@@ -136,7 +136,89 @@ Sources: golden overrides (79-21) and notes from 79-08/09/21, plus what this swe
 
 ## Refresh sweep (79-33)
 
-pending
+Status: pending operator decision (DV-79-10 to DV-79-12)
+
+Plan 79-33 (D-12, D-16). Sweep: `pnpm steamcm-refresh-parity-sweep` (`meta/steamcmRefreshParitySweep.ts`), run on the operator's Mac with the dev-vault refresh token. Read-only ops only (no redeem, no credential sign-in). Output is redacted (counts and classes only); no name, URL, id, SteamID or absolute path appears here.
+
+Method: the real `refresh()` runs in process twice with only `GAMELIB_STEAMCM_CM` toggled (`ts`, then `rust`), each from empty stores rooted in a temp dir, with the real `SteamUser` (steam-user for `ts`; the Rust CLI over one kept-open ndjson session for `rust`) and the dev-vault token. The library is snapshotted right after each `refresh()` returns (post-refresh: on `rust` the library `steamcm_refresh` returned, persisted unchanged by the thin TS caller). Each side then runs the lazy per-game enrichment (`fetchMetadataIfNeeded`, concurrency 4) and the in-memory library is snapshotted again (at rest). Diffs are by app id.
+
+Exit code: 0 (final run, after the fix below).
+
+### Corpus
+
+| Category                                              | ts  | rust |
+| ----------------------------------------------------- | --- | ---- |
+| Owned apps (`includePlayedFreeGames`)                 | 390 | 390  |
+| Licensed demos                                        | 11  | 11   |
+| Library entries after Refresh (owned + demos)         | 401 | 401  |
+| Entries with art after Refresh                        | 0   | 161  |
+| Entries with art at rest (after lazy enrichment)      | 58  | 169  |
+| Entries with a metacritic score after Refresh         | 231 | 231  |
+
+Rust in-Refresh enrichment summary (final run): attempted=169 enriched=161 delisted=7 failed=0 rateLimited=true budgetHit=false notReached=233 (the stage stopped at the first HTTP 429, the 233 are served by the lazy path). Earlier runs: 143 enriched / 7 delisted / rateLimited, and 149 / 7 / rateLimited.
+
+### Per-field results (final run)
+
+| Field                     | Stage        | Inputs | Equal | Explained                    | Unexplained |
+| ------------------------- | ------------ | ------ | ----- | ---------------------------- | ----------- |
+| app ids (set)             | post-refresh | 1      | 1     | 0                            | 0           |
+| title                     | post-refresh | 401    | 368   | enriched-in-refresh=33       | 0           |
+| art (all `art_*`)         | post-refresh | 401    | 240   | enriched-in-refresh=161      | 0           |
+| metacritic                | post-refresh | 401    | 401   | 0                            | 0           |
+| playtime                  | post-refresh | 401    | 401   | 0                            | 0           |
+| last played               | post-refresh | 401    | 401   | 0                            | 0           |
+| demo membership           | post-refresh | 401    | 401   | 0                            | 0           |
+| every other field         | post-refresh | 401    | 233   | enriched-in-refresh=168      | 0           |
+| app ids (set)             | at rest      | 1      | 1     | 0                            | 0           |
+| title                     | at rest      | 401    | 367   | enrichment-coverage=34       | 0           |
+| art (all `art_*`)         | at rest      | 401    | 228   | enrichment-coverage=173      | 0           |
+| metacritic                | at rest      | 401    | 399   | enrichment-coverage=2        | 0           |
+| playtime                  | at rest      | 401    | 401   | 0                            | 0           |
+| last played               | at rest      | 401    | 401   | 0                            | 0           |
+| demo membership           | at rest      | 401    | 401   | 0                            | 0           |
+| every other field         | at rest      | 401    | 221   | enrichment-coverage=180      | 0           |
+
+"every other field" is every key the rows above do not name (platform flags, `mac_arch`, `is_delisted`, `steamPlatformsCaptured`, `store_url`, `extra` minus playtime and last played, and so on). `enrichment-coverage` means only one side holds store enrichment for that app at rest (the Rust Refresh enriched it; the TS side enriched only the 60-app lazy sample, or the store throttled one side), so its store-derived fields are not comparable. Apps enriched on both sides at rest: 27 in the final run, 57 in the best earlier run; every compared field on them was equal.
+
+### Fixes made during the sweep
+
+1. Rust `appdetails` language (commit 371199f09). With one app, Rust returned German genres and description in 12 of 18 direct calls (three batches) and in one sweep run, where the TS client (and curl) always returned English. `Accept-Language` did not change it; `l=english` made 8 of 8 English. Rust now sends `l=english`; the mock servers in the crate's tests parse the id up to `&`. `cargo test -p gamelib-steamcm --lib` 267 passed, clippy `--all-targets -D warnings` clean, fmt clean. See DV-79-12.
+
+### Sweep limits (not divergences)
+
+- The in-process stack ran under a fresh fake HOME, so there is no Steam install: the install maps were empty on both sides and install state is not compared (that code is the same TS on both paths).
+- The anonymous CM client was not wired, so the TS side took the held-session fallback for the platform and metacritic captures. Rust reports its own anon/held split. Both sides ended with the same platform and metacritic values on every app compared.
+- The Steam store (Akamai) answers 403 after a burst of `appdetails` calls and recovers within minutes. The lazy enrichment was therefore a deterministic 60-app sample per side (the same ids on both), not every owned app as the plan wrote, and the sweep waits out a throttle before each store-heavy phase and exits 3 when fewer than 20 apps are enriched on both sides. Four earlier runs were discarded for a throttled side (exit 1 or 3).
+
+### Divergences
+
+#### DV-79-10: Rust Refresh enriches from the store inside Refresh; TS Refresh only seeds from the cache
+
+- source: 79-29/79-30 design (the Rust stage), measured here
+- ts: Refresh builds each entry from cached metadata only; art, store text, platform flags and the title come later from the lazy per-game path.
+- rust: Refresh also fetches `appdetails`, 5 at a time within a 20 s budget, stopping at the first HTTP 429. Measured: 143 to 161 of 401 enriched per Refresh, 7 delisted found, 233 to 251 left for the lazy path. Enriched entries carry art, the store title (33 entries differ from the owned-apps name at that point), platform flags, `mac_arch` and the delisted verdict.
+- Steam-correct side: neither is wrong; the store data is the same data the lazy path fetches. Where both sides held enrichment at rest the values were equal (27 apps in the final run, 57 in the best earlier run, zero unexplained).
+- caller impact: art and store text appear for roughly 40 percent of the library right after a Refresh instead of one by one as games are opened. The title of an enriched entry changes at Refresh time. A Refresh now sends up to a few hundred store requests in one burst, which tripped the store's 403 throttle during this sweep.
+- accepted: pending
+
+#### DV-79-11: the Rust enrichment stage stops on HTTP 429 but not on HTTP 403
+
+- source: `refresh/enrich.rs`, measured here
+- ts: no in-Refresh enrichment; the lazy path logs a failure per app and moves on.
+- rust: the stage stops at the first 429. The store's throttle answers 403 (Akamai), which the stage counts as a plain failure and keeps going: one run attempted 358 apps, `failed=351`, `budgetHit`, with zero enriched.
+- Steam-correct side: stopping is. A 403 burst only extends the block and wastes the budget.
+- caller impact: while the store is throttling, a Refresh spends its 20 s on requests that all fail, and the entries stay unenriched until the lazy path (also throttled) succeeds. Not data loss. If rejected, the fix is to treat 403 like 429 in `enrich.rs` and re-run.
+- accepted: pending
+
+#### DV-79-12: Rust asks the store for English explicitly; TS sends no language
+
+- source: commit 371199f09, measured here
+- ts: `appdetails?appids=N`, no language. On this host the store answered English every time.
+- rust: `appdetails?appids=N&l=english`. Without it the Rust request got German text in 12 of 18 direct calls, so the Refresh and the lazy path could store non-English genres and descriptions for the same game.
+- Steam-correct side: rust (explicit). The TS request depends on the store's own language guess for the connection.
+- caller impact: Rust-written store text is always English. A TS-written entry may be localised by the store's guess until the TS path is deleted (79-41). No user language setting is read on either path today.
+- accepted: pending
+
 
 ## Mac Steam path (79-36)
 
