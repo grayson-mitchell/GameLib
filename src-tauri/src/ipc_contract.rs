@@ -79,6 +79,30 @@ pub(crate) enum RustInvokeChannel {
     SteamfilesScanAcfs,
     SteamfilesShortcutsApply,
     SteamfilesShortcutsRead,
+    SteamcmAnonClose,
+    SteamcmAnonProductInfo,
+    SteamcmConfigure,
+    SteamcmContentServers,
+    SteamcmDepotKey,
+    SteamcmLicenses,
+    SteamcmManifestRequestCode,
+    SteamcmOwnedApps,
+    SteamcmPersonas,
+    SteamcmProductInfo,
+    SteamcmRedeemKey,
+    SteamcmSessionAcquire,
+    SteamcmSessionAcquireOpen,
+    SteamcmSessionEnsureConnected,
+    SteamcmSessionLogout,
+    SteamcmSessionRelease,
+    SteamcmSessionShutdown,
+    SteamcmSessionStatus,
+    SteamcmSigninCancel,
+    SteamcmSigninCredentialsStart,
+    SteamcmSigninGuardSubmit,
+    SteamcmSigninQrStart,
+    SteamcmSigninStatus,
+    SteamcmWrapRestoreIfOwed,
 }
 
 impl RustInvokeChannel {
@@ -142,6 +166,30 @@ impl RustInvokeChannel {
         RustInvokeChannel::SteamfilesScanAcfs,
         RustInvokeChannel::SteamfilesShortcutsApply,
         RustInvokeChannel::SteamfilesShortcutsRead,
+        RustInvokeChannel::SteamcmAnonClose,
+        RustInvokeChannel::SteamcmAnonProductInfo,
+        RustInvokeChannel::SteamcmConfigure,
+        RustInvokeChannel::SteamcmContentServers,
+        RustInvokeChannel::SteamcmDepotKey,
+        RustInvokeChannel::SteamcmLicenses,
+        RustInvokeChannel::SteamcmManifestRequestCode,
+        RustInvokeChannel::SteamcmOwnedApps,
+        RustInvokeChannel::SteamcmPersonas,
+        RustInvokeChannel::SteamcmProductInfo,
+        RustInvokeChannel::SteamcmRedeemKey,
+        RustInvokeChannel::SteamcmSessionAcquire,
+        RustInvokeChannel::SteamcmSessionAcquireOpen,
+        RustInvokeChannel::SteamcmSessionEnsureConnected,
+        RustInvokeChannel::SteamcmSessionLogout,
+        RustInvokeChannel::SteamcmSessionRelease,
+        RustInvokeChannel::SteamcmSessionShutdown,
+        RustInvokeChannel::SteamcmSessionStatus,
+        RustInvokeChannel::SteamcmSigninCancel,
+        RustInvokeChannel::SteamcmSigninCredentialsStart,
+        RustInvokeChannel::SteamcmSigninGuardSubmit,
+        RustInvokeChannel::SteamcmSigninQrStart,
+        RustInvokeChannel::SteamcmSigninStatus,
+        RustInvokeChannel::SteamcmWrapRestoreIfOwed,
     ];
 
     pub(crate) fn from_name(name: &str) -> Option<Self> {
@@ -205,6 +253,30 @@ impl RustInvokeChannel {
             "steamfiles_scan_acfs" => Some(RustInvokeChannel::SteamfilesScanAcfs),
             "steamfiles_shortcuts_apply" => Some(RustInvokeChannel::SteamfilesShortcutsApply),
             "steamfiles_shortcuts_read" => Some(RustInvokeChannel::SteamfilesShortcutsRead),
+            "steamcm_anon_close" => Some(RustInvokeChannel::SteamcmAnonClose),
+            "steamcm_anon_product_info" => Some(RustInvokeChannel::SteamcmAnonProductInfo),
+            "steamcm_configure" => Some(RustInvokeChannel::SteamcmConfigure),
+            "steamcm_content_servers" => Some(RustInvokeChannel::SteamcmContentServers),
+            "steamcm_depot_key" => Some(RustInvokeChannel::SteamcmDepotKey),
+            "steamcm_licenses" => Some(RustInvokeChannel::SteamcmLicenses),
+            "steamcm_manifest_request_code" => Some(RustInvokeChannel::SteamcmManifestRequestCode),
+            "steamcm_owned_apps" => Some(RustInvokeChannel::SteamcmOwnedApps),
+            "steamcm_personas" => Some(RustInvokeChannel::SteamcmPersonas),
+            "steamcm_product_info" => Some(RustInvokeChannel::SteamcmProductInfo),
+            "steamcm_redeem_key" => Some(RustInvokeChannel::SteamcmRedeemKey),
+            "steamcm_session_acquire" => Some(RustInvokeChannel::SteamcmSessionAcquire),
+            "steamcm_session_acquire_open" => Some(RustInvokeChannel::SteamcmSessionAcquireOpen),
+            "steamcm_session_ensure_connected" => Some(RustInvokeChannel::SteamcmSessionEnsureConnected),
+            "steamcm_session_logout" => Some(RustInvokeChannel::SteamcmSessionLogout),
+            "steamcm_session_release" => Some(RustInvokeChannel::SteamcmSessionRelease),
+            "steamcm_session_shutdown" => Some(RustInvokeChannel::SteamcmSessionShutdown),
+            "steamcm_session_status" => Some(RustInvokeChannel::SteamcmSessionStatus),
+            "steamcm_signin_cancel" => Some(RustInvokeChannel::SteamcmSigninCancel),
+            "steamcm_signin_credentials_start" => Some(RustInvokeChannel::SteamcmSigninCredentialsStart),
+            "steamcm_signin_guard_submit" => Some(RustInvokeChannel::SteamcmSigninGuardSubmit),
+            "steamcm_signin_qr_start" => Some(RustInvokeChannel::SteamcmSigninQrStart),
+            "steamcm_signin_status" => Some(RustInvokeChannel::SteamcmSigninStatus),
+            "steamcm_wrap_restore_if_owed" => Some(RustInvokeChannel::SteamcmWrapRestoreIfOwed),
             _ => None,
         }
     }
@@ -270,6 +342,30 @@ impl RustInvokeChannel {
             RustInvokeChannel::SteamfilesScanAcfs => "steamfiles_scan_acfs",
             RustInvokeChannel::SteamfilesShortcutsApply => "steamfiles_shortcuts_apply",
             RustInvokeChannel::SteamfilesShortcutsRead => "steamfiles_shortcuts_read",
+            RustInvokeChannel::SteamcmAnonClose => "steamcm_anon_close",
+            RustInvokeChannel::SteamcmAnonProductInfo => "steamcm_anon_product_info",
+            RustInvokeChannel::SteamcmConfigure => "steamcm_configure",
+            RustInvokeChannel::SteamcmContentServers => "steamcm_content_servers",
+            RustInvokeChannel::SteamcmDepotKey => "steamcm_depot_key",
+            RustInvokeChannel::SteamcmLicenses => "steamcm_licenses",
+            RustInvokeChannel::SteamcmManifestRequestCode => "steamcm_manifest_request_code",
+            RustInvokeChannel::SteamcmOwnedApps => "steamcm_owned_apps",
+            RustInvokeChannel::SteamcmPersonas => "steamcm_personas",
+            RustInvokeChannel::SteamcmProductInfo => "steamcm_product_info",
+            RustInvokeChannel::SteamcmRedeemKey => "steamcm_redeem_key",
+            RustInvokeChannel::SteamcmSessionAcquire => "steamcm_session_acquire",
+            RustInvokeChannel::SteamcmSessionAcquireOpen => "steamcm_session_acquire_open",
+            RustInvokeChannel::SteamcmSessionEnsureConnected => "steamcm_session_ensure_connected",
+            RustInvokeChannel::SteamcmSessionLogout => "steamcm_session_logout",
+            RustInvokeChannel::SteamcmSessionRelease => "steamcm_session_release",
+            RustInvokeChannel::SteamcmSessionShutdown => "steamcm_session_shutdown",
+            RustInvokeChannel::SteamcmSessionStatus => "steamcm_session_status",
+            RustInvokeChannel::SteamcmSigninCancel => "steamcm_signin_cancel",
+            RustInvokeChannel::SteamcmSigninCredentialsStart => "steamcm_signin_credentials_start",
+            RustInvokeChannel::SteamcmSigninGuardSubmit => "steamcm_signin_guard_submit",
+            RustInvokeChannel::SteamcmSigninQrStart => "steamcm_signin_qr_start",
+            RustInvokeChannel::SteamcmSigninStatus => "steamcm_signin_status",
+            RustInvokeChannel::SteamcmWrapRestoreIfOwed => "steamcm_wrap_restore_if_owed",
         }
     }
 }
@@ -1313,5 +1409,344 @@ impl SteamfilesShortcutsReadArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let first = args.first().ok_or_else(|| "steamfiles_shortcuts_read:bad-args".to_string())?;
         serde_json::from_value(first.clone()).map_err(|_| "steamfiles_shortcuts_read:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteamcmAnonCloseArgs {
+    pub(crate) reason: String,
+}
+
+impl SteamcmAnonCloseArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steamcm_anon_close:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steamcm_anon_close:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteamcmAnonProductInfoArgs {
+    pub(crate) apps: Vec<f64>,
+    pub(crate) packages: Vec<f64>,
+    #[serde(rename = "inclTokens")]
+    pub(crate) incl_tokens: bool,
+}
+
+impl SteamcmAnonProductInfoArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steamcm_anon_product_info:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steamcm_anon_product_info:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteamcmConfigureArgs {
+    #[serde(rename = "appFolder")]
+    pub(crate) app_folder: String,
+}
+
+impl SteamcmConfigureArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steamcm_configure:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steamcm_configure:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteamcmContentServersArgs {
+    #[serde(rename = "leaseId")]
+    pub(crate) lease_id: f64,
+    #[serde(rename = "appId")]
+    #[serde(default)]
+    pub(crate) app_id: Option<f64>,
+}
+
+impl SteamcmContentServersArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steamcm_content_servers:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steamcm_content_servers:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteamcmDepotKeyArgs {
+    #[serde(rename = "leaseId")]
+    pub(crate) lease_id: f64,
+    #[serde(rename = "appId")]
+    pub(crate) app_id: f64,
+    #[serde(rename = "depotId")]
+    pub(crate) depot_id: f64,
+}
+
+impl SteamcmDepotKeyArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steamcm_depot_key:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steamcm_depot_key:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteamcmLicensesArgs {
+    #[serde(rename = "leaseId")]
+    pub(crate) lease_id: f64,
+}
+
+impl SteamcmLicensesArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steamcm_licenses:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steamcm_licenses:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteamcmManifestRequestCodeArgs {
+    #[serde(rename = "leaseId")]
+    pub(crate) lease_id: f64,
+    #[serde(rename = "appId")]
+    pub(crate) app_id: f64,
+    #[serde(rename = "depotId")]
+    pub(crate) depot_id: f64,
+    #[serde(rename = "manifestId")]
+    pub(crate) manifest_id: String,
+    pub(crate) branch: String,
+}
+
+impl SteamcmManifestRequestCodeArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steamcm_manifest_request_code:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steamcm_manifest_request_code:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteamcmOwnedAppsArgs {
+    #[serde(rename = "leaseId")]
+    pub(crate) lease_id: f64,
+    #[serde(rename = "steamId")]
+    pub(crate) steam_id: String,
+    #[serde(rename = "includeAppinfo")]
+    pub(crate) include_appinfo: bool,
+    #[serde(rename = "includePlayedFreeGames")]
+    pub(crate) include_played_free_games: bool,
+    #[serde(rename = "includeFreeSub")]
+    pub(crate) include_free_sub: bool,
+    #[serde(rename = "skipUnvettedApps")]
+    pub(crate) skip_unvetted_apps: bool,
+}
+
+impl SteamcmOwnedAppsArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steamcm_owned_apps:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steamcm_owned_apps:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteamcmPersonasArgs {
+    #[serde(rename = "leaseId")]
+    pub(crate) lease_id: f64,
+    #[serde(rename = "steamIds")]
+    pub(crate) steam_ids: Vec<String>,
+}
+
+impl SteamcmPersonasArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steamcm_personas:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steamcm_personas:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteamcmProductInfoArgs {
+    #[serde(rename = "leaseId")]
+    pub(crate) lease_id: f64,
+    pub(crate) apps: Vec<f64>,
+    pub(crate) packages: Vec<f64>,
+    #[serde(rename = "inclTokens")]
+    pub(crate) incl_tokens: bool,
+}
+
+impl SteamcmProductInfoArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steamcm_product_info:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steamcm_product_info:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteamcmRedeemKeyArgs {
+    #[serde(rename = "leaseId")]
+    pub(crate) lease_id: f64,
+    pub(crate) key: String,
+}
+
+impl SteamcmRedeemKeyArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steamcm_redeem_key:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steamcm_redeem_key:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteamcmSessionAcquireArgs {
+    #[serde(rename = "refreshToken")]
+    pub(crate) refresh_token: String,
+    pub(crate) reason: String,
+    #[serde(rename = "logonId")]
+    pub(crate) logon_id: f64,
+}
+
+impl SteamcmSessionAcquireArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steamcm_session_acquire:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steamcm_session_acquire:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteamcmSessionAcquireOpenArgs {
+    pub(crate) reason: String,
+}
+
+impl SteamcmSessionAcquireOpenArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steamcm_session_acquire_open:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steamcm_session_acquire_open:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct SteamcmSessionEnsureConnectedArgs;
+
+impl SteamcmSessionEnsureConnectedArgs {
+    pub(crate) fn from_args(_args: &[Value]) -> Result<Self, String> {
+        Ok(Self)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct SteamcmSessionLogoutArgs;
+
+impl SteamcmSessionLogoutArgs {
+    pub(crate) fn from_args(_args: &[Value]) -> Result<Self, String> {
+        Ok(Self)
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteamcmSessionReleaseArgs {
+    #[serde(rename = "leaseId")]
+    pub(crate) lease_id: f64,
+}
+
+impl SteamcmSessionReleaseArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steamcm_session_release:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steamcm_session_release:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteamcmSessionShutdownArgs {
+    #[serde(rename = "boundMs")]
+    pub(crate) bound_ms: f64,
+}
+
+impl SteamcmSessionShutdownArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steamcm_session_shutdown:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steamcm_session_shutdown:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct SteamcmSessionStatusArgs;
+
+impl SteamcmSessionStatusArgs {
+    pub(crate) fn from_args(_args: &[Value]) -> Result<Self, String> {
+        Ok(Self)
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteamcmSigninCancelArgs {
+    #[serde(rename = "flowId")]
+    pub(crate) flow_id: String,
+}
+
+impl SteamcmSigninCancelArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steamcm_signin_cancel:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steamcm_signin_cancel:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteamcmSigninCredentialsStartArgs {
+    #[serde(rename = "accountName")]
+    pub(crate) account_name: String,
+    pub(crate) password: String,
+}
+
+impl SteamcmSigninCredentialsStartArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steamcm_signin_credentials_start:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steamcm_signin_credentials_start:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteamcmSigninGuardSubmitArgs {
+    #[serde(rename = "flowId")]
+    pub(crate) flow_id: String,
+    pub(crate) code: String,
+}
+
+impl SteamcmSigninGuardSubmitArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steamcm_signin_guard_submit:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steamcm_signin_guard_submit:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct SteamcmSigninQrStartArgs;
+
+impl SteamcmSigninQrStartArgs {
+    pub(crate) fn from_args(_args: &[Value]) -> Result<Self, String> {
+        Ok(Self)
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteamcmSigninStatusArgs {
+    #[serde(rename = "flowId")]
+    pub(crate) flow_id: String,
+}
+
+impl SteamcmSigninStatusArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steamcm_signin_status:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steamcm_signin_status:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteamcmWrapRestoreIfOwedArgs {
+    pub(crate) trigger: SteamcmWrapRestoreIfOwedArgsTrigger,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub(crate) enum SteamcmWrapRestoreIfOwedArgsTrigger {
+    #[serde(rename = "boot")]
+    Boot,
+    #[serde(rename = "shutdown")]
+    Shutdown,
+}
+
+impl SteamcmWrapRestoreIfOwedArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steamcm_wrap_restore_if_owed:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steamcm_wrap_restore_if_owed:bad-args".to_string())
     }
 }

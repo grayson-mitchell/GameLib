@@ -548,6 +548,44 @@ export const RUST_STEAMFILES_SHORTCUTS_READ =
   'steamfiles_shortcuts_read' as const
 
 /**
+ * Phase 79: Rust CM channels, pass-throughs to the Tauri-free `gamelib-steamcm` crate (the same
+ * dispatch `gamelib-steamcm-cli` uses). Each takes ONE object arg mirroring the crate's
+ * `deny_unknown_fields` arg struct; ids that exceed 2^53 (steamId, manifestId) travel as decimal
+ * strings. Bad args reject `<op>:bad-args`.
+ */
+export const RUST_STEAMCM_ANON_CLOSE = 'steamcm_anon_close' as const
+export const RUST_STEAMCM_ANON_PRODUCT_INFO =
+  'steamcm_anon_product_info' as const
+export const RUST_STEAMCM_CONFIGURE = 'steamcm_configure' as const
+export const RUST_STEAMCM_CONTENT_SERVERS = 'steamcm_content_servers' as const
+export const RUST_STEAMCM_DEPOT_KEY = 'steamcm_depot_key' as const
+export const RUST_STEAMCM_LICENSES = 'steamcm_licenses' as const
+export const RUST_STEAMCM_MANIFEST_REQUEST_CODE =
+  'steamcm_manifest_request_code' as const
+export const RUST_STEAMCM_OWNED_APPS = 'steamcm_owned_apps' as const
+export const RUST_STEAMCM_PERSONAS = 'steamcm_personas' as const
+export const RUST_STEAMCM_PRODUCT_INFO = 'steamcm_product_info' as const
+export const RUST_STEAMCM_REDEEM_KEY = 'steamcm_redeem_key' as const
+export const RUST_STEAMCM_SESSION_ACQUIRE = 'steamcm_session_acquire' as const
+export const RUST_STEAMCM_SESSION_ACQUIRE_OPEN =
+  'steamcm_session_acquire_open' as const
+export const RUST_STEAMCM_SESSION_ENSURE_CONNECTED =
+  'steamcm_session_ensure_connected' as const
+export const RUST_STEAMCM_SESSION_LOGOUT = 'steamcm_session_logout' as const
+export const RUST_STEAMCM_SESSION_RELEASE = 'steamcm_session_release' as const
+export const RUST_STEAMCM_SESSION_SHUTDOWN = 'steamcm_session_shutdown' as const
+export const RUST_STEAMCM_SESSION_STATUS = 'steamcm_session_status' as const
+export const RUST_STEAMCM_SIGNIN_CANCEL = 'steamcm_signin_cancel' as const
+export const RUST_STEAMCM_SIGNIN_CREDENTIALS_START =
+  'steamcm_signin_credentials_start' as const
+export const RUST_STEAMCM_SIGNIN_GUARD_SUBMIT =
+  'steamcm_signin_guard_submit' as const
+export const RUST_STEAMCM_SIGNIN_QR_START = 'steamcm_signin_qr_start' as const
+export const RUST_STEAMCM_SIGNIN_STATUS = 'steamcm_signin_status' as const
+export const RUST_STEAMCM_WRAP_RESTORE_IF_OWED =
+  'steamcm_wrap_restore_if_owed' as const
+
+/**
  * Rust-side channel name: open a fail-closed child `WebviewWindow` on any https URL
  * (Phase 34.4.1 Plan 01, D-01/D-02, REQ-34.4.1-01/REQ-34.4.1-09). Runner-agnostic by
  * design -- nothing in Rust knows what Humble is; this is the mechanism Phase 34.5
@@ -790,7 +828,31 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_STEAMFILES_READ_RUNNING_APP_ID,
   RUST_STEAMFILES_SCAN_ACFS,
   RUST_STEAMFILES_SHORTCUTS_APPLY,
-  RUST_STEAMFILES_SHORTCUTS_READ
+  RUST_STEAMFILES_SHORTCUTS_READ,
+  RUST_STEAMCM_ANON_CLOSE,
+  RUST_STEAMCM_ANON_PRODUCT_INFO,
+  RUST_STEAMCM_CONFIGURE,
+  RUST_STEAMCM_CONTENT_SERVERS,
+  RUST_STEAMCM_DEPOT_KEY,
+  RUST_STEAMCM_LICENSES,
+  RUST_STEAMCM_MANIFEST_REQUEST_CODE,
+  RUST_STEAMCM_OWNED_APPS,
+  RUST_STEAMCM_PERSONAS,
+  RUST_STEAMCM_PRODUCT_INFO,
+  RUST_STEAMCM_REDEEM_KEY,
+  RUST_STEAMCM_SESSION_ACQUIRE,
+  RUST_STEAMCM_SESSION_ACQUIRE_OPEN,
+  RUST_STEAMCM_SESSION_ENSURE_CONNECTED,
+  RUST_STEAMCM_SESSION_LOGOUT,
+  RUST_STEAMCM_SESSION_RELEASE,
+  RUST_STEAMCM_SESSION_SHUTDOWN,
+  RUST_STEAMCM_SESSION_STATUS,
+  RUST_STEAMCM_SIGNIN_CANCEL,
+  RUST_STEAMCM_SIGNIN_CREDENTIALS_START,
+  RUST_STEAMCM_SIGNIN_GUARD_SUBMIT,
+  RUST_STEAMCM_SIGNIN_QR_START,
+  RUST_STEAMCM_SIGNIN_STATUS,
+  RUST_STEAMCM_WRAP_RESTORE_IF_OWED
 ] as const
 
 /** Phase 63 (D-03): the scanner channels, a subset of {@link RUST_INVOKE_CHANNELS}. */
@@ -828,6 +890,36 @@ export const RUST_DEPOT_CHANNELS = [
   RUST_DEPOT_JOB_RUN,
   RUST_DEPOT_MANIFEST_SUMMARY
 ] as const
+
+/** Phase 79: the Rust CM channels, a subset of {@link RUST_INVOKE_CHANNELS}. */
+export const RUST_STEAMCM_CHANNELS = [
+  RUST_STEAMCM_ANON_CLOSE,
+  RUST_STEAMCM_ANON_PRODUCT_INFO,
+  RUST_STEAMCM_CONFIGURE,
+  RUST_STEAMCM_CONTENT_SERVERS,
+  RUST_STEAMCM_DEPOT_KEY,
+  RUST_STEAMCM_LICENSES,
+  RUST_STEAMCM_MANIFEST_REQUEST_CODE,
+  RUST_STEAMCM_OWNED_APPS,
+  RUST_STEAMCM_PERSONAS,
+  RUST_STEAMCM_PRODUCT_INFO,
+  RUST_STEAMCM_REDEEM_KEY,
+  RUST_STEAMCM_SESSION_ACQUIRE,
+  RUST_STEAMCM_SESSION_ACQUIRE_OPEN,
+  RUST_STEAMCM_SESSION_ENSURE_CONNECTED,
+  RUST_STEAMCM_SESSION_LOGOUT,
+  RUST_STEAMCM_SESSION_RELEASE,
+  RUST_STEAMCM_SESSION_SHUTDOWN,
+  RUST_STEAMCM_SESSION_STATUS,
+  RUST_STEAMCM_SIGNIN_CANCEL,
+  RUST_STEAMCM_SIGNIN_CREDENTIALS_START,
+  RUST_STEAMCM_SIGNIN_GUARD_SUBMIT,
+  RUST_STEAMCM_SIGNIN_QR_START,
+  RUST_STEAMCM_SIGNIN_STATUS,
+  RUST_STEAMCM_WRAP_RESTORE_IF_OWED
+] as const
+
+export type RustSteamCmChannel = (typeof RUST_STEAMCM_CHANNELS)[number]
 
 /** The set of channel names `requestRustInvoke()` is allowed to target. */
 export type RustInvokeChannel = (typeof RUST_INVOKE_CHANNELS)[number]

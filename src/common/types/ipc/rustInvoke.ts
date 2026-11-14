@@ -28,6 +28,30 @@ import {
   RUST_DEPOT_JOB_CANCEL,
   RUST_DEPOT_JOB_RUN,
   RUST_DEPOT_MANIFEST_SUMMARY,
+  RUST_STEAMCM_ANON_CLOSE,
+  RUST_STEAMCM_ANON_PRODUCT_INFO,
+  RUST_STEAMCM_CONFIGURE,
+  RUST_STEAMCM_CONTENT_SERVERS,
+  RUST_STEAMCM_DEPOT_KEY,
+  RUST_STEAMCM_LICENSES,
+  RUST_STEAMCM_MANIFEST_REQUEST_CODE,
+  RUST_STEAMCM_OWNED_APPS,
+  RUST_STEAMCM_PERSONAS,
+  RUST_STEAMCM_PRODUCT_INFO,
+  RUST_STEAMCM_REDEEM_KEY,
+  RUST_STEAMCM_SESSION_ACQUIRE,
+  RUST_STEAMCM_SESSION_ACQUIRE_OPEN,
+  RUST_STEAMCM_SESSION_ENSURE_CONNECTED,
+  RUST_STEAMCM_SESSION_LOGOUT,
+  RUST_STEAMCM_SESSION_RELEASE,
+  RUST_STEAMCM_SESSION_SHUTDOWN,
+  RUST_STEAMCM_SESSION_STATUS,
+  RUST_STEAMCM_SIGNIN_CANCEL,
+  RUST_STEAMCM_SIGNIN_CREDENTIALS_START,
+  RUST_STEAMCM_SIGNIN_GUARD_SUBMIT,
+  RUST_STEAMCM_SIGNIN_QR_START,
+  RUST_STEAMCM_SIGNIN_STATUS,
+  RUST_STEAMCM_WRAP_RESTORE_IF_OWED,
   RUST_SCAN_CONTAINED_REAL,
   RUST_SCAN_PE_IMPORTED_DLLS,
   RUST_SCAN_STEAMSTUB_SECTION,
@@ -119,6 +143,8 @@ const applyArg = z.tuple([
 ])
 const exePath = z.tuple([z.object({ exePath: z.string() })])
 const empty = z.tuple([])
+const reasonArg = z.tuple([z.object({ reason: z.string() }).strict()])
+const flowArg = z.tuple([z.object({ flowId: z.string() }).strict()])
 
 export const rustInvokeArgs = {
   // ---- Keychain
@@ -270,7 +296,102 @@ export const rustInvokeArgs = {
   [RUST_DEPOT_FINALIZE]: depotValueArg,
   [RUST_DEPOT_JOB_CANCEL]: z.tuple([z.object({ jobId: z.string() })]),
   [RUST_DEPOT_JOB_RUN]: depotValueArg,
-  [RUST_DEPOT_MANIFEST_SUMMARY]: depotValueArg
+  [RUST_DEPOT_MANIFEST_SUMMARY]: depotValueArg,
+  // ---- Rust CM client (Phase 79). Mirrors the gamelib-steamcm arg structs field for field.
+  [RUST_STEAMCM_ANON_CLOSE]: reasonArg,
+  [RUST_STEAMCM_ANON_PRODUCT_INFO]: z.tuple([
+    z
+      .object({
+        apps: z.array(z.number()),
+        packages: z.array(z.number()),
+        inclTokens: z.boolean()
+      })
+      .strict()
+  ]),
+  [RUST_STEAMCM_CONFIGURE]: z.tuple([
+    z.object({ appFolder: z.string() }).strict()
+  ]),
+  [RUST_STEAMCM_CONTENT_SERVERS]: z.tuple([
+    z.object({ leaseId: z.number(), appId: z.number().nullish() }).strict()
+  ]),
+  [RUST_STEAMCM_DEPOT_KEY]: z.tuple([
+    z
+      .object({ leaseId: z.number(), appId: z.number(), depotId: z.number() })
+      .strict()
+  ]),
+  [RUST_STEAMCM_LICENSES]: z.tuple([
+    z.object({ leaseId: z.number() }).strict()
+  ]),
+  [RUST_STEAMCM_MANIFEST_REQUEST_CODE]: z.tuple([
+    z
+      .object({
+        leaseId: z.number(),
+        appId: z.number(),
+        depotId: z.number(),
+        manifestId: z.string(),
+        branch: z.string()
+      })
+      .strict()
+  ]),
+  [RUST_STEAMCM_OWNED_APPS]: z.tuple([
+    z
+      .object({
+        leaseId: z.number(),
+        steamId: z.string(),
+        includeAppinfo: z.boolean(),
+        includePlayedFreeGames: z.boolean(),
+        includeFreeSub: z.boolean(),
+        skipUnvettedApps: z.boolean()
+      })
+      .strict()
+  ]),
+  [RUST_STEAMCM_PERSONAS]: z.tuple([
+    z.object({ leaseId: z.number(), steamIds: z.array(z.string()) }).strict()
+  ]),
+  [RUST_STEAMCM_PRODUCT_INFO]: z.tuple([
+    z
+      .object({
+        leaseId: z.number(),
+        apps: z.array(z.number()),
+        packages: z.array(z.number()),
+        inclTokens: z.boolean()
+      })
+      .strict()
+  ]),
+  [RUST_STEAMCM_REDEEM_KEY]: z.tuple([
+    z.object({ leaseId: z.number(), key: z.string() }).strict()
+  ]),
+  [RUST_STEAMCM_SESSION_ACQUIRE]: z.tuple([
+    z
+      .object({
+        refreshToken: z.string(),
+        reason: z.string(),
+        logonId: z.number()
+      })
+      .strict()
+  ]),
+  [RUST_STEAMCM_SESSION_ACQUIRE_OPEN]: reasonArg,
+  [RUST_STEAMCM_SESSION_ENSURE_CONNECTED]: empty,
+  [RUST_STEAMCM_SESSION_LOGOUT]: empty,
+  [RUST_STEAMCM_SESSION_RELEASE]: z.tuple([
+    z.object({ leaseId: z.number() }).strict()
+  ]),
+  [RUST_STEAMCM_SESSION_SHUTDOWN]: z.tuple([
+    z.object({ boundMs: z.number() }).strict()
+  ]),
+  [RUST_STEAMCM_SESSION_STATUS]: empty,
+  [RUST_STEAMCM_SIGNIN_CANCEL]: flowArg,
+  [RUST_STEAMCM_SIGNIN_CREDENTIALS_START]: z.tuple([
+    z.object({ accountName: z.string(), password: z.string() }).strict()
+  ]),
+  [RUST_STEAMCM_SIGNIN_GUARD_SUBMIT]: z.tuple([
+    z.object({ flowId: z.string(), code: z.string() }).strict()
+  ]),
+  [RUST_STEAMCM_SIGNIN_QR_START]: empty,
+  [RUST_STEAMCM_SIGNIN_STATUS]: flowArg,
+  [RUST_STEAMCM_WRAP_RESTORE_IF_OWED]: z.tuple([
+    z.object({ trigger: z.enum(['boot', 'shutdown']) }).strict()
+  ])
 } satisfies Record<RustInvokeChannel, z.ZodTuple>
 
 /** The positional args a `rustInvoke` call for channel `C` sends (input side of the schema). */
