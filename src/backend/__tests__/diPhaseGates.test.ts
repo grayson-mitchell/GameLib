@@ -126,8 +126,8 @@ describe('66.1 end state: removed collaborators', () => {
 })
 
 describe('66.1 end state: stores modules', () => {
-  it('finds the 16 stores modules', () => {
-    expect(STORES_MODULES).toHaveLength(16)
+  it('finds the 17 stores modules', () => {
+    expect(STORES_MODULES).toHaveLength(17)
     for (const m of STORES_MODULES) {
       expect(existsSync(join(BACKEND, m))).toBe(true)
     }
