@@ -5,6 +5,7 @@
 // Node does the CM half (appinfo, depot selection, keys, content servers, tokens); Rust reads
 // manifests. Nothing here fetches a manifest in TS. Exit contract: no timers or handles.
 
+import { randomUUID } from 'node:crypto'
 import { basename, resolve } from 'path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { CdnAuthTokenCache } from '../depot/cdnAuth'
@@ -81,9 +82,10 @@ export async function prescreenBridgeDepotsRust(
       Number(appId),
       opts.installRuntime.cdnSchema
     )
-    // The crate asks for CDN tokens under this host job id (73-12).
+    // The crate routes its token requests under the request's jobId (73-12).
+    const jobId = `summary-${appId}-${randomUUID()}`
     const dispose = opts.installRuntime.depotJobs.registerActiveDepotJob(
-      `summary-${appId}`,
+      jobId,
       {
         appId,
         tokenCache,
@@ -102,7 +104,8 @@ export async function prescreenBridgeDepotsRust(
         appId,
         depots: toRustDepotRefs(refs.depots),
         hosts: toRustHosts(hosts),
-        patterns: STEAM_API_PATTERNS
+        patterns: STEAM_API_PATTERNS,
+        jobId
       })
     } finally {
       dispose()

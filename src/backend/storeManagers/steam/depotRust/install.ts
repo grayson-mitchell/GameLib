@@ -7,6 +7,7 @@
 //
 // Exit contract: no timers or handles are created here. Abort is forwarded by runDepotJob.
 
+import { randomUUID } from 'node:crypto'
 import { join, resolve } from 'path'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { CdnAuthTokenCache } from '../depot/cdnAuth'
@@ -434,27 +435,26 @@ export async function sharedRedistInstallscriptsRust(
     'steamUser' | 'appId' | 'ref' | 'host' | 'registry'
   >
 ): Promise<string[]> {
-  // The crate asks for CDN tokens under this host job id (73-12).
-  const dispose = args.registry.registerActiveDepotJob(
-    `summary-${args.appId}`,
-    {
-      appId: args.appId,
-      tokenCache: args.host.cdnAuth,
-      refreshRequestCode: requestCodeRefresher(
-        getDepotClient(args.steamUser),
-        new Map([[args.ref.depotId, args.appId]]),
-        args.appId
-      ),
-      onEvent: () => {}
-    }
-  )
+  // The crate routes its token requests under the request's jobId (73-12).
+  const jobId = `summary-${args.appId}-${randomUUID()}`
+  const dispose = args.registry.registerActiveDepotJob(jobId, {
+    appId: args.appId,
+    tokenCache: args.host.cdnAuth,
+    refreshRequestCode: requestCodeRefresher(
+      getDepotClient(args.steamUser),
+      new Map([[args.ref.depotId, args.appId]]),
+      args.appId
+    ),
+    onEvent: () => {}
+  })
   let res
   try {
     res = await summarizeDepots(args.registry.transport, {
       appId: args.appId,
       depots: toRustDepotRefs([args.ref]),
       hosts: toRustHosts(args.host),
-      patterns: []
+      patterns: [],
+      jobId
     })
   } finally {
     dispose()
