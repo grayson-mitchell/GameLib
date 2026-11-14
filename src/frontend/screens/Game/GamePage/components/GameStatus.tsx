@@ -223,6 +223,13 @@ const GameStatus = ({ gameInfo, progress, handleUpdate, hasUpdate }: Props) => {
     }
 
     if (hasUpdate) {
+      // quick 261114-nxb: Steam has the explicit SteamUpdateButton instead.
+      if (isStore(runner, 'steam')) {
+        return `${t('status.installed')} - ${t(
+          'status.hasUpdates',
+          'New Version Available!'
+        )}`
+      }
       return (
         <span onClick={async () => handleUpdate()} className="updateText">
           {`${t('status.installed')} - ${t(
