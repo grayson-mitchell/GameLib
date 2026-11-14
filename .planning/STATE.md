@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 Phase: 70 (split-gameinfo-into-shared-and-per-store-shapes) — EXECUTING
 Plan: 5 of 22
 Status: Ready to execute
-Last activity: 2026-11-14
+Last activity: 2026-11-14 - Completed quick task 261114-q34: merge installed platform into supported platforms row
 
 Progress: [██████████] 99%
 
@@ -761,6 +761,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | fast | Non-Steam install dialog (DownloadDialog) footer: Install button moved left of "Locate existing installation…" — primary action first. | 2026-11-14 | 93353cf93 | prettier clean; DownloadDialog jest 3/3 | — |
 | 261114-pqm | Midnight Mirage dialogs get a visible edge: shared Dialog paper now draws `1px solid var(--modal-border, transparent)` (the token was declared in every theme but never consumed); midnightMirage `--modal-background` lifts to `--background` (#161c1e, was body-identical #070a0b) and `--modal-border` → `rgba(255, 255, 255, 0.1)`. Other themes audited: no change (equal-surface borders stay invisible; high-contrast white edge kept). | 2026-11-14 | 2b860ce27 | themeTokens 282/282, Dialog 15/15, tsc + prettier clean; live check pass 2026-11-14 | [261114-pqm-midnight-mirage-modal-edge-invisible-wir](./quick/261114-pqm-midnight-mirage-modal-edge-invisible-wir/) |
 | fast | Translucent modal edge (`--modal-border: rgba(255, 255, 255, 0.1)`) extended from midnightMirage to cyberSpaceOasis, gruvbox_dark, dracula, nord-dark, marine, zombie, sweet; high-contrast (white) and nord-light unchanged. | 2026-11-14 | df0eb21b9 | themeTokens + Dialog 315/315, prettier clean; live check pending | — |
+| 261114-q34 | Install-info tab: "Installed Platform" row merged into "Supported platforms" — the installed OS glyph is outlined (`--accent` border, title/aria "<OS> (installed)"), appended boxed if not among the native flags, raw text boxed when no icon (Browser); InstalledInfo drops the row (Browser branch returns null); `getInstallPlatformIcon` moved to PlatformSupport, darwin now maps to macOS (was Windows via `includes('win')`); glyphs 1.5× bigger. | 2026-11-14 | dc9150fb7, d1386294a | PlatformSupport 5/5, jest GamePage 549/549, codecheck + scoped prettier/eslint clean; live visual check pending | [261114-q34-merge-installed-platform-into-supported-](./quick/261114-q34-merge-installed-platform-into-supported-/) |
 
 ## Session Continuity
 
