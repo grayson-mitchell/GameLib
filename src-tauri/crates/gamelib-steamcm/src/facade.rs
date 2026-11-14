@@ -285,9 +285,21 @@ impl<B: CmBackend> Core<B> {
         packages: Vec<u32>,
         incl_tokens: bool,
     ) -> Value {
+        // steam-user falls back to a package's licence token (apps.js 215-223); only needed for
+        // package requests, so an apps-only call skips the licence read.
+        let licences = if incl_tokens && !packages.is_empty() {
+            match self.session() {
+                Some(s) => s.licenses(lease).await.unwrap_or_default(),
+                None => Vec::new(),
+            }
+        } else {
+            Vec::new()
+        };
         self.signed(lease, true, PICS_TIMEOUT, move |c| {
-            let (a, p) = (apps.clone(), packages.clone());
-            Box::pin(async move { pics::product_info(c.as_ref(), &a, &p, incl_tokens).await })
+            let (a, p, l) = (apps.clone(), packages.clone(), licences.clone());
+            Box::pin(async move {
+                pics::product_info_licensed(c.as_ref(), &a, &p, incl_tokens, &l).await
+            })
         })
         .await
     }

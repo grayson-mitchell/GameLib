@@ -228,11 +228,13 @@ fn map_to_json(pairs: &[(Vec<u8>, BinNode)]) -> Value {
     )
 }
 
-/// Package buffer (4-byte id prefix + binary KV) to steam-user's `packageinfo`:
-/// `BinaryKVParser.parse(buffer)[packageid]`.
-pub fn packageinfo_to_json(buf: &[u8]) -> Result<Value, CmError> {
+/// Package buffer (4-byte header + binary KV) to steam-user's `packageinfo`:
+/// `BinaryKVParser.parse(buffer)[packageid]`. The header is NOT the package id (real Steam sends
+/// `01 00 00 00`; measured on a live account, 79-24): the root key is, so the lookup is by the
+/// id Steam answered for.
+pub fn packageinfo_to_json(buf: &[u8], package_id: u32) -> Result<Value, CmError> {
     let body = buf.get(4..).ok_or_else(pics_parse)?;
-    let id = u32::from_le_bytes([buf[0], buf[1], buf[2], buf[3]]).to_string();
+    let id = package_id.to_string();
     let doc = kv_bin::parse_bin(body, &bin_limits()).map_err(|_| pics_parse())?;
     Ok(doc
         .root
@@ -258,11 +260,34 @@ pub async fn product_info<C: CmConn>(
     packages: &[u32],
     incl_tokens: bool,
 ) -> Result<Value, CmError> {
+    product_info_licensed(conn, apps, packages, incl_tokens, &[]).await
+}
+
+/// [`product_info`] with the account's licences: with `incl_tokens`, a package whose licence
+/// carries a non-zero access token uses it (steam-user `apps.js` 215-223), ahead of the token
+/// PICS hands back. Without this, packages come back with an empty buffer on a real account.
+pub async fn product_info_licensed<C: CmConn>(
+    conn: &C,
+    apps: &[u32],
+    packages: &[u32],
+    incl_tokens: bool,
+    licences: &[LicenseEntry],
+) -> Result<Value, CmError> {
     let (app_tokens, pkg_tokens) = if incl_tokens {
         let t = conn
             .pics_access_tokens(apps.to_vec(), packages.to_vec())
             .await?;
-        (t.apps, t.packages)
+        let mut pkg = t.packages;
+        for &id in packages {
+            if let Some(l) = licences
+                .iter()
+                .find(|l| l.package_id == id && l.access_token != 0)
+            {
+                pkg.retain(|(i, _)| *i != id);
+                pkg.push((id, l.access_token));
+            }
+        }
+        (t.apps, pkg)
     } else {
         (Vec::new(), Vec::new())
     };
@@ -302,7 +327,7 @@ pub async fn product_info<C: CmConn>(
         let info = if p.buffer.is_empty() {
             Value::Null
         } else {
-            packageinfo_to_json(&p.buffer)?
+            packageinfo_to_json(&p.buffer, p.package_id)?
         };
         out_pkgs.insert(
             p.package_id.to_string(),
@@ -377,7 +402,7 @@ mod tests {
 
     #[test]
     fn packageinfo_typing() {
-        let v = packageinfo_to_json(PKG).unwrap();
+        let v = packageinfo_to_json(PKG, 1234).unwrap();
         assert_eq!(v["billingtype"], 1);
         assert_eq!(v["status"], "ok");
         // array-like object becomes an array
@@ -393,9 +418,9 @@ mod tests {
     #[test]
     fn malformed_buffers_are_protocol_errors() {
         let bad = CmError::Protocol("pics-parse".into());
-        assert_eq!(packageinfo_to_json(&[1, 2]).unwrap_err(), bad);
+        assert_eq!(packageinfo_to_json(&[1, 2], 1).unwrap_err(), bad);
         assert_eq!(
-            packageinfo_to_json(&[1, 0, 0, 0, 0, b'a']).unwrap_err(),
+            packageinfo_to_json(&[1, 0, 0, 0, 0, b'a'], 1).unwrap_err(),
             bad
         );
         assert_eq!(appinfo_to_json(b"\"appinfo\" { \"a\"").unwrap_err(), bad);
@@ -480,6 +505,33 @@ mod tests {
         assert_eq!(v["packages"]["77"]["missingToken"], true);
         assert_eq!(v["unknownApps"], json!([999]));
         assert_eq!(v["unknownPackages"], json!([]));
+    }
+
+    #[test]
+    fn licence_token_is_used_for_a_package_with_incl_tokens() {
+        let (b, conn) = scripted(true);
+        let lic = |id, tok| LicenseEntry {
+            package_id: id,
+            access_token: tok,
+            ..Default::default()
+        };
+        // 1234 has a licence token (wins over PICS's 222); 77 has a zero licence token (PICS's 0 stays).
+        futures_block(product_info_licensed(
+            &conn,
+            &[],
+            &[1234, 77],
+            true,
+            &[lic(1234, 555), lic(77, 0)],
+        ))
+        .unwrap();
+        b.script(|s| {
+            let toks: Vec<_> = s.pics_reqs[0]
+                .packages
+                .iter()
+                .map(|p| (p.id, p.access_token))
+                .collect();
+            assert_eq!(toks, vec![(1234, 555), (77, 0)]);
+        });
     }
 
     #[test]
