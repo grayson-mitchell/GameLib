@@ -4,7 +4,7 @@ import {
   detectSteamUpdates,
   getLastKnownSteamUpdateState
 } from '../updateDetection'
-import { logWarning } from 'backend/logger'
+import { logInfo, logWarning } from 'backend/logger'
 import { createTestSteamInstallRuntime } from 'backend/testUtils/testSteamInstallRuntime'
 import { noteAutoUpdateAttempt } from '../autoUpdateAttempts'
 
@@ -52,6 +52,7 @@ function makeLib() {
 describe('Steam update listing', () => {
   beforeEach(() => {
     detect.mockReset()
+    jest.mocked(logInfo).mockClear()
     detect.mockResolvedValue([
       st('30', 'registered', 'stale'),
       st('20', 'bridge', 'stale'),
@@ -67,6 +68,10 @@ describe('Steam update listing', () => {
 
   it('auto list holds only stale bridge appIds', async () => {
     expect(await makeLib().listAutoUpdateableGames()).toEqual(['10', '20'])
+    expect(logInfo).toHaveBeenCalledWith(
+      'Steam: auto-update candidates=2',
+      expect.anything()
+    )
   })
 
   it('returns [] and warns when detection throws', async () => {
@@ -75,6 +80,10 @@ describe('Steam update listing', () => {
     expect(await lib.listUpdateableGames()).toEqual([])
     expect(await lib.listAutoUpdateableGames()).toEqual([])
     expect(logWarning).toHaveBeenCalled()
+    expect(logInfo).not.toHaveBeenCalledWith(
+      expect.stringContaining('auto-update candidates='),
+      expect.anything()
+    )
   })
 
   it('one refresh (badge list then auto list) detects once', async () => {
