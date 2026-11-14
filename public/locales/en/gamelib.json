@@ -910,6 +910,12 @@
             "stores": "Browse and shop for games in the Epic, GOG, Steam and Amazon stores."
         }
     },
+    "twoColTable": {
+        "cancel": "Cancel",
+        "edit": "Edit",
+        "remove": "Remove",
+        "save": "Save"
+    },
     "webview": {
         "embedPlaceholder": {
             "message": "Paused while a window is open"

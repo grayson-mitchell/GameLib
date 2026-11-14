@@ -1,10 +1,12 @@
-import { ReactNode, useEffect, useState } from 'react'
+import { Fragment, KeyboardEvent, ReactNode, useEffect, useState } from 'react'
 import SvgButton from '../SvgButton'
 import TextInputField from '../TextInputField'
 import AddBoxIcon from '@mui/icons-material/AddBox'
 import RemoveCircleIcon from '@mui/icons-material/RemoveCircle'
 import { faArrowUp } from '@fortawesome/free-solid-svg-icons'
 import EditIcon from '@mui/icons-material/Edit'
+import CheckIcon from '@mui/icons-material/Check'
+import CloseIcon from '@mui/icons-material/Close'
 import classnames from 'classnames'
 import useSettingsState, { selectIsRTL } from 'frontend/state/settingsState'
 import FieldLabel from '../FieldLabel'
@@ -55,20 +57,17 @@ export function TableInput({
 }: Props) {
   const isRTL = useSettingsState(selectIsRTL)
   const { t } = useTranslation()
+  const { t: tGamelib } = useTranslation('gamelib')
   const [rowData, setRowData] = useState<ColumnProps[]>(rows)
   const [newVarName, setNewVarName] = useState('')
   const [newVarValue, setNewVarValue] = useState('')
-  const [originalInputs, setOriginalInputs] =
-    useState<ColumnProps>(EMPTY_INPUTS)
-  const [dirtyInputs, setDirtyInputs] = useState(false)
+  const [editingIndex, setEditingIndex] = useState<number | null>(null)
+  const [editKey, setEditKey] = useState('')
+  const [editValue, setEditValue] = useState('')
   const [keyError, setKeyError] = useState('')
   const [valueError, setValueError] = useState('')
 
   useEffect(() => {
-    setDirtyInputs(
-      newVarName !== originalInputs.key || newVarValue !== originalInputs.value
-    )
-
     if (
       // if there's a connector, try to split the key
       connector &&
@@ -113,22 +112,82 @@ export function TableInput({
     onChange(rowData)
     setNewVarName('')
     setNewVarValue('')
-    setOriginalInputs(EMPTY_INPUTS)
-    setDirtyInputs(false)
   }
 
   function removeRow(row: ColumnProps) {
     const index = rowData.findIndex((entry) => entry === row)
     rowData.splice(index, 1)
+    clearEdit()
     setRowData([...rowData])
     onChange(rowData)
   }
 
-  function editRow(row: ColumnProps) {
-    setNewVarName(row.key)
-    setNewVarValue(row.value)
-    setOriginalInputs({ key: row.key, value: row.value })
+  function clearEdit() {
+    setEditingIndex(null)
+    setEditKey('')
+    setEditValue('')
   }
+
+  function editRow(index: number) {
+    const row = rowData[index]
+    if (!row) {
+      return
+    }
+    setEditingIndex(index)
+    setEditKey(row.key)
+    setEditValue(row.value)
+  }
+
+  const [editKeyError, editValueError]: [string, string] =
+    editingIndex !== null && validation
+      ? validation(editKey, editValue)
+      : ['', '']
+
+  function saveEdit() {
+    if (
+      editingIndex === null ||
+      editKeyError ||
+      editValueError ||
+      (!editKey && fullFills.key) ||
+      (!editValue && fullFills.value)
+    ) {
+      return
+    }
+    const next = rowData
+      .map((entry, i) =>
+        i === editingIndex ? { key: editKey, value: editValue } : entry
+      )
+      .filter((entry, i) => i === editingIndex || entry.key !== editKey)
+    setRowData(next)
+    onChange(next)
+    clearEdit()
+  }
+
+  function onEditKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.nativeEvent.isComposing) {
+      return
+    }
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      saveEdit()
+    } else if (event.key === 'Escape') {
+      event.preventDefault()
+      event.stopPropagation()
+      clearEdit()
+    }
+  }
+
+  function onEditKeyChange(newValue: string) {
+    if (connector && newValue.includes(connector) && !editValue) {
+      const [key = '', value = ''] = newValue.split(connector)
+      setEditKey(key)
+      setEditValue(value)
+    } else {
+      setEditKey(newValue)
+    }
+  }
+
+  const dirtyInputs = !!(newVarName || newVarValue)
 
   return (
     <div
@@ -145,9 +204,76 @@ export function TableInput({
             <th></th>
           </tr>
           {!!rowData.length &&
-            rowData.map((row: ColumnProps, key) => {
+            rowData.map((row: ColumnProps, index) => {
+              if (index === editingIndex) {
+                return (
+                  <Fragment key={index}>
+                    <tr>
+                      <td>
+                        <TextInputField
+                          label={header.key}
+                          value={editKey}
+                          htmlId={`${htmlId}-edit-key`}
+                          placeholder={inputPlaceHolder.key}
+                          extraClass={editKeyError ? 'error' : ''}
+                          autoFocus
+                          onKeyDown={onEditKeyDown}
+                          onChange={onEditKeyChange}
+                        />
+                      </td>
+                      <td>{connector}</td>
+                      <td>
+                        <TextInputField
+                          label={header.value}
+                          value={editValue}
+                          htmlId={`${htmlId}-edit-value`}
+                          placeholder={inputPlaceHolder.value}
+                          onKeyDown={onEditKeyDown}
+                          onChange={(newValue) => setEditValue(newValue)}
+                        />
+                      </td>
+                      <td>
+                        <SvgButton
+                          onClick={() => saveEdit()}
+                          title={tGamelib('gamelib:twoColTable.save', 'Save')}
+                          aria-label={tGamelib(
+                            'gamelib:twoColTable.save',
+                            'Save'
+                          )}
+                        >
+                          <CheckIcon
+                            style={{ color: 'var(--success)' }}
+                            fontSize="large"
+                          />
+                        </SvgButton>
+                        <SvgButton
+                          onClick={() => clearEdit()}
+                          title={tGamelib(
+                            'gamelib:twoColTable.cancel',
+                            'Cancel'
+                          )}
+                          aria-label={tGamelib(
+                            'gamelib:twoColTable.cancel',
+                            'Cancel'
+                          )}
+                        >
+                          <CloseIcon
+                            style={{ color: 'var(--danger)' }}
+                            fontSize="large"
+                          />
+                        </SvgButton>
+                      </td>
+                    </tr>
+                    {(editKeyError || editValueError) && (
+                      <tr className="error">
+                        <td colSpan={3}>{editKeyError || editValueError}</td>
+                      </tr>
+                    )}
+                  </Fragment>
+                )
+              }
               return (
-                <tr key={key}>
+                <tr key={index}>
                   <td>
                     <span>{row.key}</span>
                   </td>
@@ -156,13 +282,24 @@ export function TableInput({
                     <span>{row.value}</span>
                   </td>
                   <td>
-                    <SvgButton onClick={() => editRow(row)}>
+                    <SvgButton
+                      onClick={() => editRow(index)}
+                      title={tGamelib('gamelib:twoColTable.edit', 'Edit')}
+                      aria-label={tGamelib('gamelib:twoColTable.edit', 'Edit')}
+                    >
                       <EditIcon
                         style={{ color: 'var(--accent)' }}
                         fontSize="large"
                       />
                     </SvgButton>
-                    <SvgButton onClick={() => removeRow(row)}>
+                    <SvgButton
+                      onClick={() => removeRow(row)}
+                      title={tGamelib('gamelib:twoColTable.remove', 'Remove')}
+                      aria-label={tGamelib(
+                        'gamelib:twoColTable.remove',
+                        'Remove'
+                      )}
+                    >
                       <RemoveCircleIcon
                         style={{ color: 'var(--danger)' }}
                         fontSize="large"
@@ -227,7 +364,7 @@ export function TableInput({
           </tr>
         </tfoot>
       </table>
-      {newVarValue && warning}
+      {(newVarValue || (editingIndex !== null && editValue)) && warning}
       {afterInput}
     </div>
   )
