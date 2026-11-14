@@ -24,6 +24,19 @@ export async function redeemKey(
   store: 'steam',
   key: string
 ): Promise<RedeemKeyResult> {
+  const attempt = await redeemOnce(deps, store, key)
+  // A Set is the pre-redeem package snapshot of an ambiguous attempt. The
+  // lease is released by now; the redeem is NEVER resent, only verified.
+  return attempt instanceof Set
+    ? verifyAmbiguousRedeem(deps, store, attempt)
+    : attempt
+}
+
+async function redeemOnce(
+  deps: SteamUserSliceDeps<'acquireAuthenticated'>,
+  store: 'steam',
+  key: string
+): Promise<RedeemKeyResult | Set<number>> {
   const lease = await deps.steamUser.acquireAuthenticated({
     reason: 'redeem',
     guidedAction: 'redeem'
@@ -43,6 +56,9 @@ export async function redeemKey(
     }
   }
   const client = lease.client
+  // Snapshot owned package ids so an `ambiguous` redeem (the socket died after
+  // the request was sent) is verified by a licence diff — never by resending.
+  const before = packageIds(client.licenses)
 
   try {
     const { purchaseResultDetails, packageList } = await client.redeemKey(key)
@@ -53,6 +69,13 @@ export async function redeemKey(
   } catch (err) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const e = err as any
+    if (e?.steamcmKind === 'ambiguous') {
+      logWarning(
+        `Steam redeemKey: ambiguous result, verifying via licence list (key not resent): store=${store}`,
+        LogPrefix.Steam
+      )
+      return before
+    }
     // WR-01: Only a rejection carrying a NUMERIC EPurchaseResult is a genuine
     // Steam purchase verdict. A transport/timeout/unexpected failure (e.g. the
     // 90s internal timeout in steam-user's redeemKey, or a mid-call CM
@@ -89,6 +112,58 @@ export async function redeemKey(
     )
   } finally {
     lease.release()
+  }
+}
+
+function packageIds(licenses: { package_id?: number }[] | undefined) {
+  return new Set(
+    (licenses ?? [])
+      .map((l) => l.package_id)
+      .filter((id): id is number => typeof id === 'number')
+  )
+}
+
+/**
+ * The redeem was sent but the socket died before a reply (never resent, D-02).
+ * On a fresh lease, a package absent from the pre-redeem snapshot means it took
+ * effect: report success naming those packages. Otherwise today's failure.
+ */
+async function verifyAmbiguousRedeem(
+  deps: SteamUserSliceDeps<'acquireAuthenticated'>,
+  store: 'steam',
+  before: Set<number>
+): Promise<RedeemKeyResult> {
+  const failure: RedeemKeyResult = {
+    store,
+    outcome: 'error',
+    message: 'redeem-failed'
+  }
+  try {
+    const lease = await deps.steamUser.acquireAuthenticated({
+      reason: 'redeem'
+    })
+    if (!lease.ok) return failure
+    try {
+      const added = [...packageIds(lease.client.licenses)].filter(
+        (id) => !before.has(id)
+      )
+      if (added.length === 0) return failure
+      logInfo(
+        `Steam redeemKey: store=${store} outcome=success (verified via licence list, ${added.length} new package(s))`,
+        LogPrefix.Steam
+      )
+      return {
+        store,
+        outcome: 'success',
+        packageList: Object.fromEntries(
+          added.map((id) => [String(id), ''])
+        ) as Record<string, string>
+      }
+    } finally {
+      lease.release()
+    }
+  } catch {
+    return failure
   }
 }
 
