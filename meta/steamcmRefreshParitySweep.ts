@@ -370,10 +370,13 @@ export function diffLibraries(
     if (!r) continue
     const pt = project(t)
     const pr = project(r)
+    // An app counts as store-enriched when it carries art or the delisted verdict.
+    const enrichedTs = !allEmpty(pt.art) || t.is_delisted === true
+    const enrichedRust = !allEmpty(pr.art) || r.is_delisted === true
     const ctx: DiffContext = {
       enrichedInRefresh:
-        stage === 'post-refresh' && allEmpty(pt.art) && !allEmpty(pr.art),
-      coverageGap: stage === 'at-rest' && allEmpty(pt.art) !== allEmpty(pr.art)
+        stage === 'post-refresh' && !enrichedTs && enrichedRust,
+      coverageGap: stage === 'at-rest' && enrichedTs !== enrichedRust
     }
     if (stage === 'at-rest' && !allEmpty(pt.art) && !allEmpty(pr.art)) {
       report.bothEnriched += 1

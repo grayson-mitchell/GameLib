@@ -109,6 +109,33 @@ describe('enrichment context', () => {
   })
 })
 
+describe('delisted verdicts', () => {
+  it('treats a rust-only delisted verdict as enriched-in-refresh post-refresh and coverage at rest', () => {
+    const post = newReport()
+    diffLibraries(
+      post,
+      'post-refresh',
+      [game('1')],
+      [game('1', { is_delisted: true })],
+      { ts: new Set(), rust: new Set() }
+    )
+    expect(post['post-refresh'].other.explained).toEqual({
+      'enriched-in-refresh': 1
+    })
+    const rest = newReport()
+    diffLibraries(
+      rest,
+      'at-rest',
+      [game('1')],
+      [game('1', { is_delisted: true })],
+      { ts: new Set(), rust: new Set() }
+    )
+    expect(rest['at-rest'].other.explained).toEqual({
+      'enrichment-coverage': 1
+    })
+  })
+})
+
 describe('diffLibraries and the report', () => {
   it('counts per field and stage, and records value-free shapes', () => {
     const report = newReport()
