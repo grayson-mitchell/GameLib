@@ -615,6 +615,11 @@ process.env.XDG_CACHE_HOME = join(containmentRoot, '.cache')
   }
 }
 
+// Phase 79 transition only: the Rust CM client flags (D-18) are pinned to ts so existing
+// steam-user/steam-session caller tests keep their mocks. Removed in plan 79-41 with the flags.
+process.env.GAMELIB_STEAMCM_CM ??= 'ts'
+process.env.GAMELIB_STEAMCM_SIGNIN ??= 'ts'
+
 export {
   // Consumed by src/backend/__tests__/jestGlobalSetup.test.ts via
   // `const { containmentRoot } = require('../jest.setupContainment')`
