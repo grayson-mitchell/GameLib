@@ -1,17 +1,23 @@
 /**
  * Pins the wiring of `pnpm gameinfo-narrowing-ceiling` (phase 70, D-15): the
  * package.json script, the lint.yml CI step (after Module boundaries and the Steam line ceiling) and the
- * pre-push hook line 2. Nothing here executes the gate.
+ * pre-push hook. The lint.yml step is guarded like Backend DI ceilings so a red earlier step
+ * cannot hide it (70 gap G1).
  */
 
 import { load } from 'js-yaml'
-import { readFileSync } from 'fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'fs'
+import { spawnSync } from 'child_process'
+import { createFakeHomeProfile } from '../../src/backend/testUtils/fakeHomeProfile'
 import { join } from 'path'
 
 const REPO_ROOT = join(__dirname, '..', '..')
 
 interface Step {
+  id?: string
   name?: string
+  uses?: string
+  if?: string
   run?: string
 }
 interface ParsedWorkflow {
@@ -24,6 +30,20 @@ function read(...parts: string[]): string {
 
 function stepIndex(steps: Step[], run: string): number {
   return steps.findIndex((s) => s.run === run)
+}
+
+const GATE_RUN = 'pnpm gameinfo-narrowing-ceiling'
+
+/** True when the gate step still runs after a red earlier step but not after a failed install. */
+function gateUnmasked(steps: Step[]): boolean {
+  const deps = steps.find((s) => (s.uses ?? '').includes('install-deps'))
+  const gate = steps.find((s) => s.run === GATE_RUN)
+  if (!deps || deps.id !== 'deps' || !gate) return false
+  const cond = gate.if ?? ''
+  return (
+    cond.includes('!cancelled()') &&
+    cond.includes("steps.deps.outcome == 'success'")
+  )
 }
 
 const lintYml = read('.github', 'workflows', 'lint.yml')
@@ -66,11 +86,114 @@ describe('gameinfo-narrowing-ceiling gate wiring', () => {
     expect(stepIndex(steps, 'pnpm gameinfo-narrowing-ceiling')).toBe(-1)
   })
 
-  it('pre-push line 1 is the shebang and line 2 chains the gate', () => {
+  it('70 gap G1: the gate step runs even when an earlier Lint step is red', () => {
+    expect(gateUnmasked(lintSteps())).toBe(true)
+  })
+
+  it('near-miss: without the if guard the gate would be masked', () => {
+    const steps = lintSteps().map((s) => {
+      if (s.run !== GATE_RUN) return s
+      const { if: _if, ...rest } = s
+      return rest
+    })
+    expect(gateUnmasked(steps)).toBe(false)
+  })
+
+  it('pre-push keeps the chain on line 2 and runs the ratchet on its own line', () => {
     const lines = prePush.split('\n')
     expect(lines[0]).toMatch(/^#!/)
-    expect(lines[1]).toContain(
-      'pnpm backend-di-ceilings && pnpm gameinfo-narrowing-ceiling'
-    )
+    expect(lines[1]).toContain('pnpm backend-di-ceilings')
+    expect(lines[1]).not.toContain('gameinfo-narrowing-ceiling')
+    expect(lines).toContain('pnpm gameinfo-narrowing-ceiling')
+  })
+})
+
+const EXPECTED_ORDER = [
+  'codecheck',
+  'lint',
+  'prettier',
+  'i18n',
+  'find-deadcode',
+  'boundaries',
+  'steam-line-ceiling',
+  'backend-di-ceilings',
+  'gameinfo-narrowing-ceiling'
+]
+
+const describePosix = process.platform === 'win32' ? describe.skip : describe
+
+describePosix('pre-push hook behaviour (stub pnpm)', () => {
+  function runHook(
+    hookText: string,
+    fail: string
+  ): { status: number | null; log: string[] } {
+    const profile = createFakeHomeProfile({ prefix: 'gamelib-prepush-' })
+    try {
+      const bin = join(profile.root, 'bin')
+      mkdirSync(bin)
+      const logFile = join(profile.root, 'pnpm.log')
+      writeFileSync(logFile, '')
+      writeFileSync(
+        join(bin, 'pnpm'),
+        '#!/bin/sh\necho "$1" >> "$PNPM_STUB_LOG"\n[ "$1" = "$PNPM_STUB_FAIL" ] && exit 1\nexit 0\n',
+        { mode: 0o755 }
+      )
+      const hook = join(profile.root, 'pre-push')
+      writeFileSync(hook, hookText, { mode: 0o755 })
+      const r = spawnSync('bash', [hook], {
+        cwd: profile.root,
+        input: '',
+        encoding: 'utf8',
+        env: profile.childEnv({
+          PATH: `${bin}:/usr/bin:/bin`,
+          PNPM_STUB_LOG: logFile,
+          PNPM_STUB_FAIL: fail
+        })
+      })
+      return {
+        status: r.status,
+        log: readFileSync(logFile, 'utf8').split('\n').filter(Boolean)
+      }
+    } finally {
+      profile.dispose()
+    }
+  }
+
+  it('all green runs every check in order and exits 0', () => {
+    const r = runHook(prePush, '')
+    expect(r.status).toBe(0)
+    expect(r.log).toEqual(EXPECTED_ORDER)
+  })
+
+  it('a red backend-di-ceilings still runs the ratchet and fails the push', () => {
+    const r = runHook(prePush, 'backend-di-ceilings')
+    expect(r.status).not.toBe(0)
+    expect(r.log).toContain('gameinfo-narrowing-ceiling')
+  })
+
+  it('a red lint still runs the ratchet and fails the push', () => {
+    const r = runHook(prePush, 'lint')
+    expect(r.status).not.toBe(0)
+    expect(r.log).toContain('gameinfo-narrowing-ceiling')
+    expect(r.log).not.toContain('prettier')
+  })
+
+  it('a red ratchet alone fails the push', () => {
+    const r = runHook(prePush, 'gameinfo-narrowing-ceiling')
+    expect(r.status).not.toBe(0)
+  })
+
+  it('near-miss: the pre-fix && chain never reaches the ratchet', () => {
+    const lines = prePush.split('\n')
+    const oldHook = [
+      lines[0],
+      `${lines[1]} && pnpm gameinfo-narrowing-ceiling`,
+      'checks_status=$?',
+      'exit "$checks_status"',
+      ''
+    ].join('\n')
+    const r = runHook(oldHook, 'backend-di-ceilings')
+    expect(r.status).not.toBe(0)
+    expect(r.log).not.toContain('gameinfo-narrowing-ceiling')
   })
 })

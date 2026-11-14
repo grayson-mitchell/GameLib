@@ -1,12 +1,21 @@
 #!/bin/bash
-pnpm codecheck && pnpm lint && pnpm prettier && pnpm i18n --fail-on-update && pnpm find-deadcode && pnpm boundaries && pnpm steam-line-ceiling && pnpm backend-di-ceilings && pnpm gameinfo-narrowing-ceiling
-checks_status=$?
+pnpm codecheck && pnpm lint && pnpm prettier && pnpm i18n --fail-on-update && pnpm find-deadcode && pnpm boundaries && pnpm steam-line-ceiling && pnpm backend-di-ceilings
+chain_status=$?
+pnpm gameinfo-narrowing-ceiling
+narrowing_status=$?
+if [ "$chain_status" -ne 0 ]; then
+  checks_status=$chain_status
+else
+  checks_status=$narrowing_status
+fi
 
 # Best-effort refresh of the gitignored graphify-out/ knowledge graph after a
-# passing push. This step is NEVER a gate: line 2's chain above is the only
-# thing that decides the push, and checks_status (captured immediately after
-# it, before anything else can overwrite $?) is what this hook ultimately
-# exits with.
+# passing push. This step is NEVER a gate: line 2's chain and the independent
+# narrowing ceiling on line 4 together decide the push, each status captured
+# immediately after its command (before anything else can overwrite $?) and
+# combined into checks_status, which is what this hook ultimately exits with.
+# The ratchet runs outside the && chain so an earlier red check cannot hide
+# narrowing drift (70 gap G1).
 #
 # It runs only when checks_status is 0, so a red push never pays the rebuild
 # and graphify's own progress output can't bury the failing check's error.
