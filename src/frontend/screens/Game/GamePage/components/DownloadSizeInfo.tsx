@@ -1,5 +1,6 @@
 import useUiState from 'frontend/state/uiState'
 import { useContext, useEffect, useState } from 'react'
+import { asStoreGame } from 'common/gameInfoNarrowing'
 import { hasCapability } from 'common/storeCapabilities'
 import { useTranslation } from 'react-i18next'
 import GameContext from '../../GameContext'
@@ -70,7 +71,9 @@ const DownloadSizeInfo = ({ gameInfo }: Props) => {
       <div className="iconWithText">
         <Assignment />
         <b>{t('info.third-party-app', 'Third-Party Manager')}</b>
-        {gameInfo.isEAManaged ? 'EA app' : gameInfo.thirdPartyManagedApp}
+        {asStoreGame(gameInfo, 'legendary')?.isEAManaged
+          ? 'EA app'
+          : gameInfo.thirdPartyManagedApp}
       </div>
     )
   }

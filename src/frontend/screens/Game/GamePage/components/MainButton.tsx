@@ -1,4 +1,5 @@
 import React, { useContext } from 'react'
+import { asStoreGame } from 'common/gameInfoNarrowing'
 import { hasCapability } from 'common/storeCapabilities'
 import { useTranslation } from 'react-i18next'
 import {
@@ -280,7 +281,7 @@ const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
     if (
       hasCapability(gameInfo.runner, 'installHandOffToClient') &&
       !gameInfo.is_installed &&
-      gameInfo.install?.steamResumePending &&
+      asStoreGame(gameInfo, 'steam')?.install?.steamResumePending &&
       !is.installing &&
       !is.queued
     ) {
@@ -402,7 +403,7 @@ const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
             runner: gameInfo.runner,
             isInstalled: is_installed,
             isQueued: is.queued,
-            isDelisted: !!gameInfo.is_delisted,
+            isDelisted: !!asStoreGame(gameInfo, 'steam')?.is_delisted,
             installDisabled: disabledInstallButtons
           }) && (
             <Dropdown

@@ -1,4 +1,5 @@
 import './index.css'
+import { asStoreGame } from 'common/gameInfoNarrowing'
 import { hasCapability, isStore } from 'common/storeCapabilities'
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
@@ -190,11 +191,12 @@ export default React.memo(function GamePage(): JSX.Element | null {
   const isDownloadingEngine = status === 'engine-download'
   const isStartingSteam = status === 'steam-starting'
   const notAvailable = !gameAvailable && gameInfo.is_installed
+  const legendaryGame = asStoreGame(gameInfo, 'legendary')
   const notSupportedGame =
     hasCapability(gameInfo.runner, 'hasStoreCatalog') &&
     !!gameInfo.thirdPartyManagedApp &&
-    !gameInfo.isEAManaged &&
-    !gameInfo.isUbisoftManaged
+    !legendaryGame?.isEAManaged &&
+    !legendaryGame?.isUbisoftManaged
   const isOffline = connectivity.status !== 'online'
   const notPlayableOffline = isOffline && !gameInfo.canRunOffline
 

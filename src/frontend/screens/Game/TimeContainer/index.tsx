@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { asStoreGame } from 'common/gameInfoNarrowing'
 import { hasCapability } from 'common/storeCapabilities'
 
 import { useTranslation } from 'react-i18next'
@@ -56,7 +57,7 @@ function TimeContainer({ gameInfo }: Props) {
     runner,
     'playtimeFromStoreMetadata'
   )
-    ? gameInfo.extra?.steamPlaytimeMinutes
+    ? asStoreGame(gameInfo, 'steam')?.extra?.steamPlaytimeMinutes
     : undefined
 
   const formatSteamPlaytime = (mins: number) => {
@@ -71,7 +72,8 @@ function TimeContainer({ gameInfo }: Props) {
   // and playtime data sourced from the synced library (extra.steamLastPlayed /
   // extra.steamPlaytimeMinutes). Non-Steam games fall through to the tsInfo path.
   if (hasCapability(runner, 'playtimeFromStoreMetadata')) {
-    const steamLastPlayed = gameInfo.extra?.steamLastPlayed
+    const steamLastPlayed = asStoreGame(gameInfo, 'steam')?.extra
+      ?.steamLastPlayed
     const lastPlayedDisplay = steamLastPlayed
       ? new Intl.DateTimeFormat(undefined, {
           year: 'numeric',

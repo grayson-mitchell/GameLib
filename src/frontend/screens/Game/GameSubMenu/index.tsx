@@ -3,6 +3,7 @@ import {
   steamUninstallNeedsConfirm
 } from './steamUninstallConfirm'
 import './index.css'
+import { asStoreGame } from 'common/gameInfoNarrowing'
 import { hasCapability, isStore } from 'common/storeCapabilities'
 
 import { useCallback, useContext, useEffect, useState } from 'react'
@@ -476,7 +477,7 @@ export default function GamesSubmenu({
           {showSteamSubMenuInstallOptions({
             runner,
             isInstalled,
-            isDelisted: !!gameInfo.is_delisted
+            isDelisted: !!asStoreGame(gameInfo, 'steam')?.is_delisted
           }) && (
             <button
               onClick={() => openSteamInstallOptions(appName, gameInfo)}

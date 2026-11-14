@@ -1,4 +1,5 @@
 import { MouseEvent, useContext, useEffect, useState } from 'react'
+import { asStoreGame } from 'common/gameInfoNarrowing'
 import { hasCapability } from 'common/storeCapabilities'
 import { useTranslation } from 'react-i18next'
 import GameContext from '../../GameContext'
@@ -126,7 +127,7 @@ const AppleWikiInfo = ({ gameInfo }: Props) => {
     is.mac &&
     hasCapability(gameInfo.runner, 'usesBottleRuntime') &&
     gameInfo.is_mac_native === false &&
-    gameInfo.steamPlatformsCaptured === true
+    asStoreGame(gameInfo, 'steam')?.steamPlatformsCaptured === true
 
   const bridgeLine = resolveBridgeRouteDisplay(bridgeVerdict)
 

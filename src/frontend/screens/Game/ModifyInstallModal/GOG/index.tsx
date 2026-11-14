@@ -1,4 +1,4 @@
-import { GameInfo } from 'common/types'
+import type { GogGameInfo } from 'common/types/gog'
 import { BuildItem, GogInstallInfo } from 'common/types/gog'
 import {
   InfoBox,
@@ -21,7 +21,7 @@ import { faXmarkCircle } from '@fortawesome/free-regular-svg-icons'
 import BranchSelector from 'frontend/screens/Library/components/InstallModal/DownloadDialog/BranchSelector'
 
 interface GOGModifyInstallModal {
-  gameInfo: GameInfo
+  gameInfo: GogGameInfo
   onClose: () => void
 }
 

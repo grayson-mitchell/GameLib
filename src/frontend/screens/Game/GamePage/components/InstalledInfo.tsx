@@ -1,4 +1,5 @@
 import { useContext } from 'react'
+import { asStoreGame } from 'common/gameInfoNarrowing'
 import { hasCapability } from 'common/storeCapabilities'
 import { useTranslation } from 'react-i18next'
 import GameContext from '../../GameContext'
@@ -128,7 +129,9 @@ const InstalledInfo = ({ gameInfo }: Props) => {
       {isThirdParty && (
         <div>
           <b>{t('info.third-party-app', 'Third-Party Manager')}</b>{' '}
-          {gameInfo.isEAManaged ? 'EA app' : gameInfo.thirdPartyManagedApp}
+          {asStoreGame(gameInfo, 'legendary')?.isEAManaged
+            ? 'EA app'
+            : gameInfo.thirdPartyManagedApp}
         </div>
       )}
       {!isThirdParty && (
