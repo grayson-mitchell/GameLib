@@ -1,7 +1,8 @@
 ---
 phase: 47
 slug: migrate-aggregated-store-search-from-cheapshark-to-istherean
-status: draft
+status: approved
+reviewed_at: 2026-11-14
 shadcn_initialized: false
 preset: none
 created: 2026-11-14
@@ -59,7 +60,7 @@ i18n namespace (verified): the StoreSearch screen and both child components call
 
 ## Spacing Scale
 
-Inherited verbatim: `--space-3xs` 4, `--space-2xs` 6, `--space-xs` 8, `--space-sm` 12, `--space-md` 16, `--space-lg` 24, `--space-xl` 48 (px at 16px root). Exceptions: none. New elements use only:
+Inherited verbatim: `--space-3xs` 4, `--space-2xs` 6, `--space-xs` 8, `--space-sm` 12, `--space-md` 16, `--space-lg` 24, `--space-xl` 48 (px at 16px root). Exceptions: `--space-2xs` (6px) and `--space-sm` (12px) are off the 4-multiple standard set; both are inherited Phase 20 tokens from its em-based scale, kept for visual consistency with the existing rows. New elements use only:
 
 | Element | Spacing |
 |---|---|
@@ -268,11 +269,11 @@ Do not add a "Powered by IsThereAnyDeal" line in this contract. Whether ITAD ter
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: PASS
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS
+- [x] Dimension 5 Spacing: FLAG (inherited 6px/12px tokens; non-blocking)
+- [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** approved 2026-11-14 (gsd-ui-checker; 5 PASS, 1 non-blocking FLAG)
