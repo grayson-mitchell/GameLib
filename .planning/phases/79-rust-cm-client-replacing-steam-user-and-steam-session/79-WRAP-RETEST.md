@@ -62,4 +62,48 @@ The verdict line (column 0, exactly one) is written in the Result section below.
 
 ## Result
 
-Pending (filled in by the Task 2 live run).
+Run window: 2026-11-15, about 07:19 to 07:28 NZDT. Live run by the orchestrator with the operator.
+
+verdict: PASS
+
+### Bypass
+
+`arm-b-nowrap.patch` no longer applied (`git apply --check` failed at user.ts:565). The
+equivalent edit was hand-made in `wrappedConnectNow` (user.ts, about line 599): the
+`withMacSteamOffline((wrap) => this.connectSteamUserClient(...))` call became
+`void this.deps.macSteamOffline.withMacSteamOffline` plus
+`await this.connectSteamUserClient(token, { reason, wrap: 'not-darwin', generation })`,
+marked `// SPIKE-075 TEMP: wrap bypassed (unwrapped real-app logon). REVERT.` Never
+committed. `pnpm build:sidecar` produced a sidecar.js newer than user.ts, and the bundle
+contained `not-darwin`.
+
+### Evidence
+
+- Preconditions held: no other GameLib shell or sidecar was running before launch.
+- Mac Steam was quit and relaunched fresh. connection_log.txt showed `LogOff()` at 07:26:00
+  (the quit), then `LogOn() called` at 07:26:14 and `RecvMsgClientLogOnResponse() : 'OK'`
+  at 07:26:15 for `[U:1:<redacted>]`. No LogOff or Logged Off line appears after 07:26:15
+  through the end of the window (checked about 07:28:24).
+- Operator pressed Refresh. gamelib.log (line 320, 07:26:40):
+  `CM logon mode=authenticated reason=user-refresh wrap=not-darwin`
+- `gooffline` occurrences in gamelib.log for this run: 0.
+- Operator watched Mac Steam Friends for at least 90 s after Refresh and said: "Stayed
+  signed in".
+
+### Cleanup
+
+Dev shell killed, `git checkout -- src/backend/storeManagers/steam/user.ts` run,
+`git diff --quiet HEAD -- user.ts` exits 0, `pnpm build:sidecar` re-run (0 bypass markers).
+
+### Deviation
+
+`pnpm tauri:dev` reported "Port 5173 is already in use": a vite from the same repo, started
+the previous evening, was already serving, so the shell ran against that dev server. The
+sidecar was freshly built and started, so the backend under test was the bypassed one.
+Harmless.
+
+### Consequence for D-10
+
+An unwrapped authenticated Refresh does not sign Mac Steam's Friends out on a freshly
+started client. The wrap is not needed for this arm. The CM-fallback Refresh arm in Rust
+is still retested in UAT-B (79-37, run by 79-38).
