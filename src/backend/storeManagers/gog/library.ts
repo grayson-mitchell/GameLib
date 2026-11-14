@@ -2,7 +2,8 @@ import type { ManagerDeps } from 'backend/services/types'
 import type { CallRunnerOptions } from 'common/types'
 import axios, { AxiosError, AxiosResponse } from 'axios'
 import { GOGUser } from './user'
-import { GOGImportData, ExecResult, LaunchOption } from 'common/types'
+import { ExecResult, LaunchOption } from 'common/types'
+import type { GOGImportData } from 'common/types/gog'
 import {
   GogGameInfo,
   GogInstalledInfo,

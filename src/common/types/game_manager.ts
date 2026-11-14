@@ -6,10 +6,9 @@ import {
   ExecResult,
   InstallArgs,
   InstallInfo,
-  LaunchOption,
-  GOGAchievement
+  LaunchOption
 } from 'common/types'
-import { GOGCloudSavesLocation } from './gog'
+import { GOGCloudSavesLocation, GOGAchievement } from './gog'
 import type LogWriter from 'backend/logger/log_writer'
 
 // 37-02 (D-06/D-07): the structured affordance an install failure carries,

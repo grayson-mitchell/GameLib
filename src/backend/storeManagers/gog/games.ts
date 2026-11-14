@@ -16,13 +16,16 @@ import {
   ExtraInfo,
   GameSettings,
   ExecResult,
-  GOGImportData,
   InstallArgs,
   InstallProgress,
-  LaunchOption,
-  GOGAchievement
+  LaunchOption
 } from 'common/types'
-import type { GogGameInfo, GogInstalledInfo } from 'common/types/gog'
+import type {
+  GogGameInfo,
+  GogInstalledInfo,
+  GOGImportData,
+  GOGAchievement
+} from 'common/types/gog'
 import { existsSync, rmSync } from 'graceful-fs'
 import {
   logError,

@@ -151,7 +151,7 @@ import {
 } from 'backend/logger'
 import type { GOGManagerDeps } from '../library'
 import { createTestManagerDeps } from 'backend/testUtils/testServices'
-import type { GOGImportData } from 'common/types'
+import type { GOGImportData } from 'common/types/gog'
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 import { existsSync } from 'graceful-fs'
 import shlex from 'shlex'

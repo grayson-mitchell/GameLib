@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { existsSync, unlinkSync } from 'graceful-fs'
 import { logError, logInfo, LogPrefix, logWarning } from 'backend/logger'
-import { GOGLoginData } from 'common/types'
+import type { GOGLoginData } from 'common/types/gog'
 import type { GOGManagerDeps } from './library'
 import { GOGCredentials, UserData } from 'common/types/gog'
 import { clearCache } from 'backend/utils'

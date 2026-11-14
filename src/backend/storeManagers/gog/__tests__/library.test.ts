@@ -149,7 +149,7 @@ import type {
   GogInstalledInfo,
   Library
 } from 'common/types/gog'
-import type { GOGImportData } from 'common/types'
+import type { GOGImportData } from 'common/types/gog'
 
 const fakeCredentials: GOGCredentials = {
   access_token: 'test-access-token',

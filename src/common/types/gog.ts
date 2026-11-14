@@ -511,3 +511,48 @@ export interface GogGameInfo extends GameInfoCore {
   install: Partial<GogInstalledInfo>
   gog_save_location?: GOGCloudSavesLocation[]
 }
+
+export type GOGAchievement = {
+  achievement_id: string
+  achievement_key: string
+  visible: boolean
+  name: string
+  description: string
+  image_url_unlocked: string
+  image_url_locked: string
+  rarity: number
+  date_unlocked: string | null
+  rarity_level_description: string
+  rarity_level_slug: string
+}
+
+export type GameAchievement = GOGAchievement
+
+export interface GOGLoginData {
+  expires_in: number
+  access_token: string
+  refresh_token: string
+  user_id: string
+  loginTime: number
+  error?: boolean
+}
+
+export interface GOGImportData {
+  // "appName": "1441974651", "buildId": "55136646198962890", "title": "Prison Architect", "tasks": [{"category": "launcher", "isPrimary": true, "languages": ["en-US"], "name": "Prison Architect", "osBitness": ["64"], "path": "Launcher/dowser.exe", "type": "FileTask"}, {"category": "game", "isHidden": true, "languages": ["en-US"], "name": "Prison Architect - launcher process Prison Architect64_exe", "osBitness": ["64"], "path": "Prison Architect64.exe", "type": "FileTask"}, {"category": "document", "languages": ["en-US"], "link": "http://www.gog.com/support/prison_architect", "name": "Support", "type": "URLTask"}, {"category": "other", "languages": ["en-US"], "link": "http://www.gog.com/forum/prison_architect/prison_break_escape_map_megathread/post1", "name": "Escape Map Megathread", "type": "URLTask"}], "installedLanguage": "en-US"}
+  appName: string
+  buildId: string
+  title: string
+  tasks: Array<{
+    category: string
+    isPrimary?: boolean
+    languages?: Array<string>
+    arguments?: Array<string> | string
+    path: string
+    name: string
+    type: string
+  }>
+  installedLanguage: string
+  platform: GogInstallPlatform
+  versionName: string
+  dlcs: string[]
+}

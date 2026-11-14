@@ -1,4 +1,4 @@
-import { GameAchievement } from 'common/types'
+import type { GameAchievement } from 'common/types/gog'
 import { useMemo } from 'react'
 
 interface Props {

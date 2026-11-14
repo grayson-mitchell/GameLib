@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
-import type { GameAchievement, RuntimeName } from '../../types'
-import type { GOGCloudSavesLocation } from '../gog'
+import type { RuntimeName } from '../../types'
+import type { GameAchievement, GOGCloudSavesLocation } from '../gog'
 import {
   nonEmptyString,
   optionalArg,

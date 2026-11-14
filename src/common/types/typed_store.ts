@@ -10,13 +10,12 @@ import {
   HiddenGame,
   FavouriteGame,
   DMQueueElement,
-  GOGLoginData,
   AppSettings,
   WikiInfo,
   WindowProps,
   UploadedLogData
 } from 'common/types'
-import { UserData, GogInstalledInfo } from 'common/types/gog'
+import { UserData, GogInstalledInfo, GOGLoginData } from 'common/types/gog'
 import type { SideloadGameInfo } from 'common/types/sideload'
 import { NileUserData } from './nile'
 import { SteamUserData, SteamBottleConfig } from './steam'

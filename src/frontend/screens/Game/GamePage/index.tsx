@@ -41,9 +41,9 @@ import {
   GameSettings,
   Runner,
   WikiInfo,
-  InstallInfo,
-  GameAchievement
+  InstallInfo
 } from 'common/types'
+import type { GameAchievement } from 'common/types/gog'
 
 import GamePicture from '../GamePicture'
 import TimeContainer from '../TimeContainer'

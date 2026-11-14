@@ -1,6 +1,6 @@
 import { TypeCheckedStoreBackend } from '../../typed_store'
 import CacheStore from '../../cache'
-import { GOGAchievement } from 'common/types'
+import type { GOGAchievement } from 'common/types/gog'
 import {
   GogGameInfo,
   GOGSessionSyncQueueItem,
