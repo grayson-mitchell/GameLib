@@ -10,7 +10,8 @@
 //!    chunks plus decoded CDN chunks and checked against `sha_content`. The old tree and the
 //!    appmanifest are untouched, so a cancel or failure here leaves the old build launchable (D-16).
 //!    Temps that already passed the whole-file SHA-1 survive a cancel (a pause) and are re-hashed
-//!    and reused by the next run of the same target build; a failure deletes every temp;
+//!    and reused by the next run of the same target build; a failure deletes every temp. A cancel
+//!    before the commit leaves no journal unless the run was itself a commit-resume (IN-02);
 //! 3. commit: temps are renamed over their targets, files the new manifests dropped are deleted,
 //!    directories and symlinks are placed, modes applied, and the ACF finalized.
 //!
@@ -1731,12 +1732,15 @@ async fn delta_body(
     };
 
     // The journal goes down before the first rename: a kill from here on is a commit-resume.
+    // A cancel landing after this write (IN-02) removes the journal again in the abort branch.
+    let mut wrote_journal = false;
     if failures.is_empty() && !cancel.is_cancelled() && unattempted == 0 {
         if let Some(path) = journal_file.clone() {
             let j = job.clone();
             let written = tokio::task::spawn_blocking(move || write_journal(&j, &path)).await;
             match written {
                 Ok(Ok(())) => {
+                    wrote_journal = true;
                     #[cfg(feature = "test-hooks")]
                     crate::test_hooks::after_journal_write(&job.job_id);
                 }
@@ -1752,6 +1756,8 @@ async fn delta_body(
 
     // Any failure or cancel before the commit: remove every temp and touch no game file. A fresh
     // run leaves the ACF alone; a resume already has a mixed tree, so it is marked unfinished.
+    // IN-02: a journal this run wrote while not resuming describes nothing (no rename happened),
+    // so it is removed; a pre-existing (resuming) journal stays, the tree may be mixed.
     if !failures.is_empty() || cancel.is_cancelled() || unattempted > 0 {
         // A pause (cancel, no failure) keeps the temps that passed their whole-file SHA-1 for the
         // next run of the same target; an error deletes every temp and the ledger.
@@ -1786,7 +1792,15 @@ async fn delta_body(
             .map(|(w, _)| w.tmp.clone())
             .collect();
         let (ledger_job, ledger_to) = (job.clone(), ledger_file.clone());
+        let orphan_journal = if wrote_journal && !resuming {
+            journal_file.clone()
+        } else {
+            None
+        };
         let ledger_ok = tokio::task::spawn_blocking(move || {
+            if let Some(j) = &orphan_journal {
+                let _ = fs::remove_file(j);
+            }
             for t in &doomed {
                 let _ = fs::remove_file(t);
             }
