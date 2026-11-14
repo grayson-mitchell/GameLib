@@ -4,13 +4,13 @@ milestone: v0.10
 milestone_name: Foundations
 status: executing
 stopped_at: Phase 47 context gathered
-last_updated: "2026-11-14T08:45:27.042Z"
-last_activity: 2026-11-14 -- Phase 47 planning complete
+last_updated: "2026-11-14T09:11:54.952Z"
+last_activity: 2026-11-14
 progress:
   total_phases: 24
   completed_phases: 18
   total_plans: 401
-  completed_plans: 388
+  completed_plans: 389
   percent: 75
 ---
 
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 70 — split-gameinfo-into-shared-and-per-store-shapes
+**Current focus:** Phase 47 — migrate-aggregated-store-search-from-cheapshark-to-istherean
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -72,12 +72,12 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 
 ## Current Position
 
-Phase: 70 (split-gameinfo-into-shared-and-per-store-shapes) — EXECUTING
-Plan: 7 of 22
+Phase: 47 (migrate-aggregated-store-search-from-cheapshark-to-istherean) — EXECUTING
+Plan: 2 of 13
 Status: Ready to execute
-Last activity: 2026-11-14 -- Phase 47 planning complete
+Last activity: 2026-11-14
 
-Progress: [██████████] 99%
+Progress: [██████████] 97%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
