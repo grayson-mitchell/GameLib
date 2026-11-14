@@ -2,7 +2,7 @@
   "games": [
     {
       "app_name": "redacted",
-      "runner": "redacted",
+      "runner": "gog",
       "title": "redacted",
       "canRunOffline": true,
       "install": {

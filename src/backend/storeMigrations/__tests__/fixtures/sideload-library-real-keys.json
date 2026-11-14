@@ -1,7 +1,7 @@
 {
   "games": [
     {
-      "runner": "redacted",
+      "runner": "sideload",
       "app_name": "redacted",
       "title": "redacted",
       "install": {

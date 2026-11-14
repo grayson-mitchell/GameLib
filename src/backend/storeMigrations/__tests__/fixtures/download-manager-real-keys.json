@@ -29,7 +29,7 @@
           "is_mac_native": true,
           "is_windows_native": true,
           "mac_arch": "redacted",
-          "runner": "redacted",
+          "runner": "steam",
           "steamPlatformsCaptured": true,
           "store_url": "redacted",
           "title": "redacted",
@@ -58,7 +58,7 @@
           "is_installed": false,
           "is_linux_native": false,
           "is_mac_native": false,
-          "runner": "redacted",
+          "runner": "nile",
           "title": "redacted"
         }
       }
@@ -150,7 +150,7 @@
           "isEAManaged": false,
           "isUbisoftManaged": false,
           "is_linux_native": false,
-          "runner": "redacted",
+          "runner": "legendary",
           "store_url": "redacted"
         }
       }
@@ -186,7 +186,7 @@
           "is_mac_native": true,
           "is_windows_native": true,
           "mac_arch": "redacted",
-          "runner": "redacted",
+          "runner": "steam",
           "steamPlatformsCaptured": true,
           "store_url": "redacted",
           "title": "redacted",
@@ -215,7 +215,7 @@
           "is_installed": false,
           "is_linux_native": false,
           "is_mac_native": false,
-          "runner": "redacted",
+          "runner": "nile",
           "title": "redacted"
         }
       }
@@ -307,7 +307,7 @@
           "isEAManaged": false,
           "isUbisoftManaged": false,
           "is_linux_native": false,
-          "runner": "redacted",
+          "runner": "legendary",
           "store_url": "redacted"
         }
       }
