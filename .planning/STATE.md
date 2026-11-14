@@ -4,12 +4,12 @@ milestone: v0.10
 milestone_name: Foundations
 status: executing
 stopped_at: Phase 47 context gathered
-last_updated: "2026-11-14T08:03:06.219Z"
-last_activity: 2026-11-14
+last_updated: "2026-11-14T08:45:27.042Z"
+last_activity: 2026-11-14 -- Phase 47 planning complete
 progress:
   total_phases: 24
   completed_phases: 18
-  total_plans: 388
+  total_plans: 401
   completed_plans: 388
   percent: 75
 ---
@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 Phase: 70 (split-gameinfo-into-shared-and-per-store-shapes) — EXECUTING
 Plan: 7 of 22
 Status: Ready to execute
-Last activity: 2026-11-14
+Last activity: 2026-11-14 -- Phase 47 planning complete
 
 Progress: [██████████] 99%
 

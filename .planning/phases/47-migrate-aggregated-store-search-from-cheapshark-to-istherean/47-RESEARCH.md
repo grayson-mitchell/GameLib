@@ -404,17 +404,23 @@ export function formatPrice(amount: string, currencyCode: string, language: stri
 | A8 | 429 applies to the keyless lookup route too | D6 | Minor; uniform handling covers both |
 | A9 | `getLocaleSettings`/`REGION_OPTIONS` can be imported across screens without tripping a lint boundary | D3 | Hoist to `src/common/` |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **ITAD terms on user-supplied keys (the INFERENCE the roadmap asked to verify).**
    - What we know: vendor statement (2026-10-01): "rate limit follows the app, doesn't matter whether it's api key or oauth." The prior research's terms list (SPEC) says nothing against users registering their own app. Third-party search results could not surface the terms page; `docs.isthereanydeal.com` returns 403 to WebFetch from here, and I did not try to bypass that.
    - Unclear: whether the terms restrict distributing an app that asks users for keys, or require approval for it; whether one person registering many apps is "circumvention" ("will cause ban", SPEC). A user registering **one** app of their own for personal use is the ordinary case and is not circumvention by the spec wording we have, but that is still unverified.
    - Recommendation: keep the setting optional and last-wave; add a one-line question to the existing `api@isthereanydeal.com` thread (alongside the owed Q1 confirmation) before shipping it as a headline feature. Do not claim in UI copy that it gives "your own quota" until confirmed.
+   - **RESOLVED:** deferred by D-07 (non-blocking): Plan 47-02 Task 2 sends the question without waiting; Plans 47-11..47-13 ship the optional field with copy that claims no quota benefit.
 2. **Country/currency coverage.** Remains UNKNOWN until the operator runs the Wave 0 sweep. Plan branches are in the table above.
+   - **RESOLVED:** closed by D-12: the Wave 0 sweep is Plan 47-01's blocking operator checkpoint, which locks the measured country list in `itadCoverage.ts`.
 3. **Embedded-key CI secret.** Who injects it for release builds and what is the env var name? Human/CI decision; the plan needs a `checkpoint:human-action` task.
+   - **RESOLVED:** closed by D-01: repo secret `ITAD_API_KEY`, created by the operator in Plan 47-02 Task 1 and wired into release-tauri.yml by Plan 47-04.
 4. **Region UX.** Language-derived country is coarse and the only override is on the Deals screen. Accept for Phase 47 (recommended) or add a picker?
+   - **RESOLVED:** accepted: no picker this phase; Store Search reuses the Deals screen's stored region override (UI-SPEC section 1; Plan 47-09).
 5. **`getStoreSearchStoreMap` channel.** Keep as shim or delete (no renderer caller)? Deleting requires regenerating the IPC contract and the allow-list tests.
+   - **RESOLVED:** deleted: Plan 47-07 removes the handler, Plan 47-08 removes the channel, schema and preload invoker and regenerates the IPC contract.
 6. **Search result count.** Not specified by the roadmap; recommend 20-30 (each row costs price data, and search v1's result limit parameter name is UNKNOWN until the fixtures exist).
+   - **RESOLVED:** closed by D-09: 20 results; the parameter name is confirmed by Plan 47-01's fixtures (`ITAD_SEARCH_RESULTS_PARAM`).
 
 ## Environment Availability
 

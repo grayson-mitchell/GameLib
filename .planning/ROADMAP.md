@@ -171,7 +171,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 77: Runtime hardening from the v0.9 review debt** — 0 plans; not started
 - [ ] **Phase 78: Verification records and test health after v0.9** — 0 plans; not started
 - [ ] **Phase 79: Rust CM client replacing steam-user and steam-session** — 0 plans; not started; gated on spike 085 results
-- [ ] **Phase 47: Migrate aggregated store search from CheapShark to IsThereAnyDeal** — 0 plans; ITAD gates closed 2026-11-12; ready to plan (moved from v0.8)
+- [ ] **Phase 47: Migrate aggregated store search from CheapShark to IsThereAnyDeal** — 13 plans; ITAD gates closed 2026-11-12; planned 2026-11-14 (moved from v0.8)
 
 ## Phase Details
 
@@ -1047,13 +1047,16 @@ Plans:
 Plans (expand-contract; execution waits on Phase 69's 3 human UAT items per D-14):
 
 **Wave 1** — types and tools
+
 - [x] 70-01-PLAN.md — D-14 gate; GameInfoCore + five members + nested split in store homes; isStoreGame/asStoreGame (GameInfo stays fat)
 - [x] 70-02-PLAN.md — D-15 narrowing ratchet tool + tests (not yet wired)
 
 **Wave 2**
+
 - [x] 70-03-PLAN.md — Read-only flip probe (tsc with GameInfo as the union, in memory) + measured reader inventory
 
 **Wave 3** — readers, by area (parallel)
+
 - [x] 70-04-PLAN.md — Steam store manager returns SteamGameInfo
 - [x] 70-05-PLAN.md — GOG + sideload store managers, typed_store
 - [x] 70-06-PLAN.md — Legendary + Amazon managers, storeManagerCommon, renderer mirror store types
@@ -1062,36 +1065,45 @@ Plans (expand-contract; execution waits on Phase 69's 3 human UAT items per D-14
 - [x] 70-09-PLAN.md — Library screen readers
 
 **Wave 4**
+
 - [x] 70-10-PLAN.md — Freeze D-15 baseline (reviewed allowlist) and wire into lint.yml / pre-push
 
 **Wave 5**
+
 - [x] 70-11-PLAN.md — Flip GameInfo to the union; fold nested core types; drift guard; remove probe
 
 **Wave 6**
+
 - [x] 70-12-PLAN.md — D-13: GOG-only types out of common/types.ts; typesHomes test
 
 **Wave 7**
+
 - [x] 70-13-PLAN.md — Strict per-runner GameInfo IPC schema (install/updateGame/addNewApp) + parity
 
 **Wave 8**
+
 - [x] 70-14-PLAN.md — D-11 settings / LaunchParams / GameSettings strict schemas; delete phase70Passthrough
 - [x] 70-15-PLAN.md — D-12 strip migration on all library caches + download queue
 
 **Wave 9**
+
 - [x] 70-16-PLAN.md — D-16 live gate on an upgraded profile (70-UAT.md)
 
 **Gap closure** (70-VERIFICATION.md G1–G3, review WR-01/04/05)
 
 **Gap wave 1**
+
 - [x] 70-17-PLAN.md — G1: narrowing ratchet runs in CI and pre-push even when an earlier step is red
 - [x] 70-18-PLAN.md — G2/G3 foundation: schema-derived stripToSchema (nulls, arrays, records, unions, loose boundaries)
 
 **Gap wave 2**
+
 - [x] 70-19-PLAN.md — G2: GameInfo library chains re-strip v2 -> v3 with stripToSchema + WR-04 regression fixtures
 - [x] 70-20-PLAN.md — G2: sanitise Steam refresh entries built from steam_metadata; default legendary about.description
 - [x] 70-21-PLAN.md — G3 (per-game): settings/game v1 -> v2 strip step + retired-key / invalid-value fixtures
 
 **Gap wave 3**
+
 - [x] 70-22-PLAN.md — G3 (global): settings/global v1 -> v2 strip step + fixtures; deferred knip check for stripToSchema
 
 ### Phase 71: Rust shell module decomposition
@@ -1472,7 +1484,7 @@ Plans:
 
 **Requirements**: PRICE-01, PRICE-02, PRICE-03 (phase-level IDs minted during `/gsd-plan-phase 47`). Moved into v0.10 Foundations 2026-11-12.
 **Depends on:** Phase 20 (Aggregated Store Search — CheapShark), which minted the provider-neutral `common/types/storeSearch` vocabulary (D-11/D-12/D-13) this phase is the second implementation of. **Not** Phase 46 — `phase.add` fills `Depends on` with the immediately-preceding phase number as a positional guess, and Phase 46 (Windows single-instance guard) is unrelated; corrected by hand at filing time.
-**Plans:** 0 plans
+**Plans:** 13 plans
 
 **Research is already complete** — `.planning/quick/260916-gdg-answer-q2-cheapshark-to-itad-migration-cost/260916-gdg-RESEARCH.md` answers `questions.md` Q2 with claims graded MEASURED / SPEC / UNKNOWN. Do not re-derive it; do preserve its grades when quoting.
 
@@ -1493,13 +1505,46 @@ Plans:
    > 2. rate limit follows the app, doesn't matter whether it's api key or oauth. You can see your current usage in the app section on ITAD. The solution for this might be to have your own intermediate server between ITAD and client, to help with caching.
 
    **Consequences.** The rate limit follows the **app** — API key vs OAuth makes no difference (an ITAD written statement — vendor statement, 2026-10-01 — not MEASURED). The 1000 req/5min figure keeps its **SPEC** grade. Current usage is visible in the app section on ITAD. **The OAuth branch is DEAD:** OAuth does not move quota to each user, so `hideOwned`/`wishlistOnly` are no longer a reason to build it. Phase 47 builds the **embedded-key + hard-caching** branch.
+
    - **Q1 is literally ambiguous.** "yes, this is fine" in reply to "Does the clause rule out (b)?" almost certainly means a deals browser is fine — but a literal "yes" means it _does_ rule it out. A one-line written confirmation from ITAD is owed before any deals-browser work. The deals browser stays **OUT** of Phase 47 scope regardless.
    - **Correcting the record:** this gate previously said the email also asked whether a partner arrangement on affiliate links was worth discussing. It did not — the affiliate-partnership question was never asked. It is **UNASKED and OPEN**.
 3. **Decide the shared-key strategy — DECIDED 2026-11-12 (operator): no proxy now.** Build: an embedded key; a persisted per-install cache; debounced search; keyless `POST /lookup/id/shop/61/v1` for AppID mapping (**MEASURED** no-key); `429`/`Retry-After` degrading to the cached price with a visible timestamp; an optional user-supplied key setting — each user registering their own ITAD app gets their own budget, which is an **INFERENCE** from "follows the app", to be verified against ITAD's terms before building. Operating policy: monitor usage in ITAD's app dashboard; build Tomas's suggested intermediate caching server only when usage approaches the limit; request a raised limit only if needed.
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 47 to break down)
+**Wave 1**
+
+- [ ] 47-01-PLAN.md — Wave 0 ITAD coverage sweep (operator-run, blocking) and measured constants (D-12)
+- [ ] 47-02-PLAN.md — Operator actions: ITAD_API_KEY repo secret (D-01) and non-blocking ITAD thread reply (D-07)
+- [ ] 47-03-PLAN.md — Intl currency/date/region formatters replace formatUsdPrice; Currency Contract pointer
+- [ ] 47-04-PLAN.md — Build-time key define (dev + SEA bundles), runtime key resolver, release fail-fast (D-01..D-04)
+- [ ] 47-05-PLAN.md — itad_prices / itad_steam_gids CacheStores and the timer-free 429 gate (D-08, D-10)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 47-06-PLAN.md — ITAD adapter: localized search, verbatim deals, stale-cache fallback, keyless gid lookup
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 47-07-PLAN.md — Handlers switch to ITAD; delete cheapshark.ts, StoreSearchStore and the storeMap slot
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 47-08-PLAN.md — IPC switch: registration, schemas, preload, getItadSteamGids, drop getStoreSearchStoreMap, contract regen, renderer envelope
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 47-09-PLAN.md — Store Search container: country plumbing, region caption/fallback note, error variants, gid badge join
+- [ ] 47-11-PLAN.md — Optional user key storage: keyring slot, owner, boot step (D-05/D-06)
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
+- [ ] 47-10-PLAN.md — Cached-at lines on rows and breakdown sub-rows; country-aware breakdown (PRICE-03); non-blocking live check
+- [ ] 47-12-PLAN.md — User key IPC channels and adapter precedence with rejected-key fallback (D-05/D-06)
+
+**Wave 7** *(blocked on Wave 6 completion)*
+
+- [ ] 47-13-PLAN.md — Settings > Advanced ITAD key field with rejected-key warning (D-05/D-06)
 
 ### Phase 76: Engine-correct bottle for DRM-mode launches (v0.9 audit S9)
 
@@ -1545,4 +1590,5 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (run /gsd-plan-phase 79 to break down)
