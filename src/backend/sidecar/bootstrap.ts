@@ -33,6 +33,7 @@ import { releaseOnStdinEof } from './stdinEofRelease'
 import {
   READY_SENTINEL,
   RUST_STEAMCM_CONFIGURE,
+  RUST_STEAMCM_SIGNIN_CANCEL,
   RUST_STEAMCM_WRAP_RESTORE_IF_OWED
 } from 'common/types/sidecarTransport'
 import type { RequestRustInvoke } from 'backend/host'
@@ -1604,7 +1605,16 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       // carry the same instances.
       run: (_ctx, _io, state) => {
         state.services.steamSession = prebuilt.steamSession ?? {
-          signIn: createSteamSignInState(),
+          signIn: createSteamSignInState({
+            // Sign-out drops a rust sign-in flow; the cancel is fire-and-forget (Phase 79, D-05).
+            cancelRustFlow: (flowId) => {
+              const host = state.services.host
+              if (!host) return
+              void host
+                .requestRustInvoke(RUST_STEAMCM_SIGNIN_CANCEL, [{ flowId }])
+                .catch(() => undefined)
+            }
+          }),
           authTrigger: createSteamAuthTrigger(),
           libraryState: createSteamLibraryState(),
           gameSession: createSteamGameSessionState()
