@@ -54,8 +54,15 @@ const SlideUpTransition = forwardRef(function SlideUpTransition(
 // mechanism this component already uses for `backgroundColor` -- rather
 // than an external stylesheet racing MUI's own emotion-injected paper
 // class on specificity/injection order.
+//
+// quick-261114-pqm: --modal-border was declared in every theme but consumed
+// nowhere; the paper now draws it, which is what gives Midnight Mirage
+// dialogs a visible edge (its surface token was fixed alongside in
+// themes.scss). The transparent fallback keeps the paper edgeless if a
+// future theme omits the token.
 const StyledPaper = styled(Paper)(() => ({
   backgroundColor: 'var(--modal-background)',
+  border: '1px solid var(--modal-border, transparent)',
   maxWidth: '100%',
   borderRadius: '10px',
   '&:has(.settingsDialogContent):not(:has(.logs-wrapper))': {

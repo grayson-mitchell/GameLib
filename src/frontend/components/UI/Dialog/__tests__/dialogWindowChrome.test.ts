@@ -75,6 +75,20 @@ describe('quick-260820-kq0 round 3: the shared Dialog primitive carries a rounde
     expect(styledPaperBlock).toMatch(/borderRadius:\s*'10px'/)
   })
 
+  it('SOURCE GATE (PRESENCE) -- quick-261114-pqm: StyledPaper draws a 1px edge from --modal-border, so the token every theme declares is actually consumed', () => {
+    const source = read(DIALOG_TSX)
+
+    // Breaks if: the border declaration is removed from StyledPaper. The
+    // token was declared in all 10 themes but consumed nowhere, so Midnight
+    // Mirage dialogs had no edge.
+    const styledPaperBlock = source
+      .split('const StyledPaper')[1]
+      ?.split(')))')[0]
+    expect(styledPaperBlock).toMatch(
+      /border:\s*'1px solid var\(--modal-border, transparent\)'/
+    )
+  })
+
   it('SOURCE GATE (PRESENCE) -- MuiDialog is wired to a directional Slide transition (not the library default Fade) at a 500ms duration', () => {
     const source = read(DIALOG_TSX)
 
