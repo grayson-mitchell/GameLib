@@ -1587,7 +1587,7 @@ Plans:
 **Goal:** Steam's CM network is reached from Rust, and `steam-user` and `steam-session` are deleted. This is the critical path to retiring the Node sidecar: Phases 63, 73 and 75 moved scanners, the depot pipeline and local file formats, but CM auth, the anonymous public-data client, owned apps, manifest request codes, depot keys and redeem still live in Node (`steam/user.ts`, `userSignIn.ts`, `userSignInState.ts`, `userRedeem.ts`, `anonymousClient.ts`, `depot/planModel.ts`). Crate: steam-vent (spike 071c winner). Prior evidence: 077 (a second CM session collides with LogonSessionReplaced unless logonIDs differ), 080 (the Rust stack builds on macOS, Windows MSVC/GNU and Linux), 081 (three sessions coexist without kicks), 082 (one process, TLS providers), 073 (Rust owned-apps parity), 084 (owned apps from the running Mac Steam client). **Gate:** spike 085 (long-lived session across network drops and sleep/wake) must have final results before planning. Its frontmatter reads VALIDATED but its Results section was a placeholder on 2026-11-14, and its research already shows steam-vent's heartbeat failures never reach the caller, so GameLib likely owns reconnect. Reuse Phase 63's pattern: a Tauri-free crate in the `src-tauri/` workspace, `rustInvoke` with TypeScript signatures unchanged, a parity harness, a dev-only fallback flag, then delete the TypeScript clients and both npm packages. Open questions for discuss-phase: QR / credentials / SteamGuard sign-in on the Web-API path and refresh-token continuity, so existing users stay signed in; the macOS go-offline wrap that keeps Mac Steam's Friends list signed in; reconnect and session-lifetime ownership; whether the owned-apps fetch and artwork enrichment deferred from Phase 75 move here; and whether the install/uninstall/update polling state machines are a later slice. `STEAM-STACK.md` freezes `steam-user`/`steam-session`, so this phase must amend it. Came from the operator's request on 2026-11-14, after asking what follows Phase 75 in the sidecar migration.
 **Requirements**: TBD
 **Depends on:** Phase 75
-**Plans:** 25/44 plans executed
+**Plans:** 26/44 plans executed
 
 Plans:
 
@@ -1642,7 +1642,7 @@ Plans:
 - [x] 79-19-PLAN.md — Anonymous client on Rust; boot configure and owed-record cover
 - [x] 79-20-PLAN.md — Sign-in on Rust Web API flows; QR rotation redraw
 - [x] 79-21-PLAN.md — Tier 1 goldens, CLI spawn helper, Jest replay
-- [ ] 79-30-PLAN.md — Rust Refresh orchestration (steamcm_refresh) and enrichment ops through every layer
+- [x] 79-30-PLAN.md — Rust Refresh orchestration (steamcm_refresh) and enrichment ops through every layer
 
 **Wave 10** *(blocked on Wave 9 completion)*
 
