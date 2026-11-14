@@ -8,6 +8,15 @@
  */
 
 import type { Migration, VersionCodec } from '../storeVersioning/types'
+import {
+  downloadManagerChain,
+  gogInstalledChain,
+  gogLibraryChain,
+  legendaryLibraryChain,
+  nileLibraryChain,
+  sideloadLibraryChain,
+  steamLibraryChain
+} from './gameInfoLibraries'
 import { settingsGameChain } from './settingsGame'
 import { settingsGlobalChain } from './settingsGlobal'
 
@@ -23,7 +32,21 @@ export const STORE_MIGRATIONS: Readonly<Record<string, readonly Migration[]>> =
     'steam/mac-steam-offline-owed': [],
     // baseline v1 = the pre-engine `{kind, id, wineserverBin, dxvk?}`; codec in
     // storeVersioning/engineMarkerFile.ts
-    'engine/gamelib-engine-marker': []
+    'engine/gamelib-engine-marker': [],
+    // Phase 70 D-12: strip keys no GameInfo member declares (v1 -> v2).
+    'store_cache/steam_library': steamLibraryChain,
+    // Phase 70 D-12
+    'store_cache/gog_library': gogLibraryChain,
+    // Phase 70 D-12
+    'gog_store/installed': gogInstalledChain,
+    // Phase 70 D-12
+    'store_cache/legendary_library': legendaryLibraryChain,
+    // Phase 70 D-12
+    'store_cache/nile_library': nileLibraryChain,
+    // Phase 70 D-12 (unstamped on disk; adopted to v1 then stripped to v2)
+    'sideload_apps/library': sideloadLibraryChain,
+    // Phase 70 D-12, orchestrator resolution 4: queue/finished params.gameInfo
+    'store/download-manager': downloadManagerChain
   }
 
 /** Chain overrides keyed by chain key; `undefined`-free (an empty chain is `[]`). Test seam only. */
