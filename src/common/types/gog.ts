@@ -489,6 +489,7 @@ export interface GOGCredentials {
   loginType: number
 }
 
+/** @public first production consumers land in 70-04..70-09; tag removed in 70-10 */
 export interface GogInstalledInfo extends InstalledInfoCore {
   isDosbox?: boolean
   dosboxConf?: string[]
