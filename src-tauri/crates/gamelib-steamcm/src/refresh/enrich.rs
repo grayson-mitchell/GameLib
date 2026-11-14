@@ -748,7 +748,12 @@ mod tests {
     }
 
     fn ok_body(path: &str) -> Reply {
-        let id = path.rsplit('=').next().unwrap().to_string();
+        let id = path
+            .split("appids=")
+            .nth(1)
+            .and_then(|r| r.split('&').next())
+            .unwrap()
+            .to_string();
         Reply::json(json!({ id: {"success": true, "data": data((true, true, false))} }))
     }
 
@@ -774,7 +779,7 @@ mod tests {
     #[tokio::test]
     async fn stage_stops_at_the_first_429() {
         let m = spawn(|p| {
-            if p.ends_with("=3") {
+            if p.contains("appids=3&") {
                 Reply::status(429)
             } else {
                 ok_body(p).delayed(Duration::from_millis(30))
@@ -803,11 +808,11 @@ mod tests {
     #[tokio::test]
     async fn stage_counts_failures_and_delisted_without_aborting() {
         let m = spawn(|p| {
-            if p.ends_with("=2") {
+            if p.contains("appids=2&") {
                 Reply::status(500)
-            } else if p.ends_with("=3") {
+            } else if p.contains("appids=3&") {
                 Reply::json(json!({"3": {"success": false}}))
-            } else if p.ends_with("=4") {
+            } else if p.contains("appids=4&") {
                 Reply::json(json!({"4": {"success": true}}))
             } else {
                 ok_body(p)

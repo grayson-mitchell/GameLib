@@ -337,7 +337,7 @@ pub(crate) async fn store_appdetails_with(
     if app_id.is_empty() || !app_id.chars().all(|c| c.is_ascii_digit()) {
         return Err(StoreError::BadAppId);
     }
-    let url = format!("{base_url}?appids={app_id}");
+    let url = format!("{base_url}?appids={app_id}&l=english");
     let map_err = |e: reqwest::Error| {
         if e.is_timeout() {
             StoreError::Timeout
@@ -675,7 +675,7 @@ mod tests {
         let d = store_appdetails(&client(), &m.base, "570").await.unwrap();
         assert!(d.delisted);
         assert_eq!(d.data, None);
-        assert_eq!(m.paths.lock().unwrap()[0], "/?appids=570");
+        assert_eq!(m.paths.lock().unwrap()[0], "/?appids=570&l=english");
     }
 
     #[tokio::test]

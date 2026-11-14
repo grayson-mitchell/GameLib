@@ -363,7 +363,11 @@ mod tests {
 
     fn store_ok(ids: &'static [&'static str]) -> impl Fn(&str) -> Reply + Send + Sync {
         move |target| {
-            let id = target.split("appids=").nth(1).unwrap_or("");
+            let id = target
+                .split("appids=")
+                .nth(1)
+                .and_then(|r| r.split('&').next())
+                .unwrap_or("");
             if ids.contains(&id) {
                 Reply::json(json!({id: {"success": true, "data": {
                     "name": "G", "short_description": "s", "genres": [],
