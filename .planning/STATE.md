@@ -4,13 +4,13 @@ milestone: v0.10
 milestone_name: Foundations
 status: executing
 stopped_at: Phase 47 context gathered
-last_updated: "2026-11-14T14:02:59.909Z"
-last_activity: 2026-11-14 -- Phase 79 planning complete
+last_updated: "2026-11-14T18:12:17.415Z"
+last_activity: 2026-11-14
 progress:
   total_phases: 24
   completed_phases: 18
   total_plans: 445
-  completed_plans: 391
+  completed_plans: 392
   percent: 75
 ---
 
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 47 — migrate-aggregated-store-search-from-cheapshark-to-istherean
+**Current focus:** Phase 79 — rust-cm-client-replacing-steam-user-and-steam-session
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -72,10 +72,10 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 
 ## Current Position
 
-Phase: 47 (migrate-aggregated-store-search-from-cheapshark-to-istherean) — EXECUTING
-Plan: 4 of 13
+Phase: 79 (rust-cm-client-replacing-steam-user-and-steam-session) — EXECUTING
+Plan: 2 of 44
 Status: Ready to execute
-Last activity: 2026-11-14 -- Phase 79 planning complete
+Last activity: 2026-11-14
 
 Progress: [██████████] 98%
 
