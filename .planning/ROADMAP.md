@@ -1042,7 +1042,7 @@ Plans:
 **Goal:** `GameInfo` carries only what every store shares, and store-specific data lives in per-store shapes, so shared code stops depending on Steam, GOG or Epic fields. Measured 2026-11-06: the `GameInfo` interface in `src/common/types.ts` (1,336 lines) declares 41 top-level fields; 119 non-test files under `src/` reference it, 71 of them in the frontend. Store-specific fields sit beside shared ones, e.g. `gog_save_location`, `steamPlatformsCaptured`, the Steam Windows-depot and delisted signals and the Steam-only Metacritic score. Three parts: (1) **The split.** A shared core plus a per-store extension keyed by `runner`, as a discriminated union or a typed `storeData` field (discuss-phase decides), with a narrowing helper so a caller that needs Steam fields says so once. Phase 62's capability flags stay on the shared core. (2) **Migration.** Convert readers by area with a shrink-only count of direct store-field reads outside `storeManagers/` and store-specific UI, like Phase 62's ratchets. (3) **`common/types.ts`.** Move other store-specific types next to their store and leave `common/types.ts` with genuinely shared types. Persisted library caches that hold `GameInfo` shapes change shape, so the move goes through Phase 68's versioned migrations if it has landed, or a cache discard on version change otherwise. Open questions for discuss-phase: union versus `storeData`; whether the IPC payloads that carry `GameInfo` change shape at the same time as Phase 67's schemas; and the order relative to Phase 69, which rewrites many of the same frontend readers. Came from the post-Phase-62 architecture review on 2026-11-06.
 **Requirements**: ARCH-03 (phase IDs ARCH-03.1 to ARCH-03.6, minted in 70-RESEARCH)
 **Depends on:** Phase 62
-**Plans:** 16/22 plans complete (6 gap-closure plans pending)
+**Plans:** 17/22 plans executed
 
 Plans (expand-contract; execution waits on Phase 69's 3 human UAT items per D-14):
 
@@ -1083,7 +1083,7 @@ Plans (expand-contract; execution waits on Phase 69's 3 human UAT items per D-14
 **Gap closure** (70-VERIFICATION.md G1–G3, review WR-01/04/05)
 
 **Gap wave 1**
-- [ ] 70-17-PLAN.md — G1: narrowing ratchet runs in CI and pre-push even when an earlier step is red
+- [x] 70-17-PLAN.md — G1: narrowing ratchet runs in CI and pre-push even when an earlier step is red
 - [ ] 70-18-PLAN.md — G2/G3 foundation: schema-derived stripToSchema (nulls, arrays, records, unions, loose boundaries)
 
 **Gap wave 2**
