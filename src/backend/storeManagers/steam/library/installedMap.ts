@@ -25,7 +25,10 @@ export function isFullyInstalledStateFlags(stateFlags: number): boolean {
   return (stateFlags & 4) !== 0
 }
 
-type InstalledMap = Map<number, { installPath: string; sizeOnDisk: string }>
+type InstalledMap = Map<
+  number,
+  { installPath: string; sizeOnDisk: string; buildid?: string }
+>
 
 /**
  * One steamfiles_scan_acfs call over `steamappsDirs`. Unreadable files and missing dirs are
@@ -46,8 +49,22 @@ async function scanRecords(
 function installedEntry(rec: ScannedAcf) {
   return {
     installPath: join(rec.steamappsDir, 'common', rec.record.installdir ?? ''),
-    sizeOnDisk: rec.record.sizeOnDisk ?? '0'
+    sizeOnDisk: rec.record.sizeOnDisk ?? '0',
+    buildid: rec.record.buildid ?? undefined
   }
+}
+
+/**
+ * The one rule for turning an ACF buildid into `install.version` (operator
+ * report: "install info version is missing"). A null, empty or '0' buildid
+ * (Steam writes 0 when no build is recorded) yields no `version` key at all,
+ * never an empty or meaningless string.
+ */
+export function installVersionField(buildid: string | null | undefined): {
+  version?: string
+} {
+  const trimmed = buildid?.trim()
+  return trimmed && trimmed !== '0' ? { version: trimmed } : {}
 }
 
 function fullyInstalledAppId(rec: ScannedAcf): number | undefined {

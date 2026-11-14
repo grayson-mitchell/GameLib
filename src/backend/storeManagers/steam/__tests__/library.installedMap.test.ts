@@ -13,7 +13,8 @@ import {
   buildBottleInstalledMap,
   buildBridgeInstalledMap,
   buildIncompleteInstallSet,
-  isFullyInstalledStateFlags
+  isFullyInstalledStateFlags,
+  installVersionField
 } from '../library/installedMap'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import {
@@ -653,6 +654,15 @@ function useRustBranch() {}
 describe('installed-map builders, rust branch', () => {
   useRustBranch()
 
+  it('installVersionField keeps a real buildid and omits null/empty/zero', () => {
+    expect(installVersionField('12345')).toEqual({ version: '12345' })
+    for (const v of [null, undefined, '', '  ', '0']) {
+      const r = installVersionField(v)
+      expect(r).toEqual({})
+      expect(r).not.toHaveProperty('version')
+    }
+  })
+
   it('buildInstalledMap makes one scan call over every library and keeps last-wins for a repeated appid', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/a', '/b'])
     const stub = stubRustSteamFiles({
@@ -674,7 +684,8 @@ describe('installed-map builders, rust branch', () => {
                 appid: '10',
                 stateFlags: 4,
                 installdir: 'Second',
-                sizeOnDisk: '2'
+                sizeOnDisk: '2',
+                buildid: '12345'
               }
             },
             { dir: '/a/steamapps', rec: { appid: '20', stateFlags: 1026 } },
@@ -696,7 +707,8 @@ describe('installed-map builders, rust branch', () => {
     expect([...result.keys()].sort()).toEqual([10, 30])
     expect(result.get(10)).toEqual({
       installPath: join('/b/steamapps', 'common', 'Second'),
-      sizeOnDisk: '2'
+      sizeOnDisk: '2',
+      buildid: '12345'
     })
     expect(result.get(30)).toEqual({
       installPath: join('/a/steamapps', 'common'),

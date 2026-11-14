@@ -273,7 +273,8 @@ describe('readAcfState(libDeps)', () => {
         appid: '730',
         StateFlags: '4',
         installdir: 'csgo',
-        SizeOnDisk: '9000'
+        SizeOnDisk: '9000',
+        buildid: '555'
       }
     })
     const result = await readAcfState(libDeps, '730')
@@ -282,6 +283,7 @@ describe('readAcfState(libDeps)', () => {
       join('/steam', 'steamapps', 'common', 'csgo')
     )
     expect(result.sizeOnDisk).toBe('9000')
+    expect(result.buildid).toBe('555')
   })
 
   it('returns state:"downloading" when manifest exists but StateFlags bit 4 is unset', async () => {

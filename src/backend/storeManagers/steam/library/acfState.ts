@@ -57,6 +57,8 @@ export async function readAcfState(
   stateFlags?: number
   installPath?: string
   sizeOnDisk?: string
+  /** ACF buildid; only populated on the 'installed' result. */
+  buildid?: string
   /** Bytes downloaded/staged so far, and the totals to compare against —
    *  parsed from the ACF's AppState (strings on disk). Only populated on the
    *  'downloading' result; used by pollInstallOnce to derive a progress
@@ -104,7 +106,8 @@ export async function readAcfState(
       state: 'installed',
       stateFlags,
       installPath: join(found.steamappsDir, 'common', record.installdir ?? ''),
-      sizeOnDisk: record.sizeOnDisk ?? '0'
+      sizeOnDisk: record.sizeOnDisk ?? '0',
+      buildid: record.buildid ?? undefined
     }
   }
   return {
