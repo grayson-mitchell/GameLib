@@ -44,7 +44,7 @@ export function readSetting<T extends keyof AppSettings>(
   key: T,
   fallback: NonNullable<AppSettings[T]>
 ): NonNullable<AppSettings[T]> {
-  return (config[key] ?? fallback) as NonNullable<AppSettings[T]>
+  return config[key] ?? fallback
 }
 
 /**
