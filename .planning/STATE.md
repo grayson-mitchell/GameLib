@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.10
 milestone_name: Foundations
 status: executing
-stopped_at: "Phase 70 executing: 70-06 complete (6/16), 70-07 next"
-last_updated: 2026-11-14T03:36:17.809Z
+stopped_at: "74-33 live gate recorded: items 24/26/27 pass, 25 and 28 issues; round-4 gap planning next"
+last_updated: "2026-11-14T03:44:23.252Z"
 last_activity: 2026-11-14
 progress:
   total_phases: 24
-  completed_phases: 16
+  completed_phases: 17
   total_plans: 382
-  completed_plans: 372
-  percent: 67
+  completed_plans: 373
+  percent: 71
 ---
 
 # Project State
@@ -73,8 +73,8 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 ## Current Position
 
 Phase: 70 (split-gameinfo-into-shared-and-per-store-shapes) — EXECUTING
-Plan: 7 of 16
-Status: Executing (wave 3 of 9; 70-01..70-06 complete)
+Plan: 8 of 16
+Status: Ready to execute
 Last activity: 2026-11-14
 
 Progress: [██████████] 97%
