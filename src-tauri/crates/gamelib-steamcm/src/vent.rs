@@ -51,14 +51,17 @@ pub struct SteamVentBackend;
 
 pub struct VentConn {
     conn: Mutex<Option<Connection>>,
-    forwarder: Mutex<Option<JoinHandle<()>>>,
+    forwarder: Mutex<Vec<JoinHandle<()>>>,
+    /// Persona state pushed since this logon; dies with the connection.
+    personas: PersonaCache,
 }
 
 impl VentConn {
-    fn new(conn: Connection, forwarder: Option<JoinHandle<()>>) -> Self {
+    fn new(conn: Connection, forwarder: Vec<JoinHandle<()>>, personas: PersonaCache) -> Self {
         Self {
             conn: Mutex::new(Some(conn)),
             forwarder: Mutex::new(forwarder),
+            personas,
         }
     }
 
@@ -167,6 +170,7 @@ impl CmBackend for SteamVentBackend {
         // completes (CF-04).
         let mut licenses = Box::pin(unauth.on::<CMsgClientLicenseList>());
         let mut logged_off = Box::pin(unauth.on::<CMsgClientLoggedOff>());
+        let mut persona_pushes = Box::pin(unauth.on::<CMsgClientPersonaState>());
         let conn = unauth
             .login_with_refresh_token_and_logon_id(&refresh, logon_id)
             .await
@@ -183,8 +187,20 @@ impl CmBackend for SteamVentBackend {
                 }
             }
         });
+        let cache = PersonaCache::default();
+        let sink = cache.clone();
+        let collector = tokio::spawn(async move {
+            while let Some(Ok(state)) = persona_pushes.next().await {
+                sink.absorb(state.friends.iter().map(|f| PersonaRaw {
+                    steam_id: f.friendid(),
+                    persona_state: f.persona_state(),
+                    name: f.player_name().to_string(),
+                    avatar_hash: f.avatar_hash().to_vec(),
+                }));
+            }
+        });
         Ok(Authed {
-            conn: VentConn::new(conn, Some(forwarder)),
+            conn: VentConn::new(conn, vec![forwarder, collector], cache),
             steam_id,
             licenses: list
                 .licenses
@@ -209,7 +225,7 @@ impl CmBackend for SteamVentBackend {
             .anonymous()
             .await
             .map_err(map_err)?;
-        Ok(VentConn::new(conn, None))
+        Ok(VentConn::new(conn, Vec::new(), PersonaCache::default()))
     }
 }
 
@@ -401,8 +417,11 @@ impl CmConn for VentConn {
     }
 
     async fn personas(&self, steam_ids: Vec<u64>) -> Result<Vec<PersonaRaw>, CmError> {
+        if let Some(hit) = self.personas.lookup(&steam_ids) {
+            return Ok(hit);
+        }
         let c = self.conn()?;
-        // Subscribe before asking so an immediate reply is not missed.
+        // Cache miss: ask the CM. Subscribe before asking so an immediate reply is not missed.
         let mut states = Box::pin(c.on::<CMsgClientPersonaState>());
         c.send(CMsgClientRequestFriendData {
             persona_state_requested: Some(PERSONA_FLAG_NAME),
@@ -447,7 +466,7 @@ impl CmConn for VentConn {
             c.take();
         }
         if let Ok(mut f) = self.forwarder.lock() {
-            if let Some(h) = f.take() {
+            for h in f.drain(..) {
                 h.abort();
             }
         }

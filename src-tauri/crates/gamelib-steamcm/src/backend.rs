@@ -162,6 +162,44 @@ pub struct PersonaRaw {
     pub avatar_hash: Vec<u8>,
 }
 
+/// Persona state Steam pushes at and after logon, keyed by SteamID. One cache lives per
+/// connection, so it is scoped to the current logon: a logout, rebuild or replacement drops the
+/// connection and the cache with it. Entries without a name are ignored (a flag-limited push
+/// carries no name and would shadow a useful one). Persona names are never logged.
+#[derive(Debug, Clone, Default)]
+pub struct PersonaCache(
+    std::sync::Arc<std::sync::Mutex<std::collections::HashMap<u64, PersonaRaw>>>,
+);
+
+impl PersonaCache {
+    pub fn absorb(&self, personas: impl IntoIterator<Item = PersonaRaw>) {
+        if let Ok(mut m) = self.0.lock() {
+            for p in personas {
+                if !p.name.is_empty() {
+                    m.insert(p.steam_id, p);
+                }
+            }
+        }
+    }
+
+    /// The cached personas for every requested id, or `None` unless all of them are cached (a
+    /// partial hit falls through to the CM request).
+    pub fn lookup(&self, steam_ids: &[u64]) -> Option<Vec<PersonaRaw>> {
+        if steam_ids.is_empty() {
+            return None;
+        }
+        let m = self.0.lock().ok()?;
+        let mut out = Vec::new();
+        for id in steam_ids {
+            if out.iter().any(|p: &PersonaRaw| p.steam_id == *id) {
+                continue;
+            }
+            out.push(m.get(id)?.clone());
+        }
+        Some(out)
+    }
+}
+
 pub trait CmConn: Send + Sync + 'static {
     fn pics_access_tokens(
         &self,
@@ -227,4 +265,42 @@ pub trait CmBackend: Send + Sync + 'static {
     ) -> impl Future<Output = Result<Authed<Self::Conn>, CmError>> + Send;
 
     fn connect_anon(&self) -> impl Future<Output = Result<Self::Conn, CmError>> + Send;
+}
+
+#[cfg(test)]
+mod persona_cache_tests {
+    use super::*;
+
+    fn p(id: u64, name: &str) -> PersonaRaw {
+        PersonaRaw {
+            steam_id: id,
+            persona_state: 1,
+            name: name.into(),
+            avatar_hash: vec![1],
+        }
+    }
+
+    #[test]
+    fn hit_needs_every_id_and_a_name() {
+        let c = PersonaCache::default();
+        assert!(c.lookup(&[1]).is_none());
+        c.absorb([p(1, "a"), p(2, "")]);
+        assert_eq!(c.lookup(&[1]).unwrap().len(), 1);
+        assert!(c.lookup(&[1, 2]).is_none());
+        assert!(c.lookup(&[]).is_none());
+        c.absorb([p(2, "b"), p(1, "a2")]);
+        let got = c.lookup(&[1, 2, 1]).unwrap();
+        assert_eq!(got.len(), 2);
+        assert_eq!(got[0].name, "a2");
+    }
+
+    #[test]
+    fn clones_share_and_fresh_cache_is_empty() {
+        let c = PersonaCache::default();
+        let c2 = c.clone();
+        c.absorb([p(7, "x")]);
+        assert!(c2.lookup(&[7]).is_some());
+        // A new logon builds a new cache: nothing carries over.
+        assert!(PersonaCache::default().lookup(&[7]).is_none());
+    }
 }
