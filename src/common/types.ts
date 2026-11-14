@@ -213,7 +213,7 @@ export interface ExtraInfo {
   genres?: string[]
 }
 
-export type GameConfigVersion = 'auto' | 'v0' | 'v1'
+export type GameConfigVersion = 'auto' | 'v0' | 'v1' | 'v2'
 
 /**
  * Phase 70 (D-01, D-06): the fields every store's game shares. Per-store
