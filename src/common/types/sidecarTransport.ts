@@ -560,6 +560,7 @@ export const RUST_STEAMCM_CONFIGURE = 'steamcm_configure' as const
 export const RUST_STEAMCM_CONTENT_SERVERS = 'steamcm_content_servers' as const
 export const RUST_STEAMCM_DEPOT_KEY = 'steamcm_depot_key' as const
 export const RUST_STEAMCM_LICENSES = 'steamcm_licenses' as const
+export const RUST_STEAMCM_MAC_OWNED_APPS = 'steamcm_mac_owned_apps' as const
 export const RUST_STEAMCM_MANIFEST_REQUEST_CODE =
   'steamcm_manifest_request_code' as const
 export const RUST_STEAMCM_OWNED_APPS = 'steamcm_owned_apps' as const
@@ -838,6 +839,7 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_STEAMCM_CONTENT_SERVERS,
   RUST_STEAMCM_DEPOT_KEY,
   RUST_STEAMCM_LICENSES,
+  RUST_STEAMCM_MAC_OWNED_APPS,
   RUST_STEAMCM_MANIFEST_REQUEST_CODE,
   RUST_STEAMCM_OWNED_APPS,
   RUST_STEAMCM_PERSONAS,
@@ -905,6 +907,7 @@ export const RUST_STEAMCM_CHANNELS = [
   RUST_STEAMCM_CONTENT_SERVERS,
   RUST_STEAMCM_DEPOT_KEY,
   RUST_STEAMCM_LICENSES,
+  RUST_STEAMCM_MAC_OWNED_APPS,
   RUST_STEAMCM_MANIFEST_REQUEST_CODE,
   RUST_STEAMCM_OWNED_APPS,
   RUST_STEAMCM_PERSONAS,

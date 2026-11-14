@@ -36,6 +36,22 @@ pub(crate) fn rpc_steamcm_depot_key(args: &[Value]) -> Result<Value, String> {
     gamelib_steamcm::dispatch("steamcm_depot_key", args)
 }
 
+pub(crate) fn rpc_steamcm_mac_owned_apps(args: &[Value]) -> Result<Value, String> {
+    let a = SteamcmMacOwnedAppsArgs::from_args(args)?;
+    // T-79-104: the sidecar names an executable; only the bundled helper's name may be spawned.
+    let p = std::path::Path::new(&a.helper_path);
+    let climbs = p
+        .components()
+        .any(|c| matches!(c, std::path::Component::ParentDir));
+    if !p.is_absolute()
+        || climbs
+        || p.file_name().and_then(|n| n.to_str()) != Some("steam-bridge-helper")
+    {
+        return Err("steamcm_mac_owned_apps:bad-args".to_string());
+    }
+    gamelib_steamcm::dispatch("steamcm_mac_owned_apps", args)
+}
+
 pub(crate) fn rpc_steamcm_licenses(args: &[Value]) -> Result<Value, String> {
     SteamcmLicensesArgs::from_args(args)?;
     gamelib_steamcm::dispatch("steamcm_licenses", args)
@@ -295,5 +311,26 @@ mod tests {
         on_sidecar_eof_drop_steamcm();
         steamcm_exit_shutdown();
         assert!(start.elapsed() < STEAMCM_SHUTDOWN_BOUND * 2);
+    }
+
+    #[test]
+    fn mac_owned_apps_refuses_anything_but_the_bundled_helper_path() {
+        for path in [
+            "steam-bridge-helper",
+            "/bin/sh",
+            "/tmp/steam-bridge-helper/../sh",
+            "/tmp/../steam-bridge-helper",
+            "/tmp/not-steam-bridge-helper",
+            "",
+        ] {
+            let r = rpc_steamcm_mac_owned_apps(&[
+                serde_json::json!({"helperPath": path, "steamId": "76561198000000001"}),
+            ]);
+            assert_eq!(
+                r,
+                Err("steamcm_mac_owned_apps:bad-args".to_string()),
+                "{path}"
+            );
+        }
     }
 }

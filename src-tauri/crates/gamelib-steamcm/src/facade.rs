@@ -384,6 +384,17 @@ impl<B: CmBackend> Core<B> {
         crate::refresh::refresh_library(self.session(), &anon, client, base_url, args).await
     }
 
+    // ---- Mac Steam owned apps (79-35) ----
+
+    /// Fallback-safe: every failure is `{ok:false, kind:'fallback', reason}`.
+    pub(crate) async fn mac_owned_apps(&self, helper: &std::path::Path, steam_id: u64) -> Value {
+        let anon = self.anon();
+        match crate::macowned::mac_owned_apps(&anon, helper, steam_id).await {
+            Ok(m) => json!({"ok": true, "result": m.to_json()}),
+            Err(r) => json!({"ok": false, "kind": "fallback", "reason": r.as_str()}),
+        }
+    }
+
     // ---- anonymous ----
 
     pub(crate) async fn anon_product_info(
@@ -641,6 +652,10 @@ pub fn refresh_library(args: crate::refresh::RefreshArgs) -> Result<Value, Strin
         crate::refresh::store_http::STEAM_STORE_API,
         args,
     ))
+}
+
+pub fn mac_owned_apps(helper_path: &str, steam_id: u64) -> Result<Value, String> {
+    run(core().mac_owned_apps(std::path::Path::new(helper_path), steam_id))
 }
 
 pub fn store_enrich(

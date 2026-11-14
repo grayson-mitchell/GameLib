@@ -85,6 +85,7 @@ pub(crate) enum RustInvokeChannel {
     SteamcmContentServers,
     SteamcmDepotKey,
     SteamcmLicenses,
+    SteamcmMacOwnedApps,
     SteamcmManifestRequestCode,
     SteamcmOwnedApps,
     SteamcmPersonas,
@@ -175,6 +176,7 @@ impl RustInvokeChannel {
         RustInvokeChannel::SteamcmContentServers,
         RustInvokeChannel::SteamcmDepotKey,
         RustInvokeChannel::SteamcmLicenses,
+        RustInvokeChannel::SteamcmMacOwnedApps,
         RustInvokeChannel::SteamcmManifestRequestCode,
         RustInvokeChannel::SteamcmOwnedApps,
         RustInvokeChannel::SteamcmPersonas,
@@ -265,6 +267,7 @@ impl RustInvokeChannel {
             "steamcm_content_servers" => Some(RustInvokeChannel::SteamcmContentServers),
             "steamcm_depot_key" => Some(RustInvokeChannel::SteamcmDepotKey),
             "steamcm_licenses" => Some(RustInvokeChannel::SteamcmLicenses),
+            "steamcm_mac_owned_apps" => Some(RustInvokeChannel::SteamcmMacOwnedApps),
             "steamcm_manifest_request_code" => Some(RustInvokeChannel::SteamcmManifestRequestCode),
             "steamcm_owned_apps" => Some(RustInvokeChannel::SteamcmOwnedApps),
             "steamcm_personas" => Some(RustInvokeChannel::SteamcmPersonas),
@@ -357,6 +360,7 @@ impl RustInvokeChannel {
             RustInvokeChannel::SteamcmContentServers => "steamcm_content_servers",
             RustInvokeChannel::SteamcmDepotKey => "steamcm_depot_key",
             RustInvokeChannel::SteamcmLicenses => "steamcm_licenses",
+            RustInvokeChannel::SteamcmMacOwnedApps => "steamcm_mac_owned_apps",
             RustInvokeChannel::SteamcmManifestRequestCode => "steamcm_manifest_request_code",
             RustInvokeChannel::SteamcmOwnedApps => "steamcm_owned_apps",
             RustInvokeChannel::SteamcmPersonas => "steamcm_personas",
@@ -1507,6 +1511,21 @@ impl SteamcmLicensesArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let first = args.first().ok_or_else(|| "steamcm_licenses:bad-args".to_string())?;
         serde_json::from_value(first.clone()).map_err(|_| "steamcm_licenses:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteamcmMacOwnedAppsArgs {
+    #[serde(rename = "helperPath")]
+    pub(crate) helper_path: String,
+    #[serde(rename = "steamId")]
+    pub(crate) steam_id: String,
+}
+
+impl SteamcmMacOwnedAppsArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steamcm_mac_owned_apps:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steamcm_mac_owned_apps:bad-args".to_string())
     }
 }
 

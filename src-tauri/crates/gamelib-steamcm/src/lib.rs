@@ -36,6 +36,7 @@ pub const OPS: &[&str] = &[
     "steamcm_content_servers",
     "steamcm_depot_key",
     "steamcm_licenses",
+    "steamcm_mac_owned_apps",
     "steamcm_manifest_request_code",
     "steamcm_owned_apps",
     "steamcm_personas",
@@ -230,6 +231,13 @@ struct StoreEnrichArgs {
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct MacOwnedAppsArgs {
+    helper_path: String,
+    steam_id: String,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 struct StoreAppdetailsArgs {
     app_id: String,
 }
@@ -340,6 +348,11 @@ fn run_op(op: &str, args: &[Value]) -> Result<Value, String> {
             id64(op, steam_id)?;
             facade::refresh_library(a)
         }
+        "steamcm_mac_owned_apps" => {
+            let a: MacOwnedAppsArgs = parse_args(op, args)?;
+            let id = id64(op, &a.steam_id)?;
+            facade::mac_owned_apps(&a.helper_path, id)
+        }
         "steamcm_store_enrich" => {
             let a: StoreEnrichArgs = parse_args(op, args)?;
             facade::store_enrich(&a.app_id, a.cached, a.current, a.known_fix_mac32)
@@ -439,7 +452,7 @@ mod tests {
 
     #[test]
     fn ops_are_the_full_table_and_every_op_is_routed() {
-        assert_eq!(OPS.len(), 28);
+        assert_eq!(OPS.len(), 29);
         assert_eq!(CLI_ONLY_OPS, &["steamcm_capture_anon_pics"]);
         for op in OPS {
             // Bad args (a string, not an object) must reach the arg parser, never `unknown-op`.

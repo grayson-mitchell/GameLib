@@ -34,6 +34,7 @@ import {
   RUST_STEAMCM_CONTENT_SERVERS,
   RUST_STEAMCM_DEPOT_KEY,
   RUST_STEAMCM_LICENSES,
+  RUST_STEAMCM_MAC_OWNED_APPS,
   RUST_STEAMCM_MANIFEST_REQUEST_CODE,
   RUST_STEAMCM_OWNED_APPS,
   RUST_STEAMCM_PERSONAS,
@@ -328,6 +329,9 @@ export const rustInvokeArgs = {
   ]),
   [RUST_STEAMCM_LICENSES]: z.tuple([
     z.object({ leaseId: z.number() }).strict()
+  ]),
+  [RUST_STEAMCM_MAC_OWNED_APPS]: z.tuple([
+    z.object({ helperPath: z.string(), steamId: z.string() }).strict()
   ]),
   [RUST_STEAMCM_MANIFEST_REQUEST_CODE]: z.tuple([
     z

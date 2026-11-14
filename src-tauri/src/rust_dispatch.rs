@@ -93,6 +93,7 @@ pub(crate) fn dispatch_rust_channel(
         RustInvokeChannel::SteamcmContentServers => rpc_steamcm_content_servers(args),
         RustInvokeChannel::SteamcmDepotKey => rpc_steamcm_depot_key(args),
         RustInvokeChannel::SteamcmLicenses => rpc_steamcm_licenses(args),
+        RustInvokeChannel::SteamcmMacOwnedApps => rpc_steamcm_mac_owned_apps(args),
         RustInvokeChannel::SteamcmManifestRequestCode => rpc_steamcm_manifest_request_code(args),
         RustInvokeChannel::SteamcmOwnedApps => rpc_steamcm_owned_apps(args),
         RustInvokeChannel::SteamcmPersonas => rpc_steamcm_personas(args),

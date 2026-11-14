@@ -9,6 +9,7 @@ import type {
   RUST_STEAMCM_CONTENT_SERVERS,
   RUST_STEAMCM_DEPOT_KEY,
   RUST_STEAMCM_LICENSES,
+  RUST_STEAMCM_MAC_OWNED_APPS,
   RUST_STEAMCM_MANIFEST_REQUEST_CODE,
   RUST_STEAMCM_OWNED_APPS,
   RUST_STEAMCM_PERSONAS,
@@ -29,6 +30,7 @@ export type RustSteamCmClientChannel =
   | typeof RUST_STEAMCM_CONTENT_SERVERS
   | typeof RUST_STEAMCM_DEPOT_KEY
   | typeof RUST_STEAMCM_LICENSES
+  | typeof RUST_STEAMCM_MAC_OWNED_APPS
   | typeof RUST_STEAMCM_MANIFEST_REQUEST_CODE
   | typeof RUST_STEAMCM_OWNED_APPS
   | typeof RUST_STEAMCM_PERSONAS
@@ -54,11 +56,25 @@ export type SteamCmFailureKind =
   | 'http'
   | 'tooLarge'
   | 'parse'
+  | 'fallback'
+
+export type MacOwnedFallbackReason =
+  | 'not-macos'
+  | 'helper-missing'
+  | 'helper-failed'
+  | 'timeout'
+  | 'not-logged-on'
+  | 'account-mismatch'
+  | 'ambiguous-slot'
+  | 'parse'
+  | 'pics-failed'
 
 export type SteamCmOpFailure = {
   ok: false
   kind: SteamCmFailureKind
   eresult?: number
+  /** Set when `kind` is `fallback` (`steamcm_mac_owned_apps`): why to use the CM path. */
+  reason?: MacOwnedFallbackReason
 }
 
 /** `{ok:true,result}` or `{ok:false,kind,eresult?}`, the envelope every signed-in op returns. */
@@ -96,6 +112,13 @@ export interface SteamCmOwnedAppsResult {
     img_icon_url?: string
     rtime_last_played?: number
   }>
+}
+
+/** `steamcm_mac_owned_apps` result: games only, plus demos from Steam's own set. */
+export interface MacOwnedAppsResult {
+  owned: SteamCmOwnedAppsResult
+  demos: Array<{ appid: number; name: string; playtime_forever: number }>
+  subscribedCount: number
 }
 
 export interface SteamCmPersonasResult {
@@ -158,6 +181,7 @@ interface SteamCmResultMap {
   steamcm_content_servers: RawContentServer[]
   steamcm_depot_key: SteamCmDepotKeyResult
   steamcm_licenses: SteamCmLicense[]
+  steamcm_mac_owned_apps: MacOwnedAppsResult
   steamcm_manifest_request_code: { requestCode: string }
   steamcm_owned_apps: SteamCmOwnedAppsResult
   steamcm_personas: SteamCmPersonasResult
