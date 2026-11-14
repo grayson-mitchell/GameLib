@@ -4,7 +4,13 @@ import {
   runFixtureTable,
   type FixtureTable
 } from 'backend/testUtils/ipcSchemaFixtures'
-import { steamGameInfoFixture } from 'backend/testUtils/gameInfoFixtures'
+import {
+  gogGameInfoFixture,
+  legendaryGameInfoFixture,
+  nileGameInfoFixture,
+  sideloadGameInfoFixture,
+  steamGameInfoFixture
+} from 'backend/testUtils/gameInfoFixtures'
 
 const gameInfo = steamGameInfoFixture()
 
@@ -15,6 +21,43 @@ const installedGameInfo = steamGameInfoFixture({
     install_path: '/home/user/Games/hl2',
     executable: 'hl2.exe'
   }
+})
+
+const perRunner = [
+  steamGameInfoFixture(),
+  gogGameInfoFixture(),
+  legendaryGameInfoFixture(),
+  nileGameInfoFixture(),
+  sideloadGameInfoFixture()
+]
+
+// An undeclared key at the top, inside `install`, and inside `extra`: each must be rejected.
+function strictRejects(info: (typeof perRunner)[number]) {
+  return [
+    { ...info, smuggled: 1 },
+    { ...info, install: { ...info.install, smuggled: 1 } },
+    { ...info, extra: { reqs: [], smuggled: 1 } }
+  ]
+}
+
+const installArg = (gameInfo: unknown) => ({
+  appName: 'x',
+  runner: 'steam',
+  gameInfo,
+  path: '/p',
+  platformToInstall: 'Windows'
+})
+const updateArg = (gameInfo: unknown) => ({
+  appName: 'x',
+  runner: 'steam',
+  gameInfo
+})
+
+// Real persisted legendary entries carry undeclared keys inside dlcList elements.
+const legendaryWithDlc = legendaryGameInfoFixture({
+  dlcList: [
+    { id: 'd', mainGameItemList: [], esrbGameRatingValue: 'x' }
+  ] as never
 })
 
 const table: FixtureTable<typeof installAsyncArgs> = {
@@ -37,6 +80,8 @@ const table: FixtureTable<typeof installAsyncArgs> = {
   },
   install: {
     valid: [
+      ...perRunner.map((g) => [installArg(g)]),
+      [installArg(legendaryWithDlc)],
       [
         {
           appName: '220',
@@ -64,6 +109,9 @@ const table: FixtureTable<typeof installAsyncArgs> = {
       ]
     ],
     invalid: [
+      ...perRunner.flatMap((g) =>
+        strictRejects(g).map((bad) => [installArg(bad)])
+      ),
       [
         {
           appName: '220',
@@ -150,6 +198,8 @@ const table: FixtureTable<typeof installAsyncArgs> = {
   },
   updateGame: {
     valid: [
+      ...perRunner.map((g) => [updateArg(g)]),
+      [updateArg(legendaryWithDlc)],
       [
         {
           gameInfo: installedGameInfo,
@@ -172,6 +222,9 @@ const table: FixtureTable<typeof installAsyncArgs> = {
       ]
     ],
     invalid: [
+      ...perRunner.flatMap((g) =>
+        strictRejects(g).map((bad) => [updateArg(bad)])
+      ),
       [
         {
           gameInfo: installedGameInfo,

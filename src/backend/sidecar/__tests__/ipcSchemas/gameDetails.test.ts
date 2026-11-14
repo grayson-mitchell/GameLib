@@ -7,17 +7,47 @@ import {
   runFixtureTable,
   type FixtureTable
 } from 'backend/testUtils/ipcSchemaFixtures'
-import { sideloadGameInfoFixture } from 'backend/testUtils/gameInfoFixtures'
+import {
+  gogGameInfoFixture,
+  legendaryGameInfoFixture,
+  nileGameInfoFixture,
+  sideloadGameInfoFixture,
+  steamGameInfoFixture
+} from 'backend/testUtils/gameInfoFixtures'
+
+const perRunner = [
+  steamGameInfoFixture(),
+  gogGameInfoFixture(),
+  legendaryGameInfoFixture(),
+  nileGameInfoFixture(),
+  sideloadGameInfoFixture()
+]
+
+// An undeclared key at the top, inside `install`, and inside `extra`: each must be rejected.
+function strictRejects(info: (typeof perRunner)[number]) {
+  return [
+    { ...info, smuggled: 1 },
+    { ...info, install: { ...info.install, smuggled: 1 } },
+    { ...info, extra: { reqs: [], smuggled: 1 } }
+  ]
+}
 
 const pair = ['Fortnite', 'legendary']
 
 const syncTable: FixtureTable<typeof gameDetailsSyncArgs> = {
   addNewApp: {
     valid: [
-      [sideloadGameInfoFixture()],
+      ...perRunner.map((g) => [g]),
+      // Real persisted legendary entries carry undeclared keys inside dlcList elements.
+      [
+        legendaryGameInfoFixture({
+          dlcList: [{ id: 'd', mainGameItemList: [] }] as never
+        })
+      ],
       [sideloadGameInfoFixture({ title: 'X', install: {} })]
     ],
     invalid: [
+      ...perRunner.flatMap((g) => strictRejects(g).map((bad) => [bad])),
       [{ runner: 'sideload' }],
       [{ app_name: '', runner: 'sideload' }],
       [{ app_name: 'x', runner: 'epic' }],

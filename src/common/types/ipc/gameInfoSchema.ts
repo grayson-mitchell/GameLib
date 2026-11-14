@@ -164,7 +164,6 @@ const gameInfoCoreShape = {
   overrides: overridesSchema.optional()
 }
 
-/** @public consumed by the parity and strict-reject tests in this plan's Task 2; tag removed there */
 export const steamGameInfoSchema = z.strictObject({
   ...gameInfoCoreShape,
   runner: z.literal('steam'),
@@ -175,7 +174,6 @@ export const steamGameInfoSchema = z.strictObject({
   steamPlatformsCaptured: z.boolean().optional()
 })
 
-/** @public consumed by the parity and strict-reject tests in this plan's Task 2; tag removed there */
 export const gogGameInfoSchema = z.strictObject({
   ...gameInfoCoreShape,
   runner: z.literal('gog'),
@@ -186,7 +184,6 @@ export const gogGameInfoSchema = z.strictObject({
     .optional()
 })
 
-/** @public consumed by the parity and strict-reject tests in this plan's Task 2; tag removed there */
 export const legendaryGameInfoSchema = z.strictObject({
   ...gameInfoCoreShape,
   runner: z.literal('legendary'),
@@ -198,13 +195,11 @@ export const legendaryGameInfoSchema = z.strictObject({
   dlcList: epicDlcMetadataArg().optional()
 })
 
-/** @public consumed by the parity and strict-reject tests in this plan's Task 2; tag removed there */
 export const nileGameInfoSchema = z.strictObject({
   ...gameInfoCoreShape,
   runner: z.literal('nile')
 })
 
-/** @public consumed by the parity and strict-reject tests in this plan's Task 2; tag removed there */
 export const sideloadGameInfoSchema = z.strictObject({
   ...gameInfoCoreShape,
   runner: z.literal('sideload'),
