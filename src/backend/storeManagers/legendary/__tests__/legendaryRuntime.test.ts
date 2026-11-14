@@ -3,7 +3,7 @@
  * installed games, library entries or stubs; deriveLegendaryPaths is pure over its roots and keeps the
  * snap arm.
  */
-import type { GameInfo } from 'common/types'
+import type { LegendaryGameInfo } from 'common/types/legendary'
 import type { InstalledJsonMetadata } from 'common/types/legendary'
 import { join } from 'path'
 import { createLegendaryRuntime } from '../legendaryRuntime'
@@ -25,7 +25,9 @@ describe('createLegendaryRuntime', () => {
     a.libraryState.installedGames.set('Iris', {
       app_name: 'Iris'
     } as InstalledJsonMetadata)
-    a.libraryState.library.set('Iris', { app_name: 'Iris' } as GameInfo)
+    a.libraryState.library.set('Iris', {
+      app_name: 'Iris'
+    } as LegendaryGameInfo)
 
     expect(b.libraryState.allGames.has('Iris')).toBe(false)
     expect(b.libraryState.installedGames.has('Iris')).toBe(false)

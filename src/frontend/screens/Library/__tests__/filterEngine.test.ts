@@ -270,11 +270,12 @@ describe('filter engine', () => {
   })
 
   it('a NON-Steam game carrying a truthy is_delisted is unaffected by noStorePage: hide — the predicate is runner-scoped', () => {
-    const gogDelisted = makeGame({
-      app_name: 'gog-delisted-app',
-      runner: 'gog',
+    // is_delisted is a Steam-only key; a GOG record carrying it is a stray
+    // runtime value, so it is spread on rather than typed onto the GOG member.
+    const gogDelisted = {
+      ...makeGame({ app_name: 'gog-delisted-app', runner: 'gog' }),
       is_delisted: true
-    })
+    }
     const state = makeState({ noStorePage: 'hide' })
     const deps = makeDeps()
 

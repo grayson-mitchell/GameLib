@@ -144,8 +144,12 @@ jest.mock('axios', () => ({
 import GOGLibraryManager from '../library'
 import { GOGUser } from '../user'
 import { logWarning } from 'backend/logger'
-import type { GOGCredentials, Library } from 'common/types/gog'
-import type { GOGImportData, InstalledInfo } from 'common/types'
+import type {
+  GOGCredentials,
+  GogInstalledInfo,
+  Library
+} from 'common/types/gog'
+import type { GOGImportData } from 'common/types'
 
 const fakeCredentials: GOGCredentials = {
   access_token: 'test-access-token',
@@ -534,7 +538,7 @@ describe('importGame preserves un-owned InstalledInfo fields on re-import (26090
 
   let manager: GOGLibraryManager
 
-  const previousRecord: InstalledInfo = {
+  const previousRecord: GogInstalledInfo = {
     appName: APP_NAME,
     install_path: '/Users/u/GameLib/Endless Sky.app',
     executable: '/Users/u/GameLib/Endless Sky.app',
@@ -590,10 +594,10 @@ describe('importGame preserves un-owned InstalledInfo fields on re-import (26090
     // read), which crashes `createMissingGogdlManifest` for a fresh appName (no
     // record at all post-wipe). Back both with a shared in-memory array instead so
     // get() reflects the most recent set().
-    let installedStoreBacking: InstalledInfo[] = [previousRecord]
+    let installedStoreBacking: GogInstalledInfo[] = [previousRecord]
     mockInstalledGamesStoreGet.mockImplementation(() => installedStoreBacking)
     mockInstalledGamesStoreSet.mockImplementation(
-      (_key: string, value: InstalledInfo[]) => {
+      (_key: string, value: GogInstalledInfo[]) => {
         installedStoreBacking = value
       }
     )
@@ -621,7 +625,7 @@ describe('importGame preserves un-owned InstalledInfo fields on re-import (26090
   })
 
   const installOf = (appName: string) =>
-    manager.getGameInfo(appName)?.install as InstalledInfo | undefined
+    manager.getGameInfo(appName)?.install as GogInstalledInfo | undefined
 
   it('re-importing an already-installed game preserves versionEtag and pinnedVersion from the previous record', async () => {
     await manager.importGame(
