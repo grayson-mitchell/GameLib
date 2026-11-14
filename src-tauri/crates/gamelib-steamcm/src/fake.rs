@@ -63,6 +63,7 @@ pub(crate) struct Script {
     pub log: Vec<&'static str>,
     pub token_reqs: Vec<(Vec<u32>, Vec<u32>)>,
     pub pics_reqs: Vec<PicsRequest>,
+    pub owned_opts: Vec<OwnedOpts>,
 }
 
 impl Default for Script {
@@ -90,6 +91,7 @@ impl Default for Script {
             log: Vec::new(),
             token_reqs: Vec::new(),
             pics_reqs: Vec::new(),
+            owned_opts: Vec::new(),
         }
     }
 }
@@ -282,9 +284,13 @@ impl CmConn for FakeConn {
     async fn owned_games(
         &self,
         _steam_id: u64,
-        _opts: OwnedOpts,
+        opts: OwnedOpts,
     ) -> Result<Vec<OwnedGameRaw>, CmError> {
-        self.run("owned_games", |s| s.owned.next()).await
+        self.run("owned_games", |s| {
+            s.owned_opts.push(opts);
+            s.owned.next()
+        })
+        .await
     }
 
     async fn register_key(&self, _key: String) -> Result<PurchaseRaw, CmError> {
