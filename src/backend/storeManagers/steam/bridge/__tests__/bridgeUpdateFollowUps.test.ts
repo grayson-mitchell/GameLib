@@ -104,11 +104,11 @@ describe('runBridgeUpdateFollowUps', () => {
     exe = join(root, 'game', 'game.exe')
     writeFileSync(exe, 'exe')
     ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(exe)
-    ;(placeShimForGame as jest.Mock).mockImplementation(async () => {
+    ;(placeShimForGame as jest.Mock).mockImplementation(() => {
       const r = backupOriginalBeforeOverwrite(root, dll, '123')
-      if (!r.ok) return { status: 'error', error: r.error }
+      if (!r.ok) return Promise.resolve({ status: 'error', error: r.error })
       writeFileSync(dll, SHIM)
-      return { status: 'placed', shimPath: dll }
+      return Promise.resolve({ status: 'placed', shimPath: dll })
     })
     ;(resolveInstallEngineSettings as jest.Mock).mockResolvedValue({
       settings: {}

@@ -148,7 +148,7 @@ describe('restartMacSteamForAdoption', () => {
     let clock = 0
     const calls: string[] = []
     const deps: RestartDeps = {
-      readRunningAppId: jest.fn(async () => 0),
+      readRunningAppId: jest.fn(() => Promise.resolve(0)),
       isOfflineWrapOwed: jest.fn(() => false),
       isSteamRunning: jest.fn(async () => false),
       openUrlDetached: jest.fn((url: string) => {
@@ -173,7 +173,9 @@ describe('restartMacSteamForAdoption', () => {
   }
 
   test('a game running in Steam refuses, firing and emitting nothing', async () => {
-    const { deps } = harness({ readRunningAppId: jest.fn(async () => 4000) })
+    const { deps } = harness({
+      readRunningAppId: jest.fn(() => Promise.resolve(4000))
+    })
     await expect(restartMacSteamForAdoption('264160', deps)).resolves.toEqual({
       kind: 'game-running',
       runningAppId: 4000
@@ -440,7 +442,7 @@ describe('readAcfSnapshot and isSteamAdoptedAcf', () => {
     expect(isSteamAdoptedAcf(null, placeholder)).toBe(false)
   })
 
-  test('uses the Rust fields, not the content, when they are present', async () => {
+  test('uses the Rust fields, not the content, when they are present', () => {
     const snap = { mtimeMs: 2, content: 'garbage', stateFlags: 4, buildid: '5' }
     expect(isSteamAdoptedAcf(null, snap)).toBe(true)
   })

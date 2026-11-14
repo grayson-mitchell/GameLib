@@ -35,9 +35,12 @@ jest.mock('backend/logger', () => ({
 import {
   getLibraryOrders,
   libraryItemToOrderDetail,
-  resetLibraryActionCache,
   revealKey
 } from '../adapter'
+import {
+  createHumbleActionIdCache,
+  type HumbleActionIdCache
+} from '../actionIdCache'
 beforeEach(() => {
   jest.clearAllMocks()
   mockIsAxiosError.mockImplementation(
@@ -182,6 +185,7 @@ describe('libraryItemToOrderDetail', () => {
 
 describe('getLibraryOrders', () => {
   const ACTION_ID = 'a'.repeat(42)
+  let actionIds: HumbleActionIdCache
   const mockFetch = jest.fn()
   const realFetch = global.fetch
 
@@ -236,7 +240,7 @@ describe('getLibraryOrders', () => {
 
   beforeEach(() => {
     jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] })
-    resetLibraryActionCache()
+    actionIds = createHumbleActionIdCache()
     mockFetch.mockReset()
     global.fetch = mockFetch as unknown as typeof fetch
   })
@@ -246,7 +250,7 @@ describe('getLibraryOrders', () => {
   })
 
   async function run(cookie = 'ory_session_x=synthetic') {
-    const p = getLibraryOrders(cookie)
+    const p = getLibraryOrders(cookie, actionIds)
     await jest.runAllTimersAsync()
     return p
   }
@@ -287,6 +291,36 @@ describe('getLibraryOrders', () => {
     expect(mockLogInfo.mock.calls.flat().join(' ')).toContain(
       'reusing cached filterUserLibrary action id'
     )
+  })
+
+  test('discovery fills the library slot of the owner and leaves the redeem slot empty (66.4-REVIEW CR-01)', async () => {
+    mockDiscovery()
+    mockFetch.mockResolvedValue(actionResponse(flight(1, 1, ['a'])))
+    expect(actionIds.get('library')).toBeNull()
+
+    await run()
+
+    expect(actionIds.get('library')).toEqual({
+      id: ACTION_ID,
+      chunk: '/_next/static/chunks/bbb.js'
+    })
+    expect(actionIds.get('redeem')).toBeNull()
+  })
+
+  test("a fresh owner (a new boot) never reuses another boot's action id (66.4-REVIEW CR-01)", async () => {
+    mockDiscovery()
+    mockFetch.mockResolvedValue(actionResponse(flight(1, 1, ['a'])))
+    await run() // owner A is primed
+    mockGet.mockClear()
+    const ownerA = actionIds
+    actionIds = createHumbleActionIdCache()
+
+    const result = await run() // owner B
+
+    expect(result.status).toBe('ok')
+    expect(mockGet).toHaveBeenCalled()
+    expect(actionIds.get('library')?.id).toBe(ACTION_ID)
+    expect(actionIds).not.toBe(ownerA)
   })
 
   test('a stale id (non-flight response) triggers exactly one re-discovery then succeeds', async () => {
@@ -333,13 +367,13 @@ describe('getLibraryOrders', () => {
     mockDiscovery()
     mockFetch.mockResolvedValueOnce(actionResponse('', 401))
     expect((await run()).status).toBe('session_expired')
-    resetLibraryActionCache()
+    actionIds = createHumbleActionIdCache()
     mockFetch.mockResolvedValueOnce(actionResponse('', 403))
     expect((await run()).status).toBe('access_denied')
-    resetLibraryActionCache()
+    actionIds = createHumbleActionIdCache()
     mockFetch.mockResolvedValueOnce(actionResponse('', 429))
     expect((await run()).status).toBe('access_denied')
-    resetLibraryActionCache()
+    actionIds = createHumbleActionIdCache()
     mockFetch.mockResolvedValueOnce({
       status: 307,
       headers: new Headers({
@@ -490,7 +524,7 @@ describe('getLibraryOrders', () => {
     mockFetch
       .mockResolvedValueOnce(actionResponse(flight(1, 2, ['a'])))
       .mockRejectedValueOnce(new Error('ECONNRESET'))
-    const p = getLibraryOrders('ory_session_x=synthetic')
+    const p = getLibraryOrders('ory_session_x=synthetic', actionIds)
     const settled = p.then(
       () => 'resolved',
       (e: Error) => e.message
@@ -515,6 +549,7 @@ describe('getLibraryOrders', () => {
 
 describe('revealKey', () => {
   const ACTION_ID = 'b'.repeat(42)
+  let actionIds: HumbleActionIdCache
   const GAMEKEY = 'gamekey-reveal-xyz'
   const KEY_ID = 'somegame_steam'
   const FAKE_KEY = 'AAAAA-BBBBB-CCCCC'
@@ -561,7 +596,7 @@ describe('revealKey', () => {
 
   beforeEach(() => {
     jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] })
-    resetLibraryActionCache()
+    actionIds = createHumbleActionIdCache()
     mockFetch.mockReset()
     mockGet.mockReset()
     global.fetch = mockFetch as unknown as typeof fetch
@@ -573,7 +608,7 @@ describe('revealKey', () => {
   })
 
   async function run() {
-    const p = revealKey(COOKIE, params())
+    const p = revealKey(COOKIE, actionIds, params())
     await jest.runAllTimersAsync()
     return p
   }
@@ -595,6 +630,21 @@ describe('revealKey', () => {
     expect((init.headers as Record<string, string>)['Next-Action']).toBe(
       ACTION_ID
     )
+  })
+
+  test('a reveal writes only the redeem slot; a fresh owner re-discovers (66.4-REVIEW CR-01)', async () => {
+    mockFetch.mockResolvedValue(
+      actionResponse(flightResult({ success: true, key: FAKE_KEY }))
+    )
+    await run()
+    expect(actionIds.get('redeem')?.id).toBe(ACTION_ID)
+    expect(actionIds.get('library')).toBeNull()
+    mockGet.mockClear()
+    actionIds = createHumbleActionIdCache()
+
+    expect(await run()).toEqual({ status: 'ok', data: { key: FAKE_KEY } })
+
+    expect(mockGet).toHaveBeenCalled()
   })
 
   test('{success:false, errorKind} -> rejected_by_server, errorKind logged, key never logged', async () => {
@@ -648,14 +698,14 @@ describe('revealKey', () => {
   test('401 -> session_expired, 403 -> access_denied', async () => {
     mockFetch.mockResolvedValueOnce(actionResponse('', 401))
     expect((await run()).status).toBe('session_expired')
-    resetLibraryActionCache()
+    actionIds = createHumbleActionIdCache()
     mockFetch.mockResolvedValueOnce(actionResponse('', 403))
     expect((await run()).status).toBe('access_denied')
   })
 
   test('5xx throws (transient/ambiguous)', async () => {
     mockFetch.mockResolvedValueOnce(actionResponse('', 502))
-    const p = revealKey(COOKIE, params())
+    const p = revealKey(COOKIE, actionIds, params())
     const assertion = expect(p).rejects.toThrow()
     await jest.runAllTimersAsync()
     await assertion

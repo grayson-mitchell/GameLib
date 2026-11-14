@@ -116,6 +116,14 @@ const URL_SCHEME = /^[a-z][a-z0-9+.-]+:/i
  * The environment the script reads. A URL target (`gamelib://launch?...`) is not a file a
  * `.lnk` can point at, so it becomes an argument to `explorer.exe`, which opens it through the
  * registered protocol handler -- the Windows counterpart of the Linux entry's `xdg-open`.
+ *
+ * The URL must be a QUOTED argument. Unquoted, explorer.exe never dispatches a
+ * `scheme://host?query` token and opens Documents instead (measured 2026-11-13: unquoted 0/3,
+ * quoted 3/3; the `?` is the trigger, G-66.4-W2). A double quote inside the URL is
+ * percent-encoded to `%22` because a raw one would end the quoted argument early and hand the
+ * remainder to explorer.exe's own command line as a switch or path. `protocol.ts` decodes it
+ * again through `searchParams`.
+ *
  * `URL_SCHEME` needs two scheme characters so a drive letter (`C:`) is never mistaken for one.
  */
 export function buildShortcutEnv(
@@ -125,6 +133,7 @@ export function buildShortcutEnv(
 ): NodeJS.ProcessEnv {
   const isUrl = URL_SCHEME.test(details.target)
   const systemRoot = baseEnv.SystemRoot || baseEnv.SYSTEMROOT || 'C:\\Windows'
+  const quotedUrl = `"${details.target.replaceAll('"', '%22')}"`
   return {
     ...baseEnv,
     GAMELIB_LNK_PATH: lnkPath,
@@ -132,7 +141,7 @@ export function buildShortcutEnv(
       ? win32.join(systemRoot, 'explorer.exe')
       : details.target,
     GAMELIB_LNK_ARGS: isUrl
-      ? [details.target, details.args].filter(Boolean).join(' ')
+      ? [quotedUrl, details.args].filter(Boolean).join(' ')
       : (details.args ?? ''),
     GAMELIB_LNK_ICON: details.icon ?? '',
     GAMELIB_LNK_ICON_INDEX: String(details.iconIndex ?? 0)

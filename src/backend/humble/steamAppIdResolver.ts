@@ -27,12 +27,11 @@ import { logInfo, LogPrefix } from 'backend/logger'
  * Only titles ever reach this module: never key values, cookies or tokens.
  */
 
-export const STEAM_STORE_SEARCH_URL =
-  'https://store.steampowered.com/api/storesearch/'
+const STEAM_STORE_SEARCH_URL = 'https://store.steampowered.com/api/storesearch/'
 export const HUMBLE_APPID_MISS_TTL_MS = 7 * 24 * 60 * 60 * 1000
 export const HUMBLE_APPID_REQUEST_GAP_MS = 350
 export const HUMBLE_APPID_RESOLVE_CAP = 40
-export const HUMBLE_APPID_REQUEST_TIMEOUT_MS = 8000
+const HUMBLE_APPID_REQUEST_TIMEOUT_MS = 8000
 
 /**
  * Bumped when the search TERM changes, so misses recorded under an older term
@@ -99,7 +98,7 @@ export function normalizeForAppIdMatch(title: string): string {
  * (Steam)" -> "Valiant: Resurrection"). Punctuation and case are kept; only
  * the match (pickConfidentAppId) normalizes fully.
  */
-export function searchTermFor(title: string): string {
+function searchTermFor(title: string): string {
   let s = title.replace(/[™®©]/g, '').trim()
   let prev: string
   do {

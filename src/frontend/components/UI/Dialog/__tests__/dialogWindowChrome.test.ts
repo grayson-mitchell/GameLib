@@ -121,3 +121,38 @@ describe('quick-260820-kq0 round 3: the shared Dialog primitive carries a rounde
     expect(source).not.toMatch(/className[^}]*Dialog__element/)
   })
 })
+
+/**
+ * Quick task 261113-wro: the primitive gained an optional caller-driven close
+ * (`open`, default true) and an optional `onExited`, so SteamLogin can play
+ * the dialog's own 500ms exit on a successful sign-in BEFORE the login panel
+ * slides. SOURCE GATE, NOT A RENDER TEST -- see the note above.
+ */
+describe('quick-261113-wro: the Dialog primitive exposes an opt-in open prop and an onExited callback', () => {
+  it('SOURCE GATE (PRESENCE) -- DialogProps declares open?: boolean and onExited?: () => void', () => {
+    const source = read(DIALOG_TSX)
+
+    // Breaks if: either optional member is removed or made required (making
+    // them required would break every existing consumer at typecheck).
+    expect(source).toMatch(/open\?: boolean/)
+    expect(source).toMatch(/onExited\?: \(\) => void/)
+  })
+
+  it('SOURCE GATE (PRESENCE) -- the caller prop defaults to open, so the ~25 existing consumers are unchanged', () => {
+    const source = read(DIALOG_TSX)
+
+    // Breaks if: the `= true` default is dropped or flipped -- every consumer
+    // that does not pass `open` would then mount closed.
+    expect(source).toMatch(/open: requestedOpen = true/)
+  })
+
+  it('SOURCE GATE (PRESENCE) -- MuiDialog opens on (internal open AND caller open) and forwards onExited via TransitionProps', () => {
+    const source = read(DIALOG_TSX)
+
+    // Breaks if: open reverts to the internal state alone (a caller can no
+    // longer close the dialog through its exit), or TransitionProps is
+    // removed (onExited never fires, so SteamLogin's dismiss never runs).
+    expect(source).toContain('open={open && requestedOpen}')
+    expect(source).toContain('TransitionProps={{ onExited }}')
+  })
+})

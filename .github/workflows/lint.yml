@@ -21,7 +21,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: ./.github/actions/install-deps
+      - id: deps
+        uses: ./.github/actions/install-deps
       - name: Lint code.
         run: pnpm lint
       - name: Prettier code.
@@ -39,5 +40,8 @@ jobs:
         run: pnpm steam-line-ceiling
       # Phase 66 D-16: shrink-only module-state / child_process / jest.mock ceilings; lower
       # the matching meta/backendDiCeilings/*.json entry in the same commit as the removal.
+      # It runs even when an earlier step failed, because from a58e3e3e8 a red `Lint code.`
+      # hid ceiling drift (quick 261114-2gg); a failed install still skips it.
       - name: Backend DI ceilings
+        if: ${{ !cancelled() && steps.deps.outcome == 'success' }}
         run: pnpm backend-di-ceilings

@@ -306,6 +306,10 @@ jest.mock('../expirationAlerts', () => ({
 import { defined } from './defined'
 import { createHumbleLibrary } from '../library'
 import { createHumbleSyncFence } from '../syncFence'
+import {
+  createHumbleActionIdCache,
+  type HumbleActionIdCache
+} from '../actionIdCache'
 import { createSteamAppIdResolver } from '../steamAppIdResolver'
 import type { HumbleSteamAppIdCacheEntry } from '../steamAppIdResolver'
 import { createLoginWindowSeamSlot } from '../loginWindowSeam'
@@ -323,8 +327,10 @@ let HumbleLibrary: ReturnType<typeof createHumbleLibrary>
 const appIdCacheData = new Map<string, HumbleSteamAppIdCacheEntry>()
 const mockSteamStoreSearch = jest.fn()
 let syncFence: ReturnType<typeof createHumbleSyncFence>
+let actionIds: HumbleActionIdCache
 function buildLibrary(): ReturnType<typeof createHumbleLibrary> {
   syncFence = createHumbleSyncFence()
+  actionIds = createHumbleActionIdCache()
   return createHumbleLibrary({
     sendFrontendMessage,
     stores: storesSlice,
@@ -333,6 +339,7 @@ function buildLibrary(): ReturnType<typeof createHumbleLibrary> {
       getLiveCsrfToken: () => mockGetLiveCsrfToken()
     },
     syncFence,
+    actionIds,
     steamUser: { isLoggedIn: () => mockSteamIsLoggedIn() },
     steamAppIdResolver: createSteamAppIdResolver({
       cache: {
@@ -531,6 +538,22 @@ describe('HumbleLibrary', () => {
 
       expect(mockGetOrderDetail).toHaveBeenCalledWith('cookie-value', 'new-gk')
       expect(result).toEqual({ status: 'ok' })
+    })
+
+    test("a sync hands the library's injected action-id owner to getLibraryOrders (66.4-REVIEW CR-01)", async () => {
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['new-gk'] })
+      mockGetOrderDetail.mockResolvedValue({
+        status: 'ok',
+        data: makeRawOrder('new-gk')
+      })
+
+      await HumbleLibrary.sync(syncDeps)
+
+      expect(mockGetGamekeys).toHaveBeenCalledWith(
+        'cookie-value',
+        actionIds,
+        expect.objectContaining({ signal: expect.any(Function) })
+      )
     })
 
     test('a non-terminal cached gamekey IS re-fetched (HSYNC-03 recompute)', async () => {
@@ -1829,10 +1852,11 @@ describe('HumbleLibrary', () => {
           })
         } as never,
         user: {
-          getCredentials: async () => mockGetCredentials(),
+          getCredentials: () => Promise.resolve(mockGetCredentials()),
           getLiveCsrfToken: () => mockGetLiveCsrfToken()
         },
         syncFence: createHumbleSyncFence(),
+        actionIds: createHumbleActionIdCache(),
         steamUser: spy('steamUser', {
           isLoggedIn: () => mockSteamIsLoggedIn()
         }),
@@ -2716,11 +2740,15 @@ describe('HumbleLibrary', () => {
 
       expect(outcome).toEqual({ status: 'revealed', key: 'REAL-KEY-VALUE' })
       expect(mockAdapterRevealKey).toHaveBeenCalledTimes(1)
-      expect(mockAdapterRevealKey).toHaveBeenCalledWith('cookie-value', {
-        gamekey: 'gk1',
-        machineName: 'gk1_key',
-        keyindex: 'idx-1'
-      })
+      expect(mockAdapterRevealKey).toHaveBeenCalledWith(
+        'cookie-value',
+        actionIds,
+        {
+          gamekey: 'gk1',
+          machineName: 'gk1_key',
+          keyindex: 'idx-1'
+        }
+      )
       expect(
         defined(
           libraryData.get('gk1')?.keys[0],
@@ -3083,11 +3111,15 @@ describe('HumbleLibrary', () => {
         String(c[0][0]).includes('redeemEntitlementAction server action')
       )
       expect(call).toBeDefined()
-      expect(mockAdapterRevealKey).toHaveBeenCalledWith('cookie-value', {
-        gamekey: 'gk1',
-        machineName: 'gk1_key',
-        keyindex: 'steam'
-      })
+      expect(mockAdapterRevealKey).toHaveBeenCalledWith(
+        'cookie-value',
+        actionIds,
+        {
+          gamekey: 'gk1',
+          machineName: 'gk1_key',
+          keyindex: 'steam'
+        }
+      )
     })
 
     test('definitive failure (access_denied) logs the exact adapter status — the previously-silent 401/403/429 mapAxiosError gap', async () => {

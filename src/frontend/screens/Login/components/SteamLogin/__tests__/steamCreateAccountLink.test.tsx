@@ -233,8 +233,8 @@ describe('quick-260822-elw: showsCreateAccountLink / renderCreateAccountLink gat
     // Source-text absence, closing the gap a pure element-graph check
     // cannot: renderCreateAccountLink's own function body must not
     // reference closeWindow at all -- closeWindow's total occurrence count
-    // in this file is pinned at 8 by steamLoginWindowChrome.test.ts, and
-    // this function must not become a 9th consumer.
+    // in this file is pinned at 5 by steamLoginWindowChrome.test.ts, and
+    // this function must not become a 6th consumer.
     const source = read(STEAM_LOGIN_TSX)
     const fnBlock = extractBlock(
       source,

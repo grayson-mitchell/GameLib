@@ -139,6 +139,7 @@
         "extraInfoErrorTitle": "Couldn't load extra info",
         "extraInfoRetry": "Retry",
         "extraInfoStaleBody": "This result was cached before load outcomes were recorded, so it may be out of date. Refresh to check.",
+        "moreActions": "More actions",
         "steamInstallingPercent": "Installing… {{percent}}%",
         "steamShortcut": {
             "failed": "Updating the Steam shortcut failed."
@@ -864,12 +865,12 @@
             "prompt": {
                 "dontAskAgain": "Don't ask again for this build",
                 "finishFirst": "Finish updating {{title}} before you play. Resume it from Downloads.",
-                "queued": "An update for {{title}} is waiting in Downloads. Play after it finishes, or remove it from the queue.",
-                "updating": "{{title}} is updating. Play it when the update finishes, or pause the update in Downloads.",
                 "message": "{{title}} has an update (build {{targetBuild}}). Update now, or play the build you have?",
                 "playAnyway": "Play anyway",
+                "queued": "An update for {{title}} is waiting in Downloads. Play after it finishes, or remove it from the queue.",
                 "title": "Update available",
-                "updateNow": "Update now"
+                "updateNow": "Update now",
+                "updating": "{{title}} is updating. Play it when the update finishes, or pause the update in Downloads."
             },
             "refusedRunning": "Quit {{title}} before updating it."
         }

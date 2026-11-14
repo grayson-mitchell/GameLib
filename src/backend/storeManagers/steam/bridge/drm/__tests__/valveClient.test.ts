@@ -563,9 +563,9 @@ describe('ensureValveClient manifest hand-off (75 D-05 write-then-path)', () => 
       requestRustInvoke: stub.requestRustInvoke as never
     })
     const fetchText = jest.fn(() => Promise.resolve(MANIFEST_TEXT))
-    const fetchToFile = jest.fn(async (_u: string, dest: string) => {
+    const fetchToFile = jest.fn((_u: string, dest: string) => {
       writeFileSync(dest, 'x')
-      return { bytes: 1 }
+      return Promise.resolve({ bytes: 1 })
     })
     return { ensure, seen, stub, fetchText, fetchToFile }
   }

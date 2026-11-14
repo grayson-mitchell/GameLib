@@ -149,7 +149,7 @@ export function registerHumbleFlows(
   deps: ExpirationAlertDeps & {
     ipc: Pick<IpcRegistry, 'handle' | 'on'>
     /** The boot's Humble services (D-66.3-17): the one user and library, by slice. */
-    humble: Pick<HumbleServices, 'user' | 'library'>
+    humble: Pick<HumbleServices, 'user' | 'library' | 'actionIds'>
   }
 ): void {
   // ── Library/sync group (REQ-34.4-07) ─────────────────────────────────────

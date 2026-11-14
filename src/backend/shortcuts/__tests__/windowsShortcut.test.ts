@@ -130,7 +130,7 @@ describe('buildShortcutEnv', () => {
     expect(WRITE_SHORTCUT_SCRIPT).not.toContain('Jörg')
   })
 
-  it('turns a protocol URL target into explorer.exe + the URL as its argument', () => {
+  it('turns a protocol URL target into explorer.exe + the URL as ONE double-quoted argument', () => {
     const url = 'gamelib://launch?appName=a&runner=gog'
     const env = buildShortcutEnv(
       'C:\\x.lnk',
@@ -138,9 +138,43 @@ describe('buildShortcutEnv', () => {
       { SystemRoot: 'D:\\WINDOWS' }
     )
     expect(env.GAMELIB_LNK_TARGET).toBe('D:\\WINDOWS\\explorer.exe')
-    expect(env.GAMELIB_LNK_ARGS).toBe(url)
+    expect(env.GAMELIB_LNK_ARGS).toBe(`"${url}"`)
     expect(env.GAMELIB_LNK_ICON).toBe('C:\\Games\\Game.exe')
     expect(env.GAMELIB_LNK_ICON_INDEX).toBe('0')
+  })
+
+  it('appends details.args after the closing quote of a URL target', () => {
+    const url = 'gamelib://launch?appName=a&runner=gog'
+    const env = buildShortcutEnv(
+      'C:\\x.lnk',
+      { target: url, args: '--x' },
+      { SystemRoot: 'C:\\Windows' }
+    )
+    expect(env.GAMELIB_LNK_ARGS).toBe(`"${url}" --x`)
+  })
+
+  it('percent-encodes a double quote inside a URL target so it cannot end the argument early', () => {
+    const env = buildShortcutEnv(
+      'C:\\x.lnk',
+      { target: 'gamelib://launch?appName=a"b" /root,C:\\&runner=gog' },
+      { SystemRoot: 'C:\\Windows' }
+    )
+    const args = env.GAMELIB_LNK_ARGS ?? ''
+    expect(args).toBe(
+      '"gamelib://launch?appName=a%22b%22 /root,C:\\&runner=gog"'
+    )
+    expect(args.match(/"/g)).toHaveLength(2)
+    expect(args.startsWith('"')).toBe(true)
+    expect(args.endsWith('"')).toBe(true)
+  })
+
+  it('leaves the args of a non-URL target exactly as given, with no quotes added', () => {
+    const env = buildShortcutEnv(
+      'C:\\x.lnk',
+      { target: 'C:\\Game.exe', args: 'a b' },
+      {}
+    )
+    expect(env.GAMELIB_LNK_ARGS).toBe('a b')
   })
 
   it('does not mistake a drive letter for a URL scheme', () => {

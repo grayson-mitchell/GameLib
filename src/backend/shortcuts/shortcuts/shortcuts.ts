@@ -21,6 +21,7 @@ import sanitize from 'sanitize-filename'
 import { isMac } from 'backend/constants/environment'
 import type { Game } from 'common/types/game_manager'
 import { writeWindowsShortcut, type ShortcutDetails } from './windowsShortcut'
+import { resolveWindowsShortcutIcon } from './windowsShortcutIcon'
 import { readWindowsShellFolder } from '../../sidecar/knownFolders'
 
 /**
@@ -116,25 +117,36 @@ ${icon ? `Icon=${icon}\n` : ''}Categories=Game;
       break
     }
     case 'win32': {
+      // appName and runner are percent-encoded (as generateMacOsApp does, T-34.5-C6-17): the .lnk
+      // argument is a double-quoted string and protocol.ts decodes it again via searchParams.
       const shortcutOptions: ShortcutDetails = {
-        target: launchWithProtocol
+        target: `gamelib://launch?appName=${encodeURIComponent(app_name)}&runner=${encodeURIComponent(runner)}`
       }
       let executable = gameInfo.install.executable
       if (isStore(gameInfo, 'gog')) {
         executable = deps.libraryManagers.gog.getExecutable(gameInfo.app_name)
       }
-      if (executable) {
-        let icon: string
-        if (
-          'install_path' in gameInfo.install &&
-          gameInfo.install.install_path
-        ) {
-          icon = join(gameInfo.install.install_path, executable)
-        } else {
-          icon = executable
-        }
-        shortcutOptions.icon = icon
-        shortcutOptions.iconIndex = 0
+      const installPath =
+        'install_path' in gameInfo.install
+          ? gameInfo.install.install_path
+          : undefined
+      const resolved = await resolveWindowsShortcutIcon(deps, {
+        title,
+        installPath,
+        storeExecutable: executable
+      })
+      if (resolved) {
+        shortcutOptions.icon = resolved.icon
+        shortcutOptions.iconIndex = resolved.iconIndex
+        logInfo(
+          `Shortcut icon for ${title}: ${resolved.source} ${resolved.icon}`,
+          LogPrefix.Backend
+        )
+      } else {
+        logWarning(
+          `No icon available for ${title}, creating an iconless shortcut`,
+          LogPrefix.Backend
+        )
       }
 
       // Not `shell.writeShortcutLink`: the sidecar has no Win32 shell-link API and stubs it to

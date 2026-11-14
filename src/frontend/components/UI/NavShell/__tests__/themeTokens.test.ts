@@ -3287,7 +3287,7 @@ describe('Game-menu .is-link family: render-site census, winning-rule resolution
     expect(dropdownOwnCandidates).toEqual(['.only.is-link'])
   })
 
-  it('MainButton surface resolution: .buttons is the nearest ancestor with a depth-0 background, settled from the cascade not from a comment', () => {
+  it('MainButton surface resolution: .actionDock is the nearest ancestor with a depth-0 background, settled from the cascade not from a comment', () => {
     // .dropdown itself: transparent (Dropdown/index.scss).
     const dropdownBlock = cssBlock(dropdownScss, '.dropdown')
     expect(declsAtDepthZero(dropdownBlock, 'background')).toEqual([
@@ -3295,16 +3295,20 @@ describe('Game-menu .is-link family: render-site census, winning-rule resolution
     ])
 
     // The DOM ancestor chain, outside-in per MainButton.tsx/GamePage/index.tsx:
-    // .gameConfigContainer > .mainInfoWrapper > .mainInfo > .buttons >
-    // (MainButton) > .dropdownContainer > .dropdown. .dropdownContainer
-    // declares no depth-0 background; .buttons does (quick 261103-w9l pinned
-    // it sticky with an opaque fill), so it is the nearest painted surface.
-    // It reuses .mainInfo's own token, so the resolved surface is unchanged.
+    // .gameConfigContainer > .mainInfoWrapper > .mainInfo > .actionDock >
+    // .buttons > (MainButton) > .dropdownContainer > .dropdown.
+    // .dropdownContainer and .buttons declare no depth-0 background;
+    // .actionDock does (the docked footer, quick 261114-1fi), so it is the
+    // nearest painted surface. It reuses .mainInfo's own token, so the
+    // resolved surface is unchanged.
     const buttonsBlock = cssBlock(gamePageCss, '.buttons')
+    const actionDockBlock = cssBlock(gamePageCss, '.actionDock')
     const dropdownContainerBlock = cssBlock(dropdownScss, '.dropdownContainer')
     expect(declsAtDepthZero(dropdownContainerBlock, 'background')).toEqual([])
     expect(declsAtDepthZero(buttonsBlock, 'background')).toEqual([])
-    expect(declsAtDepthZero(buttonsBlock, 'background-color')).toEqual([
+    expect(declsAtDepthZero(buttonsBlock, 'background-color')).toEqual([])
+    expect(declsAtDepthZero(actionDockBlock, 'background')).toEqual([])
+    expect(declsAtDepthZero(actionDockBlock, 'background-color')).toEqual([
       'var(--body-background)'
     ])
 
@@ -3317,7 +3321,7 @@ describe('Game-menu .is-link family: render-site census, winning-rule resolution
   })
 
   const mainButtonSurfaceDecl = at(
-    declsAtDepthZero(cssBlock(gamePageCss, '.buttons'), 'background-color'),
+    declsAtDepthZero(cssBlock(gamePageCss, '.actionDock'), 'background-color'),
     0
   )
   const mainButtonHoverBlock = cssBlock(buttonsScss, '.button.is-link:hover')

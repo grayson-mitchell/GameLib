@@ -35,14 +35,14 @@ describe('restoreLocalSteamLibrary', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     library.clear()
-    jest.mocked(steamLibraryStore.get).mockReturnValue([])
+    jest.mocked(steamLibraryStore).get.mockReturnValue([])
     jest.mocked(refreshInstallState).mockResolvedValue(undefined)
   })
 
   it('seeds an empty map from the cache and pushes each entry once', async () => {
     const a = game('1', true)
     const b = game('2', false)
-    jest.mocked(steamLibraryStore.get).mockReturnValue([a, b])
+    jest.mocked(steamLibraryStore).get.mockReturnValue([a, b])
 
     const res = await restoreLocalSteamLibrary(deps)
 
@@ -54,7 +54,7 @@ describe('restoreLocalSteamLibrary', () => {
 
   it('does not reseed or push when the map is non-empty', async () => {
     library.set('9', game('9', true))
-    jest.mocked(steamLibraryStore.get).mockReturnValue([game('1', true)])
+    jest.mocked(steamLibraryStore).get.mockReturnValue([game('1', true)])
 
     const res = await restoreLocalSteamLibrary(deps)
 
@@ -73,7 +73,7 @@ describe('restoreLocalSteamLibrary', () => {
   })
 
   it('empty map and empty cache pushes nothing and does not throw', async () => {
-    jest.mocked(steamLibraryStore.get).mockReturnValue([])
+    jest.mocked(steamLibraryStore).get.mockReturnValue([])
 
     await expect(restoreLocalSteamLibrary(deps)).resolves.toEqual({
       seeded: 0
@@ -82,7 +82,7 @@ describe('restoreLocalSteamLibrary', () => {
   })
 
   it('awaits refreshInstallState after the seed', async () => {
-    jest.mocked(steamLibraryStore.get).mockReturnValue([game('1', false)])
+    jest.mocked(steamLibraryStore).get.mockReturnValue([game('1', false)])
     jest.mocked(refreshInstallState).mockImplementation(() => {
       expect(library.has('1')).toBe(true)
       return Promise.resolve()

@@ -109,7 +109,7 @@ describe('quick-260820-kq0: SteamLogin renders inside a single shared Dialog win
     expect((source.match(/\buseNavigate\b/g) ?? []).length).toBe(0)
   })
 
-  it('SOURCE GATE (PRESENCE, census) -- closeWindow has exactly one definition and exactly three non-calling consumers (Class C), matching the verified 8-site dismissal census', () => {
+  it('SOURCE GATE (PRESENCE, census) -- closeWindow has exactly one definition, three non-calling consumers (Class C), one exit-completion consumer, and zero direct calls (261113-wro)', () => {
     const source = read(STEAM_LOGIN_TSX)
 
     // Class A: the one definition itself.
@@ -127,10 +127,15 @@ describe('quick-260820-kq0: SteamLogin renders inside a single shared Dialog win
       (source.match(/onClose=\{closeWindow\}/g) ?? []).length
     expect(consumerSites).toBe(3)
 
-    // Total identifier occurrences: 1 definition + 4 Class B calls + 3 Class
-    // C consumers = 8, the plan's full verified dismissal census for this
-    // file.
-    expect((source.match(/closeWindow/g) ?? []).length).toBe(8)
+    // Quick task 261113-wro: the four former Class B success-branch calls
+    // are gone -- they WERE the bypass (dismiss ran while the dialog was
+    // still fully open). They are replaced by finishSignIn(), and closeWindow
+    // now runs only as the Dialog's onExited consumer.
+    expect((source.match(/closeWindow\(\)/g) ?? []).length).toBe(0)
+
+    // Total identifier occurrences: 1 definition + 0 direct calls + 3 Class C
+    // consumers + 1 exit-completion consumer = 5.
+    expect((source.match(/closeWindow/g) ?? []).length).toBe(5)
   })
 
   it('SOURCE GATE (ABSENCE) -- the old bare, unadorned panel root is gone from both the component and its stylesheet', () => {
@@ -343,5 +348,71 @@ describe('quick-260820-u29: SteamLogin tabs size to fit their labels, and the QR
     // unconfirmed by live measurement this session) -- a hardcoded offset
     // would have assumed a specific cause and specific px amount instead.
     expect(source).toMatch(/\.steamLoginBody\s*\{[^}]*margin-inline:\s*auto/)
+  })
+})
+
+/**
+ * Quick task 261113-wro: a successful Steam sign-in must close the "Sign in
+ * to Steam" window through its own exit transition FIRST, and only then let
+ * the login panel slide down. Before this, the four success branches called
+ * `dismiss` directly: the parent dropped `loginFlowOpen` (panel slides down)
+ * while the dialog stayed fully open, then unmounted it un-animated.
+ *
+ * SOURCE GATE, NOT A RENDER TEST -- see the file-header note above. The
+ * animation order itself is only visible to the plan's Task 3 live check.
+ */
+describe('quick-261113-wro: a successful sign-in closes the Steam window before the login panel slides', () => {
+  it('FILLED-SPECIMEN GUARD (raw, unstripped) -- index.tsx actually contains the literal "finishSignIn" token, so a broken comment stripper turns every other assertion in this block RED rather than vacuously green', () => {
+    const raw = readRaw(STEAM_LOGIN_TSX)
+    expect(raw).toMatch(/finishSignIn/)
+  })
+
+  it('SOURCE GATE (PRESENCE) -- all four success branches finalise the auth state (await steamLogin) and THEN start the close (finishSignIn)', () => {
+    const source = read(STEAM_LOGIN_TSX)
+
+    // Breaks if: a success branch goes back to calling closeWindow/dismiss
+    // directly, drops the await, or swaps the order so the close starts
+    // before the auth state is finalised.
+    expect(
+      (source.match(/await steamLogin\(\{[^)]*\}\)\s*finishSignIn\(\)/g) ?? [])
+        .length
+    ).toBe(4)
+  })
+
+  it('SOURCE GATE (PRESENCE, census) -- finishSignIn has exactly one declaration and four calls', () => {
+    const source = read(STEAM_LOGIN_TSX)
+
+    // Breaks if: a fifth success path is added without routing through
+    // finishSignIn, or one of the four is removed.
+    expect((source.match(/function finishSignIn\(\)/g) ?? []).length).toBe(1)
+    expect((source.match(/finishSignIn\(\)/g) ?? []).length).toBe(5)
+  })
+
+  it('SOURCE GATE (PRESENCE + ABSENCE) -- finishSignIn only flips signedIn; it never dismisses directly', () => {
+    const source = read(STEAM_LOGIN_TSX)
+    const body = source.match(/function finishSignIn\(\)\s*\{([^}]*)\}/)?.[1]
+
+    // Breaks if: the body disappears, stops setting signedIn, or starts
+    // calling closeWindow/dismiss itself (which would re-introduce the panel
+    // sliding behind a still-open dialog).
+    expect(body).toBeDefined()
+    expect(body).toContain('setSignedIn(true)')
+    expect(body).not.toContain('closeWindow')
+    expect(body).not.toContain('dismiss')
+  })
+
+  it('SOURCE GATE (PRESENCE) -- the single Dialog closes on signedIn and dismisses from onExited, while keeping its manual-close wiring', () => {
+    const source = read(STEAM_LOGIN_TSX)
+    const dialogElement = source.match(/<Dialog\s[^>]*>/)?.[0] ?? ''
+
+    // Breaks if: open={!signedIn} is dropped (the dialog never plays its exit
+    // on success), onExited stops being the one place closeWindow runs on
+    // success, or the manual X/backdrop wiring is lost.
+    expect(dialogElement).toContain('open={!signedIn}')
+    expect(dialogElement).toContain(
+      'onExited={signedIn ? closeWindow : undefined}'
+    )
+    expect(dialogElement).toContain('showCloseButton={true}')
+    expect(dialogElement).toContain('onClose={closeWindow}')
   })
 })

@@ -1,5 +1,6 @@
 {
   "jestMock": {
+    "src/frontend/screens/Game/GamePage/components/__tests__/DotsMenu.disclosure.test.tsx": 8,
     "src/frontend/screens/Game/GamePage/components/__tests__/EngineBadge.test.tsx": 1,
     "src/frontend/screens/Game/GamePage/components/__tests__/EngineNotices.test.tsx": 1,
     "src/frontend/screens/Game/GamePage/components/__tests__/GameStatus.bottleWaiting.test.tsx": 7,
@@ -15,7 +16,9 @@
     "src/frontend/screens/Game/GamePage/components/__tests__/MainButton.steamStarting.test.tsx": 5,
     "src/frontend/screens/Game/GamePage/components/__tests__/MainButton.steamWaitingRestart.test.tsx": 5,
     "src/frontend/screens/Game/GamePage/components/__tests__/SettingsButton.test.tsx": 3,
+    "src/frontend/screens/Game/GamePage/components/__tests__/SteamBridgeRouteSummary.test.tsx": 2,
     "src/frontend/screens/Game/GamePage/components/__tests__/SteamClientSetup.waitingDialog.test.tsx": 5,
+    "src/frontend/screens/Game/GamePage/components/__tests__/SteamUpdateInfo.test.tsx": 5,
     "src/frontend/screens/Game/GamePage/components/__tests__/cloudSavesSyncFailure.test.tsx": 9
   }
 }

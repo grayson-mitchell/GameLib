@@ -12,6 +12,7 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { createHumbleSyncFence } from '../syncFence'
+import { createHumbleActionIdCache } from '../actionIdCache'
 import {
   createLoginWindowSeamSlot,
   type LoginWindowSeam
@@ -38,6 +39,46 @@ describe('createHumbleSyncFence', () => {
     a.invalidate()
 
     expect(b.current()).toBe(bBefore)
+  })
+})
+
+describe('createHumbleActionIdCache (66.4-REVIEW CR-01)', () => {
+  const entry = { id: 'a'.repeat(40), chunk: '/_next/static/chunks/x.js' }
+
+  it('a fresh owner returns null for both slots', () => {
+    const owner = createHumbleActionIdCache()
+
+    expect(owner.get('library')).toBeNull()
+    expect(owner.get('redeem')).toBeNull()
+  })
+
+  it('setting one slot leaves the other null', () => {
+    const owner = createHumbleActionIdCache()
+
+    owner.set('library', entry)
+
+    expect(owner.get('library')).toEqual(entry)
+    expect(owner.get('redeem')).toBeNull()
+  })
+
+  it('setting null clears a slot', () => {
+    const owner = createHumbleActionIdCache()
+    owner.set('redeem', entry)
+
+    owner.set('redeem', null)
+
+    expect(owner.get('redeem')).toBeNull()
+  })
+
+  it('two owners are independent', () => {
+    const a = createHumbleActionIdCache()
+    const b = createHumbleActionIdCache()
+
+    a.set('library', entry)
+    a.set('redeem', entry)
+
+    expect(b.get('library')).toBeNull()
+    expect(b.get('redeem')).toBeNull()
   })
 })
 
@@ -80,7 +121,9 @@ describe('the Humble owners reach zero module state (source shape)', () => {
     'syncFence.ts',
     'loginWindowSeam.ts',
     'secretStore.ts',
-    'index.ts'
+    'index.ts',
+    'adapter.ts',
+    'actionIdCache.ts'
   ]
 
   it.each(FILES)(
@@ -119,6 +162,21 @@ describe('the Humble owners reach zero module state (source shape)', () => {
       /REVEAL_OUTCOME_EVENTS: readonly string\[\] =\s*Object\.freeze\(/
     )
     expect(library).toMatch(/REVEAL_OUTCOME_EVENTS\.includes\(/)
+  })
+
+  it('createHumbleServices builds the one action-id owner per call, not at module scope (66.4-REVIEW CR-01)', () => {
+    const index = stripSourceComments(
+      readFileSync(join(__dirname, '..', 'index.ts'), 'utf-8')
+    )
+    const factoryStart = index.indexOf('export function createHumbleServices')
+    expect(factoryStart).toBeGreaterThan(-1)
+
+    expect(index.slice(0, factoryStart)).not.toMatch(
+      /createHumbleActionIdCache\(\)/
+    )
+    expect(index.slice(factoryStart)).toMatch(
+      /const actionIds = createHumbleActionIdCache\(\)/
+    )
   })
 
   it('the single-flight and reveal-dedupe state live inside createHumbleLibrary, not at module scope', () => {

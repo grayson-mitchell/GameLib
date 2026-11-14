@@ -46,13 +46,16 @@ describe('instances and constants (D-66.3-09, D-05)', () => {
     expect(other.currentTriggerLabel()).toBe('startup')
   })
 
-  it('the trigger lists are frozen arrays; the only Set is the inferred-origin allowlist', () => {
+  it('the trigger lists and the inferred-origin allowlist are frozen arrays (D-66.3-09, 66.4-REVIEW CR-01)', () => {
     const source = stripSourceComments(
       readFileSync(join(__dirname, '..', 'authTrigger.ts'), 'utf8')
     )
-    expect(source.match(/new Set\(/g)).toHaveLength(1)
-    expect(source).toMatch(/INFERRED_REFRESH_ORIGINS[^=]*=\s*new Set\(/)
-    expect(source.match(/Object\.freeze\(\[/g)).toHaveLength(2)
+    expect(source.match(/new Set\(/g)).toBeNull()
+    expect(source).toMatch(
+      /INFERRED_REFRESH_ORIGINS: readonly string\[\] =\s*Object\.freeze\(\[/
+    )
+    expect(source).toMatch(/INFERRED_REFRESH_ORIGINS\.includes\(/)
+    expect(source.match(/Object\.freeze\(\[/g)).toHaveLength(3)
   })
 })
 
