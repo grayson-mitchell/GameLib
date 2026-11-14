@@ -192,10 +192,29 @@ describe('sidecarRpc UNBOUNDED_RUST_CHANNELS covers every human-gated dialog cha
     'RUST_DEPOT_JOB_RUN',
     // Phase 75 plan 19 (D-03): the no-download finalize walks the whole install tree to
     // measure SizeOnDisk, which scales with the game, not a clock. Also not a dialog channel.
-    'RUST_DEPOT_FINALIZE'
+    'RUST_DEPOT_FINALIZE',
+    // Phase 79 plan 15: the Rust CM session ops bound themselves (COMMAND_DEADLINE 120 s,
+    // LOGON_BOUND 35 s, wrap 5 s + 15 s spacing); the generic 60 s cap would cut a reconnect
+    // short. Not dialog channels either.
+    'RUST_STEAMCM_SESSION_ACQUIRE',
+    'RUST_STEAMCM_SESSION_ENSURE_CONNECTED',
+    'RUST_STEAMCM_SESSION_SHUTDOWN',
+    'RUST_STEAMCM_LICENSES',
+    'RUST_STEAMCM_PRODUCT_INFO',
+    'RUST_STEAMCM_DEPOT_KEY',
+    'RUST_STEAMCM_MANIFEST_REQUEST_CODE',
+    'RUST_STEAMCM_CONTENT_SERVERS',
+    'RUST_STEAMCM_OWNED_APPS',
+    'RUST_STEAMCM_PERSONAS',
+    'RUST_STEAMCM_REDEEM_KEY',
+    'RUST_STEAMCM_ANON_PRODUCT_INFO',
+    'RUST_STEAMCM_SIGNIN_QR_START',
+    'RUST_STEAMCM_SIGNIN_CREDENTIALS_START',
+    'RUST_STEAMCM_SIGNIN_GUARD_SUBMIT',
+    'RUST_STEAMCM_WRAP_RESTORE_IF_OWED'
   ]
 
-  test('contains exactly the three dialog channels plus the two depot channels', () => {
+  test('contains exactly the dialog, depot and Rust CM channels', () => {
     // Set equality AND length, not `toContain`: `toContain` catches deletion but is blind to
     // EXTENSION, and an unrelated channel silently acquiring an unbounded timeout is exactly
     // as much of a defect as a dialog channel losing one.
