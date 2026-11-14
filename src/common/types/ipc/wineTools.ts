@@ -2,7 +2,6 @@ import { z } from 'zod'
 
 import type {
   ExecResult,
-  GameSettings,
   WineInstallation,
   WinetricksApplyResult,
   WinetricksComponent,
@@ -13,23 +12,20 @@ import type {
 import {
   nonEmptyString,
   optionalArg,
-  phase70Passthrough,
   runnerArg,
   wineInstallationArg,
   type InvokeFns,
   type PushFns
 } from './schemaTypes'
+import { gameSettingsSchema } from './settingsSchema'
 
 // Shape half of rendererPathGuard.assertCommandParts; the handler keeps calling it (D-05).
 const commandParts = z.array(z.string().max(4096)).min(1).max(256)
 
 const verbList = z.array(nonEmptyString(256)).min(1).max(1024)
 
-// D-07: a settings-shaped object. Declared keys are the ones the Wine runner reads first;
-// Phase 70 tightens the rest. The cast keeps the derived call-site type the full GameSettings.
-const gameSettingsArg = phase70Passthrough({
-  winePrefix: z.string().max(4096).optional()
-}) as unknown as z.ZodType<GameSettings, GameSettings>
+// D-11: the full GameSettings shape, strict.
+const gameSettingsArg = gameSettingsSchema
 
 const protonVerb = z.enum([
   'run',

@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import type { GameStatus, LaunchParams, StatusPromise } from '../../types'
+import type { GameStatus, StatusPromise } from '../../types'
 import type {
   SteamBottleLaunchWaitingCause,
   SteamBridgeKnownBadReason,
@@ -12,26 +12,24 @@ import type {
 import {
   nonEmptyString,
   optionalArg,
-  phase70Passthrough,
   runnerArg,
   type InvokeFns,
   type PushFns
 } from './schemaTypes'
+import { launchOptionSchema } from './settingsSchema'
 
 // `origin` (quick-260817-d61) is observability + the Steam keyring deferral trigger ONLY: it
 // must never carry user data, hence the tight bound.
 const refreshOrigin = z.string().max(256)
 
-// D-07: the envelope is checked (appName + runner, the identity the sidecar routes on); the
-// launch options come from persisted game config, so the rest stays an explicit loose object
-// that Phase 70 tightens. The cast keeps the derived call-site type the full LaunchParams
-// (zod's loose-object input type carries an index signature LaunchParams cannot satisfy).
-const launchParamsArg = phase70Passthrough({
+// D-11: strict LaunchParams, including the LaunchOption union.
+const launchParamsArg = z.strictObject({
   appName: nonEmptyString(256),
   runner: runnerArg(),
+  launchArguments: launchOptionSchema.optional(),
   skipVersionCheck: z.boolean().optional(),
   args: z.array(z.string().max(8192)).max(1024).optional()
-}) as unknown as z.ZodType<LaunchParams, LaunchParams>
+})
 
 export const steamAsyncArgs = {
   refreshLibrary: z.tuple([

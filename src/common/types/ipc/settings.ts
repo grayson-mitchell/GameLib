@@ -7,28 +7,43 @@ import type { GetLogFileArgs } from 'backend/logger/paths'
 import {
   nonEmptyString,
   optionalArg,
-  phase70Passthrough,
   runnerArg,
   type InvokeFns,
   type SendFns
 } from './schemaTypes'
+import {
+  appSettingsSchema,
+  appSettingsShape,
+  settingKey
+} from './settingsSchema'
 
 const noArgs = z.tuple([])
 
-// D-07: the settings key set is every key of AppSettings (dozens, growing), so the envelope
-// bounds the key to a non-empty string and the value stays `unknown` (per-key value types are
-// Phase 70). The key is not narrowed to `keyof AppSettings` on the wire; the handler owns that.
-const settingKey = nonEmptyString(128)
+// D-11: writeConfig carries a strict partial of the full AppSettings shape; setSetting validates
+// `value` against the schema of its `key`. Both live in settingsSchema.ts.
+const configArg = appSettingsSchema.partial()
 
-// D-07 PHASE70-PASSTHROUGH: the config payload is a Partial<AppSettings>. It declares no keys
-// because the handler forwards the whole object to GlobalConfig / GameConfig; the loose object
-// also tolerates a persisted `wineVersion` carrying legacy or extra keys (67-13 disposition).
-// The cast keeps the derived call-site type the full Partial<AppSettings>: zod's loose-object
-// input type carries an index signature that an interface cannot satisfy.
-const configArg = phase70Passthrough({}) as unknown as z.ZodType<
-  Partial<AppSettings>,
-  Partial<AppSettings>
->
+// setSetting is a `send`: a rejected send is dropped silently (Phase 67 D-09), and JSON turns a
+// positional `undefined` into `null` or an absent key. So every optional key also accepts null.
+const setSettingArg = z
+  .strictObject({
+    appName: nonEmptyString(),
+    key: settingKey,
+    value: z.unknown()
+  })
+  .superRefine((arg, ctx) => {
+    const valueSchema: z.ZodType = appSettingsShape[arg.key]
+    const unset = arg.value === null || arg.value === undefined
+    if (unset && valueSchema.safeParse(undefined).success) return
+    const result = valueSchema.safeParse(arg.value)
+    if (!result.success) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['value'],
+        message: `invalid value for setting ${arg.key}`
+      })
+    }
+  })
 
 // GameLogType, listed so a rename fails the call-site type check in getLogContent's consumers.
 const LOG_TYPES = [
@@ -48,13 +63,7 @@ const logFileArgs = z.strictObject({
 }) as unknown as z.ZodType<GetLogFileArgs, GetLogFileArgs>
 
 export const settingsSyncArgs = {
-  setSetting: z.tuple([
-    z.strictObject({
-      appName: nonEmptyString(),
-      key: settingKey,
-      value: z.unknown()
-    })
-  ])
+  setSetting: z.tuple([setSettingArg])
 }
 
 export const settingsAsyncArgs = {
