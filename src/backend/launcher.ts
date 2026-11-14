@@ -1,4 +1,5 @@
 import type { AbortRegistry } from 'backend/utils/aborthandler/aborthandler'
+import { asStoreGame } from 'common/gameInfoNarrowing'
 import type { Dialogs } from 'backend/host/dialogs'
 import {
   GameInfo,
@@ -783,7 +784,10 @@ async function prepareLaunch(
     '\n\n'
   ])
 
-  const acInfoPromise = gameAnticheatInfo(deps, gameInfo.namespace)
+  const acInfoPromise = gameAnticheatInfo(
+    deps,
+    asStoreGame(gameInfo, 'legendary')?.namespace
+  )
   logWriter.logInfo(
     acInfoPromise.then((info) =>
       info?.status ? `Anticheat Status: ${info.status}` : ''

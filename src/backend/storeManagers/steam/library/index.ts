@@ -2,7 +2,6 @@ import type { SteamGameInfo } from 'common/types/steam'
 import type { ManagerDeps } from 'backend/services/types'
 import {
   ExecResult,
-  GameInfo,
   InstallPlatform,
   InstallInfo,
   LaunchOption
@@ -260,7 +259,10 @@ export default class SteamLibraryManager implements LibraryManager {
    * per-game entry point.  Falls back to the persisted library cache when the
    * in-memory Map has not been populated yet (e.g. before init() fires).
    */
-  getGameInfo(appName: string, _forceReload?: boolean): GameInfo | undefined {
+  getGameInfo(
+    appName: string,
+    _forceReload?: boolean
+  ): SteamGameInfo | undefined {
     // Delegate to SteamGame — reads shared library Map and fires lazy fetch
     // (fetchMetadataIfNeeded) when art_cover is empty (plan 02-03)
     const fromGame = new SteamGame(appName, this.deps).getGameInfo()
@@ -271,7 +273,7 @@ export default class SteamLibraryManager implements LibraryManager {
     return cached.find((g) => g.app_name === appName)
   }
 
-  getListOfGames(): GameInfo[] {
+  getListOfGames(): SteamGameInfo[] {
     return this.deps.stores.steam.steamLibraryStore.get('games', [])
   }
 

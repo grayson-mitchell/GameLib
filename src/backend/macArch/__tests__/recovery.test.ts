@@ -153,6 +153,7 @@ describe('offerWindowsReinstall', () => {
     m.promptMac32WindowsReinstall.mockResolvedValue(true)
     getGameInfo
       .mockReturnValueOnce({
+        runner: 'gog',
         title: 'G',
         is_installed: true,
         install: {

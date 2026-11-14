@@ -1,4 +1,5 @@
 import type { AppRuntimeSlice } from 'backend/appRuntime'
+import { asStoreGame } from 'common/gameInfoNarrowing'
 import type { BottleSettingsDeps } from 'backend/storeManagers/steam/bottle'
 import { logError, logInfo, LogPrefix, logWarning } from 'backend/logger'
 import { getFileSize, removeFolder, sendGameStatusUpdate } from '../utils'
@@ -322,7 +323,8 @@ export function createDownloadQueue(deps: DownloadQueueDeps) {
       const gameInfo = deps.managers.library[element.params.runner].getGameInfo(
         element.params.appName
       )
-      if (!gameInfo?.isEAManaged && !gameInfo?.isUbisoftManaged) {
+      const legendaryInfo = asStoreGame(gameInfo, 'legendary')
+      if (!legendaryInfo?.isEAManaged && !legendaryInfo?.isUbisoftManaged) {
         // Steam-specific size path (D-04): fetch via store appdetails API at enqueue
         // time so the DM queue shows a real GB/MB figure instead of '?? MB'.
         // GOG/Epic/Amazon continue to use getInstallInfo unchanged.

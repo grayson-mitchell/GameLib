@@ -15,6 +15,7 @@
 // a gog/legendary -> recovery -> storeManagers cycle. The managers arrive by
 // injection (66.1).
 
+import { asStoreGame } from 'common/gameInfoNarrowing'
 import type { MiscRuntimeSlice } from '../miscRuntime'
 import { dirname } from 'path'
 import { isMac } from 'backend/constants/environment'
@@ -197,7 +198,7 @@ export async function offerWindowsReinstall(
       return
     }
     const installLanguage = before?.install?.language
-    const installDlcs = before?.install?.installedDLCs
+    const installDlcs = asStoreGame(before, 'gog')?.install?.installedDLCs
 
     const { uninstallGameCallback } = await import('backend/utils/uninstaller')
     await uninstallGameCallback(
