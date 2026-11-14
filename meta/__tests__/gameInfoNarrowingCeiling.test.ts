@@ -16,7 +16,8 @@ const {
   evaluate,
   parseArgs,
   staleExemptions,
-  STORE_SPECIFIC_EXEMPT
+  STORE_SPECIFIC_EXEMPT,
+  COMMON_EXEMPT
 } = require('../gameInfoNarrowingCeiling.cjs')
 /* eslint-enable @typescript-eslint/no-require-imports */
 
@@ -46,7 +47,43 @@ describe('gameInfoNarrowingCeiling countNarrowing', () => {
     ).toBe(0)
   })
   it('does not count an unrelated call', () => {
-    expect(countNarrowing("isStore(g, 'steam')\n", 'a.ts')).toBe(0)
+    expect(countNarrowing("isSomethingElse(g, 'steam')\n", 'a.ts')).toBe(0)
+  })
+  it('counts GameInfoByRunner indexed access', () => {
+    expect(countNarrowing("type X = GameInfoByRunner['steam']\n", 'a.ts')).toBe(
+      1
+    )
+  })
+  it('does not count a GameInfoByRunner import alone', () => {
+    expect(
+      countNarrowing(
+        "import type { GameInfoByRunner } from 'common/types'\n",
+        'a.ts'
+      )
+    ).toBe(0)
+  })
+  it('counts Extract over GameInfo', () => {
+    expect(
+      countNarrowing(
+        "type X = Extract<GameInfo, { runner: 'steam' }>\n",
+        'a.ts'
+      )
+    ).toBe(1)
+    expect(countNarrowing("type Y = Extract<Foo, 'a'>\n", 'a.ts')).toBe(0)
+  })
+  it('counts isStore on an object subject', () => {
+    expect(countNarrowing("isStore(game, 'steam')\n", 'a.ts')).toBe(1)
+    expect(countNarrowing("isStore(info.game, 'gog')\n", 'a.ts')).toBe(1)
+  })
+  it('does not count isStore on a runner string or a non-literal store', () => {
+    for (const call of [
+      "isStore(runner, 'steam')",
+      "isStore(game.runner, 'steam')",
+      "isStore(props.store, 'gog')",
+      "isStore('steam', 'steam')",
+      'isStore(game, someVar)'
+    ])
+      expect(countNarrowing(`${call}\n`, 'a.ts')).toBe(0)
   })
   it('parses tsx', () => {
     expect(
@@ -119,11 +156,18 @@ describe('gameInfoNarrowingCeiling collectFiles', () => {
       'src/backend/storeManagers/steam/d.ts': 'x',
       'src/backend/e.ts': 'x',
       [`${exempt}/f.tsx`]: 'x',
-      'src/other/g.ts': 'x'
+      'src/other/g.ts': 'x',
+      'src/common/h.ts': 'x',
+      'src/common/types.ts': 'x',
+      'src/common/types/i.ts': 'x',
+      'src/common/gameInfoNarrowing.ts': 'x',
+      'src/common/storeCapabilities.ts': 'x',
+      'src/common/__fixtures__/j.ts': 'x'
     })
     try {
       expect(collectFiles(root).sort()).toEqual([
         'src/backend/e.ts',
+        'src/common/h.ts',
         'src/frontend/a.ts'
       ])
     } finally {
@@ -144,7 +188,9 @@ describe('gameInfoNarrowingCeiling args and exemptions', () => {
   it('reports a listed exemption missing from a root', () => {
     const root = seed({})
     try {
-      expect(staleExemptions(root)).toHaveLength(STORE_SPECIFIC_EXEMPT.length)
+      expect(staleExemptions(root)).toHaveLength(
+        STORE_SPECIFIC_EXEMPT.length + COMMON_EXEMPT.length
+      )
     } finally {
       rmSync(root, { recursive: true, force: true })
     }

@@ -33,3 +33,15 @@ Phase 70's code review left non-blocking hardening items. The operator promoted 
 ## Solution
 
 Count the bypass forms (and scan `src/common` outside store homes) in the ratchet, re-freezing the baseline with reasons; narrow `addNewApp` to the sideload schema; replace the wineTools cast with an honest partial type and tighten the no-wine arm; return `undefined`/a typed miss from `getGameInfo()`; fix the baseline reason, the GOG launch-option name handling and the JSDoc.
+
+## Resolution
+
+Closed by quick task 261114-sbo.
+
+- WR-02: the ratchet now counts `GameInfoByRunner[...]` indexed access, `Extract<...GameInfo...>` and `isStore(<object>, '<literal>')`, scans `src/common` outside its type/guard homes, and the baseline was re-frozen by hand with a reason per entry.
+- WR-03: `addNewApp` accepts only `sideloadGameInfoSchema`; the dispatcher and sideload manager are typed `SideloadGameInfo`.
+- WR-06: `runWineCommand`'s `gameSettings` is typed `Partial<GameSettings>` and the handler fills absent keys from the global settings; the settings no-wine `wineVersion` arm is a strict object with bounded `lib`/`lib32`/`wineserver`.
+- WR-07: `SteamGame.findGameInfo()` returns `SteamGameInfo | undefined`; `getGameInfo()` keeps the documented `{}` sentinel, typed `GameInfo`.
+- IN-01: the GamePage baseline reason names the real reads (no `namespace`).
+- IN-02: GOG launch option `name` falls back to `''`.
+- The stale `phase70Passthrough` JSDoc in `schemaTypes.ts` is gone.

@@ -2,8 +2,8 @@
  * Phase 70 (D-09): complete per-runner GameInfo fixtures for the strict IPC schemas. Each builder
  * returns a valid member of the GameInfo union; pass overrides to vary a field.
  */
-// Member shapes are named through GameInfoByRunner so the shared-code narrowing ratchet
-// (meta/gameInfoNarrowingCeiling.cjs) does not count this test helper.
+// Member shapes are named through GameInfoByRunner; the ratchet counts that indexed access
+// (meta/gameInfoNarrowingCeiling.cjs), so this helper is allowlisted in its baseline.
 import type { GameInfoByRunner, GameInfoCore } from 'common/types'
 
 function core(appName: string, title: string) {

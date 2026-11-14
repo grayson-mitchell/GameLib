@@ -1,9 +1,18 @@
 'use strict'
 /**
  * Phase 70 (70-02, D-15): shrink-only ratchet on GameInfo narrowing in shared
- * code. Counts, per non-test file under src/frontend and src/backend (outside
- * src/backend/storeManagers/ and the named store-specific UI), the calls to
- * isStoreGame/asStoreGame plus identifiers naming a *GameInfo member type.
+ * code. Counts, per non-test file under src/frontend, src/backend and src/common
+ * (outside src/backend/storeManagers/, the named store-specific UI and the
+ * src/common type/guard homes), these forms:
+ *   - calls to isStoreGame/asStoreGame;
+ *   - identifiers naming a *GameInfo member type;
+ *   - GameInfoByRunner[...] indexed access (names a member without its identifier);
+ *   - Extract<...GameInfo..., ...> (the same, via a conditional type);
+ *   - isStore(<object>, '<literal>') calls. isStore also accepts plain runner
+ *     strings, where it is an identity check and not a narrowing, so a first
+ *     argument that is a string literal, or an identifier / property access named
+ *     like runner or store (runner, game.runner, props.store), is NOT counted. This
+ *     is a syntactic approximation: it cannot see types.
  *
  * Contract (same family as meta/steamLineCeiling.cjs):
  *   - Every file's count must match meta/gameInfoNarrowingBaseline.json
@@ -17,8 +26,6 @@
  *   - There is NO update flag. Numbers move by hand, in the same commit.
  *   - Import/export specifiers and comments never count: an import alone is
  *     not a read.
- *   - The baseline is frozen and the tool wired into CI in 70-10, after the
- *     reader waves; until then the count legitimately grows.
  */
 const fs = require('node:fs')
 const path = require('node:path')
@@ -26,11 +33,16 @@ const ts = require('typescript')
 
 const REPO_ROOT = path.join(__dirname, '..')
 const DEFAULT_BASELINE = path.join(__dirname, 'gameInfoNarrowingBaseline.json')
-const SCAN_DIRS = ['src/frontend', 'src/backend']
+const SCAN_DIRS = ['src/frontend', 'src/backend', 'src/common']
 // 90 percent (rounded down) of the 783 files measured at 70-02.
 const DEFAULT_MIN_FILES = 704
 const CODE_EXT = new Set(['.ts', '.tsx'])
-const SKIP_DIRS = new Set(['__tests__', '__mocks__', 'node_modules'])
+const SKIP_DIRS = new Set([
+  '__tests__',
+  '__mocks__',
+  '__fixtures__',
+  'node_modules'
+])
 const GUARDS = new Set(['isStoreGame', 'asStoreGame'])
 const MEMBER_TYPES = new Set([
   'SteamGameInfo',
@@ -79,6 +91,28 @@ const STORE_SPECIFIC_EXEMPT = [
 
 const STORE_MANAGERS = 'src/backend/storeManagers'
 
+/** src/common homes that define the GameInfo types and the narrowing guards themselves. */
+const COMMON_EXEMPT = [
+  { path: 'src/common/types', reason: 'the GameInfo type and schema homes' },
+  { path: 'src/common/types.ts', reason: 'defines the GameInfo union' },
+  {
+    path: 'src/common/gameInfoNarrowing.ts',
+    reason: 'defines isStoreGame/asStoreGame'
+  },
+  { path: 'src/common/storeCapabilities.ts', reason: 'defines isStore' }
+]
+
+const RUNNER_LIKE = /runner|store/i
+
+/** isStore's first argument names an object (not a plain runner string). */
+function isObjectSubject(arg) {
+  if (ts.isStringLiteralLike(arg)) return false
+  if (ts.isIdentifier(arg)) return !RUNNER_LIKE.test(arg.text)
+  if (ts.isPropertyAccessExpression(arg))
+    return !RUNNER_LIKE.test(arg.name.text)
+  return true
+}
+
 /**
  * @param {string} text
  * @param {string} fileName
@@ -101,7 +135,30 @@ function countNarrowing(text, fileName) {
       GUARDS.has(node.expression.text)
     )
       n++
+    else if (
+      ts.isCallExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      node.expression.text === 'isStore' &&
+      node.arguments.length >= 2 &&
+      ts.isStringLiteralLike(node.arguments[1]) &&
+      isObjectSubject(node.arguments[0])
+    )
+      n++
     else if (ts.isIdentifier(node) && MEMBER_TYPES.has(node.text)) n++
+    else if (
+      ts.isIndexedAccessTypeNode(node) &&
+      ts.isTypeReferenceNode(node.objectType) &&
+      node.objectType.typeName.getText() === 'GameInfoByRunner'
+    )
+      n++
+    else if (
+      ts.isTypeReferenceNode(node) &&
+      node.typeName.getText() === 'Extract' &&
+      node.typeArguments &&
+      node.typeArguments.length > 0 &&
+      node.typeArguments[0].getText().includes('GameInfo')
+    )
+      n++
     ts.forEachChild(node, visit)
   }
   visit(sf)
@@ -112,7 +169,7 @@ function countNarrowing(text, fileName) {
 function isExempt(rel) {
   if (rel === STORE_MANAGERS || rel.startsWith(`${STORE_MANAGERS}/`))
     return true
-  return STORE_SPECIFIC_EXEMPT.some(
+  return [...STORE_SPECIFIC_EXEMPT, ...COMMON_EXEMPT].some(
     (e) => rel === e.path || rel.startsWith(`${e.path}/`)
   )
 }
@@ -192,12 +249,12 @@ function evaluate({ counts, baseline, scannedFiles, minFiles }) {
  * @returns {string[]} listed exemptions that no longer exist
  */
 function staleExemptions(root = REPO_ROOT) {
-  return STORE_SPECIFIC_EXEMPT.filter(
-    (e) => !fs.existsSync(path.join(root, ...e.path.split('/')))
-  ).map(
-    (e) =>
-      `stale store-specific exemption: ${e.path} (gone; remove it from STORE_SPECIFIC_EXEMPT in this commit)`
-  )
+  return [...STORE_SPECIFIC_EXEMPT, ...COMMON_EXEMPT]
+    .filter((e) => !fs.existsSync(path.join(root, ...e.path.split('/'))))
+    .map(
+      (e) =>
+        `stale store-specific exemption: ${e.path} (gone; remove it from STORE_SPECIFIC_EXEMPT / COMMON_EXEMPT in this commit)`
+    )
 }
 
 /**
@@ -272,7 +329,8 @@ module.exports = {
   evaluate,
   parseArgs,
   staleExemptions,
-  STORE_SPECIFIC_EXEMPT
+  STORE_SPECIFIC_EXEMPT,
+  COMMON_EXEMPT
 }
 
 if (require.main === module) main()
