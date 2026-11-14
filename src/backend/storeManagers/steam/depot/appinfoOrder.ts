@@ -116,6 +116,18 @@ export interface AppinfoOrder {
   withAppInfoOrderCapture<T>(client: object, fn: () => Promise<T>): Promise<T>
 }
 
+/** Depot ids as strings when `v` is an array of numeric ids (number or numeric string). */
+function toOrder(v: unknown): string[] | undefined {
+  if (!Array.isArray(v)) return undefined
+  const out: string[] = []
+  for (const x of v) {
+    const id = typeof x === 'number' ? String(x) : x
+    if (typeof id !== 'string' || !/^\d+$/.test(id)) return undefined
+    out.push(id)
+  }
+  return out
+}
+
 /**
  * The raw-appinfo depot order tap, as one instance (D-05, 66.4-09): the appId -> order map and the
  * per-client tap bookkeeping are closure fields. Construction allocates empty containers only: no
@@ -125,6 +137,18 @@ export function createAppinfoOrder(): AppinfoOrder {
   /** appId -> depot ids in the order they appear in the raw appinfo VDF. */
   const orderByApp = new Map<string, string[]>()
   const active = new WeakMap<object, { depth: number; original: unknown }>()
+
+  /** Records `apps[id].depotOrder` from a Rust product-info result (no-op for other shapes). */
+  function recordRustDepotOrder(result: unknown): void {
+    const apps = (result as { apps?: unknown } | null | undefined)?.apps
+    if (typeof apps !== 'object' || apps === null) return
+    for (const [id, entry] of Object.entries(apps)) {
+      const order = toOrder(
+        (entry as { depotOrder?: unknown } | null)?.depotOrder
+      )
+      if (order) orderByApp.set(id, order)
+    }
+  }
 
   /**
    * Run `fn` (a getProductInfo call) with a tap on the client's PICS
@@ -140,7 +164,14 @@ export function createAppinfoOrder(): AppinfoOrder {
     fn: () => Promise<T>
   ): Promise<T> {
     const c = client as { _send?: (...args: unknown[]) => unknown }
-    if (typeof c._send !== 'function') return fn()
+    // Phase 79 (79-22): a Rust-backed client has no `_send`; its product-info results carry
+    // `depotOrder` directly (the crate parsed the raw appinfo VDF in textual order). Record it
+    // and skip the steam-user tap. Only a steam-user client (cm=ts) gets the `_send` tap.
+    if (typeof c._send !== 'function') {
+      const result = await fn()
+      recordRustDepotOrder(result)
+      return result
+    }
 
     let state = active.get(client)
     if (!state) {

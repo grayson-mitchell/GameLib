@@ -2,7 +2,8 @@
 
 import { logInfo, LogPrefix } from 'backend/logger'
 import { withTimeout, STEAM_PICS_TIMEOUT_MS } from '../withTimeout'
-import { type SteamUserDepotClient, type RawContentServer } from './planModel'
+import { type RawContentServer } from './planModel'
+import type { SteamCmClient } from '../cm/SteamCmClient'
 
 /** Per-host content-server directory metadata, keyed by hostname and threaded to Rust's
  *  RustHostRef (moved from decompress.ts, 73-20). `usetokenauth === true` or `type === 'CDN'`
@@ -85,7 +86,7 @@ export function reduceContentServers(servers: RawContentServer[]): {
  * (Pitfall 5), same discipline as getDepotDecryptionKey/getRawManifest above.
  */
 export async function getContentServerHosts(
-  client: SteamUserDepotClient,
+  client: SteamCmClient,
   numericAppId: number
 ): Promise<{
   hosts: string[]

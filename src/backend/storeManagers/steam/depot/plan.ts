@@ -25,9 +25,9 @@ import {
   NUMERIC_ID,
   type DepotSteamUser,
   type DownloadSteamDepotsOpts,
-  type AppCommonName,
-  type SteamUserDepotClient
+  type AppCommonName
 } from './planModel'
+import type { SteamCmClient } from '../cm/SteamCmClient'
 
 export function assertNumericAppId(appId: string): void {
   if (!NUMERIC_ID.test(appId)) {
@@ -68,14 +68,14 @@ export function throwIfAborted(signal?: AbortSignal): void {
  *  client is the one SteamUser.getClient() returns while it is held. */
 export function getDepotClient(
   steamUser: Pick<DepotSteamUser, 'getClient'>
-): SteamUserDepotClient {
+): SteamCmClient {
   const client = steamUser.getClient()
   if (!client) {
     throw new Error(
       'downloadSteamDepots: no authenticated steam-user client available after acquireAuthenticated()'
     )
   }
-  return client as unknown as SteamUserDepotClient
+  return client as unknown as SteamCmClient
 }
 
 /** D-UAT-06: bounded reconnect+retry for the CM phase of a depot plan.
@@ -129,7 +129,7 @@ function delay(ms: number, signal?: AbortSignal): Promise<void> {
 export async function withPlanBuildRetry<T>(
   steamUser: Pick<DepotSteamUser, 'getClient' | 'acquireAuthenticated'>,
   signal: AbortSignal | undefined,
-  step: (client: SteamUserDepotClient) => Promise<T>,
+  step: (client: SteamCmClient) => Promise<T>,
   // [Timing] debug/steam-install-slow-start: optional label for temporary
   // per-step duration logging (see below). undefined = no logging (keeps
   // existing call sites/tests that don't pass a label unaffected).
@@ -200,7 +200,7 @@ export async function withPlanBuildRetry<T>(
  * anonymous/PICS-only connection cannot supply this, which is why this must
  * run over the authenticated CM connection, never a second/anonymous one.
  */
-async function getOwnedSets(client: SteamUserDepotClient): Promise<OwnedSets> {
+async function getOwnedSets(client: SteamCmClient): Promise<OwnedSets> {
   const packageIds = (client.licenses ?? [])
     .map((l) => (l as { package_id?: number }).package_id)
     .filter((id): id is number => typeof id === 'number')
@@ -230,7 +230,7 @@ async function getOwnedSets(client: SteamUserDepotClient): Promise<OwnedSets> {
 
 export async function fetchAppInfo(
   appinfoOrder: Pick<AppinfoOrder, 'withAppInfoOrderCapture'>,
-  client: SteamUserDepotClient,
+  client: SteamCmClient,
   numericAppId: number
 ): Promise<SteamAppInfo> {
   // G-30-02 (30-07): bounded — see getOwnedSets above.
@@ -252,7 +252,7 @@ export async function fetchAppInfo(
 
 async function fetchDlcInfos(
   appinfoOrder: Pick<AppinfoOrder, 'withAppInfoOrderCapture'>,
-  client: SteamUserDepotClient,
+  client: SteamCmClient,
   appinfo: SteamAppInfo
 ): Promise<Record<string, SteamAppInfo>> {
   const dlcIds = dlcAppIds(appinfo)
@@ -328,7 +328,7 @@ function wrapDepotKeyError(
  * terminal FileNotFound/AccessDenied EResult (never a transient CM drop).
  */
 export async function fetchDepotKey(
-  client: SteamUserDepotClient,
+  client: SteamCmClient,
   descriptor: DepotDescriptor
 ): Promise<Buffer> {
   const numericDepotId = Number(descriptor.id)

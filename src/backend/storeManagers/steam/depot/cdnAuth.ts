@@ -1,3 +1,11 @@
+// Phase 79 (79-22, CF-06) evidence and scope. Advisory check of the operator's gamelib.log files
+// (2026-11-15): 0 lines with a non-empty acquired token ("CDN auth token acquired"), 0 "no token
+// required" lines, 115 "empty token field in decoded response" warnings and 115 "GetCDNAuthToken
+// failed" warnings (fastly 51, alibaba 38, akamai 26), all from the cm=ts transport. No non-empty
+// token was ever used in production. The Rust engine never requests CDN tokens (CF-06):
+// depotCdnToken answers '' on cm=rust and this cache answers '' for any client with no `_send`.
+// The `_send` path below is kept only for cm=ts until the delete gate.
+//
 // Debug/steam-install-slow-start (cycle 6): CDN auth token support for depot
 // chunk downloads.
 //
@@ -175,6 +183,7 @@
 // module-level singleton" discipline).
 
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
+import type { SteamCmClient } from '../cm/SteamCmClient'
 
 /** Narrow surface of steam-user's own (protected-by-convention, but plain
  *  public prototype method) `_send` this module depends on (Pitfall 5
@@ -200,6 +209,12 @@ export interface CDNAuthTokenClient {
     body: Buffer,
     callback: (body: unknown, hdr?: { proto?: { eresult?: number } }) => void
   ): void
+}
+
+function hasSend(
+  client: CDNAuthTokenClient | SteamCmClient
+): client is CDNAuthTokenClient {
+  return typeof (client as Partial<CDNAuthTokenClient>)._send === 'function'
 }
 
 /** EResult.OK — see this module's doc comment above. */
@@ -440,7 +455,7 @@ export class CdnAuthTokenCache {
   private readonly negativeCache = new Map<string, number>()
 
   constructor(
-    private readonly client: CDNAuthTokenClient,
+    private readonly client: CDNAuthTokenClient | SteamCmClient,
     private readonly appId: number,
     private readonly schemaCache: CdnSchemaCache = createCdnSchemaCache()
   ) {}
@@ -475,6 +490,8 @@ export class CdnAuthTokenCache {
     // Fast path (D1/D2/D6): checked BEFORE any other lookup — an
     // already-aborted signal degrades to '' having touched nothing at all.
     if (signal?.aborted) return ''
+    // CF-06: a client without the private `_send` (the Rust-backed one) never requests tokens.
+    if (!hasSend(this.client)) return ''
 
     const key = CdnAuthTokenCache.key(depotId, host)
 
@@ -644,7 +661,7 @@ export class CdnAuthTokenCache {
         )
       }, CDN_AUTH_TOKEN_FETCH_TIMEOUT_MS)
 
-      this.client._send(
+      ;(this.client as CDNAuthTokenClient)._send(
         {
           msg: EMSG_SERVICE_METHOD_CALL_FROM_CLIENT,
           proto: { target_job_name: 'ContentServerDirectory.GetCDNAuthToken#1' }
