@@ -290,15 +290,13 @@ export interface SteamUpdateInfo {
   sizeError?: string
 }
 
-/** @public first production consumers land in 70-04..70-09; tag removed in 70-10 */
-export interface SteamExtraInfo extends ExtraInfoCore {
+interface SteamExtraInfo extends ExtraInfoCore {
   /** total playtime in minutes from getUserOwnedApps() */
   steamPlaytimeMinutes?: number
   /** Unix-seconds timestamp of the last play session from getUserOwnedApps(); undefined/0 when never played */
   steamLastPlayed?: number
 }
 
-/** @public first production consumers land in 70-04..70-09; tag removed in 70-10 */
 export interface SteamInstalledInfo extends InstalledInfoCore {
   // steam-startup-resume-crash (2026-07-18) / D-04 softened: set true when
   // SteamLibraryManager.init() detects a leftover interrupted (StateFlags
