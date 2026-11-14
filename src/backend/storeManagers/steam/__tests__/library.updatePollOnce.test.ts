@@ -13,7 +13,8 @@ import { notify } from '../../../dialog/dialog'
 import {
   STEAM_REQUEST_NO_ACTIVITY_TICKS,
   STEAM_INSTALLAPP_RETRY_EVERY_TICKS,
-  STEAM_INSTALLAPP_RETRY_MAX_ATTEMPTS
+  STEAM_INSTALLAPP_RETRY_MAX_ATTEMPTS,
+  STEAM_UPDATE_ABANDONED_TICKS
 } from '../library/pollState'
 import { requestSteamInstallApp } from '../steamInstallApp'
 
@@ -249,6 +250,89 @@ describe('pollUpdateOnce', () => {
     send.mockClear()
     await pollUpdateOnce(deps, APP, p)
     expect(statusesOf().slice(-2)).toEqual(['updating', 'done'])
+  })
+
+  describe('WR-01: Steam abandons an update after activity', () => {
+    // Steam downloads (0x106 at the starting build), then drops the update: the ACF settles at
+    // fromBuild with leftover byte counters and a TargetBuildID equal to the build.
+    const downloading = () =>
+      acf({
+        stateFlags: 0x106,
+        buildid: '777',
+        targetBuildId: '800',
+        bytesToDownload: 1000,
+        bytesDownloaded: 400
+      })
+    const settled = () =>
+      acf({
+        stateFlags: 4,
+        buildid: '777',
+        targetBuildId: '777',
+        bytesToDownload: 1000,
+        bytesDownloaded: 400
+      })
+    async function tick(p: ReturnType<typeof pollWithTarget>) {
+      p.ticks += 1
+      await pollUpdateOnce(deps, APP, p)
+    }
+
+    it('ends quietly after STEAM_UPDATE_ABANDONED_TICKS settled ticks, never finished', async () => {
+      const p = pollWithTarget('800')
+      downloading()
+      await tick(p)
+      expect(p.awaitingUpdate?.sawActivity).toBe(true)
+      settled()
+      for (let i = 0; i < STEAM_UPDATE_ABANDONED_TICKS - 1; i++) await tick(p)
+      expect(getPoll()).toBeDefined()
+      send.mockClear()
+      await tick(p)
+      expect(logInfo).toHaveBeenCalledWith(
+        'Steam: update of appId 333300 settled back at build 777 for 20 ticks; ending the update poll quietly',
+        'Steam'
+      )
+      expect(logInfo).not.toHaveBeenCalledWith(
+        expect.stringContaining('finished'),
+        'Steam'
+      )
+      // quiet end only: no 'updating' that would precede a completion's done
+      expect(statusesOf()).toEqual(['done'])
+      expect(send).not.toHaveBeenCalledWith(
+        'pushGameToLibrary',
+        expect.anything()
+      )
+      expect(invalidateSteamUpdateState).toHaveBeenCalledWith(deps, APP)
+      expect(getPoll()).toBeUndefined()
+    })
+
+    it('a settled read between active ticks restarts the count', async () => {
+      const p = pollWithTarget('800')
+      downloading()
+      await tick(p)
+      settled()
+      for (let i = 0; i < STEAM_UPDATE_ABANDONED_TICKS - 1; i++) await tick(p)
+      downloading()
+      await tick(p)
+      settled()
+      for (let i = 0; i < STEAM_UPDATE_ABANDONED_TICKS - 1; i++) await tick(p)
+      expect(getPoll()).toBeDefined()
+      expect(p.awaitingUpdate?.settledAtStartTicks).toBe(
+        STEAM_UPDATE_ABANDONED_TICKS - 1
+      )
+    })
+
+    it('reaching the target after a settled spell still finishes', async () => {
+      const p = pollWithTarget('800')
+      downloading()
+      await tick(p)
+      settled()
+      for (let i = 0; i < 5; i++) await tick(p)
+      acf({ stateFlags: 4, buildid: '800', targetBuildId: '800' })
+      await tick(p)
+      expect(logInfo).toHaveBeenCalledWith(
+        'Steam: update of appId 333300 finished (build 800)',
+        'Steam'
+      )
+    })
   })
 
   it('ends quietly after the no-activity window', async () => {

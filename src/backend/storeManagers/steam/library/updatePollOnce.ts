@@ -22,7 +22,8 @@ import {
 import {
   STEAM_INSTALLAPP_RETRY_EVERY_TICKS,
   STEAM_INSTALLAPP_RETRY_MAX_ATTEMPTS,
-  STEAM_REQUEST_NO_ACTIVITY_TICKS
+  STEAM_REQUEST_NO_ACTIVITY_TICKS,
+  STEAM_UPDATE_ABANDONED_TICKS
 } from './pollState'
 import {
   createSteamInstallAppRun,
@@ -131,6 +132,18 @@ export async function pollUpdateOnce(
     })
   }
 
+  // Not finished: the badge stays because the cached update state is re-read, not cleared.
+  const endQuietly = (message: string): void => {
+    logInfo(message, LogPrefix.Steam)
+    stopInstallPolling(deps, appId)
+    invalidateSteamUpdateState(deps, appId)
+    deps.sendFrontendMessage('gameStatusUpdate', {
+      appName: appId,
+      runner: 'steam',
+      status: 'done'
+    })
+  }
+
   if (fields) {
     const pending = isAcfUpdatePending(fields)
     if (pending) awaiting.sawPending = true
@@ -159,6 +172,27 @@ export async function pollUpdateOnce(
     ) {
       complete(fields, 'finished')
       return
+    }
+
+    // WR-01: activity was seen, then the ACF settled back at the starting build with a known
+    // newer target. Steam dropped the update; without this the poll runs to MAX_TICKS (~6 h).
+    // Consecutive ticks only, so a brief settled read mid-update does not end it.
+    if (
+      awaiting.sawActivity &&
+      atStaleStart &&
+      !pending &&
+      (fields.stateFlags & STATE_FLAG_FULLY_INSTALLED) !== 0 &&
+      (fields.stateFlags & STATE_FLAGS_RUNNING) === 0
+    ) {
+      awaiting.settledAtStartTicks = (awaiting.settledAtStartTicks ?? 0) + 1
+      if (awaiting.settledAtStartTicks >= STEAM_UPDATE_ABANDONED_TICKS) {
+        endQuietly(
+          `Steam: update of appId ${appId} settled back at build ${awaiting.fromBuild} for ${STEAM_UPDATE_ABANDONED_TICKS} ticks; ending the update poll quietly`
+        )
+        return
+      }
+    } else {
+      awaiting.settledAtStartTicks = 0
     }
 
     const live =
@@ -218,16 +252,8 @@ export async function pollUpdateOnce(
       complete(fields, 'finished')
       return
     }
-    logInfo(
-      `Steam: no update activity for appId ${appId} within ${STEAM_REQUEST_NO_ACTIVITY_TICKS} ticks; ending the update poll quietly`,
-      LogPrefix.Steam
+    endQuietly(
+      `Steam: no update activity for appId ${appId} within ${STEAM_REQUEST_NO_ACTIVITY_TICKS} ticks; ending the update poll quietly`
     )
-    stopInstallPolling(deps, appId)
-    invalidateSteamUpdateState(deps, appId)
-    deps.sendFrontendMessage('gameStatusUpdate', {
-      appName: appId,
-      runner: 'steam',
-      status: 'done'
-    })
   }
 }

@@ -55,6 +55,9 @@ export const MANIFEST_GONE_TICKS = 10
  *  13 x 3 = 39 ticks, the most that fits inside STEAM_REQUEST_NO_ACTIVITY_TICKS. */
 export const STEAM_INSTALLAPP_RETRY_EVERY_TICKS = 3
 export const STEAM_INSTALLAPP_RETRY_MAX_ATTEMPTS = 13
+/** 74 WR-01: consecutive ticks (≈60 s) the ACF must sit settled at the starting build, after
+ *  update activity was seen, before the update poll treats the update as abandoned by Steam. */
+export const STEAM_UPDATE_ABANDONED_TICKS = 20
 /** T-AOG (quick/260719-aog): consecutive frozen 'downloading' ticks (at the
  *  default 3 000 ms poll interval, ≈9 s) before a genuinely in-flight
  *  download is surfaced as 'steam-paused' rather than a silently frozen
@@ -169,6 +172,8 @@ export type ActiveInstallPoll = {
     targetBuild?: string
     sawPending?: boolean
     sawActivity?: boolean
+    /** Consecutive ticks settled back at `fromBuild` after activity (74 WR-01). */
+    settledAtStartTicks?: number
     /** Armed when the hand-off's InstallApp was unavailable (Steam closed); updatePollOnce retries
      *  it on the existing tick (UAT 19, spike 069). */
     installAppRetry?: {
