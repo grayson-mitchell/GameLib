@@ -26,3 +26,15 @@ start an update and then abandon it.
 
 Give the stale-start-after-activity case its own bounded exit (end quietly, keep the badge), and add
 a multi-tick test: activity seen, then the ACF settles at `fromBuild` with a known newer target.
+
+## Resolution
+
+2026-11-14, `b9ff5638d`: `updatePollOnce` counts consecutive ticks where, after activity, the ACF
+sits settled at `fromBuild` (not pending, StateFlags bit 4, no running flags) with a known different
+target. At `STEAM_UPDATE_ABANDONED_TICKS` (20, about 60 s) it ends quietly: it logs
+`Steam: update of appId <id> settled back at build <fromBuild> for 20 ticks; ending the update poll quietly`,
+invalidates the cached update state (the badge stays) and sends `done`, with no `finished` line.
+Any other tick resets the count. Three multi-tick tests: the abandon exit, a reset by an active tick,
+and the target still finishing after a settled spell. The first two fail on the unfixed source.
+The quiet-end helper is shared with the no-activity exit, whose log line is unchanged.
+Not seen live; reproducing it needs Steam to start and then drop an update.
