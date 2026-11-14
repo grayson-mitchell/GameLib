@@ -365,41 +365,51 @@ describe('getGameInfo(appName, forceReload=true) stale-map characterisation (qui
 })
 
 describe('70 gap G2: Epic metadata without a description', () => {
-  it("defaults extra.about.description to '' and passes the legendary extra schema", () => {
-    const manager = new LegendaryLibraryManager(
-      createTestManagerDeps({
-        onlineMonitor: {
-          ...createTestOnlineMonitor(),
-          isOnline: () => mockIsOnline(),
-          runOnceWhenOnline: jest.fn()
-        }
-      })
-    )
-    mkdirSync(legendaryMetadata, { recursive: true })
-    const { description: _omitted, ...withoutDescription } = metadataInner
-    writeFileSync(
-      join(legendaryMetadata, `${APP_NAME}.json`),
-      JSON.stringify({
-        app_name: APP_NAME,
-        app_title: 'Phoenix Point',
-        metadata: withoutDescription
-      })
-    )
-    writeFileSync(
-      join(legendaryConfigPath, 'installed.json'),
-      JSON.stringify(installedJsonFixture(OLD_SENTINEL))
-    )
-    mockIsOnline.mockReturnValue(true)
+  const { description: _omitted, ...withoutDescription } = metadataInner
+  it.each([
+    ['omitted', withoutDescription],
+    // WR-03: a null description is not caught by a destructure default.
+    [
+      'null',
+      { ...withoutDescription, description: null, shortDescription: null }
+    ]
+  ])(
+    "defaults extra.about.description to '' when %s and passes the legendary extra schema",
+    (_case, metadata) => {
+      const manager = new LegendaryLibraryManager(
+        createTestManagerDeps({
+          onlineMonitor: {
+            ...createTestOnlineMonitor(),
+            isOnline: () => mockIsOnline(),
+            runOnceWhenOnline: jest.fn()
+          }
+        })
+      )
+      mkdirSync(legendaryMetadata, { recursive: true })
+      writeFileSync(
+        join(legendaryMetadata, `${APP_NAME}.json`),
+        JSON.stringify({
+          app_name: APP_NAME,
+          app_title: 'Phoenix Point',
+          metadata
+        })
+      )
+      writeFileSync(
+        join(legendaryConfigPath, 'installed.json'),
+        JSON.stringify(installedJsonFixture(OLD_SENTINEL))
+      )
+      mockIsOnline.mockReturnValue(true)
 
-    manager.loadGamesInAccount()
-    manager.refreshInstalled()
-    const info = manager.getGameInfo(APP_NAME, true)
+      manager.loadGamesInAccount()
+      manager.refreshInstalled()
+      const info = manager.getGameInfo(APP_NAME, true)
 
-    expect(info).toBeDefined()
-    expect(info!.extra?.about?.description).toBe('')
-    expect(typeof info!.extra?.about?.shortDescription).toBe('string')
-    expect(
-      legendaryGameInfoSchema.shape.extra.safeParse(info!.extra).success
-    ).toBe(true)
-  })
+      expect(info).toBeDefined()
+      expect(info!.extra?.about?.description).toBe('')
+      expect(typeof info!.extra?.about?.shortDescription).toBe('string')
+      expect(
+        legendaryGameInfoSchema.shape.extra.safeParse(info!.extra).success
+      ).toBe(true)
+    }
+  )
 })

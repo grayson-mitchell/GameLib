@@ -552,6 +552,29 @@ describe('SteamLibraryManager', () => {
     expect(steamGameInfoSchema.safeParse(raw).success).toBe(false)
   })
 
+  it('70 WR-03: an entry still invalid after the strip is named by path, never value', async () => {
+    // The CM can omit a name; `title` is required, so the strip cannot repair it.
+    const apps = [
+      makeOwnedApp(570, undefined as unknown as string, 120),
+      makeOwnedApp(440, 'Team Fortress 2', 10)
+    ]
+    const fakeClient = makeFakeClient(apps)
+    jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
+    jest.mocked(steamLibraryStore.get).mockReturnValue([])
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue(undefined)
+    jest.mocked(logWarning).mockClear()
+
+    await manager.refresh()
+
+    const warnings = jest
+      .mocked(logWarning)
+      .mock.calls.map(([msg]) => String(msg))
+      .filter((msg) => msg.includes('still schema-invalid'))
+    expect(warnings).toEqual([
+      'Steam library entry 570 is still schema-invalid after the strip at: title'
+    ])
+  })
+
   // ── D-17: is_windows_native hydration ──────────────────────────────────────
 
   it('D-17: synced GameInfo carries is_windows_native:true when cachedMeta.is_windows_native is true', async () => {

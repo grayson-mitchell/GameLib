@@ -18,7 +18,7 @@ import {
   steamGameInfoSchema
 } from 'common/types/ipc/gameInfoSchema'
 import type { Migration } from '../storeVersioning/types'
-import { stripToSchema } from './schemaStrip'
+import { invalidPaths, stripToSchema } from './schemaStrip'
 
 type PlainObject = Record<string, unknown>
 
@@ -38,8 +38,25 @@ const GOG_INSTALLED_SCHEMA: z.ZodType = gogGameInfoSchema.shape.install
 const SIDELOAD_INSTALLED_SCHEMA: z.ZodType =
   sideloadGameInfoSchema.shape.install
 
-const strip = (item: unknown, schema: z.ZodType): unknown =>
-  stripToSchema(item, schema, { dropInvalidOptional: true })
+/**
+ * The strip never repairs a required member, so an entry can still be invalid afterwards. Report
+ * it by app name and issue paths only (no values; no `backend/logger`: module-init cycle, see
+ * storeVersioning/backup.ts) so a later IPC_INVALID_ARGS can be traced (70-REVIEW WR-03).
+ */
+const strip = (item: unknown, schema: z.ZodType): unknown => {
+  const out = stripToSchema(item, schema, { dropInvalidOptional: true })
+  const paths = invalidPaths(out, schema)
+  if (paths.length > 0) {
+    const name =
+      isPlainObject(out) && typeof out['app_name'] === 'string'
+        ? out['app_name']
+        : '(unnamed)'
+    process.stderr.write(
+      `[storeVersion] GameInfo entry ${name} is still schema-invalid after the strip at: ${paths.join(', ')}\n`
+    )
+  }
+  return out
+}
 
 /**
  * Cleans an item against its runner schema. The runner is the item's own `runner`, falling back

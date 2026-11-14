@@ -584,9 +584,16 @@ export default class LegendaryLibraryManager implements LibraryManager {
       return false
     }
 
+    // The Epic payload is parsed JSON, not checked against its type: a description can
+    // arrive as `null`, which a destructure default does not catch and `aboutSchema`
+    // rejects (70-REVIEW WR-03). `??` covers both null and undefined.
+    const raw = metadata as {
+      description?: string | null
+      shortDescription?: string | null
+    }
+    const description = raw.description ?? ''
+    const shortDescription = raw.shortDescription ?? ''
     const {
-      description = '',
-      shortDescription = '',
       keyImages = [],
       title,
       developer,

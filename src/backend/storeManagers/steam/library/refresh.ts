@@ -1,7 +1,10 @@
 import type { SteamGameInfo } from 'common/types/steam'
 import { ExecResult } from 'common/types'
 import { steamGameInfoSchema } from 'common/types/ipc/gameInfoSchema'
-import { stripToSchema } from 'backend/storeMigrations/schemaStrip'
+import {
+  invalidPaths,
+  stripToSchema
+} from 'backend/storeMigrations/schemaStrip'
 import { logInfo, logError, logWarning, LogPrefix } from 'backend/logger'
 import { isMac } from 'backend/constants/environment'
 import { getFileSize } from 'backend/utils'
@@ -483,6 +486,16 @@ async function syncOwnedLibrary(
       const cleanInfo = stripToSchema(gameInfo, steamGameInfoSchema, {
         dropInvalidOptional: true
       }) as SteamGameInfo
+      // The strip never repairs a required member (e.g. a missing `title` when the CM omits
+      // a name), so name a still-invalid entry here, paths only, or its later install fails
+      // with IPC_INVALID_ARGS and nothing points at the cause (70-REVIEW WR-03).
+      const stillInvalid = invalidPaths(cleanInfo, steamGameInfoSchema)
+      if (stillInvalid.length > 0) {
+        logWarning(
+          `Steam library entry ${appIdStr} is still schema-invalid after the strip at: ${stillInvalid.join(', ')}`,
+          LogPrefix.Steam
+        )
+      }
       deps.steamSession.libraryState.library.set(appIdStr, cleanInfo)
       deps.sendFrontendMessage('pushGameToLibrary', cleanInfo)
     }

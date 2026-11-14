@@ -142,3 +142,17 @@ export function stripToSchema(
 ): unknown {
   return clean(value, schema, options)
 }
+
+/**
+ * Issue paths (dot-joined, never values) of `value` against `schema`; empty when it parses.
+ * The strip never repairs a required member, so callers use this after `stripToSchema` to make
+ * a still-invalid entry visible in the log (70-REVIEW WR-03).
+ */
+export function invalidPaths(value: unknown, schema: z.ZodType): string[] {
+  const result = schema.safeParse(value)
+  if (result.success) return []
+  const paths = result.error.issues.map(
+    (issue) => issue.path.map(String).join('.') || '(root)'
+  )
+  return [...new Set(paths)]
+}

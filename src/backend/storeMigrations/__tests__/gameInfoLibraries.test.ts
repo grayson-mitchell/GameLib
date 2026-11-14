@@ -270,6 +270,24 @@ describe('specific shapes', () => {
     const file = { games: [{ runner: 'unknown', x: 1 }], installed: [] }
     expect(apply(sideloadLibraryChain, file)).toEqual(file)
   })
+
+  test('WR-03: an entry still invalid after the strip is reported by name and path only', () => {
+    const write = jest
+      .spyOn(process.stderr, 'write')
+      .mockImplementation(() => true)
+    try {
+      // `title` is required, so the strip cannot repair it.
+      apply(steamLibraryChain, {
+        games: [{ app_name: '570', runner: 'steam', title: 12345 }]
+      })
+      const lines = write.mock.calls.map((c) => String(c[0])).join('')
+      expect(lines).toContain('GameInfo entry 570 is still schema-invalid')
+      expect(lines).toMatch(/at: [^\n]*\btitle\b/)
+      expect(lines).not.toContain('12345')
+    } finally {
+      write.mockRestore()
+    }
+  })
 })
 
 describe('registration', () => {
