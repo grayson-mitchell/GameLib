@@ -1,0 +1,42 @@
+{
+  "files": {
+    "src/frontend/helpers/stores.ts": 4,
+    "src/frontend/hooks/hasAnticheatInfo.ts": 1,
+    "src/frontend/hooks/hasStatus.ts": 2,
+    "src/frontend/screens/Game/GamePage/components/AppleWikiInfo.tsx": 1,
+    "src/frontend/screens/Game/GamePage/components/DownloadSizeInfo.tsx": 1,
+    "src/frontend/screens/Game/GamePage/components/InstalledInfo.tsx": 1,
+    "src/frontend/screens/Game/GamePage/components/MainButton.tsx": 2,
+    "src/frontend/screens/Game/GamePage/index.tsx": 1,
+    "src/frontend/screens/Game/GameSubMenu/index.tsx": 1,
+    "src/frontend/screens/Game/TimeContainer/index.tsx": 2,
+    "src/frontend/screens/Library/components/GameCard/index.tsx": 2,
+    "src/frontend/screens/Library/components/InstallModal/ThirdPartyDialog/index.tsx": 1,
+    "src/frontend/screens/Library/components/InstallModal/index.tsx": 1,
+    "src/frontend/screens/Library/filterEngine.ts": 1,
+    "src/frontend/screens/Library/librarySort.ts": 1,
+    "src/backend/downloadmanager/downloadqueue.ts": 1,
+    "src/backend/launcher.ts": 1,
+    "src/backend/macArch/recovery.ts": 1
+  },
+  "reasons": {
+    "src/frontend/helpers/stores.ts": "Cache stores are typed per store (Legendary/GOG/Steam/Nile library arrays); the helper owns all four member shapes",
+    "src/frontend/hooks/hasAnticheatInfo.ts": "Legendary-only namespace keys the anticheat lookup",
+    "src/frontend/hooks/hasStatus.ts": "Legendary-only isEAManaged/isUbisoftManaged and Steam-only install.steamResumePending for the shared status derivation",
+    "src/frontend/screens/Game/GamePage/components/AppleWikiInfo.tsx": "Steam-only steamPlatformsCaptured gates the Apple wiki hint",
+    "src/frontend/screens/Game/GamePage/components/DownloadSizeInfo.tsx": "Legendary-only isEAManaged picks the download size label",
+    "src/frontend/screens/Game/GamePage/components/InstalledInfo.tsx": "Legendary-only isEAManaged picks the installed info label",
+    "src/frontend/screens/Game/GamePage/components/MainButton.tsx": "Steam-only install.steamResumePending and is_delisted for the shared main button state",
+    "src/frontend/screens/Game/GamePage/index.tsx": "Legendary-only fields (EA/Ubisoft managed, namespace) on the shared game page",
+    "src/frontend/screens/Game/GameSubMenu/index.tsx": "Steam-only is_delisted for the delisted menu state",
+    "src/frontend/screens/Game/TimeContainer/index.tsx": "Steam-only extra.steamPlaytimeMinutes/steamLastPlayed shown in the shared play-time block",
+    "src/frontend/screens/Library/components/GameCard/index.tsx": "Steam-only installable and is_delisted drive the card state",
+    "src/frontend/screens/Library/components/InstallModal/ThirdPartyDialog/index.tsx": "Legendary-only application_name for the third-party install dialog",
+    "src/frontend/screens/Library/components/InstallModal/index.tsx": "Steam-only fields select the Steam install dialog from the shared modal",
+    "src/frontend/screens/Library/filterEngine.ts": "Steam-only is_delisted for the library delisted filter",
+    "src/frontend/screens/Library/librarySort.ts": "Steam-only extra.steamLastPlayed for last-played sorting",
+    "src/backend/downloadmanager/downloadqueue.ts": "Legendary-only isEAManaged/isUbisoftManaged to route third-party-managed installs in the shared queue",
+    "src/backend/launcher.ts": "Legendary-only namespace for the shared launch path (anticheat/namespace lookup)",
+    "src/backend/macArch/recovery.ts": "GOG-only install.installedDLCs read in the cross-store mac arch recovery"
+  }
+}

@@ -79,11 +79,9 @@ export function hasStatus(gameInfo: GameInfo, gameSize?: string) {
     label: string
   }>({ label: '' })
 
-  const {
-    thirdPartyManagedApp = undefined,
-    is_installed,
-    runner = 'sideload'
-  } = { ...newGameInfo }
+  const thirdPartyManagedApp = newGameInfo?.thirdPartyManagedApp
+  const is_installed = newGameInfo?.is_installed
+  const runner = newGameInfo?.runner ?? 'sideload'
   const legendaryInfo = asStoreGame(newGameInfo, 'legendary')
   const isEAManaged = legendaryInfo?.isEAManaged
   const isUbisoftManaged = legendaryInfo?.isUbisoftManaged

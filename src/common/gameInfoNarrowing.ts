@@ -8,8 +8,6 @@ import type { GameInfoByRunner, GameInfoCore, Runner } from 'common/types'
  *
  * Delegates to `isStore`, so null, undefined and `{}` (no runner) are all
  * false. There is deliberately no throwing variant.
- *
- * @public first production consumers land in 70-04..70-09; tag removed in 70-10
  */
 export function isStoreGame<K extends Runner>(
   game: GameInfoCore | null | undefined,
@@ -21,8 +19,6 @@ export function isStoreGame<K extends Runner>(
 /**
  * Returns `game` narrowed to the `runner` member, or `undefined` when it is
  * null/undefined or belongs to another store.
- *
- * @public first production consumers land in 70-04..70-09; tag removed in 70-10
  */
 export function asStoreGame<K extends Runner>(
   game: GameInfoCore | null | undefined,
