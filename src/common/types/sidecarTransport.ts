@@ -566,6 +566,7 @@ export const RUST_STEAMCM_OWNED_APPS = 'steamcm_owned_apps' as const
 export const RUST_STEAMCM_PERSONAS = 'steamcm_personas' as const
 export const RUST_STEAMCM_PRODUCT_INFO = 'steamcm_product_info' as const
 export const RUST_STEAMCM_REDEEM_KEY = 'steamcm_redeem_key' as const
+export const RUST_STEAMCM_REFRESH = 'steamcm_refresh' as const
 export const RUST_STEAMCM_SESSION_ACQUIRE = 'steamcm_session_acquire' as const
 export const RUST_STEAMCM_SESSION_ACQUIRE_OPEN =
   'steamcm_session_acquire_open' as const
@@ -582,6 +583,8 @@ export const RUST_STEAMCM_SIGNIN_GUARD_SUBMIT =
   'steamcm_signin_guard_submit' as const
 export const RUST_STEAMCM_SIGNIN_QR_START = 'steamcm_signin_qr_start' as const
 export const RUST_STEAMCM_SIGNIN_STATUS = 'steamcm_signin_status' as const
+export const RUST_STEAMCM_STORE_APPDETAILS = 'steamcm_store_appdetails' as const
+export const RUST_STEAMCM_STORE_ENRICH = 'steamcm_store_enrich' as const
 export const RUST_STEAMCM_WRAP_RESTORE_IF_OWED =
   'steamcm_wrap_restore_if_owed' as const
 
@@ -840,6 +843,7 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_STEAMCM_PERSONAS,
   RUST_STEAMCM_PRODUCT_INFO,
   RUST_STEAMCM_REDEEM_KEY,
+  RUST_STEAMCM_REFRESH,
   RUST_STEAMCM_SESSION_ACQUIRE,
   RUST_STEAMCM_SESSION_ACQUIRE_OPEN,
   RUST_STEAMCM_SESSION_ENSURE_CONNECTED,
@@ -852,6 +856,8 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_STEAMCM_SIGNIN_GUARD_SUBMIT,
   RUST_STEAMCM_SIGNIN_QR_START,
   RUST_STEAMCM_SIGNIN_STATUS,
+  RUST_STEAMCM_STORE_APPDETAILS,
+  RUST_STEAMCM_STORE_ENRICH,
   RUST_STEAMCM_WRAP_RESTORE_IF_OWED
 ] as const
 
@@ -904,6 +910,7 @@ export const RUST_STEAMCM_CHANNELS = [
   RUST_STEAMCM_PERSONAS,
   RUST_STEAMCM_PRODUCT_INFO,
   RUST_STEAMCM_REDEEM_KEY,
+  RUST_STEAMCM_REFRESH,
   RUST_STEAMCM_SESSION_ACQUIRE,
   RUST_STEAMCM_SESSION_ACQUIRE_OPEN,
   RUST_STEAMCM_SESSION_ENSURE_CONNECTED,
@@ -916,6 +923,8 @@ export const RUST_STEAMCM_CHANNELS = [
   RUST_STEAMCM_SIGNIN_GUARD_SUBMIT,
   RUST_STEAMCM_SIGNIN_QR_START,
   RUST_STEAMCM_SIGNIN_STATUS,
+  RUST_STEAMCM_STORE_APPDETAILS,
+  RUST_STEAMCM_STORE_ENRICH,
   RUST_STEAMCM_WRAP_RESTORE_IF_OWED
 ] as const
 

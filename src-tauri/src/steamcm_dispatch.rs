@@ -66,6 +66,11 @@ pub(crate) fn rpc_steamcm_redeem_key(args: &[Value]) -> Result<Value, String> {
     gamelib_steamcm::dispatch("steamcm_redeem_key", args)
 }
 
+pub(crate) fn rpc_steamcm_refresh(args: &[Value]) -> Result<Value, String> {
+    SteamcmRefreshArgs::from_args(args)?;
+    gamelib_steamcm::dispatch("steamcm_refresh", args)
+}
+
 pub(crate) fn rpc_steamcm_session_acquire(args: &[Value]) -> Result<Value, String> {
     SteamcmSessionAcquireArgs::from_args(args)?;
     gamelib_steamcm::dispatch("steamcm_session_acquire", args)
@@ -124,6 +129,16 @@ pub(crate) fn rpc_steamcm_signin_qr_start(args: &[Value]) -> Result<Value, Strin
 pub(crate) fn rpc_steamcm_signin_status(args: &[Value]) -> Result<Value, String> {
     SteamcmSigninStatusArgs::from_args(args)?;
     gamelib_steamcm::dispatch("steamcm_signin_status", args)
+}
+
+pub(crate) fn rpc_steamcm_store_appdetails(args: &[Value]) -> Result<Value, String> {
+    SteamcmStoreAppdetailsArgs::from_args(args)?;
+    gamelib_steamcm::dispatch("steamcm_store_appdetails", args)
+}
+
+pub(crate) fn rpc_steamcm_store_enrich(args: &[Value]) -> Result<Value, String> {
+    SteamcmStoreEnrichArgs::from_args(args)?;
+    gamelib_steamcm::dispatch("steamcm_store_enrich", args)
 }
 
 pub(crate) fn rpc_steamcm_wrap_restore_if_owed(args: &[Value]) -> Result<Value, String> {

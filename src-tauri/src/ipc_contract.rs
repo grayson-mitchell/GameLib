@@ -90,6 +90,7 @@ pub(crate) enum RustInvokeChannel {
     SteamcmPersonas,
     SteamcmProductInfo,
     SteamcmRedeemKey,
+    SteamcmRefresh,
     SteamcmSessionAcquire,
     SteamcmSessionAcquireOpen,
     SteamcmSessionEnsureConnected,
@@ -102,6 +103,8 @@ pub(crate) enum RustInvokeChannel {
     SteamcmSigninGuardSubmit,
     SteamcmSigninQrStart,
     SteamcmSigninStatus,
+    SteamcmStoreAppdetails,
+    SteamcmStoreEnrich,
     SteamcmWrapRestoreIfOwed,
 }
 
@@ -177,6 +180,7 @@ impl RustInvokeChannel {
         RustInvokeChannel::SteamcmPersonas,
         RustInvokeChannel::SteamcmProductInfo,
         RustInvokeChannel::SteamcmRedeemKey,
+        RustInvokeChannel::SteamcmRefresh,
         RustInvokeChannel::SteamcmSessionAcquire,
         RustInvokeChannel::SteamcmSessionAcquireOpen,
         RustInvokeChannel::SteamcmSessionEnsureConnected,
@@ -189,6 +193,8 @@ impl RustInvokeChannel {
         RustInvokeChannel::SteamcmSigninGuardSubmit,
         RustInvokeChannel::SteamcmSigninQrStart,
         RustInvokeChannel::SteamcmSigninStatus,
+        RustInvokeChannel::SteamcmStoreAppdetails,
+        RustInvokeChannel::SteamcmStoreEnrich,
         RustInvokeChannel::SteamcmWrapRestoreIfOwed,
     ];
 
@@ -264,6 +270,7 @@ impl RustInvokeChannel {
             "steamcm_personas" => Some(RustInvokeChannel::SteamcmPersonas),
             "steamcm_product_info" => Some(RustInvokeChannel::SteamcmProductInfo),
             "steamcm_redeem_key" => Some(RustInvokeChannel::SteamcmRedeemKey),
+            "steamcm_refresh" => Some(RustInvokeChannel::SteamcmRefresh),
             "steamcm_session_acquire" => Some(RustInvokeChannel::SteamcmSessionAcquire),
             "steamcm_session_acquire_open" => Some(RustInvokeChannel::SteamcmSessionAcquireOpen),
             "steamcm_session_ensure_connected" => Some(RustInvokeChannel::SteamcmSessionEnsureConnected),
@@ -276,6 +283,8 @@ impl RustInvokeChannel {
             "steamcm_signin_guard_submit" => Some(RustInvokeChannel::SteamcmSigninGuardSubmit),
             "steamcm_signin_qr_start" => Some(RustInvokeChannel::SteamcmSigninQrStart),
             "steamcm_signin_status" => Some(RustInvokeChannel::SteamcmSigninStatus),
+            "steamcm_store_appdetails" => Some(RustInvokeChannel::SteamcmStoreAppdetails),
+            "steamcm_store_enrich" => Some(RustInvokeChannel::SteamcmStoreEnrich),
             "steamcm_wrap_restore_if_owed" => Some(RustInvokeChannel::SteamcmWrapRestoreIfOwed),
             _ => None,
         }
@@ -353,6 +362,7 @@ impl RustInvokeChannel {
             RustInvokeChannel::SteamcmPersonas => "steamcm_personas",
             RustInvokeChannel::SteamcmProductInfo => "steamcm_product_info",
             RustInvokeChannel::SteamcmRedeemKey => "steamcm_redeem_key",
+            RustInvokeChannel::SteamcmRefresh => "steamcm_refresh",
             RustInvokeChannel::SteamcmSessionAcquire => "steamcm_session_acquire",
             RustInvokeChannel::SteamcmSessionAcquireOpen => "steamcm_session_acquire_open",
             RustInvokeChannel::SteamcmSessionEnsureConnected => "steamcm_session_ensure_connected",
@@ -365,6 +375,8 @@ impl RustInvokeChannel {
             RustInvokeChannel::SteamcmSigninGuardSubmit => "steamcm_signin_guard_submit",
             RustInvokeChannel::SteamcmSigninQrStart => "steamcm_signin_qr_start",
             RustInvokeChannel::SteamcmSigninStatus => "steamcm_signin_status",
+            RustInvokeChannel::SteamcmStoreAppdetails => "steamcm_store_appdetails",
+            RustInvokeChannel::SteamcmStoreEnrich => "steamcm_store_enrich",
             RustInvokeChannel::SteamcmWrapRestoreIfOwed => "steamcm_wrap_restore_if_owed",
         }
     }
@@ -1588,6 +1600,44 @@ impl SteamcmRedeemKeyArgs {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteamcmRefreshArgs {
+    pub(crate) source: SteamcmRefreshArgsSource,
+    pub(crate) metadata: Value,
+    #[serde(rename = "previousGames")]
+    pub(crate) previous_games: Value,
+    #[serde(rename = "installState")]
+    pub(crate) install_state: Value,
+    #[serde(rename = "bridgeAllowlist")]
+    pub(crate) bridge_allowlist: Vec<String>,
+    #[serde(rename = "knownFixMac32")]
+    pub(crate) known_fix_mac32: Vec<String>,
+    #[serde(rename = "isMac")]
+    pub(crate) is_mac: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub(crate) enum SteamcmRefreshArgsSourceKindConst {
+    #[serde(rename = "cm")]
+    Cm,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteamcmRefreshArgsSource {
+    pub(crate) kind: SteamcmRefreshArgsSourceKindConst,
+    #[serde(rename = "leaseId")]
+    pub(crate) lease_id: f64,
+    #[serde(rename = "steamId")]
+    pub(crate) steam_id: String,
+}
+
+impl SteamcmRefreshArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steamcm_refresh:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steamcm_refresh:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub(crate) struct SteamcmSessionAcquireArgs {
     #[serde(rename = "refreshToken")]
     pub(crate) refresh_token: String,
@@ -1728,6 +1778,36 @@ impl SteamcmSigninStatusArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let first = args.first().ok_or_else(|| "steamcm_signin_status:bad-args".to_string())?;
         serde_json::from_value(first.clone()).map_err(|_| "steamcm_signin_status:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteamcmStoreAppdetailsArgs {
+    #[serde(rename = "appId")]
+    pub(crate) app_id: String,
+}
+
+impl SteamcmStoreAppdetailsArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steamcm_store_appdetails:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steamcm_store_appdetails:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteamcmStoreEnrichArgs {
+    #[serde(rename = "appId")]
+    pub(crate) app_id: String,
+    pub(crate) cached: Value,
+    pub(crate) current: Value,
+    #[serde(rename = "knownFixMac32")]
+    pub(crate) known_fix_mac32: bool,
+}
+
+impl SteamcmStoreEnrichArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steamcm_store_enrich:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steamcm_store_enrich:bad-args".to_string())
     }
 }
 

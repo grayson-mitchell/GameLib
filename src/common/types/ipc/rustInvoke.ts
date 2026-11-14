@@ -39,6 +39,7 @@ import {
   RUST_STEAMCM_PERSONAS,
   RUST_STEAMCM_PRODUCT_INFO,
   RUST_STEAMCM_REDEEM_KEY,
+  RUST_STEAMCM_REFRESH,
   RUST_STEAMCM_SESSION_ACQUIRE,
   RUST_STEAMCM_SESSION_ACQUIRE_OPEN,
   RUST_STEAMCM_SESSION_ENSURE_CONNECTED,
@@ -51,6 +52,8 @@ import {
   RUST_STEAMCM_SIGNIN_GUARD_SUBMIT,
   RUST_STEAMCM_SIGNIN_QR_START,
   RUST_STEAMCM_SIGNIN_STATUS,
+  RUST_STEAMCM_STORE_APPDETAILS,
+  RUST_STEAMCM_STORE_ENRICH,
   RUST_STEAMCM_WRAP_RESTORE_IF_OWED,
   RUST_SCAN_CONTAINED_REAL,
   RUST_SCAN_PE_IMPORTED_DLLS,
@@ -116,6 +119,10 @@ const bounds = {
   w: z.number(),
   h: z.number()
 }
+// Library, metadata snapshot and install-state payloads of the Refresh/enrichment ops: opaque
+// here, strictly typed (serde deny_unknown_fields) in `gamelib-steamcm`.
+const opaque = (title: string) =>
+  z.unknown().meta({ title, 'x-rust-value': true })
 // Depot job / summary envelope: the nested body is validated in-crate (serde deny_unknown_fields),
 // so this stays an opaque value and the generated Args carries it as a `serde_json::Value`.
 const depotValueArg = z.tuple([
@@ -361,6 +368,26 @@ export const rustInvokeArgs = {
   [RUST_STEAMCM_REDEEM_KEY]: z.tuple([
     z.object({ leaseId: z.number(), key: z.string() }).strict()
   ]),
+  [RUST_STEAMCM_REFRESH]: z.tuple([
+    z
+      .object({
+        source: z
+          .object({
+            kind: z.literal('cm'),
+            leaseId: z.number(),
+            steamId: z.string()
+          })
+          .strict(),
+        // The Rust side does the strict typing of these.
+        metadata: opaque('metadata'),
+        previousGames: opaque('previousGames'),
+        installState: opaque('installState'),
+        bridgeAllowlist: z.array(z.string()),
+        knownFixMac32: z.array(z.string()),
+        isMac: z.boolean()
+      })
+      .strict()
+  ]),
   [RUST_STEAMCM_SESSION_ACQUIRE]: z.tuple([
     z
       .object({
@@ -389,6 +416,19 @@ export const rustInvokeArgs = {
   ]),
   [RUST_STEAMCM_SIGNIN_QR_START]: empty,
   [RUST_STEAMCM_SIGNIN_STATUS]: flowArg,
+  [RUST_STEAMCM_STORE_APPDETAILS]: z.tuple([
+    z.object({ appId: z.string() }).strict()
+  ]),
+  [RUST_STEAMCM_STORE_ENRICH]: z.tuple([
+    z
+      .object({
+        appId: z.string(),
+        cached: opaque('cached'),
+        current: opaque('current'),
+        knownFixMac32: z.boolean()
+      })
+      .strict()
+  ]),
   [RUST_STEAMCM_WRAP_RESTORE_IF_OWED]: z.tuple([
     z.object({ trigger: z.enum(['boot', 'shutdown']) }).strict()
   ])

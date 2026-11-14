@@ -13,9 +13,14 @@ import type {
   RUST_STEAMCM_OWNED_APPS,
   RUST_STEAMCM_PERSONAS,
   RUST_STEAMCM_PRODUCT_INFO,
-  RUST_STEAMCM_REDEEM_KEY
+  RUST_STEAMCM_REDEEM_KEY,
+  RUST_STEAMCM_REFRESH,
+  RUST_STEAMCM_STORE_APPDETAILS,
+  RUST_STEAMCM_STORE_ENRICH
 } from 'common/types/sidecarTransport'
 import type { RustInvokeArgsOf } from 'common/types/ipc/rustInvoke'
+import type { SteamGameInfo } from 'common/types/steam'
+import type { SteamMetadataCacheEntry } from '../stores'
 import type { RawContentServer } from '../depot/planModel'
 
 /** The channels a lease-bound or anonymous CM client calls (session/sign-in ops are not here). */
@@ -29,6 +34,9 @@ export type RustSteamCmClientChannel =
   | typeof RUST_STEAMCM_PERSONAS
   | typeof RUST_STEAMCM_PRODUCT_INFO
   | typeof RUST_STEAMCM_REDEEM_KEY
+  | typeof RUST_STEAMCM_REFRESH
+  | typeof RUST_STEAMCM_STORE_APPDETAILS
+  | typeof RUST_STEAMCM_STORE_ENRICH
 
 export type SteamCmFailureKind =
   | 'leaseUnknown'
@@ -41,6 +49,11 @@ export type SteamCmFailureKind =
   | 'shuttingDown'
   | 'goOfflineRequired'
   | 'unsupported'
+  | 'ownedFailed'
+  | 'badAppId'
+  | 'http'
+  | 'tooLarge'
+  | 'parse'
 
 export type SteamCmOpFailure = {
   ok: false
@@ -89,6 +102,54 @@ export interface SteamCmPersonasResult {
   personas: Record<string, { player_name?: string } & Record<string, unknown>>
 }
 
+export interface SteamCmCaptureSummary {
+  scoped: number
+  captured: number
+  skipped: number
+  failed: boolean
+}
+
+/** `steamcm_refresh` result: the finished library and every changed metadata entry. */
+export interface RefreshResult {
+  games: SteamGameInfo[]
+  metadataUpdates: Record<string, SteamMetadataCacheEntry>
+  ownedCount: number
+  demoCount: number
+  demosFailed: boolean
+  capture: {
+    platforms: SteamCmCaptureSummary
+    metacritic: SteamCmCaptureSummary
+    anonCount: number
+    heldCount: number
+  }
+  enrich: {
+    attempted: number
+    enriched: number
+    delisted: number
+    failed: number
+    rateLimited: boolean
+    budgetHit: boolean
+    notReached: string[]
+  }
+  source: 'cm'
+}
+
+/** `steamcm_store_enrich` result; `entry`/`game` are absent for `noData`. */
+export interface StoreEnrichResult {
+  kind: 'delisted' | 'enriched' | 'noData'
+  entry?: SteamMetadataCacheEntry
+  game?: SteamGameInfo
+}
+
+/** `steamcm_store_appdetails` result (`StoreDetails` in the crate). */
+export interface StoreDetails {
+  delisted: boolean
+  data: Record<string, unknown> | null
+  storageBytes: number | null
+  macMinOs: string | null
+  macArch: string | null
+}
+
 export type SteamCmArgsFor<C extends RustSteamCmClientChannel> =
   RustInvokeArgsOf<C> extends readonly [infer A] ? A : never
 
@@ -102,6 +163,9 @@ interface SteamCmResultMap {
   steamcm_personas: SteamCmPersonasResult
   steamcm_product_info: SteamCmProductInfoResult
   steamcm_redeem_key: SteamCmRedeemResult
+  steamcm_refresh: RefreshResult
+  steamcm_store_appdetails: StoreDetails
+  steamcm_store_enrich: StoreEnrichResult
 }
 
 export type SteamCmResultFor<C extends RustSteamCmClientChannel> =

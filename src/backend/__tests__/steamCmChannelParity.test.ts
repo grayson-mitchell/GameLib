@@ -40,13 +40,13 @@ function snakeToPascal(s: string): string {
 describe('steamcm channel parity (CF-01)', () => {
   it('anti-vacuity: extraction found the ops and the extractor rejects a missing name', () => {
     expect(CLI_ONLY).toEqual(['steamcm_capture_anon_pics'])
-    expect(OPS).toHaveLength(24)
+    expect(OPS).toHaveLength(27)
     expect(() => extractConst(libRs, 'NO_SUCH_CONST')).toThrow('not found')
   })
 
   it('RUST_STEAMCM_CHANNELS equals the crate OPS minus CLI_ONLY_OPS', () => {
     expect([...RUST_STEAMCM_CHANNELS].sort()).toEqual([...OPS].sort())
-    expect(RUST_STEAMCM_CHANNELS).toHaveLength(24)
+    expect(RUST_STEAMCM_CHANNELS).toHaveLength(27)
   })
 
   it('every steamcm channel is on the rustInvoke allowlist', () => {
