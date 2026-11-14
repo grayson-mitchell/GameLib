@@ -581,6 +581,7 @@
                 "queued": "Aktualizacja {{title}} czeka w Pobieraniu. Zagraj po jej zakończeniu lub usuń ją z kolejki.",
                 "updating": "{{title}} jest aktualizowana. Zagraj po zakończeniu aktualizacji lub wstrzymaj ją w Pobieraniu.",
                 "message": "{{title}} ma aktualizację (wersja {{targetBuild}}). Zaktualizować teraz, czy zagrać w obecną wersję?",
+                "messagePartial": "{{title}} ma częściowo pobraną aktualizację (wersja {{targetBuild}}). Zaktualizować teraz, aby ją wznowić, czy zagrać w obecną wersję?",
                 "playAnyway": "Zagraj mimo to",
                 "title": "Dostępna aktualizacja",
                 "updateNow": "Zaktualizuj teraz"

@@ -590,6 +590,7 @@
                 "queued": "Tá nuashonrú le haghaidh {{title}} ag fanacht in Íoslódálacha. Imir nuair a bheidh sé críochnaithe, nó bain den scuaine é.",
                 "updating": "Tá {{title}} á nuashonrú. Imir nuair a bheidh an nuashonrú críochnaithe, nó cuir ar sos é in Íoslódálacha.",
                 "message": "Tá nuashonrú ag {{title}} (tógáil {{targetBuild}}). Nuashonraigh anois, nó imir an tógáil atá agat?",
+                "messagePartial": "Tá nuashonrú a íoslódáladh go páirteach ag {{title}} (tógáil {{targetBuild}}). Nuashonraigh anois chun é a atosú arís, nó imir an tógáil atá agat?",
                 "playAnyway": "Imir ar aon nós",
                 "title": "Nuashonrú ar fáil",
                 "updateNow": "Nuashonraigh anois"

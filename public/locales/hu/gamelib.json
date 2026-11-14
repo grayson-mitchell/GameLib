@@ -563,6 +563,7 @@
                 "queued": "A(z) {{title}} frissítése a Letöltések között vár. Játssz, ha végzett, vagy távolítsd el a sorból.",
                 "updating": "A(z) {{title}} frissül. Játssz, ha a frissítés befejeződött, vagy szüneteltesd a Letöltések között.",
                 "message": "A(z) {{title}} játékhoz frissítés érhető el ({{targetBuild}} build). Frissítesz most, vagy a meglévő buildet játszod?",
+                "messagePartial": "A(z) {{title}} játékhoz részben letöltött frissítés érhető el ({{targetBuild}} build). Frissítesz most a folytatáshoz, vagy a meglévő buildet játszod?",
                 "playAnyway": "Játék mégis",
                 "title": "Frissítés érhető el",
                 "updateNow": "Frissítés most"

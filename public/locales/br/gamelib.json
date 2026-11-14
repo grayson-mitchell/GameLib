@@ -590,6 +590,7 @@
                 "queued": "Un hizivadur evit {{title}} a gortoz e Pellgargadennoù. C'hoariit goude m'eo echu, pe tennit anezhañ eus ar rummad.",
                 "updating": "{{title}} a vez hizivaet. C'hoariit pa vo echu an hizivadur, pe lakait ar hizivadur da ehan e Pellgargadennoù.",
                 "message": "Un hizivadur zo evit {{title}} (stumm {{targetBuild}}). Hizivaat bremañ, pe c'hoari gant ar stumm hoc'h eus ?",
+                "messagePartial": "Un hizivadur lodennek pellgarget zo evit {{title}} (stumm {{targetBuild}}). Hizivaat bremañ evit kenderc'hel, pe c'hoari gant ar stumm hoc'h eus ?",
                 "playAnyway": "C'hoari memes tra",
                 "title": "Un hizivadur zo hegerz",
                 "updateNow": "Hizivaat bremañ"

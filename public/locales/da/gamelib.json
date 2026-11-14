@@ -563,6 +563,7 @@
                 "queued": "En opdatering til {{title}} venter i Downloads. Spil, når den er færdig, eller fjern den fra køen.",
                 "updating": "{{title}} opdateres. Spil, når opdateringen er færdig, eller sæt den på pause i Downloads.",
                 "message": "{{title}} har en opdatering (build {{targetBuild}}). Opdater nu, eller spil den version, du har?",
+                "messagePartial": "{{title}} har en delvist downloadet opdatering (build {{targetBuild}}). Opdater nu for at genoptage den, eller spil den version, du har?",
                 "playAnyway": "Spil alligevel",
                 "title": "Opdatering tilgængelig",
                 "updateNow": "Opdater nu"

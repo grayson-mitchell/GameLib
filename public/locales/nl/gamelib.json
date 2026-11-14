@@ -563,6 +563,7 @@
                 "queued": "Een update voor {{title}} wacht in Downloads. Speel zodra deze klaar is, of verwijder hem uit de wachtrij.",
                 "updating": "{{title}} wordt bijgewerkt. Speel zodra de update klaar is, of pauzeer hem in Downloads.",
                 "message": "{{title}} heeft een update (build {{targetBuild}}). Nu bijwerken, of de build spelen die je hebt?",
+                "messagePartial": "{{title}} heeft een gedeeltelijk gedownloade update (build {{targetBuild}}). Nu bijwerken om verder te gaan, of de build spelen die je hebt?",
                 "playAnyway": "Toch spelen",
                 "title": "Update beschikbaar",
                 "updateNow": "Nu bijwerken"

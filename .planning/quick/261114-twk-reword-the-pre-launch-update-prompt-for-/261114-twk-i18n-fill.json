@@ -1,0 +1,149 @@
+{
+  "en": {
+    "steam.update.prompt.messagePartial": "{{title}} has a partly downloaded update (build {{targetBuild}}). Update now to resume it, or play the build you have?"
+  },
+  "ar": {
+    "steam.update.prompt.messagePartial": "لدى {{title}} تحديث تم تنزيل جزء منه (الإصدار {{targetBuild}}). حدّث الآن لاستئنافه، أم تشغيل الإصدار الموجود لديك؟"
+  },
+  "az": {
+    "steam.update.prompt.messagePartial": "{{title}} üçün qismən yüklənmiş yeniləmə var (quruluş {{targetBuild}}). Davam etdirmək üçün indi yenilə, yoxsa mövcud quruluş oynansın?"
+  },
+  "be": {
+    "steam.update.prompt.messagePartial": "Для {{title}} ёсць часткова спампаванае абнаўленне (зборка {{targetBuild}}). Абнавіць зараз, каб працягнуць, ці гуляць у наяўную зборку?"
+  },
+  "bg": {
+    "steam.update.prompt.messagePartial": "{{title}} има частично изтеглена актуализация (версия {{targetBuild}}). Да се актуализира ли сега, за да продължи, или да играете наличната версия?"
+  },
+  "br": {
+    "steam.update.prompt.messagePartial": "Un hizivadur lodennek pellgarget zo evit {{title}} (stumm {{targetBuild}}). Hizivaat bremañ evit kenderc'hel, pe c'hoari gant ar stumm hoc'h eus ?"
+  },
+  "bs": {
+    "steam.update.prompt.messagePartial": "{{title}} ima djelomično preuzeto ažuriranje (verzija {{targetBuild}}). Ažurirati sada da se nastavi ili igrati verziju koju imate?"
+  },
+  "ca": {
+    "steam.update.prompt.messagePartial": "{{title}} té una actualització descarregada parcialment (versió {{targetBuild}}). Actualitzar ara per reprendre-la o jugar la versió que tens?"
+  },
+  "cs": {
+    "steam.update.prompt.messagePartial": "{{title}} má částečně staženou aktualizaci (verze {{targetBuild}}). Aktualizovat nyní a pokračovat, nebo hrát aktuální verzi?"
+  },
+  "da": {
+    "steam.update.prompt.messagePartial": "{{title}} har en delvist downloadet opdatering (build {{targetBuild}}). Opdater nu for at genoptage den, eller spil den version, du har?"
+  },
+  "de": {
+    "steam.update.prompt.messagePartial": "{{title}} hat ein teilweise heruntergeladenes Update (Build {{targetBuild}}). Jetzt aktualisieren, um es fortzusetzen, oder den vorhandenen Build spielen?"
+  },
+  "el": {
+    "steam.update.prompt.messagePartial": "Το {{title}} έχει μερικώς ληφθείσα ενημέρωση (έκδοση {{targetBuild}}). Ενημέρωση τώρα για συνέχιση ή παιχνίδι με την έκδοση που έχετε;"
+  },
+  "es": {
+    "steam.update.prompt.messagePartial": "{{title}} tiene una actualización descargada parcialmente (compilación {{targetBuild}}). ¿Actualizar ahora para reanudarla o jugar la compilación que tienes?"
+  },
+  "et": {
+    "steam.update.prompt.messagePartial": "Mängul {{title}} on osaliselt alla laaditud uuendus (järk {{targetBuild}}). Uuenda kohe, et jätkata, või mängi olemasolevat järku?"
+  },
+  "eu": {
+    "steam.update.prompt.messagePartial": "{{title}} jokoak partzialki deskargatutako eguneratzea du ({{targetBuild}} bertsioa). Orain eguneratu berrekiteko, edo daukazun bertsioa jokatu?"
+  },
+  "fa": {
+    "steam.update.prompt.messagePartial": "برای {{title}} یک به‌روزرسانی نیمه‌دانلودشده وجود دارد (نسخهٔ {{targetBuild}}). همین حالا به‌روزرسانی شود تا ادامه یابد یا نسخهٔ موجود اجرا شود؟"
+  },
+  "fi": {
+    "steam.update.prompt.messagePartial": "Pelillä {{title}} on osittain ladattu päivitys (versio {{targetBuild}}). Päivitetäänkö nyt jatkaaksesi vai pelataanko nykyistä versiota?"
+  },
+  "fr": {
+    "steam.update.prompt.messagePartial": "{{title}} a une mise à jour partiellement téléchargée (build {{targetBuild}}). Mettre à jour maintenant pour la reprendre, ou jouer à la version que vous avez ?"
+  },
+  "ga": {
+    "steam.update.prompt.messagePartial": "Tá nuashonrú a íoslódáladh go páirteach ag {{title}} (tógáil {{targetBuild}}). Nuashonraigh anois chun é a atosú arís, nó imir an tógáil atá agat?"
+  },
+  "gl": {
+    "steam.update.prompt.messagePartial": "{{title}} ten unha actualización descargada parcialmente (compilación {{targetBuild}}). Actualizar agora para retomala ou xogar coa compilación que tes?"
+  },
+  "he": {
+    "steam.update.prompt.messagePartial": "ל-{{title}} יש עדכון שהורד חלקית (גרסה {{targetBuild}}). לעדכן עכשיו כדי להמשיך, או לשחק בגרסה שיש לכם?"
+  },
+  "hr": {
+    "steam.update.prompt.messagePartial": "{{title}} ima djelomično preuzeto ažuriranje (verzija {{targetBuild}}). Ažurirati sada da se nastavi ili igrati verziju koju imate?"
+  },
+  "hu": {
+    "steam.update.prompt.messagePartial": "A(z) {{title}} játékhoz részben letöltött frissítés érhető el ({{targetBuild}} build). Frissítesz most a folytatáshoz, vagy a meglévő buildet játszod?"
+  },
+  "id": {
+    "steam.update.prompt.messagePartial": "{{title}} memiliki pembaruan yang terunduh sebagian (build {{targetBuild}}). Perbarui sekarang untuk melanjutkannya, atau mainkan build yang ada?"
+  },
+  "it": {
+    "steam.update.prompt.messagePartial": "{{title}} ha un aggiornamento scaricato in parte (build {{targetBuild}}). Aggiornare ora per riprenderlo o giocare la build che hai?"
+  },
+  "ja": {
+    "steam.update.prompt.messagePartial": "{{title}}に一部ダウンロード済みのアップデートがあります（ビルド{{targetBuild}}）。今すぐアップデートして再開しますか？それとも現在のビルドをプレイしますか？"
+  },
+  "ka": {
+    "steam.update.prompt.messagePartial": "{{title}}-ს აქვს ნაწილობრივ ჩამოტვირთული განახლება (ბილდი {{targetBuild}}). განახლდეს ახლა გასაგრძელებლად, თუ ითამაშოთ არსებული ბილდი?"
+  },
+  "ko": {
+    "steam.update.prompt.messagePartial": "{{title}}에 일부만 다운로드된 업데이트가 있습니다 (빌드 {{targetBuild}}). 지금 업데이트하여 이어서 받을까요, 아니면 현재 빌드를 플레이할까요?"
+  },
+  "lt": {
+    "steam.update.prompt.messagePartial": "{{title}} turi iš dalies atsisiųstą naujinimą (versija {{targetBuild}}). Naujinti dabar, kad tęstumėte, ar žaisti turimą versiją?"
+  },
+  "ml": {
+    "steam.update.prompt.messagePartial": "{{title}}-ന് ഭാഗികമായി ഡൗൺലോഡ് ചെയ്ത ഒരു അപ്ഡേറ്റ് ഉണ്ട് (ബിൽഡ് {{targetBuild}}). തുടരാൻ ഇപ്പോൾ അപ്ഡേറ്റ് ചെയ്യണോ, അതോ നിലവിലുള്ള ബിൽഡ് കളിക്കണോ?"
+  },
+  "nb_NO": {
+    "steam.update.prompt.messagePartial": "{{title}} har en delvis nedlastet oppdatering (build {{targetBuild}}). Oppdatere nå for å fortsette, eller spille versjonen du har?"
+  },
+  "nl": {
+    "steam.update.prompt.messagePartial": "{{title}} heeft een gedeeltelijk gedownloade update (build {{targetBuild}}). Nu bijwerken om verder te gaan, of de build spelen die je hebt?"
+  },
+  "pl": {
+    "steam.update.prompt.messagePartial": "{{title}} ma częściowo pobraną aktualizację (wersja {{targetBuild}}). Zaktualizować teraz, aby ją wznowić, czy zagrać w obecną wersję?"
+  },
+  "pt": {
+    "steam.update.prompt.messagePartial": "{{title}} tem uma atualização transferida parcialmente (versão {{targetBuild}}). Atualizar agora para a retomar ou jogar a versão que tem?"
+  },
+  "pt_BR": {
+    "steam.update.prompt.messagePartial": "{{title}} tem uma atualização baixada parcialmente (build {{targetBuild}}). Atualizar agora para retomá-la ou jogar a build que você tem?"
+  },
+  "ro": {
+    "steam.update.prompt.messagePartial": "{{title}} are o actualizare descărcată parțial (versiunea {{targetBuild}}). Actualizezi acum ca să o reiei sau joci versiunea pe care o ai?"
+  },
+  "ru": {
+    "steam.update.prompt.messagePartial": "Для {{title}} есть частично загруженное обновление (сборка {{targetBuild}}). Обновить сейчас, чтобы продолжить, или играть в текущую сборку?"
+  },
+  "sk": {
+    "steam.update.prompt.messagePartial": "Hra {{title}} má čiastočne stiahnutú aktualizáciu (verzia {{targetBuild}}). Aktualizovať teraz a pokračovať, alebo hrať aktuálnu verziu?"
+  },
+  "sl": {
+    "steam.update.prompt.messagePartial": "{{title}} ima delno preneseno posodobitev (različica {{targetBuild}}). Posodobim zdaj, da jo nadaljujem, ali igram različico, ki jo imate?"
+  },
+  "sr": {
+    "steam.update.prompt.messagePartial": "{{title}} има делимично преузето ажурирање (верзија {{targetBuild}}). Ажурирати сада да се настави или играти верзију коју имате?"
+  },
+  "sv": {
+    "steam.update.prompt.messagePartial": "{{title}} har en delvis nedladdad uppdatering (build {{targetBuild}}). Uppdatera nu för att återuppta den eller spela den version du har?"
+  },
+  "ta": {
+    "steam.update.prompt.messagePartial": "{{title}} க்கு பகுதியளவு பதிவிறக்கப்பட்ட புதுப்பிப்பு உள்ளது (பதிப்பு {{targetBuild}}). தொடர இப்போது புதுப்பிக்கவா, அல்லது உங்களிடம் உள்ள பதிப்பை விளையாடவா?"
+  },
+  "th": {
+    "steam.update.prompt.messagePartial": "{{title}} มีอัปเดตที่ดาวน์โหลดไว้บางส่วน (บิลด์ {{targetBuild}}) จะอัปเดตตอนนี้เพื่อดำเนินการต่อ หรือเล่นบิลด์ที่มีอยู่?"
+  },
+  "tr": {
+    "steam.update.prompt.messagePartial": "{{title}} için kısmen indirilmiş bir güncelleme var (sürüm {{targetBuild}}). Devam etmek için şimdi güncellensin mi, yoksa mevcut sürüm mü oynansın?"
+  },
+  "uk": {
+    "steam.update.prompt.messagePartial": "Для {{title}} є частково завантажене оновлення (збірка {{targetBuild}}). Оновити зараз, щоб продовжити, чи грати в поточну збірку?"
+  },
+  "uz": {
+    "steam.update.prompt.messagePartial": "{{title}} uchun qisman yuklab olingan yangilanish bor ({{targetBuild}} tuzilma). Davom ettirish uchun hozir yangilansinmi yoki mavjud tuzilmada o'ynalsinmi?"
+  },
+  "vi": {
+    "steam.update.prompt.messagePartial": "{{title}} có bản cập nhật đã tải một phần (bản dựng {{targetBuild}}). Cập nhật ngay để tiếp tục, hay chơi bản dựng hiện có?"
+  },
+  "zh_Hans": {
+    "steam.update.prompt.messagePartial": "{{title}} 有已部分下载的更新（版本 {{targetBuild}}）。立即更新以继续下载，还是游玩现有版本？"
+  },
+  "zh_Hant": {
+    "steam.update.prompt.messagePartial": "{{title}} 有已部分下載的更新（版本 {{targetBuild}}）。要立即更新以繼續下載，還是遊玩現有版本？"
+  }
+}

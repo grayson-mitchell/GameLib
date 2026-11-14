@@ -563,6 +563,7 @@
                 "queued": "{{title}} üçün yeniləmə Yükləmələrdə gözləyir. Bitdikdən sonra oynayın və ya onu növbədən silin.",
                 "updating": "{{title}} yenilənir. Yeniləmə bitəndə oynayın və ya yeniləməni Yükləmələrdə dayandırın.",
                 "message": "{{title}} üçün yeniləmə var (quruluş {{targetBuild}}). İndi yenilənsin, yoxsa mövcud quruluş oynansın?",
+                "messagePartial": "{{title}} üçün qismən yüklənmiş yeniləmə var (quruluş {{targetBuild}}). Davam etdirmək üçün indi yenilə, yoxsa mövcud quruluş oynansın?",
                 "playAnyway": "Yenə də oyna",
                 "title": "Yeniləmə mövcuddur",
                 "updateNow": "İndi yenilə"

@@ -581,6 +581,7 @@
                 "queued": "Posodobitev za {{title}} čaka v Prenosih. Igrajte, ko se konča, ali jo odstranite iz čakalne vrste.",
                 "updating": "{{title}} se posodablja. Igrajte, ko se posodobitev konča, ali jo začasno ustavite v Prenosih.",
                 "message": "{{title}} ima posodobitev (različica {{targetBuild}}). Posodobim zdaj ali igram različico, ki jo imate?",
+                "messagePartial": "{{title}} ima delno preneseno posodobitev (različica {{targetBuild}}). Posodobim zdaj, da jo nadaljujem, ali igram različico, ki jo imate?",
                 "playAnyway": "Vseeno igraj",
                 "title": "Na voljo je posodobitev",
                 "updateNow": "Posodobi zdaj"

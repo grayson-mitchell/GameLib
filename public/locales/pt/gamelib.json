@@ -572,6 +572,7 @@
                 "queued": "Uma atualização de {{title}} está à espera nas Transferências. Jogue quando terminar ou remova-a da fila.",
                 "updating": "{{title}} está a ser atualizado. Jogue quando a atualização terminar ou pause-a nas Transferências.",
                 "message": "{{title}} tem uma atualização (versão {{targetBuild}}). Atualizar agora ou jogar a versão que tem?",
+                "messagePartial": "{{title}} tem uma atualização transferida parcialmente (versão {{targetBuild}}). Atualizar agora para a retomar ou jogar a versão que tem?",
                 "playAnyway": "Jogar mesmo assim",
                 "title": "Atualização disponível",
                 "updateNow": "Atualizar agora"

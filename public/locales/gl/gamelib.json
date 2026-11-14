@@ -563,6 +563,7 @@
                 "queued": "Hai unha actualización de {{title}} agardando en Descargas. Xoga cando remate ou quítaa da cola.",
                 "updating": "{{title}} está a actualizarse. Xoga cando remate a actualización ou páusaa en Descargas.",
                 "message": "{{title}} ten unha actualización (compilación {{targetBuild}}). Actualizar agora ou xogar coa compilación que tes?",
+                "messagePartial": "{{title}} ten unha actualización descargada parcialmente (compilación {{targetBuild}}). Actualizar agora para retomala ou xogar coa compilación que tes?",
                 "playAnyway": "Xogar igualmente",
                 "title": "Actualización dispoñible",
                 "updateNow": "Actualizar agora"

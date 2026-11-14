@@ -462,6 +462,7 @@
                 "queued": "Une mise à jour de {{title}} attend dans Téléchargements. Jouez une fois terminée, ou retirez-la de la file.",
                 "updating": "{{title}} est en cours de mise à jour. Jouez quand elle sera terminée, ou mettez-la en pause dans Téléchargements.",
                 "message": "{{title}} a une mise à jour (build {{targetBuild}}). Mettre à jour maintenant, ou jouer à la version que vous avez ?",
+                "messagePartial": "{{title}} a une mise à jour partiellement téléchargée (build {{targetBuild}}). Mettre à jour maintenant pour la reprendre, ou jouer à la version que vous avez ?",
                 "playAnyway": "Jouer quand même",
                 "title": "Mise à jour disponible",
                 "updateNow": "Mettre à jour maintenant"

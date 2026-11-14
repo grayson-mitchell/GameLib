@@ -581,6 +581,7 @@
                 "queued": "{{title}} naujinimas laukia skiltyje Atsisiuntimai. Žaiskite jam pasibaigus arba pašalinkite jį iš eilės.",
                 "updating": "{{title}} naujinamas. Žaiskite, kai naujinimas baigsis, arba sustabdykite jį skiltyje Atsisiuntimai.",
                 "message": "{{title}} turi naujinimą (versija {{targetBuild}}). Naujinti dabar ar žaisti turimą versiją?",
+                "messagePartial": "{{title}} turi iš dalies atsisiųstą naujinimą (versija {{targetBuild}}). Naujinti dabar, kad tęstumėte, ar žaisti turimą versiją?",
                 "playAnyway": "Vis tiek žaisti",
                 "title": "Yra naujinimas",
                 "updateNow": "Naujinti dabar"

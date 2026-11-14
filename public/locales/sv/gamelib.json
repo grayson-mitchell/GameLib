@@ -563,6 +563,7 @@
                 "queued": "En uppdatering för {{title}} väntar i Nedladdningar. Spela när den är klar eller ta bort den från kön.",
                 "updating": "{{title}} uppdateras. Spela när uppdateringen är klar eller pausa den i Nedladdningar.",
                 "message": "{{title}} har en uppdatering (build {{targetBuild}}). Uppdatera nu eller spela den version du har?",
+                "messagePartial": "{{title}} har en delvis nedladdad uppdatering (build {{targetBuild}}). Uppdatera nu för att återuppta den eller spela den version du har?",
                 "playAnyway": "Spela ändå",
                 "title": "Uppdatering tillgänglig",
                 "updateNow": "Uppdatera nu"

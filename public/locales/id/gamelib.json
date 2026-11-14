@@ -563,6 +563,7 @@
                 "queued": "Pembaruan untuk {{title}} menunggu di Unduhan. Mainkan setelah selesai, atau hapus dari antrean.",
                 "updating": "{{title}} sedang diperbarui. Mainkan setelah pembaruan selesai, atau jeda di Unduhan.",
                 "message": "{{title}} memiliki pembaruan (build {{targetBuild}}). Perbarui sekarang, atau mainkan build yang ada?",
+                "messagePartial": "{{title}} memiliki pembaruan yang terunduh sebagian (build {{targetBuild}}). Perbarui sekarang untuk melanjutkannya, atau mainkan build yang ada?",
                 "playAnyway": "Tetap mainkan",
                 "title": "Pembaruan tersedia",
                 "updateNow": "Perbarui sekarang"

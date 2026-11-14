@@ -563,6 +563,7 @@
                 "queued": "{{title}} için bir güncelleme İndirmeler bölümünde bekliyor. Bittikten sonra oynayın ya da sıradan kaldırın.",
                 "updating": "{{title}} güncelleniyor. Güncelleme bitince oynayın ya da İndirmeler bölümünde duraklatın.",
                 "message": "{{title}} için bir güncelleme var (sürüm {{targetBuild}}). Şimdi güncellensin mi, yoksa mevcut sürüm mü oynansın?",
+                "messagePartial": "{{title}} için kısmen indirilmiş bir güncelleme var (sürüm {{targetBuild}}). Devam etmek için şimdi güncellensin mi, yoksa mevcut sürüm mü oynansın?",
                 "playAnyway": "Yine de oyna",
                 "title": "Güncelleme mevcut",
                 "updateNow": "Şimdi güncelle"

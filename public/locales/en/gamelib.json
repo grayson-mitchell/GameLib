@@ -868,6 +868,7 @@
                 "dontAskAgain": "Don't ask again for this build",
                 "finishFirst": "Finish updating {{title}} before you play. Resume it from Downloads.",
                 "message": "{{title}} has an update (build {{targetBuild}}). Update now, or play the build you have?",
+                "messagePartial": "{{title}} has a partly downloaded update (build {{targetBuild}}). Update now to resume it, or play the build you have?",
                 "playAnyway": "Play anyway",
                 "queued": "An update for {{title}} is waiting in Downloads. Play after it finishes, or remove it from the queue.",
                 "title": "Update available",

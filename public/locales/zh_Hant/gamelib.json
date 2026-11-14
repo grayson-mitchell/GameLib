@@ -563,6 +563,7 @@
                 "queued": "{{title}} 的更新正在「下載」中等待。請在完成後遊玩，或將其從佇列中移除。",
                 "updating": "{{title}} 正在更新。請在更新完成後遊玩，或在「下載」中暫停。",
                 "message": "{{title}} 有可用更新（版本 {{targetBuild}}）。要立即更新，還是遊玩現有版本？",
+                "messagePartial": "{{title}} 有已部分下載的更新（版本 {{targetBuild}}）。要立即更新以繼續下載，還是遊玩現有版本？",
                 "playAnyway": "仍要遊玩",
                 "title": "有可用更新",
                 "updateNow": "立即更新"

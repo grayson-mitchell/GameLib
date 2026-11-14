@@ -563,6 +563,7 @@
                 "queued": "Bản cập nhật cho {{title}} đang chờ trong mục Tải xuống. Chơi sau khi hoàn tất, hoặc xóa khỏi hàng đợi.",
                 "updating": "{{title}} đang được cập nhật. Chơi khi cập nhật xong, hoặc tạm dừng trong mục Tải xuống.",
                 "message": "{{title}} có bản cập nhật (bản dựng {{targetBuild}}). Cập nhật ngay, hay chơi bản dựng hiện có?",
+                "messagePartial": "{{title}} có bản cập nhật đã tải một phần (bản dựng {{targetBuild}}). Cập nhật ngay để tiếp tục, hay chơi bản dựng hiện có?",
                 "playAnyway": "Vẫn chơi",
                 "title": "Có bản cập nhật",
                 "updateNow": "Cập nhật ngay"

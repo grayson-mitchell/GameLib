@@ -563,6 +563,7 @@
                 "queued": "{{title}} uchun yangilanish Yuklamalar bo'limida kutmoqda. U tugagach o'ynang yoki navbatdan olib tashlang.",
                 "updating": "{{title}} yangilanmoqda. Yangilanish tugagach o'ynang yoki uni Yuklamalar bo'limida to'xtatib turing.",
                 "message": "{{title}} uchun yangilanish bor ({{targetBuild}} tuzilma). Hozir yangilansinmi yoki mavjud tuzilmada o'ynalsinmi?",
+                "messagePartial": "{{title}} uchun qisman yuklab olingan yangilanish bor ({{targetBuild}} tuzilma). Davom ettirish uchun hozir yangilansinmi yoki mavjud tuzilmada o'ynalsinmi?",
                 "playAnyway": "Baribir o'ynash",
                 "title": "Yangilanish mavjud",
                 "updateNow": "Hozir yangilash"

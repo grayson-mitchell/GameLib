@@ -563,6 +563,7 @@
                 "queued": "Pelin {{title}} päivitys odottaa Lataukset-osiossa. Pelaa sen valmistuttua tai poista se jonosta.",
                 "updating": "Peliä {{title}} päivitetään. Pelaa, kun päivitys on valmis, tai keskeytä se Lataukset-osiossa.",
                 "message": "Pelillä {{title}} on päivitys (versio {{targetBuild}}). Päivitetäänkö nyt vai pelataanko nykyistä versiota?",
+                "messagePartial": "Pelillä {{title}} on osittain ladattu päivitys (versio {{targetBuild}}). Päivitetäänkö nyt jatkaaksesi vai pelataanko nykyistä versiota?",
                 "playAnyway": "Pelaa silti",
                 "title": "Päivitys saatavilla",
                 "updateNow": "Päivitä nyt"

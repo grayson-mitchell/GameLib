@@ -542,6 +542,7 @@
                 "queued": "Mängu {{title}} uuendus ootab jaotises Allalaadimised. Mängi pärast selle lõppu või eemalda see järjekorrast.",
                 "updating": "Mängu {{title}} uuendatakse. Mängi, kui uuendus on lõppenud, või peata see jaotises Allalaadimised.",
                 "message": "Mängul {{title}} on uuendus (järk {{targetBuild}}). Uuenda kohe või mängi olemasolevat järku?",
+                "messagePartial": "Mängul {{title}} on osaliselt alla laaditud uuendus (järk {{targetBuild}}). Uuenda kohe, et jätkata, või mängi olemasolevat järku?",
                 "playAnyway": "Mängi siiski",
                 "title": "Uuendus on saadaval",
                 "updateNow": "Uuenda kohe"

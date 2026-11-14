@@ -572,6 +572,7 @@
                 "queued": "O actualizare pentru {{title}} așteaptă în Descărcări. Joacă după ce se termină sau scoate-o din coadă.",
                 "updating": "{{title}} se actualizează. Joacă după terminarea actualizării sau pune-o pe pauză în Descărcări.",
                 "message": "{{title}} are o actualizare (versiunea {{targetBuild}}). Actualizezi acum sau joci versiunea pe care o ai?",
+                "messagePartial": "{{title}} are o actualizare descărcată parțial (versiunea {{targetBuild}}). Actualizezi acum ca să o reiei sau joci versiunea pe care o ai?",
                 "playAnyway": "Joacă oricum",
                 "title": "Actualizare disponibilă",
                 "updateNow": "Actualizează acum"

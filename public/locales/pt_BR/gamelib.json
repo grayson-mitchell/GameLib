@@ -572,6 +572,7 @@
                 "queued": "Uma atualização de {{title}} está aguardando em Downloads. Jogue quando terminar ou remova-a da fila.",
                 "updating": "{{title}} está sendo atualizado. Jogue quando a atualização terminar ou pause-a em Downloads.",
                 "message": "{{title}} tem uma atualização (build {{targetBuild}}). Atualizar agora ou jogar a build que você tem?",
+                "messagePartial": "{{title}} tem uma atualização baixada parcialmente (build {{targetBuild}}). Atualizar agora para retomá-la ou jogar a build que você tem?",
                 "playAnyway": "Jogar mesmo assim",
                 "title": "Atualização disponível",
                 "updateNow": "Atualizar agora"

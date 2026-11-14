@@ -454,6 +454,7 @@
                 "queued": "Ein Update für {{title}} wartet unter Downloads. Spiele nach Abschluss oder entferne es aus der Warteschlange.",
                 "updating": "{{title}} wird aktualisiert. Spiele, wenn das Update fertig ist, oder pausiere es unter Downloads.",
                 "message": "{{title}} hat ein Update (Build {{targetBuild}}). Jetzt aktualisieren oder den vorhandenen Build spielen?",
+                "messagePartial": "{{title}} hat ein teilweise heruntergeladenes Update (Build {{targetBuild}}). Jetzt aktualisieren, um es fortzusetzen, oder den vorhandenen Build spielen?",
                 "playAnyway": "Trotzdem spielen",
                 "title": "Update verfügbar",
                 "updateNow": "Jetzt aktualisieren"

@@ -563,6 +563,7 @@
                 "queued": "{{title}} jokoaren eguneratze bat Deskargak atalean dago zain. Jokatu amaitzen denean edo kendu ilaratik.",
                 "updating": "{{title}} eguneratzen ari da. Jokatu eguneratzea amaitzen denean edo eten Deskargak atalean.",
                 "message": "{{title}} jokoak eguneratzea du ({{targetBuild}} bertsioa). Orain eguneratu, edo daukazun bertsioa jokatu?",
+                "messagePartial": "{{title}} jokoak partzialki deskargatutako eguneratzea du ({{targetBuild}} bertsioa). Orain eguneratu berrekiteko, edo daukazun bertsioa jokatu?",
                 "playAnyway": "Jokatu hala ere",
                 "title": "Eguneratzea eskuragarri",
                 "updateNow": "Eguneratu orain"

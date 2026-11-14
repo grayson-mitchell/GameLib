@@ -402,6 +402,7 @@
     "steam.update.prompt.dontAskAgain",
     "steam.update.prompt.finishFirst",
     "steam.update.prompt.message",
+    "steam.update.prompt.messagePartial",
     "steam.update.prompt.playAnyway",
     "steam.update.prompt.queued",
     "steam.update.prompt.title",

@@ -572,6 +572,7 @@
                 "queued": "Ažuriranje za {{title}} čeka u Preuzimanjima. Igrajte nakon što završi ili ga uklonite iz reda.",
                 "updating": "{{title}} se ažurira. Igrajte kad se ažuriranje završi ili ga pauzirajte u Preuzimanjima.",
                 "message": "{{title}} ima ažuriranje (verzija {{targetBuild}}). Ažurirati sada ili igrati verziju koju imate?",
+                "messagePartial": "{{title}} ima djelomično preuzeto ažuriranje (verzija {{targetBuild}}). Ažurirati sada da se nastavi ili igrati verziju koju imate?",
                 "playAnyway": "Ipak igraj",
                 "title": "Dostupno je ažuriranje",
                 "updateNow": "Ažuriraj sada"

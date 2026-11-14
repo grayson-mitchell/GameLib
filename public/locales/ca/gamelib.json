@@ -572,6 +572,7 @@
                 "queued": "Hi ha una actualització de {{title}} esperant a Baixades. Juga quan acabi o elimina-la de la cua.",
                 "updating": "{{title}} s'està actualitzant. Juga quan acabi l'actualització o posa-la en pausa a Baixades.",
                 "message": "{{title}} té una actualització (versió {{targetBuild}}). Actualitzar ara o jugar la versió que tens?",
+                "messagePartial": "{{title}} té una actualització descarregada parcialment (versió {{targetBuild}}). Actualitzar ara per reprendre-la o jugar la versió que tens?",
                 "playAnyway": "Juga igualment",
                 "title": "Actualització disponible",
                 "updateNow": "Actualitza ara"

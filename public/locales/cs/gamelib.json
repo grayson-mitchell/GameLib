@@ -581,6 +581,7 @@
                 "queued": "Aktualizace hry {{title}} čeká ve Stahování. Hrajte po jejím dokončení nebo ji odeberte z fronty.",
                 "updating": "{{title}} se aktualizuje. Hrajte, až aktualizace skončí, nebo ji pozastavte ve Stahování.",
                 "message": "{{title}} má aktualizaci (verze {{targetBuild}}). Aktualizovat nyní, nebo hrát aktuální verzi?",
+                "messagePartial": "{{title}} má částečně staženou aktualizaci (verze {{targetBuild}}). Aktualizovat nyní a pokračovat, nebo hrát aktuální verzi?",
                 "playAnyway": "Přesto hrát",
                 "title": "Je k dispozici aktualizace",
                 "updateNow": "Aktualizovat nyní"
