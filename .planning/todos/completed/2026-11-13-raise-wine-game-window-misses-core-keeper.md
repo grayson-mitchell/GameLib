@@ -26,3 +26,11 @@ operator saw that happen on this run.
 Check: while Core Keeper is running, run the `RAISE_SCRIPT` logic by hand and list the System
 Events processes with their unix ids. Then compare the result with another bridged title where
 the raise succeeds.
+
+## Resolution
+
+2026-11-14: same root cause as `2026-11-13-core-keeper-bridge-overlay-not-attached.md`; no
+change to `wineWindowRaise.ts`. Core Keeper had hung before creating its window, so there was no
+window to raise. After `01d78e5e3` the raiser succeeded on both live launches:
+`raiseWineGameWindow [bridge:1621690]: raised (CoreKeeper.exe pid=10040)` at 22:19:16 and pid
+10694 at 22:20:20.

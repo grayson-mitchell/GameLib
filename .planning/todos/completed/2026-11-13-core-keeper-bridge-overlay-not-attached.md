@@ -28,3 +28,15 @@ Check: launch with `CX_ENV=STEAM_OVERLAY_LOGGING=1 STEAM_OVERLAY_LOGGING_FLUSH=1
 env var (fixed in `89d40050d`), and confirm whether `gameoverlayui` is spawned and whether
 `overlay_commit` is ever resolved. Done when the overlay attaches and Shift+Tab opens it in game,
 or when the title is recorded as unsupported with the reason.
+
+## Resolution
+
+2026-11-14: fixed in `01d78e5e3`, live-verified. The overlay was not the defect. Since
+`b8e5cb85e` (2026-11-13 21:30) Core Keeper hung before its first frame: Facepunch Steam init now
+succeeded, and the game waited forever on a Workshop `SendQueryUGCRequest` that the bridge shim
+stubbed with call handle 0, which nothing ever completes. The 21:33 run was already hung, so there
+was nothing for the overlay to attach to. The stub now completes at once as a failed
+`SteamUGCQueryCompleted_t`. Two launches at 22:19 and 22:20: the window was raised, the overlay
+attached about 9 s in (`gameoverlayui` started), and Shift+Tab opened it (operator: "core keeper
+opened, shift-tab worked"). `overlay_commit=missing` turned out to be normal on every title.
+Debug session: `.planning/debug/resolved/core-keeper-overlay-no-attach.md`.
