@@ -14,4 +14,5 @@ ignore = [
   { id = "RUSTSEC-2026-0368", reason = "zip 4.x is reachable only through tauri-plugin-updater's extract path; nothing in GameLib invokes the updater (no JS importer, no UpdaterExt use, 72-RESEARCH Evidence 1). Revisit when tauri-plugin-updater adopts zip >= 9." },
   { id = "RUSTSEC-2026-0369", reason = "zip 4.x is reachable only through tauri-plugin-updater's extract path; nothing in GameLib invokes the updater (no JS importer, no UpdaterExt use, 72-RESEARCH Evidence 1). Revisit when tauri-plugin-updater adopts zip >= 9." },
   { id = "RUSTSEC-2026-0429", reason = "zip 4.x is reachable only through tauri-plugin-updater's extract path; nothing in GameLib invokes the updater (no JS importer, no UpdaterExt use, 72-RESEARCH Evidence 1). Revisit when tauri-plugin-updater adopts zip >= 9." },
+  { id = "RUSTSEC-2023-0071", reason = "rsa 0.9 is pinned by steam-vent; GameLib uses only RSA public-key PKCS#1 v1.5 encryption of the sign-in password with Steam's key (GetPasswordRSAPublicKey) and never holds a private key or decrypts, so the Marvin timing side channel has no target. Revisit when steam-vent moves to rsa >= 0.10." },
 ]

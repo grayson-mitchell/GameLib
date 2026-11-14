@@ -443,5 +443,7 @@ members = [
   "crates/gamelib-depot-cli",
   "crates/gamelib-steamfiles",
   "crates/gamelib-steamfiles-cli",
+  "crates/gamelib-steamcm",
+  "crates/gamelib-steamcm-cli",
 ]
 resolver = "2"
