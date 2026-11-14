@@ -42,8 +42,12 @@ use crate::error::{diag, CmError, ERESULT_EXPIRED, ERESULT_LOGON_SESSION_REPLACE
 
 const LICENSE_LIST_TIMEOUT: Duration = Duration::from_secs(10);
 const PERSONA_TIMEOUT: Duration = Duration::from_secs(5);
-/// EClientPersonaStateFlag PlayerName.
-const PERSONA_FLAG_NAME: u32 = 2;
+/// EClientPersonaStateFlag set steam-user requests (Status | PlayerName | ... | Watching, 0x7fff).
+/// A name-only request (flag 2) is answered intermittently by the CM; the full set is what
+/// steam-user sends and what the CM reliably answers.
+const PERSONA_FLAG_NAME: u32 = 0x7fff;
+/// The CM sometimes ignores a friend-data request; resend after this long, within PERSONA_TIMEOUT.
+const PERSONA_RESEND: Duration = Duration::from_millis(1250);
 const PROBE_APP: u32 = 480;
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -423,17 +427,19 @@ impl CmConn for VentConn {
         let c = self.conn()?;
         // Cache miss: ask the CM. Subscribe before asking so an immediate reply is not missed.
         let mut states = Box::pin(c.on::<CMsgClientPersonaState>());
-        c.send(CMsgClientRequestFriendData {
-            persona_state_requested: Some(PERSONA_FLAG_NAME),
-            friends: steam_ids.clone(),
-            ..Default::default()
-        })
-        .await
-        .map_err(map_net)?;
+        let ask = || {
+            c.send(CMsgClientRequestFriendData {
+                persona_state_requested: Some(PERSONA_FLAG_NAME),
+                friends: steam_ids.clone(),
+                ..Default::default()
+            })
+        };
+        ask().await.map_err(map_net)?;
         let mut out: Vec<PersonaRaw> = Vec::new();
         let deadline = tokio::time::Instant::now() + PERSONA_TIMEOUT;
         while out.len() < steam_ids.len() {
-            match tokio::time::timeout_at(deadline, states.next()).await {
+            let slice = (tokio::time::Instant::now() + PERSONA_RESEND).min(deadline);
+            match tokio::time::timeout_at(slice, states.next()).await {
                 Ok(Some(Ok(state))) => {
                     for f in &state.friends {
                         let id = f.friendid();
@@ -449,7 +455,13 @@ impl CmConn for VentConn {
                 }
                 Ok(Some(Err(e))) => return Err(map_net(e)),
                 Ok(None) => return Err(CmError::Closed),
-                Err(_) => break,
+                Err(_) => {
+                    if tokio::time::Instant::now() >= deadline {
+                        break;
+                    }
+                    // The CM answers a friend-data request intermittently; ask again.
+                    ask().await.map_err(map_net)?;
+                }
             }
         }
         Ok(out)
