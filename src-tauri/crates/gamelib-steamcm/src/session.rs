@@ -126,6 +126,28 @@ impl LogonWrap for NoWrap {
     }
 }
 
+/// D-09 PASS branch: no logon wrap exists (Mac Steam stays signed in without it), so a logon
+/// is never delayed, spaced or refused. The only job left is paying a goonline that an older
+/// build (or the TS side) owed, via `wrap::restore_if_owed`, at boot and at shutdown.
+///
+/// The shell (79-16) supplies the production `WrapHost` and must override
+/// `local_utc_offset_secs` (the crate has no tz library; the default 0 skews the late-logoff
+/// and `Logged On` fallback checks by the zone offset).
+pub struct RestoreOnlyWrap {
+    pub host: Arc<dyn crate::wrap::WrapHost>,
+    pub app_folder: std::path::PathBuf,
+}
+
+impl LogonWrap for RestoreOnlyWrap {
+    async fn before_logon(&self) -> Result<WrapTicket, WrapRefused> {
+        Ok(WrapTicket(0))
+    }
+    async fn after_logon(&self, _t: WrapTicket) {}
+    async fn pay_owed(&self, trigger: RestoreTrigger) -> RestoreOutcome {
+        crate::wrap::restore_if_owed(self.host.as_ref(), &self.app_folder, trigger).await
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SessionStatus {
@@ -1880,5 +1902,68 @@ mod tests {
         );
         assert_eq!((a, c), (Ok(()), Ok(())));
         assert_eq!(b.connect_count(), 2);
+    }
+
+    struct CountHost {
+        opened: std::sync::atomic::AtomicUsize,
+    }
+
+    impl crate::wrap::WrapHost for CountHost {
+        fn open_steam_url(&self, _url: &'static str) -> bool {
+            self.opened
+                .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            true
+        }
+        fn steam_running(&self) -> bool {
+            false
+        }
+        fn connection_log_path(&self) -> std::path::PathBuf {
+            std::path::PathBuf::from("/nonexistent/connection_log.txt")
+        }
+        fn pid_alive(&self, _pid: u32) -> bool {
+            false
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn restore_only_wrap_never_delays_a_logon_and_pays_nothing_without_a_record() {
+        let dir = tempfile::tempdir().unwrap();
+        let host = Arc::new(CountHost {
+            opened: Default::default(),
+        });
+        let w = Arc::new(RestoreOnlyWrap {
+            host: host.clone(),
+            app_folder: dir.path().to_path_buf(),
+        });
+        let b = Arc::new(FakeBackend::new());
+        let h = SessionHandle::spawn(b.clone(), w);
+        let t0 = Instant::now();
+        assert!(acq(&h).await.is_ok());
+        assert_eq!(t0.elapsed(), Duration::ZERO);
+        assert_eq!(h.shutdown(secs(5)).await, RestoreOutcome::NotOwed);
+        assert_eq!(host.opened.load(std::sync::atomic::Ordering::SeqCst), 0);
+    }
+
+    #[cfg(target_os = "macos")]
+    #[tokio::test(start_paused = true)]
+    async fn restore_only_wrap_shutdown_delegates_to_restore_if_owed() {
+        let dir = tempfile::tempdir().unwrap();
+        crate::wrap::write_owed(
+            dir.path(),
+            &crate::wrap::OwedRecord::new("test", 1, 1_700_000_000_000),
+        )
+        .unwrap();
+        let host = Arc::new(CountHost {
+            opened: Default::default(),
+        });
+        let w = Arc::new(RestoreOnlyWrap {
+            host: host.clone(),
+            app_folder: dir.path().to_path_buf(),
+        });
+        let h = SessionHandle::spawn(Arc::new(FakeBackend::new()), w);
+        // Steam is not running, so the record is owed but kept; no URL is opened.
+        assert_eq!(h.shutdown(secs(5)).await, RestoreOutcome::KeptNotRunning);
+        assert_eq!(host.opened.load(std::sync::atomic::Ordering::SeqCst), 0);
+        assert!(crate::wrap::read_owed(dir.path()).is_some());
     }
 }
