@@ -42,6 +42,9 @@ pub struct OwnedAndDemos {
     pub demos: Vec<DemoEntry>,
     /// True when the demos stage failed or timed out (`demos` is then empty).
     pub demos_failed: bool,
+    /// Why the demos stage failed: `timeout`, or the `CmError` variant (never a message body).
+    /// `None` when it succeeded.
+    pub demos_failure: Option<String>,
 }
 
 /// The `getUserOwnedApps` options `refresh.ts` passes (steam-user defaults plus
@@ -205,23 +208,24 @@ pub async fn collect_owned_and_demos<C: CmConn>(
 ) -> Result<OwnedAndDemos, CmError> {
     let owned = account::owned_apps(conn, steam_id, refresh_owned_opts()).await?;
     let ids = owned_ids(&owned);
-    let (demos, demos_failed) =
+    let (demos, demos_failure) =
         match tokio::time::timeout(LICENSED_DEMOS_TIMEOUT, fetch_demos(conn, &ids, licences)).await
         {
-            Ok(Ok(d)) => (d, false),
+            Ok(Ok(d)) => (d, None),
             Ok(Err(e)) => {
                 tracing::warn!("Steam licensed demos lookup failed, continuing owned-only: {e:?}");
-                (Vec::new(), true)
+                (Vec::new(), Some(format!("{e:?}")))
             }
             Err(_) => {
                 tracing::warn!("Steam licensed demos timed out, continuing owned-only");
-                (Vec::new(), true)
+                (Vec::new(), Some("timeout".to_string()))
             }
         };
     Ok(OwnedAndDemos {
         owned,
         demos,
-        demos_failed,
+        demos_failed: demos_failure.is_some(),
+        demos_failure,
     })
 }
 
@@ -516,6 +520,7 @@ mod tests {
         let out = collect_owned_and_demos(&c, 7, &[lic(1)]).await.unwrap();
         assert!(out.demos.is_empty());
         assert!(out.demos_failed);
+        assert_eq!(out.demos_failure.as_deref(), Some("Timeout"));
         assert_eq!(out.owned["apps"][0]["appid"], 1000);
     }
 

@@ -234,6 +234,7 @@ where
         "ownedCount": owned_count,
         "demoCount": demo_count,
         "demosFailed": collected.demos_failed,
+        "demosFailure": collected.demos_failure,
         "capture": {
             "platforms": capture_summary_json(&cap.platforms),
             "metacritic": capture_summary_json(&cap.metacritic),

@@ -117,6 +117,13 @@ fn depot_order(root_children: &[Pair]) -> Option<Vec<String>> {
 }
 
 fn parse_app(buf: &[u8]) -> Result<(Value, Option<Vec<String>>), CmError> {
+    // An app Steam answers without a buffer (a missing access token, or an app with no public
+    // data) is an entry with no appinfo, not a malformed reply: failing the whole batch for one
+    // such app broke Refresh's demo and platform stages (79-33 sweep). steam-user itself throws
+    // on a null buffer; the empty-buffer case parses to an absent `appinfo` there.
+    if buf.is_empty() {
+        return Ok((Value::Null, None));
+    }
     let text = buf.strip_suffix(&[0]).unwrap_or(buf);
     let pairs = kv_text::parse(text, &text_limits()).map_err(|_| pics_parse())?;
     // kvparser reads only the root block, `.appinfo` of it.
@@ -424,7 +431,6 @@ mod tests {
             bad
         );
         assert_eq!(appinfo_to_json(b"\"appinfo\" { \"a\"").unwrap_err(), bad);
-        assert_eq!(appinfo_to_json(b"").unwrap_err(), bad);
         let huge = vec![b'a'; PICS_MAX_BYTES + 1];
         assert_eq!(appinfo_to_json(&huge).unwrap_err(), bad);
         let deep = "\"appinfo\" { ".to_string() + &"\"k\" { ".repeat(200);
@@ -569,6 +575,37 @@ mod tests {
         let v = futures_block(product_info(&conn, &[1], &[], false)).unwrap();
         assert!(v["apps"]["1"].get("depotOrder").is_none());
         assert_eq!(v["apps"]["1"]["appinfo"]["appid"], "1");
+    }
+
+    #[test]
+    fn app_with_empty_buffer_is_an_entry_without_appinfo_not_a_failed_batch() {
+        use crate::backend::CmBackend;
+        let b = FakeBackend::new();
+        b.script(|s| {
+            s.pics.default = PicsRaw {
+                apps: vec![
+                    PicsAppRaw {
+                        app_id: 1,
+                        change_number: 1,
+                        missing_token: true,
+                        buffer: Vec::new(),
+                    },
+                    PicsAppRaw {
+                        app_id: 2,
+                        change_number: 1,
+                        missing_token: false,
+                        buffer: b"\"appinfo\" { \"appid\" \"2\" }\0".to_vec(),
+                    },
+                ],
+                ..Default::default()
+            };
+        });
+        let conn = futures_block(b.connect_anon()).unwrap();
+        let v = futures_block(product_info(&conn, &[1, 2], &[], false)).unwrap();
+        assert_eq!(v["apps"]["1"]["missingToken"], true);
+        assert!(v["apps"]["1"]["appinfo"].is_null());
+        assert!(v["apps"]["1"].get("depotOrder").is_none());
+        assert_eq!(v["apps"]["2"]["appinfo"]["appid"], "2");
     }
 
     #[test]
