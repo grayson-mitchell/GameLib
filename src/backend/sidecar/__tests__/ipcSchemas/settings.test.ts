@@ -13,7 +13,7 @@ const syncTable: FixtureTable<typeof settingsSyncArgs> = {
   setSetting: {
     valid: [
       [{ appName: 'default', key: 'focusRow', value: null }],
-      [{ appName: 'default', key: 'darkTrayIcon', value: true }],
+      [{ appName: 'default', key: 'trayIconVariant', value: 'dark' }],
       [
         {
           appName: '1234',
@@ -23,6 +23,9 @@ const syncTable: FixtureTable<typeof settingsSyncArgs> = {
       ]
     ],
     invalid: [
+      [{ appName: 'default', key: 'unknownFutureKey', value: 1 }],
+      [{ appName: 'default', key: 'darkTrayIcon', value: true }],
+      [{ appName: 'default', key: 'autoUpdateGames', value: 'yes' }],
       [{ appName: '', key: 'focusRow', value: 1 }],
       [{ appName: 'default', key: '', value: 1 }],
       [{ appName: 'default', key: 'focusRow', value: 1, extra: 1 }],
@@ -48,8 +51,7 @@ const asyncTable: FixtureTable<typeof settingsAsyncArgs> = {
           appName: 'abc',
           config: {
             autoUpdateGames: true,
-            wineVersion: { bin: '/w', name: 'W', type: 'wine', legacy: 'x' },
-            unknownFutureKey: [1, 2]
+            wineVersion: { bin: '/w', name: 'W', type: 'wine', legacy: 'x' }
           }
         }
       ]
@@ -59,7 +61,10 @@ const asyncTable: FixtureTable<typeof settingsAsyncArgs> = {
       [{ appName: '', config: {} }],
       [{ appName: 'abc' }],
       [{ appName: 'abc', config: 'nope' }],
-      [{ appName: 'abc', config: null }]
+      [{ appName: 'abc', config: null }],
+      // D-11: an undeclared key and a wrong value type are rejected.
+      [{ appName: 'abc', config: { unknownFutureKey: [1, 2] } }],
+      [{ appName: 'abc', config: { autoUpdateGames: 'yes' } }]
     ]
   },
   isNative: {

@@ -44,6 +44,8 @@ const asyncTable: FixtureTable<typeof wineToolsAsyncArgs> = {
       [{ commandParts: ['winecfg'] }]
     ],
     invalid: [
+      [{ commandParts: ['x'], gameSettings: { undeclaredKey: 1 } }],
+      [{ commandParts: ['x'], gameSettings: { enableEsync: 'yes' } }],
       [{ commandParts: [] }],
       [{ commandParts: ['x', 7] }],
       [{ commandParts: ['x'], onSpawn: 'fn' }],

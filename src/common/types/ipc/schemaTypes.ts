@@ -88,15 +88,6 @@ export function httpUrlArg() {
   return z.url({ protocol: /^https?$/ }).max(8192)
 }
 
-/**
- * PHASE70-PASSTHROUGH: D-07. The envelope stays strict; the nested GameInfo / settings object
- * is an explicit loose object that Phase 70 tightens. Grep `phase70Passthrough(` to find every
- * one.
- */
-export function phase70Passthrough<T extends z.ZodRawShape>(shape: T) {
-  return z.looseObject(shape)
-}
-
 export type ArgsMap = Record<string, z.ZodTuple>
 
 export type SendFns<A extends ArgsMap> = {

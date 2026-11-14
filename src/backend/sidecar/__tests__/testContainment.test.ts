@@ -1055,6 +1055,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'outboundHttpRegistry.test.ts',
   'outputStreamBinding.test.ts',
   'pathsBootOrder.test.ts',
+  'phase70PassthroughCensus.test.ts',
   'playtimeLockBootClear.test.ts',
   'playtimeQueueBootDrain.test.ts',
   'rendererAllowList.test.ts',

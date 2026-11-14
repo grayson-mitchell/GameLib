@@ -50,9 +50,45 @@ const steamAsync: FixtureTable<typeof steamAsyncArgs> = {
           args: ['-windowed'],
           launchArguments: { type: 'basic', name: 'n', parameters: 'p' }
         }
+      ],
+      [
+        {
+          appName: '440',
+          runner: 'steam',
+          launchArguments: { name: 'n', parameters: 'p' }
+        }
+      ],
+      [
+        {
+          appName: '440',
+          runner: 'gog',
+          launchArguments: { type: 'altExe', executable: '/g/alt.exe' }
+        }
+      ],
+      [
+        {
+          appName: '440',
+          runner: 'legendary',
+          launchArguments: { type: 'dlc', dlcAppName: 'D', dlcTitle: 'DLC' }
+        }
       ]
     ],
     invalid: [
+      [{ appName: '440', runner: 'steam', undeclared: 1 }],
+      [
+        {
+          appName: '440',
+          runner: 'steam',
+          launchArguments: { type: 'bogus', name: 'n', parameters: 'p' }
+        }
+      ],
+      [
+        {
+          appName: '440',
+          runner: 'steam',
+          launchArguments: { type: 'altExe', executable: '/g', extra: 1 }
+        }
+      ],
       [],
       [{ appName: '', runner: 'steam' }],
       [{ appName: '440', runner: 'epic' }],

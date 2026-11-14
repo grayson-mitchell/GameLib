@@ -29,7 +29,7 @@ const setSettingArg = z
   .strictObject({
     appName: nonEmptyString(),
     key: settingKey,
-    value: z.unknown()
+    value: z.unknown().optional()
   })
   .superRefine((arg, ctx) => {
     const valueSchema: z.ZodType = appSettingsShape[arg.key]

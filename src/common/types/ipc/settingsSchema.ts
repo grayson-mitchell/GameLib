@@ -16,11 +16,18 @@ const str = () => z.string().max(4096)
 const prose = () => z.string().max(65536)
 
 // `wineVersion` stays the named loose boundary (67-13): it comes from persisted config and may
-// carry legacy keys. On Windows the factory default is the empty object `{}`, so a full-config
-// write must accept it too; the cast keeps the derived type the interface.
+// carry legacy keys. The backend's own factory default is not always a real installation: with
+// no wine on PATH it is `{ bin: '', name: 'Default Wine - Not Found', type: 'wine' }`, and on
+// Windows it is `{}`. A full-config write must accept those, so the "no wine" arm admits an empty
+// `bin` and absent keys. The cast keeps the derived type the interface.
+const noWineInstallation = z.looseObject({
+  bin: z.literal('').optional(),
+  name: z.string().max(1024).optional(),
+  type: z.enum(['wine', 'proton', 'crossover', 'toolkit']).optional()
+})
 const wineVersionArg = z.union([
   wineInstallationArg(),
-  z.strictObject({})
+  noWineInstallation
 ]) as unknown as z.ZodType<WineInstallation, WineInstallation>
 
 const baseLaunchOption = z.strictObject({

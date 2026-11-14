@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 import type {
   ExecResult,
+  GameSettings,
   WineInstallation,
   WinetricksApplyResult,
   WinetricksComponent,
@@ -24,8 +25,15 @@ const commandParts = z.array(z.string().max(4096)).min(1).max(256)
 
 const verbList = z.array(nonEmptyString(256)).min(1).max(1024)
 
-// D-11: the full GameSettings shape, strict.
-const gameSettingsArg = gameSettingsSchema
+// D-11: every key and value type strict, undeclared keys rejected. Keys are optional because
+// the renderer sends a persisted GameSettings (defaults merged with the game's file) and the
+// defaults never set some required keys (ignoreGameUpdates, DXVKFpsCap, and on Windows
+// winePrefix/wineVersion). The cast restores the full GameSettings call-site type the handler
+// reads; the parity test proves the declared keys are exactly GameSettings.
+const gameSettingsArg = gameSettingsSchema.partial() as unknown as z.ZodType<
+  GameSettings,
+  GameSettings
+>
 
 const protonVerb = z.enum([
   'run',
