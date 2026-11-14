@@ -1,6 +1,7 @@
 import React from 'react'
 import useLibraryState from 'frontend/state/libraryState'
 import { GameInfo, GameStatus, Status } from 'common/types'
+import { asStoreGame } from 'common/gameInfoNarrowing'
 import { hasProgress } from './hasProgress'
 import { useTranslation } from 'react-i18next'
 import { getStatusLabel, handleNonAvailableGames } from './constants'
@@ -81,10 +82,11 @@ export function hasStatus(gameInfo: GameInfo, gameSize?: string) {
   const {
     thirdPartyManagedApp = undefined,
     is_installed,
-    runner = 'sideload',
-    isEAManaged,
-    isUbisoftManaged
+    runner = 'sideload'
   } = { ...newGameInfo }
+  const legendaryInfo = asStoreGame(newGameInfo, 'legendary')
+  const isEAManaged = legendaryInfo?.isEAManaged
+  const isUbisoftManaged = legendaryInfo?.isUbisoftManaged
 
   // GAP-17-BOTTLE-INSTALL-DONE-DESYNC: keep the tracked gameInfo in sync with
   // the LIVE prop instead of freezing it at mount. GamePage/GameCard refetch
@@ -185,7 +187,7 @@ export function hasStatus(gameInfo: GameInfo, gameSize?: string) {
       // currently installing; no active poll).
       const resumeContext =
         hasCapability(runner, 'installManagedExternally') &&
-        newGameInfo?.install?.steamResumePending
+        asStoreGame(newGameInfo, 'steam')?.install?.steamResumePending
           ? 'steam-incomplete'
           : statusContext
       const label = getStatusLabel({
