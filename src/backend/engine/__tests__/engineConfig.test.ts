@@ -208,7 +208,10 @@ describe('readStoredGameConfig', () => {
 describe('readEngineForGame', () => {
   const pin = `pinned:${ENGINE_PINS.current.id}`
   const put = (n: string, entry: unknown) =>
-    writeFileSync(join(dir, `${n}.json`), JSON.stringify({ [n]: entry }))
+    writeFileSync(
+      join(dir, `${n}.json`),
+      JSON.stringify({ [n]: entry, version: 'v2' })
+    )
 
   it('Steam reads steamEngineOverride as fallback; engineOverride wins; none -> automatic', () => {
     put('100', { steamEngineOverride: pin })

@@ -66,16 +66,39 @@ describe('ensureSettingsMigrated', () => {
     expect(readFileSync(path, 'utf8')).toBe(text)
   })
 
-  test('the identity game chain rewrites nothing and makes no backup', () => {
+  test('a v0 game file is migrated to v2 with one private backup and its settings intact', () => {
     const dir = join(root, 'GamesConfig')
     mkdirSync(dir)
     const path = join(dir, 'app.json')
     copyFileSync(join(fixtures, 'fixtures', 'settings-game-v0.json'), path)
-    const before = readFileSync(path)
     ensureSettingsMigrated(h.versioning, path, 'settings/game')
-    expect(readFileSync(path).equals(before)).toBe(true)
-    expect(listBackups(path)).toHaveLength(0)
+    const after = JSON.parse(readFileSync(path, 'utf8'))
+    expect(after.version).toBe('v2')
+    expect(after.myApp.language).toBe('en')
+    expect(after.explicit).toBe(true)
+    const backups = listBackups(path)
+    expect(backups).toHaveLength(1)
+    expect(statSync(backups[0]!).mode & 0o777).toBe(0o600)
     expect(isSettingsFileReadOnly(h.versioning, path)).toBe(false)
+  })
+
+  test('invalid per-game values are dropped and the backup keeps the original bytes', () => {
+    const dir = join(root, 'GamesConfig')
+    mkdirSync(dir)
+    const path = join(dir, 'app.json')
+    const src = join(
+      fixtures,
+      'fixtures',
+      'settings-game-v1-invalid-values.json'
+    )
+    copyFileSync(src, path)
+    ensureSettingsMigrated(h.versioning, path, 'settings/game')
+    const after = JSON.parse(readFileSync(path, 'utf8'))
+    expect(after.version).toBe('v2')
+    expect('gamescope' in after.Game2).toBe(false)
+    const backups = listBackups(path)
+    expect(backups).toHaveLength(1)
+    expect(readFileSync(backups[0]!).equals(readFileSync(src))).toBe(true)
   })
 
   test('is memoised per path', () => {

@@ -12,6 +12,7 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 import { createTestVersioning } from '../testUtils/testStoreRoot'
 import { createTestAppPaths } from '../testUtils/testAppPaths'
+import { settingsAsyncArgs } from 'common/types/ipc/settings'
 
 // Phase 68 plan 05: config.json and GamesConfig/<app>.json on the store engine.
 // Every test gets a fresh directory and a fresh module graph, so the
@@ -154,26 +155,52 @@ describe('per-game settings', () => {
       })
     )
 
-  it('get() does not rewrite a v0 file; the first real write stamps v1', () => {
+  it('get() migrates a v0 file once with a backup; later writes keep v2', () => {
     writeFileSync(
       configFile(),
       JSON.stringify({ defaultSettings: {}, version: 'v1' })
     )
     seed('app0')
-    const before = readFileSync(gameFile('app0'))
-    const mtime = statSync(gameFile('app0')).mtimeMs
     const { createGameConfigs, createGlobalConfig } = freshGraph()
     const gameConfigs = createGameConfigs({ config: createGlobalConfig() })
 
     const game = gameConfigs.get('app0')
-    expect(readFileSync(gameFile('app0')).equals(before)).toBe(true)
-    expect(statSync(gameFile('app0')).mtimeMs).toBe(mtime)
-    expect(backups('app0')).toHaveLength(0)
+    const migrated = JSON.parse(readFileSync(gameFile('app0'), 'utf8'))
+    expect(migrated.version).toBe('v2')
+    expect(migrated.app0.targetExe).toBe('a.exe')
+    expect(backups('app0')).toHaveLength(1)
 
     game.setSetting('showFps', true)
     const after = JSON.parse(readFileSync(gameFile('app0'), 'utf8'))
-    expect(after.version).toBe('v1')
+    expect(after.version).toBe('v2')
     expect(after.app0.showFps).toBe(true)
+    expect(backups('app0')).toHaveLength(1)
+  })
+
+  it('a v1 file with a retired key and a wrong-typed value round-trips through writeConfig', async () => {
+    writeFileSync(
+      configFile(),
+      JSON.stringify({ defaultSettings: {}, version: 'v1' })
+    )
+    writeFileSync(
+      gameFile('appx'),
+      JSON.stringify({
+        appx: { useSteamRuntime: true, showFps: 'yes', targetExe: 'a.exe' },
+        version: 'v1',
+        explicit: true
+      })
+    )
+    const { createGameConfigs, createGlobalConfig } = freshGraph()
+    const gameConfigs = createGameConfigs({ config: createGlobalConfig() })
+
+    const settings = await gameConfigs.get('appx').getSettings()
+    expect('useSteamRuntime' in settings).toBe(false)
+    expect(settings.showFps).not.toBe('yes')
+    expect(
+      settingsAsyncArgs.writeConfig.safeParse([
+        { appName: 'appx', config: settings }
+      ]).success
+    ).toBe(true)
   })
 
   it('a newer game file is readable, keeps changes in memory and is never written', () => {
@@ -193,9 +220,8 @@ describe('per-game settings', () => {
     expect(readFileSync(gameFile('app7')).equals(before)).toBe(true)
   })
 
-  it('readStoredGameConfig returns the entry and migrates without a write', () => {
+  it('readStoredGameConfig returns the entry and migrates once with one backup', () => {
     seed('appr')
-    const before = readFileSync(gameFile('appr'))
     const { readStoredGameConfig } = freshGraph()
 
     expect(
@@ -208,8 +234,10 @@ describe('per-game settings', () => {
         gamesConfigPath: join(mockPaths.dir, 'GamesConfig')
       })
     ).toEqual({ targetExe: 'a.exe' })
-    expect(readFileSync(gameFile('appr')).equals(before)).toBe(true)
-    expect(backups('appr')).toHaveLength(0)
+    expect(JSON.parse(readFileSync(gameFile('appr'), 'utf8')).version).toBe(
+      'v2'
+    )
+    expect(backups('appr')).toHaveLength(1)
     expect(existsSync(gameFile('appr'))).toBe(true)
   })
 })
