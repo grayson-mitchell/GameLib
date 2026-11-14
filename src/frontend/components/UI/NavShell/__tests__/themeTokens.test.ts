@@ -3638,6 +3638,26 @@ describe('quick-261114-pqm: modal paper edge tokens', () => {
     })
   })
 
+  // fast 2026-11-14: every other dark theme declared --modal-border equal to
+  // its modal surface (or, on cyberSpaceOasis, ~1.1:1 off it), so the edge the
+  // Dialog paper now paints was invisible there too. They share
+  // midnightMirage's translucent-white edge. high-contrast keeps its solid
+  // white and nord-light (light) keeps its surface-coloured border.
+  it.each([
+    'body.cyberSpaceOasis',
+    'body.gruvbox_dark',
+    'body.dracula',
+    'body.nord-dark',
+    'body.marine',
+    'body.zombie',
+    'body.sweet'
+  ])('%s modal border is rgba(255, 255, 255, 0.1)', (selector) => {
+    expect({ selector, border: resolve(selector, '--modal-border') }).toEqual({
+      selector,
+      border: 'rgba(255, 255, 255, 0.1)'
+    })
+  })
+
   it.each(themeSelectors)(
     '%s resolves --modal-border to a value',
     (selector) => {

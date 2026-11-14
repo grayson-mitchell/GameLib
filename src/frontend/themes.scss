@@ -213,7 +213,7 @@ body.cyberSpaceOasis {
   --body-background: #13172a;
   --current-background: var(--body-background);
   --modal-background: #13172a;
-  --modal-border: #1f253f;
+  --modal-border: rgba(255, 255, 255, 0.1);
   --text-hover: #7ae3fa;
   --primary: #07c5ef;
   --primary-hover: #4cdafa;
@@ -307,7 +307,7 @@ body.gruvbox_dark {
   );
   --input-background: #32302f;
   --modal-background: var(--body-background);
-  --modal-border: var(--body-background);
+  --modal-border: rgba(255, 255, 255, 0.1);
   --success: #70b430;
   --success-hover: #9bce6b;
   --primary: #458588;
@@ -390,7 +390,7 @@ body.dracula {
   );
   --input-background: #44475a;
   --modal-background: var(--body-background);
-  --modal-border: var(--body-background);
+  --modal-border: rgba(255, 255, 255, 0.1);
   --success: #50fa7b;
   --success-hover: #66f389;
   --primary: #ff79c6;
@@ -589,7 +589,7 @@ body.nord-dark {
   );
   --input-background: #2e3440;
   --modal-background: var(--body-background);
-  --modal-border: var(--body-background);
+  --modal-border: rgba(255, 255, 255, 0.1);
   --success: #94f1ab;
   --success-hover: #75e08f;
   --primary: #b48ead;
@@ -626,7 +626,7 @@ body.marine {
   );
   --input-background: #063442;
   --modal-background: var(--body-background);
-  --modal-border: var(--body-background);
+  --modal-border: rgba(255, 255, 255, 0.1);
   --success: #66e9fd;
   --success-hover: #5dc6f7;
   --osk-background: var(--body-background);
@@ -660,7 +660,7 @@ body.zombie {
   );
   --input-background: #323232;
   --modal-background: var(--body-background);
-  --modal-border: var(--body-background);
+  --modal-border: rgba(255, 255, 255, 0.1);
   --success: #d8d784;
   --success-hover: #5af15a;
   --osk-background: var(--body-background);
@@ -698,7 +698,7 @@ body.sweet {
   );
   --input-background: #360a36;
   --modal-background: var(--body-background);
-  --modal-border: var(--body-background);
+  --modal-border: rgba(255, 255, 255, 0.1);
   --success: #9a8de7;
   --success-hover: #7f148e;
   --primary: #c28cb8;
