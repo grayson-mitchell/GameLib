@@ -871,12 +871,6 @@ export default function DownloadDialog({
         )}
       </DialogContent>
       <DialogFooter>
-        <button onClick={handleSwitchToImport} className="button is-secondary">
-          {tGamelib(
-            'gamelib:installFlows.importDoorLabel',
-            'Locate existing installation…'
-          )}
-        </button>
         <button
           onClick={async () => handleInstall()}
           className="button is-primary"
@@ -886,6 +880,12 @@ export default function DownloadDialog({
             <FontAwesomeIcon className="fa-spin-pulse" icon={faSpinner} />
           ) : null}
           {getInstallLabel()}
+        </button>
+        <button onClick={handleSwitchToImport} className="button is-secondary">
+          {tGamelib(
+            'gamelib:installFlows.importDoorLabel',
+            'Locate existing installation…'
+          )}
         </button>
       </DialogFooter>
     </>
