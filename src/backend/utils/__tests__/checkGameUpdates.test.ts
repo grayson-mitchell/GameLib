@@ -1,6 +1,8 @@
 import { checkGameUpdates } from '../checkGameUpdates'
+import { logInfo } from 'backend/logger'
 
 jest.mock('backend/logger', () => ({
+  logInfo: jest.fn(),
   logWarning: jest.fn(),
   LogPrefix: { Backend: 'Backend' }
 }))
@@ -25,16 +27,22 @@ const steam = (): Lib => ({
 })
 
 describe('checkGameUpdates', () => {
+  const OFF_LINE = 'checkGameUpdates: auto-update skipped: autoUpdateGames off'
+  beforeEach(() => jest.clearAllMocks())
+
   it('auto-queues only the auto list but badges every stale game', async () => {
     const { autoUpdate, result } = run({ steam: steam() }, true)
     expect(await result).toEqual(['A', 'B'])
     expect(autoUpdate).toHaveBeenCalledWith('steam', ['A'])
+    expect(logInfo).not.toHaveBeenCalledWith(OFF_LINE, 'Backend')
   })
 
   it('never queues when autoUpdateGames is off', async () => {
     const { autoUpdate, result } = run({ steam: steam() }, false)
     expect(await result).toEqual(['A', 'B'])
     expect(autoUpdate).not.toHaveBeenCalled()
+    expect(logInfo).toHaveBeenCalledTimes(1)
+    expect(logInfo).toHaveBeenCalledWith(OFF_LINE, 'Backend')
   })
 
   it('never queues a registered stale app (D-02)', async () => {

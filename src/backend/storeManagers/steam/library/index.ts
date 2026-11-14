@@ -341,6 +341,7 @@ export default class SteamLibraryManager implements LibraryManager {
         }
         out.push(s.appId)
       }
+      logInfo(`Steam: auto-update candidates=${out.length}`, LogPrefix.Steam)
       return out.sort()
     } catch (error) {
       logWarning(['Steam update detection failed:', error], LogPrefix.Steam)

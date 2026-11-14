@@ -22,7 +22,7 @@
  */
 
 import type { GlobalConfigSlice } from 'backend/config'
-import { logWarning, LogPrefix } from 'backend/logger'
+import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { LibraryManager } from 'common/types/game_manager'
 import type { StoreManagers } from 'backend/services/types'
 
@@ -38,6 +38,12 @@ export async function checkGameUpdates(
   const { library, autoUpdate } = deps.managers
   let oldGames: string[] = []
   const { autoUpdateGames } = deps.config.getSettings()
+  if (!autoUpdateGames) {
+    logInfo(
+      'checkGameUpdates: auto-update skipped: autoUpdateGames off',
+      LogPrefix.Backend
+    )
+  }
   for (const runner of Object.keys(library) as (keyof typeof library)[]) {
     // WR-05: per-runner isolation. This loop was extracted verbatim from main.ts,
     // where it was unguarded: ONE runner whose CLI or credentials are missing
