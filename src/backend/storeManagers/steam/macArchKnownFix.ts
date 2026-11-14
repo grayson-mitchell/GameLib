@@ -14,6 +14,7 @@ import type { SteamGameInfo } from 'common/types/steam'
  * MUST NOT import games.ts or library.ts (import cycle).
  */
 
+import { readdirSync } from 'graceful-fs'
 import { readKnownFixes, type KnownFixPathsDeps } from 'backend/knownFixes'
 import { isAppleSiliconMac } from 'backend/constants/environment'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
@@ -44,6 +45,34 @@ export function knownFixSaysMac32(
     )
     return false
   }
+}
+
+/**
+ * The Steam app ids whose tier-1 known fix says macArch "32" on this host, judged with no cached
+ * metadata entry (the verified-Mach-O override stays with the consumer). Walks the three
+ * readKnownFixes layers; an unreadable layer is skipped. False-safe: empty off Apple silicon.
+ * Handed to the Rust Refresh as data because the catalogue is TS-owned.
+ */
+export function listKnownFixMac32AppIds(deps: KnownFixPathsDeps): string[] {
+  if (!isAppleSiliconMac) return []
+  const ids = new Set<string>()
+  for (const dir of [
+    deps.paths.localFixesPath,
+    deps.paths.bundledFixesPath,
+    deps.paths.fixesPath
+  ]) {
+    let names: string[]
+    try {
+      names = readdirSync(dir)
+    } catch {
+      continue
+    }
+    for (const name of names) {
+      const m = /^(\d+)-steam\.json$/.exec(name)
+      if (m?.[1]) ids.add(m[1])
+    }
+  }
+  return [...ids].filter((id) => knownFixSaysMac32(deps, id, undefined))
 }
 
 function propagateToLibrary(

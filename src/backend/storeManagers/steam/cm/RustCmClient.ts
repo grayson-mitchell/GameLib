@@ -82,12 +82,21 @@ function toCallback<T>(
   })
 }
 
+// A property on the client, not module state (the module-state census is zero outside its list).
+const LEASE_ID = Symbol.for('gamelib.steamcm.leaseId')
+
+/** The Rust lease id a client from {@link createRustCmClient} is bound to; undefined for any other client. */
+export function leaseIdOf(client: object): number | undefined {
+  const id = (client as Record<symbol, unknown>)[LEASE_ID]
+  return typeof id === 'number' ? id : undefined
+}
+
 export function createRustCmClient(
   deps: RustInvokeDeps,
   lease: RustCmLease
 ): SteamCmClient {
   const { leaseId, steamId } = lease
-  return {
+  const client: SteamCmClient = {
     steamID: { getSteamID64: () => steamId, toString: () => steamId },
     licenses: lease.licenses,
 
@@ -184,4 +193,6 @@ export function createRustCmClient(
       }
     }
   }
+  Object.defineProperty(client, LEASE_ID, { value: leaseId })
+  return client
 }

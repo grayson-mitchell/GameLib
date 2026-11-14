@@ -149,6 +149,11 @@ const knownBadReasons: readonly (readonly [
 )
 
 export const bridgeAllowlist = {
+  /** Every seed app id, for handing the allowlist to the Rust Refresh as data (Phase 79). */
+  seedIds(): string[] {
+    return [...seedAppIds]
+  },
+
   /**
    * Returns true iff `appId` is present in the bundled, zod-validated
    * `seed` list (D-51-08: seed membership only -- NOT the composed
