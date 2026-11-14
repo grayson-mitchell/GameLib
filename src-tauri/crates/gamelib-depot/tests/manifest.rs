@@ -327,6 +327,7 @@ fn summarize_req(depots: Vec<DepotRef>, cdn: &FakeCdn) -> gamelib_depot::job::Su
         depots,
         hosts: vec![host_ref(&cdn.host())],
         patterns: vec![],
+        job_id: None,
     }
 }
 

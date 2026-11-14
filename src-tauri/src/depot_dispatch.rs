@@ -253,8 +253,15 @@ pub(crate) fn rpc_depot_manifest_summary(args: &[Value], app: &AppHandle) -> Res
     let ctx = JobContext {
         cache_dir: manifest_cache_dir(app)?,
     };
-    // Same id the crate's summary fetcher uses for its token requests.
-    let host = ShellJobHost::new(state_for(app)?, format!("summary-{app_id}"));
+    // Must equal SummarizeRequest::host_job_id(), the id the crate's summary fetcher uses for its
+    // token requests: the request's jobId, else summary-{appId}.
+    let job_id = a
+        .request
+        .get("jobId")
+        .and_then(Value::as_str)
+        .map(str::to_owned)
+        .unwrap_or_else(|| format!("summary-{app_id}"));
+    let host = ShellJobHost::new(state_for(app)?, job_id);
     let dyn_host: Arc<dyn JobHost> = host.clone();
     let result = gamelib_depot::dispatch("depot_manifest_summary", &a.request, &ctx, dyn_host);
     host.finish();

@@ -131,7 +131,7 @@ async fn run_summary(
     let limiter = inflight::InflightLimiter::new(inflight::TARGET_INFLIGHT_CHUNKS).map_err(fail)?;
     let fetcher = Arc::new(fetch::Fetcher::new(
         host,
-        &format!("summary-{}", req.app_id),
+        &req.host_job_id(),
         &req.app_id,
         req.hosts.clone(),
         limiter,

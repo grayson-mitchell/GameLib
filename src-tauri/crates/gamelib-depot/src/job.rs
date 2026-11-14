@@ -110,6 +110,19 @@ pub struct SummarizeRequest {
     pub depots: Vec<DepotRef>,
     pub hosts: Vec<HostRef>,
     pub patterns: Vec<String>,
+    /// The host job id the summary's CDN-token and request-code callbacks are routed under.
+    /// Absent means the legacy `summary-{app_id}`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub job_id: Option<String>,
+}
+
+impl SummarizeRequest {
+    /// The id the summary's host callbacks route under (`job_id`, else `summary-{app_id}`).
+    pub fn host_job_id(&self) -> String {
+        self.job_id
+            .clone()
+            .unwrap_or_else(|| format!("summary-{}", self.app_id))
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -242,6 +255,22 @@ impl DepotJob {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn summarize_request_job_id_optional() {
+        let base = json!({"appId": "480", "depots": [], "hosts": [], "patterns": []});
+        let r: SummarizeRequest = serde_json::from_value(base.clone()).unwrap();
+        assert_eq!(r.job_id, None);
+        assert_eq!(r.host_job_id(), "summary-480");
+        let mut with = base.clone();
+        with["jobId"] = json!("summary-480-abc");
+        let r: SummarizeRequest = serde_json::from_value(with).unwrap();
+        assert_eq!(r.job_id.as_deref(), Some("summary-480-abc"));
+        assert_eq!(r.host_job_id(), "summary-480-abc");
+        let mut bad = base;
+        bad["bogus"] = json!(1);
+        assert!(serde_json::from_value::<SummarizeRequest>(bad).is_err());
+    }
 
     const KEY: &str = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
