@@ -541,6 +541,32 @@ const MIN_BOTH_ENRICHED = 20
 const CM_FLAG = 'GAMELIB_STEAMCM_CM'
 const LAZY_CONCURRENCY = 4
 
+async function storeStatus(): Promise<number | null> {
+  try {
+    const r = await axios.get(
+      'https://store.steampowered.com/api/appdetails?appids=730&filters=basic',
+      { timeout: 10_000, validateStatus: () => true }
+    )
+    return r.status
+  } catch {
+    return null
+  }
+}
+
+/**
+ * The Steam store (Akamai) answers 403 after a burst of appdetails calls and recovers within a few
+ * minutes. Wait it out before a store-heavy phase so a throttled side is not compared against an
+ * unthrottled one (the sweep's own bursts are what trip it). Returns the seconds waited.
+ */
+async function waitForStore(maxMs = 8 * 60_000): Promise<number> {
+  const start = Date.now()
+  while (storeBlocked(await storeStatus()) !== null) {
+    if (Date.now() - start > maxMs) break
+    await new Promise((r) => setTimeout(r, 20_000))
+  }
+  return Math.round((Date.now() - start) / 1000)
+}
+
 async function runSide(
   side: 'ts' | 'rust',
   token: string
@@ -654,6 +680,7 @@ async function runSide(
       sendFrontendMessage: (() => true) as never
     })
 
+    say(`${side} store wait before refresh: ${await waitForStore()}s`)
     const out = await refresh(deps)
     if (out && out.stderr)
       say(`${side} refresh stderr: ${out.stderr.length} chars`)
@@ -663,6 +690,7 @@ async function runSide(
     say(`${side} post-refresh games=${postRefresh.length}`)
 
     // Lazy enrichment of every owned app, concurrency 4.
+    say(`${side} store wait before lazy: ${await waitForStore()}s`)
     const lazyLimit =
       process.env.SWEEP_LAZY_SAMPLE && process.env.SWEEP_LAZY_SAMPLE !== 'all'
         ? Number(process.env.SWEEP_LAZY_SAMPLE)
@@ -740,18 +768,6 @@ async function runSide(
   }
 }
 
-async function storeStatus(): Promise<number | null> {
-  try {
-    const r = await axios.get(
-      'https://store.steampowered.com/api/appdetails?appids=730&filters=basic',
-      { timeout: 10_000, validateStatus: () => true }
-    )
-    return r.status
-  } catch {
-    return null
-  }
-}
-
 async function main(): Promise<void> {
   const report = newReport()
   const token = readToken()
@@ -809,7 +825,7 @@ async function main(): Promise<void> {
     const vacuous = report.bothEnriched < MIN_BOTH_ENRICHED
     if (exit === 0 && (blockedAfter || vacuous)) {
       say(
-        `result not trusted: ${blockedAfter ?? 'only ${report.bothEnriched} apps are enriched on both sides (need ${MIN_BOTH_ENRICHED}), so the at-rest value comparison is vacuous'}`
+        `result not trusted: ${blockedAfter ?? `only ${report.bothEnriched} apps are enriched on both sides (need ${MIN_BOTH_ENRICHED}), so the at-rest value comparison is vacuous`}`
       )
       exit = 3
     }
