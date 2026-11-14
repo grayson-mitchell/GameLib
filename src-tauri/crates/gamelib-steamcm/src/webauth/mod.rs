@@ -77,6 +77,8 @@ pub(crate) struct Timing {
     pub min_interval: Duration,
     pub max_interval: Duration,
     pub flow_timeout: Duration,
+    /// Credentials flows get longer for email retrieval (userSignIn.ts loginTimeout 180000).
+    pub credentials_timeout: Duration,
 }
 
 impl Timing {
@@ -84,6 +86,7 @@ impl Timing {
         min_interval: Duration::from_secs(1),
         max_interval: Duration::from_secs(10),
         flow_timeout: QR_LOGIN_TIMEOUT,
+        credentials_timeout: Duration::from_secs(180),
     };
 
     fn clamp_interval(&self, secs: f32) -> Duration {
@@ -212,7 +215,6 @@ impl FlowStatus {
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) enum FlowKind {
     Qr,
-    #[allow(dead_code)] // used by the credentials flow (plan 79-10)
     Credentials,
 }
 
@@ -229,6 +231,8 @@ pub(crate) struct FlowState {
     pub kind: FlowKind,
     pub status: FlowStatus,
     pub handle: Option<tokio::task::JoinHandle<()>>,
+    /// `(client_id, steam_id)` of a credentials flow, for guard-code submission.
+    pub guard_ctx: Option<(u64, u64)>,
 }
 
 /// Flow registry keyed by flowId. Status reads are local; nothing here touches the network.
@@ -371,6 +375,7 @@ impl WebAuth {
                     challenge_url: challenge_url.clone(),
                 },
                 handle: Some(handle),
+                guard_ctx: None,
             },
         );
         crate::error::diag("webauth qr flow -> waiting");
@@ -664,6 +669,7 @@ mod tests {
             min_interval: Duration::from_millis(20),
             max_interval: Duration::from_millis(20),
             flow_timeout: Duration::from_secs(1),
+            credentials_timeout: Duration::from_secs(1),
         })
     }
 
