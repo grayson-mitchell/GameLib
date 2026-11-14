@@ -1,7 +1,7 @@
 ---
 status: complete
 phase: 70-split-gameinfo-into-shared-and-per-store-shapes
-source: [70-16-PLAN.md]
+source: [70-16-PLAN.md, 70-REVIEW-FIX.md]
 started: 2026-11-14
 updated: 2026-11-14
 ---
@@ -77,13 +77,34 @@ result: pass
 expected: The Steam Windows-depot menu item appears for a game with is_windows_native true and is absent for a Mac-native Steam game.
 result: pass
 
+### 15. Cold start on the fixed build
+expected: After quitting GameLib and starting it again with `pnpm tauri:dev`, the app boots to the library with no error. The rebuilt sidecar includes the review-fix commits 57fd1d3df, 170191481 and da18dac0b.
+result: pass — restarted 19:47; build/main/sidecar.js rebuilt 19:47:59 and carries the WR-01/WR-02 code. Fixtures for 98800 and 2706020 were staged at v1 after the restart, before either config had been read (originals backed up in the session scratchpad).
+
+### 16. DLC launch option survives migration (WR-01)
+expected: Opening Game Settings for Dungeons of Dredmor (98800, staged at v1) migrates its config to v2. Its saved launch option keeps type dlc, dlcAppName and dlcTitle; only the stale name and parameters keys are removed.
+result: pass — 98800.json rewritten at 19:53:05 to v2 with backup 98800.v1.20261114T065305681Z.bak.json; lastUsedLaunchOption is {type: dlc, dlcAppName: 98801, dlcTitle: Realm of the Diggle Gods} with name/parameters gone.
+
+### 17. Alt-exe launch option survives migration (WR-01)
+expected: Opening Game Settings for All Will Fall (2706020, staged at v1) migrates its config to v2. Its saved launch option keeps type altExe and its executable; only the stale name and parameters keys are removed.
+result: pass — 2706020.json rewritten at 19:56:06 to v2 with backup 2706020.v1.20261114T065605999Z.bak.json; lastUsedLaunchOption is {type: altExe, executable: C:/Games/AllWillFall/alt.exe}. The value is staged-only and has no UI surface; the operator opened Game Settings and the file was checked.
+
+### 18. One bad environment variable is dropped, the rest are kept (WR-02)
+expected: Dungeons of Dredmor's Game Settings still shows the CX_ENV environment variable row. The staged bad entry is gone from the v2 file, and the dev terminal shows a settings-game-v1-v2 line that names enviromentOptions without printing any value.
+result: pass — Advanced tab shows CX_ENV and no GAMELIB_UAT_BAD row; v2 file keeps only CX_ENV. Terminal: `settings-game-v1-v2 98800: removed [], cleaned [enviromentOptions, lastUsedLaunchOption, gamescope]` with no values printed.
+
+### 19. Legacy gamescope settings are repaired, not dropped (WR-02)
+expected: Dungeons of Dredmor's v2 config still contains gamescope, with additionalOptions set to an empty string and enableForceGrabCursor set to false. All of its other gamescope values are unchanged.
+result: skipped
+reason: Linux-only setting with no macOS UI; operator declined to sign off on a file-only check. File evidence recorded anyway: the v2 98800.json keeps the staged gamescope block with every value unchanged plus additionalOptions "" and enableForceGrabCursor false, matching the settingsGame/settingsFiles jest coverage.
+
 ## Summary
 
-total: 14
-passed: 13
+total: 19
+passed: 17
 issues: 1
 pending: 0
-skipped: 0
+skipped: 1
 
 ## Gaps
 
