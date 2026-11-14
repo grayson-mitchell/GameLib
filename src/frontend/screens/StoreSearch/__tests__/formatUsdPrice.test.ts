@@ -1,13 +1,76 @@
-import { buildOwnedBadgeLabel, formatUsdPrice } from '../helpers'
+import {
+  buildOwnedBadgeLabel,
+  formatCachedAt,
+  formatCountryName,
+  formatPrice
+} from '../helpers'
 import type { StoreOwnershipMatch } from 'common/discounts/badges'
 
-describe('formatUsdPrice', () => {
-  it('formats a decimal price as a single "$X USD" string (D-13)', () => {
-    expect(formatUsdPrice('14.99', 'USD')).toBe('$14.99 USD')
+describe('formatPrice', () => {
+  it('formats en/USD as "$14.99 USD"', () => {
+    expect(formatPrice('14.99', 'USD', 'en')).toBe('$14.99 USD')
   })
 
-  it('does not fabricate decimals for a whole-number CheapShark string', () => {
-    expect(formatUsdPrice('9', 'USD')).toBe('$9 USD')
+  it('formats de/EUR with comma decimals, euro sign and ISO code', () => {
+    const out = formatPrice('14.99', 'EUR', 'de')
+    expect(out).toContain('14,99')
+    expect(out).toContain('€')
+    expect(out.endsWith(' EUR')).toBe(true)
+  })
+
+  it('formats GBP for en_GB and en-GB', () => {
+    for (const lng of ['en_GB', 'en-GB']) {
+      const out = formatPrice('12.99', 'GBP', lng)
+      expect(out).toContain('£12.99')
+      expect(out.endsWith(' GBP')).toBe(true)
+    }
+  })
+
+  it('formats CAD with the ISO code', () => {
+    const out = formatPrice('14.99', 'CAD', 'en')
+    expect(out).toContain('14.99')
+    expect(out.endsWith(' CAD')).toBe(true)
+  })
+
+  it('formats JPY without decimals', () => {
+    const out = formatPrice('1480', 'JPY', 'ja')
+    expect(out).toContain('1,480')
+    expect(out).not.toContain('.')
+    expect(out.endsWith(' JPY')).toBe(true)
+  })
+
+  it('falls back to "<amount> <code>" for an unusable currency code', () => {
+    expect(formatPrice('9.99', 'NOTACODE', 'en')).toBe('9.99 NOTACODE')
+  })
+
+  it('never duplicates the ISO code', () => {
+    const out = formatPrice('14.99', 'USD', 'en')
+    expect(out.match(/USD/g)).toHaveLength(1)
+  })
+})
+
+describe('formatCachedAt', () => {
+  it('renders an absolute date containing the year', () => {
+    expect(formatCachedAt(Date.UTC(2026, 10, 14, 15, 30), 'en')).toContain(
+      '2026'
+    )
+  })
+
+  it('falls back for an invalid language', () => {
+    expect(
+      formatCachedAt(Date.UTC(2026, 10, 14, 15, 30), 'xx_INVALID').length
+    ).toBeGreaterThan(0)
+  })
+})
+
+describe('formatCountryName', () => {
+  it('localizes region names', () => {
+    expect(formatCountryName('DE', 'en')).toBe('Germany')
+    expect(formatCountryName('GB', 'de')).toBe('Vereinigtes Königreich')
+  })
+
+  it('falls back to the raw code', () => {
+    expect(formatCountryName('ZZ9', 'en')).toBe('ZZ9')
   })
 })
 

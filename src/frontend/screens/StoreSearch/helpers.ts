@@ -1,4 +1,5 @@
 import type { StoreOwnershipMatch } from 'common/discounts/badges'
+import { toI18nextCode } from 'common/languages'
 
 /**
  * Pure presentational helpers for the aggregated store-search screen
@@ -8,16 +9,63 @@ import type { StoreOwnershipMatch } from 'common/discounts/badges'
  */
 
 /**
- * D-13/STORESEARCH-04 (CORRECTNESS): every rendered price is a SINGLE text
- * node of the exact shape `${amount} ${currencyCode}` (e.g. "$14.99 USD").
- * The caller renders this as ONE string in ONE element — never split into a
- * muted/smaller/separate "USD" span (see 20-UI-SPEC.md Currency Contract).
- * Does not reformat/round `amount` — CheapShark's decimal strings pass
- * through verbatim, so a whole-number price like "9" renders as "$9 USD",
- * never fabricating a trailing ".00".
+ * Currency Contract (47-UI-SPEC): every rendered price is ONE string in ONE
+ * text node -- the locale-correct symbol/placement from Intl plus the ISO
+ * code, appended only when Intl did not already print it. The caller renders
+ * it in a single element; never split the code into its own span. An unusable
+ * currency code never throws; it renders `${amount} ${currencyCode}`.
  */
-export function formatUsdPrice(amount: string, currencyCode: string): string {
-  return `$${amount} ${currencyCode}`
+export function formatPrice(
+  amount: string,
+  currencyCode: string,
+  language: string
+): string {
+  try {
+    const formatted = new Intl.NumberFormat(toI18nextCode(language), {
+      style: 'currency',
+      currency: currencyCode
+    }).format(Number(amount))
+    return formatted.includes(currencyCode)
+      ? formatted
+      : `${formatted} ${currencyCode}`
+  } catch {
+    return `${amount} ${currencyCode}`
+  }
+}
+
+/** PRICE-03: absolute (not relative) date+time of the cached result. */
+export function formatCachedAt(cachedAt: number, language: string): string {
+  try {
+    return new Intl.DateTimeFormat(toI18nextCode(language), {
+      dateStyle: 'medium',
+      timeStyle: 'short'
+    }).format(cachedAt)
+  } catch {
+    return new Date(cachedAt).toLocaleString()
+  }
+}
+
+/** Localized region name for a 2-letter code; falls back to the raw code. */
+export function formatCountryName(
+  countryCode: string,
+  language: string
+): string {
+  try {
+    return (
+      new Intl.DisplayNames([toI18nextCode(language)], {
+        type: 'region'
+      }).of(countryCode) ?? countryCode
+    )
+  } catch {
+    try {
+      return (
+        new Intl.DisplayNames(['en'], { type: 'region' }).of(countryCode) ??
+        countryCode
+      )
+    } catch {
+      return countryCode
+    }
+  }
 }
 
 /** Internal store id -> the fixed D-05/D-06 display name + resolution order. */
