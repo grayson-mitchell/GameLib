@@ -161,7 +161,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 67: Schema validation at the sidecar IPC boundary** — 20 plans in 14 waves; planned 2026-11-07 (completed 2026-11-07)
 - [x] **Phase 68: Versioned persisted stores and migrations** — 11 plans; planned (completed 2026-11-08)
 - [x] **Phase 69: Consolidate frontend state onto GlobalStateV2** — 26/26 plans; complete (completed 2026-11-14, human UAT 3/3, security 63/63 closed)
-- [x] **Phase 70: Split GameInfo into shared and per-store shapes** — 16 plans executed; verification gaps_found 2026-11-14 (G1–G3, review WR-01/04/05) — gap closure pending (completed 2026-11-14)
+- [x] **Phase 70: Split GameInfo into shared and per-store shapes** — 22 plans executed (16 + gap closure 70-17..70-22); re-verification passed 2026-11-14, G1–G3 closed; review follow-ups WR-01/02/03 open in 70-REVIEW.md (completed 2026-11-14)
 - [x] **Phase 71: Rust shell module decomposition** — 20 plans; complete (completed 2026-11-09, gaps closed by 71-19/71-20)
 - [x] **Phase 72: Renderer trust boundary and process hardening** — 0 plans; not started (completed 2026-11-08)
 - [x] **Phase 73: Steam depot download pipeline in Rust** — 21 plans; complete (completed 2026-11-10)
