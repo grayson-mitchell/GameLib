@@ -24,6 +24,7 @@
  */
 
 import { hasCapability } from 'common/storeCapabilities'
+import { asStoreGame } from 'common/gameInfoNarrowing'
 import type { GameInfo } from 'common/types'
 import { parseMetacriticScore } from 'common/metacriticScore'
 import { RunnerToStore } from './facetLabels'
@@ -205,7 +206,7 @@ export function lastPlayedMs(
   nonSteamLastPlayedIso: Readonly<Record<string, string | undefined>>
 ): number | undefined {
   if (hasCapability(game.runner, 'playtimeFromStoreMetadata')) {
-    const seconds = game.extra?.steamLastPlayed
+    const seconds = asStoreGame(game, 'steam')?.extra?.steamLastPlayed
     return typeof seconds === 'number' &&
       Number.isFinite(seconds) &&
       seconds > 0

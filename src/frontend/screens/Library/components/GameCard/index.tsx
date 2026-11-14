@@ -1,4 +1,5 @@
 import { hasCapability, isStore } from 'common/storeCapabilities'
+import { asStoreGame } from 'common/gameInfoNarrowing'
 import './index.css'
 
 import { useContext, CSSProperties, useMemo, useState, useEffect } from 'react'
@@ -166,8 +167,7 @@ const GameCard = ({
   const cover =
     gameInfoFromProps.overrides?.art_square || gameInfoFromProps.art_square
 
-  const isInstallable =
-    gameInfo.installable === undefined || gameInfo.installable // If it's undefined we assume it's installable
+  const isInstallable = asStoreGame(gameInfo, 'steam')?.installable ?? true // If it's undefined we assume it's installable
 
   const [progress, previousProgress] = hasProgress(appName, runner)
   const { install_size: size = '0' } = {
@@ -379,7 +379,8 @@ const GameCard = ({
   // Steam-only type, so any future runner setting it would badge here while
   // the filter ignored it — the exact drift this phase guarded against in
   // chipLabels.ts's PRESET_UNCATEGORIZED fix.
-  const isDelisted = isSteam && !!gameInfoFromProps.is_delisted
+  const isDelisted =
+    isSteam && !!asStoreGame(gameInfoFromProps, 'steam')?.is_delisted
 
   const handleEdit = () => {
     if (isSideloaded) {

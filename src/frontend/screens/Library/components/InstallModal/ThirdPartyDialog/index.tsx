@@ -1,4 +1,5 @@
 import { isStore } from 'common/storeCapabilities'
+import { asStoreGame } from 'common/gameInfoNarrowing'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   GameInfo,
@@ -207,7 +208,8 @@ export default function ThirdPartyDialog({
                 'third-party-managed.notice1',
                 'This game is managed by a third-party application: "{{application_name}}"',
                 {
-                  application_name: gameInfo.isEAManaged
+                  application_name: asStoreGame(gameInfo, 'legendary')
+                    ?.isEAManaged
                     ? 'EA app'
                     : gameInfo.thirdPartyManagedApp
                 }

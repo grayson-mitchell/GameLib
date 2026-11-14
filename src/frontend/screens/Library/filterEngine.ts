@@ -27,6 +27,7 @@
  */
 
 import { hasCapability } from 'common/storeCapabilities'
+import { asStoreGame } from 'common/gameInfoNarrowing'
 import { GameInfo } from 'common/types'
 import { isRunsForMeOn, type RunsForMeState } from 'common/runsForMe'
 import {
@@ -370,7 +371,8 @@ function passesMore(
   // would collide at every existing reader. This is the same expression
   // 37-03a removed from `isNonAvailableGame`.
   const isNoStorePageGame =
-    hasCapability(game.runner, 'canBeDelisted') && !!game.is_delisted
+    hasCapability(game.runner, 'canBeDelisted') &&
+    !!asStoreGame(game, 'steam')?.is_delisted
 
   // Step 1: an explicit 'hide' beats an unrelated 'only' in another
   // tri-state, because 'hide' is the user's direct instruction about THIS

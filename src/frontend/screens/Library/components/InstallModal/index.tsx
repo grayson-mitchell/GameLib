@@ -15,6 +15,7 @@ import {
   Runner,
   WineInstallation
 } from 'common/types'
+import { asStoreGame } from 'common/gameInfoNarrowing'
 import { Dialog } from 'frontend/components/UI/Dialog'
 
 import './index.scss'
@@ -224,7 +225,9 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
   // field name: `installModalSource.test.ts` bans that token in this file,
   // and a second raw reader here would be exactly the drift
   // `steamPlatformRow.ts`'s own header warns against.
-  const seedDepotSignalCaptured = hasSteamDepotSignalCaptured(gameInfo)
+  const seedDepotSignalCaptured = hasSteamDepotSignalCaptured(
+    asStoreGame(gameInfo, 'steam')
+  )
 
   // 34.14 D-04/D-05: the ONE call to `resolveDepotAvailability` in this
   // file. All of D-04's fail-open-on-unknown and D-05's seed/probe
