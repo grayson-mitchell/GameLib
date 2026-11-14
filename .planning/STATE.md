@@ -1,17 +1,17 @@
 ---
-gsd_state_version: "1.0"
+gsd_state_version: 1.0
 milestone: v0.10
 milestone_name: Foundations
 status: executing
 stopped_at: "74-33 live gate recorded: items 24/26/27 pass, 25 and 28 issues; round-4 gap planning next"
-last_updated: "2026-11-14T00:35:40.712Z"
-last_activity: 2026-11-14 -- Phase 69 complete (human UAT 3/3, security 63/63 closed)
+last_updated: "2026-11-14T02:54:03.036Z"
+last_activity: 2026-11-14
 progress:
   total_phases: 23
-  completed_phases: 16
-  total_plans: 377
-  completed_plans: 360
-  percent: 70
+  completed_phases: 17
+  total_plans: 379
+  completed_plans: 364
+  percent: 74
 ---
 
 # Project State
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 76 — engine correct bottle for drm mode launches (v0.9 audit s9)
+**Current focus:** Phase 70 — split-gameinfo-into-shared-and-per-store-shapes
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -72,12 +72,12 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 
 ## Current Position
 
-Phase: 76
-Plan: Not started
+Phase: 70 (split-gameinfo-into-shared-and-per-store-shapes) — EXECUTING
+Plan: 2 of 16
 Status: Ready to execute
-Last activity: 2026-11-14 - Completed quick task 261114-lat: Remove the orphan delta journal when a run is cancelled after the journal write
+Last activity: 2026-11-14
 
-Progress: [██████████] 99%
+Progress: [██████████] 96%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 

@@ -32,7 +32,7 @@ complete and verified per their own VERIFICATION.md files; they carry no new req
 
 - [x] **ARCH-01**: The backend has no module-level mutable state: the census is a zero-tolerance test and the Steam RunningAppID poller runs as a boot-owned step
 - [x] **ARCH-02**: The frontend has one state system: `GlobalState.tsx` / `ContextProvider` retired in favour of GlobalStateV2 slices
-- [ ] **ARCH-03**: Shared code depends only on a shared `GameInfo` core; store-specific data lives in per-store shapes
+- [x] **ARCH-03**: Shared code depends only on a shared `GameInfo` core; store-specific data lives in per-store shapes
 
 ### Steam
 
@@ -82,7 +82,7 @@ complete and verified per their own VERIFICATION.md files; they carry no new req
 | ----------- | ----- | ------ |
 | ARCH-01 | 66.4 | Complete (25/25 plans; verified 2026-11-14) |
 | ARCH-02 | 69 | Executed; 3 human UAT items pending |
-| ARCH-03 | 70 | Pending |
+| ARCH-03 | 70 | Complete |
 | STEAM-01 | 74 | Complete |
 | STEAM-02 | 74 | Complete |
 | STEAM-03 | 75 | Complete |
