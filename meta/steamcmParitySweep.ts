@@ -600,6 +600,12 @@ async function runRust(
     rmSync(appFolder, { recursive: true, force: true })
   }
   const acquire = replies[1]?.result as { ok?: boolean; leaseId?: number }
+  replies.forEach((r, n) => {
+    const res = r?.result as { ok?: boolean; kind?: string } | undefined
+    if (r?.ok === false || res?.ok === false) {
+      say(`rust reply ${n} (${lines[n]?.op}) failed: ${res?.kind ?? 'error'}`)
+    }
+  })
   const logonOk = acquire?.ok === true && acquire.leaseId === lease
   say(`rust logon with the stored token, no account name: ${logonOk}`)
   if (!logonOk) return { logonOk }
@@ -660,6 +666,12 @@ async function runRust(
   const rustPk = (unwrap(replies[5]) as { packages?: Record<string, unknown> })
     ?.packages
   const rustAppIds = appIdsFromPackages(rustPk ?? {})
+  const rustPkVals = Object.values(rustPk ?? {}) as Array<{
+    packageinfo?: unknown
+  }>
+  say(
+    `rust packages: returned=${rustPkVals.length} withInfo=${rustPkVals.filter((p) => p?.packageinfo).length} missingToken=${rustPkVals.filter((p) => (p as { missingToken?: boolean })?.missingToken).length} licencesWithToken=${(licences ?? []).filter((l) => (l as { access_token?: string }).access_token && (l as { access_token?: string }).access_token !== '0').length}`
+  )
   say(
     `counts: licences steam-user=${ts.licencePackages.length} rust=${rustPackages.length}; licence app ids steam-user=${ts.packageAppIds.length} rust=${rustAppIds.length}; owned steam-user=${ts.owned.length} rust=${rustOwned.length}`
   )
