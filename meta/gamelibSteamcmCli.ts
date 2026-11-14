@@ -173,3 +173,100 @@ export async function runSteamcmNdjson(
     }
   }
 }
+
+export interface SteamcmNdjsonSession {
+  /** One request, one reply, in order. Requests are serialised: a second send waits for the first. */
+  send(req: SteamcmRequest, timeoutMs?: number): Promise<SteamcmNdjsonReply>
+  /** Closes stdin (the CLI's EOF shutdown), waits for exit and disposes the fake HOME. */
+  close(): Promise<void>
+}
+
+/**
+ * A streaming `--ndjson` session kept open across a run: requests go out one at a time and each
+ * reply is awaited. Same fake-HOME and stdin-only-secrets rules as `runSteamcmNdjson`; the profile
+ * is fresh per session and disposed by `close()`.
+ */
+export function openSteamcmNdjsonSession(): SteamcmNdjsonSession {
+  const cli = resolveSteamcmCliPath()
+  assertSteamcmCliPresent(cli)
+  const profile = createFakeHomeProfile({ prefix: 'gamelib-steamcm-' })
+  const child = spawn(cli, ['--ndjson'], {
+    env: profile.childEnv(process.env),
+    stdio: ['pipe', 'pipe', 'pipe']
+  })
+  let buf = ''
+  let err = ''
+  let exited: number | null | undefined
+  const waiting: Array<{
+    resolve: (r: SteamcmNdjsonReply) => void
+    reject: (e: Error) => void
+  }> = []
+  const failAll = (e: Error): void => {
+    while (waiting.length > 0) waiting.shift()?.reject(e)
+  }
+  child.stdout.setEncoding('utf-8')
+  child.stderr.setEncoding('utf-8')
+  child.stdout.on('data', (d: string) => {
+    buf += d
+    let nl = buf.indexOf('\n')
+    while (nl >= 0) {
+      const line = buf.slice(0, nl)
+      buf = buf.slice(nl + 1)
+      if (line.trim() !== '') {
+        waiting.shift()?.resolve(JSON.parse(line) as SteamcmNdjsonReply)
+      }
+      nl = buf.indexOf('\n')
+    }
+  })
+  child.stderr.on('data', (d: string) => (err += d))
+  child.on('error', (e) => failAll(e))
+  const closed = new Promise<void>((resolve) => {
+    child.on('close', (code) => {
+      exited = code
+      failAll(new Error(`gamelib-steamcm-cli --ndjson exited ${code}`))
+      resolve()
+    })
+  })
+  let tail: Promise<unknown> = Promise.resolve()
+  return {
+    send(req, timeoutMs = 120_000) {
+      const run = async (): Promise<SteamcmNdjsonReply> => {
+        if (exited !== undefined) throw new Error('session closed')
+        const reply = new Promise<SteamcmNdjsonReply>((resolve, reject) => {
+          const timer = setTimeout(
+            () => reject(new Error(`${req.op} timed out`)),
+            timeoutMs
+          )
+          timer.unref()
+          waiting.push({
+            resolve: (r) => {
+              clearTimeout(timer)
+              resolve(r)
+            },
+            reject: (e) => {
+              clearTimeout(timer)
+              reject(e)
+            }
+          })
+        })
+        child.stdin.write(JSON.stringify(req) + '\n')
+        return reply
+      }
+      const p = tail.then(run, run)
+      tail = p.catch(() => undefined)
+      return p
+    },
+    async close() {
+      try {
+        child.stdin.end()
+        await closed
+      } finally {
+        try {
+          profile.dispose()
+        } catch {
+          /* best effort */
+        }
+      }
+    }
+  }
+}
