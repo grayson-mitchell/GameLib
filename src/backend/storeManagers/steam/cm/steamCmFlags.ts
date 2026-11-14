@@ -7,9 +7,9 @@
 
 export type SteamCmImpl = 'rust' | 'ts'
 
-/** Flipped to rust by plan 79-25 after 79-PARITY.md APPROVED; deleted at the delete gate (plan 79-41). */
-export const STEAMCM_CM_DEFAULT: SteamCmImpl = 'ts'
-/** Flipped to rust by plan 79-25 after 79-PARITY.md APPROVED; deleted at the delete gate (plan 79-41). */
+/** Flipped to rust by plan 79-25 after 79-PARITY.md APPROVED (CM ops); deleted at the delete gate (plan 79-41). */
+export const STEAMCM_CM_DEFAULT: SteamCmImpl = 'rust'
+/** Stays ts until the UAT-A sign-in items pass (D-18); deleted at the delete gate (plan 79-41). */
 export const STEAMCM_SIGNIN_DEFAULT: SteamCmImpl = 'ts'
 
 function pick(raw: string | undefined, fallback: SteamCmImpl): SteamCmImpl {

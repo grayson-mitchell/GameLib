@@ -6,15 +6,16 @@ import {
 } from '../steamCmFlags'
 
 describe('steamCmFlags', () => {
-  test('defaults are ts', () => {
-    expect(STEAMCM_CM_DEFAULT).toBe('ts')
+  test('cm defaults to rust, sign-in stays ts', () => {
+    expect(STEAMCM_CM_DEFAULT).toBe('rust')
     expect(STEAMCM_SIGNIN_DEFAULT).toBe('ts')
-    expect(steamCmImpl({})).toBe('ts')
+    expect(steamCmImpl({})).toBe('rust')
     expect(steamCmSignInImpl({})).toBe('ts')
   })
 
   test('accepts rust, rejects wrong case', () => {
     expect(steamCmImpl({ GAMELIB_STEAMCM_CM: 'rust' })).toBe('rust')
+    expect(steamCmImpl({ GAMELIB_STEAMCM_CM: 'ts' })).toBe('ts')
     expect(steamCmImpl({ GAMELIB_STEAMCM_CM: 'RUST' })).toBe(STEAMCM_CM_DEFAULT)
     expect(steamCmSignInImpl({ GAMELIB_STEAMCM_SIGNIN: 'x' })).toBe(
       STEAMCM_SIGNIN_DEFAULT
@@ -23,16 +24,17 @@ describe('steamCmFlags', () => {
 
   test('flags are independent', () => {
     expect(steamCmSignInImpl({ GAMELIB_STEAMCM_CM: 'rust' })).toBe('ts')
-    expect(steamCmImpl({ GAMELIB_STEAMCM_SIGNIN: 'rust' })).toBe('ts')
+    expect(steamCmImpl({ GAMELIB_STEAMCM_SIGNIN: 'rust' })).toBe('rust')
+    expect(steamCmImpl({ GAMELIB_STEAMCM_SIGNIN: 'ts' })).toBe('rust')
   })
 
   test('reads env at call time', () => {
     const prev = process.env.GAMELIB_STEAMCM_CM
     try {
-      process.env.GAMELIB_STEAMCM_CM = 'rust'
-      expect(steamCmImpl()).toBe('rust')
       process.env.GAMELIB_STEAMCM_CM = 'ts'
       expect(steamCmImpl()).toBe('ts')
+      process.env.GAMELIB_STEAMCM_CM = 'rust'
+      expect(steamCmImpl()).toBe('rust')
     } finally {
       if (prev === undefined) delete process.env.GAMELIB_STEAMCM_CM
       else process.env.GAMELIB_STEAMCM_CM = prev
