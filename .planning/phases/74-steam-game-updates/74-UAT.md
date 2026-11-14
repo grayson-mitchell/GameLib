@@ -1,9 +1,9 @@
 ---
-status: pending
+status: complete
 phase: 74-steam-game-updates
 source: [74-13-PLAN.md]
 started: 2026-11-12
-updated: 2026-11-13
+updated: 2026-11-14
 ---
 
 # Phase 74 UAT: live gate for Steam game updates
@@ -152,34 +152,34 @@ precondition: the bridge fixture stale; make the unattended path fail by signing
 
 ### 24. Steam-closed registered hand-off never finishes at the stale build (UAT 19 re-run, InstallApp off)
 expected: Refresh shows ADOM's update badge (PICS 5820078). Update logs `ACF says current (build 3512046) but Steam has build 5820078; handing the update to Steam` then `delegating update for appId 333300 via steam://nav/games/details/333300`; Steam starts; nobody presses Steam's Update; about 2 min after the click GameLib logs `no update activity for appId 333300 within 40 ticks; ending the update poll quietly`; the log never contains `update of appId 333300 finished (build 3512046)`; the badge stays after the Updating state ends.
-result: pending
+result: pass — 2026-11-14 12:59:01 `ACF says current (build 3512046) but Steam has build 5820078; handing the update to Steam` → `delegating update for appId 333300 via steam://nav/games/details/333300` (delegatedToSteamClient true); Steam started; 13:01:02 `no update activity for appId 333300 within 40 ticks; ending the update poll quietly`, then `update check apps=1 stale=1`; no `finished (build 3512046)` line; badge stayed. Steam left the ACF at buildid 3512046, TargetBuildID 5820078, StateFlags 6 (update required, not started — AutoUpdateBehavior 1).
 precondition: ADOM 333300 restaged with Steam quit to spike 069's real prior state per item 22's result (ACF buildid and TargetBuildID 3512046, StateFlags 4, depot 333302 manifest 1547379086645511101; lowering buildid alone does not make Steam download); Steam left quit (`pgrep -x steam_osx` empty); the InstallApp opt-in OFF and confirmed saved; GameLib relaunched with `pnpm tauri:dev` after the restage.
 
 ### 25. Steam-closed hand-off with InstallApp on retries InstallApp and completes at the PICS target (UAT 19 re-run + minor)
 expected: Update logs the `ACF says current (build 3512046) but Steam has build 5820078` line, then `InstallApp unavailable for appId 333300 (steam-not-running)` and the steam://nav delegate line; Steam starts; within the retry window (13 attempts 3 ticks apart, about 2 min from the click) the log shows `Steam is updating appId 333300 via InstallApp (retry after Steam start)` with no click in Steam; Steam downloads; GameLib shows Updating until `update of appId 333300 finished (build 5820078)`; the badge clears; the ACF buildid is 5820078; the log never shows `finished (build 3512046)`.
-result: pending
+result: issue — InstallApp retry never fired. 13:05:37 `InstallApp unavailable for appId 333300 (steam-not-running)` → steam://nav delegate; Mac Steam started and signed in by ~13:05:45 (<10 s, operator); Steam immediately rewrote the ACF to StateFlags 6, TargetBuildID 5820078, BytesDownloaded 0 (update required, not started — AutoUpdateBehavior 1). No `retry after Steam start`, no `gave up` line; 13:07:37 `no update activity for appId 333300 within 40 ticks; ending the update poll quietly`. ACF stayed at buildid 3512046. Diagnosis: `pollUpdateOnce` sets `awaiting.sawPending` from `isAcfUpdatePending` (StateFlags bit 2 / TargetBuildID≠buildid), and `retryInstallApp` returns early when `sawPending` — so Steam merely flagging the update as required disarms the retry on the first tick after Steam starts. 74-30's tests kept the ACF stale-and-not-pending, so they never covered this. After the quiet end GameLib's ADOM page still read `Installed - New Version Available! (Click to Update)`, also after Refresh (badge correctly kept; the update itself never ran).
 precondition: ADOM restaged again with Steam quit to the same 3512046 prior state as item 24 (Steam may have rewritten the ACF during item 24); Steam left quit; the InstallApp opt-in ON and confirmed saved; ADOM's Steam setting stays "only update when launched" (AutoUpdateBehavior 1) so only InstallApp can start it; Mac Steam must be able to start signed in (saved login) and reach its library within about 2 min of the click, because the retry gives up after that window. If it gives up first (log `InstallApp retry for appId 333300 gave up after 13 attempts`), record `result: issue` with the Steam start time and the give-up time rather than pass; GameLib relaunched with `pnpm tauri:dev`.
 
 ### 26. Signed out, installed Steam games list, launch and get an update check (UAT 23 signed-out gap)
 expected: Right after sign-out the grid still shows installed Steam games and hides not-installed ones. After relaunch: the grid lists every installed Steam game (ADOM registered, Hell Clock and the other bridge installs) and no not-installed Steam title; the Steam facet row is present; the log has `Steam: loaded <n> games from cache (no library sync this pass)` and `Steam: update check apps=<n>` with n > 0 and stale >= 1; Hell Clock shows its update badge; Play on ADOM launches it; Play on Hell Clock shows the launch prompt, Esc launches it through the bridge and it reaches its menu.
-result: pending
+result: pass — after in-app Steam sign-out the grid kept installed Steam games and hid not-installed ones; relaunch 13:13:22 `library refresh deferred — no explicit Refresh and no open Steam session` → `Steam: loaded 401 games from cache (no library sync this pass)`, 13:13:31 `Steam: update check apps=44 stale=3`; grid listed every installed Steam game, no not-installed title, Steam facet row present; Hell Clock showed its update badge. Play on ADOM: Steam applied the pending update (ACF now buildid 5820078, StateFlags 4) then the game reached its menu. Play on Hell Clock: launch prompt, Esc launched it through the bridge (`raiseWineGameWindow [bridge:1782460]: raised`, gameoverlayui attached after 4010 ms) and it reached its menu. Side note: on Hell Clock exit the log shows `[bridge-notice] appId=1782460 reason=overlay-exit-abnormal` — out of scope for this item.
 precondition: signed in with a completed sync first; Hell Clock 1782460 made stale (bridge ACF buildid 26431636 lowered to 26431635); autoUpdateGames OFF in store/config.json (check the file: the Settings toggle display is a known-wrong todo); then sign out of Steam in GameLib, look at the grid, quit and relaunch with `pnpm tauri:dev`. Mac Steam itself may stay signed in (the bridge uses it). Known limitation (74-31 cache-only restore): a game installed through Steam after the last signed-in GameLib sync stays hidden while signed out until the next signed-in sync, so do not install anything through Steam between the sync and the sign-out, and do not record such a game as an issue.
 
 ### 27. Signing back in runs an update check without a relaunch (UAT 23 note)
 expected: After sign-in completes, in the same session the log shows `Steam library sync complete: <n> games` followed by `Steam: update check apps=<m>` with m > 0; not-installed Steam titles return to the grid; Hell Clock keeps its badge.
-result: pending
+result: pass — signed in (no relaunch) at 13:18:13; 13:18:18 `[refreshLibrary] runner=steam origin=steam-login`; 13:18:27 `Steam library sync complete: 401 games`; 13:18:32 `Steam: update check apps=44 stale=2` (stale 3→2 because ADOM was updated by Steam on launch in item 26). Not-installed Steam titles returned to the grid; Hell Clock kept its badge.
 precondition: directly after item 26, still signed out, Hell Clock still stale; sign in with QR or credentials; do not relaunch.
 
 ### 28. A failing unattended auto-update does not loop (CR-02, UAT 23 re-run)
 expected: The boot logs one `auto-update attempt recorded for appId 1782460 (build 26431636)` and one `updateBridgeGame: appId 1782460 unattended=true update not started: <reason>` (or `failed`); no sign-in window, guided dialog or Keychain prompt appears; at most one "Update Started" and one "Update Failed" notification (record what appears; macOS notification settings may hide them); pressing Refresh twice adds no second `auto-update attempt recorded` for 1782460, and any later update check logs `skipping auto-update for appId 1782460: build 26431636 already attempted this session`; the bridge ACF stays at 26431635; after signing in, a manual Update runs an attended update to `[depot-rust] outcome appId=1782460 ... status=completed acf=4`. If the signed-out unattended update does not fail (it completes), record `result: blocked` with the outcome lines and try route B before giving up.
-result: pending
+result: issue — no unattended auto-update was ever attempted, so the no-loop property could not be exercised. Route A: signed out, Hell Clock 1782460 stale (bridge ACF 26431635), `autoUpdateGames: true` in store/config.json (confirmed still true after boot), relaunch 13:20:01. Boot and two Refreshes logged `Steam: update check apps=44 stale=2` three times (13:20:09/23/35) but no `auto-update attempt recorded`, no `updateBridgeGame ... unattended=true`, no `Auto-Updating` and no `Skipping auto-update` line at all; no sign-in window, dialog, Keychain prompt or notification; ACF stayed 26431635. Signing in (13:27:47 `library sync complete`, 13:27:56 `update check apps=44 stale=2`) also queued no auto-update, so it is not signed-out-specific — on 2026-11-13 21:22 (item 23 second route) the signed-in boot did log `auto-update attempt recorded for appId 1782460`, so this looks like a regression. Since `autoUpdate()` logs on every branch, `listAutoUpdateableGames` (steam/library/index.ts) most likely returned [] or was never reached; not root-caused. Manual Update after sign-in: 13:28:14 `updateBridgeGame: appId 1782460 starting delta`, 13:28:15 `[depot-rust] outcome appId=1782460 ... status=completed acf=4 ... bytes=0`; ACF back to 26431636; next check `stale=1`. Route B not run (it tests the same unattended path, which is not being entered).
 precondition: route A: signed out of Steam in GameLib, Hell Clock stale (buildid 26431635), autoUpdateGames true in store/config.json, relaunch with `pnpm tauri:dev`. Route B (only if A completes the update): signed in, Hell Clock re-staled, its bridge install folder made read-only with `chmod -R a-w` on the game folder only, autoUpdateGames true, relaunch; afterwards `chmod -R u+w` the folder. Restore sign-in and autoUpdateGames to their previous values afterwards.
 
 ## Summary
 
-total: 23
-passed: 16
-issues: 4
+total: 28
+passed: 19
+issues: 6
 pending: 0
 skipped: 2
 blocked: 1
@@ -261,3 +261,13 @@ blocked: 1
   reason: "Item 20 setup: Settings showed the toggle off while store/config.json held `autoUpdateGames: true`; toggling on then off wrote false. Not root-caused."
   severity: minor
   test: 20
+- truth: "With InstallApp on, a registered update handed to Steam while Steam is closed is started by an InstallApp retry once Steam is up"
+  status: failed
+  reason: "Item 25 (ADOM 333300, 74-30 Task 2): the retry never fired. Steam started and signed in within ~10 s, then immediately rewrote the ACF to StateFlags 6 / TargetBuildID 5820078 (update required, not started, AutoUpdateBehavior 1). pollUpdateOnce sets awaiting.sawPending from isAcfUpdatePending, and retryInstallApp returns early on sawPending, so the retry is disarmed on the first tick after Steam starts; the poll ended quietly at 40 ticks with no `retry after Steam start` and no `gave up` line. Only real activity (sawActivity), not a pending flag, should disarm the retry. 74-30's tests kept the ACF stale and never pending."
+  severity: major
+  test: 25
+- truth: "With autoUpdateGames on, a stale bridge game gets one unattended update attempt per build per session"
+  status: failed
+  reason: "Item 28: no auto-update attempt was made at all, signed out or signed in — three `update check apps=44 stale=2` passes and a post-sign-in check logged no `auto-update attempt recorded`, `Auto-Updating` or `Skipping auto-update` line for Hell Clock 1782460 (bridge, ACF 26431635, autoUpdateGames true confirmed on disk). Item 23 on 2026-11-13 21:22 did record an attempt on a signed-in boot, so this is likely a regression in or after gap-closure round 3. autoUpdate() logs on every branch, so listAutoUpdateableGames (steam/library/index.ts) likely returned [] or was not reached. Not root-caused. The CR-02 no-loop property is therefore unverified."
+  severity: major
+  test: 28
