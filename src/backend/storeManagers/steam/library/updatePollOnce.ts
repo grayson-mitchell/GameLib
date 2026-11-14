@@ -5,7 +5,8 @@
  * required, RESEARCH Pitfall 6). A build different from the hand-off's starting build also
  * completes (a short update can finish before any pending state is seen). No update activity within
  * STEAM_REQUEST_NO_ACTIVITY_TICKS ends the poll quietly, invalidating the cached update state, and
- * completes instead only when the ACF is current at the target build (or no target is known). is_installed is never changed here.
+ * completes instead only when the ACF is current at the target build (or no target is known). A known
+ * target different from the starting build must be reached before the poll reports finished. is_installed is never changed here.
  */
 import { logError, logInfo, LogPrefix } from 'backend/logger'
 import { isMac } from 'backend/constants/environment'
@@ -33,7 +34,9 @@ import { stopInstallPolling } from './installStop'
 const STATE_FLAGS_RUNNING = 0x100 | 0x400
 
 /** UAT 19 (74-30): retry InstallApp on the existing tick while armed; bounded, never overlapping,
- *  no new timer (sidecar exit contract). */
+ *  no new timer (sidecar exit contract). Steam flagging the update as required (StateFlags 6,
+ *  TargetBuildID set, nothing downloaded; AutoUpdateBehavior 1) is exactly when InstallApp must
+ *  run, so only real activity disarms the retry (UAT 25). */
 async function retryInstallApp(
   deps: ManagerDeps,
   appId: string,
@@ -45,7 +48,6 @@ async function retryInstallApp(
   if (
     !retry ||
     retry.inFlight ||
-    awaiting.sawPending ||
     awaiting.sawActivity ||
     sinceHandoff <= 0 ||
     sinceHandoff % STEAM_INSTALLAPP_RETRY_EVERY_TICKS !== 0
@@ -132,6 +134,10 @@ export async function pollUpdateOnce(
   if (fields) {
     const pending = isAcfUpdatePending(fields)
     if (pending) awaiting.sawPending = true
+    const atStaleStart =
+      awaiting.targetBuild !== undefined &&
+      fields.buildid === awaiting.fromBuild &&
+      fields.buildid !== awaiting.targetBuild
     const growing =
       poll.lastBytesDownloaded !== undefined &&
       fields.bytesDownloaded > poll.lastBytesDownloaded
@@ -144,6 +150,7 @@ export async function pollUpdateOnce(
 
     if (
       !pending &&
+      !atStaleStart &&
       (fields.stateFlags & STATE_FLAG_FULLY_INSTALLED) !== 0 &&
       (awaiting.sawPending ||
         awaiting.sawActivity ||
