@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useLocation } from 'react-router-dom'
 
 import {
   useAmazonAccount,
@@ -36,7 +37,13 @@ export default function ReportProblem() {
   const configured = isReportingConfigured()
 
   const [message, setMessage] = useState('')
-  const [selectedKey, setSelectedKey] = useState('')
+  // The game page's "Report a problem" link navigates here with the game
+  // preselected via route state.
+  const location = useLocation() as { state?: { reportGame?: unknown } | null }
+  const initialGame = location.state?.reportGame
+  const [selectedKey, setSelectedKey] = useState(
+    typeof initialGame === 'string' ? initialGame : ''
+  )
   const [email, setEmail] = useState('')
   const [includeDiagnostics, setIncludeDiagnostics] = useState(true)
   const [previewOpen, setPreviewOpen] = useState(false)

@@ -2,7 +2,7 @@ import { GameInfo } from 'common/types'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faTriangleExclamation } from '@fortawesome/free-solid-svg-icons'
 import { useTranslation } from 'react-i18next'
-import useUiState from 'frontend/state/uiState'
+import { useNavigate } from 'react-router-dom'
 
 interface Props {
   gameInfo: GameInfo
@@ -10,7 +10,7 @@ interface Props {
 
 const ReportIssue = ({ gameInfo }: Props) => {
   const { t } = useTranslation('gamepage')
-  const { openGameLogsModal } = useUiState.keys('openGameLogsModal')
+  const navigate = useNavigate()
   const showReportIssue =
     gameInfo.is_installed && gameInfo.install.platform !== 'Browser'
 
@@ -20,7 +20,11 @@ const ReportIssue = ({ gameInfo }: Props) => {
 
   return (
     <span
-      onClick={() => openGameLogsModal(gameInfo)}
+      onClick={() =>
+        navigate('/settings/report', {
+          state: { reportGame: `${gameInfo.runner}/${gameInfo.app_name}` }
+        })
+      }
       className="clickable reportProblem"
       role={'button'}
     >

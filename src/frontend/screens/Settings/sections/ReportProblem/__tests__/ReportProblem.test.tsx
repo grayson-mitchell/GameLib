@@ -57,6 +57,11 @@ jest.mock('react', () =>
 
 jest.mock('../index.css', () => ({}))
 
+let mockLocationState: unknown = null
+jest.mock('react-router-dom', () => ({
+  useLocation: () => ({ state: mockLocationState })
+}))
+
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (_k: string, d: string) => d
@@ -172,6 +177,7 @@ afterEach(() => resetAllStores())
 beforeEach(() => {
   seedStores()
   h.slots = []
+  mockLocationState = null
   mockCollect.mockReset().mockResolvedValue('DIAG')
   mockSubmit.mockReset().mockResolvedValue({ ok: true })
   mockEnv
@@ -181,6 +187,17 @@ beforeEach(() => {
 })
 
 describe('ReportProblem', () => {
+  it('preselects the game passed in route state by the game page link', () => {
+    mockLocationState = { reportGame: 'steam/70' }
+    const tree = render()
+    expect(byTestId(tree, 'report-game')?.props.value).toBe('steam/70')
+  })
+
+  it('defaults to no game without route state', () => {
+    const tree = render()
+    expect(byTestId(tree, 'report-game')?.props.value).toBe('')
+  })
+
   it('unconfigured: shows the notice, disables Send and never submits', async () => {
     mockConfigured.mockReturnValue(false)
     let tree = render()
