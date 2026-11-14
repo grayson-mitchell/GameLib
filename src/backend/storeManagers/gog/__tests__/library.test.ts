@@ -734,3 +734,23 @@ describe('finding A1 LEG 1 -- syncQueuedPlaytime releases the lock when postPlay
     expect(mockPlaytimeGet(galaxyUserId, [])).toEqual([])
   })
 })
+
+describe('getLaunchOptions never yields an undefined option name (IN-02)', () => {
+  it('a FileTask without a name and an infoFile without a name yields name: ""', () => {
+    const manager = new GOGLibraryManager(makeDeps())
+    jest.spyOn(manager, 'readInfoFile').mockReturnValue({
+      playTasks: [
+        { type: 'FileTask', category: 'game' },
+        { type: 'FileTask', category: 'game', name: 'Named' }
+      ]
+    } as never)
+
+    const options = manager.getLaunchOptions('123')
+
+    expect(options).toHaveLength(2)
+    expect(options.map((o) => (o as { name?: string }).name)).toEqual([
+      '',
+      'Named'
+    ])
+  })
+})

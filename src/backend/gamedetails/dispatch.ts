@@ -51,6 +51,7 @@ import type {
   Runner
 } from 'common/types'
 import type { GameOverride, SelectiveDownload } from 'common/types/legendary'
+import type { SideloadGameInfo } from 'common/types/sideload'
 import { isStore, storeCapabilities } from 'common/storeCapabilities'
 
 import type { Stores, StoreManagers, ManagerDeps } from '../services/types'
@@ -352,7 +353,7 @@ export async function readConfig(
   return userInfo?.displayName ?? ''
 }
 
-export function addNewApp(deps: GameDetailsDeps, args: GameInfo): void {
+export function addNewApp(deps: GameDetailsDeps, args: SideloadGameInfo): void {
   deps.managers.library['sideload'].addNewApp(args)
 }
 

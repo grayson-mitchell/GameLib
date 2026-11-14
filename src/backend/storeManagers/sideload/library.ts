@@ -1,7 +1,6 @@
 import type { ManagerDeps } from 'backend/services/types'
 import { ExecResult, GameInfo } from 'common/types'
 import type { SideloadGameInfo } from 'common/types/sideload'
-import { asStoreGame } from 'common/gameInfoNarrowing'
 import { readdirSync } from 'graceful-fs'
 import { dirname, join } from 'path'
 import { logWarning } from 'backend/logger'
@@ -22,7 +21,7 @@ export default class SideloadLibraryManager implements LibraryManager {
     return new SideloadGame(id, this.deps)
   }
 
-  addNewApp(gameInfo: GameInfo): void {
+  addNewApp(gameInfo: SideloadGameInfo): void {
     const {
       app_name,
       title,
@@ -30,11 +29,11 @@ export default class SideloadLibraryManager implements LibraryManager {
       art_cover,
       art_square,
       is_installed = true,
-      description
+      description,
+      browserUrl,
+      customUserAgent,
+      launchFullScreen
     } = gameInfo
-    // The browser/launch-presentation keys exist only on the sideload member.
-    const { browserUrl, customUserAgent, launchFullScreen } =
-      asStoreGame(gameInfo, 'sideload') ?? {}
     const game: SideloadGameInfo = {
       runner: 'sideload',
       app_name,

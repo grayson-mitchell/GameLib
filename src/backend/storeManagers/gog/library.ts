@@ -1663,7 +1663,7 @@ export default class GOGLibraryManager implements LibraryManager {
         task.category !== 'document'
       ) {
         newLaunchOptions.push({
-          name: task?.name || infoFile.name,
+          name: task?.name || infoFile.name || '',
           parameters: `--prefer-task ${index}` // gogdl parameter to launch specific task
         })
       }

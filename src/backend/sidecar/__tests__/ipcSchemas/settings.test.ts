@@ -20,9 +20,32 @@ const syncTable: FixtureTable<typeof settingsSyncArgs> = {
           key: 'wineVersion',
           value: { bin: '/w', name: 'W', type: 'wine', legacyExtra: 1 }
         }
+      ],
+      [{ appName: 'default', key: 'wineVersion', value: {} }],
+      [
+        {
+          appName: 'default',
+          key: 'wineVersion',
+          value: { bin: '', name: 'Default Wine - Not Found', type: 'wine' }
+        }
       ]
     ],
     invalid: [
+      [
+        {
+          appName: 'default',
+          key: 'wineVersion',
+          value: { bin: '', wineserver: 5 }
+        }
+      ],
+      [{ appName: 'default', key: 'wineVersion', value: { smuggled: 1 } }],
+      [
+        {
+          appName: 'default',
+          key: 'wineVersion',
+          value: { lib: 'x'.repeat(5000) }
+        }
+      ],
       [{ appName: 'default', key: 'unknownFutureKey', value: 1 }],
       [{ appName: 'default', key: 'darkTrayIcon', value: true }],
       [{ appName: 'default', key: 'autoUpdateGames', value: 'yes' }],

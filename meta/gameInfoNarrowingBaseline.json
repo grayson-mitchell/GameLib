@@ -17,7 +17,9 @@
     "src/frontend/screens/Library/librarySort.ts": 1,
     "src/backend/downloadmanager/downloadqueue.ts": 1,
     "src/backend/launcher.ts": 1,
-    "src/backend/macArch/recovery.ts": 1
+    "src/backend/macArch/recovery.ts": 1,
+    "src/backend/gamedetails/dispatch.ts": 1,
+    "src/backend/sidecar/gameDetailsFlowRegistration.ts": 1
   },
   "reasons": {
     "src/frontend/helpers/stores.ts": "Cache stores are typed per store (Legendary/GOG/Steam/Nile library arrays); the helper owns all four member shapes",
@@ -37,6 +39,8 @@
     "src/frontend/screens/Library/librarySort.ts": "Steam-only extra.steamLastPlayed for last-played sorting",
     "src/backend/downloadmanager/downloadqueue.ts": "Legendary-only isEAManaged/isUbisoftManaged to route third-party-managed installs in the shared queue",
     "src/backend/launcher.ts": "Legendary-only namespace for the shared launch path (anticheat/namespace lookup)",
-    "src/backend/macArch/recovery.ts": "GOG-only install.installedDLCs read in the cross-store mac arch recovery"
+    "src/backend/macArch/recovery.ts": "GOG-only install.installedDLCs read in the cross-store mac arch recovery",
+    "src/backend/gamedetails/dispatch.ts": "addNewApp is sideload-only: its argument is typed SideloadGameInfo to match the strict sideload IPC schema",
+    "src/backend/sidecar/gameDetailsFlowRegistration.ts": "addNewApp send handler casts its validated payload to SideloadGameInfo, the only shape the schema admits"
   }
 }

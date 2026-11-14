@@ -9,7 +9,7 @@ import type {
 } from '../../types'
 import type { GameOverride, SelectiveDownload } from '../legendary'
 
-import { gameInfoSchema, installPlatform } from './gameInfoSchema'
+import { installPlatform, sideloadGameInfoSchema } from './gameInfoSchema'
 import {
   absolutePathArg,
   nonEmptyString,
@@ -29,7 +29,7 @@ const metadataOverrideFields = {
 }
 
 export const gameDetailsSyncArgs = {
-  addNewApp: z.tuple([gameInfoSchema]),
+  addNewApp: z.tuple([sideloadGameInfoSchema]),
   changeGameVersionPinnedStatus: z.tuple([
     nonEmptyString(),
     runnerArg(),

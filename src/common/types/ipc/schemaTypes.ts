@@ -6,8 +6,9 @@
  * `shellFilesSyncArgs` -> `ShellFilesSync`) and derives its function types with `SendFns` /
  * `InvokeFns` / `PushFns` so the schema is the single source of truth for argument types.
  *
- * Every object schema a conversion writes is `z.strictObject` (D-06) unless it is wrapped in
- * `phase70Passthrough`. Backend and sidecar only: the renderer must never value-import this
+ * Every object schema a conversion writes is `z.strictObject` (D-06). The named loose
+ * boundaries (wineInstallationArg, settings configArg, wineVersionInfo) are the only non-strict
+ * objects and each carries its own comment. Backend and sidecar only: the renderer must never value-import this
  * module (D-04 keeps zod out of the renderer; `ipc/index.ts` stays type-only).
  */
 import { z } from 'zod'

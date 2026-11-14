@@ -126,12 +126,8 @@ import type { GameDetailsDeps } from '../gamedetails/dispatch'
 import { setGameMetadataOverride } from '../gamedetails/overrides'
 import type { MiscRuntimeSlice } from '../miscRuntime'
 import { getGameOverrides, getAllGameOverrides } from '../game_overrides'
-import type {
-  MoveGameArgs,
-  GameInfo,
-  InstallPlatform,
-  Runner
-} from 'common/types'
+import type { MoveGameArgs, InstallPlatform, Runner } from 'common/types'
+import type { SideloadGameInfo } from 'common/types/sideload'
 
 function logSendFailure(channel: string, error: unknown): void {
   console.warn(
@@ -298,7 +294,7 @@ export function registerGameDetailsFlows(deps: GameDetailsFlowDeps): void {
 
   deps.ipc.on('addNewApp', (_event: unknown, ...args: unknown[]) => {
     try {
-      addNewApp(deps, args[0] as GameInfo)
+      addNewApp(deps, args[0] as SideloadGameInfo)
     } catch (error) {
       logSendFailure('addNewApp', error)
     }

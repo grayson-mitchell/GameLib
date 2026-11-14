@@ -130,6 +130,9 @@ const listenerCountsBefore = new Map(
 const { DXVK, runWineCommandOnGame, runWineCommandForPendingInstall } =
   createTools({} as unknown as Parameters<typeof createTools>[0])
 const runWineCommand = jest.fn()
+const toolsSlices = createTestToolsSlices()
+toolsSlices.config.getSettings = () =>
+  ({ winePrefix: '/global/prefix', enableEsync: false }) as never
 registerWineToolsFlows({
   ipc,
   winetricksQueue: WinetricksQueue as unknown as WinetricksQueueType,
@@ -146,7 +149,7 @@ registerWineToolsFlows({
   spawnAsync: jest.fn(),
   stores: createTestStores(),
   runner: createTestServices().runner,
-  ...createTestToolsSlices(),
+  ...toolsSlices,
   gameConfigs: { get: (...a: unknown[]) => mockGameConfigGet(...a) } as never
 })
 const registeredSendChannels = [...ipc.listenerMap()]
@@ -244,6 +247,26 @@ describe('pass-through proof — runWineCommand forwards args[0] unchanged, not 
     expect(defined(mockRunWineCommand.mock.calls[0], 'first call')[0]).toBe(
       commandArgs
     )
+  })
+})
+
+describe('runWineCommand fills absent gameSettings keys from the global settings', () => {
+  it('merges payload keys over getSettings(), and leaves a gameSettings-less payload alone', async () => {
+    const handler = handlerRegistry.get('runWineCommand') as IpcHandler
+    runWineCommand.mockClear()
+    runWineCommand.mockResolvedValue({ stdout: '', stderr: '' })
+    await handler({} as never, {
+      commandParts: ['x'],
+      gameSettings: { enableEsync: true }
+    })
+    const passed = defined(runWineCommand.mock.calls[0], 'call')[0]
+    expect(passed.gameSettings.enableEsync).toBe(true)
+    expect(passed.gameSettings.winePrefix).toBe('/global/prefix')
+    runWineCommand.mockClear()
+    await handler({} as never, { commandParts: ['x'] })
+    expect(
+      defined(runWineCommand.mock.calls[0], 'call')[0].gameSettings
+    ).toBeUndefined()
   })
 })
 

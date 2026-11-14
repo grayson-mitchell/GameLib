@@ -28,11 +28,12 @@ const verbList = z.array(nonEmptyString(256)).min(1).max(1024)
 // D-11: every key and value type strict, undeclared keys rejected. Keys are optional because
 // the renderer sends a persisted GameSettings (defaults merged with the game's file) and the
 // defaults never set some required keys (ignoreGameUpdates, DXVKFpsCap, and on Windows
-// winePrefix/wineVersion). The cast restores the full GameSettings call-site type the handler
-// reads; the parity test proves the declared keys are exactly GameSettings.
+// winePrefix/wineVersion). The value is honestly partial: the handler fills the absent keys from
+// the global settings before it reaches the Wine runner. The cast only bridges zod's inferred
+// shape to the interface; the parity test proves the declared keys are exactly GameSettings.
 const gameSettingsArg = gameSettingsSchema.partial() as unknown as z.ZodType<
-  GameSettings,
-  GameSettings
+  Partial<GameSettings>,
+  Partial<GameSettings>
 >
 
 const protonVerb = z.enum([

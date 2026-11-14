@@ -37,17 +37,13 @@ const pair = ['Fortnite', 'legendary']
 const syncTable: FixtureTable<typeof gameDetailsSyncArgs> = {
   addNewApp: {
     valid: [
-      ...perRunner.map((g) => [g]),
-      // Real persisted legendary entries carry undeclared keys inside dlcList elements.
-      [
-        legendaryGameInfoFixture({
-          dlcList: [{ id: 'd', mainGameItemList: [] }] as never
-        })
-      ],
+      [sideloadGameInfoFixture()],
       [sideloadGameInfoFixture({ title: 'X', install: {} })]
     ],
     invalid: [
-      ...perRunner.flatMap((g) => strictRejects(g).map((bad) => [bad])),
+      // addNewApp is sideload-only (WR-03): every other runner's complete payload is rejected.
+      ...perRunner.filter((g) => g.runner !== 'sideload').map((g) => [g]),
+      ...strictRejects(sideloadGameInfoFixture()).map((bad) => [bad]),
       [{ runner: 'sideload' }],
       [{ app_name: '', runner: 'sideload' }],
       [{ app_name: 'x', runner: 'epic' }],

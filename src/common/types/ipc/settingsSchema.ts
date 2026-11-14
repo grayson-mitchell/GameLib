@@ -19,11 +19,16 @@ const prose = () => z.string().max(65536)
 // carry legacy keys. The backend's own factory default is not always a real installation: with
 // no wine on PATH it is `{ bin: '', name: 'Default Wine - Not Found', type: 'wine' }`, and on
 // Windows it is `{}`. A full-config write must accept those, so the "no wine" arm admits an empty
-// `bin` and absent keys. The cast keeps the derived type the interface.
-const noWineInstallation = z.looseObject({
+// `bin` and absent keys. This arm exists only to admit those two factory defaults, so it is
+// strict; lib/lib32/wineserver carry the same bounds as wineInstallationArg. The cast on the
+// union keeps the derived type the interface.
+const noWineInstallation = z.strictObject({
   bin: z.literal('').optional(),
   name: z.string().max(1024).optional(),
-  type: z.enum(['wine', 'proton', 'crossover', 'toolkit']).optional()
+  type: z.enum(['wine', 'proton', 'crossover', 'toolkit']).optional(),
+  lib: z.string().max(4096).nullish(),
+  lib32: z.string().max(4096).nullish(),
+  wineserver: z.string().max(4096).nullish()
 })
 const wineVersionArg = z.union([
   wineInstallationArg(),

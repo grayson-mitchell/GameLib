@@ -41,7 +41,9 @@ const asyncTable: FixtureTable<typeof wineToolsAsyncArgs> = {
           gameSettings: { winePrefix: '/p', wineVersion: wineInstallation }
         }
       ],
-      [{ commandParts: ['winecfg'] }]
+      [{ commandParts: ['winecfg'] }],
+      // Partial: a game-less caller may omit wineVersion/winePrefix (the handler fills them).
+      [{ commandParts: ['winecfg'], gameSettings: { enableEsync: true } }]
     ],
     invalid: [
       [{ commandParts: ['x'], gameSettings: { undeclaredKey: 1 } }],

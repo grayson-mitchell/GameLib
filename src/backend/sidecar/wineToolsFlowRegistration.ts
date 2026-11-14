@@ -101,6 +101,9 @@ import type {
   WineManagerStatus,
   WineVersionInfo
 } from 'common/types'
+import type { WineToolsAsync } from 'common/types/ipc/wineTools'
+
+type WineToolsCommandArgs = Parameters<WineToolsAsync['runWineCommand']>[0]
 
 /** Narrow slice (66.1 D-01): exactly the services the Wine-tools handlers call. */
 export interface WineToolsFlowDeps
@@ -174,12 +177,23 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
   // this one, so D-06's mid-execution-seam-discovery failure mode (the 34.4→34.4.1 carve-out)
   // cannot recur here — the seam was fully scoped at planning time.
   //
-  // Pass-through only: no wine-environment reconstruction, no platform branch, no retry logic.
-  // `runWineCommand` itself owns all of that (D-13, below).
+  // Fills defaults only: the schema types `gameSettings` as Partial<GameSettings>, so absent keys
+  // come from the global settings (payload keys win). No wine-environment reconstruction, no
+  // platform branch, no retry logic. `runWineCommand` itself owns all of that (D-13, below).
   deps.ipc.handle(
     'runWineCommand',
     async (_event: unknown, ...args: unknown[]) => {
-      return deps.commandRunner.runWineCommand(args[0] as WineCommandArgs)
+      const commandArgs = args[0] as WineToolsCommandArgs
+      if (!commandArgs.gameSettings) {
+        return deps.commandRunner.runWineCommand(args[0] as WineCommandArgs)
+      }
+      return deps.commandRunner.runWineCommand({
+        ...commandArgs,
+        gameSettings: {
+          ...deps.config.getSettings(),
+          ...commandArgs.gameSettings
+        }
+      } as WineCommandArgs)
     }
   )
 
