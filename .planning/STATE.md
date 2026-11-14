@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 Phase: 76
 Plan: Not started
 Status: Ready to execute
-Last activity: 2026-11-14 -- Phase 69 complete (human UAT 3/3, security 63/63 closed)
+Last activity: 2026-11-14 - Completed quick task 261114-lat: Remove the orphan delta journal when a run is cancelled after the journal write
 
 Progress: [██████████] 99%
 
@@ -738,6 +738,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | 261114-at7 | Bridge update hero shows "Planning update…" from confirm until transfer: runBridgeUpdate sends updating + steam-update-planning before the estimate; progressBridge in update mode sends plain updating on `planned` (covers the stale-journal fallback). UAT 6b's missing label was the pre-378aa80b1 stage-schema drop; WR-07 fixed here. | 2026-11-14 | 9c092bf21, 8e26a1406 | Jest 9 suites 130 pass; eslint + scoped prettier clean; build:sidecar OK; live pass 2026-11-14 on Core Keeper (Planning → Applying), todo closed | [261114-at7-show-a-planning-label-on-the-hero-during](./quick/261114-at7-show-a-planning-label-on-the-hero-during/) |
 | 261114-ca6 | Humble Steam keys get an exact "Owned on Steam" again: titles resolve to Steam app ids via public storesearch (strict normalized-title equality, unique app result only) on sync only, sequential 350ms unref'd gap, cap 40/pass, persistent `humble_steam_appid` cache (hits kept, misses 7-day TTL); resolved id in cached library = exact, else fuzzy. Reads cached Steam library only, no CM logon. | 2026-11-14 | f930f0547, baa44acb7 | Jest humble/stores/frontend Humble 28 suites pass; tsc no new errors; eslint + scoped prettier clean; build:sidecar OK; review 0 blockers (WR-01 fixed, WR-02/03 advisory); live check pending | [261114-ca6-restore-exact-owned-on-steam-on-humble-k](./quick/261114-ca6-restore-exact-owned-on-steam-on-humble-k/) |
 | 261114-l1j | Settings "Automatically update games" toggle was right: it and checkGameUpdates read config.json defaultSettings; the UAT read the store/config.json `settings` mirror, which drifted after a hand edit. Toggle read pinned (readSetting), boot now resyncs the mirror from config.json (config wins, mirror-only keys kept), 74-UAT preconditions name config.json, item 20/28 notes added, todo closed. | 2026-11-14 | f206a4589, ac626471c, b805f4db9 | Jest hook + resync + sidecar suites pass; codecheck, scoped prettier, build:sidecar clean; live check pending | [261114-l1j-settings-auto-update-toggle-shows-wrong-](./quick/261114-l1j-settings-auto-update-toggle-shows-wrong-/) |
+| 261114-lat | IN-02 orphan delta journal: a delta run cancelled after the journal write but before any rename now removes the journal it wrote (`wrote_journal && !resuming`); a pre-existing journal from a real mid-commit kill is kept. Journal format unchanged; WR-03 temps ledger untouched. `test-hooks` feature seam + 3 resume tests; todo closed. | 2026-11-14 | c35dc9bcc, 5833fc56f, ddf755f69, e2ab43e79 | cargo test -p gamelib-depot green; fmt + clippy clean on touched files; live check pending | [261114-lat-remove-the-orphan-delta-journal-when-a-r](./quick/261114-lat-remove-the-orphan-delta-journal-when-a-r/) |
 
 ## Session Continuity
 
