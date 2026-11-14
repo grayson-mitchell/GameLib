@@ -49,7 +49,6 @@
     "lint": "node meta/lintScoped.cjs",
     "boundaries": "depcruise --config .dependency-cruiser.cjs --output-type err-long src/backend",
     "steam-line-ceiling": "node meta/steamLineCeiling.cjs",
-    "gameinfo-flip-probe": "node meta/gameInfoFlipProbe.cjs",
     "backend-di-ceilings": "node meta/backendDiCeilings.cjs",
     "gameinfo-narrowing-ceiling": "node meta/gameInfoNarrowingCeiling.cjs",
     "lint:src": "node meta/lintScoped.cjs --src",

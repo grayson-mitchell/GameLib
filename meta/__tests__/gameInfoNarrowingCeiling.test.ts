@@ -223,7 +223,11 @@ describe('gameInfoNarrowingCeiling CLI', () => {
   })
 
   it('exits 1 naming the baseline when it is missing', () => {
-    const r = run([])
+    // The real baseline exists since 70-10, so point at an absent path.
+    const r = run([
+      '--baseline',
+      join(tmpdir(), 'no-such-dir', 'gameInfoNarrowingBaseline.json')
+    ])
     expect(r.status).toBe(1)
     expect(r.stderr).toMatch(/gameInfoNarrowingBaseline\.json/)
   })

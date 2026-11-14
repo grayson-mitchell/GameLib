@@ -1,4 +1,4 @@
-import type { GameInfoCore, InstalledInfoCore } from 'common/types'
+import type { GameInfoCore, InstalledInfo } from 'common/types'
 import { LaunchOption } from 'common/types'
 
 export type GogInstallPlatform = 'windows' | 'osx' | 'linux'
@@ -489,7 +489,7 @@ export interface GOGCredentials {
   loginType: number
 }
 
-export interface GogInstalledInfo extends InstalledInfoCore {
+export interface GogInstalledInfo extends InstalledInfo {
   isDosbox?: boolean
   dosboxConf?: string[]
   installedWithDLCs?: boolean // OLD DLC boolean (all dlcs installed)

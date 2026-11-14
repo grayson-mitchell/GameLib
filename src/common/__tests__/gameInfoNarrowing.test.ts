@@ -1,5 +1,5 @@
 import { asStoreGame, isStoreGame } from '../gameInfoNarrowing'
-import type { GameInfo, GameInfoCore, Runner } from '../types'
+import type { GameInfo, GameInfoByRunner, GameInfoCore, Runner } from '../types'
 import type { SteamGameInfo } from '../types/steam'
 import type { GogGameInfo } from '../types/gog'
 import type { LegendaryGameInfo } from '../types/legendary'
@@ -38,11 +38,20 @@ type Equal<A, B> =
     : false
 type Expect<T extends true> = T
 
-// Type level: members are assignable to the fat GameInfo and to the core.
+// Drift guard (T-70-21, D-10 technique on the union): a member added to the
+// union without a GameInfoByRunner entry (or vice versa) fails to compile.
+type _NoDrift = Expect<Equal<GameInfoByRunner[Runner], GameInfo>>
+// Negative control: the guard must reject a union that differs.
+type _Widened = GameInfo | { runner: 'steam'; extra_key: string }
+// @ts-expect-error the guard must reject a union that differs
+type _DriftControl = Expect<Equal<GameInfoByRunner[Runner], _Widened>>
+
+// Type level: members are assignable to the GameInfo union and to the core.
 const asFat: GameInfo[] = [steam, gog, legendary, nile, sideload]
 const asCore: GameInfoCore[] = [steam, gog, legendary, nile, sideload]
 
 const fat: GameInfo = { ...base, runner: 'steam' }
+export type { _NoDrift, _DriftControl }
 const _narrowed = asStoreGame(fat, 'steam')
 type _DelistedType = Expect<
   Equal<NonNullable<typeof _narrowed>['is_delisted'], boolean | undefined>

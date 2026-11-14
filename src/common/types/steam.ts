@@ -1,7 +1,7 @@
 import type {
-  ExtraInfoCore,
+  ExtraInfo,
   GameInfoCore,
-  InstalledInfoCore,
+  InstalledInfo,
   WineInstallation
 } from '../types'
 
@@ -290,14 +290,14 @@ export interface SteamUpdateInfo {
   sizeError?: string
 }
 
-interface SteamExtraInfo extends ExtraInfoCore {
+interface SteamExtraInfo extends ExtraInfo {
   /** total playtime in minutes from getUserOwnedApps() */
   steamPlaytimeMinutes?: number
   /** Unix-seconds timestamp of the last play session from getUserOwnedApps(); undefined/0 when never played */
   steamLastPlayed?: number
 }
 
-export interface SteamInstalledInfo extends InstalledInfoCore {
+export interface SteamInstalledInfo extends InstalledInfo {
   // steam-startup-resume-crash (2026-07-18) / D-04 softened: set true when
   // SteamLibraryManager.init() detects a leftover interrupted (StateFlags
   // 1026) download on startup. Surfaces the game as resumable without

@@ -5,7 +5,6 @@ import {
 } from './types/gog'
 import {
   LegendaryInstallPlatform,
-  GameMetadataInner,
   LegendaryInstallInfo
 } from './types/legendary'
 import { NileInstallInfo, NileInstallPlatform } from './types/nile'
@@ -205,22 +204,13 @@ export type ExecResult = {
   failed?: boolean
 }
 
-export interface ExtraInfoCore {
+export interface ExtraInfo {
   about?: About
   reqs: Reqs[]
   releaseDate?: string
   storeUrl?: string
   changelog?: string
   genres?: string[]
-}
-
-export interface ExtraInfo extends ExtraInfoCore {
-  // PHASE70-FLIP-PROBE: store-keys-begin
-  /** total playtime in minutes from getUserOwnedApps() — undefined for non-Steam games */
-  steamPlaytimeMinutes?: number
-  /** Unix-seconds timestamp of the last play session from getUserOwnedApps() — undefined/0 for non-Steam games */
-  steamLastPlayed?: number
-  // PHASE70-FLIP-PROBE: store-keys-end
 }
 
 export type GameConfigVersion = 'auto' | 'v0' | 'v1'
@@ -257,9 +247,9 @@ export interface GameInfoCore {
   art_square: string
   cloud_save_enabled?: boolean
   developer?: string
-  extra?: ExtraInfoCore
+  extra?: ExtraInfo
   folder_name?: string
-  install: Partial<InstalledInfoCore>
+  install: Partial<InstalledInfo>
   is_installed: boolean
   // NOTE: This is the save folder without any variables filled in...
   save_folder?: string
@@ -309,78 +299,17 @@ export interface GameInfoByRunner {
   sideload: SideloadGameInfo
 }
 
-// PHASE70-FLIP-PROBE: fat-begin
-export interface GameInfo {
-  runner: 'legendary' | 'gog' | 'sideload' | 'nile' | 'steam'
-  store_url?: string
-  app_name: string
-  art_cover: string
-  art_logo?: string
-  art_background?: string
-  art_icon?: string
-  art_square: string
-  cloud_save_enabled?: boolean
-  developer?: string
-  extra?: ExtraInfo
-  folder_name?: string
-  install: Partial<InstalledInfo>
-  installable?: boolean
-  is_installed: boolean
-  namespace?: string
-  // NOTE: This is the save folder without any variables filled in...
-  save_folder?: string
-  // ...and this is the folder with them filled in
-  save_path?: string
-  gog_save_location?: GOGCloudSavesLocation[]
-  title: string
-  canRunOffline: boolean
-  thirdPartyManagedApp?: string
-  isEAManaged?: boolean
-  isUbisoftManaged?: boolean
-  is_mac_native?: boolean
-  /** MAC32-01: resolved macOS build architecture. Absent key / 'unknown' means
-   * "not resolved" — a missing or blank Steam `osarch` tag is NEVER coerced to
-   * '32' (the documented false-32-bit-flag trap). '32' routes the game to the
-   * CrossOver/Wine bottle (32-bit dropped in Catalina/2019); '64' and 'unknown'
-   * both stay on native macOS handling. */
-  mac_arch?: '32' | '64' | 'unknown'
-  is_linux_native?: boolean
-  /** D-17: Windows-depot availability signal, mirroring
-   * `SteamMetadataCacheEntry.is_windows_native`. Sourced from
-   * `data.platforms.windows` on the SAME `appdetails` response that already
-   * yields `data.platforms.mac` / `data.platforms.linux` — persisted by
-   * 34.13-02, hydrated onto `GameInfo` in `library.ts`. Load-bearing
-   * contract: only `=== true` permits offering a Windows install. `undefined`
-   * means "never captured" (pre-34.13 cache entries) and MUST NOT be coerced
-   * to available — forcing a Windows install of a game with no Windows depot
-   * is an explicitly Deferred Idea. Per the UI-SPEC, the Windows `MenuItem`
-   * is ABSENT (never present-but-disabled) when this is not `=== true`. */
-  is_windows_native?: boolean
-  /** Delisted = confirmed unavailable on Steam (appdetails success:false).
-   * When true the game is hidden from Console and not activatable. */
-  is_delisted?: boolean
-  /** Phase 17 D-08 reconciliation — mirrors steamMetadataStore.platformsCaptured
-   * so the frontend bottle indicator matches the backend D-11 routing gate. */
-  steamPlatformsCaptured?: boolean
-  /** Quick 261029-sbi: Metacritic score (1..100). Set only for Steam, from
-   * steamMetadataStore (PICS / appdetails). `undefined` means unknown, never
-   * 0. Non-Steam scores come from the wiki cache in the renderer (see
-   * librarySort.ts). */
-  metacritic_score?: number
-  browserUrl?: string
-  description?: string
-  //used for store release versions. if remote !== local, then update
-  version?: string
-  dlcList?: GameMetadataInner[]
-  customUserAgent?: string
-  launchFullScreen?: boolean
-  overrides?: {
-    title?: string
-    art_cover?: string
-    art_square?: string
-  }
-}
-// PHASE70-FLIP-PROBE: fat-end
+/**
+ * Phase 70 (D-01): the flat discriminated union over `runner`. Narrow with
+ * `isStoreGame` / `asStoreGame` (or a `runner` check) before reading a
+ * store-only field.
+ */
+export type GameInfo =
+  | SteamGameInfo
+  | GogGameInfo
+  | LegendaryGameInfo
+  | NileGameInfo
+  | SideloadGameInfo
 
 export interface GameSettings {
   autoInstallDxvk: boolean
@@ -484,7 +413,7 @@ export interface InstallProgress {
   diskSpeed?: number
   file?: string
 }
-export interface InstalledInfoCore {
+export interface InstalledInfo {
   manifest?: {
     disk_size: number
     download_size: number
@@ -508,61 +437,6 @@ export interface InstalledInfoCore {
   appName?: string
   language?: string // For GOG games
   branch?: string // GOG beta channels
-}
-
-export interface InstalledInfo extends InstalledInfoCore {
-  // PHASE70-FLIP-PROBE: store-keys-begin
-  isDosbox?: boolean
-  dosboxConf?: string[]
-  installedWithDLCs?: boolean // OLD DLC boolean (all dlcs installed)
-  installedDLCs?: string[] // New installed GOG DLCs array
-  versionEtag?: string // Checksum for checking GOG updates
-  buildId?: string // For verifing and version pinning of GOG games
-  // Whether to skip update check for this title (currently only used for GOG as it is the only platform actively supporting version rollback)
-  pinnedVersion?: boolean
-  cyberpunk?: {
-    // Cyberpunk compatibility options
-    modsEnabled: boolean
-    modsToLoad: string[] // If this is empty redmod will load mods in alphabetic order
-  }
-  // steam-startup-resume-crash (2026-07-18) / D-04 softened: set true when
-  // SteamLibraryManager.init() detects a leftover interrupted (StateFlags
-  // 1026) download on startup. Surfaces the game as resumable without
-  // auto-driving any heavy depot work unattended — the user's own Install
-  // click (SteamGame.install()) clears this and performs the resume.
-  // 260821-rb5: as of this task, this flag has a THIRD writer — the
-  // install-start breadcrumb below — in addition to the startup ACF scan
-  // and markSteamInstallIncomplete.
-  steamResumePending?: boolean
-  // 260821-rb5: crash-surviving resume breadcrumb. Written at native depot
-  // install START (games.ts's runNativeDepotDownload, before the
-  // downloadSteamDepots await) and persisted immediately to
-  // steamLibraryStore so a kill -9 microseconds later still finds them on
-  // disk. Closes case C of the aborted-depot-residue todo
-  // (.planning/todos/pending/2026-08-16-aborted-depot-residue-has-no-acf.md):
-  // no JS runs at teardown, so no appmanifest_*.acf is ever written and
-  // scanDownloadingAppIds can never see the residue.
-  //
-  // The PRESENCE of steamResumeInstalldir is the breadcrumb discriminator.
-  // steamResumePending alone is ambiguous — it is also set by the
-  // ACF-derived startup scan and by markSteamInstallIncomplete. Only a
-  // breadcrumb-carrying entry participates in init()'s startup self-heal
-  // check.
-  //
-  // These hold the values ACTUALLY used by the run (including
-  // opts.targetSteamappsDirOverride, i.e. a bottle steamapps root), never a
-  // re-derived guess.
-  //
-  // They are cleared on the successful (status: 'done') route and by
-  // init()'s self-heal; they deliberately SURVIVE an errored or cancelled
-  // run, because those leave residue too.
-  steamResumeTargetSteamappsDir?: string
-  steamResumeInstalldir?: string
-  // Captured at native job start (todo 2026-11-09): true means the title's
-  // appmanifest had StateFlags & 4 when this job began, so cancel-delete must
-  // never treat its tree as a partial, whatever finalize wrote afterwards.
-  steamResumeInstalledAtStart?: boolean
-  // PHASE70-FLIP-PROBE: store-keys-end
 }
 
 export interface Reqs {
