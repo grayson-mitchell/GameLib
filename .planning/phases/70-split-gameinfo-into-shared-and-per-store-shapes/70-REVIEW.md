@@ -1,262 +1,236 @@
 ---
 phase: 70-split-gameinfo-into-shared-and-per-store-shapes
-reviewed: 2026-11-14T00:00:00Z
+reviewed: 2026-11-14T06:09:10Z
 depth: standard
-files_reviewed: 118
+scope: re-review of gap-closure plans 70-17..70-22 (diff 671ed7ff4..HEAD, src/frontend excluded)
+files_reviewed: 23
 files_reviewed_list:
   - .github/workflows/lint.yml
   - .husky/pre-push
-  - meta/__tests__/gameInfoNarrowingCeiling.test.ts
   - meta/__tests__/gameInfoNarrowingWiring.test.ts
-  - meta/gameInfoNarrowingBaseline.json
-  - meta/gameInfoNarrowingCeiling.cjs
-  - package.json
-  - src/backend/__tests__/storeReadOnly.test.ts
-  - src/backend/downloadmanager/downloadqueue.ts
-  - src/backend/launcher.ts
-  - src/backend/macArch/__tests__/recovery.test.ts
-  - src/backend/macArch/recovery.ts
-  - src/backend/sidecar/__tests__/downloadQueueFlows.test.ts
-  - src/backend/sidecar/__tests__/gameDetailsFlows.test.ts
-  - src/backend/sidecar/__tests__/ipcSchemas/gameDetails.test.ts
-  - src/backend/sidecar/__tests__/ipcSchemas/gameInfoParity.test.ts
-  - src/backend/sidecar/__tests__/ipcSchemas/install.test.ts
-  - src/backend/sidecar/__tests__/ipcSchemas/queueStorePush.test.ts
-  - src/backend/sidecar/__tests__/ipcSchemas/settings.test.ts
-  - src/backend/sidecar/__tests__/ipcSchemas/settingsParity.test.ts
-  - src/backend/sidecar/__tests__/ipcSchemas/wineTools.test.ts
-  - src/backend/sidecar/__tests__/phase70PassthroughCensus.test.ts
-  - src/backend/sidecar/__tests__/steamFlows.test.ts
-  - src/backend/sidecar/__tests__/testContainment.test.ts
-  - src/backend/storeManagers/gog/__tests__/gogImportGame.test.ts
-  - src/backend/storeManagers/gog/__tests__/gogRuntime.test.ts
-  - src/backend/storeManagers/gog/__tests__/library.test.ts
-  - src/backend/storeManagers/gog/games.ts
-  - src/backend/storeManagers/gog/gogRuntime.ts
-  - src/backend/storeManagers/gog/library.ts
-  - src/backend/storeManagers/gog/setup.ts
-  - src/backend/storeManagers/gog/stores.ts
-  - src/backend/storeManagers/gog/user.ts
-  - src/backend/storeManagers/legendary/__tests__/legendaryRuntime.test.ts
-  - src/backend/storeManagers/legendary/games.ts
-  - src/backend/storeManagers/legendary/legendaryRuntime.ts
-  - src/backend/storeManagers/legendary/library.ts
-  - src/backend/storeManagers/legendary/stores.ts
-  - src/backend/storeManagers/nile/library.ts
-  - src/backend/storeManagers/nile/stores.ts
-  - src/backend/storeManagers/sideload/library.ts
-  - src/backend/storeManagers/steam/__tests__/bridgeRouteVerdict.test.ts
-  - src/backend/storeManagers/steam/__tests__/cancelDelete.test.ts
-  - src/backend/storeManagers/steam/__tests__/games.test.ts
-  - src/backend/storeManagers/steam/__tests__/library.localLibrary.test.ts
-  - src/backend/storeManagers/steam/__tests__/queueHeadRevalidation.test.ts
-  - src/backend/storeManagers/steam/__tests__/staleQueueHeadCancel.regression.test.ts
-  - src/backend/storeManagers/steam/bridgeInstallState.ts
-  - src/backend/storeManagers/steam/gameMetadata.ts
-  - src/backend/storeManagers/steam/games.ts
-  - src/backend/storeManagers/steam/library/index.ts
-  - src/backend/storeManagers/steam/library/installPollOnce.ts
-  - src/backend/storeManagers/steam/library/macArch.ts
-  - src/backend/storeManagers/steam/library/refresh.ts
-  - src/backend/storeManagers/steam/library/resume.ts
-  - src/backend/storeManagers/steam/library/resumeBreadcrumbs.ts
-  - src/backend/storeManagers/steam/library/uninstallPolling.ts
-  - src/backend/storeManagers/steam/macArchKnownFix.ts
-  - src/backend/storeManagers/steam/state.ts
-  - src/backend/storeManagers/steam/stores.ts
-  - src/backend/storeManagers/storeManagerCommon/games.ts
-  - src/backend/storeMigrations/__tests__/fixtures/download-manager-gameinfo-v1.json
-  - src/backend/storeMigrations/__tests__/fixtures/download-manager-real-keys.json
-  - src/backend/storeMigrations/__tests__/fixtures/gog-installed-gameinfo-v1.json
-  - src/backend/storeMigrations/__tests__/fixtures/gog-installed-real-keys.json
-  - src/backend/storeMigrations/__tests__/fixtures/gog-library-gameinfo-v1.json
-  - src/backend/storeMigrations/__tests__/fixtures/gog-library-real-keys.json
-  - src/backend/storeMigrations/__tests__/fixtures/legendary-library-gameinfo-v1.json
-  - src/backend/storeMigrations/__tests__/fixtures/legendary-library-real-keys.json
-  - src/backend/storeMigrations/__tests__/fixtures/nile-library-gameinfo-v1.json
-  - src/backend/storeMigrations/__tests__/fixtures/nile-library-real-keys.json
-  - src/backend/storeMigrations/__tests__/fixtures/sideload-library-gameinfo-v0.json
-  - src/backend/storeMigrations/__tests__/fixtures/sideload-library-real-keys.json
-  - src/backend/storeMigrations/__tests__/fixtures/steam-library-gameinfo-v1.json
-  - src/backend/storeMigrations/__tests__/fixtures/steam-library-real-keys.json
-  - src/backend/storeMigrations/__tests__/gameInfoLibraries.test.ts
+  - src/backend/storeMigrations/schemaStrip.ts
+  - src/backend/storeMigrations/__tests__/schemaStrip.test.ts
   - src/backend/storeMigrations/gameInfoLibraries.ts
   - src/backend/storeMigrations/index.ts
-  - src/backend/storeVersioning/__tests__/gameInfoLibrariesEngine.test.ts
-  - src/backend/testUtils/gameInfoFixtures.ts
-  - src/common/__tests__/gameInfoNarrowing.test.ts
-  - src/common/__tests__/typesHomes.test.ts
-  - src/common/gameInfoNarrowing.ts
+  - src/backend/storeMigrations/__tests__/gameInfoLibraries.test.ts
+  - src/backend/storeMigrations/settingsGame.ts
+  - src/backend/storeMigrations/__tests__/settingsGame.test.ts
+  - src/backend/storeMigrations/settingsGlobal.ts
+  - src/backend/storeMigrations/__tests__/settingsGlobal.test.ts
+  - src/backend/storeManagers/steam/library/refresh.ts
+  - src/backend/storeManagers/steam/__tests__/library.refresh.test.ts
+  - src/backend/storeManagers/legendary/library.ts
+  - src/backend/storeManagers/legendary/__tests__/getGameInfoForceReloadStaleness.test.ts
+  - src/backend/constants/others.ts
   - src/common/types.ts
-  - src/common/types/game_manager.ts
-  - src/common/types/gog.ts
-  - src/common/types/ipc/gameDetails.ts
-  - src/common/types/ipc/gameInfoSchema.ts
-  - src/common/types/ipc/install.ts
-  - src/common/types/ipc/runnerMisc.ts
-  - src/common/types/ipc/schemaTypes.ts
-  - src/common/types/ipc/settings.ts
-  - src/common/types/ipc/settingsSchema.ts
-  - src/common/types/ipc/steam.ts
-  - src/common/types/ipc/wineTools.ts
-  - src/common/types/legendary.ts
-  - src/common/types/nile.ts
-  - src/common/types/sideload.ts
-  - src/common/types/steam.ts
-  - src/common/types/typed_store.ts
-  - src/frontend/helpers/stores.ts
-  - src/frontend/hooks/hasAnticheatInfo.ts
-  - src/frontend/hooks/hasStatus.ts
-  - src/frontend/screens/Game/GamePage/components/Achievements.tsx
-  - src/frontend/screens/Game/GamePage/components/AppleWikiInfo.tsx
-  - src/frontend/screens/Game/GamePage/components/DownloadSizeInfo.tsx
-  - src/frontend/screens/Game/GamePage/components/InstalledInfo.tsx
-  - src/frontend/screens/Game/GamePage/components/MainButton.tsx
-  - src/frontend/screens/Game/GamePage/index.tsx
-  - src/frontend/screens/Game/GameSubMenu/index.tsx
-  - src/frontend/screens/Game/ModifyInstallModal/GOG/index.tsx
-  - src/frontend/screens/Game/TimeContainer/index.tsx
-  - src/frontend/screens/Library/__tests__/filterEngine.test.ts
-  - src/frontend/screens/Library/components/GameCard/index.tsx
-  - src/frontend/screens/Library/components/InstallModal/ThirdPartyDialog/index.tsx
-  - src/frontend/screens/Library/components/InstallModal/index.tsx
-  - src/frontend/screens/Library/filterEngine.ts
-  - src/frontend/screens/Library/librarySort.ts
+  - src/backend/storeVersioning/__tests__/gameInfoLibrariesEngine.test.ts
+  - src/backend/storeVersioning/__tests__/settingsFiles.test.ts
+  - src/backend/__tests__/settingsVersioning.test.ts
+  - src/backend/__tests__/storeReadOnly.test.ts
+  - src/backend/engine/__tests__/engineConfig.test.ts
 findings:
   critical: 0
-  warning: 7
-  info: 3
-  total: 10
+  warning: 3
+  info: 5
+  total: 8
+gap_status:
+  WR-01: resolved
+  WR-04: resolved_with_residual
+  WR-05: resolved_with_residual
 status: issues_found
 ---
 
-# Phase 70: Code Review Report
+# Phase 70: Code Review Report (gap-closure re-review, 70-17..70-22)
 
-**Reviewed:** 2026-11-14
+**Reviewed:** 2026-11-14T06:09:10Z
 **Depth:** standard
-**Files Reviewed:** 118 (46 tests reviewed lightly)
+**Files Reviewed:** 23 (source plus tests; I skimmed the fixtures)
 **Status:** issues_found
 
 ## Narrative Findings (AI reviewer)
 
 ## Summary
 
-Only hunks from `(70-NN)` commits were judged; other sessions' work in the same range was excluded.
+This review covers the changes since `671ed7ff4`, limited to the gap-closure plans 70-17 through 70-22 (G1/WR-01, G2/WR-04, G3/WR-05). For the large shared files I judged only the changed hunks. I traced callers and readers where a hunk depends on them: `config.ts`, `game_config.ts`, `engineConfig.ts`, `gameMetadata.ts`, `settingsMirrorResync.ts`, `settingsSchema.ts` and `gameInfoSchema.ts`. I also ran `stripToSchema` against the real project schemas with `tsx` to confirm the edge cases below. I did not assume them.
 
-The reader migration holds up. I traced every `asStoreGame(x, '<store>')?.field` site against who writes that field. `isEAManaged`, `isUbisoftManaged` and `namespace` are written only by `legendary/library.ts`. `is_delisted`, `steamPlatformsCaptured`, `installable`, `steamResumePending` and `extra.steamPlaytimeMinutes`/`steamLastPlayed` are written only by Steam. `installedDLCs` is GOG-only, and `browserUrl` is set only by SideloadDialog. So none of the narrowings changes what a real runner sees. Objects with no `runner` (the `{}` that SteamGame returns on a double cache miss) gave `undefined` for these fields before the change and still do. The strip migration is idempotent and only deletes keys. It falls back to the file's store when an item has no `runner`, and leaves unknown runners alone. Nested strictness comes straight from the schemas. I also tested the `setSetting` superRefine under zod 4.6.7: an invalid `key` never reaches `appSettingsShape[key]`.
+The gap closures are mostly sound:
 
-The problems are in the enforcement layer around the split:
+- **The single schema-derived strip** (`schemaStrip.ts`) does what its header says for the constructs the project schemas use today:
+  - it removes undeclared keys at every depth, including inside array elements and record values;
+  - it removes `null` on members that reject it;
+  - it removes optional members that are still invalid, inner members first;
+  - it leaves loose and catchall objects alone, so `dlcList` and the `wineVersion` loose arm are preserved;
+  - it is safe against `__proto__` (verified).
+- **`.partial()` on a strict object stays strict** under the installed zod (verified), so the settings strips are really strict.
+- **The v2→v3 re-strip** reaches profiles that the original 70-15 strip had already stamped v2.
+- **Steam's refresh path cleans its rebuilt entries.** These come from `store_cache/steam_metadata.json`, so this cleaning closes the re-injection route that WR-04 named.
 
-- The new CI ratchet step does not run while lint is red, which it is today.
-- The ratchet can be bypassed in at least four ways. One bypass is already in use.
-- `addNewApp` accepts every runner member, but its handler only ever writes a sideload entry.
-- The strict IPC schemas are stricter than the D-12 strip, which covers only part of the data they validate.
-- Settings writes became strict with no strip migration for per-game config files.
+The new defects come from the strip's drop rules rather than from its coverage:
 
-No BLOCKER is proven. On the operator's profile, a counts-only census of Steam metadata and GamesConfig found nothing the strict schemas would reject. The schema-versus-strip gaps are latent: they depend on what is on disk.
+- Inside a union, dropping invalid optionals can change which variant a value is.
+- Required arrays and objects are dropped as a whole when one element or field is bad. In a cache that does not matter, but in user-state settings it means data loss.
+
+No BLOCKER is proven. Each defect needs on-disk data that I could not show exists on a real GameLib profile.
+
+## Gap closure verdicts
+
+### WR-01 (narrowing ratchet masked in CI and pre-push): RESOLVED
+
+- **CI.** `lint.yml:53` now carries `if: ${{ !cancelled() && steps.deps.outcome == 'success' }}`. The `deps` id exists (`lint.yml:24`). This is the same guard as `Backend DI ceilings`.
+- **Pre-push.**
+  - `.husky/pre-push:4` runs the ratchet outside the `&&` chain.
+  - Both exit statuses are captured right after their own command, before anything else can overwrite `$?`.
+  - The two are combined so that a red result from either one fails the push.
+  - The graphify step still runs only when everything is green.
+- **Tests.** `gameInfoNarrowingWiring.test.ts` pins the CI condition, including a near-miss that removes the guard. It also executes the real hook against a stubbed `pnpm` and covers four cases: all green, red DI ceilings, red lint, and a red ratchet alone. That is a behavioural check, not just a text match. The stub's `PATH` leaves out `~/.local/bin`, so graphify cannot run during the test.
+
+### WR-04 (GameInfo caches not schema-clean): RESOLVED, with residual risk (see WR-03 below)
+
+Each of the four sub-points in the original finding is now handled:
+
+| Original sub-point | What fixes it now |
+| --- | --- |
+| Nulls | Removed when the member is optional and rejects `null`. |
+| Array elements | Recursed into. |
+| `steam_metadata` re-injection | Sanitised at `refresh.ts:483`. |
+| Legendary `about.description` | Defaulted to `''` (`legendary/library.ts:588`). |
+
+The residual is that the strip runs once per store version. Of the in-memory regeneration paths, only Steam's refresh re-strips. Required members are never repaired. The `''` default covers `undefined` but not `null`.
+
+### WR-05 (settings/game and settings/global not schema-clean): RESOLVED, with residual risk (see WR-01 and WR-02 below)
+
+`settings-game-v1-v2` and `settings-global-v1-v2` strip against `gameSettingsSchema.partial()` and `appSettingsSchema.partial()`. `currentGameConfigVersion` and `currentGlobalConfigVersion` are both now `'v2'`, and `GameConfigVersion` and `GlobalConfigVersion` admit `'v2'`. The tests show a v1 file carrying `useSteamRuntime` plus a wrong-typed value round-tripping through the strict `writeConfig` schema.
+
+Three things are left:
+
+- The strip's granularity can delete valid user settings (WR-02).
+- Union coercion applies to `lastUsedLaunchOption` (WR-01).
+- The original fix's second half was not done: the install dialog's unawaited `writeConfig` (IN-05).
 
 ## Warnings
 
-### WR-01: The GameInfo narrowing ratchet step is skipped in CI whenever an earlier step fails, which is the case today
+### WR-01: Union handling can silently turn a launch option into a different variant
 
-**File:** `.github/workflows/lint.yml:48-51`, `.husky/pre-push:2`
-**Issue:** The new `GameInfo narrowing ceiling` step has no `if:`, so it gets the default `success()` condition and is skipped as soon as any earlier step fails. The comment on the step just above (`Backend DI ceilings`) records this exact failure: "from a58e3e3e8 a red `Lint code.` hid ceiling drift (quick 261114-2gg)". That step was fixed with `if: ${{ !cancelled() && steps.deps.outcome == 'success' }}`. `pnpm lint` is red today: the 70-13, 70-14 and 70-16 summaries all record the `depotRust/updateEstimate.ts:138` error. So D-15's CI enforcement currently never runs. Pre-push is in the same position: the ratchet is chained after `pnpm lint && … && pnpm backend-di-ceilings`. `deferred-items.md` records that `backend-di-ceilings` fails today too, so the pre-push run never reaches the ratchet either.
-**Fix:**
-```yaml
-      - name: GameInfo narrowing ceiling
-        if: ${{ !cancelled() && steps.deps.outcome == 'success' }}
-        run: pnpm gameinfo-narrowing-ceiling
+**File:** `src/backend/storeMigrations/schemaStrip.ts:84-90` (with `cleanObject` at lines 49-57)
+**Issue:** For an invalid union value, `clean` tries each option in declaration order. Within an option it applies `dropInvalidOptional`. `launchOptionSchema` lists `baseLaunchOption` first, and that arm's `type: z.literal('basic').optional()` is optional. So the base arm:
+
+- deletes the `'dlc'` or `'altExe'` discriminant as an "invalid optional";
+- strips `dlcAppName`, `dlcTitle` and `executable` as undeclared;
+- accepts the result if `name` and `parameters` happen to be present.
+
+The value then wins as a *basic* option, even though the dlc or altExe arm would also have cleaned it successfully. I verified this:
+
 ```
-In pre-push, run the ceiling checks so that each one executes regardless of the others, then combine their exit codes. Do not short-circuit them behind `&&`.
+stripToSchema({type:'dlc', dlcAppName:'a', dlcTitle:'b', name:'N', parameters:''},
+              launchOptionSchema, {dropInvalidOptional:true})
+// -> {"name":"N","parameters":""}
+```
 
-### WR-02: The ratchet does not count several ways to narrow, and one is already used to dodge it
+`settings-game-v1-v2` runs this on every persisted `lastUsedLaunchOption`. A remembered DLC or alternate-exe launch would quietly become "launch the base game with these parameters". Nothing is logged, and the original survives only in the backup. The result also depends on the arm order in `settingsSchema.ts`, which nobody would expect to be load-bearing.
+**Fix:** Never let an arm's own discriminant be dropped. Before any lossy pass, prefer the arm whose literal members already match the value:
 
-**File:** `meta/gameInfoNarrowingCeiling.cjs:31-42,135-138`; `src/backend/testUtils/gameInfoFixtures.ts:5-41`; `src/common/storeCapabilities.ts:157-160`
-**Issue:** `countNarrowing` counts only `isStoreGame`/`asStoreGame` calls and the five `*GameInfo` identifiers. Each of these narrows a GameInfo and is not counted:
-- `GameInfoByRunner['steam']`. `gameInfoFixtures.ts` uses it for exactly this reason: its own line-5 comment says so, and the 70-13 summary (deviation 1) records it as the way to keep the count at 0.
-- `Extract<GameInfo, { runner: 'steam' }>`.
-- `isStore(game, 'steam')`. Its overload `subject is T & { runner: K }` narrows the `GameInfo` union to the member type. SideloadDialog reads `browserUrl` after `isStore(info, 'sideload')` and compiles. D-03 says "Don't add a parallel `runner === '…'` escape hatch", but `isStore` already is one, and the ratchet ignores it.
-- `src/common/**`. It is shared code by definition, and `SCAN_DIRS` leaves it out.
-
-So shared code can read store-only fields without the shrink-only baseline ever changing.
-**Fix:** Count `GameInfoByRunner` (indexed access), `Extract<…GameInfo…>`, and `isStore(` calls whose first argument has a GameInfo type. A syntactic approximation is fine: count every `isStore(` call whose second argument is a string literal, in files that also mention `GameInfo`. Add `src/common` to `SCAN_DIRS`, exempting `src/common/types/**` and `gameInfoNarrowing.ts`. Then rename the fixture builders' return types so the dodge is visible, or give `src/backend/testUtils` its own baseline entry with a reason.
-
-### WR-03: The `addNewApp` schema accepts any runner, but the handler always writes a sideload entry
-
-**File:** `src/common/types/ipc/gameDetails.ts:32`; `src/backend/gamedetails/dispatch.ts:355-357`; `src/backend/storeManagers/sideload/library.ts:25-38`
-**Issue:** `addNewApp: z.tuple([gameInfoSchema])` accepts all five members. `dispatch.addNewApp` always routes to `managers.library['sideload'].addNewApp`. That method builds `{ runner: 'sideload', … }` and now reads `browserUrl`/`customUserAgent`/`launchFullScreen` through `asStoreGame(gameInfo, 'sideload') ?? {}`. A payload with `runner: 'gog'` (or any other member) therefore passes the strict IPC check and is written into `sideload_apps/library` as a sideload game. Its browser fields are silently dropped, where the pre-phase code read them regardless of runner. The channel's only sink is sideload, so its strict schema should accept only the sideload member. As written it is strictness in name only.
-**Fix:**
 ```ts
-import { sideloadGameInfoSchema, installPlatform } from './gameInfoSchema'
-// …
-addNewApp: z.tuple([sideloadGameInfoSchema]),
+if (inner instanceof z.ZodUnion) {
+  if (accepts(inner, value)) return value
+  const opts = inner.options as z.ZodType[]
+  // pass 1: strip undeclared keys only (no dropInvalidOptional)
+  for (const o of opts) {
+    const c = clean(value, o, { dropInvalidOptional: false })
+    if (accepts(o, c)) return c
+  }
+  // pass 2: lossy, but only on arms whose literal members the value already satisfies
+  for (const o of opts) {
+    if (!literalMembersMatch(unwrap(o), value)) continue
+    const c = clean(value, o, options)
+    if (accepts(o, c)) return c
+  }
+  return value
+}
 ```
-In `SideloadLibraryManager.addNewApp`, type the parameter as `SideloadGameInfo` and destructure the three fields directly, dropping the `asStoreGame(...) ?? {}`.
 
-### WR-04: The strict GameInfo schema rejects data the D-12 strip never cleans, with no self-heal
+Add a regression test for the dlc and altExe cases above.
 
-**File:** `src/backend/storeMigrations/gameInfoLibraries.ts:40-53`; `src/common/types/ipc/gameInfoSchema.ts:94-114,165-169`; `src/backend/storeManagers/steam/library/refresh.ts:450-459`
-**Issue:** D-12's reasoning is "strip at load so the IPC schema can be strict". The strip does less than the schema checks:
-1. **Nulls.** The strip removes only undeclared keys. Every declared optional key in the schema is `.optional()`, which rejects `null`. The one exception is `legendary.save_path`, which was widened after a census of one profile. Any other `null` written by a third-party payload or an older build, such as `art_logo`, `developer`, `description` or `extra.releaseDate`, survives the strip. The game then fails `install`/`updateGame` with `IPC_INVALID_ARGS`.
-2. **Array elements.** `treeOf` deliberately never recurses into arrays. But `extra.reqs[]` and `gog_save_location[]` are `z.strictObject` elements in the schema, so an extra key inside an element survives the strip and is rejected at IPC.
-3. **Sources outside D-12.** Every Steam refresh rebuilds the library entry with `extra: { reqs: [], ...(cachedMeta?.extra ?? {}), … }` from `store_cache/steam_metadata.json`, a store that has no strip chain. Any undeclared or null `extra` key there is re-injected into `steam_library` on every refresh, which undoes the migration. The `about` schema also requires both `description` and `shortDescription`. Legendary's `about.description` comes straight from Epic metadata with no default (`library.ts:587`), so an Epic title with no description loses the key in JSON and fails install.
+### WR-02: A whole user setting is deleted when one leaf inside it is bad
 
-None of these shows up on the operator's profile: I ran a counts-only census of `steam_metadata.json`, and 70-13 censused the library files. But the "unknown key is a real bug" premise only holds if the strip and the schema agree. When they disagree, the user can no longer install or update that game, and nothing recovers it.
-**Fix:** Derive the strip from the same schema as the check, and make it cover what the schema checks:
-- In `treeOf`, recurse into `z.ZodArray` whose element is a `ZodObject`, and strip each element.
-- Drop `null` for any key whose schema rejects `null` (`!schema.safeParse(null).success`).
-- Add a strip chain for `store_cache/steam_metadata` (its `extra`), or sanitize `cachedMeta.extra` through the Steam extra key set at the `refresh.ts` spread.
-- Default `description` to `''` in `legendary/library.ts`, as `shortDescription` already is.
+**File:** `src/backend/storeMigrations/schemaStrip.ts:54-56,71-74`; `src/backend/storeMigrations/settingsGame.ts:28-41`; `src/backend/storeMigrations/settingsGlobal.ts:49-62`
+**Issue:** The strip never removes array elements or required members. A bad leaf therefore makes the enclosing required container invalid. `.partial()` turns every top-level setting into an optional, and `dropInvalidOptional` then removes the entire setting. I verified two cases:
 
-### WR-05: Settings IPC is strict, but no migration cleans the per-game config files the renderer round-trips through it
+- `enviromentOptions: [{key:'A',value:'1'}, {key:'B',value:null}]` gives `{}`. Every environment variable for that game is deleted, not just the bad one. `wrapperOptions`, `gogSaves`, `customWinePaths` and `dismissedSignInNotices` behave the same way: one out-of-enum store in `dismissedSignInNotices` brings back every dismissed notice.
+- A `gamescope` object without `additionalOptions` gives `{}`. The header comment at `settingsGame.ts:9-11` names this "older-build `gamescope`" as an expected input. The runtime already tolerated it, since `gamescopeCommand.ts:68` uses `settings.additionalOptions ?? ''`. Yet the migration discards every gamescope field (upscaling, limiter, resolution). The global strip can do the same, and `getFactoryDefaults()` has no `gamescope` to fall back on.
 
-**File:** `src/common/types/ipc/settings.ts:23,73-75`; `src/common/types/ipc/wineTools.ts:33-36`; `src/backend/game_config.ts:204-238`; `src/backend/storeMigrations/settingsGame.ts:10-12`
-**Issue:** `writeConfig` now takes `appSettingsSchema.partial()`, which is strict. The renderer callers send the whole persisted per-game object back: DownloadDialog `:332/:345`, ThirdPartyDialog `:85/:98`, SideloadDialog `:237/:279` and ConsoleMode InstallOverlay `:332` all do `{ ...await requestGameSettings(appName), … }`. `GameConfigV0.readSettings` returns `{ ...defaults, ...settings[appName] }`, which passes on every key in the file, and `flush` is always explicit. So any key ever written to a GamesConfig file comes straight back. The settings chain is identity-only, so nothing removes keys that are no longer declared. One example: `useSteamRuntime` was removed from `GameSettings` in `56b1edc46` (2026-08-10) "with no settings migration". A Linux user who toggled it before then still has it in that game's file. For that game:
-- DownloadDialog's `await writeConfig(...)` (engine-override branch) throws `IPC_INVALID_ARGS` after `backdropClick()`, and `install()` never runs.
-- The unawaited branch is an unhandled rejection: the chosen `winePrefix`/`wineVersion`/`wineCrossoverBottle` is silently not saved and the install goes ahead without it.
-- `runWineCommand`'s `gameSettings` is rejected in the same way.
+These are user-state files, not regenerable caches. "The default applies" (`settingsGame.ts:14`) is not a recovery here: the user's environment variables and wrappers have no default. The 0600 backup is invisible to the user and nothing is logged. The 70-21 and 70-22 trade-off notes accept dropping *an invalid value*. They do not accept dropping its valid siblings.
+**Fix:** For settings, make the strip element- and leaf-granular, and repair known legacy shapes before validating:
 
-On the operator's macOS profile, 0 of 53 GamesConfig files carry an undeclared key, so the 70-16 gate could not have hit this.
-**Fix:** Add a `settings/game` v1→v2 strip chain derived from `gameSettingsShape` (and `settings/global` from `appSettingsShape`), following the D-12 pattern, so a strict schema has a clean store behind it. Alternatively, have `readSettings` drop keys outside `gameSettingsShape` before it returns. Separately, await and handle the `writeConfig` calls in the install dialogs so a rejection is visible.
+- add a `dropInvalidElements` option and use it in the settings chains, so an invalid array element is removed and the rest are kept;
+- fill `gamescope.additionalOptions ??= ''` (and any other known additive fields) before the strip;
+- log, without values, each top-level key the migration removed, so a lost setting can be traced to its backup.
 
-### WR-06: Casts and a loose arm weaken the D-11 settings schemas
+### WR-03: Only the Steam regeneration path keeps GameInfo clean; nothing reports an entry that is still invalid
 
-**File:** `src/common/types/ipc/wineTools.ts:33-36`; `src/common/types/ipc/settingsSchema.ts:24-32`
+**File:** `src/backend/storeManagers/steam/library/refresh.ts:480-487`; `src/backend/storeManagers/legendary/library.ts:588`; `src/backend/storeMigrations/gameInfoLibraries.ts:79-85`
 **Issue:**
-- `gameSettingsSchema.partial() as unknown as z.ZodType<GameSettings, GameSettings>` tells the handler every key is present, but the validated value is a partial. A missing `wineVersion`/`winePrefix` reaches the handler typed as defined and fails as a `TypeError` deep in the Wine runner, not as `IPC_INVALID_ARGS`. This is the "cast hiding a type error" pattern that D-09 removed from `install.ts`.
-- `noWineInstallation` is `z.looseObject({ bin: z.literal('').optional(), name?, type? })`. It matches any object without a non-empty `bin` and imposes no bounds or types on any other key. `{ wineserver: <any>, lib: <any>, lib32: <any>, … }` passes `writeConfig`/`setSetting('wineVersion')` even though the first arm bounds and types exactly those keys. That makes it the loosest object in the "fully strict" settings surface.
+
+1. **The strip runs once per store version.** After v3 is stamped, the GOG, Legendary, Nile and Sideload in-memory entries are rebuilt by their producers on every refresh, and nothing strips them. The renderer then sends those entries to the strict `install`/`updateGame` schemas. Their producers are typed object literals, which makes undeclared keys unlikely. But nulls and array-element shapes are not compile-checked.
+2. **The Legendary fix covers only part of the case.** `description = ''` defaults `undefined` only. An Epic payload with `description: null` still produces `about.description: null`, which `aboutSchema` rejects. The Steam equivalent uses `??` (`gameMetadata.ts:119`), which also covers null.
+3. **Required members are never repaired, and nothing says so.** `stripToSchema(...) as SteamGameInfo` casts without validating. For example, `title: app.name` can be `undefined` when the CM omits a name. An entry like that is still pushed and persisted, then fails `install` with `IPC_INVALID_ARGS`, and no log points to the cause.
+
 **Fix:**
-- Type `gameSettingsArg` honestly as `z.ZodType<Partial<GameSettings>>` and make the handler fill in defaults, by merging with `gameConfigs.get(appName).getSettings()`.
-- Declare `lib`/`lib32`/`wineserver` on the no-wine arm with the same `z.string().max(4096).nullish()` bounds as `wineInstallationArg()`, and make it strict. Its only purpose is to admit the two known factory defaults (`{ bin: '', name, type }` and `{}`).
 
-### WR-07: `SteamGame.getGameInfo()` now returns an empty object typed as a Steam member
-
-**File:** `src/backend/storeManagers/steam/games.ts:144,174`
-**Issue:** The double-miss stub changed from `{} as GameInfo` to `{} as SteamGameInfo`. The type now claims `runner: 'steam'`, `app_name: string` and so on, and the union no longer forces callers to narrow. Code that branches on `getGameInfo().runner` (for example `deps.managers.library[gi.runner]`) or forwards the object to `install`/`updateGame` type-checks but gets `undefined` at runtime. At least four sites already carry comments about this trap (`protocol.ts:444`, `utils.ts:222`, `tools/index.ts:1674`, `uninstaller.ts:132`). Narrowing the stub's type makes the lie more specific: `isStoreGame(gi, 'steam')` and `gi.runner === 'steam'` now disagree on the same value.
-**Fix:** Return `SteamGameInfo | undefined`, which `SteamLibraryManager.getGameInfo` already does, and handle the miss at the callers. As a minimum interim step, return `Partial<SteamGameInfo>` so the compiler surfaces each reader.
+- Use `description ?? ''` in Legendary. One way: `const description = metadata.description ?? ''`, outside the destructure default.
+- After each `stripToSchema` call, run `schema.safeParse(clean)`. On failure, log the issue paths with `logWarning` (paths only, no values) so a still-invalid entry is visible.
+- Either apply the same strip at the GOG, Legendary and Nile `library.set` sites, or record in the phase notes that their producers are trusted. If you trust them, add a parity test that runs each producer's output through its member schema.
 
 ## Info
 
-### IN-01: The baseline reason for GamePage describes a read the file does not make
+### IN-01: The `schemaStrip.ts` header claims more than the code delivers
 
-**File:** `meta/gameInfoNarrowingBaseline.json` (`src/frontend/screens/Game/GamePage/index.tsx` reason)
-**Issue:** The reason says "Legendary-only fields (EA/Ubisoft managed, namespace)", but `GamePage/index.tsx` makes exactly one narrowing, for `isEAManaged`/`isUbisoftManaged` (line 194). It does not read `namespace`. A ratchet reason that does not match the code undermines the "short reviewed allowlist" premise.
-**Fix:** Change the reason to "Legendary-only isEAManaged/isUbisoftManaged for the not-supported third-party check".
+**File:** `src/backend/storeMigrations/schemaStrip.ts:1-17,29-39,63-92`
+**Issue:** The header says the strip and the schema "can never disagree". `unwrap` handles only Optional, Nullable and Default. `clean` handles only Object, Array, Record and Union. Any member later written with `.pipe`/`.transform`, `.catch`, `.prefault`, `z.lazy`, `z.intersection`/`.and`, `z.tuple` or `.readonly()` passes through untouched, so the strip and the schema silently diverge again. None of these is used today.
+**Fix:** In `clean`, throw in tests (or return and count) on an unrecognised schema class that wraps structure. Alternatively, add a drift test that walks `gameInfoSchema`, `gameSettingsSchema` and `appSettingsSchema` and asserts every node is a handled class or a leaf.
 
-### IN-02: A GOG launch option can be rejected by the strict `lastUsedLaunchOption` schema
+### IN-02: Every v0 or v1 per-game config now gets a rewrite and a backup on first access, even when nothing changes
 
-**File:** `src/backend/storeManagers/gog/library.ts:1665-1668`; `src/common/types/ipc/settingsSchema.ts:33-37`
-**Issue:** `name: task?.name || infoFile.name` can be `undefined` when neither is present. The strict base arm needs `name: string`, so `setSetting({ key: 'lastUsedLaunchOption', value })` from `helpers/library.ts:372/453` would be dropped silently, because a send channel drops a rejected payload without reporting it. This is low-likelihood, but the choice would not be remembered and nothing would say so.
-**Fix:** Write `name: task?.name || infoFile.name || ''`.
+**File:** `src/backend/storeMigrations/settingsGame.ts:27-41`; `src/backend/engine/__tests__/engineConfig.test.ts:211-214`
+**Issue:**
 
-### IN-03: GameCard `isInstallable` now treats `null` differently
+- The non-identity v1→v2 step rewrites, re-stamps and backs up every GamesConfig file on its first `GameConfigs.get` or `readStoredGameConfig` call, including files the strip leaves byte-identical. On the operator's 53-file profile that means 53 backups.
+- `readStoredGameConfig`, a read path, now writes. The test `readEngineForGame … never writes` was kept green by stamping its fixtures `version: 'v2'`, not by covering the migrating read.
+- After a rollback to a pre-v2 build, every touched settings file is "newer" and therefore read-only.
 
-**File:** `src/frontend/screens/Library/components/GameCard/index.tsx:170`
-**Issue:** The old `installable === undefined || installable` evaluated to falsy for `null`. The new `asStoreGame(...)?.installable ?? true` makes it `true`. No writer stores `null` today, since `refresh.ts` always writes `true`, so this has no current effect. It is still a semantic change in a "no behaviour change" phase.
-**Fix:** None needed. Optionally use `!== false` to keep the intent explicit.
+**Fix:** Have the engine skip the rewrite and the backup when a non-identity step's output deep-equals its input. Keep the version bump implicit until the next real write. Add an `engineConfig` test for a v1 fixture that asserts exactly one migration write and none after it.
+
+### IN-03: The `store/config.json` settings mirror keeps the retired and invalid keys that the global strip removed
+
+**File:** `src/backend/settingsMirrorResync.ts:16-21`
+**Issue:** `mergeSettingsMirror` keeps keys that only the mirror holds, by design. After `settings-global-v1-v2`, `config.json` no longer has `useSteamRuntime` or a dropped invalid value, but the mirror keeps them forever. Today the renderer only reads named fields from the mirror (`defaultInstallPath`, `dismissedSignInNotices`, `hideChangelogsOnStartup`), so nothing strict receives it. Even so, the claim that the store is clean does not cover the mirror.
+**Fix:** In the resync, drop mirror keys that are not in `appSettingsShape` once. Alternatively, record the mirror as an explicit non-strict surface.
+
+### IN-04: The function name and comment say "keys", but the function now drops values too
+
+**File:** `src/backend/storeMigrations/gameInfoLibraries.ts:44-59`; `src/backend/storeMigrations/settingsGlobal.ts:12-13`
+**Issue:** `stripUndeclaredGameInfoKeys` now also removes nulls and invalid optional values. The `settingsGlobal` comment says "The factory default then applies for each removed value". That is false for `winePrefix`: `config.ts:261-268` overwrites it after the spread with `defaultSettings?.winePrefix?.replace(...)`, so a removed `winePrefix` becomes `undefined` rather than `sharedWinePrefix`. The per-game path does fall back (`game_config.ts:220`).
+**Fix:** Rename the function to `cleanGameInfoItem`. Correct the comment, or make `getSettings` fall back with `winePrefix ?? factory.winePrefix`.
+
+### IN-05: The second half of WR-05 was not done: an install-dialog `writeConfig` is still unawaited
+
+**File:** `src/frontend/screens/Library/components/InstallModal/DownloadDialog/index.tsx:345-353` (outside this review's file list; noted for traceability)
+**Issue:** The `wineVersion` branch still calls `writeConfig({...})` without `await` or `.catch`. With the stores now clean this is far less likely to reject. But if it does reject (see WR-01 and WR-02 for remaining ways strict-invalid data can exist), the result is still an unhandled rejection, and the install proceeds without the chosen prefix or Wine version.
+**Fix:** Write `await writeConfig(...)` and surface the error, as the `engineOverride` branch two lines above already does.
+
+## Prior findings outside the gap scope (still open, not counted above)
+
+Plans 70-17 to 70-22 did not target these, and I confirmed each is unchanged at HEAD:
+
+| ID | Status | Evidence |
+| --- | --- | --- |
+| prior WR-02 (ratchet blind spots) | open | `meta/gameInfoNarrowingCeiling.cjs:29` still has `SCAN_DIRS = ['src/frontend', 'src/backend']`, with no `GameInfoByRunner`/`isStore` counting |
+| prior WR-03 (`addNewApp` accepts any runner) | open | `src/common/types/ipc/gameDetails.ts:32` still uses `gameInfoSchema` |
+| prior WR-06 (settings casts and the loose no-wine arm) | open | not touched |
+| prior WR-07 (`{} as SteamGameInfo`) | open | `src/backend/storeManagers/steam/games.ts:174` |
+| prior IN-01 / IN-02 / IN-03 | open | `gog/library.ts:1666` still has `task?.name \|\| infoFile.name` |
 
 ---
 
-_Reviewed: 2026-11-14_
+_Reviewed: 2026-11-14T06:09:10Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
