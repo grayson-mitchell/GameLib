@@ -1,78 +1,76 @@
 ---
 phase: 70-split-gameinfo-into-shared-and-per-store-shapes
-verified: 2026-11-14T00:00:00Z
-status: gaps_found
-score: 6/6 must-haves verified (ARCH-03.1 to ARCH-03.6); 3 operator-promoted gaps (WR-01, WR-04, WR-05)
+verified: 2026-11-14T12:00:00Z
+status: passed
+score: 9/9 must-haves verified (ARCH-03.1 to ARCH-03.6 plus closed gaps G1, G2, G3)
 overrides_applied: 0
-gaps:
-  - id: G1
-    source: 70-REVIEW.md WR-01
-    truth: "The D-15 narrowing ratchet is enforced in CI and pre-push even when an earlier lint/ceiling step is red"
-    status: failed
-    reason: "lint.yml ratchet step lacks `if: ${{ !cancelled() && steps.deps.outcome == 'success' }}`, so it is skipped whenever `pnpm lint` is red; .husky/pre-push chains it after backend-di-ceilings, which short-circuits it the same way"
-    fix: "Add the !cancelled()/deps-success guard (same as the Backend DI ceilings step, quick 261114-2gg) and make the pre-push line run the ratchet independently of earlier ceiling failures; extend gameInfoNarrowingWiring.test.ts to pin both"
-  - id: G2
-    source: 70-REVIEW.md WR-04
-    truth: "Every GameInfo shape a real profile can persist or regenerate passes the strict per-runner IPC schemas after the D-12 strip"
-    status: failed
-    reason: "Strict gameInfoSchema rejects shapes the strip never cleans: null on optional keys (only legendary save_path allowed), undeclared keys inside array elements (reqs[], gog_save_location[]), Steam `extra` rebuilt on every refresh from steam_metadata.json (no strip chain), legendary about.description without default -> IPC_INVALID_ARGS on install/update with no recovery"
-    fix: "Derive the strip from the schemas (recurse into arrays/nested objects, null-to-undefined where the schema is optional), sanitise steam_metadata-derived `extra` at build time or add a strip chain for it, and add regression fixtures for each shape"
-  - id: G3
-    source: 70-REVIEW.md WR-05
-    truth: "Per-game and global settings already on disk pass the strict writeConfig/setSetting schemas"
-    status: failed
-    reason: "Install dialogs send the whole persisted per-game config back through writeConfig; no settings strip chain exists, so removed keys (e.g. useSteamRuntime, removed in 56b1edc46 without migration) are rejected -> one dialog branch aborts the install, the other silently drops the user's Wine settings"
-    fix: "Add settings/game and settings/global strip chains (derived from the AppSettings/GameSettings schemas) registered in the Phase 68 migration engine, plus fixtures with retired keys"
+re_verification:
+  previous_status: gaps_found
+  previous_score: 6/6 truths, 3 promoted gaps open
+  gaps_closed:
+    - "G1: D-15 narrowing ratchet enforced in CI and pre-push even when an earlier step is red (70-17)"
+    - "G2: GameInfo shapes a real profile can persist or regenerate pass the strict IPC schemas after the strip (70-18, 70-19, 70-20)"
+    - "G3: per-game and global settings on disk pass strict writeConfig/setSetting schemas (70-18, 70-21, 70-22)"
+  gaps_remaining: []
+  regressions: []
 ---
 
-# Phase 70: Split GameInfo into shared and per-store shapes - Verification Report
+# Phase 70: Split GameInfo into shared and per-store shapes - Re-verification Report
 
-**Phase Goal:** `GameInfo` carries only what every store shares; store-specific data lives in per-store shapes (split, readers migrated under a shrink-only ratchet, store types moved out of `common/types.ts`, Phase 67 passthroughs closed with strict schemas and a strip at load).
-**Status:** passed (with warnings). **ARCH-03 is satisfied; the [x] / Complete stands.**
-**Re-verification:** No
+**Phase Goal:** `GameInfo` carries only what every store shares; store-specific data lives in per-store shapes (split, readers migrated under a shrink-only ratchet, store types moved out of `common/types.ts`, persisted caches migrated through Phase 68 migrations, Phase 67 passthroughs closed with strict schemas).
+**Status:** passed. ARCH-03 remains satisfied.
+**Re-verification:** Yes, after gap-closure plans 70-17 to 70-22.
 
-## Observable Truths
+## Previously failed gaps
 
-| # | Truth (ARCH-03.x) | Status | Evidence |
+| Gap | Status | Evidence (checked in code, not SUMMARY) |
+|---|---|---|
+| G1 ratchet masked by red earlier step | CLOSED | `.github/workflows/lint.yml:52-54` step has `if: ${{ !cancelled() && steps.deps.outcome == 'success' }}`. `.husky/pre-push` runs `pnpm gameinfo-narrowing-ceiling` on its own line outside the `&&` chain, captures `chain_status` and `narrowing_status`, combines into `checks_status`. `gameInfoNarrowingWiring.test.ts` (including a behavioural run of the real hook with a stub pnpm) passes. `node meta/gameInfoNarrowingCeiling.cjs` -> PASS (787 files, 18 allowlisted). |
+| G2 strip weaker than strict GameInfo schemas | CLOSED | `storeMigrations/schemaStrip.ts` (`stripToSchema`) derives the strip from the zod schema: undeclared keys at every depth including array elements, null on optional, invalid optionals dropped. Imported by `gameInfoLibraries.ts` (seven chains, v2->v3), and by `steam/library/refresh.ts` (sanitises the `steam_metadata`-derived `extra` at rebuild). Legendary `about.description` defaulted in `legendary/library.ts`. Seven WR-04 fixtures and regression tests pass. |
+| G3 settings strips absent | CLOSED | `settingsGame.ts` and `settingsGlobal.ts` import `stripToSchema` against `gameSettingsSchema.partial()` / `appSettingsSchema.partial()`. `constants/others.ts`: `currentGameConfigVersion = 'v2'`, `currentGlobalConfigVersion = 'v2'`. Retired-key (`useSteamRuntime`) and invalid-value fixtures tested, including byte-identical backup assertions. |
+
+## Observable Truths (regression check on the original six, plus gaps)
+
+| # | Truth | Status | Evidence |
 |---|---|---|---|
-| 1 | .1 Shared core plus five members, discriminated union, narrowing helper | VERIFIED | `common/types.ts:223` `GameInfoCore`, `:278` `GameInfoByRunner`, `:291` `GameInfo` is a union of Steam/Gog/Legendary/Nile/Sideload. `common/gameInfoNarrowing.ts` has `isStoreGame`/`asStoreGame`. `SteamGameInfo` (`common/types/steam.ts:341`) holds `is_delisted`, `steamPlatformsCaptured`, `installable`. `metacritic_score`, `is_windows_native` and the capability flags stay in core by documented decision D-07 / CONTEXT lines 50-59 (the roadmap's "Steam-only Metacritic" wording was overridden by the operator in discuss-phase). `gameInfoNarrowing.test.ts` passes (drift guard included). |
-| 2 | .2 Readers migrated; shrink-only ratchet wired | VERIFIED | `node meta/gameInfoNarrowingCeiling.cjs` -> PASS (786 files, 18 allowlisted, each with a reason). Wired in `package.json`, `.husky/pre-push`, `lint.yml` (see WR-01 for the CI-skip caveat). Wiring and ceiling tests pass. |
-| 3 | .3 Store-specific types moved out of `common/types.ts` | VERIFIED | `common/types.ts` is 1254 lines (down from 1336); `typesHomes.test.ts` passes. |
-| 4 | .4 All passthroughs closed, strict schemas, helper deleted | VERIFIED | The only hits for `phase70Passthrough` are the census test that forbids it, a containment-test filename, and a stale JSDoc mention in `schemaTypes.ts:10` (INFO). Census test passes. Only loose objects: the named `dlcList` blob, `wineVersionInfo`, `noWineInstallation` (WR-06). `ipcSchemas/*` and `settingsParity` tests pass. |
-| 5 | .5 Strip migration on all library caches and the download queue | VERIFIED | `storeMigrations/gameInfoLibraries.ts` wired through `storeMigrations/index.ts`. `gameInfoLibraries.test.ts` and `gameInfoLibrariesEngine.test.ts` pass. Live gate: all 7 stores at schemaVersion 2, counts unchanged. |
-| 6 | .6 Live gate on upgraded profile | VERIFIED | 70-UAT.md: 13/14 pass. Item 3 (Steam Friends re-login after go-offline wrap) is outside the phase surface (no `(70-NN)` commit touched the wrap) and is filed as a todo. Evidence limitation noted: the gate-window sidecar log rotated, so the IPC_INVALID_ARGS grep is partial, but the install, addNewApp and settings writes were observed working. |
+| 1 | ARCH-03.1 shared core, five members, union, narrowing helper | VERIFIED | Unchanged since previous verification; `src/common/__tests__` passes. |
+| 2 | ARCH-03.2 readers migrated, shrink-only ratchet wired | VERIFIED | Ratchet PASS (787 files, 18 allowlisted); now also unmasked (G1). |
+| 3 | ARCH-03.3 store types out of `common/types.ts` | VERIFIED | `typesHomes` test passes. |
+| 4 | ARCH-03.4 passthroughs closed, strict schemas | VERIFIED | Census and ipcSchemas tests pass; strip now schema-derived so strict schemas no longer outrun the strip. |
+| 5 | ARCH-03.5 persisted caches migrated via Phase 68 versioned migrations | VERIFIED | gameInfoLibraries chains end at v3; settings/game and settings/global chains at v2; storeMigrations, storeVersioning, settingsVersioning, storeReadOnly suites pass. |
+| 6 | ARCH-03.6 live gate on upgraded profile | VERIFIED | 70-UAT.md 13/14 pass; item 3 (Steam Friends re-login after go-offline wrap) is outside phase 70's surface and filed as a todo. |
+| 7 | G1 closed | VERIFIED | See above. |
+| 8 | G2 closed | VERIFIED | See above. |
+| 9 | G3 closed | VERIFIED | See above. |
 
-Behavioural check: `npx jest` over `src/common/__tests__`, `ipcSchemas`, `storeMigrations`, `storeVersioning`, census and ratchet wiring: 50 suites / 1992 tests, all pass.
+**Behavioural check:** jest over `meta/__tests__/gameInfoNarrowingWiring`, `storeMigrations`, `storeVersioning`, `settingsVersioning`, `storeReadOnly`, `src/common/__tests__`, steam `library.refresh`, and the legendary dir: 40 suites, 796 of 797 tests pass. The one failure is `epicOfflineMode.test.ts` (signInProbe), a pre-existing failure unrelated to phase 70. `tsc --noEmit` clean per orchestrator.
 
 ## Requirements Coverage
 
-| Requirement | Status | Evidence |
+| Requirement | Plans | Status |
 |---|---|---|
-| ARCH-03 (.1 to .6) | SATISFIED | Truths 1-6 above. REQUIREMENTS.md line 35 `[x]` and the traceability row "Complete" are correct as of now, although they were ticked prematurely by 70-01. No orphaned requirement IDs for Phase 70. |
+| ARCH-03 (.1 to .6) | 70-01..70-22 (frontmatter declares ARCH-03 and ARCH-03.1 to .6 across plans; 17-22 declare ARCH-03, .2, .4, .5) | SATISFIED. REQUIREMENTS.md line 35 `[x]`, traceability row "Complete". No orphaned IDs for Phase 70. |
 
-## Review warnings: gap or follow-up?
+## Review warnings (70-REVIEW.md, 0 critical, 3 warnings) - weighed
 
-None of the warnings falsifies a must-have truth, so none is a BLOCKER. All are WARNINGs and should be tracked as follow-ups. WR-01 is a one-line fix and should be landed soon.
+None blocks the goal; no must-have truth is falsified. Reviewer verdicts: WR-01 resolved, WR-04 and WR-05 resolved with residual. They are carried as follow-ups (WARNING, not BLOCKER):
 
-- **WR-01 (confirmed in `lint.yml:50-51`): follow-up, fix promptly.** The step has no `if: ${{ !cancelled() && steps.deps.outcome == 'success' }}`. It is skipped whenever lint is red, and lint is red today from another session's `updateEstimate.ts:138`. The pre-push chain also has `backend-di-ceilings` in front of it. D-15's "wired into lint.yml and pre-push" holds, and the ratchet itself passes locally. The "enforced in CI at all times" intent does not hold while an earlier step is red. This is the same trap that was fixed for Backend DI ceilings (quick 261114-2gg), so it should be fixed the same way. It does not stop the goal being achieved, because the red state comes from another session and the tool is correct.
-- **WR-02: follow-up.** The ratchet counts only `isStoreGame`/`asStoreGame` and the member names. `GameInfoByRunner['x']`, `Extract<>`, `isStore` and `src/common` are not counted. D-15 asked for a shrink-only count of direct reads outside store homes. The baseline is real and reviewed, so the reader migration is verified, but the ratchet can be sidestepped. Harden it later. One bypass is already used in the `testUtils` fixtures.
-- **WR-03: follow-up.** `addNewApp` validates the full union but writes only sideload. This is over-acceptance, not a rejection regression. Tighten it to the sideload member schema.
-- **WR-04 / WR-05: follow-up, highest priority.** These are latent regressions: the strict schemas are stricter than the strip. Not present on the operator's profile (census showed 0 offenders), so the live gate could not hit them. But `useSteamRuntime` (removed from `GameSettings` in 56b1edc46) is a plausible real case on Linux. It would make the install dialog's `writeConfig` throw `IPC_INVALID_ARGS` and block the install, with no recovery. Nulls, array-element extra keys and `steam_metadata.json` `extra` re-injection are similar. D-12 and the plan scope did not require settings strip chains, so this is a plan gap rather than a failed truth. Recommend fixing before a release to users with older profiles.
-- **WR-06, WR-07, IN-01, IN-02, and the stale `schemaTypes.ts:10` JSDoc:** follow-ups (type honesty, loose no-wine arm, `{} as SteamGameInfo` stub, a baseline reason, an undefined GOG launch-option name).
+- **Review WR-01 (union coercion):** a persisted `lastUsedLaunchOption` of type dlc/altExe can be coerced to a basic launch option because the base arm's optional `type` is dropped. Silent, but needs a specific on-disk value and loses only a remembered launch choice; the original is in the engine backup. Fix: prefer arms whose literal members already match; add dlc/altExe regression tests.
+- **Review WR-02 (whole-setting deletion on one bad leaf):** e.g. one null in `enviromentOptions` or a `gamescope` object lacking `additionalOptions` drops the whole setting at migration. Real data-loss risk for user-state settings, recoverable only from the 0600 backup. This does not falsify "settings on disk pass the strict schemas" (they do), but it is the highest-priority follow-up. Fix: element-granular drop, pre-repair legacy gamescope, log removed keys. Recommend before release to users with older profiles.
+- **Review WR-03 (only Steam re-strips on regeneration; Legendary `description: null` not covered; no validation log):** GOG/Legendary/Nile producers are typed and trusted; residual only.
+- Info items (strip header over-claims, rewrite+backup of every per-game file on first access) are follow-ups. Earlier follow-ups WR-02/03/06/07, IN-01/02 from the first verification remain filed in the pending todo.
 
-## Facts attributed
+## Anti-patterns
 
-- The 8 failing `test:ci` suites, lint error `updateEstimate.ts:138` and `backend-di-ceilings` failure are outside this phase's `(70-NN)` commits per the orchestrator's attribution. I did not re-trace them. The 50 suites relevant to this phase pass.
+None blocking in phase-70 files. Unrelated working-tree changes (`src/frontend/screens/Game/GamePage/**`) not attributed to this phase. Failing suites listed by orchestrator are outside phase-70 files.
 
 ## Human verification
 
-None outstanding for the phase (D-16 already run by the operator).
+None outstanding. The live gate (D-16) was run; the post-gap-closure migrations (v3 GameInfo, settings v2) are covered by fixture-based tests with backup assertions rather than a repeat live gate. Optional: an operator may sanity-check one upgraded profile for the first-access backup churn noted in review IN-02.
 
 ## Gaps Summary
 
-**Operator decision 2026-11-14:** WR-01, WR-04 and WR-05 are promoted to gaps (G1-G3 in frontmatter) and must be closed inside Phase 70 via `/gsd-plan-phase 70 --gaps`. The verifier's original reading was "no blocking gaps, goal achieved" (all 6 ARCH-03.x truths hold); the promotion is the operator's call that latent install-blocking regressions should not ship as follow-ups. WR-02/03/06/07, IN-01/02 and the stale `schemaTypes.ts:10` JSDoc stay follow-ups, filed as a pending todo.
-
-Original verifier summary: Suggested follow-up plan: (a) WR-01 CI/pre-push fix; (b) WR-04/05 strip alignment (derive the strip from the schemas, add `settings/game` and `settings/global` strip chains and a `steam_metadata` `extra` sanitiser); (c) WR-02/03/06/07 hardening.
+G1, G2, G3 are closed in code and tests. ARCH-03.1 to ARCH-03.6 hold. Recommend scheduling the review WR-01/WR-02 hardening as a follow-up phase or quick task before shipping to users with older profiles.
 
 _Verified: 2026-11-14_
 _Verifier: Claude (gsd-verifier)_
