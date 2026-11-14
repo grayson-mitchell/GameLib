@@ -253,7 +253,7 @@ export function registerSteamAuthFlows(deps: SteamAuthFlowDeps): void {
   deps.ipc.handle(
     'getSteamInstallSize',
     async (_event: unknown, ...args: unknown[]) => {
-      return getSteamInstallSize(args[0])
+      return getSteamInstallSize(args[0], undefined, managerDeps())
     }
   )
 

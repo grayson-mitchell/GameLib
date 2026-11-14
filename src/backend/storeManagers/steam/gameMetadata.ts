@@ -8,9 +8,43 @@ import { resolvePlatformWrite } from './platformPrecedence'
 import { METADATA_FETCH_TIMEOUT_MS } from './state'
 import { STEAM_STORE_API, NUMERIC_APP_ID } from './gameConstants'
 import { macArchFromMinOS } from './gameRequirements'
+import { RUST_STEAMCM_STORE_ENRICH } from 'common/types/sidecarTransport'
+import { steamCmImpl } from './cm/steamCmFlags'
+import { invokeSteamCm } from './cm/rustSteamCm'
 import type SteamGame from './games'
 
 const STEAM_CDN_BASE = 'https://cdn.cloudflare.steamstatic.com/steam/apps'
+
+/**
+ * D-12: cm=rust. One steamcm_store_enrich call does the fetch and the merge (delisted branch,
+ * art URLs, platform precedence, mac_arch, carry-forwards); TS only persists and pushes.
+ * Throws nothing it should not: failures are logged by the caller's catch or here.
+ */
+async function enrichViaRust(
+  steamGame: SteamGame,
+  current: SteamGameInfo
+): Promise<void> {
+  const { deps, appId } = steamGame
+  const cached = deps.stores.steam.steamMetadataStore.get(appId) ?? null
+  const res = await invokeSteamCm(deps, RUST_STEAMCM_STORE_ENRICH, {
+    appId,
+    cached,
+    current,
+    knownFixMac32: knownFixSaysMac32(deps, appId, cached ?? undefined)
+  })
+  if (!res.ok) {
+    logWarning(
+      `Steam metadata fetch failed for appId ${appId}: ${res.kind}`,
+      LogPrefix.Steam
+    )
+    return
+  }
+  const { kind, entry, game } = res.result
+  if (kind === 'noData' || !entry || !game) return
+  deps.stores.steam.steamMetadataStore.set(appId, entry)
+  deps.steamSession.libraryState.library.set(appId, game)
+  deps.sendFrontendMessage('pushGameToLibrary', game)
+}
 
 /**
  * Fetches title, description, genres, and artwork from the Steam store
@@ -64,6 +98,10 @@ export async function fetchMetadataIfNeeded(
   await steamGame.deps.steamSession.libraryState.acquireMetadataSlot()
 
   try {
+    if (steamCmImpl() === 'rust') {
+      await enrichViaRust(steamGame, current)
+      return
+    }
     const resp = await axios.get(
       `${STEAM_STORE_API}?appids=${steamGame.appId}`,
       {

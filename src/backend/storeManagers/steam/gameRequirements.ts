@@ -4,6 +4,10 @@ import { logWarning, LogPrefix } from 'backend/logger'
 import { getFileSize } from 'backend/utils'
 import { isMac, isLinux } from 'backend/constants/environment'
 import { STEAM_STORE_API } from './gameConstants'
+import { RUST_STEAMCM_STORE_APPDETAILS } from 'common/types/sidecarTransport'
+import { steamCmImpl } from './cm/steamCmFlags'
+import { invokeSteamCm } from './cm/rustSteamCm'
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 
 /**
  * Maps the host OS to Steam's depot `oslist` vocabulary ('windows'|'macos'|
@@ -186,7 +190,8 @@ export function macArchFromMinOS(
  */
 export async function getSteamInstallSize(
   appId: unknown,
-  gameInfo?: GameInfo
+  gameInfo?: GameInfo,
+  deps?: RustInvokeDeps
 ): Promise<string> {
   // Fast path: already installed — install_size is already formatted, return
   // it directly (no parse, no network needed)
@@ -213,6 +218,33 @@ export async function getSteamInstallSize(
       `getSteamInstallSize: rejected an appId that is not a numeric string (T-06-01)`,
       LogPrefix.Steam
     )
+    return '?? MB'
+  }
+
+  // D-12: cm=rust reads the byte figure from the Rust appdetails op.
+  if (deps && steamCmImpl() === 'rust') {
+    try {
+      const res = await invokeSteamCm(deps, RUST_STEAMCM_STORE_APPDETAILS, {
+        appId
+      })
+      if (res.ok) {
+        const bytes = res.result.storageBytes
+        if (bytes && bytes > 0) return getFileSize(bytes)
+      } else {
+        logWarning(
+          `getSteamInstallSize: store appdetails failed for appId ${appId}: ${res.kind}`,
+          LogPrefix.Steam
+        )
+      }
+    } catch (err) {
+      logWarning(
+        [
+          `getSteamInstallSize: store appdetails failed for appId ${appId}:`,
+          err
+        ],
+        LogPrefix.Steam
+      )
+    }
     return '?? MB'
   }
 

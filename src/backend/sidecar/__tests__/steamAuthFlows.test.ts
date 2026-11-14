@@ -1009,7 +1009,11 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
         result: '1.5 GB'
       })
       expect(getSteamInstallSize).toHaveBeenCalledTimes(1)
-      expect(getSteamInstallSize).toHaveBeenCalledWith('999001')
+      expect(getSteamInstallSize).toHaveBeenCalledWith(
+        '999001',
+        undefined,
+        expect.anything()
+      )
     })
   })
 })
