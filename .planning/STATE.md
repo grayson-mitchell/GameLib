@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.10
 milestone_name: Foundations
 status: executing
-stopped_at: "74-33 live gate recorded: items 24/26/27 pass, 25 and 28 issues; round-4 gap planning next"
-last_updated: "2026-11-14T05:56:11.703Z"
+stopped_at: Phase 79 context gathered (planning gated on spike 085 Run C)
+last_updated: "2026-11-14T07:23:50.053Z"
 last_activity: 2026-11-14
 progress:
   total_phases: 24
@@ -767,9 +767,9 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-14T05:56:11.695Z
-Stopped at: 74-33 live gate recorded: items 24/26/27 pass, 25 and 28 issues; round-4 gap planning next
-Resume file: None
+Last session: 2026-11-14T07:23:50.044Z
+Stopped at: Phase 79 context gathered (planning gated on spike 085 Run C)
+Resume file: .planning/phases/79-rust-cm-client-replacing-steam-user-and-steam-session/79-CONTEXT.md
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
 
