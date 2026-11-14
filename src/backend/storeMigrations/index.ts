@@ -33,7 +33,7 @@ export const STORE_MIGRATIONS: Readonly<Record<string, readonly Migration[]>> =
     // baseline v1 = the pre-engine `{kind, id, wineserverBin, dxvk?}`; codec in
     // storeVersioning/engineMarkerFile.ts
     'engine/gamelib-engine-marker': [],
-    // Phase 70 D-12: strip keys no GameInfo member declares (v1 -> v2).
+    // Phase 70 D-12: strip keys no GameInfo member declares (v1 -> v2 -> v3, gap G2 re-strip).
     'store_cache/steam_library': steamLibraryChain,
     // Phase 70 D-12
     'store_cache/gog_library': gogLibraryChain,
@@ -43,7 +43,7 @@ export const STORE_MIGRATIONS: Readonly<Record<string, readonly Migration[]>> =
     'store_cache/legendary_library': legendaryLibraryChain,
     // Phase 70 D-12
     'store_cache/nile_library': nileLibraryChain,
-    // Phase 70 D-12 (unstamped on disk; adopted to v1 then stripped to v2)
+    // Phase 70 D-12 (unstamped on disk; adopted to v1 then stripped v1 -> v2 -> v3, gap G2 re-strip)
     'sideload_apps/library': sideloadLibraryChain,
     // Phase 70 D-12, orchestrator resolution 4: queue/finished params.gameInfo
     'store/download-manager': downloadManagerChain
