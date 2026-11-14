@@ -1047,6 +1047,9 @@
 .platformSupport__icons {
   display: inline-flex;
   align-items: center;
+  /* glyphs have no explicit size (FontAwesome svg = 1em); 1.5x the inherited
+     size makes them 50% bigger, and the em-based spacing scales with them */
+  font-size: 1.5em;
 }
 
 .platformSupport__icons > * + * {
