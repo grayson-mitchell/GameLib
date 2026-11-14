@@ -9,27 +9,17 @@ import type {
 } from '../../types'
 import type { GameOverride, SelectiveDownload } from '../legendary'
 
-import { installPlatform } from './install'
+import { gameInfoSchema, installPlatform } from './gameInfoSchema'
 import {
   absolutePathArg,
   nonEmptyString,
   optionalArg,
-  phase70Passthrough,
   runnerArg,
   type InvokeFns,
   type SendFns
 } from './schemaTypes'
 
 const noArgs = z.tuple([])
-
-// D-07: the GameInfo nested in addNewApp is a PHASE70-PASSTHROUGH. Declared keys are only the
-// identity pair the sidecar routes on; Phase 70 tightens the rest. The cast keeps the derived
-// call-site type the full GameInfo: zod's loose-object input type carries an index signature
-// that GameInfo (an interface) cannot satisfy.
-const gameInfoArg = phase70Passthrough({
-  app_name: nonEmptyString(),
-  runner: runnerArg()
-}) as unknown as z.ZodType<GameInfo, GameInfo>
 
 // Every key a caller sends. An empty string means "clear this override" (EditGameDialog).
 const metadataOverrideFields = {
@@ -39,7 +29,7 @@ const metadataOverrideFields = {
 }
 
 export const gameDetailsSyncArgs = {
-  addNewApp: z.tuple([gameInfoArg]),
+  addNewApp: z.tuple([gameInfoSchema]),
   changeGameVersionPinnedStatus: z.tuple([
     nonEmptyString(),
     runnerArg(),

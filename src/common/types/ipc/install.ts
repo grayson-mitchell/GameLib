@@ -1,44 +1,16 @@
 import { z } from 'zod'
 
-import type { GameInfo, StatusPromise } from '../../types'
+import type { StatusPromise } from '../../types'
 import type { SteamUpdateInfo } from '../steam'
 
+import { gameInfoSchema, installPlatform } from './gameInfoSchema'
 import {
   nonEmptyString,
   optionalArg,
-  phase70Passthrough,
   runnerArg,
   wineInstallationArg,
   type InvokeFns
 } from './schemaTypes'
-
-// Every InstallPlatform member (LegendaryInstallPlatform | GogInstallPlatform |
-// NileInstallPlatform | 'Browser'); the call-site type check against InstallPlatform catches drift.
-export const installPlatform = z.enum([
-  'Windows',
-  'Win32',
-  'Mac',
-  'Android',
-  'iOS',
-  'windows',
-  'osx',
-  'linux',
-  'Browser'
-])
-
-// D-07: the GameInfo nested in install/update args is a PHASE70-PASSTHROUGH. Declared keys are
-// only the ones the sidecar handlers read directly (`updateGame` destructures
-// `install.platform` / `install.install_path`); Phase 70 tightens the rest.
-// The cast keeps the derived call-site type the full GameInfo: zod's loose-object input type
-// carries an index signature that GameInfo (an interface) cannot satisfy.
-const gameInfoArg = phase70Passthrough({
-  app_name: nonEmptyString(),
-  runner: runnerArg(),
-  install: phase70Passthrough({
-    platform: installPlatform.optional(),
-    install_path: z.string().max(4096).optional()
-  })
-}) as unknown as z.ZodType<GameInfo, GameInfo>
 
 const stringList = z.array(z.string().max(4096)).max(4096)
 
@@ -47,7 +19,7 @@ const stringList = z.array(z.string().max(4096)).max(4096)
 const installFields = {
   appName: nonEmptyString(),
   runner: runnerArg(),
-  gameInfo: gameInfoArg,
+  gameInfo: gameInfoSchema,
   path: z.string().max(4096),
   platformToInstall: installPlatform,
   installDlcs: stringList.optional(),

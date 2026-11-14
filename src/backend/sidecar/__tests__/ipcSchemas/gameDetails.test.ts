@@ -7,14 +7,15 @@ import {
   runFixtureTable,
   type FixtureTable
 } from 'backend/testUtils/ipcSchemaFixtures'
+import { sideloadGameInfoFixture } from 'backend/testUtils/gameInfoFixtures'
 
 const pair = ['Fortnite', 'legendary']
 
 const syncTable: FixtureTable<typeof gameDetailsSyncArgs> = {
   addNewApp: {
     valid: [
-      [{ app_name: 'sideapp', runner: 'sideload', title: 'X', extra: [1] }],
-      [{ app_name: 'sideapp', runner: 'sideload', install: { a: 1 } }]
+      [sideloadGameInfoFixture()],
+      [sideloadGameInfoFixture({ title: 'X', install: {} })]
     ],
     invalid: [
       [{ runner: 'sideload' }],

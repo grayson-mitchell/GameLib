@@ -79,6 +79,7 @@
  * instead.
  */
 
+import { steamGameInfoFixture } from 'backend/testUtils/gameInfoFixtures'
 import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 
 // Per case (reset in freshRegistry): the boot is handed this root so the stores a case seeds
@@ -252,7 +253,7 @@ function makeQueueElement(appName: string): DMQueueElement {
       runner: 'steam',
       path: '/mock/install/path',
       platformToInstall: 'Windows',
-      gameInfo: { app_name: appName, runner: 'steam' } as never
+      gameInfo: steamGameInfoFixture({ app_name: appName })
     },
     addToQueueTime: Date.now(),
     startTime: 0,
@@ -479,12 +480,10 @@ describe('sidecar download-queue flows (Phase 32 Plan 01 — REQ-32-02/03/04/05/
         platformToInstall: 'Windows',
         installDlcs: [],
         sdlList: [],
-        gameInfo: {
+        gameInfo: steamGameInfoFixture({
           app_name: '999010',
-          runner: 'steam',
-          title: 'Test Game',
-          install: {}
-        }
+          title: 'Test Game'
+        })
       }
     ])
     await flush()
@@ -529,12 +528,11 @@ describe('sidecar download-queue flows (Phase 32 Plan 01 — REQ-32-02/03/04/05/
       {
         appName: '999011',
         runner: 'steam',
-        gameInfo: {
+        gameInfo: steamGameInfoFixture({
           app_name: '999011',
-          runner: 'steam',
           title: 'Test Game',
           install: { platform: 'Windows', install_path: '/fake/steam/library' }
-        }
+        })
       }
     ])
     await flush()

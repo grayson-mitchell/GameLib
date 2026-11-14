@@ -255,7 +255,8 @@ export interface LegendaryGameInfo extends GameInfoCore {
   namespace?: string
   // NOTE: save_folder (core) is the save folder without any variables filled in...
   // ...and this is the folder with them filled in
-  save_path?: string
+  // null once save_sync.ts discards a stored path (persisted as null in installed.json).
+  save_path?: string | null
   isEAManaged?: boolean
   isUbisoftManaged?: boolean
   dlcList?: GameMetadataInner[]

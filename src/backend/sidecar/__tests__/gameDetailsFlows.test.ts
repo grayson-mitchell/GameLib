@@ -301,6 +301,7 @@ jest.mock('../../utils/aborthandler/aborthandler', () => {
 })
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
+import { sideloadGameInfoFixture } from 'backend/testUtils/gameInfoFixtures'
 import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 import { createTestHostServices } from '../../testUtils/testHostServices'
 import type { BootServices } from '../../services/types'
@@ -1178,11 +1179,10 @@ describe('send-kind channels (REQ-34.2-08/REQ-34.2-01/REQ-34.2-09)', () => {
   // ── REQ-34.2-09: addNewApp ────────────────────────────────────────────────
 
   it('REQ-34.2-09 addNewApp (send) reaches the sideload manager only, with the GameInfo fixture intact', async () => {
-    const gameInfoFixture = {
+    const gameInfoFixture = sideloadGameInfoFixture({
       app_name: 'sideload-app-1',
-      title: 'Sideload Game',
-      runner: 'sideload'
-    }
+      title: 'Sideload Game'
+    })
 
     const { input } = boot()
     writeSend(input, 'ana-1', 'addNewApp', [gameInfoFixture])

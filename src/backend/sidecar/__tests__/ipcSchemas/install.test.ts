@@ -4,27 +4,18 @@ import {
   runFixtureTable,
   type FixtureTable
 } from 'backend/testUtils/ipcSchemaFixtures'
+import { steamGameInfoFixture } from 'backend/testUtils/gameInfoFixtures'
 
-const gameInfo = {
-  runner: 'steam',
-  app_name: '220',
-  art_cover: 'https://cdn.example/cover.jpg',
-  art_square: 'https://cdn.example/square.jpg',
-  install: {},
-  is_installed: false,
-  title: 'Half-Life 2',
-  canRunOffline: true
-}
+const gameInfo = steamGameInfoFixture()
 
-const installedGameInfo = {
-  ...gameInfo,
+const installedGameInfo = steamGameInfoFixture({
   is_installed: true,
   install: {
     platform: 'Windows',
     install_path: '/home/user/Games/hl2',
     executable: 'hl2.exe'
   }
-}
+})
 
 const table: FixtureTable<typeof installAsyncArgs> = {
   checkGameUpdates: { valid: [[]], invalid: [['extra']] },
