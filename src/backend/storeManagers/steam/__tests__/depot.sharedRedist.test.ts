@@ -372,7 +372,7 @@ describe('downloadSharedRedistDepots', () => {
     ) as Record<string, string>
 
   it('Play time (no allowLogon) with no open session resolves offline and never logs on', async () => {
-    jest.mocked(steamUser.acquireOpenAuthenticated).mockReturnValue(null)
+    jest.mocked(steamUser.acquireOpenAuthenticated).mockResolvedValue(null)
     jest.mocked(steamUser.getClient).mockClear()
     const r = await run()
     expect(r).toEqual(OFFLINE)

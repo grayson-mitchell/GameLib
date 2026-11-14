@@ -317,7 +317,7 @@ describe('SteamLibraryManager', () => {
     noteRefreshTrigger('steam', 'action-icons-refresh-button')
     // Default lease: the client the test installed via steamUser.getClient().
     leaseRelease = jest.fn()
-    jest.mocked(steamUser.acquireOpenAuthenticated).mockReturnValue(null)
+    jest.mocked(steamUser.acquireOpenAuthenticated).mockResolvedValue(null)
     jest.mocked(steamUser.acquireAuthenticated).mockImplementation(() =>
       Promise.resolve({
         ok: true,
@@ -1162,9 +1162,10 @@ describe('SteamLibraryManager', () => {
 
     it('with an open session: full sync on that client, no new logon, lease released', async () => {
       const fakeClient = makeFakeClient([makeOwnedApp(570, 'Dota 2', 120)])
-      jest
-        .mocked(steamUser.acquireOpenAuthenticated)
-        .mockReturnValue({ client: fakeClient, release: leaseRelease } as never)
+      jest.mocked(steamUser.acquireOpenAuthenticated).mockResolvedValue({
+        client: fakeClient,
+        release: leaseRelease
+      } as never)
 
       await manager.refresh()
 
@@ -1179,9 +1180,10 @@ describe('SteamLibraryManager', () => {
 
     it('releases the open-session lease on the hydration-catch rethrow', async () => {
       const fakeClient = makeFakeClient([makeOwnedApp(570, 'Dota 2', 120)])
-      jest
-        .mocked(steamUser.acquireOpenAuthenticated)
-        .mockReturnValue({ client: fakeClient, release: leaseRelease } as never)
+      jest.mocked(steamUser.acquireOpenAuthenticated).mockResolvedValue({
+        client: fakeClient,
+        release: leaseRelease
+      } as never)
       jest.mocked(steamLibraryStore.set).mockImplementation(() => {
         throw new Error('disk write failed')
       })

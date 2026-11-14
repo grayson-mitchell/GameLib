@@ -286,7 +286,7 @@ describe('SteamLibraryManager', () => {
     noteRefreshTrigger('steam', 'action-icons-refresh-button')
     // Default lease: the client the test installed via steamUser.getClient().
     leaseRelease = jest.fn()
-    jest.mocked(steamUser.acquireOpenAuthenticated).mockReturnValue(null)
+    jest.mocked(steamUser.acquireOpenAuthenticated).mockResolvedValue(null)
     jest.mocked(steamUser.acquireAuthenticated).mockImplementation(() =>
       Promise.resolve({
         ok: true,

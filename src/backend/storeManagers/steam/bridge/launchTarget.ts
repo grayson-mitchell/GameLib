@@ -228,7 +228,7 @@ export async function resolveBridgeLaunchExe(
     }
 
     if (!launch) {
-      const open = deps.steamUser.acquireOpenAuthenticated('user-install')
+      const open = await deps.steamUser.acquireOpenAuthenticated('user-install')
       if (open) {
         try {
           const answer = await readLaunch(open.client, appId)

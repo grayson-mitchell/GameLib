@@ -104,7 +104,7 @@ export async function refresh(deps: ManagerDeps): Promise<ExecResult | null> {
     release = lease.release
     client = lease.client
   } else {
-    const open = deps.steamUser.acquireOpenAuthenticated('user-refresh')
+    const open = await deps.steamUser.acquireOpenAuthenticated('user-refresh')
     if (!open) return refuseDeferred()
     release = open.release
     client = open.client

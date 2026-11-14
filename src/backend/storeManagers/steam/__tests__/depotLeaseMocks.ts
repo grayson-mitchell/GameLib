@@ -40,7 +40,7 @@ export function mockLeaseRefused(
 /** acquireOpenAuthenticated returns an open-session lease; returns the release spy. */
 export function mockOpenLease(steamUser: MockSteamUser): jest.Mock {
   const release = jest.fn()
-  steamUser.acquireOpenAuthenticated.mockReturnValue({
+  steamUser.acquireOpenAuthenticated.mockResolvedValue({
     client: steamUser.getClient() as never,
     release
   })

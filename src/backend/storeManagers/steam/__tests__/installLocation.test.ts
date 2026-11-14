@@ -706,7 +706,7 @@ describe('resolveSteamInstallTarget — anonymous PICS with open-session fallbac
         makeFakeClient({ getProductInfo: publicOnly }) as never
       )
     const release = jest.fn()
-    jest.mocked(steamUser.acquireOpenAuthenticated).mockReturnValue({
+    jest.mocked(steamUser.acquireOpenAuthenticated).mockResolvedValue({
       client: makeFakeClient({
         getProductInfo: mockProductInfo(12345, 'GatedGame')
       }),
@@ -726,7 +726,7 @@ describe('resolveSteamInstallTarget — anonymous PICS with open-session fallbac
       .mockResolvedValue(
         makeFakeClient({ getProductInfo: publicOnly }) as never
       )
-    jest.mocked(steamUser.acquireOpenAuthenticated).mockReturnValue(null)
+    jest.mocked(steamUser.acquireOpenAuthenticated).mockResolvedValue(null)
 
     const result = await target()
 
@@ -737,7 +737,7 @@ describe('resolveSteamInstallTarget — anonymous PICS with open-session fallbac
   it('anonymous client null with an open session falls back to the session', async () => {
     jest.mocked(getAnonymousPicsClient).mockResolvedValue(null)
     const release = jest.fn()
-    jest.mocked(steamUser.acquireOpenAuthenticated).mockReturnValue({
+    jest.mocked(steamUser.acquireOpenAuthenticated).mockResolvedValue({
       client: makeFakeClient({
         getProductInfo: mockProductInfo(12345, 'FromSession')
       }),
@@ -756,7 +756,7 @@ describe('resolveSteamInstallTarget — anonymous PICS with open-session fallbac
         getProductInfo: jest.fn().mockRejectedValue(new Error('cm down'))
       }) as never
     )
-    jest.mocked(steamUser.acquireOpenAuthenticated).mockReturnValue(null)
+    jest.mocked(steamUser.acquireOpenAuthenticated).mockResolvedValue(null)
 
     const result = await target()
 

@@ -215,7 +215,8 @@ export async function downloadSharedRedistDepots(
     if (lease.ok) release = lease.release
   } else {
     release =
-      opts.steamUser.acquireOpenAuthenticated('shared-redist')?.release ?? null
+      (await opts.steamUser.acquireOpenAuthenticated('shared-redist'))
+        ?.release ?? null
   }
   if (!release) {
     logInfo(

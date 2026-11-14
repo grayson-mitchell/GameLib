@@ -391,7 +391,7 @@ describe('resolveBridgeLaunchExe — anonymous PICS, open session, stored record
       .mocked(getAnonymousPicsClient)
       .mockResolvedValue(publicOnlyClient() as never)
     const release = jest.fn()
-    jest.mocked(steamUser.acquireOpenAuthenticated).mockReturnValue({
+    jest.mocked(steamUser.acquireOpenAuthenticated).mockResolvedValue({
       client: makeFakeClient({
         getProductInfo: mockProductInfo(GATED_ID, fullAppinfo)
       }),
@@ -407,7 +407,7 @@ describe('resolveBridgeLaunchExe — anonymous PICS, open session, stored record
     jest
       .mocked(getAnonymousPicsClient)
       .mockResolvedValue(publicOnlyClient() as never)
-    jest.mocked(steamUser.acquireOpenAuthenticated).mockReturnValue(null)
+    jest.mocked(steamUser.acquireOpenAuthenticated).mockResolvedValue(null)
     jest.mocked(readBridgeVerdict).mockReturnValue({
       launchTarget: {
         executable: 'Binaries\\Win32\\Game.exe',
@@ -425,7 +425,7 @@ describe('resolveBridgeLaunchExe — anonymous PICS, open session, stored record
 
   it('a tampered stored installdir is rejected by containment and yields undefined', async () => {
     jest.mocked(getAnonymousPicsClient).mockResolvedValue(null)
-    jest.mocked(steamUser.acquireOpenAuthenticated).mockReturnValue(null)
+    jest.mocked(steamUser.acquireOpenAuthenticated).mockResolvedValue(null)
     jest.mocked(readBridgeVerdict).mockReturnValue({
       launchTarget: { executable: 'Game.exe', installdir: '../../escape' }
     })
@@ -437,7 +437,7 @@ describe('resolveBridgeLaunchExe — anonymous PICS, open session, stored record
 
   it('no answer anywhere returns undefined without throwing', async () => {
     jest.mocked(getAnonymousPicsClient).mockResolvedValue(null)
-    jest.mocked(steamUser.acquireOpenAuthenticated).mockReturnValue(null)
+    jest.mocked(steamUser.acquireOpenAuthenticated).mockResolvedValue(null)
     jest.mocked(readBridgeVerdict).mockReturnValue(undefined)
 
     await expect(
