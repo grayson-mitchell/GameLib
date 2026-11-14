@@ -28,3 +28,11 @@ local files that the delta reuses; fix it in the Rust summarize path.
 ## Done when
 
 Both fixtures' estimates are within about 2x of the real download, recorded in a UAT item.
+
+## Resolution
+
+2026-11-14: done, no code change. 74-17's chunk credit already makes the estimate exact on both
+fixtures: Manor Lords 960,127,440 and Mining Mechs 5,979,200, equal to the real downloads
+(1.00x, was about 7x and 3x). Measured offline on the cached manifest pairs that UAT items 3
+and 5 downloaded; the old formula reproduces the round-1 estimates byte for byte as a control.
+Recorded as 74-UAT item 31; the item 5 gap is marked resolved.

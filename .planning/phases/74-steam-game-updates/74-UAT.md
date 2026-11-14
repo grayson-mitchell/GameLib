@@ -185,10 +185,15 @@ expected: The boot log has no `auto-update skipped: autoUpdateGames off` line an
 result: pass — 2026-11-14, autoUpdateGames confirmed true in config.json defaultSettings; route A (signed out, Hell Clock bridge buildid 26431635). 16:24:31 `Steam: auto-update candidates=1`, `Auto-Updating Hell Clock`, one `auto-update attempt recorded for appId 1782460 (build 26431636)`, `updateBridgeGame: appId 1782460 unattended=true update not started: Steam sign-in unavailable (not-signed-in)`; no `auto-update skipped: autoUpdateGames off`; no sign-in window, dialog or Keychain prompt. Refresh x2 (16:24:36, 16:24:57) and a later check (16:25:33) each logged `skipping auto-update for appId 1782460: build 26431636 already attempted this session` + `Steam: auto-update candidates=0`; attempt-recorded count stayed 1; ACF stayed 26431635. After sign-in, manual Update 16:27:50 `[depot-rust] outcome appId=1782460 ... status=completed acf=4`; ACF buildid 26431636. Route B not needed. 74-35 makes UAT 28 self-explaining; CR-02 no-loop holds.
 precondition: autoUpdateGames turned ON through Settings > General "Automatically update games", then confirmed true in `<appData>/gamelib/config.json` `defaultSettings.autoUpdateGames` with GameLib quit (store/config.json is only a mirror; do not edit it); route A: signed out of Steam in GameLib, Hell Clock 1782460 bridge ACF buildid lowered from 26431636 to 26431635 (if PICS has moved past 26431636, use the current PICS build and one below it, and quote them), relaunch with `pnpm tauri:dev`. Route B (only if A completes the update): signed in, Hell Clock re-staled, its bridge install folder made read-only with `chmod -R a-w` on the game folder only, relaunch; afterwards `chmod -R u+w` the folder. Restore sign-in and autoUpdateGames to their previous values afterwards, through Settings.
 
+### 31. Update size estimate is within about 2x of the real download after 74-17 (re-measure of item 5's gap)
+expected: On the same old-to-new manifest pairs that items 3 and 5 downloaded, the post-74-17 download estimate (unique new-manifest chunk bytes not present anywhere in the old manifest, compressed) is within about 2x of the `[depot-rust] outcome ... bytes=` of the real update, for both Manor Lords 1363080 and Mining Mechs 1603180.
+result: pass. 2026-11-14, measured offline on the cached manifests in `depot-manifests/` (the same GIDs items 3 and 5 downloaded; no restage or re-download), with a scratch reader using the crate's own `unzip_manifest` and protobuf types. Manor Lords depot 1363081, 7662659300316410169 to 8288717246775224817: estimate 960,127,440 equals the item 5 real `bytes=960127440` (1.00x; round 1 was 7,036,035,296, about 7.3x). Mining Mechs depot 1603181, 8421958272431716564 to 3064890709306462296: estimate 5,979,200 equals the item 3 real `bytes=5979200` (1.00x; round 1 was 19,710,720, the "18 MiB" of item 2, about 3.3x). Control: the pre-74-17 formula (every unique chunk of a changed file) reproduces both round-1 figures byte for byte, and the changed-file size 15,077,174,693 equals item 5's `peak`, so the reader matches the shipped parse. The download figure is name-independent (an unchanged file's chunks are all old chunks), so the name-free reader equals `estimate_delta`'s `max_download_bytes`. Not re-run: the "Show update size" UI read-out on a restaged stale install; the estimate is a pure function of the two manifests, so the UI would show these figures. The "Download up to" label still reads as a ceiling while the figure is now the expected download, assuming intact local files (manifest.rs doc); the wording is a separate matter.
+precondition: manifests for both pairs present in `<appData>/com.gamelib.shell/depot-manifests/<depot>/<gid>.manifest`; real download bytes taken from items 3 and 5.
+
 ## Summary
 
-total: 30
-passed: 21
+total: 31
+passed: 22
 issues: 6
 pending: 0
 skipped: 2
@@ -197,7 +202,9 @@ blocked: 1
 ## Gaps
 
 - truth: "The pre-click update size is a useful guide to the real download"
-  status: failed
+  status: resolved
+  resolved_by: "74-17 (UAT item 31: estimate equals the real download on both fixtures)"
+  resolved_at: 2026-11-14
   reason: "Item 5: the estimate showed download <= 7.0 GB (peak 15.1 GB) for Manor Lords, but only 0.96 GB was downloaded (about 7x high; Mining Mechs about 3x). The estimate counts all changed chunk bytes and does not credit chunks reusable from local files."
   severity: minor
   test: 5
