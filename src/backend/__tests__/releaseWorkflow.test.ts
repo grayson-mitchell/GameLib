@@ -1790,3 +1790,49 @@ describe('release-tauri.yml Linux build base (glibc floor -- quick 260929-vyi / 
     expect(cacheSteps[0]?.with?.workspaces).toBe('./src-tauri -> target')
   })
 })
+
+describe('release-tauri.yml ITAD key (Phase 47 D-01/D-04)', () => {
+  const seaName = 'Build self-contained sidecar (Node SEA)'
+  const failFast = (): { index: number; step: ParsedReleaseStep } => {
+    const steps = parseReleaseSteps()
+    const index = steps.findIndex(
+      (s) =>
+        (s.run ?? '').includes('test -n "$IN_ITAD_API_KEY"') &&
+        (s.run ?? '').includes('exit 1')
+    )
+    return { index, step: defined(steps[index], 'ITAD fail-fast step') }
+  }
+
+  test('fail-fast step exists and maps the secret via IN_ITAD_API_KEY', () => {
+    expect(failFast().step.env?.IN_ITAD_API_KEY).toBe(
+      '${{ secrets.ITAD_API_KEY }}'
+    )
+  })
+
+  test('fail-fast step precedes the SEA step', () => {
+    const steps = parseReleaseSteps()
+    const seaIndex = steps.findIndex((s) => s.name === seaName)
+    expect(seaIndex).toBeGreaterThan(-1)
+    expect(failFast().index).toBeLessThan(seaIndex)
+  })
+
+  test('SEA step env maps ITAD_API_KEY to the secret', () => {
+    const sea = parseReleaseSteps().find((s) => s.name === seaName)
+    expect(sea?.env?.ITAD_API_KEY).toBe('${{ secrets.ITAD_API_KEY }}')
+  })
+
+  test('job-level env has no ITAD_API_KEY', () => {
+    const job = releaseJobOf(parseReleaseWorkflow())
+    expect(Object.keys(job.env ?? {})).not.toContain('ITAD_API_KEY')
+    expect(Object.keys(job.env ?? {})).not.toContain('IN_ITAD_API_KEY')
+  })
+
+  test('no run body echoes the key', () => {
+    for (const step of parseReleaseSteps()) {
+      const run = step.run ?? ''
+      if (/\$\{?(IN_)?ITAD_API_KEY/.test(run)) {
+        expect(run).not.toMatch(/echo[^\n]*\$\{?(IN_)?ITAD_API_KEY/)
+      }
+    }
+  })
+})

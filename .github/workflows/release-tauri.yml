@@ -329,9 +329,22 @@ jobs:
       # tauri-action's externalBin resolution could not find/use for the
       # x86_64 bundle. Each matrix leg's `sidecar_triple` field makes the SEA
       # build target-driven instead of host-driven via the env var set below.
+      # Phase 47 D-04: a release must not ship without the IsThereAnyDeal key.
+      # Runs on every release-tauri run including dry runs, because a dry run
+      # builds the same artifacts and validating the secret there is the point.
+      # PR/test builds (test.yml, rust-test.yml) do not run this workflow and
+      # stay keyless. The value is never echoed; only `test -n` reads it.
+      - name: Require the ITAD_API_KEY secret (Phase 47 D-04)
+        shell: bash
+        env:
+          IN_ITAD_API_KEY: ${{ secrets.ITAD_API_KEY }}
+        run: |
+          test -n "$IN_ITAD_API_KEY" || { echo "::error::ITAD_API_KEY repo secret is missing or empty. A release must not ship without the IsThereAnyDeal key (Store Search would show 'not set up in this build'). Create it with: gh secret set ITAD_API_KEY"; exit 1; }
+
       - name: Build self-contained sidecar (Node SEA)
         env:
           GAMELIB_SIDECAR_TARGET_TRIPLE: ${{ matrix.sidecar_triple }}
+          ITAD_API_KEY: ${{ secrets.ITAD_API_KEY }}
         run: pnpm build:sidecar-sea
 
       # GAP-A (34-16, live run 30084918812): both macOS legs failed with `failed to
