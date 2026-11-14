@@ -368,6 +368,22 @@ impl<B: CmBackend> Core<B> {
         .await
     }
 
+    // ---- refresh and store (79-30) ----
+
+    /// The whole Refresh (D-12). `client`/`base_url` are injectable for tests.
+    pub(crate) async fn refresh_library(
+        &self,
+        client: &reqwest::Client,
+        base_url: &str,
+        args: crate::refresh::RefreshArgs,
+    ) -> Value
+    where
+        B::Conn: Send + Sync + 'static,
+    {
+        let anon = self.anon();
+        crate::refresh::refresh_library(self.session(), &anon, client, base_url, args).await
+    }
+
     // ---- anonymous ----
 
     pub(crate) async fn anon_product_info(
@@ -619,6 +635,47 @@ pub fn wrap_restore_if_owed(trigger: RestoreTrigger) -> Result<Value, String> {
 }
 
 /// CLI-only: raw anonymous PICS buffers, base64, for the golden captures (79-21).
+pub fn refresh_library(args: crate::refresh::RefreshArgs) -> Result<Value, String> {
+    run(core().refresh_library(
+        http_client(),
+        crate::refresh::store_http::STEAM_STORE_API,
+        args,
+    ))
+}
+
+pub fn store_enrich(
+    app_id: &str,
+    cached: Option<crate::refresh::meta_entry::SteamMetadataEntry>,
+    current: Value,
+    known_fix_mac32: bool,
+) -> Result<Value, String> {
+    run(crate::refresh::store_enrich(
+        http_client(),
+        crate::refresh::store_http::STEAM_STORE_API,
+        app_id,
+        cached.as_ref(),
+        &current,
+        known_fix_mac32,
+    ))
+}
+
+pub fn store_appdetails(app_id: &str) -> Result<Value, String> {
+    run(crate::refresh::store_appdetails_op(
+        http_client(),
+        crate::refresh::store_http::STEAM_STORE_API,
+        app_id,
+    ))
+}
+
+/// One store HTTP client for the process, built after the rustls provider is installed.
+fn http_client() -> &'static reqwest::Client {
+    static CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
+    CLIENT.get_or_init(|| {
+        crate::install_crypto_provider();
+        reqwest::Client::new()
+    })
+}
+
 pub fn capture_anon_pics(apps: Vec<u32>) -> Result<Value, String> {
     use crate::backend::{PicsId, PicsRequest};
     use base64::Engine;

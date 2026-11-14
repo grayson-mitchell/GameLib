@@ -41,6 +41,7 @@ pub const OPS: &[&str] = &[
     "steamcm_personas",
     "steamcm_product_info",
     "steamcm_redeem_key",
+    "steamcm_refresh",
     "steamcm_session_acquire",
     "steamcm_session_acquire_open",
     "steamcm_session_ensure_connected",
@@ -53,6 +54,8 @@ pub const OPS: &[&str] = &[
     "steamcm_signin_guard_submit",
     "steamcm_signin_qr_start",
     "steamcm_signin_status",
+    "steamcm_store_appdetails",
+    "steamcm_store_enrich",
     "steamcm_wrap_restore_if_owed",
 ];
 /// Ops reachable from the CLI only (the sidecar bridge does not expose them).
@@ -216,6 +219,21 @@ struct WrapArgs {
     trigger: TriggerArg,
 }
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct StoreEnrichArgs {
+    app_id: String,
+    cached: Option<refresh::meta_entry::SteamMetadataEntry>,
+    current: Value,
+    known_fix_mac32: bool,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct StoreAppdetailsArgs {
+    app_id: String,
+}
+
 fn id64(op: &str, s: &str) -> Result<u64, String> {
     s.parse::<u64>().map_err(|_| format!("{op}:bad-args"))
 }
@@ -316,6 +334,20 @@ fn run_op(op: &str, args: &[Value]) -> Result<Value, String> {
             let a: AppsArgs = parse_args(op, args)?;
             facade::capture_anon_pics(a.apps)
         }
+        "steamcm_refresh" => {
+            let a: refresh::RefreshArgs = parse_args(op, args)?;
+            let refresh::RefreshSource::Cm { steam_id, .. } = &a.source;
+            id64(op, steam_id)?;
+            facade::refresh_library(a)
+        }
+        "steamcm_store_enrich" => {
+            let a: StoreEnrichArgs = parse_args(op, args)?;
+            facade::store_enrich(&a.app_id, a.cached, a.current, a.known_fix_mac32)
+        }
+        "steamcm_store_appdetails" => {
+            let a: StoreAppdetailsArgs = parse_args(op, args)?;
+            facade::store_appdetails(&a.app_id)
+        }
         "steamcm_signin_qr_start" => {
             let _: EmptyArgs = parse_args(op, args)?;
             facade::signin_qr_start()
@@ -407,7 +439,7 @@ mod tests {
 
     #[test]
     fn ops_are_the_full_table_and_every_op_is_routed() {
-        assert_eq!(OPS.len(), 25);
+        assert_eq!(OPS.len(), 28);
         assert_eq!(CLI_ONLY_OPS, &["steamcm_capture_anon_pics"]);
         for op in OPS {
             // Bad args (a string, not an object) must reach the arg parser, never `unknown-op`.
@@ -440,6 +472,39 @@ mod tests {
             ],
         );
         assert_eq!(r, Err("steamcm_owned_apps:bad-args".to_string()));
+    }
+
+    #[test]
+    fn refresh_with_an_unknown_lease_is_a_typed_result() {
+        let base = json!({"source": {"kind": "cm", "leaseId": 9, "steamId": "76561198000000001"},
+            "metadata": {}, "previousGames": [], "installState": {},
+            "bridgeAllowlist": [], "knownFixMac32": [], "isMac": false});
+        let v = dispatch("steamcm_refresh", std::slice::from_ref(&base)).unwrap();
+        assert_eq!(v, json!({"ok": false, "kind": "leaseUnknown"}));
+        let mut extra = base.clone();
+        extra["x"] = json!(1);
+        assert_eq!(
+            dispatch("steamcm_refresh", &[extra]),
+            Err("steamcm_refresh:bad-args".to_string())
+        );
+        let mut badid = base;
+        badid["source"]["steamId"] = json!("abc");
+        assert_eq!(
+            dispatch("steamcm_refresh", &[badid]),
+            Err("steamcm_refresh:bad-args".to_string())
+        );
+    }
+
+    #[test]
+    fn store_ops_reject_a_non_numeric_app_id_without_a_request() {
+        let e = dispatch(
+            "steamcm_store_enrich",
+            &[json!({"appId": "abc", "cached": null, "current": {}, "knownFixMac32": false})],
+        )
+        .unwrap();
+        assert_eq!(e, json!({"ok": false, "kind": "badAppId"}));
+        let d = dispatch("steamcm_store_appdetails", &[json!({"appId": "abc"})]).unwrap();
+        assert_eq!(d, json!({"ok": false, "kind": "badAppId"}));
     }
 
     #[test]
