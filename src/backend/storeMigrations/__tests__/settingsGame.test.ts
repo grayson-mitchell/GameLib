@@ -54,11 +54,75 @@ describe('settings/game v1 -> v2', () => {
       migrate(fixture('settings-game-v1-invalid-values.json')),
       'Game2'
     )
-    expect('gamescope' in g).toBe(false)
+    // An older-build gamescope (no additionalOptions) is repaired, not dropped (WR-02).
+    expect(g['gamescope']).toEqual(fullGamescope)
     expect('showFps' in g).toBe(false)
     expect('lastUsedLaunchOption' in g).toBe(false)
     expect(g['targetExe']).toBe('b.exe')
     expect(g['showMangohud']).toBe(true)
+  })
+
+  test('WR-02: one bad array element is removed, its valid siblings kept', () => {
+    const g = entry(
+      migrate({
+        G: {
+          enviromentOptions: [
+            { key: 'A', value: '1' },
+            { key: 'B', value: null },
+            { key: 'C', value: '3' }
+          ],
+          wrapperOptions: [{ exe: 'gamemoderun', args: '' }, { exe: 1 }],
+          gogSaves: [{ name: 's', location: '/s' }, 'junk']
+        },
+        version: 'v1'
+      }),
+      'G'
+    )
+    expect(g['enviromentOptions']).toEqual([
+      { key: 'A', value: '1' },
+      { key: 'C', value: '3' }
+    ])
+    expect(g['wrapperOptions']).toEqual([{ exe: 'gamemoderun', args: '' }])
+    expect(g['gogSaves']).toEqual([{ name: 's', location: '/s' }])
+  })
+
+  test('WR-02: gamescope missing both additive fields keeps every other field', () => {
+    const legacy: Record<string, unknown> = { ...fullGamescope }
+    delete legacy['additionalOptions']
+    delete legacy['enableForceGrabCursor']
+    const g = entry(migrate({ G: { gamescope: legacy }, version: 'v1' }), 'G')
+    expect(g['gamescope']).toEqual({
+      ...fullGamescope,
+      additionalOptions: '',
+      enableForceGrabCursor: false
+    })
+  })
+
+  test('WR-02: logs removed and cleaned keys by name, never values', () => {
+    const write = jest
+      .spyOn(process.stderr, 'write')
+      .mockImplementation(() => true)
+    try {
+      migrate({
+        G: {
+          useSteamRuntime: true,
+          enviromentOptions: [{ key: 'SECRET_KEY', value: null }],
+          targetExe: 'ok.exe'
+        },
+        version: 'v1'
+      })
+      const lines = write.mock.calls.map((c) => String(c[0])).join('')
+      expect(lines).toContain('settings-game-v1-v2 G')
+      expect(lines).toContain('removed [useSteamRuntime]')
+      expect(lines).toContain('cleaned [enviromentOptions]')
+      expect(lines).not.toContain('SECRET_KEY')
+      expect(lines).not.toContain('ok.exe')
+      write.mockClear()
+      migrate({ G: { targetExe: 'ok.exe' }, version: 'v1' })
+      expect(write).not.toHaveBeenCalled()
+    } finally {
+      write.mockRestore()
+    }
   })
 
   test.each([

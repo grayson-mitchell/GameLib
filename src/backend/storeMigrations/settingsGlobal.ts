@@ -9,17 +9,20 @@
  * v1 -> v2 (Phase 70 gap G3, global half, WR-05) strips `defaultSettings` to
  * `appSettingsSchema.partial()`. (1) v2 removes what the strict schema cannot
  * hold: undeclared/retired keys (e.g. `useSteamRuntime`), rejected nulls and
- * invalid values. (2) The factory default then applies for each removed value.
- * (3) Valid values are untouched, including `focusRow: null`. (4) Trade-off:
- * an invalid user value is dropped from the live file; the engine's 0600
- * pre-migration backup keeps the original. v0 -> v1 stays first because the
+ * invalid values. An invalid array element is removed on its own and its
+ * valid siblings stay; an older-build `gamescope` is repaired, not dropped
+ * (see settingsStrip.ts, WR-02). (2) The factory default then applies for
+ * each removed value. (3) Valid values are untouched, including
+ * `focusRow: null`. (4) Trade-off: an invalid user value is dropped from the
+ * live file; the engine's 0600 pre-migration backup keeps the original, and
+ * each removed or cleaned key is logged by name. v0 -> v1 stays first because the
  * strip removes both legacy keys.
  */
 import { migrateFocusRowSelection } from 'common/focusRowMigration'
 import { migrateTrayIconVariant } from 'common/trayIconVariant'
 import { appSettingsSchema } from 'common/types/ipc/settingsSchema'
 import type { Migration } from '../storeVersioning/types'
-import { stripToSchema } from './schemaStrip'
+import { stripSettings } from './settingsStrip'
 
 const isPlainObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v)
@@ -54,9 +57,11 @@ export const settingsGlobalChain: readonly Migration[] = [
       if (!isPlainObject(original)) return file
       return {
         ...file,
-        defaultSettings: stripToSchema(original, appSettingsSchema.partial(), {
-          dropInvalidOptional: true
-        })
+        defaultSettings: stripSettings(
+          original,
+          appSettingsSchema.partial(),
+          'settings-global-v1-v2 defaultSettings'
+        )
       }
     }
   }

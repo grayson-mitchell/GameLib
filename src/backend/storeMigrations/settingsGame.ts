@@ -6,19 +6,21 @@
  * cannot hold, derived from `gameSettingsSchema.partial()` with the D-12
  * pattern: (1) keys no GameSettings member declares (e.g. `useSteamRuntime`,
  * removed in 56b1edc46 without a migration), nulls on members that reject
- * null, and any value the schema rejects (an older-build `gamescope` missing
- * `additionalOptions`, a stale `lastUsedLaunchOption`, a wrong type, an
- * over-long string). (2) The default applies for each removed value.
- * (3) Valid values are never touched. (4) Trade-off: an invalid user value is
- * dropped from the live file; the engine's 0600 pre-migration backup keeps
- * the original.
+ * null, and any value the schema rejects (a stale `lastUsedLaunchOption`, a
+ * wrong type, an over-long string). An invalid array element is removed on
+ * its own and its valid siblings stay; an older-build `gamescope` missing
+ * `additionalOptions` is repaired, not dropped (see settingsStrip.ts, WR-02).
+ * (2) The default applies for each removed value. (3) Valid values are never
+ * touched. (4) Trade-off: an invalid user value is dropped from the live
+ * file; the engine's 0600 pre-migration backup keeps the original, and each
+ * removed or cleaned key is logged by name.
  *
  * The persisted object is round-tripped by the install dialogs through
  * writeConfig and runWineCommand, both strict.
  */
 import type { Migration } from '../storeVersioning/types'
 import { gameSettingsSchema } from 'common/types/ipc/settingsSchema'
-import { stripToSchema } from './schemaStrip'
+import { stripSettings } from './settingsStrip'
 
 const isPlainObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v)
@@ -33,9 +35,11 @@ export const settingsGameChain: readonly Migration[] = [
         Object.entries(file).map(([key, value]) => [
           key,
           key !== 'version' && key !== 'explicit' && isPlainObject(value)
-            ? stripToSchema(value, gameSettingsSchema.partial(), {
-                dropInvalidOptional: true
-              })
+            ? stripSettings(
+                value,
+                gameSettingsSchema.partial(),
+                `settings-game-v1-v2 ${key}`
+              )
             : value
         ])
       )

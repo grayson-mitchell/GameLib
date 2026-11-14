@@ -112,7 +112,9 @@ describe('ensureSettingsMigrated', () => {
     ensureSettingsMigrated(h.versioning, path, 'settings/game')
     const after = JSON.parse(readFileSync(path, 'utf8'))
     expect(after.version).toBe('v2')
-    expect('gamescope' in after.Game2).toBe(false)
+    expect('showFps' in after.Game2).toBe(false)
+    // WR-02: the older-build gamescope is repaired, not dropped.
+    expect(after.Game2.gamescope.additionalOptions).toBe('')
     const backups = listBackups(path)
     expect(backups).toHaveLength(1)
     expect(readFileSync(backups[0]!).equals(readFileSync(src))).toBe(true)

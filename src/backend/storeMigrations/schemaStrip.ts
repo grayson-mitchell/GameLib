@@ -9,11 +9,13 @@
  *     undefined but rejects null is removed; with `dropInvalidOptional` an optional member that
  *     still fails after cleaning is removed (inner-first). Required members are never removed.
  *  3. Loose / catchall objects pass through untouched.
- *  4. Arrays: every element is cleaned, none dropped. Records: every value is cleaned.
+ *  4. Arrays: every element is cleaned; with `dropInvalidElements` an element that still fails
+ *     is removed, otherwise none is dropped. Records: every value is cleaned.
  *  5. Unions: a valid value is returned as-is. Otherwise pass 1 cleans each option losslessly
- *     (no dropInvalidOptional) and the first option it satisfies wins; pass 2 runs the lossy
- *     clean only on options whose literal members the value already matches, so an arm can
- *     never win by dropping the value's own discriminant. Else the value is returned unchanged.
+ *     (no dropInvalidOptional / dropInvalidElements) and the first option it satisfies wins;
+ *     pass 2 runs the lossy clean only on options whose literal members the value already
+ *     matches, so an arm can never win by dropping the value's own discriminant. Else the
+ *     value is returned unchanged.
  *  6. Everything else is returned unchanged. Pure and total: no mutation, no throw, no
  *     prototype pollution (results are built with Object.fromEntries).
  */
@@ -22,6 +24,11 @@ import { z } from 'zod'
 export interface StripOptions {
   /** Remove an optional member whose cleaned value still fails its schema. */
   readonly dropInvalidOptional: boolean
+  /**
+   * Remove an array element whose cleaned value still fails the element schema, keeping its
+   * valid siblings. For user-state settings, where the whole array is otherwise lost (WR-02).
+   */
+  readonly dropInvalidElements?: boolean
 }
 
 const isPlainObject = (v: unknown): v is Record<string, unknown> =>
@@ -91,7 +98,10 @@ function clean(
   if (inner instanceof z.ZodArray) {
     if (!Array.isArray(value)) return value
     const element = inner.element as z.ZodType
-    return value.map((item) => clean(item, element, options))
+    const cleaned = value.map((item) => clean(item, element, options))
+    return options.dropInvalidElements
+      ? cleaned.filter((item) => accepts(element, item))
+      : cleaned
   }
   if (inner instanceof z.ZodRecord) {
     if (!isPlainObject(value)) return value
@@ -105,7 +115,10 @@ function clean(
     const unionOptions = inner.options as z.ZodType[]
     // Pass 1 (lossless): only undeclared keys and rejected nulls go, so an arm whose own
     // discriminant the value carries wins before any arm that would drop that discriminant.
-    const lossless: StripOptions = { ...options, dropInvalidOptional: false }
+    const lossless: StripOptions = {
+      dropInvalidOptional: false,
+      dropInvalidElements: false
+    }
     for (const option of unionOptions) {
       const cleaned = clean(value, option, lossless)
       if (accepts(option, cleaned)) return cleaned

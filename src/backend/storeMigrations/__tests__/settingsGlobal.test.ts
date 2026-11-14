@@ -112,6 +112,18 @@ describe('settings/global v1 -> v2', () => {
     expect(next['language']).toBe('de')
   })
 
+  test('WR-02: one bad element is removed, its valid siblings kept', () => {
+    const next = run({
+      defaultSettings: {
+        dismissedSignInNotices: ['gog', 'origin', 'steam'],
+        customWinePaths: ['/a', 7, '/b']
+      },
+      version: 'v1'
+    })
+    expect(next['dismissedSignInNotices']).toEqual(['gog', 'steam'])
+    expect(next['customWinePaths']).toEqual(['/a', '/b'])
+  })
+
   test('valid values come out deep-equal', () => {
     const valid = {
       language: 'de',
