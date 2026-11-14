@@ -1042,7 +1042,7 @@ Plans:
 **Goal:** `GameInfo` carries only what every store shares, and store-specific data lives in per-store shapes, so shared code stops depending on Steam, GOG or Epic fields. Measured 2026-11-06: the `GameInfo` interface in `src/common/types.ts` (1,336 lines) declares 41 top-level fields; 119 non-test files under `src/` reference it, 71 of them in the frontend. Store-specific fields sit beside shared ones, e.g. `gog_save_location`, `steamPlatformsCaptured`, the Steam Windows-depot and delisted signals and the Steam-only Metacritic score. Three parts: (1) **The split.** A shared core plus a per-store extension keyed by `runner`, as a discriminated union or a typed `storeData` field (discuss-phase decides), with a narrowing helper so a caller that needs Steam fields says so once. Phase 62's capability flags stay on the shared core. (2) **Migration.** Convert readers by area with a shrink-only count of direct store-field reads outside `storeManagers/` and store-specific UI, like Phase 62's ratchets. (3) **`common/types.ts`.** Move other store-specific types next to their store and leave `common/types.ts` with genuinely shared types. Persisted library caches that hold `GameInfo` shapes change shape, so the move goes through Phase 68's versioned migrations if it has landed, or a cache discard on version change otherwise. Open questions for discuss-phase: union versus `storeData`; whether the IPC payloads that carry `GameInfo` change shape at the same time as Phase 67's schemas; and the order relative to Phase 69, which rewrites many of the same frontend readers. Came from the post-Phase-62 architecture review on 2026-11-06.
 **Requirements**: ARCH-03 (phase IDs ARCH-03.1 to ARCH-03.6, minted in 70-RESEARCH)
 **Depends on:** Phase 62
-**Plans:** 19/22 plans executed
+**Plans:** 20/22 plans executed
 
 Plans (expand-contract; execution waits on Phase 69's 3 human UAT items per D-14):
 
@@ -1088,7 +1088,7 @@ Plans (expand-contract; execution waits on Phase 69's 3 human UAT items per D-14
 
 **Gap wave 2**
 - [x] 70-19-PLAN.md — G2: GameInfo library chains re-strip v2 -> v3 with stripToSchema + WR-04 regression fixtures
-- [ ] 70-20-PLAN.md — G2: sanitise Steam refresh entries built from steam_metadata; default legendary about.description
+- [x] 70-20-PLAN.md — G2: sanitise Steam refresh entries built from steam_metadata; default legendary about.description
 - [ ] 70-21-PLAN.md — G3 (per-game): settings/game v1 -> v2 strip step + retired-key / invalid-value fixtures
 
 **Gap wave 3**
