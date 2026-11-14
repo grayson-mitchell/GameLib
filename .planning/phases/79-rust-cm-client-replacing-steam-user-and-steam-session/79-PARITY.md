@@ -1,6 +1,6 @@
 # Phase 79 Parity Report
 
-Status: PENDING operator acceptance
+Status: APPROVED (CM ops)
 
 Plan 79-24 (CF-01, CF-03, CF-04, CF-05, D-07, D-16; Tier 2 for the CM ops). Sweep: `pnpm steamcm-parity-sweep` (`meta/steamcmParitySweep.ts`), run on the operator's Mac with the dev-vault refresh token. Read-only ops only (no redeem, no credential sign-in). Output is redacted (counts, classes, sha1 prefixes); no key, request code, token, name, SteamID or absolute path appears here.
 
@@ -35,9 +35,9 @@ Rust logon used the stored steam-session refresh token unchanged and no account 
 | depot-key (SHA-1 equality)            | 3      | 3     | 0                               | 0           |
 | request-code (presence)               | 3      | 3     | 0                               | 0           |
 | content-servers (count)               | 1      | 1     | 0                               | 0           |
-| persona (own persona present)         | 1      | 0 or 1 | persona-unsupported 0 or 1      | 0           |
+| persona (own persona present)         | 1      | 1     | 0                               | 0           |
 
-The persona row varied between runs (see DV-79-09): of four full sweeps after the fix, two reported `persona-unsupported` and two reported equal. Both outcomes exit 0. Every other row was identical on every run.
+Re-sweep after the DV-79-09 fix (commits 01e01a3cc, 3fac51c13): 5 completed sweeps on the final code, persona equal in all 5, exit 0 each, every other row identical. A further 5 completed sweeps on the same logic (plus scratch diagnostics) were also equal 5 of 5. Before the fix the persona row was `persona-unsupported` in 2 of 4 sweeps. 3 further sweeps aborted before any comparison with `sweep error: Request timed out` (exit 3): that is steam-user's own `getPersonas` 10 s timeout (the CM also ignores steam-user's request intermittently), not a Rust divergence and not a parity result either way.
 
 The first sweep (before the fix) exited 1 with licence-appids unexplained (steam-user 1,144 vs Rust 0); see Fixes.
 
@@ -52,7 +52,7 @@ Sources: golden overrides (79-21) and notes from 79-08/09/21, plus what this swe
 - Rust: `licenses_json` emits package_id, time_created, owner_id, access_token, license_type, flags.
 - Steam-correct side: both carry correct values for the six shared fields (package ids equal on the live account: 485 of 485). The 12 omitted fields are simply not read.
 - caller impact: none. GameLib reads `package_id` (and the access token inside the Rust op). A future caller needing the other 12 fields must extend `licenses_json`.
-- accepted: pending
+- accepted: yes (2026-11-15)
 
 ### DV-79-02: owned apps omit `img_icon_url`
 
@@ -61,7 +61,7 @@ Sources: golden overrides (79-21) and notes from 79-08/09/21, plus what this swe
 - Rust: omits it (the raw owned-game row from the CM does not carry it).
 - Steam-correct side: neither is wrong; the field is derived data in steam-user.
 - caller impact: none. Refresh does not read it; artwork comes from the store metadata path.
-- accepted: pending
+- accepted: yes (2026-11-15)
 
 ### DV-79-03: content servers omit `sourceid`, `preferred_server`, `NumEntriesInClientList`
 
@@ -70,7 +70,7 @@ Sources: golden overrides (79-21) and notes from 79-08/09/21, plus what this swe
 - Rust: `CdnServerRaw` does not carry them.
 - Steam-correct side: neither is wrong; the live sweep found equal server counts for the sampled app.
 - caller impact: none. The depot pipeline does not read them.
-- accepted: pending
+- accepted: yes (2026-11-15)
 
 ### DV-79-04: Rust appinfo adds `depotOrder`
 
@@ -79,7 +79,7 @@ Sources: golden overrides (79-21) and notes from 79-08/09/21, plus what this swe
 - Rust: adds `depotOrder`, the depot ids in source order, on each app entry, replacing what the TS `appinfoOrder` tap computed from steam-user's private `_send`.
 - Steam-correct side: both. Every `appinfo` value is identical (live: 25 of 25 equal, 0 explained).
 - caller impact: callers get depot order from `depotOrder` instead of the private tap; extra field is ignored elsewhere.
-- accepted: pending
+- accepted: yes (2026-11-15)
 
 ### DV-79-05: an empty `allowed_app_ids` list
 
@@ -88,7 +88,7 @@ Sources: golden overrides (79-21) and notes from 79-08/09/21, plus what this swe
 - Rust: empty means unrestricted.
 - Steam-correct side: Rust. An empty allow-list that excludes every app is not a meaningful directory answer.
 - caller impact: only if Steam ever sends an empty list: Rust would offer servers steam-user would filter out.
-- accepted: pending
+- accepted: yes (2026-11-15)
 
 ### DV-79-06: an empty redeem receipt
 
@@ -97,7 +97,7 @@ Sources: golden overrides (79-21) and notes from 79-08/09/21, plus what this swe
 - Rust: resolves with an empty `packageList`.
 - Steam-correct side: Rust (a hang is not a result).
 - caller impact: a redeem that returns no receipt now completes (with no packages) instead of hanging until the caller's timeout.
-- accepted: pending
+- accepted: yes (2026-11-15)
 
 ### DV-79-07: package tokens are taken first, from the licence then from PICS
 
@@ -106,7 +106,7 @@ Sources: golden overrides (79-21) and notes from 79-08/09/21, plus what this swe
 - Rust: asks for access tokens before the request (CF-05, one round trip) and, since the fix in this plan, also prefers a licence's non-zero token for a package, like steam-user.
 - Steam-correct side: equal results measured: 485 packages, 1,144 app ids on both sides, 0 `missingToken`.
 - caller impact: none observable; fewer round trips.
-- accepted: pending
+- accepted: yes (2026-11-15)
 
 ### DV-79-08: `redeem_key` returns Ok plus the eresult
 
@@ -115,7 +115,7 @@ Sources: golden overrides (79-21) and notes from 79-08/09/21, plus what this swe
 - Rust: the op returns the result with `eresult`; the TS `RustCmClient.redeemKey` adapter rejects with the same error shape when `eresult != 1`.
 - Steam-correct side: both (same observable behaviour through the adapter).
 - caller impact: none through the adapter; a direct `steamcm_redeem_key` caller must check `eresult` itself. Not exercised live (read-only sweep).
-- accepted: pending
+- accepted: yes (2026-11-15)
 
 ### DV-79-09: own persona is intermittently absent after other session ops
 
@@ -124,13 +124,15 @@ Sources: golden overrides (79-21) and notes from 79-08/09/21, plus what this swe
 - Rust: asks the CM each call and waits 5 s, returning an empty map on silence (79-09). Measured with scratch sessions: present when it is the first op after logon (3 of 3) and after a licence read (1 of 1); absent after a PICS product-info op (1 of 1) and when asked a second time in the same session (1 of 1). The cause is Steam-side behaviour (Steam seems to answer an own-id friend-data request once, early in a session); not root-caused beyond that.
 - Steam-correct side: not decided. Steam's answer to the live request is the truth, steam-user hides the silence behind its cache.
 - caller impact: persona names are fetched at sign-in as the first op after logon, where Rust returned the persona every time it was measured. A later caller of the persona op could get an empty map. Option if rejected: have the Rust session cache the persona state it receives at logon.
-- accepted: pending
+- rejected — operator: "Reject DV-09 only" (2026-11-15)
+- resolved: Rust now caches the logon persona state (commit 01e01a3cc) and resends the friend-data request inside its unchanged 5 s window (commit 3fac51c13); re-sweep persona presence equal in every completed run (5 of 5 on the final code, 10 of 10 across the fix; see CM ops sweep). Further finding: Steam does not push own persona state at logon on a steam-vent session (the cache only fills from replies), and the CM answers a single friend-data request intermittently, so the resend is what removed the empty result.
 
 ## Fixes made during the sweep
 
 1. Package PICS parse (Rust bug, commit 77c1cad60). The first sweep returned `packageinfo: null` for all 485 packages (0 of 1,144 licence app ids). `packageinfo_to_json` read the package id from the 4-byte buffer header, but real Steam sends `01 00 00 00` there; the id is the root key, and steam-user looks the root key up by the requested id. Rust now takes the id from the answer. The hand-written fixture (79-08) had assumed the header was the id; it now carries the real header. After the fix: 485 of 485 packages parse and app ids match 1,144 to 1,144.
 2. Licence-token fallback for packages (same commit, steam-user `apps.js` 215-223): with `inclTokens`, a package uses its licence's non-zero access token ahead of the PICS-supplied one. A unit test pins it. It did not change the live result by itself (the header bug was the cause); kept for parity.
-3. Re-ran `cargo test -p gamelib-steamcm` (265 passed), `cargo clippy -p gamelib-steamcm --tests`, `cargo fmt --check`, and `pnpm exec jest src/backend/storeManagers/steam/cm meta/__tests__/gamelibSteamcmCli.test.ts meta/__tests__/steamcmParitySweep.test.ts src/backend/__tests__/fakeHomeIsolation.test.ts` (all passed).
+3. Persona cache and resend (Rust, commits 01e01a3cc and 3fac51c13; DV-79-09 rejected by the operator). `PersonaCache` (per connection, so scoped to one logon and dropped on logout, rebuild or replace) absorbs every `CMsgClientPersonaState` the connection receives, subscribed before logon, name-bearing entries only; the `personas` op answers from it on a full hit, else asks the CM (steam-user's 0x7fff flag set), resending every 1.25 s inside the 5 s bound, empty map on silence. Result shape unchanged. Unit tests pin cache hit/miss/scope; the resend and live subscription live in `vent.rs` and are covered by the live sweep only (the fake has no push channel).
+4. Re-ran `cargo test -p gamelib-steamcm` (267 passed after the persona cache), `cargo clippy -p gamelib-steamcm --tests`, `cargo fmt --check`, and `pnpm exec jest src/backend/storeManagers/steam/cm meta/__tests__/gamelibSteamcmCli.test.ts meta/__tests__/steamcmParitySweep.test.ts src/backend/__tests__/fakeHomeIsolation.test.ts` (all passed).
 
 ## Refresh sweep (79-33)
 
