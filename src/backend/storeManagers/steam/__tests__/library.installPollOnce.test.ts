@@ -680,14 +680,19 @@ describe('pollInstallOnce()', () => {
         appid: '730',
         StateFlags: '4',
         installdir: 'csgo',
-        SizeOnDisk: '50000'
+        SizeOnDisk: '50000',
+        buildid: '9876'
       }
     })
     startInstallPolling(steamTestDeps, '730', 60000) // register entry so stopInstallPolling has something to clear
     await pollInstallOnce(steamTestDeps, '730')
     expect(sendFrontendMessage).toHaveBeenCalledWith(
       'pushGameToLibrary',
-      expect.objectContaining({ app_name: '730', is_installed: true })
+      expect.objectContaining({
+        app_name: '730',
+        is_installed: true,
+        install: expect.objectContaining({ version: '9876' })
+      })
     )
     expect(sendFrontendMessage).toHaveBeenCalledWith(
       'gameStatusUpdate',

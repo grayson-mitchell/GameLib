@@ -511,7 +511,8 @@ describe('pollUninstallOnce()', () => {
           appid: '730',
           StateFlags: '4',
           installdir: 'CS2Native',
-          SizeOnDisk: '99999'
+          SizeOnDisk: '99999',
+          buildid: '4242'
         }
       })
 
@@ -524,7 +525,8 @@ describe('pollUninstallOnce()', () => {
           app_name: '730',
           is_installed: true,
           install: expect.objectContaining({
-            install_path: '/steam/steamapps/common/CS2Native'
+            install_path: '/steam/steamapps/common/CS2Native',
+            version: '4242'
           })
         })
       )

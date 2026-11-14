@@ -16,6 +16,7 @@ import {
   BYTES_PER_MIB
 } from './pollState'
 import { readAcfState } from './acfState'
+import { installVersionField } from './installedMap'
 import { verifyMacArchGroundTruth } from './macArch'
 import { releaseSteamHold, notifyRestartSteamToFinish } from './restartHold'
 import { markSteamInstallIncomplete } from './resumeBreadcrumbs'
@@ -342,7 +343,8 @@ export async function pollInstallOnce(
         install: {
           install_path: result.installPath!,
           install_size: getFileSize(Number(result.sizeOnDisk!)),
-          platform: installPlatformForSource(source)
+          platform: installPlatformForSource(source),
+          ...installVersionField(result.buildid)
         }
       }
       deps.steamSession.libraryState.library.set(appId, updated)

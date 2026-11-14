@@ -29,7 +29,8 @@ import {
   buildInstalledMap,
   buildIncompleteInstallSet,
   buildBottleInstalledMap,
-  buildBridgeInstalledMap
+  buildBridgeInstalledMap,
+  installVersionField
 } from './installedMap'
 
 export async function refresh(deps: ManagerDeps): Promise<ExecResult | null> {
@@ -438,7 +439,8 @@ async function syncOwnedLibrary(
               // GAP-17-BOTTLE-PLAY-REVERT: platform must reflect which root
               // actually matched (native vs bottle), never hardcoded — a
               // bottle-installed game must always report 'Windows' (Pitfall 3).
-              platform: installPlatformForSource(source)
+              platform: installPlatformForSource(source),
+              ...installVersionField(installedData.buildid)
             }
           : // WR-01 (21-17): no fully-installed manifest, but an incomplete
             // (bit-4-unset) native ACF is on disk — durably re-surface the
@@ -640,7 +642,15 @@ export async function refreshInstallState(deps: ManagerDeps): Promise<void> {
           : 'bridge'
     const isNowInstalled = !!installedData
 
-    if (gameInfo.is_installed !== isNowInstalled) {
+    const flipped = gameInfo.is_installed !== isNowInstalled
+    // quick 261114-rc8: a Steam update changes the buildid without flipping
+    // is_installed, so a version-only change must also persist and push.
+    const versionStale =
+      isNowInstalled &&
+      gameInfo.install?.version !==
+        installVersionField(installedData.buildid).version
+
+    if (flipped || versionStale) {
       const updated: SteamGameInfo = {
         ...gameInfo,
         is_installed: isNowInstalled,
@@ -648,7 +658,8 @@ export async function refreshInstallState(deps: ManagerDeps): Promise<void> {
           ? {
               install_path: installedData.installPath,
               install_size: getFileSize(Number(installedData.sizeOnDisk)),
-              platform: installPlatformForSource(source)
+              platform: installPlatformForSource(source),
+              ...installVersionField(installedData.buildid)
             }
           : {}
       }
@@ -673,6 +684,7 @@ export async function refreshInstallState(deps: ManagerDeps): Promise<void> {
       // registered (no double prompt); verifyMacArchGroundTruth's cached-
       // verdict early return makes repeat focus events cheap.
       if (
+        flipped &&
         isNowInstalled &&
         source === 'native' &&
         isMac &&

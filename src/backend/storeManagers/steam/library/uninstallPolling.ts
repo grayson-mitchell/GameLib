@@ -16,6 +16,7 @@ import {
 import { MAX_TICKS, STEAM_REQUEST_NO_ACTIVITY_TICKS } from './pollState'
 import type { InstallPollState, UninstallPolls } from './pollState'
 import { readAcfState } from './acfState'
+import { installVersionField } from './installedMap'
 import type { SteamLibraryStateDeps } from 'backend/services/types'
 import type { BottleSettingsDeps } from '../bottle'
 
@@ -179,7 +180,8 @@ export async function pollUninstallOnce(
         install: {
           install_path: survivor.installPath,
           install_size: getFileSize(Number(survivor.sizeOnDisk ?? '0')),
-          platform: installPlatformForSource(survivorSource)
+          platform: installPlatformForSource(survivorSource),
+          ...installVersionField(survivor.buildid)
         }
       }
       deps.steamSession.libraryState.library.set(appId, updated)

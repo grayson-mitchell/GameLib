@@ -1415,7 +1415,8 @@ describe('SteamLibraryManager', () => {
           appid: '206020',
           StateFlags: '4',
           installdir: 'Avernum 4',
-          SizeOnDisk: '123456'
+          SizeOnDisk: '123456',
+          buildid: '777'
         }
       })
 
@@ -1438,6 +1439,7 @@ describe('SteamLibraryManager', () => {
         expect.objectContaining({
           install_path: join(BOTTLE_STEAMAPPS_ROOT, 'common', 'Avernum 4'),
           install_size: '123456 B',
+          version: '777',
           // Pitfall 3: bottle installs must always report 'Windows', regardless
           // of host OS (isMac is mocked true in this block).
           platform: 'Windows'
@@ -2174,6 +2176,93 @@ describe('SteamLibraryManager', () => {
         'pushGameToLibrary',
         expect.objectContaining({ app_name: '570', is_installed: true })
       )
+    })
+
+    describe('install.version from the ACF buildid (quick 261114-rc8)', () => {
+      const seedInstalled = (version?: string) =>
+        library.set('570', {
+          runner: 'steam',
+          app_name: '570',
+          title: 'Dota 2',
+          is_installed: true,
+          install: {
+            install_path: join('/steam', 'steamapps', 'common', 'dota2'),
+            install_size: '50000 B',
+            platform: 'Mac',
+            ...(version ? { version } : {})
+          },
+          art_cover: '',
+          art_square: '',
+          extra: { reqs: [] },
+          canRunOffline: true,
+          installable: true
+        } as any)
+      const mockAcf = (buildid?: string) => {
+        jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+        ;(existsSync as jest.Mock).mockReturnValue(true)
+        ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_570.acf'])
+        ;(readFileSync as jest.Mock).mockReturnValue('content')
+        vdf.parse.mockReturnValue({
+          AppState: {
+            appid: '570',
+            StateFlags: '4',
+            installdir: 'dota2',
+            SizeOnDisk: '50000',
+            ...(buildid ? { buildid } : {})
+          }
+        })
+      }
+
+      it('sets install.version on a false→true flip', async () => {
+        library.set('570', {
+          runner: 'steam',
+          app_name: '570',
+          title: 'Dota 2',
+          is_installed: false,
+          install: {},
+          art_cover: '',
+          art_square: '',
+          extra: { reqs: [] },
+          canRunOffline: true,
+          installable: true
+        } as any)
+        mockAcf('300')
+        await manager.refreshInstallState()
+        expect(library.get('570')!.install).toEqual(
+          expect.objectContaining({ version: '300' })
+        )
+      })
+
+      it('persists and pushes a version-only change on an already-installed game', async () => {
+        seedInstalled('100')
+        mockAcf('200')
+        await manager.refreshInstallState()
+        expect(library.get('570')!.install).toEqual(
+          expect.objectContaining({ version: '200' })
+        )
+        expect(steamLibraryStore.set).toHaveBeenCalledWith(
+          'games',
+          expect.anything()
+        )
+        expect(sendFrontendMessage).toHaveBeenCalledWith(
+          'pushGameToLibrary',
+          expect.objectContaining({ app_name: '570' })
+        )
+      })
+
+      it('does not push when the buildid equals the stored version', async () => {
+        seedInstalled('200')
+        mockAcf('200')
+        await manager.refreshInstallState()
+        expect(sendFrontendMessage).not.toHaveBeenCalled()
+      })
+
+      it('does not push when there is no buildid and no stored version', async () => {
+        seedInstalled()
+        mockAcf()
+        await manager.refreshInstallState()
+        expect(sendFrontendMessage).not.toHaveBeenCalled()
+      })
     })
 
     it('refreshInstallState() sets install_path and install_size when game becomes installed', async () => {
