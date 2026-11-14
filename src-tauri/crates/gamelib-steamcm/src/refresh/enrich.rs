@@ -3,7 +3,8 @@
 //! many apps. TS only persists the returned `entry` and pushes the returned `game`.
 //!
 //! Stage budget (D-12): a cold cache has hundreds of never-enriched apps and the store
-//! rate-limits `appdetails`, so the stage runs 5 at a time, stops at the first HTTP 429 and
+//! rate-limits `appdetails`, so the stage runs 5 at a time, stops at the first HTTP 429/403, caps itself at
+//! [`ENRICH_REFRESH_MAX_REQUESTS`] requests per Refresh and
 //! gives up after 20 s so Refresh still returns promptly. Apps it does not reach are listed
 //! in `not_reached` and stay on the lazy per-game path, which calls `enrich_entry` through an
 //! op with the same merge rules.
@@ -25,6 +26,9 @@ use super::store_http::{mac_arch_from_min_os, store_appdetails, StoreDetails, St
 pub const ENRICH_CONCURRENCY: usize = 5;
 /// Wall-clock budget of one Refresh enrichment stage.
 pub const ENRICH_STAGE_BUDGET: Duration = Duration::from_secs(20);
+/// Per-Refresh cap on store `appdetails` requests (keeps one Refresh under the store throttle);
+/// the remainder is `not_reached` and served by the lazy per-game path.
+pub const ENRICH_REFRESH_MAX_REQUESTS: usize = 50;
 
 const STEAM_CDN_BASE: &str = "https://cdn.cloudflare.steamstatic.com/steam/apps";
 
@@ -280,8 +284,8 @@ enum Done {
     Failed(String, StoreError),
 }
 
-/// Enrich many apps: concurrency [`ENRICH_CONCURRENCY`], stop at the first 429, stop at
-/// `budget`. Only `Enriched`/`Delisted` outcomes are returned; a per-app failure is counted
+/// Enrich many apps: concurrency [`ENRICH_CONCURRENCY`], stop at the first 429 or 403, stop
+/// at `budget`, and make at most [`ENRICH_REFRESH_MAX_REQUESTS`] requests. Only `Enriched`/`Delisted` outcomes are returned; a per-app failure is counted
 /// and never aborts the stage.
 pub async fn enrich_stage(
     client: &reqwest::Client,
@@ -297,7 +301,10 @@ pub async fn enrich_stage(
     let mut sum = EnrichStageSummary::default();
 
     loop {
-        while !sum.rate_limited && inflight.len() < ENRICH_CONCURRENCY {
+        while !sum.rate_limited
+            && sum.attempted < ENRICH_REFRESH_MAX_REQUESTS
+            && inflight.len() < ENRICH_CONCURRENCY
+        {
             let Some(app) = queue.pop_front() else { break };
             sum.attempted += 1;
             in_flight_ids.push(app.app_id.clone());
@@ -346,7 +353,7 @@ pub async fn enrich_stage(
             }
             Done::Failed(id, e) => {
                 in_flight_ids.retain(|x| *x != id);
-                if e == (StoreError::Http { status: 429 }) {
+                if matches!(e, StoreError::Http { status: 429 | 403 }) {
                     sum.rate_limited = true;
                     sum.not_reached.push(id);
                 } else {
@@ -793,6 +800,46 @@ mod tests {
         assert!(sum.attempted < 30, "no new requests after the 429");
         assert_eq!(out.len() + sum.not_reached.len() + sum.failed, 30);
         assert!(sum.not_reached.len() >= 20);
+    }
+
+    #[tokio::test]
+    async fn stage_stops_at_the_first_403() {
+        let m = spawn(|p| {
+            if p.contains("appids=3&") {
+                Reply::status(403)
+            } else {
+                ok_body(p).delayed(Duration::from_millis(30))
+            }
+        })
+        .await;
+        let apps: Vec<_> = (1..=30).map(|i| input(&i.to_string())).collect();
+        let (out, sum) = enrich_stage(&client(), &m.base, apps, Duration::from_secs(10)).await;
+        assert!(sum.rate_limited);
+        assert!(sum.not_reached.contains(&"3".to_string()));
+        assert!(sum.attempted < 30, "no new requests after the 403");
+        assert_eq!(out.len() + sum.not_reached.len() + sum.failed, 30);
+    }
+
+    #[tokio::test]
+    async fn stage_caps_requests_per_refresh() {
+        let m = spawn(ok_body).await;
+        let apps: Vec<_> = (1..=80).map(|i| input(&i.to_string())).collect();
+        let (out, sum) = enrich_stage(&client(), &m.base, apps, Duration::from_secs(20)).await;
+        assert_eq!(ENRICH_REFRESH_MAX_REQUESTS, 50);
+        assert_eq!(sum.attempted, 50);
+        assert_eq!(out.len(), 50);
+        assert_eq!(sum.not_reached.len(), 30);
+        assert!(!sum.rate_limited && !sum.budget_hit);
+    }
+
+    #[tokio::test]
+    async fn lazy_single_app_fetch_is_not_capped_or_stopped() {
+        // The lazy op calls store_appdetails directly, never enrich_stage.
+        let m = spawn(ok_body).await;
+        for i in 0..60 {
+            let r = store_appdetails(&client(), &m.base, &i.to_string()).await;
+            assert!(r.is_ok());
+        }
     }
 
     #[tokio::test]
