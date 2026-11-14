@@ -11,13 +11,17 @@
 use crate::container::{decrypt_filename, unzip_manifest, DecodeError, MAX_MANIFEST_BYTES};
 use crate::delta;
 use crate::fetch::{FetchError, Fetcher, ERESULT_BLOCKED};
-use crate::job::{DeltaEstimate, DepotRef, DepotSummary, SummarizeRequest, SummarizeResult};
+use crate::job::{
+    DeltaEstimate, DepotJob, DepotRef, DepotSummary, JobMode, SummarizeRequest, SummarizeResult,
+};
 use crate::model::{ChunkRef, DepotManifest, ManifestFile};
 use crate::outcome::{ErrorKind, Failure};
+use gamelib_steamfiles::library::scan_acfs;
 use prost::Message;
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio_util::sync::CancellationToken;
 
@@ -548,34 +552,147 @@ impl ManifestStore {
     /// Keeps `keep_gid`, every protected GID (the installed build's manifests, Phase 74), plus the
     /// newest other GID (by mtime); removes the rest. Non-numeric protected entries are ignored.
     pub fn prune(&self, depot_id: &str, keep_gid: &str, protected: &[&str]) {
-        if !is_numeric_id(depot_id) || !is_numeric_id(keep_gid) {
-            return;
-        }
-        let dir = self.cache_dir.join(depot_id);
-        let Ok(rd) = std::fs::read_dir(&dir) else {
-            return;
+        prune_dir(&self.cache_dir, depot_id, keep_gid, protected);
+    }
+}
+
+/// Body of [`ManifestStore::prune`]; returns the number of files removed.
+fn prune_dir(cache_dir: &Path, depot_id: &str, keep_gid: &str, protected: &[&str]) -> usize {
+    if !is_numeric_id(depot_id) || !is_numeric_id(keep_gid) {
+        return 0;
+    }
+    let dir = cache_dir.join(depot_id);
+    let Ok(rd) = std::fs::read_dir(&dir) else {
+        return 0;
+    };
+    let keep_name = format!("{keep_gid}.manifest");
+    let mut others: Vec<(std::time::SystemTime, PathBuf)> = Vec::new();
+    for e in rd.flatten() {
+        let name = e.file_name().to_string_lossy().into_owned();
+        let Some(stem) = name.strip_suffix(".manifest") else {
+            continue;
         };
-        let keep_name = format!("{keep_gid}.manifest");
-        let mut others: Vec<(std::time::SystemTime, PathBuf)> = Vec::new();
-        for e in rd.flatten() {
-            let name = e.file_name().to_string_lossy().into_owned();
-            let Some(stem) = name.strip_suffix(".manifest") else {
-                continue;
-            };
-            if name == keep_name || !is_numeric_id(stem) || protected.contains(&stem) {
-                continue;
-            }
-            let mtime = e
-                .metadata()
-                .and_then(|m| m.modified())
-                .unwrap_or(std::time::UNIX_EPOCH);
-            others.push((mtime, e.path()));
+        if name == keep_name || !is_numeric_id(stem) || protected.contains(&stem) {
+            continue;
         }
-        others.sort_by_key(|a| std::cmp::Reverse(a.0));
-        for (_, p) in others.into_iter().skip(KEEP_GIDS - 1) {
-            let _ = std::fs::remove_file(p);
+        let mtime = e
+            .metadata()
+            .and_then(|m| m.modified())
+            .unwrap_or(std::time::UNIX_EPOCH);
+        others.push((mtime, e.path()));
+    }
+    others.sort_by_key(|a| std::cmp::Reverse(a.0));
+    let mut removed = 0;
+    for (_, p) in others.into_iter().skip(KEEP_GIDS - 1) {
+        if std::fs::remove_file(p).is_ok() {
+            removed += 1;
         }
     }
+    removed
+}
+
+/// Registry of the steamapps dirs GameLib has finalized installs into.
+const REGISTRY_FILE: &str = "steamapps-dirs.json";
+const MAX_REGISTRY_DIRS: usize = 64;
+const MAX_REGISTRY_PATH_BYTES: usize = 4096;
+
+static PRUNE_LOCK: Mutex<()> = Mutex::new(());
+
+fn load_registry(cache_dir: &Path) -> Vec<String> {
+    let Ok(text) = std::fs::read_to_string(cache_dir.join(REGISTRY_FILE)) else {
+        return Vec::new();
+    };
+    let Ok(serde_json::Value::Array(items)) = serde_json::from_str::<serde_json::Value>(&text)
+    else {
+        return Vec::new();
+    };
+    items
+        .into_iter()
+        .filter_map(|v| match v {
+            serde_json::Value::String(s)
+                if s.len() <= MAX_REGISTRY_PATH_BYTES && Path::new(&s).is_absolute() =>
+            {
+                Some(s)
+            }
+            _ => None,
+        })
+        .collect()
+}
+
+fn write_registry(cache_dir: &Path, dirs: &[String]) -> std::io::Result<()> {
+    ensure_dir(cache_dir)?;
+    let tmp = cache_dir.join(format!(
+        ".tmp-{}-{}",
+        std::process::id(),
+        TMP_SEQ.fetch_add(1, Ordering::Relaxed)
+    ));
+    let body = serde_json::to_vec(dirs).map_err(std::io::Error::other)?;
+    std::fs::write(&tmp, body)?;
+    std::fs::rename(&tmp, cache_dir.join(REGISTRY_FILE)).inspect_err(|_| {
+        let _ = std::fs::remove_file(&tmp);
+    })
+}
+
+/// Prunes the manifest cache of every depot in a finished install or update job and returns the
+/// number of files removed. Runs only for `mode: install` jobs that finalize.
+///
+/// Protected: every GID named by `InstalledDepots` in any appmanifest of any steamapps dir GameLib
+/// has finalized into (registry `<cache>/steamapps-dirs.json`, dirs that no longer exist are
+/// dropped), so another app's installed build is never deleted. Fails closed: if any ACF there is
+/// unreadable nothing is deleted and `Err` is returned, since an unreadable ACF might name a GID
+/// that would otherwise go. After this the cache holds the installed GID(s) plus at most one
+/// newest other per depot ([`KEEP_GIDS`]), a fixed bound rather than growth.
+pub fn prune_after_install(cache_dir: &Path, job: &DepotJob) -> Result<usize, String> {
+    if job.mode != JobMode::Install {
+        return Ok(0);
+    }
+    let Some(fin) = job.finalize.as_ref() else {
+        return Ok(0);
+    };
+    let _guard = PRUNE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let mut dirs = load_registry(cache_dir);
+    if Path::new(&fin.steamapps_dir).is_absolute()
+        && fin.steamapps_dir.len() <= MAX_REGISTRY_PATH_BYTES
+    {
+        dirs.retain(|d| d != &fin.steamapps_dir);
+        dirs.push(fin.steamapps_dir.clone());
+    }
+    if dirs.len() > MAX_REGISTRY_DIRS {
+        dirs.drain(..dirs.len() - MAX_REGISTRY_DIRS);
+    }
+    let scan = scan_acfs(&dirs);
+    if let Some(first) = scan.skipped.first() {
+        return Err(format!(
+            "{} unreadable appmanifest(s), first: {} ({})",
+            scan.skipped.len(),
+            first.file_name,
+            first.reason
+        ));
+    }
+    dirs.retain(|d| !scan.missing_dirs.contains(d));
+    let reg_result = write_registry(cache_dir, &dirs);
+    let mut protected: HashMap<&str, Vec<&str>> = HashMap::new();
+    for r in &scan.records {
+        for d in &r.record.installed_depots {
+            protected
+                .entry(d.depot_id.as_str())
+                .or_default()
+                .push(d.manifest.as_str());
+        }
+    }
+    let mut removed = 0;
+    for d in &job.depots {
+        if !is_numeric_id(&d.depot_id) || !is_numeric_id(&d.manifest_id) {
+            continue;
+        }
+        let prot = protected
+            .get(d.depot_id.as_str())
+            .cloned()
+            .unwrap_or_default();
+        removed += prune_dir(cache_dir, &d.depot_id, &d.manifest_id, &prot);
+    }
+    reg_result.map_err(|e| format!("registry write: {e}"))?;
+    Ok(removed)
 }
 
 fn ensure_dir(dir: &Path) -> std::io::Result<()> {

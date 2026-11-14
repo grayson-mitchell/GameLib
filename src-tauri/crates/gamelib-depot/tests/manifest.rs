@@ -435,3 +435,152 @@ fn prune_keeps_protected_gid() {
     left.sort();
     assert_eq!(left, vec!["1.manifest", "4.manifest", "5.manifest"]);
 }
+
+// ---- prune_after_install (quick 261114-lsl) ----
+
+fn install_job(
+    app_id: &str,
+    steamapps: &std::path::Path,
+    gid: &str,
+) -> gamelib_depot::job::DepotJob {
+    serde_json::from_value(serde_json::json!({
+        "jobId": "j",
+        "mode": "install",
+        "appId": app_id,
+        "installRoot": steamapps.join("common").join("g").to_string_lossy(),
+        "depots": [{
+            "depotId": "10",
+            "manifestId": gid,
+            "requestCode": null,
+            "key": "ab".repeat(32),
+            "ownerAppId": app_id,
+            "fromManifest": null
+        }],
+        "hosts": [],
+        "selectPaths": null,
+        "finalize": {
+            "steamappsDir": steamapps.to_string_lossy(),
+            "installdir": "g",
+            "name": "G",
+            "buildid": null,
+            "lastOwner": null,
+            "allowFullOwnership": false
+        },
+        "limits": null
+    }))
+    .unwrap()
+}
+
+fn write_acf(steamapps: &std::path::Path, app_id: &str, gid: &str) {
+    std::fs::create_dir_all(steamapps).unwrap();
+    std::fs::write(
+        steamapps.join(format!("appmanifest_{app_id}.acf")),
+        format!(
+            "\"AppState\"\n{{\n\t\"appid\"\t\t\"{app_id}\"\n\t\"StateFlags\"\t\t\"4\"\n\t\"InstalledDepots\"\n\t{{\n\t\t\"10\"\n\t\t{{\n\t\t\t\"manifest\"\t\t\"{gid}\"\n\t\t\t\"size\"\t\t\"1\"\n\t\t}}\n\t}}\n}}\n"
+        ),
+    )
+    .unwrap();
+}
+
+fn seed_manifest(cache: &std::path::Path, gid: &str, age_secs: u64) {
+    let d = cache.join("10");
+    std::fs::create_dir_all(&d).unwrap();
+    let p = d.join(format!("{gid}.manifest"));
+    std::fs::write(&p, b"x").unwrap();
+    let f = std::fs::File::options().write(true).open(&p).unwrap();
+    f.set_modified(std::time::SystemTime::now() - std::time::Duration::from_secs(age_secs))
+        .unwrap();
+}
+
+fn cached(cache: &std::path::Path) -> Vec<String> {
+    let mut v: Vec<String> = std::fs::read_dir(cache.join("10"))
+        .unwrap()
+        .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+        .filter(|n| n.ends_with(".manifest"))
+        .map(|n| n.trim_end_matches(".manifest").to_string())
+        .collect();
+    v.sort();
+    v
+}
+
+#[test]
+fn prune_after_install_several_updates() {
+    let t = tempfile::tempdir().unwrap();
+    let cache = t.path().join("cache");
+    let a = t.path().join("A");
+    for (i, gid) in ["101", "102", "103", "104"].iter().enumerate() {
+        seed_manifest(&cache, gid, 1000 - i as u64 * 10);
+        write_acf(&a, "570", gid);
+        prune_after_install(&cache, &install_job("570", &a, gid)).unwrap();
+        assert!(cached(&cache).len() <= 2);
+    }
+    assert_eq!(cached(&cache), vec!["103", "104"]);
+}
+
+#[test]
+fn prune_after_install_protects_other_apps_gids() {
+    let t = tempfile::tempdir().unwrap();
+    let cache = t.path().join("cache");
+    let a = t.path().join("A");
+    let b = t.path().join("B");
+    seed_manifest(&cache, "50", 5000);
+    write_acf(&b, "900", "50");
+    prune_after_install(&cache, &install_job("900", &b, "50")).unwrap();
+    for (i, gid) in ["60", "61", "62"].iter().enumerate() {
+        seed_manifest(&cache, gid, 1000 - i as u64 * 10);
+        write_acf(&a, "570", gid);
+        prune_after_install(&cache, &install_job("570", &a, gid)).unwrap();
+        assert!(cached(&cache).contains(&"50".to_string()));
+    }
+}
+
+#[test]
+fn prune_after_install_skips_on_unreadable_acf() {
+    let t = tempfile::tempdir().unwrap();
+    let cache = t.path().join("cache");
+    let a = t.path().join("A");
+    for (i, gid) in ["1", "2", "3", "4"].iter().enumerate() {
+        seed_manifest(&cache, gid, 1000 - i as u64 * 10);
+    }
+    std::fs::create_dir_all(&a).unwrap();
+    std::fs::write(a.join("appmanifest_1.acf"), "not vdf").unwrap();
+    assert!(prune_after_install(&cache, &install_job("570", &a, "4")).is_err());
+    assert_eq!(cached(&cache), vec!["1", "2", "3", "4"]);
+}
+
+#[test]
+fn prune_after_install_drops_missing_dirs() {
+    let t = tempfile::tempdir().unwrap();
+    let cache = t.path().join("cache");
+    let a = t.path().join("A");
+    let gone = t.path().join("gone");
+    std::fs::create_dir_all(&cache).unwrap();
+    std::fs::write(
+        cache.join("steamapps-dirs.json"),
+        serde_json::to_string(&vec![gone.to_string_lossy()]).unwrap(),
+    )
+    .unwrap();
+    seed_manifest(&cache, "1", 100);
+    write_acf(&a, "570", "1");
+    prune_after_install(&cache, &install_job("570", &a, "1")).unwrap();
+    let reg = std::fs::read_to_string(cache.join("steamapps-dirs.json")).unwrap();
+    let v: Vec<String> = serde_json::from_str(&reg).unwrap();
+    assert_eq!(v, vec![a.to_string_lossy().into_owned()]);
+}
+
+#[test]
+fn prune_after_install_noop_without_finalize_or_non_install() {
+    let t = tempfile::tempdir().unwrap();
+    let cache = t.path().join("cache");
+    let a = t.path().join("A");
+    for (i, gid) in ["1", "2", "3", "4"].iter().enumerate() {
+        seed_manifest(&cache, gid, 1000 - i as u64 * 10);
+    }
+    let mut j = install_job("570", &a, "4");
+    j.finalize = None;
+    assert_eq!(prune_after_install(&cache, &j).unwrap(), 0);
+    let mut j = install_job("570", &a, "4");
+    j.mode = gamelib_depot::job::JobMode::VerifyOnly;
+    assert_eq!(prune_after_install(&cache, &j).unwrap(), 0);
+    assert_eq!(cached(&cache), vec!["1", "2", "3", "4"]);
+}
