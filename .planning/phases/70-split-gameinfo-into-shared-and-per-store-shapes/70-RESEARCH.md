@@ -414,12 +414,16 @@ This phase changes persisted data (strip migration), so the five categories, ans
 | Over-strict schema silently drops a `send` (settings write, `addNewApp`) | Denial of service (self-inflicted) | Per-key and per-store fixtures; live gate exercises both |
 | Migration failure corrupts a library | Tampering/DoS | Engine backup + read-only fallback; migration is total and key-deleting only |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Third-party flags split (Claude's Discretion).** Recommended: `thirdPartyManagedApp` core (11 readers), `isEAManaged`/`isUbisoftManaged` Legendary (derived from the string, only legendary sets them, 5 narrowing sites). Fallback if the planner wants fewer narrowing sites: all three in core, and the D-15 start drops by about 4 files. Either satisfies D-06; I recommend the split because it matches "only makes sense for one store".
+   RESOLVED: split adopted — `thirdPartyManagedApp` in core, `isEAManaged`/`isUbisoftManaged` in the Legendary member; recorded in the 70-01 D-06 classification table.
 2. **Close `steam.ts` and `wineTools.ts` passthroughs here, and add `store/download-manager` to the strip.** Both exceed CONTEXT's literal text but are required by D-11's end state and D-12's rationale. Recommend yes to both. If the user disagrees, `phase70Passthrough` cannot be deleted and the grep acceptance in D-11 must be narrowed.
+   RESOLVED: yes to both — steam.ts `LaunchParams` and wineTools.ts `GameSettings` are closed in 70-14 (helper deleted, census test); `store/download-manager` is stripped in 70-15.
 3. **D-16 wording.** ConsoleMode no longer hides delisted games (Phase 37). Update the live-gate item and D-15's "delisted hiding in ConsoleMode" allowlist example (the real allowlist rows are `filterEngine`, `GameCard`, `MainButton`, `GameSubMenu`). `SteamInfo`/`SteamDeckComp` staying in `common/types.ts` is a small D-13 judgement call (they are cross-store wiki data).
+   RESOLVED: D-16's item reworded in 70-16 (delisted visible in ConsoleMode; Library 'no store page' facet still finds them) and D-15's allowlist examples corrected in 70-02/70-10 (`filterEngine`, `GameCard`, `MainButton`, `GameSubMenu`); `SteamInfo`/`SteamDeckComp` stay in `common/types.ts` (70-12).
 4. **`dlcList`** has no readers; deleting it is a separate todo (shape change).
+   RESOLVED: deferred, out of scope — `dlcList` stays in `LegendaryGameInfo` as the named loose IPC element (70-13) and the strip stops at it (70-15); no todo file filed.
 
 ## Assumptions Log
 

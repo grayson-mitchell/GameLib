@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.10
 milestone_name: Foundations
-status: planning
-stopped_at: Phase 70 context gathered
-last_updated: "2026-11-13T23:54:19.003Z"
-last_activity: 2026-11-14 - Phase 75 complete (35/35, verified, CI green)
+status: executing
+stopped_at: "74-33 live gate recorded: items 24/26/27 pass, 25 and 28 issues; round-4 gap planning next"
+last_updated: "2026-11-14T00:35:40.712Z"
+last_activity: 2026-11-14 -- Phase 70 planning complete
 progress:
   total_phases: 23
-  completed_phases: 15
-  total_plans: 361
-  completed_plans: 359
-  percent: 65
+  completed_phases: 16
+  total_plans: 377
+  completed_plans: 360
+  percent: 70
 ---
 
 # Project State
@@ -74,8 +74,8 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 
 Phase: 76
 Plan: Not started
-Status: Ready to plan
-Last activity: 2026-11-14 - Phase 75 complete (35/35, verified, CI green)
+Status: Ready to execute
+Last activity: 2026-11-14 -- Phase 70 planning complete
 
 Progress: [██████████] 99%
 
@@ -740,9 +740,9 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-13T23:54:18.993Z
-Stopped at: Phase 70 context gathered
-Resume file: .planning/phases/70-split-gameinfo-into-shared-and-per-store-shapes/70-CONTEXT.md
+Last session: 2026-11-14T00:30:43.401Z
+Stopped at: 74-33 live gate recorded: items 24/26/27 pass, 25 and 28 issues; round-4 gap planning next
+Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
 
