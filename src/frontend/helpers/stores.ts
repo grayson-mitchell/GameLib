@@ -15,7 +15,10 @@ import {
   TypeCheckedStore,
   UnknownGuard
 } from 'common/types/typed_store'
-import { GameInfo } from 'common/types'
+import type { LegendaryGameInfo } from 'common/types/legendary'
+import type { GogGameInfo } from 'common/types/gog'
+import type { SteamGameInfo } from 'common/types/steam'
+import type { NileGameInfo } from 'common/types/nile'
 
 class TypeCheckedStoreFrontend<
   Name extends ValidStoreName
@@ -121,7 +124,7 @@ const configStore = new TypeCheckedStoreFrontend('configStore', {
   cwd: 'store'
 })
 
-const libraryStore = new CacheStore<GameInfo[], 'library'>(
+const libraryStore = new CacheStore<LegendaryGameInfo[], 'library'>(
   'legendary_library',
   null
 )
@@ -134,7 +137,10 @@ const wineDownloaderInfoStore = new TypeCheckedStoreFrontend(
   }
 )
 
-const gogLibraryStore = new CacheStore<GameInfo[], 'games'>('gog_library', null)
+const gogLibraryStore = new CacheStore<GogGameInfo[], 'games'>(
+  'gog_library',
+  null
+)
 const gogInstalledGamesStore = new TypeCheckedStoreFrontend(
   'gogInstalledGamesStore',
   {
@@ -150,7 +156,7 @@ const steamConfigStore = new TypeCheckedStoreFrontend('steamConfigStore', {
   cwd: 'steam_store'
 })
 
-const steamLibraryStore = new CacheStore<GameInfo[], 'games'>(
+const steamLibraryStore = new CacheStore<SteamGameInfo[], 'games'>(
   'steam_library',
   null
 )
@@ -159,7 +165,7 @@ const humbleConfigStore = new TypeCheckedStoreFrontend('humbleConfigStore', {
   cwd: 'humble_store'
 })
 
-const nileLibraryStore = new CacheStore<GameInfo[], 'library'>(
+const nileLibraryStore = new CacheStore<NileGameInfo[], 'library'>(
   'nile_library',
   null
 )

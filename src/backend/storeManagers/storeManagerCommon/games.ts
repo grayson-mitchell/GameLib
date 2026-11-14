@@ -15,6 +15,7 @@ import { withKnownFixEnv } from 'backend/knownFixOverlays'
 import type LogWriter from 'backend/logger/log_writer'
 import { Game } from '../../../common/types/game_manager'
 import { engineKeyFor } from 'backend/engine/gameKey'
+import { asStoreGame } from 'common/gameInfoNarrowing'
 
 /**
  * Browser games opened a child BrowserWindow. Under the sidecar `new BrowserWindow(...)` threw
@@ -65,7 +66,7 @@ export async function launchGame(
     install: { executable }
   } = gameInfo
 
-  const { browserUrl } = gameInfo
+  const browserUrl = asStoreGame(gameInfo, 'sideload')?.browserUrl
 
   const gameSettingsOverrides = await deps.gameConfigs
     .get(appName)
