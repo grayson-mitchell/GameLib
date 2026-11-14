@@ -221,7 +221,7 @@ The helper emits one JSON object per step and exits non-zero on ambiguity; Rust 
 
 ### `gamelib-steamcm/src/refresh/*`
 
-**Analog (behaviour to port, not a code pattern to copy):** `src/backend/storeManagers/steam/library/refresh.ts` (702 lines), `licensedDemos.ts`, `platformCapture.ts`, `metacriticCapture.ts`, `gameMetadata.ts`, `gameRequirements.ts`. Order of operations is documented in RESEARCH "Refresh boundary (D-12)". Rust owns network + pure computation; TS keeps stores, `libraryState`, frontend pushes, install-state merge and bridge backfill (Open Question 1; planner should confirm boundary with operator). Use `NUMERIC_ID` guard before any URL (T-06-01/T-21-05) and size-capped strict parse of store bodies (T-2-02).
+**Analog (behaviour to port, not a code pattern to copy):** `src/backend/storeManagers/steam/library/refresh.ts` (702 lines), `licensedDemos.ts`, `platformCapture.ts`, `metacriticCapture.ts`, `gameMetadata.ts`, `gameRequirements.ts`. Order of operations is documented in RESEARCH "Refresh boundary (D-12)". Boundary (Open Question 1, RESOLVED as D-12 as written, see 79-01 assumptions item 1): Rust owns the orchestration, capture scope/merge, enrichment and its merge, and the install-state merge/assembly into the finished library. TS keeps the store writes, `libraryState`, frontend pushes, the grant/lease flow and the bridge backfill, and passes TS-owned inputs (metadata snapshot, install-state maps, allowlist, known-fix ids) as op arguments. Use `NUMERIC_ID` guard before any URL (T-06-01/T-21-05) and size-capped strict parse of store bodies (T-2-02).
 
 ---
 

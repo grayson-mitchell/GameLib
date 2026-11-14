@@ -1,8 +1,8 @@
 ---
 phase: 79
 slug: rust-cm-client-replacing-steam-user-and-steam-session
-status: draft
-nyquist_compliant: false
+status: approved
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-11-14
 ---
@@ -40,22 +40,28 @@ created: 2026-11-14
 
 Filled in by the planner per task. Decision → test map from research:
 
-| Req / Decision | Behavior | Test Type | Automated Command | File Exists | Status |
-|---|---|---|---|---|---|
-| D-01/D-03 | lease share, 60 s idle close, generation, shutdown ordering | unit (fake backend, paused clock) | `cargo test -p gamelib-steamcm --test session_fake` | ❌ W0 | ⬜ pending |
-| D-02 | dead call → probe → rebuild → retry once; backoff 5→60 s | unit (fake backend) | same | ❌ W0 | ⬜ pending |
-| D-04 | anonymous client shared, 15 s connect bound, 60 s idle | unit | `cargo test -p gamelib-steamcm --test anon_fake` | ❌ W0 | ⬜ pending |
-| D-05 | QR rotation, credentials, guard types, poll states | unit with mock HTTP | `cargo test -p gamelib-steamcm --test webauth_mock` | ❌ W0 | ⬜ pending |
-| D-06/07/08 | persona fallback, token reuse, `credentialsMissing` | unit + Jest | `pnpm jest src/backend/storeManagers/steam/__tests__/credentialsMissing.test.ts` | ✅ (adapt) | ⬜ pending |
-| CM op shapes | PICS / depot key / request code / owned / redeem JSON = steam-user's | golden (Tier 1) | `cargo test -p gamelib-steamcm --test golden` + Jest golden replay | ❌ W0 | ⬜ pending |
-| D-09/10/11 | wrap: 5 s refusal, owed record, 15 s spacing, reconnect wrapped | unit (fake clock + log) | `cargo test -p gamelib-steamcm --test wrap` (only if wrap kept) | ❌ | ⬜ pending |
-| D-12/D-16 | final Refresh library equals TS on CM path | Tier 2 sweep | `pnpm steamcm-parity-sweep` | ❌ | ⬜ pending |
-| D-14/D-15 | Mac Steam guard order + fallback | unit + live | `cargo test -p gamelib-steamcm --test macowned` | ❌ | ⬜ pending |
-| D-18 | flag defaults, env override | Jest | `pnpm jest …/steamCmFlags.test.ts` | ❌ W0 | ⬜ pending |
-| Channel parity | OPS == constants == match arms | Jest static | `pnpm jest src/backend/__tests__/steamCmChannelParity.test.ts` | ❌ W0 | ⬜ pending |
-| Delete gate | TS clients, flags, packages, patches gone | Jest | `pnpm jest src/backend/__tests__/steamCmPortComplete.test.ts` | ❌ last plan | ⬜ pending |
-| Sidecar contract | no handle survives stdin EOF | existing | `pnpm smoke:exit-check`, `pnpm smoke:sidecar` | ✅ | ⬜ pending |
-| Lease policy | production callers use lease API | existing | `pnpm jest src/backend/__tests__/steamAuthSessionPolicy.test.ts` | ✅ (adapt) | ⬜ pending |
+| Req / Decision | Plan(s) | Behavior | Test Type | Automated Command | File Exists | Status |
+|---|---|---|---|---|---|---|
+| CF-01/CF-02 | 79-01 | crate pair builds; pinned steam-vent API shapes compile; anon logon live | unit + ignored live | `cd src-tauri && cargo test -p gamelib-steamcm -p gamelib-steamcm-cli` and `cargo test -p gamelib-steamcm --test vent_api_shapes` | ❌ W0 | ⬜ pending |
+| backend seam | 79-04 | error mapping, FakeBackend, vent backend | unit (+ ignored live) | `cargo test -p gamelib-steamcm error::` / `fake::` / `vent::` | ❌ W0 | ⬜ pending |
+| D-01/D-03 | 79-06 | lease share, 60 s idle close, generation, shutdown ordering | unit (fake backend, paused clock) | `cargo test -p gamelib-steamcm session::` | ❌ W0 | ⬜ pending |
+| D-02 | 79-11 | dead call → probe → rebuild → retry once; backoff 5→60 s; 34 terminal | unit (fake backend) | `cargo test -p gamelib-steamcm liveness::` and `cargo test -p gamelib-steamcm session::` | ❌ W0 | ⬜ pending |
+| D-04 | 79-07 | anonymous client shared, 15 s connect bound, 60 s idle | unit | `cargo test -p gamelib-steamcm anon::` | ❌ W0 | ⬜ pending |
+| D-05 | 79-05, 79-10 | QR rotation, credentials, guard types, poll states | unit with mock HTTP | `cargo test -p gamelib-steamcm webauth::` | ❌ W0 | ⬜ pending |
+| CM op shapes | 79-08, 79-09, 79-21 | PICS / depot key / request code / owned / redeem JSON = steam-user's | unit + golden (Tier 1) | `cargo test -p gamelib-steamcm ops::` and `cargo test -p gamelib-steamcm --test golden` + Jest golden replay | ❌ W0 | ⬜ pending |
+| runtime/facade | 79-14 | global runtime, dispatch, op registration | unit | `cargo test -p gamelib-steamcm facade::` / `runtime::` | ❌ W0 | ⬜ pending |
+| D-06/07/08 | 79-18, 79-20 | persona fallback, token reuse, `credentialsMissing` | Jest | `pnpm exec jest src/backend/storeManagers/steam/__tests__/user src/backend/storeManagers/steam/__tests__/credentialsMissing.test.ts` | ✅ (adapt) | ⬜ pending |
+| D-09/10/11 | 79-12, 79-13 | wrap: 5 s refusal, owed record, 15 s spacing, reconnect wrapped | unit (fake clock + log) | `cargo test -p gamelib-steamcm wrap::` and `cargo test -p gamelib-steamcm session::` (only if wrap kept) | ❌ | ⬜ pending |
+| CM ops parity | 79-24 | CM op results equal TS on the operator's account | Tier 2 sweep | `pnpm steamcm-parity-sweep` | ❌ | ⬜ pending |
+| D-12 (Rust Refresh) | 79-27..79-30 | owned+demos, capture scope/merge, enrichment merge + bounded stage, assembly, orchestration | unit (fake backend, mock HTTP) | `cargo test -p gamelib-steamcm refresh::` | ❌ | ⬜ pending |
+| D-12 (TS callers) | 79-31, 79-32 | refresh() thin caller persists the Rust library; lazy enrichment via steamcm_store_enrich | Jest (replayed Rust results) | `pnpm exec jest src/backend/storeManagers/steam/__tests__/library src/backend/storeManagers/steam/__tests__/gameMetadata` | ❌ | ⬜ pending |
+| D-16 | 79-33 | Rust-returned finished library equals TS Refresh's on the CM path, divergences accepted | Tier 2 sweep | `pnpm steamcm-refresh-parity-sweep` | ❌ | ⬜ pending |
+| D-14/D-15 | 79-35, 79-36 | Mac Steam guard order + fallback; macSteam source in the Rust Refresh | unit + Jest + live | `cargo test -p gamelib-steamcm macowned::` and `cargo test -p gamelib-steamcm refresh::` + `pnpm exec jest src/backend/storeManagers/steam/__tests__/library` | ❌ | ⬜ pending |
+| D-18 | 79-03 | flag defaults, env override | Jest | `pnpm exec jest src/backend/storeManagers/steam/cm/__tests__/steamCmFlags.test.ts` | ❌ W0 | ⬜ pending |
+| Channel parity | 79-15, 79-16, 79-30, 79-35 | OPS == constants == match arms | Jest static | `pnpm exec jest src/backend/__tests__/steamCmChannelParity.test.ts` | ❌ W0 | ⬜ pending |
+| Delete gate | 79-43 | TS clients, flags, packages, patches gone | Jest | `pnpm exec jest src/backend/__tests__/steamCmPortComplete.test.ts` | ❌ last plan | ⬜ pending |
+| Sidecar contract | 79-39, 79-42 | no handle survives stdin EOF | existing | `pnpm smoke:exit-check`, `pnpm smoke:sidecar` | ✅ | ⬜ pending |
+| Lease policy | 79-18, 79-23, 79-31 | production callers use lease API | existing | `pnpm exec jest src/backend/__tests__/steamAuthSessionPolicy.test.ts` | ✅ (adapt) | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 

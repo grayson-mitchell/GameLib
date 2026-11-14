@@ -4,12 +4,12 @@ milestone: v0.10
 milestone_name: Foundations
 status: executing
 stopped_at: Phase 47 context gathered
-last_updated: "2026-11-14T09:17:52.545Z"
-last_activity: 2026-11-14
+last_updated: "2026-11-14T14:02:59.909Z"
+last_activity: 2026-11-14 -- Phase 79 planning complete
 progress:
   total_phases: 24
   completed_phases: 18
-  total_plans: 401
+  total_plans: 445
   completed_plans: 391
   percent: 75
 ---
@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 Phase: 47 (migrate-aggregated-store-search-from-cheapshark-to-istherean) — EXECUTING
 Plan: 4 of 13
 Status: Ready to execute
-Last activity: 2026-11-14 - Completed quick task 261114-v4q: edit env-var rows in place in TwoColTableInput
+Last activity: 2026-11-14 -- Phase 79 planning complete
 
 Progress: [██████████] 98%
 

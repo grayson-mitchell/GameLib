@@ -170,7 +170,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 76: Engine-correct bottle for DRM-mode launches (v0.9 audit S9)** — 0 plans; not started
 - [ ] **Phase 77: Runtime hardening from the v0.9 review debt** — 0 plans; not started
 - [ ] **Phase 78: Verification records and test health after v0.9** — 0 plans; not started
-- [ ] **Phase 79: Rust CM client replacing steam-user and steam-session** — 0 plans; not started; gated on spike 085 results
+- [ ] **Phase 79: Rust CM client replacing steam-user and steam-session** — 44 plans in 21 waves; planned (spike 085 gate satisfied)
 - [ ] **Phase 47: Migrate aggregated store search from CheapShark to IsThereAnyDeal** — 13 plans; ITAD gates closed 2026-11-12; planned 2026-11-14 (moved from v0.8)
 
 ## Phase Details
@@ -1587,8 +1587,113 @@ Plans:
 **Goal:** Steam's CM network is reached from Rust, and `steam-user` and `steam-session` are deleted. This is the critical path to retiring the Node sidecar: Phases 63, 73 and 75 moved scanners, the depot pipeline and local file formats, but CM auth, the anonymous public-data client, owned apps, manifest request codes, depot keys and redeem still live in Node (`steam/user.ts`, `userSignIn.ts`, `userSignInState.ts`, `userRedeem.ts`, `anonymousClient.ts`, `depot/planModel.ts`). Crate: steam-vent (spike 071c winner). Prior evidence: 077 (a second CM session collides with LogonSessionReplaced unless logonIDs differ), 080 (the Rust stack builds on macOS, Windows MSVC/GNU and Linux), 081 (three sessions coexist without kicks), 082 (one process, TLS providers), 073 (Rust owned-apps parity), 084 (owned apps from the running Mac Steam client). **Gate:** spike 085 (long-lived session across network drops and sleep/wake) must have final results before planning. Its frontmatter reads VALIDATED but its Results section was a placeholder on 2026-11-14, and its research already shows steam-vent's heartbeat failures never reach the caller, so GameLib likely owns reconnect. Reuse Phase 63's pattern: a Tauri-free crate in the `src-tauri/` workspace, `rustInvoke` with TypeScript signatures unchanged, a parity harness, a dev-only fallback flag, then delete the TypeScript clients and both npm packages. Open questions for discuss-phase: QR / credentials / SteamGuard sign-in on the Web-API path and refresh-token continuity, so existing users stay signed in; the macOS go-offline wrap that keeps Mac Steam's Friends list signed in; reconnect and session-lifetime ownership; whether the owned-apps fetch and artwork enrichment deferred from Phase 75 move here; and whether the install/uninstall/update polling state machines are a later slice. `STEAM-STACK.md` freezes `steam-user`/`steam-session`, so this phase must amend it. Came from the operator's request on 2026-11-14, after asking what follows Phase 75 in the sidecar migration.
 **Requirements**: TBD
 **Depends on:** Phase 75
-**Plans:** 0 plans
+**Plans:** 44 plans
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 79 to break down)
+**Wave 1**
+
+- [ ] 79-01-PLAN.md — gamelib-steamcm crate pair, package-legitimacy gate, steam-vent pin compile proof, deny/CI wiring, assumptions + D-01 record
+- [ ] 79-02-PLAN.md — D-09 wrap retest, TS arm (unwrapped Refresh, Friends watched) -> verdict
+- [ ] 79-03-PLAN.md — D-18 flags (GAMELIB_STEAMCM_CM / _SIGNIN) and persisted cmLogonId
+- [ ] 79-34-PLAN.md — Bridge helper --steam-owned-apps subcommand
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 79-04-PLAN.md — CmBackend trait, SteamVentBackend, error model, FakeBackend
+- [ ] 79-05-PLAN.md — Web API transport, QR flow, flow registry and poll loop
+- [ ] 79-29-PLAN.md — Rust metadata entry model and store enrichment (reqwest appdetails, merge, bounded stage)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 79-06-PLAN.md — Signed-in session actor: leases, shared logon, idle close, generation fence, shutdown
+- [ ] 79-07-PLAN.md — Anonymous session actor (D-04)
+- [ ] 79-08-PLAN.md — PICS ops in steam-user shapes (tokens first, depotOrder)
+- [ ] 79-09-PLAN.md — Depot key, request code, CDN hosts, owned apps, redeem, persona proof
+- [ ] 79-10-PLAN.md — Credentials + Steam Guard over the Web API
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 79-11-PLAN.md — Liveness: probe-on-failure, rebuild with backoff, retry-once, 34 terminal, sleep gap
+- [ ] 79-12-PLAN.md — Go-offline wrap in Rust per D-09 verdict (owed-record restore always)
+- [ ] 79-27-PLAN.md — Rust Refresh: owned games + licensed demos; library assembly
+- [ ] 79-28-PLAN.md — Rust Refresh: platform + metacritic capture with scope and merge
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 79-13-PLAN.md — Wrap ordering in the session (D-11, 15 s spacing)
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
+- [ ] 79-14-PLAN.md — Runtime, facade, op table, CLI
+
+**Wave 7** *(blocked on Wave 6 completion)*
+
+- [ ] 79-15-PLAN.md — TS channel contract, generated IPC contract, parity test
+
+**Wave 8** *(blocked on Wave 7 completion)*
+
+- [ ] 79-16-PLAN.md — Shell wiring: provider install, dispatch arms, wrap host, EOF/exit hooks
+- [ ] 79-17-PLAN.md — SteamCmClient interface, RustCmClient, RustAnonClient
+
+**Wave 9** *(blocked on Wave 8 completion)*
+
+- [ ] 79-18-PLAN.md — SteamUser on the Rust engine; async open acquire; logonID for steam-user
+- [ ] 79-19-PLAN.md — Anonymous client on Rust; boot configure and owed-record cover
+- [ ] 79-20-PLAN.md — Sign-in on Rust Web API flows; QR rotation redraw
+- [ ] 79-21-PLAN.md — Tier 1 goldens, CLI spawn helper, Jest replay
+- [ ] 79-30-PLAN.md — Rust Refresh orchestration (steamcm_refresh) and enrichment ops through every layer
+
+**Wave 10** *(blocked on Wave 9 completion)*
+
+- [ ] 79-22-PLAN.md — Depot callers on SteamCmClient; depotOrder tap; CDN-token evidence
+- [ ] 79-23-PLAN.md — Redeem with ambiguity resolution; lease policy test
+- [ ] 79-31-PLAN.md — refresh.ts as a thin caller of steamcm_refresh (persist + push only)
+- [ ] 79-32-PLAN.md — Lazy enrichment on the Rust enrich op
+- [ ] 79-35-PLAN.md — macowned.rs and steamcm_mac_owned_apps op
+
+**Wave 11** *(blocked on Wave 10 completion)*
+
+- [ ] 79-24-PLAN.md — Tier 2 CM-ops sweep and 79-PARITY.md acceptance
+
+**Wave 12** *(blocked on Wave 11 completion)*
+
+- [ ] 79-25-PLAN.md — Flip cm default; author UAT part A
+- [ ] 79-33-PLAN.md — D-16 parity: Rust-returned library vs TS Refresh, and acceptance
+
+**Wave 13** *(blocked on Wave 12 completion)*
+
+- [ ] 79-26-PLAN.md — Run UAT part A; flip sign-in default
+- [ ] 79-36-PLAN.md — Mac Steam source in the Rust Refresh, CM fallback; comparison vs spike 084
+
+**Wave 14** *(blocked on Wave 13 completion)*
+
+- [ ] 79-37-PLAN.md — Author UAT part B (Refresh, D-09 second arm, Mac path, lifecycle); Mac-path playtime todo
+
+**Wave 15** *(blocked on Wave 14 completion)*
+
+- [ ] 79-38-PLAN.md — Run UAT part B; CI legs; delete-gate record
+
+**Wave 16** *(blocked on Wave 15 completion)*
+
+- [ ] 79-39-PLAN.md — Delete steam-user engine from session, anon client, EOF release; drop cmLogonId
+
+**Wave 17** *(blocked on Wave 16 completion)*
+
+- [ ] 79-40-PLAN.md — Delete steam-session sign-in, TS wrap, steam-user depot code
+
+**Wave 18** *(blocked on Wave 17 completion)*
+
+- [ ] 79-41-PLAN.md — Delete the TS Refresh, capture and enrichment implementations, the D-18 flags and the Jest pin
+
+**Wave 19** *(blocked on Wave 18 completion)*
+
+- [ ] 79-42-PLAN.md — Remove npm packages, patches, SEA references, TS-vs-Rust sweeps
+
+**Wave 20** *(blocked on Wave 19 completion)*
+
+- [ ] 79-43-PLAN.md — Port-complete test; STEAM-STACK.md, CLAUDE.md, crates README section 12; close folded todo
+
+**Wave 21** *(blocked on Wave 20 completion)*
+
+- [ ] 79-44-PLAN.md — Post-deletion live smoke and CI legs

@@ -419,6 +419,7 @@ The TS wrappers must create no timers or handles that survive stdin EOF; in-flig
 `refresh.ts` (702 lines) does, in order: grant check -> acquire lease (or open lease) -> `getUserOwnedApps` -> `fetchLicensedDemos` -> anonymous-client platform capture (`platformCapture.ts`) with held-client fallback -> `captureOwnedAppMetacritic` -> `buildInstalledMap` / bottle / bridge maps (**already Rust-backed readers from Phase 75**, called from TS) -> `backfillBridgeLaunchTargets` (uses the client) -> merge into `SteamGameInfo` using `steamMetadataStore` (cached art/platform/metacritic), breadcrumbs, `isBridgeAuthoritativeForInstallState`, schema strip -> `libraryState.library.set`, `sendFrontendMessage('pushGameToLibrary')`, `steamLibraryStore.set`.
 The axios enrichment (`gameMetadata.ts` `fetchMetadataIfNeeded`, `gameRequirements.ts`) is **not in `refresh()`**: it runs lazily per game from the game page, with a dedup set (`pendingFetches`), a concurrency slot limiter, `steamMetadataSyncing` messages and store writes.
 **Recommended boundary (needs operator confirmation, Open Question 1):** Rust owns everything that is network or pure computation: the owned/demo/captured data fetch (`cm_refresh_collect`), the appdetails and requirements HTTP + parsing (`steam_store_appdetails` returning parsed fields), and the Mac Steam path. TS keeps stores, in-memory library state, frontend pushes, install-state merge and bridge backfill. "Rust returns the finished library" is then read as "Rust returns the complete resolved data for the library; TS assembles and persists", which keeps D-16's comparison valid (final library diffed) and avoids a second store implementation. Moving store writes into Rust would mean porting the Phase 68 store engine, which no decision authorises.
+**Superseded at planning (Open Question 1 RESOLVED):** this narrowed boundary is withdrawn. D-12 is honoured as written: Rust also owns the scope/merge rules, the enrichment merge and the library assembly, and returns the finished library. TS keeps only the store writes, libraryState and the renderer pushes, so there is still no store-engine port.
 
 ## Proposed wave and plan split
 
@@ -485,21 +486,29 @@ Function-ID high halves (this build, 084): `BLoggedOn` 0x6585, `GetSteamID` 0xd6
 | A5 | steam-user's leftover cache files are harmless on disk | Runtime State Inventory | Minor cleanup task |
 | A6 | The 92 s Run A stall came from an un-timed await in the spike loop | Pattern 3 | The bound may not cover the real cause; keep the loop free of awaits regardless |
 | A7 | Recommending ring over aws-lc as provider | Standard Stack | Either is valid per 082; low risk |
-| A8 | "Rust returns the finished library" means data, not store writes (Open Question 1) | Refresh boundary | If the operator wants stores in Rust, the phase grows by the Phase 68 store engine |
+| A8 | "Rust returns the finished library" means data, not store writes (Open Question 1) | Refresh boundary | Superseded: Open Question 1 is resolved as D-12 as written. Rust returns the finished library and changed metadata entries, and TS persists them to the existing stores, so no store-engine port is needed |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **What does D-12 "Rust returns the finished library to the existing TS call site" mean for stores and frontend pushes?**
    - Known: `refresh()` writes `steamLibraryStore`, `steamMetadataStore`, `steamSyncStore`, in-memory `libraryState`, and pushes to the renderer; enrichment is lazy per game, not in `refresh()`.
    - Unclear: whether the operator expects the HTTP enrichment moved as a callable op (recommended) or Refresh to absorb the lazy per-game fetch.
    - Recommendation: confirm the boundary in "Refresh boundary" before planning Wave 3.
+   - RESOLVED: D-12 as written. Rust owns the whole Refresh orchestration: the CM calls, owned apps + licensedDemos, metacritic and platform capture with their scope and merge, the HTTP store metadata/artwork enrichment over reqwest, and the merge/assembly into the finished library. It returns the finished library in one op (`steamcm_refresh`). TS `refresh()` is a thin caller that only persists to steamLibraryStore, steamMetadataStore and steamSyncStore (no Phase 68 store-engine port), updates libraryState and pushes to the renderer. TS-owned inputs (metadata snapshot, previous library, install-state maps from the Phase 63/75 scanners, bridge allowlist, known-fix ids) are passed as op arguments. The lazy `fetchMetadataIfNeeded` calls the same Rust enrichment through `steamcm_store_enrich`. See 79-01 assumptions item 1 and plans 79-27..79-33, 79-36, 79-41.
 2. **Run C results (D-01, probe interval/timeout).** Log is at `.planning/spikes/085-steam-vent-long-lived-session/runs/c-long-hold.log`, ends about 23:47 NZDT. Plan with Option A and the decision rule above; revise only if Run C shows kicks or false positives.
+   - RESOLVED: the D-01 decision block in 79-01, written from the final Run C results (2 h 59 m held, 358/358 checks ok, no GAP, no kicks): lease + idle close, probe-on-failure plus a sleep detector, no periodic probe.
 3. **steam-vent pin.** Move to `767481a`? It changes CONTEXT's stated rev. Needs operator ack; the plan-1 compile check de-risks it. Optionally set the Rust-side logon id instead of the steam-user one (D-18 stays as locked).
+   - RESOLVED (orchestrator default, operator unconfirmed): pin 767481ad, with fallback a9e8164 + vendor.sh, gated by 79-01 Task 1.
 4. **Persona fetch over steam-vent** (D-06) is unvalidated; a short spike inside Wave 1 should settle it.
+   - RESOLVED: 79-01 assumption 3 (79-09 live proof; on failure the op returns `unsupported` and D-06's account-name fallback applies).
 5. **CDN tokens.** Does production ever get a non-empty token from `CdnAuthTokenCache`? Check `gamelib.log` before deciding to delete `cdnAuth.ts` and return `''` from the Rust host.
+   - RESOLVED: 79-01 assumption 4. CF-06 is locked, so the Rust host returns `''`. 79-22's gamelib.log check is advisory: it records the evidence and creates a pending todo if non-empty tokens are seen, and never halts.
 6. **D-10 vs the skill reference.** `mac-steam-client-integration.md` says to log on *unwrapped* when Mac Steam does not log off within 5 s (075 showed an unwrapped full Refresh safe on 2026-11-09); D-10 locks the 5 s *refusal* with the guided step. D-09's retest resolves it: if the retest passes the wrap is deleted and the conflict is moot; if it fails, D-10 stands.
+   - RESOLVED: 79-01 assumption 5 (D-10 stands unless the 79-02 D-09 retest deletes the wrap).
 7. **Where does the persisted per-install `logonID` live?** A new `configStore` key is the simplest; the plan must state it.
+   - RESOLVED: 79-01 assumption 6 (`steamConfigStore.cmLogonId`, generated by `getOrCreateCmLogonId()` in plan 79-03).
 8. **Jest strategy** (Claude's discretion): recommended is Phase 75's: mock the async boundary and replay recorded Rust results (`rust-results.json`), so Jest needs no cargo; spawn the real CLI only in `meta/` sweeps.
+   - RESOLVED: 79-01 assumption 7 (replay `rust-results.json` behind a mocked `requestRustInvoke`; real CLI spawns only in `meta/` sweeps).
 
 ## Environment Availability
 
