@@ -977,6 +977,11 @@ const IN_SCOPE_SUITES = [
  * `backend/logger`, drives the registered depot-host handlers against a fake `CdnAuthTokenCache`
  * and the in-memory job registry, and reaches no filesystem, `homedir()` or child process.
  *
+ * `depotHostRegistration.rust.test.ts` (Phase 79 Plan 22) is structurally contained: it mocks
+ * `backend/logger`, sets only `GAMELIB_STEAMCM_CM` (saved and restored), and drives the depot-host
+ * handlers against jest.fn rustInvoke transports, so it reaches no filesystem, `homedir()` or child
+ * process. Its landing commit did not classify it; the T-34.2-83 tripwire caught it.
+ *
  * `bootSourceShape.test.ts` (Phase 66 Plan 08, D-08) is structurally contained: it only reads
  * source text with `fs.readFileSync`/`readdirSync`, boots nothing and spawns nothing.
  *
@@ -1018,6 +1023,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'clipboardFlows.test.ts',
   'configBootOrder.test.ts',
   'depotHostChannels.test.ts',
+  'depotHostRegistration.rust.test.ts',
   'devSecretVault.test.ts',
   'dismissedSignInNoticesSetting.test.ts',
   'downloadQueueFlows.test.ts',
