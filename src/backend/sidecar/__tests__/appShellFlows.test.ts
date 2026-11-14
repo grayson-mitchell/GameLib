@@ -1725,6 +1725,8 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
       // `--testNamePattern` filter that skips the file's earlier `boot()`
       // calls this block would otherwise silently rely on.
       const booted = boot()
+      // The boot's own steamcm_configure (Phase 79) is not a tray call.
+      mockRequestRustInvoke.mockClear()
       advance = (ms) => booted.testContext.clock.advance(ms)
       jest.useFakeTimers()
     })

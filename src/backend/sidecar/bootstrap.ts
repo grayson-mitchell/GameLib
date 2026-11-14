@@ -30,7 +30,13 @@ import { createAppShellState } from './appShellFlowRegistration'
 import { createStoreEmbedSeam } from '../store/storeEmbedSeam'
 import { removeLegacyZoomData } from './legacyZoomDataCleanup'
 import { releaseOnStdinEof } from './stdinEofRelease'
-import { READY_SENTINEL } from 'common/types/sidecarTransport'
+import {
+  READY_SENTINEL,
+  RUST_STEAMCM_CONFIGURE,
+  RUST_STEAMCM_WRAP_RESTORE_IF_OWED
+} from 'common/types/sidecarTransport'
+import type { RequestRustInvoke } from 'backend/host'
+import { steamCmImpl } from '../storeManagers/steam/cm/steamCmFlags'
 import { i18nextLanguageOptions, localeFileSegments } from 'common/languages'
 
 // ---- Step 2: import the backend registration path — AFTER the platform import -------
@@ -341,6 +347,7 @@ export const BOOT_STEP_NAMES = [
   'register-handlers',
   'rpc-server',
   'protocol-url-handler',
+  'steamcm-configure',
   'mac-steam-online-restore',
   'secret-stores',
   'orphaned-token-cleanup',
@@ -1377,6 +1384,54 @@ export function resolveAppPaths(): AppPaths {
   ) as AppPaths
 }
 
+/**
+ * Phase 79 (T-79-62/63): the boot `steamcm_configure` call. Fire-and-forget; a rejection is logged
+ * and swallowed so boot continues. Arms no timer.
+ *
+ * @public Consumed by sidecar tests through require() in a fresh module registry (D-08).
+ */
+export function configureSteamCm(deps: {
+  appFolder: string
+  requestRustInvoke: RequestRustInvoke
+}): void {
+  void Promise.resolve(
+    deps.requestRustInvoke(RUST_STEAMCM_CONFIGURE, [
+      { appFolder: deps.appFolder }
+    ])
+  ).catch((error: unknown) =>
+    logWarning(
+      `[bootstrap] steamcm_configure failed: ${String(error)}`,
+      LogPrefix.Backend
+    )
+  )
+}
+
+/**
+ * Phase 79 (D-10): the boot owed-goonline cover on either engine. cm=rust asks the shell to pay the
+ * record; cm=ts runs today's steam-user-side restore. Both read the same record format.
+ *
+ * @public Consumed by sidecar tests through require() in a fresh module registry (D-08).
+ */
+export function restoreOwedMacSteamOnlineAtBoot(deps: {
+  requestRustInvoke: RequestRustInvoke
+  restoreTs: () => Promise<unknown> | unknown
+}): void {
+  if (steamCmImpl() === 'rust') {
+    void Promise.resolve(
+      deps.requestRustInvoke(RUST_STEAMCM_WRAP_RESTORE_IF_OWED, [
+        { trigger: 'boot' }
+      ])
+    ).catch((error: unknown) =>
+      logWarning(
+        `[bootstrap] steamcm_wrap_restore_if_owed failed: ${String(error)}`,
+        LogPrefix.Backend
+      )
+    )
+    return
+  }
+  void deps.restoreTs()
+}
+
 export function init(
   deps: { guards: BootGuards },
   input: Readable = process.stdin,
@@ -1567,7 +1622,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           prebuilt.anonymousClient ??
           createAnonymousClient({
             clock: ctx.clock,
-            createClient: createRawAnonymousClient
+            createClient: createRawAnonymousClient,
+            requestRustInvoke: requireHost(state).requestRustInvoke
           })
       }
     },
@@ -2720,13 +2776,30 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       }
     },
     {
+      name: 'steamcm-configure',
+      // Phase 79 (T-79-63): hands the Rust CM client the app folder, after the RPC transport is live
+      // and ahead of mac-steam-online-restore (the restore needs the folder this sets). Runs on every
+      // engine: configuring is harmless. One bounded rustInvoke, no timer; a failure is logged.
+      run: (ctx, _io, state) => {
+        configureSteamCm({
+          appFolder: ctx.paths.appFolder,
+          requestRustInvoke: requireHost(state).requestRustInvoke
+        })
+      }
+    },
+    {
       name: 'mac-steam-online-restore',
       run: (_ctx, _io, state) => {
-        // Owed Mac Steam goonline, three layers: routed quit (handleExit), stdin EOF
-        // (releaseOnStdinEof), and this boot call. kill -9 of the sidecar is covered ONLY here.
-        void requireSteamProcesses(
-          state
-        ).macSteamOffline.restoreMacSteamOnlineIfOwed('boot')
+        // Owed Mac Steam goonline, three layers: routed quit (shell exit hook / handleExit), stdin EOF
+        // (shell EOF hook for cm=rust; releaseOnStdinEof for cm=ts), and this boot call. kill -9 of the
+        // sidecar is covered ONLY here.
+        restoreOwedMacSteamOnlineAtBoot({
+          requestRustInvoke: requireHost(state).requestRustInvoke,
+          restoreTs: () =>
+            requireSteamProcesses(
+              state
+            ).macSteamOffline.restoreMacSteamOnlineIfOwed('boot')
+        })
       }
     },
     {

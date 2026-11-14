@@ -19,6 +19,10 @@
 import SteamUserLib from 'steam-user'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { Clock, TimerHandle } from 'backend/process/types'
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
+import { RUST_STEAMCM_ANON_CLOSE } from 'common/types/sidecarTransport'
+import { createRustAnonClient } from './cm/RustAnonClient'
+import { steamCmImpl } from './cm/steamCmFlags'
 
 export const ANON_CONNECT_TIMEOUT_MS = 15000
 export const ANON_IDLE_CLOSE_MS = 60000
@@ -47,6 +51,11 @@ export interface AnonymousClientDeps {
   clock: Clock
   /** Builds one unconnected raw client; boot passes the real steam-user constructor. */
   createClient: RawClientFactory
+  /**
+   * The boot's rustInvoke transport. Read when `steamCmImpl() === 'rust'` (Phase 79, D-04): the
+   * anonymous session is then owned by the Rust anon actor and no steam-user client is built.
+   */
+  requestRustInvoke?: RustInvokeDeps['requestRustInvoke']
 }
 
 export interface AnonymousClient {
@@ -78,6 +87,40 @@ export function createRawAnonymousClient(): RawClient {
 export function createAnonymousClient(
   deps: AnonymousClientDeps
 ): AnonymousClient {
+  const tsClient = createTsAnonymousClient(deps)
+  let rustView: AnonymousPicsClient | null = null
+  const rustDeps = (): RustInvokeDeps | null =>
+    steamCmImpl() === 'rust' && deps.requestRustInvoke
+      ? { requestRustInvoke: deps.requestRustInvoke }
+      : null
+  return {
+    async get(reason) {
+      const rust = rustDeps()
+      if (!rust) return tsClient.get(reason)
+      if (!rustView) rustView = createRustAnonClient(rust)
+      return rustView
+    },
+    close(cause) {
+      const rust = rustDeps()
+      if (!rust) return tsClient.close(cause)
+      rust
+        .requestRustInvoke(RUST_STEAMCM_ANON_CLOSE, [{ reason: cause }])
+        .catch((err: unknown) =>
+          logWarning(
+            ['[Steam] steamcm_anon_close failed:', err],
+            LogPrefix.Steam
+          )
+        )
+    },
+    // The shell exit/EOF hook owns Rust teardown: no IPC here (D-18). The ts client is released
+    // either way so a flag flip mid-boot leaves nothing connected.
+    releaseForShutdown() {
+      tsClient.releaseForShutdown()
+    }
+  }
+}
+
+function createTsAnonymousClient(deps: AnonymousClientDeps): AnonymousClient {
   let cached: RawClient | null = null
   // What callers receive for `cached`: a view whose getProductInfo counts reads
   // in flight, so the idle close waits for them (54-REVIEW WR-09).

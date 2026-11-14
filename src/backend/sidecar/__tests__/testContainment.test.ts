@@ -980,6 +980,10 @@ const IN_SCOPE_SUITES = [
  * `bootSourceShape.test.ts` (Phase 66 Plan 08, D-08) is structurally contained: it only reads
  * source text with `fs.readFileSync`/`readdirSync`, boots nothing and spawns nothing.
  *
+ * `bootstrap.steamcm.test.ts` (Phase 79 Plan 19) is structurally contained: it calls the exported
+ * `configureSteamCm` / `restoreOwedMacSteamOnlineAtBoot` helpers with jest.fn transports and reads
+ * source text, so it boots nothing and reaches no filesystem write, `homedir()` or child process.
+ *
  * `outboundHttpRegistry.test.ts` (quick-261110-9w2) is structurally contained: it drives the
  * `diagnostics_channel`-based outbound-request registry against a loopback `http` server it
  * starts itself, boots nothing, and reaches no path module, `homedir()`, filesystem or child
@@ -1007,6 +1011,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'appShellImportGate.test.ts',
   'appShellState.test.ts',
   'bootSourceShape.test.ts',
+  'bootstrap.steamcm.test.ts',
   'bootstrap.test.ts',
   'bootstrapUserReconcile.test.ts',
   'bootstrapWirings.test.ts',

@@ -407,6 +407,8 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
 
   it('openFolder (send) rejects a relative path with no platform call', async () => {
     const { input, frames } = boot()
+    // The boot's own steamcm_configure (Phase 79) is not a handler call.
+    mockRequestRustInvoke.mockClear()
     writeSend(input, 'open-folder-3', 'openFolder', ['relative/dir'])
     await flushFs()
     expect(mockRequestRustInvoke).not.toHaveBeenCalled()
@@ -415,6 +417,8 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
 
   it('openExternalUrl (send) rejects a file:// URL with no platform call', async () => {
     const { input, frames } = boot()
+    // The boot's own steamcm_configure (Phase 79) is not a handler call.
+    mockRequestRustInvoke.mockClear()
     writeSend(input, 'open-external-url-3', 'openExternalUrl', ['file:///x'])
     await flush()
     expect(frames.find((f) => f.kind === 'openExternal')).toBeUndefined()
@@ -468,6 +472,8 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
 
   it('showConfigFileInFolder rejects a traversing appName', async () => {
     const { input } = boot()
+    // The boot's own steamcm_configure (Phase 79) is not a handler call.
+    mockRequestRustInvoke.mockClear()
     writeSend(input, 'config-app-2', 'showConfigFileInFolder', ['../evil'])
     await flush()
     expect(mockRequestRustInvoke).not.toHaveBeenCalled()
