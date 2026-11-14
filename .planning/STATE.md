@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v0.10
 milestone_name: Foundations
-status: verifying
-stopped_at: "74-33 live gate recorded: items 24/26/27 pass, 25 and 28 issues; round-4 gap planning next"
+status: executing
+stopped_at: "Phase 70: 16/16 plans done, verification gaps_found (G1-G3 = review WR-01/04/05, operator-promoted); gap planning next"
 last_updated: "2026-11-14T04:59:33.259Z"
 last_activity: 2026-11-14
 progress:
@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 
 Phase: 70 (split-gameinfo-into-shared-and-per-store-shapes) — EXECUTING
 Plan: 16 of 16
-Status: Phase complete — ready for verification
+Status: Gaps found — run /gsd-plan-phase 70 --gaps (G1 ratchet CI guard, G2 GameInfo strip vs strict schema, G3 settings strip chains)
 Last activity: 2026-11-14
 
 Progress: [██████████] 100%
