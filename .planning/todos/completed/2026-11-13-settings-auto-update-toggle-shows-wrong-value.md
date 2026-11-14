@@ -26,3 +26,11 @@ cache in `useSetting`, or the default masking a read that has not resolved.
 
 With `autoUpdateGames: true` in the stored config, Settings shows the toggle on after a fresh
 launch, and with `false` it shows off; a unit test pins the read path.
+
+## Resolution
+
+Resolved 2026-11-14 by quick 261114-l1j.
+
+- Root cause: the Settings toggle and the boot auto-update both read config.json `defaultSettings` via `getSettings()`, so UI and behaviour agreed. The 74 UAT operator read and hand-edited the `store/config.json` `settings` mirror, which was written through by `setSetting`/`writeConfig` but never resynced at boot.
+- Fix: `readSetting` extracted and pinned by `useSettingsContext.getSetting.test.ts`; `resyncSettingsMirror` runs in the sidecar 'config' boot step (config.json wins, mirror-only keys kept, synchronous, guarded).
+- Docs: 74-UAT preconditions now name config.json `defaultSettings.autoUpdateGames`; items 20 and 28 and their gaps carry the attribution.
