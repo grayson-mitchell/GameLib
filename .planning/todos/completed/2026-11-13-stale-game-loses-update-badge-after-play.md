@@ -29,3 +29,18 @@ Start by capturing the gameStatusUpdate sequence for a Play on a stale bridge ga
 
 Playing a stale game (Play anyway) and quitting it leaves the badge in place, pinned by a
 libraryState sequence test for the launch statuses.
+
+## Resolution
+
+Closed as not reproducible (2026-11-14). Quick 261114-mhd (763d308c3) found nothing in the bridge
+launch path that sends 'updating' and pinned the launch statuses (launching -> playing -> done,
+and a steam-starting/engine-download variant) as badge-preserving in libraryState.test.ts. It also
+added a permanent `[gameUpdates] dropped appIds=... path=...` log for every shrink of
+gameUpdates (handleGameStatus prior/new, or refresh origin/runner/checkUpdates/source/snapshotStale).
+
+Live re-run on stale Hell Clock 1782460 (bridge, buildid 26431636 -> 26431635, autoUpdateGames
+off): three Play-anyway launches, including the original Esc-then-Return pair, at 16:50:41,
+16:52:21 and 16:52:58. The badge stayed after each, and gamelib.log had zero drop lines. The
+original run differed in one known way: Settings and store/config.json disagreed on
+autoUpdateGames, fixed since by quick 261114-l1j. If the badge loss returns, grep the drop line;
+its path/source fields name the cause.
