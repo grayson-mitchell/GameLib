@@ -567,6 +567,75 @@ async function waitForStore(maxMs = 8 * 60_000): Promise<number> {
   return Math.round((Date.now() - start) / 1000)
 }
 
+/**
+ * steam-user itself prefetches the apps of every package it receives (apps.js: a tokenless
+ * `getProductInfo(appids, [], false, null, PackageContents)` whose rejection it swallows). Apps
+ * that need an access token come back with no buffer and its message handler then throws
+ * `Cannot read properties of null (reading 'toString')` OUT OF THE SOCKET CALLBACK, which is an
+ * uncaught exception that kills the process (not a rejection, so a try/catch cannot see it). The
+ * throw only aborts that one internal prefetch reply; the awaited requests are separate messages.
+ * So the TS reference side runs with a scoped guard that swallows exactly this error and counts
+ * it. node_modules is not patched. The Rust side has no such prefetch.
+ */
+let nullBufferThrows = 0
+let nullBufferShims = 0
+/**
+ * Reference-side robustness shim: an app record in a PICS reply with a null buffer (an app Steam
+ * answers without data) is given an empty `appinfo` block before steam-user handles the message (an empty string
+ * also throws in kvparser), so it parses to "no appinfo data" instead of throwing. This is what the Rust side does (empty buffer = entry
+ * without appinfo), so the TS reference is compared on the same footing instead of losing whole
+ * PICS replies. Wraps the static `_decodeProto` at run time; node_modules is untouched.
+ */
+function shimNullBuffers(client: unknown): void {
+  type Decode = (proto: unknown, encoded: unknown) => unknown
+  let k = (client as { constructor: unknown }).constructor as {
+    _decodeProto?: Decode
+    __nullBufferShim?: boolean
+  } | null
+  while (k && !Object.prototype.hasOwnProperty.call(k, '_decodeProto')) {
+    k = Object.getPrototypeOf(k) as typeof k
+  }
+  if (!k || k.__nullBufferShim || typeof k._decodeProto !== 'function') return
+  k.__nullBufferShim = true
+  const orig = k._decodeProto.bind(k)
+  k._decodeProto = (proto, encoded) => {
+    const body = orig(proto, encoded) as {
+      apps?: Array<{ buffer?: unknown }>
+    } | null
+    if (body && Array.isArray(body.apps)) {
+      for (const a of body.apps) {
+        if (a && typeof a === 'object' && 'buffer' in a && a.buffer == null) {
+          a.buffer = Buffer.from('"appinfo"\n{\n}\n')
+          nullBufferShims++
+        }
+      }
+    }
+    return body
+  }
+}
+function isSteamUserNullBuffer(e: unknown): boolean {
+  return (
+    e instanceof TypeError &&
+    e.message.includes("reading 'toString'") &&
+    String(e.stack).includes('steam-user/components/apps.js')
+  )
+}
+async function withNullBufferGuard<T>(run: () => Promise<T>): Promise<T> {
+  const handler = (e: unknown): void => {
+    if (isSteamUserNullBuffer(e)) {
+      nullBufferThrows++
+      return
+    }
+    throw e
+  }
+  process.on('uncaughtException', handler)
+  try {
+    return await run()
+  } finally {
+    process.off('uncaughtException', handler)
+  }
+}
+
 async function runSide(
   side: 'ts' | 'rust',
   token: string
@@ -613,6 +682,7 @@ async function runSide(
     }
 
     let enrich: Record<string, unknown> | undefined
+    let demosFailure: unknown
     const rustInvoke = {
       requestRustInvoke: async (channel: string, args: unknown[]) => {
         // An empty fake profile has no Steam install: scans answer "nothing there".
@@ -631,10 +701,11 @@ async function runSide(
         if (!r.ok) throw new Error(`${channel} transport error`)
         const res = r.result as {
           ok?: boolean
-          result?: { enrich?: Record<string, unknown> }
+          result?: { enrich?: Record<string, unknown>; demosFailure?: unknown }
         }
         if (channel === 'steamcm_refresh' && res?.ok && res.result) {
           enrich = res.result.enrich
+          demosFailure = res.result.demosFailure
         }
         return r.result
       }
@@ -659,8 +730,16 @@ async function runSide(
     const steamUser = new Proxy(realUser, {
       get(target, prop) {
         if (prop === 'acquireAuthenticated') {
-          return (opts: never) =>
-            target.acquireAuthenticatedWithToken(opts, token)
+          return async (opts: never) => {
+            const lease = await target.acquireAuthenticatedWithToken(
+              opts,
+              token
+            )
+            if (lease.ok) {
+              shimNullBuffers(lease.client)
+            }
+            return lease
+          }
         }
         const v = (target as never as Record<PropertyKey, unknown>)[prop]
         return typeof v === 'function'
@@ -680,8 +759,27 @@ async function runSide(
       sendFrontendMessage: (() => true) as never
     })
 
+    if (side === 'ts') {
+      const anon = deps.anonymousClient as unknown as {
+        get: (r: string) => Promise<unknown>
+      }
+      const og = anon.get.bind(anon)
+      anon.get = async (r: string) => {
+        const c = await og(r)
+        if (c) {
+          shimNullBuffers(c)
+        }
+        return c
+      }
+    }
     say(`${side} store wait before refresh: ${await waitForStore()}s`)
-    const out = await refresh(deps)
+    const out = await withNullBufferGuard(() => refresh(deps))
+    if (side === 'ts')
+      say(
+        `ts steam-user null-buffer records shimmed: ${nullBufferShims}, uncaught throws absorbed: ${nullBufferThrows}`
+      )
+    if (side === 'rust')
+      say(`rust demos stage: ${String(demosFailure ?? 'ok')}`)
     if (out && out.stderr)
       say(`${side} refresh stderr: ${out.stderr.length} chars`)
     const postRefresh = structuredClone(
@@ -833,6 +931,16 @@ async function main(): Promise<void> {
     say(`sweep error: ${e instanceof Error ? e.message : 'unknown'}`)
     if (process.env.SWEEP_DEBUG && e instanceof Error) say(String(e.stack))
     exit = 3
+  }
+  if (process.env.SWEEP_DEBUG) {
+    // Debug only: the capture-stage lines of this process's own (fake-home) app log.
+    try {
+      const { getLogFilePath } = await import('../src/backend/logger/paths')
+      for (const l of readFileSync(getLogFilePath({}), 'utf-8').split('\n'))
+        if (/capture|Refresh|PICS/i.test(l)) say(`log: ${l.slice(0, 300)}`)
+    } catch {
+      /* no log */
+    }
   }
   try {
     profile.dispose()
