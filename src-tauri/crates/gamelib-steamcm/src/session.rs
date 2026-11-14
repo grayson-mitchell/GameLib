@@ -7,25 +7,35 @@
 //! Guarantees ported from `user.ts`: lease counting with one shared logon, a 60 s idle close, a
 //! generation fence so a logon that lands after sign-out or shutdown is closed at once, a 35 s
 //! logon bound, and shutdown ordering (abandon pending logon, close, then pay the wrap's owed
-//! go-online). Liveness probing, reconnect backoff and 34 handling come in plan 79-11.
+//! go-online). Plan 79-11 adds recovery: a failed op triggers a probe, a dead probe a rebuild of
+//! the connection (fresh logon, backoff), and the op is then retried once. A non-idempotent op is
+//! never resent: it reports `Ambiguous`. LoggedOff 34 is terminal (no reconnect, 085 ping-pong);
+//! a wall-vs-monotonic gap on a 5 s tick detects sleep. There is no periodic probe (D-01).
 //!
 //! Secret hygiene: the token lives in the actor as a `RefreshTokenSecret` only; diag lines carry
 //! reasons, causes and counts, never the token.
 
 use std::collections::HashSet;
 use std::future::Future;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 
 use futures_util::future::BoxFuture;
 use serde::Serialize;
-use tokio::sync::{mpsc, oneshot};
-use tokio::time::Instant;
+use tokio::sync::{mpsc, oneshot, watch};
+use tokio::time::{Instant, MissedTickBehavior};
 
 use crate::backend::{
     Authed, CmBackend, CmConn, LicenseEntry, PicsId, PicsRequest, RefreshTokenSecret,
 };
-use crate::error::{diag, eresult_of, is_credential_refusal, CmError};
+use crate::error::{
+    diag, eresult_of, is_credential_refusal, is_transient, CmError, ERESULT_LOGON_SESSION_REPLACED,
+};
+use crate::liveness::{
+    classify, indicates_dead, kind_name, Backoff, FailureAction, GapDetector, COMMAND_DEADLINE,
+    GAP_TICK, PROBE_TIMEOUT, RECONNECT_ATTEMPT_BOUND,
+};
 
 pub type LeaseId = u32;
 
@@ -139,7 +149,15 @@ enum Cmd<C> {
     Release(LeaseId),
     Conn {
         lease: LeaseId,
-        reply: oneshot::Sender<Result<Arc<C>, OpFailure>>,
+        reply: oneshot::Sender<Result<ConnRef<C>, OpFailure>>,
+    },
+    /// An op failed on connection `epoch` with a link-level `cause`: probe, rebuild if dead.
+    /// Replies `Ok(true)` when the connection was rebuilt, `Ok(false)` when it proved alive.
+    Recover {
+        lease: LeaseId,
+        epoch: u64,
+        cause: &'static str,
+        reply: oneshot::Sender<Result<bool, OpFailure>>,
     },
     Licenses {
         lease: LeaseId,
@@ -165,6 +183,37 @@ enum LogonErr {
     Cm(CmError),
 }
 
+/// What an op needs to run against the current connection.
+struct ConnRef<C> {
+    conn: Arc<C>,
+    epoch: u64,
+    /// Set when the session is torn down under the op (LoggedOff 34): the op must give up.
+    kill: watch::Receiver<Option<OpFailure>>,
+}
+
+enum RecWaiter<C> {
+    Recover(oneshot::Sender<Result<bool, OpFailure>>),
+    Conn {
+        lease: LeaseId,
+        reply: oneshot::Sender<Result<ConnRef<C>, OpFailure>>,
+    },
+    Ensure(oneshot::Sender<bool>),
+    Acquire(oneshot::Sender<Result<(LeaseId, u64), Refusal>>),
+}
+
+#[derive(PartialEq, Eq)]
+enum Phase {
+    Probing,
+    Rebuilding,
+}
+
+struct Recovery<C> {
+    rid: u64,
+    phase: Phase,
+    waiters: Vec<RecWaiter<C>>,
+    cancel: Arc<AtomicBool>,
+}
+
 enum Internal<C> {
     Connected {
         generation: u64,
@@ -174,6 +223,24 @@ enum Internal<C> {
         generation: u64,
         ok: bool,
     },
+    Probe {
+        rid: u64,
+        ok: bool,
+    },
+    Rebuilt {
+        rid: u64,
+        generation: u64,
+        result: Result<Authed<C>, LogonErr>,
+        ms: u128,
+    },
+}
+
+enum Ev<C> {
+    Cmd(Option<Cmd<C>>),
+    Internal(Internal<C>),
+    Idle,
+    Tick,
+    Off(Option<i32>),
 }
 
 enum Waiter {
@@ -202,6 +269,15 @@ impl<B: CmBackend> Clone for SessionHandle<B> {
 impl<B: CmBackend> SessionHandle<B> {
     /// Spawn the actor onto the current runtime. It stops when every handle is dropped.
     pub fn spawn<W: LogonWrap>(backend: Arc<B>, wrap: Arc<W>) -> Self {
+        Self::spawn_with_wall(backend, wrap, Arc::new(SystemTime::now))
+    }
+
+    /// `spawn` with an injectable wall clock, so tests can simulate a system sleep.
+    pub(crate) fn spawn_with_wall<W: LogonWrap>(
+        backend: Arc<B>,
+        wrap: Arc<W>,
+        wall: Arc<dyn Fn() -> SystemTime + Send + Sync>,
+    ) -> Self {
         let (tx, rx) = mpsc::unbounded_channel();
         let (itx, irx) = mpsc::unbounded_channel();
         let actor = Actor {
@@ -214,7 +290,14 @@ impl<B: CmBackend> SessionHandle<B> {
             generation: 0,
             connecting: None,
             conn: None,
-            _logged_off: None,
+            logged_off: None,
+            epoch: 0,
+            kill: None,
+            recovery: None,
+            next_rid: 1,
+            suspect: false,
+            replaced: false,
+            wall,
             steam_id: 0,
             licenses: Vec::new(),
             shutting_down: false,
@@ -261,22 +344,79 @@ impl<B: CmBackend> SessionHandle<B> {
 
     /// Run `f` against the session's connection under `timeout`. The call runs in the caller's
     /// task, so a stalled op never blocks the actor or other callers.
+    ///
+    /// A link-level failure (timeout, closed, io) makes the actor probe the connection and, when
+    /// it is dead, rebuild it; an idempotent op is then run once more. A non-idempotent op is
+    /// never resent after a rebuild: it reports `Ambiguous`. The whole command, retry included,
+    /// is bounded by `COMMAND_DEADLINE`.
     pub async fn run_op<T>(
         &self,
         lease: LeaseId,
-        _idempotent: bool,
+        idempotent: bool,
         timeout: Duration,
-        f: impl FnOnce(Arc<B::Conn>) -> BoxFuture<'static, Result<T, CmError>>,
+        f: impl Fn(Arc<B::Conn>) -> BoxFuture<'static, Result<T, CmError>>,
     ) -> Result<T, OpFailure> {
-        let conn = self
-            .ask(|reply| Cmd::Conn { lease, reply })
+        let deadline = Instant::now() + COMMAND_DEADLINE;
+        let mut retried = false;
+        loop {
+            let cref = match tokio::time::timeout_at(
+                deadline,
+                self.ask(|reply| Cmd::Conn { lease, reply }),
+            )
             .await
-            .unwrap_or(Err(OpFailure::ShuttingDown))?;
-        match tokio::time::timeout(timeout, f(conn)).await {
-            Err(_) => Err(OpFailure::Timeout),
-            Ok(Ok(v)) => Ok(v),
-            Ok(Err(CmError::Replaced)) => Err(OpFailure::Replaced),
-            Ok(Err(e)) => Err(OpFailure::Cm(e)),
+            {
+                Err(_) => return Err(OpFailure::Timeout),
+                Ok(r) => r.unwrap_or(Err(OpFailure::ShuttingDown))?,
+            };
+            let ConnRef {
+                conn,
+                epoch,
+                mut kill,
+            } = cref;
+            let bound = timeout.min(deadline.saturating_duration_since(Instant::now()));
+            let err = tokio::select! {
+                r = tokio::time::timeout(bound, f(conn)) => match r {
+                    Ok(Ok(v)) => return Ok(v),
+                    Ok(Err(e)) => e,
+                    Err(_) => CmError::Timeout,
+                },
+                k = kill.wait_for(|k| k.is_some()) => {
+                    return Err(k.ok().and_then(|k| k.clone()).unwrap_or(OpFailure::Replaced));
+                }
+            };
+            match classify(&err, idempotent) {
+                FailureAction::Terminal(f) => return Err(f),
+                FailureAction::FailNoRetry if !indicates_dead(&err) => return Err(op_failure(err)),
+                _ => {}
+            }
+            if retried {
+                return Err(op_failure(err));
+            }
+            let recovered = tokio::time::timeout_at(
+                deadline,
+                self.ask(|reply| Cmd::Recover {
+                    lease,
+                    epoch,
+                    cause: kind_name(&err),
+                    reply,
+                }),
+            )
+            .await;
+            let rebuilt = match recovered {
+                Err(_) => return Err(OpFailure::Timeout),
+                Ok(None) => return Err(OpFailure::ShuttingDown),
+                Ok(Some(Err(f))) => return Err(f),
+                Ok(Some(Ok(rebuilt))) => rebuilt,
+            };
+            if !idempotent {
+                // The request may have reached Steam before the link died: never resend it.
+                return Err(if rebuilt {
+                    OpFailure::Ambiguous
+                } else {
+                    op_failure(err)
+                });
+            }
+            retried = true;
         }
     }
 
@@ -328,8 +468,18 @@ struct Actor<B: CmBackend, W: LogonWrap> {
     generation: u64,
     connecting: Option<Connecting>,
     conn: Option<Arc<B::Conn>>,
-    /// Held so the connection's LoggedOff forwarder keeps a receiver (plan 79-11 consumes it).
-    _logged_off: Option<mpsc::Receiver<i32>>,
+    /// The connection's LoggedOff stream, selected in the control loop.
+    logged_off: Option<mpsc::Receiver<i32>>,
+    /// Bumped on every installed connection; an op's failure is only acted on for its own epoch.
+    epoch: u64,
+    kill: Option<watch::Sender<Option<OpFailure>>>,
+    recovery: Option<Recovery<B::Conn>>,
+    next_rid: u64,
+    /// A sleep was seen while no lease was held: probe before the session is next used.
+    suspect: bool,
+    /// The session ended with LoggedOff 34 and has not been logged on again.
+    replaced: bool,
+    wall: Arc<dyn Fn() -> SystemTime + Send + Sync>,
     steam_id: u64,
     licenses: Vec<LicenseEntry>,
     shutting_down: bool,
@@ -344,20 +494,45 @@ impl<B: CmBackend, W: LogonWrap> Actor<B, W> {
         mut rx: mpsc::UnboundedReceiver<Cmd<B::Conn>>,
         mut irx: mpsc::UnboundedReceiver<Internal<B::Conn>>,
     ) {
+        let mut tick = tokio::time::interval(GAP_TICK);
+        tick.set_missed_tick_behavior(MissedTickBehavior::Delay);
+        let mut gap = GapDetector::default();
         loop {
             let idle = self.idle_deadline;
-            tokio::select! {
-                cmd = rx.recv() => match cmd {
-                    Some(c) => self.on_cmd(c),
-                    None => break,
-                },
-                Some(msg) = irx.recv() => self.on_internal(msg),
+            // Taken out so the select arm does not borrow `self`; put back before any handler.
+            let mut lo = self.logged_off.take();
+            let ev = tokio::select! {
+                cmd = rx.recv() => Ev::Cmd(cmd),
+                Some(msg) = irx.recv() => Ev::Internal(msg),
                 _ = async {
                     match idle {
                         Some(d) => tokio::time::sleep_until(d).await,
                         None => std::future::pending::<()>().await,
                     }
-                } => self.on_idle(),
+                } => Ev::Idle,
+                _ = tick.tick() => Ev::Tick,
+                off = async {
+                    match lo.as_mut() {
+                        Some(r) => r.recv().await,
+                        None => std::future::pending::<Option<i32>>().await,
+                    }
+                } => Ev::Off(off),
+            };
+            if !matches!(ev, Ev::Off(None)) {
+                self.logged_off = lo;
+            }
+            match ev {
+                Ev::Cmd(Some(c)) => self.on_cmd(c),
+                Ev::Cmd(None) => break,
+                Ev::Internal(msg) => self.on_internal(msg),
+                Ev::Idle => self.on_idle(),
+                Ev::Tick => {
+                    if let Some(secs) = gap.tick((self.wall)(), Instant::now()) {
+                        self.on_gap(secs);
+                    }
+                }
+                Ev::Off(Some(code)) => self.on_logged_off(code),
+                Ev::Off(None) => {}
             }
         }
         self.close_conn("handles-dropped");
@@ -375,6 +550,7 @@ impl<B: CmBackend, W: LogonWrap> Actor<B, W> {
                 let r = match (&self.conn, self.shutting_down) {
                     (Some(_), false) => {
                         diag(&format!("CM session open acquire reason={reason}"));
+                        self.probe_if_suspect();
                         Some((self.new_lease(), self.steam_id))
                     }
                     _ => None,
@@ -389,15 +565,23 @@ impl<B: CmBackend, W: LogonWrap> Actor<B, W> {
             }
             Cmd::Release(lease) => self.drop_lease(lease),
             Cmd::Conn { lease, reply } => {
-                let r = if self.shutting_down {
-                    Err(OpFailure::ShuttingDown)
+                if self.shutting_down {
+                    let _ = reply.send(Err(OpFailure::ShuttingDown));
                 } else if !self.leases.contains(&lease) {
-                    Err(OpFailure::LeaseUnknown)
+                    let _ = reply.send(Err(OpFailure::LeaseUnknown));
+                } else if let Some(rec) = &mut self.recovery {
+                    // Ops queued during a probe or rebuild wait for it; they start no recovery.
+                    rec.waiters.push(RecWaiter::Conn { lease, reply });
                 } else {
-                    self.conn.clone().ok_or(OpFailure::Cm(CmError::Closed))
-                };
-                let _ = reply.send(r);
+                    let _ = reply.send(self.conn_ref());
+                }
             }
+            Cmd::Recover {
+                lease,
+                epoch,
+                cause,
+                reply,
+            } => self.on_recover(lease, epoch, cause, reply),
             Cmd::Licenses { lease, reply } => {
                 let r = if self.shutting_down {
                     Err(OpFailure::ShuttingDown)
@@ -470,7 +654,15 @@ impl<B: CmBackend, W: LogonWrap> Actor<B, W> {
             return;
         }
         self.creds = Some((Arc::new(token), logon_id));
+        self.replaced = false;
+        if let Some(rec) = &mut self.recovery {
+            if self.conn.is_none() {
+                rec.waiters.push(RecWaiter::Acquire(reply));
+                return;
+            }
+        }
         if self.conn.is_some() {
+            self.probe_if_suspect();
             let id = self.new_lease();
             if reply.send(Ok((id, self.steam_id))).is_err() {
                 self.drop_lease(id);
@@ -519,6 +711,11 @@ impl<B: CmBackend, W: LogonWrap> Actor<B, W> {
     }
 
     fn abandon_pending(&mut self, why: Refusal) {
+        let op = match why {
+            Refusal::NotSignedIn => OpFailure::LeaseUnknown,
+            _ => OpFailure::ShuttingDown,
+        };
+        self.fail_recovery(op, why);
         if let Some(c) = self.connecting.take() {
             fail_waiters(c.waiters, why);
         }
@@ -535,14 +732,15 @@ impl<B: CmBackend, W: LogonWrap> Actor<B, W> {
                 self.leases.len()
             ));
         }
-        self._logged_off = None;
+        self.logged_off = None;
+        self.kill = None;
         self.licenses.clear();
         self.steam_id = 0;
     }
 
     fn on_idle(&mut self) {
         self.idle_deadline = None;
-        if self.leases.is_empty() {
+        if self.leases.is_empty() && self.recovery.is_none() {
             self.close_conn("idle");
         }
     }
@@ -554,6 +752,10 @@ impl<B: CmBackend, W: LogonWrap> Actor<B, W> {
         }
         if let Some(c) = &mut self.connecting {
             c.waiters.push(Waiter::Ensure(reply));
+            return;
+        }
+        if let Some(rec) = &mut self.recovery {
+            rec.waiters.push(RecWaiter::Ensure(reply));
             return;
         }
         let Some(conn) = self.conn.clone() else {
@@ -611,16 +813,345 @@ impl<B: CmBackend, W: LogonWrap> Actor<B, W> {
                     }
                     return;
                 }
-                // Plan 79-11 replaces this with probe + backoff: end the session, log on once.
-                self.close_conn("canary-failed");
-                let waiters: Vec<Waiter> =
-                    self.canary_waiters.drain(..).map(Waiter::Ensure).collect();
-                if self.connecting.is_none() {
-                    self.start_connect("canary-failed", waiters);
-                } else if let Some(c) = &mut self.connecting {
-                    c.waiters.extend(waiters);
+                // The canary is a stronger probe than `probe()`: go straight to the rebuild.
+                let waiters: Vec<RecWaiter<B::Conn>> = self
+                    .canary_waiters
+                    .drain(..)
+                    .map(RecWaiter::Ensure)
+                    .collect();
+                self.begin_rebuild("canary", waiters);
+            }
+            Internal::Probe { rid, ok } => self.on_probe(rid, ok),
+            Internal::Rebuilt {
+                rid,
+                generation,
+                result,
+                ms,
+            } => self.on_rebuilt(rid, generation, result, ms),
+        }
+    }
+
+    fn conn_ref(&self) -> Result<ConnRef<B::Conn>, OpFailure> {
+        match (&self.conn, &self.kill) {
+            (Some(conn), Some(kill)) => Ok(ConnRef {
+                conn: conn.clone(),
+                epoch: self.epoch,
+                kill: kill.subscribe(),
+            }),
+            _ if self.replaced => Err(OpFailure::Replaced),
+            _ => Err(OpFailure::Cm(CmError::Closed)),
+        }
+    }
+
+    /// Make `a` the session's connection.
+    fn install(&mut self, a: Authed<B::Conn>) {
+        self.epoch += 1;
+        self.conn = Some(Arc::new(a.conn));
+        self.logged_off = Some(a.logged_off);
+        self.kill = Some(watch::channel(None).0);
+        self.steam_id = a.steam_id;
+        self.licenses = a.licenses;
+        self.logon_failure = None;
+        self.replaced = false;
+        self.suspect = false;
+    }
+
+    // ---- recovery (79-11) ----
+
+    fn on_recover(
+        &mut self,
+        lease: LeaseId,
+        epoch: u64,
+        cause: &'static str,
+        reply: oneshot::Sender<Result<bool, OpFailure>>,
+    ) {
+        if self.shutting_down {
+            let _ = reply.send(Err(OpFailure::ShuttingDown));
+        } else if !self.leases.contains(&lease) {
+            let _ = reply.send(Err(OpFailure::LeaseUnknown));
+        } else if let Some(rec) = &mut self.recovery {
+            rec.waiters.push(RecWaiter::Recover(reply));
+        } else if self.conn.is_none() {
+            let _ = reply.send(Err(if self.replaced {
+                OpFailure::Replaced
+            } else {
+                OpFailure::Cm(CmError::Closed)
+            }));
+        } else if epoch != self.epoch {
+            // The connection that failed has already been replaced.
+            let _ = reply.send(Ok(true));
+        } else {
+            self.start_probe(cause, vec![RecWaiter::Recover(reply)]);
+        }
+    }
+
+    fn probe_if_suspect(&mut self) {
+        if self.suspect && self.recovery.is_none() && self.conn.is_some() {
+            self.start_probe("suspect", Vec::new());
+        }
+    }
+
+    fn on_gap(&mut self, secs: f64) {
+        if self.conn.is_none() || self.shutting_down {
+            return;
+        }
+        diag(&format!("CM sleep gap {secs:.0}s detected"));
+        if self.leases.is_empty() {
+            self.suspect = true;
+        } else if self.recovery.is_none() {
+            self.start_probe("sleep", Vec::new());
+        }
+    }
+
+    fn start_probe(&mut self, cause: &'static str, waiters: Vec<RecWaiter<B::Conn>>) {
+        let Some(conn) = self.conn.clone() else {
+            return;
+        };
+        self.suspect = false;
+        let rid = self.next_rid;
+        self.next_rid += 1;
+        self.recovery = Some(Recovery {
+            rid,
+            phase: Phase::Probing,
+            waiters,
+            cancel: Arc::new(AtomicBool::new(false)),
+        });
+        diag(&format!("CM probing session (cause={cause})"));
+        let itx = self.itx.clone();
+        tokio::spawn(async move {
+            let ok = matches!(
+                tokio::time::timeout(PROBE_TIMEOUT, conn.probe()).await,
+                Ok(Ok(()))
+            );
+            let _ = itx.send(Internal::Probe { rid, ok });
+        });
+    }
+
+    fn on_probe(&mut self, rid: u64, ok: bool) {
+        match &self.recovery {
+            Some(r) if r.rid == rid && r.phase == Phase::Probing => {}
+            _ => return,
+        }
+        if ok {
+            self.finish_recovery(false);
+        } else {
+            self.begin_rebuild("probe", Vec::new());
+        }
+    }
+
+    /// End the dead connection and log on again with backoff. Joins a recovery in progress.
+    fn begin_rebuild(&mut self, cause: &'static str, waiters: Vec<RecWaiter<B::Conn>>) {
+        match &mut self.recovery {
+            Some(r) if r.phase == Phase::Rebuilding => {
+                r.waiters.extend(waiters);
+                return;
+            }
+            Some(r) => {
+                r.waiters.extend(waiters);
+                r.phase = Phase::Rebuilding;
+            }
+            None => {
+                let rid = self.next_rid;
+                self.next_rid += 1;
+                self.recovery = Some(Recovery {
+                    rid,
+                    phase: Phase::Rebuilding,
+                    waiters,
+                    cancel: Arc::new(AtomicBool::new(false)),
+                });
+            }
+        }
+        let Some((token, logon_id)) = self.creds.clone() else {
+            self.fail_recovery(OpFailure::LeaseUnknown, Refusal::NotSignedIn);
+            return;
+        };
+        self.close_conn(cause);
+        let Some(rec) = &self.recovery else {
+            return;
+        };
+        let (rid, cancel) = (rec.rid, rec.cancel.clone());
+        let generation = self.generation;
+        let backend = self.backend.clone();
+        let wrap = self.wrap.clone();
+        let itx = self.itx.clone();
+        tokio::spawn(async move {
+            let t0 = Instant::now();
+            let mut last = CmError::Closed;
+            let mut result = None;
+            for (i, delay) in Backoff::new().enumerate() {
+                tokio::time::sleep(delay).await;
+                if cancel.load(Ordering::SeqCst) {
+                    return;
+                }
+                diag(&format!(
+                    "CM session dead (cause={cause}), rebuilding attempt={}",
+                    i + 1
+                ));
+                let ticket = match wrap.before_logon().await {
+                    Ok(t) => t,
+                    Err(_) => {
+                        result = Some(Err(LogonErr::WrapRefused));
+                        break;
+                    }
+                };
+                let r = tokio::time::timeout(
+                    RECONNECT_ATTEMPT_BOUND,
+                    backend.connect_authed(&token, logon_id),
+                )
+                .await;
+                wrap.after_logon(ticket).await;
+                match r {
+                    Ok(Ok(a)) => {
+                        result = Some(Ok(a));
+                        break;
+                    }
+                    Ok(Err(e)) => {
+                        let transient = is_transient(&e);
+                        last = e;
+                        if !transient {
+                            break;
+                        }
+                    }
+                    Err(_) => last = CmError::Timeout,
                 }
             }
+            let result = result.unwrap_or(Err(LogonErr::Cm(last)));
+            let _ = itx.send(Internal::Rebuilt {
+                rid,
+                generation,
+                result,
+                ms: t0.elapsed().as_millis(),
+            });
+        });
+    }
+
+    fn on_rebuilt(
+        &mut self,
+        rid: u64,
+        generation: u64,
+        result: Result<Authed<B::Conn>, LogonErr>,
+        ms: u128,
+    ) {
+        let current = self.recovery.as_ref().map(|r| r.rid) == Some(rid)
+            && generation == self.generation
+            && !self.shutting_down;
+        if !current {
+            if let Ok(a) = result {
+                a.conn.close();
+                diag("CM rebuild landed after sign-out/shutdown, closed");
+            }
+            return;
+        }
+        match result {
+            Ok(a) => {
+                self.install(a);
+                diag(&format!("CM session rebuilt in {ms}ms"));
+                self.finish_recovery(true);
+            }
+            Err(LogonErr::WrapRefused) => self.fail_recovery(
+                OpFailure::Cm(CmError::Protocol("go-offline-required".into())),
+                Refusal::GoOfflineRequired,
+            ),
+            Err(LogonErr::Cm(e)) => {
+                let refusal = if is_credential_refusal(&e) {
+                    self.logon_failure = Some(LogonFailure {
+                        kind: "logon-rejected",
+                        eresult: eresult_of(&e),
+                    });
+                    Refusal::LogonRejected
+                } else {
+                    Refusal::ClientNotReady
+                };
+                diag(&format!(
+                    "CM rebuild failed cause={} verdict={refusal:?}",
+                    kind_name(&e)
+                ));
+                self.fail_recovery(op_failure(e), refusal);
+            }
+        }
+    }
+
+    /// The probe found the link alive (`rebuilt == false`) or the rebuild installed a new one.
+    fn finish_recovery(&mut self, rebuilt: bool) {
+        let Some(rec) = self.recovery.take() else {
+            return;
+        };
+        for w in rec.waiters {
+            match w {
+                RecWaiter::Recover(r) => {
+                    let _ = r.send(Ok(rebuilt));
+                }
+                RecWaiter::Conn { lease, reply } => {
+                    let _ = reply.send(if self.leases.contains(&lease) {
+                        self.conn_ref()
+                    } else {
+                        Err(OpFailure::LeaseUnknown)
+                    });
+                }
+                RecWaiter::Ensure(r) => {
+                    let _ = r.send(true);
+                }
+                RecWaiter::Acquire(r) => {
+                    let id = self.new_lease();
+                    if r.send(Ok((id, self.steam_id))).is_err() {
+                        self.drop_lease(id);
+                    }
+                }
+            }
+        }
+        if self.leases.is_empty() && self.conn.is_some() {
+            self.idle_deadline = Some(Instant::now() + IDLE_GRACE);
+        }
+    }
+
+    /// Cancel the recovery and fail everything waiting on it.
+    fn fail_recovery(&mut self, op: OpFailure, refusal: Refusal) {
+        let Some(rec) = self.recovery.take() else {
+            return;
+        };
+        rec.cancel.store(true, Ordering::SeqCst);
+        for w in rec.waiters {
+            match w {
+                RecWaiter::Recover(r) => {
+                    let _ = r.send(Err(op.clone()));
+                }
+                RecWaiter::Conn { reply, .. } => {
+                    let _ = reply.send(Err(op.clone()));
+                }
+                RecWaiter::Ensure(r) => {
+                    let _ = r.send(false);
+                }
+                RecWaiter::Acquire(r) => {
+                    let _ = r.send(Err(refusal));
+                }
+            }
+        }
+    }
+
+    fn on_logged_off(&mut self, eresult: i32) {
+        if eresult == ERESULT_LOGON_SESSION_REPLACED {
+            // Another client took the session. Reconnecting would only ping-pong (085).
+            diag("CM session replaced (eresult 34), not reconnecting");
+            if let Some(k) = &self.kill {
+                let _ = k.send(Some(OpFailure::Replaced));
+            }
+            self.replaced = true;
+            self.fail_recovery(OpFailure::Replaced, Refusal::ClientNotReady);
+            for w in self.canary_waiters.drain(..) {
+                let _ = w.send(false);
+            }
+            self.close_conn("replaced");
+            return;
+        }
+        if self.leases.is_empty() {
+            self.close_conn("logged-off");
+            return;
+        }
+        if self.conn.is_some() {
+            diag(&format!(
+                "CM logged off (eresult {eresult}) with leases held"
+            ));
+            self.begin_rebuild("logged-off", Vec::new());
         }
     }
 
@@ -640,11 +1171,7 @@ impl<B: CmBackend, W: LogonWrap> Actor<B, W> {
         };
         match result {
             Ok(a) => {
-                self.conn = Some(Arc::new(a.conn));
-                self._logged_off = Some(a.logged_off);
-                self.steam_id = a.steam_id;
-                self.licenses = a.licenses;
-                self.logon_failure = None;
+                self.install(a);
                 for w in connecting.waiters {
                     match w {
                         Waiter::Acquire(reply) => {
@@ -681,6 +1208,14 @@ impl<B: CmBackend, W: LogonWrap> Actor<B, W> {
                 fail_waiters(connecting.waiters, refusal);
             }
         }
+    }
+}
+
+fn op_failure(e: CmError) -> OpFailure {
+    match e {
+        CmError::Timeout => OpFailure::Timeout,
+        CmError::Replaced => OpFailure::Replaced,
+        e => OpFailure::Cm(e),
     }
 }
 
@@ -1009,5 +1544,341 @@ mod tests {
             serde_json::to_string(&RestoreOutcome::KeptProbeFailed).unwrap(),
             "\"kept-probe-failed\""
         );
+    }
+
+    // ---- 79-11: probe, rebuild, retry once, 34, sleep gap ----
+
+    use std::sync::atomic::AtomicUsize;
+
+    async fn personas_op(
+        h: &H,
+        lease: LeaseId,
+        idem: bool,
+        runs: &Arc<AtomicUsize>,
+    ) -> Result<(), OpFailure> {
+        let runs = runs.clone();
+        h.run_op(lease, idem, secs(5), move |c| {
+            runs.fetch_add(1, Ordering::SeqCst);
+            Box::pin(async move { c.personas(vec![]).await.map(|_| ()) })
+        })
+        .await
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn dead_probe_rebuilds_once_then_retries_the_op() {
+        let (b, h) = setup();
+        let (l, _) = acq(&h).await.unwrap();
+        // Job 1 is the op, job 2 the probe.
+        b.inject_job_failure(2, CmError::Timeout);
+        let runs = Arc::new(AtomicUsize::new(0));
+        assert_eq!(personas_op(&h, l, true, &runs).await, Ok(()));
+        assert_eq!(b.connect_count(), 2);
+        assert_eq!(runs.load(Ordering::SeqCst), 2);
+        assert!(h.status().await.connected);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn live_probe_retries_without_a_rebuild() {
+        let (b, h) = setup();
+        let (l, _) = acq(&h).await.unwrap();
+        b.inject_job_failure(1, CmError::Timeout);
+        let runs = Arc::new(AtomicUsize::new(0));
+        assert_eq!(personas_op(&h, l, true, &runs).await, Ok(()));
+        assert_eq!(b.connect_count(), 1);
+        assert_eq!(runs.load(Ordering::SeqCst), 2);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_second_failure_is_final_and_steam_answers_are_not_retried() {
+        let (b, h) = setup();
+        let (l, _) = acq(&h).await.unwrap();
+        // Op, probe (alive after the first), then the retried op fails again.
+        b.script(|s| {
+            s.fail_err = CmError::Timeout;
+            s.fail_jobs = 1;
+        });
+        let runs = Arc::new(AtomicUsize::new(0));
+        b.set_delay("personas", secs(30));
+        assert_eq!(
+            personas_op(&h, l, true, &runs).await,
+            Err(OpFailure::Timeout)
+        );
+        assert_eq!(runs.load(Ordering::SeqCst), 2);
+        b.set_delay("personas", Duration::ZERO);
+        b.inject_job_failure(1, CmError::EResult(5));
+        let runs = Arc::new(AtomicUsize::new(0));
+        assert_eq!(
+            personas_op(&h, l, true, &runs).await,
+            Err(OpFailure::Cm(CmError::EResult(5)))
+        );
+        assert_eq!(runs.load(Ordering::SeqCst), 1);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn failed_rebuild_is_bounded_and_status_stays_responsive() {
+        let (b, h) = setup();
+        let (l, _) = acq(&h).await.unwrap();
+        for _ in 0..4 {
+            b.push_authed(Err(CmError::Discovery));
+        }
+        b.inject_job_failure(2, CmError::Timeout);
+        let t0 = Instant::now();
+        let h2 = h.clone();
+        let op = tokio::spawn(async move {
+            let runs = Arc::new(AtomicUsize::new(0));
+            personas_op(&h2, l, true, &runs).await
+        });
+        tokio::time::sleep(secs(20)).await;
+        let t1 = Instant::now();
+        let st = h.status().await;
+        assert!(!st.connected);
+        assert!(t1.elapsed() < Duration::from_millis(10));
+        assert_eq!(op.await.unwrap(), Err(OpFailure::Cm(CmError::Discovery)));
+        let took = t0.elapsed();
+        assert!(took >= secs(55) && took <= secs(95), "{took:?}");
+        assert!(took < COMMAND_DEADLINE);
+        assert_eq!(b.connect_count(), 5);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn the_command_deadline_bounds_attempt_probe_reconnect_and_retry() {
+        let (b, h) = setup();
+        let (l, _) = acq(&h).await.unwrap();
+        b.set_delay("connect_authed", secs(100));
+        b.inject_job_failure(2, CmError::Timeout);
+        let t0 = Instant::now();
+        let runs = Arc::new(AtomicUsize::new(0));
+        assert_eq!(
+            personas_op(&h, l, true, &runs).await,
+            Err(OpFailure::Timeout)
+        );
+        assert_eq!(t0.elapsed(), COMMAND_DEADLINE);
+        // The actor is still free.
+        assert_eq!(h.status().await.lease_count, 1);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_redeem_style_op_is_never_resent_after_a_rebuild() {
+        let (b, h) = setup();
+        let (l, _) = acq(&h).await.unwrap();
+        b.inject_job_failure(2, CmError::Closed);
+        let runs = Arc::new(AtomicUsize::new(0));
+        assert_eq!(
+            personas_op(&h, l, false, &runs).await,
+            Err(OpFailure::Ambiguous)
+        );
+        assert_eq!(runs.load(Ordering::SeqCst), 1);
+        assert_eq!(b.connect_count(), 2);
+        assert!(h.status().await.connected);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_non_idempotent_op_on_a_live_link_reports_its_own_failure() {
+        let (b, h) = setup();
+        let (l, _) = acq(&h).await.unwrap();
+        b.inject_job_failure(1, CmError::Timeout);
+        let runs = Arc::new(AtomicUsize::new(0));
+        assert_eq!(
+            personas_op(&h, l, false, &runs).await,
+            Err(OpFailure::Timeout)
+        );
+        assert_eq!(runs.load(Ordering::SeqCst), 1);
+        assert_eq!(b.connect_count(), 1);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn logged_off_34_is_terminal_with_no_reconnect() {
+        let (b, h) = setup();
+        let (l1, _) = acq(&h).await.unwrap();
+        let (_l2, _) = acq(&h).await.unwrap();
+        b.set_delay("personas", secs(100));
+        let h2 = h.clone();
+        let inflight = tokio::spawn(async move {
+            h2.run_op(l1, true, secs(110), |c| {
+                Box::pin(async move { c.personas(vec![]).await.map(|_| ()) })
+            })
+            .await
+        });
+        tokio::time::sleep(secs(1)).await;
+        b.send_logged_off(34).await;
+        assert_eq!(inflight.await.unwrap(), Err(OpFailure::Replaced));
+        assert!(!h.status().await.connected);
+        tokio::time::sleep(secs(600)).await;
+        assert!(!h.status().await.connected);
+        assert_eq!(b.connect_count(), 1);
+        // A later op on the dead session is told why.
+        b.set_delay("personas", Duration::ZERO);
+        let runs = Arc::new(AtomicUsize::new(0));
+        assert_eq!(
+            personas_op(&h, l1, true, &runs).await,
+            Err(OpFailure::Replaced)
+        );
+        assert_eq!(b.connect_count(), 1);
+        // The next acquire logs on fresh.
+        let (l3, _) = acq(&h).await.unwrap();
+        assert_eq!(b.connect_count(), 2);
+        assert!(h.status().await.connected);
+        assert_eq!(personas_op(&h, l3, true, &runs).await, Ok(()));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn other_logged_off_codes_with_a_lease_count_as_dead() {
+        let (b, h) = setup();
+        let (_l, _) = acq(&h).await.unwrap();
+        b.send_logged_off(5).await;
+        tokio::time::sleep(secs(20)).await;
+        assert_eq!(b.connect_count(), 2);
+        assert!(h.status().await.connected);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn logged_off_without_leases_just_closes() {
+        let (b, h) = setup();
+        let (l, _) = acq(&h).await.unwrap();
+        h.release(l);
+        tokio::time::sleep(secs(1)).await;
+        b.send_logged_off(5).await;
+        tokio::time::sleep(secs(20)).await;
+        assert_eq!(b.connect_count(), 1);
+        assert!(!h.status().await.connected);
+    }
+
+    /// A session whose wall clock can be jumped forward (seconds) to simulate a system sleep.
+    fn sleepy(b: Arc<FakeBackend>) -> (H, Arc<AtomicUsize>) {
+        let jump = Arc::new(AtomicUsize::new(0));
+        let (base, start) = (SystemTime::now(), Instant::now());
+        let j = jump.clone();
+        let wall = Arc::new(move || {
+            base + start.elapsed() + Duration::from_secs(j.load(Ordering::SeqCst) as u64)
+        });
+        (
+            SessionHandle::spawn_with_wall(b, Arc::new(NoWrap), wall),
+            jump,
+        )
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_sleep_with_a_lease_probes_at_once_and_a_dead_probe_rebuilds() {
+        let b = Arc::new(FakeBackend::new());
+        let (h, jump) = sleepy(b.clone());
+        let (_l, _) = acq(&h).await.unwrap();
+        tokio::time::sleep(secs(12)).await;
+        let jobs = b.job_count();
+        jump.store(365, Ordering::SeqCst);
+        b.inject_job_failure(1, CmError::Timeout);
+        tokio::time::sleep(secs(6)).await;
+        assert_eq!(b.job_count(), jobs + 1);
+        // No caller op was needed for the rebuild.
+        tokio::time::sleep(secs(30)).await;
+        assert_eq!(b.connect_count(), 2);
+        assert!(h.status().await.connected);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_sleep_with_a_live_link_probes_without_a_rebuild() {
+        let b = Arc::new(FakeBackend::new());
+        let (h, jump) = sleepy(b.clone());
+        let (_l, _) = acq(&h).await.unwrap();
+        tokio::time::sleep(secs(12)).await;
+        let jobs = b.job_count();
+        jump.store(365, Ordering::SeqCst);
+        tokio::time::sleep(secs(30)).await;
+        assert_eq!(b.job_count(), jobs + 1);
+        assert_eq!(b.connect_count(), 1);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_sleep_with_no_lease_makes_no_cm_call_until_the_session_is_used() {
+        let b = Arc::new(FakeBackend::new());
+        let (h, jump) = sleepy(b.clone());
+        let (l, _) = acq(&h).await.unwrap();
+        h.release(l);
+        tokio::time::sleep(secs(12)).await;
+        let jobs = b.job_count();
+        jump.store(365, Ordering::SeqCst);
+        tokio::time::sleep(secs(10)).await;
+        assert_eq!(b.job_count(), jobs);
+        assert_eq!(b.connect_count(), 1);
+        // The next use probes the suspect session first.
+        let (_l, _) = h.acquire_open("t".into()).await.unwrap();
+        tokio::time::sleep(secs(1)).await;
+        assert_eq!(b.job_count(), jobs + 1);
+        assert_eq!(b.connect_count(), 1);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn no_probe_runs_while_a_lease_is_idle_for_a_long_time() {
+        let (b, h) = setup();
+        let (_l, _) = acq(&h).await.unwrap();
+        tokio::time::sleep(secs(3600)).await;
+        assert_eq!(b.job_count(), 0);
+        assert_eq!(b.connect_count(), 1);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn logout_during_a_rebuild_fences_it() {
+        let (b, h) = setup();
+        let (l, _) = acq(&h).await.unwrap();
+        b.set_delay("connect_authed", secs(10));
+        b.inject_job_failure(2, CmError::Timeout);
+        let h2 = h.clone();
+        let op = tokio::spawn(async move {
+            let runs = Arc::new(AtomicUsize::new(0));
+            personas_op(&h2, l, true, &runs).await
+        });
+        // The rebuild's connect (about 5 s in) is in flight when the user signs out.
+        tokio::time::sleep(secs(8)).await;
+        h.logout().await;
+        assert_eq!(op.await.unwrap(), Err(OpFailure::LeaseUnknown));
+        tokio::time::sleep(secs(30)).await;
+        assert!(b.all_closed());
+        assert!(!h.status().await.connected);
+        assert_eq!(b.connect_count(), 2);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn logout_before_the_rebuild_attempt_starts_no_logon() {
+        let (b, h) = setup();
+        let (l, _) = acq(&h).await.unwrap();
+        b.inject_job_failure(2, CmError::Timeout);
+        let h2 = h.clone();
+        let op = tokio::spawn(async move {
+            let runs = Arc::new(AtomicUsize::new(0));
+            personas_op(&h2, l, true, &runs).await
+        });
+        tokio::time::sleep(secs(1)).await;
+        h.logout().await;
+        assert_eq!(op.await.unwrap(), Err(OpFailure::LeaseUnknown));
+        tokio::time::sleep(secs(60)).await;
+        assert_eq!(b.connect_count(), 1);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn every_rebuild_passes_through_the_logon_wrap() {
+        let (b, h, log) = recorded(false, Duration::ZERO);
+        let (l, _) = acq(&h).await.unwrap();
+        b.inject_job_failure(2, CmError::Timeout);
+        let runs = Arc::new(AtomicUsize::new(0));
+        assert_eq!(personas_op(&h, l, true, &runs).await, Ok(()));
+        assert_eq!(b.connect_count(), 2);
+        assert_eq!(
+            *log.lock().unwrap(),
+            vec!["before_logon", "after_logon", "before_logon", "after_logon"]
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn concurrent_failures_share_one_rebuild() {
+        let (b, h) = setup();
+        let (l, _) = acq(&h).await.unwrap();
+        // Two ops fail, one probe fails.
+        b.inject_job_failure(3, CmError::Timeout);
+        let runs = Arc::new(AtomicUsize::new(0));
+        let (a, c) = tokio::join!(
+            personas_op(&h, l, true, &runs),
+            personas_op(&h, l, true, &runs)
+        );
+        assert_eq!((a, c), (Ok(()), Ok(())));
+        assert_eq!(b.connect_count(), 2);
     }
 }
