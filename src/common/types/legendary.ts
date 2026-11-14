@@ -1,5 +1,6 @@
 // Types specifically for Legendary/Epic
 
+import type { GameInfoCore } from 'common/types'
 import { LaunchOption } from 'common/types'
 
 // Possible platforms for `legendary list --platform`
@@ -246,4 +247,16 @@ export interface SelectiveDownload {
   name: string
   description: string
   required?: boolean
+}
+
+/** Phase 70 (D-01, D-13): an Epic (legendary) library entry. */
+export interface LegendaryGameInfo extends GameInfoCore {
+  runner: 'legendary'
+  namespace?: string
+  // NOTE: save_folder (core) is the save folder without any variables filled in...
+  // ...and this is the folder with them filled in
+  save_path?: string
+  isEAManaged?: boolean
+  isUbisoftManaged?: boolean
+  dlcList?: GameMetadataInner[]
 }

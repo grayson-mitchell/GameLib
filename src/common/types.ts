@@ -9,6 +9,11 @@ import {
   LegendaryInstallInfo
 } from './types/legendary'
 import { NileInstallInfo, NileInstallPlatform } from './types/nile'
+import type { SteamGameInfo } from './types/steam'
+import type { GogGameInfo } from './types/gog'
+import type { LegendaryGameInfo } from './types/legendary'
+import type { NileGameInfo } from './types/nile'
+import type { SideloadGameInfo } from './types/sideload'
 import type { TrayIconVariant } from './trayIconVariant'
 import type { SignInStore } from './signInState'
 import type { TitleBarOverlay, Rectangle } from 'common/types/hostTypes'
@@ -200,17 +205,22 @@ export type ExecResult = {
   failed?: boolean
 }
 
-export interface ExtraInfo {
+export interface ExtraInfoCore {
   about?: About
   reqs: Reqs[]
   releaseDate?: string
   storeUrl?: string
   changelog?: string
   genres?: string[]
+}
+
+export interface ExtraInfo extends ExtraInfoCore {
+  // PHASE70-FLIP-PROBE: store-keys-begin
   /** total playtime in minutes from getUserOwnedApps() — undefined for non-Steam games */
   steamPlaytimeMinutes?: number
   /** Unix-seconds timestamp of the last play session from getUserOwnedApps() — undefined/0 for non-Steam games */
   steamLastPlayed?: number
+  // PHASE70-FLIP-PROBE: store-keys-end
 }
 
 export type GameConfigVersion = 'auto' | 'v0' | 'v1'
@@ -231,6 +241,75 @@ export type GOGAchievement = {
 
 export type GameAchievement = GOGAchievement
 
+/**
+ * Phase 70 (D-01, D-06): the fields every store's game shares. Per-store
+ * members (`SteamGameInfo` etc., in `common/types/<store>.ts`) extend this
+ * with a literal `runner` and their store-only fields.
+ */
+export interface GameInfoCore {
+  runner: Runner
+  store_url?: string
+  app_name: string
+  art_cover: string
+  art_logo?: string
+  art_background?: string
+  art_icon?: string
+  art_square: string
+  cloud_save_enabled?: boolean
+  developer?: string
+  extra?: ExtraInfoCore
+  folder_name?: string
+  install: Partial<InstalledInfoCore>
+  is_installed: boolean
+  // NOTE: This is the save folder without any variables filled in...
+  save_folder?: string
+  title: string
+  canRunOffline: boolean
+  thirdPartyManagedApp?: string
+  is_mac_native?: boolean
+  /** MAC32-01: resolved macOS build architecture. Absent key / 'unknown' means
+   * "not resolved" — a missing or blank Steam `osarch` tag is NEVER coerced to
+   * '32' (the documented false-32-bit-flag trap). '32' routes the game to the
+   * CrossOver/Wine bottle (32-bit dropped in Catalina/2019); '64' and 'unknown'
+   * both stay on native macOS handling. */
+  mac_arch?: '32' | '64' | 'unknown'
+  is_linux_native?: boolean
+  /** D-17: Windows-depot availability signal, mirroring
+   * `SteamMetadataCacheEntry.is_windows_native`. Sourced from
+   * `data.platforms.windows` on the SAME `appdetails` response that already
+   * yields `data.platforms.mac` / `data.platforms.linux` — persisted by
+   * 34.13-02, hydrated onto `GameInfo` in `library.ts`. Load-bearing
+   * contract: only `=== true` permits offering a Windows install. `undefined`
+   * means "never captured" (pre-34.13 cache entries) and MUST NOT be coerced
+   * to available — forcing a Windows install of a game with no Windows depot
+   * is an explicitly Deferred Idea. Per the UI-SPEC, the Windows `MenuItem`
+   * is ABSENT (never present-but-disabled) when this is not `=== true`. */
+  is_windows_native?: boolean
+  /** Quick 261029-sbi: Metacritic score (1..100). Set only for Steam, from
+   * steamMetadataStore (PICS / appdetails). `undefined` means unknown, never
+   * 0. Non-Steam scores come from the wiki cache in the renderer (see
+   * librarySort.ts). */
+  metacritic_score?: number
+  description?: string
+  //used for store release versions. if remote !== local, then update
+  version?: string
+  overrides?: {
+    title?: string
+    art_cover?: string
+    art_square?: string
+  }
+}
+
+/** Phase 70 (D-02): runner literal to its per-store member. */
+export interface GameInfoByRunner {
+  steam: SteamGameInfo
+  gog: GogGameInfo
+  legendary: LegendaryGameInfo
+  nile: NileGameInfo
+  sideload: SideloadGameInfo
+}
+
+// PHASE70-FLIP-PROBE: fat-begin
 export interface GameInfo {
   runner: 'legendary' | 'gog' | 'sideload' | 'nile' | 'steam'
   store_url?: string
@@ -301,6 +380,7 @@ export interface GameInfo {
     art_square?: string
   }
 }
+// PHASE70-FLIP-PROBE: fat-end
 
 export interface GameSettings {
   autoInstallDxvk: boolean
@@ -404,7 +484,7 @@ export interface InstallProgress {
   diskSpeed?: number
   file?: string
 }
-export interface InstalledInfo {
+export interface InstalledInfoCore {
   manifest?: {
     disk_size: number
     download_size: number
@@ -423,17 +503,21 @@ export interface InstalledInfo {
   install_path: string
   install_size: string
   is_dlc: boolean
-  isDosbox?: boolean
-  dosboxConf?: string[]
   version: string
   platform: InstallPlatform
   appName?: string
+  language?: string // For GOG games
+  branch?: string // GOG beta channels
+}
+
+export interface InstalledInfo extends InstalledInfoCore {
+  // PHASE70-FLIP-PROBE: store-keys-begin
+  isDosbox?: boolean
+  dosboxConf?: string[]
   installedWithDLCs?: boolean // OLD DLC boolean (all dlcs installed)
   installedDLCs?: string[] // New installed GOG DLCs array
-  language?: string // For GOG games
   versionEtag?: string // Checksum for checking GOG updates
   buildId?: string // For verifing and version pinning of GOG games
-  branch?: string // GOG beta channels
   // Whether to skip update check for this title (currently only used for GOG as it is the only platform actively supporting version rollback)
   pinnedVersion?: boolean
   cyberpunk?: {
@@ -478,6 +562,7 @@ export interface InstalledInfo {
   // appmanifest had StateFlags & 4 when this job began, so cancel-delete must
   // never treat its tree as a partial, whatever finalize wrote afterwards.
   steamResumeInstalledAtStart?: boolean
+  // PHASE70-FLIP-PROBE: store-keys-end
 }
 
 export interface Reqs {

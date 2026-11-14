@@ -1,3 +1,4 @@
+import type { GameInfoCore } from 'common/types'
 import { LaunchOption } from 'common/types'
 
 interface GameManifest {
@@ -41,7 +42,7 @@ export interface NileInstallInfo {
 // Amazon Games only supports Windows games
 export type NileInstallPlatform = 'Windows'
 
-export interface NileGameInfo {
+export interface NileLibraryEntry {
   id: string
   product: NileGameProduct
 }
@@ -122,4 +123,9 @@ export interface NileRegisterData {
 
 export interface NileGameDownloadInfo {
   download_size: number
+}
+
+/** Phase 70 (D-01, D-13): an Amazon (nile) library entry. No store-only top-level fields today. */
+export interface NileGameInfo extends GameInfoCore {
+  runner: 'nile'
 }

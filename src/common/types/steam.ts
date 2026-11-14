@@ -1,4 +1,9 @@
-import type { WineInstallation } from '../types'
+import type {
+  ExtraInfoCore,
+  GameInfoCore,
+  InstalledInfoCore,
+  WineInstallation
+} from '../types'
 
 export interface SteamCredentials {
   refreshToken: string // encrypted via safeStorage; decrypted before use
@@ -283,4 +288,65 @@ export interface SteamUpdateInfo {
     freeBytes?: number
   }
   sizeError?: string
+}
+
+export interface SteamExtraInfo extends ExtraInfoCore {
+  /** total playtime in minutes from getUserOwnedApps() */
+  steamPlaytimeMinutes?: number
+  /** Unix-seconds timestamp of the last play session from getUserOwnedApps(); undefined/0 when never played */
+  steamLastPlayed?: number
+}
+
+export interface SteamInstalledInfo extends InstalledInfoCore {
+  // steam-startup-resume-crash (2026-07-18) / D-04 softened: set true when
+  // SteamLibraryManager.init() detects a leftover interrupted (StateFlags
+  // 1026) download on startup. Surfaces the game as resumable without
+  // auto-driving any heavy depot work unattended — the user's own Install
+  // click (SteamGame.install()) clears this and performs the resume.
+  // 260821-rb5: as of this task, this flag has a THIRD writer — the
+  // install-start breadcrumb below — in addition to the startup ACF scan
+  // and markSteamInstallIncomplete.
+  steamResumePending?: boolean
+  // 260821-rb5: crash-surviving resume breadcrumb. Written at native depot
+  // install START (games.ts's runNativeDepotDownload, before the
+  // downloadSteamDepots await) and persisted immediately to
+  // steamLibraryStore so a kill -9 microseconds later still finds them on
+  // disk. Closes case C of the aborted-depot-residue todo
+  // (.planning/todos/pending/2026-08-16-aborted-depot-residue-has-no-acf.md):
+  // no JS runs at teardown, so no appmanifest_*.acf is ever written and
+  // scanDownloadingAppIds can never see the residue.
+  //
+  // The PRESENCE of steamResumeInstalldir is the breadcrumb discriminator.
+  // steamResumePending alone is ambiguous — it is also set by the
+  // ACF-derived startup scan and by markSteamInstallIncomplete. Only a
+  // breadcrumb-carrying entry participates in init()'s startup self-heal
+  // check.
+  //
+  // These hold the values ACTUALLY used by the run (including
+  // opts.targetSteamappsDirOverride, i.e. a bottle steamapps root), never a
+  // re-derived guess.
+  //
+  // They are cleared on the successful (status: 'done') route and by
+  // init()'s self-heal; they deliberately SURVIVE an errored or cancelled
+  // run, because those leave residue too.
+  steamResumeTargetSteamappsDir?: string
+  steamResumeInstalldir?: string
+  // Captured at native job start (todo 2026-11-09): true means the title's
+  // appmanifest had StateFlags & 4 when this job began, so cancel-delete must
+  // never treat its tree as a partial, whatever finalize wrote afterwards.
+  steamResumeInstalledAtStart?: boolean
+}
+
+/** Phase 70 (D-01, D-13): a Steam library entry. */
+export interface SteamGameInfo extends GameInfoCore {
+  runner: 'steam'
+  extra?: SteamExtraInfo
+  install: Partial<SteamInstalledInfo>
+  installable?: boolean
+  /** Delisted = confirmed unavailable on Steam (appdetails success:false).
+   * When true the game is hidden from Console and not activatable. */
+  is_delisted?: boolean
+  /** Phase 17 D-08 reconciliation — mirrors steamMetadataStore.platformsCaptured
+   * so the frontend bottle indicator matches the backend D-11 routing gate. */
+  steamPlatformsCaptured?: boolean
 }

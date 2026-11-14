@@ -1,3 +1,4 @@
+import type { GameInfoCore, InstalledInfoCore } from 'common/types'
 import { LaunchOption } from 'common/types'
 
 export type GogInstallPlatform = 'windows' | 'osx' | 'linux'
@@ -486,4 +487,27 @@ export interface GOGCredentials {
   refresh_token: string
   user_id: string
   loginType: number
+}
+
+export interface GogInstalledInfo extends InstalledInfoCore {
+  isDosbox?: boolean
+  dosboxConf?: string[]
+  installedWithDLCs?: boolean // OLD DLC boolean (all dlcs installed)
+  installedDLCs?: string[] // New installed GOG DLCs array
+  versionEtag?: string // Checksum for checking GOG updates
+  buildId?: string // For verifing and version pinning of GOG games
+  // Whether to skip update check for this title (currently only used for GOG as it is the only platform actively supporting version rollback)
+  pinnedVersion?: boolean
+  cyberpunk?: {
+    // Cyberpunk compatibility options
+    modsEnabled: boolean
+    modsToLoad: string[] // If this is empty redmod will load mods in alphabetic order
+  }
+}
+
+/** Phase 70 (D-01, D-13): a GOG library entry. */
+export interface GogGameInfo extends GameInfoCore {
+  runner: 'gog'
+  install: Partial<GogInstalledInfo>
+  gog_save_location?: GOGCloudSavesLocation[]
 }

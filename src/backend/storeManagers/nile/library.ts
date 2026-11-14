@@ -12,7 +12,7 @@ import { ExecResult, GameInfo } from 'common/types'
 import {
   FuelSchema,
   NileGameDownloadInfo,
-  NileGameInfo,
+  NileLibraryEntry,
   NileInstallInfo,
   NileInstallMetadataInfo
 } from 'common/types/nile'
@@ -69,7 +69,7 @@ export default class NileLibraryManager implements LibraryManager {
     if (!existsSync(this.nilePaths.nileLibrary)) {
       return
     }
-    const libraryJSON: NileGameInfo[] = JSON.parse(
+    const libraryJSON: NileLibraryEntry[] = JSON.parse(
       readFileSync(this.nilePaths.nileLibrary, 'utf-8')
     )
     libraryJSON.forEach((game) => {
