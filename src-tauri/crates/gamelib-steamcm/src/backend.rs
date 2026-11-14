@@ -150,6 +150,8 @@ pub struct OwnedGameRaw {
 pub struct PurchaseRaw {
     pub eresult: i32,
     pub purchase_result_details: i32,
+    /// Binary KV `purchase_receipt_info`; empty when the CM sent none.
+    pub receipt: Vec<u8>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]

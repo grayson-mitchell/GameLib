@@ -396,6 +396,7 @@ impl CmConn for VentConn {
         Ok(PurchaseRaw {
             eresult: r.eresult(),
             purchase_result_details: r.purchase_result_details(),
+            receipt: r.purchase_receipt_info().to_vec(),
         })
     }
 
