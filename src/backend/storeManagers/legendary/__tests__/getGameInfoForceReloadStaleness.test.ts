@@ -45,6 +45,9 @@ import { createTestOnlineMonitor } from 'backend/testUtils/testOnlineMonitor'
  * this probe ever does go red, something unintended changed in `library.ts`: STOP and
  * investigate — do not adjust this test to pass.
  *
+ * UPDATE (70-20, gap G2): a second describe pins that Epic metadata WITHOUT a
+ * `description` still yields `extra.about.description === ''` (schema-valid).
+ *
  * OUT OF SCOPE: the 500ms `installedJsonWatcher` debounce race
  * (`src/backend/sidecar/installedJsonWatcher.ts`) is a live-timing property, not
  * desk-provable, and is not asserted here. Neither `save_sync.ts` nor `library.ts` is
@@ -189,6 +192,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import LegendaryLibraryManager from '../library'
 import { deriveLegendaryPaths } from '../constants'
+import { legendaryGameInfoSchema } from 'common/types/ipc/gameInfoSchema'
 import type {
   InstalledJsonMetadata,
   GameMetadataInner
@@ -358,4 +362,44 @@ describe('getGameInfo(appName, forceReload=true) stale-map characterisation (qui
       expect(freshInfo!.save_path).toBe(NEW_SENTINEL)
     }
   )
+})
+
+describe('70 gap G2: Epic metadata without a description', () => {
+  it("defaults extra.about.description to '' and passes the legendary extra schema", () => {
+    const manager = new LegendaryLibraryManager(
+      createTestManagerDeps({
+        onlineMonitor: {
+          ...createTestOnlineMonitor(),
+          isOnline: () => mockIsOnline(),
+          runOnceWhenOnline: jest.fn()
+        }
+      })
+    )
+    mkdirSync(legendaryMetadata, { recursive: true })
+    const { description: _omitted, ...withoutDescription } = metadataInner
+    writeFileSync(
+      join(legendaryMetadata, `${APP_NAME}.json`),
+      JSON.stringify({
+        app_name: APP_NAME,
+        app_title: 'Phoenix Point',
+        metadata: withoutDescription
+      })
+    )
+    writeFileSync(
+      join(legendaryConfigPath, 'installed.json'),
+      JSON.stringify(installedJsonFixture(OLD_SENTINEL))
+    )
+    mockIsOnline.mockReturnValue(true)
+
+    manager.loadGamesInAccount()
+    manager.refreshInstalled()
+    const info = manager.getGameInfo(APP_NAME, true)
+
+    expect(info).toBeDefined()
+    expect(info!.extra?.about?.description).toBe('')
+    expect(typeof info!.extra?.about?.shortDescription).toBe('string')
+    expect(
+      legendaryGameInfoSchema.shape.extra.safeParse(info!.extra).success
+    ).toBe(true)
+  })
 })

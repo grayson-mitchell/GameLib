@@ -585,7 +585,7 @@ export default class LegendaryLibraryManager implements LibraryManager {
     }
 
     const {
-      description,
+      description = '',
       shortDescription = '',
       keyImages = [],
       title,
