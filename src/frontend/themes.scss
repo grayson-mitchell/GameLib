@@ -128,9 +128,11 @@ body.midnightMirage {
   --input-background: var(--background-lighter);
   --controller-hints-background: transparent;
   --current-background: var(--body-background);
-  --modal-background: var(--background-darker);
+  /* quick-261114-pqm: the modal surface was identical to the body under an
+     80%-black backdrop (invisible); the border is now consumed by the Dialog paper. */
+  --modal-background: var(--background);
   --modal-backdrop: var(--background-darker-80);
-  --modal-border: var(--background);
+  --modal-border: rgba(255, 255, 255, 0.1);
   --osk-background: var(--body-background);
   --osk-button-background: var(--input-background);
   --osk-button-border: var(--navbar-background);

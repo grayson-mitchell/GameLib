@@ -3597,3 +3597,54 @@ describe('Game-menu .is-link family: render-site census, winning-rule resolution
     }
   )
 })
+
+/**
+ * quick-261114-pqm: a modal paper needs a visible edge.
+ *
+ * Bug: midnightMirage's --modal-background resolved to #070a0b, identical to
+ * its --body-background, under an 80%-black backdrop, so the paper was
+ * indistinguishable from what surrounds it. --modal-border was declared in
+ * every theme but consumed nowhere. The Dialog paper now paints it, and
+ * midnightMirage gets a lighter surface plus a translucent-white edge.
+ * (--modal-border is deliberately never routed through contrastRatio: the
+ * rgba() value would make toRgb throw.)
+ */
+describe('quick-261114-pqm: modal paper edge tokens', () => {
+  const themesScss = read(THEMES_SCSS)
+  const globals = globalTokens()
+  const resolve = (selector: string, token: string): string | null => {
+    const scope = themeTokens(themesScss, selector)
+    const v = resolveValue(`var(${token})`, scope, globals)
+    return v === null ? null : v.replace(/\s+/g, ' ').toLowerCase()
+  }
+
+  it('midnightMirage modal surface differs from its body surface', () => {
+    const modal = resolve('body.midnightMirage', '--modal-background')
+    const body = resolve('body.midnightMirage', '--body-background')
+    expect({ modal, body, differ: modal !== body }).toEqual({
+      modal,
+      body,
+      differ: true
+    })
+  })
+
+  it('midnightMirage modal surface is #161c1e and its border is rgba(255, 255, 255, 0.1)', () => {
+    expect({
+      background: resolve('body.midnightMirage', '--modal-background'),
+      border: resolve('body.midnightMirage', '--modal-border')
+    }).toEqual({
+      background: '#161c1e',
+      border: 'rgba(255, 255, 255, 0.1)'
+    })
+  })
+
+  it.each(themeSelectors)(
+    '%s resolves --modal-border to a value',
+    (selector) => {
+      expect({
+        selector,
+        border: resolve(selector, '--modal-border')
+      }).not.toEqual({ selector, border: null })
+    }
+  )
+})
