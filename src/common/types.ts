@@ -387,7 +387,7 @@ export interface GameStatus {
   managedBySteam?: boolean
 }
 
-export type GlobalConfigVersion = 'auto' | 'v0' | 'v1'
+export type GlobalConfigVersion = 'auto' | 'v0' | 'v1' | 'v2'
 export interface InstallProgress {
   bytes: string
   eta: string

@@ -5,10 +5,21 @@
  * `darkTrayIcon` becomes `trayIconVariant` and the retired `libraryTopSection`
  * seeds `focusRow`. Both call the shared pure helpers so there is one source
  * of truth. The version stamp is written by the settings codec, not here.
+ *
+ * v1 -> v2 (Phase 70 gap G3, global half, WR-05) strips `defaultSettings` to
+ * `appSettingsSchema.partial()`. (1) v2 removes what the strict schema cannot
+ * hold: undeclared/retired keys (e.g. `useSteamRuntime`), rejected nulls and
+ * invalid values. (2) The factory default then applies for each removed value.
+ * (3) Valid values are untouched, including `focusRow: null`. (4) Trade-off:
+ * an invalid user value is dropped from the live file; the engine's 0600
+ * pre-migration backup keeps the original. v0 -> v1 stays first because the
+ * strip removes both legacy keys.
  */
 import { migrateFocusRowSelection } from 'common/focusRowMigration'
 import { migrateTrayIconVariant } from 'common/trayIconVariant'
+import { appSettingsSchema } from 'common/types/ipc/settingsSchema'
 import type { Migration } from '../storeVersioning/types'
+import { stripToSchema } from './schemaStrip'
 
 const isPlainObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v)
@@ -33,6 +44,20 @@ export const settingsGlobalChain: readonly Migration[] = [
       delete next['darkTrayIcon']
       delete next['libraryTopSection']
       return { ...file, defaultSettings: next }
+    }
+  },
+  {
+    id: 'settings-global-v1-v2',
+    to: 2,
+    run(file) {
+      const original = file['defaultSettings']
+      if (!isPlainObject(original)) return file
+      return {
+        ...file,
+        defaultSettings: stripToSchema(original, appSettingsSchema.partial(), {
+          dropInvalidOptional: true
+        })
+      }
     }
   }
 ]
