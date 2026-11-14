@@ -40,13 +40,30 @@ afterEach(() => {
 })
 
 describe('ensureSettingsMigrated', () => {
+  test('a v1 global file with an invalid value migrates to v2 with a byte-identical backup', () => {
+    const path = join(root, 'config.json')
+    copyFileSync(
+      join(fixtures, 'fixtures', 'settings-global-v1-invalid-values.json'),
+      path
+    )
+    const original = readFileSync(path)
+    ensureSettingsMigrated(h.versioning, path, 'settings/global')
+    const out = JSON.parse(readFileSync(path, 'utf8'))
+    expect(out.version).toBe('v2')
+    expect(out.defaultSettings.checkUpdatesInterval).toBeUndefined()
+    const backups = listBackups(path)
+    expect(backups).toHaveLength(1)
+    expect(readFileSync(backups[0]!).equals(original)).toBe(true)
+    expect(statSync(backups[0]!).mode & 0o777).toBe(0o600)
+  })
+
   test('migrates a v0 global file with a private backup', () => {
     const path = join(root, 'config.json')
     copyFileSync(join(fixtures, 'fixtures', 'settings-global-v0.json'), path)
     const original = readFileSync(path)
     ensureSettingsMigrated(h.versioning, path, 'settings/global')
     const out = JSON.parse(readFileSync(path, 'utf8'))
-    expect(out.version).toBe('v1')
+    expect(out.version).toBe('v2')
     expect(out.defaultSettings.trayIconVariant).toBe('dark')
     expect(out.defaultSettings.darkTrayIcon).toBeUndefined()
     const backups = listBackups(path)

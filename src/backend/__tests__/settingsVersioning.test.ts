@@ -119,7 +119,7 @@ describe('global settings', () => {
     expect(readFileSync(configFile(), 'utf8')).toBe(text)
   })
 
-  it('a v0 config is migrated to v1 with tray variant persisted and a backup', () => {
+  it('a v0 config is migrated to v2 with tray variant persisted and a backup', () => {
     writeFileSync(
       configFile(),
       JSON.stringify({
@@ -130,16 +130,37 @@ describe('global settings', () => {
 
     expect(createGlobalConfig().getSettings().trayIconVariant).toBe('dark')
     const onDisk = JSON.parse(readFileSync(configFile(), 'utf8'))
-    expect(onDisk.version).toBe('v1')
+    expect(onDisk.version).toBe('v2')
     expect(onDisk.defaultSettings.trayIconVariant).toBe('dark')
     expect('darkTrayIcon' in onDisk.defaultSettings).toBe(false)
     expect(backups('config')).toHaveLength(1)
   })
 
-  it('a missing config produces a fresh private v1 file', () => {
+  it('a v1 config with a retired key and an invalid value is stripped on load', () => {
+    writeFileSync(
+      configFile(),
+      JSON.stringify({
+        defaultSettings: { useSteamRuntime: true, checkUpdatesInterval: '10' },
+        version: 'v1'
+      })
+    )
+    const { createGlobalConfig } = freshGraph()
+    const settings = createGlobalConfig().getSettings()
+    expect('useSteamRuntime' in settings).toBe(false)
+    expect(typeof settings.checkUpdatesInterval).toBe('number')
+    const onDisk = JSON.parse(readFileSync(configFile(), 'utf8'))
+    expect(onDisk.version).toBe('v2')
+    expect(
+      settingsAsyncArgs.writeConfig.safeParse([
+        { appName: 'default', config: onDisk.defaultSettings }
+      ]).success
+    ).toBe(true)
+  })
+
+  it('a missing config produces a fresh private v2 file', () => {
     const { createGlobalConfig } = freshGraph()
     createGlobalConfig()
-    expect(JSON.parse(readFileSync(configFile(), 'utf8')).version).toBe('v1')
+    expect(JSON.parse(readFileSync(configFile(), 'utf8')).version).toBe('v2')
     expect(statSync(configFile()).mode & 0o777).toBe(0o600)
   })
 })
@@ -158,7 +179,7 @@ describe('per-game settings', () => {
   it('get() migrates a v0 file once with a backup; later writes keep v2', () => {
     writeFileSync(
       configFile(),
-      JSON.stringify({ defaultSettings: {}, version: 'v1' })
+      JSON.stringify({ defaultSettings: {}, version: 'v2' })
     )
     seed('app0')
     const { createGameConfigs, createGlobalConfig } = freshGraph()
@@ -180,7 +201,7 @@ describe('per-game settings', () => {
   it('a v1 file with a retired key and a wrong-typed value round-trips through writeConfig', async () => {
     writeFileSync(
       configFile(),
-      JSON.stringify({ defaultSettings: {}, version: 'v1' })
+      JSON.stringify({ defaultSettings: {}, version: 'v2' })
     )
     writeFileSync(
       gameFile('appx'),
@@ -206,7 +227,7 @@ describe('per-game settings', () => {
   it('a newer game file is readable, keeps changes in memory and is never written', () => {
     writeFileSync(
       configFile(),
-      JSON.stringify({ defaultSettings: {}, version: 'v1' })
+      JSON.stringify({ defaultSettings: {}, version: 'v2' })
     )
     seed('app7', 'v7')
     const before = readFileSync(gameFile('app7'))
