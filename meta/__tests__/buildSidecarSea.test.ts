@@ -290,6 +290,15 @@ describe('SEA tool resolution is Windows-spawnable (CR-02 / GAP-2 regression gua
     }
   })
 
+  test('buildEsbuildArgv carries the ITAD key define (Phase 47 D-01)', () => {
+    expect(buildEsbuildArgv('linux', { ITAD_API_KEY: 'k' }).args).toContain(
+      '--define:__ITAD_API_KEY__="k"'
+    )
+    expect(buildEsbuildArgv('win32', {}).args).toContain(
+      '--define:__ITAD_API_KEY__=""'
+    )
+  })
+
   // WR-06 (34-REVIEW.md gap cycle 2): buildEsbuildArgv() read process.platform
   // internally, so the win32 branch -- the ONE branch GAP-2 exists to fix --
   // was never evaluated on macOS/Linux dev machines or on three of the four CI
