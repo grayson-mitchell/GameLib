@@ -25,6 +25,7 @@ import { Link, NavLink, useLocation, useParams } from 'react-router-dom'
 import { Trans, useTranslation } from 'react-i18next'
 import { confirmSteamUpdate } from 'frontend/helpers/steamUpdateConfirm'
 import SteamUpdateInfo from './components/SteamUpdateInfo'
+import SteamUpdateButton from './components/SteamUpdateButton'
 import {
   useEpicAccount,
   useGogAccount,
@@ -594,11 +595,22 @@ export default React.memo(function GamePage(): JSX.Element | null {
                           handleUpdate={handleUpdate}
                           hasUpdate={hasUpdate}
                         />
+                        {isStore(gameInfo, 'steam') && is_installed && (
+                          <SteamUpdateInfo
+                            appName={appName}
+                            hasUpdate={hasUpdate}
+                          />
+                        )}
                         <div className="buttons">
                           <MainButton
                             gameInfo={gameInfo}
                             handlePlay={handlePlay}
                             handleInstall={handleInstall}
+                          />
+                          <SteamUpdateButton
+                            gameInfo={gameInfo}
+                            hasUpdate={hasUpdate}
+                            handleUpdate={handleUpdate}
                           />
                           <LaunchOptionSelector showTitle={false} />
                           <span
@@ -689,12 +701,6 @@ export default React.memo(function GamePage(): JSX.Element | null {
                           <AppleWikiInfo gameInfo={gameInfo} />
                           <RunsForMeToggle gameInfo={gameInfo} />
                           <DownloadSizeInfo gameInfo={gameInfo} />
-                          {isStore(gameInfo, 'steam') && is_installed && (
-                            <SteamUpdateInfo
-                              appName={appName}
-                              hasUpdate={hasUpdate}
-                            />
-                          )}
                           <InstalledInfo gameInfo={gameInfo} />
                           <CloudSavesSync gameInfo={gameInfo} />
                           <HumbleOriginInfo gameInfo={gameInfo} />

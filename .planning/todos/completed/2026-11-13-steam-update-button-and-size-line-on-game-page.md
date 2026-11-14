@@ -27,3 +27,7 @@ card patterns, theme survival rules).
 
 A Steam game with a pending update shows an Update button and its size on the main game page
 without opening the Info tab, in every supported theme.
+
+## Resolution
+
+Closed by quick 261114-nxb. New `SteamUpdateButton` (secondary, token-styled) sits beside Play in the game page action dock and routes through the existing `handleUpdate` (confirmSteamUpdate dialog then updateGame). `SteamUpdateInfo` was moved (one mount) from the Info tab into the dock above the button row. The Steam status line drops the hidden "(Click to Update)" target; other runners keep it. The size is still computed only on an explicit "Show update size" click, per Phase 74 D-09/D-15/T-74-39.

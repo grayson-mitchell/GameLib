@@ -173,3 +173,46 @@ describe('GamePage/index.tsx: card structure (D-02, D-03, D-04, D-06)', () => {
     expect(tsx).not.toMatch(/topRowWrapper/)
   })
 })
+
+// quick 261114-nxb / 74-UAT item 1: explicit Update button beside Play and the
+// update line in the dock instead of the Info tab.
+describe('GamePage/index.tsx: Steam update controls in the dock (nxb)', () => {
+  const at = (needle: string): number => {
+    const i = tsx.indexOf(needle)
+    if (i === -1) throw new Error(`${needle} not found in index.tsx`)
+    return i
+  }
+  const scss = stripSourceComments(
+    readFileSync(
+      join(__dirname, '..', 'components', 'SteamUpdateInfo.scss'),
+      'utf8'
+    )
+  )
+
+  it('L7: update line sits above the button row, update button follows Play', () => {
+    const positions = [
+      'className="actionDock"',
+      '<GameStatus',
+      '<SteamUpdateInfo',
+      'className="buttons"',
+      '<MainButton',
+      '<SteamUpdateButton',
+      '<LaunchOptionSelector',
+      'className="actionDockSpacer"'
+    ].map(at)
+    expect(positions).toEqual([...positions].sort((a, b) => a - b))
+  })
+
+  it('L7: one mount each, and the update line left the Info tab', () => {
+    expect(tsx.match(/<SteamUpdateInfo/g) ?? []).toHaveLength(1)
+    expect(tsx.match(/<SteamUpdateButton/g) ?? []).toHaveLength(1)
+    expect(at('<SteamUpdateInfo')).toBeLessThan(
+      at('className="extraInfoWrapper"')
+    )
+  })
+
+  it('L7: SteamUpdateInfo.scss uses theme tokens only', () => {
+    expect(scss).not.toMatch(/#[0-9a-f]{3,8}\b/i)
+    expect(scss).not.toMatch(/\b(rgb|rgba|hsl|hsla)\(/i)
+  })
+})
