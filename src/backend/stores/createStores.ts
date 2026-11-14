@@ -11,6 +11,7 @@ import { createGameOverridesStores } from 'backend/game_overrides/stores'
 import { createHumbleStores } from 'backend/humble/stores'
 import { createLoggerStores } from 'backend/logger/stores'
 import { createMacArchStores } from 'backend/macArch/stores'
+import { createStoreSearchStores } from 'backend/storeSearch/stores'
 import { createMigrationStores } from 'backend/migration/stores'
 import { createRunsForMeStores } from 'backend/runsForMe/stores'
 import { createGogStores } from 'backend/storeManagers/gog/stores'
@@ -29,6 +30,7 @@ export function createStores(deps: StoreFamilyDeps): Stores {
   return {
     kvs: createKvsStores(deps),
     crossoverIndex: createCrossoverIndexStores(deps),
+    storeSearch: createStoreSearchStores(deps),
     downloadManager: createDownloadManagerStores(deps),
     gameOverrides: createGameOverridesStores(deps),
     humble: createHumbleStores(deps),

@@ -14,6 +14,7 @@ import type { AppPaths } from '../process/context'
 import { createStoreRegistry } from '../stores/storeRegistry'
 import { createKvsStores } from '../constants/key_value_stores'
 import { createCrossoverIndexStores } from '../crossover_index/stores'
+import { createStoreSearchStores } from '../storeSearch/stores'
 import { createDownloadManagerStores } from '../downloadmanager/stores'
 import { createGameOverridesStores } from '../game_overrides/stores'
 import { createHumbleStores } from '../humble/stores'
@@ -147,6 +148,7 @@ export function createTestManagers(
 const STORE_KEYS = [
   'kvs',
   'crossoverIndex',
+  'storeSearch',
   'downloadManager',
   'gameOverrides',
   'humble',
@@ -180,6 +182,7 @@ function familyBuilders(): FamilyBuilders {
   return {
     kvs: (deps) => createKvsStores(deps),
     crossoverIndex: (deps) => createCrossoverIndexStores(deps),
+    storeSearch: (deps) => createStoreSearchStores(deps),
     downloadManager: (deps) => createDownloadManagerStores(deps),
     gameOverrides: (deps) => createGameOverridesStores(deps),
     humble: (deps) => createHumbleStores(deps),

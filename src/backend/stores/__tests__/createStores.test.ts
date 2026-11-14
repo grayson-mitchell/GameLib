@@ -187,6 +187,15 @@ describe('createStores', () => {
     expect(crossover?.invalidateCheck({})).toBe(false) // keep-last-good (D-09)
   })
 
+  it('pins the itad_prices and itad_steam_gids caches as keep-last-good with a 30-day ceiling', () => {
+    const built = builtCacheStores()
+    for (const name of ['itad_prices', 'itad_steam_gids']) {
+      const store = built.get(name)
+      expect(store?.lifespan).toBe(60 * 24 * 30)
+      expect(store?.invalidateCheck({})).toBe(false)
+    }
+  })
+
   it('two roots build independent stores: engine notices and pci caches do not share cells', () => {
     const rootA = createStoreRoot({ userData: createTestStoreRoot().userData })
     const rootB = createStoreRoot({ userData: createTestStoreRoot().userData })

@@ -82,6 +82,9 @@ export interface Stores {
   crossoverIndex: ReturnType<
     typeof import('backend/crossover_index/stores').createCrossoverIndexStores
   >
+  storeSearch: ReturnType<
+    typeof import('backend/storeSearch/stores').createStoreSearchStores
+  >
   downloadManager: ReturnType<
     typeof import('backend/downloadmanager/stores').createDownloadManagerStores
   >

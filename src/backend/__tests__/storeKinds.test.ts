@@ -114,6 +114,8 @@ const EXPECTED_KINDS: Record<string, Kind> = {
   humble_settle_declined: 'user-state',
   humble_steam_appid: 'cache',
   crossover_index: 'cache',
+  itad_prices: 'cache',
+  itad_steam_gids: 'cache',
   pci_ids_device: 'cache',
   pci_ids_vendor: 'cache',
   wikigameinfo: 'cache',

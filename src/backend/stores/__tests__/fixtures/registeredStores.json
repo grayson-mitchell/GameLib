@@ -195,6 +195,30 @@
     "registeredAs": null,
     "options": {
       "cwd": "store_cache",
+      "name": "itad_prices",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "cache"
+    }
+  },
+  {
+    "registeredAs": null,
+    "options": {
+      "cwd": "store_cache",
+      "name": "itad_steam_gids",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "cache"
+    }
+  },
+  {
+    "registeredAs": null,
+    "options": {
+      "cwd": "store_cache",
       "name": "legendary_gameinfo",
       "clearInvalidConfig": true,
       "schemaKeys": null
