@@ -620,7 +620,15 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
       expect(response?.ok).toBe(true)
       expect(response?.result.humbleConfigStore).not.toHaveProperty('csrfToken')
       expect(response?.result.gogConfigStore).not.toHaveProperty('credentials')
-      expect(response?.result.configStore).not.toHaveProperty('settings')
+      // Boot resyncs the settings mirror from config.json (quick 261114-l1j), so `settings` now
+      // exists; the rejected write must simply not have landed in it.
+      expect(
+        (
+          response?.result.configStore?.settings as
+            | { wineVersion?: { bin?: string } }
+            | undefined
+        )?.wineVersion?.bin
+      ).not.toBe('/tmp/evil.sh')
     })
 
     // WR-12: a LEGITIMATE dynamic cache-store write must still persist — the guards

@@ -201,6 +201,7 @@ import {
 } from '../logger'
 import { createGlobalConfig, type GlobalConfigSlice } from '../config'
 import { createGameConfigs } from '../game_config'
+import { resyncSettingsMirror } from '../settingsMirrorResync'
 import { resolveAppInfo } from '../host/appInfo'
 import { isPackagedSidecar } from './isPackagedSidecar'
 import { prepareAppFolder } from './appFolderStep'
@@ -493,6 +494,14 @@ function requireAborts(state: BootState): AbortRegistry {
   const { aborts } = state.services
   if (!aborts) throw new Error('abort-registry step has not run')
   return aborts
+}
+
+function requireStores(
+  state: BootState
+): NonNullable<BootState['services']['stores']> {
+  const { stores } = state.services
+  if (!stores) throw new Error('stores step has not run')
+  return stores
 }
 
 function requireStoreRoot(state: BootState): StoreRoot {
@@ -1685,6 +1694,13 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
               requireAppRuntime(state).events.emit('settingChanged', change)
           })
         state.services.config = config
+        // config.json wins over the store/config.json mirror (mirror-only keys kept); synchronous
+        // and guarded so it can never fail boot. The 'stores' step runs before this one.
+        resyncSettingsMirror({
+          config,
+          configStore: requireStores(state).kvs.configStore,
+          logError: (msg, err) => logError([msg, err], LogPrefix.Backend)
+        })
         state.services.gameConfigs =
           prebuilt.gameConfigs ??
           createGameConfigs({
