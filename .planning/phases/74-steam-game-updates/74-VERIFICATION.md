@@ -1,64 +1,61 @@
 ---
 phase: 74-steam-game-updates
-verified: 2026-11-13T23:00:00Z
-status: gaps_found
-score: 8/10 must-haves verified
+verified: 2026-11-14T17:00:00Z
+status: human_needed
+score: 10/10 must-haves verified
 overrides_applied: 0
 re_verification:
   previous_status: gaps_found
-  previous_score: 5/8
+  previous_score: 8/10
   gaps_closed:
-    - "Single launch prompt; Esc/Play anyway/Update now each do what they say (UAT 16 partial, 20 pass; dialogs.rs NSAlert, 74-26)"
-    - "WR-06 committed delta reported done despite abort (install.ts:292)"
-    - "WR-01 retire only depots dropped from branch list (install.ts:200-243; UAT 18 pass on Dredmor 2-depot)"
-    - "WR-05 launch aborted while update queued/in flight (updateLaunchPrompt.ts:51-75)"
-    - "WR-04 registered completion clears badge (UAT 17, 22 pass)"
-    - "WR-04b PICS wait bounded (updateDetection.ts:233-246, connect inside withTimeout)"
-    - "depotJobEvent IPC invalid union (UAT 21 pass)"
-    - "WR-08 unattended auth / re-queue loop (74-24, code only; UAT 23 blocked, not proven live)"
-    - "WR-09 transient old-manifest failure no longer silently falls back (74-25, code only)"
-    - "i18n: about-wording and 48 catalogs filled (74-28)"
-  gaps_remaining:
-    - "Item 19 false finished at stale build (updateNative.ts:90-93)"
-    - "Installed Steam games vanish when signed out (library/refresh.ts:80)"
+    - "Registered Update with Steam closed finishes only at the PICS target (UAT 19/24; updateNative.ts picsSaysNewer && !acfPending uses known.targetBuild; live UAT 24 pass)"
+    - "InstallApp retried after Steam start (UAT 25/29; retryInstallApp disarms on sawActivity only; live UAT 29 pass, retry 9 s after click)"
+    - "Installed Steam games kept while signed out, update check on sign-in (refresh.ts restoreLocalSteamLibrary at lines 43/69/87; live UAT 26, 27 pass)"
+    - "CR-02 unattended auto-update no-loop (live UAT 30 pass; UAT 23 blocked and UAT 28 issue superseded)"
+  gaps_remaining: []
   regressions: []
-gaps:
-  - truth: "A registered Update handed to Steam with Steam closed waits for the PICS target build before reporting finished (CR-01 completion)"
-    status: failed
-    severity: BLOCKER (major; UAT 19)
-    reason: "Confirmed in code: updateNative.ts:90-93 sets awaitingUpdate.targetBuild to acfFields.targetBuildId whenever it is non-'0', and only falls back to the PICS target (known.targetBuild) otherwise. On the ACF-says-current path (picsSaysNewer, line 83) TargetBuildID equals buildid, so the 74-23 target-aware quiet end matches the stale build and logs 'finished' with no update run."
-    artifacts:
-      - path: "src/backend/storeManagers/steam/updateNative.ts"
-        issue: "lines 90-93: ACF targetBuildId preferred over PICS target"
-    missing:
-      - "When picsSaysNewer is true, use known.targetBuild; only use ACF targetBuildId when the ACF itself shows a pending update"
-  - truth: "Installed Steam games stay in the library and get an update check while signed out / after sign-in"
-    status: failed
-    severity: BLOCKER (major; UAT 23, todo 2026-11-13-installed-steam-games-hidden-when-signed-out)
-    reason: "library/refresh.ts:80 skips the whole library refresh when the Steam client is not ready (not-signed-in), so installed games (ACF-discoverable offline) disappear and no update check runs; signing back in runs no library-wide update check."
-    artifacts:
-      - path: "src/backend/storeManagers/steam/library/refresh.ts"
-        issue: "early return on not-ready lease drops local installed games"
-    missing:
-      - "Keep local ACF-installed games when signed out; run update check on sign-in"
-  - truth: "Resuming a paused bridge update keeps downloaded progress (WR-03)"
-    status: failed
-    severity: can-defer (minor)
-    reason: "Not addressed by 74-23..29; temps still discarded at start/cancel in delta.rs."
-    artifacts:
-      - path: "src-tauri/crates/gamelib-depot/src/delta.rs"
-        issue: "temps discarded"
-    missing:
-      - "Keep verified temps across pause"
-  - truth: "Minor UAT leftovers: stale game loses badge after Play (item 20), Settings autoUpdate toggle shows wrong stored value (item 20), InstallApp never retried after Steam start for launch-only games (item 19), Update button discoverability (item 1), part-downloaded prompt wording, estimate overstatement not re-tested live (item 5)"
-    status: failed
-    severity: can-defer (minor/cosmetic)
-    reason: "Recorded as gaps in 74-UAT.md; not blocking the goal."
-    artifacts: []
-    missing:
-      - "Triage into todos"
+gaps: []
 deferred: []
+human_verification:
+  - test: "Decide whether review warnings WR-01 (update poll can stay 'updating' up to MAX_TICKS ~6h after activity seen then ACF settles at fromBuild) and WR-02 (guard inert when hand-off targetBuild == fromBuild; updateNative.ts:92-98 still prefers acfTarget when acfPending) ship as follow-up todos or get a small fix plan"
+    expected: "Accept as non-blocking follow-ups (triaged to todos) or schedule /gsd-plan-phase 74 --gaps"
+    why_human: "Judgement call on severity; neither path was exercised live and both need an unusual Steam sequence"
 ---
+
+# Phase 74 re-verification after gap-closure round 4 (74-34, 74-35, 74-36), 2026-11-14
+
+**Status: human_needed (10/10). Goal achieved; only an advisory decision remains.**
+
+## Round-2 blockers: closed (code and live evidence)
+
+| Prior gap | Code check | Live proof |
+|---|---|---|
+| UAT 19 false finished at stale build | updateNative.ts:88-98: `targetBuild = picsSaysNewer && !acfPending ? known.targetBuild : (acfTarget ?? known.targetBuild)`; updatePollOnce.ts adds `atStaleStart` guard blocking `finished` at fromBuild | UAT 24 pass: no `finished (build 3512046)`, quiet end, badge kept |
+| InstallApp never retried (UAT 25) | updatePollOnce.ts retryInstallApp guard is `sawActivity` only (sawPending no longer disarms) | UAT 29 pass: `retry after Steam start` 9 s after click, `finished (build 5820078)`, no false finish |
+| Signed out hides installed games (UAT 23) | refresh.ts calls `restoreLocalSteamLibrary` on every not-ready exit; sign-in triggers refresh and update check | UAT 26, 27 pass (apps=44, badge kept, relaunch and in-session sign-in) |
+| CR-02 unproven live (UAT 23 blocked, 28 issue) | checkGameUpdates.ts and library/index.ts log off-branch and `auto-update candidates=n` (74-35) | UAT 30 pass: one attempt recorded, `unattended=true update not started`, later checks skip with `already attempted this session`, manual attended update completed |
+
+UAT 28's "issue" was a test-setup error (store/config.json is only a mirror), diagnosed by 74-35 logging and re-run as UAT 30; UAT 23 blocked is superseded by UAT 30. UAT 25 superseded by 29. UAT 19 superseded by 24 (+ code).
+
+Spot-check: `npx jest` on library.updatePollOnce, library.updates, checkGameUpdates: 3 suites, 35 tests pass. No TBD/FIXME/XXX in the changed files. Pre-existing failures (tsc from phase-70 retyping, shimCoverage/shimGenerate, libraryState WIP) are outside phase 74 and not re-run.
+
+## Must-haves (all 10)
+Bridge badge/size (UAT 1,2), bridge Rust delta + bridge launch (3,4,5,18,21), pause/resume completes (6), registered hand-off and completion with Steam running, closed, InstallApp on/off (10,11,17,22,24,29, Windows 15), single launch prompt with Esc (20), launch gated during update, bounded offline check (8), auto-update bridge-only without loops (14, 30), content never deleted for DLC depots (18), signed-out visibility (26, 27). All VERIFIED.
+
+## Open minor items (not goal blockers, triage to todos)
+WR-03 resume discards downloaded temps (delta.rs); download estimate 3-7x high; Update button/size discoverability; Downloads hero lacks "Planning update..."; part-downloaded prompt wording; badge lost after Play (refresh restores); Update-button flash polish; Linux nav hand-off unverified. UAT totals: 30 items, 21 pass, 6 issue, 2 skipped, 1 blocked; every issue/blocked row except the minor gaps above is superseded by a later passing re-run (7->16/20, 12->17/22, 19->24, 23->26/27/30, 25->29, 28->30).
+
+## Review warnings (round 4, advisory) weighed
+- WR-01 (real, introduced by 74-34): after sawActivity and settle at fromBuild the poll can emit `updating` until MAX_TICKS (~6h) since the quiet end requires `!sawActivity`. Needs Steam to start then abandon an update; bounded; does not affect any live-proven path. Not a blocker; recommend a small fix plan (settled-at-stale tick counter).
+- WR-02 (real, edge): updateNative.ts:92-95 still prefers the ACF target whenever acfPending, so a pending ACF with TargetBuildID == buildid records target == fromBuild and the stale-finish guard is inert. Live UAT 24/29 captured Steam's real ACF (TargetBuildID = PICS target) so not reproduced. Not a blocker; one-line fix suggested in 74-REVIEW.md.
+- WR-03 (low): retry may InstallApp a queued/paused Steam download; InstallApp is idempotent-ish, user-visible effect small. Not a blocker.
+
+## Requirements
+STEAM-01 and STEAM-02 (REQUIREMENTS.md lines 39-40, 86-87, `[x]`/Complete) are claimed across plans 74-01..35 (sub-IDs plan-local). Both are now substantively satisfied: STEAM-01 (badge and registered completion incl. closed-Steam and signed-out, UAT 1, 10, 17, 22, 24, 26, 29); STEAM-02 (bridge delta update, UAT 3, 5, 6, 18, 21, 30). Prior recommendation to revert STEAM-01 is withdrawn; keep Complete. No orphaned IDs (STEAM-03 is Phase 75).
+
+---
+
+# Previous report (round 2 and round 1, preserved)
 
 ## Re-verification after gap-closure round 2 (plans 74-23..74-29), 2026-11-13
 
