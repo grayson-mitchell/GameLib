@@ -136,7 +136,7 @@ Sources: golden overrides (79-21) and notes from 79-08/09/21, plus what this swe
 
 ## Refresh sweep (79-33)
 
-Status: pending operator decision (DV-79-10 to DV-79-12)
+Status: PENDING RE-SWEEP (Refresh) — operator decisions recorded 2026-11-15; the post-fix re-sweep did not complete cleanly (see Re-run after the decision)
 
 Plan 79-33 (D-12, D-16). Sweep: `pnpm steamcm-refresh-parity-sweep` (`meta/steamcmRefreshParitySweep.ts`), run on the operator's Mac with the dev-vault refresh token. Read-only ops only (no redeem, no credential sign-in). Output is redacted (counts and classes only); no name, URL, id, SteamID or absolute path appears here.
 
@@ -199,7 +199,7 @@ Rust in-Refresh enrichment summary (final run): attempted=169 enriched=161 delis
 - rust: Refresh also fetches `appdetails`, 5 at a time within a 20 s budget, stopping at the first HTTP 429. Measured: 143 to 161 of 401 enriched per Refresh, 7 delisted found, 233 to 251 left for the lazy path. Enriched entries carry art, the store title (33 entries differ from the owned-apps name at that point), platform flags, `mac_arch` and the delisted verdict.
 - Steam-correct side: neither is wrong; the store data is the same data the lazy path fetches. Where both sides held enrichment at rest the values were equal (27 apps in the final run, 57 in the best earlier run, zero unexplained).
 - caller impact: art and store text appear for roughly 40 percent of the library right after a Refresh instead of one by one as games are opened. The title of an enriched entry changes at Refresh time. A Refresh now sends up to a few hundred store requests in one burst, which tripped the store's 403 throttle during this sweep.
-- accepted: pending
+- accepted: yes, with change (2026-11-15) — operator: "Fix DV-11 and cap DV-10"; cap 50 store requests per Refresh (`ENRICH_REFRESH_MAX_REQUESTS`, commit 2f836a4a1); the remainder is `not_reached` for the lazy path. Concurrency 5 and the 20 s budget unchanged. The lazy single-app op is not capped.
 
 #### DV-79-11: the Rust enrichment stage stops on HTTP 429 but not on HTTP 403
 
@@ -208,7 +208,8 @@ Rust in-Refresh enrichment summary (final run): attempted=169 enriched=161 delis
 - rust: the stage stops at the first 429. The store's throttle answers 403 (Akamai), which the stage counts as a plain failure and keeps going: one run attempted 358 apps, `failed=351`, `budgetHit`, with zero enriched.
 - Steam-correct side: stopping is. A 403 burst only extends the block and wastes the budget.
 - caller impact: while the store is throttling, a Refresh spends its 20 s on requests that all fail, and the entries stay unenriched until the lazy path (also throttled) succeeds. Not data loss. If rejected, the fix is to treat 403 like 429 in `enrich.rs` and re-run.
-- accepted: pending
+- accepted: rejected — operator: "Fix DV-11 and cap DV-10" (2026-11-15)
+- resolved: 403 stops the stage like 429 (rateLimited=true, the 403 app and everything unstarted or in flight go to `not_reached`, no further requests) (commit 2f836a4a1; unit test `stage_stops_at_the_first_403`). Live re-sweep: see Re-run after the decision.
 
 #### DV-79-12: Rust asks the store for English explicitly; TS sends no language
 
@@ -217,8 +218,19 @@ Rust in-Refresh enrichment summary (final run): attempted=169 enriched=161 delis
 - rust: `appdetails?appids=N&l=english`. Without it the Rust request got German text in 12 of 18 direct calls, so the Refresh and the lazy path could store non-English genres and descriptions for the same game.
 - Steam-correct side: rust (explicit). The TS request depends on the store's own language guess for the connection.
 - caller impact: Rust-written store text is always English. A TS-written entry may be localised by the store's guess until the TS path is deleted (79-41). No user language setting is read on either path today.
-- accepted: pending
+- accepted: yes (2026-11-15)
 
+
+### Re-run after the decision
+
+Unit tests (`cargo test -p gamelib-steamcm --lib` 270 passed, clippy `--all-targets -D warnings` and fmt clean): 403 stops the stage, the cap limits attempted to 50 with 30 of 80 `not_reached`, the lazy single-app fetch makes 60 consecutive requests unaffected.
+
+Live re-sweep, three runs, none clean:
+
+1. Exit 1. The store was still throttled for Rust (waited 482 s before Refresh, 101 s before lazy): in-Refresh enrich attempted=5 enriched=0 rateLimited=true notReached=390, so the 403 stop and the cap held (5 attempted, no burst) but the cap itself (attempted <= 50 with enrichment) was not exercised live. Equal on all compared apps: name, art, metacritic, playtime, last played, demo membership. Unexplained: 1 app at post-refresh (`is_windows_native` empty on Rust, `steamPlatformsCaptured` differs) and the same app's `extra` at rest. Rust reported owned=390 demos=0 against ts owned=390 demos=11, so the library was 390 vs 401 and the 11 demos were absent on this Rust run; not investigated.
+2. and 3. Exit 1 before any comparison: the TS side's `steam-user` threw `Cannot read properties of null (reading 'toString')` in `components/apps.js:298` (an app info record with a null buffer) during its own Refresh, twice in a row. Per the plan the sweep was not looped further.
+
+Not approved. Open: the 1 unexplained platform-capture app, the missing Rust demos on run 1, and a clean re-run once the `steam-user` null-buffer crash is addressed or avoided.
 
 ## Mac Steam path (79-36)
 
