@@ -31,3 +31,7 @@ validation and the `onChange` contract unchanged.
 
 Clicking Edit on a row edits that row in place, the footer row is used only to add a variable,
 and the other tables that use `TwoColTableInput` still save correctly.
+
+## Resolution
+
+Fixed in quick task 261114-v4q. Edit now turns the selected row's own cells into inputs (Enter or Save commits through one onChange call, Escape or Cancel discards); the footer row is add-only. Validation and fullFills guards apply to edits, and renaming onto an existing key upserts. Tests: src/frontend/components/UI/TwoColTableInput/__tests__/index.test.tsx.
