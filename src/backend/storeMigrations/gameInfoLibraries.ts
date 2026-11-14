@@ -52,18 +52,20 @@ const treeOf = (schema: z.ZodObject): KeyTree => {
   return { keys: new Set(Object.keys(shape)), children }
 }
 
-const TREE_BY_RUNNER: ReadonlyMap<string, KeyTree> = new Map([
-  ['steam', treeOf(steamGameInfoSchema)],
-  ['gog', treeOf(gogGameInfoSchema)],
-  ['legendary', treeOf(legendaryGameInfoSchema)],
-  ['nile', treeOf(nileGameInfoSchema)],
-  ['sideload', treeOf(sideloadGameInfoSchema)]
-])
+const GOG_TREE = treeOf(gogGameInfoSchema)
+const SIDELOAD_TREE = treeOf(sideloadGameInfoSchema)
+
+const TREE_BY_RUNNER: Readonly<Record<string, KeyTree>> = {
+  steam: treeOf(steamGameInfoSchema),
+  gog: GOG_TREE,
+  legendary: treeOf(legendaryGameInfoSchema),
+  nile: treeOf(nileGameInfoSchema),
+  sideload: SIDELOAD_TREE
+}
 
 // gog_store/installed and sideload `installed` items are installed-info objects, not GameInfo.
-const GOG_INSTALLED_TREE = TREE_BY_RUNNER.get('gog')!.children.get('install')!
-const SIDELOAD_INSTALLED_TREE =
-  TREE_BY_RUNNER.get('sideload')!.children.get('install')!
+const GOG_INSTALLED_TREE = GOG_TREE.children.get('install')!
+const SIDELOAD_INSTALLED_TREE = SIDELOAD_TREE.children.get('install')!
 
 function stripWithTree(item: PlainObject, tree: KeyTree): PlainObject {
   const out: PlainObject = {}
@@ -87,7 +89,9 @@ function stripUndeclaredGameInfoKeys(
   if (!isPlainObject(item)) return item
   const runner =
     typeof item['runner'] === 'string' ? item['runner'] : fallbackRunner
-  const tree = TREE_BY_RUNNER.get(runner)
+  const tree = Object.hasOwn(TREE_BY_RUNNER, runner)
+    ? TREE_BY_RUNNER[runner]
+    : undefined
   return tree ? stripWithTree(item, tree) : item
 }
 
