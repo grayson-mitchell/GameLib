@@ -58,6 +58,8 @@ export interface SteamCmClient {
   }>
 }
 
-type _SteamUserFits = SteamUserDepotClient extends SteamCmClient ? true : never
-const _check: _SteamUserFits = true
-void _check
+// Compile-time only (no module-scope statement: the sidecar's floating-promise guard walks this graph).
+type AssertTrue<T extends true> = T
+export type SteamUserFitsSteamCmClient = AssertTrue<
+  SteamUserDepotClient extends SteamCmClient ? true : false
+>

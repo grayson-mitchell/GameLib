@@ -1,5 +1,5 @@
 import type { SteamGoOfflineAction } from 'common/types/steam'
-import type SteamUserLib from 'steam-user'
+import type { SteamCmClient } from './cm/SteamCmClient'
 
 // ── D-02 (Phase 33-02) / Phase 54: ensureConnected canary + wrapped re-entry ─
 //
@@ -65,14 +65,12 @@ export interface GuidedInstallTarget {
   forceWindowsViaBottle?: boolean
 }
 
-type SteamUserClient = InstanceType<typeof SteamUserLib>
-
 export type AuthenticatedLease =
-  | { ok: true; client: SteamUserClient; release: () => void }
+  | { ok: true; client: SteamCmClient; release: () => void }
   | { ok: false; reason: AuthSessionRefusal }
 
 export interface OpenAuthenticatedLease {
-  client: SteamUserClient
+  client: SteamCmClient
   release: () => void
 }
 

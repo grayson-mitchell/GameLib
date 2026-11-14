@@ -43,7 +43,11 @@ export function createTestSteamUser(
     anonymousClient: overrides.anonymousClient ?? createTestAnonymousClient(),
     clock: overrides.clock ?? createFakeClock(),
     config: overrides.config ?? createTestGlobalConfig(),
-    sendFrontendMessage: overrides.sendFrontendMessage ?? (() => true)
+    sendFrontendMessage: overrides.sendFrontendMessage ?? (() => true),
+    rustInvoke: overrides.rustInvoke ?? {
+      requestRustInvoke: () =>
+        Promise.reject(new Error('rustInvoke is not wired in this test'))
+    }
   })
 }
 
@@ -67,7 +71,7 @@ export function createInertTestSteamUser(
       Promise.resolve({ ok: false, reason: 'client-not-ready' }),
     acquireAuthenticatedWithToken: () =>
       Promise.resolve({ ok: false, reason: 'client-not-ready' }),
-    acquireOpenAuthenticated: () => null,
+    acquireOpenAuthenticated: () => Promise.resolve(null),
     getPersistedSteamId64: () => undefined,
     logout: () => Promise.resolve(),
     getUserDetails: () => Promise.resolve(undefined),

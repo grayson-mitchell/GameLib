@@ -214,7 +214,8 @@ describe('authenticated connect lifecycle', () => {
     expect(instances()).toHaveLength(1)
     expect(instances()[0].logOn).toHaveBeenCalledTimes(1)
     expect(instances()[0].logOn).toHaveBeenCalledWith({
-      refreshToken: 'secret-refresh-token'
+      refreshToken: 'secret-refresh-token',
+      logonID: expect.any(Number)
     })
     expect(order).toEqual(['wrap-enter', 'wrap-exit'])
   })
@@ -385,7 +386,8 @@ describe('authenticated session lease', () => {
     expect(instances()).toHaveLength(1)
     expect(instances()[0].logOn).toHaveBeenCalledTimes(1)
     expect(instances()[0].logOn).toHaveBeenCalledWith({
-      refreshToken: 'secret-refresh-token'
+      refreshToken: 'secret-refresh-token',
+      logonID: expect.any(Number)
     })
   })
 
@@ -519,8 +521,8 @@ describe('authenticated session lease', () => {
     expect(instances()[0].logOff).toHaveBeenCalledTimes(1)
   })
 
-  it('acquireOpenAuthenticated is null with no session and never reads the keyring or logs on', () => {
-    expect(steamUser.acquireOpenAuthenticated('shared-redist')).toBeNull()
+  it('acquireOpenAuthenticated is null with no session and never reads the keyring or logs on', async () => {
+    expect(await steamUser.acquireOpenAuthenticated('shared-redist')).toBeNull()
     expect(mockReadTokenOutcome).not.toHaveBeenCalled()
     expect(instances()).toHaveLength(0)
   })
@@ -528,7 +530,7 @@ describe('authenticated session lease', () => {
   it('acquireOpenAuthenticated reuses an open session and cancels the idle timer', async () => {
     const a = await acquire()
     a.release()
-    const open = steamUser.acquireOpenAuthenticated('shared-redist')
+    const open = await steamUser.acquireOpenAuthenticated('shared-redist')
     expect(open).not.toBeNull()
     expect(open?.client).toBe(a.client)
     await jest.advanceTimersByTimeAsync(120000)
@@ -647,7 +649,7 @@ describe('sign-out during a wrapped logon (54-REVIEW WR-07)', () => {
     inst.steamID = { getSteamID64: () => '76561198000000000' }
     inst.emit('loggedOn')
     expect(internals.client).toBeNull()
-    expect(steamUser.acquireOpenAuthenticated('user-install')).toBeNull()
+    expect(await steamUser.acquireOpenAuthenticated('user-install')).toBeNull()
   })
 
   it("a sign-in after a sign-out mid-wrap does not start its wrap until the old one ends, and the old connect's cleanup leaves the new single-flight alone", async () => {
@@ -723,7 +725,7 @@ describe('shutdown during a wrapped logon (debug/shutdown-mid-connect-logon-surv
     inst.emit('loggedOn')
     expect(inst.logOff).toHaveBeenCalledTimes(2)
     expect(internals.client).toBeNull()
-    expect(steamUser.acquireOpenAuthenticated('user-install')).toBeNull()
+    expect(await steamUser.acquireOpenAuthenticated('user-install')).toBeNull()
     expect(
       logInfoLines().some((l) => l.startsWith('[Timing] SteamUser.loggedOn'))
     ).toBe(false)
@@ -834,7 +836,7 @@ describe('per-instance session state (66.3-16)', () => {
     expect(lease.ok).toBe(true)
     expect(one.getClient()).not.toBeNull()
     expect(two.getClient()).toBeNull()
-    expect(two.acquireOpenAuthenticated('user-refresh')).toBeNull()
+    expect(await two.acquireOpenAuthenticated('user-refresh')).toBeNull()
     expect(instances()).toHaveLength(1)
   })
 

@@ -1388,7 +1388,8 @@ describe('SteamUser', () => {
       const result = await steamUser.ensureConnected()
 
       expect(mockSteamUserInstance.logOn).toHaveBeenCalledWith({
-        refreshToken: 'stored-plaintext-token'
+        refreshToken: 'stored-plaintext-token',
+        logonID: expect.any(Number)
       })
       expect(result).toBe(true)
     })
@@ -1943,7 +1944,8 @@ describe('SteamUser', () => {
       const result = await steamUser.ensureConnected()
 
       expect(mockSteamUserInstance.logOn).toHaveBeenCalledWith({
-        refreshToken: 'fake-outcome-token'
+        refreshToken: 'fake-outcome-token',
+        logonID: expect.any(Number)
       })
       expect(result).toBe(true)
     })
@@ -2333,7 +2335,8 @@ describe('SteamUser', () => {
       expect(wrap()).toHaveBeenCalledTimes(1)
       expect(mockSteamUserInstance.logOn).toHaveBeenCalledTimes(1)
       expect(mockSteamUserInstance.logOn).toHaveBeenCalledWith({
-        refreshToken: 'mock-refresh-token'
+        refreshToken: 'mock-refresh-token',
+        logonID: expect.any(Number)
       })
       expect(getTokenSpy).not.toHaveBeenCalled()
       getTokenSpy.mockRestore()
@@ -2482,7 +2485,9 @@ describe('SteamUser', () => {
       expect((steamUser as any).idleTimer).toBeNull()
       expect(mockSteamUserInstance.logOff).toHaveBeenCalled()
       expect(mockCloseAnonymousClient).toHaveBeenCalledWith('logout')
-      expect(steamUser.acquireOpenAuthenticated('shared-redist')).toBeNull()
+      expect(
+        await steamUser.acquireOpenAuthenticated('shared-redist')
+      ).toBeNull()
     })
   })
 })

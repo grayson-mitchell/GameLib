@@ -1978,7 +1978,10 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             macSteamOffline: steamProcesses.macSteamOffline,
             clock,
             config,
-            sendFrontendMessage: requireHost(state).sendFrontendMessage
+            sendFrontendMessage: requireHost(state).sendFrontendMessage,
+            rustInvoke: {
+              requestRustInvoke: requireHost(state).requestRustInvoke
+            }
           })
       }
     },

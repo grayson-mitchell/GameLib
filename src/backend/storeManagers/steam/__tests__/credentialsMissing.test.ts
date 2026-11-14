@@ -267,3 +267,75 @@ describe('credentialsMissing latch', () => {
     })
   })
 })
+
+// Phase 79 (T-79-59): the same latch rules on the Rust engine.
+describe('credentialsMissing latch on the Rust engine', () => {
+  const rustInvoke = jest.fn()
+  let savedEnv: string | undefined
+  beforeEach(() => {
+    jest.clearAllMocks()
+    savedEnv = process.env.GAMELIB_STEAMCM_CM
+    process.env.GAMELIB_STEAMCM_CM = 'rust'
+    mockConfigStore.get_nodefault.mockImplementation((key: string) =>
+      key === 'isLoggedIn' ? true : undefined
+    )
+    steamUser = createTestSteamUser({
+      ...steamDeps,
+      rustInvoke: { requestRustInvoke: rustInvoke }
+    } as never)
+  })
+  afterEach(() => {
+    if (savedEnv === undefined) delete process.env.GAMELIB_STEAMCM_CM
+    else process.env.GAMELIB_STEAMCM_CM = savedEnv
+  })
+
+  it('latches the flag on an absent token without touching Rust', async () => {
+    mockReadTokenOutcome.mockResolvedValue({ status: 'absent' })
+
+    const lease = await steamUser.acquireAuthenticated({
+      reason: 'user-refresh'
+    })
+
+    expect(lease).toEqual({ ok: false, reason: 'token-absent' })
+    expect(mockConfigStore.set).toHaveBeenCalledWith(CREDENTIALS_MISSING, true)
+    expect(rustInvoke).not.toHaveBeenCalled()
+  })
+
+  it('does NOT latch on an unreadable token', async () => {
+    mockReadTokenOutcome.mockResolvedValue({
+      status: 'unreadable',
+      reason: 'timeout'
+    })
+
+    await steamUser.acquireAuthenticated({ reason: 'user-refresh' })
+
+    expect(mockConfigStore.set).not.toHaveBeenCalled()
+    expect(rustInvoke).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    [15, true],
+    [34, false]
+  ])('eresult %i latches=%s', async (eresult, latches) => {
+    mockReadTokenOutcome.mockResolvedValue({ status: 'present', token: 't' })
+    rustInvoke.mockResolvedValue({
+      ok: false,
+      refusal: 'logon-rejected',
+      logonFailure: { kind: 'x', eresult }
+    })
+
+    await steamUser.acquireAuthenticated({ reason: 'user-refresh' })
+
+    if (latches) {
+      expect(mockConfigStore.set).toHaveBeenCalledWith(
+        CREDENTIALS_MISSING,
+        true
+      )
+    } else {
+      expect(mockConfigStore.set).not.toHaveBeenCalledWith(
+        CREDENTIALS_MISSING,
+        true
+      )
+    }
+  })
+})
