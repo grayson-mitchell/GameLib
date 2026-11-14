@@ -445,6 +445,36 @@ describe('libraryState library data', () => {
     expect(errors).toEqual(['Game update check failed: Error: boom'])
   })
 
+  it('refresh logs a drop when the update check removes an appId', async () => {
+    useLibraryState.setState({ gameUpdates: ['old', 'keep'] })
+    updatesResult = async () => ['keep']
+    await lib().refresh('steam', true, undefined, 'manual')
+    expect(lib().gameUpdates).toEqual(['keep'])
+    expect(
+      infos.some((m) =>
+        m.startsWith(
+          '[gameUpdates] dropped appIds=old path=refresh origin=manual runner=steam checkUpdates=true source=checkGameUpdates snapshotStale=false'
+        )
+      )
+    ).toBe(true)
+  })
+
+  it('refresh without a shrink logs no drop', async () => {
+    useLibraryState.setState({ gameUpdates: ['keep'] })
+    await lib().refresh(undefined, false)
+    expect(infos.some((m) => m.includes('[gameUpdates] dropped'))).toBe(false)
+  })
+
+  it('refresh with a failed update check keeps updates and logs no drop', async () => {
+    useLibraryState.setState({ gameUpdates: ['a'] })
+    updatesResult = async () => {
+      throw new Error('boom')
+    }
+    await lib().refresh(undefined, true)
+    expect(lib().gameUpdates).toEqual(['a'])
+    expect(infos.some((m) => m.includes('[gameUpdates] dropped'))).toBe(false)
+  })
+
   it('logs Force Update when the epic length changed', async () => {
     mirror['legendary_library:library'] = [game('e', 'legendary')]
     await lib().refresh()
@@ -465,7 +495,7 @@ describe('libraryState library data', () => {
     })
     expect(infos).toEqual(['[refreshLibrary] runner=all origin=mount'])
     expect(fetched).toEqual([undefined])
-    expect(refreshed).toEqual([[undefined, true]])
+    expect(refreshed).toEqual([[undefined, true, undefined, 'mount']])
     expect(lib().refreshingInTheBackground).toBe(false)
   })
 
@@ -503,8 +533,8 @@ describe('libraryState library data', () => {
     await lib().refreshLibrary({ checkForUpdates: false })
     await new Promise((r) => setTimeout(r, 0))
     expect(calls).toEqual([
-      [undefined, false],
-      [undefined, true]
+      [undefined, false, undefined, 'unknown'],
+      [undefined, true, undefined, 'update-check-rerun']
     ])
   })
 
@@ -576,6 +606,7 @@ describe('libraryState library data', () => {
 describe('libraryState handleGameStatus (hot path)', () => {
   type Refresh = ReturnType<typeof useLibraryState.getState>['refreshLibrary']
   let refreshCalls: Parameters<Refresh>[0][] = []
+  let hotInfos: string[] = []
   const lib = () => useLibraryState.getState()
   const push = (status: Partial<GameStatus> & { appName: string }) =>
     lib().handleGameStatus({
@@ -585,8 +616,10 @@ describe('libraryState handleGameStatus (hot path)', () => {
     } as GameStatus)
 
   beforeEach(() => {
+    hotInfos = []
     ;(window as unknown as { api: unknown }).api = {
       logError: () => undefined,
+      logInfo: (m: string) => hotInfos.push(m),
       storeHas: () => false,
       storeGet: (_s: string, _key: string, dflt?: unknown) => dflt,
       storeSet: () => undefined
@@ -695,6 +728,42 @@ describe('libraryState handleGameStatus (hot path)', () => {
         origin: 'game-status'
       }
     ])
+  })
+
+  it.each([
+    ['launching -> playing -> done', ['launching', 'playing', 'done']],
+    [
+      'steam-starting -> engine-download -> launching -> playing -> done',
+      ['steam-starting', 'engine-download', 'launching', 'playing', 'done']
+    ]
+  ] as Array<[string, GameStatus['status'][]]>)(
+    'a stale Steam game keeps its update badge through %s (todo 2026-11-13)',
+    async (_name, statuses) => {
+      useLibraryState.setState({ gameUpdates: ['1782460', 'z'] })
+      for (const status of statuses) {
+        await push({ appName: '1782460', runner: 'steam', status })
+        expect(lib().gameUpdates.includes('1782460')).toBe(true)
+      }
+      expect(lib().gameUpdates).toEqual(['1782460', 'z'])
+      expect(hotInfos.some((m) => m.includes('[gameUpdates] dropped'))).toBe(
+        false
+      )
+      expect(refreshCalls).toEqual([
+        { runInBackground: true, library: 'steam', origin: 'game-status' }
+      ])
+    }
+  )
+
+  it('updating -> done on a Steam game drops the badge and logs the drop', async () => {
+    useLibraryState.setState({ gameUpdates: ['1782460', 'z'] })
+    await push({ appName: '1782460', runner: 'steam', status: 'updating' })
+    await push({ appName: '1782460', runner: 'steam', status: 'done' })
+    expect(lib().gameUpdates).toEqual(['z'])
+    expect(hotInfos.filter((m) => m.includes('[gameUpdates] dropped'))).toEqual(
+      [
+        '[gameUpdates] dropped appIds=1782460 path=handleGameStatus prior=updating new=done runner=steam'
+      ]
+    )
   })
 
   it('a Steam hand-off holds Updating until the poll ends: no hasUpdate-without-updating state (74 UAT 17)', async () => {

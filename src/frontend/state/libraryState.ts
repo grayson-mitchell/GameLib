@@ -79,7 +79,8 @@ export interface LibraryState {
   refresh: (
     library?: Runner | 'all',
     checkUpdates?: boolean,
-    overridesArg?: Record<string, GameOverride>
+    overridesArg?: Record<string, GameOverride>,
+    origin?: string
   ) => Promise<void>
 
   hiddenGames: HiddenGame[]
@@ -362,6 +363,11 @@ const useLibraryStateRaw = create<LibraryState>()(
               'updates',
               JSON.stringify(updatedGamesUpdates)
             )
+            if (gameUpdates.includes(appName)) {
+              window.api.logInfo(
+                `[gameUpdates] dropped appIds=${appName} path=handleGameStatus prior=${currentApp.status} new=${status} runner=${runner}`
+              )
+            }
             set({ gameUpdates: updatedGamesUpdates })
             return set({ libraryStatus: newLibraryStatus })
           }
@@ -433,7 +439,7 @@ const useLibraryStateRaw = create<LibraryState>()(
 
         try {
           await window.api.refreshLibrary(library, origin)
-          await get().refresh(library, checkForUpdates)
+          await get().refresh(library, checkForUpdates, undefined, origin)
           // Quick 261029-quw item 2: every login triggers a refresh, so a login
           // that finished in the backend heals here at the latest.
           useAuthState.getState().resyncSignInIdentityFromStores()
@@ -522,7 +528,12 @@ const useLibraryStateRaw = create<LibraryState>()(
         }
       },
 
-      refresh: async (library, checkUpdates = false, overridesArg) => {
+      refresh: async (
+        library,
+        checkUpdates = false,
+        overridesArg,
+        origin = 'unknown'
+      ) => {
         console.log('refreshing')
 
         const {
@@ -543,10 +554,16 @@ const useLibraryStateRaw = create<LibraryState>()(
         const includesAmazon = !scopedRunner || isStore(scopedRunner, 'nile')
 
         let updates = gameUpdates
+        let updatesSource:
+          | 'checkGameUpdates'
+          | 'start-snapshot'
+          | 'start-snapshot-after-check-failed' = 'start-snapshot'
         if (checkUpdates) {
           try {
             updates = await window.api.checkGameUpdates()
+            updatesSource = 'checkGameUpdates'
           } catch (error) {
+            updatesSource = 'start-snapshot-after-check-failed'
             window.api.logError(`Game update check failed: ${String(error)}`)
           }
         }
@@ -595,7 +612,14 @@ const useLibraryStateRaw = create<LibraryState>()(
 
         // Functional form: two scoped refreshes can overlap, so the flag map is
         // read at commit time, not from a snapshot taken when this started.
+        let droppedUpdates: string[] = []
+        let snapshotStale = false
         set((prev) => {
+          droppedUpdates = prev.gameUpdates.filter(
+            (id) => !updates.includes(id)
+          )
+          // true: another write landed during this refresh's awaits (the race)
+          snapshotStale = prev.gameUpdates !== gameUpdates
           const next: Partial<LibraryState> = {
             gameUpdates: updates,
             sideloadedLibrary: applyGameOverrides(updatedSideload, overrides)
@@ -626,6 +650,14 @@ const useLibraryStateRaw = create<LibraryState>()(
 
           return next
         })
+
+        // Diagnostic for the 2026-11-13 stale-badge todo; intentionally
+        // permanent (fires only on a shrink, which is rare).
+        if (droppedUpdates.length > 0) {
+          window.api.logInfo(
+            `[gameUpdates] dropped appIds=${droppedUpdates.join(',')} path=refresh origin=${origin} runner=${library ?? 'all'} checkUpdates=${checkUpdates} source=${updatesSource} snapshotStale=${snapshotStale}`
+          )
+        }
 
         if (currentLibraryLength !== epicLibrary.length) {
           // The class forced a re-render here; the store's set() already
