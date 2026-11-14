@@ -1780,7 +1780,7 @@ GL_NET_FN uint32_t gl_net_configure_lanes(uint32_t hConn, int32_t n, const void 
 #define GL_CR_REGISTRY_CAPACITY 64
 #define GL_CR_HELD_SLOTS 16
 #define GL_CR_HELD_EXPIRY_MS 10000
-#define GL_CR_HELD_MAX_BYTES 24
+#define GL_CR_HELD_MAX_BYTES 280
 #define GL_CR_DRAIN_RESP_MAX_BYTES 2596
 #define GL_CB_FLAG_REGISTERED 0x01
 #define GL_CB_FLAG_GAMESERVER 0x02
@@ -2922,6 +2922,28 @@ static int gl_md_get_api_call_result(uint64_t h, void *out, int cub,
   /* quick 261031-ixa: kind 2 = call result delivered; never under the lock. */
   if (ok) gl_cb_report_dispatch((int32_t)iExpected, 1, 2);
   return ok;
+}
+
+/* A stub method that returns a SteamAPICall_t (STUB_FAILED_CALL_RESULTS):
+ * mints a shim-owned handle (high word 0x474C, never a wire handle) and
+ * completes it at once as a failed result (m_eResult = k_EResultFail). The
+ * result is stored for IsAPICallCompleted / GetAPICallResult and, in
+ * manual-dispatch mode, announced with a 703; without manual dispatch it is
+ * also held so a CCallResult registered after this returns still gets it.
+ * Called with NO lock held. Returns 0 only for an impossible layout. */
+static volatile LONG gl_stub_cr_seq;
+static uint64_t gl_stub_fail_call_result(int32_t id, uint32_t cub, uint32_t eresult_off) {
+  uint8_t body[GL_CR_HELD_MAX_BYTES];
+  uint32_t now = gl_cb_now_ms();
+  uint32_t fail = 2;
+  uint64_t h;
+  if (cub > GL_CR_HELD_MAX_BYTES || eresult_off + 4 > cub) return 0;
+  h = 0x474C000000000000ULL | (uint64_t)(uint32_t)InterlockedIncrement(&gl_stub_cr_seq);
+  gl_cb_zero(body, (uint32_t)sizeof(body));
+  memcpy(body + eresult_off, &fail, 4);
+  gl_md_store_result(h, id, 0, cub, body, now);
+  if (!gl_md_enabled) gl_cr_hold(h, id, 0, cub, body, now);
+  return h;
 }
 
 #if !defined(__i386__)
@@ -23637,7 +23659,7 @@ static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION016_SendQueryUGCRequest(vo
   static volatile LONG gamelib_sc[2];
   (void)self;
   gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION016", "SendQueryUGCRequest", 4, GAMELIB_STUBCALL_KIND_STUB);
-  return 0LL;
+  return gl_stub_fail_call_result(3401, 280u, 8u);
 }
 
 // slot 5: GetQueryUGCResult(uint64 handle, uint32 index, w_SteamUGCDetails_t_128x* pDetails) -> bool | __thiscall ret 16 (STUB)
@@ -24427,7 +24449,7 @@ static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION017_SendQueryUGCRequest(vo
   static volatile LONG gamelib_sc[2];
   (void)self;
   gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION017", "SendQueryUGCRequest", 4, GAMELIB_STUBCALL_KIND_STUB);
-  return 0LL;
+  return gl_stub_fail_call_result(3401, 280u, 8u);
 }
 
 // slot 5: GetQueryUGCResult(uint64 handle, uint32 index, w_SteamUGCDetails_t_128x* pDetails) -> bool | __thiscall ret 16 (STUB)
@@ -25244,7 +25266,7 @@ static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION020_SendQueryUGCRequest(vo
   static volatile LONG gamelib_sc[2];
   (void)self;
   gamelib_stubcall_note(gamelib_sc, "STEAMUGC_INTERFACE_VERSION020", "SendQueryUGCRequest", 4, GAMELIB_STUBCALL_KIND_STUB);
-  return 0LL;
+  return gl_stub_fail_call_result(3401, 280u, 8u);
 }
 
 // slot 5: GetQueryUGCResult(uint64 handle, uint32 index, w_SteamUGCDetails_t_160* pDetails) -> bool | __thiscall ret 16 (STUB)

@@ -3065,8 +3065,49 @@ export const CALL_RESULT_HELD_EXPIRY_MS = 10000
 /** Slot-11 reply: u32 count + u64 h + i32 id + u32 failed + u32 cub + bytes.
  *  Mirrors helper GL_CR_DRAIN_RESP_MAX_BYTES (cross-pinned in gen_vtables.test.ts). */
 export const CALL_RESULT_DRAIN_RESP_MAX_BYTES = 4 + 8 + 4 + 4 + 4 + 2572
+/**
+ * Stub methods that return a SteamAPICall_t. A stub answering 0 (the invalid
+ * handle) leaves a game that awaits the call (Facepunch.Steamworks polls
+ * ISteamUtils::IsAPICallCompleted on it) waiting forever; Core Keeper (1621690)
+ * then never presents a frame. The stub instead returns a shim-minted handle
+ * and completes it at once with `k_EResultFail` in the result struct, so the
+ * game takes its own failure path. Keyed `${interface}.${method}`; only the
+ * interface versions whose result struct size was checked are listed.
+ * `size` is the x64 Windows size of the result struct (the game's
+ * GetAPICallResult must pass exactly this cub), `eResultOffset` the byte
+ * offset of its m_eResult. Never wire-forwarded, never helper-tracked.
+ *
+ * SteamUGCQueryCompleted_t (3401): m_handle u64 @0, m_eResult @8, m_unNumResultsReturned
+ * @12, m_unTotalMatchingResults @16, m_bCachedData @20, m_rgchNextCursor[256] @21 -> 277,
+ * rounded to 280 at pack 4 and pack 8 alike. Facepunch.Steamworks.Win64.dll in the Core
+ * Keeper install carries NextCursor, so its struct includes the cursor.
+ */
+export interface StubFailedCallResult {
+  /** Callback id of the result struct. */
+  id: number
+  /** Size in bytes of the x64 result struct. */
+  size: number
+  /** Byte offset of m_eResult inside it. */
+  eResultOffset: number
+}
+const SUGC_QUERY_COMPLETED: StubFailedCallResult = {
+  id: 3401,
+  size: 280,
+  eResultOffset: 8
+}
+export const STUB_FAILED_CALL_RESULTS: Readonly<
+  Record<string, StubFailedCallResult>
+> = {
+  'STEAMUGC_INTERFACE_VERSION016.SendQueryUGCRequest': SUGC_QUERY_COMPLETED,
+  'STEAMUGC_INTERFACE_VERSION017.SendQueryUGCRequest': SUGC_QUERY_COMPLETED,
+  'STEAMUGC_INTERFACE_VERSION020.SendQueryUGCRequest': SUGC_QUERY_COMPLETED
+}
+/** k_EResultFail. */
+const STUB_RESULT_FAIL = 2
+
 const CALL_RESULT_HELD_MAX_BYTES = Math.max(
-  ...CALL_RESULT_TABLE.map((r) => r.size)
+  ...CALL_RESULT_TABLE.map((r) => r.size),
+  ...Object.values(STUB_FAILED_CALL_RESULTS).map((r) => r.size)
 )
 
 /** Max bytes of one held message (every hold row must fit; checked at generation). */
@@ -4298,6 +4339,28 @@ static int gl_md_get_api_call_result(uint64_t h, void *out, int cub,
   return ok;
 }
 
+/* A stub method that returns a SteamAPICall_t (STUB_FAILED_CALL_RESULTS):
+ * mints a shim-owned handle (high word 0x474C, never a wire handle) and
+ * completes it at once as a failed result (m_eResult = k_EResultFail). The
+ * result is stored for IsAPICallCompleted / GetAPICallResult and, in
+ * manual-dispatch mode, announced with a 703; without manual dispatch it is
+ * also held so a CCallResult registered after this returns still gets it.
+ * Called with NO lock held. Returns 0 only for an impossible layout. */
+static volatile LONG gl_stub_cr_seq;
+static uint64_t gl_stub_fail_call_result(int32_t id, uint32_t cub, uint32_t eresult_off) {
+  uint8_t body[GL_CR_HELD_MAX_BYTES];
+  uint32_t now = gl_cb_now_ms();
+  uint32_t fail = ${STUB_RESULT_FAIL};
+  uint64_t h;
+  if (cub > GL_CR_HELD_MAX_BYTES || eresult_off + 4 > cub) return 0;
+  h = 0x474C000000000000ULL | (uint64_t)(uint32_t)InterlockedIncrement(&gl_stub_cr_seq);
+  gl_cb_zero(body, (uint32_t)sizeof(body));
+  memcpy(body + eresult_off, &fail, 4);
+  gl_md_store_result(h, id, 0, cub, body, now);
+  if (!gl_md_enabled) gl_cr_hold(h, id, 0, cub, body, now);
+  return h;
+}
+
 #if !defined(__i386__)
 static void gl_md_init(void) {
   GL_CB_LOCK();
@@ -5087,6 +5150,25 @@ function emitStubBody(
     ? `void *self, ${paramParts}`
     : 'void *self'
   const site = stubCallSite(manifest, method, 'STUB')
+
+  const failCr =
+    STUB_FAILED_CALL_RESULTS[`${manifest.interface}.${method.name}`]
+  if (failCr !== undefined) {
+    if (sret || stringReturn || method.returnKind !== 'int64') {
+      throw new Error(
+        `${manifest.interface}.${method.name}: STUB_FAILED_CALL_RESULTS needs a plain int64 SteamAPICall_t return`
+      )
+    }
+    return (
+      header +
+      `static ${cType(method.returns)} THISCALL ${funcName}(${signatureParams}) {\n` +
+      site.decl +
+      `  (void)self;\n` +
+      site.call +
+      `  return gl_stub_fail_call_result(${failCr.id}, ${failCr.size}u, ${failCr.eResultOffset}u);\n` +
+      `}\n`
+    )
+  }
 
   if (sret) {
     const structSize = method.structSize ?? 0

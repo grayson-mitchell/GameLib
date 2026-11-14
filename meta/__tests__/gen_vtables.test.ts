@@ -6000,3 +6000,51 @@ describe('58-18 older-version signature equality (T-58-56)', () => {
     }
   })
 })
+
+describe('stub methods that return a SteamAPICall_t complete as a failure', () => {
+  // Core Keeper (1621690) hung before its first frame once Facepunch Steam init
+  // succeeded: ISteamUGC SendQueryUGCRequest was a plain stub answering the
+  // invalid handle 0, which Facepunch awaits forever through IsAPICallCompleted.
+  const ugc016 = JSON.parse(
+    readFileSync(join(SDK_DIR, 'isteamugc016.manifest.json'), 'utf-8')
+  ) as InterfaceManifestV2
+
+  function body(c: string, fn: string): string {
+    const start = c.indexOf(`THISCALL ${fn}(`)
+    expect(start).toBeGreaterThan(-1)
+    return c.slice(start, c.indexOf('\n}\n', start))
+  }
+
+  it('SendQueryUGCRequest returns a minted handle completed as k_EResultFail', () => {
+    const c = generateShimC([ugc016])
+    const fn = body(c, 'vt_STEAMUGC_INTERFACE_VERSION016_SendQueryUGCRequest')
+    expect(fn).toContain('return gl_stub_fail_call_result(3401, 280u, 8u);')
+    expect(fn).not.toContain('return 0LL;')
+    expect(c).toContain('uint32_t fail = 2;')
+    // the stub still reports itself, and the handle is never the invalid 0
+    expect(fn).toContain('gamelib_stubcall_note(')
+    expect(c).toContain('0x474C000000000000ULL')
+  })
+
+  it('stores for polling, announces in manual dispatch, holds otherwise', () => {
+    const c = generateShimC([ugc016])
+    const start = c.indexOf('static uint64_t gl_stub_fail_call_result(')
+    const fn = c.slice(start, c.indexOf('\n}\n', start))
+    expect(fn).toContain('gl_md_store_result(h, id, 0, cub, body, now);')
+    expect(fn).toContain(
+      'if (!gl_md_enabled) gl_cr_hold(h, id, 0, cub, body, now);'
+    )
+    // the result buffer is big enough for the 280-byte struct
+    const held = /#define GL_CR_HELD_MAX_BYTES (\d+)/.exec(c)
+    expect(Number(held?.[1])).toBeGreaterThanOrEqual(280)
+  })
+
+  it('other stub methods keep answering zero', () => {
+    const c = generateShimC([ugc016])
+    const fn = body(
+      c,
+      'vt_STEAMUGC_INTERFACE_VERSION016_CreateQueryUGCDetailsRequest'
+    )
+    expect(fn).toContain('return 0LL;')
+  })
+})
