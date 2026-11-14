@@ -1484,7 +1484,7 @@ Plans:
 
 **Requirements**: PRICE-01, PRICE-02, PRICE-03 (phase-level IDs minted during `/gsd-plan-phase 47`). Moved into v0.10 Foundations 2026-11-12.
 **Depends on:** Phase 20 (Aggregated Store Search — CheapShark), which minted the provider-neutral `common/types/storeSearch` vocabulary (D-11/D-12/D-13) this phase is the second implementation of. **Not** Phase 46 — `phase.add` fills `Depends on` with the immediately-preceding phase number as a positional guess, and Phase 46 (Windows single-instance guard) is unrelated; corrected by hand at filing time.
-**Plans:** 1/13 plans executed
+**Plans:** 2/13 plans executed
 
 **Research is already complete** — `.planning/quick/260916-gdg-answer-q2-cheapshark-to-itad-migration-cost/260916-gdg-RESEARCH.md` answers `questions.md` Q2 with claims graded MEASURED / SPEC / UNKNOWN. Do not re-derive it; do preserve its grades when quoting.
 
@@ -1517,7 +1517,7 @@ Plans:
 - [ ] 47-01-PLAN.md — Wave 0 ITAD coverage sweep (operator-run, blocking) and measured constants (D-12)
 - [ ] 47-02-PLAN.md — Operator actions: ITAD_API_KEY repo secret (D-01) and non-blocking ITAD thread reply (D-07)
 - [x] 47-03-PLAN.md — Intl currency/date/region formatters replace formatUsdPrice; Currency Contract pointer
-- [ ] 47-04-PLAN.md — Build-time key define (dev + SEA bundles), runtime key resolver, release fail-fast (D-01..D-04)
+- [x] 47-04-PLAN.md — Build-time key define (dev + SEA bundles), runtime key resolver, release fail-fast (D-01..D-04)
 - [ ] 47-05-PLAN.md — itad_prices / itad_steam_gids CacheStores and the timer-free 429 gate (D-08, D-10)
 
 **Wave 2** *(blocked on Wave 1 completion)*

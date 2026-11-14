@@ -4,13 +4,13 @@ milestone: v0.10
 milestone_name: Foundations
 status: executing
 stopped_at: Phase 47 context gathered
-last_updated: "2026-11-14T09:11:54.952Z"
+last_updated: "2026-11-14T09:14:06.519Z"
 last_activity: 2026-11-14
 progress:
   total_phases: 24
   completed_phases: 18
   total_plans: 401
-  completed_plans: 389
+  completed_plans: 390
   percent: 75
 ---
 
@@ -73,7 +73,7 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 ## Current Position
 
 Phase: 47 (migrate-aggregated-store-search-from-cheapshark-to-istherean) — EXECUTING
-Plan: 2 of 13
+Plan: 3 of 13
 Status: Ready to execute
 Last activity: 2026-11-14
 
@@ -775,9 +775,9 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-14T08:03:06.210Z
+Last session: 2026-11-14T09:14:06.510Z
 Stopped at: Phase 47 context gathered
-Resume file: .planning/phases/47-migrate-aggregated-store-search-from-cheapshark-to-istherean/47-CONTEXT.md
+Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
 
