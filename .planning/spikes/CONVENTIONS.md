@@ -129,6 +129,24 @@ question requires otherwise.
   branch and worktree. The pre-push hook Prettier-checks the workflow file. *(080)*
 - **Two signed-in sessions in one spike need distinct `logonID`s,** or the later logon kicks the
   earlier with `LogonSessionReplaced` 34 (steam-user default 0; steam-vent hard-codes 0). *(077)*
+- **steamclient method slots: resolve by IPC function ID, require a unique match.** Decode each
+  proxy's `movz`/`movk lsl 16` pair, match the high half against OpenSteamClient's dumped data,
+  and call a method only if exactly one slot carries it: overloads share a high half, and dumped
+  indices drift (12 new `IClientUser` slots on the 2026-10-22 build). Stop the vtable walk with
+  `dladdr` at the end of steamclient. A probe that has to survive sign-out/in re-attaches on every
+  tick. *(084, 083)*
+- **Mac Steam logon oracle without CM traffic:** 084's `probe whoami` (`GetSteamID` +
+  `BLoggedOn`) every 30 s beside the mirrored `connection_log.txt`. For install state, mirror
+  `content_log.txt` too: it names the rescan ("Loaded N apps from install folder") and whether
+  Steam hashed files ("Validation: full scan") or trusted the manifest ("has no changes"). *(081,
+  083)*
+- **PICS app types for any id list: anonymous steam-user `getProductInfo(chunk, [], true)` in
+  chunks of 200.** No account and no Friends impact. Compare app-id sets with lexical `sort` +
+  `comm`; a numeric sort gives false diffs. *(084)*
+- **steam-vent never reports a dead socket.** There is no `LoggedOff` and no stream end; a failed
+  heartbeat or read only reaches `tracing`. Long-session probes need a job-timeout liveness call,
+  a wall-vs-monotonic clock gap detector for sleep, and `tracing_subscriber` at
+  `steam_vent=warn` so the hidden errors land in the run log. *(085)*
 
 ## Structure
 

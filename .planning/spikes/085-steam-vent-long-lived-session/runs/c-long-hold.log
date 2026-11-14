@@ -1,0 +1,31 @@
+2026-11-14T10:00:10.842Z start     steam-vent@a9e8164, hold 10800s, liveness every 30s, reconnect=true
+2026-11-14T10:00:11.730Z logon     logged on
+2026-11-14T10:00:13.973Z alive     liveness ok (#1, session 1)
+2026-11-14T10:00:42.232Z KICKED    ClientLoggedOff eresult 34
+2026-11-14T10:00:42.232516Z ERROR steam_vent::connection::filter: Error while reading message error=InvalidHeader
+2026-11-14T10:00:44.241Z DEAD      liveness failed: Ws(AlreadyClosed)
+2026-11-14T10:00:46.138Z RECOVERED new session 2 after 1.9s dead (logon took 1.9s)
+2026-11-14T10:01:17.080842Z ERROR steam_vent::connection::filter: Error while reading message error=InvalidHeader
+2026-11-14T10:01:17.080Z KICKED    ClientLoggedOff eresult 34
+2026-11-14T10:01:18.590Z DEAD      liveness failed: Ws(AlreadyClosed)
+2026-11-14T10:01:20.592Z RECOVERED new session 3 after 2.0s dead (logon took 2.0s)
+2026-11-14T10:10:26.750Z alive     liveness ok (#21, session 3)
+2026-11-14T10:20:31.317Z alive     liveness ok (#41, session 3)
+2026-11-14T10:30:35.801Z alive     liveness ok (#61, session 3)
+2026-11-14T10:40:40.082Z alive     liveness ok (#81, session 3)
+2026-11-14T10:50:44.400Z alive     liveness ok (#101, session 3)
+2026-11-14T11:00:48.351Z alive     liveness ok (#121, session 3)
+2026-11-14T11:10:52.833Z alive     liveness ok (#141, session 3)
+2026-11-14T11:20:57.524Z alive     liveness ok (#161, session 3)
+2026-11-14T11:31:02.010Z alive     liveness ok (#181, session 3)
+2026-11-14T11:41:06.497Z alive     liveness ok (#201, session 3)
+2026-11-14T11:51:10.882Z alive     liveness ok (#221, session 3)
+2026-11-14T12:01:15.267Z alive     liveness ok (#241, session 3)
+2026-11-14T12:11:19.860Z alive     liveness ok (#261, session 3)
+2026-11-14T12:21:24.143Z alive     liveness ok (#281, session 3)
+2026-11-14T12:31:28.475Z alive     liveness ok (#301, session 3)
+2026-11-14T12:41:32.710Z alive     liveness ok (#321, session 3)
+2026-11-14T12:51:37.196Z alive     liveness ok (#341, session 3)
+2026-11-14T13:00:12.141Z end       liveness ok=358 sessions=3 dead_at_end=false
+=Ws(AlreadyClosed)
+2026-11-14T10:01:35.279698Z ERROR steam_vent::connection::raw: Failed to send heartbeat message error=Ws(AlreadyClosed)

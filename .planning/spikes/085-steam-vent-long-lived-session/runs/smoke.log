@@ -1,0 +1,4 @@
+2026-11-13T19:32:30.955Z start     steam-vent@a9e8164, hold 40s, liveness every 10s, reconnect=true
+2026-11-13T19:32:31.819Z logon     logged on
+2026-11-13T19:32:34.063Z alive     liveness ok (#1, session 1)
+2026-11-13T19:33:11.879Z end       liveness ok=4 sessions=1 dead_at_end=false
