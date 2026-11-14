@@ -45,3 +45,7 @@ jobs:
       - name: Backend DI ceilings
         if: ${{ !cancelled() && steps.deps.outcome == 'success' }}
         run: pnpm backend-di-ceilings
+      # Phase 70 D-15: shrink-only count of isStoreGame/asStoreGame and *GameInfo member names outside
+      # storeManagers/; lower meta/gameInfoNarrowingBaseline.json in the same commit as the removal.
+      - name: GameInfo narrowing ceiling
+        run: pnpm gameinfo-narrowing-ceiling

@@ -51,6 +51,7 @@
     "steam-line-ceiling": "node meta/steamLineCeiling.cjs",
     "gameinfo-flip-probe": "node meta/gameInfoFlipProbe.cjs",
     "backend-di-ceilings": "node meta/backendDiCeilings.cjs",
+    "gameinfo-narrowing-ceiling": "node meta/gameInfoNarrowingCeiling.cjs",
     "lint:src": "node meta/lintScoped.cjs --src",
     "lint:tests": "node meta/lintScoped.cjs --tests",
     "lint-fix": "eslint --fix --ext .tsx,ts ./src",
