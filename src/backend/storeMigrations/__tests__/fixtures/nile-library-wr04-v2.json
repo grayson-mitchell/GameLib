@@ -1,0 +1,24 @@
+{
+  "library": [
+    {
+      "runner": "nile",
+      "app_name": "a1",
+      "title": "T",
+      "art_cover": "c",
+      "art_square": "s",
+      "canRunOffline": true,
+      "is_installed": false,
+      "install": {},
+      "art_background": null,
+      "extra": {
+        "reqs": [],
+        "genres": null
+      }
+    }
+  ],
+  "__internal__": {
+    "gamelib": {
+      "schemaVersion": 2
+    }
+  }
+}

@@ -66,13 +66,13 @@ afterEach(() => {
 })
 
 describe('GameInfo library chains through the engine', () => {
-  test('v1 steam_library is backed up, stripped and stamped v2', () => {
+  test('v1 steam_library is backed up, stripped and stamped v3', () => {
     const file = join(root, 'store_cache', 'steam_library.json')
     const original = stamped({ games: [game({ staleKey: 1 }), game()] }, 1)
     writeFileSync(file, original)
     expect(run(file, STEAM_KEY).status).toBe('ok')
     const out = read(file)
-    expect(out.__internal__.gamelib.schemaVersion).toBe(2)
+    expect(out.__internal__.gamelib.schemaVersion).toBe(3)
     expect(out.games).toHaveLength(2)
     expect('staleKey' in out.games[0]).toBe(false)
     const backups = listBackups(file)
@@ -89,13 +89,13 @@ describe('GameInfo library chains through the engine', () => {
     )
     expect(run(file, SIDELOAD_KEY).status).toBe('ok')
     const out = read(file)
-    expect(out.__internal__.gamelib.schemaVersion).toBe(2)
+    expect(out.__internal__.gamelib.schemaVersion).toBe(3)
     expect('staleKey' in out.games[0]).toBe(false)
   })
 
   test('a newer file is left untouched and read-only', () => {
     const file = join(root, 'store_cache', 'steam_library.json')
-    const body = stamped({ games: [game({ staleKey: 1 })] }, 3)
+    const body = stamped({ games: [game({ staleKey: 1 })] }, 4)
     writeFileSync(file, body)
     expect(run(file, STEAM_KEY)).toMatchObject({
       status: 'readOnly',
@@ -103,6 +103,20 @@ describe('GameInfo library chains through the engine', () => {
     })
     expect(readFileSync(file, 'utf8')).toBe(body)
     expect(listBackups(file)).toEqual([])
+  })
+
+  test('a v2 steam_library carrying null optionals is re-stripped once to v3', () => {
+    const file = join(root, 'store_cache', 'steam_library.json')
+    const original = stamped({ games: [game({ art_logo: null })] }, 2)
+    writeFileSync(file, original)
+    expect(run(file, STEAM_KEY).status).toBe('ok')
+    const out = read(file)
+    expect(out.__internal__.gamelib.schemaVersion).toBe(3)
+    expect(out.games).toHaveLength(1)
+    expect('art_logo' in out.games[0]).toBe(false)
+    const backups = listBackups(file)
+    expect(backups).toHaveLength(1)
+    expect(readFileSync(backups[0]!, 'utf8')).toBe(original)
   })
 
   test('a second load of a v2 file rewrites nothing and adds no backup', () => {

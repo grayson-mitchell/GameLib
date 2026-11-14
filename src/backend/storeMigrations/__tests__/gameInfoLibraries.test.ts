@@ -9,6 +9,14 @@ import {
   sideloadLibraryChain,
   steamLibraryChain
 } from '../gameInfoLibraries'
+import {
+  gogGameInfoSchema,
+  legendaryGameInfoSchema,
+  nileGameInfoSchema,
+  sideloadGameInfoSchema,
+  steamGameInfoSchema
+} from 'common/types/ipc/gameInfoSchema'
+import type { z } from 'zod'
 import { createMigrations, STORE_MIGRATIONS } from '..'
 import type { Migration } from '../../storeVersioning/types'
 
@@ -27,57 +35,94 @@ const CASES: Array<{
   keys: string[]
   fixtureName: string
   realKeys: string
+  wr04: string
 }> = [
   {
     name: 'steam',
     chain: steamLibraryChain,
     keys: ['games'],
     fixtureName: 'steam-library-gameinfo-v1.json',
-    realKeys: 'steam-library-real-keys.json'
+    realKeys: 'steam-library-real-keys.json',
+    wr04: 'steam-library-wr04-v2.json'
   },
   {
     name: 'gog',
     chain: gogLibraryChain,
     keys: ['games'],
     fixtureName: 'gog-library-gameinfo-v1.json',
-    realKeys: 'gog-library-real-keys.json'
+    realKeys: 'gog-library-real-keys.json',
+    wr04: 'gog-library-wr04-v2.json'
   },
   {
     name: 'gog installed',
     chain: gogInstalledChain,
     keys: ['installed'],
     fixtureName: 'gog-installed-gameinfo-v1.json',
-    realKeys: 'gog-installed-real-keys.json'
+    realKeys: 'gog-installed-real-keys.json',
+    wr04: 'gog-installed-wr04-v2.json'
   },
   {
     name: 'legendary',
     chain: legendaryLibraryChain,
     keys: ['library'],
     fixtureName: 'legendary-library-gameinfo-v1.json',
-    realKeys: 'legendary-library-real-keys.json'
+    realKeys: 'legendary-library-real-keys.json',
+    wr04: 'legendary-library-wr04-v2.json'
   },
   {
     name: 'nile',
     chain: nileLibraryChain,
     keys: ['library'],
     fixtureName: 'nile-library-gameinfo-v1.json',
-    realKeys: 'nile-library-real-keys.json'
+    realKeys: 'nile-library-real-keys.json',
+    wr04: 'nile-library-wr04-v2.json'
   },
   {
     name: 'sideload',
     chain: sideloadLibraryChain,
     keys: ['games', 'installed'],
     fixtureName: 'sideload-library-gameinfo-v0.json',
-    realKeys: 'sideload-library-real-keys.json'
+    realKeys: 'sideload-library-real-keys.json',
+    wr04: 'sideload-library-wr04-v2.json'
   },
   {
     name: 'download-manager',
     chain: downloadManagerChain,
     keys: ['queue', 'finished'],
     fixtureName: 'download-manager-gameinfo-v1.json',
-    realKeys: 'download-manager-real-keys.json'
+    realKeys: 'download-manager-real-keys.json',
+    wr04: 'download-manager-wr04-v2.json'
   }
 ]
+
+const SCHEMAS: Record<string, z.ZodType> = {
+  steam: steamGameInfoSchema,
+  gog: gogGameInfoSchema,
+  legendary: legendaryGameInfoSchema,
+  nile: nileGameInfoSchema,
+  sideload: sideloadGameInfoSchema
+}
+
+// `installed` items are installed-info objects; the store decides which schema.
+const schemaFor = (key: string, item: Obj, store: string): z.ZodType =>
+  key === 'installed'
+    ? (store === 'sideload' ? sideloadGameInfoSchema : gogGameInfoSchema).shape
+        .install
+    : SCHEMAS[String(gameInfoOf(item)['runner'])]!
+
+// The 70-13 real-key fixtures redact every value to "redacted"; enum members cannot hold that
+// string and real data never does. Substitute a valid member so the survive-unchanged test
+// checks key retention rather than the redaction artifact. Fixture files stay byte-unchanged.
+const VALID_ENUMS: Record<string, string> = {
+  platform: 'Windows',
+  mac_arch: '64'
+}
+const withValidEnums = (value: unknown): Obj =>
+  JSON.parse(
+    JSON.stringify(value, (k, v) =>
+      k in VALID_ENUMS && v === 'redacted' ? VALID_ENUMS[k] : v
+    )
+  )
 
 // download-manager nests the GameInfo; everything else is the item itself.
 const gameInfoOf = (item: Obj): Obj =>
@@ -85,11 +130,35 @@ const gameInfoOf = (item: Obj): Obj =>
 
 describe.each(CASES)(
   '$name chain',
-  ({ chain, keys, fixtureName, realKeys }) => {
+  ({ name, chain, keys, fixtureName, realKeys, wr04 }) => {
     const file = fixture(fixtureName)
 
-    test('targets v2 and is registered', () => {
-      expect(only(chain).to).toBe(2)
+    test('has a v1 -> v2 step and ends with a v2 -> v3 step', () => {
+      expect(chain).toHaveLength(2)
+      expect(chain[0]!.to).toBe(2)
+      expect(only(chain).to).toBe(3)
+      expect(only(chain).id).toMatch(/-v2-v3$/)
+    })
+
+    test('WR-04 shapes fail the strict schema raw and pass it after the chain', () => {
+      const wr = fixture(wr04)
+      const out = apply(chain, wr)
+      for (const key of keys) {
+        const before = wr[key] as Obj[]
+        const after = out[key] as Obj[]
+        expect(after).toHaveLength(before.length)
+        expect(
+          schemaFor(key, before[0]!, name).safeParse(gameInfoOf(before[0]!))
+            .success
+        ).toBe(false)
+        before.forEach((item, i) => {
+          const result = schemaFor(key, item, name).safeParse(
+            gameInfoOf(after[i]!)
+          )
+          expect(result.error?.message).toBeUndefined()
+          expect(result.success).toBe(true)
+        })
+      }
     })
 
     test('removes every undeclared key and keeps the entry count', () => {
@@ -126,7 +195,7 @@ describe.each(CASES)(
 
     test('real-key fixture survives unchanged (a failure means 70-13 forgot a key)', () => {
       const real = fixture(realKeys)
-      expect(apply(chain, real)).toEqual(real)
+      expect(apply(chain, withValidEnums(real))).toEqual(withValidEnums(real))
     })
 
     test('is total on hostile input', () => {
@@ -166,6 +235,19 @@ describe('specific shapes', () => {
     expect(JSON.stringify(dlc(out['library']))).toContain('mainGameItemList')
   })
 
+  test('legendary WR-04: save_path null and dlcList survive, bad about is removed', () => {
+    const file = fixture('legendary-library-wr04-v2.json')
+    const out = apply(legendaryLibraryChain, file)
+    const before = (file['library'] as Obj[])[0]!
+    const after = (out['library'] as Obj[])[0]!
+    expect(after['save_path']).toBeNull()
+    expect(after['dlcList']).toEqual(before['dlcList'])
+    const extra = after['extra'] as Obj
+    expect('about' in extra).toBe(false)
+    expect(extra['reqs']).toEqual([])
+    expect(extra['storeUrl']).toBe('u')
+  })
+
   test('gog cyberpunk nested key is stripped, declared ones kept', () => {
     const out = apply(gogLibraryChain, fixture('gog-library-gameinfo-v1.json'))
     const install = (out['games'] as Obj[])[0]!['install'] as Obj
@@ -199,8 +281,8 @@ describe('registration', () => {
     'store_cache/nile_library',
     'sideload_apps/library',
     'store/download-manager'
-  ])('%s is at version 2', (key) => {
+  ])('%s is at version 3', (key) => {
     expect(STORE_MIGRATIONS[key]).toBeDefined()
-    expect(createMigrations().currentVersionOf(key)).toBe(2)
+    expect(createMigrations().currentVersionOf(key)).toBe(3)
   })
 })

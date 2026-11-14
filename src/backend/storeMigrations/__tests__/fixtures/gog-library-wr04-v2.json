@@ -1,0 +1,44 @@
+{
+  "games": [
+    {
+      "runner": "gog",
+      "app_name": "a1",
+      "title": "T",
+      "art_cover": "c",
+      "art_square": "s",
+      "canRunOffline": true,
+      "is_installed": false,
+      "install": {
+        "install_path": "/p",
+        "manifest": {
+          "disk_size": 1,
+          "download_size": 1,
+          "app_name": "a",
+          "languages": ["en"],
+          "versionEtag": "e",
+          "dependencies": [],
+          "perLangSize": {
+            "en": {
+              "download_size": 1,
+              "disk_size": 1,
+              "junk": 2
+            }
+          }
+        }
+      },
+      "description": null,
+      "gog_save_location": [
+        {
+          "name": "n",
+          "location": "l",
+          "junk": 1
+        }
+      ]
+    }
+  ],
+  "__internal__": {
+    "gamelib": {
+      "schemaVersion": 2
+    }
+  }
+}

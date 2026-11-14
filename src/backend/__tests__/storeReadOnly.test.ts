@@ -160,7 +160,7 @@ describe('applyStoreWrite', () => {
   })
 
   test('refuses a reserved __internal__ key on a writable store', () => {
-    const p = fixture('steam_library', v({ games: [] }, 2))
+    const p = fixture('steam_library', v({ games: [] }, 3))
     const before = readFileSync(p)
     new CacheStore('steam_library', null, { root, kind: 'user-state' })
     applyStoreWrite(
@@ -187,7 +187,7 @@ describe('applyStoreWrite', () => {
   })
 
   test('a normal renderer write to a writable store persists and pushes', () => {
-    const p = fixture('steam_library', v({ games: [] }, 2))
+    const p = fixture('steam_library', v({ games: [] }, 3))
     new CacheStore('steam_library', null, { root, kind: 'user-state' })
     applyStoreWrite(
       registry,
@@ -200,7 +200,7 @@ describe('applyStoreWrite', () => {
     )
     const disk = JSON.parse(readFileSync(p, 'utf8'))
     expect(disk.games).toEqual(['a'])
-    expect(disk.__internal__.gamelib.schemaVersion).toBe(2)
+    expect(disk.__internal__.gamelib.schemaVersion).toBe(3)
     expect(frontendPush).toHaveBeenCalledTimes(1)
   })
 })
