@@ -37,7 +37,7 @@ Rust logon used the stored steam-session refresh token unchanged and no account 
 | content-servers (count)               | 1      | 1     | 0                               | 0           |
 | persona (own persona present)         | 1      | 0 or 1 | persona-unsupported 0 or 1      | 0           |
 
-The persona row varied between runs (see DV-79-09): of six full sweeps after the fix, four reported `persona-unsupported` and two reported equal. Both outcomes exit 0. Every other row was identical on every run.
+The persona row varied between runs (see DV-79-09): of four full sweeps after the fix, two reported `persona-unsupported` and two reported equal. Both outcomes exit 0. Every other row was identical on every run.
 
 The first sweep (before the fix) exited 1 with licence-appids unexplained (steam-user 1,144 vs Rust 0); see Fixes.
 
