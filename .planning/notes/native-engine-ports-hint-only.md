@@ -101,7 +101,11 @@ NBlood. Windows-only: KeeperFX.
 
 ## Still open
 
-- Does fallout1-ce actually fix the 38400 intro on this Mac, and do Wine-exe saves load in CE?
-  (Spike — the first row should be one we have seen work.)
+- ~~Does fallout1-ce fix the 38400 intro on this Mac, and do Wine-exe saves load in CE?~~
+  **Yes — spike 086 (2026-11-15).** Intro smooth natively; the Wine save loads. The dmg is
+  universal and notarised; CE reads data from the folder the `.app` sits in and rewrites
+  `fallout.cfg` on exit (so: copy the data, don't run in the Steam folder). Untested: CE save →
+  Wine exe, and App Translocation of a browser-downloaded app (setup help should say "drag the
+  app into the data folder in Finder").
 - Should the hint be gated on a data-file presence check (remaster ambiguity), or always shown
   with a note?

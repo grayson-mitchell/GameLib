@@ -46,4 +46,6 @@ picker. (Rejected — see the note.)
 
 - Gate the block on a data-file presence check (remaster ambiguity), or always show it with the
   note? Decide when the catalogue grows past the Fallout rows.
-- Whether to wait for the fallout1-ce spike before shipping the Fallout rows (seen-working rule).
+- ~~Whether to wait for the fallout1-ce spike~~ — spike 086 VALIDATED the fallout1-ce row
+  (universal, notarised, `dataStyle: copy`, Wine saves load). fallout2-ce (38410) is unverified;
+  its data is in bottle `GameLibSteamBridge-38410` if a matching check is wanted.
