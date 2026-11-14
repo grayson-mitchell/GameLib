@@ -168,12 +168,11 @@ mod tests {
             .conn
     }
 
-    #[test]
-    fn idempotency_flags() {
+    const _: () = {
         assert!(OWNED_IDEMPOTENT);
         assert!(!REDEEM_IDEMPOTENT);
         assert!(PERSONAS_IDEMPOTENT);
-    }
+    };
 
     #[tokio::test]
     async fn owned_apps_shape() {
