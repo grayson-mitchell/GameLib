@@ -32,7 +32,7 @@ const UninstallModal: React.FC<UninstallModalProps> = function ({
   const [isNative, setIsNative] = useState(true)
   const [winePrefix, setWinePrefix] = useState('')
   const [deletePrefixChecked, setDeletePrefixChecked] = useState(false)
-  const [deleteSettingsChecked, setDeleteSettingsChecked] = useState(false)
+  const [deleteSettingsChecked, setDeleteSettingsChecked] = useState(true)
   const [disableDeleteWine, setDisableDeleteWine] = useState(false)
   const { t } = useTranslation('gamepage')
   const [showUninstallModal, setShowUninstallModal] = useState(false)
@@ -111,7 +111,7 @@ const UninstallModal: React.FC<UninstallModalProps> = function ({
       appName,
       runner,
       deletePrefixChecked,
-      deleteSettingsChecked
+      deleteSettingsChecked && !isDlc
     )
     if (isStore(runner, 'sideload') && location.pathname.match(/gamepage/)) {
       navigate('/#library')
