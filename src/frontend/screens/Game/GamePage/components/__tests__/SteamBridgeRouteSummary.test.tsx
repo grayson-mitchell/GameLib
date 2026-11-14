@@ -59,31 +59,31 @@ describe('SteamBridgeRouteSummary', () => {
       missingSymbols: syms(25)
     })
     const visible = text(el)
-    expect(visible).toContain('Native Steam bridge')
-    expect(visible).toContain('25 Steam calls not covered')
-    expect(visible).not.toContain('sym0')
+    expect(visible).toBe('Steam route: Native Steam bridge')
     const tip = text(tooltipEl(el)?.props.title as ReactNode)
+    expect(tip).toContain('25 Steam calls not covered')
     expect(tip).toContain('does not cover every Steam call')
     expect(tip).toContain('sym9')
     expect(tip).not.toContain('sym10')
     expect(tip).toContain('and 15 more')
   })
 
-  it('uses the singular badge and no "more" line for one symbol', () => {
+  it('uses the singular issue and no "more" line for one symbol', () => {
     const el = render({
       reasonKey: `${R}scanMiss`,
       missingSymbols: ['only']
     })
-    expect(text(badge(el))).toBe('1 Steam call not covered')
+    expect(badge(el)?.props['aria-label']).toContain('1 Steam call not covered')
     expect(text(tooltipEl(el)?.props.title as ReactNode)).not.toContain('more')
   })
 
-  it('shows a short badge and the interpolated sentence for knownBad', () => {
+  it('shows the short issue and the interpolated sentence for knownBad', () => {
     const el = render({
       reasonKey: `${R}knownBad`,
       reasonParams: { reasonKey: `${R}seed` }
     })
-    expect(text(badge(el))).toBe('Known issue')
+    expect(text(badge(el))).toBe('')
+    expect(badge(el)?.props['aria-label']).toMatch(/^Known issue\. /)
     expect(text(tooltipEl(el)?.props.title as ReactNode)).toContain(
       'Known not to work with the bridge: Known to work with the bridge'
     )
@@ -96,6 +96,14 @@ describe('SteamBridgeRouteSummary', () => {
     expect(label?.props.title).toBe(
       'Every Steam call this game makes is covered'
     )
+  })
+
+  it('shows the glyph with the notes in its tooltip when only notes exist', () => {
+    const el = render({ reasonKey: `${R}scanClean`, notes: ['No cloud saves'] })
+    expect(text(el)).toBe('Steam route: Native Steam bridge')
+    const tip = text(tooltipEl(el)?.props.title as ReactNode)
+    expect(tip).toContain('Every Steam call this game makes is covered')
+    expect(tip).toContain('No cloud saves')
   })
 
   it('has no badge and no title for a null reason', () => {

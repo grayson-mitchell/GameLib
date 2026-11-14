@@ -9,19 +9,22 @@ interface Props {
   reasonKey: string | null
   reasonParams: Record<string, string>
   missingSymbols: string[]
+  notes?: string[]
 }
 
 /**
  * Quick task 261113-8m6: compact "Steam route" row shared by the game page
- * Install info and the install dialog. Short label as text; on an issue, a
- * warning badge whose tooltip carries the full reason and at most
- * SYMBOL_CAP missing symbols.
+ * Install info and the install dialog. One line: the route label, then on an
+ * issue (or any limited-feature note) an icon-only warning glyph whose
+ * tooltip carries the short issue, the full reason, at most SYMBOL_CAP
+ * missing symbols and the notes.
  */
 const SteamBridgeRouteSummary = ({
   routeKey,
   reasonKey,
   reasonParams,
-  missingSymbols
+  missingSymbols,
+  notes = []
 }: Props) => {
   const { t } = useTranslation('gamelib')
 
@@ -43,7 +46,7 @@ const SteamBridgeRouteSummary = ({
     </b>
   )
 
-  if (!issue) {
+  if (!issue && notes.length === 0) {
     return (
       <>
         {heading}
@@ -54,8 +57,9 @@ const SteamBridgeRouteSummary = ({
     )
   }
 
-  const badgeText =
-    issue.kind === 'notCovered'
+  const badgeText = !issue
+    ? null
+    : issue.kind === 'notCovered'
       ? t('steam.bridge.route.issue.notCovered', {
           count: issue.count,
           defaultValue: '{{count}} Steam calls not covered'
@@ -65,6 +69,7 @@ const SteamBridgeRouteSummary = ({
 
   const tooltip = (
     <div className="steamBridgeIssueTooltip">
+      {badgeText && <b>{badgeText}</b>}
       {reason && <div>{reason}</div>}
       {shown.length > 0 && (
         <>
@@ -81,8 +86,12 @@ const SteamBridgeRouteSummary = ({
           )}
         </>
       )}
+      {notes.map((n) => (
+        <div key={n}>{n}</div>
+      ))}
     </div>
   )
+  const ariaLabel = [badgeText, reason, ...notes].filter(Boolean).join('. ')
 
   return (
     <>
@@ -92,10 +101,10 @@ const SteamBridgeRouteSummary = ({
         <span
           className="steamBridgeIssueBadge"
           tabIndex={0}
-          aria-label={reason ? `${badgeText}. ${reason}` : badgeText}
+          role="img"
+          aria-label={ariaLabel}
         >
           <WarningAmber fontSize="inherit" />
-          {badgeText}
         </span>
       </Tooltip>
     </>

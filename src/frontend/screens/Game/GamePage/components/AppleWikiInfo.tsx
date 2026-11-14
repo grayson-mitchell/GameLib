@@ -264,13 +264,10 @@ const AppleWikiInfo = ({ gameInfo }: Props) => {
             reasonKey={bridgeLine.reasonKey}
             reasonParams={bridgeLine.reasonParams}
             missingSymbols={bridgeLine.missingSymbols}
+            notes={bridgeLine.limitedLineKeys.map((key) =>
+              tGamelib(`gamelib:${key}`)
+            )}
           />
-          {bridgeLine.limitedLineKeys.map((key) => (
-            <span key={key} className="steamBridgeLimitedLine">
-              {' '}
-              {tGamelib(`gamelib:${key}`)}
-            </span>
-          ))}
         </span>
       )}
     </>
