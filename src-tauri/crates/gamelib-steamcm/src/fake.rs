@@ -215,12 +215,16 @@ impl CmBackend for FakeBackend {
     }
 
     async fn connect_anon(&self) -> Result<FakeConn, CmError> {
-        {
+        let delay = {
             let mut s = self.script.lock().unwrap();
             s.connects += 1;
             if let Some(r) = s.anon.pop_front() {
                 r?;
             }
+            s.delays.get("connect_anon").copied()
+        };
+        if let Some(d) = delay {
+            tokio::time::sleep(d).await;
         }
         Ok(FakeConn::new(&self.script))
     }
