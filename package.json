@@ -85,6 +85,7 @@
     "depot-cli:build": "cargo build -p gamelib-depot-cli --manifest-path src-tauri/Cargo.toml",
     "steamfiles-cli:build": "cargo build -p gamelib-steamfiles-cli --manifest-path src-tauri/Cargo.toml",
     "steamcm-cli:build": "cargo build -p gamelib-steamcm-cli --manifest-path src-tauri/Cargo.toml",
+    "steamcm-parity-sweep": "pnpm steamcm-cli:build && node meta/runTs.cjs --bundle --platform=node --target=node22 meta/steamcmParitySweep.ts",
     "steamcm-capture-fixtures": "pnpm steamcm-cli:build && node meta/runTs.cjs --bundle --platform=node --target=node22 meta/steamcmCaptureFixtures.ts",
     "depot-parity-sweep": "pnpm depot-cli:build && node meta/runTs.cjs --bundle --platform=node --target=node22 meta/depotParitySweep.ts",
     "bridge-census": "pnpm scan-cli:build && pnpm steamfiles-cli:build && node meta/runTs.cjs --bundle --platform=node --target=node21 meta/bridgeCensus.ts",
