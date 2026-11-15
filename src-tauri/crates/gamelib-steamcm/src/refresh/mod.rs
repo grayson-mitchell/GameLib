@@ -17,6 +17,7 @@ pub mod owned_demos;
 pub mod store_http;
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::path::Path;
 use std::time::Duration;
 
 use serde::Deserialize;
@@ -24,6 +25,7 @@ use serde_json::{json, Value};
 
 use crate::anon::AnonHandle;
 use crate::backend::CmBackend;
+use crate::macowned::{mac_owned_apps, FallbackReason};
 use crate::session::{OpFailure, SessionHandle};
 
 use assemble::{assemble_library, AssembleInput, InstallStateInput, OwnedApp, PlaytimeMode};
@@ -44,7 +46,13 @@ const COLLECT_TIMEOUT: Duration = Duration::from_secs(60);
 #[derive(Deserialize)]
 #[serde(tag = "kind", rename_all = "camelCase", deny_unknown_fields)]
 pub enum RefreshSource {
-    /// 79-36 adds the `macSteam` variant.
+    /// The Mac Steam path (79-36, D-14): owned apps come from the running Mac Steam client, so no
+    /// signed-in logon is made and no lease is needed.
+    #[serde(rename_all = "camelCase")]
+    MacSteam {
+        helper_path: String,
+        steam_id: String,
+    },
     Cm {
         #[serde(rename = "leaseId")]
         lease_id: u64,
@@ -104,6 +112,10 @@ fn owned_failure(f: &OpFailure) -> Value {
     v
 }
 
+fn mac_fallback(r: FallbackReason) -> Value {
+    json!({"ok": false, "kind": "macFallback", "reason": r.as_str()})
+}
+
 /// Refresh. Never fails for a demos, capture or enrichment problem; only an owned-games failure,
 /// an unknown lease or the 150 s deadline yield `{ok:false}`.
 pub async fn refresh_library<B: CmBackend>(
@@ -137,42 +149,82 @@ async fn refresh_body<B: CmBackend>(
 where
     B::Conn: Send + Sync + 'static,
 {
-    let RefreshSource::Cm { lease_id, steam_id } = &args.source;
-    let (Some(session), Ok(lease), Ok(steam_id)) =
-        (session, u32::try_from(*lease_id), steam_id.parse::<u64>())
-    else {
-        return json!({"ok": false, "kind": "leaseUnknown"});
-    };
-
-    // Step 1: owned games plus licensed demos on the held lease. The demos stage is fail-soft
-    // inside; only the owned call can fail this.
-    let licences = match session.licenses(lease).await {
-        Ok(l) => l,
-        Err(e) => return owned_failure(&e),
-    };
-    let collected = match session
-        .run_op(lease, true, COLLECT_TIMEOUT, |c| {
-            let licences = licences.clone();
-            Box::pin(async move { collect_owned_and_demos(c.as_ref(), steam_id, &licences).await })
-        })
-        .await
-    {
-        Ok(c) => c,
-        Err(e) => return owned_failure(&e),
-    };
-
-    // Demos are concatenated after the owned rows.
-    let mut apps = OwnedApp::from_owned(&collected.owned);
-    let owned_count = apps.len();
-    apps.extend(collected.demos.iter().map(OwnedApp::from));
-    let demo_count = collected.demos.len();
+    let (apps, owned_count, demo_count, demos_failed, demos_failure, held, playtime, source_tag) =
+        match &args.source {
+            RefreshSource::Cm { lease_id, steam_id } => {
+                let (Some(session), Ok(lease), Ok(steam_id)) =
+                    (session, u32::try_from(*lease_id), steam_id.parse::<u64>())
+                else {
+                    return json!({"ok": false, "kind": "leaseUnknown"});
+                };
+                // Step 1: owned games plus licensed demos on the held lease. The demos stage is
+                // fail-soft inside; only the owned call can fail this.
+                let licences = match session.licenses(lease).await {
+                    Ok(l) => l,
+                    Err(e) => return owned_failure(&e),
+                };
+                let collected = match session
+                    .run_op(lease, true, COLLECT_TIMEOUT, |c| {
+                        let licences = licences.clone();
+                        Box::pin(async move {
+                            collect_owned_and_demos(c.as_ref(), steam_id, &licences).await
+                        })
+                    })
+                    .await
+                {
+                    Ok(c) => c,
+                    Err(e) => return owned_failure(&e),
+                };
+                // Demos are concatenated after the owned rows.
+                let mut apps = OwnedApp::from_owned(&collected.owned);
+                let owned_count = apps.len();
+                apps.extend(collected.demos.iter().map(OwnedApp::from));
+                (
+                    apps,
+                    owned_count,
+                    collected.demos.len(),
+                    json!(collected.demos_failed),
+                    json!(collected.demos_failure),
+                    Some((session, lease)),
+                    PlaytimeMode::Fresh,
+                    "cm",
+                )
+            }
+            RefreshSource::MacSteam {
+                helper_path,
+                steam_id,
+            } => {
+                // Every guard failure is a typed fallback before any capture, assembly or
+                // enrichment work (T-79-108); the TS side then runs the CM path.
+                let Ok(steam_id) = steam_id.parse::<u64>() else {
+                    return mac_fallback(FallbackReason::Parse);
+                };
+                let mac = match mac_owned_apps(anon, Path::new(helper_path), steam_id).await {
+                    Ok(m) => m,
+                    Err(r) => return mac_fallback(r),
+                };
+                let mut apps = OwnedApp::from_owned(&mac.owned);
+                let owned_count = apps.len();
+                apps.extend(mac.demos.iter().map(OwnedApp::from));
+                (
+                    apps,
+                    owned_count,
+                    mac.demos.len(),
+                    json!(false),
+                    Value::Null,
+                    None,
+                    PlaytimeMode::CarryForward,
+                    "macSteam",
+                )
+            }
+        };
     let ids: Vec<u32> = apps.iter().map(|a| a.appid).collect();
 
     // Step 2: capture. Fail-soft by contract (34.15 D-01..D-05): a failure leaves the entries
     // uncaptured and never fails Refresh.
     let cap = capture_platforms_and_metacritic(
         anon,
-        Some((&session, lease)),
+        held.as_ref().map(|(s, l)| (s, *l)),
         &args.metadata,
         &ids,
         now_ms(),
@@ -194,7 +246,7 @@ where
         previous_games: &args.previous_games,
         bridge_allowlist: &allow,
         is_mac: args.is_mac,
-        playtime: PlaytimeMode::Fresh,
+        playtime,
     });
 
     // Step 4: bounded enrichment. Apps it does not reach keep their cached art and are served by
@@ -233,8 +285,8 @@ where
         "metadataUpdates": metadata_updates,
         "ownedCount": owned_count,
         "demoCount": demo_count,
-        "demosFailed": collected.demos_failed,
-        "demosFailure": collected.demos_failure,
+        "demosFailed": demos_failed,
+        "demosFailure": demos_failure,
         "capture": {
             "platforms": capture_summary_json(&cap.platforms),
             "metacritic": capture_summary_json(&cap.metacritic),
@@ -242,7 +294,7 @@ where
             "heldCount": cap.held_count,
         },
         "enrich": enrich_summary_json(&enrich_sum),
-        "source": "cm",
+        "source": source_tag,
     }})
 }
 
@@ -490,6 +542,126 @@ mod tests {
         assert_eq!(v, json!({"ok": false, "kind": "leaseUnknown"}));
         let none = refresh_library::<FakeBackend>(None, &r.anon, &c, &m.base, args(1)).await;
         assert_eq!(none["kind"], "leaseUnknown");
+    }
+
+    fn mac_args(helper: &str, previous: Value) -> RefreshArgs {
+        serde_json::from_value(json!({
+            "source": {"kind": "macSteam", "helperPath": helper, "steamId": "76561198000000001"},
+            "metadata": {}, "previousGames": previous, "installState": {},
+            "bridgeAllowlist": [], "knownFixMac32": [], "isMac": true
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn mac_source_parses_and_rejects_unknown_keys() {
+        assert!(matches!(
+            mac_args("/x", json!([])).source,
+            RefreshSource::MacSteam { .. }
+        ));
+        let bad = serde_json::from_value::<RefreshArgs>(json!({
+            "source": {"kind": "macSteam", "helperPath": "/x", "steamId": "1", "leaseId": 1},
+            "metadata": {}, "previousGames": [], "installState": {},
+            "bridgeAllowlist": [], "knownFixMac32": [], "isMac": true
+        }));
+        assert!(bad.is_err());
+    }
+
+    #[tokio::test]
+    async fn mac_guard_failures_are_typed_fallbacks_with_no_work() {
+        let r = rig().await;
+        let m = spawn(store_ok(&[])).await;
+        let c = reqwest::Client::new();
+        let v = refresh_library::<FakeBackend>(
+            None,
+            &r.anon,
+            &c,
+            &m.base,
+            mac_args("/nonexistent/steam-bridge-helper", json!([])),
+        )
+        .await;
+        assert_eq!(v["ok"], false);
+        assert_eq!(v["kind"], "macFallback");
+        let want = if cfg!(target_os = "macos") {
+            "helper-missing"
+        } else {
+            "not-macos"
+        };
+        assert_eq!(v["reason"], want);
+        assert!(r.b.script(|s| s.pics_reqs.is_empty()));
+        assert!(m.paths.lock().unwrap().is_empty());
+        // An unparseable SteamID is a fallback too.
+        let mut bad = mac_args("/x", json!([]));
+        bad.source = RefreshSource::MacSteam {
+            helper_path: "/x".into(),
+            steam_id: "nope".into(),
+        };
+        let v = refresh_library::<FakeBackend>(None, &r.anon, &c, &m.base, bad).await;
+        assert_eq!(
+            v,
+            json!({"ok": false, "kind": "macFallback", "reason": "parse"})
+        );
+    }
+
+    #[cfg(target_os = "macos")]
+    #[tokio::test]
+    async fn mac_source_runs_anonymously_and_carries_playtime_forward() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let helper = dir.path().join("steam-bridge-helper");
+        std::fs::write(
+            &helper,
+            "#!/bin/sh\necho '{\"ok\":true,\"count\":3,\"appIds\":[10,20,30]}'\n",
+        )
+        .unwrap();
+        std::fs::set_permissions(&helper, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let typed = |id: u32, ty: &str| {
+            PicsAppRaw {
+            app_id: id,
+            change_number: 1,
+            missing_token: false,
+            buffer: format!(
+                "\"appinfo\"\n{{\n\"common\"\n{{\n\"type\" \"{ty}\"\n\"name\" \"n{id}\"\n{FULL}\n}}\n}}\n"
+            )
+            .into_bytes(),
+        }
+        };
+        let r = rig().await;
+        r.b.script(|s| {
+            // Mac type/name lookup, then the capture pass.
+            s.pics.queue.push_back(Ok(PicsRaw {
+                apps: vec![typed(10, "Game"), typed(20, "Game"), typed(30, "Demo")],
+                ..Default::default()
+            }));
+            s.pics.queue.push_back(Ok(PicsRaw {
+                apps: vec![pics_app(10), pics_app(20), pics_app(30)],
+                ..Default::default()
+            }));
+        });
+        let m = spawn(store_ok(&["10", "20", "30"])).await;
+        let c = reqwest::Client::new();
+        let prev = json!([{"app_name": "10", "extra": {
+            "steamPlaytimeMinutes": 42, "steamLastPlayed": 7}}]);
+        let v = refresh_library::<FakeBackend>(
+            None,
+            &r.anon,
+            &c,
+            &m.base,
+            mac_args(helper.to_str().unwrap(), prev),
+        )
+        .await;
+        assert_eq!(v["ok"], true, "{v}");
+        let res = &v["result"];
+        assert_eq!(res["source"], "macSteam");
+        assert_eq!(res["ownedCount"], 2);
+        assert_eq!(res["demoCount"], 1);
+        assert_eq!(res["capture"]["heldCount"], 0);
+        let games = res["games"].as_array().unwrap();
+        assert_eq!(games.len(), 3);
+        assert_eq!(games[0]["extra"]["steamPlaytimeMinutes"], 42);
+        assert_eq!(games[0]["extra"]["steamLastPlayed"], 7);
+        assert_eq!(games[1]["extra"]["steamPlaytimeMinutes"], 0);
+        assert_eq!(r.b.script(|s| s.authed.len()), 0);
     }
 
     #[test]

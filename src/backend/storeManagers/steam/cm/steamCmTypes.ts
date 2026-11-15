@@ -57,6 +57,7 @@ export type SteamCmFailureKind =
   | 'tooLarge'
   | 'parse'
   | 'fallback'
+  | 'macFallback'
 
 export type MacOwnedFallbackReason =
   | 'not-macos'
@@ -73,7 +74,10 @@ export type SteamCmOpFailure = {
   ok: false
   kind: SteamCmFailureKind
   eresult?: number
-  /** Set when `kind` is `fallback` (`steamcm_mac_owned_apps`): why to use the CM path. */
+  /**
+   * Set when `kind` is `fallback` (`steamcm_mac_owned_apps`) or `macFallback` (`steamcm_refresh`
+   * with the macSteam source): why to use the CM path.
+   */
   reason?: MacOwnedFallbackReason
 }
 
@@ -154,7 +158,7 @@ export interface RefreshResult {
     budgetHit: boolean
     notReached: string[]
   }
-  source: 'cm'
+  source: 'cm' | 'macSteam'
 }
 
 /** `steamcm_store_enrich` result; `entry`/`game` are absent for `noData`. */

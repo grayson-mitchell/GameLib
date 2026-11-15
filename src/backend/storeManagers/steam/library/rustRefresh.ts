@@ -275,3 +275,73 @@ function syncFailed(deps: ManagerDeps, err: unknown): never {
   })
   throw err
 }
+
+export type MacSteamRefreshOutcome =
+  | { kind: 'done'; exec: ExecResult }
+  | { kind: 'fallback'; reason: string }
+
+/**
+ * D-14/D-15: Refresh from the running Mac Steam client, inside the Rust orchestration, with NO
+ * signed-in logon (so it cannot sign Friends out). Every failure, including a transport throw, is
+ * a fallback: the caller continues down the CM path. Mac-path entries carry the previously stored
+ * playtime, not Steam's (an expected divergence, 79-PARITY.md).
+ */
+export async function tryMacSteamRefresh(
+  deps: ManagerDeps,
+  steamId: string
+): Promise<MacSteamRefreshOutcome> {
+  deps.sendFrontendMessage('steamSyncStatus', { status: 'syncing' })
+  let inputs: Awaited<ReturnType<typeof buildRustRefreshInputs>>
+  try {
+    inputs = await buildRustRefreshInputs(deps)
+  } catch (err) {
+    return { kind: 'fallback', reason: `inputs: ${String(err)}` }
+  }
+  const { bridgeAppIds: _bridgeAppIds, ...args } = inputs
+  let result: RefreshResult
+  try {
+    const res = await invokeSteamCm(deps, RUST_STEAMCM_REFRESH, {
+      source: {
+        kind: 'macSteam',
+        helperPath: deps.paths.steamBridgeHelperPath,
+        steamId
+      },
+      ...args
+    })
+    if (!res.ok) {
+      return {
+        kind: 'fallback',
+        reason: res.kind === 'macFallback' ? (res.reason ?? res.kind) : res.kind
+      }
+    }
+    result = res.result
+  } catch (err) {
+    return {
+      kind: 'fallback',
+      reason: `transport: ${err instanceof Error ? err.message : String(err)}`
+    }
+  }
+
+  logSummary(result)
+  try {
+    await applyRustRefreshResult(deps, args.metadata, result)
+  } catch (err) {
+    return syncFailed(deps, err)
+  }
+  logInfo(
+    `Steam Refresh: Mac Steam path ok games=${result.ownedCount} demos=${result.demoCount} (no CM logon)`,
+    LogPrefix.Steam
+  )
+  logInfo(
+    `Steam library sync complete: ${deps.steamSession.libraryState.library.size} games`,
+    LogPrefix.Steam
+  )
+  deps.sendFrontendMessage('steamSyncStatus', { status: 'idle' })
+  return {
+    kind: 'done',
+    exec: {
+      stdout: `${deps.steamSession.libraryState.library.size} games synced`,
+      stderr: ''
+    }
+  }
+}

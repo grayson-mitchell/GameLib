@@ -375,10 +375,13 @@ export const rustInvokeArgs = {
   [RUST_STEAMCM_REFRESH]: z.tuple([
     z
       .object({
+        // The contract generator has no anyOf, so the tagged union is one object here; the
+        // crate's RefreshSource (deny_unknown_fields) enforces which fields go with which kind.
         source: z
           .object({
-            kind: z.literal('cm'),
-            leaseId: z.number(),
+            kind: z.enum(['cm', 'macSteam']),
+            leaseId: z.number().optional(),
+            helperPath: z.string().optional(),
             steamId: z.string()
           })
           .strict(),

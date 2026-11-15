@@ -25,7 +25,7 @@ import {
 } from './installRoot'
 import { restoreLocalSteamLibrary } from './localLibrary'
 import { steamCmImpl } from '../cm/steamCmFlags'
-import { syncOwnedLibraryRust } from './rustRefresh'
+import { syncOwnedLibraryRust, tryMacSteamRefresh } from './rustRefresh'
 import { verifyMacArchGroundTruth } from './macArch'
 import {
   buildInstalledMap,
@@ -55,6 +55,19 @@ export async function refresh(deps: ManagerDeps): Promise<ExecResult | null> {
 
   let release: () => void
   let client: NonNullable<ReturnType<ManagerDeps['steamUser']['getClient']>>
+  if (grant && isMac && steamCmImpl() === 'rust') {
+    // D-14: the running Mac Steam client's own owned set first. No lease, no logon, so it cannot
+    // sign Friends out. No grant means no attempt (the deferral rule below is unchanged).
+    const macSteamId = deps.steamUser.getPersistedSteamId64()
+    if (macSteamId) {
+      const mac = await tryMacSteamRefresh(deps, macSteamId)
+      if (mac.kind === 'done') return mac.exec
+      logInfo(
+        `Steam Refresh: Mac Steam path unavailable (${mac.reason}), using CM`,
+        LogPrefix.Steam
+      )
+    }
+  }
   if (grant) {
     // An inferred store-exit refresh passes no guidedAction, so a refused
     // go-offline wrap never pushes the guided dialog (quick 261114-aqa).

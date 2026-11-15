@@ -1635,16 +1635,22 @@ pub(crate) struct SteamcmRefreshArgs {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
-pub(crate) enum SteamcmRefreshArgsSourceKindConst {
+pub(crate) enum SteamcmRefreshArgsSourceKind {
     #[serde(rename = "cm")]
     Cm,
+    #[serde(rename = "macSteam")]
+    MacSteam,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 pub(crate) struct SteamcmRefreshArgsSource {
-    pub(crate) kind: SteamcmRefreshArgsSourceKindConst,
+    pub(crate) kind: SteamcmRefreshArgsSourceKind,
     #[serde(rename = "leaseId")]
-    pub(crate) lease_id: f64,
+    #[serde(default)]
+    pub(crate) lease_id: Option<f64>,
+    #[serde(rename = "helperPath")]
+    #[serde(default)]
+    pub(crate) helper_path: Option<String>,
     #[serde(rename = "steamId")]
     pub(crate) steam_id: String,
 }

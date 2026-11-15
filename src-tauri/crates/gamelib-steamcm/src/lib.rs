@@ -355,8 +355,10 @@ fn run_op(op: &str, args: &[Value]) -> Result<Value, String> {
         }
         "steamcm_refresh" => {
             let a: refresh::RefreshArgs = parse_args(op, args)?;
-            let refresh::RefreshSource::Cm { steam_id, .. } = &a.source;
-            id64(op, steam_id)?;
+            // The Mac source validates its own SteamID and answers with a typed fallback.
+            if let refresh::RefreshSource::Cm { steam_id, .. } = &a.source {
+                id64(op, steam_id)?;
+            }
             facade::refresh_library(a)
         }
         "steamcm_mac_owned_apps" => {
