@@ -239,17 +239,6 @@ const MockSteamUserLib = jest.fn(() => ({
 MockSteamUserLib.EPurchaseResult = { Unknown: -1, OK: 0 }
 jest.mock('steam-user', () => MockSteamUserLib)
 
-// Phase 54: the authenticated cold connect runs inside the Mac go-offline wrap
-// and the platform capture reaches for the anonymous client. Plain functions
-// (not jest.fn) so the project's resetMocks cannot strip them.
-jest.mock('../macSteamOffline', () => ({
-  withMacSteamOffline: async (connect: (wrap: string) => Promise<unknown>) => ({
-    value: await connect('not-darwin'),
-    wrap: 'not-darwin'
-  }),
-  GuidedOfflineRequiredError: class GuidedOfflineRequiredError extends Error {},
-  restoreMacSteamOnlineIfOwed: async () => 'not-owed'
-}))
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { readTauriShellProductionSource } from 'backend/testUtils/tauriShellSource'
 const sendFrontendMessage = jest.fn()

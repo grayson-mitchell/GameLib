@@ -68,15 +68,15 @@
  *   - `steamRemoveAllCopies` -> `removeAllSteamInstallCopies(appName)`,
  *     quick-260821-le0 Task 3 — sweeps every recorded install root for a
  *     Steam title in one action, same shared-seam pattern as the pair above.
- *   - `steamGoOfflineRetry` -> `checkGuidedOfflineReady()` (the boot-built `macSteamOffline` instance),
+ *   - `steamGoOfflineRetry` -> `checkGuidedOfflineReady()` (`macSteamClient.ts`, reads Mac Steam's state only),
  *     Phase 54 Plan 07 — the guided Go Offline dialog's Continue.
  *   - `steamBridgeListFriends` -> `listBridgeFriends(appId)` and
  *     `steamBridgeInviteFriend` -> `sendBridgeInvite(appId, ordinal)`
  *     (`steam/bridge/inviteBridge.ts`), Phase 58 Plan 31, M-01 Direction A:
  *     the friend picker's list and invite channels. appId (`/^\d{1,10}$/`)
  *     and ordinal (non-negative integer) are validated here.
- *   - `steamGoOfflineCancel` -> `payAbandonedGuidedOffline('cancel')`
- *     (`macSteamOffline.ts`), 54-REVIEW WR-05 — the dialog's Cancel/close.
+ *   - `steamGoOfflineCancel` -> a no-op
+ *     (54-REVIEW WR-05 — the dialog's Cancel/close; Rust owns any owed go-online).
  *
  * Guided Steam-client install pair (Phase 34.4 Plan 02, REQ-34.4-04,
  * `deps.ipc.handle`, `main.ts:958-961`):
@@ -380,7 +380,7 @@ export function registerSteamAuthFlows(deps: SteamAuthFlowDeps): void {
   // validate; it only reads Mac Steam's state and arms the one-shot guided
   // restore. It never logs on.
   deps.ipc.handle('steamGoOfflineRetry', async () =>
-    deps.steamProcesses.macSteamOffline.checkGuidedOfflineReady()
+    deps.steamProcesses.macSteam.checkGuidedOfflineReady()
   )
 
   // Phase 58 Plan 31 (T-58-104): sidecar-only. Renderer input is untrusted, so
@@ -412,12 +412,10 @@ export function registerSteamAuthFlows(deps: SteamAuthFlowDeps): void {
     }
   )
 
-  // 54-REVIEW WR-05: sidecar-only, no renderer arguments. The guided dialog's
-  // Cancel/close: pays the goonline a ready-but-abandoned guided step owes.
-  // A no-op unless that step is still armed. It never logs on.
-  deps.ipc.handle('steamGoOfflineCancel', async () => {
-    deps.steamProcesses.macSteamOffline.payAbandonedGuidedOffline('cancel')
-  })
+  // The guided dialog's Cancel/close. Continue arms nothing in the sidecar any more (the Rust CM
+  // session owns the go-offline wrap and its owed record), so there is no goonline to pay: a
+  // no-op kept so the dialog's channel contract is unchanged.
+  deps.ipc.handle('steamGoOfflineCancel', async () => undefined)
 
   // ── Guided Steam-client install pair (REQ-34.4-04, main.ts:958-961) ───────
   deps.ipc.handle('steamClientSetupStart', async () => {

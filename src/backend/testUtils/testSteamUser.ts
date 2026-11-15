@@ -66,7 +66,7 @@ export function createInertTestSteamUser(
     logout: () => Promise.resolve(),
     getUserDetails: () => Promise.resolve(undefined),
     getCredentials: () => Promise.resolve(undefined),
-    releaseForShutdown: () => Promise.resolve('not-owed')
+    releaseForShutdown: () => Promise.resolve()
   }
   return { ...inert, ...overrides } as unknown as SteamUser
 }

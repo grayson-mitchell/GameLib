@@ -1921,9 +1921,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             clock: ctx.clock,
             platform: ctx.platform,
             config,
-            openExternal: requireHost(state).openExternal,
             paths: ctx.paths,
-            versioning: requireStoreRoot(state).versioning,
             aborts,
             sendFrontendMessage: requireHost(state).sendFrontendMessage,
             requestRustInvoke: requireHost(state).requestRustInvoke

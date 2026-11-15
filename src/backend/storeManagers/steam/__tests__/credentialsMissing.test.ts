@@ -72,25 +72,6 @@ jest.mock('steam-session', () => ({
 }))
 jest.mock('steam-user', () => jest.fn())
 
-// Phase 54 (54-03): every authenticated cold connect runs inside the Mac Steam
-// go-offline wrap. The default double is a pass-through that reports 'toggled';
-// individual tests make it reject with GuidedOfflineRequiredError.
-jest.mock('../macSteamOffline', () => {
-  class GuidedOfflineRequiredError extends Error {
-    cause: string
-    constructor(cause: string) {
-      super('guided')
-      this.name = 'GuidedOfflineRequiredError'
-      this.cause = cause
-    }
-  }
-  return {
-    withMacSteamOffline: jest.fn(),
-    GuidedOfflineRequiredError,
-    restoreMacSteamOnlineIfOwed: async () => 'not-owed'
-  }
-})
-
 import type { SteamUser, SteamUserDeps } from '../user'
 import { createTestSteamUser } from 'backend/testUtils/testSteamUser'
 import type { SteamStoresDeps } from '../library/installRoot'
@@ -121,8 +102,6 @@ beforeEach(() => {
   steamUser = createTestSteamUser(steamDeps as never)
   ;(steamDeps as unknown as { steamUser: SteamUser }).steamUser = steamUser
 })
-import { finishAuth, startQRLogin } from '../userSignIn'
-import { defined } from './fixtures/indexed'
 
 const CREDENTIALS_MISSING = 'credentialsMissing'
 
@@ -187,60 +166,6 @@ describe('credentialsMissing latch', () => {
   // Phase 49 (49-06): the sign-in / sign-out epoch hooks. A probe that began
   // before a sign-in must not re-latch afterwards (R2 concurrency edge).
   describe('sign-in epoch hooks', () => {
-    type Internals = {
-      acquireAuthenticatedWithToken: (
-        opts: unknown,
-        token: string
-      ) => Promise<unknown>
-    }
-    // No CM logon in these tests: the lease is refused (wrap refusal), which
-    // is the profile fallback path and still completes the sign-in.
-    const refuseLease = (internals: Internals) =>
-      jest
-        .spyOn(internals, 'acquireAuthenticatedWithToken')
-        .mockResolvedValue({ ok: false, reason: 'go-offline-required' })
-
-    it('finishAuth notes the sign-in after clearing credentialsMissing', async () => {
-      const internals = steamUser as unknown as Internals
-      refuseLease(internals)
-
-      await finishAuth(steamDeps, {
-        refreshToken: 'refresh-token',
-        accountName: 'Persona'
-      } as never)
-
-      expect(mockConfigStore.delete).toHaveBeenCalledWith(CREDENTIALS_MISSING)
-      expect(mockNoteSignInSucceeded).toHaveBeenCalledTimes(1)
-      expect(mockNoteSignInSucceeded).toHaveBeenCalledWith('steam')
-    })
-
-    it('the QR success path notes the sign-in', async () => {
-      const internals = steamUser as unknown as Internals
-      refuseLease(internals)
-      const handlers: Record<string, () => Promise<void> | void> = {}
-      const fakeSession = {
-        refreshToken: 'qr-refresh-token',
-        loginTimeout: 0,
-        startWithQR: jest
-          .fn()
-          .mockResolvedValue({ qrChallengeUrl: 'https://s.team/q/1' }),
-        once: jest.fn((event: string, cb: () => Promise<void> | void) => {
-          handlers[event] = cb
-        })
-      }
-      const { LoginSession } = jest.requireMock<{ LoginSession: jest.Mock }>(
-        'steam-session'
-      )
-      LoginSession.mockImplementation(() => fakeSession)
-
-      await startQRLogin(steamDeps)
-      await defined(handlers['authenticated'], 'authenticated handler')()
-
-      expect(mockConfigStore.delete).toHaveBeenCalledWith(CREDENTIALS_MISSING)
-      expect(mockNoteSignInSucceeded).toHaveBeenCalledTimes(1)
-      expect(mockNoteSignInSucceeded).toHaveBeenCalledWith('steam')
-    })
-
     it('logout notes the sign-out', async () => {
       await steamUser.logout()
 

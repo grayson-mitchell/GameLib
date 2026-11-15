@@ -14,7 +14,7 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Steam: 'Steam', Backend: 'Backend' }
 }))
 jest.mock('backend/utils', () => ({ sendGameStatusUpdate: jest.fn() }))
-jest.mock('../macSteamOffline', () => ({
+jest.mock('../macSteamClient', () => ({
   MAC_STEAM_OFFLINE_OWED_FILE: 'mac-steam-offline-owed.json'
 }))
 
@@ -362,7 +362,7 @@ describe('createRestartDeps', () => {
       appRuntime: createTestAppRuntime(),
       clock,
       paths: { appFolder: '/test/appFolder', userHome: '/test/home' },
-      macSteamOffline: { isSteamRunning, openUrlDetached },
+      macSteam: { isSteamRunning, openUrlDetached },
       launchRunGameId: () => Promise.resolve()
     })
     expect(deps.now()).toBe(5000)

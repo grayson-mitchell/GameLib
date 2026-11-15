@@ -112,23 +112,6 @@ jest.mock('../sidecarRpc', () => {
   }
 })
 
-// ── macSteamOffline — PARTIAL mock (54-13): real module, scriptable restore, so a quit
-// reaches the owed-goonline restore without firing any steam:// URL ──────────
-const mockRestoreMacSteamOnlineIfOwed = jest.fn()
-jest.mock('../../storeManagers/steam/macSteamOffline', () => {
-  const actual = jest.requireActual('../../storeManagers/steam/macSteamOffline')
-  return {
-    ...actual,
-    // The boot-built instance is real except its restore, so a quit or boot reaches the
-    // scripted restore without firing any steam:// URL.
-    createMacSteamOffline: (deps: unknown) => ({
-      ...actual.createMacSteamOffline(deps),
-      restoreMacSteamOnlineIfOwed: (...args: unknown[]) =>
-        mockRestoreMacSteamOnlineIfOwed(...args)
-    })
-  }
-})
-
 // ── axios — fix/steam-native-install-stability (33-05 live-gate gap): `init` now wires
 // the REAL `initOnlineMonitor()` (backend/online_monitor.ts), which -- now that the real
 // platformApi's `net.isOnline()` returns `true` -- immediately calls the real `pingSites()`,
@@ -498,9 +481,6 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     mockedCallAbortController.mockClear()
     mockedCallAllAbortControllers.mockClear()
     mockRequestRustInvoke.mockReset().mockResolvedValue(undefined)
-    mockRestoreMacSteamOnlineIfOwed
-      .mockReset()
-      .mockImplementation(() => Promise.resolve('not-owed'))
     warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
   })
 
@@ -605,9 +585,8 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     writeSend(input, 'quit-owed-1', 'quit', [])
     await flush()
 
-    // The Rust shell's exit hook (steamcm_dispatch.rs) pays the owed goonline: the sidecar issues no
-    // restore of its own on quit (79-39).
-    expect(mockRestoreMacSteamOnlineIfOwed).not.toHaveBeenCalled()
+    // The Rust shell's exit hook (steamcm_dispatch.rs) pays the owed goonline: the sidecar has no
+    // restore of its own (79-39, 79-40).
     expect(
       mockRequestRustInvoke.mock.calls.some(
         ([channel]) => channel === RUST_APP_EXIT
@@ -735,9 +714,6 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
           ([channel]) => channel === RUST_DIALOG_MESSAGE
         )
       ).toBe(true)
-      expect(mockRestoreMacSteamOnlineIfOwed).not.toHaveBeenCalledWith(
-        'shutdown'
-      )
     })
   })
 

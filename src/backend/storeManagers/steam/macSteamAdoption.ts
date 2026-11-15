@@ -31,8 +31,8 @@ import { RUST_STEAMFILES_READ_ACF } from 'common/types/sidecarTransport'
 import { invokeSteamFiles } from './localFiles/rustSteamFiles'
 import {
   MAC_STEAM_OFFLINE_OWED_FILE,
-  type MacSteamOffline
-} from './macSteamOffline'
+  type MacSteamClient
+} from './macSteamClient'
 
 /** Graceful quit is bounded; Steam is never killed. */
 export const RESTART_QUIT_TIMEOUT_MS = 30_000
@@ -274,12 +274,12 @@ export function createRestartDeps(deps: {
   requestRustInvoke: RustInvokeDeps['requestRustInvoke']
   clock: Clock
   paths: Pick<AppPaths, 'appFolder' | 'userHome'>
-  macSteamOffline: Pick<MacSteamOffline, 'isSteamRunning' | 'openUrlDetached'>
+  macSteam: Pick<MacSteamClient, 'isSteamRunning' | 'openUrlDetached'>
   launchRunGameId: () => Promise<unknown>
   sendFrontendMessage: StatusUpdateDeps['sendFrontendMessage']
   appRuntime: StatusUpdateDeps['appRuntime']
 }): RestartDeps {
-  const { clock, macSteamOffline } = deps
+  const { clock, macSteam } = deps
   return {
     readRunningAppId: () => {
       /* eslint-disable @typescript-eslint/no-require-imports */
@@ -296,8 +296,8 @@ export function createRestartDeps(deps: {
     isOfflineWrapOwed: () => {
       return existsSync(join(deps.paths.appFolder, MAC_STEAM_OFFLINE_OWED_FILE))
     },
-    isSteamRunning: () => macSteamOffline.isSteamRunning(),
-    openUrlDetached: (url) => macSteamOffline.openUrlDetached(url),
+    isSteamRunning: () => macSteam.isSteamRunning(),
+    openUrlDetached: (url) => macSteam.openUrlDetached(url),
     launchRunGameId: deps.launchRunGameId,
     emitStatus: (id) =>
       sendGameStatusUpdate(deps, {

@@ -1,27 +1,21 @@
-import type { LoginSession } from 'steam-session'
-
 // Sign-in state leaf (D-10, D-15): the single owner of the QR / credential
 // sign-in fields that used to be private statics on SteamUser. userSignIn.ts
 // reads and writes them through one boot-owned instance (D-05, D-66.3-13);
 // SteamUser.logout() resets it through resetSignInState().
 
 /**
- * The live sign-in session: a steam-session LoginSession (ts engine) or a Rust Web API flow
- * (GAMELIB_STEAMCM_SIGNIN=rust). The rust slot is mutable: `finalize` memoises the done-handling
- * so two polls never store the token twice, and `lastChallengeUrl` is the QR the window last drew.
+ * The live sign-in session: a Rust Web API flow id. The slot is mutable: `finalize` memoises the
+ * done-handling so two polls never store the token twice, and `lastChallengeUrl` is the QR the
+ * window last drew.
  */
-export type SignInSession =
-  | { kind: 'ts'; session: InstanceType<typeof LoginSession> }
-  | {
-      kind: 'rust'
-      flowId: string
-      lastChallengeUrl?: string
-      finalize?: Promise<string>
-    }
+export type SignInSession = {
+  flowId: string
+  lastChallengeUrl?: string
+  finalize?: Promise<string>
+}
 
 type SignInStatus = 'waiting' | 'done' | 'error'
 type SignInSessionState = { status: SignInStatus; username?: string }
-type CredSettleCallback = (result: { status: 'done' | 'error' }) => void
 
 export interface SteamSignInState {
   getSession(): SignInSession | null
@@ -32,9 +26,6 @@ export interface SteamSignInState {
   setQrLastLoggedStatus(next: SignInStatus | null): void
   getCredSessionState(): SignInSessionState
   setCredSessionState(next: SignInSessionState): void
-  addCredSettleCallback(cb: CredSettleCallback): void
-  /** Hands out the pending settle callbacks and leaves the list empty. */
-  takeCredSettleCallbacks(): CredSettleCallback[]
   /** Sign-out reset: every sign-in field back to its initial value. */
   resetSignInState(): void
 }
@@ -53,18 +44,8 @@ export function createSteamSignInState(opts?: {
   // attempt" -- reset alongside qrSessionState (startQRLogin, logout) so the
   // two fields can never drift into an incoherent pair.
   let qrLastLoggedStatus: SignInStatus | null = null
-  // Credential session completion state -- parallel to qrSessionState. Settled
-  // by the 'authenticated'/'error'/'timeout' listeners registered in
-  // startCredentialLogin's guard_required branch.
+  // Credential session completion state -- parallel to qrSessionState.
   let credSessionState: SignInSessionState = { status: 'waiting' }
-  // Resolve callbacks waiting for credSessionState to change from 'waiting'.
-  let credSettleCallbacks: CredSettleCallback[] = []
-
-  const takeCredSettleCallbacks = (): CredSettleCallback[] => {
-    const pending = credSettleCallbacks
-    credSettleCallbacks = []
-    return pending
-  }
 
   return {
     getSession: () => session,
@@ -83,20 +64,12 @@ export function createSteamSignInState(opts?: {
     setCredSessionState: (next) => {
       credSessionState = next
     },
-    addCredSettleCallback: (cb) => {
-      credSettleCallbacks.push(cb)
-    },
-    takeCredSettleCallbacks,
     resetSignInState: () => {
-      if (session?.kind === 'rust') opts?.cancelRustFlow?.(session.flowId)
+      if (session) opts?.cancelRustFlow?.(session.flowId)
       session = null
       qrSessionState = { status: 'waiting' }
       qrLastLoggedStatus = null
-      // Drain any pending credential session callbacks so callers don't hang
-      // indefinitely if logout occurs while waiting for a guard code.
-      const pendingCbs = takeCredSettleCallbacks()
       credSessionState = { status: 'error' }
-      for (const cb of pendingCbs) cb({ status: 'error' })
     }
   }
 }

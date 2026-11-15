@@ -26,7 +26,7 @@ export function createOpenExternal(deps: {
   return {
     // Options used to be dropped: the Rust opener is a plain /usr/bin/open, which activates the
     // target app. Callers passing { activate: false } are steam/games.ts rungameid launches,
-    // bridge/helperProcess.ts steam://open/main, and macSteamOffline go-offline. On darwin those
+    // bridge/helperProcess.ts steam://open/main. On darwin those
     // (steam: scheme only) spawn a detached `open -g`; non-steam URLs still go through the Rust
     // scheme check.
     async openExternal(url, options) {

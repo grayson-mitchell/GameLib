@@ -329,7 +329,7 @@ describe('SteamUser on the Rust engine', () => {
   })
 
   it('releaseForShutdown resolves without any rustInvoke and refuses later acquires', async () => {
-    await expect(steamUser.releaseForShutdown()).resolves.toBe('not-owed')
+    await expect(steamUser.releaseForShutdown()).resolves.toBeUndefined()
     expect(calls).toHaveLength(0)
 
     const lease = await steamUser.acquireAuthenticated({

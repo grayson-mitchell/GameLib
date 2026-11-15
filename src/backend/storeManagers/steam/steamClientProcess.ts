@@ -32,12 +32,12 @@
  *     that value survives a Steam crash, and a stale PID that the OS later
  *     reuses for an unrelated process would pin the poller in "waiting"
  *     forever (the image-name match makes PID reuse harmless).
- *   - darwin: `pgrep -x steam_osx` (same probe `macSteamOffline.ts` uses).
+ *   - darwin: `pgrep -x steam_osx` (same probe `macSteamClient.ts` uses).
  *   - linux: `pgrep -x steam`.
  *
  * Two-profile rule (CLAUDE.md "Fake-HOME isolation"): the probe reads no user
  * profile and passes no `env`, exactly like the `pgrep` probe in
- * `macSteamOffline.ts`; there is no real-profile arm.
+ * `macSteamClient.ts`; there is no real-profile arm.
  *
  * Sidecar exit contract: nothing runs at import; each probe is one
  * short-lived child bounded by `PROBE_TIMEOUT_MS` (the runner kills it on

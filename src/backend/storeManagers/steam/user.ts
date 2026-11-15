@@ -16,7 +16,6 @@ import { RustCmSession } from './rustSession'
 import { isCredentialRefusal, reportLogonVerdict } from './logonVerdict'
 import type { SendFrontendMessage } from '../../host/frontendMessage'
 import type { AnonymousClient } from './anonymousClient'
-import type { MacSteamRestoreOutcome } from './macSteamOffline'
 import { platform } from 'process'
 import type { SteamUserData } from 'common/types/steam'
 import type { SignInProbeOutcome } from 'common/signInState'
@@ -369,12 +368,12 @@ export class SteamUser {
    * sidecar any more, so this only fences new logons and drops the TS-held leases. Unlike logout()
    * it clears no token and no stored session: the user stays signed in.
    */
-  releaseForShutdown(): Promise<MacSteamRestoreOutcome> {
+  releaseForShutdown(): Promise<void> {
     this.shuttingDown = true
     // No IPC: the shell's stdin-EOF / exit hook (79-16) owns the Rust session teardown and
     // the owed go-online, and a rustInvoke here would race the closing transport.
     this.rust.dropLeases()
-    return Promise.resolve('not-owed')
+    return Promise.resolve()
   }
 }
 

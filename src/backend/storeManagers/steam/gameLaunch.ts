@@ -231,7 +231,7 @@ export async function launch(
             requestRustInvoke: steamGame.deps.requestRustInvoke,
             clock: steamGame.deps.clock,
             paths: steamGame.deps.paths,
-            macSteamOffline: steamGame.deps.steamProcesses.macSteamOffline,
+            macSteam: steamGame.deps.steamProcesses.macSteam,
             sendFrontendMessage: steamGame.deps.sendFrontendMessage,
             appRuntime: steamGame.deps.appRuntime,
             launchRunGameId: () =>

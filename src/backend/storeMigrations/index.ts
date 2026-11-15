@@ -27,9 +27,6 @@ export const STORE_MIGRATIONS: Readonly<Record<string, readonly Migration[]>> =
     // baseline v1 = the pre-engine hand-rolled `version: 1`; codec in
     // storeVersioning/sharedRedistLedgerFile.ts
     'steam_bridge/shared-redists': [],
-    // baseline v1 = the pre-engine `{since, by, pid}`; codec in
-    // storeVersioning/macSteamOfflineOwedFile.ts
-    'steam/mac-steam-offline-owed': [],
     // baseline v1 = the pre-engine `{kind, id, wineserverBin, dxvk?}`; codec in
     // storeVersioning/engineMarkerFile.ts
     'engine/gamelib-engine-marker': [],

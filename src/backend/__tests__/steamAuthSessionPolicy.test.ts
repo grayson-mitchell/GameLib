@@ -7,7 +7,7 @@
  * none of them, `.relog(` is gone, and `allowLogon: true` has exactly one owner.
  *
  * What it does NOT prove: runtime behaviour (authSessionLifecycle.test.ts,
- * macSteamOfflineWrap.test.ts and steamStartupKeyringDeferral.test.ts cover
+ * steamStartupKeyringDeferral.test.ts covers
  * that), nor that the Friends list stays signed in -- only the Mac UAT can.
  *
  * Every match runs on COMMENT-STRIPPED source. Known limitation: a trailing
@@ -103,7 +103,6 @@ const LAUNCH_PATH = [
   `${S}bridge/launchTarget.ts`,
   `${S}platformCapture.ts`,
   ANON,
-  `${S}macSteamOffline.ts`,
   `${S}authTrigger.ts`
 ]
 

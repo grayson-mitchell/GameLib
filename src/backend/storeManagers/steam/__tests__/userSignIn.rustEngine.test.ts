@@ -9,10 +9,6 @@ jest.mock('backend/logger', () => ({
   logDebug: jest.fn(),
   LogPrefix: { Steam: 'Steam', Backend: 'Backend' }
 }))
-jest.mock('steam-session', () => ({
-  LoginSession: jest.fn(),
-  EAuthTokenPlatformType: { SteamClient: 1 }
-}))
 
 import * as logger from 'backend/logger'
 import { createSteamSignInState } from '../userSignInState'

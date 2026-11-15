@@ -350,14 +350,12 @@ function createTestSteamProcesses(
   overrides: Partial<ManagerDeps['steamProcesses']> = {}
 ): ManagerDeps['steamProcesses'] {
   return {
-    // Inert, not unscripted: every boot pays the owed goonline through this instance.
-    macSteamOffline:
-      overrides.macSteamOffline ?? createInertSteamProcesses().macSteamOffline,
+    macSteam: overrides.macSteam ?? createInertSteamProcesses().macSteam,
     drm: unscriptedMembers<ManagerDeps['steamProcesses']['drm']>(
       'steam drm',
       overrides.drm ?? {}
     ),
-    // Inert, not unscripted, like macSteamOffline: every boot starts the poller and every stdin
+    // Inert, not unscripted, like macSteam: every boot starts the poller and every stdin
     // EOF stops it (quick 261111-7wo).
     runningPoll:
       overrides.runningPoll ?? createInertSteamProcesses().runningPoll,
@@ -376,17 +374,10 @@ export function createInertSteamProcesses(
   overrides: Partial<ManagerDeps['steamProcesses']> = {}
 ): ManagerDeps['steamProcesses'] {
   return {
-    macSteamOffline: overrides.macSteamOffline ?? {
-      withMacSteamOffline: async (connect) => ({
-        value: await connect('not-darwin'),
-        wrap: 'not-darwin'
-      }),
-      restoreMacSteamOnlineIfOwed: () => Promise.resolve('not-darwin'),
+    macSteam: overrides.macSteam ?? {
       checkGuidedOfflineReady: () => Promise.resolve({ status: 'not-macos' }),
-      payAbandonedGuidedOffline: () => false,
       isSteamRunning: () => Promise.resolve(false),
-      openUrlDetached: () => undefined,
-      onlineConfirmSettled: () => Promise.resolve()
+      openUrlDetached: () => undefined
     },
     drm:
       overrides.drm ??
