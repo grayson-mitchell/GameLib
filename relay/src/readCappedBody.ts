@@ -13,7 +13,9 @@ export async function readCappedBody(
     if (done) break
     total += value.byteLength
     if (total > max) {
-      await reader.cancel().catch(() => undefined)
+      // Fire and forget: a source whose cancel() never settles must not
+      // hold the response.
+      void reader.cancel().catch(() => undefined)
       return { ok: false }
     }
     chunks.push(value)
