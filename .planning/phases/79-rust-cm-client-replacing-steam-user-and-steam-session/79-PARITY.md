@@ -251,6 +251,8 @@ Not approved. Open: TS capture parity (blocked by the reference), decided below 
 
 Status: APPROVED (Mac path) (operator, 2026-11-15; DV-79-12 rejected and fixed, re-measured below).
 
+**Shipping state (2026-11-15, UAT-B item 14):** the Mac path is OFF by default (`GAMELIB_STEAM_MAC_PATH=on` opts in, commit 3b7417c05) because its helper makes Friends show "playing Spacewar" (AppID 480) on each Refresh; todo `2026-11-15-mac-steam-path-shows-playing-spacewar.md`. The parity approval above stands for when it is re-enabled; until then macOS Refresh uses the CM path (Refresh section).
+
 The Mac path (D-14) is meant to differ from the CM path, so it is compared against spike 084's set, not against the TS reference. Measured 2026-11-15 on this account with Mac Steam running and signed in to the stored account. The helper ran from `public/bin/arm64/darwin/steam-bridge-helper` (the one `appPaths.steamBridgeHelperPath` resolves to); the older copy under `build/bin/` predates `--steam-owned-apps` and exits 6. Real-profile arm: the `steamcm_mac_owned_apps` op was run through `gamelib-steamcm-cli` single-shot with the operator's real HOME (the helper must reach Steam's pipe), the stored SteamID read from the steam store config; the harness in `meta/` always uses a fake HOME and cannot do this, so the run used a scratchpad script that is not committed. Anonymous CM logon only, no signed-in logon. Counts only.
 
 | Measure | Count |
