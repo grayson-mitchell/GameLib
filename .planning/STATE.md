@@ -4,14 +4,14 @@ milestone: v0.10
 milestone_name: Foundations
 status: executing
 stopped_at: Phase 78 context gathered
-last_updated: "2026-11-15T08:50:57.004Z"
+last_updated: "2026-11-15T08:54:41.828Z"
 last_activity: 2026-11-15
 progress:
-  total_phases: 24
+  total_phases: 25
   completed_phases: 18
   total_plans: 445
-  completed_plans: 430
-  percent: 75
+  completed_plans: 431
+  percent: 72
 ---
 
 # Project State
@@ -73,7 +73,7 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 ## Current Position
 
 Phase: 79 (rust-cm-client-replacing-steam-user-and-steam-session) — EXECUTING
-Plan: 40 of 44
+Plan: 41 of 44
 Status: Ready to execute
 Last activity: 2026-11-15
 
@@ -277,6 +277,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 Entries for phases before 44 live in STATE-HISTORY.md § Roadmap Evolution archive (2026-10-15).
 
 - Phase 79 added 2026-11-14: **Rust CM client replacing steam-user and steam-session.** The operator asked what comes after Phase 75 in the sidecar migration. Nothing was on the roadmap: 76–78 are v0.9 audit debt, and the CM-client work existed only as spikes 071c–085. The operator asked for a phase. `Depends on` hand-corrected from Phase 78 (positional) to Phase 75. `**Goal:**` hand-written, and the summary-list line was added by hand. Gated on spike 085's final results (its frontmatter says VALIDATED, but Results was still a placeholder).
+- Phase 80 added 2026-11-15: **Steam install, uninstall and update polling state machines in Rust.** The operator asked what comes after Phase 79 in the Rust migration; nothing was on the roadmap, and `79-CONTEXT.md` deferred this as the next sidecar-retirement slice. The operator asked to add it as Phase 80. The SDK set `Depends on` to Phase 79, which is correct. `**Goal:**` hand-written, and the summary-list line was added by hand.
 - Phase 75 added 2026-11-09: **Steam local file formats in Rust.** The operator asked what comes after Phase 73 in the Node-to-Rust migration. No third slice was planned. Recommended order: finish 73, then 74; next, Steam's local file formats (this phase), because after 73 Rust writes ACFs but TypeScript still reads them; then a Rust-backed process runner folded into Phase 66 part 3; and a spike now on a Rust CM client to replace `steam-user`/`steam-session`, the critical path to retiring the sidecar. The operator agreed. `Depends on` hand-corrected from Phase 74 (positional) to Phase 73. `**Goal:**` hand-written, and the summary-list line was added by hand.
 - Phase 74 added 2026-11-08: **Steam game updates.** The operator ran `do todo` on `2026-11-07-implement-steam-game-updates.md` (major, macos, live-gate). It was too big for a quick task: two spikes, PICS buildid detection, and a delta updater in the depot pipeline. Phase 73 is about to port that pipeline to Rust and delete the TypeScript one, so the operator chose a new phase **after 73** over folding it into 73, shipping a full-re-download version before it, or running spikes only. The InstallApp-on-installed spike and the live stale-bridge check can run before 73 lands. The SDK set `Depends on` to Phase 73, which is correct this time. `**Goal:**` hand-written; the todo moved to `todos/completed/` with a Closure section pointing here. **Planned 2026-11-12:** 13 plans in 6 waves (74-01..74-13); plan-checker passed first time with 2 non-blocking warnings. Planned without a UI-SPEC (operator choice). Wave 6 (74-13 live gate) needs the operator with Mac Steam signed in and a stale bridge fixture from spike 070. `state.planned-phase` not run (banned here); recorded by hand.
 - Phase 73 added 2026-11-07: **Steam depot download pipeline in Rust.** The operator asked to look at moving the depot pipeline to Rust as a phase. Spikes 067a/067b had already shown it buys no speed (network-bound at ~18 MiB/s) and ~8% of one core, and the memory problem was fixed in Node; asked for the motivation, the operator chose **retiring the sidecar**, the revisit trigger 067c names. `Depends on` hand-corrected from Phase 72 (positional, unrelated) to Phase 63, whose migration pattern it reuses. `**Goal:**` hand-written. Applied by hand per the add-phase workflow.

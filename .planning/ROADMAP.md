@@ -171,6 +171,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 77: Runtime hardening from the v0.9 review debt** — 0 plans; not started
 - [ ] **Phase 78: Verification records and test health after v0.9** — 0 plans; not started
 - [ ] **Phase 79: Rust CM client replacing steam-user and steam-session** — 44 plans in 21 waves; planned (spike 085 gate satisfied)
+- [ ] **Phase 80: Steam install, uninstall and update polling state machines in Rust** — 0 plans; not started
 - [ ] **Phase 47: Migrate aggregated store search from CheapShark to IsThereAnyDeal** — 13 plans; ITAD gates closed 2026-11-12; planned 2026-11-14 (moved from v0.8)
 
 ## Phase Details
@@ -1587,7 +1588,7 @@ Plans:
 **Goal:** Steam's CM network is reached from Rust, and `steam-user` and `steam-session` are deleted. This is the critical path to retiring the Node sidecar: Phases 63, 73 and 75 moved scanners, the depot pipeline and local file formats, but CM auth, the anonymous public-data client, owned apps, manifest request codes, depot keys and redeem still live in Node (`steam/user.ts`, `userSignIn.ts`, `userSignInState.ts`, `userRedeem.ts`, `anonymousClient.ts`, `depot/planModel.ts`). Crate: steam-vent (spike 071c winner). Prior evidence: 077 (a second CM session collides with LogonSessionReplaced unless logonIDs differ), 080 (the Rust stack builds on macOS, Windows MSVC/GNU and Linux), 081 (three sessions coexist without kicks), 082 (one process, TLS providers), 073 (Rust owned-apps parity), 084 (owned apps from the running Mac Steam client). **Gate:** spike 085 (long-lived session across network drops and sleep/wake) must have final results before planning. Its frontmatter reads VALIDATED but its Results section was a placeholder on 2026-11-14, and its research already shows steam-vent's heartbeat failures never reach the caller, so GameLib likely owns reconnect. Reuse Phase 63's pattern: a Tauri-free crate in the `src-tauri/` workspace, `rustInvoke` with TypeScript signatures unchanged, a parity harness, a dev-only fallback flag, then delete the TypeScript clients and both npm packages. Open questions for discuss-phase: QR / credentials / SteamGuard sign-in on the Web-API path and refresh-token continuity, so existing users stay signed in; the macOS go-offline wrap that keeps Mac Steam's Friends list signed in; reconnect and session-lifetime ownership; whether the owned-apps fetch and artwork enrichment deferred from Phase 75 move here; and whether the install/uninstall/update polling state machines are a later slice. `STEAM-STACK.md` freezes `steam-user`/`steam-session`, so this phase must amend it. Came from the operator's request on 2026-11-14, after asking what follows Phase 75 in the sidecar migration.
 **Requirements**: TBD
 **Depends on:** Phase 75
-**Plans:** 39/44 plans executed
+**Plans:** 40/44 plans executed
 
 Plans:
 
@@ -1680,7 +1681,7 @@ Plans:
 
 **Wave 17** *(blocked on Wave 16 completion)*
 
-- [ ] 79-40-PLAN.md — Delete steam-session sign-in, TS wrap, steam-user depot code
+- [x] 79-40-PLAN.md — Delete steam-session sign-in, TS wrap, steam-user depot code
 
 **Wave 18** *(blocked on Wave 17 completion)*
 
@@ -1697,3 +1698,13 @@ Plans:
 **Wave 21** *(blocked on Wave 20 completion)*
 
 - [ ] 79-44-PLAN.md — Post-deletion live smoke and CI legs
+
+### Phase 80: Steam install, uninstall and update polling state machines in Rust
+
+**Goal:** The Steam install, uninstall and update polling state machines run in Rust, and their TypeScript implementations are deleted. This is the next sidecar-retirement slice after Phase 79, which listed it as a deferred idea in `79-CONTEXT.md`. Scope today, under `src/backend/storeManagers/steam/library/`: `installPolling.ts` + `installPollOnce.ts` (ACF install loop, grace/max/no-activity/manifest-gone ticks, native-handoff upgrade, restart-hold release), `uninstallPolling.ts`, `updatePollOnce.ts` (Phase 74 D-11 update completion: StateFlags bit 4 never completes alone, build-change completion, quiet end on no activity), `pollState.ts`, `runningPoll.ts` (running-app probe, Windows `RunningAppID` via reg.exe), and the ACF readers `acfState.ts` / `acfUpdateState.ts`, which can lean on the Phase 75 `gamelib-steamfiles` crate. About 2,800 lines. Reuse Phase 63's pattern: a Tauri-free crate or module in the `src-tauri/` workspace, `rustInvoke` with TypeScript signatures unchanged, a parity harness over the existing poll tests, a dev-only fallback flag, then delete the TypeScript loops. Open questions for discuss-phase: whether progress events (`liveProgress`, `steamDownloadProgress`) and the restart hold move with the loops or stay behind a callback; who owns timers once the loop leaves the sidecar (the sidecar exit contract stops applying to them); whether the bridge/bottle install-state paths (`bridgeInstallState.ts`) are in scope; and how the per-tick `ManagerDeps` side effects (library writes, notifications, `invalidateSteamUpdateState`) cross the boundary. Came from the operator's request on 2026-11-15, after asking what follows Phase 79 in the Rust migration.
+**Requirements**: TBD
+**Depends on:** Phase 79
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 80 to break down)
