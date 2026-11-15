@@ -178,7 +178,7 @@ precondition: the title is not installed, enough disk, not routed by a known fix
 
 ### 24. Sign out, then QR sign-in
 expected: After signing out and signing in by QR, `gamelib.log` has `Steam QR poll: status ... -> done` and `Steam auth complete (rust sign-in)`, and no `unknownFlow` appears anywhere in the sign-in window.
-result: pending
+result: pass — sign-out 06:38:59 (`Logging user out from Steam`, vault refresh token wiped). QR attempt 06:39:15: `Steam QR poll: status none -> waiting`, operator approved on the phone, `waiting -> done` and `Steam auth complete (rust sign-in)` at 06:39:32; `[steamcm] rust steamcm_licenses` + `steamcm_personas`, shell `CM logon mode=authenticated reason=login`, token re-stored. No `unknownFlow`, no restart of the QR flow. Stored `userData.username` real (7 chars, not the fallback), `isLoggedIn` true.
 precondition: Steam mobile app available; no flag: the D-18 flags were deleted in 79-41 and sign-in is Rust-only. Action: operator signs out, then scans the QR code; Claude greps.
 
 ### 25. Quit: no orphan, Mac Steam still online
