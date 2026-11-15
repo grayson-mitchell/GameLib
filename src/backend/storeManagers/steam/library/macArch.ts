@@ -68,19 +68,7 @@ export async function verifyMacArchGroundTruth(
   installPath: string,
   source: AcfSource
 ): Promise<void> {
-  if (source !== 'native') return
-  if (!isMac) return
-
-  const { steamLibraryStore, steamMetadataStore } = deps.stores.steam
-  const existing = steamMetadataStore.get(appId)
-  if (
-    existing?.mac_arch_verified === true ||
-    (existing?.mac_arch === '32' && existing?.mac_arch_source !== 'known-fix')
-  ) {
-    return
-  }
-  const wasKnownFix32 =
-    existing?.mac_arch_source === 'known-fix' && existing?.mac_arch === '32'
+  if (!macArchCheckNeeded(deps, appId, source)) return
 
   const binaryPath = locateMachOBinary(installPath)
   if (!binaryPath) {
@@ -99,6 +87,43 @@ export async function verifyMacArchGroundTruth(
     )
     return
   }
+
+  await applyMacArchVerdict(deps, appId, verdict)
+}
+
+/**
+ * The early-return gate of verifyMacArchGroundTruth: a native Mac install whose arch is not
+ * already verified and is not already a Mach-O '32' (a curated known-fix '32' does not skip).
+ * Rust asks this through the `installed` ack's `macArchCheck` (Phase 80 R6).
+ */
+export function macArchCheckNeeded(
+  deps: ManagerDeps,
+  appId: string,
+  source: AcfSource
+): boolean {
+  if (source !== 'native') return false
+  if (!isMac) return false
+  const existing = deps.stores.steam.steamMetadataStore.get(appId)
+  return !(
+    existing?.mac_arch_verified === true ||
+    (existing?.mac_arch === '32' && existing?.mac_arch_source !== 'known-fix')
+  )
+}
+
+/**
+ * The post-verdict half of the ground-truth check: persists the verdict, pushes the library
+ * entry, reports known-fix contradictions and the 32-bit case, and prompts i386 recovery.
+ * Called by verifyMacArchGroundTruth and by the Rust `macArchVerdict` state event handler.
+ */
+export async function applyMacArchVerdict(
+  deps: ManagerDeps,
+  appId: string,
+  verdict: '32' | '64'
+): Promise<void> {
+  const { steamLibraryStore, steamMetadataStore } = deps.stores.steam
+  const existing = steamMetadataStore.get(appId)
+  const wasKnownFix32 =
+    existing?.mac_arch_source === 'known-fix' && existing?.mac_arch === '32'
 
   steamMetadataStore.set(appId, {
     ...(existing ?? { art_cover: '', art_square: '', extra: { reqs: [] } }),
