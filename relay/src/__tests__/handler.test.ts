@@ -8,6 +8,7 @@ import worker from '../index'
 import { utcDayKey } from '../limits'
 import {
   entriesForPr,
+  readReport,
   setOutcome,
   shouldRefreshBody,
   upsertReport
@@ -94,6 +95,7 @@ async function harness(envOver: Partial<RelayEnv> = {}, script: Script = {}) {
     path?: string
     contentType?: string
     body?: string
+    stream?: ReadableStream<Uint8Array>
     ip?: string
     headers?: Record<string, string>
   }) =>
@@ -104,8 +106,12 @@ async function harness(envOver: Partial<RelayEnv> = {}, script: Script = {}) {
         'CF-Connecting-IP': o.ip ?? '198.51.100.1',
         ...o.headers
       },
-      body: o.method === 'GET' ? undefined : (o.body ?? JSON.stringify(valid()))
-    })
+      body:
+        o.method === 'GET'
+          ? undefined
+          : (o.stream ?? o.body ?? JSON.stringify(valid())),
+      ...(o.stream ? { duplex: 'half' } : {})
+    } as RequestInit)
   return {
     db,
     calls,
@@ -213,6 +219,106 @@ describe('edge', () => {
       expect((await res.json()).status).toBe('rejected')
     }
     expect(h.calls).toHaveLength(0)
+  })
+})
+
+function streamOf(parts: Uint8Array[]): ReadableStream<Uint8Array> {
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      for (const p of parts) controller.enqueue(p)
+      controller.close()
+    }
+  })
+}
+
+const chunked = (text: string, n: number): Uint8Array[] => {
+  const all = new TextEncoder().encode(text)
+  const size = Math.ceil(all.length / n)
+  return Array.from({ length: n }, (_v, i) =>
+    all.slice(i * size, (i + 1) * size)
+  )
+}
+
+describe('edge: capped body (DEBT-02)', () => {
+  it('413s a chunked body over the cap with no row and no outbound call', async () => {
+    const h = await harness()
+    const log = jest.spyOn(console, 'log').mockImplementation(() => undefined)
+    try {
+      const stream = streamOf(
+        chunked(JSON.stringify({ ...valid(), pad: 'x'.repeat(3000) }), 5)
+      )
+      const res = await h.send({ stream })
+      expect(res.status).toBe(413)
+      expect(await res.json()).toEqual({
+        status: 'rejected',
+        detail: 'too large'
+      })
+      expect(h.calls).toHaveLength(0)
+      expect(log).toHaveBeenCalledWith('relay: body over cap -> 413')
+      const v = valid()
+      expect(
+        await readReport(h.db, { appId: v.appId, key: v.key, op: v.op })
+      ).toBeNull()
+    } finally {
+      log.mockRestore()
+    }
+  })
+
+  it('accepts a chunked body under the cap like a string body', async () => {
+    const ref = await harness()
+    const expected = await ref.send({})
+    const h = await harness()
+    const res = await h.send({
+      stream: streamOf(chunked(JSON.stringify(valid()), 3))
+    })
+    expect(res.status).toBe(expected.status)
+    expect([411, 413, 400, 415]).not.toContain(res.status)
+    expect((await res.json()).status).toBe((await expected.json()).status)
+  })
+
+  it('413s when Content-Length lies under the cap', async () => {
+    const h = await harness()
+    const log = jest.spyOn(console, 'log').mockImplementation(() => undefined)
+    try {
+      const real = h.request({
+        stream: streamOf(chunked('x'.repeat(3000), 3))
+      })
+      // Node's Request keeps a caller-set content-length header on a stream
+      // body in some versions and drops it in others, so force the lie.
+      const lying = new Proxy(real, {
+        get(t, prop) {
+          if (prop === 'headers') {
+            return {
+              get: (n: string) =>
+                n.toLowerCase() === 'content-length' ? '10' : t.headers.get(n)
+            }
+          }
+          const v = Reflect.get(t, prop, t)
+          return typeof v === 'function' ? v.bind(t) : v
+        }
+      })
+      const res = await handleReport(lying as Request, h.deps)
+      expect(res.status).toBe(413)
+    } finally {
+      log.mockRestore()
+    }
+  })
+
+  it('answers 503 (never rejects) when the stream errors', async () => {
+    const h = await harness()
+    const log = jest.spyOn(console, 'log').mockImplementation(() => undefined)
+    try {
+      const stream = new ReadableStream<Uint8Array>({
+        pull(controller) {
+          controller.error(new Error('boom'))
+        }
+      })
+      const res = await h.send({ stream })
+      expect(res.status).toBe(503)
+      expect((await res.json()).status).toBe('unavailable')
+    } finally {
+      log.mockRestore()
+    }
   })
 })
 

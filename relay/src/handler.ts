@@ -13,6 +13,7 @@ import {
   getInstallationToken
 } from './githubApp'
 import { createRepoClient } from './githubFiles'
+import { readCappedBody } from './readCappedBody'
 import {
   DEFAULT_DAILY_CREATE_CAP,
   DEFAULT_IP_HOURLY_LIMIT,
@@ -121,10 +122,13 @@ async function handle(
   if (declared > KNOWN_FIX_REPORT_MAX_BYTES) {
     return respond(413, { status: 'rejected', detail: 'too large' })
   }
-  const text = await request.text()
-  if (new TextEncoder().encode(text).length > KNOWN_FIX_REPORT_MAX_BYTES) {
+  // DEBT-02 (57 WR-09): bound every body; Content-Length can be absent or lie.
+  const body = await readCappedBody(request, KNOWN_FIX_REPORT_MAX_BYTES)
+  if (!body.ok) {
+    console.log('relay: body over cap -> 413')
     return respond(413, { status: 'rejected', detail: 'too large' })
   }
+  const text = body.text
   let json: unknown
   try {
     json = JSON.parse(text)
