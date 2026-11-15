@@ -402,9 +402,13 @@ impl<B: CmBackend> SessionHandle<B> {
                     Ok(Err(e)) => e,
                     Err(_) => CmError::Timeout,
                 },
-                k = kill.wait_for(|k| k.is_some()) => {
-                    return Err(k.ok().and_then(|k| k.clone()).unwrap_or(OpFailure::Replaced));
-                }
+                k = kill.wait_for(|k| k.is_some()) => match k {
+                    // An explicit verdict (Replaced, LeaseUnknown on logout, ShuttingDown).
+                    Ok(v) => return Err(v.clone().unwrap_or(OpFailure::Replaced)),
+                    // The sender was dropped with no verdict: the connection was torn down for a
+                    // rebuild. That is a dead link, not a takeover, so take the retry-once path.
+                    Err(_) => CmError::Closed,
+                },
             };
             match classify(&err, idempotent) {
                 FailureAction::Terminal(f) => return Err(f),
@@ -622,6 +626,7 @@ impl<B: CmBackend, W: LogonWrap> Actor<B, W> {
                 self.creds = None;
                 self.logon_failure = None;
                 self.abandon_pending(Refusal::NotSignedIn);
+                self.signal_kill(OpFailure::LeaseUnknown);
                 self.close_conn("logout");
                 let _ = reply.send(());
             }
@@ -630,6 +635,7 @@ impl<B: CmBackend, W: LogonWrap> Actor<B, W> {
                 self.leases.clear();
                 self.idle_deadline = None;
                 self.abandon_pending(Refusal::ShuttingDown);
+                self.signal_kill(OpFailure::ShuttingDown);
                 self.close_conn("shutdown");
                 let wrap = self.wrap.clone();
                 tokio::spawn(async move {
@@ -743,6 +749,14 @@ impl<B: CmBackend, W: LogonWrap> Actor<B, W> {
         }
         for w in self.canary_waiters.drain(..) {
             let _ = w.send(false);
+        }
+    }
+
+    /// Give in-flight ops an explicit verdict before the connection goes. Without one, a dropped
+    /// kill sender reads as a dead link and the op retries after a rebuild.
+    fn signal_kill(&self, f: OpFailure) {
+        if let Some(k) = &self.kill {
+            let _ = k.send(Some(f));
         }
     }
 
@@ -1794,6 +1808,61 @@ mod tests {
         tokio::time::sleep(secs(30)).await;
         assert_eq!(b.connect_count(), 2);
         assert!(h.status().await.connected);
+    }
+
+    /// An op whose first attempt never finishes on its own, and whose retries succeed at once.
+    fn hanging_then_ok(
+        h: &H,
+        lease: LeaseId,
+        runs: &Arc<AtomicUsize>,
+    ) -> tokio::task::JoinHandle<Result<(), OpFailure>> {
+        let (h, runs) = (h.clone(), runs.clone());
+        tokio::spawn(async move {
+            h.run_op(lease, true, secs(600), move |_c| {
+                let first = runs.fetch_add(1, Ordering::SeqCst) == 0;
+                Box::pin(async move {
+                    if first {
+                        tokio::time::sleep(secs(10_000)).await;
+                    }
+                    Ok(())
+                })
+            })
+            .await
+        })
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn an_op_in_flight_during_a_rebuild_is_retried_not_reported_replaced() {
+        // Review 79 A/CR-01: a rebuild tore the connection down by dropping the kill sender, and
+        // in-flight ops read that as Replaced ("another client took the session").
+        let b = Arc::new(FakeBackend::new());
+        let (h, jump) = sleepy(b.clone());
+        let (l, _) = acq(&h).await.unwrap();
+        let runs = Arc::new(AtomicUsize::new(0));
+        let op = hanging_then_ok(&h, l, &runs);
+        tokio::time::sleep(secs(12)).await;
+        jump.store(365, Ordering::SeqCst);
+        b.inject_job_failure(1, CmError::Timeout);
+        assert_eq!(op.await.unwrap(), Ok(()));
+        assert_eq!(runs.load(Ordering::SeqCst), 2);
+        assert_eq!(b.connect_count(), 2);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn an_op_in_flight_at_logout_or_shutdown_gets_that_verdict() {
+        let (_b, h) = setup();
+        let (l, _) = acq(&h).await.unwrap();
+        let op = hanging_then_ok(&h, l, &Arc::new(AtomicUsize::new(0)));
+        tokio::time::sleep(secs(1)).await;
+        h.logout().await;
+        assert_eq!(op.await.unwrap(), Err(OpFailure::LeaseUnknown));
+
+        let (_b, h) = setup();
+        let (l, _) = acq(&h).await.unwrap();
+        let op = hanging_then_ok(&h, l, &Arc::new(AtomicUsize::new(0)));
+        tokio::time::sleep(secs(1)).await;
+        h.shutdown(secs(1)).await;
+        assert_eq!(op.await.unwrap(), Err(OpFailure::ShuttingDown));
     }
 
     #[tokio::test(start_paused = true)]
