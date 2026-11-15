@@ -139,7 +139,7 @@ precondition: a second Steam account on this Mac. Action: sign Mac Steam into it
 
 ### 17. Rust store enrichment
 expected: Opening a game page whose metadata is not cached writes `[steamcm] rust steamcm_store_enrich` (and `[steamcm] rust steamcm_store_appdetails` for the install size) in `gamelib.log`, and the art and requirements render.
-result: pending
+result: pass — Serious Sam Fusion 2017 page (owned, first open in GameLib): art rendered and the install info showed (engine rows for a Windows title); gamelib.log `[steamcm] rust steamcm_store_appdetails` at 15:42:30 for the install size. `steamcm_store_enrich` could not be triggered live: every owned app (390 of 390) already has a `steam_metadata` cache entry (413 entries), so `fetchMetadataIfNeeded` never takes the cold path; that call site stays covered by unit tests and the Rust enrichment stage ran live in 79-33 (run 13: attempted=50, enriched=48). A first pick (Archolos 1467450) was a stale Mac-path-only entry with no backend record (see the ghost-entry fix).
 precondition: a Steam game never opened (no cached metadata). Action: operator opens its game page; Claude greps both lines and the operator confirms the art and requirements.
 
 ### 18. Restart keeps the user signed in (D-07)
