@@ -195,7 +195,7 @@ export function compareValues(
   return cls ? { kind: 'explained', cls } : { kind: 'unexplained' }
 }
 
-export interface CategoryTally {
+interface CategoryTally {
   inputs: number
   equal: number
   explained: Partial<Record<DiffClass, number>>
@@ -212,7 +212,7 @@ export function newReport(): SweepReport {
   return r
 }
 
-export function record(
+function record(
   report: SweepReport,
   category: SweepCategory,
   outcome: Outcome

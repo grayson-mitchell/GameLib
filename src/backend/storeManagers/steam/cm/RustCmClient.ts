@@ -34,14 +34,14 @@ export interface RustCmLease {
   licenses: SteamCmLicense[]
 }
 
-export type SteamCmError = Error & {
+type SteamCmError = Error & {
   eresult?: number
   steamcmKind: SteamCmOpFailure['kind']
   purchaseResultDetails?: number
   packageList?: Record<string, string>
 }
 
-export function toSteamCmError(
+function toSteamCmError(
   channel: RustSteamCmClientChannel,
   failure: SteamCmOpFailure
 ): SteamCmError {
@@ -62,7 +62,7 @@ export function unwrapSteamCm<T>(
   return r.result
 }
 
-export function steamIdString(id: SteamIdLike): string {
+function steamIdString(id: SteamIdLike): string {
   return typeof id === 'string' ? id : id.getSteamID64()
 }
 

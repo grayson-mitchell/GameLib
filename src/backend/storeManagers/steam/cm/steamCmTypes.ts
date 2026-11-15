@@ -40,7 +40,7 @@ export type RustSteamCmClientChannel =
   | typeof RUST_STEAMCM_STORE_APPDETAILS
   | typeof RUST_STEAMCM_STORE_ENRICH
 
-export type SteamCmFailureKind =
+type SteamCmFailureKind =
   | 'leaseUnknown'
   | 'timeout'
   | 'eresult'
@@ -59,7 +59,7 @@ export type SteamCmFailureKind =
   | 'fallback'
   | 'macFallback'
 
-export type MacOwnedFallbackReason =
+type MacOwnedFallbackReason =
   | 'not-macos'
   | 'helper-missing'
   | 'helper-failed'
@@ -89,25 +89,25 @@ export interface SteamCmLicense {
   package_id?: number
 }
 
-export interface SteamCmProductInfoResult {
+interface SteamCmProductInfoResult {
   apps?: Record<number, { appinfo?: unknown; missingToken?: boolean }>
   packages?: Record<number, unknown>
   unknownApps?: number[]
   unknownPackages?: number[]
 }
 
-export interface SteamCmDepotKeyResult {
+interface SteamCmDepotKeyResult {
   eresult: number
   keyHex: string
 }
 
-export interface SteamCmRedeemResult {
+interface SteamCmRedeemResult {
   eresult: number
   purchaseResultDetails: number
   packageList: Record<string, string>
 }
 
-export interface SteamCmOwnedAppsResult {
+interface SteamCmOwnedAppsResult {
   app_count: number
   apps: Array<{
     appid: number
@@ -119,17 +119,17 @@ export interface SteamCmOwnedAppsResult {
 }
 
 /** `steamcm_mac_owned_apps` result: games only, plus demos from Steam's own set. */
-export interface MacOwnedAppsResult {
+interface MacOwnedAppsResult {
   owned: SteamCmOwnedAppsResult
   demos: Array<{ appid: number; name: string; playtime_forever: number }>
   subscribedCount: number
 }
 
-export interface SteamCmPersonasResult {
+interface SteamCmPersonasResult {
   personas: Record<string, { player_name?: string } & Record<string, unknown>>
 }
 
-export interface SteamCmCaptureSummary {
+interface SteamCmCaptureSummary {
   scoped: number
   captured: number
   skipped: number
@@ -162,14 +162,14 @@ export interface RefreshResult {
 }
 
 /** `steamcm_store_enrich` result; `entry`/`game` are absent for `noData`. */
-export interface StoreEnrichResult {
+interface StoreEnrichResult {
   kind: 'delisted' | 'enriched' | 'noData'
   entry?: SteamMetadataCacheEntry
   game?: SteamGameInfo
 }
 
 /** `steamcm_store_appdetails` result (`StoreDetails` in the crate). */
-export interface StoreDetails {
+interface StoreDetails {
   delisted: boolean
   data: Record<string, unknown> | null
   storageBytes: number | null

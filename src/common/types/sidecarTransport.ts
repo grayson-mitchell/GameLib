@@ -931,7 +931,7 @@ export const RUST_STEAMCM_CHANNELS = [
   RUST_STEAMCM_WRAP_RESTORE_IF_OWED
 ] as const
 
-export type RustSteamCmChannel = (typeof RUST_STEAMCM_CHANNELS)[number]
+type RustSteamCmChannel = (typeof RUST_STEAMCM_CHANNELS)[number]
 
 /** The set of channel names `requestRustInvoke()` is allowed to target. */
 export type RustInvokeChannel = (typeof RUST_INVOKE_CHANNELS)[number]

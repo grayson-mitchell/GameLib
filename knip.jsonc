@@ -8,8 +8,10 @@
     "meta/rerender/rerender.perf.tsx",
     "meta/rerender/seam.tsx",
     // (src/frontend/index.tsx is the vite input via index.html and is found by the vite plugin.)
-    // (src/sidecar/index.ts, the `build:sidecar` esbuild entry, is found from package.json scripts.
-    // The .cjs meta runners are likewise found from package.json scripts, so they are not listed.)
+    // The .cjs meta runners are found from package.json scripts, so they are not listed.
+    // src/sidecar/index.ts is the `build:sidecar` esbuild entry: meta/buildSidecar.ts names it as a
+    // string, which knip cannot follow (the old `esbuild` script it was found from is gone).
+    "src/sidecar/index.ts",
     // src/preload is imported by src/frontend/index.tsx (tauriAttach, tauriTransport, api/*) and
     // tauri injects nothing separately; its own jest project covers __tests__. No extra entry needed.
 
@@ -43,6 +45,7 @@
     "meta/rebrandUpstreamCatalogs.ts",
     "meta/releaseTags.ts",
     "meta/signMachOResources.ts",
+    "meta/steamcmCaptureFixtures.ts",
     "meta/trayIconVariants.ts",
     "meta/verifyRunnerBundle.ts",
     "meta/verifyUpdaterSigningKey.ts",

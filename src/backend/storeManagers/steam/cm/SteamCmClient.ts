@@ -9,11 +9,8 @@ import type SteamUserLib from 'steam-user'
 import type { RawContentServer, SteamUserDepotClient } from '../depot/planModel'
 import type { SteamCmLicense } from './steamCmTypes'
 
-export type { RawContentServer, SteamCmLicense }
-
 /** What `getProductInfo` resolves with (steam-user's own shape). */
-export type ProductInfoResult = SteamUserLib.ProductInfo
-export type LicenseShape = SteamCmLicense
+type ProductInfoResult = SteamUserLib.ProductInfo
 
 /** A SteamID object or its 64-bit decimal string, as steam-user accepts. */
 export type SteamIdLike = { getSteamID64(): string } | string
@@ -60,6 +57,6 @@ export interface SteamCmClient {
 
 // Compile-time only (no module-scope statement: the sidecar's floating-promise guard walks this graph).
 type AssertTrue<T extends true> = T
-export type SteamUserFitsSteamCmClient = AssertTrue<
+type SteamUserFitsSteamCmClient = AssertTrue<
   SteamUserDepotClient extends SteamCmClient ? true : false
 >

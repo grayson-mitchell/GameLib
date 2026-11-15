@@ -13,7 +13,7 @@ export const ITAD_FRESH_MS = 60 * 60 * 1000
 export const ITAD_GID_TTL_MS = 30 * 24 * 60 * 60 * 1000
 /** D-10: an unmapped (null) appid is retried after this long. */
 export const ITAD_GID_MISS_TTL_MS = 24 * 60 * 60 * 1000
-export const ITAD_PRICES_ENTRY_CAP = 500
+const ITAD_PRICES_ENTRY_CAP = 500
 const RETRY_AFTER_DEFAULT_MS = 60_000
 const RETRY_AFTER_MIN_MS = 1_000
 const RETRY_AFTER_MAX_MS = 15 * 60_000
@@ -77,15 +77,6 @@ export function writePriceEntry<T>(
     if (oldest !== undefined) store.delete(oldest)
   }
   store.set(INDEX_KEY, { data: index, fetchedAt: now })
-}
-
-export function writeGidEntry(
-  store: Pick<EntryStore<string | null>, 'set'>,
-  appId: string,
-  gid: string | null,
-  now: number
-): void {
-  store.set(gidCacheKey(appId), { data: gid, fetchedAt: now })
 }
 
 export function isGidEntryFresh(

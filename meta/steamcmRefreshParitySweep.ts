@@ -193,13 +193,13 @@ export function compareField(
   return cls ? { kind: 'explained', cls } : { kind: 'unexplained' }
 }
 
-export interface FieldTally {
+interface FieldTally {
   inputs: number
   equal: number
   explained: Partial<Record<RefreshDiffClass, number>>
   unexplained: number
 }
-export type StageReport = Record<RefreshField, FieldTally>
+type StageReport = Record<RefreshField, FieldTally>
 export interface RefreshReport {
   'post-refresh': StageReport
   'at-rest': StageReport
@@ -228,7 +228,7 @@ export function newReport(): RefreshReport {
   }
 }
 
-export function record(
+function record(
   report: RefreshReport,
   stage: Stage,
   field: RefreshField,
@@ -297,7 +297,7 @@ export interface GameLike {
   [k: string]: unknown
 }
 
-export interface Projection {
+interface Projection {
   name: unknown
   art: Record<string, unknown>
   metacritic: Record<string, unknown>
@@ -309,7 +309,7 @@ export interface Projection {
 const HANDLED_TOP = new Set(['app_name', 'title', 'extra', 'metacritic_score'])
 const HANDLED_EXTRA = new Set(['steamPlaytimeMinutes', 'steamLastPlayed'])
 
-export function project(g: GameLike): Projection {
+function project(g: GameLike): Projection {
   const art: Record<string, unknown> = {}
   const metacritic: Record<string, unknown> = {}
   const other: Record<string, unknown> = {}
