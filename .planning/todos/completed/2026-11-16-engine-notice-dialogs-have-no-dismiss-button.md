@@ -16,3 +16,7 @@ The refusal dialog shown for `[engine-notice] tag=crossover-required-drm` ("This
 ## Candidate directions (none chosen)
 
 - Give the dialog an explicit OK button where it is raised in engineDialogs.ts, and check every sibling tag.
+
+## Resolution
+
+Fixed by quick 261116-han (`6f5fd58e6`): DialogHandler adds a default OK button to any backend `showDialog` frame sent without buttons, which covers this dialog and the 23 other buttonless backend call sites. Not live-checked in the running app.

@@ -605,6 +605,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261114-op0 | Uninstall dialog: "Erase settings and remove log" toggle now ON by default; DLC uninstalls (toggle hidden) never pass the erase flag. | 2026-11-14 | 4c9a8ee4a | prettier clean, tsc clean, DotsMenu.disclosure 14/14; not live-checked | [261114-op0-erase-settings-toggle-on-by-default-in-u](./quick/261114-op0-erase-settings-toggle-on-by-default-in-u/) |
 | fast | Pointed the Settings Documentation link (/wiki route) and backend wikiLink at the GameLib wiki instead of Heroic's. | 2026-11-15 | 7098c4960 | ✅ | — |
 | 261115-tk8 | Removed six dead Heroic-era link channels (openWeblate, openSupportPage, openDiscordLink, openGithubSponsorsPage, openWikiLink, openReleases) and their URL constants + GITHUB_API; kept 3 Heroic wiki help links with intent comments; Support.md/FUNDING.yml now Ko-fi only; PRIVACY.md link list updated. | 2026-11-15 | 6254354b2 | Verified on a clean worktree of HEAD: 25 suites / 1532 tests, find-deadcode PASS | [261115-tk8-remove-dead-weblate-plumbing](./quick/261115-tk8-remove-dead-weblate-plumbing/) |
+| 261116-han | Backend dialogs sent without buttons (engine-notice crossover-required-drm + 23 other call sites) now get a default OK button in DialogHandler; renderer `buttons: []` callers unchanged. Todo closed. | 2026-11-16 | 6f5fd58e6 | Jest 13/13 (2 new), prettier/eslint/tsc clean; not live-checked | [261116-han-engine-notice-dialogs-have-no-dismiss-bu](./quick/261116-han-engine-notice-dialogs-have-no-dismiss-bu/) |
 
 ## Deferred Items
 
