@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v0.10
 milestone_name: Foundations
-status: ready_to_plan
-stopped_at: Phase 79 complete (44/44) — ready to discuss Phase 80
-last_updated: 2026-11-15T21:19:09.830Z
+status: planning
+stopped_at: Phase 80 context gathered
+last_updated: "2026-11-15T21:49:31.747Z"
 last_activity: 2026-11-15
 progress:
   total_phases: 25
@@ -781,9 +781,9 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-15T18:26:59.646Z
-Stopped at: Phase 78 context gathered
-Resume file: None
+Last session: 2026-11-15T21:49:31.739Z
+Stopped at: Phase 80 context gathered
+Resume file: .planning/phases/80-steam-install-uninstall-and-update-polling-state-machines-in/80-CONTEXT.md
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
 
