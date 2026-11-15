@@ -1,0 +1,45 @@
+{
+  "name": "install-grace-expiry",
+  "description": "No manifest ever appears and no native depot run is in flight: the poll stops at GRACE_TICKS (20) with a terminal done.",
+  "machine": "install",
+  "platform": "linux",
+  "start": {
+    "appId": "1000",
+    "title": "Test Game",
+    "roots": {
+      "native": ["/fake/steam"],
+      "bottle": "/fake/bottle/steamapps",
+      "bridge": "/fake/bridge/steamapps"
+    },
+    "source": "native"
+  },
+  "ticks": [
+    {
+      "acf": {
+        "/fake/steam/steamapps": null
+      },
+      "nativeInFlight": false
+    },
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {}
+  ]
+}

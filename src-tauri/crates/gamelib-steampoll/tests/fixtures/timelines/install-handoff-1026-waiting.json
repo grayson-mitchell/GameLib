@@ -1,0 +1,37 @@
+{
+  "name": "install-handoff-1026-waiting",
+  "description": "A native handoff at StateFlags 1026 shows steam-waiting-for-restart and fires the restart-Steam notice once.",
+  "machine": "install",
+  "platform": "darwin",
+  "start": {
+    "appId": "1000",
+    "title": "Test Game",
+    "roots": {
+      "native": ["/fake/steam"],
+      "bottle": "/fake/bottle/steamapps",
+      "bridge": "/fake/bridge/steamapps"
+    },
+    "source": "native",
+    "isNativeHandoff": true
+  },
+  "ticks": [
+    {
+      "acf": {
+        "/fake/steam/steamapps": {
+          "appid": "1000",
+          "name": "Test Game",
+          "installdir": "TestGame",
+          "stateFlags": 1026,
+          "sizeOnDisk": "1048576",
+          "buildid": "100",
+          "bytesDownloaded": "0",
+          "bytesToDownload": "0",
+          "bytesStaged": "0",
+          "bytesToStage": "0"
+        }
+      }
+    },
+    {},
+    {}
+  ]
+}

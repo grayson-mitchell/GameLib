@@ -1,0 +1,113 @@
+[
+  {
+    "frontend": {
+      "channel": "gameStatusUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "installing"
+        }
+      ]
+    }
+  },
+  {
+    "frontend": {
+      "channel": "progressUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "installing",
+          "progress": {
+            "percent": 10,
+            "bytes": "100 B",
+            "eta": ""
+          }
+        }
+      ]
+    }
+  },
+  {
+    "frontend": {
+      "channel": "gameStatusUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "installing"
+        }
+      ]
+    }
+  },
+  {
+    "frontend": {
+      "channel": "progressUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "installing",
+          "progress": {
+            "percent": 20,
+            "bytes": "200 B",
+            "eta": "00:00:24",
+            "downSpeed": 0.000031789143880208336
+          }
+        }
+      ]
+    }
+  },
+  {
+    "state": {
+      "kind": "installed",
+      "appId": "1000",
+      "source": "bottle",
+      "installPath": "/fake/bottle/steamapps/common/TestGame",
+      "sizeOnDisk": "1048576",
+      "buildid": "100"
+    }
+  },
+  {
+    "frontend": {
+      "channel": "gameStatusUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "done"
+        }
+      ]
+    }
+  },
+  {
+    "notify": {
+      "title": "Test Game",
+      "body": "Installation Finished",
+      "key": "notify.install.finished",
+      "default": "Installation Finished"
+    }
+  },
+  {
+    "notify": {
+      "title": "Test Game",
+      "body": "Installed without depot 2001. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+      "key": "steam.download.notify.depotSkipped",
+      "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+      "params": {
+        "depots": "2001"
+      }
+    }
+  },
+  {
+    "notify": {
+      "title": "Test Game",
+      "body": "Restart Steam to finish installing Test Game",
+      "key": "steam.waitingForSteam.notify",
+      "default": "Restart Steam to finish installing {{game}}",
+      "params": {
+        "game": "Test Game"
+      }
+    }
+  }
+]

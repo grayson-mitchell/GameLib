@@ -1,0 +1,79 @@
+{
+  "name": "update-bit4-alone-never-completes",
+  "description": "StateFlags 4 alone at the starting build never completes an update: it ends quietly after STEAM_REQUEST_NO_ACTIVITY_TICKS.",
+  "machine": "install",
+  "platform": "linux",
+  "start": {
+    "appId": "1000",
+    "title": "Test Game",
+    "roots": {
+      "native": ["/fake/steam"],
+      "bottle": "/fake/bottle/steamapps",
+      "bridge": "/fake/bridge/steamapps"
+    },
+    "source": "native",
+    "delegatedToSteamClient": true,
+    "awaitingUpdate": {
+      "fromBuild": "100",
+      "targetBuild": "200",
+      "installAppRetry": {
+        "attempts": 0
+      }
+    }
+  },
+  "ticks": [
+    {
+      "acf": {
+        "/fake/steam/steamapps": {
+          "appid": "1000",
+          "name": "Test Game",
+          "installdir": "TestGame",
+          "stateFlags": 4,
+          "sizeOnDisk": "1048576",
+          "buildid": "100",
+          "targetBuildId": "100"
+        }
+      }
+    },
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {}
+  ]
+}

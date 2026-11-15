@@ -1,0 +1,27 @@
+[
+  {
+    "frontend": {
+      "channel": "gameStatusUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "done"
+        }
+      ]
+    }
+  },
+  {
+    "frontend": {
+      "channel": "steamRequestNotice",
+      "args": [
+        {
+          "appId": "1000",
+          "title": "Test Game",
+          "kind": "uninstall-not-started",
+          "seq": 1
+        }
+      ]
+    }
+  }
+]

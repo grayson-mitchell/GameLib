@@ -1,0 +1,69 @@
+{
+  "name": "update-quiet-end-no-activity",
+  "description": "No manifest and no activity for 40 ticks: the update poll ends quietly (updateDone not completed, done).",
+  "machine": "install",
+  "platform": "linux",
+  "start": {
+    "appId": "1000",
+    "title": "Test Game",
+    "roots": {
+      "native": ["/fake/steam"],
+      "bottle": "/fake/bottle/steamapps",
+      "bridge": "/fake/bridge/steamapps"
+    },
+    "source": "native",
+    "delegatedToSteamClient": true,
+    "awaitingUpdate": {
+      "fromBuild": "100",
+      "targetBuild": "200"
+    }
+  },
+  "ticks": [
+    {
+      "acf": {
+        "/fake/steam/steamapps": null
+      }
+    },
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {}
+  ]
+}

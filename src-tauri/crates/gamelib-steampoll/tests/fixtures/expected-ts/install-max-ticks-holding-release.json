@@ -1,0 +1,52 @@
+[
+  {
+    "frontend": {
+      "channel": "gameStatusUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "installing",
+          "context": "steam-waiting-for-restart"
+        }
+      ]
+    }
+  },
+  {
+    "file": {
+      "op": "clear",
+      "appId": "1000",
+      "record": null
+    }
+  },
+  {
+    "state": {
+      "kind": "installed",
+      "appId": "1000",
+      "source": "native",
+      "installPath": "/fake/steam/steamapps/common/TestGame",
+      "sizeOnDisk": "1048576",
+      "buildid": "100"
+    }
+  },
+  {
+    "frontend": {
+      "channel": "gameStatusUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "done"
+        }
+      ]
+    }
+  },
+  {
+    "notify": {
+      "title": "Test Game",
+      "body": "Installation Finished",
+      "key": "notify.install.finished",
+      "default": "Installation Finished"
+    }
+  }
+]

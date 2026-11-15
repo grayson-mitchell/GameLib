@@ -1,0 +1,27 @@
+[
+  {
+    "file": {
+      "op": "clear",
+      "appId": "1000",
+      "record": null
+    }
+  },
+  {
+    "state": {
+      "kind": "installIncomplete",
+      "appId": "1000"
+    }
+  },
+  {
+    "frontend": {
+      "channel": "gameStatusUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "done"
+        }
+      ]
+    }
+  }
+]

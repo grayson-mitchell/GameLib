@@ -1,0 +1,40 @@
+{
+  "name": "uninstall-bottle-forced-windows-cleared",
+  "description": "A bottle-source uninstall confirmed absent clears the forced-Windows-via-bottle verdict (forcedWindowsViaBottleCleared) before completing.",
+  "machine": "uninstall",
+  "platform": "darwin",
+  "start": {
+    "appId": "1000",
+    "title": "Test Game",
+    "roots": {
+      "native": ["/fake/steam"],
+      "bottle": "/fake/bottle/steamapps",
+      "bridge": "/fake/bridge/steamapps"
+    },
+    "source": "bottle"
+  },
+  "ticks": [
+    {
+      "acf": {
+        "/fake/bottle/steamapps": {
+          "appid": "1000",
+          "name": "Test Game",
+          "installdir": "TestGame",
+          "stateFlags": 2048,
+          "sizeOnDisk": "1048576",
+          "buildid": "100",
+          "bytesDownloaded": "0",
+          "bytesToDownload": "0",
+          "bytesStaged": "0",
+          "bytesToStage": "0"
+        }
+      }
+    },
+    {
+      "acf": {
+        "/fake/bottle/steamapps": null
+      }
+    },
+    {}
+  ]
+}

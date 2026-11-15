@@ -1,0 +1,121 @@
+[
+  {
+    "frontend": {
+      "channel": "gameStatusUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "installing"
+        }
+      ]
+    }
+  },
+  {
+    "frontend": {
+      "channel": "progressUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "installing",
+          "progress": {
+            "percent": 10,
+            "bytes": "97.66 KiB",
+            "eta": "00:00:00",
+            "downSpeed": 2
+          }
+        }
+      ]
+    }
+  },
+  {
+    "frontend": {
+      "channel": "gameStatusUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "installing"
+        }
+      ]
+    }
+  },
+  {
+    "frontend": {
+      "channel": "progressUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "installing",
+          "progress": {
+            "percent": 40,
+            "bytes": "390.63 KiB",
+            "eta": "00:00:00",
+            "downSpeed": 3
+          }
+        }
+      ]
+    }
+  },
+  {
+    "frontend": {
+      "channel": "gameStatusUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "installing"
+        }
+      ]
+    }
+  },
+  {
+    "frontend": {
+      "channel": "progressUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "installing",
+          "progress": {
+            "percent": 0,
+            "bytes": "0 B",
+            "eta": ""
+          }
+        }
+      ]
+    }
+  },
+  {
+    "frontend": {
+      "channel": "gameStatusUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "installing"
+        }
+      ]
+    }
+  },
+  {
+    "frontend": {
+      "channel": "progressUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "installing",
+          "progress": {
+            "percent": 99,
+            "bytes": "976.56 KiB",
+            "eta": "",
+            "downSpeed": 1
+          }
+        }
+      ]
+    }
+  }
+]

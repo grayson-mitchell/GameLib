@@ -1,0 +1,44 @@
+{
+  "name": "install-delegated-cancel",
+  "description": "The Downloads Cancel on a Steam-owned install stops the wait and reverts the status with a done; later ticks are silent.",
+  "machine": "install",
+  "platform": "linux",
+  "start": {
+    "appId": "1000",
+    "title": "Test Game",
+    "roots": {
+      "native": ["/fake/steam"],
+      "bottle": "/fake/bottle/steamapps",
+      "bridge": "/fake/bridge/steamapps"
+    },
+    "source": "native",
+    "delegatedToSteamClient": true
+  },
+  "ticks": [
+    {
+      "acf": {
+        "/fake/steam/steamapps": null
+      }
+    },
+    {
+      "acf": {
+        "/fake/steam/steamapps": {
+          "appid": "1000",
+          "name": "Test Game",
+          "installdir": "TestGame",
+          "stateFlags": 1042,
+          "sizeOnDisk": "1048576",
+          "buildid": "100",
+          "bytesDownloaded": "100",
+          "bytesToDownload": "1000",
+          "bytesStaged": "0",
+          "bytesToStage": "0"
+        }
+      }
+    },
+    {
+      "cancelDelegated": true
+    },
+    {}
+  ]
+}

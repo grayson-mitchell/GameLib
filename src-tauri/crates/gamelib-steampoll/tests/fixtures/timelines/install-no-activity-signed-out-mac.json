@@ -1,0 +1,65 @@
+{
+  "name": "install-no-activity-signed-out-mac",
+  "description": "A delegated poll gets no activity within STEAM_REQUEST_NO_ACTIVITY_TICKS (40): done plus the install-not-started toast notice.",
+  "machine": "install",
+  "platform": "darwin",
+  "start": {
+    "appId": "1000",
+    "title": "Test Game",
+    "roots": {
+      "native": ["/fake/steam"],
+      "bottle": "/fake/bottle/steamapps",
+      "bridge": "/fake/bridge/steamapps"
+    },
+    "source": "native",
+    "delegatedToSteamClient": true
+  },
+  "ticks": [
+    {
+      "acf": {
+        "/fake/steam/steamapps": null
+      }
+    },
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {}
+  ]
+}

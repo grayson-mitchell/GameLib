@@ -1,0 +1,48 @@
+{
+  "name": "uninstall-copy-survives",
+  "description": "The native copy is removed while a bottle copy survives: uninstalled with a survivor, status done and the copy-survives notice.",
+  "machine": "uninstall",
+  "platform": "linux",
+  "start": {
+    "appId": "1000",
+    "title": "Test Game",
+    "roots": {
+      "native": ["/fake/steam"],
+      "bottle": "/fake/bottle/steamapps",
+      "bridge": "/fake/bridge/steamapps"
+    },
+    "source": "native"
+  },
+  "ticks": [
+    {
+      "acf": {
+        "/fake/steam/steamapps": {
+          "appid": "1000",
+          "name": "Test Game",
+          "installdir": "TestGame",
+          "stateFlags": 2048,
+          "sizeOnDisk": "1048576",
+          "buildid": "100",
+          "bytesDownloaded": "0",
+          "bytesToDownload": "0",
+          "bytesStaged": "0",
+          "bytesToStage": "0"
+        },
+        "/fake/bottle/steamapps": {
+          "appid": "1000",
+          "name": "Test Game",
+          "installdir": "TestGame",
+          "stateFlags": 4,
+          "sizeOnDisk": "1048576",
+          "buildid": "100"
+        }
+      }
+    },
+    {
+      "acf": {
+        "/fake/steam/steamapps": null
+      }
+    },
+    {}
+  ]
+}

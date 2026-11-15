@@ -1,0 +1,32 @@
+{
+  "name": "install-bridge-finishing",
+  "description": "A bridge install whose manifest lands reads as finishing (steam-bridge-finishing), not done, and fires no Installation Finished notice; the installer owns completion.",
+  "machine": "install",
+  "platform": "darwin",
+  "start": {
+    "appId": "1000",
+    "title": "Test Game",
+    "roots": {
+      "native": ["/fake/steam"],
+      "bottle": "/fake/bottle/steamapps",
+      "bridge": "/fake/bridge/steamapps"
+    },
+    "source": "bridge"
+  },
+  "ticks": [
+    {
+      "acf": {
+        "/fake/bridge/steamapps": {
+          "appid": "1000",
+          "name": "Test Game",
+          "installdir": "TestGame",
+          "stateFlags": 4,
+          "sizeOnDisk": "1048576",
+          "buildid": "100"
+        }
+      },
+      "bridgeFinalized": false
+    },
+    {}
+  ]
+}

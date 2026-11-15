@@ -1,0 +1,55 @@
+{
+  "name": "rearm-arm",
+  "description": "A persisted hold whose recorded Steam process is still the live one is re-armed (resuming the elapsed ticks); when Steam later exits the install completes.",
+  "machine": "rearm",
+  "platform": "linux",
+  "start": {
+    "appId": "1000",
+    "title": "Test Game",
+    "roots": {
+      "native": ["/fake/steam"],
+      "bottle": "/fake/bottle/steamapps",
+      "bridge": "/fake/bridge/steamapps"
+    }
+  },
+  "store": {
+    "restartHold": {
+      "1000": {
+        "pids": [
+          {
+            "pid": 500,
+            "startToken": "tokA"
+          }
+        ],
+        "recordedAt": 1699999994000,
+        "macNativeRoute": false,
+        "skippedDepots": []
+      }
+    }
+  },
+  "ticks": [
+    {
+      "acf": {
+        "/fake/steam/steamapps": {
+          "appid": "1000",
+          "name": "Test Game",
+          "installdir": "TestGame",
+          "stateFlags": 4,
+          "sizeOnDisk": "1048576",
+          "buildid": "100"
+        }
+      },
+      "steamPids": [500],
+      "startTokens": {
+        "500": "tokA"
+      }
+    },
+    {},
+    {},
+    {
+      "steamPids": []
+    },
+    {},
+    {}
+  ]
+}

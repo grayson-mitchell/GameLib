@@ -1,0 +1,56 @@
+{
+  "name": "install-progress-nettop",
+  "description": "On a macOS native poll the live monitor reading supplies bytes/speed/eta while the ACF sits frozen at 0; 100% is capped at 99.",
+  "machine": "install",
+  "platform": "darwin",
+  "start": {
+    "appId": "1000",
+    "title": "Test Game",
+    "roots": {
+      "native": ["/fake/steam"],
+      "bottle": "/fake/bottle/steamapps",
+      "bridge": "/fake/bridge/steamapps"
+    },
+    "source": "native"
+  },
+  "ticks": [
+    {
+      "acf": {
+        "/fake/steam/steamapps": {
+          "appid": "1000",
+          "name": "Test Game",
+          "installdir": "TestGame",
+          "stateFlags": 1042,
+          "sizeOnDisk": "1048576",
+          "buildid": "100",
+          "bytesDownloaded": "0",
+          "bytesToDownload": "1000000",
+          "bytesStaged": "0",
+          "bytesToStage": "0"
+        }
+      },
+      "monitor": {
+        "bytesDone": 100000,
+        "bytesTotal": 1000000,
+        "speedBytesPerSec": 2097152
+      }
+    },
+    {
+      "monitor": {
+        "bytesDone": 400000,
+        "bytesTotal": 1000000,
+        "speedBytesPerSec": 3145728
+      }
+    },
+    {
+      "monitor": null
+    },
+    {
+      "monitor": {
+        "bytesDone": 1000000,
+        "bytesTotal": 1000000,
+        "speedBytesPerSec": 1048576
+      }
+    }
+  ]
+}

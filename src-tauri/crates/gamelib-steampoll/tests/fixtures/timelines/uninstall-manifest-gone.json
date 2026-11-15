@@ -1,0 +1,24 @@
+{
+  "name": "uninstall-manifest-gone",
+  "description": "The manifest is already gone on the first tick: the uninstall completes immediately.",
+  "machine": "uninstall",
+  "platform": "linux",
+  "start": {
+    "appId": "1000",
+    "title": "Test Game",
+    "roots": {
+      "native": ["/fake/steam"],
+      "bottle": "/fake/bottle/steamapps",
+      "bridge": "/fake/bridge/steamapps"
+    },
+    "source": "native"
+  },
+  "ticks": [
+    {
+      "acf": {
+        "/fake/steam/steamapps": null
+      }
+    },
+    {}
+  ]
+}

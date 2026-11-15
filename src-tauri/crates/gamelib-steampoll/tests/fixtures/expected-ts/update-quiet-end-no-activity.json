@@ -1,0 +1,34 @@
+[
+  {
+    "frontend": {
+      "channel": "gameStatusUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "installing",
+          "managedBySteam": true
+        }
+      ]
+    }
+  },
+  {
+    "state": {
+      "kind": "updateDone",
+      "appId": "1000",
+      "completed": false
+    }
+  },
+  {
+    "frontend": {
+      "channel": "gameStatusUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "done"
+        }
+      ]
+    }
+  }
+]

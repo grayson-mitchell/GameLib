@@ -1,0 +1,27 @@
+{
+  "name": "running-windows-missing-value",
+  "description": "On Windows a missing RunningAppID value (reg query fails) reads as 0.",
+  "machine": "running",
+  "platform": "win32",
+  "start": {
+    "appId": "1000",
+    "title": "Test Game",
+    "roots": {
+      "native": ["/fake/steam"],
+      "bottle": "/fake/bottle/steamapps",
+      "bridge": "/fake/bridge/steamapps"
+    }
+  },
+  "ticks": [
+    {
+      "running": null
+    },
+    {
+      "running": 500
+    },
+    {
+      "running": null
+    },
+    {}
+  ]
+}

@@ -1,0 +1,42 @@
+[
+  {
+    "frontend": {
+      "channel": "gameStatusUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "uninstalling"
+        }
+      ]
+    }
+  },
+  {
+    "state": {
+      "kind": "uninstalled",
+      "appId": "1000",
+      "source": "native",
+      "survivor": null
+    }
+  },
+  {
+    "frontend": {
+      "channel": "gameStatusUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "done"
+        }
+      ]
+    }
+  },
+  {
+    "notify": {
+      "title": "Test Game",
+      "body": "Uninstalled",
+      "key": "notify.uninstalled",
+      "default": "Game Uninstalled"
+    }
+  }
+]

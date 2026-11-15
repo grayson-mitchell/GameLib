@@ -1,0 +1,28 @@
+{
+  "name": "running-one-playing-one-done",
+  "description": "Exactly one playing when the running app starts and one done when it stops.",
+  "machine": "running",
+  "platform": "darwin",
+  "start": {
+    "appId": "1000",
+    "title": "Test Game",
+    "roots": {
+      "native": ["/fake/steam"],
+      "bottle": "/fake/bottle/steamapps",
+      "bridge": "/fake/bridge/steamapps"
+    }
+  },
+  "ticks": [
+    {
+      "running": 0
+    },
+    {
+      "running": 730
+    },
+    {},
+    {
+      "running": 0
+    },
+    {}
+  ]
+}

@@ -1,0 +1,74 @@
+{
+  "name": "update-build-change-completes",
+  "description": "Update activity then the build changing to the target with bit 4 set completes the update (updateDone completed).",
+  "machine": "install",
+  "platform": "linux",
+  "start": {
+    "appId": "1000",
+    "title": "Test Game",
+    "roots": {
+      "native": ["/fake/steam"],
+      "bottle": "/fake/bottle/steamapps",
+      "bridge": "/fake/bridge/steamapps"
+    },
+    "source": "native",
+    "delegatedToSteamClient": true,
+    "awaitingUpdate": {
+      "fromBuild": "100",
+      "targetBuild": "200",
+      "installAppRetry": {
+        "attempts": 0
+      }
+    }
+  },
+  "ticks": [
+    {
+      "acf": {
+        "/fake/steam/steamapps": {
+          "appid": "1000",
+          "name": "Test Game",
+          "installdir": "TestGame",
+          "stateFlags": 1282,
+          "sizeOnDisk": "1048576",
+          "buildid": "100",
+          "bytesDownloaded": "100",
+          "bytesToDownload": "1000",
+          "bytesStaged": "0",
+          "bytesToStage": "0",
+          "targetBuildId": "200"
+        }
+      }
+    },
+    {
+      "acf": {
+        "/fake/steam/steamapps": {
+          "appid": "1000",
+          "name": "Test Game",
+          "installdir": "TestGame",
+          "stateFlags": 1282,
+          "sizeOnDisk": "1048576",
+          "buildid": "100",
+          "bytesDownloaded": "500",
+          "bytesToDownload": "1000",
+          "bytesStaged": "0",
+          "bytesToStage": "0",
+          "targetBuildId": "200"
+        }
+      }
+    },
+    {
+      "acf": {
+        "/fake/steam/steamapps": {
+          "appid": "1000",
+          "name": "Test Game",
+          "installdir": "TestGame",
+          "stateFlags": 4,
+          "sizeOnDisk": "1048576",
+          "buildid": "200",
+          "targetBuildId": "200"
+        }
+      }
+    },
+    {}
+  ]
+}

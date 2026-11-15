@@ -1,0 +1,43 @@
+{
+  "name": "install-restart-hold-steam-not-running",
+  "description": "The recorded Steam client exits (restart): the next probe (>= 10 s after the last) releases the hold and the install completes.",
+  "machine": "install",
+  "platform": "linux",
+  "start": {
+    "appId": "1000",
+    "title": "Test Game",
+    "roots": {
+      "native": ["/fake/steam"],
+      "bottle": "/fake/bottle/steamapps",
+      "bridge": "/fake/bridge/steamapps"
+    },
+    "source": "native",
+    "isNativeHandoff": true
+  },
+  "ticks": [
+    {
+      "acf": {
+        "/fake/steam/steamapps": {
+          "appid": "1000",
+          "name": "Test Game",
+          "installdir": "TestGame",
+          "stateFlags": 4,
+          "sizeOnDisk": "1048576",
+          "buildid": "100"
+        }
+      },
+      "steamPids": [500],
+      "startTokens": {
+        "500": "tokA"
+      }
+    },
+    {},
+    {},
+    {
+      "steamPids": []
+    },
+    {},
+    {},
+    {}
+  ]
+}

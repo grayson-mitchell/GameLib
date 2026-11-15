@@ -1,0 +1,73 @@
+[
+  {
+    "file": {
+      "op": "clear",
+      "appId": "1000",
+      "record": null
+    }
+  },
+  {
+    "frontend": {
+      "channel": "gameStatusUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "installing",
+          "context": "steam-waiting-for-restart"
+        }
+      ]
+    }
+  },
+  {
+    "notify": {
+      "title": "Test Game",
+      "body": "Restart Steam to finish installing Test Game",
+      "key": "steam.waitingForSteam.notify",
+      "default": "Restart Steam to finish installing {{game}}",
+      "params": {
+        "game": "Test Game"
+      }
+    }
+  },
+  {
+    "file": {
+      "op": "clear",
+      "appId": "1000",
+      "record": null
+    }
+  },
+  {
+    "frontend": {
+      "channel": "gameStatusUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "installing",
+          "context": "steam-waiting-for-restart"
+        }
+      ]
+    }
+  },
+  {
+    "file": {
+      "op": "clear",
+      "appId": "1000",
+      "record": null
+    }
+  },
+  {
+    "frontend": {
+      "channel": "gameStatusUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "installing",
+          "context": "steam-waiting-for-restart"
+        }
+      ]
+    }
+  }
+]

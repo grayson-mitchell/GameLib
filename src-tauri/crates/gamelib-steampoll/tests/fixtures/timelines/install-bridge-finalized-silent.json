@@ -1,0 +1,32 @@
+{
+  "name": "install-bridge-finalized-silent",
+  "description": "Once the bridge installer marked itself finalized the finishing status is withheld so it cannot overwrite its done.",
+  "machine": "install",
+  "platform": "darwin",
+  "start": {
+    "appId": "1000",
+    "title": "Test Game",
+    "roots": {
+      "native": ["/fake/steam"],
+      "bottle": "/fake/bottle/steamapps",
+      "bridge": "/fake/bridge/steamapps"
+    },
+    "source": "bridge"
+  },
+  "ticks": [
+    {
+      "acf": {
+        "/fake/bridge/steamapps": {
+          "appid": "1000",
+          "name": "Test Game",
+          "installdir": "TestGame",
+          "stateFlags": 4,
+          "sizeOnDisk": "1048576",
+          "buildid": "100"
+        }
+      },
+      "bridgeFinalized": true
+    },
+    {}
+  ]
+}

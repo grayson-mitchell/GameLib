@@ -1,0 +1,35 @@
+{
+  "name": "install-depot-skipped",
+  "description": "A native handoff completion with skipped depots fires Installation Finished, the depot-skipped notice and the restart-Steam notice.",
+  "machine": "install",
+  "platform": "linux",
+  "start": {
+    "appId": "1000",
+    "title": "Test Game",
+    "roots": {
+      "native": ["/fake/steam"],
+      "bottle": "/fake/bottle/steamapps",
+      "bridge": "/fake/bridge/steamapps"
+    },
+    "source": "native",
+    "isNativeHandoff": true,
+    "skippedDepots": ["2001", "2002"]
+  },
+  "ticks": [
+    {
+      "acf": {
+        "/fake/steam/steamapps": {
+          "appid": "1000",
+          "name": "Test Game",
+          "installdir": "TestGame",
+          "stateFlags": 4,
+          "sizeOnDisk": "1048576",
+          "buildid": "100"
+        }
+      },
+      "steamPids": []
+    },
+    {},
+    {}
+  ]
+}

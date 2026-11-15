@@ -1,0 +1,25 @@
+[
+  {
+    "state": {
+      "kind": "installed",
+      "appId": "1000",
+      "source": "bridge",
+      "installPath": "/fake/bridge/steamapps/common/TestGame",
+      "sizeOnDisk": "1048576",
+      "buildid": "100"
+    }
+  },
+  {
+    "frontend": {
+      "channel": "gameStatusUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "installing",
+          "context": "steam-bridge-finishing"
+        }
+      ]
+    }
+  }
+]

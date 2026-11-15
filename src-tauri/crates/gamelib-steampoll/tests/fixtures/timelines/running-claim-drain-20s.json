@@ -1,0 +1,35 @@
+{
+  "name": "running-claim-drain-20s",
+  "description": "A launch watch claim suppresses playing/done; after it ends with a terminal sent, playing is republished once 20 s later if the game is still running.",
+  "machine": "running",
+  "platform": "darwin",
+  "start": {
+    "appId": "1000",
+    "title": "Test Game",
+    "roots": {
+      "native": ["/fake/steam"],
+      "bottle": "/fake/bottle/steamapps",
+      "bridge": "/fake/bridge/steamapps"
+    }
+  },
+  "ticks": [
+    {
+      "running": 730,
+      "runningHold": 730
+    },
+    {},
+    {
+      "runningRelease": {
+        "appId": 730,
+        "terminalSent": true
+      }
+    },
+    {},
+    {},
+    {},
+    {
+      "running": 0
+    },
+    {}
+  ]
+}

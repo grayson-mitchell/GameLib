@@ -1,0 +1,12 @@
+[
+  {
+    "state": {
+      "kind": "installed",
+      "appId": "1000",
+      "source": "bridge",
+      "installPath": "/fake/bridge/steamapps/common/TestGame",
+      "sizeOnDisk": "1048576",
+      "buildid": "100"
+    }
+  }
+]

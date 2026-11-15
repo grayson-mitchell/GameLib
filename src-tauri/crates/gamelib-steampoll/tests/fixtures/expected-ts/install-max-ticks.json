@@ -1,0 +1,61 @@
+[
+  {
+    "frontend": {
+      "channel": "gameStatusUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "installing"
+        }
+      ]
+    }
+  },
+  {
+    "frontend": {
+      "channel": "progressUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "installing",
+          "progress": {
+            "percent": 10,
+            "bytes": "100 B",
+            "eta": ""
+          }
+        }
+      ]
+    }
+  },
+  {
+    "frontend": {
+      "channel": "gameStatusUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "installing"
+        }
+      ]
+    }
+  },
+  {
+    "frontend": {
+      "channel": "progressUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "installing",
+          "progress": {
+            "percent": 20,
+            "bytes": "200 B",
+            "eta": "47:59:12",
+            "downSpeed": 4.416385646041724e-9
+          }
+        }
+      ]
+    }
+  }
+]

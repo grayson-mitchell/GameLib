@@ -1,0 +1,107 @@
+[
+  {
+    "frontend": {
+      "channel": "gameStatusUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "installing",
+          "managedBySteam": true
+        }
+      ]
+    }
+  },
+  {
+    "frontend": {
+      "channel": "gameStatusUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "updating",
+          "managedBySteam": true
+        }
+      ]
+    }
+  },
+  {
+    "frontend": {
+      "channel": "progressUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "updating",
+          "progress": {
+            "percent": 10,
+            "bytes": "100 B",
+            "eta": ""
+          }
+        }
+      ]
+    }
+  },
+  {
+    "frontend": {
+      "channel": "gameStatusUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "updating",
+          "managedBySteam": true
+        }
+      ]
+    }
+  },
+  {
+    "frontend": {
+      "channel": "progressUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "updating",
+          "progress": {
+            "percent": 50,
+            "bytes": "500 B",
+            "eta": ""
+          }
+        }
+      ]
+    }
+  },
+  {
+    "state": {
+      "kind": "updateDone",
+      "appId": "1000",
+      "completed": true
+    }
+  },
+  {
+    "frontend": {
+      "channel": "gameStatusUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "updating",
+          "managedBySteam": true
+        }
+      ]
+    }
+  },
+  {
+    "frontend": {
+      "channel": "gameStatusUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "done"
+        }
+      ]
+    }
+  }
+]

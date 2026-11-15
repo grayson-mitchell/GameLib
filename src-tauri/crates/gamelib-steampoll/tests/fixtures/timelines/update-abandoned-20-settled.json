@@ -1,0 +1,58 @@
+{
+  "name": "update-abandoned-20-settled",
+  "description": "After activity the manifest sits settled at the starting build for STEAM_UPDATE_ABANDONED_TICKS (20): the update ends quietly.",
+  "machine": "install",
+  "platform": "linux",
+  "start": {
+    "appId": "1000",
+    "title": "Test Game",
+    "roots": {
+      "native": ["/fake/steam"],
+      "bottle": "/fake/bottle/steamapps",
+      "bridge": "/fake/bridge/steamapps"
+    },
+    "source": "native",
+    "delegatedToSteamClient": true,
+    "awaitingUpdate": {
+      "fromBuild": "100",
+      "targetBuild": "200",
+      "installAppRetry": {
+        "attempts": 0
+      }
+    }
+  },
+  "ticks": [
+    {
+      "acf": {
+        "/fake/steam/steamapps": {
+          "appid": "1000",
+          "name": "Test Game",
+          "installdir": "TestGame",
+          "stateFlags": 1282,
+          "sizeOnDisk": "1048576",
+          "buildid": "100",
+          "bytesDownloaded": "100",
+          "bytesToDownload": "1000",
+          "bytesStaged": "0",
+          "bytesToStage": "0",
+          "targetBuildId": "200"
+        }
+      }
+    },
+    {
+      "acf": {
+        "/fake/steam/steamapps": {
+          "appid": "1000",
+          "name": "Test Game",
+          "installdir": "TestGame",
+          "stateFlags": 4,
+          "sizeOnDisk": "1048576",
+          "buildid": "100",
+          "targetBuildId": "100"
+        }
+      },
+      "repeat": 20
+    },
+    {}
+  ]
+}

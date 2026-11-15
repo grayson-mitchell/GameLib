@@ -1,0 +1,208 @@
+[
+  {
+    "frontend": {
+      "channel": "gameStatusUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "installing"
+        }
+      ]
+    }
+  },
+  {
+    "frontend": {
+      "channel": "progressUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "installing",
+          "progress": {
+            "percent": 10,
+            "bytes": "100 B",
+            "eta": ""
+          }
+        }
+      ]
+    }
+  },
+  {
+    "frontend": {
+      "channel": "gameStatusUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "installing"
+        }
+      ]
+    }
+  },
+  {
+    "frontend": {
+      "channel": "progressUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "installing",
+          "progress": {
+            "percent": 10,
+            "bytes": "100 B",
+            "eta": ""
+          }
+        }
+      ]
+    }
+  },
+  {
+    "frontend": {
+      "channel": "gameStatusUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "installing"
+        }
+      ]
+    }
+  },
+  {
+    "frontend": {
+      "channel": "progressUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "installing",
+          "progress": {
+            "percent": 10,
+            "bytes": "100 B",
+            "eta": ""
+          }
+        }
+      ]
+    }
+  },
+  {
+    "frontend": {
+      "channel": "gameStatusUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "installing",
+          "context": "steam-paused"
+        }
+      ]
+    }
+  },
+  {
+    "frontend": {
+      "channel": "progressUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "installing",
+          "progress": {
+            "percent": 10,
+            "bytes": "100 B",
+            "eta": ""
+          }
+        }
+      ]
+    }
+  },
+  {
+    "frontend": {
+      "channel": "gameStatusUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "installing",
+          "context": "steam-paused"
+        }
+      ]
+    }
+  },
+  {
+    "frontend": {
+      "channel": "progressUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "installing",
+          "progress": {
+            "percent": 10,
+            "bytes": "100 B",
+            "eta": ""
+          }
+        }
+      ]
+    }
+  },
+  {
+    "frontend": {
+      "channel": "gameStatusUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "installing"
+        }
+      ]
+    }
+  },
+  {
+    "frontend": {
+      "channel": "progressUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "installing",
+          "progress": {
+            "percent": 40,
+            "bytes": "400 B",
+            "eta": "00:00:06",
+            "downSpeed": 0.000095367431640625
+          }
+        }
+      ]
+    }
+  },
+  {
+    "frontend": {
+      "channel": "gameStatusUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "installing"
+        }
+      ]
+    }
+  },
+  {
+    "frontend": {
+      "channel": "progressUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "installing",
+          "progress": {
+            "percent": 40,
+            "bytes": "400 B",
+            "eta": ""
+          }
+        }
+      ]
+    }
+  }
+]

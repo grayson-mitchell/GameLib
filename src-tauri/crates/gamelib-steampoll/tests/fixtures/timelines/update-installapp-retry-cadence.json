@@ -1,0 +1,97 @@
+{
+  "name": "update-installapp-retry-cadence",
+  "description": "The InstallApp retry fires every 3rd tick since handoff; the third (tick 9) succeeds and restarts the no-activity window, so the quiet end moves from tick 40 to tick 49.",
+  "machine": "install",
+  "platform": "linux",
+  "start": {
+    "appId": "1000",
+    "title": "Test Game",
+    "roots": {
+      "native": ["/fake/steam"],
+      "bottle": "/fake/bottle/steamapps",
+      "bridge": "/fake/bridge/steamapps"
+    },
+    "source": "native",
+    "delegatedToSteamClient": true,
+    "awaitingUpdate": {
+      "fromBuild": "100",
+      "targetBuild": "200",
+      "installAppRetry": {
+        "attempts": 0
+      }
+    }
+  },
+  "ticks": [
+    {
+      "acf": {
+        "/fake/steam/steamapps": {
+          "appid": "1000",
+          "name": "Test Game",
+          "installdir": "TestGame",
+          "stateFlags": 4,
+          "sizeOnDisk": "1048576",
+          "buildid": "100",
+          "targetBuildId": "100"
+        }
+      },
+      "helper": {
+        "stdout": "{\"result\":\"unavailable\",\"reason\":\"steam-not-running\"}\n",
+        "code": 0
+      }
+    },
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {
+      "helper": {
+        "stdout": "{\"result\":\"ok\",\"folderIndex\":0}\n",
+        "code": 0
+      }
+    },
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {}
+  ]
+}

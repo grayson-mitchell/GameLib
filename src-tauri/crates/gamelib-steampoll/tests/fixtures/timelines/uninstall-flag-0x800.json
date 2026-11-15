@@ -1,0 +1,41 @@
+{
+  "name": "uninstall-flag-0x800",
+  "description": "StateFlags 0x800 reads as uninstalling; the manifest vanishing completes it (uninstalled, done, Game Uninstalled).",
+  "machine": "uninstall",
+  "platform": "linux",
+  "start": {
+    "appId": "1000",
+    "title": "Test Game",
+    "roots": {
+      "native": ["/fake/steam"],
+      "bottle": "/fake/bottle/steamapps",
+      "bridge": "/fake/bridge/steamapps"
+    },
+    "source": "native"
+  },
+  "ticks": [
+    {
+      "acf": {
+        "/fake/steam/steamapps": {
+          "appid": "1000",
+          "name": "Test Game",
+          "installdir": "TestGame",
+          "stateFlags": 2048,
+          "sizeOnDisk": "1048576",
+          "buildid": "100",
+          "bytesDownloaded": "0",
+          "bytesToDownload": "0",
+          "bytesStaged": "0",
+          "bytesToStage": "0"
+        }
+      }
+    },
+    {},
+    {
+      "acf": {
+        "/fake/steam/steamapps": null
+      }
+    },
+    {}
+  ]
+}

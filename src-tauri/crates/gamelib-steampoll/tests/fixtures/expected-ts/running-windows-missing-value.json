@@ -1,0 +1,26 @@
+[
+  {
+    "frontend": {
+      "channel": "gameStatusUpdate",
+      "args": [
+        {
+          "appName": "500",
+          "runner": "steam",
+          "status": "playing"
+        }
+      ]
+    }
+  },
+  {
+    "frontend": {
+      "channel": "gameStatusUpdate",
+      "args": [
+        {
+          "appName": "500",
+          "runner": "steam",
+          "status": "done"
+        }
+      ]
+    }
+  }
+]

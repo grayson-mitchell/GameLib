@@ -1,0 +1,48 @@
+[
+  {
+    "frontend": {
+      "channel": "gameStatusUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "uninstalling"
+        }
+      ]
+    }
+  },
+  {
+    "state": {
+      "kind": "forcedWindowsViaBottleCleared",
+      "appId": "1000"
+    }
+  },
+  {
+    "state": {
+      "kind": "uninstalled",
+      "appId": "1000",
+      "source": "bottle",
+      "survivor": null
+    }
+  },
+  {
+    "frontend": {
+      "channel": "gameStatusUpdate",
+      "args": [
+        {
+          "appName": "1000",
+          "runner": "steam",
+          "status": "done"
+        }
+      ]
+    }
+  },
+  {
+    "notify": {
+      "title": "Test Game",
+      "body": "Uninstalled",
+      "key": "notify.uninstalled",
+      "default": "Game Uninstalled"
+    }
+  }
+]
