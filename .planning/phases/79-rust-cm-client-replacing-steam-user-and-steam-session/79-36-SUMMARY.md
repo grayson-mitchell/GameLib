@@ -21,13 +21,13 @@ key-files:
   created:
     - src/backend/storeManagers/steam/__tests__/library.macSteamRefresh.test.ts
 metrics:
-  tasks: "2 of 3 (task 3 is the operator checkpoint, pending)"
-  completed: partial
+  tasks: 3
+  completed: 2026-11-15
 ---
 
-# Phase 79 Plan 36: Mac Steam path primary for Refresh (partial) Summary
+# Phase 79 Plan 36: Mac Steam path primary for Refresh Summary
 
-Tasks 1 and 2 are done. Task 3 (operator accepts the Mac-path differences) is open, so the PARITY Mac section is `pending`, not approved.
+All tasks done. Task 3: the operator accepted DV-79-10, 11 and 13 and rejected DV-79-12; the fix (42117891b) widened the Mac filter to game, beta and application with test `beta_and_application_types_survive_but_other_types_still_drop`. Re-measure: 399 Mac games, 390 of 390 owned covered, no unexplained difference. PARITY Mac section is `APPROVED (Mac path)`.
 
 ## Done
 
@@ -48,7 +48,7 @@ Tasks 1 and 2 are done. Task 3 (operator accepts the Mac-path differences) is op
 ## Findings for the operator
 
 - `build/bin/arm64/darwin/steam-bridge-helper` is stale (predates `--steam-owned-apps`, exits 6); `public/bin/...` is current and is what `appPaths.steamBridgeHelperPath` resolves to. A runtime still pointing at `build/bin` would take `helper-failed` and fall back to CM.
-- New divergence not named in the plan: 3 of the 390 owned apps (2 beta, 1 application) are dropped by the Mac type filter (DV-79-12).
+- DV-79-12 (3 owned beta/application apps dropped) was found, rejected and fixed; see above.
 - The CM-path demo count could not be re-measured without a signed-in logon.
 
 ## Known Stubs
@@ -57,4 +57,4 @@ None.
 
 ## Open
 
-Task 3 checkpoint: operator decision on DV-79-10 to DV-79-13. Set the Mac section to `APPROVED (Mac path)` when accepted.
+None.
