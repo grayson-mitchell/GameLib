@@ -15,7 +15,11 @@ import ToggleSwitch from 'frontend/components/UI/ToggleSwitch'
 import SettingsContext from '../Settings/SettingsContext'
 import useSettingsContext from '../../hooks/useSettingsContext'
 import './index.css'
-import { LoginBackground } from '../Settings/components'
+import {
+  LoginBackground,
+  UseDarkTrayIcon,
+  UseFramelessWindow
+} from '../Settings/components'
 import { MenuItem, SelectChangeEvent } from '@mui/material'
 import { queryLocalFontsSafe } from './queryLocalFontsSafe'
 
@@ -175,6 +179,10 @@ const Accessibility = React.memo(function Accessibility() {
             ))}
           </datalist>
         </span>
+
+        <UseFramelessWindow />
+
+        <UseDarkTrayIcon />
 
         <span className="setting">
           <span className="fonts-label">

@@ -13,8 +13,6 @@ import {
   Shortcuts,
   StartInConsoleMode,
   TraySettings,
-  UseDarkTrayIcon,
-  UseFramelessWindow,
   WinePrefixesBasePath
 } from '../../components'
 
@@ -46,10 +44,6 @@ export default function GeneralSettings() {
       <TraySettings />
 
       <GameStartWindow />
-
-      <UseDarkTrayIcon />
-
-      <UseFramelessWindow />
 
       <Shortcuts />
 
