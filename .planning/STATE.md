@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 Phase: 79 (rust-cm-client-replacing-steam-user-and-steam-session) — EXECUTING
 Plan: 38 of 44
 Status: Ready to execute
-Last activity: 2026-11-15
+Last activity: 2026-11-15 - Completed quick task 261115-t7m: move frameless window and tray icon settings to Appearance
 
 Progress: [██████████] 98%
 
@@ -774,6 +774,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | 261114-twk | Pre-launch bridge update prompt says "partly downloaded update ... Update now to resume it" when the Rust delta temps ledger (`gamelib-delta/<appId>.temps.json`) exists; original wording otherwise. New key `steam.update.prompt.messagePartial` in all 49 catalogs + 48 mt manifests (insert-only); todo closed. | 2026-11-14 | 8b3d3e559, 79db99922, 7bce1fa50 | updateLaunchPrompt jest 24/24 (RED shown first); tsc, scoped prettier, churn guard clean; validateTranslation 48/48 + sabotage rejected; parity 48 / lint-translations 384 failures identical before and after (pre-existing); not checked live | [261114-twk-reword-the-pre-launch-update-prompt-for-](./quick/261114-twk-reword-the-pre-launch-update-prompt-for-/) |
 | 261114-v4q | TwoColTableInput Edit now edits the row in place (Save/Enter, Cancel/Escape) instead of filling the footer add row; footer is add-only; validation and `onChange` contract unchanged; 4 `gamelib:twoColTable` strings; todo closed. | 2026-11-14 | 32f0b7ef3, 07e937243 | TwoColTableInput + Settings jest 420/420 (12 new); codecheck, scoped prettier, churn guard, planning-gates clean; hardcodedStringGate 1 failure is `(installed)` in PlatformSupport.tsx from dc9150fb7 (pre-existing); not checked live | [261114-v4q-edit-env-var-rows-in-place-in-twocoltabl](./quick/261114-v4q-edit-env-var-rows-in-place-in-twocoltabl/) |
 | 261115-szs | Game page three-dot menu gains the tile context-menu items it lacked: Add/Remove Favourites, Hide/Unhide, Logs (installed, non-browser, not uninstalling), and Edit Game now shown for uninstalled games too; Remove From Recent deliberately left tile-only. | 2026-11-15 | ac63566b2 | GameSubMenu jest 55/55 (tileMenuParity RED first); tsc, scoped prettier clean; eslint 0 errors; not checked live | [261115-szs-game-page-dots-menu-parity-with-tile-con](./quick/261115-szs-game-page-dots-menu-parity-with-tile-con/) |
+| 261115-t7m | Moved "Use frameless window" and the Tray Icon variant setting from Settings > General to Appearance (after Zoom, before Fonts); placement pinned by windowSettingsPlacement.test.ts. | 2026-11-15 | dccf1802e | Jest pass (20 tests), tsc clean; live frameless OFF/ON check pending | [261115-t7m-move-frameless-window-and-tray-icon-sett](./quick/261115-t7m-move-frameless-window-and-tray-icon-sett/) |
 
 ## Session Continuity
 
