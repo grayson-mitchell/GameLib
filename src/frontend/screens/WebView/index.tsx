@@ -175,8 +175,7 @@ export default function WebView() {
   const gogStore = `https://af.gog.com?as=1838482841`
   const amazonStore = `https://gaming.amazon.com`
   const steamStore = 'https://store.steampowered.com/'
-  const wikiURL =
-    'https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki'
+  const wikiURL = 'https://github.com/grayson-mitchell/GameLib/wiki'
   const gogLoginUrl = GOG_LOGIN_URL
   const humbleLoginUrl = 'https://auth.humblebundle.com/login'
 

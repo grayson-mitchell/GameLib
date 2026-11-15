@@ -842,13 +842,12 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
 
     reinvoke({
       ...options,
-      startUrl:
-        'https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki',
+      startUrl: 'https://github.com/grayson-mitchell/GameLib/wiki',
       storeKey: 'wiki'
     })
 
     expect(mockApi.storeEmbedNavigate).toHaveBeenCalledWith(
-      'https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki'
+      'https://github.com/grayson-mitchell/GameLib/wiki'
     )
     expect(mockApi.storeEmbedHide).not.toHaveBeenCalled()
   })

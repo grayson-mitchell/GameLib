@@ -8,8 +8,7 @@ export const GITHUB_API =
 export const supportURL =
   'https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/blob/main/Support.md'
 export const discordLink = 'https://discord.gg/rHJ2uqdquK'
-export const wikiLink =
-  'https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki'
+export const wikiLink = 'https://github.com/grayson-mitchell/GameLib/wiki'
 export const weblateUrl =
   'https://hosted.weblate.org/projects/heroic-games-launcher'
 export const kofiPage = 'https://ko-fi.com/gamelib'
