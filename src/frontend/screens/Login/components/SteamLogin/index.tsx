@@ -329,6 +329,9 @@ export default function SteamLogin({ dismiss }: Props) {
       await steamLogin({ status: 'done', username: userInfo?.username })
       finishSignIn()
     } else {
+      // A wrong code leaves the flow waiting: resume the out-of-band poll so a phone approval
+      // after a rejected code still completes sign-in (UAT 79-A item 7).
+      startCredPoll()
       showError(
         'Incorrect code. Check your email or authenticator app and try again.'
       )
