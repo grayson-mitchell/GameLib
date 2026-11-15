@@ -4,8 +4,8 @@ title: 'Mac Steam owned-apps helper makes Friends show "playing Spacewar" (AppID
 area: steam-library
 severity: medium
 platform: macos
-ready: blocked
-needs: operator-permission-for-live-steamclient-probing
+ready: human
+needs: operator-uat-install-uninstall-and-friends-check
 source: Phase 79 plan 79-38 (UAT part B item 14)
 files: [native/steam-bridge/helper/gamelib_ownedapps.h, native/steam-bridge/helper/gamelib_installapp.h, src/backend/storeManagers/steam/library/macSteamPathFlag.ts, src/backend/storeManagers/steam/library/refresh.ts]
 ---
@@ -27,15 +27,31 @@ process`, and about 1-2 s after the helper exits it logs `Remove 480 from runnin
 - **Likely mechanism:** Steam defaults an unidentified pipe to AppID 480 on its first IPC call.
 - `--steam-installapp` and `--steam-uninstallapp` share `gl_ia_attach` and show the same presence. **Confirmed live 2026-11-16 (79-44 UAT item 23):** an UninstallApp at 06:36:31 and an InstallApp adoption at 06:38:04 each logged two `AppID 480 adding PID` lines, removed ~2 s later. These paths are not behind `macSteamPathEnabled()`, so every native install/uninstall with Mac Steam running flashes Spacewar briefly. The fix direction below covers both.
 
-## Mitigation in place
+## Root cause (confirmed live 2026-11-16, debug session mac-helper-spacewar-480)
 
-The Mac path is now **off by default**: `macSteamPathEnabled()` in `macSteamPathFlag.ts`, where `GAMELIB_STEAM_MAC_PATH=on` opts in. Refresh on macOS takes the Rust CM path, which UAT-B item 13 showed keeps Friends signed in (unwrapped). Spacewar 480 is also filtered out of the Mac-path owned games (`SDK_TEST_APPS`, c8a33e304).
+`meta/buildSteamBridgeShims.ts` staged `steam_appid.txt`=480 beside the built helper (finding #4,
+Phase 24). steamclient reads `steam_appid.txt` from the helper EXECUTABLE's directory, so every
+steamclient-only mode registered with Mac Steam as AppID 480. A/B with an identical binary and
+cwd: file present gave 1 `AppID 480 adding PID` line; file absent gave 0, for the guard path and for
+a full owned-apps run (1140 apps, exit 0). The inference above (first IClientUser IPC call) and the
+cwd/env theories were wrong; the file was the trigger.
 
-## Direction
+## Fix
 
-1. **Bisect.** Probe `BLoggedOn`, `GetSteamID` and `GetSubscribedApps` one at a time against live Mac Steam, watching `gameprocess_log.txt` after each.
-2. **Try clearing the app ID.** Before the first IPC call, try an IClientUtils `SetAppIDForCurrentPipe(0, false)`-style call (resolve the slot the way spike 084 resolved `GetSubscribedApps`).
-3. **Fallback.** If 480 can't be avoided, the shortest tracked window, or get the owned list in a way that doesn't touch IClientUser.
-4. **Then re-enable.** Flip the default on and re-run UAT-B item 14.
+- The build no longer stages `steam_appid.txt` next to the helper, and removes a stale copy
+  (`removeStaleSteamAppId`). Bridge mode never needed it: since Phase 51 the helper writes its own
+  per-appId `steam_appid.txt` into its cwd (`ensure_steam_appid_file`), and `helperSpawn.ts` gives
+  identity-only mode its own cwd file. The beside-binary 480 could only shadow a real game AppID.
+- `macSteamPathEnabled()` is now on by default; `GAMELIB_STEAM_MAC_PATH=off` opts out. CLAUDE.md updated.
 
-**Blocked:** live probing of the running Steam client was denied by the permission classifier. The operator has to allow it in the permission system (a Bash rule for building and running the scratchpad probes), or run the probes themselves.
+## Remaining (operator UAT)
+
+With a rebuilt helper (`pnpm build-steam-bridge`) and Mac Steam running: a Refresh, a native
+install and an uninstall each add 0 `AppID 480 adding PID` lines to
+`~/Library/Application Support/Steam/logs/gameprocess_log.txt`, and Friends shows no game. Then
+move this todo to completed.
+
+## History: mitigation (superseded)
+
+The Mac path was set **off by default** (`3b7417c05`) while this was open. Spacewar 480 is also
+filtered out of the Mac-path owned games (`SDK_TEST_APPS`, c8a33e304).

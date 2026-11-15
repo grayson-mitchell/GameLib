@@ -287,9 +287,8 @@ describe('refresh() Mac Steam path', () => {
     expect(requestRustInvoke).not.toHaveBeenCalled()
   })
 
-  it('is off by default: without GAMELIB_STEAM_MAC_PATH=on a Mac Refresh goes straight to CM', async () => {
-    // UAT-B item 14: the helper shows "playing Spacewar" in Friends, so the Mac path is opt-in.
-    delete process.env.GAMELIB_STEAM_MAC_PATH
+  it('opt-out: GAMELIB_STEAM_MAC_PATH=off sends a Mac Refresh straight to CM', async () => {
+    process.env.GAMELIB_STEAM_MAC_PATH = 'off'
     try {
       requestRustInvoke.mockResolvedValue({
         ok: true,

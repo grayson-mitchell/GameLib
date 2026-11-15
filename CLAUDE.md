@@ -42,8 +42,8 @@ wrap (only an owed-record restore). **steam-session** and **steam-user** were re
 this in Phase 79 and are no longer dependencies. The in-repo **gamelib-steamfiles** crate reads
 `libraryfolders.vdf`, ACFs, `registry.vdf`, `localconfig.vdf`, `installscript.vdf` and
 `shortcuts.vdf` (unchanged). **reqwest** (in Rust) does public store metadata and artwork, replacing
-axios for Steam. The Mac Steam owned-apps path (bridge helper) exists but ships OFF by default
-(`GAMELIB_STEAM_MAC_PATH=on`). Launch is unchanged:
+axios for Steam. The Mac Steam owned-apps path (bridge helper) is on by default
+(`GAMELIB_STEAM_MAC_PATH=off` opts out). Launch is unchanged:
 `shell.openExternal("steam://rungameid/{appId}")`.
 
 `steamworks.js`, `greenworks`, `electron-steam-openid`, Steam partner OAuth and browser-based

@@ -31,7 +31,7 @@ import {
   shim64OutputPath,
   shimByproductPaths,
   shimOutputPath,
-  steamAppIdOutputPath
+  removeStaleSteamAppId
 } from '../buildSteamBridgeShims'
 
 // Structural source assertions (no real compile) -- mirrors the 24-01
@@ -65,10 +65,26 @@ describe('buildSteamBridgeShims', () => {
       )
     })
 
-    it('stages steam_appid.txt next to the built helper (finding #4)', () => {
-      expect(steamAppIdOutputPath('arm64')).toBe(
-        join('public', 'bin', 'arm64', 'darwin', 'steam_appid.txt')
-      )
+    it('does not stage steam_appid.txt beside the helper (AppID 480 registration)', () => {
+      expect(sourceText).not.toMatch(/copyFile\(/)
+      expect(sourceText).not.toContain('stageSteamAppId')
+    })
+
+    it('removeStaleSteamAppId deletes a leftover beside-binary copy', () => {
+      const tmp = mkdtempSync(join(tmpdir(), 'gamelib-stale-appid-'))
+      const previousCwd = process.cwd()
+      try {
+        const darwinDir = join(tmp, 'public', 'bin', 'arm64', 'darwin')
+        mkdirSync(darwinDir, { recursive: true })
+        writeFileSync(join(darwinDir, 'steam_appid.txt'), '480')
+        process.chdir(tmp)
+        removeStaleSteamAppId('arm64')
+        removeStaleSteamAppId('arm64')
+        expect(() => readFileSync(join(darwinDir, 'steam_appid.txt'))).toThrow()
+      } finally {
+        process.chdir(previousCwd)
+        rmSync(tmp, { recursive: true, force: true })
+      }
     })
 
     it('paths are arch-parameterized (not hardcoded x64), matching process.arch precedent', () => {
@@ -312,15 +328,12 @@ describe('buildSteamBridgeShims', () => {
       process.env.GAMELIB_BRIDGE_TARGET_ARCH = 'x64'
       try {
         // No argument: this is exactly how compileHelper()/compileShim()/
-        // stageSteamAppId() call these helpers.
+        // compileHelper() call these helpers.
         expect(helperOutputPath()).toBe(
           join('public', 'bin', 'x64', 'darwin', 'steam-bridge-helper')
         )
         expect(shimOutputPath()).toBe(
           join('public', 'bin', 'x64', 'darwin', 'steam_api.dll')
-        )
-        expect(steamAppIdOutputPath()).toBe(
-          join('public', 'bin', 'x64', 'darwin', 'steam_appid.txt')
         )
         expect(helperOutputPath()).not.toContain(join('bin', 'arm64', 'darwin'))
       } finally {
@@ -421,7 +434,6 @@ describe('buildSteamBridgeShims', () => {
       const paths = shimByproductPaths('arm64')
       expect(paths).not.toContain(shimOutputPath('arm64'))
       expect(paths).not.toContain(helperOutputPath('arm64'))
-      expect(paths).not.toContain(steamAppIdOutputPath('arm64'))
     })
 
     it('51-15 Task 2: shim64ByproductPaths(arm64) returns the x64 .pdb and the SAME .lib name as the x86 build (measured: zig cc names the .lib after the source file, not -o)', () => {
@@ -445,7 +457,6 @@ describe('buildSteamBridgeShims', () => {
       expect(paths).not.toContain(shim64OutputPath('arm64'))
       expect(paths).not.toContain(shimOutputPath('arm64'))
       expect(paths).not.toContain(helperOutputPath('arm64'))
-      expect(paths).not.toContain(steamAppIdOutputPath('arm64'))
     })
 
     it('51-15 Task 2: pruneShim64BuildByproducts removes the x64 .pdb/.lib without touching the x64 .dll or any x86 artifact', () => {
@@ -617,7 +628,7 @@ describe('buildSteamBridgeShims', () => {
       )
     })
 
-    it('main runs exactly compileHelper, stageSteamAppId, compileShim, compileShim64, compileOverlayShim, compileOverlayInputProbe in order', () => {
+    it('main runs exactly compileHelper, compileShim, compileShim64, compileOverlayShim, compileOverlayInputProbe in order', () => {
       const from = sourceText.slice(
         sourceText.indexOf('export async function main')
       )
@@ -625,7 +636,6 @@ describe('buildSteamBridgeShims', () => {
       const calls = [...mainBody.matchAll(/await (\w+)\(\)/g)].map((m) => m[1])
       expect(calls).toEqual([
         'compileHelper',
-        'stageSteamAppId',
         'compileShim',
         'compileShim64',
         'compileOverlayShim',

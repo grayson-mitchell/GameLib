@@ -49,9 +49,11 @@
  * 261026-ng9, spike 034): the hand-written `fix.` cfg feature catalogue,
  * placed right after steam_api_shim.c in the argv.
  *
- * Also stages `steam_appid.txt`=480 next to the built helper (finding #4) --
- * the helper's runtime cwd (set by Plan 24-06 to that directory) resolves
- * the D-04 identity-only AppID from this file.
+ * Deliberately does NOT stage a `steam_appid.txt` next to the helper: steamclient
+ * reads it from the executable's directory, so a beside-binary 480 made every
+ * steamclient-only helper mode (--steam-owned-apps/-installapp/-uninstallapp)
+ * register with Mac Steam as AppID 480 ("playing Spacewar" in Friends). The
+ * helper writes its own per-appId `steam_appid.txt` into its cwd (Phase 51).
  *
  * No electron-builder.yml change needed -- `mac.files` already covers
  * `build/bin/${arch}/darwin/*` (24-RESEARCH.md Pattern 5, independently
@@ -62,7 +64,7 @@
 
 import { spawn } from 'node:child_process'
 import { existsSync, mkdirSync, rmSync } from 'node:fs'
-import { chmod, copyFile, mkdtemp, rm } from 'node:fs/promises'
+import { chmod, mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -115,14 +117,6 @@ const SHIM_DEF64_PATH = join(
   'steam-bridge',
   'generated',
   'steam_api64.def'
-)
-// D-04: the committed source-of-truth for the identity-only AppID (480,
-// Spacewar). Staged (copied, never regenerated) next to the built helper by
-// stageSteamAppId() below.
-const STEAM_APPID_SOURCE_PATH = join(
-  'native',
-  'steam-bridge',
-  'steam_appid.txt'
 )
 
 /**
@@ -314,15 +308,6 @@ export function pruneShim64BuildByproducts(
   }
 }
 
-/** Staged next to the built helper (finding #4 -- helper cwd resolution). */
-// Exported only for meta/__tests__/buildSteamBridgeShims.test.ts (outside
-// this gate's tsconfig.json scope -- see resolveBridgeArch above).
-export function steamAppIdOutputPath(
-  arch: string = resolveBridgeArch()
-): string {
-  return join(bundledBinDir(arch), 'steam_appid.txt')
-}
-
 /**
  * Argv-form (never a shell string, T-24-06) command for compiling the
  * native host helper. Exported so tests can assert the exact command
@@ -482,19 +467,6 @@ async function compileHelper(): Promise<void> {
   console.log(`Helper compiled -> ${helperOutputPath()}`)
 }
 
-async function stageSteamAppId(): Promise<void> {
-  if (!existsSync(STEAM_APPID_SOURCE_PATH)) {
-    throw new Error(
-      `Missing committed ${STEAM_APPID_SOURCE_PATH} -- expected the D-04 identity-only AppID (480) source file`
-    )
-  }
-  mkdirSync(bundledBinDir(), { recursive: true })
-  await copyFile(STEAM_APPID_SOURCE_PATH, steamAppIdOutputPath())
-  console.log(
-    `Staged steam_appid.txt -> ${steamAppIdOutputPath()} (finding #4)`
-  )
-}
-
 /**
  * The real zig-cc COMPILE GATE (finding #5a). A non-zero exit or a missing
  * `.dll` output FAILS the build -- this is intentional, not a soft warning:
@@ -576,6 +548,16 @@ async function compileShim64(): Promise<void> {
   pruneShim64BuildByproducts()
 }
 
+/**
+ * Earlier builds staged `steam_appid.txt`=480 beside the helper. Remove any
+ * leftover copy so a dev checkout does not keep the AppID 480 registration.
+ */
+export function removeStaleSteamAppId(
+  arch: string = resolveBridgeArch()
+): void {
+  rmSync(join(bundledBinDir(arch), 'steam_appid.txt'), { force: true })
+}
+
 // Self-invoked only (the JEST_WORKER_ID guard below); kept `export` because
 // meta/__tests__/buildSteamBridgeShims.test.ts's B5 case slices compileShim's
 // body by searching the source text for the literal string
@@ -583,7 +565,7 @@ async function compileShim64(): Promise<void> {
 // `export` would silently break that string match, not just this export.
 export async function main(): Promise<void> {
   await compileHelper()
-  await stageSteamAppId()
+  removeStaleSteamAppId()
   await compileShim()
   await compileShim64()
   await compileOverlayShim()
