@@ -521,15 +521,27 @@ function dropPreviousForRust(deps: UserSignInDeps): void {
   signInState.setSession(null)
 }
 
+/** Another poll already read `done` and is finalising: Rust has dropped the flow by now. */
+type Finalizing = { status: 'finalizing' }
+
+/**
+ * Reads a rust flow's status. Once one poll has read `done` (and started finalising), Rust drops
+ * the flow, so an overlapping poll would read `unknownFlow` and fail a sign-in that just
+ * succeeded (UAT 79-A item 5). Such a poll reports `finalizing` and waits on the memoised result.
+ */
 async function readFlowStatus(
   deps: UserSignInDeps,
-  flowId: string
-): Promise<RustFlowStatus> {
+  slot: RustSlot
+): Promise<RustFlowStatus | Finalizing> {
+  if (slot.finalize) return { status: 'finalizing' }
   try {
-    return (await deps.requestRustInvoke(RUST_STEAMCM_SIGNIN_STATUS, [
-      { flowId }
+    const r = (await deps.requestRustInvoke(RUST_STEAMCM_SIGNIN_STATUS, [
+      { flowId: slot.flowId }
     ])) as RustFlowStatus
+    if (r.status !== 'done' && slot.finalize) return { status: 'finalizing' }
+    return r
   } catch (err) {
+    if (slot.finalize) return { status: 'finalizing' }
     logWarning(
       `Steam sign-in status read failed (${err instanceof Error ? err.name : typeof err})`,
       LogPrefix.Steam
@@ -552,9 +564,11 @@ function logRustError(what: string, r: { eresult?: number; reason?: string }) {
 async function finalizeRustSignIn(
   deps: UserSignInDeps,
   slot: RustSlot,
-  done: Extract<RustFlowStatus, { status: 'done' }>
+  done: Extract<RustFlowStatus, { status: 'done' }> | Finalizing
 ): Promise<string> {
-  slot.finalize ??= (async () => {
+  if (slot.finalize) return slot.finalize
+  if (done.status !== 'done') throw new Error('rust sign-in finalize missing')
+  slot.finalize = (async () => {
     await deps.tokenStore.current().setToken(done.refreshToken)
     deps.stores.steam.configStore.set('isLoggedIn', true)
     deps.stores.steam.configStore.delete('credentialsMissing')
@@ -578,8 +592,8 @@ async function rustWaitSettle(
   const signInState = deps.steamSession.signIn
   for (let i = 0; i < RUST_WAIT_MAX_ITERATIONS; i++) {
     if (signInState.getSession() !== slot) return { status: 'error' }
-    const r = await readFlowStatus(deps, slot.flowId)
-    if (r.status === 'done') {
+    const r = await readFlowStatus(deps, slot)
+    if (r.status === 'done' || r.status === 'finalizing') {
       try {
         const username = await finalizeRustSignIn(deps, slot, r)
         signInState.setCredSessionState({ status: 'done', username })
@@ -654,13 +668,13 @@ async function rustPollQRLogin(deps: UserSignInDeps): Promise<{
     return { status: 'done', username: known.username }
   }
   if (known.status === 'error') return { status: 'error' }
-  const r = await readFlowStatus(deps, slot.flowId)
+  const r = await readFlowStatus(deps, slot)
   let out: {
     status: 'done' | 'waiting' | 'error'
     username?: string
     challengeUrl?: string
   }
-  if (r.status === 'done') {
+  if (r.status === 'done' || r.status === 'finalizing') {
     try {
       const username = await finalizeRustSignIn(deps, slot, r)
       signInState.setQrSessionState({ status: 'done', username })
@@ -750,8 +764,8 @@ async function rustPollCredentialLogin(deps: UserSignInDeps): Promise<{
   if (slot?.kind !== 'rust' || known.status !== 'waiting') {
     return { status: known.status, username: known.username }
   }
-  const r = await readFlowStatus(deps, slot.flowId)
-  if (r.status === 'done') {
+  const r = await readFlowStatus(deps, slot)
+  if (r.status === 'done' || r.status === 'finalizing') {
     try {
       const username = await finalizeRustSignIn(deps, slot, r)
       signInState.setCredSessionState({ status: 'done', username })

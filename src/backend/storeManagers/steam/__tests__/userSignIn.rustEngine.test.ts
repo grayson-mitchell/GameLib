@@ -167,6 +167,32 @@ describe('userSignIn on the rust engine', () => {
     expect(t.setToken).toHaveBeenCalledTimes(1)
   })
 
+  it('an overlapping poll that reads unknownFlow after done waits for the sign-in instead of failing it', async () => {
+    // UAT 79-A item 5: poll A read done and began finalising; Rust dropped the flow, so poll B's
+    // read came back unknownFlow and failed a sign-in that had just succeeded.
+    const t = build({
+      steamcm_signin_qr_start: () => ({ flowId: 'f1', challengeUrl: 'A' }),
+      steamcm_signin_status: [
+        () => DONE,
+        () =>
+          new Promise((resolve) =>
+            setTimeout(
+              () => resolve({ status: 'error', reason: 'unknownFlow' }),
+              10
+            )
+          )
+      ]
+    })
+    await startQRLogin(t.deps)
+    const a = pollQRLogin(t.deps)
+    const b = pollQRLogin(t.deps)
+    await jest.advanceTimersByTimeAsync(20)
+    expect(await a).toEqual({ status: 'done', username: 'Persona' })
+    expect(await b).toEqual({ status: 'done', username: 'Persona' })
+    expect(t.setToken).toHaveBeenCalledTimes(1)
+    expect(loggedText()).not.toContain('unknownFlow')
+  })
+
   it('pollQRLogin error maps to error', async () => {
     const t = build({
       steamcm_signin_qr_start: () => ({ flowId: 'f1', challengeUrl: 'A' }),
