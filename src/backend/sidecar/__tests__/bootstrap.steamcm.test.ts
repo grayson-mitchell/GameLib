@@ -25,12 +25,6 @@ function load(): Boot {
 }
 
 describe('boot steamcm wiring', () => {
-  const prev = process.env.GAMELIB_STEAMCM_CM
-  afterEach(() => {
-    if (prev === undefined) delete process.env.GAMELIB_STEAMCM_CM
-    else process.env.GAMELIB_STEAMCM_CM = prev
-  })
-
   it('orders steamcm-configure before mac-steam-online-restore and after rpc-server', () => {
     const { BOOT_STEP_NAMES } = load() as unknown as {
       BOOT_STEP_NAMES: readonly string[]

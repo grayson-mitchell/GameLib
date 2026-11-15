@@ -94,13 +94,10 @@ function makeUser(): SteamUser {
 const channelsCalled = (): string[] => calls.map((c) => c.channel)
 
 let steamUser: SteamUser
-let savedEnv: string | undefined
 beforeEach(() => {
   jest.clearAllMocks()
   for (const k of Object.keys(mockConfigValues)) delete mockConfigValues[k]
   calls.length = 0
-  savedEnv = process.env.GAMELIB_STEAMCM_CM
-  process.env.GAMELIB_STEAMCM_CM = 'rust'
   mockConfigStore.get.mockImplementation((k: string) => mockConfigValues[k])
   mockConfigStore.get_nodefault.mockImplementation(
     (k: string) => mockConfigValues[k]
@@ -130,10 +127,6 @@ beforeEach(() => {
     })
   }
   steamUser = makeUser()
-})
-afterEach(() => {
-  if (savedEnv === undefined) delete process.env.GAMELIB_STEAMCM_CM
-  else process.env.GAMELIB_STEAMCM_CM = savedEnv
 })
 
 describe('SteamUser on the Rust engine', () => {

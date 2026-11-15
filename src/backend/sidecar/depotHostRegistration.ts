@@ -25,7 +25,6 @@
 
 import type { IpcRegistry } from './ipcRegistry'
 import { logWarning, LogPrefix } from 'backend/logger'
-import { steamCmImpl } from '../storeManagers/steam/cm/steamCmFlags'
 import type { DepotJobRegistry } from '../storeManagers/steam/depotRust/jobRegistry'
 import type { RustJobEvent } from '../storeManagers/steam/depotRust/types'
 
@@ -92,16 +91,14 @@ export function registerDepotHostFlows(deps: {
         if ((err as { eresult?: unknown }).eresult === 40)
           return { eresult: 40 }
         logFailure('depotManifestRequestCode', jobId, err)
-        if (steamCmImpl() === 'rust') {
-          // The Rust CM client's typed failure kind (toSteamCmError); fixed allow-list only.
-          const kind = (err as { steamcmKind?: unknown }).steamcmKind
-          if (
-            kind === 'timeout' ||
-            kind === 'network' ||
-            kind === 'leaseUnknown'
-          ) {
-            return { unavailable: kind }
-          }
+        // The Rust CM client's typed failure kind (toSteamCmError); fixed allow-list only.
+        const kind = (err as { steamcmKind?: unknown }).steamcmKind
+        if (
+          kind === 'timeout' ||
+          kind === 'network' ||
+          kind === 'leaseUnknown'
+        ) {
+          return { unavailable: kind }
         }
         // Fixed allow-list only: never an error message, token or account id (T-74-85).
         const reason = /not (logged on|signed in)|no authenticated/i.test(

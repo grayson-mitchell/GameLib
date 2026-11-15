@@ -160,15 +160,11 @@ const arm = () => {
 const ID = '76561198000000001'
 
 describe('refresh() Mac Steam path', () => {
-  const prev = process.env.GAMELIB_STEAMCM_CM
   const prevMac = process.env.GAMELIB_STEAM_MAC_PATH
   beforeAll(() => {
-    process.env.GAMELIB_STEAMCM_CM = 'rust'
     process.env.GAMELIB_STEAM_MAC_PATH = 'on'
   })
   afterAll(() => {
-    if (prev === undefined) delete process.env.GAMELIB_STEAMCM_CM
-    else process.env.GAMELIB_STEAMCM_CM = prev
     if (prevMac === undefined) delete process.env.GAMELIB_STEAM_MAC_PATH
     else process.env.GAMELIB_STEAM_MAC_PATH = prevMac
   })
@@ -268,7 +264,7 @@ describe('refresh() Mac Steam path', () => {
         ).source.kind
     )
 
-  it('never sends macSteam off macOS, with cm=ts, without a stored SteamID or without a grant', async () => {
+  it('never sends macSteam off macOS, without a stored SteamID or without a grant', async () => {
     requestRustInvoke.mockResolvedValue({ ok: true, result: refreshResult([]) })
 
     env.isMac = false
@@ -289,22 +285,6 @@ describe('refresh() Mac Steam path', () => {
     steamUserMocks.acquireOpenAuthenticated.mockResolvedValue(null)
     await refresh(deps)
     expect(requestRustInvoke).not.toHaveBeenCalled()
-
-    jest.clearAllMocks()
-    process.env.GAMELIB_STEAMCM_CM = 'ts'
-    try {
-      arm()
-      getUserOwnedApps.mockRejectedValue(new Error('ts path'))
-      steamUserMocks.acquireAuthenticated.mockResolvedValue({
-        ok: true,
-        client: rustClient,
-        release
-      } as never)
-      await refresh(deps)
-      expect(requestRustInvoke).not.toHaveBeenCalled()
-    } finally {
-      process.env.GAMELIB_STEAMCM_CM = 'rust'
-    }
   })
 
   it('is off by default: without GAMELIB_STEAM_MAC_PATH=on a Mac Refresh goes straight to CM', async () => {

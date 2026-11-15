@@ -1,4 +1,4 @@
-/** 79-22: depot host handlers with cm=rust (CF-06 no tokens; typed CM failures to the crate). */
+/** 79-22: depot host handlers (CF-06 no tokens; typed CM failures to the crate). */
 jest.mock('backend/logger', () => ({
   logWarning: jest.fn(),
   logError: jest.fn(),
@@ -22,15 +22,8 @@ const depotJobs = createDepotJobRegistry({
   ...createTestHostServices(),
   appRuntime: createTestAppRuntime()
 })
-const savedEnv = process.env.GAMELIB_STEAMCM_CM
-
 beforeAll(() => {
-  process.env.GAMELIB_STEAMCM_CM = 'rust'
   registerDepotHostFlows({ ipc, depotJobs })
-})
-afterAll(() => {
-  if (savedEnv === undefined) delete process.env.GAMELIB_STEAMCM_CM
-  else process.env.GAMELIB_STEAMCM_CM = savedEnv
 })
 beforeEach(() => jest.clearAllMocks())
 

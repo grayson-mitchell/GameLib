@@ -978,7 +978,7 @@ const IN_SCOPE_SUITES = [
  * and the in-memory job registry, and reaches no filesystem, `homedir()` or child process.
  *
  * `depotHostRegistration.rust.test.ts` (Phase 79 Plan 22) is structurally contained: it mocks
- * `backend/logger`, sets only `GAMELIB_STEAMCM_CM` (saved and restored), and drives the depot-host
+ * `backend/logger`, sets no environment, and drives the depot-host
  * handlers against jest.fn rustInvoke transports, so it reaches no filesystem, `homedir()` or child
  * process. Its landing commit did not classify it; the T-34.2-83 tripwire caught it.
  *

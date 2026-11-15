@@ -178,11 +178,8 @@ describe('credentialsMissing latch', () => {
 // Phase 79 (T-79-59): the same latch rules on the Rust engine.
 describe('credentialsMissing latch on the Rust engine', () => {
   const rustInvoke = jest.fn()
-  let savedEnv: string | undefined
   beforeEach(() => {
     jest.clearAllMocks()
-    savedEnv = process.env.GAMELIB_STEAMCM_CM
-    process.env.GAMELIB_STEAMCM_CM = 'rust'
     mockConfigStore.get_nodefault.mockImplementation((key: string) =>
       key === 'isLoggedIn' ? true : undefined
     )
@@ -190,10 +187,6 @@ describe('credentialsMissing latch on the Rust engine', () => {
       ...steamDeps,
       rustInvoke: { requestRustInvoke: rustInvoke }
     } as never)
-  })
-  afterEach(() => {
-    if (savedEnv === undefined) delete process.env.GAMELIB_STEAMCM_CM
-    else process.env.GAMELIB_STEAMCM_CM = savedEnv
   })
 
   it('latches the flag on an absent token without touching Rust', async () => {

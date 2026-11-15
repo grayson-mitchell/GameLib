@@ -88,16 +88,12 @@ function build(handlers: Record<string, Handler | Handler[]>) {
 }
 
 describe('userSignIn on the rust engine', () => {
-  const prev = process.env.GAMELIB_STEAMCM_SIGNIN
   beforeEach(() => {
-    process.env.GAMELIB_STEAMCM_SIGNIN = 'rust'
     jest.clearAllMocks()
     jest.useFakeTimers()
   })
   afterEach(() => {
     jest.useRealTimers()
-    if (prev === undefined) delete process.env.GAMELIB_STEAMCM_SIGNIN
-    else process.env.GAMELIB_STEAMCM_SIGNIN = prev
   })
 
   function loggedText(): string {
@@ -351,15 +347,5 @@ describe('userSignIn on the rust engine', () => {
     expect(text).not.toContain(SECRET_PASSWORD)
     expect(text).not.toContain(SECRET_CODE)
     expect(text).not.toContain(SECRET_TOKEN)
-  })
-})
-
-describe('userSignIn ts engine selection', () => {
-  it('the default engine does not call Rust', async () => {
-    delete process.env.GAMELIB_STEAMCM_SIGNIN
-    const t = build({})
-    // poll on the ts engine reads the state leaf only
-    expect(await pollQRLogin(t.deps)).toEqual({ status: 'waiting' })
-    expect(t.requestRustInvoke).not.toHaveBeenCalled()
   })
 })
