@@ -25,10 +25,7 @@ jest.mock('backend/constants/environment', () => ({
   isWindows: false,
   isLinux: true
 }))
-jest.mock('backend/utils', () => ({
-  getSteamLibraries: jest.fn(),
-  getFileSize: jest.fn()
-}))
+
 jest.mock('../stores', () => ({
   steamLibraryStore: { get: jest.fn(), set: jest.fn() },
   steamMetadataStore: { get: jest.fn(), set: jest.fn(), entries: jest.fn() },

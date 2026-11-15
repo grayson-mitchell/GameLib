@@ -26,10 +26,7 @@ jest.mock('backend/constants/environment', () => ({
   isWindows: false,
   isLinux: true
 }))
-jest.mock('backend/utils', () => ({
-  getSteamLibraries: jest.fn(),
-  getFileSize: jest.fn()
-}))
+
 jest.mock('../stores', () => ({
   steamLibraryStore: { get: jest.fn(), set: jest.fn() },
   steamMetadataStore: { get: jest.fn(), set: jest.fn(), entries: jest.fn() },
@@ -46,19 +43,7 @@ jest.mock('../bridgeBottle', () => ({
   createDrmBridgeRunners: () => ({}),
   listReadyBridgeBottleNames: jest.fn()
 }))
-jest.mock('../bridge/launchTarget', () => ({
-  backfillBridgeLaunchTargets: jest.fn()
-}))
-jest.mock('../platformCapture', () => ({
-  createPlatformCaptureQueue: () => ({
-    withPlatformCaptureLock: <T>(section: () => Promise<T>) => section()
-  }),
-  captureOwnedAppPlatforms: jest.fn()
-}))
-jest.mock('../metacriticCapture', () => ({
-  captureOwnedAppMetacritic: jest.fn()
-}))
-jest.mock('../licensedDemos', () => ({ fetchLicensedDemos: jest.fn() }))
+
 jest.mock('../library/installedMap', () => ({
   buildInstalledMap: jest.fn(),
   buildIncompleteInstallSet: jest.fn(),

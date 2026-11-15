@@ -38,20 +38,11 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Steam: 'Steam' }
 }))
 
-jest.mock('graceful-fs', () => ({ existsSync: jest.fn(() => false) }))
 jest.mock('steam-session', () => ({
   LoginSession: jest.fn(),
   EAuthTokenPlatformType: {}
 }))
 jest.mock('steam-user', () => jest.fn())
-jest.mock('../macSteamOffline', () => {
-  class GuidedOfflineRequiredError extends Error {}
-  return {
-    withMacSteamOffline: jest.fn(),
-    GuidedOfflineRequiredError,
-    restoreMacSteamOnlineIfOwed: async () => 'not-owed'
-  }
-})
 
 import type { SteamUser } from '../user'
 import { createTestSteamUser } from 'backend/testUtils/testSteamUser'

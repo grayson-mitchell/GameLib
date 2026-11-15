@@ -28,7 +28,6 @@ jest.mock('graceful-fs', () => ({
   ...jest.requireActual('graceful-fs'),
   existsSync: jest.fn(() => false)
 }))
-jest.mock('../games', () => ({ __esModule: true, default: jest.fn() }))
 
 const APP = '1603180'
 

@@ -11,12 +11,7 @@ jest.mock('backend/logger', () => ({
   logWarning: jest.fn(),
   LogPrefix: { Steam: 'Steam', Backend: 'Backend' }
 }))
-jest.mock('backend/constants/environment', () => ({
-  isMac: false,
-  isLinux: true,
-  isWindows: false,
-  isAppleSiliconMac: false
-}))
+
 jest.mock('backend/utils', () => ({ getFileSize: jest.fn() }))
 jest.mock('axios')
 jest.mock('../macArchKnownFix', () => ({ knownFixSaysMac32: jest.fn() }))

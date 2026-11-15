@@ -53,14 +53,7 @@ jest.mock('../bridgeBottle', () => ({
   createDrmBridgeRunners: () => ({}),
   listReadyBridgeBottleNames: jest.fn(() => [])
 }))
-jest.mock('../bridge/launchTarget', () => ({
-  backfillBridgeLaunchTargets: jest.fn()
-}))
-jest.mock('../platformCapture', () => ({
-  createPlatformCaptureQueue: () => ({
-    withPlatformCaptureLock: <T>(section: () => Promise<T>) => section()
-  })
-}))
+
 jest.mock('../library/installedMap', () => ({
   buildInstalledMap: jest.fn(),
   buildIncompleteInstallSet: jest.fn(),
