@@ -65,7 +65,7 @@ precondition: 1 to 2 GB owned title not installed; install already downloading. 
 
 ### 4. Sleep/wake during a held lease
 expected: After Apple menu Sleep for about 60 s and wake, the shell log has `CM sleep gap <n>s detected` (n near 60) and the install completes.
-result: pending
+result: pass — Hell Clock re-install (restarted from 0%: the failed item-3 job left no resumable chunks), Apple menu Sleep 13:31:10 to wake 13:32:09. Shell: `CM sleep gap 56s detected`, `CM probing session (cause=sleep)`, `CM session dead (cause=probe), rebuilding attempt=1`, `CM session rebuilt in 11365ms` with leases=2 held; install `status=completed` with no manual retry. This also gives the live `CM session rebuilt` proof item 3 lacked. Note: the anonymous connection logged `Failed to send heartbeat message` until its idle close ~30 s later (it is not probed on sleep).
 precondition: an install is downloading. Action: Apple menu -> Sleep, wait about 60 s, wake the Mac, report; Claude greps and checks completion.
 
 ### 5. QR sign-in (D-06)
