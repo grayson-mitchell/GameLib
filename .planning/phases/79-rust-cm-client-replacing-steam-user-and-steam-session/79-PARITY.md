@@ -249,7 +249,7 @@ Not approved. Open: TS capture parity (blocked by the reference), decided below 
 
 ## Mac Steam path (79-36)
 
-Status: pending operator acceptance (not approved).
+Status: APPROVED (Mac path) (operator, 2026-11-15; DV-79-12 rejected and fixed, re-measured below).
 
 The Mac path (D-14) is meant to differ from the CM path, so it is compared against spike 084's set, not against the TS reference. Measured 2026-11-15 on this account with Mac Steam running and signed in to the stored account. The helper ran from `public/bin/arm64/darwin/steam-bridge-helper` (the one `appPaths.steamBridgeHelperPath` resolves to); the older copy under `build/bin/` predates `--steam-owned-apps` and exits 6. Real-profile arm: the `steamcm_mac_owned_apps` op was run through `gamelib-steamcm-cli` single-shot with the operator's real HOME (the helper must reach Steam's pipe), the stored SteamID read from the steam store config; the harness in `meta/` always uses a fake HOME and cannot do this, so the run used a scratchpad script that is not committed. Anonymous CM logon only, no signed-in logon. Counts only.
 
@@ -274,21 +274,22 @@ The CM-path demo count was not re-measured: the CM path cannot be run without a 
 ### DV-79-10: free-to-play titles appear on the Mac path
 - Mac path: lists the 8 free-to-play games the account holds free licences for (TF2, Dota 2, Warframe, Path of Exile, The Sims 4, Archolos, Enderal, Spacewar); the CM path (`GetOwnedGames`) does not.
 - Why: Steam's own library shows them; type game minus free-to-play has no local signal. D-14 accepts F2P inclusion by decision.
-- accepted: pending
+- accepted: yes (operator, 2026-11-15)
 
 ### DV-79-11: Steam-hidden demos are removed
 - Mac path: omits the 2 demos Steam does not treat as subscribed (the CM path shows them from the raw licence list). It also omits licences Steam no longer honours (ICARUS, ESO).
 - Why: Steam's set is the better oracle (084).
-- accepted: pending
+- accepted: yes (operator, 2026-11-15)
 
-### DV-79-12: owned apps of type beta or application are dropped
-- Mac path: 3 of the 390 owned apps (2 beta, 1 application) are not listed. They are in Steam's subscribed set but fail the `common.type == game` filter, and they are not demos.
-- Why: the Mac filter keeps game and demo only; widening it would also admit tools, DLC-like apps and config entries that are not in the 390.
-- accepted: pending
+### DV-79-12: owned apps of type beta or application were dropped (resolved)
+- Found: 3 of the 390 owned apps (2 beta, 1 application) failed the `common.type == game` filter.
+- Operator: rejected as designed, fixed by widening the filter to game, beta and application (tools, DLC, music and the rest still drop). Commit 42117891b, test `beta_and_application_types_survive_but_other_types_still_drop`.
+- Re-measured 2026-11-15 (same method, anonymous only): subscribed 1140; Mac-path games 399 (was 393); owned 390 covered 390 of 390 (388 as games, 2 as demos), none uncovered. The 6 extra games are all type beta or application in Steam's subscribed set: the 3 owned ones plus 3 subscribed but not in `GetOwnedGames` (084's type counts: application 4, beta 2 in the set). Explained by the widening; nothing else changed (8 F2P as before, 11 demos).
+- accepted: resolved (operator, 2026-11-15)
 
 ### DV-79-13: no playtime or last-played from Steam
 - Mac path: each entry keeps the playtime and last-played already stored for that app (else 0). The helper gives ids only, so the values go stale between CM refreshes and a new app shows 0. The follow-up todo is created by 79-37.
-- accepted: pending
+- accepted: yes (operator, 2026-11-15)
 
 ## Delete gate (79-38)
 
