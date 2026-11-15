@@ -130,6 +130,11 @@ export async function withStallTimeout<T>(
     clearTimeout(timer)
     armedAt = Date.now()
     timer = setTimeout(trip, stallMs)
+    // Sidecar exit contract: this is a deadline on work, not work. A ref'd 8-minute timer held
+    // an orphaned sidecar alive for that long after a Force Quit, because a Rust depot job whose
+    // shell is gone never settles (phase 79 UAT-B item 19). The pending install is held by the
+    // stdin pipe while the shell lives, and by nothing once it is gone, so the process drains.
+    timer.unref?.()
   }
 
   const listener = (progress: GameStatus) => {

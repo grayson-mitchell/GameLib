@@ -66,6 +66,28 @@ describe('withStallTimeout', () => {
     jest.useRealTimers()
   })
 
+  it('exit contract: the no-progress timer never holds the event loop, at arm time or after a re-arm', async () => {
+    jest.useFakeTimers()
+    const spy = jest.spyOn(global, 'setTimeout')
+    const pending = withStallTimeout(
+      { aborts, appRuntime },
+      new Promise<never>(() => {}),
+      'unref-app',
+      INSTALL_NO_PROGRESS_TIMEOUT_MS,
+      'unref test'
+    )
+    emitProgress('unref-app', { percent: 5 })
+    const stallTimers = spy.mock.results
+      .filter((_, i) => spy.mock.calls[i][1] === INSTALL_NO_PROGRESS_TIMEOUT_MS)
+      .map((r) => r.value as NodeJS.Timeout)
+    expect(stallTimers).toHaveLength(2)
+    for (const t of stallTimers) expect(t.hasRef()).toBe(false)
+    spy.mockRestore()
+    const settled = pending.catch((err: unknown) => err)
+    jest.advanceTimersByTime(INSTALL_NO_PROGRESS_TIMEOUT_MS + 1)
+    expect(isStallError(await settled)).toBe(true)
+  })
+
   it('RED vs the old ceiling (decisive): advancing progress every 100s survives 20 minutes of fake time', async () => {
     jest.useFakeTimers()
     const appName = 'never-settles-advancing'
