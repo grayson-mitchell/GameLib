@@ -26,23 +26,31 @@ GameLib is a public fork of Heroic Games Launcher that adds Steam as a first-cla
 
 ## Technology Stack (Steam)
 
-Decided during the research phase and **frozen**. The full decision record — pinned versions, the
+Decided during the research phase; the original freeze (steam-session/steam-user, both retired and replaced by Rust) was lifted and
+recorded in Phase 79 (`STEAM-STACK.md`, "Amended by Phase 79"). The full decision record — pinned versions, the
 rejected-alternatives table with reasons, confidence ratings and sources — is in
 `.planning/research/STEAM-STACK.md`. Read it when you change Steam auth, library-data or launch
 plumbing; otherwise you do not need it.
 
-The short version: **steam-session** for auth (QR / credentials / SteamGuard, yielding a refresh
-token), **steam-user** to reach the CM network anonymously for public app data
-and authenticated only on demand (explicit Refresh, sign-in, redeem, depot installs; wrapped on
-macOS so Mac Steam's Friends list stays signed in), calling `getUserOwnedApps()`,
-the in-repo **gamelib-steamfiles** crate (Rust, via rustInvoke and gamelib-steamfiles-cli) to read `libraryfolders.vdf`, ACFs, `registry.vdf`, `localconfig.vdf`, `installscript.vdf` and `shortcuts.vdf`, **axios** for
-public store metadata and artwork, and `shell.openExternal("steam://rungameid/{appId}")` to
-launch.
+The short version: the Steam CM session, sign-in, Refresh, enrichment and depot keys are Rust, in
+the in-repo **gamelib-steamcm** crate on **steam-vent** (via rustInvoke and gamelib-steamcm-cli):
+anonymous and signed-in CM logon, owned apps, PICS, depot keys, request codes and redeem.
+Sign-in is the Steam Web API `IAuthenticationService` (QR / credentials / SteamGuard, yielding a
+refresh token). The signed-in session is opened only on demand (explicit Refresh, sign-in, redeem,
+depot installs); the Rust logon keeps Mac Steam's Friends list signed in, so there is no go-offline
+wrap (only an owed-record restore). **steam-session** and **steam-user** were retired and replaced by
+this in Phase 79 and are no longer dependencies. The in-repo **gamelib-steamfiles** crate reads
+`libraryfolders.vdf`, ACFs, `registry.vdf`, `localconfig.vdf`, `installscript.vdf` and
+`shortcuts.vdf` (unchanged). **reqwest** (in Rust) does public store metadata and artwork, replacing
+axios for Steam. The Mac Steam owned-apps path (bridge helper) exists but ships OFF by default
+(`GAMELIB_STEAM_MAC_PATH=on`). Launch is unchanged:
+`shell.openExternal("steam://rungameid/{appId}")`.
 
 `steamworks.js`, `greenworks`, `electron-steam-openid`, Steam partner OAuth and browser-based
 Steam login were each evaluated and **rejected** — mostly because they require a Valve-assigned
 AppId, are abandoned, or only yield a SteamID64 with no library access. `STEAM-STACK.md` records
-the reason for each and they still hold, so re-propose one only after reading it.
+the reason for each (and for the steamroom and steam-client-lib crates, not chosen over steam-vent)
+and they still hold, so re-propose one only after reading it.
 
 <!-- GSD:stack-end -->
 

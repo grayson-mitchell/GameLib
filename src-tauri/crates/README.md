@@ -193,3 +193,43 @@ in `.planning/phases/75-steam-local-file-formats-in-rust/`. What it added to the
   operator-accepted (`75-PARITY.md`).
 - **Live gate.** CI was green on all three OSes and the live macOS UAT passed 8 of 8, after which
   both D-08 flags, the oracle and the sweep were deleted; `steamFilesPortComplete.test.ts` pins that.
+
+## 12. Fourth worked example: the Steam CM client (Phase 79)
+
+`gamelib-steamcm` and `gamelib-steamcm-cli` (on steam-vent) replaced the `steam-user` and
+`steam-session` npm packages (plus `lzma` and `zstddec`): the CM session, sign-in, Refresh,
+enrichment and depot keys. History lives in
+`.planning/phases/79-rust-cm-client-replacing-steam-user-and-steam-session/`. Unlike the earlier
+crates, this one is **stateful**, so the recipe grew in these ways:
+
+- **A session actor behind a backend trait.** One task owns the CM connection, logon state and
+  reconnect; callers send it operations and get answers. The steam-vent calls sit behind a trait,
+  so the actor is tested against a fake backend and the crate can be swapped without touching
+  callers.
+- **A global runtime and `block_on_guarded`.** The facade functions are synchronous for the shell.
+  They run on one global tokio runtime, and `block_on_guarded` returns `steamcm:nested-runtime`
+  as an error instead of panicking when it is called from inside a runtime.
+- **Lifecycle hooks.** The shell must release the session at stdin EOF and at exit, and any
+  owed-record restore (`RestoreOnlyWrap` on macOS) must be paid from the boot and shutdown
+  paths. The host trait (`WrapHost`) is set before `steamcm_configure`, or configure fails with
+  `steamcm:wrap-host-missing`.
+- **A stateful ndjson CLI.** `gamelib-steamcm-cli` keeps a session across lines, so sweeps drive a
+  real logon, Refresh or redeem and record the replies. `meta/gamelibSteamcmCli.ts` re-records.
+- **Tier 1 goldens with recorded raw buffers.** The Jest parity fixtures replay recorded Rust
+  results (`rust-results.json`) against the kept goldens (`expected.json`, `invocations.json`),
+  with the raw PICS and CM buffers stored under `tests/fixtures`, so Jest needs no Rust toolchain
+  and no network.
+
+Lessons:
+
+- Each `rustInvoke` runs on its own shell thread, so two fire-and-forget calls are not processed
+  in order. Chain on the earlier answer; never assume ordering.
+- steam-vent does not recover from a dead socket by itself (spike 085); the actor rebuilds the
+  connection with the stored refresh token.
+- Install the rustls ring provider explicitly in `main()`; with steam-vent in the build, the
+  first TLS use otherwise panics (spike 082).
+- A Rust reply that is `Ok` can still carry a failing `eresult` (redeem); the TS adapter must
+  reject on it.
+- Parity found real divergences between steam-user and the Rust client (`79-PARITY.md`); each was
+  judged and accepted before the TS side was deleted. `steamCmPortComplete.test.ts` pins the
+  deletion.

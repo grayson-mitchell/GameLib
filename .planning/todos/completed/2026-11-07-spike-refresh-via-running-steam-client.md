@@ -57,3 +57,7 @@ demos case from spike 052) from the running Mac Steam, with no CM logon by GameL
 Done when: the spike README records which call (if any) returns the owned set, the set-diff
 against `getUserOwnedApps()`, the signed-out and mismatched-account results, and a Friends-intact
 observation, with a VALIDATED / PARTIAL / INVALIDATED verdict.
+
+## Resolution
+
+resolution: Phase 79 D-14/D-15. The running-Mac-Steam owned-apps path was built (79-36, bridge helper, out of process) but ships OFF by default (`GAMELIB_STEAM_MAC_PATH=on` opts in) because its helper makes Friends show "playing Spacewar" (todo 2026-11-15-mac-steam-path-shows-playing-spacewar). Refresh on macOS uses the Rust CM path, which UAT-B item 13 verified keeps Friends signed in, so the original problem (Friends drop on Refresh) is resolved without it.
