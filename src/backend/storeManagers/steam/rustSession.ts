@@ -12,6 +12,7 @@ import {
 } from 'common/types/sidecarTransport'
 import type { SteamCmClient } from './cm/SteamCmClient'
 import { createRustCmClient } from './cm/RustCmClient'
+import { createLiveLeaseClient } from './cm/liveLeaseClient'
 import { invokeSteamCm } from './cm/rustSteamCm'
 import type { SteamStoresDeps } from './library/installRoot'
 import { readTokenOutcome, type TokenStoreSlot } from './tokenStore'
@@ -70,10 +71,18 @@ export class RustCmSession {
   // The last acquire refusal's logon failure; cleared by the next acquire and by reset().
   private logonFailure: { message: string; eresult?: number } | null = null
 
-  getClient(): SteamCmClient | null {
+  // Resolves a held lease per call, so a released lease never strands a caller still holding
+  // its own (review 79 C1/CR-01: an install handed a concurrent Refresh's client).
+  private readonly live = createLiveLeaseClient(() => this.latestLease())
+
+  private latestLease(): SteamCmClient | null {
     let last: SteamCmClient | null = null
     for (const c of this.leases.values()) last = c
     return last
+  }
+
+  getClient(): SteamCmClient | null {
+    return this.leases.size > 0 ? this.live : null
   }
 
   getLogonFailure(): { message: string; eresult?: number } | null {

@@ -141,7 +141,46 @@ describe('SteamUser on the Rust engine', () => {
       channel: 'steamcm_licenses',
       args: [{ leaseId: 7 }]
     })
-    expect(steamUser.getClient()).toBe(lease.client)
+    expect(steamUser.getClient()?.steamID?.getSteamID64()).toBe(
+      '76561197960287930'
+    )
+  })
+
+  it('getClient() follows a held lease, so releasing another lease never strands its caller', async () => {
+    // Review 79 C1/CR-01: an install handed a concurrent Refresh's client failed once that
+    // Refresh released its lease.
+    let next = 7
+    handlers['steamcm_session_acquire'] = () => ({
+      ok: true,
+      leaseId: next++,
+      steamId: '76561197960287930'
+    })
+    handlers['steamcm_depot_key'] = () => ({
+      ok: true,
+      result: { keyHex: 'ab' }
+    })
+    const install = await steamUser.acquireAuthenticated({
+      reason: 'user-install'
+    })
+    const refresh = await steamUser.acquireAuthenticated({
+      reason: 'user-refresh'
+    })
+    if (!install.ok || !refresh.ok) throw new Error('expected two leases')
+
+    const client = steamUser.getClient()
+    if (!client) throw new Error('expected a client')
+    refresh.release()
+
+    await new Promise<void>((resolve, reject) =>
+      client.getDepotDecryptionKey(1, 2, (err) =>
+        err ? reject(err) : resolve()
+      )
+    )
+    const keyCall = calls.find((c) => c.channel === 'steamcm_depot_key')
+    expect(keyCall?.args).toEqual([{ leaseId: 7, appId: 1, depotId: 2 }])
+
+    install.release()
+    expect(steamUser.getClient()).toBeNull()
   })
 
   it('release() invokes steamcm_session_release exactly once even when called twice', async () => {
