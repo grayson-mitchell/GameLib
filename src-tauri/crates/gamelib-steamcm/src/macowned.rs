@@ -33,6 +33,9 @@ pub const HELPER_TIMEOUT: Duration = Duration::from_secs(30);
 const MAX_STDOUT: usize = 4 * 1024 * 1024;
 /// Largest app count the helper may report (`GL_OA_MAX_APPS`).
 const MAX_APPS: usize = 100_000;
+/// Valve SDK test apps every account owns, never shown as games (spike findings,
+/// steam-library-ownership item 4). 480 is Spacewar.
+const SDK_TEST_APPS: &[u32] = &[480];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FallbackReason {
@@ -208,6 +211,9 @@ fn common_of(apps: &Map<String, Value>, id: u32) -> Option<&Value> {
 fn split_games_and_demos(ids: &[u32], apps: Map<String, Value>) -> (Value, Vec<DemoEntry>) {
     let mut games: Vec<(u32, String)> = Vec::new();
     for &id in ids {
+        if SDK_TEST_APPS.contains(&id) {
+            continue;
+        }
         let Some(common) = common_of(&apps, id) else {
             continue;
         };
@@ -424,6 +430,25 @@ mod tests {
             .map(|a| a["appid"].as_u64().unwrap())
             .collect();
         assert_eq!(ids, vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn sdk_test_app_480_is_dropped_from_games() {
+        let mut apps = Map::new();
+        for id in [480u32, 100] {
+            apps.insert(
+                id.to_string(),
+                json!({ "common": { "type": "Game", "name": format!("n{id}") } }),
+            );
+        }
+        let (owned, _) = split_games_and_demos(&[100, 480], apps);
+        let ids: Vec<u64> = owned["apps"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|a| a["appid"].as_u64().unwrap())
+            .collect();
+        assert_eq!(ids, vec![100]);
     }
 
     #[tokio::test]
