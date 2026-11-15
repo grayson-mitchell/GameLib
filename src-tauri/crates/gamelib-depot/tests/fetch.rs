@@ -144,7 +144,8 @@ async fn exhausted_attempts_on_a_dead_port_report_network_code() {
         vec![host_ref(&dead, "SteamCache", false)],
     )
     .with_budget(3, Duration::from_secs(15))
-    .with_backoff(1, 3);
+    .with_backoff(1, 3)
+    .with_transient_budget(Duration::ZERO);
     let fail = failed(
         f.fetch_chunk("10", "abc", 0, 0, &CancellationToken::new())
             .await
@@ -166,7 +167,8 @@ async fn attempt_timeout_15s() {
     .with_budget(
         1,
         Duration::from_millis(gamelib_depot::fetch::CHUNK_FETCH_TIMEOUT_MS),
-    );
+    )
+    .with_transient_budget(Duration::ZERO);
     let started = tokio::time::Instant::now();
     let fail = failed(
         f.fetch_chunk("10", "abc", 0, 0, &CancellationToken::new())
@@ -328,7 +330,8 @@ async fn failure_messages_never_contain_token() {
     let host = Arc::new(FakeHost::new().with_tokens(vec![Ok(Some(TOKEN_FIXTURE.into()))]));
     let f = fetcher(host, vec![host_ref(&dead, "CDN", false)])
         .with_budget(2, Duration::from_secs(15))
-        .with_backoff(1, 3);
+        .with_backoff(1, 3)
+        .with_transient_budget(Duration::ZERO);
     let fail = failed(
         f.fetch_chunk("10", "abc", 0, 0, &CancellationToken::new())
             .await
@@ -385,4 +388,97 @@ async fn failed_host_is_rotated_away_from_on_retry() {
     assert_eq!(bytes, b"ok");
     assert_eq!(served_by, good.host());
     assert_eq!(bad.hit_count("/depot/10/chunk/abc"), 1);
+}
+
+/// Serves one 200 chunk on `addr` (an address that was dead until now).
+async fn serve_late(addr: String, body: &'static [u8]) {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    let l = tokio::net::TcpListener::bind(&addr).await.unwrap();
+    loop {
+        let (mut s, _) = l.accept().await.unwrap();
+        let mut buf = [0u8; 2048];
+        let _ = s.read(&mut buf).await;
+        let head = format!(
+            "HTTP/1.1 200 OK\r\ncontent-length: {}\r\nconnection: close\r\n\r\n",
+            body.len()
+        );
+        let _ = s.write_all(head.as_bytes()).await;
+        let _ = s.write_all(body).await;
+        let _ = s.shutdown().await;
+    }
+}
+
+async fn dead_addr() -> String {
+    let l = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    l.local_addr().unwrap().to_string()
+}
+
+#[tokio::test]
+async fn connect_errors_outlast_the_attempt_budget_then_succeed() {
+    let addr = dead_addr().await;
+    let f = fetcher(
+        Arc::new(FakeHost::new()),
+        vec![host_ref(&addr, "SteamCache", false)],
+    )
+    .with_backoff(5, 10)
+    .with_transient_budget(Duration::from_secs(30));
+    let late = addr.clone();
+    let server = tokio::spawn(async move {
+        // Far more than 8 attempts at a 5-10 ms backoff elapse first.
+        tokio::time::sleep(Duration::from_millis(600)).await;
+        serve_late(late, b"after-outage").await;
+    });
+    let (bytes, _) = f
+        .fetch_chunk("10", "abc", 0, 0, &CancellationToken::new())
+        .await
+        .unwrap();
+    assert_eq!(bytes, b"after-outage");
+    server.abort();
+}
+
+#[tokio::test]
+async fn cancel_during_an_outage_wait_returns_promptly() {
+    let addr = dead_addr().await;
+    let f = Arc::new(
+        fetcher(
+            Arc::new(FakeHost::new()),
+            vec![host_ref(&addr, "SteamCache", false)],
+        )
+        // Default 8 s outage backoff would be the wait; a long budget keeps it retrying.
+        .with_transient_budget(Duration::from_secs(300)),
+    );
+    let cancel = CancellationToken::new();
+    let (f2, c2) = (f.clone(), cancel.clone());
+    let task = tokio::spawn(async move { f2.fetch_chunk("10", "abc", 0, 0, &c2).await });
+    // Past the 8 attempts' worth of 3 s waits is too slow; 300 ms is mid-wait on a long backoff.
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    let t = std::time::Instant::now();
+    cancel.cancel();
+    assert!(matches!(task.await.unwrap(), Err(FetchError::Cancelled)));
+    assert!(
+        t.elapsed() < Duration::from_millis(100),
+        "{:?}",
+        t.elapsed()
+    );
+}
+
+#[tokio::test]
+async fn permanent_http_failure_still_fails_after_the_attempt_budget() {
+    let cdn = FakeCdn::start().await;
+    cdn.script("/depot/10/chunk/abc", vec![Reply::Status(404, vec![])]);
+    let f = fetcher(
+        Arc::new(FakeHost::new()),
+        vec![host_ref(&cdn.host(), "SteamCache", false)],
+    )
+    .with_backoff(1, 3)
+    // A generous outage budget must not stretch HTTP-status failures.
+    .with_transient_budget(Duration::from_secs(300));
+    let fail = failed(
+        f.fetch_chunk("10", "abc", 0, 0, &CancellationToken::new())
+            .await
+            .unwrap_err(),
+    );
+    assert_eq!(fail.kind, ErrorKind::CdnHttp);
+    assert_eq!(fail.http_status, Some(404));
+    assert_eq!(cdn.hit_count("/depot/10/chunk/abc"), 8);
 }

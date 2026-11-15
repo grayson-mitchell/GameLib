@@ -8,6 +8,8 @@
 //! - scheme `https://` only when `https_support == "mandatory"`, else `http://` (steam-user);
 //! - token gate `use_token_auth || kind == "CDN"`; `SteamCache` hosts never ask for a token;
 //! - 8 attempts, 15 s each, backoff `200 * 2^i` capped at 3 s, cancel never reaches host health;
+//! - transport-level errors (connect, timeout, reset) keep retrying past the 8 attempts until
+//!   `TRANSIENT_BUDGET` has passed with no progress, so a Wi-Fi outage does not fail the install;
 //! - redirects are never followed (a hostile edge cannot steer a request off-host).
 //!
 //! Tokens and request codes come from Node through `JobHost`, which blocks on the sidecar pipe,
@@ -37,6 +39,18 @@ pub const CHUNK_FETCH_ATTEMPTS: u32 = 8;
 
 // TS origin: depot/decompress.ts CHUNK_FETCH_MAX_BACKOFF_MS
 pub const CHUNK_FETCH_MAX_BACKOFF_MS: u64 = 3_000;
+
+/// How long transport-level errors keep being retried, measured from the later of this fetch's
+/// first transport error and the last successful fetch anywhere in the job. Survives a multi-minute
+/// outage; one slow chunk cannot burn it while others succeed.
+pub const TRANSIENT_BUDGET: Duration = Duration::from_secs(300);
+
+/// Backoff cap while waiting out a transport-level outage (the 3 s cap would hammer a dead link).
+pub const TRANSIENT_MAX_BACKOFF_MS: u64 = 8_000;
+
+/// With no success anywhere in the job for this long, a transport error is an outage rather than a
+/// host fault, so it is not recorded against host health (nothing is left demoted afterwards).
+const OUTAGE_QUIET: Duration = Duration::from_secs(10);
 
 // TS origin: depot/decompress.ts fetchChunk `Math.min(200 * 2 ** i, ...)`
 pub const CHUNK_FETCH_BACKOFF_BASE_MS: u64 = 200;
@@ -201,6 +215,15 @@ pub struct Fetcher {
     attempt_timeout: Duration,
     /// (base, cap) in ms; defaults to the TS constants.
     backoff: (u64, u64),
+    transient_budget: Duration,
+    transient_cap_ms: u64,
+    /// Last successful fetch on this fetcher (job-wide progress).
+    last_success: Mutex<Instant>,
+}
+
+/// A transport-level failure (no HTTP status): the link, not the request, is at fault.
+fn is_transient(e: &AttemptErr) -> bool {
+    e.status.is_none() && !matches!(e.code, "too_large" | "client")
 }
 
 fn wants_cdn_auth_token(h: &HostRef) -> bool {
@@ -256,6 +279,9 @@ impl Fetcher {
             attempts: CHUNK_FETCH_ATTEMPTS,
             attempt_timeout: Duration::from_millis(CHUNK_FETCH_TIMEOUT_MS),
             backoff: (CHUNK_FETCH_BACKOFF_BASE_MS, CHUNK_FETCH_MAX_BACKOFF_MS),
+            transient_budget: TRANSIENT_BUDGET,
+            transient_cap_ms: TRANSIENT_MAX_BACKOFF_MS,
+            last_success: Mutex::new(Instant::now()),
         }
     }
 
@@ -454,7 +480,7 @@ impl Fetcher {
     ) -> Result<(Vec<u8>, String), FetchError> {
         let mut previous_host: Option<String> = None;
         let mut last: Option<AttemptErr> = None;
-        let mut last_host = String::new();
+        let mut last_host: String;
         let mut code_refreshed = false;
         let max_body = match target {
             Target::Chunk { .. } => MAX_CHUNK_BODY_BYTES,
@@ -465,7 +491,10 @@ impl Fetcher {
             Target::Manifest { manifest_id, .. } => format!("manifest {manifest_id}"),
         };
 
-        for i in 0..self.attempts {
+        let mut transient_since: Option<Instant> = None;
+        let mut transient_n: u32 = 0;
+        let mut i: u32 = 0;
+        loop {
             if cancel.is_cancelled() {
                 return Err(FetchError::Cancelled);
             }
@@ -491,6 +520,10 @@ impl Fetcher {
             previous_host = Some(host_name.clone());
             last_host = host_name.clone();
             let Some(meta) = self.hosts.iter().find(|h| h.host == host_name) else {
+                i += 1;
+                if i >= self.attempts {
+                    break;
+                }
                 continue;
             };
 
@@ -530,10 +563,18 @@ impl Fetcher {
                     if let Ok(mut h) = self.health.lock() {
                         h.record(&host_name, HostAttemptOutcome::Success, ms);
                     }
+                    if let Ok(mut t) = self.last_success.lock() {
+                        *t = Instant::now();
+                    }
                     return Ok((body, host_name));
                 }
                 Err(e) => {
-                    if let Ok(mut h) = self.health.lock() {
+                    let last_ok = self.last_success.lock().map(|t| *t).ok();
+                    let in_outage =
+                        is_transient(&e) && last_ok.is_some_and(|t| t.elapsed() >= OUTAGE_QUIET);
+                    if in_outage {
+                        // Whole link down: no host is at fault, so nothing is demoted.
+                    } else if let Ok(mut h) = self.health.lock() {
                         let o = if e.timed_out {
                             HostAttemptOutcome::Timeout
                         } else {
@@ -566,11 +607,31 @@ impl Fetcher {
                 }
             }
 
-            if i + 1 < self.attempts {
-                tokio::select! {
-                    _ = cancel.cancelled() => return Err(FetchError::Cancelled),
-                    _ = tokio::time::sleep(Duration::from_millis(backoff_with(i, self.backoff.0, self.backoff.1))) => {}
+            i += 1;
+            let transient = last.as_ref().is_some_and(is_transient);
+            let mut delay = backoff_with(i - 1, self.backoff.0, self.backoff.1);
+            if transient {
+                let since = *transient_since.get_or_insert_with(Instant::now);
+                let anchor = self
+                    .last_success
+                    .lock()
+                    .map(|t| (*t).max(since))
+                    .unwrap_or(since);
+                if i >= self.attempts && anchor.elapsed() >= self.transient_budget {
+                    break;
                 }
+                delay = backoff_with(transient_n, self.backoff.0, self.transient_cap_ms);
+                transient_n += 1;
+            } else {
+                transient_since = None;
+                transient_n = 0;
+                if i >= self.attempts {
+                    break;
+                }
+            }
+            tokio::select! {
+                _ = cancel.cancelled() => return Err(FetchError::Cancelled),
+                _ = tokio::time::sleep(Duration::from_millis(delay)) => {}
             }
         }
 
@@ -695,9 +756,17 @@ impl Fetcher {
         self
     }
 
-    /// Overrides the backoff base and cap in ms (tests keep real-socket runs fast).
+    /// Overrides the backoff base and cap in ms (tests keep real-socket runs fast). The outage
+    /// backoff cap follows it.
     pub fn with_backoff(mut self, base_ms: u64, cap_ms: u64) -> Self {
         self.backoff = (base_ms, cap_ms);
+        self.transient_cap_ms = cap_ms;
+        self
+    }
+
+    /// Overrides how long transport-level errors keep retrying past the attempt budget.
+    pub fn with_transient_budget(mut self, budget: Duration) -> Self {
+        self.transient_budget = budget;
         self
     }
 }
