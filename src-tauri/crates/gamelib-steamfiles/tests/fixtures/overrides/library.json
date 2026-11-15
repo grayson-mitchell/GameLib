@@ -17,18 +17,20 @@
         10,
         {
           "installPath": "${FIXTURES}/scan/lib2/steamapps/common/DuplicateDir",
-          "sizeOnDisk": "1000"
+          "sizeOnDisk": "1000",
+          "buildid": "100"
         }
       ],
       [
         40,
         {
           "installPath": "${FIXTURES}/scan/lib2/steamapps/common/ScanLibTwo",
-          "sizeOnDisk": "1000"
+          "sizeOnDisk": "1000",
+          "buildid": "100"
         }
       ]
     ],
-    "divergenceNote": "Rust reports sizeOnDisk as the ACF string \"1000\"; the TS oracle returned the number 1000 because @node-steam/vdf coerces numeric-looking values. ACF values are strings on disk and the declared type is string, so the Rust (string) value is the correct one."
+    "divergenceNote": "Rust reports sizeOnDisk as the ACF string \"1000\"; the TS oracle returned the number 1000 because @node-steam/vdf coerces numeric-looking values. ACF values are strings on disk and the declared type is string, so the Rust (string) value is the correct one. 79-38: the oracle predates quick-261114-rc8, which carries the ACF buildid through installedMap and readAcfState (omitted when null/empty/0); the fixture ACFs declare buildid 100, so the TS wrappers now surface it."
   },
   "library/buildInstalledMap/with-truncated-manifest": {
     "rustOverride": [
@@ -36,18 +38,20 @@
         10,
         {
           "installPath": "${FIXTURES}/scan/lib2/steamapps/common/DuplicateDir",
-          "sizeOnDisk": "1000"
+          "sizeOnDisk": "1000",
+          "buildid": "100"
         }
       ],
       [
         40,
         {
           "installPath": "${FIXTURES}/scan/lib2/steamapps/common/ScanLibTwo",
-          "sizeOnDisk": "1000"
+          "sizeOnDisk": "1000",
+          "buildid": "100"
         }
       ]
     ],
-    "divergenceNote": "The old parser never terminates on the truncated appmanifest_30.acf, so the oracle recorded a hang marker; Rust skips the unparseable manifest and returns the remaining records, which is the correct fail-soft behaviour. Rust reports sizeOnDisk as the ACF string \"1000\"; the TS oracle returned the number 1000 because @node-steam/vdf coerces numeric-looking values. ACF values are strings on disk and the declared type is string, so the Rust (string) value is the correct one."
+    "divergenceNote": "The old parser never terminates on the truncated appmanifest_30.acf, so the oracle recorded a hang marker; Rust skips the unparseable manifest and returns the remaining records, which is the correct fail-soft behaviour. Rust reports sizeOnDisk as the ACF string \"1000\"; the TS oracle returned the number 1000 because @node-steam/vdf coerces numeric-looking values. ACF values are strings on disk and the declared type is string, so the Rust (string) value is the correct one. 79-38: the oracle predates quick-261114-rc8, which carries the ACF buildid through installedMap and readAcfState (omitted when null/empty/0); the fixture ACFs declare buildid 100, so the TS wrappers now surface it."
   },
   "library/buildIncompleteInstallSet/with-truncated-manifest": {
     "rustOverride": [20],
@@ -58,18 +62,20 @@
       "state": "installed",
       "stateFlags": 4,
       "installPath": "${FIXTURES}/scan/lib1/steamapps/common/ScanInstalled",
-      "sizeOnDisk": "1000"
+      "sizeOnDisk": "1000",
+      "buildid": "100"
     },
-    "divergenceNote": "Rust reports sizeOnDisk as the ACF string \"1000\"; the TS oracle returned the number 1000 because @node-steam/vdf coerces numeric-looking values. ACF values are strings on disk and the declared type is string, so the Rust (string) value is the correct one."
+    "divergenceNote": "Rust reports sizeOnDisk as the ACF string \"1000\"; the TS oracle returned the number 1000 because @node-steam/vdf coerces numeric-looking values. ACF values are strings on disk and the declared type is string, so the Rust (string) value is the correct one. 79-38: the oracle predates quick-261114-rc8, which carries the ACF buildid through installedMap and readAcfState (omitted when null/empty/0); the fixture ACFs declare buildid 100, so the TS wrappers now surface it."
   },
   "library/readAcfState/40": {
     "rustOverride": {
       "state": "installed",
       "stateFlags": 4,
       "installPath": "${FIXTURES}/scan/lib2/steamapps/common/ScanLibTwo",
-      "sizeOnDisk": "1000"
+      "sizeOnDisk": "1000",
+      "buildid": "100"
     },
-    "divergenceNote": "Rust reports sizeOnDisk as the ACF string \"1000\"; the TS oracle returned the number 1000 because @node-steam/vdf coerces numeric-looking values. ACF values are strings on disk and the declared type is string, so the Rust (string) value is the correct one."
+    "divergenceNote": "Rust reports sizeOnDisk as the ACF string \"1000\"; the TS oracle returned the number 1000 because @node-steam/vdf coerces numeric-looking values. ACF values are strings on disk and the declared type is string, so the Rust (string) value is the correct one. 79-38: the oracle predates quick-261114-rc8, which carries the ACF buildid through installedMap and readAcfState (omitted when null/empty/0); the fixture ACFs declare buildid 100, so the TS wrappers now surface it."
   },
   "library/readAcfState/30/with-truncated-manifest": {
     "rustOverride": {
