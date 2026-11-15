@@ -75,12 +75,12 @@ precondition: launch env `GAMELIB_STEAMCM_SIGNIN=rust`; signed out. Action: choo
 
 ### 6. Credentials with a typed Steam Guard code (D-05, D-08)
 expected: Signing in with password and a typed email or mobile-authenticator code succeeds; `gamelib.log` has `Steam Guard required for credential login` then `Steam auth complete (rust sign-in)`; persona name shows and the library populates.
-result: pending
+result: pass — credentials sign-in on the Rust Web API flow reached Steam Guard (`Steam Guard required for credential login`, shell `webauth credentials flow -> guardRequired`) and completed on mobile approval: `webauth credentials flow -> done`, `Steam auth complete (rust sign-in)`, `[steamcm] rust steamcm_personas`, stored persona is real (not the fallback), library sync 390 games. The typed *correct* code sub-case is untestable on this account: its Steam mobile app offers approval only and shows no code (typed-code success stays covered by the unit test `submitSteamGuardCode normalises, submits and waits for done`).
 precondition: `GAMELIB_STEAMCM_SIGNIN=rust`; signed out; the account has email or mobile guard. Action: enter credentials, type the code when asked, report.
 
 ### 7. Wrong guard code then the right one
 expected: A wrong guard code shows an error in the form and leaves the form usable; the correct code on the second attempt succeeds: `gamelib.log` has `Steam guard code submission failed: ... EResult=65` once, then `Steam auth complete (rust sign-in)`.
-result: pending
+result: pass — after fix 37c2a1d5c (the form cleared its phone-approval poll on submit and never resumed it after a rejected code, so an approval following a wrong code hung sign-in; seen live at 13:58). Re-run 14:04: wrong code `AAAAA` -> UI "invalid code", `Steam guard code submission failed: eresult EResult=88` (TwoFactorCodeMismatch, not 65: 65 is the email-code variant); the same flow then completed on mobile approval: `webauth credentials flow -> done`, `Steam auth complete (rust sign-in)` at 14:04:37, library sync 390 games. The "right code" step is a mobile approval for this account (see item 6).
 precondition: as item 6. Action: type a wrong code, read the error, type the right code, report.
 
 ### 8. Real key redeem
