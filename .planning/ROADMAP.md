@@ -167,7 +167,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 73: Steam depot download pipeline in Rust** — 21 plans; complete (completed 2026-11-10)
 - [x] **Phase 74: Steam game updates** — 36 plans (4 gap-closure rounds); live gate passed 2026-11-14 (UAT 29-30), review WR-01/WR-02 deferred to todos (completed 2026-11-14)
 - [x] **Phase 75: Steam local file formats in Rust** — 35 plans in 20 waves; planned 2026-11-14 (completed 2026-11-14)
-- [x] **Phase 76: Engine-correct bottle for DRM-mode launches (v0.9 audit S9)** — 2 plans in 2 waves; planned (completed 2026-11-15)
+- [ ] **Phase 76: Engine-correct bottle for DRM-mode launches (v0.9 audit S9)** — 2 plans in 2 waves; executed, gaps found (2026-11-16) — gap closure pending
 - [ ] **Phase 77: Runtime hardening from the v0.9 review debt** — 3 plans in 2 waves; planned
 - [ ] **Phase 78: Verification records and test health after v0.9** — 0 plans; not started
 - [ ] **Phase 79: Rust CM client replacing steam-user and steam-session** — 44 plans in 21 waves; planned (spike 085 gate satisfied)
