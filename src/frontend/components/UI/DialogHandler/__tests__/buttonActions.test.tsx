@@ -207,6 +207,25 @@ describe('DialogHandler: resolveButtonAction (260919-sch)', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/login')
   })
 
+  // 261116-han: engine-notice and most other backend dialogs send no buttons.
+  // null is what an omitted trailing argument becomes over the sidecar's JSON hop.
+  it.each([
+    ['undefined', undefined],
+    ['null', null]
+  ])('a frame with %s buttons gets a single OK button', (_label, buttons) => {
+    mount()
+    defined(capturedOnMessage)(
+      undefined,
+      'title',
+      'message',
+      'MESSAGE',
+      buttons as unknown as ButtonOptions[] | undefined
+    )
+
+    const options = at(at(mockShowDialogModal.mock.calls, 0), 0)
+    expect(options.buttons).toEqual([{ text: 'OK' }])
+  })
+
   it('a button with no action passes through with onClick still undefined (no regression)', () => {
     mount()
     emit([{ text: 'plain' }])

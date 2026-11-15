@@ -84,10 +84,17 @@ export default function DialogHandler() {
       buttons?: Array<ButtonOptions>,
       ackId?: string
     ) => {
+      // 261116-han: most backend callers send no buttons, which rendered a
+      // dialog closable only by its window control. A backend frame cannot
+      // carry custom controls, so give it a plain dismiss. Renderer callers
+      // that pass `buttons: []` on purpose do not come through here.
+      const frameButtons: Array<ButtonOptions> = buttons?.length
+        ? buttons
+        : [{ text: t('box.ok', 'OK') }]
       // 37-02 (D-07): attach a real onClick for any button carrying a
       // recognized `action` discriminator BEFORE showDialogModal renders it.
       // Buttons with no `action` (the vast majority) pass through untouched.
-      const mappedButtons = buttons?.map((button) =>
+      const mappedButtons = frameButtons.map((button) =>
         button.action
           ? {
               ...button,
