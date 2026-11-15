@@ -76,6 +76,17 @@ fn parse_args<T: for<'de> Deserialize<'de>>(op: &str, args: &[Value]) -> Result<
     serde_json::from_value(args[0].clone()).map_err(|_| bad())
 }
 
+/// A no-arg op. The app-side contract sends these as `[]` (`z.tuple([])`); `[{}]` is also accepted.
+fn no_args(op: &str, args: &[Value]) -> Result<(), String> {
+    match args {
+        [] => Ok(()),
+        [one] => serde_json::from_value::<EmptyArgs>(one.clone())
+            .map(|_| ())
+            .map_err(|_| format!("{op}:bad-args")),
+        _ => Err(format!("{op}:bad-args")),
+    }
+}
+
 // Arg structs. None derives Debug: several carry a refresh token, password, code or key.
 
 #[derive(Deserialize)]
@@ -268,11 +279,11 @@ fn run_op(op: &str, args: &[Value]) -> Result<Value, String> {
             facade::session_release(a.lease_id)
         }
         "steamcm_session_ensure_connected" => {
-            let _: EmptyArgs = parse_args(op, args)?;
+            no_args(op, args)?;
             facade::session_ensure_connected()
         }
         "steamcm_session_logout" => {
-            let _: EmptyArgs = parse_args(op, args)?;
+            no_args(op, args)?;
             facade::session_logout()
         }
         "steamcm_session_shutdown" => {
@@ -280,7 +291,7 @@ fn run_op(op: &str, args: &[Value]) -> Result<Value, String> {
             facade::session_shutdown(std::time::Duration::from_millis(a.bound_ms))
         }
         "steamcm_session_status" => {
-            let _: EmptyArgs = parse_args(op, args)?;
+            no_args(op, args)?;
             facade::session_status()
         }
         "steamcm_licenses" => {
@@ -362,7 +373,7 @@ fn run_op(op: &str, args: &[Value]) -> Result<Value, String> {
             facade::store_appdetails(&a.app_id)
         }
         "steamcm_signin_qr_start" => {
-            let _: EmptyArgs = parse_args(op, args)?;
+            no_args(op, args)?;
             facade::signin_qr_start()
         }
         "steamcm_signin_credentials_start" => {
@@ -448,6 +459,25 @@ mod tests {
         );
         assert!(parse_args::<A>("o", &[json!({"x": 1})]).is_ok());
         assert!(parse_args::<A>("o", &[json!({"x": 1, "y": 2})]).is_err());
+    }
+
+    #[test]
+    fn no_arg_ops_accept_the_empty_tuple_the_app_sends() {
+        // The app's zod contract sends no-arg channels as `[]`; requiring `[{}]` broke QR sign-in live.
+        assert!(no_args("o", &[]).is_ok());
+        assert!(no_args("o", &[json!({})]).is_ok());
+        assert_eq!(
+            no_args("o", &[json!({"x": 1})]).err(),
+            Some("o:bad-args".to_string())
+        );
+        assert_eq!(
+            no_args("o", &[json!("bad")]).err(),
+            Some("o:bad-args".to_string())
+        );
+        assert_eq!(
+            no_args("o", &[json!({}), json!({})]).err(),
+            Some("o:bad-args".to_string())
+        );
     }
 
     #[test]
