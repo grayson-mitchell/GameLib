@@ -54,7 +54,7 @@ complete and verified per their own VERIFICATION.md files; they carry no new req
 ### v0.9 audit debt
 
 - [ ] **DEBT-01**: A DRM-mode launch never runs over a bottle initialised by the fallback engine (audit S9)
-- [ ] **DEBT-02**: The known-fix relay rejects an unbounded request body when `Content-Length` is missing (57 WR-09)
+- [x] **DEBT-02**: The known-fix relay rejects an unbounded request body when `Content-Length` is missing (57 WR-09)
 - [x] **DEBT-03**: Sidecar exit is not held by a lingering `execFile` handle (56 WR-02)
 - [x] **DEBT-04**: Game input is released when the overlay close is missed (60 WR-01)
 - [ ] **DEBT-05**: Phases 52, 53 and 58 have current verification and UAT records
@@ -92,7 +92,7 @@ complete and verified per their own VERIFICATION.md files; they carry no new req
 | PRICE-02 | 47 | Pending |
 | PRICE-03 | 47 | Pending |
 | DEBT-01 | 76 | Pending (gap: 76-VERIFICATION) |
-| DEBT-02 | 77 | Pending |
+| DEBT-02 | 77 | Complete (cc7df4830; deployed 86babc74 + live probe 413 2026-11-15, HTTP/2 no Content-Length; capped-branch tail marker not observed, branch unit-tested) |
 | DEBT-03 | 77 | Complete (evidence: 4f41cfab7, 0d5742ed3; 2026-11-15) |
 | DEBT-04 | 77 | Complete (evidence: 2d3f1f5e8, live 1ba023f7f; 2026-11-15) |
 | DEBT-05 | 78 | Pending |
