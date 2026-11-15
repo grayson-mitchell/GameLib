@@ -1,5 +1,5 @@
 ---
-status: partial
+status: complete
 phase: 79-rust-cm-client-replacing-steam-user-and-steam-session
 source: [79-25-PLAN.md]
 started: 2026-11-15
@@ -52,7 +52,7 @@ Helper rename (item 13; items 14 and 15 need it restored): the Mac path resolves
 
 ## Current Test
 
-[part A approved; part B run, awaiting operator approval]
+[part A and part B approved 2026-11-15]
 
 ## Tests
 
