@@ -982,6 +982,10 @@ const IN_SCOPE_SUITES = [
  * handlers against jest.fn rustInvoke transports, so it reaches no filesystem, `homedir()` or child
  * process. Its landing commit did not classify it; the T-34.2-83 tripwire caught it.
  *
+ * `steamPollEventRegistration.test.ts` (Phase 80 Plan 11) is structurally contained: it mocks
+ * `backend/logger`, drives the poll-event handler against in-memory test stores and recording
+ * fakes, and reaches no filesystem, `homedir()` or child process.
+ *
  * `bootSourceShape.test.ts` (Phase 66 Plan 08, D-08) is structurally contained: it only reads
  * source text with `fs.readFileSync`/`readdirSync`, boots nothing and spawns nothing.
  *
@@ -1088,6 +1092,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'sidecarRpcFraming.test.ts',
   'sidecarStdoutFramesOnly.test.ts',
   'signInProbeBootWire.test.ts',
+  'steamPollEventRegistration.test.ts',
   'skeletonFlows.test.ts',
   'steamAuthFlows.test.ts',
   'steamFlows.test.ts',

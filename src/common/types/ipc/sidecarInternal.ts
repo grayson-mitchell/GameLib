@@ -93,6 +93,58 @@ const depotJobEvent = z.discriminatedUnion('kind', [
   })
 ])
 
+// Phase 80 (80-11): the Rust steampoll state events (gamelib-steampoll events.rs). Every event
+// carries the full resulting state and a monotonic seq; keep in lockstep with `StateEvent`.
+const pollSource = z.enum(['native', 'bottle', 'bridge'])
+const pollBuildId = z.string().max(32).nullable().optional()
+const pollBase = { appId: numericId, seq: count }
+
+const steamPollStateEvent = z.discriminatedUnion('kind', [
+  z.strictObject({
+    ...pollBase,
+    kind: z.literal('installed'),
+    source: pollSource,
+    installPath: nonEmptyString(4096),
+    sizeOnDisk: numericId,
+    buildid: pollBuildId
+  }),
+  z.strictObject({ ...pollBase, kind: z.literal('installIncomplete') }),
+  z.strictObject({
+    ...pollBase,
+    kind: z.literal('updateDone'),
+    completed: z.boolean()
+  }),
+  z.strictObject({
+    ...pollBase,
+    kind: z.literal('uninstalled'),
+    source: pollSource,
+    survivor: z
+      .strictObject({
+        source: pollSource,
+        installPath: nonEmptyString(4096),
+        sizeOnDisk: numericId,
+        buildid: pollBuildId
+      })
+      .nullable()
+  }),
+  z.strictObject({ ...pollBase, kind: z.literal('bridgeUninstalled') }),
+  z.strictObject({
+    ...pollBase,
+    kind: z.literal('forcedWindowsViaBottleCleared')
+  }),
+  z.strictObject({
+    ...pollBase,
+    kind: z.literal('macArchVerdict'),
+    verdict: z.enum(['32', '64'])
+  }),
+  // rearmSettled has no appId.
+  z.strictObject({
+    seq: count,
+    kind: z.literal('rearmSettled'),
+    needsReconcile: z.boolean()
+  })
+])
+
 const noArgs = z.tuple([])
 
 // Store name and dot-notation key path, as the preload sends them (strings, never arrays).
@@ -110,7 +162,9 @@ export const sidecarInternalInvokeArgs = {
   handleProtocolUrl: z.tuple([nonEmptyString(8192)]),
   // Shell-originated: the Rust depot job asks Node for a CDN token / manifest request code.
   depotCdnToken: z.tuple([depotCdnTokenRequest]),
-  depotManifestRequestCode: z.tuple([depotManifestRequestCodeRequest])
+  depotManifestRequestCode: z.tuple([depotManifestRequestCodeRequest]),
+  // Shell-originated: the Rust steam poll tells Node about sidecar-owned state changes (D-02).
+  steamPollStateEvent: z.tuple([steamPollStateEvent])
 }
 
 export const sidecarInternalSendArgs = {
@@ -134,5 +188,9 @@ export const sidecarInternalCallers = {
   shellWindowFocused: 'shell',
   depotCdnToken: 'shell',
   depotManifestRequestCode: 'shell',
-  depotJobEvent: 'shell'
+  depotJobEvent: 'shell',
+  steamPollStateEvent: 'shell'
 } as const
+
+/** One Rust steampoll state event, as validated off the wire. */
+export type SteamPollStateEvent = z.infer<typeof steamPollStateEvent>

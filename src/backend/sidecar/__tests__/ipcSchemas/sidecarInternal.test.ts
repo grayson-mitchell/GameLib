@@ -74,6 +74,30 @@ const invokeTable: FixtureTable<typeof sidecarInternalInvokeArgs> = {
       [{ jobId: 'j1', appId: '480', depotId: '481', manifestId: 'abc' }],
       [{ jobId: '', appId: '480', depotId: '481', manifestId: '1' }]
     ]
+  },
+  steamPollStateEvent: {
+    valid: [
+      [
+        {
+          kind: 'installed',
+          appId: '480',
+          seq: 1,
+          source: 'native',
+          installPath: '/g/480',
+          sizeOnDisk: '1024',
+          buildid: null
+        }
+      ],
+      [{ kind: 'rearmSettled', seq: 2, needsReconcile: true }],
+      [{ kind: 'macArchVerdict', appId: '480', seq: 3, verdict: '64' }]
+    ],
+    invalid: [
+      [],
+      [{ kind: 'bogus', appId: '480', seq: 1 }],
+      [{ kind: 'installIncomplete', appId: 'abc', seq: 1 }],
+      [{ kind: 'installIncomplete', appId: '480', seq: 1, extra: 1 }],
+      [{ kind: 'macArchVerdict', appId: '480', seq: 3, verdict: '16' }]
+    ]
   }
 }
 
@@ -178,7 +202,8 @@ describe('sidecarInternal schemas', () => {
       'shellWindowFocused',
       'depotCdnToken',
       'depotManifestRequestCode',
-      'depotJobEvent'
+      'depotJobEvent',
+      'steamPollStateEvent'
     ]
     for (const k of Object.keys(sidecarInternalInvokeArgs)) {
       expect(defined(channelSchemas[k], k).kind).toBe('invoke')
@@ -195,6 +220,6 @@ describe('sidecarInternal schemas', () => {
     expect(
       Object.keys(sidecarInternalInvokeArgs).length +
         Object.keys(sidecarInternalSendArgs).length
-    ).toBe(13)
+    ).toBe(14)
   })
 })

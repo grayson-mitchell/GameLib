@@ -102,6 +102,9 @@ import { registerRunnerMiscFlows } from './runnerMiscFlowRegistration'
 import { registerEosOverlayFlows } from './eosOverlayFlowRegistration'
 import { registerStoreEmbedFlows } from './storeEmbedFlowRegistration'
 import { registerDepotHostFlows } from './depotHostRegistration'
+import { registerSteamPollEventFlows } from './steamPollEventRegistration'
+import { managerDepsFromServices } from '../services/managerDeps'
+import { refreshInstallState as refreshSteamInstallState } from '../storeManagers/steam/library/refresh'
 import { registerStoreWriteHandlers } from './storeWriteHandlers'
 import type { StoreRegistry } from '../stores/storeRegistry'
 import type { StoreRoot } from '../stores/storeRoot'
@@ -472,6 +475,14 @@ export function registerHandlers(deps: {
   registerDepotHostFlows({
     ipc,
     depotJobs: deps.services.steamInstallRuntime.depotJobs
+  })
+  // Phase 80 Plan 11 (D-02): shell-originated state events the Rust steam poll sends to change
+  // sidecar-owned state; own name, no ordering constraint relative to the calls above.
+  registerSteamPollEventFlows({
+    ipc,
+    manager: () => managerDepsFromServices(deps.services),
+    refreshInstallState: () =>
+      refreshSteamInstallState(managerDepsFromServices(deps.services))
   })
   // D-05: the write handlers (storeSet/storeDelete/storeNew) must not be reachable before
   // every store instance exists, or a legitimate write would be rejected as an unknown
