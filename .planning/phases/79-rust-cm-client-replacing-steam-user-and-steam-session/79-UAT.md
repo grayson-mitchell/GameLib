@@ -179,7 +179,7 @@ precondition: the title is not installed, enough disk, not routed by a known fix
 ### 24. Sign out, then QR sign-in
 expected: After signing out and signing in by QR, `gamelib.log` has `Steam QR poll: status ... -> done` and `Steam auth complete (rust sign-in)`, and no `unknownFlow` appears anywhere in the sign-in window.
 result: pending
-precondition: Steam mobile app available; `GAMELIB_STEAMCM_SIGNIN=rust` is NOT needed if the flag default has flipped (check `env | grep GAMELIB_STEAMCM` first and set it if the default is still `ts`). Action: operator signs out, then scans the QR code; Claude greps.
+precondition: Steam mobile app available; no flag: the D-18 flags were deleted in 79-41 and sign-in is Rust-only. Action: operator signs out, then scans the QR code; Claude greps.
 
 ### 25. Quit: no orphan, Mac Steam still online
 expected: After Cmd-Q, `pgrep -fl sidecar.js` prints nothing, the shell log has `[shell] steamcm shutdown (<context>): <outcome>`, and Mac Steam is still running and online.
