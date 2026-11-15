@@ -69,28 +69,10 @@
  *    `Module._load` hook approach this repo otherwise relies on cannot
  *    reach a SEA binary (see point 1), so this is a deliberately different
  *    mechanism for the SEA bundle only.
- * 3. `@doctormckay/steam-crypto` (a transitive `steam-user` dependency)
- *    reads a small bundled public-key file via
- *    `readFileSync(__dirname + '/system.pem')` -- a runtime-computed path
- *    esbuild cannot statically inline. Fixed with a small `fs.readFileSync`
- *    monkeypatch (`meta/sidecarSeaFsShim.ts`, wired in via esbuild
- *    `--inject`) that serves the certificate's well-known public bytes
- *    directly for that one path, passing every other read through
- *    unmodified.
- * 4. `steam-user`'s `cdn_compression.js` and the `lzma` package's own
- *    `index.js` both call `require()` with a RUNTIME-COMPUTED specifier
- *    (`requireWithFallback('lzma-native', 'lzma')` and
- *    `require(path.join(__dirname, 'src', 'lzma_worker.js'))`
- *    respectively) -- esbuild cannot bundle a computed require, and this
- *    ran unconditionally at module load (not lazily), crashing every
- *    startup. Both were fixed with a `pnpm patch` (`patches/steam-user.patch`,
- *    `patches/lzma.patch`) replacing each computed call with a literal,
- *    statically-bundleable target, applied via this repo's existing
- *    `pnpm.patchedDependencies` mechanism (already used for `@types/node`).
- *    `lzma-native` itself was a GameLib dependency for the TS depot
- *    pipeline's decompress worker and was removed in Phase 73 (73-21);
- *    steam-user still requires `lzma` and `zstddec` at import, so both
- *    packages and both patches stay.
+ * 3. (retired in 79-42) the `fs.readFileSync` shim for `@doctormckay/steam-crypto`'s
+ *    `system.pem` and the `steam-user`/`lzma` `pnpm patch`es existed only for
+ *    the steam-user CM client, which the Rust CM client replaced; the packages,
+ *    the patches and the shim are gone.
  *
  * Verified end-to-end: the resulting bundle, run under a fully PATH- and
  * node_modules-scrubbed environment, starts, prints `READY_SENTINEL`, and
@@ -514,9 +496,8 @@ async function writeSeaConfig(): Promise<void> {
  * (Pitfall 3), so any unresolved `require('somePackage')` left in the SEA
  * main script crashes at startup with `ERR_UNKNOWN_BUILTIN_MODULE`.
  * `electron` is aliased (not left external) to this project's own
- * `backend/platform/index.ts` so `electron-store` can be safely bundled too (fix 2);
- * `sidecarSeaFsShim.ts` is injected to patch the one dynamic asset read
- * fix 2 doesn't cover (fix 3). Deliberately independent of
+ * `backend/platform/index.ts` so `electron-store` can be safely bundled too (fix 2).
+ * Deliberately independent of
  * `pnpm build:sidecar`'s dev/Electron bundle (`build/main/sidecar.js`,
  * left untouched -- "extend, do NOT replace").
  */

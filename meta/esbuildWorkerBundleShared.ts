@@ -47,11 +47,12 @@ export function resolveEsbuildCli(): string {
  * imports `backend/platform` directly everywhere -- there is no remaining
  * `'electron'` specifier anywhere in `src/` for esbuild to need to rewrite
  * (proven by `meta/__tests__/electronAbsence.test.ts`). The
- * `i18next-fs-backend` alias and `sidecarSeaFsShim` inject exist for
- * unrelated esbuild/cjs-bundling pitfalls this worker's import chain can
- * also reach (see the original SEA fix's commit history) -- kept identical
- * across both bundles rather than hand-trimmed per consumer, so neither can
- * regress independently.
+ * `i18next-fs-backend` alias exists for an
+ * unrelated esbuild/cjs-bundling pitfall this worker's import chain can
+ * also reach -- kept identical across both bundles rather than hand-trimmed
+ * per consumer, so neither can regress independently. The `sidecarSeaFsShim`
+ * inject served only steam-crypto (a steam-user dependency) and was deleted
+ * with steam-user in 79-42.
  *
  * Phase 23.1 Plan 03 added `--alias:node-gyp-build`, rewriting lzma-native's
  * `require('node-gyp-build')(__dirname)` to the SEA-aware shim
@@ -65,7 +66,6 @@ export function seaEsbuildFlags(outfile: string, entry: string): string[] {
     '--target=node22',
     '--format=cjs',
     '--alias:i18next-fs-backend=i18next-fs-backend/cjs',
-    '--inject:./meta/sidecarSeaFsShim.ts',
     `--outfile=${outfile}`,
     entry
   ]

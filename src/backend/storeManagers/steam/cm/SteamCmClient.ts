@@ -4,12 +4,15 @@
  *
  * Types only; no work at import.
  */
-import type SteamUserLib from 'steam-user'
 import type { RawContentServer } from '../depot/planModel'
-import type { SteamCmLicense } from './steamCmTypes'
+import type {
+  SteamCmLicense,
+  SteamCmProductInfo,
+  SteamCmUserOwnedApps
+} from './steamCmTypes'
 
-/** What `getProductInfo` resolves with (steam-user's own shape). */
-type ProductInfoResult = SteamUserLib.ProductInfo
+/** What `getProductInfo` resolves with (the former steam-user shape). */
+type ProductInfoResult = SteamCmProductInfo
 
 /** A SteamID object or its 64-bit decimal string, as steam-user accepts. */
 export type SteamIdLike = { getSteamID64(): string } | string
@@ -44,7 +47,7 @@ export interface SteamCmClient {
       includeFreeSub?: boolean
       filterAppids?: number[]
     }
-  ): Promise<SteamUserLib.UserOwnedApps>
+  ): Promise<SteamCmUserOwnedApps>
   getPersonas(
     steamids: SteamIdLike[]
   ): Promise<{ personas: Record<string, { player_name?: string }> }>

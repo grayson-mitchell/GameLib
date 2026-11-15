@@ -89,6 +89,22 @@ export interface SteamCmLicense {
   package_id?: number
 }
 
+/** The `getProductInfo` result shape the production callers read (the former steam-user type). */
+export interface SteamCmProductInfo {
+  apps: Record<
+    number,
+    { changenumber?: number; missingToken?: boolean; appinfo?: any } // eslint-disable-line @typescript-eslint/no-explicit-any
+  >
+  packages: Record<number, unknown>
+  unknownApps: number[]
+  unknownPackages: number[]
+}
+
+/** The `getUserOwnedApps` result shape (the former steam-user type): owned-app records. */
+export interface SteamCmUserOwnedApps {
+  apps: Array<Record<string, unknown> & { appid: number }>
+}
+
 interface SteamCmProductInfoResult {
   apps?: Record<number, { appinfo?: unknown; missingToken?: boolean }>
   packages?: Record<number, unknown>

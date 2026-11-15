@@ -50,12 +50,6 @@ const mockSignIn = {
 }
 
 jest.mock('graceful-fs', () => ({ existsSync: jest.fn(() => false) }))
-jest.mock('steam-session', () => ({
-  LoginSession: jest.fn(),
-  EAuthTokenPlatformType: {}
-}))
-const mockSteamUserCtor = jest.fn()
-jest.mock('steam-user', () => mockSteamUserCtor)
 
 import { createTestSteamUser } from 'backend/testUtils/testSteamUser'
 import { createTestSteamSession } from 'backend/testUtils/testSteamSession'
@@ -143,7 +137,6 @@ describe('SteamUser.probeCredentialPresence', () => {
     await steamUser.probeCredentialPresence()
 
     expect(ensureConnected).not.toHaveBeenCalled()
-    expect(mockSteamUserCtor).not.toHaveBeenCalled()
   })
 
   it('writes nothing: the pass applies the verdict, not the probe', async () => {

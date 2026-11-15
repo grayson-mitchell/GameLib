@@ -62,24 +62,6 @@ const mockSteamUserInstance = {
   }),
   redeemKey: jest.fn()
 }
-const MockSteamUserLib = jest.fn(() => mockSteamUserInstance) as any
-// EPurchaseResult is a plain namespaced object on the SteamUser constructor at
-// runtime (SteamUser.EPurchaseResult = require('./resources/EPurchaseResult.js'),
-// verified in RESEARCH.md) — mirror that shape on the mock constructor so
-// classifyPurchaseResult's SteamUserLib.EPurchaseResult.Unknown reference
-// resolves in tests exactly like it does against the real installed package.
-MockSteamUserLib.EPurchaseResult = {
-  Unknown: -1,
-  OK: 0,
-  AlreadyOwned: 9,
-  RegionLockedKey: 13,
-  InvalidKey: 14,
-  DuplicatedKey: 15,
-  BaseGameRequired: 24,
-  OnCooldown: 53
-}
-
-jest.mock('steam-user', () => MockSteamUserLib)
 
 const mockCloseAnonymousClient = jest.fn()
 
@@ -230,9 +212,6 @@ describe('SteamUser', () => {
 
     // Reset handler capture maps
     steamUserOnHandlers = {}
-
-    // SteamUserLib mock — re-set constructor to return mockSteamUserInstance
-    MockSteamUserLib.mockImplementation(() => mockSteamUserInstance)
 
     // steam-user instance mocks
     mockSteamUserInstance.on.mockImplementation(

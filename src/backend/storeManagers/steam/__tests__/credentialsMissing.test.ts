@@ -66,11 +66,6 @@ jest.mock('backend/logger', () => ({
 }))
 
 jest.mock('graceful-fs', () => ({ existsSync: jest.fn(() => false) }))
-jest.mock('steam-session', () => ({
-  LoginSession: jest.fn(),
-  EAuthTokenPlatformType: {}
-}))
-jest.mock('steam-user', () => jest.fn())
 
 import type { SteamUser, SteamUserDeps } from '../user'
 import { createTestSteamUser } from 'backend/testUtils/testSteamUser'

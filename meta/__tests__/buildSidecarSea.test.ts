@@ -339,8 +339,7 @@ describe('SEA tool resolution is Windows-spawnable (CR-02 / GAP-2 regression gua
         '--platform=node',
         '--target=node22',
         '--format=cjs',
-        '--alias:i18next-fs-backend=i18next-fs-backend/cjs',
-        '--inject:./meta/sidecarSeaFsShim.ts'
+        '--alias:i18next-fs-backend=i18next-fs-backend/cjs'
       ])
     )
     expect(esbuildArgv.args.some((a) => a.startsWith('--outfile='))).toBe(true)

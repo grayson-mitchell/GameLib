@@ -200,37 +200,6 @@ jest.mock('../platformCapture', () => ({
 // paths this file exercises) nor the constraint-1 git check below touch it
 // through a mock; the git check needs the REAL execSync. ────────────────────
 
-// ── steam-session mock (mirrors user.test.ts) — no real auth session is ever
-// started by this file's tests, so these are never invoked, but the module
-// must resolve without throwing. ─────────────────────────────────────────────
-jest.mock('steam-session', () => ({
-  LoginSession: jest.fn(() => ({
-    startWithQR: jest.fn(),
-    startWithCredentials: jest.fn(),
-    submitSteamGuardCode: jest.fn(),
-    cancelLoginAttempt: jest.fn(),
-    on: jest.fn(),
-    once: jest.fn()
-  })),
-  EAuthTokenPlatformType: { SteamClient: 2 }
-}))
-
-// ── steam-user mock — user.ts no longer imports it, but other modules the manager pulls in still
-// do, and the module must resolve without throwing. ────────────────────────────
-const MockSteamUserLib = jest.fn(() => ({
-  logOn: jest.fn(),
-  logOff: jest.fn(),
-  steamID: undefined,
-  getPersonas: jest.fn(),
-  getProductInfo: jest.fn().mockResolvedValue({ apps: {} }),
-  relog: jest.fn(),
-  on: jest.fn(),
-  once: jest.fn(),
-  redeemKey: jest.fn()
-})) as any
-MockSteamUserLib.EPurchaseResult = { Unknown: -1, OK: 0 }
-jest.mock('steam-user', () => MockSteamUserLib)
-
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { readTauriShellProductionSource } from 'backend/testUtils/tauriShellSource'
 const sendFrontendMessage = jest.fn()

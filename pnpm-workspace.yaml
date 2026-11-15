@@ -12,5 +12,3 @@ onlyBuiltDependencies:
 
 patchedDependencies:
   '@types/node@22.19.3': patches/@types__node@22.19.3.patch
-  lzma: patches/lzma.patch
-  steam-user: patches/steam-user.patch

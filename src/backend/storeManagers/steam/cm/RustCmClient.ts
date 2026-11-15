@@ -8,7 +8,6 @@
  */
 import { logError, LogPrefix } from 'backend/logger'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
-import type SteamUserLib from 'steam-user'
 import {
   RUST_STEAMCM_CONTENT_SERVERS,
   RUST_STEAMCM_DEPOT_KEY,
@@ -24,7 +23,9 @@ import type {
   RustSteamCmClientChannel,
   SteamCmLicense,
   SteamCmOpFailure,
-  SteamCmOpResult
+  SteamCmOpResult,
+  SteamCmProductInfo,
+  SteamCmUserOwnedApps
 } from './steamCmTypes'
 
 export interface RustCmLease {
@@ -110,7 +111,7 @@ export function createRustCmClient(
       return unwrapSteamCm(
         RUST_STEAMCM_PRODUCT_INFO,
         r
-      ) as unknown as SteamUserLib.ProductInfo
+      ) as unknown as SteamCmProductInfo
     },
 
     getDepotDecryptionKey(appId, depotId, callback) {
@@ -159,7 +160,7 @@ export function createRustCmClient(
       return unwrapSteamCm(
         RUST_STEAMCM_OWNED_APPS,
         r
-      ) as unknown as SteamUserLib.UserOwnedApps
+      ) as unknown as SteamCmUserOwnedApps
     },
 
     async getPersonas(ids) {

@@ -81,8 +81,6 @@ const KEPT = [
   `${STEAM}/depot/select.ts`,
   `${STEAM}/depot/appinfoOrder.ts`,
   `${STEAM}/depot/contentServers.ts`,
-  'patches/lzma.patch',
-  'patches/steam-user.patch',
   'src-tauri/crates/gamelib-depot/tests/fixtures/expected.json'
 ]
 
@@ -142,20 +140,18 @@ describe('depot port complete (Phase 73 D-15)', () => {
     expect(existsSync(join(ROOT, p))).toBe(true)
   })
 
-  it('package.json keeps lzma and zstddec (steam-user requires both at import) and drops lzma-native', () => {
+  it('package.json drops lzma, zstddec and lzma-native, and the patches are gone', () => {
     const pkg = JSON.parse(
       readFileSync(join(ROOT, 'package.json'), 'utf8')
     ) as PackageJson
     const deps = { ...pkg.dependencies, ...pkg.devDependencies }
-    expect(deps).toHaveProperty('lzma')
-    expect(deps).toHaveProperty('zstddec')
-    expect(deps).not.toHaveProperty('lzma-native')
-  })
-
-  it('pnpm still patches lzma and steam-user', () => {
+    for (const name of ['lzma', 'zstddec', 'lzma-native']) {
+      expect(deps).not.toHaveProperty(name)
+    }
     const workspace = readFileSync(join(ROOT, 'pnpm-workspace.yaml'), 'utf8')
-    expect(workspace).toMatch(/^\s+lzma: patches\/lzma\.patch$/m)
-    expect(workspace).toMatch(/^\s+steam-user: patches\/steam-user\.patch$/m)
+    expect(workspace).not.toMatch(/lzma|steam-user/)
+    expect(existsSync(join(ROOT, 'patches/lzma.patch'))).toBe(false)
+    expect(existsSync(join(ROOT, 'patches/steam-user.patch'))).toBe(false)
   })
 
   it('anti-vacuity: the walk scanned a real tree', () => {

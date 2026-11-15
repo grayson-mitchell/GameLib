@@ -1,5 +1,4 @@
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import SteamUserLib from 'steam-user'
 import type { RedeemKeyOutcome, RedeemKeyResult } from 'common/types/steam'
 import type { SteamUserSliceDeps } from 'backend/services/types'
 
@@ -168,8 +167,22 @@ async function verifyAmbiguousRedeem(
 }
 
 /**
+ * The 8-value `EPurchaseResult` enum (the former steam-user resource, kept as a plain const).
+ */
+const EPurchaseResult = {
+  Unknown: -1,
+  OK: 0,
+  AlreadyOwned: 9,
+  RegionLockedKey: 13,
+  InvalidKey: 14,
+  DuplicatedKey: 15,
+  BaseGameRequired: 24,
+  OnCooldown: 53
+} as const
+
+/**
  * Classifies a raw EPurchaseResult value into exactly one of the 4 SPEC
- * REQ5 outcome buckets. References the namespaced `SteamUserLib.EPurchaseResult`
+ * REQ5 outcome buckets. References the local `EPurchaseResult`
  * enum (8 values) — NEVER the differently-numbered 84-value
  * `EPurchaseResultDetail` enum, which collides on the value 53 but means
  * something different there.
@@ -180,26 +193,26 @@ async function verifyAmbiguousRedeem(
  */
 function classifyPurchaseResult(
   store: 'steam',
-  details: SteamUserLib.EPurchaseResult,
+  details: number,
   packageList: Record<string, string>
 ): RedeemKeyResult {
   let outcome: RedeemKeyOutcome
 
   switch (details) {
-    case SteamUserLib.EPurchaseResult.OK:
+    case EPurchaseResult.OK:
       outcome = 'success'
       break
-    case SteamUserLib.EPurchaseResult.AlreadyOwned:
+    case EPurchaseResult.AlreadyOwned:
       outcome = 'already-owned'
       break
-    case SteamUserLib.EPurchaseResult.OnCooldown:
+    case EPurchaseResult.OnCooldown:
       outcome = 'rate-limited'
       break
-    case SteamUserLib.EPurchaseResult.InvalidKey:
-    case SteamUserLib.EPurchaseResult.DuplicatedKey:
-    case SteamUserLib.EPurchaseResult.RegionLockedKey:
-    case SteamUserLib.EPurchaseResult.BaseGameRequired:
-    case SteamUserLib.EPurchaseResult.Unknown:
+    case EPurchaseResult.InvalidKey:
+    case EPurchaseResult.DuplicatedKey:
+    case EPurchaseResult.RegionLockedKey:
+    case EPurchaseResult.BaseGameRequired:
+    case EPurchaseResult.Unknown:
     default:
       outcome = 'invalid'
       break

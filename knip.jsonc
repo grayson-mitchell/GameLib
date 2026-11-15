@@ -60,13 +60,7 @@
     // src/frontend/App.css pulls both in with CSS `@import '@fontsource/<font>/index.css'`, an edge
     // knip does not follow.
     "@fontsource/cabin",
-    "@fontsource/rubik",
-    // steam-user requires both at import (components/cdn_compression.js; patches/steam-user.patch
-    // pins the `lzma` require). First-party code stopped importing them when the TS depot pipeline
-    // was deleted (73-20), but they stay declared so patches/lzma.patch applies and the patched
-    // require resolves (73-21 keeps both and gates their presence).
-    "lzma",
-    "zstddec"
+    "@fontsource/rubik"
   ],
   "ignoreBinaries": [
     // Operating-system and external-toolchain commands spawned at runtime by the named files; none

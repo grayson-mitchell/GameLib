@@ -62,11 +62,6 @@ const deps = {
 
 // ── Minimal stubs so ../user can be imported (registry-swap proof only) ─────
 jest.mock('graceful-fs', () => ({ existsSync: jest.fn(() => false) }))
-jest.mock('steam-session', () => ({
-  LoginSession: jest.fn(),
-  EAuthTokenPlatformType: { SteamClient: 2 }
-}))
-jest.mock('steam-user', () => jest.fn())
 
 // ── Imports (after mocks) ─────────────────────────────────────────────────────
 import {
