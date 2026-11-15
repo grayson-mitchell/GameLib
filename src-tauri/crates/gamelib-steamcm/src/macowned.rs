@@ -320,6 +320,7 @@ mod tests {
         p
     }
 
+    #[cfg(unix)] // only the unix-gated helper-stub tests use it
     fn app_raw(rows: &[(u32, &str)]) -> PicsRaw {
         PicsRaw {
             apps: rows
