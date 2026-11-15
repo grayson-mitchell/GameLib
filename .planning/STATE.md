@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.10
 milestone_name: Foundations
 status: executing
-stopped_at: Phase 76 context gathered
-last_updated: "2026-11-15T08:38:38.082Z"
+stopped_at: Phase 77 context gathered
+last_updated: "2026-11-15T08:43:39.156Z"
 last_activity: 2026-11-15
 progress:
   total_phases: 24
@@ -780,9 +780,9 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-15T08:38:09.620Z
-Stopped at: Phase 76 context gathered
-Resume file: .planning/phases/76-engine-correct-bottle-for-drm-mode-launches-v0-9-audit-s9/76-CONTEXT.md
+Last session: 2026-11-15T08:43:39.147Z
+Stopped at: Phase 77 context gathered
+Resume file: .planning/phases/77-runtime-hardening-from-the-v0-9-review-debt/77-CONTEXT.md
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
 
