@@ -296,3 +296,21 @@ The CM-path demo count was not re-measured: the CM path cannot be run without a 
 ## Delete gate (79-38)
 
 pending
+
+## Delete gate (79-38, CF-01)
+
+Operator rule for test.yml (2026-11-15): the gate requires **no new failures compared with the pre-phase baseline**. The baseline is origin/main 4b69058f9, Test run 43548032844. Its 8 failing suites predate phase 79 and are tracked outside it: tauriShellSource, epicOfflineMode, steamLaunchRuntime, shimCoverage, shimGenerate, callbackRegistryHost, gamelibCatalogParity, lintTranslations.
+
+- [x] CM ops APPROVED (section 1).
+- [x] Refresh APPROVED (section 2).
+- [x] Mac path APPROVED (section 3). It ships OFF by default (3b7417c05) until the Spacewar presence todo is fixed.
+- [x] UAT A passed. The operator approved on 2026-11-15; see 79-26-SUMMARY.
+- [x] UAT B passed, including the D-09 second arm (item 13: unwrapped, Friends stayed online). The operator approved on 2026-11-15. Item 14 is an accepted issue (Mac path off), item 16 was skipped, and the others pass. 79-UAT.md has the details.
+- [x] rust-test.yml green on all three legs: https://github.com/grayson-mitchell/GameLib/actions/runs/43692870596 (a986c318a). macos-latest, ubuntu-latest and windows-latest all succeeded, including the clippy ratchet.
+  - Earlier runs 43673042841 (2c79851b2), 43689255783 (52cba2585), 43690607747 (ade3afbb1) and 43691683462 (ba6f108c5) were red. The causes were the CLI op-count test, then Windows compiles of unix-only Mac-path test stubs, then the Windows clippy dead_code and unused_imports ratchet. They were fixed in 5c3db0924, ade3afbb1, ba6f108c5 and a986c318a.
+- [x] test.yml has no new failures against the baseline: https://github.com/grayson-mitchell/GameLib/actions/runs/43691683424 (ba6f108c5) fails exactly the 8 baseline suites.
+  - a986c318a differs from ba6f108c5 only by a Rust test-import change plus two operator quick tasks committed from another session (261115-szs, 261115-t7m). Its run 43692870579 adds `themeTokens` (the render-site census, 29 expected vs 34; it reproduces on a clean export of HEAD, from quick-261115-szs's game-page menu change) and `steamBridgeKnownFixes` (passes locally on a clean export of HEAD; CI flake). Neither is phase-79 code.
+  - The 6 failures phase 79 introduced were fixed in 5c3db0924, 8345575b0, 445106b28, 5e068ed20 and 52cba2585 (the SteamUpdateInfo.scss restore).
+- [x] Supply-chain audit (cargo-deny) green: https://github.com/grayson-mitchell/GameLib/actions/runs/43692870623 (a986c318a). The protobuf advisory RUSTSEC-2024-0437 is ignored with a justification (steam-vent pins `=3.5.1`), and tokio was bumped to 1.54.1 (bce156071).
+
+Status: DELETE GATE MET
