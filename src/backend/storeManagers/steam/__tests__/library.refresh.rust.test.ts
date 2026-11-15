@@ -48,13 +48,8 @@ jest.mock('../bridge/launchTarget', () => ({
 jest.mock('../platformCapture', () => ({
   createPlatformCaptureQueue: () => ({
     withPlatformCaptureLock: <T>(section: () => Promise<T>) => section()
-  }),
-  captureOwnedAppPlatforms: jest.fn()
+  })
 }))
-jest.mock('../metacriticCapture', () => ({
-  captureOwnedAppMetacritic: jest.fn()
-}))
-jest.mock('../licensedDemos', () => ({ fetchLicensedDemos: jest.fn() }))
 jest.mock('../library/installedMap', () => ({
   buildInstalledMap: jest.fn(),
   buildIncompleteInstallSet: jest.fn(),
@@ -65,9 +60,6 @@ jest.mock('../library/installedMap', () => ({
 
 import { refresh } from '../library/refresh'
 import { createRustCmClient } from '../cm/RustCmClient'
-import { captureOwnedAppPlatforms } from '../platformCapture'
-import { captureOwnedAppMetacritic } from '../metacriticCapture'
-import { fetchLicensedDemos } from '../licensedDemos'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
 import { bridgeAllowlist } from '../bridge/allowlist'
 import { listReadyBridgeBottleNames } from '../bridgeBottle'
@@ -170,15 +162,6 @@ const arm = () => {
 }
 
 describe('refresh() with cm=rust', () => {
-  const prev = process.env.GAMELIB_STEAMCM_CM
-  beforeAll(() => {
-    process.env.GAMELIB_STEAMCM_CM = 'rust'
-  })
-  afterAll(() => {
-    if (prev === undefined) delete process.env.GAMELIB_STEAMCM_CM
-    else process.env.GAMELIB_STEAMCM_CM = prev
-  })
-
   beforeEach(() => {
     jest.clearAllMocks()
     env.isMac = false
@@ -227,9 +210,6 @@ describe('refresh() with cm=rust', () => {
       result: refreshResult([])
     })
     await refresh(deps)
-    expect(fetchLicensedDemos).not.toHaveBeenCalled()
-    expect(captureOwnedAppPlatforms).not.toHaveBeenCalled()
-    expect(captureOwnedAppMetacritic).not.toHaveBeenCalled()
     expect(getUserOwnedApps).not.toHaveBeenCalled()
   })
 
@@ -303,28 +283,5 @@ describe('refresh() with cm=rust', () => {
     expect(requestRustInvoke.mock.invocationCallOrder[0] ?? 0).toBeLessThan(
       jest.mocked(backfillBridgeLaunchTargets).mock.invocationCallOrder[0] ?? 0
     )
-  })
-})
-
-describe('refresh() with cm=ts', () => {
-  it('never reaches steamcm_refresh', async () => {
-    const prev = process.env.GAMELIB_STEAMCM_CM
-    process.env.GAMELIB_STEAMCM_CM = 'ts'
-    try {
-      arm()
-      steamUserMocks.acquireAuthenticated.mockResolvedValue({
-        ok: true,
-        client: rustClient,
-        release
-      } as never)
-      getUserOwnedApps.mockRejectedValue(new Error('ts path'))
-      stores.steamLibraryStore.get.mockReturnValue([])
-      await refresh(deps)
-      expect(getUserOwnedApps).toHaveBeenCalled()
-      expect(requestRustInvoke).not.toHaveBeenCalled()
-    } finally {
-      if (prev === undefined) delete process.env.GAMELIB_STEAMCM_CM
-      else process.env.GAMELIB_STEAMCM_CM = prev
-    }
   })
 })

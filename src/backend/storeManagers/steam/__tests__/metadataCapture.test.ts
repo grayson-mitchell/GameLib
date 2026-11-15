@@ -150,8 +150,6 @@ const readStripped = (relPath: string): string =>
   stripSourceComments(readFileSync(join(__dirname, relPath), 'utf8'))
 
 const gamesSource = readStripped('../games.ts')
-// 65-13: fetchMetadataIfNeeded was lifted out of SteamGame into gameMetadata.ts.
-const gameMetadataSource = readStripped('../gameMetadata.ts')
 // 62-06: the eligibility cluster (isBottleEligibleFromPlatforms, assembleBridgeRouteInput,
 // ensurePlatformsCaptured) was lifted out of the class into gameEligibility.ts.
 const eligibilitySource = readStripped('../gameEligibility.ts')
@@ -164,8 +162,16 @@ const allGameModulesSource = gameModuleNames
   .map((f) => readStripped(`../${f}`))
   .join('\n')
 
-// Moved to library/refresh.ts by Phase 65 plan 06 (syncOwnedLibrary lift).
-const librarySource = readStripped('../library/refresh.ts')
+// 79-41: the Refresh assembly and the enrichment merge live in Rust; these gates read the
+// Rust modules that now carry the rules (Rust tests there carry the behaviour).
+const CM_REFRESH_DIR = join(
+  __dirname,
+  '../../../../../src-tauri/crates/gamelib-steamcm/src/refresh'
+)
+const readRust = (name: string): string =>
+  readFileSync(join(CM_REFRESH_DIR, name), 'utf8')
+const assembleRs = readRust('assemble.rs')
+const enrichRs = readRust('enrich.rs')
 const installRootSource = readStripped('../library/installRoot.ts')
 const installFormIpcSource = readStripped('../installFormIpc.ts')
 const steamPlatformRowSource = readStripped(
@@ -176,16 +182,13 @@ const IMPORTS_HELPER =
   /import\s*\{\s*depotSignalCaptured\s*\}\s*from\s*'\.\/metadataCapture'/
 
 describe('source gate: the three depot-signal reads are normalized', () => {
-  it('library/refresh.ts seeds GameInfo.steamPlatformsCaptured through the helper', () => {
-    expect(librarySource).toMatch(
-      /steamPlatformsCaptured:\s*depotSignalCaptured\(cachedMeta\)/
-    )
+  it('refresh/assemble.rs seeds GameInfo.steamPlatformsCaptured through depot_signal_captured', () => {
+    expect(assembleRs).toMatch(/"steamPlatformsCaptured"/)
+    expect(assembleRs).toMatch(/depot_signal_captured\(cached\)/)
   })
 
-  it('library/refresh.ts imports depotSignalCaptured from ../metadataCapture', () => {
-    expect(librarySource).toMatch(
-      /import\s*\{\s*depotSignalCaptured\s*\}\s*from\s*'\.\.\/metadataCapture'/
-    )
+  it('refresh/assemble.rs imports depot_signal_captured from meta_entry', () => {
+    expect(assembleRs).toMatch(/use super::meta_entry::\{depot_signal_captured/)
   })
 
   it('installFormIpc.ts builds SteamBottleEligibilityVerdict.platformsCaptured through the helper', () => {
@@ -232,13 +235,9 @@ describe('source gate: the deliberate non-changes stay raw', () => {
 })
 
 describe('source gate: Phase 51 Plan 09 bridge verdict carry-forward (D-51-07)', () => {
-  it("gameMetadata.ts fetchMetadataIfNeeded's enumerated write carries forward an existing bridge field, mirroring forcedWindowsViaBottle", () => {
-    // non-vacuity: the lifted function must be present in the scanned source.
-    expect(gameMetadataSource).toMatch(
-      /export async function fetchMetadataIfNeeded/
-    )
-    expect(gameMetadataSource).toMatch(
-      /existingMeta\?\.bridge\s*\?\s*\{\s*bridge:\s*existingMeta\.bridge\s*\}\s*:\s*\{\}/
+  it("refresh/enrich.rs's enumerated write carries forward an existing bridge field, mirroring forcedWindowsViaBottle", () => {
+    expect(enrichRs).toMatch(
+      /entry\.bridge\s*=\s*cached\s*\.and_then\(\|c\| c\.bridge\.clone\(\)\)/
     )
   })
 

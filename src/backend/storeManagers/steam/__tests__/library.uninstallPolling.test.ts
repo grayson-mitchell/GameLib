@@ -176,21 +176,12 @@ jest.mock('../bridge/allowlist', () => ({
   bridgeAllowlist: { has: jest.fn(), knownBadReason: jest.fn() }
 }))
 
-// ── platformCapture mock — captureOwnedAppPlatforms (34.15 D-03/D-04) ──────
-// This module is unit-tested in isolation (Plan 01's own suite). Mocking it
-// here isolates refresh()'s own wiring/instrumentation from the real bulk
-// PICS scoping and merge logic — the shared beforeEach below defaults it to
-// a no-op success so every pre-existing refresh() test is unaffected; the
-// 'D-03 fail-soft' describe block below overrides this default per-test.
+// ── platformCapture mock — only the queue factory survives (79-41) ─────────
 jest.mock('../bridge/launchTarget', () => ({
   backfillBridgeLaunchTargets: jest.fn()
 }))
 jest.mock('../platformCapture', () => ({
-  createPlatformCaptureQueue: () => ({}),
-  captureOwnedAppPlatforms: jest.fn()
-}))
-jest.mock('../metacriticCapture', () => ({
-  captureOwnedAppMetacritic: jest.fn()
+  createPlatformCaptureQueue: () => ({})
 }))
 // D-UAT-13: the install poller asks which Steam client PIDs are alive when a
 // native handoff finalizes. A bare jest.fn() resolves undefined = "inconclusive"

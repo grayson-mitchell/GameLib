@@ -262,17 +262,17 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
     // Phase 54 (54-04): a granted refresh takes an authenticated lease via
     // acquireAuthenticated() instead of calling ensureConnected().
     mockLeaseOk(mockSteamUser)
-    const fakeClient = {
-      steamID: 'STEAMID_TEST',
-      getUserOwnedApps: jest.fn().mockResolvedValue({
-        app_count: 1,
-        apps: [
-          { appid: 999001, name: 'Skeleton Test Game', playtime_forever: 0 }
-        ]
-      })
-    }
+    // 79-41: Refresh is Rust-only, so the held client is a Rust lease and the owned set comes back in
+    // the steamcm_refresh reply, which this test answers on the sidecar's rustInvoke channel.
+    const {
+      createRustCmClient
+    } = require('../../storeManagers/steam/cm/RustCmClient') // eslint-disable-line @typescript-eslint/no-require-imports
+    const fakeClient = createRustCmClient(
+      { requestRustInvoke: jest.fn() } as never,
+      { leaseId: 7, steamId: '76561198000000001', licenses: [] }
+    )
 
-    jest.mocked(mockSteamUser.getClient).mockReturnValue(fakeClient as any)
+    jest.mocked(mockSteamUser.getClient).mockReturnValue(fakeClient)
 
     const { input, frames } = boot()
     // quick-260817-d61: the Steam keyring deferral gate defers an automatic
@@ -289,6 +289,57 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
       undefined,
       'action-icons-refresh-button'
     ])
+    await flush()
+    const refreshCall = frames.find(
+      (frame) =>
+        frame.kind === 'rustInvoke' && frame.channel === 'steamcm_refresh'
+    )
+    expect(refreshCall).toBeDefined()
+    input.write(
+      `${JSON.stringify({
+        id: refreshCall?.id,
+        ok: true,
+        result: {
+          ok: true,
+          result: {
+            games: [
+              {
+                runner: 'steam',
+                app_name: '999001',
+                title: 'Skeleton Test Game',
+                art_cover: '',
+                art_square: '',
+                is_installed: false,
+                install: {},
+                extra: { reqs: [] },
+                canRunOffline: true,
+                installable: true
+              }
+            ],
+            metadataUpdates: {},
+            ownedCount: 1,
+            demoCount: 0,
+            demosFailed: false,
+            capture: {
+              platforms: { scoped: 0, captured: 0, skipped: 0, failed: false },
+              metacritic: { scoped: 0, captured: 0, skipped: 0, failed: false },
+              anonCount: 0,
+              heldCount: 0
+            },
+            enrich: {
+              attempted: 0,
+              enriched: 0,
+              delisted: 0,
+              failed: 0,
+              rateLimited: false,
+              budgetHit: false,
+              notReached: []
+            },
+            source: 'cm'
+          }
+        }
+      })}\n`
+    )
     await flush()
 
     const pushes = frames.filter(

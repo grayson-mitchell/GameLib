@@ -1,5 +1,3 @@
-export const STEAM_STORE_API = 'https://store.steampowered.com/api/appdetails'
-
 /** The single project-wide steam appId shape guard, imported by every steam
  * module (clientSetup, installFormIpc, bottle, bridge/*, removeAllCopies,
  * cancelDelete, library, installLocation, gameUninstall, buildSteamProtocolUrl)

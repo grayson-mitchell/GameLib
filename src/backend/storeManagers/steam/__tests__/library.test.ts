@@ -40,7 +40,6 @@ import { downloadSteamDepots } from '../depot'
 import { resumeVerifyRust } from '../depotRust/secondary'
 import { join } from 'path'
 import { bridgeAllowlist } from '../bridge/allowlist'
-import { captureOwnedAppPlatforms } from '../platformCapture'
 import { resumeInterruptedSteamInstall } from '../library/resume'
 import type { Stores } from 'backend/services/types'
 
@@ -217,21 +216,12 @@ jest.mock('../bridge/allowlist', () => ({
   bridgeAllowlist: { has: jest.fn(), knownBadReason: jest.fn() }
 }))
 
-// ── platformCapture mock — captureOwnedAppPlatforms (34.15 D-03/D-04) ──────
-// This module is unit-tested in isolation (Plan 01's own suite). Mocking it
-// here isolates refresh()'s own wiring/instrumentation from the real bulk
-// PICS scoping and merge logic — the shared beforeEach below defaults it to
-// a no-op success so every pre-existing refresh() test is unaffected; the
-// 'D-03 fail-soft' describe block below overrides this default per-test.
+// ── platformCapture mock — only the queue factory survives (79-41) ─────────
 jest.mock('../bridge/launchTarget', () => ({
   backfillBridgeLaunchTargets: jest.fn()
 }))
 jest.mock('../platformCapture', () => ({
-  createPlatformCaptureQueue: () => ({}),
-  captureOwnedAppPlatforms: jest.fn()
-}))
-jest.mock('../metacriticCapture', () => ({
-  captureOwnedAppMetacritic: jest.fn()
+  createPlatformCaptureQueue: () => ({})
 }))
 // D-UAT-13: the install poller asks which Steam client PIDs are alive when a
 // native handoff finalizes. A bare jest.fn() resolves undefined = "inconclusive"
@@ -305,15 +295,6 @@ describe('SteamLibraryManager', () => {
     // Default: no game is bridge-eligible (D-UAT-24-02, 24-17) — every
     // pre-existing test keeps the native ?? bottle ?? bridge precedence.
     jest.mocked(bridgeAllowlist.has).mockReturnValue(false)
-    // Default: the bulk platform capture (34.15 D-03/D-04) reports a
-    // no-op success — every pre-existing refresh() test is unaffected.
-    // Individual tests below override this per-case.
-    jest.mocked(captureOwnedAppPlatforms).mockResolvedValue({
-      scopedCount: 0,
-      capturedCount: 0,
-      skippedCount: 0,
-      failed: false
-    })
   })
 
   // ── LIB-02: install state via ACF StateFlags (Task 1 — green) ─────────────

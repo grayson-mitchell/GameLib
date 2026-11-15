@@ -158,7 +158,8 @@ jest.mock('../bottledSteam', () => ({
 jest.mock('../bridge/allowlist', () => ({
   bridgeAllowlist: {
     has: jest.fn().mockReturnValue(false),
-    knownBadReason: jest.fn()
+    knownBadReason: jest.fn(),
+    seedIds: jest.fn().mockReturnValue([])
   }
 }))
 jest.mock('../bridge/shimGenerate', () => ({
@@ -192,16 +193,7 @@ jest.mock('../installLocation', () => ({
 }))
 
 jest.mock('../platformCapture', () => ({
-  createPlatformCaptureQueue: () => ({}),
-  captureOwnedAppPlatforms: jest.fn().mockResolvedValue({
-    scopedCount: 0,
-    capturedCount: 0,
-    skippedCount: 0,
-    failed: false
-  })
-}))
-jest.mock('../metacriticCapture', () => ({
-  captureOwnedAppMetacritic: jest.fn()
+  createPlatformCaptureQueue: () => ({})
 }))
 
 // ── child_process — deliberately NOT mocked. Neither init()/refresh() (the
@@ -249,7 +241,6 @@ import { createTestSteamUser } from 'backend/testUtils/testSteamUser'
 import type { TokenStore } from '../tokenStore'
 import { createTestTokenStoreSlot } from 'backend/testUtils/testTokenStore'
 import { getSteamLibraries } from 'backend/utils'
-import { captureOwnedAppPlatforms } from '../platformCapture'
 import type { GameInfo, InstallArgs } from 'common/types'
 import { at } from './fixtures/indexed'
 import type { Stores } from 'backend/services/types'
@@ -496,12 +487,6 @@ describe('Phase 54 SC1: no authenticated logon at launch, both orderings', () =>
     rustCalls.length = 0
     steamUser = buildSteamUser({ requestRustInvoke: rustSpy as never })
     steamTestDeps.steamUser = steamUser
-    jest.mocked(captureOwnedAppPlatforms).mockResolvedValue({
-      scopedCount: 0,
-      capturedCount: 0,
-      skippedCount: 0,
-      failed: false
-    })
     mockConfigStore.get_nodefault.mockImplementation((key: string) =>
       key === 'isLoggedIn' ? true : undefined
     )

@@ -83,9 +83,9 @@ export interface SteamMetadataCacheEntry {
   platformsCaptured?: boolean
   /** Quick task 260816-qcn (WR-02/CR-01 root cause): provenance stamp for the
    * three platform booleans above, written by BOTH platform-signal writers —
-   * `games.ts`'s per-game `appdetails` fetch and `platformCapture.ts`'s bulk
+   * `games.ts`'s per-game `appdetails` fetch and the Rust capture's bulk
    * PICS `oslist` capture — on every write `resolvePlatformWrite`
-   * (`./platformPrecedence`) ACCEPTS. Records WHO wrote the signal last so a
+   * (`refresh/meta_entry.rs`) ACCEPTS. Records WHO wrote the signal last so a
    * lost/overridden write is inspectable after the fact.
    *
    * Honesty limit (D-B, do not weaken this comment): this does NOT reconcile

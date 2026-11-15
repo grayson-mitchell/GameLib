@@ -13,20 +13,13 @@ jest.mock('backend/logger', () => ({
 }))
 
 jest.mock('backend/utils', () => ({ getFileSize: jest.fn() }))
-jest.mock('axios')
 jest.mock('../macArchKnownFix', () => ({ knownFixSaysMac32: jest.fn() }))
-jest.mock('../cm/steamCmFlags', () => ({ steamCmImpl: jest.fn() }))
 
-import axios from 'axios'
 import { getFileSize } from 'backend/utils'
 import { fetchMetadataIfNeeded } from '../gameMetadata'
 import { getSteamInstallSize } from '../gameRequirements'
 import { knownFixSaysMac32 } from '../macArchKnownFix'
-import { steamCmImpl } from '../cm/steamCmFlags'
 import type SteamGame from '../games'
-
-// Typed handle: reading .get off the auto-mocked axios trips @typescript-eslint/unbound-method.
-const axiosMock = axios as unknown as { get: jest.Mock }
 
 const APP_ID = '440'
 const current = {
@@ -89,12 +82,18 @@ function setup(rust: unknown) {
 beforeEach(() => {
   jest.clearAllMocks()
   ;(getFileSize as jest.Mock).mockImplementation((n: number) => `${n}B`)
-  ;(steamCmImpl as jest.Mock).mockReturnValue('rust')
   ;(knownFixSaysMac32 as jest.Mock).mockReturnValue(false)
 })
 
 describe('fetchMetadataIfNeeded on cm=rust', () => {
-  it('persists and pushes an enriched result, without axios', async () => {
+  it('WR-03/T-06-01: a non-numeric appId is rejected before any Rust call', async () => {
+    const t = setup(Promise.resolve({ ok: true, result: { kind: 'noData' } }))
+    ;(t.steamGame as unknown as { appId: string }).appId = '../../etc/passwd'
+    await fetchMetadataIfNeeded(t.steamGame, current)
+    expect(t.requestRustInvoke).not.toHaveBeenCalled()
+  })
+
+  it('persists and pushes an enriched result', async () => {
     const t = setup(
       Promise.resolve({ ok: true, result: { kind: 'enriched', entry, game } })
     )
@@ -102,7 +101,6 @@ describe('fetchMetadataIfNeeded on cm=rust', () => {
     expect(t.metaStore.get(APP_ID)).toEqual(entry)
     expect(t.library.get(APP_ID)).toEqual(game)
     expect(t.sent).toContainEqual(['pushGameToLibrary', game])
-    expect(axiosMock.get).not.toHaveBeenCalled()
     expect(t.requestRustInvoke).toHaveBeenCalledWith('steamcm_store_enrich', [
       { appId: APP_ID, cached: null, current, knownFixMac32: false }
     ])
@@ -158,7 +156,6 @@ describe('getSteamInstallSize on cm=rust', () => {
     await expect(getSteamInstallSize(APP_ID, undefined, t.deps)).resolves.toBe(
       '2048B'
     )
-    expect(axiosMock.get).not.toHaveBeenCalled()
   })
 
   it('falls back to ?? MB without a figure or on failure', async () => {
@@ -172,6 +169,5 @@ describe('getSteamInstallSize on cm=rust', () => {
     await expect(getSteamInstallSize(APP_ID, undefined, b.deps)).resolves.toBe(
       '?? MB'
     )
-    expect(axiosMock.get).not.toHaveBeenCalled()
   })
 })

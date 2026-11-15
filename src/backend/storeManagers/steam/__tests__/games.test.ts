@@ -24,7 +24,6 @@ import { createTestBridgeHelpers } from 'backend/testUtils/testBridgeHelpers'
  *  - ../state is NOT mocked — real library Map + pendingFetches Set used,
  *    cleared in beforeEach
  */
-import axios from 'axios'
 import i18next from 'i18next'
 import { readFileSync, rmSync } from 'fs'
 import { join } from 'path'
@@ -50,6 +49,7 @@ import * as shortcutsModule from '../../../shortcuts/shortcuts/shortcuts'
 import { TITLE_AUTHORITATIVE_KEYS } from '../titleSettings'
 import SteamGame from '../games'
 import * as gameMetadata from '../gameMetadata'
+import type { SteamMetadataCacheEntry } from '../stores'
 import * as gameInstallDepot from '../gameInstallDepot'
 import * as gameLaunchModule from '../gameLaunch'
 import * as stopSteamLaunchedModule from '../stopSteamLaunchedGame'
@@ -79,12 +79,7 @@ import {
 import { buildSteamProtocolUrl } from '../gameProtocolUrl'
 import { createPlatformCaptureQueue } from '../platformCapture'
 import type { SteamLaunchRuntime } from '../steamLaunchRuntime'
-import {
-  parseSteamStorageRequirement,
-  getSteamInstallSize,
-  parseSteamMacMinOSVersion,
-  macArchFromMinOS
-} from '../gameRequirements'
+import { getSteamInstallSize } from '../gameRequirements'
 import {
   markForcedWindowsViaBottle,
   clearForcedWindowsViaBottle
@@ -494,8 +489,6 @@ jest.mock('backend/logger', () => ({
   }
 }))
 
-// ── axios mock — controls store appdetails API responses ─────────────────────
-jest.mock('axios')
 // steam/games.ts now imports the shared shortcuts module, whose import graph pulls fs-extra,
 // which cannot load under this file's graceful-fs mock (quick 261026-c7r).
 jest.mock('../../../shortcuts/shortcuts/shortcuts', () => ({
@@ -1004,22 +997,28 @@ beforeEach(() => {
 
 const APP_ID = '570'
 
-/** Fixture API response for appid 570 (Dota 2) */
-const fixtureApiResponse = {
-  data: {
-    [APP_ID]: {
-      success: true,
-      data: {
-        name: 'Dota 2',
-        short_description: 'A multiplayer online battle arena game.',
-        platforms: { windows: true, mac: true, linux: false },
-        genres: [
-          { id: '1', description: 'Action' },
-          { id: '2', description: 'Strategy' }
-        ]
-      }
-    }
-  }
+// 79-41: appdetails now goes through Rust, so the ensurePlatformsCaptured / checkBottleEligibility
+// specs observe the fetch at the fetchMetadataIfNeeded seam. mockAppdetailsWrites stands in for the
+// Rust enrich op: it writes the captured platform triple the way the real fetch persists it.
+let appdetailsFetchSpy: jest.SpyInstance
+function mockAppdetailsWrites(fixture: {
+  data: Record<
+    string,
+    { data: { platforms: { windows: boolean; mac: boolean; linux: boolean } } }
+  >
+}): void {
+  appdetailsFetchSpy.mockImplementation((game: { appId: string }) => {
+    const platforms = fixture.data[game.appId]!.data.platforms
+    const previous = (steamMetadataStore.get(game.appId) ?? {}) as object
+    steamMetadataStore.set(game.appId, {
+      ...(previous as SteamMetadataCacheEntry),
+      platformsCaptured: true,
+      is_windows_native: !!platforms.windows,
+      is_mac_native: !!platforms.mac,
+      is_linux_native: !!platforms.linux
+    })
+    return Promise.resolve()
+  })
 }
 
 // debug/steam-bottle-uninstall-reverts (routing fix): uninstall() now routes
@@ -1058,12 +1057,22 @@ const flushAsync = () => new Promise<void>((resolve) => setImmediate(resolve))
 const BRIDGE_TEST_SECRET = 'ab'.repeat(32)
 
 describe('SteamGame.getGameInfo lazy metadata', () => {
+  // 79-41: the appdetails fetch and merge moved to Rust (refresh/enrich.rs, covered there and by
+  // gameMetadata.rust.test.ts). What stays here is the TS self-heal gate in getGameInfo: WHEN the
+  // fetch is triggered, observed through the fetchMetadataIfNeeded seam.
+  let fetchSpy: jest.SpyInstance
+
   beforeEach(() => {
     library.clear()
     pendingFetches.clear()
+    fetchSpy = jest
+      .spyOn(gameMetadata, 'fetchMetadataIfNeeded')
+      .mockResolvedValue(undefined)
   })
 
-  // ── LIB-04: synchronous return from in-memory library ────────────────────
+  afterEach(() => {
+    fetchSpy.mockRestore()
+  })
 
   it('LIB-04: getGameInfo returns the existing library entry synchronously', () => {
     const entry = makeEntry({
@@ -1071,12 +1080,7 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
       art_cover: 'https://example.com/art.jpg'
     })
     library.set(APP_ID, entry)
-    // A fully-enriched cache entry has platforms already captured (DETAIL-01
-    // gap-fix), so getGameInfo must NOT trigger a self-heal re-fetch.
-    // Quick task 260816-hdg: `is_windows_native` is what makes this fixture
-    // actually mean "fully enriched". Without it the entry is pre-D-17 residue
-    // and the self-heal correctly DOES fire — see the residue counterpart
-    // below. The field was added rather than the predicate weakened.
+    // `is_windows_native` is what makes this fixture mean "fully enriched" (260816-hdg).
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
       platformsCaptured: true,
       is_windows_native: true
@@ -1085,16 +1089,10 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     const result = new SteamGame(APP_ID, steamTestDeps).getGameInfo()
 
     expect(result).toBe(entry)
-    // Synchronous return — axios must NOT have been called yet
-    expect(axios.get).not.toHaveBeenCalled()
+    expect(fetchSpy).not.toHaveBeenCalled()
   })
 
-  // ── DETAIL-01 gap-fix: self-healing platform re-fetch ────────────────────
-
   it('DETAIL-01 self-heal: getGameInfo re-fetches a cached game (art present) whose platforms were never captured', async () => {
-    ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
-    // Pre-Phase-7 cache: art is present (old guard would skip) but platforms
-    // were never captured — the self-heal guard must still fire the fetch once.
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
       platformsCaptured: undefined
     })
@@ -1103,15 +1101,10 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     new SteamGame(APP_ID, steamTestDeps).getGameInfo()
     await flushAsync()
 
-    expect(axios.get).toHaveBeenCalledTimes(1)
+    expect(fetchSpy).toHaveBeenCalledTimes(1)
   })
 
   it('260816-hdg self-heal: getGameInfo re-fetches a PRE-D-17 RESIDUE entry (platformsCaptured:true, no is_windows_native)', async () => {
-    ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
-    // THE 370-ENTRY RESIDUE SHAPE — art present AND the flag claims platforms
-    // were captured, so both of the original guards would skip. The depot
-    // field that fetch owes is absent, so this entry never actually answered
-    // the depot question and the self-heal must fire.
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
       platformsCaptured: true
     })
@@ -1120,15 +1113,10 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     new SteamGame(APP_ID, steamTestDeps).getGameInfo()
     await flushAsync()
 
-    expect(axios.get).toHaveBeenCalledTimes(1)
+    expect(fetchSpy).toHaveBeenCalledTimes(1)
   })
 
-  it('260816-hdg convergence: getGameInfo does NOT re-fetch once the refetch has written is_windows_native (one fetch per game, no loop)', async () => {
-    ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
-    // The post-refetch shape. games.ts writes is_windows_native via a `!!`
-    // coercion, so it is ALWAYS present after a successful fetch — including
-    // when the answer is `false`. That is what bounds the self-heal at exactly
-    // one fetch per appId rather than a per-render loop.
+  it('260816-hdg convergence: getGameInfo does NOT re-fetch once is_windows_native is written (one fetch per game, no loop)', async () => {
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
       platformsCaptured: true,
       is_windows_native: false
@@ -1138,12 +1126,10 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     new SteamGame(APP_ID, steamTestDeps).getGameInfo()
     await flushAsync()
 
-    expect(axios.get).not.toHaveBeenCalled()
+    expect(fetchSpy).not.toHaveBeenCalled()
   })
 
   it('DETAIL-01 self-heal: getGameInfo does NOT re-fetch a delisted cached game (avoids loop)', async () => {
-    // Delisted games return before capturing platforms; gating on !is_delisted
-    // prevents a re-fetch loop.
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
       platformsCaptured: undefined
     })
@@ -1155,20 +1141,10 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     new SteamGame(APP_ID, steamTestDeps).getGameInfo()
     await flushAsync()
 
-    expect(axios.get).not.toHaveBeenCalled()
+    expect(fetchSpy).not.toHaveBeenCalled()
   })
 
-  // 08.1 review WR-02. The case above only covers a delisted game that ALREADY
-  // HAS art — the one shape the pre-fix art-based trigger happened to skip. The
-  // shape that actually loops is a game whose FIRST-EVER fetch came back
-  // `success:false`: the delisted branch writes `art_cover: ''` and returns
-  // before populating it, so `!existing.art_cover` stays true forever and
-  // getGameInfo fires a store request plus a pushGameToLibrary on every single
-  // access. pendingFetches only dedups CONCURRENT calls, so it cannot bound a
-  // sequential loop. Red-proofed: both assertions below fail against the
-  // pre-fix guard (`!existing.art_cover || platformsNeverCaptured`).
   it('WR-02: getGameInfo does NOT re-fetch a delisted game that has NO art_cover (the loop shape)', async () => {
-    ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
       platformsCaptured: undefined
     })
@@ -1177,11 +1153,10 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     new SteamGame(APP_ID, steamTestDeps).getGameInfo()
     await flushAsync()
 
-    expect(axios.get).not.toHaveBeenCalled()
+    expect(fetchSpy).not.toHaveBeenCalled()
   })
 
-  it('WR-02: repeated getGameInfo calls on an art-less delisted game stay at zero requests', async () => {
-    ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
+  it('WR-02: repeated getGameInfo calls on an art-less delisted game stay at zero fetches', async () => {
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
       platformsCaptured: undefined
     })
@@ -1195,94 +1170,21 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     game.getGameInfo()
     await flushAsync()
 
-    expect(axios.get).not.toHaveBeenCalled()
+    expect(fetchSpy).not.toHaveBeenCalled()
     expect(sendFrontendMessage).not.toHaveBeenCalledWith(
       'pushGameToLibrary',
       expect.anything()
     )
   })
 
-  // 08.1 review WR-03. This method interpolates `this.appId` into a
-  // store.steampowered.com query string and into two CDN image URLs that are
-  // pushed to the renderer as <img src>. Its sibling chokepoints
-  // (getSteamInstallSize, buildSteamProtocolUrl) both reject a non-numeric
-  // appId before building any URL, citing T-06-01/T-03-01; this one did not.
-  it('WR-03: a non-numeric appId is rejected before any URL is built', async () => {
-    ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
-    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
-      platformsCaptured: undefined
-    })
-    const badAppId = '../../etc/passwd'
-    library.set(badAppId, makeEntry({ art_cover: '' }))
-
-    new SteamGame(badAppId, steamTestDeps).getGameInfo()
-    await flushAsync()
-
-    expect(axios.get).not.toHaveBeenCalled()
-  })
-
-  it('WR-03: a numeric appId is still fetched (the guard is not over-broad)', async () => {
-    ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
-    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
-      platformsCaptured: undefined
-    })
+  it('LIB-04: when art_cover is empty, getGameInfo triggers the lazy metadata fetch', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue(undefined)
     library.set(APP_ID, makeEntry({ art_cover: '' }))
 
     new SteamGame(APP_ID, steamTestDeps).getGameInfo()
     await flushAsync()
 
-    expect(axios.get).toHaveBeenCalledTimes(1)
-  })
-
-  // ── LIB-04: lazy metadata fetch via Steam store API ──────────────────────
-
-  it('LIB-04: when art_cover is empty, fetchMetadataIfNeeded calls the Steam store appdetails API', async () => {
-    ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
-    library.set(APP_ID, makeEntry())
-
-    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
-    await flushAsync()
-
-    expect(axios.get).toHaveBeenCalledTimes(1)
-    expect(axios.get).toHaveBeenCalledWith(
-      `https://store.steampowered.com/api/appdetails?appids=${APP_ID}`,
-      { timeout: 15000 }
-    )
-  })
-
-  it('LIB-04: after fetch, art_cover/art_square/title/genres/about.description are populated from the API response', async () => {
-    ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
-    library.set(APP_ID, makeEntry())
-
-    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
-    await flushAsync()
-
-    const updated = library.get(APP_ID)!
-    expect(updated.art_cover).toBe(
-      `https://cdn.cloudflare.steamstatic.com/steam/apps/${APP_ID}/header.jpg`
-    )
-    expect(updated.art_square).toBe(
-      `https://cdn.cloudflare.steamstatic.com/steam/apps/${APP_ID}/library_600x900.jpg`
-    )
-    expect(updated.title).toBe('Dota 2')
-    expect(updated.extra?.genres).toEqual(['Action', 'Strategy'])
-    expect(updated.extra?.about?.description).toBe(
-      'A multiplayer online battle arena game.'
-    )
-  })
-
-  // ── DETAIL-01: native platform capture ───────────────────────────────────
-
-  it('DETAIL-01: appdetails platforms map onto is_mac_native / is_linux_native', async () => {
-    ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
-    library.set(APP_ID, makeEntry())
-
-    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
-    await flushAsync()
-
-    const updated = library.get(APP_ID)!
-    expect(updated.is_mac_native).toBe(true)
-    expect(updated.is_linux_native).toBe(false)
+    expect(fetchSpy).toHaveBeenCalledTimes(1)
   })
 
   // ── steam-startup-resume-crash (2026-07-18) hardening: the fire-and-forget
@@ -1320,547 +1222,6 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     process.off('unhandledRejection', rejectionSpy)
     fetchSpy.mockRestore()
   })
-
-  it('DETAIL-01: native platform flags are persisted to steamMetadataStore', async () => {
-    ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
-    library.set(APP_ID, makeEntry())
-
-    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
-    await flushAsync()
-
-    expect(steamMetadataStore.set).toHaveBeenCalledWith(
-      APP_ID,
-      expect.objectContaining({
-        is_mac_native: true,
-        is_linux_native: false
-      })
-    )
-  })
-
-  // ── D-17: Windows depot-availability capture ──────────────────────────────
-
-  it('D-17: appdetails platforms.windows maps onto GameInfo.is_windows_native', async () => {
-    ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
-    library.set(APP_ID, makeEntry())
-
-    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
-    await flushAsync()
-
-    expect(library.get(APP_ID)!.is_windows_native).toBe(true)
-  })
-
-  it('D-17: is_windows_native is persisted to steamMetadataStore', async () => {
-    ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
-    library.set(APP_ID, makeEntry())
-
-    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
-    await flushAsync()
-
-    expect(steamMetadataStore.set).toHaveBeenCalledWith(
-      APP_ID,
-      expect.objectContaining({ is_windows_native: true })
-    )
-  })
-
-  it('261029-sbi: appdetails metacritic.score is persisted with metacriticCaptured and lands on the pushed GameInfo', async () => {
-    const withScore = {
-      data: {
-        [APP_ID]: {
-          ...fixtureApiResponse.data[APP_ID],
-          data: {
-            ...fixtureApiResponse.data[APP_ID].data,
-            metacritic: { score: 88, url: 'https://example.invalid' }
-          }
-        }
-      }
-    }
-    ;(axios.get as jest.Mock).mockResolvedValue(withScore)
-    library.set(APP_ID, makeEntry())
-
-    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
-    await flushAsync()
-
-    expect(library.get(APP_ID)!.metacritic_score).toBe(88)
-    expect(steamMetadataStore.set).toHaveBeenCalledWith(
-      APP_ID,
-      expect.objectContaining({
-        metacritic_score: 88,
-        metacriticCaptured: true
-      })
-    )
-  })
-
-  it('261029-sbi: no appdetails metacritic carries existing score/captured forward, and invents none', async () => {
-    ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
-    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
-      metacritic_score: 75,
-      metacriticCaptured: true
-    })
-    library.set(APP_ID, makeEntry())
-
-    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
-    await flushAsync()
-
-    const [, written] = (steamMetadataStore.set as jest.Mock).mock.calls[0]
-    expect(written.metacritic_score).toBe(75)
-    expect(written.metacriticCaptured).toBe(true)
-  })
-
-  it('261029-sbi: no appdetails metacritic and no existing entry writes neither field', async () => {
-    ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
-    ;(steamMetadataStore.get as jest.Mock).mockReturnValue(undefined)
-    library.set(APP_ID, makeEntry())
-
-    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
-    await flushAsync()
-
-    const [, written] = (steamMetadataStore.set as jest.Mock).mock.calls[0]
-    expect('metacritic_score' in written).toBe(false)
-    expect('metacriticCaptured' in written).toBe(false)
-  })
-
-  it('D-17 false-safe: platforms.windows false yields is_windows_native false on BOTH the GameInfo and the persisted entry', async () => {
-    const fixtureWindowsFalse = {
-      data: {
-        [APP_ID]: {
-          ...fixtureApiResponse.data[APP_ID],
-          data: {
-            ...fixtureApiResponse.data[APP_ID].data,
-            platforms: { windows: false, mac: true, linux: false }
-          }
-        }
-      }
-    }
-    ;(axios.get as jest.Mock).mockResolvedValue(fixtureWindowsFalse)
-    library.set(APP_ID, makeEntry())
-
-    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
-    await flushAsync()
-
-    expect(library.get(APP_ID)!.is_windows_native).toBe(false)
-    expect(steamMetadataStore.set).toHaveBeenCalledWith(
-      APP_ID,
-      expect.objectContaining({ is_windows_native: false })
-    )
-  })
-
-  it('D-17 false-safe: an appdetails response with no platforms object yields false, never undefined', async () => {
-    const fixtureNoPlatforms = {
-      data: {
-        [APP_ID]: {
-          success: true,
-          data: {
-            name: 'Dota 2',
-            short_description: 'A multiplayer online battle arena game.',
-            genres: []
-          }
-        }
-      }
-    }
-    ;(axios.get as jest.Mock).mockResolvedValue(fixtureNoPlatforms)
-    library.set(APP_ID, makeEntry())
-
-    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
-    await flushAsync()
-
-    expect(library.get(APP_ID)!.is_windows_native).toBe(false)
-  })
-
-  // ── Quick task 260816-qcn: freshest-write-wins precedence (WR-02/CR-01) ──
-
-  describe('260816-qcn: appdetails writer honours resolvePlatformWrite precedence', () => {
-    // fixtureApiResponse gives windows:true, mac:true, linux:false. This
-    // fixture disagrees on every field so the two sources genuinely
-    // conflict, rather than coincidentally agreeing.
-    const CONFLICTING_PICS_TRIPLE = {
-      is_windows_native: true,
-      is_mac_native: false,
-      is_linux_native: true
-    }
-
-    it('declined: an existing strictly-newer PICS capture survives on BOTH the cache write and the pushed GameInfo (split-brain check)', async () => {
-      ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
-      ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
-        ...CONFLICTING_PICS_TRIPLE,
-        platformsCaptured: true,
-        platformsSource: 'pics',
-        platformsCapturedAt: Date.now() + 60_000
-      })
-      library.set(APP_ID, makeEntry())
-
-      new SteamGame(APP_ID, steamTestDeps).getGameInfo()
-      await flushAsync()
-
-      const [, written] = (steamMetadataStore.set as jest.Mock).mock.calls[0]
-      expect(written.is_windows_native).toBe(
-        CONFLICTING_PICS_TRIPLE.is_windows_native
-      )
-      expect(written.is_mac_native).toBe(CONFLICTING_PICS_TRIPLE.is_mac_native)
-      expect(written.is_linux_native).toBe(
-        CONFLICTING_PICS_TRIPLE.is_linux_native
-      )
-      expect(written.platformsSource).toBe('pics')
-
-      const pushed = library.get(APP_ID)!
-      expect(pushed.is_windows_native).toBe(
-        CONFLICTING_PICS_TRIPLE.is_windows_native
-      )
-      expect(pushed.is_mac_native).toBe(CONFLICTING_PICS_TRIPLE.is_mac_native)
-      expect(pushed.is_linux_native).toBe(
-        CONFLICTING_PICS_TRIPLE.is_linux_native
-      )
-
-      const pushedMessage = sendFrontendMessage.mock.calls.find(
-        ([channel]) => channel === 'pushGameToLibrary'
-      )
-      expect(pushedMessage![1].is_windows_native).toBe(
-        CONFLICTING_PICS_TRIPLE.is_windows_native
-      )
-      expect(pushedMessage![1].is_mac_native).toBe(
-        CONFLICTING_PICS_TRIPLE.is_mac_native
-      )
-      expect(pushedMessage![1].is_linux_native).toBe(
-        CONFLICTING_PICS_TRIPLE.is_linux_native
-      )
-    })
-
-    it('accepted: appdetails wins over an OLDER PICS capture -- persisted triple is the appdetails one, platformsSource flips to appdetails', async () => {
-      ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
-      ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
-        ...CONFLICTING_PICS_TRIPLE,
-        platformsCaptured: true,
-        platformsSource: 'pics',
-        platformsCapturedAt: Date.now() - 60_000
-      })
-      library.set(APP_ID, makeEntry())
-
-      new SteamGame(APP_ID, steamTestDeps).getGameInfo()
-      await flushAsync()
-
-      const [, written] = (steamMetadataStore.set as jest.Mock).mock.calls[0]
-      // fixtureApiResponse: windows:true, mac:true, linux:false
-      expect(written.is_windows_native).toBe(true)
-      expect(written.is_mac_native).toBe(true)
-      expect(written.is_linux_native).toBe(false)
-      expect(written.platformsSource).toBe('appdetails')
-      expect(written.platformsCapturedAt).toBeGreaterThanOrEqual(
-        Date.now() - 60_000
-      )
-    })
-
-    it('legacy: an existing entry with no platformsCapturedAt is writable by appdetails and gets stamped', async () => {
-      ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
-      ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
-        platformsCaptured: true,
-        is_windows_native: false
-        // no platformsCapturedAt -- pre-this-task legacy entry
-      })
-      library.set(APP_ID, makeEntry())
-
-      new SteamGame(APP_ID, steamTestDeps).getGameInfo()
-      await flushAsync()
-
-      const [, written] = (steamMetadataStore.set as jest.Mock).mock.calls[0]
-      expect(written.is_windows_native).toBe(true)
-      expect(written.platformsSource).toBe('appdetails')
-      expect(typeof written.platformsCapturedAt).toBe('number')
-    })
-
-    it('carry-forward on the DECLINED path: mac_arch/mac_arch_verified/mac_arch_source/forcedWindowsViaBottle all survive', async () => {
-      ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
-      ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
-        ...CONFLICTING_PICS_TRIPLE,
-        platformsCaptured: true,
-        platformsSource: 'pics',
-        platformsCapturedAt: Date.now() + 60_000,
-        mac_arch: '64',
-        mac_arch_verified: true,
-        mac_arch_source: 'macho',
-        forcedWindowsViaBottle: true
-      })
-      library.set(APP_ID, makeEntry())
-
-      new SteamGame(APP_ID, steamTestDeps).getGameInfo()
-      await flushAsync()
-
-      const [, written] = (steamMetadataStore.set as jest.Mock).mock.calls[0]
-      expect(written.mac_arch).toBe('64')
-      expect(written.mac_arch_verified).toBe(true)
-      expect(written.mac_arch_source).toBe('macho')
-      expect(written.forcedWindowsViaBottle).toBe(true)
-    })
-
-    it('260816-qcn additional gap: mac_arch is derived from the EFFECTIVE is_mac_native, never the raw appdetails one, when precedence declines and is_mac_native is false on the winning side', async () => {
-      // fixtureApiResponse claims mac:true (raw appdetails is_mac_native
-      // would be true), but the existing PICS capture is strictly newer,
-      // complete, AND says is_mac_native:false. If mac_arch were derived
-      // from the raw appdetails is_mac_native instead of the EFFECTIVE
-      // (post-precedence) one, this would incorrectly compute a mac_arch
-      // heuristic for a game whose winning platform answer says it has no
-      // mac build at all -- the exact silent-regression window flagged by
-      // the plan checker gap.
-      ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
-      ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
-        is_windows_native: true,
-        is_mac_native: false,
-        is_linux_native: true,
-        platformsCaptured: true,
-        platformsSource: 'pics',
-        platformsCapturedAt: Date.now() + 60_000
-        // no mac_arch on the existing entry, no mac_arch_verified
-      })
-      library.set(APP_ID, makeEntry())
-
-      new SteamGame(APP_ID, steamTestDeps).getGameInfo()
-      await flushAsync()
-
-      const [, written] = (steamMetadataStore.set as jest.Mock).mock.calls[0]
-      // Declined write: the effective is_mac_native is false (PICS' verdict
-      // won), so mac_arch must NOT be derived via macArchFromMinOS -- it
-      // must stay whatever the (absent) existingMeta.mac_arch was: undefined.
-      expect(written.is_mac_native).toBe(false)
-      expect(written.mac_arch).toBeUndefined()
-      expect(written.mac_arch_source).toBeUndefined()
-
-      const pushed = library.get(APP_ID)!
-      expect(pushed.is_mac_native).toBe(false)
-      expect(pushed.mac_arch).toBeUndefined()
-    })
-  })
-
-  // ── MAC32-01: inline mac_arch derivation (direction B) ────────────────────
-
-  function fixtureWithMacRequirements(minimumHtml: string | undefined) {
-    return {
-      data: {
-        [APP_ID]: {
-          success: true,
-          data: {
-            ...fixtureApiResponse.data[APP_ID].data,
-            mac_requirements: { minimum: minimumHtml }
-          }
-        }
-      }
-    }
-  }
-
-  it('MAC32-01: is_mac_native true + min-OS 10.15 persists mac_arch "64" and mac_arch_source "minos", preserving art_cover/art_square/extra', async () => {
-    ;(axios.get as jest.Mock).mockResolvedValue(
-      fixtureWithMacRequirements(
-        '<li><strong>OS:</strong> macOS 10.15 or newer<br></li>'
-      )
-    )
-    ;(steamMetadataStore.get as jest.Mock).mockReturnValue(undefined)
-    library.set(APP_ID, makeEntry())
-
-    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
-    await flushAsync()
-
-    expect(steamMetadataStore.set).toHaveBeenCalledWith(
-      APP_ID,
-      expect.objectContaining({
-        mac_arch: '64',
-        mac_arch_source: 'minos',
-        art_cover: `https://cdn.cloudflare.steamstatic.com/steam/apps/${APP_ID}/header.jpg`,
-        art_square: `https://cdn.cloudflare.steamstatic.com/steam/apps/${APP_ID}/library_600x900.jpg`,
-        extra: expect.anything()
-      })
-    )
-    const updated = library.get(APP_ID)!
-    expect(updated.mac_arch).toBe('64')
-  })
-
-  it('MAC32-01: is_mac_native true + min-OS 10.9.3 (real 32-bit, Age of Wonders III) persists mac_arch "unknown" — never a false-negative assert-32', async () => {
-    ;(axios.get as jest.Mock).mockResolvedValue(
-      fixtureWithMacRequirements(
-        '<li><strong>OS:</strong> 10.9.3 (Mavericks)<br></li>'
-      )
-    )
-    ;(steamMetadataStore.get as jest.Mock).mockReturnValue(undefined)
-    library.set(APP_ID, makeEntry())
-
-    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
-    await flushAsync()
-
-    expect(steamMetadataStore.set).toHaveBeenCalledWith(
-      APP_ID,
-      expect.objectContaining({ mac_arch: 'unknown', mac_arch_source: 'minos' })
-    )
-  })
-
-  it('MAC32-01: is_mac_native true + empty mac_requirements (minimum undefined) resolves mac_arch "unknown" without throwing', async () => {
-    ;(axios.get as jest.Mock).mockResolvedValue(
-      fixtureWithMacRequirements(undefined)
-    )
-    ;(steamMetadataStore.get as jest.Mock).mockReturnValue(undefined)
-    library.set(APP_ID, makeEntry())
-
-    expect(() =>
-      new SteamGame(APP_ID, steamTestDeps).getGameInfo()
-    ).not.toThrow()
-    await flushAsync()
-
-    expect(steamMetadataStore.set).toHaveBeenCalledWith(
-      APP_ID,
-      expect.objectContaining({ mac_arch: 'unknown', mac_arch_source: 'minos' })
-    )
-  })
-
-  it('MAC32-01: is_mac_native false does NOT recompute mac_arch — carries forward the existing entry unchanged', async () => {
-    const notMacNativeResponse = {
-      data: {
-        [APP_ID]: {
-          success: true,
-          data: {
-            ...fixtureApiResponse.data[APP_ID].data,
-            platforms: { windows: true, mac: false, linux: false },
-            mac_requirements: {
-              minimum: '<li><strong>OS:</strong> macOS 10.15 or newer<br></li>'
-            }
-          }
-        }
-      }
-    }
-    ;(axios.get as jest.Mock).mockResolvedValue(notMacNativeResponse)
-    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
-      platformsCaptured: true,
-      mac_arch: 'unknown'
-    })
-    library.set(APP_ID, makeEntry())
-
-    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
-    await flushAsync()
-
-    expect(steamMetadataStore.set).toHaveBeenCalledWith(
-      APP_ID,
-      expect.objectContaining({ mac_arch: 'unknown' })
-    )
-    // mac_arch_source must not be freshly stamped 'minos' — is_mac_native is false.
-    const setCall = (steamMetadataStore.set as jest.Mock).mock.calls.find(
-      ([key]) => key === APP_ID
-    )
-    expect(setCall?.[1]?.mac_arch_source).toBeUndefined()
-  })
-
-  it('MAC32-01: existing mac_arch_verified true is NEVER regressed by a re-fetch — mac_arch/mac_arch_source/mac_arch_verified preserved', async () => {
-    ;(axios.get as jest.Mock).mockResolvedValue(
-      fixtureWithMacRequirements(
-        '<li><strong>OS:</strong> 10.9.3 (Mavericks)<br></li>' // would compute 'unknown' if NOT gated
-      )
-    )
-    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
-      platformsCaptured: true,
-      is_mac_native: true,
-      mac_arch: '32',
-      mac_arch_verified: true,
-      mac_arch_source: 'macho'
-    })
-    library.set(APP_ID, makeEntry())
-
-    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
-    await flushAsync()
-
-    expect(steamMetadataStore.set).toHaveBeenCalledWith(
-      APP_ID,
-      expect.objectContaining({
-        mac_arch: '32',
-        mac_arch_verified: true,
-        mac_arch_source: 'macho'
-      })
-    )
-  })
-
-  // ── LIB-04: cache persistence ─────────────────────────────────────────────
-
-  it('LIB-04: fetched metadata is written to steamMetadataStore for indefinite reuse', async () => {
-    ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
-    library.set(APP_ID, makeEntry())
-
-    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
-    await flushAsync()
-
-    expect(steamMetadataStore.set).toHaveBeenCalledWith(
-      APP_ID,
-      expect.objectContaining({
-        art_cover: `https://cdn.cloudflare.steamstatic.com/steam/apps/${APP_ID}/header.jpg`,
-        art_square: `https://cdn.cloudflare.steamstatic.com/steam/apps/${APP_ID}/library_600x900.jpg`
-      })
-    )
-  })
-
-  // ── LIB-04: frontend update via IPC ──────────────────────────────────────
-
-  it('LIB-04: fetchMetadataIfNeeded calls sendFrontendMessage pushGameToLibrary with the updated GameInfo', async () => {
-    ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
-    library.set(APP_ID, makeEntry())
-
-    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
-    await flushAsync()
-
-    expect(sendFrontendMessage).toHaveBeenCalledWith(
-      'pushGameToLibrary',
-      expect.objectContaining({
-        app_name: APP_ID,
-        art_cover: `https://cdn.cloudflare.steamstatic.com/steam/apps/${APP_ID}/header.jpg`,
-        title: 'Dota 2',
-        // Phase 17 D-08 reconciliation (Plan 09): this push only happens
-        // after a successful appdetails fetch, exactly when platforms are
-        // captured — the frontend bottle indicator relies on this flag.
-        steamPlatformsCaptured: true
-      })
-    )
-  })
-
-  // ── LIB-04: pendingFetches dedup (T-2-03) ────────────────────────────────
-
-  it('LIB-04: concurrent getGameInfo calls for the same appId only fire one network request (pendingFetches dedup)', async () => {
-    // Slow-resolving promise — not resolved until after both sync calls complete
-    let resolveAxios!: (value: unknown) => void
-    ;(axios.get as jest.Mock).mockReturnValue(
-      new Promise((resolve) => {
-        resolveAxios = resolve
-      })
-    )
-    library.set(APP_ID, makeEntry())
-
-    const game = new SteamGame(APP_ID, steamTestDeps)
-    // Both calls happen synchronously before any awaited code runs
-    game.getGameInfo()
-    game.getGameInfo()
-
-    // Now resolve the single in-flight request
-    resolveAxios(fixtureApiResponse)
-    await flushAsync()
-
-    // Only one network request should have been made
-    expect(axios.get).toHaveBeenCalledTimes(1)
-  })
-
-  // ── LIB-04: error handling ────────────────────────────────────────────────
-
-  it('LIB-04: a failed appdetails request is caught and logged without throwing', async () => {
-    ;(axios.get as jest.Mock).mockRejectedValue(new Error('Network error'))
-    library.set(APP_ID, makeEntry())
-
-    const game = new SteamGame(APP_ID, steamTestDeps)
-
-    // Synchronous call must not throw
-    expect(() => game.getGameInfo()).not.toThrow()
-
-    // Async error must also be swallowed (not bubble up as unhandled rejection)
-    await flushAsync()
-
-    // logWarning should have been called with the error
-    const { logWarning } = jest.requireMock('backend/logger')
-    expect(logWarning).toHaveBeenCalled()
-    // steamMetadataStore.set must NOT run, and no game must be pushed to the
-    // frontend (the steamMetadataSyncing on/off signals are expected + allowed).
-    expect(steamMetadataStore.set).not.toHaveBeenCalled()
-    expect(sendFrontendMessage).not.toHaveBeenCalledWith(
-      'pushGameToLibrary',
-      expect.anything()
-    )
-  })
 })
 
 // ── Integration: lazy fetch reachable through SteamLibraryManager ────────────
@@ -1872,24 +1233,21 @@ describe('SteamLibraryManager.getGameInfo integration — lazy fetch delegation'
   })
 
   it('getGameInfo() through the library manager triggers lazy metadata fetch via SteamGame delegation', async () => {
-    ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
+    const fetchSpy = jest
+      .spyOn(gameMetadata, 'fetchMetadataIfNeeded')
+      .mockResolvedValue(undefined)
     // Entry in shared Map with no artwork — should trigger fetchMetadataIfNeeded
     library.set(APP_ID, makeEntry())
 
     const manager = new SteamLibraryManager(steamTestDeps)
     const result = manager.getGameInfo(APP_ID)
 
-    // Synchronous return should be the in-Map entry
     expect(result).toBeDefined()
     expect(result?.app_name).toBe(APP_ID)
 
-    // Lazy fetch must have been triggered through the delegation chain
     await flushAsync()
-    expect(axios.get).toHaveBeenCalledTimes(1)
-    expect(axios.get).toHaveBeenCalledWith(
-      `https://store.steampowered.com/api/appdetails?appids=${APP_ID}`,
-      { timeout: 15000 }
-    )
+    expect(fetchSpy).toHaveBeenCalledTimes(1)
+    fetchSpy.mockRestore()
   })
 })
 
@@ -9770,34 +9128,6 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       ).not.toBe(true)
     })
 
-    it('W7: the persisted verdict survives a subsequent appdetails re-fetch (no T-18-02-04 silent drop)', async () => {
-      mockStatefulMetadataStore({
-        art_cover: '',
-        art_square: '',
-        extra: { reqs: [] },
-        platformsCaptured: true,
-        is_mac_native: true,
-        is_windows_native: true,
-        forcedWindowsViaBottle: true
-      })
-      ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
-      // art_cover:'' (from makeEntry's default) triggers getGameInfo()'s own
-      // fire-and-forget fetchMetadataIfNeeded — the SAME re-fetch trigger
-      // LIB-04's specs already exercise, not a synthetic direct call.
-      library.set(APP_ID, makeEntry())
-
-      new SteamGame(APP_ID, steamTestDeps).getGameInfo()
-      await flushAsync()
-
-      expect(
-        (
-          steamMetadataStore.get(APP_ID) as {
-            forcedWindowsViaBottle?: boolean
-          }
-        )?.forcedWindowsViaBottle
-      ).toBe(true)
-    })
-
     // ── 34.13 review A-19 ────────────────────────────────────────────────
     // Four specs (NBI-1..NBI-4) used to pin a `nativeBottleInstall` flag's
     // write discipline and its T-18-02-04 carry-forward. A repo-wide census
@@ -9948,6 +9278,9 @@ describe('SteamGame.install() ensurePlatformsCaptured() — Phase 17 Plan 09 (MA
   beforeEach(() => {
     library.clear()
     pendingFetches.clear()
+    appdetailsFetchSpy = jest
+      .spyOn(gameMetadata, 'fetchMetadataIfNeeded')
+      .mockResolvedValue(undefined)
     const { shell } = hostFakes
     shellOpenExternal = shell.openExternal
     shellOpenExternal.mockResolvedValue(undefined)
@@ -9960,6 +9293,7 @@ describe('SteamGame.install() ensurePlatformsCaptured() — Phase 17 Plan 09 (MA
   })
 
   afterEach(() => {
+    appdetailsFetchSpy.mockRestore()
     // Explicit reset (do not rely on test-order discipline in later describes).
     envMock.isMac = false
   })
@@ -9975,13 +9309,13 @@ describe('SteamGame.install() ensurePlatformsCaptured() — Phase 17 Plan 09 (MA
       platformsCaptured: undefined,
       bridge: { userRoute: 'bottle' }
     })
-    ;(axios.get as jest.Mock).mockResolvedValue(windowsOnlyFixture)
+    mockAppdetailsWrites(windowsOnlyFixture)
     isBottleReady.mockReturnValue(false)
 
     const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.install({} as any)
 
-    expect(axios.get).toHaveBeenCalled()
+    expect(appdetailsFetchSpy).toHaveBeenCalled()
     expect(shellOpenExternal).not.toHaveBeenCalled()
     expect(sendFrontendMessage).toHaveBeenCalledWith(
       'steamBottleSetupRequired',
@@ -9994,24 +9328,24 @@ describe('SteamGame.install() ensurePlatformsCaptured() — Phase 17 Plan 09 (MA
 
   it('native-Mac game routes native after capture — install() calls shell.openExternal once platforms resolve is_mac_native:true', async () => {
     mockStatefulMetadataStore({ platformsCaptured: undefined })
-    ;(axios.get as jest.Mock).mockResolvedValue(macNativeFixture)
+    mockAppdetailsWrites(macNativeFixture)
 
     const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.install({} as any)
 
-    expect(axios.get).toHaveBeenCalled()
+    expect(appdetailsFetchSpy).toHaveBeenCalled()
     expect(shellOpenExternal).toHaveBeenCalledWith(`steam://install/${APP_ID}`)
     expect(result).toEqual({ status: 'done' })
   })
 
-  it('non-macOS install skips platform capture — axios.get is NOT called by ensurePlatformsCaptured, native path used unchanged', async () => {
+  it('non-macOS install skips platform capture — the appdetails fetch is NOT triggered by ensurePlatformsCaptured, native path used unchanged', async () => {
     envMock.isMac = false
     mockStatefulMetadataStore({ platformsCaptured: undefined })
 
     const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.install({} as any)
 
-    expect(axios.get).not.toHaveBeenCalled()
+    expect(appdetailsFetchSpy).not.toHaveBeenCalled()
     expect(shellOpenExternal).toHaveBeenCalledWith(`steam://install/${APP_ID}`)
     expect(result).toEqual({ status: 'done' })
   })
@@ -10029,7 +9363,7 @@ describe('SteamGame.install() ensurePlatformsCaptured() — Phase 17 Plan 09 (MA
     const game = new SteamGame(APP_ID, steamTestDeps)
     await game.install({} as any)
 
-    expect(axios.get).not.toHaveBeenCalled()
+    expect(appdetailsFetchSpy).not.toHaveBeenCalled()
     expect(sendFrontendMessage).toHaveBeenCalledWith(
       'steamBottleSetupRequired',
       {
@@ -10091,6 +9425,9 @@ describe('SteamGame.checkBottleEligibility() — D-09 backend-authoritative verd
   beforeEach(() => {
     library.clear()
     pendingFetches.clear()
+    appdetailsFetchSpy = jest
+      .spyOn(gameMetadata, 'fetchMetadataIfNeeded')
+      .mockResolvedValue(undefined)
     library.set(APP_ID, makeEntry({ title: 'Windows Only Game' }))
     envMock = jest.requireMock('backend/constants/environment')
     envMock.isMac = true
@@ -10099,24 +9436,25 @@ describe('SteamGame.checkBottleEligibility() — D-09 backend-authoritative verd
   })
 
   afterEach(() => {
+    appdetailsFetchSpy.mockRestore()
     envMock.isMac = false
   })
 
   it('cold cache + Windows-only game resolves true AND actually performs the capture', async () => {
     mockStatefulMetadataStore({ platformsCaptured: undefined })
-    ;(axios.get as jest.Mock).mockResolvedValue(windowsOnlyFixture)
+    mockAppdetailsWrites(windowsOnlyFixture)
 
     const result = await checkBottleEligibility(
       new SteamGame(APP_ID, steamTestDeps)
     )
 
     expect(result).toBe(true)
-    expect(axios.get).toHaveBeenCalled()
+    expect(appdetailsFetchSpy).toHaveBeenCalled()
   })
 
   it('cold cache + mac-native game resolves false', async () => {
     mockStatefulMetadataStore({ platformsCaptured: undefined })
-    ;(axios.get as jest.Mock).mockResolvedValue(macNativeFixture)
+    mockAppdetailsWrites(macNativeFixture)
 
     const result = await checkBottleEligibility(
       new SteamGame(APP_ID, steamTestDeps)
@@ -10133,7 +9471,7 @@ describe('SteamGame.checkBottleEligibility() — D-09 backend-authoritative verd
     )
 
     expect(result).toBe(true)
-    expect(axios.get).not.toHaveBeenCalled()
+    expect(appdetailsFetchSpy).not.toHaveBeenCalled()
   })
 
   it('non-macOS resolves false without touching the network', async () => {
@@ -10145,7 +9483,7 @@ describe('SteamGame.checkBottleEligibility() — D-09 backend-authoritative verd
     )
 
     expect(result).toBe(false)
-    expect(axios.get).not.toHaveBeenCalled()
+    expect(appdetailsFetchSpy).not.toHaveBeenCalled()
   })
 
   it('MAC32-02: a confirmed-32 mac build resolves true through the wrapper', async () => {
@@ -12095,248 +11433,23 @@ describe('SteamGame.uninstall() — Phase 24 Plan 08 bridge routing (R4/R6)', ()
   })
 })
 
-// ── LIB-06: parseSteamStorageRequirement ─────────────────────────────────────
-
-describe('parseSteamStorageRequirement', () => {
-  it('LIB-06: returns bytes for "15 GB available space" HTML (15 * 1024^3)', () => {
-    const html =
-      '<ul><li><strong>Storage:</strong> 15 GB available space</li></ul>'
-    expect(parseSteamStorageRequirement(html)).toBe(15 * 1024 ** 3) // 16106127360
-  })
-
-  it('LIB-06: returns bytes for plain "512 MB available space" (512 * 1024^2)', () => {
-    expect(parseSteamStorageRequirement('512 MB available space')).toBe(
-      512 * 1024 ** 2
-    ) // 536870912
-  })
-
-  it('LIB-06: returns undefined for undefined input', () => {
-    expect(parseSteamStorageRequirement(undefined)).toBeUndefined()
-  })
-
-  it('LIB-06: returns undefined when string contains no size pattern', () => {
-    expect(parseSteamStorageRequirement('no size here')).toBeUndefined()
-  })
-
-  it('LIB-06: returns undefined for non-string input (array cast — typeof guard)', () => {
-    expect(parseSteamStorageRequirement([] as any)).toBeUndefined()
-  })
-})
-
-// ── MAC32-01: parseSteamMacMinOSVersion / macArchFromMinOS ───────────────────
-// Fixtures below are the LITERAL live-fetched mac_requirements.minimum HTML
-// strings from 18-RESEARCH.md Pattern 1's corpus (cross-checked against the
-// four committed 18-01 appinfo fixtures' real titles).
-
-describe('parseSteamMacMinOSVersion', () => {
-  it('canonical bulleted shape: Dota 2 (570) resolves to 10.15', () => {
-    expect(
-      parseSteamMacMinOSVersion(
-        '<li><strong>OS:</strong> macOS 10.15 or newer<br></li>'
-      )
-    ).toEqual({ major: 10, minor: 15 })
-  })
-
-  it('canonical bulleted shape with parenthetical codename: Age of Wonders III (226840, confirmed 32-bit) resolves to 10.9.3', () => {
-    expect(
-      parseSteamMacMinOSVersion(
-        '<li><strong>OS:</strong> 10.9.3 (Mavericks)<br></li>'
-      )
-    ).toEqual({ major: 10, minor: 9 })
-  })
-
-  it('"or higher" phrasing: A Hat in Time (253230, false-flag, real 64-bit) resolves to 10.11.6', () => {
-    expect(
-      parseSteamMacMinOSVersion(
-        '<li><strong>OS:</strong> MAC OS X 10.11.6 or higher<br></li>'
-      )
-    ).toEqual({ major: 10, minor: 11 })
-  })
-
-  it('multi-alternative "or higher" list: Half-Life 2 (220) returns the LOWEST alternative (10.5.8, not 10.6.3)', () => {
-    expect(
-      parseSteamMacMinOSVersion(
-        '<li><strong>OS:</strong> Leopard 10.5.8, Snow Leopard 10.6.3, or higher<br></li>'
-      )
-    ).toEqual({ major: 10, minor: 5 })
-  })
-
-  it('tagless run-on prose: Portal resolves to 10.5.8 without the "1GB" RAM figure leaking in', () => {
-    expect(
-      parseSteamMacMinOSVersion(
-        '<strong>Minimum: </strong>OS X version Leopard 10.5.8, Snow Leopard 10.6.3, 1GB RAM, NVIDIA...'
-      )
-    ).toEqual({ major: 10, minor: 5 })
-  })
-
-  it('label+value co-located inside one <strong>, range format: Terraria resolves to the lowest bound (10.9.5, not 10.11.6)', () => {
-    expect(
-      parseSteamMacMinOSVersion(
-        '<li><strong>OS: OSX 10.9.5 - 10.11.6</strong> <br></li>'
-      )
-    ).toEqual({ major: 10, minor: 9 })
-  })
-
-  it('decoy digits: Dust: An Elysian Tail resolves via 10.6.8, NOT via the literal "32" in "32/64-bit" (no dot, excluded)', () => {
-    expect(
-      parseSteamMacMinOSVersion(
-        '<li><strong>OS:</strong> Snow Leopard 10.6.8, 32/64-bit<br>...'
-      )
-    ).toEqual({ major: 10, minor: 6 })
-  })
-
-  it("major > 10: No Man's Sky resolves to 12.3", () => {
-    expect(
-      parseSteamMacMinOSVersion(
-        '<li><strong>OS:</strong> macOS Monterey 12.3<br></li>'
-      )
-    ).toEqual({ major: 12, minor: 3 })
-  })
-
-  it('returns null for undefined input (empty-array proxy: mac_requirements: [] yields undefined via optional chaining)', () => {
-    expect(parseSteamMacMinOSVersion(undefined)).toBeNull()
-  })
-
-  it('returns null without throwing when no OS line is present at all', () => {
-    expect(parseSteamMacMinOSVersion('no os line here at all')).toBeNull()
-  })
-
-  it('returns null for non-string input (typeof guard)', () => {
-    expect(parseSteamMacMinOSVersion([] as any)).toBeNull()
-  })
-})
-
-describe('macArchFromMinOS', () => {
-  it('Dota 2 (570, min-OS 10.15, Catalina floor) resolves to "64" (confident)', () => {
-    expect(
-      macArchFromMinOS('<li><strong>OS:</strong> macOS 10.15 or newer<br></li>')
-    ).toBe('64')
-  })
-
-  it('No Man\'s Sky (min-OS 12.3, major > 10) resolves to "64" (confident)', () => {
-    expect(
-      macArchFromMinOS('<li><strong>OS:</strong> macOS Monterey 12.3<br></li>')
-    ).toBe('64')
-  })
-
-  it('Age of Wonders III (226840, min-OS 10.9.3, REAL 32-bit) resolves to "unknown" — never a false-negative assert-32', () => {
-    expect(
-      macArchFromMinOS('<li><strong>OS:</strong> 10.9.3 (Mavericks)<br></li>')
-    ).toBe('unknown')
-  })
-
-  it('A Hat in Time (253230, min-OS 10.11.6, REAL 64-bit false-flag) resolves to "unknown" — the false-flag-safe anchor', () => {
-    expect(
-      macArchFromMinOS(
-        '<li><strong>OS:</strong> MAC OS X 10.11.6 or higher<br></li>'
-      )
-    ).toBe('unknown')
-  })
-
-  it('Half-Life 2 (220, min-OS 10.5.8, lowest of two alternatives) resolves to "unknown"', () => {
-    expect(
-      macArchFromMinOS(
-        '<li><strong>OS:</strong> Leopard 10.5.8, Snow Leopard 10.6.3, or higher<br></li>'
-      )
-    ).toBe('unknown')
-  })
-
-  it('tagless prose (Portal) resolves to "unknown"', () => {
-    expect(
-      macArchFromMinOS(
-        '<strong>Minimum: </strong>OS X version Leopard 10.5.8, Snow Leopard 10.6.3, 1GB RAM, NVIDIA...'
-      )
-    ).toBe('unknown')
-  })
-
-  it('Terraria range shape resolves to "unknown" (lowest bound 10.9.5)', () => {
-    expect(
-      macArchFromMinOS(
-        '<li><strong>OS: OSX 10.9.5 - 10.11.6</strong> <br></li>'
-      )
-    ).toBe('unknown')
-  })
-
-  it('Dust: An Elysian Tail decoy digits resolve to "unknown" via 10.6.8, not the literal "32"', () => {
-    expect(
-      macArchFromMinOS(
-        '<li><strong>OS:</strong> Snow Leopard 10.6.8, 32/64-bit<br>...'
-      )
-    ).toBe('unknown')
-  })
-
-  it('undefined input (empty-array proxy) resolves to "unknown" without throwing', () => {
-    expect(macArchFromMinOS(undefined)).toBe('unknown')
-  })
-
-  it('unparseable text resolves to "unknown" without throwing', () => {
-    expect(macArchFromMinOS('no os line here at all')).toBe('unknown')
-  })
-})
-
-// ── LIB-06: getSteamInstallSize ───────────────────────────────────────────────
+// 79-41: parseSteamStorageRequirement / parseSteamMacMinOSVersion / macArchFromMinOS and the
+// getSteamInstallSize store fetch moved to Rust (refresh/store_http.rs, enrich.rs); gameMetadata.rust.test.ts
+// covers the install-size op. The T-06-01 non-numeric appId guard stays in TS:
 
 describe('getSteamInstallSize', () => {
-  beforeEach(() => {
-    library.clear()
-    pendingFetches.clear()
-    // getFileSize is mocked in backend/utils — set a stable return value per test
-    ;(
-      jest.requireMock('backend/utils').getFileSize as jest.Mock
-    ).mockReturnValue('15.00 GiB')
-  })
-
-  it('LIB-06: returns installed game size from install_size without calling axios.get', async () => {
+  it('LIB-06: returns installed game size from install_size with no store call', async () => {
     const gameInfo = makeEntry({
       is_installed: true,
       install: { install_size: '15.00 GiB', install_path: '/games/tf2' }
     })
     const result = await getSteamInstallSize('440', gameInfo)
-    expect(jest.mocked(axios.get)).not.toHaveBeenCalled()
-    // Fast path returns the already-formatted string straight through — no
-    // parse, no getFileSize call — regardless of the mocked getFileSize
-    // return value configured in beforeEach.
     expect(result).toBe('15.00 GiB')
-    expect(
-      jest.requireMock('backend/utils').getFileSize as jest.Mock
-    ).not.toHaveBeenCalled()
   })
 
-  it('LIB-06: calls store API for uninstalled game and returns parsed size string', async () => {
-    jest.mocked(axios.get).mockResolvedValue({
-      data: {
-        '440': {
-          success: true,
-          data: {
-            name: 'Team Fortress 2',
-            pc_requirements: {
-              minimum:
-                '<ul><li><strong>Storage:</strong> 15 GB available space</li></ul>'
-            }
-          }
-        }
-      }
-    })
-    const gameInfo = makeEntry({ is_installed: false, install: {} })
-    const result = await getSteamInstallSize('440', gameInfo)
-    expect(jest.mocked(axios.get)).toHaveBeenCalledTimes(1)
-    expect(jest.mocked(axios.get)).toHaveBeenCalledWith(
-      'https://store.steampowered.com/api/appdetails?appids=440'
-    )
-    expect(result).not.toBe('?? MB')
-  })
-
-  it('LIB-06: returns "?? MB" when axios.get rejects', async () => {
-    jest.mocked(axios.get).mockRejectedValue(new Error('Network error'))
-    const gameInfo = makeEntry({ is_installed: false, install: {} })
-    const result = await getSteamInstallSize('440', gameInfo)
-    expect(result).toBe('?? MB')
-  })
-
-  it('T-06-01: returns "?? MB" for non-numeric appId without calling axios.get', async () => {
+  it('T-06-01: returns "?? MB" for a non-numeric appId', async () => {
     const result = await getSteamInstallSize('not-an-id')
     expect(result).toBe('?? MB')
-    expect(jest.mocked(axios.get)).not.toHaveBeenCalled()
   })
 })
 
@@ -12944,108 +12057,8 @@ describe('SteamGame supporting read methods — GAME-01 unblock', () => {
 // Branch 3 — TRANSIENT (ambiguous empty envelope): no is_delisted write.
 // Branch 4 — TRANSIENT (network throw / catch block): no is_delisted write.
 
-describe('SteamGame.fetchMetadataIfNeeded — is_delisted detection (CONSOLE-01 Gap B)', () => {
-  beforeEach(() => {
-    library.clear()
-    pendingFetches.clear()
-  })
-
-  it('CONSOLE-01/B1: success:false response sets is_delisted:true on steamMetadataStore, library entry, and pushGameToLibrary', async () => {
-    // Arrange: Steam appdetails returns a definitive "no such app" envelope.
-    ;(axios.get as jest.Mock).mockResolvedValue({
-      data: { [APP_ID]: { success: false } }
-    })
-    // Seed the metadata store with existing art so the merge preserves it.
-    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
-      art_cover: 'https://example.com/old-art.jpg',
-      art_square: 'https://example.com/old-sq.jpg',
-      extra: { reqs: [] }
-    })
-    library.set(APP_ID, makeEntry())
-
-    // Act: fire getGameInfo → triggers fetchMetadataIfNeeded as fire-and-forget.
-    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
-    await flushAsync()
-
-    // Assert 1: steamMetadataStore persists the delisted flag.
-    expect(steamMetadataStore.set).toHaveBeenCalledWith(
-      APP_ID,
-      expect.objectContaining({ is_delisted: true })
-    )
-    // Assert 2: in-memory library entry carries is_delisted:true.
-    expect(library.get(APP_ID)?.is_delisted).toBe(true)
-    // Assert 3: frontend receives the updated GameInfo with is_delisted:true.
-    expect(sendFrontendMessage).toHaveBeenCalledWith(
-      'pushGameToLibrary',
-      expect.objectContaining({ app_name: APP_ID, is_delisted: true })
-    )
-  })
-
-  it('CONSOLE-01/B2: success:true response clears is_delisted to false on steamMetadataStore, library entry, and pushGameToLibrary', async () => {
-    // Arrange: a normal successful appdetails response (existing fixture).
-    ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
-    library.set(APP_ID, makeEntry())
-
-    // Act
-    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
-    await flushAsync()
-
-    // Assert 1: steamMetadataStore carries is_delisted:false (stale flag cleared).
-    expect(steamMetadataStore.set).toHaveBeenCalledWith(
-      APP_ID,
-      expect.objectContaining({ is_delisted: false })
-    )
-    // Assert 2: in-memory library entry has is_delisted:false.
-    expect(library.get(APP_ID)?.is_delisted).toBe(false)
-    // Assert 3: frontend push carries is_delisted:false.
-    expect(sendFrontendMessage).toHaveBeenCalledWith(
-      'pushGameToLibrary',
-      expect.objectContaining({ is_delisted: false })
-    )
-  })
-
-  it('CONSOLE-01/B3: ambiguous empty envelope (no success, no data) does NOT write is_delisted — transient failure must not hide owned games', async () => {
-    // Arrange: envelope present but both success and data are absent.
-    // This represents a rate-limit or partial API response — NOT a delisted verdict.
-    ;(axios.get as jest.Mock).mockResolvedValue({
-      data: { [APP_ID]: {} }
-    })
-    library.set(APP_ID, makeEntry())
-
-    // Act
-    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
-    await flushAsync()
-
-    // Assert: no persistence write whatsoever — transient branch returns early.
-    expect(steamMetadataStore.set).not.toHaveBeenCalled()
-    // Assert: no game pushed — owned game must remain visible (the
-    // steamMetadataSyncing on/off signals are expected + allowed).
-    expect(sendFrontendMessage).not.toHaveBeenCalledWith(
-      'pushGameToLibrary',
-      expect.anything()
-    )
-  })
-
-  it('CONSOLE-01/B4: network error (axios throw) does NOT write is_delisted — catch block must never mark owned games delisted', async () => {
-    // Arrange: axios rejects — simulates offline / network timeout.
-    ;(axios.get as jest.Mock).mockRejectedValue(new Error('Network timeout'))
-    library.set(APP_ID, makeEntry())
-
-    // Act — must not throw synchronously or cause an unhandled rejection.
-    expect(() =>
-      new SteamGame(APP_ID, steamTestDeps).getGameInfo()
-    ).not.toThrow()
-    await flushAsync()
-
-    // Assert: catch block only logs; no store write, no game pushed (the
-    // steamMetadataSyncing on/off signals are expected + allowed).
-    expect(steamMetadataStore.set).not.toHaveBeenCalled()
-    expect(sendFrontendMessage).not.toHaveBeenCalledWith(
-      'pushGameToLibrary',
-      expect.anything()
-    )
-  })
-})
+// 79-41: the is_delisted detection branches (success:false / empty envelope / network error)
+// moved to Rust (refresh/enrich.rs) and are covered by its tests and gameMetadata.rust.test.ts.
 
 // ── maybeNotifyBridgeLimited() — D-51-02/D-51-04 (Phase 51 Plan 12) ─────────
 //
