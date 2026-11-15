@@ -42,7 +42,7 @@ Since 79-25 the `cm` flag defaults to `rust`; the `signin` flag stays `ts` until
 
 ## Current Test
 
-[awaiting 79-26]
+[part A complete; awaiting operator approval]
 
 ## Tests
 
@@ -95,7 +95,7 @@ precondition: a lease has been used (item 2 or 3 done) and is idle. Action: Cmd-
 
 ### 11. cm=ts fallback and coexistence (D-18)
 expected: Launched with `GAMELIB_STEAMCM_CM=ts`, Refresh works on the TS path while Claude holds a Rust CLI session through `runSteamcmNdjson`; neither side logs eresult 34 (LoggedOff, session replaced). Claude checks this itself.
-result: pending
+result: pass — app launched with `GAMELIB_STEAMCM_CM=ts`; Claude held a Rust CLI session (`runSteamcmNdjson`-equivalent stdin NDJSON, lease 1, `CM logon mode=authenticated reason=user-refresh`) from 14:09:35 to 14:12:49. Operator Refresh at 14:10:18 ran on the TS path (`[Steam] CM logon mode=authenticated reason=user-refresh wrap=toggled`, go-offline/goonline wrap, `fetched 390 owned games`, sync complete 390). The held Rust session then answered `steamcm_licenses` (485 licences) after the TS logon; zero eresult 34 / LoggedOff / LogonSessionReplaced lines in the CLI stderr and in gamelib.log. Side note: the TS `fetchLicensedDemos` timed out (30 s), consistent with the TS-reference breakage recorded in 79-33.
 precondition: signed in; Rust CLI binary built. Action: launch with `GAMELIB_STEAMCM_CM=ts pnpm tauri:dev`, press Refresh while Claude's CLI session is open; Claude greps both sinks for `eresult` 34.
 
 ## Part B — Refresh, Mac path and delete gate (authored by 79-37)
