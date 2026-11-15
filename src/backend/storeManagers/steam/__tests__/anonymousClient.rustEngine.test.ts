@@ -1,6 +1,6 @@
 /**
- * Phase 79 (D-04, D-18): the anonymous client on the Rust engine. cm=rust never builds a steam-user
- * client; close goes to steamcm_anon_close; shutdown issues no IPC.
+ * Phase 79 (D-04, D-18): the anonymous client is Rust-only. Reads go to steamcm_anon_product_info,
+ * close goes to steamcm_anon_close, shutdown issues no IPC and no timer.
  */
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -10,35 +10,21 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Steam: 'Steam', Backend: 'Backend' }
 }))
 
-import { createAnonymousClient } from '../anonymousClient'
+import { createAnonymousClient, isPublicOnlyEntry } from '../anonymousClient'
 import { createFakeClock } from 'backend/testUtils/fakeClock'
 
-describe('anonymousClient on the rust engine', () => {
-  const prev = process.env.GAMELIB_STEAMCM_CM
-  beforeEach(() => {
-    process.env.GAMELIB_STEAMCM_CM = 'rust'
-  })
-  afterEach(() => {
-    if (prev === undefined) delete process.env.GAMELIB_STEAMCM_CM
-    else process.env.GAMELIB_STEAMCM_CM = prev
-  })
-
+describe('anonymousClient', () => {
   function build() {
     const clock = createFakeClock()
-    const createClient = jest.fn()
     const requestRustInvoke = jest
       .fn()
       .mockResolvedValue({ ok: true, result: { apps: {} } })
-    const anon = createAnonymousClient({
-      clock,
-      createClient,
-      requestRustInvoke
-    } as never)
-    return { clock, createClient, requestRustInvoke, anon }
+    const anon = createAnonymousClient({ requestRustInvoke })
+    return { clock, requestRustInvoke, anon }
   }
 
   it('get returns a Rust client whose getProductInfo invokes steamcm_anon_product_info', async () => {
-    const { anon, createClient, requestRustInvoke } = build()
+    const { anon, requestRustInvoke } = build()
     const c = await anon.get('platform-capture')
     expect(c).not.toBeNull()
     await c?.getProductInfo([1], [], false)
@@ -46,7 +32,6 @@ describe('anonymousClient on the rust engine', () => {
       'steamcm_anon_product_info',
       [{ apps: [1], packages: [], inclTokens: false }]
     )
-    expect(createClient).not.toHaveBeenCalled()
   })
 
   it('close invokes steamcm_anon_close with the reason', () => {
@@ -64,5 +49,16 @@ describe('anonymousClient on the rust engine', () => {
     expect(requestRustInvoke).not.toHaveBeenCalled()
     clock.assertNoKeepAlive()
     expect(clock.pendingCount()).toBe(0)
+  })
+})
+
+describe('isPublicOnlyEntry', () => {
+  it('detects missingToken and public_only entries only', () => {
+    expect(isPublicOnlyEntry({ missingToken: true })).toBe(true)
+    expect(isPublicOnlyEntry({ appinfo: { public_only: '1' } })).toBe(true)
+    expect(isPublicOnlyEntry({ appinfo: { common: {}, config: {} } })).toBe(
+      false
+    )
+    expect(isPublicOnlyEntry(undefined)).toBe(false)
   })
 })

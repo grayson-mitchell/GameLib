@@ -1,8 +1,6 @@
 import type { Readable } from 'node:stream'
 import type { AbortRegistry } from '../utils/aborthandler/aborthandler'
 import type { DownloadQueue } from '../downloadmanager/downloadqueue'
-import type { AnonymousClient } from '../storeManagers/steam/anonymousClient'
-import type { SteamUser } from '../storeManagers/steam/user'
 import { LogPrefix, logInfo, logWarning } from '../logger'
 import type { OutboundHttpTracker } from './outboundHttpRegistry'
 
@@ -10,31 +8,28 @@ import type { OutboundHttpTracker } from './outboundHttpRegistry'
 export const RESIDUAL_HOLDER_DIAG_MS = 15_000
 
 /**
- * Releases the three things that keep the sidecar's event loop referenced after the shell is
- * gone, so the exit contract ("exit by event-loop drain at stdin EOF") holds for a SIGNED-IN
- * sidecar and for one with a native download in flight.
+ * Releases what keeps the sidecar's event loop referenced after the shell is gone, so the exit
+ * contract ("exit by event-loop drain at stdin EOF") holds for a SIGNED-IN sidecar and for one
+ * with a native download in flight. The Steam CM session is no longer one of them: the Rust shell's
+ * EOF and exit hooks (steamcm_dispatch.rs) own its teardown, and no library-owned CM handle exists
+ * in the sidecar any more.
  *
  * debug/sidecar-survives-force-quit: Force Quit SIGKILLs the shell, which skips
  * `RunEvent::Exit` -> `shutdown_child()`. stdin EOF is then the only signal the sidecar gets,
  * and neither handle below can be fixed by unref():
- *
- *   1. the steam-user CM connection -- a library-owned TCP socket plus heartbeat timer.
- *      Measured: a logged-on client alone keeps a bare node process alive past 60s;
- *      `logOff()` lets it drain in ~100ms. Released by `deps.steamUser.releaseForShutdown()`,
- *      which (unlike logout) clears no token -- the user stays signed in.
- *   2. in-flight depot downloads -- referenced by definition (contract half 2). The queue is
+ *   1. in-flight depot downloads -- referenced by definition (contract half 2). The queue is
  *      PAUSED first (`pauseCurrentDownload()`), then any remaining controller is aborted
  *      (`deps.aborts.abortAll()`). The pause is load-bearing: initQueue keeps a stopped
  *      element in the persisted queue only when the queue is paused. A bare abort recorded
  *      the download as finished and dropped it from the queue (live gate 2026-10-26:
  *      Downloads showed it "Completed" and nothing was resumable on the next launch).
- *   3. in-flight outbound HTTP (contract half 2, not unref-able: an in-flight or unread
+ *   2. in-flight outbound HTTP (contract half 2, not unref-able: an in-flight or unread
  *      response holds the loop). Destroyed agent-agnostically by `outboundHttpRegistry.ts`,
  *      which also refuses any follow-up request. A post-EOF diagnostic then names whatever
  *      still holds the loop. See todo 2026-11-09-sidecar-orphaned-after-tauri-dev-ctrl-c /
  *      quick 261110-9w2.
  *
- * The running-game poller (SteamProcesses.runningPoll) is stopped here too, but it is NOT a fourth
+ * The running-game poller (SteamProcesses.runningPoll) is stopped here too, but it is NOT a third
  * loop-holder: its interval is an unref'd clock timer. It is stopped so a post-EOF tick neither
  * spawns reg.exe/ps nor writes a gameStatusUpdate frame to a stdout whose peer is gone
  * (quick 261111-7wo).
@@ -51,10 +46,6 @@ export function releaseOnStdinEof(
     downloadQueue: Pick<DownloadQueue, 'isRunning' | 'pauseCurrentDownload'>
     /** The boot-owned abort registry (66.4-13): aborted after the queue pause, so every in-flight job ends. */
     aborts: Pick<AbortRegistry, 'abortAll'>
-    /** The boot-owned anonymous CM client (D-66.3-14); its socket and heartbeat cannot be unref'd. */
-    anonymousClient: Pick<AnonymousClient, 'releaseForShutdown'>
-    /** The boot-owned authenticated Steam session; logOff at EOF keeps the user signed in (D-66.3-16). */
-    steamUser: Pick<SteamUser, 'releaseForShutdown'>
     /** Kills every nettop watchdog child (SteamProcesses.downloadMonitor.stopAll). */
     stopAllSteamDownloadMonitors: () => void
     /** Stops the running-game poller (SteamProcesses.runningPoll.stop). */
@@ -66,7 +57,7 @@ export function releaseOnStdinEof(
     if (released) return
     released = true
     logInfo(
-      '[sidecar] stdin closed: releasing Steam CM session, paying any owed Mac Steam goonline, stopping nettop monitors and aborting in-flight downloads',
+      '[sidecar] stdin closed: stopping nettop monitors and aborting in-flight downloads',
       LogPrefix.Backend
     )
     try {
@@ -79,30 +70,23 @@ export function releaseOnStdinEof(
     try {
       deps.aborts.abortAll()
     } catch {
-      // best-effort: still release the CM socket below
+      // best-effort: still release below
     }
     try {
       // quick 261029-sex: kill the nettop children (killable, not unref-able away).
       deps.stopAllSteamDownloadMonitors()
     } catch {
-      // best-effort: still release the CM socket below
+      // best-effort: still release below
     }
     try {
       // quick 261111-7wo: no post-EOF probe spawn or frame write.
       deps.stopRunningGamePoll()
     } catch {
-      // best-effort: still release the CM sockets below
+      // best-effort: still release below
     }
-    try {
-      // The anonymous CM logon is a library-owned socket too (D-66.3-14). Released first, as
-      // SteamUser.releaseForShutdown() did before it; the quit handler's releaseSteam does the same.
-      deps.anonymousClient.releaseForShutdown()
-    } catch {
-      // best-effort: still release the authenticated session below
-    }
-    void deps.steamUser.releaseForShutdown()
-    // After the CM release: its synchronous logOff has already started, and CM WebSocket
-    // upgrades are excluded from the registry anyway.
+    // No CM release here: the Rust shell's EOF / exit hook (steamcm_dispatch.rs) owns the CM
+    // session teardown and any owed Mac Steam go-online. CM WebSocket upgrades are excluded from the
+    // outbound registry anyway.
     try {
       deps.outboundHttp.markShuttingDown()
       const { destroyed, hosts } = deps.outboundHttp.destroyAll()

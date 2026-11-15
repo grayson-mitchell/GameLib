@@ -1,14 +1,12 @@
 /**
- * A fresh SteamUser for consumer tests (D-66.3-16), built on fakes: a fake clock, a pass-through Mac
- * Steam go-offline wrap (`not-darwin`, nothing owed), a no-op anonymous client and a fresh sign-in /
- * session state. Pass `overrides` to supply the stores, a scripted wrap or a clock the test asserts
- * on. Two calls never share a client, lease count, wrap tail or guided-install map.
+ * A fresh SteamUser for consumer tests (D-66.3-16), built on fakes: a no-op anonymous client, a
+ * fresh sign-in / session state and a rustInvoke that rejects unless the test supplies one (the Rust
+ * CM session is the only engine). Pass `overrides` to supply the stores or a scripted rustInvoke.
+ * Two calls never share a session, lease or guided-install map.
  *
- * The user module is required lazily so importing this fake does not pull the steam-user library
- * into a suite that mocks it.
+ * The user module is required lazily so a suite that mocks it is not forced to load it.
  */
 import type { SteamUser, SteamUserDeps } from '../storeManagers/steam/user'
-import { createFakeClock } from './fakeClock'
 import { createTestAnonymousClient } from './testAnonymousClient'
 import { createTestSteamSession } from './testSteamSession'
 import { createTestTokenStoreSlot } from './testTokenStore'
@@ -30,18 +28,10 @@ export function createTestSteamUser(
   const signIn = overrides.signIn ?? createTestSignInProbe()
   return loadUser().createSteamUser({
     stores: overrides.stores,
-    macSteamOffline: overrides.macSteamOffline ?? {
-      withMacSteamOffline: async (connect) => ({
-        value: await connect('not-darwin'),
-        wrap: 'not-darwin'
-      }),
-      restoreMacSteamOnlineIfOwed: () => Promise.resolve('not-darwin')
-    },
     signIn,
     steamSession: overrides.steamSession ?? createTestSteamSession(),
     tokenStore: overrides.tokenStore ?? createTestTokenStoreSlot(),
     anonymousClient: overrides.anonymousClient ?? createTestAnonymousClient(),
-    clock: overrides.clock ?? createFakeClock(),
     config: overrides.config ?? createTestGlobalConfig(),
     sendFrontendMessage: overrides.sendFrontendMessage ?? (() => true),
     rustInvoke: overrides.rustInvoke ?? {

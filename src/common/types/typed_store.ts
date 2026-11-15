@@ -93,11 +93,6 @@ export interface StoreStructure {
     // NEVER set from a keyring read that FAILED (denied/timed out) — that is a
     // different condition and reporting it as signed-out is a known false state.
     credentialsMissing?: boolean
-    // D-18 (Phase 79): per-install non-zero logonID for steam-user's logOn while
-    // GAMELIB_STEAMCM_CM=ts is selectable, so a TS and a Rust session on one account never
-    // replace each other (eresult 34, spike 077/081). Not a secret, never renderer-readable.
-    // Deleted at the Phase 79 delete gate.
-    cmLogonId?: number
   }
   // Phase 17 (17-02): dedicated Steam CrossOver bottle settings — separate
   // from steamConfigStore (auth) and never reused as a phantom GameConfig

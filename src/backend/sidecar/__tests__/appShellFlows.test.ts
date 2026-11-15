@@ -600,24 +600,19 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     expect(mockRequestRustInvoke).toHaveBeenCalledWith(RUST_APP_EXIT, [])
   })
 
-  it("54-13 quit (send) pays the owed Mac Steam goonline ('shutdown') before app_exit", async () => {
+  it('54-13 quit (send) leaves the owed Mac Steam goonline to the shell exit hook and still reaches app_exit', async () => {
     const { input } = boot()
     writeSend(input, 'quit-owed-1', 'quit', [])
     await flush()
 
-    expect(mockRestoreMacSteamOnlineIfOwed).toHaveBeenCalledWith('shutdown')
-    const exitOrder = mockRequestRustInvoke.mock.calls.findIndex(
-      ([channel]) => channel === RUST_APP_EXIT
-    )
-    expect(exitOrder).toBeGreaterThanOrEqual(0)
+    // The Rust shell's exit hook (steamcm_dispatch.rs) pays the owed goonline: the sidecar issues no
+    // restore of its own on quit (79-39).
+    expect(mockRestoreMacSteamOnlineIfOwed).not.toHaveBeenCalled()
     expect(
-      mockRestoreMacSteamOnlineIfOwed.mock.invocationCallOrder[0]
-    ).toBeLessThan(
-      defined(
-        mockRequestRustInvoke.mock.invocationCallOrder[exitOrder],
-        'exit invocation order'
+      mockRequestRustInvoke.mock.calls.some(
+        ([channel]) => channel === RUST_APP_EXIT
       )
-    )
+    ).toBe(true)
   })
 
   it("quit (send) logs the '[GAMELIB_SIDECAR_SEND_HANDLER] quit' marker, the live gate's sidecar-side proof that the shell's frame landed (todo 2026-10-05 cmd-q-and-red-x)", async () => {
@@ -1702,7 +1697,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     // The tray settle timer runs on the boot clock (66.4-16), a FakeClock in a test boot.
     let advance: (ms: number) => void = () => {}
 
-    beforeEach(() => {
+    beforeEach(async () => {
       // `logInfo()` (called synchronously by the changeTrayColor listener) needs
       // `heroicLogWriter` assigned, which only happens via bootstrap.ts's real
       // `initHeadless()` -- i.e. via `boot()`'s `init` call, same as every
@@ -1711,7 +1706,8 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
       // `--testNamePattern` filter that skips the file's earlier `boot()`
       // calls this block would otherwise silently rely on.
       const booted = boot()
-      // The boot's own steamcm_configure (Phase 79) is not a tray call.
+      // The boot's own steamcm_configure and boot restore (Phase 79) are not tray calls.
+      await flush()
       mockRequestRustInvoke.mockClear()
       advance = (ms) => booted.testContext.clock.advance(ms)
       jest.useFakeTimers()

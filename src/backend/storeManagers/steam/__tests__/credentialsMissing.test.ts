@@ -163,24 +163,6 @@ describe('credentialsMissing latch', () => {
     )
   })
 
-  it('clears the flag when a live connection is proven by the canary', async () => {
-    const getProductInfo = jest.fn().mockResolvedValue({})
-    ;(steamUser as unknown as { client: unknown }).client = {
-      steamID: { getSteamID64: () => '76561197960287930' },
-      getProductInfo
-    }
-
-    const connected = await steamUser.ensureConnected()
-
-    expect(connected).toBe(true)
-    expect(mockConfigStore.delete).toHaveBeenCalledWith(CREDENTIALS_MISSING)
-    // Never latched on the success path.
-    expect(mockConfigStore.set).not.toHaveBeenCalledWith(
-      CREDENTIALS_MISSING,
-      true
-    )
-  })
-
   it('clears the flag on logout so it cannot survive into the next session', async () => {
     await steamUser.logout()
 
@@ -299,6 +281,22 @@ describe('credentialsMissing latch on the Rust engine', () => {
     expect(lease).toEqual({ ok: false, reason: 'token-absent' })
     expect(mockConfigStore.set).toHaveBeenCalledWith(CREDENTIALS_MISSING, true)
     expect(rustInvoke).not.toHaveBeenCalled()
+  })
+
+  it('clears the flag when a live Rust session is proven by the canary', async () => {
+    rustInvoke.mockImplementation(async (channel: string) =>
+      channel === 'steamcm_session_status'
+        ? { connected: true, leaseCount: 0, logonFailure: null }
+        : { connected: true }
+    )
+
+    expect(await steamUser.ensureConnected()).toBe(true)
+
+    expect(mockConfigStore.delete).toHaveBeenCalledWith(CREDENTIALS_MISSING)
+    expect(mockConfigStore.set).not.toHaveBeenCalledWith(
+      CREDENTIALS_MISSING,
+      true
+    )
   })
 
   it('does NOT latch on an unreadable token', async () => {

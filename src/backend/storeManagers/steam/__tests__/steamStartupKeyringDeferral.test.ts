@@ -223,10 +223,8 @@ jest.mock('steam-session', () => ({
   EAuthTokenPlatformType: { SteamClient: 2 }
 }))
 
-// ── steam-user mock (mirrors user.test.ts) — connectSteamUserClient() is
-// never reached by this file's tests (every spy TokenStore outcome below
-// short-circuits ensureConnected() before that point), but the module must
-// resolve without throwing since user.ts imports it at module scope. ────────
+// ── steam-user mock — user.ts no longer imports it, but other modules the manager pulls in still
+// do, and the module must resolve without throwing. ────────────────────────────
 const MockSteamUserLib = jest.fn(() => ({
   logOn: jest.fn(),
   logOff: jest.fn(),
@@ -254,7 +252,6 @@ jest.mock('../macSteamOffline', () => ({
 }))
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { readTauriShellProductionSource } from 'backend/testUtils/tauriShellSource'
-import { EventEmitter } from 'events'
 const sendFrontendMessage = jest.fn()
 import SteamLibraryManager from '../library'
 import SteamGame from '../games'
@@ -281,18 +278,15 @@ const baseDeps = createTestManagerDeps({
 
 // One fresh SteamUser per test (66.3-16), built on the same stores, sign-in and session state the
 // manager under test reads; handed to the manager through its deps.
-const buildSteamUser = (): SteamUser =>
+const buildSteamUser = (rustInvoke?: SteamUserDeps['rustInvoke']): SteamUser =>
   createTestSteamUser({
+    ...(rustInvoke ? { rustInvoke } : {}),
     stores: baseDeps.stores,
     signIn: baseDeps.signIn,
     steamSession: baseDeps.steamSession,
     tokenStore: tokenStoreSlot,
     anonymousClient: baseDeps.anonymousClient,
-    config: baseDeps.config,
-    macSteamOffline:
-      jest.requireMock<NonNullable<SteamUserDeps['macSteamOffline']>>(
-        '../macSteamOffline'
-      )
+    config: baseDeps.config
   })
 let steamUser = buildSteamUser()
 const steamTestDeps = { ...baseDeps, steamUser }
@@ -496,30 +490,28 @@ describe('SteamLibraryManager keyring deferral (quick-260817-d61)', () => {
 // ---------------------------------------------------------------------------
 
 describe('Phase 54 SC1: no authenticated logon at launch, both orderings', () => {
-  const logOnSpy = jest.fn()
+  // The Rust CM session is the only path: an authenticated logon is a steamcm_session_acquire.
+  // A plain recorder, not jest.fn: the project's resetMocks would strip a jest.fn implementation.
+  const rustCalls: Array<[string, unknown]> = []
+  const rustSpy = async (channel: string, args: unknown) => {
+    rustCalls.push([channel, args])
+    if (channel === 'steamcm_session_acquire')
+      return { ok: true, leaseId: 1, steamId: '76561198000000000' }
+    if (channel === 'steamcm_session_acquire_open') return { ok: false }
+    return { ok: true, result: [] }
+  }
+  const acquireCalls = () =>
+    rustCalls.filter(([channel]) => channel === 'steamcm_session_acquire')
 
   beforeEach(() => {
-    logOnSpy.mockReset()
+    rustCalls.length = 0
+    steamUser = buildSteamUser({ requestRustInvoke: rustSpy as never })
+    steamTestDeps.steamUser = steamUser
     jest.mocked(captureOwnedAppPlatforms).mockResolvedValue({
       scopedCount: 0,
       capturedCount: 0,
       skippedCount: 0,
       failed: false
-    })
-    MockSteamUserLib.mockImplementation(() => {
-      const fake = new EventEmitter() as any
-      fake.steamID = null
-      fake.logOff = jest.fn()
-      fake.getUserOwnedApps = jest.fn().mockResolvedValue({ apps: [] })
-      fake.getProductInfo = jest.fn().mockResolvedValue({ apps: {} })
-      fake.logOn = (...args: unknown[]) => {
-        logOnSpy(...args)
-        Promise.resolve().then(() => {
-          fake.steamID = { getSteamID64: () => '76561198000000000' }
-          fake.emit('loggedOn')
-        })
-      }
-      return fake
     })
     mockConfigStore.get_nodefault.mockImplementation((key: string) =>
       key === 'isLoggedIn' ? true : undefined
@@ -531,18 +523,8 @@ describe('Phase 54 SC1: no authenticated logon at launch, both orderings', () =>
     void steamUser.releaseForShutdown()
   })
 
-  const authenticatedLogonLines = () => {
-    const { logInfo } = jest.requireMock('backend/logger')
-    return (logInfo as jest.Mock).mock.calls
-      .map((c) => String(c[0]))
-      .filter((l) => l.includes('CM logon mode=authenticated'))
-  }
-
   const expectNoAuthenticatedLogon = () => {
-    expect(logOnSpy).not.toHaveBeenCalledWith(
-      expect.objectContaining({ refreshToken: expect.anything() })
-    )
-    expect(authenticatedLogonLines()).toEqual([])
+    expect(acquireCalls()).toEqual([])
   }
 
   it('ordering A: boot probe first, then the mount refresh', async () => {
@@ -576,11 +558,11 @@ describe('Phase 54 SC1: no authenticated logon at launch, both orderings', () =>
     noteRefreshTrigger('steam', 'action-icons-refresh-button')
     await manager.refresh()
 
-    expect(logOnSpy).toHaveBeenCalledTimes(1)
-    expect(logOnSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ refreshToken: 'secret-refresh-token' })
-    )
-    expect(authenticatedLogonLines()).toHaveLength(1)
+    expect(acquireCalls()).toHaveLength(1)
+    expect(acquireCalls()[0]).toEqual([
+      'steamcm_session_acquire',
+      [expect.objectContaining({ refreshToken: 'secret-refresh-token' })]
+    ])
   })
 })
 

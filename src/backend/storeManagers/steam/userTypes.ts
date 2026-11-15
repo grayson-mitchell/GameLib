@@ -1,33 +1,6 @@
 import type { SteamGoOfflineAction } from 'common/types/steam'
 import type { SteamCmClient } from './cm/SteamCmClient'
 
-// ── D-02 (Phase 33-02) / Phase 54: ensureConnected canary + wrapped re-entry ─
-//
-// CANARY_APP_ID = 753 is the Steam client's own AppID — a minimal,
-// universally-owned probe app that requires no per-user ownership check, so
-// the canary getProductInfo call never fails for reasons unrelated to CM
-// socket health.
-//
-// CANARY_TIMEOUT_MS is deliberately far below STEAM_PICS_TIMEOUT_MS (25s,
-// withTimeout.ts) — a healthy CM answers a single-app getProductInfo in well
-// under a second; 5s already generously covers network jitter before we
-// suspect a stale socket.
-//
-// Phase 54 (spike 046, debug verdict 2026-10-27): a second authenticated CM
-// session on the same account signs Mac Steam's Friends out. So this class
-// owns EVERY authenticated logon: autoRelogin is off, client.relog() is never
-// called, a post-logon drop ENDS the session, and a stale canary re-enters the
-// same wrapped cold connect (withMacSteamOffline) a first connect uses.
-export const CANARY_APP_ID = 753
-export const CANARY_TIMEOUT_MS = 5000
-
-// How long the last released lease keeps the session open (RESEARCH Pattern 2:
-// prescreen -> install -> shim resolve -> shared redist must not thrash).
-export const AUTH_SESSION_IDLE_GRACE_MS = 60000
-// The authenticated connect waits this long for loggedOn/error, then logOff()s
-// the attempt. The wrap cannot fire goonline while a logon is in flight, so
-// this replaces the old 15 s fallback + separate 20 s grace window.
-export const AUTH_LOGON_BOUND_MS = 35000
 // Persona name lookup at sign-in only; bounded so Mac Steam is not held offline.
 export const SIGN_IN_PERSONA_TIMEOUT_MS = 5000
 

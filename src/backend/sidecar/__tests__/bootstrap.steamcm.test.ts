@@ -54,22 +54,18 @@ describe('boot steamcm wiring', () => {
     await Promise.resolve()
   })
 
-  it('cm=rust pays the owed record through Rust, not the ts restore', async () => {
-    process.env.GAMELIB_STEAMCM_CM = 'rust'
+  it('pays the owed record through Rust', async () => {
     const { restoreOwedMacSteamOnlineAtBoot } = load()
     const req = jest.fn().mockResolvedValue({})
-    const restoreTs = jest.fn()
-    restoreOwedMacSteamOnlineAtBoot({ requestRustInvoke: req, restoreTs })
+    restoreOwedMacSteamOnlineAtBoot({ requestRustInvoke: req })
     await new Promise((resolve) => setImmediate(resolve))
     expect(req).toHaveBeenCalledWith('steamcm_wrap_restore_if_owed', [
       { trigger: 'boot' }
     ])
-    expect(restoreTs).not.toHaveBeenCalled()
   })
 
-  it('cm=rust sends the boot restore only after configure has answered', async () => {
+  it('sends the boot restore only after configure has answered', async () => {
     // The shell runs each rustInvoke on its own thread, so the restore must not race configure.
-    process.env.GAMELIB_STEAMCM_CM = 'rust'
     const { configureSteamCm, restoreOwedMacSteamOnlineAtBoot } = load()
     let answerConfigure: (value: unknown) => void = () => undefined
     const req = jest.fn((channel: string) =>
@@ -85,7 +81,6 @@ describe('boot steamcm wiring', () => {
     })
     restoreOwedMacSteamOnlineAtBoot({
       requestRustInvoke: req,
-      restoreTs: jest.fn(),
       configured
     })
     await new Promise((resolve) => setImmediate(resolve))
@@ -98,25 +93,11 @@ describe('boot steamcm wiring', () => {
     ])
   })
 
-  it('cm=ts runs the ts restore and sends no IPC', () => {
-    process.env.GAMELIB_STEAMCM_CM = 'ts'
-    const { restoreOwedMacSteamOnlineAtBoot } = load()
-    const req = jest.fn()
-    const restoreTs = jest.fn()
-    restoreOwedMacSteamOnlineAtBoot({ requestRustInvoke: req, restoreTs })
-    expect(restoreTs).toHaveBeenCalledTimes(1)
-    expect(req).not.toHaveBeenCalled()
-  })
-
   it('a rejected rust restore is swallowed', async () => {
-    process.env.GAMELIB_STEAMCM_CM = 'rust'
     const { restoreOwedMacSteamOnlineAtBoot } = load()
     const req = jest.fn().mockRejectedValue(new Error('boom'))
     expect(() =>
-      restoreOwedMacSteamOnlineAtBoot({
-        requestRustInvoke: req,
-        restoreTs: jest.fn()
-      })
+      restoreOwedMacSteamOnlineAtBoot({ requestRustInvoke: req })
     ).not.toThrow()
     await Promise.resolve()
   })

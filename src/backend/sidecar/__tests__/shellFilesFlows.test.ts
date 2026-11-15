@@ -392,7 +392,8 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
 
   it('openFolder (send) rejects a relative path with no platform call', async () => {
     const { input, frames } = boot()
-    // The boot's own steamcm_configure (Phase 79) is not a handler call.
+    // The boot's own steamcm_configure and boot restore (Phase 79) are not handler calls.
+    await flush()
     mockRequestRustInvoke.mockClear()
     writeSend(input, 'open-folder-3', 'openFolder', ['relative/dir'])
     await flushFs()
@@ -402,7 +403,8 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
 
   it('openExternalUrl (send) rejects a file:// URL with no platform call', async () => {
     const { input, frames } = boot()
-    // The boot's own steamcm_configure (Phase 79) is not a handler call.
+    // The boot's own steamcm_configure and boot restore (Phase 79) are not handler calls.
+    await flush()
     mockRequestRustInvoke.mockClear()
     writeSend(input, 'open-external-url-3', 'openExternalUrl', ['file:///x'])
     await flush()
@@ -457,7 +459,8 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
 
   it('showConfigFileInFolder rejects a traversing appName', async () => {
     const { input } = boot()
-    // The boot's own steamcm_configure (Phase 79) is not a handler call.
+    // The boot's own steamcm_configure and boot restore (Phase 79) are not handler calls.
+    await flush()
     mockRequestRustInvoke.mockClear()
     writeSend(input, 'config-app-2', 'showConfigFileInFolder', ['../evil'])
     await flush()

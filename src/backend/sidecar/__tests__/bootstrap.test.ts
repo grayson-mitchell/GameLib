@@ -51,21 +51,6 @@
  * crash this suite exists to catch.
  */
 
-const mockRestoreMacSteamOnlineIfOwed = jest.fn()
-jest.mock('../../storeManagers/steam/macSteamOffline', () => {
-  const actual = jest.requireActual('../../storeManagers/steam/macSteamOffline')
-  return {
-    ...actual,
-    // The boot-built instance is real except its restore, so a quit or boot reaches the
-    // scripted restore without firing any steam:// URL.
-    createMacSteamOffline: (deps: unknown) => ({
-      ...actual.createMacSteamOffline(deps),
-      restoreMacSteamOnlineIfOwed: (...args: unknown[]) =>
-        mockRestoreMacSteamOnlineIfOwed(...args)
-    })
-  }
-})
-
 import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
 import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 import { createTestHostServices } from 'backend/testUtils/testHostServices'
@@ -170,24 +155,6 @@ describe('sidecar bootstrap (headless boot)', () => {
   // (electron absent) reaches READY without an uncaught exception --
   // proves paths.ts's app.getPath() and typed_store.ts's `new Store()`
   // import-time walls (spike 009) are shimmed before backend code sees them.
-  describe('boot-time owed Mac Steam goonline (54-13)', () => {
-    beforeEach(() => {
-      mockRestoreMacSteamOnlineIfOwed.mockReset()
-      mockRestoreMacSteamOnlineIfOwed.mockImplementation(() =>
-        Promise.resolve('not-owed')
-      )
-    })
-
-    it("one boot pays a stale owed goonline once with the 'boot' trigger", () => {
-      mockRestoreMacSteamOnlineIfOwed.mockImplementation(async () => {
-        return 'not-owed'
-      })
-      bootFresh()
-      expect(mockRestoreMacSteamOnlineIfOwed).toHaveBeenCalledTimes(1)
-      expect(mockRestoreMacSteamOnlineIfOwed).toHaveBeenCalledWith('boot')
-    })
-  })
-
   describe('boot services (66.1-04)', () => {
     it('a default boot returns BootServices with all forty-two fields', () => {
       const { services } = bootWithLines()

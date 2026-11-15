@@ -37,7 +37,6 @@ import {
   RUST_STEAMCM_WRAP_RESTORE_IF_OWED
 } from 'common/types/sidecarTransport'
 import type { RequestRustInvoke } from 'backend/host'
-import { steamCmImpl } from '../storeManagers/steam/cm/steamCmFlags'
 import { i18nextLanguageOptions, localeFileSegments } from 'common/languages'
 
 // ---- Step 2: import the backend registration path — AFTER the platform import -------
@@ -167,10 +166,7 @@ import gogPresence from '../storeManagers/gog/presence'
 import { createSignInProbePass } from '../signInProbe/pass'
 import { createSignInProbeOutcomes } from '../signInProbe/outcomes'
 import { createSignInEpochs } from '../signInProbe/sessionEpoch'
-import {
-  createAnonymousClient,
-  createRawAnonymousClient
-} from '../storeManagers/steam/anonymousClient'
+import { createAnonymousClient } from '../storeManagers/steam/anonymousClient'
 import { createSteamSignInState } from '../storeManagers/steam/userSignInState'
 import { createSteamAuthTrigger } from '../storeManagers/steam/authTrigger'
 import { createSteamLibraryState } from '../storeManagers/steam/state'
@@ -1418,33 +1414,28 @@ export function configureSteamCm(deps: {
 }
 
 /**
- * Phase 79 (D-10): the boot owed-goonline cover on either engine. cm=rust asks the shell to pay the
- * record; cm=ts runs today's steam-user-side restore. Both read the same record format.
+ * Phase 79 (D-10): the boot owed-goonline cover. Asks the shell to pay the go-offline wrap's record
+ * once the boot configure has answered.
  *
  * @public Consumed by sidecar tests through require() in a fresh module registry (D-08).
  */
 export function restoreOwedMacSteamOnlineAtBoot(deps: {
   requestRustInvoke: RequestRustInvoke
-  restoreTs: () => unknown
   /** Settles when the boot configure answered; the Rust restore needs the folder it sets. */
   configured?: Promise<void>
 }): void {
-  if (steamCmImpl() === 'rust') {
-    void (deps.configured ?? Promise.resolve())
-      .then(() =>
-        deps.requestRustInvoke(RUST_STEAMCM_WRAP_RESTORE_IF_OWED, [
-          { trigger: 'boot' }
-        ])
+  void (deps.configured ?? Promise.resolve())
+    .then(() =>
+      deps.requestRustInvoke(RUST_STEAMCM_WRAP_RESTORE_IF_OWED, [
+        { trigger: 'boot' }
+      ])
+    )
+    .catch((error: unknown) =>
+      logWarning(
+        `[bootstrap] steamcm_wrap_restore_if_owed failed: ${String(error)}`,
+        LogPrefix.Backend
       )
-      .catch((error: unknown) =>
-        logWarning(
-          `[bootstrap] steamcm_wrap_restore_if_owed failed: ${String(error)}`,
-          LogPrefix.Backend
-        )
-      )
-    return
-  }
-  void deps.restoreTs()
+    )
 }
 
 export function init(
@@ -1638,15 +1629,13 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     {
       name: 'steam-anonymous-client',
       // Builds the one anonymous CM client owner of this boot (D-05, D-66.3-14). Construction
-      // connects nothing and arms no timer: the connect is lazy (first `get`), bounded, and its
-      // idle-close timer runs on the boot clock (unref'd). Released at stdin EOF through
-      // releaseOnStdinEof. Before 'stores' so the SteamUser holder carries the same instance.
-      run: (ctx, _io, state) => {
+      // connects nothing and arms no timer: the Rust anon actor owns the session, and the shell
+      // EOF / exit hook tears it down. Before 'stores' so the SteamUser holder carries the same
+      // instance.
+      run: (_ctx, _io, state) => {
         state.services.anonymousClient =
           prebuilt.anonymousClient ??
           createAnonymousClient({
-            clock: ctx.clock,
-            createClient: createRawAnonymousClient,
             requestRustInvoke: requireHost(state).requestRustInvoke
           })
       }
@@ -2024,16 +2013,12 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     {
       name: 'steam-user',
       // Builds the one authenticated Steam session owner of this boot (D-05, D-66.3-16),
-      // replacing the static SteamUser class. After 'command-runner' (the Mac Steam go-offline
-      // instance exists there), before 'store-managers' and 'rpc-server' (the EOF release).
-      // Construction connects nothing and arms no timer: the logon is lazy and the idle-close
-      // timer runs on the boot clock, unref'd (exit contract).
+      // replacing the static SteamUser class. Before 'store-managers' and 'rpc-server' (the EOF
+      // release). Construction connects nothing and arms no timer: the Rust CM session is lazy.
       run: (_ctx, _io, state) => {
         const {
           stores,
           config,
-          clock,
-          steamProcesses,
           signInProbe,
           steamSession,
           tokenStore,
@@ -2041,8 +2026,6 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         } = state.services
         if (!stores) throw new Error('boot: stores step must run first')
         if (!config) throw new Error('boot: config step must run first')
-        if (!clock || !steamProcesses)
-          throw new Error('boot: command-runner step must run first')
         if (!signInProbe || !steamSession || !tokenStore || !anonymousClient)
           throw new Error(
             'boot: sign-in / steam-session / anonymous steps must run first'
@@ -2055,8 +2038,6 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             steamSession,
             tokenStore,
             anonymousClient,
-            macSteamOffline: steamProcesses.macSteamOffline,
-            clock,
             config,
             sendFrontendMessage: requireHost(state).sendFrontendMessage,
             rustInvoke: {
@@ -2780,8 +2761,6 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           outboundHttp,
           downloadQueue: services.downloadQueue,
           aborts: services.aborts,
-          anonymousClient: services.anonymousClient,
-          steamUser: services.steamUser,
           stopAllSteamDownloadMonitors: () =>
             services.steamProcesses.downloadMonitor.stopAll(),
           stopRunningGamePoll: () => services.steamProcesses.runningPoll.stop()
@@ -2815,15 +2794,11 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       name: 'mac-steam-online-restore',
       run: (_ctx, _io, state) => {
         // Owed Mac Steam goonline, three layers: routed quit (shell exit hook / handleExit), stdin EOF
-        // (shell EOF hook for cm=rust; releaseOnStdinEof for cm=ts), and this boot call. kill -9 of the
+        // (the shell EOF hook), and this boot call. kill -9 of the
         // sidecar is covered ONLY here.
         restoreOwedMacSteamOnlineAtBoot({
           requestRustInvoke: requireHost(state).requestRustInvoke,
-          configured: state.steamCmConfigured,
-          restoreTs: () =>
-            requireSteamProcesses(
-              state
-            ).macSteamOffline.restoreMacSteamOnlineIfOwed('boot')
+          configured: state.steamCmConfigured
         })
       }
     },

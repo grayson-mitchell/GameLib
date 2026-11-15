@@ -2,11 +2,9 @@
  * Phase 54 source gate (ROADMAP SC3 / SC6): the Steam authenticated-session
  * policy, enforced structurally.
  *
- * What it proves: an authenticated CM logon is reachable only from user.ts,
- * the anonymous logon only from anonymousClient.ts, the lease entry points are
- * called only from an allow-list, the launch path calls none of them, every
- * steam-user construction sets `autoRelogin: false`, `.relog(` is gone, and
- * `allowLogon: true` has exactly one owner.
+ * What it proves: no steam-user logon (authenticated or anonymous) or construction exists any
+ * more (79-39), the lease entry points are called only from an allow-list, the launch path calls
+ * none of them, `.relog(` is gone, and `allowLogon: true` has exactly one owner.
  *
  * What it does NOT prove: runtime behaviour (authSessionLifecycle.test.ts,
  * macSteamOfflineWrap.test.ts and steamStartupKeyringDeferral.test.ts cover
@@ -160,19 +158,6 @@ function offendersOutside(
     .map((f) => `${f} (${rule})`)
 }
 
-/** Capture the argument text of the call whose '(' is at `open`, on stripped source. */
-function captureParens(src: string, open: number): string {
-  let depth = 0
-  for (let i = open; i < src.length; i++) {
-    if (src[i] === '(') depth++
-    else if (src[i] === ')') {
-      depth--
-      if (depth === 0) return src.slice(open + 1, i)
-    }
-  }
-  return src.slice(open + 1)
-}
-
 describe('Steam authenticated-session policy (Phase 54 ROADMAP SC3)', () => {
   it('floor: scans at least MIN_FILES_SCANNED files', () => {
     expect(scannedRelPaths.length).toBeGreaterThanOrEqual(MIN_FILES_SCANNED)
@@ -200,16 +185,14 @@ describe('Steam authenticated-session policy (Phase 54 ROADMAP SC3)', () => {
     expect(missing).toEqual([])
   })
 
-  it('Rule A: authenticated logOn({ refreshToken }) appears only in user.ts', () => {
+  it('Rule A: no authenticated steam-user logOn({ refreshToken }) exists (the Rust CM session is the only path, 79-39)', () => {
     const re = /logOn\(\s*\{[^}]*refreshToken/
-    expect(countIn(USER, re)).toBeGreaterThanOrEqual(1)
-    expect(offendersOutside(re, [USER], 'A')).toEqual([])
+    expect([...filesMatching(re).keys()]).toEqual([])
   })
 
-  it('Rule B: anonymous logOn appears only in anonymousClient.ts', () => {
+  it('Rule B: no anonymous steam-user logOn exists (the Rust anon actor is the only path, 79-39)', () => {
     const re = /logOn\(\s*\{\s*anonymous\s*:\s*true/
-    expect(countIn(ANON, re)).toBeGreaterThanOrEqual(1)
-    expect(offendersOutside(re, [ANON], 'B')).toEqual([])
+    expect([...filesMatching(re).keys()]).toEqual([])
   })
 
   it('Rule C: .relog( appears nowhere', () => {
@@ -254,24 +237,10 @@ describe('Steam authenticated-session policy (Phase 54 ROADMAP SC3)', () => {
     expect(offenders).toEqual([])
   })
 
-  it('Rule H: every steam-user construction passes autoRelogin: false', () => {
-    // 66.3-16: the SteamUser class has a constructor of its own (createSteamUser's `new SteamUser(deps)`), so
-    // the rule matches the steam-user LIBRARY constructor only; the class is not a CM client.
-    const re = /new\s+SteamUserLib\s*\(/g
-    let constructions = 0
-    const offenders: string[] = []
-    for (const rel of scannedRelPaths) {
-      const src = stripped.get(rel) ?? ''
-      for (const m of src.matchAll(re)) {
-        const open = (m.index ?? 0) + m[0].length - 1
-        constructions++
-        if (!/autoRelogin\s*:\s*false/.test(captureParens(src, open))) {
-          offenders.push(`${rel} (H)`)
-        }
-      }
-    }
-    expect(constructions).toBeGreaterThanOrEqual(2)
-    expect(offenders).toEqual([])
+  it('Rule H: no steam-user library client is constructed anywhere (79-39)', () => {
+    // The SteamUser class (createSteamUser's `new SteamUser(deps)`) is not a CM client; only the
+    // steam-user LIBRARY constructor is matched.
+    expect([...filesMatching(/new\s+SteamUserLib\s*\(/).keys()]).toEqual([])
   })
 
   it('Rule I: allowLogon: true occurs exactly once, in gameInstallBridge.ts', () => {
@@ -301,10 +270,12 @@ describe('Steam authenticated-session policy (Phase 54 ROADMAP SC3)', () => {
     expect(offenders).toEqual([])
   })
 
-  it('Rule K: the CM logon log oracle lines each occur exactly once', () => {
-    const auth = filesMatching(/CM logon mode=authenticated reason=/)
-    const anon = filesMatching(/CM logon mode=anonymous reason=/)
-    expect([...auth.entries()]).toEqual([[USER, 1]])
-    expect([...anon.entries()]).toEqual([[ANON, 1]])
+  it('Rule K: the steam-user CM logon log oracle lines are gone (79-39)', () => {
+    expect([
+      ...filesMatching(/CM logon mode=authenticated reason=/).keys()
+    ]).toEqual([])
+    expect([
+      ...filesMatching(/CM logon mode=anonymous reason=/).keys()
+    ]).toEqual([])
   })
 })

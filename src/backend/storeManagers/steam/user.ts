@@ -1,6 +1,5 @@
 import type { ManagerDeps, SteamSessionServices } from 'backend/services/types'
 import type { GlobalConfigSlice } from 'backend/config'
-import type { Clock, TimerHandle } from 'backend/process/types'
 import { existsSync } from 'graceful-fs'
 import { join } from 'path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
@@ -10,32 +9,18 @@ import {
   RUST_STEAMCM_SESSION_LOGOUT
 } from 'common/types/sidecarTransport'
 import type { SteamCmClient } from './cm/SteamCmClient'
-import { getOrCreateCmLogonId } from './cm/cmLogonId'
-import { steamCmImpl } from './cm/steamCmFlags'
 import type { SteamStoresDeps } from './library/installRoot'
 import { STEAM_INSTALL_PATHS } from './constants'
 import { readTokenOutcome, type TokenStoreSlot } from './tokenStore'
 import { RustCmSession } from './rustSession'
 import { isCredentialRefusal, reportLogonVerdict } from './logonVerdict'
-import { withTimeout } from './withTimeout'
 import type { SendFrontendMessage } from '../../host/frontendMessage'
 import type { AnonymousClient } from './anonymousClient'
-import {
-  GuidedOfflineRequiredError,
-  type MacSteamOffline,
-  type MacSteamRestoreOutcome,
-  type MacSteamWrapKind
-} from './macSteamOffline'
-import { abortSteamUserLogon } from './steamUserLogonAbort'
+import type { MacSteamRestoreOutcome } from './macSteamOffline'
 import { platform } from 'process'
 import type { SteamUserData } from 'common/types/steam'
-import SteamUserLib from 'steam-user'
 import type { SignInProbeOutcome } from 'common/signInState'
 import {
-  CANARY_APP_ID,
-  CANARY_TIMEOUT_MS,
-  AUTH_SESSION_IDLE_GRACE_MS,
-  AUTH_LOGON_BOUND_MS,
   type AuthSessionReason,
   type AuthSessionRefusal,
   type AcquireAuthenticatedOpts,
@@ -44,18 +29,11 @@ import {
   type OpenAuthenticatedLease
 } from './userTypes'
 
-type SteamUserMacSteamOffline = Pick<
-  MacSteamOffline,
-  'withMacSteamOffline' | 'restoreMacSteamOnlineIfOwed'
->
-
 /**
  * Everything one SteamUser needs, required at construction (D-05, D-66.3-16): there is no unbound
  * state and no throw-if-unbound accessor.
  */
 export type SteamUserDeps = SteamStoresDeps & {
-  /** The boot-owned Mac Steam go-offline instance (the wrap and the shutdown restore). */
-  macSteamOffline: SteamUserMacSteamOffline
   /** The boot-owned sign-in fence and outcome map (D-66.3-13). */
   signIn: Pick<ManagerDeps['signIn'], 'epochs' | 'outcomes'>
   /** The boot-owned Steam sign-in session state and auth-unlock latches (D-66.3-13). */
@@ -64,12 +42,10 @@ export type SteamUserDeps = SteamStoresDeps & {
   tokenStore: Pick<TokenStoreSlot, 'current'>
   /** The boot-owned anonymous CM client; logout() closes it (D-66.3-14). */
   anonymousClient: Pick<AnonymousClient, 'close'>
-  /** The boot clock: the idle-close timer lives on it, unref'd (exit contract). */
-  clock: Clock
   /** The boot-built global config; the Windows Steam-client probe reads defaultSteamPath. */
   config: Pick<GlobalConfigSlice, 'getSettings'>
   sendFrontendMessage: SendFrontendMessage
-  /** The boot's rustInvoke transport: the Rust CM session (GAMELIB_STEAMCM_CM=rust, Phase 79). */
+  /** The boot's rustInvoke transport: the Rust CM session (Phase 79). */
   rustInvoke: RustInvokeDeps
 }
 
@@ -77,52 +53,25 @@ export type SteamUserDeps = SteamStoresDeps & {
 
 /**
  * The authenticated Steam CM session owner. One instance per boot, built by the 'steam-user' boot
- * step (createSteamUser); the single-flight connect, the wrap ordering, the lease count / idle
- * timer and the session generation fence are per instance and shared by every consumer through
- * Pick slices.
+ * step (createSteamUser). The Rust CM session (rustSession.ts) does the connecting; this class keeps
+ * the policy it consults, the guided-install targets and the sign-out generation fence, shared by
+ * every consumer through Pick slices.
  */
 export class SteamUser {
   constructor(private readonly deps: SteamUserDeps) {}
 
-  private client: InstanceType<typeof SteamUserLib> | null = null
-  // Single-flight for the wrapped cold connect; resolves null when connected,
-  // otherwise the refusal every joiner reports.
-  private connectingPromise: Promise<AuthSessionRefusal | null> | null = null
-  // Live leases (acquireAuthenticated / acquireOpenAuthenticated). The last
-  // release arms idleTimer; a bare ensureConnected() takes no lease.
-  private leaseCount = 0
-  private idleTimer: TimerHandle | null = null
   // 54-REVIEW CR-01: the last install target seen per appName. An install's
   // first acquire (games.ts) carries it; a nested acquire for the same app
   // (depot.ts) does not, so its guided push reads it from here. Without it a
   // guided Continue would reinstall into the default library and route.
   private guidedInstallTargets = new Map<string, GuidedInstallTarget>()
-  // True once releaseForShutdown() has run (stdin EOF: the shell is gone). A reconnect path
-  // (ensureConnected's relog, a late login) must not open a NEW CM socket after that, or the
-  // sidecar would hold the loop again.
+  // True once releaseForShutdown() has run (stdin EOF: the shell is gone). A late login must
+  // not open a NEW CM session after that.
   private shuttingDown = false
-  // 54-REVIEW WR-07: bumped by logout(). A wrapped connect captures it, and a
-  // logon that started before a sign-out never opens (or keeps) a session.
+  // 54-REVIEW WR-07: bumped by logout(). The Rust session captures it, and a logon that
+  // started before a sign-out never opens (or keeps) a session.
   private sessionGeneration = 0
-  // 54-REVIEW WR-07: abandons the authenticated logon in flight, if any.
-  private abandonPendingLogon: (() => void) | null = null
-  // 54-REVIEW WR-07: wraps run one at a time. Single-flight normally makes
-  // that true already; after a sign-out mid-wrap, a fresh sign-in's wrap must
-  // not overlap the old wrap's goonline.
-  private wrapTail: Promise<unknown> = Promise.resolve()
-  // steam-sync-false-failed-banner: the terminal 'error' the CM ended the most
-  // recent logon attempt with (e.g. AccessDenied for a refresh token Steam no
-  // longer accepts). Tagged with the client it belongs to so an error from a
-  // REPLACED client (the old one's LogonSessionReplaced arriving while a newer
-  // client is still logging on, seen in the 34.9 live gate) can never be
-  // mistaken for the current attempt's verdict. Reset at the start of every
-  // connectSteamUserClient(). Read through getLogonFailure(), which hands out
-  // only message + eresult -- never the client, never the token.
-  private logonFailure: {
-    client: InstanceType<typeof SteamUserLib>
-    message: string
-    eresult?: number
-  } | null = null
+
   // Phase 79 (D-03): the Rust CM session (cm=rust), built over this class's policy.
   private readonly rust = new RustCmSession(this.deps, {
     isShuttingDown: () => this.shuttingDown,
@@ -132,20 +81,6 @@ export class SteamUser {
     reportLogonVerdict: (outcome, epoch) =>
       reportLogonVerdict(this.deps, outcome, epoch)
   })
-
-  /** The persisted per-install CM logonID (D-18). */
-  private logonId(): number {
-    const store = this.deps.stores.steam.configStore
-    return getOrCreateCmLogonId({
-      get: (key) => store.get_nodefault(key),
-      set: (key, value) => store.set(key, value)
-    })
-  }
-
-  /** Read per call, so the dev flag (GAMELIB_STEAMCM_CM) is honoured without a restart. */
-  private engine(): 'rust' | 'ts' {
-    return steamCmImpl()
-  }
 
   // ── AUTH-05: Steam client detection ────────────────────────────────────────
 
@@ -214,10 +149,7 @@ export class SteamUser {
   // ── LIB-01: Authenticated client accessor ─────────────────────────────────
 
   getClient(): SteamCmClient | null {
-    if (this.engine() === 'rust') {
-      return this.rust.getClient()
-    }
-    return this.client as unknown as SteamCmClient | null
+    return this.rust.getClient()
   }
 
   // ── LIB-01: Reconnect on startup ───────────────────────────────────────────
@@ -232,10 +164,7 @@ export class SteamUser {
    * token. See the `logonFailure` field doc.
    */
   getLogonFailure(): { message: string; eresult?: number } | null {
-    if (this.engine() === 'rust') return this.rust.getLogonFailure()
-    const failure = this.logonFailure
-    if (!failure || failure.client !== this.client) return null
-    return { message: failure.message, eresult: failure.eresult }
+    return this.rust.getLogonFailure()
   }
 
   /**
@@ -252,13 +181,7 @@ export class SteamUser {
    * acquireOpenAuthenticated; steamAuthSessionPolicy.test.ts enforces this.
    */
   async ensureConnected(): Promise<boolean> {
-    if (this.engine() === 'rust') return this.rust.ensureConnected()
-    const refusal = await this.ensureAuthenticatedSession('user-refresh')
-    // An earlier lease cycle may have armed the idle timer; this un-leased
-    // caller is now relying on the session, so it must not be logged off
-    // under it.
-    if (refusal === null && this.leaseCount === 0) this.clearIdleTimer()
-    return refusal === null
+    return this.rust.ensureConnected()
   }
 
   /**
@@ -294,31 +217,7 @@ export class SteamUser {
         forceWindowsViaBottle: opts.forceWindowsViaBottle
       })
     }
-    if (this.engine() === 'rust') return this.rustAcquire(opts, token)
-    this.leaseCount++
-    this.clearIdleTimer()
-    let refusal: AuthSessionRefusal | null
-    try {
-      refusal = await this.ensureAuthenticatedSession(opts.reason, token, 1)
-    } catch (err) {
-      this.leaseCount--
-      this.armIdleTimer()
-      throw err
-    }
-    const client = this.client
-    if (refusal === null && !client?.steamID) refusal = 'client-not-ready'
-    if (refusal !== null || !client) {
-      this.leaseCount--
-      this.armIdleTimer()
-      const reason = refusal ?? 'client-not-ready'
-      this.pushGuidedOffline(reason, opts)
-      return { ok: false, reason }
-    }
-    return {
-      ok: true,
-      client: client as unknown as SteamCmClient,
-      release: this.makeRelease()
-    }
+    return this.rustAcquire(opts, token)
   }
 
   /** The guided Go Offline push, shared by both engines. */
@@ -368,19 +267,7 @@ export class SteamUser {
   async acquireOpenAuthenticated(
     reason: AuthSessionReason
   ): Promise<OpenAuthenticatedLease | null> {
-    if (this.engine() === 'rust') return this.rust.acquireOpen(reason)
-    const client = this.client
-    if (this.shuttingDown || !client?.steamID) return null
-    this.leaseCount++
-    this.clearIdleTimer()
-    logInfo(
-      `[Steam] CM session reused mode=authenticated reason=${reason}`,
-      LogPrefix.Steam
-    )
-    return {
-      client: client as unknown as SteamCmClient,
-      release: this.makeRelease()
-    }
+    return this.rust.acquireOpen(reason)
   }
 
   /** configStore userData.steamId when it is a numeric SteamID64 string. */
@@ -390,275 +277,6 @@ export class SteamUser {
     return typeof steamId === 'string' && /^\d+$/.test(steamId)
       ? steamId
       : undefined
-  }
-
-  private makeRelease(): () => void {
-    let released = false
-    return () => {
-      if (released) return
-      released = true
-      this.leaseCount = Math.max(0, this.leaseCount - 1)
-      this.armIdleTimer()
-    }
-  }
-
-  private armIdleTimer(): void {
-    if (this.leaseCount > 0 || !this.client) return
-    this.clearIdleTimer()
-    this.idleTimer = this.deps.clock.setTimeout(() => {
-      this.idleTimer = null
-      if (this.leaseCount === 0) this.endSession('idle')
-    }, AUTH_SESSION_IDLE_GRACE_MS)
-  }
-
-  /**
-   * The one body that may open an authenticated CM logon. null = connected.
-   * `tokenOverride` is the sign-in path: the token is already in memory, so
-   * the keyring is not read again. `callerLeases` is how many of the current
-   * leases the caller itself holds (acquireInternal counts its own first).
-   */
-  private async ensureAuthenticatedSession(
-    reason: AuthSessionReason,
-    tokenOverride?: string,
-    callerLeases = 0
-  ): Promise<AuthSessionRefusal | null> {
-    if (this.shuttingDown) return 'shutting-down'
-    if (this.client?.steamID) {
-      const client = this.client
-      try {
-        // D-02: a populated client.steamID alone is NOT proof of a live CM
-        // connection — a silently-dropped socket (NAT timeout, dead TCP with
-        // no FIN/RST ever delivered) leaves steamID populated indefinitely
-        // (verified against installed steam-user v5.3.0 source,
-        // 09-logon.js). Race a cheap canary call, bounded well below
-        // STEAM_PICS_TIMEOUT_MS, so the healthy common case still resolves
-        // near-instantly. Tradeoff note (mirrors every other withTimeout
-        // site in depot.ts): if this canary times out, the queued request is
-        // abandoned locally, not network-cancelled — a pre-accepted,
-        // already-consistent tradeoff, not new to this fix.
-        await withTimeout(
-          client.getProductInfo([CANARY_APP_ID], [], true),
-          CANARY_TIMEOUT_MS,
-          'ensureConnected canary'
-        )
-        logInfo(
-          '[Timing] SteamUser.ensureConnected: already connected (fast path, canary OK)',
-          LogPrefix.Steam
-        )
-        // A live, canary-verified CM connection disproves any latched
-        // credentialsMissing verdict — clear it so the tile recovers without
-        // waiting for the next login.
-        this.deps.stores.steam.configStore.delete('credentialsMissing')
-        return null
-      } catch (canaryErr) {
-        logWarning(
-          [
-            'Steam: ensureConnected canary failed — socket may be stale, re-entering the wrapped cold connect:',
-            canaryErr
-          ],
-          LogPrefix.Steam
-        )
-        // 54-REVIEW WR-08: other holders (a long download, a bridge install's
-        // shim and redist steps) still use this client. Ending it would log
-        // it off under them, and a replacement logon on the same account
-        // would replace their session anyway. Refuse this acquire only; the
-        // last release's idle close or a CM drop ends the session.
-        const othersHolding = this.leaseCount - callerLeases
-        if (othersHolding > 0 && this.client === client) {
-          logWarning(
-            `Steam: ensureConnected canary failed while ${othersHolding} other lease(s) hold the session; keeping it for them and refusing this caller`,
-            LogPrefix.Steam
-          )
-          return 'client-not-ready'
-        }
-        // Phase 54: never client.relog(). A relog is an authenticated logon
-        // outside the go-offline wrap (spike 046c), so the stale session is
-        // ended and the cold path below opens the replacement.
-        if (this.client === client) this.endSession('stale-canary')
-      }
-    }
-    // The sign-in path has just persisted the session itself and passes the
-    // token in memory, so it does not depend on the stored flag.
-    if (tokenOverride === undefined && !this.isLoggedIn()) {
-      return 'not-signed-in'
-    }
-
-    let token = tokenOverride
-    // A connect already in flight is joined below without a second keyring
-    // read: the read can raise a real Keychain prompt and its token is unused.
-    if (token === undefined && !this.connectingPromise) {
-      // quick-260814-r2d: branch on the three-state outcome instead of the
-      // lossy getCredentials() collapse, so a keyring read that FAILED
-      // (timeout, or a Keychain Deny) is never reported the same way as a
-      // slot that was genuinely never written to. Scope note: this surfaces
-      // the retryable condition in the backend log and in the return value
-      // only — no new IPC channel and no frontend banner is added here.
-      const outcome = await readTokenOutcome(
-        this.deps.tokenStore.current(),
-        this.deps.steamSession.authTrigger.currentTriggerLabel()
-      )
-      if (outcome.status === 'unreadable') {
-        // Deliberately does NOT contain the substring "no stored refresh
-        // token" — that string reads to a user/log-reader as "you are signed
-        // out", which is exactly the false state this fix closes. The
-        // session (isLoggedIn/userData) is left untouched; no clearToken()
-        // and no configStore.delete happen on this path.
-        logWarning(
-          `Steam: refresh token read failed (${outcome.reason}) — this is retryable, ` +
-            'keeping the signed-in session and NOT clearing any credentials',
-          LogPrefix.Steam
-        )
-        return 'token-unreadable'
-      }
-      if (outcome.status === 'absent') {
-        logWarning(
-          'Steam: logged in but no stored refresh token — cannot reconnect',
-          LogPrefix.Steam
-        )
-        // A successful read that came back EMPTY is proof the credential is
-        // gone, not a transient failure — deliberately NOT set in the
-        // `unreadable` branch above, whose whole point is that a denied/
-        // timed-out read must never be reported as signed-out. Latching it
-        // here costs no extra keyring traffic: this branch only runs on reads
-        // a deliberate user action already triggered.
-        this.deps.stores.steam.configStore.set('credentialsMissing', true)
-        return 'token-absent'
-      }
-      token = outcome.token
-    }
-
-    // quick 261011-rj0: captured BEFORE the connect attempt, exactly as the
-    // probe pass does (pass.ts). A sign-in that completes while this logon is
-    // in flight bumps the epoch, and whatever the CM then says about the OLD
-    // token is refused by `applySignInVerdict` as stale (T-49-10).
-    const epochAtStart = this.deps.signIn.epochs.capture('steam')
-    const start = Date.now()
-    if (!this.connectingPromise && token !== undefined) {
-      if (this.client?.steamID) {
-        // Another caller finished connecting while the keyring was being read;
-        // logging on again would log that fresh session off.
-        reportLogonVerdict(this.deps, 'healthy', epochAtStart)
-        return null
-      }
-      const p: Promise<AuthSessionRefusal | null> = this.wrappedConnect(
-        token,
-        reason,
-        this.sessionGeneration
-      ).finally(() => {
-        // A sign-out mid-connect may have handed the slot to a newer connect.
-        if (this.connectingPromise === p) this.connectingPromise = null
-      })
-      this.connectingPromise = p
-    }
-    if (!this.connectingPromise) return 'client-not-ready'
-    const refusal = await this.connectingPromise
-    // [Timing] debug/steam-install-slow-start: cold-connect / CM-login path.
-    logInfo(
-      `[Timing] SteamUser.ensureConnected: cold-connect path took ${Date.now() - start}ms`,
-      LogPrefix.Steam
-    )
-
-    if (refusal === null) {
-      // The CM accepted the stored credential: that disproves any latched
-      // `credentialsMissing`, whether the `absent` branch above or a previous
-      // refusal set it. Fenced and write-if-changed, so a clean flag costs
-      // nothing here.
-      reportLogonVerdict(this.deps, 'healthy', epochAtStart)
-      return null
-    }
-
-    if (refusal === 'logon-rejected') {
-      // steam-sync-false-failed-banner: the CM already ended this attempt with
-      // a terminal 'error' (AccessDenied for a refresh token Steam no longer
-      // accepts, InvalidPassword, ...). steam-user schedules no retry after
-      // such an error (09-logon.js _handleLogOnResponse default arm), so there
-      // is nothing to wait for.
-      const rejection = this.getLogonFailure()
-      if (rejection) {
-        logWarning(
-          `Steam: the CM rejected the stored-credential logon (${rejection.message}) — ` +
-            'steam-user schedules no retry after this, so not waiting out a reconnect',
-          LogPrefix.Steam
-        )
-        // quick 261011-rj0: a refusal of the CREDENTIAL (AccessDenied for a
-        // revoked/expired refresh token) is a sign-in problem, and belongs on
-        // the sign-in surface with the Sign in action -- not behind the
-        // generic "Couldn't sync / Retry" banner, whose Retry would replay
-        // this exact refusal. A terminal error that is NOT about the
-        // credential (LogonSessionReplaced, a rate limit) latches nothing.
-        if (isCredentialRefusal(rejection)) {
-          reportLogonVerdict(this.deps, 'expired', epochAtStart)
-        }
-      }
-    }
-    return refusal
-  }
-
-  /**
-   * The cold connect, inside the Mac Steam go-offline wrap. A refusal from the
-   * wrap (Mac Steam did not log off) means NO logOn call at all.
-   */
-  private wrappedConnect(
-    token: string,
-    reason: AuthSessionReason,
-    generation: number
-  ): Promise<AuthSessionRefusal | null> {
-    const run = this.wrapTail.then(() =>
-      this.wrappedConnectNow(token, reason, generation)
-    )
-    this.wrapTail = run.catch(() => undefined)
-    return run
-  }
-
-  private async wrappedConnectNow(
-    token: string,
-    reason: AuthSessionReason,
-    generation: number
-  ): Promise<AuthSessionRefusal | null> {
-    if (generation !== this.sessionGeneration) return 'not-signed-in'
-    try {
-      await this.deps.macSteamOffline.withMacSteamOffline((wrap) =>
-        this.connectSteamUserClient(token, { reason, wrap, generation })
-      )
-    } catch (err) {
-      if (err instanceof GuidedOfflineRequiredError) {
-        logWarning(
-          `[Steam] CM logon skipped: Mac Steam did not go offline (${err.cause}), no authenticated logon issued`,
-          LogPrefix.Steam
-        )
-        return 'go-offline-required'
-      }
-      throw err
-    }
-    if (generation !== this.sessionGeneration) return 'not-signed-in'
-    // debug/shutdown-mid-connect-logon-survives: a connect the shutdown
-    // release abandoned reports that, and opens nothing for its caller.
-    if (this.shuttingDown) return 'shutting-down'
-    if (this.client?.steamID) return null
-    if (this.getLogonFailure()) return 'logon-rejected'
-    return 'client-not-ready'
-  }
-
-  /** Close the current authenticated session (idle, stale canary, CM drop). */
-  private endSession(cause: string): void {
-    this.clearIdleTimer()
-    const client = this.client
-    if (!client) return
-    this.client = null
-    try {
-      client.logOff()
-    } catch {
-      // the socket is already gone
-    }
-    logInfo(
-      `[Steam] CM session closed mode=authenticated cause=${cause}`,
-      LogPrefix.Steam
-    )
-  }
-
-  private clearIdleTimer(): void {
-    if (this.idleTimer) this.deps.clock.clear(this.idleTimer)
-    this.idleTimer = null
   }
 
   // ── AUTH-04: Logout ────────────────────────────────────────────────────────
@@ -680,54 +298,33 @@ export class SteamUser {
    * handleExit())) — never a floating promise.
    */
   async logout(): Promise<void> {
-    this.clearIdleTimer()
-    this.leaseCount = 0
-    // 54-REVIEW WR-07: a wrapped logon already in flight must not open a
-    // session for the account being signed out.
+    // 54-REVIEW WR-07: a logon already in flight must not open a session for the account being
+    // signed out.
     this.sessionGeneration++
-    this.abandonPendingLogon?.()
-    if (this.engine() === 'rust') {
-      // T-79-61: drop every TS-held lease, then fence the Rust session (its generation bump).
-      this.rust.reset()
-      try {
-        await this.deps.rustInvoke.requestRustInvoke(
-          RUST_STEAMCM_SESSION_LOGOUT,
-          []
-        )
-        await this.deps.rustInvoke.requestRustInvoke(RUST_STEAMCM_ANON_CLOSE, [
-          { reason: 'logout' }
-        ])
-      } catch (err) {
-        logWarning(
-          `Steam: the Rust CM logout failed (${err instanceof Error ? err.name : typeof err})`,
-          LogPrefix.Steam
-        )
-      }
-    }
-    if (this.client) {
-      try {
-        this.client.logOff()
-      } catch (err) {
-        logWarning(
-          ['Steam client logOff error during logout:', err],
-          LogPrefix.Steam
-        )
-      }
-      this.client = null
-    }
-    // Clear any in-flight connection promise so a fresh ensureConnected() after
-    // re-login does not await a stale QR-connect promise (Rule 1 — logout must
-    // reset all connection state).
-    this.connectingPromise = null
-    this.logonFailure = null
+    // T-79-61: drop every TS-held lease; the Rust session is fenced below (its generation bump).
+    this.rust.reset()
     this.guidedInstallTargets.clear()
     this.deps.anonymousClient.close('logout')
     this.deps.steamSession.signIn.resetSignInState()
     // Quick 261112-7wv: lock the keyring gate and drop any armed refresh logon
     // grant. Must stay synchronous and before the first await below so a
-    // refresh racing a slow clearToken cannot consume a stale grant. Sits
+    // refresh racing a slow Rust logout or clearToken cannot consume a stale grant. Sits
     // beside resetSignInState: both are boot-owned steamSession latches.
     this.deps.steamSession.authTrigger.resetSteamAuthTrigger()
+    try {
+      await this.deps.rustInvoke.requestRustInvoke(
+        RUST_STEAMCM_SESSION_LOGOUT,
+        []
+      )
+      await this.deps.rustInvoke.requestRustInvoke(RUST_STEAMCM_ANON_CLOSE, [
+        { reason: 'logout' }
+      ])
+    } catch (err) {
+      logWarning(
+        `Steam: the Rust CM logout failed (${err instanceof Error ? err.name : typeof err})`,
+        LogPrefix.Steam
+      )
+    }
     // Token through the seam (D-09) first, then the remaining session keys
     // configStore.clear() used to wipe — see stores.ts's configStore
     // schema (isLoggedIn/userData are the only other keys ever written there).
@@ -767,211 +364,17 @@ export class SteamUser {
   }
 
   /**
-   * Sidecar exit contract, half 1 for a handle we cannot unref(): a logged-on steam-user client
-   * owns the CM TCP socket and its heartbeat timer inside the library, and both are referenced.
-   * Measured (debug/sidecar-survives-force-quit): an anonymous-logged-on client keeps a bare
-   * node process alive indefinitely; `logOff()` lets it drain in ~100ms. Called on stdin EOF.
-   * Unlike logout() this clears no token and no stored session -- the user stays signed in.
-   * The release also pays any goonline the go-offline wrap owes, after logOff, so no GameLib
-   * logon can land once Mac Steam reconnects. The anonymous CM client is released by the caller
-   * (releaseOnStdinEof / the quit handler) through the boot-owned instance, before this call.
-   *
-   * debug/shutdown-mid-connect-logon-survives: a logon still in flight is abandoned FIRST
-   * (abortSteamUserLogon, so steam-user cannot log on again by itself), which also settles
-   * the wrap at once: it goes back online now and runs no refresh, instead of waiting on a
-   * logon that would otherwise land seconds later with Mac Steam online.
+   * Stdin EOF: the shell is gone. The Rust shell's EOF / exit hook (steamcm_dispatch.rs) owns the CM
+   * session teardown and any owed Mac Steam go-online, and no library-owned CM handle exists in the
+   * sidecar any more, so this only fences new logons and drops the TS-held leases. Unlike logout()
+   * it clears no token and no stored session: the user stays signed in.
    */
   releaseForShutdown(): Promise<MacSteamRestoreOutcome> {
     this.shuttingDown = true
-    this.clearIdleTimer()
-    this.abandonPendingLogon?.()
-    if (this.engine() === 'rust') {
-      // No IPC: the shell's stdin-EOF / exit hook (79-16) owns the Rust session teardown and
-      // the owed go-online, and a rustInvoke here would race the closing transport.
-      this.rust.dropLeases()
-      return Promise.resolve('not-owed')
-    }
-    const client = this.client
-    if (client) {
-      try {
-        abortSteamUserLogon(client)
-      } catch (err) {
-        logWarning(
-          ['Steam client logOff error during shutdown release:', err],
-          LogPrefix.Steam
-        )
-      }
-    }
-    return this.deps.macSteamOffline.restoreMacSteamOnlineIfOwed('shutdown')
-  }
-
-  private connectSteamUserClient(
-    refreshToken: string,
-    opts: {
-      reason: AuthSessionReason
-      wrap: MacSteamWrapKind
-      generation: number
-    }
-  ): Promise<void> {
-    if (this.shuttingDown) return Promise.resolve()
-    if (opts.generation !== this.sessionGeneration) {
-      logInfo(
-        '[Steam] CM logon abandoned: signed out while the go-offline wrap was in flight',
-        LogPrefix.Steam
-      )
-      return Promise.resolve()
-    }
-    if (this.client) {
-      try {
-        abortSteamUserLogon(this.client)
-      } catch {
-        // ignore
-      }
-    }
-
-    // autoRelogin false (spike 046c): this class owns every logon, so a CM
-    // drop is a fatal 'error' for the session instead of a silent re-logon
-    // that would sign Mac Steam's Friends out again.
-    const client = new SteamUserLib({
-      enablePicsCache: false,
-      autoRelogin: false
-    })
-    this.client = client
-    // A new attempt starts with a clean slate: a verdict from a previous
-    // attempt must never be reported against this one.
-    this.logonFailure = null
-
-    const describeDrop = (cause: string, detail: unknown): string => {
-      const eresult =
-        detail instanceof Error
-          ? (detail as Error & { eresult?: number }).eresult
-          : undefined
-      const message =
-        detail instanceof Error ? detail.message : String(detail ?? 'unknown')
-      return `Steam CM session dropped (${cause}): ${message}${
-        typeof eresult === 'number' ? ` eresult=${eresult}` : ''
-      }`
-    }
-
-    return new Promise<void>((resolve) => {
-      let settled = false
-      const bound = setTimeout(() => {
-        if (settled) return
-        logWarning(
-          `Steam CM logon did not complete within ${AUTH_LOGON_BOUND_MS}ms, abandoning the attempt`,
-          LogPrefix.Steam
-        )
-        // Abandon BEFORE the wrap fires goonline, so no logon can land while
-        // Mac Steam is back online.
-        try {
-          abortSteamUserLogon(client)
-        } catch {
-          // ignore
-        }
-        if (this.client === client) this.client = null
-        settle()
-      }, AUTH_LOGON_BOUND_MS)
-      bound.unref?.()
-
-      const settle = (): void => {
-        if (settled) return
-        settled = true
-        clearTimeout(bound)
-        if (this.abandonPendingLogon === abandon) {
-          this.abandonPendingLogon = null
-        }
-        resolve()
-      }
-
-      // 54-REVIEW WR-07: logout() calls this so the wrap stops waiting on a
-      // logon for an account that is no longer signed in. releaseForShutdown()
-      // calls it too (debug/shutdown-mid-connect-logon-survives).
-      const abandon = (): void => {
-        if (settled) return
-        try {
-          abortSteamUserLogon(client)
-        } catch {
-          // ignore
-        }
-        if (this.client === client) this.client = null
-        settle()
-      }
-      this.abandonPendingLogon = abandon
-
-      client.once('loggedOn', () => {
-        // debug/shutdown-mid-connect-logon-survives: a logon that lands after
-        // the shutdown release is never kept either. Mac Steam may already be
-        // back online, so it is logged off before anything else runs.
-        if (this.shuttingDown || opts.generation !== this.sessionGeneration) {
-          // Signed out (or shut down) while this logon was in flight: never
-          // keep it.
-          try {
-            abortSteamUserLogon(client)
-          } catch {
-            // ignore
-          }
-          if (this.client === client) this.client = null
-          if (this.shuttingDown) {
-            logWarning(
-              '[Steam] CM logon landed after the shutdown release, logged off at once',
-              LogPrefix.Steam
-            )
-          }
-          settle()
-          return
-        }
-        // [Timing] debug/steam-install-slow-start diagnostic: region info
-        // steam-user exposes post-logon (cellID drives which CDN edges the
-        // content-server directory returns). Additive-only.
-        logInfo(
-          `[Timing] SteamUser.loggedOn: cellID=${client.cellID} publicIP=${client.publicIP}`,
-          LogPrefix.Steam
-        )
-        client.on('disconnected', (...args: unknown[]) => {
-          if (this.client !== client) return
-          logWarning(describeDrop('disconnected', args[1]), LogPrefix.Steam)
-          this.endSession('disconnected')
-        })
-        settle()
-      })
-
-      // 'error' is subscribed for the client's whole life: an unhandled
-      // EventEmitter 'error' would crash the sidecar, and with autoRelogin off
-      // every CM drop arrives as one.
-      client.on('error', (err: Error) => {
-        if (!settled) {
-          logWarning(
-            ['Steam client error, logon did not complete:', err],
-            LogPrefix.Steam
-          )
-          // Only the CURRENT client's error is this attempt's verdict -- see
-          // the logonFailure field doc for the replaced-client case.
-          if (this.client === client) {
-            this.logonFailure = {
-              client,
-              message: err.message,
-              eresult: (err as Error & { eresult?: number }).eresult
-            }
-          }
-          settle()
-          return
-        }
-        if (this.client !== client) return
-        logWarning(describeDrop('error', err), LogPrefix.Steam)
-        this.endSession('error')
-      })
-
-      logInfo(
-        `[Steam] CM logon mode=authenticated reason=${opts.reason} wrap=${opts.wrap}`,
-        LogPrefix.Steam
-      )
-      // D-18 / 077: a per-install non-zero logonID, so a steam-user session and a Rust CM
-      // session on one account never replace each other (eresult 34).
-      client.logOn({
-        refreshToken,
-        logonID: this.logonId()
-      })
-    })
+    // No IPC: the shell's stdin-EOF / exit hook (79-16) owns the Rust session teardown and
+    // the owed go-online, and a rustInvoke here would race the closing transport.
+    this.rust.dropLeases()
+    return Promise.resolve('not-owed')
   }
 }
 

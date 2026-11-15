@@ -15,9 +15,6 @@ const downloadQueue = {
 }
 const stopMonitors = jest.fn()
 const stopPoll = jest.fn()
-// The Steam monitor instance is injected (66.2-06): the release path only needs its stopAll.
-const releaseAnon = jest.fn()
-const release = jest.fn()
 const destroyHttp = jest.fn()
 const markShuttingDown = jest.fn()
 const deps = {
@@ -28,8 +25,6 @@ const deps = {
   downloadQueue,
   // The abort registry is injected (66.4-13): the release path only needs abortAll.
   aborts: { abortAll: () => callAll() },
-  anonymousClient: { releaseForShutdown: () => releaseAnon() },
-  steamUser: { releaseForShutdown: () => release() },
   stopAllSteamDownloadMonitors: () => stopMonitors(),
   // The running-game poller instance (quick 261111-7wo): stopped at EOF, never a loop-holder.
   stopRunningGamePoll: () => stopPoll()
@@ -41,7 +36,6 @@ import { RESIDUAL_HOLDER_DIAG_MS, releaseOnStdinEof } from '../stdinEofRelease'
 describe('releaseOnStdinEof (debug/sidecar-survives-force-quit)', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    release.mockImplementation(() => Promise.resolve('not-owed'))
     destroyHttp.mockReturnValue({
       destroyed: 2,
       hosts: ['a.example', 'b.example']
@@ -53,18 +47,18 @@ describe('releaseOnStdinEof (debug/sidecar-survives-force-quit)', () => {
     releaseOnStdinEof(input, deps)
     input.write('x\n')
     expect(callAll).not.toHaveBeenCalled()
-    expect(release).not.toHaveBeenCalled()
+    expect(destroyHttp).not.toHaveBeenCalled()
     expect(stopPoll).not.toHaveBeenCalled()
   })
 
-  it('aborts downloads and releases the CM session exactly once at EOF', () => {
+  it('aborts downloads and releases once at EOF', () => {
     const input = new PassThrough()
     releaseOnStdinEof(input, deps)
     input.resume()
     input.end()
     return new Promise<void>((resolve) => setImmediate(resolve)).then(() => {
       expect(callAll).toHaveBeenCalledTimes(1)
-      expect(release).toHaveBeenCalledTimes(1)
+      expect(destroyHttp).toHaveBeenCalledTimes(1)
       // Both 'end' and 'close' fire on a PassThrough; the poller is stopped once.
       expect(stopPoll).toHaveBeenCalledTimes(1)
     })
@@ -81,7 +75,7 @@ describe('releaseOnStdinEof (debug/sidecar-survives-force-quit)', () => {
     input.end()
     return new Promise<void>((resolve) => setImmediate(resolve)).then(() => {
       expect(order).toEqual(['pause', 'abort'])
-      expect(release).toHaveBeenCalledTimes(1)
+      expect(destroyHttp).toHaveBeenCalledTimes(1)
     })
   })
 
@@ -96,7 +90,7 @@ describe('releaseOnStdinEof (debug/sidecar-survives-force-quit)', () => {
     })
   })
 
-  it('still releases the CM session if aborting throws', () => {
+  it('still destroys outbound HTTP if aborting throws', () => {
     callAll.mockImplementationOnce(() => {
       throw new Error('boom')
     })
@@ -105,7 +99,7 @@ describe('releaseOnStdinEof (debug/sidecar-survives-force-quit)', () => {
     input.resume()
     input.end()
     return new Promise<void>((resolve) => setImmediate(resolve)).then(() => {
-      expect(release).toHaveBeenCalledTimes(1)
+      expect(destroyHttp).toHaveBeenCalledTimes(1)
     })
   })
 
@@ -119,11 +113,11 @@ describe('releaseOnStdinEof (debug/sidecar-survives-force-quit)', () => {
     input.end()
     return new Promise<void>((resolve) => setImmediate(resolve)).then(() => {
       expect(stopMonitors).toHaveBeenCalledTimes(1)
-      expect(release).toHaveBeenCalledTimes(1)
+      expect(destroyHttp).toHaveBeenCalledTimes(1)
     })
   })
 
-  it('still releases the CM session and destroys outbound HTTP if stopping the poller throws', async () => {
+  it('still destroys outbound HTTP if stopping the poller throws', async () => {
     stopPoll.mockImplementationOnce(() => {
       throw new Error('boom')
     })
@@ -133,11 +127,10 @@ describe('releaseOnStdinEof (debug/sidecar-survives-force-quit)', () => {
     input.end()
     await new Promise<void>((resolve) => setImmediate(resolve))
     expect(stopPoll).toHaveBeenCalledTimes(1)
-    expect(release).toHaveBeenCalledTimes(1)
     expect(destroyHttp).toHaveBeenCalledTimes(1)
   })
 
-  it('keeps the stdin-closed log line text unchanged', async () => {
+  it('logs the stdin-closed line', async () => {
     const input = new PassThrough()
     releaseOnStdinEof(input, deps)
     input.resume()
@@ -145,46 +138,21 @@ describe('releaseOnStdinEof (debug/sidecar-survives-force-quit)', () => {
     await new Promise<void>((resolve) => setImmediate(resolve))
     const lines = (logInfo as jest.Mock).mock.calls.map((c) => String(c[0]))
     expect(lines).toContain(
-      '[sidecar] stdin closed: releasing Steam CM session, paying any owed Mac Steam goonline, stopping nettop monitors and aborting in-flight downloads'
+      '[sidecar] stdin closed: stopping nettop monitors and aborting in-flight downloads'
     )
   })
 
-  it('releases the anonymous CM client before the authenticated session, and still releases the session if it throws', async () => {
-    const order: string[] = []
-    releaseAnon.mockImplementationOnce(() => {
-      order.push('anon')
-      throw new Error('boom')
-    })
-    release.mockImplementationOnce(() => {
-      order.push('cm')
-      return Promise.resolve('not-owed')
-    })
-    const input = new PassThrough()
-    releaseOnStdinEof(input, deps)
-    input.resume()
-    input.end()
-    await new Promise<void>((resolve) => setImmediate(resolve))
-    expect(order).toEqual(['anon', 'cm'])
-    expect(releaseAnon).toHaveBeenCalledTimes(1)
-  })
-
-  it('destroys outbound HTTP once, after the CM release, and logs count and hosts', async () => {
-    const order: string[] = []
-    release.mockImplementationOnce(() => {
-      order.push('cm')
-      return Promise.resolve('not-owed')
-    })
-    destroyHttp.mockImplementationOnce(() => {
-      order.push('http')
-      return { destroyed: 2, hosts: ['a.example', 'b.example'] }
-    })
+  it('destroys outbound HTTP once and logs count and hosts', async () => {
+    destroyHttp.mockImplementationOnce(() => ({
+      destroyed: 2,
+      hosts: ['a.example', 'b.example']
+    }))
     const input = new PassThrough()
     releaseOnStdinEof(input, deps)
     input.resume()
     input.end()
     await new Promise<void>((resolve) => setImmediate(resolve))
     expect(destroyHttp).toHaveBeenCalledTimes(1)
-    expect(order).toEqual(['cm', 'http'])
     const lines = (logInfo as jest.Mock).mock.calls.map((c) => String(c[0]))
     const line = lines.find((l) =>
       l.includes('destroyed 2 in-flight outbound HTTP')
@@ -202,7 +170,7 @@ describe('releaseOnStdinEof (debug/sidecar-survives-force-quit)', () => {
     input.resume()
     input.end()
     await new Promise<void>((resolve) => setImmediate(resolve))
-    expect(release).toHaveBeenCalledTimes(1)
+    expect(markShuttingDown).toHaveBeenCalledTimes(1)
   })
 
   it('arms an unref d residual-holder diagnostic that names active resources', () => {

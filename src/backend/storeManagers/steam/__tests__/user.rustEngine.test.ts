@@ -1,7 +1,6 @@
 /**
- * Phase 79 (D-03, D-07, D-18): SteamUser on the Rust engine (GAMELIB_STEAMCM_CM=rust). The Rust
- * session is a mocked requestRustInvoke; the policy layer (token read, verdict, guided push) is
- * the real one. The ts engine's logonID is covered at the bottom.
+ * Phase 79 (D-03, D-07, D-18): SteamUser on the Rust engine, its only engine. The Rust session is a
+ * mocked requestRustInvoke; the policy layer (token read, verdict, guided push) is the real one.
  */
 
 const mockConfigValues: Record<string, unknown> = {}
@@ -358,65 +357,5 @@ describe('SteamUser on the Rust engine', () => {
     ])
     expect(logged).not.toContain(SECRET)
     expect(logged).not.toContain('another-secret')
-  })
-})
-
-describe('SteamUser on the ts engine (D-18)', () => {
-  it('logs on with a persisted non-zero logonID, the same on a second logon', async () => {
-    process.env.GAMELIB_STEAMCM_CM = 'ts'
-    const SteamUserLib = jest.requireMock<jest.Mock>('steam-user')
-    const instances: Array<{ logOn: jest.Mock }> = []
-    SteamUserLib.mockImplementation(() => {
-      const handlersByEvent: Record<string, Array<() => void>> = {}
-      const inst = {
-        steamID: null as unknown,
-        logOn: jest.fn(() => {
-          inst.steamID = { getSteamID64: () => '1' }
-          for (const cb of handlersByEvent['loggedOn'] ?? []) cb()
-        }),
-        logOff: jest.fn(),
-        once: (e: string, cb: () => void) => {
-          ;(handlersByEvent[e] ??= []).push(cb)
-        },
-        on: jest.fn(),
-        removeAllListeners: jest.fn(),
-        getProductInfo: jest.fn().mockRejectedValue(new Error('stale'))
-      }
-      instances.push(inst)
-      return inst
-    })
-    const wrapped = jest.requireMock<{ withMacSteamOffline: jest.Mock }>(
-      '../macSteamOffline'
-    )
-    void wrapped
-    const user = createTestSteamUser({
-      stores: { steam: { configStore: mockConfigStore } },
-      signIn: mockSignIn,
-      anonymousClient: { close: jest.fn() },
-      tokenStore: { current: () => mockTokenStore },
-      steamSession: {
-        signIn: realSession.signIn,
-        authTrigger: {
-          ...realSession.authTrigger,
-          currentTriggerLabel: () => 'user-refresh'
-        }
-      }
-    } as never)
-
-    const first = await user.acquireAuthenticated({ reason: 'user-refresh' })
-    if (first.ok) first.release()
-    await user.logout()
-    mockConfigValues['isLoggedIn'] = true
-    const second = await user.acquireAuthenticated({ reason: 'user-refresh' })
-    if (second.ok) second.release()
-
-    const ids = instances.map(
-      (i) =>
-        (i.logOn.mock.calls[0] as unknown as [{ logonID?: number }])[0].logonID
-    )
-    expect(ids.length).toBeGreaterThanOrEqual(2)
-    expect(ids[0]).toBeGreaterThanOrEqual(1)
-    expect(new Set(ids).size).toBe(1)
-    expect(mockConfigValues['cmLogonId']).toBe(ids[0])
   })
 })

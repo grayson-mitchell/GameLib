@@ -3,6 +3,7 @@ jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logError: jest.fn(),
   logWarning: jest.fn(),
+  logDebug: jest.fn(),
   LogPrefix: {
     Steam: 'Steam',
     Backend: 'Backend',
@@ -132,8 +133,7 @@ jest.mock('../macSteamOffline', () => {
 const mockCloseAnonymousClient = jest.fn()
 
 // ── Imports (after mocks) ─────────────────────────────────────────────────────
-import type { SteamUser, SteamUserDeps } from '../user'
-import { createFakeClock, type FakeClock } from 'backend/testUtils/fakeClock'
+import type { SteamUser } from '../user'
 import { createTestSteamUser } from 'backend/testUtils/testSteamUser'
 import { createTestSteamSession } from 'backend/testUtils/testSteamSession'
 import type {
@@ -161,30 +161,58 @@ const steamDeps = {
     return steamUser
   }
 } as unknown as UserSignInDeps & SteamUserSliceDeps<'acquireAuthenticated'>
-// One fresh SteamUser and fake clock per test (D-05, 66.3-16): no module state to reset. `steamDeps`
+// One fresh SteamUser per test (D-05, 66.3-16): no module state to reset. `steamDeps`
 // reads the instance at call time so the sign-in / redeem flows reach the same one.
 let steamUser: SteamUser
-let clock: FakeClock
+// The Rust CM session is the only engine: a plain-function fake of the shell's steamcm_* channels
+// (not jest.fn: resetMocks would strip the implementation). Tests script `rustFake.*`.
+const FAKE_STEAM_ID = '76561198111111111'
+const rustCalls: Array<[string, unknown]> = []
+const rustFake: {
+  acquire: () => unknown
+  personas: () => unknown
+} = { acquire: () => ({}), personas: () => ({}) }
+const rustInvoke = async (channel: string, args: unknown): Promise<unknown> => {
+  rustCalls.push([channel, args])
+  switch (channel) {
+    case 'steamcm_session_acquire':
+      return rustFake.acquire()
+    case 'steamcm_licenses':
+      return { ok: true, result: [] }
+    case 'steamcm_personas':
+      return rustFake.personas()
+    case 'steamcm_session_acquire_open':
+      return { ok: false }
+    default:
+      return {}
+  }
+}
+const rustChannels = () => rustCalls.map(([channel]) => channel)
 beforeEach(() => {
   signInProbe = createTestSignInProbe()
   steamSession = createTestSteamSession()
   tokenStore = createTestTokenStoreSlot()
-  clock = createFakeClock()
+  rustCalls.length = 0
+  rustFake.acquire = () => ({
+    ok: true,
+    leaseId: 1,
+    steamId: FAKE_STEAM_ID
+  })
+  rustFake.personas = () => ({
+    ok: true,
+    result: { personas: { [FAKE_STEAM_ID]: { player_name: 'TestUser' } } }
+  })
   steamUser = createTestSteamUser({
+    rustInvoke: { requestRustInvoke: rustInvoke as never },
     sendFrontendMessage,
     stores: steamDeps.stores,
     signIn: signInProbe,
     steamSession,
     tokenStore,
-    clock,
     config: { getSettings: mockGetSettings } as never,
     anonymousClient: {
       close: (...args: unknown[]) => mockCloseAnonymousClient(...args)
-    },
-    macSteamOffline:
-      jest.requireMock<NonNullable<SteamUserDeps['macSteamOffline']>>(
-        '../macSteamOffline'
-      )
+    }
   })
 })
 import { redeemKey } from '../userRedeem'
@@ -815,9 +843,8 @@ describe('SteamUser', () => {
         'authenticated handler'
       )()
 
-      // Flush the background CM connect (logOn -> nextTick 'loggedOn' ->
-      // getPersonas -> resolve -> .then) so the persona name resolves before
-      // the next poll — the transition line must still omit it (D-03).
+      // Flush the background profile read (acquire -> licenses -> getPersonas) so the persona
+      // name resolves before the next poll — the transition line must still omit it (D-03).
       await new Promise((resolve) => process.nextTick(resolve))
       await flushAsync()
 
@@ -845,72 +872,6 @@ describe('SteamUser', () => {
   })
 
   // ── connectSteamUserClient — timeout guard ────────────────────────────────
-
-  describe('connectSteamUserClient() — timeout guard', () => {
-    afterEach(() => {
-      jest.useRealTimers()
-    })
-
-    test('resolves pollQRLogin as done immediately (before CM loggedOn fires)', async () => {
-      // logOn() never triggers loggedOn — simulates a slow CM connection
-      mockSteamUserInstance.logOn.mockImplementation(() => {
-        // intentionally does nothing
-      })
-
-      mockSessionInstance.startWithQR.mockResolvedValue({
-        qrChallengeUrl: 'steam://test',
-        actionRequired: true
-      })
-      await startQRLogin(steamDeps)
-
-      // Trigger authenticated — stores credentials and sets qrSessionState=done,
-      // then fires background CM connect (which never resolves in this test)
-      await sessionOnHandlers['authenticated']?.()
-
-      // pollQRLogin must be 'done' immediately — not blocked on CM loggedOn
-      const result = await pollQRLogin(steamDeps)
-      expect(result.status).toBe('done')
-      expect(result.username).toBeUndefined()
-    })
-
-    test('abandons a logon that never completes at the 35 s bound and falls back to the account name', async () => {
-      jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] })
-
-      // logOn() never triggers loggedOn — CM hangs indefinitely
-      mockSteamUserInstance.logOn.mockImplementation(() => {
-        // intentionally does nothing
-      })
-
-      mockSessionInstance.startWithQR.mockResolvedValue({
-        qrChallengeUrl: 'steam://test',
-        actionRequired: true
-      })
-      await startQRLogin(steamDeps)
-
-      // Kick off the background CM connect
-      void sessionOnHandlers['authenticated']?.()
-      await flushAsync()
-
-      // Just short of the bound: still waiting, nothing abandoned
-      await jest.advanceTimersByTimeAsync(34999)
-      expect(mockSteamUserInstance.logOff).not.toHaveBeenCalled()
-      expect(
-        mockConfigStore.set.mock.calls.find(([key]) => key === 'userData')
-      ).toBeUndefined()
-
-      await jest.advanceTimersByTimeAsync(1)
-      await flushAsync()
-
-      // The attempt is logged off before the wrap would fire goonline, and the
-      // profile falls back to the LoginSession account name.
-      expect(mockSteamUserInstance.logOff).toHaveBeenCalled()
-      const userDataCall = mockConfigStore.set.mock.calls.find(
-        ([key]) => key === 'userData'
-      )
-      expect(userDataCall).toBeDefined()
-      expect(userDataCall![1]).toMatchObject({ username: 'testuser' })
-    })
-  })
 
   // ── AUTH-02: Credential Login ──────────────────────────────────────────────
 
@@ -1196,225 +1157,9 @@ describe('SteamUser', () => {
 
   // ── QR race fix (260629-9ly): connectingPromise dedupe + username gating ─────
 
-  describe('QR race fix (260629-9ly)', () => {
-    beforeEach(async () => {
-      mockSessionInstance.startWithQR.mockResolvedValue({
-        qrChallengeUrl: 'steam://...qr_url_here',
-        actionRequired: true
-      })
-      // logOn does NOT fire loggedOn immediately — simulates slow CM connection.
-      // Each test resolves it manually to control timing.
-      mockSteamUserInstance.logOn.mockImplementation(() => {
-        // intentionally does nothing — loggedOn fires later in each test
-      })
-      await startQRLogin(steamDeps)
-    })
-
-    test('(a) username is undefined immediately after authenticated, then populated when CM loggedOn fires', async () => {
-      // Fire authenticated — stores creds via the awaited TokenStore seam, sets
-      // qrSessionState='done', and (with the fix) assigns this.connectingPromise.
-      // The handler is async (tokenStore.current().setToken() is awaited), so the
-      // test must await it before asserting on qrSessionState/pollQRLogin.
-      await defined(
-        sessionOnHandlers['authenticated'],
-        'authenticated handler'
-      )()
-
-      // pollQRLogin must return 'done' with username undefined — the background
-      // CM connect is still in-flight so the persona name has not arrived yet.
-      const poll1 = await pollQRLogin(steamDeps)
-      expect(poll1.status).toBe('done')
-      expect(poll1.username).toBeUndefined()
-
-      // Now resolve the CM connect by firing loggedOn (getPersonas returns 'TestUser')
-      steamUserOnHandlers['loggedOn']?.({}, {})
-
-      // Flush the lease -> getPersonas -> qrSessionState.username chain
-      await flushAsync()
-
-      // pollQRLogin should now carry the real persona name
-      const poll2 = await pollQRLogin(steamDeps)
-      expect(poll2.status).toBe('done')
-      expect(poll2.username).toBe('TestUser')
-
-      // configStore.set('userData', ...) must have been called with the real name
-      const userDataCall = mockConfigStore.set.mock.calls.find(
-        ([key]) => key === 'userData'
-      )
-      expect(userDataCall).toBeDefined()
-      expect(userDataCall![1]).toMatchObject({ username: 'TestUser' })
-    })
-
-    test('(b) concurrent ensureConnected dedupes on connectingPromise (no second client, no Steam User overwrite)', async () => {
-      // Temporarily null steamID so ensureConnected cannot take the
-      // early-return path `if (this.client?.steamID) return true`.
-      // This mirrors real Steam client behavior: steamID is null until loggedOn fires.
-      const origSteamID = mockSteamUserInstance.steamID
-      mockSteamUserInstance.steamID = null as any
-
-      // Fire authenticated — with the fix, this.connectingPromise is set once the
-      // awaited TokenStore seam's setToken() resolves. The handler is async, so
-      // await it before asserting on connectingPromise/qrSessionState below.
-      await defined(
-        sessionOnHandlers['authenticated'],
-        'authenticated handler'
-      )()
-
-      // Clear construction/call counts so we can assert "no new client" below.
-      MockSteamUserLib.mockClear()
-      mockSteamUserInstance.logOn.mockClear()
-      mockSteamUserInstance.logOff.mockClear()
-
-      // Stub isLoggedIn + refreshToken for ensureConnected's credential lookup.
-      // TOKEN_STORE_KEY = 'refreshToken' (constants.ts). Legacy plaintext path
-      // is used here so decryptToken returns the value directly.
-      mockConfigStore.get_nodefault.mockImplementation((key: string) => {
-        if (key === 'isLoggedIn') return true
-        if (key === 'refreshToken') return 'stored-plaintext-token'
-        return undefined
-      })
-
-      // Call ensureConnected while the QR connect is still in-flight.
-      // With the fix it sees this.connectingPromise non-null and awaits it —
-      // it does NOT call connectSteamUserClient again (no second client, no logOff).
-      // Assertion via logOn call count: dedupe guarantees a single logOn total;
-      // we cleared counts after authenticated, so 0 logOn calls from ensureConnected.
-      const connectResultPromise = steamUser.ensureConnected()
-
-      // Restore steamID so the loggedOn handler and ensureConnected's final
-      // Boolean(this.client?.steamID) check both see a connected client.
-      mockSteamUserInstance.steamID = origSteamID
-
-      // Resolve the CM connect by firing loggedOn — getPersonas returns 'TestUser'.
-      steamUserOnHandlers['loggedOn']?.({}, {})
-
-      // Await ensureConnected; this drains all pending microtasks from the
-      // loggedOn handler + .then() + .finally() chain before returning.
-      const result = await connectResultPromise
-
-      // ── Dedupe assertions ─────────────────────────────────────────────────
-      // logOn was NOT called by ensureConnected (counts cleared after authenticated).
-      // A single logOn was made during QR auth; ensureConnected reused that promise.
-      expect(mockSteamUserInstance.logOn).not.toHaveBeenCalled()
-
-      // No second SteamUserLib client was constructed.
-      expect(MockSteamUserLib).not.toHaveBeenCalled()
-
-      // No logOff on the existing client (no second connectSteamUserClient attempted).
-      expect(mockSteamUserInstance.logOff).not.toHaveBeenCalled()
-
-      // ensureConnected resolved to true (client is now connected).
-      expect(result).toBe(true)
-
-      // ── No 'Steam User' overwrite assertion ───────────────────────────────
-      // The QR profile (persona + userData) completes in the background.
-      await flushAsync()
-      // userData was written with the real persona name, not the fallback.
-      const userDataCall = mockConfigStore.set.mock.calls.find(
-        ([key]) => key === 'userData'
-      )
-      expect(userDataCall).toBeDefined()
-      expect(userDataCall![1]).toMatchObject({ username: 'TestUser' })
-
-      // Note: frontend SteamLogin poll-handler gating (poll.username truthy check)
-      // is a React component — not feasible to unit-test in this backend Jest harness.
-      // Covered by manual re-audit per plan 260629-9ly task 3 constraint.
-    })
-  })
-
   // ── logout with connected client ───────────────────────────────────────────
 
-  describe('logout() with active steam-user client', () => {
-    test('calls logOff() on the steam-user client when connected', async () => {
-      // First login via QR to get a client
-      mockSessionInstance.startWithQR.mockResolvedValue({
-        qrChallengeUrl: 'steam://test',
-        actionRequired: true
-      })
-      mockSteamUserInstance.logOn.mockImplementation(() => {
-        process.nextTick(() => {
-          steamUserOnHandlers['loggedOn']?.({}, {})
-        })
-      })
-
-      await startQRLogin(steamDeps)
-      await sessionOnHandlers['authenticated']?.()
-
-      // Now logout
-      await steamUser.logout()
-      expect(mockSteamUserInstance.logOff).toHaveBeenCalled()
-      expect(mockConfigStore.delete).toHaveBeenCalledWith('refreshToken')
-      expect(mockConfigStore.delete).toHaveBeenCalledWith('isLoggedIn')
-      expect(mockConfigStore.delete).toHaveBeenCalledWith('userData')
-    })
-  })
-
   // ── LIB-01: reconnect on startup ───────────────────────────────────────────
-
-  describe('ensureConnected()', () => {
-    beforeEach(async () => {
-      // Reset the in-memory client to null so we exercise the reconnect path
-      await steamUser.logout()
-    })
-
-    test('returns false when not logged in', async () => {
-      mockConfigStore.get_nodefault.mockReturnValue(undefined) // isLoggedIn false
-      const result = await steamUser.ensureConnected()
-      expect(result).toBe(false)
-      expect(mockSteamUserInstance.logOn).not.toHaveBeenCalled()
-    })
-
-    test('returns false when logged in but no stored refresh token', async () => {
-      mockConfigStore.get_nodefault.mockImplementation((key: string) =>
-        key === 'isLoggedIn' ? true : undefined
-      )
-      const result = await steamUser.ensureConnected()
-      expect(result).toBe(false)
-      expect(mockSteamUserInstance.logOn).not.toHaveBeenCalled()
-    })
-
-    test('reconnects with the stored refresh token and returns true when CM logs on', async () => {
-      mockConfigStore.get_nodefault.mockImplementation((key: string) => {
-        if (key === 'isLoggedIn') return true
-        if (key === 'refreshToken') return 'stored-plaintext-token'
-        return undefined
-      })
-      mockSteamUserInstance.logOn.mockImplementation(() => {
-        process.nextTick(() => {
-          steamUserOnHandlers['loggedOn']?.({}, {})
-        })
-      })
-
-      const result = await steamUser.ensureConnected()
-
-      expect(mockSteamUserInstance.logOn).toHaveBeenCalledWith({
-        refreshToken: 'stored-plaintext-token',
-        logonID: expect.any(Number)
-      })
-      expect(result).toBe(true)
-    })
-
-    test('does not reconnect when a live client is already connected', async () => {
-      // Establish a connected client via QR login
-      mockSessionInstance.startWithQR.mockResolvedValue({
-        qrChallengeUrl: 'steam://test',
-        actionRequired: true
-      })
-      mockSteamUserInstance.logOn.mockImplementation(() => {
-        process.nextTick(() => {
-          steamUserOnHandlers['loggedOn']?.({}, {})
-        })
-      })
-      await startQRLogin(steamDeps)
-      await sessionOnHandlers['authenticated']?.()
-      await new Promise((r) => process.nextTick(r)) // let background CM connect settle
-      mockSteamUserInstance.logOn.mockClear()
-
-      const result = await steamUser.ensureConnected()
-      expect(result).toBe(true)
-      expect(mockSteamUserInstance.logOn).not.toHaveBeenCalled()
-    })
-  })
 
   // ── steam-sync-false-failed-banner: a terminal CM logon rejection ──────────
   //
@@ -1425,166 +1170,6 @@ describe('SteamUser', () => {
   // rejected logon cost exactly 20 s (gamelib.log: "grace-window wait took an
   // additional 20002ms, connected=false") and was then reported as a generic
   // "client not ready".
-  describe('ensureConnected() — terminal CM logon rejection (steam-sync-false-failed-banner)', () => {
-    const stageStoredToken = () =>
-      mockConfigStore.get_nodefault.mockImplementation((key: string) => {
-        if (key === 'isLoggedIn') return true
-        if (key === 'refreshToken') return 'stored-plaintext-token'
-        return undefined
-      })
-
-    // Lets every already-queued microtask / nextTick settle WITHOUT advancing
-    // any faked timer (setImmediate is excluded from the fake clock below).
-    const flush = async () => {
-      for (let i = 0; i < 10; i++) {
-        await new Promise((r) => setImmediate(r))
-      }
-    }
-
-    const makeFakeClient = () => {
-      const handlers: Record<string, (...args: any[]) => any> = {}
-      return {
-        handlers,
-        steamID: null as any,
-        logOn: jest.fn(),
-        logOff: jest.fn(),
-        getPersonas: jest.fn().mockResolvedValue({ personas: {} }),
-        once: jest.fn((event: string, cb: (...args: any[]) => any) => {
-          handlers[event] = cb
-        }),
-        on: jest.fn((event: string, cb: (...args: any[]) => any) => {
-          handlers[event] = cb
-        })
-      }
-    }
-
-    const savedSteamID = mockSteamUserInstance.steamID
-
-    beforeEach(async () => {
-      await steamUser.logout()
-      // The real client nulls steamID in _disconnect(true) before emitting
-      // 'error'; the shared mock instance defaults it to a truthy id.
-      mockSteamUserInstance.steamID = null
-    })
-
-    afterEach(() => {
-      mockSteamUserInstance.steamID = savedSteamID
-      jest.useRealTimers()
-    })
-
-    test('AccessDenied during logOn -> ensureConnected() settles false WITHOUT waiting out the 20 s grace window', async () => {
-      jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] })
-      stageStoredToken()
-      const accessDenied = Object.assign(new Error('AccessDenied'), {
-        eresult: 15
-      })
-      mockSteamUserInstance.logOn.mockImplementation(() => {
-        process.nextTick(() => steamUserOnHandlers['error']?.(accessDenied))
-      })
-
-      let settled: boolean | undefined
-      const pending = steamUser.ensureConnected().then((r) => {
-        settled = r
-        return r
-      })
-      // No timer is advanced: a result here can only come from the rejection
-      // itself, never from the 20 s grace timeout.
-      await flush()
-      expect(settled).toBe(false)
-
-      // Drain so the test leaves no live timer behind either way.
-      await jest.advanceTimersByTimeAsync(20001)
-      await pending
-    })
-
-    test('getLogonFailure() names the rejection for the current client, and a new connect attempt clears it', async () => {
-      jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] })
-      stageStoredToken()
-      const accessDenied = Object.assign(new Error('AccessDenied'), {
-        eresult: 15
-      })
-      mockSteamUserInstance.logOn.mockImplementation(() => {
-        process.nextTick(() => steamUserOnHandlers['error']?.(accessDenied))
-      })
-
-      expect(steamUser.getLogonFailure()).toBeNull()
-      const first = steamUser.ensureConnected()
-      await flush()
-      expect(steamUser.getLogonFailure()).toEqual({
-        message: 'AccessDenied',
-        eresult: 15
-      })
-      await jest.advanceTimersByTimeAsync(20001)
-      await first
-
-      // A fresh logon attempt that does not fail must not inherit the old
-      // verdict.
-      mockSteamUserInstance.logOn.mockImplementation(() => {
-        process.nextTick(() => {
-          mockSteamUserInstance.steamID = { getSteamID64: () => '1' }
-          steamUserOnHandlers['loggedOn']?.({}, {})
-        })
-      })
-      const second = steamUser.ensureConnected()
-      await flush()
-      expect(steamUser.getLogonFailure()).toBeNull()
-      expect(await second).toBe(true)
-    })
-
-    test('a logoff-time error from a REPLACED client does not poison the current attempt, and its late loggedOn inside the grace window still succeeds', async () => {
-      // Guard against an over-eager fix: the 34.9 live gate shows a stale
-      // client's `LogonSessionReplaced` error arriving while a newer client is
-      // still logging on. That error is the OLD client's, and the grace window
-      // exists precisely for the NEW client's slow-but-successful logon.
-      jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] })
-      stageStoredToken()
-      const clientA = makeFakeClient()
-      const clientB = makeFakeClient()
-      MockSteamUserLib.mockImplementationOnce(() => clientA)
-      MockSteamUserLib.mockImplementationOnce(() => clientB)
-
-      // Attempt 1: client A logs on normally.
-      clientA.logOn.mockImplementation(() => {
-        process.nextTick(() => {
-          clientA.steamID = { getSteamID64: () => '1' }
-          clientA.handlers['loggedOn']?.({}, {})
-        })
-      })
-      const firstPending = steamUser.ensureConnected()
-      await flush()
-      expect(await firstPending).toBe(true)
-
-      // Attempt 2: A's socket silently dropped (steamID cleared, no error);
-      // a cold connect starts client B. While B is still logging on, A emits
-      // its stale error, then B never answers within connect's own 15 s guard.
-      clientA.steamID = null
-      clientB.logOn.mockImplementation(() => {
-        process.nextTick(() =>
-          clientA.handlers['error']?.(new Error('LogonSessionReplaced'))
-        )
-      })
-      let secondResult: boolean | undefined
-      const secondPending = steamUser.ensureConnected().then((r) => {
-        secondResult = r
-        return r
-      })
-      await flush()
-      expect(steamUser.getLogonFailure()).toBeNull()
-
-      // 15 s: connect's fallback resolves; ensureConnected enters the grace
-      // window (still unsettled -- no false-positive rejection short-circuit).
-      await jest.advanceTimersByTimeAsync(15001)
-      await flush()
-      expect(secondResult).toBeUndefined()
-
-      // B finally logs on inside the grace window.
-      clientB.steamID = { getSteamID64: () => '2' }
-      clientB.handlers['loggedOn']?.({}, {})
-      await flush()
-      expect(await secondPending).toBe(true)
-    })
-  })
-
   // ── quick 261011-rj0: a CM credential refusal reaches the sign-in surface ──
   //
   // Phase 49 D-21 made the Steam boot probe presence-only (it reads the keyring
@@ -1595,236 +1180,6 @@ describe('SteamUser', () => {
   // ensureConnected() now reports the CM's own verdict through the same fenced
   // `applySignInVerdict` the probe pass uses, so the D-19 expired row renders
   // and `resolveSteamSyncIndicator` suppresses the banner.
-  describe('ensureConnected() — a CM credential refusal reaches the sign-in surface (quick 261011-rj0)', () => {
-    const stageStoredToken = (extra: Record<string, unknown> = {}) =>
-      mockConfigStore.get_nodefault.mockImplementation((key: string) => {
-        if (key === 'isLoggedIn') return true
-        if (key === 'refreshToken') return 'stored-plaintext-token'
-        if (key in extra) return extra[key]
-        return undefined
-      })
-
-    const flush = async () => {
-      for (let i = 0; i < 10; i++) {
-        await new Promise((r) => setImmediate(r))
-      }
-    }
-
-    const rejectLogonWith = (message: string, eresult: number) => {
-      const err = Object.assign(new Error(message), { eresult })
-      mockSteamUserInstance.logOn.mockImplementation(() => {
-        process.nextTick(() => steamUserOnHandlers['error']?.(err))
-      })
-    }
-
-    const credentialsMissingSets = () =>
-      mockConfigStore.set.mock.calls.filter(
-        ([key]: [string]) => key === 'credentialsMissing'
-      )
-    const credentialsMissingDeletes = () =>
-      mockConfigStore.delete.mock.calls.filter(
-        ([key]: [string]) => key === 'credentialsMissing'
-      )
-    const outcomePublishes = () =>
-      signInProbe.pushed.map((outcomes) => [
-        'signInProbeOutcomes',
-        { outcomes }
-      ])
-
-    const savedSteamID = mockSteamUserInstance.steamID
-
-    beforeEach(async () => {
-      await steamUser.logout()
-      // logout() itself deletes credentialsMissing and publishes a sign-out;
-      // start every case from a clean ledger so only ensureConnected() counts.
-      mockConfigStore.set.mockClear()
-      mockConfigStore.delete.mockClear()
-      signInProbe.pushed.length = 0
-      mockSteamUserInstance.steamID = null
-    })
-
-    afterEach(() => {
-      mockSteamUserInstance.steamID = savedSteamID
-      jest.useRealTimers()
-    })
-
-    test('A: AccessDenied latches credentialsMissing and publishes steam=expired, and still settles false at once', async () => {
-      jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] })
-      stageStoredToken()
-      rejectLogonWith('AccessDenied', 15)
-
-      let settled: boolean | undefined
-      const pending = steamUser.ensureConnected().then((r) => {
-        settled = r
-        return r
-      })
-      await flush()
-      expect(settled).toBe(false)
-
-      expect(credentialsMissingSets()).toEqual([['credentialsMissing', true]])
-      expect(outcomePublishes()).toEqual([
-        ['signInProbeOutcomes', { outcomes: { steam: 'expired' } }]
-      ])
-
-      await jest.advanceTimersByTimeAsync(20001)
-      await pending
-    })
-
-    test('B (control): a terminal error that is NOT a credential refusal (LogonSessionReplaced) latches nothing and publishes nothing', async () => {
-      jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] })
-      stageStoredToken()
-      rejectLogonWith('LogonSessionReplaced', 34)
-
-      let settled: boolean | undefined
-      const pending = steamUser.ensureConnected().then((r) => {
-        settled = r
-        return r
-      })
-      await flush()
-      expect(settled).toBe(false)
-
-      expect(credentialsMissingSets()).toEqual([])
-      expect(outcomePublishes()).toEqual([])
-
-      await jest.advanceTimersByTimeAsync(20001)
-      await pending
-    })
-
-    test('C: a sign-in that completes while the logon is in flight moves the epoch, and the refusal is then stale -- no latch, no publish (T-49-10)', async () => {
-      jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] })
-      stageStoredToken()
-      const accessDenied = Object.assign(new Error('AccessDenied'), {
-        eresult: 15
-      })
-      mockSteamUserInstance.logOn.mockImplementation(() => {
-        // The fresh sign-in lands first (noteSignInSucceeded bumps the epoch),
-        // then the OLD attempt's refusal arrives.
-        signInProbe.epochs.bump('steam')
-        process.nextTick(() => steamUserOnHandlers['error']?.(accessDenied))
-      })
-
-      const pending = steamUser.ensureConnected()
-      await flush()
-
-      expect(credentialsMissingSets()).toEqual([])
-      expect(outcomePublishes()).toEqual([])
-
-      await jest.advanceTimersByTimeAsync(20001)
-      expect(await pending).toBe(false)
-    })
-
-    test('D: a successful cold-connect logon clears a latched credentialsMissing and publishes steam=healthy', async () => {
-      stageStoredToken({ credentialsMissing: true })
-      mockSteamUserInstance.logOn.mockImplementation(() => {
-        process.nextTick(() => {
-          mockSteamUserInstance.steamID = savedSteamID
-          steamUserOnHandlers['loggedOn']?.({}, {})
-        })
-      })
-
-      const result = await steamUser.ensureConnected()
-
-      expect(result).toBe(true)
-      expect(credentialsMissingDeletes()).toEqual([['credentialsMissing']])
-      expect(outcomePublishes()).toEqual([
-        ['signInProbeOutcomes', { outcomes: { steam: 'healthy' } }]
-      ])
-    })
-
-    test('E (control): a successful cold-connect logon with nothing latched writes nothing and publishes nothing', async () => {
-      stageStoredToken()
-      mockSteamUserInstance.logOn.mockImplementation(() => {
-        process.nextTick(() => {
-          mockSteamUserInstance.steamID = savedSteamID
-          steamUserOnHandlers['loggedOn']?.({}, {})
-        })
-      })
-
-      const result = await steamUser.ensureConnected()
-
-      expect(result).toBe(true)
-      expect(credentialsMissingDeletes()).toEqual([])
-      expect(outcomePublishes()).toEqual([])
-    })
-  })
-
-  describe('ensureConnected() — a replaced client cannot erase the current rejection (steam-sync-false-failed-banner)', () => {
-    afterEach(() => {
-      jest.useRealTimers()
-    })
-
-    test("a stale client's error landing right after the current client's AccessDenied leaves the rejection (and the immediate false) intact", async () => {
-      jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] })
-      mockConfigStore.get_nodefault.mockImplementation((key: string) => {
-        if (key === 'isLoggedIn') return true
-        if (key === 'refreshToken') return 'stored-plaintext-token'
-        return undefined
-      })
-      const makeClient = () => {
-        const handlers: Record<string, (...args: any[]) => any> = {}
-        return {
-          handlers,
-          steamID: null as any,
-          logOn: jest.fn(),
-          logOff: jest.fn(),
-          getPersonas: jest.fn().mockResolvedValue({ personas: {} }),
-          once: jest.fn((e: string, cb: (...args: any[]) => any) => {
-            handlers[e] = cb
-          }),
-          on: jest.fn((e: string, cb: (...args: any[]) => any) => {
-            handlers[e] = cb
-          })
-        }
-      }
-      await steamUser.logout()
-      const clientA = makeClient()
-      const clientB = makeClient()
-      MockSteamUserLib.mockImplementationOnce(() => clientA)
-      MockSteamUserLib.mockImplementationOnce(() => clientB)
-      const flushAll = async () => {
-        for (let i = 0; i < 10; i++) {
-          await new Promise((r) => setImmediate(r))
-        }
-      }
-
-      clientA.logOn.mockImplementation(() => {
-        process.nextTick(() => {
-          clientA.steamID = { getSteamID64: () => '1' }
-          clientA.handlers['loggedOn']?.({}, {})
-        })
-      })
-      const first = steamUser.ensureConnected()
-      await flushAll()
-      expect(await first).toBe(true)
-
-      // A's socket drops silently; the cold connect starts B, which the CM
-      // refuses -- and in the same tick A's own stale error is delivered.
-      clientA.steamID = null
-      clientB.logOn.mockImplementation(() => {
-        process.nextTick(() => {
-          clientB.handlers['error']?.(
-            Object.assign(new Error('AccessDenied'), { eresult: 15 })
-          )
-          clientA.handlers['error']?.(new Error('LogonSessionReplaced'))
-        })
-      })
-      let result: boolean | undefined
-      const second = steamUser.ensureConnected().then((r) => {
-        result = r
-        return r
-      })
-      await flushAll()
-
-      expect(result).toBe(false)
-      expect(steamUser.getLogonFailure()).toEqual({
-        message: 'AccessDenied',
-        eresult: 15
-      })
-      await jest.advanceTimersByTimeAsync(20001)
-      await second
-    })
-  })
-
   // ── quick-260814-r2d: unreadable read is not logged-out ────────────────────
   //
   // Installs a fake TokenStore through the real tokenStore.configure() seam, matching
@@ -1835,138 +1190,6 @@ describe('SteamUser', () => {
   // leaving the fake installed would make the OTHER describe blocks in this
   // file (which assume the config-backed store routed through
   // mockConfigStore) order-dependent on whichever test ran last.
-  describe('ensureConnected() — unreadable read is not logged-out (quick-260814-r2d)', () => {
-    afterEach(() => {
-      tokenStore.configure(makeConfigBackedTokenStore())
-    })
-
-    function installFakeStore(outcome: {
-      status: 'present' | 'absent' | 'unreadable'
-      token?: string
-      reason?: 'timeout' | 'unavailable'
-    }): TokenStore {
-      const fake: TokenStore = {
-        isAvailable: jest.fn().mockResolvedValue(true),
-        // Matches production's adapter exactly: getToken() collapses both
-        // absent AND unreadable to '', only present resolves the token.
-        getToken: jest
-          .fn()
-          .mockResolvedValue(outcome.status === 'present' ? outcome.token : ''),
-        setToken: jest.fn().mockResolvedValue(undefined),
-        clearToken: jest.fn().mockResolvedValue(undefined),
-        readToken: jest
-          .fn()
-          .mockResolvedValue(
-            outcome.status === 'present'
-              ? { status: 'present', token: outcome.token }
-              : outcome.status === 'absent'
-                ? { status: 'absent' }
-                : { status: 'unreadable', reason: outcome.reason }
-          )
-      }
-      tokenStore.configure(fake)
-      return fake
-    }
-
-    test('does NOT log "no stored refresh token" on an unreadable read, and DOES log a distinct retryable warning naming the reason', async () => {
-      await steamUser.logout()
-      mockConfigStore.get_nodefault.mockImplementation((key: string) =>
-        key === 'isLoggedIn' ? true : undefined
-      )
-      installFakeStore({ status: 'unreadable', reason: 'timeout' })
-
-      const result = await steamUser.ensureConnected()
-
-      expect(result).toBe(false)
-      const warningLines = (logWarning as jest.Mock).mock.calls.map((c) =>
-        String(c[0])
-      )
-      expect(
-        warningLines.some((l) => l.includes('no stored refresh token'))
-      ).toBe(false)
-      expect(
-        warningLines.some((l) => /retry/i.test(l) && /timeout/.test(l))
-      ).toBe(true)
-    })
-
-    test('an unreadable read calls neither clearToken() on the store nor configStore.delete for isLoggedIn/userData — the session survives', async () => {
-      await steamUser.logout()
-      mockConfigStore.get_nodefault.mockImplementation((key: string) =>
-        key === 'isLoggedIn' ? true : undefined
-      )
-      mockConfigStore.delete.mockClear()
-      const fake = installFakeStore({
-        status: 'unreadable',
-        reason: 'unavailable'
-      })
-
-      await steamUser.ensureConnected()
-
-      expect(fake.clearToken).not.toHaveBeenCalled()
-      expect(mockConfigStore.delete).not.toHaveBeenCalledWith('isLoggedIn')
-      expect(mockConfigStore.delete).not.toHaveBeenCalledWith('userData')
-    })
-
-    // Regression guard: the absent branch is unchanged -- still the original
-    // warning, still returns false. Already true pre-fix.
-    test('the absent branch still logs the original "no stored refresh token" warning and returns false', async () => {
-      await steamUser.logout()
-      mockConfigStore.get_nodefault.mockImplementation((key: string) =>
-        key === 'isLoggedIn' ? true : undefined
-      )
-      installFakeStore({ status: 'absent' })
-
-      const result = await steamUser.ensureConnected()
-
-      expect(result).toBe(false)
-      const warningLines = (logWarning as jest.Mock).mock.calls.map((c) =>
-        String(c[0])
-      )
-      expect(
-        warningLines.some((l) => l.includes('no stored refresh token'))
-      ).toBe(true)
-    })
-
-    // Regression guard: the present branch is unchanged -- still reaches the
-    // connect path with the token. Already true pre-fix.
-    test('the present branch still reaches the connect path with the token', async () => {
-      await steamUser.logout()
-      mockConfigStore.get_nodefault.mockImplementation((key: string) =>
-        key === 'isLoggedIn' ? true : undefined
-      )
-      installFakeStore({ status: 'present', token: 'fake-outcome-token' })
-      mockSteamUserInstance.logOn.mockImplementation(() => {
-        process.nextTick(() => {
-          steamUserOnHandlers['loggedOn']?.({}, {})
-        })
-      })
-
-      const result = await steamUser.ensureConnected()
-
-      expect(mockSteamUserInstance.logOn).toHaveBeenCalledWith({
-        refreshToken: 'fake-outcome-token',
-        logonID: expect.any(Number)
-      })
-      expect(result).toBe(true)
-    })
-
-    // Regression guard: getCredentials()'s signature and mapping are
-    // unchanged -- present maps to { refreshToken }, both absent and
-    // unreadable map to undefined. Already true pre-fix.
-    test('getCredentials() still maps present to { refreshToken } and both absent/unreadable to undefined', async () => {
-      installFakeStore({ status: 'present', token: 'present-token' })
-      await expect(steamUser.getCredentials()).resolves.toEqual({
-        refreshToken: 'present-token'
-      })
-
-      installFakeStore({ status: 'absent' })
-      await expect(steamUser.getCredentials()).resolves.toBeUndefined()
-
-      installFakeStore({ status: 'unreadable', reason: 'timeout' })
-      await expect(steamUser.getCredentials()).resolves.toBeUndefined()
-    })
-  })
-
   // ── D-02 (Phase 33-02): ensureConnected canary + relog revalidation ────────
   //
   // Establishes a connected client (steamID truthy) via QR login — matching
@@ -1975,148 +1198,6 @@ describe('SteamUser', () => {
   // four behaviors from the plan: healthy short-circuit, stale-canary
   // self-heal via relog, bounded (never-hangs) grace timeout, and error
   // during relog.
-
-  describe('ensureConnected() — canary + relog revalidation (D-02)', () => {
-    beforeEach(async () => {
-      // Reset to a clean, connected client before each test in this block.
-      await steamUser.logout()
-      mockSessionInstance.startWithQR.mockResolvedValue({
-        qrChallengeUrl: 'steam://test',
-        actionRequired: true
-      })
-      mockSteamUserInstance.logOn.mockImplementation(() => {
-        process.nextTick(() => {
-          steamUserOnHandlers['loggedOn']?.({}, {})
-        })
-      })
-      await startQRLogin(steamDeps)
-      await sessionOnHandlers['authenticated']?.()
-      await new Promise((r) => process.nextTick(r)) // let background CM connect settle
-      mockSteamUserInstance.logOn.mockClear()
-    })
-
-    test('Test 1 — healthy fast path preserved: canary resolves within bound -> returns true without calling relog()', async () => {
-      mockSteamUserInstance.getProductInfo.mockResolvedValue({ apps: {} })
-
-      const result = await steamUser.ensureConnected()
-
-      expect(result).toBe(true)
-      expect(mockSteamUserInstance.getProductInfo).toHaveBeenCalledWith(
-        [753],
-        [],
-        true
-      )
-      expect(mockSteamUserInstance.relog).not.toHaveBeenCalled()
-    })
-
-    // Cold-connect path needs isLoggedIn + a stored refresh token.
-    function signedInWithStoredToken(): void {
-      mockConfigStore.get_nodefault.mockImplementation((key: string) => {
-        if (key === 'isLoggedIn') return true
-        if (key === 'refreshToken') return 'stored-plaintext-token'
-        return undefined
-      })
-    }
-    const wrapMock = () =>
-      jest.requireMock('../macSteamOffline').withMacSteamOffline as jest.Mock
-
-    test('Test 2 — stale canary re-enters the wrapped cold connect: old client logged off, relog() never called, true', async () => {
-      mockSteamUserInstance.getProductInfo.mockRejectedValue(
-        new Error('canary timeout')
-      )
-      signedInWithStoredToken()
-      mockSteamUserInstance.logOn.mockImplementation(() => {
-        process.nextTick(() => {
-          steamUserOnHandlers['loggedOn']?.({}, {})
-        })
-      })
-      wrapMock().mockClear()
-
-      const result = await steamUser.ensureConnected()
-
-      expect(result).toBe(true)
-      expect(mockSteamUserInstance.relog).not.toHaveBeenCalled()
-      expect(mockSteamUserInstance.logOff).toHaveBeenCalled()
-      expect(wrapMock()).toHaveBeenCalledTimes(1)
-      expect(mockSteamUserInstance.logOn).toHaveBeenCalledTimes(1)
-    })
-
-    test('Test 3 — bounded, never hangs: canary rejects, the re-entered logon never completes -> false at 35000 ms', async () => {
-      jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] })
-      try {
-        mockSteamUserInstance.getProductInfo.mockRejectedValue(
-          new Error('canary timeout')
-        )
-        signedInWithStoredToken()
-        mockSteamUserInstance.logOn.mockImplementation(() => {
-          // intentionally never fires 'loggedOn' or 'error'
-        })
-
-        const resultPromise = steamUser.ensureConnected()
-        await jest.advanceTimersByTimeAsync(34999)
-        let settled = false
-        void resultPromise.then(() => {
-          settled = true
-        })
-        await flushAsync()
-        expect(settled).toBe(false)
-
-        await jest.advanceTimersByTimeAsync(1)
-        const result = await resultPromise
-
-        expect(result).toBe(false)
-        expect(mockSteamUserInstance.relog).not.toHaveBeenCalled()
-      } finally {
-        jest.useRealTimers()
-      }
-    })
-
-    test('Test 4 — error during the re-entered logon: error fires -> false', async () => {
-      mockSteamUserInstance.getProductInfo.mockRejectedValue(
-        new Error('canary timeout')
-      )
-      signedInWithStoredToken()
-      const savedSteamID = mockSteamUserInstance.steamID
-      mockSteamUserInstance.logOn.mockImplementation(() => {
-        process.nextTick(() => {
-          steamUserOnHandlers['error']?.(new Error('relog failed'))
-        })
-      })
-      // The canary needs a populated steamID on the live client first; the
-      // real client nulls it when the stale session is logged off.
-      ;(steamUser as any).client = mockSteamUserInstance
-      mockSteamUserInstance.logOff.mockImplementation(() => {
-        mockSteamUserInstance.steamID = null
-      })
-
-      try {
-        const result = await steamUser.ensureConnected()
-        expect(result).toBe(false)
-        expect(mockSteamUserInstance.relog).not.toHaveBeenCalled()
-      } finally {
-        mockSteamUserInstance.steamID = savedSteamID
-      }
-    })
-
-    test('relog() is never called, even one that would throw', async () => {
-      mockSteamUserInstance.getProductInfo.mockRejectedValue(
-        new Error('canary timeout')
-      )
-      mockSteamUserInstance.relog.mockImplementation(() => {
-        throw new Error('Cannot relog if not already connected')
-      })
-      signedInWithStoredToken()
-      mockSteamUserInstance.logOn.mockImplementation(() => {
-        process.nextTick(() => {
-          steamUserOnHandlers['loggedOn']?.({}, {})
-        })
-      })
-
-      const result = await steamUser.ensureConnected()
-      expect(result).toBe(true)
-      expect(mockSteamUserInstance.relog).not.toHaveBeenCalled()
-    })
-  })
 
   // ── REQ-26-02/04/05/06: redeemKey() ────────────────────────────────────────
 
@@ -2294,20 +1375,13 @@ describe('SteamUser', () => {
   // ── Phase 54 (54-03): sign-in, redeem and logout via the gated entry point ──
 
   describe('Phase 54 sign-in and redeem through the gated entry point', () => {
-    const wrap = () =>
-      jest.requireMock('../macSteamOffline').withMacSteamOffline as jest.Mock
-    const SESSION_STEAM_ID = '76561198111111111'
+    const SESSION_STEAM_ID = FAKE_STEAM_ID
 
     beforeEach(() => {
       // steam-session's LoginSession.steamID needs no CM: derived from the token.
       Object.defineProperty(mockSessionInstance, 'steamID', {
         configurable: true,
         get: () => ({ getSteamID64: () => SESSION_STEAM_ID })
-      })
-      mockSteamUserInstance.logOn.mockImplementation(() => {
-        process.nextTick(() => {
-          steamUserOnHandlers['loggedOn']?.({}, {})
-        })
       })
     })
 
@@ -2326,18 +1400,27 @@ describe('SteamUser', () => {
       return pending
     }
 
-    test('credentials sign-in: one wrapped logon, no keyring re-read, steamId from the LoginSession, lease released', async () => {
+    test('credentials sign-in: one Rust acquire with the in-memory token, no keyring re-read, steamId from the LoginSession, lease released', async () => {
       const getTokenSpy = jest.spyOn(tokenStore.current(), 'getToken')
 
       const result = await signInWithCredentials()
 
       expect(result.status).toBe('done')
-      expect(wrap()).toHaveBeenCalledTimes(1)
-      expect(mockSteamUserInstance.logOn).toHaveBeenCalledTimes(1)
-      expect(mockSteamUserInstance.logOn).toHaveBeenCalledWith({
-        refreshToken: 'mock-refresh-token',
-        logonID: expect.any(Number)
-      })
+      const acquires = rustCalls.filter(
+        ([channel]) => channel === 'steamcm_session_acquire'
+      )
+      expect(acquires).toEqual([
+        [
+          'steamcm_session_acquire',
+          [
+            {
+              refreshToken: 'mock-refresh-token',
+              reason: 'login',
+              logonId: 0
+            }
+          ]
+        ]
+      ])
       expect(getTokenSpy).not.toHaveBeenCalled()
       getTokenSpy.mockRestore()
       expect(mockConfigStore.set).toHaveBeenCalledWith('isLoggedIn', true)
@@ -2345,20 +1428,16 @@ describe('SteamUser', () => {
         username: 'TestUser',
         steamId: SESSION_STEAM_ID
       })
-      expect((steamUser as any).leaseCount).toBe(0)
+      expect(rustChannels()).toContain('steamcm_session_release')
     })
 
-    test('sign-in when the wrap refuses: no logOn, account-name fallback, no guided push, still done', async () => {
-      wrap().mockRejectedValue(
-        new (jest.requireMock('../macSteamOffline').GuidedOfflineRequiredError)(
-          'logoff-not-seen'
-        )
-      )
+    test('sign-in when the wrap refuses: no lease, account-name fallback, no guided push, still done', async () => {
+      rustFake.acquire = () => ({ ok: false, refusal: 'go-offline-required' })
 
       const result = await signInWithCredentials()
 
       expect(result.status).toBe('done')
-      expect(mockSteamUserInstance.logOn).not.toHaveBeenCalled()
+      expect(rustChannels()).not.toContain('steamcm_personas')
       expect(mockConfigStore.set).toHaveBeenCalledWith('userData', {
         username: 'testuser',
         steamId: SESSION_STEAM_ID
@@ -2371,7 +1450,7 @@ describe('SteamUser', () => {
 
     test('a getPersonas that hangs is bounded at 5000 ms and falls back to the account name', async () => {
       jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] })
-      mockSteamUserInstance.getPersonas.mockReturnValue(new Promise(() => {}))
+      rustFake.personas = () => new Promise(() => {})
       mockSessionInstance.startWithCredentials.mockResolvedValue({
         actionRequired: false
       })
@@ -2393,49 +1472,13 @@ describe('SteamUser', () => {
       })
     })
 
-    test('QR authenticated: poll is done before the logon settles, and a concurrent acquire shares the single logOn', async () => {
-      mockSessionInstance.startWithQR.mockResolvedValue({
-        qrChallengeUrl: 'steam://test',
-        actionRequired: true
-      })
-      // loggedOn is fired by hand below; steamID is null until then, as on a
-      // real client.
-      mockSteamUserInstance.logOn.mockImplementation(() => {})
-      const savedSteamID = mockSteamUserInstance.steamID
-      mockSteamUserInstance.steamID = null
-      await startQRLogin(steamDeps)
-      await defined(
-        sessionOnHandlers['authenticated'],
-        'authenticated handler'
-      )()
-
-      expect((await pollQRLogin(steamDeps)).status).toBe('done')
-
-      mockConfigStore.get_nodefault.mockImplementation((key: string) =>
-        key === 'isLoggedIn' ? true : undefined
-      )
-      const refresh = steamUser.acquireAuthenticated({ reason: 'user-refresh' })
-      mockSteamUserInstance.steamID = savedSteamID
-      steamUserOnHandlers['loggedOn']?.({}, {})
-
-      const lease = await refresh
-      expect(lease.ok).toBe(true)
-      expect(mockSteamUserInstance.logOn).toHaveBeenCalledTimes(1)
-      expect(wrap()).toHaveBeenCalledTimes(1)
-      if (lease.ok) lease.release()
-    })
-
     test('redeemKey with a go-offline refusal pushes steamGoOfflineRequired { action: "redeem" } and reports go-offline-required', async () => {
       mockConfigStore.get_nodefault.mockImplementation((key: string) => {
         if (key === 'isLoggedIn') return true
         if (key === 'refreshToken') return 'stored-plaintext-token'
         return undefined
       })
-      wrap().mockRejectedValue(
-        new (jest.requireMock('../macSteamOffline').GuidedOfflineRequiredError)(
-          'logoff-not-seen'
-        )
-      )
+      rustFake.acquire = () => ({ ok: false, refusal: 'go-offline-required' })
 
       const result = await redeemKey(steamDeps, 'steam', 'TEST-KEY-VALUE')
 
@@ -2448,7 +1491,7 @@ describe('SteamUser', () => {
         'steamGoOfflineRequired',
         { action: 'redeem', appName: undefined }
       )
-      expect(mockSteamUserInstance.redeemKey).not.toHaveBeenCalled()
+      expect(rustChannels()).not.toContain('steamcm_redeem_key')
     })
 
     test('redeemKey with any other refusal reports not-connected and pushes nothing', async () => {
@@ -2466,7 +1509,7 @@ describe('SteamUser', () => {
       )
     })
 
-    test('logout clears the idle timer, logs the client off, closes the anonymous client and refuses reuse', async () => {
+    test('logout fences the Rust session, closes the anonymous client and refuses reuse', async () => {
       mockConfigStore.get_nodefault.mockImplementation((key: string) => {
         if (key === 'isLoggedIn') return true
         if (key === 'refreshToken') return 'stored-plaintext-token'
@@ -2477,13 +1520,10 @@ describe('SteamUser', () => {
       })
       expect(lease.ok).toBe(true)
       if (lease.ok) lease.release()
-      expect((steamUser as any).idleTimer).not.toBeNull()
-      mockSteamUserInstance.logOff.mockClear()
 
       await steamUser.logout()
 
-      expect((steamUser as any).idleTimer).toBeNull()
-      expect(mockSteamUserInstance.logOff).toHaveBeenCalled()
+      expect(rustChannels()).toContain('steamcm_session_logout')
       expect(mockCloseAnonymousClient).toHaveBeenCalledWith('logout')
       expect(
         await steamUser.acquireOpenAuthenticated('shared-redist')

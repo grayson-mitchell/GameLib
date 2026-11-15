@@ -1,31 +1,20 @@
 /**
- * Phase 54 (54-01): one shared ANONYMOUS steam-user client for public PICS
- * reads (`getProductInfo`). An anonymous CM session carries no account, so it
- * can never sign Mac Steam's Friends session out, and it needs no go-offline
- * wrap. Public app info (platform flags, install dir, launch targets) is
- * readable anonymously; entries that need a token come back `missingToken` or
- * `public_only` (see `isPublicOnlyEntry`).
+ * The anonymous CM client (Phase 79, D-04): one shared view for public PICS reads
+ * (`getProductInfo`). The session is owned by the Rust anon actor (steamcm_anon_*), which keeps
+ * it, bounds the connect and closes it when idle; this module only hands out the RustInvoke-backed
+ * view and forwards close. An anonymous CM session carries no account, so it can never sign Mac
+ * Steam's Friends session out, and it needs no go-offline wrap. Public app info (platform flags,
+ * install dir, launch targets) is readable anonymously; entries that need a token come back
+ * `missingToken` or `public_only` (see `isPublicOnlyEntry`).
  *
- * This module imports neither the authenticated user module nor the token
- * store: it never reads the keyring and never sees a credential.
- *
- * Sidecar exit contract: every timer here runs on the boot clock (unref'd
- * unless keepAlive, which this module never asks for), the connect is
- * bounded, and the client closes itself when idle, so nothing in this module
- * can hold the event loop open at stdin EOF. "Idle" counts in-flight reads
- * (54-REVIEW WR-09): the close timer is armed only once none is running, so a
- * bulk PICS read longer than ANON_IDLE_CLOSE_MS is never cut off mid-request.
+ * This module imports neither the authenticated user module nor the token store: it never reads
+ * the keyring and never sees a credential. It holds no timer, socket or child handle (exit
+ * contract), and the shell EOF / exit hook owns the Rust teardown.
  */
-import SteamUserLib from 'steam-user'
-import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import type { Clock, TimerHandle } from 'backend/process/types'
+import { logWarning, LogPrefix } from 'backend/logger'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import { RUST_STEAMCM_ANON_CLOSE } from 'common/types/sidecarTransport'
 import { createRustAnonClient } from './cm/RustAnonClient'
-import { steamCmImpl } from './cm/steamCmFlags'
-
-export const ANON_CONNECT_TIMEOUT_MS = 15000
-export const ANON_IDLE_CLOSE_MS = 60000
 
 /** Structurally compatible with platformCapture's PlatformCapturePicsClient. */
 interface AnonymousPicsClient {
@@ -39,30 +28,16 @@ interface AnonymousPicsClient {
   }>
 }
 
-export type RawClient = InstanceType<typeof SteamUserLib>
-
-/**
- * The slice of a raw steam-user client this module drives. Constructing one must not connect:
- * only `logOn` does.
- */
-type RawClientFactory = () => RawClient
-
 export interface AnonymousClientDeps {
-  clock: Clock
-  /** Builds one unconnected raw client; boot passes the real steam-user constructor. */
-  createClient: RawClientFactory
-  /**
-   * The boot's rustInvoke transport. Read when `steamCmImpl() === 'rust'` (Phase 79, D-04): the
-   * anonymous session is then owned by the Rust anon actor and no steam-user client is built.
-   */
-  requestRustInvoke?: RustInvokeDeps['requestRustInvoke']
+  /** The boot's rustInvoke transport: the Rust anon actor owns the session. */
+  requestRustInvoke: RustInvokeDeps['requestRustInvoke']
 }
 
 export interface AnonymousClient {
-  /** The shared anonymous PICS view, connecting once for concurrent callers; null on failure or after shutdown. */
+  /** The shared anonymous PICS view; the Rust actor connects on first read. */
   get(reason: string): Promise<AnonymousPicsClient | null>
   close(cause: 'idle' | 'logout' | 'shutdown'): void
-  /** Closes the client and refuses every later `get` (stdin EOF); clears no token. */
+  /** Stdin EOF: a no-op, the shell exit hook owns the Rust session teardown (D-18). */
   releaseForShutdown(): void
 }
 
@@ -71,39 +46,22 @@ export interface AnonymousClientSlice {
   anonymousClient: Pick<AnonymousClient, 'get'>
 }
 
-/** The production constructor: steam-user with the PICS cache and auto-relogin off. */
-export function createRawAnonymousClient(): RawClient {
-  return new SteamUserLib({
-    enablePicsCache: false,
-    autoRelogin: false
-  })
-}
-
-/**
- * One anonymous steam-user owner per boot (D-05, D-66.3-14). Single-flight connect, in-use
- * counting (the idle close is armed only at inUse === 0, WR-09) and generation fencing (a connect
- * that resolves after close is discarded) are per instance.
- */
+/** One anonymous client per boot (D-05, D-66.3-14). */
 export function createAnonymousClient(
   deps: AnonymousClientDeps
 ): AnonymousClient {
-  const tsClient = createTsAnonymousClient(deps)
-  let rustView: AnonymousPicsClient | null = null
-  const rustDeps = (): RustInvokeDeps | null =>
-    steamCmImpl() === 'rust' && deps.requestRustInvoke
-      ? { requestRustInvoke: deps.requestRustInvoke }
-      : null
+  let view: AnonymousPicsClient | null = null
   return {
-    async get(reason) {
-      const rust = rustDeps()
-      if (!rust) return tsClient.get(reason)
-      if (!rustView) rustView = createRustAnonClient(rust)
-      return rustView
+    async get() {
+      if (!view) {
+        view = createRustAnonClient({
+          requestRustInvoke: deps.requestRustInvoke
+        })
+      }
+      return view
     },
     close(cause) {
-      const rust = rustDeps()
-      if (!rust) return tsClient.close(cause)
-      rust
+      deps
         .requestRustInvoke(RUST_STEAMCM_ANON_CLOSE, [{ reason: cause }])
         .catch((err: unknown) =>
           logWarning(
@@ -112,195 +70,10 @@ export function createAnonymousClient(
           )
         )
     },
-    // The shell exit/EOF hook owns Rust teardown: no IPC here (D-18). The ts client is released
-    // either way so a flag flip mid-boot leaves nothing connected.
     releaseForShutdown() {
-      tsClient.releaseForShutdown()
+      // No IPC: the shell exit / EOF hook owns the Rust teardown.
     }
   }
-}
-
-function createTsAnonymousClient(deps: AnonymousClientDeps): AnonymousClient {
-  let cached: RawClient | null = null
-  // What callers receive for `cached`: a view whose getProductInfo counts reads
-  // in flight, so the idle close waits for them (54-REVIEW WR-09).
-  let cachedView: AnonymousPicsClient | null = null
-  let inUse = 0
-  let inflight: Promise<AnonymousPicsClient | null> | null = null
-  let idleTimer: TimerHandle | null = null
-  let shuttingDown = false
-  // Bumped by close so a connect that was in flight when the client was closed
-  // discards its result instead of resurrecting the cache.
-  let generation = 0
-
-  function clearIdle(): void {
-    if (idleTimer) deps.clock.clear(idleTimer)
-    idleTimer = null
-  }
-
-  function armIdle(): void {
-    clearIdle()
-    if (inUse > 0) return
-    idleTimer = deps.clock.setTimeout(() => {
-      idleTimer = null
-      if (inUse > 0) return
-      close('idle')
-    }, ANON_IDLE_CLOSE_MS)
-  }
-
-  function viewFor(client: RawClient): AnonymousPicsClient {
-    const raw = client as unknown as AnonymousPicsClient
-    const done = (): void => {
-      // A read on a client that has since been closed or replaced does not
-      // count against the current one.
-      if (cached !== client) return
-      inUse = Math.max(0, inUse - 1)
-      if (inUse === 0) armIdle()
-    }
-    return {
-      getProductInfo: (apps, packages, inclTokens) => {
-        if (cached === client) {
-          inUse++
-          clearIdle()
-        }
-        let pending: ReturnType<AnonymousPicsClient['getProductInfo']>
-        try {
-          pending = raw.getProductInfo(apps, packages, inclTokens)
-        } catch (err) {
-          done()
-          throw err
-        }
-        return Promise.resolve(pending).finally(done)
-      }
-    }
-  }
-
-  function safeLogOff(client: RawClient): void {
-    try {
-      client.logOff()
-    } catch (err) {
-      logWarning(['Steam anonymous client logOff error:', err], LogPrefix.Steam)
-    }
-  }
-
-  function connect(reason: string): Promise<AnonymousPicsClient | null> {
-    const gen = generation
-    const client = deps.createClient()
-
-    return new Promise<AnonymousPicsClient | null>((resolve) => {
-      let settled = false
-      const settle = (value: AnonymousPicsClient | null): void => {
-        if (settled) return
-        settled = true
-        deps.clock.clear(timeout)
-        resolve(value)
-      }
-
-      const timeout = deps.clock.setTimeout(() => {
-        logWarning(
-          '[Steam] anonymous CM logon timed out after 15s',
-          LogPrefix.Steam
-        )
-        safeLogOff(client)
-        settle(null)
-      }, ANON_CONNECT_TIMEOUT_MS)
-
-      // Persistent: with autoRelogin false every post-logon drop is emitted as
-      // 'error', and an 'error' with no listener throws.
-      const onDrop =
-        (cause: 'error' | 'disconnected') =>
-        (err?: { message?: string; eresult?: number }): void => {
-          if (!settled) {
-            logWarning(
-              `[Steam] anonymous CM logon failed: ${err?.message ?? cause}`,
-              LogPrefix.Steam
-            )
-            safeLogOff(client)
-            settle(null)
-            return
-          }
-          if (cached === client) {
-            logInfo(
-              `[Steam] CM session closed mode=anonymous cause=${cause}` +
-                (err?.message ? ` message=${err.message}` : '') +
-                (err?.eresult !== undefined ? ` eresult=${err.eresult}` : ''),
-              LogPrefix.Steam
-            )
-            cached = null
-            cachedView = null
-            inUse = 0
-            inflight = null
-            clearIdle()
-          }
-        }
-      client.on('error', onDrop('error'))
-      client.on('disconnected', (eresult: number, msg?: string) =>
-        onDrop('disconnected')({ message: msg, eresult })
-      )
-
-      client.once('loggedOn', () => {
-        if (settled) return
-        if (gen !== generation || shuttingDown) {
-          safeLogOff(client)
-          settle(null)
-          return
-        }
-        cached = client
-        cachedView = viewFor(client)
-        inUse = 0
-        settle(cachedView)
-      })
-
-      logInfo(
-        '[Steam] CM logon mode=anonymous reason=' + reason,
-        LogPrefix.Steam
-      )
-      client.logOn({ anonymous: true })
-    })
-  }
-
-  async function get(reason: string): Promise<AnonymousPicsClient | null> {
-    if (shuttingDown) return null
-    if (cached && cachedView) {
-      armIdle()
-      return cachedView
-    }
-    if (!inflight) {
-      const p: Promise<AnonymousPicsClient | null> = connect(reason).finally(
-        () => {
-          if (inflight === p) inflight = null
-        }
-      )
-      inflight = p
-    }
-    const result = await inflight
-    if (result) armIdle()
-    return result
-  }
-
-  function close(cause: 'idle' | 'logout' | 'shutdown'): void {
-    generation++
-    clearIdle()
-    const client = cached
-    cached = null
-    cachedView = null
-    inUse = 0
-    inflight = null
-    if (client) {
-      safeLogOff(client)
-      logInfo(
-        `[Steam] CM session closed mode=anonymous cause=${cause}`,
-        LogPrefix.Steam
-      )
-    }
-  }
-
-  function releaseForShutdown(): void {
-    shuttingDown = true
-    close('shutdown')
-  }
-
-  return { get, close, releaseForShutdown }
 }
 
 /**
