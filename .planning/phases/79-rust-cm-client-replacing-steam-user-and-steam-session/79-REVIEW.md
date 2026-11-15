@@ -3,6 +3,7 @@ phase: 79-rust-cm-client-replacing-steam-user-and-steam-session
 reviewed: 2026-11-16
 depth: standard
 status: issues_found
+fixed: [A/CR-01 7744eeb7f, C1/CR-01 63b3b470e]
 files_reviewed: 112
 diff_base: 048efa221^
 findings:
@@ -23,7 +24,11 @@ Scope is the 112 source files named in the phase SUMMARY key-files; Cargo.lock i
 - **A/CR-01 is confirmed.** `close_conn` (session.rs:749) drops the kill watch sender without sending a value. A rebuild (session.rs:990) therefore makes in-flight `run_op` calls resolve `Replaced` at session.rs:405-406, and they skip the retry-once recovery. Only the eresult-34 path sends a value first.
 - **C1/CR-01 is confirmed.** `RustCmSession.getClient()` (rustSession.ts:73) returns the most recently acquired lease. `getDepotClient` (depot/plan.ts:69) uses it, so a running install can pick up a concurrent Refresh's client and then get `leaseUnknown` once that Refresh releases.
 
-Fix with `/gsd-code-review 79 --fix`, or plan a gap-closure phase.
+## Fixes applied (2026-11-16, operator decision: fix both criticals before close)
+
+- **A/CR-01 is fixed in 7744eeb7f.** A dropped kill sender now reads as `CmError::Closed`, which takes the retry-once recovery path. Logout sends `LeaseUnknown` explicitly, and shutdown sends `ShuttingDown`. Two new session tests fail on the old code. The crate's 279 tests, clippy and rustfmt are clean.
+- **C1/CR-01 is fixed in 63b3b470e.** `getClient()` returns a live view (`cm/liveLeaseClient.ts`) that routes each call through a lease held at the time of the call. A new `user.rustEngine` test fails on the old code. The Steam backend suites pass, except the baseline `shimCoverage` and `shimGenerate`.
+- **The 21 warnings and 23 info items are follow-up work.** They are tracked in `.planning/todos/pending/2026-11-16-phase-79-review-warnings.md`.
 
 
 ---
