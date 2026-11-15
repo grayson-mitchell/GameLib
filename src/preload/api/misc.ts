@@ -24,7 +24,6 @@ export const clearAchievementCache = makeListenerCaller('clearAchievementCache')
 export const resetHeroic = makeListenerCaller('resetHeroic')
 export const openAppManagementSettings = makeListenerCaller('openAppManagementSettings')
 export const relaunchApp = makeListenerCaller('relaunchApp')
-export const openWeblate = makeListenerCaller('openWeblate')
 export const changeLanguage = makeListenerCaller('changeLanguage')
 export const openExternalUrl = makeListenerCaller('openExternalUrl')
 export const getSteamUpdateInfo = makeHandlerInvoker('getSteamUpdateInfo')
@@ -33,7 +32,6 @@ export const getAppManagementStatus = makeHandlerInvoker('getAppManagementStatus
 export const getLatestReleases = makeHandlerInvoker('getLatestReleases')
 export const getCurrentChangelog = makeHandlerInvoker('getCurrentChangelog')
 export const openKofiPage = makeListenerCaller('openKofiPage')
-export const openGithubSponsorsPage = makeListenerCaller('openGithubSponsorsPage')
 // D-01/D-02 (Phase 34.1 Plan 03): window chrome executes RENDERER-SIDE under Tauri --
 // the sidecar registers nothing for these ten channels. Phase 35 plan 16 collapsed the
 // Electron/Tauri runtime-detection branch that used to guard this -- nothing runs under

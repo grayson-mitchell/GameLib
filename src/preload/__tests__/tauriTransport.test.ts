@@ -719,7 +719,7 @@ describe('WR-07: hydration replaces a store snapshot rather than merging into it
  * Debug session `open-external-frame-noop` (2026-08-23, closing Phase 34.3 live-gate item 1 /
  * REQ-34.3-11 item 1). `send()` used to be `void tauriInvoke(SIDECAR_SEND, {...})`, unconditionally
  * discarding the invoke's rejection for all ~57 `send()`-routed channels. A single caller
- * (`openDiscordLink`, bound bare as a JSX handler) rejected on every click and produced NO signal
+ * (`openDiscordLink`, a channel since removed in quick 261115-tk8, bound bare as a JSX handler) rejected on every click and produced NO signal
  * anywhere. The fix routes rejections through `window.api.logError`, naming the channel, with a
  * recursion guard for the `logError` channel itself (see `tauriTransport.ts`'s own docstring above
  * `send()` for why an unguarded version would recurse forever).

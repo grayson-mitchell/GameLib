@@ -178,9 +178,7 @@ export default function LanguageSelector({
   // Heroic's own Weblate project, which GameLib -- an independent fork that
   // does not pull from Heroic -- never reads corrections from for ANY
   // string, fork or upstream-copied. The `openWeblate` IPC channel and
-  // `weblateUrl` constant are left in place (removing a channel is a
-  // preload-surface/seam-parity change, out of this quick task's scope) but
-  // are now unreferenced by the frontend.
+  // `weblateUrl` constant were removed in quick task 261115-tk8.
   let afterSelect = null
   if (shouldShowMtNotice(currentLanguage)) {
     afterSelect = (

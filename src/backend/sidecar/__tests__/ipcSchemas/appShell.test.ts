@@ -32,7 +32,6 @@ const syncTable: FixtureTable<typeof appShellSyncArgs> = {
   lock: { valid: [[true], [false]], invalid: [[], ['yes']] },
   unlock: noArgs,
   quit: noArgs,
-  openReleases: noArgs,
   openWebviewPage: {
     valid: [['https://example.com/a'], ['file:///tmp/x']],
     invalid: [[], [''], ['not a url'], [1]]

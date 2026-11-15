@@ -22,14 +22,9 @@ const syncTable: FixtureTable<typeof shellFilesSyncArgs> = {
     valid: [['/home/user/Games/Prefix']],
     invalid: [[''], [undefined]]
   },
-  openSupportPage: noArgs,
-  openWeblate: noArgs,
   openLoginPage: noArgs,
-  openDiscordLink: noArgs,
   openKofiPage: noArgs,
-  openGithubSponsorsPage: noArgs,
   openWinePrefixFAQ: noArgs,
-  openWikiLink: noArgs,
   openSidInfoPage: noArgs,
   showConfigFileInFolder: {
     valid: [['Fortnite']],

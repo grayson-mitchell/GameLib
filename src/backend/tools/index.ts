@@ -1465,6 +1465,8 @@ function createWinetricks(deps: ToolsDeps) {
       }
 
       if (missingDeps.length > 0 && isMac) {
+        // Intentionally Heroic's wiki page: GameLib has no equivalent page
+        // (quick 261115-tk8).
         const message = `Check https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/Using-Heroic-on-a-Mac-computer#winetricks-setup to install the missing dependencies.`
         appendMessage(message)
         logWarning([message], LogPrefix.WineTricks)

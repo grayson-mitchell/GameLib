@@ -197,14 +197,9 @@ import {
 } from 'common/types/sidecarTransport'
 import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
 import {
-  supportURL,
-  weblateUrl,
   epicLoginUrl,
-  discordLink,
   kofiPage,
-  githubSponsorsPage,
   wineprefixFAQ,
-  wikiLink,
   sidInfoUrl
 } from '../../constants/urls'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
@@ -311,19 +306,14 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
     warnSpy.mockRestore()
   })
 
-  // ── REQ-34.3-01: the 9 constant URL openers going straight to
+  // ── REQ-34.3-01: the 4 constant URL openers going straight to
   // shell.openExternal path (all pushed as an 'openExternal' frame, the
   // same parity path appShellFlows.test.ts's own openers assert against) ────
 
   const CONSTANT_OPENERS: Array<[channel: string, urlFragment: string]> = [
-    ['openSupportPage', 'Support.md'],
-    ['openWeblate', 'weblate.org'],
     ['openLoginPage', 'epiclogin'],
-    ['openDiscordLink', 'discord.gg'],
     ['openKofiPage', 'ko-fi.com'],
-    ['openGithubSponsorsPage', 'sponsors'],
     ['openWinePrefixFAQ', 'winehq.org'],
-    ['openWikiLink', 'wiki'],
     ['openSidInfoPage', 'Epic-Alternative-Login']
   ]
 
@@ -346,14 +336,9 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
   // isn't accidentally decoupled from the real constants module.
   it('REQ-34.3-01 sanity: the constant-opener fragment table matches the real constants/urls.ts values', () => {
     const REAL_VALUES: Record<string, string> = {
-      openSupportPage: supportURL,
-      openWeblate: weblateUrl,
       openLoginPage: epicLoginUrl,
-      openDiscordLink: discordLink,
       openKofiPage: kofiPage,
-      openGithubSponsorsPage: githubSponsorsPage,
       openWinePrefixFAQ: wineprefixFAQ,
-      openWikiLink: wikiLink,
       openSidInfoPage: sidInfoUrl
     }
     for (const [channel, fragment] of CONSTANT_OPENERS) {
@@ -794,14 +779,9 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
   const CHANNEL_KINDS: Record<string, 'send' | 'invoke'> = {
     openExternalUrl: 'send',
     openFolder: 'send',
-    openSupportPage: 'send',
-    openWeblate: 'send',
     openLoginPage: 'send',
-    openDiscordLink: 'send',
     openKofiPage: 'send',
-    openGithubSponsorsPage: 'send',
     openWinePrefixFAQ: 'send',
-    openWikiLink: 'send',
     openSidInfoPage: 'send',
     showConfigFileInFolder: 'send',
     showItemInFolder: 'send',
@@ -813,13 +793,24 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
     pathExists: 'invoke'
   }
 
-  it("REQ-34.3-01/REQ-34.3-02/REQ-34.3-05/REQ-34.3-06 send-vs-handle contract: every one of this module's 19 channels is registered with the kind that matches main.ts", () => {
+  it("REQ-34.3-01/REQ-34.3-02/REQ-34.3-05/REQ-34.3-06 send-vs-handle contract: every one of this module's 14 channels is registered with the kind that matches main.ts", () => {
     boot()
 
     // Phase 72 D-09: the renderer removeFolder channel is gone.
     expect(listenerRegistry.get('removeFolder')?.length ?? 0).toBe(0)
     expect(handlerRegistry.has('removeFolder')).toBe(false)
-    expect(Object.keys(CHANNEL_KINDS)).toHaveLength(19)
+    // quick 261115-tk8: the dead Heroic-era link channels are gone.
+    for (const removed of [
+      'openSupportPage',
+      'openWeblate',
+      'openDiscordLink',
+      'openGithubSponsorsPage',
+      'openWikiLink'
+    ]) {
+      expect(listenerRegistry.get(removed)?.length ?? 0).toBe(0)
+      expect(handlerRegistry.has(removed)).toBe(false)
+    }
+    expect(Object.keys(CHANNEL_KINDS)).toHaveLength(14)
 
     for (const [channel, kind] of Object.entries(CHANNEL_KINDS)) {
       if (kind === 'send') {

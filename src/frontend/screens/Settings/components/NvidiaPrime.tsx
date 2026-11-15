@@ -4,6 +4,8 @@ import { InfoBox, ToggleSwitch } from 'frontend/components/UI'
 import useSetting from 'frontend/hooks/useSetting'
 import useUiState from 'frontend/state/uiState'
 
+// Intentionally Heroic's wiki page: GameLib has no equivalent page
+// (quick 261115-tk8).
 const WIKI_URL =
   'https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/Hybrid-GPUs:-NVIDIA-Optimus-and-AMD-Dynamic-Switchable-Graphics'
 

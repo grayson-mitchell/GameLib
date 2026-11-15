@@ -6,9 +6,7 @@ export const notify = makeListenerCaller('notify')
 export const dialogDisplayed = makeListenerCaller('dialogDisplayed')
 export const openLoginPage = makeListenerCaller('openLoginPage')
 export const openSidInfoPage = makeListenerCaller('openSidInfoPage')
-export const openSupportPage = makeListenerCaller('openSupportPage')
 export const quit = makeListenerCaller('quit')
-export const openDiscordLink = makeListenerCaller('openDiscordLink')
 export const openWinePrefixFAQ = makeListenerCaller('openWinePrefixFAQ')
 // D-12 (Phase 34.1 Plan 07): createNewWindow opens a genuine Tauri WebviewWindow --
 // renderer-side, per tauriChildWindows.ts's module comment. Phase 35 plan 17 collapsed

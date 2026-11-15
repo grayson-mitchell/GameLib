@@ -26,7 +26,6 @@ exports	meta/runnerLiteralSelectors.cjs	RUNNER_NAME
 exports	meta/runnerLiteralSelectors.cjs	SCOPE_FILES
 exports	meta/runnerLiteralSelectors.cjs	SCOPE_IGNORES
 exports	meta/updaterSigningKey.ts	readCommittedPubkey
-exports	src/backend/constants/urls.ts	GITHUB_API
 exports	src/backend/humble/constants.ts	HUMBLE_FUZZY_MATCH_THRESHOLD
 exports	src/backend/humble/constants.ts	HUMBLE_LOGIN_PARTITION
 exports	src/backend/storeManagers/steam/bridge/drm/runnerEntitlements.ts	parseEntitlementKeys
@@ -87,10 +86,8 @@ exports	src/preload/api/helpers.ts	Helpers.isNative
 exports	src/preload/api/helpers.ts	Helpers.kill
 exports	src/preload/api/helpers.ts	Helpers.notify
 exports	src/preload/api/helpers.ts	Helpers.onConnectivityChanged
-exports	src/preload/api/helpers.ts	Helpers.openDiscordLink
 exports	src/preload/api/helpers.ts	Helpers.openLoginPage
 exports	src/preload/api/helpers.ts	Helpers.openSidInfoPage
-exports	src/preload/api/helpers.ts	Helpers.openSupportPage
 exports	src/preload/api/helpers.ts	Helpers.openWinePrefixFAQ
 exports	src/preload/api/helpers.ts	Helpers.quit
 exports	src/preload/api/helpers.ts	Helpers.readConfig
@@ -216,9 +213,7 @@ exports	src/preload/api/misc.ts	Misc.oauthCaptureLogin
 exports	src/preload/api/misc.ts	Misc.openAppManagementSettings
 exports	src/preload/api/misc.ts	Misc.openExternalUrl
 exports	src/preload/api/misc.ts	Misc.openFolder
-exports	src/preload/api/misc.ts	Misc.openGithubSponsorsPage
 exports	src/preload/api/misc.ts	Misc.openKofiPage
-exports	src/preload/api/misc.ts	Misc.openWeblate
 exports	src/preload/api/misc.ts	Misc.openWebviewPage
 exports	src/preload/api/misc.ts	Misc.pathExists
 exports	src/preload/api/misc.ts	Misc.processShortcut

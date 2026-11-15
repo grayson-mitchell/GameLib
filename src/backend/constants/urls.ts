@@ -1,17 +1,7 @@
 export const epicLoginUrl = 'https://legendary.gl/epiclogin'
+// Intentionally Heroic's wiki page: GameLib has no equivalent page for the
+// Epic alternative-login how-to (quick 261115-tk8).
 export const sidInfoUrl =
   'https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/How-To:-Epic-Alternative-Login'
-export const heroicGithubURL =
-  'https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/releases/latest'
-export const GITHUB_API =
-  'https://api.github.com/repos/Heroic-Games-Launcher/HeroicGamesLauncher/releases'
-export const supportURL =
-  'https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/blob/main/Support.md'
-export const discordLink = 'https://discord.gg/rHJ2uqdquK'
-export const wikiLink = 'https://github.com/grayson-mitchell/GameLib/wiki'
-export const weblateUrl =
-  'https://hosted.weblate.org/projects/heroic-games-launcher'
 export const kofiPage = 'https://ko-fi.com/gamelib'
-export const githubSponsorsPage =
-  'https://github.com/sponsors/Heroic-Games-Launcher'
 export const wineprefixFAQ = 'https://wiki.winehq.org/FAQ#Wineprefixes'

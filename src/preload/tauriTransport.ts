@@ -82,7 +82,7 @@ export async function invoke<Ret = unknown>(channel: string, args: unknown[]): P
  * Debug session `open-external-frame-noop` (2026-08-23): this used to be
  * `void tauriInvoke(SIDECAR_SEND, { channel, args })` -- the leading `void` unconditionally
  * discarded the invoke's rejection for all ~57 channels that call `send()`. A single caller
- * (`openDiscordLink`, bound bare as a JSX `onClick` handler) passed a React SyntheticEvent as
+ * (`openDiscordLink`, a channel since removed in quick 261115-tk8, bound bare as a JSX `onClick` handler) passed a React SyntheticEvent as
  * an arg; Tauri's `invoke()` JSON-serializes its payload internally, and the SyntheticEvent's
  * cyclic references (e.g. `nativeEvent`/DOM back-references) made that serialization throw,
  * rejecting the invoke promise. With the rejection discarded, the click produced NO signal

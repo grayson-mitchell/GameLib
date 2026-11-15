@@ -2,21 +2,16 @@
  * Curated shell/files/diagnostics channel registration (Phase 34.3 Plans 01
  * and 02, D-14, REQ-34.3-01/REQ-34.3-02/REQ-34.3-05/REQ-34.3-06/REQ-34.3-13).
  *
- * Registers 19 of this slice's 27 channels onto platformApi's `ipcMain`
+ * Registers 14 of this slice's 22 channels onto platformApi's `ipcMain`
  * recorder, importing the REAL `backend/utils.ts` / `backend/utils/filesystem`
  * functions UNCHANGED:
  *
- *   send (deps.ipc.on, 16; `removeFolder` deleted in Phase 72 D-09):
+ *   send (deps.ipc.on, 11; `removeFolder` deleted in Phase 72 D-09; `openSupportPage`/`openWeblate`/`openDiscordLink`/`openGithubSponsorsPage`/`openWikiLink` deleted in quick 261115-tk8):
  *     - `openExternalUrl` -> `assertOpenableExternalUrl` then `shell.openExternal` (Phase 72 D-07)
  *     - `openFolder` -> `classifyFolderTarget`: open a directory, reveal a file or bundle (Phase 72 D-07/D-08)
- *     - `openSupportPage` -> `shell.openExternal(supportURL)` (`main.ts:737`)
- *     - `openWeblate` -> `shell.openExternal(weblateUrl)` (`main.ts:739`)
  *     - `openLoginPage` -> `shell.openExternal(epicLoginUrl)` (`main.ts:741`)
- *     - `openDiscordLink` -> `shell.openExternal(discordLink)` (`main.ts:742`)
  *     - `openKofiPage` -> `shell.openExternal(kofiPage)` (`main.ts:744`)
- *     - `openGithubSponsorsPage` -> `shell.openExternal(githubSponsorsPage)` (`main.ts:745`)
  *     - `openWinePrefixFAQ` -> `shell.openExternal(wineprefixFAQ)` (`main.ts:748`)
- *     - `openWikiLink` -> `shell.openExternal(wikiLink)` (`main.ts:750`)
  *     - `openSidInfoPage` -> `shell.openExternal(sidInfoUrl)` (`main.ts:751`)
  *     - `showConfigFileInFolder` -> inline two-branch body: `args[0] === 'default'`
  *       -> reveal `configPath`, else -> reveal the contained
@@ -80,7 +75,7 @@
  * out-of-scope UI copy, not a defect this plan introduces or fixes.
  *
  * Deliberately does NOT register:
- *   - `openReleases`, `openWebviewPage`,
+ *   - `openWebviewPage`,
  *     `showAboutWindow` — Phase 34.1 channels already registered by
  *     `appShellFlowRegistration.ts`; the IPC registry holds an ARRAY of listeners per
  *     channel, so a second registration here would double-fire them.
@@ -110,14 +105,9 @@ import {
 import { Path } from '../schemas'
 import { existsSync } from 'graceful-fs'
 import {
-  supportURL,
-  weblateUrl,
   epicLoginUrl,
-  discordLink,
   kofiPage,
-  githubSponsorsPage,
   wineprefixFAQ,
-  wikiLink,
   sidInfoUrl
 } from '../constants/urls'
 import { showDialogBoxModalAuto } from '../dialog/dialog'
@@ -186,27 +176,9 @@ export function registerShellFilesFlows(deps: {
     })().catch((error) => logSendFailure('openFolder', error))
   })
 
-  deps.ipc.on('openSupportPage', () => {
-    void Promise.resolve(deps.openExternal.openExternal(supportURL)).catch(
-      (error) => logSendFailure('openSupportPage', error)
-    )
-  })
-
-  deps.ipc.on('openWeblate', () => {
-    void Promise.resolve(deps.openExternal.openExternal(weblateUrl)).catch(
-      (error) => logSendFailure('openWeblate', error)
-    )
-  })
-
   deps.ipc.on('openLoginPage', () => {
     void Promise.resolve(deps.openExternal.openExternal(epicLoginUrl)).catch(
       (error) => logSendFailure('openLoginPage', error)
-    )
-  })
-
-  deps.ipc.on('openDiscordLink', () => {
-    void Promise.resolve(deps.openExternal.openExternal(discordLink)).catch(
-      (error) => logSendFailure('openDiscordLink', error)
     )
   })
 
@@ -216,21 +188,9 @@ export function registerShellFilesFlows(deps: {
     )
   })
 
-  deps.ipc.on('openGithubSponsorsPage', () => {
-    void Promise.resolve(
-      deps.openExternal.openExternal(githubSponsorsPage)
-    ).catch((error) => logSendFailure('openGithubSponsorsPage', error))
-  })
-
   deps.ipc.on('openWinePrefixFAQ', () => {
     void Promise.resolve(deps.openExternal.openExternal(wineprefixFAQ)).catch(
       (error) => logSendFailure('openWinePrefixFAQ', error)
-    )
-  })
-
-  deps.ipc.on('openWikiLink', () => {
-    void Promise.resolve(deps.openExternal.openExternal(wikiLink)).catch(
-      (error) => logSendFailure('openWikiLink', error)
     )
   })
 

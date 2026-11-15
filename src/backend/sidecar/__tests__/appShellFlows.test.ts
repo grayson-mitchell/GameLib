@@ -746,20 +746,6 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     })
   })
 
-  it('REQ-34.1-05 openReleases (send) reaches shell.openExternal with heroicGithubURL over the openExternal parity path', async () => {
-    const { input, frames } = boot()
-    writeSend(input, 'open-releases-1', 'openReleases', [])
-    await flush()
-
-    const pushed = frames.find((f) => f.kind === 'openExternal') as
-      | { args?: unknown[] }
-      | undefined
-    expect(pushed).toBeDefined()
-    expect((pushed?.args as unknown[])?.[0]).toContain(
-      'HeroicGamesLauncher/releases/latest'
-    )
-  })
-
   it('REQ-34.1-05 openWebviewPage (send) forwards its argument to shell.openExternal', async () => {
     const { input, frames } = boot()
     writeSend(input, 'open-webview-1', 'openWebviewPage', [

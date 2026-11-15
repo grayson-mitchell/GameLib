@@ -150,8 +150,8 @@ by Cloudflare's policy.
 - **Discord Rich Presence.** If you turn it on in Settings, GameLib tells your local Discord app
   which game you are playing. This is a connection to the Discord app on your device, using a
   GameLib application id.
-- **Opening links.** Links to stores, the Heroic wiki and support pages, Weblate, Discord and Ko-fi
-  open in your browser only when you click them.
+- **Opening links.** Links to stores, the GameLib wiki (the in-app Documentation page), a few
+  specific Heroic wiki help pages and Ko-fi open in your browser only when you click them.
 
 ## Store pages shown inside GameLib
 

@@ -39,7 +39,6 @@ export const appShellSyncArgs = {
   lock: z.tuple([z.boolean()]),
   unlock: noArgs,
   quit: noArgs,
-  openReleases: noArgs,
   // Scheme allow-list is Phase 72 (T-67-53).
   openWebviewPage: z.tuple([urlArg()]),
   openAppManagementSettings: noArgs,

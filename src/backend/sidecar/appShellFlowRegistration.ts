@@ -2,7 +2,7 @@
  * Curated app-shell channel registration (Phase 34.1 Plan 04,
  * D-03/D-08/D-09/D-13, REQ-34.1-05/REQ-34.1-09/REQ-34.1-12).
  *
- * Registers the 21 sidecar-routed app-shell channels (7 invoke + 14 send) onto platformApi's
+ * Registers the 20 sidecar-routed app-shell channels (7 invoke + 13 send) onto platformApi's
  * `ipcMain` recorder, importing the REAL `backend/appshell/*` functions
  * extracted by Plan 34.1-02 unchanged (mirrors `installFlowRegistration.ts`'s
  * / `settingsFlowRegistration.ts`'s own objective — prove the real logic runs
@@ -43,7 +43,7 @@
  *     - `dialogDisplayed` -> the boot's `dialogs.displayAcks.acknowledge()` (`dialog/displayAck`) (renderer ack that a showDialog frame is on screen)
  *     - `quit` -> `backend/utils`'s `handleExit()` (`main.ts:680`), reaching
  *       `platformApi.app.exit()` -> the existing `app_exit` rustInvoke arm
- *     - `openReleases`/`openWebviewPage` -> thin
+ *     - `openWebviewPage` -> thin
  *       `platformApi.shell.openExternal` wirings (`openWebviewPage` gated by
  *       `assertOpenableExternalUrl`, Phase 72 D-07), reaching the existing
  *       `open_external` rustInvoke arm
@@ -166,7 +166,6 @@ import type { AppRuntimeSlice } from 'backend/appRuntime'
 import i18next from 'i18next'
 
 import { isSnap, isCLINoGui, isMac } from '../constants/environment'
-import { heroicGithubURL } from '../constants/urls'
 import { getLoginBackground } from '../appshell/themes'
 import {
   getLatestReleasesForStartup,
@@ -364,7 +363,7 @@ export interface AppShellFlowDeps
 }
 
 /**
- * Registers the 21 app-shell channels (7 invoke + 14 send). Called once from
+ * Registers the 20 app-shell channels (7 invoke + 13 send). Called once from
  * `handlers.ts` — this
  * module owns no side effects at import time beyond the imports above; the
  * caller decides when registration onto the handler registry happens.
@@ -465,12 +464,6 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
     } catch (error) {
       logSendFailure('relaunchApp', error)
     }
-  })
-
-  deps.ipc.on('openReleases', () => {
-    void Promise.resolve(deps.openExternal.openExternal(heroicGithubURL)).catch(
-      (error) => logSendFailure('openReleases', error)
-    )
   })
 
   deps.ipc.on('openWebviewPage', (_event: unknown, ...args: unknown[]) => {
