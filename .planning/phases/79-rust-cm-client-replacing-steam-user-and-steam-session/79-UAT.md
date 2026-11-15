@@ -1,5 +1,5 @@
 ---
-status: pending
+status: partial
 phase: 79-rust-cm-client-replacing-steam-user-and-steam-session
 source: [79-25-PLAN.md]
 started: 2026-11-15
