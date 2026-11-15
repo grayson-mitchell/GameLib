@@ -1557,7 +1557,12 @@ Plans:
 
 Plans:
 
+**Wave 1**
+
 - [ ] 76-01-PLAN.md — DRM branch: offline pre-check + prepareBottleForEngine back to CrossOver, refusal dialogs + done, unit tests (TDD)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 76-02-PLAN.md — 76-UAT.md and live macOS Grim Dawn (219990) run (human-verify checkpoint)
 
 ### Phase 77: Runtime hardening from the v0.9 review debt
@@ -1708,4 +1713,5 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (run /gsd-plan-phase 80 to break down)
