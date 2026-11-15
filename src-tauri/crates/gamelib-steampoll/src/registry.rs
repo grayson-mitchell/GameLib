@@ -31,6 +31,7 @@ struct Inner {
     map: Mutex<HashMap<Key, Entry>>,
     next_id: AtomicU64,
     notice_seq: AtomicU64,
+    event_seq: AtomicU64,
 }
 
 #[derive(Clone)]
@@ -76,6 +77,7 @@ impl Registry {
                 map: Mutex::new(HashMap::new()),
                 next_id: AtomicU64::new(0),
                 notice_seq: AtomicU64::new(0),
+                event_seq: AtomicU64::new(0),
             }),
         }
     }
@@ -180,6 +182,11 @@ impl Registry {
                 m.values().filter(|e| !*e.done.borrow()).count()
             }
         }
+    }
+
+    /// State-event sequence: monotonic per process, from 1 (the outbox replays in ascending order).
+    pub fn next_event_seq(&self) -> u64 {
+        self.inner.event_seq.fetch_add(1, Ordering::Relaxed) + 1
     }
 
     /// Request-notice sequence shared by install and uninstall polls: pre-increment from 0.

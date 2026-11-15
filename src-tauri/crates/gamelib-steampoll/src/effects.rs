@@ -84,6 +84,17 @@ fn key_text(key: &str, default: &str, params: Map<String, Value>) -> NotifyText 
     }
 }
 
+/// `copySourceLabel` (installRoot.ts) fallback strings; an unknown source passes through.
+pub fn copy_source_label(source: &str) -> String {
+    match source {
+        "native" => "Mac Steam",
+        "bottle" => "Windows Steam (CrossOver)",
+        "bridge" => "Steam bridge",
+        other => other,
+    }
+    .to_string()
+}
+
 pub fn restart_steam_notice(title: &str) -> Effect {
     let mut params = Map::new();
     params.insert("game".into(), json!(title));
@@ -167,8 +178,8 @@ impl Continuation {
                 out.push(Effect::Notify(match survivor_source {
                     Some(survivor) => {
                         let mut params = Map::new();
-                        params.insert("removed".into(), json!(removed_source));
-                        params.insert("survivor".into(), json!(survivor));
+                        params.insert("removed".into(), json!(copy_source_label(&removed_source)));
+                        params.insert("survivor".into(), json!(copy_source_label(&survivor)));
                         Notification {
                             title: NotifyText::Literal(title),
                             body: key_text(
