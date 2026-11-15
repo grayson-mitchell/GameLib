@@ -60,7 +60,7 @@ precondition: DREDGE (or another small owned native title) not installed. Action
 
 ### 3. Mid-lease reconnect after network off/on (D-02, D-11)
 expected: During a 1 to 2 GB install, Wi-Fi off for about 20 s then back on: the shell log has `CM session rebuilt in <ms>ms` and the download resumes and completes with no manual retry.
-result: pending
+result: issue — Hell Clock (1782460, 1.5 GB). Run 1 (Wi-Fi off ~30 s): install completed with no retry, but no CM op ran during the outage and the TCP link survived, so no rebuild was exercised. Run 2 (Wi-Fi off ~90 s, then Refresh): CM side behaved per D-02 (shell `CM probing session (cause=timeout)`, link found alive, no rebuild needed, Refresh then succeeded on `CM session reused`), but the install failed: `[depot-rust] ... chunk ... failed after 8 attempts` x32, `classified as steam.download.error.connectionDropped`, UI error "Steam servers dropped the connection". The failure is the gamelib-depot CDN chunk retry budget being shorter than a 90 s outage, not the CM session. `CM session rebuilt` not yet seen live.
 precondition: 1 to 2 GB owned title not installed; install already downloading. Action: Wi-Fi off about 20 s, on, report; Claude greps the shell log and checks completion.
 
 ### 4. Sleep/wake during a held lease
