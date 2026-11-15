@@ -2,14 +2,6 @@
  * Phase 79 (79-40): what survives of the Mac Steam helper once the Rust CM session owns the wrap
  * and the owed record: the connection_log state read and the guided Go Offline Continue.
  */
-jest.mock('backend/logger', () => ({
-  logInfo: jest.fn(),
-  logError: jest.fn(),
-  logWarning: jest.fn(),
-  logDebug: jest.fn(),
-  LogPrefix: { Steam: 'Steam', Backend: 'Backend' }
-}))
-
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'

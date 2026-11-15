@@ -47,12 +47,6 @@ export interface OpenAuthenticatedLease {
   release: () => void
 }
 
-// QR_LOGIN_TIMEOUT_MS is the single source of truth for the QR session's
-// loginTimeout. The challenge-issued log line below interpolates this same
-// constant (never a second hand-typed 120000) so the logged value cannot
-// drift from the value actually set on the session.
-export const QR_LOGIN_TIMEOUT_MS = 120000
-
 // quick 261011-rj0: the EResults with which the CM refuses the CREDENTIAL
 // itself, as opposed to refusing this connection (LogonSessionReplaced,
 // RateLimitExceeded, ServiceUnavailable, ...). Only these mean "the stored
