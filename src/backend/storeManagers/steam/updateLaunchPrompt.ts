@@ -143,7 +143,7 @@ export async function gateBridgeLaunchOnUpdate(
     })
 
     switch (response) {
-      case 1:
+      case 1: {
         logInfo(
           `SteamGame: queueing update for appId ${appId} from the launch prompt`,
           LogPrefix.Steam
@@ -160,6 +160,7 @@ export async function gateBridgeLaunchOnUpdate(
           .getDownloadQueue()
           .addToQueue(buildUpdateQueueElement(queuedInfo, appId))
         return 'abort'
+      }
       case 2:
         recordUpdatePromptAck(deps, appId, targetBuild)
         return 'launch'

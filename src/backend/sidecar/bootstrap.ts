@@ -1425,7 +1425,7 @@ export function configureSteamCm(deps: {
  */
 export function restoreOwedMacSteamOnlineAtBoot(deps: {
   requestRustInvoke: RequestRustInvoke
-  restoreTs: () => Promise<unknown> | unknown
+  restoreTs: () => unknown
   /** Settles when the boot configure answered; the Rust restore needs the folder it sets. */
   configured?: Promise<void>
 }): void {

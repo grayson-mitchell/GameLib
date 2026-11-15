@@ -528,7 +528,7 @@ describe('SteamLibraryManager', () => {
 
     const pushed = jest
       .mocked(sendFrontendMessage)
-      .mock.calls.find(([_msg, info]) => info.app_name === '570')?.[1] as any
+      .mock.calls.find(([_msg, info]) => info.app_name === '570')?.[1]
 
     expect(pushed).toBeDefined()
     expect('art_logo' in pushed).toBe(false)

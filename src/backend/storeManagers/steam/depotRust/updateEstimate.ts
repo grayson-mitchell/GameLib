@@ -135,6 +135,7 @@ export async function estimateBridgeUpdate(
       // An abandoned Rust summary keeps running (no summary cancel exists); its later
       // token/request-code callbacks find no registry entry and fail, which is the intended result.
       const aborted = new Promise<never>((_, reject) => {
+        // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- the caller's abort reason, passed through verbatim
         onAbort = () => reject(signal.reason)
         if (signal.aborted) onAbort()
         else signal.addEventListener('abort', onAbort, { once: true })

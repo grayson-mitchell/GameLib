@@ -1,5 +1,5 @@
 import type { ManagerDeps } from 'backend/services/types'
-import { ExecResult, GameInfo } from 'common/types'
+import { ExecResult } from 'common/types'
 import type { SideloadGameInfo } from 'common/types/sideload'
 import { readdirSync } from 'graceful-fs'
 import { dirname, join } from 'path'

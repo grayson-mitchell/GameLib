@@ -18,6 +18,7 @@ type Boot = typeof import('../bootstrap')
 function load(): Boot {
   let m: Boot | undefined
   jest.isolateModules(() => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     m = require('../bootstrap') as Boot
   })
   return m as Boot
