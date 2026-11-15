@@ -158,12 +158,12 @@ Run after steam-user and steam-session were deleted (79-43). Build first (`pnpm 
 
 ### 20. Launch: the user is still signed in
 expected: After launching on the post-deletion build the Steam account is connected with no sign-in prompt. Proof is the stored `userData.username` being real (length greater than 0 and not the `Steam User` fallback), `isLoggedIn` true, never a name in the UI (the Accounts tile deliberately shows none).
-result: pending
+result: pass — post-deletion build (sidecar rebuilt after 79-42; no steam-user/steam-session in the bundle). Cmd-Q of the previous instance left no sidecar; relaunch booted clean (no module-not-found or steam-user/session lines). Stored `userData.username` is a real persona (7 chars, not the fallback), `isLoggedIn` true; operator confirmed Steam connected with no sign-in prompt.
 precondition: a signed-in Steam account from the earlier parts. Action: operator runs `pnpm tauri:dev`; Claude reads the stored `userData.username` length from the Steam config and confirms there is no sign-in prompt.
 
 ### 21. Refresh with Mac Steam running, Rust CM path
 expected: With Mac Steam running and online, Refresh logs `[steamcm] rust steamcm_refresh` in `gamelib.log` and the shell log has `CM logon mode=authenticated reason=user-refresh`. There is NO `Mac Steam path` line in the Refresh window, Mac Steam's Friends list stays online, and `~/Library/Application Support/Steam/logs/gameprocess_log.txt` gains no `AppID 480` line.
-result: pending
+result: pass — Mac Steam running. Refresh 22:55:09: one `[steamcm] rust steamcm_refresh`, no `Mac Steam path` line (path off by default), shell `CM logon mode=authenticated reason=user-refresh`, `Steam library sync complete: 401 games` (matches the pre-switch 401 of item 1; Steam is returning the 11 demo buffers again). Friends stayed online (operator); 0 `AppID 480` lines in gameprocess_log.txt.
 precondition: Mac Steam running, online, same account; `GAMELIB_STEAM_MAC_PATH` unset. Action: operator presses Refresh and watches Friends; Claude greps both logs and counts `AppID 480` in gameprocess_log.txt before and after.
 
 ### 22. Refresh with Mac Steam quit
