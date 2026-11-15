@@ -168,7 +168,7 @@ precondition: Mac Steam running, online, same account; `GAMELIB_STEAM_MAC_PATH` 
 
 ### 22. Refresh with Mac Steam quit
 expected: With Mac Steam quit, Refresh logs `[steamcm] rust steamcm_refresh`, the shell log has `CM logon mode=authenticated reason=user-refresh`, and `gamelib.log` has `Steam library sync complete:` with a game count.
-result: pending
+result: pass — Mac Steam quit (`pgrep -x steam_osx` empty). Refresh 06:33:56: one `[steamcm] rust steamcm_refresh`, shell `CM logon mode=authenticated reason=user-refresh`, `Steam library sync complete: 401 games` at 06:34:02. No Mac Steam dependency; 0 `AppID 480` lines.
 precondition: Mac Steam quit. Action: operator presses Refresh; Claude greps. Restart Mac Steam afterwards for item 23 onward.
 
 ### 23. Install a small game
