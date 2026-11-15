@@ -85,6 +85,31 @@ unless the clean-HEAD or full-suite run turns something red.
 - **D-15:** The records sweep is limited to **52, 53, 58**. Other phases' stale items stay in the
   v0.9 audit's tech-debt list.
 
+### Post-research amendments (operator, 2026-11-16)
+Research (`78-RESEARCH.md`) found premises that current code contradicts. The operator decided:
+- **D-17:** The 12 suites red at clean HEAD outside the four (shimGenerate, shimCoverage, ipcDomainCensus,
+  flowRegistrationCensus, tauriShellSource, epicOfflineMode, themeTokens, gamelibCatalogParity,
+  lintTranslations, genI18nGateScope, callbackRegistryHost, x86CallbackWineHarness) are **not fixed in
+  this phase**. File **one grouped pending todo** (with `severity:`/`platform:`/`ready:`) listing them
+  with first failure messages. Verification states "the four pass in the full run; N other suites red,
+  see todo" — never "full suite green". D-04 applies to the four suites and to un-masked lint steps only.
+- **D-18 (amends D-08, D-12, D-14): records state current truth.** (a) callback-1298 follow-up is
+  dropped, citing its closure in `todos/completed/`. (b) 52 WR-03 SteamStub display-ack is recorded as
+  **moot** — the notice code was deleted in 56-13 (`f8a00423a`) and a real display acknowledgement
+  shipped in `509bcb01b` (`displayAck.ts`) for the successor notices; **no new todo** (replaces D-12's
+  todo). (c) ELEX and Unclaimed World are recorded as **lifted** (`bridge-allowlist.json` `knownBad: []`,
+  closing quicks/todos cited); only Raft/Grim Dawn DRM stay open, owned by Phase 56 (replaces D-14's
+  "open / known-bad" for those two). Stale `pending/` todo paths in 52's records are corrected to
+  `completed/`. 53-VERIFICATION gets the same current-body-on-top treatment as D-06.
+- **D-19 (amends D-09 default):** Fix the three small open review items **in this phase** and then close
+  them: 58 WR-03 gets a real source pin (`GL_SEND_TIMEOUT_USEC 250000` and `SO_SNDBUF`); IN-01
+  (`inviteBridge.ts:63` `once('error')` → persistent handler) gets the fix plus a covering test; IN-02
+  (`bridge_helper.c` stale "accept loop, see main" comment) is corrected.
+- **D-20 (bounds D-16):** Do **not** lower the ESLint ceilings. D-16a is satisfied by proving the cold
+  run green at execution HEAD. D-16b (un-mask `lint.yml` steps and `.husky/pre-push`) is done, and the
+  meta wiring tests that pin the old masking (`steamLineCeilingWiring`, `backendDiCeilingsWiring`,
+  `boundaryWiring`, `gameInfoNarrowingWiring`) are updated with it; pre-push line 2 keeps `codecheck`.
+
 ### Claude's Discretion
 - How the attribution in D-02 is done (log reading versus a real bisect), as long as each suite
   ends up with a named cause.
