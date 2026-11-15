@@ -373,6 +373,46 @@ describe('initStateSubscriptions', () => {
     expect(lib.refreshingInTheBackground).toBe(false)
   })
 
+  it('a Steam sync that shrinks the set removes the entries the backend dropped, keeping installed ones', () => {
+    const g = (app_name: string, is_installed = false) => ({
+      app_name,
+      runner: 'steam',
+      title: app_name,
+      is_installed
+    })
+    config['games'] = [g('1'), g('2')]
+    config['__timestamp.games'] = 'x'
+    init.initStateSubscriptions()
+    // boot state: the persisted 410-style set, including extras
+    useLibraryState.setState({
+      steamLibrary: [
+        g('1'),
+        g('2'),
+        g('440'),
+        g('480'),
+        g('999', true)
+      ] as never
+    })
+    // a still-buffered push must land before the reconcile
+    handlers.get('handleGamePush')?.[0]?.({}, g('3'))
+    config['games'] = [g('1'), g('2'), g('3')]
+    handlers.get('handleSteamSyncStatus')?.[0]?.({}, { status: 'idle' })
+    expect(
+      useLibraryState.getState().steamLibrary.map((x) => x.app_name)
+    ).toEqual(['1', '2', '999', '3'])
+    delete config['games']
+    delete config['__timestamp.games']
+  })
+
+  it('an unreadable Steam store leaves the library alone on idle', () => {
+    init.initStateSubscriptions()
+    useLibraryState.setState({
+      steamLibrary: [{ app_name: '1', runner: 'steam' }] as never
+    })
+    handlers.get('handleSteamSyncStatus')?.[0]?.({}, { status: 'idle' })
+    expect(useLibraryState.getState().steamLibrary).toHaveLength(1)
+  })
+
   it('the refresh push calls refreshLibrary with origin push', () => {
     const seen: unknown[] = []
     useLibraryState.setState({

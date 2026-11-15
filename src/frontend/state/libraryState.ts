@@ -82,6 +82,13 @@ export interface LibraryState {
    * whole Library 400 times and froze typing for ~5 s).
    */
   applyGamePushes: (infos: GameInfo[]) => void
+  /**
+   * Drops Steam entries the backend no longer holds. Pushes only upsert, so a
+   * Refresh that shrinks the set (the Mac-path demos and F2P extras after the
+   * path was turned off) left the boot-time persisted extras on screen.
+   * Installed entries stay, as on a signed-out boot.
+   */
+  reconcileSteamLibrary: (ownedAppNames: ReadonlySet<string>) => void
   refresh: (
     library?: Runner | 'all',
     checkUpdates?: boolean,
@@ -552,6 +559,14 @@ const useLibraryStateRaw = create<LibraryState>()(
         if (steam.length)
           next.steamLibrary = upsertManyByAppName(get().steamLibrary, steam)
         if (Object.keys(next).length) set(next)
+      },
+
+      reconcileSteamLibrary: (ownedAppNames) => {
+        const current = get().steamLibrary
+        const kept = current.filter(
+          (g) => ownedAppNames.has(g.app_name) || g.is_installed
+        )
+        if (kept.length !== current.length) set({ steamLibrary: kept })
       },
 
       refresh: async (

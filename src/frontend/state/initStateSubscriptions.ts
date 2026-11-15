@@ -153,6 +153,7 @@ export function initStateSubscriptions(): void {
   })
   window.api.handleSteamSyncStatus((e, { status }) => {
     useLibraryState.getState().setSteamSyncStatus(status)
+    if (status === 'idle') reconcileSteamLibraryWithBackend()
   })
   window.api.handleRefreshLibrary((e, runner) => {
     void useLibraryState.getState().refreshLibrary({
@@ -278,6 +279,20 @@ export function flushGamePushes(): void {
   const batch = pendingGamePushes
   pendingGamePushes = []
   if (batch.length) useLibraryState.getState().applyGamePushes(batch)
+}
+
+/**
+ * A completed Steam sync persists the backend's set before it emits 'idle'.
+ * Apply the pushes still buffered, then drop entries absent from that set.
+ * An unreadable store is left alone rather than treated as empty.
+ */
+export function reconcileSteamLibraryWithBackend(): void {
+  flushGamePushes()
+  const games = steamLibraryStore.get('games')
+  if (!Array.isArray(games)) return
+  useLibraryState
+    .getState()
+    .reconcileSteamLibrary(new Set(games.map((g) => g.app_name)))
 }
 
 function queueGamePush(info: GameInfo): void {
