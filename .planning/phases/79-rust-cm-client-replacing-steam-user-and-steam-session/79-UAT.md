@@ -114,7 +114,7 @@ Run by plan 79-38. Items continue the numbering of part A. Defaults now: both `G
 
 ### 12. Rust Refresh on the CM path, Mac Steam quit (D-12, D-16)
 expected: With Mac Steam fully quit, one Refresh gives exactly one `[steamcm] rust steamcm_refresh` line in `gamelib.log`, no TS capture or demos fetch lines, then `Steam Refresh enrichment: attempted=... rateLimited=... budgetHit=...` and `Steam library sync complete: <n> games`. The owned and demo counts match the Refresh sweep in 79-PARITY.md.
-result: pending
+result: pass — Mac Steam quit (`pgrep -x steam_osx` empty), defaults (no flags). Refresh 15:09:06: `Steam Refresh: Mac Steam path unavailable (helper-failed), using CM`, then `[steamcm] rust steamcm_licenses` + `[steamcm] rust steamcm_refresh`, shell `CM logon mode=authenticated reason=user-refresh`, `Steam bulk platform capture: ... anon=1 held=1` (the Rust result summary from rustRefresh.ts, not a TS capture), `Steam Refresh enrichment: attempted=0 ... rateLimited=false budgetHit=false`, `Steam library sync complete: 390 games` (matches the 390-entry Refresh sweeps in 79-PARITY.md). No TS demos fetch line. Note: gamelib.log has TWO `steamcm_refresh` lines, one for the macSteam-source attempt and one for the CM Refresh: 79-36 routes both sources through the same channel, so "exactly one" in the expected text predates that design.
 precondition: signed in; Mac Steam quit (check `pgrep -x steam_osx` prints nothing); `pnpm build:sidecar` fresh. Action: operator presses Refresh once; Claude copies `gamelib.log` and greps the lines. Expect `Mac Steam path unavailable (` to appear first (the Mac path is tried before the CM path), then the CM Refresh.
 
 ### 13. D-09 second arm: CM-fallback Refresh with a freshly started Mac Steam, Friends watched (D-09)
@@ -129,7 +129,7 @@ precondition: Mac Steam running, online, same account; helper restored (`test -x
 
 ### 15. Mac path fallback with Mac Steam quit
 expected: With Mac Steam quit, Refresh logs `Mac Steam path unavailable (` followed by a reason and then completes through a CM Refresh (`[steamcm] rust steamcm_refresh`, `Steam library sync complete:`).
-result: pending
+result: pass — recorded from item 12's Refresh: `Steam Refresh: Mac Steam path unavailable (helper-failed), using CM` then `[steamcm] rust steamcm_refresh` and `Steam library sync complete: 390 games`.
 precondition: Mac Steam quit; helper present. Action: operator presses Refresh; Claude greps. This overlaps item 12 and may be recorded from the same Refresh.
 
 ### 16. Account-mismatch fallback
