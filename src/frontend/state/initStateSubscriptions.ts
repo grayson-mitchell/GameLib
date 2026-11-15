@@ -19,6 +19,7 @@
  * able to import this file.
  */
 import i18next from 'i18next'
+import type { GameInfo } from 'common/types'
 import { toShippedLanguage } from 'common/languages'
 import { hydrateFocusRowSelection } from 'common/focusRowMigration'
 import { applySavedZoomAtBoot } from './savedZoomBoot'
@@ -252,9 +253,7 @@ export function initStateSubscriptions(): void {
     useLibraryState.getState().updateGameOverrides(overrides)
   })
 
-  window.api.handleGamePush((e, args) => {
-    useLibraryState.getState().applyGamePush(args)
-  })
+  window.api.handleGamePush((e, args) => queueGamePush(args))
 
   // Phase 69 D-15: completed-downloads list, boot pull + queue-change refresh.
   registerDownloadsListeners()
@@ -265,6 +264,25 @@ export function initStateSubscriptions(): void {
   registerSettingsSideEffects()
   registerLibrarySideEffects()
   registerSleepAssertionSubscriber()
+}
+
+// A Steam Refresh pushes one event per game, back to back. Each is its own
+// macrotask, so applying them one by one re-rendered the whole Library per
+// game (~400x, a ~5 s freeze). Coalesce into one write per window.
+const GAME_PUSH_WINDOW_MS = 50
+let pendingGamePushes: GameInfo[] = []
+let gamePushTimer: ReturnType<typeof setTimeout> | undefined
+
+export function flushGamePushes(): void {
+  gamePushTimer = undefined
+  const batch = pendingGamePushes
+  pendingGamePushes = []
+  if (batch.length) useLibraryState.getState().applyGamePushes(batch)
+}
+
+function queueGamePush(info: GameInfo): void {
+  pendingGamePushes.push(info)
+  gamePushTimer ??= setTimeout(flushGamePushes, GAME_PUSH_WINDOW_MS)
 }
 
 /**

@@ -250,6 +250,28 @@ describe('initStateSubscriptions', () => {
     expect(useLibraryState.getState().runsForMe).toEqual({})
   })
 
+  it('a burst of game pushes lands as ONE library write', () => {
+    jest.useFakeTimers()
+    try {
+      init.initStateSubscriptions()
+      let writes = 0
+      const unsub = useLibraryState.subscribe(() => writes++)
+      for (let i = 0; i < 410; i++) {
+        handlers.get('handleGamePush')?.[0]?.(
+          {},
+          { app_name: `s${i}`, runner: 'steam', title: `S${i}` }
+        )
+      }
+      expect(writes).toBe(0)
+      jest.advanceTimersByTime(60)
+      unsub()
+      expect(writes).toBe(1)
+      expect(useLibraryState.getState().steamLibrary).toHaveLength(410)
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
   it('a game push and a metadata change update libraryState', () => {
     init.initStateSubscriptions()
     handlers.get('handleGamePush')?.[0]?.(
@@ -260,6 +282,7 @@ describe('initStateSubscriptions', () => {
         title: 'G'
       }
     )
+    init.flushGamePushes()
     expect(useLibraryState.getState().gogLibrary).toHaveLength(1)
     const overrides = { g: { wineVersion: 'w' } }
     handlers.get('handleMetadataChanged')?.[0]?.({}, overrides)

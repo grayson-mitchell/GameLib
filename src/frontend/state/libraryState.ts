@@ -76,6 +76,12 @@ export interface LibraryState {
 
   updateGameOverrides: (overrides: Record<string, GameOverride>) => void
   applyGamePush: (info: GameInfo) => void
+  /**
+   * Applies a burst of pushes with ONE store write per library (the Mac Steam
+   * Refresh pushes ~400 entries back to back; one write each re-rendered the
+   * whole Library 400 times and froze typing for ~5 s).
+   */
+  applyGamePushes: (infos: GameInfo[]) => void
   refresh: (
     library?: Runner | 'all',
     checkUpdates?: boolean,
@@ -176,13 +182,22 @@ const loadSideloadedLibrary = (
   overrides: Record<string, GameOverride> = currentOverrides()
 ): GameInfo[] => applyGameOverrides(sideloadLibrary.get('games', []), overrides)
 
-const upsertByAppName = (library: GameInfo[], info: GameInfo): GameInfo[] => {
+/** Upserts a batch: one copy, O(n + k) via an index map. */
+const upsertManyByAppName = (
+  library: GameInfo[],
+  infos: GameInfo[]
+): GameInfo[] => {
   const next = [...library]
-  const index = next.findIndex((game) => game.app_name === info.app_name)
-  if (index !== -1) {
-    next[index] = info
-  } else {
-    next.push(info)
+  const index = new Map<string, number>()
+  next.forEach((game, i) => index.set(game.app_name, i))
+  for (const info of infos) {
+    const at = index.get(info.app_name)
+    if (at !== undefined) {
+      next[at] = info
+    } else {
+      index.set(info.app_name, next.length)
+      next.push(info)
+    }
   }
   return next
 }
@@ -517,15 +532,26 @@ const useLibraryStateRaw = create<LibraryState>()(
         })
       },
 
-      applyGamePush: (info) => {
-        if (!info.app_name) return
-        if (isStore(info, 'gog')) {
-          set({ gogLibrary: upsertByAppName(get().gogLibrary, info) })
-        } else if (isStore(info, 'legendary')) {
-          set({ epicLibrary: upsertByAppName(get().epicLibrary, info) })
-        } else if (isStore(info, 'steam')) {
-          set({ steamLibrary: upsertByAppName(get().steamLibrary, info) })
+      applyGamePush: (info) => get().applyGamePushes([info]),
+
+      applyGamePushes: (infos) => {
+        const gog: GameInfo[] = []
+        const epic: GameInfo[] = []
+        const steam: GameInfo[] = []
+        for (const info of infos) {
+          if (!info.app_name) continue
+          if (isStore(info, 'gog')) gog.push(info)
+          else if (isStore(info, 'legendary')) epic.push(info)
+          else if (isStore(info, 'steam')) steam.push(info)
         }
+        const next: Partial<LibraryState> = {}
+        if (gog.length)
+          next.gogLibrary = upsertManyByAppName(get().gogLibrary, gog)
+        if (epic.length)
+          next.epicLibrary = upsertManyByAppName(get().epicLibrary, epic)
+        if (steam.length)
+          next.steamLibrary = upsertManyByAppName(get().steamLibrary, steam)
+        if (Object.keys(next).length) set(next)
       },
 
       refresh: async (
