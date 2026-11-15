@@ -13,7 +13,11 @@ fn list_prints_ops() {
     assert_eq!(out.status.code(), Some(0));
     let ops: Vec<String> =
         serde_json::from_str(String::from_utf8_lossy(&out.stdout).trim()).unwrap();
-    assert_eq!(ops.len(), 25);
+    // The CLI lists OPS plus CLI_ONLY_OPS, deduped (CLI_ONLY_OPS are already in OPS).
+    assert_eq!(ops.len(), gamelib_steamcm::OPS.len());
+    for op in gamelib_steamcm::CLI_ONLY_OPS {
+        assert!(ops.contains(&op.to_string()), "{op}");
+    }
     assert!(ops.windows(2).all(|w| w[0] < w[1]));
     assert!(ops.contains(&"steamcm_capture_anon_pics".to_string()));
 }
