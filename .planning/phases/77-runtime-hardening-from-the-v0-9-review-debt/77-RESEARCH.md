@@ -200,11 +200,14 @@ Threats: unbounded-body memory/CPU DoS (Tampering/DoS) -> capped reader + cancel
 | A2 | `duplex: 'half'` typing works in relay tsconfig | Needs a cast |
 | A3 | Cloudflare forwards `Transfer-Encoding: chunked` as a no-CL stream | Probe might hit CL fast path; use `wrangler tail` log to tell which branch fired |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. How to prove the fix (not just a 413) live: recommend the tail log line (pitfall 7). Planner decides; it adds one `console.log` and does not alter the response.
+   RESOLVED: 77-01 adds the fixed log line `relay: body over cap -> 413`; 77-03 Task 2 checks it in `wrangler tail`.
 2. Exact name of DEBT-04 publisher-watch tests: grep during planning (not found by filename search; likely in Rust crate tests or `meta/__tests__/overlayInput*`).
+   RESOLVED: 77-02 Task 1 names the `WR-01:` cases in `meta/__tests__/overlayInputSmoke.test.ts` (lines 403, 421; `itWindowServer`, skips recorded as skips).
 3. 56-VERIFICATION lines 25-26, 75 and 60-VERIFICATION lines 51, 64 and audit lines ~50, ~163-164 are the annotation targets (from CONTEXT); re-confirm line numbers at edit time.
+   RESOLVED: 77-02 Task 2 annotates the WR-02/WR-01 targets; 77-03 Task 3 annotates the audit's WR-09 lines after the live probe.
 
 ## Sources
 - Direct reads: `relay/src/handler.ts`, `relay/src/__tests__/handler.test.ts`, `relay/package.json`, `jest.config.js`, `src/backend/utils/macArch.ts`, spawn-path greps, CLAUDE.md, 77-CONTEXT.md (HIGH)

@@ -168,7 +168,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 74: Steam game updates** — 36 plans (4 gap-closure rounds); live gate passed 2026-11-14 (UAT 29-30), review WR-01/WR-02 deferred to todos (completed 2026-11-14)
 - [x] **Phase 75: Steam local file formats in Rust** — 35 plans in 20 waves; planned 2026-11-14 (completed 2026-11-14)
 - [ ] **Phase 76: Engine-correct bottle for DRM-mode launches (v0.9 audit S9)** — 2 plans in 2 waves; planned
-- [ ] **Phase 77: Runtime hardening from the v0.9 review debt** — 0 plans; not started
+- [ ] **Phase 77: Runtime hardening from the v0.9 review debt** — 3 plans in 2 waves; planned
 - [ ] **Phase 78: Verification records and test health after v0.9** — 0 plans; not started
 - [ ] **Phase 79: Rust CM client replacing steam-user and steam-session** — 44 plans in 21 waves; planned (spike 085 gate satisfied)
 - [ ] **Phase 80: Steam install, uninstall and update polling state machines in Rust** — 0 plans; not started
@@ -1571,11 +1571,18 @@ Plans:
 **Requirements**: DEBT-02, DEBT-03, DEBT-04
 **Depends on:** None
 **Source:** `milestones/v0.9-MILESTONE-AUDIT.md` tech-debt list; `56-VERIFICATION.md`, `57-REVIEW-FIX.md`, `60` review
-**Plans:** 0 plans
+**Plans:** 3 plans
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 77 to break down)
+**Wave 1**
+
+- [ ] 77-01-PLAN.md — DEBT-02: readCappedBody + handler wiring, chunked-body unit tests (TDD)
+- [ ] 77-02-PLAN.md — DEBT-03/04: re-run covering tests, D-03 spawn-bypass check, annotate stale v0.9 records, tick requirements
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 77-03-PLAN.md — DEBT-02: user deploys the relay, live chunked over-cap probe, tick DEBT-02 (human checkpoints)
 
 ### Phase 78: Verification records and test health after v0.9
 
