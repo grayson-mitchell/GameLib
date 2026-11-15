@@ -298,7 +298,7 @@ impl RegistryDword for RealRegistry {
     }
 }
 
-/// `HKCU\Software\Valve\Steam\RunningAppID` read natively (no reg.exe); 0 when missing or on
+/// `HKCU\Software\Valve\Steam\RunningAppID` read natively (no child process); 0 when missing or on
 /// any error.
 pub fn read_windows_running_app_id() -> u32 {
     running_app_id_from(&RealRegistry)
