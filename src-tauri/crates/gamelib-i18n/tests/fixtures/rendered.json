@@ -1,0 +1,4514 @@
+[
+  {
+    "language": "",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "An interrupted install for Test Game is ready to resume — click Install to continue"
+  },
+  {
+    "language": "",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "Installation Finished"
+  },
+  {
+    "language": "",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "Uninstalled"
+  },
+  {
+    "language": "",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "ar",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "ar",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "يوجد تثبيت متوقف لـ Test Game جاهز للاستئناف — انقر على تثبيت للمتابعة"
+  },
+  {
+    "language": "ar",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "ar",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "انتهى التثبيت"
+  },
+  {
+    "language": "ar",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "أُلغي التثبيت"
+  },
+  {
+    "language": "ar",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "ar",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "ar",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "ar",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "ar",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "ar",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "az",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "az",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Test Game üçün fasiləyə uğramış quraşdırma davam etməyə hazırdır — davam etmək üçün Quraşdır düyməsinə basın"
+  },
+  {
+    "language": "az",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "az",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "Quraşdırma tamamlandı"
+  },
+  {
+    "language": "az",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "Silindi"
+  },
+  {
+    "language": "az",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "az",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "az",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "az",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "az",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "az",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "be",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "be",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Перарваная ўсталёўка Test Game гатова да працягу — націсніце «Усталяваць», каб працягнуць"
+  },
+  {
+    "language": "be",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "be",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "Усталяванне скончана"
+  },
+  {
+    "language": "be",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "Выдалена"
+  },
+  {
+    "language": "be",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "be",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "be",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "be",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "be",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "be",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "bg",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "bg",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Прекъснатата инсталация на Test Game е готова за продължаване — кликнете „Инсталиране“, за да продължите"
+  },
+  {
+    "language": "bg",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "bg",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "Инсталирането е завършено"
+  },
+  {
+    "language": "bg",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "Деинсталирано"
+  },
+  {
+    "language": "bg",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "bg",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "bg",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "bg",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "bg",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "bg",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "bs",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "bs",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Prekinuta instalacija za Test Game je spremna za nastavak — klikni Instaliraj da nastaviš"
+  },
+  {
+    "language": "bs",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "bs",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "Instalacija Završena"
+  },
+  {
+    "language": "bs",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "Deinstalirano"
+  },
+  {
+    "language": "bs",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "bs",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "bs",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "bs",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "bs",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "bs",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "ca",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "ca",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Hi ha una instal·lació interrompuda de Test Game llesta per reprendre — fes clic a Instal·la per continuar"
+  },
+  {
+    "language": "ca",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "ca",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "La instal·lació ha finalitzat"
+  },
+  {
+    "language": "ca",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "Desinstal·lat"
+  },
+  {
+    "language": "ca",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "ca",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "ca",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "ca",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "ca",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "ca",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "cs",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "cs",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Přerušená instalace hry Test Game je připravena k pokračování — klikněte na Instalovat pro pokračování"
+  },
+  {
+    "language": "cs",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "cs",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "Instalace dokončena"
+  },
+  {
+    "language": "cs",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "Odinstalováno"
+  },
+  {
+    "language": "cs",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "cs",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "cs",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "cs",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "cs",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "cs",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "de",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "de",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Eine unterbrochene Installation für Test Game kann fortgesetzt werden — klicke auf Installieren, um fortzufahren"
+  },
+  {
+    "language": "de",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "de",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "Installation abgeschlossen"
+  },
+  {
+    "language": "de",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "Deinstalliert"
+  },
+  {
+    "language": "de",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "de",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "de",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "de",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "de",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "de",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "el",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "el",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Μια διακοπείσα εγκατάσταση για Test Game είναι έτοιμη να συνεχιστεί — κάντε κλικ στο Εγκατάσταση για να συνεχίσετε"
+  },
+  {
+    "language": "el",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "el",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "Η εγκατάσταση ολοκληρώθηκε"
+  },
+  {
+    "language": "el",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "Απεγκαταστάθηκε"
+  },
+  {
+    "language": "el",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "el",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "el",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "el",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "el",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "el",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "en",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "en",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "An interrupted install for Test Game is ready to resume — click Install to continue"
+  },
+  {
+    "language": "en",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "en",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "Installation Finished"
+  },
+  {
+    "language": "en",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "Uninstalled"
+  },
+  {
+    "language": "en",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "en",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "en",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "en",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "en",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "en",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "es",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "es",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Una instalación interrumpida de Test Game está lista para reanudarse: haz clic en Instalar para continuar"
+  },
+  {
+    "language": "es",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "es",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "Instalación Terminada"
+  },
+  {
+    "language": "es",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "Desinstalado"
+  },
+  {
+    "language": "es",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "es",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "es",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "es",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "es",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "es",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "et",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "et",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Katkestatud paigaldus mängule Test Game on valmis jätkamiseks — jätkamiseks klõpsa „Paigalda“"
+  },
+  {
+    "language": "et",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "et",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "Paigaldamine lõpetatud"
+  },
+  {
+    "language": "et",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "Eemaldatud"
+  },
+  {
+    "language": "et",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "et",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "et",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "et",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "et",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "et",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "eu",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "eu",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Test Game jokoaren eten den instalazioa berrekiteko prest dago — sakatu Instalatu jarraitzeko"
+  },
+  {
+    "language": "eu",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "eu",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "Amaitu da instalatzea"
+  },
+  {
+    "language": "eu",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "Desinstalatua"
+  },
+  {
+    "language": "eu",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "eu",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "eu",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "eu",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "eu",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "eu",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "fa",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "fa",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "نصب متوقف‌شده Test Game آماده ادامه است — برای ادامه روی نصب کلیک کنید"
+  },
+  {
+    "language": "fa",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "fa",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "نصب به پایان رسید"
+  },
+  {
+    "language": "fa",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "حذف شد"
+  },
+  {
+    "language": "fa",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "fa",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "fa",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "fa",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "fa",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "fa",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "fi",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "fi",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Keskeytynyt asennus pelille Test Game on valmis jatkettavaksi — jatka napsauttamalla Asenna"
+  },
+  {
+    "language": "fi",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "fi",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "Asennus valmistui"
+  },
+  {
+    "language": "fi",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "Poistettu"
+  },
+  {
+    "language": "fi",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "fi",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "fi",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "fi",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "fi",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "fi",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "fr",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "fr",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Une installation interrompue pour Test Game est prête à reprendre — cliquez sur Installer pour continuer"
+  },
+  {
+    "language": "fr",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "fr",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "Installation achevée"
+  },
+  {
+    "language": "fr",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "Désinstallé"
+  },
+  {
+    "language": "fr",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "fr",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "fr",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "fr",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "fr",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "fr",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "ga",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "ga",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Tá suiteáil idirbhriste do Test Game réidh le atosú — cliceáil Suiteáil chun leanúint ar aghaidh"
+  },
+  {
+    "language": "ga",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "ga",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "Suiteáil Críochnaithe"
+  },
+  {
+    "language": "ga",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "Díshuiteáilte"
+  },
+  {
+    "language": "ga",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "ga",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "ga",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "ga",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "ga",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "ga",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "gl",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "gl",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Unha instalación interrompida de Test Game está lista para retomarse — preme Instalar para continuar"
+  },
+  {
+    "language": "gl",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "gl",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "Instalación rematada"
+  },
+  {
+    "language": "gl",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "Desintalado"
+  },
+  {
+    "language": "gl",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "gl",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "gl",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "gl",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "gl",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "gl",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "he",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "he",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "התקנה שהופסקה עבור Test Game מוכנה להמשך — לחץ על התקן כדי להמשיך"
+  },
+  {
+    "language": "he",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "he",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "ההתקנה הסתיימה"
+  },
+  {
+    "language": "he",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "התקנה הוסרה"
+  },
+  {
+    "language": "he",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "he",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "he",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "he",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "he",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "he",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "hr",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "hr",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Prekinuta instalacija za Test Game spremna je za nastavak — kliknite Instaliraj za nastavak"
+  },
+  {
+    "language": "hr",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "hr",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "Instaliranje je završeno"
+  },
+  {
+    "language": "hr",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "Deinstalirano"
+  },
+  {
+    "language": "hr",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "hr",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "hr",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "hr",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "hr",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "hr",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "hu",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "hu",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "A(z) Test Game megszakított telepítése folytatásra kész — kattints a Telepítésre a folytatáshoz"
+  },
+  {
+    "language": "hu",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "hu",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "Telepítés befejezve"
+  },
+  {
+    "language": "hu",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "Eltávolítva"
+  },
+  {
+    "language": "hu",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "hu",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "hu",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "hu",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "hu",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "hu",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "id",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "id",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Instalasi Test Game yang terhenti siap dilanjutkan — klik Instal untuk melanjutkan"
+  },
+  {
+    "language": "id",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "id",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "Pemasangan Selesai"
+  },
+  {
+    "language": "id",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "Dihapus"
+  },
+  {
+    "language": "id",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "id",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "id",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "id",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "id",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "id",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "it",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "it",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Un'installazione interrotta per Test Game è pronta per essere ripresa — clicca Installa per continuare"
+  },
+  {
+    "language": "it",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "it",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "Installazione completata"
+  },
+  {
+    "language": "it",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "Disinstallazione completata"
+  },
+  {
+    "language": "it",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "it",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "it",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "it",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "it",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "it",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "ja",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "ja",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Test Gameの中断されたインストールを再開できます — インストールをクリックして続行してください"
+  },
+  {
+    "language": "ja",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "ja",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "インストールが完了しました"
+  },
+  {
+    "language": "ja",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "アンインストールされました"
+  },
+  {
+    "language": "ja",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "ja",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "ja",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "ja",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "ja",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "ja",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "ko",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "ko",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Test Game의 중단된 설치를 재개할 수 있습니다 — 설치를 클릭하여 계속하세요"
+  },
+  {
+    "language": "ko",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "ko",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "설치 완료됨"
+  },
+  {
+    "language": "ko",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "설치 제거됨"
+  },
+  {
+    "language": "ko",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "ko",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "ko",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "ko",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "ko",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "ko",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "lt",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "lt",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Nutrauktą Test Game diegimą galima tęsti — spustelėkite „Diegti“, kad tęstumėte"
+  },
+  {
+    "language": "lt",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "lt",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "Įdiegimas baigtas"
+  },
+  {
+    "language": "lt",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "Išdiegti"
+  },
+  {
+    "language": "lt",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "lt",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "lt",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "lt",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "lt",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "lt",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "ml",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "ml",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Test Game-ന്റെ തടസ്സപ്പെട്ട ഇൻസ്റ്റാൾ പുനരാരംഭിക്കാൻ തയ്യാറാണ് — തുടരാൻ ഇൻസ്റ്റാൾ ക്ലിക്ക് ചെയ്യുക"
+  },
+  {
+    "language": "ml",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "ml",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "സ്ഥാപിച്ചുകഴിഞ്ഞു"
+  },
+  {
+    "language": "ml",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "എടുത്തുനീക്കി"
+  },
+  {
+    "language": "ml",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "ml",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "ml",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "ml",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "ml",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "ml",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "nb_NO",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "nb_NO",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "En avbrutt installasjon for Test Game er klar til å gjenopptas — klikk Installer for å fortsette"
+  },
+  {
+    "language": "nb_NO",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "nb_NO",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "Installasjon fullført"
+  },
+  {
+    "language": "nb_NO",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "Avinstallert"
+  },
+  {
+    "language": "nb_NO",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "nb_NO",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "nb_NO",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "nb_NO",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "nb_NO",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "nb_NO",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "nb-NO",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "nb-NO",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "En avbrutt installasjon for Test Game er klar til å gjenopptas — klikk Installer for å fortsette"
+  },
+  {
+    "language": "nb-NO",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "nb-NO",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "Installasjon fullført"
+  },
+  {
+    "language": "nb-NO",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "Avinstallert"
+  },
+  {
+    "language": "nb-NO",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "nb-NO",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "nb-NO",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "nb-NO",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "nb-NO",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "nb-NO",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "nl",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "nl",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Een onderbroken installatie voor Test Game kan worden hervat — klik op Installeren om verder te gaan"
+  },
+  {
+    "language": "nl",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "nl",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "Installatie is voltooid"
+  },
+  {
+    "language": "nl",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "Verwijderd"
+  },
+  {
+    "language": "nl",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "nl",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "nl",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "nl",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "nl",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "nl",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "pl",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "pl",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Przerwana instalacja gry Test Game jest gotowa do wznowienia — kliknij Instaluj, aby kontynuować"
+  },
+  {
+    "language": "pl",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "pl",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "Instalacja zakończona"
+  },
+  {
+    "language": "pl",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "Odinstalowano"
+  },
+  {
+    "language": "pl",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "pl",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "pl",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "pl",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "pl",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "pl",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "pt",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "pt",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Uma instalação interrompida de Test Game está pronta para continuar — clique em Instalar para prosseguir"
+  },
+  {
+    "language": "pt",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "pt",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "A Instalação está Terminada"
+  },
+  {
+    "language": "pt",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "Desinstalado"
+  },
+  {
+    "language": "pt",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "pt",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "pt",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "pt",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "pt",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "pt",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "pt_BR",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "pt_BR",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Uma instalação interrompida de Test Game está pronta para continuar — clique em Instalar para prosseguir"
+  },
+  {
+    "language": "pt_BR",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "pt_BR",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "Instalação concluída"
+  },
+  {
+    "language": "pt_BR",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "Desinstalado"
+  },
+  {
+    "language": "pt_BR",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "pt_BR",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "pt_BR",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "pt_BR",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "pt_BR",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "pt_BR",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "pt-BR",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "pt-BR",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Uma instalação interrompida de Test Game está pronta para continuar — clique em Instalar para prosseguir"
+  },
+  {
+    "language": "pt-BR",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "pt-BR",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "Instalação concluída"
+  },
+  {
+    "language": "pt-BR",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "Desinstalado"
+  },
+  {
+    "language": "pt-BR",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "pt-BR",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "pt-BR",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "pt-BR",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "pt-BR",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "pt-BR",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "ro",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "ro",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "O instalare întreruptă pentru Test Game este gata de reluare — apasă Instalează pentru a continua"
+  },
+  {
+    "language": "ro",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "ro",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "Instalare Finalizată"
+  },
+  {
+    "language": "ro",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "Dezinstalat"
+  },
+  {
+    "language": "ro",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "ro",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "ro",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "ro",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "ro",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "ro",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "ru",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "ru",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Прерванная установка Test Game готова к возобновлению — нажмите «Установить», чтобы продолжить"
+  },
+  {
+    "language": "ru",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "ru",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "Установка завершена"
+  },
+  {
+    "language": "ru",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "Удалено"
+  },
+  {
+    "language": "ru",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "ru",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "ru",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "ru",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "ru",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "ru",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "sk",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "sk",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Prerušená inštalácia hry Test Game je pripravená na pokračovanie — kliknutím na Inštalovať budete pokračovať"
+  },
+  {
+    "language": "sk",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "sk",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "Inštalácia je dokončená"
+  },
+  {
+    "language": "sk",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "Odinštalované"
+  },
+  {
+    "language": "sk",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "sk",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "sk",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "sk",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "sk",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "sk",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "sr",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "sr",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Prekinuta instalacija za Test Game je spremna za nastavak — kliknite na Instaliraj da nastavite"
+  },
+  {
+    "language": "sr",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "sr",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "Инсталација је Завршена"
+  },
+  {
+    "language": "sr",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "Деинсталирано"
+  },
+  {
+    "language": "sr",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "sr",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "sr",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "sr",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "sr",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "sr",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "sv",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "sv",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "En avbruten installation för Test Game är redo att återupptas — klicka på Installera för att fortsätta"
+  },
+  {
+    "language": "sv",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "sv",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "Installation slutförd"
+  },
+  {
+    "language": "sv",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "Avinstallerat"
+  },
+  {
+    "language": "sv",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "sv",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "sv",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "sv",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "sv",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "sv",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "ta",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "ta",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Test Game-க்கான தடைபட்ட நிறுவல் தொடர தயாராக உள்ளது — தொடர நிறுவு என்பதை கிளிக் செய்யவும்"
+  },
+  {
+    "language": "ta",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "ta",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "நிறுவல் முடிந்தது"
+  },
+  {
+    "language": "ta",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "நிறுவல் நீக்கப்பட்டது"
+  },
+  {
+    "language": "ta",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "ta",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "ta",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "ta",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "ta",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "ta",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "tr",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "tr",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Test Game için yarıda kalan bir yükleme devam ettirilmeye hazır — devam etmek için Yükle'ye tıklayın"
+  },
+  {
+    "language": "tr",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "tr",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "Kurulum Tamamlandı"
+  },
+  {
+    "language": "tr",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "Kaldırıldı"
+  },
+  {
+    "language": "tr",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "tr",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "tr",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "tr",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "tr",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "tr",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "uk",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "uk",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Перерване встановлення Test Game готове до відновлення — натисніть «Встановити», щоб продовжити"
+  },
+  {
+    "language": "uk",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "uk",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "Встановлення закінчено"
+  },
+  {
+    "language": "uk",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "Видалено"
+  },
+  {
+    "language": "uk",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "uk",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "uk",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "uk",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "uk",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "uk",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "vi",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "vi",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Một bản cài đặt bị gián đoạn cho Test Game đã sẵn sàng để tiếp tục — nhấp Cài đặt để tiếp tục"
+  },
+  {
+    "language": "vi",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "vi",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "Cài Đặt Hoàn Tất"
+  },
+  {
+    "language": "vi",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "Gỡ cài đặt"
+  },
+  {
+    "language": "vi",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "vi",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "vi",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "vi",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "vi",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "vi",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "xx",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "xx",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "An interrupted install for Test Game is ready to resume — click Install to continue"
+  },
+  {
+    "language": "xx",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "xx",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "Installation Finished"
+  },
+  {
+    "language": "xx",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "Uninstalled"
+  },
+  {
+    "language": "xx",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "xx",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "xx",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "xx",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "xx",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "xx",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "zh_Hans",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "zh_Hans",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Test Game 的中断安装已可恢复——点击安装以继续"
+  },
+  {
+    "language": "zh_Hans",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "zh_Hans",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "安装完成"
+  },
+  {
+    "language": "zh_Hans",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "已卸载"
+  },
+  {
+    "language": "zh_Hans",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "zh_Hans",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "zh_Hans",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "zh_Hans",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "zh_Hans",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "zh_Hans",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "zh_Hant",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "zh_Hant",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Test Game 的中斷安裝已可繼續——按一下安裝以繼續"
+  },
+  {
+    "language": "zh_Hant",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "zh_Hant",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "已完成安裝"
+  },
+  {
+    "language": "zh_Hant",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "已解除安裝"
+  },
+  {
+    "language": "zh_Hant",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "zh_Hant",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "zh_Hant",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "zh_Hant",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "zh_Hant",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "zh_Hant",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  },
+  {
+    "language": "zh-Hans",
+    "key": "gamelib:steam.noSuchKey.anywhere",
+    "default": "Inline gamelib fallback",
+    "params": {},
+    "rendered": "Inline gamelib fallback"
+  },
+  {
+    "language": "zh-Hans",
+    "key": "gamelib:steam.resumeAvailable.notify",
+    "default": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Test Game 的中断安装已可恢复——点击安装以继续"
+  },
+  {
+    "language": "zh-Hans",
+    "key": "gamelib:steam.uninstall.copySurvives",
+    "default": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+    "params": {
+      "removed": "Mac Steam",
+      "survivor": "Steam bridge"
+    },
+    "rendered": "Removed the Mac Steam copy. A Steam bridge copy is still installed — use Remove all copies… to remove it too."
+  },
+  {
+    "language": "zh-Hans",
+    "key": "notify.install.finished",
+    "default": "Installation Finished",
+    "params": {},
+    "rendered": "安装完成"
+  },
+  {
+    "language": "zh-Hans",
+    "key": "notify.uninstalled",
+    "default": "Game Uninstalled",
+    "params": {},
+    "rendered": "已卸载"
+  },
+  {
+    "language": "zh-Hans",
+    "key": "steam.download.notify.depotSkipped",
+    "default": "Installed without depot {{depots}}. Steam wouldn't release its key for this account, so that content was skipped — the game should still run.",
+    "params": {
+      "depots": "2001, 2002"
+    },
+    "rendered": "Installed without depot 2001, 2002. Steam wouldn't release its key for this account, so that content was skipped — the game should still run."
+  },
+  {
+    "language": "zh-Hans",
+    "key": "steam.noSuchKey.anywhere",
+    "default": "Inline fallback for {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Inline fallback for Test Game"
+  },
+  {
+    "language": "zh-Hans",
+    "key": "steam.noSuchKey.numeric",
+    "default": "Count {{n}}",
+    "params": {
+      "n": 3
+    },
+    "rendered": "Count 3"
+  },
+  {
+    "language": "zh-Hans",
+    "key": "steam.noSuchKey.unknownParam",
+    "default": "Hello {{who}} and {{ spaced }}",
+    "params": {
+      "spaced": "S"
+    },
+    "rendered": "Hello {{who}} and S"
+  },
+  {
+    "language": "zh-Hans",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Test Game"
+    },
+    "rendered": "Restart Steam to finish installing Test Game"
+  },
+  {
+    "language": "zh-Hans",
+    "key": "steam.waitingForSteam.notify",
+    "default": "Restart Steam to finish installing {{game}}",
+    "params": {
+      "game": "Tom & Jerry's <b>\"Cheese\"</b>"
+    },
+    "rendered": "Restart Steam to finish installing Tom &amp; Jerry&#39;s &lt;b&gt;&quot;Cheese&quot;&lt;&#x2F;b&gt;"
+  }
+]
