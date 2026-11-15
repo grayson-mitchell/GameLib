@@ -96,7 +96,10 @@ const ACQUIRE_OPEN_ALLOW = [
   `${S}installLocation.ts`,
   `${S}bridge/launchTarget.ts`
 ]
-const ENSURE_CONNECTED_ALLOW = [USER]
+// Phase 79 (79-38): rustSession.ts is the Rust-session half of user.ts. SteamUser delegates its
+// session ownership to it, and it DEFINES `ensureConnected()` (it is the method's implementation,
+// not a second caller). It acquires nothing on its own initiative.
+const ENSURE_CONNECTED_ALLOW = [USER, `${S}rustSession.ts`]
 const LAUNCH_PATH = [
   `${S}installLocation.ts`,
   `${S}bridge/launchTarget.ts`,
@@ -213,7 +216,7 @@ describe('Steam authenticated-session policy (Phase 54 ROADMAP SC3)', () => {
     expect([...filesMatching(/\.relog\(/).keys()]).toEqual([])
   })
 
-  it('Rule D: ensureConnected( is called only from user.ts', () => {
+  it('Rule D: ensureConnected( is called only from user.ts (and defined in rustSession.ts)', () => {
     const re = /\bensureConnected\(/
     expect(countIn(USER, re)).toBeGreaterThanOrEqual(1)
     expect(offendersOutside(re, ENSURE_CONNECTED_ALLOW, 'D')).toEqual([])
