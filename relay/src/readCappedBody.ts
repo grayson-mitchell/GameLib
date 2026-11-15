@@ -1,5 +1,11 @@
 // DEBT-02 / 57 WR-09: bound the request body whether Content-Length is
 // absent or lying. Stops and cancels the stream once past `max` bytes.
+//
+// Memory bound: at most `max` bytes of accepted chunks plus ONE chunk. The
+// cap is checked after a chunk is read, so a single oversized chunk is held
+// in memory before it is rejected. On Workers the platform request-size limit
+// and chunk sizing keep that one chunk small; this does not bound the body
+// to exactly `max`.
 export async function readCappedBody(
   request: Request,
   max: number
