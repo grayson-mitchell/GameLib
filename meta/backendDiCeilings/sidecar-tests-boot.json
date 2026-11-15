@@ -1,8 +1,10 @@
 {
   "jestMock": {
+    "src/backend/sidecar/__tests__/bootstrap.steamcm.test.ts": 1,
     "src/backend/sidecar/__tests__/bootstrap.test.ts": 1,
     "src/backend/sidecar/__tests__/bootstrapUserReconcile.test.ts": 2,
     "src/backend/sidecar/__tests__/bootstrapWirings.test.ts": 5,
+    "src/backend/sidecar/__tests__/depotHostRegistration.rust.test.ts": 1,
     "src/backend/sidecar/__tests__/engineTempSweepBootWire.test.ts": 3,
     "src/backend/sidecar/__tests__/gogPresenceBootWire.test.ts": 2,
     "src/backend/sidecar/__tests__/migrationsWiring.test.ts": 3,

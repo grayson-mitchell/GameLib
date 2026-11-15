@@ -5,6 +5,7 @@
     "src/frontend/screens/Game/GamePage/components/__tests__/EngineNotices.test.tsx": 1,
     "src/frontend/screens/Game/GamePage/components/__tests__/GameStatus.bottleWaiting.test.tsx": 7,
     "src/frontend/screens/Game/GamePage/components/__tests__/GameStatus.redistSpinner.test.tsx": 7,
+    "src/frontend/screens/Game/GamePage/components/__tests__/GameStatus.steamUpdate.test.tsx": 7,
     "src/frontend/screens/Game/GamePage/components/__tests__/HumbleOriginInfo.test.tsx": 2,
     "src/frontend/screens/Game/GamePage/components/__tests__/MacArchBadge.test.tsx": 1,
     "src/frontend/screens/Game/GamePage/components/__tests__/MainButton.bridgeFinishing.test.tsx": 5,
@@ -15,9 +16,11 @@
     "src/frontend/screens/Game/GamePage/components/__tests__/MainButton.steamSplitButton.test.tsx": 6,
     "src/frontend/screens/Game/GamePage/components/__tests__/MainButton.steamStarting.test.tsx": 5,
     "src/frontend/screens/Game/GamePage/components/__tests__/MainButton.steamWaitingRestart.test.tsx": 5,
+    "src/frontend/screens/Game/GamePage/components/__tests__/PlatformSupport.test.tsx": 1,
     "src/frontend/screens/Game/GamePage/components/__tests__/SettingsButton.test.tsx": 3,
     "src/frontend/screens/Game/GamePage/components/__tests__/SteamBridgeRouteSummary.test.tsx": 2,
     "src/frontend/screens/Game/GamePage/components/__tests__/SteamClientSetup.waitingDialog.test.tsx": 5,
+    "src/frontend/screens/Game/GamePage/components/__tests__/SteamUpdateButton.test.tsx": 4,
     "src/frontend/screens/Game/GamePage/components/__tests__/SteamUpdateInfo.test.tsx": 5,
     "src/frontend/screens/Game/GamePage/components/__tests__/cloudSavesSyncFailure.test.tsx": 9
   }
