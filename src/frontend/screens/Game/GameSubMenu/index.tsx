@@ -6,9 +6,16 @@ import './index.css'
 import { asStoreGame } from 'common/gameInfoNarrowing'
 import { hasCapability, isStore } from 'common/storeCapabilities'
 
-import { useCallback, useContext, useEffect, useState } from 'react'
+import { useCallback, useContext, useEffect, useMemo, useState } from 'react'
 
-import { GameInfo, GameStatus, Runner } from 'common/types'
+import {
+  FavouriteGame,
+  GameInfo,
+  GameStatus,
+  HiddenGame,
+  Runner
+} from 'common/types'
+import { useHiddenGames, useFavouriteGames } from 'frontend/state/accountHooks'
 
 import { createNewWindow, repair } from 'frontend/helpers'
 import { useTranslation } from 'react-i18next'
@@ -38,10 +45,13 @@ import {
   ArrowUpward as ArrowUpwardIcon,
   CheckCircle as CheckCircleIcon,
   Delete as DeleteIcon,
+  Description as DescriptionIcon,
   DesktopAccessDisabled as DesktopAccessDisabledIcon,
   Download as DownloadIcon,
   DriveFileMove as DriveFileMoveIcon,
   Edit as EditIcon,
+  Favorite as FavoriteIcon,
+  FavoriteBorder as FavoriteBorderIcon,
   FindInPage as FindInPageIcon,
   Folder as FolderIcon,
   FormatListBulleted as FormatListBulletedIcon,
@@ -49,7 +59,9 @@ import {
   PictureInPicture as PictureInPictureIcon,
   Repartition as RepartitionIcon,
   Shortcut as ShortcutIcon,
-  ShoppingCart as ShoppingCartIcon
+  ShoppingCart as ShoppingCartIcon,
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon
 } from '@mui/icons-material'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faLinux, faSteam } from '@fortawesome/free-brands-svg-icons'
@@ -89,7 +101,12 @@ export default function GamesSubmenu({
   const platform = useUiState((s) => s.platform)
   const showDialogModal = useUiState((s) => s.showDialogModal)
   const openDialog = useOpenDialog()
-  const { openGameCategoriesModal } = useUiState.keys('openGameCategoriesModal')
+  const { openGameCategoriesModal, openGameLogsModal } = useUiState.keys(
+    'openGameCategoriesModal',
+    'openGameLogsModal'
+  )
+  const hiddenGames = useHiddenGames()
+  const favouriteGames = useFavouriteGames()
   const { is, gameSettings } = useContext(GameContext)
   const isWin = platform === 'win32'
   const isLinux = platform === 'linux'
@@ -113,6 +130,21 @@ export default function GamesSubmenu({
   const { t: tDefault } = useTranslation()
   const isSideloaded = !hasCapability(runner, 'hasStoreCatalog')
   const isSteam = !hasCapability(runner, 'winePrefixToolsAvailable')
+  const isBrowserGame = gameInfo.install.platform === 'Browser'
+  const isHiddenGame = useMemo(
+    () =>
+      !!hiddenGames.list.find(
+        (hiddenGame: HiddenGame) => hiddenGame.appName === appName
+      ),
+    [hiddenGames, appName]
+  )
+  const isFavouriteGame = useMemo(
+    () =>
+      !!favouriteGames.list.find(
+        (favouriteGame: FavouriteGame) => favouriteGame.appName === appName
+      ),
+    [favouriteGames, appName]
+  )
   const isThirdPartyManaged = !!gameInfo.thirdPartyManagedApp
 
   async function onMoveInstallYesClick() {
@@ -517,17 +549,63 @@ export default function GamesSubmenu({
               )}
             </button>
           )}
+          {/* quick-261115-szs: parity with the library tile context menu (GameCard items) */}
+          <button
+            onClick={async () => handleEdit()}
+            className="link button is-text is-link buttonWithIcon"
+          >
+            <EditIcon />
+            {isSideloaded
+              ? t('button.sideload.edit', 'Edit App/Game')
+              : t('button.edit-game', 'Edit Game')}
+          </button>
+          {isInstalled && !is.uninstalling && !isBrowserGame && (
+            <button
+              onClick={() => openGameLogsModal(gameInfo)}
+              className="link button is-text is-link buttonWithIcon"
+            >
+              <DescriptionIcon />
+              {t('submenu.logs', 'Logs')}
+            </button>
+          )}
+          {!isHiddenGame && (
+            <button
+              onClick={() => hiddenGames.add(appName, title)}
+              className="link button is-text is-link buttonWithIcon"
+            >
+              <VisibilityOffIcon />
+              {t('button.hide_game', 'Hide Game')}
+            </button>
+          )}
+          {isHiddenGame && (
+            <button
+              onClick={() => hiddenGames.remove(appName)}
+              className="link button is-text is-link buttonWithIcon"
+            >
+              <VisibilityIcon />
+              {t('button.unhide_game', 'Unhide Game')}
+            </button>
+          )}
+          {!isFavouriteGame && (
+            <button
+              onClick={() => favouriteGames.add(appName, title)}
+              className="link button is-text is-link buttonWithIcon"
+            >
+              <FavoriteIcon />
+              {t('button.add_to_favourites', 'Add To Favourites')}
+            </button>
+          )}
+          {isFavouriteGame && (
+            <button
+              onClick={() => favouriteGames.remove(appName)}
+              className="link button is-text is-link buttonWithIcon"
+            >
+              <FavoriteBorderIcon />
+              {t('button.remove_from_favourites', 'Remove From Favourites')}
+            </button>
+          )}
           {isInstalled && (
             <>
-              <button
-                onClick={async () => handleEdit()}
-                className="link button is-text is-link buttonWithIcon"
-              >
-                <EditIcon />
-                {isSideloaded
-                  ? t('button.sideload.edit', 'Edit App/Game')
-                  : t('button.edit-game', 'Edit Game')}
-              </button>{' '}
               {shortcutsBusy ? (
                 refreshCircle()
               ) : (
