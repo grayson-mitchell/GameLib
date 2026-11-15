@@ -4,13 +4,13 @@ milestone: v0.10
 milestone_name: Foundations
 status: executing
 stopped_at: Phase 78 context gathered
-last_updated: "2026-11-15T09:38:37.152Z"
+last_updated: "2026-11-15T10:01:53.727Z"
 last_activity: 2026-11-15
 progress:
   total_phases: 25
   completed_phases: 18
   total_plans: 450
-  completed_plans: 434
+  completed_plans: 435
   percent: 72
 ---
 
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 79 — rust-cm-client-replacing-steam-user-and-steam-session
+**Current focus:** Phase 76 — engine-correct-bottle-for-drm-mode-launches-v0-9-audit-s9
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -72,8 +72,8 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 
 ## Current Position
 
-Phase: 79 (rust-cm-client-replacing-steam-user-and-steam-session) — EXECUTING
-Plan: 44 of 44
+Phase: 76 (engine-correct-bottle-for-drm-mode-launches-v0-9-audit-s9) — EXECUTING
+Plan: 2 of 2
 Status: Ready to execute
 Last activity: 2026-11-15
 
