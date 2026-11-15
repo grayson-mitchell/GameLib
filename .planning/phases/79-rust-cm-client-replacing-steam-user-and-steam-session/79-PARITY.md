@@ -249,7 +249,46 @@ Not approved. Open: TS capture parity (blocked by the reference), decided below 
 
 ## Mac Steam path (79-36)
 
-pending
+Status: pending operator acceptance (not approved).
+
+The Mac path (D-14) is meant to differ from the CM path, so it is compared against spike 084's set, not against the TS reference. Measured 2026-11-15 on this account with Mac Steam running and signed in to the stored account. The helper ran from `public/bin/arm64/darwin/steam-bridge-helper` (the one `appPaths.steamBridgeHelperPath` resolves to); the older copy under `build/bin/` predates `--steam-owned-apps` and exits 6. Real-profile arm: the `steamcm_mac_owned_apps` op was run through `gamelib-steamcm-cli` single-shot with the operator's real HOME (the helper must reach Steam's pipe), the stored SteamID read from the steam store config; the harness in `meta/` always uses a fake HOME and cannot do this, so the run used a scratchpad script that is not committed. Anonymous CM logon only, no signed-in logon. Counts only.
+
+| Measure | Count |
+|---|---|
+| Steam reports (subscribed apps) | 1140 (084: 1140) |
+| Mac-path games (PICS type game) | 393 (084 type-game set: 393) |
+| Mac-path games vs 084 set: common / Mac-only / 084-only | 393 / 0 / 0 |
+| 084 owned set (`GetOwnedGames`, 390): covered as Mac games | 385 |
+| of the 390: covered as Mac demos | 2 |
+| of the 390: not covered (owned type beta x2, application x1) | 3 |
+| Mac-only games, not in the 390 (all free-to-play, the 084 list) | 8 |
+| Mac-only games, not in the 390 (other) | 0 |
+| CM-only licences (in 084's 1144 CM licence set, not in Steam's 1140): ICARUS, ESO, 2 demos | 4 |
+| Demos on the Mac path (type demo in Steam's set) | 11 |
+| Demos Steam hides, present on the CM path at 084 time (CM-only) | 2 |
+
+Reading: Steam's set has not drifted from 084 at all (393 games, 1140 subscribed, identical). The Mac path covers 387 of the 390 owned entries. The 3 it drops are owned apps whose PICS type is beta or application (the Mac filter keeps only type game plus demos); the CM path (`GetOwnedGames`) lists them. That divergence (DV-79-12) is new and was not named in the plan.
+
+The CM-path demo count was not re-measured: the CM path cannot be run without a signed-in logon, which this plan does not permit. At 084 time it showed 13 demos (Steam's 11 plus the 2 hidden ones); the 79-33 sweeps observed `demos=0` on both CM implementations after Steam stopped returning buffers for the 11 demo apps on the held session, while the anonymous Mac lookup does read their type.
+
+### DV-79-10: free-to-play titles appear on the Mac path
+- Mac path: lists the 8 free-to-play games the account holds free licences for (TF2, Dota 2, Warframe, Path of Exile, The Sims 4, Archolos, Enderal, Spacewar); the CM path (`GetOwnedGames`) does not.
+- Why: Steam's own library shows them; type game minus free-to-play has no local signal. D-14 accepts F2P inclusion by decision.
+- accepted: pending
+
+### DV-79-11: Steam-hidden demos are removed
+- Mac path: omits the 2 demos Steam does not treat as subscribed (the CM path shows them from the raw licence list). It also omits licences Steam no longer honours (ICARUS, ESO).
+- Why: Steam's set is the better oracle (084).
+- accepted: pending
+
+### DV-79-12: owned apps of type beta or application are dropped
+- Mac path: 3 of the 390 owned apps (2 beta, 1 application) are not listed. They are in Steam's subscribed set but fail the `common.type == game` filter, and they are not demos.
+- Why: the Mac filter keeps game and demo only; widening it would also admit tools, DLC-like apps and config entries that are not in the 390.
+- accepted: pending
+
+### DV-79-13: no playtime or last-played from Steam
+- Mac path: each entry keeps the playtime and last-played already stored for that app (else 0). The helper gives ids only, so the values go stale between CM refreshes and a new app shows 0. The follow-up todo is created by 79-37.
+- accepted: pending
 
 ## Delete gate (79-38)
 
