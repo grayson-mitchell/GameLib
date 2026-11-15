@@ -314,3 +314,14 @@ Operator rule for test.yml (2026-11-15): the gate requires **no new failures com
 - [x] Supply-chain audit (cargo-deny) green: https://github.com/grayson-mitchell/GameLib/actions/runs/43692870623 (a986c318a). The protobuf advisory RUSTSEC-2024-0437 is ignored with a justification (steam-vent pins `=3.5.1`), and tokio was bumped to 1.54.1 (bce156071).
 
 Status: DELETE GATE MET
+
+post-deletion: rust-test 43748179863 green x3, test.yml 43748179910 green (against the baseline)
+
+- Commit 1d65dab25. It carries 79-41..79-44, including the Friends sign-out fix e70995a2c, plus the other sessions' commits.
+- **rust-test** https://github.com/grayson-mitchell/GameLib/actions/runs/43748179863: windows-latest, macos-latest and ubuntu-latest all succeeded.
+- **test.yml** https://github.com/grayson-mitchell/GameLib/actions/runs/43748179910 (attempt 2): no phase-79 failures. It fails the 8 baseline suites plus 4 from other sessions:
+  - `themeTokens` (quick-261115-szs)
+  - `flowRegistrationCensus` and `ipcDomainCensus` (quick-261115-tk8)
+  - `steamLineCeiling` (`gameLaunch.ts` 1131 lines, from phase 76 commit eea599129; Lint fails the same check)
+- `dxvkInstallRemove` failed on attempt 1 (afterEach rmSync "Directory not empty") and passed on the rerun, so it is a flake.
+- Code check and Supply-chain audit (43748179923) green.
