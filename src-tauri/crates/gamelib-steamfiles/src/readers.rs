@@ -272,6 +272,79 @@ fn running_app_id(path: &Path) -> Option<u32> {
     steam.str("RunningAppID")?.trim().parse().ok()
 }
 
+const STEAM_HKCU_SUBKEY: &str = "Software\\Valve\\Steam";
+const RUNNING_APP_ID_VALUE: &str = "RunningAppID";
+
+/// Reads one REG_DWORD under HKCU. `Ok(None)` is a missing value, `Err(())` any other failure.
+#[allow(clippy::result_unit_err)]
+pub trait RegistryDword {
+    fn hkcu_dword(&self, subkey: &str, value: &str) -> Result<Option<u32>, ()>;
+}
+
+/// 0 on a missing value and on any error (runningPoll's fail-soft contract, D-13).
+pub fn running_app_id_from(reg: &dyn RegistryDword) -> u32 {
+    reg.hkcu_dword(STEAM_HKCU_SUBKEY, RUNNING_APP_ID_VALUE)
+        .ok()
+        .flatten()
+        .unwrap_or(0)
+}
+
+/// The real HKCU reader: the Windows registry API on Windows, always `Ok(None)` elsewhere.
+pub struct RealRegistry;
+
+impl RegistryDword for RealRegistry {
+    fn hkcu_dword(&self, subkey: &str, value: &str) -> Result<Option<u32>, ()> {
+        hkcu_dword_impl(subkey, value)
+    }
+}
+
+/// `HKCU\Software\Valve\Steam\RunningAppID` read natively (no reg.exe); 0 when missing or on
+/// any error.
+pub fn read_windows_running_app_id() -> u32 {
+    running_app_id_from(&RealRegistry)
+}
+
+#[cfg(not(windows))]
+fn hkcu_dword_impl(_subkey: &str, _value: &str) -> Result<Option<u32>, ()> {
+    Ok(None)
+}
+
+#[cfg(windows)]
+fn hkcu_dword_impl(subkey: &str, value: &str) -> Result<Option<u32>, ()> {
+    use windows_sys::Win32::Foundation::{ERROR_FILE_NOT_FOUND, ERROR_SUCCESS};
+    use windows_sys::Win32::System::Registry::{RegGetValueW, HKEY_CURRENT_USER, RRF_RT_REG_DWORD};
+
+    let wide = |s: &str| -> Vec<u16> { s.encode_utf16().chain(std::iter::once(0)).collect() };
+    let (sub, val) = (wide(subkey), wide(value));
+    let mut data: u32 = 0;
+    let mut bytes = std::mem::size_of::<u32>() as u32;
+    // SAFETY: `sub` and `val` are NUL-terminated and outlive the call; `data` is a u32 and
+    // `bytes` is its size in bytes, the exact buffer contract RRF_RT_REG_DWORD requires.
+    let st = unsafe {
+        RegGetValueW(
+            HKEY_CURRENT_USER,
+            sub.as_ptr(),
+            val.as_ptr(),
+            RRF_RT_REG_DWORD,
+            std::ptr::null_mut(),
+            (&mut data as *mut u32).cast(),
+            &mut bytes,
+        )
+    };
+    match st {
+        ERROR_SUCCESS => Ok(Some(data)),
+        ERROR_FILE_NOT_FOUND => Ok(None),
+        _ => Err(()),
+    }
+}
+
+/// Test hook: the real reader against an arbitrary HKCU subkey.
+#[doc(hidden)]
+#[allow(clippy::result_unit_err)]
+pub fn real_hkcu_dword(subkey: &str, value: &str) -> Result<Option<u32>, ()> {
+    hkcu_dword_impl(subkey, value)
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LocalConfigBetaKeyResult {
