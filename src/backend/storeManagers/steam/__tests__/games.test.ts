@@ -15992,6 +15992,186 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
       expect(runWineCommand).not.toHaveBeenCalled()
     })
 
+    describe('DRM mode: engine-correct bottle (76)', () => {
+      const drmSetup = () =>
+        jest.requireMock('../bridge/drm/drmLaunchSetup')
+          .__drmLaunchSetupMock as jest.Mock
+      const sentStatuses = () =>
+        (sendGameStatusUpdate as jest.Mock).mock.calls.map((c) => c[1])
+
+      beforeEach(() => {
+        ;(detectDrmWrapper as jest.Mock).mockResolvedValue('steamstub')
+        ;(preflightCrossover as jest.Mock).mockResolvedValue({
+          kind: 'healthy',
+          binDir: '/cx/bin',
+          build: '26.3',
+          trialDaysRemaining: null
+        })
+        engineDialog().mockClear()
+      })
+
+      const offline = (over: Record<string, unknown> = {}) => {
+        const o = {
+          override: undefined as unknown,
+          kind: 'non-crossover',
+          needsPin: true,
+          ...over
+        }
+        ;(checkConnectivityNow as jest.Mock).mockResolvedValue({
+          offline: true,
+          source: 'dns-failed',
+          elapsedMs: 0
+        })
+        ;(
+          jest.requireMock('backend/engine/engineDecision')
+            .isCrossoverMissing as jest.Mock
+        ).mockResolvedValue(false)
+        ;(
+          jest.requireMock('../engine/steamEngineDeps')
+            .readSteamEngineOverride as jest.Mock
+        ).mockReturnValue(o.override)
+        ;(readBottleEngineMarkerKind as jest.Mock).mockReturnValue(o.kind)
+        mockIsPinnedEngineInstalled.mockReturnValue(false)
+        ;(restoreNeedsAbsentPin as jest.Mock).mockReturnValue(o.needsPin)
+        engineDialog().mockClear()
+      }
+
+      it('marker already CrossOver: switch is a no-op, launch proceeds silently (D-03)', async () => {
+        mockPrepareBottleForEngine.mockResolvedValue({
+          ok: true,
+          changed: false
+        })
+        await new SteamGame(ID, steamTestDeps).launch({} as any)
+        expect(mockPrepareBottleForEngine).toHaveBeenCalledTimes(1)
+        expect(mockPrepareBottleForEngine).toHaveBeenCalledWith(
+          expect.objectContaining({
+            key: ID,
+            bottleName: PER_GAME,
+            next: expect.objectContaining({
+              kind: 'crossover',
+              binDir: '/cx/bin'
+            })
+          })
+        )
+        expect(drmSetup()).toHaveBeenCalled()
+        expect(engineDialog()).not.toHaveBeenCalled()
+        expect(sentStatuses()).not.toContainEqual(
+          expect.objectContaining({ status: 'engine-download' })
+        )
+      })
+
+      it('a real switch is silent: setting-up status, no toast, no dialog (D-05)', async () => {
+        mockPrepareBottleForEngine.mockImplementation(async (args: any) => {
+          args.onSwitching?.()
+          return { ok: true, changed: true }
+        })
+        await new SteamGame(ID, steamTestDeps).launch({} as any)
+        expect(sendGameStatusUpdate).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({
+            status: 'engine-download',
+            context: 'setting-up'
+          })
+        )
+        expect(notify).not.toHaveBeenCalled()
+        expect(engineDialog()).not.toHaveBeenCalled()
+        expect(drmSetup()).toHaveBeenCalled()
+      })
+
+      it.each([
+        ['dxvk-failed', 'restoreFailed', 'tag=engine-restore-failed'],
+        ['shared-bottle', 'sharedBottle', 'tag=engine-shared-bottle'],
+        ['bottle-busy', 'sharedBottle', 'tag=engine-shared-bottle'],
+        ['marker-newer', 'markerNewer', 'tag=engine-marker-newer'],
+        ['game-running', 'drmSwitchRefused', 'tag=engine-drm-switch-refused'],
+        ['invalid-bottle', 'drmSwitchRefused', 'tag=engine-drm-switch-refused']
+      ])(
+        '%s refuses the DRM launch with one dialog and a terminal done',
+        async (reason, key, tag) => {
+          mockPrepareBottleForEngine.mockResolvedValue({
+            ok: false,
+            reason,
+            detail: 'x'
+          })
+          expect(await new SteamGame(ID, steamTestDeps).launch({} as any)).toBe(
+            false
+          )
+          expect(drmSetup()).not.toHaveBeenCalled()
+          expect(engineDialog()).toHaveBeenCalledTimes(1)
+          expect(engineDialog().mock.calls[0][0].message).toContain(key)
+          expect(infoMessages().some((m) => m.includes(tag))).toBe(true)
+          expect(sendGameStatusUpdate).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({ status: 'done' })
+          )
+          expect(getEngineSelection(ID)).toBeUndefined()
+        }
+      )
+
+      it('a per-game engine override does not change the target (D-04)', async () => {
+        ;(
+          jest.requireMock('../engine/steamEngineDeps')
+            .readSteamEngineOverride as jest.Mock
+        ).mockReturnValue('staging-11')
+        mockPrepareBottleForEngine.mockResolvedValue({
+          ok: true,
+          changed: false
+        })
+        await new SteamGame(ID, steamTestDeps).launch({} as any)
+        expect(decideLaunchEngine).not.toHaveBeenCalled()
+        expect(mockPrepareBottleForEngine).toHaveBeenCalledWith(
+          expect.objectContaining({
+            next: expect.objectContaining({ kind: 'crossover' })
+          })
+        )
+        expect(getEngineSelection(ID)).toBeUndefined()
+      })
+
+      it.each([undefined, 'staging-11'])(
+        'offline with an unrestorable non-CrossOver marker refuses before pre-flight (override %s) (D-02)',
+        async (override) => {
+          offline({ override })
+          expect(await new SteamGame(ID, steamTestDeps).launch({} as any)).toBe(
+            false
+          )
+          expect(preflightCrossover).not.toHaveBeenCalled()
+          expect(mockPrepareBottleForEngine).not.toHaveBeenCalled()
+          expect(decideLaunchEngine).not.toHaveBeenCalled()
+          expect(engineDialog()).toHaveBeenCalledTimes(1)
+          expect(engineDialog().mock.calls[0][0].message).toContain(
+            'downloadFailed'
+          )
+          expect(
+            infoMessages().some((m) => m.includes('tag=engine-download-failed'))
+          ).toBe(true)
+          const warn = jest.requireMock('backend/logger')
+            .logWarning as jest.Mock
+          expect(
+            warn.mock.calls.some((c) =>
+              String(c[0]).includes(
+                `appId ${ID} launch blocked before pre-flight: offline, and returning this bottle to CrossOver needs an engine pin that is not on disk (restore-needs-pin)`
+              )
+            )
+          ).toBe(true)
+          expect(sendGameStatusUpdate).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({ status: 'done' })
+          )
+        }
+      )
+
+      it('offline with a CrossOver marker is not refused by the pre-check (D-02)', async () => {
+        offline({ kind: 'crossover', needsPin: false })
+        mockPrepareBottleForEngine.mockResolvedValue({
+          ok: true,
+          changed: false
+        })
+        await new SteamGame(ID, steamTestDeps).launch({} as any)
+        expect(preflightCrossover).toHaveBeenCalled()
+        expect(engineDialog()).not.toHaveBeenCalled()
+      })
+    })
+
     describe('G22: offline refusal before the pre-flight probe', () => {
       const blocked = (over: Record<string, unknown> = {}) => {
         const o = {
@@ -16401,6 +16581,11 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         expect(sendFrontendMessage).not.toHaveBeenCalledWith(
           'steamBridgeSetupRequired',
           expect.anything()
+        )
+        expect(mockPrepareBottleForEngine).not.toHaveBeenCalled()
+        expect(sendGameStatusUpdate).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({ status: 'done' })
         )
       }
     )
