@@ -306,6 +306,7 @@ pub async fn mac_owned_apps<B: CmBackend>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(unix)]
     use crate::backend::{PicsAppRaw, PicsRaw};
     use crate::fake::FakeBackend;
     #[cfg(unix)]
