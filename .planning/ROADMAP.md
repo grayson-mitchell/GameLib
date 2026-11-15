@@ -1553,7 +1553,7 @@ Plans:
 **Requirements**: DEBT-01
 **Depends on:** None
 **Source:** `milestones/v0.9-MILESTONE-AUDIT.md` (S9, integration 8/9)
-**Plans:** 2/2 plans complete
+**Plans:** 2/5 plans complete (gap closure 76-03..05 from 76-VERIFICATION)
 
 Plans:
 
@@ -1564,6 +1564,18 @@ Plans:
 **Wave 2** *(blocked on Wave 1 completion)*
 
 - [x] 76-02-PLAN.md — 76-UAT.md and live macOS Grim Dawn (219990) run (human-verify checkpoint)
+
+**Gap closure Wave 1** *(76-VERIFICATION CR-01)*
+
+- [ ] 76-03-PLAN.md — engineSwitch: DXVK-macOS beats CrossOver's Timestamp in inferMarker, distrust contradicted crossover markers, reconcile/record marker exports, real-switch CR-01 regression test (TDD)
+
+**Gap closure Wave 2** *(blocked on gap Wave 1 completion)*
+
+- [ ] 76-04-PLAN.md — record the pinned marker at bridge bottle creation; reconcile the marker before the DRM pre-flight; done on unresolved DRM install root (WR-04)
+
+**Gap closure Wave 3** *(blocked on gap Wave 2 completion)*
+
+- [ ] 76-05-PLAN.md — live re-run of UAT item 3 as items 6-8 (human-verify checkpoint); DEBT-01 back to complete only on a pass
 
 ### Phase 77: Runtime hardening from the v0.9 review debt
 

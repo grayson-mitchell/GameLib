@@ -65,6 +65,14 @@ hard-block (audit tech-debt item, deliberate per 59-REVIEW WR-06).
 - How to factor the shared pre-check + switch between the TCP and DRM paths (extract a helper vs
   inline), as long as the TCP path's behaviour is unchanged.
 
+### Amendment 2026-11-16 (gap closure, 76-VERIFICATION missing item 1)
+- **D-07a (amends D-07):** Install may now *record* the engine it created a bridge bottle with: provisionBridgeBottle
+  writes `.gamelib-engine.json` after a successful creation (kind `pinned` with the pin id for the fallback engine,
+  kind `crossover` for the CrossOver path). The engine *choice* is unchanged: `decideCreationEngine` stays
+  presence-only and untouched, and the launch-side switch (D-01/D-03) remains the mechanism that brings a bottle to
+  CrossOver. Reason: a marker-less pinned bottle is mislabelled crossover once CrossOver's pre-flight probe adds a
+  Timestamp to its cxbottle.conf (76-VERIFICATION, 76-REVIEW CR-01, UAT item 3). Implemented by 76-03/76-04.
+
 </decisions>
 
 <canonical_refs>
