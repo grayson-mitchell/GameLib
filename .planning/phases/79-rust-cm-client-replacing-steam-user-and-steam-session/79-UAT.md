@@ -52,7 +52,7 @@ Helper rename (item 13; items 14 and 15 need it restored): the Mac path resolves
 
 ## Current Test
 
-[part A approved; part B awaiting 79-38]
+[part A approved; part B run, awaiting operator approval]
 
 ## Tests
 
@@ -134,7 +134,7 @@ precondition: Mac Steam quit; helper present. Action: operator presses Refresh; 
 
 ### 16. Account-mismatch fallback
 expected: With Mac Steam signed into a different account than GameLib, Refresh logs `Mac Steam path unavailable (account-mismatch), using CM`. Recorded `skipped` unless the operator can sign Mac Steam into another account; it is unit-tested in 79-36.
-result: pending
+result: skipped — the Mac path is off by default since 3b7417c05 (item 14 decision), so the account-mismatch fallback is unreachable without opting in; it stays covered by the 79-36 unit tests and must be run when the Mac path is re-enabled (todo 2026-11-15-mac-steam-path-shows-playing-spacewar.md).
 precondition: a second Steam account on this Mac. Action: sign Mac Steam into it, press Refresh in GameLib; Claude greps; then restore the original account.
 
 ### 17. Rust store enrichment
