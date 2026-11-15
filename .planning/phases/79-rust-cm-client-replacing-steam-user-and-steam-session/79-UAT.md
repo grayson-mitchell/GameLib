@@ -50,7 +50,7 @@ Since 79-25 the `cm` flag defaults to `rust`; the `signin` flag stays `ts` until
 
 ### 1. Existing signed-in user survives the switch (D-07)
 expected: Pressing Refresh with no re-sign-in works: `gamelib.log` has `[steamcm] rust steamcm_session_acquire`, the shell log has `CM logon mode=authenticated reason=user-refresh`, and the library is populated (owned count matches the pre-switch count).
-result: pending
+result: pass — Refresh with no re-sign-in; shell log `CM logon mode=authenticated reason=user-refresh`, gamelib.log `[steamcm] rust steamcm_licenses` + `steamcm_refresh` (the lease acquire is not routed through the `[steamcm] rust` logger, so no `steamcm_session_acquire` line exists); owned count 401 before and after. Session closed on idle with leases=0.
 precondition: signed in from the TS build; flags unset. Action: launch with `pnpm tauri:dev`, note the owned count, press Refresh, grep both sinks, compare the count.
 
 ### 2. Rust-fed depot install of a small owned game
