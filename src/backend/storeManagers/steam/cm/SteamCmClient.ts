@@ -57,6 +57,7 @@ export interface SteamCmClient {
 
 // Compile-time only (no module-scope statement: the sidecar's floating-promise guard walks this graph).
 type AssertTrue<T extends true> = T
-type SteamUserFitsSteamCmClient = AssertTrue<
+/** @public compile-time assertion only: a type alias nothing imports, so it must stay exported to count as used. */
+export type SteamUserFitsSteamCmClient = AssertTrue<
   SteamUserDepotClient extends SteamCmClient ? true : false
 >
