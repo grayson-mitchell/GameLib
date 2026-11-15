@@ -265,15 +265,31 @@ describe('edge: capped body (DEBT-02)', () => {
   })
 
   it('accepts a chunked body under the cap like a string body', async () => {
-    const ref = await harness()
-    const expected = await ref.send({})
     const h = await harness()
     const res = await h.send({
       stream: streamOf(chunked(JSON.stringify(valid()), 3))
     })
+    expect(res.status).toBe(201)
+    expect((await res.json()).status).toBe('created')
+  })
+
+  it('treats a multibyte char split across chunks like the string body', async () => {
+    // The report schema has no free-text field, so a non-ASCII value is
+    // rejected; the split-chunk path must reject it identically to the
+    // string path (same status and detail), not as invalid JSON.
+    const text = JSON.stringify({ ...valid(), gamelibVersion: 'caf\u00e9' })
+    const all = new TextEncoder().encode(text)
+    const i = all.indexOf(0xc3) + 1
+    const ref = await harness()
+    const expected = await ref.send({ body: text })
+    const h = await harness()
+    const res = await h.send({
+      stream: streamOf([all.slice(0, i), all.slice(i)])
+    })
     expect(res.status).toBe(expected.status)
-    expect([411, 413, 400, 415]).not.toContain(res.status)
-    expect((await res.json()).status).toBe((await expected.json()).status)
+    expect(await res.json()).toEqual(await expected.json())
+    expect(res.status).not.toBe(400)
+    expect(h.calls).toHaveLength(0)
   })
 
   it('413s when Content-Length lies under the cap', async () => {
