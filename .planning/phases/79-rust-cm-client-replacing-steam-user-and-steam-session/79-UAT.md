@@ -144,7 +144,7 @@ precondition: a Steam game never opened (no cached metadata). Action: operator o
 
 ### 18. Restart keeps the user signed in (D-07)
 expected: After quitting and relaunching GameLib, the Steam account is still signed in, Refresh works with no sign-in prompt, and the shell log has `CM logon mode=authenticated reason=user-refresh` (or the Mac path line of item 14 when Mac Steam runs).
-result: pending
+result: pass — Cmd-Q then relaunch: `pgrep -fl sidecar.js` empty after quit, shell `steamcm shutdown (sidecar eof): NotOwed`; stored `userData.username` real (7 chars, not the fallback), `isLoggedIn` true; operator saw the account connected with no sign-in prompt. Refresh 15:39:24: one `[steamcm] rust steamcm_refresh` (no Mac attempt: the Mac path is off by default since 3b7417c05), shell `CM logon mode=authenticated reason=user-refresh`, `Steam library sync complete: 390 games`. Same Refresh re-checked item 14's fixes live: typing in search during the Refresh stayed responsive (c0cc89913), and no Spacewar in Friends (0 `AppID 480` lines in gameprocess_log.txt).
 precondition: signed in. Action: operator Cmd-Q then `pnpm tauri:dev`, then Refresh; Claude runs `pgrep -fl sidecar.js` after the quit and greps the logs. Prove the account is stored through `userData.username` being a real name (length, not the `Steam User` fallback), never by a name in the UI.
 
 ### 19. Force Quit during a download holding a lease
