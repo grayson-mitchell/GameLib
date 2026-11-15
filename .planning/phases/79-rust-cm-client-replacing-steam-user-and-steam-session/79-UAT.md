@@ -55,7 +55,7 @@ precondition: signed in from the TS build; flags unset. Action: launch with `pnp
 
 ### 2. Rust-fed depot install of a small owned game
 expected: `gamelib.log` has `[steamcm] rust steamcm_manifest_request_code` (and `steamcm_depot_key`) during the install; the install completes, the card flips to installed and `appmanifest_<id>.acf` exists.
-result: pending
+result: pass — DREDGE (1562430) installed in ~50 s: shell `CM logon mode=authenticated reason=user-install`; gamelib.log `[steamcm] rust steamcm_licenses`, `steamcm_product_info`, `steamcm_depot_key`, `steamcm_content_servers`, `[depot-rust] outcome ... status=completed`; Steam adopted via InstallApp, badge flipped to installed, `appmanifest_1562430.acf` present. No `steamcm_manifest_request_code` line: the crate asks for a request code only on demand (requestCodeRefresher) and this run did not need one.
 precondition: DREDGE (or another small owned native title) not installed. Action: press Install, wait for completion, grep the log.
 
 ### 3. Mid-lease reconnect after network off/on (D-02, D-11)
