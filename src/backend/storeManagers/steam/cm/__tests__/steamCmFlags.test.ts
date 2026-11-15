@@ -6,11 +6,11 @@ import {
 } from '../steamCmFlags'
 
 describe('steamCmFlags', () => {
-  test('cm defaults to rust, sign-in stays ts', () => {
+  test('cm and sign-in both default to rust', () => {
     expect(STEAMCM_CM_DEFAULT).toBe('rust')
-    expect(STEAMCM_SIGNIN_DEFAULT).toBe('ts')
+    expect(STEAMCM_SIGNIN_DEFAULT).toBe('rust')
     expect(steamCmImpl({})).toBe('rust')
-    expect(steamCmSignInImpl({})).toBe('ts')
+    expect(steamCmSignInImpl({})).toBe('rust')
   })
 
   test('accepts rust, rejects wrong case', () => {
@@ -23,7 +23,8 @@ describe('steamCmFlags', () => {
   })
 
   test('flags are independent', () => {
-    expect(steamCmSignInImpl({ GAMELIB_STEAMCM_CM: 'rust' })).toBe('ts')
+    expect(steamCmSignInImpl({ GAMELIB_STEAMCM_CM: 'ts' })).toBe('rust')
+    expect(steamCmSignInImpl({ GAMELIB_STEAMCM_SIGNIN: 'ts' })).toBe('ts')
     expect(steamCmImpl({ GAMELIB_STEAMCM_SIGNIN: 'rust' })).toBe('rust')
     expect(steamCmImpl({ GAMELIB_STEAMCM_SIGNIN: 'ts' })).toBe('rust')
   })
