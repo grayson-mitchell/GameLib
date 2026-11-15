@@ -3,8 +3,10 @@
  * installed games, library entries or stubs; deriveLegendaryPaths is pure over its roots and keeps the
  * snap arm.
  */
-import type { LegendaryGameInfo } from 'common/types/legendary'
-import type { InstalledJsonMetadata } from 'common/types/legendary'
+import type {
+  InstalledJsonMetadata,
+  LegendaryGameInfo
+} from 'common/types/legendary'
 import { join } from 'path'
 import { createLegendaryRuntime } from '../legendaryRuntime'
 import { deriveLegendaryPaths } from '../constants'

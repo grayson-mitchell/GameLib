@@ -83,6 +83,12 @@ const deps = createTestManagerDeps({
   sendFrontendMessage
 })
 const library = deps.steamSession.libraryState.library
+// Typed handles: reading .set off the mocked stores trips @typescript-eslint/unbound-method.
+const storeMocks = stores as unknown as Record<
+  'steamMetadataStore' | 'steamLibraryStore' | 'steamSyncStore',
+  { set: jest.Mock }
+>
+const allowlistMocks = bridgeAllowlist as unknown as { seedIds: jest.Mock }
 
 const game = (id: string, extra: Partial<SteamGameInfo> = {}): SteamGameInfo =>
   ({
@@ -135,7 +141,7 @@ beforeEach(() => {
   jest.mocked(buildInstalledMap).mockResolvedValue(new Map())
   jest.mocked(buildIncompleteInstallSet).mockResolvedValue(new Set())
   jest.mocked(listReadyBridgeBottleNames).mockReturnValue([])
-  jest.mocked(bridgeAllowlist.seedIds).mockReturnValue(['111'])
+  allowlistMocks.seedIds.mockReturnValue(['111'])
 })
 
 describe('listKnownFixMac32AppIds', () => {
@@ -235,8 +241,8 @@ describe('applyRustRefreshResult', () => {
     )
 
     expect(out).toEqual({ written: 1, staleSkipped: 1 })
-    expect(stores.steamMetadataStore.set).toHaveBeenCalledTimes(1)
-    expect(stores.steamMetadataStore.set).toHaveBeenCalledWith(
+    expect(storeMocks.steamMetadataStore.set).toHaveBeenCalledTimes(1)
+    expect(storeMocks.steamMetadataStore.set).toHaveBeenCalledWith(
       'a',
       upd('new-a')
     )
@@ -252,14 +258,14 @@ describe('applyRustRefreshResult', () => {
 
     expect([...library.keys()]).toEqual(['1', '2'])
     expect(sendFrontendMessage).toHaveBeenCalledTimes(2)
-    expect(stores.steamLibraryStore.set).toHaveBeenCalledWith(
+    expect(storeMocks.steamLibraryStore.set).toHaveBeenCalledWith(
       'games',
       expect.arrayContaining([
         expect.objectContaining({ app_name: '1' }),
         expect.objectContaining({ app_name: '2' })
       ])
     )
-    expect(stores.steamSyncStore.set).toHaveBeenCalledWith(
+    expect(storeMocks.steamSyncStore.set).toHaveBeenCalledWith(
       'syncedAt',
       expect.any(Number)
     )

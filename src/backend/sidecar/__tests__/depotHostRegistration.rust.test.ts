@@ -36,7 +36,7 @@ afterAll(() => {
 beforeEach(() => jest.clearAllMocks())
 
 const invoke = async (channel: string, payload: unknown): Promise<unknown> =>
-  defined(ipc.getHandler(channel), channel)({}, payload)
+  await defined(ipc.getHandler(channel), channel)({}, payload)
 
 function registerJob(
   getManifestRequestCode: SteamCmClient['getManifestRequestCode']

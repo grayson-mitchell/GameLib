@@ -102,6 +102,14 @@ const steamUser = createInertTestSteamUser({
   acquireAuthenticated: jest.fn(),
   acquireOpenAuthenticated: jest.fn()
 })
+
+// Typed jest.fn handles for the double's methods and the mocked allowlist: reading them off the
+// typed objects trips @typescript-eslint/unbound-method at every use.
+const steamUserMocks = steamUser as unknown as Record<
+  'acquireAuthenticated' | 'acquireOpenAuthenticated',
+  jest.Mock
+>
+const allowlistMocks = bridgeAllowlist as unknown as { seedIds: jest.Mock }
 const deps = createTestManagerDeps({
   stores: createTestStores({ steam: stores as never }),
   sendFrontendMessage,
@@ -181,8 +189,8 @@ describe('refresh() with cm=rust', () => {
     jest.mocked(buildInstalledMap).mockResolvedValue(new Map())
     jest.mocked(buildIncompleteInstallSet).mockResolvedValue(new Set())
     jest.mocked(listReadyBridgeBottleNames).mockReturnValue([])
-    jest.mocked(bridgeAllowlist.seedIds).mockReturnValue([])
-    jest.mocked(steamUser.acquireAuthenticated).mockResolvedValue({
+    allowlistMocks.seedIds.mockReturnValue([])
+    steamUserMocks.acquireAuthenticated.mockResolvedValue({
       ok: true,
       client: rustClient,
       release
@@ -263,7 +271,7 @@ describe('refresh() with cm=rust', () => {
 
   it('no grant and no open session: deferral with no op call', async () => {
     deps.steamSession.authTrigger.resetSteamAuthTrigger()
-    jest.mocked(steamUser.acquireOpenAuthenticated).mockResolvedValue(null)
+    steamUserMocks.acquireOpenAuthenticated.mockResolvedValue(null)
 
     const out = await refresh(deps)
 
@@ -304,7 +312,7 @@ describe('refresh() with cm=ts', () => {
     process.env.GAMELIB_STEAMCM_CM = 'ts'
     try {
       arm()
-      jest.mocked(steamUser.acquireAuthenticated).mockResolvedValue({
+      steamUserMocks.acquireAuthenticated.mockResolvedValue({
         ok: true,
         client: rustClient,
         release

@@ -1,13 +1,12 @@
 import '../../testUtils/tauriWindow'
 import { resetAllStores } from '../storeKit'
-import type { GameInfo } from 'common/types'
+import type { GameInfo, GameStatus } from 'common/types'
 import useLibraryState, {
   readInitialLibrary,
   registerLibrarySideEffects,
   selectInstallingEpicGame
 } from '../libraryState'
 import { useBottleLaunchWaiting } from '../BottleLaunchWaiting'
-import type { GameStatus } from 'common/types'
 import useAuthState from '../authState'
 
 let logged: string[] = []

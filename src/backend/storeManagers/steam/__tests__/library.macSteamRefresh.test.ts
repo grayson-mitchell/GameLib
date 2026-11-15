@@ -89,6 +89,14 @@ const steamUser = createInertTestSteamUser({
   acquireOpenAuthenticated: jest.fn(),
   getPersistedSteamId64: persistedId
 })
+
+// Typed jest.fn handles for the double's methods and the mocked allowlist: reading them off the
+// typed objects trips @typescript-eslint/unbound-method at every use.
+const steamUserMocks = steamUser as unknown as Record<
+  'acquireAuthenticated' | 'acquireOpenAuthenticated',
+  jest.Mock
+>
+const allowlistMocks = bridgeAllowlist as unknown as { seedIds: jest.Mock }
 const deps = createTestManagerDeps({
   stores: createTestStores({ steam: stores as never }),
   sendFrontendMessage,
@@ -176,8 +184,8 @@ describe('refresh() Mac Steam path', () => {
     jest.mocked(buildInstalledMap).mockResolvedValue(new Map())
     jest.mocked(buildIncompleteInstallSet).mockResolvedValue(new Set())
     jest.mocked(listReadyBridgeBottleNames).mockReturnValue([])
-    jest.mocked(bridgeAllowlist.seedIds).mockReturnValue([])
-    jest.mocked(steamUser.acquireAuthenticated).mockResolvedValue({
+    allowlistMocks.seedIds.mockReturnValue([])
+    steamUserMocks.acquireAuthenticated.mockResolvedValue({
       ok: true,
       client: rustClient,
       release
@@ -193,7 +201,7 @@ describe('refresh() Mac Steam path', () => {
     const out = await refresh(deps)
 
     expect(out?.stdout).toBe('2 games synced')
-    expect(steamUser.acquireAuthenticated).not.toHaveBeenCalled()
+    expect(steamUserMocks.acquireAuthenticated).not.toHaveBeenCalled()
     expect(requestRustInvoke).toHaveBeenCalledTimes(1)
     expect(requestRustInvoke).toHaveBeenCalledWith(RUST_STEAMCM_REFRESH, [
       expect.objectContaining({
@@ -232,7 +240,7 @@ describe('refresh() Mac Steam path', () => {
       'Steam Refresh: Mac Steam path unavailable (account-mismatch), using CM',
       'Steam'
     )
-    expect(steamUser.acquireAuthenticated).toHaveBeenCalledTimes(1)
+    expect(steamUserMocks.acquireAuthenticated).toHaveBeenCalledTimes(1)
     expect(requestRustInvoke).toHaveBeenCalledTimes(2)
     expect(requestRustInvoke).toHaveBeenLastCalledWith(RUST_STEAMCM_REFRESH, [
       expect.objectContaining({
@@ -247,7 +255,7 @@ describe('refresh() Mac Steam path', () => {
       .mockRejectedValueOnce(new Error('sidecar gone'))
       .mockResolvedValueOnce({ ok: true, result: refreshResult([]) })
     await refresh(deps)
-    expect(steamUser.acquireAuthenticated).toHaveBeenCalledTimes(1)
+    expect(steamUserMocks.acquireAuthenticated).toHaveBeenCalledTimes(1)
   })
 
   const sentSources = () =>
@@ -278,7 +286,7 @@ describe('refresh() Mac Steam path', () => {
     jest.clearAllMocks()
     persistedId.mockReturnValue(ID)
     deps.steamSession.authTrigger.resetSteamAuthTrigger()
-    jest.mocked(steamUser.acquireOpenAuthenticated).mockResolvedValue(null)
+    steamUserMocks.acquireOpenAuthenticated.mockResolvedValue(null)
     await refresh(deps)
     expect(requestRustInvoke).not.toHaveBeenCalled()
 
@@ -287,7 +295,7 @@ describe('refresh() Mac Steam path', () => {
     try {
       arm()
       getUserOwnedApps.mockRejectedValue(new Error('ts path'))
-      jest.mocked(steamUser.acquireAuthenticated).mockResolvedValue({
+      steamUserMocks.acquireAuthenticated.mockResolvedValue({
         ok: true,
         client: rustClient,
         release

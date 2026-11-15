@@ -296,7 +296,7 @@ describe("env-var shape (connector '=', validation)", () => {
     view.type(EDIT_KEY, 'A')
     view.key(EDIT_KEY, 'Enter')
     expect(onChange).toHaveBeenCalledTimes(1)
-    const saved = onChange.mock.calls[0][0] as ColumnProps[]
+    const saved = (onChange.mock.calls as unknown[][])[0]?.[0] as ColumnProps[]
     expect(saved.filter((r) => r.key === 'A')).toEqual([
       { key: 'A', value: '2' }
     ])

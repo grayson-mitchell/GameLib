@@ -147,9 +147,9 @@ import { logWarning } from 'backend/logger'
 import type {
   GOGCredentials,
   GogInstalledInfo,
+  GOGImportData,
   Library
 } from 'common/types/gog'
-import type { GOGImportData } from 'common/types/gog'
 
 const fakeCredentials: GOGCredentials = {
   access_token: 'test-access-token',

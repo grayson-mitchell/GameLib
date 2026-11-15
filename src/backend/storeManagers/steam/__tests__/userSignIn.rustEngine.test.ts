@@ -47,25 +47,28 @@ function build(handlers: Record<string, Handler | Handler[]>) {
       const h = handlers[channel]
       if (Array.isArray(h)) {
         const next = h.length > 1 ? h.shift() : h[0]
-        return next?.(args)
+        return await next?.(args)
       }
-      return h?.(args)
+      return await h?.(args)
     }
   )
-  const setToken = jest.fn(async () => {
+  const setToken = jest.fn(() => {
     order.push('setToken')
+    return Promise.resolve()
   })
   const configStore = { set: jest.fn(), delete: jest.fn() }
   const noteSignInSucceeded = jest.fn()
   const client = {
     steamID: { getSteamID64: () => '76561190000000001' },
-    getPersonas: jest.fn(async () => ({
-      personas: { '76561190000000001': { player_name: 'Persona' } }
-    }))
+    getPersonas: jest.fn(() =>
+      Promise.resolve({
+        personas: { '76561190000000001': { player_name: 'Persona' } }
+      })
+    )
   }
-  const acquireAuthenticatedWithToken = jest.fn(async () => {
+  const acquireAuthenticatedWithToken = jest.fn(() => {
     order.push('acquire')
-    return { ok: true, client, release: jest.fn() }
+    return Promise.resolve({ ok: true, client, release: jest.fn() })
   })
   const deps = {
     requestRustInvoke,

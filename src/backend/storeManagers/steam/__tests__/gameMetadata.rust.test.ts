@@ -25,6 +25,9 @@ import { knownFixSaysMac32 } from '../macArchKnownFix'
 import { steamCmImpl } from '../cm/steamCmFlags'
 import type SteamGame from '../games'
 
+// Typed handle: reading .get off the auto-mocked axios trips @typescript-eslint/unbound-method.
+const axiosMock = axios as unknown as { get: jest.Mock }
+
 const APP_ID = '440'
 const current = {
   app_name: APP_ID,
@@ -65,7 +68,7 @@ function setup(rust: unknown) {
         ...base.steamSession.libraryState,
         library,
         pendingFetches: pending,
-        acquireMetadataSlot: async () => undefined,
+        acquireMetadataSlot: () => Promise.resolve(undefined),
         releaseMetadataSlot: release
       }
     }
@@ -99,7 +102,7 @@ describe('fetchMetadataIfNeeded on cm=rust', () => {
     expect(t.metaStore.get(APP_ID)).toEqual(entry)
     expect(t.library.get(APP_ID)).toEqual(game)
     expect(t.sent).toContainEqual(['pushGameToLibrary', game])
-    expect(axios.get).not.toHaveBeenCalled()
+    expect(axiosMock.get).not.toHaveBeenCalled()
     expect(t.requestRustInvoke).toHaveBeenCalledWith('steamcm_store_enrich', [
       { appId: APP_ID, cached: null, current, knownFixMac32: false }
     ])
@@ -155,7 +158,7 @@ describe('getSteamInstallSize on cm=rust', () => {
     await expect(getSteamInstallSize(APP_ID, undefined, t.deps)).resolves.toBe(
       '2048B'
     )
-    expect(axios.get).not.toHaveBeenCalled()
+    expect(axiosMock.get).not.toHaveBeenCalled()
   })
 
   it('falls back to ?? MB without a figure or on failure', async () => {
@@ -169,6 +172,6 @@ describe('getSteamInstallSize on cm=rust', () => {
     await expect(getSteamInstallSize(APP_ID, undefined, b.deps)).resolves.toBe(
       '?? MB'
     )
-    expect(axios.get).not.toHaveBeenCalled()
+    expect(axiosMock.get).not.toHaveBeenCalled()
   })
 })

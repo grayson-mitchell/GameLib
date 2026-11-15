@@ -43,7 +43,7 @@ describe('boot steamcm wiring', () => {
   it('configureSteamCm sends the app folder and swallows a rejection', async () => {
     const { configureSteamCm } = load()
     const req = jest.fn().mockResolvedValue({})
-    configureSteamCm({ appFolder: '/app', requestRustInvoke: req })
+    await configureSteamCm({ appFolder: '/app', requestRustInvoke: req })
     expect(req).toHaveBeenCalledWith('steamcm_configure', [
       { appFolder: '/app' }
     ])
