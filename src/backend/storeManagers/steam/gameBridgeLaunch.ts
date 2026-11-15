@@ -38,9 +38,11 @@ import {
   resolveBridgeGameInstallRoot
 } from './bridgeInstallState'
 import {
+  drmOfflinePrecheck,
   maybeNotifyBridgeLimited,
   maybeNotifyDrmModeFailed,
   notifyCrossoverRequired,
+  prepareDrmBottleForCrossover,
   readLaunchExeCegMarkers,
   selectLaunchEngine,
   sendLaunchDone,
@@ -179,6 +181,18 @@ export async function launchBridgeGameBody(
   if (wantsDrm) {
     // DRM mode stays CrossOver-only (phase 59 out of scope): a clear message
     // instead of a hang, never the built-in engine, never decideLaunchEngine.
+    // Phase 76 (audit S9): it returns the bottle to CrossOver through
+    // prepareBottleForEngine (marker-keyed) before launching, and refuses
+    // up front offline when that restore cannot happen.
+    const offlineOk = await drmOfflinePrecheck(
+      steamGame,
+      bridgeBottleSettings.wineCrossoverBottle,
+      connectivity
+    )
+    if (!offlineOk.ok) {
+      sendLaunchDone(steamGame)
+      return false
+    }
     const { preflightCrossover } = await import('backend/engine/engineDecision')
     const { steamDecisionDeps, steamDecisionServices } =
       await import('./engine/steamEngineDeps')
@@ -188,6 +202,15 @@ export async function launchBridgeGameBody(
     )
     if (pre.kind !== 'healthy') {
       notifyCrossoverRequired(steamGame, 'drm', pre)
+      sendLaunchDone(steamGame)
+      return false
+    }
+    const switched = await prepareDrmBottleForCrossover(
+      steamGame,
+      bridgeBottleSettings.wineCrossoverBottle,
+      pre
+    )
+    if (!switched.ok) {
       sendLaunchDone(steamGame)
       return false
     }
