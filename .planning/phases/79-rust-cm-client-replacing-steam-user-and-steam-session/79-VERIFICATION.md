@@ -1,19 +1,27 @@
 ---
 phase: 79-rust-cm-client-replacing-steam-user-and-steam-session
 verified: 2026-11-16
-status: human_needed
-score: 7/7 goal-level truths verified (2 confirmed review defects need an operator decision)
+status: passed
+score: 7/7 goal-level truths verified (both review criticals fixed and re-verified)
 overrides_applied: 0
-human_verification:
-  - test: "Decide whether review defects A/CR-01 (session.rs close_conn -> Replaced) and C1/CR-01 (rustSession.getClient returns latest lease) are fixed before or after phase close"
-    expected: "Operator picks: gap-closure plan now, or follow-up phase/todo"
-    why_human: "Both are real, code-confirmed defects that do not falsify the phase goal but weaken D-02 (retry once) and concurrent install+Refresh"
+re_verification:
+  previous_status: human_needed
+  previous_score: 7/7
+  gaps_closed:
+    - "A/CR-01: in-flight op during rebuild/logout/shutdown reported Replaced (fixed 7744eeb7f)"
+    - "C1/CR-01: getClient() returned the last-acquired lease (fixed 63b3b470e)"
+  gaps_remaining: []
+  regressions: []
+human_resolved:
+  - decision: "Fix A/CR-01 and C1/CR-01 now, then close"
+    resolved_by: operator
+    outcome: "Both fixed and verified in code and tests (see Re-verification)"
 ---
 
 # Phase 79 Verification
 
 **Goal:** Steam's CM network is reached from Rust, and steam-user and steam-session are deleted.
-**Status:** human_needed (goal achieved; operator decision needed on the 2 critical review findings)
+**Status:** passed (goal achieved; both critical review findings fixed and re-verified)
 
 ## Truths
 
@@ -50,5 +58,11 @@ Recommendation: they do NOT block the phase goal. The goal (CM reached from Rust
 ## Anti-patterns
 No debt-marker scan was run across all 112 files; the review reports no secret leaks and unref'd timers. Not independently re-verified.
 
+## Re-verification (2026-11-16, after fixes)
+Operator chose "fix now, then close". Earlier findings above are kept as history.
+- **A/CR-01 FIXED (7744eeb7f).** session.rs:405-410: an explicit verdict returns itself; a dropped sender (no verdict) now maps to `CmError::Closed`, taking the retry-once path. Logout (line 629) and shutdown (638) call `signal_kill(LeaseUnknown / ShuttingDown)` before close. `cargo test -p gamelib-steamcm --lib session::tests::an_op`: 2 passed (`an_op_in_flight_during_a_rebuild_is_retried_not_reported_replaced`, `an_op_in_flight_at_logout_or_shutdown_gets_that_verdict`).
+- **C1/CR-01 FIXED (63b3b470e).** rustSession.ts `getClient()` returns `this.live` (non-null only while a lease is held), built by `createLiveLeaseClient` (cm/liveLeaseClient.ts), which resolves a held lease per call and fails as `leaseUnknown` when none is held; wired at rustSession.ts:15,76. `npx jest .../user.rustEngine.test.ts`: 15/15 pass, including "getClient() follows a held lease, so releasing another lease never strands its caller".
+- Human item resolved. The 21 warnings are filed in .planning/todos/pending/2026-11-16-phase-79-review-warnings.md (follow-up quality work, not phase blockers). Live app not run in this re-verification.
+
 ## Gaps
-None blocking. Open items: the two criticals above, the Spacewar todo (Mac path), UAT 8 and 16 unrun live.
+None blocking. Remaining non-blocking items: the Spacewar todo (Mac path), UAT 8 and 16 unrun live.

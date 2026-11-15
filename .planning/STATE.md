@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v0.10
 milestone_name: Foundations
-status: verifying
-stopped_at: Phase 78 context gathered
-last_updated: "2026-11-15T20:59:23.736Z"
+status: ready_to_plan
+stopped_at: Phase 79 complete (44/44) — ready to discuss Phase 80
+last_updated: 2026-11-15T21:19:09.830Z
 last_activity: 2026-11-15
 progress:
   total_phases: 25
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 76 — engine-correct-bottle-for-drm-mode-launches-v0-9-audit-s9
+**Current focus:** Phase 80 — steam install uninstall and update polling state machines in
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -72,9 +72,9 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 
 ## Current Position
 
-Phase: 76 (engine-correct-bottle-for-drm-mode-launches-v0-9-audit-s9) — EXECUTING
-Plan: 2 of 2
-Status: Phase complete — ready for verification
+Phase: 80
+Plan: Not started
+Status: Ready to plan
 Last activity: 2026-11-15
 
 Progress: [██████████] 97%
