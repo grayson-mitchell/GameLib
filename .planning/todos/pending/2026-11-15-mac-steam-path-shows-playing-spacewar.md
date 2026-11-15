@@ -25,7 +25,7 @@ process`, and about 1-2 s after the helper exits it logs `Remove 480 from runnin
 - **The attach is not the trigger.** `CreateSteamPipe` -> `ConnectToGlobalUser` -> engine slot 8 (`GetIClientUser`) registers nothing, with or without `BReleaseSteamPipe`.
 - **The first IPC calls likely are.** The full helper registers 480, and so does the guard-failure run (wrong `--expect-steamid`), which stops after `BLoggedOn` + `GetSteamID`. So the trigger is the first real IPC call on the IClientUser proxy, most likely `BLoggedOn` or `GetSteamID`. This is inferred from two runs; no bisect was measured.
 - **Likely mechanism:** Steam defaults an unidentified pipe to AppID 480 on its first IPC call.
-- `--steam-installapp` and `--steam-uninstallapp` share `gl_ia_attach` and probably show the same presence. Not run live.
+- `--steam-installapp` and `--steam-uninstallapp` share `gl_ia_attach` and show the same presence. **Confirmed live 2026-11-16 (79-44 UAT item 23):** an UninstallApp at 06:36:31 and an InstallApp adoption at 06:38:04 each logged two `AppID 480 adding PID` lines, removed ~2 s later. These paths are not behind `macSteamPathEnabled()`, so every native install/uninstall with Mac Steam running flashes Spacewar briefly. The fix direction below covers both.
 
 ## Mitigation in place
 

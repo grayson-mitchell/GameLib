@@ -173,7 +173,7 @@ precondition: Mac Steam quit. Action: operator presses Refresh; Claude greps. Re
 
 ### 23. Install a small game
 expected: Installing a small owned native title (DREDGE, 1562430, suggested) logs `[steamcm] rust steamcm_depot_key` and `[steamcm] rust steamcm_content_servers`, and ends with `[depot-rust] outcome ... status=completed`. `steamcm_manifest_request_code` appears only when a manifest needs a fresh request code, so it is not required.
-result: pending
+result: pass — ADOM (333300, 537 MB). Install went through Rust: `[steamcm] rust steamcm_depot_key` 06:36:55, `steamcm_content_servers` 06:36:56, shell `CM logon mode=authenticated reason=user-install`, `[depot-rust] outcome appId=333300 ... mode=install status=completed bytes=537117152 elapsedMs=67296`, then `Steam adopted appId 333300 via InstallApp without a restart`. Friends stayed online (operator). Note (pre-existing, not a phase-79 regression): the helper's UninstallApp (06:36:31, the operator removed the old copy first) and InstallApp adoption (06:38:04) each added `AppID 480` tracked PIDs for ~2 s in gameprocess_log.txt, i.e. a brief 'playing Spacewar' flash. This confirms the Spacewar todo's prediction that `gl_ia_attach` shares the trigger; recorded on that todo.
 precondition: the title is not installed, enough disk, not routed by a known fix. Action: operator presses Install and waits for completion; Claude greps `gamelib.log`.
 
 ### 24. Sign out, then QR sign-in
