@@ -85,7 +85,7 @@ precondition: as item 6. Action: type a wrong code, read the error, type the rig
 
 ### 8. Real key redeem
 expected: Redeeming a real unredeemed key shows the product granted; `gamelib.log` has `[steamcm] rust steamcm_redeem_key`. Without a key this is `skipped`.
-result: pending
+result: skipped — operator holds no unredeemed key to spend; redeem stays covered by the adapter tests (eresult != 1 rejects) and the 79-PARITY CM-ops section.
 precondition: operator holds an unredeemed key (else mark skipped, not pass). Action: open Redeem, enter the key, report the outcome.
 
 ### 9. Quit with a lease idle
