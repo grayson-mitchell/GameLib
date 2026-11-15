@@ -7,23 +7,16 @@ import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import {
   RUST_STEAMCM_ANON_CLOSE,
-  RUST_STEAMCM_LICENSES,
-  RUST_STEAMCM_SESSION_ACQUIRE,
-  RUST_STEAMCM_SESSION_ACQUIRE_OPEN,
-  RUST_STEAMCM_SESSION_ENSURE_CONNECTED,
-  RUST_STEAMCM_SESSION_LOGOUT,
-  RUST_STEAMCM_SESSION_RELEASE,
-  RUST_STEAMCM_SESSION_STATUS
+  RUST_STEAMCM_SESSION_LOGOUT
 } from 'common/types/sidecarTransport'
 import type { SteamCmClient } from './cm/SteamCmClient'
-import { createRustCmClient } from './cm/RustCmClient'
 import { getOrCreateCmLogonId } from './cm/cmLogonId'
 import { steamCmImpl } from './cm/steamCmFlags'
-import { invokeSteamCm } from './cm/rustSteamCm'
 import type { SteamStoresDeps } from './library/installRoot'
 import { STEAM_INSTALL_PATHS } from './constants'
 import { readTokenOutcome, type TokenStoreSlot } from './tokenStore'
-import { applySignInVerdict } from 'backend/signInProbe/verdict'
+import { RustCmSession } from './rustSession'
+import { isCredentialRefusal, reportLogonVerdict } from './logonVerdict'
 import { withTimeout } from './withTimeout'
 import type { SendFrontendMessage } from '../../host/frontendMessage'
 import type { AnonymousClient } from './anonymousClient'
@@ -43,8 +36,6 @@ import {
   CANARY_TIMEOUT_MS,
   AUTH_SESSION_IDLE_GRACE_MS,
   AUTH_LOGON_BOUND_MS,
-  CREDENTIAL_REFUSAL_ERESULTS,
-  CREDENTIAL_REFUSAL_NAMES,
   type AuthSessionReason,
   type AuthSessionRefusal,
   type AcquireAuthenticatedOpts,
@@ -81,15 +72,6 @@ export type SteamUserDeps = SteamStoresDeps & {
   /** The boot's rustInvoke transport: the Rust CM session (GAMELIB_STEAMCM_CM=rust, Phase 79). */
   rustInvoke: RustInvokeDeps
 }
-
-// What the Rust session returns for an acquire (gamelib-steamcm facade.rs).
-type RustAcquireResult =
-  | { ok: true; leaseId: number; steamId: string }
-  | {
-      ok: false
-      refusal?: AuthSessionRefusal
-      logonFailure?: { kind: string; eresult?: number | null }
-    }
 
 // ── SteamUser class ───────────────────────────────────────────────────────────
 
@@ -141,11 +123,15 @@ export class SteamUser {
     message: string
     eresult?: number
   } | null = null
-  // Phase 79 (D-03): leases this class holds on the Rust CM session (cm=rust), keyed by lease id,
-  // in acquisition order. getClient() answers from here synchronously.
-  private rustLeases = new Map<number, SteamCmClient>()
-  // The last Rust acquire refusal's logon failure; cleared by the next acquire and by logout().
-  private rustLogonFailure: { message: string; eresult?: number } | null = null
+  // Phase 79 (D-03): the Rust CM session (cm=rust), built over this class's policy.
+  private readonly rust = new RustCmSession(this.deps, {
+    isShuttingDown: () => this.shuttingDown,
+    isLoggedIn: () => this.isLoggedIn(),
+    generation: () => this.sessionGeneration,
+    isCredentialRefusal,
+    reportLogonVerdict: (outcome, epoch) =>
+      reportLogonVerdict(this.deps, outcome, epoch)
+  })
 
   /** The persisted per-install CM logonID (D-18). */
   private logonId(): number {
@@ -229,9 +215,7 @@ export class SteamUser {
 
   getClient(): SteamCmClient | null {
     if (this.engine() === 'rust') {
-      let last: SteamCmClient | null = null
-      for (const c of this.rustLeases.values()) last = c
-      return last
+      return this.rust.getClient()
     }
     return this.client as unknown as SteamCmClient | null
   }
@@ -248,60 +232,10 @@ export class SteamUser {
    * token. See the `logonFailure` field doc.
    */
   getLogonFailure(): { message: string; eresult?: number } | null {
-    if (this.engine() === 'rust') return this.rustLogonFailure
+    if (this.engine() === 'rust') return this.rust.getLogonFailure()
     const failure = this.logonFailure
     if (!failure || failure.client !== this.client) return null
     return { message: failure.message, eresult: failure.eresult }
-  }
-
-  /** True when the CM refused the stored credential itself, not the connection. */
-  private isCredentialRefusal(rejection: {
-    message: string
-    eresult?: number
-  }): boolean {
-    if (typeof rejection.eresult === 'number') {
-      return CREDENTIAL_REFUSAL_ERESULTS.includes(rejection.eresult)
-    }
-    return CREDENTIAL_REFUSAL_NAMES.includes(rejection.message)
-  }
-
-  /**
-   * quick 261011-rj0: report what the CM itself said about the stored
-   * credential, through the SAME fenced, write-if-changed latch the Phase 49
-   * boot probe uses (`applySignInVerdict`), so the Library sign-in row and the
-   * Manage Accounts tile learn about it the way they learn everything else.
-   *
-   * This is deliberately NOT a change to D-21. The boot probe still reads the
-   * keyring only and never opens the CM; this runs inside a deliberate
-   * `ensureConnected()` caller (a library refresh, an install) that has already
-   * paid for the connection. It is the first verdict site fed by a CM response
-   * rather than a keyring read, which is why it goes through `applySignInVerdict`
-   * and nothing else: the epoch fence (T-49-10) refuses a verdict from an
-   * attempt that began before a sign-in completed, and write-if-changed keeps
-   * a repeated refusal from re-notifying the renderer.
-   *
-   * Records and publishes the outcome only when the flag actually moved. A
-   * cold connect happens once per launch; re-publishing an unchanged map on
-   * every one would be noise, and `resolveSignInState` already lets a latched
-   * flag outrank whatever outcome the boot probe recorded.
-   */
-  private reportLogonVerdict(
-    outcome: 'healthy' | 'expired',
-    epochAtStart: number
-  ): void {
-    const result = applySignInVerdict(
-      {
-        stores: this.deps.stores,
-        epochs: this.deps.signIn.epochs,
-        sendFrontendMessage: this.deps.sendFrontendMessage
-      },
-      'steam',
-      outcome,
-      epochAtStart
-    )
-    if (result !== 'latched' && result !== 'cleared') return
-    this.deps.signIn.outcomes.record('steam', outcome)
-    this.deps.signIn.outcomes.publish()
   }
 
   /**
@@ -318,7 +252,7 @@ export class SteamUser {
    * acquireOpenAuthenticated; steamAuthSessionPolicy.test.ts enforces this.
    */
   async ensureConnected(): Promise<boolean> {
-    if (this.engine() === 'rust') return this.rustEnsureConnected()
+    if (this.engine() === 'rust') return this.rust.ensureConnected()
     const refusal = await this.ensureAuthenticatedSession('user-refresh')
     // An earlier lease cycle may have armed the idle timer; this un-leased
     // caller is now relying on the session, so it must not be logged off
@@ -410,185 +344,20 @@ export class SteamUser {
   }
 
   // ── Phase 79 (D-03): the Rust engine ──────────────────────────────────────
-  // Policy (shuttingDown, isLoggedIn, the token read, the credential verdict, the guided push)
-  // stays here; the session itself (logon, wrap, lease counting, idle close) is the Rust session's.
-  // Logging: names the reason and channel only, never the token, the lease args or results.
+  // The session itself lives in ./rustSession (RustCmSession); this class keeps the policy the
+  // session consults through rustHost (shuttingDown, isLoggedIn, the sign-out fence, the credential
+  // verdict) and the guided push.
 
   private async rustAcquire(
     opts: AcquireAuthenticatedOpts,
     tokenOverride?: string
   ): Promise<AuthenticatedLease> {
-    const res = await this.rustAcquireSession(opts.reason, tokenOverride)
+    const res = await this.rust.acquireSession(opts.reason, tokenOverride)
     if (!res.ok) {
       this.pushGuidedOffline(res.reason, opts)
       return { ok: false, reason: res.reason }
     }
     return { ok: true, client: res.client, release: res.release }
-  }
-
-  private async rustAcquireSession(
-    reason: AuthSessionReason,
-    tokenOverride?: string
-  ): Promise<
-    | { ok: true; client: SteamCmClient; release: () => void }
-    | { ok: false; reason: AuthSessionRefusal }
-  > {
-    if (this.shuttingDown) return { ok: false, reason: 'shutting-down' }
-    if (tokenOverride === undefined && !this.isLoggedIn()) {
-      return { ok: false, reason: 'not-signed-in' }
-    }
-    let token = tokenOverride
-    if (token === undefined) {
-      const outcome = await readTokenOutcome(
-        this.deps.tokenStore.current(),
-        this.deps.steamSession.authTrigger.currentTriggerLabel()
-      )
-      if (outcome.status === 'unreadable') {
-        logWarning(
-          `Steam: refresh token read failed (${outcome.reason}) — this is retryable, ` +
-            'keeping the signed-in session and NOT clearing any credentials',
-          LogPrefix.Steam
-        )
-        return { ok: false, reason: 'token-unreadable' }
-      }
-      if (outcome.status === 'absent') {
-        logWarning(
-          'Steam: logged in but no stored refresh token — cannot reconnect',
-          LogPrefix.Steam
-        )
-        this.deps.stores.steam.configStore.set('credentialsMissing', true)
-        return { ok: false, reason: 'token-absent' }
-      }
-      token = outcome.token
-    }
-
-    const epochAtStart = this.deps.signIn.epochs.capture('steam')
-    const generation = this.sessionGeneration
-    this.rustLogonFailure = null
-    let r: RustAcquireResult
-    try {
-      // logonId 0: the Rust session picks its own (D-18); the token is passed unchanged (D-07).
-      r = (await this.deps.rustInvoke.requestRustInvoke(
-        RUST_STEAMCM_SESSION_ACQUIRE,
-        [{ refreshToken: token, reason, logonId: 0 }]
-      )) as RustAcquireResult
-    } catch (err) {
-      logWarning(
-        `Steam: the Rust CM session acquire failed (${err instanceof Error ? err.name : typeof err})`,
-        LogPrefix.Steam
-      )
-      return { ok: false, reason: 'client-not-ready' }
-    }
-    if (!r.ok) {
-      const refusal = r.refusal ?? 'client-not-ready'
-      if (refusal === 'logon-rejected' && r.logonFailure) {
-        const rejection = {
-          message: r.logonFailure.kind,
-          ...(typeof r.logonFailure.eresult === 'number'
-            ? { eresult: r.logonFailure.eresult }
-            : {})
-        }
-        this.rustLogonFailure = rejection
-        logWarning(
-          `Steam: the CM rejected the stored-credential logon (${rejection.message})`,
-          LogPrefix.Steam
-        )
-        if (this.isCredentialRefusal(rejection)) {
-          this.reportLogonVerdict('expired', epochAtStart)
-        }
-      }
-      return { ok: false, reason: refusal }
-    }
-    // A sign-out or shutdown while the logon was in flight: never keep the lease.
-    if (this.shuttingDown || generation !== this.sessionGeneration) {
-      this.rustRelease(r.leaseId)
-      return {
-        ok: false,
-        reason: this.shuttingDown ? 'shutting-down' : 'not-signed-in'
-      }
-    }
-    const client = await this.rustBuildClient(r.leaseId, r.steamId)
-    if (!client) {
-      this.rustRelease(r.leaseId)
-      return { ok: false, reason: 'client-not-ready' }
-    }
-    this.reportLogonVerdict('healthy', epochAtStart)
-    return { ok: true, client, release: this.rustMakeRelease(r.leaseId) }
-  }
-
-  private async rustBuildClient(
-    leaseId: number,
-    steamId: string
-  ): Promise<SteamCmClient | null> {
-    let licenses
-    try {
-      const l = await invokeSteamCm(
-        this.deps.rustInvoke,
-        RUST_STEAMCM_LICENSES,
-        { leaseId }
-      )
-      licenses = l.ok ? l.result : []
-    } catch {
-      return null
-    }
-    const client = createRustCmClient(this.deps.rustInvoke, {
-      leaseId,
-      steamId,
-      licenses
-    })
-    this.rustLeases.set(leaseId, client)
-    return client
-  }
-
-  private rustRelease(leaseId: number): void {
-    this.rustLeases.delete(leaseId)
-    this.deps.rustInvoke
-      .requestRustInvoke(RUST_STEAMCM_SESSION_RELEASE, [{ leaseId }])
-      .catch((err: unknown) => {
-        logWarning(
-          `Steam: the Rust CM lease release failed (${err instanceof Error ? err.name : typeof err})`,
-          LogPrefix.Steam
-        )
-      })
-  }
-
-  private rustMakeRelease(leaseId: number): () => void {
-    let released = false
-    return () => {
-      if (released) return
-      released = true
-      this.rustRelease(leaseId)
-    }
-  }
-
-  private async rustEnsureConnected(): Promise<boolean> {
-    if (this.shuttingDown) return false
-    try {
-      const status = (await this.deps.rustInvoke.requestRustInvoke(
-        RUST_STEAMCM_SESSION_STATUS,
-        []
-      )) as { connected?: boolean }
-      if (status.connected) {
-        const r = (await this.deps.rustInvoke.requestRustInvoke(
-          RUST_STEAMCM_SESSION_ENSURE_CONNECTED,
-          []
-        )) as { connected?: boolean }
-        if (r.connected) {
-          this.deps.stores.steam.configStore.delete('credentialsMissing')
-          return true
-        }
-      }
-    } catch (err) {
-      logWarning(
-        `Steam: the Rust CM session check failed (${err instanceof Error ? err.name : typeof err})`,
-        LogPrefix.Steam
-      )
-    }
-    // Not connected: open the session through the policy path, then let the lease go.
-    const res = await this.rustAcquireSession('user-refresh')
-    if (!res.ok) return false
-    res.release()
-    return true
   }
 
   /**
@@ -599,7 +368,7 @@ export class SteamUser {
   async acquireOpenAuthenticated(
     reason: AuthSessionReason
   ): Promise<OpenAuthenticatedLease | null> {
-    if (this.engine() === 'rust') return this.rustAcquireOpen(reason)
+    if (this.engine() === 'rust') return this.rust.acquireOpen(reason)
     const client = this.client
     if (this.shuttingDown || !client?.steamID) return null
     this.leaseCount++
@@ -612,32 +381,6 @@ export class SteamUser {
       client: client as unknown as SteamCmClient,
       release: this.makeRelease()
     }
-  }
-
-  private async rustAcquireOpen(
-    reason: AuthSessionReason
-  ): Promise<OpenAuthenticatedLease | null> {
-    if (this.shuttingDown) return null
-    let r: { ok: boolean; leaseId?: number; steamId?: string }
-    try {
-      r = (await this.deps.rustInvoke.requestRustInvoke(
-        RUST_STEAMCM_SESSION_ACQUIRE_OPEN,
-        [{ reason }]
-      )) as typeof r
-    } catch {
-      return null
-    }
-    if (!r.ok || r.leaseId === undefined || r.steamId === undefined) return null
-    const client = await this.rustBuildClient(r.leaseId, r.steamId)
-    if (!client) {
-      this.rustRelease(r.leaseId)
-      return null
-    }
-    logInfo(
-      `[Steam] CM session reused mode=authenticated reason=${reason}`,
-      LogPrefix.Steam
-    )
-    return { client, release: this.rustMakeRelease(r.leaseId) }
   }
 
   /** configStore userData.steamId when it is a numeric SteamID64 string. */
@@ -794,7 +537,7 @@ export class SteamUser {
       if (this.client?.steamID) {
         // Another caller finished connecting while the keyring was being read;
         // logging on again would log that fresh session off.
-        this.reportLogonVerdict('healthy', epochAtStart)
+        reportLogonVerdict(this.deps, 'healthy', epochAtStart)
         return null
       }
       const p: Promise<AuthSessionRefusal | null> = this.wrappedConnect(
@@ -820,7 +563,7 @@ export class SteamUser {
       // `credentialsMissing`, whether the `absent` branch above or a previous
       // refusal set it. Fenced and write-if-changed, so a clean flag costs
       // nothing here.
-      this.reportLogonVerdict('healthy', epochAtStart)
+      reportLogonVerdict(this.deps, 'healthy', epochAtStart)
       return null
     }
 
@@ -843,8 +586,8 @@ export class SteamUser {
         // generic "Couldn't sync / Retry" banner, whose Retry would replay
         // this exact refusal. A terminal error that is NOT about the
         // credential (LogonSessionReplaced, a rate limit) latches nothing.
-        if (this.isCredentialRefusal(rejection)) {
-          this.reportLogonVerdict('expired', epochAtStart)
+        if (isCredentialRefusal(rejection)) {
+          reportLogonVerdict(this.deps, 'expired', epochAtStart)
         }
       }
     }
@@ -945,8 +688,7 @@ export class SteamUser {
     this.abandonPendingLogon?.()
     if (this.engine() === 'rust') {
       // T-79-61: drop every TS-held lease, then fence the Rust session (its generation bump).
-      this.rustLeases.clear()
-      this.rustLogonFailure = null
+      this.rust.reset()
       try {
         await this.deps.rustInvoke.requestRustInvoke(
           RUST_STEAMCM_SESSION_LOGOUT,
@@ -1046,7 +788,7 @@ export class SteamUser {
     if (this.engine() === 'rust') {
       // No IPC: the shell's stdin-EOF / exit hook (79-16) owns the Rust session teardown and
       // the owed go-online, and a rustInvoke here would race the closing transport.
-      this.rustLeases.clear()
+      this.rust.dropLeases()
       return Promise.resolve('not-owed')
     }
     const client = this.client
