@@ -15,7 +15,6 @@ import {
   RUST_DEPOT_MANIFEST_SUMMARY
 } from 'common/types/sidecarTransport'
 import { logInfo, LogPrefix } from 'backend/logger'
-import type { CdnAuthTokenCache } from '../depot/cdnAuth'
 import type { DepotJobRegistry, DepotTransport } from './jobRegistry'
 import type {
   RustDepotJob,
@@ -30,7 +29,6 @@ export interface RunDepotJobHooks {
   /** The boot-owned job registry the shell's token and event channels look the job up in. */
   registry: Pick<DepotJobRegistry, 'registerActiveDepotJob' | 'transport'>
   signal?: AbortSignal
-  tokenCache: CdnAuthTokenCache
   refreshRequestCode: (
     depotId: string,
     manifestId: string
@@ -77,7 +75,6 @@ export async function runDepotJob(
 
   const dispose = hooks.registry.registerActiveDepotJob(job.jobId, {
     appId: job.appId,
-    tokenCache: hooks.tokenCache,
     refreshRequestCode: hooks.refreshRequestCode,
     onEvent: hooks.onEvent
   })

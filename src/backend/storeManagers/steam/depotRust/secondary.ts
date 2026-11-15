@@ -8,7 +8,6 @@
 import { randomUUID } from 'node:crypto'
 import { basename, resolve } from 'path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { CdnAuthTokenCache } from '../depot/cdnAuth'
 import { getContentServerHosts } from '../depot/contentServers'
 import type {
   DownloadSelectedDepotFilesOpts,
@@ -77,18 +76,12 @@ export async function prescreenBridgeDepotsRust(
     const client = getDepotClient(opts.steamUser)
     const hosts = await getContentServerHosts(client, Number(appId))
     throwIfAborted(opts.signal)
-    const tokenCache = new CdnAuthTokenCache(
-      client,
-      Number(appId),
-      opts.installRuntime.cdnSchema
-    )
     // The crate routes its token requests under the request's jobId (73-12).
     const jobId = `summary-${appId}-${randomUUID()}`
     const dispose = opts.installRuntime.depotJobs.registerActiveDepotJob(
       jobId,
       {
         appId,
-        tokenCache,
         refreshRequestCode: requestCodeRefresher(
           client,
           new Map(refs.depots.map((d) => [d.depotId, d.ownerAppId])),
@@ -172,11 +165,6 @@ export async function downloadSelectedDepotFilesRust(
     const client = getDepotClient(opts.steamUser)
     const hosts = await getContentServerHosts(client, Number(appId))
     throwIfAborted(opts.signal)
-    const tokenCache = new CdnAuthTokenCache(
-      client,
-      Number(appId),
-      opts.installRuntime.cdnSchema
-    )
     const job = buildDepotJob({
       appId,
       mode: 'select_files',
@@ -189,7 +177,6 @@ export async function downloadSelectedDepotFilesRust(
     const outcome = await runDepotJob(job, {
       registry: opts.installRuntime.depotJobs,
       signal: opts.signal,
-      tokenCache,
       refreshRequestCode: requestCodeRefresher(
         client,
         new Map(refs.depots.map((d) => [d.depotId, d.ownerAppId])),
@@ -269,11 +256,6 @@ export async function resumeVerifyRust(
       throw new Error('resume verify: no depots selected')
     const client = getDepotClient(input.steamUser)
     const hosts = await getContentServerHosts(client, Number(appId))
-    const tokenCache = new CdnAuthTokenCache(
-      client,
-      Number(appId),
-      input.installRuntime.cdnSchema
-    )
     const finalize: RustFinalizeSpec = {
       steamappsDir: input.targetSteamappsDir,
       installdir: input.installdir,
@@ -297,7 +279,6 @@ export async function resumeVerifyRust(
     })
     const outcome = await runDepotJob(job, {
       registry: input.installRuntime.depotJobs,
-      tokenCache,
       refreshRequestCode: requestCodeRefresher(
         client,
         new Map(refs.depots.map((d) => [d.depotId, d.ownerAppId])),

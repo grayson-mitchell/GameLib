@@ -1,8 +1,7 @@
-// Depot plan model: option interfaces, failure records and steam-user client types (extracted from
+// Depot plan model: option interfaces, failure records and the content-server shape (extracted from
 // ../depot.ts, 62-09). The EDepotFileFlag constants and the DepotPlan shape went with the TS
 // download pipeline in 73-20; the Rust crate owns both now.
 
-import type SteamUserLib from 'steam-user'
 import type { GlobalConfigSlice } from 'backend/config'
 import { type AuthSessionReason } from '../userTypes'
 import type { SteamUserSlice } from 'backend/services/types'
@@ -108,65 +107,6 @@ export interface DownloadSteamDepotsOpts {
 export interface AppCommonName {
   common?: { name?: string }
 }
-
-/** steam-user client surface this module depends on that @types/steam-user does
- *  NOT declare — getDepotDecryptionKey is an undocumented callback API (Pitfall 5).
- *  Manifests are fetched by Rust (D-01), so getRawManifest is gone from this view. Isolated here so every untyped call is visible in one place;
- *  everything else (getProductInfo, licenses) uses the real published types. */
-interface SteamUserDepotExtras {
-  getDepotDecryptionKey(
-    appId: number,
-    depotId: number,
-    callback: (err: Error | null, key: Buffer) => void
-  ): void
-  /** Also undocumented in @types/steam-user (Pitfall 5) — resolves the CDN
-   *  hostnames Plan 05's downloadDepotFiles needs to fetch chunks from.
-   *  Full field list per node_modules/steam-user/components/cdn.js's own
-   *  mapping (confirmed by reading source, not guessed) — widened in
-   *  diagnostic cycle 4 (debug/steam-install-slow-start, lead (a)) so the RAW
-   *  directory response (load/weightedload/preferred_server/etc, the ranking
-   *  data the real Steam client uses) could be logged before reduction.
-   *  `Host`/`vhost`/`weightedload` are now ACTIVELY consumed (cycle 5, via
-   *  `reduceContentServers`/`getContentServerHosts` below) to seed
-   *  HostHealthTracker's weightedload-aware cold-start selection — the rest
-   *  remain diagnostic-only. Note: this method takes only an optional
-   *  `appid` filter — steam-user's cdn.js has no count/limit parameter to
-   *  request a larger server pool. */
-  getContentServers(
-    appId: number,
-    callback: (err: Error | null, servers: RawContentServer[]) => void
-  ): void
-  /** CDN-auth implementation cycle: also undocumented in @types/steam-user
-   *  (Pitfall 5) — verified directly against the INSTALLED steam-user@5.3.0
-   *  source (node_modules/steam-user/components/03-messages.js:419-491). A
-   *  plain, non-private prototype method ("Send a raw message") — cycle 11
-   *  (debug/steam-install-slow-start, "DECISION 2026-07-19: OPTION B")
-   *  switched depot/cdnAuth.ts from steam-user's own `_sendUnified` wrapper
-   *  (whose ENCODE step throws for `ContentServerDirectory.GetCDNAuthToken#1`
-   *  — that RPC's compiled classes were never wired into steam-user's
-   *  private protobufs lookup map, confirmed by exhaustively enumerating all
-   *  294 registered keys) to this lower-level method `_sendUnified` itself
-   *  delegates to, supplying an already-encoded `Buffer` body directly — see
-   *  depot/cdnAuth.ts's module doc comment (CYCLE 11 UPDATE section) for the
-   *  full evidence trail. */
-  _send(
-    header: { msg: number; proto: { target_job_name: string } },
-    body: Buffer,
-    callback: (body: unknown, hdr?: { proto?: { eresult?: number } }) => void
-  ): void
-  /** 73-13: steam-user cdn.js getManifestRequestCode (promise form, 10 s built-in timeout).
-   *  Undocumented in @types/steam-user (Pitfall 5); the Rust job asks for a fresh code per
-   *  manifest through this. */
-  getManifestRequestCode(
-    appId: number,
-    depotId: number,
-    manifestId: string,
-    branch: string
-  ): Promise<{ requestCode: unknown }>
-}
-
-export type SteamUserDepotClient = InstanceType<typeof SteamUserLib> &
-  SteamUserDepotExtras
 
 /** Raw per-server shape client.getContentServers resolves with — the full
  *  field set steam-user's cdn.js actually returns (confirmed by reading

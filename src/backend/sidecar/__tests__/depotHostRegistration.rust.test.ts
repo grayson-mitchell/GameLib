@@ -15,7 +15,6 @@ import { registerDepotHostFlows } from '../depotHostRegistration'
 import { createIpcRegistry } from '../ipcRegistry'
 import { createDepotJobRegistry } from '../../storeManagers/steam/depotRust/jobRegistry'
 import { requestCodeRefresher } from '../../storeManagers/steam/depotRust/install'
-import type { CdnAuthTokenCache } from '../../storeManagers/steam/depot/cdnAuth'
 import type { SteamCmClient } from '../../storeManagers/steam/cm/SteamCmClient'
 
 const ipc = createIpcRegistry()
@@ -41,18 +40,13 @@ const invoke = async (channel: string, payload: unknown): Promise<unknown> =>
 function registerJob(
   getManifestRequestCode: SteamCmClient['getManifestRequestCode']
 ) {
-  const getToken = jest.fn()
   const client = { getManifestRequestCode } as unknown as SteamCmClient
   const dispose = depotJobs.registerActiveDepotJob('job1', {
     appId: '480',
-    tokenCache: {
-      getToken,
-      invalidate: jest.fn()
-    } as unknown as CdnAuthTokenCache,
     refreshRequestCode: requestCodeRefresher(client, new Map(), '480'),
     onEvent: jest.fn()
   })
-  return { dispose, getToken }
+  return { dispose }
 }
 
 const codeReq = { jobId: 'job1', appId: '480', depotId: '481', manifestId: '9' }
@@ -65,8 +59,8 @@ function cmError(kind: string, eresult?: number) {
 }
 
 describe('cm=rust depot host handlers', () => {
-  it('depotCdnToken answers "" without touching the cache', async () => {
-    const { dispose, getToken } = registerJob(jest.fn())
+  it('depotCdnToken answers ""', async () => {
+    const { dispose } = registerJob(jest.fn())
     expect(
       await invoke('depotCdnToken', {
         jobId: 'job1',
@@ -76,7 +70,6 @@ describe('cm=rust depot host handlers', () => {
         force: true
       })
     ).toBe('')
-    expect(getToken).not.toHaveBeenCalled()
     expect(logWarning).not.toHaveBeenCalled()
     dispose()
   })

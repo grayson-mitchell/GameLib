@@ -9,12 +9,10 @@
 
 import type { AppRuntimeSlice } from 'backend/appRuntime'
 import type { HostServices } from 'backend/host'
-import type { CdnAuthTokenCache } from '../depot/cdnAuth'
 import type { RustJobEvent } from './types'
 
 interface ActiveDepotJob {
   appId: string
-  tokenCache: CdnAuthTokenCache
   /**
    * Fresh manifest request code for a depot/manifest, or null if none could be obtained.
    * Rejects with an `eresult === 40` error when Steam refused it (Blocked).

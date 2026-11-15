@@ -1,118 +1,17 @@
 // debug/cross-depot-collision-1026: recover Steam's REAL appinfo depot order.
 //
-// PICS returns an app's appinfo as VDF text whose `depots` section lists depot
-// ids in a meaningful order (XCOM 200510: 225341 ... 200522). steam-user hands
-// us `VDF.parse(text).appinfo`, a plain JS object -- and a JS object enumerates
-// integer-like keys in ASCENDING NUMERIC order regardless of insertion order,
-// so by the time getProductInfo resolves, the order is gone (200522 sorts
-// first). The raw text is only visible inside steam-user's ClientPICSProductInfo
-// response callback, which getProductInfo does not expose.
-//
-// So this module taps that one callback (per client, installed once) and reads
-// the depot ids straight out of the raw VDF text, in textual order. Nothing
-// here substitutes numeric order, gid or anything else: when no raw text was
-// observed for an app, `getAppInfoDepotOrder` returns undefined and the caller
-// must treat order as UNKNOWN.
-
-import { logWarning, LogPrefix } from 'backend/logger'
-
-/** EMsg.ClientPICSProductInfoRequest (steam-user EMsg table, value 8903). */
-const PICS_PRODUCT_INFO_REQUEST = 8903
-
-function* tokenize(text: string): Generator<{ t: string; quoted: boolean }> {
-  let i = 0
-  const n = text.length
-  while (i < n) {
-    const c = text.charAt(i)
-    if (c === '{' || c === '}') {
-      yield { t: c, quoted: false }
-      i++
-    } else if (c === '"') {
-      i++
-      let s = ''
-      while (i < n && text[i] !== '"') {
-        if (text[i] === '\\' && i + 1 < n) {
-          i++
-          const e = text[i]
-          s += e === 'n' ? '\n' : e === 't' ? '\t' : e
-        } else s += text[i]
-        i++
-      }
-      i++
-      yield { t: s, quoted: true }
-    } else if (c === '/' && text[i + 1] === '/') {
-      while (i < n && text[i] !== '\n') i++
-    } else if (/\s/.test(c)) {
-      i++
-    } else {
-      let s = ''
-      while (i < n && !/[\s{}"]/.test(text.charAt(i))) {
-        s += text.charAt(i++)
-      }
-      yield { t: s, quoted: true }
-    }
-  }
-}
-
-/**
- * Depot ids of the top-level `appinfo.depots` block, in the order they appear
- * in the raw VDF text. Only direct children of `depots` that are blocks are
- * returned (`branches`, `baselanguages`, `hasdepotsindlc` etc. are excluded by
- * the numeric-id filter). Returns undefined when the text has no depots block.
- */
-export function extractDepotOrder(vdfText: string): string[] | undefined {
-  let depth = 0
-  // key stack, one entry per open block
-  const stack: string[] = []
-  let pendingKey: string | undefined
-  let expectValue = false
-  let found = false
-  const order: string[] = []
-
-  for (const token of tokenize(vdfText)) {
-    const { t, quoted } = token
-    if (!quoted && t === '{') {
-      stack.push(pendingKey ?? '')
-      depth++
-      const depotId = stack[2]
-      if (
-        depth === 3 &&
-        stack[1]?.toLowerCase() === 'depots' &&
-        depotId !== undefined &&
-        /^\d+$/.test(depotId)
-      ) {
-        order.push(depotId)
-      }
-      if (depth === 2 && stack[1]?.toLowerCase() === 'depots') found = true
-      pendingKey = undefined
-      expectValue = false
-    } else if (!quoted && t === '}') {
-      stack.pop()
-      depth--
-      pendingKey = undefined
-      expectValue = false
-    } else if (expectValue) {
-      // scalar value; consumed
-      expectValue = false
-      pendingKey = undefined
-    } else {
-      pendingKey = t
-      expectValue = true
-      // a key followed by '{' is a block; followed by a string it is a scalar.
-      // expectValue is cleared by the '{' branch above.
-    }
-  }
-  return found ? order : undefined
-}
-
-interface PicsApp {
-  appid?: number
-  buffer?: Buffer
-}
+// PICS appinfo is VDF text whose `depots` section lists depot ids in a meaningful order (XCOM
+// 200510: 225341 ... 200522). A JS object enumerates integer-like keys in ASCENDING NUMERIC order,
+// so once appinfo is parsed into a plain object the order is gone. The Rust CM client parses the
+// raw VDF text in textual order and returns it as `apps[id].depotOrder` on every product-info
+// result (79-22); this module records that, and nothing else. Nothing here substitutes numeric
+// order, gid or anything else: when no order was observed for an app, `getAppInfoDepotOrder`
+// returns undefined and the caller must treat order as UNKNOWN.
 
 export interface AppinfoOrder {
   /** Depot ids of `appId` in raw appinfo order, or undefined when never observed. */
   getAppInfoDepotOrder(appId: string): string[] | undefined
+  /** Runs `fn` (a getProductInfo call) and records `depotOrder` from its result. */
   withAppInfoOrderCapture<T>(client: object, fn: () => Promise<T>): Promise<T>
 }
 
@@ -129,17 +28,16 @@ function toOrder(v: unknown): string[] | undefined {
 }
 
 /**
- * The raw-appinfo depot order tap, as one instance (D-05, 66.4-09): the appId -> order map and the
- * per-client tap bookkeeping are closure fields. Construction allocates empty containers only: no
- * I/O, timer or handle (sidecar exit contract).
+ * The depot order recorder, as one instance (D-05, 66.4-09): the appId -> order map is a closure
+ * field. Construction allocates an empty container only: no I/O, timer or handle (sidecar exit
+ * contract).
  */
 export function createAppinfoOrder(): AppinfoOrder {
   /** appId -> depot ids in the order they appear in the raw appinfo VDF. */
   const orderByApp = new Map<string, string[]>()
-  const active = new WeakMap<object, { depth: number; original: unknown }>()
 
-  /** Records `apps[id].depotOrder` from a Rust product-info result (no-op for other shapes). */
-  function recordRustDepotOrder(result: unknown): void {
+  /** Records `apps[id].depotOrder` from a product-info result (no-op for other shapes). */
+  function recordDepotOrder(result: unknown): void {
     const apps = (result as { apps?: unknown } | null | undefined)?.apps
     if (typeof apps !== 'object' || apps === null) return
     for (const [id, entry] of Object.entries(apps)) {
@@ -150,83 +48,13 @@ export function createAppinfoOrder(): AppinfoOrder {
     }
   }
 
-  /**
-   * Run `fn` (a getProductInfo call) with a tap on the client's PICS
-   * product-info responses so the raw appinfo VDF text is seen. The tap is
-   * installed only for the duration of `fn` (ref-counted for overlapping calls)
-   * and the client's own `_send` is restored afterwards, so nothing else ever
-   * observes a replaced method. It never alters what steam-user does: the
-   * original callback is invoked unchanged and any failure in the tap is
-   * swallowed (order then simply stays unknown for that app).
-   */
   async function withAppInfoOrderCapture<T>(
-    client: object,
+    _client: object,
     fn: () => Promise<T>
   ): Promise<T> {
-    const c = client as { _send?: (...args: unknown[]) => unknown }
-    // Phase 79 (79-22): a Rust-backed client has no `_send`; its product-info results carry
-    // `depotOrder` directly (the crate parsed the raw appinfo VDF in textual order). Record it
-    // and skip the steam-user tap. Only a steam-user client (cm=ts) gets the `_send` tap.
-    if (typeof c._send !== 'function') {
-      const result = await fn()
-      recordRustDepotOrder(result)
-      return result
-    }
-
-    let state = active.get(client)
-    if (!state) {
-      const original = c._send
-      state = { depth: 0, original }
-      active.set(client, state)
-      const wrapper = function (this: unknown, ...args: unknown[]) {
-        try {
-          const head = args[0]
-          const msg =
-            typeof head === 'object' && head !== null
-              ? (head as { msg?: number }).msg
-              : head
-          const cb = args[2]
-          if (msg === PICS_PRODUCT_INFO_REQUEST && typeof cb === 'function') {
-            args[2] = (
-              body: { apps?: PicsApp[] } | undefined,
-              ...rest: unknown[]
-            ) => {
-              try {
-                for (const app of body?.apps ?? []) {
-                  if (app?.appid === undefined || !app.buffer) continue
-                  const ids = extractDepotOrder(app.buffer.toString('utf8'))
-                  if (ids) orderByApp.set(String(app.appid), ids)
-                }
-              } catch (err) {
-                logWarning(
-                  `appinfoOrder: could not read raw appinfo order: ${String(err)}`,
-                  LogPrefix.Steam
-                )
-              }
-              return (cb as (...a: unknown[]) => unknown).call(
-                this,
-                body,
-                ...rest
-              )
-            }
-          }
-        } catch {
-          // never break the send path
-        }
-        return original.apply(this, args)
-      }
-      c._send = wrapper
-    }
-    state.depth++
-    try {
-      return await fn()
-    } finally {
-      state.depth--
-      if (state.depth === 0) {
-        c._send = state.original as (...args: unknown[]) => unknown
-        active.delete(client)
-      }
-    }
+    const result = await fn()
+    recordDepotOrder(result)
+    return result
   }
 
   return {

@@ -1,26 +1,11 @@
 /**
  * 66.4-09: the Steam install runtime holds per-instance state. Two runtimes share no app order,
- * schema cache, lock, job, poll or hold entry; construction arms no timer.
+ * lock, job, poll or hold entry; construction arms no timer.
  */
 import { createTestAppRuntime } from 'backend/testUtils/testAppRuntime'
 import { createSteamInstallRuntime } from '../steamInstallRuntime'
 import { createTestHostServices } from '../../../testUtils/testHostServices'
-import { createCdnSchemaCache } from '../depot/cdnAuth'
 import type { RustJobEvent } from '../depotRust/types'
-
-const PICS = 8903
-
-function picsClient(appId: number, depots: string[]) {
-  const vdf = `"appinfo" { "depots" { ${depots.map((d) => `"${d}" { }`).join(' ')} } }`
-  const original = function (
-    _h: unknown,
-    _b: unknown,
-    cb: (b: unknown) => void
-  ) {
-    cb({ apps: [{ appid: appId, buffer: Buffer.from(vdf + '\0') }] })
-  }
-  return { _send: original }
-}
 
 const transport = () => ({
   ...createTestHostServices(),
@@ -41,11 +26,9 @@ describe('createSteamInstallRuntime', () => {
   it('two runtimes share no appinfo order', async () => {
     const a = createSteamInstallRuntime(transport())
     const b = createSteamInstallRuntime(transport())
-    const client = picsClient(10, ['3', '2', '1'])
-    await a.appinfoOrder.withAppInfoOrderCapture(client, () => {
-      client._send({ msg: PICS }, {}, () => undefined)
-      return Promise.resolve()
-    })
+    await a.appinfoOrder.withAppInfoOrderCapture({}, () =>
+      Promise.resolve({ apps: { 10: { depotOrder: ['3', '2', '1'] } } })
+    )
     expect(a.appinfoOrder.getAppInfoDepotOrder('10')).toEqual(['3', '2', '1'])
     expect(b.appinfoOrder.getAppInfoDepotOrder('10')).toBeUndefined()
   })
@@ -87,20 +70,12 @@ describe('createSteamInstallRuntime', () => {
     ])
   })
 
-  it('cdn schema loads once per instance', () => {
-    const cache = createCdnSchemaCache()
-    const a = cache.load()
-    expect(cache.load()).toBe(a)
-    expect(createCdnSchemaCache().load()).not.toBe(a)
-  })
-
   it('depot job registries are independent and drop stale or foreign events', () => {
     const a = createSteamInstallRuntime(transport())
     const b = createSteamInstallRuntime(transport())
     const seen: number[] = []
     const dispose = a.depotJobs.registerActiveDepotJob('j', {
       appId: '1',
-      tokenCache: {} as never,
       refreshRequestCode: () => Promise.resolve(null),
       onEvent: (ev) => seen.push(ev.seq)
     })

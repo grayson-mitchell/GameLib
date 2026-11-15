@@ -3,9 +3,8 @@
  * D-03, D-06).
  *
  *   invoke (ipcMain.handle, 2):
- *     - `depotCdnToken` -> the job's `CdnAuthTokenCache` (including its `_send` workaround) answers
- *       with the token string to append verbatim to a chunk URL, `''` when none is needed, or
- *       `null` for an unknown jobId.
+ *     - `depotCdnToken` -> answers `''` (no CDN auth token is ever requested, CF-06) for a known
+ *       job, or `null` for an unknown jobId.
  *     - `depotManifestRequestCode` -> a fresh request code as a decimal string, `null` (Steam
  *       gave no code, or malformed args), `{eresult: 40}` when Steam refused the manifest (Blocked;
  *       the crate skips that depot), or `{unavailable: 'not_signed_in' | 'failed' | 'no_job'}`
@@ -19,8 +18,7 @@
  * channel name and jobId only, never arguments or results: a CDN token must never reach a log
  * (T-28-04 convention, T-73-41).
  *
- * With cm=rust (79-22): `depotCdnToken` answers `''` (CF-06) and `depotManifestRequestCode` maps the
- * CM client's `steamcmKind` (timeout, network, leaseUnknown) to `{unavailable: kind}`.
+ * `depotManifestRequestCode` maps the CM client's `steamcmKind` (timeout, network, leaseUnknown) to `{unavailable: kind}`.
  *
  * No timers, watchers or handles are created here (sidecar exit contract).
  */
@@ -69,18 +67,8 @@ export function registerDepotHostFlows(deps: {
       const depotId = field(req, 'depotId')
       const host = field(req, 'host')
       if (!job || depotId === undefined || host === undefined) return null
-      // CF-06: the Rust engine never requests CDN auth tokens; '' means "no token", and no
-      // client is touched.
-      if (steamCmImpl() === 'rust') return ''
-      try {
-        if ((req as { force?: unknown }).force === true) {
-          job.tokenCache.invalidate(depotId, host)
-        }
-        return await job.tokenCache.getToken(depotId, host)
-      } catch (err) {
-        logFailure('depotCdnToken', jobId, err)
-        return null
-      }
+      // CF-06: no CDN auth token is ever requested; '' means "no token" (79-22 evidence).
+      return ''
     }
   )
 

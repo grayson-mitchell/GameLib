@@ -76,11 +76,10 @@ const FORBIDDEN = [
 ]
 
 // Modules the TS side still owns after the port: depot selection, appinfo
-// ordering, CDN auth and content-server discovery feed the Rust job.
+// ordering and content-server discovery feed the Rust job.
 const KEPT = [
   `${STEAM}/depot/select.ts`,
   `${STEAM}/depot/appinfoOrder.ts`,
-  `${STEAM}/depot/cdnAuth.ts`,
   `${STEAM}/depot/contentServers.ts`,
   'patches/lzma.patch',
   'patches/steam-user.patch',

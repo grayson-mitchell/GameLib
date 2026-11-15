@@ -17,7 +17,6 @@ jest.mock('backend/logger', () => ({
 }))
 jest.mock('../rustDepot', () => ({ summarizeDepots: jest.fn() }))
 jest.mock('../install', () => ({ requestCodeRefresher: jest.fn() }))
-jest.mock('../../depot/cdnAuth', () => ({ CdnAuthTokenCache: jest.fn() }))
 jest.mock('../../depot/contentServers', () => ({
   getContentServerHosts: jest.fn()
 }))
@@ -53,7 +52,6 @@ const game = {
     config: {},
     steamUser: { acquireAuthenticated },
     steamInstallRuntime: {
-      cdnSchema: {},
       updateStates: { setEstimate },
       depotJobs: {
         transport: {},

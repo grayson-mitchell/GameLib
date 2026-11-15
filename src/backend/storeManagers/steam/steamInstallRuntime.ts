@@ -11,7 +11,6 @@
  * part of this runtime.
  */
 import { createAppinfoOrder, type AppinfoOrder } from './depot/appinfoOrder'
-import { createCdnSchemaCache, type CdnSchemaCache } from './depot/cdnAuth'
 import {
   createSharedRedistLocks,
   type SharedRedistLocks
@@ -39,7 +38,6 @@ import {
 
 export interface SteamInstallRuntime {
   appinfoOrder: AppinfoOrder
-  cdnSchema: CdnSchemaCache
   sharedRedistLocks: SharedRedistLocks
   depotJobs: DepotJobRegistry
   polls: InstallPollState
@@ -54,7 +52,7 @@ export interface SteamInstallRuntime {
 /** The slice the depot pipeline (plan build, Rust jobs, shared redists) reads. */
 export type DepotRuntime = Pick<
   SteamInstallRuntime,
-  'appinfoOrder' | 'cdnSchema' | 'sharedRedistLocks' | 'depotJobs'
+  'appinfoOrder' | 'sharedRedistLocks' | 'depotJobs'
 >
 
 export function createSteamInstallRuntime(
@@ -63,7 +61,6 @@ export function createSteamInstallRuntime(
   const polls = createInstallPollState()
   return {
     appinfoOrder: createAppinfoOrder(),
-    cdnSchema: createCdnSchemaCache(),
     sharedRedistLocks: createSharedRedistLocks(),
     depotJobs: createDepotJobRegistry(transport),
     polls,

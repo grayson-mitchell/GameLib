@@ -15,7 +15,6 @@ import {
   type SharedRedistKind
 } from '../bridge/sharedRedists'
 import { sanitizeInstalldir } from '../installLocation'
-import { CdnAuthTokenCache } from './cdnAuth'
 import {
   assertNumericAppId,
   getDepotClient,
@@ -285,12 +284,7 @@ async function downloadSharedRedistDepotsLeased(
       hostInfo = {
         hosts,
         weightedLoads,
-        hostMeta,
-        cdnAuth: new CdnAuthTokenCache(
-          client,
-          Number(STEAM_COMMON_REDIST_APP_ID),
-          opts.installRuntime.cdnSchema
-        )
+        hostMeta
       }
     }
     return hostInfo

@@ -1,12 +1,10 @@
 {
   "jestMock": {
     "src/backend/storeManagers/steam/__tests__/anonymousClient.rustEngine.test.ts": 1,
-    "src/backend/storeManagers/steam/__tests__/appinfoOrder.test.ts": 1,
     "src/backend/storeManagers/steam/__tests__/autoUpdateAttempts.test.ts": 1,
     "src/backend/storeManagers/steam/__tests__/bridgeBottle.test.ts": 6,
     "src/backend/storeManagers/steam/__tests__/bridgeRouteVerdict.test.ts": 13,
     "src/backend/storeManagers/steam/__tests__/cancelDelete.test.ts": 7,
-    "src/backend/storeManagers/steam/__tests__/cdnAuth.test.ts": 1,
     "src/backend/storeManagers/steam/__tests__/clientSetup.test.ts": 5,
     "src/backend/storeManagers/steam/__tests__/credentialsMissing.test.ts": 6,
     "src/backend/storeManagers/steam/__tests__/depot.clobberGuard.test.ts": 6,
@@ -42,7 +40,6 @@
     "src/backend/storeManagers/steam/__tests__/library.updates.test.ts": 7,
     "src/backend/storeManagers/steam/__tests__/licensedDemos.test.ts": 1,
     "src/backend/storeManagers/steam/__tests__/macSteamAdoption.test.ts": 3,
-    "src/backend/storeManagers/steam/__tests__/macSteamOfflineWrap.test.ts": 4,
     "src/backend/storeManagers/steam/__tests__/macSteamOnlineDebt.test.ts": 2,
     "src/backend/storeManagers/steam/__tests__/metacriticCapture.test.ts": 1,
     "src/backend/storeManagers/steam/__tests__/nativeDelete.test.ts": 1,

@@ -7,7 +7,6 @@
 
 import { randomUUID } from 'node:crypto'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { CdnAuthTokenCache } from '../depot/cdnAuth'
 import { getContentServerHosts } from '../depot/contentServers'
 import type { DownloadSteamDepotsOpts } from '../depot/planModel'
 import {
@@ -109,17 +108,11 @@ export async function estimateBridgeUpdate(
     const client = getDepotClient(deps.steamUser)
     const hosts = await getContentServerHosts(client, Number(appId))
     throwIfAborted(signal)
-    const tokenCache = new CdnAuthTokenCache(
-      client,
-      Number(appId),
-      deps.steamInstallRuntime.cdnSchema
-    )
     const jobId = `summary-${appId}-${randomUUID()}`
     const dispose = deps.steamInstallRuntime.depotJobs.registerActiveDepotJob(
       jobId,
       {
         appId,
-        tokenCache,
         refreshRequestCode: requestCodeRefresher(
           client,
           new Map(refs.depots.map((d) => [d.depotId, d.ownerAppId])),

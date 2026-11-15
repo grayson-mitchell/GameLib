@@ -14,29 +14,14 @@ jest.mock('backend/logger', () => ({
 import { createTestAppRuntime } from 'backend/testUtils/testAppRuntime'
 import { createTestHostServices } from '../../testUtils/testHostServices'
 import { defined } from 'backend/testUtils/indexed'
-import { logWarning } from 'backend/logger'
 import { channelSchemas } from 'common/types/ipc/channelSchemas'
 import { validateInbound } from '../ipcValidation'
 import { registerDepotHostFlows } from '../depotHostRegistration'
 import { createIpcRegistry } from '../ipcRegistry'
 import { createDepotJobRegistry } from '../../storeManagers/steam/depotRust/jobRegistry'
-import type { CdnAuthTokenCache } from '../../storeManagers/steam/depot/cdnAuth'
 import type { RustJobEvent } from '../../storeManagers/steam/depotRust/types'
 
-const SECRET = 'secret-token-do-not-log'
 const CHANNELS = ['depotCdnToken', 'depotManifestRequestCode', 'depotJobEvent']
-
-function fakeCache(
-  impl: () => Promise<string> = () => Promise.resolve(`?token=${SECRET}`)
-) {
-  const getToken = jest.fn(impl)
-  const invalidate = jest.fn()
-  return {
-    cache: { getToken, invalidate } as unknown as CdnAuthTokenCache,
-    getToken,
-    invalidate
-  }
-}
 
 async function invoke(channel: string, payload: unknown): Promise<unknown> {
   const handler = defined(ipc.getHandler(channel), channel)
@@ -69,61 +54,19 @@ describe('depotCdnToken', () => {
     ...over
   })
 
-  it('answers from the registered job cache', async () => {
-    const { cache, getToken, invalidate } = fakeCache()
+  it('answers "" for a registered job: no CDN token is ever requested (CF-06)', async () => {
     const dispose = depotJobs.registerActiveDepotJob('job1', {
       appId: '480',
-      tokenCache: cache,
       refreshRequestCode: jest.fn(),
       onEvent: jest.fn()
     })
-    expect(await invoke('depotCdnToken', req())).toBe(`?token=${SECRET}`)
-    expect(getToken).toHaveBeenCalledWith('481', 'cdn.example')
-    expect(invalidate).not.toHaveBeenCalled()
-    dispose()
-  })
-
-  it('force invalidates first', async () => {
-    const { cache, invalidate } = fakeCache()
-    const dispose = depotJobs.registerActiveDepotJob('job1', {
-      appId: '480',
-      tokenCache: cache,
-      refreshRequestCode: jest.fn(),
-      onEvent: jest.fn()
-    })
-    await invoke('depotCdnToken', req({ force: true }))
-    expect(invalidate).toHaveBeenCalledWith('481', 'cdn.example')
+    expect(await invoke('depotCdnToken', req())).toBe('')
+    expect(await invoke('depotCdnToken', req({ force: true }))).toBe('')
     dispose()
   })
 
   it('unknown jobId answers null', async () => {
     expect(await invoke('depotCdnToken', req({ jobId: 'nope' }))).toBeNull()
-  })
-
-  it('token_never_logged: neither success nor error output carries the token', async () => {
-    const failing = fakeCache(() =>
-      Promise.reject(new Error(`boom https://x/?token=${SECRET}`))
-    )
-    const dispose = depotJobs.registerActiveDepotJob('job1', {
-      appId: '480',
-      tokenCache: failing.cache,
-      refreshRequestCode: jest.fn(),
-      onEvent: jest.fn()
-    })
-    expect(await invoke('depotCdnToken', req())).toBeNull()
-    dispose()
-    const ok = fakeCache()
-    const dispose2 = depotJobs.registerActiveDepotJob('job1', {
-      appId: '480',
-      tokenCache: ok.cache,
-      refreshRequestCode: jest.fn(),
-      onEvent: jest.fn()
-    })
-    await invoke('depotCdnToken', req())
-    dispose2()
-    const logged = JSON.stringify((logWarning as jest.Mock).mock.calls)
-    expect((logWarning as jest.Mock).mock.calls.length).toBeGreaterThan(0)
-    expect(logged).not.toContain(SECRET)
   })
 })
 
@@ -132,7 +75,6 @@ describe('depotManifestRequestCode', () => {
     const refresh = jest.fn(() => Promise.resolve('9876543210123456789'))
     const dispose = depotJobs.registerActiveDepotJob('job1', {
       appId: '480',
-      tokenCache: fakeCache().cache,
       refreshRequestCode: refresh,
       onEvent: jest.fn()
     })
@@ -153,7 +95,6 @@ describe('depotManifestRequestCode on an EResult-40 refusal', () => {
   const register = (refresh: () => Promise<string | null>) =>
     depotJobs.registerActiveDepotJob('job9', {
       appId: '480',
-      tokenCache: fakeCache().cache,
       refreshRequestCode: refresh,
       onEvent: jest.fn()
     })
@@ -205,7 +146,6 @@ describe('depotJobEvent', () => {
     const onEvent = jest.fn()
     const dispose = depotJobs.registerActiveDepotJob('job1', {
       appId: '480',
-      tokenCache: fakeCache().cache,
       refreshRequestCode: jest.fn(),
       onEvent
     })

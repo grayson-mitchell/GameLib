@@ -1,12 +1,11 @@
 /**
  * Phase 79 (D-03, D-18): the exact subset of steam-user's client that production calls, in
- * steam-user's own call shapes. Both the steam-user client (cm=ts) and the Rust-backed client
- * (cm=rust) satisfy it, so callers change only their type.
+ * steam-user's own call shapes. The Rust-backed client satisfies it.
  *
  * Types only; no work at import.
  */
 import type SteamUserLib from 'steam-user'
-import type { RawContentServer, SteamUserDepotClient } from '../depot/planModel'
+import type { RawContentServer } from '../depot/planModel'
 import type { SteamCmLicense } from './steamCmTypes'
 
 /** What `getProductInfo` resolves with (steam-user's own shape). */
@@ -54,10 +53,3 @@ export interface SteamCmClient {
     packageList: Record<string, string>
   }>
 }
-
-// Compile-time only (no module-scope statement: the sidecar's floating-promise guard walks this graph).
-type AssertTrue<T extends true> = T
-/** @public compile-time assertion only: a type alias nothing imports, so it must stay exported to count as used. */
-export type SteamUserFitsSteamCmClient = AssertTrue<
-  SteamUserDepotClient extends SteamCmClient ? true : false
->

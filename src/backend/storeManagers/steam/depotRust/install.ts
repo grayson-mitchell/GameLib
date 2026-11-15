@@ -10,7 +10,6 @@
 import { randomUUID } from 'node:crypto'
 import { join, resolve } from 'path'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { CdnAuthTokenCache } from '../depot/cdnAuth'
 import { getContentServerHosts } from '../depot/contentServers'
 import { classifyDepotError } from '../depotErrors'
 import type {
@@ -188,11 +187,6 @@ export async function downloadSteamDepotsRust(
       Number(appId)
     )
     throwIfAborted(opts.signal)
-    const tokenCache = new CdnAuthTokenCache(
-      client,
-      Number(appId),
-      opts.installRuntime.cdnSchema
-    )
 
     // StateFlags policy: the Rust gate (can_write_full_ownership) is fed by the
     // run's outcome (an aborted signal forces 'cancelled'). Rust applies the same gate to its own
@@ -283,7 +277,6 @@ export async function downloadSteamDepotsRust(
     const outcome = await runDepotJob(job, {
       registry: opts.installRuntime.depotJobs,
       signal: opts.signal,
-      tokenCache,
       refreshRequestCode: requestCodeRefresher(
         client,
         new Map(
@@ -344,9 +337,7 @@ export async function downloadSteamDepotsRust(
 }
 
 /** Host state downloadSharedRedistDepots already builds once per run. */
-export interface SharedRedistHostInfo extends ContentServerHosts {
-  cdnAuth: CdnAuthTokenCache
-}
+export type SharedRedistHostInfo = ContentServerHosts
 
 /** One shared redist depot under the shared cache root (D-12). */
 export interface SharedRedistJobArgs {
@@ -383,7 +374,6 @@ async function runSharedRedistJob(
   const outcome = await runDepotJob(job, {
     registry: args.registry,
     signal: args.signal,
-    tokenCache: args.host.cdnAuth,
     refreshRequestCode: requestCodeRefresher(
       getDepotClient(args.steamUser),
       new Map([[args.ref.depotId, args.appId]]),
@@ -439,7 +429,6 @@ export async function sharedRedistInstallscriptsRust(
   const jobId = `summary-${args.appId}-${randomUUID()}`
   const dispose = args.registry.registerActiveDepotJob(jobId, {
     appId: args.appId,
-    tokenCache: args.host.cdnAuth,
     refreshRequestCode: requestCodeRefresher(
       getDepotClient(args.steamUser),
       new Map([[args.ref.depotId, args.appId]]),

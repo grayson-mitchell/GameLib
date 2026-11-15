@@ -16,7 +16,6 @@ import {
   RUST_DEPOT_JOB_RUN,
   RUST_DEPOT_MANIFEST_SUMMARY
 } from 'common/types/sidecarTransport'
-import type { CdnAuthTokenCache } from '../../depot/cdnAuth'
 import { createDepotJobRegistry } from '../jobRegistry'
 import {
   cancelDepotJob,
@@ -51,7 +50,6 @@ let registry = newRegistry()
 const hooks = (signal?: AbortSignal) => ({
   registry,
   signal,
-  tokenCache: {} as CdnAuthTokenCache,
   refreshRequestCode: jest.fn(() => Promise.resolve(null)),
   onEvent: jest.fn()
 })
