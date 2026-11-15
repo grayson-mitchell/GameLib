@@ -4,13 +4,13 @@ milestone: v0.10
 milestone_name: Foundations
 status: executing
 stopped_at: Phase 47 context gathered
-last_updated: "2026-11-14T21:14:12.772Z"
-last_activity: 2026-11-14
+last_updated: "2026-11-15T00:07:24.761Z"
+last_activity: 2026-11-15
 progress:
   total_phases: 24
   completed_phases: 18
   total_plans: 445
-  completed_plans: 424
+  completed_plans: 425
   percent: 75
 ---
 
@@ -73,9 +73,9 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 ## Current Position
 
 Phase: 79 (rust-cm-client-replacing-steam-user-and-steam-session) — EXECUTING
-Plan: 34 of 44
+Plan: 35 of 44
 Status: Ready to execute
-Last activity: 2026-11-15 - Live check passed for quick 261110-nwy (launch notice theming); todo closed
+Last activity: 2026-11-15
 
 Progress: [██████████] 98%
 
