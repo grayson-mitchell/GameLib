@@ -169,7 +169,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 75: Steam local file formats in Rust** — 35 plans in 20 waves; planned 2026-11-14 (completed 2026-11-14)
 - [ ] **Phase 76: Engine-correct bottle for DRM-mode launches (v0.9 audit S9)** — 2 plans in 2 waves; executed, gaps found (2026-11-16) — gap closure pending
 - [ ] **Phase 77: Runtime hardening from the v0.9 review debt** — 3 plans in 2 waves; planned
-- [ ] **Phase 78: Verification records and test health after v0.9** — 0 plans; not started
+- [ ] **Phase 78: Verification records and test health after v0.9** — 5 plans in 2 waves; planned
 - [ ] **Phase 79: Rust CM client replacing steam-user and steam-session** — 44 plans in 21 waves; planned (spike 085 gate satisfied)
 - [ ] **Phase 80: Steam install, uninstall and update polling state machines in Rust** — 0 plans; not started
 - [ ] **Phase 47: Migrate aggregated store search from CheapShark to IsThereAnyDeal** — 13 plans; ITAD gates closed 2026-11-12; planned 2026-11-14 (moved from v0.8)
@@ -1602,11 +1602,20 @@ Plans:
 **Requirements**: DEBT-05, DEBT-06
 **Depends on:** None
 **Source:** `milestones/v0.9-MILESTONE-AUDIT.md`
-**Plans:** 0 plans
+**Plans:** 5 plans in 2 waves
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 78 to break down)
+**Wave 1**
+
+- [ ] 78-01-PLAN.md — 52 records: VERIFICATION current-first, UAT gaps superseded (ELEX via Phase 54), WR-03 display-ack moot
+- [ ] 78-02-PLAN.md — 53 records: UAT gaps superseded (ELEX/Unclaimed World lifted, DRM titles open under Phase 56), VERIFICATION current-first
+- [ ] 78-03-PLAN.md — D-19 fixes (IN-01 persistent error handler + test, WR-03 pins, IN-02 comment), D-13 stale comments, 58 follow_ups to current truth
+- [ ] 78-04-PLAN.md — un-mask lint.yml ratchet steps and .husky/pre-push, with the four wiring tests updated
+
+**Wave 2**
+
+- [ ] 78-05-PLAN.md — DEBT-06 clean-worktree proof (targeted, full run, simulated hosts, CI log), attribution, cold lint, D-17 grouped todo, close lint todo
 
 ### Phase 79: Rust CM client replacing steam-user and steam-session
 
