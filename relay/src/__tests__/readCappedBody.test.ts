@@ -48,7 +48,7 @@ describe('readCappedBody (DEBT-02)', () => {
 
   it('rejects a body of max + 1 bytes', async () => {
     const res = await readCappedBody(reqOf(streamOf([bytes(2049)])), 2048)
-    expect(res).toEqual({ ok: false })
+    expect(res).toEqual({ ok: false, reason: 'too-large' })
   })
 
   it('cancels a never-closing stream once over the cap', async () => {
@@ -65,7 +65,7 @@ describe('readCappedBody (DEBT-02)', () => {
       ),
       2048
     )
-    expect(res).toEqual({ ok: false })
+    expect(res).toEqual({ ok: false, reason: 'too-large' })
     expect(cancelled).toBe(true)
   })
 
@@ -79,12 +79,15 @@ describe('readCappedBody (DEBT-02)', () => {
     expect(res).toEqual({ ok: true, text: '{"note":"café"}' })
   })
 
-  it('propagates a stream read error', async () => {
+  it('reports a stream read error as read-error', async () => {
     const body = new ReadableStream<Uint8Array>({
       pull(controller) {
         controller.error(new Error('boom'))
       }
     })
-    await expect(readCappedBody(reqOf(body), 2048)).rejects.toThrow('boom')
+    expect(await readCappedBody(reqOf(body), 2048)).toEqual({
+      ok: false,
+      reason: 'read-error'
+    })
   })
 })

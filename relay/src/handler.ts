@@ -124,6 +124,10 @@ async function handle(
   }
   // DEBT-02 (57 WR-09): bound every body; Content-Length can be absent or lie.
   const body = await readCappedBody(request, KNOWN_FIX_REPORT_MAX_BYTES)
+  if (!body.ok && body.reason === 'read-error') {
+    console.log('relay: body read failed -> 400')
+    return respond(400, { status: 'rejected', detail: 'unreadable body' })
+  }
   if (!body.ok) {
     console.log('relay: body over cap -> 413')
     return respond(413, { status: 'rejected', detail: 'too large' })

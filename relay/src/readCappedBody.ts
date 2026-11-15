@@ -9,20 +9,30 @@
 export async function readCappedBody(
   request: Request,
   max: number
-): Promise<{ ok: true; text: string } | { ok: false }> {
+): Promise<
+  { ok: true; text: string } | { ok: false; reason: 'too-large' | 'read-error' }
+> {
   if (request.body === null) return { ok: true, text: '' }
   const reader = request.body.getReader()
   const chunks: Uint8Array[] = []
   let total = 0
   for (;;) {
-    const { done, value } = await reader.read()
+    let result: ReadableStreamReadResult<Uint8Array>
+    try {
+      result = await reader.read()
+    } catch {
+      // WR-03: a truncated/malformed body or client disconnect is a client
+      // fault, not an outage; the caller answers 400, not 503.
+      return { ok: false, reason: 'read-error' }
+    }
+    const { done, value } = result
     if (done) break
     total += value.byteLength
     if (total > max) {
       // Fire and forget: a source whose cancel() never settles must not
       // hold the response.
       void reader.cancel().catch(() => undefined)
-      return { ok: false }
+      return { ok: false, reason: 'too-large' }
     }
     chunks.push(value)
   }

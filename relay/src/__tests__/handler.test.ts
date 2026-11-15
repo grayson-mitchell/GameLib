@@ -304,7 +304,7 @@ describe('edge: capped body (DEBT-02)', () => {
     }
   })
 
-  it('answers 503 (never rejects) when the stream errors', async () => {
+  it('answers 400 (never rejects) when the body stream errors', async () => {
     const h = await harness()
     const log = jest.spyOn(console, 'log').mockImplementation(() => undefined)
     try {
@@ -314,8 +314,9 @@ describe('edge: capped body (DEBT-02)', () => {
         }
       })
       const res = await h.send({ stream })
-      expect(res.status).toBe(503)
-      expect((await res.json()).status).toBe('unavailable')
+      expect(res.status).toBe(400)
+      expect((await res.json()).status).toBe('rejected')
+      expect(h.calls).toHaveLength(0)
     } finally {
       log.mockRestore()
     }
