@@ -1553,13 +1553,13 @@ Plans:
 **Requirements**: DEBT-01
 **Depends on:** None
 **Source:** `milestones/v0.9-MILESTONE-AUDIT.md` (S9, integration 8/9)
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 
 **Wave 1**
 
-- [ ] 76-01-PLAN.md — DRM branch: offline pre-check + prepareBottleForEngine back to CrossOver, refusal dialogs + done, unit tests (TDD)
+- [x] 76-01-PLAN.md — DRM branch: offline pre-check + prepareBottleForEngine back to CrossOver, refusal dialogs + done, unit tests (TDD)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
