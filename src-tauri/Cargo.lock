@@ -1641,6 +1641,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "gamelib-i18n"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "gamelib-scan"
 version = "0.1.0"
 dependencies = [
@@ -1740,6 +1748,27 @@ dependencies = [
  "gamelib-steamfiles",
  "serde_json",
  "tempfile",
+]
+
+[[package]]
+name = "gamelib-steampoll"
+version = "0.1.0"
+dependencies = [
+ "gamelib-i18n",
+ "gamelib-steamfiles",
+ "gamelib-steampoll",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "tokio-util",
+]
+
+[[package]]
+name = "gamelib-steampoll-cli"
+version = "0.1.0"
+dependencies = [
+ "gamelib-steampoll",
 ]
 
 [[package]]

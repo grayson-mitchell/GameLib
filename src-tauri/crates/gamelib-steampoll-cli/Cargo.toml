@@ -1,0 +1,17 @@
+[package]
+name = "gamelib-steampoll-cli"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.77.2"
+publish = false
+
+[[bin]]
+name = "gamelib-steampoll-cli"
+path = "src/main.rs"
+
+[dependencies]
+gamelib-steampoll = { path = "../gamelib-steampoll", features = ["testing"] }
+
+[lints.clippy]
+dbg_macro = "deny"
+todo = "deny"

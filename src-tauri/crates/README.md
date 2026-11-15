@@ -14,7 +14,7 @@ The app crate (`src-tauri`) stays the workspace root. Each port adds:
 | `src-tauri/crates/<name>`     | Tauri-free library. No `tauri` dependency, ever.              |
 | `src-tauri/crates/<name>-cli` | Optional bin, only if `meta/` tools need the code headlessly. |
 
-Current crates: `gamelib-scan`, `gamelib-depot`, `gamelib-steamfiles`, each with a `-cli`.
+Current crates: `gamelib-scan`, `gamelib-depot`, `gamelib-steamfiles`, `gamelib-steampoll`, each with a `-cli`, and `gamelib-i18n` (library only, Phase 80).
 
 Every crate sets `rust-version = "1.77.2"` and the two `[lints.clippy]` deny lines
 (`dbg_macro`, `todo`). Exception: `gamelib-depot` and `gamelib-depot-cli` set `rust-version = "1.89"`
@@ -91,7 +91,7 @@ persisted user setting would have needed UI, migration and a removal path.
 
 ## 8. CI
 
-`.github/workflows/rust-test.yml` runs an explicit `cargo test -p gamelib-scan -p gamelib-scan-cli -p gamelib-depot -p gamelib-depot-cli -p gamelib-steamfiles -p gamelib-steamfiles-cli`
+`.github/workflows/rust-test.yml` runs an explicit `cargo test -p gamelib-scan -p gamelib-scan-cli -p gamelib-depot -p gamelib-depot-cli -p gamelib-steamfiles -p gamelib-steamfiles-cli -p gamelib-steampoll -p gamelib-steampoll-cli -p gamelib-i18n`
 and `clippy --workspace` on both legs. Workspace crates are not default members, so a plain
 `cargo test` in `src-tauri` silently skips them. A new crate needs its own `-p` entry.
 

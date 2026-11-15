@@ -447,5 +447,8 @@ members = [
   "crates/gamelib-steamfiles-cli",
   "crates/gamelib-steamcm",
   "crates/gamelib-steamcm-cli",
+  "crates/gamelib-steampoll",
+  "crates/gamelib-steampoll-cli",
+  "crates/gamelib-i18n",
 ]
 resolver = "2"
