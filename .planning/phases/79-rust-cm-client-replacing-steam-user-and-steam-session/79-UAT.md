@@ -39,10 +39,20 @@ Since 79-25 the `cm` flag defaults to `rust`; the `signin` flag stays `ts` until
 | 9 | Quit (Cmd-Q) with a lease idle | `pgrep -fl sidecar.js`, shell log `[shell] steamcm shutdown (<context>): <outcome>` | item 2 or 3 done so a lease existed | n/a |
 | 10 | not applicable: 79-WRAP-RETEST.md verdict is PASS, so no wrapped-logon item is needed | n/a | n/a | n/a |
 | 11 | none for the operator beyond launching with `GAMELIB_STEAMCM_CM=ts` and pressing Refresh; Claude runs the Rust CLI session itself | `gamelib.log` and the CLI stdout | `pnpm steamcm-cli:build`-equivalent binary built under `src-tauri/target/debug` | n/a |
+| 12 | Library Refresh button, Mac Steam quit | `gamelib.log` (`[steamcm] rust steamcm_refresh`, `Steam Refresh enrichment:`, `Steam library sync complete:`) | Mac Steam quit; signed in; 79-PARITY.md Refresh sweep counts to hand | n/a |
+| 13 | Library Refresh button, Mac Steam relaunched fresh; Claude renames the helper (reversible, restore checked with `test -x`) | `gamelib.log` (`Mac Steam path unavailable (helper-missing), using CM`), shell log (`CM logon mode=authenticated`), Mac Steam `connection_log.txt`; the operator watches Friends | `public/bin/arm64/darwin/steam-bridge-helper` present and executable before the rename; Friends online | n/a |
+| 14 | Library Refresh button, Mac Steam running and signed in | `gamelib.log` (`Steam Refresh: Mac Steam path ok`), shell log (absence of `CM logon mode=authenticated`) | Mac Steam running, same account as GameLib; helper present and executable | n/a |
+| 15 | Library Refresh button, Mac Steam quit | `gamelib.log` (`Mac Steam path unavailable (`) | Mac Steam quit; helper restored | n/a |
+| 16 | not reachable without a second account in Mac Steam; `skipped` unless the operator can do it | `gamelib.log` (`Mac Steam path unavailable (account-mismatch)`) | a second Steam account signed into Mac Steam | n/a |
+| 17 | A Steam game card whose metadata is not cached (open its page) | `gamelib.log` (`[steamcm] rust steamcm_store_enrich`, `steamcm_store_appdetails`) | a game never opened since the metadata cache was cleared or never fetched | n/a |
+| 18 | Quit and relaunch GameLib (`pnpm tauri:dev`), then Refresh | `gamelib.log`, shell log | signed in before the restart | n/a |
+| 19 | Install on a game card, then Activity Monitor Force Quit | `pgrep -fl sidecar.js`, shell log (`[shell] steamcm shutdown (<context>): <outcome>` where the shell lives to write it), Mac Steam state | a 1 to 2 GB title not installed; the install is under way and holds a lease | as part A item 2 |
+
+Helper rename (item 13; items 14 and 15 need it restored): the Mac path resolves the helper at `public/bin/arm64/darwin/steam-bridge-helper` (`appPaths.steamBridgeHelperPath`; `x64` on Intel). Claude renames it to `steam-bridge-helper.bak` for item 13 and restores it straight afterwards, then runs `test -x public/bin/arm64/darwin/steam-bridge-helper`. Nothing else may run while it is renamed: the install adoption path also uses this helper and would report `helper-missing`.
 
 ## Current Test
 
-[part A complete; awaiting operator approval]
+[part A approved; part B awaiting 79-38]
 
 ## Tests
 
@@ -100,4 +110,44 @@ precondition: signed in; Rust CLI binary built. Action: launch with `GAMELIB_STE
 
 ## Part B — Refresh, Mac path and delete gate (authored by 79-37)
 
-Placeholder; 79-37 appends the Refresh, Mac-path and delete-gate items here.
+Run by plan 79-38. Items continue the numbering of part A. Defaults now: both `GAMELIB_STEAMCM_CM` and `GAMELIB_STEAMCM_SIGNIN` are `rust`, so no flag is set. The Steam Guard on this account is mobile approval only (there is no typed code). The Accounts tile deliberately shows no name; never write that a name shows in the UI. Redact SteamIDs, account and persona names, tokens and home paths.
+
+### 12. Rust Refresh on the CM path, Mac Steam quit (D-12, D-16)
+expected: With Mac Steam fully quit, one Refresh gives exactly one `[steamcm] rust steamcm_refresh` line in `gamelib.log`, no TS capture or demos fetch lines, then `Steam Refresh enrichment: attempted=... rateLimited=... budgetHit=...` and `Steam library sync complete: <n> games`. The owned and demo counts match the Refresh sweep in 79-PARITY.md.
+result: pending
+precondition: signed in; Mac Steam quit (check `pgrep -x steam_osx` prints nothing); `pnpm build:sidecar` fresh. Action: operator presses Refresh once; Claude copies `gamelib.log` and greps the lines. Expect `Mac Steam path unavailable (` to appear first (the Mac path is tried before the CM path), then the CM Refresh.
+
+### 13. D-09 second arm: CM-fallback Refresh with a freshly started Mac Steam, Friends watched (D-09)
+expected: Verdict in 79-WRAP-RETEST.md is `verdict: PASS` (unwrapped), so this arm expects NO go-offline wrap. With the helper renamed, Refresh logs `Steam Refresh: Mac Steam path unavailable (helper-missing), using CM`, then the shell log has `CM logon mode=authenticated` with no `gooffline` and no `go-offline wrap` line in either sink, and Mac Steam's Friends list stays signed in for 90 s after the logon, with no user LogOff in `connection_log.txt`. A sign-out means FAIL. (If the verdict file were FAIL the same steps would expect the wrapped `steam://open/gooffline` then goonline in `connection_log.txt` with Friends staying signed in; that branch does not apply.)
+result: pending
+precondition: Claude renames `public/bin/arm64/darwin/steam-bridge-helper` to `steam-bridge-helper.bak`; the operator quits Mac Steam, relaunches it fresh and waits until Friends shows online; GameLib running. Action: operator presses Refresh once and watches the Friends list for 90 s. Claude greps both sinks and `~/Library/Application Support/Steam/logs/connection_log.txt` (LogOff/LogOn in the window). Afterwards Claude restores the helper and checks `test -x public/bin/arm64/darwin/steam-bridge-helper`; the item is not complete until that check passes. A FAIL stops the delete gate and is reported to the orchestrator, because the wrap would then be needed after all.
+
+### 14. Mac Steam path with Mac Steam running, no CM logon (D-14, D-15)
+expected: With Mac Steam running and signed in as the same account, Refresh logs `Steam Refresh: Mac Steam path ok games=<n> demos=<n> (no CM logon)` and there is no `CM logon mode=authenticated` line in the shell log inside that Refresh window. Free-to-play titles appear, and the two Steam-hidden demos are absent. Operator note: on this path playtime and last-played are carried forward from the cached library and do not update; that is the accepted divergence row in 79-PARITY.md, tracked by todo `2026-11-15-refresh-playtime-on-mac-steam-path.md`, so stale playtime here is not a failure. Do not judge playtime on this item.
+result: pending
+precondition: Mac Steam running, online, same account; helper restored (`test -x` passes). Action: operator presses Refresh; Claude greps the Refresh window in `gamelib.log` and the shell log, and checks the library for the F2P titles and the two hidden demos.
+
+### 15. Mac path fallback with Mac Steam quit
+expected: With Mac Steam quit, Refresh logs `Mac Steam path unavailable (` followed by a reason and then completes through a CM Refresh (`[steamcm] rust steamcm_refresh`, `Steam library sync complete:`).
+result: pending
+precondition: Mac Steam quit; helper present. Action: operator presses Refresh; Claude greps. This overlaps item 12 and may be recorded from the same Refresh.
+
+### 16. Account-mismatch fallback
+expected: With Mac Steam signed into a different account than GameLib, Refresh logs `Mac Steam path unavailable (account-mismatch), using CM`. Recorded `skipped` unless the operator can sign Mac Steam into another account; it is unit-tested in 79-36.
+result: pending
+precondition: a second Steam account on this Mac. Action: sign Mac Steam into it, press Refresh in GameLib; Claude greps; then restore the original account.
+
+### 17. Rust store enrichment
+expected: Opening a game page whose metadata is not cached writes `[steamcm] rust steamcm_store_enrich` (and `[steamcm] rust steamcm_store_appdetails` for the install size) in `gamelib.log`, and the art and requirements render.
+result: pending
+precondition: a Steam game never opened (no cached metadata). Action: operator opens its game page; Claude greps both lines and the operator confirms the art and requirements.
+
+### 18. Restart keeps the user signed in (D-07)
+expected: After quitting and relaunching GameLib, the Steam account is still signed in, Refresh works with no sign-in prompt, and the shell log has `CM logon mode=authenticated reason=user-refresh` (or the Mac path line of item 14 when Mac Steam runs).
+result: pending
+precondition: signed in. Action: operator Cmd-Q then `pnpm tauri:dev`, then Refresh; Claude runs `pgrep -fl sidecar.js` after the quit and greps the logs. Prove the account is stored through `userData.username` being a real name (length, not the `Steam User` fallback), never by a name in the UI.
+
+### 19. Force Quit during a download holding a lease
+expected: After Activity Monitor Force Quit mid-download and a relaunch, `pgrep -fl sidecar.js` prints nothing (no orphan sidecar), Mac Steam is still running and online, and re-pressing Install resumes the download. If the shell survived to log it, the shell log has `[shell] steamcm shutdown (sidecar eof): <outcome>`; record whichever steamcm shutdown line is present or that none is (a SIGKILL of the shell itself cannot write one).
+result: pending
+precondition: a 1 to 2 GB title downloading with the lease held; Mac Steam running. Action: operator Force Quits GameLib from Activity Monitor; Claude runs `pgrep -fl sidecar.js` (an orphan has parent pid 1: record and kill it), operator relaunches and resumes the install.
