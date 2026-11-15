@@ -78,7 +78,9 @@ describe('withStallTimeout', () => {
     )
     emitProgress('unref-app', { percent: 5 })
     const stallTimers = spy.mock.results
-      .filter((_, i) => spy.mock.calls[i][1] === INSTALL_NO_PROGRESS_TIMEOUT_MS)
+      .filter(
+        (_, i) => spy.mock.calls[i]?.[1] === INSTALL_NO_PROGRESS_TIMEOUT_MS
+      )
       .map((r) => r.value as NodeJS.Timeout)
     expect(stallTimers).toHaveLength(2)
     for (const t of stallTimers) expect(t.hasRef()).toBe(false)
