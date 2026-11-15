@@ -308,9 +308,11 @@ mod tests {
     use super::*;
     use crate::backend::{PicsAppRaw, PicsRaw};
     use crate::fake::FakeBackend;
+    #[cfg(unix)]
     use std::os::unix::fs::PermissionsExt;
     use std::sync::Arc;
 
+    #[cfg(unix)]
     fn stub(dir: &Path, body: &str) -> std::path::PathBuf {
         let p = dir.join("steam-bridge-helper");
         std::fs::write(&p, format!("#!/bin/sh\n{body}\n")).unwrap();
@@ -402,6 +404,7 @@ mod tests {
         );
     }
 
+    #[cfg(unix)] // the stub helper is a #!/bin/sh script
     #[tokio::test]
     async fn beta_and_application_types_survive_but_other_types_still_drop() {
         let dir = tempfile::tempdir().unwrap();
@@ -451,6 +454,7 @@ mod tests {
         assert_eq!(ids, vec![100]);
     }
 
+    #[cfg(unix)] // the stub helper is a #!/bin/sh script
     #[tokio::test]
     async fn keeps_games_with_names_and_selects_demos() {
         let dir = tempfile::tempdir().unwrap();
@@ -490,6 +494,7 @@ mod tests {
         assert_eq!(b.script(|s| s.authed.len()), 0);
     }
 
+    #[cfg(unix)] // the stub helper is a #!/bin/sh script
     #[tokio::test]
     async fn a_hung_helper_times_out_and_is_killed() {
         let dir = tempfile::tempdir().unwrap();
@@ -527,6 +532,7 @@ mod tests {
         assert!(gone, "helper survived the timeout");
     }
 
+    #[cfg(unix)] // the stub helper is a #!/bin/sh script
     #[tokio::test]
     async fn a_missing_helper_and_helper_exit_codes_fall_back() {
         let dir = tempfile::tempdir().unwrap();
@@ -547,6 +553,7 @@ mod tests {
         );
     }
 
+    #[cfg(unix)] // the stub helper is a #!/bin/sh script
     #[tokio::test]
     async fn an_anonymous_lookup_failure_falls_back() {
         let dir = tempfile::tempdir().unwrap();
