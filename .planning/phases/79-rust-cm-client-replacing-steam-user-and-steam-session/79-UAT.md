@@ -151,3 +151,37 @@ precondition: signed in. Action: operator Cmd-Q then `pnpm tauri:dev`, then Refr
 expected: After Activity Monitor Force Quit mid-download and a relaunch, `pgrep -fl sidecar.js` prints nothing (no orphan sidecar), Mac Steam is still running and online, and re-pressing Install resumes the download. If the shell survived to log it, the shell log has `[shell] steamcm shutdown (sidecar eof): <outcome>`; record whichever steamcm shutdown line is present or that none is (a SIGKILL of the shell itself cannot write one).
 result: pass — after fix e3dfe2937 (first run: issue). First run: Hell Clock downloading, Mac Steam running; operator Force Quit gamelib-shell ~15:46:36. Sidecar saw stdin EOF (`[sidecar] stdin closed: releasing Steam CM session ... aborting in-flight downloads`, `aborting in-flight native depot download for appId 1782460`) but did NOT exit: `[sidecar] still alive 15000ms after stdin EOF; active resources: PipeWrap, PipeWrap, Timeout`, the connectivity periodic watch kept firing every 15 s, and `pgrep -fl sidecar.js` showed the orphan (PPID 1) 9 min later with 11 idle :443 sockets; killed by Claude. No `steamcm shutdown` line (the shell was SIGKILLed). Mac Steam still running. Fix e3dfe2937: the install stall watchdog's 8-minute timer was ref'd, and under cm=rust the `depot_job_run` request to a dead shell never settles, so that timer held the loop (the Rust depot path from phase 73 introduced it; the TS downloader settled on abort). Re-run 15:55: Hell Clock downloading, Force Quit gamelib-shell; sidecar logged `stdin closed ... aborting in-flight native depot download` at 15:55:16 and was gone by 15:55:19, no `still alive` line, `pgrep -fl sidecar.js` empty; Mac Steam still running; no `steamcm shutdown` line (shell SIGKILLed, as expected). After relaunch, Install resumed: the bar showed 0% at first, then jumped to where it had stopped once the download started (file-level resume via reconcile_partial_state). The relaunch also confirmed fix 292b6af2d: the ~20 stale Mac-path-only library entries were gone on boot without a Refresh.
 precondition: a 1 to 2 GB title downloading with the lease held; Mac Steam running. Action: operator Force Quits GameLib from Activity Monitor; Claude runs `pgrep -fl sidecar.js` (an orphan has parent pid 1: record and kill it), operator relaunches and resumes the install.
+
+## Part C — post-deletion smoke (run by 79-44)
+
+Run after steam-user and steam-session were deleted (79-43). Build first (`pnpm build:sidecar`, `pnpm build-steam-bridge`), launch with `pnpm tauri:dev`, and follow the ground rules above. The Mac Steam path is OFF by default (`macSteamPathFlag.ts`, todo `2026-11-15-mac-steam-path-shows-playing-spacewar.md`), so a Refresh takes the Rust CM path even with Mac Steam running; a `Mac Steam path` line would mean the flag was opted in.
+
+### 20. Launch: the user is still signed in
+expected: After launching on the post-deletion build the Steam account is connected with no sign-in prompt. Proof is the stored `userData.username` being real (length greater than 0 and not the `Steam User` fallback), `isLoggedIn` true, never a name in the UI (the Accounts tile deliberately shows none).
+result: pending
+precondition: a signed-in Steam account from the earlier parts. Action: operator runs `pnpm tauri:dev`; Claude reads the stored `userData.username` length from the Steam config and confirms there is no sign-in prompt.
+
+### 21. Refresh with Mac Steam running, Rust CM path
+expected: With Mac Steam running and online, Refresh logs `[steamcm] rust steamcm_refresh` in `gamelib.log` and the shell log has `CM logon mode=authenticated reason=user-refresh`. There is NO `Mac Steam path` line in the Refresh window, Mac Steam's Friends list stays online, and `~/Library/Application Support/Steam/logs/gameprocess_log.txt` gains no `AppID 480` line.
+result: pending
+precondition: Mac Steam running, online, same account; `GAMELIB_STEAM_MAC_PATH` unset. Action: operator presses Refresh and watches Friends; Claude greps both logs and counts `AppID 480` in gameprocess_log.txt before and after.
+
+### 22. Refresh with Mac Steam quit
+expected: With Mac Steam quit, Refresh logs `[steamcm] rust steamcm_refresh`, the shell log has `CM logon mode=authenticated reason=user-refresh`, and `gamelib.log` has `Steam library sync complete:` with a game count.
+result: pending
+precondition: Mac Steam quit. Action: operator presses Refresh; Claude greps. Restart Mac Steam afterwards for item 23 onward.
+
+### 23. Install a small game
+expected: Installing a small owned native title (DREDGE, 1562430, suggested) logs `[steamcm] rust steamcm_depot_key` and `[steamcm] rust steamcm_content_servers`, and ends with `[depot-rust] outcome ... status=completed`. `steamcm_manifest_request_code` appears only when a manifest needs a fresh request code, so it is not required.
+result: pending
+precondition: the title is not installed, enough disk, not routed by a known fix. Action: operator presses Install and waits for completion; Claude greps `gamelib.log`.
+
+### 24. Sign out, then QR sign-in
+expected: After signing out and signing in by QR, `gamelib.log` has `Steam QR poll: status ... -> done` and `Steam auth complete (rust sign-in)`, and no `unknownFlow` appears anywhere in the sign-in window.
+result: pending
+precondition: Steam mobile app available; `GAMELIB_STEAMCM_SIGNIN=rust` is NOT needed if the flag default has flipped (check `env | grep GAMELIB_STEAMCM` first and set it if the default is still `ts`). Action: operator signs out, then scans the QR code; Claude greps.
+
+### 25. Quit: no orphan, Mac Steam still online
+expected: After Cmd-Q, `pgrep -fl sidecar.js` prints nothing, the shell log has `[shell] steamcm shutdown (<context>): <outcome>`, and Mac Steam is still running and online.
+result: pending
+precondition: items 20 to 24 done. Action: operator presses Cmd-Q; Claude runs `pgrep -fl sidecar.js`, `pgrep -x steam_osx`, and greps the shell log.
