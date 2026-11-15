@@ -155,7 +155,7 @@ export async function generate(): Promise<GoldenRow[]> {
         key: c.key,
         default: c.default,
         params: c.params,
-        rendered: i18n.t(c.key, c.default, c.params) as string
+        rendered: i18n.t(c.key, c.default, c.params)
       })
     }
   }
