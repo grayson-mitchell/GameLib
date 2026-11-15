@@ -1,0 +1,37 @@
+{
+  "43160": {
+    "pids": [
+      {
+        "pid": 4242,
+        "startToken": "Mon Nov 16 09:12:03 2026"
+      }
+    ],
+    "recordedAt": 1700000000000,
+    "macNativeRoute": true,
+    "skippedDepots": ["43161"]
+  },
+  "238320": {
+    "pids": [
+      {
+        "pid": 77,
+        "startToken": "638000000000000000"
+      },
+      {
+        "pid": 78,
+        "startToken": "638000000000000001"
+      }
+    ],
+    "recordedAt": 1700000100000,
+    "macNativeRoute": false,
+    "skippedDepots": []
+  },
+  "__internal__": {
+    "gamelib": {
+      "schemaVersion": 1
+    }
+  },
+  "__timestamp": {
+    "43160": "Mon Nov 16 2026 09:12:03 GMT+0000 (UTC)",
+    "238320": "Mon Nov 16 2026 09:12:03 GMT+0000 (UTC)"
+  }
+}

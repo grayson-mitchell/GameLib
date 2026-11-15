@@ -1,0 +1,46 @@
+[
+  {
+    "platform": "darwin",
+    "home": "/Users/gamer",
+    "env": {},
+    "userData": "/Users/gamer/Library/Application Support/GameLib",
+    "configPath": "/Users/gamer/Library/Application Support/GameLib/config.json",
+    "restartHoldStorePath": "/Users/gamer/Library/Application Support/GameLib/store_cache/steam_restart_hold.json"
+  },
+  {
+    "platform": "win32",
+    "home": "C:\\Users\\gamer",
+    "env": {
+      "APPDATA": "D:\\Roaming"
+    },
+    "userData": "D:\\Roaming\\GameLib",
+    "configPath": "D:\\Roaming\\GameLib\\config.json",
+    "restartHoldStorePath": "D:\\Roaming\\GameLib\\store_cache\\steam_restart_hold.json"
+  },
+  {
+    "platform": "win32",
+    "home": "C:\\Users\\gamer",
+    "env": {},
+    "userData": "C:\\Users\\gamer\\AppData\\Roaming\\GameLib",
+    "configPath": "C:\\Users\\gamer\\AppData\\Roaming\\GameLib\\config.json",
+    "restartHoldStorePath": "C:\\Users\\gamer\\AppData\\Roaming\\GameLib\\store_cache\\steam_restart_hold.json"
+  },
+  {
+    "platform": "linux",
+    "home": "/home/gamer",
+    "env": {},
+    "userData": "/home/gamer/.config/GameLib",
+    "configPath": "/home/gamer/.config/GameLib/config.json",
+    "restartHoldStorePath": "/home/gamer/.config/GameLib/store_cache/steam_restart_hold.json"
+  },
+  {
+    "platform": "linux",
+    "home": "/home/gamer",
+    "env": {
+      "XDG_CONFIG_HOME": "/data/xdg"
+    },
+    "userData": "/data/xdg/GameLib",
+    "configPath": "/data/xdg/GameLib/config.json",
+    "restartHoldStorePath": "/data/xdg/GameLib/store_cache/steam_restart_hold.json"
+  }
+]
