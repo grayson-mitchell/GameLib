@@ -48,7 +48,7 @@ No REQUIREMENTS.md IDs. Gap IDs G1-G4 all closed with live evidence (UAT Gaps se
 
 60-REVIEW.md: 0 critical, 6 warnings, 7 info. Assessment against the goal:
 
-- WR-01 (no production safety timeout: a missed 331 close leaves game input blocked) is the most substantive. It only triggers if the helper or Steam dies while the overlay is open; the game is then already in a degraded state, and the mouse is blocked, not the game. Advisory but recommended follow-up (add a bounded safety close as the probe has).
+- WR-01 (no production safety timeout: a missed 331 close leaves game input blocked) is the most substantive. It only triggers if the helper or Steam dies while the overlay is open; the game is then already in a degraded state, and the mouse is blocked, not the game. Advisory but recommended follow-up (add a bounded safety close as the probe has). **Resolved (phase 77, DEBT-04):** 2d3f1f5e8 adds a 2 s publisher-pid watch in overlay_input that force-closes on ESRCH; live spot-check passed 2026-11-04 (1ba023f7f).
 - WR-02 (probe + fix co-load) affects only diagnostic runs with GAMELIB_OVERLAY_INPUT_PROBE; not a default path.
 - WR-03 (stderr cap), WR-04 (applied=true logged before prepare result: log accuracy), WR-05 (smoke tests don't assert release, skip headless), WR-06 (no DRM-route test): test/diagnostic quality. Live items 12-13 cover the behaviour. Advisory.
 - IN-07 stale (marker committed in b83a8c1b2).
@@ -61,6 +61,6 @@ None outstanding. The live UAT (60-UAT.md items 1-17) was performed by the opera
 
 ## Gaps
 
-None blocking. Recommended follow-ups (non-blocking): WR-01 safety timeout, WR-06 DRM-route test, WR-04 log ordering, lint ceiling cleanup.
+None blocking. Recommended follow-ups (non-blocking): WR-01 safety timeout (resolved by 2d3f1f5e8, phase 77), WR-06 DRM-route test, WR-04 log ordering, lint ceiling cleanup.
 
 _Verified: 2026-11-04 | Verifier: Claude (gsd-verifier)_

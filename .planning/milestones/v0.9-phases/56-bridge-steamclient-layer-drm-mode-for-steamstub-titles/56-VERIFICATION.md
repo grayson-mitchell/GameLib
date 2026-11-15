@@ -23,7 +23,7 @@ advisory:
   - id: WR-01
     note: "terminal done gated on drm.progressSent; a failed DRM launch after fireBridgeWineLaunch's own winetricks/redist status (downloads cached, DRM-only return false exits at games.ts ~4393/~4456) leaves the card on a stale status"
   - id: WR-02
-    note: "execFile child.unref() in the stage process listing does not release the event loop (timeout timer and stdio stay ref'd); bounded at 3 s, only affects sidecar exit speed after a timed-out stage"
+    note: "execFile child.unref() in the stage process listing does not release the event loop (timeout timer and stdio stay ref'd); bounded at 3 s, only affects sidecar exit speed after a timed-out stage RESOLVED 2026-11-15 (phase 77, DEBT-03): fixed by 4f41cfab7 (runBoundedListing) and 0d5742ed3 (all spawning on the process runner, which unrefs the child, its pipes and the kill timer)."
   - id: WR-03
     note: "containment policy differs between bootstrap exe (no check) and Shipping exe (realpath-contained); a symlinked steamapps/common library drops DRM routing for UE titles"
 ---
@@ -72,7 +72,7 @@ Requirement IDs: N/A (null; .planning/REQUIREMENTS.md does not exist). ROADMAP h
 0 critical. None of the warnings blocks the done-when: Grim Dawn launch 1 reached the menu with them present.
 
 - **WR-01** (advisory): a genuine but narrow residual of Gap 2. It needs a DRM-only failure exit after `fireBridgeWineLaunch` already sent `winetricks`/`redist`. Cosmetic stale card status on a failure path; recoverable. File as a follow-up todo; not a phase gap.
-- **WR-02** (advisory): sidecar exit-contract slip, bounded to 3 s and only after a timed-out stage. Does not affect reaching the menu. Worth fixing under the conventions skill (the fix block in the review is concrete), but not a goal blocker.
+- **WR-02** (advisory): sidecar exit-contract slip, bounded to 3 s and only after a timed-out stage. Does not affect reaching the menu. Worth fixing under the conventions skill (the fix block in the review is concrete), but not a goal blocker. **Resolved (phase 77, DEBT-03):** 4f41cfab7 + 0d5742ed3; runner drain and boundedListing real-runner tests re-run green 2026-11-15.
 - **WR-03** (advisory): affects UE titles reached through a symlinked `steamapps/common` library; Grim Dawn (non-UE) and the Raft/Ranch targets are not affected, as the live gate shows. The policy inconsistency is a hardening item.
 
 ### Required Artifacts / Wiring
