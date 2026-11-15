@@ -5,8 +5,6 @@ import { size } from 'frontend/helpers'
 import useLibraryState from 'frontend/state/libraryState'
 import type { SteamUpdateInfo as SteamUpdateInfoData } from 'common/types/steam'
 
-import './SteamUpdateInfo.scss'
-
 interface Props {
   appName: string
   hasUpdate: boolean
