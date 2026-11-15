@@ -171,7 +171,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 77: Runtime hardening from the v0.9 review debt** — 3 plans in 2 waves; planned
 - [ ] **Phase 78: Verification records and test health after v0.9** — 5 plans in 2 waves; planned
 - [x] **Phase 79: Rust CM client replacing steam-user and steam-session** — 44 plans in 21 waves; planned (spike 085 gate satisfied) (completed 2026-11-15)
-- [ ] **Phase 80: Steam install, uninstall and update polling state machines in Rust** — 0 plans; not started
+- [ ] **Phase 80: Steam install, uninstall and update polling state machines in Rust** — 33 plans; planned
 - [ ] **Phase 47: Migrate aggregated store search from CheapShark to IsThereAnyDeal** — 13 plans; ITAD gates closed 2026-11-12; planned 2026-11-14 (moved from v0.8)
 
 ## Phase Details
@@ -1736,10 +1736,101 @@ Plans:
 ### Phase 80: Steam install, uninstall and update polling state machines in Rust
 
 **Goal:** The Steam install, uninstall and update polling state machines run in Rust, and their TypeScript implementations are deleted. This is the next sidecar-retirement slice after Phase 79, which listed it as a deferred idea in `79-CONTEXT.md`. Scope today, under `src/backend/storeManagers/steam/library/`: `installPolling.ts` + `installPollOnce.ts` (ACF install loop, grace/max/no-activity/manifest-gone ticks, native-handoff upgrade, restart-hold release), `uninstallPolling.ts`, `updatePollOnce.ts` (Phase 74 D-11 update completion: StateFlags bit 4 never completes alone, build-change completion, quiet end on no activity), `pollState.ts`, `runningPoll.ts` (running-app probe, Windows `RunningAppID` via reg.exe), and the ACF readers `acfState.ts` / `acfUpdateState.ts`, which can lean on the Phase 75 `gamelib-steamfiles` crate. About 2,800 lines. Reuse Phase 63's pattern: a Tauri-free crate or module in the `src-tauri/` workspace, `rustInvoke` with TypeScript signatures unchanged, a parity harness over the existing poll tests, a dev-only fallback flag, then delete the TypeScript loops. Open questions for discuss-phase: whether progress events (`liveProgress`, `steamDownloadProgress`) and the restart hold move with the loops or stay behind a callback; who owns timers once the loop leaves the sidecar (the sidecar exit contract stops applying to them); whether the bridge/bottle install-state paths (`bridgeInstallState.ts`) are in scope; and how the per-tick `ManagerDeps` side effects (library writes, notifications, `invalidateSteamUpdateState`) cross the boundary. Came from the operator's request on 2026-11-15, after asking what follows Phase 79 in the Rust migration.
-**Requirements**: TBD
+**Requirements**: P80-install, P80-update, P80-uninstall, P80-running, P80-events, P80-locale, P80-acf, P80-parity, P80-gate, P80-live
 **Depends on:** Phase 79
-**Plans:** 0 plans
+**Plans:** 33 plans
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 80 to break down)
+**Wave 1**
+
+- [ ] 80-01-PLAN.md — crate skeletons + contracts (host traits, state events, effects, constants, registry, runtime; R1-R7 design record)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 80-02-PLAN.md — TS replay driver, timeline format, scenario corpus and frozen TS streams
+- [ ] 80-03-PLAN.md — gamelib-i18n: Rust notification translation with an i18next golden over all locales
+- [ ] 80-04-PLAN.md — ACF read side + update fields on gamelib-steamfiles
+- [ ] 80-06-PLAN.md — download progress maths + Rust-owned nettop monitor
+- [ ] 80-07-PLAN.md — sidecar profile paths + restart hold store/decisions/probes
+- [ ] 80-08-PLAN.md — running poll + native Windows RunningAppID read
+- [ ] 80-09-PLAN.md — state-event outbox and ordered effect applier (D-05, R1)
+- [ ] 80-10-PLAN.md — Mac arch probe and verdict
+- [ ] 80-11-PLAN.md — TS state-event handler (the only poll code left in TS)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 80-05-PLAN.md — ACF copies, scan and remove behind the Rust-only path guard
+- [ ] 80-12-PLAN.md — update poll (74 D-11) + InstallApp helper request
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 80-13-PLAN.md — uninstall poll
+- [ ] 80-14-PLAN.md — per-tick install machine (installPollOnce port)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 80-15-PLAN.md — install loop, start/upgrade/stop and query surface
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
+- [ ] 80-16-PLAN.md — boot rearm of persisted restart holds (D-09)
+
+**Wave 7** *(blocked on Wave 6 completion)*
+
+- [ ] 80-17-PLAN.md — dispatch op table, facade and replay CLI
+
+**Wave 8** *(blocked on Wave 7 completion)*
+
+- [ ] 80-18-PLAN.md — steampoll channels end to end + shell arms
+- [ ] 80-19-PLAN.md — TS-vs-Rust parity, handler parity, 80-PARITY.md (operator approval)
+
+**Wave 9** *(blocked on Wave 8 completion)*
+
+- [ ] 80-20-PLAN.md — ShellPollHost: emit, translated notify, acked state events
+
+**Wave 10** *(blocked on Wave 9 completion)*
+
+- [ ] 80-21-PLAN.md — shell lifecycle: flag, boot resume, READY flush, exit shutdown
+
+**Wave 11** *(blocked on Wave 10 completion)*
+
+- [ ] 80-22-PLAN.md — polls flag + install API on Rust
+
+**Wave 12** *(blocked on Wave 11 completion)*
+
+- [ ] 80-23-PLAN.md — status/hold readers and native-in-flight mirror on Rust
+- [ ] 80-24-PLAN.md — uninstall and running APIs on Rust
+- [ ] 80-25-PLAN.md — ACF, Mac arch and breadcrumb wrappers on Rust
+
+**Wave 13** *(blocked on Wave 12 completion)*
+
+- [ ] 80-26-PLAN.md — flip polls default to rust + author 80-HUMAN-UAT.md
+
+**Wave 14** *(blocked on Wave 13 completion)*
+
+- [ ] 80-27-PLAN.md — live smokes + three CI legs (delete gate)
+
+**Wave 15** *(blocked on Wave 14 completion)*
+
+- [ ] 80-28-PLAN.md — steam test cleanup: inventory grep, port/retarget poll tests incl. refresh/census/watchdog/progress, DI ceilings
+
+**Wave 16** *(blocked on Wave 15 completion)*
+
+- [ ] 80-29-PLAN.md — retarget remaining dependents (updateNative, games, rustSecondary, bootstrap...) and retire the TS harness
+
+**Wave 17** *(blocked on Wave 16 completion)*
+
+- [ ] 80-30-PLAN.md — reduce poll API modules to rust-only, delete per-tick files and the rearm half
+
+**Wave 18** *(blocked on Wave 17 completion)*
+
+- [ ] 80-31-PLAN.md — delete TS registries/helpers, the restart-hold TS store and the polls flag
+
+**Wave 19** *(blocked on Wave 18 completion)*
+
+- [ ] 80-32-PLAN.md — port-complete pin, docs, close the WazHack todo
+
+**Wave 20** *(blocked on Wave 19 completion)*
+
+- [ ] 80-33-PLAN.md — post-deletion live smoke + CI
