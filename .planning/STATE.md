@@ -602,6 +602,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261112-8w3 | Comet token-mode flags `--access-token`/`--refresh-token` added to the commandRunner credential redaction list and census regex; Layer-2 case pins both values redacted. Closes 66.1 security threats T-66.1-16/T-66.1-68. | 2026-11-12 | 05aa1af9c | Jest 70/70 (commandRunner.test); scoped prettier clean | [261112-8w3-add-access-token-refresh-token-to-comman](./quick/261112-8w3-add-access-token-refresh-token-to-comman/) |
 | 261112-99y | Recorded ITAD's 2026-10-01 reply in Phase 47 docs: rate limit follows the app (OAuth branch dead), gate 3 decided (embedded key + hard caching, no proxy yet), Q1 reply ambiguous, affiliate question never asked; gate 1 (ITAD app registration) still blocks planning. | 2026-11-12 | 6ff3cd9ab | docs-only; plan grep checks pass | [261112-99y-record-itad-reply-in-phase-47-docs](./quick/261112-99y-record-itad-reply-in-phase-47-docs/) |
 | 261114-op0 | Uninstall dialog: "Erase settings and remove log" toggle now ON by default; DLC uninstalls (toggle hidden) never pass the erase flag. | 2026-11-14 | 4c9a8ee4a | prettier clean, tsc clean, DotsMenu.disclosure 14/14; not live-checked | [261114-op0-erase-settings-toggle-on-by-default-in-u](./quick/261114-op0-erase-settings-toggle-on-by-default-in-u/) |
+| fast | Pointed the Settings Documentation link (/wiki route) and backend wikiLink at the GameLib wiki instead of Heroic's. | 2026-11-15 | 7098c4960 | ✅ | — |
 
 ## Deferred Items
 
