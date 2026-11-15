@@ -90,7 +90,7 @@ precondition: operator holds an unredeemed key (else mark skipped, not pass). Ac
 
 ### 9. Quit with a lease idle
 expected: After Cmd-Q, `pgrep -fl sidecar.js` prints nothing, the shell log shows the steamcm shutdown outcome, and Mac Steam is still running and online.
-result: pending
+result: pass — Cmd-Q after items 2-4 (leases idle): `pgrep -fl sidecar.js` printed nothing; shell log `exit requested (code=Some(0))`, `[shell] steamcm shutdown (exit): NotOwed`, `[shell] steamcm shutdown (sidecar eof): NotOwed`, `sidecar terminated on exit`; Mac Steam still running (no go-offline was owed, so nothing to restore).
 precondition: a lease has been used (item 2 or 3 done) and is idle. Action: Cmd-Q the app; Claude runs `pgrep -fl sidecar.js` and reads the shell log.
 
 ### 11. cm=ts fallback and coexistence (D-18)
