@@ -3,7 +3,7 @@ status: complete
 phase: 79-rust-cm-client-replacing-steam-user-and-steam-session
 source: [79-25-PLAN.md]
 started: 2026-11-15
-updated: 2026-11-15
+updated: 2026-11-16
 ---
 
 # Phase 79 UAT: live gate for the Rust CM client (session and sign-in)
@@ -183,5 +183,5 @@ precondition: Steam mobile app available; no flag: the D-18 flags were deleted i
 
 ### 25. Quit: no orphan, Mac Steam still online
 expected: After Cmd-Q, `pgrep -fl sidecar.js` prints nothing, the shell log has `[shell] steamcm shutdown (<context>): <outcome>`, and Mac Steam is still running and online.
-result: pending
+result: pass — Cmd-Q on the fixed build: shell `quit (Cmd+Q): handed to the sidecar handleExit`, `CM session closed mode=authenticated cause=shutdown leases=0`, `CM session closed mode=anonymous cause=shutdown`, `depot jobs cancelled on sidecar EOF: 0`. `pgrep -fl sidecar.js` and the shell both empty afterwards (no orphan); Mac Steam still running and Friends online (operator). The earlier window-close quit of the same session also logged `steamcm shutdown (exit): NotOwed` and `sidecar terminated on exit` with Friends online. Spacewar: the 8 `AppID 480` lines since the part C baseline are all from item 23's InstallApp/UninstallApp helper calls (pre-existing, on the Spacewar todo); none from Refresh, sign-in or quit.
 precondition: items 20 to 24 done. Action: operator presses Cmd-Q; Claude runs `pgrep -fl sidecar.js`, `pgrep -x steam_osx`, and greps the shell log.
