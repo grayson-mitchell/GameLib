@@ -68,7 +68,7 @@ const PlatformSupport = ({ gameInfo }: Props) => {
     const known = getInstallPlatformIcon(rawPlatform)
     const name = known?.title ?? rawPlatform
     if (name) {
-      const label = `${name} (installed)`
+      const label = `${name} ${t('info.installedPlatformSuffix', '(installed)')}`
       const boxIt = (inner: JSX.Element | string) => (
         <span
           className="platformSupport__icon platformSupport__icon--installed"
