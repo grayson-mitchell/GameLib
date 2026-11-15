@@ -136,7 +136,7 @@ Sources: golden overrides (79-21) and notes from 79-08/09/21, plus what this swe
 
 ## Refresh sweep (79-33)
 
-Status: PENDING RE-SWEEP (Refresh) — operator decisions recorded 2026-11-15; Rust defect found and fixed in continuation 2, but no clean run: the TS reference's capture stages now return nothing on this account (see Continuation 2)
+Status: APPROVED (Refresh) — operator decision 2026-11-15: the first sweep (401 entries, zero unexplained diffs incl. platform + metacritic) stands as the Refresh parity evidence, together with the continuation-2 Rust empty-buffer fix (074a283dc) and the live 50-cap run (run 13). Later re-sweeps cannot pass because the TS reference now captures nothing on this account (steam-user replies sha/size only, null buffer); that is a reference-side failure, not a Rust divergence (see Continuation 2)
 
 Plan 79-33 (D-12, D-16). Sweep: `pnpm steamcm-refresh-parity-sweep` (`meta/steamcmRefreshParitySweep.ts`), run on the operator's Mac with the dev-vault refresh token. Read-only ops only (no redeem, no credential sign-in). Output is redacted (counts and classes only); no name, URL, id, SteamID or absolute path appears here.
 
