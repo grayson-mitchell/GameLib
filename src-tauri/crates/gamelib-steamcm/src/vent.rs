@@ -25,15 +25,15 @@ use steam_vent_proto::steammessages_clientserver_appinfo::{
     CMsgClientPICSAccessTokenResponse, CMsgClientPICSProductInfoRequest,
     CMsgClientPICSProductInfoResponse,
 };
-use steam_vent_proto::steammessages_clientserver_friends::{
-    CMsgClientPersonaState, CMsgClientRequestFriendData,
-};
+use steam_vent_proto::steammessages_clientserver_friends::CMsgClientPersonaState;
 use steam_vent_proto::steammessages_clientserver_login::CMsgClientLoggedOff;
 use steam_vent_proto::steammessages_contentsystem_steamclient::{
     CContentServerDirectory_GetManifestRequestCode_Request,
     CContentServerDirectory_GetServersForSteamPipe_Request,
 };
-use steam_vent_proto::steammessages_player_steamclient::CPlayer_GetOwnedGames_Request;
+use steam_vent_proto::steammessages_player_steamclient::{
+    CPlayer_GetOwnedGames_Request, CPlayer_GetPlayerLinkDetails_Request,
+};
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 
@@ -41,13 +41,6 @@ use crate::backend::*;
 use crate::error::{diag, CmError, ERESULT_EXPIRED, ERESULT_LOGON_SESSION_REPLACED};
 
 const LICENSE_LIST_TIMEOUT: Duration = Duration::from_secs(10);
-const PERSONA_TIMEOUT: Duration = Duration::from_secs(5);
-/// EClientPersonaStateFlag set steam-user requests (Status | PlayerName | ... | Watching, 0x7fff).
-/// A name-only request (flag 2) is answered intermittently by the CM; the full set is what
-/// steam-user sends and what the CM reliably answers.
-const PERSONA_FLAG_NAME: u32 = 0x7fff;
-/// The CM sometimes ignores a friend-data request; resend after this long, within PERSONA_TIMEOUT.
-const PERSONA_RESEND: Duration = Duration::from_millis(1250);
 const PROBE_APP: u32 = 480;
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -425,46 +418,37 @@ impl CmConn for VentConn {
             return Ok(hit);
         }
         let c = self.conn()?;
-        // Cache miss: ask the CM. Subscribe before asking so an immediate reply is not missed.
-        let mut states = Box::pin(c.on::<CMsgClientPersonaState>());
-        let ask = || {
-            c.send(CMsgClientRequestFriendData {
-                persona_state_requested: Some(PERSONA_FLAG_NAME),
-                friends: steam_ids.clone(),
+        // Player.GetPlayerLinkDetails, never ClientRequestFriendData: a friend-data request from
+        // this session signed Mac Steam out of Friends & Chat at every sign-in (79-44 UAT item 24,
+        // bisected live 2026-11-16). The link-details read is the profile service the Steam web UI
+        // uses and does not touch the friends system.
+        let r = c
+            .service_method(CPlayer_GetPlayerLinkDetails_Request {
+                steamids: steam_ids.clone(),
                 ..Default::default()
             })
-        };
-        ask().await.map_err(map_net)?;
-        let mut out: Vec<PersonaRaw> = Vec::new();
-        let deadline = tokio::time::Instant::now() + PERSONA_TIMEOUT;
-        while out.len() < steam_ids.len() {
-            let slice = (tokio::time::Instant::now() + PERSONA_RESEND).min(deadline);
-            match tokio::time::timeout_at(slice, states.next()).await {
-                Ok(Some(Ok(state))) => {
-                    for f in &state.friends {
-                        let id = f.friendid();
-                        if steam_ids.contains(&id) && !out.iter().any(|p| p.steam_id == id) {
-                            out.push(PersonaRaw {
-                                steam_id: id,
-                                persona_state: f.persona_state(),
-                                name: f.player_name().to_string(),
-                                avatar_hash: f.avatar_hash().to_vec(),
-                            });
-                        }
-                    }
+            .await
+            .map_err(map_net)?;
+        Ok(r.accounts
+            .iter()
+            .filter_map(|a| {
+                let public = a.public_data.as_ref()?;
+                let id = public.steamid();
+                if !steam_ids.contains(&id) {
+                    return None;
                 }
-                Ok(Some(Err(e))) => return Err(map_net(e)),
-                Ok(None) => return Err(CmError::Closed),
-                Err(_) => {
-                    if tokio::time::Instant::now() >= deadline {
-                        break;
-                    }
-                    // The CM answers a friend-data request intermittently; ask again.
-                    ask().await.map_err(map_net)?;
-                }
-            }
-        }
-        Ok(out)
+                Some(PersonaRaw {
+                    steam_id: id,
+                    persona_state: a
+                        .private_data
+                        .as_ref()
+                        .map(|p| p.persona_state() as u32)
+                        .unwrap_or(0),
+                    name: public.persona_name().to_string(),
+                    avatar_hash: public.sha_digest_avatar().to_vec(),
+                })
+            })
+            .collect())
     }
 
     async fn probe(&self) -> Result<(), CmError> {
