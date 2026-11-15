@@ -203,17 +203,19 @@ fn common_of(apps: &Map<String, Value>, id: u32) -> Option<&Value> {
         .filter(|c| c.is_object())
 }
 
-/// Keep `common.type == game` (case-insensitive) with names; demos by the same rule as the CM path.
+/// Keep `common.type` game, beta or application (case-insensitive; owned betas and applications
+/// are in `GetOwnedGames`, DV-79-12) with names; demos by the same rule as the CM path.
 fn split_games_and_demos(ids: &[u32], apps: Map<String, Value>) -> (Value, Vec<DemoEntry>) {
     let mut games: Vec<(u32, String)> = Vec::new();
     for &id in ids {
         let Some(common) = common_of(&apps, id) else {
             continue;
         };
-        let is_game = common
-            .get("type")
-            .and_then(Value::as_str)
-            .is_some_and(|t| t.eq_ignore_ascii_case("game"));
+        let is_game = common.get("type").and_then(Value::as_str).is_some_and(|t| {
+            ["game", "beta", "application"]
+                .iter()
+                .any(|k| t.eq_ignore_ascii_case(k))
+        });
         if !is_game {
             continue;
         }
@@ -392,6 +394,36 @@ mod tests {
             parse_helper_output("{\"ok\":true,\"count\":0,\"appIds\":[]}", Some(0)),
             Ok(vec![])
         );
+    }
+
+    #[tokio::test]
+    async fn beta_and_application_types_survive_but_other_types_still_drop() {
+        let dir = tempfile::tempdir().unwrap();
+        let helper = stub(
+            dir.path(),
+            "echo '{\"ok\":true,\"count\":6,\"appIds\":[1,2,3,4,5,6]}'",
+        );
+        let (b, h) = setup();
+        b.script(|s| {
+            s.pics.queue.push_back(Ok(app_raw(&[
+                (1, "Game"),
+                (2, "Beta"),
+                (3, "application"),
+                (4, "DLC"),
+                (5, "Music"),
+                (6, "Tool"),
+            ])))
+        });
+        let r = mac_owned_apps_bounded(&h, &helper, 76561198000000001, Duration::from_secs(10))
+            .await
+            .unwrap();
+        let ids: Vec<u64> = r.owned["apps"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|a| a["appid"].as_u64().unwrap())
+            .collect();
+        assert_eq!(ids, vec![1, 2, 3]);
     }
 
     #[tokio::test]
