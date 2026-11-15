@@ -438,7 +438,7 @@ mod tests {
         for id in [480u32, 100] {
             apps.insert(
                 id.to_string(),
-                json!({ "common": { "type": "Game", "name": format!("n{id}") } }),
+                json!({ "appinfo": { "common": { "type": "Game", "name": format!("n{id}") } } }),
             );
         }
         let (owned, _) = split_games_and_demos(&[100, 480], apps);
