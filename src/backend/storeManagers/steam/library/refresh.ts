@@ -26,6 +26,7 @@ import {
 import { restoreLocalSteamLibrary } from './localLibrary'
 import { steamCmImpl } from '../cm/steamCmFlags'
 import { syncOwnedLibraryRust, tryMacSteamRefresh } from './rustRefresh'
+import { macSteamPathEnabled } from './macSteamPathFlag'
 import { verifyMacArchGroundTruth } from './macArch'
 import {
   buildInstalledMap,
@@ -55,7 +56,7 @@ export async function refresh(deps: ManagerDeps): Promise<ExecResult | null> {
 
   let release: () => void
   let client: NonNullable<ReturnType<ManagerDeps['steamUser']['getClient']>>
-  if (grant && isMac && steamCmImpl() === 'rust') {
+  if (grant && isMac && steamCmImpl() === 'rust' && macSteamPathEnabled()) {
     // D-14: the running Mac Steam client's own owned set first. No lease, no logon, so it cannot
     // sign Friends out. No grant means no attempt (the deferral rule below is unchanged).
     const macSteamId = deps.steamUser.getPersistedSteamId64()

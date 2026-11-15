@@ -168,12 +168,16 @@ const ID = '76561198000000001'
 
 describe('refresh() Mac Steam path', () => {
   const prev = process.env.GAMELIB_STEAMCM_CM
+  const prevMac = process.env.GAMELIB_STEAM_MAC_PATH
   beforeAll(() => {
     process.env.GAMELIB_STEAMCM_CM = 'rust'
+    process.env.GAMELIB_STEAM_MAC_PATH = 'on'
   })
   afterAll(() => {
     if (prev === undefined) delete process.env.GAMELIB_STEAMCM_CM
     else process.env.GAMELIB_STEAMCM_CM = prev
+    if (prevMac === undefined) delete process.env.GAMELIB_STEAM_MAC_PATH
+    else process.env.GAMELIB_STEAM_MAC_PATH = prevMac
   })
 
   beforeEach(() => {
@@ -307,6 +311,21 @@ describe('refresh() Mac Steam path', () => {
       expect(requestRustInvoke).not.toHaveBeenCalled()
     } finally {
       process.env.GAMELIB_STEAMCM_CM = 'rust'
+    }
+  })
+
+  it('is off by default: without GAMELIB_STEAM_MAC_PATH=on a Mac Refresh goes straight to CM', async () => {
+    // UAT-B item 14: the helper shows "playing Spacewar" in Friends, so the Mac path is opt-in.
+    delete process.env.GAMELIB_STEAM_MAC_PATH
+    try {
+      requestRustInvoke.mockResolvedValue({
+        ok: true,
+        result: refreshResult([])
+      })
+      await refresh(deps)
+      expect(sentSources()).toEqual(['cm'])
+    } finally {
+      process.env.GAMELIB_STEAM_MAC_PATH = 'on'
     }
   })
 })
