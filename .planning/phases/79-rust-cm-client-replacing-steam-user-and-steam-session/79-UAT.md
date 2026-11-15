@@ -32,11 +32,11 @@ Since 79-25 the `cm` flag defaults to `rust`; the `signin` flag stays `ts` until
 | 2 | Install on a Steam game card (native depot download) | `gamelib.log` | title not installed; enough disk | check against fixes tables |
 | 3 | Install, plus the Wi-Fi switch (operator, off about 20 s only) | shell log (`CM session rebuilt`), install progress in the UI | 1 to 2 GB title not installed | as item 2 |
 | 4 | Install, plus Apple menu Sleep | shell log (`CM sleep gap`) | as item 3; power adapter connected | as item 2 |
-| 5 | Sign out then QR sign-in in the Steam login surface | `gamelib.log` (`steamcm_signin_qr_start`, `steamcm_signin_status`) | `GAMELIB_STEAMCM_SIGNIN=rust` in the launch env; Steam mobile app available | n/a |
-| 6 | Sign out then credentials form with a Steam Guard field | `gamelib.log` (`steamcm_signin_guard_submit`) | as item 5; account has email or mobile-authenticator guard | n/a |
+| 5 | Sign out then QR sign-in in the Steam login surface | `gamelib.log` (`Steam QR poll: status`, `Steam auth complete (rust sign-in)`) | `GAMELIB_STEAMCM_SIGNIN=rust` in the launch env; Steam mobile app available | n/a |
+| 6 | Sign out then credentials form with a Steam Guard field | `gamelib.log` (`Steam auth complete (rust sign-in)`) | as item 5; account has email or mobile-authenticator guard | n/a |
 | 7 | Same form, guard field | UI error text, `gamelib.log` | as item 6 | n/a |
 | 8 | Redeem key dialog | `gamelib.log` (`steamcm_redeem_key`) | operator holds an unredeemed key; otherwise `skipped` | n/a |
-| 9 | Quit (Cmd-Q) with a lease idle | `pgrep -fl sidecar.js`, shell log shutdown outcome | item 2 or 3 done so a lease existed | n/a |
+| 9 | Quit (Cmd-Q) with a lease idle | `pgrep -fl sidecar.js`, shell log `[shell] steamcm shutdown (<context>): <outcome>` | item 2 or 3 done so a lease existed | n/a |
 | 10 | not applicable: 79-WRAP-RETEST.md verdict is PASS, so no wrapped-logon item is needed | n/a | n/a | n/a |
 | 11 | none for the operator beyond launching with `GAMELIB_STEAMCM_CM=ts` and pressing Refresh; Claude runs the Rust CLI session itself | `gamelib.log` and the CLI stdout | `pnpm steamcm-cli:build`-equivalent binary built under `src-tauri/target/debug` | n/a |
 
@@ -69,17 +69,17 @@ result: pending
 precondition: an install is downloading. Action: Apple menu -> Sleep, wait about 60 s, wake the Mac, report; Claude greps and checks completion.
 
 ### 5. QR sign-in (D-06)
-expected: With `GAMELIB_STEAMCM_SIGNIN=rust`, after sign-out the QR sign-in shows a code; waiting past one rotation (about 22 s) before scanning shows the QR redraw; scanning in the Steam mobile app signs in. `gamelib.log` has `steamcm_signin_qr_start` and `steamcm_signin_status`; the persona name or account name shows in the UI and the library populates.
+expected: With `GAMELIB_STEAMCM_SIGNIN=rust`, after sign-out the QR sign-in shows a code; waiting past one rotation (about 22 s) before scanning shows the QR redraw; scanning in the Steam mobile app signs in. `gamelib.log` has `Steam QR poll: status` transitions and `Steam auth complete (rust sign-in)` (sign-in calls rustInvoke directly, so no `[steamcm] rust` channel line is written); the persona name or account name shows in the UI and the library populates.
 result: pending
 precondition: launch env `GAMELIB_STEAMCM_SIGNIN=rust`; signed out. Action: choose QR sign-in, wait about 30 s without scanning, watch the redraw, scan, report the name shown.
 
 ### 6. Credentials with a typed Steam Guard code (D-05, D-08)
-expected: Signing in with password and a typed email or mobile-authenticator code succeeds; `gamelib.log` has `steamcm_signin_guard_submit`; persona name shows and the library populates.
+expected: Signing in with password and a typed email or mobile-authenticator code succeeds; `gamelib.log` has `Steam Guard required for credential login` then `Steam auth complete (rust sign-in)`; persona name shows and the library populates.
 result: pending
 precondition: `GAMELIB_STEAMCM_SIGNIN=rust`; signed out; the account has email or mobile guard. Action: enter credentials, type the code when asked, report.
 
 ### 7. Wrong guard code then the right one
-expected: A wrong guard code shows an error in the form and leaves the form usable; the correct code on the second attempt succeeds, with two `steamcm_signin_guard_submit` lines in the log.
+expected: A wrong guard code shows an error in the form and leaves the form usable; the correct code on the second attempt succeeds: `gamelib.log` has `Steam guard code submission failed: ... EResult=65` once, then `Steam auth complete (rust sign-in)`.
 result: pending
 precondition: as item 6. Action: type a wrong code, read the error, type the right code, report.
 
