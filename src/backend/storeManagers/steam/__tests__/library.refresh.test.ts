@@ -42,6 +42,12 @@ import { createTestAnonymousClient } from 'backend/testUtils/testAnonymousClient
 import { logInfo, logWarning } from 'backend/logger'
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 
+// Rust owns the restart-hold registry: the status read reports `holding`, the apps whose install is
+// held for a Steam restart.
+let holding: string[] = []
+const statusOverride = {
+  steampoll_status: () => ({ installs: [], uninstalls: [], holding })
+}
 const libDeps = {
   config: createTestGlobalConfig(),
   requestRustInvoke: mockedFsSteamFiles().requestRustInvoke
@@ -56,9 +62,6 @@ const getAnonymousPicsClient = jest.fn()
 // 66.3-15: the bottle helpers are read through the deps slice, so they are plain mocks here.
 const getSteamBottleSettings = jest.fn()
 const isSteamBottleProvisioned = jest.fn()
-// Rust owns the restart-hold registry: the runtime's status read reports `holding`, the apps whose
-// install is held for a Steam restart.
-let holding: string[] = []
 const holdTransport = {
   ...createTestHostServices({
     rustInvoke: (channel) =>
@@ -72,7 +75,7 @@ const holdTransport = {
 }
 const steamTestDeps = createTestManagerDeps({
   steamInstallRuntime: createTestSteamInstallRuntime(holdTransport),
-  requestRustInvoke: mockedFsSteamFiles().requestRustInvoke,
+  requestRustInvoke: mockedFsSteamFiles(statusOverride).requestRustInvoke,
   sendFrontendMessage,
   steamUser,
   steamBottle: { getSteamBottleSettings, isSteamBottleProvisioned } as never,

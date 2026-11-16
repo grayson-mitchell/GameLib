@@ -17,9 +17,7 @@ import {
   getSteamResumeBreadcrumbAppIds,
   breadcrumbAppIsFullyInstalledOnDisk
 } from './resumeBreadcrumbs'
-import { rearmPersistedSteamRestartHolds } from './resume'
 import { refresh, refreshInstallState } from './refresh'
-import { pollsImpl } from './pollsFlag'
 import { detectSteamUpdates, type SteamUpdateState } from '../updateDetection'
 import { wasAutoUpdateAttempted } from '../autoUpdateAttempts'
 import type { SteamLaunchWatchRegistry } from '../steamLaunchWatch'
@@ -61,17 +59,8 @@ export default class SteamLibraryManager implements LibraryManager {
       )
     }
 
-    // quick 261029-pkp: re-arm persisted "Restart Steam to finish" holds
-    // before anything can reconcile install state.
-    // D-09: under polls=rust the shell re-arms at start and the reconcile arrives as rearmSettled.
-    if (pollsImpl() !== 'rust') {
-      const { dropped } = await rearmPersistedSteamRestartHolds(this.deps)
-      const restartHold = this.deps.steamInstallRuntime.restartHold
-      if (dropped > 0 && restartHold.getReconcileRanDuringRearm()) {
-        restartHold.setReconcileRanDuringRearm(false)
-        void this.refreshInstallState()
-      }
-    }
+    // quick 261029-pkp / D-09: the shell re-arms persisted "Restart Steam to finish" holds at
+    // start and the reconcile arrives as rearmSettled.
 
     // steam-startup-resume-crash (2026-07-18) / D-04 softened: DETECT any
     // in-progress download left on disk (D-07) and SURFACE it as resumable —

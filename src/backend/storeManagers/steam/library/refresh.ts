@@ -15,7 +15,10 @@ import { syncOwnedLibraryRust, tryMacSteamRefresh } from './rustRefresh'
 import { macSteamPathEnabled } from './macSteamPathFlag'
 import { pollsImpl } from './pollsFlag'
 import { RUST_STEAMPOLL_STATUS } from 'common/types/sidecarTransport'
-import { invokeSteamPoll } from '../pollRust/rustSteamPoll'
+import {
+  invokeSteamPoll,
+  withoutSteamRestartHolds
+} from '../pollRust/rustSteamPoll'
 import type { PollStatus } from '../pollRust/steamPollTypes'
 import { verifyMacArchGroundTruth } from './macArch'
 import {
@@ -200,10 +203,10 @@ export async function refreshInstallState(deps: ManagerDeps): Promise<void> {
     // D-UAT-13: a window-focus reconcile (the user alt-tabbing to Steam to
     // restart it) must not flip a game that is holding for a Steam restart to
     // installed — see withoutSteamRestartHolds().
-    installedMap =
-      await deps.steamInstallRuntime.restartHold.withoutSteamRestartHolds(
-        await buildInstalledMap(deps)
-      )
+    installedMap = await withoutSteamRestartHolds(
+      deps,
+      await buildInstalledMap(deps)
+    )
     bottleInstalledMap =
       isMac && deps.steamBottle.isSteamBottleProvisioned()
         ? await buildBottleInstalledMap(deps)

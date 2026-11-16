@@ -1,17 +1,10 @@
 import type { SteamGameInfo, SteamInstalledInfo } from 'common/types/steam'
-import { join } from 'path'
 import type { SteamStoresDeps } from './installRoot'
 import type { SteamLibraryStateDeps } from 'backend/services/types'
 import type { FrontendMessageDeps } from '../../../host/frontendMessage'
-import { isFullyInstalledStateFlags } from './installedMap'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
-import {
-  RUST_STEAMFILES_READ_ACF,
-  RUST_STEAMPOLL_BREADCRUMB_INSTALLED_ON_DISK
-} from 'common/types/sidecarTransport'
-import { pollsImpl } from './pollsFlag'
+import { RUST_STEAMPOLL_BREADCRUMB_INSTALLED_ON_DISK } from 'common/types/sidecarTransport'
 import { invokeSteamPoll } from '../pollRust/rustSteamPoll'
-import { invokeSteamFiles } from '../localFiles/rustSteamFiles'
 
 /**
  * D-UAT-09 (21-17): marks a Steam library entry as incomplete/resumable
@@ -21,8 +14,8 @@ import { invokeSteamFiles } from '../localFiles/rustSteamFiles'
  * restarted. Mirrors init()'s startup-surface pattern (surface as
  * resumable, never auto-drive) and reuses the existing steamResumePending
  * field (types.ts) rather than inventing a new one. Persists immediately
- * (GAP-17-BOTTLE-STORE-DIVERGENCE precedent — see pollInstallOnce's
- * 'installed' branch) so a restart mid-cancel can't read a stale
+ * (GAP-17-BOTTLE-STORE-DIVERGENCE precedent — see the install poll's
+ * 'installed' handling) so a restart mid-cancel can't read a stale
  * is_installed:true from steamLibraryStore. A no-op (never throws) when the
  * appId has no in-memory library entry — matches every other per-appId
  * surfacing helper in this file.
@@ -195,29 +188,12 @@ export async function breadcrumbAppIsFullyInstalledOnDisk(
   install: Partial<SteamInstalledInfo> | undefined
 ): Promise<boolean> {
   if (!install?.steamResumeTargetSteamappsDir) return false
-  if (pollsImpl() === 'rust') {
-    try {
-      return (await invokeSteamPoll(
-        rust,
-        RUST_STEAMPOLL_BREADCRUMB_INSTALLED_ON_DISK,
-        { steamappsDir: install.steamResumeTargetSteamappsDir, appId }
-      )) as boolean
-    } catch {
-      return false
-    }
-  }
   try {
-    const read = await invokeSteamFiles(rust, RUST_STEAMFILES_READ_ACF, {
-      path: join(
-        install.steamResumeTargetSteamappsDir,
-        `appmanifest_${appId}.acf`
-      )
-    })
-    const stateFlags = read.record?.stateFlags
-    if (!read.exists || !read.parsed || typeof stateFlags !== 'number') {
-      return false
-    }
-    return isFullyInstalledStateFlags(stateFlags)
+    return (await invokeSteamPoll(
+      rust,
+      RUST_STEAMPOLL_BREADCRUMB_INSTALLED_ON_DISK,
+      { steamappsDir: install.steamResumeTargetSteamappsDir, appId }
+    )) as boolean
   } catch {
     return false
   }

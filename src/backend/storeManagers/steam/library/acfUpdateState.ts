@@ -2,25 +2,17 @@
  * Reads the update-relevant fields of one app's ACF (build ids as raw strings, download counters,
  * StateFlags) and decides whether a Steam-registered install has an update pending, from the ACF alone.
  */
-import { join } from 'path'
-import { getSteamLibraries, type SteamLibrariesDeps } from 'backend/utils'
+import type { SteamLibrariesDeps } from 'backend/utils'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import {
-  RUST_STEAMFILES_READ_ACF,
   RUST_STEAMPOLL_ACF_READ_UPDATE,
   RUST_STEAMPOLL_ACF_READ_UPDATE_FROM_DIR
 } from 'common/types/sidecarTransport'
-import { pollsImpl } from './pollsFlag'
 import { invokeSteamPoll, pollRootsFor } from '../pollRust/rustSteamPoll'
 import type { AcfUpdateFields as RustAcfUpdateFields } from '../pollRust/steamPollTypes'
 import { NUMERIC_APP_ID } from '../gameConstants'
-import { invokeSteamFiles } from '../localFiles/rustSteamFiles'
 import type { BottleSettingsDeps } from '../bottle'
-import {
-  type AcfSource,
-  getBottleSteamappsRoot,
-  getBridgeBottleSteamappsRoot
-} from './installRoot'
+import type { AcfSource } from './installRoot'
 
 /** StateFlags bit 4: "fully installed". */
 export const STATE_FLAG_FULLY_INSTALLED = 0x4
@@ -45,37 +37,18 @@ export async function readAcfUpdateState(
   source: AcfSource = 'native'
 ): Promise<AcfUpdateFields | null> {
   if (!NUMERIC_APP_ID.test(appId)) return null
-  if (pollsImpl() === 'rust') {
-    try {
-      const roots = pollRootsFor(deps, appId, source)
-      return fromRust(
-        (await invokeSteamPoll(deps, RUST_STEAMPOLL_ACF_READ_UPDATE, {
-          roots,
-          appId,
-          source
-        })) as RustAcfUpdateFields | null
-      )
-    } catch {
-      return null
-    }
-  }
-  let steamappsDirs: string[]
   try {
-    steamappsDirs =
-      source === 'bottle'
-        ? [getBottleSteamappsRoot(deps)]
-        : source === 'bridge'
-          ? [getBridgeBottleSteamappsRoot(deps, appId)]
-          : (await getSteamLibraries(deps)).map((p) => join(p, 'steamapps'))
+    const roots = pollRootsFor(deps, appId, source)
+    return fromRust(
+      (await invokeSteamPoll(deps, RUST_STEAMPOLL_ACF_READ_UPDATE, {
+        roots,
+        appId,
+        source
+      })) as RustAcfUpdateFields | null
+    )
   } catch {
     return null
   }
-
-  for (const steamappsDir of steamappsDirs) {
-    const fields = await readAcfUpdateFieldsFromDir(deps, steamappsDir, appId)
-    if (fields) return fields
-  }
-  return null
 }
 
 /** The Rust shape carries nulls where the TS fields are optional. */
@@ -96,34 +69,13 @@ export async function readAcfUpdateFieldsFromDir(
   appId: string
 ): Promise<AcfUpdateFields | null> {
   if (!NUMERIC_APP_ID.test(appId)) return null
-  if (pollsImpl() === 'rust') {
-    try {
-      return fromRust(
-        (await invokeSteamPoll(rust, RUST_STEAMPOLL_ACF_READ_UPDATE_FROM_DIR, {
-          steamappsDir,
-          appId
-        })) as RustAcfUpdateFields | null
-      )
-    } catch {
-      return null
-    }
-  }
   try {
-    const res = await invokeSteamFiles(rust, RUST_STEAMFILES_READ_ACF, {
-      path: join(steamappsDir, `appmanifest_${appId}.acf`)
-    })
-    const rec = res.record
-    if (!res.exists || !res.parsed || !rec || rec.buildid === null) return null
-    return {
-      steamappsDir,
-      buildid: rec.buildid,
-      targetBuildId: rec.targetBuildId ?? undefined,
-      stateFlags: rec.stateFlags ?? 0,
-      bytesToDownload: Number(rec.bytesToDownload) || 0,
-      bytesDownloaded: Number(rec.bytesDownloaded) || 0,
-      scheduledAutoUpdate: Number(rec.scheduledAutoUpdate) || 0,
-      ...(rec.betaKey ? { betaKey: rec.betaKey } : {})
-    }
+    return fromRust(
+      (await invokeSteamPoll(rust, RUST_STEAMPOLL_ACF_READ_UPDATE_FROM_DIR, {
+        steamappsDir,
+        appId
+      })) as RustAcfUpdateFields | null
+    )
   } catch {
     return null
   }

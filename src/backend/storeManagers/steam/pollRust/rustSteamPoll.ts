@@ -7,14 +7,17 @@
 import { logDebug, LogPrefix } from 'backend/logger'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import type { RustInvokeArgsOf } from 'common/types/ipc/rustInvoke'
-import type { RustSteamPollChannel } from 'common/types/sidecarTransport'
+import {
+  RUST_STEAMPOLL_STATUS,
+  type RustSteamPollChannel
+} from 'common/types/sidecarTransport'
 import type { ManagerDeps } from 'backend/services/types'
 import {
   getBottleSteamappsRoot,
   getBridgeBottleSteamappsRoot,
   type AcfSource
 } from '../library/installRoot'
-import type { PollRoots } from './steamPollTypes'
+import type { PollRoots, PollStatus } from './steamPollTypes'
 
 export function invokeSteamPoll<C extends RustSteamPollChannel>(
   deps: RustInvokeDeps,
@@ -67,4 +70,28 @@ export function titleFor(
   appId: string
 ): string {
   return deps.steamSession.libraryState.library.get(appId)?.title ?? ''
+}
+
+/**
+ * Drops every app that is holding for a Steam restart from an ACF-derived installed map, mutating
+ * and returning it. buildInstalledMap reads StateFlags only, and a fast-path manifest already reads
+ * 4 while the running Steam client is still unaware of it, so without this the window-focus
+ * reconcile (refreshInstallState) and a full refresh() would flip the badge to installed the moment
+ * the user alt-tabs to Steam to restart it. D-01: Rust owns the registry; its holding[] includes the
+ * pending boot rearm (fail closed, T-80-70). Moved from library/restartHold.ts (Phase 80).
+ */
+export async function withoutSteamRestartHolds<T>(
+  deps: RustInvokeDeps,
+  installed: Map<number, T>
+): Promise<Map<number, T>> {
+  const status = (await invokeSteamPoll(
+    deps,
+    RUST_STEAMPOLL_STATUS,
+    {}
+  )) as PollStatus
+  const holding = new Set(status.holding)
+  for (const appId of [...installed.keys()]) {
+    if (holding.has(String(appId))) installed.delete(appId)
+  }
+  return installed
 }

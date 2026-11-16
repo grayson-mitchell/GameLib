@@ -1,11 +1,6 @@
 import type { SteamGameInfo } from 'common/types/steam'
 import { InstallArgs } from 'common/types'
-import {
-  machOArchsOfAsync,
-  verdictFromArchs,
-  locateMachOBinary as locateMachOBinaryShared,
-  promptMac32WindowsReinstall
-} from 'backend/utils/macArch'
+import { promptMac32WindowsReinstall } from 'backend/utils/macArch'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { isMac } from 'backend/constants/environment'
 import { formatMacArch32KnownFixEntry } from '../macArchKnownFix'
@@ -14,7 +9,6 @@ import SteamGame from '../games'
 import type { ManagerDeps } from 'backend/services/types'
 import type { AcfSource } from './installRoot'
 import { RUST_STEAMPOLL_MAC_ARCH_VERDICT } from 'common/types/sidecarTransport'
-import { pollsImpl } from './pollsFlag'
 import { invokeSteamPoll } from '../pollRust/rustSteamPoll'
 
 // ── macOS arch ground-truth check (MAC32-03) ─────────────────────────────────
@@ -25,18 +19,6 @@ import { invokeSteamPoll } from '../pollRust/rustSteamPoll'
 // macArchFromMinOS) structurally never returns '32' either — this is the
 // correctness backstop that catches an i386-only mac depot Steam left
 // un-tagged.
-
-/**
- * Steam-prefixed wrapper over the shared locator (backend/utils/macArch) so the
- * containment-escape warning keeps its Steam log prefix. Exported for unit
- * testing.
- */
-function locateMachOBinary(
-  installPath: string,
-  launchExecutable?: string
-): string | null {
-  return locateMachOBinaryShared(installPath, launchExecutable, LogPrefix.Steam)
-}
 
 /**
  * Post-install ground-truth check (MAC32-03). Corrects Steam's un-tagged
@@ -61,7 +43,7 @@ function locateMachOBinary(
  * When the verdict is '32', triggers the user-consented recovery (CONTEXT
  * D-6 / promptI386Recovery below) as a decoupled fire-and-forget call — the
  * ground-truth check itself never awaits the dialog, so it never blocks the
- * pollInstallOnce 'installed' badge-flip UX.
+ * install 'installed' badge-flip UX.
  *
  * Exported for unit testing.
  */
@@ -73,47 +55,24 @@ export async function verifyMacArchGroundTruth(
 ): Promise<void> {
   if (!macArchCheckNeeded(deps, appId, source)) return
 
-  if (pollsImpl() === 'rust') {
-    let rustVerdict: '32' | '64' | null = null
-    try {
-      rustVerdict = (await invokeSteamPoll(
-        deps,
-        RUST_STEAMPOLL_MAC_ARCH_VERDICT,
-        { installPath }
-      )) as '32' | '64' | null
-    } catch {
-      rustVerdict = null
-    }
-    if (rustVerdict === null) {
-      logInfo(
-        `Steam: verifyMacArchGroundTruth inconclusive for appId ${appId} — leaving mac_arch unchanged`,
-        LogPrefix.Steam
-      )
-      return
-    }
-    await applyMacArchVerdict(deps, appId, rustVerdict)
-    return
+  let rustVerdict: '32' | '64' | null = null
+  try {
+    rustVerdict = (await invokeSteamPoll(
+      deps,
+      RUST_STEAMPOLL_MAC_ARCH_VERDICT,
+      { installPath }
+    )) as '32' | '64' | null
+  } catch {
+    rustVerdict = null
   }
-
-  const binaryPath = locateMachOBinary(installPath)
-  if (!binaryPath) {
-    logInfo(
-      `Steam: verifyMacArchGroundTruth found no Mach-O binary for appId ${appId} at ${installPath} — skipping`,
-      LogPrefix.Steam
-    )
-    return
-  }
-
-  const verdict = verdictFromArchs(await machOArchsOfAsync(deps, binaryPath))
-  if (verdict === null) {
+  if (rustVerdict === null) {
     logInfo(
       `Steam: verifyMacArchGroundTruth inconclusive for appId ${appId} — leaving mac_arch unchanged`,
       LogPrefix.Steam
     )
     return
   }
-
-  await applyMacArchVerdict(deps, appId, verdict)
+  await applyMacArchVerdict(deps, appId, rustVerdict)
 }
 
 /**
@@ -224,7 +183,7 @@ export async function applyMacArchVerdict(
       knownFixReportDeps(deps)
     )
     // MAC32-03/CONTEXT D-6: decoupled — never awaited here, so this check
-    // never blocks the pollInstallOnce 'installed' badge-flip UX above.
+    // never blocks the install 'installed' badge-flip UX above.
     void promptI386Recovery(deps, appId)
   }
 }
