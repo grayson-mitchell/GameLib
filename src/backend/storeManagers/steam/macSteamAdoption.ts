@@ -287,7 +287,6 @@ export function createRestartDeps(deps: {
         require('./library/runningPoll') as typeof import('./library/runningPoll')
       /* eslint-enable @typescript-eslint/no-require-imports */
       return readMacRunningAppId({
-        paths: deps.paths,
         requestRustInvoke: deps.requestRustInvoke
       })
     },

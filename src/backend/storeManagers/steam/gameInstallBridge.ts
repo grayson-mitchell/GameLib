@@ -10,8 +10,6 @@ import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { notify } from 'backend/dialog/dialog'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { stopInstallPolling } from './library/installStop'
-import * as pollState from './library/pollState'
-import { pollsImpl } from './library/pollsFlag'
 import { invokeSteamPoll } from './pollRust/rustSteamPoll'
 import { RUST_STEAMPOLL_BRIDGE_FINALIZED } from 'common/types/sidecarTransport'
 import * as bottle from './bottle'
@@ -41,23 +39,24 @@ import {
 } from './gameInstallDepot'
 
 /**
- * Marks or clears the "bridge install finalized" flag. Under polls=rust the flag lives in Rust
- * (steampoll_bridge_finalized); under ts it is the in-process set (D-16).
+ * Status context while a bridge install runs its post-download tail (quick 261029-exu). The
+ * frontend matches the same literal, like the other Steam install contexts. (Moved from the
+ * deleted library/pollState.ts, Phase 80.)
+ */
+const STEAM_BRIDGE_FINISHING_CONTEXT = 'steam-bridge-finishing'
+
+/**
+ * Marks or clears the "bridge install finalized" flag; it lives in Rust
+ * (steampoll_bridge_finalized, D-16).
  */
 async function setBridgeInstallFinalized(
   steamGame: SteamGame,
   finalized: boolean
 ): Promise<void> {
-  if (pollsImpl() === 'rust') {
-    await invokeSteamPoll(steamGame.deps, RUST_STEAMPOLL_BRIDGE_FINALIZED, {
-      appId: steamGame.appId,
-      finalized
-    })
-    return
-  }
-  const { polls } = steamGame.deps.steamInstallRuntime
-  if (finalized) polls.markBridgeInstallFinalized(steamGame.appId)
-  else polls.clearBridgeInstallFinalized(steamGame.appId)
+  await invokeSteamPoll(steamGame.deps, RUST_STEAMPOLL_BRIDGE_FINALIZED, {
+    appId: steamGame.appId,
+    finalized
+  })
 }
 
 export async function installBridgeGame(
@@ -710,7 +709,7 @@ export async function installBridgeGameLeased(
       appName: steamGame.appId,
       runner: 'steam',
       status: 'installing',
-      context: pollState.STEAM_BRIDGE_FINISHING_CONTEXT
+      context: STEAM_BRIDGE_FINISHING_CONTEXT
     })
   sendFinishing()
   try {

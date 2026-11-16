@@ -24,7 +24,6 @@ import {
   STATE_FLAG_FULLY_INSTALLED
 } from './library/acfUpdateState'
 import { startInstallPolling } from './library/installPolling'
-import { pollsImpl } from './library/pollsFlag'
 import { RUST_STEAMPOLL_STATUS } from 'common/types/sidecarTransport'
 import { invokeSteamPoll } from './pollRust/rustSteamPoll'
 import type { PollStatus } from './pollRust/steamPollTypes'
@@ -41,20 +40,12 @@ export async function pollOwnsUpdate(
   deps: SteamGame['deps'],
   appId: string
 ): Promise<boolean> {
-  if (pollsImpl() === 'rust') {
-    const status = (await invokeSteamPoll(
-      deps,
-      RUST_STEAMPOLL_STATUS,
-      {}
-    )) as PollStatus
-    return (
-      status.installs.find((i) => i.appId === appId)?.awaitingUpdate === true
-    )
-  }
-  return (
-    deps.steamInstallRuntime.polls.activePolls.get(appId)?.awaitingUpdate !==
-    undefined
-  )
+  const status = (await invokeSteamPoll(
+    deps,
+    RUST_STEAMPOLL_STATUS,
+    {}
+  )) as PollStatus
+  return status.installs.find((i) => i.appId === appId)?.awaitingUpdate === true
 }
 
 export async function updateRegisteredSteamGame(

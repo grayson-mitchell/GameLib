@@ -1,14 +1,8 @@
 import { logInfo, LogPrefix } from 'backend/logger'
-import { join } from 'path'
 import type { AppPaths } from 'backend/process/context'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
-import {
-  RUST_STEAMFILES_READ_RUNNING_APP_ID,
-  RUST_STEAMPOLL_READ_RUNNING_APP_ID
-} from 'common/types/sidecarTransport'
-import { pollsImpl } from './pollsFlag'
+import { RUST_STEAMPOLL_READ_RUNNING_APP_ID } from 'common/types/sidecarTransport'
 import { invokeSteamPoll } from '../pollRust/rustSteamPoll'
-import { invokeSteamFiles } from '../localFiles/rustSteamFiles'
 import type { Clock, ProcessRunner, TimerHandle } from 'backend/process/types'
 
 export interface RunningPollProbeDeps extends RustInvokeDeps {
@@ -17,54 +11,9 @@ export interface RunningPollProbeDeps extends RustInvokeDeps {
 }
 
 /**
- * Reads Windows HKCU\Software\Valve\Steam\RunningAppID via reg.exe.
- * Uses argv-form spawnSync (no shell) — registry path is hardcoded (T-06-04).
- * Returns 0 on missing value, non-zero exit status, or thrown error.
- */
-async function windowsRunningAppId(
-  deps: RunningPollProbeDeps
-): Promise<number> {
-  try {
-    const result = await deps.runner.run(
-      'reg',
-      ['query', 'HKCU\\Software\\Valve\\Steam', '/v', 'RunningAppID'],
-      { windowsHide: true, timeoutMs: 2000, stdin: '' }
-    )
-    if (result.timedOut || result.code !== 0) return 0
-    const match = result.stdout.match(
-      /RunningAppID\s+REG_DWORD\s+0x([0-9a-f]+)/i
-    )
-    const hex = match?.[1]
-    return hex === undefined ? 0 : parseInt(hex, 16)
-  } catch {
-    return 0
-  }
-}
-
-/**
- * Reads macOS ~/Library/Application Support/Steam/registry.vdf for RunningAppID.
- * Parsed in Rust (steamfiles) with exact casing (Pitfall 4 — T-06-06).
- * Returns 0 when file absent, parse fails, or key missing.
- */
-/** The macOS reader: pure file read, no spawn. */
-export async function readMacRunningAppId(
-  deps: Pick<RunningPollProbeDeps, 'paths' | 'requestRustInvoke'>,
-  strict = false
-): Promise<number> {
-  if (pollsImpl() === 'rust') return readRunningAppIdViaRust(deps, strict)
-  const regPath = join(
-    deps.paths.userHome,
-    'Library',
-    'Application Support',
-    'Steam',
-    'registry.vdf'
-  )
-  return readRegistryRunningAppId(deps, regPath, strict)
-}
-
-/**
- * D-13: the whole probe (reg.exe, registry.vdf, reaper scan) runs in Rust. A rejected invoke is
- * 0 unless `strict`, where it propagates (WR-01).
+ * Reads the currently running Steam game AppID. D-13: the whole probe (Windows reg.exe,
+ * registry.vdf, Linux reaper scan) runs in Rust. A rejected invoke is 0 unless `strict`, where it
+ * propagates (WR-01).
  */
 async function readRunningAppIdViaRust(
   rust: RustInvokeDeps,
@@ -80,104 +29,35 @@ async function readRunningAppIdViaRust(
   }
 }
 
-/**
- * The registry.vdf RunningAppID read shared by the macOS and Linux readers; 0 on any failure
- * unless `strict`, where a rejected rustInvoke propagates (WR-01, 75 review).
- */
-async function readRegistryRunningAppId(
-  rust: RustInvokeDeps,
-  regPath: string,
+/** The macOS reader: the Rust probe (registry.vdf parse with exact casing, T-06-06). */
+export function readMacRunningAppId(
+  deps: Pick<RunningPollProbeDeps, 'requestRustInvoke'>,
   strict = false
 ): Promise<number> {
-  try {
-    const r = await invokeSteamFiles(
-      rust,
-      RUST_STEAMFILES_READ_RUNNING_APP_ID,
-      {
-        path: regPath
-      }
-    )
-    return r.runningAppId
-  } catch (error) {
-    if (strict) throw error
-    return 0
-  }
+  return readRunningAppIdViaRust(deps, strict)
 }
 
 /**
- * Reads Linux ~/.steam/registry.vdf for RunningAppID.
- * Note: this is ~/.steam/registry.vdf, NOT ~/.steam/steam/registry.vdf (Pitfall 3).
- * Returns 0 when file absent, parse fails, or broken (ValveSoftware/steam-for-linux#9672).
- */
-function linuxRegistryVdfRunningAppId(
-  deps: Pick<RunningPollProbeDeps, 'paths' | 'requestRustInvoke'>,
-  strict = false
-): Promise<number> {
-  const regPath = join(deps.paths.userHome, '.steam', 'registry.vdf')
-  return readRegistryRunningAppId(deps, regPath, strict)
-}
-
-/**
- * Linux fallback: scans process cmdline for the Steam reaper process which carries
- * the running AppId. Uses argv-form execFileSync with a narrow regex (T-06-05).
- * Returns 0 when no reaper found or execFileSync fails.
- */
-async function linuxFallbackRunningAppId(
-  deps: RunningPollProbeDeps
-): Promise<number> {
-  try {
-    const result = await deps.runner.run('ps', ['-eo', 'args'], {
-      timeoutMs: 1000,
-      stdin: ''
-    })
-    if (result.timedOut || result.truncated || result.code !== 0) return 0
-    const match = result.stdout.match(/reaper SteamLaunch --AppId (\d+)/)
-    const digits = match?.[1]
-    return digits === undefined ? 0 : parseInt(digits, 10)
-  } catch {
-    return 0
-  }
-}
-
-/**
- * Reads the currently running Steam game AppID, cross-platform.
- *
- * - Windows: reads HKCU registry via reg.exe (T-06-04)
- * - macOS: reads ~/Library/Application Support/Steam/registry.vdf (T-06-06)
- * - Linux: tries ~/.steam/registry.vdf first; falls back to reaper process scan
- *   because the Linux VDF RunningAppID is broken since 2023 (ValveSoftware/#9672)
- *   (T-06-05)
- *
+ * Reads the currently running Steam game AppID, cross-platform (the probe is Rust, D-13).
  * Returns 0 when no game is running or on any error. Never throws.
- * Exported for unit testing.
  */
-export async function readRunningAppId(
+export function readRunningAppId(
   deps: RunningPollProbeDeps,
-  platform: NodeJS.Platform = process.platform
+  _platform: NodeJS.Platform = process.platform
 ): Promise<number> {
-  if (pollsImpl() === 'rust') return readRunningAppIdViaRust(deps, false)
-  if (platform === 'win32') return windowsRunningAppId(deps)
-  if (platform === 'darwin') return readMacRunningAppId(deps)
-  // Linux: VDF first, reaper fallback when VDF returns 0 (D-05)
-  const fromRegistry = await linuxRegistryVdfRunningAppId(deps)
-  return fromRegistry !== 0 ? fromRegistry : linuxFallbackRunningAppId(deps)
+  return readRunningAppIdViaRust(deps, false)
 }
 
 /**
- * readRunningAppId for a safety guard: a rejected registry.vdf rustInvoke
- * (macOS, Linux) throws instead of reading as "no game running", so
- * decideSteamNativeDelete's running-check-failed refusal can fire (WR-01, 75
- * review). Windows (reg.exe) is unchanged.
+ * readRunningAppId for a safety guard: a rejected rustInvoke throws instead of reading as "no
+ * game running", so decideSteamNativeDelete's running-check-failed refusal can fire (WR-01, 75
+ * review).
  */
-export async function readRunningAppIdOrThrow(
+export function readRunningAppIdOrThrow(
   deps: RunningPollProbeDeps,
-  platform: NodeJS.Platform = process.platform
+  _platform: NodeJS.Platform = process.platform
 ): Promise<number> {
-  if (pollsImpl() === 'rust') return readRunningAppIdViaRust(deps, true)
-  if (platform === 'win32') return windowsRunningAppId(deps)
-  if (platform === 'darwin') return readMacRunningAppId(deps, true)
-  const fromRegistry = await linuxRegistryVdfRunningAppId(deps, true)
-  return fromRegistry !== 0 ? fromRegistry : linuxFallbackRunningAppId(deps)
+  return readRunningAppIdViaRust(deps, true)
 }
 
 export interface RunningPoll {

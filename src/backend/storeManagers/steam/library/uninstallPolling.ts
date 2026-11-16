@@ -1,5 +1,5 @@
 import type { SteamGameInfo } from 'common/types/steam'
-import { logInfo, logError, logWarning, LogPrefix } from 'backend/logger'
+import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { getFileSize, type SteamLibrariesDeps } from 'backend/utils'
 import type { FrontendMessageDeps } from '../../../host/frontendMessage'
 import { notify, type NotifyDeps } from '../../../dialog/dialog'
@@ -13,8 +13,6 @@ import {
   installPlatformForSource,
   isBridgeAuthoritativeForInstallState
 } from './installRoot'
-import { MAX_TICKS, STEAM_REQUEST_NO_ACTIVITY_TICKS } from './pollState'
-import type { InstallPollState, UninstallPolls } from './pollState'
 import { readAcfState } from './acfState'
 import { installVersionField } from './installedMap'
 import type { SteamLibraryStateDeps } from 'backend/services/types'
@@ -24,7 +22,6 @@ import {
   RUST_STEAMPOLL_UNINSTALL_START,
   RUST_STEAMPOLL_UNINSTALL_STOP
 } from 'common/types/sidecarTransport'
-import { pollsImpl } from './pollsFlag'
 import {
   invokeSteamPoll,
   pollRootsFor,
@@ -37,12 +34,7 @@ export type UninstallPollDeps = SteamStoresDeps &
   BottleSettingsDeps &
   SteamLibraryStateDeps &
   NotifyDeps &
-  FrontendMessageDeps & {
-    steamInstallRuntime: {
-      uninstallPolls: UninstallPolls
-      polls: Pick<InstallPollState, 'nextSteamRequestNoticeSeq'>
-    }
-  }
+  FrontendMessageDeps
 
 /** Steam EAppState bit 0x800 (2048) = actively uninstalling. */
 const STATE_UNINSTALLING = 2048
@@ -86,8 +78,6 @@ export async function pollUninstallOnce(
   source: AcfSource = 'native'
 ): Promise<void> {
   const result = await readAcfState(deps, appId, source)
-  const poll =
-    deps.steamInstallRuntime.uninstallPolls.activeUninstallPolls.get(appId)
 
   // WR-01 (75 review): the read failed, so this tick learned nothing. Never
   // a confirmed absence — no badge flip, no forced-Windows clear; retry.
@@ -222,7 +212,7 @@ export async function pollUninstallOnce(
           }
         )
       })
-      void void stopUninstallPolling(deps, appId)
+      void stopUninstallPolling(deps, appId)
       logInfo(
         `Steam: uninstall polling complete for appId ${appId} — removed the ${source} copy; a ${survivorSource} copy survives at "${survivor.installPath}", badge stays installed and install_path re-resolved to it`,
         LogPrefix.Steam
@@ -258,7 +248,7 @@ export async function pollUninstallOnce(
       title: existing?.title ?? '',
       body: i18next.t('notify.uninstalled', 'Game Uninstalled')
     })
-    void void stopUninstallPolling(deps, appId)
+    void stopUninstallPolling(deps, appId)
     logInfo(
       `Steam: uninstall polling complete for appId ${appId} — badge flipped to not-installed`,
       LogPrefix.Steam
@@ -270,7 +260,6 @@ export async function pollUninstallOnce(
     result.state === 'downloading' ||
     ((result.stateFlags ?? 0) & STATE_UNINSTALLING) !== 0
   if (uninstalling) {
-    if (poll) poll.seenUninstalling = true
     deps.sendFrontendMessage('gameStatusUpdate', {
       appName: appId,
       runner: 'steam',
@@ -280,168 +269,37 @@ export async function pollUninstallOnce(
 }
 
 /**
- * Starts an ACF polling loop for an in-progress uninstall. Idempotent.
- *
- * Stops automatically when:
- *   - the manifest disappears (uninstall complete) via pollUninstallOnce
- *   - the game is still installed and no active uninstall was ever observed
- *     within STEAM_REQUEST_NO_ACTIVITY_TICKS (~2 min; Steam dropped the request
- *     or the user left its confirm dialog — quick 261105-vfq) — clears any
- *     transient status, leaving the badge installed, and shows a sign-in notice
- *   - MAX_TICKS elapsed (D-01 focus backstop takes over — T-03-06 mitigation)
- *
- * The second parameter accepts EITHER a plain intervalMs number (existing
- * call signature, unchanged) OR a `{ intervalMs?, source? }` options object —
- * `source: 'bottle'` polls the dedicated CrossOver bottle's steamapps root
- * instead of the native one. Omitting the second arg entirely, or passing a
- * bare number, preserves today's native behavior byte-for-byte.
- *
- * Exported for unit testing.
+ * Starts the Rust uninstall poll for an in-progress uninstall (Phase 80 D-01: the loop is Rust).
+ * Idempotent on the Rust side. The second parameter is either a plain intervalMs number or a
+ * `{ intervalMs?, source? }` options object; `source: 'bottle'` polls the dedicated CrossOver
+ * bottle's steamapps root instead of the native one.
  */
 export async function startUninstallPolling(
   deps: UninstallPollDeps,
   appId: string,
   intervalMsOrOptions: number | PollOptions = 3000
 ): Promise<void> {
-  if (pollsImpl() === 'rust') {
-    // D-16: Rust owns the poll; no TS timer. Resolves once Rust registered it.
-    const full = deps as unknown as ManagerDeps
-    const opts =
-      typeof intervalMsOrOptions === 'number'
-        ? { intervalMs: intervalMsOrOptions }
-        : intervalMsOrOptions
-    const source: AcfSource = opts.source ?? 'native'
-    await invokeSteamPoll(full, RUST_STEAMPOLL_UNINSTALL_START, {
-      appId,
-      title: titleFor(full, appId),
-      roots: pollRootsFor(full, appId, source),
-      source,
-      intervalMs: opts.intervalMs ?? 3000,
-      bridgeAuthoritative: isBridgeAuthoritativeForInstallState(deps, appId)
-    })
-    return
-  }
-  const { activeUninstallPolls } = deps.steamInstallRuntime.uninstallPolls
-  if (activeUninstallPolls.has(appId)) return // idempotent
-
-  const { intervalMs, source }: { intervalMs: number; source: AcfSource } =
+  // D-16: Rust owns the poll; no TS timer. Resolves once Rust registered it.
+  const full = deps as unknown as ManagerDeps
+  const opts =
     typeof intervalMsOrOptions === 'number'
-      ? { intervalMs: intervalMsOrOptions, source: 'native' }
-      : {
-          intervalMs: intervalMsOrOptions.intervalMs ?? 3000,
-          source: intervalMsOrOptions.source ?? 'native'
-        }
-
-  logInfo(
-    `Steam: starting uninstall polling for appId ${appId} (interval ${intervalMs}ms, source ${source})`,
-    LogPrefix.Steam
-  )
-
-  const entry = {
-    timer: null as unknown as NodeJS.Timeout,
-    ticks: 0,
-    seenUninstalling: false
-  }
-
-  const timer = setInterval(async () => {
-    entry.ticks++
-
-    // Absolute safety cap — stop after MAX_TICKS and rely on the D-01 focus backstop
-    if (entry.ticks >= MAX_TICKS) {
-      logWarning(
-        `Steam: uninstall polling for appId ${appId} hit safety cap (${MAX_TICKS} ticks); relying on D-01 focus backstop`,
-        LogPrefix.Steam
-      )
-      void stopUninstallPolling(deps, appId)
-      return
-    }
-
-    // Teardown-safety (mirrors startInstallPolling's callback above / bottle.ts
-    // GAP C): a real poller can outlive the Jest suite that started it —
-    // unref() only stops it from keeping the process alive, not from firing
-    // while a later suite keeps the process busy. If it fires after that
-    // suite's module mocks are torn down, readAcfState(deps)'s dependencies throw,
-    // and an unguarded throw here would escape as an unhandled rejection and
-    // kill the whole Jest worker. Production never expects this branch — it's
-    // a defensive, log-only catch; the next tick retries normally.
-    try {
-      await pollUninstallOnce(deps, appId, source)
-    } catch (error) {
-      logError(
-        [`Steam: uninstall polling tick for appId ${appId} threw`, error],
-        LogPrefix.Steam
-      )
-      return
-    }
-
-    // pollUninstallOnce may have stopped the poll (manifest absent = complete)
-    if (!activeUninstallPolls.has(appId)) return
-
-    // No-activity timeout (quick 261105-vfq): if Steam showed no uninstall
-    // activity within ~2 min, it dropped the request (signed-out Steam) or the
-    // user left its confirm dialog — clear any transient status and stop
-    // (badge stays installed).
-    if (
-      !entry.seenUninstalling &&
-      entry.ticks >= STEAM_REQUEST_NO_ACTIVITY_TICKS
-    ) {
-      logWarning(
-        `Steam: Steam did not start the uninstall for appId ${appId} — no activity within ${STEAM_REQUEST_NO_ACTIVITY_TICKS} ticks (~2 min) of the request; keeping it installed (quick 261105-vfq)`,
-        LogPrefix.Steam
-      )
-      deps.sendFrontendMessage('gameStatusUpdate', {
-        appName: appId,
-        runner: 'steam',
-        status: 'done'
-      })
-      // debug/wazhack-uninstall-reverts: this branch once gave ZERO feedback;
-      // the badge correctly stays installed (D-02). quick 261106-pvk: the
-      // notice goes to the in-app stack because the system notification can
-      // land on another monitor or not be delivered.
-      deps.sendFrontendMessage('steamRequestNotice', {
-        appId,
-        title: deps.steamSession.libraryState.library.get(appId)?.title ?? '',
-        kind: 'uninstall-not-started',
-        seq: deps.steamInstallRuntime.polls.nextSteamRequestNoticeSeq()
-      })
-      void stopUninstallPolling(deps, appId)
-    }
-  }, intervalMs)
-
-  // Teardown-safety (mirrors bottle.ts GAP C / the install poller above):
-  // unref so a leaked real poller never keeps a Jest worker alive or crashes
-  // on a later tick. Production-neutral in the Electron main process.
-  timer.unref?.()
-
-  entry.timer = timer
-  activeUninstallPolls.set(appId, entry)
+      ? { intervalMs: intervalMsOrOptions }
+      : intervalMsOrOptions
+  const source: AcfSource = opts.source ?? 'native'
+  await invokeSteamPoll(full, RUST_STEAMPOLL_UNINSTALL_START, {
+    appId,
+    title: titleFor(full, appId),
+    roots: pollRootsFor(full, appId, source),
+    source,
+    intervalMs: opts.intervalMs ?? 3000,
+    bridgeAuthoritative: isBridgeAuthoritativeForInstallState(deps, appId)
+  })
 }
 
-/**
- * Stops the active uninstall polling loop for appId (clears the interval and
- * removes the registry entry). Safe to call when no poll is active (no-op).
- *
- * Exported for unit testing.
- */
+/** Stops the Rust uninstall poll for appId. Safe to call when no poll is active (no-op). */
 export async function stopUninstallPolling(
-  deps: Pick<UninstallPollDeps, 'steamInstallRuntime'>,
+  deps: Pick<ManagerDeps, 'requestRustInvoke'>,
   appId: string
 ): Promise<void> {
-  if (pollsImpl() === 'rust') {
-    await invokeSteamPoll(
-      deps as unknown as ManagerDeps,
-      RUST_STEAMPOLL_UNINSTALL_STOP,
-      { appId }
-    )
-    return
-  }
-  const { activeUninstallPolls } = deps.steamInstallRuntime.uninstallPolls
-  const poll = activeUninstallPolls.get(appId)
-  if (!poll) return
-  clearInterval(poll.timer)
-  activeUninstallPolls.delete(appId)
-  logInfo(
-    `Steam: stopped uninstall polling for appId ${appId}`,
-    LogPrefix.Steam
-  )
+  await invokeSteamPoll(deps, RUST_STEAMPOLL_UNINSTALL_STOP, { appId })
 }

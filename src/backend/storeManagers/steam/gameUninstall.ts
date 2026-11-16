@@ -11,7 +11,6 @@ import { ExecResult } from 'common/types'
 import { RemoveArgs } from 'common/types/game_manager'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { RUST_STEAMPOLL_NEXT_NOTICE_SEQ } from 'common/types/sidecarTransport'
-import { pollsImpl } from './library/pollsFlag'
 import { isMac } from 'backend/constants/environment'
 import {
   startUninstallPolling,
@@ -193,13 +192,10 @@ export async function uninstall(
  * getGameInfo() (its fire-and-forget side effect is forbidden on this path).
  */
 export async function noticeSeq(steamGame: SteamGame): Promise<number> {
-  if (pollsImpl() === 'rust') {
-    return (await steamGame.deps.requestRustInvoke(
-      RUST_STEAMPOLL_NEXT_NOTICE_SEQ,
-      []
-    )) as number
-  }
-  return steamGame.deps.steamInstallRuntime.polls.nextSteamRequestNoticeSeq()
+  return (await steamGame.deps.requestRustInvoke(
+    RUST_STEAMPOLL_NEXT_NOTICE_SEQ,
+    []
+  )) as number
 }
 
 async function failUninstall(

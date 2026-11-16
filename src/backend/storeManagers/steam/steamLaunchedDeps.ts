@@ -7,7 +7,6 @@ import { getSteamLibraries, sendGameStatusUpdate } from 'backend/utils'
 import { readAcfInstalldir } from './acfInstalldir'
 import { sanitizeInstalldir } from './installLocation'
 import { readRunningAppId } from './library/runningPoll'
-import { pollsImpl } from './library/pollsFlag'
 import {
   RUST_STEAMPOLL_RUNNING_HOLD,
   RUST_STEAMPOLL_RUNNING_LAST_APP_ID,
@@ -111,14 +110,8 @@ export function steamLaunchWatchDeps(deps: ManagerDeps): SteamLaunchWatchDeps {
     registry: deps.libraryManagers.steam.launchWatches,
     sendStatus: (appId, status) =>
       sendGameStatusUpdate(deps, { appName: appId, runner: 'steam', status }),
-    pollerReports: (appId) =>
-      pollsImpl() === 'rust'
-        ? rustPollerReports(deps, appId)
-        : String(deps.steamProcesses.runningPoll.lastAppId()) === appId,
-    pollerHold: (appId) =>
-      pollsImpl() === 'rust'
-        ? rustPollerHold(deps, appId)
-        : deps.steamProcesses.runningPoll.hold(Number(appId)),
+    pollerReports: (appId) => rustPollerReports(deps, appId),
+    pollerHold: (appId) => rustPollerHold(deps, appId),
     readRunningAppId: () =>
       readRunningAppId(
         {

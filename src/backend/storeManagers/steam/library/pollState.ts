@@ -164,7 +164,7 @@ export type ActiveInstallPoll = {
    *  while holding (a probe spawns one short-lived child). */
   lastSteamProbeMs: number
   /** Phase 74 (D-11): set when this poll watches an update of an installed game. `sawPending` /
-   *  `sawActivity` are updatePollOnce's own bookkeeping (completion needs a pending update seen or
+   *  `sawActivity` are the update poll's own bookkeeping (completion needs a pending update seen or
    *  a changed build; the no-activity window needs `sawActivity`). */
   awaitingUpdate?: {
     fromBuild: string
@@ -174,7 +174,7 @@ export type ActiveInstallPoll = {
     sawActivity?: boolean
     /** Consecutive ticks settled back at `fromBuild` after activity (74 WR-01). */
     settledAtStartTicks?: number
-    /** Armed when the hand-off's InstallApp was unavailable (Steam closed); updatePollOnce retries
+    /** Armed when the hand-off's InstallApp was unavailable (Steam closed); the update poll retries
      *  it on the existing tick (UAT 19, spike 069). */
     installAppRetry?: {
       libraryPath?: string

@@ -276,7 +276,6 @@ export function registerHandlers(deps: {
     notifications: deps.services.host.notifications,
     onlineMonitor: deps.services.onlineMonitor,
     requestRustInvoke: deps.services.host.requestRustInvoke,
-    steamInstallRuntime: deps.services.steamInstallRuntime,
     paths: deps.services.paths,
     miscRuntime: deps.services.miscRuntime,
     sendFrontendMessage: deps.services.host.sendFrontendMessage

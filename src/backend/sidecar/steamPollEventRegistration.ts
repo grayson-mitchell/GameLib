@@ -18,10 +18,9 @@
  * Logging: channel, appId and kind only, plus an error name on failure; never a path or payload
  * (T-28-04). No timers, watchers or handles are created here (sidecar exit contract).
  *
- * `applyInstalled` and `applyUninstalled` reproduce the library mutations written inline in
- * library/installPollOnce.ts (installed branch, lines ~339-359) and library/uninstallPolling.ts
- * (survivor branch ~172-197, not-installed branch ~215-236). The poll files stay as the
- * polls=ts arm until the TS pollers are deleted; this handler is what survives.
+ * `applyInstalled` and `applyUninstalled` reproduce the library mutations the TS install poll
+ * (the deleted per-tick install poll, installed branch) and library/uninstallPolling.ts
+ * (survivor branch, not-installed branch) used to write inline; this handler is what survives.
  */
 
 import type { SteamGameInfo } from 'common/types/steam'

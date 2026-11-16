@@ -57,7 +57,6 @@ import { isStore, storeCapabilities } from 'common/storeCapabilities'
 import type { Stores, StoreManagers, ManagerDeps } from '../services/types'
 import { attachOverrides, type GameOverridesDeps } from '../game_overrides'
 import { isDelegatedInstallPolling } from '../storeManagers/steam/library/installPolling'
-import type { InstallPollState } from '../storeManagers/steam/library/pollState'
 import type { AbortRegistry } from '../utils/aborthandler/aborthandler'
 import type { OnlineMonitor } from '../online_monitor'
 import { sendGameStatusUpdate } from '../utils'
@@ -71,7 +70,6 @@ export interface GameDetailsDeps extends NotifyDeps, StatusUpdateDeps {
   managers: Pick<StoreManagers, 'library'>
   /** The boot-owned abort registry a kill signals through (66.4-13). */
   aborts: Pick<AbortRegistry, 'call'>
-  steamInstallRuntime: { polls: Pick<InstallPollState, 'activePolls'> }
   requestRustInvoke: ManagerDeps['requestRustInvoke']
   /** The path roots the Epic user-info read derives from (66.4-11). */
   paths: Pick<ManagerDeps['paths'], 'appFolder' | 'toolsPath' | 'userData'>
