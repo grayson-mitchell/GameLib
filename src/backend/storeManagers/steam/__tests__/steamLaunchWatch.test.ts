@@ -320,6 +320,46 @@ describe('steamLaunchWatch', () => {
     expect(t.sent).not.toContain('launching')
   })
 
+  function lateClaim(t: Pick<ReturnType<typeof setup>, 'deps' | 'released'>) {
+    let land!: () => void
+    const held = new Promise<void>((r) => {
+      land = r
+    })
+    t.deps.pollerHold = () =>
+      Object.assign(
+        (terminalSent: boolean) => void t.released.push(terminalSent),
+        { held }
+      )
+    return async () => {
+      land()
+      await held
+      for (let j = 0; j < 10; j++) await Promise.resolve()
+    }
+  }
+
+  it('C-WR-01 (80 iter 2) win32: a claim landing after the search sent playing sends no launching', async () => {
+    const t = setupWin([winList([42])])
+    const land = lateClaim(t)
+    t.state.running = 264160
+    t.state.alive.add(42)
+    startSteamLaunchWatch(t.deps, '264160')
+    await tick500(t.clock, 2000)
+    expect(t.sent).toEqual(['playing'])
+    await land()
+    expect(t.sent).toEqual(['playing'])
+    cancelSteamLaunchWatch(t.registry, '264160')
+  })
+
+  it('C-WR-01 (80 iter 2) win32: a claim landing after the watch ended without done sends no launching', async () => {
+    const t = setup([], { platform: 'win32', libs: undefined })
+    const land = lateClaim(t)
+    const { settled } = startSteamLaunchWatch(t.deps, '264160')
+    await settled
+    expect(t.released).toEqual([false])
+    await land()
+    expect(t.sent).toEqual([])
+  })
+
   it('W7 (a9g) win32: cancel releases true; start-window end, bail and no folder release false; exactly once', async () => {
     const cancel = setupWin([winList([42])])
     cancel.state.running = 264160

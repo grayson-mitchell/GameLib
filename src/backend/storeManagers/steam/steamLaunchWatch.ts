@@ -176,15 +176,20 @@ export function startSteamLaunchWatch(
   let doneSent = false
   let launchingSent = false
   let playingSent = false
+  // Set first thing in the run's `finally`: from then on nothing may send `launching`.
+  let finished = false
   // win32 (quick 261111-am0): hold Launching from the hand-off until the search finds the game.
   // When the poller has already reported the appId the game was running before this Play, and
   // its `playing` must not be overwritten. The claim is an async invoke into Rust (Phase 80), so
   // the poller is silenced only once it lands: the last-app-id read and the `launching` decision
-  // wait for it (80-REVIEW C-WR-06). A watch cancelled or finished meanwhile sends nothing.
+  // wait for it (80-REVIEW C-WR-06). That wait can outlast the search, so a late decision sends
+  // nothing once the watch is cancelled, has sent `playing` or `done`, or has finished: a late
+  // `launching` would overwrite `playing`, or (after the run ended without `done`) leave the card
+  // on Launching with no watch left to end it (80-REVIEW C-WR-01, iteration 2).
   if (win) {
     const decideLaunching = () =>
       whenPollerReports(deps, appId, (reports) => {
-        if (reports || cancelled || doneSent) return
+        if (reports || cancelled || doneSent || playingSent || finished) return
         launchingSent = true
         entry.shown = true
         try {
@@ -370,6 +375,7 @@ export function startSteamLaunchWatch(
       deps.log.warn(`launch watch for ${appId} failed: ${String(e)}`)
     })
     .finally(() => {
+      finished = true
       if (deps.registry.get(appId) === entry) deps.registry.delete(appId)
       releasePoller?.(doneSent || cancelled)
       // release(false) ran first: if the poller already reads the appId it has just sent
