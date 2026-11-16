@@ -1610,7 +1610,7 @@ fn run_setup(
     // Phase 80 D-03/D-04/D-05: the poll host (webview emits, translated notifications, acked
     // state events) is installed before the sidecar is spawned.
     install_steampoll_host(app.handle());
-    // D-09/D-16: boot rearm + running poll, only when GAMELIB_STEAM_POLLS=rust; returns at once.
+    // D-09/D-16: boot rearm + running poll; returns at once.
     steampoll_boot();
     let state = spawn_sidecar_state(app)?;
     start_single_instance_accept_loop(app, &state, primary_listener);

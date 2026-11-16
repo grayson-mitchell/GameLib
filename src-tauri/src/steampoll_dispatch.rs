@@ -139,42 +139,9 @@ pub(crate) fn mark_sidecar_ready() {
     SIDECAR_READY.store(true, Ordering::SeqCst);
 }
 
-/// Which implementation owns the install/uninstall/running polls (D-16).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum PollsImpl {
-    Rust,
-    Ts,
-}
-
-// Flipped to Rust by plan 80-26 after parity approval (D-16); this whole flag is deleted after
-// the delete gate (plan 80-31).
-pub(crate) const DEFAULT_POLLS_IMPL: PollsImpl = PollsImpl::Rust;
-
-/// Pure parse of `GAMELIB_STEAM_POLLS`. An unknown value falls back to the default with one diag line
-/// (the value itself is not logged, T-80-64).
-pub(crate) fn polls_impl_from(v: Option<&str>) -> PollsImpl {
-    match v {
-        None => DEFAULT_POLLS_IMPL,
-        Some("rust") => PollsImpl::Rust,
-        Some("ts") => PollsImpl::Ts,
-        Some(_) => {
-            shell_eprintln!("[shell] GAMELIB_STEAM_POLLS has an unknown value; using the default");
-            DEFAULT_POLLS_IMPL
-        }
-    }
-}
-
-/// Read once: boot resume runs before the sidecar exists, so the shell owns the flag.
-pub(crate) fn polls_impl() -> PollsImpl {
-    static IMPL: std::sync::OnceLock<PollsImpl> = std::sync::OnceLock::new();
-    *IMPL.get_or_init(|| polls_impl_from(std::env::var("GAMELIB_STEAM_POLLS").ok().as_deref()))
-}
-
-/// Boot work for the given flag value. Spawns on the steampoll runtime and returns at once (T-80-65).
-fn steampoll_boot_with(which: PollsImpl) {
-    if which != PollsImpl::Rust {
-        return;
-    }
+/// Boot work: rearm persisted restart holds and start the running poll. Spawns on the steampoll
+/// runtime and returns at once (T-80-65).
+pub(crate) fn steampoll_boot() {
     let Some(facade) = gamelib_steampoll::dispatch::facade::current() else {
         shell_eprintln!("[shell] steampoll boot skipped: no facade");
         return;
@@ -187,11 +154,6 @@ fn steampoll_boot_with(which: PollsImpl) {
     });
     // The running poll starts at boot (first probe after 5 s).
     facade.running.start();
-}
-
-/// Starts the Rust polls at boot only when polls=rust.
-pub(crate) fn steampoll_boot() {
-    steampoll_boot_with(polls_impl());
 }
 
 /// READY sentinel: the sidecar now reads, so the outbox replays queued state events in seq order (R1).
@@ -386,18 +348,9 @@ mod tests {
     use serde_json::json;
 
     #[test]
-    fn polls_flag_parse() {
-        assert_eq!(polls_impl_from(None), DEFAULT_POLLS_IMPL);
-        assert_eq!(polls_impl_from(Some("rust")), PollsImpl::Rust);
-        assert_eq!(polls_impl_from(Some("ts")), PollsImpl::Ts);
-        assert_eq!(polls_impl_from(Some("bogus")), DEFAULT_POLLS_IMPL);
-    }
-
-    #[test]
     fn boot_and_hooks_are_inert_without_a_facade() {
         let start = std::time::Instant::now();
-        steampoll_boot_with(PollsImpl::Ts);
-        steampoll_boot_with(PollsImpl::Rust);
+        steampoll_boot();
         on_sidecar_ready_steampoll();
         on_sidecar_eof_steampoll();
         steampoll_exit_shutdown();
