@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.10
 milestone_name: Foundations
-status: ready_to_plan
-stopped_at: Phase 80 complete (33/33) — ready to discuss Phase 81
-last_updated: 2026-11-16T08:05:12.501Z
+status: executing
+stopped_at: Phase 80 context gathered
+last_updated: "2026-11-16T16:55:46.226Z"
 last_activity: 2026-11-16
 progress:
   total_phases: 26
   completed_phases: 21
   total_plans: 491
-  completed_plans: 473
+  completed_plans: 474
   percent: 81
 ---
 
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 81 — unify the steam restart hold into restart on play
+**Current focus:** Phase 76 — engine-correct-bottle-for-drm-mode-launches-v0-9-audit-s9
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -72,10 +72,10 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 
 ## Current Position
 
-Phase: 81
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-11-16 - Completed quick task 261116-w6t: Steam Guard approval-first screen and credentials approve flip fix
+Phase: 76 (engine-correct-bottle-for-drm-mode-launches-v0-9-audit-s9) — EXECUTING
+Plan: 2 of 5
+Status: Ready to execute
+Last activity: 2026-11-16
 
 Progress: [██████████] 96%
 

@@ -53,7 +53,7 @@ complete and verified per their own VERIFICATION.md files; they carry no new req
 
 ### v0.9 audit debt
 
-- [ ] **DEBT-01**: A DRM-mode launch never runs over a bottle initialised by the fallback engine (audit S9)
+- [x] **DEBT-01**: A DRM-mode launch never runs over a bottle initialised by the fallback engine (audit S9)
 - [x] **DEBT-02**: The known-fix relay rejects an unbounded request body when `Content-Length` is missing (57 WR-09)
 - [x] **DEBT-03**: Sidecar exit is not held by a lingering `execFile` handle (56 WR-02)
 - [x] **DEBT-04**: Game input is released when the overlay close is missed (60 WR-01)

@@ -1554,7 +1554,7 @@ Plans:
 **Requirements**: DEBT-01
 **Depends on:** None
 **Source:** `milestones/v0.9-MILESTONE-AUDIT.md` (S9, integration 8/9)
-**Plans:** 2/5 plans complete (gap closure 76-03..05 from 76-VERIFICATION)
+**Plans:** 3/5 plans executed
 
 Plans:
 
@@ -1568,7 +1568,7 @@ Plans:
 
 **Gap closure Wave 1** *(76-VERIFICATION CR-01)*
 
-- [ ] 76-03-PLAN.md — engineSwitch: DXVK-macOS beats CrossOver's Timestamp in inferMarker, distrust contradicted crossover markers, reconcile/record marker exports, real-switch CR-01 regression test (TDD)
+- [x] 76-03-PLAN.md — engineSwitch: DXVK-macOS beats CrossOver's Timestamp in inferMarker, distrust contradicted crossover markers, reconcile/record marker exports, real-switch CR-01 regression test (TDD)
 
 **Gap closure Wave 2** *(blocked on gap Wave 1 completion)*
 
