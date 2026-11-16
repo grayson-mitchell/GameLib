@@ -331,10 +331,17 @@ impl Layout {
     fn unmap(&self, v: &mut Value) {
         match v {
             Value::String(s) => {
+                let mut stripped = false;
                 for p in &self.prefixes {
                     if s.contains(p.as_str()) {
                         *s = s.replace(p.as_str(), "");
+                        stripped = true;
                     }
+                }
+                // A path rooted in the temp base is reported as its fake `/`-separated form, so
+                // a replay is byte-identical on Windows (where the joined tail uses `\`).
+                if stripped {
+                    *s = s.replace('\\', "/");
                 }
             }
             Value::Array(a) => a.iter_mut().for_each(|x| self.unmap(x)),
