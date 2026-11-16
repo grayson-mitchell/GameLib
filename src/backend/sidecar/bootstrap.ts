@@ -89,6 +89,7 @@ import {
   clearOrphanedElectronToken
 } from '../storeManagers/steam/tokenStore'
 import { createSteamBottle } from '../storeManagers/steam/bottle'
+import { pollsImpl } from '../storeManagers/steam/library/pollsFlag'
 import { SidecarKeyringTokenStore } from './keyringTokenStore'
 import {
   createSidecarHumbleSecretStore,
@@ -3052,8 +3053,13 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         //
         // No `JEST_WORKER_ID` guard, unlike 'installed-json-watcher': every test boot carries a fake
         // clock, so nothing real is armed -- and a guard would make this step untestable.
+        //
+        // D-13: under GAMELIB_STEAM_POLLS=rust the shell started the Rust running poll (plan 21) and
+        // this TS poll is not started, so two never run. The stdin-EOF stop and downloadMonitor
+        // stopAll are then no-ops (nothing was armed); the shell owns Rust's teardown.
         try {
-          requireSteamProcesses(state).runningPoll.start()
+          if (pollsImpl() !== 'rust')
+            requireSteamProcesses(state).runningPoll.start()
         } catch (error) {
           logWarning(
             `[bootstrap] running-game poller failed to start: ${String(error)}`,

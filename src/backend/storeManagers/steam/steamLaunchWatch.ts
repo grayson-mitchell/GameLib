@@ -76,7 +76,7 @@ export interface SteamLaunchWatchDeps extends Pick<
 > {
   registry: SteamLaunchWatchRegistry
   sendStatus(appId: string, status: 'launching' | 'playing' | 'done'): void
-  pollerReports(appId: string): boolean
+  pollerReports(appId: string): boolean | Promise<boolean>
   /** Steam's RunningAppID, 0 when none; never throws. Only the win32 loop calls it. */
   readRunningAppId(): Promise<number>
   /** In-process liveness of a pid. Only the win32 loop calls it. */
@@ -104,6 +104,17 @@ export interface SteamLaunchWatchOptions {
 export interface StartSteamLaunchWatchResult {
   status: 'started' | 'already-watching'
   settled: Promise<void>
+}
+
+/** Runs `then` with the poller's answer: in the same turn when it is sync, else once it resolves. */
+function whenPollerReports(
+  deps: Pick<SteamLaunchWatchDeps, 'pollerReports'>,
+  appId: string,
+  then: (reports: boolean) => void
+): void {
+  const reports = deps.pollerReports(appId)
+  if (typeof reports === 'boolean') then(reports)
+  else void reports.then(then, () => then(false))
 }
 
 export function startSteamLaunchWatch(
@@ -160,14 +171,17 @@ export function startSteamLaunchWatch(
   // The claim above already silences the poller for this appId, so this runs in the same
   // synchronous turn. When the poller has already reported the appId the game was running before
   // this Play, and its `playing` must not be overwritten.
-  if (win && !deps.pollerReports(appId)) {
-    launchingSent = true
-    entry.shown = true
-    try {
-      deps.sendStatus(appId, 'launching')
-    } catch (e) {
-      deps.log.warn(`appId ${appId}: launching status failed: ${String(e)}`)
-    }
+  if (win) {
+    whenPollerReports(deps, appId, (reports) => {
+      if (reports) return
+      launchingSent = true
+      entry.shown = true
+      try {
+        deps.sendStatus(appId, 'launching')
+      } catch (e) {
+        deps.log.warn(`appId ${appId}: launching status failed: ${String(e)}`)
+      }
+    })
   }
   const sendDone = () => {
     doneSent = true
@@ -189,7 +203,8 @@ export function startSteamLaunchWatch(
     for (;;) {
       await sleep(pollMs)
       if (cancelled) return
-      if (deps.pollerReports(appId)) return
+      const reports = deps.pollerReports(appId)
+      if (typeof reports === 'boolean' ? reports : await reports) return
       if (reassert) {
         reassert = false
         deps.sendStatus(appId, 'playing')
@@ -345,18 +360,19 @@ export function startSteamLaunchWatch(
       releasePoller?.(doneSent || cancelled)
       // release(false) ran first: if the poller already reads the appId it has just sent
       // `playing`, and the pollerReports check below suppresses this fallback `done`.
-      if (
-        win &&
-        launchingSent &&
-        !playingSent &&
-        !doneSent &&
-        !cancelled &&
-        !deps.pollerReports(appId)
-      ) {
-        deps.log.info(`appId ${appId}: not detected running; ending Launching`)
-        deps.sendStatus(appId, 'done')
+      if (!(win && launchingSent && !playingSent && !doneSent && !cancelled)) {
+        finish()
+        return
       }
-      finish()
+      whenPollerReports(deps, appId, (reports) => {
+        if (!reports) {
+          deps.log.info(
+            `appId ${appId}: not detected running; ending Launching`
+          )
+          deps.sendStatus(appId, 'done')
+        }
+        finish()
+      })
     })
 
   return { status: 'started', settled }

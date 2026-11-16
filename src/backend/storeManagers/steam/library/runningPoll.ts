@@ -2,7 +2,12 @@ import { logInfo, LogPrefix } from 'backend/logger'
 import { join } from 'path'
 import type { AppPaths } from 'backend/process/context'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
-import { RUST_STEAMFILES_READ_RUNNING_APP_ID } from 'common/types/sidecarTransport'
+import {
+  RUST_STEAMFILES_READ_RUNNING_APP_ID,
+  RUST_STEAMPOLL_READ_RUNNING_APP_ID
+} from 'common/types/sidecarTransport'
+import { pollsImpl } from './pollsFlag'
+import { invokeSteamPoll } from '../pollRust/rustSteamPoll'
 import { invokeSteamFiles } from '../localFiles/rustSteamFiles'
 import type { Clock, ProcessRunner, TimerHandle } from 'backend/process/types'
 
@@ -46,6 +51,7 @@ export async function readMacRunningAppId(
   deps: Pick<RunningPollProbeDeps, 'paths' | 'requestRustInvoke'>,
   strict = false
 ): Promise<number> {
+  if (pollsImpl() === 'rust') return readRunningAppIdViaRust(deps, strict)
   const regPath = join(
     deps.paths.userHome,
     'Library',
@@ -54,6 +60,24 @@ export async function readMacRunningAppId(
     'registry.vdf'
   )
   return readRegistryRunningAppId(deps, regPath, strict)
+}
+
+/**
+ * D-13: the whole probe (reg.exe, registry.vdf, reaper scan) runs in Rust. A rejected invoke is
+ * 0 unless `strict`, where it propagates (WR-01).
+ */
+async function readRunningAppIdViaRust(
+  rust: RustInvokeDeps,
+  strict: boolean
+): Promise<number> {
+  try {
+    return (await invokeSteamPoll(rust, RUST_STEAMPOLL_READ_RUNNING_APP_ID, {
+      strict
+    })) as number
+  } catch (error) {
+    if (strict) throw error
+    return 0
+  }
 }
 
 /**
@@ -131,6 +155,7 @@ export async function readRunningAppId(
   deps: RunningPollProbeDeps,
   platform: NodeJS.Platform = process.platform
 ): Promise<number> {
+  if (pollsImpl() === 'rust') return readRunningAppIdViaRust(deps, false)
   if (platform === 'win32') return windowsRunningAppId(deps)
   if (platform === 'darwin') return readMacRunningAppId(deps)
   // Linux: VDF first, reaper fallback when VDF returns 0 (D-05)
@@ -148,6 +173,7 @@ export async function readRunningAppIdOrThrow(
   deps: RunningPollProbeDeps,
   platform: NodeJS.Platform = process.platform
 ): Promise<number> {
+  if (pollsImpl() === 'rust') return readRunningAppIdViaRust(deps, true)
   if (platform === 'win32') return windowsRunningAppId(deps)
   if (platform === 'darwin') return readMacRunningAppId(deps, true)
   const fromRegistry = await linuxRegistryVdfRunningAppId(deps, true)

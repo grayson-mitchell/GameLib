@@ -7,6 +7,13 @@ import { getSteamLibraries, sendGameStatusUpdate } from 'backend/utils'
 import { readAcfInstalldir } from './acfInstalldir'
 import { sanitizeInstalldir } from './installLocation'
 import { readRunningAppId } from './library/runningPoll'
+import { pollsImpl } from './library/pollsFlag'
+import {
+  RUST_STEAMPOLL_RUNNING_HOLD,
+  RUST_STEAMPOLL_RUNNING_LAST_APP_ID,
+  RUST_STEAMPOLL_RUNNING_RELEASE
+} from 'common/types/sidecarTransport'
+import { invokeSteamPoll } from './pollRust/rustSteamPoll'
 import { startSteamLaunchWatch } from './steamLaunchWatch'
 import type { SteamLaunchWatchDeps } from './steamLaunchWatch'
 import type { StopSteamLaunchedGameDeps } from './stopSteamLaunchedGame'
@@ -45,7 +52,55 @@ export function steamLaunchedStopDeps(
   }
 }
 
-function steamLaunchWatchDeps(deps: ManagerDeps): SteamLaunchWatchDeps {
+/**
+ * D-13: the running poll lives in Rust. The claim id comes from an awaited steampoll_running_hold;
+ * the release closure stays synchronous for the launch watch by capturing that promise, and its
+ * first call sends steampoll_running_release once the id has resolved. A failed hold or release is
+ * logged and never fails the watch.
+ */
+function rustPollerHold(
+  deps: ManagerDeps,
+  appId: string
+): (terminalSent: boolean) => void {
+  const claim = invokeSteamPoll(deps, RUST_STEAMPOLL_RUNNING_HOLD, {
+    appId: Number(appId)
+  }) as Promise<number>
+  let released = false
+  return (terminalSent) => {
+    if (released) return
+    released = true
+    void claim
+      .then((claimId) =>
+        invokeSteamPoll(deps, RUST_STEAMPOLL_RUNNING_RELEASE, {
+          claimId,
+          terminalSent
+        })
+      )
+      .catch((e: unknown) =>
+        logWarning(
+          `SteamGame.watch: running poll claim for ${appId} failed: ${String(e)}`,
+          LogPrefix.Steam
+        )
+      )
+  }
+}
+
+async function rustPollerReports(
+  deps: ManagerDeps,
+  appId: string
+): Promise<boolean> {
+  try {
+    const last = (await deps.requestRustInvoke(
+      RUST_STEAMPOLL_RUNNING_LAST_APP_ID,
+      []
+    )) as number
+    return String(last) === appId
+  } catch {
+    return false
+  }
+}
+
+export function steamLaunchWatchDeps(deps: ManagerDeps): SteamLaunchWatchDeps {
   const { signal: _signal, ...stop } = steamLaunchedStopDeps(deps)
   return {
     ...stop,
@@ -57,8 +112,13 @@ function steamLaunchWatchDeps(deps: ManagerDeps): SteamLaunchWatchDeps {
     sendStatus: (appId, status) =>
       sendGameStatusUpdate(deps, { appName: appId, runner: 'steam', status }),
     pollerReports: (appId) =>
-      String(deps.steamProcesses.runningPoll.lastAppId()) === appId,
-    pollerHold: (appId) => deps.steamProcesses.runningPoll.hold(Number(appId)),
+      pollsImpl() === 'rust'
+        ? rustPollerReports(deps, appId)
+        : String(deps.steamProcesses.runningPoll.lastAppId()) === appId,
+    pollerHold: (appId) =>
+      pollsImpl() === 'rust'
+        ? rustPollerHold(deps, appId)
+        : deps.steamProcesses.runningPoll.hold(Number(appId)),
     readRunningAppId: () =>
       readRunningAppId(
         {

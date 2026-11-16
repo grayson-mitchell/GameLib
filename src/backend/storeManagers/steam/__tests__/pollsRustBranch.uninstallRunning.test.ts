@@ -5,6 +5,13 @@ import {
   stopUninstallPolling
 } from '../library/uninstallPolling'
 import { noticeSeq } from '../gameUninstall'
+import {
+  readMacRunningAppId,
+  readRunningAppId,
+  readRunningAppIdOrThrow,
+  type RunningPollProbeDeps
+} from '../library/runningPoll'
+import { steamLaunchWatchDeps } from '../steamLaunchedDeps'
 
 const FLAG = 'GAMELIB_STEAM_POLLS'
 
@@ -29,6 +36,7 @@ function makeDeps(result: unknown = null) {
       getSteamBottleSettings: () => ({ wineCrossoverBottle: 'GameLibSteam' })
     },
     stores: { steam: { steamMetadataStore: { get: () => undefined } } },
+    libraryManagers: { steam: { launchWatches: new Map() } },
     steamSession: {
       libraryState: { library: new Map([['10', { title: 'Ten' }]]) }
     },
@@ -112,5 +120,98 @@ describe('uninstall API', () => {
       deps.steamInstallRuntime.uninstallPolls.activeUninstallPolls.size
     ).toBe(1)
     await stopUninstallPolling(deps, '10')
+  })
+})
+
+describe('running probe and poll', () => {
+  let prev: string | undefined
+  beforeEach(() => {
+    prev = process.env[FLAG]
+  })
+  afterEach(() => {
+    if (prev === undefined) delete process.env[FLAG]
+    else process.env[FLAG] = prev
+  })
+
+  function probeDeps(impl: (channel: string, args: unknown[]) => unknown) {
+    const calls: Call[] = []
+    const run = jest.fn()
+    const deps = {
+      requestRustInvoke: jest.fn((channel: string, args: unknown[]) => {
+        calls.push({ channel, args })
+        return Promise.resolve().then(() => impl(channel, args))
+      }),
+      runner: { run },
+      paths: { userHome: '/home/u' }
+    } as unknown as RunningPollProbeDeps
+    return { deps, calls, run }
+  }
+
+  it('rust: the three readers forward strict and never spawn', async () => {
+    process.env[FLAG] = 'rust'
+    const { deps, calls, run } = probeDeps(() => 440)
+    expect(await readRunningAppId(deps, 'win32')).toBe(440)
+    expect(await readRunningAppIdOrThrow(deps, 'win32')).toBe(440)
+    expect(await readMacRunningAppId(deps)).toBe(440)
+    expect(calls.map((c) => c.channel)).toEqual([
+      'steampoll_read_running_app_id',
+      'steampoll_read_running_app_id',
+      'steampoll_read_running_app_id'
+    ])
+    expect(calls.map((c) => c.args[0])).toEqual([
+      { strict: false },
+      { strict: true },
+      { strict: false }
+    ])
+    expect(run).not.toHaveBeenCalled()
+  })
+
+  it('rust: a rejection is 0 non-strict and rejects strict', async () => {
+    process.env[FLAG] = 'rust'
+    const { deps } = probeDeps(() => {
+      throw new Error('boom')
+    })
+    expect(await readRunningAppId(deps, 'darwin')).toBe(0)
+    await expect(readRunningAppIdOrThrow(deps, 'darwin')).rejects.toThrow(
+      'boom'
+    )
+  })
+
+  it('rust: pollerHold claims once and releases once with the claim id', async () => {
+    process.env[FLAG] = 'rust'
+    const { deps, calls } = makeDeps(5)
+    const watch = steamLaunchWatchDeps(deps)
+    const release = watch.pollerHold('10')
+    release(true)
+    release(false)
+    await new Promise((r) => setImmediate(r))
+    expect(calls).toEqual([
+      { channel: 'steampoll_running_hold', args: [{ appId: 10 }] },
+      {
+        channel: 'steampoll_running_release',
+        args: [{ claimId: 5, terminalSent: true }]
+      }
+    ])
+  })
+
+  it('rust: pollerReports reads steampoll_running_last_app_id', async () => {
+    process.env[FLAG] = 'rust'
+    const { deps, calls } = makeDeps(10)
+    const watch = steamLaunchWatchDeps(deps)
+    expect(await watch.pollerReports('10')).toBe(true)
+    expect(await watch.pollerReports('11')).toBe(false)
+    expect(calls[0]).toEqual({
+      channel: 'steampoll_running_last_app_id',
+      args: []
+    })
+  })
+
+  it('ts: the readers do not call steampoll', async () => {
+    delete process.env[FLAG]
+    const { deps, calls } = probeDeps(() => ({ runningAppId: 0 }))
+    await readMacRunningAppId(deps)
+    expect(calls.map((c) => c.channel)).not.toContain(
+      'steampoll_read_running_app_id'
+    )
   })
 })
