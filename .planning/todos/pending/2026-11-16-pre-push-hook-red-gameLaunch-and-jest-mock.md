@@ -21,8 +21,10 @@ every phase-80-caused check was fixed:
    - `src/backend/__tests__/steamPollProfileFixtures.test.ts` 1 (`jest.doMock('path')` so
      `process/appPaths` runs under the win32/posix path flavour). Removing it needs `appPaths` to
      take the path implementation as a parameter.
-   - `src/frontend/screens/Game/GamePage/components/__tests__/GameStatus.bottleWaiting.test.tsx`
-     8 vs baseline 7: quick 261114-obu added `jest.mock('../SteamUpdateInfo')`. Without it the
+   - `GameStatus.bottleWaiting.test.tsx`, `GameStatus.redistSpinner.test.tsx` and
+     `GameStatus.steamUpdate.test.tsx` (all under
+     `src/frontend/screens/Game/GamePage/components/__tests__/`), each 8 vs baseline 7: quick
+     261114-obu added `jest.mock('../SteamUpdateInfo')` to each. Without it the
      suite fails to load (SteamUpdateInfo pulls in `tauriAttach`, which reads `window` in the node
      environment).
    - `src/backend/__tests__/steamPollParity.test.ts` 20 and `steamPollTsDriver.test.ts` 20: the
@@ -34,7 +36,7 @@ every phase-80-caused check was fixed:
 - Split `gameLaunch.ts` below 1000 lines.
 - Inject the path module into `appPaths` (or test it per-platform another way) and drop the
   `doMock`.
-- Make `GameStatus.bottleWaiting` load without mocking `SteamUpdateInfo` (inject it, or run the
+- Make the three `GameStatus.*` suites load without mocking `SteamUpdateInfo` (inject it, or run the
   suite under jsdom), or re-pin the baseline with a written reason if the mock is the right shape.
 - After plan 29, re-run `pnpm backend-di-ceilings` and confirm the parity-harness entries are gone.
 - Then `bash .husky/pre-push` must exit 0 on a clean tree.
