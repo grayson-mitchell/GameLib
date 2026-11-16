@@ -3,7 +3,8 @@ import { join } from 'path'
 import * as logger from 'backend/logger'
 import {
   RUST_STEAMFILES_READ_ACF,
-  RUST_STEAMFILES_READ_RUNNING_APP_ID
+  RUST_STEAMFILES_READ_RUNNING_APP_ID,
+  RUST_STEAMPOLL_READ_RUNNING_APP_ID
 } from 'common/types/sidecarTransport'
 import { readAppManifestFlags } from '../../library/manifestFlags'
 import { readMacRunningAppId } from '../../library/runningPoll'
@@ -29,7 +30,27 @@ const SCRATCH_REGISTRY =
 
 function replayFor(root: string) {
   const inner = replayDeps(root)
-  const requestRustInvoke = (channel: string, argv: readonly unknown[]) => {
+  // The rust arm of readMacRunningAppId carries no path (the probe runs in Rust), so the case under
+  // replay is named out of band; the recorded steamfiles read stands in for the Rust poll result.
+  let runningCase = 'none'
+  const requestRustInvoke = (
+    channel: string,
+    argv: readonly unknown[]
+  ): Promise<unknown> => {
+    if (channel === RUST_STEAMPOLL_READ_RUNNING_APP_ID) {
+      const path = join(
+        root,
+        '_home',
+        runningCase,
+        'Library',
+        'Application Support',
+        'Steam',
+        'registry.vdf'
+      )
+      return Promise.resolve(
+        requestRustInvoke(RUST_STEAMFILES_READ_RUNNING_APP_ID, [{ path }])
+      ).then((r) => (r as { runningAppId: number }).runningAppId)
+    }
     const { path } = (argv[0] ?? {}) as { path?: string }
     if (channel === RUST_STEAMFILES_READ_ACF && path !== undefined) {
       const name = SCRATCH_ACF.exec(path)?.[1]
@@ -54,7 +75,12 @@ function replayFor(root: string) {
     }
     return inner.requestRustInvoke(channel, argv)
   }
-  return { requestRustInvoke }
+  return {
+    requestRustInvoke,
+    setRunningCase: (name: string) => {
+      runningCase = name
+    }
+  }
 }
 
 describe('adoption replay parity (TS wrappers over recorded Rust results)', () => {
@@ -123,29 +149,17 @@ describe('adoption replay parity (TS wrappers over recorded Rust results)', () =
 
       for (const file of listFiles(join(root, 'registry'))) {
         const name = file.slice(0, -'.vdf'.length)
-        const home = join(root, '_home', name)
+        rust.setRunningCase(name)
         await check(`readMacRunningAppId/${name}`, () =>
-          readMacRunningAppId({ paths: { userHome: home }, ...rust } as never)
+          readMacRunningAppId({ paths: { userHome: root }, ...rust } as never)
         )
       }
+      rust.setRunningCase('none')
       await check('readMacRunningAppId/no-file', () =>
-        readMacRunningAppId({
-          paths: { userHome: join(root, '_home', 'none') },
-          ...rust
-        } as never)
+        readMacRunningAppId({ paths: { userHome: root }, ...rust } as never)
       )
     })
     expect(mismatches).toEqual([])
     expect(replayed.length).toBeGreaterThanOrEqual(15)
   })
-})
-
-// Plan 80-26: the polls flag now defaults to rust; this file exercises the ts arm, so pin it.
-const prevPollsImpl = process.env.GAMELIB_STEAM_POLLS
-beforeAll(() => {
-  process.env.GAMELIB_STEAM_POLLS = 'ts'
-})
-afterAll(() => {
-  if (prevPollsImpl === undefined) delete process.env.GAMELIB_STEAM_POLLS
-  else process.env.GAMELIB_STEAM_POLLS = prevPollsImpl
 })

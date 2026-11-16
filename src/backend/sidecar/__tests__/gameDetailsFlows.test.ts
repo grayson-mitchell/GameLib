@@ -310,6 +310,7 @@ import type { BootServices } from '../../services/types'
 // and the boot's own stores share one file-cell table, as the old module-level registry did.
 let testRoot = createTestStoreRoot()
 import {
+  answerPollStatus,
   bootFresh,
   writeInvoke,
   writeSend,
@@ -675,6 +676,9 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
 
     const { input, frames } = boot()
     writeInvoke(input, 'kill-1', 'kill', ['app-1', 'steam'])
+    await flush()
+    // The delegated-install check reads the Rust poll registry first (80-26).
+    answerPollStatus(input, frames)
     await flush()
 
     expect(findResponse(frames, 'kill-1')?.ok).toBe(true)
@@ -1296,14 +1300,4 @@ describe('send-kind channels (REQ-34.2-08/REQ-34.2-01/REQ-34.2-09)', () => {
       expect(listenerRegistry.get(channel)?.length).toBe(1)
     }
   })
-})
-
-// Plan 80-26: the polls flag now defaults to rust; this file exercises the ts arm, so pin it.
-const prevPollsImpl = process.env.GAMELIB_STEAM_POLLS
-beforeAll(() => {
-  process.env.GAMELIB_STEAM_POLLS = 'ts'
-})
-afterAll(() => {
-  if (prevPollsImpl === undefined) delete process.env.GAMELIB_STEAM_POLLS
-  else process.env.GAMELIB_STEAM_POLLS = prevPollsImpl
 })

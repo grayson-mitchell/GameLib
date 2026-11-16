@@ -68,19 +68,10 @@ jest.mock('../../depot/select', () => ({
 jest.mock('../../library/installPolling', () => ({
   startInstallPolling: jest.fn()
 }))
-jest.mock('../../library/pollState', () => ({
-  ...jest.requireActual('../../library/pollState'),
-  MAX_TICKS: 1
-}))
 jest.mock('../../library/acfState', () => ({ readAcfState: jest.fn() }))
 jest.mock('../../steamClientProcess', () => ({
   listSteamClientPids: jest.fn(),
   readSteamProcessStartTokens: jest.fn()
-}))
-jest.mock('../../steamRestartHold', () => ({
-  clearSteamRestartHold: jest.fn(),
-  decideSteamRestartHoldRearm: jest.fn(),
-  listSteamRestartHolds: jest.fn().mockReturnValue(new Map())
 }))
 jest.mock('backend/constants/environment', () => ({
   isMac: true,
@@ -517,14 +508,4 @@ describe('startup resume on the rust pipeline', () => {
     expectHonestEmptyFinalize(stub, sa)
     rmSync(lib, { recursive: true, force: true })
   })
-})
-
-// Plan 80-26: the polls flag now defaults to rust; this file exercises the ts arm, so pin it.
-const prevPollsImpl = process.env.GAMELIB_STEAM_POLLS
-beforeAll(() => {
-  process.env.GAMELIB_STEAM_POLLS = 'ts'
-})
-afterAll(() => {
-  if (prevPollsImpl === undefined) delete process.env.GAMELIB_STEAM_POLLS
-  else process.env.GAMELIB_STEAM_POLLS = prevPollsImpl
 })

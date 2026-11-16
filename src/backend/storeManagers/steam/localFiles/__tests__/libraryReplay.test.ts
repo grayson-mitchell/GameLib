@@ -8,12 +8,6 @@ import {
   buildInstalledMap
 } from '../../library/installedMap'
 import {
-  findOtherManifestsWithInstalldir,
-  readAcfState,
-  scanDownloadingAppIds
-} from '../../library/acfState'
-import { breadcrumbAppIsFullyInstalledOnDisk } from '../../library/resumeBreadcrumbs'
-import {
   SYSTEM_STEAM,
   depsFor,
   listFiles,
@@ -111,100 +105,12 @@ describe('library replay parity (TS wrappers over recorded Rust results)', () =>
           buildIncompleteInstallSet(deps)
         )
       }
-      for (const appId of ['10', '20', '40', '99']) {
-        await check(`readAcfState/${appId}`, root, () =>
-          readAcfState(deps, appId)
-        )
-      }
-      await check(`readAcfState/30/${hangs}`, root, () =>
-        readAcfState(deps, '30')
-      )
-
-      const stateDeps = {
-        ...(deps as object),
-        steamSession: {
-          libraryState: {
-            library: new Map([
-              ['10', {}],
-              ['20', {}],
-              ['40', {}]
-            ])
-          }
-        }
-      } as never
-      for (const suffix of ['scan', hangs]) {
-        await check(`scanDownloadingAppIds/${suffix}`, root, async () =>
-          (await scanDownloadingAppIds(stateDeps)).sort()
-        )
-      }
-
-      const lib1 = join(root, 'scan', 'lib1', 'steamapps')
-      const lib2 = join(root, 'scan', 'lib2', 'steamapps')
-      const others: [string, string, string, string][] = [
-        ['lib1-self-installdir', lib1, 'ScanInstalled', '10'],
-        ['lib1-nonnumeric-shares', lib1, 'NonNumeric', '10'],
-        ['lib2-duplicate-dir', lib2, 'DuplicateDir', '40'],
-        ['lib1-no-match', lib1, 'Nothing', '10']
-      ]
-      for (const [label, dir, installdir, self] of others) {
-        await check(
-          `findOtherManifestsWithInstalldir/${label}`,
-          root,
-          async () =>
-            (
-              await findOtherManifestsWithInstalldir(
-                deps,
-                dir,
-                installdir,
-                self
-              )
-            ).sort()
-        )
-      }
-      // The oracle hangs on the truncated manifest; Rust skips it (override).
-      await check(
-        'findOtherManifestsWithInstalldir/with-truncated-manifest',
-        root,
-        async () =>
-          (
-            await findOtherManifestsWithInstalldir(
-              deps,
-              lib1,
-              'NonNumeric',
-              '10'
-            )
-          ).sort()
-      )
-
-      for (const appId of ['10', '20']) {
-        await check(`breadcrumbAppIsFullyInstalledOnDisk/${appId}`, root, () =>
-          breadcrumbAppIsFullyInstalledOnDisk(deps, appId, {
-            steamResumeTargetSteamappsDir: lib1
-          })
-        )
-      }
-      await check('breadcrumbAppIsFullyInstalledOnDisk/no-dir', root, () =>
-        breadcrumbAppIsFullyInstalledOnDisk(deps, '10', {})
-      )
-      await check('breadcrumbAppIsFullyInstalledOnDisk/no-manifest', root, () =>
-        breadcrumbAppIsFullyInstalledOnDisk(deps, '99', {
-          steamResumeTargetSteamappsDir: lib1
-        })
-      )
     })
     // Every mismatch is listed at once so an override review sees them all.
     expect(mismatches).toEqual([])
-    // Anti-vacuity: the area is replayed, not skipped.
-    expect(replayed.length).toBeGreaterThanOrEqual(24)
+    // Anti-vacuity: the area is replayed, not skipped. The readAcfState, scanDownloadingAppIds,
+    // findOtherManifestsWithInstalldir and breadcrumb cases moved to the cargo steampoll acf tests
+    // (their TS wrappers read through the Rust poll commands now).
+    expect(replayed.length).toBeGreaterThanOrEqual(8)
   })
-})
-
-// Plan 80-26: the polls flag now defaults to rust; this file exercises the ts arm, so pin it.
-const prevPollsImpl = process.env.GAMELIB_STEAM_POLLS
-beforeAll(() => {
-  process.env.GAMELIB_STEAM_POLLS = 'ts'
-})
-afterAll(() => {
-  if (prevPollsImpl === undefined) delete process.env.GAMELIB_STEAM_POLLS
-  else process.env.GAMELIB_STEAM_POLLS = prevPollsImpl
 })

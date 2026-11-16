@@ -3,7 +3,6 @@ import { join } from 'path'
 import * as logger from 'backend/logger'
 import { RUST_STEAMFILES_READ_ACF } from 'common/types/sidecarTransport'
 import { readAcfInstalledDepots } from '../../acfInstalledDepots'
-import { readAcfUpdateFieldsFromDir } from '../../library/acfUpdateState'
 import { readAcfBetaKey, readLocalConfigBetaKey } from '../../depot/betaBranch'
 import { listFiles, normalizeForGolden } from './fixtures/fixtureCopy'
 import {
@@ -62,15 +61,9 @@ describe('acfUpdate replay parity (TS wrappers over recorded Rust results)', () 
         await check(`readAcfInstalledDepots/${name}`, () =>
           readAcfInstalledDepots(rust, dir, '77')
         )
-        await check(`readAcfUpdateFieldsFromDir/${name}`, () =>
-          readAcfUpdateFieldsFromDir(rust, dir, '77')
-        )
       }
       await check('readAcfInstalledDepots/bad-appid', () =>
         readAcfInstalledDepots(rust, root, '../x')
-      )
-      await check('readAcfUpdateFieldsFromDir/missing', () =>
-        readAcfUpdateFieldsFromDir(rust, join(root, '_acfupdate'), '77')
       )
       for (const file of listFiles(join(root, 'localconfig'))) {
         const name = file.slice(0, -'.vdf'.length)
@@ -91,14 +84,4 @@ describe('acfUpdate replay parity (TS wrappers over recorded Rust results)', () 
     expect(mismatches).toEqual([])
     expect(replayed.length).toBeGreaterThanOrEqual(15)
   })
-})
-
-// Plan 80-26: the polls flag now defaults to rust; this file exercises the ts arm, so pin it.
-const prevPollsImpl = process.env.GAMELIB_STEAM_POLLS
-beforeAll(() => {
-  process.env.GAMELIB_STEAM_POLLS = 'ts'
-})
-afterAll(() => {
-  if (prevPollsImpl === undefined) delete process.env.GAMELIB_STEAM_POLLS
-  else process.env.GAMELIB_STEAM_POLLS = prevPollsImpl
 })

@@ -103,26 +103,6 @@ describe('createSteamInstallRuntime', () => {
     expect(a.depotJobs.lookupActiveDepotJob('j')).toBeUndefined()
   })
 
-  it('install poll state, notice sequence and bridge-finalized set are per instance', () => {
-    const a = createSteamInstallRuntime(transport())
-    const b = createSteamInstallRuntime(transport())
-    a.polls.markBridgeInstallFinalized('730')
-    expect(a.polls.isBridgeInstallFinalized('730')).toBe(true)
-    expect(b.polls.isBridgeInstallFinalized('730')).toBe(false)
-    a.polls.clearBridgeInstallFinalized('730')
-    expect(a.polls.isBridgeInstallFinalized('730')).toBe(false)
-    expect([
-      a.polls.nextSteamRequestNoticeSeq(),
-      a.polls.nextSteamRequestNoticeSeq()
-    ]).toEqual([1, 2])
-    expect(b.polls.nextSteamRequestNoticeSeq()).toBe(1)
-    a.polls.activePolls.set('1', {} as never)
-    expect(b.polls.activePolls.size).toBe(0)
-    expect(a.uninstallPolls.activeUninstallPolls).not.toBe(
-      b.uninstallPolls.activeUninstallPolls
-    )
-  })
-
   it('restart-hold bookkeeping drops the apps the Rust registry reports holding, per instance', async () => {
     // Rust owns the registry; its holding[] already includes a pending boot rearm (fail closed).
     const a = createSteamInstallRuntime({

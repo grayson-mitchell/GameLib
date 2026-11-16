@@ -153,7 +153,12 @@ jest.mock('../../storeManagers/steam/user', () => ({
 import { defined } from 'backend/testUtils/indexed'
 import { existsSync, readdirSync } from 'fs'
 import { join } from 'path'
-import { bootFresh, writeInvoke, writeSend } from './helpers/sidecarHarness'
+import {
+  answerPollStatus,
+  bootFresh,
+  writeInvoke,
+  writeSend
+} from './helpers/sidecarHarness'
 import { createTestAnonymousClient } from 'backend/testUtils/testAnonymousClient'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
 
@@ -289,6 +294,10 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
       undefined,
       'action-icons-refresh-button'
     ])
+    await flush()
+    // Polls run in Rust (80-26): the install-state reconcile asks for the poll registry before the
+    // refresh reaches steamcm_refresh, so answer that status read with an empty registry.
+    answerPollStatus(input, frames)
     await flush()
     const refreshCall = frames.find(
       (frame) =>
@@ -929,14 +938,4 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
       })
     })
   })
-})
-
-// Plan 80-26: the polls flag now defaults to rust; this file exercises the ts arm, so pin it.
-const prevPollsImpl = process.env.GAMELIB_STEAM_POLLS
-beforeAll(() => {
-  process.env.GAMELIB_STEAM_POLLS = 'ts'
-})
-afterAll(() => {
-  if (prevPollsImpl === undefined) delete process.env.GAMELIB_STEAM_POLLS
-  else process.env.GAMELIB_STEAM_POLLS = prevPollsImpl
 })

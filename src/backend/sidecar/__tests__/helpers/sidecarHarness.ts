@@ -234,6 +234,23 @@ export function writeSend(
   input.write(`${JSON.stringify({ id, kind: 'send', channel, args })}\n`)
 }
 
+/**
+ * Polls run in Rust (80-26), so any sidecar path that reads the poll registry (a kill, an install
+ * state reconcile) sends a `steampoll_status` rustInvoke the host must answer. Answers each one not
+ * yet answered with an empty registry; call after a flush and flush again.
+ */
+export function answerPollStatus(input: PassThrough, frames: Frame[]): void {
+  for (const f of frames) {
+    if (f.kind !== 'rustInvoke' || f.channel !== 'steampoll_status') continue
+    if (answeredPollStatus.has(f.id as string)) continue
+    answeredPollStatus.add(f.id as string)
+    input.write(
+      `${JSON.stringify({ id: f.id, ok: true, result: { installs: [], uninstalls: [], holding: [] } })}\n`
+    )
+  }
+}
+const answeredPollStatus = new Set<string>()
+
 /** Finds the response frame matching a request id. */
 export function findResponse(
   frames: Frame[],

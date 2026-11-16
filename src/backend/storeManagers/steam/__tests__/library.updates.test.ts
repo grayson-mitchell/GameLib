@@ -25,9 +25,6 @@ jest.mock('../library/refresh', () => ({
   refresh: jest.fn(),
   refreshInstallState: jest.fn()
 }))
-jest.mock('../library/resume', () => ({
-  rearmPersistedSteamRestartHolds: jest.fn()
-}))
 jest.mock('../../../dialog/dialog', () => ({ notify: jest.fn() }))
 
 const detect = detectSteamUpdates as jest.Mock
