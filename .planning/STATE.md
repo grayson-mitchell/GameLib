@@ -4,13 +4,13 @@ milestone: v0.10
 milestone_name: Foundations
 status: executing
 stopped_at: Phase 80 context gathered
-last_updated: "2026-11-15T23:58:10.179Z"
-last_activity: 2026-11-15
+last_updated: "2026-11-16T00:04:39.723Z"
+last_activity: 2026-11-16
 progress:
   total_phases: 25
   completed_phases: 20
   total_plans: 491
-  completed_plans: 453
+  completed_plans: 454
   percent: 80
 ---
 
@@ -73,9 +73,9 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 ## Current Position
 
 Phase: 80 (steam-install-uninstall-and-update-polling-state-machines-in) — EXECUTING
-Plan: 14 of 33
+Plan: 15 of 33
 Status: Ready to execute
-Last activity: 2026-11-15
+Last activity: 2026-11-16
 
 Progress: [█████████░] 92%
 
@@ -269,6 +269,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 66.4 P24 | 6 min | 2 tasks | 6 files |
 | Phase 66.4 P25 | ~15min | 3 tasks | 2 files |
 | Phase 70 P03 | 15min | 2 tasks | 3 files |
+| Phase 80 P14 | 40min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -782,7 +783,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-15T23:58:10.170Z
+Last session: 2026-11-16T00:04:33.334Z
 Stopped at: Phase 80 context gathered
 Resume file: None
 
