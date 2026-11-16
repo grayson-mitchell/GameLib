@@ -38,16 +38,18 @@ import {
   resolveBridgeGameInstallRoot
 } from './bridgeInstallState'
 import {
-  drmOfflinePrecheck,
   maybeNotifyBridgeLimited,
   maybeNotifyDrmModeFailed,
   notifyCrossoverRequired,
-  prepareDrmBottleForCrossover,
   readLaunchExeCegMarkers,
   selectLaunchEngine,
   sendLaunchDone,
   launchDrmModeGame
 } from './gameLaunch'
+import {
+  drmOfflinePrecheck,
+  prepareDrmBottleForCrossover
+} from './gameEngineDialogs'
 import { fireBridgeWineLaunch } from './gameBridgeWineLaunch'
 import { prepareTcpOverlay } from './gameLaunchOverlay'
 
