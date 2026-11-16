@@ -13,12 +13,14 @@ use std::time::Duration;
 use futures_util::future::{BoxFuture, FutureExt};
 use serde::Serialize;
 use serde_json::Value;
+use tokio::time::Instant;
 
 use super::enrich::parse_metacritic_score;
 use super::meta_entry::{
     depot_signal_captured, resolve_platform_write, PlatformSource, PlatformTriple,
     SteamMetadataEntry,
 };
+use super::owned_demos::APP_BATCH_SIZE;
 use crate::anon::AnonHandle;
 use crate::backend::CmBackend;
 use crate::error::CmError;
@@ -283,15 +285,27 @@ fn read_apps<C: crate::backend::CmConn + Send + Sync + 'static>(
     async move { pics::product_info(&*conn, &ids, &[], true).await }.boxed()
 }
 
+/// The bound for the next read: `PICS_BULK_TIMEOUT`, cut to what is left before `deadline`.
+/// `None` once the deadline has passed.
+fn read_bound(deadline: Instant) -> Option<Duration> {
+    let left = deadline.saturating_duration_since(Instant::now());
+    (!left.is_zero()).then(|| left.min(PICS_BULK_TIMEOUT))
+}
+
 /// Anonymous first; whatever is still uncaptured (public-only, unknown, or the read failed) is
 /// re-read through the held lease when one is given (D-04). One PICS read serves both kinds over
 /// the union of the two scopes, as `getProductInfo` has no per-field projection. Never fails.
+///
+/// Reads go in batches of [`APP_BATCH_SIZE`] and none outlives `deadline` (WR-01): what was
+/// answered before a stall or the deadline is kept, and the rest is reported `failed`, so a
+/// large first sync makes progress across Refreshes instead of timing out whole every time.
 pub async fn capture_platforms_and_metacritic<B: CmBackend>(
     anon: &AnonHandle<B>,
     held: Option<(&SessionHandle<B>, LeaseId)>,
     metadata: &BTreeMap<String, SteamMetadataEntry>,
     ids: &[u32],
     now_ms: i64,
+    deadline: Instant,
 ) -> CaptureResult
 where
     B::Conn: Send + Sync + 'static,
@@ -313,37 +327,50 @@ where
     let mut held_count = 0;
     let mut read_failed = false;
 
+    // A failed or out-of-time batch ends the anonymous pass; the held lease takes the rest.
     let todo = st.remainder();
-    if !todo.is_empty() {
-        let req = todo.clone();
+    for batch in todo.chunks(APP_BATCH_SIZE) {
+        let Some(bound) = read_bound(deadline) else {
+            read_failed = true;
+            break;
+        };
+        let req = batch.to_vec();
         match anon
-            .run_read("platform-capture", PICS_BULK_TIMEOUT, move |c| {
-                read_apps(c, req)
-            })
+            .run_read("platform-capture", bound, move |c| read_apps(c, req))
             .await
         {
-            Ok(resp) => anon_count = st.absorb(&resp, &todo, false),
-            Err(_) => read_failed = true,
+            Ok(resp) => anon_count += st.absorb(&resp, batch, false),
+            Err(_) => {
+                read_failed = true;
+                break;
+            }
         }
     }
 
     let rest = st.remainder();
     if !rest.is_empty() {
         if let Some((session, lease)) = held {
-            let req = rest.clone();
-            match session
-                .run_op(lease, true, PICS_BULK_TIMEOUT, move |c| {
-                    read_apps(c, req.clone())
-                })
-                .await
-            {
-                Ok(resp) => {
-                    held_count = st.absorb(&resp, &rest, true);
-                    // The held read answered: an earlier anonymous failure is recovered.
-                    read_failed = false;
+            let mut held_ok = true;
+            for batch in rest.chunks(APP_BATCH_SIZE) {
+                let Some(bound) = read_bound(deadline) else {
+                    held_ok = false;
+                    break;
+                };
+                let req = batch.to_vec();
+                // `run_op` bounds each attempt by `bound` but may retry once; the outer bound
+                // keeps the retry inside the deadline too.
+                let read = session.run_op(lease, true, bound, move |c| read_apps(c, req.clone()));
+                match tokio::time::timeout(bound, read).await {
+                    Ok(Ok(resp)) => held_count += st.absorb(&resp, batch, true),
+                    _ => {
+                        held_ok = false;
+                        break;
+                    }
                 }
-                Err(_) => read_failed = true,
             }
+            // The held reads answered everything left: an earlier anonymous failure is
+            // recovered.
+            read_failed = !held_ok;
         }
     }
 
@@ -595,6 +622,11 @@ mod tests {
         )
     }
 
+    /// A deadline no test reaches.
+    fn far() -> Instant {
+        Instant::now() + Duration::from_secs(3600)
+    }
+
     fn pics_reads(b: &FakeBackend) -> usize {
         b.script(|s| s.pics_reqs.len())
     }
@@ -615,6 +647,7 @@ mod tests {
             &BTreeMap::new(),
             &[1, 2],
             1_000,
+            far(),
         )
         .await;
         assert_eq!(pics_reads(&b), 1);
@@ -654,6 +687,7 @@ mod tests {
             &BTreeMap::new(),
             &[1, 2],
             1_000,
+            far(),
         )
         .await;
         assert_eq!(pics_reads(&b), 2);
@@ -673,7 +707,8 @@ mod tests {
         let (b2, anon2, _s2) = rig();
         b2.script(|s| s.pics.queue.push_back(Ok(anon_reply)));
         let r2 =
-            capture_platforms_and_metacritic(&anon2, None, &BTreeMap::new(), &[1, 2], 1_000).await;
+            capture_platforms_and_metacritic(&anon2, None, &BTreeMap::new(), &[1, 2], 1_000, far())
+                .await;
         assert_eq!(pics_reads(&b2), 1);
         assert_eq!(r2.platforms.captured, 1);
         assert_eq!(r2.platforms.skipped, 1);
@@ -697,6 +732,7 @@ mod tests {
             &BTreeMap::new(),
             &[1],
             1_000,
+            far(),
         )
         .await;
         assert_eq!(r.anon_count, 0);
@@ -721,11 +757,63 @@ mod tests {
             &BTreeMap::new(),
             &[1, 2],
             1_000,
+            far(),
         )
         .await;
         assert!(r.updates.is_empty());
         assert!(r.platforms.failed && r.metacritic.failed);
         assert_eq!(r.platforms.captured, 0);
+    }
+
+    /// WR-01: a large scope is read in batches, and the batches answered before a failure are
+    /// kept rather than lost with one all-ids request.
+    #[tokio::test]
+    async fn reads_go_in_batches_and_answered_batches_survive_a_failure() {
+        let (b, anon, _s) = rig();
+        let ids: Vec<u32> = (1..=450).collect();
+        b.script(|s| {
+            s.pics.queue.push_back(Ok(raw(
+                ids[..200]
+                    .iter()
+                    .map(|&i| app_raw(i, false, FULL))
+                    .collect(),
+                vec![],
+            )));
+            s.pics.queue.push_back(Err(CmError::Timeout));
+        });
+        let r = capture_platforms_and_metacritic(&anon, None, &BTreeMap::new(), &ids, 1_000, far())
+            .await;
+        let sizes: Vec<usize> = b.script(|s| s.pics_reqs.iter().map(|q| q.apps.len()).collect());
+        // The failed second batch ends the anonymous pass; there is no held lease.
+        assert_eq!(sizes, vec![200, 200]);
+        assert_eq!(r.platforms.captured, 200);
+        assert_eq!(r.updates.len(), 200);
+        assert!(r.platforms.failed);
+    }
+
+    /// WR-01: no read outlives the deadline, anonymous or held, and running out is `failed`.
+    #[tokio::test(start_paused = true)]
+    async fn a_stalled_read_stops_at_the_deadline() {
+        let (b, anon, sess) = rig();
+        let l = lease(&sess).await;
+        b.set_delay("pics_product_info", Duration::from_secs(3600));
+        let start = Instant::now();
+        let r = capture_platforms_and_metacritic(
+            &anon,
+            Some((&sess, l)),
+            &BTreeMap::new(),
+            &[1, 2],
+            1_000,
+            start + Duration::from_secs(10),
+        )
+        .await;
+        assert!(
+            start.elapsed() <= Duration::from_secs(11),
+            "{:?}",
+            start.elapsed()
+        );
+        assert!(r.platforms.failed && r.metacritic.failed);
+        assert!(r.updates.is_empty());
     }
 
     #[tokio::test]
@@ -749,7 +837,7 @@ mod tests {
                 vec![],
             )))
         });
-        let r = capture_platforms_and_metacritic(&anon, None, &m, &[1, 2, 3], 1_000).await;
+        let r = capture_platforms_and_metacritic(&anon, None, &m, &[1, 2, 3], 1_000, far()).await;
         assert_eq!(pics_reads(&b), 1);
         assert_eq!(r.platforms.scoped, 2);
         assert_eq!(r.metacritic.scoped, 2);
@@ -770,7 +858,7 @@ mod tests {
             1,
             json!({ "platformsCaptured": true, "is_windows_native": true, "metacriticCaptured": true }),
         )]);
-        let r = capture_platforms_and_metacritic(&anon, None, &m, &[1], 1_000).await;
+        let r = capture_platforms_and_metacritic(&anon, None, &m, &[1], 1_000, far()).await;
         assert_eq!(pics_reads(&b), 0);
         assert!(r.updates.is_empty());
 
@@ -781,7 +869,8 @@ mod tests {
                 .push_back(Ok(raw(vec![app_raw(5, false, "\"name\" \"x\"")], vec![4])))
         });
         let r =
-            capture_platforms_and_metacritic(&anon, None, &BTreeMap::new(), &[4, 5], 1_000).await;
+            capture_platforms_and_metacritic(&anon, None, &BTreeMap::new(), &[4, 5], 1_000, far())
+                .await;
         // App 5 has a `common` block, so metacritic is captured (without a score); platforms are not.
         assert_eq!(r.platforms.captured, 0);
         assert_eq!(r.platforms.skipped, 2);

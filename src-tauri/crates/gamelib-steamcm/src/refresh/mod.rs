@@ -40,6 +40,9 @@ use store_http::{store_appdetails, StoreDetails, StoreError};
 
 /// The whole `steamcm_refresh` op is bounded here; the TS side leaves it unbounded.
 pub const REFRESH_DEADLINE: Duration = Duration::from_secs(150);
+/// Kept free at the end of the deadline for assembly and the reply, so the fail-soft stages
+/// (capture, enrichment) always finish before the hard deadline fires (WR-01).
+const STAGE_MARGIN: Duration = Duration::from_secs(5);
 /// Owned games plus the 30 s demos bound, in one idempotent held-lease op.
 const COLLECT_TIMEOUT: Duration = Duration::from_secs(60);
 
@@ -118,6 +121,10 @@ fn mac_fallback(r: FallbackReason) -> Value {
 
 /// Refresh. Never fails for a demos, capture or enrichment problem; only an owned-games failure,
 /// an unknown lease or the 150 s deadline yield `{ok:false}`.
+///
+/// Only the owned-games step can run into the deadline. Capture and enrichment share what is
+/// left of it: capture stops early enough to leave enrichment its budget, enrichment stops
+/// `STAGE_MARGIN` before the deadline, and either stopping early is a soft `failed`/`budgetHit`.
 pub async fn refresh_library<B: CmBackend>(
     session: Option<SessionHandle<B>>,
     anon: &AnonHandle<B>,
@@ -128,9 +135,10 @@ pub async fn refresh_library<B: CmBackend>(
 where
     B::Conn: Send + Sync + 'static,
 {
-    match tokio::time::timeout(
-        REFRESH_DEADLINE,
-        refresh_body(session, anon, client, base_url, args),
+    let deadline = tokio::time::Instant::now() + REFRESH_DEADLINE;
+    match tokio::time::timeout_at(
+        deadline,
+        refresh_body(session, anon, client, base_url, args, deadline),
     )
     .await
     {
@@ -145,10 +153,12 @@ async fn refresh_body<B: CmBackend>(
     client: &reqwest::Client,
     base_url: &str,
     args: RefreshArgs,
+    deadline: tokio::time::Instant,
 ) -> Value
 where
     B::Conn: Send + Sync + 'static,
 {
+    let stages_end = deadline - STAGE_MARGIN;
     let (apps, owned_count, demo_count, demos_failed, demos_failure, held, playtime, source_tag) =
         match &args.source {
             RefreshSource::Cm { lease_id, steam_id } => {
@@ -228,6 +238,7 @@ where
         &args.metadata,
         &ids,
         now_ms(),
+        stages_end - ENRICH_STAGE_BUDGET,
     )
     .await;
     let mut working = args.metadata.clone();
@@ -264,7 +275,10 @@ where
             })
         })
         .collect();
-    let (outcomes, enrich_sum) = enrich_stage(client, base_url, inputs, ENRICH_STAGE_BUDGET).await;
+    let budget = stages_end
+        .saturating_duration_since(tokio::time::Instant::now())
+        .min(ENRICH_STAGE_BUDGET);
+    let (outcomes, enrich_sum) = enrich_stage(client, base_url, inputs, budget).await;
     for g in games.iter_mut() {
         let Some(id) = g.get("app_name").and_then(Value::as_str).map(String::from) else {
             continue;
@@ -524,6 +538,34 @@ mod tests {
         assert_eq!(v["result"]["capture"]["platforms"]["failed"], true);
         assert_eq!(v["result"]["enrich"]["rateLimited"], true);
         assert_eq!(v["result"]["games"].as_array().unwrap().len(), 1);
+    }
+
+    /// WR-01: capture's own bounds (90 s anonymous, 90 s held plus a retry) used to add up past
+    /// the 150 s Refresh deadline, so a stalled capture read threw the whole library away as
+    /// `timeout`. Capture is fail-soft: it now stops inside the deadline and the owned games are
+    /// returned.
+    #[tokio::test(start_paused = true)]
+    async fn a_stalled_capture_keeps_the_library_inside_the_deadline() {
+        let r = rig().await;
+        r.b.script(|s| s.owned.queue.push_back(Ok(vec![owned(10), owned(20)])));
+        r.b.set_delay("pics_product_info", Duration::from_secs(3600));
+        let m = spawn(store_ok(&[])).await;
+        let c = reqwest::Client::new();
+        let start = tokio::time::Instant::now();
+        let v = refresh_library(
+            Some(r.sess.clone()),
+            &r.anon,
+            &c,
+            &m.base,
+            args(r.lease as u64),
+        )
+        .await;
+        assert_eq!(v["ok"], true, "{v}");
+        assert!(start.elapsed() < REFRESH_DEADLINE);
+        let res = &v["result"];
+        assert_eq!(res["ownedCount"], 2);
+        assert_eq!(res["games"].as_array().unwrap().len(), 2);
+        assert_eq!(res["capture"]["platforms"]["failed"], true);
     }
 
     #[tokio::test]
