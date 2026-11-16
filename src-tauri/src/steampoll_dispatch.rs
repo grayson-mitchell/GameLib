@@ -194,10 +194,44 @@ pub(crate) fn on_sidecar_ready_steampoll() {
     let Some(facade) = gamelib_steampoll::dispatch::facade::current() else {
         return;
     };
-    let outbox = facade.outbox.clone();
-    let host = facade.registry.host().clone();
+    let period = Duration::from_millis(gamelib_steampoll::outbox::RETRY_FLUSH_INTERVAL_MS);
+    // A plain detached thread parked in `recv_timeout`: it never blocks the reader thread on the
+    // replay, and nothing waits for it at exit (process exit does not join it).
+    start_outbox_retry(
+        &RETRY_STOP,
+        facade.outbox.clone(),
+        facade.registry.host().clone(),
+        period,
+        |work| {
+            thread::Builder::new()
+                .name("steampoll-outbox-retry".into())
+                .spawn(work)
+                .map(|_| ())
+        },
+    );
+}
+
+/// The READY replay alone, on the steampoll runtime (the reader thread must not block on it).
+fn replay_on_runtime(outbox: Arc<gamelib_steampoll::outbox::Outbox>, host: Arc<dyn PollHost>) {
+    gamelib_steampoll::runtime::handle().spawn(async move {
+        outbox.mark_ready(host.as_ref()).await;
+    });
+}
+
+/// Starts the retry loop (whose first step is the READY replay) on a thread from `spawn`, once
+/// per `slot`. If a loop already holds `slot`, only the replay runs, on the runtime. If `spawn`
+/// fails, the slot is cleared so a later READY can try again, and the replay still runs on the
+/// runtime: without it the outbox would stay not-ready and hold every state event for the
+/// session (80-REVIEW B/WR-02, iteration 2).
+fn start_outbox_retry(
+    slot: &Mutex<Option<Sender<()>>>,
+    outbox: Arc<gamelib_steampoll::outbox::Outbox>,
+    host: Arc<dyn PollHost>,
+    period: Duration,
+    spawn: impl FnOnce(Box<dyn FnOnce() + Send>) -> std::io::Result<()>,
+) {
     let rx = {
-        let mut slot = RETRY_STOP.lock().unwrap_or_else(|e| e.into_inner());
+        let mut slot = slot.lock().unwrap_or_else(|e| e.into_inner());
         if slot.is_some() {
             None
         } else {
@@ -209,19 +243,14 @@ pub(crate) fn on_sidecar_ready_steampoll() {
     let Some(rx) = rx else {
         // A retry loop already runs (READY is once per process; this is only a guard): replay
         // once more on the runtime and let the existing loop keep retrying.
-        gamelib_steampoll::runtime::handle().spawn(async move {
-            outbox.mark_ready(host.as_ref()).await;
-        });
+        replay_on_runtime(outbox, host);
         return;
     };
-    // A plain detached thread parked in `recv_timeout`: it never blocks the reader thread on the
-    // replay, and nothing waits for it at exit (process exit does not join it).
-    let period = Duration::from_millis(gamelib_steampoll::outbox::RETRY_FLUSH_INTERVAL_MS);
-    let spawned = thread::Builder::new()
-        .name("steampoll-outbox-retry".into())
-        .spawn(move || run_outbox_retry_loop(outbox, host, period, rx));
-    if spawned.is_err() {
-        shell_eprintln!("[shell] steampoll outbox retry thread failed to start");
+    let (o, h) = (outbox.clone(), host.clone());
+    if spawn(Box::new(move || run_outbox_retry_loop(o, h, period, rx))).is_err() {
+        shell_eprintln!("[shell] steampoll outbox retry thread failed to start; replaying once");
+        slot.lock().unwrap_or_else(|e| e.into_inner()).take();
+        replay_on_runtime(outbox, host);
     }
 }
 
@@ -564,6 +593,57 @@ mod tests {
         drop(tx);
         loop_thread.join().unwrap();
         assert!(stopped_at.elapsed() < Duration::from_secs(1));
+    }
+
+    fn wait_for(mut done: impl FnMut() -> bool) -> bool {
+        let deadline = std::time::Instant::now() + Duration::from_secs(5);
+        while !done() {
+            if std::time::Instant::now() >= deadline {
+                return false;
+            }
+            thread::sleep(Duration::from_millis(5));
+        }
+        true
+    }
+
+    #[test]
+    fn a_failed_retry_thread_spawn_still_replays_and_frees_the_slot() {
+        let slot: Mutex<Option<Sender<()>>> = Mutex::new(None);
+        let outbox = Arc::new(gamelib_steampoll::outbox::Outbox::new());
+        outbox.enqueue(installed(1));
+        let host = Arc::new(FlakyAckHost {
+            sends: std::sync::atomic::AtomicUsize::new(0),
+            fail_first: 0,
+        });
+        start_outbox_retry(
+            &slot,
+            outbox.clone(),
+            host.clone(),
+            Duration::from_millis(10),
+            |_work| Err(std::io::Error::other("no threads")),
+        );
+        // The READY replay ran anyway: the outbox is ready and the queued event was delivered.
+        assert!(wait_for(|| outbox.queued_len() == 0), "replay never ran");
+        assert!(outbox.is_ready());
+        // The slot is free, so a later READY starts the loop.
+        assert!(slot.lock().unwrap().is_none());
+        let (started_tx, started_rx) = mpsc_channel::<()>();
+        start_outbox_retry(
+            &slot,
+            outbox.clone(),
+            host.clone(),
+            Duration::from_millis(10),
+            move |work| {
+                thread::spawn(move || {
+                    let _ = started_tx.send(());
+                    work();
+                });
+                Ok(())
+            },
+        );
+        started_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+        // Dropping the sender ends that loop, as exit does.
+        slot.lock().unwrap().take();
     }
 
     #[test]
