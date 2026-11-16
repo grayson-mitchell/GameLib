@@ -3,7 +3,7 @@ status: complete
 phase: 77-runtime-hardening-from-the-v0-9-review-debt
 source: [77-VERIFICATION.md]
 started: 2026-11-15T23:26:31Z
-updated: 2026-11-16T23:27:49Z
+updated: 2026-11-16T23:28:03Z
 ---
 
 ## Current Test
@@ -34,7 +34,7 @@ blocked: 0
 ## Gaps
 
 - truth: "A chunked over-cap POST to the deployed relay is answered by the capped-stream branch, and the tail prints `relay: body over cap -> 413`"
-  status: failed
+  status: accepted
   reason: "User reported: tail shows the POST reached the Worker (Ok) but no `relay: body over cap -> 413` log line; the 413 response itself was correct"
   severity: minor
   test: 1
@@ -46,3 +46,4 @@ blocked: 0
     - "Decide whether live proof of the capped branch is achievable at all (edge buffering may make it unreachable from public clients); if not, accept unit-test proof and retire this item"
     - "Optionally log a distinct fixed string on the fast path (e.g. `relay: declared length over cap -> 413`) so the next probe shows which branch answered"
   debug_session: ""
+  resolution: "Accepted by the operator 2026-11-17 without a code change. The deployed relay returned the correct 413 for a chunked over-cap body, live. Proof that the capped-stream branch works rests on the 77-01 unit tests (chunked over-cap, lying Content-Length, stream error). Live proof of that branch is treated as likely unreachable from a public client, because the Cloudflare edge appears to add a Content-Length. No fast-path log line, redeploy or further probe."
