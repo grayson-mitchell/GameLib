@@ -28,6 +28,8 @@ export interface SteamSignInState {
   setCredSessionState(next: SignInSessionState): void
   /** Sign-out reset: every sign-in field back to its initial value. */
   resetSignInState(): void
+  /** How many sign-out resets have run: a finalising sign-in compares it to fence a sign-out. */
+  getSignOutCount(): number
 }
 
 /** One instance per boot (D-05): every field is a closure variable, so two instances never share a session. */
@@ -46,6 +48,7 @@ export function createSteamSignInState(opts?: {
   let qrLastLoggedStatus: SignInStatus | null = null
   // Credential session completion state -- parallel to qrSessionState.
   let credSessionState: SignInSessionState = { status: 'waiting' }
+  let signOutCount = 0
 
   return {
     getSession: () => session,
@@ -64,7 +67,9 @@ export function createSteamSignInState(opts?: {
     setCredSessionState: (next) => {
       credSessionState = next
     },
+    getSignOutCount: () => signOutCount,
     resetSignInState: () => {
+      signOutCount++
       if (session) opts?.cancelRustFlow?.(session.flowId)
       session = null
       qrSessionState = { status: 'waiting' }

@@ -52,6 +52,10 @@ function build(handlers: Record<string, Handler | Handler[]>) {
     order.push('setToken')
     return Promise.resolve()
   })
+  const clearToken = jest.fn(() => {
+    order.push('clearToken')
+    return Promise.resolve()
+  })
   const configStore = { set: jest.fn(), delete: jest.fn() }
   const noteSignInSucceeded = jest.fn()
   const client = {
@@ -69,7 +73,7 @@ function build(handlers: Record<string, Handler | Handler[]>) {
   const deps = {
     requestRustInvoke,
     stores: { steam: { configStore } },
-    tokenStore: { current: () => ({ setToken }) },
+    tokenStore: { current: () => ({ setToken, clearToken }) },
     signIn: { outcomes: { noteSignInSucceeded } },
     steamSession: { signIn: createSteamSignInState() },
     steamUser: { acquireAuthenticatedWithToken }
@@ -80,6 +84,7 @@ function build(handlers: Record<string, Handler | Handler[]>) {
     calls,
     order,
     setToken,
+    clearToken,
     configStore,
     noteSignInSucceeded,
     acquireAuthenticatedWithToken,
@@ -347,5 +352,86 @@ describe('userSignIn on the rust engine', () => {
     expect(text).not.toContain(SECRET_PASSWORD)
     expect(text).not.toContain(SECRET_CODE)
     expect(text).not.toContain(SECRET_TOKEN)
+  })
+
+  describe('a sign-out during finalisation (C1/WR-02)', () => {
+    function deferred() {
+      let resolve: () => void = () => undefined
+      const promise = new Promise<void>((r) => {
+        resolve = r
+      })
+      return { promise, resolve }
+    }
+    const qrDone = () =>
+      build({
+        steamcm_signin_qr_start: () => ({ flowId: 'f1', challengeUrl: 'A' }),
+        steamcm_signin_status: () => DONE
+      })
+    const userDataWrites = (t: ReturnType<typeof build>) =>
+      t.configStore.set.mock.calls.filter((c) => c[0] === 'userData')
+
+    it('a sign-out while the token is being stored clears it and never marks the account signed in', async () => {
+      const t = qrDone()
+      const tokenWrite = deferred()
+      t.setToken.mockImplementation(() => tokenWrite.promise)
+      await startQRLogin(t.deps)
+      const poll = pollQRLogin(t.deps)
+      await jest.advanceTimersByTimeAsync(0)
+      // logout(): the sign-in reset runs synchronously before its own awaits.
+      t.deps.steamSession.signIn.resetSignInState()
+      tokenWrite.resolve()
+      await jest.advanceTimersByTimeAsync(0)
+      await poll
+
+      expect(t.clearToken).toHaveBeenCalledTimes(1)
+      expect(t.order.indexOf('clearToken')).toBeGreaterThan(
+        t.order.indexOf('setToken')
+      )
+      expect(t.configStore.set).not.toHaveBeenCalledWith('isLoggedIn', true)
+      expect(t.noteSignInSucceeded).not.toHaveBeenCalled()
+      expect(t.acquireAuthenticatedWithToken).not.toHaveBeenCalled()
+      expect(userDataWrites(t)).toEqual([])
+    })
+
+    it('a sign-out during the persona logon skips the userData write', async () => {
+      const t = qrDone()
+      const logon = deferred()
+      t.acquireAuthenticatedWithToken.mockImplementation(async () => {
+        await logon.promise
+        return { ok: true, client: t.client, release: jest.fn() }
+      })
+      await startQRLogin(t.deps)
+      const poll = pollQRLogin(t.deps)
+      await jest.advanceTimersByTimeAsync(0)
+      expect(t.acquireAuthenticatedWithToken).toHaveBeenCalled()
+      t.deps.steamSession.signIn.resetSignInState()
+      logon.resolve()
+      await jest.advanceTimersByTimeAsync(0)
+      await poll
+
+      expect(userDataWrites(t)).toEqual([])
+    })
+
+    it('a newer sign-in attempt after the commit still records the signed-in account', async () => {
+      const t = qrDone()
+      const logon = deferred()
+      t.acquireAuthenticatedWithToken.mockImplementation(async () => {
+        await logon.promise
+        return { ok: true, client: t.client, release: jest.fn() }
+      })
+      await startQRLogin(t.deps)
+      const poll = pollQRLogin(t.deps)
+      await jest.advanceTimersByTimeAsync(0)
+      // The window's own QR restart drops the slot without signing out.
+      t.deps.steamSession.signIn.setSession(null)
+      logon.resolve()
+      await jest.advanceTimersByTimeAsync(0)
+      await poll
+
+      expect(t.clearToken).not.toHaveBeenCalled()
+      expect(userDataWrites(t)).toEqual([
+        ['userData', { username: 'Persona', steamId: '76561190000000001' }]
+      ])
+    })
   })
 })

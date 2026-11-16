@@ -37,7 +37,9 @@ type SignInPollDeps = UserSignInDeps
 /** The profile read both engines share: lease, persona name bounded at 5 s, userData write. */
 async function resolveProfile(
   deps: UserSignInDeps,
-  known: { refreshToken: string; accountName?: string; steamId: string }
+  known: { refreshToken: string; accountName?: string; steamId: string },
+  /** C1/WR-02: false once the sign-in was signed out; the userData write is then skipped. */
+  mayWrite: () => boolean
 ): Promise<string> {
   let personaName = known.accountName || 'Steam User'
   let steamId = known.steamId
@@ -68,10 +70,12 @@ async function resolveProfile(
       lease.release()
     }
   }
-  deps.stores.steam.configStore.set('userData', {
-    username: personaName,
-    steamId
-  })
+  if (mayWrite()) {
+    deps.stores.steam.configStore.set('userData', {
+      username: personaName,
+      steamId
+    })
+  }
   return personaName
 }
 
@@ -151,9 +155,20 @@ function logRustError(what: string, r: { eresult?: number; reason?: string }) {
   )
 }
 
+/** A sign-out or a newer sign-in attempt landed while this one was finalising. */
+class SignInSupersededError extends Error {
+  override name = 'SignInSupersededError'
+}
+
 /**
  * Done-handling for a rust flow: the token is stored BEFORE the persona logon (D-06), so a failed
  * logon never loses it. Memoised on the slot: concurrent polls finalise once.
+ *
+ * C1/WR-02: fenced against a sign-out (logout() resets the sign-in state, which drops the slot)
+ * and a newer attempt (dropPreviousForRust). Until the sign-in is committed (isLoggedIn written,
+ * synchronously after the token write) either one discards it, clearing the token just stored.
+ * After the commit only a sign-out stops the userData write: a newer attempt does not undo an
+ * account that is already signed in.
  */
 async function finalizeRustSignIn(
   deps: UserSignInDeps,
@@ -162,16 +177,31 @@ async function finalizeRustSignIn(
 ): Promise<string> {
   if (slot.finalize) return slot.finalize
   if (done.status !== 'done') throw new Error('rust sign-in finalize missing')
+  const signInState = deps.steamSession.signIn
+  const signOuts = signInState.getSignOutCount()
+  const stillCurrent = () => signInState.getSession() === slot
+  const notSignedOut = () => signInState.getSignOutCount() === signOuts
   slot.finalize = (async () => {
+    if (!stillCurrent()) throw new SignInSupersededError()
     await deps.tokenStore.current().setToken(done.refreshToken)
+    if (!stillCurrent()) {
+      // The sign-out's own clearToken may have run before this setToken landed.
+      await deps.tokenStore.current().clearToken()
+      throw new SignInSupersededError()
+    }
     deps.stores.steam.configStore.set('isLoggedIn', true)
     deps.stores.steam.configStore.delete('credentialsMissing')
     deps.signIn.outcomes.noteSignInSucceeded('steam')
-    const name = await resolveProfile(deps, {
-      refreshToken: done.refreshToken,
-      accountName: done.accountName,
-      steamId: done.steamId ?? ''
-    })
+    const name = await resolveProfile(
+      deps,
+      {
+        refreshToken: done.refreshToken,
+        accountName: done.accountName,
+        steamId: done.steamId ?? ''
+      },
+      notSignedOut
+    )
+    if (!notSignedOut()) throw new SignInSupersededError()
     logInfo('Steam auth complete (rust sign-in)', LogPrefix.Steam)
     return name
   })()
