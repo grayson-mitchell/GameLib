@@ -199,7 +199,28 @@ pub(crate) fn rpc_steamcm_wrap_restore_if_owed(args: &[Value]) -> Result<Value, 
 /// liveness natively, and reports the real local UTC offset (the late-logoff and "Logged On"
 /// fallback checks compare local-time connection_log stamps).
 pub(crate) struct ShellWrapHost {
-    app: AppHandle,
+    /// Issues the open (production: `tauri-plugin-opener`, which returns once `open` is spawned).
+    opener: Arc<dyn Fn(&'static str) -> Result<(), String> + Send + Sync>,
+    /// How long `open_steam_url` waits for `opener` before reporting the open as not issued.
+    open_bound: Duration,
+}
+
+/// B/WR-02: bound for one steam:// open. The Shutdown restore clears the owed record as soon as
+/// `open_steam_url` returns true, so true must mean the open was issued, not merely queued.
+const STEAM_URL_OPEN_BOUND: Duration = Duration::from_secs(2);
+
+impl ShellWrapHost {
+    fn new(app: &AppHandle) -> Self {
+        let app = app.clone();
+        Self {
+            opener: Arc::new(move |url| {
+                app.opener()
+                    .open_url(url, None::<&str>)
+                    .map_err(|e| e.to_string())
+            }),
+            open_bound: STEAM_URL_OPEN_BOUND,
+        }
+    }
 }
 
 impl WrapHost for ShellWrapHost {
@@ -211,14 +232,22 @@ impl WrapHost for ShellWrapHost {
         if open_external_scheme_check(url).is_err() {
             return false;
         }
-        let app = self.app.clone();
-        // Worker thread: `open_url` can block behind an OS dialog (see sidecar.rs, D-UAT-19).
+        // Worker thread: `open_url` can block behind an OS dialog (see sidecar.rs, D-UAT-19), so
+        // the wait is bounded. A late or failed open reports false, which keeps the owed record
+        // (`KeptProbeFailed`) for the next boot's confirmed restore instead of clearing it.
+        let opener = self.opener.clone();
+        let (tx, rx) = std::sync::mpsc::channel();
         std::thread::spawn(move || {
-            if let Err(e) = app.opener().open_url(url, None::<&str>) {
-                shell_eprintln!("[shell] steamcm wrap open failed: {e}");
-            }
+            let issued = match opener(url) {
+                Ok(()) => true,
+                Err(e) => {
+                    shell_eprintln!("[shell] steamcm wrap open failed: {e}");
+                    false
+                }
+            };
+            let _ = tx.send(issued);
         });
-        true
+        rx.recv_timeout(self.open_bound).unwrap_or(false)
     }
 
     fn steam_running(&self) -> bool {
@@ -317,7 +346,7 @@ pub(crate) fn install_steamcm_host(app: &AppHandle) {
         let _ = BUNDLED_HELPER.set(helper);
     }
     gamelib_steamcm::error::set_diag_sink(shell_diag);
-    gamelib_steamcm::facade::set_wrap_host(std::sync::Arc::new(ShellWrapHost { app: app.clone() }));
+    gamelib_steamcm::facade::set_wrap_host(Arc::new(ShellWrapHost::new(app)));
 }
 
 fn steamcm_shutdown(context: &str) {
@@ -427,5 +456,59 @@ mod tests {
             "wrong name passed"
         );
         let _ = std::fs::remove_dir_all(&root);
+    }
+
+    fn host_with(
+        open_bound: Duration,
+        opener: impl Fn(&'static str) -> Result<(), String> + Send + Sync + 'static,
+    ) -> ShellWrapHost {
+        ShellWrapHost {
+            opener: Arc::new(opener),
+            open_bound,
+        }
+    }
+
+    /// B/WR-02: true must mean the open was issued; the Shutdown restore clears `owed` on it.
+    #[test]
+    fn open_steam_url_reports_true_only_after_the_open_was_issued() {
+        use gamelib_steamcm::wrap::STEAM_GO_ONLINE_URL;
+        use std::sync::atomic::{AtomicBool, Ordering};
+        let issued = Arc::new(AtomicBool::new(false));
+        let flag = issued.clone();
+        let host = host_with(Duration::from_secs(2), move |_| {
+            std::thread::sleep(Duration::from_millis(100));
+            flag.store(true, Ordering::SeqCst);
+            Ok(())
+        });
+        assert!(host.open_steam_url(STEAM_GO_ONLINE_URL));
+        assert!(
+            issued.load(Ordering::SeqCst),
+            "reported true before the opener ran"
+        );
+    }
+
+    #[test]
+    fn open_steam_url_reports_false_when_the_open_fails() {
+        use gamelib_steamcm::wrap::STEAM_GO_ONLINE_URL;
+        let host = host_with(Duration::from_secs(2), |_| Err("no handler".into()));
+        assert!(!host.open_steam_url(STEAM_GO_ONLINE_URL));
+    }
+
+    #[test]
+    fn open_steam_url_reports_false_when_the_open_outlasts_the_bound() {
+        use gamelib_steamcm::wrap::STEAM_GO_ONLINE_URL;
+        let host = host_with(Duration::from_millis(100), |_| {
+            std::thread::sleep(Duration::from_secs(1));
+            Ok(())
+        });
+        let start = Instant::now();
+        assert!(!host.open_steam_url(STEAM_GO_ONLINE_URL));
+        assert!(start.elapsed() < Duration::from_millis(900));
+    }
+
+    #[test]
+    fn open_steam_url_refuses_any_other_url_without_calling_the_opener() {
+        let host = host_with(Duration::from_secs(2), |_| panic!("opener called"));
+        assert!(!host.open_steam_url("steam://rungameid/440"));
     }
 }

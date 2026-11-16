@@ -447,6 +447,8 @@ mod tests {
         opened: Mutex<Vec<&'static str>>,
         running: AtomicBool,
         alive: AtomicBool,
+        /// When set, `open_steam_url` reports the open as not issued.
+        refuse_open: AtomicBool,
         log: PathBuf,
     }
 
@@ -456,6 +458,7 @@ mod tests {
                 opened: Mutex::new(Vec::new()),
                 running: AtomicBool::new(running),
                 alive: AtomicBool::new(false),
+                refuse_open: AtomicBool::new(false),
                 log,
             }
         }
@@ -467,7 +470,7 @@ mod tests {
     impl WrapHost for FakeHost {
         fn open_steam_url(&self, url: &'static str) -> bool {
             self.opened.lock().unwrap().push(url);
-            true
+            !self.refuse_open.load(Ordering::SeqCst)
         }
         fn steam_running(&self) -> bool {
             self.running.load(Ordering::SeqCst)
@@ -602,6 +605,18 @@ mod tests {
         assert_eq!(out, RestoreOutcome::Restored);
         assert_eq!(host.opened(), vec![STEAM_GO_ONLINE_URL]);
         assert!(!is_owed(d.path()));
+    }
+
+    /// B/WR-02: the Shutdown trigger has no log watch, so the host's `true` is the only
+    /// confirmation. An open the host did not issue must keep the record for the next boot.
+    #[tokio::test(start_paused = true)]
+    async fn shutdown_restore_keeps_the_record_when_the_open_is_not_issued() {
+        let (d, host) = setup(true);
+        host.refuse_open.store(true, Ordering::SeqCst);
+        write_owed(d.path(), &rec("toggled", 100)).unwrap();
+        let out = restore_inner(host.as_ref(), d.path(), RestoreTrigger::Shutdown).await;
+        assert_eq!(out, RestoreOutcome::KeptProbeFailed);
+        assert!(is_owed(d.path()));
     }
 
     #[tokio::test(start_paused = true)]
