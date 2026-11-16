@@ -305,7 +305,7 @@ fn status_name(s: &FlowStatus) -> &'static str {
 }
 
 /// `sub` claim of a JWT, by decoding the middle segment only. Never logged.
-fn jwt_sub(token: &str) -> Option<String> {
+pub(crate) fn jwt_sub(token: &str) -> Option<String> {
     let seg = token.split('.').nth(1)?;
     let bytes = base64::engine::general_purpose::URL_SAFE_NO_PAD
         .decode(seg.trim_end_matches('='))

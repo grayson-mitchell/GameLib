@@ -620,14 +620,7 @@ impl<B: CmBackend, W: LogonWrap> Actor<B, W> {
             }
             Cmd::Ensure { reply } => self.on_ensure(reply),
             Cmd::Logout { reply } => {
-                self.generation += 1;
-                self.leases.clear();
-                self.idle_deadline = None;
-                self.creds = None;
-                self.logon_failure = None;
-                self.abandon_pending(Refusal::NotSignedIn);
-                self.signal_kill(OpFailure::LeaseUnknown);
-                self.close_conn("logout");
+                self.sign_out("logout");
                 let _ = reply.send(());
             }
             Cmd::Shutdown { bound, reply } => {
@@ -670,6 +663,18 @@ impl<B: CmBackend, W: LogonWrap> Actor<B, W> {
         }
     }
 
+    /// Forget the credentials, fail every lease and pending waiter, and close the connection.
+    fn sign_out(&mut self, cause: &str) {
+        self.generation += 1;
+        self.leases.clear();
+        self.idle_deadline = None;
+        self.creds = None;
+        self.logon_failure = None;
+        self.abandon_pending(Refusal::NotSignedIn);
+        self.signal_kill(OpFailure::LeaseUnknown);
+        self.close_conn(cause);
+    }
+
     fn on_acquire(
         &mut self,
         token: RefreshTokenSecret,
@@ -680,6 +685,17 @@ impl<B: CmBackend, W: LogonWrap> Actor<B, W> {
         if self.shutting_down {
             let _ = reply.send(Err(Refusal::ShuttingDown));
             return;
+        }
+        // A token for another account must not get a lease on this account's session, nor
+        // become the credentials a later rebuild logs on with under this account's leases
+        // (WR-04). Treat it as a sign-out of the previous account, then log on afresh. Tokens
+        // whose account cannot be read are compared as before (no switch).
+        let prev = self.creds.as_ref().and_then(|(t, _)| token_account(t));
+        if let (Some(prev), Some(next)) = (prev, token_account(&token)) {
+            if prev != next {
+                diag("CM session account changed, previous account signed out");
+                self.sign_out("account-switch");
+            }
         }
         self.creds = Some((Arc::new(token), logon_id));
         self.replaced = false;
@@ -1268,6 +1284,11 @@ fn fail_waiters(waiters: Vec<Waiter>, why: Refusal) {
     }
 }
 
+/// The SteamID64 a refresh token was issued for (its JWT `sub`), or `None` when unreadable.
+fn token_account(token: &RefreshTokenSecret) -> Option<u64> {
+    crate::webauth::jwt_sub(token.expose())?.parse().ok()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1341,6 +1362,48 @@ mod tests {
         assert!(h.status().await.connected);
         h.release(l2);
         assert_eq!(b.connect_count(), 1);
+    }
+
+    /// A refresh token shaped like Steam's: a JWT whose `sub` is the account's SteamID64.
+    fn jwt_tok(sub: u64) -> RefreshTokenSecret {
+        use base64::Engine;
+        let e = |s: &str| base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(s);
+        RefreshTokenSecret::new(format!(
+            "{}.{}.sig",
+            e("{}"),
+            e(&format!("{{\"sub\":\"{sub}\"}}"))
+        ))
+    }
+
+    /// WR-04: a token for a different account must not be handed a lease on the live session of
+    /// the previous one. The old account's leases fail as on sign-out, and B logs on afresh.
+    #[tokio::test(start_paused = true)]
+    async fn acquire_with_another_accounts_token_relogs_on_and_fails_the_old_leases() {
+        let (b, h) = setup();
+        let (a_id, b_id) = (76561198000000001u64, 76561198000000002u64);
+        b.push_authed(Ok((a_id, Vec::new())));
+        b.push_authed(Ok((b_id, Vec::new())));
+        let (la, got_a) = h.acquire(jwt_tok(a_id), "t".into(), 0).await.unwrap();
+        assert_eq!(got_a, a_id);
+        let (lb, got_b) = h.acquire(jwt_tok(b_id), "t".into(), 0).await.unwrap();
+        assert_eq!(got_b, b_id);
+        assert_eq!(b.connect_count(), 2);
+        assert_eq!(h.licenses(la).await, Err(OpFailure::LeaseUnknown));
+        assert!(h.licenses(lb).await.is_ok());
+        assert_eq!(h.status().await.lease_count, 1);
+    }
+
+    /// The same account presenting a newer token keeps the live session (no re-logon).
+    #[tokio::test(start_paused = true)]
+    async fn acquire_with_the_same_accounts_token_reuses_the_session() {
+        let (b, h) = setup();
+        let id = 76561198000000001u64;
+        b.push_authed(Ok((id, Vec::new())));
+        let (l1, _) = h.acquire(jwt_tok(id), "t".into(), 0).await.unwrap();
+        let (l2, got) = h.acquire(jwt_tok(id), "t".into(), 0).await.unwrap();
+        assert_eq!(got, id);
+        assert_eq!(b.connect_count(), 1);
+        assert!(h.licenses(l1).await.is_ok() && h.licenses(l2).await.is_ok());
     }
 
     #[tokio::test(start_paused = true)]
