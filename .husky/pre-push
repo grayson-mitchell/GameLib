@@ -1,21 +1,19 @@
 #!/bin/bash
-pnpm codecheck && pnpm lint && pnpm prettier && pnpm i18n --fail-on-update && pnpm find-deadcode && pnpm boundaries && pnpm steam-line-ceiling && pnpm backend-di-ceilings
-chain_status=$?
-pnpm gameinfo-narrowing-ceiling
-narrowing_status=$?
-if [ "$chain_status" -ne 0 ]; then
-  checks_status=$chain_status
-else
-  checks_status=$narrowing_status
-fi
+pnpm codecheck; checks_status=$?
+pnpm lint || checks_status=1
+pnpm prettier || checks_status=1
+pnpm i18n --fail-on-update || checks_status=1
+pnpm find-deadcode || checks_status=1
+pnpm boundaries || checks_status=1
+pnpm steam-line-ceiling || checks_status=1
+pnpm backend-di-ceilings || checks_status=1
+pnpm gameinfo-narrowing-ceiling || checks_status=1
 
 # Best-effort refresh of the gitignored graphify-out/ knowledge graph after a
-# passing push. This step is NEVER a gate: line 2's chain and the independent
-# narrowing ceiling on line 4 together decide the push, each status captured
-# immediately after its command (before anything else can overwrite $?) and
-# combined into checks_status, which is what this hook ultimately exits with.
-# The ratchet runs outside the && chain so an earlier red check cannot hide
-# narrowing drift (70 gap G1).
+# passing push. This step is NEVER a gate: the nine checks above decide the push.
+# Every check runs even when an earlier one failed (Phase 78; a58e3e3e8 and 70
+# gap G1 showed a && chain lets one red check hide the rest), and any failure
+# accumulates into checks_status, which is what this hook ultimately exits with.
 #
 # It runs only when checks_status is 0, so a red push never pays the rebuild
 # and graphify's own progress output can't bury the failing check's error.
@@ -39,7 +37,7 @@ fi
 # per-repo rebuild lock, so a concurrent rebuild delays the push rather than
 # failing it.
 #
-# The chain stays on line 2 because meta/__tests__/tsconfigMeta.test.ts:94
+# Line 2 keeps `pnpm codecheck` because meta/__tests__/tsconfigMeta.test.ts:94
 # cites .husky/pre-push:2.
 if [ "$checks_status" -eq 0 ]; then
   if command -v graphify >/dev/null 2>&1; then

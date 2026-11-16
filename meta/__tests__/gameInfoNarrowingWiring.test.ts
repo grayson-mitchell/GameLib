@@ -99,12 +99,19 @@ describe('gameinfo-narrowing-ceiling gate wiring', () => {
     expect(gateUnmasked(steps)).toBe(false)
   })
 
-  it('pre-push keeps the chain on line 2 and runs the ratchet on its own line', () => {
+  it('pre-push runs the ratchet on its own line and never chains with &&', () => {
     const lines = prePush.split('\n')
     expect(lines[0]).toMatch(/^#!/)
-    expect(lines[1]).toContain('pnpm backend-di-ceilings')
-    expect(lines[1]).not.toContain('gameinfo-narrowing-ceiling')
-    expect(lines).toContain('pnpm gameinfo-narrowing-ceiling')
+    expect(lines[1]).toContain('pnpm codecheck')
+    expect(lines).toContain(
+      'pnpm gameinfo-narrowing-ceiling || checks_status=1'
+    )
+    expect(lines.some((l) => l.includes('&& pnpm'))).toBe(false)
+    expect(
+      lines.findIndex((l) => l.startsWith('pnpm gameinfo-narrowing-ceiling'))
+    ).toBeGreaterThan(
+      lines.findIndex((l) => l.startsWith('pnpm backend-di-ceilings'))
+    )
   })
 })
 
@@ -119,6 +126,10 @@ const EXPECTED_ORDER = [
   'backend-di-ceilings',
   'gameinfo-narrowing-ceiling'
 ]
+
+/** The pre-Phase-78 line 2: an && chain, so a red check hides every later one. */
+const PRE_78_CHAIN =
+  'pnpm codecheck && pnpm lint && pnpm prettier && pnpm i18n --fail-on-update && pnpm find-deadcode && pnpm boundaries && pnpm steam-line-ceiling && pnpm backend-di-ceilings'
 
 const describePosix = process.platform === 'win32' ? describe.skip : describe
 
@@ -165,35 +176,30 @@ describePosix('pre-push hook behaviour (stub pnpm)', () => {
     expect(r.log).toEqual(EXPECTED_ORDER)
   })
 
-  it('a red backend-di-ceilings still runs the ratchet and fails the push', () => {
-    const r = runHook(prePush, 'backend-di-ceilings')
-    expect(r.status).not.toBe(0)
-    expect(r.log).toContain('gameinfo-narrowing-ceiling')
-  })
-
-  it('a red lint still runs the ratchet and fails the push', () => {
-    const r = runHook(prePush, 'lint')
-    expect(r.status).not.toBe(0)
-    expect(r.log).toContain('gameinfo-narrowing-ceiling')
-    expect(r.log).not.toContain('prettier')
-  })
+  it.each(EXPECTED_ORDER)(
+    'a red %s still runs every check and fails the push',
+    (name) => {
+      const r = runHook(prePush, name)
+      expect(r.status).not.toBe(0)
+      expect(r.log).toEqual(EXPECTED_ORDER)
+    }
+  )
 
   it('a red ratchet alone fails the push', () => {
     const r = runHook(prePush, 'gameinfo-narrowing-ceiling')
     expect(r.status).not.toBe(0)
   })
 
-  it('near-miss: the pre-fix && chain never reaches the ratchet', () => {
-    const lines = prePush.split('\n')
+  it('near-miss: the pre-78 && chain never reaches prettier after a red lint', () => {
     const oldHook = [
-      lines[0],
-      `${lines[1]} && pnpm gameinfo-narrowing-ceiling`,
+      '#!/bin/bash',
+      PRE_78_CHAIN,
       'checks_status=$?',
       'exit "$checks_status"',
       ''
     ].join('\n')
-    const r = runHook(oldHook, 'backend-di-ceilings')
+    const r = runHook(oldHook, 'lint')
     expect(r.status).not.toBe(0)
-    expect(r.log).not.toContain('gameinfo-narrowing-ceiling')
+    expect(r.log).not.toContain('prettier')
   })
 })

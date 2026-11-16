@@ -62,9 +62,14 @@ describe('steam-line-ceiling gate wiring', () => {
     expect(stepIndex(steps, 'pnpm steam-line-ceiling')).toBe(-1)
   })
 
-  it('pre-push line 1 is the shebang and line 2 chains the gate', () => {
+  it('pre-push line 1 is the shebang and the gate has its own line after boundaries', () => {
     const lines = prePush.split('\n')
     expect(lines[0]).toMatch(/^#!/)
-    expect(lines[1]).toContain('pnpm boundaries && pnpm steam-line-ceiling')
+    expect(lines[1]).toContain('pnpm codecheck')
+    expect(lines).toContain('pnpm steam-line-ceiling || checks_status=1')
+    expect(lines.some((l) => l.includes('&& pnpm'))).toBe(false)
+    expect(
+      lines.findIndex((l) => l.startsWith('pnpm steam-line-ceiling'))
+    ).toBeGreaterThan(lines.findIndex((l) => l.startsWith('pnpm boundaries')))
   })
 })

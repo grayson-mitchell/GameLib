@@ -43,11 +43,20 @@ function lintSteps(): Step[] {
 
 const GATE_RUN = 'pnpm backend-di-ceilings'
 
+const GUARDED_RUNS = [
+  'pnpm prettier',
+  'pnpm find-deadcode',
+  'pnpm boundaries',
+  'pnpm steam-line-ceiling',
+  'pnpm backend-di-ceilings',
+  'pnpm gameinfo-narrowing-ceiling'
+]
+
 /** True when the install-deps step is `id: deps` and the gate step carries
  *  an `if` that survives an earlier failing step but not a failed install. */
-function gateUnmasked(steps: Step[]): boolean {
+function gateUnmasked(steps: Step[], run: string = GATE_RUN): boolean {
   const install = steps.find((s) => s.uses === './.github/actions/install-deps')
-  const gate = steps.find((s) => s.run === GATE_RUN)
+  const gate = steps.find((s) => s.run === run)
   const cond = gate?.if ?? ''
   return (
     install?.id === 'deps' &&
@@ -97,11 +106,45 @@ describe('backend-di-ceilings gate wiring', () => {
     expect(gateUnmasked(steps)).toBe(false)
   })
 
-  it('pre-push line 1 is the shebang and line 2 chains the gate', () => {
+  it('Phase 78: every step after `Lint code.` is guarded; `Lint code.` itself is not', () => {
+    const steps = lintSteps()
+    const lint = stepIndex(steps, 'pnpm lint')
+    expect(lint).toBeGreaterThanOrEqual(0)
+    expect(steps[lint].if).toBeUndefined()
+    for (const run of GUARDED_RUNS) {
+      expect(stepIndex(steps, run)).toBeGreaterThan(lint)
+    }
+  })
+
+  it.each(GUARDED_RUNS)(
+    'Phase 78: %s runs even when an earlier step is red',
+    (run) => {
+      expect(gateUnmasked(lintSteps(), run)).toBe(true)
+    }
+  )
+
+  it.each(GUARDED_RUNS)(
+    'near-miss: with the if removed from %s it is masked again',
+    (run) => {
+      const steps = lintSteps().map((s) => {
+        if (s.run !== run) return s
+        const { if: _dropped, ...rest } = s
+        return rest
+      })
+      expect(gateUnmasked(steps, run)).toBe(false)
+    }
+  )
+
+  it('pre-push line 1 is the shebang, line 2 runs codecheck, the gate has its own line after steam-line-ceiling', () => {
     const lines = prePush.split('\n')
     expect(lines[0]).toMatch(/^#!/)
-    expect(lines[1]).toContain(
-      'pnpm steam-line-ceiling && pnpm backend-di-ceilings'
+    expect(lines[1]).toContain('pnpm codecheck')
+    expect(lines).toContain('pnpm backend-di-ceilings || checks_status=1')
+    expect(lines.some((l) => l.includes('&& pnpm'))).toBe(false)
+    expect(
+      lines.findIndex((l) => l.startsWith('pnpm backend-di-ceilings'))
+    ).toBeGreaterThan(
+      lines.findIndex((l) => l.startsWith('pnpm steam-line-ceiling'))
     )
   })
 

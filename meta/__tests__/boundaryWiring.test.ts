@@ -56,10 +56,17 @@ describe('boundary gate wiring', () => {
     expect(hasBoundariesStep(load(lintYml) as ParsedWorkflow)).toBe(true)
   })
 
-  it('pre-push line 2 chains pnpm boundaries and line 1 is the shebang', () => {
+  it('pre-push runs pnpm boundaries on its own line and line 1 is the shebang', () => {
     const lines = prePush.split('\n')
     expect(lines[0]).toMatch(/^#!/)
-    expect(lines[1]).toContain('pnpm boundaries')
+    expect(lines[1]).toContain('pnpm codecheck')
+    expect(lines).toContain('pnpm boundaries || checks_status=1')
+    expect(lines.some((l) => l.includes('&& pnpm'))).toBe(false)
+    expect(
+      lines.findIndex((l) => l.startsWith('pnpm boundaries'))
+    ).toBeGreaterThan(
+      lines.findIndex((l) => l.startsWith('pnpm find-deadcode'))
+    )
   })
 
   it('package.json boundaries script runs depcruise only', () => {
