@@ -1284,6 +1284,29 @@ describe('76 gap: marker-less pinned bottle (CR-01)', () => {
     )
   })
 
+  test('76 review WR-02: a marker reconciled while the pin was absent still stops the pin wineserver once it is installed', async () => {
+    layBottle(false)
+    ;(ctx.fallback.isPinnedEngineInstalled as jest.Mock).mockReturnValue(false)
+    expect(reconcileBottleEngineMarker(ctx, NAME)).toBe('pinned')
+    expect(marker().wineserverBin).toBe('')
+    ;(ctx.fallback.isPinnedEngineInstalled as jest.Mock).mockReturnValue(true)
+    addTimestamp()
+    expect(await run(crossover)).toMatchObject({ ok: true, changed: true })
+    expect(deps.killWith).toHaveBeenCalledWith(
+      NAME,
+      pinWs,
+      { USER: 'crossover' },
+      15_000
+    )
+    expect(
+      logs().logWarning.mock.calls.map((c: unknown[]) => String(c[0]))
+    ).not.toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('outside the engine roots')
+      ])
+    )
+  })
+
   test('reconcile of a contradicted crossover marker persists pinned', () => {
     layBottle(true)
     seedMarker({ kind: 'crossover', id: 'crossover', wineserverBin: '' })

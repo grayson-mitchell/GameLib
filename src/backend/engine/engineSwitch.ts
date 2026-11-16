@@ -602,6 +602,20 @@ export function recordCrossoverBottleEngine(
   }
 }
 
+/**
+ * 76 review WR-02: a pinned marker with no recorded wineserver (inferred or reconciled while the
+ * pin was not installed) resolves it from the marker's pin, else the current pin, once installed.
+ */
+function pinnedWineserverFallback(
+  prev: EngineMarker,
+  deps: EngineSwitchDeps
+): string {
+  if (prev.kind !== 'pinned') return ''
+  const pin = pinById(prev.id) ?? ENGINE_PINS.current
+  if (!deps.ctx.fallback.isPinnedEngineInstalled(pin)) return ''
+  return deps.ctx.fallback.pinnedEnginePaths(pin).wineserverBin
+}
+
 async function killPrevious(
   bottleName: string,
   prev: EngineMarker,
@@ -624,7 +638,7 @@ async function killPrevious(
     )
     return
   }
-  const bin = prev.wineserverBin
+  const bin = prev.wineserverBin || pinnedWineserverFallback(prev, deps)
   if (bin && !existsSync(bin)) {
     logInfo(
       `engine switch: no wineserver at ${basename(bin)} for "${bottleName}", nothing to stop`,
