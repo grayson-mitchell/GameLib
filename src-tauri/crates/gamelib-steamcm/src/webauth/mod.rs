@@ -156,8 +156,17 @@ impl WebAuth {
             .headers()
             .get("x-eresult")
             .and_then(|v| v.to_str().ok())
-            .and_then(|v| v.trim().parse::<i32>().ok())
-            .ok_or(WebAuthError::Protocol("missing-x-eresult"))?;
+            .and_then(|v| v.trim().parse::<i32>().ok());
+        let status = resp.status();
+        let eresult = match eresult {
+            Some(n) => n,
+            // A rate limit or an edge 5xx without Steam's header says nothing about the flow:
+            // report it as transient so the poll loops keep going until their deadline (WR-05).
+            None if status.as_u16() == 429 || status.is_server_error() => {
+                return Err(WebAuthError::Network)
+            }
+            None => return Err(WebAuthError::Protocol("missing-x-eresult")),
+        };
         if eresult != 1 {
             return Err(WebAuthError::EResult(eresult));
         }
@@ -591,6 +600,43 @@ mod tests {
         assert_eq!(r2.err(), Some(WebAuthError::Protocol("missing-x-eresult")));
     }
 
+    /// WR-05: a rate limit or an edge 5xx without `x-eresult` is transient, not a protocol error.
+    #[tokio::test]
+    async fn headerless_429_and_5xx_are_network_errors() {
+        crate::install_crypto_provider();
+        let mock = Mock::start().await;
+        for status in [429u16, 500, 502, 503] {
+            mock.push(
+                POLL,
+                Reply {
+                    status,
+                    x_eresult: None,
+                    body: Vec::new(),
+                },
+            );
+        }
+        // A headerless non-transient status stays a protocol error.
+        mock.push(
+            POLL,
+            Reply {
+                status: 404,
+                x_eresult: None,
+                body: Vec::new(),
+            },
+        );
+        let wa = WebAuth::new(mock.base_url());
+        for status in [429u16, 500, 502, 503] {
+            let r: Result<CAuthentication_PollAuthSessionStatus_Response, _> = wa
+                .call(HttpMethod::Post, "PollAuthSessionStatus", &poll_req())
+                .await;
+            assert_eq!(r.err(), Some(WebAuthError::Network), "{status}");
+        }
+        let r: Result<CAuthentication_PollAuthSessionStatus_Response, _> = wa
+            .call(HttpMethod::Post, "PollAuthSessionStatus", &poll_req())
+            .await;
+        assert_eq!(r.err(), Some(WebAuthError::Protocol("missing-x-eresult")));
+    }
+
     #[tokio::test]
     async fn oversize_body_is_error() {
         crate::install_crypto_provider();
@@ -790,6 +836,45 @@ mod tests {
                 ..
             }
         ));
+    }
+
+    /// WR-05: a rate-limited poll keeps the QR flow alive instead of ending the sign-in.
+    #[tokio::test]
+    async fn qr_poll_survives_a_headerless_429_and_503() {
+        crate::install_crypto_provider();
+        let mock = Mock::start().await;
+        mock.push(BEGIN, begin_reply("https://s.team/q/1", 2.0));
+        for status in [429u16, 503] {
+            mock.push(
+                POLL,
+                Reply {
+                    status,
+                    x_eresult: None,
+                    body: Vec::new(),
+                },
+            );
+        }
+        let token = jwt("76561198000000001");
+        mock.push(
+            POLL,
+            Reply::ok(
+                CAuthentication_PollAuthSessionStatus_Response {
+                    refresh_token: Some(token.clone()),
+                    account_name: Some("someone".into()),
+                    ..Default::default()
+                }
+                .write_to_bytes()
+                .unwrap(),
+            ),
+        );
+        let wa = fast(mock.base_url());
+        let st = wa.qr_start().await.unwrap();
+        sleep_ms(300).await;
+        match wa.status(&st.flow_id) {
+            FlowStatus::Done { refresh_token, .. } => assert_eq!(refresh_token, token),
+            FlowStatus::Error { reason, .. } => panic!("flow ended: {reason:?}"),
+            _ => panic!("not done"),
+        }
     }
 
     #[tokio::test]
