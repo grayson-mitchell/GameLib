@@ -36,8 +36,6 @@ jest.mock('frontend/state/libraryState', () => ({
   default: (sel: (s: { libraryStatus: typeof mockStatuses }) => unknown) =>
     sel({ libraryStatus: mockStatuses })
 }))
-jest.mock('../SteamUpdateInfo.scss', () => ({}))
-jest.mock('@mui/icons-material', () => ({ CloudDownload: () => null }))
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, def: string, params: Record<string, string> = {}) => {
@@ -64,50 +62,31 @@ function collectText(node: unknown): string {
   return collectText(el.props?.children)
 }
 
-function findButton(
-  node: unknown
-): ReactElement<{ onClick: () => void }> | null {
-  if (!node || typeof node !== 'object') return null
-  if (Array.isArray(node)) {
-    for (const n of node) {
-      const f = findButton(n)
-      if (f) return f
-    }
-    return null
-  }
-  const el = node as ReactElement<{ children?: unknown; onClick: () => void }>
-  if (el.type === 'button') return el
-  return findButton(el.props?.children)
-}
-
-function render(): ReactElement | null {
+function render(appName = '1'): ReactElement | null {
   idx = 0
   effects = []
-  const out = SteamUpdateInfo({
-    appName: '1',
-    hasUpdate: true
-  }) as ReactElement | null
-  return out
+  return SteamUpdateInfo({ appName, hasUpdate: true }) as ReactElement | null
 }
 
-async function mount(): Promise<ReactElement | null> {
+type Cleanup = (() => void) | undefined
+let cleanups: Cleanup[] = []
+afterEach(() => cleanups.forEach((c) => c?.()))
+
+async function mount(appName = '1'): Promise<ReactElement | null> {
   slots.length = 0
-  let out = render()
-  for (const e of effects) e.fn()
-  for (let i = 0; i < 3; i++) {
-    await flush()
-    if (dirty) {
-      dirty = false
-      out = render()
-    }
-  }
-  return out
+  dirty = false
+  render(appName)
+  cleanups = effects.map((e) => e.fn() as Cleanup)
+  for (let i = 0; i < 4; i++) await flush()
+  dirty = false
+  return render(appName)
 }
 
 const base: Info = {
   kind: 'bridge',
   state: 'stale',
   installedBuild: '1',
+  targetBuild: '2',
   branch: 'public'
 }
 const estimate = {
@@ -118,91 +97,126 @@ const estimate = {
 }
 
 let api: jest.Mock
-function useInfo(initial: Info | null, afterClick?: Info) {
-  api = jest.fn((_id: string, opts?: { computeSize: boolean }) =>
-    Promise.resolve(opts?.computeSize && afterClick ? afterClick : initial)
-  )
-  ;(window as unknown as { api: object }).api = { getSteamUpdateInfo: api }
-}
-
-describe('SteamUpdateInfo', () => {
-  it('refetches when the game status changes and hides the line once current', async () => {
-    mockStatuses = [{ appName: '1', status: 'updating' }]
-    api = jest.fn()
-    api
-      .mockResolvedValueOnce({ ...base, kind: 'registered' })
-      .mockResolvedValueOnce({ ...base, kind: 'registered', state: 'current' })
-    ;(window as unknown as { api: object }).api = { getSteamUpdateInfo: api }
-    slots.length = 0
-    let out = render()
-    expect(effects[0]?.deps).toContain('updating')
-    for (const e of effects) e.fn()
-    await flush()
-    dirty = false
-    out = render()
-    expect(collectText(out)).not.toBe('')
-    // status entry removed after 'done'
-    mockStatuses = []
-    out = render()
-    expect(effects[0]?.deps).toContain(undefined)
-    for (const e of effects) e.fn()
-    await flush()
-    out = render()
-    expect(api).toHaveBeenCalledTimes(2)
-    expect(collectText(out)).toBe('')
-  })
-
-  it('mounts without computeSize and offers Show update size, then shows the sizes line', async () => {
-    useInfo(base, { ...base, estimate })
-    let out = await mount()
-    expect(api).toHaveBeenCalledWith('1')
-    expect(api.mock.calls[0]).toHaveLength(1)
-    const btn = findButton(out)
-    expect(collectText(out)).toContain('Show update size')
-    btn?.props.onClick()
-    for (let i = 0; i < 3; i++) {
-      await flush()
-      if (dirty) {
-        dirty = false
-        out = render()
-      }
-    }
-    expect(api).toHaveBeenCalledWith('1', { computeSize: true })
-    expect(collectText(out)).toContain(
-      'Download about 916 MiB · needs 13 GiB free during update (estimate)'
+function useInfo(initial: Info | null, afterCompute?: Info | 'reject') {
+  api = jest.fn((_id: string, opts?: { computeSize: boolean }) => {
+    if (opts?.computeSize && afterCompute === 'reject')
+      return Promise.reject(new Error('boom'))
+    return Promise.resolve(
+      opts?.computeSize && afterCompute ? afterCompute : initial
     )
   })
+  ;(window as unknown as { api: object }).api = { getSteamUpdateInfo: api }
+}
+const computeCalls = () =>
+  api.mock.calls.filter((c) => (c[1] as { computeSize?: boolean })?.computeSize)
 
-  it('renders the sizes immediately when the estimate is present', async () => {
+describe('SteamUpdateInfo (quick 261114-obu)', () => {
+  beforeEach(() => {
+    mockStatuses = []
+  })
+
+  it('auto-computes once, shows Checking while pending, then the download size only', async () => {
+    let resolve: (v: Info) => void = () => undefined
+    api = jest.fn((_id: string, opts?: { computeSize: boolean }) =>
+      opts?.computeSize
+        ? new Promise<Info>((r) => (resolve = r))
+        : Promise.resolve(base)
+    )
+    ;(window as unknown as { api: object }).api = { getSteamUpdateInfo: api }
+    slots.length = 0
+    dirty = false
+    render('a1')
+    effects.forEach((e) => e.fn())
+    await flush()
+    await flush()
+    dirty = false
+    expect(collectText(render('a1'))).toBe(' · Checking update size…')
+    expect(computeCalls()).toHaveLength(1)
+    resolve({ ...base, estimate })
+    await flush()
+    await flush()
+    const text = collectText(render('a1'))
+    expect(text).toBe(' · Download about 916 MiB')
+    expect(text).not.toContain('needs')
+    expect(text).not.toContain('free during update')
+  })
+
+  it('uses a cached estimate without computeSize', async () => {
     useInfo({ ...base, estimate })
-    const out = await mount()
-    expect(collectText(out)).toContain('Download about 916 MiB')
-    expect(api).toHaveBeenCalledTimes(1)
+    const out = await mount('a2')
+    expect(collectText(out)).toBe(' · Download about 916 MiB')
+    expect(computeCalls()).toHaveLength(0)
   })
 
-  it('renders the fallback sentence when the old manifest is gone', async () => {
+  it('uses the same label when the old manifest is gone', async () => {
     useInfo({ ...base, estimate: { ...estimate, oldManifestAvailable: false } })
-    const text = collectText(await mount())
-    expect(text).toContain("can't get the previous build's file list")
-    expect(text).toContain('download up to')
+    const text = collectText(await mount('a3'))
+    expect(text).toBe(' · Download about 916 MiB')
   })
 
-  it('says Steam will update a registered game, with no size button', async () => {
-    useInfo({ ...base, kind: 'registered' })
-    const out = await mount()
-    expect(collectText(out)).toContain('Steam will update this game.')
-    expect(findButton(out)).toBeNull()
+  it('renders nothing when compute returns sizeError without an estimate', async () => {
+    useInfo(base, { ...base, sizeError: 'x' })
+    expect(collectText(await mount('a4'))).toBe('')
+    expect(computeCalls()).toHaveLength(1)
   })
 
-  it('shows the unknown text and no button', async () => {
-    useInfo({ ...base, state: 'unknown' })
-    const out = await mount()
-    expect(collectText(out)).toContain('Update status unknown')
-    expect(findButton(out)).toBeNull()
+  it('renders nothing when compute rejects', async () => {
+    useInfo(base, 'reject')
+    expect(collectText(await mount('a5'))).toBe('')
   })
 
-  it('renders nothing for a current game', async () => {
-    useInfo({ ...base, state: 'current' })
-    expect(await mount()).toBeNull()
+  it('does not retry a failed app+targetBuild, but computes for a new targetBuild', async () => {
+    useInfo(base, 'reject')
+    await mount('a6')
+    expect(computeCalls()).toHaveLength(1)
+    await mount('a6')
+    expect(computeCalls()).toHaveLength(1)
+    useInfo({ ...base, targetBuild: '3' }, { ...base, targetBuild: '3' })
+    await mount('a6')
+    expect(computeCalls()).toHaveLength(1)
+  })
+
+  it('makes no state update after cleanup', async () => {
+    let resolve: (v: Info) => void = () => undefined
+    api = jest.fn((_id: string, opts?: { computeSize: boolean }) =>
+      opts?.computeSize
+        ? new Promise<Info>((r) => (resolve = r))
+        : Promise.resolve(base)
+    )
+    ;(window as unknown as { api: object }).api = { getSteamUpdateInfo: api }
+    slots.length = 0
+    dirty = false
+    render('a7')
+    const cs = effects.map((e) => e.fn() as Cleanup)
+    await flush()
+    await flush()
+    dirty = false
+    cs.forEach((c) => c?.())
+    resolve({ ...base, estimate })
+    await flush()
+    await flush()
+    expect(dirty).toBe(false)
+  })
+
+  it.each([
+    ['registered', { ...base, kind: 'registered' as const }],
+    ['unknown', { ...base, state: 'unknown' as const }],
+    ['current', { ...base, state: 'current' as const }],
+    ['null', null]
+  ])('renders nothing and never computes for %s', async (name, result) => {
+    useInfo(result as Info | null)
+    expect(collectText(await mount(`g-${name}`))).toBe('')
+    expect(computeCalls()).toHaveLength(0)
+  })
+
+  it('refetches when the game status changes', () => {
+    mockStatuses = [{ appName: 'a9', status: 'updating' }]
+    useInfo(null)
+    slots.length = 0
+    render('a9')
+    expect(effects[0]?.deps).toContain('updating')
+    mockStatuses = []
+    render('a9')
+    expect(effects[0]?.deps).toContain(undefined)
   })
 })

@@ -24,7 +24,6 @@ import {
 import { Link, NavLink, useLocation, useParams } from 'react-router-dom'
 import { Trans, useTranslation } from 'react-i18next'
 import { confirmSteamUpdate } from 'frontend/helpers/steamUpdateConfirm'
-import SteamUpdateInfo from './components/SteamUpdateInfo'
 import SteamUpdateButton from './components/SteamUpdateButton'
 import {
   useEpicAccount,
@@ -595,12 +594,6 @@ export default React.memo(function GamePage(): JSX.Element | null {
                           handleUpdate={handleUpdate}
                           hasUpdate={hasUpdate}
                         />
-                        {isStore(gameInfo, 'steam') && is_installed && (
-                          <SteamUpdateInfo
-                            appName={appName}
-                            hasUpdate={hasUpdate}
-                          />
-                        )}
                         <div className="buttons">
                           <MainButton
                             gameInfo={gameInfo}

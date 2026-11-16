@@ -10,7 +10,7 @@
  * Both files are read through `stripSourceComments`, so a comment that merely
  * names a forbidden pattern cannot satisfy or trip a gate.
  */
-import { readFileSync } from 'fs'
+import { existsSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 
@@ -174,26 +174,19 @@ describe('GamePage/index.tsx: card structure (D-02, D-03, D-04, D-06)', () => {
   })
 })
 
-// quick 261114-nxb / 74-UAT item 1: explicit Update button beside Play and the
-// update line in the dock instead of the Info tab.
-describe('GamePage/index.tsx: Steam update controls in the dock (nxb)', () => {
+// quick 261114-nxb / 74-UAT item 1 + 261114-obu: explicit Update button beside
+// Play; the update-size label moved out of the dock into the GameStatus line.
+describe('GamePage/index.tsx: Steam update controls in the dock (nxb/obu)', () => {
   const at = (needle: string): number => {
     const i = tsx.indexOf(needle)
     if (i === -1) throw new Error(`${needle} not found in index.tsx`)
     return i
   }
-  const scss = stripSourceComments(
-    readFileSync(
-      join(__dirname, '..', 'components', 'SteamUpdateInfo.scss'),
-      'utf8'
-    )
-  )
 
-  it('L7: update line sits above the button row, update button follows Play', () => {
+  it('L7: update button follows Play; no update-info row in the dock', () => {
     const positions = [
       'className="actionDock"',
       '<GameStatus',
-      '<SteamUpdateInfo',
       'className="buttons"',
       '<MainButton',
       '<SteamUpdateButton',
@@ -203,16 +196,25 @@ describe('GamePage/index.tsx: Steam update controls in the dock (nxb)', () => {
     expect(positions).toEqual([...positions].sort((a, b) => a - b))
   })
 
-  it('L7: one mount each, and the update line left the Info tab', () => {
-    expect(tsx.match(/<SteamUpdateInfo/g) ?? []).toHaveLength(1)
+  it('L7: index.tsx neither mounts nor imports SteamUpdateInfo', () => {
+    expect(tsx.match(/<SteamUpdateInfo/g) ?? []).toHaveLength(0)
+    expect(tsx).not.toMatch(/import SteamUpdateInfo/)
     expect(tsx.match(/<SteamUpdateButton/g) ?? []).toHaveLength(1)
-    expect(at('<SteamUpdateInfo')).toBeLessThan(
-      at('className="extraInfoWrapper"')
-    )
   })
 
-  it('L7: SteamUpdateInfo.scss uses theme tokens only', () => {
-    expect(scss).not.toMatch(/#[0-9a-f]{3,8}\b/i)
-    expect(scss).not.toMatch(/\b(rgb|rgba|hsl|hsla)\(/i)
+  it('L7: GameStatus mounts SteamUpdateInfo exactly once', () => {
+    const status = stripSourceComments(
+      readFileSync(
+        join(__dirname, '..', 'components', 'GameStatus.tsx'),
+        'utf8'
+      )
+    )
+    expect(status.match(/<SteamUpdateInfo/g) ?? []).toHaveLength(1)
+  })
+
+  it('L7: SteamUpdateInfo.scss is gone', () => {
+    expect(
+      existsSync(join(__dirname, '..', 'components', 'SteamUpdateInfo.scss'))
+    ).toBe(false)
   })
 })

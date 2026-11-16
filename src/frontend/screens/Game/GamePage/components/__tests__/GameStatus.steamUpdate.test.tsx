@@ -39,7 +39,24 @@ jest.mock('@mui/material', () => ({
 jest.mock('frontend/helpers', () => ({ getProgress: () => 0 }))
 jest.mock('../../../GameContext', () => ({ __esModule: true, default: {} }))
 
+const mockSteamUpdateInfo = function SteamUpdateInfoStub() {
+  return null
+}
+jest.mock('../SteamUpdateInfo', () => ({
+  __esModule: true,
+  default: mockSteamUpdateInfo
+}))
+
 import GameStatus from '../GameStatus'
+
+function findByType(node: unknown, type: unknown): ReactElement[] {
+  if (node === null || node === undefined || typeof node !== 'object') return []
+  if (Array.isArray(node)) return node.flatMap((n) => findByType(n, type))
+  const el = node as ReactElement
+  const own = el.type === type ? [el] : []
+  const children = (el.props as { children?: unknown } | undefined)?.children
+  return [...own, ...findByType(children, type)]
+}
 
 function collectText(node: unknown): string {
   if (node === null || node === undefined || typeof node === 'boolean')
@@ -100,6 +117,9 @@ describe('GameStatus update line (quick 261114-nxb)', () => {
     expect(text).toContain('New Version Available!')
     expect(text).not.toContain('Click to Update')
     expect(hasOnClick(tree)).toBe(false)
+    const stubs = findByType(tree, mockSteamUpdateInfo)
+    expect(stubs).toHaveLength(1)
+    expect((stubs[0]?.props as { appName: string }).appName).toBe('1')
   })
 
   it('legendary: keeps the clickable "Click to Update" text', () => {
@@ -109,5 +129,6 @@ describe('GameStatus update line (quick 261114-nxb)', () => {
     expect(hasOnClick(tree)).toBe(true)
     void findOnClick(tree)?.()
     expect(handleUpdate).toHaveBeenCalledTimes(1)
+    expect(findByType(tree, mockSteamUpdateInfo)).toHaveLength(0)
   })
 })

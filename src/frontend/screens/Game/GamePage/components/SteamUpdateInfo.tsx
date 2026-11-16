@@ -1,11 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { CloudDownload } from '@mui/icons-material'
 import { size } from 'frontend/helpers'
 import useLibraryState from 'frontend/state/libraryState'
 import type { SteamUpdateInfo as SteamUpdateInfoData } from 'common/types/steam'
-
-import './SteamUpdateInfo.scss'
 
 interface Props {
   appName: string
@@ -13,15 +10,27 @@ interface Props {
 }
 
 /**
- * Phase 74-12 (D-09/D-15): the game page's update line for an installed Steam
- * game. Mount reads the state without authenticated traffic; the sizes are
- * only computed on an explicit click of "Show update size" (T-74-39). Hooks
- * run unconditionally, before any early return.
+ * quick 261114-obu: inline async update-size label appended to the GameStatus
+ * line ("Installed - New Version Available! · Download about 916 MB").
+ *
+ * OPERATOR DECISION 2026-11-14: this deliberately reverses the Phase 74-12
+ * click-only gate (D-09/D-15, T-74-39 "no silent authenticated logon"). A
+ * stale bridge game with no cached estimate now takes one authenticated
+ * steam-user lease automatically on mount.
+ *
+ * Bounds: the plain read returns the backend's per-boot cached estimate
+ * without authenticating, so computeSize is only requested when that read is
+ * bridge+stale with no estimate. Concurrent mounts share one in-flight request
+ * and failures are memoised per appName@targetBuild, so nothing retries or
+ * loops. Failures render nothing. Hooks run unconditionally before any return.
  */
+const sizeRequests = new Map<string, Promise<SteamUpdateInfoData | null>>()
+const failedSizes = new Set<string>()
+
 const SteamUpdateInfo = ({ appName, hasUpdate }: Props) => {
   const { t } = useTranslation('gamelib')
   const [info, setInfo] = useState<SteamUpdateInfoData | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [computing, setComputing] = useState(false)
   // Re-read after the game's operation status changes (an update ending clears the line).
   const libraryStatus = useLibraryState(
     (s) => s.libraryStatus.find((g) => g.appName === appName)?.status
@@ -30,104 +39,58 @@ const SteamUpdateInfo = ({ appName, hasUpdate }: Props) => {
   useEffect(() => {
     let cancelled = false
     setInfo(null)
-    window.api
-      .getSteamUpdateInfo(appName)
-      .then((result) => {
-        if (!cancelled) setInfo(result)
-      })
-      .catch(() => {
-        if (!cancelled) setInfo(null)
-      })
+    setComputing(false)
+    const run = async () => {
+      const result = await window.api.getSteamUpdateInfo(appName)
+      if (cancelled) return
+      setInfo(result)
+      if (
+        !(result?.kind === 'bridge' && result.state === 'stale') ||
+        result.estimate
+      )
+        return
+      const key = `${appName}@${result.targetBuild ?? ''}`
+      if (failedSizes.has(key)) return
+      setComputing(true)
+      let request = sizeRequests.get(key)
+      if (!request) {
+        request = window.api
+          .getSteamUpdateInfo(appName, { computeSize: true })
+          .finally(() => sizeRequests.delete(key))
+        sizeRequests.set(key, request)
+      }
+      try {
+        const computed = await request
+        if (computed?.estimate) {
+          if (!cancelled) setInfo(computed)
+        } else {
+          failedSizes.add(key)
+        }
+      } catch {
+        failedSizes.add(key)
+      }
+      if (!cancelled) setComputing(false)
+    }
+    run().catch(() => {
+      if (!cancelled) setComputing(false)
+    })
     return () => {
       cancelled = true
     }
   }, [appName, hasUpdate, libraryStatus])
 
-  const showSize = () => {
-    setLoading(true)
-    window.api
-      .getSteamUpdateInfo(appName, { computeSize: true })
-      .then((result) => {
-        if (result) setInfo(result)
-      })
-      .catch(() => undefined)
-      .finally(() => setLoading(false))
-  }
-
-  if (!info || info.state === 'current') return null
-
-  if (info.state === 'unknown') {
+  if (!info || info.kind !== 'bridge' || info.state !== 'stale') return null
+  if (info.estimate) {
     return (
-      <div className="iconWithText steamUpdateInfo">
-        <CloudDownload />
-        {t(
-          'gamepage.update.unknown',
-          "Update status unknown: GameLib can't see this game's {{branch}} branch.",
-          { branch: info.branch }
-        )}
-      </div>
+      <>{` · ${t('gamepage.update.downloadAbout', 'Download about {{download}}', { download: size(info.estimate.downloadBytes) })}`}</>
     )
   }
-
-  if (info.kind === 'registered') {
+  if (computing) {
     return (
-      <div className="iconWithText steamUpdateInfo">
-        <CloudDownload />
-        {t('gamepage.update.registered', 'Steam will update this game.')}
-      </div>
+      <>{` · ${t('gamepage.update.checkingSize', 'Checking update size…')}`}</>
     )
   }
-
-  const { estimate } = info
-  let body: JSX.Element
-  if (estimate) {
-    const params = {
-      download: size(estimate.downloadBytes),
-      peak: size(estimate.peakBytes)
-    }
-    body = (
-      <span className="steamUpdateEstimate">
-        {estimate.oldManifestAvailable
-          ? t(
-              'gamepage.update.sizesEstimate',
-              'Download about {{download}} · needs {{peak}} free during update (estimate)',
-              params
-            )
-          : `${t(
-              'gamepage.update.fallback',
-              "GameLib can't get the previous build's file list, so it will check every file: download up to {{download}}.",
-              params
-            )} ${t(
-              'gamepage.update.sizesEstimate',
-              'Download about {{download}} · needs {{peak}} free during update (estimate)',
-              params
-            )}`}
-      </span>
-    )
-  } else if (loading) {
-    body = (
-      <span className="steamUpdateEstimate">
-        {t('gamepage.update.checkingSize', 'Checking update size…')}
-      </span>
-    )
-  } else {
-    body = (
-      <button
-        type="button"
-        className="steamUpdateSizeButton"
-        onClick={showSize}
-      >
-        {t('gamepage.update.showSize', 'Show update size')}
-      </button>
-    )
-  }
-
-  return (
-    <div className="iconWithText steamUpdateInfo">
-      <CloudDownload />
-      {body}
-    </div>
-  )
+  return null
 }
 
 export default SteamUpdateInfo

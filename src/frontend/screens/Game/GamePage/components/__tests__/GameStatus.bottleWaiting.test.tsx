@@ -40,6 +40,11 @@ jest.mock('@mui/material', () => ({
 jest.mock('frontend/helpers', () => ({ getProgress: () => 0 }))
 jest.mock('../../../GameContext', () => ({ __esModule: true, default: {} }))
 
+jest.mock('../SteamUpdateInfo', () => ({
+  __esModule: true,
+  default: () => null
+}))
+
 import GameStatus from '../GameStatus'
 
 function collectText(node: unknown): string {

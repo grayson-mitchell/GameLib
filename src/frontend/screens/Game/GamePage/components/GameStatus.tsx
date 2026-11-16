@@ -11,6 +11,7 @@ import {
 } from 'frontend/state/BottleLaunchWaiting'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
+import SteamUpdateInfo from './SteamUpdateInfo'
 import { CircularProgress, LinearProgress } from '@mui/material'
 
 interface Props {
@@ -224,11 +225,20 @@ const GameStatus = ({ gameInfo, progress, handleUpdate, hasUpdate }: Props) => {
 
     if (hasUpdate) {
       // quick 261114-nxb: Steam has the explicit SteamUpdateButton instead.
+      // quick 261114-obu: the download size follows inline as an async label.
       if (isStore(runner, 'steam')) {
-        return `${t('status.installed')} - ${t(
-          'status.hasUpdates',
-          'New Version Available!'
-        )}`
+        return (
+          <>
+            {`${t('status.installed')} - ${t(
+              'status.hasUpdates',
+              'New Version Available!'
+            )}`}
+            <SteamUpdateInfo
+              appName={gameInfo.app_name}
+              hasUpdate={hasUpdate}
+            />
+          </>
+        )
       }
       return (
         <span onClick={async () => handleUpdate()} className="updateText">
