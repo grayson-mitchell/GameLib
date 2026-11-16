@@ -231,8 +231,9 @@ function isInside(root: string, path: string): boolean {
 }
 
 /**
- * G22 (59-38): read-only view of the bottle's engine marker for the launch path. Never infers
- * or writes a marker; null for an absent/unreadable marker or an unsafe bottle name.
+ * G22 (59-38): read-only view of the bottle's engine marker for the launch path. Never writes a
+ * marker; null for an absent/unreadable marker or an unsafe bottle name. A crossover marker
+ * contradicted by DXVK-macOS reads as the pin, as the switch treats it (76 review WR-01).
  */
 export function readBottleEngineMarkerKind(
   ctx: Pick<EngineSwitchContext, 'paths' | 'fallback' | 'versioning'>,
@@ -240,7 +241,7 @@ export function readBottleEngineMarkerKind(
 ): 'crossover' | 'non-crossover' | null {
   try {
     if (sanitizeBottleName(bottleName) !== bottleName) return null
-    const marker = readMarker(getBottleDir(ctx.paths, bottleName), ctx)
+    const marker = viewMarker(getBottleDir(ctx.paths, bottleName), ctx)
     if (!marker) return null
     return marker.kind === 'crossover' ? 'crossover' : 'non-crossover'
   } catch {
@@ -268,7 +269,7 @@ export function readBottleEngineMarkerSummary(
 } | null {
   try {
     if (sanitizeBottleName(bottleName) !== bottleName) return null
-    const marker = readMarker(getBottleDir(ctx.paths, bottleName), ctx)
+    const marker = viewMarker(getBottleDir(ctx.paths, bottleName), ctx)
     if (!marker) return null
     const pinWineserverBin =
       marker.kind === 'pinned' &&
@@ -301,7 +302,7 @@ export function restoreNeedsAbsentPin(
   try {
     if (sanitizeBottleName(bottleName) !== bottleName) return false
     const bottleDir = getBottleDir(ctx.paths, bottleName)
-    const prev = readMarker(bottleDir, ctx)
+    const prev = viewMarker(bottleDir, ctx)
     if (!prev || prev.kind === 'crossover') return false
     const restoreNeeded =
       existsSync(join(bottleDir, DXVK_VERSION_FILE)) || prev.dxvk !== undefined
@@ -456,13 +457,37 @@ function inferMarker(
   return pinned()
 }
 
+/** A crossover marker contradicted by DXVK-macOS in the bottle (76 CR-01). */
+function isContradictedCrossover(
+  bottleDir: string,
+  marker: EngineMarker | null
+): boolean {
+  return marker?.kind === 'crossover' && hasStagingDxvk(bottleDir)
+}
+
+/**
+ * 76 review WR-01: the marker as the switch sees it, for the read-only views, without logging.
+ * A contradicted crossover marker reads as the pinned marker inferMarker would give (DXVK-macOS
+ * always infers the current pin). Its wineserver is left empty: the views never use it to act.
+ */
+function viewMarker(
+  bottleDir: string,
+  ctx: Pick<EngineSwitchContext, 'fallback' | 'versioning'>
+): EngineMarker | null {
+  const marker = readMarker(bottleDir, ctx)
+  if (isContradictedCrossover(bottleDir, marker)) {
+    return { kind: 'pinned', id: ENGINE_PINS.current.id, wineserverBin: '' }
+  }
+  return marker
+}
+
 /** A crossover marker contradicted by DXVK-macOS in the bottle is not trusted (76 CR-01). */
 function trustedMarker(
   bottleDir: string,
   bottleName: string,
   marker: EngineMarker | null
 ): EngineMarker | null {
-  if (marker?.kind === 'crossover' && hasStagingDxvk(bottleDir)) {
+  if (isContradictedCrossover(bottleDir, marker)) {
     logWarning(
       `engine marker for "${bottleName}" says crossover but DXVK-macOS is installed; treating it as inferred (76 CR-01)`,
       LogPrefix.Backend

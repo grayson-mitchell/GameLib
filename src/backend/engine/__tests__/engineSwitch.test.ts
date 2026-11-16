@@ -797,6 +797,27 @@ describe('G22: read-only marker accessors', () => {
     expect(restoreNeedsAbsentPin(NAME)).toBe(false)
     expect(restoreNeedsAbsentPin('../escape')).toBe(false)
   })
+
+  test('76 review WR-01: a crossover marker contradicted by DXVK-macOS reads as the pin in every view, without writing or logging', () => {
+    const logs = jest.requireMock('backend/logger')
+    logs.logWarning.mockClear()
+    seed({ kind: 'crossover', id: 'crossover', wineserverBin: '' })
+    writeFileSync(join(dir, 'current_dxvk-macOS'), 'v1')
+    const bytes = readFileSync(join(dir, ENGINE_MARKER_FILE), 'utf8')
+    expect(readBottleEngineMarkerKind(NAME)).toBe('non-crossover')
+    expect(readBottleEngineMarkerSummary(NAME)).toEqual({
+      kind: 'non-crossover',
+      pinId: 'wine-staging-11.20',
+      wineManagerVersion: null,
+      pinWineserverBin: null
+    })
+    // The switch would restore from the current pin, which is not installed.
+    expect(restoreNeedsAbsentPin(NAME)).toBe(true)
+    ;(ctx.fallback.isPinnedEngineInstalled as jest.Mock).mockReturnValue(true)
+    expect(restoreNeedsAbsentPin(NAME)).toBe(false)
+    expect(readFileSync(join(dir, ENGINE_MARKER_FILE), 'utf8')).toBe(bytes)
+    expect(logs.logWarning).not.toHaveBeenCalled()
+  })
 })
 
 describe('G30 / WR-02 engine switch', () => {
