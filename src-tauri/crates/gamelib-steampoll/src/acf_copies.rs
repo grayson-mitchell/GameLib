@@ -170,25 +170,40 @@ fn refused(source: AcfSource, reason: &str) -> RemoveCopyResult {
     }
 }
 
-/// The first component of an untrusted manifest `installdir`, or `None` unless the whole value
-/// is a relative path made only of plain segments: no root, drive prefix, `.` or `..`.
-fn installdir_first_segment(installdir: &str) -> Option<String> {
+/// Whether an untrusted manifest `installdir` is safe to delete as `common/<installdir>`.
+#[derive(Debug, PartialEq, Eq)]
+enum InstalldirShape {
+    /// Exactly one plain segment.
+    Single,
+    /// Plain relative segments, but more than one (`Studio/GameA`): deleting it would mean
+    /// deleting a parent other apps may share (80-REVIEW A/WR-01).
+    Nested,
+    /// Absolute, drive-prefixed, or carrying a `.`/`..` segment (80-REVIEW A/CR-01).
+    Escaping,
+}
+
+fn installdir_shape(installdir: &str) -> InstalldirShape {
+    // `\` and `:` are separators or drive markers on Windows; NUL is never a valid name. Refuse
+    // them on every OS so one manifest means one thing everywhere.
+    if installdir.contains(['\\', ':', '\0']) {
+        return InstalldirShape::Escaping;
+    }
     let path = Path::new(installdir);
     if path.is_absolute() || path.has_root() {
-        return None;
+        return InstalldirShape::Escaping;
     }
-    let mut first = None;
+    let mut count = 0usize;
     for c in path.components() {
         match c {
-            Component::Normal(s) => {
-                if first.is_none() {
-                    first = Some(s.to_string_lossy().into_owned());
-                }
-            }
-            _ => return None,
+            Component::Normal(_) => count += 1,
+            _ => return InstalldirShape::Escaping,
         }
     }
-    first
+    match count {
+        0 => InstalldirShape::Escaping,
+        1 => InstalldirShape::Single,
+        _ => InstalldirShape::Nested,
+    }
 }
 
 fn is_symlink(p: &Path) -> bool {
@@ -287,14 +302,29 @@ pub fn remove_copy(roots: &PollRoots, app_id: &str, source: AcfSource) -> Remove
     // The library root is the steamapps dir the manifest was actually read from (one of the
     // configured roots), never recovered from installPath: an absolute or `..`-climbing
     // installdir could otherwise point the root, the guard and the conflict scan at another
-    // library (80-REVIEW A/CR-01). The installdir itself must be plain relative segments.
-    let segment = installdir_first_segment(&installdir);
-    let Some(segment) = segment else {
-        eprintln!(
-            "gamelib-steampoll: remove_copy refused appId {app_id} source {src}: outside common/"
-        );
-        return refused(source, "install path outside common/");
-    };
+    // library (80-REVIEW A/CR-01). The installdir itself must be exactly one plain segment, so
+    // the directory deleted is the one the manifest names and the conflict scan compares like
+    // with like (80-REVIEW A/WR-01).
+    match installdir_shape(&installdir) {
+        InstalldirShape::Single => {}
+        InstalldirShape::Nested => {
+            eprintln!(
+                "gamelib-steampoll: remove_copy refused appId {app_id} source {src}: nested installdir"
+            );
+            return refused(source, "installdir is not a single folder");
+        }
+        InstalldirShape::Escaping => {
+            eprintln!(
+                "gamelib-steampoll: remove_copy refused appId {app_id} source {src}: outside common/"
+            );
+            return refused(source, "install path outside common/");
+        }
+    }
+    let segment = Path::new(&installdir)
+        .components()
+        .next()
+        .map(|c| c.as_os_str().to_string_lossy().into_owned())
+        .unwrap_or_default();
 
     let steamapps_dir = PathBuf::from(&location.steamapps_dir);
     let common_root = steamapps_dir.join("common");

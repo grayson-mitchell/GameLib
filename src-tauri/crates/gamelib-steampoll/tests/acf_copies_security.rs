@@ -123,6 +123,33 @@ fn refuses_absolute_installdir_into_another_library() {
     assert!(victim.exists() && sentinel.exists());
 }
 
+/// 80-REVIEW A/WR-01: `Studio/GameA` must never delete `common/Studio`, which holds GameB too.
+#[test]
+fn refuses_nested_installdir_and_keeps_shared_parent() {
+    let tmp = TempDir::new().unwrap();
+    let (r, sa, _v, _s) = setup(&tmp);
+    let game_a = sa.join("common/Studio/GameA");
+    let game_b = sa.join("common/Studio/GameB");
+    fs::create_dir_all(&game_a).unwrap();
+    fs::create_dir_all(&game_b).unwrap();
+    fs::write(game_b.join("game.bin"), b"x").unwrap();
+    put(&sa, "10", "Studio/GameA");
+    put(&sa, "11", "Studio/GameB");
+    assert_refused(&remove_copy(&r, "10", AcfSource::Bottle));
+    assert!(game_a.exists() && game_b.join("game.bin").exists());
+}
+
+#[test]
+fn refuses_backslash_and_drive_installdir() {
+    let tmp = TempDir::new().unwrap();
+    let (r, sa, victim, sentinel) = setup(&tmp);
+    for bad in ["..\\..\\..\\victim", "C:\\victim", "C:victim"] {
+        put(&sa, "10", bad);
+        assert_refused(&remove_copy(&r, "10", AcfSource::Bottle));
+    }
+    assert!(victim.exists() && sentinel.exists());
+}
+
 #[cfg(unix)]
 #[test]
 fn refuses_symlinked_install_root() {
