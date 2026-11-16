@@ -1,34 +1,11 @@
 // D-09: non-blocking, dismissible - no backdrop, no focus trap. Position and
 // the toast surface (sketch 006 variant A) come from NoticeStack/index.scss;
 // the region keeps pointer-events off so Manage Accounts and any cached view
-// stay fully interactive while this is shown.
+// stay fully interactive while this is shown. The icon, text, title, body and
+// action come from the shared .noticeStack* rules (quick 261116-swr).
 .humbleExpiryToast {
-  // Single-line message + action layout (the shared surface aligns to start).
-  align-items: center;
-}
-
-.humbleExpiryToastIcon {
-  color: var(--status-warning);
-  flex-shrink: 0;
-}
-
-.humbleExpiryToastMessage {
-  flex: 1;
-  font-size: var(--text-sm);
-}
-
-.humbleExpiryToastAction {
-  background: transparent;
-  border: 1px solid var(--status-warning);
-  color: var(--status-warning);
-  border-radius: var(--space-3xs);
-  padding: var(--space-3xs) var(--space-sm);
-  cursor: pointer;
-  white-space: nowrap;
-  font-size: var(--text-sm);
-}
-
-.humbleExpiryToastAction:hover {
-  background: var(--status-warning);
-  color: var(--body-background);
+  // Top-aligned like the other notices: with a title and body block, center
+  // would float the icon, the X and the button to the middle of it. Restates
+  // the surface default on purpose, as .readOnlyStoresNotice does.
+  align-items: flex-start;
 }

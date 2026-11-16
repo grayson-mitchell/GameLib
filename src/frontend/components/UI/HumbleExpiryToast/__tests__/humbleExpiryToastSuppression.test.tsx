@@ -265,6 +265,27 @@ describe('HumbleExpiryToast acquires store-embed suppression while visible (Phas
     expect(release).toHaveBeenCalledTimes(1)
   })
 
+  it('renders the split title and body and the short Reconnect label', () => {
+    mount()
+    const tree = showToast()
+    const textOf = (n: ReactNode): string => {
+      if (n === null || n === undefined || typeof n === 'boolean') return ''
+      if (typeof n === 'string' || typeof n === 'number') return String(n)
+      if (Array.isArray(n)) return n.map(textOf).join('')
+      return textOf((n as El).props?.children)
+    }
+    expect(textOf(byClass(tree, 'noticeStackTitle'))).toBe(
+      'Humble Bundle session expired'
+    )
+    expect(textOf(byClass(tree, 'noticeStackBody'))).toBe(
+      'Reconnect to keep your keys in sync.'
+    )
+    const action = byClass(tree, 'humbleExpiryToastAction')
+    expect(textOf(action)).toBe('Reconnect')
+    expect(cls(action)).toContain('noticeStackAction')
+    expect(byClass(tree, 'noticeStackIcon')).toBeDefined()
+  })
+
   it('dismissing the toast (X) leaves through the slot lifecycle, then releases', () => {
     mount()
     const tree = showToast()

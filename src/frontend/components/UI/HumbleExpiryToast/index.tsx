@@ -92,16 +92,24 @@ export default function HumbleExpiryToast() {
       <>
         <FontAwesomeIcon
           icon={faTriangleExclamation}
-          className="humbleExpiryToastIcon"
+          className="noticeStackIcon humbleExpiryToastIcon"
         />
-        <span className="humbleExpiryToastMessage">
-          {t(
-            'login.humble_expired_toast',
-            'Your Humble Bundle session expired. Reconnect to keep your keys in sync.'
-          )}
+        <span className="noticeStackText humbleExpiryToastText">
+          <span className="noticeStackTitle humbleExpiryToastTitle">
+            {t('login.humble_expired_title', 'Humble Bundle session expired')}
+          </span>{' '}
+          <span className="noticeStackBody humbleExpiryToastBody">
+            {t(
+              'login.humble_expired_body',
+              'Reconnect to keep your keys in sync.'
+            )}
+          </span>
         </span>
-        <button className="humbleExpiryToastAction" onClick={handleReconnect}>
-          {t('login.humble_reconnect', 'Session expired — Reconnect')}
+        <button
+          className="noticeStackAction humbleExpiryToastAction"
+          onClick={handleReconnect}
+        >
+          {t('login.humble_reconnect_short', 'Reconnect')}
         </button>
         <button
           className="noticeStackDismiss humbleExpiryToastDismiss"

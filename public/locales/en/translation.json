@@ -642,8 +642,10 @@
         "humble_disconnect_message": "This removes your Humble Bundle session from GameLib. You can reconnect at any time.",
         "humble_disconnect_title": "Disconnect Humble Bundle?",
         "humble_encryption_degraded": "Your system does not support secure credential storage. The Humble Bundle session is stored with reduced encryption.",
-        "humble_expired_toast": "Your Humble Bundle session expired. Reconnect to keep your keys in sync.",
+        "humble_expired_body": "Reconnect to keep your keys in sync.",
+        "humble_expired_title": "Humble Bundle session expired",
         "humble_reconnect": "Session expired — Reconnect",
+        "humble_reconnect_short": "Reconnect",
         "message": "Login with your platform. You can login to more than one platform at the same time.",
         "old-mac": "Your macOS version is {{version}}. macOS 12 or newer is required to log in.",
         "steam": "Steam Login"
