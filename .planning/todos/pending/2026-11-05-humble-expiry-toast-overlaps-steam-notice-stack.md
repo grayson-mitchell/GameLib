@@ -36,3 +36,15 @@ motion. See `sketch-findings-gamelib` → `references/notices-and-toasts.md`
 
 Live gate: trigger a Humble expiry and a Steam launch notice together; confirm
 they stack without overlap and the survivor glides into place on dismiss.
+
+## How to run the live gate fast
+
+1. `pnpm tauri:dev` (not `tauri:dev:run`). The hook exists only in dev builds; a packaged or production build does not have it.
+2. Open DevTools on the main window and run `__gamelibNotices.both()`.
+3. Click back into the GameLib window. The Steam notice's 8s countdown is frozen while DevTools has focus.
+4. Confirm the two toasts stack in the bottom-right without overlapping, Steam above Humble.
+5. Dismiss the Steam toast with its X and watch the Humble toast glide into place. Run `__gamelibNotices.clear()`, then `both()` again, and this time dismiss Humble first.
+6. Turn on macOS System Settings -> Accessibility -> Display -> Reduce motion and repeat. Toasts should only fade, and slots should close without sliding.
+7. Finish with `__gamelibNotices.clear()`. Reload the window to reset fully: clear() leaves an on-screen Steam notice to leave on its own, and preview seqs can make the mounted Steam notice ignore a real notice until reload.
+
+The jsdom half (DOM order, single region, lifecycle in both dismissal orders) is covered by `NoticeStack/__tests__/NoticeStackTwoToast.test.tsx`, and only the visual checks above remain.
