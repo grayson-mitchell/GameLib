@@ -80,7 +80,10 @@ pub fn enumerate_copies(roots: &PollRoots, app_id: &str) -> Vec<SteamInstallCopy
 /// AppIds in `steamapps_dir` (other than `self_app_id`) whose manifest declares the same
 /// `installdir`. Any manifest or directory the scan could not read yields [`UNKNOWN_CONFLICT`]
 /// instead of "no conflict", because the result gates a recursive delete. A missing directory is
-/// `[]`, as in the TS. Comparison is case-sensitive and exact.
+/// `[]`, as in the TS. On macOS and Windows the comparison ignores case, because the default
+/// volumes there are case-insensitive and `Game`/`game` are one directory (80-REVIEW A/WR-02);
+/// over-reporting only downgrades the removal to manifest-only, the safe direction. Elsewhere it
+/// is exact.
 pub fn find_other_manifests_with_installdir(
     steamapps_dir: &str,
     installdir_segment: &str,
@@ -96,7 +99,12 @@ pub fn find_other_manifests_with_installdir(
         if rec.file_name == own {
             continue;
         }
-        if rec.record.installdir.as_deref() != Some(installdir_segment) {
+        if !rec
+            .record
+            .installdir
+            .as_deref()
+            .is_some_and(|d| same_installdir(d, installdir_segment))
+        {
             continue;
         }
         let appid = rec.record.appid.clone().unwrap_or_default();
@@ -105,6 +113,16 @@ pub fn find_other_manifests_with_installdir(
         }
     }
     conflicting
+}
+
+/// Whether two installdirs name the same directory on this platform's default filesystem.
+#[cfg(any(target_os = "macos", windows))]
+fn same_installdir(a: &str, b: &str) -> bool {
+    a == b || a.to_lowercase() == b.to_lowercase()
+}
+#[cfg(not(any(target_os = "macos", windows)))]
+fn same_installdir(a: &str, b: &str) -> bool {
+    a == b
 }
 
 /// JS `parseInt(s, 10)` for non-negative values: leading digits, else `None`.

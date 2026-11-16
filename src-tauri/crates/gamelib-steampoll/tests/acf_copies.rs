@@ -134,6 +134,22 @@ fn other_manifests_finds_same_installdir() {
     );
 }
 
+/// 80-REVIEW A/WR-02: on the case-insensitive default volumes of macOS and Windows, `hoard` and
+/// `Hoard` are one directory, so they conflict. Linux filesystems keep them apart.
+#[test]
+fn other_manifests_case_differing_installdir_follows_platform_case_rule() {
+    let tmp = TempDir::new().unwrap();
+    let sa = tmp.path().join("steamapps");
+    put(&sa, &manifest("63000", "Hoard", "4"));
+    put(&sa, &manifest("228980", "hoard", "4"));
+    let found = find_other_manifests_with_installdir(&sa.to_string_lossy(), "Hoard", "63000");
+    if cfg!(any(target_os = "macos", windows)) {
+        assert_eq!(found, vec!["228980".to_string()]);
+    } else {
+        assert!(found.is_empty());
+    }
+}
+
 #[test]
 fn other_manifests_sibling_installdir_is_not_a_conflict() {
     let tmp = TempDir::new().unwrap();
