@@ -14,7 +14,7 @@ import {
 } from 'common/types/sidecarTransport'
 import { invokeSteamPoll } from './pollRust/rustSteamPoll'
 import { startSteamLaunchWatch } from './steamLaunchWatch'
-import type { SteamLaunchWatchDeps } from './steamLaunchWatch'
+import type { PollerRelease, SteamLaunchWatchDeps } from './steamLaunchWatch'
 import type { StopSteamLaunchedGameDeps } from './stopSteamLaunchedGame'
 
 export function steamLaunchedStopDeps(
@@ -61,10 +61,7 @@ export function steamLaunchedStopDeps(
  * (80-REVIEW C-WR-04): the release comes minutes later, so a rejected hold would otherwise be an
  * unhandled rejection in between. A failed hold has nothing to release.
  */
-function rustPollerHold(
-  deps: ManagerDeps,
-  appId: string
-): (terminalSent: boolean) => void {
+function rustPollerHold(deps: ManagerDeps, appId: string): PollerRelease {
   const claim: Promise<number | null> = invokeSteamPoll(
     deps,
     RUST_STEAMPOLL_RUNNING_HOLD,
@@ -80,7 +77,7 @@ function rustPollerHold(
     }
   )
   let released = false
-  return (terminalSent) => {
+  const release: PollerRelease = (terminalSent) => {
     if (released) return
     released = true
     void claim
@@ -99,6 +96,9 @@ function rustPollerHold(
         )
       )
   }
+  // The claim never rejects (its handler is attached above), so the watch can wait on it.
+  release.held = claim
+  return release
 }
 
 async function rustPollerReports(

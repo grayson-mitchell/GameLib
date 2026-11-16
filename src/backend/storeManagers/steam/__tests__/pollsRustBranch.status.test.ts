@@ -60,13 +60,14 @@ describe('status readers', () => {
 describe('native in-flight mirror', () => {
   const entry = {} as never
 
-  it('rust: pushes new keys and present-key deletes only', () => {
+  it('rust: pushes new keys and present-key deletes only', async () => {
     const { calls, requestRustInvoke } = fakeRust()
     const s = createSteamGameSessionState({ requestRustInvoke })
     s.nativeInstallsInFlight.set('1', entry)
     s.nativeInstallsInFlight.set('1', entry)
     s.nativeInstallsInFlight.delete('2')
     s.nativeInstallsInFlight.delete('1')
+    await new Promise((r) => setImmediate(r))
     expect(calls).toEqual([
       {
         channel: 'steampoll_native_in_flight',
@@ -76,6 +77,63 @@ describe('native in-flight mirror', () => {
         channel: 'steampoll_native_in_flight',
         args: [{ appId: '1', inFlight: false }]
       }
+    ])
+    expect(s.isNativeInstallInFlight('1')).toBe(false)
+  })
+
+  it('C-WR-06 a delete is sent only after the set it follows has settled', async () => {
+    const calls: { appId: string; inFlight: boolean }[] = []
+    const pending: (() => void)[] = []
+    const requestRustInvoke = jest.fn((_channel: string, args: unknown[]) => {
+      calls.push(args[0] as { appId: string; inFlight: boolean })
+      return new Promise<unknown>((resolve) =>
+        pending.push(() => resolve(null))
+      )
+    })
+    const s = createSteamGameSessionState({ requestRustInvoke })
+    s.nativeInstallsInFlight.set('1', entry)
+    s.nativeInstallsInFlight.delete('1')
+    await new Promise((r) => setImmediate(r))
+    // The worker-thread shell could otherwise apply the delete first.
+    expect(calls).toEqual([{ appId: '1', inFlight: true }])
+    pending.shift()?.()
+    await new Promise((r) => setImmediate(r))
+    expect(calls).toEqual([
+      { appId: '1', inFlight: true },
+      { appId: '1', inFlight: false }
+    ])
+  })
+
+  it('C-WR-06 a rejected push does not stall the ones after it', async () => {
+    let n = 0
+    const calls: unknown[] = []
+    const requestRustInvoke = jest.fn((_channel: string, args: unknown[]) => {
+      calls.push(args[0])
+      n += 1
+      return n === 1 ? Promise.reject(new Error('boom')) : Promise.resolve(null)
+    })
+    const s = createSteamGameSessionState({ requestRustInvoke })
+    s.nativeInstallsInFlight.set('1', entry)
+    s.nativeInstallsInFlight.delete('1')
+    await new Promise((r) => setImmediate(r))
+    expect(calls).toEqual([
+      { appId: '1', inFlight: true },
+      { appId: '1', inFlight: false }
+    ])
+  })
+
+  it('C-WR-06 clear() mirrors every removed key', async () => {
+    const { calls, requestRustInvoke } = fakeRust()
+    const s = createSteamGameSessionState({ requestRustInvoke })
+    s.nativeInstallsInFlight.set('1', entry)
+    s.nativeInstallsInFlight.set('2', entry)
+    s.nativeInstallsInFlight.clear()
+    await new Promise((r) => setImmediate(r))
+    expect(calls.map((c) => c.args[0])).toEqual([
+      { appId: '1', inFlight: true },
+      { appId: '2', inFlight: true },
+      { appId: '1', inFlight: false },
+      { appId: '2', inFlight: false }
     ])
     expect(s.isNativeInstallInFlight('1')).toBe(false)
   })

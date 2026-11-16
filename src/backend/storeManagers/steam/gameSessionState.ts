@@ -101,8 +101,15 @@ export interface SteamGameSessionState {
 /**
  * R7: every change to the in-flight set is pushed to Rust (fire and forget), so Rust
  * never calls back into TS per tick. The read API is a plain Map's.
+ *
+ * The pushes are serialised on one promise chain (80-REVIEW C-WR-06): the shell answers each
+ * rustInvoke on its own worker thread, so two independent invokes for a fast set -> delete could
+ * land in Rust as false-then-true and leave the app marked in flight. Each push is sent only
+ * after the previous one settled, so Rust applies them in call order.
  */
 class MirroredInFlightMap extends Map<string, NativeInstallEntry> {
+  private tail: Promise<void> = Promise.resolve()
+
   constructor(private readonly rust?: Partial<RustInvokeDeps>) {
     super()
   }
@@ -110,18 +117,23 @@ class MirroredInFlightMap extends Map<string, NativeInstallEntry> {
   private push(appId: string, inFlight: boolean): void {
     const requestRustInvoke = this.rust?.requestRustInvoke
     if (!requestRustInvoke) return
-    invokeSteamPoll({ requestRustInvoke }, RUST_STEAMPOLL_NATIVE_IN_FLIGHT, {
-      appId,
-      inFlight
-    }).catch((error: unknown) => {
-      logWarning(
-        [
-          `steampoll native in-flight push failed (${RUST_STEAMPOLL_NATIVE_IN_FLIGHT}, appId ${appId}):`,
-          error
-        ],
-        LogPrefix.Steam
+    this.tail = this.tail.then(() =>
+      invokeSteamPoll({ requestRustInvoke }, RUST_STEAMPOLL_NATIVE_IN_FLIGHT, {
+        appId,
+        inFlight
+      }).then(
+        () => undefined,
+        (error: unknown) => {
+          logWarning(
+            [
+              `steampoll native in-flight push failed (${RUST_STEAMPOLL_NATIVE_IN_FLIGHT}, appId ${appId}):`,
+              error
+            ],
+            LogPrefix.Steam
+          )
+        }
       )
-    })
+    )
   }
 
   override set(appId: string, entry: NativeInstallEntry): this {
@@ -135,6 +147,13 @@ class MirroredInFlightMap extends Map<string, NativeInstallEntry> {
     const had = super.delete(appId)
     if (had) this.push(appId, false)
     return had
+  }
+
+  // A plain Map.clear() would skip the mirror and leave Rust's set stale (80-REVIEW C-WR-06).
+  override clear(): void {
+    const appIds = [...this.keys()]
+    super.clear()
+    for (const appId of appIds) this.push(appId, false)
   }
 }
 

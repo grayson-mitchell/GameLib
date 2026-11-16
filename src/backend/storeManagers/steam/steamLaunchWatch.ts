@@ -86,7 +86,16 @@ export interface SteamLaunchWatchDeps extends Pick<
    * once when the watch ends, with true when it sent done or was cancelled (Stop owns the
    * terminal frame), false when it handed the status back.
    */
-  pollerHold(appId: string): (terminalSent: boolean) => void
+  pollerHold(appId: string): PollerRelease
+}
+
+/**
+ * The release closure from `pollerHold`. `held`, when present, settles once the claim has
+ * reached the poller (it is an async invoke into Rust) and never rejects; the watch decides on
+ * `launching` only after it (80-REVIEW C-WR-06).
+ */
+export type PollerRelease = ((terminalSent: boolean) => void) & {
+  held?: Promise<unknown>
 }
 
 export interface SteamLaunchWatchOptions {
@@ -168,20 +177,25 @@ export function startSteamLaunchWatch(
   let launchingSent = false
   let playingSent = false
   // win32 (quick 261111-am0): hold Launching from the hand-off until the search finds the game.
-  // The claim above already silences the poller for this appId, so this runs in the same
-  // synchronous turn. When the poller has already reported the appId the game was running before
-  // this Play, and its `playing` must not be overwritten.
+  // When the poller has already reported the appId the game was running before this Play, and
+  // its `playing` must not be overwritten. The claim is an async invoke into Rust (Phase 80), so
+  // the poller is silenced only once it lands: the last-app-id read and the `launching` decision
+  // wait for it (80-REVIEW C-WR-06). A watch cancelled or finished meanwhile sends nothing.
   if (win) {
-    whenPollerReports(deps, appId, (reports) => {
-      if (reports) return
-      launchingSent = true
-      entry.shown = true
-      try {
-        deps.sendStatus(appId, 'launching')
-      } catch (e) {
-        deps.log.warn(`appId ${appId}: launching status failed: ${String(e)}`)
-      }
-    })
+    const decideLaunching = () =>
+      whenPollerReports(deps, appId, (reports) => {
+        if (reports || cancelled || doneSent) return
+        launchingSent = true
+        entry.shown = true
+        try {
+          deps.sendStatus(appId, 'launching')
+        } catch (e) {
+          deps.log.warn(`appId ${appId}: launching status failed: ${String(e)}`)
+        }
+      })
+    const held = releasePoller?.held
+    if (held) void held.then(decideLaunching, decideLaunching)
+    else decideLaunching()
   }
   const sendDone = () => {
     doneSent = true

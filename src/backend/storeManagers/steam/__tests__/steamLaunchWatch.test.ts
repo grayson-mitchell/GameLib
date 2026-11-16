@@ -268,6 +268,58 @@ describe('steamLaunchWatch', () => {
     expect(released).toEqual([true])
   })
 
+  it('C-WR-06 win32: launching waits for the poller claim to land', async () => {
+    const t = setupWin([{ ...winList([]), repeat: true }])
+    let land!: () => void
+    const held = new Promise<void>((r) => {
+      land = r
+    })
+    let reportsRead = 0
+    t.deps.pollerReports = () => {
+      reportsRead += 1
+      return false
+    }
+    t.deps.pollerHold = () =>
+      Object.assign(
+        (terminalSent: boolean) => void t.released.push(terminalSent),
+        {
+          held
+        }
+      )
+    startSteamLaunchWatch(t.deps, '264160')
+    await Promise.resolve()
+    expect(reportsRead).toBe(0)
+    expect(t.sent).toEqual([])
+    land()
+    await held
+    await Promise.resolve()
+    expect(reportsRead).toBe(1)
+    expect(t.sent).toEqual(['launching'])
+    cancelSteamLaunchWatch(t.registry, '264160')
+  })
+
+  it('C-WR-06 win32: a watch cancelled before the claim lands sends no launching', async () => {
+    const t = setupWin([{ ...winList([]), repeat: true }])
+    let land!: () => void
+    const held = new Promise<void>((r) => {
+      land = r
+    })
+    t.deps.pollerHold = () =>
+      Object.assign(
+        (terminalSent: boolean) => void t.released.push(terminalSent),
+        {
+          held
+        }
+      )
+    const { settled } = startSteamLaunchWatch(t.deps, '264160')
+    cancelSteamLaunchWatch(t.registry, '264160')
+    land()
+    await held
+    await Promise.resolve()
+    await settled
+    expect(t.sent).not.toContain('launching')
+  })
+
   it('W7 (a9g) win32: cancel releases true; start-window end, bail and no folder release false; exactly once', async () => {
     const cancel = setupWin([winList([42])])
     cancel.state.running = 264160
