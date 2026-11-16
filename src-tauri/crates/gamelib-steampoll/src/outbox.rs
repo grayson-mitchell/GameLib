@@ -130,13 +130,16 @@ async fn send_with_timeout(host: &dyn PollHost, ev: StateEvent) -> Option<AckRep
 
 /// Apply `effects` in list order. Post-ack effects of a `Transition` run in place, before the
 /// next effect of the outer list. `title_cache` is the poll's last known title (R2).
+/// Returns the ack reply of every `Transition`, in order (the install loop reads `macArchCheck`
+/// from the `installed` one).
 pub async fn apply_effects(
     host: &dyn PollHost,
     hold: &dyn HoldSink,
     outbox: &Outbox,
     effects: Vec<Effect>,
     title_cache: &mut String,
-) {
+) -> Vec<AckReply> {
+    let mut replies: Vec<AckReply> = vec![];
     let mut work: VecDeque<Effect> = effects.into();
     while let Some(effect) = work.pop_front() {
         match effect {
@@ -166,7 +169,9 @@ pub async fn apply_effects(
                     None if !title_cache.is_empty() => reply.title = Some(title_cache.clone()),
                     None => {}
                 }
-                for e in then.resolve(&reply).into_iter().rev() {
+                let resolved = then.resolve(&reply);
+                replies.push(reply);
+                for e in resolved.into_iter().rev() {
                     work.push_front(e);
                 }
             }
@@ -183,6 +188,7 @@ pub async fn apply_effects(
             }
         }
     }
+    replies
 }
 
 fn now_ms() -> u64 {

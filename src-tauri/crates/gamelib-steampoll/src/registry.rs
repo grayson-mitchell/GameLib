@@ -158,6 +158,21 @@ impl Registry {
             .contains_key(&(kind, app_id.to_string()))
     }
 
+    /// AppIds with a registered poll of `kind`, sorted.
+    pub fn active_app_ids(&self, kind: PollKind) -> Vec<String> {
+        let mut ids: Vec<String> = self
+            .inner
+            .map
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .keys()
+            .filter(|(k, _)| *k == kind)
+            .map(|(_, id)| id.clone())
+            .collect();
+        ids.sort();
+        ids
+    }
+
     /// Cancel every poll, then wait up to `deadline` for their guards to drop. Returns how many
     /// were still running at the deadline.
     pub async fn cancel_all_and_wait(&self, deadline: Duration) -> usize {

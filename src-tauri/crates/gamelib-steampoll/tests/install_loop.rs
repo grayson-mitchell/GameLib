@@ -1,0 +1,1118 @@
+//! Port of `library.installPolling.test.ts` plus the loop behaviours plan 15 adds (hold probe,
+//! Mac arch follow-up, InstallApp feedback, query surface). The mapping table is in
+//! 80-15-SUMMARY.md.
+//!
+//! Every test runs the real ACF readers over a temp steamapps root against `RecordingHost`
+//! under paused time.
+
+use gamelib_steamfiles::acf::{write_app_manifest, AppManifestParams};
+use gamelib_steampoll::acf_state::{AcfSource, PollRoots};
+use gamelib_steampoll::constants::{
+    GRACE_TICKS, MANIFEST_GONE_TICKS, MAX_TICKS, STEAM_REQUEST_NO_ACTIVITY_TICKS,
+};
+use gamelib_steampoll::events::{AckReply, StateEvent};
+use gamelib_steampoll::host::{BoxFuture, HoldSink, ProcessRunner, RunOutput, StreamingChild};
+use gamelib_steampoll::install_loop::{
+    AwaitingUpdateOpt, InstallAppRetryOpt, InstallPolls, PollOptions, RestoredSteamHold,
+    StartInstallArgs,
+};
+use gamelib_steampoll::monitor::DownloadMonitor;
+use gamelib_steampoll::outbox::Outbox;
+use gamelib_steampoll::profile::Platform;
+use gamelib_steampoll::registry::{PollKind, Registry};
+use gamelib_steampoll::testing::{AckMode, FakeClock, RecordingHost, ScriptedRunner, StreamRecord};
+use gamelib_steampoll::uninstall::{start_uninstall, stop_uninstall, StartUninstallArgs};
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
+use std::time::Duration;
+use tempfile::TempDir;
+
+const APP: &str = "730";
+
+struct Rig {
+    polls: InstallPolls,
+    reg: Registry,
+    host: Arc<RecordingHost>,
+    runner: Arc<ScriptedRunner>,
+    roots: PollRoots,
+    steamapps: std::path::PathBuf,
+    bottle: std::path::PathBuf,
+    _tmp: TempDir,
+}
+
+fn manifest(app: &str, flags: &str) -> AppManifestParams {
+    AppManifestParams {
+        app_id: app.into(),
+        installdir: "Game".into(),
+        name: "Game".into(),
+        size_on_disk: "9000".into(),
+        buildid: Some("7".into()),
+        last_owner: None,
+        state_flags: Some(flags.into()),
+        bytes: None,
+        beta_key: None,
+        installed_depots: vec![],
+    }
+}
+
+async fn rig_with(platform: Platform, darwin_monitor: bool, ack: AckReply) -> Rig {
+    let tmp = TempDir::new().unwrap();
+    let steam = tmp.path().join("steam");
+    let steamapps = steam.join("steamapps");
+    std::fs::create_dir_all(&steamapps).unwrap();
+    std::fs::write(
+        steamapps.join("libraryfolders.vdf"),
+        format!(
+            "\"libraryfolders\"\n{{\n\"0\"\n{{\n\"path\" \"{}\"\n}}\n}}\n",
+            steam.display()
+        ),
+    )
+    .unwrap();
+    let bottle = tmp.path().join("bottle");
+    std::fs::create_dir_all(&bottle).unwrap();
+    let host = Arc::new(RecordingHost::new(AckMode::Reply(ack)));
+    let runner = Arc::new(ScriptedRunner::default());
+    let clock = Arc::new(FakeClock::new(1_000_000));
+    let outbox = Arc::new(Outbox::new());
+    outbox.mark_ready(host.as_ref()).await;
+    let reg = Registry::new(
+        tokio::runtime::Handle::current(),
+        host.clone(),
+        runner.clone(),
+        clock.clone(),
+    );
+    let monitor = Arc::new(DownloadMonitor::with_platform(
+        host.clone(),
+        runner.clone(),
+        clock,
+        darwin_monitor,
+    ));
+    let hold: Arc<dyn HoldSink> = host.clone();
+    let polls = InstallPolls::new(reg.clone(), outbox, hold, monitor, platform);
+    let roots = PollRoots {
+        steam_root: steam.to_string_lossy().into_owned(),
+        bottle_steamapps_root: Some(bottle.to_string_lossy().into_owned()),
+        bridge_steamapps_root: None,
+    };
+    Rig {
+        polls,
+        reg,
+        host,
+        runner,
+        roots,
+        steamapps,
+        bottle,
+        _tmp: tmp,
+    }
+}
+
+async fn rig() -> Rig {
+    rig_with(
+        Platform::Linux,
+        false,
+        AckReply {
+            applied: true,
+            title: Some("Game".into()),
+            ..AckReply::default()
+        },
+    )
+    .await
+}
+
+fn args(r: &Rig, app: &str, options: PollOptions) -> StartInstallArgs {
+    StartInstallArgs {
+        app_id: app.into(),
+        title: "Game".into(),
+        roots: r.roots.clone(),
+        options,
+    }
+}
+
+fn start(r: &Rig, options: PollOptions) {
+    r.polls.start_install(args(r, APP, options)).unwrap();
+}
+
+fn delegated() -> PollOptions {
+    PollOptions {
+        delegated_to_steam_client: Some(true),
+        ..PollOptions::default()
+    }
+}
+
+fn handoff(source: Option<AcfSource>) -> PollOptions {
+    PollOptions {
+        is_native_handoff: Some(true),
+        source,
+        ..PollOptions::default()
+    }
+}
+
+async fn settle() {
+    for _ in 0..10 {
+        tokio::task::yield_now().await;
+    }
+}
+
+/// Run `n` ticks (3 s each, plus 100 ms so the n-th tick has finished).
+async fn ticks(n: u32) {
+    tokio::time::sleep(Duration::from_millis(3000 * n as u64 + 100)).await;
+    settle().await;
+}
+
+fn labels(host: &RecordingHost) -> Vec<String> {
+    host.records()
+        .iter()
+        .map(|r| match r {
+            StreamRecord::State(e) => format!("state:{}", e.kind()),
+            StreamRecord::Frontend { channel, args } if channel == "gameStatusUpdate" => {
+                format!("status:{}", args[0]["status"].as_str().unwrap_or(""))
+            }
+            StreamRecord::Frontend { channel, .. } => format!("fe:{channel}"),
+            StreamRecord::Notify { .. } => "notify".into(),
+            StreamRecord::File { op, .. } => format!("file:{op}"),
+        })
+        .collect()
+}
+
+fn active(r: &Rig, app: &str) -> bool {
+    r.reg.is_active(PollKind::Install, app)
+}
+
+fn write(r: &Rig, flags: &str) {
+    write_app_manifest(&r.steamapps, &manifest(APP, flags), 1).unwrap();
+}
+
+fn remove(r: &Rig) {
+    std::fs::remove_file(r.steamapps.join(format!("appmanifest_{APP}.acf"))).unwrap();
+}
+
+// ---- idempotency and stop ---------------------------------------------------------------------
+
+#[tokio::test(start_paused = true)]
+async fn start_twice_registers_one_poll() {
+    let r = rig().await;
+    start(&r, PollOptions::default());
+    start(&r, PollOptions::default());
+    assert_eq!(r.polls.status().installs.len(), 1);
+    assert!(active(&r, APP));
+    r.polls.stop_install(APP);
+}
+
+#[tokio::test(start_paused = true)]
+async fn stop_clears_the_entry_so_a_new_start_registers_again() {
+    let r = rig().await;
+    start(&r, PollOptions::default());
+    assert!(r.polls.stop_install(APP));
+    ticks(1).await;
+    assert!(!active(&r, APP));
+    assert!(r.polls.status().installs.is_empty());
+    assert!(!r.polls.stop_install(APP), "idempotent");
+    start(&r, PollOptions::default());
+    assert_eq!(r.polls.status().installs.len(), 1);
+    r.polls.stop_install(APP);
+}
+
+#[tokio::test(start_paused = true)]
+async fn rejects_a_non_numeric_app_id() {
+    let r = rig().await;
+    assert!(r
+        .polls
+        .start_install(args(&r, "../x", PollOptions::default()))
+        .is_err());
+    assert!(r
+        .polls
+        .start_install(args(&r, "12345678901", PollOptions::default()))
+        .is_err());
+}
+
+// ---- grace window (CR-01, dkf Tests A and B) -------------------------------------------------
+
+#[tokio::test(start_paused = true)]
+async fn cr01_done_after_the_grace_window_when_no_manifest_appears() {
+    let r = rig().await;
+    start(&r, PollOptions::default());
+    ticks(GRACE_TICKS - 1).await;
+    assert!(labels(&r.host).is_empty());
+    ticks(1).await;
+    assert_eq!(labels(&r.host), vec!["status:done"]);
+    assert!(!active(&r, APP));
+}
+
+#[tokio::test(start_paused = true)]
+async fn test_a_live_native_download_survives_the_grace_window() {
+    let r = rig().await;
+    r.polls.set_native_in_flight(APP, true);
+    start(&r, PollOptions::default());
+    ticks(GRACE_TICKS + 5).await;
+    assert!(labels(&r.host).is_empty());
+    assert!(active(&r, APP));
+    // The mirror is read per tick: once the run ends, the next tick applies the grace rule.
+    r.polls.set_native_in_flight(APP, false);
+    ticks(1).await;
+    assert_eq!(labels(&r.host), vec!["status:done"]);
+    assert!(!active(&r, APP));
+}
+
+// ---- upgrade (dkf Tests C/D, g9o Tests E/F/G) ------------------------------------------------
+
+#[tokio::test(start_paused = true)]
+async fn test_c_handoff_start_upgrades_the_poll_and_keeps_one_task() {
+    let r = rig().await;
+    start(&r, PollOptions::default());
+    assert!(!r.polls.snapshot_poll(APP).unwrap().hold.is_native_handoff);
+    start(
+        &r,
+        PollOptions {
+            skipped_depots: Some(vec!["731".into()]),
+            mac_native_route: Some(true),
+            ..handoff(None)
+        },
+    );
+    let p = r.polls.snapshot_poll(APP).unwrap();
+    assert!(p.hold.is_native_handoff);
+    assert!(p.hold.mac_native_route);
+    assert_eq!(p.hold.skipped_depots, vec!["731".to_string()]);
+    assert_eq!(r.polls.status().installs.len(), 1);
+    // A second upgrade never discards a non-empty list.
+    start(
+        &r,
+        PollOptions {
+            skipped_depots: Some(vec!["999".into()]),
+            ..handoff(None)
+        },
+    );
+    assert_eq!(
+        r.polls.snapshot_poll(APP).unwrap().hold.skipped_depots,
+        vec!["731".to_string()]
+    );
+    r.polls.stop_install(APP);
+}
+
+#[tokio::test(start_paused = true)]
+async fn test_d_a_bare_call_never_clears_the_handoff_flag() {
+    let r = rig().await;
+    start(&r, handoff(None));
+    start(&r, PollOptions::default());
+    assert!(r.polls.snapshot_poll(APP).unwrap().hold.is_native_handoff);
+    r.polls.stop_install(APP);
+}
+
+#[tokio::test(start_paused = true)]
+async fn test_e_bare_native_poll_upgraded_by_the_bottle_handoff_reaches_installed() {
+    let r = rig().await;
+    write_app_manifest(&r.bottle, &manifest(APP, "4"), 1).unwrap();
+    r.polls.set_native_in_flight(APP, true);
+    start(&r, PollOptions::default());
+    // 2 ticks on the native root (no manifest there), then the finalize call retargets.
+    ticks(2).await;
+    let before = r.polls.snapshot_poll(APP).unwrap().ticks;
+    start(&r, handoff(Some(AcfSource::Bottle)));
+    let p = r.polls.snapshot_poll(APP).unwrap();
+    assert_eq!(p.source, AcfSource::Bottle);
+    assert_eq!(p.ticks, before, "ticks are kept: MAX_TICKS stays absolute");
+    ticks(1).await;
+    let recs = r.host.records();
+    assert!(recs.iter().any(|x| matches!(
+        x,
+        StreamRecord::State(StateEvent::Installed { source, .. }) if source == "bottle"
+    )));
+    assert!(!active(&r, APP));
+}
+
+#[tokio::test(start_paused = true)]
+async fn retarget_resets_the_per_root_baselines() {
+    let r = rig().await;
+    start(&r, PollOptions::default());
+    {
+        // Seed baselines through a real download tick.
+        write(&r, "1026");
+        ticks(2).await;
+    }
+    start(&r, handoff(Some(AcfSource::Bottle)));
+    let p = r.polls.snapshot_poll(APP).unwrap();
+    assert_eq!(p.last_bytes_downloaded, None);
+    assert_eq!(p.last_tick_ms, None);
+    assert_eq!(p.stalled_ticks, 0);
+    assert_eq!(p.hold.absent_ticks_since_seen, 0);
+    r.polls.stop_install(APP);
+}
+
+#[tokio::test(start_paused = true)]
+async fn test_f_source_without_handoff_never_retargets() {
+    let r = rig().await;
+    start(&r, PollOptions::default());
+    start(
+        &r,
+        PollOptions {
+            source: Some(AcfSource::Bottle),
+            ..PollOptions::default()
+        },
+    );
+    let p = r.polls.snapshot_poll(APP).unwrap();
+    assert_eq!(p.source, AcfSource::Native);
+    assert!(!p.hold.is_native_handoff);
+    r.polls.stop_install(APP);
+}
+
+#[tokio::test(start_paused = true)]
+async fn test_g_handoff_without_source_never_resets_a_bottle_poll() {
+    let r = rig().await;
+    start(
+        &r,
+        PollOptions {
+            source: Some(AcfSource::Bottle),
+            ..PollOptions::default()
+        },
+    );
+    start(&r, handoff(None));
+    let p = r.polls.snapshot_poll(APP).unwrap();
+    assert_eq!(p.source, AcfSource::Bottle);
+    assert!(p.hold.is_native_handoff);
+    r.polls.stop_install(APP);
+}
+
+#[tokio::test(start_paused = true)]
+async fn bottle_source_polls_the_bottle_root_not_the_native_one() {
+    let r = rig().await;
+    write_app_manifest(&r.bottle, &manifest(APP, "4"), 1).unwrap();
+    start(
+        &r,
+        PollOptions {
+            source: Some(AcfSource::Bottle),
+            ..PollOptions::default()
+        },
+    );
+    ticks(1).await;
+    assert_eq!(
+        labels(&r.host),
+        vec!["state:installed", "status:done", "notify"]
+    );
+}
+
+#[tokio::test(start_paused = true)]
+async fn adopted_by_steam_upgrade_releases_the_hold_and_clears_the_record() {
+    let r = rig().await;
+    start(
+        &r,
+        PollOptions {
+            restored_steam_hold: Some(RestoredSteamHold {
+                pids: vec![42],
+                start_ticks: 5,
+            }),
+            ..handoff(None)
+        },
+    );
+    assert_eq!(r.polls.status().installs[0].steam_hold, "holding");
+    start(
+        &r,
+        PollOptions {
+            adopted_by_steam_client: Some(true),
+            ..PollOptions::default()
+        },
+    );
+    assert_eq!(r.polls.status().installs[0].steam_hold, "released");
+    assert_eq!(labels(&r.host), vec!["file:clear"]);
+    r.polls.stop_install(APP);
+}
+
+// ---- installAppRetry carry-through (74-30) ---------------------------------------------------
+
+fn awaiting(with_retry: bool) -> PollOptions {
+    PollOptions {
+        awaiting_update: Some(AwaitingUpdateOpt {
+            from_build: "7".into(),
+            target_build: Some("8".into()),
+            install_app_retry: with_retry.then(|| InstallAppRetryOpt {
+                library_path: Some("/lib".into()),
+                attempts: 2,
+            }),
+        }),
+        ..PollOptions::default()
+    }
+}
+
+#[tokio::test(start_paused = true)]
+async fn fresh_poll_keeps_install_app_retry_on_awaiting_update() {
+    let r = rig().await;
+    start(&r, awaiting(true));
+    let a = r.polls.snapshot_poll(APP).unwrap().awaiting_update.unwrap();
+    let retry = a.install_app_retry.unwrap();
+    assert_eq!(retry.library_path.as_deref(), Some("/lib"));
+    assert_eq!(retry.attempts, 2);
+    r.polls.stop_install(APP);
+}
+
+#[tokio::test(start_paused = true)]
+async fn upgrade_keeps_install_app_retry_on_awaiting_update() {
+    let r = rig().await;
+    start(&r, PollOptions::default());
+    start(&r, awaiting(true));
+    let p = r.polls.snapshot_poll(APP).unwrap();
+    assert_eq!(
+        p.awaiting_update
+            .unwrap()
+            .install_app_retry
+            .unwrap()
+            .attempts,
+        2
+    );
+    assert!(r.polls.status().installs[0].awaiting_update);
+    r.polls.stop_install(APP);
+}
+
+#[tokio::test(start_paused = true)]
+async fn options_without_install_app_retry_leave_none() {
+    let r = rig().await;
+    start(&r, awaiting(false));
+    assert!(r
+        .polls
+        .snapshot_poll(APP)
+        .unwrap()
+        .awaiting_update
+        .unwrap()
+        .install_app_retry
+        .is_none());
+    r.polls.stop_install(APP);
+}
+
+#[tokio::test(start_paused = true)]
+async fn the_install_app_outcome_feeds_back_into_the_next_update_tick() {
+    // Retry armed, no Steam activity: the update tick asks for InstallApp on tick 3; the helper is
+    // missing (RecordingHost has no helper path), so the outcome is Unavailable and the loop must
+    // hand it to the next tick, which clears in_flight so the retry can run again on tick 6.
+    let r = rig().await;
+    write_app_manifest(&r.steamapps, &manifest(APP, "4"), 1).unwrap();
+    start(&r, awaiting(true));
+    ticks(3).await;
+    let retry = r
+        .polls
+        .snapshot_poll(APP)
+        .unwrap()
+        .awaiting_update
+        .unwrap()
+        .install_app_retry
+        .unwrap();
+    assert!(
+        retry.in_flight,
+        "request made on tick 3, outcome not yet applied"
+    );
+    assert_eq!(retry.request_tick, 3);
+    ticks(1).await;
+    let retry = r
+        .polls
+        .snapshot_poll(APP)
+        .unwrap()
+        .awaiting_update
+        .unwrap()
+        .install_app_retry
+        .unwrap();
+    assert!(!retry.in_flight, "tick 4 applied the outcome");
+    r.polls.stop_install(APP);
+}
+
+// ---- MAX_TICKS (74-27) -----------------------------------------------------------------------
+
+#[tokio::test(start_paused = true)]
+async fn an_install_poll_at_the_cap_stays_silent_and_stops_after_7200_ticks() {
+    let r = rig().await;
+    r.polls.set_native_in_flight(APP, true);
+    start(&r, PollOptions::default());
+    ticks(MAX_TICKS - 1).await;
+    assert!(active(&r, APP));
+    assert!(labels(&r.host).is_empty());
+    ticks(1).await;
+    assert!(!active(&r, APP));
+    assert!(
+        labels(&r.host).is_empty(),
+        "the install cap sends no status"
+    );
+}
+
+#[tokio::test(start_paused = true)]
+async fn an_update_poll_sends_done_when_the_cap_stops_it() {
+    let r = rig().await;
+    // StateFlags 0x100 (running): activity is seen, so the update never ends quietly and the
+    // poll runs to the cap.
+    write(&r, "256");
+    start(&r, awaiting(false));
+    ticks(MAX_TICKS - 1).await;
+    assert!(active(&r, APP));
+    assert!(!labels(&r.host).contains(&"status:done".to_string()));
+    ticks(1).await;
+    assert!(!active(&r, APP));
+    let l = labels(&r.host);
+    assert_eq!(l.last().unwrap(), "status:done");
+    assert_eq!(l.iter().filter(|x| *x == "status:done").count(), 1);
+}
+
+#[tokio::test(start_paused = true)]
+async fn the_cap_releases_a_holding_poll_and_reports_it_installed() {
+    let r = rig().await;
+    write(&r, "4");
+    start(
+        &r,
+        PollOptions {
+            restored_steam_hold: Some(RestoredSteamHold {
+                pids: vec![42],
+                start_ticks: MAX_TICKS - 1,
+            }),
+            ..handoff(None)
+        },
+    );
+    ticks(1).await;
+    let l = labels(&r.host);
+    assert_eq!(l[0], "file:clear", "hold released first: {l:?}");
+    assert!(l.contains(&"state:installed".to_string()));
+    assert!(l.contains(&"status:done".to_string()));
+    assert!(!active(&r, APP));
+}
+
+// ---- delegated polls (quick 261024-exo, 261105-vfq) ------------------------------------------
+
+#[tokio::test(start_paused = true)]
+async fn vfq2_a_delegated_poll_flags_managed_by_steam_at_registration() {
+    let r = rig().await;
+    start(&r, delegated());
+    let recs = r.host.records();
+    assert_eq!(recs.len(), 1);
+    match &recs[0] {
+        StreamRecord::Frontend { channel, args } => {
+            assert_eq!(channel, "gameStatusUpdate");
+            assert_eq!(args[0]["status"], "installing");
+            assert_eq!(args[0]["managedBySteam"], true);
+        }
+        other => panic!("unexpected {other:?}"),
+    }
+    r.polls.stop_install(APP);
+}
+
+#[tokio::test(start_paused = true)]
+async fn d1_a_delegated_poll_survives_grace_then_stops_with_an_in_app_notice() {
+    let r = rig().await;
+    start(&r, delegated());
+    ticks(STEAM_REQUEST_NO_ACTIVITY_TICKS - 1).await;
+    assert_eq!(labels(&r.host), vec!["status:installing"]);
+    assert!(active(&r, APP));
+    ticks(1).await;
+    assert_eq!(
+        labels(&r.host),
+        vec!["status:installing", "status:done", "fe:steamRequestNotice"]
+    );
+    let recs = r.host.records();
+    let StreamRecord::Frontend { args, .. } = &recs[2] else {
+        panic!()
+    };
+    assert_eq!(args[0]["kind"], "install-not-started");
+    assert_eq!(args[0]["appId"], APP);
+    assert_eq!(args[0]["title"], "Game");
+    assert!(!labels(&r.host).contains(&"notify".to_string()));
+    assert!(!active(&r, APP));
+}
+
+#[tokio::test(start_paused = true)]
+async fn d2_stops_after_manifest_gone_ticks_but_not_after_one_absent_tick() {
+    let r = rig().await;
+    write(&r, "1042");
+    start(&r, delegated());
+    ticks(1).await;
+    remove(&r);
+    ticks(1).await;
+    assert!(active(&r, APP), "a single absent tick does not stop it");
+    write(&r, "1042");
+    ticks(1).await;
+    assert_eq!(
+        r.polls
+            .snapshot_poll(APP)
+            .unwrap()
+            .hold
+            .absent_ticks_since_seen,
+        0
+    );
+    remove(&r);
+    ticks(MANIFEST_GONE_TICKS - 1).await;
+    assert!(active(&r, APP));
+    ticks(1).await;
+    assert!(!active(&r, APP));
+    assert_eq!(labels(&r.host).last().unwrap(), "status:done");
+}
+
+#[tokio::test(start_paused = true)]
+async fn d3_absent_then_downloading_then_installed_stops_via_the_installed_branch() {
+    let r = rig().await;
+    start(&r, delegated());
+    ticks(2).await;
+    write(&r, "1042");
+    ticks(1).await;
+    write(&r, "4");
+    ticks(1).await;
+    let l = labels(&r.host);
+    assert!(l.contains(&"state:installed".to_string()), "{l:?}");
+    assert!(!l.contains(&"fe:steamRequestNotice".to_string()));
+    assert!(!active(&r, APP));
+}
+
+#[tokio::test(start_paused = true)]
+async fn vfq1_a_manifest_that_stays_downloading_disarms_the_no_activity_timeout() {
+    let r = rig().await;
+    write(&r, "1042");
+    start(&r, delegated());
+    ticks(STEAM_REQUEST_NO_ACTIVITY_TICKS + 10).await;
+    assert!(active(&r, APP));
+    assert!(!labels(&r.host).contains(&"fe:steamRequestNotice".to_string()));
+    r.polls.stop_install(APP);
+}
+
+#[tokio::test(start_paused = true)]
+async fn vfq3_upgrading_a_bare_poll_to_delegated_counts_the_window_from_the_upgrade() {
+    let r = rig().await;
+    r.polls.set_native_in_flight(APP, true);
+    start(&r, PollOptions::default());
+    ticks(30).await;
+    start(&r, delegated());
+    assert_eq!(r.polls.snapshot_poll(APP).unwrap().delegated_since_tick, 30);
+    assert_eq!(labels(&r.host), vec!["status:installing"]);
+    ticks(STEAM_REQUEST_NO_ACTIVITY_TICKS - 1).await;
+    assert!(active(&r, APP));
+    ticks(1).await;
+    assert!(!active(&r, APP));
+    assert!(labels(&r.host).contains(&"fe:steamRequestNotice".to_string()));
+}
+
+#[tokio::test(start_paused = true)]
+async fn vfq4_cancel_delegated_stops_a_delegated_poll_with_one_done_and_false_otherwise() {
+    let r = rig().await;
+    assert!(!r.polls.cancel_delegated(APP));
+    start(&r, PollOptions::default());
+    assert!(!r.polls.cancel_delegated(APP), "not delegated");
+    assert!(active(&r, APP));
+    r.polls.stop_install(APP);
+    ticks(1).await;
+    start(&r, delegated());
+    assert!(r.polls.cancel_delegated(APP));
+    let done = labels(&r.host)
+        .iter()
+        .filter(|l| *l == "status:done")
+        .count();
+    assert_eq!(done, 1);
+    ticks(1).await;
+    assert!(!active(&r, APP));
+    assert!(!r.polls.cancel_delegated(APP));
+}
+
+#[tokio::test(start_paused = true)]
+async fn pvk3_two_give_ups_carry_strictly_increasing_seq() {
+    let r = rig().await;
+    r.polls.start_install(args(&r, "100", delegated())).unwrap();
+    r.polls.start_install(args(&r, "200", delegated())).unwrap();
+    ticks(STEAM_REQUEST_NO_ACTIVITY_TICKS).await;
+    let seqs: Vec<u64> = r
+        .host
+        .records()
+        .iter()
+        .filter_map(|x| match x {
+            StreamRecord::Frontend { channel, args } if channel == "steamRequestNotice" => {
+                args[0]["seq"].as_u64()
+            }
+            _ => None,
+        })
+        .collect();
+    assert_eq!(seqs.len(), 2);
+    assert!(seqs[1] > seqs[0]);
+}
+
+#[tokio::test(start_paused = true)]
+async fn pvk4_status_reports_delegated_only_for_a_live_delegated_poll() {
+    let r = rig().await;
+    r.polls.start_install(args(&r, "100", delegated())).unwrap();
+    r.polls
+        .start_install(args(&r, "200", PollOptions::default()))
+        .unwrap();
+    let st = r.polls.status();
+    assert_eq!(st.installs.len(), 2);
+    assert!(st.installs[0].delegated_to_steam_client);
+    assert!(!st.installs[1].delegated_to_steam_client);
+    assert_eq!(st.installs[1].steam_hold, "unprobed");
+    r.polls.stop_install("100");
+    assert!(!r.polls.status().installs.iter().any(|i| i.app_id == "100"));
+    r.polls.stop_install("200");
+}
+
+#[tokio::test(start_paused = true)]
+async fn d4_d5_only_a_delegated_download_flags_managed_by_steam() {
+    let r = rig().await;
+    write(&r, "1042");
+    start(&r, delegated());
+    ticks(1).await;
+    let flagged = |host: &RecordingHost| {
+        host.records()
+            .iter()
+            .filter(|x| {
+                matches!(x, StreamRecord::Frontend { channel, args }
+                    if channel == "gameStatusUpdate"
+                        && args[0]["status"] == "installing"
+                        && args[0]["managedBySteam"] == true)
+            })
+            .count()
+    };
+    assert_eq!(flagged(&r.host), 2, "registration plus the tick");
+    r.polls.stop_install(APP);
+
+    let r2 = rig().await;
+    write(&r2, "1042");
+    start(&r2, PollOptions::default());
+    ticks(1).await;
+    assert_eq!(flagged(&r2.host), 0);
+    r2.polls.stop_install(APP);
+}
+
+// ---- hold, stop, completion ------------------------------------------------------------------
+
+#[tokio::test(start_paused = true)]
+async fn stopping_a_holding_poll_clears_its_persisted_hold_record() {
+    let r = rig().await;
+    start(
+        &r,
+        PollOptions {
+            restored_steam_hold: Some(RestoredSteamHold {
+                pids: vec![42],
+                start_ticks: 3,
+            }),
+            ..handoff(None)
+        },
+    );
+    assert_eq!(r.polls.snapshot_poll(APP).unwrap().ticks, 3);
+    assert!(r.polls.stop_install(APP));
+    assert_eq!(labels(&r.host), vec!["file:clear"]);
+    // Idempotent: nothing more.
+    assert!(!r.polls.stop_install(APP));
+    assert_eq!(labels(&r.host), vec!["file:clear"]);
+}
+
+#[tokio::test(start_paused = true)]
+async fn a_stopped_non_holding_poll_clears_no_record() {
+    let r = rig().await;
+    start(&r, PollOptions::default());
+    r.polls.stop_install(APP);
+    assert!(labels(&r.host).is_empty());
+}
+
+#[tokio::test(start_paused = true)]
+async fn installed_ack_then_done_and_the_poll_ends() {
+    let r = rig().await;
+    write(&r, "4");
+    start(&r, PollOptions::default());
+    ticks(1).await;
+    assert_eq!(
+        labels(&r.host),
+        vec!["state:installed", "status:done", "notify"]
+    );
+    assert!(!active(&r, APP));
+    assert!(r.polls.status().installs.is_empty());
+}
+
+#[tokio::test(start_paused = true)]
+async fn the_hold_probe_is_re_entered_and_a_gone_steam_completes_the_install() {
+    // Native handoff, finalized manifest, no Steam process: the loop runs the probe (pgrep
+    // exits 1) and re-calls the step, which completes the install.
+    let r = rig().await;
+    r.runner.on(
+        "pgrep -x steam",
+        vec![RunOutput {
+            code: Some(1),
+            ..RunOutput::default()
+        }],
+    );
+    write(&r, "4");
+    start(&r, handoff(None));
+    ticks(1).await;
+    let l = labels(&r.host);
+    assert!(l.contains(&"state:installed".to_string()), "{l:?}");
+    assert!(r.runner.calls().iter().any(|c| c == "pgrep -x steam"));
+    assert!(!active(&r, APP));
+}
+
+#[tokio::test(start_paused = true)]
+async fn a_running_steam_holds_the_poll_and_persists_the_record() {
+    let r = rig().await;
+    r.runner.on(
+        "pgrep -x steam",
+        vec![RunOutput {
+            code: Some(0),
+            stdout: "321\n".into(),
+            stderr: String::new(),
+        }],
+    );
+    r.runner.on(
+        "ps -o pid=,lstart= -p 321",
+        vec![RunOutput {
+            code: Some(0),
+            stdout: "321 Mon Nov 16 10:00:00 2026\n".into(),
+            stderr: String::new(),
+        }],
+    );
+    write(&r, "4");
+    start(&r, handoff(None));
+    ticks(1).await;
+    assert!(active(&r, APP));
+    assert_eq!(r.polls.status().installs[0].steam_hold, "holding");
+    assert_eq!(r.polls.status().holding, vec![APP.to_string()]);
+    assert!(!labels(&r.host).contains(&"state:installed".to_string()));
+    r.polls.stop_install(APP);
+}
+
+#[tokio::test(start_paused = true)]
+async fn bridge_finalized_mirror_decides_finishing_versus_silent() {
+    for finalized in [false, true] {
+        let r = rig().await;
+        r.polls.set_bridge_finalized(APP, finalized);
+        let mut r_roots = r.roots.clone();
+        r_roots.bridge_steamapps_root = Some(r.bottle.to_string_lossy().into_owned());
+        write_app_manifest(&r.bottle, &manifest(APP, "4"), 1).unwrap();
+        r.polls
+            .start_install(StartInstallArgs {
+                app_id: APP.into(),
+                title: "Game".into(),
+                roots: r_roots,
+                options: PollOptions {
+                    source: Some(AcfSource::Bridge),
+                    ..PollOptions::default()
+                },
+            })
+            .unwrap();
+        ticks(1).await;
+        let l = labels(&r.host);
+        if finalized {
+            assert_eq!(l, vec!["state:installed"]);
+        } else {
+            assert_eq!(l, vec!["state:installed", "status:installing"]);
+        }
+    }
+}
+
+// ---- Mac arch follow-up (R6) -----------------------------------------------------------------
+
+#[tokio::test(start_paused = true)]
+async fn the_mac_arch_probe_runs_off_tick_only_when_the_ack_asks_for_it() {
+    for ask in [false, true] {
+        let r = rig_with(
+            Platform::Darwin,
+            false,
+            AckReply {
+                applied: true,
+                title: Some("Game".into()),
+                mac_arch_check: Some(ask),
+                ..AckReply::default()
+            },
+        )
+        .await;
+        let bin_dir = r.steamapps.join("common/Game/Game.app/Contents/MacOS");
+        std::fs::create_dir_all(&bin_dir).unwrap();
+        std::fs::write(bin_dir.join("Game"), b"x").unwrap();
+        let bin =
+            gamelib_steampoll::mac_arch::locate_macho_binary(&r.steamapps.join("common/Game"))
+                .expect("binary");
+        r.runner.on(
+            &format!("lipo -archs {}", bin.to_string_lossy()),
+            vec![RunOutput {
+                code: Some(0),
+                stdout: "i386\n".into(),
+                stderr: String::new(),
+            }],
+        );
+        write(&r, "4");
+        start(&r, PollOptions::default());
+        ticks(1).await;
+        let verdicts = r
+            .host
+            .records()
+            .iter()
+            .filter(|x| matches!(x, StreamRecord::State(StateEvent::MacArchVerdict { verdict, .. }) if verdict == "32"))
+            .count();
+        assert_eq!(verdicts, usize::from(ask), "ask={ask}");
+    }
+}
+
+// ---- monitor lifecycle (quick 261029-sex) ----------------------------------------------------
+
+#[tokio::test(start_paused = true)]
+async fn the_monitor_starts_only_for_native_non_handoff_polls_on_macos() {
+    let pgrep = "/usr/bin/pgrep -x steam_osx";
+    let none = AckReply::default();
+
+    let r = rig_with(Platform::Darwin, true, none.clone()).await;
+    start(&r, PollOptions::default());
+    settle().await;
+    assert!(r.runner.calls().iter().any(|c| c == pgrep));
+    r.polls.stop_install(APP);
+
+    // Handoff and bottle polls never spawn a nettop child.
+    let r = rig_with(Platform::Darwin, true, none.clone()).await;
+    start(&r, handoff(None));
+    settle().await;
+    assert!(!r.runner.calls().iter().any(|c| c == pgrep));
+    r.polls.stop_install(APP);
+
+    let r = rig_with(Platform::Darwin, true, none.clone()).await;
+    start(
+        &r,
+        PollOptions {
+            source: Some(AcfSource::Bottle),
+            ..PollOptions::default()
+        },
+    );
+    settle().await;
+    assert!(!r.runner.calls().iter().any(|c| c == pgrep));
+    r.polls.stop_install(APP);
+
+    // Never off macOS.
+    let r = rig_with(Platform::Linux, true, none.clone()).await;
+    start(&r, PollOptions::default());
+    settle().await;
+    assert!(!r.runner.calls().iter().any(|c| c == pgrep));
+    r.polls.stop_install(APP);
+}
+
+#[tokio::test(start_paused = true)]
+async fn upgrading_a_poll_to_delegated_or_handoff_reevaluates_the_monitor() {
+    let pgrep = "/usr/bin/pgrep -x steam_osx";
+    let r = rig_with(Platform::Darwin, true, AckReply::default()).await;
+    start(&r, handoff(None));
+    settle().await;
+    assert!(!r.runner.calls().iter().any(|c| c == pgrep));
+    // Retargeting to a non-handoff delegated native poll is not possible (the flag never goes
+    // back), so a handoff poll stays ineligible after a delegated upgrade.
+    start(&r, delegated());
+    settle().await;
+    assert!(!r.runner.calls().iter().any(|c| c == pgrep));
+    r.polls.stop_install(APP);
+}
+
+// ---- no overlapping ticks (D-10) -------------------------------------------------------------
+
+struct SlowRunner {
+    in_flight: Arc<AtomicUsize>,
+    max_in_flight: AtomicUsize,
+    calls: AtomicUsize,
+}
+
+impl ProcessRunner for SlowRunner {
+    fn run(&self, _program: &str, _argv: Vec<String>, _timeout: Duration) -> BoxFuture<RunOutput> {
+        self.calls.fetch_add(1, Ordering::SeqCst);
+        let now = self.in_flight.fetch_add(1, Ordering::SeqCst) + 1;
+        self.max_in_flight.fetch_max(now, Ordering::SeqCst);
+        let counter = self.in_flight.clone();
+        Box::pin(async move {
+            tokio::time::sleep(Duration::from_secs(10)).await;
+            counter.fetch_sub(1, Ordering::SeqCst);
+            // pgrep: nothing matched.
+            RunOutput {
+                code: Some(1),
+                ..RunOutput::default()
+            }
+        })
+    }
+
+    fn spawn_streaming(&self, _p: &str, _a: Vec<String>) -> std::io::Result<StreamingChild> {
+        Err(std::io::Error::other("unused"))
+    }
+}
+
+#[tokio::test(start_paused = true)]
+async fn a_slow_tick_delays_the_next_one_instead_of_overlapping() {
+    let tmp = TempDir::new().unwrap();
+    let steam = tmp.path().join("steam");
+    let steamapps = steam.join("steamapps");
+    std::fs::create_dir_all(&steamapps).unwrap();
+    std::fs::write(
+        steamapps.join("libraryfolders.vdf"),
+        format!(
+            "\"libraryfolders\"\n{{\n\"0\"\n{{\n\"path\" \"{}\"\n}}\n}}\n",
+            steam.display()
+        ),
+    )
+    .unwrap();
+    let host = Arc::new(RecordingHost::default());
+    let slow = Arc::new(SlowRunner {
+        in_flight: Arc::new(AtomicUsize::new(0)),
+        max_in_flight: AtomicUsize::new(0),
+        calls: AtomicUsize::new(0),
+    });
+    let clock = Arc::new(FakeClock::new(0));
+    let outbox = Arc::new(Outbox::new());
+    outbox.mark_ready(host.as_ref()).await;
+    let reg = Registry::new(
+        tokio::runtime::Handle::current(),
+        host.clone(),
+        slow.clone(),
+        clock.clone(),
+    );
+    let monitor = Arc::new(DownloadMonitor::with_platform(
+        host.clone(),
+        slow.clone(),
+        clock,
+        false,
+    ));
+    let polls = InstallPolls::new(reg.clone(), outbox, host.clone(), monitor, Platform::Linux);
+    let roots = PollRoots {
+        steam_root: steam.to_string_lossy().into_owned(),
+        bottle_steamapps_root: None,
+        bridge_steamapps_root: None,
+    };
+    // A native handoff poll on a finalized manifest probes Steam with the 10 s runner each tick.
+    write_app_manifest(&steamapps, &manifest(APP, "4"), 1).unwrap();
+    polls
+        .start_install(StartInstallArgs {
+            app_id: APP.into(),
+            title: "Game".into(),
+            roots,
+            options: handoff(None),
+        })
+        .unwrap();
+    tokio::time::sleep(Duration::from_secs(60)).await;
+    settle().await;
+    // The probe finishes with "nothing running", which completes and stops the poll after one
+    // call: a second tick must never have started a concurrent probe.
+    assert_eq!(slow.calls.load(Ordering::SeqCst), 1);
+    assert_eq!(slow.max_in_flight.load(Ordering::SeqCst), 1);
+    assert!(!reg.is_active(PollKind::Install, APP));
+}
+
+// ---- TS-pushed mirrors and the re-arm bookkeeping --------------------------------------------
+
+#[tokio::test(start_paused = true)]
+async fn pending_rearm_counts_as_holding_and_sets_the_reconcile_flag() {
+    let r = rig().await;
+    assert!(r.polls.holding_app_ids().is_empty());
+    assert!(!r.polls.reconcile_ran_during_rearm());
+    r.polls.set_pending_rearm("555", true);
+    assert_eq!(r.polls.status().holding, vec!["555".to_string()]);
+    assert!(r.polls.reconcile_ran_during_rearm());
+    r.polls.set_reconcile_ran_during_rearm(false);
+    r.polls.set_pending_rearm("555", false);
+    assert!(r.polls.holding_app_ids().is_empty());
+    assert!(!r.polls.reconcile_ran_during_rearm());
+}
+
+#[tokio::test(start_paused = true)]
+async fn status_lists_uninstall_polls_too() {
+    let r = rig().await;
+    let outbox = Arc::new(Outbox::new());
+    let hold: Arc<dyn HoldSink> = r.host.clone();
+    write(&r, "2052");
+    start_uninstall(
+        &r.reg,
+        outbox,
+        hold,
+        StartUninstallArgs {
+            app_id: APP.into(),
+            title: "Game".into(),
+            roots: r.roots.clone(),
+            source: AcfSource::Native,
+            interval_ms: None,
+            bridge_authoritative: false,
+        },
+    )
+    .unwrap();
+    assert_eq!(r.polls.status().uninstalls, vec![APP.to_string()]);
+    stop_uninstall(&r.reg, APP);
+}
