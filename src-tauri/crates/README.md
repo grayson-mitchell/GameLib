@@ -14,7 +14,9 @@ The app crate (`src-tauri`) stays the workspace root. Each port adds:
 | `src-tauri/crates/<name>`     | Tauri-free library. No `tauri` dependency, ever.              |
 | `src-tauri/crates/<name>-cli` | Optional bin, only if `meta/` tools need the code headlessly. |
 
-Current crates: `gamelib-scan`, `gamelib-depot`, `gamelib-steamfiles`, `gamelib-steampoll`, each with a `-cli`, and `gamelib-i18n` (library only, Phase 80).
+Current crates: `gamelib-scan`, `gamelib-depot`, `gamelib-steamfiles`, `gamelib-steampoll`, each with a `-cli`, and `gamelib-i18n` (library only).
+
+Phase 80 is complete: `gamelib-steampoll` (with `gamelib-steampoll-cli`) is the only implementation of the Steam install, uninstall, update and running polls, the restart hold and the download monitor, and `gamelib-i18n` translates their notification text in Rust. The TS poll loops and the `GAMELIB_STEAM_POLLS` flag are deleted.
 
 Every crate sets `rust-version = "1.77.2"` and the two `[lints.clippy]` deny lines
 (`dbg_macro`, `todo`). Exception: `gamelib-depot` and `gamelib-depot-cli` set `rust-version = "1.89"`

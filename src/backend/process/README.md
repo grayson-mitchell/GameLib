@@ -277,7 +277,7 @@ Phase 66.4 owns:
   `devEpicCookieSweep`, `runnerAuth` and the store-layer registrations.
 - **D-66.3-05 (open until 66.4-22):** the live macOS smoke with the scripted orphan/exit checker.
 - **D-66.3-06 (open, operator):** the Windows operator UAT.
-- **D-66.3-07:** reviving the RunningAppID poller (done since: quick 261111-7wo, the `steam-running-poll` boot step).
+- **D-66.3-07:** reviving the RunningAppID poller (done since: quick 261111-7wo; Phase 80 moved it to the Rust running poll, `steampoll_boot`, and the TS `steam-running-poll` boot step is gone).
 - **D-66.3-08:** the 66.2 Windows spawn-path live gate (passed since: quick 261111-5fw).
 - **D-17 (open until 66.4-22/23):** the non-autonomous live smoke.
 

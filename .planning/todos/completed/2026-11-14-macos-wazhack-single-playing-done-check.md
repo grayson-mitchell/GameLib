@@ -27,3 +27,7 @@ On the Mac, run `pnpm tauri:dev`, launch WazHack 264160 from GameLib, quit in-ga
 Playing and one Done on the card with no flicker, and `SteamGame.watch` lines in gamelib.log. Record
 whether `Steam: started running-game poller` appears at boot and whether the poller logged anything for
 264160.
+
+## Resolution
+
+Closed 2026-11-16 by Phase 80 plan 32: 80-HUMAN-UAT.md item 4a passed (WazHack 264160 gave exactly one Playing and one Done through the Rust running poll plus the steamLaunchWatch claims). Folded into D-15 item 4.

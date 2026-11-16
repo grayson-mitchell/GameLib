@@ -156,3 +156,5 @@ library and opens no authenticated session. The rows below are amended according
 ---
 
 **2026-11-14 note:** Phase 75 replaced `@node-steam/vdf` (and `steam-shortcut-editor`, which this record lists as used only for add-to-Steam) with the in-repo `gamelib-steamfiles` crate. Both npm packages are removed; the rows above are the historical decision record.
+
+**2026-11-16 note (Amended by Phase 80):** the install, uninstall, update and running polls, the restart hold and the download monitor are Rust (in-repo `gamelib-steampoll`, started by `steampoll_boot`), and notification text is translated in Rust (in-repo `gamelib-i18n`). The TS poll loops and the `GAMELIB_STEAM_POLLS` flag are deleted. No external package was added; the choices above stand.
