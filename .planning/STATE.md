@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 Phase: 81
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-11-16 - Completed quick task 261116-vt7: Remove the dead guided Go Offline dialog chain
+Last activity: 2026-11-16 - Completed quick task 261116-w6t: Steam Guard approval-first screen and credentials approve flip fix
 
 Progress: [██████████] 96%
 
@@ -785,6 +785,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | fast | Toast dismiss X made consistent: shared `.noticeStackDismiss` (Steam's 24px round themed X) in NoticeStack/index.scss used by the Steam, read-only stores and Humble toasts; per-notice X rules removed; stylesheet gate guards it. | 2026-11-16 | e69d926b8 | notice jest 86/86; gate sabotage-checked; scoped prettier clean; not checked live | — |
 | 261116-swr | Humble and read-only stores toasts brought in line with the Steam toast: shared `.noticeStackIcon/Text/Title/Body/Action` in NoticeStack/index.scss (accent icon, heading-font title, secondary body, accent-outlined action matching the X); Humble copy split into title + body with a "Reconnect" button (new en keys, `humble_expired_toast` retired); stylesheet gate extended; `__gamelibNotices.readOnly()`/`all()` added. | 2026-11-16 | 2dc0c3522, 249495278, b2d0818b5 | notice jest 105/105; gate sabotage-checked both ways; i18n + churn guard clean; scoped prettier clean; not checked live | [261116-swr-align-humble-and-read-only-stores-toasts](./quick/261116-swr-align-humble-and-read-only-stores-toasts/) |
 | 261116-vt7 | Dead guided Go Offline chain deleted (decision: delete, incl. Rust refusal): steamGoOfflineRetry/Cancel channels, steamGoOfflineRequired push, dialog + store, go-offline-required lease reason, guidedAction plumbing; Rust Refusal::GoOfflineRequired/WrapRefused gone, before_logon infallible, LogonWrap/RestoreOnlyWrap kept. | 2026-11-16 | fd31a35a8 | cargo test 304 pass, clippy/fmt clean; codecheck, check:ipc-contract green; census (c) 291->288 as planned, only pre-existing failures remain | [261116-vt7-remove-the-dead-guided-go-offline-dialog](./quick/261116-vt7-remove-the-dead-guided-go-offline-dialog/) |
+| 261116-w6t | Steam credentials sign-in Steam Guard step: approving on the phone keeps the window on a new "Approved. Completing sign-in..." step (no flip back to the login form, regression from C1/WR-06); Rust passes `canApprove` + code type up, so the screen leads with Steam Mobile approval and offers "Enter a code instead"; approve-only accounts no longer wait 180 s on "Signing in...". | 2026-11-16 | 0e437adde, 601ce5370, 3188b6263 | steamcm cargo 306/306, clippy + rustfmt clean; SteamLogin jest 238/238, userSignIn 100/100; tsc, prettier, build:sidecar, check:ipc-contract clean; not checked live | [261116-w6t-steam-guard-approval-first-screen-and-cr](./quick/261116-w6t-steam-guard-approval-first-screen-and-cr/) |
 
 ## Session Continuity
 
