@@ -69,16 +69,16 @@ Launch: `pnpm build:sidecar` then `pnpm tauri:dev` (never `tauri:dev:run`). Netw
 
 sidecar.js: rebuilt with `pnpm build:sidecar`, build/main/sidecar.js mtime Nov 16 20:24:00 2026.
 Local suites: `cargo test --workspace` and `cargo test --bin gamelib-shell` green (0 failed). `pnpm test:ci`: 14 failing suites, 13 on the known pre-existing list (tauriShellSource, flowRegistrationCensus, ipcDomainCensus, epicOfflineMode, shimCoverage, shimGenerate, themeTokens, callbackRegistryHost, gamelibCatalogParity, genI18nGateScope, lintTranslations, steamLineCeiling, x86CallbackWineHarness) plus dxvkInstallRemove ("does not resolve until every reg add has finished"), a timing test that failed under full-suite load and passes 3 of 3 in isolation; not touched by phase 80. gamePageActionDock, listed in the 80-27 preface, passed this run.
-CI legs: pending operator push (main is ahead of origin/main by 23 commits at the time of writing).
+CI legs (eb1e2d37e, pushed at the operator's direction with --no-verify, f078c2762..eb1e2d37e, 31 commits incl. other-session work): rust-test.yml run 43825957344 green on all three legs (macos-latest, ubuntu-latest, windows-latest). Jest CI run 43825957425 red on the 11 known-red suites plus steamLaunchRuntime.test.ts (bottled-Steam raise loop, Linux-only; red on every Test run since fba351fbe 2026-11-12, before phase 80; passes 9/9 on macOS); no phase-80 regression.
 
 ### 7. Steam install after deletion
 expected: Starting an install through `steam://install/<appId>` (or the GameLib Install button) shows progress, reaches its finish state, and the "Installation Finished" notification fires.
-result: pending
+result: pass — operator reported pass on the post-deletion build (2026-11-16, pnpm tauri:dev).
 
 ### 8. Steam uninstall after deletion
 expected: Uninstalling a Steam game runs to completion, the game returns to not-installed, and the "Game Uninstalled" notification fires.
-result: pending
+result: pass — operator reported pass on the post-deletion build (2026-11-16, pnpm tauri:dev).
 
 ### 9. Steam launch after deletion
 expected: Launching a Steam game (WazHack 264160 via steam://rungameid) gives exactly one Playing and exactly one Done, with no flicker.
-result: pending
+result: pass — operator reported pass on the post-deletion build (2026-11-16, pnpm tauri:dev).
