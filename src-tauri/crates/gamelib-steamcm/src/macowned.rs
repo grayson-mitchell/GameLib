@@ -23,6 +23,7 @@ use tokio::process::Command;
 
 use crate::anon::AnonHandle;
 use crate::backend::CmBackend;
+use crate::error::diag;
 use crate::facade::PICS_TIMEOUT;
 use crate::ops::pics;
 use crate::refresh::owned_demos::{select_licensed_demos, DemoEntry, APP_BATCH_SIZE};
@@ -276,13 +277,13 @@ pub(crate) async fn mac_owned_apps_bounded<B: CmBackend>(
     match &result {
         Ok(m) => {
             let games = m.owned["app_count"].as_u64().unwrap_or(0);
-            tracing::info!(
+            diag(&format!(
                 "mac-owned ok subscribed={} games={games} demos={}",
                 m.subscribed_count,
                 m.demos.len()
-            );
+            ));
         }
-        Err(r) => tracing::info!("mac-owned fallback reason={}", r.as_str()),
+        Err(r) => diag(&format!("mac-owned fallback reason={}", r.as_str())),
     }
     result
 }
@@ -294,10 +295,10 @@ pub async fn mac_owned_apps<B: CmBackend>(
     steam_id: u64,
 ) -> Result<MacOwned, FallbackReason> {
     if !cfg!(target_os = "macos") {
-        tracing::info!(
+        diag(&format!(
             "mac-owned fallback reason={}",
             FallbackReason::NotMacos.as_str()
-        );
+        ));
         return Err(FallbackReason::NotMacos);
     }
     mac_owned_apps_bounded(anon, helper_path, steam_id, HELPER_TIMEOUT).await
@@ -577,6 +578,24 @@ mod tests {
         let (_b, h) = setup();
         let r = mac_owned_apps(&h, Path::new("/nonexistent"), 1).await;
         assert_eq!(r, Err(FallbackReason::NotMacos));
+    }
+
+    /// WR-03: the outcome line must reach the crate's `diag` sink. It used to go through
+    /// `tracing::info!`, which no subscriber in the app passes, so it was dropped.
+    #[tokio::test]
+    async fn the_fallback_reason_reaches_the_diag_sink() {
+        let dir = tempfile::tempdir().unwrap();
+        let (_b, h) = setup();
+        crate::error::test_capture::take();
+        let r =
+            mac_owned_apps_bounded(&h, &dir.path().join("nope"), 1, Duration::from_secs(2)).await;
+        assert_eq!(r, Err(FallbackReason::HelperMissing));
+        let want = format!(
+            "mac-owned fallback reason={}",
+            FallbackReason::HelperMissing.as_str()
+        );
+        let lines = crate::error::test_capture::take();
+        assert!(lines.contains(&want), "{lines:?}");
     }
 
     #[test]

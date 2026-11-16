@@ -17,7 +17,7 @@ use std::time::Duration;
 use serde_json::{Map, Value};
 
 use crate::backend::{CmConn, LicenseEntry, OwnedOpts};
-use crate::error::CmError;
+use crate::error::{diag, CmError};
 use crate::ops::{account, pics};
 
 /// Apps per PICS product-info request (`APP_BATCH_SIZE` in licensedDemos.ts).
@@ -190,12 +190,12 @@ async fn fetch_demos<C: CmConn>(
         }
     }
     let demos = select_licensed_demos(owned, &package_ids, &packages, &Value::Object(apps));
-    tracing::info!(
+    diag(&format!(
         "Steam licensed demos: licenses={} licensedNotOwned={} demos={}",
         package_ids.len(),
         remainder.len(),
         demos.len()
-    );
+    ));
     Ok(demos)
 }
 
@@ -213,11 +213,13 @@ pub async fn collect_owned_and_demos<C: CmConn>(
         {
             Ok(Ok(d)) => (d, None),
             Ok(Err(e)) => {
-                tracing::warn!("Steam licensed demos lookup failed, continuing owned-only: {e:?}");
+                diag(&format!(
+                    "Steam licensed demos lookup failed, continuing owned-only: {e:?}"
+                ));
                 (Vec::new(), Some(format!("{e:?}")))
             }
             Err(_) => {
-                tracing::warn!("Steam licensed demos timed out, continuing owned-only");
+                diag("Steam licensed demos timed out, continuing owned-only");
                 (Vec::new(), Some("timeout".to_string()))
             }
         };
@@ -623,6 +625,45 @@ mod tests {
                 include_free_sub: false,
                 skip_unvetted_apps: true,
             }]
+        );
+    }
+
+    /// WR-03: the soft-failure lines must reach the crate's `diag` sink. They used to go through
+    /// `tracing::warn!`, which no subscriber in the app passes, so a missing-demos report had no
+    /// cause in the log.
+    #[tokio::test]
+    async fn a_demos_failure_reaches_the_diag_sink() {
+        let b = FakeBackend::new();
+        b.script(|s| {
+            s.owned.queue.push_back(Ok(owned_rows()));
+            s.pics.queue.push_back(Err(CmError::Timeout));
+        });
+        let c = conn(&b).await;
+        crate::error::test_capture::take();
+        collect_owned_and_demos(&c, 7, &[lic(1)]).await.unwrap();
+        let lines = crate::error::test_capture::take();
+        assert!(
+            lines
+                .iter()
+                .any(|l| l == "Steam licensed demos lookup failed, continuing owned-only: Timeout"),
+            "{lines:?}"
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_demos_timeout_reaches_the_diag_sink() {
+        let b = FakeBackend::new();
+        b.set_delay("pics_product_info", Duration::from_secs(3600));
+        b.script(|s| s.owned.queue.push_back(Ok(owned_rows())));
+        let c = conn(&b).await;
+        crate::error::test_capture::take();
+        collect_owned_and_demos(&c, 7, &[lic(1)]).await.unwrap();
+        let lines = crate::error::test_capture::take();
+        assert!(
+            lines
+                .iter()
+                .any(|l| l == "Steam licensed demos timed out, continuing owned-only"),
+            "{lines:?}"
         );
     }
 

@@ -61,7 +61,30 @@ pub fn set_diag_sink(f: fn(&str)) {
 }
 
 pub(crate) fn diag(msg: &str) {
+    #[cfg(test)]
+    test_capture::push(msg);
     (SINK.get().copied().unwrap_or(default_sink))(msg);
+}
+
+/// Test-only per-thread copy of every `diag` line, so a test can assert that a line reached the
+/// crate's sink (the process-global sink is first-call-wins and cannot be swapped per test).
+/// `#[tokio::test]` runs on one thread, so a thread-local sees the test's own lines only.
+#[cfg(test)]
+pub(crate) mod test_capture {
+    use std::cell::RefCell;
+
+    thread_local! {
+        static LINES: RefCell<Vec<String>> = const { RefCell::new(Vec::new()) };
+    }
+
+    pub(crate) fn push(msg: &str) {
+        LINES.with(|l| l.borrow_mut().push(msg.to_string()));
+    }
+
+    /// Drain and return the lines `diag` has seen on this thread.
+    pub(crate) fn take() -> Vec<String> {
+        LINES.with(|l| std::mem::take(&mut *l.borrow_mut()))
+    }
 }
 
 #[cfg(test)]
