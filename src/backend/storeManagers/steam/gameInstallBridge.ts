@@ -48,6 +48,13 @@ const STEAM_BRIDGE_FINISHING_CONTEXT = 'steam-bridge-finishing'
 /**
  * Marks or clears the "bridge install finalized" flag; it lives in Rust
  * (steampoll_bridge_finalized, D-16).
+ *
+ * Best-effort, never rejects (80-REVIEW C-WR-02): it runs at the top of the
+ * install's success `finally`, of `clearFinishing()` and before the download
+ * starts, so a rejected invoke would drop the terminal `done` and the
+ * "Installation Finished" toast, mask the real install error, or abort an
+ * install over a transport hiccup. The marker only gates the "finishing"
+ * status, so losing one write is the cheaper failure.
  */
 async function setBridgeInstallFinalized(
   steamGame: SteamGame,
@@ -56,7 +63,30 @@ async function setBridgeInstallFinalized(
   await invokeSteamPoll(steamGame.deps, RUST_STEAMPOLL_BRIDGE_FINALIZED, {
     appId: steamGame.appId,
     finalized
+  }).catch((error: unknown) => {
+    logWarning(
+      `SteamGame: bridge finalized marker (${String(finalized)}) failed for appId ${steamGame.appId}: ${String(error)}`,
+      LogPrefix.Steam
+    )
   })
+}
+
+/**
+ * Stops the install poll before a per-game bridge bottle is removed. A
+ * rejected invoke is logged, never thrown, so the bottle removal after it
+ * still runs (80-REVIEW C-WR-02).
+ */
+async function stopInstallPollingBestEffort(
+  steamGame: SteamGame
+): Promise<void> {
+  await stopInstallPolling(steamGame.deps, steamGame.appId).catch(
+    (error: unknown) => {
+      logWarning(
+        `SteamGame: stopping the install poll failed for appId ${steamGame.appId}, removing the bridge bottle anyway: ${String(error)}`,
+        LogPrefix.Steam
+      )
+    }
+  )
 }
 
 export async function installBridgeGame(
@@ -566,7 +596,7 @@ export async function installBridgeGameLeased(
       // delete it again. The row is gated on win64ShimPresent, so a later
       // build that bundles steam_api64.dll is not held back by this.
       setBridgeSteamApiPrescreen(steamGame.deps, steamGame.appId, 'x64')
-      await stopInstallPolling(steamGame.deps, steamGame.appId)
+      await stopInstallPollingBestEffort(steamGame)
       const removeResult = await bbLifecycle.removePerGameBridgeBottle(
         steamGame.deps,
         steamGame.appId
@@ -630,7 +660,7 @@ export async function installBridgeGameLeased(
       `SteamGame: installBridgeGame found Steam CEG DRM in the exe for appId ${steamGame.appId} (${cegMarkers.join(', ')}) -- CEG needs the Windows Steam client, which a bridge bottle does not have; stopping the bridge install`,
       LogPrefix.Steam
     )
-    await stopInstallPolling(steamGame.deps, steamGame.appId)
+    await stopInstallPollingBestEffort(steamGame)
     const removeResult = await bbLifecycle.removePerGameBridgeBottle(
       steamGame.deps,
       steamGame.appId

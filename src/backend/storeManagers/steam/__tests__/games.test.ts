@@ -5446,6 +5446,34 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     expect(notify).toHaveBeenCalledTimes(1)
   })
 
+  it('C-WR-02 a rejecting finalized-marker invoke still sends done and the toast', async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
+    const { sendGameStatusUpdate } = jest.requireMock('backend/utils')
+    ;(notify as jest.Mock).mockClear()
+    const failingMarkerDeps = {
+      ...steamTestDeps,
+      requestRustInvoke: (
+        ...args: Parameters<typeof steamTestDeps.requestRustInvoke>
+      ) =>
+        args[0] === 'steampoll_bridge_finalized'
+          ? Promise.reject(new Error('rustInvoke timeout'))
+          : steamTestDeps.requestRustInvoke(...args)
+    }
+
+    const result = await new SteamGame(APP_ID, failingMarkerDeps).install(
+      {} as any
+    )
+
+    expect(result).toEqual({ status: 'done' })
+    expect(sendGameStatusUpdate).toHaveBeenLastCalledWith(expect.anything(), {
+      appName: APP_ID,
+      runner: 'steam',
+      status: 'done'
+    })
+    expect(notify).toHaveBeenCalledTimes(1)
+  })
+
   it('56-20 Gap 3: a rejecting redist step still sends the final done status', async () => {
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
     ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
@@ -5699,6 +5727,39 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         runner: 'steam',
         status: 'done'
       })
+    })
+
+    it('C-WR-02 removes the per-game bottle even when stopping the poll rejects', async () => {
+      ;(placeShimForGame as jest.Mock).mockResolvedValue({
+        status: 'placed',
+        shimPath: `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/steam_api.dll`,
+        verdict: {
+          status: 'clean',
+          arch: 'x86',
+          missingSymbols: [],
+          interfaceVersions: {},
+          stubbedInterfaces: [],
+          shimExportSetVersion: 'v-ceg',
+          scannedAt: '2026-01-01T00:00:00.000Z'
+        },
+        drm: CEG_DRM
+      })
+      stopInstallPollingSpy.mockRejectedValueOnce(
+        new Error('rustInvoke timeout')
+      )
+
+      const result = await new SteamGame(APP_ID, steamTestDeps).install(
+        {} as any
+      )
+
+      expect(result).toEqual({
+        status: 'error',
+        error: expect.stringContaining('Steam CEG DRM detected')
+      })
+      expect(removePerGameBridgeBottle).toHaveBeenCalledWith(
+        steamTestDeps,
+        APP_ID
+      )
     })
 
     it('stops the install, removes the per-game bottle, persists drm and fires setup-required drm-wrapped', async () => {
