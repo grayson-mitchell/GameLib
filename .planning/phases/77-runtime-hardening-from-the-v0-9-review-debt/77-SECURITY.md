@@ -61,6 +61,17 @@ created: 2026-11-16
 | Audit Date | Threats Total | Closed | Open | Run By |
 |------------|---------------|--------|------|--------|
 | 2026-11-16 | 14 | 14 | 0 | gsd-security-auditor |
+| 2026-11-17 | 14 | 14 | 0 | orchestrator re-audit (State A short-circuit) |
+
+## Security Audit 2026-11-17
+
+| Metric | Count |
+|--------|-------|
+| Threats found | 14 |
+| Closed | 14 |
+| Open | 0 |
+
+Re-audit of the existing register (all threats plan-time, all closed, so the auditor was not re-spawned). Evidence re-checked against HEAD: the only commit touching `relay/` or `src/backend/process/runner.ts` since the 2026-11-16 audit is 194734595 (one-line lint fix in `relay/src/__tests__/handler.test.ts`); `handler.ts` order still `checkIpLimit` (:102) -> `readCappedBody` (:126) -> 413 fixed-string log (:132) -> `JSON.parse` (:138); `readCappedBody.ts` still cancels the reader on overflow; `src/backend/process/runner.ts` is still the only `src/` module importing `child_process`.
 
 ## Sign-Off
 
