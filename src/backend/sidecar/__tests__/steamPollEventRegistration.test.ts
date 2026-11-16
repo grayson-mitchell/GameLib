@@ -2,13 +2,7 @@
  * Phase 80 Plan 11: the steamPollStateEvent handler applies each Rust state event through the
  * existing TS functions, replies with the ack fields, and is idempotent and ordered (R1, R2).
  */
-jest.mock('backend/logger', () => ({
-  logWarning: jest.fn(),
-  logError: jest.fn(),
-  logInfo: jest.fn(),
-  logDebug: jest.fn(),
-  LogPrefix: new Proxy({}, { get: (_t, p) => String(p) })
-}))
+import * as logger from 'backend/logger'
 
 import { createTestManagerDeps } from 'backend/testUtils/testServices'
 import { isMac } from 'backend/constants/environment'
@@ -67,6 +61,13 @@ const installed: SteamPollStateEvent = {
   sizeOnDisk: '2048',
   buildid: '77'
 }
+
+beforeEach(() => {
+  for (const fn of ['logWarning', 'logError', 'logInfo', 'logDebug'] as const) {
+    jest.spyOn(logger, fn).mockImplementation(() => undefined)
+  }
+})
+afterEach(() => jest.restoreAllMocks())
 
 describe('steamPollStateEvent handler', () => {
   test('installed builds the install record, persists, pushes and replies title + macArchCheck', async () => {
