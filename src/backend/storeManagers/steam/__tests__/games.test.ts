@@ -924,6 +924,7 @@ jest.mock('backend/engine/engineSwitch', () => ({
   }),
   switchContextFrom: jest.fn(),
   readBottleEngineMarkerKind: jest.fn(),
+  reconcileBottleEngineMarker: jest.fn(),
   restoreNeedsAbsentPin: jest.fn()
 }))
 jest.mock('backend/engine/fallbackEngine', () => ({
@@ -13373,6 +13374,14 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           formatDrmNoticeLine(id, 'bottle-stage', 'install root not resolved')
         )
         expect(runWineCommand).not.toHaveBeenCalled()
+        expect(sendGameStatusUpdate).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({ appName: id, status: 'done' })
+        )
+        expect(
+          jest.requireMock('backend/engine/engineSwitch')
+            .reconcileBottleEngineMarker
+        ).not.toHaveBeenCalled()
       })
     })
 
@@ -15930,6 +15939,14 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
       expect(recordLaunchDecision).toHaveBeenCalledTimes(1)
     })
 
+    it('a TCP launch never reconciles the engine marker (76-04)', async () => {
+      await new SteamGame(ID, steamTestDeps).launch({} as any)
+      expect(
+        jest.requireMock('backend/engine/engineSwitch')
+          .reconcileBottleEngineMarker
+      ).not.toHaveBeenCalled()
+    })
+
     it('expired CrossOver with the pin installed: no download, toast, and settings re-read after registration', async () => {
       ;(decideLaunchEngine as jest.Mock).mockResolvedValue(
         pinnedDecision('cx-expired')
@@ -16313,6 +16330,36 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
           expect(getEngineSelection(ID)).toBeUndefined()
         }
       )
+
+      it('reconciles the marker before the offline pre-check, pre-flight and switch (76-04)', async () => {
+        const reconcile = jest.requireMock('backend/engine/engineSwitch')
+          .reconcileBottleEngineMarker as jest.Mock
+        mockPrepareBottleForEngine.mockResolvedValue({
+          ok: true,
+          changed: false
+        })
+        await new SteamGame(ID, steamTestDeps).launch({} as any)
+        expect(reconcile).toHaveBeenCalledTimes(1)
+        expect(reconcile.mock.calls[0][1]).toBe(PER_GAME)
+        const at = reconcile.mock.invocationCallOrder[0]
+        expect(at).toBeLessThan(
+          (preflightCrossover as jest.Mock).mock.invocationCallOrder[0]!
+        )
+        expect(at).toBeLessThan(
+          mockPrepareBottleForEngine.mock.invocationCallOrder[0]!
+        )
+      })
+
+      it('the offline pre-check reads the reconciled marker (76-04)', async () => {
+        offline()
+        const reconcile = jest.requireMock('backend/engine/engineSwitch')
+          .reconcileBottleEngineMarker as jest.Mock
+        await new SteamGame(ID, steamTestDeps).launch({} as any)
+        expect(reconcile).toHaveBeenCalledTimes(1)
+        expect(reconcile.mock.invocationCallOrder[0]).toBeLessThan(
+          (readBottleEngineMarkerKind as jest.Mock).mock.invocationCallOrder[0]!
+        )
+      })
 
       it('a per-game engine override does not change the target (D-04)', async () => {
         ;(

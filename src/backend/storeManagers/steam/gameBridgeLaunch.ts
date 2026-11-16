@@ -176,6 +176,8 @@ export async function launchBridgeGameBody(
       'bottle-stage',
       drmStepError('bottle-stage', 'install root not resolved').cause
     )
+    // 76-REVIEW WR-04: maybeNotifyDrmModeFailed sends no status; end the card.
+    sendLaunchDone(steamGame)
     return false
   }
   if (wantsDrm) {
@@ -184,6 +186,15 @@ export async function launchBridgeGameBody(
     // Phase 76 (audit S9): it returns the bottle to CrossOver through
     // prepareBottleForEngine (marker-keyed) before launching, and refuses
     // up front offline when that restore cannot happen.
+    // 76 gap (CR-01): persist the bottle's engine marker before CrossOver's
+    // demo-status probe adds a Timestamp to cxbottle.conf, so a Staging bottle
+    // is never inferred as CrossOver and the offline pre-check reads the real
+    // engine.
+    const sw = await import('backend/engine/engineSwitch')
+    sw.reconcileBottleEngineMarker(
+      sw.switchContextFrom(steamGame.deps),
+      bridgeBottleSettings.wineCrossoverBottle
+    )
     const offlineOk = await drmOfflinePrecheck(
       steamGame,
       bridgeBottleSettings.wineCrossoverBottle,
