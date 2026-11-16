@@ -4,10 +4,7 @@ import { existsSync } from 'graceful-fs'
 import { join } from 'path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
-import {
-  RUST_STEAMCM_ANON_CLOSE,
-  RUST_STEAMCM_SESSION_LOGOUT
-} from 'common/types/sidecarTransport'
+import { RUST_STEAMCM_SESSION_LOGOUT } from 'common/types/sidecarTransport'
 import type { SteamCmClient } from './cm/SteamCmClient'
 import type { SteamStoresDeps } from './library/installRoot'
 import { STEAM_INSTALL_PATHS } from './constants'
@@ -303,6 +300,8 @@ export class SteamUser {
     // T-79-61: drop every TS-held lease; the Rust session is fenced below (its generation bump).
     this.rust.reset()
     this.guidedInstallTargets.clear()
+    // The one anonymous-session close: it sends steamcm_anon_close {reason:'logout'} itself, so
+    // the Rust logout below must not repeat it (79-REVIEW C1/IN-02).
     this.deps.anonymousClient.close('logout')
     this.deps.steamSession.signIn.resetSignInState()
     // Quick 261112-7wv: lock the keyring gate and drop any armed refresh logon
@@ -315,9 +314,6 @@ export class SteamUser {
         RUST_STEAMCM_SESSION_LOGOUT,
         []
       )
-      await this.deps.rustInvoke.requestRustInvoke(RUST_STEAMCM_ANON_CLOSE, [
-        { reason: 'logout' }
-      ])
     } catch (err) {
       logWarning(
         `Steam: the Rust CM logout failed (${err instanceof Error ? err.name : typeof err})`,

@@ -40,6 +40,7 @@ jest.mock('backend/logger', () => ({
 import type { SteamUser } from '../user'
 import { createTestSteamUser } from 'backend/testUtils/testSteamUser'
 import { createTestSteamSession } from 'backend/testUtils/testSteamSession'
+import { createAnonymousClient } from '../anonymousClient'
 
 const SECRET = 'rust-secret-refresh-token'
 const realSession = createTestSteamSession()
@@ -59,12 +60,22 @@ const calls: Array<{ channel: string; args: unknown[] }> = []
 const sendFrontendMessage = jest.fn(() => true)
 let anonClose: jest.Mock
 
-function makeUser(): SteamUser {
+const recordingInvoke = ((channel: string, args: unknown[]) => {
+  calls.push({ channel, args })
+  const h = handlers[channel]
+  if (!h) return Promise.reject(new Error(`unmocked ${channel}`))
+  return Promise.resolve(h(args))
+}) as never
+
+/** `realAnonClient`: the boot's anonymous client on the same transport, not a close() mock. */
+function makeUser(opts: { realAnonClient?: boolean } = {}): SteamUser {
   anonClose = jest.fn()
   return createTestSteamUser({
     stores: { steam: { configStore: mockConfigStore } },
     signIn: mockSignIn,
-    anonymousClient: { close: anonClose },
+    anonymousClient: opts.realAnonClient
+      ? createAnonymousClient({ requestRustInvoke: recordingInvoke })
+      : { close: anonClose },
     tokenStore: { current: () => mockTokenStore },
     steamSession: {
       signIn: realSession.signIn,
@@ -74,14 +85,7 @@ function makeUser(): SteamUser {
       }
     },
     sendFrontendMessage,
-    rustInvoke: {
-      requestRustInvoke: ((channel: string, args: unknown[]) => {
-        calls.push({ channel, args })
-        const h = handlers[channel]
-        if (!h) return Promise.reject(new Error(`unmocked ${channel}`))
-        return Promise.resolve(h(args))
-      }) as never
-    }
+    rustInvoke: { requestRustInvoke: recordingInvoke }
   } as never)
 }
 
@@ -346,6 +350,7 @@ describe('SteamUser on the Rust engine', () => {
   })
 
   it('logout invokes session_logout and anon_close then runs the store cleanup', async () => {
+    steamUser = makeUser({ realAnonClient: true })
     const lease = await steamUser.acquireAuthenticated({
       reason: 'user-refresh'
     })
@@ -356,9 +361,11 @@ describe('SteamUser on the Rust engine', () => {
     expect(channelsCalled()).toEqual(
       expect.arrayContaining(['steamcm_session_logout', 'steamcm_anon_close'])
     )
-    expect(calls.find((c) => c.channel === 'steamcm_anon_close')?.args).toEqual(
-      [{ reason: 'logout' }]
-    )
+    // C1/IN-02: the anonymous client's own close is the only one; logout() sends no second.
+    const anonCloses = calls.filter((c) => c.channel === 'steamcm_anon_close')
+    expect(anonCloses).toEqual([
+      { channel: 'steamcm_anon_close', args: [{ reason: 'logout' }] }
+    ])
     expect(steamUser.getClient()).toBeNull()
     expect(mockTokenStore.clearToken).toHaveBeenCalled()
     expect(mockConfigStore.delete).toHaveBeenCalledWith('isLoggedIn')
