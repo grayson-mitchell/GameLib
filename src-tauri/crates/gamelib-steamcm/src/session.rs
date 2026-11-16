@@ -54,7 +54,6 @@ pub enum Refusal {
     ShuttingDown,
     LogonRejected,
     ClientNotReady,
-    GoOfflineRequired,
     NotSignedIn,
 }
 
@@ -96,19 +95,14 @@ pub enum RestoreOutcome {
     TimedOut,
 }
 
-/// Proof that `before_logon` succeeded; handed back to `after_logon`.
+/// Proof that `before_logon` ran; handed back to `after_logon`.
 #[derive(Debug, Default)]
 pub struct WrapTicket(pub u64);
 
-/// `before_logon` refused: the logon must not be attempted ("never a silent logon").
-#[derive(Debug, Default)]
-pub struct WrapRefused {
-    pub reason: String,
-}
-
-/// The go-offline wrap hook (plans 79-12/79-13).
+/// The logon hook pair plus the owed-record restore (`pay_owed`). The wrap never refuses a
+/// logon (D-09 PASS): `before_logon` is infallible.
 pub trait LogonWrap: Send + Sync + 'static {
-    fn before_logon(&self) -> impl Future<Output = Result<WrapTicket, WrapRefused>> + Send;
+    fn before_logon(&self) -> impl Future<Output = WrapTicket> + Send;
     fn after_logon(&self, t: WrapTicket) -> impl Future<Output = ()> + Send;
     fn pay_owed(&self, trigger: RestoreTrigger) -> impl Future<Output = RestoreOutcome> + Send;
 }
@@ -117,8 +111,8 @@ pub trait LogonWrap: Send + Sync + 'static {
 pub struct NoWrap;
 
 impl LogonWrap for NoWrap {
-    async fn before_logon(&self) -> Result<WrapTicket, WrapRefused> {
-        Ok(WrapTicket(0))
+    async fn before_logon(&self) -> WrapTicket {
+        WrapTicket(0)
     }
     async fn after_logon(&self, _t: WrapTicket) {}
     async fn pay_owed(&self, _trigger: RestoreTrigger) -> RestoreOutcome {
@@ -139,8 +133,8 @@ pub struct RestoreOnlyWrap {
 }
 
 impl LogonWrap for RestoreOnlyWrap {
-    async fn before_logon(&self) -> Result<WrapTicket, WrapRefused> {
-        Ok(WrapTicket(0))
+    async fn before_logon(&self) -> WrapTicket {
+        WrapTicket(0)
     }
     async fn after_logon(&self, _t: WrapTicket) {}
     async fn pay_owed(&self, trigger: RestoreTrigger) -> RestoreOutcome {
@@ -200,11 +194,6 @@ enum Cmd<C> {
     },
 }
 
-enum LogonErr {
-    WrapRefused,
-    Cm(CmError),
-}
-
 /// What an op needs to run against the current connection.
 struct ConnRef<C> {
     conn: Arc<C>,
@@ -243,7 +232,7 @@ struct Recovery<C> {
 enum Internal<C> {
     Connected {
         generation: u64,
-        result: Result<Authed<C>, LogonErr>,
+        result: Result<Authed<C>, CmError>,
     },
     Canary {
         generation: u64,
@@ -256,7 +245,7 @@ enum Internal<C> {
     Rebuilt {
         rid: u64,
         generation: u64,
-        result: Result<Authed<C>, LogonErr>,
+        result: Result<Authed<C>, CmError>,
         ms: u128,
     },
 }
@@ -768,19 +757,14 @@ impl<B: CmBackend, W: LogonWrap> Actor<B, W> {
         let wrap = self.wrap.clone();
         let itx = self.itx.clone();
         tokio::spawn(async move {
-            let result = match wrap.before_logon().await {
-                Err(_) => Err(LogonErr::WrapRefused),
-                Ok(ticket) => {
-                    let r =
-                        tokio::time::timeout(LOGON_BOUND, backend.connect_authed(&token, logon_id))
-                            .await;
-                    wrap.after_logon(ticket).await;
-                    match r {
-                        Err(_) => Err(LogonErr::Cm(CmError::Timeout)),
-                        Ok(Ok(a)) => Ok(a),
-                        Ok(Err(e)) => Err(LogonErr::Cm(e)),
-                    }
-                }
+            let ticket = wrap.before_logon().await;
+            let r =
+                tokio::time::timeout(LOGON_BOUND, backend.connect_authed(&token, logon_id)).await;
+            wrap.after_logon(ticket).await;
+            let result = match r {
+                Err(_) => Err(CmError::Timeout),
+                Ok(Ok(a)) => Ok(a),
+                Ok(Err(e)) => Err(e),
             };
             let _ = itx.send(Internal::Connected { generation, result });
         });
@@ -1073,13 +1057,7 @@ impl<B: CmBackend, W: LogonWrap> Actor<B, W> {
                     "CM session dead (cause={cause}), rebuilding attempt={}",
                     i + 1
                 ));
-                let ticket = match wrap.before_logon().await {
-                    Ok(t) => t,
-                    Err(_) => {
-                        result = Some(Err(LogonErr::WrapRefused));
-                        break;
-                    }
-                };
+                let ticket = wrap.before_logon().await;
                 let r = tokio::time::timeout(
                     RECONNECT_ATTEMPT_BOUND,
                     backend.connect_authed(&token, logon_id),
@@ -1101,7 +1079,7 @@ impl<B: CmBackend, W: LogonWrap> Actor<B, W> {
                     Err(_) => last = CmError::Timeout,
                 }
             }
-            let result = result.unwrap_or(Err(LogonErr::Cm(last)));
+            let result = result.unwrap_or(Err(last));
             let _ = itx.send(Internal::Rebuilt {
                 rid,
                 generation,
@@ -1115,7 +1093,7 @@ impl<B: CmBackend, W: LogonWrap> Actor<B, W> {
         &mut self,
         rid: u64,
         generation: u64,
-        result: Result<Authed<B::Conn>, LogonErr>,
+        result: Result<Authed<B::Conn>, CmError>,
         ms: u128,
     ) {
         let current = self.recovery.as_ref().map(|r| r.rid) == Some(rid)
@@ -1134,11 +1112,7 @@ impl<B: CmBackend, W: LogonWrap> Actor<B, W> {
                 diag(&format!("CM session rebuilt in {ms}ms"));
                 self.finish_recovery(true);
             }
-            Err(LogonErr::WrapRefused) => self.fail_recovery(
-                OpFailure::Cm(CmError::Protocol("go-offline-required".into())),
-                Refusal::GoOfflineRequired,
-            ),
-            Err(LogonErr::Cm(e)) => {
+            Err(e) => {
                 let refusal = if is_credential_refusal(&e) {
                     self.logon_failure = Some(LogonFailure {
                         kind: "logon-rejected",
@@ -1251,7 +1225,7 @@ impl<B: CmBackend, W: LogonWrap> Actor<B, W> {
         }
     }
 
-    fn on_connected(&mut self, generation: u64, result: Result<Authed<B::Conn>, LogonErr>) {
+    fn on_connected(&mut self, generation: u64, result: Result<Authed<B::Conn>, CmError>) {
         let current = self.connecting.as_ref().map(|c| c.generation) == Some(generation)
             && generation == self.generation
             && !self.shutting_down;
@@ -1285,10 +1259,7 @@ impl<B: CmBackend, W: LogonWrap> Actor<B, W> {
                     self.idle_deadline = Some(Instant::now() + IDLE_GRACE);
                 }
             }
-            Err(LogonErr::WrapRefused) => {
-                fail_waiters(connecting.waiters, Refusal::GoOfflineRequired);
-            }
-            Err(LogonErr::Cm(e)) => {
+            Err(e) => {
                 let refusal = if is_credential_refusal(&e) {
                     self.logon_failure = Some(LogonFailure {
                         kind: "logon-rejected",
@@ -1545,18 +1516,13 @@ mod tests {
     struct RecordingWrap {
         log: Log,
         backend: Arc<FakeBackend>,
-        refuse: bool,
         owed_delay: Duration,
     }
 
     impl LogonWrap for RecordingWrap {
-        async fn before_logon(&self) -> Result<WrapTicket, WrapRefused> {
+        async fn before_logon(&self) -> WrapTicket {
             self.log.lock().unwrap().push("before_logon");
-            if self.refuse {
-                Err(WrapRefused::default())
-            } else {
-                Ok(WrapTicket(1))
-            }
+            WrapTicket(1)
         }
         async fn after_logon(&self, _t: WrapTicket) {
             self.log.lock().unwrap().push("after_logon");
@@ -1574,13 +1540,12 @@ mod tests {
         }
     }
 
-    fn recorded(refuse: bool, owed_delay: Duration) -> (Arc<FakeBackend>, H, Log) {
+    fn recorded(owed_delay: Duration) -> (Arc<FakeBackend>, H, Log) {
         let b = Arc::new(FakeBackend::new());
         let log: Log = Arc::default();
         let w = Arc::new(RecordingWrap {
             log: log.clone(),
             backend: b.clone(),
-            refuse,
             owed_delay,
         });
         (b.clone(), SessionHandle::spawn(b, w), log)
@@ -1588,7 +1553,7 @@ mod tests {
 
     #[tokio::test(start_paused = true)]
     async fn shutdown_closes_before_paying_owed() {
-        let (b, h, log) = recorded(false, Duration::ZERO);
+        let (b, h, log) = recorded(Duration::ZERO);
         let _ = acq(&h).await.unwrap();
         assert_eq!(h.shutdown(secs(5)).await, RestoreOutcome::Restored);
         assert!(b.all_closed());
@@ -1602,7 +1567,7 @@ mod tests {
 
     #[tokio::test(start_paused = true)]
     async fn shutdown_during_connect_abandons_it_then_pays() {
-        let (b, h, log) = recorded(false, Duration::ZERO);
+        let (b, h, log) = recorded(Duration::ZERO);
         b.set_delay("connect_authed", secs(10));
         let h2 = h.clone();
         let pending = tokio::spawn(async move { acq(&h2).await });
@@ -1624,7 +1589,7 @@ mod tests {
 
     #[tokio::test(start_paused = true)]
     async fn shutdown_is_bounded_when_pay_owed_hangs() {
-        let (_b, h, _log) = recorded(false, secs(3600));
+        let (_b, h, _log) = recorded(secs(3600));
         let t0 = Instant::now();
         assert_eq!(h.shutdown(secs(5)).await, RestoreOutcome::TimedOut);
         assert!(t0.elapsed() <= secs(6));
@@ -1635,17 +1600,8 @@ mod tests {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn wrap_refusal_means_go_offline_required_without_connecting() {
-        let (b, h, log) = recorded(true, Duration::ZERO);
-        assert_eq!(acq(&h).await, Err(Refusal::GoOfflineRequired));
-        assert_eq!(b.connect_count(), 0);
-        assert_eq!(h.status().await.logon_failure, None);
-        assert_eq!(*log.lock().unwrap(), vec!["before_logon"]);
-    }
-
-    #[tokio::test(start_paused = true)]
     async fn after_logon_runs_once_per_attempt_even_on_failure() {
-        let (b, h, log) = recorded(false, Duration::ZERO);
+        let (b, h, log) = recorded(Duration::ZERO);
         b.push_authed(Err(CmError::EResult(15)));
         assert_eq!(acq(&h).await, Err(Refusal::LogonRejected));
         b.set_delay("connect_authed", secs(40));
@@ -1680,8 +1636,8 @@ mod tests {
     #[test]
     fn refusal_and_outcome_serialise_kebab_case() {
         assert_eq!(
-            serde_json::to_string(&Refusal::GoOfflineRequired).unwrap(),
-            "\"go-offline-required\""
+            serde_json::to_string(&Refusal::ClientNotReady).unwrap(),
+            "\"client-not-ready\""
         );
         assert_eq!(
             serde_json::to_string(&RestoreOutcome::KeptProbeFailed).unwrap(),
@@ -2113,7 +2069,7 @@ mod tests {
 
     #[tokio::test(start_paused = true)]
     async fn every_rebuild_passes_through_the_logon_wrap() {
-        let (b, h, log) = recorded(false, Duration::ZERO);
+        let (b, h, log) = recorded(Duration::ZERO);
         let (l, _) = acq(&h).await.unwrap();
         b.inject_job_failure(2, CmError::Timeout);
         let runs = Arc::new(AtomicUsize::new(0));

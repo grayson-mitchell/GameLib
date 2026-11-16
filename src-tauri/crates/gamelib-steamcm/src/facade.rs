@@ -858,10 +858,8 @@ mod tests {
 
     struct HangWrap;
     impl LogonWrap for HangWrap {
-        async fn before_logon(
-            &self,
-        ) -> Result<crate::session::WrapTicket, crate::session::WrapRefused> {
-            Ok(crate::session::WrapTicket(0))
+        async fn before_logon(&self) -> crate::session::WrapTicket {
+            crate::session::WrapTicket(0)
         }
         async fn after_logon(&self, _t: crate::session::WrapTicket) {}
         async fn pay_owed(&self, _t: RestoreTrigger) -> RestoreOutcome {
