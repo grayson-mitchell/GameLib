@@ -102,6 +102,55 @@ describe('renderArgsStruct', () => {
     )
     expect(req.text).toContain('args.first().ok_or_else(')
   })
+  it('x-secret fields get a redacting Debug instead of derive(Debug) (79 review B/IN-01)', () => {
+    const r = renderArgsStruct(
+      'steamcm_signin_guard_submit',
+      js(
+        z.tuple([
+          z.object({
+            flowId: z.string(),
+            code: z.string().meta({ 'x-secret': true })
+          })
+        ])
+      )
+    )
+    expect(r.text).toContain(
+      '#[derive(Clone, Deserialize)]\npub(crate) struct SteamcmSigninGuardSubmitArgs'
+    )
+    expect(r.text).not.toMatch(
+      /derive\(Debug[^)]*\)\]\npub\(crate\) struct SteamcmSigninGuardSubmitArgs/
+    )
+    expect(r.text).toContain(
+      'impl std::fmt::Debug for SteamcmSigninGuardSubmitArgs'
+    )
+    expect(r.text).toContain('.field("code", &"<redacted>")')
+    expect(r.text).toContain('.field("flow_id", &self.flow_id)')
+    expect(r.text).not.toContain('&self.code')
+  })
+  it('x-secret on a positional item redacts it too', () => {
+    const r = renderArgsStruct(
+      'keyring_set',
+      js(
+        z.tuple([
+          z.string().meta({ title: 'secret', 'x-secret': true }),
+          z.string().meta({ title: 'slot' }).optional()
+        ])
+      )
+    )
+    expect(r.text).toContain(
+      '#[derive(Clone)]\npub(crate) struct KeyringSetArgs'
+    )
+    expect(r.text).toContain('.field("secret", &"<redacted>")')
+    expect(r.text).toContain('.field("slot", &self.slot)')
+  })
+  it('a struct without x-secret fields keeps derive(Debug)', () => {
+    const r = renderArgsStruct(
+      'dialog_open',
+      js(z.tuple([z.object({ title: z.string() })]))
+    )
+    expect(r.text).toContain('#[derive(Debug, Clone, Deserialize)]')
+    expect(r.text).not.toContain('impl std::fmt::Debug')
+  })
   it('multi-element tuple uses titles; trailing optional is Option', () => {
     const r = renderArgsStruct(
       'keyring_set',

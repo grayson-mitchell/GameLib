@@ -378,6 +378,50 @@ mod tests {
         assert!(start.elapsed() < STEAMCM_SHUTDOWN_BOUND * 2);
     }
 
+    /// B/IN-01: a `{:?}` on a secret-bearing args struct must never print the secret (T-28-04).
+    #[test]
+    fn secret_bearing_args_debug_redacts_the_secret() {
+        use serde_json::json;
+        const SECRET: &str = "S3CRET-must-not-print";
+        let dumps = [
+            format!(
+                "{:?}",
+                SteamcmSessionAcquireArgs::from_args(&[json!({
+                    "refreshToken": SECRET, "reason": "login", "logonId": 1
+                })])
+                .unwrap()
+            ),
+            format!(
+                "{:?}",
+                SteamcmRedeemKeyArgs::from_args(&[json!({"leaseId": 1, "key": SECRET})]).unwrap()
+            ),
+            format!(
+                "{:?}",
+                SteamcmSigninCredentialsStartArgs::from_args(&[json!({
+                    "accountName": SECRET, "password": SECRET
+                })])
+                .unwrap()
+            ),
+            format!(
+                "{:?}",
+                SteamcmSigninGuardSubmitArgs::from_args(&[json!({"flowId": "f1", "code": SECRET})])
+                    .unwrap()
+            ),
+            format!(
+                "{:?}",
+                KeyringSetArgs::from_args(&[json!(SECRET), json!("slot-a")]).unwrap()
+            ),
+        ];
+        for d in &dumps {
+            assert!(!d.contains(SECRET), "secret printed: {d}");
+            assert!(d.contains("<redacted>"), "{d}");
+        }
+        // Non-secret fields still print, so the Debug stays useful.
+        assert!(dumps[0].contains("login"), "{}", dumps[0]);
+        assert!(dumps[3].contains("f1"), "{}", dumps[3]);
+        assert!(dumps[4].contains("slot-a"), "{}", dumps[4]);
+    }
+
     #[test]
     fn mac_owned_apps_refuses_anything_but_the_bundled_helper_path() {
         for path in [

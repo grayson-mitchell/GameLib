@@ -204,7 +204,7 @@ export const rustInvokeArgs = {
     'x-error-prefix': 'keyring'
   }),
   [RUST_KEYRING_SET]: z
-    .tuple([z.string().meta({ title: 'secret' }), slot])
+    .tuple([z.string().meta({ title: 'secret', 'x-secret': true }), slot])
     .meta({ 'x-error-prefix': 'keyring' }),
   [RUST_KEYRING_DELETE]: z.tuple([slot]).meta({
     'x-error-prefix': 'keyring'
@@ -487,7 +487,12 @@ export const rustInvokeArgs = {
       .strict()
   ]),
   [RUST_STEAMCM_REDEEM_KEY]: z.tuple([
-    z.object({ leaseId: z.number(), key: z.string() }).strict()
+    z
+      .object({
+        leaseId: z.number(),
+        key: z.string().meta({ 'x-secret': true })
+      })
+      .strict()
   ]),
   [RUST_STEAMCM_REFRESH]: z.tuple([
     z
@@ -515,7 +520,7 @@ export const rustInvokeArgs = {
   [RUST_STEAMCM_SESSION_ACQUIRE]: z.tuple([
     z
       .object({
-        refreshToken: z.string(),
+        refreshToken: z.string().meta({ 'x-secret': true }),
         reason: z.string(),
         logonId: z.number()
       })
@@ -533,10 +538,20 @@ export const rustInvokeArgs = {
   [RUST_STEAMCM_SESSION_STATUS]: empty,
   [RUST_STEAMCM_SIGNIN_CANCEL]: flowArg,
   [RUST_STEAMCM_SIGNIN_CREDENTIALS_START]: z.tuple([
-    z.object({ accountName: z.string(), password: z.string() }).strict()
+    z
+      .object({
+        accountName: z.string().meta({ 'x-secret': true }),
+        password: z.string().meta({ 'x-secret': true })
+      })
+      .strict()
   ]),
   [RUST_STEAMCM_SIGNIN_GUARD_SUBMIT]: z.tuple([
-    z.object({ flowId: z.string(), code: z.string() }).strict()
+    z
+      .object({
+        flowId: z.string(),
+        code: z.string().meta({ 'x-secret': true })
+      })
+      .strict()
   ]),
   [RUST_STEAMCM_SIGNIN_QR_START]: empty,
   [RUST_STEAMCM_SIGNIN_STATUS]: flowArg,

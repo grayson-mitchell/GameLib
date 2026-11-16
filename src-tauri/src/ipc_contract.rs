@@ -743,10 +743,19 @@ impl KeyringGetArgs {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub(crate) struct KeyringSetArgs {
     pub(crate) secret: String,
     pub(crate) slot: Option<String>,
+}
+
+impl std::fmt::Debug for KeyringSetArgs {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("KeyringSetArgs")
+            .field("secret", &"<redacted>")
+            .field("slot", &self.slot)
+            .finish()
+    }
 }
 
 impl KeyringSetArgs {
@@ -1694,11 +1703,20 @@ impl SteamcmProductInfoArgs {
     }
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Clone, Deserialize)]
 pub(crate) struct SteamcmRedeemKeyArgs {
     #[serde(rename = "leaseId")]
     pub(crate) lease_id: f64,
     pub(crate) key: String,
+}
+
+impl std::fmt::Debug for SteamcmRedeemKeyArgs {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SteamcmRedeemKeyArgs")
+            .field("lease_id", &self.lease_id)
+            .field("key", &"<redacted>")
+            .finish()
+    }
 }
 
 impl SteamcmRedeemKeyArgs {
@@ -1752,13 +1770,23 @@ impl SteamcmRefreshArgs {
     }
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Clone, Deserialize)]
 pub(crate) struct SteamcmSessionAcquireArgs {
     #[serde(rename = "refreshToken")]
     pub(crate) refresh_token: String,
     pub(crate) reason: String,
     #[serde(rename = "logonId")]
     pub(crate) logon_id: f64,
+}
+
+impl std::fmt::Debug for SteamcmSessionAcquireArgs {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SteamcmSessionAcquireArgs")
+            .field("refresh_token", &"<redacted>")
+            .field("reason", &self.reason)
+            .field("logon_id", &self.logon_id)
+            .finish()
+    }
 }
 
 impl SteamcmSessionAcquireArgs {
@@ -1846,11 +1874,20 @@ impl SteamcmSigninCancelArgs {
     }
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Clone, Deserialize)]
 pub(crate) struct SteamcmSigninCredentialsStartArgs {
     #[serde(rename = "accountName")]
     pub(crate) account_name: String,
     pub(crate) password: String,
+}
+
+impl std::fmt::Debug for SteamcmSigninCredentialsStartArgs {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SteamcmSigninCredentialsStartArgs")
+            .field("account_name", &"<redacted>")
+            .field("password", &"<redacted>")
+            .finish()
+    }
 }
 
 impl SteamcmSigninCredentialsStartArgs {
@@ -1860,11 +1897,20 @@ impl SteamcmSigninCredentialsStartArgs {
     }
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Clone, Deserialize)]
 pub(crate) struct SteamcmSigninGuardSubmitArgs {
     #[serde(rename = "flowId")]
     pub(crate) flow_id: String,
     pub(crate) code: String,
+}
+
+impl std::fmt::Debug for SteamcmSigninGuardSubmitArgs {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SteamcmSigninGuardSubmitArgs")
+            .field("flow_id", &self.flow_id)
+            .field("code", &"<redacted>")
+            .finish()
+    }
 }
 
 impl SteamcmSigninGuardSubmitArgs {

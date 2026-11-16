@@ -14,7 +14,9 @@
  * Tuple-level meta keys: `x-error-prefix` (error-string prefix, default the channel name) and
  * `x-field-errors: true` (single-object tuples only: `from_args` reports `<prefix>:bad-args` when
  * the object is missing, and `<prefix>:bad-args:<property>` naming the first property, in declared
- * order, that fails to deserialize). Leaf meta: `x-rust-value`.
+ * order, that fails to deserialize). Leaf meta: `x-rust-value`, and `x-secret: true` on a field
+ * whose value must never reach a log: its struct gets a hand-written `Debug` that prints
+ * `<redacted>` for that field instead of `#[derive(Debug)]` (79 review B/IN-01, T-28-04).
  *
  * Run with `pnpm gen:ipc-contract`. The generated file is COMMITTED so `cargo build` needs no Node;
  * `pnpm check:ipc-contract` (CI + path-filtered pre-commit) regenerates in memory and fails on any
@@ -139,6 +141,7 @@ const ANNOTATION_KEYS = new Set([
   'x-error-prefix',
   'x-rust-value',
   'x-field-errors',
+  'x-secret',
   '$schema',
   'minimum',
   'maximum'
@@ -279,10 +282,42 @@ export function rustTypeFor(node: JsonNode, ctx: RenderCtx): string {
   return nullable ? `Option<${out}>` : out
 }
 
+/**
+ * `Debug` for a struct with `x-secret` fields: the secret fields print `<redacted>`, the rest
+ * print as `#[derive(Debug)]` would. Field order is the declared order.
+ */
+function renderRedactingDebug(
+  name: string,
+  fields: { ident: string; secret: boolean }[]
+): string {
+  const lines = fields.map(({ ident, secret }) =>
+    secret
+      ? `            .field(${rustStr(ident)}, &"<redacted>")`
+      : `            .field(${rustStr(ident)}, &self.${ident})`
+  )
+  return `impl std::fmt::Debug for ${name} {\n    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {\n        f.debug_struct(${rustStr(name)})\n${lines.join('\n')}\n            .finish()\n    }\n}`
+}
+
+/** The derive line plus, when any field is secret, the redacting `Debug` impl to append. */
+function debugParts(
+  name: string,
+  fields: { ident: string; secret: boolean }[],
+  derives: string
+): { derive: string; debugImpl: string } {
+  if (!fields.some((f) => f.secret)) {
+    return { derive: `#[derive(Debug, ${derives})]`, debugImpl: '' }
+  }
+  return {
+    derive: `#[derive(${derives})]`,
+    debugImpl: `\n\n${renderRedactingDebug(name, fields)}`
+  }
+}
+
 function renderStruct(name: string, node: JsonNode, ctx: RenderCtx): string {
   const props = (node.properties ?? {}) as Record<string, JsonNode>
   const required = new Set((node.required ?? []) as string[])
   const lines: string[] = []
+  const fields: { ident: string; secret: boolean }[] = []
   for (const [key, prop] of Object.entries(props)) {
     const sub = child(ctx, `properties/${key}`, `${name}${pascal(key)}`)
     let ty = rustTypeFor(prop, sub)
@@ -294,10 +329,12 @@ function renderStruct(name: string, node: JsonNode, ctx: RenderCtx): string {
     if (ident !== key) attrs.push(`    #[serde(rename = ${rustStr(key)})]`)
     if (!required.has(key)) attrs.push('    #[serde(default)]')
     lines.push([...attrs, `    pub(crate) ${ident}: ${ty},`].join('\n'))
+    fields.push({ ident, secret: prop['x-secret'] === true })
   }
   ctx.usesDeserialize = true
   const body = lines.length ? `\n${lines.join('\n')}\n` : ''
-  return `#[derive(Debug, Clone, Deserialize)]\npub(crate) struct ${name} {${body}}`
+  const { derive, debugImpl } = debugParts(name, fields, 'Clone, Deserialize')
+  return `${derive}\npub(crate) struct ${name} {${body}}${debugImpl}`
 }
 
 /**
@@ -398,6 +435,7 @@ export function renderArgsStruct(
     main = `impl ${name} {\n    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {\n        ${first}.map_err(|_| ${rustStr(err)}.to_string())\n    }\n}`
   } else {
     const fields: string[] = []
+    const debugFields: { ident: string; secret: boolean }[] = []
     const lets: string[] = []
     const names: string[] = []
     items.forEach((item, i) => {
@@ -416,6 +454,7 @@ export function renderArgsStruct(
       decls.push(...sub.decls)
       if (i >= minItems && !ty.startsWith('Option<')) ty = `Option<${ty}>`
       fields.push(`    pub(crate) ${ident}: ${ty},`)
+      debugFields.push({ ident, secret: item['x-secret'] === true })
       names.push(ident)
       // clippy::get_first is held at zero by the clippy ratchet
       // (meta/clippyRatchet.cjs), so index 0 must be read with first().
@@ -432,7 +471,8 @@ export function renderArgsStruct(
     })
     ctx.usesValue = true
     ctx.usesDeserialize = true
-    main = `#[derive(Debug, Clone)]\npub(crate) struct ${name} {\n${fields.join('\n')}\n}\n\nimpl ${name} {\n    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {\n${lets.join('\n')}\n        Ok(Self { ${names.join(', ')} })\n    }\n}`
+    const { derive, debugImpl } = debugParts(name, debugFields, 'Clone')
+    main = `${derive}\npub(crate) struct ${name} {\n${fields.join('\n')}\n}${debugImpl}\n\nimpl ${name} {\n    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {\n${lets.join('\n')}\n        Ok(Self { ${names.join(', ')} })\n    }\n}`
   }
   return {
     text: [...decls, main].join('\n\n'),
