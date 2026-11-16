@@ -29,12 +29,16 @@ jest.mock('backend/engine/bottlePrimitives', () => ({
 import {
   ENGINE_MARKER_FILE,
   createEngineSwitcher,
+  reconcileBottleEngineMarker,
+  recordCrossoverBottleEngine,
+  recordPinnedBottleEngine,
   readBottleEngineMarkerKind as readKind,
   readBottleEngineMarkerSummary as readSummary,
   restoreNeedsAbsentPin as needsAbsentPin
 } from '../engineSwitch'
 import type { EngineSwitchContext, EngineSwitchDeps } from '../engineSwitch'
 import { createBottleLedger } from '../bottleLedger'
+import { writeCxbottleConf } from '../adoptBottle'
 import type { EngineSelection } from '../engineTypes'
 import { defined } from './defined'
 
@@ -1114,5 +1118,271 @@ describe('marker versioning (261109-w52)', () => {
     expectNoSideEffects()
     expect(bytes().equals(before)).toBe(true)
     expect(readBottleEngineMarkerKind(NAME)).toBeNull()
+  })
+})
+
+describe('76 gap: marker-less pinned bottle (CR-01)', () => {
+  const TS = '"Timestamp" = "20260715T103801Z"\n'
+  const confPath = () => join(dir, 'cxbottle.conf')
+  const dxvkFile = () => join(dir, 'current_dxvk-macOS')
+  const markerFile = () => join(dir, ENGINE_MARKER_FILE)
+  const logs = () =>
+    jest.requireMock('backend/logger') as {
+      logInfo: jest.Mock
+      logWarning: jest.Mock
+    }
+  let pinWs: string
+  let engineDxvk: { dir: string; version: string }
+
+  const layBottle = (withDxvk: boolean) => {
+    writeFileSync(join(dir, 'system.reg'), '')
+    expect(writeCxbottleConf(dir)).toBe(true)
+    if (withDxvk) writeFileSync(dxvkFile(), 'v1')
+  }
+  const addTimestamp = () =>
+    writeFileSync(confPath(), readFileSync(confPath(), 'utf8') + TS)
+  const removeOnRestore = () =>
+    (deps.installRemove as jest.Mock).mockImplementation(
+      async (_s, _t, action) => {
+        if (action === 'restore') rmSync(dxvkFile(), { force: true })
+        return true
+      }
+    )
+  const sawInfo = (text: string) =>
+    expect(logs().logInfo).toHaveBeenCalledWith(
+      expect.stringContaining(text),
+      expect.anything()
+    )
+  const seedNewer = () =>
+    seedMarker({
+      version: 2,
+      kind: 'pinned',
+      id: 'wine-staging-11.20',
+      wineserverBin: PIN_WS
+    })
+
+  beforeEach(() => {
+    logs().logInfo.mockClear()
+    logs().logWarning.mockClear()
+    const engines = join(mockState.root, 'engines')
+    pinWs = join(engines, 'wine-staging-11.20', 'bin', 'wineserver')
+    mkdirSync(join(engines, 'wine-staging-11.20', 'bin'), { recursive: true })
+    writeFileSync(pinWs, '')
+    mockState.engines = engines
+    engineDxvk = { dir: join(engines, 'dxvk'), version: 'v1' }
+    const paths = {
+      wineBin: join(engines, 'wine-staging-11.20', 'bin', 'wine'),
+      wineserverBin: pinWs,
+      dxvkDir: engineDxvk.dir
+    }
+    ;(ctx.fallback.pinnedEnginePaths as jest.Mock).mockReturnValue(paths)
+    ;(ctx.fallback.isPinnedEngineInstalled as jest.Mock).mockReturnValue(true)
+    deps.currentPinEngine.mockReturnValue({
+      wineBin: paths.wineBin,
+      wineserverBin: pinWs,
+      label: 'Pinned',
+      version: '11.20',
+      dxvk: engineDxvk
+    })
+    removeOnRestore()
+  })
+
+  test('CR-01: a marker-less Staging bottle whose conf gained CrossOver Timestamp is switched to crossover', async () => {
+    layBottle(true)
+    addTimestamp()
+    expect(await run(crossover)).toEqual({ ok: true, changed: true })
+    expect(deps.killWith).toHaveBeenCalledWith(
+      NAME,
+      pinWs,
+      { USER: 'crossover' },
+      15_000
+    )
+    expect(deps.installRemove).toHaveBeenCalledWith(
+      expect.anything(),
+      'dxvk',
+      'restore',
+      expect.anything()
+    )
+    expect(existsSync(dxvkFile())).toBe(false)
+    expect(marker().kind).toBe('crossover')
+    sawInfo(
+      'engine switch for "GameLibSteamBridge-620": pinned:wine-staging-11.20 -> crossover'
+    )
+  })
+
+  test('hardened inference: DXVK-macOS beats a Timestamp (pinned, no-op)', async () => {
+    layBottle(true)
+    addTimestamp()
+    expect(await run(pinned)).toEqual({ ok: true, changed: false })
+    expect(deps.killWith).not.toHaveBeenCalled()
+    expect(marker()).toMatchObject({ kind: 'pinned', id: 'wine-staging-11.20' })
+  })
+
+  test('contradicted crossover marker: next crossover switches with a restore', async () => {
+    layBottle(true)
+    seedMarker({ kind: 'crossover', id: 'crossover', wineserverBin: '' })
+    expect(await run(crossover)).toMatchObject({ ok: true, changed: true })
+    expect(deps.installRemove).toHaveBeenCalledWith(
+      expect.anything(),
+      'dxvk',
+      'restore',
+      expect.anything()
+    )
+    expect(logs().logWarning).toHaveBeenCalledWith(
+      expect.stringContaining('says crossover but DXVK-macOS is installed'),
+      expect.anything()
+    )
+  })
+
+  test('contradicted crossover marker: next pinned is a no-op that rewrites the marker', async () => {
+    layBottle(true)
+    seedMarker({ kind: 'crossover', id: 'crossover', wineserverBin: '' })
+    expect(await run(pinned)).toEqual({ ok: true, changed: false })
+    expect(deps.killWith).not.toHaveBeenCalled()
+    expect(marker().kind).toBe('pinned')
+  })
+
+  test('a crossover marker without DXVK-macOS stays a no-op', async () => {
+    layBottle(false)
+    seedMarker({ kind: 'crossover', id: 'crossover', wineserverBin: '' })
+    expect(await run(crossover)).toEqual({ ok: true, changed: false })
+  })
+
+  test('reconcile before the Timestamp appears still lets the switch reach crossover', async () => {
+    layBottle(false)
+    expect(reconcileBottleEngineMarker(ctx, NAME)).toBe('pinned')
+    expect(marker().id).toBe('wine-staging-11.20')
+    addTimestamp()
+    expect(await run(crossover)).toMatchObject({ ok: true, changed: true })
+    expect(deps.killWith).toHaveBeenCalledWith(
+      NAME,
+      pinWs,
+      { USER: 'crossover' },
+      15_000
+    )
+    sawInfo(
+      'engine switch for "GameLibSteamBridge-620": pinned:wine-staging-11.20 -> crossover'
+    )
+  })
+
+  test('reconcile of a contradicted crossover marker persists pinned', () => {
+    layBottle(true)
+    seedMarker({ kind: 'crossover', id: 'crossover', wineserverBin: '' })
+    expect(reconcileBottleEngineMarker(ctx, NAME)).toBe('pinned')
+    expect(marker().kind).toBe('pinned')
+    sawInfo('reconciled before the CrossOver pre-flight')
+  })
+
+  describe('reconcile returns null and writes nothing', () => {
+    test('trusted marker', () => {
+      layBottle(false)
+      seedMarker({ kind: 'crossover', id: 'crossover', wineserverBin: '' })
+      const before = readFileSync(markerFile())
+      expect(reconcileBottleEngineMarker(ctx, NAME)).toBeNull()
+      expect(readFileSync(markerFile()).equals(before)).toBe(true)
+    })
+    test('newer-build marker', () => {
+      layBottle(true)
+      seedNewer()
+      const before = readFileSync(markerFile())
+      const stderr = jest
+        .spyOn(process.stderr, 'write')
+        .mockImplementation(() => true)
+      expect(reconcileBottleEngineMarker(ctx, NAME)).toBeNull()
+      stderr.mockRestore()
+      expect(readFileSync(markerFile()).equals(before)).toBe(true)
+    })
+    test('unsafe name', () => {
+      expect(reconcileBottleEngineMarker(ctx, '../x')).toBeNull()
+    })
+    test('missing bottle dir', () => {
+      expect(reconcileBottleEngineMarker(ctx, 'Nope-1')).toBeNull()
+    })
+    test('no cxbottle.conf', () => {
+      expect(reconcileBottleEngineMarker(ctx, NAME)).toBeNull()
+      expect(existsSync(markerFile())).toBe(false)
+    })
+  })
+
+  test('no Timestamp and no DXVK-macOS infers pinned (CrossOver create always writes Timestamp)', async () => {
+    layBottle(false)
+    expect(reconcileBottleEngineMarker(ctx, NAME)).toBe('pinned')
+    expect(await run(pinned)).toEqual({ ok: true, changed: false })
+    expect(deps.killWith).not.toHaveBeenCalled()
+  })
+
+  describe('recordCrossoverBottleEngine', () => {
+    test('writes a crossover marker the switch then trusts', async () => {
+      expect(recordCrossoverBottleEngine(ctx, NAME, BIN_DIR)).toBe(true)
+      expect(readBottleEngineMarkerKind(NAME)).toBe('crossover')
+      expect(marker().wineserverBin).toBe(`${BIN_DIR}/wineserver`)
+      expect(await run(crossover)).toEqual({ ok: true, changed: false })
+      sawInfo('recorded at creation: crossover')
+    })
+    test('rejects an unsafe name', () => {
+      expect(recordCrossoverBottleEngine(ctx, '../x', BIN_DIR)).toBe(false)
+    })
+    test('leaves a newer-build marker byte-identical', () => {
+      seedNewer()
+      const before = readFileSync(markerFile())
+      const stderr = jest
+        .spyOn(process.stderr, 'write')
+        .mockImplementation(() => true)
+      expect(recordCrossoverBottleEngine(ctx, NAME, BIN_DIR)).toBe(false)
+      stderr.mockRestore()
+      expect(readFileSync(markerFile()).equals(before)).toBe(true)
+    })
+  })
+
+  describe('recordPinnedBottleEngine', () => {
+    const engine = () => ({
+      wineBin: pinWs.replace('wineserver', 'wine'),
+      wineserverBin: pinWs,
+      label: 'Pinned',
+      version: '11.20',
+      dxvk: engineDxvk
+    })
+    test('records pin id, wineserver and dxvk', () => {
+      writeFileSync(dxvkFile(), 'v1')
+      expect(
+        recordPinnedBottleEngine(ctx, NAME, 'wine-staging-11.20', engine())
+      ).toBe(true)
+      expect(readBottleEngineMarkerSummary(NAME)).toMatchObject({
+        kind: 'non-crossover',
+        pinId: 'wine-staging-11.20'
+      })
+      expect(marker().dxvk).toEqual(engineDxvk)
+      sawInfo('recorded at creation: pinned:wine-staging-11.20')
+    })
+    test('no dxvk key when the engine has none', () => {
+      expect(
+        recordPinnedBottleEngine(ctx, NAME, 'wine-staging-11.20', {
+          ...engine(),
+          dxvk: null
+        })
+      ).toBe(true)
+      expect('dxvk' in marker()).toBe(false)
+    })
+    test('rejects an invalid pin id or unsafe name and writes nothing', () => {
+      expect(recordPinnedBottleEngine(ctx, NAME, 'bad id!', engine())).toBe(
+        false
+      )
+      expect(
+        recordPinnedBottleEngine(ctx, '../x', 'wine-staging-11.20', engine())
+      ).toBe(false)
+      expect(existsSync(markerFile())).toBe(false)
+    })
+    test('leaves a newer-build marker byte-identical', () => {
+      seedNewer()
+      const before = readFileSync(markerFile())
+      const stderr = jest
+        .spyOn(process.stderr, 'write')
+        .mockImplementation(() => true)
+      expect(
+        recordPinnedBottleEngine(ctx, NAME, 'wine-staging-11.20', engine())
+      ).toBe(false)
+      stderr.mockRestore()
+      expect(readFileSync(markerFile()).equals(before)).toBe(true)
+    })
   })
 })
