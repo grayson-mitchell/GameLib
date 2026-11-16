@@ -282,6 +282,16 @@ impl Flows {
         self.map.lock().unwrap_or_else(|e| e.into_inner())
     }
 
+    /// The SteamID a credentials flow's BeginAuthSessionViaCredentials reply named (0 = none).
+    fn begin_steam_id(&self, id: &str) -> Option<String> {
+        self.lock()
+            .get(id)
+            .and_then(|f| f.guard_ctx)
+            .map(|(_, s)| s)
+            .filter(|s| *s != 0)
+            .map(|s| s.to_string())
+    }
+
     /// Drop `id` if it has ended. A live flow is left alone.
     fn remove_if_terminal(&self, id: &str) {
         let mut m = self.lock();
@@ -473,7 +483,16 @@ impl WebAuth {
             }
             if p.has_refresh_token() {
                 let token = p.refresh_token().to_string();
-                let steam_id = jwt_sub(&token).unwrap_or_default();
+                // A/IN-04: never hand the app a sign-in with `steamId: ""`. A credentials flow
+                // falls back to the SteamID BeginAuthSessionViaCredentials named; a QR flow has
+                // none, so an unreadable `sub` ends it.
+                let Some(steam_id) = jwt_sub(&token).or_else(|| self.flows.begin_steam_id(id))
+                else {
+                    crate::error::diag("webauth: refresh token carries no readable sub");
+                    self.flows
+                        .set_status(id, FlowStatus::error(FlowErrorReason::Network, None));
+                    return;
+                };
                 self.flows.set_status(
                     id,
                     FlowStatus::Done {
@@ -1033,6 +1052,24 @@ mod tests {
                 ..
             }
         )
+    }
+
+    /// A/IN-04: a QR sign-in whose token has no readable `sub` ends in an error, never in a
+    /// `done` with an empty SteamID.
+    #[tokio::test]
+    async fn qr_token_without_a_readable_sub_is_an_error_not_an_empty_steam_id() {
+        crate::install_crypto_provider();
+        let mock = Mock::start().await;
+        mock.push(BEGIN, begin_reply("https://s.team/q/1", 2.0));
+        mock.push(POLL, done_reply("not-a-jwt"));
+        let wa = fast(mock.base_url());
+        let st = wa.qr_start().await.unwrap();
+        sleep_ms(150).await;
+        match wa.status(&st.flow_id) {
+            FlowStatus::Error { reason, .. } => assert_eq!(reason, FlowErrorReason::Network),
+            FlowStatus::Done { steam_id, .. } => panic!("done with steamId {steam_id:?}"),
+            _ => panic!("still live"),
+        }
     }
 
     /// A/IN-03: cancelling a flow that already finished drops it, and its refresh token, at once.

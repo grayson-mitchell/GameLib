@@ -478,6 +478,32 @@ mod tests {
         }
     }
 
+    /// A/IN-04: a token with no readable `sub` takes the SteamID from the begin reply.
+    #[tokio::test]
+    async fn unreadable_sub_falls_back_to_the_begin_steam_id() {
+        let (mock, wa, r) = start(&[G::k_EAuthSessionGuardType_None]).await;
+        let CredStarted::Waiting { flow_id } = r.unwrap() else {
+            panic!("waiting")
+        };
+        mock.push(
+            POLL,
+            Reply::ok(
+                CAuthentication_PollAuthSessionStatus_Response {
+                    refresh_token: Some("not-a-jwt".into()),
+                    account_name: Some("acct".into()),
+                    ..Default::default()
+                }
+                .write_to_bytes()
+                .unwrap(),
+            ),
+        );
+        sleep_ms(150).await;
+        match wa.status(&flow_id) {
+            FlowStatus::Done { steam_id, .. } => assert_eq!(steam_id, "76561198000000001"),
+            _ => panic!("expected done"),
+        }
+    }
+
     #[tokio::test]
     async fn code_plus_confirmation_is_guard_and_app_approval_still_completes() {
         let (mock, wa, r) = start(&[
