@@ -700,6 +700,8 @@ impl InstallPolls {
                 };
                 slot.poll.hold.clone()
             };
+            // What the probe started from; an upgrade may change it while the lock is dropped.
+            let hold_before = hold.steam_hold;
             let probe_token = token.clone();
             let (holding, effects) = should_hold(
                 reg.runner().as_ref(),
@@ -719,6 +721,14 @@ impl InstallPolls {
                 let Some(slot) = polls.get_mut(app_id).filter(|s| s.gen == gen) else {
                     return false;
                 };
+                // 80-REVIEW A/WR-04: an upgrade during the probe (adoptedBySteamClient releases
+                // the hold and clears its record) moved the hold state under us. Copying the
+                // probe's result back would resurrect the hold and re-persist the record, so
+                // drop it; the next tick decides from the current state. The first step only
+                // asked for the probe and changed nothing, so nothing is lost.
+                if slot.poll.hold.steam_hold != hold_before {
+                    return true;
+                }
                 // Only the fields should_hold writes; an upgrade between the two locks keeps the
                 // rest.
                 slot.poll.hold.steam_hold = hold.steam_hold;

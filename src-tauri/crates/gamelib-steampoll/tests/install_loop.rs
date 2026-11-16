@@ -1078,6 +1078,113 @@ async fn a_slow_tick_delays_the_next_one_instead_of_overlapping() {
     assert!(!reg.is_active(PollKind::Install, APP));
 }
 
+// ---- state moved while the hold probe ran (80-REVIEW A/WR-04, A/WR-05) ----------------------
+
+/// pgrep takes 10 s and reports Steam pid 321; ps answers at once. Leaves a window in which a
+/// `steampoll_install_start` upgrade lands while the probe is out.
+struct SlowSteamRunner;
+
+impl ProcessRunner for SlowSteamRunner {
+    fn run(&self, program: &str, _argv: Vec<String>, _timeout: Duration) -> BoxFuture<RunOutput> {
+        let slow = program.ends_with("pgrep");
+        Box::pin(async move {
+            if slow {
+                tokio::time::sleep(Duration::from_secs(10)).await;
+                RunOutput {
+                    code: Some(0),
+                    stdout: "321\n".into(),
+                    stderr: String::new(),
+                }
+            } else {
+                RunOutput {
+                    code: Some(0),
+                    stdout: "321 Mon Nov 16 10:00:00 2026\n".into(),
+                    stderr: String::new(),
+                }
+            }
+        })
+    }
+
+    fn spawn_streaming(&self, _p: &str, _a: Vec<String>) -> std::io::Result<StreamingChild> {
+        Err(std::io::Error::other("unused"))
+    }
+}
+
+/// A native handoff poll on a finalized manifest, with the slow probe. Returns the polls, the
+/// host and the roots; the bottle root exists but holds no manifest.
+async fn slow_probe_rig(tmp: &TempDir) -> (InstallPolls, Arc<RecordingHost>, PollRoots) {
+    let steam = tmp.path().join("steam");
+    let steamapps = steam.join("steamapps");
+    std::fs::create_dir_all(&steamapps).unwrap();
+    std::fs::write(
+        steamapps.join("libraryfolders.vdf"),
+        format!(
+            "\"libraryfolders\"\n{{\n\"0\"\n{{\n\"path\" \"{}\"\n}}\n}}\n",
+            steam.display()
+        ),
+    )
+    .unwrap();
+    let bottle = tmp.path().join("bottle");
+    std::fs::create_dir_all(&bottle).unwrap();
+    let host = Arc::new(RecordingHost::default());
+    let runner = Arc::new(SlowSteamRunner);
+    let clock = Arc::new(FakeClock::new(1_000_000));
+    let outbox = Arc::new(Outbox::new());
+    outbox.mark_ready(host.as_ref()).await;
+    let reg = Registry::new(
+        tokio::runtime::Handle::current(),
+        host.clone(),
+        runner.clone(),
+        clock.clone(),
+    );
+    let monitor = Arc::new(DownloadMonitor::with_platform(
+        host.clone(),
+        runner,
+        clock,
+        false,
+    ));
+    let polls = InstallPolls::new(reg, outbox, host.clone(), monitor, Platform::Linux);
+    let roots = PollRoots {
+        steam_root: steam.to_string_lossy().into_owned(),
+        bottle_steamapps_root: Some(bottle.to_string_lossy().into_owned()),
+        bridge_steamapps_root: None,
+    };
+    write_app_manifest(&steamapps, &manifest(APP, "4"), 1).unwrap();
+    (polls, host, roots)
+}
+
+#[tokio::test(start_paused = true)]
+async fn an_adoption_during_the_hold_probe_is_not_overwritten_by_the_probe() {
+    let tmp = TempDir::new().unwrap();
+    let (polls, host, roots) = slow_probe_rig(&tmp).await;
+    let start_with = |options: PollOptions| {
+        polls
+            .start_install(StartInstallArgs {
+                app_id: APP.into(),
+                title: "Game".into(),
+                roots: roots.clone(),
+                options,
+            })
+            .unwrap();
+    };
+    start_with(handoff(None));
+    // First tick at 3 s starts the 10 s probe; adopt at 5 s, while it is out.
+    tokio::time::sleep(Duration::from_secs(5)).await;
+    settle().await;
+    start_with(PollOptions {
+        adopted_by_steam_client: Some(true),
+        ..PollOptions::default()
+    });
+    tokio::time::sleep(Duration::from_secs(30)).await;
+    settle().await;
+    let l = labels(&host);
+    assert!(
+        !l.contains(&"file:record".to_string()),
+        "the probe re-persisted a released hold: {l:?}"
+    );
+    assert!(l.contains(&"state:installed".to_string()), "{l:?}");
+}
+
 // ---- TS-pushed mirrors and the re-arm bookkeeping --------------------------------------------
 
 #[tokio::test(start_paused = true)]
