@@ -1,8 +1,8 @@
 ---
-status: investigating
+status: resolved
 trigger: 'Mac Steam helper shows "playing Spacewar" (AppID 480) in Friends; fix via /gsd-debug (todo 2026-11-15-mac-steam-path-shows-playing-spacewar.md)'
 created: 2026-11-16
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 ## Symptoms
@@ -36,7 +36,7 @@ next_action: verify whether bridge mode (normal / identity-only, `helperSpawn.ts
 
 ## Resolution
 
-root_cause:
-fix:
-verification:
-files_changed:
+root_cause: meta/buildSteamBridgeShims.ts staged steam_appid.txt=480 beside steam-bridge-helper; steamclient reads it from the executable's directory, so --steam-owned-apps / --steam-installapp / --steam-uninstallapp registered as AppID 480 ("playing Spacewar").
+fix: 537df457d — build no longer stages the file (removeStaleSteamAppId() deletes leftovers); macSteamPathEnabled() default on (GAMELIB_STEAM_MAC_PATH=off opts out). Unused native/steam-bridge/steam_appid.txt removed (landed in bc7f60246).
+verification: live probe (owned-apps, 1140 apps, 0 AppID 480 lines); operator UAT 2026-11-17 — Mac-path Refresh, two UninstallApp runs and an InstallApp adoption of 264160, 0 AppID 480 lines in gameprocess_log.txt.
+files_changed: meta/buildSteamBridgeShims.ts, meta/__tests__/buildSteamBridgeShims.test.ts, src/backend/storeManagers/steam/library/macSteamPathFlag.ts, src/backend/storeManagers/steam/__tests__/macSteamPathFlag.test.ts, library.macSteamRefresh.test.ts, CLAUDE.md

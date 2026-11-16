@@ -5,7 +5,7 @@ area: steam-library
 severity: medium
 platform: macos
 ready: human
-needs: operator-uat-install-uninstall-and-friends-check
+resolved: 2026-11-17 (537df457d; operator UAT passed)
 source: Phase 79 plan 79-38 (UAT part B item 14)
 files: [native/steam-bridge/helper/gamelib_ownedapps.h, native/steam-bridge/helper/gamelib_installapp.h, src/backend/storeManagers/steam/library/macSteamPathFlag.ts, src/backend/storeManagers/steam/library/refresh.ts]
 ---
@@ -44,12 +44,16 @@ cwd/env theories were wrong; the file was the trigger.
   identity-only mode its own cwd file. The beside-binary 480 could only shadow a real game AppID.
 - `macSteamPathEnabled()` is now on by default; `GAMELIB_STEAM_MAC_PATH=off` opts out. CLAUDE.md updated.
 
-## Remaining (operator UAT)
+## UAT (2026-11-17, passed)
 
-With a rebuilt helper (`pnpm build-steam-bridge`) and Mac Steam running: a Refresh, a native
-install and an uninstall each add 0 `AppID 480 adding PID` lines to
-`~/Library/Application Support/Steam/logs/gameprocess_log.txt`, and Friends shows no game. Then
-move this todo to completed.
+Rebuilt helper (07:24, no `steam_appid.txt` beside it), Mac Steam running (pid 70071). `gamelib.log`:
+Refresh 07:25:46 `Steam Refresh: Mac Steam path ok games=398 demos=11 (no CM logon)`; UninstallApp
+07:26:14 and 07:29:28 (`Steam UninstallApp accepted appId 264160`, WazHack); InstallApp adoption
+07:29:46 `Steam adopted appId 264160 via InstallApp without a restart` (experimental InstallApp
+setting on; the 07:26 install ran with it off and only recorded a pending adoption).
+`gameprocess_log.txt`: 0 `AppID 480` lines after the deliberate control probe at 2026-11-16 12:37:39.
+Friends: not separately reported by the operator; it is driven by the same tracked-process entries,
+none of which were added.
 
 ## History: mitigation (superseded)
 
