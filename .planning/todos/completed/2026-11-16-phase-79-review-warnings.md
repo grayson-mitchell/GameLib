@@ -47,3 +47,5 @@ The todo stays open only for the live gate below. No unit test can reach these c
 5. On the QR tab, switch to credentials and back to QR. A fresh code should draw and the poll should resume (round-trip fix).
 6. Start a Refresh, and install or uninstall a game while it runs. The install change should survive the Refresh (C1/WR-01).
 7. Optional: kill the sidecar (`kill -9`). The crash dialog should appear, and Restart should work (B/IN-02).
+
+**Live gate passed 2026-11-16 (operator).** It turned up two follow-up UX issues in the credentials Steam Guard step, which a quick task fixes.
