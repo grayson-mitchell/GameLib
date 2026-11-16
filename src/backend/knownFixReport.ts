@@ -29,8 +29,10 @@ import { LogPrefix, logInfo, logWarning } from './logger'
 import { isMac } from './constants/environment'
 import type { AbortRegistry } from './utils/aborthandler/aborthandler'
 
-// Plan 57-12 replaces the host with the deployed URL after the operator
-// checkpoint, and adds a test that the sentinel is gone.
+// The relay URL below is the deployed relay (57-12). The sentinel is kept only
+// as a fail-closed guard: the send path (`url.includes(RELAY_URL_PENDING_SENTINEL)`
+// in the report sender) sends nothing for a URL containing it, and
+// `__tests__/knownFixReportUrl.test.ts` pins that the deployed URL does not.
 export const RELAY_URL_PENDING_SENTINEL = 'OPERATOR-DEPLOY-PENDING'
 export const GAMELIB_FIX_RELAY_URL =
   'https://gamelib-fix-relay.gamelib.workers.dev/v1/reports'

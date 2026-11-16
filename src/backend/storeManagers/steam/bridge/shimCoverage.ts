@@ -101,8 +101,8 @@ export const SHIM_EXPORTED_SYMBOLS: SymbolTable = Object.freeze({
   SteamApps: true,
   SteamUserStats: true,
   // 51-14 Task 1: the second/last-group families (ROADMAP sub-decision 1)
-  // -- ISteamRemoteStorage (cloud-disabled), ISteamMatchmaking /
-  // ISteamMatchmakingServers / ISteamNetworking (unavailable). Flat
+  // -- ISteamRemoteStorage (cloud-disabled), ISteamMatchmaking (wired since
+  // 58-12), ISteamMatchmakingServers / ISteamNetworking (stub). Flat
   // accessors first (meta/sdk/isteamremotestorage005.manifest.json,
   // isteammatchmaking009.manifest.json,
   // isteammatchmakingservers002.manifest.json,
@@ -201,12 +201,12 @@ export function shimServedInterfaceVersions(): ReadonlyMap<
       'STEAMUSERSTATS_INTERFACE_VERSION011',
       { family: 'SteamUserStats', mode: 'wire' }
     ],
-    // 51-14: the second/last-group families -- served, but 'stub' (not
-    // 'wire'): ROADMAP sub-decision 1 answers ISteamRemoteStorage as
-    // cloud-disabled and ISteamMatchmaking/ISteamMatchmakingServers/
-    // ISteamNetworking as unavailable (P2P join stays out of scope per
-    // 24-SPEC). D-51-02's one-time notice is what tells the user these
-    // parts are stubbed.
+    // 51-14: the second/last-group families. ISteamRemoteStorage stays a
+    // cloud-disabled 'stub' (ROADMAP sub-decision 1). Since Phase 58
+    // multiplayer, SteamMatchMaking009 (lobbies) is 'wire' (D-07 / 58-12);
+    // SteamMatchMakingServers002 and SteamNetworking005 remain 'stub'. P2P
+    // and lobby join are no longer out of scope. D-51-02's one-time notice is
+    // what tells the user which families are stubbed.
     [
       'STEAMREMOTESTORAGE_INTERFACE_VERSION005',
       { family: 'SteamRemoteStorage', mode: 'stub' }
@@ -274,9 +274,11 @@ export function shim64ServedInterfaceVersions(): ReadonlyMap<
       'STEAMREMOTESTORAGE_INTERFACE_VERSION013',
       { family: 'SteamRemoteStorage', mode: 'stub' }
     ],
-    // The three shared stub manifests (51-14), arches widened to x64 this
-    // plan -- same stub behavior, arch-neutral (P2P join stays out of
-    // scope, 24-SPEC).
+    // The three shared manifests (51-14), arches widened to x64: arch-neutral.
+    // SteamMatchMaking009 is 'wire' since 58-12 (D-07);
+    // SteamMatchMakingServers002 and SteamNetworking005 remain 'stub'. The
+    // later wire entries (SteamNetworking006 58-13, SteamMatchMakingServers003
+    // 58-21) are listed below.
     // D-07 / 58-12: wired (see the x86 entry; same shared manifest).
     ['SteamMatchMaking009', { family: 'SteamMatchMaking', mode: 'wire' }],
     [
