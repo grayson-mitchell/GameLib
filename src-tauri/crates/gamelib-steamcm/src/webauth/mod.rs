@@ -29,6 +29,9 @@ pub const STEAM_API_BASE: &str = "https://api.steampowered.com";
 
 /// A QR flow ends with `timeout` after this long (userTypes.ts QR_LOGIN_TIMEOUT_MS).
 const QR_LOGIN_TIMEOUT: Duration = Duration::from_secs(120);
+/// A/IN-03: how long an ended flow nobody reads is kept. A `done` flow holds the refresh token, so
+/// it must not outlive a frontend that stopped polling. The frontend polls every 2 s.
+const TERMINAL_FLOW_TTL: Duration = Duration::from_secs(60);
 const DEVICE_NAME: &str = "GameLib";
 /// EOSType Win11, what steam-session sends for SteamClient logins.
 const OS_TYPE_WIN11: i32 = 20;
@@ -79,6 +82,8 @@ pub(crate) struct Timing {
     pub flow_timeout: Duration,
     /// Credentials flows get longer for email retrieval (userSignIn.ts loginTimeout 180000).
     pub credentials_timeout: Duration,
+    /// How long an ended flow (`done`, `error`) waits to be read before it is dropped.
+    pub terminal_ttl: Duration,
 }
 
 impl Timing {
@@ -87,6 +92,7 @@ impl Timing {
         max_interval: Duration::from_secs(10),
         flow_timeout: QR_LOGIN_TIMEOUT,
         credentials_timeout: Duration::from_secs(180),
+        terminal_ttl: TERMINAL_FLOW_TTL,
     };
 
     fn clamp_interval(&self, secs: f32) -> Duration {
@@ -276,6 +282,38 @@ impl Flows {
         self.map.lock().unwrap_or_else(|e| e.into_inner())
     }
 
+    /// Drop `id` if it has ended. A live flow is left alone.
+    fn remove_if_terminal(&self, id: &str) {
+        let mut m = self.lock();
+        if m.get(id).is_some_and(|f| is_terminal(&f.status)) {
+            m.remove(id);
+        }
+    }
+
+    /// A/IN-03: sleep `ttl`, then drop `id` if it ended and nobody read it. Runs at the tail of
+    /// the flow's own task, so aborting that task (cancel, cancel_all) also stops it.
+    pub(crate) async fn expire_after(&self, id: &str, ttl: Duration) {
+        tokio::time::sleep(ttl).await;
+        self.remove_if_terminal(id);
+    }
+
+    /// Remove every live flow of `kind` (a new attempt replaces it, userSignIn.ts parity). An
+    /// ended flow is kept: an unread `done` is a completed sign-in, and it expires on its own.
+    pub(crate) fn replace_live(m: &mut HashMap<String, FlowState>, kind: FlowKind) {
+        let stale: Vec<String> = m
+            .iter()
+            .filter(|(_, f)| f.kind == kind && !is_terminal(&f.status))
+            .map(|(k, _)| k.clone())
+            .collect();
+        for k in stale {
+            if let Some(f) = m.remove(&k) {
+                if let Some(h) = f.handle {
+                    h.abort();
+                }
+            }
+        }
+    }
+
     /// Set a live flow's status. A flow that was cancelled or removed is left alone.
     fn set_status(&self, id: &str, status: FlowStatus) {
         let mut m = self.lock();
@@ -293,6 +331,10 @@ impl Flows {
             }
         }
     }
+}
+
+fn is_terminal(s: &FlowStatus) -> bool {
+    matches!(s, FlowStatus::Done { .. } | FlowStatus::Error { .. })
 }
 
 fn status_name(s: &FlowStatus) -> &'static str {
@@ -354,18 +396,7 @@ impl WebAuth {
         let deadline = Instant::now() + self.timing.flow_timeout;
         let mut m = self.flows.lock();
         // userSignIn.ts parity: a new QR flow replaces the previous one.
-        let stale: Vec<String> = m
-            .iter()
-            .filter(|(_, f)| f.kind == FlowKind::Qr)
-            .map(|(k, _)| k.clone())
-            .collect();
-        for k in stale {
-            if let Some(f) = m.remove(&k) {
-                if let Some(h) = f.handle {
-                    h.abort();
-                }
-            }
-        }
+        Flows::replace_live(&mut m, FlowKind::Qr);
         let me = self.clone();
         let task_id = id.clone();
         let url = challenge_url.clone();
@@ -375,6 +406,9 @@ impl WebAuth {
                 me.flows
                     .set_status(&task_id, FlowStatus::error(FlowErrorReason::Timeout, None));
             }
+            me.flows
+                .expire_after(&task_id, me.timing.terminal_ttl)
+                .await;
         });
         m.insert(
             id.clone(),
@@ -453,35 +487,47 @@ impl WebAuth {
         }
     }
 
-    /// Local read of a flow's status. `Done` and `Error` are read-once: the flow is removed.
+    /// Local read of a flow's status. `Done` and `Error` are read-once: the flow is removed. An
+    /// ended flow nobody reads is dropped after `terminal_ttl` and then reads `unknownFlow`.
     pub fn status(&self, flow_id: &str) -> FlowStatus {
         let mut m = self.flows.lock();
         let Some(f) = m.get(flow_id) else {
             return FlowStatus::error(FlowErrorReason::UnknownFlow, None);
         };
-        match &f.status {
-            FlowStatus::Done { .. } | FlowStatus::Error { .. } => m
-                .remove(flow_id)
-                .map(|f| f.status)
-                .unwrap_or_else(|| FlowStatus::error(FlowErrorReason::UnknownFlow, None)),
-            s => s.clone(),
-        }
-    }
-
-    /// Stop a flow. A later `status()` reports `error cancelled` once, then `unknownFlow`.
-    pub fn cancel(&self, flow_id: &str) {
-        let mut m = self.flows.lock();
-        if let Some(f) = m.get_mut(flow_id) {
-            if let Some(h) = f.handle.take() {
+        if is_terminal(&f.status) {
+            if let Some(h) = &f.handle {
                 h.abort();
             }
-            if matches!(
-                f.status,
-                FlowStatus::Waiting { .. } | FlowStatus::GuardRequired { .. }
-            ) {
-                f.status = FlowStatus::error(FlowErrorReason::Cancelled, None);
-                crate::error::diag(&format!("webauth {} flow -> cancelled", f.kind.name()));
-            }
+            return m
+                .remove(flow_id)
+                .map(|f| f.status)
+                .unwrap_or_else(|| FlowStatus::error(FlowErrorReason::UnknownFlow, None));
+        }
+        f.status.clone()
+    }
+
+    /// Stop a flow. A live flow's later `status()` reports `error cancelled` once (within
+    /// `terminal_ttl`), then `unknownFlow`. An ended flow is dropped at once: nobody will read an
+    /// unread `done` after its sign-in was cancelled, and it holds the refresh token.
+    pub fn cancel(&self, flow_id: &str) {
+        let mut m = self.flows.lock();
+        let Some(f) = m.get_mut(flow_id) else {
+            return;
+        };
+        if let Some(h) = f.handle.take() {
+            h.abort();
+        }
+        if is_terminal(&f.status) {
+            m.remove(flow_id);
+            return;
+        }
+        f.status = FlowStatus::error(FlowErrorReason::Cancelled, None);
+        crate::error::diag(&format!("webauth {} flow -> cancelled", f.kind.name()));
+        if let Ok(rt) = tokio::runtime::Handle::try_current() {
+            let flows = self.flows.clone();
+            let id = flow_id.to_string();
+            let ttl = self.timing.terminal_ttl;
+            f.handle = Some(rt.spawn(async move { flows.expire_after(&id, ttl).await }));
         }
     }
 
@@ -716,6 +762,7 @@ mod tests {
             max_interval: Duration::from_millis(20),
             flow_timeout: Duration::from_secs(1),
             credentials_timeout: Duration::from_secs(1),
+            terminal_ttl: Duration::from_secs(30),
         })
     }
 
@@ -964,6 +1011,107 @@ mod tests {
                 eresult: Some(27)
             }
         ));
+    }
+
+    fn done_reply(token: &str) -> Reply {
+        Reply::ok(
+            CAuthentication_PollAuthSessionStatus_Response {
+                refresh_token: Some(token.to_string()),
+                account_name: Some("someone".into()),
+                ..Default::default()
+            }
+            .write_to_bytes()
+            .unwrap(),
+        )
+    }
+
+    fn is_unknown(s: FlowStatus) -> bool {
+        matches!(
+            s,
+            FlowStatus::Error {
+                reason: FlowErrorReason::UnknownFlow,
+                ..
+            }
+        )
+    }
+
+    /// A/IN-03: cancelling a flow that already finished drops it, and its refresh token, at once.
+    #[tokio::test]
+    async fn cancel_on_a_done_flow_drops_it_and_its_token() {
+        crate::install_crypto_provider();
+        let mock = Mock::start().await;
+        mock.push(BEGIN, begin_reply("https://s.team/q/1", 2.0));
+        mock.push(POLL, done_reply(&jwt("76561198000000001")));
+        let wa = fast(mock.base_url());
+        let st = wa.qr_start().await.unwrap();
+        sleep_ms(150).await;
+        wa.cancel(&st.flow_id);
+        assert!(wa.flows.lock().is_empty());
+        assert!(is_unknown(wa.status(&st.flow_id)));
+    }
+
+    /// A/IN-03: a new QR start replaces a live QR flow, not a finished sign-in nobody read yet.
+    #[tokio::test]
+    async fn a_new_qr_start_keeps_an_unread_done_flow() {
+        crate::install_crypto_provider();
+        let mock = Mock::start().await;
+        mock.push(BEGIN, begin_reply("https://s.team/q/1", 2.0));
+        mock.push(BEGIN, begin_reply("https://s.team/q/2", 2.0));
+        let token = jwt("76561198000000001");
+        mock.push(POLL, done_reply(&token));
+        mock.set_default(POLL, pending());
+        let wa = fast(mock.base_url());
+        let a = wa.qr_start().await.unwrap();
+        sleep_ms(150).await;
+        let b = wa.qr_start().await.unwrap();
+        match wa.status(&a.flow_id) {
+            FlowStatus::Done { refresh_token, .. } => assert_eq!(refresh_token, token),
+            _ => panic!("the completed sign-in was dropped"),
+        }
+        assert!(matches!(wa.status(&b.flow_id), FlowStatus::Waiting { .. }));
+        wa.cancel_all();
+    }
+
+    /// A/IN-03: an ended flow nobody reads is dropped after the TTL, token included.
+    #[tokio::test]
+    async fn an_unread_done_flow_expires_after_the_ttl() {
+        crate::install_crypto_provider();
+        let mock = Mock::start().await;
+        mock.push(BEGIN, begin_reply("https://s.team/q/1", 2.0));
+        mock.push(POLL, done_reply(&jwt("76561198000000001")));
+        let wa = fast(mock.base_url()).with_timing(Timing {
+            terminal_ttl: Duration::from_millis(200),
+            ..fast(String::new()).timing
+        });
+        let st = wa.qr_start().await.unwrap();
+        sleep_ms(100).await;
+        assert_eq!(wa.flows.lock().len(), 1);
+        sleep_ms(300).await;
+        assert!(wa.flows.lock().is_empty(), "done flow outlived the TTL");
+        assert!(is_unknown(wa.status(&st.flow_id)));
+    }
+
+    /// A/IN-03: a cancelled flow nobody reads is dropped after the TTL too (cancel_stops_polling
+    /// covers the read-once `cancelled` inside it).
+    #[tokio::test]
+    async fn an_unread_cancelled_flow_expires_after_the_ttl() {
+        crate::install_crypto_provider();
+        let mock = Mock::start().await;
+        mock.push(BEGIN, begin_reply("https://s.team/q/1", 5.0));
+        mock.set_default(POLL, pending());
+        let wa = fast(mock.base_url()).with_timing(Timing {
+            terminal_ttl: Duration::from_millis(200),
+            ..fast(String::new()).timing
+        });
+        let st = wa.qr_start().await.unwrap();
+        wa.cancel(&st.flow_id);
+        assert_eq!(wa.flows.lock().len(), 1);
+        sleep_ms(350).await;
+        assert!(
+            wa.flows.lock().is_empty(),
+            "cancelled flow outlived the TTL"
+        );
+        assert!(is_unknown(wa.status(&st.flow_id)));
     }
 
     #[test]

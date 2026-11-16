@@ -11,7 +11,7 @@
 //! the UAT-A items in plan 79-25.
 
 use super::{
-    device_details, FlowErrorReason, FlowKind, FlowState, FlowStatus, HttpMethod, WebAuth,
+    device_details, FlowErrorReason, FlowKind, FlowState, FlowStatus, Flows, HttpMethod, WebAuth,
     WebAuthError, DEVICE_NAME,
 };
 use rsa::rand_core::OsRng;
@@ -170,18 +170,7 @@ impl WebAuth {
 
         let mut m = self.flows.lock();
         // userSignIn.ts parity: a new credentials attempt replaces the previous one.
-        let stale: Vec<String> = m
-            .iter()
-            .filter(|(_, f)| f.kind == FlowKind::Credentials)
-            .map(|(k, _)| k.clone())
-            .collect();
-        for k in stale {
-            if let Some(f) = m.remove(&k) {
-                if let Some(h) = f.handle {
-                    h.abort();
-                }
-            }
-        }
+        Flows::replace_live(&mut m, FlowKind::Credentials);
         let me = self.clone();
         let task_id = id.clone();
         let handle = tokio::spawn(async move {
@@ -190,6 +179,9 @@ impl WebAuth {
                 me.flows
                     .set_status(&task_id, FlowStatus::error(FlowErrorReason::Timeout, None));
             }
+            me.flows
+                .expire_after(&task_id, me.timing.terminal_ttl)
+                .await;
         });
         let status = match guard {
             Some(g) => FlowStatus::GuardRequired {
@@ -297,6 +289,7 @@ mod tests {
             max_interval: Duration::from_millis(20),
             flow_timeout: Duration::from_secs(1),
             credentials_timeout: Duration::from_secs(1),
+            terminal_ttl: Duration::from_secs(30),
         })
     }
 
