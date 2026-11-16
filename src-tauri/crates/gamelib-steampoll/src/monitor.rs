@@ -188,6 +188,9 @@ pub struct DownloadMonitor {
     clock: Arc<dyn Clock>,
     darwin: bool,
     monitors: Mutex<HashMap<String, Shared>>,
+    /// Parity replay: a reading the harness supplies instead of nettop rows (plan 17).
+    #[cfg(any(test, feature = "testing"))]
+    injected: Mutex<HashMap<String, Option<DownloadReading>>>,
 }
 
 impl DownloadMonitor {
@@ -212,7 +215,20 @@ impl DownloadMonitor {
             clock,
             darwin,
             monitors: Mutex::new(HashMap::new()),
+            #[cfg(any(test, feature = "testing"))]
+            injected: Mutex::new(HashMap::new()),
         }
+    }
+
+    /// Makes `read(app_id)` answer `reading` (`None` = no reading) without a nettop child. The
+    /// monitor internals are covered by plan 06's tests; this lets the replay feed the loop the
+    /// timeline's `monitor` field.
+    #[cfg(any(test, feature = "testing"))]
+    pub fn inject_reading(&self, app_id: &str, reading: Option<DownloadReading>) {
+        self.injected
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .insert(app_id.to_string(), reading);
     }
 
     fn map(&self) -> MutexGuard<'_, HashMap<String, Shared>> {
@@ -332,6 +348,15 @@ impl DownloadMonitor {
 
     /// Live reading for `app_id`, or `None` when the poller must use the ACF as before.
     pub fn read(&self, app_id: &str) -> Option<DownloadReading> {
+        #[cfg(any(test, feature = "testing"))]
+        if let Some(r) = self
+            .injected
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .get(app_id)
+        {
+            return *r;
+        }
         let m = self.map().get(app_id).cloned()?;
         let g = lock(&m);
         if g.failed || g.stopped || g.kill.is_none() || g.acc.blocks < 2 {

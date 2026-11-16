@@ -1768,7 +1768,13 @@ dependencies = [
 name = "gamelib-steampoll-cli"
 version = "0.1.0"
 dependencies = [
+ "gamelib-i18n",
+ "gamelib-steamfiles",
  "gamelib-steampoll",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
 ]
 
 [[package]]
