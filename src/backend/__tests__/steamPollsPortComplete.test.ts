@@ -1,0 +1,117 @@
+/**
+ * Phase 80 deletion gate (P80-gate): the Steam install, uninstall, update and
+ * running polls, the restart hold and the download monitor live only in Rust
+ * (crates/gamelib-steampoll). Fails if a deleted TS poll module, a poll-loop
+ * constant, the polls flag or a TS `reg query RunningAppID` path comes back.
+ */
+import { existsSync, readdirSync, readFileSync } from 'fs'
+import { join, relative } from 'path'
+
+const ROOT = join(__dirname, '..', '..', '..')
+const STEAM = 'src/backend/storeManagers/steam'
+const FIXTURES = 'src-tauri/crates/gamelib-steampoll/tests/fixtures'
+
+const DELETED = [
+  `${STEAM}/library/installPollOnce.ts`,
+  `${STEAM}/library/updatePollOnce.ts`,
+  `${STEAM}/library/pollState.ts`,
+  `${STEAM}/library/restartHold.ts`,
+  `${STEAM}/library/pollsFlag.ts`,
+  `${STEAM}/steamDownloadMonitor.ts`,
+  `${STEAM}/steamDownloadProgress.ts`,
+  `${STEAM}/steamRestartHold.ts`,
+  `${STEAM}/childWatchdog.ts`,
+  'src/backend/testUtils/steamPollReplay/tsDriver.ts',
+  'meta/gamelibSteampollCli.ts'
+]
+
+const FORBIDDEN = [
+  'GRACE_TICKS',
+  'MAX_TICKS',
+  'STEAM_REQUEST_NO_ACTIVITY_TICKS',
+  'MANIFEST_GONE_TICKS',
+  'GAMELIB_STEAM_POLLS',
+  'pollsImpl',
+  'buildWatchdogSpawn'
+]
+
+// A reg.exe query of RunningAppID: the native read replaced it.
+const REG_QUERY_RUNNING_APP_ID =
+  /reg(?:\.exe)?['"`,\s[]+query[^\n]*RunningAppID/
+
+const KEPT = [
+  'src-tauri/crates/gamelib-steampoll/Cargo.toml',
+  'src-tauri/crates/gamelib-steampoll-cli/Cargo.toml',
+  'src-tauri/crates/gamelib-i18n/Cargo.toml',
+  `${FIXTURES}/timelines`,
+  `${FIXTURES}/expected-ts`,
+  `${FIXTURES}/divergences.json`
+]
+
+// This file names every forbidden symbol by design.
+const SELF = join(__dirname, 'steamPollsPortComplete.test.ts')
+
+function walk(dir: string, out: string[]): void {
+  for (const e of readdirSync(dir, { withFileTypes: true })) {
+    if (e.name === 'node_modules' || e.name === '__tests__') continue
+    const full = join(dir, e.name)
+    if (e.isDirectory()) walk(full, out)
+    else if (/\.(ts|tsx|cjs|js)$/.test(e.name)) out.push(full)
+  }
+}
+
+const stripComments = (src: string): string =>
+  src
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .split('\n')
+    .filter((l) => !/^\s*\/\//.test(l))
+    .join('\n')
+
+describe('steam polls port complete (Phase 80 P80-gate)', () => {
+  const files: string[] = []
+  walk(join(ROOT, 'src'), files)
+  walk(join(ROOT, 'meta'), files)
+  const scanned = files.filter((f) => f !== SELF)
+
+  it.each(DELETED)('%s stays deleted', (p) => {
+    expect(existsSync(join(ROOT, p))).toBe(false)
+  })
+
+  it('no forbidden poll-loop symbol remains (comments stripped)', () => {
+    const hits: string[] = []
+    for (const f of scanned) {
+      const src = stripComments(readFileSync(f, 'utf8'))
+      for (const needle of FORBIDDEN) {
+        if (src.includes(needle)) hits.push(`${relative(ROOT, f)}: ${needle}`)
+      }
+    }
+    expect(hits).toEqual([])
+  })
+
+  it('no reg query of RunningAppID remains in code (comments stripped)', () => {
+    const hits = scanned
+      .filter((f) =>
+        REG_QUERY_RUNNING_APP_ID.test(stripComments(readFileSync(f, 'utf8')))
+      )
+      .map((f) => relative(ROOT, f))
+    expect(hits).toEqual([])
+  })
+
+  it('the scan can fail: a forbidden symbol in code is caught, the same symbol in a comment is not', () => {
+    const code =
+      "const n = MAX_TICKS\nspawn('reg', ['query', k, 'RunningAppID'])"
+    const comment = '// MAX_TICKS was removed in 80-31\n/* GRACE_TICKS */'
+    expect(stripComments(code).includes('MAX_TICKS')).toBe(true)
+    expect(REG_QUERY_RUNNING_APP_ID.test(stripComments(code))).toBe(true)
+    expect(stripComments(comment).includes('MAX_TICKS')).toBe(false)
+    expect(stripComments(comment).includes('GRACE_TICKS')).toBe(false)
+  })
+
+  it.each(KEPT)('%s is kept', (p) => {
+    expect(existsSync(join(ROOT, p))).toBe(true)
+  })
+
+  it('anti-vacuity: the walk scanned a real tree', () => {
+    expect(scanned.length).toBeGreaterThanOrEqual(500)
+  })
+})
