@@ -13,6 +13,12 @@ last backend change (`tauri dev` does not rebuild the sidecar), then launch with
 The polls flag is at its rust default after plan 80-26: do not set `GAMELIB_STEAM_POLLS`.
 Offline steps: turn the network off only for the action itself, then back on before reporting.
 
+## Preface (plan 80-27 task 1, 2026-11-16)
+
+sidecar.js: rebuilt with `pnpm build:sidecar`, build/main/sidecar.js mtime Nov 16 16:42:35 2026.
+Local suites: `cargo test --workspace` and `cargo test --bin gamelib-shell` green. `pnpm test:ci` has 14 failing suites, all on the known pre-existing list (tauriShellSource, flowRegistrationCensus, ipcDomainCensus, epicOfflineMode, shimCoverage, shimGenerate, themeTokens, gamePageActionDock, callbackRegistryHost, gamelibCatalogParity, genI18nGateScope, lintTranslations, steamLineCeiling, x86CallbackWineHarness); none are phase-80 regressions.
+CI legs: pending operator push (branch main is 102 commits ahead of origin; not pushed by the executor).
+
 ## Current Test
 
 [awaiting operator, run by plan 80-27]
