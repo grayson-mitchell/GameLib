@@ -8370,7 +8370,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
     shellOpenExternal.mockResolvedValue(undefined)
     startUninstallPollingSpy = jest
       .spyOn(uninstallPollingModule, 'startUninstallPolling')
-      .mockImplementation(() => {})
+      .mockImplementation(() => Promise.resolve())
     // Routing axes for this block — reset explicitly per spec rather than
     // relying on resetMocks' implicit undefined/false default.
     isBottleReady.mockReset()
@@ -9530,7 +9530,7 @@ describe('SteamGame.uninstall() — GAME-03', () => {
     // Spy on startUninstallPolling so uninstall() can call it without running the real poller
     startUninstallPollingSpy = jest
       .spyOn(uninstallPollingModule, 'startUninstallPolling')
-      .mockImplementation(() => {})
+      .mockImplementation(() => Promise.resolve())
   })
 
   afterEach(() => {
@@ -9637,7 +9637,7 @@ describe('SteamGame.uninstall() — quick 261029-l9w: unadopted Mac native insta
     ;(getSteamLibraries as jest.Mock).mockResolvedValue([NATIVE_LIBRARY_ROOT])
     startPollingSpy = jest
       .spyOn(uninstallPollingModule, 'startUninstallPolling')
-      .mockImplementation(() => {})
+      .mockImplementation(() => Promise.resolve())
     readAcfStateSpy = jest.spyOn(acfState, 'readAcfState').mockResolvedValue({
       state: 'installed',
       installPath: NATIVE_INSTALL_PATH,
@@ -9860,7 +9860,7 @@ describe('SteamGame.uninstall() — quick 261106-s3n: delete in GameLib (ON)', (
     ;(isSteamNativeDeleteEnabled as jest.Mock).mockReturnValue(true)
     startPollingSpy = jest
       .spyOn(uninstallPollingModule, 'startUninstallPolling')
-      .mockImplementation(() => {})
+      .mockImplementation(() => Promise.resolve())
     removeCopySpy = jest
       .spyOn(acfState, 'removeSteamInstallCopy')
       .mockResolvedValue({
@@ -10062,7 +10062,7 @@ describe('SteamGame.uninstall() — Phase 17 bottle routing (D-10/D-11)', () => 
     ;(getSteamLibraries as jest.Mock).mockResolvedValue([NATIVE_LIBRARY_ROOT])
     startUninstallPollingSpy = jest
       .spyOn(uninstallPollingModule, 'startUninstallPolling')
-      .mockImplementation(() => {})
+      .mockImplementation(() => Promise.resolve())
     envMock = jest.requireMock('backend/constants/environment')
     envMock.isMac = true
     envMock.isWindows = false
@@ -10209,7 +10209,7 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
     )
     startUninstallPollingSpy = jest
       .spyOn(uninstallPollingModule, 'startUninstallPolling')
-      .mockImplementation(() => {})
+      .mockImplementation(() => Promise.resolve())
     readAcfStateSpy = jest.spyOn(acfState, 'readAcfState')
     pollUninstallOnceSpy = jest
       .spyOn(uninstallPollingModule, 'pollUninstallOnce')
@@ -10756,7 +10756,7 @@ describe('SteamGame.uninstall() — install_path-driven routing (debug/steam-bot
     shellOpenExternal.mockResolvedValue(undefined)
     startUninstallPollingSpy = jest
       .spyOn(uninstallPollingModule, 'startUninstallPolling')
-      .mockImplementation(() => {})
+      .mockImplementation(() => Promise.resolve())
     envMock = jest.requireMock('backend/constants/environment')
     envMock.isMac = true
     envMock.isWindows = false

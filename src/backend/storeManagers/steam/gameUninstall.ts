@@ -10,6 +10,9 @@ import { isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { ExecResult } from 'common/types'
 import { RemoveArgs } from 'common/types/game_manager'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
+import { RUST_STEAMPOLL_NEXT_NOTICE_SEQ } from 'common/types/sidecarTransport'
+import { pollsImpl } from './library/pollsFlag'
+import { invokeSteamPoll } from './pollRust/rustSteamPoll'
 import { isMac } from 'backend/constants/environment'
 import {
   startUninstallPolling,
@@ -158,7 +161,7 @@ export async function uninstall(
     // Poll ACF so the badge flips to not-installed when Steam removes the
     // appmanifest, without requiring a focus round-trip (D-07). Symmetric to
     // install polling. State is never optimistically flipped here (D-02).
-    startUninstallPolling(steamGame.deps, steamGame.appId)
+    await startUninstallPolling(steamGame.deps, steamGame.appId)
     // quick 261029-ji2: a removed install has nothing left to adopt.
     clearPendingAdoption(
       steamGame.appId,
@@ -190,14 +193,29 @@ export async function uninstall(
  * state and sends the single done. Title comes from the raw library Map, not
  * getGameInfo() (its fire-and-forget side effect is forbidden on this path).
  */
-function failUninstall(steamGame: SteamGame, stderr: string): ExecResult {
+export async function noticeSeq(steamGame: SteamGame): Promise<number> {
+  if (pollsImpl() === 'rust') {
+    return (await invokeSteamPoll(
+      steamGame.deps,
+      RUST_STEAMPOLL_NEXT_NOTICE_SEQ,
+      {}
+    )) as number
+  }
+  return steamGame.deps.steamInstallRuntime.polls.nextSteamRequestNoticeSeq()
+}
+
+async function failUninstall(
+  steamGame: SteamGame,
+  stderr: string
+): Promise<ExecResult> {
+  const seq = await noticeSeq(steamGame)
   steamGame.deps.sendFrontendMessage('steamRequestNotice', {
     appId: steamGame.appId,
     title:
       steamGame.deps.steamSession.libraryState.library.get(steamGame.appId)
         ?.title ?? '',
     kind: 'uninstall-failed',
-    seq: steamGame.deps.steamInstallRuntime.polls.nextSteamRequestNoticeSeq()
+    seq
   })
   return { stdout: '', stderr, failed: true }
 }
@@ -217,7 +235,7 @@ async function uninstallBridgeGame(steamGame: SteamGame): Promise<ExecResult> {
         `SteamGame: uninstallBridgeGame failed to remove per-game bottle "${bottleName}" for appId ${steamGame.appId}: ${result.error}`,
         LogPrefix.Steam
       )
-      return failUninstall(
+      return await failUninstall(
         steamGame,
         `Failed to remove bridge bottle: ${result.error}`
       )
@@ -293,7 +311,7 @@ async function uninstallBridgeGame(steamGame: SteamGame): Promise<ExecResult> {
       ],
       LogPrefix.Steam
     )
-    return failUninstall(
+    return await failUninstall(
       steamGame,
       `Failed to remove bridge install: ${String(error)}`
     )
@@ -336,20 +354,22 @@ export async function uninstallNativeInGameLib(
       })
   })
   const game = steamGame.getGameInfo().title
-  const pushNotice = (
+  const pushNotice = async (
     kind:
       | 'uninstall-refused-running'
       | 'uninstall-steam-error'
       | 'uninstall-check-failed',
     code?: number
-  ) =>
+  ) => {
+    const seq = await noticeSeq(steamGame)
     steamGame.deps.sendFrontendMessage('steamRequestNotice', {
       appId: steamGame.appId,
       title: game ?? '',
       kind,
       ...(code !== undefined ? { code } : {}),
-      seq: steamGame.deps.steamInstallRuntime.polls.nextSteamRequestNoticeSeq()
+      seq
     })
+  }
   const refuse = (reason: string): ExecResult => {
     // quick 261110-uog: uninstaller.ts logs only stderrLength, so this refusal logs its own reason.
     logWarning(`SteamGame: ${reason}`, LogPrefix.Steam)
@@ -363,7 +383,7 @@ export async function uninstallNativeInGameLib(
 
   switch (decision.route) {
     case 'steam-uninstalled':
-      startUninstallPolling(steamGame.deps, steamGame.appId)
+      await startUninstallPolling(steamGame.deps, steamGame.appId)
       clearPendingAdoption(
         steamGame.appId,
         pendingAdoptionStoreFrom(steamGame.deps)
@@ -376,15 +396,15 @@ export async function uninstallNativeInGameLib(
       )
       return removeNativeInstallDirectly(steamGame)
     case 'refused-running':
-      pushNotice('uninstall-refused-running')
+      await pushNotice('uninstall-refused-running')
       return refuse(`Refused to uninstall: ${steamGame.appId} is running`)
     case 'steam-error':
-      pushNotice('uninstall-steam-error', decision.code)
+      await pushNotice('uninstall-steam-error', decision.code)
       return refuse(
         `Steam refused to uninstall ${steamGame.appId} (error ${decision.code})`
       )
     case 'refused':
-      pushNotice('uninstall-check-failed')
+      await pushNotice('uninstall-check-failed')
       return refuse(
         `Refused to uninstall: ${decision.reason} for appId ${steamGame.appId}`
       )
@@ -493,7 +513,7 @@ export async function removeNativeInstallDirectly(
     logWarning(`SteamGame: ${failure}`, LogPrefix.Steam)
     // quick 261108-anw: a caught rm error may be a partial delete, so it
     // returns `failed` and uninstallGameCallback sends the one done.
-    return failUninstall(steamGame, failure)
+    return await failUninstall(steamGame, failure)
   }
 }
 
@@ -775,7 +795,7 @@ export async function uninstallBottleGameDirectly(
         ],
         LogPrefix.Steam
       )
-      return failUninstall(
+      return await failUninstall(
         steamGame,
         `Failed to remove bottle install: ${String(error)}`
       )
@@ -795,7 +815,7 @@ export async function uninstallBottleGameDirectly(
       ],
       LogPrefix.Steam
     )
-    return failUninstall(
+    return await failUninstall(
       steamGame,
       `Failed to remove bottle install: ${String(error)}`
     )

@@ -536,7 +536,7 @@ export async function runTsTimelineWithSnapshot(
     if (timeline.machine === 'install') {
       await startInstallPolling(deps, appId, toPollOptions(startOpts))
     } else if (timeline.machine === 'uninstall') {
-      startUninstallPolling(deps, appId, toPollOptions(startOpts))
+      await startUninstallPolling(deps, appId, toPollOptions(startOpts))
     } else if (timeline.machine === 'rearm') {
       await rearmPersistedSteamRestartHolds(deps)
       await flush()
