@@ -15,6 +15,9 @@ tauri-build = { version = "2", features = [] }
 # Phase 63 (D-03): Tauri-free scanner library behind the scan_* rustInvoke arms.
 gamelib-scan = { path = "crates/gamelib-scan" }
 gamelib-steamfiles = { path = "crates/gamelib-steamfiles" }
+# Phase 80: Tauri-free install/uninstall/running poll state machines behind the steampoll_* arms.
+gamelib-steampoll = { path = "crates/gamelib-steampoll" }
+gamelib-i18n = { path = "crates/gamelib-i18n" }
 # Phase 79: Tauri-free Rust Steam CM client (replaces steam-user / steam-session).
 gamelib-steamcm = { path = "crates/gamelib-steamcm" }
 # Phase 73: Tauri-free Steam depot download pipeline.

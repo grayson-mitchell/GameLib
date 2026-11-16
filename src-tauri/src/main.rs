@@ -133,6 +133,7 @@ mod notification_show;
 mod dialogs;
 mod scan_dispatch;
 mod steamfiles_dispatch;
+mod steampoll_dispatch;
 mod steamcm_dispatch;
 mod depot_dispatch;
 mod app_lifecycle;
@@ -153,6 +154,7 @@ use notification_show::*;
 use dialogs::*;
 use scan_dispatch::*;
 use steamfiles_dispatch::*;
+use steampoll_dispatch::*;
 use steamcm_dispatch::*;
 use depot_dispatch::*;
 use app_lifecycle::*;
@@ -2041,6 +2043,7 @@ mod tests {
         "depot_dispatch.rs",
         "scan_dispatch.rs",
         "steamfiles_dispatch.rs",
+        "steampoll_dispatch.rs",
         "steamcm_dispatch.rs",
         "shell_state.rs",
         "shell_open.rs",
@@ -2089,6 +2092,7 @@ mod tests {
         include_str!("depot_dispatch.rs"),
         include_str!("scan_dispatch.rs"),
         include_str!("steamfiles_dispatch.rs"),
+        include_str!("steampoll_dispatch.rs"),
         include_str!("steamcm_dispatch.rs"),
         include_str!("shell_state.rs"),
         include_str!("shell_open.rs"),

@@ -481,9 +481,9 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     expect(matches.length).toBe(1)
   })
 
-  test('71-07 rust_dispatch.rs is a flat router: 58 one-line arms and no catch-all arm', () => {
+  test('71-07 rust_dispatch.rs is a flat router: 111 one-line arms and no catch-all arm', () => {
     const router = readTauriShellProductionFile('rust_dispatch.rs')
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(58)
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(111)
     expect(router).not.toContain('_ =>')
   })
 
@@ -723,6 +723,7 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // pins arms == crate OPS == RUST_DEPOT_CHANNELS, and the shell tests in depot_dispatch.rs
       // cover the install-root guard and the sidecar-EOF cancel. NOT ATTEMPTED here: a live
       // job round trip; that is the live gate in plans 17/18.
+      'depot_finalize',
       'depot_job_cancel',
       'depot_job_run',
       'depot_manifest_summary',
@@ -740,7 +741,67 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       'steamfiles_read_running_app_id',
       'steamfiles_scan_acfs',
       'steamfiles_shortcuts_apply',
-      'steamfiles_shortcuts_read'
+      'steamfiles_shortcuts_read',
+
+      // Phase 79 -- the gamelib-steamcm pass-through arms, declared late (they were never added to
+      // this list). PROVEN: `steamCmChannelParity.test.ts`.
+
+      'steamcm_anon_close',
+      'steamcm_anon_product_info',
+      'steamcm_configure',
+      'steamcm_content_servers',
+      'steamcm_depot_key',
+      'steamcm_licenses',
+      'steamcm_mac_owned_apps',
+      'steamcm_manifest_request_code',
+      'steamcm_owned_apps',
+      'steamcm_personas',
+      'steamcm_product_info',
+      'steamcm_redeem_key',
+      'steamcm_refresh',
+      'steamcm_session_acquire',
+      'steamcm_session_acquire_open',
+      'steamcm_session_ensure_connected',
+      'steamcm_session_logout',
+      'steamcm_session_release',
+      'steamcm_session_shutdown',
+      'steamcm_session_status',
+      'steamcm_signin_cancel',
+      'steamcm_signin_credentials_start',
+      'steamcm_signin_guard_submit',
+      'steamcm_signin_qr_start',
+      'steamcm_signin_status',
+      'steamcm_store_appdetails',
+      'steamcm_store_enrich',
+      'steamcm_wrap_restore_if_owed',
+
+      // Phase 80 plan 18 -- 24 pass-through arms into the Tauri-free `gamelib-steampoll` crate.
+      // PROVEN: `steamPollChannelParity.test.ts` pins arms == crate OPS == RUST_STEAMPOLL_CHANNELS.
+      // NOT ATTEMPTED here: a live rustInvoke round trip.
+      'steampoll_acf_enumerate_copies',
+      'steampoll_acf_find_other_manifests',
+      'steampoll_acf_read_state',
+      'steampoll_acf_read_update',
+      'steampoll_acf_read_update_from_dir',
+      'steampoll_acf_remove_copy',
+      'steampoll_acf_scan_downloading',
+      'steampoll_breadcrumb_installed_on_disk',
+      'steampoll_bridge_finalized',
+      'steampoll_install_cancel_delegated',
+      'steampoll_install_start',
+      'steampoll_install_stop',
+      'steampoll_mac_arch_verdict',
+      'steampoll_native_in_flight',
+      'steampoll_next_notice_seq',
+      'steampoll_read_running_app_id',
+      'steampoll_running_hold',
+      'steampoll_running_last_app_id',
+      'steampoll_running_release',
+      'steampoll_running_start',
+      'steampoll_running_stop',
+      'steampoll_status',
+      'steampoll_uninstall_start',
+      'steampoll_uninstall_stop'
     ]
     const newArms = armNames.filter(
       (name) => name && !preExistingArms.includes(name)
