@@ -369,6 +369,11 @@ impl CmConn for VentConn {
             .collect())
     }
 
+    fn cell_id(&self) -> u32 {
+        // Set from the logon response's `cell_id` (steam-vent `Session::cell_id`).
+        self.conn().map(|c| c.cell_id()).unwrap_or(0)
+    }
+
     async fn owned_games(
         &self,
         steam_id: u64,

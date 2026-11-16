@@ -73,11 +73,12 @@ fn server_json(s: &CdnServerRaw) -> Value {
     Value::Object(m)
 }
 
-/// Host list in steam-user's `getContentServers` shape: only `CDN` / `SteamCache` servers, and
+/// Host list in steam-user's `getContentServers` shape, requested for the logon cell (steam-user
+/// sends `cell_id: this.cellID || 0`): only `CDN` / `SteamCache` servers, and
 /// when `app_id` is given, servers whose `allowed_app_ids` (if any) include it. Empty is
 /// `CmError::Protocol("no-content-servers")`, matching steam-user's rejection.
 pub async fn content_servers<C: CmConn>(conn: &C, app_id: Option<u32>) -> Result<Value, CmError> {
-    let raw = conn.cdn_servers(0, CDN_MAX_SERVERS).await?;
+    let raw = conn.cdn_servers(conn.cell_id(), CDN_MAX_SERVERS).await?;
     let servers: Vec<Value> = raw
         .iter()
         .filter(|s| s.kind == "CDN" || s.kind == "SteamCache")
@@ -191,5 +192,19 @@ mod tests {
             content_servers(&c, None).await,
             Err(CmError::Protocol("no-content-servers".into()))
         );
+    }
+
+    /// WR-07: steam-user asks for the logon cell (`cell_id: this.cellID || 0`, cdn.js 34), so
+    /// the directory answers with servers near the user, not its default region.
+    #[tokio::test]
+    async fn content_servers_asks_for_the_logon_cell() {
+        let b = FakeBackend::new();
+        b.script(|s| {
+            s.cell_id = 17;
+            s.cdn.default = vec![srv("CDN", "a.example", vec![])];
+        });
+        let c = conn(&b).await;
+        content_servers(&c, None).await.unwrap();
+        assert_eq!(b.script(|s| s.cdn_cells.clone()), vec![17]);
     }
 }

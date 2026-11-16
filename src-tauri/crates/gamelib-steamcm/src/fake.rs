@@ -64,6 +64,10 @@ pub(crate) struct Script {
     pub token_reqs: Vec<(Vec<u32>, Vec<u32>)>,
     pub pics_reqs: Vec<PicsRequest>,
     pub owned_opts: Vec<OwnedOpts>,
+    /// What `cell_id()` answers.
+    pub cell_id: u32,
+    /// The `cell_id` argument of each `cdn_servers` call.
+    pub cdn_cells: Vec<u32>,
 }
 
 impl Default for Script {
@@ -92,6 +96,8 @@ impl Default for Script {
             token_reqs: Vec::new(),
             pics_reqs: Vec::new(),
             owned_opts: Vec::new(),
+            cell_id: 0,
+            cdn_cells: Vec::new(),
         }
     }
 }
@@ -277,8 +283,16 @@ impl CmConn for FakeConn {
             .await
     }
 
-    async fn cdn_servers(&self, _cell_id: u32, _max: u32) -> Result<Vec<CdnServerRaw>, CmError> {
-        self.run("cdn_servers", |s| s.cdn.next()).await
+    async fn cdn_servers(&self, cell_id: u32, _max: u32) -> Result<Vec<CdnServerRaw>, CmError> {
+        self.run("cdn_servers", |s| {
+            s.cdn_cells.push(cell_id);
+            s.cdn.next()
+        })
+        .await
+    }
+
+    fn cell_id(&self) -> u32 {
+        self.script.lock().unwrap().cell_id
     }
 
     async fn owned_games(

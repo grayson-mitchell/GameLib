@@ -232,6 +232,12 @@ pub trait CmConn: Send + Sync + 'static {
         max: u32,
     ) -> impl Future<Output = Result<Vec<CdnServerRaw>, CmError>> + Send;
 
+    /// The cell id the CM assigned at logon (steam-user's `this.cellID`, from the logon
+    /// response), or 0 when unknown. steam-user requests CDN servers for this cell.
+    fn cell_id(&self) -> u32 {
+        0
+    }
+
     fn owned_games(
         &self,
         steam_id: u64,
