@@ -1,4 +1,11 @@
-import { readFileSync } from 'node:fs'
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync
+} from 'node:fs'
 import { join } from 'node:path'
 
 import {
@@ -69,4 +76,29 @@ describe('gamelibSteamcmCli', () => {
     expect(rust.length).toBeGreaterThan(0)
     expect([...STEAMCM_SECRET_OPS].sort()).toEqual([...rust].sort())
   })
+
+  // 79 review B/IN-05: a stalled CLI is killed at the bound instead of hanging the tool.
+  ;(process.platform === 'win32' ? it.skip : it)(
+    'kills a CLI that outlives the timeout',
+    () => {
+      const target = mkdtempSync(join(tmpdir(), 'gamelib-steamcm-cli-t-'))
+      const saved = process.env.CARGO_TARGET_DIR
+      try {
+        mkdirSync(join(target, 'debug'))
+        const cli = join(target, 'debug', 'gamelib-steamcm-cli')
+        writeFileSync(cli, '#!/bin/sh\nexec sleep 30\n')
+        chmodSync(cli, 0o755)
+        process.env.CARGO_TARGET_DIR = target
+        const start = Date.now()
+        expect(() =>
+          runSteamcmCliSync('steamcm_anon_close', {}, { timeoutMs: 300 })
+        ).toThrow(/signal SIGKILL/)
+        expect(Date.now() - start).toBeLessThan(10_000)
+      } finally {
+        if (saved === undefined) delete process.env.CARGO_TARGET_DIR
+        else process.env.CARGO_TARGET_DIR = saved
+        rmSync(target, { recursive: true, force: true })
+      }
+    }
+  )
 })

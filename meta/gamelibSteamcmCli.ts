@@ -28,6 +28,12 @@ const STEAMCM_CLI_BUILD_COMMAND =
 const MAX_BUFFER = 16 * 1024 * 1024
 
 /**
+ * One CLI call's bound (79 review B/IN-05). A stalled anonymous CM connection must not hang a
+ * `meta/` tool forever; SIGKILL, because a hung CM read does not answer SIGTERM promptly.
+ */
+export const STEAMCM_CLI_TIMEOUT_MS = 120_000
+
+/**
  * Mirrors `SECRET_OPS` in gamelib-steamcm-cli/src/main.rs. `gamelibSteamcmCli.test.ts` reads the
  * Rust list and fails on any difference (79 review B/IN-06).
  */
@@ -82,7 +88,8 @@ export function parseSteamcmCliResult(
 
 export function runSteamcmCliSync(
   op: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
+  opts: { timeoutMs?: number } = {}
 ): unknown {
   if (STEAMCM_SECRET_OPS.includes(op)) {
     throw new Error(`${op} takes secrets: never put them on argv (T-79-70)`)
@@ -94,9 +101,16 @@ export function runSteamcmCliSync(
     const r = spawnSync(cli, [op, JSON.stringify(args)], {
       env: profile.childEnv(process.env),
       encoding: 'utf-8',
-      maxBuffer: MAX_BUFFER
+      maxBuffer: MAX_BUFFER,
+      timeout: opts.timeoutMs ?? STEAMCM_CLI_TIMEOUT_MS,
+      killSignal: 'SIGKILL'
     })
-    if (r.error) throw r.error
+    if (r.error || r.signal) {
+      const why = r.error ? r.error.message : 'killed'
+      throw new Error(
+        `gamelib-steamcm-cli ${op} failed (signal ${r.signal ?? 'none'}): ${why}`
+      )
+    }
     return parseSteamcmCliResult(op, r.status, r.stdout, r.stderr)
   } finally {
     try {
