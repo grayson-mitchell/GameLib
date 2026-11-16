@@ -5,7 +5,6 @@ import type {
   SteamBottleLaunchWaitingCause,
   SteamBridgeKnownBadReason,
   SteamBridgeRouteReason,
-  SteamGoOfflinePayload,
   SteamRequestNoticePayload,
   SteamSetupDownloadProgress
 } from '../steam'
@@ -67,9 +66,6 @@ export const steamFrontendMessagesArgs = {
       forceWindowsViaBottle?: true
     }>(isObject)
   ]),
-  // Phase 54: user.ts acquireAuthenticated emits when the go-offline wrap did not see Mac
-  // Steam log off; SteamGoOfflineNotice.ts subscribes.
-  steamGoOfflineRequired: z.tuple([z.custom<SteamGoOfflinePayload>(isObject)]),
   // quick 261106-pvk: one-way push when Steam never starts a delegated request.
   steamRequestNotice: z.tuple([z.custom<SteamRequestNoticePayload>(isObject)]),
   // Phase 51 Plan 03 (D-51-02/08): the one-time per-game notice fired when a game launches

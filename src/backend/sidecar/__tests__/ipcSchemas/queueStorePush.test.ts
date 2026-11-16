@@ -108,10 +108,6 @@ const steamPush: FixtureTable<typeof steamFrontendMessagesArgs> = {
     invalid: [[], ['x']]
   },
   steamBridgeSetupRequired: { valid: [[{ appName: '1' }]], invalid: [[], [1]] },
-  steamGoOfflineRequired: {
-    valid: [[{ action: 'refresh' }]],
-    invalid: [[], [1]]
-  },
   steamRequestNotice: {
     valid: [[{ appId: '1', title: 't', kind: 'install-not-started' }]],
     invalid: [[], [1]]

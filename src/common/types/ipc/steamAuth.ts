@@ -5,7 +5,6 @@ import type {
   SteamBottleConfig,
   SteamBottleEligibilityVerdict,
   SteamBridgeRouteReason,
-  SteamGoOfflineRetryResult,
   BridgeListFriendsResult,
   BridgeInviteResult,
   SteamBridgeRouteVerdict,
@@ -102,9 +101,6 @@ export const steamAuthAsyncArgs = {
   ]),
   // quick-260821-le0: sweeps every recorded install root for a Steam title.
   steamRemoveAllCopies: z.tuple([nonEmptyString(64)]),
-  // Phase 54: sidecar-only guided Go Offline step.
-  steamGoOfflineRetry: noArgs,
-  steamGoOfflineCancel: noArgs,
   // Phase 58 Plan 31: sidecar-only friend picker channels.
   steamBridgeListFriends: z.tuple([steamAppIdArg()]),
   steamBridgeInviteFriend: z.tuple([
@@ -167,8 +163,6 @@ interface SteamAuthAsyncReturns {
     refused: number
     error?: string
   }>
-  steamGoOfflineRetry: Promise<SteamGoOfflineRetryResult>
-  steamGoOfflineCancel: Promise<void>
   steamBridgeListFriends: Promise<BridgeListFriendsResult>
   steamBridgeInviteFriend: Promise<BridgeInviteResult>
   persistBottleWineVersion: Promise<{

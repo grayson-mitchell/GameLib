@@ -113,7 +113,8 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   // Phase 58 Plan 31 (2026-11-01): invoke 25 -> 27 -- steamBridgeListFriends and steamBridgeInviteFriend, the Direction A friend picker
   // Phase 61 Plan 13 (2026-11-07): invoke 27 -> 24 -- getSteamEngineState, listSteamEngineOptions, dismissSteamEngineNotice
   // moved to the store-agnostic engine domain
-  'steamAuthFlowRegistration.ts': { invoke: 24, send: 1 },
+  // Quick 261116-vt7 (2026-11-16): invoke 24 -> 22 -- steamGoOfflineRetry and steamGoOfflineCancel deleted with the dead guided Go Offline dialog chain
+  'steamAuthFlowRegistration.ts': { invoke: 22, send: 1 },
   // Quick 260908-ci2 (2026-09-08): send 0 -> 1 -- `shellWindowFocused`, restoring the
   // install-badge reconciliation trigger dropped in the Electron to Tauri cutover
   // (`mainWindow.on('focus', ...)`, `main.ts:272-274`, deleted in `5643c7583`). Shell-originated

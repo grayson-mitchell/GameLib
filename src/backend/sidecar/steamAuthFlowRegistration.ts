@@ -68,15 +68,11 @@
  *   - `steamRemoveAllCopies` -> `removeAllSteamInstallCopies(appName)`,
  *     quick-260821-le0 Task 3 — sweeps every recorded install root for a
  *     Steam title in one action, same shared-seam pattern as the pair above.
- *   - `steamGoOfflineRetry` -> `checkGuidedOfflineReady()` (`macSteamClient.ts`, reads Mac Steam's state only),
- *     Phase 54 Plan 07 — the guided Go Offline dialog's Continue.
  *   - `steamBridgeListFriends` -> `listBridgeFriends(appId)` and
  *     `steamBridgeInviteFriend` -> `sendBridgeInvite(appId, ordinal)`
  *     (`steam/bridge/inviteBridge.ts`), Phase 58 Plan 31, M-01 Direction A:
  *     the friend picker's list and invite channels. appId (`/^\d{1,10}$/`)
  *     and ordinal (non-negative integer) are validated here.
- *   - `steamGoOfflineCancel` -> a no-op
- *     (54-REVIEW WR-05 — the dialog's Cancel/close; Rust owns any owed go-online).
  *
  * Guided Steam-client install pair (Phase 34.4 Plan 02, REQ-34.4-04,
  * `deps.ipc.handle`, `main.ts:958-961`):
@@ -376,14 +372,6 @@ export function registerSteamAuthFlows(deps: SteamAuthFlowDeps): void {
     }
   )
 
-  // Phase 54: sidecar-only. Takes no renderer arguments, so there is nothing to
-  // validate. It only reads Mac Steam's state and reports whether it is
-  // offline; it arms nothing (the Rust session owns any owed go-online) and
-  // never logs on.
-  deps.ipc.handle('steamGoOfflineRetry', async () =>
-    deps.steamProcesses.macSteam.checkGuidedOfflineReady()
-  )
-
   // Phase 58 Plan 31 (T-58-104): sidecar-only. Renderer input is untrusted, so
   // validate before any helper socket is opened.
   deps.ipc.handle(
@@ -412,13 +400,6 @@ export function registerSteamAuthFlows(deps: SteamAuthFlowDeps): void {
       return sendBridgeInvite(deps, appId, ordinal)
     }
   )
-
-  // The guided dialog's Cancel/close. Continue arms nothing in the sidecar any more (the Rust CM
-  // session owns any owed-goonline record, and its production wrap never refuses a logon), so
-  // there is no goonline to pay: a no-op kept so the dialog's channel contract is unchanged.
-  // Removal of the whole, now unreachable, dialog chain is tracked in
-  // .planning/todos/pending/2026-11-16-remove-the-dead-guided-go-offline-dialog-chain.md.
-  deps.ipc.handle('steamGoOfflineCancel', async () => undefined)
 
   // ── Guided Steam-client install pair (REQ-34.4-04, main.ts:958-961) ───────
   deps.ipc.handle('steamClientSetupStart', async () => {

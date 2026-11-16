@@ -129,7 +129,6 @@ describe('mapRefreshOriginToLogonGrant / store-exit grant (quick 261114-aqa)', (
     ['steam-store-exit', 'store-exit'],
     ['action-icons-refresh-button', 'user-refresh'],
     ['redeem-steam-key', 'user-refresh'],
-    ['steam-go-offline-retry', 'user-refresh'],
     ['steam-sync-notice-retry', 'user-refresh'],
     ['clear-cache', 'user-refresh'],
     ['login-success', 'login'],
@@ -329,7 +328,6 @@ describe('one-shot refresh logon grant (Phase 54)', () => {
 
   it.each([
     [undefined, 'login-success', 'login'],
-    [null, 'steam-go-offline-retry', 'user-refresh'],
     ['steam', 'redeem-steam-key', 'user-refresh'],
     ['steam', 'steam-sync-notice-retry', 'user-refresh'],
     [undefined, 'clear-cache', 'user-refresh'],

@@ -82,7 +82,6 @@ const NO_REGISTRATION_OWNER: Record<string, string> = {
   'FrontendMessages:steamBottleSetupRequired': 'steam',
   'FrontendMessages:steamSetupDownloadProgress': 'steam',
   'FrontendMessages:steamBridgeSetupRequired': 'steam',
-  'FrontendMessages:steamGoOfflineRequired': 'steam',
   'FrontendMessages:engineStateChanged': 'engine',
   'FrontendMessages:steamRequestNotice': 'steam',
   'FrontendMessages:gameSettingWriteFailed': 'appShell',
@@ -235,7 +234,8 @@ describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
     // Phase 72 Plan 09 (2026-11-08): -1 Sync (`removeFolder` deleted from shellFilesSyncArgs, D-09).
     // Phase 68 Plan 06: +1 FrontendMessages (readOnlyStoresNotice); owner-less allowlist 65 -> 66.
     // Phase 74 Plan 11: +1 Async (getSteamUpdateInfo in install.ts).
-    expect(total).toBe(297)
+    // Quick 261116-vt7: -3 (steamGoOfflineRetry, steamGoOfflineCancel, FrontendMessages steamGoOfflineRequired); owner-less allowlist 66 -> 65.
+    expect(total).toBe(294)
     // Floor (Phase 67): measured 296 at planning (Sync 60 + Async 188 + TestSync 6 + Frontend
     // Messages 42); floor = measured - 6. A parse miss in either declaration form (interface or
     // const-args) turns this red instead of silently shrinking the census.
@@ -261,7 +261,7 @@ describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
       }
     }
     expect(computed).toEqual(NO_REGISTRATION_OWNER)
-    expect(Object.keys(NO_REGISTRATION_OWNER)).toHaveLength(66)
+    expect(Object.keys(NO_REGISTRATION_OWNER)).toHaveLength(65)
   })
 
   it('parseDomainFile reads the const-args conversion form', () => {

@@ -26,11 +26,11 @@ export function createSteamProcesses(deps: {
   /** The sidecar -> Rust transport (75 D-05: the Valve manifest guards run on Rust). */
   requestRustInvoke: RequestRustInvoke
 }) {
-  const { runner, platform, config, aborts } = deps
+  const { runner, aborts } = deps
   return {
-    // Mac Steam's running probe, detached open and the guided Go Offline Continue (the Rust CM
-    // session owns the wrap and the owed record).
-    macSteam: createMacSteamClient({ config, platform, runner }),
+    // Mac Steam's running probe and detached open (the Rust CM session owns the
+    // wrap and the owed record).
+    macSteam: createMacSteamClient({ runner }),
     // The Steam DRM spawners (pgrep, codesign, unzip) and their three single-flight Maps.
     drm: createSteamDrm({
       runner,

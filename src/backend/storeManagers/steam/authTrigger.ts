@@ -80,8 +80,6 @@ const ORIGIN_TO_TRIGGER: Readonly<Record<string, SteamAuthTrigger>> = {
   // Settings > Clear cache: a deliberate action that may have emptied the
   // list, so it must be able to repopulate it.
   'clear-cache': 'user-refresh',
-  // The guided Go Offline dialog's retry.
-  'steam-go-offline-retry': 'user-refresh',
   // Leaving the in-app Steam store after an app/cart/checkout page (quick
   // 261030-qqh): deliberate for the keyring gate. Its LOGON grant is the
   // non-escalating 'store-exit' (see INFERRED_REFRESH_ORIGINS). The renderer

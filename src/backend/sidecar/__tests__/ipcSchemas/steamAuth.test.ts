@@ -99,8 +99,6 @@ const asyncTable: FixtureTable<typeof steamAuthAsyncArgs> = {
     valid: [['570']],
     invalid: [[''], [570], []]
   },
-  steamGoOfflineRetry: { valid: [[]], invalid: [['x']] },
-  steamGoOfflineCancel: { valid: [[]], invalid: [['x']] },
   steamBridgeListFriends: {
     valid: [['570']],
     invalid: [['abc'], [570], []]

@@ -368,7 +368,6 @@ export function createInertSteamProcesses(
 ): ManagerDeps['steamProcesses'] {
   return {
     macSteam: overrides.macSteam ?? {
-      checkGuidedOfflineReady: () => Promise.resolve({ status: 'not-macos' }),
       isSteamRunning: () => Promise.resolve(false),
       openUrlDetached: () => undefined
     },

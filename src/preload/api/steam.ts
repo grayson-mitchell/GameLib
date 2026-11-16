@@ -34,20 +34,11 @@ export const setSteamBridgeUserRoute = makeHandlerInvoker('setSteamBridgeUserRou
 // quick-260821-le0 (Task 3): sweeps every recorded install root for a Steam
 // title in one action — registered on BOTH runtimes.
 export const steamRemoveAllCopies = makeHandlerInvoker('steamRemoveAllCopies')
-// Phase 54 Plan 07: Continue in the guided Go Offline dialog -- sidecar-only;
-// reports whether Mac Steam now reads Logged Off. Never logs on.
-export const steamGoOfflineRetry = makeHandlerInvoker('steamGoOfflineRetry')
-// 54-REVIEW WR-05: Cancel/close in the guided Go Offline dialog -- sidecar-only;
-// pays the goonline an abandoned guided step owes. Never logs on.
-export const steamGoOfflineCancel = makeHandlerInvoker('steamGoOfflineCancel')
 // Phase 58 Plan 31 (M-01 Direction A): the friend picker's list and invite channels -- sidecar-only.
 export const steamBridgeListFriends = makeHandlerInvoker('steamBridgeListFriends')
 export const steamBridgeInviteFriend = makeHandlerInvoker('steamBridgeInviteFriend')
 // Quick 261101-llf: the invite request is no longer pushed to the main window; helperProcess.ts
 // opens the dedicated `bridge-invite` window through the shell instead.
-// Phase 54 Plan 07: one-way push -- user.ts acquireAuthenticated emits when the
-// go-offline wrap did not see Mac Steam log off; SteamGoOfflineNotice.ts subscribes.
-export const handleSteamGoOfflineRequired = frontendListenerSlot('steamGoOfflineRequired')
 // One-way push (17-05 emits, 17-06 subscribes) — no handler, listener only.
 export const handleSteamBottleSetupRequired = frontendListenerSlot('steamBottleSetupRequired')
 // quick 261027-tot: one-way push (setupDownloads.ts emits, SteamSetupDownloads.ts

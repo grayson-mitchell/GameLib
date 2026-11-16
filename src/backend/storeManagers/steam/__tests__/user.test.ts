@@ -765,8 +765,8 @@ describe('SteamUser', () => {
       expect(rustChannels()).toContain('steamcm_session_release')
     })
 
-    test('sign-in when the wrap refuses: no lease, account-name fallback, no guided push, still done', async () => {
-      rustFake.acquire = () => ({ ok: false, refusal: 'go-offline-required' })
+    test('sign-in when the session is refused: no lease, account-name fallback, still done', async () => {
+      rustFake.acquire = () => ({ ok: false, refusal: 'client-not-ready' })
 
       const result = await signInWithCredentials()
 
@@ -776,10 +776,6 @@ describe('SteamUser', () => {
         username: 'testuser',
         steamId: SESSION_STEAM_ID
       })
-      expect(sendFrontendMessage).not.toHaveBeenCalledWith(
-        'steamGoOfflineRequired',
-        expect.anything()
-      )
     })
 
     test('a getPersonas that hangs is bounded at 5000 ms and falls back to the account name', async () => {
@@ -801,29 +797,7 @@ describe('SteamUser', () => {
       })
     })
 
-    test('redeemKey with a go-offline refusal pushes steamGoOfflineRequired { action: "redeem" } and reports go-offline-required', async () => {
-      mockConfigStore.get_nodefault.mockImplementation((key: string) => {
-        if (key === 'isLoggedIn') return true
-        if (key === 'refreshToken') return 'stored-plaintext-token'
-        return undefined
-      })
-      rustFake.acquire = () => ({ ok: false, refusal: 'go-offline-required' })
-
-      const result = await redeemKey(steamDeps, 'steam', 'TEST-KEY-VALUE')
-
-      expect(result).toEqual({
-        store: 'steam',
-        outcome: 'error',
-        message: 'go-offline-required'
-      })
-      expect(sendFrontendMessage).toHaveBeenCalledWith(
-        'steamGoOfflineRequired',
-        { action: 'redeem', appName: undefined }
-      )
-      expect(rustChannels()).not.toContain('steamcm_redeem_key')
-    })
-
-    test('redeemKey with any other refusal reports not-connected and pushes nothing', async () => {
+    test('redeemKey with a refusal reports not-connected', async () => {
       // not signed in: get_nodefault stays undefined
       const result = await redeemKey(steamDeps, 'steam', 'TEST-KEY-VALUE')
 
@@ -832,10 +806,6 @@ describe('SteamUser', () => {
         outcome: 'error',
         message: 'not-connected'
       })
-      expect(sendFrontendMessage).not.toHaveBeenCalledWith(
-        'steamGoOfflineRequired',
-        expect.anything()
-      )
     })
 
     test('logout fences the Rust session, closes the anonymous client and refuses reuse', async () => {

@@ -254,27 +254,6 @@ describe('SteamUser on the Rust engine', () => {
     )
   })
 
-  it('go-offline-required with a guided install action pushes steamGoOfflineRequired', async () => {
-    handlers['steamcm_session_acquire'] = () => ({
-      ok: false,
-      refusal: 'go-offline-required'
-    })
-
-    const lease = await steamUser.acquireAuthenticated({
-      reason: 'user-install',
-      guidedAction: 'install',
-      appName: '440',
-      installPath: '/games'
-    })
-
-    expect(lease).toEqual({ ok: false, reason: 'go-offline-required' })
-    expect(sendFrontendMessage).toHaveBeenCalledWith('steamGoOfflineRequired', {
-      action: 'install',
-      appName: '440',
-      installPath: '/games'
-    })
-  })
-
   it('an absent token is token-absent, latches credentialsMissing and issues no rustInvoke', async () => {
     mockReadTokenOutcome.mockResolvedValue({ status: 'absent' })
 

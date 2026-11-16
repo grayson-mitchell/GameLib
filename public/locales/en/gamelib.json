@@ -774,15 +774,6 @@
             },
             "wineTabHint": "GameLib chooses the Wine engine and bottle for Steam games."
         },
-        "goOffline": {
-            "body": "GameLib needs to sign in to your Steam account for this. To keep your Steam Friends list signed in, it signs in while the Steam app is offline, but Steam did not go offline when GameLib asked. This can happen while a Steam game is running.",
-            "continue": "Continue",
-            "error": "Could not continue: {{error}}",
-            "readyRedeem": "Steam is offline now. Redeem the key again to continue.",
-            "steps": "If a Steam game is running, quit it first: Steam ignores Go Offline while a game runs. In the Steam app, choose Steam > Go Offline, then press Continue. GameLib sets Steam back online once it has signed in.",
-            "stillOnline": "Steam still shows as online. If a Steam game is still running, quit it first. Choose Steam > Go Offline in the Steam app, then press Continue again.",
-            "title": "Set Steam offline to continue"
-        },
         "install": {
             "bottleNameReadonlyHelper": "GameLib manages one shared CrossOver bottle for Steam. Naming a separate bottle per game isn't supported yet.",
             "bridgeEngineNotice": "This game gets its own bottle. To change the engine it runs on, use Engine (advanced) in the game's settings.",

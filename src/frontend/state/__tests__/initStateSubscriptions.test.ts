@@ -143,7 +143,6 @@ const MOVED_LISTENERS = [
   'handleSteamClientSetupRequired',
   'handleSteamBridgeSetupRequired',
   'handleSteamBridgeRouteNotice',
-  'handleSteamGoOfflineRequired',
   'handleEngineStateChanged',
   'handleSteamRequestNotice',
   'handleReadOnlyStoresNotice',

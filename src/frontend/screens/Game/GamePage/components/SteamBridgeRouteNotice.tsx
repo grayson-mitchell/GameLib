@@ -101,8 +101,7 @@ const SteamBridgeRouteNotice = () => {
   // userRoute/acknowledgeReason pair persisted before the SAME
   // installSteamGame retry (34.13-08 D-17 marshalling precedent,
   // SteamBridgeSetup.tsx). quick 261107-lum: a forced-Windows install replays
-  // its Windows-build choice on the retry (54-REVIEW CR-01 precedent,
-  // SteamGoOfflineNotice), so it never silently installs the Mac build. 'acknowledge' persists the notice
+  // its Windows-build choice on the retry (54-REVIEW CR-01 precedent), so it never silently installs the Mac build. 'acknowledge' persists the notice
   // acknowledgement for the payload's reason and passes the stored userRoute back
   // unchanged.
   const chooseRoute = async (choice: 'bottle' | 'bridge' | 'acknowledge') => {

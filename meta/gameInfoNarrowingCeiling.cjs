@@ -82,7 +82,6 @@ const STORE_SPECIFIC_EXEMPT = [
     'src/frontend/state/SteamBridgeRouteNotice.ts',
     'src/frontend/state/SteamBridgeSetup.ts',
     'src/frontend/state/SteamClientSetup.ts',
-    'src/frontend/state/SteamGoOfflineNotice.ts',
     'src/frontend/state/SteamRequestNotice.ts',
     'src/frontend/state/SteamSetupDownloads.ts',
     'src/frontend/state/SteamSignOut.ts'

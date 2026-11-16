@@ -196,23 +196,6 @@ export type SteamBottleLaunchWaitingCause =
 /** Phase 54: what the guided Go Offline step was asked for. */
 export type SteamGoOfflineAction = 'refresh' | 'install' | 'redeem'
 
-/** Phase 54: backend push (`steamGoOfflineRequired`) payload. */
-export interface SteamGoOfflinePayload {
-  action: SteamGoOfflineAction
-  appName?: string
-  /** 54-REVIEW CR-01: the refused install's own `InstallArgs.path` and
-   *  `steamForceWindowsViaBottle`, so the guided Continue replays the install
-   *  the user confirmed instead of the default library and route. Absent
-   *  when the backend never saw them. */
-  installPath?: string
-  forceWindowsViaBottle?: boolean
-}
-
-/** Phase 54: result of the renderer's `steamGoOfflineRetry` invoke. */
-export type SteamGoOfflineRetryResult = {
-  status: 'ready' | 'still-online' | 'not-macos'
-}
-
 // quick 261027-tot: first-run Steam setup payload downloads (the native Steam
 // client installer, and SteamSetup.exe going into the CrossOver bottle) are
 // not DM-queue work; they push this shape so the Downloads view can show them.

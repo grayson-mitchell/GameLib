@@ -18,7 +18,6 @@ import type { SteamUserData } from 'common/types/steam'
 import type { SignInProbeOutcome } from 'common/signInState'
 import {
   type AuthSessionReason,
-  type AuthSessionRefusal,
   type AcquireAuthenticatedOpts,
   type GuidedInstallTarget,
   type AuthenticatedLease,
@@ -220,42 +219,17 @@ export class SteamUser {
     return this.rustAcquire(opts, token)
   }
 
-  /** The guided Go Offline push, shared by both engines. */
-  private pushGuidedOffline(
-    reason: AuthSessionRefusal,
-    opts: AcquireAuthenticatedOpts
-  ): void {
-    if (reason !== 'go-offline-required' || !opts.guidedAction) return
-    const target =
-      opts.guidedAction === 'install' && opts.appName
-        ? this.guidedInstallTargets.get(opts.appName)
-        : undefined
-    this.deps.sendFrontendMessage('steamGoOfflineRequired', {
-      action: opts.guidedAction,
-      appName: opts.appName,
-      ...(target?.installPath !== undefined
-        ? { installPath: target.installPath }
-        : {}),
-      ...(target?.forceWindowsViaBottle !== undefined
-        ? { forceWindowsViaBottle: target.forceWindowsViaBottle }
-        : {})
-    })
-  }
-
   // ── Phase 79 (D-03): the Rust engine ──────────────────────────────────────
   // The session itself lives in ./rustSession (RustCmSession); this class keeps the policy the
   // session consults through rustHost (shuttingDown, isLoggedIn, the sign-out fence, the credential
-  // verdict) and the guided push.
+  // verdict).
 
   private async rustAcquire(
     opts: AcquireAuthenticatedOpts,
     tokenOverride?: string
   ): Promise<AuthenticatedLease> {
     const res = await this.rust.acquireSession(opts.reason, tokenOverride)
-    if (!res.ok) {
-      this.pushGuidedOffline(res.reason, opts)
-      return { ok: false, reason: res.reason }
-    }
+    if (!res.ok) return { ok: false, reason: res.reason }
     return { ok: true, client: res.client, release: res.release }
   }
 

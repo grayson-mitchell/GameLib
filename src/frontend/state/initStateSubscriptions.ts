@@ -53,7 +53,6 @@ import { handleSteamBottleSetupRequiredSignal } from './SteamBottleSetup'
 import { handleSteamClientSetupRequiredSignal } from './SteamClientSetup'
 import { handleSteamBridgeSetupRequiredSignal } from './SteamBridgeSetup'
 import { handleSteamBridgeRouteNoticeSignal } from './SteamBridgeRouteNotice'
-import { handleSteamGoOfflineRequiredSignal } from './SteamGoOfflineNotice'
 import { handleEngineStateChangedSignal } from './EngineState'
 import { handleSteamRequestNoticeSignal } from './SteamRequestNotice'
 import { handleReadOnlyStoresNoticeSignal } from './ReadOnlyStoresNotice'
@@ -230,9 +229,6 @@ export function initStateSubscriptions(): void {
   // Phase 51 Plan 13 (D-51-08/11): up-front bridge ROUTE notice, fired BEFORE
   // any install attempt for a known-bad / scan-miss / win64-no-shim route.
   window.api.handleSteamBridgeRouteNotice(handleSteamBridgeRouteNoticeSignal)
-  // Phase 54: guided Go Offline step when the go-offline wrap did not see Mac
-  // Steam log off; no logon happened.
-  window.api.handleSteamGoOfflineRequired(handleSteamGoOfflineRequiredSignal)
   // Phase 59 Plan 11: backend-computed per-title engine state for the game page.
   window.api.handleEngineStateChanged(handleEngineStateChangedSignal)
   // quick 261106-pvk: Steam never picked up a delegated install/uninstall.

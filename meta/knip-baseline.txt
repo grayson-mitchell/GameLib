@@ -260,7 +260,6 @@ exports	src/preload/api/steam.ts	Steam.handleSteamBottleSetupRequired
 exports	src/preload/api/steam.ts	Steam.handleSteamBridgeRouteNotice
 exports	src/preload/api/steam.ts	Steam.handleSteamBridgeSetupRequired
 exports	src/preload/api/steam.ts	Steam.handleSteamClientSetupRequired
-exports	src/preload/api/steam.ts	Steam.handleSteamGoOfflineRequired
 exports	src/preload/api/steam.ts	Steam.handleSteamMetadataSyncing
 exports	src/preload/api/steam.ts	Steam.handleSteamRequestNotice
 exports	src/preload/api/steam.ts	Steam.handleSteamSetupDownloadProgress
@@ -275,8 +274,6 @@ exports	src/preload/api/steam.ts	Steam.steamBridgeInviteFriend
 exports	src/preload/api/steam.ts	Steam.steamBridgeListFriends
 exports	src/preload/api/steam.ts	Steam.steamClientSetupRecheck
 exports	src/preload/api/steam.ts	Steam.steamClientSetupStart
-exports	src/preload/api/steam.ts	Steam.steamGoOfflineCancel
-exports	src/preload/api/steam.ts	Steam.steamGoOfflineRetry
 exports	src/preload/api/steam.ts	Steam.steamPollCredential
 exports	src/preload/api/steam.ts	Steam.steamPollQR
 exports	src/preload/api/steam.ts	Steam.steamRemoveAllCopies
