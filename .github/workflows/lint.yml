@@ -25,18 +25,25 @@ jobs:
         uses: ./.github/actions/install-deps
       - name: Lint code.
         run: pnpm lint
+      # Phase 78 (folded todo 2026-11-14-lint-workflow-red-masks-ratchet-steps): every step after
+      # `Lint code.` runs even when an earlier step failed, so one red check cannot hide the others
+      # (the same trap as quick 261114-2gg); a failed install still skips them.
       - name: Prettier code.
+        if: ${{ !cancelled() && steps.deps.outcome == 'success' }}
         run: pnpm prettier
       # Quick 261107-brs: this step is the knip identity ratchet (meta/knipRatchet.cjs against
       # meta/knip-baseline.txt). It fails on a new finding AND on a vanished one; lower
       # meta/knip-baseline.txt in the same commit that removes dead code.
       - name: Find dead code
+        if: ${{ !cancelled() && steps.deps.outcome == 'success' }}
         run: pnpm find-deadcode
       - name: Module boundaries
+        if: ${{ !cancelled() && steps.deps.outcome == 'success' }}
         run: pnpm boundaries
       # Phase 65 D-02: shrink-only per-file line ceiling for storeManagers/steam/; lower
       # meta/steamLineCeilingBaseline.json in the same commit as the move.
       - name: Steam file line ceiling
+        if: ${{ !cancelled() && steps.deps.outcome == 'success' }}
         run: pnpm steam-line-ceiling
       # Phase 66 D-16: shrink-only module-state / child_process / jest.mock ceilings; lower
       # the matching meta/backendDiCeilings/*.json entry in the same commit as the removal.
