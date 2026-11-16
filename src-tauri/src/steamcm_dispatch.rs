@@ -36,10 +36,14 @@ pub(crate) fn rpc_steamcm_depot_key(args: &[Value]) -> Result<Value, String> {
     gamelib_steamcm::dispatch("steamcm_depot_key", args)
 }
 
-pub(crate) fn rpc_steamcm_mac_owned_apps(args: &[Value]) -> Result<Value, String> {
-    let a = SteamcmMacOwnedAppsArgs::from_args(args)?;
-    // T-79-104: the sidecar names an executable; only the bundled helper's name may be spawned.
-    let p = std::path::Path::new(&a.helper_path);
+/// The shell's own bundled `steam-bridge-helper`, set once by `install_steamcm_host`.
+static BUNDLED_HELPER: std::sync::OnceLock<std::path::PathBuf> = std::sync::OnceLock::new();
+
+/// T-79-104: the sidecar names an executable to spawn, so only the shell's bundled helper may pass.
+/// The path must be absolute, must not climb, must be named `steam-bridge-helper`, and must
+/// resolve to the same file as `bundled`. With no bundled helper known, nothing passes.
+fn helper_path_ok(helper_path: &str, bundled: Option<&std::path::Path>) -> bool {
+    let p = std::path::Path::new(helper_path);
     let climbs = p
         .components()
         .any(|c| matches!(c, std::path::Component::ParentDir));
@@ -47,6 +51,24 @@ pub(crate) fn rpc_steamcm_mac_owned_apps(args: &[Value]) -> Result<Value, String
         || climbs
         || p.file_name().and_then(|n| n.to_str()) != Some("steam-bridge-helper")
     {
+        return false;
+    }
+    let Some(bundled) = bundled else {
+        return false;
+    };
+    match (std::fs::canonicalize(p), std::fs::canonicalize(bundled)) {
+        (Ok(got), Ok(want)) => got == want,
+        _ => false,
+    }
+}
+
+fn bundled_helper_ok(helper_path: &str) -> bool {
+    helper_path_ok(helper_path, BUNDLED_HELPER.get().map(|p| p.as_path()))
+}
+
+pub(crate) fn rpc_steamcm_mac_owned_apps(args: &[Value]) -> Result<Value, String> {
+    let a = SteamcmMacOwnedAppsArgs::from_args(args)?;
+    if !bundled_helper_ok(&a.helper_path) {
         return Err("steamcm_mac_owned_apps:bad-args".to_string());
     }
     gamelib_steamcm::dispatch("steamcm_mac_owned_apps", args)
@@ -83,7 +105,18 @@ pub(crate) fn rpc_steamcm_redeem_key(args: &[Value]) -> Result<Value, String> {
 }
 
 pub(crate) fn rpc_steamcm_refresh(args: &[Value]) -> Result<Value, String> {
-    SteamcmRefreshArgs::from_args(args)?;
+    let a = SteamcmRefreshArgs::from_args(args)?;
+    // T-79-104 (B/WR-01): the macSteam source spawns `helperPath`, so it takes the same guard.
+    // A refusal is a transport error, which `tryMacSteamRefresh` treats as a CM-path fallback.
+    if a.source.kind == SteamcmRefreshArgsSourceKind::MacSteam
+        && !a
+            .source
+            .helper_path
+            .as_deref()
+            .is_some_and(bundled_helper_ok)
+    {
+        return Err("steamcm_refresh:bad-args".to_string());
+    }
     gamelib_steamcm::dispatch("steamcm_refresh", args)
 }
 
@@ -280,6 +313,9 @@ impl WrapHost for ShellWrapHost {
 /// Installs the production wrap host and routes crate diagnostics to the shell log. Must run
 /// before any acquire; on macOS `steamcm_configure` fails without a host.
 pub(crate) fn install_steamcm_host(app: &AppHandle) {
+    if let Some(helper) = bundled_bridge_helper_path(app) {
+        let _ = BUNDLED_HELPER.set(helper);
+    }
     gamelib_steamcm::error::set_diag_sink(shell_diag);
     gamelib_steamcm::facade::set_wrap_host(std::sync::Arc::new(ShellWrapHost { app: app.clone() }));
 }
@@ -321,6 +357,7 @@ mod tests {
             "/tmp/steam-bridge-helper/../sh",
             "/tmp/../steam-bridge-helper",
             "/tmp/not-steam-bridge-helper",
+            "/tmp/x/steam-bridge-helper",
             "",
         ] {
             let r = rpc_steamcm_mac_owned_apps(&[
@@ -332,5 +369,63 @@ mod tests {
                 "{path}"
             );
         }
+    }
+
+    /// B/WR-01: the macSteam refresh source spawns `helperPath` too, so it must hit the same guard.
+    #[test]
+    fn refresh_refuses_a_mac_steam_source_naming_anything_but_the_bundled_helper() {
+        for helper in [
+            Some("/bin/sh"),
+            Some("/tmp/x/steam-bridge-helper"),
+            Some(""),
+            None,
+        ] {
+            let mut source = serde_json::json!({"kind": "macSteam", "steamId": "1"});
+            if let Some(h) = helper {
+                source["helperPath"] = serde_json::json!(h);
+            }
+            let r = rpc_steamcm_refresh(&[serde_json::json!({
+                "source": source,
+                "metadata": {},
+                "previousGames": [],
+                "installState": {},
+                "bridgeAllowlist": [],
+                "knownFixMac32": [],
+                "isMac": true,
+            })]);
+            assert_eq!(r, Err("steamcm_refresh:bad-args".to_string()), "{helper:?}");
+        }
+    }
+
+    /// B/WR-01: a file planted elsewhere under the helper's name is not the bundled helper.
+    #[test]
+    fn helper_path_must_resolve_to_the_bundled_helper_not_just_share_its_name() {
+        let root = std::env::temp_dir().join(format!("gamelib-wr01-{}", std::process::id()));
+        let bundled_dir = root.join("app/public/bin/arm64/darwin");
+        let planted_dir = root.join("planted");
+        std::fs::create_dir_all(&bundled_dir).unwrap();
+        std::fs::create_dir_all(&planted_dir).unwrap();
+        let bundled = bundled_dir.join("steam-bridge-helper");
+        let planted = planted_dir.join("steam-bridge-helper");
+        std::fs::write(&bundled, b"").unwrap();
+        std::fs::write(&planted, b"").unwrap();
+
+        let ok = |p: &std::path::Path, b: Option<&std::path::Path>| {
+            helper_path_ok(p.to_str().unwrap(), b)
+        };
+        assert!(ok(&bundled, Some(&bundled)));
+        assert!(!ok(&planted, Some(&bundled)), "planted copy passed");
+        assert!(
+            !ok(&bundled, None),
+            "no bundled helper known, yet a path passed"
+        );
+        assert!(
+            !ok(
+                &bundled_dir.join("steam-bridge-helper-missing"),
+                Some(&bundled)
+            ),
+            "wrong name passed"
+        );
+        let _ = std::fs::remove_dir_all(&root);
     }
 }

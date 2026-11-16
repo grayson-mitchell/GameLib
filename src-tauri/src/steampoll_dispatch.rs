@@ -221,6 +221,21 @@ fn bridge_helper_path_for(
     })
 }
 
+/// The app root and asset dir the sidecar's `appPaths.ts` uses (`public` in dev, `build` packaged).
+fn app_root_and_asset_dir(app: &AppHandle) -> (PathBuf, &'static str) {
+    if cfg!(debug_assertions) {
+        (PathBuf::from(resolve_dev_app_root()), "public")
+    } else {
+        (PathBuf::from(resolve_packaged_app_root(app)), "build")
+    }
+}
+
+/// The bundled `steam-bridge-helper` this shell ships. `None` off macOS.
+pub(crate) fn bundled_bridge_helper_path(app: &AppHandle) -> Option<PathBuf> {
+    let (app_root, asset_dir) = app_root_and_asset_dir(app);
+    bridge_helper_path_for(&app_root, asset_dir, node_arch(), cfg!(target_os = "macos"))
+}
+
 /// Renders a notification text through the catalog (`Literal` passes through).
 fn render_notify_text(catalog: &Catalog, text: &NotifyText) -> String {
     match text {
@@ -315,15 +330,10 @@ pub(crate) fn install_steampoll_host(app: &AppHandle) {
         shell_eprintln!("[shell] steampoll host not installed: no home directory");
         return;
     };
-    let (app_root, asset_dir) = if cfg!(debug_assertions) {
-        (PathBuf::from(resolve_dev_app_root()), "public")
-    } else {
-        (PathBuf::from(resolve_packaged_app_root(app)), "build")
-    };
+    let (app_root, asset_dir) = app_root_and_asset_dir(app);
     let locales_dir = app_root.join(asset_dir).join("locales");
     profile.locales_dir = Some(locales_dir.clone());
-    let helper =
-        bridge_helper_path_for(&app_root, asset_dir, node_arch(), cfg!(target_os = "macos"));
+    let helper = bundled_bridge_helper_path(app);
     let host = Arc::new(ShellPollHost {
         app: app.clone(),
         profile: profile.clone(),
