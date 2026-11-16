@@ -119,6 +119,13 @@ function dropPreviousForRust(deps: UserSignInDeps): void {
   signInState.setSession(null)
 }
 
+/**
+ * C1/WR-03: a rejected status read (the bounded rustInvoke timeout, a transport hiccup) is not a
+ * failed sign-in. It reads as `waiting` until this many fail in a row; only then is the flow
+ * cancelled and the sign-in failed.
+ */
+const STATUS_READ_FAILURE_LIMIT = 3
+
 /** Another poll already read `done` and is finalising: Rust has dropped the flow by now. */
 type Finalizing = { status: 'finalizing' }
 
@@ -136,15 +143,22 @@ async function readFlowStatus(
     const r = (await deps.requestRustInvoke(RUST_STEAMCM_SIGNIN_STATUS, [
       { flowId: slot.flowId }
     ])) as RustFlowStatus
+    slot.readFailures = 0
     if (r.status !== 'done' && slot.finalize) return { status: 'finalizing' }
     return r
   } catch (err) {
     if (slot.finalize) return { status: 'finalizing' }
+    slot.readFailures = (slot.readFailures ?? 0) + 1
     logWarning(
-      `Steam sign-in status read failed (${err instanceof Error ? err.name : typeof err})`,
+      `Steam sign-in status read failed (${err instanceof Error ? err.name : typeof err}) ${slot.readFailures}/${STATUS_READ_FAILURE_LIMIT}`,
       LogPrefix.Steam
     )
-    return { status: 'error' }
+    if (slot.readFailures < STATUS_READ_FAILURE_LIMIT) {
+      return { status: 'waiting' }
+    }
+    // Giving up: cancel the Rust flow so an approval that lands now is not left holding a token.
+    fireAndForgetCancel(deps, slot.flowId)
+    return { status: 'error', reason: 'statusReadFailed' }
   }
 }
 

@@ -434,4 +434,80 @@ describe('userSignIn on the rust engine', () => {
       ])
     })
   })
+
+  describe('a failed status read (C1/WR-03)', () => {
+    const reject = () => Promise.reject(new Error('rustInvoke timed out'))
+
+    it('pollQRLogin reads one failure as waiting and finishes when the next read is done', async () => {
+      const t = build({
+        steamcm_signin_qr_start: () => ({ flowId: 'f1', challengeUrl: 'A' }),
+        steamcm_signin_status: [reject, () => DONE],
+        steamcm_signin_cancel: () => ({ ok: true })
+      })
+      await startQRLogin(t.deps)
+      expect(await pollQRLogin(t.deps)).toEqual({ status: 'waiting' })
+      expect(t.deps.steamSession.signIn.getQrSessionState().status).toBe(
+        'waiting'
+      )
+      await pollQRLogin(t.deps)
+      await jest.advanceTimersByTimeAsync(0)
+      expect(t.setToken).toHaveBeenCalledWith(SECRET_TOKEN)
+      expect(t.requestRustInvoke).not.toHaveBeenCalledWith(
+        'steamcm_signin_cancel',
+        expect.anything()
+      )
+    })
+
+    it('a success resets the count, so only consecutive failures give up', async () => {
+      const t = build({
+        steamcm_signin_qr_start: () => ({ flowId: 'f1', challengeUrl: 'A' }),
+        steamcm_signin_status: [
+          reject,
+          reject,
+          () => ({ status: 'waiting' }),
+          reject,
+          reject,
+          () => ({ status: 'waiting' })
+        ]
+      })
+      await startQRLogin(t.deps)
+      for (let i = 0; i < 6; i++) {
+        expect(await pollQRLogin(t.deps)).toEqual({ status: 'waiting' })
+      }
+    })
+
+    it('pollCredentialLogin gives up after three failures in a row and cancels the Rust flow', async () => {
+      const t = build({
+        steamcm_signin_credentials_start: () => ({
+          flowId: 'c1',
+          status: 'guardRequired'
+        }),
+        steamcm_signin_status: reject,
+        steamcm_signin_cancel: () => ({ ok: true })
+      })
+      await startCredentialLogin(t.deps, 'acct', SECRET_PASSWORD)
+      expect(await pollCredentialLogin(t.deps)).toEqual({ status: 'waiting' })
+      expect(await pollCredentialLogin(t.deps)).toEqual({ status: 'waiting' })
+      expect(await pollCredentialLogin(t.deps)).toEqual({ status: 'error' })
+      expect(t.requestRustInvoke).toHaveBeenCalledWith(
+        'steamcm_signin_cancel',
+        [{ flowId: 'c1' }]
+      )
+    })
+
+    it('the guard-submit wait rides out one failed read', async () => {
+      const t = build({
+        steamcm_signin_credentials_start: () => ({
+          flowId: 'c1',
+          status: 'guardRequired'
+        }),
+        steamcm_signin_guard_submit: () => ({ ok: true }),
+        steamcm_signin_status: [reject, () => DONE]
+      })
+      await startCredentialLogin(t.deps, 'acct', SECRET_PASSWORD)
+      const p = submitSteamGuardCode(t.deps, SECRET_CODE)
+      await jest.advanceTimersByTimeAsync(2000)
+      expect(await p).toEqual({ status: 'done', username: 'Persona' } as never)
+    })
+  })
 })

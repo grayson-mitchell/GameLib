@@ -12,6 +12,8 @@ export type SignInSession = {
   flowId: string
   lastChallengeUrl?: string
   finalize?: Promise<string>
+  /** Consecutive failed status reads; one success resets it (C1/WR-03). */
+  readFailures?: number
 }
 
 type SignInStatus = 'waiting' | 'done' | 'error'
