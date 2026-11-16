@@ -331,6 +331,35 @@ async fn falls_back_after_the_child_exits() {
     assert_eq!(f.mon.read("43160"), None);
 }
 
+/// 80-REVIEW A/WR-09: after the child dies (Steam restarted), a later start replaces the dead
+/// entry and live readings come back; a live monitor is still never doubled.
+#[tokio::test]
+async fn a_start_after_the_child_exits_replaces_the_dead_monitor() {
+    let f = fx(STARTED, None, true);
+    f.mon.start("43160", &f.roots).await;
+    assert!(f.mon.is_live("43160"));
+    // Child exit = its stdout closes: swap spawn 0's only sender for an unrelated one, keeping
+    // the index so spawn 1 stays at index 1.
+    {
+        let mut spawns = f.runner.spawns.lock().unwrap();
+        let (p, a, _tx, k) = spawns.remove(0);
+        let (dead_tx, _) = mpsc::channel(1);
+        spawns.insert(0, (p, a, dead_tx, k));
+    }
+    settle().await;
+    assert!(!f.mon.is_live("43160"));
+    assert_eq!(f.mon.read("43160"), None);
+    f.mon.start("43160", &f.roots).await;
+    assert_eq!(f.runner.count(), 2, "the dead monitor was not replaced");
+    assert!(f.mon.is_live("43160"));
+    f.runner
+        .feed(1, &(block(&[("x", 1)]) + &block(&[("x", 2)])))
+        .await;
+    assert!(f.mon.read("43160").is_some());
+    f.mon.start("43160", &f.roots).await;
+    assert_eq!(f.runner.count(), 2, "a live monitor must not be doubled");
+}
+
 #[tokio::test]
 async fn stop_kills_the_child_and_stop_all_stops_every_live_monitor() {
     let f = fx(STARTED, None, true);

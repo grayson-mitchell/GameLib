@@ -150,6 +150,10 @@ fn hold_name(h: HoldState) -> &'static str {
     }
 }
 
+/// Every this many ticks an eligible poll restarts a download monitor that is not live
+/// (15 s at the 3 s tick): bounds the pgrep cost while Steam is down (80-REVIEW A/WR-09).
+const MONITOR_RESTART_TICKS: u32 = 5;
+
 /// quick 261029-sex: only macOS native polls are downloaded by Steam itself.
 fn live_monitor_eligible(platform: Platform, poll: &ActiveInstall) -> bool {
     platform == Platform::Darwin && poll.source == AcfSource::Native && !poll.hold.is_native_handoff
@@ -604,6 +608,7 @@ impl InstallPolls {
             roots: PollRoots,
             awaiting: bool,
             title: String,
+            restart_monitor: bool,
         }
         let (snap, pre, cap_stop) = {
             let mut polls = self.polls();
@@ -635,6 +640,8 @@ impl InstallPolls {
                     roots: poll.roots.clone(),
                     awaiting: poll.awaiting_update.is_some(),
                     title: poll.title.clone(),
+                    restart_monitor: live_monitor_eligible(self.platform, poll)
+                        && poll.ticks % MONITOR_RESTART_TICKS == 0,
                 },
                 pre,
                 cap_stop,
@@ -659,6 +666,13 @@ impl InstallPolls {
         }
         if !pre.is_empty() {
             self.apply(pre, &mut title).await;
+        }
+
+        // 80-REVIEW A/WR-09: a monitor whose nettop child died (the watched steam_osx exited in
+        // a Steam restart) or that never found Steam is restarted, throttled, so live progress
+        // comes back once Steam does. Start is idempotent for a live monitor.
+        if snap.restart_monitor && !self.monitor.is_live(app_id) {
+            self.spawn_monitor_start(app_id, snap.roots.clone());
         }
 
         // Phase B: observe (no lock held).

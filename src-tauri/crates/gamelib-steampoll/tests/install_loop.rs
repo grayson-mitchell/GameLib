@@ -988,6 +988,34 @@ async fn upgrading_a_poll_to_delegated_or_handoff_reevaluates_the_monitor() {
     r.polls.stop_install(APP);
 }
 
+/// 80-REVIEW A/WR-09: a monitor that is not live (Steam was not running, or its child died in a
+/// Steam restart) is retried every 5 ticks while the poll stays eligible, never every tick.
+#[tokio::test(start_paused = true)]
+async fn an_eligible_poll_retries_a_dead_monitor_every_five_ticks() {
+    let pgrep = "/usr/bin/pgrep -x steam_osx";
+    let r = rig_with(Platform::Darwin, true, AckReply::default()).await;
+    // Keep the poll alive past the grace window with a live download in flight.
+    r.polls.set_native_in_flight(APP, true);
+    r.runner.on(
+        pgrep,
+        vec![RunOutput {
+            code: Some(1),
+            ..RunOutput::default()
+        }],
+    );
+    start(&r, PollOptions::default());
+    settle().await;
+    let count = |r: &Rig| r.runner.calls().iter().filter(|c| *c == pgrep).count();
+    assert_eq!(count(&r), 1, "the start-time attempt");
+    ticks(4).await;
+    assert_eq!(count(&r), 1, "no retry before the fifth tick");
+    ticks(1).await;
+    assert_eq!(count(&r), 2, "one retry on the fifth tick");
+    ticks(5).await;
+    assert_eq!(count(&r), 3);
+    r.polls.stop_install(APP);
+}
+
 // ---- no overlapping ticks (D-10) -------------------------------------------------------------
 
 struct SlowRunner {

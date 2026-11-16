@@ -280,11 +280,17 @@ impl DownloadMonitor {
             failed: false,
             stopped: false,
         }));
-        // Registered before the first await so concurrent starts stay idempotent.
+        // Registered before the first await so concurrent starts stay idempotent. A failed entry
+        // (its child exited, e.g. the watched steam_osx died in a Steam restart, or the spawn
+        // failed) is replaced rather than kept, or live progress would stay lost for the rest
+        // of the poll (80-REVIEW A/WR-09).
         {
             let mut map = self.map();
-            if map.contains_key(app_id) {
-                return;
+            if let Some(existing) = map.get(app_id) {
+                if !lock(existing).failed {
+                    return;
+                }
+                kill_monitor(existing);
             }
             map.insert(app_id.to_string(), m.clone());
         }
@@ -372,6 +378,12 @@ impl DownloadMonitor {
             bytes_total: upd.download_total,
             speed_bytes_per_sec: window_rate(&g.samples, self.clock.now_ms() as f64),
         })
+    }
+
+    /// Whether a monitor for `app_id` is registered and has not failed (it may still be looking
+    /// up the Steam pid). The install loop restarts a monitor that is not live.
+    pub fn is_live(&self, app_id: &str) -> bool {
+        self.map().get(app_id).is_some_and(|m| !lock(m).failed)
     }
 
     pub fn stop(&self, app_id: &str) {
