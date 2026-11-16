@@ -146,7 +146,9 @@ fn main() {
                 let _ = out.flush();
             }
             // EOF: close the session and pay any owed go-online before the process ends.
-            gamelib_steamcm::facade::shutdown_all(EOF_SHUTDOWN_BOUND);
+            if let Err(e) = gamelib_steamcm::facade::shutdown_all(EOF_SHUTDOWN_BOUND) {
+                eprintln!("steamcm shutdown refused: {e}");
+            }
         }
         [op, _] if SECRET_OPS.contains(&op.as_str()) => {
             eprintln!("{op} takes secrets: pass it on stdin with --ndjson, never on argv");

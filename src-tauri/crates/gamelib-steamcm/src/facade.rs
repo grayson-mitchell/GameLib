@@ -755,9 +755,11 @@ pub fn capture_anon_pics(apps: Vec<u32>) -> Result<Value, String> {
     })
 }
 
-/// Called by the shell's EOF and exit hooks (79-16).
-pub fn shutdown_all(bound: Duration) -> RestoreOutcome {
-    block_on_guarded(core().shutdown_all(bound)).unwrap_or(RestoreOutcome::TimedOut)
+/// Called by the shell's EOF and exit hooks (79-16). B/IN-03: `Err` means nothing ran at all
+/// (the caller is inside a tokio runtime: no logoff, no restore). That is not a slow Steam, so it
+/// is not reported as `TimedOut`.
+pub fn shutdown_all(bound: Duration) -> Result<RestoreOutcome, String> {
+    block_on_guarded(core().shutdown_all(bound))
 }
 
 #[cfg(test)]
@@ -834,6 +836,15 @@ mod tests {
         c.configure_with(PathBuf::from("/first"), Arc::new(NoWrap));
         c.configure_with(PathBuf::from("/second"), Arc::new(NoWrap));
         assert_eq!(lock(&c.app_folder).clone(), Some(PathBuf::from("/first")));
+    }
+
+    /// B/IN-03: called from inside a runtime, the shutdown is refused, not reported as a timeout.
+    #[tokio::test]
+    async fn shutdown_all_inside_a_runtime_is_refused_not_timed_out() {
+        assert_eq!(
+            shutdown_all(Duration::from_millis(10)),
+            Err("steamcm:nested-runtime".to_string())
+        );
     }
 
     #[tokio::test]

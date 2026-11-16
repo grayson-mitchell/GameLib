@@ -350,9 +350,20 @@ pub(crate) fn install_steamcm_host(app: &AppHandle) {
 }
 
 fn steamcm_shutdown(context: &str) {
-    let outcome = gamelib_steamcm::facade::shutdown_all(STEAMCM_SHUTDOWN_BOUND);
-    // Outcome name only, never any session detail (T-28-04).
-    shell_eprintln!("[shell] steamcm shutdown ({context}): {outcome:?}");
+    let result = gamelib_steamcm::facade::shutdown_all(STEAMCM_SHUTDOWN_BOUND);
+    shell_eprintln!("{}", steamcm_shutdown_line(context, &result));
+}
+
+/// Outcome name or refusal code only, never any session detail (T-28-04). B/IN-03: a refused
+/// shutdown (nothing ran) reads `Refused`, never `TimedOut`, which means a slow Steam.
+fn steamcm_shutdown_line(
+    context: &str,
+    result: &Result<gamelib_steamcm::session::RestoreOutcome, String>,
+) -> String {
+    match result {
+        Ok(outcome) => format!("[shell] steamcm shutdown ({context}): {outcome:?}"),
+        Err(e) => format!("[shell] steamcm shutdown ({context}): Refused ({e})"),
+    }
 }
 
 /// Sidecar stdout EOF: no consumer remains for any lease, so drop them all and pay any owed goonline.
@@ -376,6 +387,21 @@ mod tests {
         on_sidecar_eof_drop_steamcm();
         steamcm_exit_shutdown();
         assert!(start.elapsed() < STEAMCM_SHUTDOWN_BOUND * 2);
+    }
+
+    #[test]
+    fn a_refused_shutdown_is_logged_as_refused_not_timed_out() {
+        use gamelib_steamcm::session::RestoreOutcome;
+        let refused = steamcm_shutdown_line("exit", &Err("steamcm:nested-runtime".into()));
+        assert_eq!(
+            refused,
+            "[shell] steamcm shutdown (exit): Refused (steamcm:nested-runtime)"
+        );
+        assert!(!refused.contains("TimedOut"));
+        assert_eq!(
+            steamcm_shutdown_line("exit", &Ok(RestoreOutcome::TimedOut)),
+            "[shell] steamcm shutdown (exit): TimedOut"
+        );
     }
 
     /// B/IN-01: a `{:?}` on a secret-bearing args struct must never print the secret (T-28-04).
