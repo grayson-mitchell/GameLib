@@ -373,7 +373,7 @@ function writeMarker(
   versioning: StoreVersioning,
   bottleDir: string,
   marker: EngineMarker
-): void {
+): boolean {
   const tmp = join(bottleDir, `${ENGINE_MARKER_FILE}.tmp-${process.pid}`)
   try {
     ensureEngineMarkerMigrated(versioning, markerPath(bottleDir))
@@ -382,7 +382,7 @@ function writeMarker(
         'engine marker is from a newer GameLib build; not overwriting it',
         LogPrefix.Backend
       )
-      return
+      return false
     }
     writeFileSync(
       tmp,
@@ -390,9 +390,11 @@ function writeMarker(
       { mode: 0o644 }
     )
     renameSync(tmp, markerPath(bottleDir))
+    return true
   } catch (err) {
     rmSync(tmp, { force: true })
     logWarning(['engine marker write failed', err], LogPrefix.Backend)
+    return false
   }
 }
 
@@ -517,7 +519,7 @@ export function reconcileBottleEngineMarker(
     const marker = readMarker(bottleDir, ctx)
     if (trustedMarker(bottleDir, bottleName, marker)) return null
     const inferred = inferMarker(bottleDir, () => defaultCurrentPinEngine(ctx))
-    writeMarker(ctx.versioning, bottleDir, inferred)
+    if (!writeMarker(ctx.versioning, bottleDir, inferred)) return null
     logInfo(
       `engine marker for "${bottleName}" reconciled before the CrossOver pre-flight: ${identityOf(inferred)} (${marker ? 'crossover marker contradicted by DXVK-macOS' : 'missing'})`,
       LogPrefix.Backend
@@ -562,7 +564,7 @@ export function recordPinnedBottleEngine(
     if (engine.dxvk && hasStagingDxvk(target.bottleDir)) {
       marker.dxvk = { dir: engine.dxvk.dir, version: engine.dxvk.version }
     }
-    writeMarker(ctx.versioning, target.bottleDir, marker)
+    if (!writeMarker(ctx.versioning, target.bottleDir, marker)) return false
     logInfo(
       `engine marker for "${bottleName}" recorded at creation: pinned:${pinId}`,
       LogPrefix.Backend
@@ -582,7 +584,7 @@ export function recordCrossoverBottleEngine(
   try {
     const target = markerWritable(ctx, bottleName)
     if (!target) return false
-    writeMarker(
+    const written = writeMarker(
       ctx.versioning,
       target.bottleDir,
       markerForBase({
@@ -592,6 +594,7 @@ export function recordCrossoverBottleEngine(
         binDir
       })
     )
+    if (!written) return false
     logInfo(
       `engine marker for "${bottleName}" recorded at creation: crossover`,
       LogPrefix.Backend

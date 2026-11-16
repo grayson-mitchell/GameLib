@@ -1,5 +1,6 @@
 import { createTestVersioning } from 'backend/testUtils/testStoreRoot'
 import {
+  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -1425,6 +1426,56 @@ describe('76 gap: marker-less pinned bottle (CR-01)', () => {
       ).toBe(false)
       stderr.mockRestore()
       expect(readFileSync(markerFile()).equals(before)).toBe(true)
+    })
+  })
+
+  describe('76 review WR-03: a failed marker write is reported, not logged as recorded', () => {
+    afterEach(() => chmodSync(dir, 0o755))
+    const readOnlyBottle = () => chmodSync(dir, 0o555)
+    const sawWriteFailure = () =>
+      expect(
+        logs().logWarning.mock.calls.map((c: unknown[]) => String(c[0]))
+      ).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining('engine marker write failed')
+        ])
+      )
+    const sawNoSuccess = () =>
+      expect(
+        logs().logInfo.mock.calls.map((c: unknown[]) => String(c[0]))
+      ).not.toEqual(
+        expect.arrayContaining([
+          expect.stringMatching(/recorded at creation|reconciled before/)
+        ])
+      )
+
+    test('recordPinnedBottleEngine', () => {
+      readOnlyBottle()
+      expect(
+        recordPinnedBottleEngine(ctx, NAME, 'wine-staging-11.20', {
+          wineBin: pinWs.replace('wineserver', 'wine'),
+          wineserverBin: pinWs,
+          label: 'Pinned',
+          version: '11.20',
+          dxvk: null
+        })
+      ).toBe(false)
+      sawWriteFailure()
+      sawNoSuccess()
+    })
+    test('recordCrossoverBottleEngine', () => {
+      readOnlyBottle()
+      expect(recordCrossoverBottleEngine(ctx, NAME, BIN_DIR)).toBe(false)
+      sawWriteFailure()
+      sawNoSuccess()
+    })
+    test('reconcileBottleEngineMarker', () => {
+      layBottle(false)
+      readOnlyBottle()
+      expect(reconcileBottleEngineMarker(ctx, NAME)).toBeNull()
+      expect(existsSync(markerFile())).toBe(false)
+      sawWriteFailure()
+      sawNoSuccess()
     })
   })
 })
