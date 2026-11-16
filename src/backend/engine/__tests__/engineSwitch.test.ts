@@ -1126,11 +1126,7 @@ describe('76 gap: marker-less pinned bottle (CR-01)', () => {
   const confPath = () => join(dir, 'cxbottle.conf')
   const dxvkFile = () => join(dir, 'current_dxvk-macOS')
   const markerFile = () => join(dir, ENGINE_MARKER_FILE)
-  const logs = () =>
-    jest.requireMock('backend/logger') as {
-      logInfo: jest.Mock
-      logWarning: jest.Mock
-    }
+  const logs = () => jest.requireMock('backend/logger')
   let pinWs: string
   let engineDxvk: { dir: string; version: string }
 
@@ -1149,10 +1145,9 @@ describe('76 gap: marker-less pinned bottle (CR-01)', () => {
       }
     )
   const sawInfo = (text: string) =>
-    expect(logs().logInfo).toHaveBeenCalledWith(
-      expect.stringContaining(text),
-      expect.anything()
-    )
+    expect(
+      logs().logInfo.mock.calls.map((c: unknown[]) => String(c[0]))
+    ).toEqual(expect.arrayContaining([expect.stringContaining(text)]))
   const seedNewer = () =>
     seedMarker({
       version: 2,
@@ -1228,9 +1223,12 @@ describe('76 gap: marker-less pinned bottle (CR-01)', () => {
       'restore',
       expect.anything()
     )
-    expect(logs().logWarning).toHaveBeenCalledWith(
-      expect.stringContaining('says crossover but DXVK-macOS is installed'),
-      expect.anything()
+    expect(
+      logs().logWarning.mock.calls.map((c: unknown[]) => String(c[0]))
+    ).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('says crossover but DXVK-macOS is installed')
+      ])
     )
   })
 

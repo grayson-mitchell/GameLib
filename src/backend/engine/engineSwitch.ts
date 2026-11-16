@@ -114,7 +114,7 @@ type PrepareResult =
     }
 
 function defaultCurrentPinEngine(
-  ctx: EngineSwitchContext
+  ctx: Pick<EngineSwitchContext, 'fallback'>
 ): NonCrossoverEngine | null {
   const pin = pinById(ENGINE_PINS.current.id)
   if (!pin || !ctx.fallback.isPinnedEngineInstalled(pin)) return null
@@ -418,8 +418,32 @@ function markerForBase(next: EngineSelection): EngineMarker {
 const identityOf = (m: { kind: MarkerKind; id: string }): string =>
   m.kind === 'crossover' ? 'crossover' : `${m.kind}:${m.id}`
 
-/** Without a marker: a conf carrying a Timestamp was touched by CrossOver; otherwise the pin. */
-function inferMarker(bottleDir: string, deps: EngineSwitchDeps): EngineMarker {
+/**
+ * DXVK-macOS (`current_dxvk-macOS`) is installed only by non-CrossOver paths (createFallbackBottle,
+ * the switch's installNextDxvk, launcher autoInstallDxvk gated on a non-CrossOver wine), and every
+ * switch to CrossOver removes it. A bottle that carries it was set up by a non-CrossOver engine
+ * (76-VERIFICATION CR-01).
+ */
+function hasStagingDxvk(bottleDir: string): boolean {
+  return existsSync(join(bottleDir, DXVK_VERSION_FILE))
+}
+
+/**
+ * Without a trusted marker: DXVK-macOS in the bottle means a non-CrossOver engine set it up
+ * (CrossOver's own probe adds a Timestamp, 76 CR-01); otherwise a conf Timestamp means CrossOver;
+ * otherwise the pin. CrossOver's template create() always writes a Timestamp, so a conf without
+ * one was written by GameLib's own writeCxbottleConf.
+ */
+function inferMarker(
+  bottleDir: string,
+  currentPinEngine: () => NonCrossoverEngine | null
+): EngineMarker {
+  const pinned = (): EngineMarker => ({
+    kind: 'pinned',
+    id: ENGINE_PINS.current.id,
+    wineserverBin: currentPinEngine()?.wineserverBin ?? ''
+  })
+  if (hasStagingDxvk(bottleDir)) return pinned()
   let conf = ''
   try {
     conf = readFileSync(join(bottleDir, 'cxbottle.conf'), 'utf8')
@@ -429,10 +453,127 @@ function inferMarker(bottleDir: string, deps: EngineSwitchDeps): EngineMarker {
   if (/Timestamp/.test(conf)) {
     return { kind: 'crossover', id: 'crossover', wineserverBin: '' }
   }
-  return {
-    kind: 'pinned',
-    id: ENGINE_PINS.current.id,
-    wineserverBin: deps.currentPinEngine()?.wineserverBin ?? ''
+  return pinned()
+}
+
+/** A crossover marker contradicted by DXVK-macOS in the bottle is not trusted (76 CR-01). */
+function trustedMarker(
+  bottleDir: string,
+  bottleName: string,
+  marker: EngineMarker | null
+): EngineMarker | null {
+  if (marker?.kind === 'crossover' && hasStagingDxvk(bottleDir)) {
+    logWarning(
+      `engine marker for "${bottleName}" says crossover but DXVK-macOS is installed; treating it as inferred (76 CR-01)`,
+      LogPrefix.Backend
+    )
+    return null
+  }
+  return marker
+}
+
+type MarkerCtx = Pick<EngineSwitchContext, 'paths' | 'fallback' | 'versioning'>
+
+/**
+ * 76 gap (CR-01): persist the bottle's engine before any CrossOver probe touches cxbottle.conf.
+ * Writes only for a provisioned bottle whose marker is missing or contradicted by DXVK-macOS.
+ */
+export function reconcileBottleEngineMarker(
+  ctx: MarkerCtx,
+  bottleName: string
+): 'crossover' | 'pinned' | null {
+  try {
+    if (sanitizeBottleName(bottleName) !== bottleName) return null
+    const bottleDir = getBottleDir(ctx.paths, bottleName)
+    if (!existsSync(join(bottleDir, 'cxbottle.conf'))) return null
+    ensureEngineMarkerMigrated(ctx.versioning, markerPath(bottleDir))
+    if (isEngineMarkerReadOnly(ctx.versioning, markerPath(bottleDir)))
+      return null
+    const marker = readMarker(bottleDir, ctx)
+    if (trustedMarker(bottleDir, bottleName, marker)) return null
+    const inferred = inferMarker(bottleDir, () => defaultCurrentPinEngine(ctx))
+    writeMarker(ctx.versioning, bottleDir, inferred)
+    logInfo(
+      `engine marker for "${bottleName}" reconciled before the CrossOver pre-flight: ${identityOf(inferred)} (${marker ? 'crossover marker contradicted by DXVK-macOS' : 'missing'})`,
+      LogPrefix.Backend
+    )
+    return inferred.kind === 'crossover' ? 'crossover' : 'pinned'
+  } catch {
+    return null
+  }
+}
+
+function markerWritable(
+  ctx: MarkerCtx,
+  bottleName: string
+): { bottleDir: string } | null {
+  if (sanitizeBottleName(bottleName) !== bottleName) return null
+  const bottleDir = getBottleDir(ctx.paths, bottleName)
+  if (!existsSync(bottleDir)) return null
+  ensureEngineMarkerMigrated(ctx.versioning, markerPath(bottleDir))
+  if (isEngineMarkerReadOnly(ctx.versioning, markerPath(bottleDir))) return null
+  return { bottleDir }
+}
+
+/**
+ * 76 gap (CR-01): the marker a pinned-engine bottle gets at creation, so it is never marker-less
+ * when CrossOver's probe later adds a Timestamp.
+ */
+export function recordPinnedBottleEngine(
+  ctx: MarkerCtx,
+  bottleName: string,
+  pinId: string,
+  engine: NonCrossoverEngine
+): boolean {
+  try {
+    if (!/^[A-Za-z0-9._-]{1,64}$/.test(pinId)) return false
+    const target = markerWritable(ctx, bottleName)
+    if (!target) return false
+    const marker: EngineMarker = {
+      kind: 'pinned',
+      id: pinId,
+      wineserverBin: engine.wineserverBin
+    }
+    if (engine.dxvk && hasStagingDxvk(target.bottleDir)) {
+      marker.dxvk = { dir: engine.dxvk.dir, version: engine.dxvk.version }
+    }
+    writeMarker(ctx.versioning, target.bottleDir, marker)
+    logInfo(
+      `engine marker for "${bottleName}" recorded at creation: pinned:${pinId}`,
+      LogPrefix.Backend
+    )
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** D-07a: the marker a CrossOver-created bridge bottle gets at creation. */
+export function recordCrossoverBottleEngine(
+  ctx: MarkerCtx,
+  bottleName: string,
+  binDir: string
+): boolean {
+  try {
+    const target = markerWritable(ctx, bottleName)
+    if (!target) return false
+    writeMarker(
+      ctx.versioning,
+      target.bottleDir,
+      markerForBase({
+        kind: 'crossover',
+        reason: 'cx-healthy',
+        crossoverBuild: null,
+        binDir
+      })
+    )
+    logInfo(
+      `engine marker for "${bottleName}" recorded at creation: crossover`,
+      LogPrefix.Backend
+    )
+    return true
+  } catch {
+    return false
   }
 }
 
@@ -683,14 +824,15 @@ async function prepareBottleForEngineBody(
       detail: `bottle "${bottleName}" engine marker was written by a newer GameLib build`
     }
   }
-  const prev = marker ?? inferMarker(bottleDir, deps)
+  const known = trustedMarker(bottleDir, bottleName, marker)
+  const prev = known ?? inferMarker(bottleDir, deps.currentPinEngine)
   const nextMarker = markerFor(next)
   if (identityOf(prev) === identityOf(nextMarker)) {
     if (prev.dxvk === 'failed' && next.kind !== 'crossover' && next.dxvk) {
       // The last switch into this engine left DXVK uninstalled: retry, no wineserver kill.
       return busyRefusal() ?? installNextDxvk(next)
     }
-    if (!marker) writeMarker(deps.ctx.versioning, bottleDir, nextMarker)
+    if (!known) writeMarker(deps.ctx.versioning, bottleDir, nextMarker)
     return { ok: true, changed: false }
   }
 
