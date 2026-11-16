@@ -300,6 +300,87 @@ describe('steamPollStateEvent handler', () => {
     }
   })
 
+  describe('seq guard (C-IN-04)', () => {
+    const uninstalled = (seq: number): SteamPollStateEvent => ({
+      kind: 'uninstalled',
+      appId: '480',
+      seq,
+      source: 'native',
+      survivor: null
+    })
+
+    test('an older installed after a newer uninstalled is consumed without a write', async () => {
+      const { send, entry, sent } = setup(game({ is_installed: true }))
+      await send(uninstalled(9))
+      expect(entry()?.is_installed).toBe(false)
+      sent.length = 0
+      const reply = await send({ ...installed, seq: 5 })
+      expect(reply).toEqual({ applied: true, title: 'Spacewar' })
+      expect(entry()?.is_installed).toBe(false)
+      expect(sent).toEqual([])
+    })
+
+    test('the install-state group shares one seq per app, across kinds', async () => {
+      const { send, entry } = setup()
+      await send({ ...installed, seq: 10 })
+      await send({ kind: 'installIncomplete', appId: '480', seq: 8 })
+      expect(entry()?.is_installed).toBe(true)
+      expect(entry()?.install?.steamResumePending).toBeUndefined()
+    })
+
+    test('other kinds are guarded per (appId, kind) and do not block the install state', async () => {
+      const { send, sent } = setup()
+      await send({ kind: 'updateDone', appId: '480', seq: 4, completed: true })
+      sent.length = 0
+      // An older updateDone is consumed.
+      expect(
+        await send({
+          kind: 'updateDone',
+          appId: '480',
+          seq: 3,
+          completed: true
+        })
+      ).toEqual({ applied: true, title: 'Spacewar' })
+      expect(sent).toEqual([])
+      // A lower-seq installed still applies: it is a different key.
+      await send({ ...installed, seq: 2 })
+      expect(sent.map(([c]) => c)).toEqual(['pushGameToLibrary'])
+    })
+
+    test('another app is not affected', async () => {
+      const { deps, send } = setup()
+      deps.steamSession.libraryState.library.set(
+        '481',
+        game({ app_name: '481', title: 'Other' })
+      )
+      await send({ ...installed, seq: 50 })
+      await send({ ...installed, appId: '481', seq: 3 })
+      expect(
+        deps.steamSession.libraryState.library.get('481')?.is_installed
+      ).toBe(true)
+    })
+
+    test('a failed apply records no seq, so the retry of the same event applies', async () => {
+      const { deps, send, entry } = setup()
+      jest
+        .spyOn(deps.stores.steam.steamLibraryStore, 'set')
+        .mockImplementationOnce(() => {
+          throw new Error('disk full')
+        })
+      expect(await send(installed)).toEqual({ applied: false })
+      expect((await send(installed)).applied).toBe(true)
+      expect(entry()?.is_installed).toBe(true)
+    })
+
+    test('the guard is per registration (a new sidecar session starts fresh)', async () => {
+      const first = setup()
+      await first.send({ ...installed, seq: 100 })
+      const second = setup()
+      await second.send({ ...installed, seq: 1 })
+      expect(second.entry()?.is_installed).toBe(true)
+    })
+  })
+
   test('pushGameToLibrary is sent before the handler promise resolves', async () => {
     const { sent, send } = setup()
     const order: string[] = []

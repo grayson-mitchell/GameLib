@@ -12,10 +12,22 @@
  * is schema-validated by `validateInbound` before this handler runs. Events carry the full
  * resulting state, so applying one twice leaves the same state (R1 idempotent replay).
  *
+ * Seq guard (80-REVIEW C-IN-04): replay and live sends can cross, and a write the shell gave up
+ * on can land late, so an older event can arrive after a newer one. The handler keeps the last
+ * applied seq in memory, per appId for the install-state group (`installed`, `uninstalled`,
+ * `installIncomplete`, matching the crate's `outbox::is_install_state_kind`) and per
+ * (appId, kind) for every other kind. An event whose seq is not newer is answered
+ * `applied: true` with no state change, so the crate drops it instead of retrying. The guard is
+ * session state, never persisted: seq restarts at 1 with every shell process, and a sidecar
+ * restart starts a fresh guard with the fresh registration.
+ * Caveat: the guard orders Rust events among themselves only. A TS-originated write
+ * (`refreshInstallState`, `pollUninstallOnce`) carries no seq, so a queued Rust event replayed
+ * after it can still overwrite it; both read the same manifests, so the next reconcile converges.
+ *
  * Refusals (80-REVIEW C-WR-08): the shell retries an unacked or `applied: false` event every
- * 10 s for the rest of the session. A refusal that retrying cannot change (no library entry to
- * update) is therefore answered `applied: true`. Only a thrown apply, which may be transient,
- * answers `applied: false`.
+ * 10 s for the rest of the session. A refusal that retrying cannot change (a stale seq, no
+ * library entry to update) is therefore answered `applied: true`. Only a thrown apply, which may
+ * be transient, answers `applied: false`.
  *
  * Ordering (R2): `pushGameToLibrary` is sent from inside the apply, before the handler returns.
  * The shell's single stdout reader keeps that order, so the push precedes the ack on the wire.
@@ -184,6 +196,38 @@ async function applyEvent(
   }
 }
 
+/** The crate's `outbox::is_install_state_kind`: these kinds each write an app's whole install state. */
+const INSTALL_STATE_KINDS: ReadonlySet<SteamPollStateEvent['kind']> = new Set([
+  'installed',
+  'uninstalled',
+  'installIncomplete'
+])
+
+/** The seq-guard key: one per appId for the install-state group, else one per (appId, kind). */
+function seqGuardKey(ev: SteamPollStateEvent): string {
+  const appId = 'appId' in ev ? ev.appId : ''
+  return INSTALL_STATE_KINDS.has(ev.kind) ? `${appId}` : `${appId}:${ev.kind}`
+}
+
+/**
+ * Last-applied seq per guard key (80-REVIEW C-IN-04). In memory only, one per registration (one
+ * per sidecar process); bounded by the number of library apps times the kinds.
+ */
+function createSeqGuard() {
+  const lastApplied = new Map<string, number>()
+  return {
+    isStale: (ev: SteamPollStateEvent): boolean => {
+      const last = lastApplied.get(seqGuardKey(ev))
+      return last !== undefined && ev.seq <= last
+    },
+    noteApplied: (ev: SteamPollStateEvent): void => {
+      const key = seqGuardKey(ev)
+      const last = lastApplied.get(key)
+      if (last === undefined || ev.seq > last) lastApplied.set(key, ev.seq)
+    }
+  }
+}
+
 /** Registers the one shell-originated poll channel. Called once from `handlers.ts`. */
 export function registerSteamPollEventFlows(deps: {
   ipc: Pick<IpcRegistry, 'handle'>
@@ -191,12 +235,31 @@ export function registerSteamPollEventFlows(deps: {
   manager: () => ManagerDeps
   refreshInstallState: () => Promise<void>
 }): void {
+  const seqGuard = createSeqGuard()
   deps.ipc.handle(
     'steamPollStateEvent',
     async (_event: unknown, ...args: unknown[]): Promise<PollAckReply> => {
       const ev = args[0] as SteamPollStateEvent
       try {
-        return await applyEvent(deps.manager(), ev, deps.refreshInstallState)
+        if (seqGuard.isStale(ev)) {
+          // Consumed, not applied: a newer event for the same state already landed.
+          const manager = deps.manager()
+          const title =
+            'appId' in ev
+              ? (manager.steamSession.libraryState.library.get(ev.appId)
+                  ?.title ?? '')
+              : undefined
+          return title === undefined
+            ? { applied: true }
+            : { applied: true, title }
+        }
+        const reply = await applyEvent(
+          deps.manager(),
+          ev,
+          deps.refreshInstallState
+        )
+        if (reply.applied) seqGuard.noteApplied(ev)
+        return reply
       } catch (err) {
         const name = err instanceof Error ? err.name : typeof err
         const appId = 'appId' in ev ? ev.appId : '?'
