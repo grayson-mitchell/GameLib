@@ -213,9 +213,20 @@ impl SidecarState {
 
     /// Write an 'invoke' frame and block until the correlated response (or timeout).
     pub(crate) fn invoke(&self, channel: String, args: Vec<Value>) -> Result<Value, String> {
-        let id = self.next_id();
         // CR-03: resolve the per-channel bound BEFORE `channel` is moved into the frame.
         let timeout = timeout_for(&channel);
+        self.invoke_bounded(channel, args, timeout)
+    }
+
+    /// `invoke` with a caller-chosen bound instead of `timeout_for(channel)`. The poll host
+    /// passes the time left before its own ack deadline (80-REVIEW B/WR-02).
+    pub(crate) fn invoke_bounded(
+        &self,
+        channel: String,
+        args: Vec<Value>,
+        timeout: Option<Duration>,
+    ) -> Result<Value, String> {
+        let id = self.next_id();
         let (tx, rx) = mpsc_channel::<Result<Value, String>>();
         {
             let mut pending = self.pending.lock().map_err(|e| e.to_string())?;

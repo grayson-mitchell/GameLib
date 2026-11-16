@@ -306,6 +306,20 @@ fn render_notify_text(catalog: &Catalog, text: &NotifyText) -> String {
     }
 }
 
+/// How long the shell waits for a `steamPollStateEvent` ack: clearly under the crate's
+/// `ACK_TIMEOUT_MS`, so the invoke settles (answered or timed out, pending entry removed) before
+/// the crate's own timer drops the future. Equal bounds raced, and the crate's timer always won,
+/// discarding an ack that arrived just in time (80-REVIEW B/WR-02).
+pub(crate) const STATE_EVENT_INVOKE_BOUND: Duration =
+    Duration::from_millis(gamelib_steampoll::constants::ACK_TIMEOUT_MS - 500);
+
+/// Time left to wait for the ack, or `None` once `deadline` has passed and the frame must not be
+/// written at all (B/WR-02).
+fn invoke_bound_before(deadline: std::time::Instant, now: std::time::Instant) -> Option<Duration> {
+    let left = deadline.saturating_duration_since(now);
+    (!left.is_zero()).then_some(left)
+}
+
 /// Reply of the sidecar's `steamPollStateEvent` handler, parsed leniently (T-80-61).
 fn ack_from_invoke(result: Result<Value, String>) -> AckReply {
     match result {
@@ -351,6 +365,9 @@ impl PollHost for ShellPollHost {
 
     fn state_event(&self, ev: StateEvent) -> BoxFuture<AckReply> {
         let app = self.app.clone();
+        // Captured here, before the crate starts its `ACK_TIMEOUT_MS` timer around this future,
+        // so the invoke always settles first (B/WR-02).
+        let deadline = std::time::Instant::now() + STATE_EVENT_INVOKE_BOUND;
         Box::pin(async move {
             if !SIDECAR_READY.load(Ordering::SeqCst) {
                 return AckReply::not_acked();
@@ -366,9 +383,18 @@ impl PollHost for ShellPollHost {
             let Ok(arg) = serde_json::to_value(&ev) else {
                 return AckReply::not_acked();
             };
-            // `invoke` blocks on a std channel: never on a runtime worker (T-80-59).
+            // `invoke` blocks on a std channel: never on a runtime worker (T-80-59). A blocking
+            // task cannot be cancelled, so a closure that only starts after the deadline (the
+            // pool is capped at 8) must not write the frame: the crate has already given up on
+            // this event and re-queued it, and a newer event may have been applied since.
             let joined = gamelib_steampoll::runtime::handle()
-                .spawn_blocking(move || state.invoke("steamPollStateEvent".to_string(), vec![arg]))
+                .spawn_blocking(move || {
+                    let Some(bound) = invoke_bound_before(deadline, std::time::Instant::now())
+                    else {
+                        return Err("steamPollStateEvent:stale".to_string());
+                    };
+                    state.invoke_bounded("steamPollStateEvent".to_string(), vec![arg], Some(bound))
+                })
                 .await;
             match joined {
                 Ok(result) => ack_from_invoke(result),
@@ -562,6 +588,30 @@ mod tests {
         assert_eq!(outbox.queued_len(), 1);
         drop(tx);
         loop_thread.join().unwrap();
+    }
+
+    #[test]
+    fn state_event_invoke_settles_before_the_crate_ack_timer() {
+        let ack = Duration::from_millis(gamelib_steampoll::constants::ACK_TIMEOUT_MS);
+        assert!(STATE_EVENT_INVOKE_BOUND < ack);
+        assert!(ack - STATE_EVENT_INVOKE_BOUND >= Duration::from_millis(500));
+    }
+
+    #[test]
+    fn a_closure_started_after_the_deadline_does_not_write() {
+        let t0 = std::time::Instant::now();
+        let deadline = t0 + Duration::from_millis(100);
+        // Started in time: waits only for what is left, never past the deadline.
+        assert_eq!(
+            invoke_bound_before(deadline, t0 + Duration::from_millis(40)),
+            Some(Duration::from_millis(60))
+        );
+        // Queued behind a full blocking pool until the deadline or later: no write.
+        assert_eq!(invoke_bound_before(deadline, deadline), None);
+        assert_eq!(
+            invoke_bound_before(deadline, deadline + Duration::from_secs(1)),
+            None
+        );
     }
 
     #[test]

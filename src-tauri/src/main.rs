@@ -400,9 +400,11 @@ fn timeout_for(channel: &str) -> Option<Duration> {
     if LONG_RUNNING_CHANNELS.contains(&channel) {
         None
     } else if channel == "steamPollStateEvent" {
-        // Phase 80 D-05 / Pitfall 3: the Rust poll's state-event ack is bounded at 5 s, so the
-        // pending entry is removed then instead of lingering for `INVOKE_TIMEOUT`.
-        Some(Duration::from_millis(gamelib_steampoll::constants::ACK_TIMEOUT_MS))
+        // Phase 80 D-05 / Pitfall 3: the poll's own ack timer is `ACK_TIMEOUT_MS`. This bound
+        // sits clearly below it so the invoke resolves (and its pending entry is removed) before
+        // that timer fires, instead of racing it (80-REVIEW B/WR-02). The poll host itself calls
+        // `invoke_bounded` with the time left before its deadline; this is the plain-invoke cap.
+        Some(STATE_EVENT_INVOKE_BOUND)
     } else {
         Some(INVOKE_TIMEOUT)
     }
@@ -2556,10 +2558,15 @@ mod tests {
     fn non_exempt_channel_is_bounded_at_invoke_timeout() {
         // Fails if timeout_for ever reverts to an unconditional None.
         assert_eq!(timeout_for("getGameInfo"), Some(INVOKE_TIMEOUT));
-        // Phase 80 D-05: the poll's state-event ack is bounded at 5 s, not 60 s.
+        // Phase 80 D-05: the poll's state-event ack is bounded near 5 s, not 60 s, and strictly
+        // under the crate's own ack timer so the two never race (80-REVIEW B/WR-02).
         assert_eq!(
             timeout_for("steamPollStateEvent"),
-            Some(Duration::from_secs(5))
+            Some(Duration::from_millis(4500))
+        );
+        assert!(
+            Duration::from_millis(4500)
+                < Duration::from_millis(gamelib_steampoll::constants::ACK_TIMEOUT_MS)
         );
     }
 
