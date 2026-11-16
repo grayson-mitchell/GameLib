@@ -889,6 +889,40 @@ async fn bridge_finalized_mirror_decides_finishing_versus_silent() {
     }
 }
 
+/// 80-REVIEW C-WR-05: the installer finalizes while the `installed` ack is still out. The tick
+/// observed the marker unset, but the status decision is made after the ack, so no finishing
+/// status follows the installer's own `done`.
+#[tokio::test(start_paused = true)]
+async fn bridge_finalized_during_the_ack_sends_no_finishing_status() {
+    use gamelib_steampoll::testing::AckMode;
+    let r = rig().await;
+    r.host.set_ack(AckMode::Never);
+    r.polls.set_bridge_finalized(APP, false);
+    let mut r_roots = r.roots.clone();
+    r_roots.bridge_steamapps_root = Some(r.bottle.to_string_lossy().into_owned());
+    write_app_manifest(&r.bottle, &manifest(APP, "4"), 1).unwrap();
+    r.polls
+        .start_install(StartInstallArgs {
+            app_id: APP.into(),
+            title: "Game".into(),
+            roots: r_roots,
+            options: PollOptions {
+                source: Some(AcfSource::Bridge),
+                ..PollOptions::default()
+            },
+        })
+        .unwrap();
+    // The first tick (3 s) observes the manifest and sends `installed`; its ack never comes.
+    tokio::time::sleep(Duration::from_millis(4000)).await;
+    settle().await;
+    assert_eq!(labels(&r.host), vec!["state:installed"]);
+    r.polls.set_bridge_finalized(APP, true);
+    // Past the 5 s ack timeout: the continuation runs now.
+    tokio::time::sleep(Duration::from_millis(6000)).await;
+    settle().await;
+    assert_eq!(labels(&r.host), vec!["state:installed"]);
+}
+
 // ---- Mac arch follow-up (R6) -----------------------------------------------------------------
 
 #[tokio::test(start_paused = true)]

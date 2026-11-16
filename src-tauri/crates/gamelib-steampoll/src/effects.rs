@@ -109,6 +109,35 @@ pub fn restart_steam_notice(title: &str) -> Effect {
 }
 
 impl Continuation {
+    /// Re-reads the bridge-finalized marker for an installer-owned `Installed` continuation
+    /// (80-REVIEW C-WR-05). The step snapshots the marker at the start of the tick, then the ack
+    /// can take up to the 5 s timeout; the installer may finalize and send `done` meanwhile. The
+    /// applier calls this after the ack, right before the post-ack effects are emitted, so a
+    /// late finalization is not followed by a stale "finishing" status. Other continuations, and
+    /// an `Installed` the installer does not own, are returned unchanged.
+    pub fn refresh_bridge_finalized(self, is_finalized: &dyn Fn(&str) -> bool) -> Self {
+        match self {
+            Continuation::Installed {
+                app_id,
+                installer_owns_completion: true,
+                bridge_install_finalized: _,
+                skipped_depots,
+                notify_restart_steam,
+            } => {
+                // The live value wins, as the TS read at the send site did.
+                let now = is_finalized(&app_id);
+                Continuation::Installed {
+                    app_id,
+                    installer_owns_completion: true,
+                    bridge_install_finalized: now,
+                    skipped_depots,
+                    notify_restart_steam,
+                }
+            }
+            other => other,
+        }
+    }
+
     pub fn resolve(self, reply: &AckReply) -> Vec<Effect> {
         let title = reply.title.clone().unwrap_or_default();
         match self {

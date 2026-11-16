@@ -280,6 +280,21 @@ pub async fn apply_effects(
     effects: Vec<Effect>,
     title_cache: &mut String,
 ) -> Vec<AckReply> {
+    apply_effects_with(host, hold, outbox, effects, title_cache, None).await
+}
+
+/// [`apply_effects`] with a live read of the bridge-finalized marker. When `bridge_finalized` is
+/// set, an installer-owned `Installed` continuation re-reads it after the ack, right before its
+/// effects run, instead of trusting the tick's snapshot (80-REVIEW C-WR-05). There is no await
+/// between that read and the status emit.
+pub async fn apply_effects_with(
+    host: &dyn PollHost,
+    hold: &dyn HoldSink,
+    outbox: &Outbox,
+    effects: Vec<Effect>,
+    title_cache: &mut String,
+    bridge_finalized: Option<&(dyn Fn(&str) -> bool + Sync)>,
+) -> Vec<AckReply> {
     let mut replies: Vec<AckReply> = vec![];
     let mut work: VecDeque<Effect> = effects.into();
     while let Some(effect) = work.pop_front() {
@@ -312,6 +327,10 @@ pub async fn apply_effects(
                     None if !title_cache.is_empty() => reply.title = Some(title_cache.clone()),
                     None => {}
                 }
+                let then = match bridge_finalized {
+                    Some(read) => then.refresh_bridge_finalized(read),
+                    None => then,
+                };
                 let resolved = then.resolve(&reply);
                 replies.push(reply);
                 for e in resolved.into_iter().rev() {

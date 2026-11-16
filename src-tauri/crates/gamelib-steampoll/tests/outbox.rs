@@ -2,7 +2,7 @@
 
 use gamelib_steampoll::effects::{status_update, Continuation, Effect, LogLevel};
 use gamelib_steampoll::events::{AckReply, StateEvent};
-use gamelib_steampoll::outbox::{apply_effects, Outbox, MAX_QUEUED_APP_IDS};
+use gamelib_steampoll::outbox::{apply_effects, apply_effects_with, Outbox, MAX_QUEUED_APP_IDS};
 use gamelib_steampoll::testing::{AckMode, RecordingHost, StreamRecord};
 use serde_json::json;
 use std::time::Duration;
@@ -394,4 +394,106 @@ async fn effect_order_and_side_records_are_preserved() {
             "fe:gameStatusUpdate"
         ]
     );
+}
+
+// ---- bridge finalized read at the send site (80-REVIEW C-WR-05) -------------------------------
+
+fn bridge_installed(app_id: &str) -> Effect {
+    Effect::Transition {
+        event: installed_ev(app_id, 1),
+        then: Continuation::Installed {
+            app_id: app_id.into(),
+            installer_owns_completion: true,
+            // The tick's snapshot: not finalized yet when the manifest was observed.
+            bridge_install_finalized: false,
+            skipped_depots: vec![],
+            notify_restart_steam: false,
+        },
+    }
+}
+
+fn status_frontends(host: &RecordingHost) -> usize {
+    host.records()
+        .iter()
+        .filter(|r| matches!(r, StreamRecord::Frontend { channel, .. } if channel == "gameStatusUpdate"))
+        .count()
+}
+
+/// The installer finalizes (and sends its own `done`) while the `installed` ack is still out.
+/// The finishing status must not follow it.
+#[tokio::test(start_paused = true)]
+async fn finalization_during_the_ack_suppresses_the_finishing_status() {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::Arc;
+    let host = RecordingHost::new(AckMode::Never);
+    let outbox = Outbox::new();
+    outbox.mark_ready(&host).await;
+    let finalized = Arc::new(AtomicBool::new(false));
+    let read = {
+        let f = finalized.clone();
+        move |_: &str| f.load(Ordering::SeqCst)
+    };
+    let mut title = String::new();
+    let flip = {
+        let f = finalized.clone();
+        async move {
+            tokio::time::sleep(Duration::from_millis(1000)).await;
+            f.store(true, Ordering::SeqCst);
+        }
+    };
+    tokio::join!(
+        apply_effects_with(
+            &host,
+            &host,
+            &outbox,
+            vec![bridge_installed("1")],
+            &mut title,
+            Some(&read),
+        ),
+        flip
+    );
+    assert_eq!(status_frontends(&host), 0);
+}
+
+#[tokio::test(start_paused = true)]
+async fn an_unfinalized_bridge_install_still_reports_finishing() {
+    let host = RecordingHost::new(acked(None));
+    let outbox = Outbox::new();
+    outbox.mark_ready(&host).await;
+    let read = |_: &str| false;
+    let mut title = String::new();
+    apply_effects_with(
+        &host,
+        &host,
+        &outbox,
+        vec![bridge_installed("1")],
+        &mut title,
+        Some(&read),
+    )
+    .await;
+    let finishing = host.records().iter().any(|r| match r {
+        StreamRecord::Frontend { channel, args } => {
+            channel == "gameStatusUpdate" && args[0]["context"] == "steam-bridge-finishing"
+        }
+        _ => false,
+    });
+    assert!(finishing);
+}
+
+/// Without a live read the snapshot still decides (the uninstall and re-arm appliers).
+#[tokio::test(start_paused = true)]
+async fn without_a_live_read_the_snapshot_decides() {
+    let host = RecordingHost::new(acked(None));
+    let outbox = Outbox::new();
+    outbox.mark_ready(&host).await;
+    let mut title = String::new();
+    apply_effects(
+        &host,
+        &host,
+        &outbox,
+        vec![bridge_installed("1")],
+        &mut title,
+    )
+    .await;
+    assert_eq!(status_frontends(&host), 1);
 }

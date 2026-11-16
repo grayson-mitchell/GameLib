@@ -31,7 +31,7 @@ use crate::install_once::{
     InstallObservation,
 };
 use crate::monitor::DownloadMonitor;
-use crate::outbox::{apply_effects, Outbox};
+use crate::outbox::{apply_effects_with, Outbox};
 use crate::profile::Platform;
 use crate::registry::{PollKind, Registry};
 use crate::update::{
@@ -586,12 +586,17 @@ impl InstallPolls {
         effects: Vec<Effect>,
         title: &mut String,
     ) -> Vec<crate::events::AckReply> {
-        apply_effects(
+        // 80-REVIEW C-WR-05: read the bridge-finalized marker when the status is emitted, not
+        // from the tick's snapshot (quick 261031-ihs reads it at the send site).
+        let shared = self.shared.clone();
+        let is_finalized = move |app_id: &str| lock(&shared.bridge_finalized).contains(app_id);
+        apply_effects_with(
             self.registry.host().as_ref(),
             self.hold.as_ref(),
             &self.outbox,
             effects,
             title,
+            Some(&is_finalized),
         )
         .await
     }
