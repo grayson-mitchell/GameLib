@@ -102,6 +102,29 @@ async function waitClosed(): Promise<void> {
   }
 }
 
+describe('controlRoundTrip error handling (58 IN-01)', () => {
+  test('IN-01: a second socket error after settle does not throw (persistent handler)', async () => {
+    let captured: Socket | null = null
+    const spy = jest
+      .spyOn(Socket.prototype, 'connect')
+      .mockImplementation(function (this: Socket) {
+        captured = this
+        process.nextTick(() => this.emit('error', new Error('first')))
+        return this
+      })
+    try {
+      const res = await listBridgeFriends(deps, '3205720')
+      expect(res).toEqual({ ok: false, reason: 'error' })
+      expect(captured).not.toBeNull()
+      expect(() =>
+        (captured as unknown as Socket).emit('error', new Error('second'))
+      ).not.toThrow()
+    } finally {
+      spy.mockRestore()
+    }
+  })
+})
+
 describe('listBridgeFriends', () => {
   test('HELLO with probe role, then slot 13; resolves the decoded list', async () => {
     controlReply = friendPayload()
