@@ -38,7 +38,7 @@ Two alternatives were built and rejected:
 ## CSS Patterns (as shipped)
 
 The region, slot and toast surface live in `NoticeStack/index.scss` and are shared by every
-notice. The icon, title, body and dismiss styles live in `SteamEngineLaunchNotice/index.scss`.
+notice. The icon, text, title, body, action button and dismiss styles live once in `NoticeStack/index.scss` as `.noticeStackIcon` / `.noticeStackText` / `.noticeStackTitle` / `.noticeStackBody` / `.noticeStackAction` / `.noticeStackDismiss` (quick 261116-swr); notices keep their own classes only as hooks.
 Per-theme tokens were added in quick `261110-nwy`.
 
 ```scss

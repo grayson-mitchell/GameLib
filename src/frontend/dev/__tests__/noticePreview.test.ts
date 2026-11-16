@@ -1,6 +1,7 @@
 import 'frontend/testUtils/tauriWindow'
 import useAuthState from 'frontend/state/authState'
 import { resetAllStores } from 'frontend/state/storeKit'
+import { useReadOnlyStoresNotice } from 'frontend/state/ReadOnlyStoresNotice'
 import { useSteamRequestNotice } from 'frontend/state/SteamRequestNotice'
 import { registerNoticePreview } from '../noticePreview'
 import type { NoticePreviewApi } from '../noticePreview'
@@ -16,6 +17,11 @@ const register = (): NoticePreviewApi => {
 afterEach(() => {
   resetAllStores()
   useSteamRequestNotice.setState({ latest: null })
+  useReadOnlyStoresNotice.setState({
+    entries: [],
+    visible: false,
+    dismissed: false
+  })
 })
 
 describe('noticePreview', () => {
@@ -25,9 +31,11 @@ describe('noticePreview', () => {
     expect((globalThis as unknown as Target).__gamelibNotices).toBeUndefined()
     registerNoticePreview(target)
     expect(Object.keys(target.__gamelibNotices ?? {}).sort()).toEqual([
+      'all',
       'both',
       'clear',
       'humble',
+      'readOnly',
       'steam'
     ])
   })
@@ -85,5 +93,39 @@ describe('noticePreview', () => {
     api.clear()
     expect(useAuthState.getState().humble.expired).toBe(false)
     expect(useSteamRequestNotice.getState().latest).toBeNull()
+  })
+
+  it('readOnly() returns true and leaves two validated entries visible', () => {
+    const api = register()
+    expect(api.readOnly()).toBe(true)
+    const st = useReadOnlyStoresNotice.getState()
+    expect(st.visible).toBe(true)
+    expect(st.entries).toHaveLength(2)
+  })
+
+  it('readOnly() shows again after a dismiss', () => {
+    const api = register()
+    api.readOnly()
+    useReadOnlyStoresNotice.getState().dismiss()
+    expect(useReadOnlyStoresNotice.getState().visible).toBe(false)
+    expect(api.readOnly()).toBe(true)
+    expect(useReadOnlyStoresNotice.getState().visible).toBe(true)
+  })
+
+  it('all() sets Steam latest, the read-only flag and humble.expired', () => {
+    const api = register()
+    api.all()
+    expect(useSteamRequestNotice.getState().latest).not.toBeNull()
+    expect(useReadOnlyStoresNotice.getState().visible).toBe(true)
+    expect(useAuthState.getState().humble.expired).toBe(true)
+  })
+
+  it('clear() resets the read-only store', () => {
+    const api = register()
+    api.readOnly()
+    api.clear()
+    const st = useReadOnlyStoresNotice.getState()
+    expect(st.visible).toBe(false)
+    expect(st.entries).toEqual([])
   })
 })

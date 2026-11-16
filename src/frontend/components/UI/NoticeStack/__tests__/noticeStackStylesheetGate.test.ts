@@ -412,3 +412,75 @@ describe('NoticeStack stylesheet gate (shared dismiss X)', () => {
     }
   )
 })
+
+// Quick 261116-swr: one icon, text (title and body) and action button for
+// every notice. The look lives once in the region sheet as .noticeStackIcon /
+// Text / Title / Body / Action; a notice that restyles its own copy of one of
+// those parts, or drops the shared class, brings back the mismatched-toast
+// regression.
+const SHARED_PARTS = ['Icon', 'Text', 'Title', 'Body', 'Action'] as const
+
+// Every rule header in a slot sheet that styles an icon, text, title, body,
+// message or action part. Message is included so the retired Humble message
+// rule cannot come back.
+function restylesSharedPart(scss: string): string[] {
+  return (
+    strip(scss).match(
+      /[A-Za-z0-9_-]*(Icon|Text|Title|Body|Message|Action)\b[^{;]*\{/g
+    ) ?? []
+  )
+}
+
+// The shared classes a slot TSX fails to carry.
+function missingSharedClasses(tsxSource: string): string[] {
+  const tsx = strip(tsxSource)
+  const missing: string[] = []
+  for (const part of SHARED_PARTS) {
+    if (part === 'Action') continue
+    if (!tsx.includes(`noticeStack${part}`)) missing.push(`noticeStack${part}`)
+  }
+  const classNames = tsx.match(/className="[^"]*"/g) ?? []
+  for (const c of classNames) {
+    for (const part of SHARED_PARTS) {
+      if (c.includes(part) && !c.includes(`noticeStack${part}`)) {
+        missing.push(`noticeStack${part}`)
+      }
+    }
+  }
+  return [...new Set(missing)]
+}
+
+describe('NoticeStack stylesheet gate (shared icon, text and action)', () => {
+  it('the region sheet defines every shared part', () => {
+    const region = strip(read(REGION_SCSS))
+    for (const part of SHARED_PARTS) {
+      expect(region).toMatch(new RegExp(`\\.noticeStack${part}\\s*\\{`))
+    }
+  })
+
+  it.each(SLOTS.map((s) => [s.name, s] as const))(
+    '%s uses the shared parts and does not restyle them',
+    (_name, slot) => {
+      expect(missingSharedClasses(read(slot.tsx))).toEqual([])
+      expect(restylesSharedPart(read(slot.scss))).toEqual([])
+    }
+  )
+
+  it('self-test: a title rule nested in the real Humble root is flagged', () => {
+    const humble = defined(SLOTS.find((s) => s.name === 'HumbleExpiryToast'))
+    const text = derive(
+      read(humble.scss),
+      '.humbleExpiryToast {',
+      '  .humbleExpiryToastTitle { color: var(--accent); }'
+    )
+    expect(restylesSharedPart(text)).not.toEqual([])
+  })
+
+  it('self-test: dropping noticeStackIcon from the read-only TSX is flagged', () => {
+    const ro = defined(SLOTS.find((s) => s.name === 'ReadOnlyStoresNotice'))
+    const tsx = read(ro.tsx)
+    const mutated = tsx.replace('noticeStackIcon ', '')
+    expect(mutated).not.toBe(tsx)
+    expect(missingSharedClasses(mutated)).toContain('noticeStackIcon')
+  })
+})
