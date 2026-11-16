@@ -43,7 +43,7 @@ function setup(seed: SteamGameInfo | null = game()) {
   })
   if (seed) deps.steamSession.libraryState.library.set(seed.app_name, seed)
   let handler: Handler | undefined
-  const refreshInstallState = jest.fn(async () => undefined)
+  const refreshInstallState = jest.fn(() => Promise.resolve(undefined))
   registerSteamPollEventFlows({
     ipc: {
       handle: (channel: string, h: Handler) => {

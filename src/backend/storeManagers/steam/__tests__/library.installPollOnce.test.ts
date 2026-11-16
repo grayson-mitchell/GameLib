@@ -286,8 +286,8 @@ describe('pollInstallOnce()', () => {
       .mockImplementation((bytes: unknown) => `${String(bytes)} B`)
   })
 
-  afterEach(() => {
-    stopInstallPolling(steamTestDeps, '730')
+  afterEach(async () => {
+    await stopInstallPolling(steamTestDeps, '730')
     jest.useRealTimers()
   })
 
@@ -430,7 +430,7 @@ describe('pollInstallOnce()', () => {
         }
       })
 
-    startInstallPolling(steamTestDeps, '730', 60000) // register activePolls entry for the speed baseline
+    await startInstallPolling(steamTestDeps, '730', 60000) // register activePolls entry for the speed baseline
     await pollInstallOnce(steamTestDeps, '730')
     jest.advanceTimersByTime(3000) // 3s elapsed between ticks
     await pollInstallOnce(steamTestDeps, '730')
@@ -480,7 +480,7 @@ describe('pollInstallOnce()', () => {
         }
       })
 
-    startInstallPolling(steamTestDeps, '730', 60000)
+    await startInstallPolling(steamTestDeps, '730', 60000)
     await pollInstallOnce(steamTestDeps, '730')
     await pollInstallOnce(steamTestDeps, '730') // no jest.advanceTimersByTime — zero elapsed ms
 
@@ -510,7 +510,7 @@ describe('pollInstallOnce()', () => {
         BytesToStage: '6'
       }
     })
-    startInstallPolling(steamTestDeps, '730', 60000)
+    await startInstallPolling(steamTestDeps, '730', 60000)
     await pollInstallOnce(steamTestDeps, '730')
     jest.advanceTimersByTime(3000)
     await pollInstallOnce(steamTestDeps, '730')
@@ -539,7 +539,7 @@ describe('pollInstallOnce()', () => {
         BytesToDownload: '10000000'
       }
     })
-    startInstallPolling(steamTestDeps, '730', 60000)
+    await startInstallPolling(steamTestDeps, '730', 60000)
     for (let i = 0; i < 4; i++) {
       await pollInstallOnce(steamTestDeps, '730')
       jest.advanceTimersByTime(3000)
@@ -593,7 +593,7 @@ describe('pollInstallOnce()', () => {
           BytesToDownload: '10000000'
         }
       })
-    startInstallPolling(steamTestDeps, '730', 60000)
+    await startInstallPolling(steamTestDeps, '730', 60000)
     for (let i = 0; i < 4; i++) {
       await pollInstallOnce(steamTestDeps, '730')
       jest.advanceTimersByTime(3000)
@@ -621,7 +621,7 @@ describe('pollInstallOnce()', () => {
     // debug/steam-1026-download-restart: isNativeHandoff:true — this poll
     // stands in for games.ts's post-depot.ts-download handoff poll, the ONLY
     // scenario where StateFlags 1026 genuinely means "waiting for restart".
-    startInstallPolling(steamTestDeps, '730', {
+    await startInstallPolling(steamTestDeps, '730', {
       intervalMs: 60000,
       isNativeHandoff: true
     })
@@ -651,7 +651,7 @@ describe('pollInstallOnce()', () => {
         BytesToStage: '6'
       }
     })
-    startInstallPolling(steamTestDeps, '730', 60000)
+    await startInstallPolling(steamTestDeps, '730', 60000)
     for (let i = 0; i < 4; i++) {
       await pollInstallOnce(steamTestDeps, '730')
       jest.advanceTimersByTime(3000)
@@ -675,7 +675,7 @@ describe('pollInstallOnce()', () => {
         buildid: '9876'
       }
     })
-    startInstallPolling(steamTestDeps, '730', 60000) // register entry so stopInstallPolling has something to clear
+    await startInstallPolling(steamTestDeps, '730', 60000) // register entry so stopInstallPolling has something to clear
     await pollInstallOnce(steamTestDeps, '730')
     expect(sendFrontendMessage).toHaveBeenCalledWith(
       'pushGameToLibrary',
@@ -706,7 +706,7 @@ describe('pollInstallOnce()', () => {
         SizeOnDisk: '50000'
       }
     })
-    startInstallPolling(steamTestDeps, '730', 60000) // register entry so stopInstallPolling has something to clear
+    await startInstallPolling(steamTestDeps, '730', 60000) // register entry so stopInstallPolling has something to clear
     await pollInstallOnce(steamTestDeps, '730')
     expect(notify).toHaveBeenCalledTimes(1)
     expect(notify).toHaveBeenCalledWith({
@@ -749,17 +749,17 @@ describe('pollInstallOnce()', () => {
       envMock.isMac = false
     })
 
-    it('starts the monitor for native non-handoff polls on macOS and stops it on stop', () => {
-      startInstallPolling(steamTestDeps, '730', 60000)
+    it('starts the monitor for native non-handoff polls on macOS and stops it on stop', async () => {
+      await startInstallPolling(steamTestDeps, '730', 60000)
       expect(startSteamDownloadMonitor).toHaveBeenCalledWith('730')
-      stopInstallPolling(steamTestDeps, '730')
+      await stopInstallPolling(steamTestDeps, '730')
       expect(stopSteamDownloadMonitor).toHaveBeenCalledWith('730')
     })
 
-    it('upgrading an existing poll to delegated starts the monitor (idempotent)', () => {
-      startInstallPolling(steamTestDeps, '730', 60000)
+    it('upgrading an existing poll to delegated starts the monitor (idempotent)', async () => {
+      await startInstallPolling(steamTestDeps, '730', 60000)
       startSteamDownloadMonitor.mockClear()
-      startInstallPolling(steamTestDeps, '730', {
+      await startInstallPolling(steamTestDeps, '730', {
         intervalMs: 60000,
         delegatedToSteamClient: true
       })
@@ -769,20 +769,23 @@ describe('pollInstallOnce()', () => {
     it.each([
       ['bottle', { source: 'bottle' as const }],
       ['native handoff', { isNativeHandoff: true }]
-    ])('never starts the monitor for %s polls', (_n, opts) => {
-      startInstallPolling(steamTestDeps, '730', { intervalMs: 60000, ...opts })
+    ])('never starts the monitor for %s polls', async (_n, opts) => {
+      await startInstallPolling(steamTestDeps, '730', {
+        intervalMs: 60000,
+        ...opts
+      })
       expect(startSteamDownloadMonitor).not.toHaveBeenCalled()
     })
 
-    it('never starts the monitor off macOS', () => {
+    it('never starts the monitor off macOS', async () => {
       envMock.isMac = false
-      startInstallPolling(steamTestDeps, '730', 60000)
+      await startInstallPolling(steamTestDeps, '730', 60000)
       expect(startSteamDownloadMonitor).not.toHaveBeenCalled()
     })
 
     it('emits live percent, speed and eta while the ACF is frozen at 0', async () => {
       readSteamDownloadMonitor.mockReturnValue(live(4_368_075_856))
-      startInstallPolling(steamTestDeps, '730', 60000)
+      await startInstallPolling(steamTestDeps, '730', 60000)
       await pollInstallOnce(steamTestDeps, '730')
       jest.advanceTimersByTime(3000)
       await pollInstallOnce(steamTestDeps, '730')
@@ -794,13 +797,13 @@ describe('pollInstallOnce()', () => {
 
     it('caps a live overshoot at 99', async () => {
       readSteamDownloadMonitor.mockReturnValue(live(8_770_693_182))
-      startInstallPolling(steamTestDeps, '730', 60000)
+      await startInstallPolling(steamTestDeps, '730', 60000)
       await pollInstallOnce(steamTestDeps, '730')
       expect(progressCalls()[0][1].progress.percent).toBe(99)
     })
 
     it('never reports steam-paused while the live counter advances', async () => {
-      startInstallPolling(steamTestDeps, '730', 60000)
+      await startInstallPolling(steamTestDeps, '730', 60000)
       for (let i = 1; i <= 5; i++) {
         readSteamDownloadMonitor.mockReturnValue(live(i * 100_000_000))
         await pollInstallOnce(steamTestDeps, '730')
@@ -813,7 +816,7 @@ describe('pollInstallOnce()', () => {
 
     it('still reports steam-paused when the live counter freezes', async () => {
       readSteamDownloadMonitor.mockReturnValue(live(100_000_000))
-      startInstallPolling(steamTestDeps, '730', 60000)
+      await startInstallPolling(steamTestDeps, '730', 60000)
       for (let i = 0; i < 5; i++) {
         await pollInstallOnce(steamTestDeps, '730')
         jest.advanceTimersByTime(3000)
@@ -824,7 +827,7 @@ describe('pollInstallOnce()', () => {
 
     it('falls back to the ACF when the monitor returns undefined', async () => {
       readSteamDownloadMonitor.mockReturnValue(undefined)
-      startInstallPolling(steamTestDeps, '730', 60000)
+      await startInstallPolling(steamTestDeps, '730', 60000)
       await pollInstallOnce(steamTestDeps, '730')
       const [call] = progressCalls()
       expect(call[1].progress.percent).toBe(0)
@@ -837,7 +840,7 @@ describe('pollInstallOnce()', () => {
         .mockReturnValue({ wineCrossoverBottle: 'GameLibSteam' } as any)
       jest.mocked(getBottleSteamappsDir).mockReturnValue('/bottle/steamapps')
       readSteamDownloadMonitor.mockReturnValue(live(5e9))
-      startInstallPolling(steamTestDeps, '730', {
+      await startInstallPolling(steamTestDeps, '730', {
         intervalMs: 60000,
         source: 'bottle'
       })
@@ -851,7 +854,7 @@ describe('pollInstallOnce()', () => {
   // ── quick 261029-exu: a bridge install owns its own completion ──────────
 
   describe('bridge source leaves completion to installBridgeGame (quick 261029-exu)', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
       jest
         .mocked(getBridgeBottleSettings)
         .mockReturnValue({ wineCrossoverBottle: 'GameLibSteamBridge' } as any)
@@ -866,7 +869,7 @@ describe('pollInstallOnce()', () => {
           SizeOnDisk: '50000'
         }
       })
-      startInstallPolling(steamTestDeps, '730', {
+      await startInstallPolling(steamTestDeps, '730', {
         intervalMs: 60000,
         source: 'bridge',
         isNativeHandoff: true
@@ -972,7 +975,7 @@ describe('pollInstallOnce()', () => {
     })
     // debug/steam-1026-download-restart: StateFlags 1026 alone is NOT enough
     // — must also be a poll started for GameLib's own finished handoff.
-    startInstallPolling(steamTestDeps, '730', {
+    await startInstallPolling(steamTestDeps, '730', {
       intervalMs: 60000,
       isNativeHandoff: true
     })
@@ -1000,12 +1003,12 @@ describe('pollInstallOnce()', () => {
           SizeOnDisk: '0'
         }
       })
-    const startBottleHandoff = () => {
+    const startBottleHandoff = async () => {
       jest
         .mocked(getSteamBottleSettings)
         .mockReturnValue({ wineCrossoverBottle: 'GameLibSteam' } as any)
       jest.mocked(getBottleSteamappsDir).mockReturnValue(BOTTLE_STEAMAPPS_ROOT)
-      startInstallPolling(steamTestDeps, '730', {
+      await startInstallPolling(steamTestDeps, '730', {
         intervalMs: 60000,
         source: 'bottle',
         isNativeHandoff: true
@@ -1030,7 +1033,7 @@ describe('pollInstallOnce()', () => {
 
     it('a bottle-source poll at 1026 marks the install incomplete and resumable, stops the poll, and sends no bottled-Steam context or notify', async () => {
       mockAcf('1026')
-      startBottleHandoff()
+      await startBottleHandoff()
       await pollInstallOnce(steamTestDeps, '730', 'bottle')
 
       const entry = library.get('730')
@@ -1063,7 +1066,7 @@ describe('pollInstallOnce()', () => {
 
     it('a bottle-source poll at StateFlags 4 is installed on the first tick (fast path unchanged)', async () => {
       mockAcf('4')
-      startBottleHandoff()
+      await startBottleHandoff()
       await pollInstallOnce(steamTestDeps, '730', 'bottle')
 
       expect(library.get('730')?.is_installed).toBe(true)
@@ -1076,7 +1079,7 @@ describe('pollInstallOnce()', () => {
 
     it('a native handoff at 1026 still emits steam-waiting-for-restart and the native notify', async () => {
       mockAcf('1026')
-      startInstallPolling(steamTestDeps, '730', {
+      await startInstallPolling(steamTestDeps, '730', {
         intervalMs: 60000,
         isNativeHandoff: true
       })
@@ -1099,7 +1102,7 @@ describe('pollInstallOnce()', () => {
         .mocked(getBridgeBottleSettings)
         .mockReturnValue({ wineCrossoverBottle: 'GameLibSteamBridge' } as any)
       jest.mocked(getBottleSteamappsDir).mockReturnValue(BOTTLE_STEAMAPPS_ROOT)
-      startInstallPolling(steamTestDeps, '730', {
+      await startInstallPolling(steamTestDeps, '730', {
         intervalMs: 60000,
         source: 'bridge',
         isNativeHandoff: true
@@ -1132,7 +1135,7 @@ describe('pollInstallOnce()', () => {
     // is set true immediately after GameLib's OWN depot download finishes,
     // BEFORE it's known whether the resulting ACF lands on 1026 or the
     // StateFlags=4 fast path — see games.ts ~L1543-1550.
-    startInstallPolling(steamTestDeps, '730', {
+    await startInstallPolling(steamTestDeps, '730', {
       intervalMs: 60000,
       isNativeHandoff: true
     })
@@ -1156,7 +1159,7 @@ describe('pollInstallOnce()', () => {
         SizeOnDisk: '50000'
       }
     })
-    startInstallPolling(steamTestDeps, '730', {
+    await startInstallPolling(steamTestDeps, '730', {
       intervalMs: 60000,
       isNativeHandoff: true,
       macNativeRoute: true
@@ -1181,8 +1184,8 @@ describe('pollInstallOnce()', () => {
         SizeOnDisk: '50000'
       }
     })
-    startInstallPolling(steamTestDeps, '730', 60000)
-    startInstallPolling(steamTestDeps, '730', {
+    await startInstallPolling(steamTestDeps, '730', 60000)
+    await startInstallPolling(steamTestDeps, '730', {
       intervalMs: 60000,
       isNativeHandoff: true,
       macNativeRoute: true
@@ -1204,7 +1207,7 @@ describe('pollInstallOnce()', () => {
         SizeOnDisk: '50000'
       }
     })
-    startInstallPolling(steamTestDeps, '730', {
+    await startInstallPolling(steamTestDeps, '730', {
       intervalMs: 60000,
       isNativeHandoff: true,
       macNativeRoute: true
@@ -1226,7 +1229,7 @@ describe('pollInstallOnce()', () => {
         SizeOnDisk: '50000'
       }
     })
-    startInstallPolling(steamTestDeps, '730', 60000) // OFF-path, no isNativeHandoff
+    await startInstallPolling(steamTestDeps, '730', 60000) // OFF-path, no isNativeHandoff
     await pollInstallOnce(steamTestDeps, '730')
     expect(notify).not.toHaveBeenCalledWith(
       expect.objectContaining({
@@ -1252,7 +1255,7 @@ describe('pollInstallOnce()', () => {
         SizeOnDisk: '50000'
       }
     })
-    startInstallPolling(steamTestDeps, '730', {
+    await startInstallPolling(steamTestDeps, '730', {
       intervalMs: 60000,
       isNativeHandoff: true,
       skippedDepots: ['1771304']
@@ -1282,7 +1285,7 @@ describe('pollInstallOnce()', () => {
         SizeOnDisk: '50000'
       }
     })
-    startInstallPolling(steamTestDeps, '730', {
+    await startInstallPolling(steamTestDeps, '730', {
       intervalMs: 60000,
       isNativeHandoff: true,
       skippedDepots: ['1771304']
@@ -1306,7 +1309,7 @@ describe('pollInstallOnce()', () => {
         SizeOnDisk: '50000'
       }
     })
-    startInstallPolling(steamTestDeps, '730', {
+    await startInstallPolling(steamTestDeps, '730', {
       intervalMs: 60000,
       isNativeHandoff: true,
       skippedDepots: ['1771304', '1771310']
@@ -1329,7 +1332,7 @@ describe('pollInstallOnce()', () => {
         SizeOnDisk: '50000'
       }
     })
-    startInstallPolling(steamTestDeps, '730', {
+    await startInstallPolling(steamTestDeps, '730', {
       intervalMs: 60000,
       isNativeHandoff: true,
       skippedDepots: ['1771304']
@@ -1360,7 +1363,7 @@ describe('pollInstallOnce()', () => {
         SizeOnDisk: '50000'
       }
     })
-    startInstallPolling(steamTestDeps, '730', {
+    await startInstallPolling(steamTestDeps, '730', {
       intervalMs: 60000,
       isNativeHandoff: true,
       skippedDepots: ['1771304']
@@ -1390,7 +1393,7 @@ describe('pollInstallOnce()', () => {
         SizeOnDisk: '50000'
       }
     })
-    startInstallPolling(steamTestDeps, '730', {
+    await startInstallPolling(steamTestDeps, '730', {
       intervalMs: 60000,
       isNativeHandoff: true,
       skippedDepots: []
@@ -1417,7 +1420,7 @@ describe('pollInstallOnce()', () => {
         SizeOnDisk: '50000'
       }
     })
-    startInstallPolling(steamTestDeps, '730', 60000) // bare-number signature, OFF-path
+    await startInstallPolling(steamTestDeps, '730', 60000) // bare-number signature, OFF-path
     await pollInstallOnce(steamTestDeps, '730')
 
     expect(i18nextT).not.toHaveBeenCalledWith(
@@ -1469,7 +1472,7 @@ describe('pollInstallOnce()', () => {
       })
     // No isNativeHandoff — mirrors games.ts's OFF-path startInstallPolling
     // calls (steam://install handoff).
-    startInstallPolling(steamTestDeps, '730', 60000)
+    await startInstallPolling(steamTestDeps, '730', 60000)
     for (let i = 0; i < 3; i++) {
       await pollInstallOnce(steamTestDeps, '730')
       jest.advanceTimersByTime(3000)
@@ -1505,7 +1508,7 @@ describe('pollInstallOnce()', () => {
         BytesToDownload: '10000000'
       }
     })
-    startInstallPolling(steamTestDeps, '730', 60000) // OFF-path, no isNativeHandoff
+    await startInstallPolling(steamTestDeps, '730', 60000) // OFF-path, no isNativeHandoff
     await pollInstallOnce(steamTestDeps, '730') // very first tick — no lastBytesDownloaded baseline yet
 
     const call = sendFrontendMessage.mock.calls.find(
@@ -1566,7 +1569,7 @@ describe('pollInstallOnce()', () => {
     })
     // debug/steam-1026-download-restart: isNativeHandoff:true — register the
     // activePolls entry AS a native-ON handoff poll so notifiedWaiting can gate.
-    startInstallPolling(steamTestDeps, '730', {
+    await startInstallPolling(steamTestDeps, '730', {
       intervalMs: 60000,
       isNativeHandoff: true
     })
@@ -1591,7 +1594,7 @@ describe('pollInstallOnce()', () => {
         BytesToDownload: '10000000'
       }
     })
-    startInstallPolling(steamTestDeps, '730', 60000) // OFF-path, no isNativeHandoff
+    await startInstallPolling(steamTestDeps, '730', 60000) // OFF-path, no isNativeHandoff
     await pollInstallOnce(steamTestDeps, '730')
     await pollInstallOnce(steamTestDeps, '730')
     await pollInstallOnce(steamTestDeps, '730')
@@ -1607,7 +1610,7 @@ describe('pollInstallOnce()', () => {
         SizeOnDisk: '0'
       }
     })
-    startInstallPolling(steamTestDeps, '730', 60000)
+    await startInstallPolling(steamTestDeps, '730', 60000)
     await pollInstallOnce(steamTestDeps, '730')
     await pollInstallOnce(steamTestDeps, '730')
     expect(notify).not.toHaveBeenCalled()
@@ -1632,7 +1635,7 @@ describe('pollInstallOnce()', () => {
           SizeOnDisk: '50000'
         }
       })
-      startInstallPolling(steamTestDeps, '730', {
+      await startInstallPolling(steamTestDeps, '730', {
         intervalMs: 60000,
         source: 'bottle'
       })
@@ -1667,7 +1670,7 @@ describe('pollInstallOnce()', () => {
         SizeOnDisk: '50000'
       }
     })
-    startInstallPolling(steamTestDeps, '730', {
+    await startInstallPolling(steamTestDeps, '730', {
       intervalMs: 60000,
       source: 'bottle'
     })
@@ -1708,7 +1711,7 @@ describe('pollInstallOnce()', () => {
         MountedDepots: {}
       }
     })
-    startInstallPolling(steamTestDeps, '730', {
+    await startInstallPolling(steamTestDeps, '730', {
       intervalMs: 60000,
       source: 'bottle'
     })

@@ -256,7 +256,7 @@ describe('D-UAT-13 hold persists across a GameLib restart (quick 261029-pkp)', (
     jest
       .mocked(readSteamProcessStartTokens)
       .mockResolvedValue(new Map([[111, 'T1']]))
-    startInstallPolling(steamTestDeps, '730', {
+    await startInstallPolling(steamTestDeps, '730', {
       intervalMs: 60000,
       isNativeHandoff: true
     })
@@ -304,8 +304,8 @@ describe('D-UAT-13 hold persists across a GameLib restart (quick 261029-pkp)', (
       .mockImplementation((bytes: unknown) => `${String(bytes)} B`)
   })
 
-  afterEach(() => {
-    stopInstallPolling(steamTestDeps, '730')
+  afterEach(async () => {
+    await stopInstallPolling(steamTestDeps, '730')
     jest.useRealTimers()
   })
 
@@ -315,7 +315,7 @@ describe('D-UAT-13 hold persists across a GameLib restart (quick 261029-pkp)', (
       jest
         .mocked(readSteamProcessStartTokens)
         .mockResolvedValue(new Map([[111, 'T1']]))
-      startInstallPolling(steamTestDeps, '730', {
+      await startInstallPolling(steamTestDeps, '730', {
         intervalMs: 60000,
         isNativeHandoff: true,
         macNativeRoute: true,
@@ -337,7 +337,7 @@ describe('D-UAT-13 hold persists across a GameLib restart (quick 261029-pkp)', (
     ])('%s still holds in memory but writes no record', async (_n, tokens) => {
       jest.mocked(listSteamClientPids).mockResolvedValue([111])
       jest.mocked(readSteamProcessStartTokens).mockResolvedValue(tokens)
-      startInstallPolling(steamTestDeps, '730', {
+      await startInstallPolling(steamTestDeps, '730', {
         intervalMs: 60000,
         isNativeHandoff: true
       })
@@ -372,7 +372,7 @@ describe('D-UAT-13 hold persists across a GameLib restart (quick 261029-pkp)', (
       jest
         .mocked(readSteamProcessStartTokens)
         .mockResolvedValue(new Map([[111, 'T1']]))
-      startInstallPolling(steamTestDeps, '730', {
+      await startInstallPolling(steamTestDeps, '730', {
         intervalMs: 1,
         isNativeHandoff: true
       })
@@ -392,14 +392,14 @@ describe('D-UAT-13 hold persists across a GameLib restart (quick 261029-pkp)', (
     it('clears the record when the poll is stopped while holding (cancel/uninstall)', async () => {
       await arm()
       expect(store.has('730')).toBe(true)
-      stopInstallPolling(steamTestDeps, '730')
+      await stopInstallPolling(steamTestDeps, '730')
       expect(store.has('730')).toBe(false)
     })
 
     it('an unprobed -> released (no Steam running) deletes a stale record', async () => {
       store.set('730', record())
       jest.mocked(listSteamClientPids).mockResolvedValue([])
-      startInstallPolling(steamTestDeps, '730', {
+      await startInstallPolling(steamTestDeps, '730', {
         intervalMs: 60000,
         isNativeHandoff: true
       })

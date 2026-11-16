@@ -690,7 +690,7 @@ describe('SteamLibraryManager', () => {
     // path stays native-only end to end.
     expect(getBottleSteamappsDir).not.toHaveBeenCalled()
 
-    stopInstallPolling(steamTestDeps, '730')
+    await stopInstallPolling(steamTestDeps, '730')
     jest.useRealTimers()
   })
 
@@ -757,7 +757,7 @@ describe('SteamLibraryManager', () => {
       })
       expect(downloadSteamDepots).not.toHaveBeenCalled()
 
-      stopInstallPolling(steamTestDeps, '730')
+      await stopInstallPolling(steamTestDeps, '730')
       jest.useRealTimers()
     })
 
@@ -778,7 +778,7 @@ describe('SteamLibraryManager', () => {
 
       expect(downloadSteamDepots).not.toHaveBeenCalled()
 
-      stopInstallPolling(steamTestDeps, '730')
+      await stopInstallPolling(steamTestDeps, '730')
       jest.useRealTimers()
     })
 
@@ -836,7 +836,7 @@ describe('SteamLibraryManager', () => {
             outcome: null
           }
         ])
-        stopInstallPolling(steamTestDeps, '730')
+        await stopInstallPolling(steamTestDeps, '730')
         jest.useRealTimers()
       })
 
@@ -865,7 +865,7 @@ describe('SteamLibraryManager', () => {
 
         expect(order).toEqual(['finalize', 'watch'])
         setIntervalSpy.mockRestore()
-        stopInstallPolling(steamTestDeps, '730')
+        await stopInstallPolling(steamTestDeps, '730')
         jest.useRealTimers()
       })
 
@@ -882,7 +882,7 @@ describe('SteamLibraryManager', () => {
           invoke.mock.calls.find((c) => c[0] === 'depot_finalize')?.[1] as any[]
         )[0]
         expect(arg.finalize.installdir).toBe('app_730')
-        stopInstallPolling(steamTestDeps, '730')
+        await stopInstallPolling(steamTestDeps, '730')
         jest.useRealTimers()
       })
 
@@ -905,7 +905,7 @@ describe('SteamLibraryManager', () => {
         expect(
           invoke.mock.calls.filter((c) => c[0] === 'depot_finalize')
         ).toHaveLength(1)
-        stopInstallPolling(steamTestDeps, '730')
+        await stopInstallPolling(steamTestDeps, '730')
         jest.useRealTimers()
       })
     })

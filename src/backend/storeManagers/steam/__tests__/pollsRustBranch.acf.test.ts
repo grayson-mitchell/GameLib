@@ -30,11 +30,7 @@ function makeDeps(handler: (channel: string) => unknown = () => null) {
   const deps = {
     requestRustInvoke: jest.fn((channel: string, args: unknown[]) => {
       calls.push({ channel, args })
-      try {
-        return Promise.resolve(handler(channel))
-      } catch (e) {
-        return Promise.reject(e)
-      }
+      return Promise.resolve().then(() => handler(channel))
     }),
     config: {
       getSettings: () => ({ defaultSteamPath: "'/steam'", wineVersion: {} })

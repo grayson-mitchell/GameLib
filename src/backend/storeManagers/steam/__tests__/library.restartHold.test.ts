@@ -284,14 +284,14 @@ describe('install poller holds steam-waiting-for-restart on the StateFlags=4 fas
       .mockImplementation((bytes: unknown) => `${String(bytes)} B`)
   })
 
-  afterEach(() => {
-    stopInstallPolling(steamTestDeps, '730')
+  afterEach(async () => {
+    await stopInstallPolling(steamTestDeps, '730')
     jest.useRealTimers()
   })
 
   it('holds a native handoff when a Steam client was running at finalize: waiting context, NO is_installed push, NO done, NO completion toast, poll kept alive', async () => {
     jest.mocked(listSteamClientPids).mockResolvedValue([111])
-    startInstallPolling(steamTestDeps, '730', {
+    await startInstallPolling(steamTestDeps, '730', {
       intervalMs: 60000,
       isNativeHandoff: true
     })
@@ -316,7 +316,7 @@ describe('install poller holds steam-waiting-for-restart on the StateFlags=4 fas
 
   it('keeps holding while the SAME Steam process is alive, re-emitting the waiting context each tick without re-notifying', async () => {
     jest.mocked(listSteamClientPids).mockResolvedValue([111])
-    startInstallPolling(steamTestDeps, '730', {
+    await startInstallPolling(steamTestDeps, '730', {
       intervalMs: 60000,
       isNativeHandoff: true
     })
@@ -336,7 +336,7 @@ describe('install poller holds steam-waiting-for-restart on the StateFlags=4 fas
 
   it('re-probes Steam at most once per probe gap while holding (no child spawn per 3 s tick)', async () => {
     jest.mocked(listSteamClientPids).mockResolvedValue([111])
-    startInstallPolling(steamTestDeps, '730', {
+    await startInstallPolling(steamTestDeps, '730', {
       intervalMs: 60000,
       isNativeHandoff: true
     })
@@ -354,7 +354,7 @@ describe('install poller holds steam-waiting-for-restart on the StateFlags=4 fas
 
   it('releases into the UNCHANGED installed flow once the recorded Steam process is gone, without repeating the restart toast', async () => {
     jest.mocked(listSteamClientPids).mockResolvedValue([111])
-    startInstallPolling(steamTestDeps, '730', {
+    await startInstallPolling(steamTestDeps, '730', {
       intervalMs: 60000,
       isNativeHandoff: true
     })
@@ -385,7 +385,7 @@ describe('install poller holds steam-waiting-for-restart on the StateFlags=4 fas
 
   it('releases when Steam was RESTARTED (a different PID replaced the recorded one)', async () => {
     jest.mocked(listSteamClientPids).mockResolvedValue([111])
-    startInstallPolling(steamTestDeps, '730', {
+    await startInstallPolling(steamTestDeps, '730', {
       intervalMs: 60000,
       isNativeHandoff: true
     })
@@ -401,7 +401,7 @@ describe('install poller holds steam-waiting-for-restart on the StateFlags=4 fas
 
   it('an inconclusive re-probe (undefined) keeps holding — only positive evidence of exit releases', async () => {
     jest.mocked(listSteamClientPids).mockResolvedValue([111])
-    startInstallPolling(steamTestDeps, '730', {
+    await startInstallPolling(steamTestDeps, '730', {
       intervalMs: 60000,
       isNativeHandoff: true
     })
@@ -417,7 +417,7 @@ describe('install poller holds steam-waiting-for-restart on the StateFlags=4 fas
 
   it('fail-open: Steam NOT running at finalize (probe []) takes the unchanged installed flow immediately', async () => {
     jest.mocked(listSteamClientPids).mockResolvedValue([])
-    startInstallPolling(steamTestDeps, '730', {
+    await startInstallPolling(steamTestDeps, '730', {
       intervalMs: 60000,
       isNativeHandoff: true
     })
@@ -436,7 +436,7 @@ describe('install poller holds steam-waiting-for-restart on the StateFlags=4 fas
 
   it('an adoptedBySteamClient poll (InstallApp ok) never probes, never holds and is installed immediately (quick 261105-sqe)', async () => {
     jest.mocked(listSteamClientPids).mockResolvedValue([111])
-    startInstallPolling(steamTestDeps, '730', {
+    await startInstallPolling(steamTestDeps, '730', {
       intervalMs: 60000,
       isNativeHandoff: true,
       macNativeRoute: true,
@@ -460,8 +460,8 @@ describe('install poller holds steam-waiting-for-restart on the StateFlags=4 fas
 
   it('adoptedBySteamClient arriving on an in-flight poll (upgrade branch) releases the hold (quick 261105-sqe)', async () => {
     jest.mocked(listSteamClientPids).mockResolvedValue([111])
-    startInstallPolling(steamTestDeps, '730', { intervalMs: 60000 })
-    startInstallPolling(steamTestDeps, '730', {
+    await startInstallPolling(steamTestDeps, '730', { intervalMs: 60000 })
+    await startInstallPolling(steamTestDeps, '730', {
       isNativeHandoff: true,
       macNativeRoute: true,
       adoptedBySteamClient: true
@@ -481,7 +481,7 @@ describe('install poller holds steam-waiting-for-restart on the StateFlags=4 fas
 
   it('fail-open: an inconclusive FIRST probe (undefined) takes the unchanged installed flow immediately', async () => {
     jest.mocked(listSteamClientPids).mockResolvedValue(undefined)
-    startInstallPolling(steamTestDeps, '730', {
+    await startInstallPolling(steamTestDeps, '730', {
       intervalMs: 60000,
       isNativeHandoff: true
     })
@@ -494,7 +494,7 @@ describe('install poller holds steam-waiting-for-restart on the StateFlags=4 fas
 
   it('an OFF-path poll (Steam owns the download, no isNativeHandoff) never probes and never holds', async () => {
     jest.mocked(listSteamClientPids).mockResolvedValue([111])
-    startInstallPolling(steamTestDeps, '730', 60000)
+    await startInstallPolling(steamTestDeps, '730', 60000)
 
     await pollInstallOnce(steamTestDeps, '730')
 
@@ -509,7 +509,7 @@ describe('install poller holds steam-waiting-for-restart on the StateFlags=4 fas
       .mocked(getSteamBottleSettings)
       .mockReturnValue({ wineCrossoverBottle: 'GameLibSteam' } as any)
     jest.mocked(getBottleSteamappsDir).mockReturnValue(BOTTLE_STEAMAPPS_ROOT)
-    startInstallPolling(steamTestDeps, '730', {
+    await startInstallPolling(steamTestDeps, '730', {
       intervalMs: 60000,
       source: 'bottle',
       isNativeHandoff: true
@@ -523,7 +523,7 @@ describe('install poller holds steam-waiting-for-restart on the StateFlags=4 fas
 
   it('a hold released because Steam itself rewrote the manifest (active download state) never re-enters, even if the probe still reports the old PID', async () => {
     jest.mocked(listSteamClientPids).mockResolvedValue([111])
-    startInstallPolling(steamTestDeps, '730', {
+    await startInstallPolling(steamTestDeps, '730', {
       intervalMs: 60000,
       isNativeHandoff: true
     })
@@ -546,7 +546,7 @@ describe('install poller holds steam-waiting-for-restart on the StateFlags=4 fas
   })
 
   it('the 1026 handoff wait is not re-armed as a hold when Steam adopts it (1026 -> 4): the restarted Steam that just adopted the manifest must not be recorded as the client that has not seen it', async () => {
-    startInstallPolling(steamTestDeps, '730', {
+    await startInstallPolling(steamTestDeps, '730', {
       intervalMs: 60000,
       isNativeHandoff: true
     })
@@ -583,7 +583,7 @@ describe('install poller holds steam-waiting-for-restart on the StateFlags=4 fas
     jest.mocked(listSteamClientPids).mockResolvedValue([111])
     // resumeInterruptedSteamInstall's bare native poll: ACF left at 1026 by the
     // earlier cancel (Steam-style active state, NOT a GameLib handoff yet).
-    startInstallPolling(steamTestDeps, '730', 60000)
+    await startInstallPolling(steamTestDeps, '730', 60000)
     vdf.parse.mockReturnValue({
       AppState: { ...ACF_4.AppState, StateFlags: '1026' }
     })
@@ -594,7 +594,7 @@ describe('install poller holds steam-waiting-for-restart on the StateFlags=4 fas
 
     // Finalize: games.ts upgrades the live poll to isNativeHandoff and the
     // manifest is rewritten at StateFlags=4 while Steam (pid 111) is running.
-    startInstallPolling(steamTestDeps, '730', {
+    await startInstallPolling(steamTestDeps, '730', {
       intervalMs: 60000,
       isNativeHandoff: true
     })
@@ -614,7 +614,7 @@ describe('install poller holds steam-waiting-for-restart on the StateFlags=4 fas
   it('a held poll survives the "no manifest -> user cancelled" grace window (GRACE_TICKS) instead of being torn down with a terminal done', async () => {
     jest.mocked(listSteamClientPids).mockResolvedValue([111])
     const interval = 10
-    startInstallPolling(steamTestDeps, '730', {
+    await startInstallPolling(steamTestDeps, '730', {
       intervalMs: interval,
       isNativeHandoff: true
     })
@@ -635,7 +635,7 @@ describe('install poller holds steam-waiting-for-restart on the StateFlags=4 fas
 
   it('ends the hold with a terminal done when the finalized manifest vanishes (MANIFEST_GONE_TICKS) so the UI is not stranded on "Restart Steam"', async () => {
     jest.mocked(listSteamClientPids).mockResolvedValue([111])
-    startInstallPolling(steamTestDeps, '730', {
+    await startInstallPolling(steamTestDeps, '730', {
       intervalMs: 60000,
       isNativeHandoff: true
     })
@@ -657,7 +657,7 @@ describe('install poller holds steam-waiting-for-restart on the StateFlags=4 fas
     jest.mocked(listSteamClientPids).mockResolvedValue([111])
     // 1 ms interval: the cap (7200 ticks) is 7.2 s of fake time, under the
     // 10 s probe gap, so the probe cannot release it first.
-    startInstallPolling(steamTestDeps, '730', {
+    await startInstallPolling(steamTestDeps, '730', {
       intervalMs: 1,
       isNativeHandoff: true
     })
@@ -677,7 +677,7 @@ describe('install poller holds steam-waiting-for-restart on the StateFlags=4 fas
     vdf.parse.mockReturnValue({
       AppState: { ...ACF_4.AppState, StateFlags: '1042' }
     })
-    startInstallPolling(steamTestDeps, '730', { intervalMs: 1 })
+    await startInstallPolling(steamTestDeps, '730', { intervalMs: 1 })
 
     await jest.advanceTimersByTimeAsync(7300)
 

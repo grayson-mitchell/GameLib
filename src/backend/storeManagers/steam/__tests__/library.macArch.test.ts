@@ -1023,8 +1023,8 @@ describe('delegated install -> verifyMacArchGroundTruth (quick 261024-exo)', () 
     dialog.showMessageBox.mockResolvedValue({ response: 1 })
   })
 
-  afterEach(() => {
-    stopInstallPolling(steamTestDeps, APP_ID)
+  afterEach(async () => {
+    await stopInstallPolling(steamTestDeps, APP_ID)
     envMock.isMac = false
     envMock.isLinux = true
     library.clear()
@@ -1057,7 +1057,7 @@ describe('delegated install -> verifyMacArchGroundTruth (quick 261024-exo)', () 
         .mocked(getSteamBottleSettings)
         .mockReturnValue({ wineCrossoverBottle: 'GameLibSteam' } as never)
     }
-    startInstallPolling(steamTestDeps, APP_ID, {
+    await startInstallPolling(steamTestDeps, APP_ID, {
       intervalMs: 10,
       source,
       delegatedToSteamClient: true
@@ -1088,7 +1088,7 @@ describe('delegated install -> verifyMacArchGroundTruth (quick 261024-exo)', () 
     expect(probe).not.toHaveBeenCalled()
     expect(dialog.showMessageBox).not.toHaveBeenCalled()
 
-    stopInstallPolling(steamTestDeps, APP_ID)
+    await stopInstallPolling(steamTestDeps, APP_ID)
     envMock.isMac = true
     manifestPresent = false
     seedGame()
@@ -1116,7 +1116,7 @@ describe('delegated install -> verifyMacArchGroundTruth (quick 261024-exo)', () 
     manifestPresent = true
     vdf.parse.mockReturnValue(installedAcf)
     // Long interval: the poll is registered but never ticks during the test.
-    startInstallPolling(steamTestDeps, APP_ID, {
+    await startInstallPolling(steamTestDeps, APP_ID, {
       intervalMs: 1_000_000,
       delegatedToSteamClient: true
     })

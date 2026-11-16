@@ -1141,7 +1141,7 @@ describe('SteamLibraryManager', () => {
       jest.mocked(listSteamClientPids).mockResolvedValue([111])
       // GameLib's own finalize just wrote the StateFlags=4 manifest while the
       // Steam client (pid 111) was running: the poller enters the hold.
-      startInstallPolling(steamTestDeps, '570', {
+      await startInstallPolling(steamTestDeps, '570', {
         intervalMs: 60000,
         isNativeHandoff: true
       })
@@ -1155,7 +1155,7 @@ describe('SteamLibraryManager', () => {
         expect(sendFrontendMessage).not.toHaveBeenCalled()
         expect(library.get('570')?.is_installed).toBe(false)
       } finally {
-        stopInstallPolling(steamTestDeps, '570') // hold ends (e.g. released/cap/uninstalled)
+        await stopInstallPolling(steamTestDeps, '570') // hold ends (e.g. released/cap/uninstalled)
       }
 
       // Control: the identical ACF DOES flip it once nothing is holding it, so

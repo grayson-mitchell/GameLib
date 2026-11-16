@@ -262,15 +262,15 @@ describe('pollUninstallOnce()', () => {
       .mockImplementation(() => {})
   })
 
-  afterEach(() => {
-    stopUninstallPolling(steamTestDeps, '730')
+  afterEach(async () => {
+    await stopUninstallPolling(steamTestDeps, '730')
     jest.useRealTimers()
     clearForcedSpy.mockRestore()
   })
 
   it('flips the badge to not-installed + sends done when the manifest is absent (uninstall complete)', async () => {
     ;(existsSync as jest.Mock).mockReturnValue(false) // manifest gone
-    startUninstallPolling(steamTestDeps, '730', 60000) // register entry so stop has something to clear
+    await startUninstallPolling(steamTestDeps, '730', 60000) // register entry so stop has something to clear
     await pollUninstallOnce(steamTestDeps, '730')
     expect(sendFrontendMessage).toHaveBeenCalledWith(
       'pushGameToLibrary',
@@ -296,7 +296,7 @@ describe('pollUninstallOnce()', () => {
         SizeOnDisk: '50000'
       }
     })
-    startUninstallPolling(steamTestDeps, '730', 60000)
+    await startUninstallPolling(steamTestDeps, '730', 60000)
     await pollUninstallOnce(steamTestDeps, '730')
     expect(sendFrontendMessage).toHaveBeenCalledWith(
       'gameStatusUpdate',
@@ -328,7 +328,7 @@ describe('pollUninstallOnce()', () => {
         SizeOnDisk: '50000'
       }
     })
-    startUninstallPolling(steamTestDeps, '730', 60000)
+    await startUninstallPolling(steamTestDeps, '730', 60000)
     await pollUninstallOnce(steamTestDeps, '730')
     expect(sendFrontendMessage).toHaveBeenCalledWith(
       'gameStatusUpdate',
@@ -349,7 +349,7 @@ describe('pollUninstallOnce()', () => {
         SizeOnDisk: '50000'
       }
     })
-    startUninstallPolling(steamTestDeps, '730', 60000)
+    await startUninstallPolling(steamTestDeps, '730', 60000)
     await pollUninstallOnce(steamTestDeps, '730')
     expect(sendFrontendMessage).not.toHaveBeenCalledWith(
       'pushGameToLibrary',
@@ -361,7 +361,7 @@ describe('pollUninstallOnce()', () => {
 
   it('GAME-03: fires notify with Game Uninstalled on the "absent" branch (confirmed ACF removal)', async () => {
     ;(existsSync as jest.Mock).mockReturnValue(false) // manifest gone = uninstall complete
-    startUninstallPolling(steamTestDeps, '730', 60000) // register entry so stop has something to clear
+    await startUninstallPolling(steamTestDeps, '730', 60000) // register entry so stop has something to clear
     await pollUninstallOnce(steamTestDeps, '730')
     expect(notify).toHaveBeenCalledTimes(1)
     expect(notify).toHaveBeenCalledWith({
@@ -380,7 +380,7 @@ describe('pollUninstallOnce()', () => {
         SizeOnDisk: '50000'
       }
     })
-    startUninstallPolling(steamTestDeps, '730', 60000)
+    await startUninstallPolling(steamTestDeps, '730', 60000)
     await pollUninstallOnce(steamTestDeps, '730')
     expect(notify).not.toHaveBeenCalled()
   })
@@ -389,7 +389,7 @@ describe('pollUninstallOnce()', () => {
   it('a rejected manifest read is not a confirmed absence: no badge flip, no forced-verdict clear', async () => {
     const rejecting = () => Promise.reject(new Error('rustInvoke timed out'))
     const deps = { ...steamTestDeps, requestRustInvoke: rejecting } as never
-    startUninstallPolling(steamTestDeps, '730', 60000)
+    await startUninstallPolling(steamTestDeps, '730', 60000)
     await pollUninstallOnce(deps, '730', 'bottle')
     expect(library.get('730')?.is_installed).toBe(true)
     expect(sendFrontendMessage).not.toHaveBeenCalledWith(
@@ -417,7 +417,7 @@ describe('pollUninstallOnce()', () => {
       ...steamTestDeps,
       requestRustInvoke: partlyRejecting
     } as never
-    startUninstallPolling(steamTestDeps, '730', 60000)
+    await startUninstallPolling(steamTestDeps, '730', 60000)
     await pollUninstallOnce(deps, '730') // default source: 'native'
     expect(library.get('730')?.is_installed).toBe(true)
     expect(sendFrontendMessage).not.toHaveBeenCalledWith(
@@ -431,7 +431,7 @@ describe('pollUninstallOnce()', () => {
 
   it('R1: bottle uninstall confirmed-absent clears the forced verdict', async () => {
     ;(existsSync as jest.Mock).mockReturnValue(false) // manifest gone
-    startUninstallPolling(steamTestDeps, '730', 60000)
+    await startUninstallPolling(steamTestDeps, '730', 60000)
     await pollUninstallOnce(steamTestDeps, '730', 'bottle')
     expect(clearForcedSpy).toHaveBeenCalledWith(steamTestDeps, '730')
   })
@@ -441,14 +441,14 @@ describe('pollUninstallOnce()', () => {
     jest
       .mocked(getBridgeBottleSettings)
       .mockReturnValue({ wineCrossoverBottle: 'GameLibSteamBridge-730' } as any)
-    startUninstallPolling(steamTestDeps, '730', 60000)
+    await startUninstallPolling(steamTestDeps, '730', 60000)
     await pollUninstallOnce(steamTestDeps, '730', 'bridge')
     expect(clearForcedSpy).toHaveBeenCalledWith(steamTestDeps, '730')
   })
 
   it('R2: a NATIVE uninstall confirmed-absent does NOT clear the forced verdict', async () => {
     ;(existsSync as jest.Mock).mockReturnValue(false) // manifest gone
-    startUninstallPolling(steamTestDeps, '730', 60000)
+    await startUninstallPolling(steamTestDeps, '730', 60000)
     await pollUninstallOnce(steamTestDeps, '730') // default source: 'native'
     expect(clearForcedSpy).not.toHaveBeenCalled()
   })
@@ -462,7 +462,7 @@ describe('pollUninstallOnce()', () => {
         SizeOnDisk: '50000'
       }
     })
-    startUninstallPolling(steamTestDeps, '730', 60000)
+    await startUninstallPolling(steamTestDeps, '730', 60000)
     await pollUninstallOnce(steamTestDeps, '730', 'bottle')
     expect(clearForcedSpy).not.toHaveBeenCalled()
   })
@@ -507,7 +507,7 @@ describe('pollUninstallOnce()', () => {
         }
       })
 
-      startUninstallPolling(steamTestDeps, '730', 60000)
+      await startUninstallPolling(steamTestDeps, '730', 60000)
       await pollUninstallOnce(steamTestDeps, '730', 'bottle')
 
       expect(sendFrontendMessage).toHaveBeenCalledWith(
@@ -565,7 +565,7 @@ describe('pollUninstallOnce()', () => {
         }
       })
 
-      startUninstallPolling(steamTestDeps, '730', 60000)
+      await startUninstallPolling(steamTestDeps, '730', 60000)
       await pollUninstallOnce(steamTestDeps, '730') // default source: 'native'
 
       expect(sendFrontendMessage).toHaveBeenCalledWith(
@@ -641,7 +641,7 @@ describe('pollUninstallOnce()', () => {
         }
       })
 
-      startUninstallPolling(steamTestDeps, '730', 60000)
+      await startUninstallPolling(steamTestDeps, '730', 60000)
       await pollUninstallOnce(steamTestDeps, '730') // default source: 'native'
 
       expect(sendFrontendMessage).toHaveBeenCalledWith(
@@ -767,7 +767,7 @@ describe('pollUninstallOnce()', () => {
 
     it('NEITHER root has a surviving copy: falls through to the original full-uninstall behaviour (badge flips false, "Game Uninstalled" toast fires) — regression guard', async () => {
       ;(existsSync as jest.Mock).mockReturnValue(false) // manifest gone everywhere
-      startUninstallPolling(steamTestDeps, '730', 60000)
+      await startUninstallPolling(steamTestDeps, '730', 60000)
       await pollUninstallOnce(steamTestDeps, '730', 'bottle')
 
       expect(sendFrontendMessage).toHaveBeenCalledWith(
@@ -794,24 +794,24 @@ describe('startUninstallPolling() idempotency and stopUninstallPolling()', () =>
     jest.mocked(getSteamLibraries).mockResolvedValue([])
   })
 
-  afterEach(() => {
-    stopUninstallPolling(steamTestDeps, '730')
+  afterEach(async () => {
+    await stopUninstallPolling(steamTestDeps, '730')
     jest.useRealTimers()
   })
 
-  it('calling startUninstallPolling twice for the same appId creates only one setInterval', () => {
+  it('calling startUninstallPolling twice for the same appId creates only one setInterval', async () => {
     const setIntervalSpy = jest.spyOn(global, 'setInterval')
-    startUninstallPolling(steamTestDeps, '730', 3000)
-    startUninstallPolling(steamTestDeps, '730', 3000) // idempotent — second call is a no-op
+    await startUninstallPolling(steamTestDeps, '730', 3000)
+    await startUninstallPolling(steamTestDeps, '730', 3000) // idempotent — second call is a no-op
     expect(setIntervalSpy).toHaveBeenCalledTimes(1)
     setIntervalSpy.mockRestore()
   })
 
-  it('stopUninstallPolling clears the entry so a new interval can register', () => {
+  it('stopUninstallPolling clears the entry so a new interval can register', async () => {
     const setIntervalSpy = jest.spyOn(global, 'setInterval')
-    startUninstallPolling(steamTestDeps, '730', 3000)
-    stopUninstallPolling(steamTestDeps, '730')
-    startUninstallPolling(steamTestDeps, '730', 3000) // new registration — entry was cleared by stop
+    await startUninstallPolling(steamTestDeps, '730', 3000)
+    await stopUninstallPolling(steamTestDeps, '730')
+    await startUninstallPolling(steamTestDeps, '730', 3000) // new registration — entry was cleared by stop
     expect(setIntervalSpy).toHaveBeenCalledTimes(2)
     setIntervalSpy.mockRestore()
   })
@@ -854,7 +854,7 @@ describe('startUninstallPolling() idempotency and stopUninstallPolling()', () =>
     ;(notify as jest.Mock).mockClear()
 
     const interval = 10
-    startUninstallPolling(steamTestDeps, '730', interval)
+    await startUninstallPolling(steamTestDeps, '730', interval)
     g9oLogger().logWarning.mockClear()
     // The old 60 s grace is gone: nothing at tick 21 or 39.
     const requestNotices = () =>
@@ -919,7 +919,7 @@ describe('startUninstallPolling() idempotency and stopUninstallPolling()', () =>
     ;(notify as jest.Mock).mockClear()
 
     const interval = 10
-    startUninstallPolling(steamTestDeps, '730', interval)
+    await startUninstallPolling(steamTestDeps, '730', interval)
     await jest.advanceTimersByTimeAsync(interval * 60)
     expect(notify).not.toHaveBeenCalled()
     expect(sendFrontendMessage).not.toHaveBeenCalledWith(
@@ -964,7 +964,7 @@ describe('startUninstallPolling() idempotency and stopUninstallPolling()', () =>
     ;(notify as jest.Mock).mockClear()
 
     const interval = 10
-    startUninstallPolling(steamTestDeps, '730', interval)
+    await startUninstallPolling(steamTestDeps, '730', interval)
     await jest.advanceTimersByTimeAsync(interval * 5)
     ;(existsSync as jest.Mock).mockReturnValue(false)
     await jest.advanceTimersByTimeAsync(interval * 3)

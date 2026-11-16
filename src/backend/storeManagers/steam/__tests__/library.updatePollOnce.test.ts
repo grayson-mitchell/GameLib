@@ -67,8 +67,8 @@ function acf(over: Record<string, unknown>) {
   } as never)
 }
 
-function poll(): NonNullable<ReturnType<typeof getPoll>> {
-  startInstallPolling(deps, APP, {
+async function poll(): Promise<NonNullable<ReturnType<typeof getPoll>>> {
+  await startInstallPolling(deps, APP, {
     delegatedToSteamClient: true,
     awaitingUpdate: { fromBuild: '100' }
   })
@@ -84,7 +84,7 @@ describe('pollUpdateOnce', () => {
 
   it('pending (StateFlags 6) reports updating, managed by Steam', async () => {
     acf({ stateFlags: 6, targetBuildId: '200' })
-    await pollUpdateOnce(deps, APP, poll())
+    await pollUpdateOnce(deps, APP, await poll())
     expect(send).toHaveBeenCalledWith('gameStatusUpdate', {
       appName: APP,
       runner: 'steam',
@@ -96,7 +96,7 @@ describe('pollUpdateOnce', () => {
 
   it('derives percent from the ACF byte counters', async () => {
     acf({ stateFlags: 6, bytesDownloaded: 936064, bytesToDownload: 1872128 })
-    await pollUpdateOnce(deps, APP, poll())
+    await pollUpdateOnce(deps, APP, await poll())
     expect(send).toHaveBeenCalledWith(
       'progressUpdate',
       expect.objectContaining({
@@ -106,7 +106,7 @@ describe('pollUpdateOnce', () => {
   })
 
   it('completes when the update is no longer pending and bit 4 is set', async () => {
-    const p = poll()
+    const p = await poll()
     acf({ stateFlags: 6, targetBuildId: '200' })
     await pollUpdateOnce(deps, APP, p)
     send.mockClear()
@@ -123,7 +123,7 @@ describe('pollUpdateOnce', () => {
 
   it('bit 4 alone with a different target build is not completion', async () => {
     acf({ stateFlags: 4, buildid: '100', targetBuildId: '200' })
-    await pollUpdateOnce(deps, APP, poll())
+    await pollUpdateOnce(deps, APP, await poll())
     expect(getPoll()).toBeDefined()
     expect(send).not.toHaveBeenCalledWith(
       'gameStatusUpdate',
@@ -132,7 +132,7 @@ describe('pollUpdateOnce', () => {
   })
 
   it('completes on the target build with no pending state ever seen, updating before done', async () => {
-    startInstallPolling(deps, APP, {
+    await startInstallPolling(deps, APP, {
       delegatedToSteamClient: true,
       awaitingUpdate: { fromBuild: '100', targetBuild: '200' }
     })
@@ -152,7 +152,7 @@ describe('pollUpdateOnce', () => {
   })
 
   it('quiet end completes when the ACF is already current', async () => {
-    const p = poll()
+    const p = await poll()
     acf({ stateFlags: 4, buildid: '100' })
     p.ticks = STEAM_REQUEST_NO_ACTIVITY_TICKS
     send.mockClear()
@@ -165,8 +165,8 @@ describe('pollUpdateOnce', () => {
     expect(getPoll()).toBeUndefined()
   })
 
-  function pollWithTarget(targetBuild: string | undefined) {
-    startInstallPolling(deps, APP, {
+  async function pollWithTarget(targetBuild: string | undefined) {
+    await startInstallPolling(deps, APP, {
       delegatedToSteamClient: true,
       awaitingUpdate: { fromBuild: '777', targetBuild }
     })
@@ -178,7 +178,7 @@ describe('pollUpdateOnce', () => {
       .map((c) => c[1].status)
 
   it('quiet end with an unmet target build does not complete', async () => {
-    const p = pollWithTarget('800')
+    const p = await pollWithTarget('800')
     acf({ stateFlags: 4, buildid: '777' })
     p.ticks = STEAM_REQUEST_NO_ACTIVITY_TICKS
     send.mockClear()
@@ -198,7 +198,7 @@ describe('pollUpdateOnce', () => {
   })
 
   it('UAT 19 live replay: stale ACF for 40 ticks ends quietly, never finished at the stale build', async () => {
-    const p = pollWithTarget('5820078')
+    const p = await pollWithTarget('5820078')
     p.awaitingUpdate!.fromBuild = '5820077'
     acf({ stateFlags: 4, buildid: '5820077', targetBuildId: '5820077' })
     send.mockClear()
@@ -223,7 +223,7 @@ describe('pollUpdateOnce', () => {
   })
 
   it('UAT 19: reaching the PICS target logs finished at that build', async () => {
-    const p = pollWithTarget('5820078')
+    const p = await pollWithTarget('5820078')
     p.awaitingUpdate!.fromBuild = '5820077'
     acf({ stateFlags: 4, buildid: '5820078', targetBuildId: '5820078' })
     p.ticks = 5
@@ -235,7 +235,7 @@ describe('pollUpdateOnce', () => {
   })
 
   it('quiet end with no known target completes when the ACF is current', async () => {
-    const p = pollWithTarget(undefined)
+    const p = await pollWithTarget(undefined)
     acf({ stateFlags: 4, buildid: '777' })
     p.ticks = STEAM_REQUEST_NO_ACTIVITY_TICKS
     send.mockClear()
@@ -244,7 +244,7 @@ describe('pollUpdateOnce', () => {
   })
 
   it('quiet end at the target build completes', async () => {
-    const p = pollWithTarget('800')
+    const p = await pollWithTarget('800')
     acf({ stateFlags: 4, buildid: '800' })
     p.ticks = STEAM_REQUEST_NO_ACTIVITY_TICKS
     send.mockClear()
@@ -271,13 +271,13 @@ describe('pollUpdateOnce', () => {
         bytesToDownload: 1000,
         bytesDownloaded: 400
       })
-    async function tick(p: ReturnType<typeof pollWithTarget>) {
+    async function tick(p: Awaited<ReturnType<typeof pollWithTarget>>) {
       p.ticks += 1
       await pollUpdateOnce(deps, APP, p)
     }
 
     it('ends quietly after STEAM_UPDATE_ABANDONED_TICKS settled ticks, never finished', async () => {
-      const p = pollWithTarget('800')
+      const p = await pollWithTarget('800')
       downloading()
       await tick(p)
       expect(p.awaitingUpdate?.sawActivity).toBe(true)
@@ -305,7 +305,7 @@ describe('pollUpdateOnce', () => {
     })
 
     it('a settled read between active ticks restarts the count', async () => {
-      const p = pollWithTarget('800')
+      const p = await pollWithTarget('800')
       downloading()
       await tick(p)
       settled()
@@ -321,7 +321,7 @@ describe('pollUpdateOnce', () => {
     })
 
     it('reaching the target after a settled spell still finishes', async () => {
-      const p = pollWithTarget('800')
+      const p = await pollWithTarget('800')
       downloading()
       await tick(p)
       settled()
@@ -336,7 +336,7 @@ describe('pollUpdateOnce', () => {
   })
 
   it('ends quietly after the no-activity window', async () => {
-    const p = poll()
+    const p = await poll()
     acf({ stateFlags: 6, targetBuildId: '200' })
     p.ticks = STEAM_REQUEST_NO_ACTIVITY_TICKS
     await pollUpdateOnce(deps, APP, p)
@@ -359,8 +359,8 @@ describe('pollUpdateOnce InstallApp retry (74-30)', () => {
   beforeEach(() => jest.clearAllMocks())
   afterEach(() => stopInstallPolling(deps, APP))
 
-  function armed() {
-    startInstallPolling(deps, APP, {
+  async function armed() {
+    await startInstallPolling(deps, APP, {
       delegatedToSteamClient: true,
       awaitingUpdate: {
         fromBuild: '100',
@@ -372,7 +372,7 @@ describe('pollUpdateOnce InstallApp retry (74-30)', () => {
     acf({ stateFlags: 4, buildid: '100', targetBuildId: '100' })
     return p
   }
-  const due = (p: ReturnType<typeof armed>) => {
+  const due = (p: Awaited<ReturnType<typeof armed>>) => {
     p.ticks = p.delegatedSinceTick + STEAM_INSTALLAPP_RETRY_EVERY_TICKS
   }
 
@@ -380,7 +380,7 @@ describe('pollUpdateOnce InstallApp retry (74-30)', () => {
     jest
       .mocked(requestSteamInstallApp)
       .mockResolvedValue({ kind: 'ok', folderIndex: 0 } as never)
-    const p = armed()
+    const p = await armed()
     due(p)
     await pollUpdateOnce(deps, APP, p)
     expect(requestSteamInstallApp).toHaveBeenCalledTimes(1)
@@ -396,7 +396,7 @@ describe('pollUpdateOnce InstallApp retry (74-30)', () => {
     jest
       .mocked(requestSteamInstallApp)
       .mockResolvedValue({ kind: 'unavailable', reason: 'steam-not-running' })
-    const p = armed()
+    const p = await armed()
     due(p)
     await pollUpdateOnce(deps, APP, p)
     expect(p.awaitingUpdate?.installAppRetry?.attempts).toBe(1)
@@ -419,7 +419,7 @@ describe('pollUpdateOnce InstallApp retry (74-30)', () => {
     jest
       .mocked(requestSteamInstallApp)
       .mockResolvedValue({ kind: 'error', code: 9 } as never)
-    const p = armed()
+    const p = await armed()
     due(p)
     await pollUpdateOnce(deps, APP, p)
     expect(p.awaitingUpdate?.installAppRetry).toBeUndefined()
@@ -437,7 +437,7 @@ describe('pollUpdateOnce InstallApp retry (74-30)', () => {
         resolve = r
       }) as never
     )
-    const p = armed()
+    const p = await armed()
     due(p)
     const first = pollUpdateOnce(deps, APP, p)
     await Promise.resolve()
@@ -456,7 +456,7 @@ describe('pollUpdateOnce InstallApp retry (74-30)', () => {
       bytesDownloaded: 0,
       bytesToDownload: 1000
     })
-  const nonDue = (p: ReturnType<typeof armed>) => {
+  const nonDue = (p: Awaited<ReturnType<typeof armed>>) => {
     p.ticks = p.delegatedSinceTick + 1
   }
 
@@ -464,7 +464,7 @@ describe('pollUpdateOnce InstallApp retry (74-30)', () => {
     jest
       .mocked(requestSteamInstallApp)
       .mockResolvedValue({ kind: 'ok', folderIndex: 0 } as never)
-    const p = armed()
+    const p = await armed()
     pendingIdle()
     due(p)
     await pollUpdateOnce(deps, APP, p)
@@ -479,7 +479,7 @@ describe('pollUpdateOnce InstallApp retry (74-30)', () => {
     jest
       .mocked(requestSteamInstallApp)
       .mockResolvedValue({ kind: 'ok', folderIndex: 0 } as never)
-    const p = armed()
+    const p = await armed()
     pendingIdle()
     nonDue(p)
     await pollUpdateOnce(deps, APP, p)
@@ -491,7 +491,7 @@ describe('pollUpdateOnce InstallApp retry (74-30)', () => {
   })
 
   it('never retries once real activity was seen', async () => {
-    const p = armed()
+    const p = await armed()
     acf({ stateFlags: 0x106, targetBuildId: '200' })
     due(p)
     await pollUpdateOnce(deps, APP, p)
@@ -499,7 +499,7 @@ describe('pollUpdateOnce InstallApp retry (74-30)', () => {
   })
 
   it('UAT 25: growing BytesDownloaded under UpdateRequired disarms the retry', async () => {
-    const p = armed()
+    const p = await armed()
     acf({ stateFlags: 6, targetBuildId: '200', bytesDownloaded: 0 })
     nonDue(p)
     await pollUpdateOnce(deps, APP, p)
@@ -514,7 +514,7 @@ describe('pollUpdateOnce InstallApp retry (74-30)', () => {
     jest
       .mocked(requestSteamInstallApp)
       .mockResolvedValue({ kind: 'unavailable', reason: 'steam-not-running' })
-    const p = armed()
+    const p = await armed()
     pendingIdle()
     nonDue(p)
     await pollUpdateOnce(deps, APP, p)
@@ -532,7 +532,7 @@ describe('pollUpdateOnce InstallApp retry (74-30)', () => {
     jest
       .mocked(requestSteamInstallApp)
       .mockResolvedValue({ kind: 'unavailable', reason: 'steam-not-running' })
-    const p = armed()
+    const p = await armed()
     pendingIdle()
     nonDue(p)
     await pollUpdateOnce(deps, APP, p)
@@ -549,11 +549,11 @@ describe('pollUpdateOnce InstallApp retry (74-30)', () => {
 describe('startInstallPolling awaitingUpdate', () => {
   afterEach(() => stopInstallPolling(deps, APP))
 
-  it('sets awaitingUpdate on an existing install poll without a second entry', () => {
-    startInstallPolling(deps, APP, { delegatedToSteamClient: true })
+  it('sets awaitingUpdate on an existing install poll without a second entry', async () => {
+    await startInstallPolling(deps, APP, { delegatedToSteamClient: true })
     const first = getPoll()
     expect(first?.awaitingUpdate).toBeUndefined()
-    startInstallPolling(deps, APP, {
+    await startInstallPolling(deps, APP, {
       delegatedToSteamClient: true,
       awaitingUpdate: { fromBuild: '9' }
     })

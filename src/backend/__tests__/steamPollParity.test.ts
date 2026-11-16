@@ -200,7 +200,7 @@ async function applyThroughHandler(
       }
     } as never,
     manager: () => deps,
-    refreshInstallState: async () => undefined
+    refreshInstallState: () => Promise.resolve(undefined)
   })
   for (const rec of rust) {
     if ('state' in rec) await handler!({}, rec.state)
