@@ -79,7 +79,7 @@ pub struct AwaitingUpdateOpt {
 
 /// `PollOptions` (installRoot.ts), every field.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase", default)]
+#[serde(rename_all = "camelCase", default, deny_unknown_fields)]
 pub struct PollOptions {
     pub interval_ms: Option<u64>,
     pub source: Option<AcfSource>,
@@ -93,7 +93,7 @@ pub struct PollOptions {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct StartInstallArgs {
     pub app_id: String,
     /// Notification title fallback (the TS start site fills it from libraryState).

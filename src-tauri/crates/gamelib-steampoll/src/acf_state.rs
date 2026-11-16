@@ -12,7 +12,7 @@ use crate::constants::STATE_FLAG_FULLY_INSTALLED;
 /// Roots a poll reads. Native libraries are resolved per tick from `steamRoot` exactly as
 /// `getSteamLibraries` (src/backend/utils.ts:610-640) does.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct PollRoots {
     pub steam_root: String,
     pub bottle_steamapps_root: Option<String>,

@@ -1,0 +1,373 @@
+//! The op table: every op is handled, bad args are `{op}:bad-args`, ops that need the facade
+//! answer `steampoll:not-configured` before `install`, and the result shapes are camelCase.
+//! The facade is process-wide, so every test takes `GUARD`.
+
+use gamelib_steampoll::dispatch::{dispatch, facade, OPS};
+use gamelib_steampoll::profile::{Platform, SidecarProfile};
+use gamelib_steampoll::testing::{FakeClock, RecordingHost, ScriptedRunner};
+use serde_json::{json, Value};
+use std::sync::{Arc, Mutex, MutexGuard};
+
+static GUARD: Mutex<()> = Mutex::new(());
+
+fn guard() -> MutexGuard<'static, ()> {
+    GUARD.lock().unwrap_or_else(|e| e.into_inner())
+}
+
+fn install(home: &std::path::Path) -> Arc<RecordingHost> {
+    // The facade reads HOME once at install: point it at a scratch dir, never the real profile.
+    std::env::set_var("HOME", home);
+    std::env::set_var("USERPROFILE", home);
+    let host = Arc::new(RecordingHost::default());
+    let profile = SidecarProfile::resolve(Platform::current(), &home.to_string_lossy(), &|_| None);
+    facade::install_for_test(
+        host.clone(),
+        Arc::new(ScriptedRunner::default()),
+        Arc::new(FakeClock::new(1_700_000_000_000)),
+        host.clone(),
+        profile,
+    );
+    host
+}
+
+fn ok(op: &str, args: Value) -> Value {
+    dispatch(op, &[args]).unwrap_or_else(|e| panic!("{op}: {e}"))
+}
+
+fn roots(steam: &str) -> Value {
+    json!({"steamRoot": steam})
+}
+
+fn write_acf(dir: &std::path::Path, app_id: &str, flags: u32) {
+    std::fs::create_dir_all(dir).unwrap();
+    std::fs::write(
+        dir.join(format!("appmanifest_{app_id}.acf")),
+        format!(
+            "\"AppState\"\n{{\n\t\"appid\"\t\t\"{app_id}\"\n\t\"installdir\"\t\t\"Game\"\n\t\"StateFlags\"\t\t\"{flags}\"\n\t\"buildid\"\t\t\"7\"\n}}\n"
+        ),
+    )
+    .unwrap();
+}
+
+#[test]
+fn every_op_in_the_table_is_handled() {
+    let _g = guard();
+    for op in OPS {
+        // Ops that take no args may succeed once another test installed the facade.
+        if let Err(e) = dispatch(op, &[json!({"__nope": true})]) {
+            assert!(!e.contains("unknown-op"), "{op} is not handled: {e}");
+        }
+    }
+    assert_eq!(
+        dispatch("steampoll_nope", &[json!({})]),
+        Err("steampoll_nope:unknown-op".to_string())
+    );
+}
+
+#[test]
+fn bad_args_are_named_per_op() {
+    let _g = guard();
+    for op in OPS {
+        if matches!(
+            *op,
+            "steampoll_next_notice_seq"
+                | "steampoll_running_last_app_id"
+                | "steampoll_running_start"
+                | "steampoll_running_stop"
+                | "steampoll_status"
+                | "steampoll_read_running_app_id"
+        ) {
+            continue;
+        }
+        assert_eq!(
+            dispatch(op, &[json!({"__nope": true})]),
+            Err(format!("{op}:bad-args")),
+            "{op}"
+        );
+        assert_eq!(dispatch(op, &[]), Err(format!("{op}:bad-args")), "{op}");
+    }
+    // Unknown source, non-numeric appId, unknown option key.
+    assert_eq!(
+        dispatch(
+            "steampoll_acf_read_state",
+            &[json!({"roots": roots("/x"), "appId": "1", "source": "other"})]
+        ),
+        Err("steampoll_acf_read_state:bad-args".to_string())
+    );
+    assert_eq!(
+        dispatch("steampoll_install_stop", &[json!({"appId": "1; rm"})]),
+        Err("steampoll_install_stop:bad-args".to_string())
+    );
+    assert_eq!(
+        dispatch(
+            "steampoll_install_start",
+            &[json!({"appId": "1", "title": "t", "roots": roots("/x"), "options": {"extra": 1}})]
+        ),
+        Err("steampoll_install_start:bad-args".to_string())
+    );
+}
+
+#[test]
+fn ops_that_need_the_facade_are_not_configured_before_install() {
+    let _g = guard();
+    facade::reset_for_test();
+    assert!(facade::registry().is_none());
+    let nc = Err("steampoll:not-configured".to_string());
+    assert_eq!(dispatch("steampoll_status", &[]), nc);
+    assert_eq!(dispatch("steampoll_next_notice_seq", &[]), nc);
+    assert_eq!(dispatch("steampoll_running_start", &[]), nc);
+    assert_eq!(
+        dispatch("steampoll_install_stop", &[json!({"appId": "1"})]),
+        nc
+    );
+    // File-only ops need no facade.
+    assert!(dispatch(
+        "steampoll_breadcrumb_installed_on_disk",
+        &[json!({"steamappsDir": "/nonexistent", "appId": "1"})]
+    )
+    .is_ok());
+}
+
+#[test]
+fn acf_ops_read_and_remove_through_the_crate() {
+    let _g = guard();
+    let tmp = tempfile::tempdir().unwrap();
+    let steam = tmp.path().join("steam");
+    let apps = steam.join("steamapps");
+    write_acf(&apps, "1000", 4);
+    write_acf(&apps, "2000", 1026);
+    std::fs::write(
+        apps.join("libraryfolders.vdf"),
+        format!(
+            "\"libraryfolders\"\n{{\n\t\"0\"\n\t{{\n\t\t\"path\"\t\t\"{}\"\n\t}}\n}}\n",
+            steam.to_string_lossy()
+        ),
+    )
+    .unwrap();
+    let r = roots(&steam.to_string_lossy());
+
+    let st = ok(
+        "steampoll_acf_read_state",
+        json!({"roots": r, "appId": "1000", "source": "native"}),
+    );
+    assert_eq!(st["state"], "installed");
+    let absent = ok(
+        "steampoll_acf_read_state",
+        json!({"roots": r, "appId": "999", "source": "native"}),
+    );
+    assert_eq!(absent["state"], "absent");
+
+    let up = ok(
+        "steampoll_acf_read_update_from_dir",
+        json!({"steamappsDir": apps, "appId": "1000"}),
+    );
+    assert_eq!(up["buildid"], "7");
+    let none = ok(
+        "steampoll_acf_read_update_from_dir",
+        json!({"steamappsDir": apps, "appId": "3"}),
+    );
+    assert_eq!(none, Value::Null);
+    let up2 = ok(
+        "steampoll_acf_read_update",
+        json!({"roots": r, "appId": "1000", "source": "native"}),
+    );
+    assert_eq!(up2["steamappsDir"], apps.to_string_lossy().as_ref());
+
+    let copies = ok(
+        "steampoll_acf_enumerate_copies",
+        json!({"roots": r, "appId": "1000"}),
+    );
+    assert!(copies.as_array().is_some());
+    let dl = ok("steampoll_acf_scan_downloading", json!({"roots": r}));
+    assert!(dl.as_array().unwrap().contains(&json!("2000")));
+    let others = ok(
+        "steampoll_acf_find_other_manifests",
+        json!({"steamappsDir": apps, "installdir": "Game", "appId": "1000"}),
+    );
+    assert!(others.as_array().unwrap().contains(&json!("2000")));
+
+    // Breadcrumb: true only for a fully-installed manifest.
+    let bc = |id: &str| {
+        ok(
+            "steampoll_breadcrumb_installed_on_disk",
+            json!({"steamappsDir": apps, "appId": id}),
+        )
+    };
+    assert_eq!(bc("1000"), json!(true));
+    assert_eq!(bc("2000"), json!(false));
+    assert_eq!(bc("404"), json!(false));
+    assert_eq!(bc("not-a-number"), json!(false));
+
+    // The only deleting op goes through acf_copies::remove_copy and its guard: a manifest-only
+    // removal result is a status object, never a bare error.
+    let rm = ok(
+        "steampoll_acf_remove_copy",
+        json!({"roots": r, "appId": "404", "source": "native"}),
+    );
+    assert!(rm["status"].is_string());
+}
+
+#[test]
+fn install_ops_drive_the_registry_and_status() {
+    let _g = guard();
+    let tmp = tempfile::tempdir().unwrap();
+    install(tmp.path());
+    let steam = tmp.path().join("steam");
+    std::fs::create_dir_all(steam.join("steamapps")).unwrap();
+
+    assert_eq!(
+        ok(
+            "steampoll_install_start",
+            json!({"appId": "1000", "title": "T", "roots": roots(&steam.to_string_lossy()),
+                   "options": {"source": "native", "intervalMs": 100000}})
+        ),
+        Value::Null
+    );
+    let st = ok("steampoll_status", json!(null));
+    assert_eq!(st["installs"][0]["appId"], "1000");
+    assert_eq!(st["installs"][0]["delegatedToSteamClient"], false);
+    assert!(st["uninstalls"].is_array());
+
+    assert_eq!(
+        ok(
+            "steampoll_install_cancel_delegated",
+            json!({"appId": "1000"})
+        ),
+        json!(false)
+    );
+    assert_eq!(
+        ok(
+            "steampoll_native_in_flight",
+            json!({"appId": "1000", "inFlight": true})
+        ),
+        Value::Null
+    );
+    assert_eq!(
+        ok(
+            "steampoll_bridge_finalized",
+            json!({"appId": "1000", "finalized": true})
+        ),
+        Value::Null
+    );
+    assert_eq!(
+        ok("steampoll_install_stop", json!({"appId": "1000"})),
+        json!(true)
+    );
+    assert_eq!(
+        ok("steampoll_install_stop", json!({"appId": "1000"})),
+        json!(false)
+    );
+
+    let a = ok("steampoll_next_notice_seq", json!(null))
+        .as_u64()
+        .unwrap();
+    let b = ok("steampoll_next_notice_seq", json!(null))
+        .as_u64()
+        .unwrap();
+    assert_eq!(b, a + 1);
+    assert!(facade::registry().is_some() && facade::outbox().is_some());
+}
+
+#[test]
+fn uninstall_and_running_ops() {
+    let _g = guard();
+    let tmp = tempfile::tempdir().unwrap();
+    install(tmp.path());
+    let steam = tmp.path().join("steam");
+    std::fs::create_dir_all(steam.join("steamapps")).unwrap();
+
+    let started = ok(
+        "steampoll_uninstall_start",
+        json!({"appId": "1000", "title": "T", "roots": roots(&steam.to_string_lossy()),
+               "source": "native", "intervalMs": 100000}),
+    );
+    assert_eq!(started, json!(true));
+    assert_eq!(
+        ok(
+            "steampoll_uninstall_start",
+            json!({"appId": "1000", "title": "T", "roots": roots(&steam.to_string_lossy()),
+                   "source": "native"})
+        ),
+        json!(false)
+    );
+    assert_eq!(
+        ok("steampoll_uninstall_stop", json!({"appId": "1000"})),
+        json!(true)
+    );
+
+    assert_eq!(ok("steampoll_running_last_app_id", json!(null)), json!(0));
+    let claim = ok("steampoll_running_hold", json!({"appId": 1000}));
+    assert!(claim.as_u64().is_some());
+    assert_eq!(
+        ok(
+            "steampoll_running_release",
+            json!({"claimId": claim, "terminalSent": true})
+        ),
+        Value::Null
+    );
+    // A released (unknown) claim is a no-op.
+    assert_eq!(
+        ok(
+            "steampoll_running_release",
+            json!({"claimId": claim, "terminalSent": true})
+        ),
+        Value::Null
+    );
+    assert_eq!(ok("steampoll_running_start", json!(null)), Value::Null);
+    assert_eq!(ok("steampoll_running_stop", json!(null)), Value::Null);
+
+    let id = ok("steampoll_read_running_app_id", json!({"strict": false}));
+    assert_eq!(id, json!(0));
+    assert_eq!(dispatch("steampoll_read_running_app_id", &[]), Ok(json!(0)));
+    let verdict = ok(
+        "steampoll_mac_arch_verdict",
+        json!({"installPath": tmp.path().join("nothing")}),
+    );
+    assert_eq!(verdict, Value::Null);
+}
+
+#[test]
+fn strict_running_read_errors_without_a_profile_home() {
+    let _g = guard();
+    if cfg!(windows) {
+        return;
+    }
+    let tmp = tempfile::tempdir().unwrap();
+    install(tmp.path());
+    // The facade captured a real scratch home above; rebuild it with no home at all.
+    std::env::set_var("HOME", "");
+    std::env::set_var("USERPROFILE", "");
+    let host = Arc::new(RecordingHost::default());
+    facade::install_for_test(
+        host.clone(),
+        Arc::new(ScriptedRunner::default()),
+        Arc::new(FakeClock::new(0)),
+        host,
+        SidecarProfile::resolve(Platform::current(), "/fake", &|_| None),
+    );
+    let e = dispatch("steampoll_read_running_app_id", &[json!({"strict": true})])
+        .expect_err("strict with no home must refuse");
+    assert!(e.starts_with("steampoll_read_running_app_id:"), "{e}");
+    assert_eq!(
+        dispatch("steampoll_read_running_app_id", &[json!({"strict": false})]),
+        Ok(json!(0))
+    );
+}
+
+#[tokio::test]
+async fn async_ops_refuse_to_run_inside_a_runtime() {
+    let _g = guard();
+    let tmp = tempfile::tempdir().unwrap();
+    install(tmp.path());
+    assert_eq!(
+        dispatch("steampoll_read_running_app_id", &[json!({"strict": false})]),
+        Err("steampoll_read_running_app_id:wrong-thread".to_string())
+    );
+    assert_eq!(
+        dispatch(
+            "steampoll_mac_arch_verdict",
+            &[json!({"installPath": "/x"})]
+        ),
+        Err("steampoll_mac_arch_verdict:wrong-thread".to_string())
+    );
+}

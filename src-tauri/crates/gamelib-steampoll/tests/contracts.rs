@@ -188,8 +188,8 @@ fn ops_sorted_and_unique() {
 #[test]
 fn dispatch_unknown_op_is_an_error() {
     assert_eq!(
-        gamelib_steampoll::dispatch("steampoll_status", &[]),
-        Err("steampoll_status:unknown-op".to_string())
+        gamelib_steampoll::dispatch("steampoll_nope", &[]),
+        Err("steampoll_nope:unknown-op".to_string())
     );
 }
 
