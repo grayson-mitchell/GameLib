@@ -164,7 +164,7 @@ describe('rust branch', () => {
 
 describe('ts branch', () => {
   it('sends nothing to Rust', async () => {
-    delete process.env[FLAG]
+    process.env[FLAG] = 'ts'
     const { deps, calls } = makeDeps()
     await stopInstallPolling(deps, '10')
     expect(await cancelDelegatedInstall(deps, '10')).toBe(false)

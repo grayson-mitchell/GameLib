@@ -148,7 +148,7 @@ pub(crate) enum PollsImpl {
 
 // Flipped to Rust by plan 80-26 after parity approval (D-16); this whole flag is deleted after
 // the delete gate (plan 80-31).
-pub(crate) const DEFAULT_POLLS_IMPL: PollsImpl = PollsImpl::Ts;
+pub(crate) const DEFAULT_POLLS_IMPL: PollsImpl = PollsImpl::Rust;
 
 /// Pure parse of `GAMELIB_STEAM_POLLS`. An unknown value falls back to the default with one diag line
 /// (the value itself is not logged, T-80-64).

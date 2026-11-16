@@ -110,7 +110,7 @@ describe('uninstall API', () => {
   })
 
   it('ts: sends nothing to Rust and uses the local seq', async () => {
-    delete process.env[FLAG]
+    process.env[FLAG] = 'ts'
     const { deps, calls } = makeDeps()
     expect(await noticeSeq({ deps } as never)).toBe(7)
     await stopUninstallPolling(deps, '10')
@@ -207,7 +207,7 @@ describe('running probe and poll', () => {
   })
 
   it('ts: the readers do not call steampoll', async () => {
-    delete process.env[FLAG]
+    process.env[FLAG] = 'ts'
     const { deps, calls } = probeDeps(() => ({ runningAppId: 0 }))
     await readMacRunningAppId(deps)
     expect(calls.map((c) => c.channel)).not.toContain(

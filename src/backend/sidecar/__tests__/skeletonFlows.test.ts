@@ -930,3 +930,13 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
     })
   })
 })
+
+// Plan 80-26: the polls flag now defaults to rust; this file exercises the ts arm, so pin it.
+const prevPollsImpl = process.env.GAMELIB_STEAM_POLLS
+beforeAll(() => {
+  process.env.GAMELIB_STEAM_POLLS = 'ts'
+})
+afterAll(() => {
+  if (prevPollsImpl === undefined) delete process.env.GAMELIB_STEAM_POLLS
+  else process.env.GAMELIB_STEAM_POLLS = prevPollsImpl
+})
