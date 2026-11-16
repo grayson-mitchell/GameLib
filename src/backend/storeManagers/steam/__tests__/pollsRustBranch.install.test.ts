@@ -36,8 +36,6 @@ function makeDeps(result: unknown = null) {
     steamSession: {
       libraryState: { library: new Map([['10', { title: 'Ten' }]]) }
     },
-    steamInstallRuntime: { polls: { activePolls: new Map() } },
-    steamProcesses: { downloadMonitor: { stop: jest.fn() } },
     sendFrontendMessage: send
   } as unknown as ManagerDeps
   return { deps, calls, send }
@@ -46,13 +44,13 @@ function makeDeps(result: unknown = null) {
 describe('wrapper', () => {
   it('forwards channel and one args object, and propagates a rejection', async () => {
     const { deps, calls } = makeDeps()
-    await invokeSteamPoll(deps, 'steampoll_status', {})
-    expect(calls).toEqual([{ channel: 'steampoll_status', args: [{}] }])
+    await invokeSteamPoll(deps, 'steampoll_status')
+    expect(calls).toEqual([{ channel: 'steampoll_status', args: [] }])
     const rejecting = {
       requestRustInvoke: () => Promise.reject(new Error('boom'))
     }
     await expect(
-      invokeSteamPoll(rejecting, 'steampoll_status', {})
+      invokeSteamPoll(rejecting, 'steampoll_status')
     ).rejects.toThrow('boom')
   })
 
@@ -88,7 +86,6 @@ describe('rust branch', () => {
       options: { delegatedToSteamClient: true }
     })
     expect(jest.getTimerCount()).toBe(0)
-    expect(deps.steamInstallRuntime.polls.activePolls.size).toBe(0)
   })
 
   it('a bare number option sends empty options', async () => {

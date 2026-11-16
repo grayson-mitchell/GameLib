@@ -342,15 +342,6 @@ export function createSteamStores(deps: StoreFamilyDeps) {
     null,
     { root: deps.root, kind: 'user-state' }
   )
-  // ── quick 261029-pkp: persisted "Restart Steam to finish" hold records ──────
-  // One record per appId whose native install is held waiting for a Steam
-  // restart, so the hold survives a GameLib restart. Read through the injected
-  // `Stores['steam']` slice (`restartHoldStoreFrom` in steamRestartHold.ts).
-  const steamRestartHoldStore = new CacheStore<unknown>(
-    'steam_restart_hold',
-    null,
-    { root: deps.root, kind: 'user-state' }
-  )
   // ── Phase 57: persisted "known-fix report sent" records (D-16/D-17) ─────────
   // Read through the injected `Stores['steam']` slice (`knownFixReportDeps` in
   // backend/knownFixReport.ts).
@@ -376,7 +367,6 @@ export function createSteamStores(deps: StoreFamilyDeps) {
     steamMetadataStore,
     steamSyncStore,
     steamPendingAdoptionStore,
-    steamRestartHoldStore,
     steamKnownFixReportStore,
     steamUpdatePromptAckStore
   }

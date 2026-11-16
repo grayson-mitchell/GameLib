@@ -13,7 +13,6 @@ import {
 import { restoreLocalSteamLibrary } from './localLibrary'
 import { syncOwnedLibraryRust, tryMacSteamRefresh } from './rustRefresh'
 import { macSteamPathEnabled } from './macSteamPathFlag'
-import { pollsImpl } from './pollsFlag'
 import { RUST_STEAMPOLL_STATUS } from 'common/types/sidecarTransport'
 import {
   invokeSteamPoll,
@@ -177,14 +176,11 @@ export async function refresh(deps: ManagerDeps): Promise<ExecResult | null> {
  */
 export async function refreshInstallState(deps: ManagerDeps): Promise<void> {
   const { steamLibraryStore } = deps.stores.steam
-  // D-01: under polls=rust the poll registry lives in Rust; one status call per reconcile, made lazily.
+  // D-01: the poll registry lives in Rust; one status call per reconcile, made lazily.
   let rustPollIds: Promise<Set<string>> | null = null
   const hasActiveInstallPoll = async (appId: string): Promise<boolean> => {
-    if (pollsImpl() !== 'rust') {
-      return deps.steamInstallRuntime.polls.activePolls.has(appId)
-    }
     rustPollIds ??= (
-      invokeSteamPoll(deps, RUST_STEAMPOLL_STATUS, {}) as Promise<PollStatus>
+      invokeSteamPoll(deps, RUST_STEAMPOLL_STATUS) as Promise<PollStatus>
     ).then((s) => new Set(s.installs.map((i) => i.appId)))
     return (await rustPollIds).has(appId)
   }

@@ -4,7 +4,6 @@ import type { SteamStoresDeps } from './library/installRoot'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import { RUST_STEAMPOLL_NATIVE_IN_FLIGHT } from 'common/types/sidecarTransport'
 import { invokeSteamPoll } from './pollRust/rustSteamPoll'
-import { pollsImpl } from './library/pollsFlag'
 
 /**
  * A single tracked native depot-download run for one appId — the value type
@@ -100,7 +99,7 @@ export interface SteamGameSessionState {
 }
 
 /**
- * R7: under polls=rust every change to the in-flight set is pushed to Rust (fire and forget), so Rust
+ * R7: every change to the in-flight set is pushed to Rust (fire and forget), so Rust
  * never calls back into TS per tick. The read API is a plain Map's.
  */
 class MirroredInFlightMap extends Map<string, NativeInstallEntry> {
@@ -110,7 +109,7 @@ class MirroredInFlightMap extends Map<string, NativeInstallEntry> {
 
   private push(appId: string, inFlight: boolean): void {
     const requestRustInvoke = this.rust?.requestRustInvoke
-    if (pollsImpl() !== 'rust' || !requestRustInvoke) return
+    if (!requestRustInvoke) return
     invokeSteamPoll({ requestRustInvoke }, RUST_STEAMPOLL_NATIVE_IN_FLIGHT, {
       appId,
       inFlight

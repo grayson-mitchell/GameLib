@@ -89,7 +89,6 @@ import {
   clearOrphanedElectronToken
 } from '../storeManagers/steam/tokenStore'
 import { createSteamBottle } from '../storeManagers/steam/bottle'
-import { pollsImpl } from '../storeManagers/steam/library/pollsFlag'
 import { SidecarKeyringTokenStore } from './keyringTokenStore'
 import {
   createSidecarHumbleSecretStore,
@@ -353,7 +352,6 @@ export const BOOT_STEP_NAMES = [
   'anticheat-listener',
   'releases-fetch',
   'installed-json-watcher',
-  'steam-running-poll',
   'playtime-lock-clear',
   'legacy-zoom-cleanup',
   'engine-temp-sweep',
@@ -1911,8 +1909,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         }
         state.services.runner = prebuilt.runner ?? ctx.runner
         state.services.clock = ctx.clock
-        // Built once per boot; starts nothing (the 'steam-running-poll' step arms the poller's
-        // interval, the monitors spawn per polled install), so the exit contract holds.
+        // Built once per boot; starts nothing, so the exit contract holds.
         const { config } = state.services
         if (!config) throw new Error('boot: config step must run first')
         state.services.steamProcesses =
@@ -2759,10 +2756,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         releaseOnStdinEof(input, {
           outboundHttp,
           downloadQueue: services.downloadQueue,
-          aborts: services.aborts,
-          stopAllSteamDownloadMonitors: () =>
-            services.steamProcesses.downloadMonitor.stopAll(),
-          stopRunningGamePoll: () => services.steamProcesses.runningPoll.stop()
+          aborts: services.aborts
         })
       }
     },
@@ -3031,40 +3025,6 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
               LogPrefix.Backend
             )
           }
-        }
-      }
-    },
-    {
-      name: 'steam-running-poll',
-      run: (_ctx, _io, state) => {
-        // The global RunningAppID poller (quick 261111-7wo, todo 2026-11-11). It used to start only
-        // from `SteamLibraryManager.init()`, which -- like `initStoreManagers()` -- is dead under
-        // Tauri, so a Windows `steam://launch` launch (no `steamLaunchWatch` coverage) never
-        // reached Playing. Starting it here makes this step the single owner.
-        //
-        // Placement: after 'rpc-server' and 'transport' (a gameStatusUpdate frame always has a bound
-        // transport) and before READY. `start()` is registration only: the first probe lands one
-        // interval (5 s) later, so nothing runs at boot itself.
-        //
-        // Exit contract: the interval is a `ctx.clock` timer, unref'd by default, with no keepAlive.
-        // Each probe is a `runner.run` child with a timeout (reg 2000 ms / ps 1000 ms) and is itself
-        // unref'd, so nothing here references the loop. It is still stopped at stdin EOF, from the
-        // 'rpc-server' step (releaseOnStdinEof), so a post-EOF tick never spawns or writes a frame.
-        //
-        // No `JEST_WORKER_ID` guard, unlike 'installed-json-watcher': every test boot carries a fake
-        // clock, so nothing real is armed -- and a guard would make this step untestable.
-        //
-        // D-13: under GAMELIB_STEAM_POLLS=rust the shell started the Rust running poll (plan 21) and
-        // this TS poll is not started, so two never run. The stdin-EOF stop and downloadMonitor
-        // stopAll are then no-ops (nothing was armed); the shell owns Rust's teardown.
-        try {
-          if (pollsImpl() !== 'rust')
-            requireSteamProcesses(state).runningPoll.start()
-        } catch (error) {
-          logWarning(
-            `[bootstrap] running-game poller failed to start: ${String(error)}`,
-            LogPrefix.Backend
-          )
         }
       }
     },

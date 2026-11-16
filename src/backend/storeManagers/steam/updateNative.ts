@@ -42,8 +42,7 @@ export async function pollOwnsUpdate(
 ): Promise<boolean> {
   const status = (await invokeSteamPoll(
     deps,
-    RUST_STEAMPOLL_STATUS,
-    {}
+    RUST_STEAMPOLL_STATUS
   )) as PollStatus
   return status.installs.find((i) => i.appId === appId)?.awaitingUpdate === true
 }

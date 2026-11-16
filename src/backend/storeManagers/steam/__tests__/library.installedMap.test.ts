@@ -127,15 +127,6 @@ jest.mock('../stores', () => ({
   steamSyncStore: {
     get: jest.fn(),
     set: jest.fn()
-  },
-  // quick 261029-pkp: persisted restart-hold records. Map-backed in the
-  // pkp describe; bare jest.fns elsewhere (entries() -> undefined is caught
-  // by listSteamRestartHolds and reads as an empty store).
-  steamRestartHoldStore: {
-    get: jest.fn(),
-    set: jest.fn(),
-    delete: jest.fn(),
-    entries: jest.fn()
   }
 }))
 

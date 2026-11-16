@@ -13,8 +13,6 @@ const downloadQueue = {
   isRunning: () => running(),
   pauseCurrentDownload: () => pause()
 }
-const stopMonitors = jest.fn()
-const stopPoll = jest.fn()
 const destroyHttp = jest.fn()
 const markShuttingDown = jest.fn()
 const deps = {
@@ -24,10 +22,7 @@ const deps = {
   },
   downloadQueue,
   // The abort registry is injected (66.4-13): the release path only needs abortAll.
-  aborts: { abortAll: () => callAll() },
-  stopAllSteamDownloadMonitors: () => stopMonitors(),
-  // The running-game poller instance (quick 261111-7wo): stopped at EOF, never a loop-holder.
-  stopRunningGamePoll: () => stopPoll()
+  aborts: { abortAll: () => callAll() }
 }
 
 import { logInfo, logWarning } from '../../logger'
@@ -48,7 +43,6 @@ describe('releaseOnStdinEof (debug/sidecar-survives-force-quit)', () => {
     input.write('x\n')
     expect(callAll).not.toHaveBeenCalled()
     expect(destroyHttp).not.toHaveBeenCalled()
-    expect(stopPoll).not.toHaveBeenCalled()
   })
 
   it('aborts downloads and releases once at EOF', () => {
@@ -59,8 +53,6 @@ describe('releaseOnStdinEof (debug/sidecar-survives-force-quit)', () => {
     return new Promise<void>((resolve) => setImmediate(resolve)).then(() => {
       expect(callAll).toHaveBeenCalledTimes(1)
       expect(destroyHttp).toHaveBeenCalledTimes(1)
-      // Both 'end' and 'close' fire on a PassThrough; the poller is stopped once.
-      expect(stopPoll).toHaveBeenCalledTimes(1)
     })
   })
 
@@ -103,33 +95,6 @@ describe('releaseOnStdinEof (debug/sidecar-survives-force-quit)', () => {
     })
   })
 
-  it('stops all nettop monitors once at EOF, and still releases if that throws', () => {
-    stopMonitors.mockImplementationOnce(() => {
-      throw new Error('boom')
-    })
-    const input = new PassThrough()
-    releaseOnStdinEof(input, deps)
-    input.resume()
-    input.end()
-    return new Promise<void>((resolve) => setImmediate(resolve)).then(() => {
-      expect(stopMonitors).toHaveBeenCalledTimes(1)
-      expect(destroyHttp).toHaveBeenCalledTimes(1)
-    })
-  })
-
-  it('still destroys outbound HTTP if stopping the poller throws', async () => {
-    stopPoll.mockImplementationOnce(() => {
-      throw new Error('boom')
-    })
-    const input = new PassThrough()
-    releaseOnStdinEof(input, deps)
-    input.resume()
-    input.end()
-    await new Promise<void>((resolve) => setImmediate(resolve))
-    expect(stopPoll).toHaveBeenCalledTimes(1)
-    expect(destroyHttp).toHaveBeenCalledTimes(1)
-  })
-
   it('logs the stdin-closed line', async () => {
     const input = new PassThrough()
     releaseOnStdinEof(input, deps)
@@ -138,7 +103,7 @@ describe('releaseOnStdinEof (debug/sidecar-survives-force-quit)', () => {
     await new Promise<void>((resolve) => setImmediate(resolve))
     const lines = (logInfo as jest.Mock).mock.calls.map((c) => String(c[0]))
     expect(lines).toContain(
-      '[sidecar] stdin closed: stopping nettop monitors and aborting in-flight downloads'
+      '[sidecar] stdin closed: aborting in-flight downloads'
     )
   })
 

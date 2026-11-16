@@ -29,10 +29,8 @@ export const RESIDUAL_HOLDER_DIAG_MS = 15_000
  *      still holds the loop. See todo 2026-11-09-sidecar-orphaned-after-tauri-dev-ctrl-c /
  *      quick 261110-9w2.
  *
- * The running-game poller (SteamProcesses.runningPoll) is stopped here too, but it is NOT a third
- * loop-holder: its interval is an unref'd clock timer. It is stopped so a post-EOF tick neither
- * spawns reg.exe/ps nor writes a gameStatusUpdate frame to a stdout whose peer is gone
- * (quick 261111-7wo).
+ * The nettop download monitor and the running-game poll are Rust since Phase 80: the shell owns
+ * their teardown, so nothing for them is released here.
  *
  * This is a deliberate AMENDMENT of "no 'end' handler by design": it does not tear the process
  * down (no process.exit) -- it only drops references to handles that cannot be unref'd, and the
@@ -46,10 +44,6 @@ export function releaseOnStdinEof(
     downloadQueue: Pick<DownloadQueue, 'isRunning' | 'pauseCurrentDownload'>
     /** The boot-owned abort registry (66.4-13): aborted after the queue pause, so every in-flight job ends. */
     aborts: Pick<AbortRegistry, 'abortAll'>
-    /** Kills every nettop watchdog child (SteamProcesses.downloadMonitor.stopAll). */
-    stopAllSteamDownloadMonitors: () => void
-    /** Stops the running-game poller (SteamProcesses.runningPoll.stop). */
-    stopRunningGamePoll: () => void
   }
 ): void {
   let released = false
@@ -57,7 +51,7 @@ export function releaseOnStdinEof(
     if (released) return
     released = true
     logInfo(
-      '[sidecar] stdin closed: stopping nettop monitors and aborting in-flight downloads',
+      '[sidecar] stdin closed: aborting in-flight downloads',
       LogPrefix.Backend
     )
     try {
@@ -69,18 +63,6 @@ export function releaseOnStdinEof(
     }
     try {
       deps.aborts.abortAll()
-    } catch {
-      // best-effort: still release below
-    }
-    try {
-      // quick 261029-sex: kill the nettop children (killable, not unref-able away).
-      deps.stopAllSteamDownloadMonitors()
-    } catch {
-      // best-effort: still release below
-    }
-    try {
-      // quick 261111-7wo: no post-EOF probe spawn or frame write.
-      deps.stopRunningGamePoll()
     } catch {
       // best-effort: still release below
     }

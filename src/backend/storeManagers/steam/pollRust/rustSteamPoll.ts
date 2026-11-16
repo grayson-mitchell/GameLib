@@ -22,10 +22,14 @@ import type { PollRoots, PollStatus } from './steamPollTypes'
 export function invokeSteamPoll<C extends RustSteamPollChannel>(
   deps: RustInvokeDeps,
   channel: C,
-  args: Record<string, unknown>
+  args?: Record<string, unknown>
 ): Promise<unknown> {
   logDebug(`[steampoll] rust ${channel}`, LogPrefix.Steam)
-  return deps.requestRustInvoke(channel, [args] as RustInvokeArgsOf<C>)
+  // A channel with an empty-tuple schema (steampoll_status) is called without args: `[]`, not `[{}]`.
+  return deps.requestRustInvoke(
+    channel,
+    (args === undefined ? [] : [args]) as RustInvokeArgsOf<C>
+  )
 }
 
 function resolveOrNull(resolve: () => string): string | null {
@@ -78,7 +82,7 @@ export function titleFor(
  * 4 while the running Steam client is still unaware of it, so without this the window-focus
  * reconcile (refreshInstallState) and a full refresh() would flip the badge to installed the moment
  * the user alt-tabs to Steam to restart it. D-01: Rust owns the registry; its holding[] includes the
- * pending boot rearm (fail closed, T-80-70). Moved from library/restartHold.ts (Phase 80).
+ * pending boot rearm (fail closed, T-80-70). Moved here in Phase 80.
  */
 export async function withoutSteamRestartHolds<T>(
   deps: RustInvokeDeps,
@@ -86,8 +90,7 @@ export async function withoutSteamRestartHolds<T>(
 ): Promise<Map<number, T>> {
   const status = (await invokeSteamPoll(
     deps,
-    RUST_STEAMPOLL_STATUS,
-    {}
+    RUST_STEAMPOLL_STATUS
   )) as PollStatus
   const holding = new Set(status.holding)
   for (const appId of [...installed.keys()]) {

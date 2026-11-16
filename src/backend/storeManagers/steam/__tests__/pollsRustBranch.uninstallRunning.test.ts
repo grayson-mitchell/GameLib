@@ -37,10 +37,6 @@ function makeDeps(result: unknown = null) {
     libraryManagers: { steam: { launchWatches: new Map() } },
     steamSession: {
       libraryState: { library: new Map([['10', { title: 'Ten' }]]) }
-    },
-    steamInstallRuntime: {
-      uninstallPolls: { activeUninstallPolls: new Map() },
-      polls: { nextSteamRequestNoticeSeq: jest.fn(() => 7) }
     }
   } as unknown as ManagerDeps
   return { deps, calls }
@@ -68,9 +64,6 @@ describe('uninstall API', () => {
       bridgeAuthoritative: false
     })
     expect(jest.getTimerCount()).toBe(0)
-    expect(
-      deps.steamInstallRuntime.uninstallPolls.activeUninstallPolls.size
-    ).toBe(0)
   })
 
   it('rust: a bare number is the interval', async () => {
@@ -94,9 +87,6 @@ describe('uninstall API', () => {
     const { deps, calls } = makeDeps(42)
     expect(await noticeSeq({ deps } as never)).toBe(42)
     expect(calls[0]?.channel).toBe('steampoll_next_notice_seq')
-    expect(
-      deps.steamInstallRuntime.polls.nextSteamRequestNoticeSeq
-    ).not.toHaveBeenCalled()
   })
 })
 

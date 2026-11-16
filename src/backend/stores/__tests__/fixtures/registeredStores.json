@@ -387,18 +387,6 @@
     "registeredAs": null,
     "options": {
       "cwd": "store_cache",
-      "name": "steam_restart_hold",
-      "clearInvalidConfig": true,
-      "schemaKeys": null
-    },
-    "declaration": {
-      "kind": "user-state"
-    }
-  },
-  {
-    "registeredAs": null,
-    "options": {
-      "cwd": "store_cache",
       "name": "steam_sync",
       "clearInvalidConfig": true,
       "schemaKeys": null

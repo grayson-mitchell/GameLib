@@ -41,7 +41,7 @@ import {
 /**
  * Status context while a bridge install runs its post-download tail (quick 261029-exu). The
  * frontend matches the same literal, like the other Steam install contexts. (Moved from the
- * deleted library/pollState.ts, Phase 80.)
+ * deleted TS poll state, Phase 80.)
  */
 const STEAM_BRIDGE_FINISHING_CONTEXT = 'steam-bridge-finishing'
 

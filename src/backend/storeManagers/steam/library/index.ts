@@ -185,9 +185,6 @@ export default class SteamLibraryManager implements LibraryManager {
       this.deps.steamSession.authTrigger.noteSteamAuthTrigger('startup')
       this.deps.onlineMonitor.runOnceWhenOnline(() => this.refresh())
     }
-
-    // The running-game poller is started by the sidecar boot step 'steam-running-poll' and stopped
-    // at stdin EOF (quick 261111-7wo); init() is not called under Tauri.
   }
 
   getGame(id: string): SteamGame {

@@ -1,6 +1,6 @@
 /**
  * 66.4-09: the Steam install runtime holds per-instance state. Two runtimes share no app order,
- * lock, job, poll or hold entry; construction arms no timer.
+ * lock or job entry; construction arms no timer.
  */
 import * as logger from 'backend/logger'
 import { createTestAppRuntime } from 'backend/testUtils/testAppRuntime'
@@ -101,29 +101,5 @@ describe('createSteamInstallRuntime', () => {
     expect(seen).toEqual([0])
     dispose()
     expect(a.depotJobs.lookupActiveDepotJob('j')).toBeUndefined()
-  })
-
-  it('restart-hold bookkeeping drops the apps the Rust registry reports holding, per instance', async () => {
-    // Rust owns the registry; its holding[] already includes a pending boot rearm (fail closed).
-    const a = createSteamInstallRuntime({
-      ...createTestHostServices({
-        rustInvoke: () =>
-          Promise.resolve({ installs: [], uninstalls: [], holding: ['5', '7'] })
-      }),
-      appRuntime: createTestAppRuntime()
-    })
-    const b = createSteamInstallRuntime(transport())
-    const installed = new Map<number, string>([
-      [5, 'x'],
-      [6, 'y'],
-      [7, 'z'],
-      [8, 'w']
-    ])
-    expect([
-      ...(await a.restartHold.withoutSteamRestartHolds(installed)).keys()
-    ]).toEqual([6, 8])
-    // Another runtime reads its own (empty) registry.
-    const other = new Map<number, string>([[5, 'x']])
-    expect((await b.restartHold.withoutSteamRestartHolds(other)).size).toBe(1)
   })
 })
