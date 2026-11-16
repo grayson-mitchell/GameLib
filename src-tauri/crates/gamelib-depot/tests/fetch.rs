@@ -482,3 +482,58 @@ async fn permanent_http_failure_still_fails_after_the_attempt_budget() {
     assert_eq!(fail.http_status, Some(404));
     assert_eq!(cdn.hit_count("/depot/10/chunk/abc"), 8);
 }
+
+/// A/IN-01: transport errors retry past the attempt budget while the outage budget lasts, so the
+/// failure message must carry the real attempt count, not the configured budget.
+#[tokio::test]
+async fn outage_exhaustion_reports_the_real_attempt_count() {
+    let addr = dead_addr().await;
+    let f = fetcher(
+        Arc::new(FakeHost::new()),
+        vec![host_ref(&addr, "SteamCache", false)],
+    )
+    .with_budget(3, Duration::from_secs(15))
+    .with_backoff(1, 3)
+    .with_transient_budget(Duration::from_millis(300));
+    let fail = failed(
+        f.fetch_chunk("10", "abc", 0, 0, &CancellationToken::new())
+            .await
+            .unwrap_err(),
+    );
+    assert_eq!(fail.kind, ErrorKind::Network);
+    let n: u32 = fail
+        .message
+        .split("failed after ")
+        .nth(1)
+        .and_then(|r| r.split(' ').next())
+        .and_then(|n| n.parse().ok())
+        .unwrap_or_else(|| panic!("no attempt count in {}", fail.message));
+    assert!(n > 3, "reported {n} attempts: {}", fail.message);
+    assert!(
+        fail.message.contains("(outage budget exhausted)"),
+        "{}",
+        fail.message
+    );
+}
+
+#[tokio::test]
+async fn http_exhaustion_does_not_claim_an_outage() {
+    let cdn = FakeCdn::start().await;
+    cdn.script("/depot/10/chunk/abc", vec![Reply::Status(500, vec![])]);
+    let f = fetcher(
+        Arc::new(FakeHost::new()),
+        vec![host_ref(&cdn.host(), "SteamCache", false)],
+    )
+    .with_backoff(1, 3);
+    let fail = failed(
+        f.fetch_chunk("10", "abc", 0, 0, &CancellationToken::new())
+            .await
+            .unwrap_err(),
+    );
+    assert!(
+        fail.message.contains("after 8 attempts: HTTP 500"),
+        "{}",
+        fail.message
+    );
+    assert!(!fail.message.contains("outage"), "{}", fail.message);
+}

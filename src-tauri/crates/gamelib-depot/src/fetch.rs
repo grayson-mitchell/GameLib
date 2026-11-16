@@ -493,6 +493,7 @@ impl Fetcher {
 
         let mut transient_since: Option<Instant> = None;
         let mut transient_n: u32 = 0;
+        let mut outage_exhausted = false;
         let mut i: u32 = 0;
         loop {
             if cancel.is_cancelled() {
@@ -618,6 +619,7 @@ impl Fetcher {
                     .map(|t| (*t).max(since))
                     .unwrap_or(since);
                 if i >= self.attempts && anchor.elapsed() >= self.transient_budget {
+                    outage_exhausted = true;
                     break;
                 }
                 delay = backoff_with(transient_n, self.backoff.0, self.transient_cap_ms);
@@ -640,22 +642,26 @@ impl Fetcher {
             code: "unknown",
             timed_out: false,
         });
+        // A/IN-01: `i` is the real attempt count; transport errors can run far past
+        // `self.attempts` while the outage budget lasts.
+        let tried = if outage_exhausted {
+            format!("{i} attempts (outage budget exhausted)")
+        } else {
+            format!("{i} attempts")
+        };
         Err(FetchError::Failed(match last.status {
             Some(s) => Failure {
                 kind: ErrorKind::CdnHttp,
                 http_status: Some(s),
-                message: format!(
-                    "{what} failed after {} attempts: HTTP {s} from {last_host}",
-                    self.attempts
-                ),
+                message: format!("{what} failed after {tried}: HTTP {s} from {last_host}"),
                 ..base_failure()
             },
             None => Failure {
                 kind: ErrorKind::Network,
                 code: Some(last.code.to_string()),
                 message: format!(
-                    "{what} failed after {} attempts: {} from {last_host}",
-                    self.attempts, last.code
+                    "{what} failed after {tried}: {} from {last_host}",
+                    last.code
                 ),
                 ..base_failure()
             },
