@@ -149,6 +149,144 @@ async fn replay_is_ascending_seq_latest_wins_per_key() {
     );
 }
 
+// ---- cross-kind ordering and in-session retry (80-REVIEW A/WR-08) ----------------------------
+
+fn installed_ev(app_id: &str, seq: u64) -> StateEvent {
+    StateEvent::Installed {
+        app_id: app_id.into(),
+        seq,
+        source: "native".into(),
+        install_path: "/x/steamapps/common/G".into(),
+        size_on_disk: "1".into(),
+        buildid: None,
+    }
+}
+
+fn uninstalled_ev(app_id: &str, seq: u64) -> StateEvent {
+    StateEvent::Uninstalled {
+        app_id: app_id.into(),
+        seq,
+        source: "native".into(),
+        survivor: None,
+    }
+}
+
+fn state_transition(event: StateEvent) -> Effect {
+    Effect::Transition {
+        then: Continuation::UpdateDone {
+            app_id: event.app_id().unwrap_or("").into(),
+            completed: false,
+        },
+        event,
+    }
+}
+
+/// The reviewer's case: `installed` seq 5 timed out and was queued, then `uninstalled` seq 9 was
+/// acked live. A later replay must not flip the app back to installed.
+#[tokio::test(start_paused = true)]
+async fn a_newer_applied_uninstalled_drops_the_queued_older_installed() {
+    let host = RecordingHost::new(AckMode::Never);
+    let outbox = Outbox::new();
+    outbox.mark_ready(&host).await;
+    let mut title = String::new();
+    apply_effects(
+        &host,
+        &host,
+        &outbox,
+        vec![state_transition(installed_ev("a", 5))],
+        &mut title,
+    )
+    .await;
+    assert_eq!(outbox.queued_len(), 1);
+    host.set_ack(acked(None));
+    apply_effects(
+        &host,
+        &host,
+        &outbox,
+        vec![state_transition(uninstalled_ev("a", 9))],
+        &mut title,
+    )
+    .await;
+    assert_eq!(outbox.queued_len(), 0, "{:?}", outbox.queued());
+    assert_eq!(outbox.retry_pending(&host).await, 0);
+    let states: Vec<String> = kinds(&host)
+        .into_iter()
+        .filter(|k| k.starts_with("state:"))
+        .collect();
+    assert_eq!(states, vec!["state:installed:5", "state:uninstalled:9"]);
+}
+
+/// An older install-state event whose ack fails after a newer one was applied is not queued.
+#[tokio::test(start_paused = true)]
+async fn an_older_state_event_failing_after_a_newer_applied_one_is_not_queued() {
+    let host = RecordingHost::new(acked(None));
+    let outbox = Outbox::new();
+    outbox.mark_ready(&host).await;
+    let mut title = String::new();
+    apply_effects(
+        &host,
+        &host,
+        &outbox,
+        vec![state_transition(uninstalled_ev("a", 9))],
+        &mut title,
+    )
+    .await;
+    host.set_ack(AckMode::Reply(AckReply::not_acked()));
+    apply_effects(
+        &host,
+        &host,
+        &outbox,
+        vec![state_transition(installed_ev("a", 5))],
+        &mut title,
+    )
+    .await;
+    assert_eq!(outbox.queued_len(), 0, "{:?}", outbox.queued());
+}
+
+/// Before READY, only the newest install-state event per appId is kept; independent kinds stay.
+#[tokio::test(start_paused = true)]
+async fn queue_keeps_only_the_newest_install_state_event_per_app() {
+    let host = RecordingHost::new(acked(None));
+    let outbox = Outbox::new();
+    outbox.enqueue(installed_ev("a", 5));
+    outbox.enqueue(updated("a", 6));
+    outbox.enqueue(uninstalled_ev("a", 9));
+    outbox.enqueue(installed_ev("a", 7)); // older than the queued uninstalled:9, ignored
+    outbox.enqueue(installed_ev("b", 8));
+    outbox.mark_ready(&host).await;
+    assert_eq!(
+        kinds(&host),
+        vec![
+            "state:updateDone:6",
+            "state:installed:8",
+            "state:uninstalled:9"
+        ]
+    );
+    assert_eq!(outbox.queued_len(), 0);
+}
+
+/// A timed-out event is retried in session, without a sidecar restart, once the host's timer
+/// calls `retry_pending`.
+#[tokio::test(start_paused = true)]
+async fn retry_pending_replays_an_unacked_event_while_ready() {
+    let host = RecordingHost::new(AckMode::Never);
+    let outbox = Outbox::new();
+    outbox.mark_ready(&host).await;
+    let mut title = String::new();
+    apply_effects(&host, &host, &outbox, vec![transition("7", 3)], &mut title).await;
+    assert_eq!(outbox.queued_len(), 1);
+    // Still not acking: the retry keeps it queued.
+    assert_eq!(outbox.retry_pending(&host).await, 1);
+    host.set_ack(acked(None));
+    assert_eq!(outbox.retry_pending(&host).await, 0);
+    // Not ready: nothing is sent.
+    outbox.enqueue(updated("8", 4));
+    outbox.mark_not_ready();
+    let before = host.records().len();
+    assert_eq!(outbox.retry_pending(&host).await, 1);
+    assert_eq!(host.records().len(), before);
+}
+
 #[tokio::test(start_paused = true)]
 async fn progress_effects_never_wait_and_send_no_state() {
     let host = RecordingHost::new(AckMode::Never);
