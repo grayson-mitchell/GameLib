@@ -88,7 +88,7 @@ export function recordSteamRestartHold(
   }
 }
 
-export function readSteamRestartHold(
+function readSteamRestartHold(
   appId: string,
   store: SteamRestartHoldStore
 ): SteamRestartHoldRecord | undefined {

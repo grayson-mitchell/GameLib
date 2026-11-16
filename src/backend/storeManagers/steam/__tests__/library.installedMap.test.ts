@@ -5,7 +5,6 @@
 
 // ── Imports ───────────────────────────────────────────────────────────────────
 import { createEngineRegistry } from 'backend/engine/engineRegistry'
-import { readAcfState } from '../library/acfState'
 import { stubRustSteamFiles } from '../localFiles/__tests__/fixtures/stubRustSteamFiles'
 import type { AcfRecord, ScanResult } from '../localFiles/steamFilesTypes'
 import {
@@ -289,34 +288,6 @@ describe('detector regression lock (D-UAT-09): buildInstalledMap / readAcfState 
 
     expect(result.has(100)).toBe(false)
     expect(result.has(200)).toBe(true)
-  })
-
-  it('Test B: readAcfState returns "downloading" for a 1026 fixture and "installed" for a 4 fixture', async () => {
-    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
-    ;(existsSync as jest.Mock).mockReturnValue(true)
-    ;(readFileSync as jest.Mock).mockReturnValue('content')
-    vdf.parse.mockReturnValue({
-      AppState: {
-        appid: '100',
-        StateFlags: '1026',
-        installdir: 'incomplete-game',
-        SizeOnDisk: '0'
-      }
-    })
-
-    const incomplete = await readAcfState(libDeps, '100')
-    expect(incomplete.state).toBe('downloading')
-    vdf.parse.mockReturnValue({
-      AppState: {
-        appid: '200',
-        StateFlags: '4',
-        installdir: 'complete-game',
-        SizeOnDisk: '500'
-      }
-    })
-
-    const complete = await readAcfState(libDeps, '200')
-    expect(complete.state).toBe('installed')
   })
 })
 
@@ -816,14 +787,4 @@ describe('installed-map builders, rust branch', () => {
     expect((await buildBridgeInstalledMap(testPaths, stub)).size).toBe(0)
     expect(stub.calls).toHaveLength(0)
   })
-})
-
-// Plan 80-26: the polls flag now defaults to rust; this file exercises the ts arm, so pin it.
-const prevPollsImpl = process.env.GAMELIB_STEAM_POLLS
-beforeAll(() => {
-  process.env.GAMELIB_STEAM_POLLS = 'ts'
-})
-afterAll(() => {
-  if (prevPollsImpl === undefined) delete process.env.GAMELIB_STEAM_POLLS
-  else process.env.GAMELIB_STEAM_POLLS = prevPollsImpl
 })

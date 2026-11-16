@@ -16,6 +16,7 @@ jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logError: jest.fn(),
   logWarning: jest.fn(),
+  logDebug: jest.fn(),
   LogPrefix: { Steam: 'Steam' }
 }))
 jest.mock('i18next', () => ({
@@ -51,7 +52,18 @@ const activePolls = new Map<string, { awaitingUpdate?: unknown }>()
 const game = {
   appId: '333300',
   deps: {
-    steamInstallRuntime: { polls: { activePolls } },
+    // Rust owns the poll registry; the status read reports what the fake start registered.
+    requestRustInvoke: () =>
+      Promise.resolve({
+        installs: [...activePolls].map(([appId, poll]) => ({
+          appId,
+          delegatedToSteamClient: false,
+          awaitingUpdate: poll.awaitingUpdate !== undefined,
+          steamHold: 'unprobed'
+        })),
+        uninstalls: [],
+        holding: []
+      }),
     config: {},
     paths: {},
     runner: {},
@@ -354,14 +366,4 @@ describe("buildSteamProtocolUrl('details')", () => {
     expect(buildSteamProtocolUrl('details', '333300')).toBe(URL)
     expect(buildSteamProtocolUrl('details', '1;rm')).toBeNull()
   })
-})
-
-// Plan 80-26: the polls flag now defaults to rust; this file exercises the ts arm, so pin it.
-const prevPollsImpl = process.env.GAMELIB_STEAM_POLLS
-beforeAll(() => {
-  process.env.GAMELIB_STEAM_POLLS = 'ts'
-})
-afterAll(() => {
-  if (prevPollsImpl === undefined) delete process.env.GAMELIB_STEAM_POLLS
-  else process.env.GAMELIB_STEAM_POLLS = prevPollsImpl
 })

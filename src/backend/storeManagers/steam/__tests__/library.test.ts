@@ -61,6 +61,7 @@ const getAnonymousPicsClient = jest.fn()
 const shell = { openExternal: jest.fn() }
 const steamTestDeps = createTestManagerDeps({
   requestRustInvoke: mockedFsSteamFiles().requestRustInvoke,
+  config: createTestGlobalConfig({ defaultSteamPath: '/steam' }),
   sendFrontendMessage,
   steamUser,
   openExternal: {
@@ -848,23 +849,18 @@ describe('SteamLibraryManager', () => {
         const order: string[] = []
         invoke.mockImplementation((channel: string) => {
           if (channel === 'depot_finalize') order.push('finalize')
+          // The watch is a Rust poll now; its start is the point after finalize.
+          if (channel === 'steampoll_install_start') order.push('watch')
           return Promise.resolve(
             channel === 'steamfiles_read_acf'
               ? { record: { installdir: 'csgo' } }
               : { acf: { path: '/x', stateFlags: 1026, sizeOnDisk: '0' } }
           )
         })
-        const setIntervalSpy = jest
-          .spyOn(global, 'setInterval')
-          .mockImplementation((() => {
-            order.push('watch')
-            return { unref: () => undefined } as unknown as NodeJS.Timeout
-          }) as unknown as typeof setInterval)
 
         await resumeInterruptedSteamInstall(steamTestDeps, '730')
 
         expect(order).toEqual(['finalize', 'watch'])
-        setIntervalSpy.mockRestore()
         await stopInstallPolling(steamTestDeps, '730')
         jest.useRealTimers()
       })
@@ -910,14 +906,4 @@ describe('SteamLibraryManager', () => {
       })
     })
   })
-})
-
-// Plan 80-26: the polls flag now defaults to rust; this file exercises the ts arm, so pin it.
-const prevPollsImpl = process.env.GAMELIB_STEAM_POLLS
-beforeAll(() => {
-  process.env.GAMELIB_STEAM_POLLS = 'ts'
-})
-afterAll(() => {
-  if (prevPollsImpl === undefined) delete process.env.GAMELIB_STEAM_POLLS
-  else process.env.GAMELIB_STEAM_POLLS = prevPollsImpl
 })

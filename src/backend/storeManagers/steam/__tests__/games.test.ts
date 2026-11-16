@@ -389,8 +389,21 @@ const mockedLaunchPaths: Pick<
   appFolder: join(tmpdir(), `gamelib drm games-test-${process.pid}`),
   userHome: createContainedHomeAppPaths().userHome
 }
+// Rust holds the bridge-install-finalized marker; the recorded calls are how a test reads it.
+const rustSteamFiles = mockedFsSteamFiles()
+const bridgeMarkerCalls = (appId: string): boolean[] =>
+  rustSteamFiles.calls
+    .filter(
+      (c) =>
+        c.channel === 'steampoll_bridge_finalized' &&
+        (c.args as { appId: string }).appId === appId
+    )
+    .map((c) => (c.args as { finalized: boolean }).finalized)
+const bridgeMarker = (appId: string): boolean =>
+  bridgeMarkerCalls(appId).at(-1) ?? false
 const steamTestDeps = createTestManagerDeps({
-  requestRustInvoke: mockedFsSteamFiles().requestRustInvoke,
+  requestRustInvoke: rustSteamFiles.requestRustInvoke,
+  config: createTestGlobalConfig({ defaultSteamPath: '/steam' }),
   sendFrontendMessage,
   aborts: {
     create: (id: string) => createAbortController(id),
@@ -5196,7 +5209,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
   beforeEach(() => {
     resetBridgeFailedSession()
     __resetDrmModeNoticeShownForTests()
-    steamTestDeps.steamInstallRuntime.polls.clearBridgeInstallFinalized(APP_ID)
+    rustSteamFiles.calls.length = 0
     library.clear()
     pendingFetches.clear()
     library.set(APP_ID, makeEntry({ title: 'Avernum 4' }))
@@ -5399,13 +5412,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
     ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
     const { sendGameStatusUpdate } = jest.requireMock('backend/utils')
-    // A leftover marker from a previous install must be cleared at start.
-    steamTestDeps.steamInstallRuntime.polls.markBridgeInstallFinalized(APP_ID)
     const seen: boolean[] = []
     ;(installSteamBridgeSharedRedists as jest.Mock).mockImplementation(() => {
-      seen.push(
-        steamTestDeps.steamInstallRuntime.polls.isBridgeInstallFinalized(APP_ID)
-      )
+      seen.push(bridgeMarker(APP_ID))
       return Promise.resolve()
     })
     ;(notify as jest.Mock).mockClear()
@@ -5413,9 +5422,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     await new SteamGame(APP_ID, steamTestDeps).install({} as any)
 
     expect(seen).toEqual([false])
-    expect(
-      steamTestDeps.steamInstallRuntime.polls.isBridgeInstallFinalized(APP_ID)
-    ).toBe(true)
+    // A leftover marker from a previous install is cleared at start, then set at the end.
+    expect(bridgeMarkerCalls(APP_ID)[0]).toBe(false)
+    expect(bridgeMarker(APP_ID)).toBe(true)
     expect(sendGameStatusUpdate).toHaveBeenLastCalledWith(expect.anything(), {
       appName: APP_ID,
       runner: 'steam',
@@ -5671,9 +5680,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       )
 
       expect(result.status).toBe('error')
-      expect(
-        steamTestDeps.steamInstallRuntime.polls.isBridgeInstallFinalized(APP_ID)
-      ).toBe(true)
+      expect(bridgeMarker(APP_ID)).toBe(true)
       expect(sendGameStatusUpdate).toHaveBeenLastCalledWith(expect.anything(), {
         appName: APP_ID,
         runner: 'steam',
@@ -10595,9 +10602,14 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
         state: 'installed',
         installPath: hoardInstallDir
       })
+      // Rust answers the conflict scan: no other manifest shares Hoard's installdir.
+      const conflictSpy = jest
+        .spyOn(acfState, 'findOtherManifestsWithInstalldir')
+        .mockResolvedValue([])
 
       const game = new SteamGame(APP_ID, steamTestDeps)
       const result = await game.uninstall({} as any)
+      conflictSpy.mockRestore()
 
       expect(result).toEqual({ stdout: '', stderr: '' })
       // Hoard's own install dir + manifest are gone.
@@ -16954,14 +16966,4 @@ describe('Steam launch watch wiring (261111-9mj)', () => {
     expect(shell.openExternal).not.toHaveBeenCalled()
     expect(startSpy).not.toHaveBeenCalled()
   })
-})
-
-// Plan 80-26: the polls flag now defaults to rust; this file exercises the ts arm, so pin it.
-const prevPollsImpl = process.env.GAMELIB_STEAM_POLLS
-beforeAll(() => {
-  process.env.GAMELIB_STEAM_POLLS = 'ts'
-})
-afterAll(() => {
-  if (prevPollsImpl === undefined) delete process.env.GAMELIB_STEAM_POLLS
-  else process.env.GAMELIB_STEAM_POLLS = prevPollsImpl
 })

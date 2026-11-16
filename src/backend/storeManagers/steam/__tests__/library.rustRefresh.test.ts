@@ -1,6 +1,7 @@
 /**
  * Phase 79-31: the Rust Refresh input builder, known-fix catalogue enumeration and result applier.
  */
+import { withEmptyPollStatus } from 'backend/testUtils/steamPollStatusFake'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
@@ -80,7 +81,8 @@ const stores =
 const sendFrontendMessage = jest.fn()
 const deps = createTestManagerDeps({
   stores: createTestStores({ steam: stores as never }),
-  sendFrontendMessage
+  sendFrontendMessage,
+  requestRustInvoke: withEmptyPollStatus(() => Promise.resolve(undefined))
 })
 const library = deps.steamSession.libraryState.library
 // Typed handles: reading .set off the mocked stores trips @typescript-eslint/unbound-method.
@@ -276,14 +278,4 @@ describe('applyRustRefreshResult', () => {
     await applyRustRefreshResult(deps, {}, result({ games: [dirty] }))
     expect(library.get('1')).not.toHaveProperty('bogusKey')
   })
-})
-
-// Plan 80-26: the polls flag now defaults to rust; this file exercises the ts arm, so pin it.
-const prevPollsImpl = process.env.GAMELIB_STEAM_POLLS
-beforeAll(() => {
-  process.env.GAMELIB_STEAM_POLLS = 'ts'
-})
-afterAll(() => {
-  if (prevPollsImpl === undefined) delete process.env.GAMELIB_STEAM_POLLS
-  else process.env.GAMELIB_STEAM_POLLS = prevPollsImpl
 })

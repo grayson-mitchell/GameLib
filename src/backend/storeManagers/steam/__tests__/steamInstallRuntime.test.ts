@@ -2,6 +2,7 @@
  * 66.4-09: the Steam install runtime holds per-instance state. Two runtimes share no app order,
  * lock, job, poll or hold entry; construction arms no timer.
  */
+import * as logger from 'backend/logger'
 import { createTestAppRuntime } from 'backend/testUtils/testAppRuntime'
 import { createSteamInstallRuntime } from '../steamInstallRuntime'
 import { createTestHostServices } from '../../../testUtils/testHostServices'
@@ -13,6 +14,12 @@ const transport = () => ({
 })
 
 describe('createSteamInstallRuntime', () => {
+  beforeEach(() => {
+    // invokeSteamPoll logs the channel; no writer is initialised in a unit test.
+    jest.spyOn(logger, 'logDebug').mockImplementation(() => undefined)
+  })
+  afterEach(() => jest.restoreAllMocks())
+
   it('arms no timer at construction', () => {
     jest.useFakeTimers()
     try {
@@ -116,13 +123,16 @@ describe('createSteamInstallRuntime', () => {
     )
   })
 
-  it('restart-hold bookkeeping fails closed through a rearm cycle and reads its own polls', async () => {
-    const a = createSteamInstallRuntime(transport())
+  it('restart-hold bookkeeping drops the apps the Rust registry reports holding, per instance', async () => {
+    // Rust owns the registry; its holding[] already includes a pending boot rearm (fail closed).
+    const a = createSteamInstallRuntime({
+      ...createTestHostServices({
+        rustInvoke: () =>
+          Promise.resolve({ installs: [], uninstalls: [], holding: ['5', '7'] })
+      }),
+      appRuntime: createTestAppRuntime()
+    })
     const b = createSteamInstallRuntime(transport())
-    const { restartHold } = a
-    a.polls.activePolls.set('5', { steamHold: 'holding' } as never)
-    a.polls.activePolls.set('6', { steamHold: 'unprobed' } as never)
-    restartHold.pendingSteamHoldRearm.add('7')
     const installed = new Map<number, string>([
       [5, 'x'],
       [6, 'y'],
@@ -130,24 +140,10 @@ describe('createSteamInstallRuntime', () => {
       [8, 'w']
     ])
     expect([
-      ...(await restartHold.withoutSteamRestartHolds(installed)).keys()
+      ...(await a.restartHold.withoutSteamRestartHolds(installed)).keys()
     ]).toEqual([6, 8])
-    expect(restartHold.getReconcileRanDuringRearm()).toBe(true)
-    restartHold.setReconcileRanDuringRearm(false)
-    restartHold.pendingSteamHoldRearm.delete('7')
-    expect(restartHold.getReconcileRanDuringRearm()).toBe(false)
-    // Another runtime has no hold for any of these apps.
+    // Another runtime reads its own (empty) registry.
     const other = new Map<number, string>([[5, 'x']])
     expect((await b.restartHold.withoutSteamRestartHolds(other)).size).toBe(1)
   })
-})
-
-// Plan 80-26: the polls flag now defaults to rust; this file exercises the ts arm, so pin it.
-const prevPollsImpl = process.env.GAMELIB_STEAM_POLLS
-beforeAll(() => {
-  process.env.GAMELIB_STEAM_POLLS = 'ts'
-})
-afterAll(() => {
-  if (prevPollsImpl === undefined) delete process.env.GAMELIB_STEAM_POLLS
-  else process.env.GAMELIB_STEAM_POLLS = prevPollsImpl
 })

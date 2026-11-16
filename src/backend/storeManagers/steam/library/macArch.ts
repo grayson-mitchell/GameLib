@@ -31,7 +31,7 @@ import { invokeSteamPoll } from '../pollRust/rustSteamPoll'
  * containment-escape warning keeps its Steam log prefix. Exported for unit
  * testing.
  */
-export function locateMachOBinary(
+function locateMachOBinary(
   installPath: string,
   launchExecutable?: string
 ): string | null {

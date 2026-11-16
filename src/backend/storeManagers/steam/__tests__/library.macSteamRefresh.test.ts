@@ -61,6 +61,7 @@ import {
   buildInstalledMap
 } from '../library/installedMap'
 import { RUST_STEAMCM_REFRESH } from 'common/types/sidecarTransport'
+import { withEmptyPollStatus } from 'backend/testUtils/steamPollStatusFake'
 import { logInfo } from 'backend/logger'
 
 const stores =
@@ -100,7 +101,7 @@ const allowlistMocks = bridgeAllowlist as unknown as { seedIds: jest.Mock }
 const deps = createTestManagerDeps({
   stores: createTestStores({ steam: stores as never }),
   sendFrontendMessage,
-  requestRustInvoke: requestRustInvoke as never,
+  requestRustInvoke: withEmptyPollStatus(requestRustInvoke) as never,
   steamBottle: { isSteamBottleProvisioned: () => false } as never,
   steamUser,
   paths: { steamBridgeHelperPath: '/helper/steam-bridge-helper' } as never
@@ -300,14 +301,4 @@ describe('refresh() Mac Steam path', () => {
       process.env.GAMELIB_STEAM_MAC_PATH = 'on'
     }
   })
-})
-
-// Plan 80-26: the polls flag now defaults to rust; this file exercises the ts arm, so pin it.
-const prevPollsImpl = process.env.GAMELIB_STEAM_POLLS
-beforeAll(() => {
-  process.env.GAMELIB_STEAM_POLLS = 'ts'
-})
-afterAll(() => {
-  if (prevPollsImpl === undefined) delete process.env.GAMELIB_STEAM_POLLS
-  else process.env.GAMELIB_STEAM_POLLS = prevPollsImpl
 })

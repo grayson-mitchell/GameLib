@@ -21,8 +21,6 @@ import {
 import { verifyMacArchGroundTruth } from '../library/macArch'
 import { breadcrumbAppIsFullyInstalledOnDisk } from '../library/resumeBreadcrumbs'
 
-const FLAG = 'GAMELIB_STEAM_POLLS'
-
 type Call = { channel: string; args: unknown[] }
 
 function makeDeps(handler: (channel: string) => unknown = () => null) {
@@ -58,18 +56,13 @@ function makeDeps(handler: (channel: string) => unknown = () => null) {
   return { deps, calls }
 }
 
-let prev: string | undefined
 beforeEach(() => {
-  prev = process.env[FLAG]
-  process.env[FLAG] = 'rust'
   jest.spyOn(logger, 'logDebug').mockImplementation(() => undefined)
   jest.spyOn(logger, 'logInfo').mockImplementation(() => undefined)
   jest.spyOn(logger, 'logWarning').mockImplementation(() => undefined)
 })
 afterEach(() => {
   jest.restoreAllMocks()
-  if (prev === undefined) delete process.env[FLAG]
-  else process.env[FLAG] = prev
 })
 
 describe('acfState rust arm', () => {

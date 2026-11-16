@@ -16,7 +16,7 @@
  * The program is a constant. Pids and the inner argv travel as positional parameters ($1, $2,
  * "$@") and are never interpolated into the script string.
  */
-export const WATCHDOG_SH = `p=$1; w=$2; shift 2
+const WATCHDOG_SH = `p=$1; w=$2; shift 2
 "$@" &
 m=$!
 g=

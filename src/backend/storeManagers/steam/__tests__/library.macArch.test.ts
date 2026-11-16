@@ -12,10 +12,8 @@ import {
 // ── Imports ───────────────────────────────────────────────────────────────────
 import { createTestHostServices } from 'backend/testUtils/testHostServices'
 import SteamLibraryManager from '../library'
-import { startInstallPolling } from '../library/installPolling'
 import { stopInstallPolling } from '../library/installStop'
-import { locateMachOBinary, verifyMacArchGroundTruth } from '../library/macArch'
-import { machOArchsOfAsync, verdictFromArchs } from 'backend/utils/macArch'
+import { verifyMacArchGroundTruth } from '../library/macArch'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import {
   vdf,
@@ -26,7 +24,6 @@ import { reportDetectedFix } from 'backend/knownFixReport'
 const sendFrontendMessage = jest.fn()
 import { t as i18nextT } from 'i18next'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
-import { getBottleSteamappsDir } from '../bottle'
 import { listReadyBridgeBottleNames } from '../bridgeBottle'
 import { join } from 'path'
 import type { ManagerDeps, Stores } from 'backend/services/types'
@@ -71,8 +68,24 @@ const getSteamBottleSettings = jest.fn()
 const isSteamBottleProvisioned = jest.fn()
 // The i386-recovery confirm goes through deps.dialogs; this recording fake is what it calls.
 const dialog = { showMessageBox: jest.fn() }
+// Rust owns the Mach-O read; its verdict is scripted from the same lipo output the cases set on
+// `probe`: an x86_64 slice is '64', an i386-only list is '32', anything else is inconclusive.
+const fsInvoke = mockedFsSteamFiles().requestRustInvoke
+const requestRustInvoke = (
+  channel: string,
+  argv: readonly unknown[]
+): Promise<unknown> => {
+  if (channel !== 'steampoll_mac_arch_verdict') return fsInvoke(channel, argv)
+  try {
+    const archs = String(probe('lipo', ['-archs']) ?? '').split(/\s+/)
+    if (archs.includes('x86_64')) return Promise.resolve('64')
+    return Promise.resolve(archs.includes('i386') ? '32' : null)
+  } catch {
+    return Promise.resolve(null)
+  }
+}
 const steamTestDeps = createTestManagerDeps({
-  requestRustInvoke: mockedFsSteamFiles().requestRustInvoke,
+  requestRustInvoke: requestRustInvoke as never,
   sendFrontendMessage,
   steamBottle: { getSteamBottleSettings, isSteamBottleProvisioned } as never,
   dialogs: {
@@ -262,161 +275,6 @@ beforeEach(() => {
 /** Flush pending microtask/macrotask queues (real timers only). */
 const flushAsync = () => new Promise<void>((resolve) => setImmediate(resolve))
 
-describe('machOArchsOfAsync()', () => {
-  it('runs lipo -archs argv-form and returns the space-split arch list', async () => {
-    probe.mockReturnValue('x86_64 arm64\n')
-
-    const result = await machOArchsOfAsync(
-      { runner: archRunner },
-      '/Games/Foo.app/Contents/MacOS/Foo'
-    )
-
-    expect(probe).toHaveBeenCalledWith('lipo', [
-      '-archs',
-      '/Games/Foo.app/Contents/MacOS/Foo'
-    ])
-    expect(result).toEqual(['x86_64', 'arm64'])
-  })
-
-  it('falls back to `file` when lipo fails, and still classifies correctly', async () => {
-    probe.mockImplementation((cmd: string) => {
-      if (cmd === 'lipo') throw new Error('lipo not found')
-      if (cmd === 'file') {
-        return '/Games/Foo.app/Contents/MacOS/Foo: Mach-O executable i386\n'
-      }
-      throw new Error(`unexpected command ${cmd}`)
-    })
-
-    const result = await machOArchsOfAsync(
-      { runner: archRunner },
-      '/Games/Foo.app/Contents/MacOS/Foo'
-    )
-
-    expect(probe).toHaveBeenCalledWith('file', [
-      '/Games/Foo.app/Contents/MacOS/Foo'
-    ])
-    expect(result).toEqual(['i386'])
-  })
-
-  it('returns [] (inconclusive) when BOTH lipo and file fail — never a 32-bit verdict', async () => {
-    probe.mockImplementation(() => {
-      throw new Error('neither tool available')
-    })
-
-    const result = await machOArchsOfAsync(
-      { runner: archRunner },
-      '/Games/Foo.app/Contents/MacOS/Foo'
-    )
-
-    expect(result).toEqual([])
-  })
-})
-
-describe('verdictFromArchs()', () => {
-  it("maps ['i386'] to '32'", () => {
-    expect(verdictFromArchs(['i386'])).toBe('32')
-  })
-
-  it("maps ['x86_64'] to '64'", () => {
-    expect(verdictFromArchs(['x86_64'])).toBe('64')
-  })
-
-  it("maps ['x86_64','arm64'] to '64'", () => {
-    expect(verdictFromArchs(['x86_64', 'arm64'])).toBe('64')
-  })
-
-  it("maps ['i386','x86_64'] to '64' — any 64 wins over i386 (universal binary)", () => {
-    expect(verdictFromArchs(['i386', 'x86_64'])).toBe('64')
-  })
-
-  it('maps [] to null — inconclusive, must NOT be coerced to 32', () => {
-    expect(verdictFromArchs([])).toBeNull()
-  })
-})
-
-describe('locateMachOBinary()', () => {
-  const INSTALL_PATH = join('/steam', 'steamapps', 'common', 'oldgame')
-
-  beforeEach(() => {
-    ;(existsSync as jest.Mock).mockReset()
-    ;(readdirSync as jest.Mock).mockReset()
-  })
-
-  it('prefers a supplied launch executable path when it exists', () => {
-    const launchExe = join('OldGame.app', 'Contents', 'MacOS', 'OldGame')
-    ;(existsSync as jest.Mock).mockImplementation(
-      (p: string) => p === join(INSTALL_PATH, launchExe)
-    )
-
-    const result = locateMachOBinary(INSTALL_PATH, launchExe)
-
-    expect(result).toBe(join(INSTALL_PATH, launchExe))
-    expect(readdirSync).not.toHaveBeenCalled()
-  })
-
-  it('scans for a top-level *.app bundle and returns Contents/MacOS/<first bin> when no launch executable is supplied', () => {
-    const macOsDir = join(INSTALL_PATH, 'OldGame.app', 'Contents', 'MacOS')
-    ;(readdirSync as jest.Mock).mockImplementation((dir: string) => {
-      if (dir === INSTALL_PATH) return ['OldGame.app', 'readme.txt']
-      if (dir === macOsDir) return ['OldGame']
-      return []
-    })
-    ;(existsSync as jest.Mock).mockReturnValue(true)
-
-    const result = locateMachOBinary(INSTALL_PATH)
-
-    expect(result).toBe(join(macOsDir, 'OldGame'))
-  })
-
-  it('returns null (no throw) when no *.app bundle is found', () => {
-    ;(readdirSync as jest.Mock).mockReturnValue(['readme.txt'])
-
-    expect(locateMachOBinary(INSTALL_PATH)).toBeNull()
-  })
-
-  it('returns null (no throw) when readdirSync throws', () => {
-    ;(readdirSync as jest.Mock).mockImplementation(() => {
-      throw new Error('ENOENT')
-    })
-
-    expect(locateMachOBinary(INSTALL_PATH)).toBeNull()
-  })
-
-  it('returns null when the *.app bundle has no Contents/MacOS dir', () => {
-    ;(readdirSync as jest.Mock).mockImplementation((dir: string) =>
-      dir === INSTALL_PATH ? ['OldGame.app'] : []
-    )
-    ;(existsSync as jest.Mock).mockReturnValue(false)
-
-    expect(locateMachOBinary(INSTALL_PATH)).toBeNull()
-  })
-
-  // T-18-03-04: a launchExecutable that escapes installPath's subtree must be
-  // rejected, never filesystem-touched — join() alone does not contain '../'.
-  it('rejects a launchExecutable that escapes installPath via ".." traversal (never touches the filesystem)', () => {
-    ;(existsSync as jest.Mock).mockReturnValue(true) // even if it "exists", it must be refused
-    ;(readdirSync as jest.Mock).mockReturnValue([]) // fall-through scan finds nothing
-
-    const result = locateMachOBinary(INSTALL_PATH, '../../../../etc/passwd')
-
-    expect(result).toBeNull()
-    // The escaped candidate must never be returned, and existsSync must never
-    // be consulted for it (containment is checked before the fs probe).
-    expect(existsSync).not.toHaveBeenCalledWith(
-      join(INSTALL_PATH, '../../../../etc/passwd')
-    )
-  })
-
-  it('rejects a launchExecutable that resolves to an absolute path outside installPath', () => {
-    ;(existsSync as jest.Mock).mockReturnValue(true)
-    ;(readdirSync as jest.Mock).mockReturnValue([])
-
-    const result = locateMachOBinary(INSTALL_PATH, '/etc/passwd')
-
-    expect(result).toBeNull()
-  })
-})
-
 describe('verifyMacArchGroundTruth() — MAC32-03', () => {
   const APP_ID = '226840'
   const INSTALL_PATH = join('/steam', 'steamapps', 'common', 'oldgame')
@@ -505,20 +363,6 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
     )
 
     expect(probe).not.toHaveBeenCalled()
-    expect(steamMetadataStore.set).not.toHaveBeenCalled()
-  })
-
-  it('logs+skips (no cache write) when locateMachOBinary finds nothing', async () => {
-    ;(readdirSync as jest.Mock).mockReturnValue(['readme.txt'])
-    ;(steamMetadataStore.get as jest.Mock).mockReturnValue(undefined)
-
-    await verifyMacArchGroundTruth(
-      steamTestDeps,
-      APP_ID,
-      INSTALL_PATH,
-      'native'
-    )
-
     expect(steamMetadataStore.set).not.toHaveBeenCalled()
   })
 
@@ -1039,64 +883,6 @@ describe('delegated install -> verifyMacArchGroundTruth (quick 261024-exo)', () 
       SizeOnDisk: '50000'
     }
   }
-  const downloadingAcf = {
-    AppState: {
-      appid: APP_ID,
-      StateFlags: '1026',
-      installdir: 'oldgame',
-      SizeOnDisk: '0',
-      BytesDownloaded: '5',
-      BytesToDownload: '10'
-    }
-  }
-
-  async function runDelegatedPoll(source: 'native' | 'bottle') {
-    if (source === 'bottle') {
-      jest.mocked(getBottleSteamappsDir).mockReturnValue(STEAMAPPS)
-      jest
-        .mocked(getSteamBottleSettings)
-        .mockReturnValue({ wineCrossoverBottle: 'GameLibSteam' } as never)
-    }
-    await startInstallPolling(steamTestDeps, APP_ID, {
-      intervalMs: 10,
-      source,
-      delegatedToSteamClient: true
-    })
-    await jest.advanceTimersByTimeAsync(30) // absent
-    manifestPresent = true
-    vdf.parse.mockReturnValue(downloadingAcf)
-    await jest.advanceTimersByTimeAsync(20)
-    vdf.parse.mockReturnValue(installedAcf)
-    await jest.advanceTimersByTimeAsync(20)
-    await flushMicrotasks()
-  }
-
-  it('E1: a delegated native poll reaching FullyInstalled runs the Mach-O check and offers i386 recovery', async () => {
-    await runDelegatedPoll('native')
-
-    expect(library.get(APP_ID)?.is_installed).toBe(true)
-    expect(steamMetadataStore.set).toHaveBeenCalledWith(
-      APP_ID,
-      expect.objectContaining({ mac_arch: '32', mac_arch_verified: true })
-    )
-    expect(dialog.showMessageBox).toHaveBeenCalledTimes(1)
-  })
-
-  it('E2: no Mach-O check or dialog on a non-mac host, nor for a delegated bottle poll', async () => {
-    envMock.isMac = false
-    await runDelegatedPoll('native')
-    expect(probe).not.toHaveBeenCalled()
-    expect(dialog.showMessageBox).not.toHaveBeenCalled()
-
-    await stopInstallPolling(steamTestDeps, APP_ID)
-    envMock.isMac = true
-    manifestPresent = false
-    seedGame()
-    await runDelegatedPoll('bottle')
-    expect(probe).not.toHaveBeenCalled()
-    expect(dialog.showMessageBox).not.toHaveBeenCalled()
-  })
-
   it('E3: focus reconciliation catches a native false->true flip with no live poll and offers i386 recovery once', async () => {
     manifestPresent = true
     vdf.parse.mockReturnValue(installedAcf)
@@ -1111,31 +897,4 @@ describe('delegated install -> verifyMacArchGroundTruth (quick 261024-exo)', () 
     )
     expect(dialog.showMessageBox).toHaveBeenCalledTimes(1)
   })
-
-  it('E4: with a live poll registered for the appId, focus reconciliation flips the badge but leaves the arch check to the poll', async () => {
-    manifestPresent = true
-    vdf.parse.mockReturnValue(installedAcf)
-    // Long interval: the poll is registered but never ticks during the test.
-    await startInstallPolling(steamTestDeps, APP_ID, {
-      intervalMs: 1_000_000,
-      delegatedToSteamClient: true
-    })
-
-    await new SteamLibraryManager(steamTestDeps).refreshInstallState()
-    await flushMicrotasks()
-
-    expect(library.get(APP_ID)?.is_installed).toBe(true)
-    expect(probe).not.toHaveBeenCalled()
-    expect(dialog.showMessageBox).not.toHaveBeenCalled()
-  })
-})
-
-// Plan 80-26: the polls flag now defaults to rust; this file exercises the ts arm, so pin it.
-const prevPollsImpl = process.env.GAMELIB_STEAM_POLLS
-beforeAll(() => {
-  process.env.GAMELIB_STEAM_POLLS = 'ts'
-})
-afterAll(() => {
-  if (prevPollsImpl === undefined) delete process.env.GAMELIB_STEAM_POLLS
-  else process.env.GAMELIB_STEAM_POLLS = prevPollsImpl
 })

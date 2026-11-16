@@ -1,6 +1,7 @@
 import type { RustSteamFilesChannel } from 'common/types/sidecarTransport'
 import { existsSync, readdirSync, readFileSync } from 'fs'
 import { join } from 'path'
+import type { PollRoots } from '../../../pollRust/steamPollTypes'
 import type {
   AcfReadResult,
   AcfRecord,
@@ -121,6 +122,44 @@ function manifestNames(dir: string): string[] {
     .sort()
 }
 
+/** The `steampoll_acf_read_update_from_dir` reply the crate gives for one real manifest. */
+function updateFieldsFromDir(steamappsDir: string, appId: string) {
+  const rec = readAcf(join(steamappsDir, `appmanifest_${appId}.acf`)).record
+  if (!rec || rec.buildid === null) return null
+  return {
+    steamappsDir,
+    buildid: rec.buildid,
+    targetBuildId: rec.targetBuildId,
+    stateFlags: rec.stateFlags ?? 0,
+    bytesToDownload: Number(rec.bytesToDownload) || 0,
+    bytesDownloaded: Number(rec.bytesDownloaded) || 0,
+    scheduledAutoUpdate: Number(rec.scheduledAutoUpdate) || 0,
+    betaKey: rec.betaKey
+  }
+}
+
+/** The steamapps dirs a poll read covers for `source`: the libraries of the native root, or one bottle root. */
+function pollDirs(roots: PollRoots, source: string): string[] {
+  if (source === 'bottle') {
+    return roots.bottleSteamappsRoot ? [roots.bottleSteamappsRoot] : []
+  }
+  if (source === 'bridge') {
+    return roots.bridgeSteamappsRoot ? [roots.bridgeSteamappsRoot] : []
+  }
+  const steamapps = join(roots.steamRoot, 'steamapps')
+  const vdfPath = join(steamapps, 'libraryfolders.vdf')
+  const libs = [roots.steamRoot]
+  if (existsSync(vdfPath)) {
+    for (const line of readFileSync(vdfPath, 'utf8').split(/\r?\n/)) {
+      const m = KV.exec(line)
+      if (m && m[1]!.toLowerCase() === 'path' && m[2] !== roots.steamRoot) {
+        libs.push(m[2]!)
+      }
+    }
+  }
+  return libs.map((lib) => join(lib, 'steamapps'))
+}
+
 /**
  * File-backed test double for the read-only steamfiles channels. It answers from the real temp
  * files a caller test already wrote, extracting flat `"Key" "Value"` pairs with one line regex.
@@ -180,5 +219,29 @@ export function fsBackedSteamFiles(overrides: Handlers = {}) {
     },
     ...overrides
   } as Handlers
-  return stubRustSteamFiles(handlers)
+  const pollHandlers: Record<string, (args: never) => unknown> = {
+    steampoll_acf_read_update_from_dir: ({
+      steamappsDir,
+      appId
+    }: {
+      steamappsDir: string
+      appId: string
+    }) => updateFieldsFromDir(steamappsDir, appId),
+    steampoll_acf_read_update: ({
+      roots,
+      appId,
+      source
+    }: {
+      roots: PollRoots
+      appId: string
+      source: string
+    }) => {
+      for (const dir of pollDirs(roots, source)) {
+        const fields = updateFieldsFromDir(dir, appId)
+        if (fields) return fields
+      }
+      return null
+    }
+  }
+  return stubRustSteamFiles({ ...pollHandlers, ...handlers } as Handlers)
 }

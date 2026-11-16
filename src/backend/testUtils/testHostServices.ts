@@ -5,6 +5,8 @@
  * `rustInvoke`.
  */
 
+import { RUST_STEAMPOLL_STATUS } from 'common/types/sidecarTransport'
+import { EMPTY_POLL_STATUS } from './steamPollStatusFake'
 import { createHostServices, type HostServices } from '../host'
 import { createIpcRegistry } from '../sidecar/ipcRegistry'
 import type { RequestRustInvoke } from '../host'
@@ -22,7 +24,11 @@ export function createTestHostServices(
   const invocations: Array<[string, unknown[]]> = []
   const requestRustInvoke = ((channel: string, args: unknown[]) => {
     invocations.push([channel, args])
-    return rustInvoke ? rustInvoke(channel, args) : Promise.resolve(undefined)
+    if (rustInvoke) return rustInvoke(channel, args)
+    // No scripted behaviour: the steampoll registry reads empty, as with no poll running.
+    return Promise.resolve(
+      channel === RUST_STEAMPOLL_STATUS ? EMPTY_POLL_STATUS : undefined
+    )
   }) as unknown as RequestRustInvoke
   const base = createHostServices({
     platform: process.platform,

@@ -12,12 +12,9 @@ import {
 import {
   markSteamInstallIncomplete,
   markSteamNativeInstallStarted,
-  clearSteamResumeBreadcrumb,
-  breadcrumbAppIsFullyInstalledOnDisk
+  clearSteamResumeBreadcrumb
 } from '../library/resumeBreadcrumbs'
-import { join } from 'path'
 import { mockedFsSteamFiles } from '../localFiles/__tests__/fixtures/mockedFsSteamFiles'
-import { stubRustSteamFiles } from '../localFiles/__tests__/fixtures/stubRustSteamFiles'
 const sendFrontendMessage = jest.fn()
 import { t as i18nextT } from 'i18next'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
@@ -296,66 +293,3 @@ describe('steamResumeInstalledAtStart breadcrumb field (todo 2026-11-09)', () =>
 })
 
 // Phase 75-20: breadcrumbAppIsFullyInstalledOnDisk on the rust branch.
-describe('breadcrumbAppIsFullyInstalledOnDisk, rust branch', () => {
-  const install = { steamResumeTargetSteamappsDir: '/s/steamapps' }
-  const read = (stateFlags: number | null, over = {}) => ({
-    exists: true,
-    parsed: true,
-    readError: null,
-    record: { stateFlags },
-    ...over
-  })
-  const ask = (reply: () => unknown, inst: object | undefined = install) => {
-    const stub = stubRustSteamFiles({
-      steamfiles_read_acf: reply as never
-    })
-    return {
-      stub,
-      result: breadcrumbAppIsFullyInstalledOnDisk(stub, '730', inst)
-    }
-  }
-
-  it('is true for a fully installed manifest and reads the breadcrumb dir', async () => {
-    const { stub, result } = ask(() => read(4))
-    expect(await result).toBe(true)
-    expect(stub.calls).toEqual([
-      {
-        channel: 'steamfiles_read_acf',
-        args: { path: join('/s/steamapps', 'appmanifest_730.acf') }
-      }
-    ])
-  })
-
-  it('is false while downloading', async () => {
-    expect(await ask(() => read(1026)).result).toBe(false)
-  })
-
-  it('is false for a missing, unparseable or flagless manifest', async () => {
-    expect(await ask(() => read(null, { exists: false })).result).toBe(false)
-    expect(await ask(() => read(null, { parsed: false })).result).toBe(false)
-    expect(await ask(() => read(null)).result).toBe(false)
-  })
-
-  it('is false without a breadcrumb dir and never calls Rust', async () => {
-    const { stub, result } = ask(() => read(4), {})
-    expect(await result).toBe(false)
-    expect(stub.calls).toHaveLength(0)
-  })
-
-  it('is false when the invoke rejects', async () => {
-    const { result } = ask(() => {
-      throw new Error('down')
-    })
-    expect(await result).toBe(false)
-  })
-})
-
-// Plan 80-26: the polls flag now defaults to rust; this file exercises the ts arm, so pin it.
-const prevPollsImpl = process.env.GAMELIB_STEAM_POLLS
-beforeAll(() => {
-  process.env.GAMELIB_STEAM_POLLS = 'ts'
-})
-afterAll(() => {
-  if (prevPollsImpl === undefined) delete process.env.GAMELIB_STEAM_POLLS
-  else process.env.GAMELIB_STEAM_POLLS = prevPollsImpl
-})

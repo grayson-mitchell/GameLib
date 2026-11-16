@@ -1,8 +1,5 @@
-import { readFileSync } from 'fs'
-import { join } from 'path'
 import * as logger from 'backend/logger'
 import type { ManagerDeps } from 'backend/services/types'
-import { DEFAULT_POLLS_IMPL, pollsImpl } from '../library/pollsFlag'
 import {
   invokeSteamPoll,
   pollRootsFor,
@@ -14,8 +11,6 @@ import {
   cancelDelegatedInstall
 } from '../library/installPolling'
 import { stopInstallPolling } from '../library/installStop'
-
-const FLAG = 'GAMELIB_STEAM_POLLS'
 
 beforeEach(() => {
   jest.spyOn(logger, 'logDebug').mockImplementation(() => undefined)
@@ -48,24 +43,6 @@ function makeDeps(result: unknown = null) {
   return { deps, calls, send }
 }
 
-describe('pollsImpl', () => {
-  it('defaults and parses', () => {
-    expect(pollsImpl({})).toBe(DEFAULT_POLLS_IMPL)
-    expect(pollsImpl({ [FLAG]: 'rust' })).toBe('rust')
-    expect(pollsImpl({ [FLAG]: 'ts' })).toBe('ts')
-    expect(pollsImpl({ [FLAG]: 'bogus' })).toBe(DEFAULT_POLLS_IMPL)
-  })
-
-  it('matches the shell default (flip together in plan 80-26)', () => {
-    const rs = readFileSync(
-      join(__dirname, '../../../../../src-tauri/src/steampoll_dispatch.rs'),
-      'utf8'
-    )
-    const m = /DEFAULT_POLLS_IMPL: PollsImpl = PollsImpl::(\w+);/.exec(rs)
-    expect(m?.[1]?.toLowerCase()).toBe(DEFAULT_POLLS_IMPL)
-  })
-})
-
 describe('wrapper', () => {
   it('forwards channel and one args object, and propagates a rejection', async () => {
     const { deps, calls } = makeDeps()
@@ -92,16 +69,11 @@ describe('wrapper', () => {
 })
 
 describe('rust branch', () => {
-  let prev: string | undefined
   beforeEach(() => {
-    prev = process.env[FLAG]
-    process.env[FLAG] = 'rust'
     jest.useFakeTimers()
   })
   afterEach(() => {
     jest.useRealTimers()
-    if (prev === undefined) delete process.env[FLAG]
-    else process.env[FLAG] = prev
   })
 
   it('start sends steampoll_install_start and creates no TS timer', async () => {
@@ -159,16 +131,5 @@ describe('rust branch', () => {
       }
     ])
     expect(send).not.toHaveBeenCalled()
-  })
-})
-
-describe('ts branch', () => {
-  it('sends nothing to Rust', async () => {
-    process.env[FLAG] = 'ts'
-    const { deps, calls } = makeDeps()
-    await stopInstallPolling(deps, '10')
-    expect(await cancelDelegatedInstall(deps, '10')).toBe(false)
-    expect(await isDelegatedInstallPolling(deps, '10')).toBe(false)
-    expect(calls).toEqual([])
   })
 })

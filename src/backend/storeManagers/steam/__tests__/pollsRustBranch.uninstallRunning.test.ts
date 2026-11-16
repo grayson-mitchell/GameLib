@@ -13,8 +13,6 @@ import {
 } from '../library/runningPoll'
 import { steamLaunchWatchDeps } from '../steamLaunchedDeps'
 
-const FLAG = 'GAMELIB_STEAM_POLLS'
-
 beforeEach(() => {
   jest.spyOn(logger, 'logDebug').mockImplementation(() => undefined)
   jest.spyOn(logger, 'logInfo').mockImplementation(() => undefined)
@@ -49,19 +47,14 @@ function makeDeps(result: unknown = null) {
 }
 
 describe('uninstall API', () => {
-  let prev: string | undefined
   beforeEach(() => {
-    prev = process.env[FLAG]
     jest.useFakeTimers()
   })
   afterEach(() => {
     jest.useRealTimers()
-    if (prev === undefined) delete process.env[FLAG]
-    else process.env[FLAG] = prev
   })
 
   it('rust: start sends steampoll_uninstall_start and creates no TS timer', async () => {
-    process.env[FLAG] = 'rust'
     const { deps, calls } = makeDeps()
     await startUninstallPolling(deps, '10', { source: 'native' })
     expect(calls).toHaveLength(1)
@@ -81,7 +74,6 @@ describe('uninstall API', () => {
   })
 
   it('rust: a bare number is the interval', async () => {
-    process.env[FLAG] = 'rust'
     const { deps, calls } = makeDeps()
     await startUninstallPolling(deps, '10', 500)
     expect(calls[0]?.args[0]).toMatchObject({
@@ -91,7 +83,6 @@ describe('uninstall API', () => {
   })
 
   it('rust: stop sends steampoll_uninstall_stop', async () => {
-    process.env[FLAG] = 'rust'
     const { deps, calls } = makeDeps()
     await stopUninstallPolling(deps, '10')
     expect(calls).toEqual([
@@ -100,7 +91,6 @@ describe('uninstall API', () => {
   })
 
   it('rust: the notice seq comes from steampoll_next_notice_seq', async () => {
-    process.env[FLAG] = 'rust'
     const { deps, calls } = makeDeps(42)
     expect(await noticeSeq({ deps } as never)).toBe(42)
     expect(calls[0]?.channel).toBe('steampoll_next_notice_seq')
@@ -108,30 +98,11 @@ describe('uninstall API', () => {
       deps.steamInstallRuntime.polls.nextSteamRequestNoticeSeq
     ).not.toHaveBeenCalled()
   })
-
-  it('ts: sends nothing to Rust and uses the local seq', async () => {
-    process.env[FLAG] = 'ts'
-    const { deps, calls } = makeDeps()
-    expect(await noticeSeq({ deps } as never)).toBe(7)
-    await stopUninstallPolling(deps, '10')
-    await startUninstallPolling(deps, '10', 1000)
-    expect(calls).toEqual([])
-    expect(
-      deps.steamInstallRuntime.uninstallPolls.activeUninstallPolls.size
-    ).toBe(1)
-    await stopUninstallPolling(deps, '10')
-  })
 })
 
 describe('running probe and poll', () => {
-  let prev: string | undefined
-  beforeEach(() => {
-    prev = process.env[FLAG]
-  })
-  afterEach(() => {
-    if (prev === undefined) delete process.env[FLAG]
-    else process.env[FLAG] = prev
-  })
+  beforeEach(() => {})
+  afterEach(() => {})
 
   function probeDeps(impl: (channel: string, args: unknown[]) => unknown) {
     const calls: Call[] = []
@@ -148,7 +119,6 @@ describe('running probe and poll', () => {
   }
 
   it('rust: the three readers forward strict and never spawn', async () => {
-    process.env[FLAG] = 'rust'
     const { deps, calls, run } = probeDeps(() => 440)
     expect(await readRunningAppId(deps, 'win32')).toBe(440)
     expect(await readRunningAppIdOrThrow(deps, 'win32')).toBe(440)
@@ -167,7 +137,6 @@ describe('running probe and poll', () => {
   })
 
   it('rust: a rejection is 0 non-strict and rejects strict', async () => {
-    process.env[FLAG] = 'rust'
     const { deps } = probeDeps(() => {
       throw new Error('boom')
     })
@@ -178,7 +147,6 @@ describe('running probe and poll', () => {
   })
 
   it('rust: pollerHold claims once and releases once with the claim id', async () => {
-    process.env[FLAG] = 'rust'
     const { deps, calls } = makeDeps(5)
     const watch = steamLaunchWatchDeps(deps)
     const release = watch.pollerHold('10')
@@ -195,7 +163,6 @@ describe('running probe and poll', () => {
   })
 
   it('rust: pollerReports reads steampoll_running_last_app_id', async () => {
-    process.env[FLAG] = 'rust'
     const { deps, calls } = makeDeps(10)
     const watch = steamLaunchWatchDeps(deps)
     expect(await watch.pollerReports('10')).toBe(true)
@@ -204,14 +171,5 @@ describe('running probe and poll', () => {
       channel: 'steampoll_running_last_app_id',
       args: []
     })
-  })
-
-  it('ts: the readers do not call steampoll', async () => {
-    process.env[FLAG] = 'ts'
-    const { deps, calls } = probeDeps(() => ({ runningAppId: 0 }))
-    await readMacRunningAppId(deps)
-    expect(calls.map((c) => c.channel)).not.toContain(
-      'steampoll_read_running_app_id'
-    )
   })
 })

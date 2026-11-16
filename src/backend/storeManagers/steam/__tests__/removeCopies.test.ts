@@ -23,18 +23,12 @@ import {
  *  - ../state is NOT mocked — real library Map, cleared in beforeEach
  */
 
-import { createEngineRegistry } from 'backend/engine/engineRegistry'
-import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import { rmSync } from 'node:fs'
 // Plain 'fs' (not 'node:fs', not 'graceful-fs') is never mocked in this file
 // — used ONLY by the Task 3 IPC-seam census test below to read real source
 // files off disk, deliberately bypassing every fixture double above it.
 import { readFileSync as readSourceFile } from 'fs'
 import { join } from 'path'
-import {
-  vdf,
-  mockedFsSteamFiles
-} from '../localFiles/__tests__/fixtures/mockedFsSteamFiles'
 import { getSteamLibraries } from 'backend/utils'
 import * as uninstallPollingModule from '../library/uninstallPolling'
 import * as acfState from '../library/acfState'
@@ -46,7 +40,7 @@ import { removeAllSteamInstallCopies } from '../removeAllCopies'
 import type { Stores } from 'backend/services/types'
 
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
-import { createTestSteamLaunchRuntime } from 'backend/testUtils/testSteamLaunchRuntime'
+import { EMPTY_POLL_STATUS } from 'backend/testUtils/steamPollStatusFake'
 
 // 66.3-15: the bottle helpers are read through the deps slice, so they are plain mocks here.
 // quick 261024-cjq: plain function (survives resetMocks) — CrossOver present.
@@ -58,20 +52,31 @@ const steamBottle = {
   isSteamBottleProvisioned: jest.fn(),
   resolveCrossoverWine: jest.fn()
 }
-const libDeps = {
-  requestRustInvoke: mockedFsSteamFiles().requestRustInvoke,
-  config: createTestGlobalConfig(),
-  steamBottle,
-  paths: { userHome: '/test-gamelib/home' },
-  engineRuntime: { registry: createEngineRegistry() },
-  steamLaunchRuntime: createTestSteamLaunchRuntime()
-}
 
 const { steamMetadataStore } = jest.requireMock<Stores['steam']>('../stores')
 const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 
+// Rust owns the ACF reads and the copy removal, so a test scripts the steampoll channels it reaches.
+// An unscripted read answers absent; the registry read answers empty; anything else is a failure.
+const rustHandlers = new Map<string, (args: unknown) => unknown>()
+const rustCalls: { channel: string; args: unknown }[] = []
+const requestRustInvoke = (
+  channel: string,
+  argv: readonly unknown[]
+): Promise<unknown> => {
+  rustCalls.push({ channel, args: argv[0] })
+  const handler = rustHandlers.get(channel)
+  if (handler) return Promise.resolve(handler(argv[0]))
+  if (channel === 'steampoll_status') return Promise.resolve(EMPTY_POLL_STATUS)
+  if (channel === 'steampoll_acf_read_state') {
+    return Promise.resolve({ state: 'absent' })
+  }
+  return Promise.reject(new Error(`unscripted rust channel ${channel}`))
+}
+
 const steamTestDeps = createTestManagerDeps({
-  requestRustInvoke: mockedFsSteamFiles().requestRustInvoke,
+  requestRustInvoke: requestRustInvoke as never,
+  config: createTestGlobalConfig({ defaultSteamPath: '/steam' }),
   steamUser,
   steamBottle: steamBottle as never,
   steamProcesses: createInertSteamProcesses(),
@@ -102,13 +107,6 @@ jest.mock('backend/logger', () => ({
 jest.mock('backend/utils', () => ({
   getSteamLibraries: jest.fn(),
   getFileSize: jest.fn()
-}))
-
-// ── graceful-fs mock — existsSync/readdirSync/readFileSync ──────────────────
-jest.mock('graceful-fs', () => ({
-  existsSync: jest.fn(),
-  readdirSync: jest.fn(),
-  readFileSync: jest.fn()
 }))
 
 // ── node:fs mock — rmSync is the ONLY delete primitive removeSteamInstallCopy
@@ -242,85 +240,13 @@ jest.mock('axios')
 // spied with `jest.spyOn(jest.requireMock('os'), 'cpus')` inside
 // `loadWithHost()` below, without redeclaring the mock.
 
-// ────────────────────────────────────────────────────────────────────────────
-// Fixture harness — an in-memory "filesystem" of steamapps dirs + ACF
-// manifests, driving the REAL readAcfState / findOtherManifestsWithInstalldir
-// implementations through the mocked graceful-fs + vdf.parse seams above.
-// ────────────────────────────────────────────────────────────────────────────
-
 const NATIVE_LIB = '/lib'
 const NATIVE_STEAMAPPS = join(NATIVE_LIB, 'steamapps')
 
-let existingPaths: Set<string>
-let manifestByPath: Map<string, { AppState: Record<string, unknown> }>
-let dirListing: Map<string, string[]>
-
-function resetFixture() {
-  existingPaths = new Set()
-  manifestByPath = new Map()
-  dirListing = new Map()
-  ;(getSteamLibraries as jest.Mock).mockResolvedValue([NATIVE_LIB])
-  ;(existsSync as jest.Mock).mockImplementation((p: string) =>
-    existingPaths.has(p)
-  )
-  ;(readdirSync as jest.Mock).mockImplementation(
-    (dir: string) => dirListing.get(dir) ?? []
-  )
-  ;(readFileSync as jest.Mock).mockImplementation((p: string) =>
-    JSON.stringify(manifestByPath.get(p))
-  )
-  vdf.parse.mockImplementation((content: string) => JSON.parse(content))
-  // rmSync is mocked (no real filesystem I/O in these tests), but the
-  // fixture must still reflect a deletion for subsequent readAcfState /
-  // findOtherManifestsWithInstalldir calls in the SAME test — e.g. Task 2's
-  // pollUninstallOnce call after removeSteamInstallCopy re-probes the same
-  // native root and must see it as gone, not still "installed". Calls are
-  // still fully recorded (mockImplementation does not disable call
-  // tracking), so `expect(rmSync).toHaveBeenCalledWith(...)` assertions
-  // elsewhere in this file are unaffected.
-  ;(rmSync as jest.Mock).mockImplementation(
-    (p: string, opts?: { recursive?: boolean }) => {
-      if (opts?.recursive) {
-        for (const existing of Array.from(existingPaths)) {
-          if (existing === p || existing.startsWith(`${p}/`)) {
-            existingPaths.delete(existing)
-          }
-        }
-      } else {
-        existingPaths.delete(p)
-      }
-      manifestByPath.delete(p)
-      for (const [dir, files] of dirListing) {
-        const idx = files.findIndex((f) => join(dir, f) === p)
-        if (idx !== -1) files.splice(idx, 1)
-      }
-    }
-  )
-}
-
-/** Registers appId's manifest under `dir` (defaults to the native steamapps
- *  root) with the given AppState fields. */
-function addManifest(
-  appId: string,
-  appState: Record<string, unknown>,
-  dir: string = NATIVE_STEAMAPPS
-) {
-  existingPaths.add(dir)
-  const file = `appmanifest_${appId}.acf`
-  const path = join(dir, file)
-  existingPaths.add(path)
-  manifestByPath.set(path, { AppState: appState })
-  const listing = dirListing.get(dir) ?? []
-  if (!listing.includes(file)) listing.push(file)
-  dirListing.set(dir, listing)
-}
-
-// StateFlags bit 4 (0x4) set => 'installed'; unset => 'downloading'.
-const INSTALLED_FLAGS = '4'
-const DOWNLOADING_FLAGS = '2'
-
 beforeEach(() => {
-  resetFixture()
+  rustHandlers.clear()
+  rustCalls.length = 0
+  ;(getSteamLibraries as jest.Mock).mockResolvedValue([NATIVE_LIB])
   jest.mocked(steamUser.acquireAuthenticated).mockResolvedValue({
     ok: true,
     client: {},
@@ -512,101 +438,6 @@ describe('isAppleSiliconMac (host gate)', () => {
 })
 
 // ── Task 1: enumerateSteamInstallCopies ──────────────────────────────────────
-describe('enumerateSteamInstallCopies', () => {
-  it('returns only the native copy when bottle/bridge are absent', async () => {
-    addManifest('63000', {
-      appid: '63000',
-      StateFlags: INSTALLED_FLAGS,
-      installdir: 'HOARD',
-      SizeOnDisk: '12345'
-    })
-    const bottleMock = jest.requireMock<{
-      getBottleSteamappsDir: jest.Mock
-    }>('../bottle')
-    const bridgeBottleMock = jest.requireMock<{
-      getBridgeBottleSettings: jest.Mock
-    }>('../bridgeBottle')
-    getSteamBottleSettings.mockReturnValue({
-      wineCrossoverBottle: 'B'
-    })
-    bridgeBottleMock.getBridgeBottleSettings.mockReturnValue({
-      wineCrossoverBottle: 'BR'
-    })
-    bottleMock.getBottleSteamappsDir.mockImplementation(
-      (_paths: unknown, name: string) =>
-        name === 'B' ? '/bottle/steamapps' : '/bridge/steamapps'
-    )
-
-    const copies = await acfState.enumerateSteamInstallCopies(libDeps, '63000')
-
-    expect(copies).toEqual([
-      {
-        source: 'native',
-        installPath: join(NATIVE_STEAMAPPS, 'common', 'HOARD'),
-        sizeOnDisk: '12345'
-      }
-    ])
-  })
-
-  it('excludes a "downloading" root from the result', async () => {
-    addManifest('63000', {
-      appid: '63000',
-      StateFlags: DOWNLOADING_FLAGS,
-      installdir: 'HOARD'
-    })
-
-    const copies = await acfState.enumerateSteamInstallCopies(libDeps, '63000')
-
-    expect(copies).toEqual([])
-  })
-
-  it('probes native, bottle, bridge in that fixed order, and a throwing probe is logged + skipped (never propagated)', async () => {
-    // Note: readAcfState is NOT spied here — it's called internally by
-    // enumerateSteamInstallCopies from the SAME source file (library.ts), so
-    // a jest.spyOn against the imported module object would not intercept
-    // that call site (TS compiles same-file calls as direct local function
-    // references, not property lookups through module.exports — a known
-    // jest/ts-jest gotcha). Order and the throw-and-skip behavior are
-    // instead observed through the real EXTERNAL seams each source's probe
-    // must call through (getSteamLibraries for native, getSteamBottleSettings
-    // for bottle, getBridgeBottleSettings for bridge) — these ARE
-    // cross-module calls and are safely mockable.
-    const order: string[] = []
-    ;(getSteamLibraries as jest.Mock).mockImplementation(() => {
-      order.push('native')
-      return Promise.resolve([NATIVE_LIB])
-    })
-    const bottleMock = jest.requireMock<{
-      getBottleSteamappsDir: jest.Mock
-    }>('../bottle')
-    const bridgeBottleMock = jest.requireMock<{
-      getBridgeBottleSettings: jest.Mock
-    }>('../bridgeBottle')
-    getSteamBottleSettings.mockImplementation(() => {
-      order.push('bottle')
-      throw new Error('unprovisioned bridge bottle')
-    })
-    bridgeBottleMock.getBridgeBottleSettings.mockImplementation(() => {
-      order.push('bridge')
-      return { wineCrossoverBottle: 'BR' }
-    })
-    bottleMock.getBottleSteamappsDir.mockReturnValue('/bridge/steamapps')
-
-    const { logWarning } = jest.requireMock<{ logWarning: jest.Mock }>(
-      'backend/logger'
-    )
-
-    const copies = await acfState.enumerateSteamInstallCopies(libDeps, '63000')
-
-    expect(order).toEqual(['native', 'bottle', 'bridge'])
-    // native: absent (no manifest fixture added); bottle: threw, skipped;
-    // bridge: absent (steamapps dir '/bridge/steamapps' never registered
-    // as existing in the fixture) -> no copies, and the throw never
-    // propagated out of enumerateSteamInstallCopies.
-    expect(copies).toEqual([])
-    expect(logWarning).toHaveBeenCalled()
-  })
-})
 
 // ── Task 1: removeSteamInstallCopy ───────────────────────────────────────────
 describe('removeSteamInstallCopy', () => {
@@ -624,266 +455,10 @@ describe('removeSteamInstallCopy', () => {
     })
     expect(rmSync).not.toHaveBeenCalled()
   })
-
-  it("state 'unknown' (manifest read rejected) -> refused, nothing deleted (WR-01)", async () => {
-    const result = await acfState.removeSteamInstallCopy(
-      {
-        ...steamTestDeps,
-        requestRustInvoke: () =>
-          Promise.reject(new Error('rustInvoke timed out'))
-      } as never,
-      '63000',
-      'native'
-    )
-
-    expect(result).toEqual({
-      status: 'refused',
-      source: 'native',
-      reason: 'install state unknown'
-    })
-    expect(rmSync).not.toHaveBeenCalled()
-  })
-
-  it("state 'absent' -> absent, nothing deleted", async () => {
-    const result = await acfState.removeSteamInstallCopy(
-      steamTestDeps,
-      '63000',
-      'native'
-    )
-
-    expect(result).toEqual({ status: 'absent', source: 'native' })
-    expect(rmSync).not.toHaveBeenCalled()
-  })
-
-  it("state 'downloading' -> refused, nothing deleted", async () => {
-    addManifest('63000', {
-      appid: '63000',
-      StateFlags: DOWNLOADING_FLAGS,
-      installdir: 'HOARD'
-    })
-
-    const result = await acfState.removeSteamInstallCopy(
-      steamTestDeps,
-      '63000',
-      'native'
-    )
-
-    expect(result).toEqual({
-      status: 'refused',
-      source: 'native',
-      reason: expect.stringMatching(/in progress/i)
-    })
-    expect(rmSync).not.toHaveBeenCalled()
-  })
-
-  it('installPath escaping common/ via a traversal installdir -> refused, nothing deleted', async () => {
-    addManifest('63000', {
-      appid: '63000',
-      StateFlags: INSTALLED_FLAGS,
-      installdir: '../../etc/evil'
-    })
-
-    const result = await acfState.removeSteamInstallCopy(
-      steamTestDeps,
-      '63000',
-      'native'
-    )
-
-    expect(result).toEqual({
-      status: 'refused',
-      source: 'native',
-      reason: expect.stringMatching(/outside common/i)
-    })
-    expect(rmSync).not.toHaveBeenCalled()
-  })
-
-  it('installPath resolving to the bare common/ root (empty installdir) -> refused, nothing deleted', async () => {
-    addManifest('63000', {
-      appid: '63000',
-      StateFlags: INSTALLED_FLAGS,
-      installdir: ''
-    })
-
-    const result = await acfState.removeSteamInstallCopy(
-      steamTestDeps,
-      '63000',
-      'native'
-    )
-
-    expect(result).toEqual({
-      status: 'refused',
-      source: 'native',
-      reason: expect.stringMatching(/outside common/i)
-    })
-    expect(rmSync).not.toHaveBeenCalled()
-  })
-
-  it('happy path -> removes the installdir AND unlinks the manifest, manifestOnly:false', async () => {
-    addManifest('63000', {
-      appid: '63000',
-      StateFlags: INSTALLED_FLAGS,
-      installdir: 'HOARD',
-      SizeOnDisk: '999'
-    })
-
-    const result = await acfState.removeSteamInstallCopy(
-      steamTestDeps,
-      '63000',
-      'native'
-    )
-
-    expect(result).toEqual({
-      status: 'removed',
-      source: 'native',
-      manifestOnly: false
-    })
-    expect(rmSync).toHaveBeenCalledWith(
-      join(NATIVE_STEAMAPPS, 'common', 'HOARD'),
-      { recursive: true, force: true }
-    )
-    expect(rmSync).toHaveBeenCalledWith(
-      join(NATIVE_STEAMAPPS, 'appmanifest_63000.acf'),
-      { force: true }
-    )
-  })
-
-  it('shared installdir with another appId -> manifest-only removal, directory untouched', async () => {
-    addManifest('63000', {
-      appid: '63000',
-      StateFlags: INSTALLED_FLAGS,
-      installdir: 'SharedGame'
-    })
-    addManifest('99999', {
-      appid: '99999',
-      StateFlags: INSTALLED_FLAGS,
-      installdir: 'SharedGame'
-    })
-
-    const result = await acfState.removeSteamInstallCopy(
-      steamTestDeps,
-      '63000',
-      'native'
-    )
-
-    expect(result).toEqual({
-      status: 'removed',
-      source: 'native',
-      manifestOnly: true
-    })
-    expect(rmSync).toHaveBeenCalledTimes(1)
-    expect(rmSync).toHaveBeenCalledWith(
-      join(NATIVE_STEAMAPPS, 'appmanifest_63000.acf'),
-      { force: true }
-    )
-    expect(rmSync).not.toHaveBeenCalledWith(
-      join(NATIVE_STEAMAPPS, 'common', 'SharedGame'),
-      expect.anything()
-    )
-  })
 })
 
 // quick 261106-s3n: the ON delete fallback leans on these guards for any
 // registered library and for hostile installdir values.
-describe('removeSteamInstallCopy — delete-in-GameLib containment (quick 261106-s3n)', () => {
-  it('removes a manifest found in a NON-default registered library from that library', async () => {
-    const lib2 = '/lib2'
-    const lib2Steamapps = join(lib2, 'steamapps')
-    ;(getSteamLibraries as jest.Mock).mockResolvedValue([NATIVE_LIB, lib2])
-    addManifest(
-      '63000',
-      { appid: '63000', StateFlags: INSTALLED_FLAGS, installdir: 'HOARD' },
-      lib2Steamapps
-    )
-
-    const result = await acfState.removeSteamInstallCopy(
-      steamTestDeps,
-      '63000',
-      'native'
-    )
-
-    expect(result).toEqual({
-      status: 'removed',
-      source: 'native',
-      manifestOnly: false
-    })
-    expect(rmSync).toHaveBeenCalledWith(
-      join(lib2Steamapps, 'common', 'HOARD'),
-      {
-        recursive: true,
-        force: true
-      }
-    )
-    expect(rmSync).toHaveBeenCalledWith(
-      join(lib2Steamapps, 'appmanifest_63000.acf'),
-      { force: true }
-    )
-    expect(rmSync).not.toHaveBeenCalledWith(
-      expect.stringContaining(NATIVE_STEAMAPPS),
-      expect.anything()
-    )
-  })
-
-  it('refuses an installdir that climbs out of common/ (../../..)', async () => {
-    addManifest('63000', {
-      appid: '63000',
-      StateFlags: INSTALLED_FLAGS,
-      installdir: '../../..'
-    })
-
-    const result = await acfState.removeSteamInstallCopy(
-      steamTestDeps,
-      '63000',
-      'native'
-    )
-
-    expect(result).toMatchObject({ status: 'refused' })
-    expect(rmSync).not.toHaveBeenCalled()
-  })
-
-  it('an absolute-looking installdir is joined under common/ and never deletes the real absolute path', async () => {
-    addManifest('63000', {
-      appid: '63000',
-      StateFlags: INSTALLED_FLAGS,
-      installdir: '/etc'
-    })
-
-    await acfState.removeSteamInstallCopy(steamTestDeps, '63000', 'native')
-
-    expect(rmSync).not.toHaveBeenCalledWith('/etc', expect.anything())
-    for (const [target] of (rmSync as jest.Mock).mock.calls) {
-      expect(target.startsWith(NATIVE_STEAMAPPS)).toBe(true)
-    }
-  })
-
-  it('a common/<installdir> symlink to an outside directory removes the link only, never the target files', async () => {
-    const real = jest.requireActual<typeof import('node:fs')>('node:fs')
-    const root = real.mkdtempSync(join(real.realpathSync('/tmp'), 's3n-'))
-    try {
-      const lib = join(root, 'lib')
-      const steamapps = join(lib, 'steamapps')
-      const outside = join(root, 'outside')
-      real.mkdirSync(join(steamapps, 'common'), { recursive: true })
-      real.mkdirSync(outside)
-      real.writeFileSync(join(outside, 'precious.txt'), 'keep')
-      const link = join(steamapps, 'common', 'LinkGame')
-      real.symlinkSync(outside, link)
-      ;(getSteamLibraries as jest.Mock).mockResolvedValue([lib])
-      addManifest(
-        '63000',
-        { appid: '63000', StateFlags: INSTALLED_FLAGS, installdir: 'LinkGame' },
-        steamapps
-      )
-      ;(rmSync as jest.Mock).mockImplementation(real.rmSync)
-
-      await acfState.removeSteamInstallCopy(steamTestDeps, '63000', 'native')
-
-      expect(real.existsSync(join(outside, 'precious.txt'))).toBe(true)
-      expect(real.existsSync(link)).toBe(false)
-    } finally {
-      real.rmSync(root, { recursive: true, force: true })
-    }
-  })
-})
 
 // ── Task 1 (D-51-12): removeSteamInstallCopy — bridge bottle cleanup ────────
 // Closes LD-5 (folded todo 2026-10-16-bridge-bottle-cleanup-gaps-after-per-game-bottles.md):
@@ -927,15 +502,22 @@ describe('removeSteamInstallCopy — bridge bottle cleanup (D-51-12)', () => {
     )
   })
 
+  // The guards and the deletion run in Rust; what stays TS is the per-game bottle step after it.
+  const removeCopyReplies = (
+    bridgeBottle: string | null,
+    manifestOnly = false
+  ) =>
+    rustHandlers.set('steampoll_acf_remove_copy', () => ({
+      status: 'removed',
+      source: 'bridge',
+      manifestOnly,
+      bridgeBottle
+    }))
+
   it('per-game bridge bottle, full removal -> removePerGameBridgeBottle called once with appId, bottleRemoved:true', async () => {
     const mock = bottleMock()
-    mock.resolveBridgeBottleName.mockReturnValue(PER_GAME_BOTTLE)
     mock.removePerGameBridgeBottle.mockResolvedValue({ status: 'removed' })
-    addManifest(
-      APP_ID,
-      { appid: APP_ID, StateFlags: INSTALLED_FLAGS, installdir: 'HOARD' },
-      BRIDGE_STEAMAPPS
-    )
+    removeCopyReplies(PER_GAME_BOTTLE)
 
     const result = await acfState.removeSteamInstallCopy(
       steamTestDeps,
@@ -954,16 +536,14 @@ describe('removeSteamInstallCopy — bridge bottle cleanup (D-51-12)', () => {
       steamTestDeps,
       APP_ID
     )
+    expect(rustCalls.map((c) => c.channel)).toContain(
+      'steampoll_acf_remove_copy'
+    )
   })
 
   it('resolved bottle is the legacy GameLibSteamBridge -> removePerGameBridgeBottle NOT called, bottleRemoved absent', async () => {
     const mock = bottleMock()
-    mock.resolveBridgeBottleName.mockReturnValue(LEGACY_BOTTLE)
-    addManifest(
-      APP_ID,
-      { appid: APP_ID, StateFlags: INSTALLED_FLAGS, installdir: 'HOARD' },
-      BRIDGE_STEAMAPPS
-    )
+    removeCopyReplies(LEGACY_BOTTLE)
 
     const result = await acfState.removeSteamInstallCopy(
       steamTestDeps,
@@ -982,25 +562,7 @@ describe('removeSteamInstallCopy — bridge bottle cleanup (D-51-12)', () => {
 
   it('manifestOnly removal (shared installdir) -> bottle NOT removed even though the bottle is per-game', async () => {
     const mock = bottleMock()
-    mock.resolveBridgeBottleName.mockReturnValue(PER_GAME_BOTTLE)
-    addManifest(
-      APP_ID,
-      {
-        appid: APP_ID,
-        StateFlags: INSTALLED_FLAGS,
-        installdir: 'SharedGame'
-      },
-      BRIDGE_STEAMAPPS
-    )
-    addManifest(
-      '99999',
-      {
-        appid: '99999',
-        StateFlags: INSTALLED_FLAGS,
-        installdir: 'SharedGame'
-      },
-      BRIDGE_STEAMAPPS
-    )
+    removeCopyReplies(PER_GAME_BOTTLE, true)
 
     const result = await acfState.removeSteamInstallCopy(
       steamTestDeps,
@@ -1018,16 +580,11 @@ describe('removeSteamInstallCopy — bridge bottle cleanup (D-51-12)', () => {
 
   it("removePerGameBridgeBottle returning {status:'error'} -> removal still reports 'removed', bottleRemoved:false, and a logWarning names the bottle", async () => {
     const mock = bottleMock()
-    mock.resolveBridgeBottleName.mockReturnValue(PER_GAME_BOTTLE)
     mock.removePerGameBridgeBottle.mockResolvedValue({
       status: 'error',
       error: 'boom'
     })
-    addManifest(
-      APP_ID,
-      { appid: APP_ID, StateFlags: INSTALLED_FLAGS, installdir: 'HOARD' },
-      BRIDGE_STEAMAPPS
-    )
+    removeCopyReplies(PER_GAME_BOTTLE)
     const { logWarning } = jest.requireMock<{ logWarning: jest.Mock }>(
       'backend/logger'
     )
@@ -1048,54 +605,6 @@ describe('removeSteamInstallCopy — bridge bottle cleanup (D-51-12)', () => {
       expect.stringContaining(PER_GAME_BOTTLE),
       expect.anything()
     )
-  })
-
-  it("source 'native' never resolves or calls removePerGameBridgeBottle", async () => {
-    const mock = bottleMock()
-    mock.resolveBridgeBottleName.mockReturnValue(PER_GAME_BOTTLE)
-    addManifest(APP_ID, {
-      appid: APP_ID,
-      StateFlags: INSTALLED_FLAGS,
-      installdir: 'HOARD'
-    })
-
-    const result = await acfState.removeSteamInstallCopy(
-      steamTestDeps,
-      APP_ID,
-      'native'
-    )
-
-    expect(result).toEqual({
-      status: 'removed',
-      source: 'native',
-      manifestOnly: false
-    })
-    expect(mock.resolveBridgeBottleName).not.toHaveBeenCalled()
-    expect(mock.removePerGameBridgeBottle).not.toHaveBeenCalled()
-  })
-
-  it("source 'bottle' never resolves or calls removePerGameBridgeBottle", async () => {
-    const mock = bottleMock()
-    mock.resolveBridgeBottleName.mockReturnValue(PER_GAME_BOTTLE)
-    addManifest(
-      APP_ID,
-      { appid: APP_ID, StateFlags: INSTALLED_FLAGS, installdir: 'HOARD' },
-      BOTTLE_STEAMAPPS
-    )
-
-    const result = await acfState.removeSteamInstallCopy(
-      steamTestDeps,
-      APP_ID,
-      'bottle'
-    )
-
-    expect(result).toEqual({
-      status: 'removed',
-      source: 'bottle',
-      manifestOnly: false
-    })
-    expect(mock.resolveBridgeBottleName).not.toHaveBeenCalled()
-    expect(mock.removePerGameBridgeBottle).not.toHaveBeenCalled()
   })
 })
 
@@ -1145,12 +654,28 @@ describe('SteamGame.install() route-time auto-cleanup (Task 2)', () => {
     steamBottle.isBottleReady.mockReturnValue(false)
   })
 
+  const nativeInstalledReplies = () =>
+    rustHandlers.set('steampoll_acf_read_state', (args) =>
+      (args as { source: string }).source === 'native'
+        ? {
+            state: 'installed',
+            stateFlags: 4,
+            installPath: join(NATIVE_STEAMAPPS, 'common', 'HOARD'),
+            sizeOnDisk: '12345'
+          }
+        : { state: 'absent' }
+    )
+  const removeCalls = () =>
+    rustCalls.filter((c) => c.channel === 'steampoll_acf_remove_copy')
+
   it("mac_arch:'32' + isAppleSiliconMac + native installed -> removeSteamInstallCopy called exactly once, install proceeds", async () => {
-    addManifest(APP_ID, {
-      appid: APP_ID,
-      StateFlags: INSTALLED_FLAGS,
-      installdir: 'HOARD'
-    })
+    nativeInstalledReplies()
+    rustHandlers.set('steampoll_acf_remove_copy', () => ({
+      status: 'removed',
+      source: 'native',
+      manifestOnly: false,
+      bridgeBottle: null
+    }))
     const removeSpy = jest.spyOn(acfState, 'removeSteamInstallCopy')
 
     const result = await new SteamGame(APP_ID, steamTestDeps).install({} as any)
@@ -1158,23 +683,18 @@ describe('SteamGame.install() route-time auto-cleanup (Task 2)', () => {
     expect(removeSpy).toHaveBeenCalledTimes(1)
     expect(removeSpy).toHaveBeenCalledWith(steamTestDeps, APP_ID, 'native')
     expect(result).toEqual({ status: 'done', deferredToSetup: true })
-    // rmSync is the real deletion primitive removeSteamInstallCopy calls
-    // internally — the spy above only proves the CALL, this proves the
-    // deletion the plan's Task 2 <behavior> requires actually happened.
-    expect(rmSync).toHaveBeenCalledWith(
-      join(NATIVE_STEAMAPPS, 'common', 'HOARD'),
-      { recursive: true, force: true }
-    )
+    // Rust performs the deletion; the call carries the native source and the appId.
+    expect(removeCalls()).toHaveLength(1)
+    expect(removeCalls()[0]?.args).toMatchObject({
+      appId: APP_ID,
+      source: 'native'
+    })
 
     removeSpy.mockRestore()
   })
 
   it('isAppleSiliconMac===false (Intel/unconfirmed) -> removeSteamInstallCopy NEVER called, even with mac_arch 32 + native copy present', async () => {
-    addManifest(APP_ID, {
-      appid: APP_ID,
-      StateFlags: INSTALLED_FLAGS,
-      installdir: 'HOARD'
-    })
+    nativeInstalledReplies()
     const removeSpy = jest.spyOn(acfState, 'removeSteamInstallCopy')
 
     // Flip the mutable environment double for this one test only.
@@ -1185,6 +705,7 @@ describe('SteamGame.install() route-time auto-cleanup (Task 2)', () => {
     await new SteamGame(APP_ID, steamTestDeps).install({} as any)
 
     expect(removeSpy).not.toHaveBeenCalled()
+    expect(removeCalls()).toHaveLength(0)
 
     // Restore the module default for subsequent tests.
     jest.requireMock<{ isAppleSiliconMac: boolean }>(
@@ -1202,11 +723,7 @@ describe('SteamGame.install() route-time auto-cleanup (Task 2)', () => {
       // beforeEach note above.
       bridge: { userRoute: 'bottle' }
     })
-    addManifest(APP_ID, {
-      appid: APP_ID,
-      StateFlags: INSTALLED_FLAGS,
-      installdir: 'HOARD'
-    })
+    nativeInstalledReplies()
     const removeSpy = jest.spyOn(acfState, 'removeSteamInstallCopy')
 
     await new SteamGame(APP_ID, steamTestDeps).install({} as any)
@@ -1216,7 +733,7 @@ describe('SteamGame.install() route-time auto-cleanup (Task 2)', () => {
   })
 
   it('no native copy on disk -> no call, no error', async () => {
-    // No addManifest() call -> readAcfState(libDeps, 'native') resolves 'absent'.
+    // No scripted read: Rust answers absent for the native root.
     const removeSpy = jest.spyOn(acfState, 'removeSteamInstallCopy')
 
     const result = await new SteamGame(APP_ID, steamTestDeps).install({} as any)
@@ -1227,11 +744,7 @@ describe('SteamGame.install() route-time auto-cleanup (Task 2)', () => {
   })
 
   it('removeSteamInstallCopy throwing is logged and swallowed — install still proceeds and returns its normal result', async () => {
-    addManifest(APP_ID, {
-      appid: APP_ID,
-      StateFlags: INSTALLED_FLAGS,
-      installdir: 'HOARD'
-    })
+    nativeInstalledReplies()
     const removeSpy = jest
       .spyOn(acfState, 'removeSteamInstallCopy')
       .mockRejectedValue(new Error('disk error'))
@@ -1245,27 +758,6 @@ describe('SteamGame.install() route-time auto-cleanup (Task 2)', () => {
     expect(result).toEqual({ status: 'done', deferredToSetup: true })
 
     removeSpy.mockRestore()
-  })
-
-  it('routes every state change through pollUninstallOnce — the cleanup block itself never hand-writes library.set (single call, from pollUninstallOnce only)', async () => {
-    addManifest(APP_ID, {
-      appid: APP_ID,
-      StateFlags: INSTALLED_FLAGS,
-      installdir: 'HOARD'
-    })
-    const librarySetSpy = jest.spyOn(library, 'set')
-
-    await new SteamGame(APP_ID, steamTestDeps).install({} as any)
-
-    // No survivor on bottle/bridge in this fixture -> pollUninstallOnce's
-    // own confirmed-absent branch calls library.set exactly once. If
-    // removeDemotedNativeOrphan ALSO hand-wrote library.set directly (the
-    // behavior this test guards against), this count would be 2 and the
-    // badge could flip early/inconsistently with the honest reconciliation.
-    expect(librarySetSpy).toHaveBeenCalledTimes(1)
-    expect(library.get(APP_ID)?.is_installed).toBe(false)
-
-    librarySetSpy.mockRestore()
   })
 })
 
@@ -1534,14 +1026,4 @@ describe('steamRemoveAllCopies IPC seam census (Task 3)', () => {
       expect(codeOnly).toEqual(expect.stringContaining('steamRemoveAllCopies'))
     }
   })
-})
-
-// Plan 80-26: the polls flag now defaults to rust; this file exercises the ts arm, so pin it.
-const prevPollsImpl = process.env.GAMELIB_STEAM_POLLS
-beforeAll(() => {
-  process.env.GAMELIB_STEAM_POLLS = 'ts'
-})
-afterAll(() => {
-  if (prevPollsImpl === undefined) delete process.env.GAMELIB_STEAM_POLLS
-  else process.env.GAMELIB_STEAM_POLLS = prevPollsImpl
 })

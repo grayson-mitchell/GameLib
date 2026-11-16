@@ -8,7 +8,7 @@
  */
 export type PollsImpl = 'rust' | 'ts'
 
-export const DEFAULT_POLLS_IMPL: PollsImpl = 'rust'
+const DEFAULT_POLLS_IMPL: PollsImpl = 'rust'
 
 export function pollsImpl(env: NodeJS.ProcessEnv = process.env): PollsImpl {
   const v = env.GAMELIB_STEAM_POLLS
