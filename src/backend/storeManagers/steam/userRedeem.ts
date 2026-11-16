@@ -9,11 +9,11 @@ import type { SteamUserSliceDeps } from 'backend/services/types'
  * submitSteamGuardCode's shape: guard clause first, plain JSON result,
  * never throws across the IPC boundary.
  *
- * `client.redeemKey()`'s TypeScript signature is misleading — it resolves
- * ONLY on EPurchaseResult.OK; every other outcome (already-owned, invalid,
- * rate-limited) REJECTS with an Error carrying `purchaseResultDetails` and
- * `packageList` as extra properties (verified against
- * node_modules/steam-user/components/apps.js:887, not the .d.ts).
+ * `client.redeemKey()` resolves ONLY on EPurchaseResult.OK; every other
+ * outcome (already-owned, invalid, rate-limited) REJECTS with an Error
+ * carrying `purchaseResultDetails` and `packageList` as extra properties.
+ * RustCmClient.redeemKey keeps that steam-user call shape: it turns a
+ * non-OK `steamcm_redeem_key` reply into that rejection.
  *
  * `store` is REQ-26-06's hidden, store-aware-ready parameter (D-05) —
  * callers default it to 'steam'; only 'steam' is wired today.
@@ -84,11 +84,12 @@ async function redeemOnce(
       return before
     }
     // WR-01: Only a rejection carrying a NUMERIC EPurchaseResult is a genuine
-    // Steam purchase verdict. A transport/timeout/unexpected failure (e.g. the
-    // 90s internal timeout in steam-user's redeemKey, or a mid-call CM
-    // disconnect) carries no purchaseResultDetails — classifying THAT as
-    // Unknown -> 'invalid' wrongly tells the user a valid key "doesn't look
-    // right". Map it to the generic 'error' outcome (connectivity copy).
+    // Steam purchase verdict. A transport/timeout/unexpected failure (e.g. a
+    // rustInvoke timeout, or a CM drop mid-call: the Rust session never
+    // resends a redeem after a rebuild) carries no purchaseResultDetails —
+    // classifying THAT as Unknown -> 'invalid' wrongly tells the user a valid
+    // key "doesn't look right". Map it to the generic 'error' outcome
+    // (connectivity copy).
     if (typeof e?.purchaseResultDetails !== 'number') {
       // WR-02: status-only diagnostic so genuine unexpected failures are
       // traceable. NEVER log the raw key (T-26-01) — only store/outcome and

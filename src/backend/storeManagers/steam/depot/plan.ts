@@ -72,7 +72,7 @@ export function getDepotClient(
   const client = steamUser.getClient()
   if (!client) {
     throw new Error(
-      'downloadSteamDepots: no authenticated steam-user client available after acquireAuthenticated()'
+      'downloadSteamDepots: no authenticated Rust CM lease client available after acquireAuthenticated()'
     )
   }
   return client as unknown as SteamCmClient
@@ -86,9 +86,9 @@ export function getDepotClient(
  *  honest error instead of hanging (fix goal #2). */
 export const PLAN_BUILD_MAX_ATTEMPTS = 3
 /** Fixed pause between a failed attempt and the next retry, given AFTER
- *  ensureConnected() has already (re)settled — steam-user's own
- *  autoRelogin/ensureConnected already waits out the real reconnect race;
- *  this is just a short courtesy pause before hitting the CM again. */
+ *  the re-acquire has already (re)settled — the Rust session rebuilds a
+ *  dropped CM connection itself before it answers an acquire; this is just a
+ *  short courtesy pause before hitting the CM again. */
 const PLAN_BUILD_RETRY_DELAY_MS = 500
 
 /** Resolves after `ms`, or immediately if/when `signal` aborts — so a cancel
@@ -115,12 +115,11 @@ function delay(ms: number, signal?: AbortSignal): Promise<void> {
  * whole plan build with no recovery — for a large multi-depot game this
  * phase can run long enough for a transient drop to occur before a single
  * chunk is ever streamed (the chunk-phase retry in downloadDepotFiles is
- * never reached). On failure, re-runs SteamUser.acquireAuthenticated() (which
- * transparently reconnects — steam-user nulls out `steamID` the instant the
- * CM connection drops, so a stale `connected` check would never catch this)
- * and re-resolves getDepotClient() before the next attempt, since a
- * reconnect creates a NEW client instance — reusing the old (dead) client
- * reference would just fail again. throwIfAborted is consulted before every
+ * never reached). On failure, re-runs SteamUser.acquireAuthenticated() (the
+ * Rust session rebuilds a dropped CM connection behind the lease, so the
+ * re-acquire is what waits out the reconnect) and re-resolves
+ * getDepotClient() before the next attempt, since each lease has its own
+ * client — reusing a client whose lease was lost would just fail again. throwIfAborted is consulted before every
  * attempt and the retry backoff is abort-interruptible, so a user cancel
  * during a retry wait still takes effect promptly (D-UAT-05 abort semantics
  * preserved — a network drop is never reported as a user cancel and a user
@@ -283,11 +282,12 @@ async function fetchDlcInfos(
 }
 
 /**
- * D-UAT-08: getDepotDecryptionKey failures arrive as a bare
- * steam-user EResult name ("FileNotFound") with no depot/app context —
- * classifyDepotError's CDN/connection-drop pattern then swallowed them into
- * the misleading "Steam servers dropped the connection" copy. Wrap with the
- * depot id + owning appId + real EResult name so the failure is diagnosable,
+ * D-UAT-08: getDepotDecryptionKey failures arrive as a bare Rust op failure
+ * ("steamcm steamcm_depot_key failed: <kind>", with `err.eresult` when Steam
+ * sent one) with no depot/app context — classifyDepotError's
+ * CDN/connection-drop pattern then swallowed them into the misleading "Steam
+ * servers dropped the connection" copy. Wrap with the depot id + owning
+ * appId + real EResult so the failure is diagnosable,
  * and preserve `err.eresult` on the wrapped error so both
  * isNonRetryableDepotError (withPlanBuildRetry's fail-fast) and
  * classifyDepotError (the final user-facing message) still recognize it.

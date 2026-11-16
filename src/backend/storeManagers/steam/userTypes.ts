@@ -52,10 +52,10 @@ export interface OpenAuthenticatedLease {
 // RateLimitExceeded, ServiceUnavailable, ...). Only these mean "the stored
 // refresh token is no longer good" and so only these may latch
 // `credentialsMissing` -- the Library then shows the sign-in row with Sign in,
-// which is the one action that fixes it. Values from
-// node_modules/steam-user/enums/EResult.js; literal numbers rather than
-// `SteamUserLib.EResult` so the test double (which carries no enum) and the
-// runtime cannot disagree.
+// which is the one action that fixes it. Values are Steam's EResult numbers,
+// the same ones the Rust session's credential-refusal check uses; literal
+// numbers rather than an imported enum, so the test double (which carries no
+// enum) and the runtime cannot disagree.
 export const CREDENTIAL_REFUSAL_ERESULTS: readonly number[] = Object.freeze([
   5, // InvalidPassword
   15, // AccessDenied -- the live case (gamelib.log 2026-10-10/11)

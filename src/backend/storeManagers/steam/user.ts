@@ -151,26 +151,28 @@ export class SteamUser {
   // ── LIB-01: Reconnect on startup ───────────────────────────────────────────
 
   /**
-   * The terminal CM error the CURRENT client's most recent logon attempt ended
-   * with, or null when there is none (never attempted, still in flight, or the
-   * attempt succeeded). Lets a caller whose ensureConnected() returned false
-   * tell "Steam refused this logon" (AccessDenied: steam-user schedules no
-   * retry, so waiting or retrying the same token replays the refusal) from
-   * "not connected yet". Carries message + eresult only: no client handle, no
-   * token. See the `logonFailure` field doc.
+   * The credential refusal the last session acquire ended with, or null when
+   * there is none (never attempted, still in flight, succeeded, or cleared by
+   * the next acquire or a sign-out). The Rust session reports a refusal of the
+   * credential itself (for example AccessDenied) as `logon-rejected` and does
+   * not retry it, so waiting or retrying the same token replays the refusal.
+   * Lets a caller whose ensureConnected() returned false tell "Steam refused
+   * this logon" from "not connected yet". Carries message + eresult only: no
+   * client handle, no token. See RustCmSession's `logonFailure` field.
    */
   getLogonFailure(): { message: string; eresult?: number } | null {
     return this.rust.getLogonFailure()
   }
 
   /**
-   * Ensure a live, authenticated steam-user client exists. Returns true only
-   * when the CM connection is established (client.steamID populated).
-   * Concurrent callers share a single in-flight connection attempt.
+   * Ensure the Rust CM session is open and signed in. Returns true only when
+   * it is connected. Concurrent callers share one logon: the Rust session
+   * actor runs a single logon for every waiting acquire.
    *
-   * Takes NO lease, so it never arms the idle timer: a long install run by a
-   * caller that has not moved to acquireAuthenticated() is never logged off
-   * mid-download.
+   * A connected session is checked without taking a lease. A closed one is
+   * opened through a lease that is released at once, so the Rust session's
+   * idle close (IDLE_GRACE after the last release) applies to it. Work that
+   * must keep the session open holds its own acquireAuthenticated() lease.
    *
    * user.ts-internal session check, kept public only because tests drive it
    * directly. Every production caller must use acquireAuthenticated /
@@ -181,9 +183,11 @@ export class SteamUser {
   }
 
   /**
-   * Lease the authenticated session, opening it (through the go-offline wrap)
-   * when it is not already open. Concurrent acquires share one logon. The last
-   * release closes the session after AUTH_SESSION_IDLE_GRACE_MS.
+   * Lease the authenticated session, opening it when it is not already open.
+   * There is no go-offline wrap: the Rust logon keeps Mac Steam's Friends list
+   * signed in, so a logon is never delayed or refused for it. Concurrent
+   * acquires share one logon. The Rust session closes 60 s (its IDLE_GRACE,
+   * the former AUTH_SESSION_IDLE_GRACE_MS) after the last release.
    */
   acquireAuthenticated(
     opts: AcquireAuthenticatedOpts
