@@ -33,8 +33,14 @@ import {
   buildInstalledMap,
   buildIncompleteInstallSet,
   buildBottleInstalledMap,
-  buildBridgeInstalledMap
+  buildBridgeInstalledMap,
+  installVersionField
 } from './installedMap'
+import {
+  type AcfSource,
+  installPlatformForSource,
+  isBridgeAuthoritativeForInstallState
+} from './installRoot'
 
 type Client = NonNullable<ReturnType<ManagerDeps['steamUser']['getClient']>>
 
@@ -75,18 +81,12 @@ export interface RustRefreshInputs {
   isMac: boolean
 }
 
-/** The op inputs plus the bridge app ids the backfill runs over. */
-export async function buildRustRefreshInputs(
+type InstallStateArg = RustRefreshInputs['installState']
+
+/** The ACF install maps the op takes, plus the bridge app ids the backfill runs over. */
+async function readInstallState(
   deps: ManagerDeps
-): Promise<RustRefreshInputs & { bridgeAppIds: string[] }> {
-  const metadata: Record<string, SteamMetadataCacheEntry> = {}
-  for (const [id, entry] of deps.stores.steam.steamMetadataStore.entries()) {
-    // A deep copy: the store may hand out live objects and the stale check compares against this.
-    metadata[id] = structuredClone(entry)
-  }
-  const previousGames = Array.from(
-    deps.steamSession.libraryState.library.values()
-  )
+): Promise<{ installState: InstallStateArg; bridgeAppIds: string[] }> {
   // D-UAT-13: apps holding for a Steam restart are not installed yet as far as the UI goes.
   const installedMap = await withoutSteamRestartHolds(
     deps,
@@ -102,25 +102,148 @@ export async function buildRustRefreshInputs(
       : null
   const incomplete = await buildIncompleteInstallSet(deps)
   return {
-    metadata,
-    previousGames,
     installState: {
       native: installArgs(installedMap),
       ...(bottleMap ? { bottle: installArgs(bottleMap) } : {}),
       ...(bridgeMap ? { bridge: installArgs(bridgeMap) } : {}),
       incomplete: [...incomplete]
     },
+    bridgeAppIds: bridgeMap ? [...bridgeMap.keys()].map(String) : []
+  }
+}
+
+/** The op inputs plus the bridge app ids the backfill runs over. */
+export async function buildRustRefreshInputs(
+  deps: ManagerDeps
+): Promise<RustRefreshInputs & { bridgeAppIds: string[] }> {
+  const metadata: Record<string, SteamMetadataCacheEntry> = {}
+  for (const [id, entry] of deps.stores.steam.steamMetadataStore.entries()) {
+    // A deep copy: the store may hand out live objects and the stale check compares against this.
+    metadata[id] = structuredClone(entry)
+  }
+  const previousGames = Array.from(
+    deps.steamSession.libraryState.library.values()
+  )
+  const { installState, bridgeAppIds } = await readInstallState(deps)
+  return {
+    metadata,
+    previousGames,
+    installState,
     bridgeAllowlist: bridgeAllowlist.seedIds(),
     knownFixMac32: listKnownFixMac32AppIds(deps),
     isMac,
-    bridgeAppIds: bridgeMap ? [...bridgeMap.keys()].map(String) : []
+    bridgeAppIds
   }
+}
+
+type Breadcrumb = { dir: string; name: string }
+
+/** Install-start breadcrumbs by app id: the same read as the Rust assembler's `breadcrumbs`. */
+function breadcrumbsOf(
+  games: Iterable<SteamGameInfo>
+): Map<string, Breadcrumb> {
+  const out = new Map<string, Breadcrumb>()
+  for (const g of games) {
+    const dir = g.install?.steamResumeTargetSteamappsDir
+    const name = g.install?.steamResumeInstalldir
+    if (dir && name) out.set(g.app_name, { dir, name })
+  }
+  return out
+}
+
+/** Everything one app's install fields are derived from, as a comparable key. */
+function installInputsKey(
+  appId: string,
+  state: InstallStateArg,
+  crumbs: Map<string, Breadcrumb>
+): string {
+  return JSON.stringify([
+    state.native[appId] ?? null,
+    state.bottle?.[appId] ?? null,
+    state.bridge?.[appId] ?? null,
+    state.incomplete.includes(Number(appId)),
+    crumbs.get(appId) ?? null
+  ])
+}
+
+/** The install half of the Rust assembler (refresh/assemble.rs `assemble_library`), for one app. */
+function installFieldsFor(
+  deps: ManagerDeps,
+  appId: string,
+  state: InstallStateArg,
+  crumbs: Map<string, Breadcrumb>
+): Pick<SteamGameInfo, 'is_installed' | 'install'> {
+  const native = state.native[appId]
+  const bottle = state.bottle?.[appId]
+  const bridge = state.bridge?.[appId]
+  let installed: AcfInstallArg | undefined
+  let source: AcfSource
+  if (isBridgeAuthoritativeForInstallState(deps, appId)) {
+    installed = bridge
+    source = 'bridge'
+  } else if (native) {
+    installed = native
+    source = 'native'
+  } else if (bottle) {
+    installed = bottle
+    source = 'bottle'
+  } else {
+    installed = bridge
+    source = 'bridge'
+  }
+  const install: SteamGameInfo['install'] = {}
+  if (installed) {
+    install.install_path = installed.installPath
+    install.install_size = installed.installSize
+    install.platform = installPlatformForSource(source)
+    Object.assign(install, installVersionField(installed.buildid))
+  } else {
+    if (state.incomplete.includes(Number(appId))) {
+      install.steamResumePending = true
+    }
+    const crumb = crumbs.get(appId)
+    if (crumb) {
+      install.steamResumePending = true
+      install.steamResumeTargetSteamappsDir = crumb.dir
+      install.steamResumeInstalldir = crumb.name
+    }
+  }
+  return { is_installed: installed !== undefined, install }
+}
+
+/**
+ * C1/WR-01: the op's games were assembled from install state read before a call of up to 150 s.
+ * An install, uninstall or install start that landed meanwhile must not be reverted, so every app
+ * whose install inputs changed since the snapshot gets its install fields rebuilt from the live
+ * state. Apps whose inputs did not change keep Rust's fields untouched.
+ */
+function overlayLiveInstallState(
+  deps: ManagerDeps,
+  games: SteamGameInfo[],
+  sent: { state: InstallStateArg; crumbs: Map<string, Breadcrumb> },
+  live: { state: InstallStateArg; crumbs: Map<string, Breadcrumb> }
+): { games: SteamGameInfo[]; overlaid: number } {
+  let overlaid = 0
+  const out = games.map((game) => {
+    const id = game.app_name
+    if (
+      installInputsKey(id, sent.state, sent.crumbs) ===
+      installInputsKey(id, live.state, live.crumbs)
+    ) {
+      return game
+    }
+    overlaid++
+    return { ...game, ...installFieldsFor(deps, id, live.state, live.crumbs) }
+  })
+  return { games: out, overlaid }
 }
 
 export async function applyRustRefreshResult(
   deps: ManagerDeps,
   sentMetadata: Record<string, SteamMetadataCacheEntry>,
-  result: RefreshResult
+  result: RefreshResult,
+  /** The install snapshot the op was built from. When given, install changes since are kept. */
+  sentInstall?: Pick<RustRefreshInputs, 'installState' | 'previousGames'>
 ): Promise<{ written: number; staleSkipped: number }> {
   const { steamLibraryStore, steamMetadataStore, steamSyncStore } =
     deps.stores.steam
@@ -145,9 +268,46 @@ export async function applyRustRefreshResult(
     LogPrefix.Steam
   )
 
+  // C1/WR-01: re-read install state now, after the long op, as the pre-79 sync did. A failed read
+  // keeps the op's snapshot rather than failing the Refresh.
+  let liveState: InstallStateArg | null = null
+  if (sentInstall) {
+    try {
+      liveState = (await readInstallState(deps)).installState
+    } catch (err) {
+      logWarning(
+        [
+          'Steam Refresh: install state re-read failed, keeping the snapshot:',
+          err instanceof Error ? err.name : 'unknown'
+        ],
+        LogPrefix.Steam
+      )
+    }
+  }
+
   const library = deps.steamSession.libraryState.library
+  // No await from here to the store write: the breadcrumbs are read from the library as it stands.
+  let games = result.games
+  if (sentInstall && liveState) {
+    const overlay = overlayLiveInstallState(
+      deps,
+      games,
+      {
+        state: sentInstall.installState,
+        crumbs: breadcrumbsOf(sentInstall.previousGames)
+      },
+      { state: liveState, crumbs: breadcrumbsOf(library.values()) }
+    )
+    games = overlay.games
+    if (overlay.overlaid > 0) {
+      logInfo(
+        `Steam Refresh: install state changed during the op, overlaid=${overlay.overlaid}`,
+        LogPrefix.Steam
+      )
+    }
+  }
   library.clear()
-  for (const game of result.games) {
+  for (const game of games) {
     // T-79-93: the same strip the TS path applies, before libraryState or the store sees it.
     const clean = stripToSchema(game, steamGameInfoSchema, {
       dropInvalidOptional: true
@@ -250,7 +410,7 @@ export async function syncOwnedLibraryRust(
   }
 
   try {
-    await applyRustRefreshResult(deps, args.metadata, result)
+    await applyRustRefreshResult(deps, args.metadata, result, args)
   } catch (err) {
     return syncFailed(deps, err)
   }
@@ -325,7 +485,7 @@ export async function tryMacSteamRefresh(
 
   logSummary(result)
   try {
-    await applyRustRefreshResult(deps, args.metadata, result)
+    await applyRustRefreshResult(deps, args.metadata, result, args)
   } catch (err) {
     return syncFailed(deps, err)
   }

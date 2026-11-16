@@ -56,6 +56,9 @@ jest.mock('../bridgeBottle', () => ({
 }))
 
 jest.mock('../library/installedMap', () => ({
+  installVersionField: jest.requireActual<
+    typeof import('../library/installedMap')
+  >('../library/installedMap').installVersionField,
   buildInstalledMap: jest.fn(),
   buildIncompleteInstallSet: jest.fn(),
   buildBottleInstalledMap: jest.fn(),
@@ -277,5 +280,101 @@ describe('applyRustRefreshResult', () => {
     const dirty = { ...game('1'), bogusKey: 'x' } as unknown as SteamGameInfo
     await applyRustRefreshResult(deps, {}, result({ games: [dirty] }))
     expect(library.get('1')).not.toHaveProperty('bogusKey')
+  })
+})
+
+describe('applyRustRefreshResult: install state that changed during the op (C1/WR-01)', () => {
+  const acf = (path: string, buildid?: string) => ({
+    installPath: path,
+    installSize: '9 B',
+    ...(buildid !== undefined ? { buildid } : {})
+  })
+  const installedGame = (id: string, path: string) =>
+    game(id, {
+      is_installed: true,
+      install: { install_path: path, install_size: '9 B', platform: 'linux' }
+    } as Partial<SteamGameInfo>)
+
+  it('keeps an install that finished during the op', async () => {
+    // The op saw nothing installed; by apply time the ACF is fully installed.
+    jest
+      .mocked(buildInstalledMap)
+      .mockResolvedValue(
+        new Map([[1, { installPath: '/n/1', sizeOnDisk: '9', buildid: '7' }]])
+      )
+    await applyRustRefreshResult(deps, {}, result({ games: [game('1')] }), {
+      installState: { native: {}, incomplete: [] },
+      previousGames: []
+    })
+    expect(library.get('1')).toMatchObject({
+      is_installed: true,
+      install: { install_path: '/n/1', install_size: '9 B', version: '7' }
+    })
+    expect(storeMocks.steamLibraryStore.set).toHaveBeenCalledWith('games', [
+      expect.objectContaining({ app_name: '1', is_installed: true })
+    ])
+  })
+
+  it('does not bring back an install that was uninstalled during the op', async () => {
+    await applyRustRefreshResult(
+      deps,
+      {},
+      result({ games: [installedGame('2', '/n/2')] }),
+      {
+        installState: { native: { '2': acf('/n/2') }, incomplete: [] },
+        previousGames: []
+      }
+    )
+    expect(library.get('2')).toMatchObject({ is_installed: false, install: {} })
+  })
+
+  it('keeps a resume breadcrumb written by an install that started during the op', async () => {
+    library.set(
+      '3',
+      game('3', {
+        install: {
+          steamResumePending: true,
+          steamResumeTargetSteamappsDir: '/steamapps',
+          steamResumeInstalldir: 'Game'
+        }
+      } as Partial<SteamGameInfo>)
+    )
+    await applyRustRefreshResult(deps, {}, result({ games: [game('3')] }), {
+      installState: { native: {}, incomplete: [] },
+      previousGames: [game('3')]
+    })
+    expect(library.get('3')?.install).toEqual({
+      steamResumePending: true,
+      steamResumeTargetSteamappsDir: '/steamapps',
+      steamResumeInstalldir: 'Game'
+    })
+  })
+
+  it("leaves Rust's fields alone for an app whose install inputs did not change", async () => {
+    jest
+      .mocked(buildInstalledMap)
+      .mockResolvedValue(
+        new Map([[4, { installPath: '/n/4', sizeOnDisk: '9' }]])
+      )
+    const fromRust = installedGame('4', '/n/4')
+    await applyRustRefreshResult(deps, {}, result({ games: [fromRust] }), {
+      installState: { native: { '4': acf('/n/4') }, incomplete: [] },
+      previousGames: []
+    })
+    expect(library.get('4')?.install).toEqual(fromRust.install)
+  })
+
+  it("keeps the op's snapshot when the re-read fails", async () => {
+    jest.mocked(buildInstalledMap).mockRejectedValue(new Error('scan'))
+    await applyRustRefreshResult(
+      deps,
+      {},
+      result({ games: [installedGame('5', '/n/5')] }),
+      {
+        installState: { native: { '5': acf('/n/5') }, incomplete: [] },
+        previousGames: []
+      }
+    )
+    expect(library.get('5')?.is_installed).toBe(true)
   })
 })

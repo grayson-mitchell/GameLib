@@ -205,6 +205,30 @@ describe('refresh() with cm=rust', () => {
     expect(release).toHaveBeenCalledTimes(1)
   })
 
+  it('C1/WR-01: an install that finishes while the op runs is not reverted by the Refresh', async () => {
+    // First scan (op inputs): nothing installed. Second scan (after the op): installed.
+    jest
+      .mocked(buildInstalledMap)
+      .mockResolvedValueOnce(new Map())
+      .mockResolvedValueOnce(
+        new Map([[1, { installPath: '/n/1', sizeOnDisk: '1' }]])
+      )
+    requestRustInvoke.mockResolvedValue({
+      ok: true,
+      result: refreshResult([game('1')])
+    })
+
+    await refresh(deps)
+
+    expect(stores.steamLibraryStore.set).toHaveBeenCalledWith('games', [
+      expect.objectContaining({
+        app_name: '1',
+        is_installed: true,
+        install: expect.objectContaining({ install_path: '/n/1' }) as unknown
+      })
+    ])
+  })
+
   it('does no TS-side CM work', async () => {
     requestRustInvoke.mockResolvedValue({
       ok: true,
