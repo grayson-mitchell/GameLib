@@ -1,8 +1,9 @@
 ---
 phase: 77-runtime-hardening-from-the-v0-9-review-debt
 verified: 2026-11-16T00:00:00Z
-status: human_needed
-score: 3/3 roadmap goals verified in code; 2 residual live-proof items routed to human
+status: passed
+human_verified: 2026-11-17 (77-HUMAN-UAT.md, complete)
+score: 3/3 roadmap goals verified; both residual live-proof items resolved in human UAT 2026-11-17
 re_verification: false
 human_verification:
   - test: "Send the over-cap probe over HTTP/1.1 chunked (curl --http1.1 -H 'Transfer-Encoding: chunked' --data-binary @3000x) while `wrangler tail` runs"
@@ -16,7 +17,7 @@ human_verification:
 # Phase 77: Runtime hardening from the v0.9 review debt - Verification Report
 
 **Phase Goal:** Close 57 WR-09 (relay unbounded body), 56 WR-02 (execFile handle holds sidecar event loop), 60 WR-01 (missed overlay close leaves game input blocked).
-**Status:** human_needed (no gaps; residual live evidence is optional hardening)
+**Status:** passed (was human_needed on 2026-11-16; both human items resolved 2026-11-17, see "Human Verification Results" below)
 
 ## Observable Truths
 
@@ -46,9 +47,16 @@ All three IDs ticked in REQUIREMENTS.md (lines 57-59, traceability 95-97). No or
 
 No TBD/FIXME/XXX in `relay/src/readCappedBody.ts` or `relay/src/handler.ts`.
 
+## Human Verification Results (2026-11-17)
+
+Source: `77-HUMAN-UAT.md` (status `complete`, 1 passed, 1 issue accepted).
+
+1. **Relay probe over HTTP/1.1 chunked: issue, accepted.** Sent once at 2026-11-16T23:24:22Z (cf-ray a5ba3fafed047256-AKL). The request went out HTTP/1.1 with `Transfer-Encoding: chunked` and no Content-Length, and the response was `HTTP/1.1 413` with `{"status":"rejected","detail":"too large"}`. The tail showed the request reach the Worker but printed no `relay: body over cap -> 413` line. So the Content-Length fast path most likely answered, after the Cloudflare edge added a length. The operator accepted the 77-01 unit tests as proof of the capped branch: no code change, no redeploy. DEBT-02 stays SATISFIED.
+2. **Overlay input smoke with `GAMELIB_DESKTOP_SMOKE=1`: pass.** The run on the operator's macOS desktop session passed 1 suite, 7 of 7 tests with none skipped, including both `WR-01:` cases. DEBT-04 now has a current automated pass, not only the dated 2026-11-04 spot-check.
+
 ## Gaps Summary
 
-None blocking. Two optional live-proof items above.
+None blocking. Two optional live-proof items above. (2026-11-17: both resolved; see Human Verification Results.)
 
 _Verified: 2026-11-16_
 _Verifier: Claude (gsd-verifier)_
