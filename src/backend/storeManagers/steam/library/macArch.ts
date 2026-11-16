@@ -13,6 +13,9 @@ import { reportDetectedFix, knownFixReportDeps } from 'backend/knownFixReport'
 import SteamGame from '../games'
 import type { ManagerDeps } from 'backend/services/types'
 import type { AcfSource } from './installRoot'
+import { RUST_STEAMPOLL_MAC_ARCH_VERDICT } from 'common/types/sidecarTransport'
+import { pollsImpl } from './pollsFlag'
+import { invokeSteamPoll } from '../pollRust/rustSteamPoll'
 
 // ── macOS arch ground-truth check (MAC32-03) ─────────────────────────────────
 // Post-install Mach-O binary inspection is the ONLY detector in this phase
@@ -69,6 +72,28 @@ export async function verifyMacArchGroundTruth(
   source: AcfSource
 ): Promise<void> {
   if (!macArchCheckNeeded(deps, appId, source)) return
+
+  if (pollsImpl() === 'rust') {
+    let rustVerdict: '32' | '64' | null = null
+    try {
+      rustVerdict = (await invokeSteamPoll(
+        deps,
+        RUST_STEAMPOLL_MAC_ARCH_VERDICT,
+        { installPath }
+      )) as '32' | '64' | null
+    } catch {
+      rustVerdict = null
+    }
+    if (rustVerdict === null) {
+      logInfo(
+        `Steam: verifyMacArchGroundTruth inconclusive for appId ${appId} — leaving mac_arch unchanged`,
+        LogPrefix.Steam
+      )
+      return
+    }
+    await applyMacArchVerdict(deps, appId, rustVerdict)
+    return
+  }
 
   const binaryPath = locateMachOBinary(installPath)
   if (!binaryPath) {

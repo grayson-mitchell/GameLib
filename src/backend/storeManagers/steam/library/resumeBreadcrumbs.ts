@@ -5,7 +5,12 @@ import type { SteamLibraryStateDeps } from 'backend/services/types'
 import type { FrontendMessageDeps } from '../../../host/frontendMessage'
 import { isFullyInstalledStateFlags } from './installedMap'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
-import { RUST_STEAMFILES_READ_ACF } from 'common/types/sidecarTransport'
+import {
+  RUST_STEAMFILES_READ_ACF,
+  RUST_STEAMPOLL_BREADCRUMB_INSTALLED_ON_DISK
+} from 'common/types/sidecarTransport'
+import { pollsImpl } from './pollsFlag'
+import { invokeSteamPoll } from '../pollRust/rustSteamPoll'
 import { invokeSteamFiles } from '../localFiles/rustSteamFiles'
 
 /**
@@ -190,6 +195,17 @@ export async function breadcrumbAppIsFullyInstalledOnDisk(
   install: Partial<SteamInstalledInfo> | undefined
 ): Promise<boolean> {
   if (!install?.steamResumeTargetSteamappsDir) return false
+  if (pollsImpl() === 'rust') {
+    try {
+      return (await invokeSteamPoll(
+        rust,
+        RUST_STEAMPOLL_BREADCRUMB_INSTALLED_ON_DISK,
+        { steamappsDir: install.steamResumeTargetSteamappsDir, appId }
+      )) as boolean
+    } catch {
+      return false
+    }
+  }
   try {
     const read = await invokeSteamFiles(rust, RUST_STEAMFILES_READ_ACF, {
       path: join(

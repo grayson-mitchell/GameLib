@@ -33,19 +33,26 @@ function resolveOrNull(resolve: () => string): string | null {
   }
 }
 
+/** The native Steam root as the poll roots carry it (quotes stripped). */
+export function nativeSteamRoot(deps: {
+  config: Pick<ManagerDeps['config'], 'getSettings'>
+}): string {
+  return deps.config.getSettings().defaultSteamPath.replaceAll("'", '')
+}
+
 /**
  * The roots Rust polls, from the existing resolvers. `source` picks which non-native root must
  * resolve; the others are best effort (null when this host has no such bottle).
  */
 export function pollRootsFor(
-  deps: Pick<ManagerDeps, 'config' | 'paths' | 'steamBottle'> &
+  deps: { config: Pick<ManagerDeps['config'], 'getSettings'> } & Parameters<
+    typeof getBottleSteamappsRoot
+  >[0] &
     Parameters<typeof getBridgeBottleSteamappsRoot>[0],
   appId: string,
   source: AcfSource = 'native'
 ): PollRoots {
-  const steamRoot = deps.config
-    .getSettings()
-    .defaultSteamPath.replaceAll("'", '')
+  const steamRoot = nativeSteamRoot(deps)
   const bottle = (): string => getBottleSteamappsRoot(deps)
   const bridge = (): string => getBridgeBottleSteamappsRoot(deps, appId)
   return {

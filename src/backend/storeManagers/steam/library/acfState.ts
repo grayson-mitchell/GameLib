@@ -7,8 +7,23 @@ import type { SteamLibraryStateDeps } from 'backend/services/types'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import {
   RUST_STEAMFILES_FIND_ACF,
-  RUST_STEAMFILES_SCAN_ACFS
+  RUST_STEAMFILES_SCAN_ACFS,
+  RUST_STEAMPOLL_ACF_ENUMERATE_COPIES,
+  RUST_STEAMPOLL_ACF_FIND_OTHER_MANIFESTS,
+  RUST_STEAMPOLL_ACF_READ_STATE,
+  RUST_STEAMPOLL_ACF_REMOVE_COPY,
+  RUST_STEAMPOLL_ACF_SCAN_DOWNLOADING
 } from 'common/types/sidecarTransport'
+import { pollsImpl } from './pollsFlag'
+import {
+  invokeSteamPoll,
+  nativeSteamRoot,
+  pollRootsFor
+} from '../pollRust/rustSteamPoll'
+import type {
+  AcfState as RustAcfState,
+  RemoveCopyResult as RustRemoveCopyResult
+} from '../pollRust/steamPollTypes'
 import { invokeSteamFiles } from '../localFiles/rustSteamFiles'
 import { NUMERIC_APP_ID } from '../gameConstants'
 import { DEFAULT_BRIDGE_BOTTLE_NAME, type BottleSettingsDeps } from '../bottle'
@@ -69,6 +84,7 @@ export async function readAcfState(
   bytesStaged?: number
   bytesToStage?: number
 }> {
+  if (pollsImpl() === 'rust') return readAcfStateViaRust(deps, appId, source)
   // Resolving a bottle/bridge root may throw (unprovisioned bottle); callers
   // rely on that throw, so it stays outside the 'unknown' mapping below.
   const bottleDirs =
@@ -120,6 +136,50 @@ export async function readAcfState(
   }
 }
 
+/** D-12: the manifest read runs in Rust; same result shape, a rejected invoke is 'unknown'. */
+async function readAcfStateViaRust(
+  deps: SteamLibrariesDeps & BottleSettingsDeps,
+  appId: string,
+  source: AcfSource
+): ReturnType<typeof readAcfState> {
+  // Root resolution may throw for an unprovisioned bottle; callers rely on it, as on the ts arm.
+  const roots = pollRootsFor(deps, appId, source)
+  let res: RustAcfState
+  try {
+    res = (await invokeSteamPoll(
+      deps as unknown as RustInvokeDeps,
+      RUST_STEAMPOLL_ACF_READ_STATE,
+      { roots, appId, source }
+    )) as RustAcfState
+  } catch (error) {
+    logWarning(
+      `SteamLibraryManager: readAcfState(${appId}, '${source}') could not read manifests, state unknown: ${String(error)}`,
+      LogPrefix.Steam
+    )
+    return { state: 'unknown' }
+  }
+  if (res.state === 'installed') {
+    return {
+      state: 'installed',
+      stateFlags: res.stateFlags,
+      installPath: res.installPath,
+      sizeOnDisk: res.sizeOnDisk,
+      buildid: res.buildid ?? undefined
+    }
+  }
+  if (res.state === 'downloading') {
+    return {
+      state: 'downloading',
+      stateFlags: res.stateFlags ?? NaN,
+      bytesDownloaded: res.bytesDownloaded,
+      bytesToDownload: res.bytesToDownload,
+      bytesStaged: res.bytesStaged,
+      bytesToStage: res.bytesToStage
+    }
+  }
+  return { state: res.state }
+}
+
 /**
  * 34.13 review A-13: every OTHER appId in `steamappsDir` whose manifest
  * declares the same `installdir` as `installdirSegment`.
@@ -156,6 +216,18 @@ export async function findOtherManifestsWithInstalldir(
   installdirSegment: string,
   selfAppId: string
 ): Promise<string[]> {
+  if (pollsImpl() === 'rust') {
+    try {
+      return (await invokeSteamPoll(
+        rust,
+        RUST_STEAMPOLL_ACF_FIND_OTHER_MANIFESTS,
+        { steamappsDir, installdir: installdirSegment, appId: selfAppId }
+      )) as string[]
+    } catch {
+      // T-75-55: a transport failure must not read as "no conflict".
+      return [UNKNOWN_CONFLICT]
+    }
+  }
   let scan
   try {
     scan = await invokeSteamFiles(rust, RUST_STEAMFILES_SCAN_ACFS, {
@@ -219,6 +291,27 @@ export async function enumerateSteamInstallCopies(
   deps: SteamLibrariesDeps & BottleSettingsDeps,
   appId: string
 ): Promise<SteamInstallCopy[]> {
+  if (pollsImpl() === 'rust') {
+    try {
+      return (await invokeSteamPoll(
+        deps as unknown as RustInvokeDeps,
+        RUST_STEAMPOLL_ACF_ENUMERATE_COPIES,
+        {
+          roots: pollRootsFor(deps, appId),
+          appId
+        }
+      )) as SteamInstallCopy[]
+    } catch (error) {
+      logWarning(
+        [
+          `SteamLibraryManager: enumerateSteamInstallCopies failed for appId ${appId}`,
+          error
+        ],
+        LogPrefix.Steam
+      )
+      return []
+    }
+  }
   const copies: SteamInstallCopy[] = []
 
   for (const source of ALL_ACF_SOURCES) {
@@ -303,6 +396,8 @@ export async function removeSteamInstallCopy(
     )
     return { status: 'refused', source, reason: 'invalid appId' }
   }
+
+  if (pollsImpl() === 'rust') return removeCopyViaRust(deps, appId, source)
 
   // D-51-12: resolve ONCE up front, via the D-B single resolver — never
   // re-derive per-game vs legacy locally. null only when appId somehow
@@ -417,6 +512,60 @@ export async function removeSteamInstallCopy(
 }
 
 /**
+ * D-12 / T-80-73: on this arm Rust owns the whole guard set and the deletion; nothing here removes
+ * a file. Only the per-game bridge bottle goes through removePerGameBridgeBottle, as on the ts arm.
+ */
+async function removeCopyViaRust(
+  deps: BottleLifecycleDeps & SteamLibrariesDeps & BottleSettingsDeps,
+  appId: string,
+  source: AcfSource
+): Promise<RemoveCopyResult> {
+  const roots = pollRootsFor(deps, appId, source)
+  let res: RustRemoveCopyResult
+  try {
+    res = (await invokeSteamPoll(
+      deps as unknown as RustInvokeDeps,
+      RUST_STEAMPOLL_ACF_REMOVE_COPY,
+      { roots, appId, source }
+    )) as RustRemoveCopyResult
+  } catch (error) {
+    logWarning(
+      `SteamLibraryManager: removeSteamInstallCopy appId ${appId} source '${source}' could not reach Rust: ${String(error)}`,
+      LogPrefix.Steam
+    )
+    return { status: 'refused', source, reason: 'install state unknown' }
+  }
+  if (res.status === 'absent') return { status: 'absent', source }
+  if (res.status === 'refused') {
+    return {
+      status: 'refused',
+      source,
+      reason: typeof res.reason === 'string' ? res.reason : 'refused'
+    }
+  }
+  logInfo(
+    `SteamLibraryManager: removeSteamInstallCopy removed appId ${appId} source '${source}'`,
+    LogPrefix.Steam
+  )
+  if (res.manifestOnly || !res.bridgeBottle) {
+    return { status: 'removed', source, manifestOnly: res.manifestOnly }
+  }
+  // The caller-side bottle step stays TS: Rust returns only the per-game candidate (80-05).
+  if (res.bridgeBottle === DEFAULT_BRIDGE_BOTTLE_NAME) {
+    return { status: 'removed', source, manifestOnly: false }
+  }
+  const bottleResult = await removePerGameBridgeBottle(deps, appId)
+  const bottleRemoved = bottleResult.status === 'removed'
+  if (!bottleRemoved) {
+    logWarning(
+      `SteamLibraryManager: removeSteamInstallCopy left bridge bottle "${res.bridgeBottle}" in place for appId ${appId} (removePerGameBridgeBottle returned '${bottleResult.status}')`,
+      LogPrefix.Steam
+    )
+  }
+  return { status: 'removed', source, manifestOnly: false, bottleRemoved }
+}
+
+/**
  * Scans all Steam library paths for appmanifest_*.acf files whose StateFlags
  * has bit 4 UNSET (download in progress), and filters to those appIds that
  * are present in the in-memory library Map.
@@ -427,6 +576,19 @@ export async function removeSteamInstallCopy(
 export async function scanDownloadingAppIds(
   deps: SteamLibrariesDeps & SteamLibraryStateDeps
 ): Promise<string[]> {
+  if (pollsImpl() === 'rust') {
+    try {
+      // Rust returns every downloading appId; the libraryState filter stays here (80-05).
+      const ids = (await invokeSteamPoll(
+        deps as unknown as RustInvokeDeps,
+        RUST_STEAMPOLL_ACF_SCAN_DOWNLOADING,
+        { roots: { steamRoot: nativeSteamRoot(deps) } }
+      )) as string[]
+      return ids.filter((id) => deps.steamSession.libraryState.library.has(id))
+    } catch {
+      return []
+    }
+  }
   const libraryPaths = await getSteamLibraries(deps)
   let scan
   try {
