@@ -102,6 +102,10 @@ export default function SteamLogin({ dismiss }: Props) {
   const errorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const guardInputRef = useRef<HTMLInputElement>(null)
   const qrRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Bumped whenever the QR poll is stopped or a new QR flow starts: a tick, or
+  // a flow start, still awaiting the backend when that happens drops its result
+  // so it cannot redraw a dead challenge over the new flow's code (C2/WR-05).
+  const qrPollGenRef = useRef(0)
   // Bumped whenever the credential poll is stopped: a tick already awaiting
   // steamPollCredential when its interval is cleared drops its result.
   const credPollGenRef = useRef(0)
@@ -121,6 +125,7 @@ export default function SteamLogin({ dismiss }: Props) {
   }
 
   function clearPollInterval() {
+    qrPollGenRef.current++
     if (pollIntervalRef.current) {
       clearInterval(pollIntervalRef.current)
       pollIntervalRef.current = null
@@ -207,9 +212,11 @@ export default function SteamLogin({ dismiss }: Props) {
     setChallengeUrl(null)
     clearPollInterval()
     clearQrRefreshTimer()
+    const gen = qrPollGenRef.current
 
     const result = await window.api.steamStartQR()
-    if (isCancelled()) {
+    // A newer flow, a tab change or the dialog closing superseded this start.
+    if (isCancelled() || gen !== qrPollGenRef.current) {
       setIsQRLoading(false)
       return
     }
@@ -228,6 +235,8 @@ export default function SteamLogin({ dismiss }: Props) {
     // Poll for scan confirmation
     pollIntervalRef.current = setInterval(async () => {
       const poll = await window.api.steamPollQR()
+      // This flow was stopped while the poll was in flight: its challenge is dead.
+      if (gen !== qrPollGenRef.current) return
       // Steam rotates the QR challenge (~22 s): redraw so the user never scans a dead code.
       setChallengeUrl((current) => nextQrChallengeUrl(current, poll))
       if (poll.status === 'done' && poll.username) {
@@ -244,6 +253,10 @@ export default function SteamLogin({ dismiss }: Props) {
         // confirming UI state and keep polling. The connect always
         // resolves within 15 s (worst case: 'Steam User' fallback),
         // so a later poll will carry a username and finalize. Cannot re-hang.
+        // The flow is approved: the 110 s auto-refresh must not restart it
+        // now, or the window would poll the new flow and never see this
+        // sign-in's username.
+        clearQrRefreshTimer()
         setStep('qr-confirmed')
       } else if (poll.status === 'error') {
         clearPollInterval()

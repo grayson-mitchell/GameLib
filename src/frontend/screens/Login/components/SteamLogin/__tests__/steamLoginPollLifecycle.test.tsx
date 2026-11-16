@@ -11,6 +11,9 @@
  *   poll and keeps the code input; an `expired` flow, or a poll that reports `error`, sends the user
  *   back to the credentials form. This also replaces the old source gate
  *   `steamLoginGuardRetry.test.ts` (UAT 79-A item 7) with the behavioural case below.
+ * - C2/WR-05: a QR poll still in flight when its flow is restarted must not redraw the dead flow's
+ *   challenge over the new code; and (C1 handoff) the 110 s auto-refresh must not restart a flow the
+ *   user already approved while its finalisation runs.
  *
  * `Dialog` is replaced with a bare container (it pulls the settings store and the embed-suppression
  * context, neither of which this flow touches) and `react-qr-code` with a node that prints the drawn
@@ -251,5 +254,85 @@ describe('C2/WR-02: a guard failure retries only while the flow is alive', () =>
     api.steamPollCredential.mockClear()
     await advance(10_000)
     expect(api.steamPollCredential).not.toHaveBeenCalled()
+  })
+})
+
+describe('C2/WR-05: QR flow restarts', () => {
+  const drawn = () => screen.queryByTestId('qr')?.textContent ?? null
+
+  async function mountOnQr() {
+    render(<SteamLogin dismiss={() => undefined} />)
+    await flush()
+    await flush()
+    expect(drawn()).toBe('qr-A')
+  }
+
+  it('a poll in flight across the 110 s auto-refresh does not redraw the dead challenge', async () => {
+    await mountOnQr()
+    const stale = deferred<QrPoll>()
+    await advance(108_000)
+    // The tick at 110 000 ms is still waiting for the backend when the refresh, due at the same
+    // instant, restarts the flow.
+    api.steamPollQR.mockReturnValueOnce(stale.promise)
+    api.steamStartQR.mockResolvedValueOnce({
+      status: 'done',
+      challengeUrl: 'qr-B'
+    })
+    await advance(2_000)
+    await flush()
+    expect(api.steamStartQR).toHaveBeenCalledTimes(2)
+    expect(drawn()).toBe('qr-B')
+
+    // The old flow's backend slot rotated before it was dropped: the stale reply carries that code.
+    stale.resolve({ status: 'waiting', challengeUrl: 'qr-A2' })
+    await flush()
+    expect(drawn()).toBe('qr-B')
+  })
+
+  it('an approved flow is not restarted by the auto-refresh while finalisation runs', async () => {
+    await mountOnQr()
+    await advance(100_000)
+    api.steamPollQR.mockResolvedValue({ status: 'done' } as QrPoll)
+    await advance(2_000)
+    expect(screen.getByText('QR scanned. Completing sign-in...')).toBeTruthy()
+
+    await advance(20_000) // past the 110 s refresh deadline
+    expect(api.steamStartQR).toHaveBeenCalledTimes(1)
+
+    api.steamPollQR.mockResolvedValue({ status: 'done', username: 'gaben' })
+    await advance(2_000)
+    await flush()
+    expect(mockSteamLogin).toHaveBeenCalledWith({
+      status: 'done',
+      username: 'gaben'
+    })
+  })
+
+  it('overlapping QR ticks that both see the username sign in once', async () => {
+    await mountOnQr()
+    const first = deferred<QrPoll>()
+    const second = deferred<QrPoll>()
+    api.steamPollQR
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise)
+    await advance(4_000)
+    first.resolve({ status: 'done', username: 'gaben' })
+    second.resolve({ status: 'done', username: 'gaben' })
+    await flush()
+    await flush()
+    expect(mockSteamLogin).toHaveBeenCalledTimes(1)
+  })
+
+  it('a QR start that resolves after switching to the credentials tab starts no QR poll', async () => {
+    await mountOnQr()
+    const start = deferred<{ status: 'done'; challengeUrl: string }>()
+    api.steamStartQR.mockReturnValueOnce(start.promise)
+    await advance(110_000) // the auto-refresh starts a new flow
+    fireEvent.click(screen.getByRole('tab', { name: 'Username & Password' }))
+    start.resolve({ status: 'done', challengeUrl: 'qr-B' })
+    await flush()
+    api.steamPollQR.mockClear()
+    await advance(10_000)
+    expect(api.steamPollQR).not.toHaveBeenCalled()
   })
 })
