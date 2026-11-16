@@ -313,12 +313,10 @@ fn render_notify_text(catalog: &Catalog, text: &NotifyText) -> String {
 pub(crate) const STATE_EVENT_INVOKE_BOUND: Duration =
     Duration::from_millis(gamelib_steampoll::constants::ACK_TIMEOUT_MS - 500);
 
-/// Time left to wait for the ack, or `None` once `deadline` has passed and the frame must not be
-/// written at all (B/WR-02).
-fn invoke_bound_before(deadline: std::time::Instant, now: std::time::Instant) -> Option<Duration> {
-    let left = deadline.saturating_duration_since(now);
-    (!left.is_zero()).then_some(left)
-}
+/// Below this much time left before the deadline the state-event frame is not written: the
+/// sidecar would apply it, the ack could not come back in time, and the crate would replay a
+/// duplicate (80-REVIEW B/IN-04). The event simply stays queued.
+pub(crate) const STATE_EVENT_MIN_WRITE_LEFT: Duration = Duration::from_millis(250);
 
 /// Reply of the sidecar's `steamPollStateEvent` handler, parsed leniently (T-80-61).
 fn ack_from_invoke(result: Result<Value, String>) -> AckReply {
@@ -384,16 +382,19 @@ impl PollHost for ShellPollHost {
                 return AckReply::not_acked();
             };
             // `invoke` blocks on a std channel: never on a runtime worker (T-80-59). A blocking
-            // task cannot be cancelled, so a closure that only starts after the deadline (the
-            // pool is capped at 8) must not write the frame: the crate has already given up on
-            // this event and re-queued it, and a newer event may have been applied since.
+            // task cannot be cancelled, so a closure that only gets to write after the deadline
+            // (queued behind the 8-thread pool, or waiting on the shared stdin lock) must not
+            // write the frame: the crate has already given up on this event and re-queued it,
+            // and a newer event may have been applied since. `invoke_until` re-checks the
+            // deadline under the stdin lock and sizes the ack wait from it (B/WR-01).
             let joined = gamelib_steampoll::runtime::handle()
                 .spawn_blocking(move || {
-                    let Some(bound) = invoke_bound_before(deadline, std::time::Instant::now())
-                    else {
-                        return Err("steamPollStateEvent:stale".to_string());
-                    };
-                    state.invoke_bounded("steamPollStateEvent".to_string(), vec![arg], Some(bound))
+                    state.invoke_until(
+                        "steamPollStateEvent".to_string(),
+                        vec![arg],
+                        deadline,
+                        STATE_EVENT_MIN_WRITE_LEFT,
+                    )
                 })
                 .await;
             match joined {
@@ -599,19 +600,49 @@ mod tests {
 
     #[test]
     fn a_closure_started_after_the_deadline_does_not_write() {
+        use crate::shell_state::time_left_to_write;
         let t0 = std::time::Instant::now();
-        let deadline = t0 + Duration::from_millis(100);
+        let deadline = t0 + Duration::from_millis(1000);
+        let floor = STATE_EVENT_MIN_WRITE_LEFT;
         // Started in time: waits only for what is left, never past the deadline.
         assert_eq!(
-            invoke_bound_before(deadline, t0 + Duration::from_millis(40)),
-            Some(Duration::from_millis(60))
+            time_left_to_write(deadline, t0 + Duration::from_millis(400), floor),
+            Some(Duration::from_millis(600))
         );
-        // Queued behind a full blocking pool until the deadline or later: no write.
-        assert_eq!(invoke_bound_before(deadline, deadline), None);
+        // Queued behind a full blocking pool (or the stdin lock) until the deadline or later:
+        // no write.
+        assert_eq!(time_left_to_write(deadline, deadline, floor), None);
         assert_eq!(
-            invoke_bound_before(deadline, deadline + Duration::from_secs(1)),
+            time_left_to_write(deadline, deadline + Duration::from_secs(1), floor),
             None
         );
+        // 1 ms (or anything up to the floor) left is treated as none (B/IN-04).
+        assert_eq!(
+            time_left_to_write(deadline, deadline - Duration::from_millis(1), floor),
+            None
+        );
+        assert_eq!(time_left_to_write(deadline, deadline - floor, floor), None);
+        assert!(STATE_EVENT_MIN_WRITE_LEFT < STATE_EVENT_INVOKE_BOUND);
+    }
+
+    /// `SidecarState` needs a real child, so the ordering inside `invoke_until` is pinned on its
+    /// source: deadline re-checked after the stdin lock, frame written under that guard, and the
+    /// ack wait sized from the deadline after the write (80-REVIEW B/WR-01).
+    #[test]
+    fn invoke_until_rechecks_the_deadline_under_the_stdin_lock() {
+        let src = include_str!("shell_state.rs");
+        let start = src.find("pub(crate) fn invoke_until(").unwrap();
+        let body = &src[start..start + src[start..].find("\n    fn await_reply(").unwrap()];
+        let lock = body.find("self.stdin.lock()").unwrap();
+        let recheck = body[lock..].find("time_left_to_write(").unwrap() + lock;
+        let write = body.find("write_line(&mut stdin").unwrap();
+        let left = body
+            .find("let left = deadline.saturating_duration_since")
+            .unwrap();
+        let wait = body
+            .find("self.await_reply(&id, &channel, &rx, Some(left))")
+            .unwrap();
+        assert!(lock < recheck && recheck < write && write < left && left < wait);
     }
 
     #[test]

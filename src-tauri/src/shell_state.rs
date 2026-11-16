@@ -1,4 +1,6 @@
 use super::*;
+use std::sync::mpsc::Receiver;
+use std::time::Instant;
 
 // ---- Shell state ----
 
@@ -198,11 +200,7 @@ impl SidecarState {
     pub(crate) fn write_raw(&self, value: &Value) -> Result<(), String> {
         let line = serde_json::to_string(value).map_err(|e| e.to_string())?;
         let mut stdin = self.stdin.lock().map_err(|e| e.to_string())?;
-        stdin
-            .write_all(line.as_bytes())
-            .and_then(|_| stdin.write_all(b"\n"))
-            .and_then(|_| stdin.flush())
-            .map_err(|e| e.to_string())
+        write_line(&mut stdin, &line)
     }
 
     /// Serialize a request frame and write it (newline-terminated) to the sidecar's stdin.
@@ -215,17 +213,6 @@ impl SidecarState {
     pub(crate) fn invoke(&self, channel: String, args: Vec<Value>) -> Result<Value, String> {
         // CR-03: resolve the per-channel bound BEFORE `channel` is moved into the frame.
         let timeout = timeout_for(&channel);
-        self.invoke_bounded(channel, args, timeout)
-    }
-
-    /// `invoke` with a caller-chosen bound instead of `timeout_for(channel)`. The poll host
-    /// passes the time left before its own ack deadline (80-REVIEW B/WR-02).
-    pub(crate) fn invoke_bounded(
-        &self,
-        channel: String,
-        args: Vec<Value>,
-        timeout: Option<Duration>,
-    ) -> Result<Value, String> {
         let id = self.next_id();
         let (tx, rx) = mpsc_channel::<Result<Value, String>>();
         {
@@ -246,6 +233,89 @@ impl SidecarState {
             // dilute a bounded table with entries that can never be looked up.
             return Err(e);
         }
+        self.await_reply(&id, &channel, &rx, timeout)
+    }
+
+    /// `invoke` that must settle by `deadline` (80-REVIEW B/WR-02, iteration 2 B/WR-01). The
+    /// poll host's state-event ack has to be answered or given up before the crate's own
+    /// `ACK_TIMEOUT_MS` timer drops the future, and the frame must never reach the pipe after
+    /// that, because the crate has re-queued the event and a newer one may have been applied.
+    ///
+    /// So the deadline is checked again AFTER the stdin lock is taken (the lock is shared with
+    /// every other invoke and every rustInvoke response, and its wait can eat the budget), and
+    /// the frame is written under that same guard. The reply wait is then sized from what is
+    /// left after the write, never from a bound computed before it. Fewer than `min_left` left
+    /// counts as no time: a frame written with ~1 ms to wait is almost always applied but not
+    /// acked, which only produces a duplicate replay (80-REVIEW B/IN-04).
+    ///
+    /// Residual, by design: a blocking `write_all` into a full pipe (the sidecar has stopped
+    /// reading stdin) cannot be bounded here. Such a write can still land after the deadline;
+    /// the TS per-appId seq guard (80-REVIEW C/IN-04) discards it as stale.
+    pub(crate) fn invoke_until(
+        &self,
+        channel: String,
+        args: Vec<Value>,
+        deadline: Instant,
+        min_left: Duration,
+    ) -> Result<Value, String> {
+        let stale = || Err(format!("{channel}:stale"));
+        // Cheap early out before any allocation or table entry (the closure may have been
+        // queued behind a full blocking pool until past the deadline).
+        if time_left_to_write(deadline, Instant::now(), min_left).is_none() {
+            return stale();
+        }
+        let id = self.next_id();
+        let req = SidecarRpcRequest {
+            id: id.clone(),
+            kind: "invoke",
+            channel: channel.clone(),
+            args,
+        };
+        let line = serde_json::to_value(&req)
+            .and_then(|v| serde_json::to_string(&v))
+            .map_err(|e| e.to_string())?;
+        let (tx, rx) = mpsc_channel::<Result<Value, String>>();
+        {
+            let mut pending = self.pending.lock().map_err(|e| e.to_string())?;
+            pending.insert(id.clone(), (channel.clone(), tx));
+        }
+        {
+            let mut stdin = match self.stdin.lock() {
+                Ok(guard) => guard,
+                Err(e) => {
+                    self.pending.lock().ok().and_then(|mut p| p.remove(&id));
+                    return Err(e.to_string());
+                }
+            };
+            // The lock wait may have used up the budget: then the frame is not written at all.
+            // Not recorded as abandoned, for the same reason as an unwritten `invoke` frame.
+            if time_left_to_write(deadline, Instant::now(), min_left).is_none() {
+                drop(stdin);
+                self.pending.lock().ok().and_then(|mut p| p.remove(&id));
+                return stale();
+            }
+            if let Err(e) = write_line(&mut stdin, &line) {
+                drop(stdin);
+                self.pending.lock().ok().and_then(|mut p| p.remove(&id));
+                return Err(e);
+            }
+        }
+        // Sized from the deadline AFTER the write: a slow write shortens the wait instead of
+        // pushing it past the deadline. Zero left still polls once for a reply already in.
+        let left = deadline.saturating_duration_since(Instant::now());
+        self.await_reply(&id, &channel, &rx, Some(left))
+    }
+
+    /// Wait for the reply to a frame that WAS written. Shared by `invoke` and `invoke_until`, so
+    /// the two abandonment arms (and their diagnostics) exist exactly once.
+    fn await_reply(
+        &self,
+        id: &str,
+        channel: &str,
+        rx: &Receiver<Result<Value, String>>,
+        timeout: Option<Duration>,
+    ) -> Result<Value, String> {
+        let (id, channel) = (id.to_string(), channel.to_string());
         // Until this task, both `Err(_)` arms below were silent: they removed the pending entry,
         // recorded the abandonment into the ring, and returned an `Err` — printing nothing. The
         // `response for unknown/timed-out` diagnostic (reader thread, below) only ever fires if a
@@ -290,3 +360,22 @@ impl SidecarState {
     }
 }
 
+/// Write one newline-terminated frame under an already-held stdin guard.
+fn write_line(stdin: &mut ChildStdin, line: &str) -> Result<(), String> {
+    stdin
+        .write_all(line.as_bytes())
+        .and_then(|_| stdin.write_all(b"\n"))
+        .and_then(|_| stdin.flush())
+        .map_err(|e| e.to_string())
+}
+
+/// Time left before `deadline` at `now`, or `None` when no more than `min_left` remains and a
+/// deadline-bound frame must not be written (80-REVIEW B/WR-01, B/IN-04).
+pub(crate) fn time_left_to_write(
+    deadline: Instant,
+    now: Instant,
+    min_left: Duration,
+) -> Option<Duration> {
+    let left = deadline.saturating_duration_since(now);
+    (left > min_left).then_some(left)
+}

@@ -403,7 +403,7 @@ fn timeout_for(channel: &str) -> Option<Duration> {
         // Phase 80 D-05 / Pitfall 3: the poll's own ack timer is `ACK_TIMEOUT_MS`. This bound
         // sits clearly below it so the invoke resolves (and its pending entry is removed) before
         // that timer fires, instead of racing it (80-REVIEW B/WR-02). The poll host itself calls
-        // `invoke_bounded` with the time left before its deadline; this is the plain-invoke cap.
+        // `invoke_until` with its own deadline; this is the plain-invoke cap.
         Some(STATE_EVENT_INVOKE_BOUND)
     } else {
         Some(INVOKE_TIMEOUT)
