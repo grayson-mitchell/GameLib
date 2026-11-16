@@ -350,6 +350,9 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
       })}\n`
     )
     await flush()
+    // C1/WR-01: the Refresh re-reads install state after the op, so answer that status read too.
+    answerPollStatus(input, frames)
+    await flush()
 
     const pushes = frames.filter(
       (frame) =>
