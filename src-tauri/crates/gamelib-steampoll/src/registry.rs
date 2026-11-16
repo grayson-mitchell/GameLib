@@ -106,22 +106,43 @@ impl Registry {
     /// Registers a poll. A second registration for the same key replaces the first entry; the
     /// first guard's drop leaves the newer entry alone.
     pub fn register(&self, kind: PollKind, app_id: &str) -> (CancellationToken, PollGuard) {
+        let mut map = self.inner.map.lock().unwrap_or_else(|e| e.into_inner());
+        self.insert_locked(&mut map, kind, app_id)
+    }
+
+    /// Registers a poll only when none is registered for the key, checking and inserting under
+    /// one lock. `None` when one already is. Use this, not `is_active` then `register`, wherever
+    /// two dispatches may race to start the same poll (80-REVIEW A/WR-06).
+    pub fn try_register(
+        &self,
+        kind: PollKind,
+        app_id: &str,
+    ) -> Option<(CancellationToken, PollGuard)> {
+        let mut map = self.inner.map.lock().unwrap_or_else(|e| e.into_inner());
+        if map.contains_key(&(kind, app_id.to_string())) {
+            return None;
+        }
+        Some(self.insert_locked(&mut map, kind, app_id))
+    }
+
+    fn insert_locked(
+        &self,
+        map: &mut HashMap<Key, Entry>,
+        kind: PollKind,
+        app_id: &str,
+    ) -> (CancellationToken, PollGuard) {
         let token = CancellationToken::new();
         let (tx, rx) = watch::channel(false);
         let id = self.inner.next_id.fetch_add(1, Ordering::Relaxed);
         let key = (kind, app_id.to_string());
-        self.inner
-            .map
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .insert(
-                key.clone(),
-                Entry {
-                    token: token.clone(),
-                    done: rx,
-                    id,
-                },
-            );
+        map.insert(
+            key.clone(),
+            Entry {
+                token: token.clone(),
+                done: rx,
+                id,
+            },
+        );
         (
             token,
             PollGuard {

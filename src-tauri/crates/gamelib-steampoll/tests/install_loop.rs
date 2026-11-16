@@ -1235,6 +1235,61 @@ async fn a_retarget_during_the_hold_probe_never_reports_the_old_roots_install() 
     polls.stop_install(APP);
 }
 
+// ---- concurrent uninstall starts (80-REVIEW A/WR-06) -----------------------------------------
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn concurrent_uninstall_starts_spawn_exactly_one_poll() {
+    let r = rig().await;
+    write(&r, "2052");
+    for round in 0..20 {
+        let barrier = Arc::new(std::sync::Barrier::new(8));
+        let threads: Vec<_> = (0..8)
+            .map(|_| {
+                let reg = r.reg.clone();
+                let host = r.host.clone();
+                let roots = r.roots.clone();
+                let barrier = barrier.clone();
+                std::thread::spawn(move || {
+                    let hold: Arc<dyn HoldSink> = host;
+                    barrier.wait();
+                    start_uninstall(
+                        &reg,
+                        Arc::new(Outbox::new()),
+                        hold,
+                        StartUninstallArgs {
+                            app_id: APP.into(),
+                            title: "Game".into(),
+                            roots,
+                            source: AcfSource::Native,
+                            interval_ms: None,
+                            bridge_authoritative: false,
+                        },
+                    )
+                    .unwrap()
+                })
+            })
+            .collect();
+        let started = threads
+            .into_iter()
+            .map(|t| t.join().unwrap())
+            .filter(|s| *s)
+            .count();
+        assert_eq!(
+            started, 1,
+            "round {round}: {started} uninstall polls started"
+        );
+        // The one registered poll is reachable, so stop really stops it.
+        assert!(stop_uninstall(&r.reg, APP));
+        for _ in 0..200 {
+            if !r.reg.is_active(PollKind::Uninstall, APP) {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+        assert!(!r.reg.is_active(PollKind::Uninstall, APP));
+    }
+}
+
 // ---- TS-pushed mirrors and the re-arm bookkeeping --------------------------------------------
 
 #[tokio::test(start_paused = true)]

@@ -327,10 +327,11 @@ pub fn start_uninstall(
     if !valid_app_id(&args.app_id) {
         return Err("bad appId".into());
     }
-    if registry.is_active(PollKind::Uninstall, &args.app_id) {
+    // Check and register under one lock: two concurrent starts must not both spawn a task
+    // (80-REVIEW A/WR-06).
+    let Some((token, guard)) = registry.try_register(PollKind::Uninstall, &args.app_id) else {
         return Ok(false);
-    }
-    let (token, guard) = registry.register(PollKind::Uninstall, &args.app_id);
+    };
     let reg = registry.clone();
     let period = Duration::from_millis(args.interval_ms.unwrap_or(TICK_INTERVAL_MS).max(1));
     registry.spawn(async move {
