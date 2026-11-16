@@ -377,8 +377,9 @@ export function registerSteamAuthFlows(deps: SteamAuthFlowDeps): void {
   )
 
   // Phase 54: sidecar-only. Takes no renderer arguments, so there is nothing to
-  // validate; it only reads Mac Steam's state and arms the one-shot guided
-  // restore. It never logs on.
+  // validate. It only reads Mac Steam's state and reports whether it is
+  // offline; it arms nothing (the Rust session owns any owed go-online) and
+  // never logs on.
   deps.ipc.handle('steamGoOfflineRetry', async () =>
     deps.steamProcesses.macSteam.checkGuidedOfflineReady()
   )

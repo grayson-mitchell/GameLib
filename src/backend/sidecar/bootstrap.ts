@@ -2819,9 +2819,10 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     {
       name: 'mac-steam-online-restore',
       run: (_ctx, _io, state) => {
-        // Owed Mac Steam goonline, three layers: routed quit (shell exit hook / handleExit), stdin EOF
-        // (the shell EOF hook), and this boot call. kill -9 of the
-        // sidecar is covered ONLY here.
+        // Owed Mac Steam goonline, three layers: routed quit (shell exit hook / handleExit), sidecar
+        // stdout EOF (the shell's on_sidecar_eof_drop_steamcm hook) and this boot call. A sidecar
+        // kill -9 closes its stdout, so the EOF hook pays it. Only a shell kill -9, which runs
+        // neither hook, is covered here alone.
         restoreOwedMacSteamOnlineAtBoot({
           requestRustInvoke: requireHost(state).requestRustInvoke,
           configured: state.steamCmConfigured
