@@ -58,11 +58,11 @@ function derive(c: PathCase) {
     | { userData: string; configPath: string; restartHoldStorePath: string }
     | undefined
   jest.isolateModules(() => {
-    const nodePath = jest.requireActual('path') as typeof import('path')
+    const nodePath = jest.requireActual<typeof import('path')>('path')
     const flavour = c.platform === 'win32' ? nodePath.win32 : nodePath.posix
     jest.doMock('path', () => flavour)
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const mod =
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       require('../process/appPaths') as typeof import('../process/appPaths')
     const appData = mod.resolveAppDataDir(
       c.platform,
