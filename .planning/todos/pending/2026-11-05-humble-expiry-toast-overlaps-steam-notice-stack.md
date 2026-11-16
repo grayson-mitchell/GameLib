@@ -45,6 +45,7 @@ they stack without overlap and the survivor glides into place on dismiss.
 4. Confirm the two toasts stack in the bottom-right without overlapping, Steam above Humble.
 5. Dismiss the Steam toast with its X and watch the Humble toast glide into place. Run `__gamelibNotices.clear()`, then `both()` again, and this time dismiss Humble first.
 6. Turn on macOS System Settings -> Accessibility -> Display -> Reduce motion and repeat. Toasts should only fade, and slots should close without sliding.
-7. Finish with `__gamelibNotices.clear()`. Reload the window to reset fully: clear() leaves an on-screen Steam notice to leave on its own, and preview seqs can make the mounted Steam notice ignore a real notice until reload.
+7. Turn macOS Reduce motion back off, then turn on GameLib's own Settings -> Accessibility -> Disable UI animations (a different setting: it sets `animation: none` on everything, so no `animationend` fires and dismissal runs on the 500ms `PHASE_FALLBACK_MS` timer in `noticeSlot.tsx`). Run `clear()` then `both()`, and dismiss each toast in turn. The dismissed toast should vanish within about half a second, and the survivor should snap into place with no animation and no leftover gap. Turn the setting back off afterwards.
+8. Finish with `__gamelibNotices.clear()`. Reload the window to reset fully: clear() leaves an on-screen Steam notice to leave on its own, and preview seqs can make the mounted Steam notice ignore a real notice until reload.
 
 The jsdom half (DOM order, single region, lifecycle in both dismissal orders) is covered by `NoticeStack/__tests__/NoticeStackTwoToast.test.tsx`, and only the visual checks above remain.
