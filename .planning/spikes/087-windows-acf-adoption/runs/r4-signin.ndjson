@@ -1,0 +1,80 @@
+﻿{"appId":"264160","run":"r4-signin","clogOffset":2318647,"ts":"2026-11-16T17:05:36.9331540Z","kind":"start"}
+{"running":0,"ts":"2026-11-16T17:05:37.0419292Z","installed":1,"activeUser":35601368,"apPid":24000,"kind":"tick","steamPids":[24000],"acf":{"launcherPath":true,"flags":"4","sha":"8CE11A2F1788","mtime":"2026-11-16T17:05:27.1767810Z","exists":true},"updating":0}
+{"running":0,"ts":"2026-11-16T17:05:42.1497625Z","installed":1,"activeUser":0,"apPid":0,"kind":"tick","steamPids":[],"acf":{"launcherPath":true,"flags":"4","sha":"8CE11A2F1788","mtime":"2026-11-16T17:05:27.1767810Z","exists":true},"updating":0}
+{"running":0,"ts":"2026-11-16T17:05:43.1801278Z","installed":1,"activeUser":0,"apPid":34560,"kind":"tick","steamPids":[34560],"acf":{"exists":false},"updating":0}
+{"ts":"2026-11-16T17:05:44.2254834Z","kind":"clog","line":"[2026-11-17 06:05:43] Client version: 1794536281"}
+{"ts":"2026-11-16T17:05:44.2274841Z","kind":"clog","line":"[2026-11-17 06:05:43] Loaded Steam library folders configuration: C:\\Program Files (x86)\\Steam\\steamapps\\libraryfolders.vdf"}
+{"ts":"2026-11-16T17:05:44.2435204Z","kind":"clog","line":"[2026-11-17 06:05:43] Loaded 10 apps from install folder \"C:\\Program Files (x86)\\Steam\\steamapps\\appmanifest_*.acf\"."}
+{"ts":"2026-11-16T17:05:44.2555230Z","kind":"clog","line":"[2026-11-17 06:05:43] Loaded 27 apps from install folder \"D:\\SteamLibrary\\steamapps\\appmanifest_*.acf\"."}
+{"ts":"2026-11-16T17:05:44.2676021Z","kind":"clog","line":"[2026-11-17 06:05:43] Triggered async write of Steam library folders configuration (2 libraries)."}
+{"running":0,"ts":"2026-11-16T17:05:55.5509895Z","installed":1,"activeUser":35601368,"apPid":34560,"kind":"tick","steamPids":[34560],"acf":{"exists":false},"updating":0}
+{"ts":"2026-11-16T17:05:55.5629864Z","kind":"clog","line":"[2026-11-17 06:05:55] Adding peer server \u0027Graysons-Mac-Studio\u0027 (10.10.3.28:27036)"}
+{"ts":"2026-11-16T17:05:55.5689883Z","kind":"clog","line":"[2026-11-17 06:05:55] Adding peer server \u0027graysons-macbook-air\u0027 (10.10.3.132:27036)"}
+{"running":0,"ts":"2026-11-16T17:06:00.6773664Z","installed":1,"activeUser":35601368,"apPid":34560,"kind":"tick","steamPids":[34560],"acf":{"exists":false},"updating":0}
+{"running":0,"ts":"2026-11-16T17:06:30.3879306Z","installed":1,"activeUser":35601368,"apPid":34560,"kind":"tick","steamPids":[34560],"acf":{"exists":false},"updating":0}
+{"running":0,"ts":"2026-11-16T17:07:00.0595233Z","installed":1,"activeUser":35601368,"apPid":34560,"kind":"tick","steamPids":[34560],"acf":{"exists":false},"updating":0}
+{"running":0,"ts":"2026-11-16T17:07:30.7184356Z","installed":1,"activeUser":35601368,"apPid":34560,"kind":"tick","steamPids":[34560],"acf":{"exists":false},"updating":0}
+{"running":0,"ts":"2026-11-16T17:08:00.4050368Z","installed":1,"activeUser":35601368,"apPid":34560,"kind":"tick","steamPids":[34560],"acf":{"exists":false},"updating":0}
+{"running":0,"ts":"2026-11-16T17:08:30.0497430Z","installed":1,"activeUser":35601368,"apPid":34560,"kind":"tick","steamPids":[34560],"acf":{"exists":false},"updating":0}
+{"running":0,"ts":"2026-11-16T17:09:00.7843361Z","installed":1,"activeUser":35601368,"apPid":34560,"kind":"tick","steamPids":[34560],"acf":{"exists":false},"updating":0}
+{"running":0,"ts":"2026-11-16T17:09:30.4673455Z","installed":1,"activeUser":35601368,"apPid":34560,"kind":"tick","steamPids":[34560],"acf":{"exists":false},"updating":0}
+{"running":0,"ts":"2026-11-16T17:10:00.1128050Z","installed":1,"activeUser":35601368,"apPid":34560,"kind":"tick","steamPids":[34560],"acf":{"exists":false},"updating":0}
+{"running":0,"ts":"2026-11-16T17:10:30.6933951Z","installed":1,"activeUser":35601368,"apPid":34560,"kind":"tick","steamPids":[34560],"acf":{"exists":false},"updating":0}
+{"running":0,"ts":"2026-11-16T17:10:38.8249091Z","installed":1,"activeUser":0,"apPid":0,"kind":"tick","steamPids":[34560],"acf":{"exists":false},"updating":0}
+{"running":0,"ts":"2026-11-16T17:10:39.8421575Z","installed":1,"activeUser":0,"apPid":29668,"kind":"tick","steamPids":[29668],"acf":{"exists":false},"updating":0}
+{"running":0,"ts":"2026-11-16T17:10:50.0103375Z","installed":1,"activeUser":0,"apPid":29668,"kind":"tick","steamPids":[29668],"acf":{"launcherPath":false,"flags":"4","sha":"DA84A93D4BCA","mtime":"2026-11-16T17:10:49.3924545Z","exists":true},"updating":0}
+{"running":0,"ts":"2026-11-16T17:11:00.1779702Z","installed":1,"activeUser":0,"apPid":29668,"kind":"tick","steamPids":[29668],"acf":{"launcherPath":false,"flags":"4","sha":"DA84A93D4BCA","mtime":"2026-11-16T17:10:49.3924545Z","exists":true},"updating":0}
+{"running":0,"ts":"2026-11-16T17:11:30.7372584Z","installed":1,"activeUser":0,"apPid":29668,"kind":"tick","steamPids":[29668],"acf":{"launcherPath":false,"flags":"4","sha":"DA84A93D4BCA","mtime":"2026-11-16T17:10:49.3924545Z","exists":true},"updating":0}
+{"running":0,"ts":"2026-11-16T17:12:00.3883270Z","installed":1,"activeUser":0,"apPid":29668,"kind":"tick","steamPids":[29668],"acf":{"launcherPath":false,"flags":"4","sha":"DA84A93D4BCA","mtime":"2026-11-16T17:10:49.3924545Z","exists":true},"updating":0}
+{"ts":"2026-11-16T17:12:16.7279349Z","kind":"clog","line":"[2026-11-17 06:12:16] Client version: 1794536281"}
+{"ts":"2026-11-16T17:12:16.7289347Z","kind":"clog","line":"[2026-11-17 06:12:16] Loaded Steam library folders configuration: C:\\Program Files (x86)\\Steam\\steamapps\\libraryfolders.vdf"}
+{"ts":"2026-11-16T17:12:16.7449344Z","kind":"clog","line":"[2026-11-17 06:12:16] Loaded 11 apps from install folder \"C:\\Program Files (x86)\\Steam\\steamapps\\appmanifest_*.acf\"."}
+{"ts":"2026-11-16T17:12:16.7589404Z","kind":"clog","line":"[2026-11-17 06:12:16] Loaded 27 apps from install folder \"D:\\SteamLibrary\\steamapps\\appmanifest_*.acf\"."}
+{"ts":"2026-11-16T17:12:16.7734543Z","kind":"clog","line":"[2026-11-17 06:12:16] Triggered async write of Steam library folders configuration (2 libraries)."}
+{"running":0,"ts":"2026-11-16T17:12:26.9965814Z","installed":1,"activeUser":35601368,"apPid":29668,"kind":"tick","steamPids":[29668],"acf":{"launcherPath":false,"flags":"4","sha":"DA84A93D4BCA","mtime":"2026-11-16T17:10:49.3924545Z","exists":true},"updating":0}
+{"ts":"2026-11-16T17:12:27.0045816Z","kind":"clog","line":"[2026-11-17 06:12:26] Adding peer server \u0027Graysons-Mac-Studio\u0027 (10.10.3.28:27036)"}
+{"ts":"2026-11-16T17:12:27.0125833Z","kind":"clog","line":"[2026-11-17 06:12:26] Adding peer server \u0027graysons-macbook-air\u0027 (10.10.3.132:27036)"}
+{"running":0,"ts":"2026-11-16T17:12:28.0451637Z","installed":1,"activeUser":35601368,"apPid":29668,"kind":"tick","steamPids":[29668],"acf":{"launcherPath":true,"flags":"4","sha":"3AC7F22221B6","mtime":"2026-11-16T17:12:27.1364543Z","exists":true},"updating":0}
+{"ts":"2026-11-16T17:12:28.0471644Z","kind":"clog","line":"[2026-11-17 06:12:27] Dependency added: parent 228980, child 264160, depot 228983"}
+{"running":0,"ts":"2026-11-16T17:12:30.1110126Z","installed":1,"activeUser":35601368,"apPid":29668,"kind":"tick","steamPids":[29668],"acf":{"launcherPath":true,"flags":"4","sha":"3AC7F22221B6","mtime":"2026-11-16T17:12:27.1364543Z","exists":true},"updating":0}
+{"running":0,"ts":"2026-11-16T17:13:00.6476930Z","installed":1,"activeUser":35601368,"apPid":29668,"kind":"tick","steamPids":[29668],"acf":{"launcherPath":true,"flags":"4","sha":"3AC7F22221B6","mtime":"2026-11-16T17:12:27.1364543Z","exists":true},"updating":0}
+{"running":0,"ts":"2026-11-16T17:13:30.2001562Z","installed":1,"activeUser":35601368,"apPid":29668,"kind":"tick","steamPids":[29668],"acf":{"launcherPath":true,"flags":"4","sha":"3AC7F22221B6","mtime":"2026-11-16T17:12:27.1364543Z","exists":true},"updating":0}
+{"running":0,"ts":"2026-11-16T17:14:00.7522665Z","installed":1,"activeUser":35601368,"apPid":29668,"kind":"tick","steamPids":[29668],"acf":{"launcherPath":true,"flags":"4","sha":"3AC7F22221B6","mtime":"2026-11-16T17:12:27.1364543Z","exists":true},"updating":0}
+{"running":0,"ts":"2026-11-16T17:14:30.2852868Z","installed":1,"activeUser":35601368,"apPid":29668,"kind":"tick","steamPids":[29668],"acf":{"launcherPath":true,"flags":"4","sha":"3AC7F22221B6","mtime":"2026-11-16T17:12:27.1364543Z","exists":true},"updating":0}
+{"running":0,"ts":"2026-11-16T17:14:49.6173935Z","installed":1,"activeUser":0,"apPid":0,"kind":"tick","steamPids":[29668],"acf":{"launcherPath":true,"flags":"4","sha":"3AC7F22221B6","mtime":"2026-11-16T17:12:27.1364543Z","exists":true},"updating":0}
+{"running":0,"ts":"2026-11-16T17:14:50.6505460Z","installed":1,"activeUser":0,"apPid":0,"kind":"tick","steamPids":[33432],"acf":{"launcherPath":false,"flags":"1026","sha":"EAFC74821E41","mtime":"2026-11-16T17:14:50.5054120Z","exists":true},"updating":0}
+{"running":0,"ts":"2026-11-16T17:14:51.6806928Z","installed":1,"activeUser":0,"apPid":33432,"kind":"tick","steamPids":[33432],"acf":{"launcherPath":false,"flags":"1026","sha":"EAFC74821E41","mtime":"2026-11-16T17:14:50.5054120Z","exists":true},"updating":0}
+{"ts":"2026-11-16T17:14:52.7117856Z","kind":"clog","line":"[2026-11-17 06:14:51] Client version: 1794536281"}
+{"ts":"2026-11-16T17:14:52.7127855Z","kind":"clog","line":"[2026-11-17 06:14:51] Loaded Steam library folders configuration: C:\\Program Files (x86)\\Steam\\steamapps\\libraryfolders.vdf"}
+{"ts":"2026-11-16T17:14:52.7277897Z","kind":"clog","line":"[2026-11-17 06:14:51] Loaded 11 apps from install folder \"C:\\Program Files (x86)\\Steam\\steamapps\\appmanifest_*.acf\"."}
+{"ts":"2026-11-16T17:14:52.7406705Z","kind":"clog","line":"[2026-11-17 06:14:51] Loaded 27 apps from install folder \"D:\\SteamLibrary\\steamapps\\appmanifest_*.acf\"."}
+{"ts":"2026-11-16T17:14:52.7536746Z","kind":"clog","line":"[2026-11-17 06:14:51] Triggered async write of Steam library folders configuration (2 libraries)."}
+{"running":0,"ts":"2026-11-16T17:15:00.9404046Z","installed":1,"activeUser":0,"apPid":33432,"kind":"tick","steamPids":[33432],"acf":{"launcherPath":false,"flags":"1026","sha":"EAFC74821E41","mtime":"2026-11-16T17:14:50.5054120Z","exists":true},"updating":0}
+{"running":0,"ts":"2026-11-16T17:15:02.9917448Z","installed":1,"activeUser":35601368,"apPid":33432,"kind":"tick","steamPids":[33432],"acf":{"launcherPath":true,"flags":"1026","sha":"D183FFAAE4AB","mtime":"2026-11-16T17:15:02.9262956Z","exists":true},"updating":0}
+{"ts":"2026-11-16T17:15:03.0027494Z","kind":"clog","line":"[2026-11-17 06:15:02] Adding peer server \u0027graysons-macbook-air\u0027 (10.10.3.132:27036)"}
+{"ts":"2026-11-16T17:15:03.0037492Z","kind":"clog","line":"[2026-11-17 06:15:02] AppID 264160 scheduler update : Priority Auto Update, not played for 4294921076 seconds, update disabled for 0 seconds"}
+{"ts":"2026-11-16T17:15:03.0148169Z","kind":"clog","line":"[2026-11-17 06:15:02] AppID 264160 state changed : Update Required,Update Queued,Update Started,"}
+{"running":0,"ts":"2026-11-16T17:15:04.0391481Z","installed":1,"activeUser":35601368,"apPid":33432,"kind":"tick","steamPids":[33432],"acf":{"launcherPath":true,"flags":"4","sha":"25B21EDCE6B1","mtime":"2026-11-16T17:15:03.3948375Z","exists":true},"updating":0}
+{"ts":"2026-11-16T17:15:04.0406522Z","kind":"clog","line":"[2026-11-17 06:15:03] Dependency added: parent 228980, child 264160, depot 228983"}
+{"ts":"2026-11-16T17:15:04.0521795Z","kind":"clog","line":"[2026-11-17 06:15:03] AppID 264160 state changed : Update Required,Update Queued,Update Running,Update Started,"}
+{"ts":"2026-11-16T17:15:04.0651838Z","kind":"clog","line":"[2026-11-17 06:15:03] AppID 264160 App update changed : Running Update,"}
+{"ts":"2026-11-16T17:15:04.0776979Z","kind":"clog","line":"[2026-11-17 06:15:03] AppID 264160 App update changed : Running Update,Reconfiguring,"}
+{"ts":"2026-11-16T17:15:04.0917064Z","kind":"clog","line":"[2026-11-17 06:15:03] AppID 264160 App update changed : Running Update,"}
+{"ts":"2026-11-16T17:15:04.1087589Z","kind":"clog","line":"[2026-11-17 06:15:03] AppID 264160 has no changes, 1 active: 264161 (4716738664447498691), 1 target: 264161 (4716738664447498691),"}
+{"ts":"2026-11-16T17:15:04.1238695Z","kind":"clog","line":"[2026-11-17 06:15:03] AppID 264160 App update changed : Running Update,Staging,"}
+{"ts":"2026-11-16T17:15:04.1400258Z","kind":"clog","line":"[2026-11-17 06:15:03] AppID 264160 App update changed : Running Update,"}
+{"ts":"2026-11-16T17:15:04.1571564Z","kind":"clog","line":"[2026-11-17 06:15:03] AppID 264160 App update changed : Running Update,Committing,"}
+{"ts":"2026-11-16T17:15:04.1734553Z","kind":"clog","line":"[2026-11-17 06:15:03] AppID 264160 starting commit from \"C:\\Program Files (x86)\\Steam\\steamapps\\downloading\\264160\" to \"C:\\Program Files (x86)\\Steam\\steamapps\\common\\WazHack\" : 0 updated, 0 moved, 0 deleted files"}
+{"ts":"2026-11-16T17:15:04.1904767Z","kind":"clog","line":"[2026-11-17 06:15:03] AppID 264160 state changed : Fully Installed,Update Queued,Update Running,"}
+{"ts":"2026-11-16T17:15:04.2075799Z","kind":"clog","line":"[2026-11-17 06:15:03] AppID 264160 finished update, 1 mounted depots (BuildID 9044149) : 264161 (4716738664447498691),"}
+{"ts":"2026-11-16T17:15:04.2235871Z","kind":"clog","line":"[2026-11-17 06:15:03] AppID 264160 App update changed : Running Update,"}
+{"ts":"2026-11-16T17:15:04.2397959Z","kind":"clog","line":"[2026-11-17 06:15:03] AppID 264160 App update changed : None"}
+{"ts":"2026-11-16T17:15:04.2566317Z","kind":"clog","line":"[2026-11-17 06:15:03] AppID 264160 state changed : Fully Installed,Update Queued,"}
+{"ts":"2026-11-16T17:15:04.2731524Z","kind":"clog","line":"[2026-11-17 06:15:03] AppID 264160 state changed : Fully Installed,"}
+{"ts":"2026-11-16T17:15:04.2906973Z","kind":"clog","line":"[2026-11-17 06:15:03] AppID 264160 scheduler finished : removed from schedule (result No Error, state 0xc) "}
+{"ts":"2026-11-16T17:15:18.5548908Z","kind":"clog","line":"[2026-11-17 06:15:17] Adding peer server \u0027Graysons-Mac-Studio\u0027 (10.10.3.28:27036)"}
+{"running":0,"ts":"2026-11-16T17:15:30.8139376Z","installed":1,"activeUser":35601368,"apPid":33432,"kind":"tick","steamPids":[33432],"acf":{"launcherPath":true,"flags":"4","sha":"25B21EDCE6B1","mtime":"2026-11-16T17:15:03.3948375Z","exists":true},"updating":0}
+{"running":0,"ts":"2026-11-16T17:16:00.4551301Z","installed":1,"activeUser":35601368,"apPid":33432,"kind":"tick","steamPids":[33432],"acf":{"launcherPath":true,"flags":"4","sha":"25B21EDCE6B1","mtime":"2026-11-16T17:15:03.3948375Z","exists":true},"updating":0}
+{"running":0,"ts":"2026-11-16T17:16:30.0052338Z","installed":1,"activeUser":35601368,"apPid":33432,"kind":"tick","steamPids":[33432],"acf":{"launcherPath":true,"flags":"4","sha":"25B21EDCE6B1","mtime":"2026-11-16T17:15:03.3948375Z","exists":true},"updating":0}
+{"running":0,"ts":"2026-11-16T17:17:00.5826302Z","installed":1,"activeUser":35601368,"apPid":33432,"kind":"tick","steamPids":[33432],"acf":{"launcherPath":true,"flags":"4","sha":"25B21EDCE6B1","mtime":"2026-11-16T17:15:03.3948375Z","exists":true},"updating":0}
+{"running":0,"ts":"2026-11-16T17:17:30.0927221Z","installed":1,"activeUser":35601368,"apPid":33432,"kind":"tick","steamPids":[33432],"acf":{"launcherPath":true,"flags":"4","sha":"25B21EDCE6B1","mtime":"2026-11-16T17:15:03.3948375Z","exists":true},"updating":0}

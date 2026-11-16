@@ -54,3 +54,20 @@ only watches Steam's library state.
 
 A NO on question 1 or 5 means Windows keeps the simplified hold. Record the result in a
 spike README and in 81-CONTEXT D-14.
+
+## Resolution
+
+Resolved by spike 087 (`.planning/spikes/087-windows-acf-adoption/README.md`) on 2026-11-17,
+on Windows 11 with native Steam and WazHack 264160. The answer is yes to questions 1, 2, 3 and 5.
+
+- **Q1 startup:** StateFlags 4 adopted with no dialog and no verify. 1026 gets a zero-file
+  commit.
+- **Q2:** a running, signed-in Steam ignores the ACF.
+- **Q3:** sign-in reloads and adopts, with no restart.
+- **Q5:** `steam://exit` → `steam://rungameid` relaunches with the game. Plain `steam.exe`
+  restarts Steam alone with no dialog.
+- **Q4 evidence:** Steam rewrites the ACF, and `LauncherPath` appears. HKCU `ActiveUser` gives
+  the signed-in state. Avoid HKCU `Installed`, which is stale. A Windows sign-out restarts
+  `steam.exe`.
+
+81-CONTEXT D-14 records the result: Windows gets restart-on-Play.

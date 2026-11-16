@@ -132,6 +132,20 @@ Not in scope:
   `/gsd-plan-phase 81`, on Windows first and then Linux. The planner then plans only the arm each
   OS gets. If the spike answers yes to its questions 1 and 5 on an OS, that OS gets restart-on-Play
   with the D-01–D-05 UX and the D-07 detection, using non-helper evidence from spike question 4.
+  - **Windows: YES, so restart-on-Play** (spike 087, 2026-11-17, native Steam on Windows 11):
+    - **Q1 startup:** StateFlags 4 adopted with no dialog and no verify. 1026 gets a zero-file
+      commit.
+    - **Q2:** a running, signed-in Steam ignores the ACF.
+    - **Q3:** sign-in reloads and adopts, with no restart.
+    - **Q5:** `steam://exit` → `steam://rungameid/<id>` relaunches with the game. Plain
+      `steam.exe` restarts Steam alone with no dialog.
+    - **Q4 evidence:** the primary signal is Steam rewriting the ACF (sha/mtime change, the
+      `LauncherPath` key appears, 1026 → 4). Signed-in state comes from HKCU `ActiveProcess`
+      `ActiveUser` (0 = signed out). The content_log `Loaded N apps …` line marks a rescan.
+      **Do not use** HKCU `Apps\<id>\Installed`, which stays 1 regardless.
+    - **Caution for D-07 on Windows:** a sign-out restarts `steam.exe`, so a PID change alone is
+      not adoption evidence.
+  - Linux: pending (`2026-11-17-…-on-linux.md`).
 - **D-15:** If the spike says no for an OS, it gets a **simplified hold**:
   - **In memory only.** No persisted store and no boot re-arm, so after a GameLib restart the game
     reads as Installed.
