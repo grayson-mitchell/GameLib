@@ -19,7 +19,7 @@ status: all_fixed
 
 - Findings in scope: 3 (WR-01..WR-03; IN-01..IN-05 out of scope)
 - Fixed: 3
-- Skipped: 0 (one optional part of WR-03 deferred, see below)
+- Skipped: 0 (one optional part of WR-03 deferred, see below) (moot since 56-13 / 509bcb01b, see WR-03)
 
 ## Fixed Issues
 
@@ -59,6 +59,8 @@ status: all_fixed
 - Tests: the dispatch-log helper matches the stable prefix. The ordered-launch test asserts the full `dialog-frame-sent=true display=unconfirmed` line, and a new test covers `dialog-frame-sent=false`.
 
 **Deferred (not built):** A real display acknowledgement would have `MessageBoxModal` mount/close emit a renderer-to-backend event, and the log would record that. It is a new cross-layer feature, not a fix. It is needed only if the re-gate requires proof of display, so it is left for a separate decision.
+
+**Current state (Phase 78, 2026-11-17):** The first half lives on in part: `showDialogBoxModalAuto` still returns a boolean in `src/backend/dialog/dialog.ts` (function at line 53; `true` is not proof of display). `maybeNotifySteamStubForwarded` was removed in `f8a00423a` (56-13), so the SteamStub `dialog-frame-sent=` log line no longer exists. That half is superseded by removal, not "fixed". The deferred second half is moot: a real display acknowledgement shipped in `509bcb01b` (`src/backend/dialog/displayAck.ts`, logging `display=confirmed elapsedMs=N` or `display=unconfirmed`) for the successor DRM-mode and engine notices, covered by `src/backend/dialog/__tests__/displayAck.test.ts` and the `dialog-frame-sent=` assertion in `src/backend/storeManagers/steam/__tests__/games.test.ts`. Its todo is `.planning/todos/completed/2026-10-28-bridge-notice-dialog-display-unconfirmed.md`. No new todo.
 
 ## Verification run
 

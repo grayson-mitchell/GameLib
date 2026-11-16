@@ -378,67 +378,79 @@ blocked: 0
 ## Gaps
 
 - truth: "A SteamStub title (Grim Dawn 219990) launched from GameLib goes through the forwarding steamclient64.dll path and reaches its main menu"
-  status: failed
+  status: superseded
+  superseded_by: "52-13..52-16 (52-VERIFICATION gaps_closed_round1)"
   reason: "The quick 261024-j4l withhold guard preempts SteamStub forwarding. 219990 is classified `withheld` because Engine.dll names SteamUser023, SteamNetworking006 and STEAMREMOTESTORAGE_INTERFACE_VERSION016 as unservable, so it takes the direct bottle launch: no forwarder, no helper, guaranteed 2 s exit. The classification predates 52-01's native SteamClient017/014 forwarding, under which those versions may be servable."
   evidence: "gamelib-launch-1.log lines 116/117, 180-182, 230-233 (withheld + direct launch), 122/186/236 (gone after 2s); the three versions are named by x64/Engine.dll (also compat/Engine.dll and root Engine.dll); items 6-8. 52-11 scratch round 1 never exercised the guard (the harness placed the shim itself)."
   fix_direction: "Make the withhold decision SteamStub-aware: when `.bind` is present, route to the bridge-steamstub forwarder path (52-08/52-09) instead of withholding, or re-derive the unservable set under native forwarding."
 - truth: "A withheld SteamStub title fails loudly with a user-visible notice"
-  status: failed
+  status: superseded
+  superseded_by: "52-13..52-16 (52-VERIFICATION gaps_closed_round1)"
   reason: "The withheld path carries no drmWrapper, so neither the forwarder placement nor the `steamstub-unforwarded` notice runs; the user sees a silent failure after 2 s."
   evidence: "No `drmWrapper=steamstub`, `forwarder placed` or `steamstub-unforwarded` anywhere in gamelib-launch-1.log; operator: failing silently (flagged as a gap at 52-08/52-09)."
   fix_direction: "Detect `.bind` independently of the shim verdict and carry drmWrapper=steamstub (or emit the unforwarded notice) on the withheld branch."
 - truth: "The launch log accurately states which steam_api the game runs"
-  status: failed
+  status: superseded
+  superseded_by: "52-13..52-16 (52-VERIFICATION gaps_closed_round1)"
   reason: "The withheld message says `launching with the game's own steam_api, no helper`, but when the original dll is gone (no .gamelib-orig backup) the stale GameLib shim remains in place, so the claim is false."
   evidence: "gamelib-launch-1.log lines 115/116, 180/179, 229/230; product x64/steam_api64.dll is 223744 bytes (stale shim, SHIM64 242688), item 8."
   fix_direction: "Log the real state (shim present, no original) or refuse to launch and advise Steam file verification."
 - truth: "The stale shim in the product bottle is refreshed or removed when the shim is withheld"
-  status: failed
+  status: superseded
+  superseded_by: "52-13..52-16 (52-VERIFICATION gaps_closed_round1)"
   reason: "The withheld path neither restores the original steam_api64.dll nor refreshes the shim, leaving the 223744-byte shim that has no helper behind it."
   evidence: "item 8: x64/steam_api64.dll 223744 bytes after three launches; the warning `leaving the GameLib shim in place` each time."
   fix_direction: "On withhold, restore the original (or fail with guidance to verify files in Steam) rather than leaving a helper-less shim; refresh to current SHIM64 if the shim is kept."
 
 - truth: "A SteamStub title (Grim Dawn 219990) launched through the forwarder reaches its main menu with a clean Steam-init log"
-  status: failed
+  status: superseded
+  superseded_by: "done-when amended 2026-10-24 at 52-32 (item 29, class O1); todos/completed/2026-10-24-steamstub-launch-check-static-re-decision.md (won't-do, spike 041); forwarder deleted in 56-13 f8a00423a"
   reason: "Re-gate items 9 and 10: the forwarder is placed and the helper answers HELLO plus SteamClient017/014 natively, yet Grim Dawn shows Application Load Error 3 (item 9) and its Steam init logs `SteamAPI_IsSteamRunning() did not locate a running instance of Steam` after two `pid` reads of the absent ActiveProcess value (item 10). Operator chose option-c on item 13: investigate first, no pid writer yet."
   evidence: "52-UAT items 9, 10, 13; round-regate.cxlog:23303/:23311/:23313; helper log HELLO + two FWD lines and nothing after."
   fix_direction: "Investigate first: what the SteamStub check does with the ActiveProcess `pid` value (existence, OpenProcess, process-name check) and why Load Error 3 follows a clean HELLO/FWD; also the ELEX Friends sign-out (Gap 5). Next step: run /gsd-plan-phase 52 --gaps. Any pid writer needs its own plan and boundary review."
 
 - truth: "Launching ELEX (411300) through the bridge leaves the user's Mac Steam session (Friends) signed in"
-  status: failed
+  status: superseded
+  superseded_by: "Phase 54: no authenticated CM logon at launch. src/backend/storeManagers/steam/anonymousClient.ts header (Rust anon actor, never signs Friends out); src/backend/storeManagers/steam/bridge/launchTarget.ts:231 (anonymous lookup first, fallback acquireOpenAuthenticated); src/backend/storeManagers/steam/user.ts:226-229 (acquireOpenAuthenticated never reads the keyring and never logs on); src/backend/__tests__/steamAuthSessionPolicy.test.ts:231 (Rule G over LAUNCH_PATH, green 16/16); 54-UAT.md items 1-4; todos/completed/2026-10-24-friends-sign-out-steam-user-logon.md"
   reason: "Item 12: the operator checked Friends signed in before launch and signed out afterwards, with ELEX reaching only its loading screen (baseline). No log line explains it; cause unknown. Candidates present in the log but unproven: GameLib's steam-user logon on Play (17:33:59) and the helper's SteamAPI_Init against the Mac client (17:34:00). Not shown to be caused by CR-01 (no forwarder path, no FWD lines for 411300)."
   evidence: "gamelib-relaunch-2.log:60-67, :71-75, :81; operator verbatim in item 12; /tmp/gamelib-gate-52r-20261024T033525Z/."
   fix_direction: "Include in the item-13 investigation (run /gsd-plan-phase 52 --gaps): repeat with Friends state checked before and after (a) Play with the bridge disabled, (b) the steam-user logon alone, (c) helper alone, on a non-ELEX title, to attribute the sign-out. Do not guess a cause before that."
 
 - truth: "A SteamStub title (Grim Dawn 219990) launched from GameLib after re-gate 2 reaches its main menu with a clean Steam-init log (item 17)"
-  status: skipped
+  status: superseded
+  superseded_by: "done-when amended 2026-10-24 at 52-32 (item 29, class O1); todos/completed/2026-10-24-steamstub-launch-check-static-re-decision.md (won't-do, spike 041); forwarder deleted in 56-13 f8a00423a"
   reason: "Gap 5 not closable within the locked boundary: item 16 chose option-other (no code change); the stub reads all 186368 bytes of the forwarder before the MessageBox and what it checks in them was never inspected, and no listed option targets that input. No Grim Dawn launch was made in re-gate 2."
   evidence: "52-UAT items 14, 16, 17; 52-19-DIAGNOSIS.md `## Gap 5: candidate inputs`; cxlog:7170-7181 and 6810-6820."
   fix_direction: "Gap 5 not closable within the locked boundary (item 16). Run /gsd-plan-phase 52 --gaps to establish what the SteamStub check examines in the forwarder bytes."
 - truth: "The re-gate 2 cx-log trace of Grim Dawn shows a clean strict Steam-init check and MSGBOX count 0 (item 18)"
-  status: skipped
+  status: superseded
+  superseded_by: "done-when amended 2026-10-24 at 52-32 (item 29, class O1); todos/completed/2026-10-24-steamstub-launch-check-static-re-decision.md (won't-do, spike 041); forwarder deleted in 56-13 f8a00423a"
   reason: "Gap 5 not closable within the locked boundary (item 16): no item 17 launch exists to trace."
   evidence: "52-UAT items 16, 18."
   fix_direction: "Gap 5 not closable within the locked boundary (item 16); re-run after /gsd-plan-phase 52 --gaps yields a change."
 - truth: "The Grim Dawn bottle hygiene holds after the re-gate 2 launch (item 19)"
-  status: skipped
+  status: superseded
+  superseded_by: "done-when amended 2026-10-24 at 52-32 (item 29, class O1); todos/completed/2026-10-24-steamstub-launch-check-static-re-decision.md (won't-do, spike 041); forwarder deleted in 56-13 f8a00423a"
   reason: "Gap 5 not closable within the locked boundary (item 16): no item 17 launch whose hygiene could be read; item 16 recorded no hygiene delta."
   evidence: "52-UAT items 11, 16, 19."
   fix_direction: "Gap 5 not closable within the locked boundary (item 16); re-read hygiene after any future Gap 5 change launches."
 
 - truth: "A SteamStub title (Grim Dawn 219990) launched from GameLib after 52-26 reaches its main menu with In-Game shown and cleared (item 23, the done-when)"
-  status: failed
+  status: superseded
+  superseded_by: "done-when amended 2026-10-24 at 52-32 (item 29, class O1); todos/completed/2026-10-24-steamstub-launch-check-static-re-decision.md (won't-do, spike 041); forwarder deleted in 56-13 f8a00423a"
   reason: "Application Load Error persists with the forwarder carrying a GameLib VS_VERSIONINFO resource: the forwarder was placed and loaded (HELLO, 2 FWD lines) yet the game did not launch and ran 37 s. option-versioninfo did not satisfy the stub. The dialog text was not recoverable, so it cannot be compared with 52-25 R1. In-Game: no, cleared: no."
   evidence: "52-UAT item 23; session /tmp/gamelib-gate-52t-20261024T070522Z, gamelib-regate3-1.log lines 106-128; 52-27-SUMMARY.md."
   fix_direction: "Compare the new dialog text with 52-25 R1 (capture the text next time), then run /gsd-plan-phase 52 --gaps. Mac Steam presence for the bridge run is a separate done-when gap once the game launches."
 - truth: "The re-gate 3 cx-log trace of Grim Dawn shows a clean strict Steam-init check, MSGBOX 0, alive at 90 s (item 24)"
-  status: failed
+  status: superseded
+  superseded_by: "done-when amended 2026-10-24 at 52-32 (item 29, class O1); todos/completed/2026-10-24-steamstub-launch-check-static-re-decision.md (won't-do, spike 041); forwarder deleted in 56-13 f8a00423a"
   reason: "A game Steam-init log exists and the Loaded line is present (not unverified), but IsSteamRunning 1 (`did not locate a running instance of Steam`), MSGBOX 1, and the game process was not alive at 90 s. Bridge-verified is NOT achieved."
   evidence: "52-UAT item 24; session /tmp/gamelib-gate-52t-20261024T070522Z (ROUND=regate3 MODE=trace WATCH=90)."
   fix_direction: "Run /gsd-plan-phase 52 --gaps with the remaining init evidence (IsSteamRunning still reports no Steam instance; ActiveProcess pid is absent)."
 
 - truth: "A SteamStub title (Grim Dawn 219990) launched through the forwarder reaches its main menu with a clean Steam-init log (done-when, after the arm B discriminating experiment)"
-  status: failed
+  status: superseded
+  superseded_by: "done-when amended 2026-10-24 at 52-32 (item 29, class O1); todos/completed/2026-10-24-steamstub-launch-check-static-re-decision.md (won't-do, spike 041); forwarder deleted in 56-13 f8a00423a"
   reason: "Experiment 52-30/52-31 classified O1: a live pid removes the IsSteamRunning warning (W 1 to 0) but Application Load Error 3 persists unchanged after the whole-file forwarder read. The file/forwarder check is the blocker, not the pid; a product pid writer would not close the done-when."
   evidence: "52-30-DIAGNOSIS.md `## Discriminating result`; 52-UAT items 27-29; sessions /tmp/gamelib-gate-52u-20261024T080006Z (arm A) and /tmp/gamelib-gate-52v-20261024T080546Z (arm B); cxlog diag5a:7235 and diag5b:7135."
   fix_direction: "Operator chose option-closeout at 52-32 (item 29): the ROADMAP done-when is amended (Grim Dawn main menu deferred to a separate operator-owned static-RE decision; the honest SteamStub notice is the remaining deliverable). Next: /gsd-verify-phase 52 to re-verify as amended; the notice itself is not yet implemented."
