@@ -308,6 +308,61 @@ async fn a_dying_task_after_stop_then_start_cannot_enable_a_duplicate_poller() {
     poll.stop();
 }
 
+/// 80-REVIEW iteration 2, A/WR-02: a `stop()` from another thread landing between `start()`
+/// setting `started` and registering its task must still cancel that task. Each round releases a
+/// thread looping `start` and one looping `stop` behind a barrier; any task the race orphaned
+/// keeps probing, so after a final stop/start one tick must still probe exactly once.
+#[tokio::test(start_paused = true)]
+async fn start_racing_stop_on_other_threads_never_orphans_a_poller() {
+    let host = Arc::new(RecordingHost::new(AckMode::NotReady));
+    let registry = Registry::new(
+        tokio::runtime::Handle::current(),
+        host.clone() as Arc<dyn PollHost>,
+        Arc::new(ScriptedRunner::default()),
+        Arc::new(FakeClock::new(0)),
+    );
+    let calls = Arc::new(AtomicU32::new(0));
+    let c = calls.clone();
+    let probe: Probe = Arc::new(move || {
+        c.fetch_add(1, Ordering::SeqCst);
+        Box::pin(async move { 0 })
+    });
+    let poll = RunningPoll::new(registry, probe);
+    for _ in 0..20 {
+        let barrier = Arc::new(std::sync::Barrier::new(2));
+        let done = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let (p1, b1, d1) = (poll.clone(), barrier.clone(), done.clone());
+        let starter = std::thread::spawn(move || {
+            b1.wait();
+            for _ in 0..2000 {
+                p1.start();
+            }
+            d1.store(true, Ordering::SeqCst);
+        });
+        let (p2, b2) = (poll.clone(), barrier);
+        let stopper = std::thread::spawn(move || {
+            b2.wait();
+            while !done.load(Ordering::SeqCst) {
+                p2.stop();
+            }
+        });
+        starter.join().unwrap();
+        stopper.join().unwrap();
+    }
+    poll.stop();
+    settle().await;
+    poll.start();
+    settle().await;
+    tokio::time::advance(Duration::from_millis(RUNNING_POLL_INTERVAL_MS)).await;
+    settle().await;
+    assert_eq!(
+        calls.load(Ordering::SeqCst),
+        1,
+        "one tick must probe once; more means a start/stop race orphaned a poller"
+    );
+    poll.stop();
+}
+
 #[tokio::test(start_paused = true)]
 async fn the_interval_is_five_seconds_and_does_not_fire_at_start() {
     let r = rig();

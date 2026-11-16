@@ -19,6 +19,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Duration;
 use tokio::time::{interval_at, Instant, MissedTickBehavior};
+use tokio_util::sync::CancellationToken;
 
 /// The registry key every running poll registers under (single instance).
 const POLL_KEY: &str = "running";
@@ -113,6 +114,9 @@ struct State {
     /// generation is current, so a cancelled task that exits after a restart cannot clear the
     /// new task's flag (80-REVIEW A/WR-07).
     gen: u64,
+    /// The current task's cancel token, set in the same critical section as `started`, so a
+    /// `stop()` always reaches the task a `start()` spawned (80-REVIEW iteration 2, A/WR-02).
+    token: Option<CancellationToken>,
 }
 
 struct Inner {
@@ -189,16 +193,23 @@ impl RunningPoll {
 
     /// Start the 5 s poll. Idempotent.
     pub fn start(&self) {
-        let gen = {
+        let (gen, token, guard) = {
             let mut st = lock(&self.inner.state);
             if st.started {
                 return;
             }
             st.started = true;
             st.gen += 1;
-            st.gen
+            // Register under the state lock: a `stop()` between the flag and the registration
+            // would cancel nothing and leave the task this call spawns uncancellable
+            // (80-REVIEW iteration 2, A/WR-02). Lock order is state -> registry map; nothing
+            // takes them the other way (`PollGuard::drop` takes the map alone).
+            let (token, guard) = self.inner.registry.register(PollKind::Running, POLL_KEY);
+            if let Some(old) = st.token.replace(token.clone()) {
+                old.cancel();
+            }
+            (st.gen, token, guard)
         };
-        let (token, guard) = self.inner.registry.register(PollKind::Running, POLL_KEY);
         let poll = self.clone();
         self.inner.registry.spawn(async move {
             let _guard = guard;
@@ -221,8 +232,10 @@ impl RunningPoll {
 
     /// Stop the poll and forget the last id and every claim.
     pub fn stop(&self) {
-        self.inner.registry.cancel(PollKind::Running, POLL_KEY);
         let mut st = lock(&self.inner.state);
+        if let Some(token) = st.token.take() {
+            token.cancel();
+        }
         st.started = false;
         st.gen += 1;
         st.last_known = 0;
