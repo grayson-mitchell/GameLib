@@ -156,7 +156,39 @@ pub(crate) fn steampoll_boot() {
     facade.running.start();
 }
 
-/// READY sentinel: the sidecar now reads, so the outbox replays queued state events in seq order (R1).
+/// The sidecar the poll host writes state events to. Set by `spawn_sidecar_state` BEFORE the
+/// reader thread starts, so a READY line read before `app.manage(state)` still finds it
+/// (80-REVIEW B/CR-01: the boot replay used to see `try_state` = `None` and fail for good).
+static STEAMPOLL_SIDECAR: OnceLock<Arc<SidecarState>> = OnceLock::new();
+
+pub(crate) fn set_steampoll_sidecar_state(state: &Arc<SidecarState>) {
+    let _ = STEAMPOLL_SIDECAR.set(state.clone());
+}
+
+/// Sender half that keeps the outbox retry loop alive. `Some` while the loop runs;
+/// `steampoll_exit_shutdown` takes and drops it, which ends the loop.
+static RETRY_STOP: Mutex<Option<Sender<()>>> = Mutex::new(None);
+
+/// READY replay, then the in-session retry of unacked state events (80-REVIEW B/CR-01). READY
+/// fires once per process, so before this a state event whose ack failed after READY sat in the
+/// outbox until exit. Every `period` the loop calls `Outbox::retry_pending`, which does nothing
+/// while the sidecar is not ready or nothing is queued, and never overlaps a running flush.
+/// Returns when `stop`'s sender is dropped (or sends).
+fn run_outbox_retry_loop(
+    outbox: Arc<gamelib_steampoll::outbox::Outbox>,
+    host: Arc<dyn PollHost>,
+    period: Duration,
+    stop: std::sync::mpsc::Receiver<()>,
+) {
+    let rt = gamelib_steampoll::runtime::handle();
+    rt.block_on(outbox.mark_ready(host.as_ref()));
+    while let Err(std::sync::mpsc::RecvTimeoutError::Timeout) = stop.recv_timeout(period) {
+        rt.block_on(outbox.retry_pending(host.as_ref()));
+    }
+}
+
+/// READY sentinel: the sidecar now reads, so the outbox replays queued state events in seq order
+/// (R1), then retries whatever is still unacked every `RETRY_FLUSH_INTERVAL_MS`.
 pub(crate) fn on_sidecar_ready_steampoll() {
     mark_sidecar_ready();
     let Some(facade) = gamelib_steampoll::dispatch::facade::current() else {
@@ -164,10 +196,33 @@ pub(crate) fn on_sidecar_ready_steampoll() {
     };
     let outbox = facade.outbox.clone();
     let host = facade.registry.host().clone();
-    // Never block the reader thread on the replay.
-    gamelib_steampoll::runtime::handle().spawn(async move {
-        outbox.mark_ready(host.as_ref()).await;
-    });
+    let rx = {
+        let mut slot = RETRY_STOP.lock().unwrap_or_else(|e| e.into_inner());
+        if slot.is_some() {
+            None
+        } else {
+            let (tx, rx) = mpsc_channel::<()>();
+            *slot = Some(tx);
+            Some(rx)
+        }
+    };
+    let Some(rx) = rx else {
+        // A retry loop already runs (READY is once per process; this is only a guard): replay
+        // once more on the runtime and let the existing loop keep retrying.
+        gamelib_steampoll::runtime::handle().spawn(async move {
+            outbox.mark_ready(host.as_ref()).await;
+        });
+        return;
+    };
+    // A plain detached thread parked in `recv_timeout`: it never blocks the reader thread on the
+    // replay, and nothing waits for it at exit (process exit does not join it).
+    let period = Duration::from_millis(gamelib_steampoll::outbox::RETRY_FLUSH_INTERVAL_MS);
+    let spawned = thread::Builder::new()
+        .name("steampoll-outbox-retry".into())
+        .spawn(move || run_outbox_retry_loop(outbox, host, period, rx));
+    if spawned.is_err() {
+        shell_eprintln!("[shell] steampoll outbox retry thread failed to start");
+    }
 }
 
 /// Sidecar EOF: later events queue instead of writing to a dead pipe. Polls keep running until exit (R1).
@@ -180,6 +235,9 @@ pub(crate) fn on_sidecar_eof_steampoll() {
 
 /// `RunEvent::Exit`: cancel every poll and kill every monitor child, bounded (D-07).
 pub(crate) fn steampoll_exit_shutdown() {
+    // End the outbox retry loop first, so it starts no new replay while the polls and the
+    // sidecar go down. A replay already running is not waited for.
+    RETRY_STOP.lock().unwrap_or_else(|e| e.into_inner()).take();
     let Some(facade) = gamelib_steampoll::dispatch::facade::current() else {
         return;
     };
@@ -297,10 +355,14 @@ impl PollHost for ShellPollHost {
             if !SIDECAR_READY.load(Ordering::SeqCst) {
                 return AckReply::not_acked();
             }
-            let Some(state) = app.try_state::<Arc<SidecarState>>() else {
-                return AckReply::not_acked();
+            // The OnceLock is set before the reader starts; `try_state` is only a fallback.
+            let state: Arc<SidecarState> = match STEAMPOLL_SIDECAR.get() {
+                Some(state) => state.clone(),
+                None => match app.try_state::<Arc<SidecarState>>() {
+                    Some(state) => state.inner().clone(),
+                    None => return AckReply::not_acked(),
+                },
             };
-            let state: Arc<SidecarState> = state.inner().clone();
             let Ok(arg) = serde_json::to_value(&ev) else {
                 return AckReply::not_acked();
             };
@@ -406,6 +468,100 @@ mod tests {
             params: serde_json::Map::new(),
         };
         assert!(render_notify_text(&c, &k).starts_with("Hello"));
+    }
+
+    /// Answers `applied` only once `fail_first` sends have been refused (B/CR-01).
+    struct FlakyAckHost {
+        sends: std::sync::atomic::AtomicUsize,
+        fail_first: usize,
+    }
+
+    impl PollHost for FlakyAckHost {
+        fn emit_frontend(&self, _channel: &str, _args: Vec<Value>) {}
+        fn notify(&self, _n: Notification) {}
+        fn state_event(&self, _ev: StateEvent) -> BoxFuture<AckReply> {
+            let n = self.sends.fetch_add(1, Ordering::SeqCst);
+            let applied = n >= self.fail_first;
+            Box::pin(async move {
+                AckReply {
+                    applied,
+                    ..AckReply::not_acked()
+                }
+            })
+        }
+        fn bridge_helper_path(&self) -> Option<PathBuf> {
+            None
+        }
+        fn shell_pid(&self) -> u32 {
+            0
+        }
+    }
+
+    fn installed(seq: u64) -> StateEvent {
+        StateEvent::Installed {
+            app_id: "440".into(),
+            seq,
+            source: "native".into(),
+            install_path: "/x".into(),
+            size_on_disk: "1".into(),
+            buildid: None,
+        }
+    }
+
+    #[test]
+    fn retry_loop_redelivers_an_event_whose_ack_failed_after_ready() {
+        let outbox = Arc::new(gamelib_steampoll::outbox::Outbox::new());
+        outbox.enqueue(installed(1));
+        // The READY replay and the first retry are refused; the second retry is applied.
+        let host = Arc::new(FlakyAckHost {
+            sends: std::sync::atomic::AtomicUsize::new(0),
+            fail_first: 2,
+        });
+        let (tx, rx) = mpsc_channel::<()>();
+        let (o, h) = (outbox.clone(), host.clone() as Arc<dyn PollHost>);
+        let loop_thread = thread::spawn(move || {
+            run_outbox_retry_loop(o, h, Duration::from_millis(10), rx);
+        });
+        let deadline = std::time::Instant::now() + Duration::from_secs(5);
+        while outbox.queued_len() > 0 && std::time::Instant::now() < deadline {
+            thread::sleep(Duration::from_millis(5));
+        }
+        assert_eq!(outbox.queued_len(), 0, "the retry loop never redelivered");
+        assert!(host.sends.load(Ordering::SeqCst) >= 3);
+        // Idle ticks send nothing.
+        let sent = host.sends.load(Ordering::SeqCst);
+        thread::sleep(Duration::from_millis(50));
+        assert_eq!(host.sends.load(Ordering::SeqCst), sent);
+        // Dropping the sender (what exit does) ends the loop promptly.
+        let stopped_at = std::time::Instant::now();
+        drop(tx);
+        loop_thread.join().unwrap();
+        assert!(stopped_at.elapsed() < Duration::from_secs(1));
+    }
+
+    #[test]
+    fn retry_loop_sends_nothing_while_the_sidecar_is_not_ready() {
+        let outbox = Arc::new(gamelib_steampoll::outbox::Outbox::new());
+        outbox.enqueue(installed(1));
+        let host = Arc::new(FlakyAckHost {
+            sends: std::sync::atomic::AtomicUsize::new(0),
+            fail_first: usize::MAX,
+        });
+        let (tx, rx) = mpsc_channel::<()>();
+        let (o, h) = (outbox.clone(), host.clone() as Arc<dyn PollHost>);
+        let loop_thread = thread::spawn(move || {
+            run_outbox_retry_loop(o, h, Duration::from_millis(10), rx);
+        });
+        thread::sleep(Duration::from_millis(30));
+        // Sidecar EOF: the loop keeps ticking but `retry_pending` must not send.
+        outbox.mark_not_ready();
+        thread::sleep(Duration::from_millis(30));
+        let sent = host.sends.load(Ordering::SeqCst);
+        thread::sleep(Duration::from_millis(60));
+        assert_eq!(host.sends.load(Ordering::SeqCst), sent);
+        assert_eq!(outbox.queued_len(), 1);
+        drop(tx);
+        loop_thread.join().unwrap();
     }
 
     #[test]

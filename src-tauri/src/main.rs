@@ -841,6 +841,9 @@ fn spawn_sidecar_state(app: &tauri::App) -> Result<Arc<SidecarState>, Box<dyn st
         job: Mutex::new(job),
     });
 
+    // Before the reader: a READY read before `manage_sidecar_state` must still reach the sidecar
+    // from the poll host (80-REVIEW B/CR-01).
+    set_steampoll_sidecar_state(&state);
     start_reader(app.handle().clone(), state.clone(), stdout);
     start_stderr_forwarder(stderr);
     Ok(state)
