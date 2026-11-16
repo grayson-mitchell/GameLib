@@ -10,64 +10,21 @@ use serde_json::json;
 use std::sync::Arc;
 use std::time::Duration;
 
-fn ts_const(src: &str, name: &str) -> u64 {
-    let needle = format!("export const {name} = ");
-    let line = src
-        .lines()
-        .find(|l| l.starts_with(&needle))
-        .unwrap_or_else(|| panic!("{name} not found in pollState.ts"));
-    let rest = &line[needle.len()..];
-    let tok: String = rest
-        .chars()
-        .take_while(|c| c.is_ascii_digit() || *c == '_' || *c == '*' || *c == ' ')
-        .collect();
-    tok.split('*')
-        .map(|p| p.trim().replace('_', "").parse::<u64>().expect("number"))
-        .product()
-}
-
 #[test]
-fn constants_match_pollstate_ts() {
-    let path = concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/../../../src/backend/storeManagers/steam/library/pollState.ts"
-    );
-    let src = std::fs::read_to_string(path).expect("pollState.ts");
-    let pairs: &[(&str, u64)] = &[
-        (
-            "GAMELIB_HANDOFF_STATE_FLAGS",
-            GAMELIB_HANDOFF_STATE_FLAGS as u64,
-        ),
-        (
-            "STEAM_HOLD_PROBE_MIN_INTERVAL_MS",
-            STEAM_HOLD_PROBE_MIN_INTERVAL_MS,
-        ),
-        ("GRACE_TICKS", GRACE_TICKS as u64),
-        ("MAX_TICKS", MAX_TICKS as u64),
-        (
-            "STEAM_REQUEST_NO_ACTIVITY_TICKS",
-            STEAM_REQUEST_NO_ACTIVITY_TICKS as u64,
-        ),
-        ("MANIFEST_GONE_TICKS", MANIFEST_GONE_TICKS as u64),
-        (
-            "STEAM_INSTALLAPP_RETRY_EVERY_TICKS",
-            STEAM_INSTALLAPP_RETRY_EVERY_TICKS as u64,
-        ),
-        (
-            "STEAM_INSTALLAPP_RETRY_MAX_ATTEMPTS",
-            STEAM_INSTALLAPP_RETRY_MAX_ATTEMPTS as u64,
-        ),
-        (
-            "STEAM_UPDATE_ABANDONED_TICKS",
-            STEAM_UPDATE_ABANDONED_TICKS as u64,
-        ),
-        ("STALLED_TICKS_THRESHOLD", STALLED_TICKS_THRESHOLD as u64),
-        ("BYTES_PER_MIB", BYTES_PER_MIB),
-    ];
-    for (name, rust) in pairs {
-        assert_eq!(ts_const(&src, name), *rust, "{name}");
-    }
-    assert!(src.contains("STEAM_BRIDGE_FINISHING_CONTEXT = 'steam-bridge-finishing'"));
+fn poll_constants_hold_their_pinned_values() {
+    // The TS poll these once mirrored is gone; the values stay pinned here because the
+    // frontend copy and the saved UAT contract both quote them.
+    assert_eq!(GAMELIB_HANDOFF_STATE_FLAGS, 1026);
+    assert_eq!(STEAM_HOLD_PROBE_MIN_INTERVAL_MS, 10_000);
+    assert_eq!(GRACE_TICKS, 20);
+    assert_eq!(MAX_TICKS, 7200);
+    assert_eq!(STEAM_REQUEST_NO_ACTIVITY_TICKS, 40);
+    assert_eq!(MANIFEST_GONE_TICKS, 10);
+    assert_eq!(STEAM_INSTALLAPP_RETRY_EVERY_TICKS, 3);
+    assert_eq!(STEAM_INSTALLAPP_RETRY_MAX_ATTEMPTS, 13);
+    assert_eq!(STEAM_UPDATE_ABANDONED_TICKS, 20);
+    assert_eq!(STALLED_TICKS_THRESHOLD, 3);
+    assert_eq!(BYTES_PER_MIB, 1024 * 1024);
     assert_eq!(STEAM_BRIDGE_FINISHING_CONTEXT, "steam-bridge-finishing");
     assert_eq!(STATE_FLAG_FULLY_INSTALLED, 0x4);
     assert_eq!(ACK_TIMEOUT_MS, 5000);

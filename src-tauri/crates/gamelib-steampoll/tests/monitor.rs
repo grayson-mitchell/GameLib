@@ -1,5 +1,6 @@
-//! Monitor cases from steamDownloadMonitor.test.ts, plus the watchdog-literal equality check and
-//! one real-process stop() test (macOS).
+//! Monitor cases from steamDownloadMonitor.test.ts, the watchdog script and argv pin, the
+//! real-process watchdog cases from childWatchdog.test.ts (unix) and one real-process stop() test
+//! (macOS).
 
 use gamelib_steampoll::acf_state::PollRoots;
 use gamelib_steampoll::host::{
@@ -120,15 +121,41 @@ fn block(rows: &[(&str, u64)]) -> String {
 }
 
 #[test]
-fn watchdog_literal_matches_childwatchdog_ts() {
-    let ts = std::fs::read_to_string(
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../../src/backend/storeManagers/steam/childWatchdog.ts"),
-    )
-    .unwrap();
-    let start = ts.find("WATCHDOG_SH = `").unwrap() + "WATCHDOG_SH = `".len();
-    let end = start + ts[start..].find("`\n").unwrap();
-    assert_eq!(&ts[start..end], WATCHDOG_SH);
+fn watchdog_script_and_argv_shape_are_pinned() {
+    // The script is constant text; pids and the inner argv travel as positional parameters and are
+    // never interpolated into it (T-80-15).
+    assert_eq!(
+        WATCHDOG_SH,
+        r#"p=$1; w=$2; shift 2
+"$@" &
+m=$!
+g=
+s=
+cleanup() {
+  c=$(pgrep -P "$m" 2>/dev/null)
+  [ -n "$c" ] && g=$c
+  [ -n "$s" ] && kill "$s" 2>/dev/null
+  [ -n "$g" ] && kill $g 2>/dev/null
+  kill "$m" 2>/dev/null
+  exit 0
+}
+trap cleanup TERM INT HUP
+while kill -0 "$p" 2>/dev/null && kill -0 "$m" 2>/dev/null && kill -0 "$w" 2>/dev/null; do
+  c=$(pgrep -P "$m" 2>/dev/null)
+  [ -n "$c" ] && g=$c
+  sleep 1 &
+  s=$!
+  wait "$s"
+done
+cleanup
+"#
+    );
+    let (file, args) = build_watchdog_spawn(11, 22, &["/x".to_string(), "a".to_string()]);
+    assert_eq!(file, "/bin/sh");
+    assert_eq!(
+        args,
+        ["-c", WATCHDOG_SH, "gamelib-watchdog", "11", "22", "/x", "a"]
+    );
 }
 
 #[tokio::test]
@@ -477,4 +504,221 @@ async fn stop_kills_a_real_child() {
         tokio::time::sleep(Duration::from_millis(20)).await;
     }
     assert!(gone, "child {pid} survived stop() for 2 s");
+}
+
+/// Real-process tests of the parent-death watchdog (childWatchdog.test.ts). Each starts the real
+/// script over throwaway `sleep` processes with a cleared environment, so no user profile is read.
+#[cfg(unix)]
+mod watchdog_real {
+    use gamelib_steampoll::monitor::build_watchdog_spawn;
+    use std::process::{Child, Command, Stdio};
+    use std::time::{Duration, Instant};
+
+    const INNER: [&str; 3] = ["/bin/sh", "-c", "sleep 300 & wait"];
+    const PATH: &str = "/usr/bin:/bin:/usr/sbin:/sbin";
+
+    fn tool(program: &str, args: &[&str]) -> std::process::Output {
+        Command::new(program)
+            .args(args)
+            .env_clear()
+            .env("PATH", PATH)
+            .output()
+            .unwrap()
+    }
+
+    fn alive(pid: u32) -> bool {
+        tool("/bin/kill", &["-0", &pid.to_string()])
+            .status
+            .success()
+    }
+
+    fn signal(sig: &str, pid: u32) {
+        tool("/bin/kill", &[sig, &pid.to_string()]);
+    }
+
+    fn children_of(pid: u32) -> Vec<u32> {
+        String::from_utf8_lossy(&tool("pgrep", &["-P", &pid.to_string()]).stdout)
+            .lines()
+            .filter_map(|l| l.trim().parse().ok())
+            .collect()
+    }
+
+    fn command_of(pid: u32) -> String {
+        String::from_utf8_lossy(&tool("ps", &["-o", "command=", "-p", &pid.to_string()]).stdout)
+            .into_owned()
+    }
+
+    fn wait_for(mut cond: impl FnMut() -> bool, limit: Duration) -> bool {
+        let t0 = Instant::now();
+        while t0.elapsed() < limit {
+            if cond() {
+                return true;
+            }
+            std::thread::sleep(Duration::from_millis(50));
+        }
+        cond()
+    }
+
+    fn sleeper() -> Child {
+        Command::new("sleep")
+            .arg("300")
+            .env_clear()
+            .env("PATH", PATH)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .unwrap()
+    }
+
+    /// Everything one test started: the parent and watched sleepers, the watchdog and its tree.
+    struct Rig {
+        parent: Child,
+        watched: Child,
+        watchdog: Child,
+        inner: u32,
+        grand: u32,
+    }
+
+    impl Rig {
+        /// Starts the watchdog on the two sleepers and waits until its inner shell and that shell's
+        /// own child exist. The watchdog also has a short-lived `sleep 1` child, so the inner shell
+        /// is picked by command line.
+        fn start() -> Rig {
+            let parent = sleeper();
+            let watched = sleeper();
+            let inner_argv: Vec<String> = INNER.iter().map(|s| s.to_string()).collect();
+            let (file, args) = build_watchdog_spawn(parent.id(), watched.id(), &inner_argv);
+            let watchdog = Command::new(file)
+                .args(args)
+                .env_clear()
+                .env("PATH", PATH)
+                .stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .spawn()
+                .unwrap();
+            let mut rig = Rig {
+                parent,
+                watched,
+                watchdog,
+                inner: 0,
+                grand: 0,
+            };
+            let wd = rig.watchdog.id();
+            let mut found = (0, 0);
+            wait_for(
+                || {
+                    let i = children_of(wd)
+                        .into_iter()
+                        .find(|p| command_of(*p).contains(INNER[2]))
+                        .unwrap_or(0);
+                    let g = if i == 0 {
+                        0
+                    } else {
+                        children_of(i).first().copied().unwrap_or(0)
+                    };
+                    found = (i, g);
+                    g != 0
+                },
+                Duration::from_secs(5),
+            );
+            rig.inner = found.0;
+            rig.grand = found.1;
+            assert_ne!(rig.inner, 0, "inner shell never appeared");
+            assert_ne!(rig.grand, 0, "grandchild never appeared");
+            rig
+        }
+
+        /// A killed child stays a zombie (and `kill -0` still succeeds) until it is waited on.
+        fn kill_parent(&mut self) {
+            let _ = self.parent.kill();
+            let _ = self.parent.wait();
+        }
+
+        fn kill_watched(&mut self) {
+            let _ = self.watched.kill();
+            let _ = self.watched.wait();
+        }
+
+        fn tree_gone(&mut self) -> bool {
+            let _ = self.watchdog.try_wait();
+            !alive(self.watchdog.id()) && !alive(self.inner) && !alive(self.grand)
+        }
+    }
+
+    impl Drop for Rig {
+        fn drop(&mut self) {
+            for pid in [self.grand, self.inner] {
+                if pid != 0 {
+                    signal("-KILL", pid);
+                }
+            }
+            for c in [&mut self.watchdog, &mut self.watched, &mut self.parent] {
+                let _ = c.kill();
+                let _ = c.wait();
+            }
+        }
+    }
+
+    #[test]
+    fn removes_the_tree_within_5s_of_the_parent_dying() {
+        let mut rig = Rig::start();
+        rig.kill_parent();
+        assert!(
+            wait_for(|| rig.tree_gone(), Duration::from_secs(5)),
+            "the tree outlived its parent"
+        );
+    }
+
+    #[test]
+    fn still_kills_the_grandchild_when_the_middle_process_dies_first() {
+        let mut rig = Rig::start();
+        // Let at least one full tick record the grandchild, as it always has in a long-lived monitor.
+        std::thread::sleep(Duration::from_millis(1500));
+        signal("-KILL", rig.inner);
+        std::thread::sleep(Duration::from_millis(300));
+        // The field shape: the grandchild outlived its parent.
+        assert!(alive(rig.grand));
+        rig.kill_parent();
+        let grand = rig.grand;
+        assert!(
+            wait_for(
+                || {
+                    let _ = rig.watchdog.try_wait();
+                    !alive(grand) && !alive(rig.watchdog.id())
+                },
+                Duration::from_secs(5)
+            ),
+            "the grandchild survived the watchdog"
+        );
+    }
+
+    #[test]
+    fn removes_the_tree_within_2s_of_a_clean_sigterm() {
+        let mut rig = Rig::start();
+        signal("-TERM", rig.watchdog.id());
+        assert!(
+            wait_for(|| rig.tree_gone(), Duration::from_secs(2)),
+            "SIGTERM left part of the tree running"
+        );
+        assert!(
+            alive(rig.parent.id()),
+            "a clean stop must leave the parent alone"
+        );
+    }
+
+    #[test]
+    fn exits_the_tree_when_the_watched_pid_exits() {
+        let mut rig = Rig::start();
+        rig.kill_watched();
+        assert!(
+            wait_for(|| rig.tree_gone(), Duration::from_secs(5)),
+            "the tree outlived the watched pid"
+        );
+        assert!(
+            alive(rig.parent.id()),
+            "the watched pid exiting must leave the parent alone"
+        );
+    }
 }

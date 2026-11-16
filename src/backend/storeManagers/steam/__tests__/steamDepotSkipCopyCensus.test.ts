@@ -34,9 +34,11 @@ import translation from '../../../../../public/locales/en/translation.json'
 
 // __dirname: src/backend/storeManagers/steam/__tests__
 const REPO_ROOT = join(__dirname, '../../../../..')
-const LIBRARY_TS_PATH = join(
+// The install step (install_once.rs) raises the depot-skipped notice; the literal key lives in the
+// shared effects module it sends through (Phase 80 moved the poll out of TS).
+const POLL_SOURCE_PATH = join(
   REPO_ROOT,
-  'src/backend/storeManagers/steam/library/installPollOnce.ts' // pollInstallOnce moved here (Phase 65-04)
+  'src-tauri/crates/gamelib-steampoll/src/effects.rs'
 )
 const DEPOT_ERRORS_TS_PATH = join(
   REPO_ROOT,
@@ -99,9 +101,9 @@ describe('steamDepotSkipCopyCensus (23.2-04, D-06/D-07): the depot-skip notice c
     })
   })
 
-  describe('3. library/installPollOnce.ts references the new key literally', () => {
+  describe('3. the Rust install poll (install_once.rs -> effects.rs) references the new key literally', () => {
     const librarySource = stripSourceComments(
-      readFileSync(LIBRARY_TS_PATH, 'utf-8')
+      readFileSync(POLL_SOURCE_PATH, 'utf-8')
     )
 
     it('the literal key string is present, non-comment', () => {

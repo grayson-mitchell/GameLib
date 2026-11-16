@@ -12,7 +12,9 @@ import {
 
 // ── Imports ───────────────────────────────────────────────────────────────────
 import SteamLibraryManager from '../library'
-import { stopInstallPolling } from '../library/installStop'
+import { createTestHostServices } from 'backend/testUtils/testHostServices'
+import { createTestAppRuntime } from 'backend/testUtils/testAppRuntime'
+import { createTestSteamInstallRuntime } from 'backend/testUtils/testSteamInstallRuntime'
 import { buildIncompleteInstallSet } from '../library/installedMap'
 import { refreshInstallState } from '../library/refresh'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
@@ -34,9 +36,6 @@ import {
 } from '../bridgeBottle'
 import { join } from 'path'
 import { bridgeAllowlist } from '../bridge/allowlist'
-import { listSteamClientPids } from '../steamClientProcess'
-import { pollInstallOnce } from '../library/installPollOnce'
-import { startInstallPolling } from '../library/installPolling'
 import type { Stores } from 'backend/services/types'
 
 import { createTestAnonymousClient } from 'backend/testUtils/testAnonymousClient'
@@ -57,7 +56,22 @@ const getAnonymousPicsClient = jest.fn()
 // 66.3-15: the bottle helpers are read through the deps slice, so they are plain mocks here.
 const getSteamBottleSettings = jest.fn()
 const isSteamBottleProvisioned = jest.fn()
+// Rust owns the restart-hold registry: the runtime's status read reports `holding`, the apps whose
+// install is held for a Steam restart.
+let holding: string[] = []
+const holdTransport = {
+  ...createTestHostServices({
+    rustInvoke: (channel) =>
+      Promise.resolve(
+        channel === 'steampoll_status'
+          ? { installs: [], uninstalls: [], holding }
+          : undefined
+      )
+  }),
+  appRuntime: createTestAppRuntime()
+}
 const steamTestDeps = createTestManagerDeps({
+  steamInstallRuntime: createTestSteamInstallRuntime(holdTransport),
   requestRustInvoke: mockedFsSteamFiles().requestRustInvoke,
   sendFrontendMessage,
   steamUser,
@@ -1138,15 +1152,10 @@ describe('SteamLibraryManager', () => {
           SizeOnDisk: '50000'
         }
       })
-      jest.mocked(listSteamClientPids).mockResolvedValue([111])
       // GameLib's own finalize just wrote the StateFlags=4 manifest while the
-      // Steam client (pid 111) was running: the poller enters the hold.
-      await startInstallPolling(steamTestDeps, '570', {
-        intervalMs: 60000,
-        isNativeHandoff: true
-      })
+      // Steam client was running: the Rust poller reports the app as holding.
+      holding = ['570']
       try {
-        await pollInstallOnce(steamTestDeps, '570')
         jest.mocked(sendFrontendMessage).mockClear()
 
         // The user alt-tabs back from Steam: the focus reconcile re-reads the
@@ -1155,7 +1164,7 @@ describe('SteamLibraryManager', () => {
         expect(sendFrontendMessage).not.toHaveBeenCalled()
         expect(library.get('570')?.is_installed).toBe(false)
       } finally {
-        await stopInstallPolling(steamTestDeps, '570') // hold ends (e.g. released/cap/uninstalled)
+        holding = [] // hold ends (e.g. released/cap/uninstalled)
       }
 
       // Control: the identical ACF DOES flip it once nothing is holding it, so
@@ -1627,14 +1636,4 @@ describe('SteamLibraryManager', () => {
   // unattended anymore (that unattended path was the confirmed crash
   // trigger). The heavy work moved to resumeInterruptedSteamInstall(), only
   // invoked by the user's own Install click (see games.test.ts). ───────────
-})
-
-// Plan 80-26: the polls flag now defaults to rust; this file exercises the ts arm, so pin it.
-const prevPollsImpl = process.env.GAMELIB_STEAM_POLLS
-beforeAll(() => {
-  process.env.GAMELIB_STEAM_POLLS = 'ts'
-})
-afterAll(() => {
-  if (prevPollsImpl === undefined) delete process.env.GAMELIB_STEAM_POLLS
-  else process.env.GAMELIB_STEAM_POLLS = prevPollsImpl
 })
