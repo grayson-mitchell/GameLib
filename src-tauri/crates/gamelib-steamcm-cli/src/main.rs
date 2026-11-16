@@ -22,6 +22,10 @@ use gamelib_steamcm::wrap::WrapHost;
 
 /// Ops whose args carry a secret. They are refused on argv (visible in `ps`) and only run via
 /// `--ndjson`, where the secret travels on stdin (T-79-48).
+///
+/// A SteamID64 is deliberately not a secret here: `steamcm_owned_apps`, `steamcm_refresh` and
+/// `steamcm_mac_owned_apps` may carry one on argv. It is public (it is in every Steam profile URL)
+/// and is not a credential; it must still never be logged (A/IN-08, operator decision 2026-11-16).
 const SECRET_OPS: &[&str] = &[
     "steamcm_session_acquire",
     "steamcm_signin_credentials_start",

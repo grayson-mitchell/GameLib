@@ -156,6 +156,9 @@ async fn run_helper(
     if !helper_path.is_file() {
         return Err(FallbackReason::HelperMissing);
     }
+    // The SteamID64 goes on argv, so other local users can see it in `ps`. That is accepted:
+    // a SteamID64 is public (it is in every Steam profile URL) and is not a credential. It must
+    // still never be logged (A/IN-08, operator decision 2026-11-16).
     let child = Command::new(helper_path)
         .args(["--steam-owned-apps", "--expect-steamid"])
         .arg(steam_id.to_string())
