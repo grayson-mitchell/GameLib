@@ -255,6 +255,25 @@ describe('refresh() Mac Steam path', () => {
     expect(steamUserMocks.acquireAuthenticated).toHaveBeenCalledTimes(1)
   })
 
+  it('C1/IN-03: an apply failure is a sync failure, not a fallback to a CM logon', async () => {
+    requestRustInvoke.mockResolvedValue({
+      ok: true,
+      result: refreshResult([game('1')])
+    })
+    stores.steamLibraryStore.set.mockImplementationOnce(() => {
+      throw new Error('library write failed')
+    })
+
+    await expect(refresh(deps)).rejects.toThrow('library write failed')
+
+    expect(steamUserMocks.acquireAuthenticated).not.toHaveBeenCalled()
+    expect(requestRustInvoke).toHaveBeenCalledTimes(1)
+    expect(syncEmits()).toEqual([
+      { status: 'syncing' },
+      { status: 'failed', reason: 'sync-failed' }
+    ])
+  })
+
   const sentSources = () =>
     requestRustInvoke.mock.calls.map(
       (c) =>

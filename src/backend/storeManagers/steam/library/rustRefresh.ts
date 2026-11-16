@@ -443,9 +443,20 @@ export type MacSteamRefreshOutcome =
 
 /**
  * D-14/D-15: Refresh from the running Mac Steam client, inside the Rust orchestration, with NO
- * signed-in logon (so it cannot sign Friends out). Every failure, including a transport throw, is
- * a fallback: the caller continues down the CM path. Mac-path entries carry the previously stored
+ * signed-in logon (so it cannot sign Friends out). Mac-path entries carry the previously stored
  * playtime, not Steam's (an expected divergence, 79-PARITY.md).
+ *
+ * Which failures fall back (79-REVIEW C1/IN-03):
+ * - Getting no owned set is a fallback, and the caller continues down the CM path. That covers an
+ *   inputs-read failure, a refused or failed op and a transport throw.
+ * - An apply failure is NOT a fallback. Mac Steam's owned set arrived; the library write is what
+ *   failed, and the CM path would fail on the same write after paying for a signed-in logon. It
+ *   goes through `syncFailed`, exactly as on the CM path, and throws out of `refresh()`.
+ *
+ * The bridge launch-target backfill the CM path runs is skipped here on purpose. It needs a
+ * token-bearing PICS read on a signed-in lease, and this path holds no lease by design. A missing
+ * target is resolved at launch instead: `resolveBridgeLaunchExe` reads anonymous PICS, then the
+ * open signed-in session, and persists what it finds.
  */
 export async function tryMacSteamRefresh(
   deps: ManagerDeps,
@@ -458,6 +469,7 @@ export async function tryMacSteamRefresh(
   } catch (err) {
     return { kind: 'fallback', reason: `inputs: ${String(err)}` }
   }
+  // No backfill on this path (see the doc above), so the bridge appIds are unused.
   const { bridgeAppIds: _bridgeAppIds, ...args } = inputs
   let result: RefreshResult
   try {
