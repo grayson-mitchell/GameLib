@@ -176,14 +176,10 @@ export async function refresh(deps: ManagerDeps): Promise<ExecResult | null> {
  */
 export async function refreshInstallState(deps: ManagerDeps): Promise<void> {
   const { steamLibraryStore } = deps.stores.steam
-  // D-01: the poll registry lives in Rust; one status call per reconcile, made lazily.
-  let rustPollIds: Promise<Set<string>> | null = null
-  const hasActiveInstallPoll = async (appId: string): Promise<boolean> => {
-    rustPollIds ??= (
-      invokeSteamPoll(deps, RUST_STEAMPOLL_STATUS) as Promise<PollStatus>
-    ).then((s) => new Set(s.installs.map((i) => i.appId)))
-    return (await rustPollIds).has(appId)
-  }
+  // D-01: the poll registry lives in Rust. One status call per reconcile, made inside the scan
+  // `try` below and shared by the restart-hold filter and the active-poll check, so a rejected
+  // status read skips the reconcile before any entry is touched (80-REVIEW C-WR-07).
+  let activeInstallPolls: Set<string>
   // WR-01 (75 review): a rejected manifest scan (rustInvoke timeout, shell
   // restart) says nothing about what is installed. Skip this reconcile
   // instead of diffing against an empty map, which would persist every
@@ -199,10 +195,13 @@ export async function refreshInstallState(deps: ManagerDeps): Promise<void> {
     // D-UAT-13: a window-focus reconcile (the user alt-tabbing to Steam to
     // restart it) must not flip a game that is holding for a Steam restart to
     // installed — see withoutSteamRestartHolds().
-    installedMap = await withoutSteamRestartHolds(
+    const scanned = await buildInstalledMap(deps)
+    const status = (await invokeSteamPoll(
       deps,
-      await buildInstalledMap(deps)
-    )
+      RUST_STEAMPOLL_STATUS
+    )) as PollStatus
+    activeInstallPolls = new Set(status.installs.map((i) => i.appId))
+    installedMap = await withoutSteamRestartHolds(deps, scanned, status)
     bottleInstalledMap =
       isMac && deps.steamBottle.isSteamBottleProvisioned()
         ? await buildBottleInstalledMap(deps)
@@ -300,7 +299,7 @@ export async function refreshInstallState(deps: ManagerDeps): Promise<void> {
         isNowInstalled &&
         source === 'native' &&
         isMac &&
-        !(await hasActiveInstallPoll(appIdStr))
+        !activeInstallPolls.has(appIdStr)
       ) {
         void verifyMacArchGroundTruth(
           deps,

@@ -889,6 +889,63 @@ describe('SteamLibraryManager', () => {
       )
     })
 
+    it('C-WR-07 makes one status read per reconcile and survives a later status failure', async () => {
+      const envMock = jest.requireMock('backend/constants/environment')
+      envMock.isMac = true
+      try {
+        library.set('570', {
+          runner: 'steam',
+          app_name: '570',
+          title: 'Dota 2',
+          is_installed: false,
+          install: {},
+          art_cover: '',
+          art_square: '',
+          extra: { reqs: [] },
+          canRunOffline: true,
+          installable: true
+        } as any)
+        jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+        ;(existsSync as jest.Mock).mockReturnValue(true)
+        ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_570.acf'])
+        ;(readFileSync as jest.Mock).mockReturnValue('content')
+        vdf.parse.mockReturnValue({
+          AppState: {
+            appid: '570',
+            StateFlags: '4',
+            installdir: 'dota2',
+            SizeOnDisk: '50000'
+          }
+        })
+        // The first status read answers; any later one rejects (a shell restart mid-reconcile).
+        let statusReads = 0
+        const deps = {
+          ...steamTestDeps,
+          requestRustInvoke: (
+            ...args: Parameters<typeof steamTestDeps.requestRustInvoke>
+          ) => {
+            if (args[0] === 'steampoll_status') {
+              statusReads += 1
+              if (statusReads > 1) {
+                return Promise.reject(new Error('rustInvoke timeout'))
+              }
+            }
+            return steamTestDeps.requestRustInvoke(...args)
+          }
+        }
+
+        await expect(refreshInstallState(deps)).resolves.toBeUndefined()
+
+        expect(statusReads).toBe(1)
+        expect(sendFrontendMessage).toHaveBeenCalledWith(
+          'pushGameToLibrary',
+          expect.objectContaining({ app_name: '570', is_installed: true })
+        )
+      } finally {
+        envMock.isMac = false
+      }
+    })
+
     describe('install.version from the ACF buildid (quick 261114-rc8)', () => {
       const seedInstalled = (version?: string) =>
         library.set('570', {

@@ -86,12 +86,13 @@ export function titleFor(
  */
 export async function withoutSteamRestartHolds<T>(
   deps: RustInvokeDeps,
-  installed: Map<number, T>
+  installed: Map<number, T>,
+  // A status the caller already read, so one reconcile makes one status call (80-REVIEW C-WR-07).
+  knownStatus?: PollStatus
 ): Promise<Map<number, T>> {
-  const status = (await invokeSteamPoll(
-    deps,
-    RUST_STEAMPOLL_STATUS
-  )) as PollStatus
+  const status =
+    knownStatus ??
+    ((await invokeSteamPoll(deps, RUST_STEAMPOLL_STATUS)) as PollStatus)
   const holding = new Set(status.holding)
   for (const appId of [...installed.keys()]) {
     if (holding.has(String(appId))) installed.delete(appId)
