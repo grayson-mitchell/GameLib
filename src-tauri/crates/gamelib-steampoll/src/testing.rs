@@ -154,19 +154,26 @@ fn call_key(program: &str, argv: &[String]) -> String {
         .join(" ")
 }
 
+/// Map key for scripted outputs: path separators are folded to `/` on both the scripting and
+/// the lookup side, so a test that builds its expected path with a different mix of separators
+/// than the code under test (e.g. `join("a/b")` vs `join("a").join("b")` on Windows) still matches.
+fn script_key(key: &str) -> String {
+    key.replace('\\', "/")
+}
+
 impl ScriptedRunner {
     /// Script outputs for `program argv...`; they are consumed in order, the last one repeats.
     pub fn on(&self, key: &str, outputs: Vec<RunOutput>) {
         self.runs
             .lock()
             .unwrap_or_else(|e| e.into_inner())
-            .insert(key.to_string(), outputs);
+            .insert(script_key(key), outputs);
     }
     pub fn on_stream(&self, key: &str, lines: Vec<String>) {
         self.streams
             .lock()
             .unwrap_or_else(|e| e.into_inner())
-            .insert(key.to_string(), lines);
+            .insert(script_key(key), lines);
     }
     pub fn calls(&self) -> Vec<String> {
         self.calls.lock().unwrap_or_else(|e| e.into_inner()).clone()
@@ -181,7 +188,7 @@ impl ProcessRunner for ScriptedRunner {
             .unwrap_or_else(|e| e.into_inner())
             .push(key.clone());
         let mut runs = self.runs.lock().unwrap_or_else(|e| e.into_inner());
-        let out = match runs.get_mut(&key) {
+        let out = match runs.get_mut(&script_key(&key)) {
             Some(v) if v.len() > 1 => v.remove(0),
             Some(v) => v.first().cloned().unwrap_or_default(),
             None => RunOutput::default(),
@@ -199,7 +206,7 @@ impl ProcessRunner for ScriptedRunner {
             .streams
             .lock()
             .unwrap_or_else(|e| e.into_inner())
-            .get(&key)
+            .get(&script_key(&key))
             .cloned()
             .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, "unscripted"))?;
         let (tx, rx) = tokio::sync::mpsc::channel(lines.len().max(1));
