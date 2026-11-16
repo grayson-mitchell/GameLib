@@ -52,7 +52,8 @@ const activePolls = new Map<string, { awaitingUpdate?: unknown }>()
 const game = {
   appId: '333300',
   deps: {
-    // Rust owns the poll registry; the status read reports what the fake start registered.
+    // Rust owns the poll registry. Ownership now comes from the start's own answer (C-WR-03);
+    // this status fake stays so a regression back to a separate status read shows up.
     requestRustInvoke: () =>
       Promise.resolve({
         installs: [...activePolls].map(([appId, poll]) => ({
@@ -81,7 +82,7 @@ describe('updateRegisteredSteamGame', () => {
     activePolls.clear()
     jest.mocked(startInstallPolling).mockImplementation((_d, id) => {
       activePolls.set(id, { awaitingUpdate: {} })
-      return Promise.resolve()
+      return Promise.resolve(true)
     })
     jest.mocked(resolveSteamLibraryRoot).mockResolvedValue('/lib')
     jest.mocked(readRunningAppId).mockResolvedValue(0)
@@ -117,11 +118,38 @@ describe('updateRegisteredSteamGame', () => {
     activePolls.clear()
     jest.mocked(startInstallPolling).mockImplementation((_d, id) => {
       activePolls.set(id, {})
-      return Promise.resolve()
+      return Promise.resolve(false)
     })
     expect(await updateRegisteredSteamGame(game)).toEqual({
       status: 'done',
       handedOffToSteam: false
+    })
+  })
+
+  it('C-WR-03 a rejected poll start after the hand-off is not an error', async () => {
+    jest.mocked(startInstallPolling).mockRejectedValue(new Error('timeout'))
+    jest
+      .mocked(requestSteamInstallApp)
+      .mockResolvedValue({ kind: 'ok', folderIndex: 0 } as never)
+    expect(await updateRegisteredSteamGame(game)).toEqual({
+      status: 'done',
+      handedOffToSteam: false
+    })
+    jest.mocked(isSteamExperimentalInstallAppEnabled).mockReturnValue(false)
+    expect(await updateRegisteredSteamGame(game)).toEqual({
+      status: 'done',
+      handedOffToSteam: false
+    })
+    expect(openExternal).toHaveBeenCalledWith(URL)
+  })
+
+  it('C-WR-03 ownership comes from the start, not a later status read', async () => {
+    // The poll finished before any status read could see it: the start's own answer still wins.
+    jest.mocked(startInstallPolling).mockResolvedValue(true)
+    jest.mocked(isSteamExperimentalInstallAppEnabled).mockReturnValue(false)
+    expect(await updateRegisteredSteamGame(game)).toEqual({
+      status: 'done',
+      handedOffToSteam: true
     })
   })
 

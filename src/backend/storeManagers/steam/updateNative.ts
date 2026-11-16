@@ -8,7 +8,7 @@
  */
 import i18next from 'i18next'
 import type { InstallResult } from 'common/types/game_manager'
-import { logError, logInfo, LogPrefix } from 'backend/logger'
+import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type SteamGame from './games'
 import { buildSteamProtocolUrl } from './gameProtocolUrl'
 import { isSteamExperimentalInstallAppEnabled } from './experimentalInstallAppSetting'
@@ -24,27 +24,33 @@ import {
   STATE_FLAG_FULLY_INSTALLED
 } from './library/acfUpdateState'
 import { startInstallPolling } from './library/installPolling'
-import { RUST_STEAMPOLL_STATUS } from 'common/types/sidecarTransport'
-import { invokeSteamPoll } from './pollRust/rustSteamPoll'
-import type { PollStatus } from './pollRust/steamPollTypes'
 import {
   getLastKnownSteamUpdateState,
   invalidateSteamUpdateState
 } from './updateDetection'
 
-// True when an update-aware poll for appId is registered after the hand-off, so
-// the poll (not the queue's 'done') owns the terminal status. If
-// startInstallPolling no-opped because a non-update poll already existed this
-// is false and the queue sends 'done' as before.
-export async function pollOwnsUpdate(
+// Starts the update-aware poll after the update was already handed to Steam
+// (InstallApp or the steam:// link). True when that poll owns the terminal
+// status; then the queue sends no 'done' of its own. When the poll does not
+// watch an update this is false and the queue sends 'done' as before.
+// The answer comes from the start itself (80-REVIEW C-WR-03): a separate
+// status read could miss a poll that already finished and double the 'done'.
+// The hand-off has happened, so a rejected start is logged and reported as
+// not owned, never turned into an error for a running Steam update.
+async function startUpdatePoll(
   deps: SteamGame['deps'],
-  appId: string
+  appId: string,
+  pollOptions: Parameters<typeof startInstallPolling>[2]
 ): Promise<boolean> {
-  const status = (await invokeSteamPoll(
-    deps,
-    RUST_STEAMPOLL_STATUS
-  )) as PollStatus
-  return status.installs.find((i) => i.appId === appId)?.awaitingUpdate === true
+  try {
+    return await startInstallPolling(deps, appId, pollOptions)
+  } catch (error) {
+    logWarning(
+      `SteamGame: update poll start failed for appId ${appId} after the Steam hand-off: ${String(error)}`,
+      LogPrefix.Steam
+    )
+    return false
+  }
 }
 
 export async function updateRegisteredSteamGame(
@@ -133,10 +139,9 @@ export async function updateRegisteredSteamGame(
         `SteamGame: Steam is updating appId ${appId} via InstallApp`,
         LogPrefix.Steam
       )
-      await startInstallPolling(deps, appId, pollOptions)
       return {
         status: 'done',
-        handedOffToSteam: await pollOwnsUpdate(deps, appId)
+        handedOffToSteam: await startUpdatePoll(deps, appId, pollOptions)
       }
     }
     if (outcome.kind === 'error') {
@@ -162,6 +167,8 @@ export async function updateRegisteredSteamGame(
     LogPrefix.Steam
   )
   await deps.openExternal.openExternal(url)
-  await startInstallPolling(deps, appId, pollOptions)
-  return { status: 'done', handedOffToSteam: await pollOwnsUpdate(deps, appId) }
+  return {
+    status: 'done',
+    handedOffToSteam: await startUpdatePoll(deps, appId, pollOptions)
+  }
 }

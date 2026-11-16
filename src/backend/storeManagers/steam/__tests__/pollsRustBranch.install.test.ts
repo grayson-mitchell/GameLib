@@ -88,6 +88,13 @@ describe('rust branch', () => {
     expect(jest.getTimerCount()).toBe(0)
   })
 
+  it('C-WR-03 start resolves the Rust awaitingUpdate answer', async () => {
+    expect(await startInstallPolling(makeDeps(true).deps, '10')).toBe(true)
+    expect(await startInstallPolling(makeDeps(false).deps, '10')).toBe(false)
+    // An older shell that still answers null is read as "not update-aware".
+    expect(await startInstallPolling(makeDeps(null).deps, '10')).toBe(false)
+  })
+
   it('a bare number option sends empty options', async () => {
     const { deps, calls } = makeDeps()
     await startInstallPolling(deps, '10', 1000)

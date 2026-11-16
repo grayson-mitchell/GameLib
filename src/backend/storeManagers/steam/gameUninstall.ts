@@ -159,7 +159,7 @@ export async function uninstall(
     // Poll ACF so the badge flips to not-installed when Steam removes the
     // appmanifest, without requiring a focus round-trip (D-07). Symmetric to
     // install polling. State is never optimistically flipped here (D-02).
-    await startUninstallPolling(steamGame.deps, steamGame.appId)
+    await startUninstallPollingAfterHandoff(steamGame)
     // quick 261029-ji2: a removed install has nothing left to adopt.
     clearPendingAdoption(
       steamGame.appId,
@@ -191,11 +191,56 @@ export async function uninstall(
  * state and sends the single done. Title comes from the raw library Map, not
  * getGameInfo() (its fire-and-forget side effect is forbidden on this path).
  */
+// The highest notice seq this process has handed out (session state, never
+// persisted: the Rust counter restarts with the shell).
+let lastNoticeSeq = 0
+
+/**
+ * The next notice seq, from the Rust counter (steampoll_next_notice_seq).
+ * Never rejects (80-REVIEW C-WR-03): a failure notice must still reach the
+ * user when steampoll is unreachable. The fallback is the midpoint between
+ * the highest seq seen and the next integer, so it is newer than every seq
+ * already handed out here (the frontend drops an older or equal seq) and
+ * never equal to, or ahead of, the next one Rust issues.
+ */
 export async function noticeSeq(steamGame: SteamGame): Promise<number> {
-  return (await steamGame.deps.requestRustInvoke(
-    RUST_STEAMPOLL_NEXT_NOTICE_SEQ,
-    []
-  )) as number
+  try {
+    const seq = (await steamGame.deps.requestRustInvoke(
+      RUST_STEAMPOLL_NEXT_NOTICE_SEQ,
+      []
+    )) as number
+    if (typeof seq === 'number' && Number.isFinite(seq)) {
+      lastNoticeSeq = Math.max(lastNoticeSeq, seq)
+      return seq
+    }
+    throw new Error(`non-numeric notice seq ${String(seq)}`)
+  } catch (error) {
+    const fallback = (lastNoticeSeq + Math.floor(lastNoticeSeq) + 1) / 2
+    logWarning(
+      `SteamGame: notice seq read failed for appId ${steamGame.appId}, using local seq ${fallback}: ${String(error)}`,
+      LogPrefix.Steam
+    )
+    lastNoticeSeq = fallback
+    return fallback
+  }
+}
+
+/**
+ * Starts the uninstall poll after the uninstall was already handed to Steam.
+ * The hand-off has happened, so a rejected invoke is logged, never reported
+ * as a failed uninstall (80-REVIEW C-WR-03).
+ */
+async function startUninstallPollingAfterHandoff(
+  steamGame: SteamGame
+): Promise<void> {
+  await startUninstallPolling(steamGame.deps, steamGame.appId).catch(
+    (error: unknown) => {
+      logWarning(
+        `SteamGame: uninstall poll start failed for appId ${steamGame.appId} after the Steam hand-off: ${String(error)}`,
+        LogPrefix.Steam
+      )
+    }
+  )
 }
 
 async function failUninstall(
@@ -377,7 +422,7 @@ export async function uninstallNativeInGameLib(
 
   switch (decision.route) {
     case 'steam-uninstalled':
-      await startUninstallPolling(steamGame.deps, steamGame.appId)
+      await startUninstallPollingAfterHandoff(steamGame)
       clearPendingAdoption(
         steamGame.appId,
         pendingAdoptionStoreFrom(steamGame.deps)

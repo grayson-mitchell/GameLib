@@ -397,8 +397,13 @@ fn run_op(op: &str, args: &[Value]) -> Result<Value, String> {
         "steampoll_install_start" => {
             let a: StartInstallArgs = parse(op, args)?;
             let f = configured()?;
-            f.polls.start_install(a).map_err(|_| bad_args(op))?;
-            Ok(Value::Null)
+            // True when the appId's poll is update-aware after this call (80-REVIEW C-WR-03).
+            out(
+                op,
+                f.polls
+                    .start_install_reporting(a)
+                    .map_err(|_| bad_args(op))?,
+            )
         }
         "steampoll_install_stop" => {
             let a: AppOnly = parse(op, args)?;

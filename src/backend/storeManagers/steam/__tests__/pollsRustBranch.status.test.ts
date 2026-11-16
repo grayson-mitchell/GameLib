@@ -1,8 +1,6 @@
 import * as logger from 'backend/logger'
 import { withoutSteamRestartHolds } from '../pollRust/rustSteamPoll'
 import { createSteamGameSessionState } from '../gameSessionState'
-import { pollOwnsUpdate } from '../updateNative'
-import type SteamGame from '../games'
 
 type Call = { channel: string; args: unknown[] }
 
@@ -56,17 +54,6 @@ describe('status readers', () => {
     )
     expect([...out.keys()]).toEqual([6, 8])
     expect(calls).toEqual([{ channel: 'steampoll_status', args: [] }])
-  })
-
-  it('rust: pollOwnsUpdate reads installs[appId].awaitingUpdate', async () => {
-    const { requestRustInvoke } = fakeRust(status)
-    const deps = {
-      requestRustInvoke,
-      steamInstallRuntime: { polls: { activePolls: new Map() } }
-    } as unknown as SteamGame['deps']
-    expect(await pollOwnsUpdate(deps, '5')).toBe(true)
-    expect(await pollOwnsUpdate(deps, '6')).toBe(false)
-    expect(await pollOwnsUpdate(deps, '9')).toBe(false)
   })
 })
 

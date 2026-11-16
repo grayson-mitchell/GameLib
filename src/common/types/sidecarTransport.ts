@@ -619,6 +619,7 @@ export const RUST_STEAMPOLL_INSTALL_CANCEL_DELEGATED =
 
 /**
  * Rust-side channel name: Phase 80 steampoll op `steampoll_install_start`. Starts the install poll. Args `{ appId, title, roots, options? }`; options is validated in the crate.
+ * Resolves a boolean: true when the appId's poll watches an update once the call returns (80-REVIEW C-WR-03).
  * Bad args reject `steampoll_install_start:bad-args`.
  */
 export const RUST_STEAMPOLL_INSTALL_START = 'steampoll_install_start' as const

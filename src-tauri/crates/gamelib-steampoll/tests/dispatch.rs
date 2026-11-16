@@ -221,7 +221,31 @@ fn install_ops_drive_the_registry_and_status() {
             json!({"appId": "1000", "title": "T", "roots": roots(&steam.to_string_lossy()),
                    "options": {"source": "native", "intervalMs": 100000}})
         ),
-        Value::Null
+        json!(false)
+    );
+    // 80-REVIEW C-WR-03: the start reports whether the poll is update-aware once it returns,
+    // read under the start's own lock. A repeat start that carries `awaitingUpdate` upgrades the
+    // running poll, so it reports true; a fresh update start reports true too.
+    assert_eq!(
+        ok(
+            "steampoll_install_start",
+            json!({"appId": "1000", "title": "T", "roots": roots(&steam.to_string_lossy()),
+                   "options": {"awaitingUpdate": {"fromBuild": "1", "targetBuild": "2"}}})
+        ),
+        json!(true)
+    );
+    assert_eq!(
+        ok(
+            "steampoll_install_start",
+            json!({"appId": "1001", "title": "U", "roots": roots(&steam.to_string_lossy()),
+                   "options": {"source": "native", "intervalMs": 100000,
+                               "awaitingUpdate": {"fromBuild": "1", "targetBuild": "2"}}})
+        ),
+        json!(true)
+    );
+    assert_eq!(
+        ok("steampoll_install_stop", json!({"appId": "1001"})),
+        json!(true)
     );
     let st = ok("steampoll_status", json!(null));
     assert_eq!(st["installs"][0]["appId"], "1000");

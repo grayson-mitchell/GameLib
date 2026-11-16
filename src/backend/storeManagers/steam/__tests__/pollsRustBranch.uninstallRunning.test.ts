@@ -88,6 +88,25 @@ describe('uninstall API', () => {
     expect(await noticeSeq({ deps } as never)).toBe(42)
     expect(calls[0]?.channel).toBe('steampoll_next_notice_seq')
   })
+
+  it('C-WR-03 a rejected seq read falls back to a seq between the last one and the next', async () => {
+    const warn = jest
+      .spyOn(logger, 'logWarning')
+      .mockImplementation(() => undefined)
+    const ok = makeDeps(100).deps
+    expect(await noticeSeq({ deps: ok, appId: '10' } as never)).toBe(100)
+    const failing = {
+      requestRustInvoke: () => Promise.reject(new Error('timeout'))
+    }
+    const first = await noticeSeq({ deps: failing, appId: '10' } as never)
+    const second = await noticeSeq({ deps: failing, appId: '10' } as never)
+    // Newer than every seq handed out so far, so the frontend shows it...
+    expect(first).toBeGreaterThan(100)
+    expect(second).toBeGreaterThan(first)
+    // ...and never equal to or past the next Rust seq, so that one still shows too.
+    expect(second).toBeLessThan(101)
+    expect(warn).toHaveBeenCalledTimes(2)
+  })
 })
 
 describe('running probe and poll', () => {

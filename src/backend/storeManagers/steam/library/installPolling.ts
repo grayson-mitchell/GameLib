@@ -19,21 +19,26 @@ import type { PollStatus } from '../pollRust/steamPollTypes'
  * Starts the Rust install poll for appId. Idempotent on the Rust side; the second parameter is
  * either a plain intervalMs number (ignored, Rust owns the cadence) or a PollOptions object
  * (`source`, `isNativeHandoff`, `skippedDepots`, `delegatedToSteamClient`, ...).
+ *
+ * Resolves true when the appId's poll watches an update (`awaitingUpdate`) once the start or
+ * upgrade has landed. Rust reads that under the start's own lock, so a poll that finishes
+ * straight away cannot turn the answer false (80-REVIEW C-WR-03).
  */
 export async function startInstallPolling(
   deps: ManagerDeps,
   appId: string,
   intervalMsOrOptions: number | PollOptions = 3000
-): Promise<void> {
+): Promise<boolean> {
   // D-16: Rust owns the poll; no TS timer. Resolves once Rust registered it.
   const options =
     typeof intervalMsOrOptions === 'number' ? {} : intervalMsOrOptions
-  await invokeSteamPoll(deps, RUST_STEAMPOLL_INSTALL_START, {
+  const ownsUpdate = await invokeSteamPoll(deps, RUST_STEAMPOLL_INSTALL_START, {
     appId,
     title: titleFor(deps, appId),
     roots: pollRootsFor(deps, appId, options.source),
     options
   })
+  return ownsUpdate === true
 }
 
 /**

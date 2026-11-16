@@ -231,6 +231,15 @@ impl InstallPolls {
     /// `startInstallPolling`: a new poll, or the upgrade of the one already running for the
     /// appId. `Err` only for a bad appId (T-80-46).
     pub fn start_install(&self, args: StartInstallArgs) -> Result<(), String> {
+        self.start_install_reporting(args).map(|_| ())
+    }
+
+    /// [`Self::start_install`], also reporting whether the appId's poll carries an
+    /// `awaitingUpdate` once this call returns. It is read under the same lock as the start or
+    /// upgrade, so the answer cannot be lost to a poll that finishes before a separate status
+    /// read (80-REVIEW C-WR-03). The sidecar's update hand-off uses it to decide whether the poll
+    /// or the download queue owns the terminal `done`.
+    pub fn start_install_reporting(&self, args: StartInstallArgs) -> Result<bool, String> {
         if !valid_app_id(&args.app_id) {
             return Err("bad appId".into());
         }
@@ -243,7 +252,7 @@ impl InstallPolls {
         let mut polls = self.polls();
         if let Some(slot) = polls.get_mut(&app_id) {
             self.upgrade(&app_id, &mut slot.poll, &o);
-            return Ok(());
+            return Ok(slot.poll.awaiting_update.is_some());
         }
 
         let interval_ms = o.interval_ms.unwrap_or(TICK_INTERVAL_MS).max(1);
@@ -285,6 +294,7 @@ impl InstallPolls {
             absent_ticks_since_seen: 0,
         };
         poll.awaiting_update = o.awaiting_update.as_ref().map(|a| awaiting_from(a, 0));
+        let owns_update = poll.awaiting_update.is_some();
 
         let gen = self.shared.next_gen.fetch_add(1, Ordering::Relaxed);
         let eligible = live_monitor_eligible(self.platform, &poll);
@@ -306,7 +316,7 @@ impl InstallPolls {
         if eligible {
             self.spawn_monitor_start(&app_id, roots);
         }
-        Ok(())
+        Ok(owns_update)
     }
 
     /// The existing-entry branch of `startInstallPolling`: field-by-field upgrade rules.
