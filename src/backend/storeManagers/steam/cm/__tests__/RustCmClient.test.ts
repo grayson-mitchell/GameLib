@@ -148,6 +148,18 @@ describe('createRustCmClient', () => {
     ])
   })
 
+  it('getUserOwnedApps offers no app filter the Rust op would drop (C1/IN-01)', async () => {
+    const c = createRustCmClient(deps, lease)
+    requestRustInvoke.mockResolvedValueOnce(golden('owned_apps:two'))
+    // A type-level pin, checked by `tsc`: the Rust op has no filter, so the interface must not
+    // advertise one. If `filterAppids` comes back, this directive is unused and tsc fails.
+    // @ts-expect-error filterAppids is not an option of the Rust-backed op.
+    await c.getUserOwnedApps('76561198000000001', { filterAppids: [10] })
+    expect(requestRustInvoke).toHaveBeenLastCalledWith('steamcm_owned_apps', [
+      expect.not.objectContaining({ filterAppids: expect.anything() })
+    ])
+  })
+
   it('logs the channel only', async () => {
     requestRustInvoke.mockResolvedValue(
       ok({ eresult: 1, purchaseResultDetails: 0, packageList: {} })

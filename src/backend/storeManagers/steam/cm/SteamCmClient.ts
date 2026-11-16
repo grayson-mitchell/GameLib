@@ -41,12 +41,17 @@ export interface SteamCmClient {
     manifestId: string,
     branch: string
   ): Promise<{ requestCode: unknown }>
+  /**
+   * No production caller: Refresh reads the owned set through `steamcm_refresh`. Kept as the TS
+   * face of `steamcm_owned_apps`, which the golden parity test drives. The Rust op has no app
+   * filter, so the options carry none: steam-user's `filterAppids` was dropped rather than
+   * silently ignored (79-REVIEW C1/IN-01).
+   */
   getUserOwnedApps(
     steamID: SteamIdLike,
     options?: {
       includePlayedFreeGames?: boolean
       includeFreeSub?: boolean
-      filterAppids?: number[]
     }
   ): Promise<SteamCmUserOwnedApps>
   getPersonas(
