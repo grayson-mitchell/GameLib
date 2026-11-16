@@ -305,10 +305,11 @@ impl<B: CmBackend> Actor<B> {
         self.idle_deadline = None;
         self.in_flight = 0;
         if let Some(c) = self.connecting.take() {
+            // A/IN-05: a requested close is not an eresult-34 replacement, so it is not `Replaced`.
             let failure = if self.shutting_down {
                 OpFailure::ShuttingDown
             } else {
-                OpFailure::Replaced
+                OpFailure::Cm(CmError::Closed)
             };
             for w in c.waiters {
                 let _ = w.send(Err(failure.clone()));
@@ -415,6 +416,19 @@ mod tests {
         tokio::task::yield_now().await;
         assert!(!h.is_connected());
         assert!(b.all_closed());
+    }
+
+    /// A/IN-05: a read waiting on the connect when the connection is closed on request gets a
+    /// closed-connection error, not the eresult-34 `Replaced`.
+    #[tokio::test(start_paused = true)]
+    async fn close_during_connect_answers_waiters_closed_not_replaced() {
+        let (b, h) = setup();
+        b.set_delay("connect_anon", Duration::from_secs(5));
+        let h2 = h.clone();
+        let read = tokio::spawn(async move { h2.run_read("t", T, probe).await });
+        tokio::time::sleep(Duration::from_secs(1)).await;
+        h.close("logout");
+        assert_eq!(read.await.unwrap(), Err(OpFailure::Cm(CmError::Closed)));
     }
 
     #[tokio::test(start_paused = true)]
