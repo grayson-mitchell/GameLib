@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 Phase: 81
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-11-16
+Last activity: 2026-11-16 - Completed quick task 261116-vt7: Remove the dead guided Go Offline dialog chain
 
 Progress: [██████████] 96%
 
@@ -784,6 +784,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | 261116-s6q | Two-toast notice stack made cheap to check: dev-only `window.__gamelibNotices` (`humble`/`steam`/`both`/`clear`, guarded by `import.meta.env.DEV`, absent from the production bundle) drives the real stores; jsdom test mounts `AppNoticeStack` with Steam + Humble and covers both dismissal orders; todo gains a fast live-gate recipe and stays pending (`ready: live-gate`). | 2026-11-16 | f4e52c877, 1c0e59909 | NoticeStack/Humble/dev jest 34/34; vite build grep 0 hits; codecheck, scoped prettier, planning-gates 12/12; visual gate not run live | [261116-s6q-notice-stack-two-toast-jest-test-and-dev](./quick/261116-s6q-notice-stack-two-toast-jest-test-and-dev/) |
 | fast | Toast dismiss X made consistent: shared `.noticeStackDismiss` (Steam's 24px round themed X) in NoticeStack/index.scss used by the Steam, read-only stores and Humble toasts; per-notice X rules removed; stylesheet gate guards it. | 2026-11-16 | e69d926b8 | notice jest 86/86; gate sabotage-checked; scoped prettier clean; not checked live | — |
 | 261116-swr | Humble and read-only stores toasts brought in line with the Steam toast: shared `.noticeStackIcon/Text/Title/Body/Action` in NoticeStack/index.scss (accent icon, heading-font title, secondary body, accent-outlined action matching the X); Humble copy split into title + body with a "Reconnect" button (new en keys, `humble_expired_toast` retired); stylesheet gate extended; `__gamelibNotices.readOnly()`/`all()` added. | 2026-11-16 | 2dc0c3522, 249495278, b2d0818b5 | notice jest 105/105; gate sabotage-checked both ways; i18n + churn guard clean; scoped prettier clean; not checked live | [261116-swr-align-humble-and-read-only-stores-toasts](./quick/261116-swr-align-humble-and-read-only-stores-toasts/) |
+| 261116-vt7 | Dead guided Go Offline chain deleted (decision: delete, incl. Rust refusal): steamGoOfflineRetry/Cancel channels, steamGoOfflineRequired push, dialog + store, go-offline-required lease reason, guidedAction plumbing; Rust Refusal::GoOfflineRequired/WrapRefused gone, before_logon infallible, LogonWrap/RestoreOnlyWrap kept. | 2026-11-16 | fd31a35a8 | cargo test 304 pass, clippy/fmt clean; codecheck, check:ipc-contract green; census (c) 291->288 as planned, only pre-existing failures remain | [261116-vt7-remove-the-dead-guided-go-offline-dialog](./quick/261116-vt7-remove-the-dead-guided-go-offline-dialog/) |
 
 ## Session Continuity
 
