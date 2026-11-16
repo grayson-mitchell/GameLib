@@ -156,8 +156,12 @@ describe('userSignIn on the rust engine', () => {
       steamcm_signin_status: () => DONE
     })
     await startQRLogin(t.deps)
-    const r = await pollQRLogin(t.deps)
-    expect(r).toEqual({ status: 'done', username: 'Persona' })
+    expect(await pollQRLogin(t.deps)).toEqual({ status: 'done' })
+    await jest.advanceTimersByTimeAsync(0)
+    expect(await pollQRLogin(t.deps)).toEqual({
+      status: 'done',
+      username: 'Persona'
+    })
     expect(t.order.indexOf('setToken')).toBeLessThan(t.order.indexOf('acquire'))
     expect(t.configStore.set).toHaveBeenCalledWith('isLoggedIn', true)
     expect(t.configStore.delete).toHaveBeenCalledWith('credentialsMissing')
@@ -187,8 +191,12 @@ describe('userSignIn on the rust engine', () => {
     const a = pollQRLogin(t.deps)
     const b = pollQRLogin(t.deps)
     await jest.advanceTimersByTimeAsync(20)
-    expect(await a).toEqual({ status: 'done', username: 'Persona' })
-    expect(await b).toEqual({ status: 'done', username: 'Persona' })
+    expect(await a).toEqual({ status: 'done' })
+    expect((await b).status).toBe('done')
+    expect(await pollQRLogin(t.deps)).toEqual({
+      status: 'done',
+      username: 'Persona'
+    })
     expect(t.setToken).toHaveBeenCalledTimes(1)
     expect(loggedText()).not.toContain('unknownFlow')
   })
@@ -305,6 +313,8 @@ describe('userSignIn on the rust engine', () => {
     })
     await startCredentialLogin(t.deps, 'acct', SECRET_PASSWORD)
     expect(await pollCredentialLogin(t.deps)).toEqual({ status: 'waiting' })
+    expect(await pollCredentialLogin(t.deps)).toEqual({ status: 'done' })
+    await jest.advanceTimersByTimeAsync(0)
     expect(await pollCredentialLogin(t.deps)).toEqual({
       status: 'done',
       username: 'Persona'
@@ -318,6 +328,8 @@ describe('userSignIn on the rust engine', () => {
     })
     t.client.getPersonas.mockRejectedValue(new Error('unsupported'))
     await startQRLogin(t.deps)
+    await pollQRLogin(t.deps)
+    await jest.advanceTimersByTimeAsync(0)
     expect(await pollQRLogin(t.deps)).toEqual({
       status: 'done',
       username: 'acct'
@@ -508,6 +520,104 @@ describe('userSignIn on the rust engine', () => {
       const p = submitSteamGuardCode(t.deps, SECRET_CODE)
       await jest.advanceTimersByTimeAsync(2000)
       expect(await p).toEqual({ status: 'done', username: 'Persona' } as never)
+    })
+  })
+
+  describe('polls do not block on finalisation (C1/WR-06)', () => {
+    function pendingLogon(t: ReturnType<typeof build>) {
+      let resolve: () => void = () => undefined
+      const gate = new Promise<void>((r) => {
+        resolve = r
+      })
+      t.acquireAuthenticatedWithToken.mockImplementation(async () => {
+        await gate
+        return { ok: true, client: t.client, release: jest.fn() }
+      })
+      return resolve
+    }
+
+    it('overlapping QR polls during the persona logon return done without a username, and one later poll carries it', async () => {
+      const t = build({
+        steamcm_signin_qr_start: () => ({ flowId: 'f1', challengeUrl: 'A' }),
+        steamcm_signin_status: () => DONE
+      })
+      const release = pendingLogon(t)
+      await startQRLogin(t.deps)
+
+      // The window's 2 s interval does not wait for the previous call.
+      const polls = [
+        pollQRLogin(t.deps),
+        pollQRLogin(t.deps),
+        pollQRLogin(t.deps)
+      ]
+      await jest.advanceTimersByTimeAsync(0)
+      // Under the old contract these were still pending here, then all resolved with the username.
+      for (const p of polls) expect(await p).toEqual({ status: 'done' })
+      expect(t.acquireAuthenticatedWithToken).toHaveBeenCalledTimes(1)
+
+      release()
+      await jest.advanceTimersByTimeAsync(0)
+      expect(await pollQRLogin(t.deps)).toEqual({
+        status: 'done',
+        username: 'Persona'
+      })
+      expect(t.setToken).toHaveBeenCalledTimes(1)
+    })
+
+    it('a credential poll during the persona logon returns done without a username', async () => {
+      const t = build({
+        steamcm_signin_credentials_start: () => ({
+          flowId: 'c1',
+          status: 'guardRequired'
+        }),
+        steamcm_signin_status: () => DONE
+      })
+      const release = pendingLogon(t)
+      await startCredentialLogin(t.deps, 'acct', SECRET_PASSWORD)
+
+      const first = pollCredentialLogin(t.deps)
+      await jest.advanceTimersByTimeAsync(0)
+      expect(await first).toEqual({ status: 'done' })
+      expect(await pollCredentialLogin(t.deps)).toEqual({ status: 'done' })
+
+      release()
+      await jest.advanceTimersByTimeAsync(0)
+      expect(await pollCredentialLogin(t.deps)).toEqual({
+        status: 'done',
+        username: 'Persona'
+      })
+    })
+
+    it('a failed finalisation turns the next poll into error', async () => {
+      const t = build({
+        steamcm_signin_qr_start: () => ({ flowId: 'f1', challengeUrl: 'A' }),
+        steamcm_signin_status: () => DONE
+      })
+      t.setToken.mockRejectedValue(new Error('keyring locked'))
+      await startQRLogin(t.deps)
+      expect(await pollQRLogin(t.deps)).toEqual({ status: 'done' })
+      await jest.advanceTimersByTimeAsync(0)
+      expect(await pollQRLogin(t.deps)).toEqual({ status: 'error' })
+    })
+
+    it('a finalisation that settles after a newer attempt started leaves its state alone', async () => {
+      const t = build({
+        steamcm_signin_qr_start: [
+          () => ({ flowId: 'f1', challengeUrl: 'A' }),
+          () => ({ flowId: 'f2', challengeUrl: 'B' })
+        ],
+        steamcm_signin_status: () => DONE,
+        steamcm_signin_cancel: () => ({ ok: true })
+      })
+      const release = pendingLogon(t)
+      await startQRLogin(t.deps)
+      await pollQRLogin(t.deps)
+      await startQRLogin(t.deps)
+      release()
+      await jest.advanceTimersByTimeAsync(0)
+      expect(t.deps.steamSession.signIn.getQrSessionState()).toEqual({
+        status: 'waiting'
+      })
     })
   })
 })

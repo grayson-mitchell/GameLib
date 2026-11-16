@@ -222,6 +222,44 @@ async function finalizeRustSignIn(
   return slot.finalize
 }
 
+type SettledSignIn = { status: 'done' | 'error'; username?: string }
+
+/**
+ * C1/WR-06: the poll channels must not block on finalisation. It includes a cold signed-in logon
+ * and the persona read, and the window polls on a 2 s interval that does not wait for the previous
+ * call, so a blocking poll left several in flight and each finished the sign-in. The poll starts
+ * finalize (memoised on the slot) and returns `done` without a username at once. The first caller
+ * to start it records the outcome in the session state when it settles, which a later poll reads.
+ * A slot that is no longer the live session records nothing.
+ */
+function finalizeInBackground(
+  deps: UserSignInDeps,
+  slot: RustSlot,
+  r: Extract<RustFlowStatus, { status: 'done' }> | Finalizing,
+  record: (next: SettledSignIn) => void,
+  what: string
+): void {
+  const signInState = deps.steamSession.signIn
+  const owner = !slot.finalize
+  const finalize = finalizeRustSignIn(deps, slot, r)
+  // Someone else started it (a guard-submit wait, an earlier poll) and records its outcome.
+  if (!owner) return
+  void finalize.then(
+    (username) => {
+      if (signInState.getSession() === slot) {
+        record({ status: 'done', username })
+      }
+    },
+    (err: unknown) => {
+      logError(
+        `${what} finalization failed (${err instanceof Error ? err.name : typeof err})`,
+        LogPrefix.Steam
+      )
+      if (signInState.getSession() === slot) record({ status: 'error' })
+    }
+  )
+}
+
 /** Waits (unref'd 1 s reads) until the flow is done or errored, finalising on done. */
 async function rustWaitSettle(
   deps: UserSignInDeps,
@@ -234,14 +272,18 @@ async function rustWaitSettle(
     if (r.status === 'done' || r.status === 'finalizing') {
       try {
         const username = await finalizeRustSignIn(deps, slot, r)
-        signInState.setCredSessionState({ status: 'done', username })
+        if (signInState.getSession() === slot) {
+          signInState.setCredSessionState({ status: 'done', username })
+        }
         return { status: 'done', username }
       } catch (err) {
         logError(
           `Steam credential auth finalization failed (${err instanceof Error ? err.name : typeof err})`,
           LogPrefix.Steam
         )
-        signInState.setCredSessionState({ status: 'error' })
+        if (signInState.getSession() === slot) {
+          signInState.setCredSessionState({ status: 'error' })
+        }
         return { status: 'error' }
       }
     }
@@ -312,18 +354,22 @@ export async function pollQRLogin(deps: SignInPollDeps): Promise<{
     challengeUrl?: string
   }
   if (r.status === 'done' || r.status === 'finalizing') {
-    try {
-      const username = await finalizeRustSignIn(deps, slot, r)
-      signInState.setQrSessionState({ status: 'done', username })
-      out = { status: 'done', username }
-    } catch (err) {
-      logError(
-        `Steam QR auth finalization failed (${err instanceof Error ? err.name : typeof err})`,
-        LogPrefix.Steam
+    // An overlapping poll may already have moved the state on (and finalize may have settled).
+    if (signInState.getQrSessionState().status === 'waiting') {
+      signInState.setQrSessionState({ status: 'done' })
+      finalizeInBackground(
+        deps,
+        slot,
+        r,
+        (next) => signInState.setQrSessionState(next),
+        'Steam QR auth'
       )
-      signInState.setQrSessionState({ status: 'error' })
-      out = { status: 'error' }
     }
+    const now = signInState.getQrSessionState()
+    out =
+      now.status === 'done'
+        ? { status: 'done', username: now.username }
+        : { status: now.status }
   } else if (r.status === 'error') {
     logRustError('Steam QR session error', r)
     signInState.setQrSessionState({ status: 'error' })
@@ -401,14 +447,19 @@ export async function pollCredentialLogin(deps: SignInPollDeps): Promise<{
   }
   const r = await readFlowStatus(deps, slot)
   if (r.status === 'done' || r.status === 'finalizing') {
-    try {
-      const username = await finalizeRustSignIn(deps, slot, r)
-      signInState.setCredSessionState({ status: 'done', username })
-      return { status: 'done', username }
-    } catch {
-      signInState.setCredSessionState({ status: 'error' })
-      return { status: 'error' }
+    // An overlapping poll may already have moved the state on (and finalize may have settled).
+    if (signInState.getCredSessionState().status === 'waiting') {
+      signInState.setCredSessionState({ status: 'done' })
+      finalizeInBackground(
+        deps,
+        slot,
+        r,
+        (next) => signInState.setCredSessionState(next),
+        'Steam credential auth'
+      )
     }
+    const now = signInState.getCredSessionState()
+    return { status: now.status, username: now.username }
   }
   if (r.status === 'error') {
     logRustError('Steam credential session error', r)
