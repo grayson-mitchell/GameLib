@@ -83,3 +83,7 @@ detecting sign-in state reliably.
   - Did the rearm run, and with which decision?
   - Why did the game read as not installed rather than "restart Steam to
     finish"?
+
+## Resolution (2026-11-16)
+
+Absorbed into Phase 81 (Unify the Steam restart hold into restart-on-Play) after discussion: spikes 047/048/083 and restart-on-Play (261029-ji2) already covered the options listed above. The open debug questions under "Also observed" (missing init logs, re-arm reading as not installed) go away if Phase 81 deletes the boot re-arm; if it keeps a hold anywhere, debug them first.

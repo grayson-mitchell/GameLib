@@ -172,6 +172,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 78: Verification records and test health after v0.9** — 5 plans in 2 waves; planned
 - [x] **Phase 79: Rust CM client replacing steam-user and steam-session** — 44 plans in 21 waves; planned (spike 085 gate satisfied) (completed 2026-11-15)
 - [ ] **Phase 80: Steam install, uninstall and update polling state machines in Rust** — 33 plans; planned
+- [ ] **Phase 81: Unify the Steam restart hold into restart-on-Play** — not planned
 - [ ] **Phase 47: Migrate aggregated store search from CheapShark to IsThereAnyDeal** — 13 plans; ITAD gates closed 2026-11-12; planned 2026-11-14 (moved from v0.8)
 
 ## Phase Details
@@ -1834,3 +1835,13 @@ Plans:
 **Wave 20** *(blocked on Wave 19 completion)*
 
 - [ ] 80-33-PLAN.md — post-deletion live smoke + CI
+
+### Phase 81: Unify the Steam restart hold into restart-on-Play
+
+**Goal:** One mechanism, not two, for a GameLib depot install that the running Steam client has not adopted. Today macOS has both the D-UAT-13 poll hold ("Restart Steam to finish", `gamelib-steampoll` `hold.rs` after Phase 80, with the persisted `steam_restart_hold` store and boot re-arm from quick 261029-pkp) and restart-on-Play (`macSteamAdoption.ts`, quick 261029-ji2: a pending-adoption record, and Play quits and relaunches Steam when the same Steam process has not adopted the game). The hold is the brittle half: it releases only when the recorded Steam pid exits, so a sign-in rescan that adopts the game leaves it stuck (261105-ord gate item 6, appId 112100), and its boot re-arm fails closed to "not installed". Scope: report the game installed once the ACF says so and let restart-on-Play handle the unadopted case at Play; delete the hold, its persisted store and the boot re-arm where restart-on-Play applies; release the pending-adoption record on spike 083's evidence (sign-in reloads every appmanifest, observable via content_log `Loaded N apps from install folder` and helper `GetAppInstallState` 1026 -> 4), with "Sign in to Steam to finish" for a signed-out Steam; keep the experimental InstallApp setting (quick 261105-ord/261105-sqe) as the preferred macOS path when on, with restart-on-Play as its fallback; give the user an in-app action rather than passive text. Windows/Linux: extend restart-on-Play only if the todo `2026-11-16-spike-steam-startup-and-sign-in-adoption-on-windows-linux.md` finds Steam adopts at startup without a dialog there; otherwise they keep a simplified hold. Do not re-spike `steam://install` (047/048: needs a click in Steam's install dialog). Absorbs todo `2026-11-05-steam-restart-hold-brittle-discuss.md`. Came from the operator's discussion on 2026-11-16.
+**Requirements**: TBD
+**Depends on:** Phase 80
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 81 to break down)
