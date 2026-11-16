@@ -3,7 +3,7 @@ status: complete
 phase: 76-engine-correct-bottle-for-drm-mode-launches-v0-9-audit-s9
 source: [76-01-SUMMARY.md]
 started: 2026-11-15T10:10:00Z
-updated: 2026-11-16T07:30:00Z
+updated: 2026-11-17T07:10:00Z
 ---
 
 ## Current Test
@@ -16,7 +16,7 @@ Operator note: build first with `pnpm build:sidecar`, start with `pnpm tauri:dev
 
 Hiding CrossOver: renaming /Applications/CrossOver.app does NOT hide it, because GameLib finds CrossOver through Spotlight by bundle ID (`mdfind kMDItemCFBundleIdentifier = com.codeweavers.CrossOver`), which also matches a renamed bundle. Use `mkdir -p ~/cx-hidden.noindex && mv /Applications/CrossOver.app ~/cx-hidden.noindex/` (Spotlight skips `*.noindex`), confirm `mdfind "kMDItemCFBundleIdentifier = com.codeweavers.CrossOver"` prints nothing, then restart GameLib. Restore with `mv ~/cx-hidden.noindex/CrossOver.app /Applications/`. A correct hide shows `bottle creation engine pinned (cx-missing)` in the log; `bottle creation engine crossover` means the precondition is not met.
 
-Engine marker note: no `.gamelib-engine.json` is written at bottle creation. The engine of a marker-less bottle is inferred from `cxbottle.conf` (no `Timestamp` means pinned).
+Engine marker note: from 76-04 a pinned bottle gets `.gamelib-engine.json` (kind pinned) at creation, and a DRM launch reconciles a missing or DXVK-contradicted marker before the CrossOver pre-flight. Items 1-5 ran on the 76-01 build, where no marker was written at creation and the engine of a marker-less bottle was inferred from `cxbottle.conf` (no `Timestamp` means pinned). Items 6-8 run on the 76-03/76-04 build.
 
 ### 1. Install with CrossOver hidden takes the fallback engine
 expected: Precondition: Grim Dawn (219990) is not installed (uninstall it first if it is), CrossOver is hidden with the `.noindex` method above (mdfind returns nothing), and GameLib has been restarted. Installing Grim Dawn completes, and the log shows `bottle creation engine pinned (cx-missing)` and `provisionBridgeBottle: ... created by Wine-Staging ... + DXVK-macOS ...` (a non-CrossOver, pinned Wine-Staging engine).
@@ -40,10 +40,22 @@ result: pass. 07:24:04 second `[bridge-drm] appId=219990 mode=steamclient-layer`
 expected: A DRM-free bridge title (e.g. Avernum 6, 206060) still launches as before, with no DRM setup step and no new engine dialog.
 result: pass. 07:24:54 Avernum 6 (206060) launched via the Steam bridge, no DRM setup step, no engine dialog.
 
+### 6. Gap re-test: Play heals the mislabelled Grim Dawn bottle and switches it to CrossOver
+expected: Precondition (snapshot taken before the run: `.gamelib-engine.json` reads kind crossover, `current_dxvk-macOS` from Nov 16 07:14 is present), CrossOver in /Applications, only Mac Steam running, GameLib restarted on the new sidecar; pressing Play logs `engine marker for "GameLibSteamBridge-219990" reconciled before the CrossOver pre-flight: pinned:wine-staging-11.20 (crossover marker contradicted by DXVK-macOS)` then `engine switch for "GameLibSteamBridge-219990": pinned:wine-staging-11.20 -> crossover`; no confirm dialog or toast; afterwards current_dxvk-macOS is absent and the marker reads crossover; the strict DRM criterion is met (lsteamclient game-process trace for 219990 with a game-originated call beyond init).
+result: pass — live 2026-11-17 06:48: marker reconciled (pinned:wine-staging-11.20, crossover contradicted by DXVK-macOS) then switched pinned -> crossover; current_dxvk-macOS gone, marker reads crossover; lsteamclient trace pid 304 with game calls beyond init (GetAchievement, FileWrite), events=41 rejected=0; no dialog. Side note: exit logged overlay-exit-abnormal (pushed=false, no toast).
+
+### 7. Gap re-test: install with CrossOver hidden records a pinned marker at creation
+expected: Grim Dawn uninstalled first (and its bottle dir gone), CrossOver hidden with the `.noindex` method and mdfind empty, GameLib restarted; install logs `bottle creation engine pinned (cx-missing)`, `created by Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)` and `engine marker for "GameLibSteamBridge-219990" recorded at creation: pinned:wine-staging-11.20`; the bottle's .gamelib-engine.json reads kind pinned, id wine-staging-11.20.
+result: pass — live 2026-11-17 06:51: CrossOver hidden (mdfind empty); logged `bottle creation engine for appId 219990: pinned (cx-missing)`, `created by Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)`, `engine marker ... recorded at creation: pinned:wine-staging-11.20`; .gamelib-engine.json reads kind pinned, id wine-staging-11.20; DXVK-macOS present, conf has no Timestamp.
+
+### 8. Gap re-test: restored CrossOver, Play switches the fresh pinned bottle and launches in DRM mode
+expected: CrossOver restored to /Applications (mdfind finds it), only Mac Steam running, GameLib restarted; pressing Play briefly shows the setting-up status, then DRM setup, then the game; no confirm dialog or toast; the log shows `engine switch for "GameLibSteamBridge-219990": pinned:wine-staging-11.20 -> crossover`; afterwards current_dxvk-macOS is absent and the marker reads crossover; the strict DRM criterion is met.
+result: pass — live 2026-11-17 07:00: CrossOver restored (mdfind finds it); no confirm dialog or toast reported; logged `engine switch for "GameLibSteamBridge-219990": pinned:wine-staging-11.20 -> crossover`, then DRM launch in steamclient-layer mode (crossover 26.3.0.39832); current_dxvk-macOS gone, marker reads crossover; lsteamclient trace pid 416 with game calls beyond init (GetAchievement, FileWrite, GetNumAchievements), events=41 rejected=0.
+
 ## Summary
 
-total: 5
-passed: 4
+total: 8
+passed: 7
 issues: 1
 pending: 0
 skipped: 0
