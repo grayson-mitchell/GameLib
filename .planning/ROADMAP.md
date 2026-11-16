@@ -171,7 +171,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 77: Runtime hardening from the v0.9 review debt** — 3 plans in 2 waves; planned
 - [ ] **Phase 78: Verification records and test health after v0.9** — 5 plans in 2 waves; planned
 - [x] **Phase 79: Rust CM client replacing steam-user and steam-session** — 44 plans in 21 waves; planned (spike 085 gate satisfied) (completed 2026-11-15)
-- [ ] **Phase 80: Steam install, uninstall and update polling state machines in Rust** — 33 plans; planned
+- [x] **Phase 80: Steam install, uninstall and update polling state machines in Rust** — 33 plans; planned (completed 2026-11-16)
 - [ ] **Phase 81: Unify the Steam restart hold into restart-on-Play** — not planned
 - [ ] **Phase 47: Migrate aggregated store search from CheapShark to IsThereAnyDeal** — 13 plans; ITAD gates closed 2026-11-12; planned 2026-11-14 (moved from v0.8)
 
@@ -1739,7 +1739,7 @@ Plans:
 **Goal:** The Steam install, uninstall and update polling state machines run in Rust, and their TypeScript implementations are deleted. This is the next sidecar-retirement slice after Phase 79, which listed it as a deferred idea in `79-CONTEXT.md`. Scope today, under `src/backend/storeManagers/steam/library/`: `installPolling.ts` + `installPollOnce.ts` (ACF install loop, grace/max/no-activity/manifest-gone ticks, native-handoff upgrade, restart-hold release), `uninstallPolling.ts`, `updatePollOnce.ts` (Phase 74 D-11 update completion: StateFlags bit 4 never completes alone, build-change completion, quiet end on no activity), `pollState.ts`, `runningPoll.ts` (running-app probe, Windows `RunningAppID` via reg.exe), and the ACF readers `acfState.ts` / `acfUpdateState.ts`, which can lean on the Phase 75 `gamelib-steamfiles` crate. About 2,800 lines. Reuse Phase 63's pattern: a Tauri-free crate or module in the `src-tauri/` workspace, `rustInvoke` with TypeScript signatures unchanged, a parity harness over the existing poll tests, a dev-only fallback flag, then delete the TypeScript loops. Open questions for discuss-phase: whether progress events (`liveProgress`, `steamDownloadProgress`) and the restart hold move with the loops or stay behind a callback; who owns timers once the loop leaves the sidecar (the sidecar exit contract stops applying to them); whether the bridge/bottle install-state paths (`bridgeInstallState.ts`) are in scope; and how the per-tick `ManagerDeps` side effects (library writes, notifications, `invalidateSteamUpdateState`) cross the boundary. Came from the operator's request on 2026-11-15, after asking what follows Phase 79 in the Rust migration.
 **Requirements**: P80-install, P80-update, P80-uninstall, P80-running, P80-events, P80-locale, P80-acf, P80-parity, P80-gate, P80-live
 **Depends on:** Phase 79
-**Plans:** 32/33 plans executed
+**Plans:** 33/33 plans complete
 
 Plans:
 
@@ -1834,7 +1834,7 @@ Plans:
 
 **Wave 20** *(blocked on Wave 19 completion)*
 
-- [ ] 80-33-PLAN.md — post-deletion live smoke + CI
+- [x] 80-33-PLAN.md — post-deletion live smoke + CI
 
 ### Phase 81: Unify the Steam restart hold into restart-on-Play
 
