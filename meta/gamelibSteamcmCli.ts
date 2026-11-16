@@ -27,17 +27,16 @@ const STEAMCM_CLI_BUILD_COMMAND =
 
 const MAX_BUFFER = 16 * 1024 * 1024
 
-/** Mirrors `SECRET_OPS` in gamelib-steamcm-cli/src/main.rs. */
+/**
+ * Mirrors `SECRET_OPS` in gamelib-steamcm-cli/src/main.rs. `gamelibSteamcmCli.test.ts` reads the
+ * Rust list and fails on any difference (79 review B/IN-06).
+ */
 export const STEAMCM_SECRET_OPS: readonly string[] = [
   'steamcm_session_acquire',
   'steamcm_signin_credentials_start',
   'steamcm_signin_guard_submit',
   'steamcm_redeem_key'
 ]
-
-export type SteamcmNdjsonReply =
-  | { ok: true; result: unknown }
-  | { ok: false; error: unknown }
 
 export function resolveSteamcmCliPath(
   env: NodeJS.ProcessEnv = process.env,
@@ -79,14 +78,6 @@ export function parseSteamcmCliResult(
       `gamelib-steamcm-cli ${op} printed unparseable output: ${stdout.slice(0, 200)}`
     )
   }
-}
-
-/** Pure: one stdout line per request, in order. */
-export function parseSteamcmNdjson(stdout: string): SteamcmNdjsonReply[] {
-  return stdout
-    .split('\n')
-    .filter((l) => l.trim() !== '')
-    .map((l) => JSON.parse(l) as SteamcmNdjsonReply)
 }
 
 export function runSteamcmCliSync(

@@ -1,14 +1,25 @@
+import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 import {
   assertSteamcmCliPresent,
   parseSteamcmCliResult,
-  parseSteamcmNdjson,
   resolveSteamcmCliPath,
   runSteamcmCliSync,
   STEAMCM_SECRET_OPS
 } from '../gamelibSteamcmCli'
 import { tmpdir } from 'node:os'
+
+const RUST_CLI = join(
+  __dirname,
+  '..',
+  '..',
+  'src-tauri',
+  'crates',
+  'gamelib-steamcm-cli',
+  'src',
+  'main.rs'
+)
 
 describe('gamelibSteamcmCli', () => {
   it('resolves the debug binary under src-tauri/target', () => {
@@ -42,18 +53,20 @@ describe('gamelibSteamcmCli', () => {
     )
   })
 
-  it('parses ndjson replies one per line', () => {
-    expect(
-      parseSteamcmNdjson('{"ok":true,"result":1}\n{"ok":false,"error":"x"}\n')
-    ).toEqual([
-      { ok: true, result: 1 },
-      { ok: false, error: 'x' }
-    ])
-  })
-
   it('refuses every secret-bearing op on argv, before any spawn', () => {
     for (const op of STEAMCM_SECRET_OPS) {
       expect(() => runSteamcmCliSync(op, { key: 'K' })).toThrow(/takes secrets/)
     }
+  })
+
+  // 79 review B/IN-06: a secret op added to the Rust CLI but not here would go on argv (visible in
+  // `ps`) before the CLI refused it.
+  it('STEAMCM_SECRET_OPS matches SECRET_OPS in the Rust CLI', () => {
+    const src = readFileSync(RUST_CLI, 'utf-8')
+    const block = /const SECRET_OPS: &\[&str\] = &\[([\s\S]*?)\];/.exec(src)
+    expect(block).not.toBeNull()
+    const rust = [...(block?.[1] ?? '').matchAll(/"([^"]+)"/g)].map((m) => m[1])
+    expect(rust.length).toBeGreaterThan(0)
+    expect([...STEAMCM_SECRET_OPS].sort()).toEqual([...rust].sort())
   })
 })
