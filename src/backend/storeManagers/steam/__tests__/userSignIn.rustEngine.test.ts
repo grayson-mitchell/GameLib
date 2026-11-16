@@ -229,7 +229,26 @@ describe('userSignIn on the rust engine', () => {
   })
 
   it('startCredentialLogin waiting polls every second on unref timers until done', async () => {
-    const unref = jest.spyOn(global, 'setTimeout')
+    // C1/IN-04: wrap each handle's unref so the test sees it called, not just setTimeout. The
+    // sidecar exit contract needs the wait's timers unref'd; a bare setTimeout spy passed even
+    // with `handle.unref?.()` removed from sleepUnref.
+    const fakeSetTimeout = global.setTimeout
+    const waits: Array<{ ms: number | undefined; unref: jest.Mock }> = []
+    const spy = jest.spyOn(global, 'setTimeout').mockImplementation(((
+      fn: (...a: unknown[]) => void,
+      ms?: number,
+      ...rest: unknown[]
+    ) => {
+      const handle = fakeSetTimeout(fn, ms, ...rest)
+      const original = handle.unref?.bind(handle)
+      const unref = jest.fn(() => {
+        original?.()
+        return handle
+      })
+      handle.unref = unref
+      waits.push({ ms, unref })
+      return handle
+    }) as unknown as typeof setTimeout)
     const t = build({
       steamcm_signin_credentials_start: () => ({
         ok: true,
@@ -245,7 +264,10 @@ describe('userSignIn on the rust engine', () => {
     const p = startCredentialLogin(t.deps, 'acct', SECRET_PASSWORD)
     await jest.advanceTimersByTimeAsync(3000)
     expect(await p).toEqual({ status: 'done', username: 'Persona' } as never)
-    expect(unref).toHaveBeenCalled()
+    spy.mockRestore()
+    const pollWaits = waits.filter((w) => w.ms === 1000)
+    expect(pollWaits.length).toBeGreaterThanOrEqual(2)
+    for (const w of pollWaits) expect(w.unref).toHaveBeenCalledTimes(1)
     expect(jest.getTimerCount()).toBe(0)
   })
 
