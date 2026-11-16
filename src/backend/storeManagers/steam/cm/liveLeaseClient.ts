@@ -24,7 +24,7 @@ export function createLiveLeaseClient(
       return current()?.steamID ?? null
     },
     get licenses() {
-      return current()?.licenses ?? []
+      return current()?.licenses ?? null
     },
     getProductInfo: async (...a) => pick().getProductInfo(...a),
     getDepotDecryptionKey(appId, depotId, callback) {

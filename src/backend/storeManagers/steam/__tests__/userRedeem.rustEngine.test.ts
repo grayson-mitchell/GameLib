@@ -5,7 +5,7 @@ import type { SteamCmClient } from '../cm/SteamCmClient'
 const KEY = 'AAAAA-BBBBB-CCCCC'
 
 function fakeClient(
-  licenses: { package_id?: number }[],
+  licenses: { package_id?: number }[] | null,
   redeem: jest.Mock
 ): SteamCmClient {
   return { licenses, redeemKey: redeem } as unknown as SteamCmClient
@@ -110,6 +110,34 @@ describe('redeemKey on a SteamCmClient lease', () => {
     const r = await redeemKey(deps, 'steam', KEY)
     expect(r.outcome).toBe('error')
     expect(redeem).toHaveBeenCalledTimes(1)
+  })
+
+  it('C1/WR-05: ambiguous with an unknown pre-redeem licence list fails without verifying', async () => {
+    // The redeem lease's steamcm_licenses failed. As [] it made every owned package look new on
+    // the verification lease, so an invalid key was reported as redeemed.
+    const redeem = jest.fn().mockRejectedValue(steamcmError('ambiguous'))
+    const { deps, acquireAuthenticated } = makeDeps([
+      fakeClient(null, redeem),
+      fakeClient([{ package_id: 1 }, { package_id: 2 }], jest.fn())
+    ])
+    const r = await redeemKey(deps, 'steam', KEY)
+    expect(r).toEqual({
+      store: 'steam',
+      outcome: 'error',
+      message: 'redeem-failed'
+    })
+    expect(acquireAuthenticated).toHaveBeenCalledTimes(1)
+    expect(redeem).toHaveBeenCalledTimes(1)
+  })
+
+  it('C1/WR-05: ambiguous fails when the verification lease cannot read its licence list', async () => {
+    const redeem = jest.fn().mockRejectedValue(steamcmError('ambiguous'))
+    const { deps } = makeDeps([
+      fakeClient([{ package_id: 1 }], redeem),
+      fakeClient(null, jest.fn())
+    ])
+    const r = await redeemKey(deps, 'steam', KEY)
+    expect(r.outcome).toBe('error')
   })
 
   it('never logs the product key', async () => {

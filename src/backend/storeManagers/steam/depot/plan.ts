@@ -201,7 +201,14 @@ export async function withPlanBuildRetry<T>(
  * run over the authenticated CM connection, never a second/anonymous one.
  */
 async function getOwnedSets(client: SteamCmClient): Promise<OwnedSets> {
-  const packageIds = (client.licenses ?? [])
+  // C1/WR-05: an unread licence list is not "owns nothing": that misreported the game as not
+  // owned. Fail the step instead (it is retried like any other plan-build failure).
+  if (!client.licenses) {
+    throw new Error(
+      'downloadSteamDepots: the Steam licence list could not be read'
+    )
+  }
+  const packageIds = client.licenses
     .map((l) => (l as { package_id?: number }).package_id)
     .filter((id): id is number => typeof id === 'number')
 

@@ -57,7 +57,8 @@ async function redeemOnce(
   const client = lease.client
   // Snapshot owned package ids so an `ambiguous` redeem (the socket died after
   // the request was sent) is verified by a licence diff — never by resending.
-  const before = packageIds(client.licenses)
+  // null when this lease's licence list is unknown: such a redeem cannot be verified (C1/WR-05).
+  const before = client.licenses ? packageIds(client.licenses) : null
 
   try {
     const { purchaseResultDetails, packageList } = await client.redeemKey(key)
@@ -69,6 +70,13 @@ async function redeemOnce(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const e = err as any
     if (e?.steamcmKind === 'ambiguous') {
+      if (!before) {
+        logWarning(
+          `Steam redeemKey: ambiguous result and no pre-redeem licence list to verify against (key not resent): store=${store} outcome=error`,
+          LogPrefix.Steam
+        )
+        return { store, outcome: 'error', message: 'redeem-failed' }
+      }
       logWarning(
         `Steam redeemKey: ambiguous result, verifying via licence list (key not resent): store=${store}`,
         LogPrefix.Steam
@@ -114,9 +122,9 @@ async function redeemOnce(
   }
 }
 
-function packageIds(licenses: { package_id?: number }[] | undefined) {
+function packageIds(licenses: { package_id?: number }[]) {
   return new Set(
-    (licenses ?? [])
+    licenses
       .map((l) => l.package_id)
       .filter((id): id is number => typeof id === 'number')
   )
@@ -143,9 +151,10 @@ async function verifyAmbiguousRedeem(
     })
     if (!lease.ok) return failure
     try {
-      const added = [...packageIds(lease.client.licenses)].filter(
-        (id) => !before.has(id)
-      )
+      // An unknown licence list proves nothing either way.
+      const after = lease.client.licenses
+      if (!after) return failure
+      const added = [...packageIds(after)].filter((id) => !before.has(id))
       if (added.length === 0) return failure
       logInfo(
         `Steam redeemKey: store=${store} outcome=success (verified via licence list, ${added.length} new package(s))`,

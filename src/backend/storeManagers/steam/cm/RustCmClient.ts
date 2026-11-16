@@ -32,7 +32,8 @@ export interface RustCmLease {
   leaseId: number
   /** The account's 64-bit SteamID as a decimal string. */
   steamId: string
-  licenses: SteamCmLicense[]
+  /** null when steamcm_licenses failed: unknown, never "owns nothing" (C1/WR-05). */
+  licenses: SteamCmLicense[] | null
 }
 
 type SteamCmError = Error & {

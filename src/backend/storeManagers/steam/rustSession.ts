@@ -199,7 +199,15 @@ export class RustCmSession {
         RUST_STEAMCM_LICENSES,
         { leaseId }
       )
-      licenses = l.ok ? l.result : []
+      // C1/WR-05: an unread licence list stays unknown. As [] it read as "owns nothing", which a
+      // redeem verification diff counts as every owned package being newly added.
+      licenses = l.ok ? l.result : null
+      if (!l.ok) {
+        logWarning(
+          `Steam CM: the licence list could not be read (${l.kind})`,
+          LogPrefix.Steam
+        )
+      }
     } catch {
       return null
     }

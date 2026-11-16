@@ -79,7 +79,7 @@ type KeyCb = (err: Error | null, key: Buffer) => void
 
 function makeFakeClient() {
   return {
-    licenses: [] as Array<{ package_id: number }>,
+    licenses: [] as Array<{ package_id: number }> | null,
     steamID: { getSteamID64: jest.fn().mockReturnValue('76561198012345678') },
     getProductInfo: jest.fn().mockResolvedValue({
       apps: { 12345: { appinfo: { depots: {}, extended: {} } } },
@@ -349,6 +349,19 @@ describe('buildDepotRefs', () => {
 
       expect(refs.depots).toHaveLength(1)
       expect(calls).toBe(2)
+    })
+  })
+
+  describe('C1/WR-05: an unread licence list', () => {
+    it('fails the plan as unreadable instead of reading it as owning nothing', async () => {
+      const c = wire()
+      c.licenses = null
+
+      await expect(buildDepotRefs(APP_ID, BASE_OPTS)).rejects.toThrow(
+        /licence list could not be read/
+      )
+      // No bulk package read over an empty id list.
+      expect(c.getProductInfo).not.toHaveBeenCalledWith([], [], true)
     })
   })
 

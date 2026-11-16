@@ -146,6 +146,17 @@ describe('SteamUser on the Rust engine', () => {
     )
   })
 
+  it('C1/WR-05: a failed licence read leaves the licence list unknown (null), not empty', async () => {
+    handlers['steamcm_licenses'] = () => ({ ok: false, kind: 'closed' })
+    const lease = await steamUser.acquireAuthenticated({
+      reason: 'user-refresh'
+    })
+    expect(lease.ok).toBe(true)
+    if (!lease.ok) return
+    expect(lease.client.licenses).toBeNull()
+    expect(steamUser.getClient()?.licenses).toBeNull()
+  })
+
   it('getClient() follows a held lease, so releasing another lease never strands its caller', async () => {
     // Review 79 C1/CR-01: an install handed a concurrent Refresh's client failed once that
     // Refresh released its lease.

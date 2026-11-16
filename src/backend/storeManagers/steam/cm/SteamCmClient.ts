@@ -19,7 +19,8 @@ export type SteamIdLike = { getSteamID64(): string } | string
 
 export interface SteamCmClient {
   steamID: { getSteamID64(): string; toString(): string } | null
-  licenses: SteamCmLicense[]
+  /** null when the lease's licence list could not be read: unknown, never "owns nothing" (C1/WR-05). */
+  licenses: SteamCmLicense[] | null
   getProductInfo(
     apps: number[],
     packages: number[],
