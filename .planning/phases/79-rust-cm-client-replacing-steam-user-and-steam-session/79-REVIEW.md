@@ -3,7 +3,8 @@ phase: 79-rust-cm-client-replacing-steam-user-and-steam-session
 reviewed: 2026-11-16
 depth: standard
 status: issues_found
-fixed: [A/CR-01 7744eeb7f, C1/CR-01 63b3b470e]
+fixed: [A/CR-01 7744eeb7f, C1/CR-01 63b3b470e, all 21 warnings and 23 info items — see 79-REVIEW-FIX.md]
+fix_report: 79-REVIEW-FIX.md
 files_reviewed: 112
 diff_base: 048efa221^
 findings:

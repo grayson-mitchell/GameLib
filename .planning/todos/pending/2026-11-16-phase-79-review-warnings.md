@@ -4,7 +4,7 @@ title: 'Phase 79 code review: 21 warnings and 23 info findings to triage and fix
 area: steam-cm
 severity: medium
 platform: any
-ready: code
+ready: live-gate
 source: .planning/phases/79-rust-cm-client-replacing-steam-user-and-steam-session/79-REVIEW.md
 files: [src-tauri/crates/gamelib-steamcm/src, src-tauri/src/steamcm_dispatch.rs, src/backend/storeManagers/steam, src/frontend/screens/Login/components/SteamLogin/index.tsx, src/backend/sidecar/bootstrap.ts]
 ---
@@ -31,3 +31,19 @@ The remaining warnings and all info items are in 79-REVIEW.md.
 ## Direction
 
 Triage with `/gsd-code-review 79 --fix` (Critical+Warning scope), or plan a small follow-up phase. Each fix needs a regression test that fails on the old code.
+
+## Resolution (2026-11-16)
+
+All 44 open findings are fixed and on `main`, plus the QR → credentials → QR round-trip bug. A/IN-08 was closed by operator decision (accept SteamID64 on argv, never log it). C2/IN-03 moved to its own todo, `2026-11-16-remove-the-dead-guided-go-offline-dialog-chain.md`. Commits and tests per finding are in `79-REVIEW-FIX.md`. Every behaviour fix has a regression test that fails on the old code.
+
+The todo stays open only for the live gate below. No unit test can reach these checks. Move it to `completed/` once they pass.
+
+## Live gate
+
+1. `pnpm tauri:dev` (not `tauri:dev:run`). Boot while signed in, and check that a signed-in Refresh works (C2/WR-04 configure gate).
+2. Sign out, then sign in by **QR**. The dialog should close once, and exactly one library Refresh should run (C1/WR-06, C2/WR-05).
+3. Sign out, then sign in with **credentials plus phone approval**. Again the dialog should close once and one Refresh should run (C1/WR-02, C1/WR-06, C2/WR-01).
+4. Enter a wrong Steam Guard code. The code input should stay, and the "incorrect code" copy should read right (C2/WR-02).
+5. On the QR tab, switch to credentials and back to QR. A fresh code should draw and the poll should resume (round-trip fix).
+6. Start a Refresh, and install or uninstall a game while it runs. The install change should survive the Refresh (C1/WR-01).
+7. Optional: kill the sidecar (`kill -9`). The crash dialog should appear, and Restart should work (B/IN-02).
