@@ -84,6 +84,11 @@ impl Outbox {
         }
     }
 
+    /// The sidecar is gone: later events queue instead of being written to a dead pipe.
+    pub fn mark_not_ready(&self) {
+        self.ready.store(false, Ordering::SeqCst);
+    }
+
     /// Mark the sidecar READY and replay the queue (ascending seq).
     pub async fn mark_ready(&self, host: &dyn PollHost) {
         self.ready.store(true, Ordering::SeqCst);

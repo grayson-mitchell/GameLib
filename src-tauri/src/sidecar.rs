@@ -461,7 +461,7 @@ pub(crate) fn start_reader(app: AppHandle, state: Arc<SidecarState>, stdout: std
             if trimmed == READY_SENTINEL {
                 // Sidecar bootstrapped; commands may already be queued and will now flow.
                 shell_eprintln!("[shell] sidecar signalled READY ({READY_SENTINEL})");
-                mark_sidecar_ready();
+                on_sidecar_ready_steampoll();
                 continue;
             }
             let value: Value = match serde_json::from_str(trimmed) {
@@ -666,6 +666,7 @@ pub(crate) fn start_reader(app: AppHandle, state: Arc<SidecarState>, stdout: std
         on_sidecar_eof_cancel_jobs();
         // Leases never outlive a dead sidecar; owed goonline is paid (Pitfall 1, D-03).
         on_sidecar_eof_drop_steamcm();
+        on_sidecar_eof_steampoll();
 
         // D-01/D-02: an EOF outside an intentional shutdown means the sidecar died. Tell the user.
         on_sidecar_eof(&state.shutting_down, &state.eof_surfaced, || {

@@ -5218,3 +5218,30 @@ describe('raw shell-source readers are allow-listed (D-10, 71-19 WR-01)', () => 
     }
   })
 })
+
+// Phase 80 plan 21 (D-07, D-08): the poll lifecycle hooks and their order.
+describe('Phase 80 plan 21: steampoll lifecycle wiring', () => {
+  test('the READY branch and the EOF branch call the steampoll hooks', () => {
+    const code = loadMainRsCode(readTauriShellProductionSource())
+    expect(code).toContain('on_sidecar_ready_steampoll();')
+    expect(code).toContain('on_sidecar_eof_steampoll();')
+  })
+
+  test('steampoll_exit_shutdown runs before shutdown_child in handle_exit', () => {
+    const code = loadMainRsCode()
+    const exit = code.indexOf('steampoll_exit_shutdown();')
+    const shutdown = code.indexOf('shutdown_child()')
+    expect(exit).toBeGreaterThan(-1)
+    expect(exit).toBeLessThan(shutdown)
+  })
+
+  test('steampoll_boot runs after the host install and before spawn_sidecar_state', () => {
+    const code = loadMainRsCode()
+    const install = code.indexOf('install_steampoll_host(app.handle());')
+    const boot = code.indexOf('steampoll_boot();')
+    const spawn = code.indexOf('spawn_sidecar_state(app)?')
+    expect(install).toBeGreaterThan(-1)
+    expect(boot).toBeGreaterThan(install)
+    expect(boot).toBeLessThan(spawn)
+  })
+})

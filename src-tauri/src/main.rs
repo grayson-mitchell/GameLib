@@ -754,6 +754,8 @@ fn handle_exit(app_handle: &tauri::AppHandle, single_instance_socket_path: Optio
     }
     // Pays any owed goonline and logs off before the sidecar dies (Pitfall 1, D-03).
     steamcm_exit_shutdown();
+    // Kills Rust-owned nettop children and stops polls before the sidecar dies (D-07).
+    steampoll_exit_shutdown();
     if let Some(state) = app_handle.try_state::<Arc<SidecarState>>() {
         state.shutdown_child();
     }
@@ -1608,6 +1610,8 @@ fn run_setup(
     // Phase 80 D-03/D-04/D-05: the poll host (webview emits, translated notifications, acked
     // state events) is installed before the sidecar is spawned.
     install_steampoll_host(app.handle());
+    // D-09/D-16: boot rearm + running poll, only when GAMELIB_STEAM_POLLS=rust; returns at once.
+    steampoll_boot();
     let state = spawn_sidecar_state(app)?;
     start_single_instance_accept_loop(app, &state, primary_listener);
     install_os_deep_link_handler(app, &state);

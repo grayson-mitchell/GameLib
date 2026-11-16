@@ -504,6 +504,11 @@ impl InstallPolls {
         self.platform
     }
 
+    /// Kills every live download-monitor child (the shell's exit hook, D-07).
+    pub fn stop_all_monitors(&self) {
+        self.monitor.stop_all();
+    }
+
     pub fn registry(&self) -> &Registry {
         &self.registry
     }

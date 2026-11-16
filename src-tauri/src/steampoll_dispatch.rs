@@ -139,6 +139,97 @@ pub(crate) fn mark_sidecar_ready() {
     SIDECAR_READY.store(true, Ordering::SeqCst);
 }
 
+/// Which implementation owns the install/uninstall/running polls (D-16).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum PollsImpl {
+    Rust,
+    Ts,
+}
+
+// Flipped to Rust by plan 80-26 after parity approval (D-16); this whole flag is deleted after
+// the delete gate (plan 80-31).
+pub(crate) const DEFAULT_POLLS_IMPL: PollsImpl = PollsImpl::Ts;
+
+/// Pure parse of `GAMELIB_STEAM_POLLS`. An unknown value falls back to the default with one diag line
+/// (the value itself is not logged, T-80-64).
+pub(crate) fn polls_impl_from(v: Option<&str>) -> PollsImpl {
+    match v {
+        None => DEFAULT_POLLS_IMPL,
+        Some("rust") => PollsImpl::Rust,
+        Some("ts") => PollsImpl::Ts,
+        Some(_) => {
+            shell_eprintln!("[shell] GAMELIB_STEAM_POLLS has an unknown value; using the default");
+            DEFAULT_POLLS_IMPL
+        }
+    }
+}
+
+/// Read once: boot resume runs before the sidecar exists, so the shell owns the flag.
+pub(crate) fn polls_impl() -> PollsImpl {
+    static IMPL: std::sync::OnceLock<PollsImpl> = std::sync::OnceLock::new();
+    *IMPL.get_or_init(|| polls_impl_from(std::env::var("GAMELIB_STEAM_POLLS").ok().as_deref()))
+}
+
+/// Boot work for the given flag value. Spawns on the steampoll runtime and returns at once (T-80-65).
+fn steampoll_boot_with(which: PollsImpl) {
+    if which != PollsImpl::Rust {
+        return;
+    }
+    let Some(facade) = gamelib_steampoll::dispatch::facade::current() else {
+        shell_eprintln!("[shell] steampoll boot skipped: no facade");
+        return;
+    };
+    // D-09: boot resume of persisted restart holds, before the sidecar could ask.
+    let polls = facade.polls.clone();
+    let profile = facade.profile.clone();
+    gamelib_steampoll::runtime::handle().spawn(async move {
+        let _ = gamelib_steampoll::rearm::rearm_persisted_holds(&polls, &profile).await;
+    });
+    // The running poll starts at boot (first probe after 5 s).
+    facade.running.start();
+}
+
+/// Starts the Rust polls at boot only when polls=rust.
+pub(crate) fn steampoll_boot() {
+    steampoll_boot_with(polls_impl());
+}
+
+/// READY sentinel: the sidecar now reads, so the outbox replays queued state events in seq order (R1).
+pub(crate) fn on_sidecar_ready_steampoll() {
+    mark_sidecar_ready();
+    let Some(facade) = gamelib_steampoll::dispatch::facade::current() else {
+        return;
+    };
+    let outbox = facade.outbox.clone();
+    let host = facade.registry.host().clone();
+    // Never block the reader thread on the replay.
+    gamelib_steampoll::runtime::handle().spawn(async move {
+        outbox.mark_ready(host.as_ref()).await;
+    });
+}
+
+/// Sidecar EOF: later events queue instead of writing to a dead pipe. Polls keep running until exit (R1).
+pub(crate) fn on_sidecar_eof_steampoll() {
+    SIDECAR_READY.store(false, Ordering::SeqCst);
+    if let Some(outbox) = gamelib_steampoll::dispatch::facade::outbox() {
+        outbox.mark_not_ready();
+    }
+}
+
+/// `RunEvent::Exit`: cancel every poll and kill every monitor child, bounded (D-07).
+pub(crate) fn steampoll_exit_shutdown() {
+    let Some(facade) = gamelib_steampoll::dispatch::facade::current() else {
+        return;
+    };
+    let registry = facade.registry.clone();
+    let still = gamelib_steampoll::runtime::handle()
+        .block_on(registry.cancel_all_and_wait(EXIT_FINALIZE_WAIT));
+    facade.polls.stop_all_monitors();
+    if still > 0 {
+        shell_eprintln!("[shell] steampoll polls still running at exit deadline: {still}");
+    }
+}
+
 /// The Node `process.arch` spelling `appPaths.ts` puts in `public/bin/<arch>/...`.
 fn node_arch() -> &'static str {
     if cfg!(target_arch = "aarch64") {
@@ -293,6 +384,26 @@ pub(crate) fn install_steampoll_host(app: &AppHandle) {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn polls_flag_parse() {
+        assert_eq!(polls_impl_from(None), DEFAULT_POLLS_IMPL);
+        assert_eq!(polls_impl_from(Some("rust")), PollsImpl::Rust);
+        assert_eq!(polls_impl_from(Some("ts")), PollsImpl::Ts);
+        assert_eq!(polls_impl_from(Some("bogus")), DEFAULT_POLLS_IMPL);
+    }
+
+    #[test]
+    fn boot_and_hooks_are_inert_without_a_facade() {
+        let start = std::time::Instant::now();
+        steampoll_boot_with(PollsImpl::Ts);
+        steampoll_boot_with(PollsImpl::Rust);
+        on_sidecar_ready_steampoll();
+        on_sidecar_eof_steampoll();
+        steampoll_exit_shutdown();
+        assert!(start.elapsed() < EXIT_FINALIZE_WAIT);
+        SIDECAR_READY.store(false, Ordering::SeqCst);
+    }
 
     #[test]
     fn frontend_payload_matches_the_relay_shape() {
