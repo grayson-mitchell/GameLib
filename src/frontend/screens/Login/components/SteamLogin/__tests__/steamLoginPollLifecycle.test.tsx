@@ -336,3 +336,74 @@ describe('C2/WR-05: QR flow restarts', () => {
     expect(api.steamPollQR).not.toHaveBeenCalled()
   })
 })
+
+describe('QR -> credentials -> QR tab round-trip', () => {
+  const drawn = () => screen.queryByTestId('qr')?.textContent ?? null
+  const toTab = (name: 'QR Code' | 'Username & Password') =>
+    fireEvent.click(screen.getByRole('tab', { name }))
+
+  async function mountOnQr() {
+    render(<SteamLogin dismiss={() => undefined} />)
+    await flush()
+    await flush()
+    expect(drawn()).toBe('qr-A')
+  }
+
+  it('returning to the QR tab starts a fresh flow, draws its code and polls it', async () => {
+    await mountOnQr()
+    api.steamStartQR.mockResolvedValueOnce({
+      status: 'done',
+      challengeUrl: 'qr-B'
+    })
+    toTab('Username & Password')
+    toTab('QR Code')
+    await flush()
+    await flush()
+
+    expect(api.steamStartQR).toHaveBeenCalledTimes(2)
+    expect(drawn()).toBe('qr-B')
+
+    // The new flow is live: it is polled, and its approval signs in.
+    api.steamPollQR.mockClear()
+    api.steamPollQR.mockResolvedValue({ status: 'done', username: 'gaben' })
+    await advance(2_000)
+    await flush()
+    expect(api.steamPollQR).toHaveBeenCalled()
+    expect(mockSteamLogin).toHaveBeenCalledWith({
+      status: 'done',
+      username: 'gaben'
+    })
+  })
+
+  it('returning to the QR tab from the Steam Guard step starts a fresh flow', async () => {
+    await mountOnGuardStep()
+    api.steamStartQR.mockResolvedValueOnce({
+      status: 'done',
+      challengeUrl: 'qr-B'
+    })
+    toTab('QR Code')
+    await flush()
+    await flush()
+
+    expect(api.steamStartQR).toHaveBeenCalledTimes(2)
+    expect(drawn()).toBe('qr-B')
+  })
+
+  it('a start from before the round-trip cannot draw over the fresh flow', async () => {
+    await mountOnQr()
+    const stale = deferred<{ status: 'done'; challengeUrl: string }>()
+    api.steamStartQR
+      .mockReturnValueOnce(stale.promise)
+      .mockResolvedValueOnce({ status: 'done', challengeUrl: 'qr-C' })
+    await advance(110_000) // the auto-refresh starts flow B; its start is still in flight
+    toTab('Username & Password')
+    toTab('QR Code')
+    await flush()
+    await flush()
+    expect(drawn()).toBe('qr-C')
+
+    stale.resolve({ status: 'done', challengeUrl: 'qr-B' })
+    await flush()
+    expect(drawn()).toBe('qr-C')
+  })
+})

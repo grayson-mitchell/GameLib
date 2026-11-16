@@ -411,7 +411,13 @@ export default function SteamLogin({ dismiss }: Props) {
     setError(null)
     setActiveTab(val)
     if (val === 'qr') {
-      // startQRFlow will be triggered by the effect above
+      // The QR poll and refresh timer were just stopped, so whatever flow the
+      // step names ('qr-active', 'qr-confirmed', or a credentials step) is no
+      // longer followed. Go back to 'tab' so the QR effect above starts a fresh
+      // flow; clearPollInterval has already bumped the generation, so a start
+      // or tick from the old flow cannot draw over it (C2/WR-05).
+      setChallengeUrl(null)
+      setStep('tab')
     }
   }
 
