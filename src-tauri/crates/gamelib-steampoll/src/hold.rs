@@ -170,9 +170,24 @@ pub fn decide_rearm(
 /// The `steam_restart_hold` store file. Every operation is a read-modify-write of the whole file
 /// (atomic temp + rename, 0600 on unix). Failures are logged by appId and op and never
 /// propagated, matching the TS try/catch: persistence is best-effort.
+///
+/// Concurrency (80-REVIEW A/WR-03): polls for different apps write from separate tokio tasks,
+/// and `rearm` builds its own instance for the same file, so each read-modify-write holds the
+/// process-wide `STORE_LOCK` from load to rename, and each write uses its own temp name.
 #[derive(Debug, Clone)]
 pub struct HoldStore {
     path: PathBuf,
+}
+
+/// Serialises every hold-store read-modify-write in this process, across all instances. One lock
+/// for all paths is enough: writes are rare and short.
+static STORE_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+/// Makes each temp file name unique within the process.
+static TMP_COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+fn store_lock() -> std::sync::MutexGuard<'static, ()> {
+    STORE_LOCK.lock().unwrap_or_else(|e| e.into_inner())
 }
 
 fn is_bookkeeping_key(key: &str) -> bool {
@@ -232,7 +247,8 @@ impl HoldStore {
             std::fs::create_dir_all(dir)?;
         }
         let mut tmp = self.path.clone().into_os_string();
-        tmp.push(format!(".tmp-{}", std::process::id()));
+        let n = TMP_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        tmp.push(format!(".tmp-{}-{n}", std::process::id()));
         let tmp = PathBuf::from(tmp);
         let text = serde_json::to_string_pretty(&Value::Object(data.clone()))
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
@@ -283,6 +299,7 @@ impl HoldStore {
         if is_bookkeeping_key(app_id) {
             return;
         }
+        let _lock = store_lock();
         let mut data = match self.load() {
             Ok(Some(m)) => m,
             Ok(None) => {
@@ -322,6 +339,7 @@ impl HoldStore {
         if is_bookkeeping_key(app_id) {
             return;
         }
+        let _lock = store_lock();
         let mut data = match self.load() {
             Ok(Some(m)) => m,
             Ok(None) => return,

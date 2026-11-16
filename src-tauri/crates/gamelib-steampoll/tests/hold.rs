@@ -46,6 +46,43 @@ fn store() -> (tempfile::TempDir, HoldStore) {
 
 // ---- steamRestartHold.test.ts: persistence ----------------------------------------------------
 
+/// 80-REVIEW A/WR-03: concurrent read-modify-writes from separate instances on separate threads
+/// (the per-poll tasks plus rearm's own instance) neither lose a record nor resurrect a cleared one.
+#[test]
+fn concurrent_writers_on_separate_instances_lose_nothing() {
+    let (_d, s) = store();
+    let path = s.path().to_path_buf();
+    // Records that must end up cleared.
+    for i in 0..16u32 {
+        s.record(&format!("9{i}"), &rec(), 1);
+    }
+    let threads: Vec<_> = (0..16u32)
+        .map(|i| {
+            let path = path.clone();
+            std::thread::spawn(move || {
+                let mine = HoldStore::new(path);
+                for _ in 0..4 {
+                    mine.record(&format!("1{i}"), &rec(), 2);
+                    mine.clear(&format!("9{i}"));
+                }
+            })
+        })
+        .collect();
+    for t in threads {
+        t.join().unwrap();
+    }
+    for i in 0..16u32 {
+        assert_eq!(s.read(&format!("1{i}")), Some(rec()), "record 1{i} lost");
+        assert_eq!(s.read(&format!("9{i}")), None, "record 9{i} resurrected");
+    }
+    let leftovers: Vec<_> = std::fs::read_dir(path.parent().unwrap())
+        .unwrap()
+        .flatten()
+        .filter(|e| e.file_name().to_string_lossy().contains(".tmp-"))
+        .collect();
+    assert!(leftovers.is_empty(), "temp files left behind");
+}
+
 #[test]
 fn round_trips_a_record_and_clears_it() {
     let (_d, s) = store();
