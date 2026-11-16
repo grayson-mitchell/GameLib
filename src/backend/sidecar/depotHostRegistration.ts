@@ -18,7 +18,10 @@
  * channel name and jobId only, never arguments or results: a CDN token must never reach a log
  * (T-28-04 convention, T-73-41).
  *
- * `depotManifestRequestCode` maps the CM client's `steamcmKind` (timeout, network, leaseUnknown) to `{unavailable: kind}`.
+ * `depotManifestRequestCode` maps the CM client's `steamcmKind` timeout and network to
+ * `{unavailable: kind}`, and leaseUnknown to `{unavailable: 'not_signed_in'}`: Rust reports a
+ * signed-out session (sign-out, failed recovery) as leaseUnknown, and the depot crate's fetch.rs
+ * knows only `not_signed_in` (the "sign in" action); anything else reads as a network error.
  *
  * No timers, watchers or handles are created here (sidecar exit contract).
  */
@@ -93,11 +96,10 @@ export function registerDepotHostFlows(deps: {
         logFailure('depotManifestRequestCode', jobId, err)
         // The Rust CM client's typed failure kind (toSteamCmError); fixed allow-list only.
         const kind = (err as { steamcmKind?: unknown }).steamcmKind
-        if (
-          kind === 'timeout' ||
-          kind === 'network' ||
-          kind === 'leaseUnknown'
-        ) {
+        // leaseUnknown is the Rust session's "not signed in" (Refusal::NotSignedIn); the crate
+        // must see not_signed_in or it offers a network retry instead of sign-in (C2/WR-03).
+        if (kind === 'leaseUnknown') return { unavailable: 'not_signed_in' }
+        if (kind === 'timeout' || kind === 'network') {
           return { unavailable: kind }
         }
         // Fixed allow-list only: never an error message, token or account id (T-74-85).

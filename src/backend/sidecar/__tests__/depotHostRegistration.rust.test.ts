@@ -91,7 +91,7 @@ describe('cm=rust depot host handlers', () => {
     dispose()
   })
 
-  it.each(['timeout', 'network', 'leaseUnknown'])(
+  it.each(['timeout', 'network'])(
     'maps steamcmKind %s to {unavailable}',
     async (kind) => {
       const { dispose } = registerJob(() => Promise.reject(cmError(kind)))
@@ -101,6 +101,16 @@ describe('cm=rust depot host handlers', () => {
       dispose()
     }
   )
+
+  it('maps steamcmKind leaseUnknown (signed out) to the crate not_signed_in reason (C2/WR-03)', async () => {
+    const { dispose } = registerJob(() =>
+      Promise.reject(cmError('leaseUnknown'))
+    )
+    expect(await invoke('depotManifestRequestCode', codeReq)).toEqual({
+      unavailable: 'not_signed_in'
+    })
+    dispose()
+  })
 
   it('logs channel, jobId and error name only', async () => {
     const { dispose } = registerJob(() => Promise.reject(cmError('timeout')))
