@@ -61,28 +61,12 @@ export async function refresh(deps: ManagerDeps): Promise<ExecResult | null> {
     }
   }
   if (grant) {
-    // An inferred store-exit refresh passes no guidedAction, so a refused
-    // go-offline wrap never pushes the guided dialog (quick 261114-aqa).
+    // An inferred store-exit refresh acquires as a plain 'user-refresh' (quick 261114-aqa).
     const inferred = grant === 'store-exit'
-    const lease = await deps.steamUser.acquireAuthenticated(
-      inferred
-        ? { reason: 'user-refresh' }
-        : { reason: grant, guidedAction: 'refresh' }
-    )
+    const lease = await deps.steamUser.acquireAuthenticated({
+      reason: inferred ? 'user-refresh' : grant
+    })
     if (!lease.ok) {
-      if (lease.reason === 'go-offline-required') {
-        // The guided dialog (pushed by acquireAuthenticated) is the surface,
-        // not the failed banner. An inferred store-exit refresh has no dialog.
-        logInfo(
-          inferred
-            ? 'Steam: store-exit refresh skipped — Mac Steam did not go offline automatically; keeping the cached library (no guided Go Offline step, no logon)'
-            : 'Steam: library refresh waiting on the guided Go Offline step, no logon issued',
-          LogPrefix.Steam
-        )
-        await restoreLocalSteamLibrary(deps)
-        deps.sendFrontendMessage('steamSyncStatus', { status: 'idle' })
-        return null
-      }
       // steam-sync-false-failed-banner: "not ready" is not one condition. A
       // terminal CM rejection (AccessDenied) schedules no retry; name it.
       const rejection =

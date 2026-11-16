@@ -392,7 +392,7 @@ describe('downloadSharedRedistDepots', () => {
   })
 
   it('allowLogon: a refused acquire resolves offline', async () => {
-    mockLeaseRefused(steamUser, 'go-offline-required')
+    mockLeaseRefused(steamUser)
     const r = await run(GAME, { allowLogon: true })
     expect(r).toEqual(OFFLINE)
     expect(steamUser.acquireOpenAuthenticated).not.toHaveBeenCalled()
@@ -404,7 +404,6 @@ describe('downloadSharedRedistDepots', () => {
     await run(GAME, { allowLogon: true })
     expect(steamUser.acquireAuthenticated).toHaveBeenCalledWith({
       reason: 'shared-redist',
-      guidedAction: 'install',
       appName: GAME
     })
     expect(release).toHaveBeenCalledTimes(1)

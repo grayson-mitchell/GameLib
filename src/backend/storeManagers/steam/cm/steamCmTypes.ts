@@ -49,7 +49,6 @@ type SteamCmFailureKind =
   | 'protocol'
   | 'ambiguous'
   | 'shuttingDown'
-  | 'goOfflineRequired'
   | 'unsupported'
   | 'ownedFailed'
   | 'badAppId'

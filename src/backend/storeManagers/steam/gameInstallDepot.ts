@@ -224,10 +224,7 @@ export async function runNativeDepotDownload(
     // every exit path, including abort.
     const lease = await steamGame.deps.steamUser.acquireAuthenticated({
       reason: 'user-install',
-      guidedAction: 'install',
-      appName: steamGame.appId,
-      installPath: args.path,
-      forceWindowsViaBottle: args.steamForceWindowsViaBottle
+      appName: steamGame.appId
     })
     if (!lease.ok) {
       return installResultForRefusal(steamGame, lease.reason)
@@ -360,22 +357,13 @@ export async function runNativeDepotDownload(
 }
 
 /**
- * Phase 54: maps a refused authenticated acquire to an install result. A
- * go-offline refusal means the guided dialog owns the next step (the install
- * did not fail), so it returns the same deferredToSetup contract the bridge
- * route notice uses. Every other refusal carries the fixed not-signed-in copy.
+ * Phase 54: maps a refused authenticated acquire to an install result. Every
+ * refusal carries the fixed not-signed-in copy.
  */
 export function installResultForRefusal(
   steamGame: SteamGame,
   reason: AuthSessionRefusal
 ): InstallResult {
-  if (reason === 'go-offline-required') {
-    logInfo(
-      `SteamGame: appId ${steamGame.appId} install waiting on the guided Go Offline step, no logon issued`,
-      LogPrefix.Steam
-    )
-    return { status: 'done', deferredToSetup: true }
-  }
   logWarning(
     `SteamGame: appId ${steamGame.appId} install refused, no authenticated Steam session (${reason})`,
     LogPrefix.Steam

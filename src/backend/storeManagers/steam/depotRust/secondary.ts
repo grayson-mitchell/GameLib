@@ -46,7 +46,6 @@ async function acquireOrThrow(
 ): Promise<Extract<Lease, { ok: true }>> {
   const lease = await steamUser.acquireAuthenticated({
     reason,
-    guidedAction: 'install',
     appName: appId
   })
   if (!lease.ok) {

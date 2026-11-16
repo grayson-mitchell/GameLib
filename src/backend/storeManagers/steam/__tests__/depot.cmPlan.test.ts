@@ -566,13 +566,13 @@ describe('downloadSteamDepots entry (CM half before the Rust job)', () => {
 
   it('Phase 54: a refused acquire reports the not-signed-in copy, never touches the client, and runs no job', async () => {
     const stub = rust()
-    mockLeaseRefused(steamUser, 'go-offline-required')
+    mockLeaseRefused(steamUser)
 
     const out = await downloadSteamDepots(APP_ID, opts())
 
     const expected = classifyDepotError(
       new Error(
-        `downloadSteamDepots: no authenticated Steam CM connection available for appId ${APP_ID} (go-offline-required)`
+        `downloadSteamDepots: no authenticated Steam CM connection available for appId ${APP_ID} (logon-rejected)`
       )
     )
     expect(expected.key).toBe('steam.download.error.notSignedIn')
@@ -595,7 +595,6 @@ describe('downloadSteamDepots entry (CM half before the Rust job)', () => {
     expect(jest.mocked(steamUser.acquireAuthenticated)).toHaveBeenCalledTimes(1)
     expect(jest.mocked(steamUser.acquireAuthenticated)).toHaveBeenCalledWith({
       reason: 'user-install',
-      guidedAction: 'install',
       appName: APP_ID
     })
     expect(release).toHaveBeenCalledTimes(1)

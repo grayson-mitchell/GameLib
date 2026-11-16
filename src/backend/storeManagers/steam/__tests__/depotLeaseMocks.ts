@@ -27,13 +27,10 @@ export function mockLeaseOk(
 }
 
 /** acquireAuthenticated refuses (no lease, no client). */
-export function mockLeaseRefused(
-  steamUser: MockSteamUser,
-  reason: 'logon-rejected' | 'go-offline-required' = 'logon-rejected'
-): void {
+export function mockLeaseRefused(steamUser: MockSteamUser): void {
   steamUser.acquireAuthenticated.mockResolvedValue({
     ok: false,
-    reason
+    reason: 'logon-rejected'
   } as never)
 }
 

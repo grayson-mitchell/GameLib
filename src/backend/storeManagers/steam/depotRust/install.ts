@@ -131,8 +131,6 @@ export async function downloadSteamDepotsRust(
     throwIfAborted(opts.signal)
     lease = await opts.steamUser.acquireAuthenticated({
       reason: opts.sessionReason ?? 'user-install',
-      // Unattended (auto-update): no guided sign-in or Go Offline push.
-      ...(opts.unattended === true ? {} : { guidedAction: 'install' as const }),
       appName: appId
     })
     throwIfAborted(opts.signal)

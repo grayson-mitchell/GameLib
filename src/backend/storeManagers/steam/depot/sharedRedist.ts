@@ -208,7 +208,6 @@ export async function downloadSharedRedistDepots(
   if (opts.allowLogon) {
     const lease = await opts.steamUser.acquireAuthenticated({
       reason: 'shared-redist',
-      guidedAction: 'install',
       appName: gameAppId
     })
     if (lease.ok) release = lease.release

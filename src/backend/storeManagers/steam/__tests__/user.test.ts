@@ -581,10 +581,7 @@ describe('SteamUser', () => {
         packageList: { '123': 'Some Game' }
       })
       expect(releaseLease).toHaveBeenCalledTimes(1)
-      expect(acquireSpy).toHaveBeenCalledWith({
-        reason: 'redeem',
-        guidedAction: 'redeem'
-      })
+      expect(acquireSpy).toHaveBeenCalledWith({ reason: 'redeem' })
     })
 
     test('releases the lease when client.redeemKey rejects', async () => {
@@ -593,22 +590,6 @@ describe('SteamUser', () => {
       await redeemKey(steamDeps, 'steam', 'TEST-KEY-VALUE')
 
       expect(releaseLease).toHaveBeenCalledTimes(1)
-    })
-
-    test('a go-offline-required refusal maps to the go-offline-required message', async () => {
-      acquireSpy.mockResolvedValue({
-        ok: false,
-        reason: 'go-offline-required'
-      })
-
-      const result = await redeemKey(steamDeps, 'steam', 'TEST-KEY-VALUE')
-
-      expect(result).toEqual({
-        store: 'steam',
-        outcome: 'error',
-        message: 'go-offline-required'
-      })
-      expect(mockSteamUserInstance.redeemKey).not.toHaveBeenCalled()
     })
 
     const rejectCases: Array<{

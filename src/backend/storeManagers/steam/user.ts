@@ -19,7 +19,6 @@ import type { SignInProbeOutcome } from 'common/signInState'
 import {
   type AuthSessionReason,
   type AcquireAuthenticatedOpts,
-  type GuidedInstallTarget,
   type AuthenticatedLease,
   type OpenAuthenticatedLease
 } from './userTypes'
@@ -59,7 +58,6 @@ export class SteamUser {
   // first acquire (games.ts) carries it; a nested acquire for the same app
   // (depot.ts) does not, so its guided push reads it from here. Without it a
   // guided Continue would reinstall into the default library and route.
-  private guidedInstallTargets = new Map<string, GuidedInstallTarget>()
   // True once releaseForShutdown() has run (stdin EOF: the shell is gone). A late login must
   // not open a NEW CM session after that.
   private shuttingDown = false
@@ -206,16 +204,6 @@ export class SteamUser {
     token?: string
   ): Promise<AuthenticatedLease> {
     if (this.shuttingDown) return { ok: false, reason: 'shutting-down' }
-    if (
-      opts.appName &&
-      (opts.installPath !== undefined ||
-        opts.forceWindowsViaBottle !== undefined)
-    ) {
-      this.guidedInstallTargets.set(opts.appName, {
-        installPath: opts.installPath,
-        forceWindowsViaBottle: opts.forceWindowsViaBottle
-      })
-    }
     return this.rustAcquire(opts, token)
   }
 
@@ -277,7 +265,6 @@ export class SteamUser {
     this.sessionGeneration++
     // T-79-61: drop every TS-held lease; the Rust session is fenced below (its generation bump).
     this.rust.reset()
-    this.guidedInstallTargets.clear()
     // The one anonymous-session close: it sends steamcm_anon_close {reason:'logout'} itself, so
     // the Rust logout below must not repeat it (79-REVIEW C1/IN-02).
     this.deps.anonymousClient.close('logout')

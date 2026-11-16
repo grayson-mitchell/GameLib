@@ -37,8 +37,7 @@ async function redeemOnce(
   key: string
 ): Promise<RedeemKeyResult | Set<number>> {
   const lease = await deps.steamUser.acquireAuthenticated({
-    reason: 'redeem',
-    guidedAction: 'redeem'
+    reason: 'redeem'
   })
   if (!lease.ok) {
     logWarning(
@@ -48,10 +47,7 @@ async function redeemOnce(
     return {
       store,
       outcome: 'error',
-      message:
-        lease.reason === 'go-offline-required'
-          ? 'go-offline-required'
-          : 'not-connected'
+      message: 'not-connected'
     }
   }
   const client = lease.client

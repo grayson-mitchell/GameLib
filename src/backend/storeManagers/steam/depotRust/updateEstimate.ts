@@ -86,10 +86,8 @@ export async function estimateBridgeUpdate(
     if ('error' in ctx) return ctx
     throwIfAborted(signal)
     lease = await deps.steamUser.acquireAuthenticated({
-      // reason stays 'user-install': it drives the macOS go-offline wrap. Unattended
-      // omits guidedAction so a refusal never opens sign-in or pushes Go Offline UI.
+      // reason stays 'user-install' for attended and unattended runs alike.
       reason: 'user-install',
-      ...(opts.unattended === true ? {} : { guidedAction: 'install' as const }),
       appName: appId
     })
     if (!lease.ok)

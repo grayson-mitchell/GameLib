@@ -39,7 +39,7 @@ import { bridgeAllowlist } from '../bridge/allowlist'
 import type { Stores } from 'backend/services/types'
 
 import { createTestAnonymousClient } from 'backend/testUtils/testAnonymousClient'
-import { logInfo, logWarning } from 'backend/logger'
+import { logWarning } from 'backend/logger'
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 
 // Rust owns the restart-hold registry: the status read reports `holding`, the apps whose install is
@@ -432,19 +432,6 @@ describe('SteamLibraryManager', () => {
       }
     )
 
-    it('refused go-offline-required: exactly one idle emit, no logon, cached library untouched', async () => {
-      refuse('go-offline-required')
-
-      const result = await manager.refresh()
-
-      expect(result).toBeNull()
-      expect(steamSyncEmits()).toEqual([{ status: 'idle' }])
-      expect(sendFrontendMessage).not.toHaveBeenCalledWith(
-        'pushGameToLibrary',
-        expect.anything()
-      )
-    })
-
     describe('UAT 23: non-sync exits restore the cached library', () => {
       const cachedGame = (app_name: string, is_installed: boolean) =>
         ({
@@ -485,20 +472,11 @@ describe('SteamLibraryManager', () => {
         )
       })
 
-      it('logon-rejected and go-offline-required exits also seed the map', async () => {
+      it('a logon-rejected exit also seeds the map', async () => {
         seedCache()
         refuse('logon-rejected')
         await manager.refresh()
         expect(library.size).toBe(2)
-
-        library.clear()
-        resetSteamAuthTrigger()
-        noteRefreshTrigger('steam', 'action-icons-refresh-button')
-        refuse('go-offline-required')
-        sendFrontendMessage.mockClear()
-        await manager.refresh()
-        expect(library.size).toBe(2)
-        expect(steamSyncEmits()).toEqual([{ status: 'idle' }])
       })
 
       it('ungranted refresh with no open session seeds the map and never logs on', async () => {
@@ -551,7 +529,7 @@ describe('SteamLibraryManager', () => {
       })
     })
 
-    it('a granted Refresh asks for the guided Go Offline step', async () => {
+    it('a granted Refresh acquires a user-refresh lease', async () => {
       const fakeClient = makeFakeClient([])
       jest.mocked(steamUser.getClient).mockReturnValue(fakeClient as any)
 
@@ -559,59 +537,13 @@ describe('SteamLibraryManager', () => {
 
       expect(steamUser.acquireAuthenticated).toHaveBeenCalledTimes(1)
       expect(steamUser.acquireAuthenticated).toHaveBeenCalledWith({
-        reason: 'user-refresh',
-        guidedAction: 'refresh'
+        reason: 'user-refresh'
       })
       expect(leaseRelease).toHaveBeenCalledTimes(1)
     })
 
-    describe('store-exit grant never escalates to the guided Go Offline step (quick 261114-aqa)', () => {
-      const cached = (app_name: string) =>
-        ({
-          runner: 'steam',
-          app_name,
-          title: app_name,
-          is_installed: false,
-          install: {}
-        }) as any
-
-      it('a refused go-offline wrap shows no dialog, keeps the cache, emits idle', async () => {
-        jest
-          .mocked(steamLibraryStore.get)
-          .mockReturnValue([cached('1'), cached('2')])
-        library.clear()
-        resetSteamAuthTrigger()
-        noteRefreshTrigger('steam', 'steam-store-exit')
-        jest.mocked(steamUser.acquireAuthenticated).mockResolvedValue({
-          ok: false,
-          reason: 'go-offline-required'
-        } as never)
-        sendFrontendMessage.mockClear()
-
-        const result = await manager.refresh()
-
-        expect(result).toBeNull()
-        expect(steamUser.acquireAuthenticated).toHaveBeenCalledTimes(1)
-        expect(steamUser.acquireAuthenticated).toHaveBeenCalledWith({
-          reason: 'user-refresh'
-        })
-        const arg = jest.mocked(steamUser.acquireAuthenticated).mock
-          .calls[0]?.[0] as object
-        expect(arg).not.toHaveProperty('guidedAction')
-        expect(steamSyncEmits()).toEqual([{ status: 'idle' }])
-        expect(library.size).toBe(2)
-        expect(sendFrontendMessage).not.toHaveBeenCalledWith(
-          'steamGoOfflineRequired',
-          expect.anything()
-        )
-        const storeExitLogs = jest
-          .mocked(logInfo)
-          .mock.calls.filter(([m]) => String(m).includes('store-exit'))
-        expect(storeExitLogs).toHaveLength(1)
-        expect(storeExitLogs[0]?.[0]).toContain('cached library')
-      })
-
-      it('a successful store-exit refresh syncs without a guidedAction', async () => {
+    describe('store-exit grant acquires a plain user-refresh lease (quick 261114-aqa)', () => {
+      it('a successful store-exit refresh syncs', async () => {
         resetSteamAuthTrigger()
         noteRefreshTrigger('steam', 'steam-store-exit')
         jest
@@ -626,8 +558,8 @@ describe('SteamLibraryManager', () => {
         expect(leaseRelease).toHaveBeenCalledTimes(1)
       })
 
-      it.each(['redeem-steam-key', 'steam-go-offline-retry'])(
-        'explicit origin %s still passes guidedAction refresh',
+      it.each(['redeem-steam-key'])(
+        'explicit origin %s acquires a user-refresh lease',
         async (origin) => {
           resetSteamAuthTrigger()
           noteRefreshTrigger('steam', origin)
@@ -638,8 +570,7 @@ describe('SteamLibraryManager', () => {
           await manager.refresh()
 
           expect(steamUser.acquireAuthenticated).toHaveBeenCalledWith({
-            reason: 'user-refresh',
-            guidedAction: 'refresh'
+            reason: 'user-refresh'
           })
         }
       )
@@ -655,8 +586,7 @@ describe('SteamLibraryManager', () => {
       await manager.refresh()
 
       expect(steamUser.acquireAuthenticated).toHaveBeenCalledWith({
-        reason: 'login',
-        guidedAction: 'refresh'
+        reason: 'login'
       })
     })
 
@@ -758,7 +688,7 @@ describe('SteamLibraryManager', () => {
       armBridgeInstalled()
       jest.mocked(steamUser.acquireAuthenticated).mockResolvedValue({
         ok: false,
-        reason: 'go-offline-required'
+        reason: 'logon-rejected'
       } as never)
 
       await manager.refresh()

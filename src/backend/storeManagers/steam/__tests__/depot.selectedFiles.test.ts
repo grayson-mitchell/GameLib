@@ -169,7 +169,6 @@ describe('downloadSelectedDepotFiles', () => {
     expect(releasedDuringJob).toBe(false)
     expect(jest.mocked(steamUser.acquireAuthenticated)).toHaveBeenCalledWith({
       reason: 'original-restore',
-      guidedAction: 'install',
       appName: '12345'
     })
     expect(release).toHaveBeenCalledTimes(1)

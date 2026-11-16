@@ -193,9 +193,6 @@ export type SteamBottleLaunchWaitingCause =
   | 'login'
   | 'other-session'
 
-/** Phase 54: what the guided Go Offline step was asked for. */
-export type SteamGoOfflineAction = 'refresh' | 'install' | 'redeem'
-
 // quick 261027-tot: first-run Steam setup payload downloads (the native Steam
 // client installer, and SteamSetup.exe going into the CrossOver bottle) are
 // not DM-queue work; they push this shape so the Downloads view can show them.

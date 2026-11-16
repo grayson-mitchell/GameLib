@@ -232,10 +232,7 @@ export async function install(
       const prescreenLease =
         await steamGame.deps.steamUser.acquireAuthenticated({
           reason: 'prescreen',
-          guidedAction: 'install',
-          appName: steamGame.appId,
-          installPath: args.path,
-          forceWindowsViaBottle: args.steamForceWindowsViaBottle
+          appName: steamGame.appId
         })
       if (!prescreenLease.ok) {
         return installResultForRefusal(steamGame, prescreenLease.reason)

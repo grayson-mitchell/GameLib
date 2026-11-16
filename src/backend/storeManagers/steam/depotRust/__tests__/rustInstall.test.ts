@@ -741,19 +741,17 @@ describe('downloadSteamDepots lease options (74-19 unattended)', () => {
   const firstLeaseOpts = () =>
     jest.mocked(steamUser.acquireAuthenticated).mock.calls[0]?.[0]
 
-  it('omits guidedAction for an unattended run', async () => {
-    mockLeaseRefused(steamUser)
-    await downloadSteamDepots(APP_ID, { ...OPTS(), unattended: true })
-    expect(firstLeaseOpts()).toBeDefined()
-    expect(firstLeaseOpts()).not.toHaveProperty('guidedAction')
-    expect(firstLeaseOpts()).toMatchObject({ reason: 'user-install' })
-  })
-
-  it('keeps guidedAction install for a user-started run', async () => {
-    mockLeaseRefused(steamUser)
-    await downloadSteamDepots(APP_ID, OPTS())
-    expect(firstLeaseOpts()).toMatchObject({ guidedAction: 'install' })
-  })
+  it.each([[true], [false]])(
+    'the lease opts are exactly the reason and appName (unattended=%s)',
+    async (unattended) => {
+      mockLeaseRefused(steamUser)
+      await downloadSteamDepots(APP_ID, { ...OPTS(), unattended })
+      expect(firstLeaseOpts()).toEqual({
+        reason: 'user-install',
+        appName: APP_ID
+      })
+    }
+  )
 })
 
 describe('zero-depot finalize on the rust flag (75-23)', () => {

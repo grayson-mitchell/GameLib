@@ -119,10 +119,7 @@ export async function installBridgeGame(
   // only the idle timer after the last release closes the session).
   const lease = await steamGame.deps.steamUser.acquireAuthenticated({
     reason: 'user-install',
-    guidedAction: 'install',
-    appName: steamGame.appId,
-    installPath: args.path,
-    forceWindowsViaBottle: args.steamForceWindowsViaBottle
+    appName: steamGame.appId
   })
   if (!lease.ok) {
     return installResultForRefusal(steamGame, lease.reason)
@@ -497,10 +494,9 @@ export async function installBridgeGameLeased(
     signal
   })
 
-  // A refusal wrapped by the go-offline step, or (quick 261027-tot) a
-  // Steam client that is not installed / never launched, reports `done`
-  // with deferredToSetup: a dialog owns the next step, nothing was
-  // downloaded, and it is not a bridge failure.
+  // (quick 261027-tot) A Steam client that is not installed / never launched
+  // reports `done` with deferredToSetup: a dialog owns the next step, nothing
+  // was downloaded, and it is not a bridge failure.
   if (downloadResult.deferredToSetup) return downloadResult
 
   // 59-REVIEW CR-02: a user cancel is not a bridge failure; marking it would

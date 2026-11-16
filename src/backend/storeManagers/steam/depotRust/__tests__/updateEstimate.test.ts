@@ -124,21 +124,20 @@ describe('estimateBridgeUpdate', () => {
     )
   })
 
-  it('unattended omits guidedAction from the lease; a user run asks for install', async () => {
-    acquireAuthenticated.mockResolvedValue({ ok: false, reason: 'no-session' })
-    await estimateBridgeUpdate(game, { unattended: true })
-    expect(acquireAuthenticated.mock.calls[0]?.[0]).not.toHaveProperty(
-      'guidedAction'
-    )
-    expect(acquireAuthenticated.mock.calls[0]?.[0]).toMatchObject({
-      reason: 'user-install'
-    })
-    acquireAuthenticated.mockClear()
-    await estimateBridgeUpdate(game, {})
-    expect(acquireAuthenticated.mock.calls[0]?.[0]).toMatchObject({
-      guidedAction: 'install'
-    })
-  })
+  it.each([[true], [false]])(
+    'the lease opts are exactly the reason and appName (unattended=%s)',
+    async (unattended) => {
+      acquireAuthenticated.mockResolvedValue({
+        ok: false,
+        reason: 'no-session'
+      })
+      await estimateBridgeUpdate(game, { unattended })
+      expect(acquireAuthenticated.mock.calls[0]?.[0]).toEqual({
+        reason: 'user-install',
+        appName: '12345'
+      })
+    }
+  )
 
   it('a missing old manifest degrades to max-changed and flags it', async () => {
     jest.mocked(summarizeDepots).mockResolvedValue({

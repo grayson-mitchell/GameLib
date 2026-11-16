@@ -1,4 +1,3 @@
-import type { SteamGoOfflineAction } from 'common/types/steam'
 import type { SteamCmClient } from './cm/SteamCmClient'
 
 // Persona name lookup at sign-in only; bounded so Mac Steam is not held offline.
@@ -21,21 +20,10 @@ export type AuthSessionRefusal =
   | 'token-absent'
   | 'logon-rejected'
   | 'client-not-ready'
-  | 'go-offline-required'
 
 export interface AcquireAuthenticatedOpts {
   reason: AuthSessionReason
-  guidedAction?: SteamGoOfflineAction
   appName?: string
-  // 54-REVIEW CR-01: the install's own target, carried into the guided Go
-  // Offline push so Continue replays the install the user confirmed.
-  installPath?: string
-  forceWindowsViaBottle?: boolean
-}
-
-export interface GuidedInstallTarget {
-  installPath?: string
-  forceWindowsViaBottle?: boolean
 }
 
 export type AuthenticatedLease =

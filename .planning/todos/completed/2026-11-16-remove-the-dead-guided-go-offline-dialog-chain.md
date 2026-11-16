@@ -43,3 +43,7 @@ branch says Mac Steam stays signed in without one, but the Rust `LogonWrap` trai
 - If it is deleted, the channels, schema entries, preload invokers, frontend dialog and store,
   TS refusal branches and allow-list entries go in one change, and `pnpm check:ipc-contract`
   and the census tests are updated to the new counts.
+
+## Decision
+
+Deleted on 2026-11-16 (user decision), including the Rust refusal: `Refusal::GoOfflineRequired`, `WrapRefused` and `LogonErr::WrapRefused` are gone and `LogonWrap::before_logon` returns `WrapTicket` infallibly. The `LogonWrap` trait is kept because `RestoreOnlyWrap` uses it for the owed-record restore (boot and shutdown). Removed in quick 261116-vt7: the steamGoOfflineRetry/steamGoOfflineCancel channels and allow-list entries, the steamGoOfflineRequired push, SteamGoOfflineNotice (dialog + store), the go-offline-required lease reason and its branches, the guidedAction/installPath/forceWindowsViaBottle acquire opts, checkGuidedOfflineReady/readMacSteamCmState, the steam-go-offline-retry refresh origin, and the steam.goOffline i18n keys.
