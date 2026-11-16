@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 Phase: 80 (steam-install-uninstall-and-update-polling-state-machines-in) — EXECUTING
 Plan: 33 of 33
 Status: Ready to execute
-Last activity: 2026-11-16
+Last activity: 2026-11-16 - Completed quick task 261116-s6q: Notice stack two-toast Jest test and dev console trigger
 
 Progress: [██████████] 96%
 
@@ -781,6 +781,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | 261114-v4q | TwoColTableInput Edit now edits the row in place (Save/Enter, Cancel/Escape) instead of filling the footer add row; footer is add-only; validation and `onChange` contract unchanged; 4 `gamelib:twoColTable` strings; todo closed. | 2026-11-14 | 32f0b7ef3, 07e937243 | TwoColTableInput + Settings jest 420/420 (12 new); codecheck, scoped prettier, churn guard, planning-gates clean; hardcodedStringGate 1 failure is `(installed)` in PlatformSupport.tsx from dc9150fb7 (pre-existing); not checked live | [261114-v4q-edit-env-var-rows-in-place-in-twocoltabl](./quick/261114-v4q-edit-env-var-rows-in-place-in-twocoltabl/) |
 | 261115-szs | Game page three-dot menu gains the tile context-menu items it lacked: Add/Remove Favourites, Hide/Unhide, Logs (installed, non-browser, not uninstalling), and Edit Game now shown for uninstalled games too; Remove From Recent deliberately left tile-only. | 2026-11-15 | ac63566b2 | GameSubMenu jest 55/55 (tileMenuParity RED first); tsc, scoped prettier clean; eslint 0 errors; not checked live | [261115-szs-game-page-dots-menu-parity-with-tile-con](./quick/261115-szs-game-page-dots-menu-parity-with-tile-con/) |
 | 261115-t7m | Moved "Use frameless window" and the Tray Icon variant setting from Settings > General to Appearance (after Zoom, before Fonts); placement pinned by windowSettingsPlacement.test.ts. | 2026-11-15 | dccf1802e | Jest pass (20 tests), tsc clean; live frameless OFF/ON check pending | [261115-t7m-move-frameless-window-and-tray-icon-sett](./quick/261115-t7m-move-frameless-window-and-tray-icon-sett/) |
+| 261116-s6q | Two-toast notice stack made cheap to check: dev-only `window.__gamelibNotices` (`humble`/`steam`/`both`/`clear`, guarded by `import.meta.env.DEV`, absent from the production bundle) drives the real stores; jsdom test mounts `AppNoticeStack` with Steam + Humble and covers both dismissal orders; todo gains a fast live-gate recipe and stays pending (`ready: live-gate`). | 2026-11-16 | f4e52c877, 1c0e59909 | NoticeStack/Humble/dev jest 34/34; vite build grep 0 hits; codecheck, scoped prettier, planning-gates 12/12; visual gate not run live | [261116-s6q-notice-stack-two-toast-jest-test-and-dev](./quick/261116-s6q-notice-stack-two-toast-jest-test-and-dev/) |
 
 ## Session Continuity
 
