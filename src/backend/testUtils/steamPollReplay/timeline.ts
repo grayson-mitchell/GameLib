@@ -9,9 +9,9 @@
  * Types only plus `parseTimeline`; no imports from the code under test.
  */
 
-export type Machine = 'install' | 'uninstall' | 'running' | 'rearm'
-export type Platform = 'darwin' | 'win32' | 'linux'
-export type AcfSourceName = 'native' | 'bottle' | 'bridge'
+type Machine = 'install' | 'uninstall' | 'running' | 'rearm'
+type Platform = 'darwin' | 'win32' | 'linux'
+type AcfSourceName = 'native' | 'bottle' | 'bridge'
 
 /** The ACF record shape (mirrors steamFilesTypes AcfRecord, without the depots). */
 export interface TimelineAcfRecord {
@@ -46,7 +46,7 @@ export interface StartOptions {
   }
 }
 
-export interface Roots {
+interface Roots {
   /** Native library paths (the steamapps dir is `<lib>/steamapps`). */
   native: string[]
   /** The CrossOver bottle's steamapps dir. */
@@ -55,13 +55,13 @@ export interface Roots {
   bridge?: string
 }
 
-export interface StartSpec extends StartOptions {
+interface StartSpec extends StartOptions {
   appId: string
   title: string
   roots: Roots
 }
 
-export interface StoreSpec {
+interface StoreSpec {
   /** Persisted restart-hold records present at start (rearm scenarios). */
   restartHold?: Record<
     string,

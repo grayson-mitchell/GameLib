@@ -33,7 +33,7 @@ export const STEAMPOLL_OPS = [
   'steampoll_uninstall_stop'
 ] as const
 
-export type AcfSource = 'native' | 'bottle' | 'bridge'
+type AcfSource = 'native' | 'bottle' | 'bridge'
 
 export interface PollRoots {
   steamRoot: string
@@ -60,13 +60,6 @@ export type AcfState =
       sizeOnDisk: string
       buildid: string | null
     }
-
-/** One installed copy from `steampoll_acf_enumerate_copies`. */
-export interface SteamInstallCopy {
-  source: AcfSource
-  installPath: string
-  sizeOnDisk: string
-}
 
 /** `steampoll_acf_read_update` result (null when no manifest yields fields). */
 export interface AcfUpdateFields {

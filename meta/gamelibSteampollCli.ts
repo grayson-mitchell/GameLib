@@ -25,7 +25,7 @@ const STEAMPOLL_CLI_BUILD_COMMAND =
 
 const MAX_BUFFER = 64 * 1024 * 1024
 
-export function resolveSteampollCliPath(
+function resolveSteampollCliPath(
   env: NodeJS.ProcessEnv = process.env,
   cwd: string = process.cwd()
 ): string {
@@ -41,14 +41,14 @@ function missingBinaryError(cli: string): Error {
 }
 
 /** Throws the missing-binary error up front when the CLI is not built. */
-export function assertSteampollCliPresent(
+function assertSteampollCliPresent(
   cli: string = resolveSteampollCliPath()
 ): void {
   if (!existsSync(cli)) throw missingBinaryError(cli)
 }
 
 /** Pure: the replay stdout contract (0 = one JSON array; 2 = bad timeline; 64 = usage). */
-export function parseSteampollReplayResult(
+function parseSteampollReplayResult(
   timelinePath: string,
   status: number | null,
   stdout: string,
