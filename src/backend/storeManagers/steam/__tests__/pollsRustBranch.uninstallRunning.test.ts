@@ -171,6 +171,39 @@ describe('running probe and poll', () => {
     ])
   })
 
+  it('C-WR-04 a rejected hold is handled at once and releases nothing', async () => {
+    const warn = jest
+      .spyOn(logger, 'logWarning')
+      .mockImplementation(() => undefined)
+    const unhandled: unknown[] = []
+    const onUnhandled = (reason: unknown) => unhandled.push(reason)
+    process.on('unhandledRejection', onUnhandled)
+    try {
+      const calls: string[] = []
+      const deps = {
+        ...makeDeps().deps,
+        requestRustInvoke: (channel: string) => {
+          calls.push(channel)
+          return Promise.reject(new Error('hold failed'))
+        }
+      } as unknown as ManagerDeps
+      const release = steamLaunchWatchDeps(deps).pollerHold('10')
+      // The launch watch runs for minutes before it releases; no handler may be missing meanwhile.
+      await new Promise((r) => setImmediate(r))
+      await new Promise((r) => setImmediate(r))
+      expect(unhandled).toEqual([])
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('running poll claim for 10 failed'),
+        expect.anything()
+      )
+      release(true)
+      await new Promise((r) => setImmediate(r))
+      expect(calls).toEqual(['steampoll_running_hold'])
+    } finally {
+      process.off('unhandledRejection', onUnhandled)
+    }
+  })
+
   it('rust: pollerReports reads steampoll_running_last_app_id', async () => {
     const { deps, calls } = makeDeps(10)
     const watch = steamLaunchWatchDeps(deps)

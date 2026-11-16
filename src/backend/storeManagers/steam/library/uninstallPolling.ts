@@ -212,7 +212,7 @@ export async function pollUninstallOnce(
           }
         )
       })
-      void stopUninstallPolling(deps, appId)
+      void stopUninstallPolling(deps, appId).catch(() => undefined)
       logInfo(
         `Steam: uninstall polling complete for appId ${appId} — removed the ${source} copy; a ${survivorSource} copy survives at "${survivor.installPath}", badge stays installed and install_path re-resolved to it`,
         LogPrefix.Steam
@@ -248,7 +248,7 @@ export async function pollUninstallOnce(
       title: existing?.title ?? '',
       body: i18next.t('notify.uninstalled', 'Game Uninstalled')
     })
-    void stopUninstallPolling(deps, appId)
+    void stopUninstallPolling(deps, appId).catch(() => undefined)
     logInfo(
       `Steam: uninstall polling complete for appId ${appId} — badge flipped to not-installed`,
       LogPrefix.Steam

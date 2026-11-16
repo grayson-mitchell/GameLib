@@ -56,28 +56,45 @@ export function steamLaunchedStopDeps(
  * the release closure stays synchronous for the launch watch by capturing that promise, and its
  * first call sends steampoll_running_release once the id has resolved. A failed hold or release is
  * logged and never fails the watch.
+ *
+ * The claim's rejection handler is attached when the hold is sent, not when the release runs
+ * (80-REVIEW C-WR-04): the release comes minutes later, so a rejected hold would otherwise be an
+ * unhandled rejection in between. A failed hold has nothing to release.
  */
 function rustPollerHold(
   deps: ManagerDeps,
   appId: string
 ): (terminalSent: boolean) => void {
-  const claim = invokeSteamPoll(deps, RUST_STEAMPOLL_RUNNING_HOLD, {
-    appId: Number(appId)
-  }) as Promise<number>
+  const claim: Promise<number | null> = invokeSteamPoll(
+    deps,
+    RUST_STEAMPOLL_RUNNING_HOLD,
+    { appId: Number(appId) }
+  ).then(
+    (claimId) => claimId as number,
+    (e: unknown) => {
+      logWarning(
+        `SteamGame.watch: running poll claim for ${appId} failed: ${String(e)}`,
+        LogPrefix.Steam
+      )
+      return null
+    }
+  )
   let released = false
   return (terminalSent) => {
     if (released) return
     released = true
     void claim
       .then((claimId) =>
-        invokeSteamPoll(deps, RUST_STEAMPOLL_RUNNING_RELEASE, {
-          claimId,
-          terminalSent
-        })
+        claimId === null
+          ? undefined
+          : invokeSteamPoll(deps, RUST_STEAMPOLL_RUNNING_RELEASE, {
+              claimId,
+              terminalSent
+            })
       )
       .catch((e: unknown) =>
         logWarning(
-          `SteamGame.watch: running poll claim for ${appId} failed: ${String(e)}`,
+          `SteamGame.watch: running poll release for ${appId} failed: ${String(e)}`,
           LogPrefix.Steam
         )
       )
