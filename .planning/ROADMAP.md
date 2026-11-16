@@ -167,7 +167,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 73: Steam depot download pipeline in Rust** — 21 plans; complete (completed 2026-11-10)
 - [x] **Phase 74: Steam game updates** — 36 plans (4 gap-closure rounds); live gate passed 2026-11-14 (UAT 29-30), review WR-01/WR-02 deferred to todos (completed 2026-11-14)
 - [x] **Phase 75: Steam local file formats in Rust** — 35 plans in 20 waves; planned 2026-11-14 (completed 2026-11-14)
-- [ ] **Phase 76: Engine-correct bottle for DRM-mode launches (v0.9 audit S9)** — 2 plans in 2 waves; executed, gaps found (2026-11-16) — gap closure pending
+- [x] **Phase 76: Engine-correct bottle for DRM-mode launches (v0.9 audit S9)** — 2 plans in 2 waves; executed, gaps found (2026-11-16) — gap closure pending (completed 2026-11-16)
 - [ ] **Phase 77: Runtime hardening from the v0.9 review debt** — 3 plans in 2 waves; planned
 - [ ] **Phase 78: Verification records and test health after v0.9** — 5 plans in 2 waves; planned
 - [x] **Phase 79: Rust CM client replacing steam-user and steam-session** — 44 plans in 21 waves; planned (spike 085 gate satisfied) (completed 2026-11-15)
@@ -1554,7 +1554,7 @@ Plans:
 **Requirements**: DEBT-01
 **Depends on:** None
 **Source:** `milestones/v0.9-MILESTONE-AUDIT.md` (S9, integration 8/9)
-**Plans:** 4/5 plans executed
+**Plans:** 5/5 plans complete
 
 Plans:
 
@@ -1576,7 +1576,7 @@ Plans:
 
 **Gap closure Wave 3** *(blocked on gap Wave 2 completion)*
 
-- [ ] 76-05-PLAN.md — live re-run of UAT item 3 as items 6-8 (human-verify checkpoint); DEBT-01 back to complete only on a pass
+- [x] 76-05-PLAN.md — live re-run of UAT item 3 as items 6-8 (human-verify checkpoint); DEBT-01 back to complete only on a pass
 
 ### Phase 77: Runtime hardening from the v0.9 review debt
 
