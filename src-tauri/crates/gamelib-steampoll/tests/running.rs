@@ -271,6 +271,43 @@ async fn start_is_idempotent_one_task_and_stop_resets_last_id() {
     assert_eq!(r.sent().len(), 2);
 }
 
+/// 80-REVIEW A/WR-07: a stop then start before the old task sees its cancellation must not let
+/// that dying task clear `started`, or the next start spawns a second, unreachable poller.
+#[tokio::test(start_paused = true)]
+async fn a_dying_task_after_stop_then_start_cannot_enable_a_duplicate_poller() {
+    let host = Arc::new(RecordingHost::new(AckMode::NotReady));
+    let registry = Registry::new(
+        tokio::runtime::Handle::current(),
+        host.clone() as Arc<dyn PollHost>,
+        Arc::new(ScriptedRunner::default()),
+        Arc::new(FakeClock::new(0)),
+    );
+    let calls = Arc::new(AtomicU32::new(0));
+    let c = calls.clone();
+    let probe: Probe = Arc::new(move || {
+        c.fetch_add(1, Ordering::SeqCst);
+        Box::pin(async move { 0 })
+    });
+    let poll = RunningPoll::new(registry, probe);
+    poll.start();
+    settle().await;
+    // No await between: the first task has not observed its cancellation yet.
+    poll.stop();
+    poll.start();
+    settle().await;
+    // Already running: this must be a no-op.
+    poll.start();
+    settle().await;
+    tokio::time::advance(Duration::from_millis(RUNNING_POLL_INTERVAL_MS)).await;
+    settle().await;
+    assert_eq!(
+        calls.load(Ordering::SeqCst),
+        1,
+        "one tick must probe once; more means duplicate pollers"
+    );
+    poll.stop();
+}
+
 #[tokio::test(start_paused = true)]
 async fn the_interval_is_five_seconds_and_does_not_fire_at_start() {
     let r = rig();

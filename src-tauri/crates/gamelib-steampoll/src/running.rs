@@ -109,6 +109,10 @@ struct State {
     claims: HashMap<u32, Claim>,
     next_claim: u64,
     started: bool,
+    /// Bumped by every `start` and `stop`. A task clears `started` on exit only while its own
+    /// generation is current, so a cancelled task that exits after a restart cannot clear the
+    /// new task's flag (80-REVIEW A/WR-07).
+    gen: u64,
 }
 
 struct Inner {
@@ -185,13 +189,15 @@ impl RunningPoll {
 
     /// Start the 5 s poll. Idempotent.
     pub fn start(&self) {
-        {
+        let gen = {
             let mut st = lock(&self.inner.state);
             if st.started {
                 return;
             }
             st.started = true;
-        }
+            st.gen += 1;
+            st.gen
+        };
         let (token, guard) = self.inner.registry.register(PollKind::Running, POLL_KEY);
         let poll = self.clone();
         self.inner.registry.spawn(async move {
@@ -206,7 +212,10 @@ impl RunningPoll {
                     _ = ticks.tick() => poll.poll_once().await,
                 }
             }
-            lock(&poll.inner.state).started = false;
+            let mut st = lock(&poll.inner.state);
+            if st.gen == gen {
+                st.started = false;
+            }
         });
     }
 
@@ -215,6 +224,7 @@ impl RunningPoll {
         self.inner.registry.cancel(PollKind::Running, POLL_KEY);
         let mut st = lock(&self.inner.state);
         st.started = false;
+        st.gen += 1;
         st.last_known = 0;
         st.claims.clear();
     }
