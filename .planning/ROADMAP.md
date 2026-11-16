@@ -1554,7 +1554,7 @@ Plans:
 **Requirements**: DEBT-01
 **Depends on:** None
 **Source:** `milestones/v0.9-MILESTONE-AUDIT.md` (S9, integration 8/9)
-**Plans:** 3/5 plans executed
+**Plans:** 4/5 plans executed
 
 Plans:
 
@@ -1572,7 +1572,7 @@ Plans:
 
 **Gap closure Wave 2** *(blocked on gap Wave 1 completion)*
 
-- [ ] 76-04-PLAN.md — record the pinned marker at bridge bottle creation; reconcile the marker before the DRM pre-flight; done on unresolved DRM install root (WR-04)
+- [x] 76-04-PLAN.md — record the pinned marker at bridge bottle creation; reconcile the marker before the DRM pre-flight; done on unresolved DRM install root (WR-04)
 
 **Gap closure Wave 3** *(blocked on gap Wave 2 completion)*
 
