@@ -98,6 +98,13 @@ export default function SteamLogin({ dismiss }: Props) {
   const errorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const guardInputRef = useRef<HTMLInputElement>(null)
   const qrRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Bumped whenever the credential poll is stopped: a tick already awaiting
+  // steamPollCredential when its interval is cleared drops its result.
+  const credPollGenRef = useRef(0)
+  // Bumped when a credential attempt ends without a sign-in: a new submit, Back
+  // to Credentials, a tab change or the dialog closing. A submit that resolves
+  // after its attempt ended must not restart the poll or move the step.
+  const credAttemptRef = useRef(0)
 
   // --- Cleanup helpers ---
   // quick-261113-wro: a successful sign-in must play the dialog's own exit
@@ -117,6 +124,7 @@ export default function SteamLogin({ dismiss }: Props) {
   }
 
   function clearCredPollInterval() {
+    credPollGenRef.current++
     if (credPollIntervalRef.current) {
       clearInterval(credPollIntervalRef.current)
       credPollIntervalRef.current = null
@@ -128,6 +136,10 @@ export default function SteamLogin({ dismiss }: Props) {
       clearTimeout(errorTimerRef.current)
       errorTimerRef.current = null
     }
+  }
+
+  function endCredAttempt() {
+    credAttemptRef.current++
   }
 
   function clearQrRefreshTimer() {
@@ -151,8 +163,12 @@ export default function SteamLogin({ dismiss }: Props) {
   // authenticator code, the frontend learns and dismisses the overlay automatically.
   function startCredPoll() {
     clearCredPollInterval()
+    const gen = credPollGenRef.current
     credPollIntervalRef.current = setInterval(async () => {
       const poll = await window.api.steamPollCredential()
+      // Stopped while this tick was in flight (sign-in finished on another
+      // tick, guard submit, tab change, dialog closed): drop the result.
+      if (gen !== credPollGenRef.current) return
       if (poll.status === 'done' && poll.username) {
         clearCredPollInterval()
         setStep('qr-confirmed') // reuse the "completing sign-in" UI
@@ -245,6 +261,7 @@ export default function SteamLogin({ dismiss }: Props) {
 
     return () => {
       mounted = false
+      endCredAttempt()
       clearPollInterval()
       clearCredPollInterval()
       clearErrorTimer()
@@ -285,6 +302,8 @@ export default function SteamLogin({ dismiss }: Props) {
 
   // --- Credential submit (step 1) ---
   async function handleCredentialSubmit() {
+    endCredAttempt()
+    const attempt = credAttemptRef.current
     setLoading(true)
     setError(null)
     const result = await window.api.steamStartCredentials({
@@ -297,6 +316,10 @@ export default function SteamLogin({ dismiss }: Props) {
       const userInfo = await window.api.getSteamUserInfo()
       await steamLogin({ status: 'done', username: userInfo?.username })
       finishSignIn()
+    } else if (attempt !== credAttemptRef.current) {
+      // The dialog closed or the user left the credentials step while the
+      // start was in flight: starting a poll now would outlive the dialog.
+      return
     } else if (result.status === 'guard_required') {
       // Start polling for out-of-band completion (DeviceConfirmation phone-approval path).
       // If the user approves on their phone before typing a code, the poll fires
@@ -317,6 +340,7 @@ export default function SteamLogin({ dismiss }: Props) {
     // settled credSessionState='done', the poll would dismiss the overlay while
     // we're mid-await — clearing it avoids a double-dismissal race.
     clearCredPollInterval()
+    const attempt = credAttemptRef.current
     setLoading(true)
     setError(null)
     const result = await window.api.steamSubmitGuard(
@@ -328,6 +352,10 @@ export default function SteamLogin({ dismiss }: Props) {
       const userInfo = await window.api.getSteamUserInfo()
       await steamLogin({ status: 'done', username: userInfo?.username })
       finishSignIn()
+    } else if (attempt !== credAttemptRef.current) {
+      // Closed, Back to Credentials or a tab change during the submit: the
+      // attempt is over, so do not restart its poll (it would never be cleared).
+      return
     } else {
       // A wrong code leaves the flow waiting: resume the out-of-band poll so a phone approval
       // after a rejected code still completes sign-in (UAT 79-A item 7).
@@ -343,6 +371,7 @@ export default function SteamLogin({ dismiss }: Props) {
     _e: React.SyntheticEvent,
     val: 'qr' | 'credentials'
   ) {
+    endCredAttempt()
     clearPollInterval()
     clearCredPollInterval()
     clearQrRefreshTimer()
@@ -535,6 +564,7 @@ export default function SteamLogin({ dismiss }: Props) {
             <button
               className="button is-tertiary"
               onClick={() => {
+                endCredAttempt()
                 clearCredPollInterval()
                 setStep('credentials-1')
                 setUsername('')
