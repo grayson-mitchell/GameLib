@@ -95,6 +95,12 @@ export default function SteamLogin({ dismiss }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [signedIn, setSignedIn] = useState(false)
+  // What Steam allows for this attempt: approve in the app and/or type a code of a type.
+  const [guardOptions, setGuardOptions] = useState<{
+    canApprove: boolean
+    codeType?: 'email' | 'device'
+  }>({ canApprove: false })
+  const [showCodeEntry, setShowCodeEntry] = useState(false)
 
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const credPollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
@@ -203,8 +209,22 @@ export default function SteamLogin({ dismiss }: Props) {
     endCredAttempt()
     clearCredPollInterval()
     setGuardCode('')
+    setGuardOptions({ canApprove: false })
+    setShowCodeEntry(false)
     setStep('credentials-1')
     showError(message)
+  }
+
+  function backToCredentials() {
+    endCredAttempt()
+    clearCredPollInterval()
+    setStep('credentials-1')
+    setUsername('')
+    setPassword('')
+    setGuardCode('')
+    setGuardOptions({ canApprove: false })
+    setShowCodeEntry(false)
+    setError(null)
   }
 
   // --- QR flow ---
@@ -326,7 +346,7 @@ export default function SteamLogin({ dismiss }: Props) {
     if (step === 'credentials-2') {
       guardInputRef.current?.focus()
     }
-  }, [step])
+  }, [step, showCodeEntry])
 
   // --- Credential submit (step 1) ---
   async function handleCredentialSubmit() {
@@ -353,6 +373,11 @@ export default function SteamLogin({ dismiss }: Props) {
       // If the user approves on their phone before typing a code, the poll fires
       // authenticated → pollCredentialLogin returns 'done' → we dismiss the overlay.
       // Also covers the case where the session errors mid-wait (e.g. phone denied).
+      setGuardOptions({
+        canApprove: result.canApprove === true,
+        codeType: result.codeType
+      })
+      setShowCodeEntry(result.canApprove !== true)
       startCredPoll()
       setStep('credentials-2')
     } else {
@@ -546,6 +571,71 @@ export default function SteamLogin({ dismiss }: Props) {
     }
 
     // Step 2: SteamGuard
+    if (step === 'credentials-2' && guardOptions.canApprove && !showCodeEntry) {
+      return (
+        <div>
+          <p
+            id="steamguard-instructions"
+            style={{
+              fontSize: 'var(--text-md)',
+              color: 'var(--text-default)',
+              marginBottom: 'var(--space-md)'
+            }}
+          >
+            Approve this sign-in in the Steam Mobile app.
+          </p>
+          <div style={{ textAlign: 'center', padding: 'var(--space-md) 0' }}>
+            <FontAwesomeIcon
+              icon={faSyncAlt}
+              spin
+              style={{ fontSize: '2em', color: 'var(--text-default)' }}
+            />
+            <p
+              style={{
+                fontSize: 'var(--text-xs)',
+                color: 'var(--text-secondary)',
+                marginTop: 'var(--space-xs)'
+              }}
+            >
+              Waiting for approval...
+            </p>
+          </div>
+
+          {error && (
+            <p role="alert" className="steamError">
+              <FontAwesomeIcon
+                icon={faCircleExclamation}
+                style={{ marginRight: 'var(--space-3xs)' }}
+              />
+              {error}
+            </p>
+          )}
+
+          {guardOptions.codeType && (
+            <button
+              type="button"
+              className="steamCreateAccountLink"
+              onClick={() => setShowCodeEntry(true)}
+            >
+              Enter a code instead
+            </button>
+          )}
+
+          <div
+            style={{
+              display: 'flex',
+              gap: 'var(--space-sm)',
+              marginTop: 'var(--space-md)'
+            }}
+          >
+            <button className="button is-tertiary" onClick={backToCredentials}>
+              Back to Credentials
+            </button>
+          </div>
+        </div>
+      )
+    }
+
     if (step === 'credentials-2') {
       return (
         <div>
@@ -557,7 +647,11 @@ export default function SteamLogin({ dismiss }: Props) {
               marginBottom: 'var(--space-md)'
             }}
           >
-            Check your email or authenticator app for a Steam Guard code.
+            {guardOptions.codeType === 'email'
+              ? 'Check your email for a Steam Guard code.'
+              : guardOptions.codeType === 'device'
+                ? 'Enter the code from your Steam Mobile app.'
+                : 'Check your email or authenticator app for a Steam Guard code.'}
           </p>
 
           <div style={{ marginBottom: 'var(--space-md)' }}>
@@ -628,18 +722,7 @@ export default function SteamLogin({ dismiss }: Props) {
                 'Verify Code'
               )}
             </button>
-            <button
-              className="button is-tertiary"
-              onClick={() => {
-                endCredAttempt()
-                clearCredPollInterval()
-                setStep('credentials-1')
-                setUsername('')
-                setPassword('')
-                setGuardCode('')
-                setError(null)
-              }}
-            >
+            <button className="button is-tertiary" onClick={backToCredentials}>
               Back to Credentials
             </button>
           </div>

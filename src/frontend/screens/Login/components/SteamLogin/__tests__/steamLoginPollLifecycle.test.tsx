@@ -93,7 +93,14 @@ afterEach(() => {
   jest.useRealTimers()
 })
 
-async function mountOnGuardStep() {
+type StartReply = {
+  status: 'done' | 'guard_required' | 'error'
+  canApprove?: boolean
+  codeType?: 'email' | 'device'
+}
+
+async function mountAfterStart(reply: StartReply) {
+  api.steamStartCredentials.mockResolvedValueOnce(reply)
   const view = render(<SteamLogin dismiss={() => undefined} />)
   await flush()
   fireEvent.click(screen.getByRole('tab', { name: 'Username & Password' }))
@@ -105,6 +112,11 @@ async function mountOnGuardStep() {
   })
   fireEvent.click(screen.getByRole('button', { name: 'Sign In to Steam' }))
   await flush()
+  return view
+}
+
+async function mountOnGuardStep() {
+  const view = await mountAfterStart({ status: 'guard_required' })
   fireEvent.change(
     screen.getByLabelText('Steam Guard code (letters or digits)'),
     {
@@ -433,6 +445,91 @@ describe('credentials approval does not flip back to the credentials form', () =
       status: 'done',
       username: 'gaben'
     })
+    expect(screen.queryByLabelText('Username')).toBeNull()
+  })
+})
+
+describe('approval-first Steam Guard', () => {
+  const CODE = 'Steam Guard code (letters or digits)'
+
+  it('approve + device code leads with approval, then reveals the code form on request', async () => {
+    await mountAfterStart({
+      status: 'guard_required',
+      canApprove: true,
+      codeType: 'device'
+    })
+    expect(
+      screen.getByText('Approve this sign-in in the Steam Mobile app.')
+    ).toBeTruthy()
+    expect(screen.queryByLabelText(CODE)).toBeNull()
+
+    api.steamPollCredential.mockClear()
+    await advance(2_000)
+    expect(api.steamPollCredential).toHaveBeenCalledTimes(1)
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Enter a code instead' })
+    )
+    expect(screen.getByLabelText(CODE)).toBeTruthy()
+    expect(
+      screen.getByText('Enter the code from your Steam Mobile app.')
+    ).toBeTruthy()
+    api.steamPollCredential.mockClear()
+    await advance(2_000)
+    expect(api.steamPollCredential).toHaveBeenCalledTimes(1)
+  })
+
+  it('approve only shows no code option, and Back to Credentials stops the poll', async () => {
+    await mountAfterStart({ status: 'guard_required', canApprove: true })
+    expect(
+      screen.getByText('Approve this sign-in in the Steam Mobile app.')
+    ).toBeTruthy()
+    expect(
+      screen.queryByRole('button', { name: 'Enter a code instead' })
+    ).toBeNull()
+    expect(screen.queryByLabelText(CODE)).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back to Credentials' }))
+    expect(screen.getByLabelText('Username')).toBeTruthy()
+    api.steamPollCredential.mockClear()
+    await advance(10_000)
+    expect(api.steamPollCredential).not.toHaveBeenCalled()
+  })
+
+  it('email code only shows the email copy and no approval', async () => {
+    await mountAfterStart({
+      status: 'guard_required',
+      canApprove: false,
+      codeType: 'email'
+    })
+    expect(screen.getByLabelText(CODE)).toBeTruthy()
+    expect(
+      screen.getByText('Check your email for a Steam Guard code.')
+    ).toBeTruthy()
+    expect(screen.queryByText(/Approve this sign-in/)).toBeNull()
+    expect(
+      screen.queryByRole('button', { name: 'Enter a code instead' })
+    ).toBeNull()
+  })
+
+  it('device code only shows the Mobile app copy', async () => {
+    await mountAfterStart({
+      status: 'guard_required',
+      canApprove: false,
+      codeType: 'device'
+    })
+    expect(screen.getByLabelText(CODE)).toBeTruthy()
+    expect(
+      screen.getByText('Enter the code from your Steam Mobile app.')
+    ).toBeTruthy()
+    expect(screen.queryByText(/Approve this sign-in/)).toBeNull()
+  })
+
+  it('approving from the approval view shows the approved state', async () => {
+    await mountAfterStart({ status: 'guard_required', canApprove: true })
+    api.steamPollCredential.mockResolvedValueOnce({ status: 'done' } as Poll)
+    await advance(2_000)
+    expect(screen.getByText('Approved. Completing sign-in...')).toBeTruthy()
     expect(screen.queryByLabelText('Username')).toBeNull()
   })
 })
