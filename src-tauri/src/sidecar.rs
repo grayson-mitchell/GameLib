@@ -664,15 +664,47 @@ pub(crate) fn start_reader(app: AppHandle, state: Arc<SidecarState>, stdout: std
         // D-08: no consumer remains for any depot job's events or responses, so stop them all.
         // Runs for an intentional shutdown too; the exit path then waits for finalize.
         on_sidecar_eof_cancel_jobs();
-        // Leases never outlive a dead sidecar; owed goonline is paid (Pitfall 1, D-03).
-        on_sidecar_eof_drop_steamcm();
         on_sidecar_eof_steampoll();
 
+        // Leases never outlive a dead sidecar; owed goonline is paid (Pitfall 1, D-03).
         // D-01/D-02: an EOF outside an intentional shutdown means the sidecar died. Tell the user.
-        on_sidecar_eof(&state.shutting_down, &state.eof_surfaced, || {
-            surface_dead_sidecar(&app, &state);
-        });
+        sidecar_eof_teardown(
+            &state.shutting_down,
+            &state.eof_surfaced,
+            on_sidecar_eof_drop_steamcm,
+            || state.reap_dead_sidecar_tree(),
+            || show_dead_sidecar_dialog(&app, &state),
+        );
     });
+}
+
+/// Orders the end-of-stdout teardown. On an intentional shutdown the bounded (5 s) steamcm close
+/// runs here, in line. On a crash (B/IN-02) the dead sidecar's process tree is reaped first and
+/// the steamcm close runs on its own thread, so neither the orphaned group nor the dialog waits
+/// for the CM logoff. The dialog's Restart or Quit then reaches `RunEvent::Exit`, whose own
+/// bounded steamcm shutdown is unaffected. Pure and `AppHandle`-free for the tests.
+pub(crate) fn sidecar_eof_teardown<D, R, S>(
+    shutting_down: &AtomicBool,
+    surfaced: &AtomicBool,
+    drop_steamcm: D,
+    reap: R,
+    show_dialog: S,
+) where
+    D: FnOnce() + Send + 'static,
+    R: FnOnce(),
+    S: FnOnce(),
+{
+    let mut drop_steamcm = Some(drop_steamcm);
+    on_sidecar_eof(shutting_down, surfaced, || {
+        reap();
+        if let Some(d) = drop_steamcm.take() {
+            std::thread::spawn(d);
+        }
+        show_dialog();
+    });
+    if let Some(d) = drop_steamcm {
+        d();
+    }
 }
 
 /// Decides whether a sidecar EOF is surfaced to the user (D-03). Pure and `AppHandle`-free so
@@ -688,12 +720,12 @@ pub(crate) fn on_sidecar_eof<F: FnOnce()>(shutting_down: &AtomicBool, surfaced: 
     surface();
 }
 
-/// Reaps the sidecar's whole process tree unconditionally (WR-01), then shows the generic
-/// Restart/Quit dialog on the reader thread (D-05). The unix group SIGKILL works even after the
-/// leader's own `exit(1)` (a group outlives its leader); on Windows the kill-on-close job is
-/// dropped. Restart is a full `app.restart()`, never an in-place respawn (D-01).
-fn surface_dead_sidecar(app: &AppHandle, state: &Arc<SidecarState>) {
-    state.reap_dead_sidecar_tree();
+/// Shows the generic Restart/Quit dialog on the reader thread (D-05), after
+/// `sidecar_eof_teardown` reaped the sidecar's whole process tree (WR-01). The unix group SIGKILL
+/// works even after the leader's own `exit(1)` (a group outlives its leader); on Windows the
+/// kill-on-close job is dropped. Restart is a full `app.restart()`, never an in-place respawn
+/// (D-01).
+fn show_dead_sidecar_dialog(app: &AppHandle, state: &Arc<SidecarState>) {
     shell_eprintln!("[shell] sidecar stdout closed outside shutdown; showing dead-sidecar dialog");
     let restart = app
         .dialog()
@@ -743,6 +775,59 @@ mod tests {
         on_sidecar_eof(&down, &shown, || calls += 1);
         on_sidecar_eof(&down, &shown, || calls += 1);
         assert_eq!(calls, 1);
+    }
+
+    /// B/IN-02: on a crash the tree is reaped and the dialog shown without waiting for the
+    /// steamcm close, which still runs (on its own thread).
+    #[test]
+    fn crash_teardown_reaps_then_shows_the_dialog_without_waiting_for_steamcm() {
+        use std::sync::{mpsc, Mutex};
+        use std::time::{Duration, Instant};
+        let (down, shown) = (AtomicBool::new(false), AtomicBool::new(false));
+        let order = Mutex::new(Vec::new());
+        let (tx, rx) = mpsc::channel();
+        let start = Instant::now();
+        sidecar_eof_teardown(
+            &down,
+            &shown,
+            move || {
+                std::thread::sleep(Duration::from_millis(400));
+                let _ = tx.send(());
+            },
+            || order.lock().unwrap().push("reap"),
+            || order.lock().unwrap().push("dialog"),
+        );
+        assert!(
+            start.elapsed() < Duration::from_millis(200),
+            "teardown waited for the steamcm close: {:?}",
+            start.elapsed()
+        );
+        assert_eq!(*order.lock().unwrap(), vec!["reap", "dialog"]);
+        rx.recv_timeout(Duration::from_secs(5))
+            .expect("steamcm close never ran");
+    }
+
+    /// On an intentional shutdown the steamcm close runs in line, with no reap and no dialog.
+    #[test]
+    fn shutdown_teardown_runs_the_steamcm_close_in_line() {
+        use std::sync::atomic::AtomicUsize;
+        use std::sync::Arc;
+        let (down, shown) = (AtomicBool::new(true), AtomicBool::new(false));
+        let ran = Arc::new(AtomicUsize::new(0));
+        let r = ran.clone();
+        let mut other = 0;
+        let mut dialog = 0;
+        sidecar_eof_teardown(
+            &down,
+            &shown,
+            move || {
+                r.fetch_add(1, Ordering::SeqCst);
+            },
+            || other += 1,
+            || dialog += 1,
+        );
+        assert_eq!(ran.load(Ordering::SeqCst), 1);
+        assert_eq!((other, dialog), (0, 0));
     }
 
     #[cfg(unix)]
