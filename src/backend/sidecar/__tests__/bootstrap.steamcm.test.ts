@@ -14,15 +14,24 @@ jest.mock('backend/logger', () => ({
 }))
 
 type Boot = typeof import('../bootstrap')
+type Logger = typeof import('backend/logger')
 
-function load(): Boot {
+/** Loads bootstrap in a fresh registry; `logWarning` is that registry's mock, the one it calls. */
+function load(): Boot & { logWarning: jest.Mock } {
   let m: Boot | undefined
+  let logger: Logger | undefined
   jest.isolateModules(() => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    /* eslint-disable @typescript-eslint/no-require-imports */
     m = require('../bootstrap') as Boot
+    logger = require('backend/logger') as Logger
+    /* eslint-enable @typescript-eslint/no-require-imports */
   })
-  return m as Boot
+  return Object.assign(Object.create(m as Boot) as Boot, {
+    logWarning: (logger as Logger).logWarning as jest.Mock
+  })
 }
+
+const settle = () => new Promise((resolve) => setImmediate(resolve))
 
 describe('boot steamcm wiring', () => {
   it('orders steamcm-configure before mac-steam-online-restore and after rpc-server', () => {
@@ -34,18 +43,41 @@ describe('boot steamcm wiring', () => {
     expect(at('steamcm-configure')).toBeLessThan(at('mac-steam-online-restore'))
   })
 
-  it('configureSteamCm sends the app folder and swallows a rejection', async () => {
-    const { configureSteamCm } = load()
+  it('configureSteamCm sends the app folder and reports success', async () => {
+    const { configureSteamCm, logWarning } = load()
     const req = jest.fn().mockResolvedValue({})
-    await configureSteamCm({ appFolder: '/app', requestRustInvoke: req })
+    await expect(
+      configureSteamCm({ appFolder: '/app', requestRustInvoke: req })
+    ).resolves.toBe(true)
     expect(req).toHaveBeenCalledWith('steamcm_configure', [
       { appFolder: '/app' }
     ])
+    expect(logWarning).not.toHaveBeenCalled()
+  })
+
+  // C2/WR-06: the old `expect(() => ...).not.toThrow()` passed for any promise-returning function.
+  // These await the promise and assert the warning, so removing the rejection handler fails them.
+  it('configureSteamCm swallows a rejection: resolves false and logs a warning', async () => {
+    const { configureSteamCm, logWarning } = load()
     const bad = jest.fn().mockRejectedValue(new Error('boom'))
-    expect(() =>
+    await expect(
       configureSteamCm({ appFolder: '/app', requestRustInvoke: bad })
-    ).not.toThrow()
-    await Promise.resolve()
+    ).resolves.toBe(false)
+    expect(logWarning).toHaveBeenCalledWith(
+      expect.stringContaining('steamcm_configure failed'),
+      expect.anything()
+    )
+  })
+
+  it('configureSteamCm swallows a synchronous throw from the transport', async () => {
+    const { configureSteamCm, logWarning } = load()
+    const throws = jest.fn(() => {
+      throw new Error('boom')
+    })
+    await expect(
+      configureSteamCm({ appFolder: '/app', requestRustInvoke: throws })
+    ).resolves.toBe(false)
+    expect(logWarning).toHaveBeenCalledTimes(1)
   })
 
   it('pays the owed record through Rust', async () => {
@@ -87,13 +119,24 @@ describe('boot steamcm wiring', () => {
     ])
   })
 
-  it('a rejected rust restore is swallowed', async () => {
-    const { restoreOwedMacSteamOnlineAtBoot } = load()
-    const req = jest.fn().mockRejectedValue(new Error('boom'))
-    expect(() =>
+  it('a rejected rust restore is swallowed and logged', async () => {
+    const { restoreOwedMacSteamOnlineAtBoot, logWarning } = load()
+    const unhandled = jest.fn()
+    process.on('unhandledRejection', unhandled)
+    try {
+      const req = jest.fn().mockRejectedValue(new Error('boom'))
       restoreOwedMacSteamOnlineAtBoot({ requestRustInvoke: req })
-    ).not.toThrow()
-    await Promise.resolve()
+      await settle()
+      await settle()
+      expect(req).toHaveBeenCalledTimes(1)
+      expect(logWarning).toHaveBeenCalledWith(
+        expect.stringContaining('steamcm_wrap_restore_if_owed failed'),
+        expect.anything()
+      )
+      expect(unhandled).not.toHaveBeenCalled()
+    } finally {
+      process.off('unhandledRejection', unhandled)
+    }
   })
 
   it('the source names each channel once', () => {
