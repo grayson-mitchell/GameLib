@@ -148,6 +148,20 @@ async fn discover_and_connect() -> Result<UnAuthenticatedConnection, CmError> {
         .map_err(map_err)
 }
 
+fn license_entries(list: &CMsgClientLicenseList) -> Vec<LicenseEntry> {
+    list.licenses
+        .iter()
+        .map(|l| LicenseEntry {
+            package_id: l.package_id(),
+            time_created: l.time_created(),
+            owner_id: l.owner_id(),
+            access_token: l.access_token(),
+            license_type: l.license_type(),
+            flags: l.flags(),
+        })
+        .collect()
+}
+
 impl CmBackend for SteamVentBackend {
     type Conn = VentConn;
 
@@ -176,6 +190,16 @@ impl CmBackend for SteamVentBackend {
             Ok(Some(Ok(l))) => l,
             _ => return Err(CmError::Protocol("no-license-list".into())),
         };
+        // Steam pushes a fresh list after a redeem or a purchase; keep the stream alive so the
+        // session's copy (and the package tokens taken from it) follows (WR-02).
+        let (ltx, lrx) = mpsc::channel(4);
+        let license_forwarder = tokio::spawn(async move {
+            while let Some(Ok(l)) = licenses.next().await {
+                if ltx.send(license_entries(&l)).await.is_err() {
+                    break;
+                }
+            }
+        });
         let (tx, rx) = mpsc::channel(4);
         let forwarder = tokio::spawn(async move {
             while let Some(Ok(off)) = logged_off.next().await {
@@ -197,21 +221,11 @@ impl CmBackend for SteamVentBackend {
             }
         });
         Ok(Authed {
-            conn: VentConn::new(conn, vec![forwarder, collector], cache),
+            conn: VentConn::new(conn, vec![forwarder, collector, license_forwarder], cache),
             steam_id,
-            licenses: list
-                .licenses
-                .iter()
-                .map(|l| LicenseEntry {
-                    package_id: l.package_id(),
-                    time_created: l.time_created(),
-                    owner_id: l.owner_id(),
-                    access_token: l.access_token(),
-                    license_type: l.license_type(),
-                    flags: l.flags(),
-                })
-                .collect(),
+            licenses: license_entries(&list),
             logged_off: rx,
+            license_updates: lrx,
         })
     }
 

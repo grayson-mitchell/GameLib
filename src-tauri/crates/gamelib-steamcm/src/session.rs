@@ -221,6 +221,10 @@ enum RecWaiter<C> {
     },
     Ensure(oneshot::Sender<bool>),
     Acquire(oneshot::Sender<Result<(LeaseId, u64), Refusal>>),
+    Licenses {
+        lease: LeaseId,
+        reply: oneshot::Sender<Result<Vec<LicenseEntry>, OpFailure>>,
+    },
 }
 
 #[derive(PartialEq, Eq)]
@@ -263,6 +267,7 @@ enum Ev<C> {
     Idle,
     Tick,
     Off(Option<i32>),
+    Licenses(Option<Vec<LicenseEntry>>),
 }
 
 enum Waiter {
@@ -313,6 +318,7 @@ impl<B: CmBackend> SessionHandle<B> {
             connecting: None,
             conn: None,
             logged_off: None,
+            license_updates: None,
             epoch: 0,
             kill: None,
             recovery: None,
@@ -496,6 +502,8 @@ struct Actor<B: CmBackend, W: LogonWrap> {
     conn: Option<Arc<B::Conn>>,
     /// The connection's LoggedOff stream, selected in the control loop.
     logged_off: Option<mpsc::Receiver<i32>>,
+    /// The connection's later licence lists, selected in the control loop (WR-02).
+    license_updates: Option<mpsc::Receiver<Vec<LicenseEntry>>>,
     /// Bumped on every installed connection; an op's failure is only acted on for its own epoch.
     epoch: u64,
     kill: Option<watch::Sender<Option<OpFailure>>>,
@@ -527,6 +535,7 @@ impl<B: CmBackend, W: LogonWrap> Actor<B, W> {
             let idle = self.idle_deadline;
             // Taken out so the select arm does not borrow `self`; put back before any handler.
             let mut lo = self.logged_off.take();
+            let mut lu = self.license_updates.take();
             let ev = tokio::select! {
                 cmd = rx.recv() => Ev::Cmd(cmd),
                 Some(msg) = irx.recv() => Ev::Internal(msg),
@@ -543,9 +552,18 @@ impl<B: CmBackend, W: LogonWrap> Actor<B, W> {
                         None => std::future::pending::<Option<i32>>().await,
                     }
                 } => Ev::Off(off),
+                lic = async {
+                    match lu.as_mut() {
+                        Some(r) => r.recv().await,
+                        None => std::future::pending::<Option<Vec<LicenseEntry>>>().await,
+                    }
+                } => Ev::Licenses(lic),
             };
             if !matches!(ev, Ev::Off(None)) {
                 self.logged_off = lo;
+            }
+            if !matches!(ev, Ev::Licenses(None)) {
+                self.license_updates = lu;
             }
             match ev {
                 Ev::Cmd(Some(c)) => self.on_cmd(c),
@@ -559,6 +577,8 @@ impl<B: CmBackend, W: LogonWrap> Actor<B, W> {
                 }
                 Ev::Off(Some(code)) => self.on_logged_off(code),
                 Ev::Off(None) => {}
+                Ev::Licenses(Some(l)) => self.licenses = l,
+                Ev::Licenses(None) => {}
             }
         }
         self.close_conn("handles-dropped");
@@ -613,6 +633,18 @@ impl<B: CmBackend, W: LogonWrap> Actor<B, W> {
                     Err(OpFailure::ShuttingDown)
                 } else if !self.leases.contains(&lease) {
                     Err(OpFailure::LeaseUnknown)
+                } else if self.conn.is_none() {
+                    // No connection means no licence list, not an empty one (WR-02): wait for a
+                    // rebuild under way, else report the link as gone.
+                    if let Some(rec) = &mut self.recovery {
+                        rec.waiters.push(RecWaiter::Licenses { lease, reply });
+                        return;
+                    }
+                    Err(if self.replaced {
+                        OpFailure::Replaced
+                    } else {
+                        OpFailure::Cm(CmError::Closed)
+                    })
                 } else {
                     Ok(self.licenses.clone())
                 };
@@ -785,6 +817,7 @@ impl<B: CmBackend, W: LogonWrap> Actor<B, W> {
             ));
         }
         self.logged_off = None;
+        self.license_updates = None;
         self.kill = None;
         self.licenses.clear();
         self.steam_id = 0;
@@ -900,6 +933,7 @@ impl<B: CmBackend, W: LogonWrap> Actor<B, W> {
         self.epoch += 1;
         self.conn = Some(Arc::new(a.conn));
         self.logged_off = Some(a.logged_off);
+        self.license_updates = Some(a.license_updates);
         self.kill = Some(watch::channel(None).0);
         self.steam_id = a.steam_id;
         self.licenses = a.licenses;
@@ -1149,6 +1183,13 @@ impl<B: CmBackend, W: LogonWrap> Actor<B, W> {
                         self.drop_lease(id);
                     }
                 }
+                RecWaiter::Licenses { lease, reply } => {
+                    let _ = reply.send(if self.leases.contains(&lease) {
+                        Ok(self.licenses.clone())
+                    } else {
+                        Err(OpFailure::LeaseUnknown)
+                    });
+                }
             }
         }
         if self.leases.is_empty() && self.conn.is_some() {
@@ -1175,6 +1216,9 @@ impl<B: CmBackend, W: LogonWrap> Actor<B, W> {
                 }
                 RecWaiter::Acquire(r) => {
                     let _ = r.send(Err(refusal));
+                }
+                RecWaiter::Licenses { reply, .. } => {
+                    let _ = reply.send(Err(op.clone()));
                 }
             }
         }
@@ -1988,6 +2032,66 @@ mod tests {
         assert!(b.all_closed());
         assert!(!h.status().await.connected);
         assert_eq!(b.connect_count(), 2);
+    }
+
+    fn lic(package_id: u32) -> LicenseEntry {
+        LicenseEntry {
+            package_id,
+            access_token: u64::from(package_id) * 10,
+            ..Default::default()
+        }
+    }
+
+    fn pkg_ids(l: &[LicenseEntry]) -> Vec<u32> {
+        l.iter().map(|e| e.package_id).collect()
+    }
+
+    /// WR-02: Steam pushes a new licence list after a redeem or a purchase. A reused session
+    /// must answer with it, not the list it saw at logon.
+    #[tokio::test(start_paused = true)]
+    async fn a_licence_list_pushed_after_logon_replaces_the_cached_one() {
+        let (b, h) = setup();
+        b.push_authed(Ok((7, vec![lic(1)])));
+        let (l, _) = acq(&h).await.unwrap();
+        assert_eq!(pkg_ids(&h.licenses(l).await.unwrap()), vec![1]);
+        b.send_license_list(vec![lic(1), lic(2)]).await;
+        tokio::time::sleep(Duration::from_millis(1)).await;
+        assert_eq!(pkg_ids(&h.licenses(l).await.unwrap()), vec![1, 2]);
+        assert_eq!(h.status().await.licenses_len, 2);
+    }
+
+    /// WR-02: during a rebuild the old list is gone and the new one has not arrived. A licence
+    /// read waits for the rebuilt connection instead of answering an empty list.
+    #[tokio::test(start_paused = true)]
+    async fn licences_during_a_rebuild_wait_for_the_new_connection() {
+        let (b, h) = setup();
+        b.push_authed(Ok((7, vec![lic(1)])));
+        b.push_authed(Ok((7, vec![lic(1), lic(2)])));
+        let (l, _) = acq(&h).await.unwrap();
+        b.set_delay("connect_authed", secs(10));
+        b.inject_job_failure(2, CmError::Timeout);
+        let h2 = h.clone();
+        let op = tokio::spawn(async move {
+            let runs = Arc::new(AtomicUsize::new(0));
+            personas_op(&h2, l, true, &runs).await
+        });
+        // The rebuild's connect (about 5 s in) is in flight: no connection, lease still valid.
+        tokio::time::sleep(secs(8)).await;
+        assert!(!h.status().await.connected);
+        let got = h.licenses(l).await.unwrap();
+        assert_eq!(pkg_ids(&got), vec![1, 2]);
+        assert_eq!(op.await.unwrap(), Ok(()));
+    }
+
+    /// A lease whose session is gone with no recovery under way gets an error, not `[]`.
+    #[tokio::test(start_paused = true)]
+    async fn licences_with_no_connection_and_no_recovery_are_an_error() {
+        let (b, h) = setup();
+        let (l, _) = acq(&h).await.unwrap();
+        b.send_logged_off(34).await;
+        tokio::time::sleep(Duration::from_millis(1)).await;
+        assert!(!h.status().await.connected);
+        assert_eq!(h.licenses(l).await, Err(OpFailure::Replaced));
     }
 
     #[tokio::test(start_paused = true)]

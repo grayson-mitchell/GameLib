@@ -58,6 +58,8 @@ pub(crate) struct Script {
     pub connects: usize,
     pub jobs: usize,
     pub kick: Vec<mpsc::Sender<i32>>,
+    /// One sender per authed connection, feeding its `license_updates`.
+    pub lic_push: Vec<mpsc::Sender<Vec<LicenseEntry>>>,
     pub closed_flags: Vec<Arc<AtomicBool>>,
     /// Method names in call order, for tests that assert sequencing.
     pub log: Vec<&'static str>,
@@ -91,6 +93,7 @@ impl Default for Script {
             connects: 0,
             jobs: 0,
             kick: Vec::new(),
+            lic_push: Vec::new(),
             closed_flags: Vec::new(),
             log: Vec::new(),
             token_reqs: Vec::new(),
@@ -144,6 +147,14 @@ impl FakeBackend {
         let senders: Vec<_> = self.script(|s| s.kick.clone());
         for tx in senders {
             let _ = tx.send(eresult).await;
+        }
+    }
+
+    /// Push a new licence list on every live authed connection (a redeem or purchase).
+    pub async fn send_license_list(&self, list: Vec<LicenseEntry>) {
+        let senders: Vec<_> = self.script(|s| s.lic_push.clone());
+        for tx in senders {
+            let _ = tx.send(list.clone()).await;
         }
     }
 
@@ -220,12 +231,18 @@ impl CmBackend for FakeBackend {
         }
         let (steam_id, licenses) = scripted?;
         let (tx, rx) = mpsc::channel(4);
-        self.script.lock().unwrap().kick.push(tx);
+        let (ltx, lrx) = mpsc::channel(4);
+        {
+            let mut s = self.script.lock().unwrap();
+            s.kick.push(tx);
+            s.lic_push.push(ltx);
+        }
         Ok(Authed {
             conn: FakeConn::new(&self.script),
             steam_id,
             licenses,
             logged_off: rx,
+            license_updates: lrx,
         })
     }
 

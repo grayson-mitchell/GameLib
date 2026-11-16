@@ -50,6 +50,9 @@ pub struct Authed<C> {
     pub licenses: Vec<LicenseEntry>,
     /// Every `CMsgClientLoggedOff` eresult for the connection's whole life (CF-04, D-07).
     pub logged_off: tokio::sync::mpsc::Receiver<i32>,
+    /// Every later `CMsgClientLicenseList` (Steam pushes a new one after a redeem or a
+    /// purchase), each replacing `licenses`, for the connection's whole life.
+    pub license_updates: tokio::sync::mpsc::Receiver<Vec<LicenseEntry>>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
