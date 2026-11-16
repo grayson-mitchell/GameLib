@@ -137,7 +137,14 @@ interface SteamAuthAsyncReturns {
   steamStartCredentials: Promise<{
     status: 'done' | 'guard_required' | 'error'
   }>
-  steamSubmitGuard: Promise<{ status: 'done' | 'error' }>
+  /**
+   * `reason` on an error (C2/WR-02): `wrongCode` and `failed` leave the flow waiting for another
+   * code; `expired` means it is gone and the sign-in has to start again.
+   */
+  steamSubmitGuard: Promise<
+    | { status: 'done'; username?: string }
+    | { status: 'error'; reason: 'wrongCode' | 'failed' | 'expired' }
+  >
   redeemSteamKey: Promise<RedeemKeyResult>
   getSteamUserInfo: Promise<SteamUserData | undefined>
   checkSteamInstalled: Promise<boolean>

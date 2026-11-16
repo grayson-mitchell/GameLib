@@ -76,6 +76,10 @@ interface Props {
   dismiss: () => void
 }
 
+/** Shown when the credential flow can no longer finish and the user has to start again. */
+export const SIGN_IN_ENDED_MESSAGE =
+  'This Steam sign-in expired or was declined. Sign in again to get a new code.'
+
 export default function SteamLogin({ dismiss }: Props) {
   const steamLogin = useAuthState((s) => s.steamLogin)
   const closeWindow = () => dismiss()
@@ -178,13 +182,23 @@ export default function SteamLogin({ dismiss }: Props) {
         // Authenticated but CM connect still in flight — keep polling for username.
         setStep('qr-confirmed')
       } else if (poll.status === 'error') {
-        // Session errored (e.g. poll failure, phone denied).
-        // Stop polling; the guard-code input remains so the user can retry
-        // or press "Back to Credentials" to start a fresh session.
-        clearCredPollInterval()
+        // The flow is over (phone denied, timed out, status reads failing,
+        // finalisation failed): another code cannot succeed, so say so and
+        // go back to the credentials form (C2/WR-02).
+        returnToCredentials(SIGN_IN_ENDED_MESSAGE)
       }
       // 'waiting' — keep polling
     }, 2000)
+  }
+
+  // The credential flow is gone: stop its poll and ask for the details again.
+  // The typed username and password stay, so starting again is one click.
+  function returnToCredentials(message: string) {
+    endCredAttempt()
+    clearCredPollInterval()
+    setGuardCode('')
+    setStep('credentials-1')
+    showError(message)
   }
 
   // --- QR flow ---
@@ -356,13 +370,19 @@ export default function SteamLogin({ dismiss }: Props) {
       // Closed, Back to Credentials or a tab change during the submit: the
       // attempt is over, so do not restart its poll (it would never be cleared).
       return
-    } else {
-      // A wrong code leaves the flow waiting: resume the out-of-band poll so a phone approval
+    } else if (result.reason === 'wrongCode' || result.reason === 'failed') {
+      // The flow is still waiting for a code: resume the out-of-band poll so a phone approval
       // after a rejected code still completes sign-in (UAT 79-A item 7).
       startCredPoll()
       showError(
-        'Incorrect code. Check your email or authenticator app and try again.'
+        result.reason === 'wrongCode'
+          ? 'Incorrect code. Check your email or authenticator app and try again.'
+          : 'Could not reach Steam to check the code. Try again.'
       )
+    } else {
+      // The flow expired, was declined or failed to finish (C2/WR-02): a retry
+      // with any code would fail too.
+      returnToCredentials(SIGN_IN_ENDED_MESSAGE)
     }
   }
 

@@ -7,6 +7,10 @@
  *
  * - C2/WR-01: a credential or guard submit that resolves after the dialog closed, or after the user
  *   left the credentials step, must not start a credential poll (nothing would ever clear it).
+ * - C2/WR-02: only a guard failure that leaves the flow waiting (`wrongCode`, `failed`) resumes the
+ *   poll and keeps the code input; an `expired` flow, or a poll that reports `error`, sends the user
+ *   back to the credentials form. This also replaces the old source gate
+ *   `steamLoginGuardRetry.test.ts` (UAT 79-A item 7) with the behavioural case below.
  *
  * `Dialog` is replaced with a bare container (it pulls the settings store and the embed-suppression
  * context, neither of which this flow touches) and `react-qr-code` with a node that prints the drawn
@@ -33,7 +37,7 @@ jest.mock('frontend/state/authState', () => ({
 
 // Imported after the mocks above.
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
-import SteamLogin from '../index'
+import SteamLogin, { SIGN_IN_ENDED_MESSAGE } from '../index'
 
 type Deferred<T> = { promise: Promise<T>; resolve: (v: T) => void }
 function deferred<T>(): Deferred<T> {
@@ -193,5 +197,59 @@ describe('C2/WR-01: a submit that resolves after its attempt ended starts no pol
     await flush()
 
     expect(mockSteamLogin).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('C2/WR-02: a guard failure retries only while the flow is alive', () => {
+  async function submitWith(result: { status: 'error'; reason: string }) {
+    await mountOnGuardStep()
+    api.steamSubmitGuard.mockResolvedValueOnce(result)
+    fireEvent.click(screen.getByRole('button', { name: 'Verify Code' }))
+    await flush()
+    api.steamPollCredential.mockClear()
+  }
+
+  it('a wrong code keeps the code input, says so and resumes the poll', async () => {
+    await submitWith({ status: 'error', reason: 'wrongCode' })
+    expect(screen.getByRole('alert').textContent).toMatch(/Incorrect code/)
+    expect(
+      screen.getByLabelText('Steam Guard code (letters or digits)')
+    ).toBeTruthy()
+    await advance(2_000)
+    expect(api.steamPollCredential).toHaveBeenCalledTimes(1)
+  })
+
+  it('a failed submit keeps the code input without calling the code wrong', async () => {
+    await submitWith({ status: 'error', reason: 'failed' })
+    expect(screen.getByRole('alert').textContent).not.toMatch(/Incorrect code/)
+    expect(
+      screen.getByLabelText('Steam Guard code (letters or digits)')
+    ).toBeTruthy()
+    await advance(2_000)
+    expect(api.steamPollCredential).toHaveBeenCalledTimes(1)
+  })
+
+  it('an expired flow returns to the credentials form and stops polling', async () => {
+    await submitWith({ status: 'error', reason: 'expired' })
+    expect(screen.getByRole('alert').textContent).toBe(SIGN_IN_ENDED_MESSAGE)
+    expect(
+      screen.queryByLabelText('Steam Guard code (letters or digits)')
+    ).toBeNull()
+    expect(screen.getByLabelText('Username')).toBeTruthy()
+    await advance(10_000)
+    expect(api.steamPollCredential).not.toHaveBeenCalled()
+  })
+
+  it('a poll that reports error returns to the credentials form', async () => {
+    await mountOnGuardStep()
+    api.steamPollCredential.mockResolvedValueOnce({ status: 'error' })
+    await advance(2_000)
+    expect(screen.getByRole('alert').textContent).toBe(SIGN_IN_ENDED_MESSAGE)
+    expect(
+      screen.queryByLabelText('Steam Guard code (letters or digits)')
+    ).toBeNull()
+    api.steamPollCredential.mockClear()
+    await advance(10_000)
+    expect(api.steamPollCredential).not.toHaveBeenCalled()
   })
 })

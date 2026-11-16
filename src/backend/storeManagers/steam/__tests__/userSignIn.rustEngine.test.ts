@@ -296,11 +296,88 @@ describe('userSignIn on the rust engine', () => {
     })
     await startCredentialLogin(t.deps, 'acct', SECRET_PASSWORD)
     expect(await submitSteamGuardCode(t.deps, 'WRONG')).toEqual({
-      status: 'error'
+      status: 'error',
+      reason: 'wrongCode'
     })
     const p = submitSteamGuardCode(t.deps, 'RIGHT')
     await jest.advanceTimersByTimeAsync(1000)
     expect(await p).toEqual({ status: 'done', username: 'Persona' } as never)
+  })
+
+  describe('a guard failure says whether the flow is still alive (C2/WR-02)', () => {
+    async function submitAfterGuardStart(
+      handlers: Record<string, Handler | Handler[]>
+    ) {
+      const t = build({
+        steamcm_signin_credentials_start: () => ({
+          flowId: 'c1',
+          status: 'guardRequired'
+        }),
+        ...handlers
+      })
+      await startCredentialLogin(t.deps, 'acct', SECRET_PASSWORD)
+      const p = submitSteamGuardCode(t.deps, SECRET_CODE)
+      await jest.advanceTimersByTimeAsync(2000)
+      return await p
+    }
+
+    it('an authenticator mismatch (eresult 88) is a wrong code', async () => {
+      expect(
+        await submitAfterGuardStart({
+          steamcm_signin_guard_submit: () => ({
+            ok: false,
+            kind: 'eresult',
+            eresult: 88
+          })
+        })
+      ).toEqual({ status: 'error', reason: 'wrongCode' })
+    })
+
+    it('a flow Rust no longer knows is expired', async () => {
+      expect(
+        await submitAfterGuardStart({
+          steamcm_signin_guard_submit: () => ({
+            ok: false,
+            kind: 'unknownFlow'
+          })
+        })
+      ).toEqual({ status: 'error', reason: 'expired' })
+    })
+
+    it('a network failure on the submit is retryable, not a wrong code', async () => {
+      expect(
+        await submitAfterGuardStart({
+          steamcm_signin_guard_submit: () => ({ ok: false, kind: 'network' })
+        })
+      ).toEqual({ status: 'error', reason: 'failed' })
+    })
+
+    it('a rejected rustInvoke is retryable', async () => {
+      expect(
+        await submitAfterGuardStart({
+          steamcm_signin_guard_submit: () => {
+            throw new Error('shell gone')
+          }
+        })
+      ).toEqual({ status: 'error', reason: 'failed' })
+    })
+
+    it('a flow that ends in error while settling is expired', async () => {
+      expect(
+        await submitAfterGuardStart({
+          steamcm_signin_guard_submit: () => ({ ok: true }),
+          steamcm_signin_status: () => ({ status: 'error', kind: 'timeout' })
+        })
+      ).toEqual({ status: 'error', reason: 'expired' })
+    })
+
+    it('no active session is expired', async () => {
+      const t = build({})
+      expect(await submitSteamGuardCode(t.deps, SECRET_CODE)).toEqual({
+        status: 'error',
+        reason: 'expired'
+      })
+    })
   })
 
   it('pollCredentialLogin sees an out-of-band approval', async () => {

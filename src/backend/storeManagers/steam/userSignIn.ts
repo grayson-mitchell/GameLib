@@ -469,10 +469,27 @@ export async function pollCredentialLogin(deps: SignInPollDeps): Promise<{
   return { status: 'waiting' }
 }
 
+/**
+ * Why a guard submit failed, so the window can tell a retry from a restart (C2/WR-02):
+ * - `wrongCode`: Steam rejected the code (EResult 65 email, 88 authenticator); the flow stays in
+ *   guardRequired and another code may be submitted.
+ * - `failed`: the submit itself did not complete (transport error, Rust rejection); the flow was not
+ *   changed, so another submit may work.
+ * - `expired`: there is no live flow to submit to any more (no session, Rust no longer knows the
+ *   flow, or it ended in error while settling); the user has to start the sign-in again.
+ */
+export type GuardSubmitFailure = 'wrongCode' | 'failed' | 'expired'
+
+/** EResults that mean "that code was wrong" and leave the flow waiting for another one. */
+const WRONG_GUARD_CODE_ERESULTS: readonly number[] = [65, 88]
+
 export async function submitSteamGuardCode(
   deps: UserSignInDeps,
   code: string
-): Promise<{ status: 'done' | 'error' }> {
+): Promise<
+  | { status: 'done'; username?: string }
+  | { status: 'error'; reason: GuardSubmitFailure }
+> {
   const signInState = deps.steamSession.signIn
   const slot = signInState.getSession()
   if (!slot) {
@@ -480,28 +497,48 @@ export async function submitSteamGuardCode(
       'submitSteamGuardCode called but no active session',
       LogPrefix.Steam
     )
-    return { status: 'error' }
+    return { status: 'error', reason: 'expired' }
   }
   // Normalise: 5-character email codes may arrive lowercase.
   const normalized = code.trim().toUpperCase()
+  let r: { ok?: boolean; kind?: string; eresult?: number }
   try {
-    const r = (await deps.requestRustInvoke(RUST_STEAMCM_SIGNIN_GUARD_SUBMIT, [
+    r = (await deps.requestRustInvoke(RUST_STEAMCM_SIGNIN_GUARD_SUBMIT, [
       { flowId: slot.flowId, code: normalized }
     ])) as { ok?: boolean; kind?: string; eresult?: number }
-    if (r.ok === false) {
-      // A wrong code (EResult 65) leaves the flow in guardRequired: the user may submit again.
-      logError(
-        `Steam guard code submission failed: ${r.kind ?? 'error'} EResult=${r.eresult ?? 'unknown'}`,
-        LogPrefix.Steam
-      )
-      return { status: 'error' }
-    }
-    return await rustWaitSettle(deps, slot)
   } catch (err) {
     logError(
       `Steam guard code submission failed (${err instanceof Error ? err.name : typeof err})`,
       LogPrefix.Steam
     )
-    return { status: 'error' }
+    return { status: 'error', reason: 'failed' }
+  }
+  if (r.ok === false) {
+    logError(
+      `Steam guard code submission failed: ${r.kind ?? 'error'} EResult=${r.eresult ?? 'unknown'}`,
+      LogPrefix.Steam
+    )
+    if (r.kind === 'unknownFlow') return { status: 'error', reason: 'expired' }
+    if (
+      r.kind === 'eresult' &&
+      typeof r.eresult === 'number' &&
+      WRONG_GUARD_CODE_ERESULTS.includes(r.eresult)
+    ) {
+      return { status: 'error', reason: 'wrongCode' }
+    }
+    return { status: 'error', reason: 'failed' }
+  }
+  try {
+    const settled = await rustWaitSettle(deps, slot)
+    // A settle error means the flow ended (denied, timed out, superseded or finalisation failed).
+    return settled.status === 'done'
+      ? { status: 'done', username: settled.username }
+      : { status: 'error', reason: 'expired' }
+  } catch (err) {
+    logError(
+      `Steam guard code submission failed while settling (${err instanceof Error ? err.name : typeof err})`,
+      LogPrefix.Steam
+    )
+    return { status: 'error', reason: 'expired' }
   }
 }
