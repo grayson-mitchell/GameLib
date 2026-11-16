@@ -11,6 +11,9 @@ import { notify } from 'backend/dialog/dialog'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { stopInstallPolling } from './library/installStop'
 import * as pollState from './library/pollState'
+import { pollsImpl } from './library/pollsFlag'
+import { invokeSteamPoll } from './pollRust/rustSteamPoll'
+import { RUST_STEAMPOLL_BRIDGE_FINALIZED } from 'common/types/sidecarTransport'
 import * as bottle from './bottle'
 import * as bbLifecycle from './bridgeBottleLifecycle'
 import * as bridgeBottle from './bridgeBottle'
@@ -36,6 +39,26 @@ import {
   installDepotDownload,
   installResultForRefusal
 } from './gameInstallDepot'
+
+/**
+ * Marks or clears the "bridge install finalized" flag. Under polls=rust the flag lives in Rust
+ * (steampoll_bridge_finalized); under ts it is the in-process set (D-16).
+ */
+async function setBridgeInstallFinalized(
+  steamGame: SteamGame,
+  finalized: boolean
+): Promise<void> {
+  if (pollsImpl() === 'rust') {
+    await invokeSteamPoll(steamGame.deps, RUST_STEAMPOLL_BRIDGE_FINALIZED, {
+      appId: steamGame.appId,
+      finalized
+    })
+    return
+  }
+  const { polls } = steamGame.deps.steamInstallRuntime
+  if (finalized) polls.markBridgeInstallFinalized(steamGame.appId)
+  else polls.clearBridgeInstallFinalized(steamGame.appId)
+}
 
 export async function installBridgeGame(
   steamGame: SteamGame,
@@ -78,10 +101,8 @@ export async function installBridgeGame(
   // Quick 261029-exu: the bridge poller no longer sends 'done' when the
   // manifest lands, so a path that stops after the download (CEG, shim
   // failure, a throw) must clear the "finishing" status itself.
-  const clearFinishing = () => {
-    steamGame.deps.steamInstallRuntime.polls.markBridgeInstallFinalized(
-      steamGame.appId
-    )
+  const clearFinishing = async () => {
+    await setBridgeInstallFinalized(steamGame, true)
     sendGameStatusUpdate(steamGame.deps, {
       appName: steamGame.appId,
       runner: 'steam',
@@ -145,7 +166,7 @@ export async function installBridgeGame(
         installEngine,
         signal
       )
-      if (result.status === 'error') clearFinishing()
+      if (result.status === 'error') await clearFinishing()
       return result
     } finally {
       if (
@@ -157,7 +178,7 @@ export async function installBridgeGame(
       }
     }
   } catch (error) {
-    clearFinishing()
+    await clearFinishing()
     throw error
   } finally {
     lease.release()
@@ -435,9 +456,7 @@ export async function installBridgeGameLeased(
     return { status: 'abort' }
   }
   // a new install must show finishing again (quick 261031-ihs)
-  steamGame.deps.steamInstallRuntime.polls.clearBridgeInstallFinalized(
-    steamGame.appId
-  )
+  await setBridgeInstallFinalized(steamGame, false)
   const targetSteamappsDir = bottle.getBottleSteamappsDir(
     steamGame.deps.paths,
     bridgeBottleName
@@ -548,7 +567,7 @@ export async function installBridgeGameLeased(
       // delete it again. The row is gated on win64ShimPresent, so a later
       // build that bundles steam_api64.dll is not held back by this.
       setBridgeSteamApiPrescreen(steamGame.deps, steamGame.appId, 'x64')
-      stopInstallPolling(steamGame.deps, steamGame.appId)
+      await stopInstallPolling(steamGame.deps, steamGame.appId)
       const removeResult = await bbLifecycle.removePerGameBridgeBottle(
         steamGame.deps,
         steamGame.appId
@@ -612,7 +631,7 @@ export async function installBridgeGameLeased(
       `SteamGame: installBridgeGame found Steam CEG DRM in the exe for appId ${steamGame.appId} (${cegMarkers.join(', ')}) -- CEG needs the Windows Steam client, which a bridge bottle does not have; stopping the bridge install`,
       LogPrefix.Steam
     )
-    stopInstallPolling(steamGame.deps, steamGame.appId)
+    await stopInstallPolling(steamGame.deps, steamGame.appId)
     const removeResult = await bbLifecycle.removePerGameBridgeBottle(
       steamGame.deps,
       steamGame.appId
@@ -732,9 +751,7 @@ export async function installBridgeGameLeased(
       )
     })
   } finally {
-    steamGame.deps.steamInstallRuntime.polls.markBridgeInstallFinalized(
-      steamGame.appId
-    )
+    await setBridgeInstallFinalized(steamGame, true)
     sendGameStatusUpdate(steamGame.deps, {
       appName: steamGame.appId,
       runner: 'steam',

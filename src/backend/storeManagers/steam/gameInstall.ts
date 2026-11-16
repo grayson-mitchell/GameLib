@@ -439,7 +439,7 @@ export async function install(
         `SteamGame: Steam is installing appId ${steamGame.appId} via InstallApp (library folder index ${outcome.folderIndex})`,
         LogPrefix.Steam
       )
-      startInstallPolling(steamGame.deps, steamGame.appId, {
+      await startInstallPolling(steamGame.deps, steamGame.appId, {
         delegatedToSteamClient: true
       })
       return { status: 'done' }
@@ -474,7 +474,7 @@ export async function install(
   // quick 261024-exo: delegatedToSteamClient keeps the poll alive through
   // Steam's startup/self-update and the user's install dialog (a failed
   // dispatch never reaches here, so no poller means no false installing).
-  startInstallPolling(steamGame.deps, steamGame.appId, {
+  await startInstallPolling(steamGame.deps, steamGame.appId, {
     delegatedToSteamClient: true
   })
 

@@ -264,7 +264,7 @@ export async function resumeInterruptedSteamInstall(
       )
     }
 
-    startInstallPolling(deps, appId)
+    await startInstallPolling(deps, appId)
   } catch (err) {
     // Per-appId hardening: a resume attempt failing for any reason must
     // never throw out to the caller (SteamGame.install() continues into its
@@ -364,7 +364,7 @@ export async function rearmPersistedSteamRestartHolds(
           )
           continue
         }
-        startInstallPolling(deps, appId, {
+        await startInstallPolling(deps, appId, {
           isNativeHandoff: true,
           source: 'native',
           macNativeRoute: record.macNativeRoute,

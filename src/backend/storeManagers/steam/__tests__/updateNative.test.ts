@@ -67,7 +67,7 @@ const opts = {
 describe('updateRegisteredSteamGame', () => {
   beforeEach(() => {
     activePolls.clear()
-    jest.mocked(startInstallPolling).mockImplementation((_d, id) => {
+    jest.mocked(startInstallPolling).mockImplementation(async (_d, id) => {
       activePolls.set(id, { awaitingUpdate: {} })
     })
     jest.mocked(resolveSteamLibraryRoot).mockResolvedValue('/lib')
@@ -102,7 +102,7 @@ describe('updateRegisteredSteamGame', () => {
       handedOffToSteam: true
     })
     activePolls.clear()
-    jest.mocked(startInstallPolling).mockImplementation((_d, id) => {
+    jest.mocked(startInstallPolling).mockImplementation(async (_d, id) => {
       activePolls.set(id, {})
     })
     expect(await updateRegisteredSteamGame(game)).toEqual({

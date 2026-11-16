@@ -134,7 +134,7 @@ export async function pollInstallOnce(
         `Steam: bottle install for appId ${appId} finalized at StateFlags ${GAMELIB_HANDOFF_STATE_FLAGS} — GameLib could not verify the full install, so it is marked incomplete and resumable (no bottled-Steam handoff)`,
         LogPrefix.Steam
       )
-      stopInstallPolling(deps, appId)
+      void stopInstallPolling(deps, appId)
       markSteamInstallIncomplete(deps, appId)
       deps.sendFrontendMessage('gameStatusUpdate', {
         appName: appId,
@@ -448,7 +448,7 @@ export async function pollInstallOnce(
       notifyRestartSteamToFinish(deps, existing?.title ?? '')
     }
 
-    stopInstallPolling(deps, appId)
+    void stopInstallPolling(deps, appId)
     logInfo(
       `Steam: install polling complete for appId ${appId} — badge flipped to installed`,
       LogPrefix.Steam
@@ -483,7 +483,7 @@ export async function pollInstallOnce(
         runner: 'steam',
         status: 'done'
       })
-      stopInstallPolling(deps, appId)
+      void stopInstallPolling(deps, appId)
     }
   }
 }

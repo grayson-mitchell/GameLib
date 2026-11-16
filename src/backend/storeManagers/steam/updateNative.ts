@@ -126,7 +126,7 @@ export async function updateRegisteredSteamGame(
         `SteamGame: Steam is updating appId ${appId} via InstallApp`,
         LogPrefix.Steam
       )
-      startInstallPolling(deps, appId, pollOptions)
+      await startInstallPolling(deps, appId, pollOptions)
       return { status: 'done', handedOffToSteam: pollOwnsUpdate(deps, appId) }
     }
     if (outcome.kind === 'error') {
@@ -152,6 +152,6 @@ export async function updateRegisteredSteamGame(
     LogPrefix.Steam
   )
   await deps.openExternal.openExternal(url)
-  startInstallPolling(deps, appId, pollOptions)
+  await startInstallPolling(deps, appId, pollOptions)
   return { status: 'done', handedOffToSteam: pollOwnsUpdate(deps, appId) }
 }

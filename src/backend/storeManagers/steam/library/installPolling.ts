@@ -13,6 +13,18 @@ import { releaseSteamHold } from './restartHold'
 import { stopInstallPolling } from './installStop'
 import { pollInstallOnce } from './installPollOnce'
 import type { InstallPollState } from './pollState'
+import { pollsImpl } from './pollsFlag'
+import {
+  invokeSteamPoll,
+  pollRootsFor,
+  titleFor
+} from '../pollRust/rustSteamPoll'
+import {
+  RUST_STEAMPOLL_INSTALL_START,
+  RUST_STEAMPOLL_INSTALL_CANCEL_DELEGATED,
+  RUST_STEAMPOLL_STATUS
+} from 'common/types/sidecarTransport'
+import type { PollStatus } from '../pollRust/steamPollTypes'
 
 // ── Install polling lifecycle (D-07) ─────────────────────────────────────────
 
@@ -49,11 +61,23 @@ import type { InstallPollState } from './pollState'
  *
  * Exported for unit testing.
  */
-export function startInstallPolling(
+export async function startInstallPolling(
   deps: ManagerDeps,
   appId: string,
   intervalMsOrOptions: number | PollOptions = 3000
-): void {
+): Promise<void> {
+  if (pollsImpl() === 'rust') {
+    // D-16: Rust owns the poll; no TS timer. Resolves once Rust registered it.
+    const options =
+      typeof intervalMsOrOptions === 'number' ? {} : intervalMsOrOptions
+    await invokeSteamPoll(deps, RUST_STEAMPOLL_INSTALL_START, {
+      appId,
+      title: titleFor(deps, appId),
+      roots: pollRootsFor(deps, appId, options.source),
+      options
+    })
+    return
+  }
   const { polls } = deps.steamInstallRuntime
   const { activePolls } = polls
   // 260822-dkf (D-02): before the grace-window fix below, the finalize-time
@@ -282,7 +306,7 @@ export function startInstallPolling(
         `Steam: install polling for appId ${appId} hit safety cap (${MAX_TICKS} ticks); relying on D-01 focus backstop`,
         LogPrefix.Steam
       )
-      stopInstallPolling(deps, appId)
+      void stopInstallPolling(deps, appId)
       // 74-27 (T-74-92): the queue holds 'updating' through a Steam hand-off, so the
       // update poll must always end with a terminal 'done' (install polls unchanged).
       if (entry.awaitingUpdate) {
@@ -372,7 +396,7 @@ export function startInstallPolling(
           kind: 'install-not-started',
           seq: polls.nextSteamRequestNoticeSeq()
         })
-        stopInstallPolling(deps, appId)
+        void stopInstallPolling(deps, appId)
         return
       } else if (
         entry.seenDownloading &&
@@ -391,7 +415,7 @@ export function startInstallPolling(
           runner: 'steam',
           status: 'done'
         })
-        stopInstallPolling(deps, appId)
+        void stopInstallPolling(deps, appId)
       }
     } else if (
       !entry.seenDownloading &&
@@ -407,7 +431,7 @@ export function startInstallPolling(
         runner: 'steam',
         status: 'done'
       })
-      stopInstallPolling(deps, appId)
+      void stopInstallPolling(deps, appId)
     } else if (
       !entry.seenDownloading &&
       entry.ticks === GRACE_TICKS &&
@@ -472,12 +496,23 @@ function isLiveMonitorEligible(poll: {
  * controller lookup for it (a delegated install has none by design;
  * quick 261106-pvk).
  */
-export function isDelegatedInstallPolling(
+export async function isDelegatedInstallPolling(
   deps: {
     steamInstallRuntime: { polls: Pick<InstallPollState, 'activePolls'> }
-  },
+  } & Pick<ManagerDeps, 'requestRustInvoke'>,
   appId: string
-): boolean {
+): Promise<boolean> {
+  if (pollsImpl() === 'rust') {
+    const status = (await invokeSteamPoll(
+      deps,
+      RUST_STEAMPOLL_STATUS,
+      {}
+    )) as PollStatus
+    return (
+      status.installs.find((i) => i.appId === appId)?.delegatedToSteamClient ===
+      true
+    )
+  }
   return (
     deps.steamInstallRuntime.polls.activePolls.get(appId)
       ?.delegatedToSteamClient === true
@@ -491,20 +526,31 @@ export function isDelegatedInstallPolling(
  * library/ACF reconcile picks it up. Returns true when a delegated poll was
  * stopped; false when there is no poll or it is not delegated.
  */
-export function cancelDelegatedInstall(
+export async function cancelDelegatedInstall(
   deps: Pick<
     ManagerDeps,
-    'steamProcesses' | 'steamInstallRuntime' | 'sendFrontendMessage'
+    | 'steamProcesses'
+    | 'steamInstallRuntime'
+    | 'sendFrontendMessage'
+    | 'requestRustInvoke'
   >,
   appId: string
-): boolean {
+): Promise<boolean> {
+  if (pollsImpl() === 'rust') {
+    // Rust stops the poll and sends the terminal status itself.
+    return (await invokeSteamPoll(
+      deps,
+      RUST_STEAMPOLL_INSTALL_CANCEL_DELEGATED,
+      { appId }
+    )) as boolean
+  }
   const entry = deps.steamInstallRuntime.polls.activePolls.get(appId)
   if (!entry || !entry.delegatedToSteamClient) return false
   logInfo(
     `Steam: Cancel stops GameLib's wait for the Steam-owned install of appId ${appId}; nothing is cancelled inside Steam (quick 261105-vfq)`,
     LogPrefix.Steam
   )
-  stopInstallPolling(deps, appId)
+  await stopInstallPolling(deps, appId)
   deps.sendFrontendMessage('gameStatusUpdate', {
     appName: appId,
     runner: 'steam',

@@ -334,7 +334,7 @@ export async function runNativeDepotDownload(
           adoption.pendingAdoptionStoreFrom(steamGame.deps)
         )
       }
-      startInstallPolling(steamGame.deps, steamGame.appId, {
+      await startInstallPolling(steamGame.deps, steamGame.appId, {
         isNativeHandoff: true,
         skippedDepots: handoff.skippedDepots,
         macNativeRoute: true,
@@ -598,7 +598,7 @@ export async function runNativeDepotDownloadLeased(
   // The OFF-path calls in install() have no skipped-depot knowledge
   // (Steam owns those downloads) and must NOT receive it.
   if (opts.pollerSource) {
-    startInstallPolling(steamGame.deps, steamGame.appId, {
+    await startInstallPolling(steamGame.deps, steamGame.appId, {
       source: opts.pollerSource,
       isNativeHandoff: true,
       skippedDepots: outcome.skippedDepots ?? []
@@ -614,7 +614,7 @@ export async function runNativeDepotDownloadLeased(
       skippedDepots: outcome.skippedDepots ?? []
     }
   } else {
-    startInstallPolling(steamGame.deps, steamGame.appId, {
+    await startInstallPolling(steamGame.deps, steamGame.appId, {
       isNativeHandoff: true,
       skippedDepots: outcome.skippedDepots ?? []
     })

@@ -252,8 +252,8 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
   })
 
   afterEach(() => {
-    stopInstallPolling(steamTestDeps, '730')
-    stopInstallPolling(steamTestDeps, '731')
+    void stopInstallPolling(steamTestDeps, '730')
+    void stopInstallPolling(steamTestDeps, '731')
     isNativeInstallInFlightSpy?.mockRestore()
     isNativeInstallInFlightSpy = undefined
     jest.useRealTimers()
@@ -261,17 +261,17 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
 
   it('calling startInstallPolling twice for the same appId creates only one setInterval', () => {
     const setIntervalSpy = jest.spyOn(global, 'setInterval')
-    startInstallPolling(steamTestDeps, '730', 3000)
-    startInstallPolling(steamTestDeps, '730', 3000) // idempotent — second call is a no-op
+    void startInstallPolling(steamTestDeps, '730', 3000)
+    void startInstallPolling(steamTestDeps, '730', 3000) // idempotent — second call is a no-op
     expect(setIntervalSpy).toHaveBeenCalledTimes(1)
     setIntervalSpy.mockRestore()
   })
 
   it('stopInstallPolling clears the entry so startInstallPolling can register a new interval', () => {
     const setIntervalSpy = jest.spyOn(global, 'setInterval')
-    startInstallPolling(steamTestDeps, '730', 3000)
-    stopInstallPolling(steamTestDeps, '730')
-    startInstallPolling(steamTestDeps, '730', 3000) // new registration — entry was cleared by stop
+    void startInstallPolling(steamTestDeps, '730', 3000)
+    void stopInstallPolling(steamTestDeps, '730')
+    void startInstallPolling(steamTestDeps, '730', 3000) // new registration — entry was cleared by stop
     expect(setIntervalSpy).toHaveBeenCalledTimes(2)
     setIntervalSpy.mockRestore()
   })
@@ -284,7 +284,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     ;(existsSync as jest.Mock).mockReturnValue(false) // manifest never appears
     jest.mocked(sendFrontendMessage).mockClear()
     const interval = 10
-    startInstallPolling(steamTestDeps, '730', interval)
+    void startInstallPolling(steamTestDeps, '730', interval)
     // GRACE_TICKS (20) + 1 ticks so the grace branch fires
     await jest.advanceTimersByTimeAsync(interval * 21)
     expect(sendFrontendMessage).toHaveBeenCalledWith(
@@ -305,7 +305,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
       steamTestDeps.steamInstallRuntime.polls.activePolls.get('730')
 
     it('fresh poll keeps installAppRetry on awaitingUpdate', () => {
-      startInstallPolling(steamTestDeps, '730', {
+      void startInstallPolling(steamTestDeps, '730', {
         intervalMs: 10,
         delegatedToSteamClient: true,
         awaitingUpdate: {
@@ -318,11 +318,11 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     })
 
     it('existing-entry upgrade keeps installAppRetry on awaitingUpdate', () => {
-      startInstallPolling(steamTestDeps, '730', {
+      void startInstallPolling(steamTestDeps, '730', {
         intervalMs: 10,
         delegatedToSteamClient: true
       })
-      startInstallPolling(steamTestDeps, '730', {
+      void startInstallPolling(steamTestDeps, '730', {
         intervalMs: 10,
         delegatedToSteamClient: true,
         awaitingUpdate: {
@@ -335,7 +335,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     })
 
     it('options without installAppRetry leave no installAppRetry key', () => {
-      startInstallPolling(steamTestDeps, '730', {
+      void startInstallPolling(steamTestDeps, '730', {
         intervalMs: 10,
         delegatedToSteamClient: true,
         awaitingUpdate: { fromBuild: '1', targetBuild: '2' }
@@ -349,7 +349,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
       options?: Parameters<typeof startInstallPolling>[2]
     ) => {
       jest.mocked(sendFrontendMessage).mockClear()
-      startInstallPolling(steamTestDeps, '730', options)
+      void startInstallPolling(steamTestDeps, '730', options)
       const entry =
         steamTestDeps.steamInstallRuntime.polls.activePolls.get('730')
       if (!entry) throw new Error('poll not registered')
@@ -412,7 +412,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     jest.mocked(sendFrontendMessage).mockClear()
 
     const interval = 10
-    startInstallPolling(steamTestDeps, '730', interval)
+    void startInstallPolling(steamTestDeps, '730', interval)
     // GRACE_TICKS (20) + 1 ticks — the point where the (defective) grace
     // branch would fire.
     await jest.advanceTimersByTimeAsync(interval * 21)
@@ -449,7 +449,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     jest.mocked(sendFrontendMessage).mockClear()
 
     const interval = 10
-    startInstallPolling(steamTestDeps, '730', interval)
+    void startInstallPolling(steamTestDeps, '730', interval)
     await jest.advanceTimersByTimeAsync(interval * 21)
 
     expect(sendFrontendMessage).toHaveBeenCalledWith(
@@ -480,10 +480,10 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
       .mockReturnValue(true)
 
     // Call 1 — mirrors resumeInterruptedSteamInstall's bare download poll.
-    startInstallPolling(steamTestDeps, '730', 10)
+    void startInstallPolling(steamTestDeps, '730', 10)
     // Call 2 — mirrors games.ts:1720/1726's finalize-time handoff start,
     // arriving while call 1's entry is still registered.
-    startInstallPolling(steamTestDeps, '730', {
+    void startInstallPolling(steamTestDeps, '730', {
       intervalMs: 10,
       isNativeHandoff: true,
       skippedDepots: []
@@ -536,8 +536,8 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     jest.mocked(sendFrontendMessage).mockClear()
     const setIntervalSpy = jest.spyOn(global, 'setInterval')
 
-    startInstallPolling(steamTestDeps, '730', 10) // call 1: bare download poll
-    startInstallPolling(steamTestDeps, '730', {
+    void startInstallPolling(steamTestDeps, '730', 10) // call 1: bare download poll
+    void startInstallPolling(steamTestDeps, '730', {
       intervalMs: 10,
       isNativeHandoff: true,
       skippedDepots: []
@@ -550,7 +550,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
       )
     const contextBefore = gameStatusCalls().at(-1)?.[1]?.context
 
-    startInstallPolling(steamTestDeps, '730', 10) // call 3: the extra bare call under test
+    void startInstallPolling(steamTestDeps, '730', 10) // call 3: the extra bare call under test
 
     await jest.advanceTimersByTimeAsync(10) // tick — observe state AFTER
     const contextAfter = gameStatusCalls().at(-1)?.[1]?.context
@@ -617,8 +617,8 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
   it('Test E (261027-g9o): a bare native poll upgraded by the bottle handoff reads the bottle root and reaches installed', async () => {
     try {
       arrangeBottleOnlyManifest()
-      startInstallPolling(steamTestDeps, '730', 10) // resume-shaped bare native poll
-      startInstallPolling(steamTestDeps, '730', {
+      void startInstallPolling(steamTestDeps, '730', 10) // resume-shaped bare native poll
+      void startInstallPolling(steamTestDeps, '730', {
         intervalMs: 10,
         source: 'bottle',
         isNativeHandoff: true,
@@ -641,11 +641,11 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
   it('Test F (261027-g9o, interaction pin): an options call with source but no isNativeHandoff never retargets the poll', async () => {
     try {
       arrangeBottleOnlyManifest()
-      startInstallPolling(steamTestDeps, '730', {
+      void startInstallPolling(steamTestDeps, '730', {
         intervalMs: 10,
         source: 'bottle'
       })
-      startInstallPolling(steamTestDeps, '730', {
+      void startInstallPolling(steamTestDeps, '730', {
         intervalMs: 10,
         source: 'native'
       })
@@ -665,11 +665,11 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
   it('Test G (261027-g9o, interaction pin): a handoff call with no source key never resets a bottle poll to native', async () => {
     try {
       arrangeBottleOnlyManifest()
-      startInstallPolling(steamTestDeps, '730', {
+      void startInstallPolling(steamTestDeps, '730', {
         intervalMs: 10,
         source: 'bottle'
       })
-      startInstallPolling(steamTestDeps, '730', {
+      void startInstallPolling(steamTestDeps, '730', {
         intervalMs: 10,
         isNativeHandoff: true,
         skippedDepots: []
@@ -712,7 +712,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     g9oLogger().logWarning.mockClear()
 
     const interval = 10
-    startInstallPolling(steamTestDeps, '730', {
+    void startInstallPolling(steamTestDeps, '730', {
       intervalMs: interval,
       delegatedToSteamClient: true
     })
@@ -769,7 +769,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
 
     const interval = 10
     ;(existsSync as jest.Mock).mockReturnValue(true)
-    startInstallPolling(steamTestDeps, '730', {
+    void startInstallPolling(steamTestDeps, '730', {
       intervalMs: interval,
       delegatedToSteamClient: true
     })
@@ -800,7 +800,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
 
     const interval = 10
     ;(existsSync as jest.Mock).mockReturnValue(false)
-    startInstallPolling(steamTestDeps, '730', {
+    void startInstallPolling(steamTestDeps, '730', {
       intervalMs: interval,
       delegatedToSteamClient: true
     })
@@ -839,7 +839,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     ;(notify as jest.Mock).mockClear()
 
     const interval = 10
-    startInstallPolling(steamTestDeps, '730', {
+    void startInstallPolling(steamTestDeps, '730', {
       intervalMs: interval,
       delegatedToSteamClient: true
     })
@@ -856,7 +856,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
   it('VFQ-2: a delegated poll flags managedBySteam at registration, before any tick', () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
     jest.mocked(sendFrontendMessage).mockClear()
-    startInstallPolling(steamTestDeps, '730', {
+    void startInstallPolling(steamTestDeps, '730', {
       intervalMs: 10,
       delegatedToSteamClient: true
     })
@@ -878,13 +878,13 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     ;(notify as jest.Mock).mockClear()
 
     const interval = 10
-    startInstallPolling(steamTestDeps, '730', { intervalMs: interval })
+    void startInstallPolling(steamTestDeps, '730', { intervalMs: interval })
     await jest.advanceTimersByTimeAsync(interval * 30)
     expect(sendFrontendMessage).not.toHaveBeenCalledWith(
       'gameStatusUpdate',
       expect.objectContaining({ managedBySteam: true })
     )
-    startInstallPolling(steamTestDeps, '730', {
+    void startInstallPolling(steamTestDeps, '730', {
       intervalMs: interval,
       delegatedToSteamClient: true
     })
@@ -913,28 +913,28 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     jest.mocked(sendFrontendMessage).mockClear()
     ;(notify as jest.Mock).mockClear()
 
-    expect(cancelDelegatedInstall(steamTestDeps, '730')).toBe(false) // no poll
+    expect(await cancelDelegatedInstall(steamTestDeps, '730')).toBe(false) // no poll
 
     const interval = 10
-    startInstallPolling(steamTestDeps, '730', { intervalMs: interval }) // bare poll
-    expect(cancelDelegatedInstall(steamTestDeps, '730')).toBe(false)
+    void startInstallPolling(steamTestDeps, '730', { intervalMs: interval }) // bare poll
+    expect(await cancelDelegatedInstall(steamTestDeps, '730')).toBe(false)
     await jest.advanceTimersByTimeAsync(interval * 2)
     const ticking = (existsSync as jest.Mock).mock.calls.length
     await jest.advanceTimersByTimeAsync(interval * 2)
     expect((existsSync as jest.Mock).mock.calls.length).toBeGreaterThan(ticking)
-    stopInstallPolling(steamTestDeps, '730')
+    void stopInstallPolling(steamTestDeps, '730')
 
-    startInstallPolling(steamTestDeps, '730', {
+    void startInstallPolling(steamTestDeps, '730', {
       intervalMs: interval,
       delegatedToSteamClient: true
     })
-    expect(cancelDelegatedInstall(steamTestDeps, '730')).toBe(true)
+    expect(await cancelDelegatedInstall(steamTestDeps, '730')).toBe(true)
     expect(doneCalls()).toHaveLength(1)
     expect(notify).not.toHaveBeenCalled()
     const callsAfter = (existsSync as jest.Mock).mock.calls.length
     await jest.advanceTimersByTimeAsync(interval * 5)
     expect((existsSync as jest.Mock).mock.calls.length).toBe(callsAfter)
-    expect(cancelDelegatedInstall(steamTestDeps, '730')).toBe(false)
+    expect(await cancelDelegatedInstall(steamTestDeps, '730')).toBe(false)
   })
 
   it('PVK-3: two install give-ups in one session carry strictly increasing seq', async () => {
@@ -946,7 +946,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     jest.mocked(sendFrontendMessage).mockClear()
     const interval = 10
     for (let i = 0; i < 2; i++) {
-      startInstallPolling(steamTestDeps, '730', {
+      void startInstallPolling(steamTestDeps, '730', {
         intervalMs: interval,
         delegatedToSteamClient: true
       })
@@ -965,17 +965,17 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     isNativeInstallInFlightSpy = jest
       .spyOn(steamTestDeps.steamSession.gameSession, 'isNativeInstallInFlight')
       .mockReturnValue(true)
-    expect(isDelegatedInstallPolling(steamTestDeps, '730')).toBe(false) // no poll
-    startInstallPolling(steamTestDeps, '730', { intervalMs: 10 }) // bare poll
-    expect(isDelegatedInstallPolling(steamTestDeps, '730')).toBe(false)
-    stopInstallPolling(steamTestDeps, '730')
-    startInstallPolling(steamTestDeps, '730', {
+    expect(await isDelegatedInstallPolling(steamTestDeps, '730')).toBe(false) // no poll
+    void startInstallPolling(steamTestDeps, '730', { intervalMs: 10 }) // bare poll
+    expect(await isDelegatedInstallPolling(steamTestDeps, '730')).toBe(false)
+    void stopInstallPolling(steamTestDeps, '730')
+    void startInstallPolling(steamTestDeps, '730', {
       intervalMs: 10,
       delegatedToSteamClient: true
     })
-    expect(isDelegatedInstallPolling(steamTestDeps, '730')).toBe(true)
-    cancelDelegatedInstall(steamTestDeps, '730')
-    expect(isDelegatedInstallPolling(steamTestDeps, '730')).toBe(false)
+    expect(await isDelegatedInstallPolling(steamTestDeps, '730')).toBe(true)
+    await cancelDelegatedInstall(steamTestDeps, '730')
+    expect(await isDelegatedInstallPolling(steamTestDeps, '730')).toBe(false)
   })
 
   // ── debug/steam-dl-missing-in-downloads ────────────────────────────────────
@@ -1001,7 +1001,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     jest.mocked(sendFrontendMessage).mockClear()
 
     const interval = 10
-    startInstallPolling(steamTestDeps, '730', {
+    void startInstallPolling(steamTestDeps, '730', {
       intervalMs: interval,
       delegatedToSteamClient: true
     })
@@ -1036,7 +1036,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     jest.mocked(sendFrontendMessage).mockClear()
 
     const interval = 10
-    startInstallPolling(steamTestDeps, '730', { intervalMs: interval })
+    void startInstallPolling(steamTestDeps, '730', { intervalMs: interval })
     await jest.advanceTimersByTimeAsync(interval * 2)
 
     const installing = sendFrontendMessage.mock.calls.filter(
@@ -1068,7 +1068,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
       }
     })
 
-    startInstallPolling(steamTestDeps, '730', { source: 'bottle' })
+    void startInstallPolling(steamTestDeps, '730', { source: 'bottle' })
     await jest.advanceTimersByTimeAsync(3000)
 
     expect(getSteamLibraries).not.toHaveBeenCalled()

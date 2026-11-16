@@ -114,7 +114,7 @@ export async function pollUpdateOnce(
       `Steam: update of appId ${appId} ${verb} (build ${done.buildid})`,
       LogPrefix.Steam
     )
-    stopInstallPolling(deps, appId)
+    void stopInstallPolling(deps, appId)
     invalidateSteamUpdateState(deps, appId)
     if (existing) deps.sendFrontendMessage('pushGameToLibrary', existing)
     // libraryState only drops a game from gameUpdates on a done that follows updating, and a 3 s
@@ -135,7 +135,7 @@ export async function pollUpdateOnce(
   // Not finished: the badge stays because the cached update state is re-read, not cleared.
   const endQuietly = (message: string): void => {
     logInfo(message, LogPrefix.Steam)
-    stopInstallPolling(deps, appId)
+    void stopInstallPolling(deps, appId)
     invalidateSteamUpdateState(deps, appId)
     deps.sendFrontendMessage('gameStatusUpdate', {
       appName: appId,

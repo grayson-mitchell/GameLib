@@ -534,7 +534,7 @@ export async function runTsTimelineWithSnapshot(
     void _title
     void _roots
     if (timeline.machine === 'install') {
-      startInstallPolling(deps, appId, toPollOptions(startOpts))
+      await startInstallPolling(deps, appId, toPollOptions(startOpts))
     } else if (timeline.machine === 'uninstall') {
       startUninstallPolling(deps, appId, toPollOptions(startOpts))
     } else if (timeline.machine === 'rearm') {
@@ -551,9 +551,9 @@ export async function runTsTimelineWithSnapshot(
         if (tick.monitor !== undefined) monitor.reading = tick.monitor
       }
       if (tick.startAgain) {
-        startInstallPolling(deps, appId, toPollOptions(tick.startAgain))
+        await startInstallPolling(deps, appId, toPollOptions(tick.startAgain))
       }
-      if (tick.cancelDelegated) cancelDelegatedInstall(deps, appId)
+      if (tick.cancelDelegated) await cancelDelegatedInstall(deps, appId)
       if (running && tick.runningHold !== undefined) {
         releases.set(tick.runningHold, running.hold(tick.runningHold))
       }

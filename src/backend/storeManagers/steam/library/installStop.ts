@@ -1,6 +1,9 @@
 import { logInfo, LogPrefix } from 'backend/logger'
 import type { ManagerDeps } from 'backend/services/types'
 import { clearSteamRestartHold } from '../steamRestartHold'
+import { pollsImpl } from './pollsFlag'
+import { invokeSteamPoll } from '../pollRust/rustSteamPoll'
+import { RUST_STEAMPOLL_INSTALL_STOP } from 'common/types/sidecarTransport'
 
 /**
  * Stops the active polling loop for appId (clears the interval and removes the
@@ -8,10 +11,15 @@ import { clearSteamRestartHold } from '../steamRestartHold'
  *
  * Exported for unit testing.
  */
-export function stopInstallPolling(
-  deps: Pick<ManagerDeps, 'steamProcesses' | 'steamInstallRuntime'>,
+export async function stopInstallPolling(
+  deps: Pick<ManagerDeps, 'steamProcesses' | 'steamInstallRuntime'> &
+    Pick<ManagerDeps, 'requestRustInvoke'>,
   appId: string
-): void {
+): Promise<void> {
+  if (pollsImpl() === 'rust') {
+    await invokeSteamPoll(deps, RUST_STEAMPOLL_INSTALL_STOP, { appId })
+    return
+  }
   const { activePolls } = deps.steamInstallRuntime.polls
   const poll = activePolls.get(appId)
   if (!poll) return

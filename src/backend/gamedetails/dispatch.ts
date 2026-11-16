@@ -72,6 +72,7 @@ export interface GameDetailsDeps extends NotifyDeps, StatusUpdateDeps {
   /** The boot-owned abort registry a kill signals through (66.4-13). */
   aborts: Pick<AbortRegistry, 'call'>
   steamInstallRuntime: { polls: Pick<InstallPollState, 'activePolls'> }
+  requestRustInvoke: ManagerDeps['requestRustInvoke']
   /** The path roots the Epic user-info read derives from (66.4-11). */
   paths: Pick<ManagerDeps['paths'], 'appFolder' | 'toolsPath' | 'userData'>
   stores: {
@@ -186,7 +187,7 @@ export async function kill(
   if (
     !(
       storeCapabilities[runner].installManagedExternally &&
-      isDelegatedInstallPolling(deps, appName)
+      (await isDelegatedInstallPolling(deps, appName))
     )
   ) {
     deps.aborts.call(appName)
