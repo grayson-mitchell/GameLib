@@ -729,6 +729,11 @@ impl InstallPolls {
                 if slot.poll.hold.steam_hold != hold_before {
                     return true;
                 }
+                // 80-REVIEW A/WR-05: a retarget during the probe means `obs.acf` was read from
+                // the old root; re-entering would report it under the new source. Next tick.
+                if slot.poll.source != snap.source {
+                    return true;
+                }
                 // Only the fields should_hold writes; an upgrade between the two locks keeps the
                 // rest.
                 slot.poll.hold.steam_hold = hold.steam_hold;

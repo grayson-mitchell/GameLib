@@ -1080,20 +1080,32 @@ async fn a_slow_tick_delays_the_next_one_instead_of_overlapping() {
 
 // ---- state moved while the hold probe ran (80-REVIEW A/WR-04, A/WR-05) ----------------------
 
-/// pgrep takes 10 s and reports Steam pid 321; ps answers at once. Leaves a window in which a
-/// `steampoll_install_start` upgrade lands while the probe is out.
-struct SlowSteamRunner;
+/// pgrep takes 10 s and reports Steam pid 321 (or, with `steam_running` false, nothing); ps
+/// answers at once. Leaves a window in which a `steampoll_install_start` upgrade lands while the
+/// probe is out.
+struct SlowSteamRunner {
+    steam_running: bool,
+}
 
 impl ProcessRunner for SlowSteamRunner {
     fn run(&self, program: &str, _argv: Vec<String>, _timeout: Duration) -> BoxFuture<RunOutput> {
         let slow = program.ends_with("pgrep");
+        let running = self.steam_running;
         Box::pin(async move {
             if slow {
                 tokio::time::sleep(Duration::from_secs(10)).await;
-                RunOutput {
-                    code: Some(0),
-                    stdout: "321\n".into(),
-                    stderr: String::new(),
+                if running {
+                    RunOutput {
+                        code: Some(0),
+                        stdout: "321\n".into(),
+                        stderr: String::new(),
+                    }
+                } else {
+                    // pgrep: nothing matched.
+                    RunOutput {
+                        code: Some(1),
+                        ..RunOutput::default()
+                    }
                 }
             } else {
                 RunOutput {
@@ -1112,7 +1124,10 @@ impl ProcessRunner for SlowSteamRunner {
 
 /// A native handoff poll on a finalized manifest, with the slow probe. Returns the polls, the
 /// host and the roots; the bottle root exists but holds no manifest.
-async fn slow_probe_rig(tmp: &TempDir) -> (InstallPolls, Arc<RecordingHost>, PollRoots) {
+async fn slow_probe_rig(
+    tmp: &TempDir,
+    steam_running: bool,
+) -> (InstallPolls, Arc<RecordingHost>, PollRoots) {
     let steam = tmp.path().join("steam");
     let steamapps = steam.join("steamapps");
     std::fs::create_dir_all(&steamapps).unwrap();
@@ -1127,7 +1142,7 @@ async fn slow_probe_rig(tmp: &TempDir) -> (InstallPolls, Arc<RecordingHost>, Pol
     let bottle = tmp.path().join("bottle");
     std::fs::create_dir_all(&bottle).unwrap();
     let host = Arc::new(RecordingHost::default());
-    let runner = Arc::new(SlowSteamRunner);
+    let runner = Arc::new(SlowSteamRunner { steam_running });
     let clock = Arc::new(FakeClock::new(1_000_000));
     let outbox = Arc::new(Outbox::new());
     outbox.mark_ready(host.as_ref()).await;
@@ -1156,7 +1171,7 @@ async fn slow_probe_rig(tmp: &TempDir) -> (InstallPolls, Arc<RecordingHost>, Pol
 #[tokio::test(start_paused = true)]
 async fn an_adoption_during_the_hold_probe_is_not_overwritten_by_the_probe() {
     let tmp = TempDir::new().unwrap();
-    let (polls, host, roots) = slow_probe_rig(&tmp).await;
+    let (polls, host, roots) = slow_probe_rig(&tmp, true).await;
     let start_with = |options: PollOptions| {
         polls
             .start_install(StartInstallArgs {
@@ -1183,6 +1198,41 @@ async fn an_adoption_during_the_hold_probe_is_not_overwritten_by_the_probe() {
         "the probe re-persisted a released hold: {l:?}"
     );
     assert!(l.contains(&"state:installed".to_string()), "{l:?}");
+}
+
+#[tokio::test(start_paused = true)]
+async fn a_retarget_during_the_hold_probe_never_reports_the_old_roots_install() {
+    // Steam is not running, so without the guard the re-entered step completes the install.
+    let tmp = TempDir::new().unwrap();
+    let (polls, host, roots) = slow_probe_rig(&tmp, false).await;
+    let start_with = |options: PollOptions| {
+        polls
+            .start_install(StartInstallArgs {
+                app_id: APP.into(),
+                title: "Game".into(),
+                roots: roots.clone(),
+                options,
+            })
+            .unwrap();
+    };
+    start_with(handoff(None));
+    // The probe is out from 3 s to 13 s; retarget to the (empty) bottle root at 5 s.
+    tokio::time::sleep(Duration::from_secs(5)).await;
+    settle().await;
+    start_with(handoff(Some(AcfSource::Bottle)));
+    tokio::time::sleep(Duration::from_secs(12)).await;
+    settle().await;
+    let installed: Vec<_> = host
+        .records()
+        .into_iter()
+        .filter(|x| matches!(x, StreamRecord::State(StateEvent::Installed { .. })))
+        .collect();
+    assert!(
+        installed.is_empty(),
+        "the native root's install was reported under the bottle source: {installed:?}"
+    );
+    assert_eq!(polls.snapshot_poll(APP).unwrap().source, AcfSource::Bottle);
+    polls.stop_install(APP);
 }
 
 // ---- TS-pushed mirrors and the re-arm bookkeeping --------------------------------------------
