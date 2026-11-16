@@ -1,0 +1,109 @@
+[
+  {
+    "dv": "DV-80-01",
+    "recordIndex": 3,
+    "rustRecord": null,
+    "scenario": "ack-timeout-emits-anyway",
+    "tsRecord": {
+      "frontend": {
+        "args": [
+          {
+            "appName": "1000",
+            "runner": "steam",
+            "status": "done"
+          }
+        ],
+        "channel": "gameStatusUpdate"
+      }
+    }
+  },
+  {
+    "dv": "DV-80-01",
+    "recordIndex": 4,
+    "rustRecord": null,
+    "scenario": "ack-timeout-emits-anyway",
+    "tsRecord": {
+      "notify": {
+        "body": "Installation Finished",
+        "default": "Installation Finished",
+        "key": "notify.install.finished",
+        "title": "Test Game"
+      }
+    }
+  },
+  {
+    "dv": "DV-80-02",
+    "recordIndex": 2,
+    "rustRecord": {
+      "frontend": {
+        "args": [
+          {
+            "appName": "1000",
+            "runner": "steam",
+            "status": "done"
+          }
+        ],
+        "channel": "gameStatusUpdate"
+      }
+    },
+    "scenario": "sidecar-not-ready-latest-wins",
+    "tsRecord": {
+      "state": {
+        "appId": "1000",
+        "buildid": "100",
+        "installPath": "/fake/steam/steamapps/common/TestGame",
+        "kind": "installed",
+        "sizeOnDisk": "1048576",
+        "source": "native"
+      }
+    }
+  },
+  {
+    "dv": "DV-80-02",
+    "recordIndex": 3,
+    "rustRecord": {
+      "notify": {
+        "body": "Installation Finished",
+        "default": "Installation Finished",
+        "key": "notify.install.finished",
+        "title": "Test Game"
+      }
+    },
+    "scenario": "sidecar-not-ready-latest-wins",
+    "tsRecord": {
+      "frontend": {
+        "args": [
+          {
+            "appName": "1000",
+            "runner": "steam",
+            "status": "done"
+          }
+        ],
+        "channel": "gameStatusUpdate"
+      }
+    }
+  },
+  {
+    "dv": "DV-80-02",
+    "recordIndex": 4,
+    "rustRecord": {
+      "state": {
+        "appId": "1000",
+        "buildid": "100",
+        "installPath": "/fake/steam/steamapps/common/TestGame",
+        "kind": "installed",
+        "sizeOnDisk": "1048576",
+        "source": "native"
+      }
+    },
+    "scenario": "sidecar-not-ready-latest-wins",
+    "tsRecord": {
+      "notify": {
+        "body": "Installation Finished",
+        "default": "Installation Finished",
+        "key": "notify.install.finished",
+        "title": "Test Game"
+      }
+    }
+  }
+]

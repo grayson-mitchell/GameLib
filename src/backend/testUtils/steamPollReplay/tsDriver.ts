@@ -277,10 +277,27 @@ function finalizeStream(stream: StreamRecord[]): StreamRecord[] {
   return stream
 }
 
+/** What the TS loops left behind in the sidecar's library, for handler parity (D-14). */
+export interface TsSnapshot {
+  /** The library entry the run was seeded with. */
+  initial: unknown
+  /** Library values at the end of the run. */
+  library: unknown[]
+  /** The last `steamLibraryStore.set('games', ...)` value, undefined when never written. */
+  games: unknown
+}
+
 /** Runs one timeline through the real TS loops and returns the normalised stream. */
 export async function runTsTimeline(
   timeline: Timeline
 ): Promise<StreamRecord[]> {
+  return (await runTsTimelineWithSnapshot(timeline)).stream
+}
+
+/** Like `runTsTimeline`, plus the final library / store snapshot. */
+export async function runTsTimelineWithSnapshot(
+  timeline: Timeline
+): Promise<{ stream: StreamRecord[]; snapshot: TsSnapshot }> {
   await ensureI18n()
   world.current = freshWorld()
   clearTranslations()
@@ -295,6 +312,7 @@ export async function runTsTimeline(
   w.bridgeDir = start.roots.bridge
   w.bridgeAllowlisted = timeline.store?.bridgeAllowlisted ?? false
 
+  let storeGames: unknown
   // Stores: Map-backed, restart-hold writes recorded as file records.
   const holdMap = new Map<string, unknown>(
     Object.entries(timeline.store?.restartHold ?? {})
@@ -302,7 +320,12 @@ export async function runTsTimeline(
   const metadata = new Map<string, unknown>()
   if (timeline.store?.metadata) metadata.set(appId, timeline.store.metadata)
   const steamStores = {
-    steamLibraryStore: { get: () => undefined, set: () => undefined },
+    steamLibraryStore: {
+      get: () => undefined,
+      set: (_k: string, v: unknown) => {
+        storeGames = v
+      }
+    },
     steamMetadataStore: {
       get: (k: string) => metadata.get(k),
       set: (k: string, v: unknown) => void metadata.set(k, v),
@@ -342,7 +365,7 @@ export async function runTsTimeline(
     const base = createTestManagerDeps()
     const library = base.steamSession.libraryState.library
     const installed = timeline.machine === 'uninstall'
-    library.set(appId, {
+    const seedEntry = {
       app_name: appId,
       runner: 'steam',
       title: start.title,
@@ -359,7 +382,9 @@ export async function runTsTimeline(
             platform: 'Mac'
           }
         : {}
-    } as never)
+    }
+    const initial = JSON.parse(JSON.stringify(seedEntry)) as unknown
+    library.set(appId, seedEntry as never)
     // Observe sidecar-state writes: library.set of a resolved install => `installed` / `uninstalled`.
     const rawSet = library.set.bind(library)
     library.set = (key, value) => {
@@ -540,7 +565,17 @@ export async function runTsTimeline(
       clock.advance(intervalMs)
       await flush()
     }
-    return finalizeStream(world.current.stream)
+    return {
+      stream: finalizeStream(world.current.stream),
+      snapshot: {
+        initial,
+        library: JSON.parse(JSON.stringify([...library.values()])) as unknown[],
+        games:
+          storeGames === undefined
+            ? undefined
+            : JSON.parse(JSON.stringify(storeGames))
+      }
+    }
   } finally {
     restore()
   }
