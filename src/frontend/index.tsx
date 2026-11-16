@@ -38,6 +38,7 @@ import { installExternalLinkClickHandler } from './helpers/externalLinkClicks'
 import { configStore } from './helpers/stores'
 import { resolveBootLanguage } from './helpers/resolveBootLanguage'
 import { initOnlineMonitor } from './helpers/onlineMonitor'
+import { registerNoticePreview } from './dev/noticePreview'
 import { installKeyboardNavTracking } from './helpers/inputModality'
 import { defaultThemes } from './components/UI/ThemeSelector'
 import { migrateThemeKey } from './components/UI/ThemeSelector/themeLabels'
@@ -57,6 +58,14 @@ import {
 const pickerParams = parseBridgeInvitePickerParams(window.location.search)
 
 initOnlineMonitor()
+
+// Dev-only `window.__gamelibNotices` (live gate for the notice stack). Vite
+// replaces `import.meta.env.DEV` with a literal in both modes, so in production
+// Rollup removes the dead call and then the side-effect-free module. jest
+// cannot compile `import.meta` (ts-jest emits CJS); that is safe here only
+// because index.tsx is never imported by a test, which is why the guard lives
+// here and not in the module.
+if (import.meta.env.DEV) registerNoticePreview()
 
 window.addEventListener('error', (ev: ErrorEvent) => {
   // A real Error JSON-serialises to `{}` across IPC, so send its text, not the object.
