@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v0.10
 milestone_name: Foundations
-status: verifying
-stopped_at: Phase 80 context gathered
-last_updated: "2026-11-16T07:55:40.657Z"
+status: ready_to_plan
+stopped_at: Phase 80 complete (33/33) — ready to discuss Phase 81
+last_updated: 2026-11-16T08:05:12.501Z
 last_activity: 2026-11-16
 progress:
   total_phases: 26
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 80 — steam-install-uninstall-and-update-polling-state-machines-in
+**Current focus:** Phase 81 — unify the steam restart hold into restart on play
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -72,10 +72,10 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 
 ## Current Position
 
-Phase: 80 (steam-install-uninstall-and-update-polling-state-machines-in) — EXECUTING
-Plan: 33 of 33
-Status: Phase complete — ready for verification
-Last activity: 2026-11-16 - Completed quick task 261116-swr: Align Humble and read-only stores toasts with the Steam toast styling
+Phase: 81
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-11-16
 
 Progress: [██████████] 96%
 
