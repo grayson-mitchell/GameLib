@@ -399,6 +399,10 @@ fn invoke_abandoned_message(reason: &str, id: &str, channel: &str) -> String {
 fn timeout_for(channel: &str) -> Option<Duration> {
     if LONG_RUNNING_CHANNELS.contains(&channel) {
         None
+    } else if channel == "steamPollStateEvent" {
+        // Phase 80 D-05 / Pitfall 3: the Rust poll's state-event ack is bounded at 5 s, so the
+        // pending entry is removed then instead of lingering for `INVOKE_TIMEOUT`.
+        Some(Duration::from_millis(gamelib_steampoll::constants::ACK_TIMEOUT_MS))
     } else {
         Some(INVOKE_TIMEOUT)
     }
@@ -1601,6 +1605,9 @@ fn run_setup(
     macos_native_gamepad::start(app.handle().clone());
     // Wrap host first: macOS `steamcm_configure` fails without it (79-14).
     install_steamcm_host(app.handle());
+    // Phase 80 D-03/D-04/D-05: the poll host (webview emits, translated notifications, acked
+    // state events) is installed before the sidecar is spawned.
+    install_steampoll_host(app.handle());
     let state = spawn_sidecar_state(app)?;
     start_single_instance_accept_loop(app, &state, primary_listener);
     install_os_deep_link_handler(app, &state);
@@ -2542,6 +2549,11 @@ mod tests {
     fn non_exempt_channel_is_bounded_at_invoke_timeout() {
         // Fails if timeout_for ever reverts to an unconditional None.
         assert_eq!(timeout_for("getGameInfo"), Some(INVOKE_TIMEOUT));
+        // Phase 80 D-05: the poll's state-event ack is bounded at 5 s, not 60 s.
+        assert_eq!(
+            timeout_for("steamPollStateEvent"),
+            Some(Duration::from_secs(5))
+        );
     }
 
     #[test]
