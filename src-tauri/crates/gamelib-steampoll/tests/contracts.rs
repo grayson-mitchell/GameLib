@@ -224,3 +224,106 @@ async fn tokio_runner_exit_code_and_timeout() {
 fn system_clock_is_wall_time() {
     assert!(SystemClock.now_ms() > 1_700_000_000_000);
 }
+
+/// 80-REVIEW C-WR-08: the producer side of the state-event wire parity. Every `StateEvent`
+/// variant, with the edge values Rust can really emit (a raw empty or non-numeric SizeOnDisk, a
+/// long buildid, an installdir-joined path past 4096 bytes, the largest appId and a large seq),
+/// serialised and pinned to `tests/fixtures/state-events.json`. The sidecar's
+/// `steamPollStateEventParity.test.ts` parses that same file with the zod schema, so a change on
+/// either side fails one of the two tests. Regenerate with `GAMELIB_REGEN_STATE_EVENTS=1`.
+#[test]
+fn state_event_wire_fixture_matches_every_variant() {
+    let long_path = format!(
+        "/Volumes/Games/SteamLibrary/steamapps/common/{}",
+        "a".repeat(4200)
+    );
+    let events = vec![
+        StateEvent::Installed {
+            app_id: "4294967295".into(),
+            seq: 9_007_199_254_740_991,
+            source: "native".into(),
+            install_path: "/steam/steamapps/common/Game".into(),
+            size_on_disk: "50000".into(),
+            buildid: Some("12345678".into()),
+        },
+        StateEvent::Installed {
+            app_id: "480".into(),
+            seq: 2,
+            source: "bottle".into(),
+            install_path: long_path.clone(),
+            size_on_disk: String::new(),
+            buildid: None,
+        },
+        StateEvent::Installed {
+            app_id: "480".into(),
+            seq: 3,
+            source: "bridge".into(),
+            install_path: "/b/steamapps/common/".into(),
+            size_on_disk: "not-a-number".into(),
+            buildid: Some("b".repeat(64)),
+        },
+        StateEvent::InstallIncomplete {
+            app_id: "480".into(),
+            seq: 4,
+        },
+        StateEvent::UpdateDone {
+            app_id: "480".into(),
+            seq: 5,
+            completed: true,
+        },
+        StateEvent::Uninstalled {
+            app_id: "480".into(),
+            seq: 6,
+            source: "native".into(),
+            survivor: None,
+        },
+        StateEvent::Uninstalled {
+            app_id: "480".into(),
+            seq: 7,
+            source: "native".into(),
+            survivor: Some(Survivor {
+                source: "bottle".into(),
+                install_path: long_path,
+                size_on_disk: String::new(),
+                buildid: None,
+            }),
+        },
+        StateEvent::BridgeUninstalled {
+            app_id: "480".into(),
+            seq: 8,
+        },
+        StateEvent::ForcedWindowsViaBottleCleared {
+            app_id: "480".into(),
+            seq: 9,
+        },
+        StateEvent::MacArchVerdict {
+            app_id: "480".into(),
+            seq: 10,
+            verdict: "32".into(),
+        },
+        StateEvent::MacArchVerdict {
+            app_id: "480".into(),
+            seq: 11,
+            verdict: "64".into(),
+        },
+        StateEvent::RearmSettled {
+            seq: 12,
+            needs_reconcile: true,
+        },
+    ];
+    // Every kind is covered.
+    let kinds: std::collections::BTreeSet<&str> = events.iter().map(StateEvent::kind).collect();
+    assert_eq!(kinds.len(), 8);
+
+    let wire = serde_json::to_string_pretty(&events).unwrap() + "\n";
+    let path =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/state-events.json");
+    if std::env::var_os("GAMELIB_REGEN_STATE_EVENTS").is_some() {
+        std::fs::write(&path, &wire).unwrap();
+    }
+    let pinned = std::fs::read_to_string(&path).expect("state-events.json fixture");
+    assert_eq!(
+        pinned, wire,
+        "regenerate with GAMELIB_REGEN_STATE_EVENTS=1 and update the zod schema"
+    );
+}

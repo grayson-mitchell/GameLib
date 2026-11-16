@@ -95,8 +95,16 @@ const depotJobEvent = z.discriminatedUnion('kind', [
 
 // Phase 80 (80-11): the Rust steampoll state events (gamelib-steampoll events.rs). Every event
 // carries the full resulting state and a monotonic seq; keep in lockstep with `StateEvent`.
+// 80-REVIEW C-WR-08: the bounds match what Rust can actually emit, not what a well-formed ACF
+// holds. `sizeOnDisk` and `buildid` are raw ACF strings Rust passes through unvalidated (an empty
+// or non-numeric SizeOnDisk is possible), and `installPath` is a steamapps dir joined with the
+// raw installdir. An event this schema rejects is re-sent by the shell every 10 s for the rest of
+// the session, so it must not be stricter than its producer. The handler sanitises the values.
+// steamPollStateEventParity.test.ts parses the crate's serialised fixture of every variant.
 const pollSource = z.enum(['native', 'bottle', 'bridge'])
-const pollBuildId = z.string().max(32).nullable().optional()
+const pollBuildId = z.string().max(256).nullable().optional()
+const pollSizeOnDisk = z.string().max(256)
+const pollInstallPath = nonEmptyString(65536)
 const pollBase = { appId: numericId, seq: count }
 
 const steamPollStateEvent = z.discriminatedUnion('kind', [
@@ -104,8 +112,8 @@ const steamPollStateEvent = z.discriminatedUnion('kind', [
     ...pollBase,
     kind: z.literal('installed'),
     source: pollSource,
-    installPath: nonEmptyString(4096),
-    sizeOnDisk: numericId,
+    installPath: pollInstallPath,
+    sizeOnDisk: pollSizeOnDisk,
     buildid: pollBuildId
   }),
   z.strictObject({ ...pollBase, kind: z.literal('installIncomplete') }),
@@ -121,8 +129,8 @@ const steamPollStateEvent = z.discriminatedUnion('kind', [
     survivor: z
       .strictObject({
         source: pollSource,
-        installPath: nonEmptyString(4096),
-        sizeOnDisk: numericId,
+        installPath: pollInstallPath,
+        sizeOnDisk: pollSizeOnDisk,
         buildid: pollBuildId
       })
       .nullable()

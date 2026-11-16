@@ -986,6 +986,11 @@ const IN_SCOPE_SUITES = [
  * `backend/logger`, drives the poll-event handler against in-memory test stores and recording
  * fakes, and reaches no filesystem, `homedir()` or child process.
  *
+ * `steamPollStateEventParity.test.ts` (80-REVIEW C-WR-08) is structurally contained: it spies
+ * on `backend/logger`, reads one committed crate fixture (`state-events.json`) with
+ * `fs.readFileSync` rooted at `__dirname`, and drives the poll-event handler against in-memory
+ * test stores; it writes nothing and reaches no `homedir()` or child process.
+ *
  * `bootSourceShape.test.ts` (Phase 66 Plan 08, D-08) is structurally contained: it only reads
  * source text with `fs.readFileSync`/`readdirSync`, boots nothing and spawns nothing.
  *
@@ -1098,6 +1103,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'sidecarStdoutFramesOnly.test.ts',
   'signInProbeBootWire.test.ts',
   'steamPollEventRegistration.test.ts',
+  'steamPollStateEventParity.test.ts',
   'skeletonFlows.test.ts',
   'steamAuthFlows.test.ts',
   'steamCmConfigGate.test.ts',

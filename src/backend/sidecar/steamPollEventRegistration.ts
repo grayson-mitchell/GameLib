@@ -12,6 +12,11 @@
  * is schema-validated by `validateInbound` before this handler runs. Events carry the full
  * resulting state, so applying one twice leaves the same state (R1 idempotent replay).
  *
+ * Refusals (80-REVIEW C-WR-08): the shell retries an unacked or `applied: false` event every
+ * 10 s for the rest of the session. A refusal that retrying cannot change (no library entry to
+ * update) is therefore answered `applied: true`. Only a thrown apply, which may be transient,
+ * answers `applied: false`.
+ *
  * Ordering (R2): `pushGameToLibrary` is sent from inside the apply, before the handler returns.
  * The shell's single stdout reader keeps that order, so the push precedes the ack on the wire.
  *
@@ -61,6 +66,16 @@ function persistAndPush(deps: ManagerDeps, updated: SteamGameInfo): void {
   deps.sendFrontendMessage('pushGameToLibrary', updated)
 }
 
+/**
+ * A raw ACF `SizeOnDisk` string from Rust, which passes it through unvalidated (it may be empty
+ * or non-numeric). Anything that is not a finite, non-negative number counts as 0 bytes
+ * (80-REVIEW C-WR-08).
+ */
+function sizeOnDiskBytes(raw: string): number {
+  const bytes = Number(raw)
+  return Number.isFinite(bytes) && bytes >= 0 ? bytes : 0
+}
+
 type InstalledEvent = Extract<SteamPollStateEvent, { kind: 'installed' }>
 type UninstalledEvent = Extract<SteamPollStateEvent, { kind: 'uninstalled' }>
 
@@ -72,7 +87,7 @@ function applyInstalled(deps: ManagerDeps, ev: InstalledEvent): void {
     is_installed: true,
     install: {
       install_path: ev.installPath,
-      install_size: getFileSize(Number(ev.sizeOnDisk)),
+      install_size: getFileSize(sizeOnDiskBytes(ev.sizeOnDisk)),
       platform: installPlatformForSource(ev.source),
       ...installVersionField(ev.buildid)
     }
@@ -89,7 +104,7 @@ function applyUninstalled(deps: ManagerDeps, ev: UninstalledEvent): void {
       is_installed: true,
       install: {
         install_path: survivor.installPath,
-        install_size: getFileSize(Number(survivor.sizeOnDisk)),
+        install_size: getFileSize(sizeOnDiskBytes(survivor.sizeOnDisk)),
         platform: installPlatformForSource(survivor.source),
         ...installVersionField(survivor.buildid)
       }
@@ -153,7 +168,18 @@ async function applyEvent(
       await applyMacArchVerdict(deps, ev.appId, ev.verdict)
       return { applied: true, title: titleOf(ev.appId) }
     case 'rearmSettled':
-      if (ev.needsReconcile) await refreshInstallState()
+      // Acked at once, the reconcile runs detached (80-REVIEW C-WR-08): a full reconcile at boot
+      // can outlast the shell's ack bound, and an unacked rearmSettled is re-sent every 10 s,
+      // reconciling again each time. Nothing in Rust waits on the reconcile.
+      if (ev.needsReconcile) {
+        void refreshInstallState().catch((err: unknown) => {
+          const name = err instanceof Error ? err.name : typeof err
+          logWarning(
+            `steamPollStateEvent rearmSettled reconcile failed (${name})`,
+            LogPrefix.Steam
+          )
+        })
+      }
       return { applied: true }
   }
 }

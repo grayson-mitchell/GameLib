@@ -221,6 +221,48 @@ describe('steamPollStateEvent handler', () => {
     expect(refreshInstallState).toHaveBeenCalledTimes(1)
   })
 
+  test('C-WR-08 rearmSettled acks before the reconcile finishes, and a failed reconcile is logged', async () => {
+    const { send, refreshInstallState } = setup()
+    let finish!: () => void
+    refreshInstallState.mockImplementationOnce(
+      () =>
+        new Promise<undefined>((r) => {
+          finish = () => r(undefined)
+        })
+    )
+    const reply = await send({
+      kind: 'rearmSettled',
+      seq: 1,
+      needsReconcile: true
+    })
+    expect(reply).toEqual({ applied: true })
+    expect(refreshInstallState).toHaveBeenCalledTimes(1)
+    finish()
+
+    refreshInstallState.mockImplementationOnce(() =>
+      Promise.reject(new Error('scan failed'))
+    )
+    expect(
+      await send({ kind: 'rearmSettled', seq: 2, needsReconcile: true })
+    ).toEqual({ applied: true })
+    await new Promise((r) => setImmediate(r))
+    expect(logger.logWarning).toHaveBeenCalledWith(
+      expect.stringContaining('rearmSettled reconcile failed'),
+      expect.anything()
+    )
+  })
+
+  test('C-WR-08 a raw empty or non-numeric sizeOnDisk is stored as 0 bytes', async () => {
+    const { send, entry } = setup()
+    expect((await send({ ...installed, sizeOnDisk: '' })).applied).toBe(true)
+    const empty = entry()?.install?.install_size
+    expect(
+      (await send({ ...installed, seq: 2, sizeOnDisk: 'garbage' })).applied
+    ).toBe(true)
+    expect(entry()?.install?.install_size).toBe(empty)
+    expect(String(empty)).not.toContain('NaN')
+  })
+
   test('a throwing apply replies applied:false', async () => {
     const { deps, send } = setup()
     deps.stores.steam.steamLibraryStore.set = () => {
