@@ -3,175 +3,236 @@ phase: 80-steam-install-uninstall-and-update-polling-state-machines-in
 reviewed: 2026-11-16
 depth: standard
 status: issues_found
-files_reviewed: 99
+iteration: 2
+files_reviewed: 109
 findings:
-  critical: 2
-  warning: 21
+  critical: 0
+  warning: 5
   info: 14
-  total: 37
+  total: 19
 ---
 
-# Phase 80 Code Review
+# Phase 80 Code Review (re-review after fix pass)
 
-Split three ways because the phase scope (108 files, ~72k lines) exceeds one reviewer's context: A = Rust crates (43 files), B = Tauri shell (8), C = TS backend (48). Large pre-existing files were reviewed by their phase-80 diff (base b1f3f4a05^). Fixtures, JSON baselines and Cargo.lock were excluded.
+Re-review after the 27 `fix(80):` commits that followed the first review (b7dbc199e, 37 findings; fix reports 80-REVIEW-FIX-A/B/C.md). Split three ways as before: A = Rust crates (43 files), B = Tauri shell (8), C = TS backend + meta + .github (58). Each part verifies the prior findings, checks the fix commits for regressions (`git diff b7dbc199e..HEAD`), and re-reviews its scope by the phase diff (base b1f3f4a05^). Finding IDs are local to each part (A-WR-01 etc.).
 
 ## Orchestrator triage
 
-- **A-CR-01 / A-WR-01 (installdir-derived library root / multi-segment installdir deletes common/<first segment>) are inherited, not introduced.** The deleted TS `removeSteamInstallCopy` (b1f3f4a05^:library/acfState.ts ~L340-388) derived `steamappsDir = resolve(installPath,'..','..')` and deleted `common/<first segment>` the same way; the Rust port is faithful. Still real defects worth fixing.
-- **One theme spans all three parts:** state-event delivery. B-CR-01 (unacked events after READY never replayed), A-WR-08 / B-WR-01 (replay can reorder a stale `installed` after a newer `uninstalled`), C-IN-04 (TS handler ignores `seq`), C-WR-08 (zod stricter than Rust output; rejected events retried only at READY), B-WR-02 (double 5 s timeout orphans the blocking invoke). Fix together: retry/flush unacked events while running, and a per-app seq guard in `steamPollEventRegistration.ts`.
-- **Second theme:** concurrency in the crate (A-WR-03 HoldStore unlocked RMW, A-WR-04/05 probe races, A-WR-06/07 double-start) and lost same-turn ordering on the TS side (C-WR-01..07).
-- Live UAT (items 1-9) and CI legs passed, so none of these show on the happy path; each needs a failure, timeout or race.
+- **Prior Criticals both fixed** (A-CR-01, B-CR-01). Of the prior Warnings: fixed except A-WR-01, A-WR-07, B-WR-02, C-WR-06 (partial — their gaps are the new Warnings below) and C-WR-09 (skipped, design decision, still open).
+- **A-WR-01 is the priority — data-loss risk:** the installdir conflict scan compares the cleaned target against the *other* manifests' raw installdirs, so a co-installed `Studio/GameB` / `Studio/` / `.\Studio` is not seen and `remove_dir_all(common/Studio)` deletes it.
+- **Same bug, unreviewed path:** TS `uninstallBottleGameDirectly` (`gameUninstall.ts:768-797`) still deletes the first installdir segment — the original A-WR-01 on the bottle path. Not counted (noted by Part A).
+- **New Warnings:** A-WR-02 stop/start race leaves an uncancellable poller; B-WR-01 the 4.5 s deadline is not re-checked after the stdin lock / wait not sized from it; B-WR-02 retry-thread spawn failure leaves the outbox not-ready for the session; C-WR-01 a late win32 `launching` can overwrite `playing` or outlive the watch (regression from C-WR-06).
+- **Retry noise theme (Info):** A-IN-01 unbounded log growth while hung, C-IN-04 poison events re-sent every 10 s uncapped.
 
-## Part A — Rust crates (gamelib-steampoll, -cli, steamfiles, i18n)
+## Part A — Rust crates
 
-Finding IDs below are local to this part (prefix them with A- when referring, e.g. A-CR-01).
 
-## Phase 80 (Part A, Rust crates): Code Review Report
+### Phase 80 (Part A, Rust crates): Code Review Report, re-review after the fix pass
 
 **Reviewed:** 2026-11-16
-**Depth:** standard (with targeted cross-checks against the deleted TS: `updatePollOnce.ts`, `uninstallPolling.ts`, `acfState.ts` at `b1f3f4a05^`)
-**Files Reviewed:** 43 (tests read only for coverage gaps)
+**Depth:** standard. I read the fix diff `b7dbc199e..HEAD` in full for the steampoll crate, including the Part B and Part C additions (`start_install_reporting`, `refresh_bridge_finalized`, `apply_effects_with`, dispatch `[null]`). Large pre-existing files were read by their phase diff from `b1f3f4a05^`.
+**Files Reviewed:** 43
 **Status:** issues_found
 
-### Summary
+## Summary
 
-I traced the update machine against the deleted `updatePollOnce.ts` line by line. It matches: bit 4 only completes together with `saw_pending`/`saw_activity`/a build change, the no-activity completion is the TS rule, and the one-tick deferral of the InstallApp outcome is equivalent because 40 % 3 != 0. The uninstall step matches the TS too, including the MAX_TICKS cap with no terminal `done`. I found no panics on untrusted ACF, VDF or nettop input; every slice point is an ASCII boundary.
+The fix pass is solid. CR-01 is closed: the library root now comes from the directory the manifest was actually read from, and an absolute, drive-prefixed, `.`/`..` or nested `installdir` is refused before any join. WR-03 to WR-06, WR-08 and WR-09 are fixed correctly, and I found no regression in them.
 
-The serious problems are elsewhere:
+Two prior findings are only partly fixed:
 
-- **CR-01:** the delete path in `acf_copies::remove_copy` can be steered outside the library the manifest came from. This is the one Rust-only guard on a recursive delete.
-- **Concurrency:** the hold store, the hold-probe re-entry in the install loop, uninstall start, and running-poll start/stop each have a race. All four are real, because the shell dispatches from worker threads and the loops await child processes for seconds at a time.
+- **WR-01 (now WR-01 below):** only the manifest being removed is validated. The conflict scan still compares that clean segment against the *other* manifests' raw `installdir` values, so a co-installed `Studio/GameB` next to a single-segment `Studio` still has its files deleted.
+- **WR-07 (now WR-02 below):** the generation counter closes the dying-task case. A concurrent `stop()` that lands between `start()`'s state unlock and its `registry.register` still leaves an uncancellable poller, and a later `start()` adds a second one.
 
-### Critical Issues
+No legitimate Steam installdir should be refused. Steam installdirs are a single folder name, and `:` and `\` cannot appear in a Windows folder name, so no shipping depot uses them. A refusal fails safe: the result is `Refused` and the disk is untouched.
 
-#### CR-01: `remove_copy` recovers `steamapps` from the installdir-derived path, so a crafted `installdir` deletes a directory in a different library
+## Verification of the prior Part A findings
 
-**File:** `src-tauri/crates/gamelib-steampoll/src/acf_copies.rs:273-318` (with `acf_state.rs:129-133`)
-**Issue:** `read_acf_state` builds `install_path = join(<dir the manifest was found in>, "common", installdir)` but does not return that directory. `remove_copy` then normalizes `install_path` and takes `steamapps_dir = normalized/../..`. That means the "library root" the guard checks is derived from the untrusted `installdir`, not from where the manifest actually is. Two examples:
+### CR-01: fixed
 
-- `installdir = "../../../other/steamapps/common/Victim"` in `<T>/bottle/steamapps/appmanifest_10.acf` normalizes to `<T>/other/steamapps/common/Victim`.
-- An absolute `installdir = "/any/path/steamapps/common/Victim"` replaces the base entirely (`Path::join` with an absolute path). On Windows a drive-prefixed path does the same.
+- `read_acf_state_located` returns the `steamapps_dir` that `find_acf` matched. `remove_copy` builds `common/<segment>`, the manifest path, the guard input and the conflict-scan dir from it alone.
+- `installdir_shape` refuses `\`, `:` and NUL on every OS. It also refuses `is_absolute()`/`has_root()` paths and any non-`Normal` component (`.`, `..`, prefix). Those checks cover `/abs`, `C:\x`, `C:x`, `\\server\x` and `..\..`.
+- The guard is no longer tautological, because `steamapps_dir` cannot be steered by manifest content. The two new security tests put a victim under a real `other/steamapps/common` and would have failed on the old derivation.
+- `AcfState::Installed.install_path` is still `join(dir, "common", installdir)`. That is only reported to the sidecar, and no Rust delete path consumes it any more. The only `remove_dir_all` in the crate is in `remove_copy`.
 
-In both cases `steamapps_dir` becomes `<…>/steamapps` of the victim's tree. `guard_install_root(steamapps_dir, install_root)` is then tautological: the canonical root is inside `canonicalize(steamapps_dir)/common` by construction. The conflict scan also runs against the *victim's* `steamapps`, so it finds nothing unless that tree happens to hold a manifest with the same installdir. `remove_dir_all` then deletes the directory.
+### WR-01: partly fixed (see the new WR-01)
 
-The module doc (lines 10-12) claims "an `installdir` that is absolute or climbs out of `common/` is refused". `refuses_absolute_installdir` and `refuses_traversal_installdir` only pass because their victim path has no `steamapps/common` in it. The TS had the same derivation, but this guard was meant to be the strict Rust-only replacement (D-12, T-80-11/12).
-**Fix:** Validate `installdir` itself and pin the library root to the directory the manifest was read from:
+The manifest being removed is now refused when nested. The other side of the comparison was not normalized.
+
+### WR-02: fixed
+
+`same_installdir` folds case on macOS and Windows and stays exact on Linux, which is correct for ext4-hosted Wine prefixes. There is a small residual in Unicode normalization, covered in IN-04.
+
+### WR-03: fixed
+
+- `STORE_LOCK` is held across load → rename in both `record_value` and `clear`. Because it is static, it also covers `rearm.rs`'s second `HoldStore`.
+- I grepped `src/` for other writers of the store. Nothing outside the crate writes it (only a test names it), so a process-wide lock is enough.
+- Lock order is `polls` → `STORE_LOCK` (via `upgrade` → `hold.clear`). Nothing takes them in reverse, so there is no deadlock.
+- Temp names are unique per write.
+
+### WR-04: fixed
+
+`hold_before` is snapshotted with the clone, and the copy-back is dropped when the slot's `steam_hold` moved. That covers the adoption release, `Unprobed`/`Holding` → `Released`.
+
+The claim that "the first step changed nothing" holds. `installed()` returns the probe request before touching `poll` (install_once.rs:487-497), and `downloading()` never asks for a probe.
+
+The early return also cannot lose a `pending_outcome`. A probe only happens on the non-update path, and `pending_outcome` is only ever set by the update path.
+
+### WR-05: fixed
+
+The `source` re-check now sits in the second critical section, after the WR-04 check.
+
+### WR-06: fixed
+
+`try_register` checks and inserts under one map lock, and `start_uninstall` uses it. The semantics are unchanged from `is_active`: a cancelled-but-still-draining poll still blocks a restart, as before.
+
+### WR-07: partly fixed (see the new WR-02)
+
+### WR-08: fixed (crate side)
+
+- `note_applied` runs on every applied ack, live or replayed, and drops older queued events in the install-state group.
+- `enqueue` refuses an event older than an applied or queued one in the group.
+- `flush` replays in ascending seq, re-checks each entry is still queued, and stops when the sidecar is not ready. The `flushing` guard is reset by `Drop`, so a dropped future cannot wedge it.
+
+The `updateDone` exclusion is sound. Its handler (`steamPollEventRegistration.ts`) only invalidates the update state and re-pushes the existing entry; it writes no install fields. Superseding an `installed` with it would lose the install-path write.
+
+The only cross-kind residual is narrow. An older unacked `installed` replayed after a newer applied `updateDone` re-writes the `installed` buildid, which can be older than the post-update build. This needs an `installed` ack to fail and an update to finish inside one 10 s retry window, so I have not raised it as a finding.
+
+The Part C seq guard (`steamPollEventRegistration.ts`) uses the same group, and stale events are answered `applied: true`, so the crate drops them instead of retrying.
+
+### WR-09: fixed (not live-verified, as the fix report says)
+
+`start()` replaces a `failed` entry after `kill_monitor`. `is_live` is false for a missing or failed entry, and the loop restarts at most once every 5 ticks, and only while the poll is `live_monitor_eligible`.
+
+A monitor that is still looking up the Steam pid counts as live, so it is not doubled. The no-pid path removes the entry, so the next throttled tick retries.
+
+### Fixes from Parts B and C inside this crate
+
+All three look correct:
+
+- **`start_install_reporting`** reads `awaiting_update` under the same `polls` lock as the start or upgrade.
+- **`refresh_bridge_finalized`** only rewrites an installer-owned `Installed` continuation, and the read has no await before `resolve`.
+- **Dispatch** now accepts `[null]`.
+
+## Warnings
+
+### WR-01: The conflict scan compares the validated segment against other manifests' raw `installdir`, so a nested or trailing-separator co-install is still deleted
+
+**File:** `src-tauri/crates/gamelib-steampoll/src/acf_copies.rs:99-107` (the caller is at 341-361)
+**Issue:** `remove_copy` now requires its own `installdir` to be one segment, say `Studio`. `find_other_manifests_with_installdir` then compares `"Studio"` against each other manifest's raw `installdir`.
+
+Some co-installed manifests name the same directory and still compare unequal:
+
+- `Studio/GameB` (nested)
+- `Studio/` (trailing separator)
+- `.\Studio`
+- on Windows, `Studio.` or `Studio ` (Win32 strips a trailing dot or space)
+
+Each of these is reported as "no conflict", and `remove_dir_all(common/Studio)` deletes the other app's files. This is the original WR-01 data-loss shape with the two roles swapped. The fix report says the scan now "compares like with like", but only one side was normalized, and no test covers it: `refuses_nested_installdir_and_keeps_shared_parent` only nests the manifest being removed.
+
+**Fix:** Normalize the other side to its first component before comparing. Count anything that cannot be parsed as a conflict, because that only downgrades the removal to manifest-only:
 
 ```rust
-// acf_state.rs: carry the real dir on Installed
-AcfState::Installed { steamapps_dir: dir.clone(), installdir: record.installdir.clone().unwrap_or_default(), .. }
-
-// acf_copies.rs
-fn valid_installdir(s: &str) -> bool {
-    !s.is_empty() && s != "." && s != ".."
-        && !s.contains(['/', '\\', ':', '\0'])   // single plain segment only
+/// First plain segment of another manifest's installdir; None = treat as a conflict.
+fn first_segment(d: &str) -> Option<String> {
+    let seg = d.split(['/', '\\']).find(|s| !s.is_empty() && *s != ".")?;
+    if seg == ".." || seg.contains(':') { return None; }
+    #[cfg(windows)]
+    let seg = seg.trim_end_matches(['.', ' ']);
+    Some(seg.to_string())
 }
-if !valid_installdir(&installdir) { return refused(source, "bad installdir"); }
-let steamapps_dir = PathBuf::from(&steamapps_dir_from_reader);
-let install_root = steamapps_dir.join("common").join(&installdir);
+// in the scan:
+let Some(d) = rec.record.installdir.as_deref() else { continue };
+match first_segment(d) {
+    Some(s) if !same_installdir(&s, installdir_segment) => continue,
+    _ => {} // same dir, or unparseable: conflict
+}
 ```
 
-Add security tests with a victim at `<tmp>/other/steamapps/common/Victim`, reached both through a relative `../../../other/...` installdir and through an absolute one.
+Add a security test with `put(&sa, "10", "Studio")` next to `put(&sa, "11", "Studio/GameB")`, asserting that `common/Studio/GameB` survives.
 
-### Warnings
+### WR-02: `RunningPoll::start` still races a concurrent `stop`, leaving an uncancellable poller (WR-07 residual)
 
-#### WR-01: A multi-segment `installdir` deletes its first segment, which can be a shared parent
+**File:** `src-tauri/crates/gamelib-steampoll/src/running.rs:191-229`
+**Issue:** `start()` sets `started = true` and bumps `gen` under the state lock. It then releases the lock, and only afterwards calls `registry.register(PollKind::Running, POLL_KEY)` (line 201). If `stop()` runs from another dispatch thread in that window, it goes wrong in three steps:
 
-**File:** `src-tauri/crates/gamelib-steampoll/src/acf_copies.rs:278-302`
-**Issue:** `segment` is only the first component under `common/`. For `installdir = "Studio/GameA"`, `install_root` becomes `common/Studio` and `remove_dir_all` deletes the whole `Studio` folder. The conflict check compares the segment `"Studio"` against other manifests' full `installdir` values (`"Studio/GameB"`), so it never matches, and GameB's files are deleted too.
-**Fix:** Refuse any `installdir` that is not a single normal component (the `valid_installdir` check in CR-01), or require `install_norm == common_root.join(segment)` before deleting.
+1. **`stop()` misses the task:** `registry.cancel` finds no entry, or only the old one, so it cancels nothing. It sets `started = false` and bumps `gen`.
+2. **`start()` spawns an uncancellable task:** it registers a fresh token and spawns task A. A is running, but `started` is false and nothing cancelled it.
+3. **The next `start()` doubles it:** it spawns task B, and `register` *replaces* the map entry without cancelling A's token. A is now unreachable. `stop()` can only cancel B, and A emits `playing`/`done` frames for the rest of the process.
 
-#### WR-02: The conflict check is case-sensitive, but macOS (APFS default) and Windows filesystems are not
-
-**File:** `src-tauri/crates/gamelib-steampoll/src/acf_copies.rs:96`
-**Issue:** `rec.record.installdir.as_deref() != Some(installdir_segment)` misses a co-installed app whose manifest says `game` when this one says `Game`. Both resolve to the same directory on a case-insensitive volume, and the shared directory is deleted. The rule exists to prevent exactly that, so being "exact like the TS" is not a defence.
-**Fix:** On Darwin and Windows compare with `eq_ignore_ascii_case`, or compare canonicalized `common/<installdir>` paths for existing directories. Over-reporting a conflict only downgrades the action to manifest-only, which is the safe direction.
-
-#### WR-03: `HoldStore` read-modify-write has no lock and a temp name shared within the process; concurrent polls lose or resurrect hold records
-
-**File:** `src-tauri/crates/gamelib-steampoll/src/hold.rs:229-256, 282-349` (used as one `Arc<HoldStore>` by every poll via `src/steampoll_dispatch.rs:333`, plus a second instance in `rearm.rs:36`)
-**Issue:** `record` and `clear` each do load → mutate → save with no mutex. Polls for different apps run on separate tokio tasks, possibly on separate worker threads. Two of them applying `WriteHoldRecord` and `ClearHoldRecord` at once can interleave: one save overwrites the other's change, so a cleared record comes back (re-arms a finished hold at boot) or a new record is lost (the hold does not survive a restart). The temp file is `<path>.tmp-<pid>`, so two writers in this process also truncate and write the same temp file at the same time, which can produce a renamed file containing mixed content.
-**Fix:** Wrap the store in a process-wide `Mutex<()>` held across load+save (a `static` keyed by path, or store it in the struct and share one instance with `rearm`). Make the temp name unique per write (counter or `tempfile::NamedTempFile::new_in(dir)`).
-
-#### WR-04: The hold-probe copy-back overwrites a hold that `upgrade(adopted_by_steam_client)` released during the probe, then re-persists it
-
-**File:** `src-tauri/crates/gamelib-steampoll/src/install_loop.rs:695-731` (with `upgrade` at 351-357)
-**Issue:** `should_hold` runs on a *clone* of `poll.hold` with the lock dropped. It awaits `pgrep`/`ps`/PowerShell for up to 5 s + 15 s. If TS calls `steampoll_install_start` with `adoptedBySteamClient: true` in that window, `upgrade` sets `steam_hold = Released` and clears the record. When the probe returns, lines 724-728 copy `steam_hold = Holding` (and the pids) back over it unconditionally. The re-entered step then applies the probe's `WriteHoldRecord` and shows "Restart Steam to finish" for a game Steam has already adopted. The record survives restarts until the pids die.
-**Fix:** Snapshot `steam_hold` before the await. Copy back only if the slot's `steam_hold` still equals the snapshot; otherwise discard the probe outcome and re-run the step without `obs.hold`:
+The new generation counter does not help here. It only decides who clears `started`, and A never exits.
+**Fix:** Make registration part of the same critical section, or keep the token in `State` so `stop()` can always reach it:
 
 ```rust
-let before = hold.steam_hold; // captured with the clone
-...
-if slot.poll.hold.steam_hold != before { return true; } // state moved under us; next tick decides
+pub fn start(&self) {
+    let mut st = lock(&self.inner.state);
+    if st.started { return; }
+    st.started = true;
+    st.gen += 1;
+    let gen = st.gen;
+    // state -> registry map is the only order taken; PollGuard::drop takes the map alone.
+    let (token, guard) = self.inner.registry.register(PollKind::Running, POLL_KEY);
+    st.token = Some(token.clone());
+    drop(st);
+    /* spawn as before */
+}
+pub fn stop(&self) {
+    let mut st = lock(&self.inner.state);
+    if let Some(t) = st.token.take() { t.cancel(); }
+    st.started = false; st.gen += 1; st.last_known = 0; st.claims.clear();
+}
 ```
 
-#### WR-05: A source retarget during the hold probe is not re-checked, so the re-entered step reports the old root's install under the new source
+Add a test that interleaves `start`/`stop` from threads behind a barrier and then asserts one probe per tick.
 
-**File:** `src-tauri/crates/gamelib-steampoll/src/install_loop.rs:689-692 vs 717-731`
-**Issue:** The retarget guard (`slot.poll.source != snap.source`) runs only before the first `install_step`. The second lock after `should_hold` re-enters `install_step` with the same `obs.acf`, which was read from the *old* root, even if `upgrade` switched `poll.source` while the probe ran. `installed()` then emits `StateEvent::Installed` with `source_name(poll.source)` (new root) and the old root's `install_path`/`size_on_disk`/`buildid`, and stops the poll.
-**Fix:** Repeat the guard in the second critical section:
+## Info
 
-```rust
-if slot.poll.source != snap.source { return true; }
-```
+### IN-01: Prior IN-03 got worse: the in-session retry appends to the unbounded `Outbox::logs` every few seconds while the sidecar is hung
 
-#### WR-06: `start_uninstall` is check-then-register (TOCTOU); concurrent starts spawn two uninstall tasks and one becomes uncancellable
+**File:** `src-tauri/crates/gamelib-steampoll/src/outbox.rs:98-104, 256-260`
+**Issue:** `flush` used to run once per READY. It now also runs every `RETRY_FLUSH_INTERVAL_MS` from the shell. While the sidecar is alive but not acking, each queued event logs `replay … ack timeout` on every pass, about one line per 5 s timeout, for the rest of the session. The `Vec<String>` is never trimmed.
+**Fix:** Cap `logs` as a ring buffer (for example 500 lines), or compile it only under `cfg(any(test, feature = "testing"))`. Consider logging a replay timeout once per (appId, kind, seq).
 
-**File:** `src-tauri/crates/gamelib-steampoll/src/uninstall.rs:330-336` (`registry.rs:108-134`)
-**Issue:** `is_active` and `register` take the registry lock separately. Two dispatches on different worker threads can both see "not active" and both register. `register` replaces the map entry, so the first task's token is no longer reachable: `stop_uninstall` cancels only the second, and the first runs to completion, emitting a duplicate `uninstalled` state event and toast.
-**Fix:** Add `Registry::try_register(kind, app_id) -> Option<(CancellationToken, PollGuard)>` that checks and inserts under one lock, and use it here (and in `RunningPoll::start`).
+### IN-02: `mark_ready` silently skips its replay when a retry flush is already running
 
-#### WR-07: `RunningPoll` stop → start race lets a dying task clear `started`, which allows a duplicate poller
+**File:** `src-tauri/crates/gamelib-steampoll/src/outbox.rs:215-218, 233-236`
+**Issue:** On a re-READY, `mark_ready` sets `ready` and calls `flush`, which returns at once if the `flushing` guard is held. That happens when a retry flush started before the sidecar died and is still waiting out a 5 s timeout. The old flush does carry on against the new sidecar once `is_ready()` is true again. But the entry that timed out waits for the next 10 s retry. The doc comment says `mark_ready` "replays the queue", which is not guaranteed.
+**Fix:** Set a `flush_requested` flag when the guard is held, and have the running flush loop once more before releasing it. Or document the up-to-one-period delay.
 
-**File:** `src-tauri/crates/gamelib-steampoll/src/running.rs:187-220`
-**Issue:** `stop()` cancels the task and sets `started = false`. If `start()` runs before the old task observes the cancellation, it sets `started = true` and spawns task B. The old task then reaches line 209 and sets `started = false` while B is running. The next `start()` spawns task C. B is now orphaned: its registry entry was replaced, so `stop()` cannot reach it. Two pollers then emit duplicate `playing`/`done` frames.
-**Fix:** Track a generation. Have the task clear `started` only if its generation is still current, or remove line 209 and let only `stop()` own the flag.
+### IN-03: A cancelled `RunningPoll` task still finishes its in-flight probe after `stop()` and emits from the reset state
 
-#### WR-08: Unacked state events only replay on the next `mark_ready`, and replay is per (appId, kind), so an older event of one kind can be replayed after a newer event of another kind
+**File:** `src-tauri/crates/gamelib-steampoll/src/running.rs:210-213, 283`
+**Issue:** `tokio::select!` only races the branch futures. Once `ticks.tick()` wins, `poll.poll_once().await` runs to completion even if the token is cancelled meanwhile. So a `stop()` during a probe is followed by `transition(current)` against `last_known = 0`. That emits `playing` for the running game after the stop, and sets `last_known` again. The comment at line 283 ("stop() can cancel the task mid-probe") is inaccurate.
+**Fix:** In the tick arm, `select!` the probe against `token.cancelled()`, or check `token.is_cancelled()` (or the generation) before applying `transition`.
 
-**File:** `src-tauri/crates/gamelib-steampoll/src/outbox.rs:56-127, 169-171`
-**Issue:** First problem: when the sidecar is READY but an ack times out or returns `applied: false`, the event is queued, but `flush` runs only from `mark_ready` (the shell's sidecar restart). The event therefore stays pending for the rest of the session.
+### IN-04: The macOS case fold ignores Unicode normalization
 
-Second problem: the dedupe key is `(appId, kind)`. Suppose `installed` (seq 5) timed out and is queued, then a later `uninstalled` (seq 9) for the same app is acked directly. On the next `mark_ready`, `installed` seq 5 is replayed after the sidecar has applied seq 9, which flips the badge back to installed. "Events carry full state, so replay is idempotent" holds only within one kind. Whether this bites depends on the sidecar rejecting stale seqs per appId (part C should confirm).
-**Fix:** When a newer event for the same appId is acked, drop older queued events for that appId whose kinds conflict (installed / uninstalled / installIncomplete / updateDone). Or key the queue by appId for the install-state kinds. Also schedule a bounded retry flush while ready rather than waiting for a sidecar restart.
+**File:** `src-tauri/crates/gamelib-steampoll/src/acf_copies.rs:118-122`
+**Issue:** APFS and HFS+ are normalization-insensitive as well as case-insensitive. An `installdir` of `Café` in NFC and one in NFD are one directory on disk, but `to_lowercase` compares them as different, so the conflict is missed. This is an edge case: installdirs are almost always ASCII.
+**Fix:** Compare `canonicalize(common/<a>)` against `canonicalize(common/<b>)` when both exist. Or treat any non-ASCII pair whose ASCII-folded forms differ only in non-ASCII bytes as a conflict, which is the safe direction.
 
-#### WR-09: A dead download monitor is never restarted; after a Steam restart, live progress is lost for the rest of the poll
+## Prior findings
 
-**File:** `src-tauri/crates/gamelib-steampoll/src/monitor.rs:284-290, 341-345`
-**Issue:** The watchdog exits when the watched `steam_osx` pid dies. The reader task then sets `failed = true`, but the entry stays in `monitors`. Every later `start()` (including `upgrade`'s `spawn_monitor_start`) sees `contains_key` and returns, and `read()` returns `None` forever. A Steam restart mid-download, which is common in the restart-hold flows, silently drops the macOS live progress and speed for the rest of the install.
-**Fix:** In `start()`, replace an existing entry whose `failed` is true (kill it first) instead of returning, or remove the entry from the map when the reader task ends.
+| Prior ID | Status | Notes |
+| --- | --- | --- |
+| A-CR-01 | Fixed | The root is pinned to the manifest's own steamapps dir. Escaping installdirs are refused. Security tests added. |
+| A-WR-01 | Partly fixed | The nested manifest being removed is refused. A nested or trailing-separator *other* manifest still is not detected (new WR-01). |
+| A-WR-02 | Fixed | Case-insensitive on macOS and Windows. Unicode-normalization residual in IN-04. |
+| A-WR-03 | Fixed | Static `STORE_LOCK` across load and rename. Unique temp names. No other writer exists. |
+| A-WR-04 | Fixed | `steam_hold` snapshot. A moved state drops the probe outcome. |
+| A-WR-05 | Fixed | Source re-check in the second critical section. |
+| A-WR-06 | Fixed | `Registry::try_register`. |
+| A-WR-07 | Partly fixed | The dying-task case is closed. `stop()` racing between `start()`'s unlock and `register` still orphans a poller (new WR-02). |
+| A-WR-08 | Fixed | Install-state supersede group, ascending replay, `retry_pending`. `updateDone` exclusion verified. |
+| A-WR-09 | Fixed | Dead monitor replaced, with a throttled restart. Not live-verified. |
+| A-IN-01 | Not fixed | `let _ = remove_file(&manifest_path)` is unchanged (acf_copies.rs:364, 383). |
+| A-IN-02 | Not fixed | `canon_root.parent().is_some()` is still dead (acf_copies.rs:285). |
+| A-IN-03 | Not fixed, worse | See IN-01. |
+| A-IN-04 | Not fixed | `pending_outcome.take()` still precedes the first retarget guard (install_loop.rs:706-717). The new WR-04/05 early returns do not add to it. |
+| A-IN-05 | Not fixed | `gamelib-steampoll-cli/Cargo.toml:13` still enables `testing`. |
 
-### Info
+## Cross-part note (outside Part A scope, not counted)
 
-#### IN-01: `remove_copy` reports `Removed` even when deleting the manifest fails
-
-**File:** `src-tauri/crates/gamelib-steampoll/src/acf_copies.rs:308, 327`
-**Issue:** `let _ = std::fs::remove_file(&manifest_path)` is ignored. If the directory is gone but the manifest remains (EACCES, or a read-only bottle), the caller is told the removal succeeded and the next `read_acf_state` reports Installed with a missing directory.
-**Fix:** Report `Refused { reason: "manifest remove failed" }`, or a `manifest_left: true` flag, when the error is not NotFound.
-
-#### IN-02: Dead condition in `guard_install_root`
-
-**File:** `src-tauri/crates/gamelib-steampoll/src/acf_copies.rs:245`
-**Issue:** `&& canon_root.parent().is_some()` is always true for a path that `starts_with(<abs>/common)`. Separately, `canon_root == canon_steamapps/common` is not rejected here; it is only prevented by the caller's non-empty segment.
-**Fix:** Replace it with `&& canon_root != canon_steamapps.join("common")` so the guard is self-contained.
-
-#### IN-03: `Outbox::logs` grows without bound for the whole process lifetime
-
-**File:** `src-tauri/crates/gamelib-steampoll/src/outbox.rs:26, 48-54`
-**Issue:** Every `Effect::Log` is appended to an in-memory `Vec<String>` that is never trimmed. That includes the per-tick "deferring completion" warning in `uninstall.rs:181`, which can repeat for hours. The comment says it is kept for tests and diagnostics.
-**Fix:** Cap it as a ring buffer (for example the last 500 lines), or gate it behind `cfg(any(test, feature = "testing"))`.
-
-#### IN-04: A pending InstallApp outcome is dropped on the retarget early-return, leaving `in_flight` stuck
-
-**File:** `src-tauri/crates/gamelib-steampoll/src/install_loop.rs:679, 689-692`
-**Issue:** `pending_outcome.take()` runs before the retarget check. When the tick returns early, the outcome is discarded, `InstallAppRetry.in_flight` stays `true`, and the retry never fires again for that poll.
-**Fix:** Take the outcome only after the guard passes, or put it back into `*pending_outcome` before `return true`.
-
-#### IN-05: The CLI enables the `testing` feature of `gamelib-steampoll` inside the shared workspace
-
-**File:** `src-tauri/crates/gamelib-steampoll-cli/Cargo.toml:13`
-**Issue:** Under resolver 2, any `cargo build/clippy/test --workspace` unifies `testing` into the app build as well. That compiles `install_for_test` / `inject_reading` into the shell binary for that build. A release `tauri build` of the app package alone is not affected.
-**Fix:** Move the replay harness behind a CLI-local feature, or keep it out of workspace default-members so workspace builds do not unify it.
+The TS `uninstallBottleGameDirectly` (`src/backend/storeManagers/steam/gameUninstall.ts:768-797`) still takes `relFromCommon.split(sep)[0]` as the segment it deletes. A nested bottle `installdir` therefore deletes its shared parent there too: the original A-WR-01 shape, on a TS path the Rust fix does not cover. Its conflict scan calls the Rust `find_other_manifests_with_installdir`, so it would also benefit from the WR-01 fix above.
 
 ---
 
@@ -179,130 +240,173 @@ _Reviewed: 2026-11-16_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
 
-## Part B — Tauri shell (src-tauri/src, Cargo, CI)
+## Part B — Tauri shell
 
-Finding IDs below are local to this part (prefix them with B- when referring, e.g. B-CR-01).
 
-## Phase 80 (Part B, Tauri shell): Code Review Report
+### Phase 80 (Part B, Tauri shell): Code Review Report, re-review
 
 **Reviewed:** 2026-11-16
 **Depth:** standard
 **Files Reviewed:** 8
 **Status:** issues_found
 
-### Narrative Findings (AI reviewer)
+## Narrative Findings (AI reviewer)
 
-### Summary
+## Summary
 
-Scope: `steampoll_dispatch.rs` (new) in full, and the phase-80 diff hunks of `ipc_contract.rs`, `main.rs`, `sidecar.rs`, `rust_dispatch.rs`, `notification_show.rs`, `Cargo.toml` and `rust-test.yml` (diff base `b1f3f4a05^`). To check the contracts I also read the crate code these files call (`outbox.rs`, `dispatch.rs`, `runtime.rs`, `registry.rs`, `running.rs`), `SidecarState::invoke`, and the TS callers and zod schemas.
+**What I reviewed:**
+- The fix-pass diff `b7dbc199e..HEAD` over the 8 scope files. It holds 3 `fix(80):` commits (a3285aaff, c65ec88bd, 66c3ca42f) and 4 `fix(79):` commits that also touch `sidecar.rs` and `ipc_contract.rs` (1645ab6d5, a152a9caa, 2be7ead56, 179ac05b7).
+- `steampoll_dispatch.rs` in full.
+- The phase diff from `b1f3f4a05^` for `main.rs`, `sidecar.rs`, `shell_state.rs`, `rust_dispatch.rs`, `notification_show.rs` and `Cargo.toml`.
 
-The 24-arm channel table, the enum and name round-trip, the `notification_show` refactor and the CI and Cargo wiring are consistent. The main defect is in how the shell drives the state-event outbox. The shell triggers a replay only from the sidecar READY sentinel. READY fires once per process, because a sidecar death means a full `app.restart()`. So any state event that is not acked after boot is never re-sent. Smaller issues: the replay can race with live events, the two equal 5 s timeouts interact badly, and the shell's args contract for `steampoll_read_running_app_id` is stricter than the TS schema and the crate.
+**Code I read to check contracts:**
+- `outbox.rs`: `send_with_timeout`, `flush`, `retry_pending`, `enqueue`.
+- `runtime.rs`: the multi-thread runtime, so `Handle::block_on` from a std thread drives timers.
+- `dispatch.rs` and `install_loop.rs` from C-WR-03.
+- The TS seq guard in `steamPollEventRegistration.ts`.
 
-### Critical Issues
+**Result:** the fix pass is mostly sound.
+- B-CR-01 and B-WR-03 are fixed.
+- The B-WR-01 skip argument holds.
+- B-WR-02 is only partly fixed. The new deadline is checked once, before the closure takes the stdin lock and writes the frame. The wait for the ack is sized at that moment, not after the write. So a slow or contended stdin write can still make the invoke outlive the crate's 5 s timer, and the frame can still be written after the crate has re-queued the event. The cause is a sidecar that is not reading, which is the same busy-Node condition the finding was about.
+- New issue: if the retry thread fails to spawn, the READY replay never runs and the outbox stays not-ready for the whole session.
 
-#### CR-01: State events not acked after READY are never replayed (the only flush trigger is the one-shot READY sentinel)
+**Regression questions from the brief:**
+- **Does the retry thread delay exit?** No. It is a detached `std::thread` and nothing joins it. `steampoll_exit_shutdown` drops the sender first, which wakes `recv_timeout` with `Disconnected` immediately. A flush already in flight is not waited for. Two `Handle::block_on` calls from separate non-runtime threads (retry thread and main thread) on the multi-thread runtime are fine.
+- **Does a repeat READY start a second loop?** No. A repeat READY finds `RETRY_STOP` set and spawns one `mark_ready` on the runtime. The crate's `flushing` swap makes that a no-op while the loop is flushing.
+- **Is the stop channel ordered correctly at exit?** Yes. The stop runs before `cancel_all_and_wait`, so no new retry tick starts during cancellation.
+- **`OnceLock` against `try_state`:** the `OnceLock` is set before `start_reader`, so the boot race is closed. The `try_state` fallback is now unreachable (IN-01).
+- **The 4.5 s / 5 s split:**
+  - A queued closure that starts after the deadline now skips the write. That closes the orphaned-write case when the write itself is fast.
+  - It is still open when the write or the stdin lock blocks (WR-01).
+  - No ack is lost on the normal path. `tokio::time::timeout` reads `Instant::now()` after `host.state_event(ev)` has run, so the shell deadline is always at least 500 ms before the crate deadline.
+- **`steampoll_install_start` returning bool:** consistent. The shell validates arguments only and passes results through unchanged (`rpc_steampoll_install_start` → crate `dispatch`). The shell has no result schema to update, and the `sidecarTransport.ts` doc now states the boolean.
 
-**File:** `src-tauri/src/steampoll_dispatch.rs:160-171` (with `src-tauri/src/sidecar.rs:464`, `crates/gamelib-steampoll/src/outbox.rs:93-127,169-171`)
-**Issue:** The steps that lose the event:
-1. `apply_effects` enqueues every `Transition` whose ack is not `applied`. That covers an ack timeout, an invoke error, a handler throw, and `try_state` missing.
-2. `Outbox::flush` is called only from `mark_ready`.
-3. `mark_ready` is called only from `on_sidecar_ready_steampoll`, which runs once, on the READY line.
-4. A sidecar death is never respawned in place (sidecar.rs:694, "Restart is a full `app.restart()`"). So no second READY arrives.
+**Phase-79 commits in the range:**
+- These are the `sidecar_eof_teardown` split and the redacting `Debug` impls. They are outside phase 80 and were reviewed under phase 79.
+- I checked only how they interact with steampoll. `on_sidecar_eof_steampoll` still runs before the teardown, in line on the reader thread, so their reordering does not affect the poll host.
 
-Result: once the sidecar is READY, a single slow ack drops that state change for the rest of the session. A slow ack means the Node event loop is busy for more than `ACK_TIMEOUT_MS` = 5 s, for example during a library refresh or a large synchronous `steamLibraryStore.set`. Examples of lost changes: `installed` (is_installed/install path never written to the library store), `uninstalled`, `updateDone`, `macArchVerdict`. The event sits in the in-memory queue until the process exits. Entries that fail during the READY replay itself stay queued the same way.
+## Prior findings
 
-There is also a boot window where this happens. `state_event` returns `not_acked` when `app.try_state::<Arc<SidecarState>>()` is `None`. `manage_sidecar_state` (main.rs:1105) runs after `spawn_sidecar_state` has started the reader thread. If READY is read before `app.manage(state)`, the whole boot replay fails and is never retried.
+| ID | Title | Verdict | Notes |
+| --- | --- | --- | --- |
+| B-CR-01 | Unacked state events after READY never replayed | **Fixed** | `run_outbox_retry_loop` calls `retry_pending` every `RETRY_FLUSH_INTERVAL_MS`. `STEAMPOLL_SIDECAR` is set before `start_reader` (`main.rs:848`), which closes the boot `try_state` race. Two loop tests cover redelivery, idle, not-ready and stop. New gap on thread-spawn failure, see WR-02. |
+| B-WR-01 | READY replay races live transitions | **Fixed (no shell change; the skip argument holds)** | (1) Crate A-WR-08: `note_applied` drops superseded queued install-state events, and `flush` re-checks `still_queued` before each send. (2) What remains is two sends crossing on the wire, and C-IN-04 closes that: `steamPollEventRegistration.ts:236-262` guards by seq per appId for the install-state group. (3) The guard is check-then-apply across an `await`, but `applyInstalled`, `applyUninstalled` and `markSteamInstallIncomplete` are synchronous (`:137-165`), so for the install-state kinds the check and the apply run in one turn. (4) Only `macArchVerdict` awaits, and it is keyed per (appId, kind). Holding live sends behind the replay is not needed. |
+| B-WR-02 | Equal 5 s timeouts orphan the blocking invoke | **Partly fixed** | Fixed: equal bounds, the stale-start write, and the comment. Still open: the deadline is not re-checked after the stdin lock and write, and the recv bound is computed before the write. See WR-01. |
+| B-WR-03 | Shell rejects `[]` for `steampoll_read_running_app_id` | **Fixed** | Generated `from_args` maps `[]` and `[null]` to `{}` (`ipc_contract.rs:2314-2318`). The crate now matches `None \| Some(Null)`. The generator test and the shell test pin both. |
+| B-IN-01 | `block_on` without a `try_current` guard on exit | Open, not worse | The new `run_outbox_retry_loop` runs `block_on` on a fresh std thread, which is correct. `steampoll_exit_shutdown:245` is unchanged. |
+| B-IN-02 | Exit waits run one after another | Open, not worse | The retry thread is not joined, so it adds nothing to quit time. |
+| B-IN-03 | Shell arg validation drifted from the crate | Open, unchanged | — |
 
-**Fix:** Give the outbox a retry trigger that does not depend on READY, and remove the `try_state` race:
+## Warnings
+
+### WR-01: The B-WR-02 deadline is checked before the stdin write, not after, so a blocked write can still write late and outlive the crate's ack timer
+
+**File:** `src-tauri/src/steampoll_dispatch.rs:390-397`, `src-tauri/src/shell_state.rs:198-206, 223-258`
+
+**Issue:** The closure works out `bound = deadline - now` once, then calls `invoke_bounded`. Inside `invoke_bounded`, two steps can block without any limit, and neither looks at the deadline:
+1. `write_frame` → `write_raw` takes the `stdin` mutex and calls a blocking `write_all` + `flush` (`shell_state.rs:198-206`). The mutex is shared with every other invoke and with every rustInvoke response frame. `write_all` blocks once the pipe buffer is full, which happens when the sidecar is not reading stdin.
+2. After the write, `rx.recv_timeout(bound)` (`:258`) waits the full `bound` that was computed before the write. That is not the time left at that point.
+
+That leaves two failures that B-WR-02 was meant to remove:
+- **Late write:** the closure starts at T+0.1 s with `bound` = 4.4 s and then blocks about 5 s on the stdin lock or a full pipe. The crate times out at T+5 s and re-queues the event, and a newer live event for the app may then be applied. The blocked write then completes and puts the stale frame on the wire after it. The C-IN-04 seq guard absorbs this only if the newer event was applied before the stale frame is handled.
+- **Ack discarded:** even a short delay in the write, for example 1 s spent waiting for the mutex, moves the recv deadline to about T+5.5 s. That is after the crate's 5 s timer. So an ack that arrives between 5.0 s and 5.5 s is dropped by the crate and the event is reported as not acked. This is the "two timers race" case the fix commit says is gone.
+
+The trigger is the same condition B-WR-02 was written for: a Node event loop that is busy for seconds and not draining stdin.
+
+**Fix:** Pass the deadline into the invoke instead of a duration. Re-check it after the lock is taken, and size the recv from it:
 ```rust
-// steampoll_dispatch.rs, in on_sidecar_ready_steampoll (or steampoll_boot):
-let outbox = facade.outbox.clone();
-let host = facade.registry.host().clone();
-gamelib_steampoll::runtime::handle().spawn(async move {
-    outbox.mark_ready(host.as_ref()).await;
-    let mut tick = tokio::time::interval(Duration::from_secs(10));
-    loop {
-        tick.tick().await;
-        if outbox.is_ready() && outbox.queued_len() > 0 {
-            outbox.flush(host.as_ref()).await;
+// shell_state.rs
+pub(crate) fn invoke_until(&self, channel: String, args: Vec<Value>, deadline: Instant)
+    -> Result<Value, String>
+{
+    let id = self.next_id();
+    let (tx, rx) = mpsc_channel();
+    self.pending.lock().map_err(|e| e.to_string())?.insert(id.clone(), (channel.clone(), tx));
+    let req = SidecarRpcRequest { id: id.clone(), kind: "invoke", channel: channel.clone(), args };
+    let value = serde_json::to_value(&req).map_err(|e| e.to_string())?;
+    {
+        let mut stdin = self.stdin.lock().map_err(|e| e.to_string())?;
+        if Instant::now() >= deadline {           // lock wait ate the budget: do not write
+            self.pending.lock().ok().and_then(|mut p| p.remove(&id));
+            return Err(format!("{channel}:stale"));
         }
+        /* write_all + "\n" + flush under this same guard */
     }
-});
-```
-(Or flush after each applied live ack in the crate.) Separately, store the `Arc<SidecarState>` in a `OnceLock` that `ShellPollHost` reads, set before `start_reader` runs, so that `state_event` does not depend on `app.manage` ordering.
-
-### Warnings
-
-#### WR-01: READY replay races live transitions; stale queued events can overwrite newer state for a different kind
-
-**File:** `src-tauri/src/steampoll_dispatch.rs:160-171`, `src-tauri/src/steampoll_dispatch.rs:282`
-**Issue:** `on_sidecar_ready_steampoll` sets `SIDECAR_READY` synchronously. `outbox.mark_ready` then sets the outbox `ready` flag and replays a snapshot one event at a time, waiting up to 5 s for each. While the replay runs, any live `Transition` sees `outbox.is_ready() == true` and is sent straight away. Two things can go wrong:
-- Latest-wins only applies per `(appId, kind)`. A queued `installed` (seq 5) for app X can be replayed after a live `uninstalled` (seq 9) for X has already been applied.
-- The sidecar handler (`steamPollEventRegistration.ts`) has no seq guard.
-
-Either way the library ends up `is_installed: true` for a game that was just removed. The pre-READY window is exactly when this happens: boot rearm and install polls started by the sidecar's boot resume are producing events then.
-**Fix:** Keep live sends behind the replay. Leave `ready` false (live events keep enqueuing) until `flush` has drained, and loop `flush` until the queue is empty or stops shrinking. Or pass `seq` to the TS handler and have it refuse an event older than the last one it applied for that appId.
-
-#### WR-02: Two equal 5 s timeouts orphan the blocking invoke, so a timed-out event can still be written late and out of order
-
-**File:** `src-tauri/src/steampoll_dispatch.rs:279-300`, `src-tauri/src/main.rs:402-405`
-**Issue:**
-- **The two timers:** `send_with_timeout` wraps `state_event` in `tokio::time::timeout(5 s)`. Inside, `spawn_blocking` runs `SidecarState::invoke`, and `timeout_for("steamPollStateEvent")` sets that invoke's own timeout to the same 5 s.
-- **The outer timer always wins:** it starts before the blocking task is scheduled and before the frame is written, so it fires first. The future is dropped, but a `spawn_blocking` task cannot be cancelled.
-- **The frame can be written late:** the steampoll runtime caps blocking threads at 8. Under load, a queued closure that has not started yet still runs later and writes the frame to the sidecar. By then the event has already been re-enqueued as not acked, and a newer event for the same app may already have been applied. So the stale event lands last.
-- **An answered ack can be discarded:** a reply that arrives just before 5 s on the invoke side is thrown away by the outer timer.
-- **The comment is inaccurate:** main.rs:403 says the bound is matched so that "the pending entry is removed then". It does not hold the two timers in a safe relationship.
-
-**Fix:** Set the shell invoke bound clearly below the crate bound (e.g. `ACK_TIMEOUT_MS - 500`). Inside the blocking closure, check a deadline captured before `spawn_blocking` and skip the write once it has passed:
-```rust
-let deadline = std::time::Instant::now() + Duration::from_millis(ACK_TIMEOUT_MS - 500);
-spawn_blocking(move || {
-    if std::time::Instant::now() >= deadline { return Err("steamPollStateEvent:stale".into()); }
-    state.invoke("steamPollStateEvent".to_string(), vec![arg])
-})
-```
-
-#### WR-03: Shell contract for `steampoll_read_running_app_id` rejects `[]`, which the TS schema and the crate both accept
-
-**File:** `src-tauri/src/ipc_contract.rs` (`SteampollReadRunningAppIdArgs::from_args`, new hunk near the end of the file), `src-tauri/src/steampoll_dispatch.rs:89-92`
-**Issue:**
-- **What each layer accepts:** the zod schema is `z.tuple([z.object({ strict }).strict().optional()])` (rustInvoke.ts:391), so `[]` and `[undefined]` are both valid sends. The crate's dispatch handles the missing case explicitly (`match args.first() { None => StrictArgs::default(), ... }`). The shell's generated `from_args` does `args.first().ok_or_else(bad-args)`, so `[]` is rejected before the crate sees it.
-- **Why it matters:** `[undefined]` is sent over JSON as `[null]`, which fails `from_value::<Struct>(Null)`. The sidecarTransport.ts doc comment says "the object is optional".
-- **Why it is latent:** today's only caller (`runningPoll.ts:22`) always passes `{ strict }`. The first caller that omits the object will get `bad-args`. In the non-strict path that is silently turned into `0` ("nothing running"), which can unblock a native delete while a game is running.
-
-**Fix:**
-```rust
-impl SteampollReadRunningAppIdArgs {
-    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
-        match args.first() {
-            None | Some(Value::Null) => Ok(Self { strict: None }),
-            Some(first) => serde_json::from_value(first.clone())
-                .map_err(|_| "steampoll_read_running_app_id:bad-args".to_string()),
-        }
-    }
+    let left = deadline.saturating_duration_since(Instant::now());
+    match rx.recv_timeout(left) { /* same arms as invoke_bounded */ }
 }
 ```
-Also fix the generator so that an optional tuple element produces this shape. Also make the crate treat `Some(Null)` like `None`.
+A blocking `write_all` into a full pipe still cannot be bounded this way. Document that last case as the residual that C-IN-04 covers, or move stdin writes to a writer thread with a bounded queue.
 
-### Info
+### WR-02: If the retry thread fails to spawn, the READY replay never runs and the outbox is never marked ready
 
-#### IN-01: `steampoll_exit_shutdown` calls `Handle::block_on` without the `try_current` guard the crate uses
+**File:** `src-tauri/src/steampoll_dispatch.rs:199-225`
 
-**File:** `src-tauri/src/steampoll_dispatch.rs:186-188`
-**Issue:** `gamelib_steampoll::dispatch::block_on` refuses to run inside a runtime (`wrong-thread`). The exit hook calls `runtime::handle().block_on(...)` directly. `handle_exit` runs on the main thread from `RunEvent::Exit` today, so this is fine. But if it is ever reached from a runtime context, it panics inside the event-loop callback. That would skip `shutdown_child()`, `wake_lock_release_all()` and the socket cleanup that follow it.
-**Fix:** Guard with `tokio::runtime::Handle::try_current().is_err()`. Otherwise, run the wait on a `std::thread` and join it.
+**Issue:** The READY replay (`outbox.mark_ready`) now runs only as the first statement of `run_outbox_retry_loop`. Before the fix it was spawned on the steampoll runtime.
 
-#### IN-02: Exit waits run one after another, so worst-case quit time is about 10 s plus the steamcm bound
+When `thread::Builder::spawn` fails (thread or resource exhaustion), several things go wrong:
+- **The replay is lost.** The closure is dropped, so `mark_ready` never runs. The outbox's `ready` flag stays `false` for the whole process.
+- **Every state event is held back.** Every later `Transition` sees `is_ready() == false` and is enqueued. None is ever sent, because `retry_pending` is also gated on `is_ready()`.
+- **No later READY can repair it.** `RETRY_STOP` still holds the sender, so a later READY takes the "loop already runs" branch and assumes a loop exists.
+- **Only a log line remains.** The user sees no install, uninstall or update state from the Rust polls for the session, and the only trace is "retry thread failed to start".
 
-**File:** `src-tauri/src/main.rs:751-758`
-**Issue:** The depot `cancel_all_and_wait(5 s)`, `steamcm_exit_shutdown` and `steampoll_exit_shutdown` (another 5 s) run in sequence. A poll cancelled mid-transition can be waiting on a 5 s sidecar ack, so a hung sidecar stretches quit time noticeably.
-**Fix:** Cancel the steampoll registry (`cancel_all`) before the depot wait, then wait on both against one shared deadline.
+The failure is rare, but the result is a total loss of state-event delivery, not a degraded retry.
 
-#### IN-03: Shell-side arg validation has drifted from the crate's, so the first-layer check is weaker than intended
+**Fix:** On spawn failure, clear the slot and fall back to the old runtime replay:
+```rust
+if spawned.is_err() {
+    shell_eprintln!("[shell] steampoll outbox retry thread failed to start");
+    RETRY_STOP.lock().unwrap_or_else(|e| e.into_inner()).take();
+    gamelib_steampoll::runtime::handle().spawn(async move {
+        outbox.mark_ready(host.as_ref()).await;   // outbox/host must be cloned before the move above
+    });
+}
+```
+Alternatively, call `mark_ready` (spawned on the runtime) before starting the thread, and make the thread a pure retry ticker.
 
-**File:** `src-tauri/src/ipc_contract.rs` (Steampoll*Args structs)
-**Issue:** The shell structs do not use `deny_unknown_fields`, while every crate struct does. They also accept `appId: i64` (the crate uses `u32`), `claimId: i64` (the crate uses `u64`) and `bridgeAuthoritative: Option<bool>`, which accepts `null` (the crate uses `bool` with a default). The crate re-parses everything, so nothing is unsafe today. But the shell layer catches nothing the crate would not, and the error a caller sees depends on which layer rejected.
-**Fix:** Emit `deny_unknown_fields` and the narrower integer types from the generator, or drop the shell pre-parse for steampoll channels and rely on the crate.
+## Info
+
+### IN-01: The `try_state` fallback in `ShellPollHost::state_event` is unreachable, and the `OnceLock` set result is discarded
+
+**File:** `src-tauri/src/steampoll_dispatch.rs:162-166, 376-382`
+**Issue:**
+- `set_steampoll_sidecar_state` always runs before `start_reader` (`main.rs:848`), and READY can only come from that reader. So whenever `SIDECAR_READY` is true, `STEAMPOLL_SIDECAR` is set, and the `try_state` arm never runs.
+- `let _ = STEAMPOLL_SIDECAR.set(...)` hides a second call. If `spawn_sidecar_state` ever ran twice in one process, the poll host would silently keep writing to the first `SidecarState` while `handle_exit` shuts down the managed one.
+
+**Fix:** Drop the `try_state` arm and the `app` capture it needs. Log or `debug_assert!` when `set` returns `Err`.
+
+### IN-02: On sidecar EOF the pending invokes are drained before the outbox is marked not-ready, so a retry flush in that gap can post an invoke nobody drains
+
+**File:** `src-tauri/src/sidecar.rs:660-667`
+**Issue:**
+- **The gap:** `drain_pending_invokes` runs, then `on_sidecar_eof_cancel_jobs`, then `on_sidecar_eof_steampoll`.
+- **What can land in it:** the new retry thread can start a flush there. Its `invoke_bounded` inserts a pending entry after the drain.
+- **Why it is usually harmless:** the write to a dead child's stdin fails at once with EPIPE.
+- **When it costs time:** if the child has closed stdout but not yet exited, the write succeeds and the invoke waits the full 4.5 s for an answer that cannot come.
+- **Why it is Info:** this is pre-existing ordering, but the periodic retry makes it more likely to be hit. The cost is bounded at 4.5 s per event, and the event is re-queued.
+
+**Fix:** Call `on_sidecar_eof_steampoll()` (which runs `mark_not_ready`) before `drain_pending_invokes`.
+
+### IN-03: The WR-02 tests pin only constants and the pure helper, not the timer relationship they claim
+
+**File:** `src-tauri/src/steampoll_dispatch.rs:593-615`, `src-tauri/src/main.rs:2558-2571`
+**Issue:**
+- **What is pinned:** `state_event_invoke_settles_before_the_crate_ack_timer` checks `4500 < 5000`, and `a_closure_started_after_the_deadline_does_not_write` tests `invoke_bound_before` on its own.
+- **What is not pinned:** nothing checks that the deadline is captured before the crate's `tokio::time::timeout` starts. Nothing checks that the invoke path sizes its wait from the deadline (the gap behind WR-01). A refactor that moves the `Instant::now()` capture into the `async move` block would pass every test.
+- **The `main.rs` duplicate:** it repeats the literal `4500` instead of `STATE_EVENT_INVOKE_BOUND`.
+
+**Fix:** Add a test that drives `send_with_timeout`-equivalent wrapping around a host whose `state_event` captures its deadline the same way, and asserts the deadline is earlier than the timer's. Use `STATE_EVENT_INVOKE_BOUND` in `main.rs`.
+
+### IN-04: A closure that starts just before the deadline writes the frame with a near-zero bound, which almost guarantees an "applied but not acked" duplicate
+
+**File:** `src-tauri/src/steampoll_dispatch.rs:318-321, 392-396`
+**Issue:**
+- `invoke_bound_before` returns `Some(1 ms)` when 1 ms is left. The frame is then written, and the invoke almost always times out.
+- The sidecar applies the event anyway, while the crate re-queues it and replays it 10 s later.
+- The C-IN-04 guard makes the replay harmless, so this costs a wasted frame and an `invoke_abandoned` diag line each time, not a wrong state.
+
+**Fix:** Skip the write when the time left is below a small floor, for example `if left < Duration::from_millis(250) { return None }`. The event is not written and simply stays queued.
 
 ---
 
@@ -310,171 +414,141 @@ _Reviewed: 2026-11-16_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
 
-## Part C — TS backend, sidecar, IPC types, tests
+## Part C — TS backend
 
-Finding IDs below are local to this part (prefix them with C- when referring, e.g. C-CR-01).
 
-## Phase 80 (Part C): Code Review Report
+### Phase 80 (Part C): Re-review after the fix pass
 
-**Reviewed:** 2026-11-16
-**Depth:** standard (large pre-phase files reviewed as `git diff b1f3f4a05^..HEAD` hunks only)
-**Files Reviewed:** 48
+**Reviewed:** 2026-11-16T09:36:47Z
+**Depth:** standard. The fix(80) commits since b7dbc199e were read in full. Large pre-existing files were reviewed by their diff from b1f3f4a05^.
+**Files Reviewed:** 58
 **Status:** issues_found
 
-### Summary
+## Summary
 
-The deletion is broadly faithful. Every per-tick library write the TS loops made (installed, survivor and not-installed uninstall branches, installIncomplete, update-done `invalidateSteamUpdateState` + push, mac-arch verdict, forced-Windows clear, bridge uninstall) is reached through `steamPollStateEvent`. Rust drives toasts and statuses through effect continuations. The zod discriminated union matches `events.rs` kind-for-kind and field-for-field. The rustInvoke arg schemas match the crate `PollOptions` / start-args field sets. No new Node timers or handles were added, so the sidecar exit contract holds on the TS side.
+All of C-WR-01 to C-WR-08 and C-IN-04 landed, and most are correct. Each of the rustInvoke paths now degrades instead of throwing. The status read in `refreshInstallState` is a single read inside the scan `try`. The zod schema no longer rejects what Rust actually emits.
 
-The main regression class: in-process synchronous bookkeeping (activePolls lookups, the notice-seq counter, the bridge-finalized set, the running-poll claim, the in-flight map) became an awaited or fire-and-forget rustInvoke. These calls were never failure points before. Now a rejected or slow invoke can abort a kill, mask an install's result, drop its `done` status and toast, or report a handoff that already happened as a failure. The shell answers each rustInvoke on its own worker thread (`sidecar.rs` `start_reader`), so the old "same synchronous turn" ordering guarantees are gone. Two of them (the launch-watch claim and the bridge-finalized read) protected fixes for bugs seen in live use. The event channel also has no cross-language schema parity test. A rejected or not-applied event is retried only at the next sidecar READY.
+**Seq guard.** I found no case where it drops a legitimate Rust event within a session:
 
-No Criticals: every Warning needs a steampoll rustInvoke failure, a timeout, or an interleaving race to trigger. None is a defect on the happy path.
+- `seq` is a single per-shell-process counter (`registry.rs:224`).
+- The sidecar is a child of the shell, so each restart gets a fresh guard.
+- Every tick draws one seq. It emits at most one install-group kind per app per tick (`uninstall.rs:150-262`, `install_once.rs:300-575`).
+- Every other kind gets its own key.
+- A second registration only loses protection; it never drops an event.
+- The install-group apply has no `await`, so check-then-note is atomic for that group.
+- The `macArchVerdict` writes happen before the handler's first `await`.
 
-### Warnings
+**WR-08 relaxation and the 10 s retry.** The stale and refusal replies (`applied:true`) are consumed correctly by `note_applied` and do not change the Rust continuation: `bridgeAuthoritative` in the reply is never read by the crate. The remaining gaps are poison events, which are retried with no cap (IN-04), and a parity test that cannot detect a refusal (IN-05).
 
-#### WR-01: Kill/stop of a Steam game now depends on a steampoll rustInvoke succeeding
+**WR-02/03 best-effort paths.** They log and continue. Only one of them swallows a failure with a user-visible effect: a lost finalize marker (IN-06, a documented trade-off).
 
-**File:** `src/backend/gamedetails/dispatch.ts:185-193`, `src/backend/storeManagers/steam/library/installPolling.ts:45-57`, `src/backend/storeManagers/steam/games.ts:590`
-**Issue:** `kill()` now awaits `isDelegatedInstallPolling` (a `steampoll_status` invoke) before `deps.aborts.call(appName)` and before `getGame(appName).stop()`. If the invoke rejects (rustInvoke timeout, shell restart), `kill` throws. Neither the abort controller nor `stop()` runs, so the user's Stop/Cancel does nothing. Inside `stop()`, `await cancelDelegatedInstall(...)` has the same problem: a rejection there skips the bridge-kill route below it, so a running bridge game cannot be stopped. Before this change both checks were synchronous Map reads and could not fail.
-**Fix:** Treat a failed status read as "not delegated", so the abort and stop still run:
+**New tests.** None spawns a child process, so `createFakeHomeProfile()` does not apply. `steamPollStateEventParity.test.ts` is classified in `testContainment.test.ts`.
+
+**One new Warning.** The C-WR-06 launch-watch change makes `launching` wait for the claim. That delay can now be up to the 60 s rustInvoke bound. But the new guard checks only `cancelled || doneSent`, so a late `launching` can overwrite `playing`, or arrive after the watch has ended and leave the game stuck on "Launching".
+
+## Prior findings
+
+| ID | Title | Status | Verification |
+| --- | --- | --- | --- |
+| C-WR-01 | Kill/stop depends on a steampoll invoke | **Fixed** | c711d0414. `dispatch.ts:185-201` uses try/catch and defaults to not delegated, so the abort and `stop()` always run. In `games.ts:590-601`, a rejected cancel falls through to the bridge route. Correct. |
+| C-WR-02 | Bridge `finally`/`catch` await a rustInvoke | **Fixed** | 32c3c502c. `setBridgeInstallFinalized` never rejects, and the two pre-removal stops are best-effort. Correct. The residual trade-off is in IN-06. |
+| C-WR-03 | Notices and post-handoff bookkeeping throw | **Fixed (one limit documented)** | 68ad4227d. `noticeSeq` never rejects, and the uninstall and update hand-offs are logged instead of failing. `steampoll_install_start` now returns ownership, which removes the double-`done` race. The fallback seq can still be hidden by a notice from a Rust loop (IN-02). |
+| C-WR-04 | Unhandled rejections | **Fixed** | fd8699e62. The claim's handler is attached at creation, and both `stopUninstallPolling` fire-and-forgets have a `.catch`. Correct. |
+| C-WR-05 | Bridge-finalized read at tick start | **Fixed (Rust)** | 30880a6ad. `Continuation::refresh_bridge_finalized` re-reads the marker after the ack, only for installer-owned `Installed` continuations (`effects.rs:118-139`, `install_loop.rs:590-600`). Correct. |
+| C-WR-06 | Mirror and claim ordering | **Partly fixed** | db4d406f9. The mirror chain is correct: `tail` never rejects, because production `requestRustInvoke` returns a rejected promise and never throws synchronously. The `clear()` override mirrors every key it removes. The launch-watch half adds a new race; see WR-01 below. |
+| C-WR-07 | `refreshInstallState` rejects mid-reconcile | **Fixed** | f5a680142. There is one status read, inside the `try`, shared by the hold filter and the active-poll set. A rejected read returns before any mutation. Correct. |
+| C-WR-08 | Schema stricter than producer; no parity test | **Fixed** | ffd108571. The schema now accepts every fixture variant, a non-numeric SizeOnDisk becomes 0 bytes, and `rearmSettled` is acked before its detached reconcile. The finite bounds and missing retry cap are in IN-04; the weak handler assertion is in IN-05. |
+| C-WR-09 | `pollUninstallOnce` duplicates the Rust pipeline | **Not fixed (skipped, design decision)** | Unchanged apart from the `.catch` from WR-04. The skip reasoning holds (LOCKED operator decisions, live UAT per path). It is still open debt. |
+| C-IN-04 | Handler ignores `seq` | **Fixed** | 2c461c7c5. The grouping matches `outbox::is_install_state_kind`, and a failed apply records no seq. I found no case where a legitimate event is dropped (see Summary). The cross-kind gap is in IN-03. |
+
+## Narrative Findings (AI reviewer)
+
+## Warnings
+
+### WR-01: The win32 launch watch can send `launching` after `playing`, or after the watch has ended
+
+**File:** `src/backend/storeManagers/steam/steamLaunchWatch.ts:184-198` (with the `finally` at 368-386)
+
+**Issue:** After C-WR-06, `decideLaunching` runs only once `releasePoller.held` settles. That is the `steampoll_running_hold` rustInvoke, which can take up to `RUST_INVOKE_TIMEOUT_MS` (60 s, `sidecarRpc.ts:84`), and it is followed by a second async read in `whenPollerReports`. Meanwhile `runWin32` keeps going. The only guard is `if (reports || cancelled || doneSent) return`, so two interleavings now produce a wrong status:
+
+1. **Late `launching` overwrites `playing`.**
+   - The search loop finds the game, sets `playingSent = true` and sends `playing`.
+   - The claim lands after that, and the poller is held, so it has not reported the appId.
+   - `decideLaunching` sends `launching`.
+   - Nothing re-sends `playing`: `reassert` is set only by a relaunch. The card shows "Launching" for the whole session, until the game exits and `done` is sent.
+2. **Late `launching` after the watch has ended.**
+   - `run()` returns without `doneSent`. This happens when there is no install folder (`run`, about line 360), when the start window elapses, or when the watch leaves it to the RunningAppID poller.
+   - The `finally` runs while `launchingSent` is still false, so it skips its fallback `done` and calls `finish()`.
+   - The claim then lands and `launching` is sent. No code path will ever send `done`, so the game is stuck on "Launching" until the app restarts.
+
+The new comment says "A watch cancelled or finished meanwhile sends nothing", but a finished watch is not checked. Before this change only the `pollerReports` read was async, so the window was one invoke wide. It is now two invokes plus a hold that can last up to 60 s, so this regression is tied to the fix. The new test (`steamLaunchWatch.test.ts`, C-WR-06) covers only cancel-before-claim.
+
+**Fix:** Track that the watch has finished and that `playing` was sent, and check both in the late callback:
 ```ts
-const delegated = await isDelegatedInstallPolling(deps, appName).catch((e) => {
-  logWarning(`kill: steampoll status failed, assuming not delegated: ${String(e)}`, LogPrefix.Steam)
-  return false
-})
+let finished = false
+const decideLaunching = () =>
+  whenPollerReports(deps, appId, (reports) => {
+    if (reports || cancelled || doneSent || playingSent || finished) return
+    ...
+  })
+// in .finally(), first line:
+finished = true
 ```
-In `games.ts`, use `if (await cancelDelegatedInstall(this.deps, this.appId).catch(() => false)) return`.
+Add tests where `held` lands (a) after the search sends `playing` and (b) after `run()` returns with no install folder. Assert that `launching` is not sent in either case.
 
-#### WR-02: Bridge install `finally` and `catch` now await a rustInvoke; a rejection drops `done` and the toast, and masks the real outcome
+## Info
 
-**File:** `src/backend/storeManagers/steam/gameInstallBridge.ts:103-110, 168, 180, 752-764, 458, 569, 633`
-**Issue:** `setBridgeInstallFinalized` used to be a synchronous Set write. It is now an awaited `steampoll_bridge_finalized` invoke at the top of the success `finally` and of `clearFinishing()`. If it rejects:
-- In the `finally` (752), `sendGameStatusUpdate(done)` and the single "Installation Finished" toast never run. A successful install throws, and the UI stays on "finishing".
-- In the `catch` (180), the original install error is replaced by the transport error and `done` is skipped.
-- At 458 a transport hiccup aborts the install before it starts.
-- At 569 and 633, `await stopInstallPolling` rejecting skips `removePerGameBridgeBottle`, which leaks the bottle on the shim/CEG refusal paths.
+### IN-01: Orphaned JSDoc, and module-global notice state
 
-**Fix:** Make the marker best-effort and keep the status send unconditional:
-```ts
-async function setBridgeInstallFinalized(g: SteamGame, finalized: boolean) {
-  await invokeSteamPoll(g.deps, RUST_STEAMPOLL_BRIDGE_FINALIZED, { appId: g.appId, finalized })
-    .catch((e) => logWarning(`bridge finalized marker failed for ${g.appId}: ${String(e)}`, LogPrefix.Steam))
-}
-```
-Apply the same `.catch` to the two `stopInstallPolling` calls before bottle removal.
+**File:** `src/backend/storeManagers/steam/gameUninstall.ts:188-196`
 
-#### WR-03: Failure notices and post-handoff bookkeeping now throw when steampoll is unreachable
+**Issue:** The `failUninstall` JSDoc ("quick 261108-anw: a delete errored ...") now sits above `let lastNoticeSeq = 0`, and `failUninstall` itself (about line 246) has no doc. `lastNoticeSeq` is also module-global, which breaks the per-boot session-state rule in `gameSessionState.ts` ("every map and set is per-instance, so two boots never share a session"). Two boots in one jest registry share it.
 
-**File:** `src/backend/storeManagers/steam/gameUninstall.ts:194-215, 356-366, 162, 380`; `src/backend/storeManagers/steam/updateNative.ts:136-140, 164-166`
-**Issue:**
-- `failUninstall` and `pushNotice` await `noticeSeq()` (`steampoll_next_notice_seq`) before they send `steamRequestNotice`. On a rejection, the failure path throws instead of returning `{ failed: true }`. The user gets no notice, and `uninstallGameCallback`'s single `done` contract is broken. Before this change the seq was an in-process counter.
-- `uninstall()` (162) and the `steam-uninstalled` route (380) `await startUninstallPolling` after `openExternal(steam://uninstall)` has already handed off to Steam. A rejection reports the uninstall as failed, and `clearPendingAdoption` is skipped.
-- `updateRegisteredSteamGame` awaits `startInstallPolling` and `pollOwnsUpdate` after InstallApp or `openExternal` already started the update. A rejection turns a running Steam update into an error result.
-- `pollOwnsUpdate` is now a separate status read after the start. If the Rust update poll finishes before that read, it returns false, and the queue sends a second terminal `done` on top of the poll's own.
+**Fix:** Move the JSDoc back onto `failUninstall`. Keep `lastNoticeSeq` in the per-boot `SteamGameSessionState`, or pass it in through `deps`.
 
-**Fix:** Fall back to a local monotonic counter (or `Date.now()`) when `noticeSeq` rejects; the frontend only needs ordering. Wrap the post-handoff `startUninstallPolling`/`startInstallPolling` in `.catch(logWarning)`. Have `steampoll_install_start` return whether this call registered an update poll, and drop the separate `pollOwnsUpdate` status read.
+### IN-02: The fallback notice seq can still be hidden, and its comment overclaims
 
-#### WR-04: Unhandled promise rejections introduced by the port
+**File:** `src/backend/storeManagers/steam/gameUninstall.ts:198-225`
 
-**File:** `src/backend/storeManagers/steam/steamLaunchedDeps.ts:60-85`; `src/backend/storeManagers/steam/library/uninstallPolling.ts:215, 251`
-**Issue:**
-- `rustPollerHold` creates the `claim` promise eagerly, but attaches a handler only when the release closure is first called, at the end of the launch watch (minutes later). If `steampoll_running_hold` rejects, it is an unhandled rejection at that moment. Only later does Node add a `PromiseRejectionHandledWarning`.
-- `pollUninstallOnce` still runs in production (bridge, bottle-direct, native-direct and remove-all-copies completions). It fires `void stopUninstallPolling(...)`, which is now a rustInvoke with no `.catch`. It also makes a pointless round trip on direct paths that never started a Rust poll.
+**Issue:** The doc says the fallback is "never equal to, or ahead of, the next one Rust issues" and is newer than everything handed out. It is newer only than the seqs this process has seen. The Rust install and uninstall loops issue their own notice seqs (`install_loop.rs:838`, `uninstall.rs:129`), which TS never sees. The frontend keeps one global `latest` (`SteamRequestNotice.ts:47`). So after any loop notice, a fallback `uninstall-failed` notice is silently dropped, which is the exact symptom C-WR-03 targeted. The fix report mentions this, but the code comment does not.
 
-The process guard is log-only, so the sidecar does not crash, but these are exactly the defects that guard is documented as "defence in depth" for.
-**Fix:** Attach a handler at creation, for example `const claim = invokeSteamPoll(...).then(id => id as number, (e) => { logWarning(...); return null })`, and skip the release when the claim is `null`. In `pollUninstallOnce`, use `void stopUninstallPolling(deps, appId).catch(() => undefined)`.
+**Fix:** At minimum, correct the comment. For a real fix, have the frontend order notices by `(seq, receivedAt)`, or have the sidecar learn the highest seq from the Rust loop notices (they pass through the shell, which could stamp them).
 
-#### WR-05: The bridge-finalized check is now read at tick observation, not at the send site (regression risk for quick 261031-ihs)
+### IN-03: The seq guard leaves `bridgeUninstalled` and `forcedWindowsViaBottleCleared` unordered against install state
 
-**File:** `src/backend/storeManagers/steam/gameInstallBridge.ts:752-758` (with `src-tauri/crates/gamelib-steampoll/src/install_once.rs:548`, `install_loop.rs:677`)
-**Issue:** The deleted TS read `isBridgeInstallFinalized` synchronously at the send site, which is the whole point of 261031-ihs ("Read synchronously at the send site"). Rust snapshots `bridge_finalized` into `obs` at the start of the tick. It carries the snapshot through the `installed` Transition, waits up to 5 s for the sidecar ack, and only then emits the `installing` / `steam-bridge-finishing` status. Meanwhile the installer's `finally` sets the flag over a separate rustInvoke and sends `done` over the sidecar stdout. A short bridge tail (no redists, prefetch fails fast) can now produce "finishing" after `done`, and the game stays on "finishing" until restart. The TS side cannot fix this alone; it is listed here because the TS change is what moved the read.
-**Fix:** In Rust, re-read `bridge_finalized` in the `Continuation::Installed` handler, at the moment the status is emitted, instead of carrying `obs.bridge_finalized`. Add a rust-arm test where finalization lands between the observation and the ack.
+**File:** `src/backend/sidecar/steamPollEventRegistration.ts:199-210`
 
-#### WR-06: Ordering of fire-and-forget mirror and claim invokes is no longer guaranteed
+**Issue:** Both kinds are emitted by the same uninstall tick as `uninstalled`, and both write bridge/install-related state. Each is keyed on its own `(appId, kind)`. Example: a queued `bridgeUninstalled` (seq 8) that is replayed after a newer `installed` (seq 50, a bridge reinstall) still runs `markBridgeGameUninstalled`. The crate's `note_applied` likewise drops only install-group kinds. This is unlikely with a 10 s retry, because a reinstall takes minutes. But the header's claim that "an older event can arrive after a newer one" is covered is only true within a group.
 
-**File:** `src/backend/storeManagers/steam/gameSessionState.ts:105-139`; `src/backend/storeManagers/steam/steamLaunchWatch.ts:166-185`
-**Issue:**
-- `MirroredInFlightMap` sends `native_in_flight {true}` on `set` and `{false}` on `delete` as independent fire-and-forget invokes. The shell answers each rustInvoke on its own worker thread, so a fast `set`→`delete` (an immediate abort or refusal) can land in Rust as false-then-true. Rust's `native_in_flight` set then stays true, which suppresses the install poll's grace give-up (`install_loop.rs:829-844`). `Map.prototype.clear()` is not overridden, so a `clear()` would silently skip the mirror.
-- `steamLaunchWatch.ts:171-172` still says "The claim above already silences the poller for this appId, so this runs in the same synchronous turn". That is no longer true: `pollerHold` is an async invoke. The Rust running poll can emit `playing`/`done` for the app before the hold lands, and the `launching` send now happens after an async `last_app_id` read issued in parallel with the hold.
+**Fix:** Before applying a `bridgeUninstalled` or `forcedWindowsViaBottleCleared`, also check it against the app's install-group seq. Or document the gap in the header next to the TS-write caveat.
 
-**Fix:** Serialise the mirror per appId with a promise chain (`this.tail = this.tail.then(() => invoke(...))`), or send the full in-flight set each time so the last write wins. Override `clear()`. For the launch watch, await the hold before deciding on `launching` (`startSteamLaunchWatch` is already async-capable via `whenPollerReports`), and update the stale comment.
+### IN-04: Poison events still retry every 10 s with no cap; the schema bounds are still finite
 
-#### WR-07: `refreshInstallState` can reject mid-reconcile after partial writes
+**File:** `src/common/types/ipc/sidecarInternal.ts:105-107`; `src/backend/sidecar/steamPollEventRegistration.ts:263-271`
 
-**File:** `src/backend/storeManagers/steam/library/refresh.ts:180-186, 298-311`
-**Issue:** `hasActiveInstallPoll` (a lazy `steampoll_status` invoke) is awaited inside the per-entry loop, outside the WR-01 `try` that guards the scans. If that invoke rejects, the loop aborts after earlier entries were already mutated, persisted and pushed. The function then rejects to its callers: the `rearmSettled` handler returns `applied:false`, which makes Rust re-queue it, and `localLibrary.ts:44` gets the rejection. The scan section deliberately skips the reconcile on a transport failure; this new call breaks that contract.
-**Fix:** Pre-fetch the status inside the existing `try`, next to `withoutSteamRestartHolds`, which already makes the same call. Reuse that one result for both the hold filter and the active-poll set, instead of a second lazy read in the loop.
+**Issue:** Rust passes `SizeOnDisk` and `buildid` through unbounded, so a corrupt ACF value over 256 characters still fails `validateInbound`. So do an unknown future `kind` and an apply that throws every time, for example a store write that keeps failing in `applyMacArchVerdict`. Before Part B such an event was retried only at READY. With the 10 s `retry_pending` loop it is now re-sent, and for a throwing apply a warning is logged, every 10 s for the whole session. This is the prior C-IN-04 "re-queued forever" note, now worse because the retry is periodic.
 
-#### WR-08: The `steamPollStateEvent` schema is hand-mirrored, stricter than its producer, and untested against it; rejected events are lost for the session
+**Fix:** In the handler, truncate instead of rejecting (`z.string().transform(s => s.slice(0, 256))`, or validate with `.max` only on `installPath`). In the crate outbox, add a per-entry attempt cap that logs and drops the entry. The fixer deferred that cap to Part A.
 
-**File:** `src/common/types/ipc/sidecarInternal.ts:96-146`; `src/backend/sidecar/steamPollEventRegistration.ts:168-183`
-**Issue:**
-- Rust `size_on_disk` is an unvalidated raw ACF string (`acf_state.rs:134` defaults only `None` to `"0"`; `Some("")` passes through). Zod requires `numericId` (`^\d+$`, max 20). `buildid` is capped at 32 and `installPath` at 4096. An event that fails `validateInbound` is rejected before the handler runs.
-- `Outbox::flush` runs only from `mark_ready` (`outbox.rs:93-95`). So an event that is rejected, returns `applied:false` (any handler throw), or exceeds `ACK_TIMEOUT_MS` (5 s) is not retried until the next sidecar restart. The library badge never flips in-session, even though Rust's post-ack continuation still sends the "Installation Finished" toast.
-- `rearmSettled` awaits a full `refreshInstallState` (several scans plus a status call) inside that 5 s budget at boot, when the sidecar is busiest.
-- `steamPollChannelParity.test.ts` pins the op list, but nothing checks `StateEvent`/`AckReply` against the zod union, so the next Rust field change drifts silently.
+### IN-05: The parity test's handler assertion cannot detect a refusal
 
-**Fix:** Relax `sizeOnDisk` to `z.string().max(32)` (the consumer already does `Number(...)`), or normalise it in Rust. For `rearmSettled`, ack first and run the reconcile detached (`void refreshInstallState().catch(log)`). Add a parity test that serialises each `StateEvent` variant from a Rust fixture, for example via `gamelib-steampoll-cli`, and parses it with the zod schema. Raise the in-session retry gap with the Part A reviewer.
+**File:** `src/backend/sidecar/__tests__/steamPollStateEventParity.test.ts:70-101`
 
-#### WR-09: `pollUninstallOnce` duplicates the Rust uninstall completion pipeline
+**Issue:** The test is named "applies every producer event without a refusal" and asserts `reply.applied === true`. Since C-WR-08, refusals and stale events also answer `applied: true`, so this assertion passes even if the handler applies nothing. The fixture's first event (appId `4294967295`, seq 2^53-1) is not in the seeded library, so it always takes the no-entry refusal path. The NaN check reads only the final state (the seq-7 survivor). The non-numeric `"not-a-number"` case (seq 3) is overwritten before it is checked.
 
-**File:** `src/backend/storeManagers/steam/library/uninstallPolling.ts:75-269`
-**Issue:** The Rust uninstall loop (`uninstall.rs:150-270`) now owns the survivor probe, the forced-Windows clear, the bridge-uninstalled step, the toast and the status. The TS `pollUninstallOnce` still implements the same pipeline in full for the five direct-removal call sites (`gameUninstall.ts:247, 319, 491, 719, 797, 827`; `gameInstall.ts:552`; `removeAllCopies.ts:92`). The two now differ:
-- TS clears forced-Windows and logs per root.
-- Rust emits `BridgeUninstalled` for a bridge source; TS relies on the callers.
-- The survivor gating also differs: TS requires `existing` to take the survivor branch.
+**Fix:** Seed every fixture appId. After each event, assert the resulting library entry (for example, that `install_size` matches `/^\d/` right after each `installed` or survivor event), not only the `applied` flag.
 
-The LOCKED operator decisions (HOARD three-root case, the copySurvives toast) now live in two places with no parity test across them. This is the drift the port was meant to remove.
-**Fix:** Route the direct paths through a single-tick Rust op, for example `steampoll_uninstall_once`, that returns the same effects as the loop, or have them start a Rust uninstall poll and let its first tick complete. Then delete `pollUninstallOnce`.
+### IN-06: A lost finalize marker silently re-opens the C-WR-05 "finishing after done" symptom
 
-### Info
+**File:** `src/backend/storeManagers/steam/gameInstallBridge.ts:59-72`
 
-#### IN-01: Dead parameters and unsound casts left by the deletion
+**Issue:** This is the documented trade-off of C-WR-02. If `setBridgeInstallFinalized(true)` fails, the error is logged only. The Rust poll's `Installed` continuation then reads `finalized = false` and emits `steam-bridge-finishing` after the installer's `done`. The card then stays on "finishing" until restart, and the only trace is a warning in the log. That is the 261031-ihs defect, now behind a transport failure.
 
-**File:** `src/backend/storeManagers/steam/library/runningPoll.ts:7-10, 45, 57`; `src/backend/storeManagers/steam/library/acfState.ts:54, 79, 193, 287, 342`; `src/backend/storeManagers/steam/library/uninstallPolling.ts:283`; `src/backend/storeManagers/steam/library/acfUpdateState.ts:5`
-**Issue:**
-- `RunningPollProbeDeps.runner` and `.paths` and the `_platform` parameters are unused now that the probe is Rust.
-- `readAcfState`, `enumerateSteamInstallCopies`, `removeCopyViaRust`, `scanDownloadingAppIds` and `startUninstallPolling` take `SteamLibrariesDeps & ...` (unused) and cast `deps as unknown as RustInvokeDeps`. A caller without `requestRustInvoke` type-checks, then fails at runtime as a TypeError that `readAcfState` swallows into `'unknown'`, so an uninstall would never complete.
-- The `readAcfState` JSDoc still says native scans use `getSteamLibraries(deps)`.
-
-**Fix:** Change the deps types to `Pick<ManagerDeps, 'requestRustInvoke' | 'config'> & BottleSettingsDeps`, drop the casts and the dead fields, and update the doc.
-
-#### IN-02: `steampoll_running_start` and `steampoll_running_stop` are allowlisted with no TS caller
-
-**File:** `src/common/types/sidecarTransport.ts:672-683`, `src/common/types/ipc/rustInvoke.ts:401-402`
-**Issue:** The shell starts the running poll at boot (`steampoll_boot`). Nothing in `src/` invokes these channels, yet they stay on the sidecar's rustInvoke surface, so sidecar code can stop the shell-owned poller.
-**Fix:** Remove them from `RUST_INVOKE_CHANNELS`, or document why the sidecar needs them.
-
-#### IN-03: Inconsistent invoke wrappers and test-only exports
-
-**File:** `src/backend/storeManagers/steam/steamLaunchedDeps.ts:91-94`; `src/backend/storeManagers/steam/gameUninstall.ts:194`; `src/backend/storeManagers/steam/updateNative.ts:39`
-**Issue:** `rustPollerReports` and `noticeSeq` call `deps.requestRustInvoke` directly instead of `invokeSteamPoll`, which skips its channel typing and debug log. `noticeSeq` and `pollOwnsUpdate` are exported only for tests.
-**Fix:** Use `invokeSteamPoll` everywhere. Keep these helpers module-private, or move them to a small module.
-
-#### IN-04: The handler ignores `seq`; replay is idempotent per event but not ordered against TS-originated writes
-
-**File:** `src/backend/sidecar/steamPollEventRegistration.ts:102-159`
-**Issue:** The header claims R1 idempotent replay. That holds for one event applied twice. But a queued `installed` replayed at READY can overwrite a newer state written by TS (`pollUninstallOnce`, `refreshInstallState`), because `seq` is never compared. An unknown future `kind` fails validation and is re-queued forever (bounded by the outbox key).
-**Fix:** Keep a per-(appId, kind) last-applied seq in the session state and answer `applied:true` without mutating when the incoming seq is not newer. Note the cross-source caveat in the header.
-
-#### IN-05: Weak or dead test scaffolding
-
-**File:** `src/backend/storeManagers/steam/__tests__/library.refresh.test.ts:65-78`; `src/backend/storeManagers/steam/__tests__/pollsRustBranch.uninstallRunning.test.ts:90-92, 109-126`; `meta/genI18nGolden.ts:41`
-**Issue:**
-- `holdTransport` answers `steampoll_status`, but the code under test reads `deps.requestRustInvoke` (the `statusOverride` mock), so that branch is dead.
-- The empty `beforeEach`/`afterEach` do nothing.
-- The "never spawn" assertion is tautological, because `runner` is no longer reachable from the readers.
-- `REPO_ROOT = process.cwd()` makes `i18nGolden.test.ts` depend on jest being run from the repo root.
-
-**Fix:** Remove the dead transport and the empty hooks. Have the generator take the root as a parameter, and have the test pass `join(__dirname, '../../..')`.
-
-#### IN-06: `startInstallPolling` silently drops a numeric interval
-
-**File:** `src/backend/storeManagers/steam/library/installPolling.ts:23-36`
-**Issue:** A bare-number second argument becomes `{}`, although Rust `PollOptions` accepts `intervalMs`. `startUninstallPolling` forwards it. The asymmetry is surprising, and `resume.ts:255` relies on the default.
-**Fix:** Forward `{ intervalMs }` for symmetry, or remove the number overload.
+**Fix:** Acceptable as written. Optionally retry the marker once before giving up, or send `done` again after a failed marker write so the last frame is terminal.
 
 ---
 
-_Reviewed: 2026-11-16_
+_Reviewed: 2026-11-16T09:36:47Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
+
