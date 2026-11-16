@@ -461,6 +461,7 @@ pub(crate) fn start_reader(app: AppHandle, state: Arc<SidecarState>, stdout: std
             if trimmed == READY_SENTINEL {
                 // Sidecar bootstrapped; commands may already be queued and will now flow.
                 shell_eprintln!("[shell] sidecar signalled READY ({READY_SENTINEL})");
+                mark_sidecar_ready();
                 continue;
             }
             let value: Value = match serde_json::from_str(trimmed) {

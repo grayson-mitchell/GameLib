@@ -16,8 +16,17 @@ use super::*;
 // `show()` dispatches its work onto `tauri::async_runtime::spawn` and returns promptly.
 pub(crate) fn rpc_notification_show(args: &[Value], app: &AppHandle) -> Result<Value, String> {
     let opts = NotificationShowArgs::from_args(args)?;
-    let title = opts.title.as_deref();
-    let body = opts.body.as_deref();
+    show_notification(app, opts.title.as_deref(), opts.body.as_deref()).map(Value::String)
+}
+
+/// The one delivery path for an OS notification: `rpc_notification_show` (the sidecar's
+/// `Notification.show()`) and the Rust steampoll host (Phase 80 D-03) both come through here.
+/// Resolves the backend label (see below), never null.
+pub(crate) fn show_notification(
+    app: &AppHandle,
+    title: Option<&str>,
+    body: Option<&str>,
+) -> Result<String, String> {
     #[cfg(target_os = "macos")]
     if macos_notifications::backend()
         == notification_backend::NotificationBackend::UserNotifications
@@ -26,7 +35,7 @@ pub(crate) fn rpc_notification_show(args: &[Value], app: &AppHandle) -> Result<V
         // (`notification_backend::user_notifications_label`): acceptance by UN* is not
         // proof of a banner, so the settings that decide that travel with it (52-REVIEW
         // WR-01).
-        return macos_notifications::deliver(title, body).map(Value::String);
+        return macos_notifications::deliver(title, body);
     }
     let mut builder = app.notification().builder();
     if let Some(title) = title {
@@ -38,10 +47,8 @@ pub(crate) fn rpc_notification_show(args: &[Value], app: &AppHandle) -> Result<V
     builder.show().map_err(|e| e.to_string())?;
     // Resolve the backend label, not null: it makes delivery observable, and the
     // plugin's Ok does not mean delivered (52-UAT item 30).
-    Ok(Value::String(
-        notification_backend::backend_label(
-            notification_backend::NotificationBackend::Plugin,
-        )
-        .to_string(),
-    ))
+    Ok(
+        notification_backend::backend_label(notification_backend::NotificationBackend::Plugin)
+            .to_string(),
+    )
 }
