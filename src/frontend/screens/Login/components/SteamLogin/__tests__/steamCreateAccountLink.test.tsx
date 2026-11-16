@@ -151,12 +151,12 @@ function extractBlock(source: string, marker: string): string {
   return source.slice(braceStart, i + 1)
 }
 
-// All seven Step values with their expected showsCreateAccountLink result.
-// The three `true` rows and the four `false` rows are asserted in the SAME
+// All eight Step values with their expected showsCreateAccountLink result.
+// The three `true` rows and the five `false` rows are asserted in the SAME
 // test below, so a predicate rewritten to `return true` fails on the false
 // rows and a predicate rewritten to `return false` fails on the true rows --
 // neither direction can pass vacuously. Typed as Array<[Step, boolean]> so
-// that adding an eighth Step member without updating this table is at least
+// that adding a ninth Step member without updating this table is at least
 // visible to tsc (an unhandled member would make the table's type narrower
 // than `Step` if this were exhaustively derived -- here it is a literal
 // enumeration instead, deliberately, so tsc flags nothing automatically, but
@@ -168,7 +168,8 @@ const ALL_STEPS_WITH_EXPECTATION: Array<[Step, boolean]> = [
   ['qr-active', true],
   ['qr-confirmed', false],
   ['credentials-1', true],
-  ['credentials-2', false]
+  ['credentials-2', false],
+  ['credentials-confirmed', false]
 ]
 
 describe('quick-260822-elw: showsCreateAccountLink / renderCreateAccountLink gate', () => {

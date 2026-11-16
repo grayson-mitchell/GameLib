@@ -407,3 +407,32 @@ describe('QR -> credentials -> QR tab round-trip', () => {
     expect(drawn()).toBe('qr-C')
   })
 })
+
+describe('credentials approval does not flip back to the credentials form', () => {
+  it('stays on the approved state while finalisation runs, then signs in once', async () => {
+    await mountOnGuardStep()
+    api.steamPollCredential.mockResolvedValueOnce({ status: 'done' } as Poll)
+    await advance(2_000)
+
+    expect(screen.queryByLabelText('Username')).toBeNull()
+    expect(screen.queryByLabelText('Password')).toBeNull()
+    expect(
+      screen.queryByLabelText('Steam Guard code (letters or digits)')
+    ).toBeNull()
+    expect(screen.getByText('Approved. Completing sign-in...')).toBeTruthy()
+    expect(screen.queryByText(/QR scanned/)).toBeNull()
+
+    api.steamPollCredential.mockResolvedValueOnce({
+      status: 'done',
+      username: 'gaben'
+    } as Poll)
+    await advance(2_000)
+    await flush()
+    expect(mockSteamLogin).toHaveBeenCalledTimes(1)
+    expect(mockSteamLogin).toHaveBeenCalledWith({
+      status: 'done',
+      username: 'gaben'
+    })
+    expect(screen.queryByLabelText('Username')).toBeNull()
+  })
+})

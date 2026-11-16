@@ -31,6 +31,7 @@ export type Step =
   | 'qr-confirmed'
   | 'credentials-1'
   | 'credentials-2'
+  | 'credentials-confirmed'
 
 // D-01 (quick task 260822-elw): no account-creation offer once authentication
 // is actually in flight -- 'qr-confirmed' (QR scanned, completing sign-in) and
@@ -180,12 +181,12 @@ export default function SteamLogin({ dismiss }: Props) {
       if (gen !== credPollGenRef.current) return
       if (poll.status === 'done' && poll.username) {
         clearCredPollInterval()
-        setStep('qr-confirmed') // reuse the "completing sign-in" UI
+        setStep('credentials-confirmed')
         await steamLogin({ status: 'done', username: poll.username })
         finishSignIn()
       } else if (poll.status === 'done') {
         // Authenticated but CM connect still in flight — keep polling for username.
-        setStep('qr-confirmed')
+        setStep('credentials-confirmed')
       } else if (poll.status === 'error') {
         // The flow is over (phone denied, timed out, status reads failing,
         // finalisation failed): another code cannot succeed, so say so and
@@ -517,6 +518,33 @@ export default function SteamLogin({ dismiss }: Props) {
 
   // --- Render: Credentials tab content ---
   function renderCredentialsContent() {
+    // Approved in Steam Guard; finalisation is running. Never fall through to
+    // the step-1 form while the poll waits for the username.
+    if (step === 'credentials-confirmed') {
+      return (
+        <div style={{ textAlign: 'center', padding: 'var(--space-lg) 0' }}>
+          <FontAwesomeIcon
+            icon={faCheckCircle}
+            style={{
+              fontSize: '2.5em',
+              color: 'var(--status-success)',
+              marginBottom: 'var(--space-sm)'
+            }}
+          />
+          <p
+            style={{ fontSize: 'var(--text-md)', color: 'var(--text-default)' }}
+          >
+            <FontAwesomeIcon
+              icon={faSyncAlt}
+              spin
+              style={{ marginRight: 'var(--space-3xs)' }}
+            />
+            Approved. Completing sign-in...
+          </p>
+        </div>
+      )
+    }
+
     // Step 2: SteamGuard
     if (step === 'credentials-2') {
       return (
