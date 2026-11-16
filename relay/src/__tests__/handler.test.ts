@@ -313,7 +313,7 @@ describe('edge: capped body (DEBT-02)', () => {
           return typeof v === 'function' ? v.bind(t) : v
         }
       })
-      const res = await handleReport(lying as Request, h.deps)
+      const res = await handleReport(lying, h.deps)
       expect(res.status).toBe(413)
     } finally {
       log.mockRestore()
