@@ -33,6 +33,28 @@ pub const LOG_POLL: Duration = Duration::from_millis(250);
 pub const LATE_LOGOFF_WINDOW_MS: i64 = 60_000;
 const STATE_READ_BYTES: u64 = 65_536;
 
+/// Mac Steam's connection log, relative to the user's home.
+const CONNECTION_LOG_REL: &str = "Library/Application Support/Steam/logs/connection_log.txt";
+
+/// Stands in for the home directory when none is known. It cannot exist, so the log probe fails
+/// as a missing file rather than reading a path relative to the current directory.
+const NO_HOME: &str = "/nonexistent-home";
+
+/// `connection_log.txt` under `home`. B/IN-04: a missing or relative home gives a path that cannot
+/// exist, never a CWD-relative one.
+pub fn connection_log_path_in(home: Option<PathBuf>) -> PathBuf {
+    let home = home
+        .filter(|h| h.is_absolute())
+        .unwrap_or_else(|| PathBuf::from(NO_HOME));
+    home.join(CONNECTION_LOG_REL)
+}
+
+/// The current user's `connection_log.txt`. `std::env::home_dir` reads `$HOME` and falls back to
+/// the password database when it is unset or empty.
+pub fn default_connection_log_path() -> PathBuf {
+    connection_log_path_in(std::env::home_dir())
+}
+
 /// What the shell provides. Implemented outside the crate so it stays Tauri-free.
 pub trait WrapHost: Send + Sync + 'static {
     /// Opens one of the two const steam:// URLs (detached, never raising Steam). True if issued.
@@ -430,6 +452,21 @@ impl OwedPayer {
 
 #[cfg(test)]
 mod tests {
+    /// B/IN-04: no home, or a relative one, never yields a CWD-relative log path.
+    #[test]
+    fn connection_log_path_is_absolute_without_a_usable_home() {
+        for home in [None, Some(PathBuf::new()), Some(PathBuf::from("rel/home"))] {
+            let p = super::connection_log_path_in(home.clone());
+            assert!(p.is_absolute(), "{home:?} -> {p:?}");
+            assert!(p.starts_with(super::NO_HOME), "{home:?} -> {p:?}");
+        }
+        assert_eq!(
+            super::connection_log_path_in(Some(PathBuf::from("/Users/u"))),
+            PathBuf::from("/Users/u/Library/Application Support/Steam/logs/connection_log.txt")
+        );
+        assert!(super::default_connection_log_path().is_absolute());
+    }
+
     use super::*;
     use std::io::Write;
 

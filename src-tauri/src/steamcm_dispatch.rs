@@ -267,10 +267,8 @@ impl WrapHost for ShellWrapHost {
     }
 
     fn connection_log_path(&self) -> std::path::PathBuf {
-        let home = std::env::var_os("HOME")
-            .map(std::path::PathBuf::from)
-            .unwrap_or_default();
-        home.join("Library/Application Support/Steam/logs/connection_log.txt")
+        // B/IN-04: never CWD-relative when HOME is unset.
+        gamelib_steamcm::wrap::default_connection_log_path()
     }
 
     fn pid_alive(&self, pid: u32) -> bool {

@@ -39,11 +39,8 @@ struct CliWrapHost {
 
 impl CliWrapHost {
     fn new() -> Self {
-        let home = std::env::var_os("HOME")
-            .map(PathBuf::from)
-            .unwrap_or_default();
         Self {
-            log: home.join("Library/Application Support/Steam/logs/connection_log.txt"),
+            log: gamelib_steamcm::wrap::default_connection_log_path(),
         }
     }
 }
