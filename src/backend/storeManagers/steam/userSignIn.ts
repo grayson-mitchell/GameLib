@@ -395,11 +395,17 @@ export async function pollQRLogin(deps: SignInPollDeps): Promise<{
   return out
 }
 
+export type SteamGuardCodeType = 'email' | 'device'
+
 export async function startCredentialLogin(
   deps: UserSignInDeps,
   accountName: string,
   password: string
-): Promise<{ status: 'done' | 'guard_required' | 'error' }> {
+): Promise<{
+  status: 'done' | 'guard_required' | 'error'
+  canApprove?: boolean
+  codeType?: SteamGuardCodeType
+}> {
   const signInState = deps.steamSession.signIn
   try {
     signInState.setCredSessionState({ status: 'waiting' })
@@ -413,6 +419,8 @@ export async function startCredentialLogin(
       status?: string
       reason?: string
       eresult?: number
+      guardType?: string
+      canApprove?: boolean
     }
     if (!r.flowId || (r.status !== 'guardRequired' && r.status !== 'waiting')) {
       logRustError('Steam credential login failed', r)
@@ -423,7 +431,21 @@ export async function startCredentialLogin(
     signInState.setSession(slot)
     if (r.status === 'guardRequired') {
       logInfo('Steam Guard required for credential login', LogPrefix.Steam)
-      return { status: 'guard_required' }
+      const codeType: SteamGuardCodeType | undefined =
+        r.guardType === 'email' || r.guardType === 'device'
+          ? r.guardType
+          : undefined
+      return {
+        status: 'guard_required',
+        canApprove: r.canApprove === true,
+        codeType
+      }
+    }
+    if (r.canApprove === true) {
+      // Approve-only account: show the approval screen now. The window's credential poll
+      // (pollCredentialLogin) completes the flow when the user approves.
+      logInfo('Steam sign-in awaiting mobile approval', LogPrefix.Steam)
+      return { status: 'guard_required', canApprove: true }
     }
     return await rustWaitSettle(deps, slot)
   } catch (err) {

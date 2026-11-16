@@ -224,8 +224,61 @@ describe('userSignIn on the rust engine', () => {
       })
     })
     expect(await startCredentialLogin(t.deps, 'acct', SECRET_PASSWORD)).toEqual(
-      { status: 'guard_required' }
+      { status: 'guard_required', canApprove: false }
     )
+  })
+
+  it('startCredentialLogin reports canApprove and the device code type', async () => {
+    const t = build({
+      steamcm_signin_credentials_start: () => ({
+        ok: true,
+        flowId: 'c1',
+        status: 'guardRequired',
+        guardType: 'device',
+        canApprove: true
+      })
+    })
+    expect(await startCredentialLogin(t.deps, 'acct', SECRET_PASSWORD)).toEqual(
+      { status: 'guard_required', canApprove: true, codeType: 'device' }
+    )
+  })
+
+  it('startCredentialLogin reports the email code type without approval', async () => {
+    const t = build({
+      steamcm_signin_credentials_start: () => ({
+        ok: true,
+        flowId: 'c1',
+        status: 'guardRequired',
+        guardType: 'email',
+        canApprove: false
+      })
+    })
+    expect(await startCredentialLogin(t.deps, 'acct', SECRET_PASSWORD)).toEqual(
+      { status: 'guard_required', canApprove: false, codeType: 'email' }
+    )
+  })
+
+  it('startCredentialLogin returns at once for an approve-only waiting flow, and the poll still finishes it', async () => {
+    const t = build({
+      steamcm_signin_credentials_start: () => ({
+        ok: true,
+        flowId: 'c1',
+        status: 'waiting',
+        canApprove: true
+      }),
+      steamcm_signin_status: () => DONE
+    })
+    const r = await startCredentialLogin(t.deps, 'acct', SECRET_PASSWORD)
+    expect(r).toEqual({ status: 'guard_required', canApprove: true })
+    expect(r.codeType).toBeUndefined()
+    expect(t.calls).not.toContain('steamcm_signin_status')
+    // Finalisation runs in the background: the first poll says done, a later one carries the name.
+    expect((await pollCredentialLogin(t.deps)).status).toBe('done')
+    await jest.advanceTimersByTimeAsync(0)
+    expect(await pollCredentialLogin(t.deps)).toEqual({
+      status: 'done',
+      username: 'Persona'
+    })
   })
 
   it('startCredentialLogin waiting polls every second on unref timers until done', async () => {

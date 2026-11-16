@@ -132,6 +132,10 @@ interface SteamAuthAsyncReturns {
   }>
   steamStartCredentials: Promise<{
     status: 'done' | 'guard_required' | 'error'
+    /** Steam lets the user approve this sign-in in the Steam Mobile app (or by email) instead of typing a code. */
+    canApprove?: boolean
+    /** Which kind of typed code Steam accepts, when it accepts one. */
+    codeType?: 'email' | 'device'
   }>
   /**
    * `reason` on an error (C2/WR-02): `wrongCode` and `failed` leave the flow waiting for another

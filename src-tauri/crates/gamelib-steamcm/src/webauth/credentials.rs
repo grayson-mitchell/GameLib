@@ -33,13 +33,19 @@ use tokio::time::Instant;
 const WEBSITE_ID: &str = "Unknown";
 
 /// Result of `credentials_start`. The password is gone by the time this exists.
+/// `can_approve` is true when Steam allows approving the sign-in in the Mobile app or by
+/// email (a *Confirmation type), alongside or instead of a typed code.
 #[derive(Clone, Serialize)]
 #[serde(tag = "status", rename_all = "camelCase")]
 pub enum CredStarted {
     #[serde(rename_all = "camelCase")]
-    GuardRequired { flow_id: String, guard_type: String },
+    GuardRequired {
+        flow_id: String,
+        guard_type: String,
+        can_approve: bool,
+    },
     #[serde(rename_all = "camelCase")]
-    Waiting { flow_id: String },
+    Waiting { flow_id: String, can_approve: bool },
 }
 
 /// Result of `guard_submit`. A wrong code is `Err(WebAuthError::EResult(65))` and leaves the flow
@@ -94,6 +100,17 @@ fn code_guard_type(types: &[EAuthSessionGuardType]) -> Option<&'static str> {
         EAuthSessionGuardType::k_EAuthSessionGuardType_EmailCode => Some("email"),
         EAuthSessionGuardType::k_EAuthSessionGuardType_DeviceCode => Some("device"),
         _ => None,
+    })
+}
+
+/// Whether any allowed confirmation can be approved without typing a code.
+fn can_approve(types: &[EAuthSessionGuardType]) -> bool {
+    types.iter().any(|t| {
+        matches!(
+            t,
+            EAuthSessionGuardType::k_EAuthSessionGuardType_DeviceConfirmation
+                | EAuthSessionGuardType::k_EAuthSessionGuardType_EmailConfirmation
+        )
     })
 }
 
@@ -161,6 +178,7 @@ impl WebAuth {
             }
         }
         let guard = code_guard_type(&types);
+        let approvable = can_approve(&types);
 
         let client_id = begin.client_id();
         let request_id = begin.request_id().to_vec();
@@ -209,8 +227,12 @@ impl WebAuth {
             Some(g) => CredStarted::GuardRequired {
                 flow_id: id,
                 guard_type: g.to_string(),
+                can_approve: approvable,
             },
-            None => CredStarted::Waiting { flow_id: id },
+            None => CredStarted::Waiting {
+                flow_id: id,
+                can_approve: approvable,
+            },
         })
     }
 
@@ -445,6 +467,79 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn can_approve_mapping() {
+        let (_m, _wa, r) = start(&[
+            G::k_EAuthSessionGuardType_DeviceConfirmation,
+            G::k_EAuthSessionGuardType_DeviceCode,
+        ])
+        .await;
+        match r.unwrap() {
+            CredStarted::GuardRequired {
+                guard_type,
+                can_approve,
+                ..
+            } => {
+                assert_eq!(guard_type, "device");
+                assert!(can_approve);
+            }
+            _ => panic!("expected guard"),
+        }
+
+        let (_m, _wa, r) = start(&[G::k_EAuthSessionGuardType_EmailCode]).await;
+        match r.unwrap() {
+            CredStarted::GuardRequired {
+                guard_type,
+                can_approve,
+                ..
+            } => {
+                assert_eq!(guard_type, "email");
+                assert!(!can_approve);
+            }
+            _ => panic!("expected guard"),
+        }
+
+        let (_m, _wa, r) = start(&[G::k_EAuthSessionGuardType_None]).await;
+        assert!(matches!(
+            r.unwrap(),
+            CredStarted::Waiting {
+                can_approve: false,
+                ..
+            }
+        ));
+
+        for t in [
+            G::k_EAuthSessionGuardType_DeviceConfirmation,
+            G::k_EAuthSessionGuardType_EmailConfirmation,
+        ] {
+            let (_m, _wa, r) = start(&[t]).await;
+            assert!(
+                matches!(
+                    r.unwrap(),
+                    CredStarted::Waiting {
+                        can_approve: true,
+                        ..
+                    }
+                ),
+                "{t:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn can_approve_serialises_camel_case() {
+        let v = serde_json::to_value(CredStarted::GuardRequired {
+            flow_id: "f".into(),
+            guard_type: "device".into(),
+            can_approve: true,
+        })
+        .unwrap();
+        assert_eq!(v["canApprove"], true);
+        assert_eq!(v["guardType"], "device");
+        assert_eq!(v["flowId"], "f");
+        assert_eq!(v["status"], "guardRequired");
+    }
+
+    #[tokio::test]
     async fn confirmations_and_none_map_to_waiting() {
         for t in [
             G::k_EAuthSessionGuardType_DeviceConfirmation,
@@ -460,7 +555,7 @@ mod tests {
     #[tokio::test]
     async fn none_polls_to_done() {
         let (mock, wa, r) = start(&[G::k_EAuthSessionGuardType_None]).await;
-        let CredStarted::Waiting { flow_id } = r.unwrap() else {
+        let CredStarted::Waiting { flow_id, .. } = r.unwrap() else {
             panic!("waiting")
         };
         mock.push(POLL, done("76561198000000001"));
@@ -482,7 +577,7 @@ mod tests {
     #[tokio::test]
     async fn unreadable_sub_falls_back_to_the_begin_steam_id() {
         let (mock, wa, r) = start(&[G::k_EAuthSessionGuardType_None]).await;
-        let CredStarted::Waiting { flow_id } = r.unwrap() else {
+        let CredStarted::Waiting { flow_id, .. } = r.unwrap() else {
             panic!("waiting")
         };
         mock.push(
@@ -514,6 +609,7 @@ mod tests {
         let CredStarted::GuardRequired {
             flow_id,
             guard_type,
+            ..
         } = r.unwrap()
         else {
             panic!("guard")
@@ -636,7 +732,7 @@ mod tests {
     #[tokio::test]
     async fn flow_not_awaiting_a_code_is_unknown() {
         let (mock, wa, r) = start(&[G::k_EAuthSessionGuardType_DeviceConfirmation]).await;
-        let CredStarted::Waiting { flow_id } = r.unwrap() else {
+        let CredStarted::Waiting { flow_id, .. } = r.unwrap() else {
             panic!()
         };
         let out = wa.guard_submit(&flow_id, "12345").await.unwrap();
