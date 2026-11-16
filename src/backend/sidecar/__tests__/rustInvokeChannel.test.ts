@@ -26,7 +26,10 @@ import { bootFresh } from './helpers/sidecarHarness'
 
 // On a macOS host the boot's Rosetta probe runs through the scripted context runner (66.2-11);
 // answer it as installed so the boot emits no Rosetta dialog frame into the frames under test.
+// The boot's steamcm_configure is left unanswered, so the boot restore that waits on it never
+// emits a frame into those either.
 const BOOT_OPTS = {
+  answerSteamCmConfigure: false,
   context: {
     script: [
       {

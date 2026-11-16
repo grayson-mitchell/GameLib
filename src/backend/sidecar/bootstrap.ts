@@ -31,6 +31,10 @@ import { createStoreEmbedSeam } from '../store/storeEmbedSeam'
 import { removeLegacyZoomData } from './legacyZoomDataCleanup'
 import { releaseOnStdinEof } from './stdinEofRelease'
 import {
+  createSteamCmConfigGate,
+  type SteamCmConfigGate
+} from './steamCmConfigGate'
+import {
   READY_SENTINEL,
   RUST_STEAMCM_CONFIGURE,
   RUST_STEAMCM_SIGNIN_CANCEL,
@@ -394,11 +398,16 @@ interface BootState {
    */
   i18nReady: Promise<void>
   /**
-   * Settles (never rejects) once the boot `steamcm_configure` rustInvoke has answered. The shell
-   * runs each rustInvoke on its own thread, so frame order is not completion order: the cm=rust
+   * Settles (never rejects) once the boot `steamcm_configure` attempt has answered: true on success.
+   * The shell runs each rustInvoke on its own thread, so frame order is not completion order: the
    * boot owed-goonline restore chains on this so it cannot reach Rust before the app folder is set.
    */
-  steamCmConfigured: Promise<void>
+  steamCmConfigured: Promise<boolean>
+  /**
+   * The configure gate built with the host transport (C2/WR-04): session-dependent steamcm ops wait
+   * for a successful configure and retry a failed one. Null when the host was prebuilt.
+   */
+  steamCmGate: SteamCmConfigGate | null
   /** The per-boot services, filled by the 'stores', 'command-runner' and 'store-managers' steps. */
   services: Partial<BootServices>
   /**
@@ -1311,7 +1320,8 @@ export function bootSidecar(
   booted = true
   const state: BootState = {
     i18nReady: Promise.resolve(),
-    steamCmConfigured: Promise.resolve(),
+    steamCmConfigured: Promise.resolve(false),
+    steamCmGate: null,
     services: {},
     secretVault: null,
     steamGridKeyringStore: null,
@@ -1388,27 +1398,34 @@ export function resolveAppPaths(): AppPaths {
 }
 
 /**
- * Phase 79 (T-79-62/63): the boot `steamcm_configure` call. Boot does not wait on it; a rejection is
- * logged and swallowed so boot continues. Arms no timer. Returns a promise that always settles, so
- * the boot restore can order itself after the configure answer.
+ * Phase 79 (T-79-62/63): one `steamcm_configure` attempt. Boot does not wait on it; a rejection is
+ * logged and swallowed so boot continues. Arms no timer. Resolves true on success and false on a
+ * rejection, never rejects, so the boot restore can order itself after the answer and the configure
+ * gate (steamCmConfigGate.ts, C2/WR-04) can retry a failed attempt on the next session op.
  *
  * @public Consumed by sidecar tests through require() in a fresh module registry (D-08).
  */
 export function configureSteamCm(deps: {
   appFolder: string
   requestRustInvoke: RequestRustInvoke
-}): Promise<void> {
-  return Promise.resolve(
-    deps.requestRustInvoke(RUST_STEAMCM_CONFIGURE, [
-      { appFolder: deps.appFolder }
-    ])
+}): Promise<boolean> {
+  // The executor runs synchronously, so the frame goes out at once and a synchronous throw becomes
+  // a rejection.
+  return new Promise<unknown>((resolve) =>
+    resolve(
+      deps.requestRustInvoke(RUST_STEAMCM_CONFIGURE, [
+        { appFolder: deps.appFolder }
+      ])
+    )
   ).then(
-    () => undefined,
-    (error: unknown) =>
+    () => true,
+    (error: unknown) => {
       logWarning(
-        `[bootstrap] steamcm_configure failed: ${String(error)}`,
+        `[bootstrap] steamcm_configure failed (Steam sign-in, Refresh and installs wait for a retry on the next Steam op): ${String(error)}`,
         LogPrefix.Backend
       )
+      return false
+    }
   )
 }
 
@@ -1421,7 +1438,7 @@ export function configureSteamCm(deps: {
 export function restoreOwedMacSteamOnlineAtBoot(deps: {
   requestRustInvoke: RequestRustInvoke
   /** Settles when the boot configure answered; the Rust restore needs the folder it sets. */
-  configured?: Promise<void>
+  configured?: Promise<unknown>
 }): void {
   void (deps.configured ?? Promise.resolve())
     .then(() =>
@@ -1546,18 +1563,30 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       // facade. `host.ipc` is the one registry instance (66.1 C-WR-1: no split-brain), built here.
       run: (ctx, _io, state) => {
         const rpc = requireRpc(state)
-        state.services.host =
-          prebuilt.host ??
-          createHostServices({
-            platform: ctx.platform,
-            ipc: createIpcRegistry(),
-            requestRustInvoke: rpc.requestRustInvoke,
-            requestOpenExternal: rpc.requestOpenExternal,
-            pushFrontendMessage: rpc.pushFrontendMessage,
-            openDetached: (url, onError) =>
-              ctx.runner.openDetached(url, onError),
-            runSync: (cmd, argv, opts) => ctx.runner.runSync(cmd, argv, opts)
-          })
+        if (prebuilt.host) {
+          state.services.host = prebuilt.host
+          return
+        }
+        // C2/WR-04: every consumer of the host transport gets the configure gate, so no
+        // session-dependent steamcm op reaches Rust before configure has succeeded.
+        const gate = createSteamCmConfigGate({
+          configure: () =>
+            configureSteamCm({
+              appFolder: ctx.paths.appFolder,
+              requestRustInvoke: rpc.requestRustInvoke
+            }),
+          requestRustInvoke: rpc.requestRustInvoke
+        })
+        state.steamCmGate = gate
+        state.services.host = createHostServices({
+          platform: ctx.platform,
+          ipc: createIpcRegistry(),
+          requestRustInvoke: gate.requestRustInvoke,
+          requestOpenExternal: rpc.requestOpenExternal,
+          pushFrontendMessage: rpc.pushFrontendMessage,
+          openDetached: (url, onError) => ctx.runner.openDetached(url, onError),
+          runSync: (cmd, argv, opts) => ctx.runner.runSync(cmd, argv, opts)
+        })
       }
     },
     {
@@ -2774,13 +2803,17 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     {
       name: 'steamcm-configure',
       // Phase 79 (T-79-63): hands the Rust CM client the app folder, after the RPC transport is live
-      // and ahead of mac-steam-online-restore (the restore needs the folder this sets). Runs on every
-      // engine: configuring is harmless. One bounded rustInvoke, no timer; a failure is logged.
+      // and ahead of mac-steam-online-restore (the restore needs the folder this sets). Configure is
+      // mandatory: it spawns the Rust session actor. This is the first attempt through the configure
+      // gate (C2/WR-04); a failure is logged, and the next session-dependent steamcm op retries it.
+      // One bounded rustInvoke, no timer.
       run: (ctx, _io, state) => {
-        state.steamCmConfigured = configureSteamCm({
-          appFolder: ctx.paths.appFolder,
-          requestRustInvoke: requireHost(state).requestRustInvoke
-        })
+        state.steamCmConfigured = state.steamCmGate
+          ? state.steamCmGate.ensure()
+          : configureSteamCm({
+              appFolder: ctx.paths.appFolder,
+              requestRustInvoke: requireHost(state).requestRustInvoke
+            })
       }
     },
     {

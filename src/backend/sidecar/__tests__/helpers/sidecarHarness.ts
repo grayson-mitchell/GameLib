@@ -134,6 +134,12 @@ export function bootFresh(opts?: {
    * BEFORE the boot). Skip the reset; the boot still happens exactly once.
    */
   reuseRegistry?: boolean
+  /**
+   * Answer the boot's `steamcm_configure` frame with success, as the shell does (default true).
+   * Session-dependent steamcm ops wait for configure (C2/WR-04), so a case that does not answer it
+   * would stall them. A case that drives configure itself passes false.
+   */
+  answerSteamCmConfigure?: boolean
   /** Prebuilt services handed to the boot; every other service is built by its step. */
   services?: Partial<BootServices>
   /** Overrides for this case's createTestContext(); `userData` stays under the fake HOME. */
@@ -172,7 +178,16 @@ export function bootFresh(opts?: {
   // 75-30: the Steam local-file readers are Rust-only, so a booted sidecar's steamfiles_* rustInvoke
   // frames need an answer; a file-backed double over the case's fake HOME stands in for the shell.
   const steamFiles = fsBackedSteamFiles()
+  const answerConfigure = opts?.answerSteamCmConfigure ?? true
   const frames = collectFrames(output, (frame) => {
+    if (
+      answerConfigure &&
+      frame.kind === 'rustInvoke' &&
+      frame.channel === 'steamcm_configure'
+    ) {
+      input.write(`${JSON.stringify({ id: frame.id, ok: true, result: {} })}\n`)
+      return
+    }
     if (
       frame.kind !== 'rustInvoke' ||
       typeof frame.channel !== 'string' ||

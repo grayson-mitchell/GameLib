@@ -993,6 +993,11 @@ const IN_SCOPE_SUITES = [
  * `configureSteamCm` / `restoreOwedMacSteamOnlineAtBoot` helpers with jest.fn transports and reads
  * source text, so it boots nothing and reaches no filesystem write, `homedir()` or child process.
  *
+ * `steamCmConfigGate.test.ts` (Phase 79 review C2/WR-04) is structurally contained: it drives the
+ * configure gate with jest.fn transports, and its one boot case goes through `bootFresh` (a
+ * createTestContext fake HOME and an in-memory output stream), so it reaches no real filesystem,
+ * `homedir()` or child process.
+ *
  * `outboundHttpRegistry.test.ts` (quick-261110-9w2) is structurally contained: it drives the
  * `diagnostics_channel`-based outbound-request registry against a loopback `http` server it
  * starts itself, boots nothing, and reaches no path module, `homedir()`, filesystem or child
@@ -1095,6 +1100,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'steamPollEventRegistration.test.ts',
   'skeletonFlows.test.ts',
   'steamAuthFlows.test.ts',
+  'steamCmConfigGate.test.ts',
   'steamFlows.test.ts',
   'steamFocusRefreshWire.test.ts',
   'steamgridSecretStore.test.ts',
