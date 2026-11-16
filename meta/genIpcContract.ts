@@ -388,7 +388,14 @@ export function renderArgsStruct(
     merge(ctx, sub)
     decls.push(...sub.decls)
     ctx.usesValue = true
-    main = `impl ${name} {\n    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {\n        let first = args.first().ok_or_else(|| ${rustStr(err)}.to_string())?;\n        serde_json::from_value(first.clone()).map_err(|_| ${rustStr(err)}.to_string())\n    }\n}`
+    // An optional object (`z.tuple([z.object(...).optional()])`, so no `minItems`) accepts `[]`
+    // and `[null]` (`[undefined]` over JSON) as the empty object, as the zod schema does
+    // (80-REVIEW B/WR-03). Required fields still fail with `bad-args` then.
+    const first =
+      minItems === 0
+        ? `let first = args.first().filter(|v| !v.is_null()).cloned().unwrap_or_else(|| Value::Object(serde_json::Map::new()));\n        serde_json::from_value(first)`
+        : `let first = args.first().ok_or_else(|| ${rustStr(err)}.to_string())?;\n        serde_json::from_value(first.clone())`
+    main = `impl ${name} {\n    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {\n        ${first}.map_err(|_| ${rustStr(err)}.to_string())\n    }\n}`
   } else {
     const fields: string[] = []
     const lets: string[] = []

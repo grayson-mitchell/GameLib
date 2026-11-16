@@ -615,6 +615,33 @@ mod tests {
     }
 
     #[test]
+    fn read_running_app_id_accepts_an_absent_object_like_the_zod_schema() {
+        // `[]` and `[null]` (`[undefined]` over JSON) are valid sends (80-REVIEW B/WR-03).
+        assert_eq!(
+            SteampollReadRunningAppIdArgs::from_args(&[])
+                .unwrap()
+                .strict,
+            None
+        );
+        assert_eq!(
+            SteampollReadRunningAppIdArgs::from_args(&[Value::Null])
+                .unwrap()
+                .strict,
+            None
+        );
+        assert_eq!(
+            SteampollReadRunningAppIdArgs::from_args(&[json!({"strict": true})])
+                .unwrap()
+                .strict,
+            Some(true)
+        );
+        assert_eq!(
+            SteampollReadRunningAppIdArgs::from_args(&[json!("x")]).unwrap_err(),
+            "steampoll_read_running_app_id:bad-args"
+        );
+    }
+
+    #[test]
     fn malformed_or_failed_acks_are_not_acked() {
         assert_eq!(
             ack_from_invoke(Err("timeout".into())),

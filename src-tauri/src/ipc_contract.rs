@@ -2267,8 +2267,8 @@ pub(crate) struct SteampollReadRunningAppIdArgs {
 
 impl SteampollReadRunningAppIdArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
-        let first = args.first().ok_or_else(|| "steampoll_read_running_app_id:bad-args".to_string())?;
-        serde_json::from_value(first.clone()).map_err(|_| "steampoll_read_running_app_id:bad-args".to_string())
+        let first = args.first().filter(|v| !v.is_null()).cloned().unwrap_or_else(|| Value::Object(serde_json::Map::new()));
+        serde_json::from_value(first).map_err(|_| "steampoll_read_running_app_id:bad-args".to_string())
     }
 }
 

@@ -319,6 +319,11 @@ fn uninstall_and_running_ops() {
     let id = ok("steampoll_read_running_app_id", json!({"strict": false}));
     assert_eq!(id, json!(0));
     assert_eq!(dispatch("steampoll_read_running_app_id", &[]), Ok(json!(0)));
+    // `[undefined]` arrives as `[null]` (80-REVIEW B/WR-03).
+    assert_eq!(
+        dispatch("steampoll_read_running_app_id", &[Value::Null]),
+        Ok(json!(0))
+    );
     let verdict = ok(
         "steampoll_mac_arch_verdict",
         json!({"installPath": tmp.path().join("nothing")}),

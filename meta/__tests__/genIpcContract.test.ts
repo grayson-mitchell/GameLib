@@ -82,6 +82,26 @@ describe('renderArgsStruct', () => {
     expect(r.text).not.toContain('deny_unknown_fields')
     expect(r.text).toContain('"dialog_open:bad-args"')
   })
+  it('an optional single object reads [] and [null] as the empty object (80 review B/WR-03)', () => {
+    const r = renderArgsStruct(
+      'steampoll_read_running_app_id',
+      js(
+        z.tuple([
+          z.object({ strict: z.boolean().optional() }).strict().optional()
+        ])
+      )
+    )
+    expect(r.text).toContain(
+      'args.first().filter(|v| !v.is_null()).cloned().unwrap_or_else(|| Value::Object(serde_json::Map::new()))'
+    )
+    expect(r.text).not.toContain('ok_or_else')
+    // A required object keeps rejecting a missing argument.
+    const req = renderArgsStruct(
+      'dialog_open',
+      js(z.tuple([z.object({ title: z.string() })]))
+    )
+    expect(req.text).toContain('args.first().ok_or_else(')
+  })
   it('multi-element tuple uses titles; trailing optional is Option', () => {
     const r = renderArgsStruct(
       'keyring_set',

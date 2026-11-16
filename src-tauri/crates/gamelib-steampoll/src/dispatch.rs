@@ -426,8 +426,10 @@ fn run_op(op: &str, args: &[Value]) -> Result<Value, String> {
         }
         "steampoll_next_notice_seq" => out(op, configured()?.registry.next_notice_seq()),
         "steampoll_read_running_app_id" => {
+            // The object is optional: `[]` and `[null]` (`[undefined]` over JSON) both mean the
+            // default, as in the zod schema and the shell contract (80-REVIEW B/WR-03).
             let a: StrictArgs = match args.first() {
-                None => StrictArgs::default(),
+                None | Some(Value::Null) => StrictArgs::default(),
                 Some(_) => parse(op, args)?,
             };
             let f = configured()?;
