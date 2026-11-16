@@ -1,6 +1,6 @@
 # Phase 80 Parity Report
 
-Status: PENDING (operator review)
+Status: APPROVED (2026-11-16, operator)
 
 Plan 80-19 (D-14, 63 D-07). Two measurements, both enforced by tests that stay in the repo:
 
@@ -50,7 +50,7 @@ Both are the "Known TS baseline limits" of the corpus README: the TS loops have 
 - Rust behaviour: the `installed` state event is sent to the sidecar and the continuation (done status, notification) waits for the ack; with no ack it emits anyway after 5 s. The replay's timeline ends at the last scripted tick, which is before that 5 s elapses, so the stream has 3 records and the done status and notification are absent from it (in production they land 5 s after the event).
 - Steam-correct side: Rust. The notification title and the game's final state come from the sidecar's reply, so continuing only after the ack (or a bounded timeout) cannot announce a finish the sidecar has not recorded.
 - caller impact: none visible to a user when the sidecar is healthy (the ack is immediate); a wedged sidecar delays the "finished" toast by at most 5 s instead of dropping it.
-- accepted: pending
+- accepted: yes (2026-11-16)
 
 ### DV-80-02: outbox queues until the sidecar is READY, then replays latest-wins and reorders the record stream
 
@@ -59,7 +59,7 @@ Both are the "Known TS baseline limits" of the corpus README: the TS loops have 
 - Rust behaviour: the `installed` state event is held in the outbox while the sidecar is not READY (latest event per app wins), the done status and notification are emitted from the poll, and the held state event is delivered when READY: the stream order is done, notify, installed instead of installed, done, notify. Content of every record is identical.
 - Steam-correct side: Rust. A state event delivered before the sidecar can apply it would be lost; queueing it keeps the final library state correct (confirmed by handler parity: equal final library and store).
 - caller impact: the frontend sees the done status and the toast a moment before `pushGameToLibrary` for the same game while the sidecar is starting; it recovers on the push. Only possible in the startup window.
-- accepted: pending
+- accepted: yes (2026-11-16)
 
 ## Not diffs (documented, no ledger entry)
 
@@ -68,4 +68,8 @@ Both are the "Known TS baseline limits" of the corpus README: the TS loops have 
 
 ## Summary
 
-Unexplained = 0 across stream parity (39 timelines), handler parity (39 timelines) and locale parity (528 rows). Two divergences, DV-80-01 and DV-80-02, both transport-only, await operator acceptance.
+Unexplained = 0 across stream parity (39 timelines), handler parity (39 timelines) and locale parity (528 rows). Two divergences, DV-80-01 and DV-80-02, both transport-only, accepted by the operator 2026-11-16.
+
+## Operator approval
+
+Operator reply, verbatim: "approved" (2026-11-16). Accepts DV-80-01 (ack-timeout-emits-anyway) and DV-80-02 (sidecar-not-ready-latest-wins).
