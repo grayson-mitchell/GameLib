@@ -91,7 +91,7 @@ export default function ReadOnlyStoresNotice() {
           )}
         </div>
         <button
-          className="readOnlyStoresNoticeDismiss"
+          className="noticeStackDismiss readOnlyStoresNoticeDismiss"
           aria-label={t('readOnlyStores.dismiss', 'Dismiss')}
           onClick={handleDismiss}
         >

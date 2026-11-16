@@ -74,7 +74,7 @@ describe('launch notice theme tokens', () => {
   })
 
   it('dismiss x falls back when --action-icon is unset', () => {
-    expect(ruleBody(steam, '.steamEngineLaunchNoticeDismiss')).toMatch(
+    expect(ruleBody(region, '.noticeStackDismiss')).toMatch(
       /color:\s*var\(--action-icon,\s*var\(--text-secondary\)\)/
     )
   })

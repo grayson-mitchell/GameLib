@@ -392,3 +392,23 @@ describe('NoticeStack stylesheet gate (discovery guard)', () => {
     }
   )
 })
+
+// Quick: one dismiss X for every notice. The X look lives once, on
+// `.noticeStackDismiss` in the region sheet; a notice that restyles its own X
+// (or drops the shared class) brings back the mismatched-X regression.
+describe('NoticeStack stylesheet gate (shared dismiss X)', () => {
+  it('the region sheet defines .noticeStackDismiss', () => {
+    expect(strip(read(REGION_SCSS))).toMatch(/\.noticeStackDismiss\s*\{/)
+  })
+
+  it.each(SLOTS.map((s) => [s.name, s] as const))(
+    '%s uses the shared X and does not restyle it',
+    (_name, slot) => {
+      const tsx = strip(read(slot.tsx))
+      const buttons = tsx.match(/className="[^"]*Dismiss[^"]*"/g) ?? []
+      expect(buttons.length).toBeGreaterThan(0)
+      for (const b of buttons) expect(b).toContain('noticeStackDismiss')
+      expect(strip(read(slot.scss))).not.toMatch(/Dismiss\b[^{;]*\{/)
+    }
+  )
+})

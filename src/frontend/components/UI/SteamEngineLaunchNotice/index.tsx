@@ -652,7 +652,7 @@ export default function SteamEngineLaunchNotice() {
             <span className="steamEngineLaunchNoticeBody">{o.body}</span>
           </span>
           <button
-            className="steamEngineLaunchNoticeDismiss"
+            className="noticeStackDismiss steamEngineLaunchNoticeDismiss"
             aria-label={t('steam.engine.notice.dismiss', 'Dismiss')}
             onClick={() => {
               if (o.phase === 'in') o.beginLeave()

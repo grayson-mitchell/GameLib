@@ -27,15 +27,3 @@
   font-size: var(--text-sm);
   color: var(--text-secondary);
 }
-
-.readOnlyStoresNoticeDismiss {
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: var(--space-3xs);
-}
-
-.readOnlyStoresNoticeDismiss:hover {
-  color: var(--text-default);
-}

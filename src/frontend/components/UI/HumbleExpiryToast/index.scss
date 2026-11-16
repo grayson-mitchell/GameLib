@@ -32,15 +32,3 @@
   background: var(--status-warning);
   color: var(--body-background);
 }
-
-.humbleExpiryToastDismiss {
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: var(--space-3xs);
-}
-
-.humbleExpiryToastDismiss:hover {
-  color: var(--text-default);
-}

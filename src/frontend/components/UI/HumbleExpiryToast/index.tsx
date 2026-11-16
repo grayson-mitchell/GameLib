@@ -104,7 +104,7 @@ export default function HumbleExpiryToast() {
           {t('login.humble_reconnect', 'Session expired — Reconnect')}
         </button>
         <button
-          className="humbleExpiryToastDismiss"
+          className="noticeStackDismiss humbleExpiryToastDismiss"
           aria-label={t('button.dismiss', 'Dismiss')}
           onClick={beginLeave}
         >
