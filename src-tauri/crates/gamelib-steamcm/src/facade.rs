@@ -539,6 +539,8 @@ fn run<F: std::future::Future<Output = Value>>(f: F) -> Result<Value, String> {
     block_on_guarded(f)
 }
 
+/// Also installs the steam-vent log forwarder as the process-global `tracing` subscriber; see
+/// `vent::install_vent_log_forwarder` for what that takes from the host process.
 pub fn configure(app_folder: &str) -> Result<Value, String> {
     crate::vent::install_vent_log_forwarder();
     let folder = PathBuf::from(app_folder);
@@ -657,7 +659,7 @@ pub fn wrap_restore_if_owed(trigger: RestoreTrigger) -> Result<Value, String> {
     run(core().wrap_restore_if_owed(trigger))
 }
 
-/// CLI-only: raw anonymous PICS buffers, base64, for the golden captures (79-21).
+/// The whole Refresh (D-12, `steamcm_refresh`): owned apps, PICS capture and store enrichment.
 pub fn refresh_library(args: crate::refresh::RefreshArgs) -> Result<Value, String> {
     run(core().refresh_library(
         http_client(),
@@ -703,6 +705,7 @@ fn http_client() -> &'static reqwest::Client {
     })
 }
 
+/// CLI-only: raw anonymous PICS buffers, base64, for the golden captures (79-21).
 pub fn capture_anon_pics(apps: Vec<u32>) -> Result<Value, String> {
     use crate::backend::{PicsId, PicsRequest};
     use base64::Engine;

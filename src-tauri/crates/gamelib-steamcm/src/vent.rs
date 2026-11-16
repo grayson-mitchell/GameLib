@@ -533,6 +533,18 @@ impl tracing::Subscriber for VentLogForwarder {
 }
 
 /// Idempotent. If another global subscriber is already set, this is a no-op.
+///
+/// A/IN-09: this claims the PROCESS-GLOBAL `tracing` subscriber (`steamcm_configure` runs it in
+/// the shell process). Two consequences:
+/// - a later `set_global_default` by any other crate fails (silently, if it ignores the error);
+/// - every event that is not a `steam_vent*` event at WARN or above is discarded (`enabled`).
+///
+/// That is safe today only because no other code in this workspace emits `tracing` events: crate
+/// diagnostics go through `crate::error::diag` (A/WR-03 moved the last `tracing::` calls there).
+/// Do not add `tracing::` calls expecting them to be seen, and do not install another global
+/// subscriber without replacing this one. A scoped dispatcher (`tracing::dispatcher::with_default`)
+/// was considered and not used: it is thread-local, and steam-vent spawns its own tokio tasks,
+/// which would run outside the scope and lose the forwarding this exists for.
 pub fn install_vent_log_forwarder() {
     static ONCE: Once = Once::new();
     ONCE.call_once(|| {
