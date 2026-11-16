@@ -1,8 +1,8 @@
 [
   {
     "file": "src/frontend/screens/Login/components/SteamLogin/index.tsx",
-    "expectedCount": 29,
-    "reason": "D-17 -- deferred; the file's 26 pre-existing literals plus 3 added by quick task 260822-elw (create-a-Steam-account link) remain deferred D-17 debt. The file is no longer deletion-pending: Phase 36 kept SteamLogin and re-homed it as a co-mounted overlay on /login."
+    "expectedCount": 31,
+    "reason": "D-17 -- deferred; the file's 26 pre-existing literals plus 3 added by quick task 260822-elw (create-a-Steam-account link) plus 2 added by the Phase 79 review fix C2/WR-02 (the expired-sign-in and could-not-check-the-code guard messages) remain deferred D-17 debt. The file is no longer deletion-pending: Phase 36 kept SteamLogin and re-homed it as a co-mounted overlay on /login."
   },
   {
     "file": "src/frontend/screens/WebView/useTauriOAuthLogin.ts",
