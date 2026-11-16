@@ -7,7 +7,9 @@
 //! `{apps:{[id]:{changenumber, missingToken, appinfo}}, packages:{[id]:{changenumber, missingToken,
 //! packageinfo}}, unknownApps, unknownPackages}`. `missingToken` is `!!missing_token`. A package
 //! with an empty buffer has `packageinfo: null`. Ids listed in `unknown_*` are reported and the
-//! (absent) entry is not synthesised.
+//! (absent) entry is not synthesised. Additions: an app or package whose buffer fails to parse
+//! has `appinfo`/`packageinfo: null` and its id in `parseFailedApps`/`parseFailedPackages`
+//! (steam-user threw for the whole call instead). Both lists are present only when non-empty.
 //!
 //! App buffer (`apps.js` 298-306): UTF-8 text, ONE trailing NUL removed (`/\0$/`), parsed by the
 //! `kvparser` package and the `.appinfo` member taken. `kvparser` (`lib/KvParser.js`) rules:
@@ -44,7 +46,7 @@ use gamelib_steamfiles::kv_text::{self, Limits, Pair, Value as KvValue};
 use serde_json::{json, Map, Value};
 
 use crate::backend::{CmConn, LicenseEntry, PicsId, PicsRequest};
-use crate::error::CmError;
+use crate::error::{diag, CmError};
 
 /// PICS buffers up to 4 MiB (T-79-26).
 const PICS_MAX_BYTES: usize = 4 * 1024 * 1024;
@@ -317,9 +319,17 @@ pub async fn product_info_licensed<C: CmConn>(
     };
     let raw = conn.pics_product_info(req).await?;
 
+    // A buffer the parser rejects (malformed, or over the size/depth limits) fails only its own
+    // entry: it reads as an entry without info, like the empty-buffer case, and its id is listed
+    // in `parseFailed*` (WR-06). Only a transport failure fails the whole batch.
+    let mut parse_failed_apps: Vec<u32> = Vec::new();
+    let mut parse_failed_pkgs: Vec<u32> = Vec::new();
     let mut out_apps = Map::new();
     for a in &raw.apps {
-        let (appinfo, order) = parse_app(&a.buffer)?;
+        let (appinfo, order) = parse_app(&a.buffer).unwrap_or_else(|_| {
+            parse_failed_apps.push(a.app_id);
+            (Value::Null, None)
+        });
         let mut e = Map::new();
         e.insert("changenumber".into(), json!(a.change_number));
         e.insert("missingToken".into(), json!(a.missing_token));
@@ -334,7 +344,10 @@ pub async fn product_info_licensed<C: CmConn>(
         let info = if p.buffer.is_empty() {
             Value::Null
         } else {
-            packageinfo_to_json(&p.buffer, p.package_id)?
+            packageinfo_to_json(&p.buffer, p.package_id).unwrap_or_else(|_| {
+                parse_failed_pkgs.push(p.package_id);
+                Value::Null
+            })
         };
         out_pkgs.insert(
             p.package_id.to_string(),
@@ -348,12 +361,23 @@ pub async fn product_info_licensed<C: CmConn>(
     // An id Steam reports unknown is reported, and never also present in apps/packages.
     let unknown_apps: Vec<u32> = raw.unknown_app_ids.clone();
     let unknown_pkgs: Vec<u32> = raw.unknown_package_ids.clone();
-    Ok(json!({
+    let mut out = json!({
         "apps": out_apps,
         "packages": out_pkgs,
         "unknownApps": unknown_apps,
         "unknownPackages": unknown_pkgs,
-    }))
+    });
+    // Only present when something failed, so a clean reply keeps steam-user's exact shape.
+    if !parse_failed_apps.is_empty() || !parse_failed_pkgs.is_empty() {
+        diag(&format!(
+            "PICS parse failed apps={} packages={}, continuing without them",
+            parse_failed_apps.len(),
+            parse_failed_pkgs.len()
+        ));
+        out["parseFailedApps"] = json!(parse_failed_apps);
+        out["parseFailedPackages"] = json!(parse_failed_pkgs);
+    }
+    Ok(out)
 }
 
 /// `client.licenses` element shape (`CMsgClientLicenseList.License` via `toObject({longs: String})`:
@@ -608,23 +632,74 @@ mod tests {
         assert_eq!(v["apps"]["2"]["appinfo"]["appid"], "2");
     }
 
+    /// WR-06: one malformed app or package buffer is an entry without info plus a
+    /// `parseFailed*` id, not a failed batch. The well-formed entries beside it survive.
     #[test]
-    fn parse_failure_propagates() {
+    fn a_malformed_buffer_fails_only_its_own_entry() {
         use crate::backend::CmBackend;
         let b = FakeBackend::new();
         b.script(|s| {
             s.pics.default = PicsRaw {
-                packages: vec![PicsPackageRaw {
-                    package_id: 1,
-                    buffer: vec![1, 0, 0, 0, 9],
-                    ..Default::default()
+                apps: vec![
+                    PicsAppRaw {
+                        app_id: 1,
+                        change_number: 3,
+                        missing_token: false,
+                        buffer: b"\"appinfo\" { \"appid\"".to_vec(),
+                    },
+                    PicsAppRaw {
+                        app_id: 2,
+                        change_number: 1,
+                        missing_token: false,
+                        buffer: b"\"appinfo\" { \"appid\" \"2\" }\0".to_vec(),
+                    },
+                ],
+                packages: vec![
+                    PicsPackageRaw {
+                        package_id: 10,
+                        buffer: vec![1, 0, 0, 0, 9],
+                        ..Default::default()
+                    },
+                    PicsPackageRaw {
+                        package_id: 1234,
+                        buffer: PKG.to_vec(),
+                        ..Default::default()
+                    },
+                ],
+                ..Default::default()
+            };
+        });
+        let conn = futures_block(b.connect_anon()).unwrap();
+        let v = futures_block(product_info(&conn, &[1, 2], &[10, 1234], false)).unwrap();
+        assert!(v["apps"]["1"]["appinfo"].is_null());
+        assert_eq!(v["apps"]["1"]["changenumber"], 3);
+        assert!(v["apps"]["1"].get("depotOrder").is_none());
+        assert_eq!(v["apps"]["2"]["appinfo"]["appid"], "2");
+        assert!(v["packages"]["10"]["packageinfo"].is_null());
+        assert_eq!(v["packages"]["1234"]["packageinfo"]["status"], "ok");
+        assert_eq!(v["parseFailedApps"], json!([1]));
+        assert_eq!(v["parseFailedPackages"], json!([10]));
+    }
+
+    #[test]
+    fn a_clean_batch_reports_no_parse_failures() {
+        use crate::backend::CmBackend;
+        let b = FakeBackend::new();
+        b.script(|s| {
+            s.pics.default = PicsRaw {
+                apps: vec![PicsAppRaw {
+                    app_id: 2,
+                    change_number: 1,
+                    missing_token: false,
+                    buffer: b"\"appinfo\" { \"appid\" \"2\" }\0".to_vec(),
                 }],
                 ..Default::default()
             };
         });
         let conn = futures_block(b.connect_anon()).unwrap();
-        let e = futures_block(product_info(&conn, &[], &[1], false)).unwrap_err();
-        assert_eq!(e, CmError::Protocol("pics-parse".into()));
+        let v = futures_block(product_info(&conn, &[2], &[], false)).unwrap();
+        assert!(v.get("parseFailedApps").is_none());
+        assert!(v.get("parseFailedPackages").is_none());
     }
 
     #[test]
