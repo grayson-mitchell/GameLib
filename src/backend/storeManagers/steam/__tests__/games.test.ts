@@ -3671,6 +3671,19 @@ describe('SteamGame.stop() — delegated install cancel (261105-vfq)', () => {
     expect(spy).toHaveBeenCalledWith(steamTestDeps, APP_ID)
     expect(warnedNoOp()).toBe(true)
   })
+
+  it('C-WR-01 a rejected cancel invoke falls through instead of throwing', async () => {
+    getBottleProcessMonitorPhase.mockReturnValue(null)
+    const spy = jest
+      .spyOn(installPollingModule, 'cancelDelegatedInstall')
+      .mockRejectedValue(new Error('rustInvoke timeout'))
+    await expect(
+      new SteamGame(APP_ID, steamTestDeps).stop()
+    ).resolves.toBeUndefined()
+    expect(spy).toHaveBeenCalledWith(steamTestDeps, APP_ID)
+    // Reached the routes below the delegated cancel (here: the no-op path).
+    expect(warnedNoOp()).toBe(true)
+  })
 })
 
 // ── SteamGame.stop() — D-02 real abort for an in-flight native depot download ─

@@ -182,12 +182,21 @@ export async function kill(
   // A Steam-owned (delegated) install has no abort controller by design;
   // SteamGame.stop() -> cancelDelegatedInstall ends it, and a lookup here
   // would log a false "Aborting not possible" ERROR (quick 261106-pvk).
-  if (
-    !(
-      storeCapabilities[runner].installManagedExternally &&
-      (await isDelegatedInstallPolling(deps, appName))
-    )
-  ) {
+  // The check is a steampoll rustInvoke (Phase 80) and may reject; a failed
+  // read counts as "not delegated" so the abort and stop() below still run
+  // (80-REVIEW C-WR-01). Stop must never depend on that invoke succeeding.
+  let delegated = false
+  if (storeCapabilities[runner].installManagedExternally) {
+    try {
+      delegated = await isDelegatedInstallPolling(deps, appName)
+    } catch (error) {
+      logWarning(
+        `kill: steampoll status read failed for ${appName}, assuming not delegated: ${String(error)}`,
+        LogPrefix.Backend
+      )
+    }
+  }
+  if (!delegated) {
     deps.aborts.call(appName)
   }
   return deps.managers.library[runner].getGame(appName).stop()

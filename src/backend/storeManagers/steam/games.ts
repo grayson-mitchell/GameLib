@@ -587,7 +587,18 @@ export default class SteamGame implements Game {
 
     // Delegated-install cancel route (IPC kill -> dispatch.kill -> stop();
     // quick 261105-vfq): stops GameLib's wait for a Steam-owned install.
-    if (await cancelDelegatedInstall(this.deps, this.appId)) return
+    // A rejected cancel invoke falls through to the bridge route below, so a
+    // running bridge game can still be stopped (80-REVIEW C-WR-01).
+    let cancelledDelegated = false
+    try {
+      cancelledDelegated = await cancelDelegatedInstall(this.deps, this.appId)
+    } catch (error) {
+      logWarning(
+        `SteamGame.stop: delegated-install cancel failed for appId ${this.appId}, continuing: ${String(error)}`,
+        LogPrefix.Steam
+      )
+    }
+    if (cancelledDelegated) return
 
     // quick 261024-urq: bridge route. GameLib spawned the Wine command itself,
     // so (unlike bottled Steam) it can and must end it. Kill only the game's

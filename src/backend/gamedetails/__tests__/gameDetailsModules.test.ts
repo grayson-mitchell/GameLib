@@ -335,6 +335,24 @@ describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
     expect(result).toBe(stopResult)
   })
 
+  it('C-WR-01 kill still aborts and stops when the steampoll status read rejects', async () => {
+    isDelegatedInstallPollingMock.mockRejectedValue(
+      new Error('rustInvoke timeout')
+    )
+    const stopResult = Symbol('stopped')
+    const gameDouble = makeGameDouble({
+      stop: jest.fn().mockResolvedValue(stopResult)
+    })
+    managerMocks.steam.getGame.mockReturnValue(gameDouble)
+
+    const result = await kill(dispatchDeps, '440', 'steam')
+
+    expect(callAbortControllerMock).toHaveBeenCalledWith('440')
+    expect(gameDouble.stop).toHaveBeenCalled()
+    expect(result).toBe(stopResult)
+    expect(logWarningMock).toHaveBeenCalled()
+  })
+
   it('PVK-6 kill still calls callAbortController for other runners and never consults the predicate', async () => {
     isDelegatedInstallPollingMock.mockReturnValue(true)
     managerMocks.legendary.getGame.mockReturnValue(makeGameDouble({}))
