@@ -503,6 +503,11 @@ export async function provisionBridgeBottle(
     wineVersion?: WineInstallation
     /** Phase 59: create with this engine instead of CrossOver (D-01). */
     fallbackEngine?: NonCrossoverEngine
+    /**
+     * 76 gap (CR-01): the pin `fallbackEngine` came from; recorded as the
+     * bottle's engine marker. Defaults to ENGINE_PINS.current.id.
+     */
+    fallbackPinId?: string
     /** D-12: hard cap for `cxbottle --create`, in ms. */
     createTimeoutMs?: number
     /** 59-REVIEW CR-01: aborts bottle creation and removes what this call created. */
@@ -554,12 +559,26 @@ export async function provisionBridgeBottle(
     // Lazy: services/engineServices value-imports backend/tools (storeManagers <-> steam cycle).
     const { engineServicesFrom } =
       await import('backend/services/engineServices')
-    return createFallbackBottle(
-      engineServicesFrom(deps),
+    const services = engineServicesFrom(deps)
+    const made = await createFallbackBottle(
+      services,
       bottleName,
       opts.fallbackEngine,
       opts.signal
     )
+    if (made.status === 'done') {
+      // D-07a: install records the engine it used (the choice is unchanged).
+      const { recordPinnedBottleEngine, switchContextFrom } =
+        await import('backend/engine/engineSwitch')
+      const { ENGINE_PINS } = await import('backend/engine/enginePins')
+      recordPinnedBottleEngine(
+        switchContextFrom(services),
+        bottleName,
+        opts.fallbackPinId ?? ENGINE_PINS.current.id,
+        opts.fallbackEngine
+      )
+    }
+    return made
   }
 
   // (3b) quick 261024-cjq: CrossOver precondition, after the ready
@@ -668,6 +687,19 @@ export async function provisionBridgeBottle(
   // between runs): best-effort cleanup after creation so a fresh bottle
   // never leaves a wedged wineserver behind. Never fails provisioning.
   await killBottleWineServer(deps, bottleName, binDir)
+
+  // D-07a: record the CrossOver marker so a new bottle never relies on inference.
+  {
+    const { recordCrossoverBottleEngine, switchContextFrom } =
+      await import('backend/engine/engineSwitch')
+    const { engineServicesFrom } =
+      await import('backend/services/engineServices')
+    recordCrossoverBottleEngine(
+      switchContextFrom(engineServicesFrom(deps)),
+      bottleName,
+      binDir
+    )
+  }
 
   logInfo(
     `provisionBridgeBottle: bridge bottle "${bottleName}" created (no Windows Steam client installed — R6)`,

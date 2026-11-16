@@ -277,6 +277,7 @@ export async function provisionBridgeBottleForInstall(
     provisionResult = await bbLifecycle.provisionBridgeBottle(steamGame.deps, {
       bottleName: bridgeBottleName,
       fallbackEngine: engine,
+      fallbackPinId: creation.pin.id,
       signal
     })
   } else {
@@ -318,6 +319,7 @@ export async function provisionBridgeBottleForInstall(
         {
           bottleName: bridgeBottleName,
           fallbackEngine: engine,
+          fallbackPinId: ENGINE_PINS.current.id,
           signal
         }
       )

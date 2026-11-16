@@ -25,6 +25,8 @@ import { dirname as dirnameOf, join as joinPath } from 'node:path'
 import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
 import { checkWineBeforeLaunch, downloadFile } from 'backend/utils'
 import * as engineServicesModule from 'backend/services/engineServices'
+import * as engineSwitchModule from 'backend/engine/engineSwitch'
+import { ENGINE_PINS } from 'backend/engine/enginePins'
 import type { EngineServicesSource } from 'backend/services/engineServices'
 import { writeCxbottleConf } from 'backend/engine/adoptBottle'
 import { createTestStores } from 'backend/testUtils/testServices'
@@ -1299,6 +1301,148 @@ describe('Phase 59 engine registry', () => {
       })
       expect(result).toEqual({ status: 'done', createdHere: false })
       expect(mockedSpawnAsync).not.toHaveBeenCalled()
+    })
+
+    describe('creation-time engine marker (76-04, D-07a)', () => {
+      let pinned: jest.SpyInstance
+      let crossover: jest.SpyInstance
+      beforeEach(() => {
+        pinned = jest
+          .spyOn(engineSwitchModule, 'recordPinnedBottleEngine')
+          .mockReturnValue(true)
+        crossover = jest
+          .spyOn(engineSwitchModule, 'recordCrossoverBottleEngine')
+          .mockReturnValue(true)
+      })
+      afterEach(() => {
+        pinned.mockRestore()
+        crossover.mockRestore()
+      })
+
+      test('a successful fallback creation records the pinned marker once with the pin id', async () => {
+        const result = await provisionBridgeBottle(spawnDeps, {
+          bottleName: name,
+          fallbackEngine: engine,
+          fallbackPinId: 'wine-staging-11.20'
+        })
+        expect(result).toEqual({ status: 'done', createdHere: true })
+        expect(pinned).toHaveBeenCalledTimes(1)
+        expect(pinned).toHaveBeenCalledWith(
+          expect.anything(),
+          name,
+          'wine-staging-11.20',
+          engine
+        )
+        expect(crossover).not.toHaveBeenCalled()
+      })
+
+      test('fallbackPinId omitted records ENGINE_PINS.current.id', async () => {
+        await provisionBridgeBottle(spawnDeps, {
+          bottleName: name,
+          fallbackEngine: engine
+        })
+        expect(pinned).toHaveBeenCalledWith(
+          expect.anything(),
+          name,
+          ENGINE_PINS.current.id,
+          engine
+        )
+      })
+
+      test('a failed wineboot records nothing', async () => {
+        mockedSpawnAsync.mockImplementation(async (bin: string) =>
+          bin === engine.wineBin
+            ? { code: 1, stdout: '', stderr: 'boom' }
+            : { code: 0, stdout: '', stderr: '' }
+        )
+        const result = await provisionBridgeBottle(spawnDeps, {
+          bottleName: name,
+          fallbackEngine: engine
+        })
+        expect(result.status).toBe('error')
+        expect(pinned).not.toHaveBeenCalled()
+        expect(crossover).not.toHaveBeenCalled()
+      })
+
+      test('an aborted creation records nothing', async () => {
+        const ac = new AbortController()
+        ac.abort()
+        const result = await provisionBridgeBottle(spawnDeps, {
+          bottleName: name,
+          fallbackEngine: engine,
+          signal: ac.signal
+        })
+        expect(result.status).toBe('error')
+        expect(pinned).not.toHaveBeenCalled()
+        expect(crossover).not.toHaveBeenCalled()
+      })
+
+      test('the already-ready short-circuit records nothing', async () => {
+        mockedExistsSync.mockImplementation((p: string) =>
+          String(p).endsWith('cxbottle.conf')
+        )
+        await provisionBridgeBottle(spawnDeps, {
+          bottleName: name,
+          fallbackEngine: engine
+        })
+        await provisionBridgeBottle(spawnDeps, { bottleName: name })
+        expect(pinned).not.toHaveBeenCalled()
+        expect(crossover).not.toHaveBeenCalled()
+      })
+
+      test('a successful CrossOver creation records the crossover marker once, not pinned', async () => {
+        mockedExistsSync.mockReturnValue(false)
+        mockedSpawnAsync.mockImplementation(async (bin: string) => {
+          if (bin.includes('cxbottle')) {
+            mockedExistsSync.mockImplementation((path: string) =>
+              path.includes('cxbottle.conf')
+            )
+          }
+          return { code: 0, stdout: '', stderr: '' }
+        })
+        const result = await provisionBridgeBottle(spawnDeps, {
+          bottleName: name
+        })
+        expect(result.status).toBe('done')
+        expect(crossover).toHaveBeenCalledTimes(1)
+        expect(crossover).toHaveBeenCalledWith(
+          expect.anything(),
+          name,
+          CX_BIN_DIR
+        )
+        expect(pinned).not.toHaveBeenCalled()
+      })
+
+      test('a CrossOver create timeout records nothing', async () => {
+        mockedSpawnAsync.mockImplementation(async (bin: string) =>
+          bin.includes('cxbottle')
+            ? { code: null, stdout: '', stderr: '' }
+            : { code: 0, stdout: '', stderr: '' }
+        )
+        const result = await provisionBridgeBottle(spawnDeps, {
+          bottleName: name,
+          createTimeoutMs: 1000
+        })
+        expect(result.status).toBe('error')
+        expect(crossover).not.toHaveBeenCalled()
+      })
+
+      test('a CrossOver create without a conf records nothing', async () => {
+        const result = await provisionBridgeBottle(spawnDeps, {
+          bottleName: name
+        })
+        expect(result.status).toBe('error')
+        expect(crossover).not.toHaveBeenCalled()
+      })
+
+      test('a thrown CrossOver create records nothing', async () => {
+        mockedSpawnAsync.mockRejectedValue(new Error('spawn failed'))
+        const result = await provisionBridgeBottle(spawnDeps, {
+          bottleName: name
+        })
+        expect(result.status).toBe('error')
+        expect(crossover).not.toHaveBeenCalled()
+      })
     })
 
     test('a toolkit wineVersion without a fallback engine is still rejected', async () => {

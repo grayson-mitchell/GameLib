@@ -6902,6 +6902,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       const call = (provisionBridgeBottle as jest.Mock).mock.calls[0][1]
       expect(call.bottleName).toBe(`GameLibSteamBridge-${APP_ID}`)
       expect(call.wineVersion).toBeUndefined()
+      expect(call.fallbackPinId).toBe(ENGINE_PINS.current.id)
       expect(call.fallbackEngine).toEqual(
         expect.objectContaining({
           wineBin: ENGINE_OK.paths.wineBin,
@@ -7017,6 +7018,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       expect(
         (provisionBridgeBottle as jest.Mock).mock.calls[1][1].fallbackEngine
       ).toBeDefined()
+      expect(
+        (provisionBridgeBottle as jest.Mock).mock.calls[1][1].fallbackPinId
+      ).toBe(ENGINE_PINS.current.id)
       expect(result.status).toBe('done')
     })
 
