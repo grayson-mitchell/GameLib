@@ -495,6 +495,23 @@ impl InstallPolls {
         }
     }
 
+    /// Whether the TS-pushed mirror says a native install is in flight for `app_id`.
+    pub fn native_in_flight(&self, app_id: &str) -> bool {
+        lock(&self.shared.native_in_flight).contains(app_id)
+    }
+
+    pub fn platform(&self) -> Platform {
+        self.platform
+    }
+
+    pub fn registry(&self) -> &Registry {
+        &self.registry
+    }
+
+    pub fn outbox(&self) -> &Arc<Outbox> {
+        &self.outbox
+    }
+
     /// Boot re-arm bookkeeping (plan 16): the pending-verification set.
     pub fn set_pending_rearm(&self, app_id: &str, pending: bool) {
         let mut set = lock(&self.shared.pending_rearm);
