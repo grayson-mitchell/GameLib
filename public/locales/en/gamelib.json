@@ -156,6 +156,7 @@
             "checkingSize": "Checking update size…",
             "confirmButton": "Update",
             "confirmTitle": "Update {{title}}?",
+            "downloadAbout": "Download about {{download}}",
             "fallback": "GameLib can't get the previous build's file list, so it will check every file: download up to {{download}}.",
             "notEnoughDisk": "Needs {{peak}} free, {{available}} available.",
             "registered": "Steam will update this game.",
