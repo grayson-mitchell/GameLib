@@ -148,6 +148,64 @@ describe('fetchMetadataIfNeeded on cm=rust', () => {
   })
 })
 
+describe('fetchMetadataIfNeeded against a concurrent metadata write (C1/WR-04)', () => {
+  const captured = { ...entry, platformsCaptured: true, mac_arch: '64' }
+  const enriched = (e: unknown) =>
+    Promise.resolve({ ok: true, result: { kind: 'enriched', entry: e, game } })
+
+  it('does not write a merge built before a Refresh capture landed, and re-runs it on the captured entry', async () => {
+    const t = setup(undefined)
+    const merged = { ...captured, art_cover: 'merged' }
+    t.requestRustInvoke
+      .mockImplementationOnce(() => {
+        // A Refresh's PICS capture writes the entry while the fetch is out.
+        t.metaStore.set(APP_ID, captured)
+        return enriched({ ...entry, art_cover: 'from-stale-snapshot' })
+      })
+      .mockImplementationOnce(() => enriched(merged))
+
+    await fetchMetadataIfNeeded(t.steamGame, current)
+
+    expect(t.metaStore.get(APP_ID)).toEqual(merged)
+    expect(t.requestRustInvoke).toHaveBeenCalledTimes(2)
+    expect(t.requestRustInvoke).toHaveBeenLastCalledWith(
+      'steamcm_store_enrich',
+      [expect.objectContaining({ cached: captured })]
+    )
+  })
+
+  it('gives up without writing when the entry keeps changing', async () => {
+    const t = setup(undefined)
+    let n = 0
+    t.requestRustInvoke.mockImplementation(() => {
+      n++
+      t.metaStore.set(APP_ID, { ...captured, art_cover: `refresh-${n}` })
+      return enriched({ ...entry, art_cover: 'stale' })
+    })
+
+    await fetchMetadataIfNeeded(t.steamGame, current)
+
+    expect(t.requestRustInvoke).toHaveBeenCalledTimes(2)
+    expect(t.metaStore.get(APP_ID)).toEqual({
+      ...captured,
+      art_cover: 'refresh-2'
+    })
+    expect(t.library.size).toBe(0)
+    expect(t.release).toHaveBeenCalledTimes(1)
+  })
+
+  it('checks and writes inside the platform-capture lock', async () => {
+    const t = setup(enriched(entry))
+    const lock = jest.spyOn(
+      t.deps.steamLaunchRuntime.platformCapture,
+      'withPlatformCaptureLock'
+    )
+    await fetchMetadataIfNeeded(t.steamGame, current)
+    expect(lock).toHaveBeenCalledTimes(1)
+    expect(t.metaStore.get(APP_ID)).toEqual(entry)
+  })
+})
+
 describe('getSteamInstallSize on cm=rust', () => {
   it('formats storageBytes from the appdetails op', async () => {
     const t = setup(

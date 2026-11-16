@@ -5,18 +5,26 @@ import { knownFixSaysMac32 } from './macArchKnownFix'
 import { RUST_STEAMCM_STORE_ENRICH } from 'common/types/sidecarTransport'
 import { invokeSteamCm } from './cm/rustSteamCm'
 import type SteamGame from './games'
+import type { SteamMetadataCacheEntry } from './stores'
+
+/** C1/WR-04: how many times one enrichment re-runs after a concurrent metadata write. */
+const ENRICH_ATTEMPTS = 2
 
 /**
- * D-12: cm=rust. One steamcm_store_enrich call does the fetch and the merge (delisted branch,
- * art URLs, platform precedence, mac_arch, carry-forwards); TS only persists and pushes.
- * Throws nothing it should not: failures are logged by the caller's catch or here.
+ * One fetch-and-merge. The merge is built from the entry read before the fetch, so it is written
+ * only if that entry is unchanged, checked and written under the platform-capture lock the Rust
+ * Refresh writes under (T-79-127). A concurrent write (a Refresh's PICS capture) reads `stale`.
  */
-async function enrichViaRust(
+async function enrichOnce(
   steamGame: SteamGame,
   current: SteamGameInfo
-): Promise<void> {
+): Promise<'settled' | 'stale'> {
   const { deps, appId } = steamGame
-  const cached = deps.stores.steam.steamMetadataStore.get(appId) ?? null
+  const store = deps.stores.steam.steamMetadataStore
+  // A serialised snapshot: the store may hand out live objects, and the stale check compares
+  // against this. Entries are persisted JSON, so the text is a faithful copy.
+  const snapshot = JSON.stringify(store.get(appId) ?? null)
+  const cached = JSON.parse(snapshot) as SteamMetadataCacheEntry | null
   const res = await invokeSteamCm(deps, RUST_STEAMCM_STORE_ENRICH, {
     appId,
     cached,
@@ -28,13 +36,44 @@ async function enrichViaRust(
       `Steam metadata fetch failed for appId ${appId}: ${res.kind}`,
       LogPrefix.Steam
     )
-    return
+    return 'settled'
   }
   const { kind, entry, game } = res.result
-  if (kind === 'noData' || !entry || !game) return
-  deps.stores.steam.steamMetadataStore.set(appId, entry)
-  deps.steamSession.libraryState.library.set(appId, game)
-  deps.sendFrontendMessage('pushGameToLibrary', game)
+  if (kind === 'noData' || !entry || !game) return 'settled'
+  return deps.steamLaunchRuntime.platformCapture.withPlatformCaptureLock(
+    async () => {
+      if (JSON.stringify(store.get(appId) ?? null) !== snapshot) {
+        return Promise.resolve('stale' as const)
+      }
+      store.set(appId, entry)
+      deps.steamSession.libraryState.library.set(appId, game)
+      deps.sendFrontendMessage('pushGameToLibrary', game)
+      return Promise.resolve('settled' as const)
+    }
+  )
+}
+
+/**
+ * D-12: cm=rust. One steamcm_store_enrich call does the fetch and the merge (delisted branch,
+ * art URLs, platform precedence, mac_arch, carry-forwards); TS only persists and pushes.
+ * Throws nothing it should not: failures are logged by the caller's catch or here.
+ * C1/WR-04: a merge that went stale during the fetch is re-run on the fresh entry, not written.
+ */
+async function enrichViaRust(
+  steamGame: SteamGame,
+  current: SteamGameInfo
+): Promise<void> {
+  const { deps, appId } = steamGame
+  let game = current
+  for (let attempt = 1; attempt <= ENRICH_ATTEMPTS; attempt++) {
+    if ((await enrichOnce(steamGame, game)) === 'settled') return
+    // A Refresh may have replaced the library entry too: merge onto what is there now.
+    game = deps.steamSession.libraryState.library.get(appId) ?? current
+  }
+  logWarning(
+    `Steam metadata for appId ${appId} kept changing during the fetch; left for the next enrichment`,
+    LogPrefix.Steam
+  )
 }
 
 /**
