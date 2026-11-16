@@ -8,15 +8,18 @@
 //! bottle. Logging: appId, source and outcome only (T-80-14).
 //!
 //! Known deltas from the TS, all in the refusing direction: a symlinked install root or common dir
-//! is refused (TS removed the link only), and an `installdir` that is absolute or climbs out of
-//! `common/` is refused.
+//! is refused (TS removed the link only), and an `installdir` that is absolute, drive-prefixed or
+//! has a `.`/`..` segment is refused. The library root is the steamapps dir the manifest was read
+//! from, never one recovered from the installdir-derived install path (80-REVIEW A/CR-01).
 
 use std::path::{Component, Path, PathBuf};
 
 use gamelib_steamfiles::library::scan_acfs;
 use serde::{Deserialize, Serialize};
 
-use crate::acf_state::{read_acf_state, steam_libraries, AcfSource, AcfState, PollRoots};
+use crate::acf_state::{
+    read_acf_state, read_acf_state_located, steam_libraries, AcfSource, AcfState, PollRoots,
+};
 
 /// Sentinel conflict: "could not read, assume a co-installed app" (T-75-55, WR-02).
 pub const UNKNOWN_CONFLICT: &str = "<unknown>";
@@ -167,19 +170,25 @@ fn refused(source: AcfSource, reason: &str) -> RemoveCopyResult {
     }
 }
 
-/// Lexical normalization (`path.resolve` without touching the disk).
-fn normalize(p: &Path) -> PathBuf {
-    let mut out = PathBuf::new();
-    for c in p.components() {
+/// The first component of an untrusted manifest `installdir`, or `None` unless the whole value
+/// is a relative path made only of plain segments: no root, drive prefix, `.` or `..`.
+fn installdir_first_segment(installdir: &str) -> Option<String> {
+    let path = Path::new(installdir);
+    if path.is_absolute() || path.has_root() {
+        return None;
+    }
+    let mut first = None;
+    for c in path.components() {
         match c {
-            Component::ParentDir => {
-                out.pop();
+            Component::Normal(s) => {
+                if first.is_none() {
+                    first = Some(s.to_string_lossy().into_owned());
+                }
             }
-            Component::CurDir => {}
-            other => out.push(other.as_os_str()),
+            _ => return None,
         }
     }
-    out
+    first
 }
 
 fn is_symlink(p: &Path) -> bool {
@@ -257,32 +266,29 @@ pub fn remove_copy(roots: &PollRoots, app_id: &str, source: AcfSource) -> Remove
         eprintln!("gamelib-steampoll: remove_copy rejected non-numeric appId (source {src})");
         return refused(source, "invalid appId");
     }
-    let install_path = match read_acf_state(roots, app_id, source) {
+    let (state, location) = read_acf_state_located(roots, app_id, source);
+    match state {
         AcfState::Absent => return RemoveCopyResult::Absent { source },
         AcfState::Unknown => return refused(source, "install state unknown"),
         AcfState::Downloading { .. } => {
             eprintln!("gamelib-steampoll: remove_copy refused appId {app_id} source {src}: install in progress");
             return refused(source, "install in progress");
         }
-        AcfState::Installed { install_path, .. } => install_path,
+        AcfState::Installed { .. } => {}
+    }
+    let Some(location) = location else {
+        return refused(source, "no install path");
     };
-    if install_path.is_empty() {
+    let installdir = location.installdir.unwrap_or_default();
+    if installdir.is_empty() {
         return refused(source, "no install path");
     }
 
-    // read_acf_state builds installPath as join(steamapps, "common", installdir); recover
-    // steamapps from it as the TS does, then require the install path to sit inside common/.
-    let install_norm = normalize(Path::new(&install_path));
-    let steamapps_dir = normalize(&install_norm.join("..").join(".."));
-    let common_root = steamapps_dir.join("common");
-    let segment = install_norm
-        .strip_prefix(&common_root)
-        .ok()
-        .and_then(|rel| rel.components().next())
-        .and_then(|c| match c {
-            Component::Normal(s) => Some(s.to_string_lossy().into_owned()),
-            _ => None,
-        });
+    // The library root is the steamapps dir the manifest was actually read from (one of the
+    // configured roots), never recovered from installPath: an absolute or `..`-climbing
+    // installdir could otherwise point the root, the guard and the conflict scan at another
+    // library (80-REVIEW A/CR-01). The installdir itself must be plain relative segments.
+    let segment = installdir_first_segment(&installdir);
     let Some(segment) = segment else {
         eprintln!(
             "gamelib-steampoll: remove_copy refused appId {app_id} source {src}: outside common/"
@@ -290,6 +296,8 @@ pub fn remove_copy(roots: &PollRoots, app_id: &str, source: AcfSource) -> Remove
         return refused(source, "install path outside common/");
     };
 
+    let steamapps_dir = PathBuf::from(&location.steamapps_dir);
+    let common_root = steamapps_dir.join("common");
     let install_root = common_root.join(&segment);
     let manifest_path = steamapps_dir.join(format!("appmanifest_{app_id}.acf"));
 

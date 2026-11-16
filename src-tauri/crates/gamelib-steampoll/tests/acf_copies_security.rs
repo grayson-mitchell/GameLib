@@ -93,6 +93,36 @@ fn refuses_dot_segment_installdir() {
     assert!(sa.join("common").exists() && sentinel.exists());
 }
 
+/// A victim that itself sits in another library's `steamapps/common`, so a library root derived
+/// from the install path would make the guard tautological (80-REVIEW A/CR-01).
+fn other_library_victim(tmp: &TempDir) -> (PathBuf, PathBuf) {
+    let victim = tmp.path().join("other/steamapps/common/Victim");
+    fs::create_dir_all(&victim).unwrap();
+    let sentinel = victim.join("precious.txt");
+    fs::write(&sentinel, b"keep").unwrap();
+    (victim, sentinel)
+}
+
+#[test]
+fn refuses_traversal_installdir_into_another_library() {
+    let tmp = TempDir::new().unwrap();
+    let (r, sa, _v, _s) = setup(&tmp);
+    let (victim, sentinel) = other_library_victim(&tmp);
+    put(&sa, "10", "../../../other/steamapps/common/Victim");
+    assert_refused(&remove_copy(&r, "10", AcfSource::Bottle));
+    assert!(victim.exists() && sentinel.exists());
+}
+
+#[test]
+fn refuses_absolute_installdir_into_another_library() {
+    let tmp = TempDir::new().unwrap();
+    let (r, sa, _v, _s) = setup(&tmp);
+    let (victim, sentinel) = other_library_victim(&tmp);
+    put(&sa, "10", &victim.to_string_lossy());
+    assert_refused(&remove_copy(&r, "10", AcfSource::Bottle));
+    assert!(victim.exists() && sentinel.exists());
+}
+
 #[cfg(unix)]
 #[test]
 fn refuses_symlinked_install_root() {

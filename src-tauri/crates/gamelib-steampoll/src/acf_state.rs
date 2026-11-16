@@ -112,18 +112,41 @@ fn steamapps_dirs(roots: &PollRoots, source: AcfSource, strict: bool) -> Option<
 
 /// Install state of one appId from its ACF (acfState.ts `readAcfState`).
 pub fn read_acf_state(roots: &PollRoots, app_id: &str, source: AcfSource) -> AcfState {
+    read_acf_state_located(roots, app_id, source).0
+}
+
+/// Where a manifest was actually read: the steamapps dir it sits in (one of the configured
+/// roots, never derived from manifest content) and its raw, untrusted `installdir`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AcfLocation {
+    pub steamapps_dir: String,
+    pub installdir: Option<String>,
+}
+
+/// [`read_acf_state`] plus the [`AcfLocation`] of the manifest (`Some` whenever one was found).
+/// A delete path must pin the library root to `steamapps_dir` here, never recover it from
+/// `install_path`, which `installdir` can steer anywhere (80-REVIEW A/CR-01).
+pub fn read_acf_state_located(
+    roots: &PollRoots,
+    app_id: &str,
+    source: AcfSource,
+) -> (AcfState, Option<AcfLocation>) {
     if !is_numeric_app_id(app_id) {
-        return AcfState::Unknown;
+        return (AcfState::Unknown, None);
     }
     let Some(dirs) = steamapps_dirs(roots, source, true) else {
-        return AcfState::Unknown;
+        return (AcfState::Unknown, None);
     };
     let dirs: Vec<String> = dirs.into_iter().filter(|d| Path::new(d).exists()).collect();
     let found = gamelib_steamfiles::library::find_acf(&dirs, app_id);
     let (Some(record), Some(dir)) = (found.record, found.steamapps_dir) else {
-        return AcfState::Absent;
+        return (AcfState::Absent, None);
     };
-    match record.state_flags {
+    let location = AcfLocation {
+        steamapps_dir: dir.clone(),
+        installdir: record.installdir.clone(),
+    };
+    let state = match record.state_flags {
         Some(flags) if flags & STATE_FLAG_FULLY_INSTALLED != 0 => AcfState::Installed {
             state_flags: flags,
             install_path: Path::new(&dir)
@@ -141,7 +164,8 @@ pub fn read_acf_state(roots: &PollRoots, app_id: &str, source: AcfSource) -> Acf
             bytes_staged: bytes_field(&record.bytes_staged),
             bytes_to_stage: bytes_field(&record.bytes_to_stage),
         },
-    }
+    };
+    (state, Some(location))
 }
 
 /// Steam sets StateFlags bit 0x2 (UpdateRequired) while an update is pending.
