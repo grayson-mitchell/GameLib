@@ -2207,6 +2207,8 @@ describeDarwinOnly(
       expect(raw).toContain('#define GL_MAX_CONNS 16')
       expect(src).toContain('MSG_DONTWAIT')
       expect(src).toContain('SO_SNDTIMEO')
+      expect(src).toContain('SO_SNDBUF')
+      expect(raw).toContain('#define GL_SEND_TIMEOUT_USEC 250000')
       expect(src).toContain('& ~O_NONBLOCK')
       expect(src).toMatch(/\bpoll\(/)
       expect(src).not.toMatch(/pthread_create|\bfork\(/)

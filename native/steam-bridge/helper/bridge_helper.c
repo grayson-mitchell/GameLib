@@ -2296,7 +2296,7 @@ int gl_mms_get_server_details(void *self, const uint8_t *args, uint32_t argLen, 
  * Mac Steam cannot show for a Wine game. The helper keeps that lobby (set ONLY
  * by the game's own call, never by a wire request carrying an id) and exposes
  * an authenticated friend snapshot plus an invite action to GameLib's own UI.
- * This helper is single-threaded (one accept loop, see main), so this state
+ * This helper is single-threaded (one poll loop, see gl_serve_forever), so this state
  * needs no mutex. SteamIDs and the lobby id are never logged. */
 
 #define GL_INVITE_FRIENDS_MAX 100u
