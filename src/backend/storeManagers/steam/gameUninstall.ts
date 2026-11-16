@@ -557,6 +557,57 @@ export async function removeNativeInstallDirectly(
 }
 
 /**
+ * 80-REVIEW C/EXTRA-01: the shape of an untrusted manifest `installdir`, mirroring
+ * `installdir_shape` in gamelib-steampoll's acf_copies.rs. Only a `single` plain folder name
+ * may be deleted as `common/<installdir>`; a `nested` one (`Studio/GameB`) names a parent
+ * other apps may share. A backslash, `:` and NUL are refused on every OS so one manifest means one
+ * thing everywhere; so are an absolute path and any `.` or `..` segment (stricter than Rust,
+ * which drops a non-leading `.`). Empty segments from repeated or trailing `/` are ignored,
+ * as Rust's `Path::components` does.
+ *
+ * Exported for unit testing.
+ */
+export function installdirShape(
+  installdir: string
+):
+  | { kind: 'single'; segment: string }
+  | { kind: 'nested' }
+  | { kind: 'escaping' } {
+  if (/[\\:\0]/.test(installdir) || installdir.startsWith('/')) {
+    return { kind: 'escaping' }
+  }
+  const segments = installdir.split('/').filter((s) => s !== '')
+  if (segments.length === 0 || segments.some((s) => s === '.' || s === '..')) {
+    return { kind: 'escaping' }
+  }
+  const [segment] = segments
+  if (segment === undefined) return { kind: 'escaping' }
+  return segments.length === 1
+    ? { kind: 'single', segment }
+    : { kind: 'nested' }
+}
+
+/**
+ * 80-REVIEW C/EXTRA-01: the raw `installdir` behind a Rust `readAcfState` installPath. Rust
+ * builds it as `Path::new(steamappsDir).join("common").join(installdir)` with no
+ * normalization, so the installdir is the verbatim tail after `<steamappsDir>/common/`. An
+ * installPath without that prefix (an absolute installdir replaces the whole path) yields
+ * `undefined`, which the caller refuses.
+ *
+ * Exported for unit testing.
+ */
+export function rawInstalldirFromInstallPath(
+  steamappsDir: string,
+  installPath: string
+): string | undefined {
+  const withSep = (p: string) => (p.endsWith(sep) ? p : p + sep)
+  const prefix = withSep(withSep(steamappsDir) + 'common')
+  return installPath.startsWith(prefix)
+    ? installPath.slice(prefix.length)
+    : undefined
+}
+
+/**
  * debug/steam-bottle-uninstall-reverts (FINAL): direct-deletion uninstall
  * for EVERY bottle-eligible, non-bridge title — GameLib-authored
  * (installBottleNative(), D-15/SNI-08) AND legacy-delegated/genuinely
@@ -773,7 +824,36 @@ export async function uninstallBottleGameDirectly(
   const relFromCommon = relative(commonRoot, resolvedInstallPath)
   const installdirSegment = relFromCommon.split(sep)[0]
 
+  // 80-REVIEW C/EXTRA-01 (parity with the Rust remove_copy, A/WR-01): the
+  // segment above is only the FIRST folder of the installdir, so a nested
+  // `Studio/GameB` used to delete all of common/Studio, a parent other apps
+  // may share. The raw installdir must be exactly one plain folder name.
+  // `resolve()` hides `.`/`..` segments, so the check reads the unresolved
+  // installdir; anything that cannot be recovered or is not a single folder
+  // is refused before any delete, leaving the disk untouched.
+  const rawInstalldir = rawInstalldirFromInstallPath(
+    steamappsDir,
+    acfState.installPath
+  )
+  const shape =
+    rawInstalldir === undefined
+      ? ({ kind: 'escaping' } as const)
+      : installdirShape(rawInstalldir)
+  if (shape.kind === 'nested') {
+    logWarning(
+      `SteamGame: uninstallBottleGameDirectly refused appId ${steamGame.appId}: the installdir is nested, so its top folder may be shared with other apps`,
+      LogPrefix.Steam
+    )
+    return {
+      stdout: '',
+      stderr: `Refused to uninstall: the install folder for appId ${steamGame.appId} is not a single folder under common/`,
+      refused: true
+    }
+  }
+
   if (
+    shape.kind !== 'single' ||
+    shape.segment !== installdirSegment ||
     !installdirSegment ||
     relFromCommon.startsWith('..') ||
     isAbsolute(relFromCommon)
@@ -811,6 +891,9 @@ export async function uninstallBottleGameDirectly(
   // it is installed. Remove the manifest only, and let the completion
   // pipeline reconcile — a partial uninstall the user can retry beats
   // deleting a game they did not ask about.
+  // The scan runs in Rust (`find_other_manifests_with_installdir`), which
+  // compares case-insensitively on macOS and Windows; its normalization of the
+  // OTHER manifests' installdirs to their first folder is Part A's A/WR-01.
   const conflicting = await findOtherManifestsWithInstalldir(
     steamGame.deps,
     steamappsDir,

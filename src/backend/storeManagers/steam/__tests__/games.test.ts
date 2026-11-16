@@ -132,6 +132,7 @@ import {
   isSteamNativeInstallEnabled
 } from '../nativeInstallSetting'
 import { decideSteamNativeDelete } from '../nativeDelete'
+import { installdirShape, rawInstalldirFromInstallPath } from '../gameUninstall'
 import { isSteamExperimentalInstallAppEnabled } from '../experimentalInstallAppSetting'
 import { requestSteamInstallApp } from '../steamInstallApp'
 import { downloadSteamDepots, prescreenBridgeDepots } from '../depot'
@@ -10829,6 +10830,135 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
 
       conflictSpy.mockRestore()
     })
+
+    // ── 80-REVIEW C/EXTRA-01 ────────────────────────────────────────────────
+    // The delete target used to be the FIRST folder of the installdir, so a
+    // nested `Studio/GameB` deleted all of common/Studio, including a
+    // co-installed `Studio/GameA`. Proven on a real filesystem.
+    describe('C/EXTRA-01: only a single-folder installdir is ever deleted', () => {
+      let studioDir: string
+      let otherGameDir: string
+
+      beforeEach(() => {
+        ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+          platformsCaptured: true,
+          is_mac_native: false
+        })
+        studioDir = realJoin(steamappsDir, 'common', 'Studio')
+        otherGameDir = realJoin(studioDir, 'GameA')
+        mkdirSync(realJoin(studioDir, 'GameB'), { recursive: true })
+        mkdirSync(otherGameDir, { recursive: true })
+        writeFileSync(realJoin(otherGameDir, 'GameA.exe'), 'other-app-stub')
+      })
+
+      async function uninstallWithInstallPath(installPath: string) {
+        library.set(
+          APP_ID,
+          makeEntry({
+            title: 'Hoard',
+            is_installed: true,
+            install: { install_path: hoardInstallDir }
+          })
+        )
+        readAcfStateSpy.mockResolvedValue({ state: 'installed', installPath })
+        const conflictSpy = jest
+          .spyOn(acfState, 'findOtherManifestsWithInstalldir')
+          .mockResolvedValue([])
+        try {
+          return {
+            result: await new SteamGame(APP_ID, steamTestDeps).uninstall(
+              {} as any
+            ),
+            conflictSpy
+          }
+        } finally {
+          conflictSpy.mockRestore()
+        }
+      }
+
+      it('a nested installdir is refused and the shared parent folder survives', async () => {
+        const { result, conflictSpy } = await uninstallWithInstallPath(
+          `${steamappsDir}/common/Studio/GameB`
+        )
+
+        expect(result.refused).toBe(true)
+        expect(result.stderr).toContain('not a single folder')
+        expect(realExistsSync(realJoin(otherGameDir, 'GameA.exe'))).toBe(true)
+        expect(realExistsSync(realJoin(studioDir, 'GameB'))).toBe(true)
+        // Fail safe: the disk is untouched, the manifest included.
+        expect(realExistsSync(hoardManifestPath)).toBe(true)
+        expect(conflictSpy).not.toHaveBeenCalled()
+        expect(pollUninstallOnceSpy).not.toHaveBeenCalled()
+      })
+
+      it.each([
+        ['a `..` segment', 'Studio/../Hoard'],
+        ['a `.` segment', './Hoard'],
+        ['a backslash', 'Studio\\GameB'],
+        ['a colon', 'C:Hoard'],
+        ['an empty installdir', '']
+      ])(
+        'an installdir with %s is refused and nothing is deleted',
+        async (_label, installdir) => {
+          const { result } = await uninstallWithInstallPath(
+            `${steamappsDir}/common/${installdir}`
+          )
+
+          expect(result.refused).toBe(true)
+          expect(realExistsSync(realJoin(hoardInstallDir, 'Hoard.exe'))).toBe(
+            true
+          )
+          expect(realExistsSync(otherGameDir)).toBe(true)
+          expect(realExistsSync(hoardManifestPath)).toBe(true)
+          expect(pollUninstallOnceSpy).not.toHaveBeenCalled()
+        }
+      )
+
+      it('DISCRIMINATOR: a trailing separator on a single folder still deletes that folder only', async () => {
+        const { result } = await uninstallWithInstallPath(
+          `${steamappsDir}/common/Hoard/`
+        )
+
+        expect(result).toEqual({ stdout: '', stderr: '' })
+        expect(realExistsSync(hoardInstallDir)).toBe(false)
+        expect(realExistsSync(otherGameDir)).toBe(true)
+      })
+    })
+  })
+})
+
+describe('80-REVIEW C/EXTRA-01: installdirShape and rawInstalldirFromInstallPath', () => {
+  it.each([
+    ['Hoard', { kind: 'single', segment: 'Hoard' }],
+    ['Hoard/', { kind: 'single', segment: 'Hoard' }],
+    ['Studio/GameB', { kind: 'nested' }],
+    ['Studio//GameB/', { kind: 'nested' }],
+    ['/etc', { kind: 'escaping' }],
+    ['..', { kind: 'escaping' }],
+    ['Studio/..', { kind: 'escaping' }],
+    ['Studio/.', { kind: 'escaping' }],
+    ['./Hoard', { kind: 'escaping' }],
+    ['Studio\\GameB', { kind: 'escaping' }],
+    ['C:Hoard', { kind: 'escaping' }],
+    ['Ho\0ard', { kind: 'escaping' }],
+    ['', { kind: 'escaping' }],
+    ['/', { kind: 'escaping' }]
+  ])('installdirShape(%j)', (installdir, expected) => {
+    expect(installdirShape(installdir)).toEqual(expected)
+  })
+
+  it('recovers the verbatim installdir after <steamapps>/common/', () => {
+    expect(
+      rawInstalldirFromInstallPath('/b/steamapps', '/b/steamapps/common/A/../B')
+    ).toBe('A/../B')
+    expect(
+      rawInstalldirFromInstallPath('/b/steamapps/', '/b/steamapps/common/A')
+    ).toBe('A')
+    // An absolute installdir replaces the whole path in Rust's join.
+    expect(rawInstalldirFromInstallPath('/b/steamapps', '/etc')).toBe(undefined)
+    expect(
+      rawInstalldirFromInstallPath('/b/steamapps', '/b/steamapps/commonX/A')
+    ).toBe(undefined)
   })
 })
 
