@@ -44,7 +44,8 @@
     "src/frontend/screens/Settings/components/Tools/index.tsx": 1,
     "src/frontend/screens/Settings/sections/GamesSettings/index.tsx": 1,
     "src/frontend/state/initStateSubscriptions.ts": 1,
-    "src/frontend/state/libraryState.ts": 4
+    "src/frontend/state/libraryState.ts": 4,
+    "src/backend/sidecar/steamPollEventRegistration.ts": 1
   },
   "reasons": {
     "src/frontend/helpers/stores.ts": "Cache stores are typed per store (Legendary/GOG/Steam/Nile library arrays); the helper owns all four member shapes",
@@ -91,6 +92,7 @@
     "src/frontend/screens/Settings/components/Tools/index.tsx": "isStore(x, 'sideload') discriminates the install shape; reads no store-only field (install.install_path on the other branch)",
     "src/frontend/screens/Settings/sections/GamesSettings/index.tsx": "isStore(gameInfo, 'sideload') identity check choosing sideload settings; reads no store-only field",
     "src/frontend/state/initStateSubscriptions.ts": "isStore(gameInfo, 'sideload') identity gate; reads no store-only field",
-    "src/frontend/state/libraryState.ts": "Routes an upserted game into the gog/legendary/steam library arrays by isStore(info, store), and checks isStore(game, 'legendary') for installing Epic games; scopedRunner checks are identity checks on a runner value"
+    "src/frontend/state/libraryState.ts": "Routes an upserted game into the gog/legendary/steam library arrays by isStore(info, store), and checks isStore(game, 'legendary') for installing Epic games; scopedRunner checks are identity checks on a runner value",
+    "src/backend/sidecar/steamPollEventRegistration.ts": "Phase 80 steamPollStateEvent handler applies Rust Steam poll state events; it is Steam-only by contract and persists the updated SteamGameInfo record"
   }
 }
