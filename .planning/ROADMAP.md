@@ -1603,15 +1603,15 @@ Plans:
 **Requirements**: DEBT-05, DEBT-06
 **Depends on:** None
 **Source:** `milestones/v0.9-MILESTONE-AUDIT.md`
-**Plans:** 1/5 plans executed
+**Plans:** 3/5 plans executed
 
 Plans:
 
 **Wave 1**
 
 - [x] 78-01-PLAN.md — 52 records: VERIFICATION current-first, UAT gaps superseded (ELEX via Phase 54), WR-03 display-ack moot
-- [ ] 78-02-PLAN.md — 53 records: UAT gaps superseded (ELEX/Unclaimed World lifted, DRM titles open under Phase 56), VERIFICATION current-first
-- [ ] 78-03-PLAN.md — D-19 fixes (IN-01 persistent error handler + test, WR-03 pins, IN-02 comment), D-13 stale comments, 58 follow_ups to current truth
+- [x] 78-02-PLAN.md — 53 records: UAT gaps superseded (ELEX/Unclaimed World lifted, DRM titles open under Phase 56), VERIFICATION current-first
+- [x] 78-03-PLAN.md — D-19 fixes (IN-01 persistent error handler + test, WR-03 pins, IN-02 comment), D-13 stale comments, 58 follow_ups to current truth
 - [ ] 78-04-PLAN.md — un-mask lint.yml ratchet steps and .husky/pre-push, with the four wiring tests updated
 
 **Wave 2**
