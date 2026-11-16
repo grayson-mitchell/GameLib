@@ -66,14 +66,14 @@ export default function ReadOnlyStoresNotice() {
       <>
         <FontAwesomeIcon
           icon={faTriangleExclamation}
-          className="readOnlyStoresNoticeIcon"
+          className="noticeStackIcon readOnlyStoresNoticeIcon"
         />
-        <div className="readOnlyStoresNoticeText">
-          <div className="readOnlyStoresNoticeTitle">
+        <div className="noticeStackText readOnlyStoresNoticeText">
+          <div className="noticeStackTitle readOnlyStoresNoticeTitle">
             {t('readOnlyStores.title', 'Some data is read-only')}
           </div>
           {newer && (
-            <div className="readOnlyStoresNoticeBody">
+            <div className="noticeStackBody readOnlyStoresNoticeBody">
               {t(
                 'readOnlyStores.newer.body',
                 "This data was saved by a newer GameLib, so changes won't be saved. Update GameLib to keep them."
@@ -81,7 +81,7 @@ export default function ReadOnlyStoresNotice() {
             </div>
           )}
           {failedAreas.length > 0 && (
-            <div className="readOnlyStoresNoticeBody">
+            <div className="noticeStackBody readOnlyStoresNoticeBody">
               {t(
                 'readOnlyStores.failed.body',
                 "{{areas}} couldn't be updated, so changes won't be saved. See the log for details.",

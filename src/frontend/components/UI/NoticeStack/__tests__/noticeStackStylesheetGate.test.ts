@@ -314,7 +314,7 @@ describe('NoticeStack stylesheet gate (derived specimens)', () => {
   it('flags position sticky even on an inner rule', () => {
     const text = derive(
       read(steam.scss),
-      '.steamEngineLaunchNoticeIcon {',
+      '.steamEngineLaunchNotice--waiting .steamEngineLaunchNoticeBar {',
       '  position: sticky;'
     )
     const v = violationsFor(steam.scss, 'slot', steam.rootBase, text)
@@ -324,7 +324,7 @@ describe('NoticeStack stylesheet gate (derived specimens)', () => {
   it('flags a stray anchor on an inner rule that is not absolute', () => {
     const text = derive(
       read(steam.scss),
-      '.steamEngineLaunchNoticeIcon {',
+      '.steamEngineLaunchNotice--waiting .steamEngineLaunchNoticeBar {',
       '  top: 0;'
     )
     const v = violationsFor(steam.scss, 'slot', steam.rootBase, text)

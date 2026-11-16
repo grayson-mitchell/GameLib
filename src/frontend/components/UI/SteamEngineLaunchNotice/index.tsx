@@ -645,11 +645,15 @@ export default function SteamEngineLaunchNotice() {
         <>
           <FontAwesomeIcon
             icon={o.icon}
-            className="steamEngineLaunchNoticeIcon"
+            className="noticeStackIcon steamEngineLaunchNoticeIcon"
           />
-          <span className="steamEngineLaunchNoticeText">
-            <span className="steamEngineLaunchNoticeTitle">{o.title}</span>{' '}
-            <span className="steamEngineLaunchNoticeBody">{o.body}</span>
+          <span className="noticeStackText steamEngineLaunchNoticeText">
+            <span className="noticeStackTitle steamEngineLaunchNoticeTitle">
+              {o.title}
+            </span>{' '}
+            <span className="noticeStackBody steamEngineLaunchNoticeBody">
+              {o.body}
+            </span>
           </span>
           <button
             className="noticeStackDismiss steamEngineLaunchNoticeDismiss"

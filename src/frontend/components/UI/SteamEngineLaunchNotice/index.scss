@@ -1,42 +1,14 @@
 // D-06 / 59-UAT G6: non-blocking, dismissible; no backdrop or focus trap.
 // Theme variables only (multi-theme survival). The region, slot and toast
 // surface (sketch 006 variant A) live in ../NoticeStack/index.scss.
-// Mapping (quick 261110-nwy): icon --accent, title --primary-font-family +
-// --text-title, body --secondary-font-family, dismiss --action-icon tokens.
-// The stripe and the countdown bar stay --status-warning on purpose.
+// Mapping (quick 261116-swr): the icon, title, body and dismiss tokens now live
+// on the shared rules in ../NoticeStack/index.scss; the stripe and the
+// countdown bar stay --status-warning on purpose.
 
 // Kept as a hook for tests and styling; carries no positioning (the region
 // owns the stack).
 .steamEngineLaunchNotice--overlay {
   order: 0;
-}
-
-.steamEngineLaunchNoticeIcon {
-  flex: none;
-  width: 16px;
-  height: 16px;
-  padding-top: 1px;
-  color: var(--accent);
-}
-
-.steamEngineLaunchNoticeText {
-  flex: 1;
-  min-width: 0;
-  line-height: 1.4;
-}
-
-.steamEngineLaunchNoticeTitle {
-  display: block;
-  font-family: var(--primary-font-family);
-  color: var(--text-title, var(--text-default));
-  font-weight: var(--bold);
-}
-
-.steamEngineLaunchNoticeBody {
-  display: block;
-  margin-top: 2px;
-  font-family: var(--secondary-font-family);
-  color: var(--text-secondary);
 }
 
 // Countdown hairline (L7). Display only: the real timer lives in the TSX; the

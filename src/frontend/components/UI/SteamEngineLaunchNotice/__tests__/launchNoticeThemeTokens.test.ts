@@ -15,6 +15,8 @@ const ROOT = path.resolve(__dirname, '../../../../../..')
 const UI = 'src/frontend/components/UI'
 const REGION = `${UI}/NoticeStack/index.scss`
 const STEAM = `${UI}/SteamEngineLaunchNotice/index.scss`
+const HUMBLE = `${UI}/HumbleExpiryToast/index.scss`
+const READ_ONLY = `${UI}/ReadOnlyStoresNotice/index.scss`
 
 const read = (rel: string) =>
   stripSourceComments(readFileSync(path.join(ROOT, rel), 'utf8'))
@@ -62,15 +64,21 @@ describe('launch notice theme tokens', () => {
   })
 
   it('title uses heading font and title colour', () => {
-    const body = ruleBody(steam, '.steamEngineLaunchNoticeTitle')
+    const body = ruleBody(region, '.noticeStackTitle')
     expect(body).toContain('var(--primary-font-family)')
     expect(body).toContain('var(--text-title, var(--text-default))')
   })
 
   it('icon takes the accent', () => {
-    expect(ruleBody(steam, '.steamEngineLaunchNoticeIcon')).toMatch(
+    expect(ruleBody(region, '.noticeStackIcon')).toMatch(
       /color:\s*var\(--accent\);/
     )
+  })
+
+  it('action button takes the accent', () => {
+    const body = ruleBody(region, '.noticeStackAction')
+    expect(body).toMatch(/border:\s*1px solid var\(--accent\)/)
+    expect(body).toMatch(/color:\s*var\(--accent\);/)
   })
 
   it('dismiss x falls back when --action-icon is unset', () => {
@@ -80,7 +88,7 @@ describe('launch notice theme tokens', () => {
   })
 
   it('uses no literal colours except the shadow rgba', () => {
-    for (const text of [region, steam]) {
+    for (const text of [region, steam, read(HUMBLE), read(READ_ONLY)]) {
       expect(text).not.toMatch(/#[0-9a-fA-F]{3,8}\b/)
       expect(text).not.toMatch(/\brgb\(/)
       const noShadow = text.replace(/box-shadow:[^;]*;/g, '')

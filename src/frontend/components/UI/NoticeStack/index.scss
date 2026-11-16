@@ -107,6 +107,62 @@
   }
 }
 
+// The icon, text and action look for every notice lives here. Notices add
+// these classes and keep their own classes only as hooks; none restyles them
+// (quick 261116-swr).
+.noticeStackIcon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  padding-top: 1px;
+  color: var(--accent);
+}
+
+.noticeStackText {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.4;
+}
+
+.noticeStackTitle {
+  display: block;
+  font-family: var(--primary-font-family);
+  color: var(--text-title, var(--text-default));
+  font-weight: var(--bold);
+}
+
+.noticeStackBody {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--secondary-font-family);
+  color: var(--text-secondary);
+}
+
+.noticeStackAction {
+  flex: none;
+  align-self: flex-start;
+  background: transparent;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  color: var(--accent);
+  padding: var(--space-3xs) var(--space-sm);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  line-height: 1.4;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 120ms;
+
+  &:hover {
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+}
+
 @keyframes noticeStackToastIn {
   from {
     opacity: 0;
