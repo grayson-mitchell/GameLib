@@ -537,3 +537,58 @@ async fn http_exhaustion_does_not_claim_an_outage() {
     );
     assert!(!fail.message.contains("outage"), "{}", fail.message);
 }
+
+/// A/IN-02: the outage clock starts at the first fetch, not at construction. A fetcher built well
+/// before its first fetch (a slow manifest request-code round trip) must still record a refusing
+/// host's errors in host health, so the host is demoted instead of being picked at full weight.
+#[tokio::test]
+async fn errors_before_any_success_still_demote_a_dead_host_after_a_late_start() {
+    let addr = dead_addr().await;
+    let f = fetcher(
+        Arc::new(FakeHost::new()),
+        vec![host_ref(&addr, "SteamCache", false)],
+    )
+    .with_budget(3, Duration::from_secs(15))
+    .with_backoff(1, 3)
+    .with_transient_budget(Duration::ZERO)
+    .with_outage_quiet(Duration::from_millis(200));
+    // Longer than the quiet window passes between construction and the first fetch.
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    let _ = f
+        .fetch_chunk("10", "abc", 0, 0, &CancellationToken::new())
+        .await
+        .unwrap_err();
+    let stats = f.host_stats(&addr).unwrap();
+    assert_eq!(stats.attempts, 3, "{stats:?}");
+    assert_eq!(stats.consecutive_failures, 3, "{stats:?}");
+}
+
+/// The outage rule itself still holds: once nothing has succeeded for the quiet window since
+/// fetching began, transport errors are the link's fault and demote no host.
+#[tokio::test]
+async fn a_long_outage_after_fetching_began_demotes_no_host() {
+    let addr = dead_addr().await;
+    let f = fetcher(
+        Arc::new(FakeHost::new()),
+        vec![host_ref(&addr, "SteamCache", false)],
+    )
+    .with_budget(1, Duration::from_secs(15))
+    .with_backoff(1, 3)
+    .with_transient_budget(Duration::ZERO)
+    .with_outage_quiet(Duration::from_millis(200));
+    let _ = f
+        .fetch_chunk("10", "abc", 0, 0, &CancellationToken::new())
+        .await
+        .unwrap_err();
+    assert_eq!(f.host_stats(&addr).unwrap().attempts, 1);
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    let _ = f
+        .fetch_chunk("10", "abc", 0, 0, &CancellationToken::new())
+        .await
+        .unwrap_err();
+    assert_eq!(
+        f.host_stats(&addr).unwrap().attempts,
+        1,
+        "outage error was recorded"
+    );
+}

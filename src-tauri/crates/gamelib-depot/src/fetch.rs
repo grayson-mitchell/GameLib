@@ -217,8 +217,13 @@ pub struct Fetcher {
     backoff: (u64, u64),
     transient_budget: Duration,
     transient_cap_ms: u64,
-    /// Last successful fetch on this fetcher (job-wide progress).
-    last_success: Mutex<Instant>,
+    /// Last successful fetch on this fetcher (job-wide progress). A/IN-02: `None` until the first
+    /// fetch starts, which sets it, so time spent before any fetch (a slow manifest request-code
+    /// round trip, say) never counts as an outage.
+    last_success: Mutex<Option<Instant>>,
+    /// How long with no success anywhere before a transport error is read as a whole-link outage
+    /// (and left out of host health).
+    outage_quiet: Duration,
 }
 
 /// A transport-level failure (no HTTP status): the link, not the request, is at fault.
@@ -281,7 +286,8 @@ impl Fetcher {
             backoff: (CHUNK_FETCH_BACKOFF_BASE_MS, CHUNK_FETCH_MAX_BACKOFF_MS),
             transient_budget: TRANSIENT_BUDGET,
             transient_cap_ms: TRANSIENT_MAX_BACKOFF_MS,
-            last_success: Mutex::new(Instant::now()),
+            last_success: Mutex::new(None),
+            outage_quiet: OUTAGE_QUIET,
         }
     }
 
@@ -495,6 +501,9 @@ impl Fetcher {
         let mut transient_n: u32 = 0;
         let mut outage_exhausted = false;
         let mut i: u32 = 0;
+        if let Ok(mut t) = self.last_success.lock() {
+            t.get_or_insert_with(Instant::now);
+        }
         loop {
             if cancel.is_cancelled() {
                 return Err(FetchError::Cancelled);
@@ -565,14 +574,14 @@ impl Fetcher {
                         h.record(&host_name, HostAttemptOutcome::Success, ms);
                     }
                     if let Ok(mut t) = self.last_success.lock() {
-                        *t = Instant::now();
+                        *t = Some(Instant::now());
                     }
                     return Ok((body, host_name));
                 }
                 Err(e) => {
-                    let last_ok = self.last_success.lock().map(|t| *t).ok();
-                    let in_outage =
-                        is_transient(&e) && last_ok.is_some_and(|t| t.elapsed() >= OUTAGE_QUIET);
+                    let last_ok = self.last_success.lock().ok().and_then(|t| *t);
+                    let in_outage = is_transient(&e)
+                        && last_ok.is_some_and(|t| t.elapsed() >= self.outage_quiet);
                     if in_outage {
                         // Whole link down: no host is at fault, so nothing is demoted.
                     } else if let Ok(mut h) = self.health.lock() {
@@ -616,8 +625,9 @@ impl Fetcher {
                 let anchor = self
                     .last_success
                     .lock()
-                    .map(|t| (*t).max(since))
-                    .unwrap_or(since);
+                    .ok()
+                    .and_then(|t| *t)
+                    .map_or(since, |t| t.max(since));
                 if i >= self.attempts && anchor.elapsed() >= self.transient_budget {
                     outage_exhausted = true;
                     break;
@@ -774,6 +784,17 @@ impl Fetcher {
     pub fn with_transient_budget(mut self, budget: Duration) -> Self {
         self.transient_budget = budget;
         self
+    }
+
+    /// Overrides how long with no success marks an outage (tests keep real-time runs short).
+    pub fn with_outage_quiet(mut self, quiet: Duration) -> Self {
+        self.outage_quiet = quiet;
+        self
+    }
+
+    /// Host-health stats for one host (read-only).
+    pub fn host_stats(&self, host: &str) -> Option<crate::host_health::HostStatsSnapshot> {
+        self.health.lock().ok().map(|h| h.snapshot(host))
     }
 }
 
