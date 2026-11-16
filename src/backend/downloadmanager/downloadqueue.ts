@@ -332,9 +332,9 @@ export function createDownloadQueue(deps: DownloadQueueDeps) {
           storeCapabilities[element.params.runner].installSizeFromSteamStore
         ) {
           element.params.size = await getSteamInstallSize(
+            deps,
             element.params.appName,
-            element.params.gameInfo,
-            deps
+            element.params.gameInfo
           )
         } else {
           const installInfo = await deps.managers.library[

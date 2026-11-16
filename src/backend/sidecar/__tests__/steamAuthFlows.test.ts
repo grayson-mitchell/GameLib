@@ -1010,9 +1010,8 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
       })
       expect(getSteamInstallSize).toHaveBeenCalledTimes(1)
       expect(getSteamInstallSize).toHaveBeenCalledWith(
-        '999001',
-        undefined,
-        expect.anything()
+        expect.objectContaining({ requestRustInvoke: expect.any(Function) }),
+        '999001'
       )
     })
   })

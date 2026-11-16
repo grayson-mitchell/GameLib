@@ -11672,13 +11672,21 @@ describe('getSteamInstallSize', () => {
       is_installed: true,
       install: { install_size: '15.00 GiB', install_path: '/games/tf2' }
     })
-    const result = await getSteamInstallSize('440', gameInfo)
+    const requestRustInvoke = jest.fn()
+    const result = await getSteamInstallSize(
+      { requestRustInvoke },
+      '440',
+      gameInfo
+    )
     expect(result).toBe('15.00 GiB')
+    expect(requestRustInvoke).not.toHaveBeenCalled()
   })
 
   it('T-06-01: returns "?? MB" for a non-numeric appId', async () => {
-    const result = await getSteamInstallSize('not-an-id')
+    const requestRustInvoke = jest.fn()
+    const result = await getSteamInstallSize({ requestRustInvoke }, 'not-an-id')
     expect(result).toBe('?? MB')
+    expect(requestRustInvoke).not.toHaveBeenCalled()
   })
 })
 

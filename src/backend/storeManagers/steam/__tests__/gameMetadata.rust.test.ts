@@ -211,21 +211,27 @@ describe('getSteamInstallSize on cm=rust', () => {
     const t = setup(
       Promise.resolve({ ok: true, result: { storageBytes: 2048 } })
     )
-    await expect(getSteamInstallSize(APP_ID, undefined, t.deps)).resolves.toBe(
-      '2048B'
-    )
+    await expect(getSteamInstallSize(t.deps, APP_ID)).resolves.toBe('2048B')
   })
 
   it('falls back to ?? MB without a figure or on failure', async () => {
     const a = setup(
       Promise.resolve({ ok: true, result: { storageBytes: null } })
     )
-    await expect(getSteamInstallSize(APP_ID, undefined, a.deps)).resolves.toBe(
-      '?? MB'
-    )
+    await expect(getSteamInstallSize(a.deps, APP_ID)).resolves.toBe('?? MB')
     const b = setup(Promise.resolve({ ok: false, kind: 'httpError' }))
-    await expect(getSteamInstallSize(APP_ID, undefined, b.deps)).resolves.toBe(
-      '?? MB'
+    await expect(getSteamInstallSize(b.deps, APP_ID)).resolves.toBe('?? MB')
+  })
+
+  it('C2/IN-02: requires deps, so no caller can silently lose the estimate', async () => {
+    const t = setup(
+      Promise.resolve({ ok: true, result: { storageBytes: 2048 } })
     )
+    // A type-level pin, checked by `tsc`: the old optional trailing `deps` let a call with no
+    // transport type-check and return '?? MB' for every uninstalled title.
+    // @ts-expect-error deps is the required first parameter.
+    const legacyCall = () => getSteamInstallSize(APP_ID)
+    expect(typeof legacyCall).toBe('function')
+    await expect(getSteamInstallSize(t.deps, APP_ID)).resolves.toBe('2048B')
   })
 })

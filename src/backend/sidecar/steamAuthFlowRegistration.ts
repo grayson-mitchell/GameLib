@@ -94,7 +94,7 @@
  *     untrusted at runtime despite its type contract. Only a valid payload
  *     calls `redeemKey(deps, store, key)`. Never logs the key value on
  *     either path.
- *   - `getSteamInstallSize` -> `getSteamInstallSize(appId)` (`main.ts:923-925`,
+ *   - `getSteamInstallSize` -> `getSteamInstallSize(deps, appId)` (`main.ts:923-925`,
  *     imported from `steam/games.ts`, not `steam/library.ts`).
  *
  * Never live-run (D-08): `steamBottleProvision` downloads a real CrossOver
@@ -253,7 +253,7 @@ export function registerSteamAuthFlows(deps: SteamAuthFlowDeps): void {
   deps.ipc.handle(
     'getSteamInstallSize',
     async (_event: unknown, ...args: unknown[]) => {
-      return getSteamInstallSize(args[0], undefined, managerDeps())
+      return getSteamInstallSize(managerDeps(), args[0])
     }
   )
 

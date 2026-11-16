@@ -25,16 +25,20 @@ export function hostSteamDepotOs(): string {
  * is already a `getFileSize`-formatted string (persisted that way by
  * library.ts) — return it directly, no parse.
  *
- * Pre-install estimate: call the public Steam store appdetails API, parse
- * the `pc_requirements.minimum` HTML for a storage figure, and return it via
- * getFileSize. Falls back to '?? MB' when no figure is obtainable (D-03).
+ * Pre-install estimate: the Rust `steamcm_store_appdetails` op reads the
+ * public store appdetails storage figure, returned via getFileSize. Falls
+ * back to '?? MB' when no figure is obtainable (D-03).
+ *
+ * `deps` comes first and is required (79-REVIEW C2/IN-02): with the axios
+ * fallback gone, the Rust op is the only source of an estimate, so a caller
+ * that could omit it would silently get '?? MB' for every uninstalled title.
  *
  * appId is guarded with /^\d+$/ before any network request (T-06-01).
  */
 export async function getSteamInstallSize(
+  deps: RustInvokeDeps,
   appId: unknown,
-  gameInfo?: GameInfo,
-  deps?: RustInvokeDeps
+  gameInfo?: GameInfo
 ): Promise<string> {
   // Fast path: already installed — install_size is already formatted, return
   // it directly (no parse, no network needed)
@@ -64,32 +68,25 @@ export async function getSteamInstallSize(
     return '?? MB'
   }
 
-  // D-12: cm=rust reads the byte figure from the Rust appdetails op.
-  if (deps) {
-    try {
-      const res = await invokeSteamCm(deps, RUST_STEAMCM_STORE_APPDETAILS, {
-        appId
-      })
-      if (res.ok) {
-        const bytes = res.result.storageBytes
-        if (bytes && bytes > 0) return getFileSize(bytes)
-      } else {
-        logWarning(
-          `getSteamInstallSize: store appdetails failed for appId ${appId}: ${res.kind}`,
-          LogPrefix.Steam
-        )
-      }
-    } catch (err) {
+  // D-12: the byte figure comes from the Rust appdetails op.
+  try {
+    const res = await invokeSteamCm(deps, RUST_STEAMCM_STORE_APPDETAILS, {
+      appId
+    })
+    if (res.ok) {
+      const bytes = res.result.storageBytes
+      if (bytes && bytes > 0) return getFileSize(bytes)
+    } else {
       logWarning(
-        [
-          `getSteamInstallSize: store appdetails failed for appId ${appId}:`,
-          err
-        ],
+        `getSteamInstallSize: store appdetails failed for appId ${appId}: ${res.kind}`,
         LogPrefix.Steam
       )
     }
-    return '?? MB'
+  } catch (err) {
+    logWarning(
+      [`getSteamInstallSize: store appdetails failed for appId ${appId}:`, err],
+      LogPrefix.Steam
+    )
   }
-
   return '?? MB'
 }
