@@ -908,9 +908,10 @@ async fn the_mac_arch_probe_runs_off_tick_only_when_the_ack_asks_for_it() {
         let bin_dir = r.steamapps.join("common/Game/Game.app/Contents/MacOS");
         std::fs::create_dir_all(&bin_dir).unwrap();
         std::fs::write(bin_dir.join("Game"), b"x").unwrap();
-        let bin =
-            gamelib_steampoll::mac_arch::locate_macho_binary(&r.steamapps.join("common/Game"))
-                .expect("binary");
+        let bin = gamelib_steampoll::mac_arch::locate_macho_binary(
+            &r.steamapps.join("common").join("Game"),
+        )
+        .expect("binary");
         r.runner.on(
             &format!("lipo -archs {}", bin.to_string_lossy()),
             vec![RunOutput {
