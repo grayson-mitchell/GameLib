@@ -60,7 +60,9 @@ function controlRoundTrip(
     const timeout = setTimeout(() => finish(null), CONTROL_TIMEOUT_MS)
     timeout.unref?.()
 
-    socket.once('error', () => finish(null))
+    // Persistent handler: a late second 'error' after destroy must not become
+    // an uncaught exception (58 IN-01); finish() is idempotent via `settled`.
+    socket.on('error', () => finish(null))
 
     socket.connect(port, BRIDGE_HOST, () => {
       try {
