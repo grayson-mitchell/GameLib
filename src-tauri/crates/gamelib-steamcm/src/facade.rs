@@ -20,7 +20,7 @@ use serde_json::{json, Map, Value};
 
 use crate::anon::AnonHandle;
 use crate::backend::{CmBackend, CmConn, OwnedOpts, RefreshTokenSecret};
-use crate::error::{eresult_of, CmError};
+use crate::error::{diag, eresult_of, CmError};
 use crate::ops::{account, depot, pics};
 use crate::runtime::block_on_guarded;
 use crate::session::{
@@ -155,13 +155,19 @@ impl<B: CmBackend> Core<B> {
         Ok(())
     }
 
-    /// Must run inside the runtime. Idempotent: the first configure wins.
+    /// Must run inside the runtime. Idempotent: the first configure wins, for the folder as well
+    /// as the session. A/IN-07: the session's wrap holds the first folder, so a later folder would
+    /// make `wrap_restore_if_owed` and the session shutdown read different owed records.
     pub(crate) fn configure_with<W: LogonWrap>(&self, app_folder: PathBuf, wrap: Arc<W>) {
-        *lock(&self.app_folder) = Some(app_folder);
         let mut s = lock(&self.session);
-        if s.is_none() {
-            *s = Some(SessionHandle::spawn(self.backend.clone(), wrap));
+        if s.is_some() {
+            if lock(&self.app_folder).as_ref() != Some(&app_folder) {
+                diag("steamcm configure: app folder differs from the first; keeping the first");
+            }
+            return;
         }
+        *lock(&self.app_folder) = Some(app_folder);
+        *s = Some(SessionHandle::spawn(self.backend.clone(), wrap));
     }
 
     // ---- session ----
@@ -819,6 +825,15 @@ mod tests {
         let st = c.session_status().await;
         assert_eq!(st["leaseCount"], 1);
         assert!(c.host_for_tests().is_none());
+    }
+
+    /// A/IN-07: a second configure changes neither the folder nor the session.
+    #[tokio::test]
+    async fn the_first_configure_wins_for_the_app_folder_too() {
+        let c = core_fake();
+        c.configure_with(PathBuf::from("/first"), Arc::new(NoWrap));
+        c.configure_with(PathBuf::from("/second"), Arc::new(NoWrap));
+        assert_eq!(lock(&c.app_folder).clone(), Some(PathBuf::from("/first")));
     }
 
     #[tokio::test]
