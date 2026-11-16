@@ -66,3 +66,9 @@ Verification for every fix: `pnpm build-steam-bridge` (native helper plus both s
 _Fixed: 2026-11-01_
 _Fixer: Claude (gsd-code-fixer)_
 _Iteration: 1_
+
+## Phase 78 follow-up (2026-11-17)
+
+- IN-01 and IN-02, out of this fix pass's scope, were fixed in Phase 78: IN-01 in `inviteBridge.ts` (`socket.on('error')`, test commit `32c1eb938`, fix commit `ecc58d332`), IN-02 in `bridge_helper.c` (comment now names `gl_serve_forever`, commit `ffe77b2c5`).
+- WR-03 gained source pins for the 250 ms send timeout and `SO_SNDBUF` in the 58-35 source-pins test (commit `ffe77b2c5`).
+

@@ -16,9 +16,6 @@ re_verification:
   regressions: []
 gaps: []
 follow_ups:
-  - "WR-01 (58-REVIEW): picker trigger rides on a log line capped at 16 per helper process; after 16 '+' presses the picker never opens. Not goal-blocking (live gate used 8 presses). File as todo."
-  - "WR-02..WR-05, IN-01/02 from 58-REVIEW (connection-slot exhaustion, blocking send, friend ordinal reassignment, unanchored INVITE regex)."
-  - "Todo 2026-11-01-callback-1298-on-bridge-join-path (D-09 unlisted callback 1298)."
   - "58-33 item 2(e) passed only under an operator amendment (main-menu '+' refuses cleanly with INVITE refused reason=no-pending); would be 'issue' under the original criterion. Item 3 path=unknown (lsof showed no remote endpoint)."
 human_verification: []
 ---
@@ -27,6 +24,21 @@ human_verification: []
 
 **Phase Goal:** A Steam multiplayer title run through the macOS native bridge can host, find and join an online session with a second Steam account, in TCP shim mode and DRM mode. Done when, on this Mac, one TCP-mode title and one DRM-mode title each host a session that a second account joins and plays in, with the join visible in the bridge trace.
 **Status:** passed. **Re-verification:** yes (gap plans 58-25..58-37 executed).
+
+## Follow-up status (current, Phase 78 re-check 2026-11-17)
+
+The earlier follow_ups bundled seven review items as "fixed" or "filed"; each is re-measured at HEAD below. Paths are relative to `src/backend/storeManagers/steam/bridge/` unless they start with `native/`.
+
+- WR-01 picker log cap: closed. `native/steam-bridge/helper/bridge_helper.c` invite-dialog log emission at `:2379` (`logts_f("INVITE", "dialog appid=...")`), covered by `__tests__/helperSpawn.test.ts:232` ("invite-dialog: forwards once, logs one INVITE dialog line") and `__tests__/helperNetHarness.test.ts`. Commits `3c76c1cf5` / `e2ac4e8a5`.
+- WR-02 pre-auth slot exhaustion: closed. `bridge_helper.c:305` `GL_AUTH_DEADLINE_SECONDS`, eviction at `:3124`; `__tests__/helperIntegration.test.ts:2135` ("58 WR-02: a full table evicts its oldest unauthenticated slot ..."). Commit `98aa57699`.
+- WR-03 blocking send: closed. `bridge_helper.c:313` `GL_SEND_TIMEOUT_USEC 250000`, `:3157` `SO_SNDTIMEO`, `:3165` `SO_SNDBUF`. Pinned by the 58-35 source-pins test in `__tests__/helperIntegration.test.ts` (commit `ffe77b2c5`, pin-only: it pins existing code) plus the 58-REVIEW-FIX live session-continuity check. No automated stalled-reader reproduction exists.
+- WR-04 stale friend ordinal: closed. `bridge_helper.c:2327` `_Static_assert` on the token index, `:2481` `GL_INVITE_BAD_ORDINAL`; `__tests__/helperNetHarness.test.ts:313` ("... stale snapshot token ..."). Commit `56f46ff7a`.
+- WR-05 unanchored INVITE regex: closed. `helperSpawn.ts:49` `INVITE_DIALOG_LINE` (anchored; moved from helperProcess.ts); `__tests__/helperSpawn.test.ts:286` ("58 WR-05: the text embedded inside another line does nothing"). Commit `0453435c9`.
+- IN-01 socket error handler: fixed in Phase 78. `inviteBridge.ts:65` `socket.on('error', ...)` (was `once`); covered by the new "IN-01: a second socket error after settle does not throw" test in `__tests__/inviteBridge.test.ts` (RED commit `32c1eb938`, fix commit `ecc58d332`).
+- IN-02 stale comment: fixed in Phase 78. `bridge_helper.c:2299` now reads "one poll loop, see gl_serve_forever" (commit `ffe77b2c5`).
+- callback-1298 (D-18a): dropped. Closed 2026-11-06 in `.planning/todos/completed/2026-11-01-callback-1298-on-bridge-join-path.md` (`## Closed 2026-11-06`); the reopen trigger lives in that todo.
+
+Genuinely open: the 58-33 item 2(e) operator-amendment / Item 3 `path=unknown` entry, the only remaining `follow_ups` item.
 
 ## Done-when, per mode
 
