@@ -107,6 +107,30 @@ pub(crate) enum RustInvokeChannel {
     SteamcmStoreAppdetails,
     SteamcmStoreEnrich,
     SteamcmWrapRestoreIfOwed,
+    SteampollAcfEnumerateCopies,
+    SteampollAcfFindOtherManifests,
+    SteampollAcfReadState,
+    SteampollAcfReadUpdate,
+    SteampollAcfReadUpdateFromDir,
+    SteampollAcfRemoveCopy,
+    SteampollAcfScanDownloading,
+    SteampollBreadcrumbInstalledOnDisk,
+    SteampollBridgeFinalized,
+    SteampollInstallCancelDelegated,
+    SteampollInstallStart,
+    SteampollInstallStop,
+    SteampollMacArchVerdict,
+    SteampollNativeInFlight,
+    SteampollNextNoticeSeq,
+    SteampollReadRunningAppId,
+    SteampollRunningHold,
+    SteampollRunningLastAppId,
+    SteampollRunningRelease,
+    SteampollRunningStart,
+    SteampollRunningStop,
+    SteampollStatus,
+    SteampollUninstallStart,
+    SteampollUninstallStop,
 }
 
 impl RustInvokeChannel {
@@ -198,6 +222,30 @@ impl RustInvokeChannel {
         RustInvokeChannel::SteamcmStoreAppdetails,
         RustInvokeChannel::SteamcmStoreEnrich,
         RustInvokeChannel::SteamcmWrapRestoreIfOwed,
+        RustInvokeChannel::SteampollAcfEnumerateCopies,
+        RustInvokeChannel::SteampollAcfFindOtherManifests,
+        RustInvokeChannel::SteampollAcfReadState,
+        RustInvokeChannel::SteampollAcfReadUpdate,
+        RustInvokeChannel::SteampollAcfReadUpdateFromDir,
+        RustInvokeChannel::SteampollAcfRemoveCopy,
+        RustInvokeChannel::SteampollAcfScanDownloading,
+        RustInvokeChannel::SteampollBreadcrumbInstalledOnDisk,
+        RustInvokeChannel::SteampollBridgeFinalized,
+        RustInvokeChannel::SteampollInstallCancelDelegated,
+        RustInvokeChannel::SteampollInstallStart,
+        RustInvokeChannel::SteampollInstallStop,
+        RustInvokeChannel::SteampollMacArchVerdict,
+        RustInvokeChannel::SteampollNativeInFlight,
+        RustInvokeChannel::SteampollNextNoticeSeq,
+        RustInvokeChannel::SteampollReadRunningAppId,
+        RustInvokeChannel::SteampollRunningHold,
+        RustInvokeChannel::SteampollRunningLastAppId,
+        RustInvokeChannel::SteampollRunningRelease,
+        RustInvokeChannel::SteampollRunningStart,
+        RustInvokeChannel::SteampollRunningStop,
+        RustInvokeChannel::SteampollStatus,
+        RustInvokeChannel::SteampollUninstallStart,
+        RustInvokeChannel::SteampollUninstallStop,
     ];
 
     pub(crate) fn from_name(name: &str) -> Option<Self> {
@@ -289,6 +337,30 @@ impl RustInvokeChannel {
             "steamcm_store_appdetails" => Some(RustInvokeChannel::SteamcmStoreAppdetails),
             "steamcm_store_enrich" => Some(RustInvokeChannel::SteamcmStoreEnrich),
             "steamcm_wrap_restore_if_owed" => Some(RustInvokeChannel::SteamcmWrapRestoreIfOwed),
+            "steampoll_acf_enumerate_copies" => Some(RustInvokeChannel::SteampollAcfEnumerateCopies),
+            "steampoll_acf_find_other_manifests" => Some(RustInvokeChannel::SteampollAcfFindOtherManifests),
+            "steampoll_acf_read_state" => Some(RustInvokeChannel::SteampollAcfReadState),
+            "steampoll_acf_read_update" => Some(RustInvokeChannel::SteampollAcfReadUpdate),
+            "steampoll_acf_read_update_from_dir" => Some(RustInvokeChannel::SteampollAcfReadUpdateFromDir),
+            "steampoll_acf_remove_copy" => Some(RustInvokeChannel::SteampollAcfRemoveCopy),
+            "steampoll_acf_scan_downloading" => Some(RustInvokeChannel::SteampollAcfScanDownloading),
+            "steampoll_breadcrumb_installed_on_disk" => Some(RustInvokeChannel::SteampollBreadcrumbInstalledOnDisk),
+            "steampoll_bridge_finalized" => Some(RustInvokeChannel::SteampollBridgeFinalized),
+            "steampoll_install_cancel_delegated" => Some(RustInvokeChannel::SteampollInstallCancelDelegated),
+            "steampoll_install_start" => Some(RustInvokeChannel::SteampollInstallStart),
+            "steampoll_install_stop" => Some(RustInvokeChannel::SteampollInstallStop),
+            "steampoll_mac_arch_verdict" => Some(RustInvokeChannel::SteampollMacArchVerdict),
+            "steampoll_native_in_flight" => Some(RustInvokeChannel::SteampollNativeInFlight),
+            "steampoll_next_notice_seq" => Some(RustInvokeChannel::SteampollNextNoticeSeq),
+            "steampoll_read_running_app_id" => Some(RustInvokeChannel::SteampollReadRunningAppId),
+            "steampoll_running_hold" => Some(RustInvokeChannel::SteampollRunningHold),
+            "steampoll_running_last_app_id" => Some(RustInvokeChannel::SteampollRunningLastAppId),
+            "steampoll_running_release" => Some(RustInvokeChannel::SteampollRunningRelease),
+            "steampoll_running_start" => Some(RustInvokeChannel::SteampollRunningStart),
+            "steampoll_running_stop" => Some(RustInvokeChannel::SteampollRunningStop),
+            "steampoll_status" => Some(RustInvokeChannel::SteampollStatus),
+            "steampoll_uninstall_start" => Some(RustInvokeChannel::SteampollUninstallStart),
+            "steampoll_uninstall_stop" => Some(RustInvokeChannel::SteampollUninstallStop),
             _ => None,
         }
     }
@@ -382,6 +454,30 @@ impl RustInvokeChannel {
             RustInvokeChannel::SteamcmStoreAppdetails => "steamcm_store_appdetails",
             RustInvokeChannel::SteamcmStoreEnrich => "steamcm_store_enrich",
             RustInvokeChannel::SteamcmWrapRestoreIfOwed => "steamcm_wrap_restore_if_owed",
+            RustInvokeChannel::SteampollAcfEnumerateCopies => "steampoll_acf_enumerate_copies",
+            RustInvokeChannel::SteampollAcfFindOtherManifests => "steampoll_acf_find_other_manifests",
+            RustInvokeChannel::SteampollAcfReadState => "steampoll_acf_read_state",
+            RustInvokeChannel::SteampollAcfReadUpdate => "steampoll_acf_read_update",
+            RustInvokeChannel::SteampollAcfReadUpdateFromDir => "steampoll_acf_read_update_from_dir",
+            RustInvokeChannel::SteampollAcfRemoveCopy => "steampoll_acf_remove_copy",
+            RustInvokeChannel::SteampollAcfScanDownloading => "steampoll_acf_scan_downloading",
+            RustInvokeChannel::SteampollBreadcrumbInstalledOnDisk => "steampoll_breadcrumb_installed_on_disk",
+            RustInvokeChannel::SteampollBridgeFinalized => "steampoll_bridge_finalized",
+            RustInvokeChannel::SteampollInstallCancelDelegated => "steampoll_install_cancel_delegated",
+            RustInvokeChannel::SteampollInstallStart => "steampoll_install_start",
+            RustInvokeChannel::SteampollInstallStop => "steampoll_install_stop",
+            RustInvokeChannel::SteampollMacArchVerdict => "steampoll_mac_arch_verdict",
+            RustInvokeChannel::SteampollNativeInFlight => "steampoll_native_in_flight",
+            RustInvokeChannel::SteampollNextNoticeSeq => "steampoll_next_notice_seq",
+            RustInvokeChannel::SteampollReadRunningAppId => "steampoll_read_running_app_id",
+            RustInvokeChannel::SteampollRunningHold => "steampoll_running_hold",
+            RustInvokeChannel::SteampollRunningLastAppId => "steampoll_running_last_app_id",
+            RustInvokeChannel::SteampollRunningRelease => "steampoll_running_release",
+            RustInvokeChannel::SteampollRunningStart => "steampoll_running_start",
+            RustInvokeChannel::SteampollRunningStop => "steampoll_running_stop",
+            RustInvokeChannel::SteampollStatus => "steampoll_status",
+            RustInvokeChannel::SteampollUninstallStart => "steampoll_uninstall_start",
+            RustInvokeChannel::SteampollUninstallStop => "steampoll_uninstall_stop",
         }
     }
 }
@@ -1847,5 +1943,452 @@ impl SteamcmWrapRestoreIfOwedArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let first = args.first().ok_or_else(|| "steamcm_wrap_restore_if_owed:bad-args".to_string())?;
         serde_json::from_value(first.clone()).map_err(|_| "steamcm_wrap_restore_if_owed:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteampollAcfEnumerateCopiesArgs {
+    pub(crate) roots: SteampollAcfEnumerateCopiesArgsRoots,
+    #[serde(rename = "appId")]
+    pub(crate) app_id: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteampollAcfEnumerateCopiesArgsRoots {
+    #[serde(rename = "steamRoot")]
+    pub(crate) steam_root: String,
+    #[serde(rename = "bottleSteamappsRoot")]
+    #[serde(default)]
+    pub(crate) bottle_steamapps_root: Option<String>,
+    #[serde(rename = "bridgeSteamappsRoot")]
+    #[serde(default)]
+    pub(crate) bridge_steamapps_root: Option<String>,
+}
+
+impl SteampollAcfEnumerateCopiesArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steampoll_acf_enumerate_copies:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steampoll_acf_enumerate_copies:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteampollAcfFindOtherManifestsArgs {
+    #[serde(rename = "steamappsDir")]
+    pub(crate) steamapps_dir: String,
+    pub(crate) installdir: String,
+    #[serde(rename = "appId")]
+    pub(crate) app_id: String,
+}
+
+impl SteampollAcfFindOtherManifestsArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steampoll_acf_find_other_manifests:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steampoll_acf_find_other_manifests:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteampollAcfReadStateArgs {
+    pub(crate) roots: SteampollAcfReadStateArgsRoots,
+    #[serde(rename = "appId")]
+    pub(crate) app_id: String,
+    pub(crate) source: SteampollAcfReadStateArgsSource,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteampollAcfReadStateArgsRoots {
+    #[serde(rename = "steamRoot")]
+    pub(crate) steam_root: String,
+    #[serde(rename = "bottleSteamappsRoot")]
+    #[serde(default)]
+    pub(crate) bottle_steamapps_root: Option<String>,
+    #[serde(rename = "bridgeSteamappsRoot")]
+    #[serde(default)]
+    pub(crate) bridge_steamapps_root: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub(crate) enum SteampollAcfReadStateArgsSource {
+    #[serde(rename = "native")]
+    Native,
+    #[serde(rename = "bottle")]
+    Bottle,
+    #[serde(rename = "bridge")]
+    Bridge,
+}
+
+impl SteampollAcfReadStateArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steampoll_acf_read_state:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steampoll_acf_read_state:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteampollAcfReadUpdateArgs {
+    pub(crate) roots: SteampollAcfReadUpdateArgsRoots,
+    #[serde(rename = "appId")]
+    pub(crate) app_id: String,
+    pub(crate) source: SteampollAcfReadUpdateArgsSource,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteampollAcfReadUpdateArgsRoots {
+    #[serde(rename = "steamRoot")]
+    pub(crate) steam_root: String,
+    #[serde(rename = "bottleSteamappsRoot")]
+    #[serde(default)]
+    pub(crate) bottle_steamapps_root: Option<String>,
+    #[serde(rename = "bridgeSteamappsRoot")]
+    #[serde(default)]
+    pub(crate) bridge_steamapps_root: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub(crate) enum SteampollAcfReadUpdateArgsSource {
+    #[serde(rename = "native")]
+    Native,
+    #[serde(rename = "bottle")]
+    Bottle,
+    #[serde(rename = "bridge")]
+    Bridge,
+}
+
+impl SteampollAcfReadUpdateArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steampoll_acf_read_update:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steampoll_acf_read_update:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteampollAcfReadUpdateFromDirArgs {
+    #[serde(rename = "steamappsDir")]
+    pub(crate) steamapps_dir: String,
+    #[serde(rename = "appId")]
+    pub(crate) app_id: String,
+}
+
+impl SteampollAcfReadUpdateFromDirArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steampoll_acf_read_update_from_dir:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steampoll_acf_read_update_from_dir:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteampollAcfRemoveCopyArgs {
+    pub(crate) roots: SteampollAcfRemoveCopyArgsRoots,
+    #[serde(rename = "appId")]
+    pub(crate) app_id: String,
+    pub(crate) source: SteampollAcfRemoveCopyArgsSource,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteampollAcfRemoveCopyArgsRoots {
+    #[serde(rename = "steamRoot")]
+    pub(crate) steam_root: String,
+    #[serde(rename = "bottleSteamappsRoot")]
+    #[serde(default)]
+    pub(crate) bottle_steamapps_root: Option<String>,
+    #[serde(rename = "bridgeSteamappsRoot")]
+    #[serde(default)]
+    pub(crate) bridge_steamapps_root: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub(crate) enum SteampollAcfRemoveCopyArgsSource {
+    #[serde(rename = "native")]
+    Native,
+    #[serde(rename = "bottle")]
+    Bottle,
+    #[serde(rename = "bridge")]
+    Bridge,
+}
+
+impl SteampollAcfRemoveCopyArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steampoll_acf_remove_copy:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steampoll_acf_remove_copy:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteampollAcfScanDownloadingArgs {
+    pub(crate) roots: SteampollAcfScanDownloadingArgsRoots,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteampollAcfScanDownloadingArgsRoots {
+    #[serde(rename = "steamRoot")]
+    pub(crate) steam_root: String,
+    #[serde(rename = "bottleSteamappsRoot")]
+    #[serde(default)]
+    pub(crate) bottle_steamapps_root: Option<String>,
+    #[serde(rename = "bridgeSteamappsRoot")]
+    #[serde(default)]
+    pub(crate) bridge_steamapps_root: Option<String>,
+}
+
+impl SteampollAcfScanDownloadingArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steampoll_acf_scan_downloading:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steampoll_acf_scan_downloading:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteampollBreadcrumbInstalledOnDiskArgs {
+    #[serde(rename = "steamappsDir")]
+    pub(crate) steamapps_dir: String,
+    #[serde(rename = "appId")]
+    pub(crate) app_id: String,
+}
+
+impl SteampollBreadcrumbInstalledOnDiskArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steampoll_breadcrumb_installed_on_disk:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steampoll_breadcrumb_installed_on_disk:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteampollBridgeFinalizedArgs {
+    #[serde(rename = "appId")]
+    pub(crate) app_id: String,
+    pub(crate) finalized: bool,
+}
+
+impl SteampollBridgeFinalizedArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steampoll_bridge_finalized:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steampoll_bridge_finalized:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteampollInstallCancelDelegatedArgs {
+    #[serde(rename = "appId")]
+    pub(crate) app_id: String,
+}
+
+impl SteampollInstallCancelDelegatedArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steampoll_install_cancel_delegated:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steampoll_install_cancel_delegated:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteampollInstallStartArgs {
+    #[serde(rename = "appId")]
+    pub(crate) app_id: String,
+    pub(crate) title: String,
+    pub(crate) roots: SteampollInstallStartArgsRoots,
+    #[serde(default)]
+    pub(crate) options: Option<Value>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteampollInstallStartArgsRoots {
+    #[serde(rename = "steamRoot")]
+    pub(crate) steam_root: String,
+    #[serde(rename = "bottleSteamappsRoot")]
+    #[serde(default)]
+    pub(crate) bottle_steamapps_root: Option<String>,
+    #[serde(rename = "bridgeSteamappsRoot")]
+    #[serde(default)]
+    pub(crate) bridge_steamapps_root: Option<String>,
+}
+
+impl SteampollInstallStartArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steampoll_install_start:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steampoll_install_start:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteampollInstallStopArgs {
+    #[serde(rename = "appId")]
+    pub(crate) app_id: String,
+}
+
+impl SteampollInstallStopArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steampoll_install_stop:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steampoll_install_stop:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteampollMacArchVerdictArgs {
+    #[serde(rename = "installPath")]
+    pub(crate) install_path: String,
+}
+
+impl SteampollMacArchVerdictArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steampoll_mac_arch_verdict:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steampoll_mac_arch_verdict:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteampollNativeInFlightArgs {
+    #[serde(rename = "appId")]
+    pub(crate) app_id: String,
+    #[serde(rename = "inFlight")]
+    pub(crate) in_flight: bool,
+}
+
+impl SteampollNativeInFlightArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steampoll_native_in_flight:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steampoll_native_in_flight:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct SteampollNextNoticeSeqArgs;
+
+impl SteampollNextNoticeSeqArgs {
+    pub(crate) fn from_args(_args: &[Value]) -> Result<Self, String> {
+        Ok(Self)
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteampollReadRunningAppIdArgs {
+    #[serde(default)]
+    pub(crate) strict: Option<bool>,
+}
+
+impl SteampollReadRunningAppIdArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steampoll_read_running_app_id:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steampoll_read_running_app_id:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteampollRunningHoldArgs {
+    #[serde(rename = "appId")]
+    pub(crate) app_id: i64,
+}
+
+impl SteampollRunningHoldArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steampoll_running_hold:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steampoll_running_hold:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct SteampollRunningLastAppIdArgs;
+
+impl SteampollRunningLastAppIdArgs {
+    pub(crate) fn from_args(_args: &[Value]) -> Result<Self, String> {
+        Ok(Self)
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteampollRunningReleaseArgs {
+    #[serde(rename = "claimId")]
+    pub(crate) claim_id: i64,
+    #[serde(rename = "terminalSent")]
+    pub(crate) terminal_sent: bool,
+}
+
+impl SteampollRunningReleaseArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steampoll_running_release:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steampoll_running_release:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct SteampollRunningStartArgs;
+
+impl SteampollRunningStartArgs {
+    pub(crate) fn from_args(_args: &[Value]) -> Result<Self, String> {
+        Ok(Self)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct SteampollRunningStopArgs;
+
+impl SteampollRunningStopArgs {
+    pub(crate) fn from_args(_args: &[Value]) -> Result<Self, String> {
+        Ok(Self)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct SteampollStatusArgs;
+
+impl SteampollStatusArgs {
+    pub(crate) fn from_args(_args: &[Value]) -> Result<Self, String> {
+        Ok(Self)
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteampollUninstallStartArgs {
+    #[serde(rename = "appId")]
+    pub(crate) app_id: String,
+    pub(crate) title: String,
+    pub(crate) roots: SteampollUninstallStartArgsRoots,
+    pub(crate) source: SteampollUninstallStartArgsSource,
+    #[serde(rename = "intervalMs")]
+    #[serde(default)]
+    pub(crate) interval_ms: Option<i64>,
+    #[serde(rename = "bridgeAuthoritative")]
+    #[serde(default)]
+    pub(crate) bridge_authoritative: Option<bool>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteampollUninstallStartArgsRoots {
+    #[serde(rename = "steamRoot")]
+    pub(crate) steam_root: String,
+    #[serde(rename = "bottleSteamappsRoot")]
+    #[serde(default)]
+    pub(crate) bottle_steamapps_root: Option<String>,
+    #[serde(rename = "bridgeSteamappsRoot")]
+    #[serde(default)]
+    pub(crate) bridge_steamapps_root: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub(crate) enum SteampollUninstallStartArgsSource {
+    #[serde(rename = "native")]
+    Native,
+    #[serde(rename = "bottle")]
+    Bottle,
+    #[serde(rename = "bridge")]
+    Bridge,
+}
+
+impl SteampollUninstallStartArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steampoll_uninstall_start:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steampoll_uninstall_start:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteampollUninstallStopArgs {
+    #[serde(rename = "appId")]
+    pub(crate) app_id: String,
+}
+
+impl SteampollUninstallStopArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steampoll_uninstall_stop:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steampoll_uninstall_stop:bad-args".to_string())
     }
 }

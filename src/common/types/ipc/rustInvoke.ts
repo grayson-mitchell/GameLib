@@ -28,6 +28,30 @@ import {
   RUST_DEPOT_JOB_CANCEL,
   RUST_DEPOT_JOB_RUN,
   RUST_DEPOT_MANIFEST_SUMMARY,
+  RUST_STEAMPOLL_ACF_ENUMERATE_COPIES,
+  RUST_STEAMPOLL_ACF_FIND_OTHER_MANIFESTS,
+  RUST_STEAMPOLL_ACF_READ_STATE,
+  RUST_STEAMPOLL_ACF_READ_UPDATE,
+  RUST_STEAMPOLL_ACF_READ_UPDATE_FROM_DIR,
+  RUST_STEAMPOLL_ACF_REMOVE_COPY,
+  RUST_STEAMPOLL_ACF_SCAN_DOWNLOADING,
+  RUST_STEAMPOLL_BREADCRUMB_INSTALLED_ON_DISK,
+  RUST_STEAMPOLL_BRIDGE_FINALIZED,
+  RUST_STEAMPOLL_INSTALL_CANCEL_DELEGATED,
+  RUST_STEAMPOLL_INSTALL_START,
+  RUST_STEAMPOLL_INSTALL_STOP,
+  RUST_STEAMPOLL_MAC_ARCH_VERDICT,
+  RUST_STEAMPOLL_NATIVE_IN_FLIGHT,
+  RUST_STEAMPOLL_NEXT_NOTICE_SEQ,
+  RUST_STEAMPOLL_READ_RUNNING_APP_ID,
+  RUST_STEAMPOLL_RUNNING_HOLD,
+  RUST_STEAMPOLL_RUNNING_LAST_APP_ID,
+  RUST_STEAMPOLL_RUNNING_RELEASE,
+  RUST_STEAMPOLL_RUNNING_START,
+  RUST_STEAMPOLL_RUNNING_STOP,
+  RUST_STEAMPOLL_STATUS,
+  RUST_STEAMPOLL_UNINSTALL_START,
+  RUST_STEAMPOLL_UNINSTALL_STOP,
   RUST_STEAMCM_ANON_CLOSE,
   RUST_STEAMCM_ANON_PRODUCT_INFO,
   RUST_STEAMCM_CONFIGURE,
@@ -128,6 +152,26 @@ const opaque = (title: string) =>
 // so this stays an opaque value and the generated Args carries it as a `serde_json::Value`.
 const depotValueArg = z.tuple([
   z.unknown().meta({ title: 'request', 'x-rust-value': true })
+])
+// ---- Steam polling (Phase 80). Mirrors the gamelib-steampoll op args; the crate re-validates with
+// deny_unknown_fields. appId stays a string here (the crate enforces the numeric constraint).
+const pollRoots = z
+  .object({
+    steamRoot: z.string(),
+    bottleSteamappsRoot: z.string().nullish(),
+    bridgeSteamappsRoot: z.string().nullish()
+  })
+  .strict()
+const pollSource = z.enum(['native', 'bottle', 'bridge'])
+const pollAppArg = z.tuple([z.object({ appId: z.string() }).strict()])
+const pollRootsAppArg = z.tuple([
+  z.object({ roots: pollRoots, appId: z.string() }).strict()
+])
+const pollRootsAppSourceArg = z.tuple([
+  z.object({ roots: pollRoots, appId: z.string(), source: pollSource }).strict()
+])
+const pollDirAppArg = z.tuple([
+  z.object({ steamappsDir: z.string(), appId: z.string() }).strict()
 ])
 const pathArg = z.tuple([z.object({ path: z.string() }).strict()])
 const pathAppArg = z.tuple([
@@ -299,6 +343,79 @@ export const rustInvokeArgs = {
   [RUST_STEAMFILES_SCAN_ACFS]: dirsArg,
   [RUST_STEAMFILES_SHORTCUTS_APPLY]: applyArg,
   [RUST_STEAMFILES_SHORTCUTS_READ]: pathArg,
+  // ---- Steam install/uninstall/running polling (Phase 80)
+  [RUST_STEAMPOLL_ACF_ENUMERATE_COPIES]: pollRootsAppArg,
+  [RUST_STEAMPOLL_ACF_FIND_OTHER_MANIFESTS]: z.tuple([
+    z
+      .object({
+        steamappsDir: z.string(),
+        installdir: z.string(),
+        appId: z.string()
+      })
+      .strict()
+  ]),
+  [RUST_STEAMPOLL_ACF_READ_STATE]: pollRootsAppSourceArg,
+  [RUST_STEAMPOLL_ACF_READ_UPDATE]: pollRootsAppSourceArg,
+  [RUST_STEAMPOLL_ACF_READ_UPDATE_FROM_DIR]: pollDirAppArg,
+  [RUST_STEAMPOLL_ACF_REMOVE_COPY]: pollRootsAppSourceArg,
+  [RUST_STEAMPOLL_ACF_SCAN_DOWNLOADING]: z.tuple([
+    z.object({ roots: pollRoots }).strict()
+  ]),
+  [RUST_STEAMPOLL_BREADCRUMB_INSTALLED_ON_DISK]: pollDirAppArg,
+  [RUST_STEAMPOLL_BRIDGE_FINALIZED]: z.tuple([
+    z.object({ appId: z.string(), finalized: z.boolean() }).strict()
+  ]),
+  [RUST_STEAMPOLL_INSTALL_CANCEL_DELEGATED]: pollAppArg,
+  // options (PollOptions) is validated in-crate with deny_unknown_fields, so it stays opaque here.
+  [RUST_STEAMPOLL_INSTALL_START]: z.tuple([
+    z
+      .object({
+        appId: z.string(),
+        title: z.string(),
+        roots: pollRoots,
+        options: z
+          .unknown()
+          .meta({ title: 'options', 'x-rust-value': true })
+          .optional()
+      })
+      .strict()
+  ]),
+  [RUST_STEAMPOLL_INSTALL_STOP]: pollAppArg,
+  [RUST_STEAMPOLL_MAC_ARCH_VERDICT]: z.tuple([
+    z.object({ installPath: z.string() }).strict()
+  ]),
+  [RUST_STEAMPOLL_NATIVE_IN_FLIGHT]: z.tuple([
+    z.object({ appId: z.string(), inFlight: z.boolean() }).strict()
+  ]),
+  [RUST_STEAMPOLL_NEXT_NOTICE_SEQ]: empty,
+  [RUST_STEAMPOLL_READ_RUNNING_APP_ID]: z.tuple([
+    z.object({ strict: z.boolean().optional() }).strict().optional()
+  ]),
+  [RUST_STEAMPOLL_RUNNING_HOLD]: z.tuple([
+    z.object({ appId: z.number().int().min(0).max(4294967295) }).strict()
+  ]),
+  [RUST_STEAMPOLL_RUNNING_LAST_APP_ID]: empty,
+  [RUST_STEAMPOLL_RUNNING_RELEASE]: z.tuple([
+    z
+      .object({ claimId: z.number().int().min(0), terminalSent: z.boolean() })
+      .strict()
+  ]),
+  [RUST_STEAMPOLL_RUNNING_START]: empty,
+  [RUST_STEAMPOLL_RUNNING_STOP]: empty,
+  [RUST_STEAMPOLL_STATUS]: empty,
+  [RUST_STEAMPOLL_UNINSTALL_START]: z.tuple([
+    z
+      .object({
+        appId: z.string(),
+        title: z.string(),
+        roots: pollRoots,
+        source: pollSource,
+        intervalMs: z.number().int().min(0).optional(),
+        bridgeAuthoritative: z.boolean().optional()
+      })
+      .strict()
+  ]),
+  [RUST_STEAMPOLL_UNINSTALL_STOP]: pollAppArg,
   // ---- Steam depot jobs (Phase 73). The job body is validated in-crate (deny_unknown_fields),
   // so the envelope only names the identifying strings and the rest is an opaque Value.
   [RUST_DEPOT_FINALIZE]: depotValueArg,

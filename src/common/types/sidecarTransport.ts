@@ -547,6 +547,167 @@ export const RUST_STEAMFILES_SHORTCUTS_APPLY =
 export const RUST_STEAMFILES_SHORTCUTS_READ =
   'steamfiles_shortcuts_read' as const
 
+// Phase 80: Rust steampoll channels, pass-throughs to the Tauri-free `gamelib-steampoll` crate.
+/**
+ * Rust-side channel name: Phase 80 steampoll op `steampoll_acf_enumerate_copies`. Enumerates every install copy of an app across the Steam roots. Args `{ roots, appId }`.
+ * Bad args reject `steampoll_acf_enumerate_copies:bad-args`.
+ */
+export const RUST_STEAMPOLL_ACF_ENUMERATE_COPIES =
+  'steampoll_acf_enumerate_copies' as const
+
+/**
+ * Rust-side channel name: Phase 80 steampoll op `steampoll_acf_find_other_manifests`. Finds other appmanifests sharing an installdir. Args `{ steamappsDir, installdir, appId }`.
+ * Bad args reject `steampoll_acf_find_other_manifests:bad-args`.
+ */
+export const RUST_STEAMPOLL_ACF_FIND_OTHER_MANIFESTS =
+  'steampoll_acf_find_other_manifests' as const
+
+/**
+ * Rust-side channel name: Phase 80 steampoll op `steampoll_acf_read_state`. Reads the ACF install state of an app. Args `{ roots, appId, source }`.
+ * Bad args reject `steampoll_acf_read_state:bad-args`.
+ */
+export const RUST_STEAMPOLL_ACF_READ_STATE = 'steampoll_acf_read_state' as const
+
+/**
+ * Rust-side channel name: Phase 80 steampoll op `steampoll_acf_read_update`. Reads the ACF update state of an app. Args `{ roots, appId, source }`.
+ * Bad args reject `steampoll_acf_read_update:bad-args`.
+ */
+export const RUST_STEAMPOLL_ACF_READ_UPDATE =
+  'steampoll_acf_read_update' as const
+
+/**
+ * Rust-side channel name: Phase 80 steampoll op `steampoll_acf_read_update_from_dir`. Reads the ACF update fields from one steamapps dir. Args `{ steamappsDir, appId }`.
+ * Bad args reject `steampoll_acf_read_update_from_dir:bad-args`.
+ */
+export const RUST_STEAMPOLL_ACF_READ_UPDATE_FROM_DIR =
+  'steampoll_acf_read_update_from_dir' as const
+
+/**
+ * Rust-side channel name: Phase 80 steampoll op `steampoll_acf_remove_copy`. Removes one install copy (appmanifest and files). Args `{ roots, appId, source }`.
+ * Bad args reject `steampoll_acf_remove_copy:bad-args`.
+ */
+export const RUST_STEAMPOLL_ACF_REMOVE_COPY =
+  'steampoll_acf_remove_copy' as const
+
+/**
+ * Rust-side channel name: Phase 80 steampoll op `steampoll_acf_scan_downloading`. Scans the roots for apps currently downloading. Args `{ roots }`.
+ * Bad args reject `steampoll_acf_scan_downloading:bad-args`.
+ */
+export const RUST_STEAMPOLL_ACF_SCAN_DOWNLOADING =
+  'steampoll_acf_scan_downloading' as const
+
+/**
+ * Rust-side channel name: Phase 80 steampoll op `steampoll_breadcrumb_installed_on_disk`. Whether the breadcrumb manifest says fully installed. Args `{ steamappsDir, appId }`.
+ * Bad args reject `steampoll_breadcrumb_installed_on_disk:bad-args`.
+ */
+export const RUST_STEAMPOLL_BREADCRUMB_INSTALLED_ON_DISK =
+  'steampoll_breadcrumb_installed_on_disk' as const
+
+/**
+ * Rust-side channel name: Phase 80 steampoll op `steampoll_bridge_finalized`. Records that the bridge finalized an install. Args `{ appId, finalized }`.
+ * Bad args reject `steampoll_bridge_finalized:bad-args`.
+ */
+export const RUST_STEAMPOLL_BRIDGE_FINALIZED =
+  'steampoll_bridge_finalized' as const
+
+/**
+ * Rust-side channel name: Phase 80 steampoll op `steampoll_install_cancel_delegated`. Cancels a delegated install poll. Args `{ appId }`.
+ * Bad args reject `steampoll_install_cancel_delegated:bad-args`.
+ */
+export const RUST_STEAMPOLL_INSTALL_CANCEL_DELEGATED =
+  'steampoll_install_cancel_delegated' as const
+
+/**
+ * Rust-side channel name: Phase 80 steampoll op `steampoll_install_start`. Starts the install poll. Args `{ appId, title, roots, options? }`; options is validated in the crate.
+ * Bad args reject `steampoll_install_start:bad-args`.
+ */
+export const RUST_STEAMPOLL_INSTALL_START = 'steampoll_install_start' as const
+
+/**
+ * Rust-side channel name: Phase 80 steampoll op `steampoll_install_stop`. Stops the install poll. Args `{ appId }`.
+ * Bad args reject `steampoll_install_stop:bad-args`.
+ */
+export const RUST_STEAMPOLL_INSTALL_STOP = 'steampoll_install_stop' as const
+
+/**
+ * Rust-side channel name: Phase 80 steampoll op `steampoll_mac_arch_verdict`. Probes the native macOS arch verdict for an install path. Args `{ installPath }`.
+ * Bad args reject `steampoll_mac_arch_verdict:bad-args`.
+ */
+export const RUST_STEAMPOLL_MAC_ARCH_VERDICT =
+  'steampoll_mac_arch_verdict' as const
+
+/**
+ * Rust-side channel name: Phase 80 steampoll op `steampoll_native_in_flight`. Marks a native install in flight. Args `{ appId, inFlight }`.
+ * Bad args reject `steampoll_native_in_flight:bad-args`.
+ */
+export const RUST_STEAMPOLL_NATIVE_IN_FLIGHT =
+  'steampoll_native_in_flight' as const
+
+/**
+ * Rust-side channel name: Phase 80 steampoll op `steampoll_next_notice_seq`. Takes the next notice sequence number. No args.
+ * Bad args reject `steampoll_next_notice_seq:bad-args`.
+ */
+export const RUST_STEAMPOLL_NEXT_NOTICE_SEQ =
+  'steampoll_next_notice_seq' as const
+
+/**
+ * Rust-side channel name: Phase 80 steampoll op `steampoll_read_running_app_id`. Reads the running Steam app id. Args `[{ strict? }]` (the object is optional).
+ * Bad args reject `steampoll_read_running_app_id:bad-args`.
+ */
+export const RUST_STEAMPOLL_READ_RUNNING_APP_ID =
+  'steampoll_read_running_app_id' as const
+
+/**
+ * Rust-side channel name: Phase 80 steampoll op `steampoll_running_hold`. Takes a running-poll hold for an app id; resolves a numeric claim id. Args `{ appId }`.
+ * Bad args reject `steampoll_running_hold:bad-args`.
+ */
+export const RUST_STEAMPOLL_RUNNING_HOLD = 'steampoll_running_hold' as const
+
+/**
+ * Rust-side channel name: Phase 80 steampoll op `steampoll_running_last_app_id`. The last running app id the poller saw. No args.
+ * Bad args reject `steampoll_running_last_app_id:bad-args`.
+ */
+export const RUST_STEAMPOLL_RUNNING_LAST_APP_ID =
+  'steampoll_running_last_app_id' as const
+
+/**
+ * Rust-side channel name: Phase 80 steampoll op `steampoll_running_release`. Releases a running-poll hold. Args `{ claimId, terminalSent }`.
+ * Bad args reject `steampoll_running_release:bad-args`.
+ */
+export const RUST_STEAMPOLL_RUNNING_RELEASE =
+  'steampoll_running_release' as const
+
+/**
+ * Rust-side channel name: Phase 80 steampoll op `steampoll_running_start`. Starts the running poll. No args.
+ * Bad args reject `steampoll_running_start:bad-args`.
+ */
+export const RUST_STEAMPOLL_RUNNING_START = 'steampoll_running_start' as const
+
+/**
+ * Rust-side channel name: Phase 80 steampoll op `steampoll_running_stop`. Stops the running poll. No args.
+ * Bad args reject `steampoll_running_stop:bad-args`.
+ */
+export const RUST_STEAMPOLL_RUNNING_STOP = 'steampoll_running_stop' as const
+
+/**
+ * Rust-side channel name: Phase 80 steampoll op `steampoll_status`. The install poll status snapshot. No args.
+ * Bad args reject `steampoll_status:bad-args`.
+ */
+export const RUST_STEAMPOLL_STATUS = 'steampoll_status' as const
+
+/**
+ * Rust-side channel name: Phase 80 steampoll op `steampoll_uninstall_start`. Starts the uninstall poll. Args `{ appId, title, roots, source, intervalMs?, bridgeAuthoritative? }`.
+ * Bad args reject `steampoll_uninstall_start:bad-args`.
+ */
+export const RUST_STEAMPOLL_UNINSTALL_START =
+  'steampoll_uninstall_start' as const
+
+/**
+ * Rust-side channel name: Phase 80 steampoll op `steampoll_uninstall_stop`. Stops the uninstall poll. Args `{ appId }`.
+ * Bad args reject `steampoll_uninstall_stop:bad-args`.
+ */
+export const RUST_STEAMPOLL_UNINSTALL_STOP = 'steampoll_uninstall_stop' as const
+
 /**
  * Phase 79: Rust CM channels, pass-throughs to the Tauri-free `gamelib-steamcm` crate (the same
  * dispatch `gamelib-steamcm-cli` uses). Each takes ONE object arg mirroring the crate's
@@ -860,7 +1021,31 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_STEAMCM_SIGNIN_STATUS,
   RUST_STEAMCM_STORE_APPDETAILS,
   RUST_STEAMCM_STORE_ENRICH,
-  RUST_STEAMCM_WRAP_RESTORE_IF_OWED
+  RUST_STEAMCM_WRAP_RESTORE_IF_OWED,
+  RUST_STEAMPOLL_ACF_ENUMERATE_COPIES,
+  RUST_STEAMPOLL_ACF_FIND_OTHER_MANIFESTS,
+  RUST_STEAMPOLL_ACF_READ_STATE,
+  RUST_STEAMPOLL_ACF_READ_UPDATE,
+  RUST_STEAMPOLL_ACF_READ_UPDATE_FROM_DIR,
+  RUST_STEAMPOLL_ACF_REMOVE_COPY,
+  RUST_STEAMPOLL_ACF_SCAN_DOWNLOADING,
+  RUST_STEAMPOLL_BREADCRUMB_INSTALLED_ON_DISK,
+  RUST_STEAMPOLL_BRIDGE_FINALIZED,
+  RUST_STEAMPOLL_INSTALL_CANCEL_DELEGATED,
+  RUST_STEAMPOLL_INSTALL_START,
+  RUST_STEAMPOLL_INSTALL_STOP,
+  RUST_STEAMPOLL_MAC_ARCH_VERDICT,
+  RUST_STEAMPOLL_NATIVE_IN_FLIGHT,
+  RUST_STEAMPOLL_NEXT_NOTICE_SEQ,
+  RUST_STEAMPOLL_READ_RUNNING_APP_ID,
+  RUST_STEAMPOLL_RUNNING_HOLD,
+  RUST_STEAMPOLL_RUNNING_LAST_APP_ID,
+  RUST_STEAMPOLL_RUNNING_RELEASE,
+  RUST_STEAMPOLL_RUNNING_START,
+  RUST_STEAMPOLL_RUNNING_STOP,
+  RUST_STEAMPOLL_STATUS,
+  RUST_STEAMPOLL_UNINSTALL_START,
+  RUST_STEAMPOLL_UNINSTALL_STOP
 ] as const
 
 /** Phase 63 (D-03): the scanner channels, a subset of {@link RUST_INVOKE_CHANNELS}. */
@@ -898,6 +1083,36 @@ export const RUST_DEPOT_CHANNELS = [
   RUST_DEPOT_JOB_RUN,
   RUST_DEPOT_MANIFEST_SUMMARY
 ] as const
+
+/** Phase 80: the steampoll channels, a subset of {@link RUST_INVOKE_CHANNELS}. */
+export const RUST_STEAMPOLL_CHANNELS = [
+  RUST_STEAMPOLL_ACF_ENUMERATE_COPIES,
+  RUST_STEAMPOLL_ACF_FIND_OTHER_MANIFESTS,
+  RUST_STEAMPOLL_ACF_READ_STATE,
+  RUST_STEAMPOLL_ACF_READ_UPDATE,
+  RUST_STEAMPOLL_ACF_READ_UPDATE_FROM_DIR,
+  RUST_STEAMPOLL_ACF_REMOVE_COPY,
+  RUST_STEAMPOLL_ACF_SCAN_DOWNLOADING,
+  RUST_STEAMPOLL_BREADCRUMB_INSTALLED_ON_DISK,
+  RUST_STEAMPOLL_BRIDGE_FINALIZED,
+  RUST_STEAMPOLL_INSTALL_CANCEL_DELEGATED,
+  RUST_STEAMPOLL_INSTALL_START,
+  RUST_STEAMPOLL_INSTALL_STOP,
+  RUST_STEAMPOLL_MAC_ARCH_VERDICT,
+  RUST_STEAMPOLL_NATIVE_IN_FLIGHT,
+  RUST_STEAMPOLL_NEXT_NOTICE_SEQ,
+  RUST_STEAMPOLL_READ_RUNNING_APP_ID,
+  RUST_STEAMPOLL_RUNNING_HOLD,
+  RUST_STEAMPOLL_RUNNING_LAST_APP_ID,
+  RUST_STEAMPOLL_RUNNING_RELEASE,
+  RUST_STEAMPOLL_RUNNING_START,
+  RUST_STEAMPOLL_RUNNING_STOP,
+  RUST_STEAMPOLL_STATUS,
+  RUST_STEAMPOLL_UNINSTALL_START,
+  RUST_STEAMPOLL_UNINSTALL_STOP
+] as const
+
+export type RustSteamPollChannel = (typeof RUST_STEAMPOLL_CHANNELS)[number]
 
 /** Phase 79: the Rust CM channels, a subset of {@link RUST_INVOKE_CHANNELS}. */
 export const RUST_STEAMCM_CHANNELS = [
