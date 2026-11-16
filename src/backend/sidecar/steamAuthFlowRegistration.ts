@@ -414,8 +414,10 @@ export function registerSteamAuthFlows(deps: SteamAuthFlowDeps): void {
   )
 
   // The guided dialog's Cancel/close. Continue arms nothing in the sidecar any more (the Rust CM
-  // session owns the go-offline wrap and its owed record), so there is no goonline to pay: a
-  // no-op kept so the dialog's channel contract is unchanged.
+  // session owns any owed-goonline record, and its production wrap never refuses a logon), so
+  // there is no goonline to pay: a no-op kept so the dialog's channel contract is unchanged.
+  // Removal of the whole, now unreachable, dialog chain is tracked in
+  // .planning/todos/pending/2026-11-16-remove-the-dead-guided-go-offline-dialog-chain.md.
   deps.ipc.handle('steamGoOfflineCancel', async () => undefined)
 
   // ── Guided Steam-client install pair (REQ-34.4-04, main.ts:958-961) ───────
