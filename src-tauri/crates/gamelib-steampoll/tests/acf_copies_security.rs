@@ -139,6 +139,101 @@ fn refuses_nested_installdir_and_keeps_shared_parent() {
     assert!(game_a.exists() && game_b.join("game.bin").exists());
 }
 
+/// 80-REVIEW iteration 2, A/WR-01: removing `Studio` must see a co-installed manifest whose raw
+/// installdir lives in `common/Studio` under another spelling, and keep that app's files.
+fn assert_other_spelling_keeps_shared_dir(other: &str) {
+    let tmp = TempDir::new().unwrap();
+    let (r, sa, _v, _s) = setup(&tmp);
+    let game_b = sa.join("common/Studio/GameB");
+    fs::create_dir_all(&game_b).unwrap();
+    fs::write(game_b.join("game.bin"), b"x").unwrap();
+    put(&sa, "10", "Studio");
+    put(&sa, "11", other);
+    let res = remove_copy(&r, "10", AcfSource::Bottle);
+    assert!(
+        matches!(
+            res,
+            RemoveCopyResult::Removed {
+                manifest_only: true,
+                ..
+            }
+        ),
+        "other installdir {other:?}: expected manifest-only removal, got {res:?}"
+    );
+    assert!(
+        game_b.join("game.bin").exists(),
+        "other installdir {other:?}: shared files deleted"
+    );
+}
+
+#[test]
+fn keeps_shared_dir_when_other_installdir_is_nested() {
+    assert_other_spelling_keeps_shared_dir("Studio/GameB");
+}
+
+#[test]
+fn keeps_shared_dir_when_other_installdir_is_nested_with_backslash() {
+    assert_other_spelling_keeps_shared_dir("Studio\\GameB");
+}
+
+#[test]
+fn keeps_shared_dir_when_other_installdir_has_trailing_separator() {
+    assert_other_spelling_keeps_shared_dir("Studio/");
+}
+
+#[test]
+fn keeps_shared_dir_when_other_installdir_has_dot_prefix() {
+    assert_other_spelling_keeps_shared_dir(".\\Studio");
+    assert_other_spelling_keeps_shared_dir("./Studio");
+}
+
+#[cfg(windows)]
+#[test]
+fn keeps_shared_dir_when_other_installdir_has_trailing_dot_or_space() {
+    assert_other_spelling_keeps_shared_dir("Studio.");
+    assert_other_spelling_keeps_shared_dir("Studio ");
+}
+
+/// An installdir the scan cannot reduce to one folder fails safe: manifest-only.
+#[test]
+fn keeps_shared_dir_when_other_installdir_is_unparseable() {
+    for other in [
+        "",
+        "/",
+        "../Studio",
+        "Foo/../Studio",
+        "C:\\Studio",
+        "/abs/Studio",
+    ] {
+        assert_other_spelling_keeps_shared_dir(other);
+    }
+}
+
+/// A co-installed manifest in a different top-level folder is not a conflict.
+#[test]
+fn removes_dir_when_other_installdir_is_a_different_folder() {
+    let tmp = TempDir::new().unwrap();
+    let (r, sa, _v, _s) = setup(&tmp);
+    let studio = sa.join("common/Studio");
+    let other = sa.join("common/Studios/GameB");
+    fs::create_dir_all(&studio).unwrap();
+    fs::create_dir_all(&other).unwrap();
+    put(&sa, "10", "Studio");
+    put(&sa, "11", "Studios/GameB");
+    let res = remove_copy(&r, "10", AcfSource::Bottle);
+    assert!(
+        matches!(
+            res,
+            RemoveCopyResult::Removed {
+                manifest_only: false,
+                ..
+            }
+        ),
+        "got {res:?}"
+    );
+    assert!(!studio.exists() && other.exists());
+}
+
 #[test]
 fn refuses_backslash_and_drive_installdir() {
     let tmp = TempDir::new().unwrap();

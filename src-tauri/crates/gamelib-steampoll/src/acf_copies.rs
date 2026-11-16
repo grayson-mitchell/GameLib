@@ -78,8 +78,9 @@ pub fn enumerate_copies(roots: &PollRoots, app_id: &str) -> Vec<SteamInstallCopy
 }
 
 /// AppIds in `steamapps_dir` (other than `self_app_id`) whose manifest declares the same
-/// `installdir`. Any manifest or directory the scan could not read yields [`UNKNOWN_CONFLICT`]
-/// instead of "no conflict", because the result gates a recursive delete. A missing directory is
+/// top-level folder under `common/`. Any manifest or directory the scan could not read, and any
+/// installdir that does not reduce to one plain folder, yields a conflict instead of "no
+/// conflict", because the result gates a recursive delete. A missing directory is
 /// `[]`, as in the TS. On macOS and Windows the comparison ignores case, because the default
 /// volumes there are case-insensitive and `Game`/`game` are one directory (80-REVIEW A/WR-02);
 /// over-reporting only downgrades the removal to manifest-only, the safe direction. Elsewhere it
@@ -95,16 +96,24 @@ pub fn find_other_manifests_with_installdir(
     if scan.skipped.iter().any(|s| s.file_name != own) {
         conflicting.push(UNKNOWN_CONFLICT.to_string());
     }
+    // Both sides are reduced to the top-level folder under `common/` before comparing, because
+    // that folder is what a removal deletes: `Studio/GameB`, `Studio/`, `.\Studio` (and on
+    // Windows `Studio.`) all live in `common/Studio` (80-REVIEW iteration 2, A/WR-01). An
+    // installdir that does not reduce to a plain folder is counted as a conflict.
+    let Some(target) = top_level_segment(installdir_segment) else {
+        if conflicting.is_empty() {
+            conflicting.push(UNKNOWN_CONFLICT.to_string());
+        }
+        return conflicting;
+    };
     for rec in &scan.records {
         if rec.file_name == own {
             continue;
         }
-        if !rec
-            .record
-            .installdir
-            .as_deref()
-            .is_some_and(|d| same_installdir(d, installdir_segment))
-        {
+        let Some(raw) = rec.record.installdir.as_deref() else {
+            continue;
+        };
+        if top_level_segment(raw).is_some_and(|seg| !same_installdir(&seg, &target)) {
             continue;
         }
         let appid = rec.record.appid.clone().unwrap_or_default();
@@ -113,6 +122,27 @@ pub fn find_other_manifests_with_installdir(
         }
     }
     conflicting
+}
+
+/// The folder directly under `common/` that a raw manifest `installdir` lives in, or `None` when
+/// that cannot be read off it: empty, absolute, any `..` segment, a drive or ADS marker, or NUL.
+/// Both `/` and `\` separate on every OS, since a Wine prefix's manifests use either. Win32
+/// strips trailing dots and spaces from a name, so `Studio.` is `Studio` there.
+fn top_level_segment(installdir: &str) -> Option<String> {
+    if installdir.starts_with(['/', '\\']) || installdir.contains([':', '\0']) {
+        return None;
+    }
+    let mut parts = installdir.split(['/', '\\']);
+    if parts.clone().any(|s| s == "..") {
+        return None;
+    }
+    let seg = parts.find(|s| !s.is_empty() && *s != ".")?;
+    #[cfg(windows)]
+    let seg = seg.trim_end_matches(['.', ' ']);
+    if seg.is_empty() {
+        return None;
+    }
+    Some(seg.to_string())
 }
 
 /// Whether two installdirs name the same directory on this platform's default filesystem.
@@ -321,8 +351,9 @@ pub fn remove_copy(roots: &PollRoots, app_id: &str, source: AcfSource) -> Remove
     // configured roots), never recovered from installPath: an absolute or `..`-climbing
     // installdir could otherwise point the root, the guard and the conflict scan at another
     // library (80-REVIEW A/CR-01). The installdir itself must be exactly one plain segment, so
-    // the directory deleted is the one the manifest names and the conflict scan compares like
-    // with like (80-REVIEW A/WR-01).
+    // the directory deleted is the one the manifest names (80-REVIEW A/WR-01). The conflict scan
+    // reduces every other manifest's installdir to its top-level folder before comparing, so a
+    // nested or oddly spelled co-install in this folder still counts (iteration 2, A/WR-01).
     match installdir_shape(&installdir) {
         InstalldirShape::Single => {}
         InstalldirShape::Nested => {
