@@ -1,9 +1,9 @@
 ---
 phase: 80
 slug: steam-install-uninstall-and-update-polling-state-machines-in
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: validated
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-11-16
 ---
 
@@ -41,15 +41,15 @@ Filled in by the planner/executor per task. Behavior → test mapping (suggested
 
 | Req | Behavior | Test Type | Automated Command | File Exists | Status |
 |-----|----------|-----------|-------------------|-------------|--------|
-| P80-install | tick constants, grace/max/manifest-gone/no-activity, handoff upgrade, hold release | cargo unit + replay | `cargo test -p gamelib-steampoll install` | ❌ W0 | ⬜ pending |
-| P80-update | Phase 74 D-11 update completion rules | cargo unit + replay | `cargo test -p gamelib-steampoll update` | ❌ W0 | ⬜ pending |
-| P80-uninstall | uninstall completion paths + bridge-uninstalled event | cargo unit | `cargo test -p gamelib-steampoll uninstall` | ❌ W0 | ⬜ pending |
-| P80-running | one Playing/Done, claims, drain, registry read | cargo unit (+cfg(windows)) | `cargo test -p gamelib-steampoll running` | ❌ W0 | ⬜ pending |
-| P80-events | state-event ack ordering, timeout, latest-wins queue, replay | cargo (fake host) + Jest handler | `cargo test -p gamelib-steampoll outbox` | ❌ W0 | ⬜ pending |
-| P80-locale | key resolution, defaults, interpolation, 49 locales | cargo + Jest cross-check | `cargo test -p gamelib-i18n` | ❌ W0 | ⬜ pending |
-| P80-acf | acfState/acfUpdateState/path guard | cargo security-style tests | `cargo test -p gamelib-steampoll acf_state` | ❌ W0 | ⬜ pending |
-| P80-parity | TS vs Rust output stream equal | Jest harness | `pnpm jest steamPollParity` | ❌ W0 | ⬜ pending |
-| P80-gate | TS deleted, fallback flag gone | Jest source pin | `pnpm jest steamPollsPortComplete` | ❌ W0 | ⬜ pending |
+| P80-install | tick constants, grace/max/manifest-gone/no-activity, handoff upgrade, hold release | cargo unit + replay | `cargo test -p gamelib-steampoll --features testing` (install_loop 47, install_once_complete 27, install_once_progress 38, hold 36, rearm 13) | ✅ | ✅ green |
+| P80-update | Phase 74 D-11 update completion rules | cargo unit + replay | `cargo test -p gamelib-steampoll --features testing --test update --test acf_update` (34 + 9) | ✅ | ✅ green |
+| P80-uninstall | uninstall completion paths + bridge-uninstalled event | cargo unit | `cargo test -p gamelib-steampoll --features testing --test uninstall --test acf_copies --test acf_copies_security` (28 + 23 + 19) | ✅ | ✅ green |
+| P80-running | one Playing/Done, claims, drain, registry read | cargo unit (+cfg(windows)) | `cargo test -p gamelib-steampoll --features testing --test running --test monitor` (26 + 20); Windows registry read on the CI Windows leg | ✅ | ✅ green |
+| P80-events | state-event ack ordering, timeout, latest-wins queue, replay | cargo (fake host) + Jest handler | `cargo test -p gamelib-steampoll --features testing --test outbox --test contracts --test dispatch` (15 + 11 + 8) + `pnpm jest steamPollEventRegistration steamPollStateEventParity` | ✅ | ✅ green |
+| P80-locale | key resolution, defaults, interpolation, 49 locales | cargo + Jest cross-check | `cargo test -p gamelib-i18n` (528 golden rows) + `pnpm jest i18nGolden` | ✅ | ✅ green |
+| P80-acf | acfState/acfUpdateState/path guard | cargo security-style tests | `cargo test -p gamelib-steampoll --features testing --test acf_state --test acf_copies_security` (25 + 19) | ✅ | ✅ green |
+| P80-parity | TS vs Rust output stream equal | Jest harness | `cargo test -p gamelib-steampoll-cli --test frozen_parity` (the Jest `steamPollParity` harness was retired with the TS loops in 80-29; frozen goldens now enforce parity) + `pnpm jest steamPollStateEventParity` (wire shape) | ✅ | ✅ green |
+| P80-gate | TS deleted, fallback flag gone | Jest source pin | `pnpm jest steamPollsPortComplete` | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -57,12 +57,12 @@ Filled in by the planner/executor per task. Behavior → test mapping (suggested
 
 ## Wave 0 Requirements
 
-- [ ] `gamelib-steampoll` crate skeleton + workspace member + recording `PollHost` fake
-- [ ] State-event transport (channel in `RustInvokeChannel`/generated TS, sidecar handler, per-channel timeout, queue)
-- [ ] Locale loader reading real `public/locales` (read i18n init options first)
-- [ ] Scenario/timeline format + TS driver harness
-- [ ] Decision on `gamelib-steampoll-cli` for Jest-driven replay
-- [ ] Source-pin registration (`tauriShellSource.test.ts`)
+- [x] `gamelib-steampoll` crate skeleton + workspace member + recording `PollHost` fake
+- [x] State-event transport (channel in `RustInvokeChannel`/generated TS, sidecar handler, per-channel timeout, queue)
+- [x] Locale loader reading real `public/locales` (read i18n init options first)
+- [x] Scenario/timeline format + TS driver harness
+- [x] Decision on `gamelib-steampoll-cli` for Jest-driven replay
+- [x] Source-pin registration (`tauriShellSource.test.ts`)
 
 ---
 
@@ -77,11 +77,27 @@ Filled in by the planner/executor per task. Behavior → test mapping (suggested
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 180s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 180s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** validated 2026-11-16
+
+---
+
+## Validation Audit 2026-11-16
+
+Audited after both review-fix rounds (HEAD includes all `fix(80):` commits). Every requirement maps to an existing automated test, and each was run green on the macOS host.
+
+| Metric | Count |
+|--------|-------|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
+
+Runs: `gamelib-steampoll --features testing` 415 tests across 19 targets; `gamelib-steampoll-cli` 10 (incl. `frozen_parity`); `gamelib-i18n` 6; Jest `steamPollsPortComplete`, `steamPollStateEventParity`, `steamPollEventRegistration` 46, `i18nGolden` 2. All pass.
+
+Note: the first run of `contracts::state_event_wire_fixture_matches_every_variant` failed with the fixture "not found". The cause was a stale test binary built in a review-fix worktree that shared `src-tauri/target`; `env!("CARGO_MANIFEST_DIR")` still pointed at the deleted worktree. `cargo clean -p gamelib-steampoll -p gamelib-steampoll-cli -p gamelib-steamfiles` fixed it; no code change. Manual-only items (live smokes, Windows `RunningAppID`) are unchanged.
