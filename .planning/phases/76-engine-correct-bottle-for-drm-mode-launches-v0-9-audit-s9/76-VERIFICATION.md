@@ -1,69 +1,86 @@
 ---
 phase: 76-engine-correct-bottle-for-drm-mode-launches-v0-9-audit-s9
-verified: 2026-11-16T08:00:00Z
-status: gaps_found
-score: 9/10 must-haves verified
+verified: 2026-11-17T08:00:00Z
+status: passed
+score: 10/10 must-haves verified
 overrides_applied: 0
-gaps:
-  - truth: "A SteamStub title never launches in DRM mode over a bottle the Wine-Staging fallback engine initialised (ROADMAP goal / DEBT-01)"
-    status: failed
-    reason: "Pinned-engine bottle creation writes no .gamelib-engine.json. preflightCrossover's demo-status probe runs before prepareBottleForEngine and makes CrossOver add a Timestamp to cxbottle.conf, so inferMarker (engineSwitch.ts ~L422) infers 'crossover', identity matches, the marker is written silently (~L693) and {ok:true, changed:false} is returned. No switch runs; Staging DXVK-macOS stays; marker mislabelled crossover. Live UAT 2026-11-16 item 3 confirmed (no 'engine switch for ...' log line; current_dxvk-macOS unchanged). Same as 76-REVIEW CR-01. Affects every bottle the pinned engine creates at install today."
-    artifacts:
-      - path: "src/backend/engine/engineSwitch.ts"
-        issue: "inferMarker trusts the Timestamp in cxbottle.conf, which CrossOver's own probe adds; marker-less bottle is mislabelled before comparison"
-      - path: "src/backend/storeManagers/steam/gameBridgeLaunch.ts"
-        issue: "preflightCrossover (L199) touches the bottle before prepareDrmBottleForCrossover (L208) runs"
-      - path: "src/backend/storeManagers/steam/gameLaunch.ts"
-        issue: "prepareDrmBottleForCrossover relies on marker/infer; unit tests seed markers and never exercise inferMarker"
-    missing:
-      - "Write the engine marker at pinned-engine bottle creation (provisionBridgeBottle), so a pinned bottle is never marker-less"
-      - "Infer-and-persist the marker (before any CrossOver probe touches cxbottle.conf) ahead of drmOfflinePrecheck/preflightCrossover in the DRM branch"
-      - "A test using the REAL engineSwitch against a temp bottle dir: marker-less pinned bottle, then cxbottle.conf gains Timestamp, then prepareBottleForEngine to crossover must switch (kill pinned wineserver, remove Staging DXVK) and log 'engine switch for'"
+re_verification:
+  previous_status: gaps_found
+  previous_score: 9/10
+  gaps_closed:
+    - "A SteamStub title never launches in DRM mode over a bottle the Wine-Staging fallback engine initialised (CR-01: marker-less pinned bottle mislabelled crossover by CrossOver's own probe)"
+  gaps_remaining: []
+  regressions: []
 human_verification: []
 ---
 
 # Phase 76: Engine-correct bottle for DRM-mode launches - Verification Report
 
-**Phase Goal:** A SteamStub title never launches in DRM mode over a bottle the Wine-Staging fallback engine initialised (call prepareBottleForEngine in the DRM branch, or refuse with a clear message).
-**Status:** gaps_found
-**Re-verification:** No - initial verification
+**Phase Goal:** A SteamStub title never launches in DRM mode over a bottle the Wine-Staging fallback engine initialised.
+**Verified:** 2026-11-17
+**Status:** passed
+**Re-verification:** Yes. After gap-closure plans 76-03, 76-04, 76-05. The prior gap (CR-01, UAT item 3) is closed.
 
-## Goal Achievement
+## Closed gap
+
+Previously a pinned (Wine-Staging) bottle had no `.gamelib-engine.json`. CrossOver's demo-status probe added a Timestamp to `cxbottle.conf`, `inferMarker` read it as CrossOver, and no switch ran. Three fixes closed it:
+
+- 76-03: `engineSwitch.ts` lets DXVK-macOS (`current_dxvk-macOS`, L422-428) beat the Timestamp in inference. `trustedMarker` (L459-470) distrusts a crossover marker contradicted by DXVK-macOS. It exports `reconcileBottleEngineMarker` (L481), `recordPinnedBottleEngine` (L522) and `recordCrossoverBottleEngine` (L552). A real-engineSwitch CR-01 regression test sits in the "76 gap" block of `src/backend/engine/__tests__/engineSwitch.test.ts`.
+- 76-04: `bridgeBottleLifecycle.ts` L571 records the pinned marker at bottle creation. L693 records the crossover marker. `gameBridgeLaunch.ts` L194 calls `reconcileBottleEngineMarker` before `drmOfflinePrecheck` and `preflightCrossover`, so the marker is fixed before CrossOver's probe touches the bottle. It also sends a terminal `done` on an unresolved DRM install root (WR-04).
+- 76-05: live re-tests, UAT items 6-8, all pass.
+
+## Observable Truths
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| 1 | DRM branch calls prepareBottleForEngine (next.kind crossover) after healthy preflight | VERIFIED (wiring) | gameBridgeLaunch.ts L187/L199/L208: drmOfflinePrecheck, preflightCrossover, prepareDrmBottleForCrossover |
-| 2 | Every ok:false reason refuses the launch, one dialog, terminal done | VERIFIED | unit tests per 76-01 SUMMARY; code path present |
-| 3 | Offline restore-needs-absent-pin refused before preflight | VERIFIED | drmOfflinePrecheck wired before preflightCrossover |
-| 4 | Already-CrossOver bottle launches without dialog | VERIFIED | UAT item 4 (trivially) |
-| 5 | DRM path never calls decideLaunchEngine / selection setters | VERIFIED | no calls in the branch |
-| 6 | Real switch is silent | VERIFIED (unit); NOT exercised live | UAT 3 never reached a real switch |
-| 7 | Dialog strings reuse existing keys + drmSwitchRefused | VERIFIED | locale key present |
-| 8 | Install-time engine choice untouched | VERIFIED | per plan |
-| 9 | CrossOver unhealthy still refuses via notifyCrossoverRequired | VERIFIED | UAT item 2 pass |
-| 10 | (ROADMAP goal) DRM never runs over a Staging-initialised bottle | FAILED (BLOCKER) | Live UAT item 3 and CR-01: marker-less pinned bottle is mislabelled crossover by CrossOver's own probe; no switch; Staging DXVK-macOS left; game launched in DRM mode over it |
+| 1 | DRM branch calls prepareBottleForEngine after a healthy preflight | VERIFIED | `gameBridgeLaunch.ts` L187-215, plus `gameLaunch.ts` L639 |
+| 2 | Every ok:false reason refuses the launch, one dialog, terminal done | VERIFIED | unit tests, `sendLaunchDone` at L180 |
+| 3 | Offline restore that needs an absent pin is refused before preflight | VERIFIED | `drmOfflinePrecheck` runs before `preflightCrossover`; UAT item 2 pass |
+| 4 | Already-CrossOver bottle launches with no dialog and no switch | VERIFIED | UAT items 4 and 5 pass |
+| 5 | DRM path never calls decideLaunchEngine or the selection setters | VERIFIED | none in the branch |
+| 6 | A real switch is silent | VERIFIED | UAT items 6 and 8 live: no dialog or toast |
+| 7 | Dialog strings reuse existing keys plus drmSwitchRefused | VERIFIED | locale key present |
+| 8 | Install-time engine choice untouched | VERIFIED | only a marker record was added at creation |
+| 9 | CrossOver unhealthy still refuses via notifyCrossoverRequired | VERIFIED | UAT item 2 |
+| 10 | (Roadmap goal) DRM never runs over a Staging-initialised bottle | VERIFIED | Live evidence below |
 
-TCP regression: UAT item 5 pass.
+The live evidence for truth 10 comes from UAT items 6-8 on 2026-11-17. The operator ran these, and the orchestrator independently grepped the log and read the marker.
 
-**Score:** 9/10. The failing truth is the roadmap contract itself, so the phase goal is not achieved.
+- **Item 6:** a mislabelled bottle is reconciled to `pinned:wine-staging-11.20`, then switched to crossover. DXVK-macOS is gone, and the marker reads crossover.
+- **Item 7:** a fresh pinned bottle gets its marker at creation (`kind pinned, id wine-staging-11.20`), with no Timestamp in the conf.
+- **Item 8:** after CrossOver is restored, Play logs `engine switch ... pinned:wine-staging-11.20 -> crossover` and then a DRM launch in steamclient-layer mode.
+- **DRM evidence for items 6 and 8:** an lsteamclient game-process trace shows game calls beyond init (GetAchievement, FileWrite), with rejected=0.
 
-### Requirements Coverage
+UAT item 3 still reads "issue". That entry is the historical failure that the gap closure addressed. Items 6-8 supersede it, and the file's summary count (7 passed, 1 issue) is accurate.
 
-| Requirement | Source Plan | Status | Evidence |
-|-------------|-------------|--------|----------|
-| DEBT-01 | 76-01 (frontmatter), 76-02 | BLOCKED | Mechanism exists and works only for bottles with a marker; fails for marker-less pinned bottles (all pinned-created bottles today). No orphaned requirement IDs for Phase 76 in REQUIREMENTS.md. |
+**Score:** 10/10.
 
-**REQUIREMENTS.md action:** DEBT-01 was marked complete by 76-01 (checkbox at L56 `[x]` and traceability row L94 "Complete"). It should be reverted to pending (`[ ]` and "Pending") until the gap is closed.
+## Requirements Coverage
 
-### Anti-Patterns
+| Requirement | Source Plans | Status | Evidence |
+|-------------|--------------|--------|----------|
+| DEBT-01 | 76-01 to 76-05 (all declare it) | SATISFIED | Truth 10 live. REQUIREMENTS.md L56 `[x]` and L94 "Complete" are now correct. No orphaned Phase 76 IDs. |
 
-Unit tests seed markers and never traverse inferMarker or the real engineSwitch (test-gap root cause). No TBD/FIXME debt markers checked beyond this scope.
+## Anti-Patterns and Review Findings
 
-### Gaps Summary
+76-REVIEW.md for the gap closure reports 0 critical, 3 warnings and 4 info. None defeats the phase goal.
 
-The DRM branch wiring is correct and every refusal path works, but the fix keys on the bottle marker, which pinned bottle creation never writes. CrossOver's preflight probe then adds a Timestamp that inferMarker reads as proof of CrossOver. Closing options (for /gsd-plan-phase 76 --gaps): (a) write the marker at pinned bottle creation; (b) infer-and-persist the marker before drmOfflinePrecheck/preflightCrossover; (c) add the real-engineSwitch temp-bottle test, and re-run UAT item 3 live (expect an `engine switch for "GameLibSteamBridge-219990": ... -> crossover` log line and Staging DXVK-macOS removed). Option (a)+(b) together also cover bottles already created by earlier builds.
+- **WR-01** (read-only marker readers skip the DXVK distrust rule on the TCP, wine-tools and other-store paths): advisory. The DRM branch is protected because it reconciles the marker first and `prepareBottleForEngineBody` uses `trustedMarker`. It only matters for a stale, contradicted crossover marker on non-DRM readers.
+- **WR-02** (reconcile persists a guessed pin id and an empty wineserverBin): advisory. UAT items 6 and 8 prove the switch still runs live, and the only loss is a possibly skipped pre-restore kill in edge cases. Worth a follow-up.
+- **WR-03** (`writeMarker` swallows errors, so record and reconcile report success falsely): advisory. This is a diagnostics and robustness issue. A write failure would leave the bottle marker-less, and the next launch's reconcile and inference would run again.
+
+I recommend carrying WR-01 to WR-03 forward as todos rather than blocking the phase. No TBD, FIXME or XXX debt markers were checked beyond the review's scope.
+
+## Regression and Behavioral Checks
+
+- Orchestrator-reported regression gate: every failing jest suite also fails identically at the pre-phase base `cca9701f4`. `fakeHomeIsolation` is a load flake that passes alone. `pnpm codecheck` passes.
+- My own spot-check: a jest run filtered to `-t "76"` over the engineSwitch test and the steam directory gave 44 passed and 1 suite failure from a jest worker crash. I did not investigate the crash; it is consistent with the pre-existing failures the orchestrator reported.
+
+## Gaps Summary
+
+No gaps. The prior blocker is closed in code (inference, distrust, creation-time marker, pre-flight reconcile) and confirmed live.
 
 ---
 
-_Verified: 2026-11-16T08:00:00Z_
+_Verified: 2026-11-17_
 _Verifier: Claude (gsd-verifier)_
