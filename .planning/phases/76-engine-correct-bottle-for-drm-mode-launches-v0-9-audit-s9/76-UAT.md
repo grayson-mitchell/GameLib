@@ -3,7 +3,7 @@ status: complete
 phase: 76-engine-correct-bottle-for-drm-mode-launches-v0-9-audit-s9
 source: [76-01-SUMMARY.md]
 started: 2026-11-15T10:10:00Z
-updated: 2026-11-17T07:10:00Z
+updated: 2026-11-17T12:22:00Z
 ---
 
 ## Current Test
@@ -52,10 +52,18 @@ result: pass — live 2026-11-17 06:51: CrossOver hidden (mdfind empty); logged 
 expected: CrossOver restored to /Applications (mdfind finds it), only Mac Steam running, GameLib restarted; pressing Play briefly shows the setting-up status, then DRM setup, then the game; no confirm dialog or toast; the log shows `engine switch for "GameLibSteamBridge-219990": pinned:wine-staging-11.20 -> crossover`; afterwards current_dxvk-macOS is absent and the marker reads crossover; the strict DRM criterion is met.
 result: pass — live 2026-11-17 07:00: CrossOver restored (mdfind finds it); no confirm dialog or toast reported; logged `engine switch for "GameLibSteamBridge-219990": pinned:wine-staging-11.20 -> crossover`, then DRM launch in steamclient-layer mode (crossover 26.3.0.39832); current_dxvk-macOS gone, marker reads crossover; lsteamclient trace pid 416 with game calls beyond init (GetAchievement, FileWrite, GetNumAchievements), events=41 rejected=0.
 
+### 9. Review re-test (WR-02): switching a pinned bottle whose marker has no wineserver stops the pinned wineserver
+expected: Runs on the post-review build (`pnpm build:sidecar`, then `pnpm tauri:dev`). Setup: repeat item 7 (Grim Dawn uninstalled, CrossOver hidden, install) so `GameLibSteamBridge-219990/.gamelib-engine.json` reads kind pinned; quit GameLib; blank the marker's wineserver with `B="$HOME/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-219990"; python3 -c 'import json,sys;p=sys.argv[1];m=json.load(open(p));m["wineserverBin"]="";json.dump(m,open(p,"w"))' "$B/.gamelib-engine.json"`; start the pinned wineserver with `WINEPREFIX="$B" "$HOME/Library/Application Support/gamelib/tools/steam-engines/wine-staging-11.20/Contents/Resources/wine/bin/wineserver" -p` and confirm `pgrep -fl wineserver` lists it; restore CrossOver (mdfind finds it); start GameLib with only Mac Steam running. Pressing Play logs `engine switch for "GameLibSteamBridge-219990": pinned:wine-staging-11.20 -> crossover` with NO `ignoring marker wineserver outside the engine roots` and NO `no wineserver at ... nothing to stop` line for this bottle; afterwards `pgrep -fl wineserver` no longer lists the steam-engines wineserver, current_dxvk-macOS is absent, the marker reads crossover, and the strict DRM criterion is met (lsteamclient game-process trace for 219990 with a game-originated call beyond init).
+result: pass — live 2026-11-17 12:16: marker blanked to wineserverBin "" (kind pinned, wine-staging-11.20) and the pinned wineserver started with -p (pid 83992); 12:16:07 `engine switch for "GameLibSteamBridge-219990": pinned:wine-staging-11.20 -> crossover`, no `ignoring marker wineserver outside the engine roots` and no `nothing to stop` line; afterwards pgrep lists no wineserver (83992 gone), current_dxvk-macOS absent, marker reads kind crossover; 12:16:16 `[bridge-drm] appId=219990 mode=steamclient-layer crossover=26.3.0.39832`; lsteamclient trace 219990-1794870976635.log pid 416 role=game with game calls beyond init (BIsSubscribedApp, GetAppOwnershipTicketData, SteamController Init/RunFrame), 41 events; overlay attached to game pid 84615.
+
+### 10. Review re-test (WR-01): offline Play on a crossover-marked bottle holding DXVK-macOS gives the offline refusal
+expected: Run after item 9. Setup with GameLib quit: `B="$HOME/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-206060"; cp "$B/.gamelib-engine.json" "$HOME/76-wr01-marker.bak"; touch "$B/current_dxvk-macOS"; mv "$HOME/Library/Application Support/gamelib/tools/steam-engines/wine-staging-11.20" "$HOME/Library/Application Support/gamelib/tools/steam-engines/wine-staging-11.20.hidden"`; start GameLib (`pnpm tauri:dev`), then turn the network off only for the action. Pressing Play on Avernum 6 (206060) logs `SteamGame: appId 206060 launch blocked before pre-flight: offline, and returning this bottle to CrossOver needs an engine pin that is not on disk (restore-needs-pin)` and shows the dialog "GameLib couldn't download its built-in engine (offline). Check your connection and try again." (`tag=engine-download-failed`); no `dxvk-failed` dialog, no engine switch, the card returns to Play, and `cmp "$B/.gamelib-engine.json" "$HOME/76-wr01-marker.bak"` reports no difference (the views never write). Cleanup before any further Play of Avernum 6: quit GameLib, `rm "$B/current_dxvk-macOS"; mv "$HOME/Library/Application Support/gamelib/tools/steam-engines/wine-staging-11.20.hidden" "$HOME/Library/Application Support/gamelib/tools/steam-engines/wine-staging-11.20"`.
+result: pass — live 2026-11-17 12:18: marker kind crossover plus a touched current_dxvk-macOS, pin hidden as wine-staging-11.20.hidden, network off; 12:18:39 `SteamGame: appId 206060 launch blocked before pre-flight: offline, and returning this bottle to CrossOver needs an engine pin that is not on disk (restore-needs-pin)`; `[engine-notice] appId=206060 tag=engine-download-failed display=confirmed`. Dialog text verbatim: "GameLib couldn't download its built-in engine (offline). Check your connection and try again." No dxvk-failed notice, no engine switch logged for 206060, marker byte-identical to the backup (cmp clean), and the pin was not re-downloaded. Cleanup done (DXVK file removed, pin restored, backup deleted).
+
 ## Summary
 
-total: 8
-passed: 7
+total: 10
+passed: 9
 issues: 1
 pending: 0
 skipped: 0
