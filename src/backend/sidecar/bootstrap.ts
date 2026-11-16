@@ -1608,7 +1608,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           }),
           authTrigger: createSteamAuthTrigger(),
           libraryState: createSteamLibraryState(),
-          gameSession: createSteamGameSessionState()
+          gameSession: createSteamGameSessionState(state.services.host)
         }
       }
     },

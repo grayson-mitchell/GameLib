@@ -116,7 +116,7 @@ describe('createSteamInstallRuntime', () => {
     )
   })
 
-  it('restart-hold bookkeeping fails closed through a rearm cycle and reads its own polls', () => {
+  it('restart-hold bookkeeping fails closed through a rearm cycle and reads its own polls', async () => {
     const a = createSteamInstallRuntime(transport())
     const b = createSteamInstallRuntime(transport())
     const { restartHold } = a
@@ -129,15 +129,15 @@ describe('createSteamInstallRuntime', () => {
       [7, 'z'],
       [8, 'w']
     ])
-    expect([...restartHold.withoutSteamRestartHolds(installed).keys()]).toEqual(
-      [6, 8]
-    )
+    expect([
+      ...(await restartHold.withoutSteamRestartHolds(installed)).keys()
+    ]).toEqual([6, 8])
     expect(restartHold.getReconcileRanDuringRearm()).toBe(true)
     restartHold.setReconcileRanDuringRearm(false)
     restartHold.pendingSteamHoldRearm.delete('7')
     expect(restartHold.getReconcileRanDuringRearm()).toBe(false)
     // Another runtime has no hold for any of these apps.
     const other = new Map<number, string>([[5, 'x']])
-    expect(b.restartHold.withoutSteamRestartHolds(other).size).toBe(1)
+    expect((await b.restartHold.withoutSteamRestartHolds(other)).size).toBe(1)
   })
 })

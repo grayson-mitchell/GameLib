@@ -64,7 +64,10 @@ export function createSteamInstallRuntime(
     sharedRedistLocks: createSharedRedistLocks(),
     depotJobs: createDepotJobRegistry(transport),
     polls,
-    restartHold: createSteamRestartHold({ polls }),
+    restartHold: createSteamRestartHold({
+      polls,
+      requestRustInvoke: transport.requestRustInvoke
+    }),
     uninstallPolls: createUninstallPolls(),
     updateStates: createSteamUpdateStateCache(),
     autoUpdateAttempts: new Map()

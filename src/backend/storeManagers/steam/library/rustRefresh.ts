@@ -88,7 +88,7 @@ export async function buildRustRefreshInputs(
   )
   // D-UAT-13: apps holding for a Steam restart are not installed yet as far as the UI goes.
   const installedMap =
-    deps.steamInstallRuntime.restartHold.withoutSteamRestartHolds(
+    await deps.steamInstallRuntime.restartHold.withoutSteamRestartHolds(
       await buildInstalledMap(deps)
     )
   const bottleMap =

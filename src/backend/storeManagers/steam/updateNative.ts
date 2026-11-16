@@ -24,6 +24,10 @@ import {
   STATE_FLAG_FULLY_INSTALLED
 } from './library/acfUpdateState'
 import { startInstallPolling } from './library/installPolling'
+import { pollsImpl } from './library/pollsFlag'
+import { RUST_STEAMPOLL_STATUS } from 'common/types/sidecarTransport'
+import { invokeSteamPoll } from './pollRust/rustSteamPoll'
+import type { PollStatus } from './pollRust/steamPollTypes'
 import {
   getLastKnownSteamUpdateState,
   invalidateSteamUpdateState
@@ -33,7 +37,20 @@ import {
 // the poll (not the queue's 'done') owns the terminal status. If
 // startInstallPolling no-opped because a non-update poll already existed this
 // is false and the queue sends 'done' as before.
-function pollOwnsUpdate(deps: SteamGame['deps'], appId: string): boolean {
+export async function pollOwnsUpdate(
+  deps: SteamGame['deps'],
+  appId: string
+): Promise<boolean> {
+  if (pollsImpl() === 'rust') {
+    const status = (await invokeSteamPoll(
+      deps,
+      RUST_STEAMPOLL_STATUS,
+      {}
+    )) as PollStatus
+    return (
+      status.installs.find((i) => i.appId === appId)?.awaitingUpdate === true
+    )
+  }
   return (
     deps.steamInstallRuntime.polls.activePolls.get(appId)?.awaitingUpdate !==
     undefined
@@ -127,7 +144,10 @@ export async function updateRegisteredSteamGame(
         LogPrefix.Steam
       )
       await startInstallPolling(deps, appId, pollOptions)
-      return { status: 'done', handedOffToSteam: pollOwnsUpdate(deps, appId) }
+      return {
+        status: 'done',
+        handedOffToSteam: await pollOwnsUpdate(deps, appId)
+      }
     }
     if (outcome.kind === 'error') {
       logError(
@@ -153,5 +173,5 @@ export async function updateRegisteredSteamGame(
   )
   await deps.openExternal.openExternal(url)
   await startInstallPolling(deps, appId, pollOptions)
-  return { status: 'done', handedOffToSteam: pollOwnsUpdate(deps, appId) }
+  return { status: 'done', handedOffToSteam: await pollOwnsUpdate(deps, appId) }
 }

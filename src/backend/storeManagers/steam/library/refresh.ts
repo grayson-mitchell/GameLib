@@ -13,6 +13,10 @@ import {
 import { restoreLocalSteamLibrary } from './localLibrary'
 import { syncOwnedLibraryRust, tryMacSteamRefresh } from './rustRefresh'
 import { macSteamPathEnabled } from './macSteamPathFlag'
+import { pollsImpl } from './pollsFlag'
+import { RUST_STEAMPOLL_STATUS } from 'common/types/sidecarTransport'
+import { invokeSteamPoll } from '../pollRust/rustSteamPoll'
+import type { PollStatus } from '../pollRust/steamPollTypes'
 import { verifyMacArchGroundTruth } from './macArch'
 import {
   buildInstalledMap,
@@ -170,6 +174,17 @@ export async function refresh(deps: ManagerDeps): Promise<ExecResult | null> {
  */
 export async function refreshInstallState(deps: ManagerDeps): Promise<void> {
   const { steamLibraryStore } = deps.stores.steam
+  // D-01: under polls=rust the poll registry lives in Rust; one status call per reconcile, made lazily.
+  let rustPollIds: Promise<Set<string>> | null = null
+  const hasActiveInstallPoll = async (appId: string): Promise<boolean> => {
+    if (pollsImpl() !== 'rust') {
+      return deps.steamInstallRuntime.polls.activePolls.has(appId)
+    }
+    rustPollIds ??= (
+      invokeSteamPoll(deps, RUST_STEAMPOLL_STATUS, {}) as Promise<PollStatus>
+    ).then((s) => new Set(s.installs.map((i) => i.appId)))
+    return (await rustPollIds).has(appId)
+  }
   // WR-01 (75 review): a rejected manifest scan (rustInvoke timeout, shell
   // restart) says nothing about what is installed. Skip this reconcile
   // instead of diffing against an empty map, which would persist every
@@ -186,7 +201,7 @@ export async function refreshInstallState(deps: ManagerDeps): Promise<void> {
     // restart it) must not flip a game that is holding for a Steam restart to
     // installed — see withoutSteamRestartHolds().
     installedMap =
-      deps.steamInstallRuntime.restartHold.withoutSteamRestartHolds(
+      await deps.steamInstallRuntime.restartHold.withoutSteamRestartHolds(
         await buildInstalledMap(deps)
       )
     bottleInstalledMap =
@@ -286,7 +301,7 @@ export async function refreshInstallState(deps: ManagerDeps): Promise<void> {
         isNowInstalled &&
         source === 'native' &&
         isMac &&
-        !deps.steamInstallRuntime.polls.activePolls.has(appIdStr)
+        !(await hasActiveInstallPoll(appIdStr))
       ) {
         void verifyMacArchGroundTruth(
           deps,

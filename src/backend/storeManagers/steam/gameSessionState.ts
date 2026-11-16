@@ -1,6 +1,10 @@
 import { InstallResult } from 'common/types/game_manager'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { SteamStoresDeps } from './library/installRoot'
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
+import { RUST_STEAMPOLL_NATIVE_IN_FLIGHT } from 'common/types/sidecarTransport'
+import { invokeSteamPoll } from './pollRust/rustSteamPoll'
+import { pollsImpl } from './library/pollsFlag'
 
 /**
  * A single tracked native depot-download run for one appId — the value type
@@ -95,9 +99,51 @@ export interface SteamGameSessionState {
   isNativeInstallInFlight(appId: string): boolean
 }
 
+/**
+ * R7: under polls=rust every change to the in-flight set is pushed to Rust (fire and forget), so Rust
+ * never calls back into TS per tick. The read API is a plain Map's.
+ */
+class MirroredInFlightMap extends Map<string, NativeInstallEntry> {
+  constructor(private readonly rust?: Partial<RustInvokeDeps>) {
+    super()
+  }
+
+  private push(appId: string, inFlight: boolean): void {
+    const requestRustInvoke = this.rust?.requestRustInvoke
+    if (pollsImpl() !== 'rust' || !requestRustInvoke) return
+    invokeSteamPoll({ requestRustInvoke }, RUST_STEAMPOLL_NATIVE_IN_FLIGHT, {
+      appId,
+      inFlight
+    }).catch((error: unknown) => {
+      logWarning(
+        [
+          `steampoll native in-flight push failed (${RUST_STEAMPOLL_NATIVE_IN_FLIGHT}, appId ${appId}):`,
+          error
+        ],
+        LogPrefix.Steam
+      )
+    })
+  }
+
+  override set(appId: string, entry: NativeInstallEntry): this {
+    const isNew = !this.has(appId)
+    super.set(appId, entry)
+    if (isNew) this.push(appId, true)
+    return this
+  }
+
+  override delete(appId: string): boolean {
+    const had = super.delete(appId)
+    if (had) this.push(appId, false)
+    return had
+  }
+}
+
 /** One instance per boot (D-05, D-66.3-13): every map and set is per-instance, so two boots never share a session. */
-export function createSteamGameSessionState(): SteamGameSessionState {
-  const nativeInstallsInFlight = new Map<string, NativeInstallEntry>()
+export function createSteamGameSessionState(
+  rust?: Partial<RustInvokeDeps>
+): SteamGameSessionState {
+  const nativeInstallsInFlight = new MirroredInFlightMap(rust)
   const bridgeFailedThisSession = new Set<string>()
   return {
     nativeInstallsInFlight,

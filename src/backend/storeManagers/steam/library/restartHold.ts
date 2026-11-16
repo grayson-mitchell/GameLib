@@ -12,6 +12,11 @@ import {
   type SteamRestartHoldStore
 } from '../steamRestartHold'
 import type { AcfSource } from './installRoot'
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
+import { RUST_STEAMPOLL_STATUS } from 'common/types/sidecarTransport'
+import { invokeSteamPoll } from '../pollRust/rustSteamPoll'
+import type { PollStatus } from '../pollRust/steamPollTypes'
+import { pollsImpl } from './pollsFlag'
 import {
   STEAM_HOLD_PROBE_MIN_INTERVAL_MS,
   type ActiveInstallPoll,
@@ -59,7 +64,9 @@ export interface SteamRestartHold {
   /** True when a reconcile consulted the fail-closed rearm window. */
   getReconcileRanDuringRearm(): boolean
   setReconcileRanDuringRearm(value: boolean): void
-  withoutSteamRestartHolds<T>(installed: Map<number, T>): Map<number, T>
+  withoutSteamRestartHolds<T>(
+    installed: Map<number, T>
+  ): Promise<Map<number, T>>
   shouldHoldForSteamRestart(
     deps: SteamProbeDeps,
     appId: string,
@@ -73,9 +80,11 @@ export interface SteamRestartHold {
  * reconcile-ran flag are closure fields, and the hold decisions read the install polls it is given.
  * Construction allocates an empty set and a flag: no I/O, timer or handle.
  */
-export function createSteamRestartHold(deps: {
-  polls: Pick<InstallPollState, 'activePolls'>
-}): SteamRestartHold {
+export function createSteamRestartHold(
+  deps: {
+    polls: Pick<InstallPollState, 'activePolls'>
+  } & Partial<RustInvokeDeps>
+): SteamRestartHold {
   const { polls } = deps
   const pendingSteamHoldRearm = new Set<string>()
   let reconcileRanDuringRearm = false
@@ -105,9 +114,22 @@ export function createSteamRestartHold(deps: {
    * reconcile (refreshInstallState) and a full refresh() would flip the badge
    * to installed the moment the user alt-tabs to Steam to restart it.
    */
-  function withoutSteamRestartHolds<T>(
+  async function withoutSteamRestartHolds<T>(
     installed: Map<number, T>
-  ): Map<number, T> {
+  ): Promise<Map<number, T>> {
+    if (pollsImpl() === 'rust' && deps.requestRustInvoke) {
+      // D-01: Rust owns the registry; its holding[] includes the pending boot rearm (fail closed, T-80-70).
+      const status = (await invokeSteamPoll(
+        { requestRustInvoke: deps.requestRustInvoke },
+        RUST_STEAMPOLL_STATUS,
+        {}
+      )) as PollStatus
+      const holding = new Set(status.holding)
+      for (const appId of [...installed.keys()]) {
+        if (holding.has(String(appId))) installed.delete(appId)
+      }
+      return installed
+    }
     for (const appId of [...installed.keys()]) {
       if (isHoldingForSteamRestart(String(appId))) installed.delete(appId)
     }
