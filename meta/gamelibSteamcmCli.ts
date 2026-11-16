@@ -31,7 +31,7 @@ const MAX_BUFFER = 16 * 1024 * 1024
  * One CLI call's bound (79 review B/IN-05). A stalled anonymous CM connection must not hang a
  * `meta/` tool forever; SIGKILL, because a hung CM read does not answer SIGTERM promptly.
  */
-export const STEAMCM_CLI_TIMEOUT_MS = 120_000
+const STEAMCM_CLI_TIMEOUT_MS = 120_000
 
 /**
  * Mirrors `SECRET_OPS` in gamelib-steamcm-cli/src/main.rs. `gamelibSteamcmCli.test.ts` reads the
