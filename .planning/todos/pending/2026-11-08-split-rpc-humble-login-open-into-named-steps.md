@@ -31,7 +31,9 @@ on the planning machine, so the first macos-latest rust-test run carrying these 
 compile and clippy check: Rust test run 43063757130 on `cad0bd7d0`, the first run whose commit
 contains `ea210b612`, with `cargo-test (macos-latest)` green.
 
-Live gates still owed. macOS: pass condition is a live sign-in presented as a sheet with the native bar; a second
+**Windows live sign-in: passed (operator, 2026-11-17)** against the Windows condition below.
+
+Live gate still owed. macOS: pass condition is a live sign-in presented as a sheet with the native bar; a second
 visible login refused while the first is pending; x/Esc resolving it; Epic and GOG pristine sheets
 unchanged. Windows: a visible login window owned by main and centred over it, main disabled while
 it is up and re-enabled on close, titled `origin — document title`, where closing it resolves the
