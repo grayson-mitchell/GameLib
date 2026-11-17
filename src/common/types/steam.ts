@@ -257,6 +257,26 @@ export interface SteamRequestNoticePayload {
   seq: number
 }
 
+/**
+ * Phase 81 D-01..D-03: what the game page may read about a Steam game's pending adoption. The
+ * frontend never derives adoption; it renders this answer. `steamSignedIn` is null until the Rust
+ * watch feeds it (81-09); false means Steam is running but signed out (D-03).
+ */
+export interface SteamAdoptionStatus {
+  pending: boolean
+  steamSignedIn: boolean | null
+}
+
+/** Phase 81 D-02: how a "Restart Steam now" ended; the three refusals mirror the Play gate's. */
+export type SteamAdoptionRestartOutcome =
+  | 'relaunched'
+  | 'game-running'
+  | 'steam-busy'
+  | 'quit-timeout'
+  | 'no-record'
+  | 'in-progress'
+  | 'error'
+
 /** Phase 74 plan 11: what the renderer may read about a Steam game's update (D-15: unknown is never stale). */
 export interface SteamUpdateInfo {
   kind: 'bridge' | 'registered'

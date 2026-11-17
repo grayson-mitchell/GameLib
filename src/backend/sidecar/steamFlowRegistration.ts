@@ -106,6 +106,7 @@ import {
   dispatchSteamLaunchWithoutSteamOnce
 } from '../storeManagers/steam/launchDispatch'
 import { toView } from '../storeManagers/steam/directLaunch/directLaunchVerdict'
+import { answerSteamAdoptionStatus } from '../storeManagers/steam/adoptionStatus'
 import type { SteamDirectLaunchView } from 'common/types/steam'
 import { logInfo, logWarning, LogPrefix, RunnerToLogPrefixMap } from '../logger'
 import type { LaunchParams, Runner, StatusPromise } from 'common/types'
@@ -494,6 +495,11 @@ export function registerSteamFlows(deps: SteamFlowDeps): void {
     'steamLaunchWithoutSteamOnce',
     (_event: unknown, ...args: unknown[]) =>
       handleLaunchWithoutSteamOnce(deps, args[0])
+  )
+  deps.ipc.handle(
+    'steamAdoptionStatus',
+    (_event: unknown, ...args: unknown[]) =>
+      answerSteamAdoptionStatus(deps, args[0])
   )
 
   // Restores the install-badge reconciliation trigger dropped in the

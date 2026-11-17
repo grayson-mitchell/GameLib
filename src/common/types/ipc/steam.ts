@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 import type { GameStatus, StatusPromise } from '../../types'
 import type {
+  SteamAdoptionStatus,
   SteamBottleLaunchWaitingCause,
   SteamBridgeKnownBadReason,
   SteamBridgeRouteReason,
@@ -40,7 +41,9 @@ export const steamAsyncArgs = {
   // quick 261117-p38 / q1t: the "Launch without Steam" verdict for the per-game setting toggle.
   steamDirectLaunchVerdict: z.tuple([z.string().regex(/^\d{1,10}$/)]),
   // Phase 81 D-05: the one-shot "Launch without Steam" on a refused Play restart's notice.
-  steamLaunchWithoutSteamOnce: z.tuple([z.string().regex(/^\d{1,10}$/)])
+  steamLaunchWithoutSteamOnce: z.tuple([z.string().regex(/^\d{1,10}$/)]),
+  // Phase 81 D-01..D-03: the game page's pending-adoption read (appId is renderer input).
+  steamAdoptionStatus: z.tuple([z.string().regex(/^\d{1,10}$/)])
 }
 
 interface SteamAsyncReturns {
@@ -48,6 +51,7 @@ interface SteamAsyncReturns {
   launch: StatusPromise
   steamDirectLaunchVerdict: Promise<SteamDirectLaunchView>
   steamLaunchWithoutSteamOnce: Promise<boolean>
+  steamAdoptionStatus: Promise<SteamAdoptionStatus>
 }
 
 // D-12: typing only, never parsed at runtime. Every payload originates in the backend, so the

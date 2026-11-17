@@ -140,12 +140,6 @@ export async function gatePlayOnAdoption(
   // opens the install dialog (the failure being removed), and quitting would end the user's game
   // session. Steam is never killed; the record stays pending (D-05). The refusal is an in-app
   // notice (the renderer maps the closed kind to today's gamelib:steam.adoptRestart.* copy).
-  const kind: AdoptRestartNoticeKind =
-    outcome.kind === 'game-running'
-      ? 'adopt-restart-game-running'
-      : outcome.kind === 'steam-busy'
-        ? 'adopt-restart-busy'
-        : 'adopt-restart-quit-timeout'
   logWarning(
     `SteamGame: Play for ${appId} not launched (${outcome.kind}); pending adoption kept`,
     LogPrefix.Steam
@@ -156,6 +150,29 @@ export async function gatePlayOnAdoption(
     (v) => v.applies,
     () => false
   )
+  await pushAdoptRestartRefusal(steamGame, outcome.kind, launchWithoutSteam)
+  return 'refused'
+}
+
+/** The three restart refusals the user is told about (D-05). */
+export type AdoptRestartRefusal = 'game-running' | 'steam-busy' | 'quit-timeout'
+
+/**
+ * Pushes the in-app notice for a refused restart (the renderer maps the closed kind to the
+ * gamelib:steam.adoptRestart.* copy). Shared by the Play gate and "Restart Steam now" (81-08).
+ */
+export async function pushAdoptRestartRefusal(
+  steamGame: SteamGame,
+  refusal: AdoptRestartRefusal,
+  launchWithoutSteam: boolean
+): Promise<void> {
+  const { deps, appId } = steamGame
+  const kind: AdoptRestartNoticeKind =
+    refusal === 'game-running'
+      ? 'adopt-restart-game-running'
+      : refusal === 'steam-busy'
+        ? 'adopt-restart-busy'
+        : 'adopt-restart-quit-timeout'
   deps.sendFrontendMessage('steamRequestNotice', {
     appId,
     title: deps.steamSession.libraryState.library.get(appId)?.title ?? '',
@@ -163,5 +180,4 @@ export async function gatePlayOnAdoption(
     launchWithoutSteam,
     seq: await noticeSeq(steamGame)
   })
-  return 'refused'
 }

@@ -43,6 +43,10 @@ const steamAsync: FixtureTable<typeof steamAsyncArgs> = {
     valid: [['570']],
     invalid: [['abc'], ['12345678901'], [570], []]
   },
+  steamAdoptionStatus: {
+    valid: [['570']],
+    invalid: [['abc'], ['12345678901'], [570], []]
+  },
   refreshLibrary: {
     valid: [[], ['steam'], ['all', 'startup'], [null, null]],
     invalid: [['bogus'], ['all', 1], ['all', 'o'.repeat(300)]]

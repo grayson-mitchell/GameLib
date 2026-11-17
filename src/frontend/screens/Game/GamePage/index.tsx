@@ -24,6 +24,7 @@ import {
 import { Link, NavLink, useLocation, useParams } from 'react-router-dom'
 import { Trans, useTranslation } from 'react-i18next'
 import { confirmSteamUpdate } from 'frontend/helpers/steamUpdateConfirm'
+import AdoptionNote from './components/AdoptionNote'
 import SteamUpdateButton from './components/SteamUpdateButton'
 import {
   useEpicAccount,
@@ -595,6 +596,7 @@ export default React.memo(function GamePage(): JSX.Element | null {
                           handleUpdate={handleUpdate}
                           hasUpdate={hasUpdate}
                         />
+                        <AdoptionNote gameInfo={gameInfo} />
                         <div className="buttons">
                           <MainButton
                             gameInfo={gameInfo}
