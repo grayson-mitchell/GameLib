@@ -145,13 +145,15 @@ const Accessibility = React.memo(function Accessibility() {
 
   return (
     <div className="Accessibility Settings">
-      <div className="settingsWrapper">
+      <div className="appearanceGallery">
         <h1 className="headerTitle">
           {t('accessibility.title', 'Appearance')}
         </h1>
 
         <ThemeSelector />
+      </div>
 
+      <div className="settingsWrapper">
         <span className="rangeWrapper Field">
           <label className={classNames({ isRTL: isRTL })}>
             {t('accessibility.zoom', 'Zoom')} ({zoomDraft}%)

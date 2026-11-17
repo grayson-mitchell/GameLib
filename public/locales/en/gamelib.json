@@ -80,6 +80,11 @@
         "steamInstallTargetBridgeBottle": "Its own Windows bottle",
         "steamInstallTargetDefault": "Your Steam library"
     },
+    "customThemes": {
+        "active": "Active",
+        "builtInReadOnly": "Built-in theme, read-only",
+        "groupBuiltIn": "Built-in"
+    },
     "discounts": {
         "pegiPrefix": "PEGI ≤ {{value}}"
     },
