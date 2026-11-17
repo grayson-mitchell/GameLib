@@ -5,16 +5,16 @@ milestone_name: Foundations
 current_phase: 81
 current_phase_name: Unify the Steam restart hold into restart-on-Play
 status: executing
-stopped_at: Completed 81-01-PLAN.md
-last_updated: "2026-11-17T17:06:07.533Z"
+stopped_at: Completed 81-02-PLAN.md
+last_updated: "2026-11-17T17:14:30.265Z"
 last_activity: 2026-11-17
 last_activity_desc: Phase 81 execution started
-state_head: 9fb1da91c13e19b3663345fd0a223723f40314c8
+state_head: 031ef980a69eb1b514b85dbb9d076bf57c73be03
 progress:
   total_phases: 26
   completed_phases: 23
   total_plans: 511
-  completed_plans: 492
+  completed_plans: 493
   percent: 88
 ---
 
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 ## Current Position
 
 Phase: 81 (Unify the Steam restart hold into restart-on-Play) — EXECUTING
-Plan: 2 of 20
+Plan: 3 of 20
 Status: Ready to execute
 Last activity: 2026-11-17 — Phase 81 execution started
 
@@ -275,6 +275,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 70 P03 | 15min | 2 tasks | 3 files |
 | Phase 80 P14 | 40min | 2 tasks | 3 files |
 | Phase 81 P01 | continuation | 2 tasks | 12 files |
+| Phase 81 P02 | 45min | 2 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -440,6 +441,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 66.4]: 66.4-24: Windows .lnk passes the gamelib:// URL as one double-quoted explorer.exe argument with inner quotes percent-encoded to %22
 - [Phase 47]: 47-01: ITAD sweep measured (2026-11-17): auth `query:key`, Epic shop id 16, lookup ceiling 1000, amount==amountInt, 32 priced / 10 fallback countries; search `resultsParam` measured NULL (results=20 and limit=20 both return 20 because 20 is the default), locked as `results` from the official ITAD OpenAPI spec (SPEC grade); itadCoverage.ts committed
 - [Phase 81]: 81-01: ACF adoption compare is content-only (no mtime); pid-change evidence is macOS only (spikes 087/088 r4)
+- [Phase 81]: 81-02: adoption op string bounds are zod refinements because genIpcContract rejects pattern/length keywords; unknown keys are refused by the crate's strict parse, not the generated shell struct
 
 ### Pending Todos
 
@@ -815,8 +817,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-17T17:06:04.288Z
-Stopped at: Completed 81-01-PLAN.md
+Last session: 2026-11-17T17:14:26.984Z
+Stopped at: Completed 81-02-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
