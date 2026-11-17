@@ -5,7 +5,14 @@ import i18next from 'i18next'
 import type { ExperimentalFeatures, FocusRowSelection } from 'common/types'
 import { toShippedLanguage } from 'common/languages'
 import { seedFocusRowFromMirror } from 'common/focusRowMigration'
+import type { CustomTheme } from '../../common/types/customTheme'
 import { configStore } from '../helpers/stores'
+import { builtinSeed } from '../customThemes/builtinTokens'
+import {
+  makeCopy,
+  parseCustomThemes,
+  resolveThemeKey
+} from '../customThemes/customTheme'
 import { bindStoreHooks, registerStoreForReset } from './storeKit'
 
 // Phase 69 D-01: settings/theme/appearance domain store (formerly the
@@ -36,9 +43,14 @@ export function wasFocusRowPickedThisSession(): boolean {
   return focusRowPickedThisSession
 }
 
+export type DuplicateResult =
+  | { ok: true; id: string }
+  | { ok: false; reason: 'limit' | 'unknown-source' }
+
 export interface SettingsState {
   language: string
   theme: string
+  customThemes: CustomTheme[]
   zoomPercent: number
   primaryFontFamily: string
   secondaryFontFamily: string
@@ -56,6 +68,11 @@ export interface SettingsState {
 
   setLanguage: (newLanguage: string) => void
   setTheme: (newThemeName: string) => void
+  /** Stores a frozen copy of a built-in or custom theme. Does not apply it (OD-6). */
+  duplicateTheme: (
+    sourceKey: string,
+    copyName: (n: number | null) => string
+  ) => DuplicateResult
   setZoomPercent: (newZoomPercent: number) => void
   setPrimaryFontFamily: (newFontFamily: string, saveToFile?: boolean) => void
   setSecondaryFontFamily: (newFontFamily: string, saveToFile?: boolean) => void
@@ -72,10 +89,19 @@ export interface SettingsState {
   handleFocusRow: (value: FocusRowSelection) => void
 }
 
+// 16 lowercase hex characters from 8 random bytes. `crypto.randomUUID` is not verified on the
+// `tauri://` origin, so `getRandomValues` is used.
+function newThemeId(): string {
+  const bytes = new Uint8Array(8)
+  crypto.getRandomValues(bytes)
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
+}
+
 const useSettingsStateRaw = create<SettingsState>()(
-  subscribeWithSelector((set) => ({
+  subscribeWithSelector((set, get) => ({
     language: 'en',
     theme: 'midnightMirage',
+    customThemes: [],
     zoomPercent: 100,
     primaryFontFamily: '',
     secondaryFontFamily: '',
@@ -100,6 +126,26 @@ const useSettingsStateRaw = create<SettingsState>()(
       configStore.set('theme', newThemeName)
       set({ theme: newThemeName })
       window.setTheme(newThemeName)
+    },
+
+    duplicateTheme: (sourceKey, copyName) => {
+      const existing = get().customThemes
+      const resolved = resolveThemeKey(sourceKey, existing)
+      let source: { base: string; tokens: Readonly<Record<string, string>> }
+      if (resolved.kind === 'builtin') {
+        const seed = builtinSeed(resolved.key)
+        if (!seed) return { ok: false, reason: 'unknown-source' }
+        source = { base: resolved.key, tokens: seed }
+      } else if (resolved.kind === 'custom') {
+        source = resolved.theme
+      } else {
+        return { ok: false, reason: 'unknown-source' }
+      }
+      const id = newThemeId()
+      const next = [...existing, makeCopy(source, id, copyName(null))]
+      configStore.set('customThemes', next)
+      set({ customThemes: next })
+      return { ok: true, id }
     },
 
     setZoomPercent: (newZoomPercent) => {
@@ -176,6 +222,7 @@ const useSettingsStateRaw = create<SettingsState>()(
 type InitialSettings = Pick<
   SettingsState,
   | 'theme'
+  | 'customThemes'
   | 'zoomPercent'
   | 'primaryFontFamily'
   | 'secondaryFontFamily'
@@ -213,6 +260,7 @@ export function readInitialSettings(): InitialSettings {
       ? { language: toShippedLanguage(i18next.language) }
       : {}),
     theme: configStore.get('theme', 'midnightMirage'),
+    customThemes: parseCustomThemes(configStore.get('customThemes', [])),
     zoomPercent: configStore.get('zoomPercent', 100),
     secondaryFontFamily:
       configStore.get_nodefault('contentFontFamily') ||

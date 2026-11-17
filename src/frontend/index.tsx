@@ -40,8 +40,12 @@ import { resolveBootLanguage } from './helpers/resolveBootLanguage'
 import { initOnlineMonitor } from './helpers/onlineMonitor'
 import { registerNoticePreview } from './dev/noticePreview'
 import { installKeyboardNavTracking } from './helpers/inputModality'
-import { defaultThemes } from './components/UI/ThemeSelector'
 import { migrateThemeKey } from './components/UI/ThemeSelector/themeLabels'
+import { applyTheme } from './customThemes/applyTheme'
+import {
+  DEFAULT_THEME_KEY,
+  parseCustomThemes
+} from './customThemes/customTheme'
 import Loading from './screens/Loading'
 import { hydrateStoreSnapshot } from '../preload/tauriTransport'
 import { parseBridgeInvitePickerParams } from 'common/bridgeInvitePicker'
@@ -195,8 +199,6 @@ try {
 probeMark('after-hydrate')
 if (!pickerParams) applyFramelessDecorations()
 
-const DEFAULT_THEME = 'midnightMirage'
-
 const Backend = new HttpApi(null, {
   // Quick task 260901-b8z: `addPath` used to live here as
   // 'build/locales/{{lng}}/{{ns}}'. It is reached only via
@@ -313,16 +315,13 @@ probeMark('after-root-render')
 i18next.on('initialized', () => probeMark('i18next-initialized'))
 i18next.on('loaded', () => probeMark('i18next-loaded'))
 
-// helper function to set the theme class
-window.setTheme = async (themeClass: string) => {
-  // Custom CSS themes were removed (quick 261031-bst). A stored value naming a
-  // theme file from that era is not a built-in key; fall back rather than
-  // leave the body on a class no stylesheet defines.
-  if (!Object.keys(defaultThemes).includes(themeClass)) {
-    themeClass = DEFAULT_THEME
-  }
-
-  document.body.className = themeClass
+// helper function to set the theme class. `applyTheme` owns the built-in / custom /
+// unknown-key resolution (D-08): it replaces only the built-in theme classes on the body, so
+// isRTL, keyboardNav and controllerLayout survive a switch, and an unknown or deleted key falls
+// back to the default.
+window.setTheme = async (themeKey: string) => {
+  const customs = parseCustomThemes(configStore.get('customThemes', []))
+  applyTheme(document.body, themeKey, customs, DEFAULT_THEME_KEY)
 
   // `navigator.windowControlsOverlay` is undefined in the Tauri WKWebView (it is a
   // Chromium/Electron-only surface), so guard the access — mirrors App.tsx's
@@ -348,8 +347,8 @@ window.setTheme = async (themeClass: string) => {
 // it through the migration once at boot and persist the result, so this is
 // a one-time rewrite rather than a translation performed on every launch.
 // A leftover custom theme filename is not a retired key and passes
-// through `migrateThemeKey` unchanged; `setTheme` maps it to DEFAULT_THEME.
-const storedThemeClass = configStore.get('theme', DEFAULT_THEME)
+// through `migrateThemeKey` unchanged; `setTheme` maps it to DEFAULT_THEME_KEY.
+const storedThemeClass = configStore.get('theme', DEFAULT_THEME_KEY)
 const themeClass = migrateThemeKey(storedThemeClass)
 if (themeClass !== storedThemeClass) {
   configStore.set('theme', themeClass)
