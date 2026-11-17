@@ -43,6 +43,7 @@ import {
   STORE_SET_CHANNEL,
   STORE_DELETE_CHANNEL,
   STORE_NEW_CHANNEL,
+  STORE_SET_CHECKED_CHANNEL,
   STORE_CHANGED_CHANNEL,
   type StoreChangedPayload
 } from 'common/types/sidecarTransport'
@@ -111,7 +112,9 @@ interface StoreLayer {
 /**
  * THE single write choke point (D-06). Guards run in this fixed order; each rejection
  * logs exactly one stderr line naming the store and key — NEVER the value (T-28-04
- * convention) — and returns without writing or emitting a change event.
+ * convention) — and returns false without writing or emitting a change event. Returns true
+ * only after the write persisted and the change was pushed (the confirmed-write channel
+ * reports this to the renderer; the send-kind listeners ignore it).
  */
 export function applyStoreWrite(
   registry: StoreRegistry,
@@ -121,7 +124,7 @@ export function applyStoreWrite(
   storeName: string,
   key: string,
   value?: unknown
-): void {
+): boolean {
   // Guard (a): storeName must be a declared store (STORE_UNIVERSE) or a RECOGNIZED
   // dynamic cache-store name.
   //
@@ -140,7 +143,7 @@ export function applyStoreWrite(
     process.stderr.write(
       `[storeWriteHandlers] rejected write — unrecognized store name '${storeName}' key '${key}'\n`
     )
-    return
+    return false
   }
 
   // Guard (b): PHASE 28 D-04 / REQ-28-02 — the Steam refresh token lives in the OS
@@ -156,7 +159,7 @@ export function applyStoreWrite(
     process.stderr.write(
       `[storeWriteHandlers] rejected write — steamConfigStore.${TOKEN_STORE_KEY} is Keychain-owned (D-04/REQ-28-02), key '${key}'\n`
     )
-    return
+    return false
   }
 
   // Guard (c′): CR-01 defence-in-depth — refuse prototype-chain key path segments at
@@ -170,7 +173,7 @@ export function applyStoreWrite(
     process.stderr.write(
       `[storeWriteHandlers] rejected write — disallowed key path segment, store '${storeName}'\n`
     )
-    return
+    return false
   }
 
   // Guard (c): D-08 WRITE-SIDE — a field the renderer may not read, it may not write,
@@ -187,7 +190,7 @@ export function applyStoreWrite(
     process.stderr.write(
       `[storeWriteHandlers] rejected write — field not allow-listed, store '${storeName}' key '${key}'\n`
     )
-    return
+    return false
   }
 
   // Guard (d): resolve the target ONLY through the registry or the fixed cache-store
@@ -197,7 +200,7 @@ export function applyStoreWrite(
     process.stderr.write(
       `[storeWriteHandlers] rejected write — no resolvable store instance for '${storeName}' key '${key}'\n`
     )
-    return
+    return false
   }
 
   // Guard (e): Phase 68 D-03 — a read-only store (newer-than-supported or failed
@@ -209,7 +212,7 @@ export function applyStoreWrite(
     process.stderr.write(
       `[storeWriteHandlers] refusing write to read-only store '${storeName}' key '${key}'\n`
     )
-    return
+    return false
   }
 
   try {
@@ -235,7 +238,7 @@ export function applyStoreWrite(
         error instanceof Error ? error.message : String(error)
       }\n`
     )
-    return
+    return false
   }
 
   pushStoreChanged(push, {
@@ -244,6 +247,7 @@ export function applyStoreWrite(
     value,
     deleted: op === 'delete'
   })
+  return true
 }
 
 /**
@@ -297,7 +301,7 @@ function pushStoreChanged(
  * is owned by the 'register-handlers' boot step (D-66.4-01), not by a module latch.
  */
 export function registerStoreWriteHandlers(deps: {
-  ipc: Pick<IpcRegistry, 'on'>
+  ipc: Pick<IpcRegistry, 'on' | 'handle'>
   registry: StoreRegistry
   root: StoreRoot
   /** This boot's backend -> frontend push (66.4-15). */
@@ -333,6 +337,30 @@ export function registerStoreWriteHandlers(deps: {
         const { registry, root, push } = layer
         applyStoreWrite(registry, root, push, 'set', storeName, key, value)
       }
+    }
+  )
+
+  // Phase 64 plan 03: the CONFIRMED write. Same choke point as `storeSet`, but an `invoke`
+  // channel, so the renderer awaits whether the write reached disk. A refusal is `false`, not a
+  // rejected promise: every guard already logged its own stderr line.
+  deps.ipc.handle(
+    STORE_SET_CHECKED_CHANNEL,
+    (
+      _event: unknown,
+      storeName: unknown,
+      key: unknown,
+      value: unknown
+    ): Promise<boolean> => {
+      if (typeof storeName !== 'string' || typeof key !== 'string') {
+        process.stderr.write(
+          '[storeWriteHandlers] storeSetChecked rejected a non-string store name or key\n'
+        )
+        return Promise.resolve(false)
+      }
+      const { registry, root, push } = layer
+      return Promise.resolve(
+        applyStoreWrite(registry, root, push, 'set', storeName, key, value)
+      )
     }
   )
 

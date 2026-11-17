@@ -92,7 +92,8 @@ import { BOOT_SET_STORES, STORE_ALLOWLIST } from 'common/types/storePolicy'
 import {
   STORE_SNAPSHOT_CHANNEL,
   STORE_FETCH_CHANNEL,
-  STORE_SET_CHANNEL
+  STORE_SET_CHANNEL,
+  STORE_SET_CHECKED_CHANNEL
 } from 'common/types/sidecarTransport'
 
 // `registerHandlers()` registers every invoke handler (including the
@@ -168,6 +169,21 @@ async function invokeStoreFetch(
     )
   }
   return (await handler(undefined, storeName)) as Record<string, unknown>
+}
+
+/** Invokes the real registered `sidecar:store-set-checked` handler directly off the recorder. */
+async function invokeStoreSetChecked(
+  storeName: string,
+  key: string,
+  value: unknown
+): Promise<boolean> {
+  const handler = bootServices.host.ipc.getHandler(STORE_SET_CHECKED_CHANNEL)
+  if (!handler) {
+    throw new Error(
+      `${STORE_SET_CHECKED_CHANNEL} handler was not registered by ../handlers`
+    )
+  }
+  return (await handler(undefined, storeName, key, value)) as boolean
 }
 
 describe('round-trip', () => {
@@ -556,5 +572,57 @@ describe('C-WR-1: two boots in one module registry', () => {
 
     const snapshot = await invokeStoreSnapshot(services2.host.ipc)
     expect(snapshot.gameOverridesStore).toMatchObject({ overrides })
+  })
+})
+
+/**
+ * Phase 64 plan 03: the confirmed write. `sidecar:store-set-checked` resolves true only after the
+ * write persisted, and false (writing nothing) for every shape a write guard refuses, so a renderer
+ * Save can tell a persisted theme from a refused one.
+ */
+describe('sidecar:store-set-checked (confirmed write)', () => {
+  it('resolves true and persists an allow-listed configStore key', async () => {
+    await expect(
+      invokeStoreSetChecked('configStore', 'theme', 'dracula')
+    ).resolves.toBe(true)
+    expect(
+      asProbeable(registry.get('configStore')).get_nodefault('theme')
+    ).toBe('dracula')
+  })
+
+  it('resolves false and writes nothing for the Keychain-owned Steam token', async () => {
+    await expect(
+      invokeStoreSetChecked('steamConfigStore', 'refreshToken', 'x')
+    ).resolves.toBe(false)
+    expect(
+      asProbeable(steamConfigStore).get_nodefault('refreshToken')
+    ).toBeUndefined()
+  })
+
+  it('resolves false for a prototype-chain key path', async () => {
+    await expect(
+      invokeStoreSetChecked('configStore', 'games.__proto__.x', 1)
+    ).resolves.toBe(false)
+    expect(({} as Record<string, unknown>).x).toBeUndefined()
+  })
+
+  it('resolves false for a store name that is not recognized', async () => {
+    await expect(invokeStoreSetChecked('notARealStore', 'k', 1)).resolves.toBe(
+      false
+    )
+  })
+
+  it('resolves false for a field that is not allow-listed', async () => {
+    await expect(
+      invokeStoreSetChecked('configStore', 'userHome', '/tmp/x')
+    ).resolves.toBe(false)
+  })
+
+  it('resolves false for non-string arguments', async () => {
+    const handler = defined(
+      bootServices.host.ipc.getHandler(STORE_SET_CHECKED_CHANNEL),
+      'checked handler'
+    )
+    await expect(handler(undefined, 1, 'theme', 'x')).resolves.toBe(false)
   })
 })

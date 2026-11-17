@@ -1324,6 +1324,16 @@ export const STORE_NEW_CHANNEL = 'storeNew' as const
 export const STORE_FETCH_CHANNEL = 'sidecar:store-fetch' as const
 
 /**
+ * `invoke`-kind INTERNAL RPC channel, ridden over `SIDECAR_INVOKE`, for a CONFIRMED single-key
+ * store write (Phase 64 plan 03). Unlike the fire-and-forget `STORE_SET_CHANNEL` it carries a
+ * response: the sidecar resolves `true` only when the write was persisted, and `false` when any
+ * write guard refused it or the write threw. It routes through the same `applyStoreWrite` choke
+ * point as `storeSet`. A renderer channel (not in `sidecarInternalCallers`), so it is relayed
+ * through the Rust shell's generated `RENDERER_CHANNELS` allow-list.
+ */
+export const STORE_SET_CHECKED_CHANNEL = 'sidecar:store-set-checked' as const
+
+/**
  * Mirrors `src-tauri/src/main.rs`'s own snapshot-channel constant. DISTINCT from
  * `SIDECAR_STORE_SNAPSHOT` (the renderer-facing Tauri COMMAND name the renderer invokes to
  * request the snapshot) — this is the internal sidecar-side channel identifier for the same

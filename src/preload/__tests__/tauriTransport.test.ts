@@ -43,6 +43,7 @@ import {
   snapshotGet,
   snapshotHas,
   snapshotSet,
+  snapshotSetChecked,
   snapshotDelete,
   hydrateStoreSnapshot,
   registerStore,
@@ -51,7 +52,12 @@ import {
   onStoreChanged
 } from '../tauriTransport'
 import { defined } from './defined'
-import { STORE_FETCH_CHANNEL, STORE_CHANGED_CHANNEL, STORE_LAZY_MISS_MARKER } from 'common/types/sidecarTransport'
+import {
+  STORE_FETCH_CHANNEL,
+  STORE_CHANGED_CHANNEL,
+  STORE_LAZY_MISS_MARKER,
+  STORE_SET_CHECKED_CHANNEL
+} from 'common/types/sidecarTransport'
 
 const mockedInvoke = coreInvoke as jest.MockedFunction<typeof coreInvoke>
 const mockedListen = eventListen as jest.MockedFunction<typeof eventListen>
@@ -688,6 +694,69 @@ describe('WR-03: snapshotSet/snapshotDelete are allow-list gated', () => {
       expect(String(call[0])).not.toContain('blocked write')
     }
     expect(snapshotGet('configStore', 'theme')).toBe('gsd')
+  })
+})
+
+/**
+ * Phase 64 plan 03: `snapshotSetChecked` is the awaitable write. The local snapshot moves only
+ * after the sidecar confirms persistence, so a refused or failed write never shows a value that
+ * is not on disk.
+ */
+describe('snapshotSetChecked: confirmed write', () => {
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
+  it('a resolved true invoke updates the snapshot and returns true', async () => {
+    mockedInvoke.mockResolvedValue(true as never)
+    snapshotSet('configStore', 'theme', 'before')
+    mockedInvoke.mockClear()
+    mockedInvoke.mockResolvedValue(true as never)
+
+    await expect(snapshotSetChecked('configStore', 'theme', 'after')).resolves.toBe(true)
+
+    expect(mockedInvoke).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ channel: STORE_SET_CHECKED_CHANNEL, args: ['configStore', 'theme', 'after'] })
+    )
+    expect(snapshotGet('configStore', 'theme')).toBe('after')
+  })
+
+  it('a resolved false invoke returns false and leaves the snapshot unchanged', async () => {
+    snapshotSet('configStore', 'theme', 'kept')
+    mockedInvoke.mockResolvedValue(false as never)
+
+    await expect(snapshotSetChecked('configStore', 'theme', 'refused')).resolves.toBe(false)
+
+    expect(snapshotGet('configStore', 'theme')).toBe('kept')
+  })
+
+  it('a rejected invoke returns false and leaves the snapshot unchanged', async () => {
+    snapshotSet('configStore', 'theme', 'kept')
+    mockedInvoke.mockRejectedValue(new Error('sidecar gone') as never)
+
+    await expect(snapshotSetChecked('configStore', 'theme', 'lost')).resolves.toBe(false)
+
+    expect(snapshotGet('configStore', 'theme')).toBe('kept')
+  })
+
+  it('only an exact true counts as persisted', async () => {
+    snapshotSet('configStore', 'theme', 'kept')
+    mockedInvoke.mockResolvedValue('true' as never)
+
+    await expect(snapshotSetChecked('configStore', 'theme', 'truthy')).resolves.toBe(false)
+
+    expect(snapshotGet('configStore', 'theme')).toBe('kept')
+  })
+
+  it('a non-writable field returns false without invoking', async () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    mockedInvoke.mockClear()
+
+    await expect(snapshotSetChecked('gogConfigStore', 'credentials', { access_token: 'x' })).resolves.toBe(false)
+
+    expect(mockedInvoke).not.toHaveBeenCalled()
+    expect(warnSpy).toHaveBeenCalled()
   })
 })
 

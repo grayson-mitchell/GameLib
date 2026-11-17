@@ -128,6 +128,7 @@ import {
   snapshotGet,
   snapshotHas,
   snapshotSet,
+  snapshotSetChecked,
   snapshotDelete
 } from '../tauriTransport'
 // FUTURE WORK
@@ -169,6 +170,10 @@ export const storeNew = function (storeName: string, options: StoreOptions<Recor
 export const storeSet = (storeName: string, key: string, value?: unknown) => {
   snapshotSet(storeName, key, value)
 }
+
+// Phase 64 plan 03: awaitable write; resolves true only once the sidecar persisted it.
+export const storeSetChecked = (storeName: string, key: string, value?: unknown) =>
+  snapshotSetChecked(storeName, key, value)
 
 export const storeHas = (storeName: string, key: string) => {
   return snapshotHas(storeName, key)

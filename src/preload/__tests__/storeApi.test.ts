@@ -31,6 +31,7 @@ const mockedRegisterStore = jest.fn()
 const mockedSnapshotGet = jest.fn()
 const mockedSnapshotHas = jest.fn()
 const mockedSnapshotSet = jest.fn()
+const mockedSnapshotSetChecked = jest.fn()
 const mockedSnapshotDelete = jest.fn()
 
 jest.mock('../tauriTransport', () => ({
@@ -38,10 +39,11 @@ jest.mock('../tauriTransport', () => ({
   snapshotGet: (...args: unknown[]) => mockedSnapshotGet(...args),
   snapshotHas: (...args: unknown[]) => mockedSnapshotHas(...args),
   snapshotSet: (...args: unknown[]) => mockedSnapshotSet(...args),
+  snapshotSetChecked: (...args: unknown[]) => mockedSnapshotSetChecked(...args),
   snapshotDelete: (...args: unknown[]) => mockedSnapshotDelete(...args)
 }))
 
-import { storeNew, storeGet, storeSet, storeHas, storeDelete } from '../api/misc'
+import { storeNew, storeGet, storeSet, storeSetChecked, storeHas, storeDelete } from '../api/misc'
 
 describe('misc.ts store bridge delegation (D-01/D-02/D-04 convergence)', () => {
   beforeEach(() => {
@@ -59,6 +61,13 @@ describe('misc.ts store bridge delegation (D-01/D-02/D-04 convergence)', () => {
     storeSet('configStore', 'theme', 'dark')
 
     expect(mockedSnapshotSet).toHaveBeenCalledWith('configStore', 'theme', 'dark')
+  })
+
+  it('storeSetChecked delegates to snapshotSetChecked and returns its confirmation', async () => {
+    mockedSnapshotSetChecked.mockResolvedValue(true)
+
+    await expect(storeSetChecked('configStore', 'theme', 'dark')).resolves.toBe(true)
+    expect(mockedSnapshotSetChecked).toHaveBeenCalledWith('configStore', 'theme', 'dark')
   })
 
   it('storeHas delegates unconditionally to snapshotHas and returns its result', () => {

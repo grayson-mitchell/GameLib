@@ -59,6 +59,17 @@ class TypeCheckedStoreFrontend<
     window.api.storeSet(this.storeName, key, value)
   }
 
+  /**
+   * Awaitable `set`: resolves `true` only after the sidecar persisted the write, `false` when it
+   * was refused or failed. The renderer snapshot is left unchanged on `false`.
+   */
+  public setChecked<KeyType extends string>(
+    key: KeyType,
+    value: UnknownGuard<Get<StoreStructure[Name], KeyType>>
+  ): Promise<boolean> {
+    return window.api.storeSetChecked(this.storeName, key, value)
+  }
+
   public delete<KeyType extends string>(key: KeyType) {
     window.api.storeDelete(this.storeName, key)
   }

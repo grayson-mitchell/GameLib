@@ -174,6 +174,8 @@ export const sidecarInternalInvokeArgs = {
   trayResolveRunner: z.tuple([nonEmptyString(256)]),
   'sidecar:store-snapshot': noArgs,
   'sidecar:store-fetch': z.tuple([storeName]),
+  // Phase 64 plan 03: a confirmed write; resolves true only once persisted (renderer-invoked).
+  'sidecar:store-set-checked': z.tuple([storeName, keyPath, z.json()]),
   // The `gamelib://` prefix check stays in bootstrap.ts (D-05).
   handleProtocolUrl: z.tuple([nonEmptyString(8192)]),
   // Shell-originated: the Rust depot job asks Node for a CDN token / manifest request code.

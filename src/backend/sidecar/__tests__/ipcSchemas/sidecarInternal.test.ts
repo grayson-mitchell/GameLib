@@ -30,6 +30,14 @@ const invokeTable: FixtureTable<typeof sidecarInternalInvokeArgs> = {
     valid: [['gogLibraryStore'], ['timestampStore']],
     invalid: [[], [''], [1], ['x'.repeat(129)]]
   },
+  // Phase 64 plan 03: renderer-invoked confirmed write [store, key, json value]
+  'sidecar:store-set-checked': {
+    valid: [
+      ['configStore', 'theme', 'dracula'],
+      ['configStore', 'customThemes', []]
+    ],
+    invalid: [[], ['configStore'], ['', 'theme', 1], [1, 'theme', 1]]
+  },
   // main.rs / single_instance.rs: [Value::String(url)]
   handleProtocolUrl: {
     valid: [['gamelib://launch/steam/220']],
@@ -193,7 +201,7 @@ describe('sidecarInternal schemas', () => {
   runFixtureTable(sidecarInternalInvokeArgs, invokeTable)
   runFixtureTable(sidecarInternalSendArgs, sendTable)
 
-  it('registers the thirteen channels with the right kind and caller', () => {
+  it('registers the fifteen channels with the right kind and caller', () => {
     const shell = [
       'health',
       'trayResolveRunner',
@@ -220,6 +228,6 @@ describe('sidecarInternal schemas', () => {
     expect(
       Object.keys(sidecarInternalInvokeArgs).length +
         Object.keys(sidecarInternalSendArgs).length
-    ).toBe(14)
+    ).toBe(15)
   })
 })

@@ -31,6 +31,7 @@ import {
   SIDECAR_STORE_SNAPSHOT,
   FRONTEND_MESSAGE_EVENT,
   STORE_FETCH_CHANNEL,
+  STORE_SET_CHECKED_CHANNEL,
   STORE_NEW_CHANNEL,
   STORE_CHANGED_CHANNEL,
   STORE_LAZY_MISS_MARKER,
@@ -545,6 +546,32 @@ export function snapshotSet(storeName: string, key: string, value?: unknown): vo
   // CR-03: nested write, mirroring `getAtPath`'s nested read.
   setAtPath(snapshot[storeName], key, value)
   send('storeSet', [storeName, key, value])
+}
+
+/**
+ * Confirmed counterpart of `snapshotSet`: resolves `true` only after the sidecar reports the
+ * write was persisted, and `false` when it refused it (not allow-listed, unsafe key path,
+ * unknown or read-only store, a throwing write) or the invoke itself failed. The local
+ * snapshot is written ONLY on a `true` result, never optimistically, so a refused write leaves
+ * the renderer showing exactly what is on disk (Phase 64 plan 03).
+ */
+export async function snapshotSetChecked(storeName: string, key: string, value?: unknown): Promise<boolean> {
+  // WR-04: the WRITE predicate, strictly narrower than the read predicate.
+  if (!isWritableStoreField(storeName, key)) {
+    rejectSnapshotWrite('snapshotSetChecked', storeName, key)
+    return false
+  }
+  let persisted: unknown
+  try {
+    persisted = await invoke<boolean>(STORE_SET_CHECKED_CHANNEL, [storeName, key, value])
+  } catch {
+    return false
+  }
+  if (persisted !== true) return false
+  if (!snapshot[storeName]) snapshot[storeName] = {}
+  // CR-03: nested write, mirroring `getAtPath`'s nested read.
+  setAtPath(snapshot[storeName], key, value)
+  return true
 }
 
 /** Deletes locally and forwards the delete to the sidecar asynchronously. */
