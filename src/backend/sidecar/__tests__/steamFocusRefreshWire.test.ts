@@ -165,6 +165,7 @@ jest.mock('../../launcher', () => ({
 // `jest.spyOn` on its `refreshInstallState` method observes the real production call path, not
 // a stand-in.
 import { createTestSteamSession } from 'backend/testUtils/testSteamSession'
+import { createTestSteamInstallRuntime } from 'backend/testUtils/testSteamInstallRuntime'
 import SteamLibraryManager from '../../storeManagers/steam/library'
 import { registerSteamFlows } from '../steamFlowRegistration'
 import { createTestSidecarRpc } from '../../testUtils/testSidecarRpc'
@@ -193,6 +194,7 @@ const steamFlowDeps = () => ({
   stores: createTestStores(),
   notifications: createTestHostServices().notifications,
   steamSession: createTestSteamSession(),
+  steamInstallRuntime: createTestSteamInstallRuntime(),
   humble: { library: { recomputeOwnership: () => undefined } },
   launcher: {
     launchEventCallback: (...args: unknown[]) =>

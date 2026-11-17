@@ -168,6 +168,7 @@ export function registerHandlers(deps: {
     appState: deps.services.host.appState,
     managers: deps.services.managers,
     stores: deps.services.stores,
+    steamInstallRuntime: deps.services.steamInstallRuntime,
     launcher: deps.services.launcher,
     notifications: deps.services.host.notifications,
     sendFrontendMessage: deps.services.host.sendFrontendMessage,

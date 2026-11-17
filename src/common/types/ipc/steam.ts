@@ -4,6 +4,7 @@ import type { GameStatus, StatusPromise } from '../../types'
 import type {
   SteamAdoptionRestartOutcome,
   SteamAdoptionStatus,
+  SteamAdoptionStatusPayload,
   SteamBottleLaunchWaitingCause,
   SteamBridgeKnownBadReason,
   SteamBridgeRouteReason,
@@ -85,6 +86,11 @@ export const steamFrontendMessagesArgs = {
   ]),
   // quick 261106-pvk: one-way push when Steam never starts a delegated request.
   steamRequestNotice: z.tuple([z.custom<SteamRequestNoticePayload>(isObject)]),
+  // Phase 81 (D-07, D-03): the game page's adoption status, pushed on every record write/clear and
+  // every signed-in change. `seq` rises strictly per boot; the renderer drops anything not newer.
+  steamAdoptionStatusChanged: z.tuple([
+    z.custom<SteamAdoptionStatusPayload>(isObject)
+  ]),
   // Phase 51 Plan 03 (D-51-02/08): the one-time per-game notice fired when a game launches
   // through a stubbed interface, an identity fallback, or past a known-bad acknowledgement.
   // `userRoute` is sent back unchanged on acknowledgement so an override is never wiped.

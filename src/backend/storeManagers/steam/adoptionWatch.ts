@@ -13,11 +13,13 @@ import { existsSync } from 'node:fs'
 import type { GlobalConfigSlice } from 'backend/config'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import { logWarning, LogPrefix } from 'backend/logger'
+import type { ManagerDeps } from 'backend/services/types'
 import {
   RUST_STEAMPOLL_ADOPTION_READ,
   RUST_STEAMPOLL_ADOPTION_UNWATCH,
   RUST_STEAMPOLL_ADOPTION_WATCH
 } from 'common/types/sidecarTransport'
+import { pushSteamAdoptionStatus } from './adoptionStatus'
 import { isSteamExperimentalInstallAppEnabled } from './experimentalInstallAppSetting'
 import type { SteamStoresDeps } from './library/installRoot'
 import {
@@ -28,10 +30,15 @@ import {
   type PendingAdoptionRecord
 } from './macSteamAdoption'
 import { invokeSteamPoll } from './pollRust/rustSteamPoll'
+import type { SteamInstallRuntime } from './steamInstallRuntime'
 import type { AdoptionReading } from './pollRust/steamPollTypes'
 
 export type AdoptionWatchDeps = RustInvokeDeps &
-  SteamStoresDeps & { config: Pick<GlobalConfigSlice, 'getSettings'> }
+  SteamStoresDeps &
+  Pick<ManagerDeps, 'sendFrontendMessage'> & {
+    config: Pick<GlobalConfigSlice, 'getSettings'>
+    steamInstallRuntime: Pick<SteamInstallRuntime, 'adoption'>
+  }
 
 /** The watch/read op arguments for one pending record. */
 export function adoptionWatchArgs(
@@ -91,15 +98,21 @@ export async function recordAndWatchPendingAdoption(
   record: PendingAdoptionRecord
 ): Promise<void> {
   recordPendingAdoption(appId, record, pendingAdoptionStoreFrom(deps))
+  pushSteamAdoptionStatus(deps, appId)
   await watchPendingAdoption(deps, appId, record)
 }
 
-/** Clears the record and unwatches it (fire and forget; a rejection is logged). */
+/**
+ * Clears the record, drops its signed-in reading, pushes the page status (D-07: the note goes
+ * away on its own) and unwatches it (fire and forget; a rejection is logged).
+ */
 export function clearAndUnwatchPendingAdoption(
   deps: AdoptionWatchDeps,
   appId: string
 ): void {
   clearPendingAdoption(appId, pendingAdoptionStoreFrom(deps))
+  deps.steamInstallRuntime.adoption.signedIn.delete(appId)
+  pushSteamAdoptionStatus(deps, appId)
   invokeSteamPoll(deps, RUST_STEAMPOLL_ADOPTION_UNWATCH, { appId }).catch(
     (err: unknown) =>
       logInvokeFailure('unwatch', RUST_STEAMPOLL_ADOPTION_UNWATCH, appId, err)

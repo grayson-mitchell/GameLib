@@ -36,6 +36,15 @@ export interface SteamInstallRuntime {
    * persisted: the Rust counter restarts with the shell.
    */
   noticeSeq: { last: number }
+  /**
+   * Phase 81 (D-03, D-07): the page-status push counter (strictly increasing per boot, so the
+   * renderer can drop a stale push) and the Rust watch's last signed-in reading per appId (null =
+   * unknown). Session state, never persisted; closure containers only.
+   */
+  adoption: {
+    pushSeq: { last: number }
+    signedIn: Map<string, boolean | null>
+  }
 }
 
 /** The slice the depot pipeline (plan build, Rust jobs, shared redists) reads. */
@@ -53,6 +62,7 @@ export function createSteamInstallRuntime(
     depotJobs: createDepotJobRegistry(transport),
     updateStates: createSteamUpdateStateCache(),
     autoUpdateAttempts: new Map(),
-    noticeSeq: { last: 0 }
+    noticeSeq: { last: 0 },
+    adoption: { pushSeq: { last: 0 }, signedIn: new Map() }
   }
 }

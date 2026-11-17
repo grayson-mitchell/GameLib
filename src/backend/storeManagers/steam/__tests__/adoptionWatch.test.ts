@@ -46,8 +46,12 @@ function makeDeps(
   deps: AdoptionWatchDeps
   calls: Call[]
   store: Map<string, unknown>
+  pushes: Call[]
+  signedIn: Map<string, boolean | null>
 } {
   const calls: Call[] = []
+  const pushes: Call[] = []
+  const signedIn = new Map<string, boolean | null>()
   const store = new Map<string, unknown>(Object.entries(options.seed ?? {}))
   const storeFake = {
     get: (key: string) => store.get(key),
@@ -61,6 +65,10 @@ function makeDeps(
   }
   const deps = {
     stores: { steam: { steamPendingAdoptionStore: storeFake } },
+    sendFrontendMessage: (channel: string, ...args: unknown[]) => {
+      pushes.push({ channel, args })
+    },
+    steamInstallRuntime: { adoption: { pushSeq: { last: 0 }, signedIn } },
     config: {
       getSettings: () => ({
         steamExperimentalInstallApp: options.installApp === true
@@ -76,7 +84,7 @@ function makeDeps(
       return Promise.resolve(true)
     }
   } as unknown as AdoptionWatchDeps
-  return { deps, calls, store }
+  return { deps, calls, store, pushes, signedIn }
 }
 
 function record(manifestPath = '/steam/steamapps/appmanifest_112100.acf') {
@@ -124,6 +132,60 @@ describe('recordAndWatchPendingAdoption', () => {
 
   test('a rejected watch invoke is swallowed and the record stays (D-10)', async () => {
     const { deps, store } = makeDeps({ reply: () => new Error('timeout') })
+    await expect(
+      recordAndWatchPendingAdoption(deps, '112100', record())
+    ).resolves.toBeUndefined()
+    expect(store.has('112100')).toBe(true)
+  })
+})
+
+describe('the page status push (D-07)', () => {
+  const payloads = (pushes: Call[]) =>
+    pushes.map((p) => p.args[0] as Record<string, unknown>)
+
+  test('recordAndWatchPendingAdoption pushes pending:true once after the store write', async () => {
+    const { deps, pushes } = makeDeps()
+    await recordAndWatchPendingAdoption(deps, '112100', record())
+    expect(pushes.map((p) => p.channel)).toEqual(['steamAdoptionStatusChanged'])
+    expect(payloads(pushes)[0]).toEqual({
+      appName: '112100',
+      pending: true,
+      steamSignedIn: null,
+      seq: 1
+    })
+  })
+
+  test('clearAndUnwatchPendingAdoption pushes pending:false once and drops the signed-in reading', async () => {
+    const { deps, pushes, signedIn } = makeDeps({
+      seed: { '112100': record() }
+    })
+    signedIn.set('112100', false)
+    clearAndUnwatchPendingAdoption(deps, '112100')
+    await flush()
+    expect(signedIn.has('112100')).toBe(false)
+    expect(payloads(pushes)).toEqual([
+      { appName: '112100', pending: false, steamSignedIn: null, seq: 1 }
+    ])
+  })
+
+  test('a record write then a clear push with a strictly increasing seq', async () => {
+    const { deps, pushes } = makeDeps()
+    await recordAndWatchPendingAdoption(deps, '112100', record())
+    clearAndUnwatchPendingAdoption(deps, '112100')
+    await flush()
+    await recordAndWatchPendingAdoption(deps, '112100', record())
+    expect(payloads(pushes).map((p) => [p.pending, p.seq])).toEqual([
+      [true, 1],
+      [false, 2],
+      [true, 3]
+    ])
+  })
+
+  test('a failed push never fails the write (the record stays)', async () => {
+    const { deps, store } = makeDeps()
+    ;(deps as { sendFrontendMessage: unknown }).sendFrontendMessage = () => {
+      throw new Error('transport down')
+    }
     await expect(
       recordAndWatchPendingAdoption(deps, '112100', record())
     ).resolves.toBeUndefined()

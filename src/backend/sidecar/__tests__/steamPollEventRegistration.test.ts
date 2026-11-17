@@ -423,6 +423,20 @@ describe('steamPollStateEvent handler', () => {
       ).toBeUndefined()
     })
 
+    const statusPushes = (sent: Array<[string, unknown]>) =>
+      sent.filter(([c]) => c === 'steamAdoptionStatusChanged').map(([, p]) => p)
+
+    test('adopted pushes pending:false once and drops any cached reading (D-07)', async () => {
+      const { deps, sent, send } = setup()
+      seedRecord(deps)
+      deps.steamInstallRuntime.adoption.signedIn.set('480', false)
+      await send(adoption(true, 2, true))
+      expect(statusPushes(sent)).toEqual([
+        { appName: '480', pending: false, steamSignedIn: null, seq: 1 }
+      ])
+      expect(deps.steamInstallRuntime.adoption.signedIn.has('480')).toBe(false)
+    })
+
     test('adopted with no record replies applied and writes nothing', async () => {
       const { deps, send } = setup()
       const store = pendingAdoptionStoreFrom(deps)

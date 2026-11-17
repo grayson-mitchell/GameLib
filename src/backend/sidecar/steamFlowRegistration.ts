@@ -467,7 +467,10 @@ async function handleLaunchWithoutSteamOnce(
  * effects at import time beyond registration; the caller decides when
  * registration onto the handler registry happens.
  */
-export type SteamFlowDeps = Pick<BootServices, 'managers' | 'stores'> &
+export type SteamFlowDeps = Pick<
+  BootServices,
+  'managers' | 'stores' | 'steamInstallRuntime'
+> &
   AppRuntimeSlice<'events' | 'launchFlights'> & {
     ipc: Pick<IpcRegistry, 'handle' | 'on'>
     config: Pick<GlobalConfigSlice, 'getSettings'>

@@ -4,6 +4,7 @@ import { isStore } from 'common/storeCapabilities'
 import type { GameInfo } from 'common/types'
 import type { SteamAdoptionStatus } from 'common/types/steam'
 import useLibraryState from 'frontend/state/libraryState'
+import { useSteamAdoptionStatus } from 'frontend/state/SteamAdoptionStatus'
 import GameContext from '../../GameContext'
 import './AdoptionNote.scss'
 
@@ -11,14 +12,19 @@ interface Props {
   gameInfo: GameInfo
 }
 
+/** One query answer with the push seq the store held when the query was issued (a newer push wins). */
+interface StatusRead {
+  status: SteamAdoptionStatus | null
+  floor: number
+}
+
 /** One status read; a rejected query counts as "nothing to show" (the page never errors on it). */
-const readStatus = async (
-  appName: string
-): Promise<SteamAdoptionStatus | null> => {
+const readStatus = async (appName: string): Promise<StatusRead> => {
+  const floor = useSteamAdoptionStatus.getState().byApp[appName]?.seq ?? 0
   try {
-    return await window.api.steamAdoptionStatus(appName)
+    return { status: await window.api.steamAdoptionStatus(appName), floor }
   } catch {
-    return null
+    return { status: null, floor }
   }
 }
 
@@ -26,7 +32,11 @@ const readStatus = async (
  * Phase 81 D-01: the quiet note under the game status for an installed Steam game whose install
  * Steam has not adopted yet. The frontend never derives adoption: everything shown here comes from
  * the backend's `steamAdoptionStatus` answer, read on mount, when the game's operation status
- * changes, and after an action resolves.
+ * changes, and after an action resolves, merged with the live `steamAdoptionStatusChanged` push
+ * (D-07, D-03): the backend pushes on every record write and clear and every signed-in change, so
+ * the note clears itself on adoption and follows Steam's sign-in state without a reload. A push
+ * wins over a query answer when its seq is newer than the one the store held when that query was
+ * issued (every change pushes, so the latest push is the latest state).
  *
  * The same block serves the one GameLib 1026 install still waiting for a Steam restart
  * (`steam-waiting-for-restart`, RESEARCH Open Question 1): there it is the action alone, no note,
@@ -39,7 +49,8 @@ const AdoptionNote = ({ gameInfo }: Props) => {
   const { is, statusContext } = useContext(GameContext)
   const appName = gameInfo.app_name
   const steam = isStore(gameInfo, 'steam')
-  const [status, setStatus] = useState<SteamAdoptionStatus | null>(null)
+  const [read, setRead] = useState<StatusRead>({ status: null, floor: 0 })
+  const pushed = useSteamAdoptionStatus((s) => s.byApp[appName])
   // True while an action is in flight (T-81-28: no repeated clicks).
   const [busy, setBusy] = useState(false)
   // Re-read after the game's operation status changes (an install ending, a launch finishing).
@@ -49,13 +60,13 @@ const AdoptionNote = ({ gameInfo }: Props) => {
 
   useEffect(() => {
     if (!steam) {
-      setStatus(null)
+      setRead({ status: null, floor: 0 })
       return
     }
     let cancelled = false
     readStatus(appName)
       .then((result) => {
-        if (!cancelled) setStatus(result)
+        if (!cancelled) setRead(result)
       })
       .catch(() => undefined)
     return () => {
@@ -65,6 +76,8 @@ const AdoptionNote = ({ gameInfo }: Props) => {
 
   if (!steam) return null
 
+  const status: SteamAdoptionStatus | null =
+    pushed && pushed.seq > read.floor ? pushed : read.status
   const waitingForRestart =
     is.installing && statusContext === 'steam-waiting-for-restart'
   const installedPending = gameInfo.is_installed && status?.pending === true
@@ -90,7 +103,7 @@ const AdoptionNote = ({ gameInfo }: Props) => {
     } catch {
       // The backend answers failures itself; the re-read below shows the true state.
     }
-    setStatus(await readStatus(appName))
+    setRead(await readStatus(appName))
     setBusy(false)
   }
 

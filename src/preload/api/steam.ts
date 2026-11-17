@@ -30,6 +30,8 @@ export const persistBottleWineVersion = makeHandlerInvoker('persistBottleWineVer
 export const getSteamBridgeRoute = makeHandlerInvoker('getSteamBridgeRoute')
 // quick 261106-pvk: one-way push, library.ts no-activity give-up.
 export const handleSteamRequestNotice = frontendListenerSlot('steamRequestNotice')
+// Phase 81 (D-07, D-03): the game page's adoption status, pushed live.
+export const handleSteamAdoptionStatusChanged = frontendListenerSlot('steamAdoptionStatusChanged')
 export const setSteamBridgeUserRoute = makeHandlerInvoker('setSteamBridgeUserRoute')
 // quick-260821-le0 (Task 3): sweeps every recorded install root for a Steam
 // title in one action — registered on BOTH runtimes.

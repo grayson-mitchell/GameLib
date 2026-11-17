@@ -23,10 +23,20 @@ import {
 import type SteamGame from './games'
 import type { SteamStoresDeps } from './library/installRoot'
 import { hostPlatform, pushAdoptRestartRefusal } from './playAdoption'
+import type { SteamInstallRuntime } from './steamInstallRuntime'
 import type {
   SteamAdoptionRestartOutcome,
   SteamAdoptionStatus
 } from 'common/types/steam'
+
+/** What the page status reads: the record store plus the per-boot signed-in cache (81-09). */
+export type AdoptionStatusDeps = SteamStoresDeps & {
+  steamInstallRuntime: Pick<SteamInstallRuntime, 'adoption'>
+}
+
+/** What a status push needs on top of the read: the typed frontend push. */
+export type AdoptionPushDeps = AdoptionStatusDeps &
+  Pick<ManagerDeps, 'sendFrontendMessage'>
 
 const NOT_PENDING: SteamAdoptionStatus = { pending: false, steamSignedIn: null }
 
@@ -36,23 +46,50 @@ function isSteamAppIdArg(value: unknown): value is string {
 }
 
 /**
- * Whether a stored, valid pending-adoption record exists for `appId`. `steamSignedIn` stays null
- * until the Rust watch feeds it (81-09 widens deps with the signed-in cache).
+ * Whether a stored, valid pending-adoption record exists for `appId`, and the last signed-in
+ * reading the Rust watch reported for it (null until one arrives, D-03).
  */
 export function getSteamAdoptionStatus(
-  deps: SteamStoresDeps,
+  deps: AdoptionStatusDeps,
   appId: string
 ): SteamAdoptionStatus {
   return {
     pending:
       readPendingAdoption(appId, pendingAdoptionStoreFrom(deps)) !== undefined,
-    steamSignedIn: null
+    steamSignedIn: deps.steamInstallRuntime.adoption.signedIn.get(appId) ?? null
+  }
+}
+
+/**
+ * D-07: pushes the page status for `appId` to the renderer, once, with a strictly increasing seq
+ * (the renderer drops anything not newer). Called after every record write and clear and after
+ * every signed-in change. Never throws: a failed push must not fail the install, launch or
+ * uninstall path that wrote the record.
+ */
+export function pushSteamAdoptionStatus(
+  deps: AdoptionPushDeps,
+  appId: string
+): void {
+  try {
+    const status = getSteamAdoptionStatus(deps, appId)
+    const seq = ++deps.steamInstallRuntime.adoption.pushSeq.last
+    deps.sendFrontendMessage('steamAdoptionStatusChanged', {
+      appName: appId,
+      pending: status.pending,
+      steamSignedIn: status.steamSignedIn,
+      seq
+    })
+  } catch (err) {
+    logWarning(
+      `[Steam] adoption status push failed for ${appId}: ${String(err)}`,
+      LogPrefix.Steam
+    )
   }
 }
 
 /** The `steamAdoptionStatus` handler body: a bad appId or any failure answers "not pending". */
 export function answerSteamAdoptionStatus(
-  deps: SteamStoresDeps,
+  deps: AdoptionStatusDeps,
   appId: unknown
 ): SteamAdoptionStatus {
   if (!isSteamAppIdArg(appId)) return { ...NOT_PENDING }

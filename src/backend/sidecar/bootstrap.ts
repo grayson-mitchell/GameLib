@@ -2866,9 +2866,12 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       // so it is bounded boot work (sidecar exit contract, half 2); no timer or handle is created and
       // every rejection is caught. It must run after 'rpc-server' (requestRustInvoke writes frames).
       run: (_ctx, _io, state) => {
-        const { host, stores, config } = requireServices(state)
+        const { host, stores, config, steamInstallRuntime } =
+          requireServices(state)
         void resumeAdoptionWatches({
           requestRustInvoke: host.requestRustInvoke,
+          sendFrontendMessage: host.sendFrontendMessage,
+          steamInstallRuntime,
           stores,
           config
         }).catch((err: unknown) => {

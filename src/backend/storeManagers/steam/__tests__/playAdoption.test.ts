@@ -187,7 +187,10 @@ function harness(options: {
         library: new Map([[APP_ID, { title: 'Dota 2' }]])
       }
     },
-    steamInstallRuntime: { noticeSeq: { last: 0 } }
+    steamInstallRuntime: {
+      noticeSeq: { last: 0 },
+      adoption: { pushSeq: { last: 0 }, signedIn: new Map() }
+    }
   }
   const game = {
     deps,

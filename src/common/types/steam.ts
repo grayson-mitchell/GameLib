@@ -267,6 +267,12 @@ export interface SteamAdoptionStatus {
   steamSignedIn: boolean | null
 }
 
+/** Phase 81 D-07: one page-status push; `seq` rises strictly per boot, the renderer keeps the newest. */
+export type SteamAdoptionStatusPayload = SteamAdoptionStatus & {
+  appName: string
+  seq: number
+}
+
 /** Phase 81 D-02: how a "Restart Steam now" ended; the three refusals mirror the Play gate's. */
 export type SteamAdoptionRestartOutcome =
   | 'relaunched'

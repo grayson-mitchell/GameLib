@@ -18,11 +18,13 @@ import {
   RUST_STEAMPOLL_READ_RUNNING_APP_ID
 } from 'common/types/sidecarTransport'
 import {
+  type AdoptionPushDeps,
   answerSteamAdoptionOpenSteam,
   answerSteamAdoptionRestartNow,
   answerSteamAdoptionStatus,
   getSteamAdoptionStatus,
   openSteamForAdoption,
+  pushSteamAdoptionStatus,
   restartSteamNowForAdoption
 } from '../adoptionStatus'
 import { MAC_STEAM_OFFLINE_OWED_FILE } from '../macSteamClient'
@@ -45,6 +47,10 @@ function record(): PendingAdoptionRecord {
 function depsWith(entries: Array<[string, unknown]>) {
   const store = new Map<string, unknown>(entries)
   return {
+    sendFrontendMessage: jest.fn(),
+    steamInstallRuntime: {
+      adoption: { pushSeq: { last: 0 }, signedIn: new Map() }
+    },
     stores: {
       steam: {
         steamPendingAdoptionStore: {
@@ -54,7 +60,7 @@ function depsWith(entries: Array<[string, unknown]>) {
         }
       }
     }
-  } as unknown as Parameters<typeof getSteamAdoptionStatus>[0]
+  } as unknown as AdoptionPushDeps
 }
 
 describe('getSteamAdoptionStatus (D-01)', () => {
@@ -81,6 +87,65 @@ describe('getSteamAdoptionStatus (D-01)', () => {
     expect(
       getSteamAdoptionStatus(depsWith([['999', record()]]), APP_ID).pending
     ).toBe(false)
+  })
+})
+
+describe('the signed-in cache and the page push (D-03, D-07)', () => {
+  const pushesOf = (deps: ReturnType<typeof depsWith>) =>
+    (deps.sendFrontendMessage as jest.Mock).mock.calls
+
+  test('getSteamAdoptionStatus reads the cached signed-in reading, null when none', () => {
+    const deps = depsWith([[APP_ID, record()]])
+    expect(getSteamAdoptionStatus(deps, APP_ID).steamSignedIn).toBeNull()
+    deps.steamInstallRuntime.adoption.signedIn.set(APP_ID, false)
+    expect(getSteamAdoptionStatus(deps, APP_ID).steamSignedIn).toBe(false)
+    deps.steamInstallRuntime.adoption.signedIn.set(APP_ID, null)
+    expect(getSteamAdoptionStatus(deps, APP_ID).steamSignedIn).toBeNull()
+  })
+
+  test('pushSteamAdoptionStatus sends one steamAdoptionStatusChanged with the stored state and a strictly increasing seq', () => {
+    const deps = depsWith([[APP_ID, record()]])
+    pushSteamAdoptionStatus(deps, APP_ID)
+    pushSteamAdoptionStatus(deps, APP_ID)
+    expect(pushesOf(deps)).toEqual([
+      [
+        'steamAdoptionStatusChanged',
+        { appName: APP_ID, pending: true, steamSignedIn: null, seq: 1 }
+      ],
+      [
+        'steamAdoptionStatusChanged',
+        { appName: APP_ID, pending: true, steamSignedIn: null, seq: 2 }
+      ]
+    ])
+  })
+
+  test('the push carries only appName, two status fields and a seq (T-81-29)', () => {
+    const deps = depsWith([[APP_ID, record()]])
+    pushSteamAdoptionStatus(deps, APP_ID)
+    const payload = pushesOf(deps)[0][1] as Record<string, unknown>
+    expect(Object.keys(payload).sort()).toEqual([
+      'appName',
+      'pending',
+      'seq',
+      'steamSignedIn'
+    ])
+  })
+
+  test('pushSteamAdoptionStatus never throws when the push fails', () => {
+    const deps = depsWith([[APP_ID, record()]])
+    ;(deps.sendFrontendMessage as jest.Mock).mockImplementation(() => {
+      throw new Error('transport down')
+    })
+    expect(() => pushSteamAdoptionStatus(deps, APP_ID)).not.toThrow()
+  })
+
+  test('answerSteamAdoptionStatus includes the cached reading', () => {
+    const deps = depsWith([[APP_ID, record()]])
+    deps.steamInstallRuntime.adoption.signedIn.set(APP_ID, false)
+    expect(answerSteamAdoptionStatus(deps, APP_ID)).toEqual({
+      pending: true,
+      steamSignedIn: false
+    })
   })
 })
 
@@ -225,7 +290,10 @@ function harness(
     steamSession: {
       libraryState: { library: new Map([[APP_ID, { title: 'Dota 2' }]]) }
     },
-    steamInstallRuntime: { noticeSeq: { last: 0 } }
+    steamInstallRuntime: {
+      noticeSeq: { last: 0 },
+      adoption: { pushSeq: { last: 0 }, signedIn: new Map() }
+    }
   }
   const game = { deps, appId: APP_ID } as unknown as SteamGame
   return {

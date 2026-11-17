@@ -132,6 +132,10 @@ const steamPush: FixtureTable<typeof steamFrontendMessagesArgs> = {
     valid: [[{ appId: '1', title: 't', kind: 'install-not-started' }]],
     invalid: [[], [1]]
   },
+  steamAdoptionStatusChanged: {
+    valid: [[{ appName: '1', pending: true, steamSignedIn: null, seq: 1 }]],
+    invalid: [[], [1]]
+  },
   steamBridgeRouteNotice: {
     valid: [
       [

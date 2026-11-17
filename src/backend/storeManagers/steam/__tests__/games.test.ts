@@ -9671,8 +9671,13 @@ describe('SteamGame.uninstall() — GAME-03', () => {
     const game = new SteamGame(APP_ID, steamTestDeps)
     await game.uninstall({} as any)
 
-    // Badge state is reconciled only after the focus ACF re-read, never assumed from click
-    expect(sendFrontendMessage).not.toHaveBeenCalled()
+    // Badge state is reconciled only after the focus ACF re-read, never assumed from click.
+    // Phase 81 (D-07): clearing a pending-adoption record pushes the page's adoption status (it
+    // carries no install state), so that one channel is not an optimistic flip.
+    const flips = sendFrontendMessage.mock.calls.filter(
+      (c: unknown[]) => c[0] !== 'steamAdoptionStatusChanged'
+    )
+    expect(flips).toEqual([])
   })
 })
 

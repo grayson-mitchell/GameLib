@@ -50,6 +50,30 @@ jest.mock('react-i18next', () => {
 })
 
 import AdoptionNote from '../AdoptionNote'
+import * as adoptionStore from 'frontend/state/SteamAdoptionStatus'
+
+// The real push store holds the state; its hook is spied (not jest.mock'ed) so this harness, which
+// never renders, can read it through the selector without React's external-store hook.
+const realStore = adoptionStore.useSteamAdoptionStatus
+beforeEach(() => {
+  const spy = jest
+    .spyOn(adoptionStore, 'useSteamAdoptionStatus')
+    .mockImplementation(((
+      sel: (s: ReturnType<typeof realStore.getState>) => unknown
+    ) => sel(realStore.getState())) as never)
+  Object.assign(spy, { getState: realStore.getState })
+})
+afterAll(() => jest.restoreAllMocks())
+
+type MockPush = {
+  appName: string
+  pending: boolean
+  steamSignedIn: boolean | null
+  seq: number
+}
+/** Seeds the real push store (replacing every entry), as the backend push handler would. */
+const setPushed = (byApp: Record<string, MockPush>) =>
+  realStore.setState({ byApp })
 
 const flush = () => new Promise((r) => setTimeout(r, 0))
 
@@ -99,6 +123,7 @@ function useStatus(answer: unknown) {
 
 describe('AdoptionNote (D-01)', () => {
   beforeEach(() => {
+    setPushed({})
     mockStatuses = []
     mockContext = { is: {} }
   })
@@ -199,6 +224,7 @@ function useBackend(status: unknown, restartAnswer = 'relaunched') {
 
 describe('AdoptionNote actions (D-02, D-03, D-04)', () => {
   beforeEach(() => {
+    setPushed({})
     mockStatuses = []
     mockContext = { is: {} }
   })
@@ -293,6 +319,78 @@ describe('AdoptionNote actions (D-02, D-03, D-04)', () => {
     findButton(out)!.props.onClick()
     for (let i = 0; i < 3; i++) await flush()
     expect(statusApi).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('AdoptionNote live push (D-07, D-03)', () => {
+  beforeEach(() => {
+    setPushed({})
+    mockStatuses = []
+    mockContext = { is: {} }
+  })
+  const push = (over: Partial<MockPush>) => {
+    setPushed({
+      '112100': {
+        appName: '112100',
+        pending: true,
+        steamSignedIn: null,
+        seq: 1,
+        ...over
+      }
+    })
+  }
+
+  test('a push with pending false removes the block without a re-query or reload (D-07)', async () => {
+    useBackend({ pending: true, steamSignedIn: null })
+    const out = await mount(steam())
+    expect(collectText(out)).toContain('Steam will restart once')
+    push({ pending: false, seq: 2 })
+    expect(render(steam())).toBeNull()
+    expect(statusApi).toHaveBeenCalledTimes(1)
+  })
+
+  test('a push with steamSignedIn false switches to the sign-in text and Open Steam; a later true switches back (D-03)', async () => {
+    useBackend({ pending: true, steamSignedIn: null })
+    const out = await mount(steam())
+    expect(labelOf(out)).toBe('Restart Steam now')
+    push({ steamSignedIn: false, seq: 2 })
+    const signedOut = render(steam())
+    expect(collectText(signedOut)).toContain('Sign in to Steam to finish setup')
+    expect(labelOf(signedOut)).toBe('Open Steam')
+    push({ steamSignedIn: true, seq: 3 })
+    const back = render(steam())
+    expect(collectText(back)).toContain('Steam will restart once')
+    expect(labelOf(back)).toBe('Restart Steam now')
+  })
+
+  test('Play stays available throughout: the signed-out block never disables the button for a push', async () => {
+    useBackend({ pending: true, steamSignedIn: null })
+    await mount(steam())
+    push({ steamSignedIn: false, seq: 2 })
+    expect(findButton(render(steam()))!.props.disabled).toBeFalsy()
+  })
+
+  test('a push shows the note even when the query answered not pending (newer seq wins)', async () => {
+    useBackend({ pending: false, steamSignedIn: null })
+    expect(await mount(steam())).toBeNull()
+    push({ pending: true, seq: 1 })
+    expect(collectText(render(steam()))).toContain('Steam will restart once')
+  })
+
+  test('a push no newer than the one the store held when the query was issued loses to the query answer', async () => {
+    push({ pending: false, seq: 7 })
+    useBackend({ pending: true, steamSignedIn: null })
+    const out = await mount(steam())
+    expect(collectText(out)).toContain('Steam will restart once')
+  })
+
+  test("another game's push is ignored", async () => {
+    useBackend({ pending: true, steamSignedIn: null })
+    const out = await mount(steam())
+    setPushed({
+      '999': { appName: '999', pending: false, steamSignedIn: null, seq: 9 }
+    })
+    expect(collectText(render(steam()))).toBe(collectText(out))
   })
 })
 

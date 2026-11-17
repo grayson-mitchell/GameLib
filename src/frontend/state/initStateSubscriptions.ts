@@ -55,6 +55,7 @@ import { handleSteamBridgeSetupRequiredSignal } from './SteamBridgeSetup'
 import { handleSteamBridgeRouteNoticeSignal } from './SteamBridgeRouteNotice'
 import { handleEngineStateChangedSignal } from './EngineState'
 import { handleSteamRequestNoticeSignal } from './SteamRequestNotice'
+import { handleSteamAdoptionStatusChangedSignal } from './SteamAdoptionStatus'
 import { handleReadOnlyStoresNoticeSignal } from './ReadOnlyStoresNotice'
 import { handleSteamBottleLaunchWaitingSignal } from './BottleLaunchWaiting'
 
@@ -233,6 +234,9 @@ export function initStateSubscriptions(): void {
   window.api.handleEngineStateChanged(handleEngineStateChangedSignal)
   // quick 261106-pvk: Steam never picked up a delegated install/uninstall.
   window.api.handleSteamRequestNotice(handleSteamRequestNoticeSignal)
+  window.api.handleSteamAdoptionStatusChanged(
+    handleSteamAdoptionStatusChangedSignal
+  )
   window.api.handleReadOnlyStoresNotice(handleReadOnlyStoresNoticeSignal)
   // Phase 51 Plan 08 (D-51-16): records a bottled-Steam launch's "waiting for
   // Steam" classification; the matching clear() lives in handleGameStatus.
