@@ -243,7 +243,8 @@ describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
     // Phase 47 Plan 12: +2 (itad.getKeyStatus, itad.setApiKey).
     // Phase 81 Plan 07: +1 Async (steamLaunchWithoutSteamOnce, the one-shot launch from the refused-restart notice).
     // Phase 81 Plan 08: +1 Async (steamAdoptionStatus, the game page's pending-adoption read).
-    expect(total).toBe(293)
+    // Phase 81 Plan 08 task 2: +2 Async (steamAdoptionRestartNow, steamAdoptionOpenSteam).
+    expect(total).toBe(295)
     // Floor (Phase 67): originally measured - 6. Re-measured at 290 after quick 261115-tk8's deliberate
     // six-channel deletion and quick 261117-p38's two added channels (288 + 2), so the floor moves
     // 290 -> 284 and the parse-miss margin stays the same 6.

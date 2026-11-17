@@ -583,8 +583,13 @@
     },
     "steam": {
         "adoption": {
+            "action": {
+                "openSteam": "Open Steam",
+                "restartNow": "Restart Steam now"
+            },
             "note": {
-                "restartOnPlay": "Steam will restart once when you press Play."
+                "restartOnPlay": "Steam will restart once when you press Play.",
+                "signIn": "Sign in to Steam to finish setup"
             }
         },
         "adoptRestart": {

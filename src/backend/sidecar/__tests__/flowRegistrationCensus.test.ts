@@ -128,7 +128,8 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   // (the Rust `.setup()` window-focus handler), not renderer-originated. Invoke count unchanged.
   // Phase 81 Plan 07 (D-05): invoke 3 -> 4 -- steamLaunchWithoutSteamOnce, the one-shot launch from the refused-restart notice.
   // Phase 81 Plan 08 (D-01): invoke 4 -> 5 -- steamAdoptionStatus, the game page's pending-adoption read.
-  'steamFlowRegistration.ts': { invoke: 5, send: 1 },
+  // Phase 81 Plan 08 task 2 (D-02, D-03): invoke 5 -> 7 -- steamAdoptionRestartNow and steamAdoptionOpenSteam.
+  'steamFlowRegistration.ts': { invoke: 7, send: 1 },
   // Phase 40 Plan 05 (REQ-40-02/REQ-40-05): new module — the 10 in-app store-embed channels
   // (9 lifecycle/navigation invoke arms, including the takeNavEvents drain implemented by quick
   // task `260905-e61` for GAP-D; 1 send arm for the fire-and-forget bounds courier, D-18/D-29).

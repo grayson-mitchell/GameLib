@@ -150,6 +150,7 @@
     "src/frontend/screens/DownloadManager/index.tsx",
     "src/frontend/screens/Game/GameContext.tsx",
     "src/frontend/screens/Game/GamePage/components/Achievements.tsx",
+    "src/frontend/screens/Game/GamePage/components/AdoptionNote.tsx",
     "src/frontend/screens/Game/GamePage/components/AppleWikiInfo.tsx",
     "src/frontend/screens/Game/GamePage/components/CloudSavesSync.tsx",
     "src/frontend/screens/Game/GamePage/components/CompatibilityInfo.tsx",

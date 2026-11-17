@@ -694,6 +694,8 @@ pub(crate) const RENDERER_CHANNELS: &[&str] = &[
     "showLogFileInFolder",
     "showUpdateSetting",
     "sidecar:store-fetch",
+    "steamAdoptionOpenSteam",
+    "steamAdoptionRestartNow",
     "steamAdoptionStatus",
     "steamBottleProvision",
     "steamBottleStatus",

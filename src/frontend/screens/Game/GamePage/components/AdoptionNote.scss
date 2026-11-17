@@ -1,0 +1,18 @@
+// Phase 81 D-01..D-03: the quiet note and its single action under the game status. Theme tokens
+// only (sketch-findings-gamelib: the note must read in every theme).
+.steamAdoptionNote {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs);
+
+  &__text {
+    font-family: var(--secondary-font-family);
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+  }
+
+  &__action {
+    flex: none;
+  }
+}

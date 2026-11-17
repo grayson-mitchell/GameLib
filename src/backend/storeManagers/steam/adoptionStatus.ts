@@ -5,15 +5,28 @@
  * The three `answer*` functions are the sidecar handlers' bodies: the appId is renderer input
  * (T-81-27), so each re-validates it, and none of them throws.
  *
+ * D-02 / D-04: "Restart Steam now" runs the same graceful quit and relaunch as restart-on-Play,
+ * but relaunches Steam itself instead of a game; "Open Steam" brings Steam forward. Neither asks
+ * for confirmation. Steam is never killed.
+ *
  * Exit contract: no timers or handles, no work at import.
  */
-import { logWarning, LogPrefix } from 'backend/logger'
+import { logInfo, logWarning, LogPrefix } from 'backend/logger'
+import type { ManagerDeps } from 'backend/services/types'
+import { clearAndUnwatchPendingAdoption } from './adoptionWatch'
 import {
+  createRestartDeps,
   pendingAdoptionStoreFrom,
-  readPendingAdoption
+  readPendingAdoption,
+  restartSteamForAdoption
 } from './macSteamAdoption'
+import type SteamGame from './games'
 import type { SteamStoresDeps } from './library/installRoot'
-import type { SteamAdoptionStatus } from 'common/types/steam'
+import { hostPlatform, pushAdoptRestartRefusal } from './playAdoption'
+import type {
+  SteamAdoptionRestartOutcome,
+  SteamAdoptionStatus
+} from 'common/types/steam'
 
 const NOT_PENDING: SteamAdoptionStatus = { pending: false, steamSignedIn: null }
 
@@ -51,5 +64,123 @@ export function answerSteamAdoptionStatus(
       LogPrefix.Steam
     )
     return { ...NOT_PENDING }
+  }
+}
+
+/**
+ * D-02: quits Steam gracefully, waits, and relaunches Steam itself; only a relaunch clears the
+ * pending record. A refusal (a game running in Steam, a wrap owed, Steam not quitting in 30 s)
+ * shows the 81-07 in-app notice, without the launch-without-Steam action, and keeps the record.
+ */
+async function runRestartNow(
+  steamGame: SteamGame,
+  platform: NodeJS.Platform
+): Promise<SteamAdoptionRestartOutcome> {
+  const { deps, appId } = steamGame
+  if (!readPendingAdoption(appId, pendingAdoptionStoreFrom(deps))) {
+    return 'no-record'
+  }
+  const outcome = await restartSteamForAdoption(
+    appId,
+    createRestartDeps({
+      platform,
+      requestRustInvoke: deps.requestRustInvoke,
+      runner: deps.runner,
+      openExternal: deps.openExternal,
+      clock: deps.clock,
+      paths: deps.paths,
+      macSteam: deps.steamProcesses.macSteam,
+      sendFrontendMessage: deps.sendFrontendMessage,
+      appRuntime: deps.appRuntime,
+      // Steam itself, not a game: one URL on all three OSes. The user pressed the button, so Steam
+      // comes up in front (no activate:false).
+      relaunch: () => deps.openExternal.openExternal('steam://open/main')
+    })
+  )
+  if (outcome.kind === 'relaunched') {
+    clearAndUnwatchPendingAdoption(deps, appId)
+    return 'relaunched'
+  }
+  logWarning(
+    `SteamGame: Restart Steam now for ${appId} refused (${outcome.kind}); pending adoption kept`,
+    LogPrefix.Steam
+  )
+  await pushAdoptRestartRefusal(steamGame, outcome.kind, false)
+  return outcome.kind
+}
+
+/**
+ * D-02: "Restart Steam now". Serialised with Play through the shared Steam single flight, so a
+ * second click or a Play pressed meanwhile joins this one instead of starting another restart.
+ * The flight resolves false (no game is launched), so a joining Play records no recent game.
+ * Never rejects: a failure answers 'error'.
+ */
+export async function restartSteamNowForAdoption(
+  steamGame: SteamGame,
+  platform: NodeJS.Platform = hostPlatform()
+): Promise<SteamAdoptionRestartOutcome> {
+  const { appId, deps } = steamGame
+  let joined = false
+  let outcome: SteamAdoptionRestartOutcome = 'error'
+  try {
+    await deps.appRuntime.launchFlights.singleFlightLaunch(
+      'steam',
+      appId,
+      () => {
+        joined = true
+      },
+      async () => {
+        outcome = await runRestartNow(steamGame, platform)
+        return false
+      }
+    )
+  } catch (err) {
+    logWarning(
+      `SteamGame: Restart Steam now for ${appId} failed: ${String(err)}`,
+      LogPrefix.Steam
+    )
+    return joined ? 'in-progress' : 'error'
+  }
+  return joined ? 'in-progress' : outcome
+}
+
+/** D-03: brings Steam forward (no activate:false, which would send the open to the background). */
+export async function openSteamForAdoption(
+  deps: Pick<ManagerDeps, 'openExternal'>
+): Promise<void> {
+  logInfo('SteamGame: opening Steam from the adoption note', LogPrefix.Steam)
+  await deps.openExternal.openExternal('steam://open/main')
+}
+
+/** The `steamAdoptionRestartNow` handler body: a bad appId does nothing; never rejects. */
+export async function answerSteamAdoptionRestartNow(
+  getGame: (appId: string) => SteamGame,
+  appId: unknown
+): Promise<SteamAdoptionRestartOutcome> {
+  if (!isSteamAppIdArg(appId)) return 'error'
+  try {
+    return await restartSteamNowForAdoption(getGame(appId))
+  } catch (err) {
+    logWarning(
+      [`steamAdoptionRestartNow failed appId=${appId}:`, err],
+      LogPrefix.Steam
+    )
+    return 'error'
+  }
+}
+
+/** The `steamAdoptionOpenSteam` handler body: a bad appId does nothing; never rejects. */
+export async function answerSteamAdoptionOpenSteam(
+  getGame: (appId: string) => SteamGame,
+  appId: unknown
+): Promise<void> {
+  if (!isSteamAppIdArg(appId)) return
+  try {
+    await openSteamForAdoption(getGame(appId).deps)
+  } catch (err) {
+    logWarning(
+      [`steamAdoptionOpenSteam failed appId=${appId}:`, err],
+      LogPrefix.Steam
+    )
   }
 }

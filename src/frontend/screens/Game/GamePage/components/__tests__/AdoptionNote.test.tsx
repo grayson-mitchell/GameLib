@@ -1,18 +1,24 @@
 /**
- * Phase 81 D-01: AdoptionNote. No jsdom here, so the component is driven with a tiny hook harness
+ * Phase 81 D-01..D-04: AdoptionNote. No jsdom here, so the component is driven with a tiny hook harness
  * (the SteamUpdateInfo pattern): useState keeps slots, useEffect runs after each render, and a
  * state change re-renders.
  */
 import 'frontend/testUtils/tauriWindow'
+import { readFileSync } from 'fs'
+import { join } from 'path'
 import type { ReactElement } from 'react'
 import type { GameInfo } from 'common/types'
 
 const slots: unknown[] = []
 let idx = 0
 let effects: Array<{ fn: () => unknown; deps: unknown[] | undefined }> = []
+let mockContext: { is: Record<string, boolean>; statusContext?: string } = {
+  is: {}
+}
 
 jest.mock('react', () => ({
   ...jest.requireActual<typeof import('react')>('react'),
+  useContext: () => mockContext,
   useState: (init: unknown) => {
     const i = idx++
     if (!(i in slots)) slots[i] = init
@@ -34,6 +40,8 @@ jest.mock('frontend/state/libraryState', () => ({
   default: (sel: (s: { libraryStatus: typeof mockStatuses }) => unknown) =>
     sel({ libraryStatus: mockStatuses })
 }))
+jest.mock('../../../GameContext', () => ({ __esModule: true, default: {} }))
+jest.mock('../AdoptionNote.scss', () => ({}))
 jest.mock('react-i18next', () => {
   const { faithfulReactI18next } = jest.requireActual<
     typeof import('./faithfulTranslate')
@@ -92,6 +100,7 @@ function useStatus(answer: unknown) {
 describe('AdoptionNote (D-01)', () => {
   beforeEach(() => {
     mockStatuses = []
+    mockContext = { is: {} }
   })
 
   test.each([null, true])(
@@ -99,9 +108,10 @@ describe('AdoptionNote (D-01)', () => {
     async (signedIn) => {
       useStatus({ pending: true, steamSignedIn: signedIn })
       const out = await mount(steam())
-      expect(collectText(out)).toBe(
+      expect(collectText(out)).toContain(
         'Steam will restart once when you press Play.'
       )
+      expect(collectText(out)).not.toContain('Sign in to Steam')
       expect((out?.props as { role: string }).role).toBe('status')
       expect(statusApi).toHaveBeenCalledWith('112100')
     }
@@ -148,5 +158,157 @@ describe('AdoptionNote (D-01)', () => {
     await mount(steam())
     expect(effects.length).toBe(hidden)
     expect(idx).toBeGreaterThan(0)
+  })
+})
+
+// --- Task 2: the two actions ---------------------------------------------------------------
+
+interface Btn {
+  className: string
+  disabled?: boolean
+  onClick: () => void
+}
+function findButton(node: unknown): ReactElement<Btn> | null {
+  if (!node || typeof node !== 'object') return null
+  if (Array.isArray(node)) {
+    for (const n of node) {
+      const found = findButton(n)
+      if (found) return found
+    }
+    return null
+  }
+  const el = node as ReactElement<Btn & { children?: unknown }>
+  if (el.type === 'button') return el as ReactElement<Btn>
+  return findButton(el.props?.children)
+}
+const labelOf = (out: ReactElement | null) => collectText(findButton(out))
+
+let actions: { restart: jest.Mock; open: jest.Mock }
+function useBackend(status: unknown, restartAnswer = 'relaunched') {
+  actions = {
+    restart: jest.fn(() => Promise.resolve(restartAnswer)),
+    open: jest.fn(() => Promise.resolve())
+  }
+  statusApi = jest.fn(() => Promise.resolve(status))
+  ;(window as unknown as { api: object }).api = {
+    steamAdoptionStatus: statusApi,
+    steamAdoptionRestartNow: actions.restart,
+    steamAdoptionOpenSteam: actions.open
+  }
+}
+
+describe('AdoptionNote actions (D-02, D-03, D-04)', () => {
+  beforeEach(() => {
+    mockStatuses = []
+    mockContext = { is: {} }
+  })
+
+  test('pending: the note and a secondary "Restart Steam now" button that calls the backend once with the appId', async () => {
+    useBackend({ pending: true, steamSignedIn: true })
+    const out = await mount(steam())
+    expect(collectText(out)).toContain('Steam will restart once')
+    const button = findButton(out)!
+    expect(labelOf(out)).toBe('Restart Steam now')
+    expect(button.props.className).toContain('button')
+    expect(button.props.className).toContain('is-secondary')
+    expect(button.props.className).toContain('steamAdoptionNote__action')
+    button.props.onClick()
+    await flush()
+    expect(actions.restart).toHaveBeenCalledTimes(1)
+    expect(actions.restart).toHaveBeenCalledWith('112100')
+    expect(actions.open).not.toHaveBeenCalled()
+  })
+
+  test('signed out: "Sign in to Steam to finish setup" and "Open Steam" that brings Steam forward', async () => {
+    useBackend({ pending: true, steamSignedIn: false })
+    const out = await mount(steam())
+    expect(collectText(out)).toContain('Sign in to Steam to finish setup')
+    expect(collectText(out)).not.toContain('will restart once')
+    expect(labelOf(out)).toBe('Open Steam')
+    findButton(out)!.props.onClick()
+    await flush()
+    expect(actions.open).toHaveBeenCalledWith('112100')
+    expect(actions.restart).not.toHaveBeenCalled()
+  })
+
+  test('the action re-queries the status when it resolves, so a relaunch removes the block', async () => {
+    useBackend({ pending: true, steamSignedIn: null })
+    const out = await mount(steam())
+    expect(statusApi).toHaveBeenCalledTimes(1)
+    statusApi.mockImplementation(() =>
+      Promise.resolve({ pending: false, steamSignedIn: null })
+    )
+    findButton(out)!.props.onClick()
+    for (let i = 0; i < 3; i++) await flush()
+    expect(statusApi).toHaveBeenCalledTimes(2)
+    expect(render(steam())).toBeNull()
+  })
+
+  test('the button is disabled while the game is launching or playing', async () => {
+    useBackend({ pending: true, steamSignedIn: null })
+    mockContext = { is: { launching: true } }
+    expect(findButton(await mount(steam()))!.props.disabled).toBe(true)
+    mockContext = { is: { playing: true } }
+    expect(findButton(render(steam()))!.props.disabled).toBe(true)
+    mockContext = { is: {} }
+    expect(findButton(render(steam()))!.props.disabled).toBeFalsy()
+  })
+
+  test('a click while the call is in flight does nothing more (the button is disabled meanwhile)', async () => {
+    useBackend({ pending: true, steamSignedIn: null })
+    let finish: (v: string) => void = () => undefined
+    const out = await mount(steam())
+    actions.restart.mockImplementation(
+      () => new Promise<string>((r) => (finish = r))
+    )
+    findButton(out)!.props.onClick()
+    expect(findButton(render(steam()))!.props.disabled).toBe(true)
+    finish('relaunched')
+    for (let i = 0; i < 3; i++) await flush()
+    expect(findButton(render(steam()))!.props.disabled).toBeFalsy()
+  })
+
+  test('the 1026 edge (installing, steam-waiting-for-restart): the action without the note', async () => {
+    useBackend({ pending: false, steamSignedIn: null })
+    mockContext = {
+      is: { installing: true },
+      statusContext: 'steam-waiting-for-restart'
+    }
+    const out = await mount(steam({ is_installed: false }))
+    expect(labelOf(out)).toBe('Restart Steam now')
+    expect(collectText(out).trim()).toBe('Restart Steam now')
+    expect(collectText(out)).not.toContain('will restart once')
+  })
+
+  test('installing without the waiting context shows nothing', async () => {
+    useBackend({ pending: false, steamSignedIn: null })
+    mockContext = { is: { installing: true } }
+    expect(await mount(steam({ is_installed: false }))).toBeNull()
+  })
+
+  test('a rejected action still re-reads the status and never throws (D-04: no prompt either way)', async () => {
+    useBackend({ pending: true, steamSignedIn: null })
+    const out = await mount(steam())
+    actions.restart.mockImplementation(() => Promise.reject(new Error('x')))
+    findButton(out)!.props.onClick()
+    for (let i = 0; i < 3; i++) await flush()
+    expect(statusApi).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('AdoptionNote source (D-04, theme tokens)', () => {
+  const read = (name: string) =>
+    readFileSync(join(__dirname, '..', name), 'utf8')
+
+  test('neither action asks for confirmation', () => {
+    expect(read('AdoptionNote.tsx')).not.toMatch(/confirm\(|showDialog/)
+  })
+
+  test('the stylesheet uses theme tokens only: no literal colours', () => {
+    const scss = read('AdoptionNote.scss')
+    expect(scss).not.toMatch(/#[0-9a-fA-F]{3,6}\b|rgb\(|hsl\(/)
+    expect(scss).toContain('var(--text-secondary)')
+    expect(scss).toContain('var(--secondary-font-family)')
+    expect(scss).toContain('var(--space-xs)')
   })
 })
