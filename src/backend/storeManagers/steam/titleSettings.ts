@@ -68,7 +68,9 @@ export const TITLE_AUTHORITATIVE_KEYS = settingsKeys([
   'verboseLogs',
   'showFps',
   'showMangohud',
-  'lastUsedLaunchOption'
+  'lastUsedLaunchOption',
+  // quick 261117-q1t live gate: without this a bridge game's toggle read as off at Play.
+  'launchWithoutSteam'
 ])
 
 /** Only the allowlisted keys present (`!== undefined`) in the entry. */

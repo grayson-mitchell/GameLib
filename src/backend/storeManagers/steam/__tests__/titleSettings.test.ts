@@ -54,7 +54,7 @@ describe('readStoredTitleConfig', () => {
 })
 
 describe('TITLE_AUTHORITATIVE_KEYS', () => {
-  it('is the 11 per-title keys', () => {
+  it('is the 12 per-title keys', () => {
     expect([...TITLE_AUTHORITATIVE_KEYS].sort()).toEqual(
       [
         'launcherArgs',
@@ -67,7 +67,8 @@ describe('TITLE_AUTHORITATIVE_KEYS', () => {
         'verboseLogs',
         'showFps',
         'showMangohud',
-        'lastUsedLaunchOption'
+        'lastUsedLaunchOption',
+        'launchWithoutSteam'
       ].sort()
     )
   })

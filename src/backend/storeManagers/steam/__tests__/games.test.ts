@@ -8550,7 +8550,8 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       verboseLogs: true,
       showFps: true,
       showMangohud: true,
-      lastUsedLaunchOption: { type: 'basic', name: 'x', parameters: '-y' }
+      lastUsedLaunchOption: { type: 'basic', name: 'x', parameters: '-y' },
+      launchWithoutSteam: true
     }
 
     it.each(TITLE_AUTHORITATIVE_KEYS.map((k) => [k]))(
