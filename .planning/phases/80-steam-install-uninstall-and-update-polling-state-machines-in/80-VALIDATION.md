@@ -101,3 +101,17 @@ Audited after both review-fix rounds (HEAD includes all `fix(80):` commits). Eve
 Runs: `gamelib-steampoll --features testing` 415 tests across 19 targets; `gamelib-steampoll-cli` 10 (incl. `frozen_parity`); `gamelib-i18n` 6; Jest `steamPollsPortComplete`, `steamPollStateEventParity`, `steamPollEventRegistration` 46, `i18nGolden` 2. All pass.
 
 Note: the first run of `contracts::state_event_wire_fixture_matches_every_variant` failed with the fixture "not found". The cause was a stale test binary built in a review-fix worktree that shared `src-tauri/target`; `env!("CARGO_MANIFEST_DIR")` still pointed at the deleted worktree. `cargo clean -p gamelib-steampoll -p gamelib-steampoll-cli -p gamelib-steamfiles` fixed it; no code change. Manual-only items (live smokes, Windows `RunningAppID`) are unchanged.
+
+---
+
+## Validation Audit 2026-11-17
+
+Re-audit at `2d3498bb9`. No commit since the previous audit (`a1fe64669`) touches `gamelib-steampoll`, `gamelib-steampoll-cli`, `gamelib-i18n` or `public/locales`; the intervening work (phases 76–78, quick tasks) is outside this phase's surface. The live smokes have since passed operator UAT (`6803d803f`, 7 passed, 0 issues).
+
+| Metric | Count |
+|--------|-------|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
+
+Runs: `gamelib-steampoll --features testing` + `gamelib-steampoll-cli` + `gamelib-i18n`: 431 tests across 27 targets, 0 failed. Jest `steamPollsPortComplete`, `steamPollStateEventParity`, `steamPollEventRegistration`, `i18nGolden`: 4 suites, 48 tests, all pass.
