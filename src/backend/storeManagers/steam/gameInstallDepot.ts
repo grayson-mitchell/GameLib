@@ -12,6 +12,10 @@ import { startInstallPolling } from './library/installPolling'
 import * as resumeBreadcrumbs from './library/resumeBreadcrumbs'
 import { readInstalledAtStart } from './library/manifestFlags'
 import * as adoption from './macSteamAdoption'
+import {
+  clearAndUnwatchPendingAdoption,
+  recordAndWatchPendingAdoption
+} from './adoptionWatch'
 import type { AuthSessionRefusal } from './userTypes'
 import { downloadSteamDepots } from './depot'
 import { ensureSteamClientReady } from './clientSetup'
@@ -278,10 +282,7 @@ export async function runNativeDepotDownload(
         )
         if (outcome.kind === 'ok') {
           adoptedByInstallApp = true
-          adoption.clearPendingAdoption(
-            steamGame.appId,
-            adoption.pendingAdoptionStoreFrom(steamGame.deps)
-          )
+          clearAndUnwatchPendingAdoption(steamGame.deps, steamGame.appId)
           logInfo(
             `SteamGame: Steam adopted appId ${steamGame.appId} via InstallApp without a restart`,
             LogPrefix.Steam
@@ -305,16 +306,12 @@ export async function runNativeDepotDownload(
           handoff.manifestPath
         )
         if (baseline) {
-          adoption.recordPendingAdoption(
-            steamGame.appId,
-            {
-              steamPid: pid,
-              manifestPath: handoff.manifestPath,
-              baseline,
-              recordedAt: Date.now()
-            },
-            adoption.pendingAdoptionStoreFrom(steamGame.deps)
-          )
+          await recordAndWatchPendingAdoption(steamGame.deps, steamGame.appId, {
+            steamPid: pid,
+            manifestPath: handoff.manifestPath,
+            baseline,
+            recordedAt: Date.now()
+          })
           logInfo(
             `SteamGame: recorded pending Steam adoption for ${steamGame.appId} (steam_osx pid ${pid})`,
             LogPrefix.Steam
@@ -326,10 +323,7 @@ export async function runNativeDepotDownload(
           )
         }
       } else {
-        adoption.clearPendingAdoption(
-          steamGame.appId,
-          adoption.pendingAdoptionStoreFrom(steamGame.deps)
-        )
+        clearAndUnwatchPendingAdoption(steamGame.deps, steamGame.appId)
       }
       await startInstallPolling(steamGame.deps, steamGame.appId, {
         isNativeHandoff: true,
