@@ -71,12 +71,15 @@ FENCE = "---"
 # ---------------------------------------------------------------------------
 # SDK_FIELDS -- the single source of truth for every literal this gate checks.
 #
-# Copied from get-shit-done-cc 1.42.3 (`sdk/src/query/state.ts`,
+# First copied from get-shit-done-cc 1.42.3 (`sdk/src/query/state.ts`,
 # `sdk/src/query/state-mutation.ts`) by grepping every call site of
 # `stateExtractField(`, `stateReplaceField(` and `stateReplaceFieldWithFallback(`
-# (both primary and fallback arguments). MUST BE RE-DERIVED ON UPGRADE -- see
-# `discover_installed_sdk_literals()` below, which does this automatically whenever an
-# SDK source tree is available and fails loudly on drift.
+# (both primary and fallback arguments). Re-derived against @opengsd/gsd-core 1.21.0
+# (`~/.claude/gsd-core/bin/lib/*.cjs`, plus `stateFieldValue(...)` body-field arguments)
+# by quick task 261117-sin, which added Completed Phases, State Head and milestone.
+# MUST BE RE-DERIVED ON UPGRADE -- see `discover_installed_sdk_literals()` below, which
+# does this automatically whenever a gsd-core library is installed and fails loudly
+# on drift.
 #
 # `canonical`: True for the 8 fields the restructured STATE.md carries exactly one
 # anchored line for. `required`: the count this gate demands (1 for canonical, 0 for
@@ -120,14 +123,21 @@ SDK_FIELDS: tuple[dict, ...] = (
     {"literal": "Last Date", "canonical": False, "required": 0, "section": None},
     {"literal": "Paused At", "canonical": False, "required": 0, "section": None},
     {"literal": "Total Phases", "canonical": False, "required": 0, "section": None},
+    # gsd-core 1.21.0 additions (quick 261117-sin): state-transition.cjs reads/writes
+    # "Completed Phases"; smart-entry.cjs falls back to body "State Head";
+    # phase.cjs reads "milestone".
+    {"literal": "Completed Phases", "canonical": False, "required": 0, "section": None},
+    {"literal": "State Head", "canonical": False, "required": 0, "section": None},
+    {"literal": "milestone", "canonical": False, "required": 0, "section": None},
 )
 
 # Anti-vacuity floor for the self-test -- see anti_vacuity() below. 13 cases: 9 REJECT
 # (bold-Status duplicate, plain-plan duplicate, Last-activity continuation, ###-subheading
 # early-termination, missing Resume file, stray Current Plan, zero-canonical-fields body,
 # missing target file, Plan: TBD) + 4 ACCEPT (minimal document, Current-focus/table-row
-# decoys, mid-line field literal, Plan: Not started).
-MINIMUM_SELF_TEST_CASES = 13
+# decoys, mid-line field literal, Plan: Not started) + 1 drift-scanner fixture
+# (gsd-core's compiled call shapes; quick 261117-sin).
+MINIMUM_SELF_TEST_CASES = 14
 
 
 def fail(message: str) -> None:
@@ -304,12 +314,20 @@ def check_document(text: str) -> tuple[bool, list[str]]:
 
 
 # ---------------------------------------------------------------------------
-# Drift detection: re-derive field literals from the INSTALLED SDK source, when one is
-# available, and fail if it uses a literal missing from SDK_FIELDS. CI has no SDK
-# installed, so the pinned list above is authoritative and must work alone -- this is a
-# belt-and-braces check for local/dev runs, not a CI dependency.
+# Drift detection: re-derive field literals from the INSTALLED gsd-core library, when
+# one is available, and fail if it uses a literal missing from SDK_FIELDS. CI has no
+# gsd-core installed, so the pinned list above is authoritative and must work alone --
+# this is a belt-and-braces check for local/dev runs, not a CI dependency. Each of the
+# three machines this repo is worked from has its own install, so a machine on a newer
+# gsd-core is the one that will surface new literals first.
+#
+# Repointed from get-shit-done-cc 1.42.3's `sdk/src/query/*.ts` to gsd-core's compiled
+# `~/.claude/gsd-core/bin/lib/*.cjs` by quick task 261117-sin. The old candidate paths
+# never covered a macOS npx install, so on these machines it had always fallen back.
 # ---------------------------------------------------------------------------
 #
+# CALL_SITE_RE matches both the direct form `stateExtractField(body, 'X')` and the
+# compiled cross-module form `(0, state_document_cjs_1.stateExtractField)(body, 'X')`.
 # Group 1: "WithFallback" if the called function is the fallback variant, else None.
 # Group 2: the PRIMARY field-name literal (always a field name, for every variant).
 # Group 3: the SECOND quoted string immediately following, if any -- ONLY meaningful
@@ -319,61 +337,73 @@ def check_document(text: str) -> tuple[bool, list[str]]:
 # written, not a field name, and must be discarded by the caller -- this regex cannot
 # express that condition itself (no cross-group conditional in Python's `re`), so
 # discover_installed_sdk_literals() below filters group 3 on group 1's presence.
+# Quoted groups exclude newlines: a field literal never spans lines, and without that a
+# doc comment wrapping `'Current` / `Phase'` across a line break was read as one literal.
 CALL_SITE_RE = re.compile(
-    r"state(?:Extract|Replace)Field(WithFallback)?\(\s*[A-Za-z0-9_]+\s*,\s*"
-    r"'([^']*)'(?:\s*,\s*'([^']*)')?",
+    r"state(?:Extract|Replace)Field(WithFallback)?\)?\(\s*[A-Za-z0-9_.]+\s*,\s*"
+    r"'([^'\n]*)'(?:\s*,\s*'([^'\n]*)')?",
+)
+
+# gsd-core also reads body fields indirectly through
+# `stateFieldValue(fm, body, fmKey | null, 'Body Field')` (state-document.cjs): the
+# frontmatter key first, then `stateExtractField(body, bodyField)`. Group 1 is that
+# body-field literal (e.g. smart-entry.cjs's 'State Head').
+FIELD_VALUE_RE = re.compile(
+    r"stateFieldValue\)?\(\s*[A-Za-z0-9_.]+\s*,\s*[A-Za-z0-9_.]+\s*,\s*"
+    r"(?:'[^'\n]*'|null)\s*,\s*'([^'\n]*)'",
 )
 
 
+def literals_in_source(text: str) -> set[str]:
+    """Every field-name literal at a stateExtractField/stateReplaceField/
+    stateReplaceFieldWithFallback call site (primary AND fallback) or a
+    stateFieldValue body-field argument in `text`."""
+    literals: set[str] = set()
+    for m in CALL_SITE_RE.finditer(text):
+        with_fallback, primary, maybe_fallback_name = m.group(1), m.group(2), m.group(3)
+        if primary:
+            literals.add(primary)
+        # Group 3 is only a genuine FALLBACK FIELD NAME when this call site is the
+        # WithFallback variant. For a plain stateReplaceField/stateExtractField
+        # call, a second quoted literal is the REPLACEMENT VALUE being written
+        # (e.g. `stateReplaceField(content, 'Current Plan', '1')`), not a field
+        # name, and must not be enrolled as one.
+        if with_fallback and maybe_fallback_name:
+            literals.add(maybe_fallback_name)
+    for m in FIELD_VALUE_RE.finditer(text):
+        literals.add(m.group(1))
+    return literals
+
+
 def discover_installed_sdk_literals() -> tuple[list[str] | None, str]:
-    """Returns (literals or None, note). `literals` is None if no SDK source tree was
-    found (belt-and-braces check skipped, not failed); otherwise the full list of
-    string-literal field-name arguments found at every stateExtractField/
-    stateReplaceField/stateReplaceFieldWithFallback call site (primary AND fallback)."""
+    """Returns (literals or None, note). `literals` is None if no gsd-core library was
+    found (belt-and-braces check skipped, not failed); otherwise every field-name
+    literal `literals_in_source` finds across the library's `*.cjs` files."""
     import os
 
     candidates = []
-    env_path = os.environ.get("GSD_SDK_QUERY_SRC")
+    env_path = os.environ.get("GSD_CORE_LIB_DIR")
     if env_path:
         candidates.append(Path(env_path))
-    home = Path.home()
-    candidates.append(home / "AppData" / "Roaming" / "npm" / "node_modules" / "get-shit-done-cc" / "sdk" / "src" / "query")
-    candidates.append(Path("/usr/local/lib/node_modules/get-shit-done-cc/sdk/src/query"))
-    candidates.append(Path("/opt/homebrew/lib/node_modules/get-shit-done-cc/sdk/src/query"))
+    config_dir = os.environ.get("CLAUDE_CONFIG_DIR")
+    if config_dir:
+        candidates.append(Path(config_dir) / "gsd-core" / "bin" / "lib")
+    candidates.append(Path.home() / ".claude" / "gsd-core" / "bin" / "lib")
 
-    src_dir = next((c for c in candidates if c.is_dir()), None)
-    if src_dir is None:
-        return None, "SDK source not found; using pinned 1.42.3 list"
+    lib_dir = next((c for c in candidates if (c / "state-document.cjs").is_file()), None)
+    if lib_dir is None:
+        return None, "gsd-core library not found; using pinned list"
 
     literals: set[str] = set()
-    for filename in ("state.ts", "state-mutation.ts", "state-document.ts"):
-        f = src_dir / filename
-        if not f.is_file():
-            continue
-        text = f.read_text(encoding="utf-8", errors="replace")
-        for m in CALL_SITE_RE.finditer(text):
-            with_fallback, primary, maybe_fallback_name = m.group(1), m.group(2), m.group(3)
-            if primary:
-                literals.add(primary)
-            # Group 3 is only a genuine FALLBACK FIELD NAME when this call site is the
-            # WithFallback variant. For a plain stateReplaceField/stateExtractField
-            # call, a second quoted literal is the REPLACEMENT VALUE being written
-            # (e.g. `stateReplaceField(content, 'Current Plan', '1')`), not a field
-            # name, and must not be enrolled as one.
-            if with_fallback and maybe_fallback_name:
-                literals.add(maybe_fallback_name)
+    for f in sorted(lib_dir.glob("*.cjs")):
+        literals |= literals_in_source(f.read_text(encoding="utf-8", errors="replace"))
 
     version = "<unknown>"
-    pkg_json = src_dir.parent.parent.parent / "package.json"
-    if pkg_json.is_file():
-        import json as _json
+    version_file = lib_dir.parent.parent / "VERSION"
+    if version_file.is_file():
+        version = version_file.read_text(encoding="utf-8").strip() or "<unknown>"
 
-        try:
-            version = _json.loads(pkg_json.read_text(encoding="utf-8")).get("version", "<unknown>")
-        except Exception:
-            pass
-
-    return sorted(literals), f"SDK source found at {src_dir} (version {version})"
+    return sorted(literals), f"gsd-core library found at {lib_dir} (version {version})"
 
 
 def check_drift() -> list[str]:
@@ -385,8 +415,8 @@ def check_drift() -> list[str]:
     missing = [lit for lit in installed if lit.lower() not in pinned_lower]
     if missing:
         return [
-            f"installed SDK uses field literal(s) not in SDK_FIELDS (case-insensitively): "
-            f"{missing} -- re-derive SDK_FIELDS from the installed source (see module docstring)"
+            f"installed gsd-core uses field literal(s) not in SDK_FIELDS (case-insensitively): "
+            f"{missing} -- re-derive SDK_FIELDS from the installed library (see module docstring)"
         ]
     return []
 
@@ -588,6 +618,23 @@ def self_test() -> int:
         "Plan: TBD -- neither `<N> of <M>` nor `Not started`",
         MINIMAL_VALID_DOCUMENT.replace("Plan: 7 of 7 — description\n", "Plan: TBD\n"),
     )
+
+    # Drift scanner: gsd-core's compiled call shapes must each yield exactly their field
+    # name(s). A regex that silently stops matching would make the drift check vacuous.
+    case_count += 1
+    fixture = (
+        "const a = (0, state_document_cjs_1.stateExtractField)(body, 'Completed Phases');\n"
+        "const b = stateReplaceField(content, 'Current Plan', '1');\n"
+        "stateReplaceFieldWithFallback(content, 'Current Phase', 'Phase', value);\n"
+        "const c = stateFieldValue(fm, body, 'state_head', 'State Head').value;\n"
+        "const d = stateFieldValue(fm, body, null, 'Last activity').value;\n"
+        " * prose: stateExtractField(body, 'Current\n * Phase') wraps a line\n"
+    )
+    expected = {"Completed Phases", "Current Plan", "Current Phase", "Phase", "State Head", "Last activity"}
+    got = literals_in_source(fixture)
+    if got != expected:
+        fail(f"self-test FAILED: drift scanner fixture yielded {sorted(got)}, expected {sorted(expected)}")
+    print("  self-test OK (DRIFT): compiled gsd-core call shapes yield exactly their field names")
 
     return case_count
 
