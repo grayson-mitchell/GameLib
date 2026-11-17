@@ -471,6 +471,16 @@ const FIXTURE_DIFF_LINES = [
  * title (data, not copy): by user decision it joined DEFERRED_FILES and the
  * D-18 allowlist at expectedCount 1, so it is still scanned on every run but
  * leaves the fork-touched list. DECLARED_UNSCANNED_DEBT unchanged.
+ *
+ * 2026-11-17 (phase 47 plans 09/13, quick 261117-r4c): fork-touched 404 -> 407
+ * by a fresh `pnpm gen-i18n-gate-scope`, scope 283 -> 286. Three new
+ * fork-touched files, all SCANNED, not declared debt (every user-visible
+ * string already goes through t()): `Settings/components/ItadApiKey.tsx`
+ * (47-13), `StoreSearch/hooks/useOwnedSteamGids.ts` (47-09) and
+ * `GamePage/components/NativePortInfo.tsx` (quick 261117-r4c, another
+ * session's file, included because the derivation is all-or-nothing). All
+ * three were hand-inserted in sorted position into scope.
+ * DECLARED_UNSCANNED_DEBT unchanged.
  */
 const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/__mocks__/svgReactStub.tsx',
@@ -1324,9 +1334,9 @@ describe('--rewrite-scope guard', () => {
     }
   })
 
-  it('A0 fixture sanity: the seeded scope is the REAL 283-file hand-curated snapshot, and the fresh-snapshot fixture carries the committed 404-file fork-touched set verbatim', () => {
-    expect(scopeSnapshot.files.length).toBe(283)
-    expect(forkTouchedSnapshot.files.length).toBe(404)
+  it('A0 fixture sanity: the seeded scope is the REAL 286-file hand-curated snapshot, and the fresh-snapshot fixture carries the committed 407-file fork-touched set verbatim', () => {
+    expect(scopeSnapshot.files.length).toBe(286)
+    expect(forkTouchedSnapshot.files.length).toBe(407)
     // `freshSnapshot()` is a FIXTURE built from the committed artifact
     // (`files: [...forkTouchedSnapshot.files]`) -- NOT a live git derivation,
     // despite what this assertion used to claim. The live derivation is
@@ -1367,7 +1377,7 @@ describe('--rewrite-scope guard', () => {
     expect(result.refusal).toBeNull()
   })
 
-  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 283 -> 404 diff and writes nothing', () => {
+  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 286 -> 407 diff and writes nothing', () => {
     const { outDir, scopePath, seededBytes } = seedScope()
 
     const result = writeArtifacts({
@@ -1390,7 +1400,7 @@ describe('--rewrite-scope guard', () => {
     expect(refusal.provenance).toBe(scopeSnapshot.generatedBy)
   })
 
-  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 404', () => {
+  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 407', () => {
     // The load-bearing spec. Without it, A1/A2's "the file did not change"
     // would be satisfied just as well by a writer that cannot write at all —
     // a guard that refuses everything is not a fix, it is a different bug.
@@ -1403,12 +1413,12 @@ describe('--rewrite-scope guard', () => {
     })
 
     const rewritten = JSON.parse(readFileSync(scopePath, 'utf-8'))
-    expect(rewritten.files.length).toBe(404)
+    expect(rewritten.files.length).toBe(407)
     expect(result.wroteScope).toBe(scopePath)
     expect(result.refusal).toBeNull()
   })
 
-  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 404 files', () => {
+  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 407 files', () => {
     const outDir = makeTmpDir()
     const scopePath = join(outDir, 'i18nGateScope.json')
     expect(existsSync(scopePath)).toBe(false)
@@ -1421,7 +1431,7 @@ describe('--rewrite-scope guard', () => {
 
     expect(result.refusal).toBeNull()
     expect(result.wroteScope).toBe(scopePath)
-    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(404)
+    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(407)
   })
 
   it('A5 PROVENANCE RATCHET ON THE REAL ARTIFACT: the committed marker still reads as hand-curated', () => {

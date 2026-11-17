@@ -1,7 +1,7 @@
 {
   "baseCommit": "b5b5cad3fa2e822602d320b70788d87240fc056e",
   "baseVersion": "2.22.0",
-  "generatedAt": "2026-11-17T06:00:24.375Z",
+  "generatedAt": "2026-11-17T09:13:18.644Z",
   "generatedBy": "pnpm gen-i18n-gate-scope",
   "purpose": "A-17: the CI-readable input to the i18n scope staleness ratchet — every fork-touched src/frontend source file eligible for the hardcoded-string gate (D-17 deferrals already removed, exactly the operand the ratchet compares against), INCLUDING those not yet listed in i18nGateScope.json. Regenerate with `pnpm gen-i18n-gate-scope`.",
   "files": [
@@ -165,6 +165,7 @@
     "src/frontend/screens/Game/GamePage/components/InstalledInfo.tsx",
     "src/frontend/screens/Game/GamePage/components/MacArchBadge.tsx",
     "src/frontend/screens/Game/GamePage/components/MainButton.tsx",
+    "src/frontend/screens/Game/GamePage/components/NativePortInfo.tsx",
     "src/frontend/screens/Game/GamePage/components/PlatformSupport.tsx",
     "src/frontend/screens/Game/GamePage/components/ReleaseDate.tsx",
     "src/frontend/screens/Game/GamePage/components/ReportIssue.tsx",
@@ -302,6 +303,7 @@
     "src/frontend/screens/Settings/components/GameStartWindow.tsx",
     "src/frontend/screens/Settings/components/Gamescope.tsx",
     "src/frontend/screens/Settings/components/HideChangelogOnStartup.tsx",
+    "src/frontend/screens/Settings/components/ItadApiKey.tsx",
     "src/frontend/screens/Settings/components/LaunchWithoutSteam.tsx",
     "src/frontend/screens/Settings/components/LauncherArgs.tsx",
     "src/frontend/screens/Settings/components/LoginBackground.tsx",
@@ -362,6 +364,7 @@
     "src/frontend/screens/StoreSearch/components/StoreSearchRow/index.tsx",
     "src/frontend/screens/StoreSearch/helpers.ts",
     "src/frontend/screens/StoreSearch/hooks/useDebouncedStoreSearch.ts",
+    "src/frontend/screens/StoreSearch/hooks/useOwnedSteamGids.ts",
     "src/frontend/screens/StoreSearch/index.tsx",
     "src/frontend/screens/WebView/components/EpicLauncherBlockedNotice.tsx",
     "src/frontend/screens/WebView/components/HumbleLoginSurface.tsx",
