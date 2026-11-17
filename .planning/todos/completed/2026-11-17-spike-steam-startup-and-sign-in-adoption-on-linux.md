@@ -47,3 +47,16 @@ No GPU is needed, because the spike only watches Steam's library state. Use a sm
 
 Use the same probe shape as the Windows todo. A NO on question 1 or 5 means Linux keeps the
 simplified hold. Record the result in a spike README and in 81-CONTEXT D-14.
+
+## Resolution
+
+Resolved by spike 088 (`.planning/spikes/088-linux-acf-adoption/README.md`) on 2026-11-17, on
+native Debian Steam with tool app 1628350. The answer is yes to questions 1, 2, 3 and 5.
+
+- **Q1 startup:** adopted after a restart, no update or verify line.
+- **Q2:** a running, signed-in Steam ignores the ACF.
+- **Q3:** sign-in adopts with the same pid and no dialog.
+- **Q5:** `steam://exit` quits in ~4 s; a `steam://` URL or plain `steam` relaunches it.
+- **Q4 evidence:** no ACF rewrite. Use `Loaded N apps` and the `libraryfolders.vdf` apps map.
+
+81-CONTEXT D-14 records the result: Linux gets restart-on-Play.

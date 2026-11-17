@@ -67,7 +67,6 @@ export {
   createBoundedOutputCapture,
   DEFAULT_OUTPUT_CAPTURE_LIMIT as SIGN_IN_PROBE_OUTPUT_CAP
 } from 'backend/utils/boundedOutputCapture'
-export type { BoundedOutputCapture } from 'backend/utils/boundedOutputCapture'
 
 interface ClassifierInput {
   /** Everything the capture held (stdout and stderr, interleaved). */

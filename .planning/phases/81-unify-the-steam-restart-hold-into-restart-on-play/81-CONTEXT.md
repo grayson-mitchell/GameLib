@@ -132,6 +132,30 @@ Not in scope:
   `/gsd-plan-phase 81`, on Windows first and then Linux. The planner then plans only the arm each
   OS gets. If the spike answers yes to its questions 1 and 5 on an OS, that OS gets restart-on-Play
   with the D-01–D-05 UX and the D-07 detection, using non-helper evidence from spike question 4.
+  - **Windows: YES, so restart-on-Play** (spike 087, 2026-11-17, native Steam on Windows 11):
+    - **Q1 startup:** StateFlags 4 adopted with no dialog and no verify. 1026 gets a zero-file
+      commit.
+    - **Q2:** a running, signed-in Steam ignores the ACF.
+    - **Q3:** sign-in reloads and adopts, with no restart.
+    - **Q5:** `steam://exit` → `steam://rungameid/<id>` relaunches with the game. Plain
+      `steam.exe` restarts Steam alone with no dialog.
+    - **Q4 evidence:** the primary signal is Steam rewriting the ACF (sha/mtime change, the
+      `LauncherPath` key appears, 1026 → 4). Signed-in state comes from HKCU `ActiveProcess`
+      `ActiveUser` (0 = signed out). The content_log `Loaded N apps …` line marks a rescan.
+      **Do not use** HKCU `Apps\<id>\Installed`, which stays 1 regardless.
+    - **Caution for D-07 on Windows:** a sign-out restarts `steam.exe`, so a PID change alone is
+      not adoption evidence.
+  - **Linux: YES, so restart-on-Play** (spike 088, 2026-11-17, native Debian Steam, tool app
+    1628350):
+    - **Q1 startup:** adopted after a restart (`Loaded 5 → 6 apps`), no update or verify line.
+    - **Q2:** a running, signed-in Steam ignores the ACF.
+    - **Q3:** sign-in rescans and adopts, same pid, no dialog (operator-confirmed).
+    - **Q5:** `steam://exit` quits in ~4 s; any `steam://` URL or plain `steam` relaunches it.
+    - **Q4 evidence:** Steam did **not** rewrite this ACF, so use the content_log
+      `Loaded N apps` line and the `libraryfolders.vdf` `apps` map. `registry.vdf` has no
+      `ActiveUser`/`Installed`; signed-in is `[Logged On` in `connection_log.txt`.
+    - **Cautions:** Linux sign-out also restarts `steam`. `steam -silent` shows no window.
+      Not tested: a real game launching after relaunch, 1026, Flatpak.
 - **D-15:** If the spike says no for an OS, it gets a **simplified hold**:
   - **In memory only.** No persisted store and no boot re-arm, so after a GameLib restart the game
     reads as Installed.
