@@ -33,3 +33,30 @@ visible login refused while the first is pending; x/Esc resolving it; Epic and G
 unchanged. Windows: a visible login window owned by main and centred over it, main disabled while
 it is up and re-enabled on close, titled `origin — document title`, where closing it resolves the
 sign-in. Close this todo once both pass.
+
+## macOS live gate (2026-11-17): PASS
+
+Run under `pnpm tauri:dev` on a build carrying the split (no `src-tauri/src` file newer than the
+running binary).
+
+- **Compile and clippy.** `cargo clippy --all-targets` in `src-tauri` on macOS: no errors. The two
+  warnings in `humble_open.rs` (`== true` at the latch, borrowed `initialization_script` arg) both
+  blame to `f25afa977`, before the split; the first is deliberate per its own comment. CI did not
+  provide this check: macos-latest rust-test on `aad9cedc6` failed earlier, on the unrelated
+  `watchdog_real::still_kills_the_grandchild_when_the_middle_process_dies_first`.
+- **Sheet with native bar:** Humble, Epic, GOG and Amazon all present as sheets. Amazon shows the
+  in-app `TauriLoginPanel` "preparing" panel for about a second first, while `nile auth --login`
+  fetches the URL. That is frontend behaviour from before the split, not a sheet fallback.
+- **x and Esc** each resolve the Humble sign-in (`closed before login completed — cancelling watch`
+  at 21:20:12 and 21:20:16).
+- **Epic and GOG pristine sheets** unchanged.
+- **Real Humble sign-in** completed: session cookie stored at 21:22:48.
+- **Second visible login refused: not reachable from the UI.** The sheet is modal, and the Amazon
+  `nile` spawn gap the latch comment describes (~7-8s) now measures about 1s (`nile auth --login`
+  21:15:42, window label 21:15:43), too short to click a second store. The refusal path was not
+  exercised live.
+
+Not a gate item: the first library sync after the sign-in returned `access_denied` (Humble 403 or
+429) at 21:22:48, in the sidecar's fetch path, which the split did not touch.
+
+Windows live gate still owed.
