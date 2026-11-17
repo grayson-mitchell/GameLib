@@ -179,7 +179,7 @@ describe('ThemeGallery: Your themes group', () => {
     fireEvent.click(
       container.querySelector('[aria-label="Rename Theme 4"]') as HTMLElement
     )
-    const input = screen.getByLabelText('Theme name') as HTMLInputElement
+    const input = screen.getByLabelText<HTMLInputElement>('Theme name')
     expect(input.value).toBe('Theme 4')
     fireEvent.click(screen.getByRole('button', { name: 'Keep name' }))
     expect(screen.queryByLabelText('Theme name')).toBeNull()

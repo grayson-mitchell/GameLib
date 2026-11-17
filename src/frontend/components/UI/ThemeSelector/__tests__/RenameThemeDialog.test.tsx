@@ -61,7 +61,7 @@ const open = (onClose = jest.fn()) => {
   )
   return {
     onClose,
-    input: screen.getByLabelText('Theme name') as HTMLInputElement,
+    input: screen.getByLabelText<HTMLInputElement>('Theme name'),
     confirm: () => screen.getByRole('button', { name: 'Rename theme' })
   }
 }
