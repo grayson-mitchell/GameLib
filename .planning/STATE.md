@@ -5,16 +5,16 @@ milestone_name: Foundations
 current_phase: 81
 current_phase_name: Unify the Steam restart hold into restart-on-Play
 status: executing
-stopped_at: Phase 64 context gathered
-last_updated: "2026-11-17T10:41:45.507Z"
+stopped_at: Completed 81-01-PLAN.md
+last_updated: "2026-11-17T17:06:07.533Z"
 last_activity: 2026-11-17
-last_activity_desc: "Completed quick task 261117-r4c: Native port hint catalogue and game-page block"
-state_head: cb4a645904bb7031d957d7ed555639765f39001f
+last_activity_desc: Phase 81 execution started
+state_head: 9fb1da91c13e19b3663345fd0a223723f40314c8
 progress:
   total_phases: 26
   completed_phases: 23
   total_plans: 511
-  completed_plans: 491
+  completed_plans: 492
   percent: 88
 ---
 
@@ -25,7 +25,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 81 — unify the Steam restart hold into restart-on-Play (not planned)
+**Current focus:** Phase 81 — Unify the Steam restart hold into restart-on-Play
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -76,10 +76,10 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 
 ## Current Position
 
-Phase: 81 (Unify the Steam restart hold into restart-on-Play) — READY TO EXECUTE
-Plan: Not started
+Phase: 81 (Unify the Steam restart hold into restart-on-Play) — EXECUTING
+Plan: 2 of 20
 Status: Ready to execute
-Last activity: 2026-11-17 - Completed quick task 261117-ubb: Load a pinned CDN-fetched libsteam_api.dylib in the macOS bridge helper
+Last activity: 2026-11-17 — Phase 81 execution started
 
 Progress: [█████████░] 88%
 
@@ -274,6 +274,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 66.4 P25 | ~15min | 3 tasks | 2 files |
 | Phase 70 P03 | 15min | 2 tasks | 3 files |
 | Phase 80 P14 | 40min | 2 tasks | 3 files |
+| Phase 81 P01 | continuation | 2 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -438,6 +439,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 66.4]: 66.4-24: Windows shortcut icon chain is store exe, local install-dir scan (3 levels, 20k entries, no symlinks), then GameLib shell exe; PICS and Uninstall DisplayIcon rejected on measurement
 - [Phase 66.4]: 66.4-24: Windows .lnk passes the gamelib:// URL as one double-quoted explorer.exe argument with inner quotes percent-encoded to %22
 - [Phase 47]: 47-01: ITAD sweep measured (2026-11-17): auth `query:key`, Epic shop id 16, lookup ceiling 1000, amount==amountInt, 32 priced / 10 fallback countries; search `resultsParam` measured NULL (results=20 and limit=20 both return 20 because 20 is the default), locked as `results` from the official ITAD OpenAPI spec (SPEC grade); itadCoverage.ts committed
+- [Phase 81]: 81-01: ACF adoption compare is content-only (no mtime); pid-change evidence is macOS only (spikes 087/088 r4)
 
 ### Pending Todos
 
@@ -813,9 +815,9 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-17T09:55:17.394Z
-Stopped at: Phase 64 context gathered
-Resume file: .planning/phases/64-ui-to-edit-themes/64-CONTEXT.md
+Last session: 2026-11-17T17:06:04.288Z
+Stopped at: Completed 81-01-PLAN.md
+Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
 
