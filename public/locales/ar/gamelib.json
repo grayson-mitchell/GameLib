@@ -22,6 +22,13 @@
                 "stalled_few": "لا يوجد تقدم في التنزيل منذ {{count}} دقائق — تم إيقاف التثبيت",
                 "stalled_many": "لا يوجد تقدم في التنزيل منذ {{count}} دقيقة — تم إيقاف التثبيت",
                 "stalled_other": "لا يوجد تقدم في التنزيل منذ {{count}} دقيقة — تم إيقاف التثبيت"
+            },
+            "launch": {
+                "epic": {
+                    "credentials": "انتهت صلاحية تسجيل دخولك إلى Epic Games، لذا لم تبدأ {{title}}. سجّل الخروج من Epic Games ثم سجّل الدخول مرة أخرى، ثم اضغط على «تشغيل».",
+                    "loginFailed": "تعذّر على GameLib تسجيل الدخول إلى Epic Games، لذا لم تبدأ {{title}}. تحقق من اتصالك بالإنترنت، أو سجّل الخروج من Epic Games ثم سجّل الدخول مرة أخرى. وإذا كانت هذه اللعبة تعمل دون اتصال، فشغّل خيار «شغل اللعبة دون اتصال بالإنترنت» في إعداداتها.",
+                    "network": "تعذّر على GameLib الوصول إلى Epic Games لتسجيل الدخول، لذا لم تبدأ {{title}}. تحقق من اتصالك بالإنترنت وحاول مرة أخرى. وإذا كانت هذه اللعبة تعمل دون اتصال، فشغّل خيار «شغل اللعبة دون اتصال بالإنترنت» في إعداداتها."
+                }
             }
         },
         "filePicker": {
@@ -94,6 +101,7 @@
         "extraInfoErrorTitle": "تعذّر تحميل المعلومات الإضافية",
         "extraInfoRetry": "أعد المحاولة",
         "extraInfoStaleBody": "تم تخزين هذه النتيجة مؤقتًا قبل تسجيل نتائج التحميل، لذا قد تكون قديمة. حدّثها للتحقق.",
+        "moreActions": "المزيد من الإجراءات",
         "steamInstallingPercent": "جارٍ التثبيت… {{percent}}%",
         "steamUpdateCommitting": "جارٍ تطبيق التحديث…",
         "steamUpdatePlanning": "جارٍ التخطيط للتحديث…",
@@ -104,6 +112,7 @@
             "checkingSize": "جارٍ التحقق من حجم التحديث…",
             "confirmButton": "تحديث",
             "confirmTitle": "تحديث {{title}}؟",
+            "downloadAbout": "حجم التنزيل حوالي {{download}}",
             "fallback": "لا يستطيع GameLib الحصول على قائمة ملفات الإصدار السابق، لذا سيفحص كل ملف: تنزيل يصل إلى {{download}}.",
             "notEnoughDisk": "يحتاج إلى {{peak}} مساحة حرة، والمتاح {{available}}.",
             "registered": "سيقوم Steam بتحديث هذه اللعبة.",
@@ -378,6 +387,10 @@
         "title": "استبدال مفتاح Steam",
         "viewInLibrary": "عرض في المكتبة"
     },
+    "reportProblem": {
+        "logsInstructions": "صف ما حدث في نموذج البلاغ. يمكن تضمين معلومات التشخيص وأحدث السجلات تلقائيًا.",
+        "openForm": "افتح نموذج البلاغ"
+    },
     "setting": {
         "eosOverlay": {
             "unavailable": "طبقة EOS Overlay غير متاحة في هذا الإصدار",
@@ -510,7 +523,6 @@
                 "moreSymbols_few": "و{{count}} آخرين",
                 "moreSymbols_many": "و{{count}} آخر",
                 "moreSymbols_other": "و{{count}} آخر",
-                "missingSymbols": "غير مشمول: {{symbols}}",
                 "native": "جسر Steam الأصلي",
                 "notCoveredHeading": "غير مغطى:",
                 "reason": {
@@ -540,8 +552,17 @@
             },
             "setup": {
                 "missingSymbols": "الجسر لا يغطي: {{symbols}}",
-                "redownloadNote": "التراجع يعيد تنزيل اللعبة مرة أخرى داخل عميل Steam المعبأ الخاص بـ Windows."
+                "redownloadNote": "التراجع يعيد تنزيل اللعبة مرة أخرى داخل عميل Steam المعبأ الخاص بـ Windows.",
+                "steamClientUpdated": "تم تحديث Steam بطريقة لا يستطيع جسر Steam في هذا الإصدار من GameLib استخدامها بعد. حدّث GameLib، أو شغّل اللعبة من Steam في الوقت الحالي."
             }
+        },
+        "directLaunch": {
+            "confirmLaunch": "تشغيل",
+            "confirmMessage": "سيؤدي هذا إلى تشغيل اللعبة مباشرة دون عميل Steam. في هذه الجلسة لن تتوفر مزامنة Steam Cloud ولا تتبع وقت اللعب ولا الإنجازات ولا تراكب Steam.",
+            "confirmTitle": "هل تريد التشغيل دون Steam؟",
+            "failed": "تعذّر تشغيل {{game}} دون Steam.",
+            "label": "التشغيل دون Steam",
+            "notEligible": "لم يعد بالإمكان تشغيل هذه اللعبة دون Steam. استخدم «تشغيل» بدلًا من ذلك."
         },
         "download": {
             "error": {
@@ -598,6 +619,8 @@
             "refusedRunning": "أغلق {{title}} قبل تحديثها."
         },
         "engine": {
+            "drmSwitchRefused": "تعذّر بدء {{title}} في وضع Steam DRM لأن GameLib لم يتمكن من إعادة ملفات اللعبة إلى CrossOver ({{reason}}). أغلق أي لعبة تعمل من هذه الحاوية (bottle) وحاول مرة أخرى.",
+            "markerNewer": "تم إعداد ملفات لعبة {{title}} آخر مرة بواسطة إصدار أحدث من GameLib، لذا لن يغيّر هذا الإصدار محركها. شغّلها بالمحرك الذي تستخدمه بالفعل، أو حدّث GameLib.",
             "wineTabHint": "يختار GameLib محرك Wine وbottle لألعاب Steam.",
             "toast": {
                 "body": "يتم استخدام المحرك المدمج لهذا التشغيل.",
@@ -878,5 +901,11 @@
             "groupBy": "جمّع ألعابك حسب حالة التثبيت أو المتجر، أو أوقف التجميع.",
             "sort": "رتّب ألعابك حسب الاسم أو آخر تشغيل أو حجم التثبيت، واعكس الاتجاه."
         }
+    },
+    "twoColTable": {
+        "cancel": "إلغاء",
+        "edit": "تعديل",
+        "remove": "إزالة",
+        "save": "حفظ"
     }
 }

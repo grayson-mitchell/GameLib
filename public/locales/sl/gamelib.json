@@ -20,6 +20,13 @@
                 "stalled_two": "Brez napredka prenosa {{count}} minuti — namestitev je bila ustavljena",
                 "stalled_few": "Brez napredka prenosa {{count}} minute — namestitev je bila ustavljena",
                 "stalled_other": "Brez napredka prenosa {{count}} minut — namestitev je bila ustavljena"
+            },
+            "launch": {
+                "epic": {
+                    "credentials": "Vaša prijava v Epic Games je potekla, zato se {{title}} ni zagnala. Odjavite se iz Epic Games, znova se prijavite in nato pritisnite Igraj.",
+                    "loginFailed": "GameLib se ni mogel prijaviti v Epic Games, zato se {{title}} ni zagnala. Preverite internetno povezavo ali se odjavite iz Epic Games in znova prijavite. Če ta igra lahko deluje brez povezave, v njenih nastavitvah vklopite »Zaženi igro brez povezave«.",
+                    "network": "GameLib se ni mogel povezati z Epic Games zaradi prijave, zato se {{title}} ni zagnala. Preverite internetno povezavo in poskusite znova. Če ta igra lahko deluje brez povezave, v njenih nastavitvah vklopite »Zaženi igro brez povezave«."
+                }
             }
         },
         "filePicker": {
@@ -92,6 +99,7 @@
         "extraInfoErrorTitle": "Dodatnih informacij ni bilo mogoče naložiti",
         "extraInfoRetry": "Poskusi znova",
         "extraInfoStaleBody": "Ta rezultat je bil shranjen v predpomnilnik, preden so se beležili izidi nalaganja, zato je morda zastarel. Osvežite za preverjanje.",
+        "moreActions": "Več dejanj",
         "steamInstallingPercent": "Nameščanje… {{percent}} %",
         "steamUpdateCommitting": "Uveljavljanje posodobitve…",
         "steamUpdatePlanning": "Načrtovanje posodobitve…",
@@ -102,6 +110,7 @@
             "checkingSize": "Preverjanje velikosti posodobitve…",
             "confirmButton": "Posodobi",
             "confirmTitle": "Posodobim {{title}}?",
+            "downloadAbout": "Prenos približno {{download}}",
             "fallback": "GameLib ne more pridobiti seznama datotek prejšnje različice, zato bo preveril vsako datoteko: prenos do {{download}}.",
             "notEnoughDisk": "Potrebnega je {{peak}} prostega prostora, na voljo je {{available}}.",
             "registered": "Steam bo posodobil to igro.",
@@ -190,7 +199,7 @@
         "cooldown_two": "Trenutno nedosegljivo — poskusite znova čez {{count}} minuti",
         "cooldown_few": "Trenutno nedosegljivo — poskusite znova čez {{count}} minute",
         "cooldown_other": "Trenutno nedosegljivo — poskusite znova čez {{count}} minut",
-        "giftConfirmBody": "Kdorkoli s to povezavo lahko prevzame ključ — ko je enkrat unovčen, je za vedno izgubljen. Podaritev boste dokončali na Humblovi spletni strani.",
+        "giftConfirmBody": "Kdorkoli s to povezavo lahko prevzame ključ — ko je enkrat unovčen, je za vedno izgubljen. Podaritev boste dokončali na lastni spletni strani storitve Humble.",
         "loginAndClaim": "Prijavite se na {{store}} in prevzemite",
         "markRedeemed": "Označi kot unovčeno",
         "redeemableOnly": "Samo ključi, ki jih je mogoče unovčiti",
@@ -364,6 +373,10 @@
         "title": "Unovčite ključ Steam",
         "viewInLibrary": "Prikaži v knjižnici"
     },
+    "reportProblem": {
+        "logsInstructions": "V obrazcu za poročilo opišite, kaj se je zgodilo. Diagnostiko in nedavne dnevnike lahko vključimo samodejno.",
+        "openForm": "Odpri obrazec za poročilo"
+    },
     "setting": {
         "eosOverlay": {
             "unavailable": "Prekritje EOS v tej različici ni na voljo",
@@ -492,7 +505,6 @@
                 "moreSymbols_two": "in še {{count}}",
                 "moreSymbols_few": "in še {{count}}",
                 "moreSymbols_other": "in še {{count}}",
-                "missingSymbols": "Ni pokrito: {{symbols}}",
                 "native": "Izvorni Steam most",
                 "notCoveredHeading": "Ni pokrito:",
                 "reason": {
@@ -522,8 +534,17 @@
             },
             "setup": {
                 "missingSymbols": "Most ne pokriva: {{symbols}}",
-                "redownloadNote": "Vrnitev ponovno prenese igro v Windows odjemalec Steam v bottle."
+                "redownloadNote": "Vrnitev ponovno prenese igro v Windows odjemalec Steam v bottle.",
+                "steamClientUpdated": "Steam se je posodobil na način, ki ga most Steam v tej različici GameLiba še ne more uporabljati. Posodobite GameLib ali igro za zdaj zaženite iz Steama."
             }
+        },
+        "directLaunch": {
+            "confirmLaunch": "Zaženi",
+            "confirmMessage": "S tem se igra zažene neposredno, brez odjemalca Steam. V tej seji ni sinhronizacije Steam Cloud, beleženja igralnega časa, dosežkov ali prekrivnega sloja Steam.",
+            "confirmTitle": "Zagnati brez Steama?",
+            "failed": "Igre {{game}} ni bilo mogoče zagnati brez Steama.",
+            "label": "Zaženi brez Steama",
+            "notEligible": "Te igre ni več mogoče zagnati brez Steama. Namesto tega uporabite Igraj."
         },
         "download": {
             "error": {
@@ -580,6 +601,8 @@
             "refusedRunning": "Zaprite {{title}}, preden jo posodobite."
         },
         "engine": {
+            "drmSwitchRefused": "Igre {{title}} ni bilo mogoče zagnati v načinu Steam DRM, ker GameLib ni mogel vrniti njenih datotek v CrossOver ({{reason}}). Zaprite vse igre, ki se izvajajo iz tega bottla, in poskusite znova.",
+            "markerNewer": "Datoteke igre {{title}} je nazadnje nastavila novejša različica GameLiba, zato ta različica ne bo spremenila njenega pogona. Zaženite jo s pogonom, ki ga že uporablja, ali posodobite GameLib.",
             "wineTabHint": "GameLib izbere pogon Wine in bottle za igre Steam.",
             "toast": {
                 "body": "Za ta zagon se uporablja vgrajeni pogon.",
@@ -850,5 +873,11 @@
             "groupBy": "Združite igre po stanju namestitve ali trgovini ali izklopite združevanje.",
             "sort": "Razvrstite igre po imenu, zadnji igri ali velikosti namestitve in obrnite smer."
         }
+    },
+    "twoColTable": {
+        "cancel": "Prekliči",
+        "edit": "Uredi",
+        "remove": "Odstrani",
+        "save": "Shrani"
     }
 }

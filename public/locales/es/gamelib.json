@@ -19,6 +19,13 @@
                 "stalled_one": "Sin progreso de descarga durante {{count}} minuto — la instalación se detuvo",
                 "stalled_many": "Sin progreso de descarga durante {{count}} minutos — la instalación se detuvo",
                 "stalled_other": "Sin progreso de descarga durante {{count}} minutos — la instalación se detuvo"
+            },
+            "launch": {
+                "epic": {
+                    "credentials": "Tu inicio de sesión en Epic Games ha caducado, por eso {{title}} no se ha iniciado. Cierra sesión en Epic Games, vuelve a iniciarla y pulsa Jugar.",
+                    "loginFailed": "GameLib no pudo iniciar sesión en Epic Games, por eso {{title}} no se ha iniciado. Comprueba tu conexión a internet, o cierra sesión en Epic Games y vuelve a iniciarla. Si este juego puede ejecutarse sin conexión, activa «Ejecutar juego sin conexión» en sus ajustes.",
+                    "network": "GameLib no pudo conectarse con Epic Games para iniciar sesión, por eso {{title}} no se ha iniciado. Comprueba tu conexión a internet e inténtalo de nuevo. Si este juego puede ejecutarse sin conexión, activa «Ejecutar juego sin conexión» en sus ajustes."
+                }
             }
         },
         "filePicker": {
@@ -91,6 +98,7 @@
         "extraInfoErrorTitle": "No se pudo cargar información adicional",
         "extraInfoRetry": "Reintentar",
         "extraInfoStaleBody": "Este resultado se almacenó en caché antes de que se registraran los resultados de carga, por lo que puede estar desactualizado. Actualiza para comprobarlo.",
+        "moreActions": "Más acciones",
         "steamInstallingPercent": "Instalando… {{percent}} %",
         "steamUpdateCommitting": "Aplicando la actualización…",
         "steamUpdatePlanning": "Planificando la actualización…",
@@ -101,6 +109,7 @@
             "checkingSize": "Comprobando el tamaño de la actualización…",
             "confirmButton": "Actualizar",
             "confirmTitle": "¿Actualizar {{title}}?",
+            "downloadAbout": "Descarga de unos {{download}}",
             "fallback": "GameLib no puede obtener la lista de archivos de la compilación anterior, así que comprobará todos los archivos: descarga de hasta {{download}}.",
             "notEnoughDisk": "Necesita {{peak}} libres, hay {{available}} disponibles.",
             "registered": "Steam actualizará este juego.",
@@ -357,6 +366,10 @@
         "title": "Canjear una clave de Steam",
         "viewInLibrary": "Ver en la biblioteca"
     },
+    "reportProblem": {
+        "logsInstructions": "Describe lo que ocurrió en el formulario de informe. Los diagnósticos y los registros recientes pueden incluirse automáticamente.",
+        "openForm": "Abrir el formulario de informe"
+    },
     "setting": {
         "eosOverlay": {
             "unavailable": "El EOS Overlay no está disponible en esta versión",
@@ -483,7 +496,6 @@
                 "moreSymbols_one": "y {{count}} más",
                 "moreSymbols_many": "y {{count}} más",
                 "moreSymbols_other": "y {{count}} más",
-                "missingSymbols": "No cubierto: {{symbols}}",
                 "native": "Puente nativo de Steam",
                 "notCoveredHeading": "No cubierto:",
                 "reason": {
@@ -513,8 +525,17 @@
             },
             "setup": {
                 "missingSymbols": "El puente no cubre: {{symbols}}",
-                "redownloadNote": "Al volver atrás se descarga el juego de nuevo en el cliente de Steam de Windows en bottle."
+                "redownloadNote": "Al volver atrás se descarga el juego de nuevo en el cliente de Steam de Windows en bottle.",
+                "steamClientUpdated": "Steam se actualizó de una forma que el puente de Steam de esta versión de GameLib aún no puede usar. Actualiza GameLib o, por ahora, inicia el juego desde Steam."
             }
+        },
+        "directLaunch": {
+            "confirmLaunch": "Iniciar",
+            "confirmMessage": "Esto inicia el juego directamente, sin el cliente de Steam. En esta sesión no habrá sincronización de Steam Cloud, ni seguimiento del tiempo de juego, ni logros, ni overlay de Steam.",
+            "confirmTitle": "¿Iniciar sin Steam?",
+            "failed": "No se pudo iniciar {{game}} sin Steam.",
+            "label": "Iniciar sin Steam",
+            "notEligible": "Este juego ya no se puede iniciar sin Steam. Usa Jugar en su lugar."
         },
         "download": {
             "error": {
@@ -571,6 +592,8 @@
             "refusedRunning": "Cierra {{title}} antes de actualizarlo."
         },
         "engine": {
+            "drmSwitchRefused": "{{title}} no pudo iniciarse en modo Steam DRM porque GameLib no pudo devolver los archivos del juego a CrossOver ({{reason}}). Cierra cualquier juego que se esté ejecutando desde esta bottle e inténtalo de nuevo.",
+            "markerNewer": "Los archivos de {{title}} los configuró por última vez una versión más reciente de GameLib, así que esta versión no cambiará su motor. Inícialo con el motor que ya usa o actualiza GameLib.",
             "wineTabHint": "GameLib elige el motor Wine y la bottle para los juegos de Steam.",
             "toast": {
                 "body": "Se usa el motor integrado para este inicio.",
@@ -836,5 +859,11 @@
             "groupBy": "Agrupa tus juegos por estado de instalación o por tienda, o desactiva la agrupación.",
             "sort": "Ordena tus juegos por nombre, última partida o tamaño de instalación, e invierte el sentido."
         }
+    },
+    "twoColTable": {
+        "cancel": "Cancelar",
+        "edit": "Editar",
+        "remove": "Quitar",
+        "save": "Guardar"
     }
 }

@@ -18,6 +18,13 @@
                 "signInToSteam": "Masuk ke Steam",
                 "stalled_one": "Tidak ada progres unduhan selama {{count}} menit — instalasi dihentikan",
                 "stalled_other": "Tidak ada progres unduhan selama {{count}} menit — instalasi dihentikan"
+            },
+            "launch": {
+                "epic": {
+                    "credentials": "Login Epic Games Anda sudah kedaluwarsa, jadi {{title}} tidak dimulai. Keluar dari Epic Games, masuk lagi, lalu tekan Mainkan.",
+                    "loginFailed": "GameLib tidak dapat masuk ke Epic Games, jadi {{title}} tidak dimulai. Periksa koneksi internet Anda, atau keluar dari Epic Games lalu masuk lagi. Jika game ini bisa berjalan secara luring, aktifkan Jalankan Game Secara Luring di pengaturannya.",
+                    "network": "GameLib tidak dapat menjangkau Epic Games untuk masuk, jadi {{title}} tidak dimulai. Periksa koneksi internet Anda lalu coba lagi. Jika game ini bisa berjalan secara luring, aktifkan Jalankan Game Secara Luring di pengaturannya."
+                }
             }
         },
         "filePicker": {
@@ -90,6 +97,7 @@
         "extraInfoErrorTitle": "Tidak dapat memuat info tambahan",
         "extraInfoRetry": "Coba Lagi",
         "extraInfoStaleBody": "Hasil ini disimpan dalam cache sebelum hasil pemuatan dicatat, sehingga mungkin sudah kedaluwarsa. Segarkan untuk memeriksanya.",
+        "moreActions": "Tindakan lainnya",
         "steamInstallingPercent": "Menginstal… {{percent}}%",
         "steamUpdateCommitting": "Menerapkan pembaruan…",
         "steamUpdatePlanning": "Merencanakan pembaruan…",
@@ -100,6 +108,7 @@
             "checkingSize": "Memeriksa ukuran pembaruan…",
             "confirmButton": "Perbarui",
             "confirmTitle": "Perbarui {{title}}?",
+            "downloadAbout": "Unduhan sekitar {{download}}",
             "fallback": "GameLib tidak dapat mengambil daftar file build sebelumnya, jadi akan memeriksa setiap file: unduhan hingga {{download}}.",
             "notEnoughDisk": "Membutuhkan {{peak}} ruang kosong, tersedia {{available}}.",
             "registered": "Steam akan memperbarui game ini.",
@@ -350,6 +359,10 @@
         "title": "Tukarkan kunci Steam",
         "viewInLibrary": "Lihat di pustaka"
     },
+    "reportProblem": {
+        "logsInstructions": "Jelaskan apa yang terjadi di formulir laporan. Diagnostik dan log terbaru dapat disertakan secara otomatis.",
+        "openForm": "Buka formulir laporan"
+    },
     "setting": {
         "eosOverlay": {
             "unavailable": "EOS Overlay tidak tersedia di build ini",
@@ -474,7 +487,6 @@
                 "label": "Rute Steam",
                 "moreSymbols_one": "dan {{count}} lainnya",
                 "moreSymbols_other": "dan {{count}} lainnya",
-                "missingSymbols": "Tidak tercakup: {{symbols}}",
                 "native": "Jembatan Steam native",
                 "notCoveredHeading": "Tidak tercakup:",
                 "reason": {
@@ -504,8 +516,17 @@
             },
             "setup": {
                 "missingSymbols": "Jembatan tidak mencakup: {{symbols}}",
-                "redownloadNote": "Fallback mengunduh ulang game ke klien Steam Windows dalam bottle."
+                "redownloadNote": "Fallback mengunduh ulang game ke klien Steam Windows dalam bottle.",
+                "steamClientUpdated": "Steam diperbarui dengan cara yang belum dapat digunakan oleh jembatan Steam di versi GameLib ini. Perbarui GameLib, atau untuk sementara jalankan game dari Steam."
             }
+        },
+        "directLaunch": {
+            "confirmLaunch": "Jalankan",
+            "confirmMessage": "Ini menjalankan game secara langsung, tanpa klien Steam. Pada sesi ini tidak ada sinkronisasi Steam Cloud, pelacakan waktu bermain, pencapaian, maupun overlay Steam.",
+            "confirmTitle": "Jalankan tanpa Steam?",
+            "failed": "Tidak dapat menjalankan {{game}} tanpa Steam.",
+            "label": "Jalankan tanpa Steam",
+            "notEligible": "Game ini tidak bisa lagi dijalankan tanpa Steam. Gunakan Mainkan sebagai gantinya."
         },
         "download": {
             "error": {
@@ -562,6 +583,8 @@
             "refusedRunning": "Tutup {{title}} sebelum memperbarui."
         },
         "engine": {
+            "drmSwitchRefused": "{{title}} tidak dapat dimulai dalam mode Steam DRM karena GameLib tidak dapat mengembalikan file game ke CrossOver ({{reason}}). Tutup game apa pun yang berjalan dari bottle ini lalu coba lagi.",
+            "markerNewer": "File game {{title}} terakhir disiapkan oleh GameLib versi yang lebih baru, jadi versi ini tidak akan mengubah engine-nya. Jalankan dengan engine yang sudah dipakainya, atau perbarui GameLib.",
             "wineTabHint": "GameLib memilih mesin Wine dan bottle untuk game Steam.",
             "toast": {
                 "body": "Menggunakan mesin bawaan untuk peluncuran ini.",
@@ -822,5 +845,11 @@
             "groupBy": "Kelompokkan gim Anda berdasarkan status instalasi atau toko, atau matikan pengelompokan.",
             "sort": "Urutkan gim Anda berdasarkan nama, terakhir dimainkan, atau ukuran instalasi, lalu balik arahnya."
         }
+    },
+    "twoColTable": {
+        "cancel": "Batalkan",
+        "edit": "Ubah",
+        "remove": "Hapus",
+        "save": "Simpan"
     }
 }

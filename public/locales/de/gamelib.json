@@ -45,6 +45,7 @@
         "extraInfoErrorTitle": "Zusatzinfos konnten nicht geladen werden",
         "extraInfoRetry": "Erneut versuchen",
         "extraInfoStaleBody": "Dieses Ergebnis wurde zwischengespeichert, bevor Ladeergebnisse erfasst wurden, und könnte daher veraltet sein. Aktualisieren, um zu prüfen.",
+        "moreActions": "Weitere Aktionen",
         "steamInstallingPercent": "Wird installiert… {{percent}} %",
         "steamUpdateCommitting": "Update wird angewendet…",
         "steamUpdatePlanning": "Update wird geplant…",
@@ -55,6 +56,7 @@
             "checkingSize": "Update-Größe wird geprüft…",
             "confirmButton": "Aktualisieren",
             "confirmTitle": "{{title}} aktualisieren?",
+            "downloadAbout": "Download von etwa {{download}}",
             "fallback": "GameLib kann die Dateiliste des vorherigen Builds nicht abrufen und prüft deshalb jede Datei: Download bis zu {{download}}.",
             "notEnoughDisk": "Benötigt {{peak}} freien Speicher, {{available}} verfügbar.",
             "registered": "Steam aktualisiert dieses Spiel.",
@@ -376,7 +378,6 @@
                 "label": "Steam-Route",
                 "moreSymbols_one": "und {{count}} weitere",
                 "moreSymbols_other": "und {{count}} weitere",
-                "missingSymbols": "Nicht abgedeckt: {{symbols}}",
                 "native": "Native Steam-Brücke",
                 "notCoveredHeading": "Nicht abgedeckt:",
                 "reason": {
@@ -406,8 +407,17 @@
             },
             "setup": {
                 "missingSymbols": "Die Brücke deckt nicht ab: {{symbols}}",
-                "redownloadNote": "Der Rückfall lädt das Spiel erneut in den Windows-Steam-Client in der Bottle herunter."
+                "redownloadNote": "Der Rückfall lädt das Spiel erneut in den Windows-Steam-Client in der Bottle herunter.",
+                "steamClientUpdated": "Steam wurde auf eine Weise aktualisiert, die die Steam-Bridge dieser GameLib-Version noch nicht nutzen kann. Aktualisiere GameLib oder starte das Spiel vorerst über Steam."
             }
+        },
+        "directLaunch": {
+            "confirmLaunch": "Starten",
+            "confirmMessage": "Damit wird das Spiel direkt ohne den Steam-Client gestartet. In dieser Sitzung gibt es keine Steam-Cloud-Synchronisierung, keine Spielzeiterfassung, keine Erfolge und kein Steam-Overlay.",
+            "confirmTitle": "Ohne Steam starten?",
+            "failed": "{{game}} konnte nicht ohne Steam gestartet werden.",
+            "label": "Ohne Steam starten",
+            "notEligible": "Dieses Spiel lässt sich nicht mehr ohne Steam starten. Verwende stattdessen Spielen."
         },
         "install": {
             "bottleNameReadonlyHelper": "GameLib verwaltet eine gemeinsame CrossOver-Bottle für Steam. Eine separate Bottle pro Spiel zu benennen wird noch nicht unterstützt.",
@@ -464,6 +474,8 @@
             "notify": "Eine unterbrochene Installation für {{game}} kann fortgesetzt werden — klicke auf Installieren, um fortzufahren"
         },
         "engine": {
+            "drmSwitchRefused": "{{title}} konnte nicht im Steam-DRM-Modus gestartet werden, weil GameLib die Spieldateien nicht zurück auf CrossOver umstellen konnte ({{reason}}). Schließe alle Spiele, die in dieser Bottle laufen, und versuche es erneut.",
+            "markerNewer": "Die Spieldateien von {{title}} wurden zuletzt von einer neueren GameLib-Version eingerichtet, daher ändert diese Version die Engine nicht. Starte das Spiel mit der Engine, die es bereits verwendet, oder aktualisiere GameLib.",
             "wineTabHint": "GameLib wählt die Wine-Engine und die Bottle für Steam-Spiele aus.",
             "toast": {
                 "body": "Für diesen Start wird die integrierte Engine verwendet.",
@@ -532,6 +544,13 @@
                 "signInToSteam": "Bei Steam anmelden",
                 "stalled_one": "Seit {{count}} Minute kein Download-Fortschritt — die Installation wurde gestoppt",
                 "stalled_other": "Seit {{count}} Minuten kein Download-Fortschritt — die Installation wurde gestoppt"
+            },
+            "launch": {
+                "epic": {
+                    "credentials": "Deine Epic-Games-Anmeldung ist abgelaufen, deshalb wurde {{title}} nicht gestartet. Melde dich bei Epic Games ab, melde dich erneut an und klicke dann auf Spielen.",
+                    "loginFailed": "GameLib konnte sich nicht bei Epic Games anmelden, deshalb wurde {{title}} nicht gestartet. Prüfe deine Internetverbindung oder melde dich bei Epic Games ab und wieder an. Wenn dieses Spiel offline laufen kann, aktiviere in seinen Einstellungen „Spiel offline ausführen“.",
+                    "network": "GameLib konnte Epic Games für die Anmeldung nicht erreichen, deshalb wurde {{title}} nicht gestartet. Prüfe deine Internetverbindung und versuche es erneut. Wenn dieses Spiel offline laufen kann, aktiviere in seinen Einstellungen „Spiel offline ausführen“."
+                }
             }
         },
         "filePicker": {
@@ -603,6 +622,10 @@
         "redeeming": "Wird eingelöst...",
         "title": "Einen Steam-Key einlösen",
         "viewInLibrary": "In Bibliothek anzeigen"
+    },
+    "reportProblem": {
+        "logsInstructions": "Beschreibe im Meldeformular, was passiert ist. Diagnosedaten und aktuelle Logs können automatisch angehängt werden.",
+        "openForm": "Meldeformular öffnen"
     },
     "setting": {
         "eosOverlay": {
@@ -822,5 +845,11 @@
             "groupBy": "Gruppiere deine Spiele nach Installationsstatus oder Shop, oder schalte die Gruppierung aus.",
             "sort": "Sortiere deine Spiele nach Name, zuletzt gespielt oder Installationsgröße und kehre die Richtung um."
         }
+    },
+    "twoColTable": {
+        "cancel": "Abbrechen",
+        "edit": "Bearbeiten",
+        "remove": "Entfernen",
+        "save": "Speichern"
     }
 }

@@ -21,6 +21,13 @@
                 "stalled_few": "Gan dul chun cinn íoslódála le {{count}} nóiméad — stopadh an tsuiteáil",
                 "stalled_many": "Gan dul chun cinn íoslódála le {{count}} nóiméad — stopadh an tsuiteáil",
                 "stalled_other": "Gan dul chun cinn íoslódála le {{count}} nóiméad — stopadh an tsuiteáil"
+            },
+            "launch": {
+                "epic": {
+                    "credentials": "Tá do logáil isteach Epic Games imithe in éag, mar sin níor tosaigh {{title}}. Logáil amach as Epic Games, logáil isteach arís, ansin brúigh Imir.",
+                    "loginFailed": "Ní raibh GameLib in ann logáil isteach in Epic Games, mar sin níor tosaigh {{title}}. Seiceáil do cheangal idirlín, nó logáil amach as Epic Games agus logáil isteach arís. Más féidir leis an gcluiche seo rith as líne, cuir «Rith Cluiche As Líne» air ina shocruithe.",
+                    "network": "Ní raibh GameLib in ann teacht ar Epic Games chun logáil isteach, mar sin níor tosaigh {{title}}. Seiceáil do cheangal idirlín agus bain triail eile as. Más féidir leis an gcluiche seo rith as líne, cuir «Rith Cluiche As Líne» air ina shocruithe."
+                }
             }
         },
         "filePicker": {
@@ -93,6 +100,7 @@
         "extraInfoErrorTitle": "Níorbh fhéidir eolas breise a lódáil",
         "extraInfoRetry": "Bain triail eile as",
         "extraInfoStaleBody": "Cuireadh an toradh seo i dtaisce sula taifeadadh torthaí lódála, mar sin d'fhéadfadh sé a bheith as dáta. Athnuaigh chun a sheiceáil.",
+        "moreActions": "Tuilleadh gníomhartha",
         "steamInstallingPercent": "Ag suiteáil… {{percent}}%",
         "steamUpdateCommitting": "Nuashonrú á chur i bhfeidhm…",
         "steamUpdatePlanning": "Nuashonrú á phleanáil…",
@@ -103,6 +111,7 @@
             "checkingSize": "Méid an nuashonraithe á sheiceáil…",
             "confirmButton": "Nuashonraigh",
             "confirmTitle": "Nuashonraigh {{title}}?",
+            "downloadAbout": "Íoslódáil thart ar {{download}}",
             "fallback": "Ní féidir le GameLib liosta comhad an tógála roimhe a fháil, mar sin seiceálfaidh sé gach comhad: íoslódáil suas le {{download}}.",
             "notEnoughDisk": "Teastaíonn {{peak}} saor, tá {{available}} ar fáil.",
             "registered": "Nuashonrós Steam an cluiche seo.",
@@ -371,6 +380,10 @@
         "title": "Fuascail eochair Steam",
         "viewInLibrary": "Amharc sa leabharlann"
     },
+    "reportProblem": {
+        "logsInstructions": "Déan cur síos ar an méid a tharla san fhoirm tuairiscithe. Is féidir diagnóisic agus logaí le déanaí a chur san áireamh go huathoibríoch.",
+        "openForm": "Oscail an fhoirm tuairiscithe"
+    },
     "setting": {
         "eosOverlay": {
             "unavailable": "Níl an EOS Overlay ar fáil sa leagan seo",
@@ -501,7 +514,6 @@
                 "moreSymbols_few": "agus {{count}} eile",
                 "moreSymbols_many": "agus {{count}} eile",
                 "moreSymbols_other": "agus {{count}} eile",
-                "missingSymbols": "Gan chlúdach: {{symbols}}",
                 "native": "Droichead dúchasach Steam",
                 "notCoveredHeading": "Gan clúdach:",
                 "reason": {
@@ -531,8 +543,17 @@
             },
             "setup": {
                 "missingSymbols": "Ní chlúdaíonn an droichead: {{symbols}}",
-                "redownloadNote": "Íoslódálann an cúlú an cluiche arís isteach sa chliant Steam Windows i mbuidéal."
+                "redownloadNote": "Íoslódálann an cúlú an cluiche arís isteach sa chliant Steam Windows i mbuidéal.",
+                "steamClientUpdated": "Nuashonraíodh Steam ar bhealach nach féidir le droichead Steam na leagan seo de GameLib a úsáid fós. Nuashonraigh GameLib, nó seoladh an cluiche ó Steam don chuid is mó."
             }
+        },
+        "directLaunch": {
+            "confirmLaunch": "Seol",
+            "confirmMessage": "Seolann sé seo an cluiche go díreach, gan an cliant Steam. Don seisiún seo, níl aon sioncronú Steam Cloud, aon rianú ama súgartha, aon éachtaí ná aon forleagan Steam ann.",
+            "confirmTitle": "Seol gan Steam?",
+            "failed": "Níorbh fhéidir {{game}} a sheoladh gan Steam.",
+            "label": "Seol gan Steam",
+            "notEligible": "Ní féidir an cluiche seo a sheoladh gan Steam a thuilleadh. Úsáid Imir ina ionad."
         },
         "download": {
             "error": {
@@ -589,6 +610,8 @@
             "refusedRunning": "Dún {{title}} sula nuashonraíonn tú é."
         },
         "engine": {
+            "drmSwitchRefused": "Níorbh fhéidir {{title}} a thosú i mód Steam DRM mar nach raibh GameLib in ann a chuid comhad cluiche a athrú ar ais go CrossOver ({{reason}}). Dún aon chluiche atá ag rith ón mbuidéal (bottle) seo agus bain triail eile as.",
+            "markerNewer": "Chuir leagan níos nuaí de GameLib comhaid chluiche {{title}} ar bun an uair dheireanach, mar sin ní athróidh an leagan seo a inneall. Seol é leis an inneall atá in úsáid aige cheana, nó nuashonraigh GameLib.",
             "wineTabHint": "Roghnaíonn GameLib an t-inneall Wine agus an buidéal do chluichí Steam.",
             "toast": {
                 "body": "Á úsáid an inneall ionsuite don seoladh seo.",
@@ -864,5 +887,11 @@
             "groupBy": "Grúpáil do chluichí de réir stádas suiteála nó siopa, nó cuir an grúpáil as.",
             "sort": "Sórtáil do chluichí de réir ainm, an uair dheireanach a imríodh iad nó méid suiteála, agus iompaigh an treo."
         }
+    },
+    "twoColTable": {
+        "cancel": "Cealaigh",
+        "edit": "Cuir in eagar",
+        "remove": "Bain",
+        "save": "Sábháil"
     }
 }

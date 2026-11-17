@@ -19,6 +19,13 @@
                 "stalled_one": "Нема напретка преузимања {{count}} минут — инсталација је заустављена",
                 "stalled_few": "Нема напретка преузимања {{count}} минута — инсталација је заустављена",
                 "stalled_other": "Нема напретка преузимања {{count}} минута — инсталација је заустављена"
+            },
+            "launch": {
+                "epic": {
+                    "credentials": "Ваша пријава на Epic Games је истекла, па се {{title}} није покренула. Одјавите се са Epic Games, пријавите се поново, а затим притисните Играј.",
+                    "loginFailed": "GameLib није успео да се пријави на Epic Games, па се {{title}} није покренула. Проверите интернет везу или се одјавите са Epic Games и поново пријавите. Ако ова игра може да ради ван мреже, укључите „Покрени игру ван мреже“ у њеним подешавањима.",
+                    "network": "GameLib није успео да се повеже са Epic Games ради пријаве, па се {{title}} није покренула. Проверите интернет везу и покушајте поново. Ако ова игра може да ради ван мреже, укључите „Покрени игру ван мреже“ у њеним подешавањима."
+                }
             }
         },
         "filePicker": {
@@ -91,6 +98,7 @@
         "extraInfoErrorTitle": "Није могуће учитати додатне информације",
         "extraInfoRetry": "Покушај поново",
         "extraInfoStaleBody": "Овај резултат је кеширан пре него што су резултати учитавања забележени, па може бити застарео. Освежите да бисте проверили.",
+        "moreActions": "Више радњи",
         "steamInstallingPercent": "Инсталирање… {{percent}}%",
         "steamUpdateCommitting": "Примена ажурирања…",
         "steamUpdatePlanning": "Планирање ажурирања…",
@@ -101,6 +109,7 @@
             "checkingSize": "Провера величине ажурирања…",
             "confirmButton": "Ажурирај",
             "confirmTitle": "Ажурирати {{title}}?",
+            "downloadAbout": "Преузимање око {{download}}",
             "fallback": "GameLib не може да добије списак датотека претходне верзије, па ће проверити сваку датотеку: преузимање до {{download}}.",
             "notEnoughDisk": "Потребно је {{peak}} слободног простора, доступно је {{available}}.",
             "registered": "Steam ће ажурирати ову игру.",
@@ -357,6 +366,10 @@
         "title": "Искористите Steam кључ",
         "viewInLibrary": "Погледај у библиотеци"
     },
+    "reportProblem": {
+        "logsInstructions": "У обрасцу за пријаву опишите шта се догодило. Дијагностика и недавни записници могу се укључити аутоматски.",
+        "openForm": "Отвори образац за пријаву"
+    },
     "setting": {
         "eosOverlay": {
             "unavailable": "EOS Overlay није доступан у овој верзији",
@@ -483,7 +496,6 @@
                 "moreSymbols_one": "и још {{count}}",
                 "moreSymbols_few": "и још {{count}}",
                 "moreSymbols_other": "и још {{count}}",
-                "missingSymbols": "Nije pokriveno: {{symbols}}",
                 "native": "Nativni Steam most",
                 "notCoveredHeading": "Није покривено:",
                 "reason": {
@@ -513,8 +525,17 @@
             },
             "setup": {
                 "missingSymbols": "Most ne pokriva: {{symbols}}",
-                "redownloadNote": "Povratak ponovo preuzima igru u Windows Steam klijent u bočici."
+                "redownloadNote": "Povratak ponovo preuzima igru u Windows Steam klijent u bočici.",
+                "steamClientUpdated": "Steam је ажуриран на начин који Steam мост ове верзије GameLib-а још не може да користи. Ажурирајте GameLib или за сада покрените игру из Steam-а."
             }
+        },
+        "directLaunch": {
+            "confirmLaunch": "Покрени",
+            "confirmMessage": "Ово покреће игру директно, без Steam клијента. У овој сесији нема Steam Cloud синхронизације, праћења времена играња, достигнућа ни Steam преклапања.",
+            "confirmTitle": "Покренути без Steam-а?",
+            "failed": "Није могуће покренути {{game}} без Steam-а.",
+            "label": "Покрени без Steam-а",
+            "notEligible": "Ова игра се више не може покренути без Steam-а. Уместо тога користите Играј."
         },
         "download": {
             "error": {
@@ -571,6 +592,8 @@
             "refusedRunning": "Затворите {{title}} пре ажурирања."
         },
         "engine": {
+            "drmSwitchRefused": "{{title}} није могла да се покрене у Steam DRM режиму јер GameLib није успео да врати њене датотеке на CrossOver ({{reason}}). Затворите све игре које раде из овог bottle-а и покушајте поново.",
+            "markerNewer": "Датотеке игре {{title}} последњи пут је подесила новија верзија GameLib-а, па ова верзија неће мењати њен engine. Покрените је са engine-ом који већ користи или ажурирајте GameLib.",
             "wineTabHint": "GameLib бира Wine енџин и bottle за Steam игре.",
             "toast": {
                 "body": "За ово покретање користи се уграђени енџин.",
@@ -836,5 +859,11 @@
             "groupBy": "Групишите игре по статусу инсталације или по продавници, или искључите груписање.",
             "sort": "Сортирајте игре по називу, последњем игрању или величини инсталације и окрените смер."
         }
+    },
+    "twoColTable": {
+        "cancel": "Откажи",
+        "edit": "Уреди",
+        "remove": "Уклони",
+        "save": "Сачувај"
     }
 }

@@ -18,6 +18,13 @@
                 "signInToSteam": "Log ind på Steam",
                 "stalled_one": "Ingen downloadfremgang i {{count}} minut — installationen blev stoppet",
                 "stalled_other": "Ingen downloadfremgang i {{count}} minutter — installationen blev stoppet"
+            },
+            "launch": {
+                "epic": {
+                    "credentials": "Din Epic Games-login er udløbet, så {{title}} startede ikke. Log ud af Epic Games, log ind igen, og tryk derefter på Spil.",
+                    "loginFailed": "GameLib kunne ikke logge ind på Epic Games, så {{title}} startede ikke. Tjek din internetforbindelse, eller log ud af Epic Games og log ind igen. Hvis dette spil kan køre offline, så slå Kør spil offline til i spillets indstillinger.",
+                    "network": "GameLib kunne ikke få forbindelse til Epic Games for at logge ind, så {{title}} startede ikke. Tjek din internetforbindelse, og prøv igen. Hvis dette spil kan køre offline, så slå Kør spil offline til i spillets indstillinger."
+                }
             }
         },
         "filePicker": {
@@ -90,6 +97,7 @@
         "extraInfoErrorTitle": "Kunne ikke indlæse ekstra info",
         "extraInfoRetry": "Prøv igen",
         "extraInfoStaleBody": "Dette resultat blev cachet før indlæsningsresultater blev registreret, så det kan være forældet. Opdater for at kontrollere.",
+        "moreActions": "Flere handlinger",
         "steamInstallingPercent": "Installerer… {{percent}} %",
         "steamUpdateCommitting": "Anvender opdatering…",
         "steamUpdatePlanning": "Planlægger opdatering…",
@@ -100,6 +108,7 @@
             "checkingSize": "Kontrollerer opdateringens størrelse…",
             "confirmButton": "Opdater",
             "confirmTitle": "Opdater {{title}}?",
+            "downloadAbout": "Download på ca. {{download}}",
             "fallback": "GameLib kan ikke hente filoversigten for den forrige version, så alle filer bliver kontrolleret: download på op til {{download}}.",
             "notEnoughDisk": "Kræver {{peak}} ledig plads, {{available}} er tilgængelig.",
             "registered": "Steam opdaterer dette spil.",
@@ -350,6 +359,10 @@
         "title": "Indløs en Steam-nøgle",
         "viewInLibrary": "Vis i biblioteket"
     },
+    "reportProblem": {
+        "logsInstructions": "Beskriv, hvad der skete, i rapportformularen. Diagnostik og nyere logfiler kan medtages automatisk.",
+        "openForm": "Åbn rapportformularen"
+    },
     "setting": {
         "eosOverlay": {
             "unavailable": "EOS Overlay er ikke tilgængeligt i denne build",
@@ -474,7 +487,6 @@
                 "label": "Steam-rute",
                 "moreSymbols_one": "og {{count}} mere",
                 "moreSymbols_other": "og {{count}} mere",
-                "missingSymbols": "Ikke dækket: {{symbols}}",
                 "native": "Native Steam-bro",
                 "notCoveredHeading": "Ikke dækket:",
                 "reason": {
@@ -504,8 +516,17 @@
             },
             "setup": {
                 "missingSymbols": "Broen dækker ikke: {{symbols}}",
-                "redownloadNote": "Tilbagefald downloader spillet igen til Windows Steam-klienten i bottle."
+                "redownloadNote": "Tilbagefald downloader spillet igen til Windows Steam-klienten i bottle.",
+                "steamClientUpdated": "Steam er opdateret på en måde, som denne version af GameLibs Steam-bro endnu ikke kan bruge. Opdater GameLib, eller start spillet fra Steam indtil videre."
             }
+        },
+        "directLaunch": {
+            "confirmLaunch": "Start",
+            "confirmMessage": "Det starter spillet direkte uden Steam-klienten. I denne session er der ingen Steam Cloud-synkronisering, ingen sporing af spilletid, ingen præstationer og intet Steam-overlay.",
+            "confirmTitle": "Start uden Steam?",
+            "failed": "Kunne ikke starte {{game}} uden Steam.",
+            "label": "Start uden Steam",
+            "notEligible": "Dette spil kan ikke længere startes uden Steam. Brug Spil i stedet."
         },
         "download": {
             "error": {
@@ -562,6 +583,8 @@
             "refusedRunning": "Luk {{title}}, før du opdaterer det."
         },
         "engine": {
+            "drmSwitchRefused": "{{title}} kunne ikke starte i Steam DRM-tilstand, fordi GameLib ikke kunne skifte spillets filer tilbage til CrossOver ({{reason}}). Luk alle spil, der kører fra denne bottle, og prøv igen.",
+            "markerNewer": "{{title}}s spilfiler blev sidst sat op af en nyere version af GameLib, så denne version ændrer ikke dens engine. Start det med den engine, det allerede bruger, eller opdater GameLib.",
             "wineTabHint": "GameLib vælger Wine-motoren og bottle til Steam-spil.",
             "toast": {
                 "body": "Bruger den indbyggede motor til denne start.",
@@ -822,5 +845,11 @@
             "groupBy": "Gruppér dine spil efter installationsstatus eller butik, eller slå gruppering fra.",
             "sort": "Sortér dine spil efter navn, sidst spillet eller installationsstørrelse, og vend retningen."
         }
+    },
+    "twoColTable": {
+        "cancel": "Afbryd",
+        "edit": "Rediger",
+        "remove": "Fjern",
+        "save": "Gem"
     }
 }

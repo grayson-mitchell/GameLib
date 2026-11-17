@@ -21,6 +21,13 @@
                 "stalled_few": "Nann kenendigezh pellgargañ abaoe {{count}} munutenn — paouezet eo bet an staliadur",
                 "stalled_many": "Nann kenendigezh pellgargañ abaoe {{count}} a vunutennoù — paouezet eo bet an staliadur",
                 "stalled_other": "Nann kenendigezh pellgargañ abaoe {{count}} munutenn — paouezet eo bet an staliadur"
+            },
+            "launch": {
+                "epic": {
+                    "credentials": "Echu eo ho kennask gant Epic Games, setu n'eo ket deuet {{title}} da gregiñ. Digennaskit diouzh Epic Games, kennaskit en-dro, ha goude-se pouezit war C'hoari.",
+                    "loginFailed": "N'eo ket deuet a-benn GameLib da gennaskañ ouzh Epic Games, setu n'eo ket deuet {{title}} da gregiñ. Gwiriekait ho kenstrollad internet, pe digennaskit diouzh Epic Games ha kennaskit en-dro. M'hall ar C'hoari-mañ mont en-dro hep kenstrollad, gweredekait « Rediñ ar c'hoari hep kenstrollad » en e arventennoù.",
+                    "network": "N'eo ket deuet a-benn GameLib da gaout tizh Epic Games evit kennaskañ, setu n'eo ket deuet {{title}} da gregiñ. Gwiriekait ho kenstrollad internet hag adklaskit. M'hall ar C'hoari-mañ mont en-dro hep kenstrollad, gweredekait « Rediñ ar c'hoari hep kenstrollad » en e arventennoù."
+                }
             }
         },
         "filePicker": {
@@ -93,6 +100,7 @@
         "extraInfoErrorTitle": "N'eo ket bet gouest da gargañ an titour ouzhpenn",
         "extraInfoRetry": "Adklask",
         "extraInfoStaleBody": "Er c'hrubuilh eo bet ar disoc'h-mañ a-raok ma voe enrollet an disoc'hoù kargañ, dre-se marteze n'eo ket dedennus mui. Freskaat evit gwiriañ.",
+        "moreActions": "Muioc'h a obererezhioù",
         "steamInstallingPercent": "O staliañ… {{percent}}%",
         "steamUpdateCommitting": "O lakaat ar hizivadur da dalvezout…",
         "steamUpdatePlanning": "O steuziañ ar hizivadur…",
@@ -103,6 +111,7 @@
             "checkingSize": "O wiriañ ment ar hizivadur…",
             "confirmButton": "Hizivaat",
             "confirmTitle": "Hizivaat {{title}} ?",
+            "downloadAbout": "Pellgargañ war-dro {{download}}",
             "fallback": "Ne c'hall ket GameLib kaout roll restroù ar stumm a-raok, setu ez eus da wiriañ an holl restroù: pellgargañ betek {{download}}.",
             "notEnoughDisk": "Ezhomm ez eus eus {{peak}} a blas dieub, {{available}} zo hegerz.",
             "registered": "Steam a hizivaio ar c'hoari-mañ.",
@@ -371,6 +380,10 @@
         "title": "Dispakañ un alc'hwez Steam",
         "viewInLibrary": "Gwelet el lyrjad"
     },
+    "reportProblem": {
+        "logsInstructions": "Deskrivit ar pezh a zo c'hoarvezet er furmskrid danevell. Gallout a ra an diagnostikoù hag ar marilhoù nevez bezañ ensoc'het ent emgefreek.",
+        "openForm": "Digeriñ ar furmskrid danevell"
+    },
     "setting": {
         "eosOverlay": {
             "unavailable": "N'eo ket hegerz an EOS Overlay er stumm-mañ",
@@ -501,7 +514,6 @@
                 "moreSymbols_few": "ha {{count}} all",
                 "moreSymbols_many": "ha {{count}} all",
                 "moreSymbols_other": "ha {{count}} all",
-                "missingSymbols": "N'eo ket sikouret: {{symbols}}",
                 "native": "Pont orin Steam",
                 "notCoveredHeading": "Ket goloet:",
                 "reason": {
@@ -531,8 +543,17 @@
             },
             "setup": {
                 "missingSymbols": "Ar pont ne sikour ket: {{symbols}}",
-                "redownloadNote": "An distro a bellgarg ar c'hoari en-dro en arval Steam Windows e voutailh."
+                "redownloadNote": "An distro a bellgarg ar c'hoari en-dro en arval Steam Windows e voutailh.",
+                "steamClientUpdated": "Hizivet eo bet Steam en un doare ma n'hall ket pont Steam ar stumm-mañ eus GameLib arverañ c'hoazh. Hizivit GameLib, pe loc'hit ar c'hoari diwar Steam evit bremañ."
             }
+        },
+        "directLaunch": {
+            "confirmLaunch": "Loc'hañ",
+            "confirmMessage": "Loc'hañ a ra se ar c'hoari war-eeun, hep arval Steam. Evit an estez-mañ, ne vo ket sinkronekadur Steam Cloud, heuliañ ar prantad c'hoari, kutuilhoù pe overlay Steam.",
+            "confirmTitle": "Loc'hañ hep Steam ?",
+            "failed": "N'eus ket bet gallet loc'hañ {{game}} hep Steam.",
+            "label": "Loc'hañ hep Steam",
+            "notEligible": "Ne c'hall ket ar c'hoari-mañ bezañ loc'het ken hep Steam. Implijit C'hoari e plas."
         },
         "download": {
             "error": {
@@ -589,6 +610,8 @@
             "refusedRunning": "Serrit {{title}} a-raok hizivaat anezhañ."
         },
         "engine": {
+            "drmSwitchRefused": "N'eo ket bet gallet loc'hañ {{title}} e mod Steam DRM peogwir n'eo ket deuet a-benn GameLib da zistreiñ e restroù c'hoari da CrossOver ({{reason}}). Serrit forzh pe c'hoari a red diwar ar voutailh (bottle)-mañ hag adklaskit.",
+            "markerNewer": "Restroù c'hoari {{title}} a zo bet kefluniet da ziwezhañ gant ur stumm nevesoc'h eus GameLib, setu ne cheñcho ket ar stumm-mañ e vodiger. Loc'hit anezhi gant ar c'higenv a implij dija, pe hizivit GameLib.",
             "wineTabHint": "GameLib a ziuz ar c’heflusker Wine hag ar voutailh evit c’hoarioù Steam.",
             "toast": {
                 "body": "Implijet eo ar c’heflusker enframmet evit al lañs-mañ.",
@@ -864,5 +887,11 @@
             "groupBy": "Strollit ho c'hoarioù dre statud staliañ pe dre stal, pe diweredekait ar strollañ.",
             "sort": "Rummit ho c'hoarioù dre anv, c'hoari diwezhañ pe ment staliañ, ha troit ar roud."
         }
+    },
+    "twoColTable": {
+        "cancel": "Nullañ",
+        "edit": "Kemmañ",
+        "remove": "Dilemel",
+        "save": "Enrollañ"
     }
 }

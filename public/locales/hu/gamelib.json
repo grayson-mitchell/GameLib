@@ -18,6 +18,13 @@
                 "signInToSteam": "Jelentkezz be a Steam-be",
                 "stalled_one": "Nincs letöltési folyamat {{count}} perce — a telepítés leállt",
                 "stalled_other": "Nincs letöltési folyamat {{count}} perce — a telepítés leállt"
+            },
+            "launch": {
+                "epic": {
+                    "credentials": "Az Epic Games-bejelentkezésed lejárt, ezért a(z) {{title}} nem indult el. Jelentkezz ki az Epic Gamesből, jelentkezz be újra, majd nyomd meg a Játék gombot.",
+                    "loginFailed": "A GameLib nem tudott bejelentkezni az Epic Gamesbe, ezért a(z) {{title}} nem indult el. Ellenőrizd az internetkapcsolatot, vagy jelentkezz ki az Epic Gamesből, és jelentkezz be újra. Ha ez a játék offline is futhat, kapcsold be a beállításaiban a „Játék futtatása offline” opciót.",
+                    "network": "A GameLib nem érte el az Epic Gamest a bejelentkezéshez, ezért a(z) {{title}} nem indult el. Ellenőrizd az internetkapcsolatot, és próbáld újra. Ha ez a játék offline is futhat, kapcsold be a beállításaiban a „Játék futtatása offline” opciót."
+                }
             }
         },
         "filePicker": {
@@ -90,6 +97,7 @@
         "extraInfoErrorTitle": "Az extra információk betöltése sikertelen",
         "extraInfoRetry": "Újra",
         "extraInfoStaleBody": "Ez az eredmény a betöltési kimenetek rögzítése előtt lett gyorsítótárazva, így elavult lehet. Frissítsd az ellenőrzéshez.",
+        "moreActions": "További műveletek",
         "steamInstallingPercent": "Telepítés… {{percent}}%",
         "steamUpdateCommitting": "Frissítés alkalmazása…",
         "steamUpdatePlanning": "Frissítés tervezése…",
@@ -100,6 +108,7 @@
             "checkingSize": "Frissítés méretének ellenőrzése…",
             "confirmButton": "Frissítés",
             "confirmTitle": "Frissíted a(z) {{title}} játékot?",
+            "downloadAbout": "Letöltés körülbelül {{download}}",
             "fallback": "A GameLib nem tudja lekérni az előző build fájllistáját, ezért minden fájlt ellenőriz: akár {{download}} letöltés.",
             "notEnoughDisk": "{{peak}} szabad hely szükséges, {{available}} áll rendelkezésre.",
             "registered": "A Steam frissíteni fogja ezt a játékot.",
@@ -350,6 +359,10 @@
         "title": "Steam kulcs beváltása",
         "viewInLibrary": "Megtekintés a könyvtárban"
     },
+    "reportProblem": {
+        "logsInstructions": "Írd le a jelentési űrlapon, mi történt. A diagnosztikai adatok és a legutóbbi naplók automatikusan csatolhatók.",
+        "openForm": "Jelentési űrlap megnyitása"
+    },
     "setting": {
         "eosOverlay": {
             "unavailable": "Az EOS Overlay nem érhető el ebben a buildben",
@@ -474,7 +487,6 @@
                 "label": "Steam útvonal",
                 "moreSymbols_one": "és még {{count}}",
                 "moreSymbols_other": "és még {{count}}",
-                "missingSymbols": "Nem lefedett: {{symbols}}",
                 "native": "Natív Steam híd",
                 "notCoveredHeading": "Nincs lefedve:",
                 "reason": {
@@ -504,8 +516,17 @@
             },
             "setup": {
                 "missingSymbols": "A híd nem fedi le: {{symbols}}",
-                "redownloadNote": "A visszaesés újra letölti a játékot a bottle-os Windows Steam kliensbe."
+                "redownloadNote": "A visszaesés újra letölti a játékot a bottle-os Windows Steam kliensbe.",
+                "steamClientUpdated": "A Steam olyan módon frissült, amelyet a GameLib ezen verziójának Steam-hídja még nem tud használni. Frissítsd a GameLibet, vagy egyelőre a Steamből indítsd el a játékot."
             }
+        },
+        "directLaunch": {
+            "confirmLaunch": "Indítás",
+            "confirmMessage": "Ez közvetlenül, a Steam-kliens nélkül indítja el a játékot. Ebben a munkamenetben nincs Steam Cloud-szinkronizálás, játékidő-követés, teljesítmény és Steam-átfedés.",
+            "confirmTitle": "Indítod Steam nélkül?",
+            "failed": "Nem sikerült a(z) {{game}} indítása Steam nélkül.",
+            "label": "Indítás Steam nélkül",
+            "notEligible": "Ez a játék már nem indítható Steam nélkül. Használd helyette a Játék gombot."
         },
         "download": {
             "error": {
@@ -562,6 +583,8 @@
             "refusedRunning": "Zárd be a(z) {{title}} játékot a frissítés előtt."
         },
         "engine": {
+            "drmSwitchRefused": "A(z) {{title}} nem tudott elindulni Steam DRM módban, mert a GameLib nem tudta visszaváltani a játékfájlokat CrossOverre ({{reason}}). Zárj be minden, ebből a bottle-ból futó játékot, és próbáld újra.",
+            "markerNewer": "A(z) {{title}} játékfájljait legutóbb a GameLib egy újabb verziója állította be, ezért ez a verzió nem módosítja a motorját. Indítsd el a már használt motorral, vagy frissítsd a GameLibet.",
             "wineTabHint": "A GameLib választja ki a Wine motort és a bottle-t a Steam-játékokhoz.",
             "toast": {
                 "body": "Ehhez az indításhoz a beépített motor van használatban.",
@@ -822,5 +845,11 @@
             "groupBy": "Csoportosítsd a játékaidat telepítési állapot vagy áruház szerint, vagy kapcsold ki a csoportosítást.",
             "sort": "Rendezd a játékaidat név, utolsó játék ideje vagy telepítési méret szerint, és fordítsd meg az irányt."
         }
+    },
+    "twoColTable": {
+        "cancel": "Mégse",
+        "edit": "Szerkesztés",
+        "remove": "Eltávolítás",
+        "save": "Mentés"
     }
 }

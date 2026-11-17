@@ -18,6 +18,13 @@
                 "signInToSteam": "Steam'ga kiring",
                 "stalled_one": "{{count}} daqiqadan beri yuklab olish jarayoni yo‘q — o‘rnatish to‘xtatildi",
                 "stalled_other": "{{count}} daqiqadan beri yuklab olish jarayoni yo‘q — o‘rnatish to‘xtatildi"
+            },
+            "launch": {
+                "epic": {
+                    "credentials": "Epic Games'ga kirish muddati tugadi, shuning uchun {{title}} ishga tushmadi. Epic Games'dan chiqing, qayta kiring va keyin O'ynash tugmasini bosing.",
+                    "loginFailed": "GameLib Epic Games'ga kira olmadi, shuning uchun {{title}} ishga tushmadi. Internet aloqangizni tekshiring yoki Epic Games'dan chiqib, qayta kiring. Agar bu o'yin oflayn ishlay olsa, uning sozlamalarida «O'yinni oflayn rejimda ishga tushiring» ni yoqing.",
+                    "network": "GameLib kirish uchun Epic Games bilan bog'lana olmadi, shuning uchun {{title}} ishga tushmadi. Internet aloqangizni tekshiring va qayta urinib ko'ring. Agar bu o'yin oflayn ishlay olsa, uning sozlamalarida «O'yinni oflayn rejimda ishga tushiring» ni yoqing."
+                }
             }
         },
         "filePicker": {
@@ -90,6 +97,7 @@
         "extraInfoErrorTitle": "Qo'shimcha ma'lumotni yuklab bo'lmadi",
         "extraInfoRetry": "Qayta urinish",
         "extraInfoStaleBody": "Bu natija yuklash holatlari qayd etilishidan oldin keshlangan, shuning uchun eskirgan bo'lishi mumkin. Tekshirish uchun yangilang.",
+        "moreActions": "Boshqa amallar",
         "steamInstallingPercent": "Oʻrnatilmoqda… {{percent}}%",
         "steamUpdateCommitting": "Yangilanish qo'llanmoqda…",
         "steamUpdatePlanning": "Yangilanish rejalashtirilmoqda…",
@@ -100,6 +108,7 @@
             "checkingSize": "Yangilanish hajmi tekshirilmoqda…",
             "confirmButton": "Yangilash",
             "confirmTitle": "{{title}} yangilansinmi?",
+            "downloadAbout": "Taxminan {{download}} yuklab olinadi",
             "fallback": "GameLib oldingi tuzilmaning fayllar ro'yxatini ola olmaydi, shuning uchun har bir faylni tekshiradi: {{download}} gacha yuklab olish.",
             "notEnoughDisk": "{{peak}} bo'sh joy kerak, {{available}} mavjud.",
             "registered": "Steam bu o'yinni yangilaydi.",
@@ -350,6 +359,10 @@
         "title": "Steam kalitini faollashtirish",
         "viewInLibrary": "Kutubxonada ko'rish"
     },
+    "reportProblem": {
+        "logsInstructions": "Hisobot shaklida nima sodir bo'lganini tasvirlab bering. Diagnostika va so'nggi jurnallar avtomatik qo'shilishi mumkin.",
+        "openForm": "Hisobot shaklini ochish"
+    },
     "setting": {
         "eosOverlay": {
             "unavailable": "EOS Overlay ushbu build'da mavjud emas",
@@ -474,7 +487,6 @@
                 "label": "Steam marshruti",
                 "moreSymbols_one": "va yana {{count}} ta",
                 "moreSymbols_other": "va yana {{count}} ta",
-                "missingSymbols": "Qamrab olinmagan: {{symbols}}",
                 "native": "Mahalliy Steam ko'prigi",
                 "notCoveredHeading": "Qamrab olinmagan:",
                 "reason": {
@@ -504,8 +516,17 @@
             },
             "setup": {
                 "missingSymbols": "Ko'prik qamrab olmaydi: {{symbols}}",
-                "redownloadNote": "Zaxira o'yinni yana bottle'dagi Windows Steam klientiga yuklab oladi."
+                "redownloadNote": "Zaxira o'yinni yana bottle'dagi Windows Steam klientiga yuklab oladi.",
+                "steamClientUpdated": "Steam GameLib'ning ushbu versiyasidagi Steam ko'prigi hali foydalana olmaydigan tarzda yangilandi. GameLib'ni yangilang yoki hozircha o'yinni Steam'dan ishga tushiring."
             }
+        },
+        "directLaunch": {
+            "confirmLaunch": "Ishga tushirish",
+            "confirmMessage": "Bu o'yinni Steam mijozisiz to'g'ridan-to'g'ri ishga tushiradi. Bu seansda Steam Cloud sinxronizatsiyasi, o'yin vaqtini kuzatish, yutuqlar va Steam overlay bo'lmaydi.",
+            "confirmTitle": "Steam'siz ishga tushirilsinmi?",
+            "failed": "{{game}} o'yinini Steam'siz ishga tushirib bo'lmadi.",
+            "label": "Steam'siz ishga tushirish",
+            "notEligible": "Bu o'yinni endi Steam'siz ishga tushirib bo'lmaydi. Buning o'rniga O'ynash tugmasidan foydalaning."
         },
         "download": {
             "error": {
@@ -562,6 +583,8 @@
             "refusedRunning": "Yangilashdan oldin {{title}} o'yinini yoping."
         },
         "engine": {
+            "drmSwitchRefused": "GameLib o'yin fayllarini CrossOver'ga qaytara olmagani uchun ({{reason}}) {{title}} Steam DRM rejimida ishga tushmadi. Shu bottle'dan ishlayotgan barcha o'yinlarni yoping va qayta urinib ko'ring.",
+            "markerNewer": "{{title}} o'yin fayllarini oxirgi marta GameLib'ning yangiroq versiyasi sozlagan, shuning uchun bu versiya uning dvigatelini o'zgartirmaydi. Uni allaqachon ishlatayotgan dvigatel bilan ishga tushiring yoki GameLib'ni yangilang.",
             "wineTabHint": "GameLib Steam o‘yinlari uchun Wine dvigateli va bottle’ni tanlaydi.",
             "toast": {
                 "body": "Bu ishga tushirish uchun o‘rnatilgan dvigatel ishlatilmoqda.",
@@ -822,5 +845,11 @@
             "groupBy": "O'yinlaringizni o'rnatish holati yoki do'kon bo'yicha guruhlang yoki guruhlashni o'chiring.",
             "sort": "O'yinlaringizni nomi, oxirgi o'ynalgani yoki o'rnatish hajmi bo'yicha saralang va yo'nalishni almashtiring."
         }
+    },
+    "twoColTable": {
+        "cancel": "Bekor qilish",
+        "edit": "Tahrirlash",
+        "remove": "Olib tashlash",
+        "save": "Saqlash"
     }
 }

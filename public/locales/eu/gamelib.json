@@ -18,6 +18,13 @@
                 "signInToSteam": "Hasi saioa Steam-en",
                 "stalled_one": "Ez dago deskarga-aurrerapenik {{count}} minutuan — instalazioa gelditu egin da",
                 "stalled_other": "Ez dago deskarga-aurrerapenik {{count}} minutuan — instalazioa gelditu egin da"
+            },
+            "launch": {
+                "epic": {
+                    "credentials": "Epic Games-eko saioa iraungi da, beraz {{title}} ez da abiatu. Amaitu saioa Epic Games-en, hasi saioa berriro eta sakatu Jokatu.",
+                    "loginFailed": "GameLib-ek ezin izan du Epic Games-en saioa hasi, beraz {{title}} ez da abiatu. Egiaztatu internet-konexioa, edo amaitu saioa Epic Games-en eta hasi berriro. Joko hau lineaz kanpo exekutatu badaiteke, aktibatu «Exekutatu jokoa lineaz kanpo» bere ezarpenetan.",
+                    "network": "GameLib-ek ezin izan du Epic Games-ekin konektatu saioa hasteko, beraz {{title}} ez da abiatu. Egiaztatu internet-konexioa eta saiatu berriro. Joko hau lineaz kanpo exekutatu badaiteke, aktibatu «Exekutatu jokoa lineaz kanpo» bere ezarpenetan."
+                }
             }
         },
         "filePicker": {
@@ -90,6 +97,7 @@
         "extraInfoErrorTitle": "Ezin izan da informazio gehigarria kargatu",
         "extraInfoRetry": "Saiatu berriro",
         "extraInfoStaleBody": "Emaitza hau kargaren emaitzak erregistratu baino lehen katxeatu zen, beraz baliteke eguneratua ez egotea. Freskatu egiaztatzeko.",
+        "moreActions": "Ekintza gehiago",
         "steamInstallingPercent": "Instalatzen… {{percent}}%",
         "steamUpdateCommitting": "Eguneratzea aplikatzen…",
         "steamUpdatePlanning": "Eguneratzea planifikatzen…",
@@ -100,6 +108,7 @@
             "checkingSize": "Eguneratzearen tamaina egiaztatzen…",
             "confirmButton": "Eguneratu",
             "confirmTitle": "{{title}} eguneratu nahi duzu?",
+            "downloadAbout": "Deskarga: gutxi gorabehera {{download}}",
             "fallback": "GameLib-ek ezin du aurreko bertsioaren fitxategi-zerrenda lortu, beraz fitxategi guztiak egiaztatuko ditu: {{download}} arteko deskarga.",
             "notEnoughDisk": "{{peak}} toki libre behar dira, {{available}} erabilgarri daude.",
             "registered": "Steam-ek joko hau eguneratuko du.",
@@ -350,6 +359,10 @@
         "title": "Erreskatatu Steam gako bat",
         "viewInLibrary": "Ikusi liburutegian"
     },
+    "reportProblem": {
+        "logsInstructions": "Azaldu zer gertatu den txostenaren inprimakian. Diagnostikoak eta egunkari berriak automatikoki sar daitezke.",
+        "openForm": "Ireki txostenaren inprimakia"
+    },
     "setting": {
         "eosOverlay": {
             "unavailable": "EOS Overlay ez dago eskuragarri bertsio honetan",
@@ -474,7 +487,6 @@
                 "label": "Steam bidea",
                 "moreSymbols_one": "eta {{count}} gehiago",
                 "moreSymbols_other": "eta {{count}} gehiago",
-                "missingSymbols": "Estali gabe: {{symbols}}",
                 "native": "Steam zubi natiboa",
                 "notCoveredHeading": "Estali gabe:",
                 "reason": {
@@ -504,8 +516,17 @@
             },
             "setup": {
                 "missingSymbols": "Zubiak ez du estaltzen: {{symbols}}",
-                "redownloadNote": "Atzera egiteak jokoa berriro deskargatzen du Windows-eko Steam bezero bottle-an."
+                "redownloadNote": "Atzera egiteak jokoa berriro deskargatzen du Windows-eko Steam bezero bottle-an.",
+                "steamClientUpdated": "Steam eguneratu da GameLib-en bertsio honetako Steam zubiak oraindik erabili ezin duen moduan. Eguneratu GameLib, edo oraingoz abiarazi jokoa Steam-etik."
             }
+        },
+        "directLaunch": {
+            "confirmLaunch": "Abiarazi",
+            "confirmMessage": "Honek jokoa zuzenean abiarazten du, Steam bezeroa erabili gabe. Saio honetan ez dago Steam Cloud sinkronizaziorik, jokatutako denboraren jarraipenik, lorpenik edo Steam overlay-rik.",
+            "confirmTitle": "Steam gabe abiarazi?",
+            "failed": "Ezin izan da {{game}} Steam gabe abiarazi.",
+            "label": "Abiarazi Steam gabe",
+            "notEligible": "Joko hau ezin da jada Steam gabe abiarazi. Erabili Jokatu horren ordez."
         },
         "download": {
             "error": {
@@ -562,6 +583,8 @@
             "refusedRunning": "Itxi {{title}} eguneratu aurretik."
         },
         "engine": {
+            "drmSwitchRefused": "{{title}} ezin izan da Steam DRM moduan abiarazi, GameLib-ek ezin izan dituelako jokoaren fitxategiak CrossOver-era itzuli ({{reason}}). Itxi bottle honetatik exekutatzen ari den edozein joko eta saiatu berriro.",
+            "markerNewer": "{{title}} jokoaren fitxategiak GameLib-en bertsio berriago batek konfiguratu zituen azkenekoz, beraz bertsio honek ez du bere motorra aldatuko. Abiarazi dagoeneko erabiltzen duen motorrarekin, edo eguneratu GameLib.",
             "wineTabHint": "GameLib-ek Wine motorra eta bottle-a hautatzen ditu Steam jokoetarako.",
             "toast": {
                 "body": "Abiarazte honetarako motor integratua erabiltzen ari da.",
@@ -822,5 +845,11 @@
             "groupBy": "Multzokatu zure jokoak instalazio-egoeraren edo dendaren arabera, edo desaktibatu multzokatzea.",
             "sort": "Ordenatu zure jokoak izenaren, azken aldiz jokatutakoaren edo instalazioaren tamainaren arabera, eta aldatu norabidea."
         }
+    },
+    "twoColTable": {
+        "cancel": "Ezeztatu",
+        "edit": "Editatu",
+        "remove": "Kendu",
+        "save": "Gorde"
     }
 }

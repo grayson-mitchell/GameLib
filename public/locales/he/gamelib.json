@@ -19,6 +19,13 @@
                 "stalled_one": "אין התקדמות בהורדה כבר {{count}} דקה — ההתקנה נעצרה",
                 "stalled_two": "אין התקדמות בהורדה כבר {{count}} דקות — ההתקנה נעצרה",
                 "stalled_other": "אין התקדמות בהורדה כבר {{count}} דקות — ההתקנה נעצרה"
+            },
+            "launch": {
+                "epic": {
+                    "credentials": "ההתחברות שלך ל-Epic Games פגה, ולכן {{title}} לא הופעל. התנתק מ-Epic Games, התחבר שוב ואז לחץ על הפעל.",
+                    "loginFailed": "GameLib לא הצליח להתחבר ל-Epic Games, ולכן {{title}} לא הופעל. בדוק את חיבור האינטרנט שלך, או התנתק מ-Epic Games והתחבר שוב. אם המשחק הזה יכול לפעול ללא חיבור לרשת, הפעל את האפשרות „הפעל משחק ללא חיבור לרשת” בהגדרות שלו.",
+                    "network": "GameLib לא הצליח ליצור קשר עם Epic Games כדי להתחבר, ולכן {{title}} לא הופעל. בדוק את חיבור האינטרנט שלך ונסה שוב. אם המשחק הזה יכול לפעול ללא חיבור לרשת, הפעל את האפשרות „הפעל משחק ללא חיבור לרשת” בהגדרות שלו."
+                }
             }
         },
         "filePicker": {
@@ -91,6 +98,7 @@
         "extraInfoErrorTitle": "לא ניתן היה לטעון מידע נוסף",
         "extraInfoRetry": "נסה שוב",
         "extraInfoStaleBody": "תוצאה זו נשמרה במטמון לפני שתוצאות הטעינה נרשמו, ולכן ייתכן שהיא אינה עדכנית. רענן כדי לבדוק.",
+        "moreActions": "פעולות נוספות",
         "steamInstallingPercent": "מתקין… {{percent}}%",
         "steamUpdateCommitting": "מחיל את העדכון…",
         "steamUpdatePlanning": "מתכנן את העדכון…",
@@ -101,6 +109,7 @@
             "checkingSize": "בודק את גודל העדכון…",
             "confirmButton": "עדכן",
             "confirmTitle": "לעדכן את {{title}}?",
+            "downloadAbout": "הורדה של כ-{{download}}",
             "fallback": "GameLib לא מצליח לקבל את רשימת הקבצים של הגרסה הקודמת, ולכן יבדוק כל קובץ: הורדה של עד {{download}}.",
             "notEnoughDisk": "נדרשים {{peak}} פנויים, זמינים {{available}}.",
             "registered": "Steam יעדכן את המשחק הזה.",
@@ -357,6 +366,10 @@
         "title": "מימוש מפתח Steam",
         "viewInLibrary": "הצג בספרייה"
     },
+    "reportProblem": {
+        "logsInstructions": "תאר בטופס הדיווח מה קרה. אפשר לכלול אוטומטית נתוני אבחון ויומנים אחרונים.",
+        "openForm": "פתח את טופס הדיווח"
+    },
     "setting": {
         "eosOverlay": {
             "unavailable": "שכבת ה-EOS Overlay אינה זמינה בגרסה זו",
@@ -483,7 +496,6 @@
                 "moreSymbols_one": "ועוד אחד",
                 "moreSymbols_two": "ועוד שניים",
                 "moreSymbols_other": "ועוד {{count}}",
-                "missingSymbols": "לא מכוסה: {{symbols}}",
                 "native": "גשר Steam מובנה",
                 "notCoveredHeading": "לא מכוסה:",
                 "reason": {
@@ -513,8 +525,17 @@
             },
             "setup": {
                 "missingSymbols": "הגשר אינו מכסה: {{symbols}}",
-                "redownloadNote": "החזרה מורידה את המשחק שוב ללקוח Steam של Windows ב-bottle."
+                "redownloadNote": "החזרה מורידה את המשחק שוב ללקוח Steam של Windows ב-bottle.",
+                "steamClientUpdated": "Steam עודכן בצורה שגשר Steam בגרסה זו של GameLib עדיין לא יכול להשתמש בה. עדכן את GameLib, או הפעל את המשחק מ-Steam לבינתיים."
             }
+        },
+        "directLaunch": {
+            "confirmLaunch": "הפעל",
+            "confirmMessage": "פעולה זו מפעילה את המשחק ישירות, ללא לקוח Steam. בהפעלה הזו אין סנכרון Steam Cloud, מעקב אחר זמן משחק, הישגים או שכבת-על של Steam.",
+            "confirmTitle": "להפעיל ללא Steam?",
+            "failed": "לא ניתן היה להפעיל את {{game}} ללא Steam.",
+            "label": "הפעל ללא Steam",
+            "notEligible": "אי אפשר עוד להפעיל את המשחק הזה ללא Steam. השתמש בהפעל במקום זאת."
         },
         "download": {
             "error": {
@@ -571,6 +592,8 @@
             "refusedRunning": "סגרו את {{title}} לפני העדכון."
         },
         "engine": {
+            "drmSwitchRefused": "{{title}} לא הצליח לפעול במצב Steam DRM כי GameLib לא הצליח להחזיר את קובצי המשחק ל-CrossOver ({{reason}}). סגור כל משחק שרץ מה-bottle הזה ונסה שוב.",
+            "markerNewer": "קובצי המשחק של {{title}} הוגדרו לאחרונה על ידי גרסה חדשה יותר של GameLib, ולכן גרסה זו לא תשנה את המנוע שלו. הפעל אותו עם המנוע שהוא כבר משתמש בו, או עדכן את GameLib.",
             "wineTabHint": "GameLib בוחר את מנוע Wine ואת ה-bottle עבור משחקי Steam.",
             "toast": {
                 "body": "נעשה שימוש במנוע המובנה עבור ההפעלה הזו.",
@@ -836,5 +859,11 @@
             "groupBy": "קבצו את המשחקים שלכם לפי מצב התקנה או לפי חנות, או כבו את הקיבוץ.",
             "sort": "מיינו את המשחקים שלכם לפי שם, הפעלה אחרונה או גודל התקנה, והפכו את הכיוון."
         }
+    },
+    "twoColTable": {
+        "cancel": "ביטול",
+        "edit": "עריכה",
+        "remove": "הסרה",
+        "save": "שמירה"
     }
 }

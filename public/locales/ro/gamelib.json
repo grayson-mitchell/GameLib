@@ -19,6 +19,13 @@
                 "stalled_one": "Nicio activitate de descărcare de {{count}} minut — instalarea a fost oprită",
                 "stalled_few": "Nicio activitate de descărcare de {{count}} minute — instalarea a fost oprită",
                 "stalled_other": "Nicio activitate de descărcare de {{count}} de minute — instalarea a fost oprită"
+            },
+            "launch": {
+                "epic": {
+                    "credentials": "Autentificarea ta în Epic Games a expirat, așa că {{title}} nu a pornit. Deconectează-te de la Epic Games, conectează-te din nou, apoi apasă Joacă.",
+                    "loginFailed": "GameLib nu s-a putut autentifica în Epic Games, așa că {{title}} nu a pornit. Verifică-ți conexiunea la internet sau deconectează-te de la Epic Games și conectează-te din nou. Dacă acest joc poate rula offline, activează „Rulați jocul offline” în setările lui.",
+                    "network": "GameLib nu a putut contacta Epic Games pentru autentificare, așa că {{title}} nu a pornit. Verifică-ți conexiunea la internet și încearcă din nou. Dacă acest joc poate rula offline, activează „Rulați jocul offline” în setările lui."
+                }
             }
         },
         "filePicker": {
@@ -91,6 +98,7 @@
         "extraInfoErrorTitle": "Nu s-au putut încărca informațiile suplimentare",
         "extraInfoRetry": "Reîncearcă",
         "extraInfoStaleBody": "Acest rezultat a fost stocat în cache înainte de a se înregistra rezultatele încărcării, deci poate fi depășit. Reîmprospătează pentru a verifica.",
+        "moreActions": "Mai multe acțiuni",
         "steamInstallingPercent": "Se instalează… {{percent}}%",
         "steamUpdateCommitting": "Se aplică actualizarea…",
         "steamUpdatePlanning": "Se planifică actualizarea…",
@@ -101,6 +109,7 @@
             "checkingSize": "Se verifică dimensiunea actualizării…",
             "confirmButton": "Actualizează",
             "confirmTitle": "Actualizezi {{title}}?",
+            "downloadAbout": "Descărcare de aproximativ {{download}}",
             "fallback": "GameLib nu poate obține lista de fișiere a versiunii anterioare, așa că va verifica fiecare fișier: descărcare de până la {{download}}.",
             "notEnoughDisk": "Necesită {{peak}} liberi, {{available}} disponibili.",
             "registered": "Steam va actualiza acest joc.",
@@ -357,6 +366,10 @@
         "title": "Revendică o cheie Steam",
         "viewInLibrary": "Vezi în bibliotecă"
     },
+    "reportProblem": {
+        "logsInstructions": "Descrie în formularul de raportare ce s-a întâmplat. Diagnosticele și jurnalele recente pot fi incluse automat.",
+        "openForm": "Deschide formularul de raportare"
+    },
     "setting": {
         "eosOverlay": {
             "unavailable": "EOS Overlay nu este disponibil în această versiune",
@@ -483,7 +496,6 @@
                 "moreSymbols_one": "și încă {{count}}",
                 "moreSymbols_few": "și încă {{count}}",
                 "moreSymbols_other": "și încă {{count}}",
-                "missingSymbols": "Neacoperit: {{symbols}}",
                 "native": "Pod nativ Steam",
                 "notCoveredHeading": "Neacoperite:",
                 "reason": {
@@ -513,8 +525,17 @@
             },
             "setup": {
                 "missingSymbols": "Podul nu acoperă: {{symbols}}",
-                "redownloadNote": "Revenirea redescarcă jocul în clientul Steam pentru Windows în bottle."
+                "redownloadNote": "Revenirea redescarcă jocul în clientul Steam pentru Windows în bottle.",
+                "steamClientUpdated": "Steam s-a actualizat într-un mod pe care puntea Steam din această versiune de GameLib nu îl poate folosi încă. Actualizează GameLib sau, deocamdată, pornește jocul din Steam."
             }
+        },
+        "directLaunch": {
+            "confirmLaunch": "Pornește",
+            "confirmMessage": "Aceasta pornește jocul direct, fără clientul Steam. În această sesiune nu există sincronizare Steam Cloud, urmărirea timpului de joc, realizări sau overlay Steam.",
+            "confirmTitle": "Pornești fără Steam?",
+            "failed": "Nu s-a putut porni {{game}} fără Steam.",
+            "label": "Pornește fără Steam",
+            "notEligible": "Acest joc nu mai poate fi pornit fără Steam. Folosește Joacă în schimb."
         },
         "download": {
             "error": {
@@ -571,6 +592,8 @@
             "refusedRunning": "Închide {{title}} înainte de a-l actualiza."
         },
         "engine": {
+            "drmSwitchRefused": "{{title}} nu a putut porni în modul Steam DRM deoarece GameLib nu a putut readuce fișierele jocului la CrossOver ({{reason}}). Închide orice joc care rulează din acest bottle și încearcă din nou.",
+            "markerNewer": "Fișierele jocului {{title}} au fost configurate ultima dată de o versiune mai nouă de GameLib, așa că această versiune nu îi va schimba motorul. Pornește-l cu motorul pe care îl folosește deja sau actualizează GameLib.",
             "wineTabHint": "GameLib alege motorul Wine și bottle-ul pentru jocurile Steam.",
             "toast": {
                 "body": "Se folosește motorul integrat pentru această lansare.",
@@ -836,5 +859,11 @@
             "groupBy": "Grupează-ți jocurile după starea instalării sau după magazin, ori dezactivează gruparea.",
             "sort": "Sortează-ți jocurile după nume, ultima rulare sau dimensiunea instalării și inversează direcția."
         }
+    },
+    "twoColTable": {
+        "cancel": "Anulează",
+        "edit": "Editează",
+        "remove": "Elimină",
+        "save": "Salvează"
     }
 }

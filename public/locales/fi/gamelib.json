@@ -18,6 +18,13 @@
                 "signInToSteam": "Kirjaudu Steamiin",
                 "stalled_one": "Ei latauksen edistymistä {{count}} minuuttiin — asennus pysäytettiin",
                 "stalled_other": "Ei latauksen edistymistä {{count}} minuuttiin — asennus pysäytettiin"
+            },
+            "launch": {
+                "epic": {
+                    "credentials": "Epic Games -kirjautumisesi on vanhentunut, joten {{title}} ei käynnistynyt. Kirjaudu ulos Epic Gamesista, kirjaudu uudelleen sisään ja paina sitten Pelaa.",
+                    "loginFailed": "GameLib ei voinut kirjautua Epic Gamesiin, joten {{title}} ei käynnistynyt. Tarkista internetyhteytesi tai kirjaudu ulos Epic Gamesista ja takaisin sisään. Jos tämä peli voi toimia offline-tilassa, ota pelin asetuksissa käyttöön Käynnistä peli offline-tilassa.",
+                    "network": "GameLib ei saanut yhteyttä Epic Gamesiin kirjautumista varten, joten {{title}} ei käynnistynyt. Tarkista internetyhteytesi ja yritä uudelleen. Jos tämä peli voi toimia offline-tilassa, ota pelin asetuksissa käyttöön Käynnistä peli offline-tilassa."
+                }
             }
         },
         "filePicker": {
@@ -90,6 +97,7 @@
         "extraInfoErrorTitle": "Lisätietoja ei voitu ladata",
         "extraInfoRetry": "Yritä uudelleen",
         "extraInfoStaleBody": "Tämä tulos tallennettiin välimuistiin ennen kuin latauksen tuloksia alettiin tallentaa, joten se voi olla vanhentunut. Päivitä tarkistaaksesi.",
+        "moreActions": "Lisää toimintoja",
         "steamInstallingPercent": "Asennetaan… {{percent}} %",
         "steamUpdateCommitting": "Otetaan päivitystä käyttöön…",
         "steamUpdatePlanning": "Suunnitellaan päivitystä…",
@@ -100,6 +108,7 @@
             "checkingSize": "Tarkistetaan päivityksen kokoa…",
             "confirmButton": "Päivitä",
             "confirmTitle": "Päivitetäänkö {{title}}?",
+            "downloadAbout": "Lataus noin {{download}}",
             "fallback": "GameLib ei saa edellisen version tiedostoluetteloa, joten se tarkistaa jokaisen tiedoston: lataus enintään {{download}}.",
             "notEnoughDisk": "Tarvitaan {{peak}} vapaata tilaa, saatavilla on {{available}}.",
             "registered": "Steam päivittää tämän pelin.",
@@ -350,6 +359,10 @@
         "title": "Lunasta Steam-avain",
         "viewInLibrary": "Näytä kirjastossa"
     },
+    "reportProblem": {
+        "logsInstructions": "Kuvaile raporttilomakkeessa, mitä tapahtui. Diagnostiikka ja viimeaikaiset lokit voidaan liittää automaattisesti.",
+        "openForm": "Avaa raporttilomake"
+    },
     "setting": {
         "eosOverlay": {
             "unavailable": "EOS-peittokuva ei ole käytettävissä tässä versiossa",
@@ -474,7 +487,6 @@
                 "label": "Steam-reitti",
                 "moreSymbols_one": "ja {{count}} muu",
                 "moreSymbols_other": "ja {{count}} muuta",
-                "missingSymbols": "Ei katettu: {{symbols}}",
                 "native": "Natiivi Steam-silta",
                 "notCoveredHeading": "Ei katettu:",
                 "reason": {
@@ -504,8 +516,17 @@
             },
             "setup": {
                 "missingSymbols": "Silta ei kata: {{symbols}}",
-                "redownloadNote": "Palautuminen lataa pelin uudelleen pullotettuun Windowsin Steam-asiakasohjelmaan."
+                "redownloadNote": "Palautuminen lataa pelin uudelleen pullotettuun Windowsin Steam-asiakasohjelmaan.",
+                "steamClientUpdated": "Steam päivittyi tavalla, jota tämän GameLib-version Steam-silta ei vielä osaa käyttää. Päivitä GameLib tai käynnistä peli toistaiseksi Steamista."
             }
+        },
+        "directLaunch": {
+            "confirmLaunch": "Käynnistä",
+            "confirmMessage": "Tämä käynnistää pelin suoraan ilman Steam-asiakasohjelmaa. Tässä istunnossa ei ole Steam Cloud -synkronointia, peliajan seurantaa, saavutuksia eikä Steamin päällystä.",
+            "confirmTitle": "Käynnistetäänkö ilman Steamia?",
+            "failed": "Peliä {{game}} ei voitu käynnistää ilman Steamia.",
+            "label": "Käynnistä ilman Steamia",
+            "notEligible": "Tätä peliä ei voi enää käynnistää ilman Steamia. Käytä sen sijaan Pelaa-painiketta."
         },
         "download": {
             "error": {
@@ -562,6 +583,8 @@
             "refusedRunning": "Sulje {{title}} ennen päivittämistä."
         },
         "engine": {
+            "drmSwitchRefused": "Peliä {{title}} ei voitu käynnistää Steam DRM -tilassa, koska GameLib ei voinut vaihtaa pelin tiedostoja takaisin CrossOveriin ({{reason}}). Sulje kaikki tästä bottlesta käynnissä olevat pelit ja yritä uudelleen.",
+            "markerNewer": "Pelin {{title}} tiedostot on viimeksi määrittänyt GameLibin uudempi versio, joten tämä versio ei muuta sen moottoria. Käynnistä peli sillä moottorilla, jota se jo käyttää, tai päivitä GameLib.",
             "wineTabHint": "GameLib valitsee Steam-peleille Wine-moottorin ja bottlen.",
             "toast": {
                 "body": "Tässä käynnistyksessä käytetään sisäänrakennettua moottoria.",
@@ -822,5 +845,11 @@
             "groupBy": "Ryhmittele pelisi asennuksen tilan tai kaupan mukaan tai poista ryhmittely käytöstä.",
             "sort": "Lajittele pelisi nimen, viimeksi pelatun ajan tai asennuskoon mukaan ja käännä suunta."
         }
+    },
+    "twoColTable": {
+        "cancel": "Keskeytä",
+        "edit": "Muokkaa",
+        "remove": "Poista",
+        "save": "Tallenna"
     }
 }

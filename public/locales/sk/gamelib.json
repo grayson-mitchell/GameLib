@@ -19,6 +19,13 @@
                 "stalled_few": "Žiadny priebeh sťahovania už {{count}} minúty — instalácia bola zastavená",
                 "stalled_many": "Žiadny priebeh sťahovania už {{count}} minúty — instalácia bola zastavená",
                 "stalled_other": "Žiadny priebeh sťahovania už {{count}} minút — instalácia bola zastavená"
+            },
+            "launch": {
+                "epic": {
+                    "credentials": "Platnosť vášho prihlásenia do Epic Games vypršala, preto sa {{title}} nespustila. Odhláste sa z Epic Games, znova sa prihláste a potom stlačte Hrať.",
+                    "loginFailed": "GameLib sa nemohol prihlásiť do Epic Games, preto sa {{title}} nespustila. Skontrolujte pripojenie k internetu alebo sa odhláste z Epic Games a znova prihláste. Ak táto hra vie bežať offline, zapnite v jej nastaveniach „Spustite hru offline“.",
+                    "network": "GameLib sa nemohol na prihlásenie spojiť s Epic Games, preto sa {{title}} nespustila. Skontrolujte pripojenie k internetu a skúste to znova. Ak táto hra vie bežať offline, zapnite v jej nastaveniach „Spustite hru offline“."
+                }
             }
         },
         "filePicker": {
@@ -92,6 +99,7 @@
         "extraInfoErrorTitle": "Nepodarilo sa načítať ďalšie informácie",
         "extraInfoRetry": "Skúsiť znova",
         "extraInfoStaleBody": "Tento výsledok bol uložený do vyrovnávacej pamäte pred zaznamenaním výsledkov načítania, takže môže byť neaktuálny. Obnovte a skontrolujte.",
+        "moreActions": "Ďalšie akcie",
         "steamInstallingPercent": "Inštaluje sa… {{percent}} %",
         "steamUpdateCommitting": "Používa sa aktualizácia…",
         "steamUpdatePlanning": "Plánuje sa aktualizácia…",
@@ -102,6 +110,7 @@
             "checkingSize": "Zisťuje sa veľkosť aktualizácie…",
             "confirmButton": "Aktualizovať",
             "confirmTitle": "Aktualizovať {{title}}?",
+            "downloadAbout": "Stiahnutie približne {{download}}",
             "fallback": "GameLib nedokáže získať zoznam súborov predchádzajúcej verzie, preto skontroluje každý súbor: sťahovanie do {{download}}.",
             "notEnoughDisk": "Vyžaduje {{peak}} voľného miesta, k dispozícii je {{available}}.",
             "registered": "Steam túto hru aktualizuje.",
@@ -364,6 +373,10 @@
         "title": "Uplatniť kľúč Steam",
         "viewInLibrary": "Zobraziť v knižnici"
     },
+    "reportProblem": {
+        "logsInstructions": "Vo formulári hlásenia popíšte, čo sa stalo. Diagnostika a nedávne záznamy sa môžu pridať automaticky.",
+        "openForm": "Otvoriť formulár hlásenia"
+    },
     "setting": {
         "eosOverlay": {
             "unavailable": "Prekrytie EOS nie je v tejto verzii k dispozícii",
@@ -492,7 +505,6 @@
                 "moreSymbols_few": "a ešte {{count}}",
                 "moreSymbols_many": "a ešte {{count}}",
                 "moreSymbols_other": "a ešte {{count}}",
-                "missingSymbols": "Nepokryté: {{symbols}}",
                 "native": "Natívny most Steam",
                 "notCoveredHeading": "Nepokryté:",
                 "reason": {
@@ -522,8 +534,17 @@
             },
             "setup": {
                 "missingSymbols": "Most nepokrýva: {{symbols}}",
-                "redownloadNote": "Návrat znova stiahne hru do klienta Steam pre Windows v bottle."
+                "redownloadNote": "Návrat znova stiahne hru do klienta Steam pre Windows v bottle.",
+                "steamClientUpdated": "Steam sa aktualizoval spôsobom, ktorý most Steamu v tejto verzii GameLib zatiaľ nevie použiť. Aktualizujte GameLib alebo hru zatiaľ spúšťajte zo Steamu."
             }
+        },
+        "directLaunch": {
+            "confirmLaunch": "Spustiť",
+            "confirmMessage": "Hra sa spustí priamo, bez klienta Steam. V tejto relácii nebude synchronizácia Steam Cloud, sledovanie herného času, úspechy ani prekrytie Steamu.",
+            "confirmTitle": "Spustiť bez Steamu?",
+            "failed": "Hru {{game}} sa nepodarilo spustiť bez Steamu.",
+            "label": "Spustiť bez Steamu",
+            "notEligible": "Túto hru už nie je možné spustiť bez Steamu. Použite namiesto toho Hrať."
         },
         "download": {
             "error": {
@@ -580,6 +601,8 @@
             "refusedRunning": "Pred aktualizáciou ukončite hru {{title}}."
         },
         "engine": {
+            "drmSwitchRefused": "Hru {{title}} sa nepodarilo spustiť v režime Steam DRM, pretože GameLib nedokázal vrátiť jej súbory späť do CrossOver ({{reason}}). Zatvorte všetky hry spustené z tohto bottle a skúste to znova.",
+            "markerNewer": "Súbory hry {{title}} naposledy nastavila novšia verzia GameLib, preto táto verzia jej engine nezmení. Spustite ju s enginom, ktorý už používa, alebo aktualizujte GameLib.",
             "wineTabHint": "GameLib vyberá pre hry zo Steamu engine Wine a bottle.",
             "toast": {
                 "body": "Pri tomto spustení sa používa vstavaný engine.",
@@ -850,5 +873,11 @@
             "groupBy": "Zoskupte hry podľa stavu inštalácie alebo obchodu, prípadne zoskupovanie vypnite.",
             "sort": "Zoraďte hry podľa názvu, posledného spustenia alebo veľkosti inštalácie a otočte smer."
         }
+    },
+    "twoColTable": {
+        "cancel": "Zrušiť",
+        "edit": "Upraviť",
+        "remove": "Odstrániť",
+        "save": "Uložiť"
     }
 }

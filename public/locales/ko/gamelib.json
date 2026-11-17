@@ -18,6 +18,13 @@
                 "signInToSteam": "Steam에 로그인",
                 "stalled_one": "{{count}}분 동안 다운로드 진행 상황이 없어 설치가 중지되었습니다",
                 "stalled_other": "{{count}}분 동안 다운로드 진행 상황이 없어 설치가 중지되었습니다"
+            },
+            "launch": {
+                "epic": {
+                    "credentials": "Epic Games 로그인이 만료되어 {{title}}을(를) 시작하지 못했습니다. Epic Games에서 로그아웃한 뒤 다시 로그인하고 플레이를 누르세요.",
+                    "loginFailed": "GameLib이 Epic Games에 로그인하지 못해 {{title}}을(를) 시작하지 못했습니다. 인터넷 연결을 확인하거나 Epic Games에서 로그아웃한 뒤 다시 로그인하세요. 이 게임을 오프라인으로 실행할 수 있다면 게임 설정에서 '게임 오프라인으로 실행'을 켜세요.",
+                    "network": "GameLib이 로그인을 위해 Epic Games에 연결하지 못해 {{title}}을(를) 시작하지 못했습니다. 인터넷 연결을 확인하고 다시 시도하세요. 이 게임을 오프라인으로 실행할 수 있다면 게임 설정에서 '게임 오프라인으로 실행'을 켜세요."
+                }
             }
         },
         "filePicker": {
@@ -90,6 +97,7 @@
         "extraInfoErrorTitle": "추가 정보를 불러오지 못함",
         "extraInfoRetry": "다시 시도",
         "extraInfoStaleBody": "이 결과는 로드 결과가 기록되기 전에 캐시되어 오래되었을 수 있습니다. 새로고침하여 확인하세요.",
+        "moreActions": "더 많은 작업",
         "steamInstallingPercent": "설치 중… {{percent}}%",
         "steamUpdateCommitting": "업데이트 적용 중…",
         "steamUpdatePlanning": "업데이트 준비 중…",
@@ -100,6 +108,7 @@
             "checkingSize": "업데이트 크기 확인 중…",
             "confirmButton": "업데이트",
             "confirmTitle": "{{title}}을(를) 업데이트할까요?",
+            "downloadAbout": "다운로드 약 {{download}}",
             "fallback": "GameLib이 이전 빌드의 파일 목록을 가져올 수 없어 모든 파일을 확인합니다. 최대 {{download}}를 다운로드합니다.",
             "notEnoughDisk": "{{peak}}의 여유 공간이 필요합니다. 사용 가능: {{available}}.",
             "registered": "Steam이 이 게임을 업데이트합니다.",
@@ -350,6 +359,10 @@
         "title": "Steam 키 등록",
         "viewInLibrary": "라이브러리에서 보기"
     },
+    "reportProblem": {
+        "logsInstructions": "신고 양식에 어떤 일이 있었는지 설명해 주세요. 진단 정보와 최근 로그를 자동으로 포함할 수 있습니다.",
+        "openForm": "신고 양식 열기"
+    },
     "setting": {
         "eosOverlay": {
             "unavailable": "이 빌드에서는 EOS 오버레이를 사용할 수 없습니다",
@@ -474,7 +487,6 @@
                 "label": "Steam 경로",
                 "moreSymbols_one": "외 {{count}}개",
                 "moreSymbols_other": "외 {{count}}개",
-                "missingSymbols": "커버되지 않음: {{symbols}}",
                 "native": "네이티브 Steam 브리지",
                 "notCoveredHeading": "지원되지 않음:",
                 "reason": {
@@ -504,8 +516,17 @@
             },
             "setup": {
                 "missingSymbols": "브리지가 커버하지 않음: {{symbols}}",
-                "redownloadNote": "폴백하면 게임이 bottle 안의 Windows Steam 클라이언트로 다시 다운로드됨."
+                "redownloadNote": "폴백하면 게임이 bottle 안의 Windows Steam 클라이언트로 다시 다운로드됨.",
+                "steamClientUpdated": "Steam이 이 버전의 GameLib Steam 브리지가 아직 사용할 수 없는 방식으로 업데이트되었습니다. GameLib을 업데이트하거나 당분간 Steam에서 게임을 실행하세요."
             }
+        },
+        "directLaunch": {
+            "confirmLaunch": "실행",
+            "confirmMessage": "Steam 클라이언트 없이 게임을 바로 실행합니다. 이번 세션에서는 Steam 클라우드 동기화, 플레이 시간 기록, 업적, Steam 오버레이를 사용할 수 없습니다.",
+            "confirmTitle": "Steam 없이 실행할까요?",
+            "failed": "{{game}}을(를) Steam 없이 실행하지 못했습니다.",
+            "label": "Steam 없이 실행",
+            "notEligible": "이 게임은 더 이상 Steam 없이 실행할 수 없습니다. 대신 플레이를 사용하세요."
         },
         "download": {
             "error": {
@@ -562,6 +583,8 @@
             "refusedRunning": "업데이트하기 전에 {{title}}을(를) 종료하세요."
         },
         "engine": {
+            "drmSwitchRefused": "GameLib이 게임 파일을 CrossOver로 되돌리지 못해({{reason}}) {{title}}을(를) Steam DRM 모드로 시작하지 못했습니다. 이 bottle에서 실행 중인 게임을 모두 닫고 다시 시도하세요.",
+            "markerNewer": "{{title}}의 게임 파일은 더 새로운 버전의 GameLib이 마지막으로 설정했으므로 이 버전에서는 엔진을 변경하지 않습니다. 이미 사용 중인 엔진으로 실행하거나 GameLib을 업데이트하세요.",
             "wineTabHint": "GameLib이 Steam 게임에 사용할 Wine 엔진과 보틀을 선택합니다.",
             "toast": {
                 "body": "이번 실행에는 내장 엔진을 사용합니다.",
@@ -822,5 +845,11 @@
             "groupBy": "게임을 설치 상태나 스토어별로 그룹화하거나 그룹화를 끌 수 있습니다.",
             "sort": "게임을 이름, 마지막 플레이 또는 설치 크기순으로 정렬하고 방향을 바꿀 수 있습니다."
         }
+    },
+    "twoColTable": {
+        "cancel": "취소",
+        "edit": "편집",
+        "remove": "제거",
+        "save": "저장"
     }
 }

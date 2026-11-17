@@ -20,6 +20,13 @@
                 "stalled_few": "Nėra atsisiuntimo pažangos {{count}} minutes — diegimas sustabdytas",
                 "stalled_many": "Nėra atsisiuntimo pažangos {{count}} minutės — diegimas sustabdytas",
                 "stalled_other": "Nėra atsisiuntimo pažangos {{count}} minučių — diegimas sustabdytas"
+            },
+            "launch": {
+                "epic": {
+                    "credentials": "Jūsų prisijungimo prie Epic Games galiojimas baigėsi, todėl {{title}} nebuvo paleistas. Atsijunkite nuo Epic Games, prisijunkite iš naujo ir paspauskite Žaisti.",
+                    "loginFailed": "GameLib nepavyko prisijungti prie Epic Games, todėl {{title}} nebuvo paleistas. Patikrinkite interneto ryšį arba atsijunkite nuo Epic Games ir prisijunkite iš naujo. Jei šis žaidimas gali veikti neprisijungus, jo nustatymuose įjunkite „Paleisti žaidimą kaip neprisijungus“.",
+                    "network": "GameLib nepavyko susisiekti su Epic Games, kad prisijungtų, todėl {{title}} nebuvo paleistas. Patikrinkite interneto ryšį ir bandykite dar kartą. Jei šis žaidimas gali veikti neprisijungus, jo nustatymuose įjunkite „Paleisti žaidimą kaip neprisijungus“."
+                }
             }
         },
         "filePicker": {
@@ -92,6 +99,7 @@
         "extraInfoErrorTitle": "Nepavyko įkelti papildomos informacijos",
         "extraInfoRetry": "Bandyti dar kartą",
         "extraInfoStaleBody": "Šis rezultatas buvo talpinamas podėlyje prieš pradedant registruoti įkėlimo rezultatus, todėl jis gali būti pasenęs. Atnaujinkite, kad patikrintumėte.",
+        "moreActions": "Daugiau veiksmų",
         "steamInstallingPercent": "Diegiama… {{percent}} %",
         "steamUpdateCommitting": "Taikomas naujinimas…",
         "steamUpdatePlanning": "Planuojamas naujinimas…",
@@ -102,6 +110,7 @@
             "checkingSize": "Tikrinamas naujinimo dydis…",
             "confirmButton": "Naujinti",
             "confirmTitle": "Naujinti {{title}}?",
+            "downloadAbout": "Atsisiuntimas maždaug {{download}}",
             "fallback": "GameLib negali gauti ankstesnės versijos failų sąrašo, todėl patikrins kiekvieną failą: atsisiuntimas iki {{download}}.",
             "notEnoughDisk": "Reikia {{peak}} laisvos vietos, yra {{available}}.",
             "registered": "Steam atnaujins šį žaidimą.",
@@ -364,6 +373,10 @@
         "title": "Aktyvuoti Steam raktą",
         "viewInLibrary": "Žiūrėti bibliotekoje"
     },
+    "reportProblem": {
+        "logsInstructions": "Pranešimo formoje aprašykite, kas įvyko. Diagnostika ir naujausi žurnalai gali būti pridėti automatiškai.",
+        "openForm": "Atidaryti pranešimo formą"
+    },
     "setting": {
         "eosOverlay": {
             "unavailable": "EOS Overlay nepasiekiamas šioje versijoje",
@@ -492,7 +505,6 @@
                 "moreSymbols_few": "ir dar {{count}}",
                 "moreSymbols_many": "ir dar {{count}}",
                 "moreSymbols_other": "ir dar {{count}}",
-                "missingSymbols": "Nepadengta: {{symbols}}",
                 "native": "Vietinis Steam tiltas",
                 "notCoveredHeading": "Neaprėpta:",
                 "reason": {
@@ -522,8 +534,17 @@
             },
             "setup": {
                 "missingSymbols": "Tiltas nepadengia: {{symbols}}",
-                "redownloadNote": "Grįžimas iš naujo atsisiunčia žaidimą į Windows Steam klientą bottle."
+                "redownloadNote": "Grįžimas iš naujo atsisiunčia žaidimą į Windows Steam klientą bottle.",
+                "steamClientUpdated": "Steam buvo atnaujintas taip, kad šios GameLib versijos Steam tiltas dar negali juo naudotis. Atnaujinkite GameLib arba kol kas paleiskite žaidimą iš Steam."
             }
+        },
+        "directLaunch": {
+            "confirmLaunch": "Paleisti",
+            "confirmMessage": "Taip žaidimas paleidžiamas tiesiogiai, be Steam kliento. Šiame seanse nebus Steam Cloud sinchronizavimo, žaidimo laiko sekimo, pasiekimų ir Steam perdangos.",
+            "confirmTitle": "Paleisti be Steam?",
+            "failed": "Nepavyko paleisti {{game}} be Steam.",
+            "label": "Paleisti be Steam",
+            "notEligible": "Šio žaidimo nebegalima paleisti be Steam. Vietoj to naudokite Žaisti."
         },
         "download": {
             "error": {
@@ -580,6 +601,8 @@
             "refusedRunning": "Uždarykite {{title}} prieš naujindami."
         },
         "engine": {
+            "drmSwitchRefused": "{{title}} nepavyko paleisti Steam DRM režimu, nes GameLib negalėjo grąžinti žaidimo failų į CrossOver ({{reason}}). Uždarykite visus žaidimus, veikiančius iš šio bottle, ir bandykite dar kartą.",
+            "markerNewer": "{{title}} žaidimo failus paskutinį kartą nustatė naujesnė GameLib versija, todėl ši versija nekeis jo variklio. Paleiskite jį su jau naudojamu varikliu arba atnaujinkite GameLib.",
             "wineTabHint": "GameLib parenka Wine variklį ir bottle „Steam“ žaidimams.",
             "toast": {
                 "body": "Šiam paleidimui naudojamas integruotas variklis.",
@@ -850,5 +873,11 @@
             "groupBy": "Grupuokite žaidimus pagal įdiegimo būseną arba parduotuvę, arba išjunkite grupavimą.",
             "sort": "Rūšiuokite žaidimus pagal pavadinimą, paskutinį žaidimą ar įdiegimo dydį ir pakeiskite kryptį."
         }
+    },
+    "twoColTable": {
+        "cancel": "Atšaukti",
+        "edit": "Redaguoti",
+        "remove": "Pašalinti",
+        "save": "Išsaugoti"
     }
 }

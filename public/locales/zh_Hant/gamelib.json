@@ -18,6 +18,13 @@
                 "signInToSteam": "登入 Steam",
                 "stalled_one": "{{count}} 分鐘內下載沒有進度 — 安裝已停止",
                 "stalled_other": "{{count}} 分鐘內下載沒有進度 — 安裝已停止"
+            },
+            "launch": {
+                "epic": {
+                    "credentials": "你的 Epic Games 登入已過期，因此 {{title}} 未能啟動。請登出 Epic Games，重新登入，然後按下「開始遊戲」。",
+                    "loginFailed": "GameLib 無法登入 Epic Games，因此 {{title}} 未能啟動。請檢查你的網路連線，或登出 Epic Games 後重新登入。如果這款遊戲可以離線執行，請在其設定中開啟「離線執行遊戲」。",
+                    "network": "GameLib 無法連線到 Epic Games 進行登入，因此 {{title}} 未能啟動。請檢查你的網路連線後再試一次。如果這款遊戲可以離線執行，請在其設定中開啟「離線執行遊戲」。"
+                }
             }
         },
         "filePicker": {
@@ -90,6 +97,7 @@
         "extraInfoErrorTitle": "無法載入額外資訊",
         "extraInfoRetry": "重試",
         "extraInfoStaleBody": "此結果是在記錄載入結果之前快取的，可能已過時。請重新整理以確認。",
+        "moreActions": "更多操作",
         "steamInstallingPercent": "正在安裝… {{percent}}%",
         "steamUpdateCommitting": "正在套用更新…",
         "steamUpdatePlanning": "正在規劃更新…",
@@ -100,6 +108,7 @@
             "checkingSize": "正在檢查更新大小…",
             "confirmButton": "更新",
             "confirmTitle": "要更新 {{title}} 嗎？",
+            "downloadAbout": "下載約 {{download}}",
             "fallback": "GameLib 無法取得上一個版本的檔案清單，因此會檢查每個檔案：最多下載 {{download}}。",
             "notEnoughDisk": "需要 {{peak}} 可用空間，目前可用 {{available}}。",
             "registered": "Steam 將更新此遊戲。",
@@ -350,6 +359,10 @@
         "title": "兌換 Steam 序號",
         "viewInLibrary": "在資料庫中檢視"
     },
+    "reportProblem": {
+        "logsInstructions": "請在回報表單中描述發生了什麼事。診斷資訊與最近的記錄檔可以自動附上。",
+        "openForm": "開啟回報表單"
+    },
     "setting": {
         "eosOverlay": {
             "unavailable": "此版本中 EOS Overlay 無法使用",
@@ -474,7 +487,6 @@
                 "label": "Steam 路線",
                 "moreSymbols_one": "以及另外 {{count}} 個",
                 "moreSymbols_other": "以及另外 {{count}} 個",
-                "missingSymbols": "未涵蓋：{{symbols}}",
                 "native": "原生 Steam 橋接",
                 "notCoveredHeading": "未涵蓋：",
                 "reason": {
@@ -504,8 +516,17 @@
             },
             "setup": {
                 "missingSymbols": "橋接未涵蓋：{{symbols}}",
-                "redownloadNote": "回退將把遊戲重新下載到 Bottle 中的 Windows 版 Steam 用戶端。"
+                "redownloadNote": "回退將把遊戲重新下載到 Bottle 中的 Windows 版 Steam 用戶端。",
+                "steamClientUpdated": "Steam 的更新方式是此版本 GameLib 的 Steam 橋接暫時無法使用的。請更新 GameLib，或暫時從 Steam 啟動遊戲。"
             }
+        },
+        "directLaunch": {
+            "confirmLaunch": "啟動",
+            "confirmMessage": "這會略過 Steam 用戶端，直接啟動遊戲。本次工作階段沒有 Steam Cloud 同步、遊玩時數統計、成就和 Steam 疊加層。",
+            "confirmTitle": "不透過 Steam 啟動？",
+            "failed": "無法在沒有 Steam 的情況下啟動 {{game}}。",
+            "label": "不透過 Steam 啟動",
+            "notEligible": "這款遊戲已無法在沒有 Steam 的情況下啟動。請改用「開始遊戲」。"
         },
         "download": {
             "error": {
@@ -562,6 +583,8 @@
             "refusedRunning": "更新前請先關閉 {{title}}。"
         },
         "engine": {
+            "drmSwitchRefused": "{{title}} 無法以 Steam DRM 模式啟動，因為 GameLib 無法將其遊戲檔案切換回 CrossOver（{{reason}}）。請關閉所有從此 bottle 執行的遊戲，然後再試一次。",
+            "markerNewer": "{{title}} 的遊戲檔案上次是由較新版本的 GameLib 設定的，因此此版本不會變更其引擎。請使用它已在使用的引擎啟動，或更新 GameLib。",
             "wineTabHint": "GameLib 會為 Steam 遊戲選擇 Wine 引擎和 bottle。",
             "toast": {
                 "body": "本次啟動使用內建引擎。",
@@ -822,5 +845,11 @@
             "groupBy": "依安裝狀態或商店將遊戲分組，也可以關閉分組。",
             "sort": "依名稱、上次遊玩時間或安裝大小排序遊戲，並可切換排序方向。"
         }
+    },
+    "twoColTable": {
+        "cancel": "取消",
+        "edit": "編輯",
+        "remove": "移除",
+        "save": "儲存"
     }
 }

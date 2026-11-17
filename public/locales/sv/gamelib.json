@@ -18,6 +18,13 @@
                 "signInToSteam": "Logga in på Steam",
                 "stalled_one": "Ingen nedladdningsförlopp på {{count}} minut — installationen stoppades",
                 "stalled_other": "Ingen nedladdningsförlopp på {{count}} minuter — installationen stoppades"
+            },
+            "launch": {
+                "epic": {
+                    "credentials": "Din Epic Games-inloggning har gått ut, så {{title}} startade inte. Logga ut från Epic Games, logga in igen och tryck sedan på Spela.",
+                    "loginFailed": "GameLib kunde inte logga in på Epic Games, så {{title}} startade inte. Kontrollera din internetanslutning, eller logga ut från Epic Games och logga in igen. Om det här spelet kan köras offline, slå på Kör spelet offline i spelets inställningar.",
+                    "network": "GameLib kunde inte nå Epic Games för att logga in, så {{title}} startade inte. Kontrollera din internetanslutning och försök igen. Om det här spelet kan köras offline, slå på Kör spelet offline i spelets inställningar."
+                }
             }
         },
         "filePicker": {
@@ -90,6 +97,7 @@
         "extraInfoErrorTitle": "Kunde inte läsa in extra information",
         "extraInfoRetry": "Försök igen",
         "extraInfoStaleBody": "Detta resultat cachades innan utfall från inläsningar registrerades, så det kan vara inaktuellt. Uppdatera för att kontrollera.",
+        "moreActions": "Fler åtgärder",
         "steamInstallingPercent": "Installerar… {{percent}} %",
         "steamUpdateCommitting": "Tillämpar uppdateringen…",
         "steamUpdatePlanning": "Planerar uppdateringen…",
@@ -100,6 +108,7 @@
             "checkingSize": "Kontrollerar uppdateringens storlek…",
             "confirmButton": "Uppdatera",
             "confirmTitle": "Uppdatera {{title}}?",
+            "downloadAbout": "Nedladdning på cirka {{download}}",
             "fallback": "GameLib kan inte hämta filistan för den tidigare versionen och kontrollerar därför varje fil: nedladdning på upp till {{download}}.",
             "notEnoughDisk": "Kräver {{peak}} ledigt utrymme, {{available}} är tillgängligt.",
             "registered": "Steam uppdaterar det här spelet.",
@@ -350,6 +359,10 @@
         "title": "Lös in en Steam-nyckel",
         "viewInLibrary": "Visa i biblioteket"
     },
+    "reportProblem": {
+        "logsInstructions": "Beskriv i rapportformuläret vad som hände. Diagnostik och senaste loggar kan inkluderas automatiskt.",
+        "openForm": "Öppna rapportformuläret"
+    },
     "setting": {
         "eosOverlay": {
             "unavailable": "EOS-overlägget är inte tillgängligt i den här versionen",
@@ -474,7 +487,6 @@
                 "label": "Steam-rutt",
                 "moreSymbols_one": "och {{count}} till",
                 "moreSymbols_other": "och {{count}} till",
-                "missingSymbols": "Täcks inte: {{symbols}}",
                 "native": "Nativ Steam-brygga",
                 "notCoveredHeading": "Inte täckt:",
                 "reason": {
@@ -504,8 +516,17 @@
             },
             "setup": {
                 "missingSymbols": "Bryggan täcker inte: {{symbols}}",
-                "redownloadNote": "Återgången laddar ner spelet igen till Windows Steam-klienten på bottle."
+                "redownloadNote": "Återgången laddar ner spelet igen till Windows Steam-klienten på bottle.",
+                "steamClientUpdated": "Steam uppdaterades på ett sätt som Steam-bryggan i den här versionen av GameLib inte kan använda ännu. Uppdatera GameLib, eller starta spelet från Steam tills vidare."
             }
+        },
+        "directLaunch": {
+            "confirmLaunch": "Starta",
+            "confirmMessage": "Detta startar spelet direkt, utan Steam-klienten. I den här sessionen finns ingen Steam Cloud-synkronisering, ingen spelstidsspårning, inga prestationer och ingen Steam-overlay.",
+            "confirmTitle": "Starta utan Steam?",
+            "failed": "Det gick inte att starta {{game}} utan Steam.",
+            "label": "Starta utan Steam",
+            "notEligible": "Det här spelet kan inte längre startas utan Steam. Använd Spela i stället."
         },
         "download": {
             "error": {
@@ -562,6 +583,8 @@
             "refusedRunning": "Stäng {{title}} innan du uppdaterar det."
         },
         "engine": {
+            "drmSwitchRefused": "{{title}} kunde inte starta i Steam DRM-läge eftersom GameLib inte kunde växla tillbaka spelets filer till CrossOver ({{reason}}). Stäng alla spel som körs från den här bottle och försök igen.",
+            "markerNewer": "{{title}}s spelfiler sattes senast upp av en nyare version av GameLib, så den här versionen ändrar inte dess motor. Starta det med den motor det redan använder, eller uppdatera GameLib.",
             "wineTabHint": "GameLib väljer Wine-motorn och flaskan för Steam-spel.",
             "toast": {
                 "body": "Använder den inbyggda motorn för den här starten.",
@@ -822,5 +845,11 @@
             "groupBy": "Gruppera dina spel efter installationsstatus eller butik, eller stäng av gruppering.",
             "sort": "Sortera dina spel efter namn, senast spelad eller installationsstorlek och vänd riktningen."
         }
+    },
+    "twoColTable": {
+        "cancel": "Avbryt",
+        "edit": "Redigera",
+        "remove": "Ta bort",
+        "save": "Spara"
     }
 }

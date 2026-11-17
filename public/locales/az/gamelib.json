@@ -18,6 +18,13 @@
                 "signInToSteam": "Steam-ə daxil olun",
                 "stalled_one": "{{count}} dəqiqədir endirmə irəliləmir — quraşdırma dayandırıldı",
                 "stalled_other": "{{count}} dəqiqədir endirmə irəliləmir — quraşdırma dayandırıldı"
+            },
+            "launch": {
+                "epic": {
+                    "credentials": "Epic Games hesabına girişinizin müddəti bitib, ona görə {{title}} başlamadı. Epic Games hesabından çıxın, yenidən daxil olun və sonra Oyna düyməsinə basın.",
+                    "loginFailed": "GameLib Epic Games hesabına daxil ola bilmədi, ona görə {{title}} başlamadı. İnternet bağlantınızı yoxlayın və ya Epic Games hesabından çıxıb yenidən daxil olun. Bu oyun oflayn işləyə bilirsə, onun parametrlərində «Oyunu Oflayn Çalışın» seçimini aktiv edin.",
+                    "network": "GameLib daxil olmaq üçün Epic Games-ə qoşula bilmədi, ona görə {{title}} başlamadı. İnternet bağlantınızı yoxlayın və yenidən cəhd edin. Bu oyun oflayn işləyə bilirsə, onun parametrlərində «Oyunu Oflayn Çalışın» seçimini aktiv edin."
+                }
             }
         },
         "filePicker": {
@@ -90,6 +97,7 @@
         "extraInfoErrorTitle": "Əlavə məlumat yüklənə bilmədi",
         "extraInfoRetry": "Yenidən cəhd et",
         "extraInfoStaleBody": "Bu nəticə yükləmə nəticələri qeydə alınmazdan əvvəl keşlənib, ona görə köhnəlmiş ola bilər. Yoxlamaq üçün yeniləyin.",
+        "moreActions": "Daha çox əməliyyat",
         "steamInstallingPercent": "Quraşdırılır… {{percent}}%",
         "steamUpdateCommitting": "Yeniləmə tətbiq olunur…",
         "steamUpdatePlanning": "Yeniləmə planlaşdırılır…",
@@ -101,6 +109,7 @@
             "checkingSize": "Yeniləmə ölçüsü yoxlanılır…",
             "confirmButton": "Yenilə",
             "confirmTitle": "{{title}} yenilənsin?",
+            "downloadAbout": "Təxminən {{download}} yüklənəcək",
             "fallback": "GameLib əvvəlki quruluşun fayl siyahısını ala bilmir, ona görə hər faylı yoxlayacaq: {{download}} qədər yükləmə.",
             "notEnoughDisk": "{{peak}} boş yer lazımdır, {{available}} mövcuddur.",
             "registered": "Steam bu oyunu yeniləyəcək.",
@@ -350,6 +359,10 @@
         "title": "Steam açarını aktivləşdir",
         "viewInLibrary": "Kitabxanada göstər"
     },
+    "reportProblem": {
+        "logsInstructions": "Hesabat formasında nə baş verdiyini təsvir edin. Diaqnostika və son jurnallar avtomatik əlavə oluna bilər.",
+        "openForm": "Hesabat formasını açın"
+    },
     "setting": {
         "eosOverlay": {
             "unavailable": "EOS Overlay bu versiyada əlçatan deyil",
@@ -474,7 +487,6 @@
                 "label": "Steam marşrutu",
                 "moreSymbols_one": "və daha {{count}}",
                 "moreSymbols_other": "və daha {{count}}",
-                "missingSymbols": "Əhatə olunmayıb: {{symbols}}",
                 "native": "Yerli Steam körpüsü",
                 "notCoveredHeading": "Əhatə olunmayıb:",
                 "reason": {
@@ -504,8 +516,17 @@
             },
             "setup": {
                 "missingSymbols": "Körpü əhatə etmir: {{symbols}}",
-                "redownloadNote": "Geri qayıtmaq oyunu yenidən bağlanmış Windows Steam klientinə yükləyir."
+                "redownloadNote": "Geri qayıtmaq oyunu yenidən bağlanmış Windows Steam klientinə yükləyir.",
+                "steamClientUpdated": "Steam elə yenilənib ki, GameLib-in bu versiyasının Steam körpüsü onu hələ istifadə edə bilmir. GameLib-i yeniləyin və ya hələlik oyunu Steam-dən işə salın."
             }
+        },
+        "directLaunch": {
+            "confirmLaunch": "İşə sal",
+            "confirmMessage": "Bu, oyunu Steam müştərisi olmadan birbaşa işə salır. Bu sessiyada Steam Cloud sinxronizasiyası, oyun vaxtının izlənməsi, nailiyyətlər və Steam overlay olmayacaq.",
+            "confirmTitle": "Steam olmadan işə salınsın?",
+            "failed": "{{game}} Steam olmadan işə salına bilmədi.",
+            "label": "Steam olmadan işə sal",
+            "notEligible": "Bu oyunu artıq Steam olmadan işə salmaq mümkün deyil. Əvəzinə Oyna düyməsindən istifadə edin."
         },
         "download": {
             "error": {
@@ -562,6 +583,8 @@
             "refusedRunning": "Yeniləməzdən əvvəl {{title}} oyununu bağlayın."
         },
         "engine": {
+            "drmSwitchRefused": "{{title}} Steam DRM rejimində başlaya bilmədi, çünki GameLib oyun fayllarını yenidən CrossOver-ə keçirə bilmədi ({{reason}}). Bu bottle-dan işləyən hər hansı oyunu bağlayın və yenidən cəhd edin.",
+            "markerNewer": "{{title}} oyununun faylları sonuncu dəfə GameLib-in daha yeni versiyası ilə hazırlanıb, ona görə bu versiya onun mühərrikini dəyişməyəcək. Onu artıq istifadə etdiyi mühərriklə işə salın və ya GameLib-i yeniləyin.",
             "wineTabHint": "GameLib Steam oyunları üçün Wine mühərrikini və bottle-ı seçir.",
             "toast": {
                 "body": "Bu başlatma üçün daxili mühərrik istifadə olunur.",
@@ -822,5 +845,11 @@
             "groupBy": "Oyunlarınızı quraşdırma statusuna və ya mağazaya görə qruplaşdırın, ya da qruplaşdırmanı söndürün.",
             "sort": "Oyunlarınızı ada, son oynanmaya və ya quraşdırma ölçüsünə görə sıralayın və istiqaməti dəyişin."
         }
+    },
+    "twoColTable": {
+        "cancel": "Ləğv et",
+        "edit": "Redaktə et",
+        "remove": "Sil",
+        "save": "Yadda saxla"
     }
 }

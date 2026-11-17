@@ -45,6 +45,7 @@
         "extraInfoErrorTitle": "Impossible de charger les infos supplémentaires",
         "extraInfoRetry": "Réessayer",
         "extraInfoStaleBody": "Ce résultat a été mis en cache avant l'enregistrement des résultats de chargement, il peut donc être obsolète. Actualisez pour vérifier.",
+        "moreActions": "Plus d'actions",
         "steamInstallingPercent": "Installation… {{percent}} %",
         "steamUpdateCommitting": "Application de la mise à jour…",
         "steamUpdatePlanning": "Préparation de la mise à jour…",
@@ -55,6 +56,7 @@
             "checkingSize": "Vérification de la taille de la mise à jour…",
             "confirmButton": "Mettre à jour",
             "confirmTitle": "Mettre à jour {{title}} ?",
+            "downloadAbout": "Téléchargement d'environ {{download}}",
             "fallback": "GameLib ne peut pas obtenir la liste des fichiers de la version précédente et vérifiera donc chaque fichier : téléchargement jusqu'à {{download}}.",
             "notEnoughDisk": "Nécessite {{peak}} libres, {{available}} disponibles.",
             "registered": "Steam mettra à jour ce jeu.",
@@ -384,7 +386,6 @@
                 "moreSymbols_one": "et {{count}} de plus",
                 "moreSymbols_many": "et {{count}} de plus",
                 "moreSymbols_other": "et {{count}} de plus",
-                "missingSymbols": "Non couvert : {{symbols}}",
                 "native": "Pont natif Steam",
                 "notCoveredHeading": "Non couvert :",
                 "reason": {
@@ -414,8 +415,17 @@
             },
             "setup": {
                 "missingSymbols": "Le pont ne couvre pas : {{symbols}}",
-                "redownloadNote": "Le repli retélécharge le jeu dans le client Steam Windows en bouteille."
+                "redownloadNote": "Le repli retélécharge le jeu dans le client Steam Windows en bouteille.",
+                "steamClientUpdated": "Steam a été mis à jour d'une manière que le pont Steam de cette version de GameLib ne peut pas encore utiliser. Mettez à jour GameLib, ou lancez le jeu depuis Steam pour le moment."
             }
+        },
+        "directLaunch": {
+            "confirmLaunch": "Lancer",
+            "confirmMessage": "Cela lance le jeu directement, sans le client Steam. Pour cette session, il n'y a ni synchronisation Steam Cloud, ni suivi du temps de jeu, ni succès, ni surcouche Steam.",
+            "confirmTitle": "Lancer sans Steam ?",
+            "failed": "Impossible de lancer {{game}} sans Steam.",
+            "label": "Lancer sans Steam",
+            "notEligible": "Ce jeu ne peut plus être lancé sans Steam. Utilisez Jouer à la place."
         },
         "install": {
             "bottleNameReadonlyHelper": "GameLib gère une seule bouteille CrossOver partagée pour Steam. Nommer une bouteille distincte par jeu n'est pas encore pris en charge.",
@@ -472,6 +482,8 @@
             "notify": "Une installation interrompue pour {{game}} est prête à reprendre — cliquez sur Installer pour continuer"
         },
         "engine": {
+            "drmSwitchRefused": "{{title}} n'a pas pu démarrer en mode Steam DRM car GameLib n'a pas pu remettre ses fichiers de jeu sur CrossOver ({{reason}}). Fermez tout jeu qui s'exécute depuis cette bottle, puis réessayez.",
+            "markerNewer": "Les fichiers de jeu de {{title}} ont été configurés en dernier par une version plus récente de GameLib, donc cette version ne modifiera pas son moteur. Lancez-le avec le moteur qu'il utilise déjà, ou mettez à jour GameLib.",
             "wineTabHint": "GameLib choisit le moteur Wine et la bouteille pour les jeux Steam.",
             "toast": {
                 "body": "Utilisation du moteur intégré pour ce lancement.",
@@ -541,6 +553,13 @@
                 "stalled_one": "Aucune progression du téléchargement depuis {{count}} minute — l'installation a été arrêtée",
                 "stalled_many": "Aucune progression du téléchargement depuis {{count}} minutes — l'installation a été arrêtée",
                 "stalled_other": "Aucune progression du téléchargement depuis {{count}} minutes — l'installation a été arrêtée"
+            },
+            "launch": {
+                "epic": {
+                    "credentials": "Votre connexion à Epic Games a expiré, donc {{title}} ne s'est pas lancé. Déconnectez-vous d'Epic Games, reconnectez-vous, puis appuyez sur Jouer.",
+                    "loginFailed": "GameLib n'a pas pu se connecter à Epic Games, donc {{title}} ne s'est pas lancé. Vérifiez votre connexion internet, ou déconnectez-vous d'Epic Games puis reconnectez-vous. Si ce jeu peut fonctionner hors ligne, activez « Lancer le jeu hors ligne » dans ses paramètres.",
+                    "network": "GameLib n'a pas pu joindre Epic Games pour se connecter, donc {{title}} ne s'est pas lancé. Vérifiez votre connexion internet et réessayez. Si ce jeu peut fonctionner hors ligne, activez « Lancer le jeu hors ligne » dans ses paramètres."
+                }
             }
         },
         "filePicker": {
@@ -612,6 +631,10 @@
         "redeeming": "Activation en cours...",
         "title": "Activer une clé Steam",
         "viewInLibrary": "Voir dans la bibliothèque"
+    },
+    "reportProblem": {
+        "logsInstructions": "Décrivez ce qui s'est passé dans le formulaire de signalement. Les diagnostics et les journaux récents peuvent être inclus automatiquement.",
+        "openForm": "Ouvrir le formulaire de signalement"
     },
     "setting": {
         "eosOverlay": {
@@ -836,5 +859,11 @@
             "groupBy": "Regroupez vos jeux par état d'installation ou par boutique, ou désactivez le regroupement.",
             "sort": "Triez vos jeux par nom, dernière partie ou taille d'installation, et inversez l'ordre."
         }
+    },
+    "twoColTable": {
+        "cancel": "Annuler",
+        "edit": "Modifier",
+        "remove": "Supprimer",
+        "save": "Enregistrer"
     }
 }

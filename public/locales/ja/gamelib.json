@@ -18,6 +18,13 @@
                 "signInToSteam": "Steam にサインイン",
                 "stalled_one": "{{count}} 分間ダウンロードの進行がなかったため、インストールを停止しました",
                 "stalled_other": "{{count}} 分間ダウンロードの進行がなかったため、インストールを停止しました"
+            },
+            "launch": {
+                "epic": {
+                    "credentials": "Epic Gamesのサインインの有効期限が切れたため、{{title}}を起動できませんでした。Epic Gamesからログアウトし、もう一度ログインしてから「プレイ」を押してください。",
+                    "loginFailed": "GameLibがEpic Gamesにサインインできなかったため、{{title}}を起動できませんでした。インターネット接続を確認するか、Epic Gamesからログアウトして再度ログインしてください。このゲームがオフラインで動作する場合は、ゲームの設定で「ゲームをオフラインで実行」をオンにしてください。",
+                    "network": "GameLibがサインインのためにEpic Gamesに接続できなかったため、{{title}}を起動できませんでした。インターネット接続を確認して、もう一度お試しください。このゲームがオフラインで動作する場合は、ゲームの設定で「ゲームをオフラインで実行」をオンにしてください。"
+                }
             }
         },
         "filePicker": {
@@ -90,6 +97,7 @@
         "extraInfoErrorTitle": "追加情報を読み込めませんでした",
         "extraInfoRetry": "再試行",
         "extraInfoStaleBody": "この結果は読み込み結果が記録される前にキャッシュされたため、古い可能性があります。更新して確認してください。",
+        "moreActions": "その他の操作",
         "steamInstallingPercent": "インストール中… {{percent}}%",
         "steamUpdateCommitting": "アップデートを適用中…",
         "steamUpdatePlanning": "アップデートを準備中…",
@@ -100,6 +108,7 @@
             "checkingSize": "アップデートのサイズを確認中…",
             "confirmButton": "アップデート",
             "confirmTitle": "{{title}}をアップデートしますか？",
+            "downloadAbout": "ダウンロード約{{download}}",
             "fallback": "GameLibは以前のビルドのファイル一覧を取得できないため、すべてのファイルを確認します。ダウンロードは最大{{download}}です。",
             "notEnoughDisk": "{{peak}}の空き容量が必要です（利用可能: {{available}}）。",
             "registered": "Steamがこのゲームをアップデートします。",
@@ -350,6 +359,10 @@
         "title": "Steamキーを引き換える",
         "viewInLibrary": "ライブラリで表示"
     },
+    "reportProblem": {
+        "logsInstructions": "何が起きたかをレポートフォームに記入してください。診断情報と最近のログを自動的に含めることができます。",
+        "openForm": "レポートフォームを開く"
+    },
     "setting": {
         "eosOverlay": {
             "unavailable": "このビルドではEOS Overlayは利用できません",
@@ -474,7 +487,6 @@
                 "label": "Steamルート",
                 "moreSymbols_one": "ほか{{count}}件",
                 "moreSymbols_other": "ほか{{count}}件",
-                "missingSymbols": "カバーされていない: {{symbols}}",
                 "native": "ネイティブSteamブリッジ",
                 "notCoveredHeading": "未対応:",
                 "reason": {
@@ -504,8 +516,17 @@
             },
             "setup": {
                 "missingSymbols": "ブリッジはカバーしていない: {{symbols}}",
-                "redownloadNote": "フォールバックするとゲームがボトル化されたWindows版Steamクライアントに再度ダウンロードされる。"
+                "redownloadNote": "フォールバックするとゲームがボトル化されたWindows版Steamクライアントに再度ダウンロードされる。",
+                "steamClientUpdated": "Steamが、このバージョンのGameLibのSteamブリッジではまだ使えない形で更新されました。GameLibを更新するか、当面はSteamからゲームを起動してください。"
             }
+        },
+        "directLaunch": {
+            "confirmLaunch": "起動",
+            "confirmMessage": "Steamクライアントを使わずに、ゲームを直接起動します。このセッションでは、Steamクラウドの同期、プレイ時間の記録、実績、Steamオーバーレイは利用できません。",
+            "confirmTitle": "Steamなしで起動しますか？",
+            "failed": "{{game}}をSteamなしで起動できませんでした。",
+            "label": "Steamなしで起動",
+            "notEligible": "このゲームはSteamなしでは起動できなくなりました。代わりに「プレイ」を使用してください。"
         },
         "download": {
             "error": {
@@ -562,6 +583,8 @@
             "refusedRunning": "アップデートする前に{{title}}を終了してください。"
         },
         "engine": {
+            "drmSwitchRefused": "GameLibがゲームファイルをCrossOverに戻せなかったため（{{reason}}）、{{title}}をSteam DRMモードで起動できませんでした。このbottleから実行中のゲームをすべて閉じて、もう一度お試しください。",
+            "markerNewer": "{{title}}のゲームファイルは、より新しいバージョンのGameLibによって最後にセットアップされたため、このバージョンではエンジンを変更しません。すでに使用しているエンジンで起動するか、GameLibを更新してください。",
             "wineTabHint": "GameLib が Steam ゲーム用の Wine エンジンとボトルを選びます。",
             "toast": {
                 "body": "今回の起動では内蔵エンジンを使用します。",
@@ -822,5 +845,11 @@
             "groupBy": "ゲームをインストール状況またはストアでグループ化できます。グループ化をオフにすることもできます。",
             "sort": "ゲームを名前、最終プレイ日、インストールサイズで並べ替え、昇順と降順を切り替えられます。"
         }
+    },
+    "twoColTable": {
+        "cancel": "キャンセル",
+        "edit": "編集",
+        "remove": "削除",
+        "save": "保存"
     }
 }

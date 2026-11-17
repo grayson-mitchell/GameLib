@@ -18,6 +18,13 @@
                 "signInToSteam": "Logi Steami sisse",
                 "stalled_one": "Allalaadimine ei ole {{count}} minutit edenenud — paigaldamine peatati",
                 "stalled_other": "Allalaadimine ei ole {{count}} minutit edenenud — paigaldamine peatati"
+            },
+            "launch": {
+                "epic": {
+                    "credentials": "Sinu Epic Gamesi sisselogimine on aegunud, mistõttu {{title}} ei käivitunud. Logi Epic Gamesist välja, logi uuesti sisse ja vajuta siis Mängi.",
+                    "loginFailed": "GameLib ei saanud Epic Gamesi sisse logida, mistõttu {{title}} ei käivitunud. Kontrolli oma internetiühendust või logi Epic Gamesist välja ja uuesti sisse. Kui see mäng võib töötada võrguühenduseta, lülita selle seadetes sisse „Käivita mäng võrguühenduseta“.",
+                    "network": "GameLib ei saanud sisselogimiseks Epic Gamesiga ühendust, mistõttu {{title}} ei käivitunud. Kontrolli oma internetiühendust ja proovi uuesti. Kui see mäng võib töötada võrguühenduseta, lülita selle seadetes sisse „Käivita mäng võrguühenduseta“."
+                }
             }
         },
         "filePicker": {
@@ -90,6 +97,7 @@
         "extraInfoErrorTitle": "Lisainfo laadimine ebaõnnestus",
         "extraInfoRetry": "Proovi uuesti",
         "extraInfoStaleBody": "See tulemus salvestati vahemällu enne laadimistulemuste registreerimist, seega võib see olla vananenud. Värskenda kontrollimiseks.",
+        "moreActions": "Veel toiminguid",
         "steamInstallingPercent": "Paigaldamine… {{percent}}%",
         "steamUpdateCommitting": "Uuenduse rakendamine…",
         "steamUpdatePlanning": "Uuenduse planeerimine…",
@@ -100,6 +108,7 @@
             "checkingSize": "Uuenduse suuruse kontrollimine…",
             "confirmButton": "Uuenda",
             "confirmTitle": "Kas uuendada {{title}}?",
+            "downloadAbout": "Allalaadimine umbes {{download}}",
             "fallback": "GameLib ei saa eelmise järgu faililoendit kätte, mistõttu kontrollib ta iga faili: allalaadimine kuni {{download}}.",
             "notEnoughDisk": "Vaja on {{peak}} vaba ruumi, saadaval on {{available}}.",
             "registered": "Steam uuendab seda mängu.",
@@ -350,6 +359,10 @@
         "placeholder": "Sisesta oma Steami võti",
         "title": "Lunasta Steami võti"
     },
+    "reportProblem": {
+        "logsInstructions": "Kirjelda aruandevormis, mis juhtus. Diagnostika ja hiljutised logid võib automaatselt kaasata.",
+        "openForm": "Ava aruandevorm"
+    },
     "setting": {
         "eosOverlay": {
             "unavailable": "EOS Overlay pole selles versioonis saadaval",
@@ -453,7 +466,6 @@
                 "label": "Steami marsruut",
                 "moreSymbols_one": "ja veel {{count}}",
                 "moreSymbols_other": "ja veel {{count}}",
-                "missingSymbols": "Pole kaetud: {{symbols}}",
                 "native": "Steami natiivne sild",
                 "notCoveredHeading": "Katmata:",
                 "reason": {
@@ -483,8 +495,17 @@
             },
             "setup": {
                 "missingSymbols": "Sild ei kata: {{symbols}}",
-                "redownloadNote": "Tagasilangemine laadib mängu uuesti alla Windowsi Steami kliendisse pudelis."
+                "redownloadNote": "Tagasilangemine laadib mängu uuesti alla Windowsi Steami kliendisse pudelis.",
+                "steamClientUpdated": "Steam uuenes viisil, mida selle GameLibi versiooni Steami sild veel kasutada ei saa. Uuenda GameLibi või käivita mäng praegu Steamist."
             }
+        },
+        "directLaunch": {
+            "confirmLaunch": "Käivita",
+            "confirmMessage": "See käivitab mängu otse ilma Steami kliendita. Selles seansis puudub Steam Cloudi sünkroonimine, mänguaja jälgimine, saavutused ja Steami ülekate.",
+            "confirmTitle": "Käivitada ilma Steamita?",
+            "failed": "Mängu {{game}} ei õnnestunud ilma Steamita käivitada.",
+            "label": "Käivita ilma Steamita",
+            "notEligible": "Seda mängu ei saa enam ilma Steamita käivitada. Kasuta selle asemel nuppu Mängi."
         },
         "download": {
             "error": {
@@ -559,6 +580,8 @@
             }
         },
         "engine": {
+            "drmSwitchRefused": "Mängu {{title}} ei õnnestunud Steam DRM-i režiimis käivitada, sest GameLib ei saanud selle mängufaile tagasi CrossOveri peale lülitada ({{reason}}). Sulge kõik sellest bottle'ist töötavad mängud ja proovi uuesti.",
+            "markerNewer": "Mängu {{title}} failid seadis viimati üles GameLibi uuem versioon, seega see versioon selle mootorit ei muuda. Käivita see mootoriga, mida see juba kasutab, või uuenda GameLibi.",
             "wineTabHint": "GameLib valib Steami mängudele Wine'i mootori ja bottle'i.",
             "toast": {
                 "body": "Selle käivituse jaoks kasutatakse sisseehitatud mootorit.",
@@ -822,5 +845,11 @@
             "groupBy": "Rühmita oma mängud paigalduse oleku või poe järgi või lülita rühmitamine välja.",
             "sort": "Sorteeri oma mängud nime, viimati mängitud aja või paigalduse suuruse järgi ja pööra suund ümber."
         }
+    },
+    "twoColTable": {
+        "cancel": "Tühista",
+        "edit": "Muuda",
+        "remove": "Eemalda",
+        "save": "Salvesta"
     }
 }

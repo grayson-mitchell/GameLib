@@ -18,6 +18,13 @@
                 "signInToSteam": "Aanmelden bij Steam",
                 "stalled_one": "Geen downloadvoortgang gedurende {{count}} minuut — de installatie is gestopt",
                 "stalled_other": "Geen downloadvoortgang gedurende {{count}} minuten — de installatie is gestopt"
+            },
+            "launch": {
+                "epic": {
+                    "credentials": "Je Epic Games-aanmelding is verlopen, daarom is {{title}} niet gestart. Meld je af bij Epic Games, meld je opnieuw aan en druk dan op Spelen.",
+                    "loginFailed": "GameLib kon niet inloggen bij Epic Games, daarom is {{title}} niet gestart. Controleer je internetverbinding, of meld je af bij Epic Games en meld je opnieuw aan. Als deze game offline kan draaien, zet je in de instellingen van de game Spel Offline Draaien aan.",
+                    "network": "GameLib kon Epic Games niet bereiken om in te loggen, daarom is {{title}} niet gestart. Controleer je internetverbinding en probeer het opnieuw. Als deze game offline kan draaien, zet je in de instellingen van de game Spel Offline Draaien aan."
+                }
             }
         },
         "filePicker": {
@@ -90,6 +97,7 @@
         "extraInfoErrorTitle": "Kon extra informatie niet laden",
         "extraInfoRetry": "Opnieuw proberen",
         "extraInfoStaleBody": "Dit resultaat is gecachet voordat laadresultaten werden geregistreerd, dus het kan verouderd zijn. Vernieuw om te controleren.",
+        "moreActions": "Meer acties",
         "steamInstallingPercent": "Installeren… {{percent}}%",
         "steamUpdateCommitting": "Update toepassen…",
         "steamUpdatePlanning": "Update plannen…",
@@ -100,6 +108,7 @@
             "checkingSize": "Updategrootte controleren…",
             "confirmButton": "Bijwerken",
             "confirmTitle": "{{title}} bijwerken?",
+            "downloadAbout": "Download van ongeveer {{download}}",
             "fallback": "GameLib kan de bestandslijst van de vorige build niet ophalen en controleert daarom elk bestand: download tot {{download}}.",
             "notEnoughDisk": "Vereist {{peak}} vrije ruimte, {{available}} beschikbaar.",
             "registered": "Steam werkt deze game bij.",
@@ -350,6 +359,10 @@
         "title": "Een Steam-key inwisselen",
         "viewInLibrary": "Bekijken in bibliotheek"
     },
+    "reportProblem": {
+        "logsInstructions": "Beschrijf in het meldingsformulier wat er is gebeurd. Diagnostische gegevens en recente logs kunnen automatisch worden toegevoegd.",
+        "openForm": "Open het meldingsformulier"
+    },
     "setting": {
         "eosOverlay": {
             "unavailable": "De EOS Overlay is niet beschikbaar in deze build",
@@ -474,7 +487,6 @@
                 "label": "Steam-route",
                 "moreSymbols_one": "en nog {{count}}",
                 "moreSymbols_other": "en nog {{count}}",
-                "missingSymbols": "Niet gedekt: {{symbols}}",
                 "native": "Native Steam-brug",
                 "notCoveredHeading": "Niet gedekt:",
                 "reason": {
@@ -504,8 +516,17 @@
             },
             "setup": {
                 "missingSymbols": "De brug dekt niet: {{symbols}}",
-                "redownloadNote": "De terugval downloadt het spel opnieuw naar de Windows Steam-client in bottle."
+                "redownloadNote": "De terugval downloadt het spel opnieuw naar de Windows Steam-client in bottle.",
+                "steamClientUpdated": "Steam is op een manier bijgewerkt die de Steam-brug van deze versie van GameLib nog niet kan gebruiken. Werk GameLib bij of start de game voorlopig vanuit Steam."
             }
+        },
+        "directLaunch": {
+            "confirmLaunch": "Starten",
+            "confirmMessage": "Hiermee start de game rechtstreeks, zonder de Steam-client. Tijdens deze sessie is er geen Steam Cloud-synchronisatie, geen speeltijdregistratie, zijn er geen prestaties en geen Steam-overlay.",
+            "confirmTitle": "Starten zonder Steam?",
+            "failed": "{{game}} kon niet zonder Steam worden gestart.",
+            "label": "Starten zonder Steam",
+            "notEligible": "Deze game kan niet meer zonder Steam worden gestart. Gebruik in plaats daarvan Spelen."
         },
         "download": {
             "error": {
@@ -562,6 +583,8 @@
             "refusedRunning": "Sluit {{title}} voordat je het bijwerkt."
         },
         "engine": {
+            "drmSwitchRefused": "{{title}} kon niet starten in Steam DRM-modus omdat GameLib de gamebestanden niet kon terugzetten naar CrossOver ({{reason}}). Sluit alle games die vanuit deze bottle draaien en probeer het opnieuw.",
+            "markerNewer": "De gamebestanden van {{title}} zijn voor het laatst ingesteld door een nieuwere versie van GameLib, dus deze versie verandert de engine niet. Start de game met de engine die hij al gebruikt, of werk GameLib bij.",
             "wineTabHint": "GameLib kiest de Wine-engine en de bottle voor Steam-games.",
             "toast": {
                 "body": "De ingebouwde engine wordt gebruikt voor deze start.",
@@ -822,5 +845,11 @@
             "groupBy": "Groepeer je games op installatiestatus of winkel, of schakel groeperen uit.",
             "sort": "Sorteer je games op naam, laatst gespeeld of installatiegrootte en draai de volgorde om."
         }
+    },
+    "twoColTable": {
+        "cancel": "Annuleren",
+        "edit": "Bewerken",
+        "remove": "Verwijderen",
+        "save": "Opslaan"
     }
 }
