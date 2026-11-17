@@ -81,9 +81,20 @@
         "steamInstallTargetDefault": "Your Steam library"
     },
     "customThemes": {
+        "actionDuplicate": "Duplicate {{name}}",
+        "actionDuplicateShort": "Duplicate",
+        "actionEdit": "Edit {{name}}",
         "active": "Active",
         "builtInReadOnly": "Built-in theme, read-only",
-        "groupBuiltIn": "Built-in"
+        "copyName": "{{name}} copy",
+        "copyNameNumbered": "{{name}} copy {{n}}",
+        "emptyBody": "Duplicate a theme to start your own. Your copy keeps the original colours until you change them.",
+        "emptyHeading": "No custom themes yet",
+        "groupBuiltIn": "Built-in",
+        "groupCustom": "Your themes",
+        "limitBody": "You’ve reached the limit of {{max}} custom themes. Delete one to make another.",
+        "limitClose": "Close message",
+        "limitTitle": "Theme limit reached"
     },
     "discounts": {
         "pegiPrefix": "PEGI ≤ {{value}}"

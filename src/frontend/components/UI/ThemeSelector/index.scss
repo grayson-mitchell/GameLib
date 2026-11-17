@@ -148,3 +148,61 @@
   gap: 4px;
   color: var(--text-secondary);
 }
+
+// Icon-only action buttons: a 32px square hit area around a 16px glyph. Rest colour is
+// --text-secondary; only Delete changes colour (to --status-danger) on hover and focus.
+.themeCard__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 32px;
+  block-size: 32px;
+  margin: 0;
+  padding: 0;
+  font-size: 16px;
+  color: var(--text-secondary);
+  background: none;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+  appearance: none;
+}
+
+.themeCard__action:hover,
+.themeCard__action:focus-visible {
+  color: var(--text-default);
+}
+
+.themeCard__action--danger:hover,
+.themeCard__action--danger:focus-visible {
+  color: var(--status-danger);
+}
+
+.themeCard__action:focus-visible {
+  outline: var(--focus-ring-width, 3px) solid
+    var(--focus-ring-color, var(--accent, #0080ff));
+  outline-offset: 2px;
+}
+
+// "Your themes" with no custom themes: a heading and one sentence, never an empty box.
+.themeGallery__empty {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-block: 8px;
+}
+
+.themeGallery__emptyHeading {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: var(--semibold);
+  line-height: 1.5;
+}
+
+.themeGallery__emptyBody {
+  max-inline-size: 60ch;
+  margin: 0;
+  font-size: var(--text-md);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
