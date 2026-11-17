@@ -5,9 +5,16 @@
  */
 import type { CustomTheme } from '../../common/types/customTheme'
 import { isBuiltInThemeKey } from './builtinTokens'
+import type { SupportsFn } from './validate'
 
 export const CUSTOM_THEME_PREFIX = 'custom:'
 export const DEFAULT_THEME_KEY = 'midnightMirage'
+
+export const MAX_CUSTOM_THEMES = 50
+export const MAX_THEME_NAME_LENGTH = 60
+export const MAX_TOKENS_PER_THEME = 256
+export const MAX_TOKEN_VALUE_LENGTH = 512
+export const THEME_ID_PATTERN = /^[0-9a-f]{16}$/
 
 export const customThemeKey = (id: string): string =>
   `${CUSTOM_THEME_PREFIX}${id}`
@@ -43,7 +50,10 @@ const isPlainObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v)
 
 /** First structural pass: never throws; anything malformed is dropped. */
-export function parseCustomThemes(raw: unknown): CustomTheme[] {
+export function parseCustomThemes(
+  raw: unknown,
+  _supports?: SupportsFn
+): CustomTheme[] {
   if (!Array.isArray(raw)) return []
   const out: CustomTheme[] = []
   for (const entry of raw) {
@@ -63,4 +73,27 @@ export function parseCustomThemes(raw: unknown): CustomTheme[] {
     }
   }
   return out
+}
+
+export function validateThemeName(
+  _name: string,
+  _others: readonly { id: string; name: string }[],
+  _selfId?: string
+): 'empty' | 'too-long' | 'taken' | null {
+  return null
+}
+
+export function nextCopyName(
+  _sourceName: string,
+  _existingNames: readonly string[],
+  format: (n: number | null) => string
+): string {
+  return format(null)
+}
+
+export function newCustomThemeId(
+  _existingIds: ReadonlySet<string>,
+  _random: (b: Uint8Array) => Uint8Array = (b) => crypto.getRandomValues(b)
+): string {
+  return ''
 }
