@@ -122,12 +122,12 @@ SDK_FIELDS: tuple[dict, ...] = (
     {"literal": "Total Phases", "canonical": False, "required": 0, "section": None},
 )
 
-# Anti-vacuity floor for the self-test -- see anti_vacuity() below. 11 cases: 8 REJECT
+# Anti-vacuity floor for the self-test -- see anti_vacuity() below. 13 cases: 9 REJECT
 # (bold-Status duplicate, plain-plan duplicate, Last-activity continuation, ###-subheading
 # early-termination, missing Resume file, stray Current Plan, zero-canonical-fields body,
-# missing target file) + 3 ACCEPT (minimal document, Current-focus/table-row decoys,
-# mid-line field literal).
-MINIMUM_SELF_TEST_CASES = 11
+# missing target file, Plan: TBD) + 4 ACCEPT (minimal document, Current-focus/table-row
+# decoys, mid-line field literal, Plan: Not started).
+MINIMUM_SELF_TEST_CASES = 13
 
 
 def fail(message: str) -> None:
@@ -281,16 +281,23 @@ def check_document(text: str) -> tuple[bool, list[str]]:
                 f"updateCurrentPositionFields/stateAdvancePlan"
             )
 
-    # ---- Check 5: Plan: value matches ^\d+\s+of\s+\d+ (advance-plan's compound parse) ----
+    # ---- Check 5: Plan: value is `<N> of <M>` or gsd-core's own `Not started` ----
+    # `<N> of <M>` is what advance-plan's compound parse reads (1.42.3
+    # state-mutation.ts:555-559; gsd-core state-transition.cjs parsePlanFields).
+    # `Not started` (exact) is the value gsd-core itself writes when a phase is
+    # ready to plan or ready to execute (state-transition.cjs, `currentPlan:
+    # 'Not started'`; quick 261117-sf6). advance-plan on it returns an error
+    # without writing, so it cannot corrupt anything. Any other value is still
+    # drift.
     if "Plan" in canonical_line_no:
         line_no = canonical_line_no["Plan"]
         line_text = body_lines[line_no - 1]
         value = line_text.split(":", 1)[1].strip() if ":" in line_text else ""
-        if not re.match(r"^\d+\s+of\s+\d+", value):
+        if not (re.match(r"^\d+\s+of\s+\d+", value) or value == "Not started"):
             problems.append(
-                f"Plan: value {value!r} does not start with `<N> of <M>` -- "
-                f"state.advance-plan's compound-format parser (state-mutation.ts:555-559) "
-                f"requires this shape"
+                f"Plan: value {value!r} is neither `<N> of <M>` (advance-plan's "
+                f"compound-format parse) nor gsd-core's own between-phases value "
+                f"`Not started`"
             )
 
     return (len(problems) == 0), problems
@@ -568,6 +575,18 @@ def self_test() -> int:
             "Filler content.\n",
             "Filler content -- see Status: x for more.\n",
         ),
+    )
+
+    # ACCEPT: gsd-core's own between-phases value (quick 261117-sf6).
+    accept(
+        "Plan: Not started -- the value gsd-core writes when a phase is ready to plan",
+        MINIMAL_VALID_DOCUMENT.replace("Plan: 7 of 7 — description\n", "Plan: Not started\n"),
+    )
+
+    # REJECT: any other non-`<N> of <M>` value -- check 5 must not have gone vacuous.
+    reject(
+        "Plan: TBD -- neither `<N> of <M>` nor `Not started`",
+        MINIMAL_VALID_DOCUMENT.replace("Plan: 7 of 7 — description\n", "Plan: TBD\n"),
     )
 
     return case_count
