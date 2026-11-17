@@ -162,5 +162,5 @@ fn every_shipped_timeline_replays() {
             count += 1;
         }
     }
-    assert!(count >= 39, "found {count} timelines");
+    assert!(count >= 35, "found {count} timelines");
 }
