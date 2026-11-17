@@ -10,11 +10,16 @@
 //! |---|---|---|---|
 //! | Steam rewrote the ACF (content differs from the GameLib baseline, StateFlags bit 4, real buildid) | yes | yes | yes |
 //! | a `Loaded N apps from install folder` line for the record's folder with N above the count logged before the watch began (`content_log.txt`, 81-05, Open Question 3) | yes | yes | yes |
+//! | `libraryfolders.vdf` lists the app and was modified after the record (81-05, spike 088) | no | no | yes |
 //! | Steam's own install state for the app has bit 4 (the `--steam-appstate` helper, D-08) | yes | never | never |
 //! | the recorded `steam_osx` pid is no longer live, unless the helper says the state is not 4 | yes | never | never |
 //!
 //! A pid change is not evidence off macOS: spikes 087 and 088 (r4) showed that a sign-out restarts
-//! Steam without adopting anything.
+//! Steam without adopting anything (Steam not running is no evidence there either).
+//!
+//! Signed-in off macOS (D-03), reported only while Steam is running: Windows reads HKCU
+//! `ActiveProcess\ActiveUser` (0 = signed out), Linux the last `Logged On` / `Logged Off` state
+//! line of `logs/connection_log.txt`.
 //!
 //! macOS helper reading (81-04, spike 083). Steam open at its sign-in screen adopts the install the
 //! moment the operator signs in, with the same pid, so the pid rule alone never sees it. Each
@@ -40,7 +45,10 @@
 //!
 //! Logging rule (T-28-04): appId and evidence kind only, never a path, SteamID, title or payload.
 
-use crate::adoption_evidence::{capture_log_cursor, folder_key, scan_log_for_rescan, LogCursor};
+use crate::adoption_evidence::{
+    capture_log_cursor, connection_log_signed_in, folder_key, library_folders_list_app,
+    scan_log_for_rescan, windows_signed_in, LogCursor,
+};
 use crate::app_state::{read_app_state, AppStateOutcome};
 use crate::constants::{
     ADOPTION_ACF_MAX_BYTES, ADOPTION_HELPER_SIGNED_IN_MIN_INTERVAL_MS,
@@ -52,6 +60,7 @@ use crate::host::HoldSink;
 use crate::outbox::{apply_effects, Outbox};
 use crate::profile::Platform;
 use crate::registry::{PollKind, Registry};
+use gamelib_steamfiles::readers::{RealRegistry, RegistryDword};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::BTreeMap;
@@ -263,6 +272,8 @@ struct Inner {
     steam_root: Option<PathBuf>,
     /// `steam_root` resolved once, so the fallback discovery runs at most once.
     resolved_root: OnceLock<PathBuf>,
+    /// The Windows HKCU reader (`ActiveUser`); the real registry unless a test swaps it.
+    registry_reader: Arc<dyn RegistryDword + Send + Sync>,
     state: Mutex<State>,
 }
 
@@ -294,6 +305,24 @@ impl AdoptionWatch {
                 platform,
                 steam_root,
                 resolved_root: OnceLock::new(),
+                registry_reader: Arc::new(RealRegistry),
+                state: Mutex::new(State::default()),
+            }),
+        }
+    }
+
+    /// A watcher identical to this one but reading HKCU through `reader`. For tests; call it right
+    /// after [`AdoptionWatch::new`]: it starts with an empty watch list.
+    pub fn with_registry_reader(self, reader: Arc<dyn RegistryDword + Send + Sync>) -> Self {
+        let old = &self.inner;
+        AdoptionWatch {
+            inner: Arc::new(Inner {
+                registry: old.registry.clone(),
+                outbox: old.outbox.clone(),
+                platform: old.platform,
+                steam_root: old.steam_root.clone(),
+                resolved_root: OnceLock::new(),
+                registry_reader: reader,
                 state: Mutex::new(State::default()),
             }),
         }
@@ -449,10 +478,39 @@ impl AdoptionWatch {
                 return reading;
             }
         }
-        // The helper and the pid rule are macOS only: on Windows and Linux a sign-out restarts
-        // Steam without adopting anything (spikes 087 and 088, r4).
-        if self.inner.platform != Platform::Darwin {
-            return reading;
+        // The helper and the pid rule are macOS only. On Windows and Linux neither a Steam pid
+        // change nor Steam not running is evidence: a sign-out restarts Steam without adopting
+        // anything (spikes 087 and 088, r4). Those platforms get their own evidence and their
+        // signed-in reading, reported only while Steam is running.
+        let steam_running = reading.steam_running == Some(true);
+        match self.inner.platform {
+            Platform::Darwin => {}
+            Platform::Linux => {
+                // Spike 088: Steam never rewrites the ACF on Linux; it lists the app in
+                // libraryfolders.vdf instead.
+                let vdf = self
+                    .steam_root()
+                    .join("steamapps")
+                    .join("libraryfolders.vdf");
+                if library_folders_list_app(&vdf, &args.app_id, args.recorded_at_ms) {
+                    reading.adopted = true;
+                    reading.evidence = Some("libraryfolders".to_string());
+                    return reading;
+                }
+                if steam_running {
+                    let log = self.steam_root().join("logs").join("connection_log.txt");
+                    reading.signed_in = connection_log_signed_in(&log);
+                }
+                return reading;
+            }
+            Platform::Win32 => {
+                // Spike 087: ActiveUser 0 is signed out. The HKCU `Apps\<id>\Installed` value is
+                // never read: it is not reliable evidence.
+                if steam_running {
+                    reading.signed_in = windows_signed_in(&*self.inner.registry_reader);
+                }
+                return reading;
+            }
         }
         let now = self.inner.registry.clock().now_ms();
         if cache.wants_helper(args, pids_changed, now) {
@@ -569,15 +627,13 @@ impl AdoptionWatch {
             })
             .collect();
         if !snapshot.is_empty() {
-            let pids = if self.inner.platform == Platform::Darwin {
-                crate::hold::list_steam_client_pids(
-                    &**self.inner.registry.runner(),
-                    self.inner.platform,
-                )
-                .await
-            } else {
-                None
-            };
+            // Every OS: `steamRunning` and the signed-in readings need the live Steam pid list. Only
+            // macOS reads a pid change as evidence.
+            let pids = crate::hold::list_steam_client_pids(
+                &**self.inner.registry.runner(),
+                self.inner.platform,
+            )
+            .await;
             let sorted_pids = pids.as_deref().map(|p| {
                 let mut v = p.to_vec();
                 v.sort_unstable();

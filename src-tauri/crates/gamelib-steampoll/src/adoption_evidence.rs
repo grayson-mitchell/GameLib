@@ -15,8 +15,18 @@
 //!
 //! The folder text differs per OS (macOS mixes `/` with a trailing `\appmanifest_*.acf`, Windows
 //! is all backslashes), so both sides are reduced to [`folder_key`] before they are compared.
+//!
+//! # Linux and Windows readings (spikes 087 and 088)
+//!
+//! Linux: Steam lists an adopted app in the `apps` map of `steamapps/libraryfolders.vdf`, and never
+//! rewrites the ACF (spike 088), so [`library_folders_list_app`] is its evidence. Signed-in is the
+//! last `Logged On` / `Logged Off` state line of `logs/connection_log.txt`
+//! ([`connection_log_signed_in`]). Windows: signed-in is `HKCU\Software\Valve\Steam\ActiveProcess`
+//! `ActiveUser` ([`windows_signed_in`]); 0 means signed out. A Steam pid change, including Steam not
+//! running, is never evidence on either OS: a sign-out restarts Steam without adopting anything.
 
-use crate::constants::ADOPTION_LOG_TAIL_BYTES;
+use crate::constants::{ADOPTION_CONNECTION_LOG_TAIL_BYTES, ADOPTION_LOG_TAIL_BYTES};
+use gamelib_steamfiles::readers::RegistryDword;
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::Path;
@@ -174,4 +184,92 @@ fn scan(path: &Path, cursor: &LogCursor) -> Option<(bool, u64)> {
             .any(|(folder, count)| folder == cursor.key && count > prior)
     });
     Some((found, new_offset))
+}
+
+/// True when `libraryfolders.vdf` at `path` lists `app_id` under some folder's `apps` map AND the
+/// file was modified after `recorded_at_ms`. An app listed in a file that predates the record is an
+/// older install, not this one; a file that cannot be read or parsed is "not listed".
+pub fn library_folders_list_app(path: &Path, app_id: &str, recorded_at_ms: f64) -> bool {
+    let modified_ms = std::fs::metadata(path)
+        .and_then(|m| m.modified())
+        .ok()
+        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|d| d.as_millis() as f64);
+    let Some(modified_ms) = modified_ms else {
+        return false;
+    };
+    if modified_ms <= recorded_at_ms {
+        return false;
+    }
+    gamelib_steamfiles::library::read_library_folder_apps(path)
+        .is_some_and(|apps| apps.iter().any(|id| id == app_id))
+}
+
+/// The HKCU subkey and value that name the account Steam is signed in as.
+const ACTIVE_PROCESS_SUBKEY: &str = "Software\\Valve\\Steam\\ActiveProcess";
+const ACTIVE_USER_VALUE: &str = "ActiveUser";
+
+/// Windows signed-in: `ActiveUser` 0 is signed out, any other value is signed in, and a missing
+/// value or a read error is unknown. Never reads `Apps\<id>\Installed`: spike 087 found that key
+/// unreliable as adoption evidence.
+pub fn windows_signed_in(reg: &dyn RegistryDword) -> Option<bool> {
+    match reg.hkcu_dword(ACTIVE_PROCESS_SUBKEY, ACTIVE_USER_VALUE) {
+        Ok(Some(0)) => Some(false),
+        Ok(Some(_)) => Some(true),
+        Ok(None) | Err(()) => None,
+    }
+}
+
+/// The state word of a connection_log `[YYYY-MM-DD HH:MM:SS] [State, n, m] ...` line (the grammar
+/// `gamelib-steamcm`'s wrap.rs reads, copied rather than imported: that parser is private).
+fn state_word(line: &str) -> Option<&str> {
+    let line = line.trim_end_matches('\r');
+    let b = line.as_bytes();
+    if b.len() < 24 || b[0] != b'[' || b[5] != b'-' || b[8] != b'-' || b[11] != b' ' {
+        return None;
+    }
+    let number = |range: std::ops::Range<usize>| line.get(range)?.parse::<u32>().ok();
+    number(1..5)?;
+    number(6..8)?;
+    number(9..11)?;
+    number(12..14)?;
+    number(15..17)?;
+    number(18..20)?;
+    let rest = line.get(20..)?.strip_prefix("] [")?;
+    let inner = &rest[..rest.find(']')?];
+    let mut parts = inner.split(", ");
+    let word = parts.next()?;
+    if word.is_empty() || !word.chars().all(|c| c.is_ascii_alphabetic() || c == ' ') {
+        return None;
+    }
+    parts.next()?.parse::<i64>().ok()?;
+    parts.next()?.parse::<i64>().ok()?;
+    Some(word)
+}
+
+/// Linux signed-in: the last state line in the final
+/// [`ADOPTION_CONNECTION_LOG_TAIL_BYTES`] of `connection_log.txt`. `Logged On` is signed in,
+/// `Logged Off` signed out; any other state word, no state line or an unreadable file is unknown.
+pub fn connection_log_signed_in(path: &Path) -> Option<bool> {
+    let mut file = File::open(path).ok()?;
+    let meta = file.metadata().ok()?;
+    if !meta.is_file() {
+        return None;
+    }
+    let len = meta.len();
+    let start = len.saturating_sub(ADOPTION_CONNECTION_LOG_TAIL_BYTES);
+    file.seek(SeekFrom::Start(start)).ok()?;
+    let mut buf = Vec::new();
+    file.take(len - start).read_to_end(&mut buf).ok()?;
+    let text = String::from_utf8_lossy(&buf);
+    let mut lines = text.split('\n');
+    if start > 0 {
+        // The window began inside a line: drop that fragment.
+        lines.next();
+    }
+    match lines.filter_map(state_word).next_back()? {
+        "Logged On" => Some(true),
+        "Logged Off" => Some(false),
+        _ => None,
+    }
 }

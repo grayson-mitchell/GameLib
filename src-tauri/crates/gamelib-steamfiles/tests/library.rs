@@ -165,3 +165,66 @@ fn scan_caps_directory_entries() {
     assert_eq!(r.skipped.len(), 1);
     assert_eq!(r.skipped[0].reason, "too-many-entries");
 }
+
+// ---- read_library_folder_apps (81-05) ----
+
+const TWO_FOLDERS: &str = r#""libraryfolders"
+{
+	"0"
+	{
+		"path"		"C:\\Program Files (x86)\\Steam"
+		"label"		""
+		"apps"
+		{
+			"228980"		"1234567"
+			"1628350"		"7654321"
+		}
+	}
+	"1"
+	{
+		"path"		"D:\\SteamLibrary"
+	}
+	"contentstatsid"		"5551212"
+}
+"#;
+
+fn vdf(content: &str) -> (tempfile::TempDir, PathBuf) {
+    let d = tempfile::tempdir().unwrap();
+    let p = d.path().join("libraryfolders.vdf");
+    std::fs::write(&p, content).unwrap();
+    (d, p)
+}
+
+#[test]
+fn folder_apps_lists_every_app_of_every_folder_and_skips_folders_without_apps() {
+    let (_d, p) = vdf(TWO_FOLDERS);
+    let mut apps = read_library_folder_apps(&p).unwrap();
+    apps.sort();
+    assert_eq!(apps, vec!["1628350", "228980"]);
+}
+
+#[test]
+fn folder_apps_on_a_vdf_with_no_apps_maps_is_an_empty_list() {
+    let (_d, p) = vdf("\"libraryfolders\"\n{\n\t\"0\"\n\t{\n\t\t\"path\"\t\t\"/lib\"\n\t}\n}\n");
+    assert_eq!(read_library_folder_apps(&p), Some(vec![]));
+}
+
+#[test]
+fn folder_apps_ignores_non_numeric_app_keys() {
+    let (_d, p) = vdf(
+        "\"libraryfolders\"\n{\n\t\"0\"\n\t{\n\t\t\"apps\"\n\t\t{\n\t\t\t\"480\"\t\t\"1\"\n\t\t\t\"x1\"\t\t\"2\"\n\t\t}\n\t}\n}\n",
+    );
+    assert_eq!(read_library_folder_apps(&p), Some(vec!["480".to_string()]));
+}
+
+#[test]
+fn folder_apps_is_none_for_a_missing_unparseable_or_oversized_file() {
+    let d = tempfile::tempdir().unwrap();
+    assert_eq!(read_library_folder_apps(&d.path().join("absent.vdf")), None);
+
+    let (_d, p) = vdf("\"libraryfolders\"\n{\n\t\"0\"\n\t{\n");
+    assert_eq!(read_library_folder_apps(&p), None);
+
+    let (_d, p) = vdf(&" ".repeat(LIBRARY_MAX_BYTES as usize + 1));
+    assert_eq!(read_library_folder_apps(&p), None);
+}

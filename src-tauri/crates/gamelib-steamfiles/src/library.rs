@@ -73,6 +73,45 @@ pub fn read_library_folders(path: &Path) -> LibraryFoldersResult {
     }
 }
 
+/// The app ids listed under the `apps` map of every library folder in `libraryfolders.vdf`
+/// (Steam writes an app there once it has adopted an install into that folder). Folders without an
+/// `apps` map contribute nothing; non-numeric keys are skipped. `None` when the file is missing,
+/// over [`LIBRARY_MAX_BYTES`] or does not parse, so a caller never reads a failure as "not listed".
+pub fn read_library_folder_apps(path: &Path) -> Option<Vec<String>> {
+    let meta = std::fs::metadata(path).ok()?;
+    if meta.len() > LIBRARY_MAX_BYTES {
+        return None;
+    }
+    let bytes = std::fs::read(path).ok()?;
+    let limits = Limits {
+        max_bytes: LIBRARY_MAX_BYTES as usize,
+        max_depth: 64,
+    };
+    let pairs = parse(&bytes, &limits).ok()?;
+    let root = merged(&pairs);
+    let mut apps = Vec::new();
+    if let Some(folders) = root.map("libraryfolders") {
+        for (key, value) in folders.iter() {
+            if key.is_empty() || !key.bytes().all(|b| b.is_ascii_digit()) {
+                continue;
+            }
+            let MergedValue::Map(folder) = value else {
+                continue;
+            };
+            if let Some(listed) = folder.map("apps") {
+                apps.extend(
+                    listed
+                        .iter()
+                        .map(|(id, _)| id)
+                        .filter(|id| !id.is_empty() && id.bytes().all(|b| b.is_ascii_digit()))
+                        .map(str::to_string),
+                );
+            }
+        }
+    }
+    Some(apps)
+}
+
 #[derive(Serialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ScannedAcf {

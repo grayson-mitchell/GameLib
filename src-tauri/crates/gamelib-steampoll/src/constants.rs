@@ -55,3 +55,5 @@ pub const ADOPTION_INSTALLAPP_FALLBACK_DELAY_MS: u64 = 10_000;
 /// predates a watch and for each tick's new lines (T-81-15). A longer append is read from its last
 /// window only.
 pub const ADOPTION_LOG_TAIL_BYTES: u64 = 262_144;
+/// The most of `logs/connection_log.txt` read to find Steam's last logon state (Linux, T-81-15).
+pub const ADOPTION_CONNECTION_LOG_TAIL_BYTES: u64 = 65_536;

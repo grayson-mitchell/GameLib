@@ -2,6 +2,7 @@
 //! (Steam's ACF rewrite everywhere, a changed steam_osx pid on macOS only), the singleton task
 //! lifecycle and the watch-arg validation.
 
+use gamelib_steamfiles::readers::RegistryDword;
 use gamelib_steampoll::adoption::{
     acf_rewritten_by_steam, validate_watch_args, AdoptionWatch, AdoptionWatchArgs,
     ADOPTION_POLL_KEY,
@@ -17,7 +18,7 @@ use gamelib_steampoll::registry::{PollKind, Registry};
 use gamelib_steampoll::testing::{AckMode, FakeClock, RecordingHost, ScriptedRunner, StreamRecord};
 use serde_json::Value;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 const PGREP_MAC: &str = "/usr/bin/pgrep -x steam_osx";
@@ -165,6 +166,58 @@ impl Rig {
             .open(self.content_log())
             .unwrap();
         f.write_all(content.as_bytes()).unwrap();
+    }
+
+    /// Swaps the watch for one that reads HKCU through `reader`.
+    fn with_registry(self, reader: Arc<dyn RegistryDword + Send + Sync>) -> Rig {
+        Rig {
+            watch: self.watch.with_registry_reader(reader),
+            ..self
+        }
+    }
+
+    /// Writes `<steamRoot>/steamapps/libraryfolders.vdf`.
+    fn write_library_folders(&self, content: &str) {
+        let dir = self.steam_root.path().join("steamapps");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("libraryfolders.vdf"), content).unwrap();
+    }
+
+    /// Writes `<steamRoot>/logs/connection_log.txt`.
+    fn write_connection_log(&self, content: &str) {
+        let dir = self.steam_root.path().join("logs");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("connection_log.txt"), content).unwrap();
+    }
+
+    /// What the Windows `tasklist` probe answers: the listed steam.exe pids, or none.
+    fn script_tasklist(&self, pids: &[u32]) {
+        let system_root = std::env::var("SystemRoot").unwrap_or_else(|_| "C:\\Windows".to_string());
+        let tasklist = format!(
+            "{}\\System32\\tasklist.exe",
+            system_root.trim_end_matches('\\')
+        );
+        let stdout = if pids.is_empty() {
+            "INFO: No tasks are running which match the specified criteria.\r\n".to_string()
+        } else {
+            pids.iter()
+                .map(|p| format!("\"steam.exe\",\"{p}\",\"Console\",\"1\",\"1 K\"\r\n"))
+                .collect()
+        };
+        self.runner.on(
+            &format!("{tasklist} /FI IMAGENAME eq steam.exe /FO CSV /NH"),
+            vec![pgrep(Some(0), &stdout)],
+        );
+    }
+
+    /// What the Linux `pgrep -x steam` probe answers: the listed pids, or none.
+    fn script_linux_steam(&self, pids: &[u32]) {
+        if pids.is_empty() {
+            self.runner.on("pgrep -x steam", vec![pgrep(Some(1), "")]);
+        } else {
+            let out: String = pids.iter().map(|p| format!("{p}\n")).collect();
+            self.runner.on("pgrep -x steam", vec![pgrep(Some(0), &out)]);
+        }
     }
 
     fn helper_path(&self) -> &str {
@@ -1133,4 +1186,248 @@ async fn read_skips_the_log_evidence_for_an_app_that_is_not_watched() {
     r.append_content_log(&loaded_line(&lib, 9));
     let reading = r.watch.read(&lib.args("480", 111)).await;
     assert!(!reading.adopted);
+}
+
+// ---- Linux libraryfolders evidence and the Windows/Linux readings (81-05 task 2) ----
+
+const VDF_LISTING_480: &str = "\"libraryfolders\"\n{\n\t\"0\"\n\t{\n\t\t\"path\"\t\t\"/home/u/.steam/steam\"\n\t\t\"apps\"\n\t\t{\n\t\t\t\"228980\"\t\t\"1\"\n\t\t\t\"480\"\t\t\"2\"\n\t\t}\n\t}\n}\n";
+
+/// A registry that answers one scripted `ActiveUser` value and remembers the subkeys it was asked.
+struct FakeRegistry {
+    answer: Mutex<Result<Option<u32>, ()>>,
+    reads: Mutex<Vec<(String, String)>>,
+}
+
+impl FakeRegistry {
+    fn new(answer: Result<Option<u32>, ()>) -> Arc<Self> {
+        Arc::new(FakeRegistry {
+            answer: Mutex::new(answer),
+            reads: Mutex::new(Vec::new()),
+        })
+    }
+    fn set(&self, answer: Result<Option<u32>, ()>) {
+        *self.answer.lock().unwrap() = answer;
+    }
+}
+
+impl RegistryDword for FakeRegistry {
+    fn hkcu_dword(&self, subkey: &str, value: &str) -> Result<Option<u32>, ()> {
+        self.reads
+            .lock()
+            .unwrap()
+            .push((subkey.to_string(), value.to_string()));
+        *self.answer.lock().unwrap()
+    }
+}
+
+#[tokio::test(start_paused = true)]
+async fn on_linux_a_libraryfolders_listing_newer_than_the_record_adopts() {
+    let r = rig(Platform::Linux).await;
+    let lib = library();
+    lib.write("480", &handoff_acf("480"));
+    r.write_library_folders(VDF_LISTING_480);
+    let args = lib.args("480", 111);
+    let reading = r.watch.read(&args).await;
+    assert!(reading.adopted);
+    assert_eq!(reading.evidence.as_deref(), Some("libraryfolders"));
+
+    r.watch.watch(args).unwrap();
+    tick().await;
+    assert_eq!(r.events(), vec![("480".to_string(), true, None)]);
+    assert!(r.watch.watched_app_ids().is_empty());
+}
+
+#[tokio::test(start_paused = true)]
+async fn on_linux_a_libraryfolders_listing_older_than_the_record_is_not_adopted() {
+    let r = rig(Platform::Linux).await;
+    let lib = library();
+    lib.write("480", &handoff_acf("480"));
+    r.write_library_folders(VDF_LISTING_480);
+    let mut args = lib.args("480", 111);
+    // Recorded a long time after the file was written.
+    args.recorded_at_ms = 4_100_000_000_000.0;
+    assert!(!r.watch.read(&args).await.adopted);
+    r.watch.watch(args).unwrap();
+    tick().await;
+    tick().await;
+    assert_eq!(r.events(), vec![("480".to_string(), false, None)]);
+    assert!(r.active());
+}
+
+#[tokio::test(start_paused = true)]
+async fn on_linux_an_app_missing_from_libraryfolders_is_not_adopted() {
+    let r = rig(Platform::Linux).await;
+    let lib = library();
+    lib.write("480", &handoff_acf("480"));
+    r.write_library_folders(&VDF_LISTING_480.replace("\"480\"", "\"481\""));
+    assert!(!r.watch.read(&lib.args("480", 111)).await.adopted);
+}
+
+#[tokio::test(start_paused = true)]
+async fn on_linux_a_changed_steam_pid_is_never_adopted() {
+    let r = rig(Platform::Linux).await;
+    let lib = library();
+    lib.write("480", &handoff_acf("480"));
+    r.script_linux_steam(&[222]);
+    let args = lib.args("480", 111);
+    r.watch.watch(args.clone()).unwrap();
+    for _ in 0..3 {
+        tick().await;
+    }
+    assert!(!r.watch.read(&args).await.adopted);
+    assert_eq!(r.events(), vec![("480".to_string(), false, None)]);
+    assert!(r.active());
+}
+
+#[tokio::test(start_paused = true)]
+async fn on_linux_a_stopped_steam_with_a_recorded_pid_is_never_adopted() {
+    let r = rig(Platform::Linux).await;
+    let lib = library();
+    lib.write("480", &handoff_acf("480"));
+    r.script_linux_steam(&[]);
+    let args = lib.args("480", 111);
+    let reading = r.watch.read(&args).await;
+    assert!(!reading.adopted);
+    assert_eq!(reading.steam_running, Some(false));
+    r.watch.watch(args).unwrap();
+    for _ in 0..3 {
+        tick().await;
+    }
+    assert_eq!(r.events(), vec![("480".to_string(), false, None)]);
+    assert!(r.active());
+}
+
+#[tokio::test(start_paused = true)]
+async fn on_windows_a_changed_steam_pid_is_never_adopted() {
+    let r = rig(Platform::Win32).await;
+    let lib = library();
+    lib.write("480", &handoff_acf("480"));
+    r.script_tasklist(&[222]);
+    let args = lib.args("480", 111);
+    r.watch.watch(args.clone()).unwrap();
+    for _ in 0..3 {
+        tick().await;
+    }
+    assert!(!r.watch.read(&args).await.adopted);
+    assert_eq!(r.events(), vec![("480".to_string(), false, None)]);
+    assert!(r.active());
+}
+
+#[tokio::test(start_paused = true)]
+async fn on_windows_a_stopped_steam_with_a_recorded_pid_is_never_adopted() {
+    let r = rig(Platform::Win32).await;
+    let lib = library();
+    lib.write("480", &handoff_acf("480"));
+    r.script_tasklist(&[]);
+    let args = lib.args("480", 111);
+    let reading = r.watch.read(&args).await;
+    assert!(!reading.adopted);
+    assert_eq!(reading.steam_running, Some(false));
+    r.watch.watch(args).unwrap();
+    for _ in 0..3 {
+        tick().await;
+    }
+    assert_eq!(r.events(), vec![("480".to_string(), false, None)]);
+    assert!(r.active());
+}
+
+#[tokio::test(start_paused = true)]
+async fn on_windows_signed_in_follows_active_user_only_while_steam_is_running() {
+    let reg = FakeRegistry::new(Ok(Some(35_601_368)));
+    let r = rig(Platform::Win32).await.with_registry(reg.clone());
+    let lib = library();
+    lib.write("480", &handoff_acf("480"));
+    r.script_tasklist(&[111]);
+    r.watch.watch(lib.args("480", 111)).unwrap();
+
+    tick().await;
+    assert_eq!(
+        r.events().last(),
+        Some(&("480".to_string(), false, Some(true)))
+    );
+    reg.set(Ok(Some(0)));
+    tick().await;
+    assert_eq!(
+        r.events().last(),
+        Some(&("480".to_string(), false, Some(false)))
+    );
+    // Steam stopped: the registry may still say 0 or an account, but it is not a reading.
+    reg.set(Ok(Some(35_601_368)));
+    r.script_tasklist(&[]);
+    tick().await;
+    assert_eq!(r.events().last(), Some(&("480".to_string(), false, None)));
+    // A missing value or a read error is unknown, not signed out.
+    r.script_tasklist(&[111]);
+    reg.set(Ok(None));
+    tick().await;
+    assert_eq!(r.events().last(), Some(&("480".to_string(), false, None)));
+    reg.set(Err(()));
+    assert_eq!(r.watch.read(&lib.args("480", 111)).await.signed_in, None);
+
+    // Only ActiveProcess\ActiveUser is ever read (spike 087: never Apps\<id>\Installed).
+    let reads = reg.reads.lock().unwrap();
+    assert!(!reads.is_empty());
+    assert!(reads.iter().all(|(subkey, value)| {
+        subkey == "Software\\Valve\\Steam\\ActiveProcess" && value == "ActiveUser"
+    }));
+}
+
+#[tokio::test(start_paused = true)]
+async fn on_linux_signed_in_follows_the_connection_log_only_while_steam_is_running() {
+    let r = rig(Platform::Linux).await;
+    let lib = library();
+    lib.write("480", &handoff_acf("480"));
+    r.script_linux_steam(&[111]);
+    r.write_connection_log("[2026-11-18 09:00:00] [Logged On, 1, 2] x\n");
+    r.watch.watch(lib.args("480", 111)).unwrap();
+
+    tick().await;
+    assert_eq!(
+        r.events().last(),
+        Some(&("480".to_string(), false, Some(true)))
+    );
+    r.write_connection_log(
+        "[2026-11-18 09:00:00] [Logged On, 1, 2] x\n[2026-11-18 09:05:00] [Logged Off, 1, 2] x\n",
+    );
+    tick().await;
+    assert_eq!(
+        r.events().last(),
+        Some(&("480".to_string(), false, Some(false)))
+    );
+    r.script_linux_steam(&[]);
+    tick().await;
+    assert_eq!(r.events().last(), Some(&("480".to_string(), false, None)));
+    // No connection_log at all is unknown.
+    r.script_linux_steam(&[111]);
+    std::fs::remove_file(r.steam_root.path().join("logs").join("connection_log.txt")).unwrap();
+    tick().await;
+    assert_eq!(r.events().last(), Some(&("480".to_string(), false, None)));
+}
+
+#[tokio::test(start_paused = true)]
+async fn read_fills_steam_running_from_a_pid_probe_on_every_os() {
+    let lib = library();
+    lib.write("480", &handoff_acf("480"));
+    let args = lib.args("480", 111);
+
+    let mac = rig(Platform::Darwin).await;
+    mac.script_pgrep(vec![pgrep(Some(0), "111\n")]);
+    assert_eq!(mac.watch.read(&args).await.steam_running, Some(true));
+    mac.script_pgrep(vec![pgrep(Some(1), "")]);
+    assert_eq!(mac.watch.read(&args).await.steam_running, Some(false));
+
+    let linux = rig(Platform::Linux).await;
+    linux.script_linux_steam(&[111]);
+    assert_eq!(linux.watch.read(&args).await.steam_running, Some(true));
+    linux.script_linux_steam(&[]);
+    assert_eq!(linux.watch.read(&args).await.steam_running, Some(false));
+    // A probe that cannot answer is unknown.
+    linux.runner.on("pgrep -x steam", vec![pgrep(Some(2), "")]);
+    assert_eq!(linux.watch.read(&args).await.steam_running, None);
+
+    let win = rig(Platform::Win32).await;
+    win.script_tasklist(&[111]);
+    assert_eq!(win.watch.read(&args).await.steam_running, Some(true));
+    win.script_tasklist(&[]);
+    assert_eq!(win.watch.read(&args).await.steam_running, Some(false));
 }

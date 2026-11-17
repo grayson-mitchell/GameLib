@@ -279,3 +279,158 @@ fn a_missing_log_is_no_evidence_and_never_panics() {
     // A directory in place of the file is an I/O failure too.
     assert!(!scan_log_for_rescan(dir.path(), &mut cursor));
 }
+
+// ---- Linux libraryfolders, Windows ActiveUser and the Linux connection_log (81-05 task 2) ----
+
+use gamelib_steamfiles::readers::RegistryDword;
+use gamelib_steampoll::adoption_evidence::{
+    connection_log_signed_in, library_folders_list_app, windows_signed_in,
+};
+use std::cell::RefCell;
+
+const VDF_WITH_APP: &str = "\"libraryfolders\"\n{\n\t\"0\"\n\t{\n\t\t\"path\"\t\t\"/home/u/.steam/steam\"\n\t\t\"apps\"\n\t\t{\n\t\t\t\"228980\"\t\t\"123\"\n\t\t\t\"1628350\"\t\t\"456\"\n\t\t}\n\t}\n}\n";
+const VDF_WITHOUT_APP: &str = "\"libraryfolders\"\n{\n\t\"0\"\n\t{\n\t\t\"path\"\t\t\"/home/u/.steam/steam\"\n\t\t\"apps\"\n\t\t{\n\t\t\t\"228980\"\t\t\"123\"\n\t\t}\n\t}\n}\n";
+
+fn vdf_file(content: &str) -> Log {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("libraryfolders.vdf");
+    std::fs::write(&path, content).unwrap();
+    Log { _dir: dir, path }
+}
+
+#[test]
+fn a_listed_app_with_a_newer_file_is_evidence() {
+    let vdf = vdf_file(VDF_WITH_APP);
+    // The file was just written, so it is later than the epoch.
+    assert!(library_folders_list_app(&vdf.path, "1628350", 1_000.0));
+}
+
+#[test]
+fn a_listed_app_in_a_file_older_than_the_record_is_not_evidence() {
+    let vdf = vdf_file(VDF_WITH_APP);
+    // Recorded a century from now: whatever the file says predates the record.
+    assert!(!library_folders_list_app(
+        &vdf.path,
+        "1628350",
+        4_100_000_000_000.0
+    ));
+}
+
+#[test]
+fn an_app_that_is_not_listed_or_a_file_that_cannot_be_read_is_not_evidence() {
+    let vdf = vdf_file(VDF_WITHOUT_APP);
+    assert!(!library_folders_list_app(&vdf.path, "1628350", 1_000.0));
+    // A substring of a listed id is not that id.
+    let vdf = vdf_file(VDF_WITH_APP);
+    assert!(!library_folders_list_app(&vdf.path, "16283", 1_000.0));
+    assert!(!library_folders_list_app(
+        &vdf._dir.path().join("absent.vdf"),
+        "1628350",
+        1_000.0
+    ));
+    let broken = vdf_file("\"libraryfolders\"\n{\n\t\"0\"\n\t{\n");
+    assert!(!library_folders_list_app(&broken.path, "1628350", 1_000.0));
+}
+
+struct FakeRegistry {
+    answer: Result<Option<u32>, ()>,
+    reads: RefCell<Vec<(String, String)>>,
+}
+
+impl FakeRegistry {
+    fn new(answer: Result<Option<u32>, ()>) -> Self {
+        FakeRegistry {
+            answer,
+            reads: RefCell::new(Vec::new()),
+        }
+    }
+}
+
+impl RegistryDword for FakeRegistry {
+    fn hkcu_dword(&self, subkey: &str, value: &str) -> Result<Option<u32>, ()> {
+        self.reads
+            .borrow_mut()
+            .push((subkey.to_string(), value.to_string()));
+        self.answer
+    }
+}
+
+#[test]
+fn windows_active_user_zero_is_signed_out_and_any_account_is_signed_in() {
+    assert_eq!(
+        windows_signed_in(&FakeRegistry::new(Ok(Some(0)))),
+        Some(false)
+    );
+    assert_eq!(
+        windows_signed_in(&FakeRegistry::new(Ok(Some(35_601_368)))),
+        Some(true)
+    );
+}
+
+#[test]
+fn windows_signed_in_is_unknown_for_a_missing_value_or_a_read_error() {
+    assert_eq!(windows_signed_in(&FakeRegistry::new(Ok(None))), None);
+    assert_eq!(windows_signed_in(&FakeRegistry::new(Err(()))), None);
+}
+
+#[test]
+fn windows_signed_in_reads_exactly_active_process_active_user() {
+    let reg = FakeRegistry::new(Ok(Some(1)));
+    windows_signed_in(&reg);
+    assert_eq!(
+        *reg.reads.borrow(),
+        vec![(
+            "Software\\Valve\\Steam\\ActiveProcess".to_string(),
+            "ActiveUser".to_string()
+        )]
+    );
+}
+
+fn state(word: &str) -> String {
+    format!("[2026-11-18 09:00:00] [{word}, 1, 2] some detail\n")
+}
+
+#[test]
+fn connection_log_last_state_line_decides_signed_in() {
+    let log = log_with(&format!("{}{}", state("Logged Off"), state("Logged On")));
+    assert_eq!(connection_log_signed_in(&log.path), Some(true));
+    let log = log_with(&format!("{}{}", state("Logged On"), state("Logged Off")));
+    assert_eq!(connection_log_signed_in(&log.path), Some(false));
+}
+
+#[test]
+fn connection_log_reads_crlf_and_skips_lines_that_are_not_state_lines() {
+    let log = log_with(&format!(
+        "{}[2026-11-18 09:00:05] Connection to Steam servers successful.\r\n",
+        state("Logged On").replace('\n', "\r\n")
+    ));
+    assert_eq!(connection_log_signed_in(&log.path), Some(true));
+}
+
+#[test]
+fn connection_log_with_another_final_state_no_state_line_or_no_file_is_unknown() {
+    let log = log_with(&format!("{}{}", state("Logged On"), state("Connecting")));
+    assert_eq!(connection_log_signed_in(&log.path), None);
+    let log = log_with("[2026-11-18 09:00:05] nothing to see here\n");
+    assert_eq!(connection_log_signed_in(&log.path), None);
+    assert_eq!(
+        connection_log_signed_in(&log._dir.path().join("absent.txt")),
+        None
+    );
+    assert_eq!(connection_log_signed_in(log._dir.path()), None);
+}
+
+#[test]
+fn connection_log_only_reads_the_final_64_kib() {
+    // The only state line sits before the last 64 KiB.
+    let log = log_with(&format!(
+        "{}{}",
+        state("Logged On"),
+        "[2026-11-18 09:00:05] filler line that is not a state line\n".repeat(1200)
+    ));
+    assert!(log.len() > 64 * 1024);
+    assert_eq!(connection_log_signed_in(&log.path), None);
+    // One inside the window is found.
+    log.append(&state("Logged Off"));
+    assert_eq!(connection_log_signed_in(&log.path), Some(false));
+}
