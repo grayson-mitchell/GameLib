@@ -9,9 +9,10 @@
 
 /**
  * Countries ITAD prices in their own currency (sweep `pricedCountries`; status 200 and not identical to the
- * US run). Any other country gets the US fallback, D-13: there is no nearest-region table.
+ * US run). An array, not a Set: the module-state census (moduleStateCensus.test.ts) flags any `new Set` at module
+ * scope, and this constant is only ever membership-tested with `.includes`. Any other country gets the US fallback, D-13: there is no nearest-region table.
  */
-export const ITAD_PRICED_COUNTRIES: ReadonlySet<string> = new Set([
+export const ITAD_PRICED_COUNTRIES: readonly string[] = [
   'US',
   'AU',
   'BR',
@@ -44,7 +45,7 @@ export const ITAD_PRICED_COUNTRIES: ReadonlySet<string> = new Set([
   'AT',
   'BE',
   'IN'
-])
+]
 
 /** D-13: unpriced countries fall back to this one. */
 export const ITAD_FALLBACK_COUNTRY = 'US'
