@@ -521,12 +521,11 @@
             }
         },
         "directLaunch": {
-            "confirmLaunch": "Ishga tushirish",
             "confirmMessage": "Bu o'yinni Steam mijozisiz to'g'ridan-to'g'ri ishga tushiradi. Bu seansda Steam Cloud sinxronizatsiyasi, o'yin vaqtini kuzatish, yutuqlar va Steam overlay bo'lmaydi.",
-            "confirmTitle": "Steam'siz ishga tushirilsinmi?",
+            "drmBadge": "Mavjud emas: bu o'yin Steam DRM'dan foydalanadi, unga Steam ilovasi kerak.",
             "failed": "{{game}} o'yinini Steam'siz ishga tushirib bo'lmadi.",
             "label": "Steam'siz ishga tushirish",
-            "notEligible": "Bu o'yinni endi Steam'siz ishga tushirib bo'lmaydi. Buning o'rniga O'ynash tugmasidan foydalaning."
+            "warning": "Bu o'yin Steam API'dan foydalanadi yoki GameLib uni tekshira olmadi. Steam'siz u yopilib qolishi, Steam funksiyalarisiz ishlashi yoki Steam'ni qayta ochishi mumkin. Steam Cloud sinxronizatsiyasi, o'yin vaqti, yutuqlar va overlay'dan mahrum bo'lasiz."
         },
         "download": {
             "error": {

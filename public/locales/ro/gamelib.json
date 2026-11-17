@@ -530,12 +530,11 @@
             }
         },
         "directLaunch": {
-            "confirmLaunch": "Pornește",
             "confirmMessage": "Aceasta pornește jocul direct, fără clientul Steam. În această sesiune nu există sincronizare Steam Cloud, urmărirea timpului de joc, realizări sau overlay Steam.",
-            "confirmTitle": "Pornești fără Steam?",
+            "drmBadge": "Indisponibil: acest joc folosește Steam DRM, care necesită aplicația Steam.",
             "failed": "Nu s-a putut porni {{game}} fără Steam.",
             "label": "Pornește fără Steam",
-            "notEligible": "Acest joc nu mai poate fi pornit fără Steam. Folosește Joacă în schimb."
+            "warning": "Acest joc folosește Steam API sau GameLib nu a putut verifica. Fără Steam, se poate închide, poate rula fără funcțiile Steam sau poate redeschide Steam. Pierzi sincronizarea Steam Cloud, timpul de joc, realizările și overlay-ul."
         },
         "download": {
             "error": {

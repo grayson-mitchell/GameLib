@@ -521,12 +521,11 @@
             }
         },
         "directLaunch": {
-            "confirmLaunch": "Käynnistä",
             "confirmMessage": "Tämä käynnistää pelin suoraan ilman Steam-asiakasohjelmaa. Tässä istunnossa ei ole Steam Cloud -synkronointia, peliajan seurantaa, saavutuksia eikä Steamin päällystä.",
-            "confirmTitle": "Käynnistetäänkö ilman Steamia?",
+            "drmBadge": "Ei käytettävissä: tämä peli käyttää Steam DRM:ää, joka tarvitsee Steam-sovelluksen.",
             "failed": "Peliä {{game}} ei voitu käynnistää ilman Steamia.",
             "label": "Käynnistä ilman Steamia",
-            "notEligible": "Tätä peliä ei voi enää käynnistää ilman Steamia. Käytä sen sijaan Pelaa-painiketta."
+            "warning": "Tämä peli käyttää Steamin API:a, tai GameLib ei voinut tarkistaa sitä. Ilman Steamia se voi sulkeutua, toimia ilman Steam-ominaisuuksia tai avata Steamin uudelleen. Menetät Steam Cloud -synkronoinnin, peliajan, saavutukset ja päällysteen."
         },
         "download": {
             "error": {

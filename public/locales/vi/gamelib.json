@@ -521,12 +521,11 @@
             }
         },
         "directLaunch": {
-            "confirmLaunch": "Khởi chạy",
             "confirmMessage": "Thao tác này khởi chạy trò chơi trực tiếp, không qua ứng dụng Steam. Trong phiên này sẽ không có đồng bộ Steam Cloud, theo dõi thời gian chơi, thành tựu hay overlay Steam.",
-            "confirmTitle": "Khởi chạy không cần Steam?",
+            "drmBadge": "Không khả dụng: trò chơi này dùng Steam DRM, vốn cần ứng dụng Steam.",
             "failed": "Không thể khởi chạy {{game}} khi không có Steam.",
             "label": "Khởi chạy không cần Steam",
-            "notEligible": "Trò chơi này không còn có thể khởi chạy khi không có Steam. Hãy dùng Chơi thay thế."
+            "warning": "Trò chơi này dùng Steam API, hoặc GameLib không thể kiểm tra. Khi không có Steam, trò chơi có thể thoát, chạy mà không có tính năng của Steam hoặc mở lại Steam. Bạn sẽ mất đồng bộ Steam Cloud, thời gian chơi, thành tựu và overlay."
         },
         "download": {
             "error": {

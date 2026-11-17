@@ -530,12 +530,11 @@
             }
         },
         "directLaunch": {
-            "confirmLaunch": "Inicia",
             "confirmMessage": "Això inicia el joc directament, sense el client de Steam. En aquesta sessió no hi haurà sincronització de Steam Cloud, ni seguiment del temps de joc, ni assoliments, ni superposició de Steam.",
-            "confirmTitle": "Vols iniciar sense Steam?",
+            "drmBadge": "No disponible: aquest joc fa servir el DRM de Steam, que necessita l'aplicació Steam.",
             "failed": "No s'ha pogut iniciar {{game}} sense Steam.",
             "label": "Inicia sense Steam",
-            "notEligible": "Aquest joc ja no es pot iniciar sense Steam. Fes servir Juga."
+            "warning": "Aquest joc fa servir l'API de Steam, o GameLib no ha pogut comprovar-ho. Sense Steam pot tancar-se, funcionar sense les funcions de Steam o tornar a obrir Steam. Perdràs la sincronització de Steam Cloud, el temps de joc, els assoliments i la superposició."
         },
         "download": {
             "error": {

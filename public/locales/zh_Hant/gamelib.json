@@ -521,12 +521,11 @@
             }
         },
         "directLaunch": {
-            "confirmLaunch": "啟動",
             "confirmMessage": "這會略過 Steam 用戶端，直接啟動遊戲。本次工作階段沒有 Steam Cloud 同步、遊玩時數統計、成就和 Steam 疊加層。",
-            "confirmTitle": "不透過 Steam 啟動？",
+            "drmBadge": "無法使用：這款遊戲使用 Steam DRM，需要 Steam 應用程式。",
             "failed": "無法在沒有 Steam 的情況下啟動 {{game}}。",
             "label": "不透過 Steam 啟動",
-            "notEligible": "這款遊戲已無法在沒有 Steam 的情況下啟動。請改用「開始遊戲」。"
+            "warning": "這款遊戲使用 Steam API，或 GameLib 無法檢查。沒有 Steam 時，它可能會結束、在沒有 Steam 功能的情況下執行，或重新開啟 Steam。你將失去 Steam Cloud 同步、遊玩時數、成就和疊加層。"
         },
         "download": {
             "error": {

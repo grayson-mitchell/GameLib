@@ -412,12 +412,11 @@
             }
         },
         "directLaunch": {
-            "confirmLaunch": "Starten",
             "confirmMessage": "Damit wird das Spiel direkt ohne den Steam-Client gestartet. In dieser Sitzung gibt es keine Steam-Cloud-Synchronisierung, keine Spielzeiterfassung, keine Erfolge und kein Steam-Overlay.",
-            "confirmTitle": "Ohne Steam starten?",
+            "drmBadge": "Nicht verfügbar: Dieses Spiel verwendet Steam DRM, wofür die Steam-App nötig ist.",
             "failed": "{{game}} konnte nicht ohne Steam gestartet werden.",
             "label": "Ohne Steam starten",
-            "notEligible": "Dieses Spiel lässt sich nicht mehr ohne Steam starten. Verwende stattdessen Spielen."
+            "warning": "Dieses Spiel nutzt die Steam-API, oder GameLib konnte es nicht prüfen. Ohne Steam kann es sich beenden, ohne Steam-Funktionen laufen oder Steam erneut öffnen. Du verlierst Steam-Cloud-Synchronisierung, Spielzeit, Erfolge und das Overlay."
         },
         "install": {
             "bottleNameReadonlyHelper": "GameLib verwaltet eine gemeinsame CrossOver-Bottle für Steam. Eine separate Bottle pro Spiel zu benennen wird noch nicht unterstützt.",

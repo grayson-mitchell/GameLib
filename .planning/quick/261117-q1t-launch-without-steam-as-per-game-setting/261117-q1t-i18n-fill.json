@@ -1,0 +1,198 @@
+{
+  "en": {
+    "steam.directLaunch.warning": "This game uses the Steam API, or GameLib could not check. Without Steam it may quit, run without Steam features, or reopen Steam. You lose Steam Cloud sync, playtime, achievements and the overlay.",
+    "steam.directLaunch.drmBadge": "Not available: this game uses Steam DRM, which needs the Steam app."
+  },
+  "ar": {
+    "steam.directLaunch.warning": "تستخدم هذه اللعبة Steam API، أو تعذّر على GameLib التحقق. من دون Steam قد تُغلق اللعبة أو تعمل دون ميزات Steam أو تعيد فتح Steam. ستفقد مزامنة Steam Cloud ووقت اللعب والإنجازات وتراكب Steam.",
+    "steam.directLaunch.drmBadge": "غير متاح: تستخدم هذه اللعبة Steam DRM الذي يتطلب تطبيق Steam."
+  },
+  "az": {
+    "steam.directLaunch.warning": "Bu oyun Steam API istifadə edir və ya GameLib yoxlaya bilmədi. Steam olmadan oyun bağlana, Steam funksiyaları olmadan işləyə və ya Steam-i yenidən aça bilər. Steam Cloud sinxronizasiyasını, oyun vaxtını, nailiyyətləri və overlay-i itirəcəksiniz.",
+    "steam.directLaunch.drmBadge": "Əlçatan deyil: bu oyun Steam tətbiqini tələb edən Steam DRM istifadə edir."
+  },
+  "be": {
+    "steam.directLaunch.warning": "Гэтая гульня выкарыстоўвае Steam API, або GameLib не змог яе праверыць. Без Steam яна можа закрыцца, працаваць без функцый Steam або зноў адкрыць Steam. Вы страціце сінхранізацыю Steam Cloud, час гульні, дасягненні і overlay.",
+    "steam.directLaunch.drmBadge": "Недаступна: гэтая гульня выкарыстоўвае Steam DRM, а для яго патрэбна праграма Steam."
+  },
+  "bg": {
+    "steam.directLaunch.warning": "Тази игра използва Steam API или GameLib не успя да провери. Без Steam тя може да се затвори, да работи без функциите на Steam или да отвори Steam отново. Ще загубите синхронизирането със Steam Cloud, игралното време, постиженията и наслагването.",
+    "steam.directLaunch.drmBadge": "Недостъпно: тази игра използва Steam DRM, която изисква приложението Steam."
+  },
+  "br": {
+    "steam.directLaunch.warning": "Ar c'hoari-mañ a implij Steam API, pe n'eo ket bet gouest GameLib da wiriañ. Hep Steam e c'hall ehanañ, mont en-dro hep perzhioù Steam, pe lakaat Steam da loc'hañ en-dro. Kollet e vo ganeoc'h sinkronekadur Steam Cloud, prantad c'hoari, kutuilhoù hag an overlay.",
+    "steam.directLaunch.drmBadge": "Dihegerz: ar c'hoari-mañ a implij Steam DRM, hag en deus ezhomm eus arval Steam."
+  },
+  "bs": {
+    "steam.directLaunch.warning": "Ova igra koristi Steam API ili GameLib nije mogao provjeriti. Bez Steama može se zatvoriti, raditi bez Steam funkcija ili ponovo otvoriti Steam. Gubite Steam Cloud sinhronizaciju, vrijeme igranja, postignuća i overlay.",
+    "steam.directLaunch.drmBadge": "Nije dostupno: ova igra koristi Steam DRM, kojem je potrebna aplikacija Steam."
+  },
+  "ca": {
+    "steam.directLaunch.warning": "Aquest joc fa servir l'API de Steam, o GameLib no ha pogut comprovar-ho. Sense Steam pot tancar-se, funcionar sense les funcions de Steam o tornar a obrir Steam. Perdràs la sincronització de Steam Cloud, el temps de joc, els assoliments i la superposició.",
+    "steam.directLaunch.drmBadge": "No disponible: aquest joc fa servir el DRM de Steam, que necessita l'aplicació Steam."
+  },
+  "cs": {
+    "steam.directLaunch.warning": "Tato hra používá Steam API, nebo to GameLib nemohl ověřit. Bez Steamu se může ukončit, běžet bez funkcí Steamu nebo znovu otevřít Steam. Přijdete o synchronizaci Steam Cloud, herní čas, úspěchy a překryv.",
+    "steam.directLaunch.drmBadge": "Nedostupné: tato hra používá Steam DRM, které vyžaduje aplikaci Steam."
+  },
+  "da": {
+    "steam.directLaunch.warning": "Dette spil bruger Steam API'et, eller GameLib kunne ikke kontrollere det. Uden Steam kan det lukke ned, køre uden Steam-funktioner eller åbne Steam igen. Du mister Steam Cloud-synkronisering, spilletid, præstationer og overlayet.",
+    "steam.directLaunch.drmBadge": "Ikke tilgængelig: dette spil bruger Steam DRM, som kræver Steam-appen."
+  },
+  "de": {
+    "steam.directLaunch.warning": "Dieses Spiel nutzt die Steam-API, oder GameLib konnte es nicht prüfen. Ohne Steam kann es sich beenden, ohne Steam-Funktionen laufen oder Steam erneut öffnen. Du verlierst Steam-Cloud-Synchronisierung, Spielzeit, Erfolge und das Overlay.",
+    "steam.directLaunch.drmBadge": "Nicht verfügbar: Dieses Spiel verwendet Steam DRM, wofür die Steam-App nötig ist."
+  },
+  "el": {
+    "steam.directLaunch.warning": "Αυτό το παιχνίδι χρησιμοποιεί το Steam API ή το GameLib δεν μπόρεσε να ελέγξει. Χωρίς το Steam μπορεί να κλείσει, να λειτουργήσει χωρίς τις λειτουργίες του Steam ή να ανοίξει ξανά το Steam. Θα χάσετε τον συγχρονισμό Steam Cloud, τον χρόνο παιχνιδιού, τα επιτεύγματα και την επικάλυψη.",
+    "steam.directLaunch.drmBadge": "Μη διαθέσιμο: αυτό το παιχνίδι χρησιμοποιεί Steam DRM, το οποίο απαιτεί την εφαρμογή Steam."
+  },
+  "es": {
+    "steam.directLaunch.warning": "Este juego usa la API de Steam, o GameLib no pudo comprobarlo. Sin Steam puede cerrarse, funcionar sin las funciones de Steam o volver a abrir Steam. Perderás la sincronización de Steam Cloud, el tiempo de juego, los logros y el overlay.",
+    "steam.directLaunch.drmBadge": "No disponible: este juego usa el DRM de Steam, que necesita la aplicación de Steam."
+  },
+  "et": {
+    "steam.directLaunch.warning": "See mäng kasutab Steami API-t või GameLib ei saanud seda kontrollida. Ilma Steamita võib see sulguda, töötada ilma Steami funktsioonideta või avada Steami uuesti. Kaotad Steam Cloudi sünkroonimise, mänguaja, saavutused ja ülekatte.",
+    "steam.directLaunch.drmBadge": "Pole saadaval: see mäng kasutab Steami DRM-i, mis vajab Steami rakendust."
+  },
+  "eu": {
+    "steam.directLaunch.warning": "Joko honek Steam API erabiltzen du, edo GameLibek ezin izan du egiaztatu. Steam gabe, itxi egin daiteke, Steam eginbiderik gabe exekutatu daiteke edo Steam berriro ireki dezake. Steam Cloud sinkronizazioa, jokatutako denbora, lorpenak eta overlay-a galduko dituzu.",
+    "steam.directLaunch.drmBadge": "Ez dago erabilgarri: joko honek Steam DRM erabiltzen du, eta honek Steam aplikazioa behar du."
+  },
+  "fa": {
+    "steam.directLaunch.warning": "این بازی از Steam API استفاده می‌کند یا GameLib نتوانست آن را بررسی کند. بدون Steam ممکن است بازی بسته شود، بدون ویژگی‌های Steam اجرا شود یا دوباره Steam را باز کند. همگام‌سازی Steam Cloud، زمان بازی، دستاوردها و Overlay را از دست می‌دهید.",
+    "steam.directLaunch.drmBadge": "در دسترس نیست: این بازی از Steam DRM استفاده می‌کند که به برنامه Steam نیاز دارد."
+  },
+  "fi": {
+    "steam.directLaunch.warning": "Tämä peli käyttää Steamin API:a, tai GameLib ei voinut tarkistaa sitä. Ilman Steamia se voi sulkeutua, toimia ilman Steam-ominaisuuksia tai avata Steamin uudelleen. Menetät Steam Cloud -synkronoinnin, peliajan, saavutukset ja päällysteen.",
+    "steam.directLaunch.drmBadge": "Ei käytettävissä: tämä peli käyttää Steam DRM:ää, joka tarvitsee Steam-sovelluksen."
+  },
+  "fr": {
+    "steam.directLaunch.warning": "Ce jeu utilise l'API Steam, ou GameLib n'a pas pu le vérifier. Sans Steam, il peut se fermer, fonctionner sans les fonctions de Steam ou rouvrir Steam. Vous perdez la synchronisation Steam Cloud, le temps de jeu, les succès et la surcouche.",
+    "steam.directLaunch.drmBadge": "Indisponible : ce jeu utilise le DRM de Steam, qui nécessite l'application Steam."
+  },
+  "ga": {
+    "steam.directLaunch.warning": "Úsáideann an cluiche seo API Steam, nó níorbh fhéidir le GameLib é a sheiceáil. Gan Steam, d'fhéadfadh sé scor, rith gan gnéithe Steam, nó Steam a athoscailt. Caillfidh tú sioncronú Steam Cloud, am súgartha, éachtaí agus an forleagan.",
+    "steam.directLaunch.drmBadge": "Níl sé ar fáil: úsáideann an cluiche seo DRM Steam, a bhfuil aip Steam ag teastáil uaidh."
+  },
+  "gl": {
+    "steam.directLaunch.warning": "Este xogo usa a API de Steam, ou GameLib non puido comprobalo. Sen Steam pode pecharse, funcionar sen as funcións de Steam ou volver abrir Steam. Perderás a sincronización de Steam Cloud, o tempo de xogo, os logros e a superposición.",
+    "steam.directLaunch.drmBadge": "Non dispoñible: este xogo usa o DRM de Steam, que necesita a aplicación de Steam."
+  },
+  "he": {
+    "steam.directLaunch.warning": "המשחק הזה משתמש ב-Steam API, או ש-GameLib לא הצליח לבדוק. ללא Steam הוא עלול להיסגר, לפעול בלי תכונות של Steam או לפתוח את Steam מחדש. תאבד סנכרון Steam Cloud, זמן משחק, הישגים ושכבת-על.",
+    "steam.directLaunch.drmBadge": "לא זמין: המשחק הזה משתמש ב-Steam DRM, שדורש את אפליקציית Steam."
+  },
+  "hr": {
+    "steam.directLaunch.warning": "Ova igra koristi Steam API ili GameLib nije mogao provjeriti. Bez Steama se može zatvoriti, raditi bez Steam funkcija ili ponovno otvoriti Steam. Gubite Steam Cloud sinkronizaciju, vrijeme igranja, postignuća i overlay.",
+    "steam.directLaunch.drmBadge": "Nije dostupno: ova igra koristi Steam DRM, kojem je potrebna aplikacija Steam."
+  },
+  "hu": {
+    "steam.directLaunch.warning": "Ez a játék a Steam API-t használja, vagy a GameLib nem tudta ellenőrizni. Steam nélkül bezárulhat, Steam-funkciók nélkül futhat, vagy újra megnyithatja a Steamet. Elveszíted a Steam Cloud-szinkronizálást, a játékidőt, a teljesítményeket és az átfedést.",
+    "steam.directLaunch.drmBadge": "Nem érhető el: ez a játék Steam DRM-et használ, amelyhez szükség van a Steam alkalmazásra."
+  },
+  "id": {
+    "steam.directLaunch.warning": "Game ini memakai Steam API, atau GameLib tidak dapat memeriksanya. Tanpa Steam, game mungkin menutup sendiri, berjalan tanpa fitur Steam, atau membuka Steam kembali. Anda kehilangan sinkronisasi Steam Cloud, waktu bermain, pencapaian, dan overlay.",
+    "steam.directLaunch.drmBadge": "Tidak tersedia: game ini memakai Steam DRM, yang memerlukan aplikasi Steam."
+  },
+  "it": {
+    "steam.directLaunch.warning": "Questo gioco usa l'API di Steam, oppure GameLib non ha potuto verificarlo. Senza Steam potrebbe chiudersi, funzionare senza le funzioni di Steam o riaprire Steam. Perderai la sincronizzazione Steam Cloud, il tempo di gioco, gli obiettivi e l'overlay.",
+    "steam.directLaunch.drmBadge": "Non disponibile: questo gioco usa il DRM di Steam, che richiede l'app Steam."
+  },
+  "ja": {
+    "steam.directLaunch.warning": "このゲームはSteam APIを使用しているか、GameLibが確認できませんでした。Steamなしでは、終了したり、Steamの機能なしで動作したり、Steamが再び開いたりすることがあります。Steamクラウドの同期、プレイ時間、実績、オーバーレイは利用できなくなります。",
+    "steam.directLaunch.drmBadge": "利用できません：このゲームはSteam DRMを使用しており、Steamアプリが必要です。"
+  },
+  "ka": {
+    "steam.directLaunch.warning": "ეს თამაში იყენებს Steam API-ს, ან GameLib-მა ვერ შეამოწმა. Steam-ის გარეშე მას შეუძლია დაიხუროს, იმუშაოს Steam-ის ფუნქციების გარეშე ან თავიდან გახსნას Steam. დაკარგავთ Steam Cloud-ის სინქრონიზაციას, თამაშის დროს, მიღწევებს და ოვერლეის.",
+    "steam.directLaunch.drmBadge": "მიუწვდომელია: ეს თამაში იყენებს Steam DRM-ს, რომელსაც Steam აპლიკაცია სჭირდება."
+  },
+  "ko": {
+    "steam.directLaunch.warning": "이 게임은 Steam API를 사용하거나 GameLib이 확인하지 못했습니다. Steam 없이 실행하면 종료되거나, Steam 기능 없이 실행되거나, Steam이 다시 열릴 수 있습니다. Steam 클라우드 동기화, 플레이 시간, 업적, 오버레이를 사용할 수 없습니다.",
+    "steam.directLaunch.drmBadge": "사용할 수 없음: 이 게임은 Steam 앱이 필요한 Steam DRM을 사용합니다."
+  },
+  "lt": {
+    "steam.directLaunch.warning": "Šis žaidimas naudoja Steam API arba GameLib negalėjo patikrinti. Be Steam jis gali užsidaryti, veikti be Steam funkcijų arba vėl atidaryti Steam. Prarasite Steam Cloud sinchronizavimą, žaidimo laiką, pasiekimus ir perdangą.",
+    "steam.directLaunch.drmBadge": "Nepasiekiama: šis žaidimas naudoja Steam DRM, kuriai reikalinga Steam programa."
+  },
+  "ml": {
+    "steam.directLaunch.warning": "ഈ ഗെയിം Steam API ഉപയോഗിക്കുന്നു, അല്ലെങ്കിൽ GameLib-ന് പരിശോധിക്കാൻ കഴിഞ്ഞില്ല. Steam ഇല്ലാതെ ഇത് അടഞ്ഞുപോകാം, Steam സവിശേഷതകളില്ലാതെ പ്രവർത്തിക്കാം, അല്ലെങ്കിൽ Steam വീണ്ടും തുറക്കാം. Steam Cloud സമന്വയം, കളിസമയം, നേട്ടങ്ങൾ, ഓവർലേ എന്നിവ നഷ്ടപ്പെടും.",
+    "steam.directLaunch.drmBadge": "ലഭ്യമല്ല: ഈ ഗെയിം Steam DRM ഉപയോഗിക്കുന്നു, ഇതിന് Steam ആപ്പ് ആവശ്യമാണ്."
+  },
+  "nb_NO": {
+    "steam.directLaunch.warning": "Dette spillet bruker Steam API, eller GameLib kunne ikke sjekke det. Uten Steam kan det lukke seg, kjøre uten Steam-funksjoner eller åpne Steam på nytt. Du mister Steam Cloud-synkronisering, spilletid, prestasjoner og overlayet.",
+    "steam.directLaunch.drmBadge": "Ikke tilgjengelig: dette spillet bruker Steam DRM, som krever Steam-appen."
+  },
+  "nl": {
+    "steam.directLaunch.warning": "Deze game gebruikt de Steam-API, of GameLib kon dit niet controleren. Zonder Steam kan de game afsluiten, zonder Steam-functies draaien of Steam opnieuw openen. Je verliest Steam Cloud-synchronisatie, speeltijd, prestaties en de overlay.",
+    "steam.directLaunch.drmBadge": "Niet beschikbaar: deze game gebruikt Steam DRM, wat de Steam-app nodig heeft."
+  },
+  "pl": {
+    "steam.directLaunch.warning": "Ta gra korzysta z Steam API albo GameLib nie mógł tego sprawdzić. Bez Steam może się zamknąć, działać bez funkcji Steam albo ponownie otworzyć Steam. Utracisz synchronizację Steam Cloud, czas gry, osiągnięcia i nakładkę.",
+    "steam.directLaunch.drmBadge": "Niedostępne: ta gra korzysta z Steam DRM, które wymaga aplikacji Steam."
+  },
+  "pt": {
+    "steam.directLaunch.warning": "Este jogo usa a API do Steam, ou o GameLib não conseguiu verificar. Sem o Steam, pode fechar-se, funcionar sem as funcionalidades do Steam ou reabrir o Steam. Perde a sincronização do Steam Cloud, o tempo de jogo, as conquistas e a sobreposição.",
+    "steam.directLaunch.drmBadge": "Indisponível: este jogo usa o DRM do Steam, que precisa da aplicação Steam."
+  },
+  "pt_BR": {
+    "steam.directLaunch.warning": "Este jogo usa a API do Steam, ou o GameLib não conseguiu verificar. Sem o Steam, ele pode fechar, rodar sem os recursos do Steam ou reabrir o Steam. Você perde a sincronização do Steam Cloud, o tempo de jogo, as conquistas e o overlay.",
+    "steam.directLaunch.drmBadge": "Indisponível: este jogo usa o DRM do Steam, que precisa do app Steam."
+  },
+  "ro": {
+    "steam.directLaunch.warning": "Acest joc folosește Steam API sau GameLib nu a putut verifica. Fără Steam, se poate închide, poate rula fără funcțiile Steam sau poate redeschide Steam. Pierzi sincronizarea Steam Cloud, timpul de joc, realizările și overlay-ul.",
+    "steam.directLaunch.drmBadge": "Indisponibil: acest joc folosește Steam DRM, care necesită aplicația Steam."
+  },
+  "ru": {
+    "steam.directLaunch.warning": "Эта игра использует Steam API, или GameLib не смог это проверить. Без Steam она может закрыться, работать без функций Steam или снова открыть Steam. Вы потеряете синхронизацию Steam Cloud, учёт времени в игре, достижения и оверлей.",
+    "steam.directLaunch.drmBadge": "Недоступно: эта игра использует Steam DRM, которому нужно приложение Steam."
+  },
+  "sk": {
+    "steam.directLaunch.warning": "Táto hra používa Steam API, alebo to GameLib nedokázal overiť. Bez Steamu sa môže ukončiť, bežať bez funkcií Steamu alebo znova otvoriť Steam. Prídete o synchronizáciu Steam Cloud, herný čas, úspechy a prekrytie.",
+    "steam.directLaunch.drmBadge": "Nedostupné: táto hra používa Steam DRM, ktoré vyžaduje aplikáciu Steam."
+  },
+  "sl": {
+    "steam.directLaunch.warning": "Ta igra uporablja Steam API ali pa GameLib tega ni mogel preveriti. Brez Steama se lahko zapre, deluje brez funkcij Steam ali znova odpre Steam. Izgubili boste sinhronizacijo Steam Cloud, igralni čas, dosežke in prekrivni sloj.",
+    "steam.directLaunch.drmBadge": "Ni na voljo: ta igra uporablja Steam DRM, ki potrebuje aplikacijo Steam."
+  },
+  "sr": {
+    "steam.directLaunch.warning": "Ова игра користи Steam API или GameLib није могао да провери. Без Steam-а може да се затвори, ради без Steam функција или поново отвори Steam. Губите Steam Cloud синхронизацију, време играња, достигнућа и преклапање.",
+    "steam.directLaunch.drmBadge": "Није доступно: ова игра користи Steam DRM, којем је потребна Steam апликација."
+  },
+  "sv": {
+    "steam.directLaunch.warning": "Det här spelet använder Steam API, eller så kunde GameLib inte kontrollera det. Utan Steam kan det avslutas, köras utan Steam-funktioner eller öppna Steam igen. Du förlorar Steam Cloud-synkronisering, spelstid, prestationer och overlayen.",
+    "steam.directLaunch.drmBadge": "Inte tillgängligt: det här spelet använder Steam DRM, som kräver Steam-appen."
+  },
+  "ta": {
+    "steam.directLaunch.warning": "இந்த விளையாட்டு Steam API-ஐப் பயன்படுத்துகிறது, அல்லது GameLib-ஆல் சரிபார்க்க முடியவில்லை. Steam இல்லாமல் இது மூடப்படலாம், Steam அம்சங்கள் இல்லாமல் இயங்கலாம் அல்லது Steam-ஐ மீண்டும் திறக்கலாம். Steam Cloud ஒத்திசைவு, விளையாட்டு நேரம், சாதனைகள், மேலடுக்கு ஆகியவற்றை இழப்பீர்கள்.",
+    "steam.directLaunch.drmBadge": "கிடைக்கவில்லை: இந்த விளையாட்டு Steam DRM-ஐப் பயன்படுத்துகிறது, அதற்கு Steam பயன்பாடு தேவை."
+  },
+  "th": {
+    "steam.directLaunch.warning": "เกมนี้ใช้ Steam API หรือ GameLib ตรวจสอบไม่ได้ หากไม่มี Steam เกมอาจปิดตัวเอง ทำงานโดยไม่มีฟีเจอร์ของ Steam หรือเปิด Steam ขึ้นมาใหม่ คุณจะไม่ได้รับการซิงก์ Steam Cloud เวลาเล่น ความสำเร็จ และโอเวอร์เลย์",
+    "steam.directLaunch.drmBadge": "ใช้งานไม่ได้: เกมนี้ใช้ Steam DRM ซึ่งต้องใช้แอป Steam"
+  },
+  "tr": {
+    "steam.directLaunch.warning": "Bu oyun Steam API kullanıyor veya GameLib kontrol edemedi. Steam olmadan oyun kapanabilir, Steam özellikleri olmadan çalışabilir veya Steam'i yeniden açabilir. Steam Cloud eşitlemesini, oynama süresini, başarımları ve kaplamayı kaybedersiniz.",
+    "steam.directLaunch.drmBadge": "Kullanılamıyor: bu oyun, Steam uygulamasını gerektiren Steam DRM kullanıyor."
+  },
+  "uk": {
+    "steam.directLaunch.warning": "Ця гра використовує Steam API, або GameLib не зміг це перевірити. Без Steam вона може закритися, працювати без функцій Steam або знову відкрити Steam. Ви втратите синхронізацію Steam Cloud, облік ігрового часу, досягнення та накладання.",
+    "steam.directLaunch.drmBadge": "Недоступно: ця гра використовує Steam DRM, якому потрібен застосунок Steam."
+  },
+  "uz": {
+    "steam.directLaunch.warning": "Bu o'yin Steam API'dan foydalanadi yoki GameLib uni tekshira olmadi. Steam'siz u yopilib qolishi, Steam funksiyalarisiz ishlashi yoki Steam'ni qayta ochishi mumkin. Steam Cloud sinxronizatsiyasi, o'yin vaqti, yutuqlar va overlay'dan mahrum bo'lasiz.",
+    "steam.directLaunch.drmBadge": "Mavjud emas: bu o'yin Steam DRM'dan foydalanadi, unga Steam ilovasi kerak."
+  },
+  "vi": {
+    "steam.directLaunch.warning": "Trò chơi này dùng Steam API, hoặc GameLib không thể kiểm tra. Khi không có Steam, trò chơi có thể thoát, chạy mà không có tính năng của Steam hoặc mở lại Steam. Bạn sẽ mất đồng bộ Steam Cloud, thời gian chơi, thành tựu và overlay.",
+    "steam.directLaunch.drmBadge": "Không khả dụng: trò chơi này dùng Steam DRM, vốn cần ứng dụng Steam."
+  },
+  "zh_Hans": {
+    "steam.directLaunch.warning": "这款游戏使用 Steam API，或 GameLib 无法检查。没有 Steam 时，它可能会退出、在没有 Steam 功能的情况下运行，或重新打开 Steam。你将失去 Steam Cloud 同步、游戏时长、成就和叠加层。",
+    "steam.directLaunch.drmBadge": "不可用：这款游戏使用 Steam DRM，需要 Steam 应用。"
+  },
+  "zh_Hant": {
+    "steam.directLaunch.warning": "這款遊戲使用 Steam API，或 GameLib 無法檢查。沒有 Steam 時，它可能會結束、在沒有 Steam 功能的情況下執行，或重新開啟 Steam。你將失去 Steam Cloud 同步、遊玩時數、成就和疊加層。",
+    "steam.directLaunch.drmBadge": "無法使用：這款遊戲使用 Steam DRM，需要 Steam 應用程式。"
+  }
+}

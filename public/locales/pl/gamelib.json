@@ -539,12 +539,11 @@
             }
         },
         "directLaunch": {
-            "confirmLaunch": "Uruchom",
             "confirmMessage": "Gra zostanie uruchomiona bezpośrednio, bez klienta Steam. W tej sesji nie będzie synchronizacji Steam Cloud, śledzenia czasu gry, osiągnięć ani nakładki Steam.",
-            "confirmTitle": "Uruchomić bez Steam?",
+            "drmBadge": "Niedostępne: ta gra korzysta z Steam DRM, które wymaga aplikacji Steam.",
             "failed": "Nie udało się uruchomić gry {{game}} bez Steam.",
             "label": "Uruchom bez Steam",
-            "notEligible": "Tej gry nie można już uruchomić bez Steam. Użyj zamiast tego przycisku Graj."
+            "warning": "Ta gra korzysta z Steam API albo GameLib nie mógł tego sprawdzić. Bez Steam może się zamknąć, działać bez funkcji Steam albo ponownie otworzyć Steam. Utracisz synchronizację Steam Cloud, czas gry, osiągnięcia i nakładkę."
         },
         "download": {
             "error": {

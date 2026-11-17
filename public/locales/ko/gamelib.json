@@ -521,12 +521,11 @@
             }
         },
         "directLaunch": {
-            "confirmLaunch": "실행",
             "confirmMessage": "Steam 클라이언트 없이 게임을 바로 실행합니다. 이번 세션에서는 Steam 클라우드 동기화, 플레이 시간 기록, 업적, Steam 오버레이를 사용할 수 없습니다.",
-            "confirmTitle": "Steam 없이 실행할까요?",
+            "drmBadge": "사용할 수 없음: 이 게임은 Steam 앱이 필요한 Steam DRM을 사용합니다.",
             "failed": "{{game}}을(를) Steam 없이 실행하지 못했습니다.",
             "label": "Steam 없이 실행",
-            "notEligible": "이 게임은 더 이상 Steam 없이 실행할 수 없습니다. 대신 플레이를 사용하세요."
+            "warning": "이 게임은 Steam API를 사용하거나 GameLib이 확인하지 못했습니다. Steam 없이 실행하면 종료되거나, Steam 기능 없이 실행되거나, Steam이 다시 열릴 수 있습니다. Steam 클라우드 동기화, 플레이 시간, 업적, 오버레이를 사용할 수 없습니다."
         },
         "download": {
             "error": {

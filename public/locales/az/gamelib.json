@@ -521,12 +521,11 @@
             }
         },
         "directLaunch": {
-            "confirmLaunch": "İşə sal",
             "confirmMessage": "Bu, oyunu Steam müştərisi olmadan birbaşa işə salır. Bu sessiyada Steam Cloud sinxronizasiyası, oyun vaxtının izlənməsi, nailiyyətlər və Steam overlay olmayacaq.",
-            "confirmTitle": "Steam olmadan işə salınsın?",
+            "drmBadge": "Əlçatan deyil: bu oyun Steam tətbiqini tələb edən Steam DRM istifadə edir.",
             "failed": "{{game}} Steam olmadan işə salına bilmədi.",
             "label": "Steam olmadan işə sal",
-            "notEligible": "Bu oyunu artıq Steam olmadan işə salmaq mümkün deyil. Əvəzinə Oyna düyməsindən istifadə edin."
+            "warning": "Bu oyun Steam API istifadə edir və ya GameLib yoxlaya bilmədi. Steam olmadan oyun bağlana, Steam funksiyaları olmadan işləyə və ya Steam-i yenidən aça bilər. Steam Cloud sinxronizasiyasını, oyun vaxtını, nailiyyətləri və overlay-i itirəcəksiniz."
         },
         "download": {
             "error": {

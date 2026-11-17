@@ -521,12 +521,11 @@
             }
         },
         "directLaunch": {
-            "confirmLaunch": "اجرا",
             "confirmMessage": "این کار بازی را مستقیماً و بدون برنامه Steam اجرا می‌کند. در این نشست همگام‌سازی Steam Cloud، ثبت زمان بازی، دستاوردها و Steam Overlay وجود نخواهد داشت.",
-            "confirmTitle": "بدون Steam اجرا شود؟",
+            "drmBadge": "در دسترس نیست: این بازی از Steam DRM استفاده می‌کند که به برنامه Steam نیاز دارد.",
             "failed": "اجرای {{game}} بدون Steam ممکن نشد.",
             "label": "اجرا بدون Steam",
-            "notEligible": "این بازی دیگر بدون Steam قابل اجرا نیست. به‌جای آن از «اجرا» استفاده کنید."
+            "warning": "این بازی از Steam API استفاده می‌کند یا GameLib نتوانست آن را بررسی کند. بدون Steam ممکن است بازی بسته شود، بدون ویژگی‌های Steam اجرا شود یا دوباره Steam را باز کند. همگام‌سازی Steam Cloud، زمان بازی، دستاوردها و Overlay را از دست می‌دهید."
         },
         "download": {
             "error": {

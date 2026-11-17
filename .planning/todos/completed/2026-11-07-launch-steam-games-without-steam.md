@@ -57,7 +57,7 @@ Live gate: pick at least one game from each row of the table above. Check the op
 only for eligible games and that an eligible game launches with Steam fully quit. For a Steam-API
 game, record whether it keeps running, quits, or relaunches through Steam.
 
-## Resolution (quick 261117-p38)
+## Resolution (quick 261117-p38) — superseded by q1t below
 
 Shipped (macOS only; Mac-native and bridge installs):
 
@@ -77,18 +77,39 @@ Shipped (macOS only; Mac-native and bridge installs):
   live-confirmed entry exists to put in it, so Steam-API games stay on the Steam launch.
 - Boundary held: nothing writes, copies, replaces or emulates `steam_api`.
 
+## Resolution (quick 261117-q1t)
+
+Reworked into an Epic-style per-game setting (macOS only; Mac-native and bridge installs):
+
+- Game Settings > run tab has a "Launch without Steam" toggle beside the Steam overlay control
+  (the Epic offline-mode pattern; setting key `launchWithoutSteam`). Play honours it for every
+  Mac-native and bridge game.
+- Steam DRM titles (SteamStub, CEG markers, curated `drm: "ceg"`) show the toggle disabled with a
+  badge. If the setting was already on and the game is now DRM, Play falls back to the normal
+  Steam launch and logs why; the launch never fails because of the setting.
+- Steam-API and unchecked ("unknown") games are allowed, with a warning that names what is lost
+  (Cloud sync, playtime, achievements, overlay) and that the game may quit, run without Steam
+  features, or reopen Steam.
+- The sub-menu button, its confirm dialog and the `steamLaunchWithoutSteam` channel are removed;
+  `steamDirectLaunchVerdict` stays.
+- Boundary held: nothing writes, copies, replaces or emulates `steam_api`.
+
 ## Live gate — OWED, not run
 
-Operator, this Mac. Restart `pnpm tauri:dev` first (it does not rebuild the sidecar). Fully quit
-Steam (Steam > Quit; confirm no `steam_osx` process) before each launch step.
+Operator, this Mac. Restart `pnpm tauri:dev` first (it does not rebuild the sidecar; check the
+`sidecar.js` mtime). Fully quit Steam (confirm no `steam_osx` process) before each launch step.
 
-1. Pick one game per todo table row: (a) no Steam API, no DRM — one Mac-native and, if owned, one
-   bridge (Windows) game; (b) uses the Steam API, no DRM; (c) Steam DRM (SteamStub or CEG).
-2. Open each game's page sub-menu: "Launch without Steam" appears for (a) only — never for (b) or (c).
-3. For (a): choose it; the confirm names no Steam Cloud, playtime, achievements, overlay; Launch;
-   the game runs with Steam quit; Stop in GameLib ends it.
-4. For (b): record (no option shown, so via a normal Steam-less attempt only if the operator
-   chooses) whether such a game keeps running, quits, or relaunches through Steam — record only,
-   nothing to change.
-5. Update the game (or change its buildid) and reopen the page: the verdict is recomputed (log
-   line), not served stale.
+1. Pick one game per todo table row: (a) no Steam API, no DRM, Mac-native and, if owned, bridge;
+   (b) uses the Steam API, no DRM; (c) Steam DRM.
+2. Open each game's Settings > run tab: (a) and (b) show an enabled toggle beside the Steam
+   overlay control; (c) shows it disabled with the DRM badge. Turning it on for (b) shows the
+   yellow warning naming Cloud sync, playtime, achievements and the overlay. The sub-menu no
+   longer has "Launch without Steam".
+3. Toggle on for (a), press Play: the game runs with Steam quit; Stop ends it.
+4. Toggle on for (b), press Play: record whether it keeps running, quits or reopens Steam
+   (record only).
+5. For (c), if a stored `launchWithoutSteam: true` can be set (for example from before a DRM
+   detection), Play launches through Steam and the log has the fallback line.
+6. Toggle off: Play uses the normal Steam launch.
+7. Update a game (or change its buildid) and reopen its settings: the verdict recompute log line
+   appears.

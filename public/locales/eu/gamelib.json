@@ -521,12 +521,11 @@
             }
         },
         "directLaunch": {
-            "confirmLaunch": "Abiarazi",
             "confirmMessage": "Honek jokoa zuzenean abiarazten du, Steam bezeroa erabili gabe. Saio honetan ez dago Steam Cloud sinkronizaziorik, jokatutako denboraren jarraipenik, lorpenik edo Steam overlay-rik.",
-            "confirmTitle": "Steam gabe abiarazi?",
+            "drmBadge": "Ez dago erabilgarri: joko honek Steam DRM erabiltzen du, eta honek Steam aplikazioa behar du.",
             "failed": "Ezin izan da {{game}} Steam gabe abiarazi.",
             "label": "Abiarazi Steam gabe",
-            "notEligible": "Joko hau ezin da jada Steam gabe abiarazi. Erabili Jokatu horren ordez."
+            "warning": "Joko honek Steam API erabiltzen du, edo GameLibek ezin izan du egiaztatu. Steam gabe, itxi egin daiteke, Steam eginbiderik gabe exekutatu daiteke edo Steam berriro ireki dezake. Steam Cloud sinkronizazioa, jokatutako denbora, lorpenak eta overlay-a galduko dituzu."
         },
         "download": {
             "error": {

@@ -530,12 +530,11 @@
             }
         },
         "directLaunch": {
-            "confirmLaunch": "Iniciar",
             "confirmMessage": "Isto inicia o jogo diretamente, sem o cliente Steam. Nesta sessão não há sincronização do Steam Cloud, registo do tempo de jogo, conquistas nem sobreposição do Steam.",
-            "confirmTitle": "Iniciar sem o Steam?",
+            "drmBadge": "Indisponível: este jogo usa o DRM do Steam, que precisa da aplicação Steam.",
             "failed": "Não foi possível iniciar {{game}} sem o Steam.",
             "label": "Iniciar sem o Steam",
-            "notEligible": "Este jogo já não pode ser iniciado sem o Steam. Use Jogar em vez disso."
+            "warning": "Este jogo usa a API do Steam, ou o GameLib não conseguiu verificar. Sem o Steam, pode fechar-se, funcionar sem as funcionalidades do Steam ou reabrir o Steam. Perde a sincronização do Steam Cloud, o tempo de jogo, as conquistas e a sobreposição."
         },
         "download": {
             "error": {

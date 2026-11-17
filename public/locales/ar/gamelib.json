@@ -557,12 +557,11 @@
             }
         },
         "directLaunch": {
-            "confirmLaunch": "تشغيل",
             "confirmMessage": "سيؤدي هذا إلى تشغيل اللعبة مباشرة دون عميل Steam. في هذه الجلسة لن تتوفر مزامنة Steam Cloud ولا تتبع وقت اللعب ولا الإنجازات ولا تراكب Steam.",
-            "confirmTitle": "هل تريد التشغيل دون Steam؟",
+            "drmBadge": "غير متاح: تستخدم هذه اللعبة Steam DRM الذي يتطلب تطبيق Steam.",
             "failed": "تعذّر تشغيل {{game}} دون Steam.",
             "label": "التشغيل دون Steam",
-            "notEligible": "لم يعد بالإمكان تشغيل هذه اللعبة دون Steam. استخدم «تشغيل» بدلًا من ذلك."
+            "warning": "تستخدم هذه اللعبة Steam API، أو تعذّر على GameLib التحقق. من دون Steam قد تُغلق اللعبة أو تعمل دون ميزات Steam أو تعيد فتح Steam. ستفقد مزامنة Steam Cloud ووقت اللعب والإنجازات وتراكب Steam."
         },
         "download": {
             "error": {

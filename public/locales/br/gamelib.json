@@ -548,12 +548,11 @@
             }
         },
         "directLaunch": {
-            "confirmLaunch": "Loc'hañ",
             "confirmMessage": "Loc'hañ a ra se ar c'hoari war-eeun, hep arval Steam. Evit an estez-mañ, ne vo ket sinkronekadur Steam Cloud, heuliañ ar prantad c'hoari, kutuilhoù pe overlay Steam.",
-            "confirmTitle": "Loc'hañ hep Steam ?",
+            "drmBadge": "Dihegerz: ar c'hoari-mañ a implij Steam DRM, hag en deus ezhomm eus arval Steam.",
             "failed": "N'eus ket bet gallet loc'hañ {{game}} hep Steam.",
             "label": "Loc'hañ hep Steam",
-            "notEligible": "Ne c'hall ket ar c'hoari-mañ bezañ loc'het ken hep Steam. Implijit C'hoari e plas."
+            "warning": "Ar c'hoari-mañ a implij Steam API, pe n'eo ket bet gouest GameLib da wiriañ. Hep Steam e c'hall ehanañ, mont en-dro hep perzhioù Steam, pe lakaat Steam da loc'hañ en-dro. Kollet e vo ganeoc'h sinkronekadur Steam Cloud, prantad c'hoari, kutuilhoù hag an overlay."
         },
         "download": {
             "error": {

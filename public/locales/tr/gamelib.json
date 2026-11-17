@@ -521,12 +521,11 @@
             }
         },
         "directLaunch": {
-            "confirmLaunch": "Başlat",
             "confirmMessage": "Bu, oyunu Steam istemcisi olmadan doğrudan başlatır. Bu oturumda Steam Cloud eşitlemesi, oynama süresi takibi, başarımlar ve Steam kaplaması olmaz.",
-            "confirmTitle": "Steam olmadan başlatılsın mı?",
+            "drmBadge": "Kullanılamıyor: bu oyun, Steam uygulamasını gerektiren Steam DRM kullanıyor.",
             "failed": "{{game}} Steam olmadan başlatılamadı.",
             "label": "Steam olmadan başlat",
-            "notEligible": "Bu oyun artık Steam olmadan başlatılamıyor. Bunun yerine Oyna'yı kullanın."
+            "warning": "Bu oyun Steam API kullanıyor veya GameLib kontrol edemedi. Steam olmadan oyun kapanabilir, Steam özellikleri olmadan çalışabilir veya Steam'i yeniden açabilir. Steam Cloud eşitlemesini, oynama süresini, başarımları ve kaplamayı kaybedersiniz."
         },
         "download": {
             "error": {

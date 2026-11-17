@@ -548,12 +548,11 @@
             }
         },
         "directLaunch": {
-            "confirmLaunch": "Seol",
             "confirmMessage": "Seolann sé seo an cluiche go díreach, gan an cliant Steam. Don seisiún seo, níl aon sioncronú Steam Cloud, aon rianú ama súgartha, aon éachtaí ná aon forleagan Steam ann.",
-            "confirmTitle": "Seol gan Steam?",
+            "drmBadge": "Níl sé ar fáil: úsáideann an cluiche seo DRM Steam, a bhfuil aip Steam ag teastáil uaidh.",
             "failed": "Níorbh fhéidir {{game}} a sheoladh gan Steam.",
             "label": "Seol gan Steam",
-            "notEligible": "Ní féidir an cluiche seo a sheoladh gan Steam a thuilleadh. Úsáid Imir ina ionad."
+            "warning": "Úsáideann an cluiche seo API Steam, nó níorbh fhéidir le GameLib é a sheiceáil. Gan Steam, d'fhéadfadh sé scor, rith gan gnéithe Steam, nó Steam a athoscailt. Caillfidh tú sioncronú Steam Cloud, am súgartha, éachtaí agus an forleagan."
         },
         "download": {
             "error": {

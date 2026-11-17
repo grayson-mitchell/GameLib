@@ -521,12 +521,11 @@
             }
         },
         "directLaunch": {
-            "confirmLaunch": "起動",
             "confirmMessage": "Steamクライアントを使わずに、ゲームを直接起動します。このセッションでは、Steamクラウドの同期、プレイ時間の記録、実績、Steamオーバーレイは利用できません。",
-            "confirmTitle": "Steamなしで起動しますか？",
+            "drmBadge": "利用できません：このゲームはSteam DRMを使用しており、Steamアプリが必要です。",
             "failed": "{{game}}をSteamなしで起動できませんでした。",
             "label": "Steamなしで起動",
-            "notEligible": "このゲームはSteamなしでは起動できなくなりました。代わりに「プレイ」を使用してください。"
+            "warning": "このゲームはSteam APIを使用しているか、GameLibが確認できませんでした。Steamなしでは、終了したり、Steamの機能なしで動作したり、Steamが再び開いたりすることがあります。Steamクラウドの同期、プレイ時間、実績、オーバーレイは利用できなくなります。"
         },
         "download": {
             "error": {

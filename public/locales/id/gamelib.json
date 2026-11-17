@@ -521,12 +521,11 @@
             }
         },
         "directLaunch": {
-            "confirmLaunch": "Jalankan",
             "confirmMessage": "Ini menjalankan game secara langsung, tanpa klien Steam. Pada sesi ini tidak ada sinkronisasi Steam Cloud, pelacakan waktu bermain, pencapaian, maupun overlay Steam.",
-            "confirmTitle": "Jalankan tanpa Steam?",
+            "drmBadge": "Tidak tersedia: game ini memakai Steam DRM, yang memerlukan aplikasi Steam.",
             "failed": "Tidak dapat menjalankan {{game}} tanpa Steam.",
             "label": "Jalankan tanpa Steam",
-            "notEligible": "Game ini tidak bisa lagi dijalankan tanpa Steam. Gunakan Mainkan sebagai gantinya."
+            "warning": "Game ini memakai Steam API, atau GameLib tidak dapat memeriksanya. Tanpa Steam, game mungkin menutup sendiri, berjalan tanpa fitur Steam, atau membuka Steam kembali. Anda kehilangan sinkronisasi Steam Cloud, waktu bermain, pencapaian, dan overlay."
         },
         "download": {
             "error": {

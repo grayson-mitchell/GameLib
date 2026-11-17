@@ -500,12 +500,11 @@
             }
         },
         "directLaunch": {
-            "confirmLaunch": "Käivita",
             "confirmMessage": "See käivitab mängu otse ilma Steami kliendita. Selles seansis puudub Steam Cloudi sünkroonimine, mänguaja jälgimine, saavutused ja Steami ülekate.",
-            "confirmTitle": "Käivitada ilma Steamita?",
+            "drmBadge": "Pole saadaval: see mäng kasutab Steami DRM-i, mis vajab Steami rakendust.",
             "failed": "Mängu {{game}} ei õnnestunud ilma Steamita käivitada.",
             "label": "Käivita ilma Steamita",
-            "notEligible": "Seda mängu ei saa enam ilma Steamita käivitada. Kasuta selle asemel nuppu Mängi."
+            "warning": "See mäng kasutab Steami API-t või GameLib ei saanud seda kontrollida. Ilma Steamita võib see sulguda, töötada ilma Steami funktsioonideta või avada Steami uuesti. Kaotad Steam Cloudi sünkroonimise, mänguaja, saavutused ja ülekatte."
         },
         "download": {
             "error": {

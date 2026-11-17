@@ -296,6 +296,7 @@
     "src/frontend/screens/Settings/components/GameStartWindow.tsx",
     "src/frontend/screens/Settings/components/Gamescope.tsx",
     "src/frontend/screens/Settings/components/HideChangelogOnStartup.tsx",
+    "src/frontend/screens/Settings/components/LaunchWithoutSteam.tsx",
     "src/frontend/screens/Settings/components/LauncherArgs.tsx",
     "src/frontend/screens/Settings/components/LoginBackground.tsx",
     "src/frontend/screens/Settings/components/Mangohud.tsx",

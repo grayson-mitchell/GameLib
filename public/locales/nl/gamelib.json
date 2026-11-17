@@ -521,12 +521,11 @@
             }
         },
         "directLaunch": {
-            "confirmLaunch": "Starten",
             "confirmMessage": "Hiermee start de game rechtstreeks, zonder de Steam-client. Tijdens deze sessie is er geen Steam Cloud-synchronisatie, geen speeltijdregistratie, zijn er geen prestaties en geen Steam-overlay.",
-            "confirmTitle": "Starten zonder Steam?",
+            "drmBadge": "Niet beschikbaar: deze game gebruikt Steam DRM, wat de Steam-app nodig heeft.",
             "failed": "{{game}} kon niet zonder Steam worden gestart.",
             "label": "Starten zonder Steam",
-            "notEligible": "Deze game kan niet meer zonder Steam worden gestart. Gebruik in plaats daarvan Spelen."
+            "warning": "Deze game gebruikt de Steam-API, of GameLib kon dit niet controleren. Zonder Steam kan de game afsluiten, zonder Steam-functies draaien of Steam opnieuw openen. Je verliest Steam Cloud-synchronisatie, speeltijd, prestaties en de overlay."
         },
         "download": {
             "error": {

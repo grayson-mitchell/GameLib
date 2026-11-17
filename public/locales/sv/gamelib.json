@@ -521,12 +521,11 @@
             }
         },
         "directLaunch": {
-            "confirmLaunch": "Starta",
             "confirmMessage": "Detta startar spelet direkt, utan Steam-klienten. I den här sessionen finns ingen Steam Cloud-synkronisering, ingen spelstidsspårning, inga prestationer och ingen Steam-overlay.",
-            "confirmTitle": "Starta utan Steam?",
+            "drmBadge": "Inte tillgängligt: det här spelet använder Steam DRM, som kräver Steam-appen.",
             "failed": "Det gick inte att starta {{game}} utan Steam.",
             "label": "Starta utan Steam",
-            "notEligible": "Det här spelet kan inte längre startas utan Steam. Använd Spela i stället."
+            "warning": "Det här spelet använder Steam API, eller så kunde GameLib inte kontrollera det. Utan Steam kan det avslutas, köras utan Steam-funktioner eller öppna Steam igen. Du förlorar Steam Cloud-synkronisering, spelstid, prestationer och overlayen."
         },
         "download": {
             "error": {

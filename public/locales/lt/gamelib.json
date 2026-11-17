@@ -539,12 +539,11 @@
             }
         },
         "directLaunch": {
-            "confirmLaunch": "Paleisti",
             "confirmMessage": "Taip žaidimas paleidžiamas tiesiogiai, be Steam kliento. Šiame seanse nebus Steam Cloud sinchronizavimo, žaidimo laiko sekimo, pasiekimų ir Steam perdangos.",
-            "confirmTitle": "Paleisti be Steam?",
+            "drmBadge": "Nepasiekiama: šis žaidimas naudoja Steam DRM, kuriai reikalinga Steam programa.",
             "failed": "Nepavyko paleisti {{game}} be Steam.",
             "label": "Paleisti be Steam",
-            "notEligible": "Šio žaidimo nebegalima paleisti be Steam. Vietoj to naudokite Žaisti."
+            "warning": "Šis žaidimas naudoja Steam API arba GameLib negalėjo patikrinti. Be Steam jis gali užsidaryti, veikti be Steam funkcijų arba vėl atidaryti Steam. Prarasite Steam Cloud sinchronizavimą, žaidimo laiką, pasiekimus ir perdangą."
         },
         "download": {
             "error": {

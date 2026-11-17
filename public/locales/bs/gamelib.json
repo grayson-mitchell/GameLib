@@ -530,12 +530,11 @@
             }
         },
         "directLaunch": {
-            "confirmLaunch": "Pokreni",
             "confirmMessage": "Ovo pokreće igru direktno, bez Steam klijenta. U ovoj sesiji nema Steam Cloud sinhronizacije, praćenja vremena igranja, postignuća ni Steam overlaya.",
-            "confirmTitle": "Pokrenuti bez Steama?",
+            "drmBadge": "Nije dostupno: ova igra koristi Steam DRM, kojem je potrebna aplikacija Steam.",
             "failed": "Nije moguće pokrenuti {{game}} bez Steama.",
             "label": "Pokreni bez Steama",
-            "notEligible": "Ova igra se više ne može pokrenuti bez Steama. Umjesto toga koristite Igraj."
+            "warning": "Ova igra koristi Steam API ili GameLib nije mogao provjeriti. Bez Steama može se zatvoriti, raditi bez Steam funkcija ili ponovo otvoriti Steam. Gubite Steam Cloud sinhronizaciju, vrijeme igranja, postignuća i overlay."
         },
         "download": {
             "error": {

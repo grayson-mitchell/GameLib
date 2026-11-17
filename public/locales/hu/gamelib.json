@@ -521,12 +521,11 @@
             }
         },
         "directLaunch": {
-            "confirmLaunch": "Indítás",
             "confirmMessage": "Ez közvetlenül, a Steam-kliens nélkül indítja el a játékot. Ebben a munkamenetben nincs Steam Cloud-szinkronizálás, játékidő-követés, teljesítmény és Steam-átfedés.",
-            "confirmTitle": "Indítod Steam nélkül?",
+            "drmBadge": "Nem érhető el: ez a játék Steam DRM-et használ, amelyhez szükség van a Steam alkalmazásra.",
             "failed": "Nem sikerült a(z) {{game}} indítása Steam nélkül.",
             "label": "Indítás Steam nélkül",
-            "notEligible": "Ez a játék már nem indítható Steam nélkül. Használd helyette a Játék gombot."
+            "warning": "Ez a játék a Steam API-t használja, vagy a GameLib nem tudta ellenőrizni. Steam nélkül bezárulhat, Steam-funkciók nélkül futhat, vagy újra megnyithatja a Steamet. Elveszíted a Steam Cloud-szinkronizálást, a játékidőt, a teljesítményeket és az átfedést."
         },
         "download": {
             "error": {

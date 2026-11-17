@@ -684,12 +684,11 @@
             }
         },
         "directLaunch": {
-            "confirmLaunch": "Launch",
             "confirmMessage": "This starts the game directly, without the Steam client. For this session there is no Steam Cloud sync, no playtime tracking, no achievements and no Steam overlay.",
-            "confirmTitle": "Launch without Steam?",
+            "drmBadge": "Not available: this game uses Steam DRM, which needs the Steam app.",
             "failed": "Could not launch {{game}} without Steam.",
             "label": "Launch without Steam",
-            "notEligible": "This game can no longer launch without Steam. Use Play instead."
+            "warning": "This game uses the Steam API, or GameLib could not check. Without Steam it may quit, run without Steam features, or reopen Steam. You lose Steam Cloud sync, playtime, achievements and the overlay."
         },
         "download": {
             "error": {

@@ -530,12 +530,11 @@
             }
         },
         "directLaunch": {
-            "confirmLaunch": "הפעל",
             "confirmMessage": "פעולה זו מפעילה את המשחק ישירות, ללא לקוח Steam. בהפעלה הזו אין סנכרון Steam Cloud, מעקב אחר זמן משחק, הישגים או שכבת-על של Steam.",
-            "confirmTitle": "להפעיל ללא Steam?",
+            "drmBadge": "לא זמין: המשחק הזה משתמש ב-Steam DRM, שדורש את אפליקציית Steam.",
             "failed": "לא ניתן היה להפעיל את {{game}} ללא Steam.",
             "label": "הפעל ללא Steam",
-            "notEligible": "אי אפשר עוד להפעיל את המשחק הזה ללא Steam. השתמש בהפעל במקום זאת."
+            "warning": "המשחק הזה משתמש ב-Steam API, או ש-GameLib לא הצליח לבדוק. ללא Steam הוא עלול להיסגר, לפעול בלי תכונות של Steam או לפתוח את Steam מחדש. תאבד סנכרון Steam Cloud, זמן משחק, הישגים ושכבת-על."
         },
         "download": {
             "error": {

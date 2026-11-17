@@ -539,12 +539,11 @@
             }
         },
         "directLaunch": {
-            "confirmLaunch": "Spustiť",
             "confirmMessage": "Hra sa spustí priamo, bez klienta Steam. V tejto relácii nebude synchronizácia Steam Cloud, sledovanie herného času, úspechy ani prekrytie Steamu.",
-            "confirmTitle": "Spustiť bez Steamu?",
+            "drmBadge": "Nedostupné: táto hra používa Steam DRM, ktoré vyžaduje aplikáciu Steam.",
             "failed": "Hru {{game}} sa nepodarilo spustiť bez Steamu.",
             "label": "Spustiť bez Steamu",
-            "notEligible": "Túto hru už nie je možné spustiť bez Steamu. Použite namiesto toho Hrať."
+            "warning": "Táto hra používa Steam API, alebo to GameLib nedokázal overiť. Bez Steamu sa môže ukončiť, bežať bez funkcií Steamu alebo znova otvoriť Steam. Prídete o synchronizáciu Steam Cloud, herný čas, úspechy a prekrytie."
         },
         "download": {
             "error": {

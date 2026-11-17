@@ -420,12 +420,11 @@
             }
         },
         "directLaunch": {
-            "confirmLaunch": "Lancer",
             "confirmMessage": "Cela lance le jeu directement, sans le client Steam. Pour cette session, il n'y a ni synchronisation Steam Cloud, ni suivi du temps de jeu, ni succès, ni surcouche Steam.",
-            "confirmTitle": "Lancer sans Steam ?",
+            "drmBadge": "Indisponible : ce jeu utilise le DRM de Steam, qui nécessite l'application Steam.",
             "failed": "Impossible de lancer {{game}} sans Steam.",
             "label": "Lancer sans Steam",
-            "notEligible": "Ce jeu ne peut plus être lancé sans Steam. Utilisez Jouer à la place."
+            "warning": "Ce jeu utilise l'API Steam, ou GameLib n'a pas pu le vérifier. Sans Steam, il peut se fermer, fonctionner sans les fonctions de Steam ou rouvrir Steam. Vous perdez la synchronisation Steam Cloud, le temps de jeu, les succès et la surcouche."
         },
         "install": {
             "bottleNameReadonlyHelper": "GameLib gère une seule bouteille CrossOver partagée pour Steam. Nommer une bouteille distincte par jeu n'est pas encore pris en charge.",

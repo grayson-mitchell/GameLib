@@ -539,12 +539,11 @@
             }
         },
         "directLaunch": {
-            "confirmLaunch": "Zaženi",
             "confirmMessage": "S tem se igra zažene neposredno, brez odjemalca Steam. V tej seji ni sinhronizacije Steam Cloud, beleženja igralnega časa, dosežkov ali prekrivnega sloja Steam.",
-            "confirmTitle": "Zagnati brez Steama?",
+            "drmBadge": "Ni na voljo: ta igra uporablja Steam DRM, ki potrebuje aplikacijo Steam.",
             "failed": "Igre {{game}} ni bilo mogoče zagnati brez Steama.",
             "label": "Zaženi brez Steama",
-            "notEligible": "Te igre ni več mogoče zagnati brez Steama. Namesto tega uporabite Igraj."
+            "warning": "Ta igra uporablja Steam API ali pa GameLib tega ni mogel preveriti. Brez Steama se lahko zapre, deluje brez funkcij Steam ali znova odpre Steam. Izgubili boste sinhronizacijo Steam Cloud, igralni čas, dosežke in prekrivni sloj."
         },
         "download": {
             "error": {
