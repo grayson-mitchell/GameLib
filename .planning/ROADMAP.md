@@ -173,7 +173,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 78: Verification records and test health after v0.9** — 5 plans in 2 waves; planned (completed 2026-11-17)
 - [x] **Phase 79: Rust CM client replacing steam-user and steam-session** — 44 plans in 21 waves; planned (spike 085 gate satisfied) (completed 2026-11-15)
 - [x] **Phase 80: Steam install, uninstall and update polling state machines in Rust** — 33 plans; planned (completed 2026-11-16)
-- [ ] **Phase 81: Unify the Steam restart hold into restart-on-Play** — not planned
+- [ ] **Phase 81: Unify the Steam restart hold into restart-on-Play** — 13 plans; planned
 - [ ] **Phase 47: Migrate aggregated store search from CheapShark to IsThereAnyDeal** — 13 plans; ITAD gates closed 2026-11-12; planned 2026-11-14 (moved from v0.8)
 
 **v0.11 Node Sidecar Retirement** (planned 2026-11-17; requirements `REQUIREMENTS-v0.11.md`)
@@ -1861,12 +1861,57 @@ Plans:
 ### Phase 81: Unify the Steam restart hold into restart-on-Play
 
 **Goal:** One mechanism, not two, for a GameLib depot install that the running Steam client has not adopted. Today macOS has both the D-UAT-13 poll hold ("Restart Steam to finish", `gamelib-steampoll` `hold.rs` after Phase 80, with the persisted `steam_restart_hold` store and boot re-arm from quick 261029-pkp) and restart-on-Play (`macSteamAdoption.ts`, quick 261029-ji2: a pending-adoption record, and Play quits and relaunches Steam when the same Steam process has not adopted the game). The hold is the brittle half: it releases only when the recorded Steam pid exits, so a sign-in rescan that adopts the game leaves it stuck (261105-ord gate item 6, appId 112100), and its boot re-arm fails closed to "not installed". Scope: report the game installed once the ACF says so and let restart-on-Play handle the unadopted case at Play; delete the hold, its persisted store and the boot re-arm where restart-on-Play applies; release the pending-adoption record on spike 083's evidence (sign-in reloads every appmanifest, observable via content_log `Loaded N apps from install folder` and helper `GetAppInstallState` 1026 -> 4), with "Sign in to Steam to finish" for a signed-out Steam; keep the experimental InstallApp setting (quick 261105-ord/261105-sqe) as the preferred macOS path when on, with restart-on-Play as its fallback; give the user an in-app action rather than passive text. Windows/Linux: extend restart-on-Play only if the todos `2026-11-16-spike-steam-startup-and-sign-in-adoption-on-windows.md` and `2026-11-17-spike-steam-startup-and-sign-in-adoption-on-linux.md` find Steam adopts at startup without a dialog there; otherwise they keep a simplified hold. Do not re-spike `steam://install` (047/048: needs a click in Steam's install dialog). Absorbs todo `2026-11-05-steam-restart-hold-brittle-discuss.md`. Came from the operator's discussion on 2026-11-16.
-**Requirements**: TBD
+**Requirements**: TBD (scope is CONTEXT.md D-01..D-15; every decision is cited in a plan)
 **Depends on:** Phase 80
-**Plans:** 0 plans
+**Plans:** 13 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 81 to break down)
+
+**Wave 1**
+
+- [ ] 81-01-PLAN.md — adoptionState event contract and the Rust adoption-watch task (ACF rewrite, macOS pid)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 81-02-PLAN.md — adoption watch/unwatch/read ops on every layer; watch every record; boot resume
+- [ ] 81-03-PLAN.md — helper `--steam-appstate` (BLoggedOn, GetAppInstallState), Rust reader, macOS helper evidence, D-09 fallback
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 81-04-PLAN.md — Windows/Linux evidence: content_log rescan rule, libraryfolders, signed-in readers
+- [ ] 81-05-PLAN.md — restart-on-Play on every OS: Play gate, record writer, unadopted uninstall, D-06 pin
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 81-06-PLAN.md — refusal as an in-app notice with "Launch without Steam" for eligible games
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 81-07-PLAN.md — game-page note and actions (Restart Steam now, Open Steam), live updates
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
+- [ ] 81-08-PLAN.md — Installed as soon as the ACF says so; delete the boot re-arm
+
+**Wave 7** *(blocked on Wave 6 completion)*
+
+- [ ] 81-09-PLAN.md — D-12 migration of persisted holds (drain, write pending records, discard)
+
+**Wave 8** *(blocked on Wave 7 completion)*
+
+- [ ] 81-10-PLAN.md — delete the hold state machine, store writer and HoldSink; status and refresh cleanup
+
+**Wave 9** *(blocked on Wave 8 completion)*
+
+- [ ] 81-11-PLAN.md — hold-free contracts (start options, rearmSettled), dead TS probe, deletion gate, invariant test
+
+**Wave 10** *(blocked on Wave 9 completion)*
+
+- [ ] 81-12-PLAN.md — author the live-gate contract (81-HUMAN-UAT.md) and its reachability review
+
+**Wave 11** *(blocked on Wave 10 completion)*
+
+- [ ] 81-13-PLAN.md — run the live gate on macOS, Windows 11 and Linux (operator)
 
 ## v0.11 Phase Details
 
