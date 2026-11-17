@@ -15,32 +15,54 @@
  *   challenge over the new code; and (C1 handoff) the 110 s auto-refresh must not restart a flow the
  *   user already approved while its finalisation runs.
  *
- * `Dialog` is replaced with a bare container (it pulls the settings store and the embed-suppression
- * context, neither of which this flow touches) and `react-qr-code` with a node that prints the drawn
- * challenge, so a test can read which code the user is shown.
+ * Nothing is mocked. The real `Dialog` renders (the fake `window.api` supplies `gamepadAction`), the
+ * real auth store is seeded with a `jest.fn` `steamLogin`, and the drawn code is identified by matching
+ * the real QR svg against reference renders of each candidate challenge.
  */
 import 'frontend/testUtils/jsdomNoticeEnv'
-import type { ReactNode } from 'react'
 
-jest.mock('../index.scss', () => ({}))
-jest.mock('frontend/components/UI/Dialog', () => ({
-  Dialog: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  DialogHeader: ({ children }: { children: ReactNode }) => <h1>{children}</h1>
-}))
-jest.mock('react-qr-code', () => ({
-  __esModule: true,
-  default: ({ value }: { value: string }) => <div data-testid="qr">{value}</div>
-}))
 const mockSteamLogin = jest.fn()
-jest.mock('frontend/state/authState', () => ({
-  __esModule: true,
-  default: (select: (s: { steamLogin: typeof mockSteamLogin }) => unknown) =>
-    select({ steamLogin: mockSteamLogin })
-}))
 
-// Imported after the mocks above.
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import QRCode from 'react-qr-code'
 import SteamLogin, { SIGN_IN_ENDED_MESSAGE } from '../index'
+import useAuthState from 'frontend/state/authState'
+import { resetAllStores } from 'frontend/state/storeKit'
+import { StoreEmbedSuppressionProvider } from 'frontend/components/UI/NavShell/StoreEmbedSuppressionContext'
+
+const renderLogin = () =>
+  render(
+    <StoreEmbedSuppressionProvider>
+      <SteamLogin dismiss={() => undefined} />
+    </StoreEmbedSuppressionProvider>
+  )
+
+const QR_LABEL = 'Steam QR code for mobile login'
+const CANDIDATES = ['qr-A', 'qr-A2', 'qr-B', 'qr-C']
+const referenceMarkup = new Map<string, string>()
+function referenceFor(value: string): string {
+  const cached = referenceMarkup.get(value)
+  if (cached !== undefined) return cached
+  const ref = render(
+    <QRCode value={value} size={200} fgColor="#000000" bgColor="#ffffff" />
+  )
+  const markup = ref.container.querySelector('svg')?.innerHTML ?? ''
+  ref.unmount()
+  referenceMarkup.set(value, markup)
+  return markup
+}
+
+// Which challenge the user is shown: the real svg matched against references.
+function drawn(): string | null {
+  const svg = screen.queryByRole('img', { name: QR_LABEL })
+  if (!svg) return null
+  const markup = svg.innerHTML
+  const match = CANDIDATES.find((v) => referenceFor(v) === markup)
+  if (match === undefined) {
+    throw new Error(`drawn QR matches no known challenge: ${markup}`)
+  }
+  return match
+}
 
 type Deferred<T> = { promise: Promise<T>; resolve: (v: T) => void }
 function deferred<T>(): Deferred<T> {
@@ -60,7 +82,8 @@ const api = {
   steamStartCredentials: jest.fn(),
   steamSubmitGuard: jest.fn(),
   getSteamUserInfo: jest.fn(),
-  openExternalUrl: jest.fn()
+  openExternalUrl: jest.fn(),
+  gamepadAction: jest.fn()
 }
 
 async function advance(ms: number) {
@@ -86,10 +109,12 @@ beforeEach(() => {
   api.steamStartCredentials.mockResolvedValue({ status: 'guard_required' })
   api.getSteamUserInfo.mockResolvedValue({ username: 'gaben' })
   mockSteamLogin.mockResolvedValue('done')
+  useAuthState.setState({ steamLogin: mockSteamLogin })
 })
 
 afterEach(() => {
   cleanup()
+  resetAllStores()
   jest.useRealTimers()
 })
 
@@ -101,7 +126,7 @@ type StartReply = {
 
 async function mountAfterStart(reply: StartReply) {
   api.steamStartCredentials.mockResolvedValueOnce(reply)
-  const view = render(<SteamLogin dismiss={() => undefined} />)
+  const view = renderLogin()
   await flush()
   fireEvent.click(screen.getByRole('tab', { name: 'Username & Password' }))
   fireEvent.change(screen.getByLabelText('Username'), {
@@ -160,7 +185,7 @@ describe('C2/WR-01: a submit that resolves after its attempt ended starts no pol
   })
 
   it('a guard_required start after the dialog closed does not start a credential poll', async () => {
-    render(<SteamLogin dismiss={() => undefined} />)
+    renderLogin()
     await flush()
     fireEvent.click(screen.getByRole('tab', { name: 'Username & Password' }))
     fireEvent.change(screen.getByLabelText('Username'), {
@@ -270,10 +295,8 @@ describe('C2/WR-02: a guard failure retries only while the flow is alive', () =>
 })
 
 describe('C2/WR-05: QR flow restarts', () => {
-  const drawn = () => screen.queryByTestId('qr')?.textContent ?? null
-
   async function mountOnQr() {
-    render(<SteamLogin dismiss={() => undefined} />)
+    renderLogin()
     await flush()
     await flush()
     expect(drawn()).toBe('qr-A')
@@ -350,12 +373,11 @@ describe('C2/WR-05: QR flow restarts', () => {
 })
 
 describe('QR -> credentials -> QR tab round-trip', () => {
-  const drawn = () => screen.queryByTestId('qr')?.textContent ?? null
   const toTab = (name: 'QR Code' | 'Username & Password') =>
     fireEvent.click(screen.getByRole('tab', { name }))
 
   async function mountOnQr() {
-    render(<SteamLogin dismiss={() => undefined} />)
+    renderLogin()
     await flush()
     await flush()
     expect(drawn()).toBe('qr-A')
@@ -531,5 +553,13 @@ describe('approval-first Steam Guard', () => {
     await advance(2_000)
     expect(screen.getByText('Approved. Completing sign-in...')).toBeTruthy()
     expect(screen.queryByLabelText('Username')).toBeNull()
+  })
+})
+
+describe('QR reference markup', () => {
+  it('is pairwise distinct across candidates, so drawn() can never match vacuously', () => {
+    const markups = CANDIDATES.map(referenceFor)
+    expect(markups.every((m) => m.length > 0)).toBe(true)
+    expect(new Set(markups).size).toBe(CANDIDATES.length)
   })
 })

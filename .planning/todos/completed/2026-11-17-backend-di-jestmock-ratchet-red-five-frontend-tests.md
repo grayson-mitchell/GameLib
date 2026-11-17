@@ -27,3 +27,7 @@ The contract forbids adding or raising a baseline ("remove it instead"), so the 
 ## Solution
 
 Rewrite these five tests to use fakes passed in through props/context or the existing testUtils helpers instead of `jest.mock`. Cheap first steps: a `moduleNameMapper` stub for `.scss` removes four of the NoticeStack and one of the SteamLogin mocks; the rest need real seams (react-i18next faithful stub is already in `faithfulTranslate`). Plan 78-05 stopped here after one attempt (the SteamUpdateInfo stub cannot simply be dropped).
+
+## Resolution
+
+Resolved by quick 261117-omv. A jest css/scss moduleNameMapper stub replaced the per-test scss mocks; the Login route constants moved to a light `loginPaths.ts` seam so NoticeStackTwoToast needs no Login mock; steamLoginPollLifecycle now uses the real Dialog, store and QR; the GameStatus trio dropped two mocks each and their shard baselines were lowered 7 -> 6.
