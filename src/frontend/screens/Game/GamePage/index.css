@@ -213,6 +213,23 @@
         }
       }
 
+      .nativePortInfo {
+        ol {
+          padding-inline-start: 1.25rem;
+          margin: 0.25rem 0;
+        }
+
+        p {
+          margin: 0.25rem 0;
+        }
+
+        .nativePortInfo__buttons {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.5rem;
+        }
+      }
+
       h1 {
         font-size: 34px;
         line-height: 39px;

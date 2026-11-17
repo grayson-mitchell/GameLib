@@ -69,6 +69,7 @@ import {
   GameStatus,
   HLTB,
   HumbleOriginInfo,
+  NativePortInfo,
   InstalledInfo,
   MacArchBadge,
   MainButton,
@@ -697,6 +698,10 @@ export default React.memo(function GamePage(): JSX.Element | null {
                           <InstalledInfo gameInfo={gameInfo} />
                           <CloudSavesSync gameInfo={gameInfo} />
                           <HumbleOriginInfo gameInfo={gameInfo} />
+                          <NativePortInfo
+                            gameInfo={gameInfo}
+                            platform={platform}
+                          />
                         </TabPanel>
 
                         <TabPanel
