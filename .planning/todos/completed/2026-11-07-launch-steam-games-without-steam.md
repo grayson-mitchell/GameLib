@@ -113,3 +113,17 @@ Operator, this Mac. Restart `pnpm tauri:dev` first (it does not rebuild the side
 6. Toggle off: Play uses the normal Steam launch.
 7. Update a game (or change its buildid) and reopen its settings: the verdict recompute log line
    appears.
+
+### Live results (2026-11-17, operator)
+
+- Grim Dawn (219990, bridge): toggle disabled for Steam DRM, as expected. The badge row read as
+  clutter, so the reason moved behind the label-line (i) (089db50fb).
+- WazHack (264160) and Avernum 6 (206060): the toggle was missing at first. The running sidecar
+  predated q1t and returned the old `eligible` shape; the toggle showed after a restart.
+- WazHack (264160, Mac-native, Unity): row (b), not (a). It ships
+  `PlugIns/libsteam_api.bundle` (Facepunch.Steamworks), which the exact-name walk missed, so the
+  verdict said `warning none`. Play with the toggle on started the game directly. It reopened
+  Steam (steam_osx started 19:15:08 by launchd), and the game then ran under Steam. Outcome:
+  **relaunches through Steam**. The walk now matches `(lib)steam_api(64).{dylib,bundle,framework}`
+  and the cache is at v3, so WazHack now gets the Steam-API warning.
+- Still to run: a true row-(a) game with Steam quit; Avernum 6 (b) outcome; steps 5-7.

@@ -238,7 +238,7 @@ describe('cache', () => {
     await getDirectLaunchVerdict(d, { ...macInput, ...change })
     expect(probes.knownFixCeg.mock.calls.length).toBeGreaterThan(before)
     const stored = d.map.get('10') as Record<string, unknown>
-    expect(stored.v).toBe(2)
+    expect(stored.v).toBe(3)
     expect(stored.buildid).toBe(
       (change as { buildid?: string }).buildid ?? '100'
     )
@@ -257,9 +257,9 @@ describe('cache', () => {
     expect(d.map.size).toBe(0)
   })
 
-  test('corrupt and v1 records are recomputed', async () => {
+  test('corrupt, v1 and v2 records are recomputed', async () => {
     const good = {
-      v: 2,
+      v: 3,
       kind: 'mac-native',
       installPath: '/inst',
       buildid: '100'
@@ -267,6 +267,16 @@ describe('cache', () => {
     for (const bad of [
       'junk',
       { v: 1 },
+      {
+        ...good,
+        v: 2,
+        verdict: {
+          applies: true,
+          kind: 'mac-native',
+          warning: 'none',
+          launch: { args: [] }
+        }
+      },
       {
         ...good,
         v: 1,

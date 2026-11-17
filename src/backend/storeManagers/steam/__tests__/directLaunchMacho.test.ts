@@ -180,12 +180,17 @@ describe('machOLinksSteamApi and findMacSteamApiFiles (temp dir)', () => {
     mkdirSync(join(app, 'Plugins', 'steam_api.bundle'), { recursive: true })
     mkdirSync(join(app, 'Frameworks'), { recursive: true })
     writeFileSync(join(app, 'Frameworks', 'LibSteam_API.dylib'), 'x')
+    // Unity / Facepunch.Steamworks ships it as a lib-prefixed bundle (WazHack).
+    mkdirSync(join(app, 'Plugins', 'libsteam_api.bundle', 'Contents'), {
+      recursive: true
+    })
     mkdirSync(join(dir, 'elsewhere'))
     writeFileSync(join(dir, 'elsewhere', 'libsteam_api.dylib'), 'x')
     symlinkSync(join(dir, 'elsewhere'), join(dir, 'Foo.app', 'link'))
     const found = (await findMacSteamApiFiles(join(dir, 'Foo.app'))).sort()
     expect(found).toEqual([
       join(app, 'Frameworks', 'LibSteam_API.dylib'),
+      join(app, 'Plugins', 'libsteam_api.bundle'),
       join(app, 'Plugins', 'steam_api.bundle')
     ])
   })
@@ -193,6 +198,7 @@ describe('machOLinksSteamApi and findMacSteamApiFiles (temp dir)', () => {
   test('a clean tree has none', async () => {
     mkdirSync(join(dir, 'a', 'b'), { recursive: true })
     writeFileSync(join(dir, 'a', 'b', 'game'), 'x')
+    writeFileSync(join(dir, 'a', 'steam_api_notes.txt'), 'x')
     expect(await findMacSteamApiFiles(dir)).toEqual([])
   })
 })

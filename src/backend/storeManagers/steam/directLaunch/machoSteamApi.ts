@@ -173,9 +173,13 @@ const WALK_MAX_DEPTH = 8
 const WALK_MAX_ENTRIES = 20000
 
 /**
- * Bounded walk for shipped Steam API files: a libsteam_api.dylib file or a
- * steam_api.bundle / steam_api.framework directory. Never follows links.
+ * A shipped Steam API library, file or bundle/framework dir, with or without the `lib` prefix:
+ * libsteam_api.dylib, steam_api.bundle, and Unity's libsteam_api.bundle (Facepunch.Steamworks,
+ * e.g. WazHack, which the exact-name match missed).
  */
+const STEAM_API_NAME = /^(lib)?steam_api(64)?\.(dylib|bundle|framework)$/
+
+/** Bounded walk for shipped Steam API files (STEAM_API_NAME). Never follows links. */
 export async function findMacSteamApiFiles(root: string): Promise<string[]> {
   const found: string[] = []
   let seen = 0
@@ -191,15 +195,16 @@ export async function findMacSteamApiFiles(root: string): Promise<string[]> {
       if (entry.isSymbolicLink()) continue
       const full = join(dir, entry.name)
       const lower = entry.name.toLowerCase()
-      if (entry.isDirectory()) {
-        if (lower === 'steam_api.bundle' || lower === 'steam_api.framework') {
-          found.push(full)
-          continue
-        }
-        if (depth < WALK_MAX_DEPTH) await walk(full, depth + 1)
+      if (
+        (entry.isDirectory() || entry.isFile()) &&
+        STEAM_API_NAME.test(lower)
+      ) {
+        found.push(full)
         continue
       }
-      if (entry.isFile() && lower === 'libsteam_api.dylib') found.push(full)
+      if (entry.isDirectory() && depth < WALK_MAX_DEPTH) {
+        await walk(full, depth + 1)
+      }
     }
   }
   await walk(root, 0)

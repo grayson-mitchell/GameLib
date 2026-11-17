@@ -179,6 +179,9 @@ function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v)
 }
 
+// v3: libsteam_api.bundle detection (WazHack); v2 records may wrongly say 'none'.
+const CACHE_VERSION = 3
+
 function readCached(
   deps: DirectLaunchDeps,
   input: DirectLaunchInput,
@@ -187,7 +190,7 @@ function readCached(
 ): DirectLaunchVerdict | undefined {
   try {
     const rec = deps.store.get(input.appId)
-    if (!isRecord(rec) || rec.v !== 2) return undefined
+    if (!isRecord(rec) || rec.v !== CACHE_VERSION) return undefined
     if (
       rec.kind !== kind ||
       rec.installPath !== installPath ||
@@ -268,7 +271,7 @@ export async function getDirectLaunchVerdict(
   ) {
     try {
       deps.store.set(input.appId, {
-        v: 2,
+        v: CACHE_VERSION,
         kind,
         installPath,
         buildid: input.buildid,
