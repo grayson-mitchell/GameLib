@@ -10,7 +10,7 @@ import {
 import { ThemeCard } from './ThemeCard'
 import { ThemeCardActions } from './ThemeCardActions'
 import { RenameThemeDialog } from './RenameThemeDialog'
-import { showThemeLimitDialog } from './themeDialogs'
+import { confirmDeleteTheme, showThemeLimitDialog } from './themeDialogs'
 import { defaultThemes, resolveThemeLabel } from './themeLabels'
 import './index.scss'
 
@@ -22,8 +22,14 @@ const editorPath = (id: string) => `/accessibility/themes/${id}`
  * "Your themes" lists the custom themes in stored (creation) order.
  */
 export function ThemeGallery() {
-  const { theme, customThemes, setTheme, duplicateTheme } =
-    useSettingsState.keys('theme', 'customThemes', 'setTheme', 'duplicateTheme')
+  const { theme, customThemes, setTheme, duplicateTheme, deleteCustomTheme } =
+    useSettingsState.keys(
+      'theme',
+      'customThemes',
+      'setTheme',
+      'duplicateTheme',
+      'deleteCustomTheme'
+    )
   const { t } = useTranslation()
   const { t: tGamelib } = useTranslation('gamelib')
   const navigate = useNavigate()
@@ -121,6 +127,14 @@ export function ThemeGallery() {
                       onDuplicate={() => duplicate(key, custom.name)}
                       onRename={() =>
                         setRenaming({ id: custom.id, name: custom.name })
+                      }
+                      onDelete={() =>
+                        confirmDeleteTheme({
+                          t,
+                          theme: custom,
+                          isActive: key === theme,
+                          onConfirm: () => deleteCustomTheme(custom.id)
+                        })
                       }
                     />
                   }

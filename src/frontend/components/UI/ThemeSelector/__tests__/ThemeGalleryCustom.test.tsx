@@ -6,7 +6,7 @@ import 'frontend/testUtils/jsdomNoticeEnv'
 import i18next from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import { MemoryRouter, Route, Routes, useParams } from 'react-router-dom'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { ThemeSelector } from '../index'
 import type { CustomTheme } from 'common/types/customTheme'
 import { MAX_CUSTOM_THEMES } from 'frontend/customThemes/customTheme'
@@ -213,5 +213,79 @@ describe('ThemeGallery: Your themes group', () => {
     expect(dialog.title).toBe('Theme limit reached')
     expect(dialog.buttons?.map((b) => b.text)).toEqual(['Close message'])
     expect(queryByTestId('editor-probe')).toBeNull()
+  })
+
+  describe('Delete', () => {
+    const clickDelete = (container: HTMLElement, name: string) =>
+      fireEvent.click(
+        container.querySelector(`[aria-label="Delete ${name}"]`) as HTMLElement
+      )
+
+    it('asks first, with Keep theme focused and Delete theme in the danger style', () => {
+      useSettingsState.setState({ customThemes: [makeTheme(1)] })
+      const { container } = renderGallery()
+      clickDelete(container, 'Theme 1')
+      const dialog = useUiState.getState().dialogModalOptions
+      expect(dialog.title).toBe('Delete theme?')
+      expect(typeof dialog.message).not.toBe('string')
+      expect(render(<>{dialog.message}</>).container.textContent).toBe(
+        '“Theme 1” will be deleted. This can’t be undone.'
+      )
+      expect(dialog.buttons).toEqual([
+        { text: 'Keep theme', autoFocus: true },
+        {
+          text: 'Delete theme',
+          variant: 'danger',
+          onClick: expect.any(Function)
+        }
+      ])
+      expect(useSettingsState.getState().customThemes).toHaveLength(1)
+    })
+
+    it('removes the card when the delete is confirmed', () => {
+      useSettingsState.setState({
+        customThemes: [makeTheme(1), makeTheme(2)]
+      })
+      const { container } = renderGallery()
+      clickDelete(container, 'Theme 1')
+      const confirm = useUiState.getState().dialogModalOptions.buttons?.[1]
+      act(() => confirm?.onClick?.())
+      expect(customCards(container).map((c) => c.dataset.themeKey)).toEqual([
+        `custom:${hexId(2)}`
+      ])
+    })
+
+    it('names the base built-in when deleting the active theme, and switches to it', () => {
+      useSettingsState.setState({
+        customThemes: [makeTheme(1, { base: 'nord-light' })],
+        theme: `custom:${hexId(1)}`
+      })
+      const { container } = renderGallery()
+      clickDelete(container, 'Theme 1')
+      const dialog = useUiState.getState().dialogModalOptions
+      expect(render(<>{dialog.message}</>).container.textContent).toBe(
+        '“Theme 1” is your active theme. The app will switch to Nord Light. This can’t be undone.'
+      )
+      act(() => dialog.buttons?.[1]?.onClick?.())
+      expect(useSettingsState.getState().theme).toBe('nord-light')
+      expect(customCards(container)).toHaveLength(0)
+    })
+
+    it('renders a theme name containing markup as text, not HTML', () => {
+      useSettingsState.setState({
+        customThemes: [makeTheme(1, { name: '<b>x</b> &amp; y' })]
+      })
+      const { container } = renderGallery()
+      fireEvent.click(
+        container.querySelector(
+          '[data-theme-key^="custom:"] .themeCard__action--danger'
+        ) as HTMLElement
+      )
+      const message = render(
+        <>{useUiState.getState().dialogModalOptions.message}</>
+      ).container
+      expect(message.querySelector('b')).toBeNull()
+      expect(message.textContent).toContain('<b>x</b> &amp; y')
+    })
   })
 })

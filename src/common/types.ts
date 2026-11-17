@@ -49,6 +49,9 @@ export interface ButtonOptions {
   // Visual emphasis only. Serializable (survives the backend showDialog hop
   // like `action`). Absent = the default secondary-outline look.
   variant?: 'primary' | 'danger'
+  // Marks the button that receives focus when the dialog opens (the safe
+  // default of a destructive confirmation). Serializable like `variant`.
+  autoFocus?: boolean
 }
 
 export type LaunchParams = {

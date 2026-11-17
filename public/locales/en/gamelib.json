@@ -81,6 +81,7 @@
         "steamInstallTargetDefault": "Your Steam library"
     },
     "customThemes": {
+        "actionDelete": "Delete {{name}}",
         "actionDuplicate": "Duplicate {{name}}",
         "actionDuplicateShort": "Duplicate",
         "actionEdit": "Edit {{name}}",
@@ -89,6 +90,11 @@
         "builtInReadOnly": "Built-in theme, read-only",
         "copyName": "{{name}} copy",
         "copyNameNumbered": "{{name}} copy {{n}}",
+        "deleteActiveBody": "“{{name}}” is your active theme. The app will switch to {{fallback}}. This can’t be undone.",
+        "deleteBody": "“{{name}}” will be deleted. This can’t be undone.",
+        "deleteConfirm": "Delete theme",
+        "deleteKeep": "Keep theme",
+        "deleteTitle": "Delete theme?",
         "emptyBody": "Duplicate a theme to start your own. Your copy keeps the original colours until you change them.",
         "emptyHeading": "No custom themes yet",
         "groupBuiltIn": "Built-in",

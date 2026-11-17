@@ -52,6 +52,7 @@ const MessageBoxModal: React.FC<MessageBoxModalProps> = function (props) {
             button.onClick?.()
           }}
           className={messageBoxButtonClassName(button.variant)}
+          autoFocus={button.autoFocus}
           key={'messageBoxModalButton_' + i.toString()}
         >
           {button.text}
