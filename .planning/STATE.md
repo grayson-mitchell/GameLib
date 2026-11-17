@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v0.10
 milestone_name: Foundations
-status: ready_to_plan
-stopped_at: Phase 78 complete (5/5) — next open phase is 81 (79 and 80 already complete)
-last_updated: 2026-11-17T00:39:11.056Z
+status: planning
+stopped_at: Phase 81 context gathered
+last_updated: "2026-11-17T05:03:16.887Z"
 last_activity: 2026-11-17
 progress:
   total_phases: 26
@@ -790,9 +790,9 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-17T00:06:58.861Z
-Stopped at: Phase 80 context gathered
-Resume file: None
+Last session: 2026-11-17T05:03:16.878Z
+Stopped at: Phase 81 context gathered
+Resume file: .planning/phases/81-unify-the-steam-restart-hold-into-restart-on-play/81-CONTEXT.md
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
 
