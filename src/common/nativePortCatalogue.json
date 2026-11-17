@@ -1,0 +1,51 @@
+[
+  {
+    "id": "fallout1-ce",
+    "name": "fallout1-ce",
+    "url": "https://github.com/alexbatalov/fallout1-ce/releases",
+    "licence": "Sustainable Use License",
+    "appIds": [38400],
+    "mac": "universal",
+    "linux": true,
+    "windows": true,
+    "dataStyle": "copy",
+    "dataFiles": ["MASTER.DAT", "CRITTER.DAT", "DATA/"],
+    "note": "Copy the data into its own folder, then drag the app into that folder in Finder. Don't run it inside the Steam folder: it rewrites fallout.cfg."
+  },
+  {
+    "id": "fallout2-ce",
+    "name": "fallout2-ce",
+    "url": "https://github.com/alexbatalov/fallout2-ce/releases",
+    "licence": "Sustainable Use License",
+    "appIds": [38410],
+    "mac": "universal",
+    "linux": true,
+    "windows": true,
+    "dataStyle": "copy",
+    "dataFiles": ["MASTER.DAT", "CRITTER.DAT", "DATA/"],
+    "note": "Copy the data into its own folder, then drag the app into that folder in Finder. Don't run it inside the Steam folder: it rewrites fallout.cfg. Not yet verified on macOS by GameLib."
+  },
+  {
+    "id": "openmw",
+    "name": "OpenMW",
+    "url": "https://github.com/OpenMW/openmw/releases",
+    "licence": "GPL-3.0",
+    "appIds": [22320],
+    "mac": "arm64",
+    "linux": true,
+    "windows": true,
+    "dataStyle": "point",
+    "note": "Needs the Morrowind data files folder; point the OpenMW launcher's installation wizard at the game folder."
+  },
+  {
+    "id": "openloco",
+    "name": "OpenLoco",
+    "url": "https://github.com/OpenLoco/OpenLoco/releases",
+    "licence": "MIT",
+    "appIds": [356430],
+    "mac": "arm64",
+    "linux": true,
+    "windows": true,
+    "dataStyle": "point"
+  }
+]
