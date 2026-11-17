@@ -151,7 +151,6 @@ import {
   pendingAdoptionStoreFrom,
   readPendingAdoption
 } from '../storeManagers/steam/macSteamAdoption'
-import { isMac } from 'backend/constants/environment'
 import { resolveInstallRoot } from '../storeManagers/steam/library/installRoot'
 import { getSteamBottleEligibilityVerdict } from '../storeManagers/steam/installFormIpc'
 import { isSteamExperimentalInstallAppEnabled } from '../storeManagers/steam/experimentalInstallAppSetting'
@@ -414,7 +413,7 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
   // alone. Every other route (bridge, bottle, setting-ON native, Mac native
   // with a pending adoption) is deleted by GameLib itself, so `delegated` is
   // false and the renderer must confirm. Mirrors gameUninstall.ts routing.
-  // The Mac pending-adoption check is deliberately conservative: the
+  // The pending-adoption check is deliberately conservative: the
   // backend's real decision needs a live Steam-pid probe that a read-only
   // route query must not run. A record that later needs no direct delete costs
   // one extra confirm; no confirm at all is not acceptable. Reads the raw
@@ -440,8 +439,8 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
         if (isSteamNativeDeleteEnabled(deps.config)) {
           return { gamelibDelete: true, delegated: false }
         }
+        // Every OS since Phase 81 D-14: a pending record means GameLib removes it directly.
         if (
-          isMac &&
           readPendingAdoption(
             appName,
             pendingAdoptionStoreFrom(managerDepsFromServices(deps))

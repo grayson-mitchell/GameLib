@@ -116,6 +116,8 @@ async function runDispatch(
       LogPrefix.Steam
     )
   }
+  // Phase 81 D-06: the single decision point where the launch-without-Steam setting short-circuits
+  // the adoption restart (the gate lives inside game.launch()).
   const launched = withoutSteam
     ? await game.launchWithoutSteam()
     : await game.launch(undefined as unknown as LogWriter)

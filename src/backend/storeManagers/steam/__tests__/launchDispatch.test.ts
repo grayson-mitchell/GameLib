@@ -196,7 +196,7 @@ describe('quick 261117-q1t: the launchWithoutSteam game setting', () => {
     addRecentGameMock.mockResolvedValue(undefined)
   })
 
-  it('on: launches without Steam and records the recent game', async () => {
+  it('D-06 (Phase 81): on, the adoption gate never runs: launchWithoutSteam() is called and launch() never is', async () => {
     game(() => Promise.resolve({ launchWithoutSteam: true }))
     expect(await dispatchSteamLaunch(deps, appId)).toBe(true)
     expect(withoutMock).toHaveBeenCalledTimes(1)
@@ -208,12 +208,15 @@ describe('quick 261117-q1t: the launchWithoutSteam game setting', () => {
     [{}],
     [{ launchWithoutSteam: false }],
     [{ launchWithoutSteam: 'yes' }]
-  ])('off or absent (%j): normal Steam launch', async (settings) => {
-    game(() => Promise.resolve(settings))
-    expect(await dispatchSteamLaunch(deps, appId)).toBe(true)
-    expect(launchMock).toHaveBeenCalledTimes(1)
-    expect(withoutMock).not.toHaveBeenCalled()
-  })
+  ])(
+    'D-06 (Phase 81) off or absent (%j): normal Steam launch, the gate runs inside launch()',
+    async (settings) => {
+      game(() => Promise.resolve(settings))
+      expect(await dispatchSteamLaunch(deps, appId)).toBe(true)
+      expect(launchMock).toHaveBeenCalledTimes(1)
+      expect(withoutMock).not.toHaveBeenCalled()
+    }
+  )
 
   it('unreadable settings: warns and uses the normal Steam launch', async () => {
     game(() => Promise.reject(new Error('no config')))

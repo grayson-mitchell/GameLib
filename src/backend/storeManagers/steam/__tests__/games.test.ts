@@ -1010,6 +1010,15 @@ beforeEach(() => {
     hasBindSection: false,
     readError: null
   })
+  // Phase 81 D-14: a native depot install ends in a Steam client probe on every OS. Steam is
+  // not running by default, so the poll starts at once as it did before; scenarios override.
+  jest
+    .mocked(
+      jest.requireMock<typeof import('../macSteamAdoption')>(
+        '../macSteamAdoption'
+      )
+    )
+    .probeSteamPid.mockResolvedValue(null)
 })
 
 // ── Test helpers ──────────────────────────────────────────────────────────────
@@ -4123,7 +4132,8 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
     // correctly read as "waiting for Steam restart", not an active download.
     expect(startInstallPollingSpy).toHaveBeenCalledWith(steamTestDeps, APP_ID, {
       isNativeHandoff: true,
-      skippedDepots: []
+      skippedDepots: [],
+      macNativeRoute: false
     })
     expect(result).toEqual({ status: 'done' })
   })
@@ -4246,7 +4256,8 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
 
     expect(startInstallPollingSpy).toHaveBeenCalledWith(steamTestDeps, APP_ID, {
       isNativeHandoff: true,
-      skippedDepots: ['1771304']
+      skippedDepots: ['1771304'],
+      macNativeRoute: false
     })
     expect(result).toEqual({ status: 'done' })
   })
@@ -4260,7 +4271,8 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
 
     expect(startInstallPollingSpy).toHaveBeenCalledWith(steamTestDeps, APP_ID, {
       isNativeHandoff: true,
-      skippedDepots: []
+      skippedDepots: [],
+      macNativeRoute: false
     })
     const call = (startInstallPollingSpy as jest.Mock).mock.calls.find(
       ([, appId]) => appId === APP_ID
@@ -9795,6 +9807,78 @@ describe('SteamGame.uninstall() — quick 261029-l9w: unadopted Mac native insta
     expect(pollOnceSpy).toHaveBeenCalledWith(steamTestDeps, APP_ID, 'native')
   })
 
+  describe.each<['linux' | 'win32']>([['linux'], ['win32']])(
+    'on %s (Phase 81 D-14)',
+    (host) => {
+      beforeEach(() => {
+        envMock.isMac = false
+        envMock.isLinux = host === 'linux'
+        envMock.isWindows = host === 'win32'
+      })
+      const reading = (over: Record<string, unknown> = {}) => ({
+        adopted: false,
+        signedIn: true,
+        steamRunning: true,
+        helperState: null,
+        evidence: null,
+        ...over
+      })
+
+      it('a running Steam that has not adopted the install: removed directly, no steam://uninstall', async () => {
+        readAdoptionSpy.mockResolvedValue(reading())
+
+        const result = await new SteamGame(APP_ID, steamTestDeps).uninstall(
+          {} as any
+        )
+
+        expect(shellOpenExternal).not.toHaveBeenCalled()
+        expect(removeCopySpy).toHaveBeenCalledWith(
+          steamTestDeps,
+          APP_ID,
+          'native'
+        )
+        expect(adoption().clearPendingAdoption).toHaveBeenCalledWith(
+          APP_ID,
+          mockAdoptionStore
+        )
+        expect(pollOnceSpy).toHaveBeenCalledWith(
+          steamTestDeps,
+          APP_ID,
+          'native'
+        )
+        expect(result).toEqual({ stdout: '', stderr: '' })
+      })
+
+      it('a signed-out Steam (open-steam) is removed directly too', async () => {
+        readAdoptionSpy.mockResolvedValue(reading({ signedIn: false }))
+
+        await new SteamGame(APP_ID, steamTestDeps).uninstall({} as any)
+
+        expect(shellOpenExternal).not.toHaveBeenCalled()
+        expect(removeCopySpy).toHaveBeenCalled()
+      })
+
+      it('delegates when the reading says Steam adopted the install', async () => {
+        readAdoptionSpy.mockResolvedValue(reading({ adopted: true }))
+        await new SteamGame(APP_ID, steamTestDeps).uninstall({} as any)
+        expectDelegated()
+      })
+
+      it('delegates when the reading says Steam is not running', async () => {
+        readAdoptionSpy.mockResolvedValue(reading({ steamRunning: false }))
+        await new SteamGame(APP_ID, steamTestDeps).uninstall({} as any)
+        expectDelegated()
+      })
+
+      it('no Rust reading and a different pid still removes directly (a pid change is not evidence off macOS)', async () => {
+        adoption().probeSteamPid.mockResolvedValue(99999)
+        await new SteamGame(APP_ID, steamTestDeps).uninstall({} as any)
+        expect(removeCopySpy).toHaveBeenCalled()
+        expect(shellOpenExternal).not.toHaveBeenCalled()
+      })
+    }
+  )
+
   it('delegates when there is no pending-adoption record', async () => {
     adoption().readPendingAdoption.mockReturnValue(undefined)
     await new SteamGame(APP_ID, steamTestDeps).uninstall({} as any)
@@ -9846,12 +9930,12 @@ describe('SteamGame.uninstall() — quick 261029-l9w: unadopted Mac native insta
     expectDelegated()
   })
 
-  it('delegates on a non-Mac host without probing or reading the record', async () => {
+  it('a non-Mac host with no record delegates without probing Steam (the gate runs on every OS since Phase 81, but only with a record)', async () => {
     envMock.isMac = false
+    adoption().readPendingAdoption.mockReturnValue(undefined)
     await new SteamGame(APP_ID, steamTestDeps).uninstall({} as any)
     expectDelegated()
     expect(adoption().probeSteamPid).not.toHaveBeenCalled()
-    expect(adoption().readPendingAdoption).not.toHaveBeenCalled()
   })
 
   it('refusal arm: deletes nothing, no delegation, keeps record, clears status, stderr set', async () => {
@@ -15452,6 +15536,76 @@ describe('SteamGame — quick 261029-ji2 pending Steam adoption', () => {
         expect.objectContaining({ macNativeRoute: true })
       )
     })
+
+    it.each<['linux' | 'win32']>([['linux'], ['win32']])(
+      '%s: Steam running: records the pending adoption, watches it and polls without macNativeRoute (Phase 81 D-14)',
+      async (host) => {
+        envMock.isMac = false
+        envMock.isLinux = host === 'linux'
+        envMock.isWindows = host === 'win32'
+        adoption().probeSteamPid.mockResolvedValue(123)
+        const watchSpy = jest.spyOn(
+          adoptionWatchModule,
+          'recordAndWatchPendingAdoption'
+        )
+
+        const result = await new SteamGame(APP_ID, steamTestDeps).install(
+          {} as any
+        )
+
+        expect(result).toEqual({ status: 'done' })
+        expect(adoption().probeSteamPid).toHaveBeenCalledWith(
+          expect.anything(),
+          host
+        )
+        expect(watchSpy).toHaveBeenCalledTimes(1)
+        expect(adoption().recordPendingAdoption).toHaveBeenCalledTimes(1)
+        expect(adoption().recordPendingAdoption).toHaveBeenCalledWith(
+          APP_ID,
+          expect.objectContaining({
+            steamPid: 123,
+            baseline: RECORD.baseline,
+            manifestPath: `/mock/steam/steamapps/appmanifest_${APP_ID}.acf`
+          }),
+          mockAdoptionStore
+        )
+        expect(startInstallPollingSpy).toHaveBeenCalledWith(
+          steamTestDeps,
+          APP_ID,
+          {
+            isNativeHandoff: true,
+            skippedDepots: [],
+            macNativeRoute: false
+          }
+        )
+        // InstallApp is a macOS-only attempt.
+        expect(requestSteamInstallApp).not.toHaveBeenCalled()
+        watchSpy.mockRestore()
+      }
+    )
+
+    it.each<['linux' | 'win32']>([['linux'], ['win32']])(
+      '%s: Steam not running: no record is written, a stale one is cleared, the poll still starts',
+      async (host) => {
+        envMock.isMac = false
+        envMock.isLinux = host === 'linux'
+        envMock.isWindows = host === 'win32'
+        adoption().probeSteamPid.mockResolvedValue(null)
+
+        await new SteamGame(APP_ID, steamTestDeps).install({} as any)
+
+        expect(adoption().recordPendingAdoption).not.toHaveBeenCalled()
+        expect(adoption().clearPendingAdoption).toHaveBeenCalledWith(
+          APP_ID,
+          mockAdoptionStore
+        )
+        expect(startInstallPollingSpy).toHaveBeenCalledWith(
+          steamTestDeps,
+          APP_ID,
+          expect.objectContaining({ isNativeHandoff: true })
+        )
+      }
+    )
 
     it('U-3: a Steam-performed install (opt-in OFF, steam://install delegated) never records a pending adoption', async () => {
       ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)

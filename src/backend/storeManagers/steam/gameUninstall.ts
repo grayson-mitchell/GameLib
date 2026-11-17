@@ -11,7 +11,6 @@ import { ExecResult } from 'common/types'
 import { RemoveArgs } from 'common/types/game_manager'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { RUST_STEAMPOLL_NEXT_NOTICE_SEQ } from 'common/types/sidecarTransport'
-import { isMac } from 'backend/constants/environment'
 import {
   startUninstallPolling,
   pollUninstallOnce
@@ -149,9 +148,9 @@ export async function uninstall(
     if (isSteamNativeDeleteEnabled(steamGame.deps.config))
       return uninstallNativeInGameLib(steamGame)
 
-    // quick 261029-l9w: a running Steam that never adopted a GameLib install
-    // ignores steam://uninstall, so remove that one state directly.
-    const direct = await uninstallUnadoptedMacNativeDirectly(steamGame)
+    // quick 261029-l9w / Phase 81 D-14: a running Steam that never adopted a GameLib install
+    // ignores steam://uninstall (every OS), so remove that one state directly.
+    const direct = await uninstallUnadoptedNativeDirectly(steamGame)
     if (direct) return direct
 
     logInfo(
@@ -448,27 +447,28 @@ export async function uninstallNativeInGameLib(
 
 /**
  * quick 261029-l9w: direct removal of a GameLib native install the running
- * Mac Steam never adopted. Returns null to mean "delegate as before".
+ * Steam never adopted (every OS since Phase 81 D-14). Returns null to mean "delegate as before".
  *
  * Live evidence (2026-10-29, WazHack 264160): a Steam that still holds the
  * app as Uninstalled ignores steam://uninstall (three dispatches, files
  * untouched, same steam_osx PID), so the pill sat on "Uninstalling" until
  * the poller's ~60 s grace expired.
  *
- * Gate: ji2's own decidePlayAdoption(...) === 'restart' (record present,
- * same PID, ACF still GameLib's). Steam not running, a different PID or an
- * adopted ACF all delegate: Steam then owns the app and handles the URL (a
- * not-running Steam adopts at startup before processing it). A non-
+ * Gate: ji2's own decidePlayAdoption(...) is 'restart' or 'open-steam'
+ * (record present, Steam running and not adopted it; a signed-out Steam is no
+ * more able to act on the URL). Steam not running, adopted (the Rust reading,
+ * or on macOS a different PID or a rewritten ACF) all delegate: Steam then
+ * owns the app and handles the URL (a not-running Steam adopts at startup
+ * before processing it). A non-
  * 'installed' ACF (fail-closed 1026 handoff) also delegates, unchanged.
  *
  * Deletion reuses removeSteamInstallCopy's guards (the port of
  * uninstallBottleGameDirectly's); completion is pollUninstallOnce, which
  * flips is_installed, pushes, sends done and fires the toast.
  */
-export async function uninstallUnadoptedMacNativeDirectly(
+export async function uninstallUnadoptedNativeDirectly(
   steamGame: SteamGame
 ): Promise<ExecResult | null> {
-  if (!isMac) return null
   const record = readPendingAdoption(
     steamGame.appId,
     pendingAdoptionStoreFrom(steamGame.deps)
@@ -494,7 +494,8 @@ export async function uninstallUnadoptedMacNativeDirectly(
       ? null
       : await readAcfSnapshot(steamGame.deps, record.manifestPath)
   })
-  if (decision !== 'restart') return null
+  // 'open-steam': a signed-out Steam cannot act on steam://uninstall either.
+  if (decision !== 'restart' && decision !== 'open-steam') return null
 
   const acf = await readAcfState(steamGame.deps, steamGame.appId, 'native')
   if (acf.state !== 'installed' || !acf.installPath) return null
@@ -522,7 +523,7 @@ export async function uninstallUnadoptedMacNativeDirectly(
 
 /**
  * Shared guarded direct removal of the native install (quick 261106-s3n
- * extracted this from uninstallUnadoptedMacNativeDirectly): files via
+ * extracted this from uninstallUnadoptedNativeDirectly): files via
  * removeSteamInstallCopy's guards, completion via pollUninstallOnce.
  */
 export async function removeNativeInstallDirectly(

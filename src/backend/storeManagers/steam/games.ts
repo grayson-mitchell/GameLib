@@ -471,7 +471,7 @@ export default class SteamGame implements Game {
    *
    * Native delegation itself is unchanged (one exception, quick 261029-l9w: a
    * Mac install the running Steam never adopted is removed directly, see
-   * uninstallUnadoptedMacNativeDirectly()): does NOT show a GamerLib
+   * uninstallUnadoptedNativeDirectly()): does NOT show a GamerLib
    * confirmation dialog — Steam owns its own confirm dialog (D-05). Install
    * state is never optimistically flipped from a click (D-02); badges flip
    * only after confirmed ACF data. After the URL fires we poll the ACF (D-07)

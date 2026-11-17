@@ -218,7 +218,7 @@ export async function runNativeDepotDownload(
       }
     }
 
-    // Filled by runNativeDepotDownloadLeased on the native Mac route only.
+    // Filled by runNativeDepotDownloadLeased on the native route (every OS, Phase 81 D-14).
     const deferredPoll: {
       handoff?: { manifestPath: string; skippedDepots: string[] }
     } = {}
@@ -248,21 +248,19 @@ export async function runNativeDepotDownload(
       lease.release()
     }
 
-    // Quick 261029-ji2: native Mac route. `steam://install` only opens
-    // Steam's install dialog (needs a click), so it is no longer fired.
-    // A RUNNING Mac Steam never notices the ACF GameLib wrote, but a Steam
-    // that starts afterwards adopts it. If Steam is running now, remember
-    // its PID so Play can restart it once (macSteamAdoption.ts); if not, the
-    // next Steam start adopts it and any stale record is dropped. This is
-    // the ONLY place a pending-adoption record is written: GameLib's own
-    // depot download finished here (the lease is released first so the
-    // go-offline wrap is restored). Steam-performed installs (steam-client,
-    // bottle, bridge, pollerSource) never reach this branch.
-    // quick 261105-ord: with the experimental InstallApp setting ON, a
-    // running Steam is first asked to adopt the install directly; only a
-    // non-ok outcome falls through to the record below.
-    // An ok adoption also tells the poller Steam already knows the install,
-    // so no D-UAT-13 restart hold arms (quick 261105-sqe).
+    // Quick 261029-ji2 / Phase 81 D-14: the native route on macOS, Windows and Linux.
+    // `steam://install` only opens Steam's install dialog (needs a click), so it is no
+    // longer fired. A RUNNING Steam never notices the ACF GameLib wrote, but a Steam
+    // that starts afterwards adopts it. If Steam is running now, remember its PID so
+    // Play can restart it once (playAdoption.ts); if not, the next Steam start adopts
+    // it and any stale record is dropped. This is the ONLY place a pending-adoption
+    // record is written: GameLib's own depot download finished here (the lease is
+    // released first so the go-offline wrap is restored). Steam-performed installs
+    // (steam-client, bottle, bridge, pollerSource) never reach this branch.
+    // quick 261105-ord (macOS only, experimental setting): with InstallApp ON, a
+    // running Steam is first asked to adopt the install directly; only a non-ok
+    // outcome falls through to the record below. An ok adoption also tells the
+    // poller Steam already knows the install (quick 261105-sqe).
     if (deferredPoll.handoff && leasedResult.status === 'done') {
       const handoff = deferredPoll.handoff
       const pid = await adoption
@@ -329,7 +327,7 @@ export async function runNativeDepotDownload(
       await startInstallPolling(steamGame.deps, steamGame.appId, {
         isNativeHandoff: true,
         skippedDepots: handoff.skippedDepots,
-        macNativeRoute: true,
+        macNativeRoute: isMac,
         ...(adoptedByInstallApp ? { adoptedBySteamClient: true } : {})
       })
     }
@@ -586,9 +584,9 @@ export async function runNativeDepotDownloadLeased(
       isNativeHandoff: true,
       skippedDepots: outcome.skippedDepots ?? []
     })
-  } else if (isMac) {
-    // Quick 261029-ji2: native Mac route. The poll starts in the caller
-    // after the Steam PID is recorded (runNativeDepotDownload).
+  } else {
+    // Phase 81 D-14: the native route on every OS. The caller writes the pending-adoption record
+    // (when Steam is running and InstallApp did not adopt the install) before the poll starts.
     deferredPoll.handoff = {
       manifestPath: join(
         targetSteamappsDir,
@@ -596,11 +594,6 @@ export async function runNativeDepotDownloadLeased(
       ),
       skippedDepots: outcome.skippedDepots ?? []
     }
-  } else {
-    await startInstallPolling(steamGame.deps, steamGame.appId, {
-      isNativeHandoff: true,
-      skippedDepots: outcome.skippedDepots ?? []
-    })
   }
 
   return {
