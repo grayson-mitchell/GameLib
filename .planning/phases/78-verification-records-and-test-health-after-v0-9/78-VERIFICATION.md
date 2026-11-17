@@ -1,13 +1,15 @@
 ---
 phase: 78-verification-records-and-test-health-after-v0-9
 verified: 2026-11-17T00:00:00Z
-status: human_needed
-score: 5/5 roadmap truths verified; 1 plan-level must-have (78-05 backend-di-ceilings green) not met, adjudicated as out of goal scope, needs operator acceptance
-overrides_applied: 0
-human_verification:
-  - test: "Accept or reject the 78-05 deviation: pnpm backend-di-ceilings is still red (five frontend jest.mock tests)"
-    expected: "Operator confirms it is out of Phase 78's roadmap goal and tracked by .planning/todos/pending/2026-11-17-backend-di-jestmock-ratchet-red-five-frontend-tests.md (or asks for it to be fixed in this phase)"
-    why_human: "Plan 78-05 must-have and CONTEXT D-04/D-16/D-20 asked every ratchet green; the roadmap goal does not. Scope call belongs to the operator."
+status: passed
+score: 5/5 roadmap truths verified; 1 plan-level must-have (78-05 backend-di-ceilings green) not met, adjudicated as out of goal scope, accepted by operator 2026-11-17 (override below)
+overrides_applied: 1
+overrides:
+  - must_have: "backend-di-ceilings passes at execution HEAD (78-05 / D-16a, D-20)"
+    reason: "Five jest.mock reds pre-date Phase 78 (quick-261116-s6q, Phase 79/80); filed as 2026-11-17 todo; ceilings unchanged"
+    accepted_by: "operator"
+    accepted_at: "2026-11-17T00:00:00Z"
+human_verification: []
 ---
 
 # Phase 78 Verification Report
@@ -77,3 +79,8 @@ No roadmap-level gaps. The records match the code and the four suites pass. One 
 
 _Verified: 2026-11-17_
 _Verifier: Claude (gsd-verifier)_
+
+
+## Operator decision (2026-11-17)
+
+The operator accepted the 78-05 `backend-di-ceilings` deviation as out of the roadmap goal, tracked by `.planning/todos/pending/2026-11-17-backend-di-jestmock-ratchet-red-five-frontend-tests.md`. Status moved from `human_needed` to `passed`. The three review warnings (WR-01..03) were then fixed in `b64a65d38`, `1a52a00bd` and `075436e4a`; see `78-REVIEW-FIX.md`.
