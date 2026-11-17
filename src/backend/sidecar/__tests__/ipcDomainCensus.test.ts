@@ -238,7 +238,8 @@ describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
     // Quick 261115-tk8 (6254354b2): -6 (openWeblate, openSupportPage, openDiscordLink, openGithubSponsorsPage,
     // openWikiLink, openReleases).
     // Quick 261117-p38 (481168a3c): +2 (the Launch without Steam channels in ipc/steam.ts).
-    expect(total).toBe(290)
+    // Quick 261117-q1t: -1 (steamLaunchWithoutSteam removed; Play honours a game setting).
+    expect(total).toBe(289)
     // Floor (Phase 67): originally measured - 6. Re-measured at 290 after quick 261115-tk8's deliberate
     // six-channel deletion and quick 261117-p38's two added channels (288 + 2), so the floor moves
     // 290 -> 284 and the parse-miss margin stays the same 6.

@@ -34,7 +34,6 @@ import useUiState from 'frontend/state/uiState'
 import EditGameDialog from 'frontend/components/UI/EditGameDialog'
 import { reportRepairFailure } from './repairFailure'
 import { toggleShortcuts } from './shortcutsToggle'
-import SteamDirectLaunchButton from './SteamDirectLaunchButton'
 import useOpenDialog from 'frontend/hooks/useOpenDialog'
 import {
   callOrDeclare,
@@ -659,12 +658,6 @@ export default function GamesSubmenu({
                     'Remove all copies…'
                   )}
                 </button>
-              )}{' '}
-              {isSteam && platform === 'darwin' && (
-                <SteamDirectLaunchButton
-                  appName={appName}
-                  disabled={is.playing}
-                />
               )}{' '}
               {!isSideloaded && !isSteam && !isThirdPartyManaged && (
                 <button

@@ -125,7 +125,7 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   // install-badge reconciliation trigger dropped in the Electron to Tauri cutover
   // (`mainWindow.on('focus', ...)`, `main.ts:272-274`, deleted in `5643c7583`). Shell-originated
   // (the Rust `.setup()` window-focus handler), not renderer-originated. Invoke count unchanged.
-  'steamFlowRegistration.ts': { invoke: 4, send: 1 },
+  'steamFlowRegistration.ts': { invoke: 3, send: 1 },
   // Phase 40 Plan 05 (REQ-40-02/REQ-40-05): new module — the 10 in-app store-embed channels
   // (9 lifecycle/navigation invoke arms, including the takeNavEvents drain implemented by quick
   // task `260905-e61` for GAP-D; 1 send arm for the fire-and-forget bounds courier, D-18/D-29).

@@ -37,16 +37,14 @@ export const steamAsyncArgs = {
     optionalArg(refreshOrigin)
   ]),
   launch: z.tuple([launchParamsArg]),
-  // quick 261117-p38: "Launch without Steam" -- the eligibility verdict and the launch.
-  steamDirectLaunchVerdict: z.tuple([z.string().regex(/^\d{1,10}$/)]),
-  steamLaunchWithoutSteam: z.tuple([z.string().regex(/^\d{1,10}$/)])
+  // quick 261117-p38 / q1t: the "Launch without Steam" verdict for the per-game setting toggle.
+  steamDirectLaunchVerdict: z.tuple([z.string().regex(/^\d{1,10}$/)])
 }
 
 interface SteamAsyncReturns {
   refreshLibrary: Promise<void>
   launch: StatusPromise
   steamDirectLaunchVerdict: Promise<SteamDirectLaunchView>
-  steamLaunchWithoutSteam: Promise<{ status: 'done' | 'error' }>
 }
 
 // D-12: typing only, never parsed at runtime. Every payload originates in the backend, so the

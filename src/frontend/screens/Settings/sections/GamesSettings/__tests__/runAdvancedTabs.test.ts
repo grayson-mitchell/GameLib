@@ -40,6 +40,7 @@ const runTags = [
   '<Mangohud />',
   '<GameMode />',
   '<NvidiaPrime />',
+  '<LaunchWithoutSteam />',
   '<SteamOverlayOverride />'
 ]
 

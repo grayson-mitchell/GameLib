@@ -38,7 +38,8 @@ import {
   AfterLaunchScriptPath,
   NvidiaPrime,
   EngineOverride,
-  SteamOverlayOverride
+  SteamOverlayOverride,
+  LaunchWithoutSteam
 } from '../../components'
 import { TabPanel } from 'frontend/components/UI'
 import Tools from '../../components/Tools'
@@ -309,6 +310,9 @@ export default function GamesSettings() {
         <Mangohud />
         <GameMode />
         <NvidiaPrime />
+        {/* quick 261117-q1t: per-game launch without the Steam app. macOS scope is
+            isMacSteamTitle; route scope comes from the backend verdict. */}
+        {isMacSteamTitle && <LaunchWithoutSteam />}
         {/* Phase 60 D-02: per-game overlay off switch; eligibility comes from
             the backend and includes DRM-mode titles. */}
         {isMacSteamTitle && <SteamOverlayOverride />}

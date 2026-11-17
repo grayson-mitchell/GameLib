@@ -53,8 +53,8 @@ now provably the real one, not merely the originally-transcribed one.
 
 | | Count |
 |---|---:|
-| Unique channels | 247 |
-| Ported to sidecar | 92 |
+| Unique channels | 246 |
+| Ported to sidecar | 91 |
 | **Unported** | **159** |
 
 Reconciles with SEAM.md line 366 ("~208 of the 220 total IPC endpoints ... remain") and its
@@ -180,7 +180,7 @@ goes 68 → 71. `Unported` is unchanged: the channels are born ported.
 
 ## Already ported (34)
 
-`cancelDownload`, `checkGameUpdates`, `checkSteamInstalled`, `connectivity-changed`, `getDMQueueInformation`, `get-connectivity-status`, `getLogContent`, `getMaxCpus`, `getSteamDeleteRoute`, `getSteamInstallAppTargets`, `getSteamUpdateInfo`, `getSystemInfo`, `hasExecutable`, `install`, `isNative`, `isSteamBottleEligible`, `launch`, `listSteamLibraryTargets`, `logError`, `oauthCaptureLogin`, `openDialog`, `pauseCurrentDownload`, `persistBottleWineVersion`, `refreshLibrary`, `removeFromDMQueue`, `requestAppSettings`, `requestGameSettings`, `resumeCurrentDownload`, `setSetting`, `showUpdateSetting`, `steamDirectLaunchVerdict`, `steamLaunchWithoutSteam`, `steamPollQR`, `steamRemoveAllCopies`, `steamStartQR`, `uninstall`, `updateGame`, `writeConfig`
+`cancelDownload`, `checkGameUpdates`, `checkSteamInstalled`, `connectivity-changed`, `getDMQueueInformation`, `get-connectivity-status`, `getLogContent`, `getMaxCpus`, `getSteamDeleteRoute`, `getSteamInstallAppTargets`, `getSteamUpdateInfo`, `getSystemInfo`, `hasExecutable`, `install`, `isNative`, `isSteamBottleEligible`, `launch`, `listSteamLibraryTargets`, `logError`, `oauthCaptureLogin`, `openDialog`, `pauseCurrentDownload`, `persistBottleWineVersion`, `refreshLibrary`, `removeFromDMQueue`, `requestAppSettings`, `requestGameSettings`, `resumeCurrentDownload`, `setSetting`, `showUpdateSetting`, `steamDirectLaunchVerdict`, `steamPollQR`, `steamRemoveAllCopies`, `steamStartQR`, `uninstall`, `updateGame`, `writeConfig`
 
 `logError` was ported early by Phase 34.2 gap cycle 2 (plan 34.2-16) — see the Phase 34.3 list
 below, which now excludes it, and `34.2-PORTED-CHANNELS.md`'s gap-cycle-2 subsection for the full
@@ -754,3 +754,7 @@ Both are filed in the "Already ported" bucket line. There is no Electron leg.
 
 **Unique channels raised 245 → 247, Ported to sidecar raised 90 → 92 (quick 261117-p38, 2026-11-17):**
 both numbers moved together by +2 and `Unported` (159) is unchanged.
+
+**Unique channels lowered 247 → 246, Ported to sidecar lowered 92 → 91 (quick 261117-q1t, 2026-11-17):**
+`steamLaunchWithoutSteam` was removed. "Launch without Steam" is now the per-game `launchWithoutSteam`
+setting that Play (`launchDispatch.ts`) honours; only `steamDirectLaunchVerdict` remains. `Unported` (159) is unchanged.

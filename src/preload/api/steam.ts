@@ -37,8 +37,6 @@ export const steamRemoveAllCopies = makeHandlerInvoker('steamRemoveAllCopies')
 // quick 261117-p38: "Launch without Steam" -- the eligibility verdict and the launch (sidecar-only).
 /** @public reached only as `window.api.steamDirectLaunchVerdict` through the preload api bundle, which knip cannot trace */
 export const steamDirectLaunchVerdict = makeHandlerInvoker('steamDirectLaunchVerdict')
-/** @public reached only as `window.api.steamLaunchWithoutSteam` through the preload api bundle, which knip cannot trace */
-export const steamLaunchWithoutSteam = makeHandlerInvoker('steamLaunchWithoutSteam')
 // Phase 58 Plan 31 (M-01 Direction A): the friend picker's list and invite channels -- sidecar-only.
 export const steamBridgeListFriends = makeHandlerInvoker('steamBridgeListFriends')
 export const steamBridgeInviteFriend = makeHandlerInvoker('steamBridgeInviteFriend')

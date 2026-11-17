@@ -1,0 +1,108 @@
+import { useContext, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { ToggleSwitch } from 'frontend/components/UI'
+import useSetting from 'frontend/hooks/useSetting'
+import SettingsContext from '../SettingsContext'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import {
+  faExclamationTriangle,
+  faLock
+} from '@fortawesome/free-solid-svg-icons'
+import type { SteamDirectLaunchView } from 'common/types/steam'
+
+type Control =
+  | { kind: 'hidden' }
+  | { kind: 'disabled-drm' }
+  | { kind: 'toggle'; warn: boolean }
+
+/**
+ * quick 261117-q1t: what the "Launch without Steam" row shows for a backend verdict.
+ * Only DRM greys the toggle out; a Steam-API or unchecked game gets a warning once the
+ * setting is on.
+ */
+export function describeLaunchWithoutSteamControl(
+  view: SteamDirectLaunchView | undefined,
+  on: boolean
+): Control {
+  if (!view) return { kind: 'hidden' }
+  if (!view.applies) {
+    return view.reason === 'steam-drm'
+      ? { kind: 'disabled-drm' }
+      : { kind: 'hidden' }
+  }
+  return { kind: 'toggle', warn: on && view.warning !== 'none' }
+}
+
+const LaunchWithoutSteam = () => {
+  const { t } = useTranslation('gamelib')
+  const { isDefault, appName } = useContext(SettingsContext)
+  const [on, setOn] = useSetting('launchWithoutSteam', false)
+  const [view, setView] = useState<SteamDirectLaunchView | undefined>()
+
+  useEffect(() => {
+    if (isDefault) return
+    let cancelled = false
+    window.api
+      .steamDirectLaunchVerdict(appName)
+      .then((v) => {
+        if (!cancelled) setView(v)
+      })
+      .catch(() => {
+        if (!cancelled) setView({ applies: false, reason: 'error' })
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [isDefault, appName])
+
+  if (isDefault) return null
+  const control = describeLaunchWithoutSteamControl(view, on === true)
+  if (control.kind === 'hidden') return null
+
+  const title = t('steam.directLaunch.label', 'Launch without Steam')
+  if (control.kind === 'disabled-drm') {
+    return (
+      <>
+        <ToggleSwitch
+          htmlId="launchWithoutSteam"
+          value={false}
+          disabled
+          handleChange={() => undefined}
+          title={title}
+        />
+        <div className="infoBox">
+          <FontAwesomeIcon icon={faLock} />
+          {t(
+            'steam.directLaunch.drmBadge',
+            'Not available: this game uses Steam DRM, which needs the Steam app.'
+          )}
+        </div>
+      </>
+    )
+  }
+  return (
+    <>
+      <ToggleSwitch
+        htmlId="launchWithoutSteam"
+        value={on === true}
+        handleChange={() => setOn(!on)}
+        title={title}
+        description={t(
+          'steam.directLaunch.confirmMessage',
+          'This starts the game directly, without the Steam client. For this session there is no Steam Cloud sync, no playtime tracking, no achievements and no Steam overlay.'
+        )}
+      />
+      {control.warn && (
+        <div className="infoBox saves-warning">
+          <FontAwesomeIcon icon={faExclamationTriangle} color={'yellow'} />
+          {t(
+            'steam.directLaunch.warning',
+            'This game uses the Steam API, or GameLib could not check. Without Steam it may quit, run without Steam features, or reopen Steam. You lose Steam Cloud sync, playtime, achievements and the overlay.'
+          )}
+        </div>
+      )}
+    </>
+  )
+}
+
+export default LaunchWithoutSteam
