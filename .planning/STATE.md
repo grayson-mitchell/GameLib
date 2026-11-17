@@ -5,16 +5,16 @@ milestone_name: Foundations
 current_phase: 64
 current_phase_name: UI to edit themes
 status: executing
-stopped_at: Completed 64-06-PLAN.md
-last_updated: "2026-11-17T20:04:50.275Z"
+stopped_at: Completed 64-07-PLAN.md
+last_updated: "2026-11-17T20:22:21.692Z"
 last_activity: 2026-11-18
 last_activity_desc: Phase 64 execution started
-state_head: 77555d65f72e4eea24a2a654f792a53601867aa3
+state_head: 710e04ed22d22a7fd4793e3d95091e598cf6f87f
 progress:
   total_phases: 26
   completed_phases: 23
   total_plans: 521
-  completed_plans: 507
+  completed_plans: 508
   percent: 88
 ---
 
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 ## Current Position
 
 Phase: 64 (UI to edit themes) — EXECUTING
-Plan: 7 of 10
+Plan: 8 of 10
 Status: Ready to execute
 Last activity: 2026-11-18 — Phase 64 execution started
 
@@ -290,6 +290,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 64 P04 | 25 min | 3 tasks | 13 files |
 | Phase 64 P05 | 10min | 3 tasks | 15 files |
 | Phase 64 P06 | 30min | 3 tasks | 14 files |
+| Phase 64 P07 | 45min | 3 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -479,6 +480,9 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 64]: Thumbnail colours fall back to the base built-in's value for the same element, then #00000000, so a half-typed draft never draws raw text or a blank hole
 - [Phase 64]: Nord Light selected-tab label is not mirrored in the thumbnail (UI-SPEC OD-2 lists only the two button rules); Plan 10 UAT checks it
 - [Phase 64]: 64-06: Duplicate never applies the copy (OD-6); Delete fallback mirrors deleteCustomTheme (base built-in, else default); dialog messages with user names are React elements (T-64-16)
+- [Phase 64]: Phase 64-07: invalid-colour input border uses --text-default, not --status-danger (danger reserved for Delete)
+- [Phase 64]: Phase 64-07: Enter on invalid colour text keeps the error, only blur reverts; blur on an unchanged valid value does not commit
+- [Phase 64]: Phase 64-07: editor preview is first in the DOM and placed in column 2 by grid placement so stacking needs no order
 
 ### Pending Todos
 
@@ -854,8 +858,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-17T20:04:40.625Z
-Stopped at: Completed 64-06-PLAN.md
+Last session: 2026-11-17T20:22:18.344Z
+Stopped at: Completed 64-07-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
