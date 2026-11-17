@@ -55,5 +55,5 @@ picker. (Rejected — see the note.)
 Done in quick 261117-r4c (`b74e7c9b3`, `20e70fdc1`, `ca5563472`). Catalogue
 `src/common/nativePortCatalogue.json` (fallout1-ce, fallout2-ce, openmw, openloco) with a
 validated loader/matcher; `NativePortInfo` block on the game page Info tab. Data-file gating not
-added (block always shows with the row's note). Strings are en-only; the other locales are not
-machine-filled yet. Live check owed.
+added (block always shows with the row's note). Strings translated into all 48 locales in `dbf3f34b4` (authored
+in-session, 864 pairs validated with `validateTranslation`, 0 failures). Live check owed.
