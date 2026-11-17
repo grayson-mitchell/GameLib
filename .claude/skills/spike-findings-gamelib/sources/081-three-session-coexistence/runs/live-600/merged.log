@@ -1,0 +1,91 @@
+# run live-600: vent first, su logonID=81 10s later, hold 600s; exit vent=0 su=0
+2026-11-13T18:45:11.986Z vent     start   steam-vent@a9e8164, ip=0, app 220 depot 221, hold 615s, cycle every 20s
+2026-11-13T18:45:14.480Z vent     logon   logged on
+2026-11-13T18:45:19.214Z vent     cycle   #1 pics=ok depotkey eresult 1 reqcode ok cdn 6 servers 2720ms
+2026-11-13T18:45:21.000Z macsteam whoami  {"step":"whoami","steamId64":"76561197995867096","loggedOn":1}
+2026-11-13T18:45:22.008Z su       start   steam-user, logonID=81, hold 600s, cycle every 20s
+2026-11-13T18:45:22.717Z su       logon   logged on
+2026-11-13T18:45:22.725Z su       license 485 licences
+2026-11-13T18:45:25.557Z su       cycle   #1 owned=390 pkgPICS=50 appPICS=50 838ms
+2026-11-13T18:45:39.153Z vent     cycle   #2 pics=ok depotkey eresult 1 reqcode ok cdn 6 servers 2558ms
+2026-11-13T18:45:46.257Z su       cycle   #2 owned=390 pkgPICS=50 appPICS=50 699ms
+2026-11-13T18:45:51.000Z macsteam whoami  {"step":"whoami","steamId64":"76561197995867096","loggedOn":1}
+2026-11-13T18:45:59.102Z vent     cycle   #3 pics=ok depotkey eresult 1 reqcode ok cdn 6 servers 2569ms
+2026-11-13T18:46:06.966Z su       cycle   #3 owned=390 pkgPICS=50 appPICS=50 709ms
+2026-11-13T18:46:19.353Z vent     cycle   #4 pics=ok depotkey eresult 1 reqcode ok cdn 6 servers 2623ms
+2026-11-13T18:46:21.000Z macsteam whoami  {"step":"whoami","steamId64":"76561197995867096","loggedOn":1}
+2026-11-13T18:46:28.109Z su       cycle   #4 owned=390 pkgPICS=50 appPICS=50 1142ms
+2026-11-13T18:46:39.256Z vent     cycle   #5 pics=ok depotkey eresult 1 reqcode ok cdn 6 servers 2527ms
+2026-11-13T18:46:48.832Z su       cycle   #5 owned=390 pkgPICS=50 appPICS=50 722ms
+2026-11-13T18:46:51.000Z macsteam whoami  {"step":"whoami","steamId64":"76561197995867096","loggedOn":1}
+2026-11-13T18:46:59.157Z vent     cycle   #6 pics=ok depotkey eresult 1 reqcode ok cdn 6 servers 2522ms
+2026-11-13T18:47:09.617Z su       cycle   #6 owned=390 pkgPICS=50 appPICS=50 783ms
+2026-11-13T18:47:19.106Z vent     cycle   #7 pics=ok depotkey eresult 1 reqcode ok cdn 6 servers 2577ms
+2026-11-13T18:47:21.000Z macsteam whoami  {"step":"whoami","steamId64":"76561197995867096","loggedOn":1}
+2026-11-13T18:47:30.710Z su       cycle   #7 owned=390 pkgPICS=50 appPICS=50 1092ms
+2026-11-13T18:47:39.309Z vent     cycle   #8 pics=ok depotkey eresult 1 reqcode ok cdn 6 servers 2827ms
+2026-11-13T18:47:51.000Z macsteam whoami  {"step":"whoami","steamId64":"76561197995867096","loggedOn":1}
+2026-11-13T18:47:51.379Z su       cycle   #8 owned=390 pkgPICS=50 appPICS=40 668ms
+2026-11-13T18:47:59.407Z vent     cycle   #9 pics=ok depotkey eresult 1 reqcode ok cdn 6 servers 2724ms
+2026-11-13T18:48:12.111Z su       cycle   #9 owned=390 pkgPICS=50 appPICS=50 730ms
+2026-11-13T18:48:19.109Z vent     cycle   #10 pics=ok depotkey eresult 1 reqcode ok cdn 6 servers 2576ms
+2026-11-13T18:48:21.000Z macsteam whoami  {"step":"whoami","steamId64":"76561197995867096","loggedOn":1}
+2026-11-13T18:48:32.813Z su       cycle   #10 owned=390 pkgPICS=35 appPICS=50 700ms
+2026-11-13T18:48:39.112Z vent     cycle   #11 pics=ok depotkey eresult 1 reqcode ok cdn 6 servers 2627ms
+2026-11-13T18:48:51.000Z macsteam whoami  {"step":"whoami","steamId64":"76561197995867096","loggedOn":1}
+2026-11-13T18:48:53.641Z su       cycle   #11 owned=390 pkgPICS=50 appPICS=50 827ms
+2026-11-13T18:48:59.359Z vent     cycle   #12 pics=ok depotkey eresult 1 reqcode ok cdn 6 servers 2627ms
+2026-11-13T18:49:14.810Z su       cycle   #12 owned=390 pkgPICS=50 appPICS=50 1168ms
+2026-11-13T18:49:19.310Z vent     cycle   #13 pics=ok depotkey eresult 1 reqcode ok cdn 6 servers 2581ms
+2026-11-13T18:49:21.000Z macsteam whoami  {"step":"whoami","steamId64":"76561197995867096","loggedOn":1}
+2026-11-13T18:49:35.517Z su       cycle   #13 owned=390 pkgPICS=50 appPICS=50 706ms
+2026-11-13T18:49:39.210Z vent     cycle   #14 pics=ok depotkey eresult 1 reqcode ok cdn 6 servers 2522ms
+2026-11-13T18:49:51.000Z macsteam whoami  {"step":"whoami","steamId64":"76561197995867096","loggedOn":1}
+2026-11-13T18:49:56.217Z su       cycle   #14 owned=390 pkgPICS=50 appPICS=50 699ms
+2026-11-13T18:49:59.161Z vent     cycle   #15 pics=ok depotkey eresult 1 reqcode ok cdn 6 servers 2573ms
+2026-11-13T18:50:17.313Z su       cycle   #15 owned=390 pkgPICS=50 appPICS=50 1095ms
+2026-11-13T18:50:19.112Z vent     cycle   #16 pics=ok depotkey eresult 1 reqcode ok cdn 6 servers 2576ms
+2026-11-13T18:50:22.000Z macsteam whoami  {"step":"whoami","steamId64":"76561197995867096","loggedOn":1}
+2026-11-13T18:50:38.028Z su       cycle   #16 owned=390 pkgPICS=50 appPICS=30 714ms
+2026-11-13T18:50:39.312Z vent     cycle   #17 pics=ok depotkey eresult 1 reqcode ok cdn 6 servers 2823ms
+2026-11-13T18:50:52.000Z macsteam whoami  {"step":"whoami","steamId64":"76561197995867096","loggedOn":1}
+2026-11-13T18:50:58.819Z su       cycle   #17 owned=390 pkgPICS=50 appPICS=50 790ms
+2026-11-13T18:50:59.417Z vent     cycle   #18 pics=ok depotkey eresult 1 reqcode ok cdn 6 servers 2738ms
+2026-11-13T18:51:19.164Z vent     cycle   #19 pics=ok depotkey eresult 1 reqcode ok cdn 6 servers 2624ms
+2026-11-13T18:51:19.535Z su       cycle   #18 owned=390 pkgPICS=50 appPICS=50 714ms
+2026-11-13T18:51:22.000Z macsteam whoami  {"step":"whoami","steamId64":"76561197995867096","loggedOn":1}
+2026-11-13T18:51:39.213Z vent     cycle   #20 pics=ok depotkey eresult 1 reqcode ok cdn 6 servers 2677ms
+2026-11-13T18:51:40.714Z su       cycle   #19 owned=390 pkgPICS=50 appPICS=50 1178ms
+2026-11-13T18:51:52.000Z macsteam whoami  {"step":"whoami","steamId64":"76561197995867096","loggedOn":1}
+2026-11-13T18:51:59.115Z vent     cycle   #21 pics=ok depotkey eresult 1 reqcode ok cdn 6 servers 2529ms
+2026-11-13T18:52:01.412Z su       cycle   #20 owned=390 pkgPICS=20 appPICS=50 696ms
+2026-11-13T18:52:19.117Z vent     cycle   #22 pics=ok depotkey eresult 1 reqcode ok cdn 6 servers 2632ms
+2026-11-13T18:52:22.000Z macsteam whoami  {"step":"whoami","steamId64":"76561197995867096","loggedOn":1}
+2026-11-13T18:52:22.165Z su       cycle   #21 owned=390 pkgPICS=50 appPICS=50 752ms
+2026-11-13T18:52:39.315Z vent     cycle   #23 pics=ok depotkey eresult 1 reqcode ok cdn 6 servers 2581ms
+2026-11-13T18:52:42.883Z su       cycle   #22 owned=390 pkgPICS=50 appPICS=50 717ms
+2026-11-13T18:52:52.000Z macsteam whoami  {"step":"whoami","steamId64":"76561197995867096","loggedOn":1}
+2026-11-13T18:52:59.271Z vent     cycle   #24 pics=ok depotkey eresult 1 reqcode ok cdn 6 servers 2581ms
+2026-11-13T18:53:04.017Z su       cycle   #23 owned=390 pkgPICS=50 appPICS=50 1132ms
+2026-11-13T18:53:19.319Z vent     cycle   #25 pics=ok depotkey eresult 1 reqcode ok cdn 6 servers 2668ms
+2026-11-13T18:53:22.000Z macsteam whoami  {"step":"whoami","steamId64":"76561197995867096","loggedOn":1}
+2026-11-13T18:53:24.724Z su       cycle   #24 owned=390 pkgPICS=50 appPICS=20 706ms
+2026-11-13T18:53:39.368Z vent     cycle   #26 pics=ok depotkey eresult 1 reqcode ok cdn 6 servers 2678ms
+2026-11-13T18:53:45.419Z su       cycle   #25 owned=390 pkgPICS=50 appPICS=50 694ms
+2026-11-13T18:53:52.000Z macsteam whoami  {"step":"whoami","steamId64":"76561197995867096","loggedOn":1}
+2026-11-13T18:53:59.223Z vent     cycle   #27 pics=ok depotkey eresult 1 reqcode ok cdn 6 servers 2730ms
+2026-11-13T18:54:06.162Z su       cycle   #26 owned=390 pkgPICS=50 appPICS=50 742ms
+2026-11-13T18:54:19.170Z vent     cycle   #28 pics=ok depotkey eresult 1 reqcode ok cdn 6 servers 2571ms
+2026-11-13T18:54:22.000Z macsteam whoami  {"step":"whoami","steamId64":"76561197995867096","loggedOn":1}
+2026-11-13T18:54:27.266Z su       cycle   #27 owned=390 pkgPICS=50 appPICS=50 1103ms
+2026-11-13T18:54:39.121Z vent     cycle   #29 pics=ok depotkey eresult 1 reqcode ok cdn 6 servers 2580ms
+2026-11-13T18:54:47.970Z su       cycle   #28 owned=390 pkgPICS=50 appPICS=50 702ms
+2026-11-13T18:54:52.000Z macsteam whoami  {"step":"whoami","steamId64":"76561197995867096","loggedOn":1}
+2026-11-13T18:54:59.119Z vent     cycle   #30 pics=ok depotkey eresult 1 reqcode ok cdn 6 servers 2626ms
+2026-11-13T18:55:08.716Z su       cycle   #29 owned=390 pkgPICS=50 appPICS=50 745ms
+2026-11-13T18:55:19.321Z vent     cycle   #31 pics=ok depotkey eresult 1 reqcode ok cdn 6 servers 2827ms
+2026-11-13T18:55:22.000Z macsteam whoami  {"step":"whoami","steamId64":"76561197995867096","loggedOn":1}
+2026-11-13T18:55:22.721Z su       end     alive_at_end=true cycles=29
+2026-11-13T18:55:22.759Z su       DISCON  disconnected eresult 3 (Logged off)
+2026-11-13T18:55:29.644Z vent     end     alive_at_end=true cycles=31
+# Mac Steam connection_log (local time) during the run:

@@ -1,0 +1,34 @@
+2026-11-13T18:45:22.008Z su       start   steam-user, logonID=81, hold 600s, cycle every 20s
+2026-11-13T18:45:22.717Z su       logon   logged on
+2026-11-13T18:45:22.725Z su       license 485 licences
+2026-11-13T18:45:25.557Z su       cycle   #1 owned=390 pkgPICS=50 appPICS=50 838ms
+2026-11-13T18:45:46.257Z su       cycle   #2 owned=390 pkgPICS=50 appPICS=50 699ms
+2026-11-13T18:46:06.966Z su       cycle   #3 owned=390 pkgPICS=50 appPICS=50 709ms
+2026-11-13T18:46:28.109Z su       cycle   #4 owned=390 pkgPICS=50 appPICS=50 1142ms
+2026-11-13T18:46:48.832Z su       cycle   #5 owned=390 pkgPICS=50 appPICS=50 722ms
+2026-11-13T18:47:09.617Z su       cycle   #6 owned=390 pkgPICS=50 appPICS=50 783ms
+2026-11-13T18:47:30.710Z su       cycle   #7 owned=390 pkgPICS=50 appPICS=50 1092ms
+2026-11-13T18:47:51.379Z su       cycle   #8 owned=390 pkgPICS=50 appPICS=40 668ms
+2026-11-13T18:48:12.111Z su       cycle   #9 owned=390 pkgPICS=50 appPICS=50 730ms
+2026-11-13T18:48:32.813Z su       cycle   #10 owned=390 pkgPICS=35 appPICS=50 700ms
+2026-11-13T18:48:53.641Z su       cycle   #11 owned=390 pkgPICS=50 appPICS=50 827ms
+2026-11-13T18:49:14.810Z su       cycle   #12 owned=390 pkgPICS=50 appPICS=50 1168ms
+2026-11-13T18:49:35.517Z su       cycle   #13 owned=390 pkgPICS=50 appPICS=50 706ms
+2026-11-13T18:49:56.217Z su       cycle   #14 owned=390 pkgPICS=50 appPICS=50 699ms
+2026-11-13T18:50:17.313Z su       cycle   #15 owned=390 pkgPICS=50 appPICS=50 1095ms
+2026-11-13T18:50:38.028Z su       cycle   #16 owned=390 pkgPICS=50 appPICS=30 714ms
+2026-11-13T18:50:58.819Z su       cycle   #17 owned=390 pkgPICS=50 appPICS=50 790ms
+2026-11-13T18:51:19.535Z su       cycle   #18 owned=390 pkgPICS=50 appPICS=50 714ms
+2026-11-13T18:51:40.714Z su       cycle   #19 owned=390 pkgPICS=50 appPICS=50 1178ms
+2026-11-13T18:52:01.412Z su       cycle   #20 owned=390 pkgPICS=20 appPICS=50 696ms
+2026-11-13T18:52:22.165Z su       cycle   #21 owned=390 pkgPICS=50 appPICS=50 752ms
+2026-11-13T18:52:42.883Z su       cycle   #22 owned=390 pkgPICS=50 appPICS=50 717ms
+2026-11-13T18:53:04.017Z su       cycle   #23 owned=390 pkgPICS=50 appPICS=50 1132ms
+2026-11-13T18:53:24.724Z su       cycle   #24 owned=390 pkgPICS=50 appPICS=20 706ms
+2026-11-13T18:53:45.419Z su       cycle   #25 owned=390 pkgPICS=50 appPICS=50 694ms
+2026-11-13T18:54:06.162Z su       cycle   #26 owned=390 pkgPICS=50 appPICS=50 742ms
+2026-11-13T18:54:27.266Z su       cycle   #27 owned=390 pkgPICS=50 appPICS=50 1103ms
+2026-11-13T18:54:47.970Z su       cycle   #28 owned=390 pkgPICS=50 appPICS=50 702ms
+2026-11-13T18:55:08.716Z su       cycle   #29 owned=390 pkgPICS=50 appPICS=50 745ms
+2026-11-13T18:55:22.721Z su       end     alive_at_end=true cycles=29
+2026-11-13T18:55:22.759Z su       DISCON  disconnected eresult 3 (Logged off)

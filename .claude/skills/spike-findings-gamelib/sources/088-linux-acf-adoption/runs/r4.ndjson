@@ -1,0 +1,40 @@
+{"t": "20:01:04", "k": "start", "app": "1628350"}
+{"t": "20:01:04", "k": "state", "pids": [11807, 11935], "reg": {"SteamPID": "11936", "AppInstalled": null}, "acf": {"exists": true, "mtime": 1794898637, "StateFlags": "4", "LauncherPath": false, "sha": "2294fef087"}}
+{"t": "20:01:07", "k": "state", "pids": [11807, 11935], "reg": {"SteamPID": "11935", "AppInstalled": null}, "acf": {"exists": true, "mtime": 1794898637, "StateFlags": "4", "LauncherPath": false, "sha": "2294fef087"}}
+{"t": "20:01:09", "k": "state", "pids": [13414], "reg": {"SteamPID": "0", "AppInstalled": null}, "acf": {"exists": false}}
+{"t": "20:01:10", "k": "state", "pids": [13414, 13533], "reg": {"SteamPID": "13543", "AppInstalled": null}, "acf": {"exists": false}}
+{"t": "20:01:12", "k": "log", "line": ""}
+{"t": "20:01:12", "k": "log", "line": ""}
+{"t": "20:01:12", "k": "log", "line": "[2026-11-17 20:01:12] Client version: 1794536281"}
+{"t": "20:01:12", "k": "log", "line": "[2026-11-17 20:01:12] Loaded Steam library folders configuration: /home/graysonmitchell/.steam/debian-installation/steamapps/libraryfolders.vdf"}
+{"t": "20:01:12", "k": "log", "line": "[2026-11-17 20:01:12] Loaded 5 apps from install folder \"/home/graysonmitchell/.steam/debian-installation/steamapps\\appmanifest_*.acf\"."}
+{"t": "20:01:12", "k": "log", "line": "[2026-11-17 20:01:12] Install folder /media/graysonmitchell/Games/SteamLibrary not mounted."}
+{"t": "20:01:12", "k": "log", "line": "[2026-11-17 20:01:12] Install folder /media/graysonmitchell/7ca4a725-1bb4-4e38-8f76-bad1fc803309/SteamLibrary not mounted."}
+{"t": "20:01:12", "k": "log", "line": "[2026-11-17 20:01:12] Loaded 9 apps from install folder \"/mnt/PopGames/SteamLibrary/steamapps\\appmanifest_*.acf\"."}
+{"t": "20:01:12", "k": "log", "line": "[2026-11-17 20:01:12] Triggered async write of Steam library folders configuration (4 libraries)."}
+{"t": "20:01:13", "k": "log", "line": "[2026-11-17 20:01:13] Adding peer server 'Graysons-Mac-Studio' (10.10.3.28:27036)"}
+{"t": "20:01:13", "k": "log", "line": "[2026-11-17 20:01:13] Adding peer server 'graysons-macbook-air' (10.10.3.132:27036)"}
+{"t": "20:01:41", "k": "hb", "pids": [13414, 13533], "reg": {"SteamPID": "13543", "AppInstalled": null}, "acf": {"exists": false}}
+{"t": "20:02:11", "k": "hb", "pids": [13414, 13533], "reg": {"SteamPID": "13543", "AppInstalled": null}, "acf": {"exists": false}}
+{"t": "20:02:42", "k": "hb", "pids": [13414, 13533], "reg": {"SteamPID": "13543", "AppInstalled": null}, "acf": {"exists": false}}
+{"t": "20:02:59", "k": "state", "pids": [13414, 13533], "reg": {"SteamPID": "13533", "AppInstalled": null}, "acf": {"exists": false}}
+{"t": "20:03:29", "k": "hb", "pids": [13414, 13533], "reg": {"SteamPID": "13533", "AppInstalled": null}, "acf": {"exists": false}}
+{"t": "20:04:00", "k": "hb", "pids": [13414, 13533], "reg": {"SteamPID": "13533", "AppInstalled": null}, "acf": {"exists": false}}
+{"t": "20:04:15", "k": "state", "pids": [13414], "reg": {"SteamPID": "0", "AppInstalled": null}, "acf": {"exists": false}}
+{"t": "20:04:16", "k": "state", "pids": [13414, 15507], "reg": {"SteamPID": "15508", "AppInstalled": null}, "acf": {"exists": false}}
+{"t": "20:04:34", "k": "state", "pids": [13414, 15507], "reg": {"SteamPID": "15508", "AppInstalled": null}, "acf": {"exists": true, "mtime": 1794899073, "StateFlags": "4", "LauncherPath": false, "sha": "2294fef087"}}
+{"t": "20:05:05", "k": "hb", "pids": [13414, 15507], "reg": {"SteamPID": "15508", "AppInstalled": null}, "acf": {"exists": true, "mtime": 1794899073, "StateFlags": "4", "LauncherPath": false, "sha": "2294fef087"}}
+{"t": "20:05:06", "k": "log", "line": ""}
+{"t": "20:05:06", "k": "log", "line": ""}
+{"t": "20:05:06", "k": "log", "line": "[2026-11-17 20:05:05] Client version: 1794536281"}
+{"t": "20:05:06", "k": "log", "line": "[2026-11-17 20:05:05] Loaded Steam library folders configuration: /home/graysonmitchell/.steam/debian-installation/steamapps/libraryfolders.vdf"}
+{"t": "20:05:06", "k": "log", "line": "[2026-11-17 20:05:05] Loaded 6 apps from install folder \"/home/graysonmitchell/.steam/debian-installation/steamapps\\appmanifest_*.acf\"."}
+{"t": "20:05:06", "k": "log", "line": "[2026-11-17 20:05:05] Install folder /media/graysonmitchell/Games/SteamLibrary not mounted."}
+{"t": "20:05:06", "k": "log", "line": "[2026-11-17 20:05:05] Install folder /media/graysonmitchell/7ca4a725-1bb4-4e38-8f76-bad1fc803309/SteamLibrary not mounted."}
+{"t": "20:05:06", "k": "log", "line": "[2026-11-17 20:05:05] Loaded 9 apps from install folder \"/mnt/PopGames/SteamLibrary/steamapps\\appmanifest_*.acf\"."}
+{"t": "20:05:06", "k": "log", "line": "[2026-11-17 20:05:05] Triggered async write of Steam library folders configuration (4 libraries)."}
+{"t": "20:05:07", "k": "log", "line": "[2026-11-17 20:05:06] Adding peer server 'graysons-macbook-air' (10.10.3.132:27036)"}
+{"t": "20:05:07", "k": "log", "line": "[2026-11-17 20:05:06] Adding peer server 'Graysons-Mac-Studio' (10.10.3.28:27036)"}
+{"t": "20:05:35", "k": "hb", "pids": [13414, 15507], "reg": {"SteamPID": "15508", "AppInstalled": null}, "acf": {"exists": true, "mtime": 1794899073, "StateFlags": "4", "LauncherPath": false, "sha": "2294fef087"}}
+{"t": "20:06:06", "k": "hb", "pids": [13414, 15507], "reg": {"SteamPID": "15508", "AppInstalled": null}, "acf": {"exists": true, "mtime": 1794899073, "StateFlags": "4", "LauncherPath": false, "sha": "2294fef087"}}
+{"t": "20:06:36", "k": "hb", "pids": [13414, 15507], "reg": {"SteamPID": "15508", "AppInstalled": null}, "acf": {"exists": true, "mtime": 1794899073, "StateFlags": "4", "LauncherPath": false, "sha": "2294fef087"}}

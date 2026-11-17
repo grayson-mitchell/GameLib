@@ -8,6 +8,8 @@ How GameLib works alongside a native Mac Steam that is already running and signe
 - showing live progress while Steam downloads;
 - driving install, adopt, update, verify and uninstall headlessly through steamclient's
   `IClientAppManager`;
+- finishing an install when Steam is signed out (sign-in adopts the ACF);
+- reading the account's owned apps from the running Steam through `IClientUser`, with no CM logon;
 - why bridge installs never get updates.
 
 Writing the ACF and doing the depot download are covered in `steam-native-install.md`. The
@@ -45,6 +47,16 @@ in-bottle `steam_api` proxy is covered in `macos-steam-bridge.md`. Production to
   click. **Corrected 2026-10-29:** 047–049 originally reported this as unattended, which was
   wrong. Production restarts Steam on Play instead. The silent, no-UI alternative is
   `IClientAppManager::InstallApp`. (047, 048, 049, 066)
+- **A depot install that finishes while Mac Steam is signed out ends in "Sign in to Steam to
+  finish", not "Restart Steam".** Sign-in reloads every appmanifest and adopts the GameLib ACF on
+  its own; poll `BLoggedOn` + `GetAppInstallState`, and fall back to `InstallApp` if state is not
+  4 shortly after sign-in. That adoption hashes nothing when the manifest ID matches, so
+  GameLib's own verify is the only integrity check on this path. *(083)*
+- **On macOS, a Refresh can read the account's apps from the running Steam
+  (`IClientUser::GetSubscribedApps`) instead of a signed-in CM logon**, but only after
+  `GetSteamID` matches the stored `userData.steamId`, with slots resolved by IPC function ID and
+  the CM path as fallback. Intersect the licensed-demo rule with this set: the raw CM licence list
+  keeps expired licences Steam hides. *(084)*
 - **Never call an `IClientAppManager` slot you have not verified at runtime.** Resolve the
   engine getter by RTTI name and each method by its IPC function-ID high half. If either check
   fails, fall back to the `steam://` / restart path. (065, 066, 067, 069)
@@ -179,6 +191,73 @@ uninstalled app. Disambiguate with `GetNumInstalledApps` (0 when signed out) or
 `TargetBuildID` ≠ `buildid`, `BytesToDownload` > 0, `ScheduledAutoUpdate` set. The ACF lags
 until Steam has noticed the update.
 
+### 4a. Signed-out Steam: sign-in is the rescan (083)
+
+`InstallApp` needs a signed-in Steam (signed out it returns 18, 067), so a depot install that
+finishes while Steam is signed out used to end in "Restart Steam to finish". It does not need
+to: **signing in reloads every `appmanifest_*.acf`** in every library folder, and a GameLib ACF
+written while signed out is adopted about 1 s after sign-in, with no restart and no
+`InstallApp`. *(083)*
+
+What the live run (WazHack 264160, GameLib's production 1026 ACF written while signed out) saw,
+polling once a second:
+
+| Moment | `BLoggedOn` | `GetNumInstalledApps` | `GetAppInstallState(264160)` |
+|---|---|---|---|
+| signed out, before and after the ACF write | 0 | 0 | 1 |
+| first tick of sign-in (still connecting) | 0 | 15 (library already loaded) | **1026**, read from GameLib's file |
+| one second later | 1 | 15 | **4**, held 10 s; `InstallApp` never fired |
+
+content_log at sign-in: `Loaded 14 apps from install folder …`, then `Update Required,Update
+Queued,Update Started`, `has no changes, 1 active: 264162 (…), 1 target: 264162 (…)`, a commit of
+`0 updated, 0 moved, 0 deleted files`, and `Fully Installed`. Steam then rewrote the ACF itself
+(StateFlags 4, `TargetBuildID 9044149`). *(083)*
+
+The production shape (`sources/083-adoption-signal-without-restart/watch.sh` + `probe.c`):
+
+1. Show "Sign in to Steam to finish" while the helper ticks `BLoggedOn` and
+   `GetAppInstallState` (slot by function-ID high half: `BLoggedOn` `0x6585`,
+   `GetAppInstallState` `0xeaf2`).
+2. **Re-attach on every tick** (`CreateSteamPipe` → `ConnectToGlobalUser` → getters, RTTI
+   checked). No pipe or interface handle has to survive the sign-in.
+3. When `BLoggedOn` turns 1, give Steam a few seconds. If state is not 4 by then, call
+   `InstallApp` once (section 3), which adopts after a full scan (066).
+4. Treat state as meaningful only once `GetNumInstalledApps` > 0: the library loads at the start
+   of sign-in, about 1 s before `BLoggedOn`. *(083)*
+
+### 4b. Owned apps from the running Steam, no CM logon (084)
+
+A Mac Refresh can read the account's apps from the signed-in Steam with the same attach chain:
+`CLIENTENGINE_INTERFACE_VERSION005` → `CreateSteamPipe` (slot 0) → `ConnectToGlobalUser`
+(slot 3) → `GetIClientUser` (engine slot 8, RTTI `14IClientUserMap`). That means no go-offline
+wrap, no logonID juggling (077) and no Friends risk. *(084)*
+
+`IClientBilling` has no enumeration; the list is on `IClientUser`. Resolve each method by
+decoding every proxy's IPC function ID (a `movz wN,#lo` / `movk wN,#hi,lsl #16` pair in the first
+64 instructions) and call it only when **exactly one** slot carries the expected high half,
+because overloads share a high half (slots 0 and 1 are both `LogOn`, `0x3e52`). Stop the vtable
+walk with `dladdr` at the end of `steamclient.dylib`. *(084)*
+
+| Method | Slot (2026-10-22 build, 259 slots, 12 new vs OpenSteamClient) | Function-ID high half |
+|---|---|---|
+| `BLoggedOn` | 4 | `0x6585` |
+| `GetSteamID` | 10 | `0xd6fc` |
+| `BIsSubscribedApp(AppId_t)` | 181 | `0x8d36` |
+| `GetSubscribedApps(AppId_t *, uint32 max, bool)` | 182 | `0x8532` |
+
+```c
+uint32_t n = GetSubscribedApps(user, NULL, 0, false);   // return value = total count, not written count
+AppId_t *buf = malloc(n * sizeof *buf);
+GetSubscribedApps(user, buf, n, false);                 // the bool flag made no difference
+```
+
+Before using the set, check `BLoggedOn` = 1 and `GetSteamID` equals GameLib's stored
+`userData.steamId` (`getPersistedSteamId64()`); otherwise, or on any guard failure, fall back to
+the CM path. The result is a superset of `GetOwnedGames` (DLC, tools, config, music, F2P), so
+names and types still come from PICS: an anonymous logon is enough. Comparison against 073 and
+the demo finding are in `steam-library-ownership.md`. Probe: `sources/084-owned-apps-from-running-steam/probe.c`
+(`scan`, `whoami`, `owned`, `check`). *(084)*
+
 ### 5. Live progress for a Steam-performed download (050)
 
 This applies only to **Mac-native** games. Wine games always go through GameLib's own depot
@@ -229,6 +308,17 @@ installs".
   dialog is off-screen, Steam logs `Installs.CancelInstall`. (Correction to 047–049)
 - **Don't rely on passive pickup or `RefreshLibraryFolders`.** Neither rescans manifests.
   `RecoverAppFromFolder` is repair-only and returns 18 for an app Steam doesn't know. (047, 066)
+  Sign-in *is* a rescan, though (083).
+- **Don't treat sign-in adoption of a 1026 ACF as a verify.** With a matching `InstalledDepots`
+  manifest Steam committed 0 files and logged no `Validation: full scan`; no file under
+  `common/WazHack` was touched. This contradicts the `appManifest.ts` comment that 1026 makes
+  "Steam run its own verify/repair pass" for that case. *(083)*
+- **Don't hold a steamclient pipe across a sign-in.** Re-attach per poll. *(083)*
+- **Don't use `GetSubscribedApps` as the owned-games list.** It is the licence set: filter by PICS
+  `common.type`, and accept that `game`-type F2P titles (TF2, Dota 2, Warframe, …) have no local
+  signal to drop them, or keep the CM `GetOwnedGames` call for the exact owned list. *(084)*
+- **Don't use OpenSteamClient's `IClientUser` slot numbers.** 12 of 259 slots are new on this
+  build. *(084)*
 - **Don't hard-code `IClientAppManager` / engine slot indices** from OpenSteamClient. Two were
   wrong for a one-year-old header. (065)
 - **Don't read `GetUpdateInfo`'s struct as documented.** It has drifted. Only the build words at
@@ -263,6 +353,14 @@ installs".
   `MustCloseGames`; the URL path is unknown. The `LogOff()` gate covers this either way.
 - **Wrap settle times below 2 s are untested**, and so is Refresh as the wrap trigger (046b's
   logon was the launch-time one).
+- **Sign-in adoption (083), not tested:** Steam not running at all (an ordinary launch also loads
+  the folders: the existing restart path), a non-default library folder, `buildid "0"` (may still
+  force a verify). Windows and Linux sign-in adoption is covered by 087/088 in
+  `steam-native-install.md`. The main Steam window opening at sign-in is Steam's normal
+  behaviour; no adoption dialog was seen.
+- **Owned apps from Steam (084):** macOS only, Steam running and signed in. Live addition of a new
+  licence, Offline Mode, and the values returned signed out or not running were not observed (the
+  probe's guards return `pipe` / `user` failures there).
 - **Untested across the board:** Steam not running (expect `CreateSteamPipe` → 0, then fall
   back), an unowned app, a running game during `UninstallApp`/`InstallApp`, non-default library
   folders, large or multi-depot updates via `InstallApp`, adopt-at-startup content scanning
@@ -288,7 +386,9 @@ installs".
 | 070   | VALIDATED                       | 6 of 28 bridge installs stale; nothing ever updates bridge bottles                                                                                   |
 | 074\* | VALIDATED wrapped + SURPRISE    | wrap works from Rust; a **bare** logon no longer flips Friends (2026-11-09); keep the wrap pending a full-refresh retest                             |
 | 075   | VALIDATED                       | GameLib's **full Refresh** unwrapped (harness and real app) doesn't flip Friends either; steamclient.dylib unchanged since before the flips → keep the wrap, fall through unwrapped |
+| 083   | VALIDATED                       | signed-out Steam: sign-in reloads every appmanifest and adopts a GameLib 1026 ACF ~1 s after `BLoggedOn` (0 files committed); restart hold → sign-in hold |
+| 084   | VALIDATED                       | `IClientUser::GetSubscribedApps` (slot by function ID) returns 1,140 apps with no CM logon: all 390 owned, CM-licensed set minus 4 lapsed licences |
 
 \*074 is packaged elsewhere (Rust migration). It is cited here because it qualifies 046's
-premise. Sources for 046a–070 and 075 are in `sources/<NNN-name>/` (075 includes
+premise. Sources for 046a–070, 075, 083 and 084 are in `sources/<NNN-name>/` (075 includes
 `arm-b-nowrap.patch`, the one-line real-app bypass, to re-run the check).

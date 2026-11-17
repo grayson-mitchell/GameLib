@@ -5,8 +5,9 @@ migration moves it to Rust piece by piece (Phase 63 scanners → Phase 73 depot 
 local file formats → a later CM-client slice). This reference covers what the spikes proved about
 the two Steam-heavy slices: the **depot download pipeline** (067a–c, now Phase 73's
 `gamelib-depot`) and the **CM client** that replaces `steam-user`/`steam-session` (071–074), plus
-running the two clients side by side during the migration (077) and the combined stack on Windows
-and Linux (080).
+running the two clients side by side during the migration (077, 081), the combined stack on Windows
+and Linux (080), two rustls providers in one process (082), and holding a steam-vent session for
+hours across network drops and sleep (085).
 
 ## Requirements
 
@@ -56,6 +57,19 @@ and Linux (080).
   every CM connect, which beats `gamelib-depot`'s `ring` install (`fetch.rs:91-94`, which tolerates
   losing). Otherwise the active provider depends on whether a CM connect or a CDN fetch runs first.
   Staying ring-only means patching steam-vent (no default features; provider passed in). *(080)*
+- **Install one rustls provider explicitly at the top of the shell's `main()`, in the same change
+  that adds steam-vent.** Two compiled providers remove rustls's implicit choice, and any
+  `rustls-no-provider` reqwest client built before an install panics. Whichever provider is
+  installed first serves the whole process, and steam-vent and `gamelib-depot` both work on
+  either. *(082)*
+- **A long-lived steam-vent session needs GameLib-owned liveness and reconnect.** steam-vent never
+  reports a dead socket: heartbeat and read-loop errors are only logged, `on::<>` streams never
+  end, and there is no reconnect API. GameLib must (a) run a periodic cheap job with a timeout
+  (PICS access token, 10 s) and treat a failure as dead, (b) compare wall and monotonic clocks to
+  detect sleep and check at once on wake, (c) rebuild the `Connection` (discover + connect +
+  refresh-token logon) with 5→60 s backoff, and (d) treat `ClientLoggedOff` 34 as a kick: back
+  off and stop after repeated 34s instead of reconnecting at once, or two sessions ping-pong
+  forever. Never set `SSLKEYLOGFILE` (steam-vent installs rustls `KeyLogFile`). *(085)*
 - **Keep the macOS go-offline wrap** around every authenticated CM logon; it works unchanged from
   Rust. Its premise needs re-testing: see Constraints. *(074)*
 - **Bridge-game updates are a chunk-level delta in `gamelib-depot` (`DepotRef.fromManifest`).**
@@ -139,6 +153,77 @@ tokio::spawn(async move {
     if let Some(Ok(m)) = logged_off.next().await { /* m.eresult(): 34 = replaced → drop session, don't retry-loop */ }
 });
 ```
+
+### Three sessions on one account: steam-user + steam-vent + Mac Steam (081)
+
+077's `logonID` fix holds at production shape and duration. In a 10-minute live run with Mac
+Steam online and **no go-offline wrap**, steam-vent (ip 0) ran 31/31 depot-shaped cycles every
+20 s (PICS token + product info, public GID, `GetDepotDecryptionKey`, `GetManifestRequestCode`,
+`GetServersForSteamPipe`; ~2.6 s each) while steam-user on `logonID` 81 ran 29/29 Refresh-shaped
+cycles (`getUserOwnedApps` 390, package PICS for 50 licences, app PICS for 50 apps; ~0.7 s each).
+Zero `KICKED`/`DEAD` lines on either side, in the vent-first order (the reverse of 077's arm C). *(081)*
+
+Mac Steam was checked two ways with no CM traffic of its own: `probe whoami` from 084
+(`GetSteamID` + `BLoggedOn` through `steamclient.dylib`) read `loggedOn 1` on 21/21 probes, and
+`connection_log.txt` gained no lines. So a signed-in Rust depot path on macOS does not need the
+go-offline wrap. Harness: `sources/081-three-session-coexistence/` (`run.sh`, `src/main.rs`,
+`su-work.mjs`); it logs only eresults and counts, never tokens or keys. *(081)*
+
+### One explicit rustls provider at shell start (082)
+
+```rust
+// src-tauri main(), before tauri::Builder — the first install wins for the whole process
+let _ = rustls::crypto::ring::default_provider().install_default();
+// or aws_lc_rs::default_provider() for post-quantum X25519MLKEM768 key exchange
+```
+
+Why it is needed, measured per arm (each its own process, because the default provider is
+process-global): *(082)*
+
+| Arm | Provider at end | Result |
+|---|---|---|
+| ring-only control build, bare reqwest | none (implicit ring) | HTTP 200 |
+| steam-vent build, bare reqwest, no install | none | **panic** at reqwest `async_impl/client.rs:2501` ("No rustls crypto provider is configured") |
+| vent-then-depot | aws-lc-rs | ✓ everything on aws-lc |
+| depot-then-vent | ring | ✓ everything on ring, CM websocket included |
+| concurrent | aws-lc-rs | ✓ 2,227 HTTPS manifest summaries in 34.9 s during 40 PICS jobs |
+| explicit-ring / explicit-aws | as installed | ✓ |
+
+steam-vent's `install_default().ok()` (`transport/websocket.rs:21`, every connect) and
+`gamelib-depot`'s `let _ =` (`fetch.rs:89-95`) both lose quietly to an earlier install, so the
+explicit one decides. Today no shell path builds a client before an install (the updater
+installs ring itself at `updater.rs:446`; tauri core's reqwest is mobile-only), so the exposure
+is the *next* Rust networking code, e.g. Web-API sign-in (072) running before any depot job or CM
+connect. To tell which provider is live, `CryptoProvider::get_default()` offering
+`X25519MLKEM768` means aws-lc-rs. aws-lc-sys still compiles in either way unless steam-vent is
+patched. *(082)*
+
+### Keep a steam-vent session alive for the app's lifetime (085)
+
+steam-vent a9e8164 hides a dead socket: `setup_heartbeat` only logs a failed send, the read task
+in `connection/filter.rs` logs and returns, and the `on::<CMsgClientLoggedOff>()` stream lives on
+inside the dead `Connection`. `ServerList::pick_ws` rotates servers, but the caller has to build
+the new `Connection`. The watchdog that recovered every case
+(`sources/085-steam-vent-long-lived-session/src/main.rs`):
+
+```rust
+async fn alive(c: &Connection) -> Result<(), String> {      // cheap liveness job
+    let r: Result<CMsgClientPICSAccessTokenResponse, _> = tokio::time::timeout(
+        Duration::from_secs(10),
+        c.job(CMsgClientPICSAccessTokenRequest { appids: vec![480], ..Default::default() }),
+    )
+    .await
+    .map_err(|_| "outer timeout 10s".to_string())?;
+    r.map(|_| ()).map_err(|e| format!("{e:?}"))
+}
+// every 30 s: if wall-clock delta − monotonic delta is large → GAP (system slept): check now.
+// on failure: loop { timeout(30 s, discover + connect + subscribe LoggedOff + login_with_refresh_token);
+//                    sleep(backoff); backoff = (backoff * 2).min(60) }   // from 5 s
+```
+
+Re-subscribe every `on::<>` stream on the new connection; the old ones are tied to the dead
+socket. Time the whole check with the watchdog, not just the job: Run A had a 92 s stall outside
+the 10 s job timeout while the network was down. *(085)*
 
 ### Build for Windows and Linux (080)
 
@@ -243,6 +328,18 @@ about 83 s end to end against ~6.5 min for a full download.
   failing whatever was in flight. (077)
 - **Relying on whichever TLS provider installs first.** `install_default()` is first-wins, and
   both crates call it. (080)
+- **Building any `rustls-no-provider` reqwest client before a provider is installed** once
+  steam-vent is linked: it panics instead of falling back to ring. *(082)*
+- **Assuming depot CDN traffic is plain HTTP.** `gamelib-depot` defaults to `http://`, but 5 of 6
+  CDN hosts the CM returned were `httpsSupport: mandatory`, so the provider choice reaches the
+  depot download too. *(082)*
+- **Trusting a steam-vent session to report its own death.** After a network drop jobs time out,
+  then fail with `BrokenPipe` forever (the socket stays bound to the vanished interface address,
+  `AddrNotAvailable`); nothing reaches the caller and the `LoggedOff` stream stays silent. *(085)*
+- **Reconnecting immediately after a `ClientLoggedOff` 34.** Two auto-reconnecting sessions on
+  one identity kicked each other in turn every ~2 s until one was killed. *(085)*
+- **Setting `SSLKEYLOGFILE` in the shell's environment:** steam-vent installs rustls
+  `KeyLogFile`, which would write TLS secrets. *(085)*
 - **Reading a GNU cross-build as proof for MSVC.** On `windows-gnu`, aws-lc-sys assembles with
   mingw and never consults NASM; MSVC build scripts take a different path. (080)
 - **QR over steam-vent's CM connection:** its unauthenticated service call is `pub(crate)`.
@@ -280,6 +377,17 @@ about 83 s end to end against ~6.5 min for a full download.
   licenses, 198 files / 3.2 GB manifest).
 - **Session coexistence (077):** n=1 account, one public IP; the same-NAT, two-machine case is
   inferred from the identity rule, not tested.
+- **Three-session run (081):** 10 minutes only, steady network. Friends was measured through
+  `BLoggedOn` and a silent `connection_log.txt`, not by watching the Friends UI.
+- **Long-lived session numbers (085):** a steady session held **2 h 59 m with 358/358 checks ok**
+  (heartbeat alone keeps it alive; nothing expires on a 3 h scale). Network drop: recovered 76 s
+  after the first failure (logon 1.4 s, gated by the network returning; while offline each
+  reconnect fails at once with `Failed send discovery request`). 365 s sleep: recovered in ~11 s
+  (one 10 s job timeout, then logon 0.8 s). The refresh token was reused each time. A kick is
+  the only signalled failure (`ClientLoggedOff` 34, then `InvalidHeader`, then
+  `Ws(AlreadyClosed)`). The 92 s loop stall in Run A is unexplained.
+- **TLS (082):** anonymous logon only (app 1007, depot 1004); the 5-of-6 `mandatory` CDN split was
+  the same on every run.
 - **Depot decode numbers (067b):** Civ V mix 177 MiB/s single thread both; Rust 5.8 vs Node 9.3
   cpu-s/GiB (~8% of ~1 core system-wide). Node's pure-JS LZMA fallback is a 6× cliff.
 - **067c was not run:** its trigger (memory inherent to Node) wasn't met; the 2.75 GB RSS was the
@@ -287,10 +395,11 @@ about 83 s end to end against ~6.5 min for a full download.
 
 ## Origin
 
-Synthesized from spikes: 067a, 067b, 067c, 071a, 071b, 071c, 072, 073, 074, 076, 077, 080 (with 010, 002,
-070 as prior art).
+Synthesized from spikes: 067a, 067b, 067c, 071a, 071b, 071c, 072, 073, 074, 076, 077, 080, 081, 082, 085
+(with 010, 002, 070 as prior art).
 Source files available in: sources/067a-node-pipeline-stage-profile/, sources/067b-chunk-decode-bench/,
 sources/067c-rust-depot-job/, sources/071a-cm-crate-steamroom/, sources/071b-cm-crate-steam-client-lib/,
 sources/071c-cm-crate-steam-vent/, sources/072-rust-signin-refresh-token/,
 sources/073-rust-owned-apps-parity/, sources/074-rust-logon-friends-wrap/,
-sources/076-bridge-delta-update/
+sources/076-bridge-delta-update/, sources/081-three-session-coexistence/,
+sources/082-one-process-tls-providers/, sources/085-steam-vent-long-lived-session/

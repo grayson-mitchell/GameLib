@@ -1,0 +1,172 @@
+{"t": "19:55:33", "k": "start", "app": "1628350"}
+{"t": "19:55:33", "k": "state", "pids": [], "reg": {"SteamPID": "2503", "AppInstalled": null}, "acf": {"exists": false}}
+{"t": "19:55:34", "k": "state", "pids": [7438, 7445], "reg": {"SteamPID": "7445", "AppInstalled": null}, "acf": {"exists": false}}
+{"t": "19:55:49", "k": "state", "pids": [], "reg": {"SteamPID": "0", "AppInstalled": null}, "acf": {"exists": false}}
+{"t": "19:55:53", "k": "state", "pids": [9246, 9248], "reg": {"SteamPID": "9248", "AppInstalled": null}, "acf": {"exists": false}}
+{"t": "19:56:23", "k": "hb", "pids": [9246, 9248], "reg": {"SteamPID": "9248", "AppInstalled": null}, "acf": {"exists": false}}
+{"t": "19:56:32", "k": "state", "pids": [9246], "reg": {"SteamPID": "9248", "AppInstalled": null}, "acf": {"exists": false}}
+{"t": "19:56:33", "k": "state", "pids": [9534], "reg": {"SteamPID": "0", "AppInstalled": null}, "acf": {"exists": false}}
+{"t": "19:56:34", "k": "state", "pids": [9534, 9674], "reg": {"SteamPID": "9675", "AppInstalled": null}, "acf": {"exists": false}}
+{"t": "19:56:36", "k": "log", "line": ""}
+{"t": "19:56:36", "k": "log", "line": ""}
+{"t": "19:56:36", "k": "log", "line": "[2026-11-17 19:56:36] Client version: 1794536281"}
+{"t": "19:56:36", "k": "log", "line": "[2026-11-17 19:56:36] Loaded Steam library folders configuration: /home/graysonmitchell/.steam/debian-installation/steamapps/libraryfolders.vdf"}
+{"t": "19:56:36", "k": "log", "line": "[2026-11-17 19:56:36] Loaded 5 apps from install folder \"/home/graysonmitchell/.steam/debian-installation/steamapps\\appmanifest_*.acf\"."}
+{"t": "19:56:36", "k": "log", "line": "[2026-11-17 19:56:36] Install folder /media/graysonmitchell/Games/SteamLibrary not mounted."}
+{"t": "19:56:36", "k": "log", "line": "[2026-11-17 19:56:36] Install folder /media/graysonmitchell/7ca4a725-1bb4-4e38-8f76-bad1fc803309/SteamLibrary not mounted."}
+{"t": "19:56:36", "k": "log", "line": "[2026-11-17 19:56:36] Loaded 9 apps from install folder \"/mnt/PopGames/SteamLibrary/steamapps\\appmanifest_*.acf\"."}
+{"t": "19:56:36", "k": "log", "line": "[2026-11-17 19:56:36] Triggered async write of Steam library folders configuration (4 libraries)."}
+{"t": "19:56:39", "k": "log", "line": "[2026-11-17 19:56:39] Adding peer server 'Graysons-Mac-Studio' (10.10.3.28:27036)"}
+{"t": "19:56:39", "k": "log", "line": "[2026-11-17 19:56:39] Adding peer server 'graysons-macbook-air' (10.10.3.132:27036)"}
+{"t": "19:56:40", "k": "log", "line": "[2026-11-17 19:56:40] AppID 1493710 state changed : Update Required,Fully Installed, (Update delayed for 1067151 secs)"}
+{"t": "19:56:40", "k": "log", "line": "[2026-11-17 19:56:40] AppID 1493710 config changed : updated depots 1493711"}
+{"t": "19:56:40", "k": "log", "line": "[2026-11-17 19:56:40] AppID 2139460 state changed : Update Required,Fully Installed, (Update delayed for 732445 secs)"}
+{"t": "19:56:40", "k": "log", "line": "[2026-11-17 19:56:40] AppID 2139460 config changed : updated depots 2139461"}
+{"t": "19:56:40", "k": "log", "line": "[2026-11-17 19:56:40] AppID 1070560 scheduler update : Priority Auto Update, not played for 31277142 seconds, update disabled for 0 seconds"}
+{"t": "19:56:40", "k": "log", "line": "[2026-11-17 19:56:40] AppID 1070560 state changed : Update Required,Fully Installed,Update Queued,"}
+{"t": "19:56:40", "k": "log", "line": "[2026-11-17 19:56:40] AppID 1391110 scheduler update : Priority Auto Update, not played for 31277070 seconds, update disabled for 0 seconds"}
+{"t": "19:56:40", "k": "log", "line": "[2026-11-17 19:56:40] AppID 1391110 state changed : Update Required,Fully Installed,Update Queued,"}
+{"t": "19:56:40", "k": "log", "line": "[2026-11-17 19:56:40] AppID 1070560 state changed : Update Required,Fully Installed,Update Queued,Update Running,"}
+{"t": "19:56:40", "k": "log", "line": "[2026-11-17 19:56:40] AppID 1070560 App update changed : Running Update,"}
+{"t": "19:56:40", "k": "log", "line": "[2026-11-17 19:56:40] AppID 1070560 App update changed : Running Update,Reconfiguring,"}
+{"t": "19:56:41", "k": "log", "line": "[2026-11-17 19:56:41] Got 6 download sources and 0 caching proxies via ContentServerDirectoryService::BYieldingGetServersForSteamPipe (CellID 22 / Launcher 0)"}
+{"t": "19:56:41", "k": "log", "line": "[2026-11-17 19:56:41] Created peer download interface to host Graysons-Mac-Studio (10.10.3.28)"}
+{"t": "19:56:41", "k": "log", "line": "[2026-11-17 19:56:41] Moving to source priority class '8'"}
+{"t": "19:56:41", "k": "log", "line": "[2026-11-17 19:56:41] Created download interface of type 'SteamCache' (7) to host cache1-akl-edgx.steamcontent.com (cache1-akl-edgx.steamcontent.com)"}
+{"t": "19:56:41", "k": "log", "line": "[2026-11-17 19:56:41] HTTP/2 available"}
+{"t": "19:56:41", "k": "log", "line": "[2026-11-17 19:56:41] Created ipv4-only http client"}
+{"t": "19:56:42", "k": "log", "line": "[2026-11-17 19:56:41] AppID 1070560 App update changed : Running Update,"}
+{"t": "19:56:42", "k": "log", "line": "[2026-11-17 19:56:41] AppID 1070560 App update changed : Running Update,Verifying Installed,"}
+{"t": "19:56:42", "k": "log", "line": "[2026-11-17 19:56:41] AppID 1070560 App update changed : Running Update,"}
+{"t": "19:56:42", "k": "log", "line": "[2026-11-17 19:56:41] AppID 1070560 App update changed : Running Update,Preallocating,"}
+{"t": "19:56:42", "k": "log", "line": "[2026-11-17 19:56:41] AppID 1070560 preallocated 0 files (0 MB) "}
+{"t": "19:56:42", "k": "log", "line": "[2026-11-17 19:56:41] AppID 1070560 App update changed : Running Update,"}
+{"t": "19:56:42", "k": "log", "line": "[2026-11-17 19:56:42] AppID 1070560 update started : download 0/957632, store 0/0, reuse 0/7402190, delta 0/7402190, stage 0/10613504 "}
+{"t": "19:56:42", "k": "log", "line": "[2026-11-17 19:56:42] AppID 1070560 state changed : Update Required,Fully Installed,Update Queued,Update Running,Update Started,"}
+{"t": "19:56:42", "k": "log", "line": "[2026-11-17 19:56:42] Last verify in '/home/graysonmitchell/.steam/debian-installation' was 16 days ago, clean bytes tally reset to 0"}
+{"t": "19:56:42", "k": "log", "line": "[2026-11-17 19:56:42] Triggered async write of Steam library folders configuration (4 libraries)."}
+{"t": "19:56:42", "k": "log", "line": "[2026-11-17 19:56:42] AppID 1070560 App update changed : Running Update,Downloading,Staging,"}
+{"t": "19:56:42", "k": "log", "line": "[2026-11-17 19:56:42] Downloading 73 chunks for depot 1070561 (8475493586714137016)"}
+{"t": "19:56:42", "k": "log", "line": "[2026-11-17 19:56:42] Peer - Graysons-Mac-Studio (10.10.3.28:27036): open connection to [U:1:35601368] failed (Busy)"}
+{"t": "19:56:42", "k": "log", "line": "[2026-11-17 19:56:42] Created peer download interface to host graysons-macbook-air (10.10.3.132)"}
+{"t": "19:56:42", "k": "log", "line": "[2026-11-17 19:56:42] Peer - graysons-macbook-air (10.10.3.132:27036): open connection to [U:1:35601368] failed (Not Logged On)"}
+{"t": "19:56:42", "k": "log", "line": "[2026-11-17 19:56:42] Created download interface of type 'SteamCache' (7) to host cache2-akl-tpwr.steamcontent.com (cache2-akl-tpwr.steamcontent.com)"}
+{"t": "19:56:42", "k": "log", "line": "[2026-11-17 19:56:42] Created download interface of type 'SteamCache' (7) to host cache1-akl-tpwr.steamcontent.com (cache1-akl-tpwr.steamcontent.com)"}
+{"t": "19:56:42", "k": "log", "line": "[2026-11-17 19:56:42] Moving to source priority class '4'"}
+{"t": "19:56:42", "k": "log", "line": "[2026-11-17 19:56:42] Created download interface of type 'CDN' (2) to host fastly.cdn.steampipe.steamcontent.com (fastly.cdn.steampipe.steamcontent.com)"}
+{"t": "19:56:42", "k": "log", "line": "[2026-11-17 19:56:42] Created download interface of type 'CDN' (2) to host steampipe.akamaized.net (steampipe.akamaized.net)"}
+{"t": "19:56:42", "k": "log", "line": "[2026-11-17 19:56:42] Moving to source priority class '3'"}
+{"t": "19:56:42", "k": "log", "line": "[2026-11-17 19:56:42] Created download interface of type 'CDN' (2) to host alibaba.cdn.steampipe.steamcontent.com (alibaba.cdn.steampipe.steamcontent.com)"}
+{"t": "19:56:42", "k": "log", "line": "[2026-11-17 19:56:42] HTTP (CDN,11) - steampipe.akamaized.net (0.0.0.0:0 / 0.0.0.0:0, host: steampipe.akamaized.net): AuthenticateDepotID (1070561) - Success!"}
+{"t": "19:56:42", "k": "log", "line": "[2026-11-17 19:56:42] HTTP (CDN,31) - fastly.cdn.steampipe.steamcontent.com (0.0.0.0:0 / 0.0.0.0:0, host: fastly.cdn.steampipe.steamcontent.com): AuthenticateDepotID (1070561) - Success!"}
+{"t": "19:56:42", "k": "log", "line": "[2026-11-17 19:56:42] HTTP (CDN,33) - alibaba.cdn.steampipe.steamcontent.com (0.0.0.0:0 / 0.0.0.0:0, host: alibaba.cdn.steampipe.steamcontent.com): AuthenticateDepotID (1070561) - Success!"}
+{"t": "19:56:45", "k": "log", "line": "[2026-11-17 19:56:44] AppID 1070560 App update changed : Running Update,"}
+{"t": "19:56:45", "k": "log", "line": "[2026-11-17 19:56:44] AppID 1070560 App update changed : Running Update,Verifying Staged,"}
+{"t": "19:56:45", "k": "log", "line": "[2026-11-17 19:56:44] Verified 10 MB in '/home/graysonmitchell/.steam/debian-installation', clean bytes tally is now 10 MB"}
+{"t": "19:56:45", "k": "log", "line": "[2026-11-17 19:56:44] Triggered async write of Steam library folders configuration (4 libraries)."}
+{"t": "19:56:45", "k": "log", "line": "[2026-11-17 19:56:44] AppID 1070560 App update changed : Running Update,"}
+{"t": "19:56:45", "k": "log", "line": "[2026-11-17 19:56:44] AppID 1070560 App update changed : Running Update,Committing,"}
+{"t": "19:56:45", "k": "log", "line": "[2026-11-17 19:56:44] AppID 1070560 starting commit from \"/home/graysonmitchell/.steam/debian-installation/steamapps/downloading/1070560\" to \"/home/graysonmitchell/.steam/debian-installation/steamapps/common/SteamLinuxRuntime\" : 175 updated, 0 moved, 68 deleted files"}
+{"t": "19:56:45", "k": "log", "line": "[2026-11-17 19:56:44] AppID 1070560 state changed : Fully Installed,Update Queued,Update Running,"}
+{"t": "19:56:45", "k": "log", "line": "[2026-11-17 19:56:44] AppID 1070560 finished update, 1 mounted depots (BuildID 26115262) : 1070561 (8475493586714137016),"}
+{"t": "19:56:45", "k": "log", "line": "[2026-11-17 19:56:44] AppID 1070560 App update changed : Running Update,"}
+{"t": "19:56:45", "k": "log", "line": "[2026-11-17 19:56:44] AppID 1070560 App update changed : None"}
+{"t": "19:56:45", "k": "log", "line": "[2026-11-17 19:56:44] AppID 1070560 state changed : Fully Installed,Update Queued,"}
+{"t": "19:56:45", "k": "log", "line": "[2026-11-17 19:56:44] AppID 1070560 state changed : Fully Installed,"}
+{"t": "19:56:45", "k": "log", "line": "[2026-11-17 19:56:44] AppID 1070560 scheduler finished : removed from schedule (result No Error, state 0xc) "}
+{"t": "19:56:45", "k": "log", "line": "[2026-11-17 19:56:44] AppID 1391110 state changed : Update Required,Fully Installed,Update Queued,Update Running,"}
+{"t": "19:56:45", "k": "log", "line": "[2026-11-17 19:56:44] AppID 1391110 App update changed : Running Update,"}
+{"t": "19:56:45", "k": "log", "line": "[2026-11-17 19:56:44] AppID 1391110 App update changed : Running Update,Reconfiguring,"}
+{"t": "19:56:45", "k": "log", "line": "[2026-11-17 19:56:44] Created peer download interface to host Graysons-Mac-Studio (10.10.3.28)"}
+{"t": "19:56:46", "k": "log", "line": "[2026-11-17 19:56:45] AppID 1391110 App update changed : Running Update,"}
+{"t": "19:56:46", "k": "log", "line": "[2026-11-17 19:56:45] AppID 1391110 App update changed : Running Update,Verifying Installed,"}
+{"t": "19:56:46", "k": "log", "line": "[2026-11-17 19:56:45] AppID 1391110 App update changed : Running Update,"}
+{"t": "19:56:46", "k": "log", "line": "[2026-11-17 19:56:45] AppID 1391110 App update changed : Running Update,Preallocating,"}
+{"t": "19:56:46", "k": "log", "line": "[2026-11-17 19:56:45] AppID 1391110 preallocated 0 files (0 MB) "}
+{"t": "19:56:46", "k": "log", "line": "[2026-11-17 19:56:45] AppID 1391110 App update changed : Running Update,"}
+{"t": "19:56:46", "k": "log", "line": "[2026-11-17 19:56:45] AppID 1391110 update started : download 0/5947296, store 0/0, reuse 0/9744781, delta 0/9744781, stage 0/24338686 "}
+{"t": "19:56:46", "k": "log", "line": "[2026-11-17 19:56:45] AppID 1391110 state changed : Update Required,Fully Installed,Update Queued,Update Running,Update Started,"}
+{"t": "19:56:46", "k": "log", "line": "[2026-11-17 19:56:45] Last verify in '/mnt/PopGames/SteamLibrary' was 17 days ago, clean bytes tally reset to 0"}
+{"t": "19:56:46", "k": "log", "line": "[2026-11-17 19:56:45] Triggered async write of Steam library folders configuration (4 libraries)."}
+{"t": "19:56:46", "k": "log", "line": "[2026-11-17 19:56:45] AppID 1391110 App update changed : Running Update,Downloading,Staging,"}
+{"t": "19:56:46", "k": "log", "line": "[2026-11-17 19:56:45] Downloading 79 chunks for depot 1391111 (7982283169184995105)"}
+{"t": "19:56:46", "k": "log", "line": "[2026-11-17 19:56:45] Peer - Graysons-Mac-Studio (10.10.3.28:27036): open connection to [U:1:35601368] failed (Busy)"}
+{"t": "19:56:46", "k": "log", "line": "[2026-11-17 19:56:45] HTTPS (CDN,11) - steampipe.akamaized.net (23.52.70.202:443 / 23.52.70.202:443, host: steampipe.akamaized.net): AuthenticateDepotID (1391111) - Success!"}
+{"t": "19:56:46", "k": "log", "line": "[2026-11-17 19:56:45] HTTPS (CDN,31) - fastly.cdn.steampipe.steamcontent.com (199.232.211.82:443 / 199.232.211.82:443, host: fastly.cdn.steampipe.steamcontent.com): AuthenticateDepotID (1391111) - Success!"}
+{"t": "19:56:46", "k": "log", "line": "[2026-11-17 19:56:45] HTTP (CDN,33) - alibaba.cdn.steampipe.steamcontent.com (65.8.136.90:80 / 65.8.136.90:80, host: alibaba.cdn.steampipe.steamcontent.com): AuthenticateDepotID (1391111) - Success!"}
+{"t": "19:56:47", "k": "log", "line": "[2026-11-17 19:56:46] AppID 1391110 App update changed : Running Update,"}
+{"t": "19:56:47", "k": "log", "line": "[2026-11-17 19:56:46] AppID 1391110 App update changed : Running Update,Verifying Staged,"}
+{"t": "19:56:47", "k": "log", "line": "[2026-11-17 19:56:46] Verified 23 MB in '/mnt/PopGames/SteamLibrary', clean bytes tally is now 23 MB"}
+{"t": "19:56:47", "k": "log", "line": "[2026-11-17 19:56:46] Triggered async write of Steam library folders configuration (4 libraries)."}
+{"t": "19:56:47", "k": "log", "line": "[2026-11-17 19:56:46] AppID 1391110 App update changed : Running Update,"}
+{"t": "19:56:47", "k": "log", "line": "[2026-11-17 19:56:46] AppID 1391110 App update changed : Running Update,Committing,"}
+{"t": "19:56:47", "k": "log", "line": "[2026-11-17 19:56:46] AppID 1391110 starting commit from \"/mnt/PopGames/SteamLibrary/steamapps/downloading/1391110\" to \"/mnt/PopGames/SteamLibrary/steamapps/common/SteamLinuxRuntime_soldier\" : 1347 updated, 8364 moved, 1228 deleted files"}
+{"t": "19:56:47", "k": "log", "line": "[2026-11-17 19:56:46] AppID 1391110 state changed : Fully Installed,Update Queued,Update Running,"}
+{"t": "19:56:47", "k": "log", "line": "[2026-11-17 19:56:46] AppID 1391110 finished update, 1 mounted depots (BuildID 26115965) : 1391111 (7982283169184995105),"}
+{"t": "19:56:47", "k": "log", "line": "[2026-11-17 19:56:46] AppID 1391110 App update changed : Running Update,"}
+{"t": "19:56:47", "k": "log", "line": "[2026-11-17 19:56:46] AppID 1391110 App update changed : None"}
+{"t": "19:56:47", "k": "log", "line": "[2026-11-17 19:56:46] AppID 1391110 state changed : Fully Installed,Update Queued,"}
+{"t": "19:56:47", "k": "log", "line": "[2026-11-17 19:56:46] AppID 1391110 state changed : Fully Installed,"}
+{"t": "19:56:47", "k": "log", "line": "[2026-11-17 19:56:46] AppID 1391110 scheduler finished : removed from schedule (result No Error, state 0xc) "}
+{"t": "19:57:05", "k": "hb", "pids": [9534, 9674], "reg": {"SteamPID": "9675", "AppInstalled": null}, "acf": {"exists": false}}
+{"t": "19:57:05", "k": "log", "line": "[2026-11-17 19:57:05] AppID 1493710 state changed : Update Required,Fully Installed,Prefetching Info, (Update delayed for 1067126 secs)"}
+{"t": "19:57:06", "k": "log", "line": "[2026-11-17 19:57:05] HTTP (CDN,33) - alibaba.cdn.steampipe.steamcontent.com (65.8.136.90:80 / 65.8.136.90:80, host: alibaba.cdn.steampipe.steamcontent.com): AuthenticateDepotID (1493711) - Success!"}
+{"t": "19:57:06", "k": "log", "line": "[2026-11-17 19:57:05] HTTP (CDN,33) - alibaba.cdn.steampipe.steamcontent.com (65.8.136.213:80 / 65.8.136.213:80, host: alibaba.cdn.steampipe.steamcontent.com): alibaba.cdn.steampipe.steamcontent.com/depot/1493711/manifest/1784381342600337554/5/4470116254237514104 - manifest request received 200 (OK) HTTP response"}
+{"t": "19:57:06", "k": "log", "line": "[2026-11-17 19:57:06] AppID 1493710 state changed : Update Required,Fully Installed, (Update delayed for 1067125 secs)"}
+{"t": "19:57:06", "k": "log", "line": "[2026-11-17 19:57:06] AppID 1493710 update prefetch finished : 554896 bytes to download, 0 bytes to stage"}
+{"t": "19:57:06", "k": "log", "line": "[2026-11-17 19:57:06] AppID 2139460 state changed : Update Required,Fully Installed,Prefetching Info, (Update delayed for 732419 secs)"}
+{"t": "19:57:07", "k": "log", "line": "[2026-11-17 19:57:06] HTTP (CDN,33) - alibaba.cdn.steampipe.steamcontent.com (65.8.136.213:80 / 65.8.136.213:80, host: alibaba.cdn.steampipe.steamcontent.com): AuthenticateDepotID (2139461) - Success!"}
+{"t": "19:57:07", "k": "log", "line": "[2026-11-17 19:57:07] HTTP (CDN,33) - alibaba.cdn.steampipe.steamcontent.com (65.8.136.213:80 / 65.8.136.213:80, host: alibaba.cdn.steampipe.steamcontent.com): alibaba.cdn.steampipe.steamcontent.com/depot/2139461/manifest/3394286416640013372/5/1100165993706652231 - manifest request received 200 (OK) HTTP response"}
+{"t": "19:57:08", "k": "log", "line": "[2026-11-17 19:57:07] AppID 2139460 state changed : Update Required,Fully Installed, (Update delayed for 732418 secs)"}
+{"t": "19:57:08", "k": "log", "line": "[2026-11-17 19:57:07] AppID 2139460 update prefetch finished : 3534382586 bytes to download, 0 bytes to stage"}
+{"t": "19:57:18", "k": "state", "pids": [9534, 9674], "reg": {"SteamPID": "9675", "AppInstalled": null}, "acf": {"exists": true, "mtime": 1794898637, "StateFlags": "4", "LauncherPath": false, "sha": "2294fef087"}}
+{"t": "19:57:46", "k": "log", "line": "[2026-11-17 19:57:46] HTTPS (SteamCache,350) - cache2-akl-tpwr.steamcontent.com (101.53.220.135:443 / 101.53.220.135:443, host: cache2-akl-tpwr.steamcontent.com): Connection has been idle for '61' seconds, closing"}
+{"t": "19:57:46", "k": "log", "line": "[2026-11-17 19:57:46] HTTPS (SteamCache,350) - cache2-akl-tpwr.steamcontent.com (101.53.220.135:443 / 101.53.220.135:443, host: cache2-akl-tpwr.steamcontent.com): Closing connection"}
+{"t": "19:57:46", "k": "log", "line": "[2026-11-17 19:57:46] HTTPS (SteamCache,349) - cache1-akl-tpwr.steamcontent.com (101.53.220.134:443 / 101.53.220.134:443, host: cache1-akl-tpwr.steamcontent.com): Connection has been idle for '61' seconds, closing"}
+{"t": "19:57:46", "k": "log", "line": "[2026-11-17 19:57:46] HTTPS (SteamCache,349) - cache1-akl-tpwr.steamcontent.com (101.53.220.134:443 / 101.53.220.134:443, host: cache1-akl-tpwr.steamcontent.com): Closing connection"}
+{"t": "19:57:46", "k": "log", "line": "[2026-11-17 19:57:46] HTTPS (CDN,11) - steampipe.akamaized.net (23.52.70.202:443 / 23.52.70.202:443, host: steampipe.akamaized.net): Connection has been idle for '61' seconds, closing"}
+{"t": "19:57:46", "k": "log", "line": "[2026-11-17 19:57:46] HTTPS (CDN,11) - steampipe.akamaized.net (23.52.70.202:443 / 23.52.70.202:443, host: steampipe.akamaized.net): Closing connection"}
+{"t": "19:57:47", "k": "log", "line": "[2026-11-17 19:57:47] HTTPS (SteamCache,498) - cache1-akl-edgx.steamcontent.com (203.26.79.2:443 / 203.26.79.2:443, host: cache1-akl-edgx.steamcontent.com): Connection has been idle for '61' seconds, closing"}
+{"t": "19:57:47", "k": "log", "line": "[2026-11-17 19:57:47] HTTPS (SteamCache,498) - cache1-akl-edgx.steamcontent.com (203.26.79.2:443 / 203.26.79.2:443, host: cache1-akl-edgx.steamcontent.com): Closing connection"}
+{"t": "19:57:47", "k": "log", "line": "[2026-11-17 19:57:47] HTTPS (CDN,31) - fastly.cdn.steampipe.steamcontent.com (199.232.211.82:443 / 199.232.211.82:443, host: fastly.cdn.steampipe.steamcontent.com): Connection has been idle for '61' seconds, closing"}
+{"t": "19:57:47", "k": "log", "line": "[2026-11-17 19:57:47] HTTPS (CDN,31) - fastly.cdn.steampipe.steamcontent.com (199.232.211.82:443 / 199.232.211.82:443, host: fastly.cdn.steampipe.steamcontent.com): Closing connection"}
+{"t": "19:57:48", "k": "hb", "pids": [9534, 9674], "reg": {"SteamPID": "9675", "AppInstalled": null}, "acf": {"exists": true, "mtime": 1794898637, "StateFlags": "4", "LauncherPath": false, "sha": "2294fef087"}}
+{"t": "19:57:55", "k": "log", "line": "[2026-11-17 19:57:54] Current download rate: 0.000 Mbps"}
+{"t": "19:58:09", "k": "log", "line": "[2026-11-17 19:58:08] HTTP (CDN,33) - alibaba.cdn.steampipe.steamcontent.com (65.8.136.213:80 / 65.8.136.213:80, host: alibaba.cdn.steampipe.steamcontent.com): Connection has been idle for '61' seconds, closing"}
+{"t": "19:58:09", "k": "log", "line": "[2026-11-17 19:58:08] HTTP (CDN,33) - alibaba.cdn.steampipe.steamcontent.com (65.8.136.213:80 / 65.8.136.213:80, host: alibaba.cdn.steampipe.steamcontent.com): Closing connection"}
+{"t": "19:58:19", "k": "hb", "pids": [9534, 9674], "reg": {"SteamPID": "9675", "AppInstalled": null}, "acf": {"exists": true, "mtime": 1794898637, "StateFlags": "4", "LauncherPath": false, "sha": "2294fef087"}}
+{"t": "19:58:49", "k": "hb", "pids": [9534, 9674], "reg": {"SteamPID": "9675", "AppInstalled": null}, "acf": {"exists": true, "mtime": 1794898637, "StateFlags": "4", "LauncherPath": false, "sha": "2294fef087"}}
+{"t": "19:59:20", "k": "hb", "pids": [9534, 9674], "reg": {"SteamPID": "9675", "AppInstalled": null}, "acf": {"exists": true, "mtime": 1794898637, "StateFlags": "4", "LauncherPath": false, "sha": "2294fef087"}}
+{"t": "19:59:26", "k": "state", "pids": [9534, 9674], "reg": {"SteamPID": "9674", "AppInstalled": null}, "acf": {"exists": true, "mtime": 1794898637, "StateFlags": "4", "LauncherPath": false, "sha": "2294fef087"}}
+{"t": "19:59:30", "k": "state", "pids": [], "reg": {"SteamPID": "0", "AppInstalled": null}, "acf": {"exists": true, "mtime": 1794898637, "StateFlags": "4", "LauncherPath": false, "sha": "2294fef087"}}
+{"t": "19:59:41", "k": "state", "pids": [11807, 11935], "reg": {"SteamPID": "11936", "AppInstalled": null}, "acf": {"exists": true, "mtime": 1794898637, "StateFlags": "4", "LauncherPath": false, "sha": "2294fef087"}}
+{"t": "19:59:43", "k": "log", "line": ""}
+{"t": "19:59:43", "k": "log", "line": ""}
+{"t": "19:59:43", "k": "log", "line": "[2026-11-17 19:59:43] Client version: 1794536281"}
+{"t": "19:59:43", "k": "log", "line": "[2026-11-17 19:59:43] Loaded Steam library folders configuration: /home/graysonmitchell/.steam/debian-installation/steamapps/libraryfolders.vdf"}
+{"t": "19:59:43", "k": "log", "line": "[2026-11-17 19:59:43] Loaded 6 apps from install folder \"/home/graysonmitchell/.steam/debian-installation/steamapps\\appmanifest_*.acf\"."}
+{"t": "19:59:43", "k": "log", "line": "[2026-11-17 19:59:43] Install folder /media/graysonmitchell/Games/SteamLibrary not mounted."}
+{"t": "19:59:43", "k": "log", "line": "[2026-11-17 19:59:43] Install folder /media/graysonmitchell/7ca4a725-1bb4-4e38-8f76-bad1fc803309/SteamLibrary not mounted."}
+{"t": "19:59:43", "k": "log", "line": "[2026-11-17 19:59:43] Loaded 9 apps from install folder \"/mnt/PopGames/SteamLibrary/steamapps\\appmanifest_*.acf\"."}
+{"t": "19:59:43", "k": "log", "line": "[2026-11-17 19:59:43] Triggered async write of Steam library folders configuration (4 libraries)."}
+{"t": "19:59:44", "k": "log", "line": "[2026-11-17 19:59:44] Adding peer server 'graysons-macbook-air' (10.10.3.132:27036)"}
+{"t": "19:59:44", "k": "log", "line": "[2026-11-17 19:59:44] Adding peer server 'Graysons-Mac-Studio' (10.10.3.28:27036)"}
+{"t": "20:00:12", "k": "hb", "pids": [11807, 11935], "reg": {"SteamPID": "11936", "AppInstalled": null}, "acf": {"exists": true, "mtime": 1794898637, "StateFlags": "4", "LauncherPath": false, "sha": "2294fef087"}}
+{"t": "20:00:42", "k": "hb", "pids": [11807, 11935], "reg": {"SteamPID": "11936", "AppInstalled": null}, "acf": {"exists": true, "mtime": 1794898637, "StateFlags": "4", "LauncherPath": false, "sha": "2294fef087"}}
+{"t": "20:01:06", "k": "state", "pids": [11807, 11935], "reg": {"SteamPID": "11935", "AppInstalled": null}, "acf": {"exists": true, "mtime": 1794898637, "StateFlags": "4", "LauncherPath": false, "sha": "2294fef087"}}
+{"t": "20:01:09", "k": "state", "pids": [13414], "reg": {"SteamPID": "0", "AppInstalled": null}, "acf": {"exists": false}}
+{"t": "20:01:10", "k": "state", "pids": [13414, 13533], "reg": {"SteamPID": "13543", "AppInstalled": null}, "acf": {"exists": false}}
+{"t": "20:01:13", "k": "log", "line": ""}
+{"t": "20:01:13", "k": "log", "line": ""}
+{"t": "20:01:13", "k": "log", "line": "[2026-11-17 20:01:12] Client version: 1794536281"}
+{"t": "20:01:13", "k": "log", "line": "[2026-11-17 20:01:12] Loaded Steam library folders configuration: /home/graysonmitchell/.steam/debian-installation/steamapps/libraryfolders.vdf"}
+{"t": "20:01:13", "k": "log", "line": "[2026-11-17 20:01:12] Loaded 5 apps from install folder \"/home/graysonmitchell/.steam/debian-installation/steamapps\\appmanifest_*.acf\"."}
+{"t": "20:01:13", "k": "log", "line": "[2026-11-17 20:01:12] Install folder /media/graysonmitchell/Games/SteamLibrary not mounted."}
+{"t": "20:01:13", "k": "log", "line": "[2026-11-17 20:01:12] Install folder /media/graysonmitchell/7ca4a725-1bb4-4e38-8f76-bad1fc803309/SteamLibrary not mounted."}
+{"t": "20:01:13", "k": "log", "line": "[2026-11-17 20:01:12] Loaded 9 apps from install folder \"/mnt/PopGames/SteamLibrary/steamapps\\appmanifest_*.acf\"."}
+{"t": "20:01:13", "k": "log", "line": "[2026-11-17 20:01:12] Triggered async write of Steam library folders configuration (4 libraries)."}
+{"t": "20:01:14", "k": "log", "line": "[2026-11-17 20:01:13] Adding peer server 'Graysons-Mac-Studio' (10.10.3.28:27036)"}
+{"t": "20:01:14", "k": "log", "line": "[2026-11-17 20:01:13] Adding peer server 'graysons-macbook-air' (10.10.3.132:27036)"}
+{"t": "20:01:41", "k": "hb", "pids": [13414, 13533], "reg": {"SteamPID": "13543", "AppInstalled": null}, "acf": {"exists": false}}
+{"t": "20:02:11", "k": "hb", "pids": [13414, 13533], "reg": {"SteamPID": "13543", "AppInstalled": null}, "acf": {"exists": false}}
+{"t": "20:02:33", "k": "end"}

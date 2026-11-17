@@ -1,0 +1,16 @@
+{
+  "arm": "bare",
+  "build": "with steam-vent (rustls: ring + aws_lc_rs)",
+  "provider_at_end": "none",
+  "provider_at_start": "none",
+  "steps": [
+    {
+      "provider_after": "none",
+      "result": {
+        "ok": true,
+        "value": "HTTP 200"
+      },
+      "step": "bare reqwest GET (no install)"
+    }
+  ]
+}

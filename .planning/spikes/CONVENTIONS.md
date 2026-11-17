@@ -29,6 +29,19 @@ question requires otherwise.
   `run.log`) plus a final JSON verdict on stdout; exit code encodes pass/fail. `.gitignore` the
   compiled binary + transient `steam_appid.txt`; commit source + scripts + README + `run.log`.
   Requires the live signed-in Steam client (user launches it).
+  **087 extended it:** take the dylib path, AppID and a run label on argv, and run one dylib per
+  process (as the bridge helper does), so a single harness compares the client copy against any
+  candidate. Probe accessor versions by range, never one hardcoded `_vNNN`. Copy the candidates into
+  a gitignored `pinned/` dir rather than loading them in place. A failing control run (the client
+  copy with Steam not running) proves the harness can tell a pass from a fail. To test a change to
+  the **real** helper, compile a patched copy of `bridge_helper.c` with the production clang flags
+  and swap it over `public/bin/arm64/darwin/steam-bridge-helper` with a backup and restore script
+  (088). `pnpm tauri:dev` does not rebuild it, and the spawn uses `replaceEnv`, so an env override
+  does not reach the helper.
+- **Genuine Valve binaries for a spike come from Valve's own CDN, verified by content** (089, the
+  Proton/NotProton pattern from 043): hash of the downloaded package, then the extracted file's
+  sha256, then `codesign` team `MXGJJ98X76`. Mac client packages are `.zip.vz` (`vz.py` in 089
+  decodes them).
 
 - **Live-webview / platform-behaviour spikes (Tauri line, 013–015):** a real `cargo`-run Tauri
   app (no Tauri CLI: static `dist/index.html` as `frontendDist`, `bundle.active = false`, plus a

@@ -1,0 +1,10 @@
+[  0.000s] start      arm explicit-aws, with steam-vent (rustls: ring + aws_lc_rs)
+[  0.000s] step       install aws-lc: {"ok":true,"value":"ok"}
+[  1.381s] cm         anonymous logon ok
+[  2.431s] step       CM anonymous connect + job inputs: {"ok":true,"value":"ok"}
+[  2.482s] step       depot summary plain: {"ok":true,"value":"fileCount 8, host httpsSupport [\"mandatory\", \"mandatory\", \"mandatory\", \"mandatory\", \"mandatory\", \"unavailable\"]"}
+[  2.498s] step       depot summary https: {"ok":true,"value":"fileCount 8, host httpsSupport [\"mandatory\", \"mandatory\", \"mandatory\", \"mandatory\", \"mandatory\", \"mandatory\"]"}
+[  2.730s] step       CM job after depot: {"ok":true,"value":"1205 B appinfo"}
+[  4.456s] cm         anonymous logon ok
+[  4.456s] step       fresh CM connect after depot: {"ok":true,"value":"ok"}
+[  4.733s] step       bare reqwest GET at end: {"ok":true,"value":"HTTP 200"}

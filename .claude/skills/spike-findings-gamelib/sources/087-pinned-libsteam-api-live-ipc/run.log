@@ -1,0 +1,126 @@
+[2026-11-17T08:01:58.532Z] START    label=bg2ee-v023-app257350 pid=14825 appid=257350 dylib=pinned/bg2ee-v023.dylib
+[2026-11-17T08:01:58.533Z] DLOPEN   image=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/087-pinned-libsteam-api-live-ipc/pinned/bg2ee-v023.dylib
+[2026-11-17T08:01:58.551Z] INIT     InitFlat -> 0 err=""
+[2026-11-17T08:01:58.552Z] ACCESS   SteamUser=v023 Friends=v018 Utils=v010 Apps=v008 UserStats=v013
+[2026-11-17T08:01:58.552Z] IFACE    user=0x77490091e0 friends=0x7748c49f70 utils=0x7748c49f60 apps=0x774900b980 stats=0x7748c49f80
+[2026-11-17T08:01:58.552Z] MD       manual dispatch ready pipe=1
+[2026-11-17T08:01:58.552Z] READ     BLoggedOn=1 steamID64=76561197995867096 personaLen=7 GetAppID=257350 BIsSubscribed=1 lang=english
+[2026-11-17T08:01:58.552Z] CALL     RequestUserStats -> hAPICall=2182413977251171697
+[2026-11-17T08:01:58.553Z] CB       callback id=1040044 cub=784
+[2026-11-17T08:01:58.553Z] CB       callback id=1270006 cub=16
+[2026-11-17T08:01:58.874Z] CB       callback id=1101 cub=20
+[2026-11-17T08:01:59.087Z] CB       703 for our call (cub=20) -> GetAPICallResult ok=1 failed=0 gameID=257350 eResult=1 user_match=1
+[2026-11-17T08:01:59.087Z] CB       callback id=1101 cub=20
+[2026-11-17T08:01:59.087Z] CB       callback id=1040011 cub=260
+[2026-11-17T08:01:59.087Z] CB       callback id=336 cub=12
+[2026-11-17T08:01:59.087Z] CB       callback id=304 cub=12
+[2026-11-17T08:01:59.138Z] CB       drained 8 callbacks total, 703=1 1101=1
+[2026-11-17T08:01:59.138Z] END      ok=1
+[2026-11-17T08:01:39.940Z] START    label=bg2ee-v023-app480 pid=14661 appid=480 dylib=pinned/bg2ee-v023.dylib
+[2026-11-17T08:01:39.941Z] DLOPEN   image=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/087-pinned-libsteam-api-live-ipc/pinned/bg2ee-v023.dylib
+[2026-11-17T08:01:39.962Z] INIT     InitFlat -> 0 err=""
+[2026-11-17T08:01:39.962Z] ACCESS   SteamUser=v023 Friends=v018 Utils=v010 Apps=v008 UserStats=v013
+[2026-11-17T08:01:39.963Z] IFACE    user=0x7a870806e0 friends=0x100f66d20 utils=0x100f66d10 apps=0x7a87080700 stats=0x100f66d30
+[2026-11-17T08:01:39.963Z] MD       manual dispatch ready pipe=1
+[2026-11-17T08:01:39.963Z] READ     BLoggedOn=1 steamID64=76561197995867096 personaLen=7 GetAppID=480 BIsSubscribed=1 lang=english
+[2026-11-17T08:01:39.963Z] CALL     RequestUserStats -> hAPICall=12061844635045775239
+[2026-11-17T08:01:39.964Z] CB       callback id=1040044 cub=784
+[2026-11-17T08:01:39.964Z] CB       callback id=1100035 cub=4
+[2026-11-17T08:01:39.964Z] CB       callback id=1100038 cub=4
+[2026-11-17T08:01:39.964Z] CB       callback id=1270006 cub=16
+[2026-11-17T08:01:40.015Z] CB       callback id=1100035 cub=4
+[2026-11-17T08:01:40.015Z] CB       callback id=1100038 cub=4
+[2026-11-17T08:01:40.233Z] CB       callback id=336 cub=12
+[2026-11-17T08:01:40.233Z] CB       callback id=336 cub=12
+[2026-11-17T08:01:40.233Z] CB       callback id=1101 cub=20
+[2026-11-17T08:01:40.339Z] CB       callback id=304 cub=12
+[2026-11-17T08:01:40.444Z] CB       callback id=1040011 cub=260
+[2026-11-17T08:01:40.495Z] CB       703 for our call (cub=20) -> GetAPICallResult ok=1 failed=0 gameID=480 eResult=1 user_match=1
+[2026-11-17T08:01:40.495Z] CB       callback id=1101 cub=20
+[2026-11-17T08:01:40.550Z] CB       drained 13 callbacks total, 703=1 1101=1
+[2026-11-17T08:01:40.551Z] END      ok=1
+[2026-11-17T08:02:01.154Z] START    label=client-v024-app257350 pid=14838 appid=257350 dylib=pinned/client-v024.dylib
+[2026-11-17T08:02:01.155Z] DLOPEN   image=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/087-pinned-libsteam-api-live-ipc/pinned/client-v024.dylib
+[2026-11-17T08:02:01.173Z] INIT     InitFlat -> 0 err=""
+[2026-11-17T08:02:01.174Z] ACCESS   SteamUser=v024 Friends=v018 Utils=v011 Apps=v009 UserStats=v013
+[2026-11-17T08:02:01.175Z] IFACE    user=0x7a43008740 friends=0x7a42c954c0 utils=0x7a42c95480 apps=0x7a430088a0 stats=0x7a42c954e0
+[2026-11-17T08:02:01.175Z] MD       manual dispatch ready pipe=1
+[2026-11-17T08:02:01.175Z] READ     BLoggedOn=1 steamID64=76561197995867096 personaLen=7 GetAppID=257350 BIsSubscribed=1 lang=english
+[2026-11-17T08:02:01.176Z] CALL     RequestUserStats -> hAPICall=10092460204586361736
+[2026-11-17T08:02:01.177Z] CB       callback id=1040044 cub=784
+[2026-11-17T08:02:01.393Z] CB       703 for our call (cub=20) -> GetAPICallResult ok=1 failed=0 gameID=257350 eResult=1 user_match=1
+[2026-11-17T08:02:01.393Z] CB       callback id=1101 cub=20
+[2026-11-17T08:02:01.448Z] CB       drained 3 callbacks total, 703=1 1101=1
+[2026-11-17T08:02:01.449Z] END      ok=1
+[2026-11-17T08:01:42.562Z] START    label=client-v024-app480 pid=14668 appid=480 dylib=pinned/client-v024.dylib
+[2026-11-17T08:01:42.563Z] DLOPEN   image=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/087-pinned-libsteam-api-live-ipc/pinned/client-v024.dylib
+[2026-11-17T08:01:42.584Z] INIT     InitFlat -> 0 err=""
+[2026-11-17T08:01:42.585Z] ACCESS   SteamUser=v024 Friends=v018 Utils=v011 Apps=v009 UserStats=v013
+[2026-11-17T08:01:42.586Z] IFACE    user=0x10583f100 friends=0x10583f130 utils=0x10583f0e0 apps=0x10583f150 stats=0x10583f170
+[2026-11-17T08:01:42.586Z] MD       manual dispatch ready pipe=1
+[2026-11-17T08:01:42.586Z] READ     BLoggedOn=1 steamID64=76561197995867096 personaLen=7 GetAppID=480 BIsSubscribed=1 lang=english
+[2026-11-17T08:01:42.586Z] CALL     RequestUserStats -> hAPICall=10741969913722517657
+[2026-11-17T08:01:42.586Z] CB       callback id=1040044 cub=784
+[2026-11-17T08:01:42.586Z] CB       callback id=1100035 cub=4
+[2026-11-17T08:01:42.587Z] CB       callback id=1100038 cub=4
+[2026-11-17T08:01:42.587Z] CB       callback id=1270006 cub=16
+[2026-11-17T08:01:42.851Z] CB       callback id=336 cub=12
+[2026-11-17T08:01:42.851Z] CB       callback id=336 cub=12
+[2026-11-17T08:01:42.901Z] CB       703 for our call (cub=20) -> GetAPICallResult ok=1 failed=0 gameID=480 eResult=1 user_match=1
+[2026-11-17T08:01:42.901Z] CB       callback id=1101 cub=20
+[2026-11-17T08:01:42.956Z] CB       drained 8 callbacks total, 703=1 1101=1
+[2026-11-17T08:01:42.956Z] END      ok=1
+[2026-11-17T08:02:12.526Z] START    label=dredge-v021-adhoc-app480 pid=15028 appid=480 dylib=pinned/dredge-v021-adhoc.dylib
+[2026-11-17T08:02:12.867Z] DLOPEN   image=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/087-pinned-libsteam-api-live-ipc/pinned/dredge-v021-adhoc.dylib
+[2026-11-17T08:02:12.885Z] INIT     SteamAPI_Init(legacy) -> 0 err=""
+[2026-11-17T08:02:12.886Z] ACCESS   SteamUser=v021 Friends=v017 Utils=v010 Apps=v008 UserStats=v012
+[2026-11-17T08:02:12.887Z] IFACE    user=0x79eccd8180 friends=0x1014a48b0 utils=0x1014a48a0 apps=0x79eccd81a0 stats=0x1014a48c0
+[2026-11-17T08:02:12.887Z] MD       manual dispatch ready pipe=1
+[2026-11-17T08:02:12.887Z] READ     BLoggedOn=1 steamID64=76561197995867096 personaLen=7 GetAppID=480 BIsSubscribed=1 lang=english
+[2026-11-17T08:02:12.887Z] CALL     RequestUserStats -> hAPICall=4978046937850570857
+[2026-11-17T08:02:12.888Z] CB       callback id=1040044 cub=784
+[2026-11-17T08:02:12.888Z] CB       callback id=1100035 cub=4
+[2026-11-17T08:02:12.888Z] CB       callback id=1100038 cub=4
+[2026-11-17T08:02:12.888Z] CB       callback id=1270006 cub=16
+[2026-11-17T08:02:13.157Z] CB       callback id=336 cub=12
+[2026-11-17T08:02:13.157Z] CB       callback id=336 cub=12
+[2026-11-17T08:02:13.157Z] CB       703 for our call (cub=20) -> GetAPICallResult ok=1 failed=0 gameID=480 eResult=1 user_match=1
+[2026-11-17T08:02:13.157Z] CB       callback id=1101 cub=20
+[2026-11-17T08:02:13.209Z] CB       drained 8 callbacks total, 703=1 1101=1
+[2026-11-17T08:02:13.210Z] END      ok=1
+[2026-11-17T08:02:03.460Z] START    label=dredge-v021-app257350 pid=14873 appid=257350 dylib=pinned/dredge-v021.dylib
+[2026-11-17T08:02:03.477Z] FATAL    dlopen: dlopen(pinned/dredge-v021.dylib, 0x0006): tried: 'pinned/dredge-v021.dylib' (code signature invalid in <38FCE79C-F2FA-3F7D-A3B9-DB00F2275BD7> '/Users/graysonmitchell/Projects/GameLib/.planning/spikes/087-pinned-libsteam-api-live-ipc/pinned/dredge-v021.dylib' (errno=1) sliceOffset=0x00034000, codeBlobOffset=0x0002B870, codeBlobSize=0x000051E0), '/System/Volumes/Preboot/Cryptexes/OSpinned/dredge-v021.dylib' (no such file), '/usr/lib/pinned/dredge-v021.dylib' (no such file, not in dyld cache), 'pinned/dredge-v021.dylib' (code signature invalid in <38FCE79C-F2FA-3F7D-A3B9-DB00F2275BD7> '/Users/graysonmitchell/Projects/GameLib/.planning/spikes/087-pinned-libsteam-api-live-ipc/pinned/dredge-v021.dylib' (errno=1) sliceOffset=0x00034000, codeBlobOffset=0x0002B870, codeBlobSize=0x000051E0), '/Users/graysonmitchell/Projects/GameLib/.planning/spikes/087-pinned-libsteam-api-live-ipc/pinned/dredge-v021.dylib' (code signature invalid in <38FCE79C-F2FA-3F7D-A3B9-DB00F2275BD7> '/Users/graysonmitchell/Projects/GameLib/.planning/spikes/087-pinned-libsteam-api-live-ipc/pinned/dredge-v021.dylib' (errno=1) sliceOffset=0x00034000, codeBlobOffset=0x0002B870, codeBlobSize=0x000051E0), '/System/Vo
+[2026-11-17T08:01:44.968Z] START    label=dredge-v021-app480 pid=14684 appid=480 dylib=pinned/dredge-v021.dylib
+[2026-11-17T08:01:44.983Z] FATAL    dlopen: dlopen(pinned/dredge-v021.dylib, 0x0006): tried: 'pinned/dredge-v021.dylib' (code signature invalid in <38FCE79C-F2FA-3F7D-A3B9-DB00F2275BD7> '/Users/graysonmitchell/Projects/GameLib/.planning/spikes/087-pinned-libsteam-api-live-ipc/pinned/dredge-v021.dylib' (errno=1) sliceOffset=0x00034000, codeBlobOffset=0x0002B870, codeBlobSize=0x000051E0), '/System/Volumes/Preboot/Cryptexes/OSpinned/dredge-v021.dylib' (no such file), '/usr/lib/pinned/dredge-v021.dylib' (no such file, not in dyld cache), 'pinned/dredge-v021.dylib' (code signature invalid in <38FCE79C-F2FA-3F7D-A3B9-DB00F2275BD7> '/Users/graysonmitchell/Projects/GameLib/.planning/spikes/087-pinned-libsteam-api-live-ipc/pinned/dredge-v021.dylib' (errno=1) sliceOffset=0x00034000, codeBlobOffset=0x0002B870, codeBlobSize=0x000051E0), '/Users/graysonmitchell/Projects/GameLib/.planning/spikes/087-pinned-libsteam-api-live-ipc/pinned/dredge-v021.dylib' (code signature invalid in <38FCE79C-F2FA-3F7D-A3B9-DB00F2275BD7> '/Users/graysonmitchell/Projects/GameLib/.planning/spikes/087-pinned-libsteam-api-live-ipc/pinned/dredge-v021.dylib' (errno=1) sliceOffset=0x00034000, codeBlobOffset=0x0002B870, codeBlobSize=0x000051E0), '/System/Vo
+[2026-11-17T08:02:05.495Z] START    label=wog-v023-app257350 pid=14907 appid=257350 dylib=pinned/wog-v023.dylib
+[2026-11-17T08:02:05.497Z] DLOPEN   image=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/087-pinned-libsteam-api-live-ipc/pinned/wog-v023.dylib
+[2026-11-17T08:02:05.529Z] INIT     InitFlat -> 0 err=""
+[2026-11-17T08:02:05.529Z] ACCESS   SteamUser=v023 Friends=v017 Utils=v010 Apps=v008 UserStats=v013
+[2026-11-17T08:02:05.530Z] IFACE    user=0x100980500 friends=0x100980520 utils=0x1009804f0 apps=0x100976da0 stats=0x100980530
+[2026-11-17T08:02:05.530Z] MD       manual dispatch ready pipe=1
+[2026-11-17T08:02:05.531Z] READ     BLoggedOn=1 steamID64=76561197995867096 personaLen=7 GetAppID=257350 BIsSubscribed=1 lang=english
+[2026-11-17T08:02:05.531Z] CALL     RequestUserStats -> hAPICall=16544233077361051791
+[2026-11-17T08:02:05.531Z] CB       callback id=1040044 cub=784
+[2026-11-17T08:02:05.531Z] CB       callback id=1270006 cub=16
+[2026-11-17T08:02:05.856Z] CB       703 for our call (cub=20) -> GetAPICallResult ok=1 failed=0 gameID=257350 eResult=1 user_match=1
+[2026-11-17T08:02:05.856Z] CB       callback id=1101 cub=20
+[2026-11-17T08:02:05.909Z] CB       drained 4 callbacks total, 703=1 1101=1
+[2026-11-17T08:02:05.910Z] END      ok=1
+[2026-11-17T08:01:47.003Z] START    label=wog-v023-app480 pid=14687 appid=480 dylib=pinned/wog-v023.dylib
+[2026-11-17T08:01:47.006Z] DLOPEN   image=/Users/graysonmitchell/Projects/GameLib/.planning/spikes/087-pinned-libsteam-api-live-ipc/pinned/wog-v023.dylib
+[2026-11-17T08:01:47.037Z] INIT     InitFlat -> 0 err=""
+[2026-11-17T08:01:47.038Z] ACCESS   SteamUser=v023 Friends=v017 Utils=v010 Apps=v008 UserStats=v013
+[2026-11-17T08:01:47.038Z] IFACE    user=0x7480c78b00 friends=0x1012af0c0 utils=0x1012af090 apps=0x7480c78d40 stats=0x1012af0e0
+[2026-11-17T08:01:47.038Z] MD       manual dispatch ready pipe=1
+[2026-11-17T08:01:47.039Z] READ     BLoggedOn=1 steamID64=76561197995867096 personaLen=7 GetAppID=480 BIsSubscribed=1 lang=english
+[2026-11-17T08:01:47.039Z] CALL     RequestUserStats -> hAPICall=7702694377240548353
+[2026-11-17T08:01:47.040Z] CB       callback id=1040044 cub=784
+[2026-11-17T08:01:47.040Z] CB       callback id=1100035 cub=4
+[2026-11-17T08:01:47.040Z] CB       callback id=1100038 cub=4
+[2026-11-17T08:01:47.040Z] CB       callback id=1270006 cub=16
+[2026-11-17T08:01:47.306Z] CB       callback id=336 cub=12
+[2026-11-17T08:01:47.307Z] CB       callback id=336 cub=12
+[2026-11-17T08:01:47.307Z] CB       703 for our call (cub=20) -> GetAPICallResult ok=1 failed=0 gameID=480 eResult=1 user_match=1
+[2026-11-17T08:01:47.307Z] CB       callback id=1101 cub=20
+[2026-11-17T08:01:47.361Z] CB       drained 8 callbacks total, 703=1 1101=1
+[2026-11-17T08:01:47.362Z] END      ok=1

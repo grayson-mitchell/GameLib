@@ -1,0 +1,35 @@
+[2026-11-17T08:05:28.860Z] START    label=valve-cdn-v023-app257350 pid=17050 appid=257350 dylib=/private/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/74080b77-323f-413d-8055-c0b06211c12b/scratchpad/089/cdn/pin/valve-cdn-v023.dylib
+[2026-11-17T08:05:28.862Z] DLOPEN   image=/private/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/74080b77-323f-413d-8055-c0b06211c12b/scratchpad/089/cdn/pin/valve-cdn-v023.dylib
+[2026-11-17T08:05:28.882Z] INIT     InitFlat -> 0 err=""
+[2026-11-17T08:05:28.883Z] ACCESS   SteamUser=v023 Friends=v018 Utils=v011 Apps=v009 UserStats=v013
+[2026-11-17T08:05:28.883Z] IFACE    user=0x77f703e2e0 friends=0x77f6c44510 utils=0x77f6c44500 apps=0x77f703f4e0 stats=0x77f6c44520
+[2026-11-17T08:05:28.883Z] MD       manual dispatch ready pipe=1
+[2026-11-17T08:05:28.884Z] READ     BLoggedOn=1 steamID64=76561197995867096 personaLen=7 GetAppID=257350 BIsSubscribed=1 lang=english
+[2026-11-17T08:05:28.884Z] CALL     RequestUserStats -> hAPICall=1967012582087017584
+[2026-11-17T08:05:28.884Z] CB       callback id=1040044 cub=784
+[2026-11-17T08:05:28.884Z] CB       callback id=1270006 cub=16
+[2026-11-17T08:05:28.884Z] CB       callback id=304 cub=12
+[2026-11-17T08:05:29.039Z] CB       callback id=1040011 cub=260
+[2026-11-17T08:05:29.147Z] CB       callback id=304 cub=12
+[2026-11-17T08:05:29.198Z] CB       703 for our call (cub=20) -> GetAPICallResult ok=1 failed=0 gameID=257350 eResult=1 user_match=1
+[2026-11-17T08:05:29.198Z] CB       callback id=1101 cub=20
+[2026-11-17T08:05:29.250Z] CB       drained 7 callbacks total, 703=1 1101=1
+[2026-11-17T08:05:29.251Z] END      ok=1
+[2026-11-17T08:05:28.146Z] START    label=valve-cdn-v023-app480 pid=17051 appid=480 dylib=/private/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/74080b77-323f-413d-8055-c0b06211c12b/scratchpad/089/cdn/pin/valve-cdn-v023.dylib
+[2026-11-17T08:05:28.512Z] DLOPEN   image=/private/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/74080b77-323f-413d-8055-c0b06211c12b/scratchpad/089/cdn/pin/valve-cdn-v023.dylib
+[2026-11-17T08:05:28.533Z] INIT     InitFlat -> 0 err=""
+[2026-11-17T08:05:28.534Z] ACCESS   SteamUser=v023 Friends=v018 Utils=v011 Apps=v009 UserStats=v013
+[2026-11-17T08:05:28.535Z] IFACE    user=0x76dccd8180 friends=0x10446cad0 utils=0x10446cac0 apps=0x76dccd81a0 stats=0x10446cae0
+[2026-11-17T08:05:28.535Z] MD       manual dispatch ready pipe=1
+[2026-11-17T08:05:28.535Z] READ     BLoggedOn=1 steamID64=76561197995867096 personaLen=7 GetAppID=480 BIsSubscribed=1 lang=english
+[2026-11-17T08:05:28.535Z] CALL     RequestUserStats -> hAPICall=18301324695676976619
+[2026-11-17T08:05:28.536Z] CB       callback id=1040044 cub=784
+[2026-11-17T08:05:28.536Z] CB       callback id=1100035 cub=4
+[2026-11-17T08:05:28.536Z] CB       callback id=1100038 cub=4
+[2026-11-17T08:05:28.536Z] CB       callback id=1270006 cub=16
+[2026-11-17T08:05:28.800Z] CB       callback id=336 cub=12
+[2026-11-17T08:05:28.801Z] CB       callback id=336 cub=12
+[2026-11-17T08:05:28.801Z] CB       703 for our call (cub=20) -> GetAPICallResult ok=1 failed=0 gameID=480 eResult=1 user_match=1
+[2026-11-17T08:05:28.801Z] CB       callback id=1101 cub=20
+[2026-11-17T08:05:28.855Z] CB       drained 8 callbacks total, 703=1 1101=1
+[2026-11-17T08:05:28.856Z] END      ok=1

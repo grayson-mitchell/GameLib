@@ -67,6 +67,22 @@ exact parity against steam-user on the same account: `GetOwnedGames` 390 = 390 (
 earlier Rust attempt (071a) that skipped tokens got 939. steam-vent has no binary package-KV
 reader; 073 used a ~60-line reader in the harness. Family-shared licenses were not exercised.
 
+### 4. macOS: the running Steam as a CM-free source (084 — cross-reference)
+
+On macOS, a signed-in Mac Steam answers "which apps does this account have" through
+`IClientUser::GetSubscribedApps`, with no GameLib CM logon (recipe and slot table in
+`mac-steam-client-integration.md` → "Owned apps from the running Steam"). On the operator's
+account it returned 1,140 apps: **all 390 `GetOwnedGames` apps**, and the 1,144-app CM-licensed
+set (073) minus four licences Steam no longer honours — ICARUS 1149460, The Elder Scrolls Online
+306130, Wonderia Demo 3801710, Probably Stolen Demo 4349200, each `BIsSubscribedApp` 0. The
+operator confirmed both demos show in GameLib but not in Steam's own library, so **the raw CM
+licence list keeps lapsed licences, and `licensedDemos.ts` surfaces them.** Intersect the demo
+rule with Steam's set (or `BIsSubscribedApp`) when it is available. The set is licences, not
+owned games (dlc 441, game 393, tool 190, config 65, …), so type filtering via anonymous PICS
+still applies, and the eight `game`-type apps outside `GetOwnedGames` were all free-to-play.
+Use it only after `GetSteamID` matches the stored `userData.steamId`; Windows and Linux keep the
+CM path. *(084)*
+
 ## What to Avoid
 
 - **Do not assume "free-on-demand licenses are excluded until played".** That note (todo
@@ -96,12 +112,15 @@ reader; 073 used a ~60-line reader in the harness. Family-shared licenses were n
 ## Constraints
 
 - Library Refresh needs an authenticated CM logon — there is no CM-free route for a SteamClient
-  token (053/053b INVALIDATED).
+  token (053/053b INVALIDATED). The one exception is macOS with Steam running and signed in on
+  the same account, where the running client is the source *(084)*.
 - Untested, both CM-free by construction: a separate **WebBrowser-platform** refresh token
   (second sign-in / QR scan, minted via `finalizelogin`) and an existing store web session
   (`steamLoginSecure` cookie). No spike has tested either yet. Whether store
   `dynamicstore/userdata` lists demos is also open.
 - Untested: whether time-limited licenses (free weekends) carry a flag or expiry needing a filter.
+  084's lapsed ICARUS and ESO licences fit ended free weekends, which suggests the CM list does
+  not drop them; Steam's own subscribed set does.
 - Untested: family-shared licenses (none on the test account).
 - The 052 probe ran with GameLib fully quit (the only session on the token).
 
@@ -114,5 +133,8 @@ reader; 073 used a ~60-line reader in the harness. Family-shared licenses were n
 - **053b renewal-mint — INVALIDATED.** Renewal allowed still refused (15 both transports); no new
   refresh token; Keychain verified unchanged.
 - **073 rust-owned-apps-parity — VALIDATED** (separate wrap-up; cited here as confirmation).
+- **084 owned-apps-from-running-steam — VALIDATED** (packaged with Mac Steam integration; cited
+  here). `GetSubscribedApps` = CM-licensed set minus 4 lapsed licences; covers all 390 owned.
+  Sources: `sources/084-owned-apps-from-running-steam/`.
 - Sources: `sources/052-demo-licenses-vs-owned-apps/`, `sources/053-web-api-library-no-cm/`,
   `sources/053b-renewal-mint/` (README + `probe.mjs` each).

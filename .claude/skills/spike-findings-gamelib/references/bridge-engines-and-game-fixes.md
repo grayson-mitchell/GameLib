@@ -2,7 +2,8 @@
 
 This covers the layer **underneath** the macOS Steam bridge (`references/macos-steam-bridge.md`):
 which Wine runtime runs the game, how a game that crashes in its bridge bottle gets fixed without
-touching its files, and which prefix it runs in. The overlay injection runner is separate, in
+touching its files, which prefix it runs in, and when to point at a native source port instead
+(086). The overlay injection runner is separate, in
 `references/steam-overlay-in-bottles.md`.
 
 **Key finding:** the bridge (shim, helper, cfg, TCP) is engine-independent. Every failure in these
@@ -199,6 +200,43 @@ USER=crossover \
   that checks right after `wineboot` returns will report "not ready". Wine-Staging 11.20 uses the
   new-WoW64 layout: one win64 prefix runs x86 PEs with no separate 32-bit unix side.
 
+### 6. When Wine can't fix it: hint a native source port (086, VALIDATED)
+
+Some problems sit below anything the bottle can reach. Fallout (38400) plays its intro movies
+about 10× slow and choppy in the bridge: the 32-bit x86 MVE player runs under Rosetta + Wine.
+The decision note `.planning/notes/native-engine-ports-hint-only.md` (operator, 2026-11-15) says
+GameLib only **points at** source ports: a "Native port available" block on the game page from a
+catalogue row keyed by AppId, plus setup help. The user installs the port and adds it as a
+sideloaded game. GameLib never downloads, pins, configures or launches a port, and a port is
+never a tier-2 known fix. 086 checked that the first catalogue row is worth showing. _(086)_
+
+**fallout1-ce v1.1.0 (`alexbatalov/fallout1-ce`, 2024-03-03), staged beside an APFS clone of the
+Steam data on Apple Silicon:**
+
+- **Intro movies play smoothly** (operator-observed). CPU sits at ~100 % of one core during the
+  two ~12 s movie windows on CE too (CE's MVE player busy-waits), and 3–6 % at the menu, so CPU %
+  does not separate CE from Wine. Pacing is the signal, judged by eye. _(086)_
+- **Saves made by the Wine `FALLOUTW.EXE` load in CE.** Slot 4 (header `FALLOUT SAVE FILE`,
+  version 1.2) was listed and loaded; CE writes version 1.1 `R` in the same three-file
+  `DATA/SAVEGAME/SLOTnn` layout and `LoadHeader` does not reject on version. _(086)_
+- **The data folder is the folder the `.app` sits in.** `winmain.cc` does
+  `chdir(SDL_GetBasePath())`, and `Info.plist` sets `SDL_FILESYSTEM_BASE_DIR_TYPE = parent`.
+  There is no data-path setting or argument. _(086)_
+- **CE rewrites `fallout.cfg` on exit** (CRLF → LF, adds `player_speed=0`, `splash` 2 → 3), so it
+  must never run inside the Steam install. _(086)_
+- `fallout-ce-macos.dmg` is 5,049,524 bytes, sha256
+  `db8833e4fe452e5cdff16a4c37893be0a4e5f6b473abe5ae4839a3ba61c11a2c`; universal (x86_64 + arm64),
+  hardened runtime, Developer ID signed and notarised, SDL2 static, system frameworks only. _(086)_
+
+Catalogue row the spike supports: `mac: universal`, notarised, `dataStyle: copy` (`MASTER.DAT`,
+`CRITTER.DAT`, `DATA/`, optionally `fallout.cfg`; not `f1_res.ini`, which in a bridge bottle is
+High Resolution Patch format), saves carry over from the Windows exe. Setup steps: copy (don't
+move or symlink) the data into a new folder, drag the app into that folder **in Finder**, open
+it. On a bridge-only install the data lives in the bottle
+(`GameLibSteamBridge-38400/drive_c/.../steamapps/common/Fallout`), so "Show data folder" must
+resolve there. Staging recipe: `sources/086-fallout1-ce-native-intro/stage.sh` (sha-checks the
+dmg, `cp -c` clones, never writes the source); `run.sh` samples CPU/RSS. _(086)_
+
 ## What to Avoid
 
 - **Patching game exes.** 030's one-byte `je`→`jmp` was only a proof, and Steam verify reverts it.
@@ -238,6 +276,10 @@ USER=crossover \
   cap the log. This storm is also why the fallback feels sluggish compared with CrossOver. _(057)_
 - **Assuming the Windows user is `$USER`.** CrossOver bottles and GPTK prefixes use `crossover`.
   Save and log lookups must discover the user directory. _(058, 059)_
+- **Running a source port inside the Steam install folder, or moving/symlinking the data to it.**
+  fallout1-ce rewrites `fallout.cfg` on exit, a Steam-owned file. Copy instead. _(086)_
+- **Using CPU % to judge movie playback.** Native CE and Wine both pin a core during MVE playback.
+  _(086)_
 - **Probe ABI mistakes.** `SteamUser()` (unversioned) returns NULL. Use `SteamAPI_SteamUser_v023`.
   `GetSteamID` returns its CSteamID through an MSVC hidden sret pointer, not RAX. Run the CrossOver
   control first. Use `grep -a` on the 48 k-line generated shim, which grep otherwise treats as
@@ -263,16 +305,23 @@ USER=crossover \
 - **Not covered:** option (b) (Mesa overlays, `dllOverrides`, applied-fix ledger); any non-WGL shim
   feature; a bundled profile in a packaged build; 32-bit D3D titles on Staging; GPTK on a CX bottle;
   `ROSETTA_ADVERTISE_AVX`; DX12 titles; many repeated engine switches.
+- **Source-port hint (086), not covered:** the reverse save direction (a CE save loaded by the Wine
+  exe), App Translocation (a browser-downloaded, quarantined app launched in place may run from a
+  random read-only path and then find no data with `SDL_FILESYSTEM_BASE_DIR_TYPE=parent`; `curl`
+  downloads carry no quarantine, so the run could not show it — the "move it in Finder" step
+  guards against it either way), fullscreen/resolution, controller, and Steam playtime (none,
+  as expected). One port, one Mac.
 
 ## Origin
 
-Synthesized from spikes 030, 031, 032, 033, 034, 042, 056, 057, 058 and 059. Operator decisions
+Synthesized from spikes 030, 031, 032, 033, 034, 042, 056, 057, 058, 059 and 086. Operator decisions
 come from the memory notes `steam-engine-crossover-first-staging-fallback` and
-`bottled-steam-is-narrow-fallback`, and from `.planning/spikes/MANIFEST.md` → _Requirements (Idea B
+`bottled-steam-is-narrow-fallback`, the decision note `.planning/notes/native-engine-ports-hint-only.md`
+(086's context), and from `.planning/spikes/MANIFEST.md` → _Requirements (Idea B
 — non-CrossOver engines)_.
 
 Verdicts: 030 PARTIAL · 031 PARTIAL · 032 INVALIDATED · 033 PARTIAL · 034 VALIDATED · 042
-VALIDATED · 056 VALIDATED · 057 VALIDATED · 058 PARTIAL · 059 VALIDATED.
+VALIDATED · 056 VALIDATED · 057 VALIDATED · 058 PARTIAL · 059 VALIDATED · 086 VALIDATED.
 
 Reversals: 033 overturns 030's seek-storm diagnosis. 033 and 034 supersede 030's byte patch. 032
 overturns 031's Rosetta-JIT guess for llvmpipe and closes Zink. 042 invalidates the `Options.xml`
@@ -285,4 +334,5 @@ Source files: `sources/030-hoard-macos-opengl/`, `sources/031-hoard-mesa-opengl/
 `sources/034-known-fixes-v2-hoard/` (`shim_features.c`, `prototype.patch`,
 `63000-steam.profile.json`), `sources/042-crossover-gst-libav-overlay/`,
 `sources/056-plain-prefix-bridge-handshake/`, `sources/057-wine-staging-real-title/`,
-`sources/058-gptk-engine-bridge/`, `sources/059-reuse-cx-bottle-vs-fresh-prefix/`.
+`sources/058-gptk-engine-bridge/`, `sources/059-reuse-cx-bottle-vs-fresh-prefix/`,
+`sources/086-fallout1-ce-native-intro/`.

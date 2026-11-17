@@ -1,0 +1,9 @@
+[  0.000s] start      arm vent-then-depot, with steam-vent (rustls: ring + aws_lc_rs)
+[  1.475s] cm         anonymous logon ok
+[  3.024s] step       CM anonymous connect + job inputs: {"ok":true,"value":"ok"}
+[  3.285s] step       depot summary plain: {"ok":true,"value":"fileCount 8, host httpsSupport [\"mandatory\", \"mandatory\", \"mandatory\", \"mandatory\", \"mandatory\", \"unavailable\"]"}
+[  3.301s] step       depot summary https: {"ok":true,"value":"fileCount 8, host httpsSupport [\"mandatory\", \"mandatory\", \"mandatory\", \"mandatory\", \"mandatory\", \"mandatory\"]"}
+[  3.625s] step       CM job after depot: {"ok":true,"value":"1205 B appinfo"}
+[  5.960s] cm         anonymous logon ok
+[  5.960s] step       fresh CM connect after depot: {"ok":true,"value":"ok"}
+[  6.284s] step       bare reqwest GET at end: {"ok":true,"value":"HTTP 200"}

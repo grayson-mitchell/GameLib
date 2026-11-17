@@ -1,0 +1,16 @@
+2026-11-13T20:27:08.576Z start     steam-vent@a9e8164, hold 10800s, liveness every 30s, reconnect=true
+2026-11-13T20:27:10.829Z logon     logged on
+2026-11-13T20:27:13.138Z alive     liveness ok (#1, session 1)
+2026-11-13T20:37:21.068Z alive     liveness ok (#21, session 1)
+2026-11-13T20:40:32.794Z DEAD      liveness failed: Timeout
+2026-11-13T20:40:32.798Z RETRY     reconnect failed: Failed send discovery request: error sending request for url (https://api.steampowered.com/ISteamDirectory/GetCMList/v1/?cellid=0); backoff 5s
+2026-11-13T20:40:37.800Z RETRY     reconnect failed: Failed send discovery request: error sending request for url (https://api.steampowered.com/ISteamDirectory/GetCMList/v1/?cellid=0); backoff 10s
+2026-11-13T20:40:47.803Z RETRY     reconnect failed: Failed send discovery request: error sending request for url (https://api.steampowered.com/ISteamDirectory/GetCMList/v1/?cellid=0); backoff 20s
+2026-11-13T20:41:07.807Z RETRY     reconnect failed: Failed send discovery request: error sending request for url (https://api.steampowered.com/ISteamDirectory/GetCMList/v1/?cellid=0); backoff 40s
+2026-11-13T20:41:36.292262Z ERROR steam_vent::connection::filter: Error while reading message error=Ws(Io(Os { code: 54, kind: ConnectionReset, message: "Connection reset by peer" }))
+2026-11-13T20:41:44.036410Z ERROR steam_vent::connection::raw: Failed to send heartbeat message error=Ws(Io(Os { code: 32, kind: BrokenPipe, message: "Broken pipe" }))
+2026-11-13T20:41:49.179Z RECOVERED new session 2 after 76.4s dead (logon took 1.4s)
+2026-11-13T20:48:49.843Z GAP       wall clock jumped 365s past the monotonic clock (system sleep)
+2026-11-13T20:48:59.846Z DEAD      liveness failed: Timeout
+2026-11-13T20:49:00.677Z RECOVERED new session 3 after 0.8s dead (logon took 0.8s)
+2026-11-13T20:49:01.081625Z ERROR steam_vent::connection::filter: Error while reading message error=Ws(Io(Os { code: 54, kind: ConnectionReset, message: "Connection reset by peer" }))

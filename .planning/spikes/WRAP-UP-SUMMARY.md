@@ -1,7 +1,7 @@
 # Spike Wrap-Up Summary
 
-**Date:** 2026-11-10 (third update — 077 and 080 folded into the Rust migration area; earlier: backlog 023–060 and 065–070 plus 067a–c and 071–074 on 2026-11-09, then 075–076 the same day; every spike in `.planning/spikes/` is processed)
-**Spikes processed:** 89 (31 before, 54 in the first 2026-11-09 wrap-up, 2 in the second, 2 on 2026-11-10)
+**Date:** 2026-11-18 (fourth update: 081–089, including two pairs of colliding numbers, 087/088 pinned-dylib and 087/088 ACF adoption; earlier: 2026-11-09 and 2026-11-10 wrap-ups; every spike in `.planning/spikes/` is processed)
+**Spikes processed:** 100 (89 through 2026-11-10, then 11 on 2026-11-18)
 **Feature areas:** Steam native install; macOS native Steam bridge; Tauri/Rust rearchitecture; Tauri login webview + cookies; Tauri embedded store browser; login-window UX on macOS; OAuth login test harness; Steam overlay in bridged games; bridge engines & per-game fixes; Steam DRM in the bridge; Mac Steam client integration; Steam library ownership; macOS runtime signals; Rust migration of the Steam stack
 **Skill output:** `./.claude/skills/spike-findings-gamelib/`
 
@@ -269,3 +269,37 @@ the overlay's invite dialog vs GameLib's picker. Blueprint:
   steam-vent force-installs the aws-lc rustls provider, so the shell should install one provider
   explicitly. steam-vent main's anonymous logon needs a one-line fix.
 
+## Fourth wrap-up (2026-11-18): 081–089
+
+Parallel sessions reused two numbers, so `087` and `088` each name two spikes. Both are kept and
+named by directory.
+
+| # | Name | Type | Verdict | Feature Area |
+|---|------|------|---------|--------------|
+| 081 | three-session-coexistence | standard | ✓ VALIDATED | Rust migration of the Steam stack |
+| 082 | one-process-tls-providers | standard | ✓ VALIDATED | Rust migration of the Steam stack |
+| 083 | adoption-signal-without-restart | standard | ✓ VALIDATED | Mac Steam client integration |
+| 084 | owned-apps-from-running-steam | standard | ✓ VALIDATED | Mac Steam client integration; Steam library ownership |
+| 085 | steam-vent-long-lived-session | standard | ✓ VALIDATED | Rust migration of the Steam stack |
+| 086 | fallout1-ce-native-intro | standard | ✓ VALIDATED | Bridge engines & per-game fixes |
+| 087 | pinned-libsteam-api-live-ipc | standard | ✓ VALIDATED | macOS native Steam bridge |
+| 087 | windows-acf-adoption | standard | ✓ VALIDATED | Steam native install |
+| 088 | pinned-helper-real-game | standard | ✓ VALIDATED | macOS native Steam bridge |
+| 088 | linux-acf-adoption | standard | ✓ VALIDATED | Steam native install |
+| 089 | pinned-dylib-source-and-signing | standard | ✓ VALIDATED | macOS native Steam bridge |
+
+Key findings:
+
+- **Pinned `libsteam_api.dylib` (087–089, shipped as quick 261117-ubb):** the live Mac client
+  serves older SDK builds, so the bridge helper loads a Valve-signed build fetched from Valve's
+  client-update CDN (`webhelpers_osx` package). It is verified by `sha2vz`, then by the dylib sha256
+  and team `MXGJJ98X76`, and cached locally. The Steam client copy is only a logged `UNPINNED`
+  fallback. The pin must match the dispatch's SDK. ELEX and Schedule I ran end to end on it.
+- **Adoption off macOS (087w/088l):** Windows and Linux Steam adopt a GameLib ACF only at startup
+  and sign-in, so the answer there is restart-on-Play. **On macOS (083),** signing in to Steam
+  adopts the ACF, so a signed-out finish is a sign-in hold.
+- **No-CM owned apps (084):** `IClientUser::GetSubscribedApps` on the running client matches the
+  owned set and drops lapsed licences the CM list keeps.
+- **Rust CM line (081, 082, 085):** three sessions coexist unwrapped; install one rustls provider at
+  `main()`; GameLib must own steam-vent liveness and reconnect.
+- **Native source ports (086):** fallout1-ce is a hint-only escape where Wine is slow.
