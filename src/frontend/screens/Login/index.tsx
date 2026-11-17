@@ -37,15 +37,21 @@ import { resolveSignInTile } from './signInTileState'
 import { LOGIN_OPEN_PARAM, resolveLoginOpenRequest } from './loginOpenParam'
 import { bindOverlayDismiss } from './overlayDismiss'
 
-export const epicLoginPath = '/loginweb/legendary'
-export const gogLoginPath = '/loginweb/gog'
-export const amazonLoginPath = '/loginweb/nile'
-export const steamLoginPath = '/loginweb/steam'
-// D-05: Humble now logs in through the embedded Stores WebView, matching the
-// other runners above, instead of the retired popup BrowserWindow. This is
-// the single source of truth for the Humble login route — the D-09 reconnect
-// toast (HumbleExpiryToast) imports it from here too.
-export const humbleLoginPath = '/loginweb/humble'
+import {
+  epicLoginPath,
+  gogLoginPath,
+  amazonLoginPath,
+  steamLoginPath,
+  humbleLoginPath
+} from './loginPaths'
+
+export {
+  epicLoginPath,
+  gogLoginPath,
+  amazonLoginPath,
+  steamLoginPath,
+  humbleLoginPath
+}
 
 // Mirrors Dialog.tsx's `transitionDuration={500}` (its Slide exit transition
 // needs a full 500ms of mounted time to play), for BOTH the Steam and Humble

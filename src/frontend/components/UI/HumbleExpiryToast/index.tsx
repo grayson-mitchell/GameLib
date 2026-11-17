@@ -8,7 +8,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 
 import useAuthState from 'frontend/state/authState'
-import { humbleLoginPath } from 'frontend/screens/Login'
+import { humbleLoginPath } from 'frontend/screens/Login/loginPaths'
 import { useSuppressStoreEmbedWhile } from 'frontend/components/UI/NavShell/StoreEmbedSuppressionContext'
 import {
   renderNoticeSlot,

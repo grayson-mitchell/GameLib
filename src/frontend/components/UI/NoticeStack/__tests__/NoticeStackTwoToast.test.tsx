@@ -15,36 +15,11 @@
  */
 import 'frontend/testUtils/jsdomNoticeEnv'
 
-jest.mock('../index.scss', () => ({}))
-jest.mock('frontend/components/UI/HumbleExpiryToast/index.scss', () => ({}))
-jest.mock(
-  'frontend/components/UI/SteamEngineLaunchNotice/index.scss',
-  () => ({})
-)
-jest.mock('frontend/components/UI/ReadOnlyStoresNotice/index.scss', () => ({}))
-jest.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (
-      _key: string,
-      defaultValue: string,
-      opts?: Record<string, string>
-    ): string =>
-      typeof defaultValue === 'string'
-        ? defaultValue.replace(
-            /\{\{(\w+)\}\}/g,
-            (_m, k: string) => opts?.[k] ?? ''
-          )
-        : _key
-  })
-}))
-jest.mock('react-router-dom', () => ({
-  useNavigate: () => () => undefined
-}))
-jest.mock('frontend/screens/Login', () => ({
-  humbleLoginPath: '/loginweb/humble'
-}))
-
-// Imported after the mocks above (no jest.mock hoisting in this setup).
+// No module is mocked: styles resolve through the jest css mapper, and i18n
+// and routing are real.
+import i18next from 'i18next'
+import { initReactI18next } from 'react-i18next'
+import { MemoryRouter } from 'react-router-dom'
 import { act, cleanup, fireEvent, render } from '@testing-library/react'
 import { AppNoticeStack } from '../index'
 import { StoreEmbedSuppressionProvider } from 'frontend/components/UI/NavShell/StoreEmbedSuppressionContext'
@@ -56,6 +31,12 @@ import {
 } from 'frontend/state/SteamRequestNotice'
 import { PHASE_FALLBACK_MS } from '../noticeSlot'
 import type { IpcRendererEvent } from 'common/types/hostTypes'
+
+void i18next.use(initReactI18next).init({
+  lng: 'en',
+  resources: {},
+  initImmediate: false
+})
 
 beforeEach(() => {
   jest.useFakeTimers()
@@ -90,9 +71,11 @@ const slots = (container: HTMLElement): HTMLElement[] =>
 
 const mountBoth = () => {
   const { container } = render(
-    <StoreEmbedSuppressionProvider>
-      <AppNoticeStack />
-    </StoreEmbedSuppressionProvider>
+    <MemoryRouter>
+      <StoreEmbedSuppressionProvider>
+        <AppNoticeStack />
+      </StoreEmbedSuppressionProvider>
+    </MemoryRouter>
   )
   pushSteam(1)
   setHumbleExpired(true)
