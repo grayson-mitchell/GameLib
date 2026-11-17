@@ -524,6 +524,12 @@ const FIXTURE_DIFF_LINES = [
  * SCANNED, not declared debt: every string they render is a literal `t()` call.
  * DECLARED_UNSCANNED_DEBT unchanged.
  *
+ * 2026-11-18 (phase 64 plan 08): fork-touched 432 -> 434, scope 311 -> 313 by
+ * hand-inserting TWO files in sorted position into scope (all committed first,
+ * then `pnpm gen-i18n-gate-scope`): the Accessibility ThemeEditor `AdvancedSection.tsx`
+ * and `GradientField.tsx`. SCANNED, not declared debt: every string they render is a
+ * literal `t()` call. DECLARED_UNSCANNED_DEBT unchanged.
+ *
  * 2026-11-18 (phase 64 plan 07): fork-touched 426 -> 432, scope 305 -> 311 by
  * hand-inserting SIX files in sorted position into scope (all committed first,
  * then `pnpm gen-i18n-gate-scope`): the Accessibility ThemeEditor `ColourField.tsx`,
@@ -1390,9 +1396,9 @@ describe('--rewrite-scope guard', () => {
     }
   })
 
-  it('A0 fixture sanity: the seeded scope is the REAL 311-file hand-curated snapshot, and the fresh-snapshot fixture carries the committed 432-file fork-touched set verbatim', () => {
-    expect(scopeSnapshot.files.length).toBe(311)
-    expect(forkTouchedSnapshot.files.length).toBe(432)
+  it('A0 fixture sanity: the seeded scope is the REAL 313-file hand-curated snapshot, and the fresh-snapshot fixture carries the committed 434-file fork-touched set verbatim', () => {
+    expect(scopeSnapshot.files.length).toBe(313)
+    expect(forkTouchedSnapshot.files.length).toBe(434)
     // `freshSnapshot()` is a FIXTURE built from the committed artifact
     // (`files: [...forkTouchedSnapshot.files]`) -- NOT a live git derivation,
     // despite what this assertion used to claim. The live derivation is
@@ -1433,7 +1439,7 @@ describe('--rewrite-scope guard', () => {
     expect(result.refusal).toBeNull()
   })
 
-  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 311 -> 432 diff and writes nothing', () => {
+  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 313 -> 434 diff and writes nothing', () => {
     const { outDir, scopePath, seededBytes } = seedScope()
 
     const result = writeArtifacts({
@@ -1456,7 +1462,7 @@ describe('--rewrite-scope guard', () => {
     expect(refusal.provenance).toBe(scopeSnapshot.generatedBy)
   })
 
-  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 432', () => {
+  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 434', () => {
     // The load-bearing spec. Without it, A1/A2's "the file did not change"
     // would be satisfied just as well by a writer that cannot write at all —
     // a guard that refuses everything is not a fix, it is a different bug.
@@ -1469,12 +1475,12 @@ describe('--rewrite-scope guard', () => {
     })
 
     const rewritten = JSON.parse(readFileSync(scopePath, 'utf-8'))
-    expect(rewritten.files.length).toBe(432)
+    expect(rewritten.files.length).toBe(434)
     expect(result.wroteScope).toBe(scopePath)
     expect(result.refusal).toBeNull()
   })
 
-  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 432 files', () => {
+  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 434 files', () => {
     const outDir = makeTmpDir()
     const scopePath = join(outDir, 'i18nGateScope.json')
     expect(existsSync(scopePath)).toBe(false)
@@ -1487,7 +1493,7 @@ describe('--rewrite-scope guard', () => {
 
     expect(result.refusal).toBeNull()
     expect(result.wroteScope).toBe(scopePath)
-    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(432)
+    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(434)
   })
 
   it('A5 PROVENANCE RATCHET ON THE REAL ARTIFACT: the committed marker still reads as hand-curated', () => {
