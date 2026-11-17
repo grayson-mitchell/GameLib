@@ -14,6 +14,7 @@ const NAV_ROW_Y = [31, 41, 51] as const
  * A mini-launcher drawn from a theme's own token values (THEME-01). Pure geometry in a 160x100
  * viewBox, no `<text>` (labels are bars), so there is no font dependency and nothing to translate.
  * The tab bar and sidebar paint from their own tokens, never assumed darker than the body.
+ * i18n-gate-exempt: the string literals here are SVG geometry and attribute values, never rendered to a user
  */
 export function ThemeThumbnail({ tokens, base, label }: ThemeThumbnailProps) {
   const p = thumbnailPalette(tokens, base)
