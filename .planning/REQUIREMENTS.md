@@ -43,7 +43,7 @@ complete and verified per their own VERIFICATION.md files; they carry no new req
 ### Themes
 
 - [x] **THEME-01**: User can browse every theme in a gallery of preview thumbnails
-- [ ] **THEME-02**: User can duplicate a theme and edit its colours; built-in themes never change
+- [x] **THEME-02**: User can duplicate a theme and edit its colours; built-in themes never change
 
 ### Price search
 
@@ -87,7 +87,7 @@ complete and verified per their own VERIFICATION.md files; they carry no new req
 | STEAM-02 | 74 | Complete |
 | STEAM-03 | 75 | Complete |
 | THEME-01 | 64 | Complete |
-| THEME-02 | 64 | Pending |
+| THEME-02 | 64 | Complete |
 | PRICE-01 | 47 | Pending |
 | PRICE-02 | 47 | Pending |
 | PRICE-03 | 47 | Pending |
