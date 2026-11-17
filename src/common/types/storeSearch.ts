@@ -56,14 +56,6 @@ export interface StoreSearchDeal {
   cachedAt?: number
 }
 
-/** A single store entry from the provider's store directory. */
-export interface StoreSearchStore {
-  storeId: string
-  storeName: string
-  runner?: Runner
-  isActive: boolean
-}
-
 /** The search envelope: rows plus the country ITAD actually priced. */
 export interface StoreSearchResponse {
   results: StoreSearchResult[]

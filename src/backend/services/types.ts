@@ -223,7 +223,7 @@ export interface ManagerDeps {
   aborts: AbortRegistry
   /** The boot-owned app runtime: event bus, frontend-ready flag, launch single-flight, image fetches, CrossOver index, overlay installs (66.4-17). */
   appRuntime: AppRuntime
-  /** The boot-owned misc runtime: metadata-override push, Mac arch prompt chain, CheapShark store map (66.4-18). */
+  /** The boot-owned misc runtime: metadata-override push, Mac arch prompt chain, ITAD rate-limit gate (66.4-18, 47). */
   miscRuntime: MiscRuntime
   /** The boot-owned Wine window raiser: its raise timers run on the boot clock (66.4-13). */
   windowRaiser: WineWindowRaiser

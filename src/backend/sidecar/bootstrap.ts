@@ -1896,7 +1896,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       name: 'misc-runtime',
       // Builds the misc runtime of this boot (D-05, 66.4-18): the metadata-override push (its notifier
       // is a constructor dependency, over this boot's frontend push), the Mac arch prompt chain and the
-      // CheapShark store-map cache. Construction only: no I/O, no timer, no handle. Directly after
+      // ITAD rate-limit gate. Construction only: no I/O, no timer, no handle. Directly after
       // 'app-runtime', before 'store-managers' (ManagerDeps carries it) and 'register-handlers'.
       run: (_ctx, _io, state) => {
         const host = requireHost(state)
