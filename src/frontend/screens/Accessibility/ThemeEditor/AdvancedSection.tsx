@@ -28,7 +28,7 @@ const NON_COLOUR = new Set<string>(NON_COLOUR_TOKENS)
  * keys, the draft's keys and the live-derived tokens (which a copy never stores, OD-1), minus the
  * core tokens and the non-colour `--focus-ring-width`.
  */
-export function advancedTokens(
+function advancedTokens(
   base: string,
   draft: Readonly<Record<string, string>>
 ): string[] {

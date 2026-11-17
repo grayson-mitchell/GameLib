@@ -15,6 +15,12 @@ import { ColourField } from './ColourField'
 import { GradientField } from './GradientField'
 import { resolveFloorPairLabels, resolveTokenLabel } from './tokenLabels'
 
+/**
+ * i18n-gate-exempt: a DOM id for aria-describedby, never rendered to a user
+ */
+const warningId = (inputId: string, floorId: string) =>
+  `${inputId}-warn-${floorId}`
+
 interface TokenRowProps {
   token: string
   value: string
@@ -44,11 +50,11 @@ export function TokenRow({
   const { t: tGamelib } = useTranslation('gamelib')
   const inputId = `token${token}`
   const label = resolveTokenLabel(token, t)
-  // A live-derived token is never stored on Duplicate; empty means "follow the source" (OD-1).
   const warnings = failures.map((failure) => {
     const { a, b } = resolveFloorPairLabels(failure, t)
+    const id = warningId(inputId, failure.id)
     return {
-      id: `${inputId}-warn-${failure.id}`,
+      id,
       text: t(
         'gamelib:customThemes.contrastWarning',
         '{{a}} vs {{b}} {{ratio}}:1, needs {{min}}:1',
@@ -60,6 +66,7 @@ export function TokenRow({
   // Chips on the label line (OD-1, OD-2). Each help text sits behind an icon-only (i) beside the
   // label, never under the input.
   const derivedFrom = LIVE_DERIVED_TOKENS[token] as string | undefined
+  // A live-derived token is never stored on Duplicate; empty means "follow the source" (OD-1).
   const allowEmpty = derivedFrom !== undefined
   const notInPreview = CORE_TOKENS.includes(token) && !PREVIEW_TOKENS.has(token)
   const setByBase =
