@@ -5,16 +5,16 @@ milestone_name: Foundations
 current_phase: 64
 current_phase_name: UI to edit themes
 status: executing
-stopped_at: Completed 81-08-PLAN.md
-last_updated: "2026-11-17T18:18:43.871Z"
+stopped_at: Completed 64-01-PLAN.md
+last_updated: "2026-11-17T18:28:33.560Z"
 last_activity: 2026-11-18
 last_activity_desc: Phase 64 execution started
-state_head: 44f3f77e212f79674bb094933a2690d50e267fa0
+state_head: 6bffbb261947e65b92c47b35f55748666bedd29e
 progress:
   total_phases: 26
   completed_phases: 23
   total_plans: 521
-  completed_plans: 499
+  completed_plans: 500
   percent: 88
 ---
 
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 ## Current Position
 
 Phase: 64 (UI to edit themes) — EXECUTING
-Plan: 2 of 10
+Plan: 3 of 10
 Status: Ready to execute
 Last activity: 2026-11-18 — Phase 64 execution started
 
@@ -282,6 +282,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 81 P06 | 70min | 2 tasks | 13 files |
 | Phase 81 P07 | 40min | 2 tasks | 24 files |
 | Phase 81 P08 | 75min | 2 tasks | 21 files |
+| Phase 64 P01 | 16 min | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -457,6 +458,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 81]: 81-07: refused Play restart is an in-app notice (closed adopt-restart-* kinds); eligible games get a one-shot Launch without Steam via steamLaunchWithoutSteamOnce, backend re-derives the verdict, per-game setting untouched (D-06)
 - [Phase 81]: 81-07: noticeSeq moved to noticeSeq.ts to avoid a playAdoption <-> gameUninstall import cycle
 - [Phase 81]: 81-08: handler bodies live in adoptionStatus.ts as answer* functions; Restart Steam now relaunches steam://open/main inside the shared Steam single flight (resolves false); i18n gate files hand-edited for AdoptionNote.tsx, not regenerated
+- [Phase 64]: tryContrast measures a partly transparent background as opaque (legacy toRgb behaviour); only alpha 0 on either side yields null
+- [Phase 64]: i18n gate exemption for tokenResolve.ts is declaration-level on resolveColour, not file-level
 
 ### Pending Todos
 
@@ -832,8 +835,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-17T18:18:40.157Z
-Stopped at: Completed 81-08-PLAN.md
+Last session: 2026-11-17T18:28:30.004Z
+Stopped at: Completed 64-01-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

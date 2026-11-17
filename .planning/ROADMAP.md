@@ -526,11 +526,11 @@ Plans:
 **Goal:** Users can make their own theme by copying a built-in one and editing its colours, without the built-in themes ever changing. Three parts: (1) **Theme gallery.** A thumbnail of every theme, each a small launcher preview drawn from that theme's real token values (body, sidebar, active nav row, accent and search outline, library tiles, primary / secondary / success / danger buttons), like the comparison page made on 2026-11-05 (https://claude.ai/artifact/Ji88yFXU7ymdVoTn1kV4kY). (2) **Duplicate, then edit.** Picking a theme and choosing Duplicate creates a new custom theme seeded with the source's resolved token values (`var()` chains followed through `styles/_colors.scss`). The 10 built-in themes in `src/frontend/themes.scss` are read-only. The copy opens a token editor that lists each token with a colour swatch and value, and the copy's thumbnail updates as values change. (3) **Use it.** Saved custom themes appear in the theme selector beside the built-ins and apply app-wide. Custom themes are stored as token data, not CSS files: quick 261031-bst removed the old custom-CSS-file themes and their IPC channels, and `window.setTheme` (`src/frontend/index.tsx`) now maps any non-built-in key to the default, so that fallback needs a custom-theme branch again. Open questions for discuss-phase: whether a copy of Nord Light carries its 23 nested component overrides (they are selectors, not tokens; without them a light copy breaks MUI dialogs, genre tags and context menus); which tokens the editor shows (themes declare 25–56 each); and whether the contrast floors `themeTokens.test.ts` enforces (3:1 border against body and modal backgrounds, accent against the sidebar) become live warnings in the editor. Came from the theme comparison on 2026-11-05.
 **Requirements**: THEME-01, THEME-02 (milestone-level; phase IDs minted by `/gsd-plan-phase`)
 **Depends on:** None
-**Plans:** 10 plans
+**Plans:** 1/10 plans executed
 
 Plans:
 **Wave 1**
-- [ ] 64-01-PLAN.md — Shared colour, resolver and contrast-floor modules lifted out of themeTokens.test.ts (D-16)
+- [x] 64-01-PLAN.md — Shared colour, resolver and contrast-floor modules lifted out of themeTokens.test.ts (D-16)
 - [ ] 64-03-PLAN.md — Awaited configStore write (sidecar:store-set-checked) and the customThemes key
 
 **Wave 2** *(blocked on Wave 1 completion)*
