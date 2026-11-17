@@ -77,7 +77,19 @@ In `~/Library/Logs/GameLib/gamelib.log`, under `bridge helper [<appId>]`: a `PIN
      dropped it as unlisted. That is by design (`bridge_helper.c` 60-15: 331 is turned into a Darwin
      notification, not forwarded), not a pin regression.
    - Helper exited by SIGTERM at game quit, as normal.
-4. `089/fetch-pin.sh`: `codesign -dv … | grep -q` exited early under `set -o pipefail` (SIGPIPE on
+4. **Schedule I (3205720, shim mode), 2026-11-18 07:13 local, operator: "no issues"**, on the
+   **production** helper from quick 261117-ubb (not this spike's build):
+   - `PIN source=pinned sha256=4162eb40…6bac dylib=~/Library/Application Support/GameLib/steam-api/<sha>/libsteam_api.dylib loaded=1`:
+     the production resolver cached the 089 pin, so no `UNPINNED` fallback.
+   - Accessors: SteamUser **v023** … MatchmakingServers **v003**, all 11 resolved, none missing.
+     `manual dispatch ready`, `READY init=ok`, `SteamAPI ready (… real appid=3205720)`.
+   - `HELLO shim attached`, `GINIT fn=SteamInternal_SteamAPI_Init ret=0 ok=1 session=1`. That meets
+     the strict criterion (`ret=0` is `k_ESteamAPIInitResult_OK` for this entry point).
+   - Callbacks 1101, 1222 and 1281 were dispatched to the game, `targets=1`.
+   - Overlay: `attached gameoverlayui … after 3011ms`; `iCallback=331` (GameOverlayActivated) at
+     07:15:59, so the overlay opened in-game. Helper exited by SIGTERM at game quit.
+   This is the second shim-mode title the Results asked for, now passing on the shipped code path.
+5. `089/fetch-pin.sh`: `codesign -dv … | grep -q` exited early under `set -o pipefail` (SIGPIPE on
    codesign), failing the team check on a good dylib. It is now `grep … >/dev/null`.
 
 ## Results
@@ -96,6 +108,6 @@ Signal for the build (adds to 087's and 089's):
   hard-code it. The helper then keeps the Steam-tree lookup only as the fallback.
 - **The pin and the generated dispatch move together.** This run used a v023 pin with MMS v003, which
   the dispatch covers. A pin bump must regenerate `bridge_dispatch.h`.
-- **Coverage in this spike is one shim-mode title (ELEX).** DRM-mode titles never load
+- **Coverage: two shim-mode titles, ELEX (spike build) and Schedule I (production 261117-ubb build).** DRM-mode titles never load
   the helper, so pinning cannot affect them. A UAT for the build should repeat this on a second shim
   title (Avernum 6 or XCOM: EU) and an identity-only (480) fallback launch.
