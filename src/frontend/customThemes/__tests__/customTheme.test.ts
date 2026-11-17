@@ -1,7 +1,10 @@
 import type { CustomTheme } from '../../../common/types/customTheme'
 import {
+  CUSTOM_THEME_PREFIX,
   MAX_CUSTOM_THEMES,
   MAX_THEME_NAME_LENGTH,
+  MAX_TOKENS_PER_THEME,
+  MAX_TOKEN_VALUE_LENGTH,
   THEME_ID_PATTERN,
   customThemeKey,
   makeCopy,
@@ -80,7 +83,8 @@ describe('parseCustomThemes totality and ordering', () => {
 
   it('drops a theme with more than 256 tokens', () => {
     const tokens: Record<string, string> = {}
-    for (let i = 0; i < 257; i++) tokens[`--accent-${i}`] = '#112233'
+    for (let i = 0; i < MAX_TOKENS_PER_THEME + 1; i++)
+      tokens[`--accent-${i}`] = '#112233'
     expect(parseCustomThemes([valid(1, { tokens })], yes)).toEqual([])
   })
 
@@ -143,7 +147,7 @@ describe('parseCustomThemes token handling', () => {
   })
 
   it('drops values that are too long, non-strings or not colours', () => {
-    const long = '#' + 'a'.repeat(512)
+    const long = '#' + 'a'.repeat(MAX_TOKEN_VALUE_LENGTH)
     const raw = {
       '--accent': long,
       '--success': 5 as unknown as string,
@@ -279,6 +283,10 @@ describe('parseCustomThemes never throws', () => {
 })
 
 describe('resolveThemeKey and makeCopy', () => {
+  it('builds the custom key from the prefix', () => {
+    expect(customThemeKey('abc')).toBe(`${CUSTOM_THEME_PREFIX}abc`)
+  })
+
   it('resolves built-in, custom and unknown keys', () => {
     const t = valid(1)
     expect(resolveThemeKey('dracula', [t])).toEqual({
