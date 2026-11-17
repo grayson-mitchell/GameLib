@@ -11,7 +11,8 @@ import {
   DisableLogs,
   ResetHeroic,
   GamePadDelayRepeat,
-  SteamGridDbApiKey
+  SteamGridDbApiKey,
+  ItadApiKey
 } from '../../components'
 
 export default function AdvancedSetting() {
@@ -43,6 +44,11 @@ export default function AdvancedSetting() {
 
       <div className="advancedSetting">
         <SteamGridDbApiKey />
+        <hr />
+      </div>
+
+      <div className="advancedSetting">
+        <ItadApiKey />
         <hr />
       </div>
 

@@ -1068,6 +1068,18 @@
         "gamescope": {
             "searchMsg": "Searching for gamescope executable."
         },
+        "itad": {
+            "apikey": {
+                "placeholder": "Enter your IsThereAnyDeal API key (optional)",
+                "placeholder_saved": "Key saved — type to replace, clear to remove",
+                "rejected": "ITAD rejected this key, so Store Search is using the built-in key.",
+                "title": "IsThereAnyDeal API Key",
+                "unavailable": "Unavailable on this build"
+            },
+            "help": {
+                "description": "Optional. Store Search uses a built-in IsThereAnyDeal key. If you have your own key from isthereanydeal.com/apps/my, enter it here and it is used instead. The key is stored encrypted when your system supports it."
+            }
+        },
         "launchOptions": "Launch Options",
         "legacy_warning": "Warning: The settings on this tab are mostly deprecated and might not work at all.",
         "log": {
