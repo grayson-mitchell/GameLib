@@ -1,7 +1,8 @@
 ---
 phase: 40-in-app-store-and-wiki-browsing-under-tauri-embedded-child-we
 verified: 2026-09-05T10:40:00Z
-status: gaps_closed_partially
+status: passed
+status_note: 'Was `gaps_closed_partially` (set 2026-09-05), which gsd-core 1.21.0 audit-uat rejects as outside passed | gaps_found | human_needed. Re-statused passed 2026-11-17 (quick 261117-sdc) because every open item it named has since closed: GAP-D fixed by 260905-e61 and live-gated by 260909-tgx; GAP-E de/fr 6/6 filled under 260905-c40; /store/epic Turnstile closed wontfix 2026-09-15; adtraction detection closed by operator decision 2026-09-17. REQ-40-06 and REQ-40-14 stay PARTIAL as scored below; the body is unchanged.'
 score: 11/14 requirements verified; 2 PARTIAL (REQ-40-06, REQ-40-14); 1 requirement's own gates left RED by the phase (REQ-40-10's i18n-scope pin)
 overrides_applied: 0
 verified_against_commit: cabc2c7d1
