@@ -8,6 +8,7 @@ import { InstallArgs } from 'common/types'
 import { InstallResult } from 'common/types/game_manager'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { isMac } from 'backend/constants/environment'
+import { hostPlatform } from './playAdoption'
 import { startInstallPolling } from './library/installPolling'
 import * as resumeBreadcrumbs from './library/resumeBreadcrumbs'
 import { readInstalledAtStart } from './library/manifestFlags'
@@ -265,7 +266,7 @@ export async function runNativeDepotDownload(
     if (deferredPoll.handoff && leasedResult.status === 'done') {
       const handoff = deferredPoll.handoff
       const pid = await adoption
-        .probeMacSteamPid({ runner: steamGame.deps.runner })
+        .probeSteamPid({ runner: steamGame.deps.runner }, hostPlatform())
         .catch(() => null)
       let adoptedByInstallApp = false
       if (

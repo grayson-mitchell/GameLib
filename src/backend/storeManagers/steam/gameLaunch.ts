@@ -16,18 +16,9 @@ import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { notify, showDialogBoxModalAuto } from 'backend/dialog/dialog'
 import { sendGameStatusUpdate } from 'backend/utils'
 import type LogWriter from 'backend/logger/log_writer'
-import { isMac, isWindows } from 'backend/constants/environment'
+import { isWindows } from 'backend/constants/environment'
 import type { SteamBridgeVerdict } from './stores'
-import {
-  probeMacSteamPid,
-  createRestartDeps,
-  readAcfSnapshot,
-  readPendingAdoption,
-  pendingAdoptionStoreFrom,
-  decidePlayAdoption,
-  restartMacSteamForAdoption
-} from './macSteamAdoption'
-import { clearAndUnwatchPendingAdoption } from './adoptionWatch'
+import { gatePlayOnAdoption } from './playAdoption'
 import { killBridgeBottleWineServer } from './bridgeBottleLifecycle'
 import {
   getBridgeBottleSettings,
@@ -201,80 +192,13 @@ export async function launch(
   // 2026-10-29-open-external-drops-activate-false). It is not what controls
   // Windows Steam's "Starting game" window: the `rungameid` verb causes that,
   // which is why Windows uses the `launch` verb above. No effect on Linux.
-  // Quick 261029-ji2: a GameLib-downloaded Mac install that the still-running
-  // Steam never adopted makes rungameid open the install dialog, so Steam is
-  // restarted once first. Only installs with a pending-adoption record (see
-  // runNativeDepotDownload) ever probe or restart anything.
-  if (isMac) {
-    const adoptionStore = pendingAdoptionStoreFrom(steamGame.deps)
-    const record = readPendingAdoption(steamGame.appId, adoptionStore)
-    if (record) {
-      const currentPid = await probeMacSteamPid({
-        runner: steamGame.deps.runner
-      }).catch(() => null)
-      const decision = decidePlayAdoption({
-        record,
-        currentPid,
-        currentAcf: await readAcfSnapshot(steamGame.deps, record.manifestPath)
-      })
-      if (decision === 'clear-and-launch') {
-        clearAndUnwatchPendingAdoption(steamGame.deps, steamGame.appId)
-      } else if (decision === 'unknown') {
-        // WR-01 (75 review): never quit Steam on an unread ACF; record kept.
-        logWarning(
-          `SteamGame: Play for ${steamGame.appId}: manifest unreadable, adoption unknown; launching without a Steam restart (pending adoption kept)`,
-          LogPrefix.Steam
-        )
-      } else if (decision === 'restart') {
-        const outcome = await restartMacSteamForAdoption(
-          steamGame.appId,
-          createRestartDeps({
-            requestRustInvoke: steamGame.deps.requestRustInvoke,
-            clock: steamGame.deps.clock,
-            paths: steamGame.deps.paths,
-            macSteam: steamGame.deps.steamProcesses.macSteam,
-            sendFrontendMessage: steamGame.deps.sendFrontendMessage,
-            appRuntime: steamGame.deps.appRuntime,
-            launchRunGameId: () =>
-              steamGame.deps.openExternal.openExternal(url, { activate: false })
-          })
-        )
-        if (outcome.kind === 'relaunched') {
-          clearAndUnwatchPendingAdoption(steamGame.deps, steamGame.appId)
-          watchSteamLaunch(steamGame.deps, steamGame.appId)
-          return true
-        }
-        // Refuse rather than fall back to a plain launch: an unadopted
-        // install in a running Steam opens the install dialog (the failure
-        // being removed), and quitting would end the user's game session.
-        // Steam is never killed; the record stays pending.
-        const game = steamGame.getGameInfo().title
-        const body =
-          outcome.kind === 'game-running'
-            ? i18next.t(
-                'gamelib:steam.adoptRestart.gameRunning',
-                'Quit the game running in Steam, then press Play to finish setting up {{game}}.',
-                { game }
-              )
-            : outcome.kind === 'steam-busy'
-              ? i18next.t(
-                  'gamelib:steam.adoptRestart.busy',
-                  'Steam is busy with a GameLib sign-in. Try Play again in a moment.'
-                )
-              : i18next.t(
-                  'gamelib:steam.adoptRestart.quitTimeout',
-                  "Steam didn't quit, so {{game}} couldn't be set up. Quit Steam and press Play again.",
-                  { game }
-                )
-        logWarning(
-          `SteamGame: Play for ${steamGame.appId} not launched (${outcome.kind}); pending adoption kept`,
-          LogPrefix.Steam
-        )
-        notify(steamGame.deps, { title: game, body })
-        return false
-      }
-    }
-  }
+  // Quick 261029-ji2 / Phase 81 D-14: a GameLib-downloaded install that the still-running
+  // Steam never adopted makes rungameid open the install dialog, so Steam is restarted once
+  // first (or opened, when signed out). The gate lives in playAdoption.ts and only acts for
+  // installs with a pending-adoption record (see runNativeDepotDownload).
+  const gate = await gatePlayOnAdoption(steamGame)
+  if (gate === 'launched') return true
+  if (gate === 'opened-steam' || gate === 'refused') return false
   await steamGame.deps.openExternal.openExternal(url, { activate: false })
   watchSteamLaunch(steamGame.deps, steamGame.appId)
   return true

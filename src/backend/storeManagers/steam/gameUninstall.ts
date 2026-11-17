@@ -23,13 +23,17 @@ import {
 } from './library/acfState'
 import { resolveInstallRoot } from './library/installRoot'
 import {
-  probeMacSteamPid,
+  probeSteamPid,
   readAcfSnapshot,
   readPendingAdoption,
   pendingAdoptionStoreFrom,
   decidePlayAdoption
 } from './macSteamAdoption'
-import { clearAndUnwatchPendingAdoption } from './adoptionWatch'
+import {
+  clearAndUnwatchPendingAdoption,
+  readSteamAdoption
+} from './adoptionWatch'
+import { hostPlatform } from './playAdoption'
 import { getBottleSteamappsDir } from './bottle'
 import { removePerGameBridgeBottle } from './bridgeBottleLifecycle'
 import {
@@ -471,13 +475,24 @@ export async function uninstallUnadoptedMacNativeDirectly(
   )
   if (!record) return null
 
-  const currentPid = await probeMacSteamPid({
-    runner: steamGame.deps.runner
-  }).catch(() => null)
+  const platform = hostPlatform()
+  const currentPid = await probeSteamPid(
+    { runner: steamGame.deps.runner },
+    platform
+  ).catch(() => null)
+  const reading = await readSteamAdoption(
+    steamGame.deps,
+    steamGame.appId,
+    record
+  )
   const decision = decidePlayAdoption({
     record,
+    platform,
+    reading,
     currentPid,
-    currentAcf: await readAcfSnapshot(steamGame.deps, record.manifestPath)
+    currentAcf: reading
+      ? null
+      : await readAcfSnapshot(steamGame.deps, record.manifestPath)
   })
   if (decision !== 'restart') return null
 

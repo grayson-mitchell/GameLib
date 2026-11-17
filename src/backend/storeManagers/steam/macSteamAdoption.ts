@@ -1,6 +1,6 @@
 /**
- * Quick 261029-ji2: adopt a GameLib-downloaded native Mac install into Steam by
- * restarting Steam on Play.
+ * Quick 261029-ji2: adopt a GameLib-downloaded native Steam install into Steam by
+ * restarting Steam on Play. Restart-on-Play on macOS, Windows and Linux since Phase 81 D-14.
  *
  * Why not `steam://install/<appId>` (quick 261029-iwy, dropped): that URL opens
  * Steam's install DIALOG. Adoption only proceeds once a human clicks Install
@@ -10,7 +10,7 @@
  * STARTS after GameLib wrote the files + ACF adopts them at startup with no
  * dialog (spikes 001/003, Phase 23). So Play, when the Steam process that was
  * running at install end has not adopted the game, quits Steam gracefully
- * (`steam://exit`), waits for `steam_osx` to exit, and relaunches through
+ * (`steam://exit`), waits for the Steam client process to exit, and relaunches through
  * `steam://rungameid/<appId>`.
  *
  * Only installs GameLib downloaded itself ever get a record (games.ts native
@@ -27,12 +27,15 @@ import { createFakeHomeProfile } from 'backend/testUtils/fakeHomeProfile'
 import type { Clock, ProcessRunner } from 'backend/process/types'
 import type { AppPaths } from 'backend/process/context'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
+import type { OpenExternal } from 'backend/host/openExternal'
 import { RUST_STEAMFILES_READ_ACF } from 'common/types/sidecarTransport'
 import { invokeSteamFiles } from './localFiles/rustSteamFiles'
 import {
   MAC_STEAM_OFFLINE_OWED_FILE,
   type MacSteamClient
 } from './macSteamClient'
+import { listSteamClientPids } from './steamClientProcess'
+import type { AdoptionReading } from './pollRust/steamPollTypes'
 
 /** Graceful quit is bounded; Steam is never killed. */
 export const RESTART_QUIT_TIMEOUT_MS = 30_000
@@ -216,27 +219,47 @@ export function isSteamAdoptedAcf(
  * 'unknown': the record is pending and the running Steam is the one that saw the install, but
  * the current ACF could not be read, so whether Steam adopted it is unknown. Callers take the
  * side-effect-free route (plain launch / delegated uninstall) and keep the record.
+ *
+ * 'open-steam' (Phase 81 D-03): Steam is running but signed out, so it cannot adopt anything and
+ * a restart would only lose the sign-in screen the user is on; Play opens Steam instead and keeps
+ * the record.
  */
-type PlayAdoptionDecision =
+export type PlayAdoptionDecision =
   | 'launch'
   | 'clear-and-launch'
   | 'restart'
   | 'unknown'
+  | 'open-steam'
 
 /**
- * Pure Play-time decision. A different PID means Steam restarted since the
- * install and adopted at its own startup; the same PID with an unrewritten ACF
- * means the running Steam has never seen the install.
+ * Pure Play-time decision. The Rust adoption read (`reading`) is the evidence on every OS and is
+ * consulted first: adopted or a Steam that is not running clears the record; a signed-out Steam
+ * opens Steam (D-03); anything else restarts it.
+ *
+ * With no reading (D-10: the Rust read failed) today's rules apply: a Steam that is not running
+ * clears; on macOS only, a different steam_osx PID means Steam restarted since the install and
+ * adopted at its own startup (off macOS a pid change is not evidence, so the ACF decides);
+ * an unreadable ACF is 'unknown'; an ACF Steam rewrote clears; otherwise restart.
  */
 export function decidePlayAdoption(input: {
   record: PendingAdoptionRecord | undefined
+  platform: NodeJS.Platform
+  reading: AdoptionReading | null
   currentPid: number | null
   currentAcf: AcfSnapshot | null
 }): PlayAdoptionDecision {
-  const { record, currentPid, currentAcf } = input
+  const { record, platform, reading, currentPid, currentAcf } = input
   if (!record) return 'launch'
+  if (reading) {
+    if (reading.adopted) return 'clear-and-launch'
+    if (reading.steamRunning === false) return 'clear-and-launch'
+    if (reading.signedIn === false) return 'open-steam'
+    return 'restart'
+  }
   if (currentPid === null) return 'clear-and-launch'
-  if (currentPid !== record.steamPid) return 'clear-and-launch'
+  if (platform === 'darwin' && currentPid !== record.steamPid) {
+    return 'clear-and-launch'
+  }
   if (currentAcf?.rustReadFailed) return 'unknown'
   if (isSteamAdoptedAcf(record.baseline, currentAcf)) return 'clear-and-launch'
   return 'restart'
@@ -246,7 +269,7 @@ export function decidePlayAdoption(input: {
  * `pgrep -x steam_osx` returning the lowest PID, or null when not running.
  * Isolated half of the two-profile rule: env from createFakeHomeProfile().
  */
-export async function probeMacSteamPid(
+async function probeMacSteamPid(
   deps: { runner: Pick<ProcessRunner, 'run'> },
   timeoutMs = 2000
 ): Promise<number | null> {
@@ -273,6 +296,21 @@ export async function probeMacSteamPid(
   }
 }
 
+/**
+ * The PID of the running Steam client (lowest when several), null when it is not running.
+ * macOS keeps the isolated `pgrep -x steam_osx`; Windows and Linux use listSteamClientPids, whose
+ * `undefined` (unknown) throws here so callers keep their `.catch(() => null)`.
+ */
+export async function probeSteamPid(
+  deps: { runner: Pick<ProcessRunner, 'run'> },
+  platform: NodeJS.Platform
+): Promise<number | null> {
+  if (platform === 'darwin') return probeMacSteamPid(deps)
+  const pids = await listSteamClientPids(deps, platform)
+  if (pids === undefined) throw new Error('Steam client process list unknown')
+  return pids.length ? Math.min(...pids) : null
+}
+
 type RestartResult =
   | { kind: 'relaunched' }
   | { kind: 'game-running'; runningAppId: number }
@@ -284,7 +322,7 @@ export interface RestartDeps {
   isOfflineWrapOwed: () => boolean
   isSteamRunning: () => Promise<boolean>
   openUrlDetached: (url: string) => void
-  launchRunGameId: () => Promise<unknown>
+  relaunch: () => Promise<unknown>
   emitStatus: (appId: string) => void
   emitDone: (appId: string) => void
   sleep: (ms: number) => Promise<void>
@@ -293,19 +331,25 @@ export interface RestartDeps {
 
 /**
  * The restart deps, built explicitly by the caller (no default): timers come
- * from the clock (unref'd by default), the probe and the detached open from
- * the boot-built Mac Steam instance.
+ * from the clock (unref'd by default). macOS keeps the boot-built Mac Steam
+ * instance (process probe, detached `open -g`) and the go-offline owed-wrap file;
+ * Windows and Linux probe with listSteamClientPids (an unknown answer counts as
+ * still running), fire steam://exit through openExternal, and never owe a wrap.
  */
 export function createRestartDeps(deps: {
+  platform: NodeJS.Platform
   requestRustInvoke: RustInvokeDeps['requestRustInvoke']
+  runner: Pick<ProcessRunner, 'run'>
+  openExternal: Pick<OpenExternal, 'openExternal'>
   clock: Clock
   paths: Pick<AppPaths, 'appFolder' | 'userHome'>
   macSteam: Pick<MacSteamClient, 'isSteamRunning' | 'openUrlDetached'>
-  launchRunGameId: () => Promise<unknown>
+  relaunch: () => Promise<unknown>
   sendFrontendMessage: StatusUpdateDeps['sendFrontendMessage']
   appRuntime: StatusUpdateDeps['appRuntime']
 }): RestartDeps {
-  const { clock, macSteam } = deps
+  const { clock, macSteam, platform } = deps
+  const mac = platform === 'darwin'
   return {
     readRunningAppId: () => {
       /* eslint-disable @typescript-eslint/no-require-imports */
@@ -317,13 +361,34 @@ export function createRestartDeps(deps: {
       })
     },
     // Restarting Steam mid go-offline wrap would bring it online and kick
-    // GameLib's CM session, so refuse while the wrap is owed.
+    // GameLib's CM session, so refuse while the wrap is owed (macOS only).
     isOfflineWrapOwed: () => {
+      if (!mac) return false
       return existsSync(join(deps.paths.appFolder, MAC_STEAM_OFFLINE_OWED_FILE))
     },
-    isSteamRunning: () => macSteam.isSteamRunning(),
-    openUrlDetached: (url) => macSteam.openUrlDetached(url),
-    launchRunGameId: deps.launchRunGameId,
+    isSteamRunning: mac
+      ? () => macSteam.isSteamRunning()
+      : async () => {
+          const pids = await listSteamClientPids(
+            { runner: deps.runner },
+            platform
+          )
+          // undefined = unknown: still running, so a failed probe never relaunches early.
+          return pids === undefined || pids.length > 0
+        },
+    openUrlDetached: mac
+      ? (url) => macSteam.openUrlDetached(url)
+      : (url) => {
+          deps.openExternal
+            .openExternal(url, { activate: false })
+            .catch((err: unknown) =>
+              logWarning(
+                `[Steam] could not open ${url}: ${String(err)}`,
+                LogPrefix.Steam
+              )
+            )
+        },
+    relaunch: deps.relaunch,
     emitStatus: (id) =>
       sendGameStatusUpdate(deps, {
         appName: id,
@@ -347,11 +412,11 @@ export function createRestartDeps(deps: {
 }
 
 /**
- * Quit Mac Steam gracefully, wait (bounded) for it to exit, then relaunch via
- * `launchRunGameId`. Never signals Steam. `steam://exit` rather than an
+ * Quit Steam gracefully (any OS), wait (bounded) for it to exit, then relaunch via
+ * `relaunch`. Never signals Steam. `steam://exit` rather than an
  * osascript quit: Apple Events to Steam raise a macOS Automation TCC prompt.
  */
-export async function restartMacSteamForAdoption(
+export async function restartSteamForAdoption(
   appId: string,
   deps: RestartDeps
 ): Promise<RestartResult> {
@@ -404,7 +469,7 @@ export async function restartMacSteamForAdoption(
       `[Steam] Steam exited after ${elapsed()} ms; relaunching ${appId}`,
       LogPrefix.Steam
     )
-    await deps.launchRunGameId()
+    await deps.relaunch()
     return { kind: 'relaunched' }
   } finally {
     deps.emitDone(appId)

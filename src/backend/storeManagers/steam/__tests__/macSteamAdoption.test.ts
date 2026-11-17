@@ -23,8 +23,8 @@ import {
   isSteamAdoptedAcf,
   readAcfSnapshot,
   decidePlayAdoption,
-  restartMacSteamForAdoption,
-  probeMacSteamPid,
+  restartSteamForAdoption,
+  probeSteamPid,
   createRestartDeps,
   recordPendingAdoption,
   readPendingAdoption,
@@ -35,6 +35,7 @@ import {
   type PendingAdoptionStore,
   type RestartDeps
 } from '../macSteamAdoption'
+import type { AdoptionReading } from '../pollRust/steamPollTypes'
 import { stubRustSteamFiles } from '../localFiles/__tests__/fixtures/stubRustSteamFiles'
 import { at } from './fixtures/indexed'
 import { createFakeClock } from 'backend/testUtils/fakeClock'
@@ -94,56 +95,197 @@ describe('decidePlayAdoption', () => {
     baseline: own,
     recordedAt: 1
   }
-  test('no record launches normally', () => {
-    expect(
-      decidePlayAdoption({
-        record: undefined,
-        currentPid: 100,
-        currentAcf: own
-      })
-    ).toBe('launch')
+  const reading = (over: Partial<AdoptionReading> = {}): AdoptionReading => ({
+    adopted: false,
+    signedIn: true,
+    steamRunning: true,
+    helperState: null,
+    evidence: null,
+    ...over
   })
-  test('Steam not running clears and launches', () => {
-    expect(
-      decidePlayAdoption({ record, currentPid: null, currentAcf: own })
-    ).toBe('clear-and-launch')
+  const rewritten = acf({ StateFlags: '4', buildid: '9044150' }, 2000)
+  const unreadable: AcfSnapshot = {
+    ...own,
+    stateFlags: null,
+    buildid: '',
+    rustReadFailed: true
+  }
+
+  describe('with a Rust reading (every OS)', () => {
+    test.each<NodeJS.Platform>(['darwin', 'win32', 'linux'])(
+      'no record launches normally (%s)',
+      (platform) => {
+        expect(
+          decidePlayAdoption({
+            record: undefined,
+            platform,
+            reading: reading(),
+            currentPid: 100,
+            currentAcf: null
+          })
+        ).toBe('launch')
+      }
+    )
+    test.each<NodeJS.Platform>(['darwin', 'win32', 'linux'])(
+      'adopted clears and launches (%s)',
+      (platform) => {
+        expect(
+          decidePlayAdoption({
+            record,
+            platform,
+            reading: reading({ adopted: true }),
+            currentPid: 100,
+            currentAcf: null
+          })
+        ).toBe('clear-and-launch')
+      }
+    )
+    test('Steam not running clears and launches', () => {
+      expect(
+        decidePlayAdoption({
+          record,
+          platform: 'win32',
+          reading: reading({ steamRunning: false }),
+          currentPid: 100,
+          currentAcf: null
+        })
+      ).toBe('clear-and-launch')
+    })
+    test('running but signed out opens Steam (D-03)', () => {
+      expect(
+        decidePlayAdoption({
+          record,
+          platform: 'linux',
+          reading: reading({ signedIn: false }),
+          currentPid: 100,
+          currentAcf: null
+        })
+      ).toBe('open-steam')
+    })
+    test('running, signed in and not adopted restarts; unknown signed-in restarts', () => {
+      for (const signedIn of [true, null]) {
+        expect(
+          decidePlayAdoption({
+            record,
+            platform: 'darwin',
+            reading: reading({ signedIn }),
+            currentPid: 200,
+            currentAcf: null
+          })
+        ).toBe('restart')
+      }
+    })
+    test('the reading wins over a pid change', () => {
+      expect(
+        decidePlayAdoption({
+          record,
+          platform: 'darwin',
+          reading: reading(),
+          currentPid: 999,
+          currentAcf: rewritten
+        })
+      ).toBe('restart')
+    })
   })
-  test('a different PID clears and launches', () => {
-    expect(
-      decidePlayAdoption({ record, currentPid: 200, currentAcf: own })
-    ).toBe('clear-and-launch')
-  })
-  test('same PID and an ACF Steam already rewrote clears and launches', () => {
-    expect(
-      decidePlayAdoption({
-        record,
-        currentPid: 100,
-        currentAcf: acf({ StateFlags: '4', buildid: '9044150' }, 2000)
-      })
-    ).toBe('clear-and-launch')
-  })
-  test('same PID and an unreadable current ACF is unknown, not restart (WR-01)', () => {
-    expect(
-      decidePlayAdoption({
-        record,
-        currentPid: 100,
-        currentAcf: {
-          ...own,
-          stateFlags: null,
-          buildid: '',
-          rustReadFailed: true
-        }
-      })
-    ).toBe('unknown')
-  })
-  test('same PID and unadopted ACF restarts', () => {
-    expect(
-      decidePlayAdoption({ record, currentPid: 100, currentAcf: own })
-    ).toBe('restart')
+
+  describe('without a reading (D-10: today rules)', () => {
+    const noReading = { reading: null } as const
+    test.each<NodeJS.Platform>(['darwin', 'win32', 'linux'])(
+      'no record launches normally (%s)',
+      (platform) => {
+        expect(
+          decidePlayAdoption({
+            record: undefined,
+            platform,
+            ...noReading,
+            currentPid: 100,
+            currentAcf: own
+          })
+        ).toBe('launch')
+      }
+    )
+    test.each<NodeJS.Platform>(['darwin', 'win32', 'linux'])(
+      'Steam not running clears and launches (%s)',
+      (platform) => {
+        expect(
+          decidePlayAdoption({
+            record,
+            platform,
+            ...noReading,
+            currentPid: null,
+            currentAcf: own
+          })
+        ).toBe('clear-and-launch')
+      }
+    )
+    test('darwin: a different PID clears and launches', () => {
+      expect(
+        decidePlayAdoption({
+          record,
+          platform: 'darwin',
+          ...noReading,
+          currentPid: 200,
+          currentAcf: own
+        })
+      ).toBe('clear-and-launch')
+    })
+    test.each<NodeJS.Platform>(['win32', 'linux'])(
+      '%s: a different PID with an unadopted ACF still restarts (pid change is not evidence)',
+      (platform) => {
+        expect(
+          decidePlayAdoption({
+            record,
+            platform,
+            ...noReading,
+            currentPid: 200,
+            currentAcf: own
+          })
+        ).toBe('restart')
+      }
+    )
+    test.each<NodeJS.Platform>(['darwin', 'win32', 'linux'])(
+      'same PID and an ACF Steam already rewrote clears and launches (%s)',
+      (platform) => {
+        expect(
+          decidePlayAdoption({
+            record,
+            platform,
+            ...noReading,
+            currentPid: 100,
+            currentAcf: rewritten
+          })
+        ).toBe('clear-and-launch')
+      }
+    )
+    test('an unreadable current ACF is unknown, not restart (WR-01)', () => {
+      expect(
+        decidePlayAdoption({
+          record,
+          platform: 'darwin',
+          ...noReading,
+          currentPid: 100,
+          currentAcf: unreadable
+        })
+      ).toBe('unknown')
+    })
+    test.each<NodeJS.Platform>(['darwin', 'win32', 'linux'])(
+      'same PID and unadopted ACF restarts (%s)',
+      (platform) => {
+        expect(
+          decidePlayAdoption({
+            record,
+            platform,
+            ...noReading,
+            currentPid: 100,
+            currentAcf: own
+          })
+        ).toBe('restart')
+      }
+    )
   })
 })
 
-describe('restartMacSteamForAdoption', () => {
+describe('restartSteamForAdoption', () => {
   function harness(overrides: Partial<RestartDeps> = {}) {
     let clock = 0
     const calls: string[] = []
@@ -154,7 +296,7 @@ describe('restartMacSteamForAdoption', () => {
       openUrlDetached: jest.fn((url: string) => {
         calls.push(`open:${url}`)
       }),
-      launchRunGameId: jest.fn(async () => {
+      relaunch: jest.fn(async () => {
         calls.push('launch')
       }),
       emitStatus: jest.fn(() => {
@@ -176,19 +318,19 @@ describe('restartMacSteamForAdoption', () => {
     const { deps } = harness({
       readRunningAppId: jest.fn(() => Promise.resolve(4000))
     })
-    await expect(restartMacSteamForAdoption('264160', deps)).resolves.toEqual({
+    await expect(restartSteamForAdoption('264160', deps)).resolves.toEqual({
       kind: 'game-running',
       runningAppId: 4000
     })
     expect(deps.openUrlDetached).not.toHaveBeenCalled()
     expect(deps.emitStatus).not.toHaveBeenCalled()
     expect(deps.emitDone).not.toHaveBeenCalled()
-    expect(deps.launchRunGameId).not.toHaveBeenCalled()
+    expect(deps.relaunch).not.toHaveBeenCalled()
   })
 
   test('a go-offline wrap owed refuses as steam-busy', async () => {
     const { deps } = harness({ isOfflineWrapOwed: jest.fn(() => true) })
-    await expect(restartMacSteamForAdoption('264160', deps)).resolves.toEqual({
+    await expect(restartSteamForAdoption('264160', deps)).resolves.toEqual({
       kind: 'steam-busy'
     })
     expect(deps.openUrlDetached).not.toHaveBeenCalled()
@@ -201,13 +343,13 @@ describe('restartMacSteamForAdoption', () => {
     const { deps, calls } = harness({
       isSteamRunning: jest.fn(async () => ++polls < 3)
     })
-    await expect(restartMacSteamForAdoption('264160', deps)).resolves.toEqual({
+    await expect(restartSteamForAdoption('264160', deps)).resolves.toEqual({
       kind: 'relaunched'
     })
     expect(deps.emitStatus).toHaveBeenCalledTimes(1)
     expect(deps.openUrlDetached).toHaveBeenCalledTimes(1)
     expect(deps.openUrlDetached).toHaveBeenCalledWith('steam://exit')
-    expect(deps.launchRunGameId).toHaveBeenCalledTimes(1)
+    expect(deps.relaunch).toHaveBeenCalledTimes(1)
     expect(polls).toBe(3)
     expect(calls).toEqual(['emit', 'open:steam://exit', 'launch', 'done'])
     expect(deps.emitDone).toHaveBeenCalledTimes(1)
@@ -215,17 +357,17 @@ describe('restartMacSteamForAdoption', () => {
     expect(
       at((deps.emitDone as jest.Mock).mock.invocationCallOrder, 0)
     ).toBeGreaterThan(
-      at((deps.launchRunGameId as jest.Mock).mock.invocationCallOrder, 0)
+      at((deps.relaunch as jest.Mock).mock.invocationCallOrder, 0)
     )
   })
 
-  test('launchRunGameId rejecting still emits done once and propagates', async () => {
+  test('relaunch rejecting still emits done once and propagates', async () => {
     const { deps } = harness({
-      launchRunGameId: jest.fn(async () => {
+      relaunch: jest.fn(async () => {
         throw new Error('open failed')
       })
     })
-    await expect(restartMacSteamForAdoption('264160', deps)).rejects.toThrow(
+    await expect(restartSteamForAdoption('264160', deps)).rejects.toThrow(
       'open failed'
     )
     expect(deps.emitDone).toHaveBeenCalledTimes(1)
@@ -233,10 +375,10 @@ describe('restartMacSteamForAdoption', () => {
 
   test('Steam never exits: quit-timeout, no relaunch, exit fired once', async () => {
     const { deps } = harness({ isSteamRunning: jest.fn(async () => true) })
-    await expect(restartMacSteamForAdoption('264160', deps)).resolves.toEqual({
+    await expect(restartSteamForAdoption('264160', deps)).resolves.toEqual({
       kind: 'quit-timeout'
     })
-    expect(deps.launchRunGameId).not.toHaveBeenCalled()
+    expect(deps.relaunch).not.toHaveBeenCalled()
     expect(deps.emitDone).toHaveBeenCalledTimes(1)
     expect(deps.openUrlDetached).toHaveBeenCalledTimes(1)
     const slept = (deps.sleep as jest.Mock).mock.calls.reduce(
@@ -252,10 +394,10 @@ describe('restartMacSteamForAdoption', () => {
         throw new Error('pgrep failed')
       })
     })
-    await expect(restartMacSteamForAdoption('264160', deps)).resolves.toEqual({
+    await expect(restartSteamForAdoption('264160', deps)).resolves.toEqual({
       kind: 'quit-timeout'
     })
-    expect(deps.launchRunGameId).not.toHaveBeenCalled()
+    expect(deps.relaunch).not.toHaveBeenCalled()
   })
 })
 
@@ -306,7 +448,7 @@ describe('pending-adoption record store', () => {
   })
 })
 
-describe('probeMacSteamPid', () => {
+describe('probeSteamPid (darwin: the isolated pgrep)', () => {
   const pgrep = (result: ScriptStep['result']): ScriptStep => ({
     cmd: '/usr/bin/pgrep',
     argv: ['-x', 'steam_osx'],
@@ -317,7 +459,7 @@ describe('probeMacSteamPid', () => {
     const runner = createScriptedRunner([
       pgrep({ code: 0, stdout: '812\n77\n' })
     ])
-    await expect(probeMacSteamPid({ runner })).resolves.toBe(77)
+    await expect(probeSteamPid({ runner }, 'darwin')).resolves.toBe(77)
     const call = runner.calls[0]
     expect(call?.opts).toMatchObject({
       replaceEnv: true,
@@ -329,42 +471,109 @@ describe('probeMacSteamPid', () => {
 
   test('exit 1 means Steam is not running', async () => {
     const runner = createScriptedRunner([pgrep({ code: 1 })])
-    await expect(probeMacSteamPid({ runner })).resolves.toBeNull()
+    await expect(probeSteamPid({ runner }, 'darwin')).resolves.toBeNull()
   })
 
   test('a timeout, another exit code or a spawn error rejects', async () => {
     await expect(
-      probeMacSteamPid({
-        runner: createScriptedRunner([pgrep({ code: null, timedOut: true })])
-      })
+      probeSteamPid(
+        {
+          runner: createScriptedRunner([pgrep({ code: null, timedOut: true })])
+        },
+        'darwin'
+      )
     ).rejects.toThrow('timed out')
     await expect(
-      probeMacSteamPid({ runner: createScriptedRunner([pgrep({ code: 2 })]) })
+      probeSteamPid(
+        { runner: createScriptedRunner([pgrep({ code: 2 })]) },
+        'darwin'
+      )
     ).rejects.toThrow()
     await expect(
-      probeMacSteamPid({
-        runner: createScriptedRunner([
-          { cmd: '/usr/bin/pgrep', error: { code: 'ENOENT' } }
-        ])
-      })
+      probeSteamPid(
+        {
+          runner: createScriptedRunner([
+            { cmd: '/usr/bin/pgrep', error: { code: 'ENOENT' } }
+          ])
+        },
+        'darwin'
+      )
     ).rejects.toThrow()
   })
+
+  const tasklist = join(
+    process.env.SystemRoot ?? 'C:\\Windows',
+    'System32',
+    'tasklist.exe'
+  )
+  const listCmd = (platform: NodeJS.Platform) =>
+    platform === 'linux' ? 'pgrep' : tasklist
+
+  test.each<[NodeJS.Platform, string]>([
+    ['linux', '812\n77\n'],
+    [
+      'win32',
+      '"steam.exe","812","Console","1","10 K"\r\n"steam.exe","77","Console","1","10 K"\r\n'
+    ]
+  ])(
+    '%s: the lowest client pid via listSteamClientPids',
+    async (platform, stdout) => {
+      const runner = createScriptedRunner([
+        { cmd: listCmd(platform), result: { code: 0, stdout } }
+      ])
+      await expect(probeSteamPid({ runner }, platform)).resolves.toBe(77)
+    }
+  )
+
+  test.each<NodeJS.Platform>(['linux', 'win32'])(
+    '%s: no client process is null, an unknown probe rejects',
+    async (platform) => {
+      const none = createScriptedRunner([
+        {
+          cmd: listCmd(platform),
+          result: { code: platform === 'linux' ? 1 : 0, stdout: '' }
+        }
+      ])
+      await expect(
+        probeSteamPid({ runner: none }, platform)
+      ).resolves.toBeNull()
+      const unknown = createScriptedRunner([
+        { cmd: listCmd(platform), result: { code: 2, stdout: '' } }
+      ])
+      await expect(
+        probeSteamPid({ runner: unknown }, platform)
+      ).rejects.toThrow('unknown')
+    }
+  )
 })
 
 describe('createRestartDeps', () => {
-  test('timers and now come from the clock; the probe and open come from the instance', async () => {
+  const base = (
+    over: Partial<Parameters<typeof createRestartDeps>[0]> = {}
+  ) => ({
+    platform: 'darwin' as NodeJS.Platform,
+    requestRustInvoke: () => Promise.reject(new Error('not used')),
+    sendFrontendMessage: jest.fn(),
+    appRuntime: createTestAppRuntime(),
+    runner: createScriptedRunner([]),
+    openExternal: { openExternal: jest.fn().mockResolvedValue(undefined) },
+    clock: createFakeClock(5000),
+    paths: { appFolder: '/test/appFolder', userHome: '/test/home' },
+    macSteam: {
+      isSteamRunning: jest.fn().mockResolvedValue(false),
+      openUrlDetached: jest.fn()
+    },
+    relaunch: () => Promise.resolve(),
+    ...over
+  })
+
+  test('darwin: timers and now come from the clock; the probe and open come from the instance', async () => {
     const clock = createFakeClock(5000)
     const isSteamRunning = jest.fn().mockResolvedValue(false)
     const openUrlDetached = jest.fn()
-    const deps = createRestartDeps({
-      requestRustInvoke: () => Promise.reject(new Error('not used')),
-      sendFrontendMessage: jest.fn(),
-      appRuntime: createTestAppRuntime(),
-      clock,
-      paths: { appFolder: '/test/appFolder', userHome: '/test/home' },
-      macSteam: { isSteamRunning, openUrlDetached },
-      launchRunGameId: () => Promise.resolve()
-    })
+    const deps = createRestartDeps(
+      base({ clock, macSteam: { isSteamRunning, openUrlDetached } })
+    )
     expect(deps.now()).toBe(5000)
     let slept = false
     void deps.sleep(500).then(() => {
@@ -378,6 +587,47 @@ describe('createRestartDeps', () => {
     expect(slept).toBe(true)
     deps.openUrlDetached('steam://exit')
     expect(openUrlDetached).toHaveBeenCalledWith('steam://exit')
+    await expect(deps.isSteamRunning()).resolves.toBe(false)
+  })
+
+  test.each<NodeJS.Platform>(['win32', 'linux'])(
+    '%s: no wrap is owed, exit goes through openExternal, an unknown probe counts as running',
+    async (platform) => {
+      const openExternal = jest.fn().mockResolvedValue(undefined)
+      const macSteam = {
+        isSteamRunning: jest.fn(),
+        openUrlDetached: jest.fn()
+      }
+      const cmd =
+        platform === 'linux'
+          ? 'pgrep'
+          : join(
+              process.env.SystemRoot ?? 'C:\\Windows',
+              'System32',
+              'tasklist.exe'
+            )
+      const runner = createScriptedRunner([
+        { cmd, result: { code: 2, stdout: '' } }
+      ])
+      const deps = createRestartDeps(
+        base({ platform, runner, openExternal: { openExternal }, macSteam })
+      )
+      expect(deps.isOfflineWrapOwed()).toBe(false)
+      deps.openUrlDetached('steam://exit')
+      expect(openExternal).toHaveBeenCalledWith('steam://exit', {
+        activate: false
+      })
+      expect(macSteam.openUrlDetached).not.toHaveBeenCalled()
+      await expect(deps.isSteamRunning()).resolves.toBe(true)
+      expect(macSteam.isSteamRunning).not.toHaveBeenCalled()
+    }
+  )
+
+  test('linux: an empty process list means Steam has exited', async () => {
+    const runner = createScriptedRunner([
+      { cmd: 'pgrep', result: { code: 1, stdout: '' } }
+    ])
+    const deps = createRestartDeps(base({ platform: 'linux', runner }))
     await expect(deps.isSteamRunning()).resolves.toBe(false)
   })
 })
