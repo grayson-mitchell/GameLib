@@ -59,6 +59,7 @@ import type {
 import type { AnonymousClient } from 'backend/storeManagers/steam/anonymousClient'
 import type { SteamUser } from 'backend/storeManagers/steam/user'
 import type { SteamGridDbSecretStore } from 'backend/steamgrid/secretStore'
+import type { ItadSecrets } from 'backend/storeSearch/itadSecrets'
 import type { HumbleServices } from 'backend/humble'
 import type { LoginWindowSeamSlot } from 'backend/humble/loginWindowSeam'
 import type { SteamBottle } from 'backend/storeManagers/steam/bottle'
@@ -399,6 +400,8 @@ export interface BootServices {
    * SteamGridDB API-key owner, over the store this boot selected (keyring or dev vault).
    */
   steamGridSecrets: SteamGridDbSecretStore
+  /** Built by the 'itad-secrets' boot step, before 'register-handlers' (Phase 47 D-05): the optional user ITAD key owner. */
+  itadSecrets: ItadSecrets
   /**
    * Built by the 'humble-services' boot step, after 'steam-user' and before 'store-managers'
    * (D-66.3-17): the Humble user/library/fence/login-window seam of this boot.

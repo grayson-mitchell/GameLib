@@ -15,6 +15,7 @@ import { createStoreRegistry } from '../stores/storeRegistry'
 import { createKvsStores } from '../constants/key_value_stores'
 import { createCrossoverIndexStores } from '../crossover_index/stores'
 import { createStoreSearchStores } from '../storeSearch/stores'
+import { createItadSecrets } from '../storeSearch/itadSecrets'
 import { createDownloadManagerStores } from '../downloadmanager/stores'
 import { createGameOverridesStores } from '../game_overrides/stores'
 import { createHumbleStores } from '../humble/stores'
@@ -304,6 +305,7 @@ export function createTestServices(
     steamUser,
     steamGridSecrets:
       overrides.steamGridSecrets ?? createTestSteamGridSecrets(),
+    itadSecrets: overrides.itadSecrets ?? createTestItadSecrets(),
     humble:
       overrides.humble ??
       createTestHumbleServices({
@@ -329,6 +331,22 @@ function createTestSteamGridSecrets(
       key = undefined
     }
   }
+}
+
+/** An in-memory ITAD user-key owner: no keyring, no logger output. */
+function createTestItadSecrets(): BootServices['itadSecrets'] {
+  let key: string | undefined
+  return createItadSecrets({
+    store: {
+      getApiKey: async () => key,
+      setApiKey: async (value) => {
+        key = value
+      },
+      clearApiKey: async () => {
+        key = undefined
+      }
+    }
+  })
 }
 
 /** Placeholder paths nothing reads from or creates: a suite that needs real dirs uses createTestContext. */

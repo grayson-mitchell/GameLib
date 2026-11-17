@@ -45,6 +45,7 @@ describe('bootstrap.ts source shape (D-08)', () => {
       // handler is registered; the keyring touch (migration) stays in 'secret-stores' below.
       'secret-vault',
       'steamgrid-secrets',
+      'itad-secrets',
       'command-runner',
       'humble-services',
       'online-monitor-owner',

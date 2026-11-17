@@ -105,6 +105,8 @@ import {
   type SidecarSteamGridDbSecretStore
 } from './steamgridSecretStore'
 import { createSteamGridDbSecrets } from '../steamgrid/secretStore'
+import { SidecarItadKeyStore } from './itadSecretStore'
+import { createItadSecrets } from '../storeSearch/itadSecrets'
 import { createHumbleServices } from '../humble'
 import { registerDxmtListeners } from '../tools/dxmt'
 // 34.5 gap cycle 4 plan 36 (developer-scoped Routing addition): the dev-only plaintext vault
@@ -320,6 +322,7 @@ export const BOOT_STEP_NAMES = [
   'config',
   'secret-vault',
   'steamgrid-secrets',
+  'itad-secrets',
   'steam-bottle',
   'abort-registry',
   'app-runtime',
@@ -583,6 +586,7 @@ function requireServices(state: BootState): BootServices {
     steamBottle,
     steamUser,
     steamGridSecrets,
+    itadSecrets,
     humble
   } = state.services
   if (
@@ -627,6 +631,7 @@ function requireServices(state: BootState): BootServices {
     !steamBottle ||
     !steamUser ||
     !steamGridSecrets ||
+    !itadSecrets ||
     !humble
   ) {
     const missing = (
@@ -672,6 +677,7 @@ function requireServices(state: BootState): BootServices {
         'steamBottle',
         'steamUser',
         'steamGridSecrets',
+        'itadSecrets',
         'humble'
       ] as const
     ).filter((name) => !state.services[name])
@@ -719,6 +725,7 @@ function requireServices(state: BootState): BootServices {
     steamBottle,
     steamUser,
     steamGridSecrets,
+    itadSecrets,
     humble
   }
 }
@@ -1836,6 +1843,19 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         }
         state.services.steamGridSecrets =
           prebuilt.steamGridSecrets ?? createSteamGridDbSecrets({ store })
+      }
+    },
+    {
+      name: 'itad-secrets',
+      // Builds the one ITAD user-key owner of this boot (Phase 47 D-05) over the selected store
+      // (dev vault or keyring), before 'register-handlers'. Construction does no I/O (the keyring
+      // slot store reads lazily on first get), and no migration step is needed: the secret is new.
+      run: (_ctx, _io, state) => {
+        const store = state.secretVault
+          ? state.secretVault.itadKeyStore
+          : new SidecarItadKeyStore(requireHost(state).requestRustInvoke)
+        state.services.itadSecrets =
+          prebuilt.itadSecrets ?? createItadSecrets({ store })
       }
     },
     {
