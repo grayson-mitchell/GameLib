@@ -330,3 +330,17 @@ export interface SteamGameInfo extends GameInfoCore {
    * so the frontend bottle indicator matches the backend D-11 routing gate. */
   steamPlatformsCaptured?: boolean
 }
+
+/** quick 261117-p38: why "Launch without Steam" is not offered for a game. */
+export type SteamDirectLaunchIneligibleReason =
+  | 'host-unsupported'
+  | 'not-installed'
+  | 'route-unsupported'
+  | 'steam-api'
+  | 'steam-drm'
+  | 'unknown'
+
+/** quick 261117-p38: the renderer-facing "Launch without Steam" verdict. */
+export type SteamDirectLaunchView =
+  | { eligible: true; kind: 'mac-native' | 'bridge' }
+  | { eligible: false; reason: SteamDirectLaunchIneligibleReason }

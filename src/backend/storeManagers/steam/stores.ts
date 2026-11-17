@@ -359,6 +359,13 @@ export function createSteamStores(deps: StoreFamilyDeps) {
     null,
     { root: deps.root, kind: 'user-state' }
   )
+  // ── quick 261117-p38: "Launch without Steam" eligibility verdicts ──────────
+  // appId -> { v, kind, installPath, buildid, verdict } (directLaunchVerdict.ts).
+  const steamDirectLaunchVerdictStore = new CacheStore<unknown>(
+    'steam_direct_launch_verdict',
+    null,
+    { root: deps.root, kind: 'cache' }
+  )
 
   return {
     configStore,
@@ -368,6 +375,7 @@ export function createSteamStores(deps: StoreFamilyDeps) {
     steamSyncStore,
     steamPendingAdoptionStore,
     steamKnownFixReportStore,
-    steamUpdatePromptAckStore
+    steamUpdatePromptAckStore,
+    steamDirectLaunchVerdictStore
   }
 }
