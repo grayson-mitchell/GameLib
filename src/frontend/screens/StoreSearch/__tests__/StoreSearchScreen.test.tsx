@@ -365,7 +365,7 @@ describe('StoreSearch screen container', () => {
   })
 
   it('a successful empty result renders the no-results block (no icon), distinct from the prompt block', async () => {
-    mockApi.searchStores.mockResolvedValue([])
+    mockApi.searchStores.mockResolvedValue({ results: [], pricedCountry: 'US' })
     mount()
 
     const tree = await search('portal')
@@ -430,9 +430,12 @@ describe('StoreSearch screen container', () => {
       humble: { keys: [] }
     }
     seedStores()
-    mockApi.searchStores.mockResolvedValue([
-      makeResult({ gameId: 'game-1', title: 'Portal', steamAppId: '400' })
-    ])
+    mockApi.searchStores.mockResolvedValue({
+      results: [
+        makeResult({ gameId: 'game-1', title: 'Portal', steamAppId: '400' })
+      ],
+      pricedCountry: 'US'
+    })
     mount()
 
     const tree = await search('portal')

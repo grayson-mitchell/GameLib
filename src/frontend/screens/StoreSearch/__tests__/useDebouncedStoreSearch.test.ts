@@ -107,7 +107,10 @@ const mockApi = {
 // Imported after the mocks above (textual order — this project's ts-jest
 // setup does not hoist jest.mock like babel-jest; see HumbleOriginInfo.test.tsx).
 import { useDebouncedStoreSearch } from '../hooks/useDebouncedStoreSearch'
-import type { StoreSearchResult } from 'common/types/storeSearch'
+import type {
+  StoreSearchResponse,
+  StoreSearchResult
+} from 'common/types/storeSearch'
 import fs from 'fs'
 import path from 'path'
 import { defined } from '../../__tests__/fixtures/indexed'
@@ -171,6 +174,10 @@ function makeResult(
   }
 }
 
+function envelope(results: StoreSearchResult[]): StoreSearchResponse {
+  return { results, pricedCountry: 'US' }
+}
+
 describe('useDebouncedStoreSearch', () => {
   beforeEach(() => {
     jest.useFakeTimers()
@@ -183,7 +190,7 @@ describe('useDebouncedStoreSearch', () => {
   })
 
   it('rapid sequential setQuery within the 400ms window fires searchStores exactly once, with the final value', async () => {
-    mockApi.searchStores.mockResolvedValue([])
+    mockApi.searchStores.mockResolvedValue(envelope([]))
 
     let hook = mount()
     hook.setQuery('p')
@@ -220,10 +227,10 @@ describe('useDebouncedStoreSearch', () => {
   })
 
   it('ignores a stale (superseded) resolution via the generation guard', async () => {
-    const resolvers: Array<(value: StoreSearchResult[]) => void> = []
+    const resolvers: Array<(value: StoreSearchResponse) => void> = []
     mockApi.searchStores.mockImplementation(
       () =>
-        new Promise<StoreSearchResult[]>((resolve) => {
+        new Promise<StoreSearchResponse>((resolve) => {
           resolvers.push(resolve)
         })
     )
@@ -243,7 +250,7 @@ describe('useDebouncedStoreSearch', () => {
 
     // Newer (generation 2) resolves first with its real result.
     const newerResult = [makeResult({ gameId: 'portal-2', title: 'Portal 2' })]
-    defined(resolvers[1], 'newer resolver')(newerResult)
+    defined(resolvers[1], 'newer resolver')(envelope(newerResult))
     hook = await settle(hook)
     expect(hook.results).toEqual(newerResult)
     expect(hook.status).toBe('results')
@@ -253,17 +260,17 @@ describe('useDebouncedStoreSearch', () => {
     defined(
       resolvers[0],
       'stale resolver'
-    )([makeResult({ gameId: 'portal-1', title: 'Portal' })])
+    )(envelope([makeResult({ gameId: 'portal-1', title: 'Portal' })]))
     hook = await settle(hook)
     expect(hook.results).toEqual(newerResult)
     expect(hook.status).toBe('results')
   })
 
   it('WR-01: discards a stale in-flight response after the query is cleared below MIN_QUERY_LENGTH', async () => {
-    let resolveFetch: (value: StoreSearchResult[]) => void = () => {}
+    let resolveFetch: (value: StoreSearchResponse) => void = () => {}
     mockApi.searchStores.mockImplementation(
       () =>
-        new Promise<StoreSearchResult[]>((resolve) => {
+        new Promise<StoreSearchResponse>((resolve) => {
           resolveFetch = resolve
         })
     )
@@ -291,7 +298,7 @@ describe('useDebouncedStoreSearch', () => {
 
     // The stale in-flight response now resolves — it must be discarded,
     // not repopulate results or flip the screen back to a results view.
-    resolveFetch([makeResult()])
+    resolveFetch(envelope([makeResult()]))
     hook = await settle(hook)
 
     expect(hook.status).toBe('prompt')
@@ -321,10 +328,10 @@ describe('useDebouncedStoreSearch', () => {
   })
 
   it('exposes loading=true while the debounce timer is pending, and while a request is in-flight', async () => {
-    let resolveFetch: (value: StoreSearchResult[]) => void = () => {}
+    let resolveFetch: (value: StoreSearchResponse) => void = () => {}
     mockApi.searchStores.mockImplementation(
       () =>
-        new Promise<StoreSearchResult[]>((resolve) => {
+        new Promise<StoreSearchResponse>((resolve) => {
           resolveFetch = resolve
         })
     )
@@ -345,7 +352,7 @@ describe('useDebouncedStoreSearch', () => {
     expect(hook.loading).toBe(true)
     expect(mockApi.searchStores).toHaveBeenCalledTimes(1)
 
-    resolveFetch([])
+    resolveFetch(envelope([]))
     hook = await settle(hook)
 
     expect(hook.loading).toBe(false)

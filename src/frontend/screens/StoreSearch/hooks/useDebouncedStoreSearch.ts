@@ -105,8 +105,8 @@ export function useDebouncedStoreSearch(): UseDebouncedStoreSearchResult {
           return
         }
         setFetching(false)
-        setResults(response)
-        setStatus(response.length === 0 ? 'empty' : 'results')
+        setResults(response.results)
+        setStatus(response.results.length === 0 ? 'empty' : 'results')
       })
       .catch((err) => {
         if (generationRef.current !== generation) {
