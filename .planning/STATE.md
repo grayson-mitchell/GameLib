@@ -4,16 +4,16 @@ milestone: v0.10
 milestone_name: Foundations
 current_phase: 81
 status: planning
-stopped_at: Phase 81 context gathered
-last_updated: "2026-11-17T09:37:49.075Z"
+stopped_at: Phase 64 context gathered
+last_updated: "2026-11-17T09:55:20.659Z"
 last_activity: 2026-11-17
 last_activity_desc: "Completed quick task 261117-r4c: Native port hint catalogue and game-page block"
-state_head: 1aff893bb90539d2780a549c6b49a96ffeb82124
+state_head: 09e299725fd04861989436f6c0b1aaa3c55b8fe8
 progress:
   total_phases: 26
   completed_phases: 23
-  total_plans: 491
-  completed_plans: 481
+  total_plans: 501
+  completed_plans: 491
   percent: 88
 ---
 
@@ -812,9 +812,9 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-17T05:03:16.878Z
-Stopped at: Completed 47-13-PLAN.md (Settings > Advanced IsThereAnyDeal API key field with rejected-key warning; codecheck green; live check pending operator); previously completed 47-10-PLAN.md (cached-at "Price from" lines on rows and breakdown sub-rows, country-aware breakdown fetch, en strings; sidecar rebuilt; live check pending operator; codecheck green); 47-02 D-07 reply pending operator; Phase 81 context gathered
-Resume file: .planning/phases/81-unify-the-steam-restart-hold-into-restart-on-play/81-CONTEXT.md
+Last session: 2026-11-17T09:55:17.394Z
+Stopped at: Phase 64 context gathered
+Resume file: .planning/phases/64-ui-to-edit-themes/64-CONTEXT.md
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
 
