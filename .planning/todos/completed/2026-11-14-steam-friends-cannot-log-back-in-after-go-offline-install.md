@@ -30,3 +30,18 @@ Reproduce on a profile with Mac Steam running and signed in: start a Steam insta
 sign Friends back in. Check the owed-goonline record and whether `steam://open/goonline` is
 issued/owed at the right time. Decide whether the install should proceed without needing Steam
 closed.
+
+## Resolution (2026-11-17)
+
+Closed without a code change: Phase 79 removed the cause. The go-offline wrap
+(`macSteamOffline.ts`, `macSteamOfflineOwedFile.ts`) was deleted (`ad5a128ad`) after
+79-WRAP-RETEST returned `verdict: PASS`: an unwrapped authenticated logon leaves Mac Steam's
+Friends signed in. Nothing in `src/` or `src-tauri/` issues `steam://open/gooffline` now. The
+only code left is the owed-record restore in `gamelib-steamcm` `wrap.rs`, which sends
+`goonline` to pay a record that an older build left behind.
+
+Live evidence (79-UAT item 23, `e9fa6f180`): with Mac Steam running, ADOM (333300) installed
+through the Rust CM path (`CM logon mode=authenticated reason=user-install`,
+`[depot-rust] ... status=completed`). Friends stayed online, and Steam adopted the game via
+InstallApp without a restart, so Steam did not have to be closed. Items 13, 21, 24 and 25
+recorded Friends staying online across Refresh, sign-in and quit.
