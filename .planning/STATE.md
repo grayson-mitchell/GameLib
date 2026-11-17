@@ -5,16 +5,16 @@ milestone_name: Foundations
 current_phase: 64
 current_phase_name: UI to edit themes
 status: executing
-stopped_at: Completed 64-02-PLAN.md
-last_updated: "2026-11-17T19:02:52.524Z"
+stopped_at: Completed 64-04-PLAN.md
+last_updated: "2026-11-17T19:26:21.360Z"
 last_activity: 2026-11-18
 last_activity_desc: Phase 64 execution started
-state_head: 4f2d04081479c1a08868a9fce1818bcb388ec988
+state_head: 781a4c5fb1cc9d6278d3623f0bd56fe0644e7665
 progress:
   total_phases: 26
   completed_phases: 23
   total_plans: 521
-  completed_plans: 504
+  completed_plans: 505
   percent: 88
 ---
 
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 ## Current Position
 
 Phase: 64 (UI to edit themes) — EXECUTING
-Plan: 4 of 10
+Plan: 5 of 10
 Status: Ready to execute
 Last activity: 2026-11-18 — Phase 64 execution started
 
@@ -287,6 +287,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 64 P03 | 25 min | 2 tasks | 15 files |
 | Phase 81 P10 | 50min | 2 tasks | 21 files |
 | Phase 64 P02 | 19 min | 2 tasks | 12 files |
+| Phase 64 P04 | 25 min | 3 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -471,6 +472,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 81]: 81-10: the restart hold never arms; a native handoff reports Installed on the first ACF tick on every OS and the restart toast is bottle-only (1026 wait unchanged)
 - [Phase 64]: Built-in token seeds resolve root tokens in :root scope and body/theme tokens in body scope, never storing LIVE_DERIVED_TOKENS or --focus-ring-width (OD-1) — A token declared only on :root is computed at :root, so a theme override never reaches it; derived tokens must keep following Body background and Accent.
 - [Phase 64]: Core tokens a built-in leaves undeclared are seeded from the real consumer fallback chain; zombie --primary seeds to #00000000 — A later release declaring one in themes.scss must not change an existing copy, and .button background var(--primary) has no fallback.
+- [Phase 64]: One resolver (resolveThemeKey) answers which theme a key is; window.setTheme goes through applyTheme and replaces only the 10 built-in body classes
+- [Phase 64]: Save and the boot parser share cleanTokens (name pattern, known-token universe, canonical colours, gradient deny-list), so a saved token survives a restart
 
 ### Pending Todos
 
@@ -846,8 +849,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-17T19:02:49.164Z
-Stopped at: Completed 64-02-PLAN.md
+Last session: 2026-11-17T19:26:17.974Z
+Stopped at: Completed 64-04-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
