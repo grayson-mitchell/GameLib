@@ -58,14 +58,13 @@ type LaunchDispatchDeps = Pick<
  */
 export function dispatchSteamLaunch(
   deps: LaunchDispatchDeps,
-  appName: string,
-  mode: 'steam' | 'without-steam' = 'steam'
+  appName: string
 ): Promise<boolean> {
   return deps.appRuntime.launchFlights.singleFlightLaunch(
     'steam',
     appName,
     () => notifyAlreadyLaunching(deps, appName),
-    () => runDispatch(deps, appName, mode)
+    () => runDispatch(deps, appName)
   )
 }
 
@@ -100,15 +99,26 @@ function notifyAlreadyLaunching(
 
 async function runDispatch(
   deps: LaunchDispatchDeps,
-  appName: string,
-  mode: 'steam' | 'without-steam'
+  appName: string
 ): Promise<boolean> {
   const game = deps.libraryManagers.steam.getGame(appName)
-  // quick 261117-p38: 'without-steam' shares this single flight and the recent-games write.
-  const launched =
-    mode === 'without-steam'
-      ? await game.launchWithoutSteam()
-      : await game.launch(undefined as unknown as LogWriter)
+  // quick 261117-q1t: the per-game `launchWithoutSteam` setting picks the launch; it shares
+  // this single flight and the recent-games write. Unreadable settings count as off.
+  let withoutSteam = false
+  try {
+    withoutSteam = (await game.getSettings()).launchWithoutSteam === true
+  } catch (err) {
+    logWarning(
+      [
+        'dispatchSteamLaunch: could not read launchWithoutSteam; using Steam:',
+        err
+      ],
+      LogPrefix.Steam
+    )
+  }
+  const launched = withoutSteam
+    ? await game.launchWithoutSteam()
+    : await game.launch(undefined as unknown as LogWriter)
 
   if (!launched) {
     return false

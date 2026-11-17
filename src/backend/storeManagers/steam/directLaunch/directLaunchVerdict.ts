@@ -1,10 +1,10 @@
 /**
- * quick 261117-p38: the "Launch without Steam" eligibility decision.
+ * quick 261117-q1t (reworks p38): the "Launch without Steam" per-game setting verdict.
  *
- * A game is eligible only when it does not use the Steam API (PE import table or
- * a shipped steam_api(64).dll; Mach-O load command or a shipped libsteam_api /
- * steam_api.bundle) AND carries no Steam DRM wrapper (SteamStub, CEG markers, a
- * curated `drm: "ceg"` known fix). Anything unreadable fails closed ('unknown').
+ * Steam DRM (a PE SteamStub wrapper, CEG markers, a curated `drm: "ceg"` known fix) is the
+ * only probe result that makes the setting not apply. A Steam-API game, or one the probes
+ * could not read, still applies, carrying a warning the renderer shows (it may quit, run
+ * without Steam features, or reopen Steam).
  *
  * The decision is pure over injected probes (the real ones live in
  * directLaunchProbes.ts), so it is unit-testable without a filesystem or Rust.
@@ -12,8 +12,9 @@
  * kind. Detection only reads; nothing here writes or emulates steam_api.
  */
 import type {
-  SteamDirectLaunchIneligibleReason,
-  SteamDirectLaunchView
+  SteamDirectLaunchUnavailableReason,
+  SteamDirectLaunchView,
+  SteamDirectLaunchWarning
 } from 'common/types/steam'
 
 /** The ProcessRunner track label a Mac-native direct launch is spawned and stopped with. */
@@ -27,9 +28,19 @@ export interface DirectLaunchPlan {
   workingDir?: string
 }
 
+type VerdictUnavailableReason = Exclude<
+  SteamDirectLaunchUnavailableReason,
+  'error'
+>
+
 export type DirectLaunchVerdict =
-  | { eligible: true; kind: DirectLaunchKind; launch: DirectLaunchPlan }
-  | { eligible: false; reason: SteamDirectLaunchIneligibleReason }
+  | {
+      applies: true
+      kind: DirectLaunchKind
+      warning: SteamDirectLaunchWarning
+      launch: DirectLaunchPlan
+    }
+  | { applies: false; reason: VerdictUnavailableReason }
 
 export interface LaunchEntry {
   executable: string
@@ -73,9 +84,9 @@ export interface DirectLaunchInput {
 }
 
 export function toView(verdict: DirectLaunchVerdict): SteamDirectLaunchView {
-  return verdict.eligible
-    ? { eligible: true, kind: verdict.kind }
-    : { eligible: false, reason: verdict.reason }
+  return verdict.applies
+    ? { applies: true, kind: verdict.kind, warning: verdict.warning }
+    : { applies: false, reason: verdict.reason }
 }
 
 /** Whitespace split that honours double quotes. No shell semantics. */
@@ -101,18 +112,9 @@ export function splitLaunchArguments(raw: string): string[] {
   return out
 }
 
-// A frozen tuple, not a module-level Set: the module-state census counts Sets, and this never mutates.
-const NOT_CACHED: readonly SteamDirectLaunchIneligibleReason[] = [
-  'unknown',
-  'host-unsupported',
-  'route-unsupported',
-  'not-installed'
-]
-
-const no = (
-  reason: SteamDirectLaunchIneligibleReason
-): DirectLaunchVerdict => ({
-  eligible: false,
+// Host/route/install reasons are never computed here; 'unknown' warnings are not cached.
+const no = (reason: VerdictUnavailableReason): DirectLaunchVerdict => ({
+  applies: false,
   reason
 })
 
@@ -123,20 +125,29 @@ async function computeMacNative(
   if (probes.knownFixCeg()) return no('steam-drm')
   const entry = await probes.readLaunchEntry('macos')
   const binaryPath = probes.locateMacBinary(installPath, entry?.executable)
-  if (!binaryPath) return no('unknown')
-  const files = await probes.macSteamApiFiles(installPath)
-  if (files.length > 0) return no('steam-api')
-  const links = await probes.macLinks(binaryPath)
-  if (links === 'links') return no('steam-api')
-  if (links === 'unreadable') return no('unknown')
-  return {
-    eligible: true,
-    kind: 'mac-native',
-    launch: {
-      binaryPath,
-      args: splitLaunchArguments(entry?.arguments ?? ''),
-      ...(entry?.workingdir ? { workingDir: entry.workingdir } : {})
+  const args = splitLaunchArguments(entry?.arguments ?? '')
+  const workingDir = entry?.workingdir ? { workingDir: entry.workingdir } : {}
+  if (!binaryPath) {
+    return {
+      applies: true,
+      kind: 'mac-native',
+      warning: 'unknown',
+      launch: { args, ...workingDir }
     }
+  }
+  let warning: SteamDirectLaunchWarning = 'none'
+  const files = await probes.macSteamApiFiles(installPath)
+  if (files.length > 0) warning = 'steam-api'
+  else {
+    const links = await probes.macLinks(binaryPath)
+    if (links === 'links') warning = 'steam-api'
+    else if (links === 'unreadable') warning = 'unknown'
+  }
+  return {
+    applies: true,
+    kind: 'mac-native',
+    warning,
+    launch: { binaryPath, args, ...workingDir }
   }
 }
 
@@ -144,21 +155,24 @@ async function computeBridge(
   probes: DirectLaunchProbes
 ): Promise<DirectLaunchVerdict> {
   if (probes.knownFixCeg()) return no('steam-drm')
+  const entry = await probes.readLaunchEntry('windows')
+  const launch = { args: splitLaunchArguments(entry?.arguments ?? '') }
+  const yes = (warning: SteamDirectLaunchWarning): DirectLaunchVerdict => ({
+    applies: true,
+    kind: 'bridge',
+    warning,
+    launch
+  })
   const exe = await probes.resolveBridgeExe()
-  if (!exe) return no('unknown')
+  if (!exe) return yes('unknown')
   const drm = await probes.peDrm(exe)
-  if (drm === undefined) return no('unknown')
+  if (drm === undefined) return yes('unknown')
   if (drm !== 'none') return no('steam-drm')
   const imports = await probes.peImports(exe)
-  if (imports === 'error') return no('unknown')
-  if (imports === 'steam-api') return no('steam-api')
-  if ((await probes.peSteamApiDlls(exe)) > 0) return no('steam-api')
-  const entry = await probes.readLaunchEntry('windows')
-  return {
-    eligible: true,
-    kind: 'bridge',
-    launch: { args: splitLaunchArguments(entry?.arguments ?? '') }
-  }
+  if (imports === 'error') return yes('unknown')
+  if (imports === 'steam-api') return yes('steam-api')
+  if ((await probes.peSteamApiDlls(exe)) > 0) return yes('steam-api')
+  return yes('none')
 }
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -173,7 +187,7 @@ function readCached(
 ): DirectLaunchVerdict | undefined {
   try {
     const rec = deps.store.get(input.appId)
-    if (!isRecord(rec) || rec.v !== 1) return undefined
+    if (!isRecord(rec) || rec.v !== 2) return undefined
     if (
       rec.kind !== kind ||
       rec.installPath !== installPath ||
@@ -182,8 +196,11 @@ function readCached(
       return undefined
     }
     const v = rec.verdict
-    if (!isRecord(v) || typeof v.eligible !== 'boolean') return undefined
-    if (v.eligible) {
+    if (!isRecord(v) || typeof v.applies !== 'boolean') return undefined
+    if (v.applies) {
+      if (v.warning !== 'none' && v.warning !== 'steam-api') {
+        return undefined
+      }
       const launch = v.launch
       if (v.kind !== kind || !isRecord(launch) || !Array.isArray(launch.args)) {
         return undefined
@@ -203,8 +220,7 @@ function readCached(
       }
       return v as unknown as DirectLaunchVerdict
     }
-    return typeof v.reason === 'string' &&
-      (v.reason === 'steam-api' || v.reason === 'steam-drm')
+    return v.reason === 'steam-drm'
       ? (v as unknown as DirectLaunchVerdict)
       : undefined
   } catch {
@@ -234,20 +250,25 @@ export async function getDirectLaunchVerdict(
     deps.warn?.(
       `direct-launch verdict for appId ${input.appId} failed: ${String(err)}`
     )
-    verdict = no('unknown')
+    verdict = {
+      applies: true,
+      kind,
+      warning: 'unknown',
+      launch: { args: [] }
+    }
   }
 
   deps.info?.(
-    `direct-launch verdict for appId ${input.appId} recomputed (${kind}, buildid ${input.buildid || 'unknown'}): ${verdict.eligible ? 'eligible' : verdict.reason}`
+    `direct-launch verdict for appId ${input.appId} recomputed (${kind}, buildid ${input.buildid || 'unknown'}): ${verdict.applies ? `applies (warning ${verdict.warning})` : verdict.reason}`
   )
 
   if (
     input.buildid !== '' &&
-    (verdict.eligible || !NOT_CACHED.includes(verdict.reason))
+    (!verdict.applies || verdict.warning !== 'unknown')
   ) {
     try {
       deps.store.set(input.appId, {
-        v: 1,
+        v: 2,
         kind,
         installPath,
         buildid: input.buildid,

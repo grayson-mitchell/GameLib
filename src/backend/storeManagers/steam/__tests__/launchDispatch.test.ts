@@ -69,6 +69,7 @@ describe('dispatchSteamLaunch', () => {
     launchMock = jest.fn()
     getGameMock.mockReturnValue({
       launch: (...args: unknown[]) => launchMock(...args),
+      getSettings: () => Promise.resolve({}),
       getGameInfo: () => gameInfo
     })
   })
@@ -125,6 +126,7 @@ describe('WR-03: single-flight at the launch IPC entry', () => {
     launchMock = jest.fn()
     getGameMock.mockReturnValue({
       launch: (...args: unknown[]) => launchMock(...args),
+      getSettings: () => Promise.resolve({}),
       getGameInfo: () => ({
         app_name: appId,
         title: 'Some Steam Game',
@@ -169,5 +171,55 @@ describe('WR-03: single-flight at the launch IPC entry', () => {
     await new Promise(setImmediate)
     await dispatchSteamLaunch(deps, appId)
     expect(launchMock).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('quick 261117-q1t: the launchWithoutSteam game setting', () => {
+  const appId = '999004'
+  const launchMock = jest.fn()
+  const withoutMock = jest.fn()
+
+  function game(getSettings: () => Promise<unknown>) {
+    getGameMock.mockReturnValue({
+      launch: (...args: unknown[]) => launchMock(...args),
+      launchWithoutSteam: (...args: unknown[]) => withoutMock(...args),
+      getSettings,
+      getGameInfo: () => ({ app_name: appId, runner: 'steam' })
+    })
+  }
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    deps.appRuntime = createTestAppRuntime()
+    launchMock.mockResolvedValue(true)
+    withoutMock.mockResolvedValue(true)
+    addRecentGameMock.mockResolvedValue(undefined)
+  })
+
+  it('on: launches without Steam and records the recent game', async () => {
+    game(() => Promise.resolve({ launchWithoutSteam: true }))
+    expect(await dispatchSteamLaunch(deps, appId)).toBe(true)
+    expect(withoutMock).toHaveBeenCalledTimes(1)
+    expect(launchMock).not.toHaveBeenCalled()
+    expect(addRecentGameMock).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([
+    [{}],
+    [{ launchWithoutSteam: false }],
+    [{ launchWithoutSteam: 'yes' }]
+  ])('off or absent (%j): normal Steam launch', async (settings) => {
+    game(() => Promise.resolve(settings))
+    expect(await dispatchSteamLaunch(deps, appId)).toBe(true)
+    expect(launchMock).toHaveBeenCalledTimes(1)
+    expect(withoutMock).not.toHaveBeenCalled()
+  })
+
+  it('unreadable settings: warns and uses the normal Steam launch', async () => {
+    game(() => Promise.reject(new Error('no config')))
+    expect(await dispatchSteamLaunch(deps, appId)).toBe(true)
+    expect(logWarningMock).toHaveBeenCalledTimes(1)
+    expect(launchMock).toHaveBeenCalledTimes(1)
+    expect(withoutMock).not.toHaveBeenCalled()
   })
 })

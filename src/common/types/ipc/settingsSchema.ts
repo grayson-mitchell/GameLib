@@ -110,6 +110,7 @@ export const gameSettingsShape = {
   steamEngineOverride: str().optional(),
   engineOverride: str().optional(),
   steamOverlayOverride: z.enum(['automatic', 'on', 'off']).optional(),
+  launchWithoutSteam: z.boolean().optional(),
   winePrefix: str(),
   wineVersion: wineVersionArg,
   wrapperOptions: z

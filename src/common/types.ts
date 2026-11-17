@@ -336,6 +336,12 @@ export interface GameSettings {
    * The user's on/off beats a known fix in both directions (D-03).
    */
   steamOverlayOverride?: 'automatic' | 'on' | 'off'
+  /**
+   * quick 261117-q1t: macOS Mac-native/bridge Steam games launch without the Steam app on
+   * Play. Distinct from offlineMode, which launcher.ts also forces on when the network is
+   * down. Undefined means off.
+   */
+  launchWithoutSteam?: boolean
   winePrefix: string
   wineVersion: WineInstallation
   wrapperOptions: WrapperVariable[]

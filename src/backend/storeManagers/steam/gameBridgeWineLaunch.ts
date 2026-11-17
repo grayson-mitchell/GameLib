@@ -100,7 +100,7 @@ export async function fireBridgeWineLaunch(
   bridgeBottleSettingsIn: GameSettings,
   drm?: DrmWineLaunch,
   overlay?: OverlayLaunchPayload,
-  opts?: { withoutSteam?: { args: string[] } }
+  opts?: { withoutSteam?: { args: string[]; onNeedsSteam?: () => void } }
 ): Promise<boolean> {
   const reportLaunchFailure = (error: unknown) => {
     logWarning(

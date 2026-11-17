@@ -331,16 +331,25 @@ export interface SteamGameInfo extends GameInfoCore {
   steamPlatformsCaptured?: boolean
 }
 
-/** quick 261117-p38: why "Launch without Steam" is not offered for a game. */
-export type SteamDirectLaunchIneligibleReason =
+/** quick 261117-q1t: what the "Launch without Steam" toggle warns about. */
+export type SteamDirectLaunchWarning = 'none' | 'steam-api' | 'unknown'
+
+/**
+ * quick 261117-q1t: why the "Launch without Steam" toggle is unavailable. 'error' is
+ * only produced by the sidecar handler on bad input or a thrown verdict.
+ */
+export type SteamDirectLaunchUnavailableReason =
   | 'host-unsupported'
   | 'not-installed'
   | 'route-unsupported'
-  | 'steam-api'
   | 'steam-drm'
-  | 'unknown'
+  | 'error'
 
-/** quick 261117-p38: the renderer-facing "Launch without Steam" verdict. */
+/** quick 261117-q1t: the renderer-facing "Launch without Steam" verdict. */
 export type SteamDirectLaunchView =
-  | { eligible: true; kind: 'mac-native' | 'bridge' }
-  | { eligible: false; reason: SteamDirectLaunchIneligibleReason }
+  | {
+      applies: true
+      kind: 'mac-native' | 'bridge'
+      warning: SteamDirectLaunchWarning
+    }
+  | { applies: false; reason: SteamDirectLaunchUnavailableReason }

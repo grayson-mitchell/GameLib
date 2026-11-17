@@ -58,7 +58,7 @@ import { prepareTcpOverlay } from './gameLaunchOverlay'
  * shim, no bridge helper, no overlay and no steamclient-layer DRM mode.
  */
 export interface BridgeLaunchOptions {
-  withoutSteam?: { args: string[] }
+  withoutSteam?: { args: string[]; onNeedsSteam?: () => void }
 }
 
 export async function launchBridgeGameBody(
@@ -170,21 +170,13 @@ export async function launchBridgeGameBody(
   // 59-REVIEW WR-04 / 59-15: persist what this launch routed on so the engine
   // state keeps the override off DRM-mode titles.
   if (opts?.withoutSteam && wantsDrm) {
-    // A stale verdict: DRM mode needs Steam, so it is not a direct-launch game.
+    // A stale verdict: DRM mode needs Steam. The caller falls back to the Steam launch
+    // after this launch settles, so no notification and no terminal 'done' here.
     logWarning(
-      `SteamGame: appId ${steamGame.appId} needs Steam DRM mode — refusing to launch without Steam`,
+      `SteamGame: appId ${steamGame.appId} needs Steam DRM mode; falling back to the normal Steam launch`,
       LogPrefix.Steam
     )
-    notify(steamGame.deps, {
-      title: steamGame.getGameInfo().title,
-      // Same call shape as the file's other i18next.t uses; the lint ceiling counts warnings.
-      // eslint-disable-next-line import-x/no-named-as-default-member
-      body: i18next.t(
-        'gamelib:steam.directLaunch.notEligible',
-        'This game can no longer launch without Steam. Use Play instead.'
-      )
-    })
-    sendLaunchDone(steamGame)
+    opts.withoutSteam.onNeedsSteam?.()
     return false
   }
   // A direct launch must not rewrite the persisted bridge-mode verdict.

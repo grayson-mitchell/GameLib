@@ -7,8 +7,9 @@
  * - Bridge (Windows): the existing bridge launch runs the exe in its bottle with
  *   no shim, no helper, no overlay and no DRM mode (`withoutSteam`).
  *
- * The sidecar re-derives the verdict here and refuses an ineligible game
- * whatever the renderer sent. Nothing in this folder writes, copies or
+ * quick 261117-q1t: now a per-game setting honoured by Play. The sidecar
+ * re-derives the verdict here; DRM and every non-launchable case fall back to
+ * the normal Steam launch, never a failure. Nothing in this folder writes, copies or
  * emulates steam_api (DRM boundary).
  */
 import i18next from 'i18next'
@@ -17,13 +18,15 @@ import { dirname, isAbsolute, relative, resolve } from 'node:path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { notify } from 'backend/dialog/dialog'
 import { sendGameStatusUpdate } from 'backend/utils'
+import type LogWriter from 'backend/logger/log_writer'
 import type { ProcessRunner } from 'backend/process/types'
 import type SteamGame from '../games'
 import { launchBridgeGame } from '../gameBridgeLaunchGate'
 import { getSteamDirectLaunchVerdict } from './directLaunchProbes'
 import {
   STEAM_DIRECT_TRACK_RUNNER,
-  type DirectLaunchPlan
+  type DirectLaunchPlan,
+  type DirectLaunchVerdict
 } from './directLaunchVerdict'
 
 export interface MacNativeLaunchDeps {
@@ -90,17 +93,6 @@ export function launchMacNativeWithoutSteam(
   })
 }
 
-function notifyNotEligible(steamGame: SteamGame): void {
-  notify(steamGame.deps, {
-    title: steamGame.getGameInfo().title,
-    // eslint-disable-next-line import-x/no-named-as-default-member
-    body: i18next.t(
-      'gamelib:steam.directLaunch.notEligible',
-      'This game can no longer launch without Steam. Use Play instead.'
-    )
-  })
-}
-
 function notifyFailed(steamGame: SteamGame): void {
   const game = steamGame.getGameInfo().title
   notify(steamGame.deps, {
@@ -114,32 +106,63 @@ function notifyFailed(steamGame: SteamGame): void {
   })
 }
 
+export interface LaunchWithoutSteamSeams {
+  getVerdict(steamGame: SteamGame): Promise<DirectLaunchVerdict>
+}
+
 export async function launchWithoutSteam(
-  steamGame: SteamGame
+  steamGame: SteamGame,
+  seams: LaunchWithoutSteamSeams = { getVerdict: getSteamDirectLaunchVerdict }
 ): Promise<boolean> {
   const { appId, deps } = steamGame
-  const verdict = await getSteamDirectLaunchVerdict(steamGame)
-  if (!verdict.eligible) {
-    logWarning(
-      `direct launch refused for appId ${appId}: ${verdict.reason}`,
+  // quick 261117-q1t: the setting never fails a launch; anything not launchable goes through Steam.
+  const viaSteam = (
+    reason: string,
+    level: 'info' | 'warn'
+  ): Promise<boolean> => {
+    const message = `launch without Steam skipped for appId ${appId} (${reason}); using the normal Steam launch`
+    if (level === 'info') logInfo(message, LogPrefix.Steam)
+    else logWarning(message, LogPrefix.Steam)
+    return steamGame.launch(undefined as unknown as LogWriter)
+  }
+  const verdict = await seams.getVerdict(steamGame)
+  if (!verdict.applies) {
+    return viaSteam(
+      verdict.reason,
+      verdict.reason === 'steam-drm' ? 'warn' : 'info'
+    )
+  }
+  if (verdict.warning !== 'none') {
+    logInfo(
+      `launch without Steam for appId ${appId} carries warning ${verdict.warning}`,
       LogPrefix.Steam
     )
-    notifyNotEligible(steamGame)
-    return false
   }
   if (verdict.kind === 'bridge') {
     logInfo(
       `direct launch of bridge appId ${appId} (no shim, no helper, no overlay)`,
       LogPrefix.Steam
     )
-    return launchBridgeGame(steamGame, {
-      withoutSteam: { args: verdict.launch.args }
+    let needsSteam = false
+    const launched = await launchBridgeGame(steamGame, {
+      withoutSteam: {
+        args: verdict.launch.args,
+        onNeedsSteam: () => {
+          needsSteam = true
+        }
+      }
     })
+    // The bridge in-flight entry is released by now; launch() cannot join itself.
+    if (!launched && needsSteam) return viaSteam('late Steam DRM', 'warn')
+    return launched
   }
   const installPath = steamGame.getGameInfo().install?.install_path
-  if (typeof installPath !== 'string' || installPath.length === 0) {
-    notifyNotEligible(steamGame)
-    return false
+  if (
+    typeof installPath !== 'string' ||
+    installPath.length === 0 ||
+    !verdict.launch.binaryPath
+  ) {
+    return viaSteam('no launch binary', 'warn')
   }
   const started = await launchMacNativeWithoutSteam(
     {

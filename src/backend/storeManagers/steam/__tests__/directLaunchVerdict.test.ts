@@ -56,7 +56,7 @@ describe('getDirectLaunchVerdict gating', () => {
         ...macInput,
         host: h
       })
-      expect(v).toEqual({ eligible: false, reason: 'host-unsupported' })
+      expect(v).toEqual({ applies: false, reason: 'host-unsupported' })
       for (const p of Object.values(probes)) expect(p).not.toHaveBeenCalled()
     }
   )
@@ -65,84 +65,99 @@ describe('getDirectLaunchVerdict gating', () => {
     const d = makeDeps(makeProbes())
     expect(
       await getDirectLaunchVerdict(d, { ...macInput, kind: null })
-    ).toEqual({ eligible: false, reason: 'route-unsupported' })
+    ).toEqual({ applies: false, reason: 'route-unsupported' })
     expect(
       await getDirectLaunchVerdict(d, { ...macInput, installPath: undefined })
-    ).toEqual({ eligible: false, reason: 'not-installed' })
+    ).toEqual({ applies: false, reason: 'not-installed' })
   })
 })
 
 describe('mac-native', () => {
-  test('clean binary is eligible with the PICS launch plan', async () => {
+  test('clean binary applies with no warning and the PICS launch plan', async () => {
     const v = await getDirectLaunchVerdict(makeDeps(makeProbes()), macInput)
     expect(v).toEqual({
-      eligible: true,
+      applies: true,
       kind: 'mac-native',
+      warning: 'none',
       launch: {
         binaryPath: '/inst/Game.app/Contents/MacOS/Game',
         args: ['-windowed']
       }
     })
-    expect(toView(v)).toEqual({ eligible: true, kind: 'mac-native' })
+    expect(toView(v)).toEqual({
+      applies: true,
+      kind: 'mac-native',
+      warning: 'none'
+    })
   })
 
-  test('steam_api file, load command, ceg known fix', async () => {
+  test('steam_api files or a load command apply with the steam-api warning', async () => {
     const files = makeProbes({
       macSteamApiFiles: jest.fn(() => Promise.resolve(['/x']))
     })
-    expect(await getDirectLaunchVerdict(makeDeps(files), macInput)).toEqual({
-      eligible: false,
-      reason: 'steam-api'
+    expect(
+      await getDirectLaunchVerdict(makeDeps(files), macInput)
+    ).toMatchObject({
+      applies: true,
+      warning: 'steam-api',
+      launch: { binaryPath: expect.any(String) }
     })
     const links = makeProbes({
       macLinks: jest.fn(() => Promise.resolve('links'))
     })
-    expect(await getDirectLaunchVerdict(makeDeps(links), macInput)).toEqual({
-      eligible: false,
-      reason: 'steam-api'
-    })
+    expect(
+      await getDirectLaunchVerdict(makeDeps(links), macInput)
+    ).toMatchObject({ applies: true, warning: 'steam-api' })
+  })
+
+  test('a ceg known fix is the only thing that does not apply', async () => {
     const ceg = makeProbes({ knownFixCeg: jest.fn(() => true) })
     expect(await getDirectLaunchVerdict(makeDeps(ceg), macInput)).toEqual({
-      eligible: false,
+      applies: false,
       reason: 'steam-drm'
     })
   })
 
-  test('binary not located or unreadable is unknown', async () => {
+  test('binary not located applies with an unknown warning and no binaryPath', async () => {
     const none = makeProbes({ locateMacBinary: jest.fn(() => null) })
     expect(await getDirectLaunchVerdict(makeDeps(none), macInput)).toEqual({
-      eligible: false,
-      reason: 'unknown'
+      applies: true,
+      kind: 'mac-native',
+      warning: 'unknown',
+      launch: { args: ['-windowed'] }
     })
+  })
+
+  test('an unreadable binary applies with an unknown warning', async () => {
     const unreadable = makeProbes({
       macLinks: jest.fn(() => Promise.resolve('unreadable'))
     })
     expect(
       await getDirectLaunchVerdict(makeDeps(unreadable), macInput)
-    ).toEqual({ eligible: false, reason: 'unknown' })
+    ).toMatchObject({ applies: true, warning: 'unknown' })
   })
 
   test('a throwing probe is unknown, never thrown', async () => {
     const boom = makeProbes({
       readLaunchEntry: jest.fn(() => Promise.reject(new Error('x')))
     })
-    expect(await getDirectLaunchVerdict(makeDeps(boom), macInput)).toEqual({
-      eligible: false,
-      reason: 'unknown'
-    })
+    expect(
+      await getDirectLaunchVerdict(makeDeps(boom), macInput)
+    ).toMatchObject({ applies: true, warning: 'unknown' })
   })
 })
 
 describe('bridge', () => {
   const entry = { executable: 'g.exe', arguments: '-path "My Dir" -x' }
-  test('eligible with args from the windows entry', async () => {
+  test('applies with args from the windows entry', async () => {
     const probes = makeProbes({
       readLaunchEntry: jest.fn(() => Promise.resolve(entry))
     })
     expect(await getDirectLaunchVerdict(makeDeps(probes), bridgeInput)).toEqual(
       {
-        eligible: true,
+        applies: true,
         kind: 'bridge',
+        warning: 'none',
         launch: { args: ['-path', 'My Dir', '-x'] }
       }
     )
@@ -150,17 +165,25 @@ describe('bridge', () => {
   })
 
   test.each([
-    ['steamstub', { peDrm: () => Promise.resolve('steamstub') }, 'steam-drm'],
-    ['ceg markers', { peDrm: () => Promise.resolve('ceg') }, 'steam-drm'],
-    ['known fix', { knownFixCeg: () => true }, 'steam-drm'],
+    ['steamstub', { peDrm: () => Promise.resolve('steamstub') }],
+    ['ceg markers', { peDrm: () => Promise.resolve('ceg') }],
+    ['known fix', { knownFixCeg: () => true }],
     [
       'drm before steam-api',
       {
         peDrm: () => Promise.resolve('steamstub'),
         peImports: () => Promise.resolve('steam-api')
-      },
-      'steam-drm'
-    ],
+      }
+    ]
+  ])('%s does not apply', async (_n, over) => {
+    const v = await getDirectLaunchVerdict(
+      makeDeps(makeProbes(over as Partial<DirectLaunchProbes>)),
+      bridgeInput
+    )
+    expect(v).toEqual({ applies: false, reason: 'steam-drm' })
+  })
+
+  test.each([
     ['import', { peImports: () => Promise.resolve('steam-api') }, 'steam-api'],
     [
       'runtime dll or shim',
@@ -178,12 +201,17 @@ describe('bridge', () => {
       { resolveBridgeExe: () => Promise.resolve(undefined) },
       'unknown'
     ]
-  ])('%s', async (_n, over, reason) => {
+  ])('%s applies with a warning', async (_n, over, warning) => {
     const v = await getDirectLaunchVerdict(
       makeDeps(makeProbes(over as Partial<DirectLaunchProbes>)),
       bridgeInput
     )
-    expect(v).toEqual({ eligible: false, reason })
+    expect(v).toMatchObject({
+      applies: true,
+      kind: 'bridge',
+      warning,
+      launch: { args: ['-windowed'] }
+    })
   })
 })
 
@@ -194,7 +222,7 @@ describe('cache', () => {
     await getDirectLaunchVerdict(d, macInput)
     const calls = probes.macLinks.mock.calls.length
     const again = await getDirectLaunchVerdict(d, macInput)
-    expect(again.eligible).toBe(true)
+    expect(again.applies).toBe(true)
     expect(probes.macLinks.mock.calls.length).toBe(calls)
   })
 
@@ -210,7 +238,7 @@ describe('cache', () => {
     await getDirectLaunchVerdict(d, { ...macInput, ...change })
     expect(probes.knownFixCeg.mock.calls.length).toBeGreaterThan(before)
     const stored = d.map.get('10') as Record<string, unknown>
-    expect(stored.v).toBe(1)
+    expect(stored.v).toBe(2)
     expect(stored.buildid).toBe(
       (change as { buildid?: string }).buildid ?? '100'
     )
@@ -219,7 +247,7 @@ describe('cache', () => {
   test('empty buildid computes but does not store', async () => {
     const d = makeDeps(makeProbes())
     const v = await getDirectLaunchVerdict(d, { ...macInput, buildid: '' })
-    expect(v.eligible).toBe(true)
+    expect(v.applies).toBe(true)
     expect(d.map.size).toBe(0)
   })
 
@@ -229,43 +257,61 @@ describe('cache', () => {
     expect(d.map.size).toBe(0)
   })
 
-  test('corrupt records are recomputed', async () => {
+  test('corrupt and v1 records are recomputed', async () => {
+    const good = {
+      v: 2,
+      kind: 'mac-native',
+      installPath: '/inst',
+      buildid: '100'
+    }
     for (const bad of [
       'junk',
-      { v: 2 },
+      { v: 1 },
       {
+        ...good,
         v: 1,
-        kind: 'mac-native',
-        installPath: '/inst',
-        buildid: '100',
-        verdict: { eligible: true }
+        verdict: {
+          eligible: true,
+          kind: 'mac-native',
+          launch: { args: [] }
+        }
       },
+      { ...good, verdict: { applies: true, kind: 'mac-native' } },
       {
-        v: 1,
-        kind: 'mac-native',
-        installPath: '/inst',
-        buildid: '100',
-        verdict: { eligible: false, reason: 'bogus' }
-      }
+        ...good,
+        verdict: {
+          applies: true,
+          kind: 'mac-native',
+          warning: 'unknown',
+          launch: { args: [] }
+        }
+      },
+      { ...good, verdict: { applies: false, reason: 'bogus' } },
+      { ...good, verdict: { applies: false, reason: 'steam-api' } }
     ]) {
       const probes = makeProbes()
       const d = makeDeps(probes)
       d.map.set('10', bad)
       const v = await getDirectLaunchVerdict(d, macInput)
-      expect(v.eligible).toBe(true)
+      expect(v.applies).toBe(true)
       expect(probes.knownFixCeg).toHaveBeenCalled()
     }
   })
 
-  test('ineligible steam-api verdicts are cached', async () => {
-    const probes = makeProbes({
-      macLinks: jest.fn(() => Promise.resolve('links'))
-    })
-    const d = makeDeps(probes)
-    await getDirectLaunchVerdict(d, macInput)
-    const n = probes.macLinks.mock.calls.length
-    await getDirectLaunchVerdict(d, macInput)
-    expect(probes.macLinks.mock.calls.length).toBe(n)
+  test('steam-api and steam-drm verdicts are cached', async () => {
+    for (const [over, applies] of [
+      [{ macLinks: jest.fn(() => Promise.resolve('links')) }, true],
+      [{ knownFixCeg: jest.fn(() => true) }, false]
+    ] as const) {
+      const probes = makeProbes(over as Partial<DirectLaunchProbes>)
+      const d = makeDeps(probes)
+      await getDirectLaunchVerdict(d, macInput)
+      expect(d.map.size).toBe(1)
+      const n = probes.knownFixCeg.mock.calls.length
+      const again = await getDirectLaunchVerdict(d, macInput)
+      expect(again.applies).toBe(applies)
+      expect(probes.knownFixCeg.mock.calls.length).toBe(n)
+    }
   })
 })
 
