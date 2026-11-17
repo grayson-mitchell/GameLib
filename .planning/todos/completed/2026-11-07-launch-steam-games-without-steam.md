@@ -142,5 +142,8 @@ Operator, this Mac. Restart `pnpm tauri:dev` first (it does not rebuild the side
   spawn failed with EBADARCH (-86); the "could not launch" notification was sent but not seen.
   The verdict now reads each slice's CPU type and does not apply when no slice can run here
   (`mac-arch-unsupported`, toggle hidden); cache v4. Not a row-(a) candidate after all.
-- Still to run: Dead Age 2 (951430, universal x86_64+arm64, no Steam API) with Steam quit;
-  steps 5-7.
+- Dead Age 2 (951430, Mac-native, row a): **launched with Steam quit**. The verdict applied with
+  warning none; no fallback or spawn-failure line; no steam_osx process was started. Game-status
+  cycles at 20:10:31 and 20:10:57. Gap: a successful direct spawn logs nothing, so the log
+  cannot prove the route on its own.
+- Still to run: Stop on a direct launch; steps 5-7.
