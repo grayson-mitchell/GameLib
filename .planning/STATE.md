@@ -3,16 +3,17 @@ gsd_state_version: "1.0"
 milestone: v0.10
 milestone_name: Foundations
 current_phase: 81
-status: planning
+current_phase_name: Unify the Steam restart hold into restart-on-Play
+status: executing
 stopped_at: Phase 64 context gathered
-last_updated: "2026-11-17T09:55:20.659Z"
+last_updated: "2026-11-17T10:41:45.507Z"
 last_activity: 2026-11-17
 last_activity_desc: "Completed quick task 261117-r4c: Native port hint catalogue and game-page block"
-state_head: 09e299725fd04861989436f6c0b1aaa3c55b8fe8
+state_head: cb4a645904bb7031d957d7ed555639765f39001f
 progress:
   total_phases: 26
   completed_phases: 23
-  total_plans: 501
+  total_plans: 511
   completed_plans: 491
   percent: 88
 ---
@@ -75,9 +76,9 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 
 ## Current Position
 
-Phase: 81
+Phase: 81 (Unify the Steam restart hold into restart-on-Play) — READY TO EXECUTE
 Plan: Not started
-Status: Ready to plan
+Status: Ready to execute
 Last activity: 2026-11-17 - Completed quick task 261117-ubb: Load a pinned CDN-fetched libsteam_api.dylib in the macOS bridge helper
 
 Progress: [█████████░] 88%

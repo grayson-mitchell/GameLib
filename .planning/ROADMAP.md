@@ -1868,80 +1868,64 @@ Plans:
 Plans 81-10 through 81-13 ship in the same release (operator decision 2026-11-17): between the boot re-arm's deletion and the boot drain, a hold persisted by an older build is neither re-armed nor migrated.
 
 Plans:
-
 **Wave 1**
-
 - [ ] 81-01-PLAN.md — adoptionState event contract and the Rust adoption-watch task (ACF rewrite, macOS pid)
 
 **Wave 2** *(blocked on Wave 1 completion)*
-
 - [ ] 81-02-PLAN.md — adoption watch/unwatch/read ops on every layer
 - [ ] 81-04-PLAN.md — helper `--steam-appstate` (BLoggedOn, GetAppInstallState), Rust reader, macOS helper evidence, D-09 fallback
 
 **Wave 3** *(blocked on Wave 2 completion)*
-
 - [ ] 81-03-PLAN.md — watch every pending-adoption record GameLib writes; unwatch every clear; boot resume
 - [ ] 81-05-PLAN.md — Windows/Linux evidence: content_log rescan rule, libraryfolders, signed-in readers
 
 **Wave 4** *(blocked on Wave 3 completion)*
-
 - [ ] 81-06-PLAN.md — restart-on-Play on every OS: Play gate, record writer, unadopted uninstall, D-06 pin
 
 **Wave 5** *(blocked on Wave 4 completion)*
-
 - [ ] 81-07-PLAN.md — refusal as an in-app notice with "Launch without Steam" for eligible games
 
 **Wave 6** *(blocked on Wave 5 completion)*
-
 - [ ] 81-08-PLAN.md — game-page note and its actions (Restart Steam now, Open Steam), query-driven
 
 **Wave 7** *(blocked on Wave 6 completion)*
-
 - [ ] 81-09-PLAN.md — the note stays live: status push on every record change, signed-in feed from the watch
 
 **Wave 8** *(blocked on Wave 7 completion)*
-
 - [ ] 81-10-PLAN.md — Installed as soon as the ACF says so; native restart toast removed
 
 **Wave 9** *(blocked on Wave 8 completion)*
-
 - [ ] 81-11-PLAN.md — delete the boot re-arm
 
 **Wave 10** *(blocked on Wave 9 completion)*
-
 - [ ] 81-12-PLAN.md — drain and discard ops for persisted holds (Rust reads, validates, deletes)
 
 **Wave 11** *(blocked on Wave 10 completion)*
-
 - [ ] 81-13-PLAN.md — D-12 boot migration of persisted holds; rearmSettled off the wire
 
 **Wave 12** *(blocked on Wave 11 completion)*
-
 - [ ] 81-14-PLAN.md — no hold state machine in the install poll; no hold field in the start options; invariant test
 
 **Wave 13** *(blocked on Wave 12 completion)*
-
 - [ ] 81-15-PLAN.md — no hold sink in effects, the install loop, the facade or the shell
 
 **Wave 14** *(blocked on Wave 13 completion)*
-
 - [ ] 81-16-PLAN.md — hold.rs deleted: probes to steam_process.rs, records to hold_migration.rs
 
 **Wave 15** *(blocked on Wave 14 completion)*
-
 - [ ] 81-17-PLAN.md — no hold in the poll status or the library refresh
 
 **Wave 16** *(blocked on Wave 15 completion)*
-
 - [ ] 81-18-PLAN.md — dead TS start-token probe removed; Phase 81 deletion gate
 
 **Wave 17** *(blocked on Wave 16 completion)*
-
 - [ ] 81-19-PLAN.md — author the live-gate contract (81-HUMAN-UAT.md) and its reachability review
 
 **Wave 18** *(blocked on Wave 17 completion)*
-
 - [ ] 81-20-PLAN.md — run the live gate on macOS, Windows 11 and Linux (operator)
+
+**Cross-cutting constraints:** <!-- gsd:generated -->
+- Release coupling (operator decision 2026-11-17): plans 81-10, 81-11, 81-12 and 81-13 ship in the same release
 
 ## v0.11 Phase Details
 
