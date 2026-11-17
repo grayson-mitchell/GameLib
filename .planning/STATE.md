@@ -5,16 +5,16 @@ milestone_name: Foundations
 current_phase: 64
 current_phase_name: UI to edit themes
 status: executing
-stopped_at: Completed 64-08-PLAN.md
-last_updated: "2026-11-17T20:48:21.039Z"
+stopped_at: Completed 64-09-PLAN.md
+last_updated: "2026-11-17T21:03:25.984Z"
 last_activity: 2026-11-18
 last_activity_desc: Phase 64 execution started
-state_head: ece082c214fadf1d8639d77af6cad5d0fee98614
+state_head: e083b2822562fd41cd67504e20ab7fc02024ec4f
 progress:
   total_phases: 26
   completed_phases: 23
   total_plans: 521
-  completed_plans: 509
+  completed_plans: 510
   percent: 88
 ---
 
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 ## Current Position
 
 Phase: 64 (UI to edit themes) — EXECUTING
-Plan: 9 of 10
+Plan: 10 of 10
 Status: Ready to execute
 Last activity: 2026-11-18 — Phase 64 execution started
 
@@ -292,6 +292,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 64 P06 | 30min | 3 tasks | 14 files |
 | Phase 64 P07 | 45min | 3 tasks | 16 files |
 | Phase 64 P08 | 50 min | 3 tasks | 17 files |
+| Phase 64 P09 | 40 min | 3 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -488,6 +489,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 64]: A live-derived token's empty field clears it from the draft (ThemeEditor commit deletes the key on empty), so it keeps following its source
 - [Phase 64]: GradientField paints its strip only from the last value isValidGradient accepted and exposes it as data-gradient (jsdom drops gradients from inline style)
 - [Phase 64]: i18n-gate-exempt must be a JSDoc block before a module-level declaration; a line comment inside a function body is not honoured
+- [Phase 64]: 64-09: leave prompt resolves via a resolved flag plus queueMicrotask because MessageBoxModal runs onClose before the clicked button onClick; Escape/backdrop/X mean Keep editing
+- [Phase 64]: 64-09: save-failure notice has no auto-hide (like ReadOnlyStoresNotice); noticeStackStylesheetGate treats Body as optional for one-sentence notices
 
 ### Pending Todos
 
@@ -863,8 +866,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-17T20:48:17.592Z
-Stopped at: Completed 64-08-PLAN.md
+Last session: 2026-11-17T21:03:11.994Z
+Stopped at: Completed 64-09-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
