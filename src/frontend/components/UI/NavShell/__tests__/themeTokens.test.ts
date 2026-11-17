@@ -15,15 +15,28 @@
  * CR-02's ONLY evidence; see index.scss's own comment on `.NavShell__navbar`
  * for the full acceptance of that limitation.
  *
- * `read()` (piped through `stripSourceComments`) and the brace-counted
- * `cssBlock()` helper are copied verbatim from
- * `src/frontend/screens/Library/__tests__/tier2Portal.test.ts`, which itself
- * copied them from the Login source-gate idiom -- not factored into a
- * shared util, matching that file's own precedent.
+ * `read()` (piped through `stripSourceComments`) stays local. The brace-counted
+ * SCSS block parsers, the colour math and the `var()`/`color-mix()` resolver
+ * were lifted into `frontend/testUtils/scssTokenSource` and
+ * `frontend/customThemes/{colour,tokenResolve}` by phase 64-01 (D-16), so the
+ * theme editor and this census share one implementation.
  */
 import { readFileSync, readdirSync } from 'fs'
 import { join, sep } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
+import {
+  allBlocksFor,
+  cssBlock,
+  customProps,
+  globalTokensFrom,
+  themeTokensFrom
+} from 'frontend/testUtils/scssTokenSource'
+import {
+  NAMED_COLOURS,
+  contrastRatio,
+  mixSrgb
+} from 'frontend/customThemes/colour'
+import { resolveColour, resolveValue } from 'frontend/customThemes/tokenResolve'
 import { at, defined } from '../../../__tests__/fixtures/indexed'
 
 const REPO_ROOT = join(__dirname, '..', '..', '..', '..', '..', '..')
@@ -111,32 +124,6 @@ const NAVBAR_ACTIVE_FALLBACK_CHAIN =
 /** `--navbar-active` but NOT `--navbar-active-background`. */
 const BARE_NAVBAR_ACTIVE = /var\(\s*--navbar-active\s*\)/
 const ANY_NAVBAR_ACTIVE = /--navbar-active(?![-\w])/g
-
-/**
- * Returns the declaration body of the FIRST top-level rule whose selector
- * matches exactly, e.g. `.Header`. Brace-counted rather than
- * regex-terminated so a nested block cannot end the match early. Copied
- * verbatim from tier2Portal.test.ts (itself copied from the Login
- * source-gate idiom) rather than factored into a shared util, matching that
- * file's own precedent.
- */
-function cssBlock(source: string, selector: string): string {
-  const start = source.indexOf(`${selector} {`)
-  if (start === -1) {
-    throw new Error(`selector ${selector} not found`)
-  }
-  let depth = 0
-  for (let i = source.indexOf('{', start); i < source.length; i++) {
-    if (source[i] === '{') depth++
-    if (source[i] === '}') {
-      depth--
-      if (depth === 0) {
-        return source.slice(source.indexOf('{', start) + 1, i)
-      }
-    }
-  }
-  throw new Error(`unterminated block for ${selector}`)
-}
 
 describe('gruvbox_dark theme tokens (CR-01, D-31)', () => {
   const themesScss = read(THEMES_SCSS)
@@ -421,155 +408,19 @@ const COLORS_SCSS = 'src/frontend/styles/_colors.scss'
 const NAV_TABS_SCSS =
   'src/frontend/components/UI/NavShell/components/NavTabs/index.scss'
 
-/** Top-level `--x: value;` pairs of a block body, ignoring nested rules. */
-const customProps = (blockBody: string): Map<string, string> => {
-  const out = new Map<string, string>()
-  let depth = 0
-  let buf = ''
-  for (const ch of blockBody) {
-    if (ch === '{') {
-      depth++
-      buf = ''
-    } else if (ch === '}') {
-      depth--
-      buf = ''
-    } else if (ch === ';' && depth === 0) {
-      const m = /^\s*(--[\w-]+)\s*:\s*([\s\S]+)$/.exec(buf)
-      if (m) out.set(defined(m[1]), defined(m[2]).trim().replace(/\s+/g, ' '))
-      buf = ''
-    } else {
-      buf += ch
-    }
-  }
-  return out
-}
-
 /**
  * Global tokens (`--neutral-*`, `--brand-*`) live in `styles/_colors.scss`, NOT
  * in themes.scss. Omitting them makes every midnightMirage chain resolve to
  * nothing, which reads as "no data" rather than as an error -- a silent way for
  * this whole census to go vacuous. Asserted non-empty below.
  */
-const globalTokens = (): Map<string, string> => {
-  const src = read(COLORS_SCSS)
-  const out = new Map<string, string>()
-  for (const m of src.matchAll(/(--[\w-]+)\s*:\s*([^;{}]+);/g)) {
-    if (!out.has(defined(m[1]))) out.set(defined(m[1]), defined(m[2]).trim())
-  }
-  return out
-}
-
-/**
- * Every block matching `selector`, merged last-wins. Re-verified 2026-10-04
- * (quick task 261004-bz3, after collapsing the comma-joined groups to single
- * selectors): none of the 10 surviving themes is declared twice in
- * themes.scss -- each `body.<theme> {` now appears exactly once. The merge
- * (rather than a single-match lookup) is kept anyway as a defensive measure
- * against a future theme block being accidentally split across two rules,
- * not because any live duplicate exists today.
- */
-const allBlocksFor = (source: string, selector: string): string[] => {
-  // Matching the literal `selector {` is what excludes descendant rules such
-  // as `body.zombie .alphabet-filter-button--active {`, which would otherwise
-  // false-match a prefix search for `body.zombie`.
-  const needle = `${selector} {`
-  const out: string[] = []
-  let from = 0
-  for (;;) {
-    const start = source.indexOf(needle, from)
-    if (start === -1) break
-    let depth = 0
-    let i = source.indexOf('{', start)
-    const open = i
-    for (; i < source.length; i++) {
-      if (source[i] === '{') depth++
-      else if (source[i] === '}' && --depth === 0) break
-    }
-    if (depth !== 0) throw new Error(`unterminated block for ${selector}`)
-    out.push(source.slice(open + 1, i))
-    from = i
-  }
-  if (out.length === 0) throw new Error(`selector ${selector} not found`)
-  return out
-}
+const globalTokens = (): Map<string, string> =>
+  globalTokensFrom(read(COLORS_SCSS))
 
 const themeTokens = (
   themesScss: string,
   selector: string
-): Map<string, string> => {
-  const merged = new Map(customProps(cssBlock(themesScss, 'body')))
-  for (const body of allBlocksFor(themesScss, selector))
-    for (const [k, v] of customProps(body)) merged.set(k, v)
-  return merged
-}
-
-/** Resolve a `var()` chain to a literal, following fallbacks exactly as CSS does. */
-const resolveValue = (
-  value: string,
-  scope: Map<string, string>,
-  globals: Map<string, string>,
-  seen = new Set<string>()
-): string | null => {
-  const v = value.trim()
-  const m = /^var\(\s*(--[\w-]+)\s*(?:,\s*([\s\S]+))?\)$/.exec(v)
-  if (!m) return v
-  const name = defined(m[1])
-  const fallback = m[2]
-  if (!seen.has(name)) {
-    const next = scope.get(name) ?? globals.get(name)
-    if (next !== undefined) {
-      const r = resolveValue(next, scope, globals, new Set(seen).add(name))
-      if (r !== null) return r
-    }
-  }
-  return fallback ? resolveValue(fallback, scope, globals, seen) : null
-}
-
-const NAMED_COLOURS: Record<string, string> = {
-  white: '#ffffff',
-  black: '#000000',
-  // CSS `gray` -- what --border-color and three themes' --divider resolve to.
-  gray: '#808080'
-}
-
-const toRgb = (colour: string): [number, number, number] | null => {
-  const c = (NAMED_COLOURS[colour.toLowerCase()] ?? colour).trim()
-  const m = /^#([0-9a-f]{3,8})$/i.exec(c)
-  if (!m) return null
-  let hex = defined(m[1])
-  if (hex.length === 3)
-    hex = hex
-      .split('')
-      .map((ch) => ch + ch)
-      .join('')
-  if (hex.length === 8) hex = hex.slice(0, 6) // opaque alpha
-  if (hex.length !== 6) return null
-  return [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16)) as [
-    number,
-    number,
-    number
-  ]
-}
-
-const relativeLuminance = ([r, g, b]: [number, number, number]): number => {
-  const lin = (v: number) => {
-    const s = v / 255
-    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4
-  }
-  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b)
-}
-
-const contrastRatio = (fg: string, bg: string): number => {
-  const a = toRgb(fg)
-  const b = toRgb(bg)
-  if (!a || !b) throw new Error(`uncomparable colours: ${fg} / ${bg}`)
-  const sorted = [relativeLuminance(a), relativeLuminance(b)].sort(
-    (x, y) => y - x
-  )
-  const hi = at(sorted, 0)
-  const lo = at(sorted, 1)
-  return (hi + 0.05) / (lo + 0.05)
-}
+): Map<string, string> => themeTokensFrom(themesScss, selector)
 
 /**
  * The `color:` NavTabs paints on the selected tab, as authored. Prefers a
@@ -1526,129 +1377,6 @@ const WINETRICKS_ROW_SCSS =
   'src/frontend/screens/Settings/sections/WinetricksSettings/Row/index.scss'
 const WINETRICKS_LOG_PANEL_SCSS =
   'src/frontend/screens/Settings/sections/WinetricksSettings/LogPanel/index.scss'
-
-/**
- * Mixes two colours already resolved to a `toRgb`-acceptable literal, channel
- * by channel, as `weightA·a + (1-weightA)·b` (weightA a 0-1 fraction).
- * Rounded to the nearest integer per channel and returned as a 6-digit
- * lowercase hex string. Shared by the `color-mix(in srgb, ...)` resolver
- * below and by the hovered-row-surface compositing in `rowSurfaces`, which is
- * the same arithmetic applied to an opacity/`currentColor` composite instead
- * of an authored percentage.
- */
-const mixSrgb = (a: string, b: string, weightA: number): string => {
-  const rgbA = toRgb(a)
-  const rgbB = toRgb(b)
-  if (!rgbA || !rgbB) {
-    throw new Error(`mixSrgb: uncomparable colours: ${a} / ${b}`)
-  }
-  const mixed = rgbA.map((channelA, i) =>
-    Math.round(channelA * weightA + at(rgbB, i) * (1 - weightA))
-  )
-  return (
-    '#' + mixed.map((channel) => channel.toString(16).padStart(2, '0')).join('')
-  )
-}
-
-/**
- * Splits a `color-mix()` argument list on TOP-LEVEL commas only, tracking
- * paren depth so a `var(--x, fallback)` fallback's own comma never ends an
- * argument early.
- */
-const splitTopLevelCommas = (source: string): string[] => {
-  const out: string[] = []
-  let depth = 0
-  let buf = ''
-  for (const ch of source) {
-    if (ch === '(') depth++
-    else if (ch === ')') depth--
-    if (ch === ',' && depth === 0) {
-      out.push(buf)
-      buf = ''
-    } else {
-      buf += ch
-    }
-  }
-  out.push(buf)
-  return out
-}
-
-/** A colour argument of `color-mix()`: a colour expression plus an optional trailing `NN%`. */
-const parseColourMixArg = (
-  arg: string
-): { colourExpr: string; weight: number | null } => {
-  const trimmed = arg.trim()
-  const m = /^([\s\S]+?)\s+(\d+)%$/.exec(trimmed)
-  if (m) return { colourExpr: defined(m[1]), weight: Number(defined(m[2])) }
-  return { colourExpr: trimmed, weight: null }
-}
-
-/**
- * Resolves a `var()` chain exactly as `resolveValue` does, and additionally
- * resolves a `color-mix(in srgb, A p%, B)` expression (the `--winetricks-
- * danger-text` shape) down to a literal hex colour, reimplementing the CSS
- * weight rules: one percentage given means the other is `100 - p`; none given
- * means 50/50; both given means normalised by their sum. Each colour argument
- * is resolved recursively (so a `color-mix()` nested inside a `var()`
- * fallback also resolves) and must itself be a hex or named colour `toRgb`
- * accepts -- a bare `transparent` or `currentColor` argument throws rather
- * than silently mis-resolving, because neither is a fixed colour outside a
- * known compositing surface.
- */
-const resolveColour = (
-  value: string,
-  scope: Map<string, string>,
-  globals: Map<string, string>
-): string | null => {
-  const resolved = resolveValue(value, scope, globals)
-  if (resolved === null) return null
-  if (!resolved.startsWith('color-mix(')) return resolved
-
-  const inner = resolved.slice('color-mix('.length, resolved.length - 1).trim()
-  const args = splitTopLevelCommas(inner)
-  if (args.length !== 3) {
-    throw new Error(
-      `expected 3 color-mix() arguments, found ${args.length}: ${resolved}`
-    )
-  }
-  const colourSpace = at(args, 0)
-  const argA = at(args, 1)
-  const argB = at(args, 2)
-  if (colourSpace.trim() !== 'in srgb') {
-    throw new Error(
-      `expected 'in srgb' color-mix(), found '${colourSpace.trim()}'`
-    )
-  }
-
-  const a = parseColourMixArg(argA)
-  const b = parseColourMixArg(argB)
-  const colourA = resolveColour(a.colourExpr, scope, globals)
-  const colourB = resolveColour(b.colourExpr, scope, globals)
-  if (colourA === null || !toRgb(colourA)) {
-    throw new Error(
-      `color-mix() argument is not a resolvable colour: ${a.colourExpr} -> ${colourA}`
-    )
-  }
-  if (colourB === null || !toRgb(colourB)) {
-    throw new Error(
-      `color-mix() argument is not a resolvable colour: ${b.colourExpr} -> ${colourB}`
-    )
-  }
-
-  let weightA: number
-  if (a.weight !== null && b.weight !== null) {
-    const sum = a.weight + b.weight
-    weightA = sum === 0 ? 50 : (a.weight / sum) * 100
-  } else if (a.weight !== null) {
-    weightA = a.weight
-  } else if (b.weight !== null) {
-    weightA = 100 - b.weight
-  } else {
-    weightA = 50
-  }
-
-  return mixSrgb(colourA, colourB, weightA / 100)
-}
 
 /**
  * The tab root's own custom properties (`WinetricksSettings/index.scss`'s
