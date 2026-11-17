@@ -701,6 +701,7 @@ pub(crate) const RENDERER_CHANNELS: &[&str] = &[
     "steamClientSetupRecheck",
     "steamClientSetupStart",
     "steamDirectLaunchVerdict",
+    "steamLaunchWithoutSteamOnce",
     "steamPollCredential",
     "steamPollQR",
     "steamRemoveAllCopies",

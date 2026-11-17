@@ -131,6 +131,8 @@ function harness(options: {
   adoptionRead?: AdoptionReading | Error
   runningAppId?: number
   readAcf?: unknown
+  // The backend's launch-without-Steam verdict for the game (D-05); a rejection counts as false.
+  directLaunch?: boolean | Error
 }): Harness {
   const store = new Map<string, unknown>()
   if (options.withRecord !== false) store.set(APP_ID, record())
@@ -190,7 +192,11 @@ function harness(options: {
   const game = {
     deps,
     appId: APP_ID,
-    getGameInfo: () => ({ title: 'Dota 2' })
+    getGameInfo: () => ({ title: 'Dota 2' }),
+    getDirectLaunchVerdict: () =>
+      options.directLaunch instanceof Error
+        ? Promise.reject(options.directLaunch)
+        : Promise.resolve({ applies: options.directLaunch ?? false })
   } as unknown as SteamGame
   return { game, store, runner, openExternal, rust, dir }
 }
@@ -283,6 +289,7 @@ describe('gatePlayOnAdoption', () => {
         appId: APP_ID,
         title: 'Dota 2',
         kind: 'adopt-restart-game-running',
+        launchWithoutSteam: false,
         seq: 7
       }
     ])
@@ -307,6 +314,7 @@ describe('gatePlayOnAdoption', () => {
         appId: APP_ID,
         title: 'Dota 2',
         kind: 'adopt-restart-quit-timeout',
+        launchWithoutSteam: false,
         seq: 7
       }
     ])
@@ -323,11 +331,37 @@ describe('gatePlayOnAdoption', () => {
     expect(h.openExternal).not.toHaveBeenCalled()
     expect(stored(h)).toBeDefined()
     expect(noticesOf(h)).toEqual([
-      { appId: APP_ID, title: 'Dota 2', kind: 'adopt-restart-busy', seq: 7 }
+      {
+        appId: APP_ID,
+        title: 'Dota 2',
+        kind: 'adopt-restart-busy',
+        launchWithoutSteam: false,
+        seq: 7
+      }
     ])
     expect(notify).not.toHaveBeenCalled()
     expect(rungameidOpened(h)).toBe(false)
   })
+
+  test.each([
+    ['applies', true, true],
+    ['does not apply', false, false],
+    ['rejects', new Error('verdict unavailable'), false]
+  ] as const)(
+    'D-05: the refusal notice offers launch-without-Steam only when the verdict %s',
+    async (_name, directLaunch, expected) => {
+      const h = harness({
+        script: [pgrepLinux(0, '100\n')],
+        runningAppId: 4000,
+        directLaunch
+      })
+      await expect(gatePlayOnAdoption(h.game, 'linux')).resolves.toBe('refused')
+      expect(noticesOf(h)).toEqual([
+        expect.objectContaining({ launchWithoutSteam: expected })
+      ])
+      expect(rungameidOpened(h)).toBe(false)
+    }
+  )
 
   test('an adopted install clears the record and proceeds to a plain launch', async () => {
     const h = harness({

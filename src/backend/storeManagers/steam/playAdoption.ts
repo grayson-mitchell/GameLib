@@ -150,10 +150,17 @@ export async function gatePlayOnAdoption(
     `SteamGame: Play for ${appId} not launched (${outcome.kind}); pending adoption kept`,
     LogPrefix.Steam
   )
+  // D-05: offer "Launch without Steam" only when the backend's direct-launch verdict applies;
+  // a rejected verdict read counts as not applying. The click re-derives the verdict.
+  const launchWithoutSteam = await steamGame.getDirectLaunchVerdict().then(
+    (v) => v.applies,
+    () => false
+  )
   deps.sendFrontendMessage('steamRequestNotice', {
     appId,
     title: deps.steamSession.libraryState.library.get(appId)?.title ?? '',
     kind,
+    launchWithoutSteam,
     seq: await noticeSeq(steamGame)
   })
   return 'refused'

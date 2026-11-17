@@ -68,6 +68,49 @@ export function dispatchSteamLaunch(
   )
 }
 
+/**
+ * Phase 81 D-05: the one-shot "Launch without Steam" from the refused-restart notice. Shares the
+ * Steam single flight with Play (a second press joins and gets the "already starting" notice).
+ * D-06: the per-game setting is never changed here, and its short-circuit in runDispatch stays
+ * the single decision point on the Play path.
+ *
+ * The backend re-derives the direct-launch verdict at click time (T-81-24): a game that does not
+ * qualify (Steam DRM, not launchable) answers false and nothing is launched. The Steam launch is
+ * the thing that was just refused, so there is no Steam fallback here.
+ */
+export function dispatchSteamLaunchWithoutSteamOnce(
+  deps: LaunchDispatchDeps,
+  appName: string
+): Promise<boolean> {
+  return deps.appRuntime.launchFlights.singleFlightLaunch(
+    'steam',
+    appName,
+    () => notifyAlreadyLaunching(deps, appName),
+    async () => {
+      const game = deps.libraryManagers.steam.getGame(appName)
+      const verdict = await game.getDirectLaunchVerdict()
+      if (!verdict.applies) {
+        logInfo(
+          `dispatchSteamLaunchWithoutSteamOnce: appId ${appName} does not qualify for a direct launch; nothing launched`,
+          LogPrefix.Steam
+        )
+        return false
+      }
+      const launched = await game.launchWithoutSteam()
+      if (!launched) return false
+      try {
+        await addRecentGame(deps, game.getGameInfo())
+      } catch (err) {
+        logWarning(
+          ['dispatchSteamLaunchWithoutSteamOnce: addRecentGame failed:', err],
+          LogPrefix.Steam
+        )
+      }
+      return true
+    }
+  )
+}
+
 function notifyAlreadyLaunching(
   deps: LaunchDispatchDeps,
   appName: string

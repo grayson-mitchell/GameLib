@@ -48,7 +48,10 @@ jest.mock('i18next', () => ({
 }))
 
 // ── Imports (after mocks) ──────────────────────────────────────────────────────────────────
-import { dispatchSteamLaunch } from '../launchDispatch'
+import {
+  dispatchSteamLaunch,
+  dispatchSteamLaunchWithoutSteamOnce
+} from '../launchDispatch'
 import { createTestAppRuntime } from 'backend/testUtils/testAppRuntime'
 
 describe('dispatchSteamLaunch', () => {
@@ -224,5 +227,79 @@ describe('quick 261117-q1t: the launchWithoutSteam game setting', () => {
     expect(logWarningMock).toHaveBeenCalledTimes(1)
     expect(launchMock).toHaveBeenCalledTimes(1)
     expect(withoutMock).not.toHaveBeenCalled()
+  })
+})
+
+describe('Phase 81 D-05: the one-shot launch without Steam from the refused-restart notice', () => {
+  const appId = '999005'
+  const launchMock = jest.fn()
+  const withoutMock = jest.fn()
+  const verdictMock = jest.fn()
+  const getSettingsMock = jest.fn()
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    deps.appRuntime = createTestAppRuntime()
+    launchMock.mockResolvedValue(true)
+    withoutMock.mockResolvedValue(true)
+    verdictMock.mockResolvedValue({ applies: true })
+    addRecentGameMock.mockResolvedValue(undefined)
+    getGameMock.mockReturnValue({
+      launch: (...args: unknown[]) => launchMock(...args),
+      launchWithoutSteam: (...args: unknown[]) => withoutMock(...args),
+      getDirectLaunchVerdict: () => verdictMock(),
+      getSettings: (...args: unknown[]) => getSettingsMock(...args),
+      getGameInfo: () => ({
+        app_name: appId,
+        title: 'Some Steam Game',
+        runner: 'steam'
+      })
+    })
+  })
+
+  it('a game that does not qualify launches nothing at all and answers false', async () => {
+    verdictMock.mockResolvedValue({ applies: false, reason: 'steam-drm' })
+    expect(await dispatchSteamLaunchWithoutSteamOnce(deps, appId)).toBe(false)
+    expect(withoutMock).not.toHaveBeenCalled()
+    expect(launchMock).not.toHaveBeenCalled()
+    expect(addRecentGameMock).not.toHaveBeenCalled()
+  })
+
+  it('a game that qualifies launches without Steam once, never through Steam, and records the recent game', async () => {
+    expect(await dispatchSteamLaunchWithoutSteamOnce(deps, appId)).toBe(true)
+    expect(withoutMock).toHaveBeenCalledTimes(1)
+    expect(launchMock).not.toHaveBeenCalled()
+    expect(addRecentGameMock).toHaveBeenCalledWith(
+      deps,
+      expect.objectContaining({ app_name: appId })
+    )
+  })
+
+  it('a launch that did not start is not a recent game', async () => {
+    withoutMock.mockResolvedValue(false)
+    expect(await dispatchSteamLaunchWithoutSteamOnce(deps, appId)).toBe(false)
+    expect(addRecentGameMock).not.toHaveBeenCalled()
+  })
+
+  it('D-06: it never reads or writes the per-game setting', async () => {
+    await dispatchSteamLaunchWithoutSteamOnce(deps, appId)
+    expect(getSettingsMock).not.toHaveBeenCalled()
+  })
+
+  it('joins the Steam single flight: a second press gets the already-starting notice and launches nothing more', async () => {
+    let resolveLaunch!: (v: boolean) => void
+    withoutMock.mockReturnValue(
+      new Promise<boolean>((res) => {
+        resolveLaunch = res
+      })
+    )
+    const a = dispatchSteamLaunchWithoutSteamOnce(deps, appId)
+    const b = dispatchSteamLaunchWithoutSteamOnce(deps, appId)
+    await new Promise(setImmediate)
+    resolveLaunch(true)
+    await expect(a).resolves.toBe(true)
+    await expect(b).resolves.toBe(true)
+    expect(withoutMock).toHaveBeenCalledTimes(1)
+    expect(notifyMock).toHaveBeenCalledTimes(1)
   })
 })

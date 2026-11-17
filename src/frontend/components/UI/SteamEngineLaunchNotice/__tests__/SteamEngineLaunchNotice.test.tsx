@@ -693,6 +693,58 @@ describe('SteamEngineLaunchNotice request slot (quick 261106-pvk)', () => {
     expect(text(render())).toBe(expected)
   })
 
+  describe('Phase 81 D-05: Launch without Steam on a refused Play restart', () => {
+    const adopt = (over: Record<string, unknown> = {}) =>
+      req({
+        appId: '570',
+        title: 'Dota 2',
+        kind: 'adopt-restart-game-running',
+        launchWithoutSteam: true,
+        ...over
+      })
+    const actionOf = (out: ReactNode) =>
+      find(out, (e) => cls(e).includes('noticeStackAction'))
+    const launchOnce = jest.fn()
+    beforeEach(() => {
+      launchOnce.mockReset().mockResolvedValue(true)
+      ;(
+        globalThis as unknown as { window: Record<string, unknown> }
+      ).window.api = { steamLaunchWithoutSteamOnce: launchOnce }
+    })
+
+    it('shows the button for an adopt-restart kind whose verdict applies', () => {
+      requestState = adopt()
+      const out = render()
+      expect(text(actionOf(out))).toBe('Launch without Steam')
+      expect(cls(actionOf(out))).toContain('steamEngineLaunchNoticeAction')
+    })
+
+    it.each([
+      ['the verdict does not apply', adopt({ launchWithoutSteam: false })],
+      ['the flag is absent', adopt({ launchWithoutSteam: undefined })],
+      [
+        'the kind is not an adopt-restart kind',
+        adopt({ kind: 'uninstall-failed' })
+      ]
+    ])('hides the button when %s', (_name, state) => {
+      requestState = state
+      expect(actionOf(render())).toBeUndefined()
+    })
+
+    it('clicking it calls steamLaunchWithoutSteamOnce once with the appId and starts the leave', () => {
+      requestState = adopt()
+      const out = render()
+      actionOf(out)?.props.onClick?.()
+      expect(launchOnce).toHaveBeenCalledTimes(1)
+      expect(launchOnce).toHaveBeenCalledWith('570')
+      const leaving = render()
+      expect(cls(toast(leaving))).toContain('noticeStackToast--leaving')
+      // A second click on the leaving notice does nothing.
+      actionOf(leaving)?.props.onClick?.()
+      expect(launchOnce).toHaveBeenCalledTimes(1)
+    })
+  })
+
   it('falls back to the title Steam when the title is empty', () => {
     requestState = req({ title: '' })
     expect(text(render())).toMatch(/^Steam Steam didn't start the install/)

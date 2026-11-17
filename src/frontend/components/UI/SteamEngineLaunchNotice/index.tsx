@@ -77,7 +77,9 @@ const REQUEST_KINDS: readonly string[] = [
 ]
 interface ShownRequest {
   kind: RequestKind
+  appId: string
   title: string
+  launchWithoutSteam?: boolean
   code?: number
   seq: number
   phase: NoticePhase
@@ -384,7 +386,9 @@ export default function SteamEngineLaunchNotice() {
     lastRequestSeq.current = n.seq
     const next: ShownRequest = {
       kind: n.kind,
+      appId: n.appId,
       title: typeof n.title === 'string' ? n.title : '',
+      ...(n.launchWithoutSteam === true ? { launchWithoutSteam: true } : {}),
       ...(typeof n.code === 'number' ? { code: n.code } : {}),
       seq: n.seq,
       phase: 'in'
@@ -625,6 +629,8 @@ export default function SteamEngineLaunchNotice() {
     icon: IconDefinition
     title: string
     body: string
+    /** An optional button before dismiss, in the shared notice-stack action style. */
+    action?: { label: string; onClick: () => void }
     setHover: (v: boolean) => void
     beginLeave: () => void
     toCollapsing: () => void
@@ -661,6 +667,16 @@ export default function SteamEngineLaunchNotice() {
               {o.body}
             </span>
           </span>
+          {o.action && (
+            <button
+              className="noticeStackAction steamEngineLaunchNoticeAction"
+              onClick={() => {
+                if (o.phase === 'in') o.action?.onClick()
+              }}
+            >
+              {o.action.label}
+            </button>
+          )}
           <button
             className="noticeStackDismiss steamEngineLaunchNoticeDismiss"
             aria-label={t('steam.engine.notice.dismiss', 'Dismiss')}
@@ -750,6 +766,25 @@ export default function SteamEngineLaunchNotice() {
         icon: faRightToBracket,
         title: requestGame,
         body: requestBody(shownRequest, requestGame),
+        // Phase 81 D-05: the backend's direct-launch verdict decided whether the button shows;
+        // the click re-derives it, so a stale flag can never launch an ineligible game.
+        ...(shownRequest.kind.startsWith('adopt-restart-') &&
+        shownRequest.launchWithoutSteam
+          ? {
+              action: {
+                label: t(
+                  'steam.adoptRestart.launchWithoutSteam',
+                  'Launch without Steam'
+                ),
+                onClick: () => {
+                  void window.api.steamLaunchWithoutSteamOnce(
+                    shownRequest.appId
+                  )
+                  setShownRequest({ ...shownRequest, phase: 'leaving' })
+                }
+              }
+            }
+          : {}),
         setHover: setHoveredRequest,
         beginLeave: () =>
           setShownRequest({ ...shownRequest, phase: 'leaving' }),

@@ -241,7 +241,8 @@ describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
     // Quick 261117-q1t: -1 (steamLaunchWithoutSteam removed; Play honours a game setting).
     // Phase 47 Plan 08: +1 getItadSteamGids, -1 getStoreSearchStoreMap (net 0).
     // Phase 47 Plan 12: +2 (itad.getKeyStatus, itad.setApiKey).
-    expect(total).toBe(291)
+    // Phase 81 Plan 07: +1 Async (steamLaunchWithoutSteamOnce, the one-shot launch from the refused-restart notice).
+    expect(total).toBe(292)
     // Floor (Phase 67): originally measured - 6. Re-measured at 290 after quick 261115-tk8's deliberate
     // six-channel deletion and quick 261117-p38's two added channels (288 + 2), so the floor moves
     // 290 -> 284 and the parse-miss margin stays the same 6.

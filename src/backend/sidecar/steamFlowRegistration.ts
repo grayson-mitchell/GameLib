@@ -101,7 +101,10 @@ import { isMac } from '../constants/environment'
 // owns the Steam `runner === 'steam'` branch's launch call AND its
 // recent-games side effect — see that branch's own comment below.
 import type { BootServices } from '../services/types'
-import { dispatchSteamLaunch } from '../storeManagers/steam/launchDispatch'
+import {
+  dispatchSteamLaunch,
+  dispatchSteamLaunchWithoutSteamOnce
+} from '../storeManagers/steam/launchDispatch'
 import { toView } from '../storeManagers/steam/directLaunch/directLaunchVerdict'
 import type { SteamDirectLaunchView } from 'common/types/steam'
 import { logInfo, logWarning, LogPrefix, RunnerToLogPrefixMap } from '../logger'
@@ -420,6 +423,38 @@ async function handleDirectLaunchVerdict(
 }
 
 /**
+ * Phase 81 D-05: the one-shot "Launch without Steam" from the refused-restart notice. The appId is
+ * renderer input, so it is re-validated here (T-81-23); the backend re-derives the verdict inside
+ * the dispatch (T-81-24). Any failure answers false.
+ */
+async function handleLaunchWithoutSteamOnce(
+  deps: SteamFlowDeps,
+  appId: unknown
+): Promise<boolean> {
+  if (typeof appId !== 'string' || !DIRECT_LAUNCH_APP_ID.test(appId)) {
+    return false
+  }
+  try {
+    return await dispatchSteamLaunchWithoutSteamOnce(
+      {
+        libraryManagers: deps.managers.library,
+        notifications: deps.notifications,
+        sendFrontendMessage: deps.sendFrontendMessage,
+        stores: deps.stores,
+        appRuntime: deps.appRuntime
+      },
+      appId
+    )
+  } catch (err) {
+    logWarning(
+      [`steamLaunchWithoutSteamOnce failed appId=${appId}:`, err],
+      LogPrefix.Steam
+    )
+    return false
+  }
+}
+
+/**
  * Registers `refreshLibrary` (read-flow), `launch` (action-flow), and
  * `shellWindowFocused` (install-state refresh trigger) — the first two as
  * `ipcMain.handle` invoke handlers, the last as an `ipcMain.on` send
@@ -454,6 +489,11 @@ export function registerSteamFlows(deps: SteamFlowDeps): void {
     'steamDirectLaunchVerdict',
     (_event: unknown, ...args: unknown[]) =>
       handleDirectLaunchVerdict(deps, args[0])
+  )
+  deps.ipc.handle(
+    'steamLaunchWithoutSteamOnce',
+    (_event: unknown, ...args: unknown[]) =>
+      handleLaunchWithoutSteamOnce(deps, args[0])
   )
 
   // Restores the install-badge reconciliation trigger dropped in the
