@@ -131,13 +131,15 @@ const STORE_EMBED_LINK_POPUP_LABEL: &str = "store-embed-link-popup";
 /// environment / related view, so the popup shares the embed's data store and cookies and keeps
 /// `window.opener`. A plain titled window, deliberately not a child or sheet: child attachment
 /// was measured live-broken on macOS (login-window-ux-macos spike findings, D-C). Navigation is
-/// limited to http(s); `window.close()` from the page closes it.
+/// limited to http(s); `window.close()` from the page closes it. The title is the origin-derived
+/// `login_window_title` (WR-07), never a composed or hard-coded string.
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 pub(crate) fn store_embed_open_link_popup(
     app: &AppHandle,
     url: tauri::Url,
     features: tauri::webview::NewWindowFeatures,
 ) -> Result<tauri::WebviewWindow, String> {
+    let origin = url.origin().ascii_serialization();
     tauri::WebviewWindowBuilder::new(
         app,
         STORE_EMBED_LINK_POPUP_LABEL,
@@ -145,7 +147,7 @@ pub(crate) fn store_embed_open_link_popup(
     )
     .window_features(features)
     .user_agent(STORE_EMBED_USER_AGENT)
-    .title(format!("Sign in - {}", url.host_str().unwrap_or("")))
+    .title(login_window_title(&origin, None))
     .inner_size(520.0, 700.0)
     .center()
     .on_navigation(|u| matches!(u.scheme(), "https" | "http" | "about"))

@@ -126,8 +126,9 @@ function logSendFailure(channel: string, error: unknown): void {
 }
 
 /**
- * Registers this module's 19 shell/files/diagnostics channels (16 from Plan
- * 01, plus Plan 02's `clearCache`/`clearAchievementCache`/`resetHeroic`).
+ * Registers this module's 14 shell/files/diagnostics channels (3 invoke + 11
+ * send; quick 261115-tk8 deleted five link-opener sends, Phase 72 D-09 deleted
+ * `removeFolder`).
  * Called once from `handlers.ts` — this module owns no side effects at
  * import time beyond the imports above; the caller decides when
  * registration onto the handler registry happens.

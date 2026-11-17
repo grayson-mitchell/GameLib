@@ -3060,6 +3060,15 @@ describe('quick-260925-uok Windows gamelib:// HKCU self-heal on launch', () => {
   function fnRegion(code: string, fnToken: string): string | null {
     const start = code.indexOf(fnToken)
     if (start === -1) return null
+    // The 261109-vdw split left some of these fns LAST in their file, so the next-`\nfn`/`\n#[cfg`
+    // heuristic ran on into the next concatenated file. Bound the region by the fn's own closing
+    // brace (`fnEndAfter`) whenever the line is a plain fn definition.
+    const lineStart = code.lastIndexOf('\n', start) + 1
+    try {
+      return code.slice(start, fnEndAfter(code, lineStart))
+    } catch {
+      // not a plain/unique `fn` definition line: fall back to the next-item heuristic
+    }
     const searchFrom = start + fnToken.length
     const nextFn = code.indexOf('\nfn ', searchFrom)
     const nextCfg = code.indexOf('\n#[cfg', searchFrom)
@@ -3368,6 +3377,15 @@ describe('Phase 46 Windows single-instance guard (REQ-46-01/03/04/07/08, U-34.5-
   function fnRegion(code: string, fnToken: string): string | null {
     const start = code.indexOf(fnToken)
     if (start === -1) return null
+    // The 261109-vdw split left some of these fns LAST in their file, so the next-`\nfn`/`\n#[cfg`
+    // heuristic ran on into the next concatenated file. Bound the region by the fn's own closing
+    // brace (`fnEndAfter`) whenever the line is a plain fn definition.
+    const lineStart = code.lastIndexOf('\n', start) + 1
+    try {
+      return code.slice(start, fnEndAfter(code, lineStart))
+    } catch {
+      // not a plain/unique `fn` definition line: fall back to the next-item heuristic
+    }
     const searchFrom = start + fnToken.length
     const nextFn = code.indexOf('\nfn ', searchFrom)
     const nextCfg = code.indexOf('\n#[cfg', searchFrom)
@@ -4769,7 +4787,9 @@ describe('tauriShellSource helper scope', () => {
       'meta/captureShellScrollback.ts':
         'assertRepoRoot only checks main.rs EXISTS, it never reads it',
       'meta/__tests__/captureShellScrollback.test.ts':
-        'an exists() mock for assertRepoRoot, not a read'
+        'an exists() mock for assertRepoRoot, not a read',
+      'meta/__tests__/gamelibSteamcmCli.test.ts':
+        "reads the gamelib-steamcm-cli crate's own src/main.rs, not the Tauri shell's"
     }
     const offenders: string[] = []
     const visit = (dir: string): void => {

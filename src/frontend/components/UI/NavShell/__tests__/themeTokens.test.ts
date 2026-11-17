@@ -2779,6 +2779,10 @@ const GAME_SUB_MENU_TSX = join(
   REPO_ROOT,
   'src/frontend/screens/Game/GameSubMenu/index.tsx'
 )
+const STEAM_DIRECT_LAUNCH_BUTTON_TSX = join(
+  REPO_ROOT,
+  'src/frontend/screens/Game/GameSubMenu/SteamDirectLaunchButton.tsx'
+)
 const MAIN_BUTTON_TSX = join(
   REPO_ROOT,
   'src/frontend/screens/Game/GamePage/components/MainButton.tsx'
@@ -3035,7 +3039,11 @@ describe('Game-menu .is-link family: render-site census, winning-rule resolution
     return resolved
   }
 
-  it('render-site census: re-derived F1 counts match exactly (29 total, 22 is-link, 21 GameSubMenu, 1 MainButton, 1 pure DownloadManager, 2 pure SteamManagedItemView, 4 pure EngineNotices)', () => {
+  // Census moves, each a deliberate feature: quick 261115-szs (ac63566b2) added 5 dots-menu-parity
+  // entries to GameSubMenu (21 -> 26); quick 261117-p38 (481168a3c) added SteamDirectLaunchButton.tsx (1 is-link, rendered
+  // inside the same `.gameTools` container). All use the same `link button is-text is-link
+  // buttonWithIcon` shape, so the winning-rule and contrast tests below cover them.
+  it('render-site census: re-derived F1 counts match exactly (35 total, 28 is-link, 26 GameSubMenu, 1 SteamDirectLaunchButton, 1 MainButton, 1 pure DownloadManager, 2 pure SteamManagedItemView, 4 pure EngineNotices)', () => {
     const allFiles = walkTsxFiles(FRONTEND_DIR)
     expect(allFiles.length).toBeGreaterThan(100) // walk sanity, same floor as navTourAnchorCensus
 
@@ -3044,7 +3052,7 @@ describe('Game-menu .is-link family: render-site census, winning-rule resolution
       const matches = text.match(/className="[^"]*is-text[^"]*"/g) ?? []
       return matches.map(() => path)
     })
-    expect(isTextSites).toHaveLength(29)
+    expect(isTextSites).toHaveLength(35)
 
     // The is-link subset re-derived directly from file contents, not from
     // isTextSites, so a non-is-link site is never miscounted as one.
@@ -3054,10 +3062,15 @@ describe('Game-menu .is-link family: render-site census, winning-rule resolution
         text.match(/className="[^"]*is-text[^"]*is-link[^"]*"/g) ?? []
       return matches.map(() => path)
     })
-    expect(isLinkOccurrences).toHaveLength(22)
+    expect(isLinkOccurrences).toHaveLength(28)
     expect(
       isLinkOccurrences.filter((path) => path === GAME_SUB_MENU_TSX)
-    ).toHaveLength(21)
+    ).toHaveLength(26)
+    expect(
+      isLinkOccurrences.filter(
+        (path) => path === STEAM_DIRECT_LAUNCH_BUTTON_TSX
+      )
+    ).toHaveLength(1)
     expect(
       isLinkOccurrences.filter((path) => path === MAIN_BUTTON_TSX)
     ).toHaveLength(1)

@@ -235,11 +235,16 @@ describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
     // Phase 68 Plan 06: +1 FrontendMessages (readOnlyStoresNotice); owner-less allowlist 65 -> 66.
     // Phase 74 Plan 11: +1 Async (getSteamUpdateInfo in install.ts).
     // Quick 261116-vt7: -3 (steamGoOfflineRetry, steamGoOfflineCancel, FrontendMessages steamGoOfflineRequired); owner-less allowlist 66 -> 65.
-    expect(total).toBe(294)
-    // Floor (Phase 67): measured 296 at planning (Sync 60 + Async 188 + TestSync 6 + Frontend
-    // Messages 42); floor = measured - 6. A parse miss in either declaration form (interface or
-    // const-args) turns this red instead of silently shrinking the census.
-    expect(total).toBeGreaterThanOrEqual(290)
+    // Quick 261115-tk8 (6254354b2): -6 (openWeblate, openSupportPage, openDiscordLink, openGithubSponsorsPage,
+    // openWikiLink, openReleases).
+    // Quick 261117-p38 (481168a3c): +2 (the Launch without Steam channels in ipc/steam.ts).
+    expect(total).toBe(290)
+    // Floor (Phase 67): originally measured - 6. Re-measured at 290 after quick 261115-tk8's deliberate
+    // six-channel deletion and quick 261117-p38's two added channels (288 + 2), so the floor moves
+    // 290 -> 284 and the parse-miss margin stays the same 6.
+    // A parse miss in either declaration form (interface or const-args) turns this red instead of
+    // silently shrinking the census.
+    expect(total).toBeGreaterThanOrEqual(284)
   })
 
   it('(d) the owner-less channel allowlist equals the computed set', () => {
