@@ -1,9 +1,11 @@
 **These `<!-- GSD:*-start source:... -->` regions are hand-maintained.** The `source:` marker is
-historical provenance, not live generation. No tool reads or rewrites these regions today —
-`gsd-sdk` contains no reference to the markers and `get-shit-done-cc` is not installed — and the
-conventions below were hand-written straight into this file (`c33f98771`, `d7d021a05`,
-`67ed8767b`). Edit the regions here, directly; content written into a named source file will not
-propagate. A region marked `source:hand-maintained` has no source document at all.
+historical provenance, not live generation. gsd-core's `gsd-tools generate-claude-md` _can_
+rewrite them — without `--auto` it replaces all six marked regions — but no workflow used here
+runs it: only `/gsd-new-project` calls it, and `/gsd-profile-user` touches only the profile region.
+Do not run `generate-claude-md` against this file. The conventions below were hand-written straight
+into it (`c33f98771`, `d7d021a05`, `67ed8767b`). Edit the regions here, directly; content written
+into a named source file will not propagate. A region marked `source:hand-maintained` has no
+source document at all.
 
 <!-- GSD:project-start source:.planning/PROJECT.md -->
 

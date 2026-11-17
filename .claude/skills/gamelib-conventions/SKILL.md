@@ -211,27 +211,19 @@ expected: Games appear as cards with title, artwork, and an Install button.
 result: pending
 ```
 
-**What changed, and when.** This section used to describe `get-shit-done-cc` 1.42.3's
-adjacency-matched `parseUatItems`, under which a single body `expected: |` block scalar hid every
-`### N.` item in its file. The machine has since moved to `@opengsd/gsd-core`
-(`~/.claude/gsd-core/bin/lib/uat.cjs`, `parseUatItemsWithStats`) — 1.14.0 when the measurement
-below was taken, 1.15.0 as of 2026-09-30. Measured 2026-09-26 under 1.14.0: the new
-parser slices each column-0 `### N.` heading to the next heading of any level and reads
-`expected: |` values dedented — probed directly with an in-memory fixture (a block-scalar
-`expected:` plus a separate `## Current Test` block scalar elsewhere in the document): the item
-was returned, its multi-line body dedented, `headingsSeen: 0`. Live `audit-uat --raw` reported 418
-outstanding items across 56 files, `parse_gap_files: 2` — against the attributed 1.42.3 comparison
-figure of 42 items across 13 files, measured by the 260926-kkt orchestrator before the old tool
-was removed. That figure cannot be re-measured: `~/.claude/get-shit-done/` survives only as an
-empty directory skeleton — re-measured 2026-09-30, `find ~/.claude/get-shit-done -type d | wc -l`
-returns 17: the root plus 5 top-level entries (`bin`, `contexts`, `references`, `templates`,
-`workflows`) and 16 descendants in all, every one of the 17 a directory, with 0 files and 0
-symlinks at any depth. Naming the command is the point: an unnamed count invited a real misread —
-a plain `ls` showing 5 was taken as contradicting the 17, when both are correct measurements of the
-same unchanged tree. This sentence used to claim the path no longer exists at all, which was wrong;
-the conclusion it supported still holds, because a tree with no files in it cannot be run.
-`34.3-UAT.md` (5 items) and `34.5-UAT.md` (17 items) were both 0 under 1.42.3 and are read in full
-now. Block scalars are no longer a visibility hazard. Inline `expected:` stays the preference
+**Which parser, and when.** This repo is worked from three machines; each runs its own global
+`@opengsd/gsd-core` install (`~/.claude/gsd-core/bin/lib/uat.cjs`, `parseUatItemsWithStats`).
+Check `~/.claude/gsd-core/VERSION` rather than assuming one machine's version holds for the others.
+The deprecated `get-shit-done-cc` 1.42.3 used an adjacency-matched `parseUatItems` under which a
+single body `expected: |` block scalar hid every `### N.` item in its file; it is no longer used
+anywhere. One machine was briefly back on it (reinstalled 2026-10-22, cause unknown, removed
+2026-11-17); if `~/.claude/get-shit-done/` contains any files, or `gsd-sdk` is on `PATH`, that
+machine has regressed. Measured 2026-09-26 under gsd-core 1.14.0: the parser slices each column-0
+`### N.` heading to the next heading of any level and reads `expected: |` values dedented — probed
+with an in-memory fixture, the item was returned with its multi-line body dedented,
+`headingsSeen: 0`. `audit-uat --raw` then reported 418 outstanding items across 56 files, against
+42 across 13 under 1.42.3; `34.3-UAT.md` (5 items) and `34.5-UAT.md` (17 items) went from 0 to
+read in full. Block scalars are no longer a visibility hazard. Inline `expected:` stays the preference
 because it is the shipped template's own `### N.` item shape and diffs cleanly — not because
 anything breaks under gsd-core. The 26 existing `expected: |` blocks across `34.3-UAT.md`,
 `34.5-UAT.md`, and `34.6-UAT.md` stay exactly as written; there is no reason to flatten them.
@@ -262,9 +254,9 @@ enforcement.
 **Upstream files.** `~/.claude/gsd-core/templates/UAT.md`, `workflows/verify-work.md`, and
 `workflows/execute-phase.md` still write `expected: |`, but inside the `## Current Test` cursor
 block, not inside a `### N.` item, and gsd-core reads it there — so a freshly scaffolded file needs
-no hand-correction. Those files are outside this repo, unversioned, shared by every project on the
-machine, and overwritten by a `gsd-core` upgrade — the same caveat the formatter section below
-records for the plan template.
+no hand-correction. Those files are outside this repo, unversioned, separate on each machine,
+shared by every project on that machine, and overwritten by a `gsd-core` upgrade — the same
+caveat the formatter section below records for the plan template.
 
 ### A formatter check belongs in every task's `<verify>`
 
@@ -328,50 +320,29 @@ touches, so this is a backstop rather than the only line of defence — but the 
 `git commit` only. `git rebase`, `cherry-pick` and `merge` create commits without running it, and
 `--no-verify` skips it. The verify block is what keeps the file formatted in the first place.
 
-The gsd-core plan template files, `~/.claude/gsd-core/templates/phase-prompt.md` and
-`~/.claude/gsd-core/bin/lib/template.cjs`, carry this reminder again — measured 2026-09-26, a
-case-insensitive grep for prettier or formatter returns 7 hits in the template (a 14-line
-`<!-- FORMATTER CHECK IN <verify> ... -->` comment block plus two `<verify>` lines) and 1 in
-`template.cjs` (the `<verify>` string at line 182). The hand edit this paragraph used to cite
-(added with it in `38bcad5b1`) was made to the pre-migration `get-shit-done-cc` 1.42.3 install's
-copies and did not survive the move to `@opengsd/gsd-core` 1.14.0 — but the installer detected
-both files as locally modified and parked them in `~/.claude/gsd-local-patches/`, whose
-`backup-meta.json` records pristine SHA-256 hashes rather than silently clobbering them.
-`/gsd-update --reapply` merged the reminder back into both, and
-`~/.claude/gsd-core/bin/verify-reapply-patches.cjs` reported 2 checked, 0 failures, 0 drifted.
+**The plan templates can carry a reminder too, per machine.** Each machine's
+`~/.claude/gsd-core/templates/phase-prompt.md` and `~/.claude/gsd-core/bin/lib/template.cjs` can
+hold a hand-added reminder: a `<!-- FORMATTER CHECK IN <verify> ... -->` comment block above
+Task 1 plus formatter wording in both example `<verify>` lines, and a `template.cjs` `<verify>`
+string that reads "include the formatter check over any file this task writes". To check a
+machine: `grep -ci 'prettier\|formatter'` returns 7 in `phase-prompt.md` and 1 in
+`template.cjs` when it is present, and 0 in an unpatched install.
 
-`~/.claude/gsd-pristine/` exists and is not empty — `drwxr-xr-x@`, mtime `Sep 26 15:42`. It holds
-exactly 2 files under 5 directories (`find ~/.claude/gsd-pristine -type f | wc -l` returns 2;
-`-type d` returns 5): `gsd-core/templates/phase-prompt.md` (19412 bytes) and
-`gsd-core/bin/lib/template.cjs` (10781 bytes), both stamped `Sep 26 15:42`. Both are genuine
-untouched 1.14.0 originals, hash-verified: `shasum -a 256` yields `6e0068f3…` for
-`phase-prompt.md` and `b6585df7…` for `template.cjs`, matching the `pristine_hashes` recorded in
-`gsd-local-patches/backup-meta.json` exactly (the full 64-character values live there).
-Corroborating: a case-insensitive `grep -ic -E 'prettier|formatter'` returns 0 in each
-`gsd-pristine/` copy, against the live 7 and 1 the paragraph above already cites.
+These files are outside this repo, unversioned, separate on each of the three machines, shared by
+every project on that machine, and **overwritten by every gsd-core upgrade or reinstall**. The
+installer parks locally modified files in `~/.claude/gsd-local-patches/`, and `/gsd-update
+--reapply` merges them back. That is a MANUAL step after every upgrade; nothing runs it
+automatically. Before reapplying, diff the parked files against the release they came from: on
+2026-11-17 the move from `get-shit-done-cc` 1.42.3 back to gsd-core 1.21.0 parked 170 "modified"
+files, and every one was only the old installer's own rewrites (`/gsd:` to `/gsd-`, `~` to
+`$HOME`), not real edits. Wholesale loss happens too. The reminder was first written into the 1.42.3
+copies (`38bcad5b1`), carried to gsd-core 1.14.0 by reapply, then lost on one machine when 1.42.3
+was reinstalled over gsd-core on 2026-10-22. Its original text was never versioned, so it was
+rewritten from this section on 2026-11-17 (quick task 261117-s78). If a machine's grep shows 0,
+rewrite it from this section the same way.
 
-**Load-bearing: this is a per-patched-file baseline, not a snapshot of the release.**
-`backup-meta.json`'s `files` array is exactly `["gsd-core/bin/lib/template.cjs",
-"gsd-core/templates/phase-prompt.md"]` — the same 2 paths the pristine tree contains — so it
-holds a baseline only for files already known to be locally modified. Any gsd-core file modified
-locally for the first time before the next upgrade therefore still has no baseline, which is the
-same hole the 1.42.3 -> 1.14.0 move fell into: that move had neither a git repo at `~/.claude` nor a
-pristine snapshot, and its baseline had to be reconstructed from the npm tarball and hash-validated.
-
-The 1.14.0 -> 1.15.0 upgrade is the first one that had pristine available (`backup-meta.json`
-`from_version` `1.14.0`, `backed_up_at 2026-09-29T19:21:40.467Z`; `gsd-file-manifest.json`
-`version: 1.15.0` at `19:21:40.713Z`; `gsd-core/VERSION` reads `1.15.0`). Its observable outcome is
-indistinguishable from a verbatim restore: the live installed files are byte-identical to the
-`gsd-local-patches/` backups: `e559c6e7…` for `template.cjs`, `e021d981…` for `phase-prompt.md`.
-That does not mean a three-way merge happened, and it does not mean one did not — a verbatim
-restore is harmless only if 1.15.0 shipped those two files unchanged from 1.14.0, and that cannot
-be checked from here because the live copies are patched.
-
-The limit, at equal weight: reapply is a MANUAL step the operator must run after every upgrade —
-nothing runs it automatically — and **those `gsd-core` files remain outside this repo,
-unversioned, shared by every project on the machine, and a `gsd-core` upgrade will overwrite
-them** — the same caveat this file already records for the UAT template. This section is the
-durable copy of the requirement; treat the template text as a convenience, not as the requirement.
+This section is the durable copy of the requirement; treat the template text as a convenience,
+not as the requirement.
 
 
 </context>
