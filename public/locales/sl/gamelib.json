@@ -99,6 +99,7 @@
         "extraInfoErrorTitle": "Dodatnih informacij ni bilo mogoče naložiti",
         "extraInfoRetry": "Poskusi znova",
         "extraInfoStaleBody": "Ta rezultat je bil shranjen v predpomnilnik, preden so se beležili izidi nalaganja, zato je morda zastarel. Osvežite za preverjanje.",
+        "hiddenAchievement": "Skriti dosežek",
         "moreActions": "Več dejanj",
         "steamInstallingPercent": "Nameščanje… {{percent}} %",
         "steamUpdateCommitting": "Uveljavljanje posodobitve…",

@@ -97,6 +97,7 @@
         "extraInfoErrorTitle": "Qo'shimcha ma'lumotni yuklab bo'lmadi",
         "extraInfoRetry": "Qayta urinish",
         "extraInfoStaleBody": "Bu natija yuklash holatlari qayd etilishidan oldin keshlangan, shuning uchun eskirgan bo'lishi mumkin. Tekshirish uchun yangilang.",
+        "hiddenAchievement": "Yashirin yutuq",
         "moreActions": "Boshqa amallar",
         "steamInstallingPercent": "Oʻrnatilmoqda… {{percent}}%",
         "steamUpdateCommitting": "Yangilanish qo'llanmoqda…",

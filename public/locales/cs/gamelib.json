@@ -99,6 +99,7 @@
         "extraInfoErrorTitle": "Nepodařilo se načíst další informace",
         "extraInfoRetry": "Zkusit znovu",
         "extraInfoStaleBody": "Tento výsledek byl uložen do mezipaměti před zaznamenáním výsledků načtení, takže může být zastaralý. Obnovte pro kontrolu.",
+        "hiddenAchievement": "Skrytý úspěch",
         "moreActions": "Další akce",
         "steamInstallingPercent": "Instaluji… {{percent}} %",
         "steamUpdateCommitting": "Používá se aktualizace…",

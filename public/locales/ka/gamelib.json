@@ -97,6 +97,7 @@
         "extraInfoErrorTitle": "დამატებითი ინფორმაციის ჩატვირთვა ვერ მოხერხდა",
         "extraInfoRetry": "ხელახლა ცდა",
         "extraInfoStaleBody": "ეს შედეგი ქეშირებულია ჩატვირთვის შედეგების ჩაწერამდე, ამიტომ შეიძლება მოძველებული იყოს. განაახლეთ შესამოწმებლად.",
+        "hiddenAchievement": "დამალული მიღწევა",
         "moreActions": "მეტი მოქმედება",
         "steamInstallingPercent": "მიმდინარეობს დაყენება… {{percent}}%",
         "steamUpdateCommitting": "განახლების გამოყენება…",

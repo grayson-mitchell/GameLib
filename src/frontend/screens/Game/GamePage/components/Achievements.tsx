@@ -1,11 +1,17 @@
 import type { GameAchievement } from 'common/types/gog'
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   achievements: GameAchievement[]
 }
 
 const Achievements = ({ achievements }: Props) => {
+  const { t: tGamelib } = useTranslation('gamelib')
+  const hiddenLabel = tGamelib(
+    'gamelib:gamepage.hiddenAchievement',
+    'Hidden Achievement'
+  )
   const sortedAchievements = useMemo(() => {
     const unlocked = achievements
       .filter((x) => x.date_unlocked !== null)
@@ -35,12 +41,12 @@ const Achievements = ({ achievements }: Props) => {
                 src={
                   x.date_unlocked ? x.image_url_unlocked : x.image_url_locked
                 }
-                alt={isHiddenAchievement ? 'Hidden Achievement' : x.name}
+                alt={isHiddenAchievement ? hiddenLabel : x.name}
               />
             </div>
             <div className="achievement-text">
               <span className="achievement-title">
-                {isHiddenAchievement ? 'Hidden Achievement' : x.name}
+                {isHiddenAchievement ? hiddenLabel : x.name}
               </span>
               <span className="achievement-desc">
                 {isHiddenAchievement ? '' : x.description}

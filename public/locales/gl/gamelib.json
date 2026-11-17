@@ -97,6 +97,7 @@
         "extraInfoErrorTitle": "Non se puido cargar información adicional",
         "extraInfoRetry": "Reintentar",
         "extraInfoStaleBody": "Este resultado quedou en caché antes de que se rexistrasen os resultados da carga, polo que podería estar desactualizado. Actualiza para comprobalo.",
+        "hiddenAchievement": "Logro oculto",
         "moreActions": "Máis accións",
         "steamInstallingPercent": "Instalando… {{percent}} %",
         "steamUpdateCommitting": "Aplicando a actualización…",

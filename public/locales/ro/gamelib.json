@@ -98,6 +98,7 @@
         "extraInfoErrorTitle": "Nu s-au putut încărca informațiile suplimentare",
         "extraInfoRetry": "Reîncearcă",
         "extraInfoStaleBody": "Acest rezultat a fost stocat în cache înainte de a se înregistra rezultatele încărcării, deci poate fi depășit. Reîmprospătează pentru a verifica.",
+        "hiddenAchievement": "Realizare ascunsă",
         "moreActions": "Mai multe acțiuni",
         "steamInstallingPercent": "Se instalează… {{percent}}%",
         "steamUpdateCommitting": "Se aplică actualizarea…",

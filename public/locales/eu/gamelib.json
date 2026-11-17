@@ -97,6 +97,7 @@
         "extraInfoErrorTitle": "Ezin izan da informazio gehigarria kargatu",
         "extraInfoRetry": "Saiatu berriro",
         "extraInfoStaleBody": "Emaitza hau kargaren emaitzak erregistratu baino lehen katxeatu zen, beraz baliteke eguneratua ez egotea. Freskatu egiaztatzeko.",
+        "hiddenAchievement": "Lorpen ezkutua",
         "moreActions": "Ekintza gehiago",
         "steamInstallingPercent": "Instalatzen… {{percent}}%",
         "steamUpdateCommitting": "Eguneratzea aplikatzen…",

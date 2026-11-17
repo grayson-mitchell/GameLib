@@ -98,6 +98,7 @@
         "extraInfoErrorTitle": "Não foi possível carregar informação extra",
         "extraInfoRetry": "Tentar novamente",
         "extraInfoStaleBody": "Este resultado foi guardado em cache antes de os resultados de carregamento serem registados, pelo que pode estar desatualizado. Atualize para verificar.",
+        "hiddenAchievement": "Conquista oculta",
         "moreActions": "Mais ações",
         "steamInstallingPercent": "A instalar… {{percent}}%",
         "steamUpdateCommitting": "A aplicar a atualização…",

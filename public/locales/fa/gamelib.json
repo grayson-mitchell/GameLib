@@ -97,6 +97,7 @@
         "extraInfoErrorTitle": "بارگذاری اطلاعات اضافی ممکن نشد",
         "extraInfoRetry": "تلاش دوباره",
         "extraInfoStaleBody": "این نتیجه پیش از ثبت نتایج بارگذاری کش شده است، پس ممکن است قدیمی باشد. برای بررسی، تازه‌سازی کنید.",
+        "hiddenAchievement": "دستاورد پنهان",
         "moreActions": "اقدام‌های بیشتر",
         "steamInstallingPercent": "در حال نصب… {{percent}}%",
         "steamUpdateCommitting": "در حال اعمال به‌روزرسانی…",

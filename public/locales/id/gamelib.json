@@ -97,6 +97,7 @@
         "extraInfoErrorTitle": "Tidak dapat memuat info tambahan",
         "extraInfoRetry": "Coba Lagi",
         "extraInfoStaleBody": "Hasil ini disimpan dalam cache sebelum hasil pemuatan dicatat, sehingga mungkin sudah kedaluwarsa. Segarkan untuk memeriksanya.",
+        "hiddenAchievement": "Pencapaian tersembunyi",
         "moreActions": "Tindakan lainnya",
         "steamInstallingPercent": "Menginstal… {{percent}}%",
         "steamUpdateCommitting": "Menerapkan pembaruan…",

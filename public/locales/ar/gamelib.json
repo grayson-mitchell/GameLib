@@ -101,6 +101,7 @@
         "extraInfoErrorTitle": "تعذّر تحميل المعلومات الإضافية",
         "extraInfoRetry": "أعد المحاولة",
         "extraInfoStaleBody": "تم تخزين هذه النتيجة مؤقتًا قبل تسجيل نتائج التحميل، لذا قد تكون قديمة. حدّثها للتحقق.",
+        "hiddenAchievement": "إنجاز مخفي",
         "moreActions": "المزيد من الإجراءات",
         "steamInstallingPercent": "جارٍ التثبيت… {{percent}}%",
         "steamUpdateCommitting": "جارٍ تطبيق التحديث…",

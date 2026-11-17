@@ -45,6 +45,7 @@
         "extraInfoErrorTitle": "Zusatzinfos konnten nicht geladen werden",
         "extraInfoRetry": "Erneut versuchen",
         "extraInfoStaleBody": "Dieses Ergebnis wurde zwischengespeichert, bevor Ladeergebnisse erfasst wurden, und könnte daher veraltet sein. Aktualisieren, um zu prüfen.",
+        "hiddenAchievement": "Versteckter Erfolg",
         "moreActions": "Weitere Aktionen",
         "steamInstallingPercent": "Wird installiert… {{percent}} %",
         "steamUpdateCommitting": "Update wird angewendet…",

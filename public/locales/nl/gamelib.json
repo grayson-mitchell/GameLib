@@ -97,6 +97,7 @@
         "extraInfoErrorTitle": "Kon extra informatie niet laden",
         "extraInfoRetry": "Opnieuw proberen",
         "extraInfoStaleBody": "Dit resultaat is gecachet voordat laadresultaten werden geregistreerd, dus het kan verouderd zijn. Vernieuw om te controleren.",
+        "hiddenAchievement": "Verborgen prestatie",
         "moreActions": "Meer acties",
         "steamInstallingPercent": "Installeren… {{percent}}%",
         "steamUpdateCommitting": "Update toepassen…",

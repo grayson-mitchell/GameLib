@@ -29,6 +29,9 @@ const DEFERRED_STEAM_LOGIN =
   'src/frontend/screens/Login/components/SteamLogin/index.tsx'
 const DEFERRED_OAUTH_LOGIN =
   'src/frontend/screens/WebView/useTauriOAuthLogin.ts'
+// Not D-17 debt: allowlisted by user decision (quick 261117-pfj), see the
+// 2026-11-17 entry above DECLARED_UNSCANNED_DEBT.
+const DEFERRED_NOTICE_PREVIEW = 'src/frontend/dev/noticePreview.ts'
 
 const FIXED_NOW = new Date('2026-08-07T00:00:00.000Z')
 
@@ -456,6 +459,18 @@ const FIXTURE_DIFF_LINES = [
  * 2026-11-16 (quick 261116-vt7): fork-touched 398 -> 396, scope 277 -> 275.
  * `SteamGoOfflineNotice.tsx` and `state/SteamGoOfflineNotice.ts` were deleted
  * and dropped from both lists. DECLARED_UNSCANNED_DEBT unchanged.
+ *
+ * 2026-11-17 (quick 261117-pfj): fork-touched 396 -> 404 by a fresh
+ * `pnpm gen-i18n-gate-scope`, scope 276 -> 283. Quick 261117-p38 had
+ * hand-added `GameSubMenu/SteamDirectLaunchButton.tsx` to scope (275 -> 276)
+ * without regenerating the fork-touched list. The other 8 new fork-touched
+ * files were SCANNED, not declared debt: `scanScope({ extraFiles })` found 3
+ * literals. `Achievements.tsx`'s two "Hidden Achievement" now read
+ * `gamelib:gamepage.hiddenAchievement`; 7 files were hand-inserted in sorted
+ * position into scope. `dev/noticePreview.ts`'s one literal is a fixture game
+ * title (data, not copy): by user decision it joined DEFERRED_FILES and the
+ * D-18 allowlist at expectedCount 1, so it is still scanned on every run but
+ * leaves the fork-touched list. DECLARED_UNSCANNED_DEBT unchanged.
  */
 const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/__mocks__/svgReactStub.tsx',
@@ -693,11 +708,12 @@ describe('genI18nGateScope', () => {
   })
 
   describe('D-17 deferral', () => {
-    it('removes both D-17 paths from files and lists them under excluded.deferred', () => {
+    it('removes all three deferred paths from files and lists them under excluded.deferred', () => {
       const diffLines = [
         ...FIXTURE_DIFF_LINES,
         `A\t${DEFERRED_STEAM_LOGIN}`,
-        `M\t${DEFERRED_OAUTH_LOGIN}`
+        `M\t${DEFERRED_OAUTH_LOGIN}`,
+        `A\t${DEFERRED_NOTICE_PREVIEW}`
       ]
 
       const snapshot = buildScopeSnapshot({
@@ -709,8 +725,13 @@ describe('genI18nGateScope', () => {
 
       expect(snapshot.files).not.toContain(DEFERRED_STEAM_LOGIN)
       expect(snapshot.files).not.toContain(DEFERRED_OAUTH_LOGIN)
+      expect(snapshot.files).not.toContain(DEFERRED_NOTICE_PREVIEW)
       expect(snapshot.excluded.deferred.slice().sort()).toEqual(
-        [DEFERRED_STEAM_LOGIN, DEFERRED_OAUTH_LOGIN].sort()
+        [
+          DEFERRED_STEAM_LOGIN,
+          DEFERRED_OAUTH_LOGIN,
+          DEFERRED_NOTICE_PREVIEW
+        ].sort()
       )
       expect(snapshot.excluded.reason[DEFERRED_STEAM_LOGIN]).toBeDefined()
       expect(snapshot.excluded.reason[DEFERRED_OAUTH_LOGIN]).toBeDefined()
@@ -745,10 +766,17 @@ describe('genI18nGateScope', () => {
       expect(scopeSnapshot.files).not.toContain(DEFERRED_OAUTH_LOGIN)
     })
 
-    it('excluded.deferred contains exactly the two D-17 paths, each with a reason', () => {
+    it('excluded.deferred contains exactly the two D-17 paths and the allowlisted noticePreview, each with a reason', () => {
       expect(scopeSnapshot.excluded.deferred.slice().sort()).toEqual(
-        [DEFERRED_STEAM_LOGIN, DEFERRED_OAUTH_LOGIN].sort()
+        [
+          DEFERRED_STEAM_LOGIN,
+          DEFERRED_OAUTH_LOGIN,
+          DEFERRED_NOTICE_PREVIEW
+        ].sort()
       )
+      expect(
+        scopeSnapshot.excluded.reason[DEFERRED_NOTICE_PREVIEW]
+      ).toBeDefined()
       expect(scopeSnapshot.excluded.reason[DEFERRED_STEAM_LOGIN]).toBeDefined()
       expect(scopeSnapshot.excluded.reason[DEFERRED_OAUTH_LOGIN]).toBeDefined()
     })
@@ -1296,9 +1324,9 @@ describe('--rewrite-scope guard', () => {
     }
   })
 
-  it('A0 fixture sanity: the seeded scope is the REAL 275-file hand-curated snapshot, and the fresh-snapshot fixture carries the committed 396-file fork-touched set verbatim', () => {
-    expect(scopeSnapshot.files.length).toBe(275)
-    expect(forkTouchedSnapshot.files.length).toBe(396)
+  it('A0 fixture sanity: the seeded scope is the REAL 283-file hand-curated snapshot, and the fresh-snapshot fixture carries the committed 404-file fork-touched set verbatim', () => {
+    expect(scopeSnapshot.files.length).toBe(283)
+    expect(forkTouchedSnapshot.files.length).toBe(404)
     // `freshSnapshot()` is a FIXTURE built from the committed artifact
     // (`files: [...forkTouchedSnapshot.files]`) -- NOT a live git derivation,
     // despite what this assertion used to claim. The live derivation is
@@ -1339,7 +1367,7 @@ describe('--rewrite-scope guard', () => {
     expect(result.refusal).toBeNull()
   })
 
-  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 275 -> 396 diff and writes nothing', () => {
+  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 283 -> 404 diff and writes nothing', () => {
     const { outDir, scopePath, seededBytes } = seedScope()
 
     const result = writeArtifacts({
@@ -1362,7 +1390,7 @@ describe('--rewrite-scope guard', () => {
     expect(refusal.provenance).toBe(scopeSnapshot.generatedBy)
   })
 
-  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 396', () => {
+  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 404', () => {
     // The load-bearing spec. Without it, A1/A2's "the file did not change"
     // would be satisfied just as well by a writer that cannot write at all —
     // a guard that refuses everything is not a fix, it is a different bug.
@@ -1375,12 +1403,12 @@ describe('--rewrite-scope guard', () => {
     })
 
     const rewritten = JSON.parse(readFileSync(scopePath, 'utf-8'))
-    expect(rewritten.files.length).toBe(396)
+    expect(rewritten.files.length).toBe(404)
     expect(result.wroteScope).toBe(scopePath)
     expect(result.refusal).toBeNull()
   })
 
-  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 396 files', () => {
+  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 404 files', () => {
     const outDir = makeTmpDir()
     const scopePath = join(outDir, 'i18nGateScope.json')
     expect(existsSync(scopePath)).toBe(false)
@@ -1393,7 +1421,7 @@ describe('--rewrite-scope guard', () => {
 
     expect(result.refusal).toBeNull()
     expect(result.wroteScope).toBe(scopePath)
-    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(396)
+    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(404)
   })
 
   it('A5 PROVENANCE RATCHET ON THE REAL ARTIFACT: the committed marker still reads as hand-curated', () => {

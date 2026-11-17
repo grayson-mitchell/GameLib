@@ -98,6 +98,7 @@
         "extraInfoErrorTitle": "Nije moguće učitati dodatne informacije",
         "extraInfoRetry": "Pokušaj ponovo",
         "extraInfoStaleBody": "Ovaj rezultat je keširan prije nego što su ishodi učitavanja zabilježeni, pa može biti zastario. Osvježite da provjerite.",
+        "hiddenAchievement": "Skriveno dostignuće",
         "moreActions": "Više radnji",
         "steamInstallingPercent": "Instaliranje… {{percent}}%",
         "steamUpdateCommitting": "Primjena ažuriranja…",

@@ -97,6 +97,7 @@
         "extraInfoErrorTitle": "Kunde inte läsa in extra information",
         "extraInfoRetry": "Försök igen",
         "extraInfoStaleBody": "Detta resultat cachades innan utfall från inläsningar registrerades, så det kan vara inaktuellt. Uppdatera för att kontrollera.",
+        "hiddenAchievement": "Dold prestation",
         "moreActions": "Fler åtgärder",
         "steamInstallingPercent": "Installerar… {{percent}} %",
         "steamUpdateCommitting": "Tillämpar uppdateringen…",

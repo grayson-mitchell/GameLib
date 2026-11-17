@@ -99,6 +99,7 @@
         "extraInfoErrorTitle": "Не ўдалося загрузіць дадатковую інфармацыю",
         "extraInfoRetry": "Паўторыць",
         "extraInfoStaleBody": "Гэты результат быў закэшаваны да фіксацыі выніку загрузкі, таму ён можа быць састарэлым. Абновіце, каб перавірыць.",
+        "hiddenAchievement": "Схаванае дасягненне",
         "moreActions": "Іншыя дзеянні",
         "steamInstallingPercent": "Усталяванне… {{percent}}%",
         "steamUpdateCommitting": "Прымяненне абнаўлення…",

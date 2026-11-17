@@ -97,6 +97,7 @@
         "extraInfoErrorTitle": "Ek bilgi yüklenemedi",
         "extraInfoRetry": "Tekrar dene",
         "extraInfoStaleBody": "Bu sonuç, yükleme sonuçları kaydedilmeden önce önbelleğe alındı, bu yüzden güncel olmayabilir. Kontrol etmek için yenileyin.",
+        "hiddenAchievement": "Gizli başarım",
         "moreActions": "Daha fazla eylem",
         "steamInstallingPercent": "Kuruluyor… %{{percent}}",
         "steamUpdateCommitting": "Güncelleme uygulanıyor…",

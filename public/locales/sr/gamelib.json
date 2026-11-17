@@ -98,6 +98,7 @@
         "extraInfoErrorTitle": "Није могуће учитати додатне информације",
         "extraInfoRetry": "Покушај поново",
         "extraInfoStaleBody": "Овај резултат је кеширан пре него што су резултати учитавања забележени, па може бити застарео. Освежите да бисте проверили.",
+        "hiddenAchievement": "Скривено достигнуће",
         "moreActions": "Више радњи",
         "steamInstallingPercent": "Инсталирање… {{percent}}%",
         "steamUpdateCommitting": "Примена ажурирања…",

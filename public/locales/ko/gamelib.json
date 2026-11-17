@@ -97,6 +97,7 @@
         "extraInfoErrorTitle": "추가 정보를 불러오지 못함",
         "extraInfoRetry": "다시 시도",
         "extraInfoStaleBody": "이 결과는 로드 결과가 기록되기 전에 캐시되어 오래되었을 수 있습니다. 새로고침하여 확인하세요.",
+        "hiddenAchievement": "숨겨진 도전 과제",
         "moreActions": "더 많은 작업",
         "steamInstallingPercent": "설치 중… {{percent}}%",
         "steamUpdateCommitting": "업데이트 적용 중…",

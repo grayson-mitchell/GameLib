@@ -99,6 +99,7 @@
         "extraInfoErrorTitle": "Не вдалося завантажити додаткову інформацію",
         "extraInfoRetry": "Повторити",
         "extraInfoStaleBody": "Цей результат був кешований до фіксації результатів завантаження, тож може бути застарілим. Оновіть, щоб перевірити.",
+        "hiddenAchievement": "Приховане досягнення",
         "moreActions": "Інші дії",
         "steamInstallingPercent": "Встановлення… {{percent}}%",
         "steamUpdateCommitting": "Застосування оновлення…",

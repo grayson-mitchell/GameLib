@@ -97,6 +97,7 @@
         "extraInfoErrorTitle": "追加情報を読み込めませんでした",
         "extraInfoRetry": "再試行",
         "extraInfoStaleBody": "この結果は読み込み結果が記録される前にキャッシュされたため、古い可能性があります。更新して確認してください。",
+        "hiddenAchievement": "隠し実績",
         "moreActions": "その他の操作",
         "steamInstallingPercent": "インストール中… {{percent}}%",
         "steamUpdateCommitting": "アップデートを適用中…",

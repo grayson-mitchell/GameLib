@@ -97,6 +97,7 @@
         "extraInfoErrorTitle": "无法加载额外信息",
         "extraInfoRetry": "重试",
         "extraInfoStaleBody": "此结果是在记录加载结果之前缓存的，可能已过期。请刷新以检查。",
+        "hiddenAchievement": "隐藏成就",
         "moreActions": "更多操作",
         "steamInstallingPercent": "正在安装… {{percent}}%",
         "steamUpdateCommitting": "正在应用更新…",

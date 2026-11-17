@@ -97,6 +97,7 @@
         "extraInfoErrorTitle": "Əlavə məlumat yüklənə bilmədi",
         "extraInfoRetry": "Yenidən cəhd et",
         "extraInfoStaleBody": "Bu nəticə yükləmə nəticələri qeydə alınmazdan əvvəl keşlənib, ona görə köhnəlmiş ola bilər. Yoxlamaq üçün yeniləyin.",
+        "hiddenAchievement": "Gizli nailiyyət",
         "moreActions": "Daha çox əməliyyat",
         "steamInstallingPercent": "Quraşdırılır… {{percent}}%",
         "steamUpdateCommitting": "Yeniləmə tətbiq olunur…",

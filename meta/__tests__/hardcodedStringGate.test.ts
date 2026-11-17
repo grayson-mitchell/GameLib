@@ -1927,14 +1927,19 @@ describe('hardcodedStringGate', () => {
         expect(report.scannedFiles).toBe(realScope.files.length)
       })
 
-      it('the D-18 allowlist has exactly the two D-17 deferred entries — growing it is a decision, not a way to reach green (T-34.8-30)', () => {
+      // 2 -> 3 (quick 261117-pfj), a user decision: `dev/noticePreview.ts`
+      // carries one fixture game title in a dev-only preview payload. That is
+      // data the backend would send, not copy, so translating it is wrong;
+      // the entry is count-pinned at 1, so any new literal there still fails.
+      it('the D-18 allowlist has exactly the two D-17 deferred entries plus the noticePreview fixture — growing it is a decision, not a way to reach green (T-34.8-30)', () => {
         const allowlist = JSON.parse(
           readFileSync('meta/i18nGateAllowlist.json', 'utf-8')
         ) as Array<{ file: string }>
-        expect(allowlist).toHaveLength(2)
+        expect(allowlist).toHaveLength(3)
         expect(allowlist.map((entry) => entry.file)).toEqual([
           'src/frontend/screens/Login/components/SteamLogin/index.tsx',
-          'src/frontend/screens/WebView/useTauriOAuthLogin.ts'
+          'src/frontend/screens/WebView/useTauriOAuthLogin.ts',
+          'src/frontend/dev/noticePreview.ts'
         ])
       })
 

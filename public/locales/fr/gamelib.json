@@ -45,6 +45,7 @@
         "extraInfoErrorTitle": "Impossible de charger les infos supplémentaires",
         "extraInfoRetry": "Réessayer",
         "extraInfoStaleBody": "Ce résultat a été mis en cache avant l'enregistrement des résultats de chargement, il peut donc être obsolète. Actualisez pour vérifier.",
+        "hiddenAchievement": "Accomplissement caché",
         "moreActions": "Plus d'actions",
         "steamInstallingPercent": "Installation… {{percent}} %",
         "steamUpdateCommitting": "Application de la mise à jour…",

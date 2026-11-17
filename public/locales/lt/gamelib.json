@@ -99,6 +99,7 @@
         "extraInfoErrorTitle": "Nepavyko įkelti papildomos informacijos",
         "extraInfoRetry": "Bandyti dar kartą",
         "extraInfoStaleBody": "Šis rezultatas buvo talpinamas podėlyje prieš pradedant registruoti įkėlimo rezultatus, todėl jis gali būti pasenęs. Atnaujinkite, kad patikrintumėte.",
+        "hiddenAchievement": "Paslėptas pasiekimas",
         "moreActions": "Daugiau veiksmų",
         "steamInstallingPercent": "Diegiama… {{percent}} %",
         "steamUpdateCommitting": "Taikomas naujinimas…",

@@ -97,6 +97,7 @@
         "extraInfoErrorTitle": "Không thể tải thông tin bổ sung",
         "extraInfoRetry": "Thử lại",
         "extraInfoStaleBody": "Kết quả này được lưu vào bộ nhớ đệm trước khi kết quả tải được ghi nhận, nên có thể đã lỗi thời. Làm mới để kiểm tra.",
+        "hiddenAchievement": "Thành tựu ẩn",
         "moreActions": "Thêm thao tác",
         "steamInstallingPercent": "Đang cài đặt… {{percent}}%",
         "steamUpdateCommitting": "Đang áp dụng bản cập nhật…",

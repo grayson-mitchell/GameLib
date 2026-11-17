@@ -97,6 +97,7 @@
         "extraInfoErrorTitle": "Допълнителната информация не можа да се зареди",
         "extraInfoRetry": "Опитайте отново",
         "extraInfoStaleBody": "Този резултат е кеширан преди да се записват резултатите от зареждането, така че може да е неактуален. Обновете, за да проверите.",
+        "hiddenAchievement": "Скрито постижение",
         "moreActions": "Още действия",
         "steamInstallingPercent": "Инсталира се… {{percent}}%",
         "steamUpdateCommitting": "Прилагане на актуализацията…",

@@ -98,6 +98,7 @@
         "extraInfoErrorTitle": "No s'ha pogut carregar la informació addicional",
         "extraInfoRetry": "Torna-ho a provar",
         "extraInfoStaleBody": "Aquest resultat es va desar en memòria cau abans de registrar els resultats de la càrrega, per la qual cosa pot estar desactualitzat. Actualitza-ho per comprovar-ho.",
+        "hiddenAchievement": "Assoliment ocult",
         "moreActions": "Més accions",
         "steamInstallingPercent": "S'està instal·lant… {{percent}}%",
         "steamUpdateCommitting": "Aplicant l'actualització…",

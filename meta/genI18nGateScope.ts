@@ -116,7 +116,11 @@ const DEFERRED_FILES: Record<string, string> = {
     'D-17 -- deferred; interactive SteamLogin UI is deletion-pending, ' +
     'blocked on Phase 34.4.2',
   'src/frontend/screens/WebView/useTauriOAuthLogin.ts':
-    'D-17 -- deferred; Epic OAuth login flow, blocked on Phase 34.5'
+    'D-17 -- deferred; Epic OAuth login flow, blocked on Phase 34.5',
+  'src/frontend/dev/noticePreview.ts':
+    'Allowlisted, not deferred debt: the one literal is the fixture game ' +
+    "title in the dev-only notice preview's Steam payload, data the backend " +
+    'would send, never translated (quick 261117-pfj)'
 }
 
 // ---------------------------------------------------------------------------

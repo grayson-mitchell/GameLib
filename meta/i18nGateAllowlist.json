@@ -8,5 +8,10 @@
     "file": "src/frontend/screens/WebView/useTauriOAuthLogin.ts",
     "expectedCount": 2,
     "reason": "D-17 -- deferred; Phase 34.5's open gate fails at this file's render layer (useTauriOAuthLogin), which is why the retrofit is blocked until that gate closes."
+  },
+  {
+    "file": "src/frontend/dev/noticePreview.ts",
+    "expectedCount": 1,
+    "reason": "Not deferred debt: the one literal is the fixture game title ('Half-Life 2') in the dev-only notice preview's Steam payload. It stands in for a game title the backend sends, which is data and never translated. Count-pinned so any new literal in this file still fails (quick 261117-pfj)."
   }
 ]

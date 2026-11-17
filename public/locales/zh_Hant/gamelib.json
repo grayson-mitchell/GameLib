@@ -97,6 +97,7 @@
         "extraInfoErrorTitle": "無法載入額外資訊",
         "extraInfoRetry": "重試",
         "extraInfoStaleBody": "此結果是在記錄載入結果之前快取的，可能已過時。請重新整理以確認。",
+        "hiddenAchievement": "隱藏成就",
         "moreActions": "更多操作",
         "steamInstallingPercent": "正在安裝… {{percent}}%",
         "steamUpdateCommitting": "正在套用更新…",

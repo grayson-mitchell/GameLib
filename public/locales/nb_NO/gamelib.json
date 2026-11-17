@@ -97,6 +97,7 @@
         "extraInfoErrorTitle": "Kunne ikke laste tilleggsinfo",
         "extraInfoRetry": "Prøv igjen",
         "extraInfoStaleBody": "Dette resultatet ble hurtiglagret før lasteutfall ble registrert, så det kan være utdatert. Oppdater for å kontrollere.",
+        "hiddenAchievement": "Skjult prestasjon",
         "moreActions": "Flere handlinger",
         "steamInstallingPercent": "Installerer… {{percent}} %",
         "steamUpdateCommitting": "Bruker oppdateringen…",

@@ -99,6 +99,7 @@
         "extraInfoErrorTitle": "Не удалось загрузить дополнительную информацию",
         "extraInfoRetry": "Повторить",
         "extraInfoStaleBody": "Этот результат был закэширован до того, как стали фиксироваться итоги загрузки, поэтому он может быть устаревшим. Обновите, чтобы проверить.",
+        "hiddenAchievement": "Скрытое достижение",
         "moreActions": "Другие действия",
         "steamInstallingPercent": "Установка… {{percent}}%",
         "steamUpdateCommitting": "Применение обновления…",
