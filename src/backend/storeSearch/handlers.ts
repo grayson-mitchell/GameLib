@@ -46,7 +46,7 @@ import type {
  * RESEARCH D3: a missing or malformed country prices as US, it never fails the
  * search. Only an upper-case ISO 3166-1 alpha-2 shape is accepted as given.
  */
-export function normalizeCountry(country: unknown): string {
+function normalizeCountry(country: unknown): string {
   return typeof country === 'string' && /^[A-Z]{2}$/.test(country)
     ? country
     : 'US'

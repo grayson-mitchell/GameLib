@@ -66,11 +66,20 @@ const table: FixtureTable<typeof enrichmentAsyncArgs> = {
     ]
   },
   searchStores: {
-    valid: [['half-life'], ['']],
+    valid: [['half-life'], [''], ['portal', 'DE'], ['portal', null]],
     invalid: [[], [1], ['x'.repeat(300)]]
   },
-  getStoreSearchDeals: { valid: [['123']], invalid: [[], [''], [1]] },
-  getStoreSearchStoreMap: noArgs,
+  getStoreSearchDeals: {
+    valid: [
+      ['018d937f-0f7e-7172-b2c5-9a6e6b4e38a1'],
+      ['018d937f-0f7e-7172-b2c5-9a6e6b4e38a1', 'US']
+    ],
+    invalid: [[], [''], [1], ['a.b']]
+  },
+  getItadSteamGids: {
+    valid: [[['220', '400']], [[]]],
+    invalid: [[['abc']], [[220]], [Array(5001).fill('1')]]
+  },
   'steamgriddb.hasApiKey': noArgs,
   'steamgriddb.setApiKey': {
     valid: [['abcdef0123'], ['']],

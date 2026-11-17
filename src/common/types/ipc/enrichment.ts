@@ -8,11 +8,7 @@ import type {
 } from '../../types'
 import type { CatalogProduct } from '../discounts'
 import type { RunsForMeState } from '../../runsForMe'
-import type {
-  StoreSearchDeal,
-  StoreSearchResult,
-  StoreSearchStore
-} from '../storeSearch'
+import type { StoreSearchDeal, StoreSearchResponse } from '../storeSearch'
 import {
   nonEmptyString,
   optionalArg,
@@ -25,6 +21,8 @@ const noArgs = z.tuple([])
 // Search terms and ids drive outbound network requests (T-67-51), so every string is bounded.
 const appName = nonEmptyString(256)
 const searchTerm = z.string().max(256)
+// Lenient on purpose: the handler maps anything that is not /^[A-Z]{2}$/ to US (RESEARCH D3).
+const countryArg = optionalArg(z.string().max(16))
 const styleList = z.array(z.string().max(64)).max(64).optional()
 
 // Renderer-constructed, so strict. Quick 261029-mkz: per-game "Runs for me" override.
@@ -66,9 +64,16 @@ export const enrichmentAsyncArgs = {
     optionalArg(z.boolean()),
     optionalArg(z.boolean())
   ]),
-  searchStores: z.tuple([searchTerm]),
-  getStoreSearchDeals: z.tuple([nonEmptyString(256)]),
-  getStoreSearchStoreMap: noArgs,
+  searchStores: z.tuple([searchTerm, countryArg]),
+  // ITAD game id shape; blocks dots and path separators before the cache layer (T-47-25).
+  getStoreSearchDeals: z.tuple([
+    z.string().regex(/^[0-9a-fA-F-]{1,64}$/),
+    countryArg
+  ]),
+  // Keyless Steam appid -> ITAD gid lookup; digits-only and bounded (T-47-26).
+  getItadSteamGids: z.tuple([
+    z.array(z.string().regex(/^\d{1,10}$/)).max(5000)
+  ]),
   'steamgriddb.hasApiKey': noArgs,
   // T-67-50: bounded; a rejection never echoes the key (value-free rejection log).
   'steamgriddb.setApiKey': z.tuple([z.string().max(256)]),
@@ -89,9 +94,9 @@ interface EnrichmentAsyncReturns {
   removeRecent: Promise<void>
   getWikiGameInfo: Promise<WikiInfo | null>
   getGogDiscounts: Promise<CatalogProduct[]>
-  searchStores: Promise<StoreSearchResult[]>
+  searchStores: Promise<StoreSearchResponse>
   getStoreSearchDeals: Promise<StoreSearchDeal[]>
-  getStoreSearchStoreMap: Promise<Record<string, StoreSearchStore>>
+  getItadSteamGids: Promise<Record<string, string>>
   'steamgriddb.hasApiKey': Promise<boolean>
   'steamgriddb.setApiKey': Promise<void>
   'steamgriddb.searchGame': Promise<Array<{ id: number; name: string }>>

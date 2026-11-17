@@ -29,9 +29,10 @@
  *     - `getCrossoverIndex` -> `crossover_index/crossoverRatingMap.ts`'s
  *       `buildCrossoverRatingMap()` (Plan 34.2-03 extraction; registered at
  *       `crossover_index/ipc_handler.ts:47` today)
- *     - `searchStores` / `getStoreSearchDeals` / `getStoreSearchStoreMap` ->
- *       `storeSearch/handlers.ts`'s `handleSearchStores(query)` /
- *       `handleGetStoreSearchDeals(gameId)` / `handleGetStoreSearchStoreMap()`
+ *     - `searchStores` / `getStoreSearchDeals` / `getItadSteamGids` ->
+ *       `storeSearch/handlers.ts`'s `handleSearchStores(query, country)` /
+ *       `handleGetStoreSearchDeals(gameId, country)` /
+ *       `handleGetItadSteamGids(appIds)`
  *       (Plan 34.2-13 extraction; imported the same way by
  *       `storeSearch/index.ts` on the Electron side)
  *     - `removeRecent` -> `recent_games/recent_games.ts`'s
@@ -65,7 +66,7 @@
  * `electron`) — registering it again here would double-fire
  * `downloadAntiCheatData` per `releasesInfoReady` event.
  *
- * `searchStores` / `getStoreSearchDeals` / `getStoreSearchStoreMap` error
+ * `searchStores` / `getStoreSearchDeals` / `getItadSteamGids` error
  * contract: this registration now IMPORTS the three shared handler bodies
  * from `storeSearch/handlers.ts` instead of hand-copying the try / `logError`
  * / `throw err` shape (Phase 34.2 Plan 13, closes code-review finding
@@ -170,7 +171,7 @@ import { buildCrossoverRatingMap } from '../crossover_index/crossoverRatingMap'
 import {
   handleSearchStores,
   handleGetStoreSearchDeals,
-  handleGetStoreSearchStoreMap
+  handleGetItadSteamGids
 } from '../storeSearch/handlers'
 import { getRunsForMeMap, setRunsForMeByUser } from '../runsForMe'
 import { removeRecentGame } from '../recent_games/recent_games'
@@ -186,13 +187,18 @@ export interface EnrichmentFlowDeps
   extends
     FrontendMessageDeps,
     AppRuntimeSlice<'events' | 'crossoverIndex'>,
-    MiscRuntimeSlice<'storeMap'> {
+    MiscRuntimeSlice<'itadGate'> {
   ipc: Pick<IpcRegistry, 'handle'>
   appInfo: Pick<AppInfo, 'version'>
   managers: Pick<StoreManagers, 'library'>
   stores: Pick<
     Stores,
-    'kvs' | 'runsForMe' | 'wikiGameInfo' | 'crossoverIndex' | 'gog'
+    | 'kvs'
+    | 'runsForMe'
+    | 'wikiGameInfo'
+    | 'crossoverIndex'
+    | 'gog'
+    | 'storeSearch'
   >
   onlineMonitor: Pick<OnlineMonitor, 'isOnline'>
   /** The boot-owned HowLongToBeat credentials cache (66.4-12). */
@@ -327,17 +333,27 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
   // the Phase 20 D-14 try/log/RETHROW contract. A bare pass-through would
   // silently change the error-propagation contract the frontend depends on.
   deps.ipc.handle('searchStores', async (_event: unknown, ...args: unknown[]) =>
-    handleSearchStores(deps, args[0] as string)
+    handleSearchStores(
+      deps,
+      args[0] as string,
+      args[1] as string | null | undefined
+    )
   )
 
   deps.ipc.handle(
     'getStoreSearchDeals',
     async (_event: unknown, ...args: unknown[]) =>
-      handleGetStoreSearchDeals(deps, args[0] as string)
+      handleGetStoreSearchDeals(
+        deps,
+        args[0] as string,
+        args[1] as string | null | undefined
+      )
   )
 
-  deps.ipc.handle('getStoreSearchStoreMap', async () =>
-    handleGetStoreSearchStoreMap(deps)
+  deps.ipc.handle(
+    'getItadSteamGids',
+    async (_event: unknown, ...args: unknown[]) =>
+      handleGetItadSteamGids(deps, args[0] as string[])
   )
 
   // Imports ONLY removeRecentGame from recent_games.ts — not

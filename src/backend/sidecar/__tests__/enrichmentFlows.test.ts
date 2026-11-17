@@ -34,8 +34,8 @@
  * force-exit.
  *
  * Mocked only at the boundaries this plan's own module docstring names:
- *   - `axios` — scriptable per-URL (CheapShark's three real endpoints), so
- *     the storeSearch trio's real `cheapshark.ts` bodies run against
+ *   - `axios` — scriptable per-URL (ITAD's search/prices/lookup endpoints), so
+ *     the storeSearch trio's real `itad.ts` bodies run against
  *     controlled fixture data/failures instead of a real network call.
  *   - `backend/storeManagers` (`libraryManagerMap`) — scriptable managers,
  *     the boundary `buildCrossoverRatingMap`'s enumeration walks and
@@ -65,7 +65,7 @@
  *
  * Deliberately NOT mocked (the bodies actually under test — mocking them
  * would prove only that a jest.fn() was called, per this plan's own
- * instruction): `storeSearch/cheapshark`, `anticheat/utils`,
+ * instruction): `storeSearch/itad`, `anticheat/utils`,
  * `crossover_index/crossoverRatingMap`, `knownFixes`, `recent_games/recent_games`.
  */
 
@@ -134,11 +134,12 @@ jest.mock('backend/store_backend', () => ({
   default: jest.requireActual('../fileStore').default
 }))
 
-// ── axios — scriptable per-URL. `mockCheapsharkGet` drives the storeSearch
-// trio's real cheapshark.ts bodies (top-level `axios.get`); `create()`
-// still exists so bootstrap.ts's real `fetchLastestReleases()`
+// ── axios — scriptable per-URL. `mockAxiosGet` / `mockAxiosPost` drive the
+// storeSearch trio's real itad.ts bodies (top-level `axios.get` / `axios.post`);
+// `create()` still exists so bootstrap.ts's real `fetchLastestReleases()`
 // (`axiosClient = axios.create(...)`) does not crash at startup ──────────────
-const mockCheapsharkGet = jest.fn()
+const mockAxiosGet = jest.fn()
+const mockAxiosPost = jest.fn()
 jest.mock('axios', () => {
   const mockInstance = {
     get: jest.fn(() => Promise.resolve({ data: {} })),
@@ -147,7 +148,8 @@ jest.mock('axios', () => {
   return {
     __esModule: true,
     default: {
-      get: (...args: unknown[]) => mockCheapsharkGet(...args),
+      get: (...args: unknown[]) => mockAxiosGet(...args),
+      post: (...args: unknown[]) => mockAxiosPost(...args),
       head: jest.fn(() => Promise.resolve({ status: 200 })),
       create: jest.fn(() => mockInstance)
     }
@@ -510,20 +512,25 @@ function makeGameInfo(overrides: Partial<GameInfo> = {}): GameInfo {
   } as GameInfo
 }
 
-const CHEAPSHARK_BASE = 'https://www.cheapshark.com/api/1.0'
+const ITAD_BASE = 'https://api.isthereanydeal.com'
+const ITAD_GID = '018d937f-0f7e-7172-b2c5-9a6e6b4e38a1'
+const ITAD_KEY_ENV = 'GAMELIB_ITAD_API_KEY'
 
-const STORE_FIXTURE_RAW = [
+const itadSearchFixture = [
+  { id: ITAD_GID, title: 'Team Fortress 2', assets: { banner145: 'tf2.jpg' } }
+]
+
+const itadPricesFixture = [
   {
-    storeID: '1',
-    storeName: 'Steam',
-    isActive: 1,
-    images: { banner: '', logo: '', icon: '' }
-  },
-  {
-    storeID: '25',
-    storeName: 'Epic Games Store',
-    isActive: 1,
-    images: { banner: '', logo: '', icon: '' }
+    id: ITAD_GID,
+    deals: [
+      {
+        shop: { id: 61, name: 'Steam' },
+        price: { amount: 4.99, amountInt: 499, currency: 'USD' },
+        regular: { amount: 9.99, amountInt: 999, currency: 'USD' },
+        url: 'https://store.steampowered.com/app/440/?ref=itad'
+      }
+    ]
   }
 ]
 
@@ -531,7 +538,8 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
   beforeEach(() => {
     freshRegistry()
     mockAppSettings({ language: 'en' })
-    mockCheapsharkGet.mockReset()
+    mockAxiosGet.mockReset()
+    mockAxiosPost.mockReset()
     mockIsCrossoverIndexEligible.mockReset()
     mockResolveRatingFor.mockReset()
     // Re-armed after mockReset per the WR-08 gotcha documented below:
@@ -602,14 +610,19 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
   })
 
   // ── REQ-34.2-11 / Phase 20 D-14: the storeSearch error-propagation
-  // contract, run FIRST in the file, before any successful getStoreMap()
-  // call can populate cheapshark.ts's own in-memory storeMapCache — a
-  // reject-then-succeed ordering would let a later happy-path test's cache
-  // hit silently mask this suite's own reject scenario ─────────────────────
-  describe('REQ-34.2-11/Phase 20 D-14 storeSearch error contract (load-bearing trio, run first)', () => {
-    it('REQ-34.2-11 searchStores (invoke): a rejecting provider surfaces an ERROR response frame, not an empty array', async () => {
-      mockCheapsharkGet.mockImplementation(() =>
-        Promise.reject(new Error('cheapshark unreachable'))
+  // contract. Every test uses a query / gid no other test cached, so a prior
+  // happy path can never mask a reject scenario ─────────────────────────────
+  describe('REQ-34.2-11/Phase 20 D-14 storeSearch error contract (load-bearing trio)', () => {
+    beforeEach(() => {
+      process.env[ITAD_KEY_ENV] = 'test-key'
+    })
+    afterEach(() => {
+      delete process.env[ITAD_KEY_ENV]
+    })
+
+    it('REQ-34.2-11 searchStores (invoke): a rejecting provider surfaces an ERROR response frame carrying the [storeSearch:provider] marker, not an empty array', async () => {
+      mockAxiosGet.mockImplementation(() =>
+        Promise.reject(new Error('itad unreachable'))
       )
 
       const { input, frames } = boot()
@@ -619,158 +632,137 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
       const response = findResponse(frames, 'ss-err-1')
       expect(response?.ok).toBe(false)
       expect(typeof response?.error).toBe('string')
-      expect((response?.error as string).length).toBeGreaterThan(0)
+      expect(response?.error as string).toContain('[storeSearch:provider]')
       expect(response?.result).toBeUndefined()
     })
 
-    it('REQ-34.2-11 getStoreSearchDeals (invoke): a rejecting provider surfaces an ERROR response frame, not an empty array', async () => {
-      mockCheapsharkGet.mockImplementation(() =>
-        Promise.reject(new Error('cheapshark unreachable'))
+    it('REQ-34.2-11 getStoreSearchDeals (invoke): a rejecting provider surfaces an ERROR response frame carrying the [storeSearch:provider] marker, not an empty array', async () => {
+      mockAxiosPost.mockImplementation(() =>
+        Promise.reject(new Error('itad unreachable'))
       )
 
       const { input, frames } = boot()
-      writeInvoke(input, 'gsd-err-1', 'getStoreSearchDeals', ['game-1'])
+      writeInvoke(input, 'gsd-err-1', 'getStoreSearchDeals', [ITAD_GID])
       await flush()
 
       const response = findResponse(frames, 'gsd-err-1')
       expect(response?.ok).toBe(false)
       expect(typeof response?.error).toBe('string')
-      expect((response?.error as string).length).toBeGreaterThan(0)
+      expect(response?.error as string).toContain('[storeSearch:provider]')
       expect(response?.result).toBeUndefined()
     })
 
-    it('REQ-34.2-11 getStoreSearchStoreMap (invoke): a rejecting provider surfaces an ERROR response frame, not an empty object', async () => {
-      mockCheapsharkGet.mockImplementation(() =>
-        Promise.reject(new Error('cheapshark unreachable'))
+    it('T-47-28b the error frame carries only the marker message: no key, no URL', async () => {
+      mockAxiosGet.mockImplementation(() =>
+        Promise.reject(new Error('https://api.isthereanydeal.com?key=test-key'))
       )
 
       const { input, frames } = boot()
-      writeInvoke(input, 'gssm-err-1', 'getStoreSearchStoreMap', [])
+      writeInvoke(input, 'ss-err-leak', 'searchStores', ['leak probe query'])
       await flush()
 
-      const response = findResponse(frames, 'gssm-err-1')
+      const response = findResponse(frames, 'ss-err-leak')
       expect(response?.ok).toBe(false)
-      expect(typeof response?.error).toBe('string')
-      expect((response?.error as string).length).toBeGreaterThan(0)
-      expect(response?.result).toBeUndefined()
+      expect(response?.error as string).not.toContain('test-key')
+      expect(response?.error as string).not.toContain('http')
+    })
+
+    it('REQ-34.2-11 searchStores (invoke): no built-in key surfaces an ERROR frame carrying [storeSearch:notConfigured]', async () => {
+      delete process.env[ITAD_KEY_ENV]
+
+      const { input, frames } = boot()
+      writeInvoke(input, 'ss-nokey-1', 'searchStores', ['keyless query'])
+      await flush()
+
+      const response = findResponse(frames, 'ss-nokey-1')
+      expect(response?.ok).toBe(false)
+      expect(response?.error as string).toContain('[storeSearch:notConfigured]')
+      expect(mockAxiosGet).not.toHaveBeenCalled()
     })
   })
 
-  // ── REQ-34.2-11: storeSearch trio happy paths (run AFTER the error-contract
-  // block above; getStoreSearchStoreMap's cache now legitimately populates
-  // for the rest of the file) ────────────────────────────────────────────────
+  // ── REQ-34.2-11: storeSearch trio happy paths ────────────────────────────
   describe('REQ-34.2-11 storeSearch trio (happy path)', () => {
-    it('REQ-34.2-11 getStoreSearchStoreMap (invoke) returns the mapped CheapShark store directory', async () => {
-      mockCheapsharkGet.mockImplementation((url: string) => {
-        if (url === `${CHEAPSHARK_BASE}/stores`) {
-          return Promise.resolve({ data: STORE_FIXTURE_RAW })
+    beforeEach(() => {
+      process.env[ITAD_KEY_ENV] = 'test-key'
+    })
+    afterEach(() => {
+      delete process.env[ITAD_KEY_ENV]
+    })
+
+    it('REQ-34.2-11 searchStores (invoke) returns the StoreSearchResponse envelope from ITAD', async () => {
+      mockAxiosGet.mockImplementation((url: string) => {
+        if (url === `${ITAD_BASE}/games/search/v1`) {
+          return Promise.resolve({ data: itadSearchFixture })
         }
         return Promise.reject(new Error(`unexpected axios.get(${url})`))
       })
-
-      const { input, frames } = boot()
-      writeInvoke(input, 'gssm-1', 'getStoreSearchStoreMap', [])
-      await flush()
-
-      const response = findResponse(frames, 'gssm-1')
-      expect(response?.ok).toBe(true)
-      const result = response?.result as Record<
-        string,
-        { storeId: string; storeName: string; isActive: boolean }
-      >
-      expect(result['1']).toMatchObject({
-        storeId: '1',
-        storeName: 'Steam',
-        isActive: true
-      })
-      expect(result['25']).toMatchObject({
-        storeId: '25',
-        storeName: 'Epic Games Store',
-        isActive: true
-      })
-    })
-
-    it('REQ-34.2-11 searchStores (invoke) returns the mapped CheapShark search results', async () => {
-      mockCheapsharkGet.mockImplementation(
-        (url: string, config?: { params?: Record<string, unknown> }) => {
-          if (url === `${CHEAPSHARK_BASE}/games` && config?.params?.title) {
-            return Promise.resolve({
-              data: [
-                {
-                  gameID: 'g1',
-                  steamAppID: '440',
-                  cheapest: '9.99',
-                  cheapestDealID: 'deal1',
-                  external: 'Team Fortress 2',
-                  internalName: 'teamfortress2',
-                  thumb: 'thumb.jpg'
-                }
-              ]
-            })
-          }
-          return Promise.reject(new Error(`unexpected axios.get(${url})`))
+      mockAxiosPost.mockImplementation((url: string) => {
+        if (url === `${ITAD_BASE}/games/prices/v3`) {
+          return Promise.resolve({ data: itadPricesFixture })
         }
-      )
+        return Promise.reject(new Error(`unexpected axios.post(${url})`))
+      })
 
       const { input, frames } = boot()
-      writeInvoke(input, 'ss-1', 'searchStores', ['team fortress'])
+      writeInvoke(input, 'ss-1', 'searchStores', ['team fortress', 'US'])
       await flush()
 
       const response = findResponse(frames, 'ss-1')
       expect(response?.ok).toBe(true)
-      expect(response?.result).toMatchObject([
-        {
-          gameId: 'g1',
-          title: 'Team Fortress 2',
-          steamAppId: '440',
-          cheapestPrice: '9.99',
-          currencyCode: 'USD'
-        }
-      ])
+      expect(response?.result).toMatchObject({
+        pricedCountry: 'US',
+        results: [
+          {
+            gameId: ITAD_GID,
+            title: 'Team Fortress 2',
+            cheapestPrice: '4.99',
+            currencyCode: 'USD'
+          }
+        ]
+      })
     })
 
-    it('REQ-34.2-11 getStoreSearchDeals (invoke) returns the mapped CheapShark deal breakdown', async () => {
-      mockCheapsharkGet.mockImplementation(
-        (url: string, config?: { params?: Record<string, unknown> }) => {
-          if (url === `${CHEAPSHARK_BASE}/stores`) {
-            return Promise.resolve({ data: STORE_FIXTURE_RAW })
-          }
-          if (url === `${CHEAPSHARK_BASE}/games` && config?.params?.id) {
-            return Promise.resolve({
-              data: {
-                info: { title: 'Team Fortress 2', thumb: 'thumb.jpg' },
-                cheapestPriceEver: { price: '4.99', date: 0 },
-                deals: [
-                  {
-                    storeID: '1',
-                    dealID: 'deal-x',
-                    price: '4.99',
-                    retailPrice: '9.99',
-                    savings: '50'
-                  }
-                ]
-              }
-            })
-          }
-          return Promise.reject(new Error(`unexpected axios.get(${url})`))
+    it('REQ-34.2-11 getStoreSearchDeals (invoke) returns the mapped ITAD deal breakdown', async () => {
+      mockAxiosPost.mockImplementation((url: string) => {
+        if (url === `${ITAD_BASE}/games/prices/v3`) {
+          return Promise.resolve({ data: itadPricesFixture })
         }
-      )
+        return Promise.reject(new Error(`unexpected axios.post(${url})`))
+      })
 
       const { input, frames } = boot()
-      writeInvoke(input, 'gsd-1', 'getStoreSearchDeals', ['g1'])
+      writeInvoke(input, 'gsd-1', 'getStoreSearchDeals', [ITAD_GID, 'US'])
       await flush()
 
       const response = findResponse(frames, 'gsd-1')
       expect(response?.ok).toBe(true)
       expect(response?.result).toMatchObject([
         {
-          storeId: '1',
+          storeId: '61',
           storeName: 'Steam',
           price: '4.99',
           retailPrice: '9.99',
           currencyCode: 'USD'
         }
       ])
+    })
+
+    it('PRICE-02 getItadSteamGids (invoke) returns the keyless appid -> gid map', async () => {
+      mockAxiosPost.mockImplementation((url: string) => {
+        if (url.startsWith(`${ITAD_BASE}/lookup/id/shop/`)) {
+          return Promise.resolve({ data: { 'app/440': ITAD_GID } })
+        }
+        return Promise.reject(new Error(`unexpected axios.post(${url})`))
+      })
+
+      const { input, frames } = boot()
+      writeInvoke(input, 'gig-1', 'getItadSteamGids', [['440']])
+      await flush()
+
+      const response = findResponse(frames, 'gig-1')
+      expect(response?.ok).toBe(true)
+      expect(response?.result).toEqual({ '440': ITAD_GID })
     })
   })
 
@@ -1027,7 +1019,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
       // No provider fetch ever happened — the cache hit resolved everything,
       // which is only possible if the lookup key was the REAL title, not
       // the wrong one passed as the `title` argument.
-      expect(mockCheapsharkGet).not.toHaveBeenCalled()
+      expect(mockAxiosGet).not.toHaveBeenCalled()
     })
   })
 
@@ -1397,15 +1389,18 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
       ['getKnownFixes', ['app-x', 'gog']],
       ['getCrossoverIndex', []],
       ['searchStores', ['query-x']],
-      ['getStoreSearchDeals', ['deal-x']],
-      ['getStoreSearchStoreMap', []],
+      ['getStoreSearchDeals', [ITAD_GID]],
+      ['getItadSteamGids', [['440']]],
       ['removeRecent', ['app-x']]
     ]
 
     it.each(ALL_8_CHANNELS)(
       'REQ-34.2-14 channel "%s" does not return UNPORTED_CHANNEL_MARKER and is present in the handler registry',
       async (channel, args) => {
-        mockCheapsharkGet.mockImplementation(() =>
+        mockAxiosGet.mockImplementation(() =>
+          Promise.reject(new Error('boundary rejection, not a marker'))
+        )
+        mockAxiosPost.mockImplementation(() =>
           Promise.reject(new Error('boundary rejection, not a marker'))
         )
 

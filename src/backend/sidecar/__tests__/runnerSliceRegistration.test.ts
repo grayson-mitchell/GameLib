@@ -291,7 +291,7 @@ const ENRICHMENT_CHANNELS = [
   'getCrossoverIndex',
   'searchStores',
   'getStoreSearchDeals',
-  'getStoreSearchStoreMap',
+  'getItadSteamGids',
   'removeRecent',
   'getGogDiscounts',
   'steamgriddb.hasApiKey',

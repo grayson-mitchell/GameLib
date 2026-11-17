@@ -77,7 +77,7 @@
  * Deliberately does NOT register:
  *   - The 8 enrichment channels (`getKnownFixes`, `getCrossoverIndex`,
  *     `getWikiGameInfo`, `getAnticheatInfo`, `searchStores`,
- *     `getStoreSearchDeals`, `getStoreSearchStoreMap`, `removeRecent`) —
+ *     `getStoreSearchDeals`, `getItadSteamGids`, `removeRecent`) —
  *     plan 34.2-06's own `enrichmentFlowRegistration.ts`.
  *   - `requestGameSettings` — already registered by
  *     `settingsFlowRegistration.ts:113` with a Steam bottle-launch fix that
