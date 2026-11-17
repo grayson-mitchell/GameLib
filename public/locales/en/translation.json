@@ -1190,6 +1190,8 @@
             "ownedOnMulti": "Owned on {{stores}}",
             "ownedOnOverflow": "Owned on {{stores}} +{{count}} more"
         },
+        "cached": "Price from {{time}}",
+        "cachedTitle": "Live prices are temporarily unavailable, so this is the last price we saved.",
         "error": {
             "notConfigured": "Price lookups aren't set up in this build. Add an IsThereAnyDeal API key in Settings > Advanced.",
             "provider": "Couldn't reach the price provider.",
