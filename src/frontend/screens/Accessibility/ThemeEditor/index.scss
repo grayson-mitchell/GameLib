@@ -1,0 +1,268 @@
+// Theme editor (Phase 64, THEME-02). Colours come only from role tokens of the active, saved
+// theme, so a draft can never restyle the editor itself (D-05); the preview thumbnail is the one
+// element that paints from the draft. Logical properties only (RTL). The editor is its own route,
+// not inside `.Accessibility`, whose `label, span` rule forces --text-xl with !important.
+
+.themeEditor {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  inline-size: 100%;
+  max-inline-size: 960px;
+  padding-block: 16px;
+  text-align: start;
+}
+
+.themeEditor--missing {
+  align-items: flex-start;
+}
+
+.themeEditor__header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  inline-size: 100%;
+}
+
+.themeEditor__header .headerTitle {
+  margin-block: 0;
+}
+
+.themeEditor__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-block-size: 32px;
+  padding-inline: 0;
+}
+
+.themeEditor__headerRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  inline-size: 100%;
+}
+
+.themeEditor__identity {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-inline-size: 0;
+}
+
+.themeEditor__name {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--semibold);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.themeEditor__base,
+.themeEditor__note,
+.themeEditor__unsaved {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.themeEditor__actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.themeEditor__unsaved {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.themeEditor__unsavedDot {
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.themeEditor__status {
+  margin: 0;
+  min-block-size: 1.5em;
+  font-size: var(--text-sm);
+}
+
+.themeEditor__panes {
+  display: grid;
+  grid-template-columns: minmax(360px, 480px) minmax(320px, 1fr);
+  gap: 32px;
+  align-items: start;
+}
+
+.themeEditor__tokens {
+  grid-column: 1;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-inline-size: 0;
+}
+
+.themeEditor__preview {
+  grid-column: 2;
+  grid-row: 1;
+  position: sticky;
+  inset-block-start: 16px;
+  min-inline-size: 0;
+}
+
+.themeEditor__preview .themeThumbnail {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+}
+
+.themeEditor__group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.themeEditor__groupHeading {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--semibold);
+  line-height: 1.2;
+}
+
+.themeEditor__row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px;
+  background: var(--background);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+}
+
+.themeEditor__rowText {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-inline-size: 0;
+}
+
+.themeEditor__rowLabel {
+  font-size: var(--text-md);
+  font-weight: var(--regular);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.themeEditor__rowToken {
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+// The picker popover surface and the swatch checkerboard use tokens only.
+.colourField {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.colourField__controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.colourField__swatch {
+  display: block;
+  flex-shrink: 0;
+  inline-size: 32px;
+  block-size: 32px;
+  padding: 0;
+  overflow: hidden;
+  cursor: pointer;
+  background: repeating-conic-gradient(
+      var(--text-secondary) 0 25%,
+      var(--background) 0 50%
+    )
+    50% / 8px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+
+.colourField__swatchFill {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+.colourField__input {
+  box-sizing: border-box;
+  inline-size: 128px;
+  padding: 4px 8px;
+  font-size: var(--text-md);
+  color: var(--text-default);
+  background: var(--input-background);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+
+.colourField__input[aria-invalid='true'] {
+  border-color: var(--text-default);
+}
+
+.colourField__error {
+  margin: 0;
+  max-inline-size: 200px;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--text-default);
+}
+
+.colourField__popover {
+  inline-size: 232px;
+  padding: 8px;
+  background: var(--background);
+  border: 1px solid var(--border-color);
+}
+
+.colourField__popover .react-colorful {
+  inline-size: 100%;
+}
+
+// Below about 760px of content width the editor stacks: preview first, not sticky.
+@container (max-width: 760px) {
+  .themeEditor__panes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .themeEditor__preview,
+  .themeEditor__tokens {
+    grid-column: 1;
+  }
+
+  .themeEditor__preview {
+    grid-row: 1;
+    position: static;
+    max-inline-size: 360px;
+  }
+
+  .themeEditor__tokens {
+    grid-row: 2;
+  }
+}

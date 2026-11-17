@@ -1,10 +1,15 @@
 import { useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
 import useSettingsState from 'frontend/state/settingsState'
 import type { CustomTheme } from 'common/types/customTheme'
+import { customThemeKey } from 'frontend/customThemes/customTheme'
+import { resolveThemeLabel } from 'frontend/components/UI/ThemeSelector/themeLabels'
 import { PreviewPane } from './PreviewPane'
 import { TokenList } from './TokenList'
+import './index.scss'
 
 const tokensEqual = (
   a: Readonly<Record<string, string>>,
@@ -18,7 +23,10 @@ const tokensEqual = (
 
 function EditorBody({ theme }: { theme: CustomTheme }) {
   const { t } = useTranslation()
+  const { t: tGamelib } = useTranslation('gamelib')
+  const navigate = useNavigate()
   const saveCustomThemeTokens = useSettingsState((s) => s.saveCustomThemeTokens)
+  const activeThemeKey = useSettingsState((s) => s.theme)
   // D-05: the draft lives only in this component. It feeds the preview thumbnail; the running app
   // changes only when Save goes through the store.
   const [draft, setDraft] = useState<Record<string, string>>(() => ({
@@ -52,30 +60,68 @@ function EditorBody({ theme }: { theme: CustomTheme }) {
     }
   }
 
+  const isActive = activeThemeKey === customThemeKey(theme.id)
+
   return (
     <div className="themeEditor">
       <header className="themeEditor__header">
+        {/* Plan 09 routes this through the unsaved-changes prompt (useBlocker). */}
+        <button
+          type="button"
+          className="button is-text themeEditor__back"
+          aria-label={t(
+            'gamelib:customThemes.backToAppearance',
+            'Back to Appearance'
+          )}
+          onClick={() => void navigate('/accessibility')}
+        >
+          <FontAwesomeIcon icon={faArrowLeft} aria-hidden="true" />
+          {t('gamelib:customThemes.back', 'Appearance')}
+        </button>
         <h1 className="headerTitle">
           {t('gamelib:customThemes.editHeading', 'Edit theme')}
         </h1>
         <div className="themeEditor__headerRow">
-          <p className="themeEditor__name">{theme.name}</p>
-          <button
-            type="button"
-            className="button is-primary"
-            disabled={!dirty || saving}
-            onClick={() => void save()}
-          >
-            {t('gamelib:customThemes.saveTheme', 'Save theme')}
-          </button>
+          <div className="themeEditor__identity">
+            <p className="themeEditor__name">{theme.name}</p>
+            <p className="themeEditor__base">
+              {t('gamelib:customThemes.basedOn', 'Based on {{base}}', {
+                base: resolveThemeLabel(theme.base, tGamelib)
+              })}
+            </p>
+          </div>
+          <div className="themeEditor__actions">
+            {dirty && (
+              <p className="themeEditor__unsaved">
+                <span className="themeEditor__unsavedDot" aria-hidden="true" />
+                {t('gamelib:customThemes.unsaved', 'Unsaved changes')}
+              </p>
+            )}
+            <button
+              type="button"
+              className="button is-primary"
+              disabled={!dirty || saving}
+              onClick={() => void save()}
+            >
+              {t('gamelib:customThemes.saveTheme', 'Save theme')}
+            </button>
+          </div>
         </div>
+        {!isActive && (
+          <p className="themeEditor__note">
+            {t(
+              'gamelib:customThemes.inactiveNote',
+              'This isn’t your active theme. Pick it in the gallery to use it.'
+            )}
+          </p>
+        )}
         <p role="status" aria-live="polite" className="themeEditor__status">
           {status}
         </p>
       </header>
       <div className="themeEditor__panes">
-        <TokenList draft={draft} onCommit={commit} />
         <PreviewPane name={theme.name} base={theme.base} tokens={draft} />
+        <TokenList draft={draft} onCommit={commit} />
       </div>
     </div>
   )

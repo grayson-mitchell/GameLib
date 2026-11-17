@@ -35,13 +35,16 @@ class FakeRequest {
 }
 Object.assign(globalThis, { Request: FakeRequest })
 
+const INACTIVE_NOTE =
+  'This isn’t your active theme. Pick it in the gallery to use it.'
 const ID = '00000000000000a1'
 const setThemeStub = jest.fn()
 // A plain recorder, not jest.fn(): the jest config resets mock implementations between tests.
 const storeSetCheckedCalls: unknown[][] = []
+let holdWrite: Promise<boolean> | null = null
 const storeSetChecked = (...args: unknown[]) => {
   storeSetCheckedCalls.push(args)
-  return Promise.resolve(true)
+  return holdWrite ?? Promise.resolve(true)
 }
 
 const theme: CustomTheme = {
@@ -69,6 +72,7 @@ afterEach(() => {
   resetAllStores()
   setThemeStub.mockReset()
   storeSetCheckedCalls.length = 0
+  holdWrite = null
   document.body.className = ''
   document.body.removeAttribute('style')
 })
@@ -155,6 +159,64 @@ describe('ThemeEditor', () => {
     expect(
       screen.getByText('That custom theme no longer exists.')
     ).not.toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Back to Appearance' }))
+    expect(router.state.location.pathname).toBe('/accessibility')
+  })
+  it('keeps Save disabled until something changes', () => {
+    seed('midnightMirage')
+    renderEditor()
+    expect(saveButton().disabled).toBe(true)
+    typeInto(screen.getByLabelText('Body background'), '#123456')
+    expect(saveButton().disabled).toBe(false)
+    expect(screen.getByText('Unsaved changes')).not.toBeNull()
+  })
+
+  it('writes once for a double click while the save is pending', async () => {
+    seed('midnightMirage')
+    let release: (ok: boolean) => void = () => undefined
+    holdWrite = new Promise<boolean>((resolve) => {
+      release = resolve
+    })
+    renderEditor()
+    typeInto(screen.getByLabelText('Body background'), '#123456')
+    fireEvent.click(saveButton())
+    expect(saveButton().disabled).toBe(true)
+    fireEvent.click(saveButton())
+    expect(storeSetCheckedCalls).toHaveLength(1)
+    await act(async () => {
+      release(true)
+      await holdWrite
+    })
+    expect(screen.getByRole('status').textContent).toBe('Saved')
+  })
+
+  it('announces nothing and stays dirty when the write fails', async () => {
+    seed('custom:' + ID)
+    holdWrite = Promise.resolve(false)
+    renderEditor()
+    typeInto(screen.getByLabelText('Body background'), '#123456')
+    await act(async () => {
+      fireEvent.click(saveButton())
+    })
+    expect(screen.getByRole('status').textContent).toBe('')
+    expect(setThemeStub).not.toHaveBeenCalled()
+    expect(saveButton().disabled).toBe(false)
+  })
+
+  it('shows the inactive-theme note only while the theme is not active', () => {
+    seed('midnightMirage')
+    const { unmount } = renderEditor()
+    expect(screen.getByText(INACTIVE_NOTE)).not.toBeNull()
+    unmount()
+    seed('custom:' + ID)
+    renderEditor()
+    expect(screen.queryByText(INACTIVE_NOTE)).toBeNull()
+  })
+
+  it('names the base theme and goes back to Appearance when clean', () => {
+    seed('midnightMirage')
+    const { router } = renderEditor()
+    expect(screen.getByText('Based on Nord Light')).not.toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Back to Appearance' }))
     expect(router.state.location.pathname).toBe('/accessibility')
   })
