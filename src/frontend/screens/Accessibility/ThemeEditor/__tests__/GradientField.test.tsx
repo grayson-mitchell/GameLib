@@ -39,7 +39,7 @@ const setup = (
       allowEmpty={allowEmpty}
     />
   )
-  const field = screen.getByRole('textbox') as HTMLTextAreaElement
+  const field = screen.getByRole<HTMLTextAreaElement>('textbox')
   const strip = () =>
     utils.container.querySelector('.gradientField__strip') as HTMLElement
   const type = (text: string) =>
@@ -100,17 +100,18 @@ describe('GradientField', () => {
 
   it('paints the 24px strip only from the last valid gradient', () => {
     const { strip, type } = setup(GOOD)
-    expect(strip().style.backgroundImage).toContain('linear-gradient')
+    expect(strip().dataset.gradient).toContain('linear-gradient')
     type('url(https://x)')
-    expect(strip().style.backgroundImage).not.toContain('url(')
-    expect(strip().style.backgroundImage).toContain('linear-gradient(90deg')
+    expect(strip().dataset.gradient).not.toContain('url(')
+    expect(strip().dataset.gradient).toContain('linear-gradient(90deg')
     const next = 'linear-gradient(0deg, #111, #222)'
     type(next)
-    expect(strip().style.backgroundImage).toContain('linear-gradient(0deg')
+    expect(strip().dataset.gradient).toContain('linear-gradient(0deg')
   })
 
   it('never paints an untrusted stored value the engine does not accept', () => {
     const { strip } = setup('url(https://x)')
+    expect(strip().dataset.gradient).toBe('')
     expect(strip().style.backgroundImage).toBe('')
   })
 

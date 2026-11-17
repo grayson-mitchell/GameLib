@@ -38,8 +38,13 @@ function EditorBody({ theme }: { theme: CustomTheme }) {
 
   const dirty = !tokensEqual(draft, theme.tokens)
 
+  // An empty value clears a live-derived token so it follows its source again (OD-1).
   const commit = (token: string, value: string) => {
-    setDraft((d) => ({ ...d, [token]: value }))
+    setDraft((d) => {
+      const next = { ...d, [token]: value }
+      if (value === '') delete next[token]
+      return next
+    })
     setStatus('')
   }
 
@@ -121,7 +126,7 @@ function EditorBody({ theme }: { theme: CustomTheme }) {
       </header>
       <div className="themeEditor__panes">
         <PreviewPane name={theme.name} base={theme.base} tokens={draft} />
-        <TokenList draft={draft} onCommit={commit} />
+        <TokenList base={theme.base} draft={draft} onCommit={commit} />
       </div>
     </div>
   )

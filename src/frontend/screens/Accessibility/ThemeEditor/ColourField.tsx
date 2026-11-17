@@ -21,6 +21,8 @@ interface ColourFieldProps {
   onCommit: (value: string) => void
   /** Extra element id(s) describing the input, such as a contrast warning. */
   describedBy?: string
+  /** An empty field is valid and commits `''` (a live-derived token follows its source, OD-1). */
+  allowEmpty?: boolean
 }
 
 /**
@@ -34,7 +36,8 @@ export function ColourField({
   label,
   value,
   onCommit,
-  describedBy
+  describedBy,
+  allowEmpty = false
 }: ColourFieldProps) {
   const { t } = useTranslation()
   const errorId = useId()
@@ -56,11 +59,17 @@ export function ColourField({
     return () => element.removeEventListener('input', handler)
   }, [])
 
-  const invalid = !validateColourInput(text).ok
+  const emptyOk = allowEmpty && text.trim() === ''
+  const invalid = !emptyOk && !validateColourInput(text).ok
 
   // Enter commits only a valid entry and otherwise leaves the error showing; blur reverts an
   // invalid entry to the last good value.
   const commitText = (revertInvalid: boolean) => {
+    if (emptyOk) {
+      setText('')
+      if (value !== '') onCommit('')
+      return
+    }
     const result = validateColourInput(text)
     if (result.ok) {
       setText(result.value)

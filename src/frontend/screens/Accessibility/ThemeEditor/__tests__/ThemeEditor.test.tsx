@@ -224,4 +224,18 @@ describe('ThemeEditor', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Back to Appearance' }))
     expect(router.state.location.pathname).toBe('/accessibility')
   })
+  it('keeps a live-derived token out of the draft: set it, clear it, and the theme is clean again', () => {
+    seed('midnightMirage')
+    renderEditor()
+    fireEvent.click(screen.getByRole('button', { name: /Advanced/ }))
+    const field = document.getElementById(
+      'token--focus-ring-color'
+    ) as HTMLInputElement
+    expect(field.value).toBe('')
+    typeInto(field, '#abcdef')
+    expect(saveButton().disabled).toBe(false)
+    typeInto(field, '')
+    expect(field.value).toBe('')
+    expect(saveButton().disabled).toBe(true)
+  })
 })

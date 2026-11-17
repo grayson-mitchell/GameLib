@@ -88,7 +88,7 @@ const warningText = (a: string, b: string, fg: string, bg: string) =>
   `${a} vs ${b} ${formatRatio(tryContrast(fg, bg) as number)}:1, needs 3:1`
 
 const saveButton = () =>
-  screen.getByRole('button', { name: 'Save theme' }) as HTMLButtonElement
+  screen.getByRole<HTMLButtonElement>('button', { name: 'Save theme' })
 
 describe('theme editor contrast warnings', () => {
   it('starts with no warnings and says so', () => {
