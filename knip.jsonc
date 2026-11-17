@@ -36,6 +36,7 @@
     "meta/downloadHelperBinaries.ts",
     "meta/extractProtonInventory.ts",
     "meta/genI18nGateScope.ts",
+    "meta/genThemeTokens.ts",
     "meta/gen_vtables.ts",
     "meta/graphifyCodeViz.ts",
     "meta/i18nCatalogChurnGuard.ts",
