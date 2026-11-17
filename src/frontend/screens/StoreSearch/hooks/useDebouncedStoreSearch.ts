@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 
-import type { StoreSearchResult } from 'common/types/storeSearch'
+import {
+  storeSearchErrorCode,
+  type StoreSearchErrorCode,
+  type StoreSearchResult
+} from 'common/types/storeSearch'
 
 /**
  * STORESEARCH-02/D-11 debounce + min-3-char + generation-counter-cancel hook.
@@ -12,9 +16,11 @@ import type { StoreSearchResult } from 'common/types/storeSearch'
  *    'prompt', no request), else a 400ms `setTimeout` before committing
  *    `debouncedQuery`; a superseding keystroke clears the pending timer via
  *    the effect's cleanup (standard debounce shape).
- * 2. `debouncedQuery` -> fetch: fires `window.api.searchStores`. T-20-04:
- *    this is the load-bearing rate control the RESEARCH doc calls out — one
- *    request per pause, never per keystroke.
+ * 2. `debouncedQuery` + `countryCode` -> fetch: fires
+ *    `window.api.searchStores(query, country)`. T-20-04: this is the
+ *    load-bearing rate control the RESEARCH doc calls out — one request per
+ *    pause, never per keystroke. PRICE-01: a region change re-runs the
+ *    committed search once.
  *
  * D-11/RESEARCH Pitfall 5: `AbortController` does NOT cancel
  * `ipcRenderer.invoke()`'s already-in-flight promise across the IPC hop —
@@ -46,13 +52,23 @@ interface UseDebouncedStoreSearchResult {
   /** Re-fires the current debouncedQuery (provider-failed retry affordance,
    * D-14). No-op if there is no committed query yet. */
   retry: () => void
+  /** The country ITAD actually priced (differs from the requested one only on
+   * the D-13 US fallback); null until a search succeeds. */
+  pricedCountry: string | null
+  /** Stable classification of the last failure (D-03); null otherwise. The
+   * raw error text is never exposed (T-20-02, T-47-31). */
+  errorCode: StoreSearchErrorCode | null
 }
 
-export function useDebouncedStoreSearch(): UseDebouncedStoreSearchResult {
+export function useDebouncedStoreSearch(
+  countryCode: string
+): UseDebouncedStoreSearchResult {
   const [query, setQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [results, setResults] = useState<StoreSearchResult[]>([])
   const [status, setStatus] = useState<StoreSearchStatus>('prompt')
+  const [pricedCountry, setPricedCountry] = useState<string | null>(null)
+  const [errorCode, setErrorCode] = useState<StoreSearchErrorCode | null>(null)
   const [debouncePending, setDebouncePending] = useState(false)
   const [fetching, setFetching] = useState(false)
   const generationRef = useRef(0)
@@ -71,6 +87,7 @@ export function useDebouncedStoreSearch(): UseDebouncedStoreSearchResult {
       setFetching(false)
       setDebouncedQuery('')
       setResults([])
+      setErrorCode(null)
       setStatus('prompt')
       return
     }
@@ -98,7 +115,7 @@ export function useDebouncedStoreSearch(): UseDebouncedStoreSearchResult {
     setStatus('loading')
 
     window.api
-      .searchStores(searchQuery)
+      .searchStores(searchQuery, countryCode)
       .then((response) => {
         if (generationRef.current !== generation) {
           // Superseded by a newer query — discard this stale resolution.
@@ -106,6 +123,8 @@ export function useDebouncedStoreSearch(): UseDebouncedStoreSearchResult {
         }
         setFetching(false)
         setResults(response.results)
+        setPricedCountry(response.pricedCountry)
+        setErrorCode(null)
         setStatus(response.results.length === 0 ? 'empty' : 'results')
       })
       .catch((err) => {
@@ -116,6 +135,7 @@ export function useDebouncedStoreSearch(): UseDebouncedStoreSearchResult {
         setFetching(false)
         // Raw error goes to the log, never to rendered state (T-20-02).
         window.api.logError(String(err))
+        setErrorCode(storeSearchErrorCode(err))
         setStatus('error')
       })
   }
@@ -128,7 +148,7 @@ export function useDebouncedStoreSearch(): UseDebouncedStoreSearchResult {
     // fetchResults is intentionally omitted from the deps array: it's a
     // plain closure recreated every render, and depending on it would
     // refire the request on every render rather than only on a real
-    // debouncedQuery commit.
+    // debouncedQuery / countryCode change.
 
     // IN-01: bump the generation on cleanup (deps change or unmount) so a
     // resolution in flight for this debouncedQuery is discarded — this is
@@ -137,7 +157,7 @@ export function useDebouncedStoreSearch(): UseDebouncedStoreSearchResult {
     return () => {
       generationRef.current++
     }
-  }, [debouncedQuery])
+  }, [debouncedQuery, countryCode])
 
   return {
     query,
@@ -145,6 +165,8 @@ export function useDebouncedStoreSearch(): UseDebouncedStoreSearchResult {
     results,
     status,
     loading: debouncePending || fetching,
-    retry: () => fetchResults(debouncedQuery)
+    retry: () => fetchResults(debouncedQuery),
+    pricedCountry,
+    errorCode
   }
 }

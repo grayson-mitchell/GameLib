@@ -124,15 +124,17 @@ function harness(): HookHarness {
   return jest.requireMock('react') as unknown as HookHarness
 }
 
+let country = 'US'
+
 function mount(): Hook {
   harness().__resetMount()
   harness().__beginRender()
-  return useDebouncedStoreSearch()
+  return useDebouncedStoreSearch(country)
 }
 
 function rerender(): Hook {
   harness().__beginRender()
-  return useDebouncedStoreSearch()
+  return useDebouncedStoreSearch(country)
 }
 
 function flushPromises(): Promise<void> {
@@ -183,6 +185,7 @@ describe('useDebouncedStoreSearch', () => {
     jest.useFakeTimers()
     mockApi.searchStores.mockReset()
     mockApi.logError.mockReset()
+    country = 'US'
   })
 
   afterEach(() => {
@@ -211,7 +214,7 @@ describe('useDebouncedStoreSearch', () => {
     hook = await settle(hook)
 
     expect(mockApi.searchStores).toHaveBeenCalledTimes(1)
-    expect(mockApi.searchStores).toHaveBeenCalledWith('port')
+    expect(mockApi.searchStores).toHaveBeenCalledWith('port', 'US')
   })
 
   it('a query trimmed to <3 chars fires no request and exposes status "prompt"', async () => {
@@ -325,6 +328,77 @@ describe('useDebouncedStoreSearch', () => {
     hook.setQuery('portal 2')
     hook = rerender()
     expect(hook.query).toBe('portal 2')
+  })
+
+  it('sends the country with the search and exposes the response pricedCountry', async () => {
+    country = 'DE'
+    mockApi.searchStores.mockResolvedValue({
+      results: [makeResult()],
+      pricedCountry: 'US'
+    })
+
+    let hook = mount()
+    expect(hook.pricedCountry).toBeNull()
+    hook.setQuery('portal')
+    hook = rerender()
+    jest.advanceTimersByTime(DEBOUNCE_WINDOW)
+    hook = await settle(hook)
+
+    expect(mockApi.searchStores).toHaveBeenCalledTimes(1)
+    expect(mockApi.searchStores).toHaveBeenCalledWith('portal', 'DE')
+    expect(hook.pricedCountry).toBe('US')
+    expect(hook.status).toBe('results')
+  })
+
+  it('a country change with a committed query re-fires the search exactly once', async () => {
+    country = 'DE'
+    mockApi.searchStores.mockResolvedValue(envelope([makeResult()]))
+
+    let hook = mount()
+    hook.setQuery('portal')
+    hook = rerender()
+    jest.advanceTimersByTime(DEBOUNCE_WINDOW)
+    hook = await settle(hook)
+    expect(mockApi.searchStores).toHaveBeenCalledTimes(1)
+
+    country = 'GB'
+    hook = await settle(hook)
+
+    expect(mockApi.searchStores).toHaveBeenCalledTimes(2)
+    expect(mockApi.searchStores).toHaveBeenLastCalledWith('portal', 'GB')
+  })
+
+  it('classifies rejections into errorCode and clears it on the next success', async () => {
+    mockApi.searchStores.mockRejectedValueOnce(
+      new Error('boom [storeSearch:rateLimited]')
+    )
+    let hook = mount()
+    hook.setQuery('portal')
+    hook = rerender()
+    jest.advanceTimersByTime(DEBOUNCE_WINDOW)
+    hook = await settle(hook)
+    expect(hook.status).toBe('error')
+    expect(hook.errorCode).toBe('rateLimited')
+
+    mockApi.searchStores.mockRejectedValueOnce(
+      new Error('x [storeSearch:notConfigured]')
+    )
+    hook.retry()
+    hook = await settle(hook)
+    expect(hook.errorCode).toBe('notConfigured')
+
+    mockApi.searchStores.mockRejectedValueOnce(new Error('network down'))
+    hook.retry()
+    hook = await settle(hook)
+    expect(hook.errorCode).toBe('provider')
+    // The raw error text is never part of the returned state (T-20-02).
+    expect(JSON.stringify(hook)).not.toContain('network down')
+
+    mockApi.searchStores.mockResolvedValueOnce(envelope([makeResult()]))
+    hook.retry()
+    hook = await settle(hook)
+    expect(hook.status).toBe('results')
+    expect(hook.errorCode).toBeNull()
   })
 
   it('exposes loading=true while the debounce timer is pending, and while a request is in-flight', async () => {
