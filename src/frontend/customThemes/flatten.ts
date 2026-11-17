@@ -52,6 +52,8 @@ const closingParen = (text: string, open: number): number => {
  * Replaces every `var(--x[, fallback])` inside gradient text with its
  * resolved literal. Returns null when any inner var cannot resolve to a
  * literal.
+ *
+ * i18n-gate-exempt: the `var(` literal is CSS syntax, never rendered to a user
  */
 const substituteVars = (
   text: string,
@@ -97,6 +99,13 @@ const flattenValue = (
   return normaliseColour(resolved)
 }
 
+/**
+ * The selector a theme's block is declared under in `themes.scss`.
+ *
+ * i18n-gate-exempt: the `body.` literal is CSS selector syntax, never rendered to a user
+ */
+const themeSelector = (key: string): string => `body.${key}`
+
 export function flattenBuiltinTheme(
   input: FlattenInput
 ): Record<string, string> {
@@ -112,7 +121,7 @@ export function flattenBuiltinTheme(
   // Body tier: base body block, then every body.<key> block, last wins.
   for (const [k, v] of customProps(cssBlock(input.themesScss, 'body')))
     scope.set(k, v)
-  for (const block of allBlocksFor(input.themesScss, `body.${input.key}`))
+  for (const block of allBlocksFor(input.themesScss, themeSelector(input.key)))
     for (const [k, v] of customProps(block)) scope.set(k, v)
 
   const skipped = new Set<string>([
