@@ -22,4 +22,4 @@ Each must keep D-14: no CM logon on the primary Mac path, so Friends cannot be s
 
 ## Resolution
 
-Resolved by quick-261117-q52: the Mac Steam Refresh path now reads per-app Playtime and LastPlayed from Mac Steam's localconfig.vdf (gamelib-steamfiles, no logon) and merges them with max(carried, local). Live check pending.
+Resolved by quick-261117-q52: the Mac Steam Refresh path now reads per-app Playtime and LastPlayed from Mac Steam's localconfig.vdf (gamelib-steamfiles, no logon) and merges them with max(carried, local). Live check passed 2026-11-17 (WazHack 23509 -> 23524 min via the Mac Steam path, no CM logon, Friends stayed signed in).
