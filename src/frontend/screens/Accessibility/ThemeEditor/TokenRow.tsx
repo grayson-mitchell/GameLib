@@ -3,7 +3,14 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faTriangleExclamation } from '@fortawesome/free-solid-svg-icons'
 import type { FloorFailure } from 'frontend/customThemes/contrastFloors'
 import { formatRatio } from 'frontend/customThemes/colour'
-import { LIVE_DERIVED_TOKENS } from 'frontend/customThemes/tokens'
+import {
+  BASE_OVERRIDDEN_TOKENS,
+  PREVIEW_TOKENS
+} from 'frontend/customThemes/thumbnailPalette'
+import { CORE_TOKENS, LIVE_DERIVED_TOKENS } from 'frontend/customThemes/tokens'
+import FieldLabel from 'frontend/components/UI/FieldLabel'
+import InfoIcon from 'frontend/components/UI/InfoIcon'
+import { resolveThemeLabel } from 'frontend/components/UI/ThemeSelector/themeLabels'
 import { ColourField } from './ColourField'
 import { GradientField } from './GradientField'
 import { resolveFloorPairLabels, resolveTokenLabel } from './tokenLabels'
@@ -30,13 +37,14 @@ export function TokenRow({
   value,
   onCommit,
   failures = [],
+  base,
   gradient = false
 }: TokenRowProps) {
   const { t } = useTranslation()
+  const { t: tGamelib } = useTranslation('gamelib')
   const inputId = `token${token}`
   const label = resolveTokenLabel(token, t)
   // A live-derived token is never stored on Duplicate; empty means "follow the source" (OD-1).
-  const allowEmpty = token in LIVE_DERIVED_TOKENS
   const warnings = failures.map((failure) => {
     const { a, b } = resolveFloorPairLabels(failure, t)
     return {
@@ -49,6 +57,52 @@ export function TokenRow({
     }
   })
 
+  // Chips on the label line (OD-1, OD-2). Each help text sits behind an icon-only (i) beside the
+  // label, never under the input.
+  const derivedFrom = LIVE_DERIVED_TOKENS[token] as string | undefined
+  const allowEmpty = derivedFrom !== undefined
+  const notInPreview = CORE_TOKENS.includes(token) && !PREVIEW_TOKENS.has(token)
+  const setByBase =
+    base !== undefined && (BASE_OVERRIDDEN_TOKENS[base] ?? []).includes(token)
+  const chips =
+    derivedFrom !== undefined || notInPreview || setByBase ? (
+      <span className="themeEditor__chips">
+        {derivedFrom !== undefined && (
+          <>
+            <span className="themeEditor__chip">
+              {t('gamelib:customThemes.chipDerived', 'Derived')}
+            </span>
+            <InfoIcon
+              text={t(
+                'gamelib:customThemes.chipDerivedHelp',
+                'Follows {{source}} until you set a value here.',
+                { source: resolveTokenLabel(derivedFrom, t) }
+              )}
+            />
+          </>
+        )}
+        {notInPreview && (
+          <span className="themeEditor__chip">
+            {t('gamelib:customThemes.chipNotInPreview', 'Not in preview')}
+          </span>
+        )}
+        {setByBase && (
+          <>
+            <span className="themeEditor__chip">
+              {t('gamelib:customThemes.chipSetByBase', 'Set by base theme')}
+            </span>
+            <InfoIcon
+              text={t(
+                'gamelib:customThemes.chipSetByBaseHelp',
+                '{{base}} sets this directly, so editing it doesn’t change the real app.',
+                { base: resolveThemeLabel(base, tGamelib) }
+              )}
+            />
+          </>
+        )}
+      </span>
+    ) : undefined
+
   const describedBy = warnings.map((w) => w.id).join(' ') || undefined
 
   return (
@@ -60,9 +114,12 @@ export function TokenRow({
       }
     >
       <div className="themeEditor__rowText">
-        <label className="themeEditor__rowLabel" htmlFor={inputId}>
-          {label}
-        </label>
+        <FieldLabel
+          htmlId={inputId}
+          label={label}
+          help={chips}
+          className="themeEditor__rowLabel"
+        />
         <code className="themeEditor__rowToken">{token}</code>
       </div>
       {gradient ? (

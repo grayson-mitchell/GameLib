@@ -1,3 +1,5 @@
+@use '../../../styles/pillChip';
+
 // Theme editor (Phase 64, THEME-02). Colours come only from role tokens of the active, saved
 // theme, so a draft can never restyle the editor itself (D-05); the preview thumbnail is the one
 // element that paints from the draft. Logical properties only (RTL). The editor is its own route,
@@ -294,4 +296,160 @@
   font-size: var(--text-sm);
   line-height: 1.5;
   color: var(--text-secondary);
+}
+
+// Chips on the label line (OD-1, OD-2): the shared pill chip, made static. Never accent: the
+// chip mixin's hover border is reset so a chip does not read as a control.
+.themeEditor__chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.themeEditor__chip {
+  @include pillChip.chip(2px 8px, var(--text-sm));
+  display: inline-block;
+  cursor: default;
+  line-height: 1.5;
+  white-space: nowrap;
+
+  &:hover {
+    border-color: color-mix(
+      in srgb,
+      var(--text-default, #eae8e5) 20%,
+      transparent
+    );
+  }
+}
+
+// FieldLabel's row is sized for form fields; here it sits inside the row's label column.
+.themeEditor__rowText .fieldLabelRow {
+  flex-wrap: wrap;
+  margin-block-end: 0;
+  gap: 8px;
+}
+
+.themeEditor__rowText .fieldLabelRow .popover-wrapper {
+  margin-inline-start: 0;
+}
+
+// Advanced (D-12): collapsed by default; the chevron is accent only while open.
+.themeEditor__advanced {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.themeEditor__advancedToggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  inline-size: 100%;
+  min-block-size: 32px;
+  padding: 8px;
+  font: inherit;
+  color: var(--text-default);
+  text-align: start;
+  cursor: pointer;
+  background: var(--background);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+}
+
+.themeEditor__advancedChevron {
+  flex-shrink: 0;
+  transition: transform 140ms ease;
+  color: var(--text-secondary);
+
+  &.is-open {
+    transform: rotate(180deg);
+    color: var(--accent);
+  }
+}
+
+.themeEditor__advancedTitle {
+  font-size: var(--text-lg);
+  font-weight: var(--semibold);
+  line-height: 1.2;
+}
+
+.themeEditor__advancedCount {
+  margin-inline-start: auto;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.themeEditor__advancedPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.themeEditor__filter {
+  box-sizing: border-box;
+  inline-size: 100%;
+  padding: 8px;
+  font-size: var(--text-md);
+  color: var(--text-default);
+  background: var(--input-background);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+
+.themeEditor__filterEmpty {
+  margin: 0;
+  padding: 8px;
+  font-size: var(--text-md);
+  line-height: 1.5;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+// A gradient row stacks: label and token name above, the raw-text field full width below.
+.themeEditor__row--gradient {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.gradientField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  inline-size: 100%;
+}
+
+.gradientField__input {
+  box-sizing: border-box;
+  inline-size: 100%;
+  padding: 4px 8px;
+  font-family:
+    var(--secondary-font-family), source-code-pro, Menlo, Monaco, Consolas,
+    'Courier New', monospace;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--text-default);
+  resize: vertical;
+  background: var(--input-background);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+
+.gradientField__input[aria-invalid='true'] {
+  border-color: var(--text-default);
+}
+
+.gradientField__error {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--text-default);
+}
+
+// Display only: a strip painted from the last value that validated, never a picker.
+.gradientField__strip {
+  block-size: 24px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
 }

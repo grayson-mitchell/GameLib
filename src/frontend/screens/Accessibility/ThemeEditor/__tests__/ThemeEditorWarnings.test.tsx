@@ -143,3 +143,82 @@ describe('theme editor contrast warnings', () => {
     expect(saveButton().disabled).toBe(false)
   })
 })
+
+const NORD_ID = '00000000000000c3'
+
+const nordCopy: CustomTheme = {
+  id: NORD_ID,
+  name: 'Nord copy',
+  base: 'nord-light',
+  tokens: { ...theme.tokens, '--success-button': '#a3be8c' }
+}
+
+const renderNord = () => {
+  useSettingsState.setState({
+    customThemes: [nordCopy],
+    theme: 'midnightMirage'
+  })
+  const router = createMemoryRouter(
+    [{ path: 'accessibility/themes/:id', element: <ThemeEditor /> }],
+    { initialEntries: [`/accessibility/themes/${NORD_ID}`] }
+  )
+  return render(<RouterProvider router={router} />)
+}
+
+const rowOf = (token: string) =>
+  input(token).closest('.themeEditor__row') as HTMLElement
+
+describe('theme editor chips', () => {
+  it('marks the Success button of a Nord Light copy as set by the base theme, with an (i) help', () => {
+    renderNord()
+    const row = rowOf('--success-button')
+    expect(row.textContent).toContain('Set by base theme')
+    const help = row.querySelector('button.helpLink--iconOnly') as HTMLElement
+    expect(help).toBeTruthy()
+    fireEvent.click(help)
+    expect(
+      screen.getByText(
+        'Nord Light sets this directly, so editing it doesn’t change the real app.'
+      )
+    ).toBeTruthy()
+  })
+
+  it('does not mark the Success button of any other base as set by the base theme', () => {
+    renderEditor()
+    expect(rowOf('--success-button').textContent).not.toContain(
+      'Set by base theme'
+    )
+  })
+
+  it('marks a core token the thumbnail does not draw as not in preview, without an (i)', () => {
+    renderEditor()
+    const row = rowOf('--modal-background')
+    expect(row.textContent).toContain('Not in preview')
+    expect(row.querySelector('.helpLink')).toBeNull()
+    expect(rowOf('--body-background').textContent).not.toContain(
+      'Not in preview'
+    )
+  })
+
+  it('marks a live-derived token in Advanced as derived, and names its source in the (i) help', () => {
+    renderEditor()
+    fireEvent.click(screen.getByRole('button', { name: /Advanced/ }))
+    const row = rowOf('--focus-ring-color')
+    expect(row.textContent).toContain('Derived')
+    fireEvent.click(row.querySelector('button.helpLink--iconOnly') as Element)
+    expect(
+      screen.getByText('Follows Accent until you set a value here.')
+    ).toBeTruthy()
+  })
+
+  it('keeps every help text behind an icon-only trigger: no Help link, and no text until it is opened', () => {
+    renderEditor()
+    fireEvent.click(screen.getByRole('button', { name: /Advanced/ }))
+    expect(
+      document.querySelectorAll('.helpLink:not(.helpLink--iconOnly)')
+    ).toHaveLength(0)
+    expect(
+      screen.queryByText('Follows Accent until you set a value here.')
+    ).toBeNull()
+  })
+})
