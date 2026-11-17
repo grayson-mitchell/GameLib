@@ -183,7 +183,10 @@ function probeHealthAndWhoami(
     )
     timeout.unref?.()
 
-    socket.once('error', () => finish({ healthOk, authOk, whoamiOk: false }))
+    // Persistent handler: a late second 'error' after destroy must not become
+    // an uncaught exception (78 WR-02, sibling of 58 IN-01); finish() is
+    // idempotent via `settled`.
+    socket.on('error', () => finish({ healthOk, authOk, whoamiOk: false }))
 
     socket.connect(port, BRIDGE_HELPER_HOST, () => {
       socket.write(encodeControl(PROBE_REQUEST_ID, 'health'))

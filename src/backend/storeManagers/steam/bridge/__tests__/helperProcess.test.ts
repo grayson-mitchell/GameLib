@@ -440,6 +440,35 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
     expect(warned).not.toContain(secret)
   }, 10000)
 
+  // 78-REVIEW WR-02: the sibling of 58 IN-01 (inviteBridge controlRoundTrip).
+  // A one-shot 'error' listener is consumed by the first error, so a second
+  // one on the destroyed probe socket would be an unhandled 'error' event.
+  test('78 WR-02: a second socket error after the probe settles does not throw (persistent handler)', async () => {
+    const child = new FakeChildProcess()
+    mockedSpawn.mockReturnValue(child)
+    const probeSockets: FakeSocket[] = []
+    MockedSocket.mockImplementation(() => {
+      const sock = new FakeSocket(healthOkFrame, whoamiOkFrame)
+      if (probeSockets.length === 0) {
+        sock.connect.mockImplementation(() => {
+          process.nextTick(() => sock.emit('error', new Error('first')))
+        })
+      }
+      probeSockets.push(sock)
+      return sock
+    })
+
+    const pending = ensureBridgeHelperReady(helperDeps, APP_ID_A)
+    emitListenLine(child, 55001, APP_ID_A)
+    const result = await pending
+
+    expect(result.status).toBe('ready')
+    expect(probeSockets.length).toBeGreaterThanOrEqual(2)
+    const failed = at(probeSockets, 0)
+    expect(failed.destroy).toHaveBeenCalled()
+    expect(() => failed.emit('error', new Error('second'))).not.toThrow()
+  }, 10000)
+
   // ── 51-REVIEW WR-02: the backend waits for the helper's READY line ────────
 
   test('WR-02: slow init -- no probe before READY (past the old ~3 s budget), then ready', async () => {
