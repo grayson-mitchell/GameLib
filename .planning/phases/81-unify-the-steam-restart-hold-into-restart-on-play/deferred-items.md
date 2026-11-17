@@ -32,3 +32,9 @@ Out-of-scope discoveries logged by plan executors. Not fixed in the plan that fo
 - `src/backend/__tests__/storeKinds.test.ts` ("the scanned name -> kind table equals EXPECTED_KINDS exactly")
   fails: the scan finds `steam_direct_launch_verdict` (kind `cache`) that `EXPECTED_KINDS` does not list.
   A store added outside this plan; 81-06 touches no store file.
+
+## Found in 81-07 (2026-11-18)
+
+- `src/frontend/components/UI/NavShell/__tests__/themeTokens.test.ts` render-site census expects 34 `is-text` sites and
+  finds 37: `screens/Game/GamePage/components/NativePortInfo.tsx` carries 3 that the census does not list. The
+  file is from the native-port work outside this phase; 81-07 touches no `is-text` markup.
