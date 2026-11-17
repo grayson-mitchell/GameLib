@@ -169,7 +169,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 75: Steam local file formats in Rust** — 35 plans in 20 waves; planned 2026-11-14 (completed 2026-11-14)
 - [x] **Phase 76: Engine-correct bottle for DRM-mode launches (v0.9 audit S9)** — 5 plans in 3 waves; gap closure 76-03..05 verified live (UAT 6-8) (completed 2026-11-17)
 - [x] **Phase 77: Runtime hardening from the v0.9 review debt** — 3 plans in 2 waves; planned (completed 2026-11-16)
-- [ ] **Phase 78: Verification records and test health after v0.9** — 5 plans in 2 waves; planned
+- [x] **Phase 78: Verification records and test health after v0.9** — 5 plans in 2 waves; planned (completed 2026-11-17)
 - [x] **Phase 79: Rust CM client replacing steam-user and steam-session** — 44 plans in 21 waves; planned (spike 085 gate satisfied) (completed 2026-11-15)
 - [x] **Phase 80: Steam install, uninstall and update polling state machines in Rust** — 33 plans; planned (completed 2026-11-16)
 - [ ] **Phase 81: Unify the Steam restart hold into restart-on-Play** — not planned
@@ -1603,7 +1603,7 @@ Plans:
 **Requirements**: DEBT-05, DEBT-06
 **Depends on:** None
 **Source:** `milestones/v0.9-MILESTONE-AUDIT.md`
-**Plans:** 4/5 plans executed
+**Plans:** 5/5 plans complete
 
 Plans:
 
@@ -1616,7 +1616,7 @@ Plans:
 
 **Wave 2**
 
-- [ ] 78-05-PLAN.md — DEBT-06 clean-worktree proof (targeted, full run, simulated hosts, CI log), attribution, cold lint, D-17 grouped todo, close lint todo
+- [x] 78-05-PLAN.md — DEBT-06 clean-worktree proof (targeted, full run, simulated hosts, CI log), attribution, cold lint, D-17 grouped todo, close lint todo
 
 ### Phase 79: Rust CM client replacing steam-user and steam-session
 
