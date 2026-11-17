@@ -5,16 +5,16 @@ milestone_name: Foundations
 current_phase: 64
 current_phase_name: UI to edit themes
 status: executing
-stopped_at: Completed 64-04-PLAN.md
-last_updated: "2026-11-17T19:26:21.360Z"
+stopped_at: Completed 64-05-PLAN.md
+last_updated: "2026-11-17T19:41:19.151Z"
 last_activity: 2026-11-18
 last_activity_desc: Phase 64 execution started
-state_head: 781a4c5fb1cc9d6278d3623f0bd56fe0644e7665
+state_head: 72cbdcf49de532f5eb55ebed0442dbc4e16464fb
 progress:
   total_phases: 26
   completed_phases: 23
   total_plans: 521
-  completed_plans: 505
+  completed_plans: 506
   percent: 88
 ---
 
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 ## Current Position
 
 Phase: 64 (UI to edit themes) — EXECUTING
-Plan: 5 of 10
+Plan: 6 of 10
 Status: Ready to execute
 Last activity: 2026-11-18 — Phase 64 execution started
 
@@ -288,6 +288,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 81 P10 | 50min | 2 tasks | 21 files |
 | Phase 64 P02 | 19 min | 2 tasks | 12 files |
 | Phase 64 P04 | 25 min | 3 tasks | 13 files |
+| Phase 64 P05 | 10min | 3 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -474,6 +475,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 64]: Core tokens a built-in leaves undeclared are seeded from the real consumer fallback chain; zombie --primary seeds to #00000000 — A later release declaring one in themes.scss must not change an existing copy, and .button background var(--primary) has no fallback.
 - [Phase 64]: One resolver (resolveThemeKey) answers which theme a key is; window.setTheme goes through applyTheme and replaces only the 10 built-in body classes
 - [Phase 64]: Save and the boot parser share cleanTokens (name pattern, known-token universe, canonical colours, gradient deny-list), so a saved token survives a restart
+- [Phase 64]: Thumbnail colours fall back to the base built-in's value for the same element, then #00000000, so a half-typed draft never draws raw text or a blank hole
+- [Phase 64]: Nord Light selected-tab label is not mirrored in the thumbnail (UI-SPEC OD-2 lists only the two button rules); Plan 10 UAT checks it
 
 ### Pending Todos
 
@@ -849,8 +852,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-17T19:26:17.974Z
-Stopped at: Completed 64-04-PLAN.md
+Last session: 2026-11-17T19:41:15.674Z
+Stopped at: Completed 64-05-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
