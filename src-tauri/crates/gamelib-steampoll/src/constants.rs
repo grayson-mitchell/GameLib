@@ -42,3 +42,6 @@ pub const ACK_TIMEOUT_MS: u64 = 5000;
 pub const ADOPTION_TICK_MS: u64 = 5_000;
 /// The largest ACF the adoption watch reads or accepts as a baseline (T-81-02).
 pub const ADOPTION_ACF_MAX_BYTES: u64 = 1_048_576;
+/// How long one `--steam-appstate` helper call may run before it counts as no answer (T-81-13).
+/// The helper arms its own 8 s alarm, so this only catches a helper that cannot even start.
+pub const ADOPTION_HELPER_TIMEOUT_MS: u64 = 10_000;
