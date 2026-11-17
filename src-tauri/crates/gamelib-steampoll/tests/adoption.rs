@@ -56,6 +56,9 @@ struct Rig {
     /// The helper path the host reports (a real empty file), `None` for a rig with no helper.
     helper: Option<String>,
     _helper_dir: Option<tempfile::TempDir>,
+    /// The Steam root the watch reads logs and VDFs from: always a scratch directory, never the
+    /// real profile.
+    steam_root: tempfile::TempDir,
 }
 
 async fn rig(platform: Platform) -> Rig {
@@ -97,14 +100,21 @@ async fn rig_inner(platform: Platform, with_helper: bool) -> Rig {
     );
     let outbox = Arc::new(Outbox::new());
     outbox.mark_ready(&*host).await;
+    let steam_root = tempfile::tempdir().unwrap();
     Rig {
-        watch: AdoptionWatch::new(registry.clone(), outbox, platform, None),
+        watch: AdoptionWatch::new(
+            registry.clone(),
+            outbox,
+            platform,
+            Some(steam_root.path().to_path_buf()),
+        ),
         host,
         runner,
         registry,
         clock,
         helper,
         _helper_dir: helper_dir,
+        steam_root,
     }
 }
 
@@ -133,6 +143,28 @@ impl Rig {
 
     fn script_pgrep(&self, outputs: Vec<RunOutput>) {
         self.runner.on(PGREP_MAC, outputs);
+    }
+
+    /// `<steamRoot>/logs/content_log.txt`.
+    fn content_log(&self) -> PathBuf {
+        self.steam_root.path().join("logs").join("content_log.txt")
+    }
+
+    /// Replaces the content_log with `lines`, creating `logs/` when needed.
+    fn write_content_log(&self, content: &str) {
+        let path = self.content_log();
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, content).unwrap();
+    }
+
+    /// Appends to the content_log.
+    fn append_content_log(&self, content: &str) {
+        use std::io::Write;
+        let mut f = std::fs::OpenOptions::new()
+            .append(true)
+            .open(self.content_log())
+            .unwrap();
+        f.write_all(content.as_bytes()).unwrap();
     }
 
     fn helper_path(&self) -> &str {
@@ -999,4 +1031,106 @@ async fn windows_and_linux_never_spawn_the_helper() {
             "{platform:?}"
         );
     }
+}
+
+// ---- content_log rescan evidence (81-05 task 1) ----
+
+/// The line Steam logs when it rescans `lib`'s steamapps folder and finds `count` apps, in the
+/// mixed-separator shape macOS writes (`<dir>\appmanifest_*.acf`) with CRLF endings.
+fn loaded_line(lib: &Library, count: u32) -> String {
+    format!(
+        "[2026-11-18 10:00:00] Loaded {count} apps from install folder \"{}\\appmanifest_*.acf\".\r\n",
+        lib.steamapps.display()
+    )
+}
+
+async fn adopts_on_a_content_log_rescan(platform: Platform) {
+    let r = rig(platform).await;
+    let lib = library();
+    lib.write("480", &handoff_acf("480"));
+    r.write_content_log(&loaded_line(&lib, 3));
+    let args = lib.args("480", 111);
+    r.watch.watch(args.clone()).unwrap();
+
+    // A rescan that finds the same count is not evidence.
+    r.append_content_log(&loaded_line(&lib, 3));
+    tick().await;
+    assert_eq!(r.events(), vec![("480".to_string(), false, None)]);
+
+    // A rescan that finds one more app is. `read` sees it without advancing the watch.
+    r.append_content_log(&loaded_line(&lib, 4));
+    let reading = r.watch.read(&args).await;
+    assert!(reading.adopted, "{platform:?}");
+    assert_eq!(reading.evidence.as_deref(), Some("log"));
+    assert!(r.watch.watched_app_ids().contains(&"480".to_string()));
+
+    tick().await;
+    assert_eq!(
+        r.events(),
+        vec![
+            ("480".to_string(), false, None),
+            ("480".to_string(), true, None)
+        ]
+    );
+    assert!(r.watch.watched_app_ids().is_empty());
+    assert!(!r.active());
+}
+
+#[tokio::test(start_paused = true)]
+async fn on_linux_a_content_log_rescan_with_one_more_app_adopts() {
+    adopts_on_a_content_log_rescan(Platform::Linux).await;
+}
+
+#[tokio::test(start_paused = true)]
+async fn on_windows_a_content_log_rescan_with_one_more_app_adopts() {
+    adopts_on_a_content_log_rescan(Platform::Win32).await;
+}
+
+#[tokio::test(start_paused = true)]
+async fn on_macos_a_content_log_rescan_backs_up_the_other_evidence() {
+    let r = rig(Platform::Darwin).await;
+    let lib = library();
+    lib.write("480", &handoff_acf("480"));
+    r.write_content_log(&loaded_line(&lib, 3));
+    // Steam stays up with the recorded pid and there is no helper, so only the log can speak.
+    r.script_pgrep(vec![pgrep(Some(0), "111\n")]);
+    r.watch.watch(lib.args("480", 111)).unwrap();
+    r.append_content_log(&loaded_line(&lib, 4));
+    tick().await;
+    assert_eq!(r.events().last(), Some(&("480".to_string(), true, None)));
+}
+
+#[tokio::test(start_paused = true)]
+async fn a_missing_content_log_is_no_evidence_and_never_panics() {
+    for platform in [Platform::Linux, Platform::Win32] {
+        let r = rig(platform).await;
+        let lib = library();
+        lib.write("480", &handoff_acf("480"));
+        // No logs/ directory at all, before and after the watch starts.
+        r.watch.watch(lib.args("480", 111)).unwrap();
+        tick().await;
+        tick().await;
+        assert_eq!(r.events(), vec![("480".to_string(), false, None)]);
+        assert!(r.active(), "{platform:?}");
+        // A log that only appears later has no prior count for the folder: the rule stays off.
+        r.write_content_log(&loaded_line(&lib, 9));
+        tick().await;
+        assert_eq!(r.events(), vec![("480".to_string(), false, None)]);
+        // An unreadable log (a directory where the file should be) is no evidence either.
+        std::fs::remove_file(r.content_log()).unwrap();
+        std::fs::create_dir(r.content_log()).unwrap();
+        tick().await;
+        assert_eq!(r.events(), vec![("480".to_string(), false, None)]);
+    }
+}
+
+#[tokio::test(start_paused = true)]
+async fn read_skips_the_log_evidence_for_an_app_that_is_not_watched() {
+    let r = rig(Platform::Linux).await;
+    let lib = library();
+    lib.write("480", &handoff_acf("480"));
+    r.write_content_log(&loaded_line(&lib, 3));
+    r.append_content_log(&loaded_line(&lib, 9));
+    let reading = r.watch.read(&lib.args("480", 111)).await;
+    assert!(!reading.adopted);
 }

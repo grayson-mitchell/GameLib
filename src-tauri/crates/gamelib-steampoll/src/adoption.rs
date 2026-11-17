@@ -9,12 +9,12 @@
 //! | evidence | macOS | Windows | Linux |
 //! |---|---|---|---|
 //! | Steam rewrote the ACF (content differs from the GameLib baseline, StateFlags bit 4, real buildid) | yes | yes | yes |
+//! | a `Loaded N apps from install folder` line for the record's folder with N above the count logged before the watch began (`content_log.txt`, 81-05, Open Question 3) | yes | yes | yes |
 //! | Steam's own install state for the app has bit 4 (the `--steam-appstate` helper, D-08) | yes | never | never |
 //! | the recorded `steam_osx` pid is no longer live, unless the helper says the state is not 4 | yes | never | never |
 //!
 //! A pid change is not evidence off macOS: spikes 087 and 088 (r4) showed that a sign-out restarts
-//! Steam without adopting anything. A later plan adds the Windows/Linux readers (81-05) as further
-//! evidence kinds.
+//! Steam without adopting anything.
 //!
 //! macOS helper reading (81-04, spike 083). Steam open at its sign-in screen adopts the install the
 //! moment the operator signs in, with the same pid, so the pid rule alone never sees it. Each
@@ -40,6 +40,7 @@
 //!
 //! Logging rule (T-28-04): appId and evidence kind only, never a path, SteamID, title or payload.
 
+use crate::adoption_evidence::{capture_log_cursor, folder_key, scan_log_for_rescan, LogCursor};
 use crate::app_state::{read_app_state, AppStateOutcome};
 use crate::constants::{
     ADOPTION_ACF_MAX_BYTES, ADOPTION_HELPER_SIGNED_IN_MIN_INTERVAL_MS,
@@ -55,7 +56,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 use std::time::Duration;
 use tokio::time::{interval_at, Instant, MissedTickBehavior};
 use tokio_util::sync::CancellationToken;
@@ -81,8 +82,7 @@ pub struct AdoptionWatchArgs {
     pub install_app_fallback: bool,
 }
 
-/// What one evaluation found. `evidence` is `"acf"`, `"helper"` or `"pid"` here; 81-05 adds
-/// `"log"` and `"libraryfolders"`.
+/// What one evaluation found. `evidence` is `"acf"`, `"log"`, `"helper"` or `"pid"`.
 #[derive(Debug, Clone, Default, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AdoptionReading {
@@ -234,6 +234,8 @@ struct Entry {
     last: Option<Emitted>,
     /// macOS helper readings; unused elsewhere.
     helper: HelperCache,
+    /// Where the watch stopped reading `content_log.txt` (every OS), captured at registration.
+    cursor: LogCursor,
     /// Bumped per insert, so a tick holding a snapshot of a replaced entry cannot write to or
     /// remove its replacement.
     version: u64,
@@ -257,9 +259,10 @@ struct Inner {
     registry: Registry,
     outbox: Arc<Outbox>,
     platform: Platform,
-    /// Unused until 81-05 (the Windows/Linux readers).
-    #[allow(dead_code)]
+    /// The Steam root the log readers use; `None` falls back to the discovered default.
     steam_root: Option<PathBuf>,
+    /// `steam_root` resolved once, so the fallback discovery runs at most once.
+    resolved_root: OnceLock<PathBuf>,
     state: Mutex<State>,
 }
 
@@ -290,15 +293,33 @@ impl AdoptionWatch {
                 outbox,
                 platform,
                 steam_root,
+                resolved_root: OnceLock::new(),
                 state: Mutex::new(State::default()),
             }),
         }
     }
 
+    /// The Steam root the log and VDF readers use: the one given to [`AdoptionWatch::new`], else the
+    /// discovered default (the `rearm.rs` fallback). Resolved once.
+    fn steam_root(&self) -> &Path {
+        self.inner.resolved_root.get_or_init(|| {
+            self.inner.steam_root.clone().unwrap_or_else(|| {
+                PathBuf::from(gamelib_steamfiles::discover::discover_default().path)
+            })
+        })
+    }
+
+    fn content_log_path(&self) -> PathBuf {
+        self.steam_root().join("logs").join("content_log.txt")
+    }
+
     /// Adds (or replaces) a watch entry and starts the task when it is not running. Replacing an
-    /// entry resets its last-emitted state.
+    /// entry resets its last-emitted state and re-captures its log cursor.
     pub fn watch(&self, args: AdoptionWatchArgs) -> Result<(), String> {
         validate_watch_args(&args).map_err(str::to_string)?;
+        // The manifest path names `<steamapps>/appmanifest_<id>.acf`, so its folder key is the
+        // record's own steamapps folder in the same shape the log line is reduced to.
+        let cursor = capture_log_cursor(&self.content_log_path(), &folder_key(&args.manifest_path));
         let started = {
             let mut st = lock(&self.inner.state);
             st.next_version += 1;
@@ -309,6 +330,7 @@ impl AdoptionWatch {
                     args,
                     last: None,
                     helper: HelperCache::default(),
+                    cursor,
                     version,
                 },
             );
@@ -386,19 +408,27 @@ impl AdoptionWatch {
         )
         .await;
         let mut cache = HelperCache::default();
-        self.evaluate(args, pids.as_deref(), &mut cache, false)
+        // A watched app reads through a copy of its own cursor, so a read never advances the
+        // watch; an unwatched app has no cursor and the log evidence is skipped.
+        let mut cursor = lock(&self.inner.state)
+            .entries
+            .get(&args.app_id)
+            .map(|e| e.cursor.clone());
+        self.evaluate(args, pids.as_deref(), &mut cache, cursor.as_mut(), false)
             .await
     }
 
-    /// The evidence rules, in order: Steam's ACF rewrite on every platform; on macOS, the helper
-    /// reporting install-state bit 4, then the recorded `steam_osx` pid no longer being live
-    /// (unless the helper definitely says the state is not 4, D-07). `cache` holds the helper
-    /// readings; a fresh cache makes the helper run now.
+    /// The evidence rules, in order: Steam's ACF rewrite on every platform; a content_log rescan
+    /// that found more apps in the record's folder on every platform (`cursor` `None` skips it);
+    /// on macOS, the helper reporting install-state bit 4, then the recorded `steam_osx` pid no
+    /// longer being live (unless the helper definitely says the state is not 4, D-07). `cache`
+    /// holds the helper readings; a fresh cache makes the helper run now.
     async fn evaluate(
         &self,
         args: &AdoptionWatchArgs,
         pids: Option<&[u32]>,
         cache: &mut HelperCache,
+        cursor: Option<&mut LogCursor>,
         pids_changed: bool,
     ) -> AdoptionReading {
         let mut reading = AdoptionReading {
@@ -411,6 +441,13 @@ impl AdoptionWatch {
             reading.adopted = true;
             reading.evidence = Some("acf".to_string());
             return reading;
+        }
+        if let Some(cursor) = cursor {
+            if scan_log_for_rescan(&self.content_log_path(), cursor) {
+                reading.adopted = true;
+                reading.evidence = Some("log".to_string());
+                return reading;
+            }
         }
         // The helper and the pid rule are macOS only: on Windows and Linux a sign-out restarts
         // Steam without adopting anything (spikes 087 and 088, r4).
@@ -501,14 +538,36 @@ impl AdoptionWatch {
         }
     }
 
+    /// Writes the advanced log `cursor` back, under the same replaced-entry rule.
+    fn store_cursor(&self, app_id: &str, version: u64, cursor: &LogCursor) {
+        if let Some(entry) = lock(&self.inner.state).entries.get_mut(app_id) {
+            if entry.version == version {
+                entry.cursor = cursor.clone();
+            }
+        }
+    }
+
     /// One tick. Returns false when the task should exit (no entries remain).
     async fn tick(&self) -> bool {
-        let snapshot: Vec<(AdoptionWatchArgs, Option<Emitted>, u64, HelperCache)> =
-            lock(&self.inner.state)
-                .entries
-                .values()
-                .map(|e| (e.args.clone(), e.last, e.version, e.helper.clone()))
-                .collect();
+        let snapshot: Vec<(
+            AdoptionWatchArgs,
+            Option<Emitted>,
+            u64,
+            HelperCache,
+            LogCursor,
+        )> = lock(&self.inner.state)
+            .entries
+            .values()
+            .map(|e| {
+                (
+                    e.args.clone(),
+                    e.last,
+                    e.version,
+                    e.helper.clone(),
+                    e.cursor.clone(),
+                )
+            })
+            .collect();
         if !snapshot.is_empty() {
             let pids = if self.inner.platform == Platform::Darwin {
                 crate::hold::list_steam_client_pids(
@@ -528,11 +587,18 @@ impl AdoptionWatch {
             let pids_changed = sorted_pids
                 .as_ref()
                 .is_some_and(|now| lock(&self.inner.state).last_pids.as_ref() != Some(now));
-            for (args, last, version, mut cache) in snapshot {
+            for (args, last, version, mut cache, mut cursor) in snapshot {
                 let reading = self
-                    .evaluate(&args, pids.as_deref(), &mut cache, pids_changed)
+                    .evaluate(
+                        &args,
+                        pids.as_deref(),
+                        &mut cache,
+                        Some(&mut cursor),
+                        pids_changed,
+                    )
                     .await;
                 self.store_cache(&args.app_id, version, &cache);
+                self.store_cursor(&args.app_id, version, &cursor);
                 let pair: Emitted = (reading.adopted, reading.signed_in);
                 if last != Some(pair) {
                     self.emit(&args.app_id, pair).await;

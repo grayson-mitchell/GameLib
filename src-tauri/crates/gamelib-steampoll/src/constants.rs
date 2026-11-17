@@ -51,3 +51,7 @@ pub const ADOPTION_HELPER_SIGNED_IN_MIN_INTERVAL_MS: u64 = 15_000;
 /// After the watch sees Steam sign in (having seen it signed out), how long it waits for Steam to
 /// adopt on its own before the one-shot InstallApp fallback may fire (D-09, spike 083).
 pub const ADOPTION_INSTALLAPP_FALLBACK_DELAY_MS: u64 = 10_000;
+/// The most of `logs/content_log.txt` the adoption watch reads at once, both for the count that
+/// predates a watch and for each tick's new lines (T-81-15). A longer append is read from its last
+/// window only.
+pub const ADOPTION_LOG_TAIL_BYTES: u64 = 262_144;
