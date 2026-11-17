@@ -131,4 +131,11 @@ Operator, this Mac. Restart `pnpm tauri:dev` first (it does not rebuild the side
   per-game settings through `TITLE_AUTHORITATIVE_KEYS`, which lacked `launchWithoutSteam`, so
   Play saw it as off for every bridge game. Key added. The game's own outcome is not yet
   recorded.
-- Still to run: a true row-(a) game with Steam quit; Avernum 6 (b) outcome again; steps 5-7.
+- Avernum 6 (206060, bridge, row b), after bbcfb66aa: the direct path ran ("direct launch of
+  bridge ... no shim, no helper, no overlay"; Avernum 6.exe started in its bottle). The game
+  showed "Steam must be running to play this game (SteamAPI_Init() failed)" and quit. Outcome:
+  **quits**.
+- Row (a) candidates on this Mac (no steam_api file, no Steam link per otool): Legends of
+  Aethereus (248410) and Dead Age 2 (951430). Every other installed Mac-native game ships a
+  Steam API.
+- Still to run: a row-(a) game with Steam quit; steps 5-7.
