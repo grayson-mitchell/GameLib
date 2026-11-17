@@ -35,7 +35,84 @@ export interface CoreTokenGroup {
   tokens: readonly string[]
 }
 
-// RED stubs: the real core token set lands in the GREEN commit.
-export const CORE_TOKEN_GROUPS: readonly CoreTokenGroup[] = []
-export const CORE_TOKENS: readonly string[] = []
-export const CORE_TOKEN_SEEDS: Readonly<Record<string, readonly string[]>> = {}
+/**
+ * The 27 core tokens the editor lists and the thumbnail reads (D-12, UI-SPEC
+ * "Core tokens"), in UI-SPEC order.
+ */
+export const CORE_TOKEN_GROUPS: readonly CoreTokenGroup[] = [
+  {
+    id: 'surfaces',
+    tokens: [
+      '--body-background',
+      '--background',
+      '--input-background',
+      '--modal-background',
+      '--modal-border',
+      '--border-color'
+    ]
+  },
+  {
+    id: 'navigation',
+    tokens: [
+      '--navbar-background',
+      '--navbar-active-background',
+      '--navbar-active',
+      '--navbar-inactive',
+      '--navbar-accent'
+    ]
+  },
+  {
+    id: 'text',
+    tokens: [
+      '--text-default',
+      '--text-secondary',
+      '--text-tertiary',
+      '--text-hover'
+    ]
+  },
+  {
+    id: 'buttons',
+    tokens: [
+      '--primary',
+      '--primary-hover',
+      '--secondary-button',
+      '--success-button',
+      '--cancel-button',
+      '--danger'
+    ]
+  },
+  {
+    id: 'accent',
+    tokens: ['--accent', '--accent-overlay', '--search-bar-border']
+  },
+  {
+    id: 'status',
+    tokens: ['--status-success', '--status-warning', '--status-danger']
+  }
+]
+
+export const CORE_TOKENS: readonly string[] = CORE_TOKEN_GROUPS.flatMap(
+  (g) => g.tokens
+)
+
+/**
+ * How a core token a built-in leaves undeclared is seeded: the first entry
+ * that yields a value wins. A `--name` entry takes the already-flattened
+ * value of that token; anything else is a literal colour. Each chain is the
+ * real consumer fallback (git grep over src/frontend styles):
+ *   var(--navbar-active, var(--accent-overlay, var(--accent)))
+ *   var(--navbar-inactive, var(--navbar-accent))      (NavItem/index.scss)
+ *   var(--text-hover, var(--accent))
+ *   .button.is-success { background: var(--success-button, var(--status-success)) }
+ *   var(--danger, #cc3333)
+ */
+export const CORE_TOKEN_SEEDS: Readonly<Record<string, readonly string[]>> = {
+  '--navbar-active': ['--accent-overlay', '--accent'],
+  '--navbar-inactive': ['--navbar-accent'],
+  '--text-hover': ['--accent'],
+  '--success-button': ['--status-success'],
+  '--danger': ['#cc3333'],
+  // `.button { background: var(--primary) }` has no fallback, so an
+  // undeclared --primary computes to a transparent background (zombie).
+  '--primary': ['#00000000']
+}

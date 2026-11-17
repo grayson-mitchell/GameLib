@@ -20,7 +20,12 @@ import {
 } from '../testUtils/scssTokenSource'
 import { normaliseColour } from './colour'
 import { resolveColour } from './tokenResolve'
-import { LIVE_DERIVED_TOKENS, NON_COLOUR_TOKENS } from './tokens'
+import {
+  CORE_TOKEN_SEEDS,
+  CORE_TOKENS,
+  LIVE_DERIVED_TOKENS,
+  NON_COLOUR_TOKENS
+} from './tokens'
 
 export interface FlattenInput {
   /** `themes.scss`, comment-stripped. */
@@ -119,6 +124,26 @@ export function flattenBuiltinTheme(
     if (skipped.has(name)) continue
     const value = flattenValue(raw, scope)
     if (value !== null) flat.set(name, value)
+  }
+
+  // Seed every core token the theme leaves undeclared from its consumer
+  // fallback chain, so a later release that starts declaring one in
+  // themes.scss cannot change an existing copy: the copy already stores it.
+  for (const token of CORE_TOKENS) {
+    if (flat.has(token)) continue
+    for (const candidate of CORE_TOKEN_SEEDS[token] ?? []) {
+      const value = candidate.startsWith('--')
+        ? flat.get(candidate)
+        : normaliseColour(candidate)
+      if (value !== undefined && value !== null) {
+        flat.set(token, value)
+        break
+      }
+    }
+    if (!flat.has(token))
+      throw new Error(
+        `flattenBuiltinTheme: theme "${input.key}" leaves core token ${token} undeclared and no seed chain fills it`
+      )
   }
 
   return Object.fromEntries(

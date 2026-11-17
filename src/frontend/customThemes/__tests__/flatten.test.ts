@@ -66,11 +66,15 @@ describe('flattenBuiltinTheme', () => {
     const out = run('--a: #111111;', '--accent: #00ff00;', ['--success-button'])
     // --success-button falls back to --status-success (a declared #123456).
     expect(out['--success-button']).toBe(out['--status-success'])
-    const nav = run('--a: #111111;', '', [
-      '--navbar-active',
-      '--accent-overlay'
-    ])
-    expect(nav['--navbar-active']).toBe(nav['--accent'])
+    // --navbar-active prefers --accent-overlay over --accent.
+    const nav = run(
+      '--a: #111111;',
+      '--accent-overlay: #aa0000;\n--accent: #00aa00;',
+      ['--navbar-active']
+    )
+    expect(nav['--navbar-active']).toBe('#aa0000')
+    // An undeclared --danger takes the consumer's literal fallback.
+    expect(run('--a: #111111;', '', ['--danger'])['--danger']).toBe('#cc3333')
   })
 
   it('throws naming the theme and token when no seed chain can fill a core token', () => {
