@@ -32,3 +32,11 @@ Skip this if the Windows machine is to hand anyway.
 
 Ask the Windows todo's questions 1–3 against the bottle's `steamapps`, using a small game.
 Note the answers in the Windows todo as a prior, not a result.
+
+## Resolution
+
+Closed without running on 2026-11-17, because the real run came first and made this superseded.
+Spike 087 (`.planning/spikes/087-windows-acf-adoption/README.md`) ran questions 1–5 on Windows 11 with
+native Steam and answered yes to 1, 2, 3 and 5. 81-CONTEXT D-14 records that Windows gets
+restart-on-Play. A Wine-bottle prior can no longer change that decision, so per this todo's own
+"skip this if the Windows machine is to hand" rule, it was not run.
