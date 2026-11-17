@@ -579,6 +579,8 @@ static SRWLOCK g_cb_registry_lock = SRWLOCK_INIT;
 #define GL_CB_UNLOCK() ReleaseSRWLockExclusive(&g_cb_registry_lock)
 #define GL_CB_THREAD_ID() ((uint32_t)GetCurrentThreadId())
 #define GL_CB_YIELD() Sleep(1)
+#define GL_CB_SEQ_T volatile LONG
+#define GL_CB_ATOMIC_INC(p) InterlockedIncrement(p)
 static uint32_t gl_cb_now_ms(void) { return (uint32_t)GetTickCount(); }
 static int gl_cb_transport_drain(uint8_t *buf, uint32_t cap, uint32_t *lenOut) {
   return bridge_transact(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_DRAIN_CALLBACKS, NULL, 0, buf, cap, lenOut);
@@ -1770,6 +1772,16 @@ GL_NET_FN uint32_t gl_net_configure_lanes(uint32_t hConn, int32_t n, const void 
 #ifndef GL_NET_CB_ANY
 #define GL_NET_CB_ANY() 0
 #endif
+/* Counter for shim-owned call-result handles. The registry text stays
+ * host-portable (no Win32 types): the 64-bit shim defines both before this
+ * text with LONG/InterlockedIncrement, every other embedder (the host test
+ * harness) gets the GCC/Clang atomic builtin. */
+#ifndef GL_CB_SEQ_T
+#define GL_CB_SEQ_T volatile int32_t
+#endif
+#ifndef GL_CB_ATOMIC_INC
+#define GL_CB_ATOMIC_INC(p) __atomic_add_fetch((p), 1, __ATOMIC_SEQ_CST)
+#endif
 #define GL_CB_REGISTRY_CAPACITY 512
 #define GL_CB_DRAIN_MIN_INTERVAL_MS 30
 #define GL_CB_DRAIN_MAX_PER_RUN 4
@@ -2931,14 +2943,14 @@ static int gl_md_get_api_call_result(uint64_t h, void *out, int cub,
  * manual-dispatch mode, announced with a 703; without manual dispatch it is
  * also held so a CCallResult registered after this returns still gets it.
  * Called with NO lock held. Returns 0 only for an impossible layout. */
-static volatile LONG gl_stub_cr_seq;
+static GL_CB_SEQ_T gl_stub_cr_seq;
 static uint64_t gl_stub_fail_call_result(int32_t id, uint32_t cub, uint32_t eresult_off) {
   uint8_t body[GL_CR_HELD_MAX_BYTES];
   uint32_t now = gl_cb_now_ms();
   uint32_t fail = 2;
   uint64_t h;
   if (cub > GL_CR_HELD_MAX_BYTES || eresult_off + 4 > cub) return 0;
-  h = 0x474C000000000000ULL | (uint64_t)(uint32_t)InterlockedIncrement(&gl_stub_cr_seq);
+  h = 0x474C000000000000ULL | (uint64_t)(uint32_t)GL_CB_ATOMIC_INC(&gl_stub_cr_seq);
   gl_cb_zero(body, (uint32_t)sizeof(body));
   memcpy(body + eresult_off, &fail, 4);
   gl_md_store_result(h, id, 0, cub, body, now);

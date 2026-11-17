@@ -31,6 +31,11 @@ export interface SteamInstallRuntime {
   updateStates: SteamUpdateStateCache
   /** CR-02: appId -> target build of the last unattended auto-update attempt; per boot, closure Map only. */
   autoUpdateAttempts: Map<string, string>
+  /**
+   * The highest notice seq handed out this boot (80-REVIEW C-WR-03 fallback input). Session state, never
+   * persisted: the Rust counter restarts with the shell.
+   */
+  noticeSeq: { last: number }
 }
 
 /** The slice the depot pipeline (plan build, Rust jobs, shared redists) reads. */
@@ -47,6 +52,7 @@ export function createSteamInstallRuntime(
     sharedRedistLocks: createSharedRedistLocks(),
     depotJobs: createDepotJobRegistry(transport),
     updateStates: createSteamUpdateStateCache(),
-    autoUpdateAttempts: new Map()
+    autoUpdateAttempts: new Map(),
+    noticeSeq: { last: 0 }
   }
 }

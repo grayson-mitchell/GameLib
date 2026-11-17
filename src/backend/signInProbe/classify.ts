@@ -35,8 +35,8 @@
  *
  * Secrets: captured output can contain tokens (gogdl's `auth` stdout is a
  * token-exchange object). This module therefore has no log path at all -- it
- * imports nothing but a type, and a source gate in classify.test.ts pins that
- * (T-49-09). The capture is bounded at SIGN_IN_PROBE_OUTPUT_CAP characters.
+ * imports nothing but a type (it only re-exports the pure bounded capture), and a source gate in
+ * classify.test.ts pins that (T-49-09). The capture is bounded at SIGN_IN_PROBE_OUTPUT_CAP characters.
  *
  * Sidecar exit contract: pure, no timer, watcher, socket or child, so there is
  * nothing to unref() and no in-flight work. The bound-abort path for the
@@ -59,37 +59,15 @@ export const NILE_AUTH_FAILURE_STATUSES = ['400', '401', '403']
  */
 export const NILE_NO_GAMES_INSTALLED_MARKER = 'No games installed'
 
-/** Upper bound on captured runner output, in characters. */
-export const SIGN_IN_PROBE_OUTPUT_CAP = 64_000
-
-// WHY exported ahead of its consumer: 49-05 / 49-06 type their probe-function
-// capture parameters with it. Remove this marker when they land.
-export interface BoundedOutputCapture {
-  /** Feed one raw chunk (stdout or stderr) from `CallRunnerOptions.onOutput`. */
-  onOutput(chunk: string): void
-  text(): string
-  /** True once at least one chunk has arrived, false for a joined spawn. */
-  observed(): boolean
-}
-
-export function createBoundedOutputCapture(
-  cap: number = SIGN_IN_PROBE_OUTPUT_CAP
-): BoundedOutputCapture {
-  let held = ''
-  let seen = false
-  return {
-    onOutput(chunk: string) {
-      seen = true
-      const room = cap - held.length
-      if (room <= 0) {
-        return
-      }
-      held += chunk.length > room ? chunk.slice(0, room) : chunk
-    },
-    text: () => held,
-    observed: () => seen
-  }
-}
+// The bounded capture is store-neutral and lives in backend/utils/boundedOutputCapture (quick
+// 261117-pfj), so legendary/games.ts need not import this probe module. Re-exported (an `export ...
+// from`, not an `import`) for the existing importers (SIGN_IN_PROBE_OUTPUT_CAP is the 64 000-character
+// bound); the module is pure, with no log path.
+export {
+  createBoundedOutputCapture,
+  DEFAULT_OUTPUT_CAPTURE_LIMIT as SIGN_IN_PROBE_OUTPUT_CAP
+} from 'backend/utils/boundedOutputCapture'
+export type { BoundedOutputCapture } from 'backend/utils/boundedOutputCapture'
 
 interface ClassifierInput {
   /** Everything the capture held (stdout and stderr, interleaved). */

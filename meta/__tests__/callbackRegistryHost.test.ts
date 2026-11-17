@@ -62,6 +62,7 @@ const CASES = [
   'cr_held_capacity',
   'cr_max_per_run_and_backoff',
   'cr_buffer_zeroed',
+  'stub_cr_handle_mint',
   'md_broadcast',
   'md_callresult',
   'md_callresult_failed_flag',

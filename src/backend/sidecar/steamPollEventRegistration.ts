@@ -197,16 +197,18 @@ async function applyEvent(
 }
 
 /** The crate's `outbox::is_install_state_kind`: these kinds each write an app's whole install state. */
-const INSTALL_STATE_KINDS: ReadonlySet<SteamPollStateEvent['kind']> = new Set([
+const INSTALL_STATE_KINDS: readonly SteamPollStateEvent['kind'][] = [
   'installed',
   'uninstalled',
   'installIncomplete'
-])
+]
 
 /** The seq-guard key: one per appId for the install-state group, else one per (appId, kind). */
 function seqGuardKey(ev: SteamPollStateEvent): string {
   const appId = 'appId' in ev ? ev.appId : ''
-  return INSTALL_STATE_KINDS.has(ev.kind) ? `${appId}` : `${appId}:${ev.kind}`
+  return INSTALL_STATE_KINDS.includes(ev.kind)
+    ? `${appId}`
+    : `${appId}:${ev.kind}`
 }
 
 /**

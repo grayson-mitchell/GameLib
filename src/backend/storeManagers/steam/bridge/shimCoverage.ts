@@ -117,6 +117,8 @@ export const SHIM_EXPORTED_SYMBOLS: SymbolTable = Object.freeze({
   // 58-03: the SDK/Steamworks.NET spelling (alias of the line above).
   SteamAPI_SteamMatchmaking_v009: true,
   SteamAPI_SteamMatchMakingServers_v002: true,
+  // b8e5cb85e: the Facepunch spelling (flatAccessorAlias from meta/sdk/isteammatchmakingservers002.manifest.json).
+  SteamAPI_SteamMatchmakingServers_v002: true,
   SteamAPI_SteamNetworking_v005: true,
   SteamAPI_SteamRemoteStorage_v010: true,
   SteamAPI_SteamRemoteStorage_v008: true,

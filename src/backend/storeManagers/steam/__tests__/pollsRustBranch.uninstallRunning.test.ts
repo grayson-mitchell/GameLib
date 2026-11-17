@@ -37,7 +37,8 @@ function makeDeps(result: unknown = null) {
     libraryManagers: { steam: { launchWatches: new Map() } },
     steamSession: {
       libraryState: { library: new Map([['10', { title: 'Ten' }]]) }
-    }
+    },
+    steamInstallRuntime: { noticeSeq: { last: 0 } }
   } as unknown as ManagerDeps
   return { deps, calls }
 }
@@ -95,8 +96,10 @@ describe('uninstall API', () => {
       .mockImplementation(() => undefined)
     const ok = makeDeps(100).deps
     expect(await noticeSeq({ deps: ok, appId: '10' } as never)).toBe(100)
+    // The two deps objects share one boot-owned holder, which the old module variable modelled.
     const failing = {
-      requestRustInvoke: () => Promise.reject(new Error('timeout'))
+      requestRustInvoke: () => Promise.reject(new Error('timeout')),
+      steamInstallRuntime: ok.steamInstallRuntime
     }
     const first = await noticeSeq({ deps: failing, appId: '10' } as never)
     const second = await noticeSeq({ deps: failing, appId: '10' } as never)

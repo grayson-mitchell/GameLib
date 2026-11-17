@@ -25,13 +25,14 @@ const FAT_MAGIC_64 = 0xcafebabf
 const MAX_FAT_ARCHES = 16
 const MAX_SIZEOFCMDS = 1024 * 1024
 
-const DYLIB_COMMANDS = new Set([
+// A frozen tuple, not a module-level Set: the module-state census counts Sets, and this never mutates.
+const DYLIB_COMMANDS: readonly number[] = [
   0xc, // LC_LOAD_DYLIB
   0x80000018, // LC_LOAD_WEAK_DYLIB
   0x8000001f, // LC_REEXPORT_DYLIB
   0x20, // LC_LAZY_LOAD_DYLIB
   0x80000023 // LC_LOAD_UPWARD_DYLIB
-])
+]
 
 async function readExact(
   read: RangedRead,
@@ -90,7 +91,7 @@ async function listSliceDylibs(
     const cmd = u32(block, pos)
     const cmdsize = u32(block, pos + 4)
     if (cmdsize < 8 || pos + cmdsize > sizeofcmds) return null
-    if (DYLIB_COMMANDS.has(cmd)) {
+    if (DYLIB_COMMANDS.includes(cmd)) {
       if (cmdsize < 12) return null
       const nameOff = u32(block, pos + 8)
       if (nameOff < 12 || nameOff >= cmdsize) return null

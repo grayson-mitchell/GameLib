@@ -38,7 +38,7 @@ import { legendaryLaunchArgumentFields } from '../runnerLaunchArgv'
 import { readKnownFixLaunchOverrides } from 'backend/knownFixLaunch'
 import { t } from 'i18next'
 import { showDialogBoxModalAuto } from '../../dialog/dialog'
-import { createBoundedOutputCapture } from 'backend/signInProbe/classify'
+import { createBoundedOutputCapture } from 'backend/utils/boundedOutputCapture'
 import {
   LEGENDARY_LAUNCH_OUTPUT_CAP,
   classifyLegendaryLaunchFailure,

@@ -191,10 +191,6 @@ export async function uninstall(
  * state and sends the single done. Title comes from the raw library Map, not
  * getGameInfo() (its fire-and-forget side effect is forbidden on this path).
  */
-// The highest notice seq this process has handed out (session state, never
-// persisted: the Rust counter restarts with the shell).
-let lastNoticeSeq = 0
-
 /**
  * The next notice seq, from the Rust counter (steampoll_next_notice_seq).
  * Never rejects (80-REVIEW C-WR-03): a failure notice must still reach the
@@ -204,23 +200,25 @@ let lastNoticeSeq = 0
  * never equal to, or ahead of, the next one Rust issues.
  */
 export async function noticeSeq(steamGame: SteamGame): Promise<number> {
+  // The highest seq handed out this boot lives on the boot-owned install runtime, not module state.
+  const holder = steamGame.deps.steamInstallRuntime.noticeSeq
   try {
     const seq = (await steamGame.deps.requestRustInvoke(
       RUST_STEAMPOLL_NEXT_NOTICE_SEQ,
       []
     )) as number
     if (typeof seq === 'number' && Number.isFinite(seq)) {
-      lastNoticeSeq = Math.max(lastNoticeSeq, seq)
+      holder.last = Math.max(holder.last, seq)
       return seq
     }
     throw new Error(`non-numeric notice seq ${String(seq)}`)
   } catch (error) {
-    const fallback = (lastNoticeSeq + Math.floor(lastNoticeSeq) + 1) / 2
+    const fallback = (holder.last + Math.floor(holder.last) + 1) / 2
     logWarning(
       `SteamGame: notice seq read failed for appId ${steamGame.appId}, using local seq ${fallback}: ${String(error)}`,
       LogPrefix.Steam
     )
-    lastNoticeSeq = fallback
+    holder.last = fallback
     return fallback
   }
 }

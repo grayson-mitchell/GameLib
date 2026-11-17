@@ -1996,6 +1996,22 @@ static void case_mms_malformed_ignored(void) {
   PASS();
 }
 
+/* gl_stub_fail_call_result mints shim-owned handles from gl_stub_cr_seq via the embedder's atomic
+ * increment (GL_CB_ATOMIC_INC). The harness defines neither GL_CB_SEQ_T nor GL_CB_ATOMIC_INC, so this
+ * proves the portable defaults compile and count on a non-Windows host (quick 261117-pfj). */
+static void case_stub_cr_handle_mint(void) {
+  uint64_t h1, h2;
+  g_case = "stub_cr_handle_mint";
+  reset();
+  h1 = gl_stub_fail_call_result(513, 8, 0);
+  h2 = gl_stub_fail_call_result(513, 8, 0);
+  CHECK((h1 >> 48) == 0x474C);
+  CHECK((h2 >> 48) == 0x474C);
+  CHECK(h2 == h1 + 1);
+  CHECK(gl_cr_held_count == 2);
+  PASS();
+}
+
 int main(void) {
   pthread_mutexattr_t attr;
   uint32_t i;
@@ -2051,6 +2067,7 @@ int main(void) {
   case_cr_held_capacity();
   case_cr_max_per_run_and_backoff();
   case_cr_buffer_zeroed();
+  case_stub_cr_handle_mint();
   case_md_broadcast();
   case_md_callresult();
   case_md_callresult_failed_flag();

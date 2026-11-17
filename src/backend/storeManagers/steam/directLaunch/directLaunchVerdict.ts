@@ -101,12 +101,13 @@ export function splitLaunchArguments(raw: string): string[] {
   return out
 }
 
-const NOT_CACHED: ReadonlySet<SteamDirectLaunchIneligibleReason> = new Set([
+// A frozen tuple, not a module-level Set: the module-state census counts Sets, and this never mutates.
+const NOT_CACHED: readonly SteamDirectLaunchIneligibleReason[] = [
   'unknown',
   'host-unsupported',
   'route-unsupported',
   'not-installed'
-])
+]
 
 const no = (
   reason: SteamDirectLaunchIneligibleReason
@@ -242,7 +243,7 @@ export async function getDirectLaunchVerdict(
 
   if (
     input.buildid !== '' &&
-    (verdict.eligible || !NOT_CACHED.has(verdict.reason))
+    (verdict.eligible || !NOT_CACHED.includes(verdict.reason))
   ) {
     try {
       deps.store.set(input.appId, {
