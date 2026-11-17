@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { useBlocker, useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
@@ -9,6 +9,7 @@ import { customThemeKey } from 'frontend/customThemes/customTheme'
 import { resolveThemeLabel } from 'frontend/components/UI/ThemeSelector/themeLabels'
 import { PreviewPane } from './PreviewPane'
 import { TokenList } from './TokenList'
+import { showUnsavedChangesDialog } from './unsavedChangesDialog'
 import './index.scss'
 
 const tokensEqual = (
@@ -48,8 +49,9 @@ function EditorBody({ theme }: { theme: CustomTheme }) {
     setStatus('')
   }
 
-  const save = async () => {
-    if (inFlight.current) return
+  // Resolves with the store outcome, or null when a save was already in flight.
+  const save = async (): Promise<'saved' | 'applied' | 'failed' | null> => {
+    if (inFlight.current) return null
     inFlight.current = true
     setSaving(true)
     try {
@@ -59,18 +61,47 @@ function EditorBody({ theme }: { theme: CustomTheme }) {
       } else if (outcome === 'saved') {
         setStatus(t('gamelib:customThemes.saved', 'Saved'))
       }
+      return outcome
     } finally {
       inFlight.current = false
       setSaving(false)
     }
   }
 
+  // D-06: Back and every other route change share one prompt. Only a change of path counts as
+  // leaving; a clean draft, or a save already in flight, never blocks.
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      dirty && !saving && currentLocation.pathname !== nextLocation.pathname
+  )
+  const latest = useRef({ blocker, save, name: theme.name, t })
+  useEffect(() => {
+    latest.current = { blocker, save, name: theme.name, t }
+  })
+  useEffect(() => {
+    if (blocker.state !== 'blocked') return
+    showUnsavedChangesDialog({
+      t,
+      name: latest.current.name,
+      onKeepEditing: () => latest.current.blocker.reset?.(),
+      onDiscard: () => latest.current.blocker.proceed?.(),
+      onSave: () => {
+        void latest.current.save().then((outcome) => {
+          // A refused or skipped save stays in the editor; the draft is still dirty.
+          if (outcome === 'saved' || outcome === 'applied')
+            latest.current.blocker.proceed?.()
+          else latest.current.blocker.reset?.()
+        })
+      }
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fires once per block; the handlers read the latest values through the ref
+  }, [blocker.state])
+
   const isActive = activeThemeKey === customThemeKey(theme.id)
 
   return (
     <div className="themeEditor">
       <header className="themeEditor__header">
-        {/* Plan 09 routes this through the unsaved-changes prompt (useBlocker). */}
         <button
           type="button"
           className="button is-text themeEditor__back"
