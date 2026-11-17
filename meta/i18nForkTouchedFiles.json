@@ -1,7 +1,7 @@
 {
   "baseCommit": "b5b5cad3fa2e822602d320b70788d87240fc056e",
   "baseVersion": "2.22.0",
-  "generatedAt": "2026-11-17T19:55:03.623Z",
+  "generatedAt": "2026-11-17T20:14:52.905Z",
   "generatedBy": "pnpm gen-i18n-gate-scope",
   "purpose": "A-17: the CI-readable input to the i18n scope staleness ratchet — every fork-touched src/frontend source file eligible for the hardcoded-string gate (D-17 deferrals already removed, exactly the operand the ratchet compares against), INCLUDING those not yet listed in i18nGateScope.json. Regenerate with `pnpm gen-i18n-gate-scope`.",
   "files": [
@@ -137,6 +137,12 @@
     "src/frontend/hooks/useSettingsContext.ts",
     "src/frontend/index.tsx",
     "src/frontend/muiTheme.ts",
+    "src/frontend/screens/Accessibility/ThemeEditor/ColourField.tsx",
+    "src/frontend/screens/Accessibility/ThemeEditor/PreviewPane.tsx",
+    "src/frontend/screens/Accessibility/ThemeEditor/TokenList.tsx",
+    "src/frontend/screens/Accessibility/ThemeEditor/TokenRow.tsx",
+    "src/frontend/screens/Accessibility/ThemeEditor/index.tsx",
+    "src/frontend/screens/Accessibility/ThemeEditor/tokenLabels.ts",
     "src/frontend/screens/Accessibility/index.tsx",
     "src/frontend/screens/Accessibility/queryLocalFontsSafe.ts",
     "src/frontend/screens/ConsoleMode/InstallOverlay/consoleSteamTarget.ts",

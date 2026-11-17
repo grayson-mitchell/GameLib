@@ -5,6 +5,11 @@ import { HexAlphaColorPicker } from 'react-colorful'
 import { normaliseColour, safeColour } from 'frontend/customThemes/colour'
 import { validateColourInput } from 'frontend/customThemes/validate'
 
+/**
+ * i18n-gate-exempt: a CSS class name for the picker popover's paper, never rendered to a user
+ */
+const POPOVER_SLOT_PROPS = { paper: { className: 'colourField__popover' } }
+
 interface ColourFieldProps {
   /** DOM id of the text input; the row's `<label htmlFor>` points at it. */
   id: string
@@ -125,7 +130,7 @@ export function ColourField({
         anchorEl={swatch.current}
         onClose={closePicker}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-        slotProps={{ paper: { className: 'colourField__popover' } }}
+        slotProps={POPOVER_SLOT_PROPS}
       >
         <HexAlphaColorPicker
           color={safeColour(value, '#000000')}
