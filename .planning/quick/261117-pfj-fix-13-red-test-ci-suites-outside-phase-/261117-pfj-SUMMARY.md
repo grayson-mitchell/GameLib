@@ -1,7 +1,7 @@
 ---
 phase: quick-261117-pfj
 plan: 01
-status: incomplete
+status: complete
 subsystem: test-gates
 tags: [census, i18n, shim, tauri-shell, module-state]
 requirements: [TODO-2026-11-16-full-suite-red-outside-debt-06]
@@ -86,3 +86,8 @@ None.
 ## Self-Check: PASSED
 
 Commits f757c9edf, 4234aa0da, 5ead32da6 exist; created files `src/backend/utils/boundedOutputCapture.ts` and the fill record exist.
+
+
+## Follow-up (same session): genI18nGateScope
+
+User chose to scan the 8 unscanned fork-touched files. 7 joined `meta/i18nGateScope.json` (Achievements.tsx after its two 'Hidden Achievement' literals became `gamelib:gamepage.hiddenAchievement`, translated into 48 locales with manifests). `dev/noticePreview.ts` (one fixture game title) was allowlisted at expectedCount 1 by user decision: DEFERRED_FILES + `excluded.deferred` + D-18 allowlist, with the hardcodedStringGate allowlist pin moved from 2 to 3. Fork-touched list regenerated from a clean HEAD worktree (404), because concurrent quick q1t had uncommitted files in the shared tree. Commit 56756396c. Result: 13/13 suites pass (1253 tests), tsc and eslint clean.

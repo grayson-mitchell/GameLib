@@ -25,3 +25,7 @@ Running `pnpm gen-i18n-gate-scope` fixes A-17 but turns the A-03 ratchet red, be
 ## Solution
 
 Decide per file: scan (add to scope and fix any hard-coded strings) or declare debt with a reason. Then run `pnpm gen-i18n-gate-scope`, move the pinned 275 and 396 counts in the test to the measured values, and confirm `git diff --quiet meta/i18nCatalogPresenceBaseline.json`. Do not widen the declared debt just to get the ratchet green.
+
+## Resolution
+
+Closed 2026-11-17 by quick 261117-pfj (56756396c). User decision: scan the files rather than declare debt. An audit-mode `scanScope({ extraFiles })` over the 8 new fork-touched files found 3 literals. The two "Hidden Achievement" strings in `Achievements.tsx` now read `gamelib:gamepage.hiddenAchievement` (translated into 48 locales). The other 7 files were hand-inserted into `meta/i18nGateScope.json` (scope 283). By a second user decision, `dev/noticePreview.ts`'s one literal, a fixture game title, was allowlisted at expectedCount 1. The allowlist pin moved from 2 to 3, and the file is listed in DEFERRED_FILES and `excluded.deferred`. `meta/i18nForkTouchedFiles.json` was regenerated from a clean tree (404). DECLARED_UNSCANNED_DEBT and `meta/i18nCatalogPresenceBaseline.json` are unchanged. All 13 original suites pass (1253 tests).
