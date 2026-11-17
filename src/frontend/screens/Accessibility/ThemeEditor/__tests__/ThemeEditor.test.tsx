@@ -100,6 +100,10 @@ const typeInto = (input: HTMLElement, text: string) => {
 const bodyRect = (container: HTMLElement) =>
   container.querySelector('[data-part="body"]')
 
+// The header's save status; the preview column carries a second polite status (contrast summary).
+const headerStatus = () =>
+  document.querySelector('.themeEditor__status') as HTMLElement
+
 const saveButton = () =>
   screen.getByRole('button', { name: 'Save theme' }) as HTMLButtonElement
 
@@ -137,7 +141,7 @@ describe('ThemeEditor', () => {
     const stored = call[2] as CustomTheme[]
     expect(stored[0]?.tokens['--body-background']).toBe('#123456')
     expect(setThemeStub).toHaveBeenCalledTimes(1)
-    expect(screen.getByRole('status').textContent).toBe('Saved and applied')
+    expect(headerStatus().textContent).toBe('Saved and applied')
   })
 
   it('Save only persists and says "Saved" when the theme is inactive', async () => {
@@ -149,7 +153,7 @@ describe('ThemeEditor', () => {
     })
     expect(storeSetCheckedCalls).toHaveLength(1)
     expect(setThemeStub).not.toHaveBeenCalled()
-    expect(screen.getByRole('status').textContent).toBe('Saved')
+    expect(headerStatus().textContent).toBe('Saved')
   })
 
   it('shows "Theme not found" with a way back for an unknown id', () => {
@@ -187,7 +191,7 @@ describe('ThemeEditor', () => {
       release(true)
       await holdWrite
     })
-    expect(screen.getByRole('status').textContent).toBe('Saved')
+    expect(headerStatus().textContent).toBe('Saved')
   })
 
   it('announces nothing and stays dirty when the write fails', async () => {
@@ -198,7 +202,7 @@ describe('ThemeEditor', () => {
     await act(async () => {
       fireEvent.click(saveButton())
     })
-    expect(screen.getByRole('status').textContent).toBe('')
+    expect(headerStatus().textContent).toBe('')
     expect(setThemeStub).not.toHaveBeenCalled()
     expect(saveButton().disabled).toBe(false)
   })

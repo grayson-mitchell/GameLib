@@ -1,5 +1,6 @@
 import { TFunction } from 'i18next'
 import type { CoreTokenGroupId } from 'frontend/customThemes/tokens'
+import type { FloorFailure } from 'frontend/customThemes/contrastFloors'
 
 // Theme editor labels (Phase 64, D-12). One literal `t('gamelib:customThemes.<slug>', '<English>')`
 // per case so the hardcoded-string gate sees a literal-argument call (the same switch-of-literals
@@ -93,5 +94,35 @@ export function resolveGroupLabel(id: CoreTokenGroupId, t: TFunction): string {
       return t('gamelib:customThemes.group.accent', 'Accent')
     case 'status':
       return t('gamelib:customThemes.group.status', 'Status')
+  }
+}
+
+/**
+ * The two names a contrast-floor warning reads between ("Border vs body 2.1:1, needs 3:1"), one
+ * literal pair of `t()` calls per `CONTRAST_FLOORS` id. An unknown id falls back to its raw
+ * foreground and background token names.
+ */
+export function resolveFloorPairLabels(
+  failure: Pick<FloorFailure, 'id' | 'fg' | 'bg'>,
+  t: TFunction
+): { a: string; b: string } {
+  switch (failure.id) {
+    case 'border-body':
+      return {
+        a: t('gamelib:customThemes.pairBorder', 'Border'),
+        b: t('gamelib:customThemes.pairBody', 'body')
+      }
+    case 'border-modal':
+      return {
+        a: t('gamelib:customThemes.pairBorder', 'Border'),
+        b: t('gamelib:customThemes.pairDialog', 'dialog')
+      }
+    case 'accent-body':
+      return {
+        a: t('gamelib:customThemes.pairAccent', 'Accent'),
+        b: t('gamelib:customThemes.pairBody', 'body')
+      }
+    default:
+      return { a: failure.fg, b: failure.bg }
   }
 }

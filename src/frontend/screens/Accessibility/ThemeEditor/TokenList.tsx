@@ -1,4 +1,6 @@
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { checkFloors } from 'frontend/customThemes/contrastFloors'
 import { CORE_TOKEN_GROUPS } from 'frontend/customThemes/tokens'
 import { TokenRow } from './TokenRow'
 import { resolveGroupLabel } from './tokenLabels'
@@ -10,6 +12,8 @@ interface TokenListProps {
 
 export function TokenList({ draft, onCommit }: TokenListProps) {
   const { t } = useTranslation()
+  // Live contrast warnings (D-15): recomputed from the draft, three pairs at most per render.
+  const failures = useMemo(() => checkFloors(draft), [draft])
   return (
     <div className="themeEditor__tokens">
       {CORE_TOKEN_GROUPS.map((group) => (
@@ -23,6 +27,9 @@ export function TokenList({ draft, onCommit }: TokenListProps) {
               token={token}
               value={draft[token] ?? ''}
               onCommit={onCommit}
+              failures={failures.filter(
+                (f) => f.fg === token || f.bg === token
+              )}
             />
           ))}
         </section>

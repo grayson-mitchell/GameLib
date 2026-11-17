@@ -1,4 +1,6 @@
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { checkFloors } from 'frontend/customThemes/contrastFloors'
 import { ThemeThumbnail } from 'frontend/components/UI/ThemeSelector/ThemeThumbnail'
 
 interface PreviewPaneProps {
@@ -10,6 +12,7 @@ interface PreviewPaneProps {
 
 export function PreviewPane({ name, base, tokens }: PreviewPaneProps) {
   const { t } = useTranslation()
+  const warningCount = useMemo(() => checkFloors(tokens).length, [tokens])
   return (
     <div className="themeEditor__preview">
       <ThemeThumbnail
@@ -21,6 +24,18 @@ export function PreviewPane({ name, base, tokens }: PreviewPaneProps) {
           { name }
         )}
       />
+      <p role="status" aria-live="polite" className="themeEditor__summary">
+        {warningCount === 0
+          ? t(
+              'gamelib:customThemes.contrastSummaryNone',
+              'No contrast warnings'
+            )
+          : t('gamelib:customThemes.contrastSummary', {
+              count: warningCount,
+              defaultValue_one: '{{count}} contrast warning',
+              defaultValue_other: '{{count}} contrast warnings'
+            })}
+      </p>
     </div>
   )
 }

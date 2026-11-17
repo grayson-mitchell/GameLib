@@ -143,6 +143,7 @@
 
 .themeEditor__row {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
@@ -265,4 +266,32 @@
   .themeEditor__tokens {
     grid-row: 2;
   }
+}
+
+// Contrast warnings (D-15): text stays --text-default so it reads in every theme; the triangle and
+// the inline-start rule carry --status-warning. Icon plus text, never colour alone.
+.themeEditor__warning {
+  flex-basis: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 8px;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--text-default);
+  border-inline-start: 3px solid var(--status-warning);
+}
+
+.themeEditor__warningIcon {
+  flex-shrink: 0;
+  margin-block-start: 3px;
+  color: var(--status-warning);
+}
+
+.themeEditor__summary {
+  margin: 8px 0 0;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--text-secondary);
 }
