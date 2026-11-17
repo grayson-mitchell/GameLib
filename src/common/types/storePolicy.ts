@@ -106,7 +106,8 @@ export const STORE_ALLOWLIST: Record<string, readonly string[] | '*'> = {
     'window-props',
     'settings',
     'skipVcRuntime',
-    'showSnapWarning'
+    'showSnapWarning',
+    'customThemes'
   ],
   wineDownloaderInfoStore: ['wine-releases'],
   gogInstalledGamesStore: ['installed'],

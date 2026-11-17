@@ -292,12 +292,21 @@ describe('WR-04: write allow-list is strictly narrower than the read allow-list'
 
   it.each([
     ['configStore', 'theme'],
+    ['configStore', 'customThemes'],
     ['configStore', 'games.hidden'],
     ['configStore', 'language'],
     ['timestampStore', 'anything'],
     ['legendary_library', '__timestamp.library']
   ])('%s.%s stays writable', (storeName, key) => {
     expect(isWritableStoreField(storeName, key)).toBe(true)
+  })
+
+  it('configStore.customThemes is allow-listed and its prototype path is not writable', () => {
+    expect(isAllowedStoreField('configStore', 'customThemes')).toBe(true)
+    expect(isWritableStoreField('configStore', 'customThemes')).toBe(true)
+    expect(
+      isWritableStoreField('configStore', 'customThemes.__proto__.x')
+    ).toBe(false)
   })
 
   it('a non-readable field is never writable (fail closed by construction)', () => {

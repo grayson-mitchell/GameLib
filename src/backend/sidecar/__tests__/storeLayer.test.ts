@@ -590,6 +590,23 @@ describe('sidecar:store-set-checked (confirmed write)', () => {
     ).toBe('dracula')
   })
 
+  it('persists a customThemes array and reads it back equal', async () => {
+    const customThemes = [
+      {
+        id: '0123456789abcdef',
+        name: 'Mine',
+        base: 'nord-light',
+        tokens: { '--accent': '#112233' }
+      }
+    ]
+    await expect(
+      invokeStoreSetChecked('configStore', 'customThemes', customThemes)
+    ).resolves.toBe(true)
+    expect(
+      asProbeable(registry.get('configStore')).get_nodefault('customThemes')
+    ).toEqual(customThemes)
+  })
+
   it('resolves false and writes nothing for the Keychain-owned Steam token', async () => {
     await expect(
       invokeStoreSetChecked('steamConfigStore', 'refreshToken', 'x')

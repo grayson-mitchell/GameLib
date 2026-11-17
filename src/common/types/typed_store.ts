@@ -20,6 +20,7 @@ import type { SideloadGameInfo } from 'common/types/sideload'
 import { NileUserData } from './nile'
 import { SteamUserData, SteamBottleConfig } from './steam'
 import { HumbleUserData } from './humble'
+import type { CustomTheme } from './customTheme'
 
 export interface StoreStructure {
   configStore: {
@@ -32,6 +33,7 @@ export interface StoreStructure {
       customCategories: Record<string, string[]>
     }
     theme: string
+    customThemes: CustomTheme[]
     zoomPercent: number
     contentFontFamily: string
     actionsFontFamily: string
