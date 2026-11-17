@@ -433,6 +433,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 74]: [74-01] Delta plan pass yields only the CDN list; local chunks re-verified at build time; multi-use CDN chunks fetched once and cached
 - [Phase 66.4]: 66.4-24: Windows shortcut icon chain is store exe, local install-dir scan (3 levels, 20k entries, no symlinks), then GameLib shell exe; PICS and Uninstall DisplayIcon rejected on measurement
 - [Phase 66.4]: 66.4-24: Windows .lnk passes the gamelib:// URL as one double-quoted explorer.exe argument with inner quotes percent-encoded to %22
+- [Phase 47]: 47-01: ITAD sweep measured (2026-11-17): auth `query:key`, Epic shop id 16, lookup ceiling 1000, amount==amountInt, 32 priced / 10 fallback countries; search `resultsParam` is NULL (results=20 and limit=20 both return 20), so Task 3 itadCoverage.ts is held and D-09 needs a re-probe or relaxation
 
 ### Pending Todos
 
@@ -805,7 +806,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 ## Session Continuity
 
 Last session: 2026-11-17T05:03:16.878Z
-Stopped at: Phase 81 context gathered
+Stopped at: Completed 47-01 Tasks 1-2 (sweep committed; Task 3 held on resultsParam=null); Phase 81 context gathered
 Resume file: .planning/phases/81-unify-the-steam-restart-hold-into-restart-on-play/81-CONTEXT.md
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
