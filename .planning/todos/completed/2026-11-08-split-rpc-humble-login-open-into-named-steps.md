@@ -33,7 +33,7 @@ contains `ea210b612`, with `cargo-test (macos-latest)` green.
 
 **Windows live sign-in: passed (operator, 2026-11-17)** against the Windows condition below.
 
-Live gate still owed. macOS: pass condition is a live sign-in presented as a sheet with the native bar; a second
+Live gate (both now passed, see below). macOS: pass condition is a live sign-in presented as a sheet with the native bar; a second
 visible login refused while the first is pending; x/Esc resolving it; Epic and GOG pristine sheets
 unchanged. Windows: a visible login window owned by main and centred over it, main disabled while
 it is up and re-enabled on close, titled `origin — document title`, where closing it resolves the
@@ -64,4 +64,11 @@ running binary).
 Not a gate item: the first library sync after the sign-in returned `access_denied` (Humble 403 or
 429) at 21:22:48, in the sidecar's fetch path, which the split did not touch.
 
-Windows live gate still owed.
+## Resolution
+
+Closed 2026-11-17: both live gates passed on post-split code, the Windows one (operator,
+`60c779698`) and the macOS one (section above), and the macOS compile and clippy check passed
+earlier. The two passes were recorded on different machines, so each one's note still said the
+other gate was owed until this close reconciled them. One part of the macOS condition was not run
+live: the refusal of a second visible login while the first is pending. The modal sheet makes it
+unreachable from the UI, as noted above.
