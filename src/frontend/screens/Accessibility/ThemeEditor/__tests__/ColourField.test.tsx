@@ -44,8 +44,8 @@ const renderField = (value = '#336699') => {
   )
 }
 
-const field = () => screen.getByRole('textbox') as HTMLInputElement
-const swatch = () => screen.getByRole('button') as HTMLButtonElement
+const field = () => screen.getByRole<HTMLInputElement>('textbox')
+const swatch = () => screen.getByRole<HTMLButtonElement>('button')
 
 const typeText = (text: string) =>
   fireEvent.input(field(), { target: { value: text } })

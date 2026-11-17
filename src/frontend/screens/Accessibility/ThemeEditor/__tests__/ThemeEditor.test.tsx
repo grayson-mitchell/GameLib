@@ -105,7 +105,7 @@ const headerStatus = () =>
   document.querySelector('.themeEditor__status') as HTMLElement
 
 const saveButton = () =>
-  screen.getByRole('button', { name: 'Save theme' }) as HTMLButtonElement
+  screen.getByRole<HTMLButtonElement>('button', { name: 'Save theme' })
 
 describe('ThemeEditor', () => {
   it('lists the 27 core tokens in six groups', () => {
