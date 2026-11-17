@@ -1,7 +1,8 @@
 ---
 phase: "64"
 slug: ui-to-edit-themes
-status: draft
+status: approved
+reviewed_at: "2026-11-18"
 shadcn_initialized: false
 preset: none
 created: "2026-11-17"
@@ -164,6 +165,7 @@ The gallery heading reuses the existing key `setting.select_theme` ("Select Them
 | Editor back button | "Appearance" with a leading arrow; aria-label "Back to Appearance" |
 | Editor subtitle | "Based on {{base}}" (base = built-in display name via `resolveThemeLabel`) |
 | Save states | Disabled when nothing changed. After save: "Saved" (polite live region); if the edited theme is active: "Saved and applied" |
+| Save failure | Toast in the bottom-right notice stack: "Couldn’t save “{{name}}”. Your changes are still here, so try again." The editor stays open and the draft stays dirty (key `saveFailed`). Shown when the config-store write rejects; the "Saved" announcement is not made |
 | Unsaved marker | "Unsaved changes" (caption, with the accent dot) |
 | Inactive-theme note | "This isn’t your active theme. Pick it in the gallery to use it." (shown only while the edited theme is not active) |
 | Token group headings | Surfaces / Navigation / Text / Buttons / Accent / Status / Advanced |
@@ -346,7 +348,12 @@ No WCAG 4.5:1 text floor in this phase (D-16).
 
 ## UI Considerations
 
-Applicable state considerations resolved: 8 covered, 4 backstop, 2 unresolved
+Probe run 2026-11-18 (`ui-consideration-probe.cjs`, 6 elements: E1 gallery, E2 theme card, E3 editor,
+E4 colour field, E5 dialogs, E6 persistence). It found 35 applicable considerations. E6 is unclassified
+because it is not a visual surface: it is covered by the `customThemes` store tests and the live restart UAT.
+The user confirmed the detected kinds and resolved both previously open items.
+
+Applicable state considerations resolved: 14 covered, 6 backstop, 0 unresolved
 
 | Category | Element(s) | Status | Resolution / Reason |
 |----------|------------|--------|---------------------|
@@ -362,8 +369,14 @@ Applicable state considerations resolved: 8 covered, 4 backstop, 2 unresolved
 | overflow | narrow window (under about 760px content) | 🧪 backstop | Stacked layout with a non-sticky preview; verify at the minimum window size on macOS |
 | partial | Nord Light copy preview truthfulness | 🧪 backstop | `BASE_PREVIEW_OVERRIDES` pinned by a source-text test; confirm in live UAT [OD-2] |
 | long-text | three-theme survival of all new chrome | 🧪 backstop | Live check on midnightMirage, gruvbox_dark, dracula; Dracula's lighter navbar is the stress case |
-| error | `configStore` write failure on Save | ⚠ unresolved | The optimistic snapshot write only logs on rejection (`rejectSnapshotWrite`); no user-visible failure path is specified. Planner treats it as an assumption: show no error |
-| partial | RTL layout of the split pane and action rows | ⚠ unresolved | Logical properties are required, but no RTL visual check is specified; planner treats it as an assumption |
+| error | `configStore` write failure on Save | ✅ covered | User decision 2026-11-18: the Save path awaits the write; on rejection it shows the "Save failure" toast (Copywriting Contract), keeps the editor open and the draft dirty, and does not announce "Saved". Unit-test the rejected-write branch |
+| partial | RTL layout of the split pane and action rows | 🧪 backstop | User decision 2026-11-18: logical CSS properties only (no `left`/`right`/`margin-left` in new styles), plus one live UAT item viewing the gallery and editor in an RTL language |
+| populated | gallery, card, editor token list | ✅ covered | Gallery always holds the 10 built-ins; the editor always lists the 27 core tokens; layout per `## Gallery` and `## Editor` |
+| empty | colour field cleared | ✅ covered | An empty value is invalid: the colour field error shows and the draft keeps the last good value |
+| error | Rename dialog | ✅ covered | Empty, too-long and duplicate names show the Rename errors; "Rename theme" stays disabled until valid |
+| loading | dialogs and Save | ✅ covered | Dialogs open synchronously. Save disables its button while the write is pending, so a double-click cannot double-write |
+| overflow | many custom themes | 🧪 backstop | Bounded by the custom-theme cap and the limit dialog; check the grid with the cap reached in live UAT |
+| long-text | dialog messages with a long theme name | 🧪 backstop | Names are at most 60 characters and dialog text wraps; check one 60-character name in live UAT |
 
 ---
 
@@ -396,12 +409,12 @@ These are locked; the "Alternative" column records what was rejected.
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
-- [ ] Dimension 7 Inventory Provenance: PASS
+- [x] Dimension 1 Copywriting: FLAG (non-blocking: "Duplicate" tooltip is verb-only; aria-label is full)
+- [x] Dimension 2 Visuals: PASS
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS
+- [x] Dimension 5 Spacing: PASS
+- [x] Dimension 6 Registry Safety: PASS
+- [x] Dimension 7 Inventory Provenance: PASS
 
-**Approval:** pending
+**Approval:** approved 2026-11-18 (gsd-ui-checker, after 1 revision)
