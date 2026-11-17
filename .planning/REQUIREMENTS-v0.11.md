@@ -67,7 +67,33 @@ Every requirement below is a "still works after the port" guarantee unless it sa
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (filled by the roadmapper) | | |
+| FND-01 | Phase 82 | Pending |
+| FND-02 | Phase 82 | Pending |
+| FND-03 | Phase 83 | Pending |
+| FND-04 | Phase 83 | Pending |
+| FND-05 | Phase 84 | Pending |
+| FND-06 | Phase 85 | Pending |
+| FND-07 | Phase 85 | Pending |
+| SVC-01 | Phase 86 | Pending |
+| SVC-02 | Phase 87 | Pending |
+| SVC-03 | Phase 88 | Pending |
+| STM-01 | Phase 89 | Pending |
+| STM-02 | Phase 90 | Pending |
+| STO-01 | Phase 91 | Pending |
+| STO-02 | Phase 92 | Pending |
+| STO-03 | Phase 92 | Pending |
+| STO-04 | Phase 93 | Pending |
+| SVC-04 | Phase 94 | Pending |
+| SVC-05 | Phase 94 | Pending |
+| STM-03 | Phase 95 | Pending |
+| STM-04 | Phase 96 | Pending |
+| STM-05 | Phase 97 | Pending |
+| RET-01 | Phase 98 | Pending |
+| RET-04 | Phase 98 | Pending |
+| RET-02 | Phase 99 | Pending |
+| RET-03 | Phase 99 | Pending |
+
+Coverage: 25/25 requirements mapped, each to exactly one phase (82-99).
 
 ---
 *Requirements defined: 2026-11-17*
