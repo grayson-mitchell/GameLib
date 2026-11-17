@@ -150,6 +150,14 @@ const steamPollStateEvent = z.discriminatedUnion('kind', [
     seq: count,
     kind: z.literal('rearmSettled'),
     needsReconcile: z.boolean()
+  }),
+  // Phase 81 D-07: Steam adopted (or has not adopted) a GameLib-written install. `signedIn` is
+  // the latest signed-in reading, null when unknown.
+  z.strictObject({
+    ...pollBase,
+    kind: z.literal('adoptionState'),
+    adopted: z.boolean(),
+    signedIn: z.boolean().nullable()
   })
 ])
 

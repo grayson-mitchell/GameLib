@@ -66,6 +66,15 @@ pub enum StateEvent {
     /// Boot rearm finished. `needsReconcile` => the sidecar runs its library reconcile.
     #[serde(rename = "rearmSettled", rename_all = "camelCase")]
     RearmSettled { seq: u64, needs_reconcile: bool },
+    /// D-07: Steam adopted (or has not adopted) a GameLib-written install; `signedIn` is the
+    /// latest signed-in reading, None when unknown.
+    #[serde(rename = "adoptionState", rename_all = "camelCase")]
+    AdoptionState {
+        app_id: String,
+        seq: u64,
+        adopted: bool,
+        signed_in: Option<bool>,
+    },
 }
 
 /// Outbox latest-wins key: (appId, kind). `rearmSettled` uses an empty appId.
@@ -82,6 +91,7 @@ impl StateEvent {
             StateEvent::ForcedWindowsViaBottleCleared { .. } => "forcedWindowsViaBottleCleared",
             StateEvent::MacArchVerdict { .. } => "macArchVerdict",
             StateEvent::RearmSettled { .. } => "rearmSettled",
+            StateEvent::AdoptionState { .. } => "adoptionState",
         }
     }
 
@@ -93,7 +103,8 @@ impl StateEvent {
             | StateEvent::Uninstalled { app_id, .. }
             | StateEvent::BridgeUninstalled { app_id, .. }
             | StateEvent::ForcedWindowsViaBottleCleared { app_id, .. }
-            | StateEvent::MacArchVerdict { app_id, .. } => Some(app_id),
+            | StateEvent::MacArchVerdict { app_id, .. }
+            | StateEvent::AdoptionState { app_id, .. } => Some(app_id),
             StateEvent::RearmSettled { .. } => None,
         }
     }
@@ -107,7 +118,8 @@ impl StateEvent {
             | StateEvent::BridgeUninstalled { seq, .. }
             | StateEvent::ForcedWindowsViaBottleCleared { seq, .. }
             | StateEvent::MacArchVerdict { seq, .. }
-            | StateEvent::RearmSettled { seq, .. } => *seq,
+            | StateEvent::RearmSettled { seq, .. }
+            | StateEvent::AdoptionState { seq, .. } => *seq,
         }
     }
 

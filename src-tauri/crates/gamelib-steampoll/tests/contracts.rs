@@ -310,10 +310,22 @@ fn state_event_wire_fixture_matches_every_variant() {
             seq: 12,
             needs_reconcile: true,
         },
+        StateEvent::AdoptionState {
+            app_id: "480".into(),
+            seq: 13,
+            adopted: true,
+            signed_in: Some(true),
+        },
+        StateEvent::AdoptionState {
+            app_id: "480".into(),
+            seq: 14,
+            adopted: false,
+            signed_in: None,
+        },
     ];
     // Every kind is covered.
     let kinds: std::collections::BTreeSet<&str> = events.iter().map(StateEvent::kind).collect();
-    assert_eq!(kinds.len(), 8);
+    assert_eq!(kinds.len(), 9);
 
     let wire = serde_json::to_string_pretty(&events).unwrap() + "\n";
     let path =

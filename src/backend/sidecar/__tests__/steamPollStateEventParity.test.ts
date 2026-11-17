@@ -40,7 +40,8 @@ const KINDS: Record<SteamPollStateEvent['kind'], true> = {
   bridgeUninstalled: true,
   forcedWindowsViaBottleCleared: true,
   macArchVerdict: true,
-  rearmSettled: true
+  rearmSettled: true,
+  adoptionState: true
 }
 
 beforeEach(() => {

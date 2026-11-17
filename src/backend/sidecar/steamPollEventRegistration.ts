@@ -5,7 +5,7 @@
  *   invoke (ipcMain.handle, 1):
  *     - `steamPollStateEvent` -> applies one state event (installed, installIncomplete,
  *       updateDone, uninstalled, bridgeUninstalled, forcedWindowsViaBottleCleared,
- *       macArchVerdict, rearmSettled) by calling the EXISTING TS functions, and replies
+ *       macArchVerdict, rearmSettled, adoptionState) by calling the EXISTING TS functions, and replies
  *       `{applied, title?, macArchCheck?, bridgeAuthoritative?}` (gamelib-steampoll `AckReply`).
  *
  * `caller: 'shell'` (sidecarInternal.ts): it never reaches the renderer surface, and the payload
@@ -42,7 +42,7 @@
 
 import type { SteamGameInfo } from 'common/types/steam'
 import type { SteamPollStateEvent } from 'common/types/ipc/sidecarInternal'
-import { logWarning, LogPrefix } from 'backend/logger'
+import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { getFileSize } from 'backend/utils'
 import type { ManagerDeps } from 'backend/services/types'
 import type { IpcRegistry } from './ipcRegistry'
@@ -59,6 +59,10 @@ import {
 import { invalidateSteamUpdateState } from '../storeManagers/steam/updateDetection'
 import { clearForcedWindowsViaBottle } from '../storeManagers/steam/gameSessionState'
 import { markBridgeGameUninstalled } from '../storeManagers/steam/bridgeInstallState'
+import {
+  clearPendingAdoption,
+  pendingAdoptionStoreFrom
+} from '../storeManagers/steam/macSteamAdoption'
 
 export interface PollAckReply {
   applied: boolean
@@ -193,6 +197,18 @@ async function applyEvent(
         })
       }
       return { applied: true }
+    case 'adoptionState':
+      // Phase 81 D-07: Steam adopted the install, so the pending-adoption record is done.
+      // Clearing an absent record is a no-op. `ev.signedIn` is not used yet (81-09 caches it
+      // for the page note).
+      if (ev.adopted) {
+        clearPendingAdoption(ev.appId, pendingAdoptionStoreFrom(deps))
+        logInfo(
+          `steamPollStateEvent adoptionState appId=${ev.appId} adopted`,
+          LogPrefix.Steam
+        )
+      }
+      return { applied: true, title: titleOf(ev.appId) }
   }
 }
 

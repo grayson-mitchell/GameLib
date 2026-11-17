@@ -11,6 +11,11 @@ import type { SteamGameInfo } from 'common/types/steam'
 import type { SteamPollStateEvent } from 'common/types/ipc/sidecarInternal'
 import type { ManagerDeps } from 'backend/services/types'
 import {
+  pendingAdoptionStoreFrom,
+  readPendingAdoption,
+  recordPendingAdoption
+} from '../../storeManagers/steam/macSteamAdoption'
+import {
   registerSteamPollEventFlows,
   type PollAckReply
 } from '../steamPollEventRegistration'
@@ -378,6 +383,85 @@ describe('steamPollStateEvent handler', () => {
       const second = setup()
       await second.send({ ...installed, seq: 1 })
       expect(second.entry()?.is_installed).toBe(true)
+    })
+  })
+
+  describe('adoptionState (Phase 81 D-07)', () => {
+    const adoption = (
+      adopted: boolean,
+      seq: number,
+      signedIn: boolean | null = null
+    ): SteamPollStateEvent => ({
+      kind: 'adoptionState',
+      appId: '480',
+      seq,
+      adopted,
+      signedIn
+    })
+    const seedRecord = (deps: ManagerDeps) =>
+      recordPendingAdoption(
+        '480',
+        {
+          steamPid: 4242,
+          manifestPath: '/fake/steamapps/appmanifest_480.acf',
+          baseline: { content: 'x', mtimeMs: 1 },
+          recordedAt: 1
+        },
+        pendingAdoptionStoreFrom(deps)
+      )
+
+    test('adopted with a stored record clears it and replies applied with the title', async () => {
+      const { deps, send } = setup()
+      seedRecord(deps)
+      expect(
+        readPendingAdoption('480', pendingAdoptionStoreFrom(deps))
+      ).toBeDefined()
+      const reply = await send(adoption(true, 1, true))
+      expect(reply).toEqual({ applied: true, title: 'Spacewar' })
+      expect(
+        readPendingAdoption('480', pendingAdoptionStoreFrom(deps))
+      ).toBeUndefined()
+    })
+
+    test('adopted with no record replies applied and writes nothing', async () => {
+      const { deps, send } = setup()
+      const store = pendingAdoptionStoreFrom(deps)
+      const set = jest.spyOn(store, 'set')
+      const reply = await send(adoption(true, 1))
+      expect(reply.applied).toBe(true)
+      expect(set).not.toHaveBeenCalled()
+      expect(readPendingAdoption('480', store)).toBeUndefined()
+    })
+
+    test('not adopted leaves the record untouched and replies applied', async () => {
+      const { deps, send } = setup()
+      seedRecord(deps)
+      const reply = await send(adoption(false, 1, false))
+      expect(reply.applied).toBe(true)
+      expect(
+        readPendingAdoption('480', pendingAdoptionStoreFrom(deps))
+      ).toBeDefined()
+      pendingAdoptionStoreFrom(deps).delete('480')
+    })
+
+    test('a stale seq is answered applied without clearing, and the kind is guarded per (appId, kind)', async () => {
+      const { deps, send } = setup()
+      await send(adoption(false, 5))
+      seedRecord(deps)
+      const stale = await send(adoption(true, 4))
+      expect(stale).toEqual({ applied: true, title: 'Spacewar' })
+      expect(
+        readPendingAdoption('480', pendingAdoptionStoreFrom(deps))
+      ).toBeDefined()
+      // An install-state event with a lower seq still applies: adoptionState is not in that group.
+      await send({ ...installed, seq: 2 })
+      expect(
+        readPendingAdoption('480', pendingAdoptionStoreFrom(deps))
+      ).toBeDefined()
+      expect((await send(adoption(true, 6))).applied).toBe(true)
+      expect(
+        readPendingAdoption('480', pendingAdoptionStoreFrom(deps))
+      ).toBeUndefined()
     })
   })
 

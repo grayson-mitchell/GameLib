@@ -82,5 +82,19 @@
     "kind": "rearmSettled",
     "seq": 12,
     "needsReconcile": true
+  },
+  {
+    "kind": "adoptionState",
+    "appId": "480",
+    "seq": 13,
+    "adopted": true,
+    "signedIn": true
+  },
+  {
+    "kind": "adoptionState",
+    "appId": "480",
+    "seq": 14,
+    "adopted": false,
+    "signedIn": null
   }
 ]
