@@ -15,7 +15,7 @@ re_verification:
       - "Done-when (as amended): item 30 notice conjunct, closed by 52-36 (in-app dialog) and scored pass at item 32 from GameLib.app"
     gaps_remaining: []
     gaps_deferred:
-      - "Grim Dawn main menu through the bridge (Application Load Error 3): out of phase by the amendment; tracked in .planning/todos/pending/2026-10-24-steamstub-launch-check-static-re-decision.md"
+      - "Grim Dawn main menu through the bridge (Application Load Error 3): out of phase by the amendment; tracked in .planning/todos/completed/2026-10-24-steamstub-launch-check-static-re-decision.md"
     regressions: []
   gap_closure_3:
     verified: 2026-10-24T08:10:00Z
