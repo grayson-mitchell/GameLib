@@ -250,6 +250,7 @@ import {
   createBridgeHelperRegistry,
   DEFAULT_STEAM_WAIT_SCHEDULE
 } from '../storeManagers/steam/bridge/helperRegistry'
+import { createSteamApiPinResolver } from '../storeManagers/steam/bridge/steamApiPin'
 import { createSteamUser } from '../storeManagers/steam/user'
 // Transitional (removed by plan 27): the legacy registries still hold children until plans
 // 23/24/26 move them onto the runner.
@@ -1680,14 +1681,20 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       // Builds the one bridge-helper registry of this boot (D-05, D-66.3-14): the per-appId helper
       // map and the exit teardown. Construction spawns nothing and installs no listener (the
       // process 'exit' teardown is added on the first spawn). The wait schedule, helper path and
-      // spawn env are the production values; a test hands the boot a prebuilt registry.
+      // spawn env are the production values; a test hands the boot a prebuilt registry. Quick
+      // 261117-ubb: the pinned-dylib resolver is still inert here -- the first rustInvoke is issued
+      // only from a bridge launch, bounded at 10 s, never at boot (exit contract).
       run: (ctx, _io, state) => {
         state.services.bridgeHelpers =
           prebuilt.bridgeHelpers ??
           createBridgeHelperRegistry({
             steamWaitSchedule: DEFAULT_STEAM_WAIT_SCHEDULE,
             helperPath: () => ctx.paths.steamBridgeHelperPath,
-            spawnEnv: () => process.env
+            spawnEnv: () => process.env,
+            resolveSteamApiDylib: createSteamApiPinResolver({
+              requestRustInvoke: requireHost(state).requestRustInvoke,
+              isMac
+            })
           })
       }
     },

@@ -29,7 +29,7 @@ const sendFrontendMessage = jest.fn()
 import { logInfo, logWarning } from 'backend/logger'
 import { BRIDGE_SECRET_ENV, encodeResponse, STATUS_OK } from '../protocol'
 import { ensureBridgeHelperReady } from '../helperProcess'
-import { classifyInitFlatError } from '../helperSpawn'
+import { classifyInitFlatError, ensureHelperSpawned } from '../helperSpawn'
 import {
   createBridgeHelperRegistry,
   type BridgeHelperRegistry
@@ -486,6 +486,66 @@ describe('helperSpawn.ts (spawn, stderr relay, line parsing)', () => {
       await Promise.resolve()
       await Promise.resolve()
       expect(registry.hasLive()).toBe(false)
+    })
+  })
+
+  // Quick 261117-ubb: the pinned libsteam_api.dylib path rides on argv, never env.
+  describe('--steam-api-dylib argv', () => {
+    const PINNED = '/abs/steam-api/4162eb40/libsteam_api.dylib'
+    const argvOfNextSpawn = (
+      appId: string,
+      options?: Parameters<typeof ensureHelperSpawned>[2]
+    ): string[] => {
+      mockedSpawn.mockReturnValue(new FakeChildProcess())
+      ensureHelperSpawned(helperDeps, appId, options)
+      return mockedSpawn.mock.calls[mockedSpawn.mock.calls.length - 1][1]
+    }
+
+    test('a full spawn appends the flag and path', () => {
+      expect(argvOfNextSpawn('411300', { steamApiDylib: PINNED })).toEqual([
+        '--appid',
+        '411300',
+        '--port',
+        '0',
+        '--steam-api-dylib',
+        PINNED
+      ])
+    })
+
+    test('an identity-only spawn appends the flag and path', () => {
+      expect(
+        argvOfNextSpawn('411300', { identityOnly: true, steamApiDylib: PINNED })
+      ).toEqual([
+        '--appid',
+        '480',
+        '--port',
+        '0',
+        '--identity-only',
+        '--report-appid',
+        '411300',
+        '--steam-api-dylib',
+        PINNED
+      ])
+    })
+
+    test.each([[undefined], [null], ['']])(
+      'steamApiDylib=%p leaves argv unchanged',
+      (steamApiDylib) => {
+        expect(argvOfNextSpawn('411300', { steamApiDylib })).toEqual([
+          '--appid',
+          '411300',
+          '--port',
+          '0'
+        ])
+      }
+    )
+
+    test('the path is not secret: the launch secret stays env-only', () => {
+      const argv = argvOfNextSpawn('411300', { steamApiDylib: PINNED })
+      const options = mockedSpawn.mock.calls[0][2]
+      expect(argv.some((a) => a.includes(options.env[BRIDGE_SECRET_ENV]))).toBe(
+        false
+      )
     })
   })
 

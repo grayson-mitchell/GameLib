@@ -14,6 +14,8 @@ gamelib-steamfiles = { path = "../gamelib-steamfiles" }
 aes = "0.9"
 cbc = "0.2"
 sha1 = "0.11"
+# Pinned libsteam_api.dylib verification (quick 261117-ubb). Already locked at 0.10.9 via tauri-codegen.
+sha2 = "0.10"
 flate2 = { version = "1", default-features = false, features = ["zlib-rs"] }
 xz2 = { version = "0.1", features = ["static"] }
 zstd = "0.14"

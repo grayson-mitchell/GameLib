@@ -481,9 +481,9 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     expect(matches.length).toBe(1)
   })
 
-  test('71-07 rust_dispatch.rs is a flat router: 111 one-line arms and no catch-all arm', () => {
+  test('71-07 rust_dispatch.rs is a flat router: 112 one-line arms and no catch-all arm', () => {
     const router = readTauriShellProductionFile('rust_dispatch.rs')
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(111)
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(112)
     expect(router).not.toContain('_ =>')
   })
 
@@ -801,7 +801,12 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       'steampoll_running_stop',
       'steampoll_status',
       'steampoll_uninstall_start',
-      'steampoll_uninstall_stop'
+      'steampoll_uninstall_stop',
+
+      // Quick 261117-ubb -- the pinned libsteam_api.dylib resolver (macOS bridge helper).
+      // PROVEN: `gamelib_depot::steam_api_pin` tests (cache, snapshot, CDN, every integrity failure).
+      // NOT ATTEMPTED here: a live rustInvoke round trip (the operator's live gate).
+      'steam_api_pin_resolve'
     ]
     const newArms = armNames.filter(
       (name) => name && !preExistingArms.includes(name)

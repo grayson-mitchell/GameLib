@@ -21,6 +21,7 @@ pub mod post;
 pub mod reconcile;
 pub mod registry;
 pub mod stall;
+pub mod steam_api_pin;
 #[cfg(feature = "test-hooks")]
 #[doc(hidden)]
 pub mod test_hooks;

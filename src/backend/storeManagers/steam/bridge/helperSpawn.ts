@@ -114,7 +114,7 @@ const MAX_PORT = 65535
 export function ensureHelperSpawned(
   deps: HelperSpawnDeps,
   appId: string,
-  options?: { identityOnly?: boolean }
+  options?: { identityOnly?: boolean; steamApiDylib?: string | null }
 ): BridgeHelperEntry {
   const registry = deps.bridgeHelpers
   const helpers = registry.helpers
@@ -136,22 +136,32 @@ export function ensureHelperSpawned(
   // entry is stored under (which is always the real appId, either way).
   const expectedListenAppId = identityOnly ? '480' : appId
 
-  const args = identityOnly
-    ? [
-        '--appid',
-        '480',
-        '--port',
-        '0',
-        '--identity-only',
-        '--report-appid',
-        appId
-      ]
-    : ['--appid', appId, '--port', '0']
+  // Quick 261117-ubb: the pinned dylib path is argv (not secret, unlike the launch secret below).
+  // The helper re-validates it by content and falls back to the Steam client's copy otherwise.
+  const steamApiDylib = options?.steamApiDylib
+  const pinned = typeof steamApiDylib === 'string' && steamApiDylib !== ''
+  const args = [
+    ...(identityOnly
+      ? [
+          '--appid',
+          '480',
+          '--port',
+          '0',
+          '--identity-only',
+          '--report-appid',
+          appId
+        ]
+      : ['--appid', appId, '--port', '0']),
+    ...(pinned ? ['--steam-api-dylib', steamApiDylib] : [])
+  ]
 
+  const dylibNote = pinned
+    ? `pinned libsteam_api ${steamApiDylib}`
+    : 'Steam client libsteam_api'
   logInfo(
     identityOnly
-      ? `ensureHelperSpawned: spawning an identity-only (480) fallback bridge helper for appId ${appId} from ${helperPath} (D-51-04)`
-      : `ensureHelperSpawned: spawning a bridge helper for appId ${appId} from ${helperPath} (D-51-01)`,
+      ? `ensureHelperSpawned: spawning an identity-only (480) fallback bridge helper for appId ${appId} from ${helperPath} with the ${dylibNote} (D-51-04)`
+      : `ensureHelperSpawned: spawning a bridge helper for appId ${appId} from ${helperPath} with the ${dylibNote} (D-51-01)`,
     LogPrefix.Steam
   )
 

@@ -752,6 +752,19 @@ export const RUST_STEAMCM_WRAP_RESTORE_IF_OWED =
   'steamcm_wrap_restore_if_owed' as const
 
 /**
+ * Rust-side channel name: quick 261117-ubb. Resolves the pinned, Valve-signed `libsteam_api.dylib`
+ * the macOS bridge helper loads: the GameLib cache, else a snapshot of the Steam client's own copy
+ * when it already hashes to the pin, else a fetch from Valve's client-update CDN (sha2vz, VZ decode,
+ * dylib sha256 and Valve team-ID checks before it is cached). Args: none (the shell derives every
+ * path from `HOME` itself). Resolves `{ source: 'cached' | 'snapshot' | 'fetched' | 'unpinned' |
+ * 'unsupported', path: string | null, pinSha256, steamUser, detail: string | null }`; `path` is set
+ * only for cached/snapshot/fetched. macOS only: every other platform answers `unsupported` without
+ * touching the network or the filesystem. Bounded at 50 s on the Rust side (connect 10 s, request
+ * 45 s), under the sidecar's 60 s `RUST_INVOKE_TIMEOUT_MS`.
+ */
+export const RUST_STEAM_API_PIN_RESOLVE = 'steam_api_pin_resolve' as const
+
+/**
  * Rust-side channel name: open a fail-closed child `WebviewWindow` on any https URL
  * (Phase 34.4.1 Plan 01, D-01/D-02, REQ-34.4.1-01/REQ-34.4.1-09). Runner-agnostic by
  * design -- nothing in Rust knows what Humble is; this is the mechanism Phase 34.5
@@ -1023,6 +1036,7 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_STEAMCM_STORE_APPDETAILS,
   RUST_STEAMCM_STORE_ENRICH,
   RUST_STEAMCM_WRAP_RESTORE_IF_OWED,
+  RUST_STEAM_API_PIN_RESOLVE,
   RUST_STEAMPOLL_ACF_ENUMERATE_COPIES,
   RUST_STEAMPOLL_ACF_FIND_OTHER_MANIFESTS,
   RUST_STEAMPOLL_ACF_READ_STATE,

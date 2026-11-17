@@ -139,6 +139,7 @@ pub(crate) fn dispatch_rust_channel(
         RustInvokeChannel::SteamcmStoreAppdetails => rpc_steamcm_store_appdetails(args),
         RustInvokeChannel::SteamcmStoreEnrich => rpc_steamcm_store_enrich(args),
         RustInvokeChannel::SteamcmWrapRestoreIfOwed => rpc_steamcm_wrap_restore_if_owed(args),
+        RustInvokeChannel::SteamApiPinResolve => rpc_steam_api_pin_resolve(args),
         RustInvokeChannel::DepotFinalize => rpc_depot_finalize(args, app),
         RustInvokeChannel::DepotJobCancel => rpc_depot_job_cancel(args),
         RustInvokeChannel::DepotJobRun => rpc_depot_job_run(args, app),

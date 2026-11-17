@@ -258,3 +258,60 @@ pub fn zip_wrap(data: &[u8], method: u16) -> Vec<u8> {
     ));
     v
 }
+
+/// A multi-entry zip of STORED entries, in the given order, with a real central directory and
+/// EOCD. Names are written verbatim (a Valve archive uses backslash directory names).
+pub fn zip_named(entries: &[(&str, &[u8])]) -> Vec<u8> {
+    let with_method: Vec<(&str, &[u8], u16)> =
+        entries.iter().map(|(n, d)| (*n, *d, 0u16)).collect();
+    zip_named_methods(&with_method)
+}
+
+/// Like [`zip_named`], with a per-entry method (0 stored, 8 deflate).
+pub fn zip_named_methods(entries: &[(&str, &[u8], u16)]) -> Vec<u8> {
+    let mut out = Vec::new();
+    let mut central = Vec::new();
+    for (name, data, method) in entries {
+        let crc = crc32(data);
+        let body = if *method == 8 {
+            deflate_raw(data)
+        } else {
+            data.to_vec()
+        };
+        let local_off = out.len() as u32;
+        out.extend(local_header(
+            0,
+            *method,
+            crc,
+            body.len() as u32,
+            data.len() as u32,
+            name.as_bytes(),
+        ));
+        out.extend_from_slice(&body);
+
+        central.extend_from_slice(b"PK\x01\x02");
+        central.extend_from_slice(&20u16.to_le_bytes());
+        central.extend_from_slice(&20u16.to_le_bytes());
+        central.extend_from_slice(&0u16.to_le_bytes());
+        central.extend_from_slice(&method.to_le_bytes());
+        central.extend_from_slice(&[0u8; 4]);
+        central.extend_from_slice(&crc.to_le_bytes());
+        central.extend_from_slice(&(body.len() as u32).to_le_bytes());
+        central.extend_from_slice(&(data.len() as u32).to_le_bytes());
+        central.extend_from_slice(&(name.len() as u16).to_le_bytes());
+        central.extend_from_slice(&[0u8; 12]);
+        central.extend_from_slice(&local_off.to_le_bytes());
+        central.extend_from_slice(name.as_bytes());
+    }
+    let cd_off = out.len() as u32;
+    let cd_len = central.len() as u32;
+    out.extend(central);
+    out.extend_from_slice(b"PK\x05\x06");
+    out.extend_from_slice(&[0u8; 4]);
+    out.extend_from_slice(&(entries.len() as u16).to_le_bytes());
+    out.extend_from_slice(&(entries.len() as u16).to_le_bytes());
+    out.extend_from_slice(&cd_len.to_le_bytes());
+    out.extend_from_slice(&cd_off.to_le_bytes());
+    out.extend_from_slice(&0u16.to_le_bytes());
+    out
+}

@@ -213,18 +213,38 @@ fn decode_vz(buf: &[u8], expected: Option<u64>, cap: u64) -> Result<Vec<u8>, Dec
             ));
         }
     }
-    let mut stream = Vec::with_capacity(13 + payload.len());
-    stream.extend_from_slice(props);
-    stream.extend_from_slice(&u64::from(out_size).to_le_bytes());
-    stream.extend_from_slice(payload);
-
-    let dec = xz2::stream::Stream::new_lzma_decoder(u64::MAX)
-        .map_err(|e| DecodeError::failed(format!("lzma init: {e}")))?;
-    drain_capped(
-        xz2::read::XzDecoder::new_stream(&stream[..], dec),
-        cap,
-        "VZ",
-    )
+    // `header_size` is the uncompressed size written into the 13-byte LZMA-alone header.
+    let run = |header_size: u64| -> Result<Vec<u8>, DecodeError> {
+        let mut stream = Vec::with_capacity(13 + payload.len());
+        stream.extend_from_slice(props);
+        stream.extend_from_slice(&header_size.to_le_bytes());
+        stream.extend_from_slice(payload);
+        let dec = xz2::stream::Stream::new_lzma_decoder(u64::MAX)
+            .map_err(|e| DecodeError::failed(format!("lzma init: {e}")))?;
+        drain_capped(
+            xz2::read::XzDecoder::new_stream(&stream[..], dec),
+            cap,
+            "VZ",
+        )
+    };
+    match run(u64::from(out_size)) {
+        Err(e) if e.code == "decode_failed" => {
+            // Valve's client packages (webhelpers_*.zip.vz, quick 261117-ubb) end their LZMA stream
+            // with an end-of-payload marker, which this liblzma rejects when the header also
+            // carries a size. Depot chunks never reach here: they decode on the first attempt.
+            // Retry with the size left unknown (the marker ends the stream) and require the footer
+            // size, so a stream that is simply corrupt still fails.
+            let out = run(u64::MAX).map_err(|_| e)?;
+            if out.len() as u64 != u64::from(out_size) {
+                return Err(DecodeError::new(
+                    "size_mismatch",
+                    format!("VZ chunk: decoded {} != footer size {out_size}", out.len()),
+                ));
+            }
+            Ok(out)
+        }
+        other => other,
+    }
 }
 
 /// VSZa: `'VSZa'(4) | crc(4) | zstd body | crc(4) | size(4) | pad(4) | 'zsv'`.
@@ -395,35 +415,24 @@ fn check_declared(out: Vec<u8>, declared: u64) -> Result<Vec<u8>, DecodeError> {
 /// End-of-central-directory scan window: 22-byte record plus a maximal 65535-byte comment.
 const EOCD_SCAN: usize = 65_557;
 
-fn unzip_first_entry(buf: &[u8]) -> Result<Vec<u8>, DecodeError> {
-    // Locate the EOCD record, scanning backwards.
+/// Offset of the end-of-central-directory record, scanning backwards.
+fn find_eocd(buf: &[u8]) -> Result<usize, DecodeError> {
     let lo = buf.len().saturating_sub(EOCD_SCAN);
-    let eocd = (lo..buf.len().saturating_sub(21))
+    (lo..buf.len().saturating_sub(21))
         .rev()
         .find(|&i| buf[i..i + 4] == *b"PK\x05\x06")
-        .ok_or_else(|| DecodeError::failed("zip: no end of central directory"))?;
-    if u16_at(buf, eocd + 10)? == 0 {
-        return Err(DecodeError::failed("zip: no entries"));
-    }
-    let cd = usize::try_from(u32_at(buf, eocd + 16)?)
-        .map_err(|_| DecodeError::failed("zip: bad central directory offset"))?;
-    if buf.get(cd..cd + 4) != Some(b"PK\x01\x02") {
-        return Err(DecodeError::failed("zip: bad central directory entry"));
-    }
-    let method = u16_at(buf, cd + 10)?;
-    let csize = u32_at(buf, cd + 20)?;
-    let usize_ = u32_at(buf, cd + 24)?;
-    let local = usize::try_from(u32_at(buf, cd + 42)?)
-        .map_err(|_| DecodeError::failed("zip: bad local header offset"))?;
-    if csize == u32::MAX || usize_ == u32::MAX {
-        return Err(DecodeError::failed("zip64 entries are not supported"));
-    }
-    if u64::from(usize_) > MAX_MANIFEST_BYTES {
-        return Err(DecodeError::new(
-            "size_mismatch",
-            format!("zip: declared size {usize_} exceeds {MAX_MANIFEST_BYTES}"),
-        ));
-    }
+        .ok_or_else(|| DecodeError::failed("zip: no end of central directory"))
+}
+
+/// The body of the entry whose local header sits at `local`: stored (0) or deflated (8). The
+/// caller has already applied its own size cap to `usize_`.
+fn read_local_entry(
+    buf: &[u8],
+    local: usize,
+    method: u16,
+    csize: u32,
+    usize_: u32,
+) -> Result<Vec<u8>, DecodeError> {
     if buf.get(local..local + 4) != Some(b"PK\x03\x04") {
         return Err(DecodeError::failed("zip: bad local header"));
     }
@@ -451,6 +460,76 @@ fn unzip_first_entry(buf: &[u8]) -> Result<Vec<u8>, DecodeError> {
         }
     };
     check_declared(out, u64::from(usize_))
+}
+
+fn unzip_first_entry(buf: &[u8]) -> Result<Vec<u8>, DecodeError> {
+    let eocd = find_eocd(buf)?;
+    if u16_at(buf, eocd + 10)? == 0 {
+        return Err(DecodeError::failed("zip: no entries"));
+    }
+    let cd = usize::try_from(u32_at(buf, eocd + 16)?)
+        .map_err(|_| DecodeError::failed("zip: bad central directory offset"))?;
+    if buf.get(cd..cd + 4) != Some(b"PK\x01\x02") {
+        return Err(DecodeError::failed("zip: bad central directory entry"));
+    }
+    let method = u16_at(buf, cd + 10)?;
+    let csize = u32_at(buf, cd + 20)?;
+    let usize_ = u32_at(buf, cd + 24)?;
+    let local = usize::try_from(u32_at(buf, cd + 42)?)
+        .map_err(|_| DecodeError::failed("zip: bad local header offset"))?;
+    if csize == u32::MAX || usize_ == u32::MAX {
+        return Err(DecodeError::failed("zip64 entries are not supported"));
+    }
+    if u64::from(usize_) > MAX_MANIFEST_BYTES {
+        return Err(DecodeError::new(
+            "size_mismatch",
+            format!("zip: declared size {usize_} exceeds {MAX_MANIFEST_BYTES}"),
+        ));
+    }
+    read_local_entry(buf, local, method, csize, usize_)
+}
+
+/// The exact bytes of the member called `name` in a zip, found by walking every central-directory
+/// record (stored or deflated; no zip64). Declared size above `cap` is rejected before any
+/// decoding, so a hostile archive cannot make this allocate more than `cap`. Used for the pinned
+/// Steam client package, whose other entries use backslash directory names.
+pub fn unzip_entry_named(buf: &[u8], name: &str, cap: u64) -> Result<Vec<u8>, DecodeError> {
+    let eocd = find_eocd(buf)?;
+    let count = usize::from(u16_at(buf, eocd + 10)?);
+    let mut pos = usize::try_from(u32_at(buf, eocd + 16)?)
+        .map_err(|_| DecodeError::failed("zip: bad central directory offset"))?;
+    for _ in 0..count {
+        if buf.get(pos..pos + 4) != Some(b"PK\x01\x02") {
+            return Err(DecodeError::failed("zip: bad central directory entry"));
+        }
+        let method = u16_at(buf, pos + 10)?;
+        let csize = u32_at(buf, pos + 20)?;
+        let usize_ = u32_at(buf, pos + 24)?;
+        let name_len = usize::from(u16_at(buf, pos + 28)?);
+        let extra_len = usize::from(u16_at(buf, pos + 30)?);
+        let comment_len = usize::from(u16_at(buf, pos + 32)?);
+        let local = u32_at(buf, pos + 42)?;
+        let name_start = pos + 46;
+        let entry_name = buf
+            .get(name_start..name_start + name_len)
+            .ok_or_else(|| DecodeError::failed("zip: central directory name outside buffer"))?;
+        if entry_name == name.as_bytes() {
+            if csize == u32::MAX || usize_ == u32::MAX || local == u32::MAX {
+                return Err(DecodeError::failed("zip64 entries are not supported"));
+            }
+            if u64::from(usize_) > cap {
+                return Err(DecodeError::new(
+                    "size_mismatch",
+                    format!("zip: declared size {usize_} exceeds {cap}"),
+                ));
+            }
+            let local = usize::try_from(local)
+                .map_err(|_| DecodeError::failed("zip: bad local header offset"))?;
+            return read_local_entry(buf, local, method, csize, usize_);
+        }
+        pos = name_start + name_len + extra_len + comment_len;
+    }
+    Err(DecodeError::failed(format!("zip: no entry named {name}")))
 }
 
 #[cfg(test)]

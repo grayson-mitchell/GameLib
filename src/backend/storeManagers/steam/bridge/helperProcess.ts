@@ -433,6 +433,12 @@ async function startSteamDefault(
  *    later call -- never respawned just to retry the other mode. EXCEPT an
  *    entry whose InitFlat failed (261027-aue): InitFlat runs once per
  *    process, so it can never become ready and is stopped and respawned.
+ *  - Quick 261117-ubb: before any spawn that will really happen, the pinned
+ *    libsteam_api.dylib path is resolved ONCE per call through
+ *    `registry.resolveSteamApiDylib()` (bounded at STEAM_API_PIN_WAIT_MS; `null`
+ *    means UNPINNED, the helper loads the Steam client's own copy) and handed
+ *    to every spawn of the call, the identity-only fallback included. A reused
+ *    live entry never triggers a resolution.
  *  - 261027-aue: a full helper whose InitFlat failed with a known Steam-state
  *    text (Steam quit / still signing in) enters a bounded wait: Steam is
  *    started when it is not running, `onWaitingForSteam` fires once, and a
@@ -469,7 +475,31 @@ export async function ensureBridgeHelperReady(
     registry.stop(appId)
   }
 
-  let entry = ensureHelperSpawned(deps, appId)
+  // Quick 261117-ubb: the pinned libsteam_api.dylib path, resolved (bounded, never at boot) only
+  // when a spawn will really happen, and at most once per call. A reused live entry needs none. A
+  // registry with no resolver answers a synchronous null, so the spawn stays synchronous then.
+  let pinnedDylib: Promise<string | null> | string | null | undefined
+  const spawnHelper = (spawnOptions?: {
+    identityOnly?: boolean
+  }): BridgeHelperEntry | Promise<BridgeHelperEntry> => {
+    if (registry.helpers.has(appId)) {
+      return ensureHelperSpawned(deps, appId, spawnOptions)
+    }
+    if (pinnedDylib === undefined) {
+      pinnedDylib = registry.resolveSteamApiDylib()
+    }
+    if (pinnedDylib === null || typeof pinnedDylib === 'string') {
+      return ensureHelperSpawned(deps, appId, {
+        ...spawnOptions,
+        steamApiDylib: pinnedDylib
+      })
+    }
+    return pinnedDylib.then((steamApiDylib) =>
+      ensureHelperSpawned(deps, appId, { ...spawnOptions, steamApiDylib })
+    )
+  }
+
+  let entry = await spawnHelper()
   let probe = await probeHelperReadiness(entry)
 
   let waitStart: number | null = null
@@ -510,7 +540,7 @@ export async function ensureBridgeHelperReady(
             : 'Steam did not finish signing in within the wait budget'
       }
     }
-    entry = ensureHelperSpawned(deps, appId)
+    entry = await spawnHelper()
     probe = await probeHelperReadiness(entry)
   }
 
@@ -602,7 +632,7 @@ export async function ensureBridgeHelperReady(
     LogPrefix.Steam
   )
   registry.stop(appId)
-  const fallbackEntry = ensureHelperSpawned(deps, appId, { identityOnly: true })
+  const fallbackEntry = await spawnHelper({ identityOnly: true })
   const fallbackProbe = await probeHelperReadiness(fallbackEntry)
 
   if (fallbackProbe.outcome === 'ready') {

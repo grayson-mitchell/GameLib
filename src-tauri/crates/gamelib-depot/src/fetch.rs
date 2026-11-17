@@ -113,7 +113,7 @@ struct AttemptErr {
     timed_out: bool,
 }
 
-fn install_crypto_provider() {
+pub(crate) fn install_crypto_provider() {
     static ONCE: OnceLock<()> = OnceLock::new();
     ONCE.get_or_init(|| {
         // Err means another provider is already installed, which is fine.

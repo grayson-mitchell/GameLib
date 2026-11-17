@@ -201,6 +201,9 @@
 #include "gamelib_installapp.h"
 // Phase 79 (D-14/D-15): --steam-owned-apps subcommand.
 #include "gamelib_ownedapps.h"
+// quick 261117-ubb: the compiled-in libsteam_api.dylib pin and the validator that gates a
+// caller-handed --steam-api-dylib path.
+#include "gamelib_steam_api_pin.h"
 
 // 60-15: GameOverlayActivated (331) -> Darwin notification, probe flag only.
 static gl_ovl_state g_ovl;
@@ -449,10 +452,28 @@ static int is_valid_appid(const char *s) {
 }
 
 /*
- * T-24-SC: builds the canonical, OS/Steam-provided dylib path from $HOME --
- * never from attacker-supplied input, never a caller-provided override.
+ * quick 261117-ubb: `--steam-api-dylib <path>` -- the pinned, Valve-signed libsteam_api.dylib the
+ * sidecar resolved (the GameLib cache copy). NULL when the flag was absent.
  */
-static void resolve_dylib_path(char *out, size_t outSize) {
+static const char *g_steam_api_dylib_arg = NULL;
+
+/*
+ * T-24-SC / T-ubb-02: picks the dylib to dlopen. A caller-provided path (`--steam-api-dylib`) is
+ * accepted ONLY when gl_steam_api_pin_check proves its bytes hash to the pin compiled into this
+ * helper; the path itself is never trusted, wherever it points. Otherwise this falls back to the
+ * canonical, OS/Steam-provided path built from $HOME -- never from attacker-supplied input -- and
+ * reports why through *reasonOut (`no-flag` when the flag was absent). Returns 1 when the pinned
+ * path was chosen (*reasonOut is then NULL), 0 for the UNPINNED fallback.
+ */
+static int resolve_dylib_path(char *out, size_t outSize, const char **reasonOut) {
+  const char *reason = "no-flag";
+  if (g_steam_api_dylib_arg != NULL) {
+    if (gl_steam_api_pin_check(g_steam_api_dylib_arg, &reason)) {
+      snprintf(out, outSize, "%s", g_steam_api_dylib_arg);
+      *reasonOut = NULL;
+      return 1;
+    }
+  }
   const char *home = getenv("HOME");
   if (!home || home[0] == '\0') home = "/";
   snprintf(
@@ -461,6 +482,8 @@ static void resolve_dylib_path(char *out, size_t outSize) {
     "MacOS/Frameworks/Steam Helper.app/Contents/MacOS/libsteam_api.dylib",
     home
   );
+  *reasonOut = reason;
+  return 0;
 }
 
 /*
@@ -513,9 +536,25 @@ static void pump_callbacks(void) {
  */
 static int load_steam_api(void) {
   char dylibPath[1024];
-  resolve_dylib_path(dylibPath, sizeof dylibPath);
+  const char *unpinnedReason = NULL;
+  int pinned = resolve_dylib_path(dylibPath, sizeof dylibPath, &unpinnedReason);
 
   g_dylib_handle = dlopen(dylibPath, RTLD_NOW | RTLD_LOCAL);
+
+  // quick 261117-ubb: say which dylib this helper loaded, before the NULL check so a failed
+  // dlopen is logged too. logts_f's 160-byte buffer is too small for a sha plus a path.
+  {
+    char pinLine[1536];
+    if (pinned) {
+      snprintf(pinLine, sizeof pinLine, "source=pinned sha256=%s dylib=%s loaded=%d",
+               GAMELIB_STEAM_API_PIN_SHA256, dylibPath, g_dylib_handle ? 1 : 0);
+    } else {
+      snprintf(pinLine, sizeof pinLine, "source=UNPINNED reason=%s dylib=%s loaded=%d",
+               unpinnedReason ? unpinnedReason : "unknown", dylibPath, g_dylib_handle ? 1 : 0);
+    }
+    logts("PIN", pinLine);
+  }
+
   if (!g_dylib_handle) {
     logts("FATAL", dlerror());
     return 0;
@@ -3270,6 +3309,11 @@ int main(int argc, char **argv) {
       // launching with this helper in identity-only mode rather than
       // refusing the game outright. No value: a bare flag.
       identityOnly = 1;
+    } else if (strcmp(argv[i], "--steam-api-dylib") == 0 && i + 1 < argc) {
+      // quick 261117-ubb: the pinned dylib path. Not trusted: load_steam_api()
+      // re-validates it by content against the compiled-in pin and falls back
+      // to the Steam-tree path (UNPINNED) when it does not hash to it.
+      g_steam_api_dylib_arg = argv[++i];
     } else if (strcmp(argv[i], "--report-appid") == 0 && i + 1 < argc) {
       // D-51-04: the LAUNCHING game's real AppID (never 480) -- what
       // SteamUtils.GetAppID reports back in identity-only mode, even

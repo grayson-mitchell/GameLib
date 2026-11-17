@@ -645,6 +645,99 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
     )
   })
 
+  // ── Quick 261117-ubb: the pinned libsteam_api.dylib hand-off ───────────────
+  describe('pinned libsteam_api.dylib (quick 261117-ubb)', () => {
+    const PINNED = '/abs/steam-api/4162eb40/libsteam_api.dylib'
+
+    test('the resolved path is resolved once and reaches the full helper AND the identity-only fallback', async () => {
+      const resolve = jest.fn(() => Promise.resolve(PINNED))
+      registry = newRegistry({ resolveSteamApiDylib: resolve })
+      const fullChild = new FakeChildProcess()
+      const identityChild = new FakeChildProcess()
+      mockedSpawn
+        .mockReturnValueOnce(fullChild)
+        .mockReturnValueOnce(identityChild)
+      MockedSocket.mockImplementationOnce(
+        () => new FakeSocket(healthOkFrame, whoamiErrFrame)
+      ).mockImplementationOnce(
+        () => new FakeSocket(healthOkFrame, whoamiOkFrame)
+      )
+
+      const pending = ensureBridgeHelperReady(helperDeps, APP_ID_A)
+      await waitForSpawnCallCount(1)
+      emitListenLine(fullChild, 55001, APP_ID_A)
+      await waitForSpawnCallCount(2)
+      emitListenLine(identityChild, 55002, '480')
+      const result = await pending
+
+      expect(result.status).toBe('fallback-identity')
+      expect(resolve).toHaveBeenCalledTimes(1)
+      expect(mockedSpawn.mock.calls[0][1]).toEqual([
+        '--appid',
+        APP_ID_A,
+        '--port',
+        '0',
+        '--steam-api-dylib',
+        PINNED
+      ])
+      expect(mockedSpawn.mock.calls[1][1].slice(-2)).toEqual([
+        '--steam-api-dylib',
+        PINNED
+      ])
+    })
+
+    test('a resolver that answers null (UNPINNED) spawns with no flag', async () => {
+      registry = newRegistry({
+        resolveSteamApiDylib: () => Promise.resolve(null)
+      })
+      const child = new FakeChildProcess()
+      mockedSpawn.mockReturnValueOnce(child)
+      MockedSocket.mockImplementation(
+        () => new FakeSocket(healthOkFrame, whoamiOkFrame)
+      )
+
+      const pending = ensureBridgeHelperReady(helperDeps, APP_ID_A)
+      await waitForSpawnCallCount(1)
+      emitListenLine(child, 55001, APP_ID_A)
+      await pending
+
+      expect(mockedSpawn.mock.calls[0][1]).toEqual([
+        '--appid',
+        APP_ID_A,
+        '--port',
+        '0'
+      ])
+    })
+
+    test('a live entry that is reused never triggers a resolution', async () => {
+      const resolve = jest.fn(() => Promise.resolve(PINNED))
+      registry = newRegistry({ resolveSteamApiDylib: resolve })
+      const child = new FakeChildProcess()
+      mockedSpawn.mockReturnValue(child)
+      MockedSocket.mockImplementation(
+        () => new FakeSocket(healthOkFrame, whoamiOkFrame)
+      )
+
+      const first = ensureBridgeHelperReady(helperDeps, APP_ID_A)
+      await waitForSpawnCallCount(1)
+      emitListenLine(child, 55001, APP_ID_A)
+      await first
+      expect(resolve).toHaveBeenCalledTimes(1)
+
+      const second = await ensureBridgeHelperReady(helperDeps, APP_ID_A)
+      expect(second.status).toBe('ready')
+      expect(mockedSpawn).toHaveBeenCalledTimes(1)
+      expect(resolve).toHaveBeenCalledTimes(1)
+    })
+
+    test('a rejected-input call (non-numeric appId) never resolves a path', async () => {
+      const resolve = jest.fn(() => Promise.resolve(PINNED))
+      registry = newRegistry({ resolveSteamApiDylib: resolve })
+      await ensureBridgeHelperReady(helperDeps, 'not-numeric')
+      expect(resolve).not.toHaveBeenCalled()
+    })
+  })
+
   test('quick 261113-n39: WHOAMI ERR with the accessor-missing reason byte -> steam-client-updated, one warning, one setup message, no identity-only (480) spawn', async () => {
     const fullChild = new FakeChildProcess()
     mockedSpawn.mockReturnValueOnce(fullChild)

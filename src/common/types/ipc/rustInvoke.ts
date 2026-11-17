@@ -80,6 +80,7 @@ import {
   RUST_STEAMCM_STORE_APPDETAILS,
   RUST_STEAMCM_STORE_ENRICH,
   RUST_STEAMCM_WRAP_RESTORE_IF_OWED,
+  RUST_STEAM_API_PIN_RESOLVE,
   RUST_SCAN_CONTAINED_REAL,
   RUST_SCAN_PE_IMPORTED_DLLS,
   RUST_SCAN_STEAMSTUB_SECTION,
@@ -570,7 +571,8 @@ export const rustInvokeArgs = {
   ]),
   [RUST_STEAMCM_WRAP_RESTORE_IF_OWED]: z.tuple([
     z.object({ trigger: z.enum(['boot', 'shutdown']) }).strict()
-  ])
+  ]),
+  [RUST_STEAM_API_PIN_RESOLVE]: empty
 } satisfies Record<RustInvokeChannel, z.ZodTuple>
 
 /** The positional args a `rustInvoke` call for channel `C` sends (input side of the schema). */

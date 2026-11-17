@@ -64,6 +64,13 @@ export interface BridgeHelperRegistryDeps {
    * child, because `node:child_process` reads the REAL host env).
    */
   spawnEnv: () => NodeJS.ProcessEnv
+  /**
+   * Quick 261117-ubb: resolves the pinned libsteam_api.dylib path the helper is handed on argv, or
+   * `null` (UNPINNED: the helper loads the Steam client's own copy). Bounded by the implementation
+   * (`createSteamApiPinResolver`); optional so every existing registry stays valid. A registry
+   * built without one answers a synchronous `null`, which keeps the spawn synchronous.
+   */
+  resolveSteamApiDylib?: () => Promise<string | null> | null
 }
 
 export interface BridgeHelperRegistry {
@@ -72,6 +79,11 @@ export interface BridgeHelperRegistry {
   readonly steamWaitSchedule: BridgeHelperRegistryDeps['steamWaitSchedule']
   helperPath(): string
   spawnEnv(): NodeJS.ProcessEnv
+  /**
+   * The pinned dylib path for a spawn that will really happen, or `null` (UNPINNED). A synchronous
+   * `null` means there is nothing to resolve (no resolver wired), so the caller spawns at once.
+   */
+  resolveSteamApiDylib(): Promise<string | null> | null
   installExitTeardownOnce(): void
   /** Phase 58 Plan 31: the live helper's port and secret, only when both are known. */
   getConnection(appId: string): { port: number; secret: string } | null
@@ -144,6 +156,7 @@ export function createBridgeHelperRegistry(
     steamWaitSchedule: deps.steamWaitSchedule,
     helperPath: deps.helperPath,
     spawnEnv: deps.spawnEnv,
+    resolveSteamApiDylib: deps.resolveSteamApiDylib ?? (() => null),
     installExitTeardownOnce(): void {
       if (exitTeardownInstalled) return
       exitTeardownInstalled = true
@@ -167,6 +180,7 @@ export type BridgeHelperSlice = Pick<
   | 'steamWaitSchedule'
   | 'helperPath'
   | 'spawnEnv'
+  | 'resolveSteamApiDylib'
   | 'installExitTeardownOnce'
   | 'getConnection'
   | 'stop'

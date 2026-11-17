@@ -285,6 +285,31 @@ pub(crate) fn rpc_depot_finalize(args: &[Value], app: &AppHandle) -> Result<Valu
     result
 }
 
+/// `steam_api_pin_resolve` (quick 261117-ubb): resolves the pinned libsteam_api.dylib the macOS
+/// bridge helper loads. macOS only: every other platform answers `unsupported` without touching the
+/// network or the filesystem. The cache and Steam-client paths are derived here from `HOME`; the
+/// sidecar never hands over a path. Blocking (a cold fetch), so it runs on the dispatch worker.
+pub(crate) fn rpc_steam_api_pin_resolve(args: &[Value]) -> Result<Value, String> {
+    SteamApiPinResolveArgs::from_args(args)?;
+    #[cfg(not(target_os = "macos"))]
+    {
+        serde_json::to_value(gamelib_depot::steam_api_pin::Resolution::unsupported(
+            &gamelib_depot::steam_api_pin::PIN,
+        ))
+        .map_err(|_| "steam_api_pin_resolve:encode".to_string())
+    }
+    #[cfg(target_os = "macos")]
+    {
+        use gamelib_depot::steam_api_pin::{layout_for_home, resolve, Resolution, PIN};
+        let resolution = match layout_for_home(std::env::var("HOME").ok().as_deref()) {
+            None => Resolution::unpinned(&PIN, &["no-home".to_string()]),
+            Some(layout) => std::panic::catch_unwind(|| resolve(&layout, &PIN))
+                .map_err(|_| "steam_api_pin_resolve:panic".to_string())?,
+        };
+        serde_json::to_value(resolution).map_err(|_| "steam_api_pin_resolve:encode".to_string())
+    }
+}
+
 /// Sidecar stdout ended: no response can arrive and no event consumer exists, so every depot job
 /// is cancelled (D-08). Logs the count only.
 pub(crate) fn on_sidecar_eof_cancel_jobs() {

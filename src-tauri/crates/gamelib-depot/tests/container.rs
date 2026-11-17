@@ -268,6 +268,132 @@ fn unzip_manifest_declared_size_above_cap_errors() {
     assert_eq!(unzip_manifest(&z).unwrap_err().code, "size_mismatch");
 }
 
+/// A VZ package whose LZMA stream ends with an end-of-payload marker (what liblzma's own alone
+/// encoder writes), like Valve's client packages (webhelpers_*.zip.vz).
+fn vz_with_end_marker(data: &[u8]) -> Vec<u8> {
+    use std::io::Write as _;
+    let opts = xz2::stream::LzmaOptions::new_preset(1).unwrap();
+    let enc = xz2::stream::Stream::new_lzma_encoder(&opts).unwrap();
+    let mut w = xz2::write::XzEncoder::new_stream(Vec::new(), enc);
+    w.write_all(data).unwrap();
+    let alone = w.finish().unwrap();
+    let mut v = b"VZa".to_vec();
+    v.extend_from_slice(&[0u8; 4]);
+    v.extend_from_slice(&alone[..5]); // props
+    v.extend_from_slice(&alone[13..]); // payload, after the 13-byte alone header
+    v.extend_from_slice(&encode::crc32(data).to_le_bytes());
+    v.extend_from_slice(&(data.len() as u32).to_le_bytes());
+    v.extend_from_slice(b"zv");
+    v
+}
+
+#[test]
+fn vz_with_an_end_of_payload_marker_decodes() {
+    let d = sample(100_000);
+    assert_eq!(unzip_manifest(&vz_with_end_marker(&d)).unwrap(), d);
+}
+
+#[test]
+fn vz_with_an_end_marker_and_a_wrong_footer_size_is_rejected() {
+    let d = sample(50_000);
+    let mut v = vz_with_end_marker(&d);
+    let n = v.len();
+    v[n - 6..n - 2].copy_from_slice(&(d.len() as u32 + 1).to_le_bytes());
+    assert!(unzip_manifest(&v).is_err());
+}
+
+fn multi_entry_zip(member: &[u8]) -> Vec<u8> {
+    encode::zip_named(&[
+        (
+            "Frameworks\\Steam Helper.app\\Contents\\Info.plist",
+            b"plist",
+        ),
+        (
+            "Frameworks/Steam Helper.app/Contents/MacOS/other.dylib",
+            b"other",
+        ),
+        (
+            "Frameworks/Steam Helper.app/Contents/MacOS/libsteam_api.dylib",
+            member,
+        ),
+        ("trailer.txt", b"tail"),
+    ])
+}
+
+const MEMBER: &str = "Frameworks/Steam Helper.app/Contents/MacOS/libsteam_api.dylib";
+
+#[test]
+fn unzip_entry_named_returns_exact_stored_member_bytes() {
+    let d = sample(5000);
+    let z = multi_entry_zip(&d);
+    assert_eq!(unzip_entry_named(&z, MEMBER, 1 << 20).unwrap(), d);
+    // The other entries are reachable by their own exact names, backslashes included.
+    assert_eq!(
+        unzip_entry_named(
+            &z,
+            "Frameworks\\Steam Helper.app\\Contents\\Info.plist",
+            1 << 20
+        )
+        .unwrap(),
+        b"plist"
+    );
+}
+
+#[test]
+fn unzip_entry_named_inflates_a_deflated_member() {
+    let d = sample(8000);
+    let z = encode::zip_named_methods(&[("a", b"first", 0), ("b", &d, 8)]);
+    assert_eq!(unzip_entry_named(&z, "b", 1 << 20).unwrap(), d);
+}
+
+#[test]
+fn unzip_entry_named_missing_name_errors() {
+    let z = multi_entry_zip(&sample(100));
+    assert!(unzip_entry_named(&z, "Frameworks/missing.dylib", 1 << 20).is_err());
+    // A prefix of a real name is not a match.
+    assert!(unzip_entry_named(&z, "Frameworks/Steam Helper.app", 1 << 20).is_err());
+}
+
+#[test]
+fn unzip_entry_named_zip64_marker_errors() {
+    let d = sample(100);
+    let mut z = encode::zip_named(&[("only", &d)]);
+    let eocd = z.len() - 22;
+    let cd = u32::from_le_bytes(z[eocd + 16..eocd + 20].try_into().unwrap()) as usize;
+    z[cd + 24..cd + 28].copy_from_slice(&u32::MAX.to_le_bytes());
+    assert!(unzip_entry_named(&z, "only", 1 << 20).is_err());
+}
+
+#[test]
+fn unzip_entry_named_declared_size_above_cap_errors() {
+    let d = sample(5000);
+    let z = multi_entry_zip(&d);
+    assert_eq!(
+        unzip_entry_named(&z, MEMBER, 4999).unwrap_err().code,
+        "size_mismatch"
+    );
+    assert!(unzip_entry_named(&z, MEMBER, 5000).is_ok());
+}
+
+#[test]
+fn unzip_entry_named_unsupported_method_errors() {
+    let z = encode::zip_named_methods(&[("x", b"data", 9)]);
+    assert_eq!(
+        unzip_entry_named(&z, "x", 1 << 20).unwrap_err().code,
+        "unknown_container"
+    );
+}
+
+#[test]
+fn unzip_entry_named_truncated_central_directory_errors() {
+    let z = multi_entry_zip(&sample(100));
+    let eocd = z.len() - 22;
+    let mut bad = z.clone();
+    // Claim far more entries than exist: the walk must run off the buffer and error, not panic.
+    bad[eocd + 10..eocd + 12].copy_from_slice(&500u16.to_le_bytes());
+    assert!(unzip_entry_named(&bad, "no-such-name", 1 << 20).is_err());
+}
+
 #[test]
 fn unzip_manifest_vsza_footer_size_above_cap_errors() {
     let d = sample(100);

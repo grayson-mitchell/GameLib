@@ -107,6 +107,7 @@ pub(crate) enum RustInvokeChannel {
     SteamcmStoreAppdetails,
     SteamcmStoreEnrich,
     SteamcmWrapRestoreIfOwed,
+    SteamApiPinResolve,
     SteampollAcfEnumerateCopies,
     SteampollAcfFindOtherManifests,
     SteampollAcfReadState,
@@ -222,6 +223,7 @@ impl RustInvokeChannel {
         RustInvokeChannel::SteamcmStoreAppdetails,
         RustInvokeChannel::SteamcmStoreEnrich,
         RustInvokeChannel::SteamcmWrapRestoreIfOwed,
+        RustInvokeChannel::SteamApiPinResolve,
         RustInvokeChannel::SteampollAcfEnumerateCopies,
         RustInvokeChannel::SteampollAcfFindOtherManifests,
         RustInvokeChannel::SteampollAcfReadState,
@@ -337,6 +339,7 @@ impl RustInvokeChannel {
             "steamcm_store_appdetails" => Some(RustInvokeChannel::SteamcmStoreAppdetails),
             "steamcm_store_enrich" => Some(RustInvokeChannel::SteamcmStoreEnrich),
             "steamcm_wrap_restore_if_owed" => Some(RustInvokeChannel::SteamcmWrapRestoreIfOwed),
+            "steam_api_pin_resolve" => Some(RustInvokeChannel::SteamApiPinResolve),
             "steampoll_acf_enumerate_copies" => Some(RustInvokeChannel::SteampollAcfEnumerateCopies),
             "steampoll_acf_find_other_manifests" => Some(RustInvokeChannel::SteampollAcfFindOtherManifests),
             "steampoll_acf_read_state" => Some(RustInvokeChannel::SteampollAcfReadState),
@@ -454,6 +457,7 @@ impl RustInvokeChannel {
             RustInvokeChannel::SteamcmStoreAppdetails => "steamcm_store_appdetails",
             RustInvokeChannel::SteamcmStoreEnrich => "steamcm_store_enrich",
             RustInvokeChannel::SteamcmWrapRestoreIfOwed => "steamcm_wrap_restore_if_owed",
+            RustInvokeChannel::SteamApiPinResolve => "steam_api_pin_resolve",
             RustInvokeChannel::SteampollAcfEnumerateCopies => "steampoll_acf_enumerate_copies",
             RustInvokeChannel::SteampollAcfFindOtherManifests => "steampoll_acf_find_other_manifests",
             RustInvokeChannel::SteampollAcfReadState => "steampoll_acf_read_state",
@@ -1990,6 +1994,15 @@ impl SteamcmWrapRestoreIfOwedArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let first = args.first().ok_or_else(|| "steamcm_wrap_restore_if_owed:bad-args".to_string())?;
         serde_json::from_value(first.clone()).map_err(|_| "steamcm_wrap_restore_if_owed:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct SteamApiPinResolveArgs;
+
+impl SteamApiPinResolveArgs {
+    pub(crate) fn from_args(_args: &[Value]) -> Result<Self, String> {
+        Ok(Self)
     }
 }
 

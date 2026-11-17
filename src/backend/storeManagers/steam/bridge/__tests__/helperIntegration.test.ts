@@ -52,9 +52,19 @@ const sendFrontendMessage = jest.fn()
  * not ambient propagation that never happens.
  */
 import { createDisplayAcks } from 'backend/dialog/displayAck'
+import { logInfo, logWarning } from 'backend/logger'
 import { at } from '../../__tests__/fixtures/indexed'
 import { execFileSync, spawn } from 'node:child_process'
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
+import {
+  chmodSync,
+  copyFileSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  symlinkSync,
+  writeFileSync
+} from 'node:fs'
 import { Socket } from 'node:net'
 import { join, resolve } from 'node:path'
 
@@ -2610,5 +2620,197 @@ describeDarwinOnly(
         h.child.kill()
       }
     }, 15000)
+
+    // quick 261117-ubb: the pinned libsteam_api.dylib hand-off. A second helper is compiled with
+    // the pin overridden (-DGAMELIB_STEAM_API_PIN_SHA256) to the sha of a tiny test dylib, so the
+    // real validator, the real argv parse and the real PIN line are all exercised without the
+    // Valve dylib. Every clang run and spawn uses the fake-HOME profile's env.
+    describe('--steam-api-dylib pin (quick 261117-ubb)', () => {
+      let testPinHelperPath: string
+      let testDylibPath: string
+
+      const sha256Of = (path: string) =>
+        createHash('sha256').update(readFileSync(path)).digest('hex')
+
+      beforeAll(() => {
+        const buildDir = mkdtempSync(join(profile.root, 'pin-build-'))
+        const { command, args } = buildHelperCompileArgv()
+        const archFlag = args[args.indexOf('-arch') + 1] as string
+
+        const dylibSource = join(buildDir, 'test_steam_api.c')
+        writeFileSync(
+          dylibSource,
+          [
+            'int SteamAPI_InitFlat(char *err) { err[0] = 0; return 1; }',
+            'void SteamAPI_RunCallbacks(void) {}'
+          ].join('\n')
+        )
+        const dylibDir = join(buildDir, 'dylib')
+        mkdirSync(dylibDir, { mode: 0o700 })
+        testDylibPath = join(dylibDir, 'libsteam_api.dylib')
+        execFileSync(
+          'clang',
+          ['-dynamiclib', '-arch', archFlag, '-o', testDylibPath, dylibSource],
+          { env: profile.childEnv(), stdio: 'pipe' }
+        )
+
+        const outputFlagIndex = args.indexOf('-o')
+        const customArgs = [...args]
+        testPinHelperPath = join(buildDir, 'steam-bridge-helper-testpin')
+        customArgs[outputFlagIndex + 1] = testPinHelperPath
+        customArgs.splice(
+          outputFlagIndex,
+          0,
+          `-DGAMELIB_STEAM_API_PIN_SHA256="${sha256Of(testDylibPath)}"`
+        )
+        execFileSync(command, customArgs, {
+          cwd: REPO_ROOT,
+          env: profile.childEnv(),
+          stdio: 'pipe'
+        })
+        chmodSync(testPinHelperPath, 0o755)
+      }, 60000)
+
+      /** Spawns `helperPath` directly, waits for its PIN line, kills it. */
+      const pinLineFor = async (
+        helperPath: string,
+        extraArgs: string[],
+        cwd?: string
+      ): Promise<string> => {
+        const stageDir = mkdtempSync(join(profile.root, 'pin-run-'))
+        const child = spawn(
+          helperPath,
+          ['--appid', AVERNUM_APP_ID, '--port', '0', ...extraArgs],
+          {
+            cwd: cwd ?? stageDir,
+            stdio: ['ignore', 'pipe', 'pipe'],
+            env: profile.childEnv()
+          }
+        )
+        try {
+          return await new Promise<string>((resolvePromise, rejectPromise) => {
+            let stderr = ''
+            const timeout = setTimeout(() => {
+              rejectPromise(
+                new Error(`no PIN line within timeout -- stderr: ${stderr}`)
+              )
+            }, 8000)
+            child.stderr?.on('data', (data: Buffer) => {
+              stderr += data.toString()
+              const match = /\] PIN .*$/m.exec(stderr)
+              if (match) {
+                clearTimeout(timeout)
+                resolvePromise(match[0])
+              }
+            })
+          })
+        } finally {
+          child.kill()
+        }
+      }
+
+      test('a handed dylib that hashes to the compiled-in pin is loaded: source=pinned loaded=1', async () => {
+        const line = await pinLineFor(testPinHelperPath, [
+          '--steam-api-dylib',
+          testDylibPath
+        ])
+        expect(line).toContain('PIN    source=pinned')
+        expect(line).toContain(`sha256=${sha256Of(testDylibPath)}`)
+        expect(line).toContain(`dylib=${testDylibPath}`)
+        expect(line).toContain('loaded=1')
+      }, 15000)
+
+      test('the production-pinned helper refuses a file that is not its pin: sha256-mismatch', async () => {
+        const line = await pinLineFor(compiledHelperPath, [
+          '--steam-api-dylib',
+          testDylibPath
+        ])
+        expect(line).toContain('source=UNPINNED reason=sha256-mismatch')
+        expect(line).not.toContain(`dylib=${testDylibPath}`)
+      }, 15000)
+
+      test('no flag is UNPINNED with reason no-flag', async () => {
+        const line = await pinLineFor(testPinHelperPath, [])
+        expect(line).toContain('source=UNPINNED reason=no-flag')
+      }, 15000)
+
+      test('a relative path is refused: invalid-path', async () => {
+        const line = await pinLineFor(
+          testPinHelperPath,
+          ['--steam-api-dylib', 'libsteam_api.dylib'],
+          join(testDylibPath, '..')
+        )
+        expect(line).toContain('source=UNPINNED reason=invalid-path')
+      }, 15000)
+
+      test('a symlink to the pinned file is refused (O_NOFOLLOW): open-failed', async () => {
+        const linkDir = mkdtempSync(join(profile.root, 'pin-link-'))
+        const link = join(linkDir, 'libsteam_api.dylib')
+        symlinkSync(testDylibPath, link)
+        const line = await pinLineFor(testPinHelperPath, [
+          '--steam-api-dylib',
+          link
+        ])
+        expect(line).toContain('source=UNPINNED reason=open-failed')
+      }, 15000)
+
+      test('a group-writable copy is refused: unsafe-owner-or-mode', async () => {
+        const copyDir = mkdtempSync(join(profile.root, 'pin-mode-'))
+        const copy = join(copyDir, 'libsteam_api.dylib')
+        copyFileSync(testDylibPath, copy)
+        chmodSync(copy, 0o664)
+        const line = await pinLineFor(testPinHelperPath, [
+          '--steam-api-dylib',
+          copy
+        ])
+        expect(line).toContain('source=UNPINNED reason=unsafe-owner-or-mode')
+      }, 15000)
+
+      test('through ensureBridgeHelperReady the full helper AND the identity-only 480 fallback both load the pinned dylib', async () => {
+        const PIN_APP_ID = '411300'
+        const pinRegistry = createBridgeHelperRegistry({
+          steamWaitSchedule: DEFAULT_STEAM_WAIT_SCHEDULE,
+          helperPath: () => testPinHelperPath,
+          spawnEnv: () => profile.childEnv(),
+          resolveSteamApiDylib: () => Promise.resolve(testDylibPath)
+        })
+        const infoMock = logInfo as jest.Mock
+        const warnMock = logWarning as jest.Mock
+        infoMock.mockClear()
+        warnMock.mockClear()
+        try {
+          const result = await ensureBridgeHelperReady(
+            { ...helperDeps(), bridgeHelpers: pinRegistry },
+            PIN_APP_ID
+          )
+          // The fake dylib's InitFlat fails, so the full helper is not-inited and the 480 fallback
+          // is attempted (and fails the same way): two helpers were spawned.
+          expect(result.ready).toBe(false)
+
+          const pinLines = warnMock.mock.calls
+            .map((call) => String(call[0]))
+            .filter(
+              (line) =>
+                line.includes(`bridge helper [${PIN_APP_ID}]:`) &&
+                line.includes('PIN    source=pinned')
+            )
+          expect(pinLines).toHaveLength(2)
+
+          const spawnLogs = infoMock.mock.calls
+            .map((call) => String(call[0]))
+            .filter((line) => line.includes('ensureHelperSpawned:'))
+          expect(spawnLogs).toHaveLength(2)
+          expect(
+            spawnLogs.some(
+              (line) =>
+                line.includes('identity-only') &&
+                line.includes(`pinned libsteam_api ${testDylibPath}`)
+            )
+          ).toBe(true)
+        } finally {
+          pinRegistry.shutdownAll()
+        }
+      }, 40000)
+    })
   }
 )
