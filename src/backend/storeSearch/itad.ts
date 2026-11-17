@@ -30,6 +30,7 @@ import {
   writePriceEntry
 } from './itadCache'
 import { resolveBuiltInItadKey } from './itadKey'
+import type { ItadSecrets } from './itadSecrets'
 import type { ItadCacheEntry } from './stores'
 
 /**
@@ -37,7 +38,8 @@ import type { ItadCacheEntry } from './stores'
  * GameLib's provider-neutral `common/types/storeSearch` types here and only
  * here.
  *
- * Key handling: the shared key travels as a `key` query param (axios `params`,
+ * Key handling: an optional user key (D-05) is preferred over the built-in key until ITAD rejects
+ * it (D-06). The key travels as a `key` query param (axios `params`,
  * never string-built). It is never logged and never placed in a thrown error:
  * failures are logged as `{endpoint, status}` only, and `StoreSearchError`
  * messages carry a marker, an endpoint label and a status.
@@ -65,6 +67,11 @@ export type ItadDeps = {
   }
   now?: () => number
   env?: NodeJS.ProcessEnv
+  /**
+   * The optional user-key owner (D-05, D-06). Optional on purpose: PRICE-01..03 run on the
+   * built-in key alone, so a caller with no owner (the Steam deals path) keeps working.
+   */
+  itadSecrets?: Pick<ItadSecrets, 'getApiKey' | 'isRejected' | 'markRejected'>
 } & MiscRuntimeSlice<'itadGate'>
 
 export class StoreSearchError extends Error {
@@ -114,11 +121,58 @@ function pricedCountryFor(requested: string): string {
     : ITAD_FALLBACK_COUNTRY
 }
 
-/** D-03: no key configured is a typed error, not a crash. */
-function requireKey(deps: ItadDeps, endpoint: string): string {
-  const resolved = resolveBuiltInItadKey(deps.env)
-  if (!resolved) throw new StoreSearchError('notConfigured', endpoint)
-  return resolved.key
+type ResolvedKey = { key: string; source: 'user' | 'env' | 'baked' }
+
+/**
+ * Key precedence (D-02, D-05): the user key (set, and not rejected this session) >
+ * GAMELIB_ITAD_API_KEY > the baked key. D-03: no key at all is a typed error, not a crash.
+ */
+async function resolveKey(
+  deps: ItadDeps,
+  endpoint: string
+): Promise<ResolvedKey> {
+  const secrets = deps.itadSecrets
+  if (secrets && !secrets.isRejected()) {
+    const user = (await secrets.getApiKey()) ?? ''
+    if (user) return { key: user, source: 'user' }
+  }
+  const builtIn = resolveBuiltInItadKey(deps.env)
+  if (!builtIn) throw new StoreSearchError('notConfigured', endpoint)
+  return builtIn
+}
+
+/**
+ * Runs `request` with the resolved key. D-06: when ITAD answers 401/403 to a request made with the
+ * USER key, the key is marked rejected for the session and that same request is retried once with
+ * the built-in key (or fails notConfigured when there is none). A rejection of a built-in key is not
+ * retried. `first` lets a caller that already resolved the key (to fail early) reuse it.
+ */
+async function withKey<T>(
+  deps: ItadDeps,
+  endpoint: string,
+  request: (key: string) => Promise<T>,
+  first?: ResolvedKey
+): Promise<T> {
+  const resolved = first ?? (await resolveKey(deps, endpoint))
+  try {
+    return await request(resolved.key)
+  } catch (err) {
+    const status = statusOf(err)
+    if (
+      resolved.source !== 'user' ||
+      !deps.itadSecrets ||
+      (status !== 401 && status !== 403)
+    ) {
+      throw err
+    }
+    deps.itadSecrets.markRejected()
+    logWarning(
+      `[itad] user key rejected status=${status}; using the built-in key`,
+      LogPrefix.Backend
+    )
+    const fallback = await resolveKey(deps, endpoint)
+    return request(fallback.key)
+  }
 }
 
 function isHttpsUrl(u: unknown): u is string {
@@ -317,6 +371,21 @@ function staleOrThrow<T, R>(
  */
 async function postPrices(
   deps: ItadDeps,
+  endpoint: string,
+  gids: string[],
+  country: string,
+  first?: ResolvedKey
+): Promise<{ byId: Map<string, StoreSearchDeal[]>; pricedCountry: string }> {
+  return withKey(
+    deps,
+    endpoint,
+    (key) => postPricesWithKey(deps, key, gids, country),
+    first
+  )
+}
+
+async function postPricesWithKey(
+  deps: ItadDeps,
   key: string,
   gids: string[],
   country: string
@@ -407,21 +476,24 @@ export async function searchGames(
       new StoreSearchError('rateLimited', 'search', 429)
     )
   }
-  const key = requireKey(deps, 'search')
+  const resolved = await resolveKey(deps, 'search')
 
   return deps.miscRuntime.itadGate.singleFlight(cacheKey, async () => {
     try {
-      const { data: found } = await axios.get<ItadSearchItem[]>(
-        `${ITAD_BASE}/games/search/v1`,
-        {
-          params: {
-            title: query,
-            [ITAD_SEARCH_RESULTS_PARAM]: ITAD_SEARCH_RESULT_COUNT,
-            key
-          },
-          timeout: REQUEST_TIMEOUT_MS,
-          headers: buildHeaders(deps)
-        }
+      const { data: found } = await withKey(
+        deps,
+        'search',
+        (key) =>
+          axios.get<ItadSearchItem[]>(`${ITAD_BASE}/games/search/v1`, {
+            params: {
+              title: query,
+              [ITAD_SEARCH_RESULTS_PARAM]: ITAD_SEARCH_RESULT_COUNT,
+              key
+            },
+            timeout: REQUEST_TIMEOUT_MS,
+            headers: buildHeaders(deps)
+          }),
+        resolved
       )
       const items = (Array.isArray(found) ? found : []).filter(
         (i) => i && isUuid(i.id) && typeof i.title === 'string'
@@ -431,9 +503,10 @@ export async function searchGames(
         writePriceEntry(store, cacheKey, empty, clock(deps))
         return { ...empty }
       }
+      // Resolved afresh: a rejected user key from the search call must not be reused here.
       const { byId, pricedCountry } = await postPrices(
         deps,
-        key,
+        'search',
         items.map((i) => i.id),
         country
       )
@@ -477,15 +550,16 @@ export async function getGameDeals(
       new StoreSearchError('rateLimited', 'deals', 429)
     )
   }
-  const key = requireKey(deps, 'deals')
+  const resolved = await resolveKey(deps, 'deals')
 
   return deps.miscRuntime.itadGate.singleFlight(cacheKey, async () => {
     try {
       const { byId, pricedCountry } = await postPrices(
         deps,
-        key,
+        'deals',
         [gameId],
-        country
+        country,
+        resolved
       )
       const deals = byId.get(gameId) ?? []
       cacheDeals(

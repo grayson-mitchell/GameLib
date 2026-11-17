@@ -542,3 +542,148 @@ describe('lookupSteamGids', () => {
     ).toContain('status=503')
   })
 })
+
+describe('user key precedence and rejected-key fallback (D-05, D-06)', () => {
+  const USERKEY = 'USERKEY-987'
+  const ENVKEY = KEY
+
+  function fakeSecrets(initial: string | null = USERKEY) {
+    let rejected = false
+    return {
+      getApiKey: jest.fn(async () => initial ?? undefined),
+      isRejected: jest.fn(() => rejected),
+      markRejected: jest.fn(() => {
+        rejected = true
+      })
+    }
+  }
+
+  const searchKeys = () =>
+    mockedAxios.get.mock.calls.map((c) => (c[1]?.params as Json).key)
+  const priceKeys = () =>
+    mockedAxios.post.mock.calls.map((c) => (c[2]?.params as Json).key)
+
+  it('sends the user key when one is set', async () => {
+    deps.itadSecrets = fakeSecrets()
+    serve(searchItems, pricesUS)
+
+    await searchGames(deps, 'portal', 'US')
+
+    expect(searchKeys()).toEqual([USERKEY])
+    expect(priceKeys()).toEqual([USERKEY])
+  })
+
+  it('uses the built-in key when the user key is unset', async () => {
+    deps.itadSecrets = fakeSecrets(null)
+    serve(searchItems, pricesUS)
+
+    await searchGames(deps, 'portal', 'US')
+
+    expect(searchKeys()).toEqual([ENVKEY])
+    expect(priceKeys()).toEqual([ENVKEY])
+  })
+
+  it('uses the built-in key when there is no itadSecrets owner at all', async () => {
+    serve(searchItems, pricesUS)
+
+    await searchGames(deps, 'portal', 'US')
+
+    expect(searchKeys()).toEqual([ENVKEY])
+  })
+
+  it.each([401, 403])(
+    'on a %i for the user key marks it rejected and retries once with the built-in key',
+    async (status) => {
+      const secrets = fakeSecrets()
+      deps.itadSecrets = secrets
+      mockedAxios.get
+        .mockRejectedValueOnce(axiosErr(status))
+        .mockResolvedValue({ data: searchItems })
+      mockedAxios.post.mockResolvedValue({ data: pricesUS })
+
+      const res = await searchGames(deps, 'portal', 'US')
+
+      expect(res.results).toHaveLength(3)
+      expect(secrets.markRejected).toHaveBeenCalledTimes(1)
+      expect(searchKeys()).toEqual([USERKEY, ENVKEY])
+      expect(priceKeys()).toEqual([ENVKEY])
+
+      // A later search goes straight to the built-in key.
+      mockedAxios.get.mockClear()
+      mockedAxios.post.mockClear()
+      await searchGames(deps, 'another', 'US')
+      expect(searchKeys()).toEqual([ENVKEY])
+      expect(secrets.markRejected).toHaveBeenCalledTimes(1)
+    }
+  )
+
+  it('falls back on a rejected user key for the deals request too', async () => {
+    const secrets = fakeSecrets()
+    deps.itadSecrets = secrets
+    mockedAxios.post
+      .mockRejectedValueOnce(axiosErr(403))
+      .mockResolvedValue({ data: pricesUS })
+
+    const deals = await getGameDeals(deps, GID_A, 'US')
+
+    expect(deals.length).toBeGreaterThan(0)
+    expect(secrets.markRejected).toHaveBeenCalledTimes(1)
+    expect(priceKeys()).toEqual([USERKEY, ENVKEY])
+  })
+
+  it('rejects notConfigured after one request when the user key is rejected and there is no built-in key', async () => {
+    deps.env = {}
+    const secrets = fakeSecrets()
+    deps.itadSecrets = secrets
+    mockedAxios.get.mockRejectedValue(axiosErr(401))
+
+    const e = await rejection(searchGames(deps, 'portal', 'US'))
+
+    expect(codeOf(e)).toBe('notConfigured')
+    expect(mockedAxios.get).toHaveBeenCalledTimes(1)
+    expect(mockedAxios.post).not.toHaveBeenCalled()
+    expect(secrets.markRejected).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not mark rejected nor retry when the built-in key gets a 401', async () => {
+    const secrets = fakeSecrets(null)
+    deps.itadSecrets = secrets
+    mockedAxios.get.mockRejectedValue(axiosErr(401))
+
+    const e = await rejection(searchGames(deps, 'portal', 'US'))
+
+    expect(codeOf(e)).toBe('provider')
+    expect(secrets.markRejected).not.toHaveBeenCalled()
+    expect(mockedAxios.get).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not treat a non-auth failure of the user key as a rejection', async () => {
+    const secrets = fakeSecrets()
+    deps.itadSecrets = secrets
+    mockedAxios.get.mockRejectedValue(axiosErr(500))
+
+    await rejection(searchGames(deps, 'portal', 'US'))
+
+    expect(secrets.markRejected).not.toHaveBeenCalled()
+    expect(mockedAxios.get).toHaveBeenCalledTimes(1)
+  })
+
+  it('never puts either key in a log call or a thrown message', async () => {
+    deps.itadSecrets = fakeSecrets()
+    mockedAxios.get.mockRejectedValue(axiosErr(401))
+
+    const e = await rejection(searchGames(deps, 'portal', 'US'))
+
+    const logged = [
+      ...(logError as jest.Mock).mock.calls,
+      ...(logWarning as jest.Mock).mock.calls
+    ]
+      .flat()
+      .map(String)
+      .join('\n')
+    expect(logged).not.toContain(USERKEY)
+    expect(logged).not.toContain(ENVKEY)
+    expect(e.message).not.toContain(USERKEY)
+    expect(e.message).not.toContain(ENVKEY)
+  })
+})
