@@ -84,6 +84,7 @@
         "actionDuplicate": "Duplicate {{name}}",
         "actionDuplicateShort": "Duplicate",
         "actionEdit": "Edit {{name}}",
+        "actionRename": "Rename {{name}}",
         "active": "Active",
         "builtInReadOnly": "Built-in theme, read-only",
         "copyName": "{{name}} copy",
@@ -94,7 +95,14 @@
         "groupCustom": "Your themes",
         "limitBody": "You’ve reached the limit of {{max}} custom themes. Delete one to make another.",
         "limitClose": "Close message",
-        "limitTitle": "Theme limit reached"
+        "limitTitle": "Theme limit reached",
+        "renameConfirm": "Rename theme",
+        "renameErrorEmpty": "Enter a name.",
+        "renameErrorTaken": "You already have a theme called “{{name}}”.",
+        "renameErrorTooLong": "Use 60 characters or fewer.",
+        "renameKeepName": "Keep name",
+        "renameLabel": "Theme name",
+        "renameTitle": "Rename theme"
     },
     "discounts": {
         "pegiPrefix": "PEGI ≤ {{value}}"

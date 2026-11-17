@@ -1,4 +1,4 @@
-import { useId } from 'react'
+import { useId, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import useSettingsState from 'frontend/state/settingsState'
@@ -9,6 +9,7 @@ import {
 } from 'frontend/customThemes/customTheme'
 import { ThemeCard } from './ThemeCard'
 import { ThemeCardActions } from './ThemeCardActions'
+import { RenameThemeDialog } from './RenameThemeDialog'
 import { showThemeLimitDialog } from './themeDialogs'
 import { defaultThemes, resolveThemeLabel } from './themeLabels'
 import './index.scss'
@@ -28,6 +29,9 @@ export function ThemeGallery() {
   const navigate = useNavigate()
   const headingId = useId()
   const customHeadingId = useId()
+  const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(
+    null
+  )
   const resolved = resolveThemeKey(theme, customThemes)
 
   // OD-6: the copy is never applied; the user lands in its editor and applies it from its card.
@@ -115,6 +119,9 @@ export function ThemeGallery() {
                       name={custom.name}
                       onEdit={() => void navigate(editorPath(custom.id))}
                       onDuplicate={() => duplicate(key, custom.name)}
+                      onRename={() =>
+                        setRenaming({ id: custom.id, name: custom.name })
+                      }
                     />
                   }
                 />
@@ -123,6 +130,12 @@ export function ThemeGallery() {
           </div>
         )}
       </div>
+      <RenameThemeDialog
+        open={renaming !== null}
+        themeId={renaming?.id ?? ''}
+        currentName={renaming?.name ?? ''}
+        onClose={() => setRenaming(null)}
+      />
     </>
   )
 }

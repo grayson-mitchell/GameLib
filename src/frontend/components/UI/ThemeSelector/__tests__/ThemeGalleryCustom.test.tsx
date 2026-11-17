@@ -6,7 +6,7 @@ import 'frontend/testUtils/jsdomNoticeEnv'
 import i18next from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import { MemoryRouter, Route, Routes, useParams } from 'react-router-dom'
-import { cleanup, fireEvent, render } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { ThemeSelector } from '../index'
 import type { CustomTheme } from 'common/types/customTheme'
 import { MAX_CUSTOM_THEMES } from 'frontend/customThemes/customTheme'
@@ -170,6 +170,19 @@ describe('ThemeGallery: Your themes group', () => {
     expect(useSettingsState.getState().customThemes.map((t) => t.name)).toEqual(
       ['Dracula copy', 'Dracula copy 2']
     )
+  })
+
+  it('Rename opens the dialog from the card on the current name', () => {
+    useSettingsState.setState({ customThemes: [makeTheme(4)] })
+    const { container } = renderGallery()
+    expect(screen.queryByLabelText('Theme name')).toBeNull()
+    fireEvent.click(
+      container.querySelector('[aria-label="Rename Theme 4"]') as HTMLElement
+    )
+    const input = screen.getByLabelText('Theme name') as HTMLInputElement
+    expect(input.value).toBe('Theme 4')
+    fireEvent.click(screen.getByRole('button', { name: 'Keep name' }))
+    expect(screen.queryByLabelText('Theme name')).toBeNull()
   })
 
   it('Edit navigates to the editor route for that theme', () => {

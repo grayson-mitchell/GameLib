@@ -206,3 +206,11 @@
   line-height: 1.5;
   color: var(--text-secondary);
 }
+
+// Rename dialog (rendered in a MUI portal, so it carries its own class).
+.renameThemeDialog__error {
+  margin: 8px 0 0;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--status-danger);
+}
