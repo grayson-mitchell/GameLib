@@ -1,0 +1,217 @@
+[
+  {
+    "id": "018d937f-012f-73b8-ab2c-898516969e6a",
+    "historyLow": {
+      "all": {
+        "amount": 240,
+        "amountInt": 240,
+        "currency": "JPY"
+      },
+      "y1": {
+        "amount": 240,
+        "amountInt": 240,
+        "currency": "JPY"
+      },
+      "m3": {
+        "amount": 240,
+        "amountInt": 240,
+        "currency": "JPY"
+      }
+    },
+    "deals": [
+      {
+        "shop": {
+          "id": 61,
+          "name": "Steam"
+        },
+        "price": {
+          "amount": 1400,
+          "amountInt": 1400,
+          "currency": "JPY"
+        },
+        "regular": {
+          "amount": 1400,
+          "amountInt": 1400,
+          "currency": "JPY"
+        },
+        "cut": 0,
+        "voucher": null,
+        "storeLow": {
+          "amount": 240,
+          "amountInt": 240,
+          "currency": "JPY"
+        },
+        "flag": null,
+        "drm": [],
+        "platforms": [
+          {
+            "id": 1,
+            "name": "Windows"
+          },
+          {
+            "id": 3,
+            "name": "Linux"
+          }
+        ],
+        "timestamp": "2026-10-09T01:08:30+02:00",
+        "expiry": null,
+        "url": "https://itad.link/018d9386-7132-719b-89e1-e11b8c591ee7/?app=tagwff"
+      }
+    ]
+  },
+  {
+    "id": "018d937f-1212-7232-b23f-a046f6fd4a57",
+    "historyLow": {
+      "all": {
+        "amount": 556,
+        "amountInt": 556,
+        "currency": "JPY"
+      },
+      "y1": {
+        "amount": 558,
+        "amountInt": 558,
+        "currency": "JPY"
+      },
+      "m3": {
+        "amount": 3245,
+        "amountInt": 3245,
+        "currency": "JPY"
+      }
+    },
+    "deals": [
+      {
+        "shop": {
+          "id": 61,
+          "name": "Steam"
+        },
+        "price": {
+          "amount": 6490,
+          "amountInt": 6490,
+          "currency": "JPY"
+        },
+        "regular": {
+          "amount": 6490,
+          "amountInt": 6490,
+          "currency": "JPY"
+        },
+        "cut": 0,
+        "voucher": null,
+        "storeLow": {
+          "amount": 558,
+          "amountInt": 558,
+          "currency": "JPY"
+        },
+        "flag": null,
+        "drm": [],
+        "platforms": [
+          {
+            "id": 1,
+            "name": "Windows"
+          }
+        ],
+        "timestamp": "2026-10-08T19:23:52+02:00",
+        "expiry": null,
+        "url": "https://itad.link/018d9386-f72d-7282-ba92-7e682f310719/?app=tagwff"
+      },
+      {
+        "shop": {
+          "id": 4,
+          "name": "Blizzard"
+        },
+        "price": {
+          "amount": 6490,
+          "amountInt": 6490,
+          "currency": "JPY"
+        },
+        "regular": {
+          "amount": 6490,
+          "amountInt": 6490,
+          "currency": "JPY"
+        },
+        "cut": 0,
+        "voucher": null,
+        "storeLow": {
+          "amount": 6490,
+          "amountInt": 6490,
+          "currency": "JPY"
+        },
+        "flag": "S",
+        "drm": [
+          {
+            "id": 4,
+            "name": "Blizzard"
+          }
+        ],
+        "platforms": [
+          {
+            "id": 1,
+            "name": "Windows"
+          }
+        ],
+        "timestamp": "2026-10-19T03:01:00+02:00",
+        "expiry": null,
+        "url": "https://itad.link/01a03ad0-d2bb-70b0-a2de-a6e8b1fc8a49/?app=tagwff"
+      }
+    ]
+  },
+  {
+    "id": "018d937f-1749-73f8-bf5a-8e0aa3cdd9ff",
+    "historyLow": {
+      "all": {
+        "amount": 240,
+        "amountInt": 240,
+        "currency": "JPY"
+      },
+      "y1": {
+        "amount": 240,
+        "amountInt": 240,
+        "currency": "JPY"
+      },
+      "m3": {
+        "amount": 240,
+        "amountInt": 240,
+        "currency": "JPY"
+      }
+    },
+    "deals": [
+      {
+        "shop": {
+          "id": 61,
+          "name": "Steam"
+        },
+        "price": {
+          "amount": 1400,
+          "amountInt": 1400,
+          "currency": "JPY"
+        },
+        "regular": {
+          "amount": 1400,
+          "amountInt": 1400,
+          "currency": "JPY"
+        },
+        "cut": 0,
+        "voucher": null,
+        "storeLow": {
+          "amount": 240,
+          "amountInt": 240,
+          "currency": "JPY"
+        },
+        "flag": null,
+        "drm": [],
+        "platforms": [
+          {
+            "id": 1,
+            "name": "Windows"
+          },
+          {
+            "id": 3,
+            "name": "Linux"
+          }
+        ],
+        "timestamp": "2026-10-09T01:08:30+02:00",
+        "expiry": null,
+        "url": "https://itad.link/018d9386-b04b-7194-9d66-ee76a81e6050/?app=tagwff"
+      }
+    ]
+  }
+]

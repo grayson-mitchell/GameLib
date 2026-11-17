@@ -1,0 +1,7 @@
+{
+  "status": 403,
+  "body": {
+    "status_code": 403,
+    "reason_phrase": "Missing api key"
+  }
+}

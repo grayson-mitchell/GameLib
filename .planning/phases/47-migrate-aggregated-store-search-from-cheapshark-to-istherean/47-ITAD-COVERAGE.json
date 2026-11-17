@@ -1,0 +1,603 @@
+{
+  "measuredAt": "2026-11-17T07:55:47.347Z",
+  "authStyle": "query:key",
+  "resultsParam": null,
+  "searchCounts": {
+    "results": 20,
+    "limit": 20
+  },
+  "lookupBatchCeiling": 1000,
+  "shops": {
+    "steam": {
+      "id": 61,
+      "title": "Steam",
+      "deals": 18977,
+      "games": 333868,
+      "update": "2026-11-17T08:51:52+01:00"
+    },
+    "gog": {
+      "id": 35,
+      "title": "GOG",
+      "deals": 6402,
+      "games": 12915,
+      "update": "2026-11-17T08:37:43+01:00"
+    },
+    "epic": {
+      "id": 16,
+      "title": "Epic Game Store",
+      "deals": 487,
+      "games": 15700,
+      "update": "2026-11-17T08:44:09+01:00"
+    }
+  },
+  "countries": {
+    "US": {
+      "status": 200,
+      "currencies": [
+        "USD"
+      ],
+      "identicalToUS": false,
+      "shopsWithDeals": 4,
+      "amountAgrees": {
+        "USD": true
+      },
+      "headers": {}
+    },
+    "AU": {
+      "status": 200,
+      "currencies": [
+        "AUD"
+      ],
+      "identicalToUS": false,
+      "shopsWithDeals": 4,
+      "amountAgrees": {
+        "AUD": true
+      },
+      "headers": {}
+    },
+    "BR": {
+      "status": 200,
+      "currencies": [
+        "BRL"
+      ],
+      "identicalToUS": false,
+      "shopsWithDeals": 4,
+      "amountAgrees": {
+        "BRL": true
+      },
+      "headers": {}
+    },
+    "CA": {
+      "status": 200,
+      "currencies": [
+        "CAD"
+      ],
+      "identicalToUS": false,
+      "shopsWithDeals": 4,
+      "amountAgrees": {
+        "CAD": true
+      },
+      "headers": {}
+    },
+    "CN": {
+      "status": 200,
+      "currencies": [
+        "CNY"
+      ],
+      "identicalToUS": false,
+      "shopsWithDeals": 3,
+      "amountAgrees": {
+        "CNY": true
+      },
+      "headers": {}
+    },
+    "CZ": {
+      "status": 200,
+      "currencies": [
+        "EUR"
+      ],
+      "identicalToUS": false,
+      "shopsWithDeals": 4,
+      "amountAgrees": {
+        "EUR": true
+      },
+      "headers": {}
+    },
+    "DK": {
+      "status": 200,
+      "currencies": [
+        "EUR"
+      ],
+      "identicalToUS": false,
+      "shopsWithDeals": 4,
+      "amountAgrees": {
+        "EUR": true
+      },
+      "headers": {}
+    },
+    "FI": {
+      "status": 200,
+      "currencies": [
+        "EUR"
+      ],
+      "identicalToUS": false,
+      "shopsWithDeals": 4,
+      "amountAgrees": {
+        "EUR": true
+      },
+      "headers": {}
+    },
+    "FR": {
+      "status": 200,
+      "currencies": [
+        "EUR"
+      ],
+      "identicalToUS": false,
+      "shopsWithDeals": 4,
+      "amountAgrees": {
+        "EUR": true
+      },
+      "headers": {}
+    },
+    "DE": {
+      "status": 200,
+      "currencies": [
+        "EUR"
+      ],
+      "identicalToUS": false,
+      "shopsWithDeals": 4,
+      "amountAgrees": {
+        "EUR": true
+      },
+      "headers": {}
+    },
+    "GR": {
+      "status": 200,
+      "currencies": [
+        "EUR"
+      ],
+      "identicalToUS": false,
+      "shopsWithDeals": 4,
+      "amountAgrees": {
+        "EUR": true
+      },
+      "headers": {}
+    },
+    "HU": {
+      "status": 200,
+      "currencies": [
+        "EUR"
+      ],
+      "identicalToUS": false,
+      "shopsWithDeals": 4,
+      "amountAgrees": {
+        "EUR": true
+      },
+      "headers": {}
+    },
+    "IL": {
+      "status": 200,
+      "currencies": [
+        "USD"
+      ],
+      "identicalToUS": true,
+      "shopsWithDeals": 4,
+      "amountAgrees": {
+        "USD": true
+      },
+      "headers": {}
+    },
+    "IT": {
+      "status": 200,
+      "currencies": [
+        "EUR"
+      ],
+      "identicalToUS": false,
+      "shopsWithDeals": 4,
+      "amountAgrees": {
+        "EUR": true
+      },
+      "headers": {}
+    },
+    "JP": {
+      "status": 200,
+      "currencies": [
+        "JPY"
+      ],
+      "identicalToUS": false,
+      "shopsWithDeals": 4,
+      "amountAgrees": {
+        "JPY": true
+      },
+      "headers": {}
+    },
+    "NL": {
+      "status": 200,
+      "currencies": [
+        "EUR"
+      ],
+      "identicalToUS": false,
+      "shopsWithDeals": 4,
+      "amountAgrees": {
+        "EUR": true
+      },
+      "headers": {}
+    },
+    "NO": {
+      "status": 200,
+      "currencies": [
+        "EUR"
+      ],
+      "identicalToUS": false,
+      "shopsWithDeals": 4,
+      "amountAgrees": {
+        "EUR": true
+      },
+      "headers": {}
+    },
+    "PL": {
+      "status": 200,
+      "currencies": [
+        "PLN"
+      ],
+      "identicalToUS": false,
+      "shopsWithDeals": 4,
+      "amountAgrees": {
+        "PLN": true
+      },
+      "headers": {}
+    },
+    "PT": {
+      "status": 200,
+      "currencies": [
+        "EUR"
+      ],
+      "identicalToUS": false,
+      "shopsWithDeals": 4,
+      "amountAgrees": {
+        "EUR": true
+      },
+      "headers": {}
+    },
+    "RO": {
+      "status": 200,
+      "currencies": [
+        "EUR"
+      ],
+      "identicalToUS": false,
+      "shopsWithDeals": 4,
+      "amountAgrees": {
+        "EUR": true
+      },
+      "headers": {}
+    },
+    "RU": {
+      "status": 200,
+      "currencies": [
+        "USD"
+      ],
+      "identicalToUS": true,
+      "shopsWithDeals": 4,
+      "amountAgrees": {
+        "USD": true
+      },
+      "headers": {}
+    },
+    "KR": {
+      "status": 200,
+      "currencies": [
+        "KRW"
+      ],
+      "identicalToUS": false,
+      "shopsWithDeals": 4,
+      "amountAgrees": {
+        "KRW": true
+      },
+      "headers": {}
+    },
+    "ES": {
+      "status": 200,
+      "currencies": [
+        "EUR"
+      ],
+      "identicalToUS": false,
+      "shopsWithDeals": 4,
+      "amountAgrees": {
+        "EUR": true
+      },
+      "headers": {}
+    },
+    "SE": {
+      "status": 200,
+      "currencies": [
+        "EUR"
+      ],
+      "identicalToUS": false,
+      "shopsWithDeals": 4,
+      "amountAgrees": {
+        "EUR": true
+      },
+      "headers": {}
+    },
+    "CH": {
+      "status": 200,
+      "currencies": [
+        "EUR"
+      ],
+      "identicalToUS": false,
+      "shopsWithDeals": 4,
+      "amountAgrees": {
+        "EUR": true
+      },
+      "headers": {}
+    },
+    "TW": {
+      "status": 200,
+      "currencies": [
+        "TWD"
+      ],
+      "identicalToUS": false,
+      "shopsWithDeals": 4,
+      "amountAgrees": {
+        "TWD": true
+      },
+      "headers": {}
+    },
+    "TR": {
+      "status": 200,
+      "currencies": [
+        "TRY"
+      ],
+      "identicalToUS": false,
+      "shopsWithDeals": 4,
+      "amountAgrees": {
+        "TRY": true
+      },
+      "headers": {}
+    },
+    "UA": {
+      "status": 200,
+      "currencies": [
+        "USD"
+      ],
+      "identicalToUS": true,
+      "shopsWithDeals": 4,
+      "amountAgrees": {
+        "USD": true
+      },
+      "headers": {}
+    },
+    "GB": {
+      "status": 200,
+      "currencies": [
+        "GBP"
+      ],
+      "identicalToUS": false,
+      "shopsWithDeals": 4,
+      "amountAgrees": {
+        "GBP": true
+      },
+      "headers": {}
+    },
+    "AR": {
+      "status": 200,
+      "currencies": [
+        "ARS"
+      ],
+      "identicalToUS": false,
+      "shopsWithDeals": 4,
+      "amountAgrees": {
+        "ARS": true
+      },
+      "headers": {}
+    },
+    "MD": {
+      "status": 200,
+      "currencies": [
+        "USD"
+      ],
+      "identicalToUS": true,
+      "shopsWithDeals": 4,
+      "amountAgrees": {
+        "USD": true
+      },
+      "headers": {}
+    },
+    "NZ": {
+      "status": 200,
+      "currencies": [
+        "NZD"
+      ],
+      "identicalToUS": false,
+      "shopsWithDeals": 4,
+      "amountAgrees": {
+        "NZD": true
+      },
+      "headers": {}
+    },
+    "IE": {
+      "status": 200,
+      "currencies": [
+        "EUR"
+      ],
+      "identicalToUS": false,
+      "shopsWithDeals": 4,
+      "amountAgrees": {
+        "EUR": true
+      },
+      "headers": {}
+    },
+    "AT": {
+      "status": 200,
+      "currencies": [
+        "EUR"
+      ],
+      "identicalToUS": false,
+      "shopsWithDeals": 4,
+      "amountAgrees": {
+        "EUR": true
+      },
+      "headers": {}
+    },
+    "BE": {
+      "status": 200,
+      "currencies": [
+        "EUR"
+      ],
+      "identicalToUS": false,
+      "shopsWithDeals": 4,
+      "amountAgrees": {
+        "EUR": true
+      },
+      "headers": {}
+    },
+    "MX": {
+      "status": 200,
+      "currencies": [
+        "USD"
+      ],
+      "identicalToUS": true,
+      "shopsWithDeals": 4,
+      "amountAgrees": {
+        "USD": true
+      },
+      "headers": {}
+    },
+    "IN": {
+      "status": 200,
+      "currencies": [
+        "INR"
+      ],
+      "identicalToUS": false,
+      "shopsWithDeals": 3,
+      "amountAgrees": {
+        "INR": true
+      },
+      "headers": {}
+    },
+    "ZA": {
+      "status": 200,
+      "currencies": [
+        "USD"
+      ],
+      "identicalToUS": true,
+      "shopsWithDeals": 4,
+      "amountAgrees": {
+        "USD": true
+      },
+      "headers": {}
+    },
+    "SG": {
+      "status": 200,
+      "currencies": [
+        "USD"
+      ],
+      "identicalToUS": true,
+      "shopsWithDeals": 4,
+      "amountAgrees": {
+        "USD": true
+      },
+      "headers": {}
+    },
+    "HK": {
+      "status": 200,
+      "currencies": [
+        "USD"
+      ],
+      "identicalToUS": true,
+      "shopsWithDeals": 4,
+      "amountAgrees": {
+        "USD": true
+      },
+      "headers": {}
+    },
+    "SA": {
+      "status": 200,
+      "currencies": [
+        "USD"
+      ],
+      "identicalToUS": true,
+      "shopsWithDeals": 4,
+      "amountAgrees": {
+        "USD": true
+      },
+      "headers": {}
+    },
+    "AE": {
+      "status": 200,
+      "currencies": [
+        "USD"
+      ],
+      "identicalToUS": true,
+      "shopsWithDeals": 4,
+      "amountAgrees": {
+        "USD": true
+      },
+      "headers": {}
+    }
+  },
+  "pricedCountries": [
+    "US",
+    "AU",
+    "BR",
+    "CA",
+    "CN",
+    "CZ",
+    "DK",
+    "FI",
+    "FR",
+    "DE",
+    "GR",
+    "HU",
+    "IT",
+    "JP",
+    "NL",
+    "NO",
+    "PL",
+    "PT",
+    "RO",
+    "KR",
+    "ES",
+    "SE",
+    "CH",
+    "TW",
+    "TR",
+    "GB",
+    "AR",
+    "NZ",
+    "IE",
+    "AT",
+    "BE",
+    "IN"
+  ],
+  "fallbackCountries": [
+    "IL",
+    "RU",
+    "UA",
+    "MD",
+    "MX",
+    "ZA",
+    "SG",
+    "HK",
+    "SA",
+    "AE"
+  ],
+  "stoppedOn429": null,
+  "amountSource": "amount",
+  "errorShapes": {
+    "noKey": {
+      "status": 403,
+      "body": {
+        "status_code": 403,
+        "reason_phrase": "Missing api key"
+      }
+    },
+    "badKey": {
+      "status": 403,
+      "body": {
+        "status_code": 403,
+        "reason_phrase": "Invalid or expired api key"
+      }
+    }
+  }
+}
