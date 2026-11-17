@@ -68,3 +68,23 @@ export const mixSrgb = (a: string, b: string, weightA: number): string => {
     '#' + mixed.map((channel) => channel.toString(16).padStart(2, '0')).join('')
   )
 }
+
+export interface Rgba {
+  r: number
+  g: number
+  b: number
+  a: number
+}
+
+// RED stubs: signatures only, deliberately wrong results (replaced in GREEN).
+export const parseColour = (_input: string): Rgba | null => null
+export const normaliseColour = (_input: string): string | null => null
+export const tryContrast = (
+  _fg: string | undefined,
+  _bg: string | undefined
+): number | null => null
+export const safeColour = (
+  _value: string | undefined,
+  _fallback: string
+): string => ''
+export const formatRatio = (_ratio: number): string => ''
