@@ -2206,9 +2206,12 @@ describeDarwinOnly(
         .replace(/^\s*\/\/.*$/gm, '')
       expect(raw).toContain('#define GL_MAX_CONNS 16')
       expect(src).toContain('MSG_DONTWAIT')
-      expect(src).toContain('SO_SNDTIMEO')
-      expect(src).toContain('SO_SNDBUF')
-      expect(raw).toContain('#define GL_SEND_TIMEOUT_USEC 250000')
+      // 78 WR-03: pin the setsockopt calls and the applied constant, not bare
+      // tokens a getsockopt or a commented-out #define would also satisfy.
+      expect(src).toMatch(/#define GL_SEND_TIMEOUT_USEC 250000\b/)
+      expect(src).toMatch(/\.tv_usec\s*=\s*GL_SEND_TIMEOUT_USEC/)
+      expect(src).toMatch(/setsockopt\([^;]*SO_SNDTIMEO/)
+      expect(src).toMatch(/setsockopt\([^;]*SO_SNDBUF/)
       expect(src).toContain('& ~O_NONBLOCK')
       expect(src).toMatch(/\bpoll\(/)
       expect(src).not.toMatch(/pthread_create|\bfork\(/)
