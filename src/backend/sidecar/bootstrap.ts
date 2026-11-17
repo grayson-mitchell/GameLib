@@ -93,6 +93,7 @@ import {
   clearOrphanedElectronToken
 } from '../storeManagers/steam/tokenStore'
 import { createSteamBottle } from '../storeManagers/steam/bottle'
+import { resumeAdoptionWatches } from '../storeManagers/steam/adoptionWatch'
 import { SidecarKeyringTokenStore } from './keyringTokenStore'
 import {
   createSidecarHumbleSecretStore,
@@ -354,6 +355,7 @@ export const BOOT_STEP_NAMES = [
   'protocol-url-handler',
   'steamcm-configure',
   'mac-steam-online-restore',
+  'steam-adoption-resume',
   'secret-stores',
   'orphaned-token-cleanup',
   'online-monitor',
@@ -2853,6 +2855,27 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         restoreOwedMacSteamOnlineAtBoot({
           requestRustInvoke: requireHost(state).requestRustInvoke,
           configured: state.steamCmConfigured
+        })
+      }
+    },
+    {
+      name: 'steam-adoption-resume',
+      // Phase 81 (D-07): Rust's adoption watch list is in memory, so every stored pending-adoption
+      // record is re-registered once per boot (a record whose manifest is gone is cleared instead).
+      // rustInvoke is bounded by RUST_INVOKE_TIMEOUT_MS and this makes one invoke per stored record,
+      // so it is bounded boot work (sidecar exit contract, half 2); no timer or handle is created and
+      // every rejection is caught. It must run after 'rpc-server' (requestRustInvoke writes frames).
+      run: (_ctx, _io, state) => {
+        const { host, stores, config } = requireServices(state)
+        void resumeAdoptionWatches({
+          requestRustInvoke: host.requestRustInvoke,
+          stores,
+          config
+        }).catch((err: unknown) => {
+          logWarning(
+            `[Steam] adoption watch resume failed: ${String(err)}`,
+            LogPrefix.Steam
+          )
         })
       }
     },

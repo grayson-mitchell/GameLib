@@ -86,12 +86,12 @@ export function recordPendingAdoption(
   store.set(appId, record)
 }
 
-export function readPendingAdoption(
-  appId: string,
-  store: PendingAdoptionStore
+/** Validates one stored value; undefined when it is not a well-formed pending-adoption record. */
+function parsePendingAdoption(
+  value: unknown
 ): PendingAdoptionRecord | undefined {
   try {
-    const v = store.get(appId) as Partial<PendingAdoptionRecord> | undefined
+    const v = value as Partial<PendingAdoptionRecord> | undefined
     if (!v || typeof v !== 'object') return undefined
     const baseline = v.baseline as Partial<AcfSnapshot> | null | undefined
     if (
@@ -115,6 +115,32 @@ export function readPendingAdoption(
   } catch {
     return undefined
   }
+}
+
+export function readPendingAdoption(
+  appId: string,
+  store: PendingAdoptionStore
+): PendingAdoptionRecord | undefined {
+  try {
+    return parsePendingAdoption(store.get(appId))
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * Every stored entry that passes the same validation as readPendingAdoption, as [appId, record].
+ * Invalid entries are skipped, never thrown on (T-81-07).
+ */
+export function listPendingAdoptions(
+  store: PendingAdoptionStore & { entries(): Array<[string, unknown]> }
+): Array<[string, PendingAdoptionRecord]> {
+  const out: Array<[string, PendingAdoptionRecord]> = []
+  for (const [appId, value] of store.entries()) {
+    const record = parsePendingAdoption(value)
+    if (record) out.push([appId, record])
+  }
+  return out
 }
 
 export function clearPendingAdoption(

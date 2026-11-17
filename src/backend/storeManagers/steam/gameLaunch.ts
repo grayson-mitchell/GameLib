@@ -23,11 +23,11 @@ import {
   createRestartDeps,
   readAcfSnapshot,
   readPendingAdoption,
-  clearPendingAdoption,
   pendingAdoptionStoreFrom,
   decidePlayAdoption,
   restartMacSteamForAdoption
 } from './macSteamAdoption'
+import { clearAndUnwatchPendingAdoption } from './adoptionWatch'
 import { killBridgeBottleWineServer } from './bridgeBottleLifecycle'
 import {
   getBridgeBottleSettings,
@@ -218,7 +218,7 @@ export async function launch(
         currentAcf: await readAcfSnapshot(steamGame.deps, record.manifestPath)
       })
       if (decision === 'clear-and-launch') {
-        clearPendingAdoption(steamGame.appId, adoptionStore)
+        clearAndUnwatchPendingAdoption(steamGame.deps, steamGame.appId)
       } else if (decision === 'unknown') {
         // WR-01 (75 review): never quit Steam on an unread ACF; record kept.
         logWarning(
@@ -240,7 +240,7 @@ export async function launch(
           })
         )
         if (outcome.kind === 'relaunched') {
-          clearPendingAdoption(steamGame.appId, adoptionStore)
+          clearAndUnwatchPendingAdoption(steamGame.deps, steamGame.appId)
           watchSteamLaunch(steamGame.deps, steamGame.appId)
           return true
         }

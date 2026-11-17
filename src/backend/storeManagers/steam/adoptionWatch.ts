@@ -9,6 +9,7 @@
  *
  * Exit contract: no timers, no handles, no work at import.
  */
+import { existsSync } from 'node:fs'
 import type { GlobalConfigSlice } from 'backend/config'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import { logWarning, LogPrefix } from 'backend/logger'
@@ -21,6 +22,7 @@ import { isSteamExperimentalInstallAppEnabled } from './experimentalInstallAppSe
 import type { SteamStoresDeps } from './library/installRoot'
 import {
   clearPendingAdoption,
+  listPendingAdoptions,
   pendingAdoptionStoreFrom,
   recordPendingAdoption,
   type PendingAdoptionRecord
@@ -59,12 +61,12 @@ function logInvokeFailure(
   )
 }
 
-/** Registers one record with the Rust watch. A rejected invoke is logged and swallowed (D-10). */
-export async function watchPendingAdoption(
+/** Registers one record with the Rust watch; true when Rust accepted it. A rejection is logged (D-10). */
+async function watchPendingAdoption(
   deps: AdoptionWatchDeps,
   appId: string,
   record: PendingAdoptionRecord
-): Promise<void> {
+): Promise<boolean> {
   try {
     await invokeSteamPoll(
       deps,
@@ -75,8 +77,10 @@ export async function watchPendingAdoption(
         isSteamExperimentalInstallAppEnabled(deps.config)
       )
     )
+    return true
   } catch (err) {
     logInvokeFailure('watch', RUST_STEAMPOLL_ADOPTION_WATCH, appId, err)
+    return false
   }
 }
 
@@ -136,4 +140,38 @@ export async function readSteamAdoption(
     logInvokeFailure('read', RUST_STEAMPOLL_ADOPTION_READ, appId, err)
     return null
   }
+}
+
+/**
+ * Re-registers every stored record with the Rust watch (sidecar boot; Rust's list is in memory).
+ * A record whose manifest file no longer exists is cleared instead (T-81-07); an invalid entry is
+ * ignored. Resolves the number of records watched and never rejects: a store that cannot be
+ * listed answers 0, and a failed watch invoke is swallowed with its record kept (D-10).
+ */
+export async function resumeAdoptionWatches(
+  deps: AdoptionWatchDeps
+): Promise<number> {
+  let stored: ReturnType<typeof listPendingAdoptions>
+  try {
+    stored = listPendingAdoptions(
+      pendingAdoptionStoreFrom(deps) as ReturnType<
+        typeof pendingAdoptionStoreFrom
+      > & { entries(): Array<[string, unknown]> }
+    )
+  } catch (err) {
+    logWarning(
+      `[Steam] could not list pending adoptions at boot: ${String(err)}`,
+      LogPrefix.Steam
+    )
+    return 0
+  }
+  let watched = 0
+  for (const [appId, record] of stored) {
+    if (!existsSync(record.manifestPath)) {
+      clearAndUnwatchPendingAdoption(deps, appId)
+      continue
+    }
+    if (await watchPendingAdoption(deps, appId, record)) watched += 1
+  }
+  return watched
 }

@@ -43,6 +43,15 @@ describe('boot steamcm wiring', () => {
     expect(at('steamcm-configure')).toBeLessThan(at('mac-steam-online-restore'))
   })
 
+  it('orders steam-adoption-resume directly after mac-steam-online-restore, after rpc-server (Phase 81 D-07)', () => {
+    const { BOOT_STEP_NAMES } = load() as unknown as {
+      BOOT_STEP_NAMES: readonly string[]
+    }
+    const at = (n: string) => BOOT_STEP_NAMES.indexOf(n)
+    expect(at('steam-adoption-resume')).toBe(at('mac-steam-online-restore') + 1)
+    expect(at('steam-adoption-resume')).toBeGreaterThan(at('rpc-server'))
+  })
+
   it('configureSteamCm sends the app folder and reports success', async () => {
     const { configureSteamCm, logWarning } = load()
     const req = jest.fn().mockResolvedValue({})

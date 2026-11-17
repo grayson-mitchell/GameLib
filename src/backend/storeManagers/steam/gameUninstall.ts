@@ -26,10 +26,10 @@ import {
   probeMacSteamPid,
   readAcfSnapshot,
   readPendingAdoption,
-  clearPendingAdoption,
   pendingAdoptionStoreFrom,
   decidePlayAdoption
 } from './macSteamAdoption'
+import { clearAndUnwatchPendingAdoption } from './adoptionWatch'
 import { getBottleSteamappsDir } from './bottle'
 import { removePerGameBridgeBottle } from './bridgeBottleLifecycle'
 import {
@@ -161,10 +161,7 @@ export async function uninstall(
     // install polling. State is never optimistically flipped here (D-02).
     await startUninstallPollingAfterHandoff(steamGame)
     // quick 261029-ji2: a removed install has nothing left to adopt.
-    clearPendingAdoption(
-      steamGame.appId,
-      pendingAdoptionStoreFrom(steamGame.deps)
-    )
+    clearAndUnwatchPendingAdoption(steamGame.deps, steamGame.appId)
 
     return { stdout: '', stderr: '' }
   }
@@ -421,10 +418,7 @@ export async function uninstallNativeInGameLib(
   switch (decision.route) {
     case 'steam-uninstalled':
       await startUninstallPollingAfterHandoff(steamGame)
-      clearPendingAdoption(
-        steamGame.appId,
-        pendingAdoptionStoreFrom(steamGame.deps)
-      )
+      clearAndUnwatchPendingAdoption(steamGame.deps, steamGame.appId)
       return { stdout: '', stderr: '' }
     case 'fallback':
       logInfo(
@@ -527,10 +521,7 @@ export async function removeNativeInstallDirectly(
       'native'
     )
     if (result.status !== 'refused') {
-      clearPendingAdoption(
-        steamGame.appId,
-        pendingAdoptionStoreFrom(steamGame.deps)
-      )
+      clearAndUnwatchPendingAdoption(steamGame.deps, steamGame.appId)
       await pollUninstallOnce(steamGame.deps, steamGame.appId, 'native')
       return { stdout: '', stderr: '' }
     }

@@ -3,6 +3,9 @@
  * list fed from it. Driven through an in-memory store fake and a fake requestRustInvoke that records
  * channel and args; no module is mocked.
  */
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { initHeadless } from 'backend/logger'
 import {
   RUST_STEAMPOLL_ADOPTION_READ,
@@ -14,9 +17,14 @@ import {
   clearAndUnwatchPendingAdoption,
   readSteamAdoption,
   recordAndWatchPendingAdoption,
+  resumeAdoptionWatches,
   type AdoptionWatchDeps
 } from '../adoptionWatch'
-import type { PendingAdoptionRecord } from '../macSteamAdoption'
+import {
+  listPendingAdoptions,
+  readPendingAdoption,
+  type PendingAdoptionRecord
+} from '../macSteamAdoption'
 
 // The real logger needs a writer; HOME is redirected by the backend jest containment setup.
 beforeAll(() => initHeadless())
@@ -176,5 +184,103 @@ describe('readSteamAdoption', () => {
     await expect(
       readSteamAdoption(deps, '112100', record())
     ).resolves.toBeNull()
+  })
+})
+
+describe('listPendingAdoptions', () => {
+  test('returns only entries that pass the record validation', () => {
+    const { deps } = makeDeps({
+      seed: {
+        '112100': record(),
+        '5': { steamPid: -1 },
+        '6': 'junk',
+        '7': { ...record(), manifestPath: 7 }
+      }
+    })
+    const store = (
+      deps.stores.steam as unknown as {
+        steamPendingAdoptionStore: Parameters<typeof listPendingAdoptions>[0]
+      }
+    ).steamPendingAdoptionStore
+    expect(listPendingAdoptions(store).map(([id]) => id)).toEqual(['112100'])
+    expect(readPendingAdoption('112100', store)).toEqual(record())
+  })
+})
+
+describe('resumeAdoptionWatches', () => {
+  let dir: string
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'adoption-resume-'))
+  })
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true })
+  })
+
+  function manifestIn(name: string): string {
+    const p = join(dir, name)
+    writeFileSync(p, '"AppState" {}')
+    return p
+  }
+
+  test('watches each valid record whose manifest exists and resolves the count', async () => {
+    const a = manifestIn('appmanifest_1.acf')
+    const b = manifestIn('appmanifest_2.acf')
+    const { deps, calls, store } = makeDeps({
+      seed: { '1': record(a), '2': record(b) }
+    })
+    await expect(resumeAdoptionWatches(deps)).resolves.toBe(2)
+    expect(calls.map((c) => c.channel)).toEqual([
+      RUST_STEAMPOLL_ADOPTION_WATCH,
+      RUST_STEAMPOLL_ADOPTION_WATCH
+    ])
+    expect(store.size).toBe(2)
+  })
+
+  test('clears a record whose manifest is gone and does not watch it', async () => {
+    const { deps, calls, store } = makeDeps({
+      seed: { '1': record(join(dir, 'appmanifest_gone.acf')) }
+    })
+    await expect(resumeAdoptionWatches(deps)).resolves.toBe(0)
+    await flush()
+    expect(store.has('1')).toBe(false)
+    expect(calls.map((c) => c.channel)).toEqual([
+      RUST_STEAMPOLL_ADOPTION_UNWATCH
+    ])
+  })
+
+  test('ignores invalid entries', async () => {
+    const { deps, calls, store } = makeDeps({
+      seed: { '9': { steamPid: 'x' }, '8': null }
+    })
+    await expect(resumeAdoptionWatches(deps)).resolves.toBe(0)
+    expect(calls).toEqual([])
+    expect(store.size).toBe(2)
+  })
+
+  test('never rejects when a watch invoke rejects; the record is kept', async () => {
+    const a = manifestIn('appmanifest_3.acf')
+    const { deps, store } = makeDeps({
+      seed: { '3': record(a) },
+      reply: () => new Error('timeout')
+    })
+    await expect(resumeAdoptionWatches(deps)).resolves.toBe(0)
+    expect(store.has('3')).toBe(true)
+  })
+
+  test('never rejects when the store cannot be listed', async () => {
+    const { deps } = makeDeps()
+    const broken = {
+      ...deps,
+      stores: {
+        steam: {
+          steamPendingAdoptionStore: {
+            entries: () => {
+              throw new Error('disk')
+            }
+          }
+        }
+      }
+    } as unknown as AdoptionWatchDeps
+    await expect(resumeAdoptionWatches(broken)).resolves.toBe(0)
   })
 })
