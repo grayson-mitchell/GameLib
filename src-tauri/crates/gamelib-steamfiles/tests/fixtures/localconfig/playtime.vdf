@@ -1,0 +1,57 @@
+"UserLocalConfigStore"
+{
+	"software"
+	{
+		"valve"
+		{
+			"Steam"
+			{
+				"Apps"
+				{
+					"10"
+					{
+						"Playtime"		"120"
+						"LastPlayed"		"1700000000"
+					}
+					"20"
+					{
+						"playtime"		"5"
+						"lastplayed"		"1600000000"
+						"Playtime2wks"		"999"
+					}
+					"30"
+					{
+						"LastPlayed"		"1650000000"
+					}
+					"40"
+					{
+						"PLAYTIME"		"77"
+					}
+					"50"
+					{
+						"Playtime2wks"		"10"
+						"PlaytimeDisconnected"		"20"
+					}
+					"60"
+					{
+						"Other"		"x"
+					}
+					"abc"
+					{
+						"Playtime"		"5"
+					}
+					"70"
+					{
+						"Playtime"		"-3"
+						"LastPlayed"		"notanumber"
+					}
+					"80"
+					{
+						"Playtime"		"99999999999999999999999"
+						"LastPlayed"		"12"
+					}
+				}
+			}
+		}
+	}
+}

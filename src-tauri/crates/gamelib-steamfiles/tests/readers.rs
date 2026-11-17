@@ -384,3 +384,53 @@ fn results_serialize_camel_case() {
     let j = serde_json::to_value(LocalConfigBetaKeyResult { beta_key: None }).unwrap();
     assert!(j.get("betaKey").is_some());
 }
+
+#[test]
+fn localconfig_path_for_derives_account_id() {
+    let root = Path::new("/s");
+    assert_eq!(
+        localconfig_path_for(root, 76561198000000001),
+        Some(PathBuf::from("/s/userdata/39734273/config/localconfig.vdf"))
+    );
+    assert_eq!(localconfig_path_for(root, STEAM_ID64_BASE), None);
+    assert_eq!(localconfig_path_for(root, 5), None);
+    assert_eq!(
+        localconfig_path_for(root, STEAM_ID64_BASE + (1u64 << 32)),
+        None
+    );
+}
+
+#[test]
+fn playtime_reader_reads_fixture() {
+    let m = read_localconfig_playtime(&fx("localconfig/playtime.vdf"));
+    let lp = |p, l| LocalPlaytime {
+        playtime_minutes: p,
+        last_played: l,
+    };
+    assert_eq!(m.get(&10), Some(&lp(Some(120), Some(1700000000))));
+    assert_eq!(m.get(&20), Some(&lp(Some(5), Some(1600000000))));
+    assert_eq!(m.get(&30), Some(&lp(None, Some(1650000000))));
+    assert_eq!(m.get(&40), Some(&lp(Some(77), None)));
+    assert!(!m.contains_key(&50));
+    assert!(!m.contains_key(&60));
+    assert!(!m.contains_key(&70));
+    assert_eq!(m.get(&80), Some(&lp(None, Some(12))));
+    assert_eq!(m.len(), 5);
+}
+
+#[test]
+fn playtime_reader_fail_soft() {
+    assert!(read_localconfig_playtime(&fx("localconfig/none.vdf")).is_empty());
+    assert!(read_localconfig_playtime(&fx("localconfig/missing.vdf")).is_empty());
+    let d = tempfile::tempdir().unwrap();
+    let p = d.path().join("localconfig.vdf");
+    std::fs::write(&p, "\"UserLocalConfigStore\"\n{\n\"Software\"\n{\n").unwrap();
+    assert!(read_localconfig_playtime(&p).is_empty());
+}
+
+#[test]
+fn playtime_reader_rejects_over_cap() {
+    let p = fx("localconfig/playtime.vdf");
+    assert!(!read_localconfig_playtime_capped(&p, 1 << 20).is_empty());
+    assert!(read_localconfig_playtime_capped(&p, 16).is_empty());
+}

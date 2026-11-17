@@ -3,7 +3,8 @@
 
 use crate::kv_text::{self, Limits, MergedMap, MergedValue, Pair, Value};
 use serde::Serialize;
-use std::path::Path;
+use std::collections::BTreeMap;
+use std::path::{Path, PathBuf};
 
 pub const MAX_VALVE_MANIFEST_BYTES: u64 = 512 * 1024;
 const MAX_VALVE_PACKAGE_BYTES: u64 = 200 * 1024 * 1024;
@@ -386,6 +387,101 @@ pub fn read_localconfig_beta_key(path: &Path, app_id: &str) -> LocalConfigBetaKe
     LocalConfigBetaKeyResult {
         beta_key: localconfig_beta_key(path, app_id),
     }
+}
+
+/// SteamID64 of account id 0 (the individual-universe base).
+pub const STEAM_ID64_BASE: u64 = 76561197960265728;
+
+/// Size cap for the playtime read of localconfig.vdf. A real Mac Steam file measured about 34 MiB
+/// (2026-11-17), so the 64 MiB `Limits::local_file()` leaves too little headroom; the parse uses
+/// `Limits { max_bytes: LOCALCONFIG_PLAYTIME_MAX_BYTES as usize, max_depth: 64 }`.
+pub const LOCALCONFIG_PLAYTIME_MAX_BYTES: u64 = 128 * 1024 * 1024;
+
+const LOCALCONFIG_PLAYTIME_MAX_ENTRIES: usize = 200_000;
+
+/// Per-app playtime from localconfig.vdf: minutes and unix seconds, each independently optional.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct LocalPlaytime {
+    pub playtime_minutes: Option<i64>,
+    pub last_played: Option<i64>,
+}
+
+/// `<root>/userdata/<accountId>/config/localconfig.vdf` for a SteamID64; None when the id is not
+/// a valid individual account (never resolves to the `0` directory). Pure, no filesystem access.
+pub fn localconfig_path_for(steam_root: &Path, steam_id64: u64) -> Option<PathBuf> {
+    let diff = steam_id64.checked_sub(STEAM_ID64_BASE)?;
+    let account = u32::try_from(diff).ok().filter(|a| *a > 0)?;
+    Some(
+        steam_root
+            .join("userdata")
+            .join(account.to_string())
+            .join("config")
+            .join("localconfig.vdf"),
+    )
+}
+
+/// Fail-soft read of per-app `Playtime` / `LastPlayed` from localconfig.vdf. Every failure is an
+/// empty map.
+pub fn read_localconfig_playtime(path: &Path) -> BTreeMap<u32, LocalPlaytime> {
+    read_localconfig_playtime_capped(path, LOCALCONFIG_PLAYTIME_MAX_BYTES)
+}
+
+#[doc(hidden)]
+pub fn read_localconfig_playtime_capped(path: &Path, cap: u64) -> BTreeMap<u32, LocalPlaytime> {
+    localconfig_playtime(path, cap).unwrap_or_default()
+}
+
+fn playtime_field(app: &[Pair], key: &str) -> Option<i64> {
+    match &kv_text::find(app, key)?.value {
+        Value::Str(s) => s.decoded().trim().parse::<i64>().ok().filter(|v| *v >= 0),
+        Value::Map(_) => None,
+    }
+}
+
+fn localconfig_playtime(path: &Path, cap: u64) -> Option<BTreeMap<u32, LocalPlaytime>> {
+    if std::fs::metadata(path).ok()?.len() > cap {
+        return None;
+    }
+    let bytes = std::fs::read(path).ok()?;
+    if bytes.len() as u64 > cap {
+        return None;
+    }
+    let limits = Limits {
+        max_bytes: cap as usize,
+        max_depth: 64,
+    };
+    let root = kv_text::parse(&bytes, &limits).ok()?;
+    let mut cur: &[Pair] = &root;
+    for key in ["UserLocalConfigStore", "Software", "Valve", "Steam", "apps"] {
+        match &kv_text::find(cur, key)?.value {
+            Value::Map(m) => cur = m,
+            Value::Str(_) => return None,
+        }
+    }
+    let mut out = BTreeMap::new();
+    for pair in cur {
+        if out.len() >= LOCALCONFIG_PLAYTIME_MAX_ENTRIES {
+            break;
+        }
+        let key = pair.key.decoded();
+        if key.is_empty() || !key.bytes().all(|b| b.is_ascii_digit()) {
+            continue;
+        }
+        let Ok(app_id) = key.parse::<u32>() else {
+            continue;
+        };
+        let Value::Map(app) = &pair.value else {
+            continue;
+        };
+        let entry = LocalPlaytime {
+            playtime_minutes: playtime_field(app, "Playtime"),
+            last_played: playtime_field(app, "LastPlayed"),
+        };
+        if entry.playtime_minutes.is_some() || entry.last_played.is_some() {
+            out.insert(app_id, entry);
+        }
+    }
+    Some(out)
 }
 
 fn localconfig_beta_key(path: &Path, app_id: &str) -> Option<String> {
