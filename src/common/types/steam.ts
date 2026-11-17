@@ -247,8 +247,13 @@ export interface SteamRequestNoticePayload {
     | 'uninstall-steam-error'
     | 'uninstall-check-failed'
     | 'uninstall-failed'
+    | 'adopt-restart-game-running'
+    | 'adopt-restart-busy'
+    | 'adopt-restart-quit-timeout'
   /** only for uninstall-steam-error */
   code?: number
+  /** only for adopt-restart-* kinds: the backend's direct-launch verdict applies (Phase 81 D-05) */
+  launchWithoutSteam?: boolean
   seq: number
 }
 

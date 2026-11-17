@@ -15,9 +15,7 @@
  *
  * Exit contract: no timers or handles of its own; the restart sleeps run on the unref'd clock.
  */
-import i18next from 'i18next'
 import { isMac, isWindows } from 'backend/constants/environment'
-import { notify } from 'backend/dialog/dialog'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { sendGameStatusUpdate } from 'backend/utils'
 import {
@@ -25,7 +23,9 @@ import {
   readSteamAdoption
 } from './adoptionWatch'
 import { buildSteamProtocolUrl } from './gameProtocolUrl'
+import { noticeSeq } from './noticeSeq'
 import type SteamGame from './games'
+import type { SteamRequestNoticePayload } from 'common/types/steam'
 import {
   createRestartDeps,
   decidePlayAdoption,
@@ -36,6 +36,11 @@ import {
   restartSteamForAdoption
 } from './macSteamAdoption'
 import { watchSteamLaunch } from './steamLaunchedDeps'
+
+type AdoptRestartNoticeKind = Extract<
+  SteamRequestNoticePayload['kind'],
+  `adopt-restart-${string}`
+>
 
 /**
  * 'proceed': the caller goes on with its plain launch. 'launched': Steam was restarted and
@@ -133,29 +138,23 @@ export async function gatePlayOnAdoption(
 
   // Refuse rather than fall back to a plain launch: an unadopted install in a running Steam
   // opens the install dialog (the failure being removed), and quitting would end the user's game
-  // session. Steam is never killed; the record stays pending (D-05).
-  const game = steamGame.getGameInfo().title
-  const body =
+  // session. Steam is never killed; the record stays pending (D-05). The refusal is an in-app
+  // notice (the renderer maps the closed kind to today's gamelib:steam.adoptRestart.* copy).
+  const kind: AdoptRestartNoticeKind =
     outcome.kind === 'game-running'
-      ? i18next.t(
-          'gamelib:steam.adoptRestart.gameRunning',
-          'Quit the game running in Steam, then press Play to finish setting up {{game}}.',
-          { game }
-        )
+      ? 'adopt-restart-game-running'
       : outcome.kind === 'steam-busy'
-        ? i18next.t(
-            'gamelib:steam.adoptRestart.busy',
-            'Steam is busy with a GameLib sign-in. Try Play again in a moment.'
-          )
-        : i18next.t(
-            'gamelib:steam.adoptRestart.quitTimeout',
-            "Steam didn't quit, so {{game}} couldn't be set up. Quit Steam and press Play again.",
-            { game }
-          )
+        ? 'adopt-restart-busy'
+        : 'adopt-restart-quit-timeout'
   logWarning(
     `SteamGame: Play for ${appId} not launched (${outcome.kind}); pending adoption kept`,
     LogPrefix.Steam
   )
-  notify(deps, { title: game, body })
+  deps.sendFrontendMessage('steamRequestNotice', {
+    appId,
+    title: deps.steamSession.libraryState.library.get(appId)?.title ?? '',
+    kind,
+    seq: await noticeSeq(steamGame)
+  })
   return 'refused'
 }

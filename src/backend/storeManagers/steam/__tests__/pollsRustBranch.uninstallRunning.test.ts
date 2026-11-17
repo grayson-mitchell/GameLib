@@ -4,7 +4,7 @@ import {
   startUninstallPolling,
   stopUninstallPolling
 } from '../library/uninstallPolling'
-import { noticeSeq } from '../gameUninstall'
+import { noticeSeq } from '../noticeSeq'
 import {
   readMacRunningAppId,
   readRunningAppId,

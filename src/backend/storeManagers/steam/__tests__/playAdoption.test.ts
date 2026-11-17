@@ -11,6 +11,7 @@ import { initHeadless } from 'backend/logger'
 import {
   RUST_STEAMFILES_READ_ACF,
   RUST_STEAMPOLL_ADOPTION_READ,
+  RUST_STEAMPOLL_NEXT_NOTICE_SEQ,
   RUST_STEAMPOLL_ADOPTION_UNWATCH,
   RUST_STEAMPOLL_READ_RUNNING_APP_ID
 } from 'common/types/sidecarTransport'
@@ -154,6 +155,9 @@ function harness(options: {
         const r = options.adoptionRead ?? reading()
         return r instanceof Error ? Promise.reject(r) : Promise.resolve(r)
       }
+      if (channel === RUST_STEAMPOLL_NEXT_NOTICE_SEQ) {
+        return Promise.resolve(7)
+      }
       if (channel === RUST_STEAMPOLL_READ_RUNNING_APP_ID) {
         return Promise.resolve(options.runningAppId ?? 0)
       }
@@ -175,7 +179,13 @@ function harness(options: {
       }
     },
     sendFrontendMessage: jest.fn(),
-    appRuntime: {}
+    appRuntime: {},
+    steamSession: {
+      libraryState: {
+        library: new Map([[APP_ID, { title: 'Dota 2' }]])
+      }
+    },
+    steamInstallRuntime: { noticeSeq: { last: 0 } }
   }
   const game = {
     deps,
@@ -191,6 +201,15 @@ const stored = (h: Harness) =>
     set: () => undefined,
     delete: () => undefined
   })
+
+// Every steamRequestNotice push the gate sent (D-05: the refusal is an in-app notice).
+const noticesOf = (h: Harness) =>
+  (h.game.deps.sendFrontendMessage as jest.Mock).mock.calls
+    .filter((c) => c[0] === 'steamRequestNotice')
+    .map((c) => c[1])
+
+const rungameidOpened = (h: Harness) =>
+  h.openExternal.mock.calls.some(([url]) => String(url).includes('rungameid'))
 
 const unwatched = (h: Harness) =>
   h.rust.some((c) => c.channel === RUST_STEAMPOLL_ADOPTION_UNWATCH)
@@ -259,10 +278,16 @@ describe('gatePlayOnAdoption', () => {
     await expect(gatePlayOnAdoption(h.game, 'linux')).resolves.toBe('refused')
     expect(h.openExternal).not.toHaveBeenCalled()
     expect(stored(h)).toBeDefined()
-    expect(notify).toHaveBeenCalledWith(h.game.deps, {
-      title: 'Dota 2',
-      body: 'Quit the game running in Steam, then press Play to finish setting up {{game}}.'
-    })
+    expect(noticesOf(h)).toEqual([
+      {
+        appId: APP_ID,
+        title: 'Dota 2',
+        kind: 'adopt-restart-game-running',
+        seq: 7
+      }
+    ])
+    expect(notify).not.toHaveBeenCalled()
+    expect(rungameidOpened(h)).toBe(false)
   })
 
   test('Steam never exits within 30 s: refused, only steam://exit fired, never rungameid, record kept (D-05)', async () => {
@@ -277,7 +302,16 @@ describe('gatePlayOnAdoption', () => {
       ['steam://exit', { activate: false }]
     ])
     expect(stored(h)).toBeDefined()
-    expect(notify).toHaveBeenCalledTimes(1)
+    expect(noticesOf(h)).toEqual([
+      {
+        appId: APP_ID,
+        title: 'Dota 2',
+        kind: 'adopt-restart-quit-timeout',
+        seq: 7
+      }
+    ])
+    expect(notify).not.toHaveBeenCalled()
+    expect(rungameidOpened(h)).toBe(false)
   })
 
   test('macOS with a go-offline wrap owed: refused as busy, Steam untouched', async () => {
@@ -288,12 +322,11 @@ describe('gatePlayOnAdoption', () => {
     await expect(gatePlayOnAdoption(h.game, 'darwin')).resolves.toBe('refused')
     expect(h.openExternal).not.toHaveBeenCalled()
     expect(stored(h)).toBeDefined()
-    expect(notify).toHaveBeenCalledWith(
-      h.game.deps,
-      expect.objectContaining({
-        body: 'Steam is busy with a GameLib sign-in. Try Play again in a moment.'
-      })
-    )
+    expect(noticesOf(h)).toEqual([
+      { appId: APP_ID, title: 'Dota 2', kind: 'adopt-restart-busy', seq: 7 }
+    ])
+    expect(notify).not.toHaveBeenCalled()
+    expect(rungameidOpened(h)).toBe(false)
   })
 
   test('an adopted install clears the record and proceeds to a plain launch', async () => {

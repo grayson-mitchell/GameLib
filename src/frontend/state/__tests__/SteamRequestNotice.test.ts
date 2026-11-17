@@ -41,6 +41,9 @@ describe('SteamRequestNotice store', () => {
     ['uninstall-refused-running', undefined],
     ['uninstall-check-failed', undefined],
     ['uninstall-failed', undefined],
+    ['adopt-restart-game-running', undefined],
+    ['adopt-restart-busy', undefined],
+    ['adopt-restart-quit-timeout', undefined],
     ['uninstall-steam-error', 2]
   ] as const)('accepts kind %s', (kind, code) => {
     send(make({ kind, ...(code !== undefined ? { code } : {}) }))

@@ -15664,15 +15664,19 @@ describe('SteamGame — quick 261029-ji2 pending Steam adoption', () => {
           ReturnType<
             typeof import('../macSteamAdoption').restartSteamForAdoption
           >
-        >
+        >,
+        string
       ]
     >([
-      [{ kind: 'game-running', runningAppId: 4000 }],
-      [{ kind: 'steam-busy' }],
-      [{ kind: 'quit-timeout' }]
+      [
+        { kind: 'game-running', runningAppId: 4000 },
+        'adopt-restart-game-running'
+      ],
+      [{ kind: 'steam-busy' }, 'adopt-restart-busy'],
+      [{ kind: 'quit-timeout' }, 'adopt-restart-quit-timeout']
     ])(
-      'record + restart refused (%j): notifies, returns false, keeps the record, opens no rungameid',
-      async (outcome) => {
+      'record + restart refused (%j): pushes the in-app notice, returns false, keeps the record, opens no rungameid',
+      async (outcome, noticeKind) => {
         adoption().readPendingAdoption.mockReturnValue(RECORD)
         adoption().probeSteamPid.mockResolvedValue(123)
         adoption().decidePlayAdoption.mockReturnValue('restart')
@@ -15683,7 +15687,11 @@ describe('SteamGame — quick 261029-ji2 pending Steam adoption', () => {
         )
 
         expect(result).toBe(false)
-        expect(notifyMock).toHaveBeenCalledTimes(1)
+        expect(notifyMock).not.toHaveBeenCalled()
+        expect(sendFrontendMessage).toHaveBeenCalledWith(
+          'steamRequestNotice',
+          expect.objectContaining({ appId: APP_ID, kind: noticeKind })
+        )
         expect(adoption().clearPendingAdoption).not.toHaveBeenCalled()
         expect(shellOpenExternal).not.toHaveBeenCalled()
       }

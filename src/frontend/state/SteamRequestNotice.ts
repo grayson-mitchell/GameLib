@@ -24,7 +24,10 @@ const REQUEST_KINDS: ReadonlySet<string> = new Set([
   'uninstall-refused-running',
   'uninstall-steam-error',
   'uninstall-check-failed',
-  'uninstall-failed'
+  'uninstall-failed',
+  'adopt-restart-game-running',
+  'adopt-restart-busy',
+  'adopt-restart-quit-timeout'
 ])
 
 // Standalone so tests can simulate the push without mounting GlobalState.

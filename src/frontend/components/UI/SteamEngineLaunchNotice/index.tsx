@@ -61,13 +61,19 @@ type RequestKind =
   | 'uninstall-steam-error'
   | 'uninstall-check-failed'
   | 'uninstall-failed'
+  | 'adopt-restart-game-running'
+  | 'adopt-restart-busy'
+  | 'adopt-restart-quit-timeout'
 const REQUEST_KINDS: readonly string[] = [
   'install-not-started',
   'uninstall-not-started',
   'uninstall-refused-running',
   'uninstall-steam-error',
   'uninstall-check-failed',
-  'uninstall-failed'
+  'uninstall-failed',
+  'adopt-restart-game-running',
+  'adopt-restart-busy',
+  'adopt-restart-quit-timeout'
 ]
 interface ShownRequest {
   kind: RequestKind
@@ -711,6 +717,23 @@ export default function SteamEngineLaunchNotice() {
         return t(
           'steam.uninstall.failed',
           "Couldn't finish uninstalling {{game}}. Some files may remain; try uninstalling again.",
+          { game }
+        )
+      case 'adopt-restart-game-running':
+        return t(
+          'steam.adoptRestart.gameRunning',
+          'Quit the game running in Steam, then press Play to finish setting up {{game}}.',
+          { game }
+        )
+      case 'adopt-restart-busy':
+        return t(
+          'steam.adoptRestart.busy',
+          'Steam is busy with a GameLib sign-in. Try Play again in a moment.'
+        )
+      case 'adopt-restart-quit-timeout':
+        return t(
+          'steam.adoptRestart.quitTimeout',
+          "Steam didn't quit, so {{game}} couldn't be set up. Quit Steam and press Play again.",
           { game }
         )
     }

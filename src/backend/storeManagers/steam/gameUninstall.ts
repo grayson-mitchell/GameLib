@@ -10,7 +10,6 @@ import { isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { ExecResult } from 'common/types'
 import { RemoveArgs } from 'common/types/game_manager'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { RUST_STEAMPOLL_NEXT_NOTICE_SEQ } from 'common/types/sidecarTransport'
 import {
   startUninstallPolling,
   pollUninstallOnce
@@ -33,6 +32,7 @@ import {
   readSteamAdoption
 } from './adoptionWatch'
 import { hostPlatform } from './playAdoption'
+import { noticeSeq } from './noticeSeq'
 import { getBottleSteamappsDir } from './bottle'
 import { removePerGameBridgeBottle } from './bridgeBottleLifecycle'
 import {
@@ -186,44 +186,6 @@ export async function uninstall(
 }
 
 /**
- * quick 261108-anw: a delete errored (possibly partially). Push the in-app
- * retry notice and return `failed` so uninstallGameCallback keeps GameLib's
- * state and sends the single done. Title comes from the raw library Map, not
- * getGameInfo() (its fire-and-forget side effect is forbidden on this path).
- */
-/**
- * The next notice seq, from the Rust counter (steampoll_next_notice_seq).
- * Never rejects (80-REVIEW C-WR-03): a failure notice must still reach the
- * user when steampoll is unreachable. The fallback is the midpoint between
- * the highest seq seen and the next integer, so it is newer than every seq
- * already handed out here (the frontend drops an older or equal seq) and
- * never equal to, or ahead of, the next one Rust issues.
- */
-export async function noticeSeq(steamGame: SteamGame): Promise<number> {
-  // The highest seq handed out this boot lives on the boot-owned install runtime, not module state.
-  const holder = steamGame.deps.steamInstallRuntime.noticeSeq
-  try {
-    const seq = (await steamGame.deps.requestRustInvoke(
-      RUST_STEAMPOLL_NEXT_NOTICE_SEQ,
-      []
-    )) as number
-    if (typeof seq === 'number' && Number.isFinite(seq)) {
-      holder.last = Math.max(holder.last, seq)
-      return seq
-    }
-    throw new Error(`non-numeric notice seq ${String(seq)}`)
-  } catch (error) {
-    const fallback = (holder.last + Math.floor(holder.last) + 1) / 2
-    logWarning(
-      `SteamGame: notice seq read failed for appId ${steamGame.appId}, using local seq ${fallback}: ${String(error)}`,
-      LogPrefix.Steam
-    )
-    holder.last = fallback
-    return fallback
-  }
-}
-
-/**
  * Starts the uninstall poll after the uninstall was already handed to Steam.
  * The hand-off has happened, so a rejected invoke is logged, never reported
  * as a failed uninstall (80-REVIEW C-WR-03).
@@ -241,6 +203,12 @@ async function startUninstallPollingAfterHandoff(
   )
 }
 
+/**
+ * quick 261108-anw: a delete errored (possibly partially). Push the in-app
+ * retry notice and return `failed` so uninstallGameCallback keeps GameLib's
+ * state and sends the single done. Title comes from the raw library Map, not
+ * getGameInfo() (its fire-and-forget side effect is forbidden on this path).
+ */
 async function failUninstall(
   steamGame: SteamGame,
   stderr: string
