@@ -26,3 +26,9 @@ Out-of-scope discoveries logged by plan executors. Not fixed in the plan that fo
   runs `--test adoption --test app_state --test update`, which pass.
 - `RUSTDOCFLAGS="-D warnings" cargo doc -p gamelib-steampoll` fails on an unresolved
   `testing::RecordingHost` link in `lib.rs` line 2 (the `testing` module is cfg-gated). Pre-existing.
+
+## Found in 81-06 (2026-11-18)
+
+- `src/backend/__tests__/storeKinds.test.ts` ("the scanned name -> kind table equals EXPECTED_KINDS exactly")
+  fails: the scan finds `steam_direct_launch_verdict` (kind `cache`) that `EXPECTED_KINDS` does not list.
+  A store added outside this plan; 81-06 touches no store file.

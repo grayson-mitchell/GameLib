@@ -5,16 +5,16 @@ milestone_name: Foundations
 current_phase: 81
 current_phase_name: Unify the Steam restart hold into restart-on-Play
 status: executing
-stopped_at: Completed 81-05-PLAN.md
-last_updated: "2026-11-17T17:41:12.862Z"
+stopped_at: Completed 81-06-PLAN.md
+last_updated: "2026-11-17T17:52:03.175Z"
 last_activity: 2026-11-17
 last_activity_desc: Phase 81 execution started
-state_head: d2b64dc510a2b5110ee6c9afd5f205110a133f3c
+state_head: 34e39cf99cb17ca7ac035fc5d003e49769e57fcc
 progress:
   total_phases: 26
   completed_phases: 23
-  total_plans: 512
-  completed_plans: 496
+  total_plans: 519
+  completed_plans: 497
   percent: 88
 ---
 
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 ## Current Position
 
 Phase: 81 (Unify the Steam restart hold into restart-on-Play) — EXECUTING
-Plan: 6 of 20
+Plan: 7 of 20
 Status: Ready to execute
 Last activity: 2026-11-17 — Phase 81 execution started
 
@@ -279,6 +279,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 81 P04 | 40min | 2 tasks | 9 files |
 | Phase 81 P03 | 30min | 2 tasks | 8 files |
 | Phase 81 P05 | 25min | 2 tasks | 8 files |
+| Phase 81 P06 | 70min | 2 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -450,6 +451,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 81]: ADOPTION: InstallApp D-09 fallback fires once per record, only after a seen sign-out then sign-in still not 4 after 10 s
 - [Phase 81]: 81-03: watchPendingAdoption kept private (knip); boot step passes a narrow {requestRustInvoke, stores, config} slice
 - [Phase 81]: 81-05: capture_log_cursor puts the offset at the end of the last complete line; the Open Question 3 rule stays off with no prior count; pid probe runs every tick on every OS but only macOS reads a pid change as evidence
+- [Phase 81]: 81-06: probeSteamPid is the single pid probe (probeMacSteamPid private); the Play gate lives in playAdoption.ts with hostPlatform(); reading-first decision, darwin-only pid rule in the D-10 fallback
 
 ### Pending Todos
 
@@ -825,8 +827,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-17T17:41:09.598Z
-Stopped at: Completed 81-05-PLAN.md
+Last session: 2026-11-17T17:51:59.779Z
+Stopped at: Completed 81-06-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
