@@ -529,16 +529,32 @@ Plans:
 **Plans:** 10 plans
 
 Plans:
-
+**Wave 1**
 - [ ] 64-01-PLAN.md — Shared colour, resolver and contrast-floor modules lifted out of themeTokens.test.ts (D-16)
-- [ ] 64-02-PLAN.md — Built-in token seeds: flatten, generator, committed JSON, 27 core tokens
 - [ ] 64-03-PLAN.md — Awaited configStore write (sidecar:store-set-checked) and the customThemes key
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 64-02-PLAN.md — Built-in token seeds: flatten, generator, committed JSON, 27 core tokens
+
+**Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 64-04-PLAN.md — Custom theme model, applyTheme behind window.setTheme, store setters
+
+**Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 64-05-PLAN.md — Thumbnail and built-in gallery replacing the theme dropdown (THEME-01)
+
+**Wave 5** *(blocked on Wave 4 completion)*
 - [ ] 64-06-PLAN.md — Your themes group: Duplicate, Edit, Rename, Delete
+
+**Wave 6** *(blocked on Wave 5 completion)*
 - [ ] 64-07-PLAN.md — Theme editor: route, core token rows, alpha colour picker, live preview, Save
+
+**Wave 7** *(blocked on Wave 6 completion)*
 - [ ] 64-08-PLAN.md — Editor: contrast warnings, Advanced tokens, gradients, chips
+
+**Wave 8** *(blocked on Wave 7 completion)*
 - [ ] 64-09-PLAN.md — Editor: unsaved-changes prompt, save-failure notice, header Rename
+
+**Wave 9** *(blocked on Wave 8 completion)*
 - [ ] 64-10-PLAN.md — i18n baseline, full phase gate and live UAT on macOS
 
 ### Phase 65: Steam store manager decomposition, continued
