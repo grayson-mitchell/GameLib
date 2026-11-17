@@ -128,7 +128,7 @@ Not in scope:
 
 ### Windows/Linux arm
 - **D-14:** Run the spike todo
-  `2026-11-16-spike-steam-startup-and-sign-in-adoption-on-windows-linux.md` **before**
+  `2026-11-16-spike-steam-startup-and-sign-in-adoption-on-windows.md` and `2026-11-17-spike-steam-startup-and-sign-in-adoption-on-linux.md` **before**
   `/gsd-plan-phase 81`, on Windows first and then Linux. The planner then plans only the arm each
   OS gets. If the spike answers yes to its questions 1 and 5 on an OS, that OS gets restart-on-Play
   with the D-01–D-05 UX and the D-07 detection, using non-helper evidence from spike question 4.
@@ -169,7 +169,7 @@ Not in scope:
 - `.planning/todos/completed/2026-11-05-steam-restart-hold-brittle-discuss.md`: the absorbed
   todo. It holds the 261105-ord gate item 6 failure (appId 112100) and the boot re-arm
   observations.
-- `.planning/todos/pending/2026-11-16-spike-steam-startup-and-sign-in-adoption-on-windows-linux.md`:
+- `.planning/todos/pending/2026-11-16-spike-steam-startup-and-sign-in-adoption-on-windows.md` and `2026-11-17-spike-steam-startup-and-sign-in-adoption-on-linux.md`:
   must run before planning (D-14)
 - `.planning/todos/pending/2026-11-07-launch-steam-games-without-steam.md`: the D-05/D-06
   interaction
