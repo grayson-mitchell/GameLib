@@ -1,7 +1,7 @@
 {
   "baseCommit": "b5b5cad3fa2e822602d320b70788d87240fc056e",
   "baseVersion": "2.22.0",
-  "generatedAt": "2026-11-17T19:37:35.914Z",
+  "generatedAt": "2026-11-17T19:55:03.623Z",
   "generatedBy": "pnpm gen-i18n-gate-scope",
   "purpose": "A-17: the CI-readable input to the i18n scope staleness ratchet — every fork-touched src/frontend source file eligible for the hardcoded-string gate (D-17 deferrals already removed, exactly the operand the ratchet compares against), INCLUDING those not yet listed in i18nGateScope.json. Regenerate with `pnpm gen-i18n-gate-scope`.",
   "files": [
@@ -79,10 +79,13 @@
     "src/frontend/components/UI/SvgButton/index.tsx",
     "src/frontend/components/UI/TextInputField/index.tsx",
     "src/frontend/components/UI/TextInputWithIconField/index.tsx",
+    "src/frontend/components/UI/ThemeSelector/RenameThemeDialog.tsx",
     "src/frontend/components/UI/ThemeSelector/ThemeCard.tsx",
+    "src/frontend/components/UI/ThemeSelector/ThemeCardActions.tsx",
     "src/frontend/components/UI/ThemeSelector/ThemeGallery.tsx",
     "src/frontend/components/UI/ThemeSelector/ThemeThumbnail.tsx",
     "src/frontend/components/UI/ThemeSelector/index.tsx",
+    "src/frontend/components/UI/ThemeSelector/themeDialogs.ts",
     "src/frontend/components/UI/ThemeSelector/themeLabels.ts",
     "src/frontend/components/UI/ToggleSwitch/index.tsx",
     "src/frontend/components/UI/TwoColTableInput/index.tsx",
