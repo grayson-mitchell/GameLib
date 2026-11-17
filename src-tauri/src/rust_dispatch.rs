@@ -94,6 +94,8 @@ pub(crate) fn dispatch_rust_channel(
         RustInvokeChannel::SteampollAcfReadUpdateFromDir => rpc_steampoll_acf_read_update_from_dir(args),
         RustInvokeChannel::SteampollAcfRemoveCopy => rpc_steampoll_acf_remove_copy(args),
         RustInvokeChannel::SteampollAcfScanDownloading => rpc_steampoll_acf_scan_downloading(args),
+        RustInvokeChannel::SteampollAdoptionRead => rpc_steampoll_adoption_read(args),
+        RustInvokeChannel::SteampollAdoptionUnwatch => rpc_steampoll_adoption_unwatch(args),
         RustInvokeChannel::SteampollAdoptionWatch => rpc_steampoll_adoption_watch(args),
         RustInvokeChannel::SteampollBreadcrumbInstalledOnDisk => rpc_steampoll_breadcrumb_installed_on_disk(args),
         RustInvokeChannel::SteampollBridgeFinalized => rpc_steampoll_bridge_finalized(args),

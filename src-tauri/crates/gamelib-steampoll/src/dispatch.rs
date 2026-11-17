@@ -3,9 +3,9 @@
 //! unknown op, a missing facade, a wrong thread or a panic (`{op}:panic`, T-80-52).
 //!
 //! Threading: the shell calls `dispatch` on a worker thread, never from inside a tokio runtime
-//! (as `gamelib-steamcm` does). The two async ops (`steampoll_read_running_app_id`,
-//! `steampoll_mac_arch_verdict`) `block_on` the crate runtime and answer `{op}:wrong-thread`
-//! when called from inside a runtime.
+//! (as `gamelib-steamcm` does). The three async ops (`steampoll_read_running_app_id`,
+//! `steampoll_mac_arch_verdict`, `steampoll_adoption_read`) `block_on` the crate runtime and
+//! answer `{op}:wrong-thread` when called from inside a runtime.
 
 use crate::acf_copies::{
     enumerate_copies, find_other_manifests_with_installdir, remove_copy, scan_downloading_app_ids,
@@ -33,6 +33,8 @@ pub const OPS: &[&str] = &[
     "steampoll_acf_read_update_from_dir",
     "steampoll_acf_remove_copy",
     "steampoll_acf_scan_downloading",
+    "steampoll_adoption_read",
+    "steampoll_adoption_unwatch",
     "steampoll_adoption_watch",
     "steampoll_breadcrumb_installed_on_disk",
     "steampoll_bridge_finalized",
@@ -387,6 +389,19 @@ fn run_op(op: &str, args: &[Value]) -> Result<Value, String> {
         "steampoll_acf_scan_downloading" => {
             let a: RootsOnly = parse(op, args)?;
             out(op, scan_downloading_app_ids(&a.roots))
+        }
+        "steampoll_adoption_read" => {
+            let a: AdoptionWatchArgs = parse(op, args)?;
+            validate_watch_args(&a).map_err(|_| bad_args(op))?;
+            let f = configured()?;
+            // An error string, never a panic, so a caller can fail safe (D-10).
+            let reading = block_on(op, f.adoption.read(&a))?;
+            out(op, reading)
+        }
+        "steampoll_adoption_unwatch" => {
+            let a: AppOnly = parse(op, args)?;
+            numeric_app_id(op, &a.app_id)?;
+            out(op, configured()?.adoption.unwatch(&a.app_id))
         }
         "steampoll_adoption_watch" => {
             let a: AdoptionWatchArgs = parse(op, args)?;

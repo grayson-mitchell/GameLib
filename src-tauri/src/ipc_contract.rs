@@ -115,6 +115,8 @@ pub(crate) enum RustInvokeChannel {
     SteampollAcfReadUpdateFromDir,
     SteampollAcfRemoveCopy,
     SteampollAcfScanDownloading,
+    SteampollAdoptionRead,
+    SteampollAdoptionUnwatch,
     SteampollAdoptionWatch,
     SteampollBreadcrumbInstalledOnDisk,
     SteampollBridgeFinalized,
@@ -232,6 +234,8 @@ impl RustInvokeChannel {
         RustInvokeChannel::SteampollAcfReadUpdateFromDir,
         RustInvokeChannel::SteampollAcfRemoveCopy,
         RustInvokeChannel::SteampollAcfScanDownloading,
+        RustInvokeChannel::SteampollAdoptionRead,
+        RustInvokeChannel::SteampollAdoptionUnwatch,
         RustInvokeChannel::SteampollAdoptionWatch,
         RustInvokeChannel::SteampollBreadcrumbInstalledOnDisk,
         RustInvokeChannel::SteampollBridgeFinalized,
@@ -349,6 +353,8 @@ impl RustInvokeChannel {
             "steampoll_acf_read_update_from_dir" => Some(RustInvokeChannel::SteampollAcfReadUpdateFromDir),
             "steampoll_acf_remove_copy" => Some(RustInvokeChannel::SteampollAcfRemoveCopy),
             "steampoll_acf_scan_downloading" => Some(RustInvokeChannel::SteampollAcfScanDownloading),
+            "steampoll_adoption_read" => Some(RustInvokeChannel::SteampollAdoptionRead),
+            "steampoll_adoption_unwatch" => Some(RustInvokeChannel::SteampollAdoptionUnwatch),
             "steampoll_adoption_watch" => Some(RustInvokeChannel::SteampollAdoptionWatch),
             "steampoll_breadcrumb_installed_on_disk" => Some(RustInvokeChannel::SteampollBreadcrumbInstalledOnDisk),
             "steampoll_bridge_finalized" => Some(RustInvokeChannel::SteampollBridgeFinalized),
@@ -468,6 +474,8 @@ impl RustInvokeChannel {
             RustInvokeChannel::SteampollAcfReadUpdateFromDir => "steampoll_acf_read_update_from_dir",
             RustInvokeChannel::SteampollAcfRemoveCopy => "steampoll_acf_remove_copy",
             RustInvokeChannel::SteampollAcfScanDownloading => "steampoll_acf_scan_downloading",
+            RustInvokeChannel::SteampollAdoptionRead => "steampoll_adoption_read",
+            RustInvokeChannel::SteampollAdoptionUnwatch => "steampoll_adoption_unwatch",
             RustInvokeChannel::SteampollAdoptionWatch => "steampoll_adoption_watch",
             RustInvokeChannel::SteampollBreadcrumbInstalledOnDisk => "steampoll_breadcrumb_installed_on_disk",
             RustInvokeChannel::SteampollBridgeFinalized => "steampoll_bridge_finalized",
@@ -2199,6 +2207,43 @@ impl SteampollAcfScanDownloadingArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let first = args.first().ok_or_else(|| "steampoll_acf_scan_downloading:bad-args".to_string())?;
         serde_json::from_value(first.clone()).map_err(|_| "steampoll_acf_scan_downloading:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteampollAdoptionReadArgs {
+    #[serde(rename = "appId")]
+    pub(crate) app_id: String,
+    #[serde(rename = "manifestPath")]
+    pub(crate) manifest_path: String,
+    #[serde(rename = "baselineContent")]
+    pub(crate) baseline_content: String,
+    #[serde(rename = "recordedAtMs")]
+    pub(crate) recorded_at_ms: f64,
+    #[serde(rename = "steamPid")]
+    pub(crate) steam_pid: i64,
+    #[serde(rename = "installAppFallback")]
+    #[serde(default)]
+    pub(crate) install_app_fallback: Option<bool>,
+}
+
+impl SteampollAdoptionReadArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steampoll_adoption_read:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steampoll_adoption_read:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteampollAdoptionUnwatchArgs {
+    #[serde(rename = "appId")]
+    pub(crate) app_id: String,
+}
+
+impl SteampollAdoptionUnwatchArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steampoll_adoption_unwatch:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steampoll_adoption_unwatch:bad-args".to_string())
     }
 }
 

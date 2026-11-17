@@ -481,9 +481,9 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     expect(matches.length).toBe(1)
   })
 
-  test('71-07 rust_dispatch.rs is a flat router: 113 one-line arms and no catch-all arm', () => {
+  test('71-07 rust_dispatch.rs is a flat router: 115 one-line arms and no catch-all arm', () => {
     const router = readTauriShellProductionFile('rust_dispatch.rs')
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(113)
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(115)
     expect(router).not.toContain('_ =>')
   })
 
@@ -785,6 +785,8 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       'steampoll_acf_read_update_from_dir',
       'steampoll_acf_remove_copy',
       'steampoll_acf_scan_downloading',
+      'steampoll_adoption_read',
+      'steampoll_adoption_unwatch',
       'steampoll_adoption_watch',
       'steampoll_breadcrumb_installed_on_disk',
       'steampoll_bridge_finalized',

@@ -14,6 +14,8 @@ export const STEAMPOLL_OPS = [
   'steampoll_acf_read_update_from_dir',
   'steampoll_acf_remove_copy',
   'steampoll_acf_scan_downloading',
+  'steampoll_adoption_read',
+  'steampoll_adoption_unwatch',
   'steampoll_adoption_watch',
   'steampoll_breadcrumb_installed_on_disk',
   'steampoll_bridge_finalized',
@@ -95,4 +97,17 @@ export interface PollStatus {
   }>
   uninstalls: string[]
   holding: string[]
+}
+
+/**
+ * @public `steampoll_adoption_read` result (serde camelCase; `Option` fields serialise as null).
+ * Consumed by the sidecar caller in 81-03.
+ */
+export interface AdoptionReading {
+  adopted: boolean
+  signedIn: boolean | null
+  steamRunning: boolean | null
+  helperState: number | null
+  /** `'acf'` or `'pid'` in 81-01; 81-04 and 81-05 add more. */
+  evidence: string | null
 }

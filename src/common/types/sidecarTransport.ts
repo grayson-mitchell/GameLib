@@ -604,6 +604,19 @@ export const RUST_STEAMPOLL_BREADCRUMB_INSTALLED_ON_DISK =
   'steampoll_breadcrumb_installed_on_disk' as const
 
 /**
+ * Rust-side channel name: Phase 81 steampoll op `steampoll_adoption_read`. Evaluates one pending adoption once, without registering a watch. Args as `steampoll_adoption_watch`.
+ * Resolves `{ adopted, signedIn, steamRunning, helperState, evidence }`. Bad args reject `steampoll_adoption_read:bad-args`; a call from inside a runtime rejects `steampoll_adoption_read:wrong-thread`.
+ */
+export const RUST_STEAMPOLL_ADOPTION_READ = 'steampoll_adoption_read' as const
+
+/**
+ * Rust-side channel name: Phase 81 steampoll op `steampoll_adoption_unwatch`. Stops watching one app. Args `{ appId }`.
+ * Resolves `true` when the app was watched, `false` otherwise. Bad args reject `steampoll_adoption_unwatch:bad-args`.
+ */
+export const RUST_STEAMPOLL_ADOPTION_UNWATCH =
+  'steampoll_adoption_unwatch' as const
+
+/**
  * Rust-side channel name: Phase 81 steampoll op `steampoll_adoption_watch`. Starts (or replaces) the Rust watch of one pending adoption. Args `{ appId, manifestPath, baselineContent, recordedAtMs, steamPid, installAppFallback? }`.
  * Resolves `true`. Bad args reject `steampoll_adoption_watch:bad-args`.
  */
@@ -1050,6 +1063,8 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_STEAMPOLL_ACF_READ_UPDATE_FROM_DIR,
   RUST_STEAMPOLL_ACF_REMOVE_COPY,
   RUST_STEAMPOLL_ACF_SCAN_DOWNLOADING,
+  RUST_STEAMPOLL_ADOPTION_READ,
+  RUST_STEAMPOLL_ADOPTION_UNWATCH,
   RUST_STEAMPOLL_ADOPTION_WATCH,
   RUST_STEAMPOLL_BREADCRUMB_INSTALLED_ON_DISK,
   RUST_STEAMPOLL_BRIDGE_FINALIZED,
@@ -1115,6 +1130,8 @@ export const RUST_STEAMPOLL_CHANNELS = [
   RUST_STEAMPOLL_ACF_READ_UPDATE_FROM_DIR,
   RUST_STEAMPOLL_ACF_REMOVE_COPY,
   RUST_STEAMPOLL_ACF_SCAN_DOWNLOADING,
+  RUST_STEAMPOLL_ADOPTION_READ,
+  RUST_STEAMPOLL_ADOPTION_UNWATCH,
   RUST_STEAMPOLL_ADOPTION_WATCH,
   RUST_STEAMPOLL_BREADCRUMB_INSTALLED_ON_DISK,
   RUST_STEAMPOLL_BRIDGE_FINALIZED,

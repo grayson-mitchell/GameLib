@@ -1,6 +1,6 @@
-//! Handlers for the 24 `steampoll_*` rustInvoke channels (Phase 80 plan 18). Each validates through
+//! Handlers for the 27 `steampoll_*` rustInvoke channels (Phase 80 plan 18, Phase 81 plan 02). Each validates through
 //! its generated Args struct then calls the Tauri-free `gamelib-steampoll` dispatch on the calling
-//! worker thread (the two async ops block on the crate's own runtime and answer `wrong-thread` if
+//! worker thread (the three async ops block on the crate's own runtime and answer `wrong-thread` if
 //! called from inside one). Nothing here formats an argument, path or title into a log line (T-28-04).
 
 use super::*;
@@ -44,6 +44,16 @@ pub(crate) fn rpc_steampoll_acf_remove_copy(args: &[Value]) -> Result<Value, Str
 pub(crate) fn rpc_steampoll_acf_scan_downloading(args: &[Value]) -> Result<Value, String> {
     SteampollAcfScanDownloadingArgs::from_args(args)?;
     gamelib_steampoll::dispatch("steampoll_acf_scan_downloading", args)
+}
+
+pub(crate) fn rpc_steampoll_adoption_read(args: &[Value]) -> Result<Value, String> {
+    SteampollAdoptionReadArgs::from_args(args)?;
+    gamelib_steampoll::dispatch("steampoll_adoption_read", args)
+}
+
+pub(crate) fn rpc_steampoll_adoption_unwatch(args: &[Value]) -> Result<Value, String> {
+    SteampollAdoptionUnwatchArgs::from_args(args)?;
+    gamelib_steampoll::dispatch("steampoll_adoption_unwatch", args)
 }
 
 pub(crate) fn rpc_steampoll_adoption_watch(args: &[Value]) -> Result<Value, String> {
@@ -755,6 +765,41 @@ mod tests {
         assert_eq!(
             SteampollAdoptionWatchArgs::from_args(&[]).unwrap_err(),
             "steampoll_adoption_watch:bad-args"
+        );
+    }
+
+    #[test]
+    fn adoption_read_and_unwatch_args_accept_the_zod_shaped_object() {
+        let read = SteampollAdoptionReadArgs::from_args(&[json!({
+            "appId": "1234",
+            "manifestPath": "/steam/steamapps/appmanifest_1234.acf",
+            "baselineContent": "x",
+            "recordedAtMs": 1.0,
+            "steamPid": 7
+        })])
+        .unwrap();
+        assert_eq!(read.steam_pid, 7);
+        assert_eq!(
+            SteampollAdoptionReadArgs::from_args(&[json!({"appId": "1"})]).unwrap_err(),
+            "steampoll_adoption_read:bad-args"
+        );
+        let unwatch = SteampollAdoptionUnwatchArgs::from_args(&[json!({"appId": "1234"})]).unwrap();
+        assert_eq!(unwatch.app_id, "1234");
+        assert_eq!(
+            SteampollAdoptionUnwatchArgs::from_args(&[json!({"appId": 5})]).unwrap_err(),
+            "steampoll_adoption_unwatch:bad-args"
+        );
+    }
+
+    #[test]
+    fn adoption_read_and_unwatch_reject_malformed_args_before_the_crate() {
+        assert_eq!(
+            rpc_steampoll_adoption_read(&[json!({"appId": "1234"})]).unwrap_err(),
+            "steampoll_adoption_read:bad-args"
+        );
+        assert_eq!(
+            rpc_steampoll_adoption_unwatch(&[json!({"appId": "1234", "extra": 1})]).unwrap_err(),
+            "steampoll_adoption_unwatch:bad-args"
         );
     }
 

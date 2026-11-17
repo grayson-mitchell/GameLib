@@ -447,3 +447,61 @@ fn adoption_watch_rejects_invalid_args_with_its_own_bad_args() {
         .watched_app_ids()
         .is_empty());
 }
+
+#[test]
+fn adoption_unwatch_answers_true_for_a_watched_app_and_false_otherwise() {
+    let _g = guard();
+    assert!(OPS.contains(&"steampoll_adoption_unwatch"));
+    let tmp = tempfile::tempdir().unwrap();
+    install(tmp.path());
+    ok("steampoll_adoption_watch", watch_args(tmp.path(), "1234"));
+    assert_eq!(
+        ok("steampoll_adoption_unwatch", json!({"appId": "1234"})),
+        json!(true)
+    );
+    assert_eq!(
+        ok("steampoll_adoption_unwatch", json!({"appId": "1234"})),
+        json!(false)
+    );
+    assert_eq!(
+        dispatch("steampoll_adoption_unwatch", &[json!({"appId": "1; rm"})]),
+        Err("steampoll_adoption_unwatch:bad-args".to_string())
+    );
+}
+
+#[test]
+fn adoption_read_answers_the_reading_shape_and_rejects_bad_args() {
+    let _g = guard();
+    assert!(OPS.contains(&"steampoll_adoption_read"));
+    let tmp = tempfile::tempdir().unwrap();
+    install(tmp.path());
+    let reading = ok("steampoll_adoption_read", watch_args(tmp.path(), "1234"));
+    assert_eq!(reading["adopted"], json!(false));
+    for key in ["signedIn", "steamRunning", "helperState", "evidence"] {
+        assert!(reading.get(key).is_some(), "{key} is in the reading");
+    }
+    // A read registers nothing.
+    assert!(facade::current()
+        .unwrap()
+        .adoption
+        .watched_app_ids()
+        .is_empty());
+    let bad = Err("steampoll_adoption_read:bad-args".to_string());
+    let mut relative = watch_args(tmp.path(), "1234");
+    relative["manifestPath"] = json!("steamapps/appmanifest_1234.acf");
+    assert_eq!(dispatch("steampoll_adoption_read", &[relative]), bad);
+    let mut unknown = watch_args(tmp.path(), "1234");
+    unknown["extra"] = json!(1);
+    assert_eq!(dispatch("steampoll_adoption_read", &[unknown]), bad);
+}
+
+#[tokio::test]
+async fn adoption_read_refuses_to_run_inside_a_runtime_without_panicking() {
+    let _g = guard();
+    let tmp = tempfile::tempdir().unwrap();
+    install(tmp.path());
+    assert_eq!(
+        dispatch("steampoll_adoption_read", &[watch_args(tmp.path(), "1234")]),
+        Err("steampoll_adoption_read:wrong-thread".to_string())
+    );
+}

@@ -274,6 +274,14 @@ export function mockedFsSteamFiles(
     steampoll_install_stop: () => undefined,
     steampoll_install_cancel_delegated: () => false,
     steampoll_adoption_watch: () => true,
+    steampoll_adoption_unwatch: () => true,
+    steampoll_adoption_read: () => ({
+      adopted: false,
+      signedIn: null,
+      steamRunning: null,
+      helperState: null,
+      evidence: null
+    }),
     steampoll_uninstall_start: () => undefined,
     steampoll_uninstall_stop: () => undefined,
     steampoll_bridge_finalized: () => undefined,
