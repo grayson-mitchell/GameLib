@@ -74,6 +74,17 @@ export interface SettingsState {
     sourceKey: string,
     copyName: (n: number | null) => string
   ) => DuplicateResult
+  renameCustomTheme: (
+    id: string,
+    name: string
+  ) => 'ok' | 'empty' | 'too-long' | 'taken' | 'not-found'
+  deleteCustomTheme: (
+    id: string
+  ) => { ok: true; fellBackTo: string | null } | { ok: false }
+  saveCustomThemeTokens: (
+    id: string,
+    tokens: Readonly<Record<string, string>>
+  ) => Promise<'saved' | 'applied' | 'failed'>
   setZoomPercent: (newZoomPercent: number) => void
   setPrimaryFontFamily: (newFontFamily: string, saveToFile?: boolean) => void
   setSecondaryFontFamily: (newFontFamily: string, saveToFile?: boolean) => void
@@ -120,6 +131,10 @@ const useSettingsStateRaw = create<SettingsState>()(
       set({ theme: newThemeName })
       window.setTheme(newThemeName)
     },
+
+    renameCustomTheme: () => 'not-found',
+    deleteCustomTheme: () => ({ ok: false }),
+    saveCustomThemeTokens: () => Promise.resolve('failed'),
 
     duplicateTheme: (sourceKey, copyName) => {
       const existing = get().customThemes
