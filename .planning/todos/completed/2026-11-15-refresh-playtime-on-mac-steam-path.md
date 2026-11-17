@@ -19,3 +19,7 @@ On the Mac Steam owned-apps path (the primary Refresh path on macOS when a logon
 - An occasional bounded CM owned-games read when a lease is already open.
 
 Each must keep D-14: no CM logon on the primary Mac path, so Friends cannot be signed out.
+
+## Resolution
+
+Resolved by quick-261117-q52: the Mac Steam Refresh path now reads per-app Playtime and LastPlayed from Mac Steam's localconfig.vdf (gamelib-steamfiles, no logon) and merges them with max(carried, local). Live check pending.

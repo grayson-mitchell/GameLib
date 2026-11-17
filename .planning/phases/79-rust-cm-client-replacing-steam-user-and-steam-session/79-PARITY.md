@@ -291,7 +291,8 @@ The CM-path demo count was not re-measured: the CM path cannot be run without a 
 
 ### DV-79-13: no playtime or last-played from Steam
 - Mac path: each entry keeps the playtime and last-played already stored for that app (else 0). The helper gives ids only, so the values go stale between CM refreshes and a new app shows 0. The follow-up todo is created by 79-37.
-- accepted: yes (operator, 2026-11-15)
+- Closed by quick-261117-q52: the Mac path now also reads per-app Playtime (minutes) and LastPlayed (unix seconds) from Mac Steam's userdata/<accountId>/config/localconfig.vdf via gamelib-steamfiles, merged per field as max(carried, local). A missing, oversized or malformed file falls back to pure carry-forward; no logon is added (D-14 held). Remaining gap: an app never run on this Mac and never CM-refreshed still shows 0.
+- accepted: resolved (quick-261117-q52, 2026-11-17; live check pending)
 
 ## Delete gate (79-38)
 
