@@ -102,6 +102,8 @@ import { isMac } from '../constants/environment'
 // recent-games side effect — see that branch's own comment below.
 import type { BootServices } from '../services/types'
 import { dispatchSteamLaunch } from '../storeManagers/steam/launchDispatch'
+import { toView } from '../storeManagers/steam/directLaunch/directLaunchVerdict'
+import type { SteamDirectLaunchView } from 'common/types/steam'
 import { logInfo, logWarning, LogPrefix, RunnerToLogPrefixMap } from '../logger'
 import type { LaunchParams, Runner, StatusPromise } from 'common/types'
 // SHELL_WINDOW_FOCUSED: the third channel registerSteamFlows() below owns (quick-260908-ci2).
@@ -391,6 +393,71 @@ async function handleLaunch(
   }
 }
 
+const DIRECT_LAUNCH_APP_ID = /^\d{1,10}$/
+
+/**
+ * quick 261117-p38: whether "Launch without Steam" is offered for a game. The
+ * appId is renderer input, so it is validated first; any failure is 'unknown'
+ * (not eligible).
+ */
+async function handleDirectLaunchVerdict(
+  deps: SteamFlowDeps,
+  appId: unknown
+): Promise<SteamDirectLaunchView> {
+  if (typeof appId !== 'string' || !DIRECT_LAUNCH_APP_ID.test(appId)) {
+    return { eligible: false, reason: 'unknown' }
+  }
+  try {
+    return toView(
+      await deps.managers.library.steam.getGame(appId).getDirectLaunchVerdict()
+    )
+  } catch (err) {
+    logWarning(
+      [`steamDirectLaunchVerdict failed appId=${appId}:`, err],
+      LogPrefix.Steam
+    )
+    return { eligible: false, reason: 'unknown' }
+  }
+}
+
+/**
+ * quick 261117-p38: launches a Steam game without the Steam client. The launch
+ * re-derives the verdict itself, so a stale or forged renderer request for an
+ * ineligible game is refused there. Never rejects (sidecarRejectionGuard).
+ */
+async function handleLaunchWithoutSteam(
+  deps: SteamFlowDeps,
+  appId: unknown
+): Promise<{ status: 'done' | 'error' }> {
+  if (typeof appId !== 'string' || !DIRECT_LAUNCH_APP_ID.test(appId)) {
+    return { status: 'error' }
+  }
+  try {
+    const { minimizeOnLaunch, noTrayIcon } = deps.config.getSettings()
+    if (minimizeOnLaunch && (isMac || !noTrayIcon)) {
+      deps.appState.hideMainWindow()
+    }
+    const launched = await dispatchSteamLaunch(
+      {
+        libraryManagers: deps.managers.library,
+        stores: deps.stores,
+        notifications: deps.notifications,
+        sendFrontendMessage: deps.sendFrontendMessage,
+        appRuntime: deps.appRuntime
+      },
+      appId,
+      'without-steam'
+    )
+    return { status: launched ? 'done' : 'error' }
+  } catch (err) {
+    logWarning(
+      [`steamLaunchWithoutSteam failed appId=${appId}:`, err],
+      LogPrefix.Steam
+    )
+    return { status: 'error' }
+  }
+}
+
 /**
  * Registers `refreshLibrary` (read-flow), `launch` (action-flow), and
  * `shellWindowFocused` (install-state refresh trigger) — the first two as
@@ -421,6 +488,16 @@ export function registerSteamFlows(deps: SteamFlowDeps): void {
   )
   deps.ipc.handle('launch', (event: unknown, ...args: unknown[]) =>
     handleLaunch(deps, event, ...args)
+  )
+  deps.ipc.handle(
+    'steamDirectLaunchVerdict',
+    (_event: unknown, ...args: unknown[]) =>
+      handleDirectLaunchVerdict(deps, args[0])
+  )
+  deps.ipc.handle(
+    'steamLaunchWithoutSteam',
+    (_event: unknown, ...args: unknown[]) =>
+      handleLaunchWithoutSteam(deps, args[0])
   )
 
   // Restores the install-badge reconciliation trigger dropped in the

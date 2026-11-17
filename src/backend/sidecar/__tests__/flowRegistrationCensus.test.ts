@@ -67,7 +67,10 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   //
   // Quick 261031-bst (2026-10-31): invoke 10 -> 7, send 15 -> 14 -- custom themes and
   // Custom CSS removed (getCustomThemes, getThemeCSS, getCustomCSS, openCustomThemesWiki).
-  'appShellFlowRegistration.ts': { invoke: 7, send: 14 },
+  //
+  // Quick 261115-tk8 (2026-11-15, 6254354b2): send 14 -> 13 -- the dead Heroic-era `openReleases`
+  // link channel deleted.
+  'appShellFlowRegistration.ts': { invoke: 7, send: 13 },
   'clipboardFlowRegistration.ts': { invoke: 1, send: 2 },
   // Phase 61 Plan 13 (2026-11-07): the store-agnostic engine domain (getEngineState, listEngineOptions,
   // getDefaultEngine, getPerGameBottleName, dismissEngineNotice)
@@ -99,7 +102,10 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   'runnerMiscFlowRegistration.ts': { invoke: 14, send: 0 },
   'settingsFlowRegistration.ts': { invoke: 11, send: 1 },
   // Phase 72 Plan 09 (2026-11-08): send 17 -> 16 -- the renderer `removeFolder` channel deleted (D-09).
-  'shellFilesFlowRegistration.ts': { invoke: 3, send: 16 },
+  // Quick 261115-tk8 (2026-11-15, 6254354b2): send 16 -> 11 -- the dead Heroic-era link channels
+  // `openWeblate`, `openSupportPage`, `openDiscordLink`, `openGithubSponsorsPage` and
+  // `openWikiLink` deleted.
+  'shellFilesFlowRegistration.ts': { invoke: 3, send: 11 },
   // Quick 261012-ca6 (2026-10-12): invoke 4 -> 6, send 3 -> 1 -- `addShortcut` and
   // `removeShortcut` moved from send to invoke so the renderer can learn the write's outcome.
   'shortcutsFlowRegistration.ts': { invoke: 6, send: 1 },
@@ -119,7 +125,7 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   // install-badge reconciliation trigger dropped in the Electron to Tauri cutover
   // (`mainWindow.on('focus', ...)`, `main.ts:272-274`, deleted in `5643c7583`). Shell-originated
   // (the Rust `.setup()` window-focus handler), not renderer-originated. Invoke count unchanged.
-  'steamFlowRegistration.ts': { invoke: 2, send: 1 },
+  'steamFlowRegistration.ts': { invoke: 4, send: 1 },
   // Phase 40 Plan 05 (REQ-40-02/REQ-40-05): new module — the 10 in-app store-embed channels
   // (9 lifecycle/navigation invoke arms, including the takeNavEvents drain implemented by quick
   // task `260905-e61` for GAP-D; 1 send arm for the fire-and-forget bounds courier, D-18/D-29).

@@ -8,7 +8,7 @@
  * (DRM boundary).
  */
 import { dirname, join } from 'node:path'
-import { logWarning, LogPrefix } from 'backend/logger'
+import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { isMac } from 'backend/constants/environment'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
 import { locateMachOBinary } from 'backend/utils/macArch'
@@ -231,7 +231,8 @@ export async function getSteamDirectLaunchVerdict(
       },
       probes: buildDirectLaunchProbes(steamGame),
       now: () => Date.now(),
-      warn: (m) => logWarning(m, LogPrefix.Steam)
+      warn: (m) => logWarning(m, LogPrefix.Steam),
+      info: (m) => logInfo(m, LogPrefix.Steam)
     },
     input
   )

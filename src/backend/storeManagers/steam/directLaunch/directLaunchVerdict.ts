@@ -61,6 +61,7 @@ export interface DirectLaunchDeps {
   probes: DirectLaunchProbes
   now(): number
   warn?(message: string): void
+  info?(message: string): void
 }
 
 export interface DirectLaunchInput {
@@ -234,6 +235,10 @@ export async function getDirectLaunchVerdict(
     )
     verdict = no('unknown')
   }
+
+  deps.info?.(
+    `direct-launch verdict for appId ${input.appId} recomputed (${kind}, buildid ${input.buildid || 'unknown'}): ${verdict.eligible ? 'eligible' : verdict.reason}`
+  )
 
   if (
     input.buildid !== '' &&

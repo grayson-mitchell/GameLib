@@ -58,13 +58,14 @@ type LaunchDispatchDeps = Pick<
  */
 export function dispatchSteamLaunch(
   deps: LaunchDispatchDeps,
-  appName: string
+  appName: string,
+  mode: 'steam' | 'without-steam' = 'steam'
 ): Promise<boolean> {
   return deps.appRuntime.launchFlights.singleFlightLaunch(
     'steam',
     appName,
     () => notifyAlreadyLaunching(deps, appName),
-    () => runDispatch(deps, appName)
+    () => runDispatch(deps, appName, mode)
   )
 }
 
@@ -99,10 +100,15 @@ function notifyAlreadyLaunching(
 
 async function runDispatch(
   deps: LaunchDispatchDeps,
-  appName: string
+  appName: string,
+  mode: 'steam' | 'without-steam'
 ): Promise<boolean> {
   const game = deps.libraryManagers.steam.getGame(appName)
-  const launched = await game.launch(undefined as unknown as LogWriter)
+  // quick 261117-p38: 'without-steam' shares this single flight and the recent-games write.
+  const launched =
+    mode === 'without-steam'
+      ? await game.launchWithoutSteam()
+      : await game.launch(undefined as unknown as LogWriter)
 
   if (!launched) {
     return false

@@ -682,6 +682,8 @@ pub(crate) const RENDERER_CHANNELS: &[&str] = &[
     "steamBridgeListFriends",
     "steamClientSetupRecheck",
     "steamClientSetupStart",
+    "steamDirectLaunchVerdict",
+    "steamLaunchWithoutSteam",
     "steamPollCredential",
     "steamPollQR",
     "steamRemoveAllCopies",

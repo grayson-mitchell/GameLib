@@ -131,6 +131,7 @@
     "src/frontend/screens/Game/GamePage/index.tsx",
     "src/frontend/screens/Game/GamePage/playClickedLatch.ts",
     "src/frontend/screens/Game/GamePicture/index.tsx",
+    "src/frontend/screens/Game/GameSubMenu/SteamDirectLaunchButton.tsx",
     "src/frontend/screens/Game/GameSubMenu/index.tsx",
     "src/frontend/screens/Game/GameSubMenu/repairFailure.ts",
     "src/frontend/screens/Game/ModifyInstallModal/index.tsx",

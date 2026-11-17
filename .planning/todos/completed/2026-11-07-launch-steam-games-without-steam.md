@@ -56,3 +56,39 @@ A "Launch without Steam" option, shown only when GameLib can tell the game quali
 Live gate: pick at least one game from each row of the table above. Check the option appears
 only for eligible games and that an eligible game launches with Steam fully quit. For a Steam-API
 game, record whether it keeps running, quits, or relaunches through Steam.
+
+## Resolution (quick 261117-p38)
+
+Shipped (macOS only; Mac-native and bridge installs):
+
+- Detection reuses the bridge's PE import scan, SteamStub / CEG detection, the runtime
+  `steam_api(64).dll` walk and the curated `drm: "ceg"` known fix. Mac-native games get a new
+  in-process Mach-O reader (`directLaunch/machoSteamApi.ts`: thin 32/64-bit, fat, fat64 load
+  commands) plus a bounded walk for `libsteam_api.dylib` / `steam_api.bundle`. Unreadable fails
+  closed ("unknown").
+- The verdict is cached per appId and keyed on buildid + install path + install kind.
+- Two launch paths: Mac-native runs its own Mach-O binary with the PICS arguments, tracked so Stop
+  ends it; bridge games run in their own bottle with no shim, no helper, no overlay and no
+  steamclient-layer DRM mode. The sidecar re-derives the verdict at launch.
+- Two sidecar channels (`steamDirectLaunchVerdict`, `steamLaunchWithoutSteam`) and a verdict-gated
+  "Launch without Steam" sub-menu entry whose confirm names what is lost for the session (Steam
+  Cloud, playtime, achievements, overlay).
+- Not built: the optional curated allowlist of Steam-API games confirmed to keep running. No
+  live-confirmed entry exists to put in it, so Steam-API games stay on the Steam launch.
+- Boundary held: nothing writes, copies, replaces or emulates `steam_api`.
+
+## Live gate — OWED, not run
+
+Operator, this Mac. Restart `pnpm tauri:dev` first (it does not rebuild the sidecar). Fully quit
+Steam (Steam > Quit; confirm no `steam_osx` process) before each launch step.
+
+1. Pick one game per todo table row: (a) no Steam API, no DRM — one Mac-native and, if owned, one
+   bridge (Windows) game; (b) uses the Steam API, no DRM; (c) Steam DRM (SteamStub or CEG).
+2. Open each game's page sub-menu: "Launch without Steam" appears for (a) only — never for (b) or (c).
+3. For (a): choose it; the confirm names no Steam Cloud, playtime, achievements, overlay; Launch;
+   the game runs with Steam quit; Stop in GameLib ends it.
+4. For (b): record (no option shown, so via a normal Steam-less attempt only if the operator
+   chooses) whether such a game keeps running, quits, or relaunches through Steam — record only,
+   nothing to change.
+5. Update the game (or change its buildid) and reopen the page: the verdict is recomputed (log
+   line), not served stale.
