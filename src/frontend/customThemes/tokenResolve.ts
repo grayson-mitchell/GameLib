@@ -68,6 +68,8 @@ const parseColourMixArg = (
  * their sum. Each colour argument is resolved recursively and must itself be
  * a hex or named colour `toRgb` accepts -- a bare `transparent` or
  * `currentColor` argument throws rather than silently mis-resolving.
+ *
+ * i18n-gate-exempt: the string literals here are CSS syntax tokens and developer-facing Error text, never rendered to a user
  */
 export const resolveColour = (
   value: string,
