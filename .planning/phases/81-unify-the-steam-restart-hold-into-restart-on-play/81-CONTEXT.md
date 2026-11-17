@@ -145,7 +145,17 @@ Not in scope:
       **Do not use** HKCU `Apps\<id>\Installed`, which stays 1 regardless.
     - **Caution for D-07 on Windows:** a sign-out restarts `steam.exe`, so a PID change alone is
       not adoption evidence.
-  - Linux: pending (`2026-11-17-…-on-linux.md`).
+  - **Linux: YES, so restart-on-Play** (spike 088, 2026-11-17, native Debian Steam, tool app
+    1628350):
+    - **Q1 startup:** adopted after a restart (`Loaded 5 → 6 apps`), no update or verify line.
+    - **Q2:** a running, signed-in Steam ignores the ACF.
+    - **Q3:** sign-in rescans and adopts, same pid, no dialog (operator-confirmed).
+    - **Q5:** `steam://exit` quits in ~4 s; any `steam://` URL or plain `steam` relaunches it.
+    - **Q4 evidence:** Steam did **not** rewrite this ACF, so use the content_log
+      `Loaded N apps` line and the `libraryfolders.vdf` `apps` map. `registry.vdf` has no
+      `ActiveUser`/`Installed`; signed-in is `[Logged On` in `connection_log.txt`.
+    - **Cautions:** Linux sign-out also restarts `steam`. `steam -silent` shows no window.
+      Not tested: a real game launching after relaunch, 1026, Flatpak.
 - **D-15:** If the spike says no for an OS, it gets a **simplified hold**:
   - **In memory only.** No persisted store and no boot re-arm, so after a GameLib restart the game
     reads as Installed.
