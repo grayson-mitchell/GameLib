@@ -110,7 +110,9 @@ describe('backend-di-ceilings gate wiring', () => {
     const steps = lintSteps()
     const lint = stepIndex(steps, 'pnpm lint')
     expect(lint).toBeGreaterThanOrEqual(0)
-    expect(steps[lint].if).toBeUndefined()
+    const lintStep = steps[lint]
+    expect(lintStep).toBeDefined()
+    expect(lintStep?.if).toBeUndefined()
     for (const run of GUARDED_RUNS) {
       expect(stepIndex(steps, run)).toBeGreaterThan(lint)
     }

@@ -40,3 +40,14 @@ every phase-80-caused check was fixed:
   suite under jsdom), or re-pin the baseline with a written reason if the mock is the right shape.
 - After plan 29, re-run `pnpm backend-di-ceilings` and confirm the parity-harness entries are gone.
 - Then `bash .husky/pre-push` must exit 0 on a clean tree.
+
+## Resolution (2026-11-17)
+
+- `gameLaunch.ts` split under 1000 lines in `a96dab654` (78-05); now 965.
+- `steamPollParity` / `steamPollTsDriver` retired, and `steamPollProfileFixtures` (with its
+  `doMock('path')`) removed, in `a281e00bd` (80-29).
+- The `GameStatus.*` trio was lowered 8 -> 6 with ceilings re-pinned in `217d96cde` (quick 261117-omv).
+- `pnpm steam-line-ceiling` and `pnpm backend-di-ceilings` both PASS.
+- The last red hook check was `codecheck`: `meta/__tests__/backendDiCeilingsWiring.test.ts:113`
+  TS2532 (`steps[lint]` possibly undefined). Fixed by binding the step and asserting it is defined.
+  All nine hook checks then pass on the committed tree.
