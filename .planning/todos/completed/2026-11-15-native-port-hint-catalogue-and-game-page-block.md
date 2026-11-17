@@ -49,3 +49,11 @@ picker. (Rejected — see the note.)
 - ~~Whether to wait for the fallout1-ce spike~~ — spike 086 VALIDATED the fallout1-ce row
   (universal, notarised, `dataStyle: copy`, Wine saves load). fallout2-ce (38410) is unverified;
   its data is in bottle `GameLibSteamBridge-38410` if a matching check is wanted.
+
+## Resolution (2026-11-17)
+
+Done in quick 261117-r4c (`b74e7c9b3`, `20e70fdc1`, `ca5563472`). Catalogue
+`src/common/nativePortCatalogue.json` (fallout1-ce, fallout2-ce, openmw, openloco) with a
+validated loader/matcher; `NativePortInfo` block on the game page Info tab. Data-file gating not
+added (block always shows with the row's note). Strings are en-only; the other locales are not
+machine-filled yet. Live check owed.

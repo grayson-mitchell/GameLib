@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 Phase: 81
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-11-17
+Last activity: 2026-11-17 - Completed quick task 261117-r4c: Native port hint catalogue and game-page block
 
 Progress: [██████████] 98%
 
@@ -796,6 +796,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | fast | Launch without Steam: Mac steam_api walk now matches (lib)steam_api(64).dylib/bundle/framework (WazHack's Unity libsteam_api.bundle was missed); verdict cache v3; live results logged in the todo. | 2026-11-17 | cfb54215e | Jest 58/58 directLaunch + launchWithoutSteam; tsc, scoped prettier + eslint clean | — |
 | fast | Launch without Steam: bridge games now honour the toggle at Play (launchWithoutSteam added to TITLE_AUTHORITATIVE_KEYS; it was dropped, so Avernum 6 took the bridge launch). | 2026-11-17 | bbcfb66aa | Jest 727/727 titleSettings + games; tsc, scoped prettier clean | — |
 | fast | Launch without Steam: Mac binaries with no slice this Mac can run (i386/PPC only, e.g. Legends of Aethereus, EBADARCH) get 'mac-arch-unsupported' and no toggle; verdict cache v4. | 2026-11-17 | c32e25bb5 | Jest 76/76 directLaunch + toggle; tsc, scoped prettier clean; real headers checked | — |
+| 261117-r4c | Native port hint: checked-in catalogue (fallout1-ce, fallout2-ce, openmw, openloco) + validated loader/matcher in src/common; "Native port available" block on the game page Info tab with setup help by dataStyle, Show data folder / Copy install path, not-tracked line; hint-only, no data-file gate; todo closed. | 2026-11-17 | b74e7c9b3, 20e70fdc1, ca5563472 | 21 common + 40 frontend tests pass; tsc clean; en strings only; live check pending | [261117-r4c-native-port-hint-catalogue-and-game-page](./quick/261117-r4c-native-port-hint-catalogue-and-game-page/) |
 
 ## Session Continuity
 
