@@ -4,7 +4,7 @@
  *
  * Group 1 asserts the Phase 20 D-14 rethrow-don't-swallow error contract
  * directly against the three shared handler bodies, mocking only
- * `../cheapshark` and `../../logger` so the contract is exercised without any
+ * `../itad` and `../../logger` so the contract is exercised without any
  * network call.
  *
  * Group 2 is the anti-remerge gate: it reads `storeSearch/index.ts` and
@@ -22,11 +22,11 @@ import { stripSourceComments as stripComments } from 'backend/testUtils/stripSou
 
 const mockSearchGames = jest.fn()
 const mockGetGameDeals = jest.fn()
-const mockGetStoreMap = jest.fn()
-jest.mock('../cheapshark', () => ({
+const mockLookupSteamGids = jest.fn()
+jest.mock('../itad', () => ({
   searchGames: (...args: unknown[]) => mockSearchGames(...args),
   getGameDeals: (...args: unknown[]) => mockGetGameDeals(...args),
-  getStoreMap: (...args: unknown[]) => mockGetStoreMap(...args)
+  lookupSteamGids: (...args: unknown[]) => mockLookupSteamGids(...args)
 }))
 
 const mockLogError = jest.fn()
@@ -38,42 +38,55 @@ jest.mock('../../logger', () => ({
 import {
   handleSearchStores,
   handleGetStoreSearchDeals,
-  handleGetStoreSearchStoreMap
+  handleGetItadSteamGids
 } from '../handlers'
+import type { ItadDeps } from '../itad'
+import { createItadGate } from '../itadCache'
 
 // Comment-stripping now delegates to the shared
 // `backend/testUtils/stripSourceComments` util (strips block comments first,
 // then the line-prefix filter), imported above as `stripComments`.
 
-const deps = {
-  appInfo: { version: '1.2.3-test' },
-  // The handlers only pass the deps through to the (mocked) CheapShark calls.
-  miscRuntime: { storeMap: { get: () => undefined, set: () => undefined } }
+// The handlers only pass the deps through to the (mocked) ITAD calls.
+const fakeStore = {
+  get: () => undefined,
+  set: () => undefined,
+  delete: () => undefined
 }
+const deps: ItadDeps = {
+  appInfo: { version: '1.2.3-test' },
+  stores: {
+    storeSearch: { itadPricesStore: fakeStore, itadSteamGidsStore: fakeStore }
+  },
+  miscRuntime: { itadGate: createItadGate() }
+}
+
+// What the real adapter throws: a marker-prefixed message, no URL, no key.
+const providerError = () => new Error('[storeSearch:rateLimited] search 429')
 
 describe('storeSearch/handlers.ts', () => {
   beforeEach(() => {
     mockSearchGames.mockReset()
     mockGetGameDeals.mockReset()
-    mockGetStoreMap.mockReset()
+    mockLookupSteamGids.mockReset()
     mockLogError.mockReset()
   })
 
   // ── Group 1 — behavioural: the D-14 contract itself ─────────────────────
   describe('behavioural contract (Phase 20 D-14)', () => {
     it('handleSearchStores passes through a successful result unchanged', async () => {
-      const fixture = [{ title: 'Portal 2' }]
+      const fixture = { results: [{ title: 'Portal 2' }], pricedCountry: 'GB' }
       mockSearchGames.mockResolvedValue(fixture)
 
-      const result = await handleSearchStores(deps, 'portal')
+      const result = await handleSearchStores(deps, 'portal', 'GB')
 
       expect(result).toBe(fixture)
-      expect(mockSearchGames).toHaveBeenCalledWith(deps, 'portal')
+      expect(mockSearchGames).toHaveBeenCalledWith(deps, 'portal', 'GB')
       expect(mockLogError).not.toHaveBeenCalled()
     })
 
     it('handleSearchStores REJECTS (never resolves to an empty result) when the provider rejects, and logs the exact channel prefix', async () => {
-      mockSearchGames.mockRejectedValue(new Error('cheapshark unreachable'))
+      mockSearchGames.mockRejectedValue(providerError())
 
       const outcome = await Promise.allSettled([
         handleSearchStores(deps, 'portal')
@@ -84,9 +97,9 @@ describe('storeSearch/handlers.ts', () => {
       // `.rejects.toThrow` assertion alone.
       expect(outcome[0].status).toBe('rejected')
       if (outcome[0].status === 'rejected') {
-        expect((outcome[0].reason as Error).message).toBe(
-          'cheapshark unreachable'
-        )
+        // T-47-28: the stable marker survives the rethrow (it is the only
+        // thing the renderer can classify the failure by).
+        expect((outcome[0].reason as Error).message).toContain('[storeSearch:')
       }
       expect(mockLogError).toHaveBeenCalledWith(
         expect.stringContaining('searchStores handler failed:'),
@@ -101,12 +114,12 @@ describe('storeSearch/handlers.ts', () => {
       const result = await handleGetStoreSearchDeals(deps, 'game-1')
 
       expect(result).toBe(fixture)
-      expect(mockGetGameDeals).toHaveBeenCalledWith(deps, 'game-1')
+      expect(mockGetGameDeals).toHaveBeenCalledWith(deps, 'game-1', 'US')
       expect(mockLogError).not.toHaveBeenCalled()
     })
 
     it('handleGetStoreSearchDeals REJECTS (never resolves to an empty array) when the provider rejects, and logs the exact channel prefix', async () => {
-      mockGetGameDeals.mockRejectedValue(new Error('cheapshark unreachable'))
+      mockGetGameDeals.mockRejectedValue(providerError())
 
       const outcome = await Promise.allSettled([
         handleGetStoreSearchDeals(deps, 'game-1')
@@ -114,9 +127,9 @@ describe('storeSearch/handlers.ts', () => {
 
       expect(outcome[0].status).toBe('rejected')
       if (outcome[0].status === 'rejected') {
-        expect((outcome[0].reason as Error).message).toBe(
-          'cheapshark unreachable'
-        )
+        // T-47-28: the stable marker survives the rethrow (it is the only
+        // thing the renderer can classify the failure by).
+        expect((outcome[0].reason as Error).message).toContain('[storeSearch:')
       }
       expect(mockLogError).toHaveBeenCalledWith(
         expect.stringContaining('getStoreSearchDeals handler failed:'),
@@ -124,34 +137,65 @@ describe('storeSearch/handlers.ts', () => {
       )
     })
 
-    it('handleGetStoreSearchStoreMap passes through a successful result unchanged', async () => {
-      const fixture = { g2a: { name: 'G2A' } }
-      mockGetStoreMap.mockResolvedValue(fixture)
+    it('handleGetItadSteamGids passes the appIds through and returns the gid map unchanged', async () => {
+      const fixture = { '620': 'gid-620' }
+      mockLookupSteamGids.mockResolvedValue(fixture)
 
-      const result = await handleGetStoreSearchStoreMap(deps)
+      const result = await handleGetItadSteamGids(deps, ['620', '730'])
 
       expect(result).toBe(fixture)
+      expect(mockLookupSteamGids).toHaveBeenCalledWith(deps, ['620', '730'])
       expect(mockLogError).not.toHaveBeenCalled()
     })
 
-    it('handleGetStoreSearchStoreMap REJECTS (never resolves to an empty object) when the provider rejects, and logs the exact channel prefix', async () => {
-      mockGetStoreMap.mockRejectedValue(new Error('cheapshark unreachable'))
+    it('handleGetItadSteamGids keeps the log-and-rethrow wrapper when the lookup rejects', async () => {
+      mockLookupSteamGids.mockRejectedValue(providerError())
 
       const outcome = await Promise.allSettled([
-        handleGetStoreSearchStoreMap(deps)
+        handleGetItadSteamGids(deps, ['620'])
       ])
 
       expect(outcome[0].status).toBe('rejected')
-      if (outcome[0].status === 'rejected') {
-        expect((outcome[0].reason as Error).message).toBe(
-          'cheapshark unreachable'
-        )
-      }
       expect(mockLogError).toHaveBeenCalledWith(
-        expect.stringContaining('getStoreSearchStoreMap handler failed:'),
+        expect.stringContaining('getItadSteamGids handler failed:'),
         'Backend'
       )
     })
+  })
+
+  // ── Group 1b — country normalisation (RESEARCH D3) ───────────────────────
+  describe('country normalisation (garbled input prices as US, never fails)', () => {
+    beforeEach(() => {
+      mockSearchGames.mockResolvedValue({ results: [], pricedCountry: 'US' })
+      mockGetGameDeals.mockResolvedValue([])
+    })
+
+    it.each([
+      ['GB', 'GB'],
+      ['DE', 'DE'],
+      [undefined, 'US'],
+      [null, 'US'],
+      ['gb', 'US'],
+      ['USA', 'US'],
+      ['', 'US']
+    ])('handleSearchStores country %p -> %p', async (input, expected) => {
+      await handleSearchStores(deps, 'portal', input)
+      expect(mockSearchGames).toHaveBeenCalledWith(deps, 'portal', expected)
+    })
+
+    it.each([
+      ['GB', 'GB'],
+      [undefined, 'US'],
+      [null, 'US'],
+      ['gb', 'US'],
+      ['USA', 'US']
+    ])(
+      'handleGetStoreSearchDeals country %p -> %p',
+      async (input, expected) => {
+        await handleGetStoreSearchDeals(deps, 'game-1', input)
+        expect(mockGetGameDeals).toHaveBeenCalledWith(deps, 'game-1', expected)
+      }
+    )
   })
 
   // ── Group 2 — single-source-of-truth gate ────────────────────────────────
@@ -174,12 +218,12 @@ describe('storeSearch/handlers.ts', () => {
       expect(stripped).not.toMatch(/handler failed:/)
     })
 
-    it('the shared handlers.ts module itself holds all three log strings (the single source of truth)', () => {
+    it('the shared handlers.ts module itself holds all the log strings (the single source of truth)', () => {
       const source = readFileSync(join(__dirname, '..', 'handlers.ts'), 'utf-8')
       const stripped = stripComments(source)
       expect(stripped).toMatch(/searchStores handler failed:/)
       expect(stripped).toMatch(/getStoreSearchDeals handler failed:/)
-      expect(stripped).toMatch(/getStoreSearchStoreMap handler failed:/)
+      expect(stripped).toMatch(/getItadSteamGids handler failed:/)
     })
   })
 })

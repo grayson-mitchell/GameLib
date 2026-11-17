@@ -1,15 +1,13 @@
 import { logError, LogPrefix } from '../logger'
-import type { AppInfo } from '../process/context'
 import {
   searchGames,
   getGameDeals,
-  getStoreMap,
-  type StoreSearchDeps
-} from './cheapshark'
+  lookupSteamGids,
+  type ItadDeps
+} from './itad'
 import type {
-  StoreSearchResult,
-  StoreSearchDeal,
-  StoreSearchStore
+  StoreSearchResponse,
+  StoreSearchDeal
 } from 'common/types/storeSearch'
 
 /**
@@ -28,27 +26,39 @@ import type {
  * implementation both registration sites import, so the two builds cannot
  * drift apart.
  *
- * The rethrow in each of the three functions below is DELIBERATE and
+ * The rethrow in each of the functions below is DELIBERATE and
  * LOAD-BEARING — do not add a fallback return, do not swallow the error, do
- * not widen the return type.
+ * not widen the return type. Serving stale rows from the cache under a 429 is
+ * a SUCCESS return carrying `cachedAt` (decided inside `./itad`); the rethrow
+ * remains for the no-cache case, and its message carries the stable
+ * `[storeSearch:<code>]` marker (no URL, no key) so the code survives the IPC
+ * string flattening.
  *
- * This module imports only `./cheapshark` and the logger — it does NOT
- * directly import the `addHandler`-registering sibling module, the
- * curated-IPC layer, or the `electron` package. It DOES reach the `electron`
- * package TRANSITIVELY, through a top-of-file import inside `cheapshark.ts`
- * itself — that hop is already accounted for in `electronReachLedger.test.ts`'s
- * committed baseline (plan 34.2-11) and is rescued at sidecar runtime by
- * `platformApi`'s `Module._load` interception. This module does NOT claim
- * transitive electron-freedom — only the absence of a DIRECT import of the
+ * This module imports only `./itad` and the logger — it does NOT directly
+ * import the `addHandler`-registering sibling module, the curated-IPC layer,
+ * or the `electron` package. Any transitive reach into `electron` through
+ * `./itad` is rescued at sidecar runtime by `platformApi`'s `Module._load`
+ * interception; this module claims only the absence of a DIRECT import of the
  * curated-IPC layer, the `electron` package, or the registration sibling.
  */
 
+/**
+ * RESEARCH D3: a missing or malformed country prices as US, it never fails the
+ * search. Only an upper-case ISO 3166-1 alpha-2 shape is accepted as given.
+ */
+export function normalizeCountry(country: unknown): string {
+  return typeof country === 'string' && /^[A-Z]{2}$/.test(country)
+    ? country
+    : 'US'
+}
+
 export async function handleSearchStores(
-  deps: { appInfo: Pick<AppInfo, 'version'> },
-  query: string
-): Promise<StoreSearchResult[]> {
+  deps: ItadDeps,
+  query: string,
+  country?: string | null
+): Promise<StoreSearchResponse> {
   try {
-    return await searchGames(deps, query)
+    return await searchGames(deps, query, normalizeCountry(country))
   } catch (err) {
     logError(`searchStores handler failed: ${String(err)}`, LogPrefix.Backend)
     throw err
@@ -56,11 +66,12 @@ export async function handleSearchStores(
 }
 
 export async function handleGetStoreSearchDeals(
-  deps: StoreSearchDeps,
-  gameId: string
+  deps: ItadDeps,
+  gameId: string,
+  country?: string | null
 ): Promise<StoreSearchDeal[]> {
   try {
-    return await getGameDeals(deps, gameId)
+    return await getGameDeals(deps, gameId, normalizeCountry(country))
   } catch (err) {
     logError(
       `getStoreSearchDeals handler failed: ${String(err)}`,
@@ -70,14 +81,15 @@ export async function handleGetStoreSearchDeals(
   }
 }
 
-export async function handleGetStoreSearchStoreMap(
-  deps: StoreSearchDeps
-): Promise<Record<string, StoreSearchStore>> {
+export async function handleGetItadSteamGids(
+  deps: ItadDeps,
+  appIds: string[]
+): Promise<Record<string, string>> {
   try {
-    return await getStoreMap(deps)
+    return await lookupSteamGids(deps, appIds)
   } catch (err) {
     logError(
-      `getStoreSearchStoreMap handler failed: ${String(err)}`,
+      `getItadSteamGids handler failed: ${String(err)}`,
       LogPrefix.Backend
     )
     throw err
