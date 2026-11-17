@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faSpinner } from '@fortawesome/free-solid-svg-icons'
+import { faClockRotateLeft, faSpinner } from '@fortawesome/free-solid-svg-icons'
 
 import StoreLogos from 'frontend/components/UI/StoreLogos'
 import type { StoreSearchDeal } from 'common/types/storeSearch'
-import { formatPrice } from '../../helpers'
+import { formatCachedAt, formatPrice } from '../../helpers'
 import '../../index.css'
 
 interface Props {
   gameId: string
   title: string
+  /** Country the parent row was priced for; deals are fetched for it. */
+  countryCode: string
   /** Collapses the parent row so a later click retries the fetch (RESEARCH
    * Open Question 2) — no per-row persisted error UI. */
   onFetchFailed: () => void
@@ -22,15 +24,24 @@ interface Props {
  * and unmounting on collapse is what makes a later expand a fresh retry
  * after a failure, with no persisted per-row error state.
  */
-const StoreSearchBreakdown = ({ gameId, title, onFetchFailed }: Props) => {
+const StoreSearchBreakdown = ({
+  gameId,
+  title,
+  countryCode,
+  onFetchFailed
+}: Props) => {
   const { t, i18n } = useTranslation()
   const [deals, setDeals] = useState<StoreSearchDeal[] | null>(null)
+  const cachedTitle = t(
+    'storeSearch.cachedTitle',
+    'Live prices are temporarily unavailable, so this is the last price we saved.'
+  )
 
   useEffect(() => {
     let cancelled = false
 
     window.api
-      .getStoreSearchDeals(gameId)
+      .getStoreSearchDeals(gameId, countryCode)
       .then((result) => {
         if (!cancelled) {
           setDeals(result)
@@ -52,7 +63,7 @@ const StoreSearchBreakdown = ({ gameId, title, onFetchFailed }: Props) => {
     // re-running the fetch on its identity change would refire the request
     // outside a real re-expand.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameId])
+  }, [gameId, countryCode])
 
   if (deals === null) {
     return (
@@ -97,6 +108,18 @@ const StoreSearchBreakdown = ({ gameId, title, onFetchFailed }: Props) => {
           <span className="storeSearchRow__breakdownPrice">
             {formatPrice(deal.price, deal.currencyCode, i18n.language)}
           </span>
+          {deal.cachedAt !== undefined && (
+            <span
+              className="storeSearchRow__cached"
+              title={cachedTitle}
+              aria-label={cachedTitle}
+            >
+              <FontAwesomeIcon icon={faClockRotateLeft} aria-hidden />
+              {t('storeSearch.cached', 'Price from {{time}}', {
+                time: formatCachedAt(deal.cachedAt, i18n.language)
+              })}
+            </span>
+          )}
         </div>
       ))}
     </div>

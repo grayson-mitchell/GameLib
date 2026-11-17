@@ -27,6 +27,7 @@ import type {
   StoreSearchResult
 } from 'common/types/storeSearch'
 import type { StoreOwnershipMatch } from 'common/discounts/badges'
+import { formatCachedAt, formatPrice } from '../helpers'
 
 // Colocated CSS side-effect import used by both components under test.
 jest.mock('../index.css', () => ({}))
@@ -150,33 +151,35 @@ function harness(): HookHarness {
 type RowProps = {
   result: StoreSearchResult
   badges: { owned: StoreOwnershipMatch[]; keyAvailable: boolean }
+  countryCode?: string
 }
 type BreakdownProps = {
   gameId: string
   title: string
+  countryCode?: string
   onFetchFailed: () => void
 }
 
 function mountRow(props: RowProps): ReactElement {
   harness().__resetMount()
   harness().__beginRender()
-  return StoreSearchRow(props)
+  return StoreSearchRow({ countryCode: 'US', ...props })
 }
 
 function rerenderRow(props: RowProps): ReactElement {
   harness().__beginRender()
-  return StoreSearchRow(props)
+  return StoreSearchRow({ countryCode: 'US', ...props })
 }
 
 function mountBreakdown(props: BreakdownProps): ReactElement {
   harness().__resetMount()
   harness().__beginRender()
-  return StoreSearchBreakdown(props)
+  return StoreSearchBreakdown({ countryCode: 'US', ...props })
 }
 
 function rerenderBreakdown(props: BreakdownProps): ReactElement {
   harness().__beginRender()
-  return StoreSearchBreakdown(props)
+  return StoreSearchBreakdown({ countryCode: 'US', ...props })
 }
 
 function flushPromises(): Promise<void> {
@@ -384,6 +387,78 @@ describe('StoreSearchRow', () => {
     expect(breakdown?.props.title).toBe('Clicky Game')
     expect(typeof breakdown?.props.onFetchFailed).toBe('function')
   })
+
+  describe('cached-at line (PRICE-03)', () => {
+    const CACHED_AT = Date.UTC(2026, 10, 17, 9, 30)
+    const EXPLANATION =
+      'Live prices are temporarily unavailable, so this is the last price we saved.'
+
+    it('renders a separate cached line with the absolute time, title and aria-label, outside the price node', () => {
+      const tree = mountRow({
+        result: makeResult({ cachedAt: CACHED_AT }),
+        badges: { owned: [], keyAvailable: false }
+      })
+
+      const cached = findByClassNamePart(tree, 'storeSearchRow__cached')
+      expect(cached).toBeDefined()
+      expect(textContent(cached)).toBe(
+        `Price from ${formatCachedAt(CACHED_AT, 'en')}`
+      )
+      expect(cached?.props.title).toBe(EXPLANATION)
+      expect(cached?.props['aria-label']).toBe(EXPLANATION)
+
+      const price = findByClassNamePart(tree, 'storeSearchRow__price')
+      expect(findByClassNamePart(price, 'storeSearchRow__cached')).toBe(
+        undefined
+      )
+      expect(textContent(price)).toBe(formatPrice('14.99', 'USD', 'en'))
+    })
+
+    it('renders no cached line when the row carries no cachedAt', () => {
+      const tree = mountRow({
+        result: makeResult(),
+        badges: { owned: [], keyAvailable: false }
+      })
+
+      expect(findByClassNamePart(tree, 'storeSearchRow__cached')).toBe(
+        undefined
+      )
+    })
+
+    it('never words the visible cached line as an error', () => {
+      const tree = mountRow({
+        result: makeResult({ cachedAt: CACHED_AT }),
+        badges: { owned: [], keyAvailable: false }
+      })
+
+      const text = textContent(
+        findByClassNamePart(tree, 'storeSearchRow__cached')
+      ).toLowerCase()
+      expect(text).not.toMatch(/error|failed|rate/)
+    })
+
+    it('forwards the search country to the mounted breakdown', () => {
+      const result = makeResult()
+      const initial = mountRow({
+        result,
+        countryCode: 'DE',
+        badges: { owned: [], keyAvailable: false }
+      })
+      ;(
+        findByClassNamePart(initial, 'storeSearchRow__expandButton')!.props
+          .onClick as () => void
+      )()
+      const expanded = rerenderRow({
+        result,
+        countryCode: 'DE',
+        badges: { owned: [], keyAvailable: false }
+      })
+
+      expect(
+        findByType(expanded, StoreSearchBreakdown)?.props.countryCode
+      ).toBe('DE')
+    })
+  })
 })
 
 describe('StoreSearchBreakdown', () => {
@@ -403,7 +478,7 @@ describe('StoreSearchBreakdown', () => {
     })
 
     expect(textContent(tree)).toContain('Loading store prices')
-    expect(mockApi.getStoreSearchDeals).toHaveBeenCalledWith('game-1')
+    expect(mockApi.getStoreSearchDeals).toHaveBeenCalledWith('game-1', 'US')
   })
 
   it('calls getStoreSearchDeals exactly once per expand (mount) even across rerenders', async () => {
@@ -480,6 +555,54 @@ describe('StoreSearchBreakdown', () => {
     expect(mockApi.openExternalUrl).toHaveBeenCalledWith(
       'https://www.cheapshark.com/redirect?dealID=deal-1'
     )
+  })
+
+  it('fetches the deals for the given country exactly once', async () => {
+    mockApi.getStoreSearchDeals.mockResolvedValue([makeDeal()])
+
+    const props = {
+      gameId: 'game-1',
+      title: 'Some Game',
+      countryCode: 'DE',
+      onFetchFailed: jest.fn()
+    }
+    mountBreakdown(props)
+    await flushPromises()
+    rerenderBreakdown(props)
+
+    expect(mockApi.getStoreSearchDeals).toHaveBeenCalledTimes(1)
+    expect(mockApi.getStoreSearchDeals).toHaveBeenCalledWith('game-1', 'DE')
+  })
+
+  it('renders a cached line only on deals that carry cachedAt, keeping the API order', async () => {
+    const CACHED_AT = Date.UTC(2026, 10, 17, 9, 30)
+    mockApi.getStoreSearchDeals.mockResolvedValue([
+      makeDeal({ storeId: '1', storeName: 'Zeta', cachedAt: CACHED_AT }),
+      makeDeal({ storeId: '2', storeName: 'Alpha' })
+    ])
+
+    const props = {
+      gameId: 'game-1',
+      title: 'Some Game',
+      onFetchFailed: jest.fn()
+    }
+    mountBreakdown(props)
+    await flushPromises()
+    const tree = rerenderBreakdown(props)
+
+    const items = findAllByClassNamePart(tree, 'storeSearchRow__breakdownItem')
+    expect(items).toHaveLength(2)
+    expect(textContent(items[0])).toContain('Zeta')
+    expect(textContent(items[1])).toContain('Alpha')
+
+    const first = findByClassNamePart(items[0], 'storeSearchRow__cached')
+    expect(textContent(first)).toBe(
+      `Price from ${formatCachedAt(CACHED_AT, 'en')}`
+    )
+    expect(
+      findByClassNamePart(items[1], 'storeSearchRow__cached')
+    ).toBeUndefined()
+    expect(textContent(first).toLowerCase()).not.toMatch(/error|failed|rate/)
   })
 
   it('a fetch failure logs the error and calls onFetchFailed (retry-on-next-click, no persisted error UI)', async () => {

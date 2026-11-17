@@ -1,14 +1,21 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faChevronDown } from '@fortawesome/free-solid-svg-icons'
+import {
+  faChevronDown,
+  faClockRotateLeft
+} from '@fortawesome/free-solid-svg-icons'
 import classNames from 'classnames'
 
 import { CachedImage } from 'frontend/components/UI'
 import fallBackImage from 'frontend/assets/gamelib_card.svg?url'
 import type { StoreSearchResult } from 'common/types/storeSearch'
 import type { StoreOwnershipMatch } from 'common/discounts/badges'
-import { buildOwnedBadgeLabel, formatPrice } from '../../helpers'
+import {
+  buildOwnedBadgeLabel,
+  formatCachedAt,
+  formatPrice
+} from '../../helpers'
 import StoreSearchBreakdown from '../StoreSearchBreakdown'
 import '../../index.css'
 
@@ -17,6 +24,9 @@ interface Props {
   /** Already-resolved by the Plan 06 container (resolveStoreSearchBadges) —
    * this row never recomputes ownership (T-20-03). */
   badges: { owned: StoreOwnershipMatch[]; keyAvailable: boolean }
+  /** The country the search was priced for; the expanded breakdown fetches
+   * deals for the same country (PRICE-01). */
+  countryCode: string
 }
 
 /**
@@ -26,11 +36,15 @@ interface Props {
  * signals that can both render — unlike `DiscountCard`'s owned-XOR-key
  * precedence, this screen shows both pills side by side.
  */
-const StoreSearchRow = ({ result, badges }: Props) => {
+const StoreSearchRow = ({ result, badges, countryCode }: Props) => {
   const { t, i18n } = useTranslation()
   const [expanded, setExpanded] = useState(false)
 
   const ownedLabel = buildOwnedBadgeLabel(badges.owned)
+  const cachedTitle = t(
+    'storeSearch.cachedTitle',
+    'Live prices are temporarily unavailable, so this is the last price we saved.'
+  )
 
   return (
     <>
@@ -54,13 +68,27 @@ const StoreSearchRow = ({ result, badges }: Props) => {
             </span>
           )}
         </div>
-        <span className="storeSearchRow__price">
-          {formatPrice(
-            result.cheapestPrice,
-            result.currencyCode,
-            i18n.language
+        <div className="storeSearchRow__priceColumn">
+          <span className="storeSearchRow__price">
+            {formatPrice(
+              result.cheapestPrice,
+              result.currencyCode,
+              i18n.language
+            )}
+          </span>
+          {result.cachedAt !== undefined && (
+            <span
+              className="storeSearchRow__cached"
+              title={cachedTitle}
+              aria-label={cachedTitle}
+            >
+              <FontAwesomeIcon icon={faClockRotateLeft} aria-hidden />
+              {t('storeSearch.cached', 'Price from {{time}}', {
+                time: formatCachedAt(result.cachedAt, i18n.language)
+              })}
+            </span>
           )}
-        </span>
+        </div>
         <button
           type="button"
           className="storeSearchRow__expandButton"
@@ -84,6 +112,7 @@ const StoreSearchRow = ({ result, badges }: Props) => {
         <StoreSearchBreakdown
           gameId={result.gameId}
           title={result.title}
+          countryCode={countryCode}
           onFetchFailed={() => setExpanded(false)}
         />
       )}

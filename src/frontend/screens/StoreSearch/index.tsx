@@ -218,6 +218,7 @@ export default function StoreSearch() {
             <StoreSearchRow
               key={result.gameId}
               result={result}
+              countryCode={countryCode}
               badges={
                 badgesByGameId.get(result.gameId) ?? {
                   owned: [],
