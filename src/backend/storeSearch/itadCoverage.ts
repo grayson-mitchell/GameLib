@@ -72,5 +72,9 @@ export const ITAD_LOOKUP_BATCH_SIZE = Math.min(1000, 200)
 /** Sweep `amountSource`: `amount` agreed with `amountInt` for every recorded currency. */
 export const ITAD_PRICE_AMOUNT_SOURCE: 'amount' | 'amountInt' = 'amount'
 
-/** Sweep `authStyle`: the key travels as a `key` query parameter. */
-export const ITAD_AUTH_STYLE: 'query:key' = 'query:key'
+/**
+ * Sweep `authStyle`: the key travels as a `key` query parameter. Documentation of the measured
+ * value only (the adapter builds its `key` params inline), so it is deliberately not exported.
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const ITAD_AUTH_STYLE = 'query:key'
