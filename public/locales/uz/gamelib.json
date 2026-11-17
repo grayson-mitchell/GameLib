@@ -99,6 +99,30 @@
         "extraInfoStaleBody": "Bu natija yuklash holatlari qayd etilishidan oldin keshlangan, shuning uchun eskirgan bo'lishi mumkin. Tekshirish uchun yangilang.",
         "hiddenAchievement": "Yashirin yutuq",
         "moreActions": "Boshqa amallar",
+        "nativePort": {
+            "copyPath": "O'rnatish yo'lini nusxalash",
+            "intro": "{{name}} — bu o'yin fayllaringizdan foydalanib, ushbu o'yinni nativ ishga tushiradigan jamoa source porti.",
+            "licence": "Litsenziya: {{licence}}",
+            "notTracked": "Port orqali o'ynaganda Steam o'yin vaqti va yutuqlar kuzatilmaydi.",
+            "openLink": "{{name}}ni olish",
+            "platform": {
+                "linux": "Linux",
+                "mac-arm64": "macOS (Apple silicon)",
+                "mac-universal": "macOS (Apple silicon va Intel)",
+                "mac-x86": "macOS (Intel)",
+                "windows": "Windows"
+            },
+            "platforms": "Ishlaydi: {{platforms}}",
+            "setupHeading": "Sozlash",
+            "showFolder": "Ma'lumotlar jildini ko'rsatish",
+            "steps": {
+                "copy": "Bularni o'yin jildidan port jildiga nusxalang — Steam o'rnatilishi buzilmasligi uchun ko'chirmang, nusxalang: {{files}}",
+                "import": "Port o'yin ma'lumotlarini asl o'rnatuvchidan import qiladi — birinchi ishga tushirishdagi sozlashga amal qiling.",
+                "point": "Port o'yin ma'lumotlarini so'raganda, unga o'yinning o'rnatish jildini ko'rsating.",
+                "sideload": "Keyin GameLib'dan ishga tushirish uchun portni O'yin qo'shish orqali kutubxonangizga qo'shing."
+            },
+            "title": "Nativ port mavjud"
+        },
         "steamInstallingPercent": "Oʻrnatilmoqda… {{percent}}%",
         "steamUpdateCommitting": "Yangilanish qo'llanmoqda…",
         "steamUpdatePlanning": "Yangilanish rejalashtirilmoqda…",

@@ -102,6 +102,30 @@
         "extraInfoStaleBody": "Er c'hrubuilh eo bet ar disoc'h-mañ a-raok ma voe enrollet an disoc'hoù kargañ, dre-se marteze n'eo ket dedennus mui. Freskaat evit gwiriañ.",
         "hiddenAchievement": "Berzh kuzh",
         "moreActions": "Muioc'h a obererezhioù",
+        "nativePort": {
+            "copyPath": "Eilañ treug staliañ",
+            "intro": "{{name}} a zo ur porzh mammenn kumuniezh a ra dehongañ ar c'hoari-mañ en ur doare nativel gant ho restroù c'hoari.",
+            "licence": "Lañvaz: {{licence}}",
+            "notTracked": "Ne vez ket heuliet an amzer c'hoari hag ar c'hounidoù Steam pa c'hoarit dre ar porzh.",
+            "openLink": "Tapout {{name}}",
+            "platform": {
+                "linux": "Linux",
+                "mac-arm64": "macOS (Apple silicon)",
+                "mac-universal": "macOS (Apple silicon ha Intel)",
+                "mac-x86": "macOS (Intel)",
+                "windows": "Windows"
+            },
+            "platforms": "Mont a ra war: {{platforms}}",
+            "setupHeading": "Arventennañ",
+            "showFolder": "Diskouez ar c'havlec'h roadennoù",
+            "steps": {
+                "copy": "Eilit an dra-se eus kavlec'h ar c'hoari da gavlec'h ar porzh — eilit, na zilec'hit ket, evit ma chomo staladur Steam peurvat: {{files}}",
+                "import": "Enporzhiañ a ra ar porzh roadennoù ar c'hoari eus ar stalier orin — heuilhit an arventennañ d'ar c'hentañ loc'hadenn.",
+                "point": "Pa c'houlenno ar porzh roadennoù ar c'hoari, diskouezit dezhañ kavlec'h staliañ ar c'hoari.",
+                "sideload": "Goude-se ouzhpennit ar porzh d'ho levraoueg gant Ouzhpennañ ur c'hoari evit e loc'hañ eus GameLib."
+            },
+            "title": "Un porzh nativel a zo hegerz"
+        },
         "steamInstallingPercent": "O staliañ… {{percent}}%",
         "steamUpdateCommitting": "O lakaat ar hizivadur da dalvezout…",
         "steamUpdatePlanning": "O steuziañ ar hizivadur…",

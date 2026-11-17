@@ -99,6 +99,30 @@
         "extraInfoStaleBody": "Detta resultat cachades innan utfall från inläsningar registrerades, så det kan vara inaktuellt. Uppdatera för att kontrollera.",
         "hiddenAchievement": "Dold prestation",
         "moreActions": "Fler åtgärder",
+        "nativePort": {
+            "copyPath": "Kopiera installationssökväg",
+            "intro": "{{name}} är en community-källkodsport som kör det här spelet nativt med dina spelfiler.",
+            "licence": "Licens: {{licence}}",
+            "notTracked": "Speltid och prestationer i Steam spåras inte när du spelar via porten.",
+            "openLink": "Hämta {{name}}",
+            "platform": {
+                "linux": "Linux",
+                "mac-arm64": "macOS (Apple silicon)",
+                "mac-universal": "macOS (Apple silicon och Intel)",
+                "mac-x86": "macOS (Intel)",
+                "windows": "Windows"
+            },
+            "platforms": "Körs på: {{platforms}}",
+            "setupHeading": "Installation",
+            "showFolder": "Visa datamapp",
+            "steps": {
+                "copy": "Kopiera dessa från spelmappen till portens mapp — kopiera, flytta inte, så att Steam-installationen förblir intakt: {{files}}",
+                "import": "Porten importerar speldata från det ursprungliga installationsprogrammet — följ konfigurationen vid första körningen.",
+                "point": "När porten ber om speldata, peka den till spelets installationsmapp.",
+                "sideload": "Lägg sedan till porten i ditt bibliotek med Lägg till spel så att du kan starta den från GameLib."
+            },
+            "title": "Nativ port tillgänglig"
+        },
         "steamInstallingPercent": "Installerar… {{percent}} %",
         "steamUpdateCommitting": "Tillämpar uppdateringen…",
         "steamUpdatePlanning": "Planerar uppdateringen…",

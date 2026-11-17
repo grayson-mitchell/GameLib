@@ -99,6 +99,30 @@
         "extraInfoStaleBody": "이 결과는 로드 결과가 기록되기 전에 캐시되어 오래되었을 수 있습니다. 새로고침하여 확인하세요.",
         "hiddenAchievement": "숨겨진 도전 과제",
         "moreActions": "더 많은 작업",
+        "nativePort": {
+            "copyPath": "설치 경로 복사",
+            "intro": "{{name}}은(는) 보유한 게임 파일을 사용해 이 게임을 네이티브로 실행하는 커뮤니티 소스 포트입니다.",
+            "licence": "라이선스: {{licence}}",
+            "notTracked": "포트로 플레이하면 Steam 플레이 시간과 업적이 기록되지 않습니다.",
+            "openLink": "{{name}} 받기",
+            "platform": {
+                "linux": "Linux",
+                "mac-arm64": "macOS (Apple silicon)",
+                "mac-universal": "macOS (Apple silicon 및 Intel)",
+                "mac-x86": "macOS (Intel)",
+                "windows": "Windows"
+            },
+            "platforms": "지원 플랫폼: {{platforms}}",
+            "setupHeading": "설정",
+            "showFolder": "데이터 폴더 표시",
+            "steps": {
+                "copy": "이 파일들을 게임 폴더에서 포트 폴더로 복사하세요. Steam 설치가 그대로 유지되도록 이동하지 말고 복사하세요: {{files}}",
+                "import": "포트가 원본 설치 프로그램에서 게임 데이터를 가져옵니다. 처음 실행할 때의 설정을 따르세요.",
+                "point": "포트가 게임 데이터를 요청하면 게임의 설치 폴더를 지정하세요.",
+                "sideload": "그런 다음 게임 추가로 포트를 라이브러리에 추가하면 GameLib에서 실행할 수 있습니다."
+            },
+            "title": "네이티브 포트 사용 가능"
+        },
         "steamInstallingPercent": "설치 중… {{percent}}%",
         "steamUpdateCommitting": "업데이트 적용 중…",
         "steamUpdatePlanning": "업데이트 준비 중…",

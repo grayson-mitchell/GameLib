@@ -99,6 +99,30 @@
         "extraInfoStaleBody": "この結果は読み込み結果が記録される前にキャッシュされたため、古い可能性があります。更新して確認してください。",
         "hiddenAchievement": "隠し実績",
         "moreActions": "その他の操作",
+        "nativePort": {
+            "copyPath": "インストールパスをコピー",
+            "intro": "{{name}}は、お持ちのゲームファイルを使ってこのゲームをネイティブ実行する、コミュニティ製のソースポートです。",
+            "licence": "ライセンス: {{licence}}",
+            "notTracked": "ポート経由でプレイしている間、Steamのプレイ時間と実績は記録されません。",
+            "openLink": "{{name}}を入手",
+            "platform": {
+                "linux": "Linux",
+                "mac-arm64": "macOS (Apple silicon)",
+                "mac-universal": "macOS (Apple siliconとIntel)",
+                "mac-x86": "macOS (Intel)",
+                "windows": "Windows"
+            },
+            "platforms": "対応環境: {{platforms}}",
+            "setupHeading": "セットアップ",
+            "showFolder": "データフォルダを表示",
+            "steps": {
+                "copy": "これらをゲームフォルダからポートのフォルダへコピーしてください。Steamのインストールをそのまま保つため、移動ではなくコピーしてください: {{files}}",
+                "import": "ポートは元のインストーラーからゲームデータをインポートします。初回起動時のセットアップに従ってください。",
+                "point": "ポートがゲームデータを求めてきたら、ゲームのインストールフォルダを指定してください。",
+                "sideload": "その後、ゲームを追加でポートをライブラリに追加すると、GameLibから起動できます。"
+            },
+            "title": "ネイティブポートが利用可能"
+        },
         "steamInstallingPercent": "インストール中… {{percent}}%",
         "steamUpdateCommitting": "アップデートを適用中…",
         "steamUpdatePlanning": "アップデートを準備中…",

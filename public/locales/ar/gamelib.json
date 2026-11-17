@@ -103,6 +103,30 @@
         "extraInfoStaleBody": "تم تخزين هذه النتيجة مؤقتًا قبل تسجيل نتائج التحميل، لذا قد تكون قديمة. حدّثها للتحقق.",
         "hiddenAchievement": "إنجاز مخفي",
         "moreActions": "المزيد من الإجراءات",
+        "nativePort": {
+            "copyPath": "نسخ مسار التثبيت",
+            "intro": "{{name}} هو منفذ مصدري من المجتمع يشغّل هذه اللعبة محليًا باستخدام ملفات لعبتك.",
+            "licence": "الترخيص: {{licence}}",
+            "notTracked": "لا يتم تتبع وقت اللعب والإنجازات في Steam عند اللعب عبر المنفذ.",
+            "openLink": "احصل على {{name}}",
+            "platform": {
+                "linux": "Linux",
+                "mac-arm64": "macOS (Apple silicon)",
+                "mac-universal": "macOS (Apple silicon و Intel)",
+                "mac-x86": "macOS (Intel)",
+                "windows": "Windows"
+            },
+            "platforms": "يعمل على: {{platforms}}",
+            "setupHeading": "الإعداد",
+            "showFolder": "عرض مجلد البيانات",
+            "steps": {
+                "copy": "انسخ هذه الملفات من مجلد اللعبة إلى مجلد المنفذ — انسخها ولا تنقلها، حتى يبقى تثبيت Steam سليمًا: {{files}}",
+                "import": "يستورد المنفذ بيانات اللعبة من المثبّت الأصلي — اتبع الإعداد عند التشغيل الأول.",
+                "point": "عندما يطلب المنفذ بيانات اللعبة، وجّهه إلى مجلد تثبيت اللعبة.",
+                "sideload": "ثم أضف المنفذ إلى مكتبتك عبر أضف لعبة لتتمكن من تشغيله من GameLib."
+            },
+            "title": "منفذ أصلي متاح"
+        },
         "steamInstallingPercent": "جارٍ التثبيت… {{percent}}%",
         "steamUpdateCommitting": "جارٍ تطبيق التحديث…",
         "steamUpdatePlanning": "جارٍ التخطيط للتحديث…",

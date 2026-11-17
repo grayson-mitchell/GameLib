@@ -47,6 +47,30 @@
         "extraInfoStaleBody": "Ce résultat a été mis en cache avant l'enregistrement des résultats de chargement, il peut donc être obsolète. Actualisez pour vérifier.",
         "hiddenAchievement": "Accomplissement caché",
         "moreActions": "Plus d'actions",
+        "nativePort": {
+            "copyPath": "Copier le chemin d'installation",
+            "intro": "{{name}} est un port source communautaire qui exécute ce jeu nativement à partir des fichiers de votre jeu.",
+            "licence": "Licence : {{licence}}",
+            "notTracked": "Le temps de jeu et les succès Steam ne sont pas suivis lorsque vous jouez via le port.",
+            "openLink": "Obtenir {{name}}",
+            "platform": {
+                "linux": "Linux",
+                "mac-arm64": "macOS (Apple silicon)",
+                "mac-universal": "macOS (Apple silicon et Intel)",
+                "mac-x86": "macOS (Intel)",
+                "windows": "Windows"
+            },
+            "platforms": "Fonctionne sur : {{platforms}}",
+            "setupHeading": "Configuration",
+            "showFolder": "Afficher le dossier de données",
+            "steps": {
+                "copy": "Copiez ces fichiers du dossier du jeu vers le dossier du port — copiez, ne déplacez pas, afin que l'installation Steam reste intacte : {{files}}",
+                "import": "Le port importe les données du jeu depuis l'installateur d'origine — suivez la configuration du premier lancement.",
+                "point": "Lorsque le port demande les données du jeu, indiquez-lui le dossier d'installation du jeu.",
+                "sideload": "Ajoutez ensuite le port à votre bibliothèque avec Ajouter un jeu pour pouvoir le lancer depuis GameLib."
+            },
+            "title": "Port natif disponible"
+        },
         "steamInstallingPercent": "Installation… {{percent}} %",
         "steamUpdateCommitting": "Application de la mise à jour…",
         "steamUpdatePlanning": "Préparation de la mise à jour…",

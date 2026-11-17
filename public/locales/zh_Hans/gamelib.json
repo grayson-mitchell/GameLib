@@ -99,6 +99,30 @@
         "extraInfoStaleBody": "此结果是在记录加载结果之前缓存的，可能已过期。请刷新以检查。",
         "hiddenAchievement": "隐藏成就",
         "moreActions": "更多操作",
+        "nativePort": {
+            "copyPath": "复制安装路径",
+            "intro": "{{name}} 是一个社区源码移植版，使用你的游戏文件原生运行这款游戏。",
+            "licence": "许可证：{{licence}}",
+            "notTracked": "通过该移植版游玩时，不会记录 Steam 游戏时长和成就。",
+            "openLink": "获取 {{name}}",
+            "platform": {
+                "linux": "Linux",
+                "mac-arm64": "macOS (Apple silicon)",
+                "mac-universal": "macOS (Apple silicon 和 Intel)",
+                "mac-x86": "macOS (Intel)",
+                "windows": "Windows"
+            },
+            "platforms": "运行平台：{{platforms}}",
+            "setupHeading": "设置",
+            "showFolder": "显示数据文件夹",
+            "steps": {
+                "copy": "请将这些文件从游戏文件夹复制到移植版文件夹——是复制而非移动，以保持 Steam 安装完好：{{files}}",
+                "import": "该移植版会从原始安装程序导入游戏数据——请按首次运行的设置进行。",
+                "point": "当移植版询问游戏数据时，请指向游戏的安装文件夹。",
+                "sideload": "然后通过添加游戏将该移植版添加到你的库中，这样就能从 GameLib 启动它。"
+            },
+            "title": "提供原生移植版"
+        },
         "steamInstallingPercent": "正在安装… {{percent}}%",
         "steamUpdateCommitting": "正在应用更新…",
         "steamUpdatePlanning": "正在规划更新…",

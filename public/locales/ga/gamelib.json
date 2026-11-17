@@ -102,6 +102,30 @@
         "extraInfoStaleBody": "Cuireadh an toradh seo i dtaisce sula taifeadadh torthaí lódála, mar sin d'fhéadfadh sé a bheith as dáta. Athnuaigh chun a sheiceáil.",
         "hiddenAchievement": "Éacht folaithe",
         "moreActions": "Tuilleadh gníomhartha",
+        "nativePort": {
+            "copyPath": "Cóipeáil cosán suiteála",
+            "intro": "Is calafort foinse pobail é {{name}} a ritheann an cluiche seo go dúchasach ag úsáid do chuid comhad cluiche.",
+            "licence": "Ceadúnas: {{licence}}",
+            "notTracked": "Ní dhéantar am súgartha ná éachtaí Steam a rianú nuair a imrítear tríd an gcalafort.",
+            "openLink": "Faigh {{name}}",
+            "platform": {
+                "linux": "Linux",
+                "mac-arm64": "macOS (Apple silicon)",
+                "mac-universal": "macOS (Apple silicon agus Intel)",
+                "mac-x86": "macOS (Intel)",
+                "windows": "Windows"
+            },
+            "platforms": "Ritheann sé ar: {{platforms}}",
+            "setupHeading": "Socrú",
+            "showFolder": "Taispeáin fillteán na sonraí",
+            "steps": {
+                "copy": "Cóipeáil iad seo ó fhillteán an chluiche go fillteán an chalafoirt — cóipeáil, ná bog, ionas go bhfanfaidh suiteáil Steam slán: {{files}}",
+                "import": "Allmhairíonn an calafort sonraí an chluiche ón suiteálaí bunaidh — lean an socrú céadrite.",
+                "point": "Nuair a iarrfaidh an calafort sonraí an chluiche, díríigh é ar fhillteán suiteála an chluiche.",
+                "sideload": "Ansin cuir an calafort le do leabharlann le Cuir Cluiche Leis ionas gur féidir leat é a sheoladh ó GameLib."
+            },
+            "title": "Tá calafort dúchasach ar fáil"
+        },
         "steamInstallingPercent": "Ag suiteáil… {{percent}}%",
         "steamUpdateCommitting": "Nuashonrú á chur i bhfeidhm…",
         "steamUpdatePlanning": "Nuashonrú á phleanáil…",

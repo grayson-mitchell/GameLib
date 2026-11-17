@@ -99,6 +99,30 @@
         "extraInfoStaleBody": "Tämä tulos tallennettiin välimuistiin ennen kuin latauksen tuloksia alettiin tallentaa, joten se voi olla vanhentunut. Päivitä tarkistaaksesi.",
         "hiddenAchievement": "Piilotettu saavutus",
         "moreActions": "Lisää toimintoja",
+        "nativePort": {
+            "copyPath": "Kopioi asennuspolku",
+            "intro": "{{name}} on yhteisön lähdekoodiportti, joka suorittaa tämän pelin natiivisti käyttäen pelisi tiedostoja.",
+            "licence": "Lisenssi: {{licence}}",
+            "notTracked": "Steamin peliaikaa ja saavutuksia ei seurata, kun pelaat portin kautta.",
+            "openLink": "Hanki {{name}}",
+            "platform": {
+                "linux": "Linux",
+                "mac-arm64": "macOS (Apple silicon)",
+                "mac-universal": "macOS (Apple silicon ja Intel)",
+                "mac-x86": "macOS (Intel)",
+                "windows": "Windows"
+            },
+            "platforms": "Toimii alustoilla: {{platforms}}",
+            "setupHeading": "Asennus",
+            "showFolder": "Näytä datakansio",
+            "steps": {
+                "copy": "Kopioi nämä pelikansiosta portin kansioon — kopioi, älä siirrä, jotta Steam-asennus pysyy ehjänä: {{files}}",
+                "import": "Portti tuo pelin tiedot alkuperäisestä asennusohjelmasta — seuraa ensimmäisen käynnistyksen asetuksia.",
+                "point": "Kun portti pyytää pelin tietoja, osoita sille pelin asennuskansio.",
+                "sideload": "Lisää sitten portti kirjastoosi Lisää peli -toiminnolla, jotta voit käynnistää sen GameLibista."
+            },
+            "title": "Natiiviportti saatavilla"
+        },
         "steamInstallingPercent": "Asennetaan… {{percent}} %",
         "steamUpdateCommitting": "Otetaan päivitystä käyttöön…",
         "steamUpdatePlanning": "Suunnitellaan päivitystä…",

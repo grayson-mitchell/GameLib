@@ -99,6 +99,30 @@
         "extraInfoStaleBody": "Bu sonuç, yükleme sonuçları kaydedilmeden önce önbelleğe alındı, bu yüzden güncel olmayabilir. Kontrol etmek için yenileyin.",
         "hiddenAchievement": "Gizli başarım",
         "moreActions": "Daha fazla eylem",
+        "nativePort": {
+            "copyPath": "Kurulum yolunu kopyala",
+            "intro": "{{name}}, oyun dosyalarınızı kullanarak bu oyunu yerel olarak çalıştıran, topluluk tarafından geliştirilen bir kaynak portudur.",
+            "licence": "Lisans: {{licence}}",
+            "notTracked": "Port üzerinden oynarken Steam oyun süresi ve başarımlar izlenmez.",
+            "openLink": "{{name}} edin",
+            "platform": {
+                "linux": "Linux",
+                "mac-arm64": "macOS (Apple silicon)",
+                "mac-universal": "macOS (Apple silicon ve Intel)",
+                "mac-x86": "macOS (Intel)",
+                "windows": "Windows"
+            },
+            "platforms": "Çalıştığı platformlar: {{platforms}}",
+            "setupHeading": "Kurulum",
+            "showFolder": "Veri klasörünü göster",
+            "steps": {
+                "copy": "Bunları oyun klasöründen portun klasörüne kopyalayın — Steam kurulumu bozulmasın diye taşımayın, kopyalayın: {{files}}",
+                "import": "Port, oyun verilerini orijinal yükleyiciden içe aktarır — ilk çalıştırma kurulumunu izleyin.",
+                "point": "Port oyun verilerini istediğinde, onu oyunun kurulum klasörüne yönlendirin.",
+                "sideload": "Ardından GameLib'den başlatabilmek için portu Oyun Ekle ile kitaplığınıza ekleyin."
+            },
+            "title": "Yerel port mevcut"
+        },
         "steamInstallingPercent": "Kuruluyor… %{{percent}}",
         "steamUpdateCommitting": "Güncelleme uygulanıyor…",
         "steamUpdatePlanning": "Güncelleme planlanıyor…",

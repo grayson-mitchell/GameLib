@@ -99,6 +99,30 @@
         "extraInfoStaleBody": "See tulemus salvestati vahemällu enne laadimistulemuste registreerimist, seega võib see olla vananenud. Värskenda kontrollimiseks.",
         "hiddenAchievement": "Peidetud saavutus",
         "moreActions": "Veel toiminguid",
+        "nativePort": {
+            "copyPath": "Kopeeri paigaldustee",
+            "intro": "{{name}} on kogukonna lähtekoodiport, mis käivitab selle mängu natiivselt sinu mängufailide abil.",
+            "licence": "Litsents: {{licence}}",
+            "notTracked": "Steami mänguaega ja saavutusi ei jälgita, kui mängid pordi kaudu.",
+            "openLink": "Hangi {{name}}",
+            "platform": {
+                "linux": "Linux",
+                "mac-arm64": "macOS (Apple silicon)",
+                "mac-universal": "macOS (Apple silicon ja Intel)",
+                "mac-x86": "macOS (Intel)",
+                "windows": "Windows"
+            },
+            "platforms": "Töötab platvormidel: {{platforms}}",
+            "setupHeading": "Seadistus",
+            "showFolder": "Kuva andmekaust",
+            "steps": {
+                "copy": "Kopeeri need mängukaustast pordi kausta — kopeeri, ära teisalda, et Steami paigaldus jääks puutumata: {{files}}",
+                "import": "Port impordib mänguandmed algsest paigaldajast — järgi esmakäivituse seadistust.",
+                "point": "Kui port küsib mänguandmeid, suuna see mängu paigalduskausta.",
+                "sideload": "Seejärel lisa port oma teeki käsuga Lisa mäng, et saaksid seda GameLibist käivitada."
+            },
+            "title": "Natiivne port on saadaval"
+        },
         "steamInstallingPercent": "Paigaldamine… {{percent}}%",
         "steamUpdateCommitting": "Uuenduse rakendamine…",
         "steamUpdatePlanning": "Uuenduse planeerimine…",

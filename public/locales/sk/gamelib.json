@@ -101,6 +101,30 @@
         "extraInfoStaleBody": "Tento výsledok bol uložený do vyrovnávacej pamäte pred zaznamenaním výsledkov načítania, takže môže byť neaktuálny. Obnovte a skontrolujte.",
         "hiddenAchievement": "Skrytý úspech",
         "moreActions": "Ďalšie akcie",
+        "nativePort": {
+            "copyPath": "Kopírovať cestu inštalácie",
+            "intro": "{{name}} je komunitný zdrojový port, ktorý túto hru spúšťa natívne pomocou súborov vašej hry.",
+            "licence": "Licencia: {{licence}}",
+            "notTracked": "Herný čas a úspechy v službe Steam sa pri hraní cez port nesledujú.",
+            "openLink": "Získať {{name}}",
+            "platform": {
+                "linux": "Linux",
+                "mac-arm64": "macOS (Apple silicon)",
+                "mac-universal": "macOS (Apple silicon a Intel)",
+                "mac-x86": "macOS (Intel)",
+                "windows": "Windows"
+            },
+            "platforms": "Funguje na: {{platforms}}",
+            "setupHeading": "Nastavenie",
+            "showFolder": "Zobraziť priečinok s dátami",
+            "steps": {
+                "copy": "Skopírujte ich z priečinka hry do priečinka portu — kopírujte, nepresúvajte, aby inštalácia Steam zostala nedotknutá: {{files}}",
+                "import": "Port importuje dáta hry z pôvodného inštalátora — postupujte podľa nastavenia pri prvom spustení.",
+                "point": "Keď port požiada o dáta hry, nasmerujte ho do inštalačného priečinka hry.",
+                "sideload": "Potom port pridajte do knižnice cez Pridať Hru, aby ste ho mohli spustiť z GameLib."
+            },
+            "title": "K dispozícii je natívny port"
+        },
         "steamInstallingPercent": "Inštaluje sa… {{percent}} %",
         "steamUpdateCommitting": "Používa sa aktualizácia…",
         "steamUpdatePlanning": "Plánuje sa aktualizácia…",

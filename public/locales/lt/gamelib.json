@@ -101,6 +101,30 @@
         "extraInfoStaleBody": "Šis rezultatas buvo talpinamas podėlyje prieš pradedant registruoti įkėlimo rezultatus, todėl jis gali būti pasenęs. Atnaujinkite, kad patikrintumėte.",
         "hiddenAchievement": "Paslėptas pasiekimas",
         "moreActions": "Daugiau veiksmų",
+        "nativePort": {
+            "copyPath": "Kopijuoti diegimo kelią",
+            "intro": "{{name}} yra bendruomenės šaltinio prievadas (source port), kuris šį žaidimą paleidžia natyviai naudodamas jūsų žaidimo failus.",
+            "licence": "Licencija: {{licence}}",
+            "notTracked": "Žaidžiant per prievadą, Steam žaidimo laikas ir pasiekimai nefiksuojami.",
+            "openLink": "Gauti {{name}}",
+            "platform": {
+                "linux": "Linux",
+                "mac-arm64": "macOS (Apple silicon)",
+                "mac-universal": "macOS (Apple silicon ir Intel)",
+                "mac-x86": "macOS (Intel)",
+                "windows": "Windows"
+            },
+            "platforms": "Veikia: {{platforms}}",
+            "setupHeading": "Sąranka",
+            "showFolder": "Rodyti duomenų aplanką",
+            "steps": {
+                "copy": "Nukopijuokite juos iš žaidimo aplanko į prievado aplanką — kopijuokite, o ne perkelkite, kad Steam diegimas išliktų nepakitęs: {{files}}",
+                "import": "Prievadas importuoja žaidimo duomenis iš originalaus diegimo programos — vadovaukitės pirmojo paleidimo sąranka.",
+                "point": "Kai prievadas paprašys žaidimo duomenų, nurodykite žaidimo diegimo aplanką.",
+                "sideload": "Tada pridėkite prievadą į savo biblioteką naudodami Pridėti žaidimą, kad galėtumėte jį paleisti iš GameLib."
+            },
+            "title": "Galimas natyvus prievadas"
+        },
         "steamInstallingPercent": "Diegiama… {{percent}} %",
         "steamUpdateCommitting": "Taikomas naujinimas…",
         "steamUpdatePlanning": "Planuojamas naujinimas…",

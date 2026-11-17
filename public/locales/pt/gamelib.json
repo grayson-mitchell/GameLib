@@ -100,6 +100,30 @@
         "extraInfoStaleBody": "Este resultado foi guardado em cache antes de os resultados de carregamento serem registados, pelo que pode estar desatualizado. Atualize para verificar.",
         "hiddenAchievement": "Conquista oculta",
         "moreActions": "Mais ações",
+        "nativePort": {
+            "copyPath": "Copiar caminho de instalação",
+            "intro": "{{name}} é um source port da comunidade que executa este jogo nativamente usando os ficheiros do teu jogo.",
+            "licence": "Licença: {{licence}}",
+            "notTracked": "O tempo de jogo e as conquistas do Steam não são registados quando jogas através do port.",
+            "openLink": "Obter {{name}}",
+            "platform": {
+                "linux": "Linux",
+                "mac-arm64": "macOS (Apple silicon)",
+                "mac-universal": "macOS (Apple silicon e Intel)",
+                "mac-x86": "macOS (Intel)",
+                "windows": "Windows"
+            },
+            "platforms": "Funciona em: {{platforms}}",
+            "setupHeading": "Configuração",
+            "showFolder": "Mostrar pasta de dados",
+            "steps": {
+                "copy": "Copia estes ficheiros da pasta do jogo para a pasta do port — copia, não movas, para que a instalação do Steam fique intacta: {{files}}",
+                "import": "O port importa os dados do jogo a partir do instalador original — segue a configuração do primeiro arranque.",
+                "point": "Quando o port pedir os dados do jogo, indica-lhe a pasta de instalação do jogo.",
+                "sideload": "Depois adiciona o port à tua biblioteca com Adicionar Jogo para o poderes iniciar a partir do GameLib."
+            },
+            "title": "Port nativo disponível"
+        },
         "steamInstallingPercent": "A instalar… {{percent}}%",
         "steamUpdateCommitting": "A aplicar a atualização…",
         "steamUpdatePlanning": "A planear a atualização…",

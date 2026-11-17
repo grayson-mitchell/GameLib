@@ -99,6 +99,30 @@
         "extraInfoStaleBody": "Hasil ini disimpan dalam cache sebelum hasil pemuatan dicatat, sehingga mungkin sudah kedaluwarsa. Segarkan untuk memeriksanya.",
         "hiddenAchievement": "Pencapaian tersembunyi",
         "moreActions": "Tindakan lainnya",
+        "nativePort": {
+            "copyPath": "Salin jalur instalasi",
+            "intro": "{{name}} adalah source port komunitas yang menjalankan gim ini secara native menggunakan berkas gim Anda.",
+            "licence": "Lisensi: {{licence}}",
+            "notTracked": "Waktu bermain dan pencapaian Steam tidak dilacak saat Anda bermain melalui port.",
+            "openLink": "Dapatkan {{name}}",
+            "platform": {
+                "linux": "Linux",
+                "mac-arm64": "macOS (Apple silicon)",
+                "mac-universal": "macOS (Apple silicon dan Intel)",
+                "mac-x86": "macOS (Intel)",
+                "windows": "Windows"
+            },
+            "platforms": "Berjalan di: {{platforms}}",
+            "setupHeading": "Penyiapan",
+            "showFolder": "Tampilkan folder data",
+            "steps": {
+                "copy": "Salin berkas ini dari folder gim ke folder port — salin, jangan pindahkan, agar instalasi Steam tetap utuh: {{files}}",
+                "import": "Port mengimpor data gim dari penginstal asli — ikuti penyiapan saat pertama kali dijalankan.",
+                "point": "Saat port meminta data gim, arahkan ke folder instalasi gim.",
+                "sideload": "Lalu tambahkan port ke pustaka Anda dengan Tambahkan Gim agar dapat dijalankan dari GameLib."
+            },
+            "title": "Port native tersedia"
+        },
         "steamInstallingPercent": "Menginstal… {{percent}}%",
         "steamUpdateCommitting": "Menerapkan pembaruan…",
         "steamUpdatePlanning": "Merencanakan pembaruan…",

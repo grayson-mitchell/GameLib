@@ -99,6 +99,30 @@
         "extraInfoStaleBody": "Ez az eredmény a betöltési kimenetek rögzítése előtt lett gyorsítótárazva, így elavult lehet. Frissítsd az ellenőrzéshez.",
         "hiddenAchievement": "Rejtett eredmény",
         "moreActions": "További műveletek",
+        "nativePort": {
+            "copyPath": "Telepítési útvonal másolása",
+            "intro": "A(z) {{name}} egy közösségi forrásport, amely natívan futtatja ezt a játékot a játékfájljaid segítségével.",
+            "licence": "Licenc: {{licence}}",
+            "notTracked": "A Steam játékidő és a teljesítmények nem követhetők, ha a porton keresztül játszol.",
+            "openLink": "{{name}} letöltése",
+            "platform": {
+                "linux": "Linux",
+                "mac-arm64": "macOS (Apple silicon)",
+                "mac-universal": "macOS (Apple silicon és Intel)",
+                "mac-x86": "macOS (Intel)",
+                "windows": "Windows"
+            },
+            "platforms": "Futtatható: {{platforms}}",
+            "setupHeading": "Beállítás",
+            "showFolder": "Adatmappa megjelenítése",
+            "steps": {
+                "copy": "Másold ezeket a játék mappájából a port mappájába — másold, ne mozgasd, hogy a Steam-telepítés érintetlen maradjon: {{files}}",
+                "import": "A port az eredeti telepítőből importálja a játékadatokat — kövesd az első indításkori beállítást.",
+                "point": "Amikor a port elkéri a játékadatokat, add meg neki a játék telepítési mappáját.",
+                "sideload": "Ezután add hozzá a portot a könyvtáradhoz a Játék hozzáadása segítségével, hogy a GameLibből indíthasd."
+            },
+            "title": "Natív port érhető el"
+        },
         "steamInstallingPercent": "Telepítés… {{percent}}%",
         "steamUpdateCommitting": "Frissítés alkalmazása…",
         "steamUpdatePlanning": "Frissítés tervezése…",

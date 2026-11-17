@@ -99,6 +99,30 @@
         "extraInfoStaleBody": "Dette resultat blev cachet før indlæsningsresultater blev registreret, så det kan være forældet. Opdater for at kontrollere.",
         "hiddenAchievement": "Skjult bedrift",
         "moreActions": "Flere handlinger",
+        "nativePort": {
+            "copyPath": "Kopiér installationssti",
+            "intro": "{{name}} er en community-source-port, der kører dette spil nativt med dine spilfiler.",
+            "licence": "Licens: {{licence}}",
+            "notTracked": "Spilletid og præstationer i Steam bliver ikke registreret, når du spiller via porten.",
+            "openLink": "Hent {{name}}",
+            "platform": {
+                "linux": "Linux",
+                "mac-arm64": "macOS (Apple silicon)",
+                "mac-universal": "macOS (Apple silicon og Intel)",
+                "mac-x86": "macOS (Intel)",
+                "windows": "Windows"
+            },
+            "platforms": "Kører på: {{platforms}}",
+            "setupHeading": "Opsætning",
+            "showFolder": "Vis datamappe",
+            "steps": {
+                "copy": "Kopiér disse fra spilmappen til portens mappe — kopiér, flyt ikke, så Steam-installationen forbliver intakt: {{files}}",
+                "import": "Porten importerer spildata fra det originale installationsprogram — følg opsætningen ved første kørsel.",
+                "point": "Når porten spørger efter spildata, så peg den på spillets installationsmappe.",
+                "sideload": "Tilføj derefter porten til dit bibliotek med Tilføj spil, så du kan starte den fra GameLib."
+            },
+            "title": "Nativ port tilgængelig"
+        },
         "steamInstallingPercent": "Installerer… {{percent}} %",
         "steamUpdateCommitting": "Anvender opdatering…",
         "steamUpdatePlanning": "Planlægger opdatering…",

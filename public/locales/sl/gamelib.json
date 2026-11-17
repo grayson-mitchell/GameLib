@@ -101,6 +101,30 @@
         "extraInfoStaleBody": "Ta rezultat je bil shranjen v predpomnilnik, preden so se beležili izidi nalaganja, zato je morda zastarel. Osvežite za preverjanje.",
         "hiddenAchievement": "Skriti dosežek",
         "moreActions": "Več dejanj",
+        "nativePort": {
+            "copyPath": "Kopiraj pot namestitve",
+            "intro": "{{name}} je skupnostni izvorni port, ki to igro izvaja izvorno z uporabo datotek vaše igre.",
+            "licence": "Licenca: {{licence}}",
+            "notTracked": "Steamov čas igranja in dosežki se ne beležijo, ko igrate prek porta.",
+            "openLink": "Prenesi {{name}}",
+            "platform": {
+                "linux": "Linux",
+                "mac-arm64": "macOS (Apple silicon)",
+                "mac-universal": "macOS (Apple silicon in Intel)",
+                "mac-x86": "macOS (Intel)",
+                "windows": "Windows"
+            },
+            "platforms": "Deluje na: {{platforms}}",
+            "setupHeading": "Nastavitev",
+            "showFolder": "Pokaži mapo s podatki",
+            "steps": {
+                "copy": "Kopirajte te datoteke iz mape igre v mapo porta — kopirajte, ne premikajte, da namestitev Steam ostane nedotaknjena: {{files}}",
+                "import": "Port uvozi podatke igre iz izvirnega namestitvenega programa — sledite nastavitvi ob prvem zagonu.",
+                "point": "Ko port zahteva podatke igre, ga usmerite v namestitveno mapo igre.",
+                "sideload": "Nato port dodajte v knjižnico z Dodaj igro, da ga lahko zaženete iz GameLib."
+            },
+            "title": "Na voljo je izvorni port"
+        },
         "steamInstallingPercent": "Nameščanje… {{percent}} %",
         "steamUpdateCommitting": "Uveljavljanje posodobitve…",
         "steamUpdatePlanning": "Načrtovanje posodobitve…",

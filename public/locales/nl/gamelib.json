@@ -99,6 +99,30 @@
         "extraInfoStaleBody": "Dit resultaat is gecachet voordat laadresultaten werden geregistreerd, dus het kan verouderd zijn. Vernieuw om te controleren.",
         "hiddenAchievement": "Verborgen prestatie",
         "moreActions": "Meer acties",
+        "nativePort": {
+            "copyPath": "Installatiepad kopiëren",
+            "intro": "{{name}} is een community-sourceport die deze game native uitvoert met je gamebestanden.",
+            "licence": "Licentie: {{licence}}",
+            "notTracked": "Steam-speeltijd en prestaties worden niet bijgehouden als je via de port speelt.",
+            "openLink": "{{name}} downloaden",
+            "platform": {
+                "linux": "Linux",
+                "mac-arm64": "macOS (Apple silicon)",
+                "mac-universal": "macOS (Apple silicon en Intel)",
+                "mac-x86": "macOS (Intel)",
+                "windows": "Windows"
+            },
+            "platforms": "Draait op: {{platforms}}",
+            "setupHeading": "Instellen",
+            "showFolder": "Gegevensmap tonen",
+            "steps": {
+                "copy": "Kopieer deze uit de gamemap naar de map van de port — kopiëren, niet verplaatsen, zodat de Steam-installatie intact blijft: {{files}}",
+                "import": "De port importeert de gamegegevens uit het originele installatieprogramma — volg de instellingen bij de eerste keer starten.",
+                "point": "Als de port om de gamegegevens vraagt, wijs dan naar de installatiemap van de game.",
+                "sideload": "Voeg de port daarna aan je bibliotheek toe met Voeg game toe, zodat je hem vanuit GameLib kunt starten."
+            },
+            "title": "Native port beschikbaar"
+        },
         "steamInstallingPercent": "Installeren… {{percent}}%",
         "steamUpdateCommitting": "Update toepassen…",
         "steamUpdatePlanning": "Update plannen…",

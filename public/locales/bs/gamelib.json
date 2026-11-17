@@ -100,6 +100,30 @@
         "extraInfoStaleBody": "Ovaj rezultat je keširan prije nego što su ishodi učitavanja zabilježeni, pa može biti zastario. Osvježite da provjerite.",
         "hiddenAchievement": "Skriveno dostignuće",
         "moreActions": "Više radnji",
+        "nativePort": {
+            "copyPath": "Kopiraj putanju instalacije",
+            "intro": "{{name}} je zajednički source port koji pokreće ovu igru nativno koristeći datoteke vaše igre.",
+            "licence": "Licenca: {{licence}}",
+            "notTracked": "Steam vrijeme igranja i postignuća se ne prate kada igrate preko porta.",
+            "openLink": "Preuzmi {{name}}",
+            "platform": {
+                "linux": "Linux",
+                "mac-arm64": "macOS (Apple silicon)",
+                "mac-universal": "macOS (Apple silicon i Intel)",
+                "mac-x86": "macOS (Intel)",
+                "windows": "Windows"
+            },
+            "platforms": "Radi na: {{platforms}}",
+            "setupHeading": "Postavljanje",
+            "showFolder": "Prikaži folder s podacima",
+            "steps": {
+                "copy": "Kopirajte ovo iz foldera igre u folder porta — kopirajte, ne premještajte, da Steam instalacija ostane netaknuta: {{files}}",
+                "import": "Port uvozi podatke igre iz originalnog instalera — slijedite postavljanje pri prvom pokretanju.",
+                "point": "Kada port zatraži podatke igre, usmjerite ga na instalacijski folder igre.",
+                "sideload": "Zatim dodajte port u svoju biblioteku pomoću Dodaj igru kako biste ga mogli pokrenuti iz GameLib-a."
+            },
+            "title": "Dostupan je nativni port"
+        },
         "steamInstallingPercent": "Instaliranje… {{percent}}%",
         "steamUpdateCommitting": "Primjena ažuriranja…",
         "steamUpdatePlanning": "Planiranje ažuriranja…",

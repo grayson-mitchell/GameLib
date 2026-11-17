@@ -100,6 +100,30 @@
         "extraInfoStaleBody": "תוצאה זו נשמרה במטמון לפני שתוצאות הטעינה נרשמו, ולכן ייתכן שהיא אינה עדכנית. רענן כדי לבדוק.",
         "hiddenAchievement": "הישג מוסתר",
         "moreActions": "פעולות נוספות",
+        "nativePort": {
+            "copyPath": "העתק נתיב התקנה",
+            "intro": "{{name}} הוא פורט קוד מקור של הקהילה שמריץ את המשחק הזה באופן מקורי באמצעות קובצי המשחק שלך.",
+            "licence": "רישיון: {{licence}}",
+            "notTracked": "זמן המשחק וההישגים ב-Steam אינם נמדדים כשמשחקים דרך הפורט.",
+            "openLink": "קבל את {{name}}",
+            "platform": {
+                "linux": "Linux",
+                "mac-arm64": "macOS (Apple silicon)",
+                "mac-universal": "macOS (Apple silicon ו-Intel)",
+                "mac-x86": "macOS (Intel)",
+                "windows": "Windows"
+            },
+            "platforms": "פועל על: {{platforms}}",
+            "setupHeading": "הגדרה",
+            "showFolder": "הצג את תיקיית הנתונים",
+            "steps": {
+                "copy": "העתק את אלה מתיקיית המשחק לתיקיית הפורט — העתק, אל תעביר, כדי שההתקנה של Steam תישאר שלמה: {{files}}",
+                "import": "הפורט מייבא את נתוני המשחק ממתקין המקור — עקוב אחר ההגדרה בהפעלה הראשונה.",
+                "point": "כשהפורט מבקש את נתוני המשחק, הצבע לו על תיקיית ההתקנה של המשחק.",
+                "sideload": "לאחר מכן הוסף את הפורט לספרייה שלך באמצעות הוסף משחק כדי שתוכל להפעיל אותו מ-GameLib."
+            },
+            "title": "פורט מקורי זמין"
+        },
         "steamInstallingPercent": "מתקין… {{percent}}%",
         "steamUpdateCommitting": "מחיל את העדכון…",
         "steamUpdatePlanning": "מתכנן את העדכון…",

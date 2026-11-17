@@ -100,6 +100,30 @@
         "extraInfoStaleBody": "Aquest resultat es va desar en memòria cau abans de registrar els resultats de la càrrega, per la qual cosa pot estar desactualitzat. Actualitza-ho per comprovar-ho.",
         "hiddenAchievement": "Assoliment ocult",
         "moreActions": "Més accions",
+        "nativePort": {
+            "copyPath": "Copia la ruta d'instal·lació",
+            "intro": "{{name}} és un port de codi font de la comunitat que executa aquest joc de manera nativa amb els fitxers del teu joc.",
+            "licence": "Llicència: {{licence}}",
+            "notTracked": "El temps de joc i els assoliments de Steam no es registren quan jugues amb el port.",
+            "openLink": "Obtén {{name}}",
+            "platform": {
+                "linux": "Linux",
+                "mac-arm64": "macOS (Apple silicon)",
+                "mac-universal": "macOS (Apple silicon i Intel)",
+                "mac-x86": "macOS (Intel)",
+                "windows": "Windows"
+            },
+            "platforms": "Funciona a: {{platforms}}",
+            "setupHeading": "Configuració",
+            "showFolder": "Mostra la carpeta de dades",
+            "steps": {
+                "copy": "Copia això de la carpeta del joc a la carpeta del port — copia, no moguis, perquè la instal·lació de Steam quedi intacta: {{files}}",
+                "import": "El port importa les dades del joc de l'instal·lador original — segueix la configuració del primer inici.",
+                "point": "Quan el port demani les dades del joc, indica-li la carpeta d'instal·lació del joc.",
+                "sideload": "Després afegeix el port a la teva biblioteca amb Afegeix un joc per poder-lo iniciar des de GameLib."
+            },
+            "title": "Port natiu disponible"
+        },
         "steamInstallingPercent": "S'està instal·lant… {{percent}}%",
         "steamUpdateCommitting": "Aplicant l'actualització…",
         "steamUpdatePlanning": "Planificant l'actualització…",

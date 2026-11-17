@@ -99,6 +99,30 @@
         "extraInfoStaleBody": "Emaitza hau kargaren emaitzak erregistratu baino lehen katxeatu zen, beraz baliteke eguneratua ez egotea. Freskatu egiaztatzeko.",
         "hiddenAchievement": "Lorpen ezkutua",
         "moreActions": "Ekintza gehiago",
+        "nativePort": {
+            "copyPath": "Kopiatu instalazio-bidea",
+            "intro": "{{name}} komunitateak egindako iturburu-ataka bat da, joko hau modu natiboan exekutatzen duena zure jokoaren fitxategiak erabiliz.",
+            "licence": "Lizentzia: {{licence}}",
+            "notTracked": "Steam-eko jokoaldia eta lorpenak ez dira jarraitzen atakaren bidez jokatzen duzunean.",
+            "openLink": "Eskuratu {{name}}",
+            "platform": {
+                "linux": "Linux",
+                "mac-arm64": "macOS (Apple silicon)",
+                "mac-universal": "macOS (Apple silicon eta Intel)",
+                "mac-x86": "macOS (Intel)",
+                "windows": "Windows"
+            },
+            "platforms": "Hemen funtzionatzen du: {{platforms}}",
+            "setupHeading": "Konfigurazioa",
+            "showFolder": "Erakutsi datuen karpeta",
+            "steps": {
+                "copy": "Kopiatu hauek jokoaren karpetatik atakaren karpetara — kopiatu, ez mugitu, Steam-en instalazioa osorik geratu dadin: {{files}}",
+                "import": "Atakak jokoaren datuak jatorrizko instalatzailetik inportatzen ditu — jarraitu lehen exekuzioko konfigurazioari.",
+                "point": "Atakak jokoaren datuak eskatzen dituenean, adierazi jokoaren instalazio-karpeta.",
+                "sideload": "Ondoren, gehitu ataka zure liburutegira Gehitu jokoa erabiliz, GameLib-etik abiarazi ahal izateko."
+            },
+            "title": "Ataka natiboa eskuragarri"
+        },
         "steamInstallingPercent": "Instalatzen… {{percent}}%",
         "steamUpdateCommitting": "Eguneratzea aplikatzen…",
         "steamUpdatePlanning": "Eguneratzea planifikatzen…",

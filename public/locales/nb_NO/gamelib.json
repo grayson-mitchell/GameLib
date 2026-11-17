@@ -99,6 +99,30 @@
         "extraInfoStaleBody": "Dette resultatet ble hurtiglagret før lasteutfall ble registrert, så det kan være utdatert. Oppdater for å kontrollere.",
         "hiddenAchievement": "Skjult prestasjon",
         "moreActions": "Flere handlinger",
+        "nativePort": {
+            "copyPath": "Kopier installasjonssti",
+            "intro": "{{name}} er en source port fra fellesskapet som kjører dette spillet nativt med spillfilene dine.",
+            "licence": "Lisens: {{licence}}",
+            "notTracked": "Steam-spilletid og prestasjoner spores ikke når du spiller via porten.",
+            "openLink": "Hent {{name}}",
+            "platform": {
+                "linux": "Linux",
+                "mac-arm64": "macOS (Apple silicon)",
+                "mac-universal": "macOS (Apple silicon og Intel)",
+                "mac-x86": "macOS (Intel)",
+                "windows": "Windows"
+            },
+            "platforms": "Kjører på: {{platforms}}",
+            "setupHeading": "Oppsett",
+            "showFolder": "Vis datamappe",
+            "steps": {
+                "copy": "Kopier disse fra spillmappen til portens mappe — kopier, ikke flytt, slik at Steam-installasjonen forblir intakt: {{files}}",
+                "import": "Porten importerer spilldata fra det opprinnelige installasjonsprogrammet — følg oppsettet ved første kjøring.",
+                "point": "Når porten ber om spilldata, peker du den til spillets installasjonsmappe.",
+                "sideload": "Legg deretter til porten i biblioteket ditt med Legg til spill, så du kan starte den fra GameLib."
+            },
+            "title": "Nativ port tilgjengelig"
+        },
         "steamInstallingPercent": "Installerer… {{percent}} %",
         "steamUpdateCommitting": "Bruker oppdateringen…",
         "steamUpdatePlanning": "Planlegger oppdateringen…",

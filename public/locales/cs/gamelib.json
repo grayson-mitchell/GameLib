@@ -101,6 +101,30 @@
         "extraInfoStaleBody": "Tento výsledek byl uložen do mezipaměti před zaznamenáním výsledků načtení, takže může být zastaralý. Obnovte pro kontrolu.",
         "hiddenAchievement": "Skrytý úspěch",
         "moreActions": "Další akce",
+        "nativePort": {
+            "copyPath": "Kopírovat cestu instalace",
+            "intro": "{{name}} je komunitní zdrojový port, který tuto hru spouští nativně pomocí souborů vaší hry.",
+            "licence": "Licence: {{licence}}",
+            "notTracked": "Herní čas a úspěchy ve Steamu se při hraní přes port nesledují.",
+            "openLink": "Získat {{name}}",
+            "platform": {
+                "linux": "Linux",
+                "mac-arm64": "macOS (Apple silicon)",
+                "mac-universal": "macOS (Apple silicon a Intel)",
+                "mac-x86": "macOS (Intel)",
+                "windows": "Windows"
+            },
+            "platforms": "Funguje na: {{platforms}}",
+            "setupHeading": "Nastavení",
+            "showFolder": "Zobrazit složku s daty",
+            "steps": {
+                "copy": "Zkopírujte je ze složky hry do složky portu — kopírujte, nepřesouvejte, aby instalace Steamu zůstala nedotčená: {{files}}",
+                "import": "Port importuje herní data z původního instalátoru — postupujte podle nastavení při prvním spuštění.",
+                "point": "Když port požádá o herní data, nasměrujte ho do instalační složky hry.",
+                "sideload": "Poté port přidejte do knihovny pomocí Přidat hru, abyste ho mohli spustit z GameLibu."
+            },
+            "title": "K dispozici je nativní port"
+        },
         "steamInstallingPercent": "Instaluji… {{percent}} %",
         "steamUpdateCommitting": "Používá se aktualizace…",
         "steamUpdatePlanning": "Plánuje se aktualizace…",

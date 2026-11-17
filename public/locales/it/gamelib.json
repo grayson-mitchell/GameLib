@@ -100,6 +100,30 @@
         "extraInfoStaleBody": "Questo risultato è stato memorizzato nella cache prima che gli esiti del caricamento venissero registrati, quindi potrebbe non essere aggiornato. Aggiorna per verificare.",
         "hiddenAchievement": "Trofeo nascosto",
         "moreActions": "Altre azioni",
+        "nativePort": {
+            "copyPath": "Copia percorso di installazione",
+            "intro": "{{name}} è un source port della community che esegue questo gioco in modo nativo usando i file del tuo gioco.",
+            "licence": "Licenza: {{licence}}",
+            "notTracked": "Il tempo di gioco e gli obiettivi di Steam non vengono tracciati quando giochi tramite il port.",
+            "openLink": "Scarica {{name}}",
+            "platform": {
+                "linux": "Linux",
+                "mac-arm64": "macOS (Apple silicon)",
+                "mac-universal": "macOS (Apple silicon e Intel)",
+                "mac-x86": "macOS (Intel)",
+                "windows": "Windows"
+            },
+            "platforms": "Funziona su: {{platforms}}",
+            "setupHeading": "Configurazione",
+            "showFolder": "Mostra cartella dati",
+            "steps": {
+                "copy": "Copia questi file dalla cartella del gioco alla cartella del port — copia, non spostare, così l'installazione di Steam resta intatta: {{files}}",
+                "import": "Il port importa i dati del gioco dal programma di installazione originale — segui la configurazione del primo avvio.",
+                "point": "Quando il port chiede i dati del gioco, indicagli la cartella di installazione del gioco.",
+                "sideload": "Poi aggiungi il port alla tua libreria con Aggiungi Gioco per poterlo avviare da GameLib."
+            },
+            "title": "Port nativo disponibile"
+        },
         "steamInstallingPercent": "Installazione in corso… {{percent}}%",
         "steamUpdateCommitting": "Applicazione dell'aggiornamento…",
         "steamUpdatePlanning": "Pianificazione dell'aggiornamento…",

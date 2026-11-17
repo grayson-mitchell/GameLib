@@ -100,6 +100,30 @@
         "extraInfoStaleBody": "Acest rezultat a fost stocat în cache înainte de a se înregistra rezultatele încărcării, deci poate fi depășit. Reîmprospătează pentru a verifica.",
         "hiddenAchievement": "Realizare ascunsă",
         "moreActions": "Mai multe acțiuni",
+        "nativePort": {
+            "copyPath": "Copiază calea de instalare",
+            "intro": "{{name}} este un port sursă al comunității care rulează acest joc nativ, folosind fișierele jocului tău.",
+            "licence": "Licență: {{licence}}",
+            "notTracked": "Timpul de joc și realizările Steam nu sunt urmărite când joci prin port.",
+            "openLink": "Obține {{name}}",
+            "platform": {
+                "linux": "Linux",
+                "mac-arm64": "macOS (Apple silicon)",
+                "mac-universal": "macOS (Apple silicon și Intel)",
+                "mac-x86": "macOS (Intel)",
+                "windows": "Windows"
+            },
+            "platforms": "Rulează pe: {{platforms}}",
+            "setupHeading": "Configurare",
+            "showFolder": "Afișează folderul de date",
+            "steps": {
+                "copy": "Copiază-le din folderul jocului în folderul portului — copiază, nu muta, ca instalarea Steam să rămână intactă: {{files}}",
+                "import": "Portul importă datele jocului din programul de instalare original — urmează configurarea de la prima rulare.",
+                "point": "Când portul cere datele jocului, indică-i folderul de instalare al jocului.",
+                "sideload": "Apoi adaugă portul în bibliotecă cu Adaugă joc, ca să-l poți porni din GameLib."
+            },
+            "title": "Port nativ disponibil"
+        },
         "steamInstallingPercent": "Se instalează… {{percent}}%",
         "steamUpdateCommitting": "Se aplică actualizarea…",
         "steamUpdatePlanning": "Se planifică actualizarea…",

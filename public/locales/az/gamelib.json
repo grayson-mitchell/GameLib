@@ -99,6 +99,30 @@
         "extraInfoStaleBody": "Bu nəticə yükləmə nəticələri qeydə alınmazdan əvvəl keşlənib, ona görə köhnəlmiş ola bilər. Yoxlamaq üçün yeniləyin.",
         "hiddenAchievement": "Gizli nailiyyət",
         "moreActions": "Daha çox əməliyyat",
+        "nativePort": {
+            "copyPath": "Quraşdırma yolunu kopyala",
+            "intro": "{{name}} icma tərəfindən hazırlanmış mənbə portudur və bu oyunu oyun fayllarınızdan istifadə edərək yerli şəkildə işlədir.",
+            "licence": "Lisenziya: {{licence}}",
+            "notTracked": "Port vasitəsilə oynadıqda Steam oyun vaxtı və nailiyyətlər izlənmir.",
+            "openLink": "{{name}} əldə et",
+            "platform": {
+                "linux": "Linux",
+                "mac-arm64": "macOS (Apple silicon)",
+                "mac-universal": "macOS (Apple silicon və Intel)",
+                "mac-x86": "macOS (Intel)",
+                "windows": "Windows"
+            },
+            "platforms": "İşlədiyi platformalar: {{platforms}}",
+            "setupHeading": "Quraşdırma",
+            "showFolder": "Data qovluğunu göstər",
+            "steps": {
+                "copy": "Bunları oyun qovluğundan portun qovluğuna kopyalayın — köçürməyin, kopyalayın ki, Steam quraşdırması toxunulmaz qalsın: {{files}}",
+                "import": "Port oyun datasını orijinal quraşdırıcıdan idxal edir — ilk işə salma quraşdırmasına əməl edin.",
+                "point": "Port oyun datasını soruşduqda, onu oyunun quraşdırma qovluğuna yönləndirin.",
+                "sideload": "Sonra portu Oyun əlavə et vasitəsilə kitabxananıza əlavə edin ki, GameLib-dən işə sala biləsiniz."
+            },
+            "title": "Yerli port mövcuddur"
+        },
         "steamInstallingPercent": "Quraşdırılır… {{percent}}%",
         "steamUpdateCommitting": "Yeniləmə tətbiq olunur…",
         "steamUpdatePlanning": "Yeniləmə planlaşdırılır…",

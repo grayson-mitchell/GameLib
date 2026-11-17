@@ -99,6 +99,30 @@
         "extraInfoStaleBody": "Kết quả này được lưu vào bộ nhớ đệm trước khi kết quả tải được ghi nhận, nên có thể đã lỗi thời. Làm mới để kiểm tra.",
         "hiddenAchievement": "Thành tựu ẩn",
         "moreActions": "Thêm thao tác",
+        "nativePort": {
+            "copyPath": "Sao chép đường dẫn cài đặt",
+            "intro": "{{name}} là một source port của cộng đồng, chạy trò chơi này ở dạng gốc (native) bằng các tệp trò chơi của bạn.",
+            "licence": "Giấy phép: {{licence}}",
+            "notTracked": "Thời gian chơi và thành tích Steam không được ghi nhận khi bạn chơi qua port.",
+            "openLink": "Tải {{name}}",
+            "platform": {
+                "linux": "Linux",
+                "mac-arm64": "macOS (Apple silicon)",
+                "mac-universal": "macOS (Apple silicon và Intel)",
+                "mac-x86": "macOS (Intel)",
+                "windows": "Windows"
+            },
+            "platforms": "Chạy trên: {{platforms}}",
+            "setupHeading": "Thiết lập",
+            "showFolder": "Hiển thị thư mục dữ liệu",
+            "steps": {
+                "copy": "Sao chép các tệp này từ thư mục trò chơi vào thư mục của port — hãy sao chép, đừng di chuyển, để bản cài đặt Steam được giữ nguyên: {{files}}",
+                "import": "Port nhập dữ liệu trò chơi từ trình cài đặt gốc — hãy làm theo bước thiết lập khi chạy lần đầu.",
+                "point": "Khi port yêu cầu dữ liệu trò chơi, hãy trỏ nó tới thư mục cài đặt của trò chơi.",
+                "sideload": "Sau đó thêm port vào thư viện của bạn bằng Thêm Trò Chơi để chạy từ GameLib."
+            },
+            "title": "Có sẵn port gốc (native)"
+        },
         "steamInstallingPercent": "Đang cài đặt… {{percent}}%",
         "steamUpdateCommitting": "Đang áp dụng bản cập nhật…",
         "steamUpdatePlanning": "Đang lập kế hoạch cập nhật…",
