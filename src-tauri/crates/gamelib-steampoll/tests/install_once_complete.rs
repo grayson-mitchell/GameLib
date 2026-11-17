@@ -1,10 +1,8 @@
-//! Port of the installed / completion cases of `library.installPollOnce.test.ts`, plus the hold
-//! handshake, update delegation and the Mac arch follow-up. Mapping table: 80-14-SUMMARY.md.
+//! Port of the installed / completion cases of `library.installPollOnce.test.ts`, plus update delegation and the Mac arch follow-up. Mapping table: 80-14-SUMMARY.md.
 
 use gamelib_steampoll::acf_state::{AcfSource, AcfState, AcfUpdateFields, PollRoots};
 use gamelib_steampoll::effects::{Continuation, Effect};
 use gamelib_steampoll::events::{AckReply, StateEvent};
-use gamelib_steampoll::hold::HoldState;
 use gamelib_steampoll::host::{NotifyText, RunOutput};
 use gamelib_steampoll::install_once::{
     install_step, mac_arch_verdict_effect, run_mac_arch_followup, wants_mac_arch_probe,
@@ -354,79 +352,29 @@ fn skip_notice_independent_of_the_restart_flag() {
     assert!(!p.notified_waiting);
 }
 
-// ---- restart hold ----------------------------------------------------------------------------
+// ---- installed on the first tick (Phase 81 D-11) -----------------------------------------------
 
 #[test]
-fn eligible_poll_asks_the_loop_for_the_hold_probe_without_side_effects() {
-    let mut p = handoff(AcfSource::Native);
-    let step = install_step(APP, &mut p, &obs(installed_acf()));
-    assert!(step.hold_probe.is_some());
-    assert!(step.effects.is_empty() && !step.stop);
-    assert!(!p.notified_waiting);
-    assert_eq!(p.hold.steam_hold, HoldState::Unprobed);
-}
-
-#[test]
-fn ineligible_polls_never_ask_for_the_probe() {
-    // OFF path (not a native handoff), a bottle handoff, and an already released hold.
-    let mut off = poll(AcfSource::Native);
-    let mut bottle = handoff(AcfSource::Bottle);
-    let mut released = handoff(AcfSource::Native);
-    released.hold.steam_hold = HoldState::Released;
-    for p in [&mut off, &mut bottle, &mut released] {
-        let step = install_step(APP, p, &obs(installed_acf()));
-        assert!(step.hold_probe.is_none());
-        assert!(step.stop, "completes straight away");
+fn a_native_handoff_reports_installed_on_the_first_tick_on_every_platform() {
+    // The hold never arms: no probe request, no steam-waiting-for-restart status, no wait.
+    for platform in [Platform::Darwin, Platform::Win32, Platform::Linux] {
+        let mut p = handoff(AcfSource::Native);
+        let mut o = obs(installed_acf());
+        o.platform = platform;
+        let step = install_step(APP, &mut p, &o);
+        assert!(step.hold_probe.is_none(), "{platform:?}: no hold probe");
+        assert!(step.stop, "{platform:?}: completes on the first tick");
+        assert!(
+            installed_event(&step.effects).is_some(),
+            "{platform:?}: Installed fires on that tick"
+        );
+        assert!(
+            !statuses(&step.effects)
+                .iter()
+                .any(|s| s["context"] == "steam-waiting-for-restart"),
+            "{platform:?}: never waits for a restart"
+        );
     }
-}
-
-#[test]
-fn holding_keeps_the_poll_waiting_and_notifies_once() {
-    let mut p = handoff(AcfSource::Native);
-    p.hold.steam_hold = HoldState::Holding;
-    let write = Effect::WriteHoldRecord {
-        app_id: APP.into(),
-        record: serde_json::json!({"pids": []}),
-    };
-    let mut o = obs(installed_acf());
-    o.hold = Some(HoldOutcome {
-        holding: true,
-        effects: vec![write.clone()],
-    });
-    let step = install_step(APP, &mut p, &o);
-    assert!(!step.stop);
-    assert_eq!(step.effects[0], write, "the record write comes first");
-    assert!(!step
-        .effects
-        .iter()
-        .any(|e| matches!(e, Effect::Transition { .. })));
-    let s = statuses(&step.effects);
-    assert_eq!(s[0]["status"], "installing");
-    assert_eq!(s[0]["context"], "steam-waiting-for-restart");
-    assert_eq!(
-        notify_keys(&step.effects),
-        vec!["steam.waitingForSteam.notify"]
-    );
-
-    // the second tick does not repeat the notice
-    let again = install_step(APP, &mut p, &o);
-    assert!(notify_keys(&again.effects).is_empty());
-}
-
-#[test]
-fn a_release_completes_with_the_hold_effects_first() {
-    let mut p = handoff(AcfSource::Native);
-    p.hold.steam_hold = HoldState::Released;
-    let clear = Effect::ClearHoldRecord { app_id: APP.into() };
-    let mut o = obs(installed_acf());
-    o.hold = Some(HoldOutcome {
-        holding: false,
-        effects: vec![clear.clone()],
-    });
-    let step = install_step(APP, &mut p, &o);
-    assert!(step.stop);
-    assert_eq!(step.effects[0], clear);
-    assert!(installed_event(&step.effects).is_some());
 }
 
 // ---- update delegation -----------------------------------------------------------------------

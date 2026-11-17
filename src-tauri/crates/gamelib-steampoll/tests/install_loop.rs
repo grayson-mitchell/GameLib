@@ -11,10 +11,9 @@ use gamelib_steampoll::constants::{
     GRACE_TICKS, MANIFEST_GONE_TICKS, MAX_TICKS, STEAM_REQUEST_NO_ACTIVITY_TICKS,
 };
 use gamelib_steampoll::events::{AckReply, StateEvent};
-use gamelib_steampoll::host::{BoxFuture, HoldSink, ProcessRunner, RunOutput, StreamingChild};
+use gamelib_steampoll::host::{HoldSink, RunOutput};
 use gamelib_steampoll::install_loop::{
-    AwaitingUpdateOpt, InstallAppRetryOpt, InstallPolls, PollOptions, RestoredSteamHold,
-    StartInstallArgs,
+    AwaitingUpdateOpt, InstallAppRetryOpt, InstallPolls, PollOptions, StartInstallArgs,
 };
 use gamelib_steampoll::monitor::DownloadMonitor;
 use gamelib_steampoll::outbox::Outbox;
@@ -22,7 +21,6 @@ use gamelib_steampoll::profile::Platform;
 use gamelib_steampoll::registry::{PollKind, Registry};
 use gamelib_steampoll::testing::{AckMode, FakeClock, RecordingHost, ScriptedRunner, StreamRecord};
 use gamelib_steampoll::uninstall::{start_uninstall, stop_uninstall, StartUninstallArgs};
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 use tempfile::TempDir;
@@ -389,32 +387,6 @@ async fn bottle_source_polls_the_bottle_root_not_the_native_one() {
     );
 }
 
-#[tokio::test(start_paused = true)]
-async fn adopted_by_steam_upgrade_releases_the_hold_and_clears_the_record() {
-    let r = rig().await;
-    start(
-        &r,
-        PollOptions {
-            restored_steam_hold: Some(RestoredSteamHold {
-                pids: vec![42],
-                start_ticks: 5,
-            }),
-            ..handoff(None)
-        },
-    );
-    assert_eq!(r.polls.status().installs[0].steam_hold, "holding");
-    start(
-        &r,
-        PollOptions {
-            adopted_by_steam_client: Some(true),
-            ..PollOptions::default()
-        },
-    );
-    assert_eq!(r.polls.status().installs[0].steam_hold, "released");
-    assert_eq!(labels(&r.host), vec!["file:clear"]);
-    r.polls.stop_install(APP);
-}
-
 // ---- installAppRetry carry-through (74-30) ---------------------------------------------------
 
 fn awaiting(with_retry: bool) -> PollOptions {
@@ -543,28 +515,6 @@ async fn an_update_poll_sends_done_when_the_cap_stops_it() {
     let l = labels(&r.host);
     assert_eq!(l.last().unwrap(), "status:done");
     assert_eq!(l.iter().filter(|x| *x == "status:done").count(), 1);
-}
-
-#[tokio::test(start_paused = true)]
-async fn the_cap_releases_a_holding_poll_and_reports_it_installed() {
-    let r = rig().await;
-    write(&r, "4");
-    start(
-        &r,
-        PollOptions {
-            restored_steam_hold: Some(RestoredSteamHold {
-                pids: vec![42],
-                start_ticks: MAX_TICKS - 1,
-            }),
-            ..handoff(None)
-        },
-    );
-    ticks(1).await;
-    let l = labels(&r.host);
-    assert_eq!(l[0], "file:clear", "hold released first: {l:?}");
-    assert!(l.contains(&"state:installed".to_string()));
-    assert!(l.contains(&"status:done".to_string()));
-    assert!(!active(&r, APP));
 }
 
 // ---- delegated polls (quick 261024-exo, 261105-vfq) ------------------------------------------
@@ -768,35 +718,6 @@ async fn d4_d5_only_a_delegated_download_flags_managed_by_steam() {
 // ---- hold, stop, completion ------------------------------------------------------------------
 
 #[tokio::test(start_paused = true)]
-async fn stopping_a_holding_poll_clears_its_persisted_hold_record() {
-    let r = rig().await;
-    start(
-        &r,
-        PollOptions {
-            restored_steam_hold: Some(RestoredSteamHold {
-                pids: vec![42],
-                start_ticks: 3,
-            }),
-            ..handoff(None)
-        },
-    );
-    assert_eq!(r.polls.snapshot_poll(APP).unwrap().ticks, 3);
-    assert!(r.polls.stop_install(APP));
-    assert_eq!(labels(&r.host), vec!["file:clear"]);
-    // Idempotent: nothing more.
-    assert!(!r.polls.stop_install(APP));
-    assert_eq!(labels(&r.host), vec!["file:clear"]);
-}
-
-#[tokio::test(start_paused = true)]
-async fn a_stopped_non_holding_poll_clears_no_record() {
-    let r = rig().await;
-    start(&r, PollOptions::default());
-    r.polls.stop_install(APP);
-    assert!(labels(&r.host).is_empty());
-}
-
-#[tokio::test(start_paused = true)]
 async fn installed_ack_then_done_and_the_poll_ends() {
     let r = rig().await;
     write(&r, "4");
@@ -808,56 +729,6 @@ async fn installed_ack_then_done_and_the_poll_ends() {
     );
     assert!(!active(&r, APP));
     assert!(r.polls.status().installs.is_empty());
-}
-
-#[tokio::test(start_paused = true)]
-async fn the_hold_probe_is_re_entered_and_a_gone_steam_completes_the_install() {
-    // Native handoff, finalized manifest, no Steam process: the loop runs the probe (pgrep
-    // exits 1) and re-calls the step, which completes the install.
-    let r = rig().await;
-    r.runner.on(
-        "pgrep -x steam",
-        vec![RunOutput {
-            code: Some(1),
-            ..RunOutput::default()
-        }],
-    );
-    write(&r, "4");
-    start(&r, handoff(None));
-    ticks(1).await;
-    let l = labels(&r.host);
-    assert!(l.contains(&"state:installed".to_string()), "{l:?}");
-    assert!(r.runner.calls().iter().any(|c| c == "pgrep -x steam"));
-    assert!(!active(&r, APP));
-}
-
-#[tokio::test(start_paused = true)]
-async fn a_running_steam_holds_the_poll_and_persists_the_record() {
-    let r = rig().await;
-    r.runner.on(
-        "pgrep -x steam",
-        vec![RunOutput {
-            code: Some(0),
-            stdout: "321\n".into(),
-            stderr: String::new(),
-        }],
-    );
-    r.runner.on(
-        "ps -o pid=,lstart= -p 321",
-        vec![RunOutput {
-            code: Some(0),
-            stdout: "321 Mon Nov 16 10:00:00 2026\n".into(),
-            stderr: String::new(),
-        }],
-    );
-    write(&r, "4");
-    start(&r, handoff(None));
-    ticks(1).await;
-    assert!(active(&r, APP));
-    assert_eq!(r.polls.status().installs[0].steam_hold, "holding");
-    assert_eq!(r.polls.status().holding, vec![APP.to_string()]);
-    assert!(!labels(&r.host).contains(&"state:installed".to_string()));
-    r.polls.stop_install(APP);
 }
 
 #[tokio::test(start_paused = true)]
@@ -1048,253 +919,6 @@ async fn an_eligible_poll_retries_a_dead_monitor_every_five_ticks() {
     ticks(5).await;
     assert_eq!(count(&r), 3);
     r.polls.stop_install(APP);
-}
-
-// ---- no overlapping ticks (D-10) -------------------------------------------------------------
-
-struct SlowRunner {
-    in_flight: Arc<AtomicUsize>,
-    max_in_flight: AtomicUsize,
-    calls: AtomicUsize,
-}
-
-impl ProcessRunner for SlowRunner {
-    fn run(&self, _program: &str, _argv: Vec<String>, _timeout: Duration) -> BoxFuture<RunOutput> {
-        self.calls.fetch_add(1, Ordering::SeqCst);
-        let now = self.in_flight.fetch_add(1, Ordering::SeqCst) + 1;
-        self.max_in_flight.fetch_max(now, Ordering::SeqCst);
-        let counter = self.in_flight.clone();
-        Box::pin(async move {
-            tokio::time::sleep(Duration::from_secs(10)).await;
-            counter.fetch_sub(1, Ordering::SeqCst);
-            // pgrep: nothing matched.
-            RunOutput {
-                code: Some(1),
-                ..RunOutput::default()
-            }
-        })
-    }
-
-    fn spawn_streaming(&self, _p: &str, _a: Vec<String>) -> std::io::Result<StreamingChild> {
-        Err(std::io::Error::other("unused"))
-    }
-}
-
-#[tokio::test(start_paused = true)]
-async fn a_slow_tick_delays_the_next_one_instead_of_overlapping() {
-    let tmp = TempDir::new().unwrap();
-    let steam = tmp.path().join("steam");
-    let steamapps = steam.join("steamapps");
-    std::fs::create_dir_all(&steamapps).unwrap();
-    std::fs::write(
-        steamapps.join("libraryfolders.vdf"),
-        format!(
-            "\"libraryfolders\"\n{{\n\"0\"\n{{\n\"path\" \"{}\"\n}}\n}}\n",
-            steam.display()
-        ),
-    )
-    .unwrap();
-    let host = Arc::new(RecordingHost::default());
-    let slow = Arc::new(SlowRunner {
-        in_flight: Arc::new(AtomicUsize::new(0)),
-        max_in_flight: AtomicUsize::new(0),
-        calls: AtomicUsize::new(0),
-    });
-    let clock = Arc::new(FakeClock::new(0));
-    let outbox = Arc::new(Outbox::new());
-    outbox.mark_ready(host.as_ref()).await;
-    let reg = Registry::new(
-        tokio::runtime::Handle::current(),
-        host.clone(),
-        slow.clone(),
-        clock.clone(),
-    );
-    let monitor = Arc::new(DownloadMonitor::with_platform(
-        host.clone(),
-        slow.clone(),
-        clock,
-        false,
-    ));
-    let polls = InstallPolls::new(reg.clone(), outbox, host.clone(), monitor, Platform::Linux);
-    let roots = PollRoots {
-        steam_root: steam.to_string_lossy().into_owned(),
-        bottle_steamapps_root: None,
-        bridge_steamapps_root: None,
-    };
-    // A native handoff poll on a finalized manifest probes Steam with the 10 s runner each tick.
-    write_app_manifest(&steamapps, &manifest(APP, "4"), 1).unwrap();
-    polls
-        .start_install(StartInstallArgs {
-            app_id: APP.into(),
-            title: "Game".into(),
-            roots,
-            options: handoff(None),
-        })
-        .unwrap();
-    tokio::time::sleep(Duration::from_secs(60)).await;
-    settle().await;
-    // The probe finishes with "nothing running", which completes and stops the poll after one
-    // call: a second tick must never have started a concurrent probe.
-    assert_eq!(slow.calls.load(Ordering::SeqCst), 1);
-    assert_eq!(slow.max_in_flight.load(Ordering::SeqCst), 1);
-    assert!(!reg.is_active(PollKind::Install, APP));
-}
-
-// ---- state moved while the hold probe ran (80-REVIEW A/WR-04, A/WR-05) ----------------------
-
-/// pgrep takes 10 s and reports Steam pid 321 (or, with `steam_running` false, nothing); ps
-/// answers at once. Leaves a window in which a `steampoll_install_start` upgrade lands while the
-/// probe is out.
-struct SlowSteamRunner {
-    steam_running: bool,
-}
-
-impl ProcessRunner for SlowSteamRunner {
-    fn run(&self, program: &str, _argv: Vec<String>, _timeout: Duration) -> BoxFuture<RunOutput> {
-        let slow = program.ends_with("pgrep");
-        let running = self.steam_running;
-        Box::pin(async move {
-            if slow {
-                tokio::time::sleep(Duration::from_secs(10)).await;
-                if running {
-                    RunOutput {
-                        code: Some(0),
-                        stdout: "321\n".into(),
-                        stderr: String::new(),
-                    }
-                } else {
-                    // pgrep: nothing matched.
-                    RunOutput {
-                        code: Some(1),
-                        ..RunOutput::default()
-                    }
-                }
-            } else {
-                RunOutput {
-                    code: Some(0),
-                    stdout: "321 Mon Nov 16 10:00:00 2026\n".into(),
-                    stderr: String::new(),
-                }
-            }
-        })
-    }
-
-    fn spawn_streaming(&self, _p: &str, _a: Vec<String>) -> std::io::Result<StreamingChild> {
-        Err(std::io::Error::other("unused"))
-    }
-}
-
-/// A native handoff poll on a finalized manifest, with the slow probe. Returns the polls, the
-/// host and the roots; the bottle root exists but holds no manifest.
-async fn slow_probe_rig(
-    tmp: &TempDir,
-    steam_running: bool,
-) -> (InstallPolls, Arc<RecordingHost>, PollRoots) {
-    let steam = tmp.path().join("steam");
-    let steamapps = steam.join("steamapps");
-    std::fs::create_dir_all(&steamapps).unwrap();
-    std::fs::write(
-        steamapps.join("libraryfolders.vdf"),
-        format!(
-            "\"libraryfolders\"\n{{\n\"0\"\n{{\n\"path\" \"{}\"\n}}\n}}\n",
-            steam.display()
-        ),
-    )
-    .unwrap();
-    let bottle = tmp.path().join("bottle");
-    std::fs::create_dir_all(&bottle).unwrap();
-    let host = Arc::new(RecordingHost::default());
-    let runner = Arc::new(SlowSteamRunner { steam_running });
-    let clock = Arc::new(FakeClock::new(1_000_000));
-    let outbox = Arc::new(Outbox::new());
-    outbox.mark_ready(host.as_ref()).await;
-    let reg = Registry::new(
-        tokio::runtime::Handle::current(),
-        host.clone(),
-        runner.clone(),
-        clock.clone(),
-    );
-    let monitor = Arc::new(DownloadMonitor::with_platform(
-        host.clone(),
-        runner,
-        clock,
-        false,
-    ));
-    let polls = InstallPolls::new(reg, outbox, host.clone(), monitor, Platform::Linux);
-    let roots = PollRoots {
-        steam_root: steam.to_string_lossy().into_owned(),
-        bottle_steamapps_root: Some(bottle.to_string_lossy().into_owned()),
-        bridge_steamapps_root: None,
-    };
-    write_app_manifest(&steamapps, &manifest(APP, "4"), 1).unwrap();
-    (polls, host, roots)
-}
-
-#[tokio::test(start_paused = true)]
-async fn an_adoption_during_the_hold_probe_is_not_overwritten_by_the_probe() {
-    let tmp = TempDir::new().unwrap();
-    let (polls, host, roots) = slow_probe_rig(&tmp, true).await;
-    let start_with = |options: PollOptions| {
-        polls
-            .start_install(StartInstallArgs {
-                app_id: APP.into(),
-                title: "Game".into(),
-                roots: roots.clone(),
-                options,
-            })
-            .unwrap();
-    };
-    start_with(handoff(None));
-    // First tick at 3 s starts the 10 s probe; adopt at 5 s, while it is out.
-    tokio::time::sleep(Duration::from_secs(5)).await;
-    settle().await;
-    start_with(PollOptions {
-        adopted_by_steam_client: Some(true),
-        ..PollOptions::default()
-    });
-    tokio::time::sleep(Duration::from_secs(30)).await;
-    settle().await;
-    let l = labels(&host);
-    assert!(
-        !l.contains(&"file:record".to_string()),
-        "the probe re-persisted a released hold: {l:?}"
-    );
-    assert!(l.contains(&"state:installed".to_string()), "{l:?}");
-}
-
-#[tokio::test(start_paused = true)]
-async fn a_retarget_during_the_hold_probe_never_reports_the_old_roots_install() {
-    // Steam is not running, so without the guard the re-entered step completes the install.
-    let tmp = TempDir::new().unwrap();
-    let (polls, host, roots) = slow_probe_rig(&tmp, false).await;
-    let start_with = |options: PollOptions| {
-        polls
-            .start_install(StartInstallArgs {
-                app_id: APP.into(),
-                title: "Game".into(),
-                roots: roots.clone(),
-                options,
-            })
-            .unwrap();
-    };
-    start_with(handoff(None));
-    // The probe is out from 3 s to 13 s; retarget to the (empty) bottle root at 5 s.
-    tokio::time::sleep(Duration::from_secs(5)).await;
-    settle().await;
-    start_with(handoff(Some(AcfSource::Bottle)));
-    tokio::time::sleep(Duration::from_secs(12)).await;
-    settle().await;
-    let installed: Vec<_> = host
-        .records()
-        .into_iter()
-        .filter(|x| matches!(x, StreamRecord::State(StateEvent::Installed { .. })))
-        .collect();
-    assert!(
-        installed.is_empty(),
-        "the native root's install was reported under the bottle source: {installed:?}"
-    );
-    assert_eq!(polls.snapshot_poll(APP).unwrap().source, AcfSource::Bottle);
-    polls.stop_install(APP);
 }
 
 // ---- concurrent uninstall starts (80-REVIEW A/WR-06) -----------------------------------------

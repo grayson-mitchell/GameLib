@@ -1,51 +1,5 @@
 [
   {
-    "frontend": {
-      "channel": "gameStatusUpdate",
-      "args": [
-        {
-          "appName": "1000",
-          "runner": "steam",
-          "status": "installing",
-          "context": "steam-waiting-for-restart"
-        }
-      ]
-    }
-  },
-  {
-    "frontend": {
-      "channel": "gameStatusUpdate",
-      "args": [
-        {
-          "appName": "1000",
-          "runner": "steam",
-          "status": "installing",
-          "context": "steam-waiting-for-restart"
-        }
-      ]
-    }
-  },
-  {
-    "frontend": {
-      "channel": "gameStatusUpdate",
-      "args": [
-        {
-          "appName": "1000",
-          "runner": "steam",
-          "status": "installing",
-          "context": "steam-waiting-for-restart"
-        }
-      ]
-    }
-  },
-  {
-    "file": {
-      "op": "clear",
-      "appId": "1000",
-      "record": null
-    }
-  },
-  {
     "state": {
       "kind": "installed",
       "appId": "1000",
@@ -73,6 +27,13 @@
       "body": "Installation Finished",
       "key": "notify.install.finished",
       "default": "Installation Finished"
+    }
+  },
+  {
+    "file": {
+      "op": "clear",
+      "appId": "1000",
+      "record": null
     }
   }
 ]

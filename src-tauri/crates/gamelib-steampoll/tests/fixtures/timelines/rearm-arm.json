@@ -1,6 +1,6 @@
 {
   "name": "rearm-arm",
-  "description": "A persisted hold whose recorded Steam process is still the live one is re-armed (resuming the elapsed ticks); when Steam later exits the install completes.",
+  "description": "A persisted hold whose recorded Steam process is still the live one no longer holds the install (Phase 81 D-11): it completes on the first tick and the restored record is cleared.",
   "machine": "rearm",
   "platform": "linux",
   "start": {

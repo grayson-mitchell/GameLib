@@ -193,14 +193,6 @@ fn installing_status(app_id: &str, context: Option<&str>, managed_by_steam: bool
     }
 }
 
-/// Whether the loop must run the Steam-process probe before this tick can decide completion
-/// (`should_hold` returns false immediately for anything else, so those skip the round trip).
-fn hold_eligible(poll: &ActiveInstall) -> bool {
-    poll.hold.is_native_handoff
-        && poll.source == AcfSource::Native
-        && poll.hold.steam_hold != HoldState::Released
-}
-
 /// One install-poll tick (`pollInstallOnce`).
 pub fn install_step(
     app_id: &str,
@@ -481,36 +473,6 @@ fn installed(
     buildid: &Option<String>,
 ) -> InstallStep {
     let mut fx: Vec<Effect> = Vec::new();
-
-    // D-UAT-13: GameLib's own finalize wrote this manifest while a Steam client was running;
-    // stay in 'waiting for restart' until that client is gone.
-    // A supplied outcome is always honoured: the loop's probe may itself have released the hold,
-    // which makes the poll ineligible on re-entry, and its effects (record clear, logs) must
-    // still go out.
-    if obs.hold.is_some() || hold_eligible(poll) {
-        let Some(outcome) = &obs.hold else {
-            return InstallStep {
-                hold_probe: Some(HoldProbeRequest {
-                    source: poll.source,
-                }),
-                ..InstallStep::effects(vec![])
-            };
-        };
-        fx.extend(outcome.effects.clone());
-        if outcome.holding {
-            fx.push(installing_status(
-                app_id,
-                Some("steam-waiting-for-restart"),
-                false,
-            ));
-            // Fire-once, shared with the 1026 branch's guard (T-21-16-03).
-            if !poll.notified_waiting {
-                poll.notified_waiting = true;
-                fx.push(Effect::Notify(restart_to_finish_notification(&poll.title)));
-            }
-            return InstallStep::effects(fx);
-        }
-    }
 
     // Quick 261029-exu: a bridge install keeps working after its manifest lands, so
     // installBridgeGame owns the final 'done' and the toast.
