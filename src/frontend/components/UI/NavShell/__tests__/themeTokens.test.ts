@@ -36,6 +36,7 @@ import {
   contrastRatio,
   mixSrgb
 } from 'frontend/customThemes/colour'
+import { CONTRAST_FLOORS } from 'frontend/customThemes/contrastFloors'
 import { resolveColour, resolveValue } from 'frontend/customThemes/tokenResolve'
 import { at, defined } from '../../../__tests__/fixtures/indexed'
 
@@ -495,6 +496,16 @@ describe('selected NavTab label contrast in every theme (CR-01 residual)', () =>
 describe('--border-color is visible in every theme (3:1 non-text floor)', () => {
   const themesScss = read(THEMES_SCSS)
   const globals = globalTokens()
+  // The 3:1 minimum is read from the shared floor table (D-16), not retyped.
+  const floorMin = (id: string): number => {
+    const floor = CONTRAST_FLOORS.find((f) => f.id === id)
+    if (!floor) throw new Error(`no contrast floor named ${id}`)
+    return floor.min
+  }
+  const minByBackground: Record<string, number> = {
+    '--body-background': floorMin('border-body'),
+    '--modal-background': floorMin('border-modal')
+  }
 
   it.each(themeSelectors)(
     '%s paints --border-color at >= 3:1 against --body-background and --modal-background',
@@ -507,7 +518,11 @@ describe('--border-color is visible in every theme (3:1 non-text floor)', () => 
         expect(bg).not.toBeNull()
         const ratio = contrastRatio(border as string, bg as string)
         // Object form so a failure names the surface and the measured ratio.
-        expect({ surface, ratio, passes: ratio >= 3 }).toEqual({
+        expect({
+          surface,
+          ratio,
+          passes: ratio >= (minByBackground[surface] ?? Infinity)
+        }).toEqual({
           surface,
           ratio,
           passes: true
@@ -586,6 +601,9 @@ describe('FocusRowStrip chevron disc: glyph vs disc is >= 3:1 in every theme (G-
   const stripCss = read(FOCUS_ROW_STRIP_CSS)
   const control = cssBlock(stripCss, '.focusRowStrip__control')
   const globals = globalTokens()
+  // The 3:1 minimum is read from the shared floor table (D-16), not retyped.
+  const chevronMin =
+    CONTRAST_FLOORS.find((f) => f.id === 'accent-body')?.min ?? Infinity
   const colourDecls = declsAtDepthZero(control, 'color')
   const discDecls = [
     ...declsAtDepthZero(control, 'background'),
@@ -622,7 +640,11 @@ describe('FocusRowStrip chevron disc: glyph vs disc is >= 3:1 in every theme (G-
       })
       const ratio = contrastRatio(glyph as string, disc as string)
       // Object form so a failure names the theme and the measured ratio.
-      expect({ selector, ratio, passes: ratio >= 3 }).toEqual({
+      expect({
+        selector,
+        ratio,
+        passes: ratio >= chevronMin
+      }).toEqual({
         selector,
         ratio,
         passes: true
