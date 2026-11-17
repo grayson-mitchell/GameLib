@@ -53,8 +53,8 @@ now provably the real one, not merely the originally-transcribed one.
 
 | | Count |
 |---|---:|
-| Unique channels | 246 |
-| Ported to sidecar | 91 |
+| Unique channels | 248 |
+| Ported to sidecar | 93 |
 | **Unported** | **159** |
 
 Reconciles with SEAM.md line 366 ("~208 of the 220 total IPC endpoints ... remain") and its
@@ -180,7 +180,7 @@ goes 68 → 71. `Unported` is unchanged: the channels are born ported.
 
 ## Already ported (34)
 
-`cancelDownload`, `checkGameUpdates`, `checkSteamInstalled`, `connectivity-changed`, `getDMQueueInformation`, `get-connectivity-status`, `getLogContent`, `getMaxCpus`, `getSteamDeleteRoute`, `getSteamInstallAppTargets`, `getSteamUpdateInfo`, `getSystemInfo`, `hasExecutable`, `install`, `isNative`, `isSteamBottleEligible`, `launch`, `listSteamLibraryTargets`, `logError`, `oauthCaptureLogin`, `openDialog`, `pauseCurrentDownload`, `persistBottleWineVersion`, `refreshLibrary`, `removeFromDMQueue`, `requestAppSettings`, `requestGameSettings`, `resumeCurrentDownload`, `setSetting`, `showUpdateSetting`, `steamDirectLaunchVerdict`, `steamPollQR`, `steamRemoveAllCopies`, `steamStartQR`, `uninstall`, `updateGame`, `writeConfig`
+`cancelDownload`, `checkGameUpdates`, `checkSteamInstalled`, `connectivity-changed`, `getDMQueueInformation`, `get-connectivity-status`, `getItadSteamGids`, `getLogContent`, `getMaxCpus`, `getSteamDeleteRoute`, `getSteamInstallAppTargets`, `getSteamUpdateInfo`, `getSystemInfo`, `hasExecutable`, `install`, `isNative`, `isSteamBottleEligible`, `itad.getKeyStatus`, `itad.setApiKey`, `launch`, `listSteamLibraryTargets`, `logError`, `oauthCaptureLogin`, `openDialog`, `pauseCurrentDownload`, `persistBottleWineVersion`, `refreshLibrary`, `removeFromDMQueue`, `requestAppSettings`, `requestGameSettings`, `resumeCurrentDownload`, `setSetting`, `showUpdateSetting`, `steamDirectLaunchVerdict`, `steamPollQR`, `steamRemoveAllCopies`, `steamStartQR`, `uninstall`, `updateGame`, `writeConfig`
 
 `logError` was ported early by Phase 34.2 gap cycle 2 (plan 34.2-16) — see the Phase 34.3 list
 below, which now excludes it, and `34.2-PORTED-CHANNELS.md`'s gap-cycle-2 subsection for the full
@@ -233,7 +233,7 @@ the Phase 34.5 list below for its new home.
 
 ## Phase 34.2 — Slice 5 — game details, settings and overrides (26 channels)
 
-`addNewApp`, `changeGameVersionPinnedStatus`, `changeInstallPath`, `getAllGameOverrides`, `getAnticheatInfo`, `getAvailableCyberpunkMods`, `getCrossoverIndex`, `getExtraInfo`, `getGameInfo`, `getGameMetadataOverride`, `getGameOverride`, `getGameSdl`, `getGameSettings`, `getKnownFixes`, `getLaunchOptions`, `getStoreSearchDeals`, `getStoreSearchStoreMap`, `getWikiGameInfo`, `isGameAvailable`, `kill`, `readConfig`, `removeRecent`, `repair`, `searchStores`, `setCyberpunkModConfig`, `setGameMetadataOverride`
+`addNewApp`, `changeGameVersionPinnedStatus`, `changeInstallPath`, `getAllGameOverrides`, `getAnticheatInfo`, `getAvailableCyberpunkMods`, `getCrossoverIndex`, `getExtraInfo`, `getGameInfo`, `getGameMetadataOverride`, `getGameOverride`, `getGameSdl`, `getGameSettings`, `getKnownFixes`, `getLaunchOptions`, `getStoreSearchDeals`, `getWikiGameInfo`, `isGameAvailable`, `kill`, `readConfig`, `removeRecent`, `repair`, `searchStores`, `setCyberpunkModConfig`, `setGameMetadataOverride`
 
 ## Phase 34.3 — Slice 6 — shell, files, logs and diagnostics (29 channels)
 
@@ -758,3 +758,8 @@ both numbers moved together by +2 and `Unported` (159) is unchanged.
 **Unique channels lowered 247 → 246, Ported to sidecar lowered 92 → 91 (quick 261117-q1t, 2026-11-17):**
 `steamLaunchWithoutSteam` was removed. "Launch without Steam" is now the per-game `launchWithoutSteam`
 setting that Play (`launchDispatch.ts`) honours; only `steamDirectLaunchVerdict` remains. `Unported` (159) is unchanged.
+
+**Unique channels raised 246 → 248, Ported to sidecar raised 91 → 93 (Phase 47, 2026-11-17):**
+the IsThereAnyDeal migration added three channels, born ported and filed in the "Already ported" bucket line:
+`getItadSteamGids` (Plan 08) and `itad.getKeyStatus` and `itad.setApiKey` (Plan 12). It deleted `getStoreSearchStoreMap`
+(Plan 08, CheapShark store map), now removed from the Phase 34.2 line. Net +2 on both counts; `Unported` (159) is unchanged.
