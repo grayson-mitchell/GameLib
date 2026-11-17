@@ -1,11 +1,14 @@
 ---
-gsd_state_version: 1.0
+gsd_state_version: "1.0"
 milestone: v0.10
 milestone_name: Foundations
+current_phase: 81
 status: planning
 stopped_at: Phase 81 context gathered
-last_updated: "2026-11-17T05:03:16.887Z"
+last_updated: "2026-11-17T09:37:49.075Z"
 last_activity: 2026-11-17
+last_activity_desc: "Completed quick task 261117-r4c: Native port hint catalogue and game-page block"
+state_head: 1aff893bb90539d2780a549c6b49a96ffeb82124
 progress:
   total_phases: 26
   completed_phases: 23
@@ -75,9 +78,9 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 Phase: 81
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-11-17 - Completed quick task 261117-r4c: Native port hint catalogue and game-page block
+Last activity: 2026-11-17 - Completed quick task 261117-ubb: Load a pinned CDN-fetched libsteam_api.dylib in the macOS bridge helper
 
-Progress: [██████████] 98%
+Progress: [█████████░] 88%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -613,6 +616,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261117-sdc | 25-VERIFICATION `pass` -> `passed`; 40-VERIFICATION `gaps_closed_partially` -> `passed` with a status_note (every open item since closed in completed todos). gsd-core 1.21.0 audit-uat runs again. | 2026-11-17 | | audit-uat exit 0, 66 files, parse_gap_files 0; frontmatter gate OK; planning-gates 11/12 (field-anchor gate fails at HEAD too) | [261117-sdc-fix-two-verification-statuses-outside-gs](./quick/261117-sdc-fix-two-verification-statuses-outside-gs/) |
 | 261117-sf6 | Field-anchor gate check 5 now accepts gsd-core's own `Plan: Not started` (written by gsd-core at ready-to-plan/execute) besides `<N> of <M>`; anything else still fails. Self-test 11 -> 13 cases. | 2026-11-17 | | planning-gates 12/12 | [261117-sf6-field-anchor-gate-accepts-gsd-core-s-own](./quick/261117-sf6-field-anchor-gate-accepts-gsd-core-s-own/) |
 | 261117-sin | Field-anchor gate's drift check now scans gsd-core's `~/.claude/gsd-core/bin/lib/*.cjs` (compiled call shapes + `stateFieldValue`) instead of the 1.42.3 SDK it never found; pinned Completed Phases, State Head, milestone as required-0. Self-test 13 -> 14. | 2026-11-17 | | planning-gates 12/12; no-install fallback passes; planted literal fails | [261117-sin-repoint-field-anchor-gate-drift-check-at](./quick/261117-sin-repoint-field-anchor-gate-drift-check-at/) |
+| 261117-ubb | Load a pinned CDN-fetched libsteam_api.dylib in the macOS bridge helper | 2026-11-17 | 1aff893bb | — | [261117-ubb-load-a-pinned-cdn-fetched-libsteam-api-d](./quick/261117-ubb-load-a-pinned-cdn-fetched-libsteam-api-d/) |
 
 ## Deferred Items
 
