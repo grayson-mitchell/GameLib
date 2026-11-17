@@ -126,6 +126,15 @@ describe('parseCustomThemes token handling', () => {
     expect(Object.keys(tokensOf(tokens) ?? {})).toHaveLength(names.size)
   })
 
+  it.each(Object.keys(BUILTIN_TOKENS))(
+    'round-trips the whole frozen seed of %s',
+    (key) => {
+      const seed = BUILTIN_TOKENS[key] ?? {}
+      const copy = makeCopy({ base: key, tokens: seed }, id(1), 'c')
+      expect(parseCustomThemes([copy], yes)).toEqual([copy])
+    }
+  )
+
   it('accepts the live-derived token names but not the non-colour width token', () => {
     expect(tokensOf({ '--focus-ring-color': '#112233' })).toEqual({
       '--focus-ring-color': '#112233'
@@ -210,7 +219,7 @@ describe('parseCustomThemes never throws', () => {
       undefined,
       0,
       -1,
-      1e999,
+      Infinity,
       NaN,
       '',
       'x',

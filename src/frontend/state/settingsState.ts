@@ -10,6 +10,7 @@ import { configStore } from '../helpers/stores'
 import { builtinSeed } from '../customThemes/builtinTokens'
 import {
   makeCopy,
+  newCustomThemeId,
   parseCustomThemes,
   resolveThemeKey
 } from '../customThemes/customTheme'
@@ -89,14 +90,6 @@ export interface SettingsState {
   handleFocusRow: (value: FocusRowSelection) => void
 }
 
-// 16 lowercase hex characters from 8 random bytes. `crypto.randomUUID` is not verified on the
-// `tauri://` origin, so `getRandomValues` is used.
-function newThemeId(): string {
-  const bytes = new Uint8Array(8)
-  crypto.getRandomValues(bytes)
-  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
-}
-
 const useSettingsStateRaw = create<SettingsState>()(
   subscribeWithSelector((set, get) => ({
     language: 'en',
@@ -141,7 +134,7 @@ const useSettingsStateRaw = create<SettingsState>()(
       } else {
         return { ok: false, reason: 'unknown-source' }
       }
-      const id = newThemeId()
+      const id = newCustomThemeId(new Set(existing.map((t) => t.id)))
       const next = [...existing, makeCopy(source, id, copyName(null))]
       configStore.set('customThemes', next)
       set({ customThemes: next })
