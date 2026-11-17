@@ -806,7 +806,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 ## Session Continuity
 
 Last session: 2026-11-17T05:03:16.878Z
-Stopped at: Completed 47-09-PLAN.md (Store Search container: region caption + fallback note, rateLimited/notConfigured error variants, ITAD gid owned-badge join; codecheck + lint:src green); 47-02 D-07 reply pending operator; Phase 81 context gathered
+Stopped at: Completed 47-11-PLAN.md (ITAD user-key storage: itad-api-key keyring slot + dev-vault arm, total createItadSecrets owner with session rejected flag, 'itad-secrets' boot step; codecheck green); 47-02 D-07 reply pending operator; Phase 81 context gathered
 Resume file: .planning/phases/81-unify-the-steam-restart-hold-into-restart-on-play/81-CONTEXT.md
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
