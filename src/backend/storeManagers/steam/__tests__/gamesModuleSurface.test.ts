@@ -48,6 +48,7 @@ const LIFTED_OWNERS = [
   'gameBridgeLaunch.ts',
   'gameBridgeLaunchGate.ts',
   'gameBridgeWineLaunch.ts',
+  'gameEngineDialogs.ts',
   'gameLaunch.ts',
   'gameMaintenance.ts',
   'gameUninstall.ts',
@@ -115,6 +116,8 @@ describe('steam/games.ts module surface (D-05)', () => {
     // gameBridgeLaunch; gameUninstall and gameMaintenance sit beside them
     // and nothing imports those two.
     // gameMetadata (65-13) is a leaf beneath gameEligibility, which calls it.
+    // gameEngineDialogs (78-05) sits below gameLaunch and gameBridgeLaunch,
+    // which both import it; it imports no game* sibling.
     const FORWARD: Record<string, number> = {
       gameMetadata: -1,
       gameEligibility: 0,
@@ -123,6 +126,7 @@ describe('steam/games.ts module surface (D-05)', () => {
       gameInstallDepot: 0,
       gameInstall: 1,
       gameInstallBridge: 2,
+      gameEngineDialogs: 1,
       gameLaunch: 2,
       gameBridgeLaunch: 3,
       gameBridgeLaunchGate: 3,
