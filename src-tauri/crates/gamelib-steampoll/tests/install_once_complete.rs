@@ -6,7 +6,7 @@ use gamelib_steampoll::events::{AckReply, StateEvent};
 use gamelib_steampoll::host::{NotifyText, RunOutput};
 use gamelib_steampoll::install_once::{
     install_step, mac_arch_verdict_effect, run_mac_arch_followup, wants_mac_arch_probe,
-    ActiveInstall, HoldOutcome, InstallObservation, InstallStep,
+    ActiveInstall, InstallObservation, InstallStep,
 };
 use gamelib_steampoll::mac_arch::MacArch;
 use gamelib_steampoll::profile::Platform;
@@ -176,15 +176,29 @@ fn off_path_poll_fires_no_restart_steam_notice() {
 }
 
 #[test]
-fn native_handoff_fast_path_fires_the_restart_steam_notice() {
-    let mut p = handoff(AcfSource::Native);
-    // eligible for a hold decision; the probe found no Steam client
-    let mut o = obs(installed_acf());
-    o.hold = Some(HoldOutcome {
-        holding: false,
-        effects: vec![],
-    });
-    let (_, flat) = full(&mut p, &o);
+fn a_native_handoff_fires_finished_and_never_the_restart_steam_notice() {
+    // Phase 81 (D-11/D-14): restart-on-Play replaced the toast for native installs, on every OS.
+    for platform in [Platform::Darwin, Platform::Win32, Platform::Linux] {
+        let mut p = handoff(AcfSource::Native);
+        let mut o = obs(installed_acf());
+        o.platform = platform;
+        let (step, flat) = full(&mut p, &o);
+        assert!(installed_event(&step.effects).is_some(), "{platform:?}");
+        assert_eq!(
+            notify_keys(&flat),
+            vec!["notify.install.finished"],
+            "{platform:?}"
+        );
+        assert!(!p.notified_waiting, "{platform:?}");
+    }
+}
+
+#[test]
+fn a_bottle_handoff_still_fires_the_restart_steam_notice() {
+    // A bottle handoff is adopted only by a bottled-Steam restart; restart-on-Play does not apply.
+    let mut p = handoff(AcfSource::Bottle);
+    let (step, flat) = full(&mut p, &obs(installed_acf()));
+    assert!(installed_event(&step.effects).is_some());
     assert_eq!(
         notify_keys(&flat),
         vec!["notify.install.finished", "steam.waitingForSteam.notify"]
@@ -194,14 +208,10 @@ fn native_handoff_fast_path_fires_the_restart_steam_notice() {
 
 #[test]
 fn mac_native_route_fires_finished_and_not_restart_steam() {
+    // The flag no longer changes the outcome: a native source never gets the toast.
     let mut p = handoff(AcfSource::Native);
     p.hold.mac_native_route = true;
-    let mut o = obs(installed_acf());
-    o.hold = Some(HoldOutcome {
-        holding: false,
-        effects: vec![],
-    });
-    let (_, flat) = full(&mut p, &o);
+    let (_, flat) = full(&mut p, &obs(installed_acf()));
     assert_eq!(notify_keys(&flat), vec!["notify.install.finished"]);
 }
 
@@ -304,14 +314,10 @@ fn several_skipped_depots_join_into_one_comma_separated_value() {
 
 #[test]
 fn all_three_notices_fire_in_one_confirmed_installed_tick() {
-    let mut p = handoff(AcfSource::Native);
+    // Bottle source: it is the only handoff that still gets the restart-Steam notice.
+    let mut p = handoff(AcfSource::Bottle);
     p.hold.skipped_depots = vec!["229006".into()];
-    let mut o = obs(installed_acf());
-    o.hold = Some(HoldOutcome {
-        holding: false,
-        effects: vec![],
-    });
-    let (_, flat) = full(&mut p, &o);
+    let (_, flat) = full(&mut p, &obs(installed_acf()));
     // The shared-guard trap: the two fire-once flags are independent, order as in the TS.
     assert_eq!(
         notify_keys(&flat),

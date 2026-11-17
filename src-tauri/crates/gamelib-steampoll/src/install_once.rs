@@ -485,10 +485,11 @@ fn installed(
         Vec::new()
     };
 
-    // wazhack-uninstall-reverts: the "restart Steam" notice also fires here (StateFlags=4 fast
-    // path), unless the Mac native route restarts Steam on Play.
+    // Phase 81 (D-11/D-14): restart-on-Play replaced the "restart Steam" notice for native
+    // installs on every OS, so a StateFlags=4 handoff only asks for a restart on the bottle
+    // source, where restart-on-Play does not apply (a bottled-Steam restart adopts it).
     let notify_restart_steam = poll.hold.is_native_handoff
-        && !poll.hold.mac_native_route
+        && poll.source == AcfSource::Bottle
         && !installer_owns_completion
         && !poll.notified_waiting;
     if notify_restart_steam {

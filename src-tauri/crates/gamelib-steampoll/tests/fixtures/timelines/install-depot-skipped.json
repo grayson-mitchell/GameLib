@@ -1,6 +1,6 @@
 {
   "name": "install-depot-skipped",
-  "description": "A native handoff completion with skipped depots fires Installation Finished, the depot-skipped notice and the restart-Steam notice.",
+  "description": "A native handoff completion with skipped depots fires Installation Finished and the depot-skipped notice.",
   "machine": "install",
   "platform": "linux",
   "start": {
