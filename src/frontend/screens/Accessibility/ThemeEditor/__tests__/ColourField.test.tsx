@@ -115,7 +115,8 @@ describe('ColourField', () => {
     renderField('#336699')
     fireEvent.click(swatch())
     const alpha = screen.getByRole('slider', { name: 'Alpha' })
-    fireEvent.keyDown(alpha, { key: 'ArrowLeft' })
-    expect(commits).toEqual(['#336699fc'])
+    // react-colorful reads `keyCode`; 37 is ArrowLeft, which lowers alpha by 0.05.
+    fireEvent.keyDown(alpha, { key: 'ArrowLeft', keyCode: 37 })
+    expect(commits).toEqual(['#336699f2'])
   })
 })
