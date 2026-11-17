@@ -9,11 +9,24 @@
 //! | evidence | macOS | Windows | Linux |
 //! |---|---|---|---|
 //! | Steam rewrote the ACF (content differs from the GameLib baseline, StateFlags bit 4, real buildid) | yes | yes | yes |
-//! | the recorded `steam_osx` pid is no longer live | yes | never | never |
+//! | Steam's own install state for the app has bit 4 (the `--steam-appstate` helper, D-08) | yes | never | never |
+//! | the recorded `steam_osx` pid is no longer live, unless the helper says the state is not 4 | yes | never | never |
 //!
 //! A pid change is not evidence off macOS: spikes 087 and 088 (r4) showed that a sign-out restarts
-//! Steam without adopting anything. Later plans add the helper (81-04) and the Windows/Linux
-//! readers (81-05) as further evidence kinds.
+//! Steam without adopting anything. A later plan adds the Windows/Linux readers (81-05) as further
+//! evidence kinds.
+//!
+//! macOS helper reading (81-04, spike 083). Steam open at its sign-in screen adopts the install the
+//! moment the operator signs in, with the same pid, so the pid rule alone never sees it. Each
+//! macOS tick therefore also asks the helper whether Steam is signed in and what install state it
+//! holds. The helper is gated so a signed-in Steam is not probed every tick (see `HelperCache`),
+//! and it is advisory: when it cannot answer (missing, unsupported arch, timeout, junk) the watch
+//! behaves exactly as before, `signedIn` is unknown and the entry is kept (D-10).
+//!
+//! D-09: no InstallApp call happens at sign-in. With the experimental InstallApp setting on,
+//! InstallApp fires at most once per record, only when the watch saw Steam signed out, then signed
+//! in, and the state is still not 4 [`ADOPTION_INSTALLAPP_FALLBACK_DELAY_MS`] later (spike 083:
+//! "fire InstallApp once only if the state is not 4 a few seconds after BLoggedOn turns 1").
 //!
 //! The ACF comparison is content-only. The TS `isSteamAdoptedAcf` also compares file timestamps,
 //! but TS `statSync()` millisecond timestamps and Rust `SystemTime` milliseconds are not bit-equal,
@@ -27,7 +40,11 @@
 //!
 //! Logging rule (T-28-04): appId and evidence kind only, never a path, SteamID, title or payload.
 
-use crate::constants::{ADOPTION_ACF_MAX_BYTES, ADOPTION_TICK_MS};
+use crate::app_state::{read_app_state, AppStateOutcome};
+use crate::constants::{
+    ADOPTION_ACF_MAX_BYTES, ADOPTION_HELPER_SIGNED_IN_MIN_INTERVAL_MS,
+    ADOPTION_INSTALLAPP_FALLBACK_DELAY_MS, ADOPTION_TICK_MS,
+};
 use crate::effects::{Continuation, Effect};
 use crate::events::StateEvent;
 use crate::host::HoldSink;
@@ -58,13 +75,14 @@ pub struct AdoptionWatchArgs {
     pub recorded_at_ms: f64,
     /// The `steam_osx` pid that was running when GameLib finished the install; 0 = unknown.
     pub steam_pid: u32,
-    /// Fire InstallApp once when signed in and not adopted (used by 81-04, D-09).
+    /// Fire InstallApp once when Steam signed in after being seen signed out and the app is still
+    /// not adopted (D-09). Only the macOS watch reads it.
     #[serde(default)]
     pub install_app_fallback: bool,
 }
 
-/// What one evaluation found. `evidence` is `"acf"` or `"pid"` here; 81-04 adds `"helper"`, 81-05
-/// adds `"log"` and `"libraryfolders"`.
+/// What one evaluation found. `evidence` is `"acf"`, `"helper"` or `"pid"` here; 81-05 adds
+/// `"log"` and `"libraryfolders"`.
 #[derive(Debug, Clone, Default, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AdoptionReading {
@@ -150,10 +168,72 @@ impl HoldSink for NoHoldSink {
 
 type Emitted = (bool, Option<bool>);
 
+/// What the macOS watch remembers about its helper readings for one entry. Replacing the entry
+/// resets it.
+#[derive(Debug, Clone, Default)]
+struct HelperCache {
+    /// When the helper last ran (clock ms).
+    last_helper_ms: Option<u64>,
+    /// The last helper answer's `loggedOn`; `None` when the helper could not answer.
+    signed_in: Option<bool>,
+    /// The last helper answer's install state for the app; `None` when unknown.
+    helper_state: Option<u32>,
+    /// A reading said Steam was signed out (the D-09 precondition).
+    saw_signed_out: bool,
+    /// When a reading first said signed in after `saw_signed_out`; the D-09 window opens here.
+    signed_in_at_ms: Option<u64>,
+    /// InstallApp was already requested for this record (D-09: at most once).
+    install_app_fired: bool,
+}
+
+impl HelperCache {
+    /// Whether this tick asks the helper again (D-08). Unknown or signed-out Steam is probed every
+    /// tick, because sign-in is exactly what is being waited for; a signed-in Steam is re-probed
+    /// when the Steam pid list changed, while a D-09 window is open, or once per
+    /// [`ADOPTION_HELPER_SIGNED_IN_MIN_INTERVAL_MS`].
+    fn wants_helper(&self, args: &AdoptionWatchArgs, pids_changed: bool, now_ms: u64) -> bool {
+        let Some(last) = self.last_helper_ms else {
+            return true;
+        };
+        let fallback_window_open =
+            args.install_app_fallback && self.signed_in_at_ms.is_some() && !self.install_app_fired;
+        self.signed_in != Some(true)
+            || pids_changed
+            || fallback_window_open
+            || now_ms.saturating_sub(last) >= ADOPTION_HELPER_SIGNED_IN_MIN_INTERVAL_MS
+    }
+
+    /// Folds one helper answer into the cache.
+    fn apply(&mut self, outcome: &AppStateOutcome, now_ms: u64) {
+        self.last_helper_ms = Some(now_ms);
+        match outcome {
+            AppStateOutcome::Ok {
+                logged_on, state, ..
+            } => {
+                self.signed_in = Some(*logged_on);
+                self.helper_state = *state;
+                if !logged_on {
+                    self.saw_signed_out = true;
+                    self.signed_in_at_ms = None;
+                } else if self.saw_signed_out && self.signed_in_at_ms.is_none() {
+                    self.signed_in_at_ms = Some(now_ms);
+                }
+            }
+            // D-10: no answer is unknown, not signed out and not adopted.
+            AppStateOutcome::SteamNotRunning | AppStateOutcome::Unavailable { .. } => {
+                self.signed_in = None;
+                self.helper_state = None;
+            }
+        }
+    }
+}
+
 struct Entry {
     args: AdoptionWatchArgs,
     /// The last (adopted, signedIn) pair emitted for this entry; replacing the entry resets it.
     last: Option<Emitted>,
+    /// macOS helper readings; unused elsewhere.
+    helper: HelperCache,
     /// Bumped per insert, so a tick holding a snapshot of a replaced entry cannot write to or
     /// remove its replacement.
     version: u64,
@@ -169,6 +249,8 @@ struct State {
     gen: u64,
     /// The current task's cancel token, set in the same critical section as `started`.
     token: Option<CancellationToken>,
+    /// The sorted live Steam pids the last macOS tick saw; a difference re-probes the helper.
+    last_pids: Option<Vec<u32>>,
 }
 
 struct Inner {
@@ -226,6 +308,7 @@ impl AdoptionWatch {
                 Entry {
                     args,
                     last: None,
+                    helper: HelperCache::default(),
                     version,
                 },
             );
@@ -293,19 +376,31 @@ impl AdoptionWatch {
         lock(&self.inner.state).entries.keys().cloned().collect()
     }
 
-    /// Evaluates `args` once without registering an entry or starting the task.
+    /// Evaluates `args` once without registering an entry or starting the task. On macOS the
+    /// helper is always asked once (Play consults it before restarting Steam, RESEARCH Open
+    /// Question 4); `helper_state` and `signed_in` carry its answer. Never fires InstallApp.
     pub async fn read(&self, args: &AdoptionWatchArgs) -> AdoptionReading {
         let pids = crate::hold::list_steam_client_pids(
             &**self.inner.registry.runner(),
             self.inner.platform,
         )
         .await;
-        self.evaluate(args, pids.as_deref()).await
+        let mut cache = HelperCache::default();
+        self.evaluate(args, pids.as_deref(), &mut cache, false)
+            .await
     }
 
-    /// The evidence rules, in order: Steam's ACF rewrite on every platform; on macOS only, the
-    /// recorded `steam_osx` pid no longer being live. `signed_in` is filled by 81-03 and 81-04.
-    async fn evaluate(&self, args: &AdoptionWatchArgs, pids: Option<&[u32]>) -> AdoptionReading {
+    /// The evidence rules, in order: Steam's ACF rewrite on every platform; on macOS, the helper
+    /// reporting install-state bit 4, then the recorded `steam_osx` pid no longer being live
+    /// (unless the helper definitely says the state is not 4, D-07). `cache` holds the helper
+    /// readings; a fresh cache makes the helper run now.
+    async fn evaluate(
+        &self,
+        args: &AdoptionWatchArgs,
+        pids: Option<&[u32]>,
+        cache: &mut HelperCache,
+        pids_changed: bool,
+    ) -> AdoptionReading {
         let mut reading = AdoptionReading {
             steam_running: pids.map(|p| !p.is_empty()),
             ..AdoptionReading::default()
@@ -317,11 +412,34 @@ impl AdoptionWatch {
             reading.evidence = Some("acf".to_string());
             return reading;
         }
-        // A pid change is evidence on macOS only: on Windows and Linux a sign-out restarts Steam
-        // without adopting anything (spikes 087 and 088, r4).
-        if self.inner.platform == Platform::Darwin && args.steam_pid > 0 {
+        // The helper and the pid rule are macOS only: on Windows and Linux a sign-out restarts
+        // Steam without adopting anything (spikes 087 and 088, r4).
+        if self.inner.platform != Platform::Darwin {
+            return reading;
+        }
+        let now = self.inner.registry.clock().now_ms();
+        if cache.wants_helper(args, pids_changed, now) {
+            let outcome = read_app_state(
+                &**self.inner.registry.host(),
+                &**self.inner.registry.runner(),
+                &args.app_id,
+            )
+            .await;
+            cache.apply(&outcome, now);
+        }
+        reading.signed_in = cache.signed_in;
+        reading.helper_state = cache.helper_state;
+        if cache.helper_state.is_some_and(|state| state & 4 != 0) {
+            reading.adopted = true;
+            reading.evidence = Some("helper".to_string());
+            return reading;
+        }
+        if args.steam_pid > 0 {
             if let Some(live) = pids {
-                if !live.contains(&args.steam_pid) {
+                // D-07: the helper confirms or refutes a pid change. A definite state without
+                // bit 4 means Steam restarted but has not adopted yet; no answer keeps the rule.
+                let refuted = cache.helper_state.is_some();
+                if !live.contains(&args.steam_pid) && !refuted {
                     reading.adopted = true;
                     reading.evidence = Some("pid".to_string());
                 }
@@ -330,13 +448,67 @@ impl AdoptionWatch {
         reading
     }
 
+    /// D-09, the only place InstallApp is requested: the watch saw Steam signed out, then signed
+    /// in, and the app is still not adopted [`ADOPTION_INSTALLAPP_FALLBACK_DELAY_MS`] later. Once
+    /// per record.
+    async fn maybe_fire_install_app(
+        &self,
+        args: &AdoptionWatchArgs,
+        version: u64,
+        cache: &mut HelperCache,
+    ) {
+        if !args.install_app_fallback || cache.install_app_fired {
+            return;
+        }
+        let Some(signed_in_at) = cache.signed_in_at_ms else {
+            return;
+        };
+        let now = self.inner.registry.clock().now_ms();
+        if now.saturating_sub(signed_in_at) < ADOPTION_INSTALLAPP_FALLBACK_DELAY_MS {
+            return;
+        }
+        // Mark first and persist, so nothing can fire it a second time.
+        cache.install_app_fired = true;
+        self.store_cache(&args.app_id, version, cache);
+        let library_root = Path::new(&args.manifest_path)
+            .parent()
+            .and_then(Path::parent)
+            .map(|p| p.to_string_lossy().into_owned());
+        let outcome = crate::update::request_steam_install_app(
+            &**self.inner.registry.host(),
+            &**self.inner.registry.runner(),
+            &args.app_id,
+            library_root.as_deref(),
+        )
+        .await;
+        let kind = match outcome {
+            crate::update::SteamInstallAppOutcome::Ok { .. } => "ok",
+            crate::update::SteamInstallAppOutcome::Unavailable { .. } => "unavailable",
+            crate::update::SteamInstallAppOutcome::Error { .. } => "error",
+        };
+        log_line(&format!(
+            "adoption appId {} signed in but not adopted, requested InstallApp ({kind})",
+            args.app_id
+        ));
+    }
+
+    /// Writes `cache` back to the entry unless the entry was replaced or removed meanwhile.
+    fn store_cache(&self, app_id: &str, version: u64, cache: &HelperCache) {
+        if let Some(entry) = lock(&self.inner.state).entries.get_mut(app_id) {
+            if entry.version == version {
+                entry.helper = cache.clone();
+            }
+        }
+    }
+
     /// One tick. Returns false when the task should exit (no entries remain).
     async fn tick(&self) -> bool {
-        let snapshot: Vec<(AdoptionWatchArgs, Option<Emitted>, u64)> = lock(&self.inner.state)
-            .entries
-            .values()
-            .map(|e| (e.args.clone(), e.last, e.version))
-            .collect();
+        let snapshot: Vec<(AdoptionWatchArgs, Option<Emitted>, u64, HelperCache)> =
+            lock(&self.inner.state)
+                .entries
+                .values()
+                .map(|e| (e.args.clone(), e.last, e.version, e.helper.clone()))
+                .collect();
         if !snapshot.is_empty() {
             let pids = if self.inner.platform == Platform::Darwin {
                 crate::hold::list_steam_client_pids(
@@ -347,8 +519,20 @@ impl AdoptionWatch {
             } else {
                 None
             };
-            for (args, last, version) in snapshot {
-                let reading = self.evaluate(&args, pids.as_deref()).await;
+            let sorted_pids = pids.as_deref().map(|p| {
+                let mut v = p.to_vec();
+                v.sort_unstable();
+                v
+            });
+            // An inconclusive probe (`None`) changes nothing: only a definite list can differ.
+            let pids_changed = sorted_pids
+                .as_ref()
+                .is_some_and(|now| lock(&self.inner.state).last_pids.as_ref() != Some(now));
+            for (args, last, version, mut cache) in snapshot {
+                let reading = self
+                    .evaluate(&args, pids.as_deref(), &mut cache, pids_changed)
+                    .await;
+                self.store_cache(&args.app_id, version, &cache);
                 let pair: Emitted = (reading.adopted, reading.signed_in);
                 if last != Some(pair) {
                     self.emit(&args.app_id, pair).await;
@@ -372,7 +556,13 @@ impl AdoptionWatch {
                     {
                         st.entries.remove(&args.app_id);
                     }
+                } else if self.inner.platform == Platform::Darwin {
+                    self.maybe_fire_install_app(&args, version, &mut cache)
+                        .await;
                 }
+            }
+            if let Some(now) = sorted_pids {
+                lock(&self.inner.state).last_pids = Some(now);
             }
         }
         // Decide "empty" and clear `started` under one lock, so a watch() that lands right after

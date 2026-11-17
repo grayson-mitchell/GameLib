@@ -6,37 +6,94 @@ use gamelib_steampoll::adoption::{
     acf_rewritten_by_steam, validate_watch_args, AdoptionWatch, AdoptionWatchArgs,
     ADOPTION_POLL_KEY,
 };
-use gamelib_steampoll::constants::{ADOPTION_ACF_MAX_BYTES, ADOPTION_TICK_MS};
+use gamelib_steampoll::constants::{
+    ADOPTION_ACF_MAX_BYTES, ADOPTION_HELPER_SIGNED_IN_MIN_INTERVAL_MS, ADOPTION_TICK_MS,
+};
 use gamelib_steampoll::events::{AckReply, StateEvent};
-use gamelib_steampoll::host::{PollHost, RunOutput};
+use gamelib_steampoll::host::{BoxFuture, Notification, PollHost, RunOutput};
 use gamelib_steampoll::outbox::Outbox;
 use gamelib_steampoll::profile::Platform;
 use gamelib_steampoll::registry::{PollKind, Registry};
 use gamelib_steampoll::testing::{AckMode, FakeClock, RecordingHost, ScriptedRunner, StreamRecord};
+use serde_json::Value;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
 const PGREP_MAC: &str = "/usr/bin/pgrep -x steam_osx";
 
+/// A `PollHost` that forwards to a `RecordingHost` but names a bridge helper path, which the
+/// recording host never does.
+struct PathHost {
+    inner: Arc<RecordingHost>,
+    helper: Option<PathBuf>,
+}
+
+impl PollHost for PathHost {
+    fn emit_frontend(&self, channel: &str, args: Vec<Value>) {
+        self.inner.emit_frontend(channel, args);
+    }
+    fn notify(&self, n: Notification) {
+        self.inner.notify(n);
+    }
+    fn state_event(&self, ev: StateEvent) -> BoxFuture<AckReply> {
+        self.inner.state_event(ev)
+    }
+    fn bridge_helper_path(&self) -> Option<PathBuf> {
+        self.helper.clone()
+    }
+    fn shell_pid(&self) -> u32 {
+        1
+    }
+}
+
 struct Rig {
     watch: AdoptionWatch,
     host: Arc<RecordingHost>,
     runner: Arc<ScriptedRunner>,
     registry: Registry,
+    clock: Arc<FakeClock>,
+    /// The helper path the host reports (a real empty file), `None` for a rig with no helper.
+    helper: Option<String>,
+    _helper_dir: Option<tempfile::TempDir>,
 }
 
 async fn rig(platform: Platform) -> Rig {
+    rig_inner(platform, false).await
+}
+
+/// A rig whose host names an existing helper file, so `--steam-appstate` calls reach the runner.
+async fn rig_with_helper(platform: Platform) -> Rig {
+    rig_inner(platform, true).await
+}
+
+async fn rig_inner(platform: Platform, with_helper: bool) -> Rig {
     let host = Arc::new(RecordingHost::new(AckMode::Reply(AckReply {
         applied: true,
         ..AckReply::default()
     })));
     let runner = Arc::new(ScriptedRunner::default());
+    let clock = Arc::new(FakeClock::new(1_000_000));
+    let (helper_dir, helper_path) = if with_helper {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("steam-bridge-helper");
+        std::fs::write(&path, "").unwrap();
+        (Some(dir), Some(path))
+    } else {
+        (None, None)
+    };
+    let helper = helper_path
+        .as_ref()
+        .map(|p| p.to_string_lossy().into_owned());
+    let path_host = Arc::new(PathHost {
+        inner: host.clone(),
+        helper: helper_path,
+    });
     let registry = Registry::new(
         tokio::runtime::Handle::current(),
-        host.clone() as Arc<dyn PollHost>,
+        path_host as Arc<dyn PollHost>,
         runner.clone(),
-        Arc::new(FakeClock::new(1_000_000)),
+        clock.clone(),
     );
     let outbox = Arc::new(Outbox::new());
     outbox.mark_ready(&*host).await;
@@ -45,6 +102,9 @@ async fn rig(platform: Platform) -> Rig {
         host,
         runner,
         registry,
+        clock,
+        helper,
+        _helper_dir: helper_dir,
     }
 }
 
@@ -74,6 +134,63 @@ impl Rig {
     fn script_pgrep(&self, outputs: Vec<RunOutput>) {
         self.runner.on(PGREP_MAC, outputs);
     }
+
+    fn helper_path(&self) -> &str {
+        self.helper.as_deref().expect("rig built without a helper")
+    }
+
+    /// Scripts the `--steam-appstate` helper for `app_id`; lines are consumed in order, the last
+    /// one repeats.
+    fn script_helper(&self, app_id: &str, outputs: Vec<RunOutput>) {
+        self.runner.on(
+            &format!("{} --steam-appstate {app_id}", self.helper_path()),
+            outputs,
+        );
+    }
+
+    /// How many times the helper's `--steam-appstate` ran.
+    fn helper_calls(&self) -> usize {
+        self.runner
+            .calls()
+            .iter()
+            .filter(|c| c.contains("--steam-appstate"))
+            .count()
+    }
+
+    /// The `--steam-installapp` calls the watch made.
+    fn install_app_calls(&self) -> Vec<String> {
+        self.runner
+            .calls()
+            .into_iter()
+            .filter(|c| c.contains("--steam-installapp"))
+            .collect()
+    }
+
+    /// One adoption tick with the wall clock moving the same 5 s the paused timer does.
+    async fn tick(&self) {
+        self.clock.advance(ADOPTION_TICK_MS);
+        tick().await;
+    }
+}
+
+/// A helper answer line.
+fn helper_ok(logged_on: u8, state: Option<u32>, installed: Option<u32>) -> RunOutput {
+    let n = |v: Option<u32>| v.map_or("null".to_string(), |v| v.to_string());
+    pgrep(
+        Some(0),
+        &format!(
+            "{{\"result\":\"ok\",\"loggedOn\":{logged_on},\"state\":{},\"installed\":{}}}\n",
+            n(state),
+            n(installed)
+        ),
+    )
+}
+
+fn helper_unavailable(reason: &str) -> RunOutput {
+    pgrep(
+        Some(2),
+        &format!("{{\"result\":\"unavailable\",\"reason\":\"{reason}\"}}\n"),
+    )
 }
 
 async fn settle() {
@@ -535,4 +652,351 @@ fn watch_args_deserialize_camel_case_and_reject_unknown_keys() {
         r#"{"appId":"480","manifestPath":"/x","baselineContent":"b","recordedAtMs":1,"steamPid":7,"extra":1}"#
     )
     .is_err());
+}
+
+// ---- macOS helper reading (81-04, D-07 / D-08 / D-09 / D-10) ----
+
+#[tokio::test(start_paused = true)]
+async fn on_macos_helper_state_with_bit_4_reads_adopted_without_an_acf_or_pid_change() {
+    let r = rig_with_helper(Platform::Darwin).await;
+    let lib = library();
+    lib.write("480", &handoff_acf("480"));
+    r.script_pgrep(vec![pgrep(Some(0), "111\n")]);
+    r.script_helper("480", vec![helper_ok(1, Some(4), Some(15))]);
+
+    // read(): unchanged ACF, same pid, helper says 4.
+    let reading = r.watch.read(&lib.args("480", 111)).await;
+    assert!(reading.adopted);
+    assert_eq!(reading.evidence.as_deref(), Some("helper"));
+    assert_eq!(reading.helper_state, Some(4));
+    assert_eq!(reading.signed_in, Some(true));
+
+    // Through the task: adopted on the first tick, event carries signedIn, the entry goes.
+    r.watch.watch(lib.args("480", 111)).unwrap();
+    r.tick().await;
+    assert_eq!(r.events(), vec![("480".to_string(), true, Some(true))]);
+    assert!(r.watch.watched_app_ids().is_empty());
+    assert!(!r.active());
+    // Bit 4 plus other bits still counts.
+    r.script_helper("480", vec![helper_ok(1, Some(6), None)]);
+    assert!(r.watch.read(&lib.args("480", 111)).await.adopted);
+}
+
+#[tokio::test(start_paused = true)]
+async fn on_macos_signing_in_adopts_by_itself_and_never_calls_install_app() {
+    // The 112100 regression: Steam open at the sign-in screen, the operator signs in, same pid.
+    let r = rig_with_helper(Platform::Darwin).await;
+    let lib = library();
+    lib.write("480", &handoff_acf("480"));
+    r.script_pgrep(vec![pgrep(Some(0), "111\n")]);
+    r.script_helper(
+        "480",
+        vec![
+            helper_ok(0, Some(1), Some(0)),
+            helper_ok(0, Some(1026), Some(15)),
+            helper_ok(1, Some(4), Some(15)),
+        ],
+    );
+    let mut args = lib.args("480", 111);
+    args.install_app_fallback = true;
+    r.watch.watch(args).unwrap();
+
+    r.tick().await;
+    assert_eq!(r.events(), vec![("480".to_string(), false, Some(false))]);
+    r.tick().await;
+    assert_eq!(r.events().len(), 1, "still (false, signed out): deduped");
+    r.tick().await;
+    assert_eq!(
+        r.events(),
+        vec![
+            ("480".to_string(), false, Some(false)),
+            ("480".to_string(), true, Some(true))
+        ]
+    );
+    assert!(!r.active());
+    assert!(
+        r.install_app_calls().is_empty(),
+        "sign-in adopts by itself: {:?}",
+        r.install_app_calls()
+    );
+}
+
+#[tokio::test(start_paused = true)]
+async fn on_macos_install_app_fires_once_after_a_seen_sign_in_that_does_not_adopt() {
+    let r = rig_with_helper(Platform::Darwin).await;
+    let lib = library();
+    lib.write("480", &handoff_acf("480"));
+    r.script_pgrep(vec![pgrep(Some(0), "111\n")]);
+    // Signed out, then signed in and stuck at 1026.
+    r.script_helper(
+        "480",
+        vec![
+            helper_ok(0, Some(1), Some(0)),
+            helper_ok(1, Some(1026), Some(15)),
+        ],
+    );
+    let key = format!(
+        "{} --steam-installapp 480 --library {}",
+        r.helper_path(),
+        lib.steamapps.parent().unwrap().to_string_lossy()
+    );
+    r.runner.on(
+        &key,
+        vec![pgrep(Some(0), "{\"result\":\"ok\",\"folderIndex\":0}\n")],
+    );
+    let mut args = lib.args("480", 111);
+    args.install_app_fallback = true;
+    r.watch.watch(args).unwrap();
+
+    r.tick().await; // signed out
+    assert!(r.install_app_calls().is_empty());
+    r.tick().await; // signed in, the window opens
+    assert!(r.install_app_calls().is_empty());
+    // Not yet: less than the delay has passed since the sign-in reading.
+    r.tick().await; // +5 s
+    assert!(r.install_app_calls().is_empty());
+    r.tick().await; // +10 s: still not 4, fire
+    assert_eq!(r.install_app_calls(), vec![key.clone()]);
+    // Never again, however long it stays stuck.
+    for _ in 0..6 {
+        r.tick().await;
+    }
+    assert_eq!(r.install_app_calls(), vec![key]);
+    assert!(r.active(), "the entry is kept");
+}
+
+#[tokio::test(start_paused = true)]
+async fn on_macos_install_app_does_not_fire_when_adopted_before_the_delay() {
+    let r = rig_with_helper(Platform::Darwin).await;
+    let lib = library();
+    lib.write("480", &handoff_acf("480"));
+    r.script_pgrep(vec![pgrep(Some(0), "111\n")]);
+    r.script_helper(
+        "480",
+        vec![
+            helper_ok(0, Some(1), None),
+            helper_ok(1, Some(1026), None),
+            helper_ok(1, Some(4), None),
+        ],
+    );
+    let mut args = lib.args("480", 111);
+    args.install_app_fallback = true;
+    r.watch.watch(args).unwrap();
+    for _ in 0..5 {
+        r.tick().await;
+    }
+    assert_eq!(
+        r.events().last(),
+        Some(&("480".to_string(), true, Some(true)))
+    );
+    assert!(r.install_app_calls().is_empty());
+}
+
+#[tokio::test(start_paused = true)]
+async fn on_macos_install_app_never_fires_without_the_setting_or_without_a_seen_sign_out() {
+    // Setting off: signed out, then signed in and stuck, never called.
+    let off = rig_with_helper(Platform::Darwin).await;
+    let lib = library();
+    lib.write("480", &handoff_acf("480"));
+    off.script_pgrep(vec![pgrep(Some(0), "111\n")]);
+    off.script_helper(
+        "480",
+        vec![helper_ok(0, Some(1), None), helper_ok(1, Some(1026), None)],
+    );
+    off.watch.watch(lib.args("480", 111)).unwrap();
+    for _ in 0..8 {
+        off.tick().await;
+    }
+    assert!(off.install_app_calls().is_empty());
+
+    // Setting on, but signed in from the first reading: no signed-out reading was ever seen.
+    let on = rig_with_helper(Platform::Darwin).await;
+    on.script_pgrep(vec![pgrep(Some(0), "111\n")]);
+    on.script_helper("480", vec![helper_ok(1, Some(1026), None)]);
+    let mut args = lib.args("480", 111);
+    args.install_app_fallback = true;
+    on.watch.watch(args).unwrap();
+    for _ in 0..8 {
+        on.tick().await;
+    }
+    assert!(on.install_app_calls().is_empty());
+    assert_eq!(on.events(), vec![("480".to_string(), false, Some(true))]);
+}
+
+#[tokio::test(start_paused = true)]
+async fn on_macos_the_helper_refutes_a_pid_change_when_its_state_is_not_4() {
+    let r = rig_with_helper(Platform::Darwin).await;
+    let lib = library();
+    lib.write("480", &handoff_acf("480"));
+    // The recorded pid 111 is gone: Steam restarted as 222.
+    r.script_pgrep(vec![pgrep(Some(0), "222\n")]);
+    r.script_helper("480", vec![helper_ok(1, Some(1), Some(3))]);
+    let reading = r.watch.read(&lib.args("480", 111)).await;
+    assert!(!reading.adopted, "state 1: restarted but not adopted");
+    assert_eq!(reading.helper_state, Some(1));
+    assert_eq!(reading.evidence, None);
+
+    // Through the task as well.
+    r.watch.watch(lib.args("480", 111)).unwrap();
+    r.tick().await;
+    r.tick().await;
+    assert_eq!(r.events(), vec![("480".to_string(), false, Some(true))]);
+    assert!(r.active());
+}
+
+#[tokio::test(start_paused = true)]
+async fn on_macos_a_helper_with_no_answer_leaves_the_pid_rule_standing() {
+    let lib = library();
+    lib.write("480", &handoff_acf("480"));
+    let cases = [
+        helper_unavailable("steam-not-running"),
+        helper_unavailable("unsupported-arch"),
+        pgrep(None, ""),
+        pgrep(Some(0), "not json\n"),
+        // Signed out answers with no state: nothing definite to refute with.
+        helper_ok(0, None, None),
+    ];
+    for helper in cases {
+        let r = rig_with_helper(Platform::Darwin).await;
+        r.script_pgrep(vec![pgrep(Some(0), "222\n")]);
+        r.script_helper("480", vec![helper.clone()]);
+        let reading = r.watch.read(&lib.args("480", 111)).await;
+        assert!(reading.adopted, "{helper:?}");
+        assert_eq!(reading.evidence.as_deref(), Some("pid"), "{helper:?}");
+    }
+}
+
+#[tokio::test(start_paused = true)]
+async fn on_macos_an_unavailable_helper_never_adopts_reports_unknown_and_keeps_the_entry() {
+    // D-10: a missing helper (no path), then one that fails every tick.
+    let missing = rig(Platform::Darwin).await;
+    let lib = library();
+    lib.write("480", &handoff_acf("480"));
+    missing.script_pgrep(vec![pgrep(Some(0), "111\n")]);
+    missing.watch.watch(lib.args("480", 111)).unwrap();
+    missing.tick().await;
+    missing.tick().await;
+    assert_eq!(missing.events(), vec![("480".to_string(), false, None)]);
+    assert!(missing.active());
+
+    let r = rig_with_helper(Platform::Darwin).await;
+    r.script_pgrep(vec![pgrep(Some(0), "111\n")]);
+    r.script_helper(
+        "480",
+        vec![helper_unavailable("method-unverified:BLoggedOn")],
+    );
+    r.watch.watch(lib.args("480", 111)).unwrap();
+    for _ in 0..4 {
+        r.tick().await;
+    }
+    assert_eq!(r.events(), vec![("480".to_string(), false, None)]);
+    assert_eq!(r.watch.watched_app_ids(), vec!["480".to_string()]);
+    assert!(r.active());
+    assert_eq!(r.helper_calls(), 4, "unknown is probed every tick");
+}
+
+#[tokio::test(start_paused = true)]
+async fn on_macos_the_helper_is_rate_limited_while_signed_in_and_unchanged() {
+    let r = rig_with_helper(Platform::Darwin).await;
+    let lib = library();
+    lib.write("480", &handoff_acf("480"));
+    r.script_pgrep(vec![pgrep(Some(0), "111\n")]);
+    r.script_helper("480", vec![helper_ok(1, Some(1026), Some(3))]);
+    r.watch.watch(lib.args("480", 0)).unwrap();
+
+    let ticks_per_interval = ADOPTION_HELPER_SIGNED_IN_MIN_INTERVAL_MS / ADOPTION_TICK_MS;
+    r.tick().await;
+    assert_eq!(r.helper_calls(), 1, "the first tick asks");
+    for _ in 1..ticks_per_interval {
+        r.tick().await;
+    }
+    assert_eq!(r.helper_calls(), 1, "signed in and unchanged: reused");
+    r.tick().await;
+    assert_eq!(r.helper_calls(), 2, "one interval later: asked again");
+    assert_eq!(r.events(), vec![("480".to_string(), false, Some(true))]);
+}
+
+#[tokio::test(start_paused = true)]
+async fn on_macos_signed_out_is_probed_every_tick_and_a_pid_list_change_re_probes() {
+    let signed_out = rig_with_helper(Platform::Darwin).await;
+    let lib = library();
+    lib.write("480", &handoff_acf("480"));
+    signed_out.script_pgrep(vec![pgrep(Some(0), "111\n")]);
+    signed_out.script_helper("480", vec![helper_ok(0, Some(1), None)]);
+    signed_out.watch.watch(lib.args("480", 0)).unwrap();
+    for _ in 0..3 {
+        signed_out.tick().await;
+    }
+    assert_eq!(signed_out.helper_calls(), 3);
+
+    let r = rig_with_helper(Platform::Darwin).await;
+    // Ticks 1 and 2 see pid 111, tick 3 sees a restart (222), tick 4 stays on 222.
+    r.script_pgrep(vec![
+        pgrep(Some(0), "111\n"),
+        pgrep(Some(0), "111\n"),
+        pgrep(Some(0), "222\n"),
+        pgrep(Some(0), "222\n"),
+    ]);
+    r.script_helper("480", vec![helper_ok(1, Some(1026), None)]);
+    r.watch.watch(lib.args("480", 0)).unwrap();
+    r.tick().await;
+    r.tick().await;
+    assert_eq!(r.helper_calls(), 1);
+    r.tick().await;
+    assert_eq!(r.helper_calls(), 2, "the pid list changed on this tick");
+    r.tick().await;
+    assert_eq!(r.helper_calls(), 2);
+}
+
+#[tokio::test(start_paused = true)]
+async fn on_macos_read_always_asks_the_helper_once_and_returns_its_answer() {
+    let r = rig_with_helper(Platform::Darwin).await;
+    let lib = library();
+    lib.write("480", &handoff_acf("480"));
+    r.script_pgrep(vec![pgrep(Some(0), "111\n")]);
+    r.script_helper("480", vec![helper_ok(1, Some(1026), Some(9))]);
+    let reading = r.watch.read(&lib.args("480", 111)).await;
+    assert_eq!(r.helper_calls(), 1);
+    assert!(!reading.adopted);
+    assert_eq!(reading.helper_state, Some(1026));
+    assert_eq!(reading.signed_in, Some(true));
+    // A second read asks again (no entry, no cache) and never fires InstallApp.
+    let mut args = lib.args("480", 111);
+    args.install_app_fallback = true;
+    r.script_helper("480", vec![helper_ok(0, Some(1), None)]);
+    let reading = r.watch.read(&args).await;
+    assert_eq!(r.helper_calls(), 2);
+    assert_eq!(reading.signed_in, Some(false));
+    assert_eq!(reading.helper_state, Some(1));
+    assert!(r.install_app_calls().is_empty());
+    assert!(r.watch.watched_app_ids().is_empty());
+}
+
+#[tokio::test(start_paused = true)]
+async fn windows_and_linux_never_spawn_the_helper() {
+    let lib = library();
+    lib.write("480", &handoff_acf("480"));
+    for platform in [Platform::Linux, Platform::Win32] {
+        let r = rig_with_helper(platform).await;
+        r.script_helper("480", vec![helper_ok(1, Some(4), Some(1))]);
+        let mut args = lib.args("480", 111);
+        args.install_app_fallback = true;
+        let reading = r.watch.read(&args).await;
+        assert!(!reading.adopted, "{platform:?}: helper state is not read");
+        assert_eq!(reading.signed_in, None);
+        assert_eq!(reading.helper_state, None);
+        r.watch.watch(args).unwrap();
+        for _ in 0..4 {
+            r.tick().await;
+        }
+        assert_eq!(r.helper_calls(), 0, "{platform:?}");
+        assert!(r.install_app_calls().is_empty(), "{platform:?}");
+        assert!(
+            r.runner
+                .calls()
+                .iter()
+                .all(|c| !c.contains("steam-bridge-helper")),
+            "{platform:?}"
+        );
+    }
 }

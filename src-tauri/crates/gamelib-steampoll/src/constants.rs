@@ -45,3 +45,9 @@ pub const ADOPTION_ACF_MAX_BYTES: u64 = 1_048_576;
 /// How long one `--steam-appstate` helper call may run before it counts as no answer (T-81-13).
 /// The helper arms its own 8 s alarm, so this only catches a helper that cannot even start.
 pub const ADOPTION_HELPER_TIMEOUT_MS: u64 = 10_000;
+/// While Steam is signed in and its pid list is unchanged, the adoption watch asks the macOS
+/// helper at most this often (D-08). Signed out or unknown is probed every tick.
+pub const ADOPTION_HELPER_SIGNED_IN_MIN_INTERVAL_MS: u64 = 15_000;
+/// After the watch sees Steam sign in (having seen it signed out), how long it waits for Steam to
+/// adopt on its own before the one-shot InstallApp fallback may fire (D-09, spike 083).
+pub const ADOPTION_INSTALLAPP_FALLBACK_DELAY_MS: u64 = 10_000;
