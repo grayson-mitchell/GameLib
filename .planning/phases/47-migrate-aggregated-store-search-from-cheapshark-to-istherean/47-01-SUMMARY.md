@@ -3,7 +3,7 @@ phase: 47-migrate-aggregated-store-search-from-cheapshark-to-istherean
 plan: 01
 subsystem: backend/storeSearch
 tags: [itad, measurement, coverage-sweep, fixtures]
-status: partial
+status: complete
 requires: []
 provides:
   - meta/measureItadCoverage.ts operator-run ITAD sweep (HTTP only, key from GAMELIB_ITAD_API_KEY)
@@ -12,6 +12,7 @@ provides:
 affects: [47-06, 47-07]
 key-files:
   created:
+    - src/backend/storeSearch/itadCoverage.ts
     - meta/measureItadCoverage.ts
     - meta/__tests__/measureItadCoverage.test.ts
     - .planning/phases/47-migrate-aggregated-store-search-from-cheapshark-to-istherean/47-ITAD-COVERAGE.json
@@ -25,28 +26,29 @@ key-files:
     - src/backend/storeSearch/__tests__/fixtures/itad/error-badkey.json
   modified: []
 key-decisions:
-  - "Task 3 (itadCoverage.ts) NOT written: the sweep measured resultsParam = null, and the plan says STOP and report in that case (D-09 cannot be met as specified)"
-requirements-completed: []
-commits: 2
+  - "ITAD_SEARCH_RESULTS_PARAM = 'results', graded SPEC (official ITAD OpenAPI: number 1..100, default 20, no `limit` param); the sweep's resultsParam stays null in 47-ITAD-COVERAGE.json as the raw measurement"
+requirements-completed: [PRICE-01, PRICE-02]
+commits: 3
 plan_head_before: 01d78e5e34b45fb4d183fc40dc7d01c93defddac
-plan_head_after: 92f388a6374c57b64fbdc055757ade3593fc2dd0
+plan_head_after: 7657d6bf5
 completed: 2026-11-17
 ---
 
 # Phase 47 Plan 01: ITAD coverage sweep Summary
 
-The sweep script was written and run by the operator against ITAD with the app API key; its key-free output and response fixtures are committed. The measured-constants module (Task 3) is blocked on one unresolved measurement: the search results param.
+The sweep script was written and run by the operator against ITAD with the app API key; its key-free output and response fixtures are committed, and the measured values are locked in `src/backend/storeSearch/itadCoverage.ts`. The one value the sweep could not measure, the search results param, is locked from the official ITAD OpenAPI spec and graded SPEC.
 
 ## Status
 
-Tasks 1 and 2 complete. Task 3 not done, deliberately (see "Blocker for Task 3"). `status: partial` so the plan is not read as finished; requirements PRICE-01 and PRICE-02 are not marked complete.
+All three tasks complete.
 
 ## Commits
 
 - `fd2477a83`: `meta/measureItadCoverage.ts` and its pure-helper tests (Task 1)
 - `92f388a63`: `47-ITAD-COVERAGE.json` and the eight `itad/*.json` fixtures (Task 2 outputs)
+- `7657d6bf5`: `src/backend/storeSearch/itadCoverage.ts` (Task 3)
 
-`commits: 2` is counted by plan scope, not `rev-list ${plan_head_before}..HEAD` (that range spans unrelated main-branch commits made between the two plan commits). `plan_head_before` is the parent of `fd2477a83`.
+`commits: 3` is counted by plan scope, not `rev-list ${plan_head_before}..HEAD` (that range spans unrelated main-branch commits made between the two plan commits). `plan_head_before` is the parent of `fd2477a83`.
 
 ## Measured values (sweep of 2026-11-17T07:55:47Z)
 
@@ -67,15 +69,23 @@ Tasks 1 and 2 complete. Task 3 not done, deliberately (see "Blocker for Task 3")
 
 Note for the adapter (47-06): a missing or invalid key is a **403**, not 401. Both bodies carry `reason_phrase`.
 
-## Notable finding: resultsParam is null (D-09 unresolved)
+## Search results param: SPEC, not MEASURED (D-09)
 
-`/games/search/v1` returned 20 rows for BOTH `results=20` and `limit=20`, so the probe could not tell which param ITAD honours. 20 may simply be the default page size, in which case neither param is what caps the count, or both are accepted. `pickResultsParam` returns null when both runs match the wanted count, so `47-ITAD-COVERAGE.json` records `resultsParam: null` and `searchCounts: {results: 20, limit: 20}`.
+`/games/search/v1` returned 20 rows for BOTH `results=20` and `limit=20`, so the sweep could not tell which param ITAD honours; `47-ITAD-COVERAGE.json` keeps the raw measurement (`resultsParam: null`, `searchCounts: {results: 20, limit: 20}`) and was not edited. Resolution, graded **SPEC**: the official ITAD OpenAPI spec (docs.isthereanydeal.com, game search; read via a search-index snippet because the live page returns 403 to automated fetch) defines `results` as a number 1..100, default 20, "maximum number of results returned", and has no `limit` param. That is consistent with the sweep: 20 is the default and the unknown `limit` was ignored. An attempted operator re-probe with a count of 5 was inconclusive (403: the operator shell held the wrong credential), so this stays SPEC until a live probe with a non-default count upgrades it. `ITAD_SEARCH_RESULTS_PARAM = 'results'`; `ITAD_SEARCH_RESULT_COUNT = 20`.
 
-Consequence for downstream plans: any plan that sizes a search request (47-06 onward) cannot assume a param name. Do not hardcode `results` or `limit` from RESEARCH. Resolving it needs a second probe with a wanted count that differs from the default (for example 5 or 50) so the two params can be told apart, or a read of ITAD's API docs for `/games/search/v1`. This plan's downstream plans were not edited.
+## Locked constants (src/backend/storeSearch/itadCoverage.ts)
 
-## Blocker for Task 3
+`ITAD_PRICED_COUNTRIES` (the 32 above, includes US), `ITAD_FALLBACK_COUNTRY = 'US'`, `ITAD_SHOP_ID_STEAM = '61'`, `ITAD_SHOP_ID_GOG = '35'`, `ITAD_SHOP_ID_EPIC = '16'`, `ITAD_SEARCH_RESULTS_PARAM = 'results'` (SPEC), `ITAD_SEARCH_RESULT_COUNT = 20`, `ITAD_LOOKUP_BATCH_SIZE = 200`, `ITAD_PRICE_AMOUNT_SOURCE = 'amount'`, `ITAD_AUTH_STYLE = 'query:key'`. Plans 47-05/47-06 cite these.
 
-Task 3 says: if `resultsParam` is null, STOP and report, because no param caps the count and D-09 cannot be met as specified. `src/backend/storeSearch/itadCoverage.ts` was therefore not created. Every other constant it needs is measured and listed above, so only `ITAD_SEARCH_RESULTS_PARAM` is open. Next step is an operator/planner decision: re-probe with a non-default count, or relax D-09 to "request 20, slice client-side". Plans 47-06+ should not be unblocked until that is settled.
+## RESEARCH "what result changes the plan" rows that fired
+
+- Row 1 (most REGION_OPTIONS countries return own currency): fired, plan as written.
+- Row 2 (silent USD fallback identical to the US run): fired for IL RU UA MD MX ZA SG HK SA AE (status 200, identicalToUS true). Those are absent from `ITAD_PRICED_COUNTRIES`, so the UI can say the region is not priced and show the USD note (Pitfall 5).
+- Row 3 (4xx countries): not fired, every country returned 200.
+- Row 4 (`amountInt` disagrees with `amount`): not fired, `amountSource = 'amount'`.
+- Row 5 (lookup ceiling below library size): not fired, ceiling 1000; the adapter still chunks at 200.
+- Row 6 (Epic id differs from the assumed 16): not fired, measured id is 16 (by title "Epic Game Store").
+- Row 7 (429 on the sweep): not fired.
 
 ## Redaction and format checks
 
@@ -88,7 +98,7 @@ The operator's first run used the ITAD app's OAuth client credential instead of 
 
 ## Deviations from Plan
 
-None in code. The one departure from the dispatched flow is that Task 3 was not executed, per the plan's own STOP rule.
+None. Task 3's STOP rule (null results param) was resolved by the orchestrator with the SPEC-graded value above before Task 3 ran.
 
 ## Known Stubs
 
@@ -101,4 +111,5 @@ None. No new network surface in the app; the sweep is a standalone meta script.
 ## Self-Check: PASSED
 
 - 47-ITAD-COVERAGE.json and all eight fixtures present and non-empty (Task 2 verify passed).
-- Commits `fd2477a83` and `92f388a63` exist on main.
+- itadCoverage.ts present; `pnpm codecheck` clean; scoped `prettier --check` over itadCoverage.ts and the eight fixtures clean; key grep over fixtures and summary JSON returned 0 files.
+- Commits `fd2477a83`, `92f388a63` and `7657d6bf5` exist on main.
