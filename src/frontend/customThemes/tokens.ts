@@ -21,3 +21,21 @@ export const LIVE_DERIVED_TOKENS: Readonly<Record<string, string>> = {
 
 /** Tokens that are not colours; no colour editor or colour seed applies to them. */
 export const NON_COLOUR_TOKENS = ['--focus-ring-width'] as const
+
+export type CoreTokenGroupId =
+  | 'surfaces'
+  | 'navigation'
+  | 'text'
+  | 'buttons'
+  | 'accent'
+  | 'status'
+
+export interface CoreTokenGroup {
+  id: CoreTokenGroupId
+  tokens: readonly string[]
+}
+
+// RED stubs: the real core token set lands in the GREEN commit.
+export const CORE_TOKEN_GROUPS: readonly CoreTokenGroup[] = []
+export const CORE_TOKENS: readonly string[] = []
+export const CORE_TOKEN_SEEDS: Readonly<Record<string, readonly string[]>> = {}
