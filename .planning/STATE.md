@@ -795,6 +795,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | fast | Launch without Steam: DRM reason moved from a badge row to the label-line (i) help icon (toggleWithInfo + InfoBox iconOnly). | 2026-11-17 | 089db50fb | Jest 14/14; tsc, scoped prettier + eslint clean | — |
 | fast | Launch without Steam: Mac steam_api walk now matches (lib)steam_api(64).dylib/bundle/framework (WazHack's Unity libsteam_api.bundle was missed); verdict cache v3; live results logged in the todo. | 2026-11-17 | cfb54215e | Jest 58/58 directLaunch + launchWithoutSteam; tsc, scoped prettier + eslint clean | — |
 | fast | Launch without Steam: bridge games now honour the toggle at Play (launchWithoutSteam added to TITLE_AUTHORITATIVE_KEYS; it was dropped, so Avernum 6 took the bridge launch). | 2026-11-17 | bbcfb66aa | Jest 727/727 titleSettings + games; tsc, scoped prettier clean | — |
+| fast | Launch without Steam: Mac binaries with no slice this Mac can run (i386/PPC only, e.g. Legends of Aethereus, EBADARCH) get 'mac-arch-unsupported' and no toggle; verdict cache v4. | 2026-11-17 | c32e25bb5 | Jest 76/76 directLaunch + toggle; tsc, scoped prettier clean; real headers checked | — |
 
 ## Session Continuity
 
