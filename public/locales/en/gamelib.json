@@ -111,6 +111,7 @@
         "deleteConfirm": "Delete theme",
         "deleteKeep": "Keep theme",
         "deleteTitle": "Delete theme?",
+        "dismissNotice": "Dismiss",
         "editHeading": "Edit theme",
         "emptyBody": "Duplicate a theme to start your own. Your copy keeps the original colours until you change them.",
         "emptyHeading": "No custom themes yet",
@@ -145,6 +146,7 @@
         "renameKeepName": "Keep name",
         "renameLabel": "Theme name",
         "renameTitle": "Rename theme",
+        "saveFailed": "Couldn’t save “{{name}}”. Your changes are still here, so try again.",
         "saveTheme": "Save theme",
         "saved": "Saved",
         "savedApplied": "Saved and applied",
@@ -178,7 +180,11 @@
             "textSecondary": "Secondary text",
             "textTertiary": "Text on buttons"
         },
-        "unsaved": "Unsaved changes"
+        "unsaved": "Unsaved changes",
+        "unsavedBody": "You have unsaved changes to “{{name}}”.",
+        "unsavedDiscard": "Discard changes",
+        "unsavedKeepEditing": "Keep editing",
+        "unsavedTitle": "Unsaved changes"
     },
     "discounts": {
         "pegiPrefix": "PEGI ≤ {{value}}"

@@ -56,6 +56,23 @@
   min-inline-size: 0;
 }
 
+.themeEditor__nameRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-inline-size: 0;
+}
+
+.themeEditor__rename {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  min-inline-size: 32px;
+  min-block-size: 32px;
+  padding: 0;
+}
+
 .themeEditor__name {
   margin: 0;
   font-size: var(--text-lg);

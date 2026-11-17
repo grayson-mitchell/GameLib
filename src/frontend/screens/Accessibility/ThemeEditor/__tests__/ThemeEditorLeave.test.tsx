@@ -222,4 +222,67 @@ describe('ThemeEditor leave prompt', () => {
     expect(dialog().showDialog).toBe(false)
     expect(router.state.location.pathname).toBe('/accessibility')
   })
+
+  describe('header Rename', () => {
+    const openRename = () =>
+      fireEvent.click(screen.getByRole('button', { name: 'Rename My Nord' }))
+    // The name field listens for the native `input` event.
+    const typeName = (input: HTMLInputElement, value: string) => {
+      input.value = value
+      fireEvent.input(input)
+    }
+    const heading = () =>
+      document.querySelector('.themeEditor__name')?.textContent
+
+    it('sits between Back and Save theme in tab order', () => {
+      renderEditor()
+      const buttons = Array.from(document.querySelectorAll('button')).map(
+        (b) => b.getAttribute('aria-label') ?? b.textContent
+      )
+      const back = buttons.indexOf('Back to Appearance')
+      const rename = buttons.indexOf('Rename My Nord')
+      const save = buttons.indexOf('Save theme')
+      expect(back).toBeGreaterThanOrEqual(0)
+      expect(rename).toBeGreaterThan(back)
+      expect(save).toBeGreaterThan(rename)
+    })
+
+    it('opens the Rename dialog and a valid rename updates the heading', async () => {
+      renderEditor()
+      expect(screen.queryByLabelText('Theme name')).toBeNull()
+      openRename()
+      const input = screen.getByLabelText<HTMLInputElement>('Theme name')
+      expect(input.value).toBe('My Nord')
+      typeName(input, 'Nord Night')
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Rename theme' }))
+      })
+      expect(heading()).toBe('Nord Night')
+      expect(screen.queryByLabelText('Theme name')).toBeNull()
+    })
+
+    it('does not dirty the token draft, so leaving afterwards is not blocked', async () => {
+      const router = renderEditor()
+      openRename()
+      typeName(
+        screen.getByLabelText<HTMLInputElement>('Theme name'),
+        'Nord Night'
+      )
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Rename theme' }))
+      })
+      expect(screen.queryByText('Unsaved changes')).toBeNull()
+      await clickBack()
+      expect(dialog().showDialog).toBe(false)
+      expect(router.state.location.pathname).toBe('/accessibility')
+    })
+
+    it('Keep name closes the dialog and leaves the name alone', () => {
+      renderEditor()
+      openRename()
+      fireEvent.click(screen.getByRole('button', { name: 'Keep name' }))
+      expect(screen.queryByLabelText('Theme name')).toBeNull()
+      expect(heading()).toBe('My Nord')
+    })
+  })
 })

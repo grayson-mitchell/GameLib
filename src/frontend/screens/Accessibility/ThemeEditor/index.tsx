@@ -2,12 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import { useBlocker, useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
+import { faArrowLeft, faPenToSquare } from '@fortawesome/free-solid-svg-icons'
 import useSettingsState from 'frontend/state/settingsState'
 import { useThemeSaveFailedNotice } from 'frontend/state/ThemeSaveFailedNotice'
 import type { CustomTheme } from 'common/types/customTheme'
 import { customThemeKey } from 'frontend/customThemes/customTheme'
 import { resolveThemeLabel } from 'frontend/components/UI/ThemeSelector/themeLabels'
+import { RenameThemeDialog } from 'frontend/components/UI/ThemeSelector/RenameThemeDialog'
 import { PreviewPane } from './PreviewPane'
 import { TokenList } from './TokenList'
 import { showUnsavedChangesDialog } from './unsavedChangesDialog'
@@ -36,6 +37,7 @@ function EditorBody({ theme }: { theme: CustomTheme }) {
   }))
   const [saving, setSaving] = useState(false)
   const [status, setStatus] = useState('')
+  const [renaming, setRenaming] = useState(false)
   const inFlight = useRef(false)
 
   const dirty = !tokensEqual(draft, theme.tokens)
@@ -123,7 +125,23 @@ function EditorBody({ theme }: { theme: CustomTheme }) {
         </h1>
         <div className="themeEditor__headerRow">
           <div className="themeEditor__identity">
-            <p className="themeEditor__name">{theme.name}</p>
+            <div className="themeEditor__nameRow">
+              <p className="themeEditor__name">{theme.name}</p>
+              {/* OD-5: the same Rename dialog the gallery card opens. Renaming never touches the
+                  token draft, so it neither dirties the editor nor trips the leave prompt. */}
+              <button
+                type="button"
+                className="button is-text themeEditor__rename"
+                aria-label={t(
+                  'gamelib:customThemes.actionRename',
+                  'Rename {{name}}',
+                  { name: theme.name }
+                )}
+                onClick={() => setRenaming(true)}
+              >
+                <FontAwesomeIcon icon={faPenToSquare} aria-hidden="true" />
+              </button>
+            </div>
             <p className="themeEditor__base">
               {t('gamelib:customThemes.basedOn', 'Based on {{base}}', {
                 base: resolveThemeLabel(theme.base, tGamelib)
@@ -159,6 +177,12 @@ function EditorBody({ theme }: { theme: CustomTheme }) {
           {status}
         </p>
       </header>
+      <RenameThemeDialog
+        open={renaming}
+        themeId={theme.id}
+        currentName={theme.name}
+        onClose={() => setRenaming(false)}
+      />
       <div className="themeEditor__panes">
         <PreviewPane name={theme.name} base={theme.base} tokens={draft} />
         <TokenList base={theme.base} draft={draft} onCommit={commit} />
