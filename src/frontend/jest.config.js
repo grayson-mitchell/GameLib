@@ -38,7 +38,10 @@ module.exports = {
   // REPO root (`rootDir: '../..'` below), so the target path must be
   // `<rootDir>/src/frontend/__mocks__/...`, not `<rootDir>/__mocks__/...`.
   moduleNameMapper: {
-    '\\.svg\\?react$': '<rootDir>/src/frontend/__mocks__/svgReactStub.tsx'
+    '\\.svg\\?react$': '<rootDir>/src/frontend/__mocks__/svgReactStub.tsx',
+    // Replaces per-test jest.mock('x.scss', () => ({})) calls (quick
+    // 261117-omv; the backend-di jestMock ratchet counts those).
+    '\\.s?css$': '<rootDir>/src/frontend/__mocks__/styleStub.ts'
   },
 
   modulePaths: [compilerOptions.baseUrl]

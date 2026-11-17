@@ -210,7 +210,11 @@ describe('AboutDialog', () => {
     const stylesheet = jest
       .requireActual<typeof import('fs')>('fs')
       .readFileSync(
-        require.resolve('../index.scss').replace(/\.js$/, ''),
+        // Not require.resolve: the jest css mapper redirects scss specifiers
+        // to an empty stub, and this test needs the real stylesheet.
+        jest
+          .requireActual<typeof import('path')>('path')
+          .join(__dirname, '../index.scss'),
         'utf-8'
       )
     const declarations = stylesheet
