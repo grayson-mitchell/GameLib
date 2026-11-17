@@ -5,16 +5,16 @@ milestone_name: Foundations
 current_phase: 64
 current_phase_name: UI to edit themes
 status: executing
-stopped_at: Completed 81-07-PLAN.md
-last_updated: "2026-11-17T18:08:05.177Z"
-last_activity: 2026-11-17
-last_activity_desc: Phase 81 execution started
-state_head: f3f6311f3eceaf74aa0c2b9fdc02a1c7688bc5bb
+stopped_at: Completed 81-08-PLAN.md
+last_updated: "2026-11-17T18:18:43.871Z"
+last_activity: 2026-11-18
+last_activity_desc: Phase 64 execution started
+state_head: 44f3f77e212f79674bb094933a2690d50e267fa0
 progress:
   total_phases: 26
   completed_phases: 23
   total_plans: 521
-  completed_plans: 498
+  completed_plans: 499
   percent: 88
 ---
 
@@ -25,7 +25,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 81 — Unify the Steam restart hold into restart-on-Play
+**Current focus:** Phase 64 — UI to edit themes
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -76,10 +76,10 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 
 ## Current Position
 
-Phase: 64 (UI to edit themes) — READY TO EXECUTE
-Plan: 8 of 20
+Phase: 64 (UI to edit themes) — EXECUTING
+Plan: 2 of 10
 Status: Ready to execute
-Last activity: 2026-11-17 — Phase 81 execution started
+Last activity: 2026-11-18 — Phase 64 execution started
 
 Progress: [█████████░] 88%
 
@@ -281,6 +281,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 81 P05 | 25min | 2 tasks | 8 files |
 | Phase 81 P06 | 70min | 2 tasks | 13 files |
 | Phase 81 P07 | 40min | 2 tasks | 24 files |
+| Phase 81 P08 | 75min | 2 tasks | 21 files |
 
 ## Accumulated Context
 
@@ -455,6 +456,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 81]: 81-06: probeSteamPid is the single pid probe (probeMacSteamPid private); the Play gate lives in playAdoption.ts with hostPlatform(); reading-first decision, darwin-only pid rule in the D-10 fallback
 - [Phase 81]: 81-07: refused Play restart is an in-app notice (closed adopt-restart-* kinds); eligible games get a one-shot Launch without Steam via steamLaunchWithoutSteamOnce, backend re-derives the verdict, per-game setting untouched (D-06)
 - [Phase 81]: 81-07: noticeSeq moved to noticeSeq.ts to avoid a playAdoption <-> gameUninstall import cycle
+- [Phase 81]: 81-08: handler bodies live in adoptionStatus.ts as answer* functions; Restart Steam now relaunches steam://open/main inside the shared Steam single flight (resolves false); i18n gate files hand-edited for AdoptionNote.tsx, not regenerated
 
 ### Pending Todos
 
@@ -830,8 +832,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-17T18:02:31.074Z
-Stopped at: Completed 81-07-PLAN.md
+Last session: 2026-11-17T18:18:40.157Z
+Stopped at: Completed 81-08-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
