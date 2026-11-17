@@ -794,6 +794,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | 261117-q1t | Launch without Steam reworked to operator intent: per-game run-tab toggle like Epic offline mode, all Mac-native/bridge games; Steam DRM greys it out with a badge, Steam-API/unknown allowed with warning; Play honours it with Steam fallback; sub-menu button and launch channel removed; 48 locales filled. | 2026-11-17 | 61d80ed3b, d8d53ef42, 87b84e949 | 218+158 suites pass; codecheck, ipc-contract, i18n gates green; live gate OWED | [261117-q1t-launch-without-steam-as-per-game-setting](./quick/261117-q1t-launch-without-steam-as-per-game-setting/) |
 | fast | Launch without Steam: DRM reason moved from a badge row to the label-line (i) help icon (toggleWithInfo + InfoBox iconOnly). | 2026-11-17 | 089db50fb | Jest 14/14; tsc, scoped prettier + eslint clean | — |
 | fast | Launch without Steam: Mac steam_api walk now matches (lib)steam_api(64).dylib/bundle/framework (WazHack's Unity libsteam_api.bundle was missed); verdict cache v3; live results logged in the todo. | 2026-11-17 | cfb54215e | Jest 58/58 directLaunch + launchWithoutSteam; tsc, scoped prettier + eslint clean | — |
+| fast | Launch without Steam: bridge games now honour the toggle at Play (launchWithoutSteam added to TITLE_AUTHORITATIVE_KEYS; it was dropped, so Avernum 6 took the bridge launch). | 2026-11-17 | bbcfb66aa | Jest 727/727 titleSettings + games; tsc, scoped prettier clean | — |
 
 ## Session Continuity
 
