@@ -7,12 +7,18 @@ import { toShippedLanguage } from 'common/languages'
 import { seedFocusRowFromMirror } from 'common/focusRowMigration'
 import type { CustomTheme } from '../../common/types/customTheme'
 import { configStore } from '../helpers/stores'
-import { builtinSeed } from '../customThemes/builtinTokens'
+import { builtinSeed, isBuiltInThemeKey } from '../customThemes/builtinTokens'
 import {
+  DEFAULT_THEME_KEY,
+  MAX_CUSTOM_THEMES,
+  cleanTokens,
+  customThemeKey,
   makeCopy,
   newCustomThemeId,
+  nextCopyName,
   parseCustomThemes,
-  resolveThemeKey
+  resolveThemeKey,
+  validateThemeName
 } from '../customThemes/customTheme'
 import { bindStoreHooks, registerStoreForReset } from './storeKit'
 
@@ -132,28 +138,84 @@ const useSettingsStateRaw = create<SettingsState>()(
       window.setTheme(newThemeName)
     },
 
-    renameCustomTheme: () => 'not-found',
-    deleteCustomTheme: () => ({ ok: false }),
-    saveCustomThemeTokens: () => Promise.resolve('failed'),
-
     duplicateTheme: (sourceKey, copyName) => {
       const existing = get().customThemes
+      if (existing.length >= MAX_CUSTOM_THEMES) {
+        return { ok: false, reason: 'limit' }
+      }
       const resolved = resolveThemeKey(sourceKey, existing)
       let source: { base: string; tokens: Readonly<Record<string, string>> }
+      let sourceName: string
       if (resolved.kind === 'builtin') {
         const seed = builtinSeed(resolved.key)
         if (!seed) return { ok: false, reason: 'unknown-source' }
         source = { base: resolved.key, tokens: seed }
+        sourceName = resolved.key
       } else if (resolved.kind === 'custom') {
         source = resolved.theme
+        sourceName = resolved.theme.name
       } else {
         return { ok: false, reason: 'unknown-source' }
       }
       const id = newCustomThemeId(new Set(existing.map((t) => t.id)))
-      const next = [...existing, makeCopy(source, id, copyName(null))]
+      const name = nextCopyName(
+        sourceName,
+        existing.map((t) => t.name),
+        copyName
+      )
+      const next = [...existing, makeCopy(source, id, name)]
       configStore.set('customThemes', next)
       set({ customThemes: next })
       return { ok: true, id }
+    },
+
+    // Every custom-theme setter looks the id up in `customThemes` first, so a built-in key
+    // or an unknown id is refused before anything is written (T-64-14).
+    renameCustomTheme: (id, name) => {
+      const existing = get().customThemes
+      if (!existing.some((t) => t.id === id)) return 'not-found'
+      const problem = validateThemeName(name, existing, id)
+      if (problem) return problem
+      const trimmed = name.trim()
+      const next = existing.map((t) =>
+        t.id === id ? { ...t, name: trimmed } : t
+      )
+      configStore.set('customThemes', next)
+      set({ customThemes: next })
+      return 'ok'
+    },
+
+    deleteCustomTheme: (id) => {
+      const existing = get().customThemes
+      const target = existing.find((t) => t.id === id)
+      if (!target) return { ok: false }
+      const next = existing.filter((t) => t.id !== id)
+      configStore.set('customThemes', next)
+      set({ customThemes: next })
+      if (get().theme !== customThemeKey(id))
+        return { ok: true, fellBackTo: null }
+      const fellBackTo = isBuiltInThemeKey(target.base)
+        ? target.base
+        : DEFAULT_THEME_KEY
+      get().setTheme(fellBackTo)
+      return { ok: true, fellBackTo }
+    },
+
+    // D-05: reports the real persisted outcome. The renderer snapshot and state change only
+    // after the sidecar confirmed the write.
+    saveCustomThemeTokens: async (id, tokens) => {
+      const existing = get().customThemes
+      if (!existing.some((t) => t.id === id)) return 'failed'
+      const cleaned = cleanTokens(tokens)
+      if (cleaned === null) return 'failed'
+      const next = existing.map((t) =>
+        t.id === id ? { ...t, tokens: cleaned } : t
+      )
+      if (!(await configStore.setChecked('customThemes', next))) return 'failed'
+      set({ customThemes: next })
+      if (get().theme !== customThemeKey(id)) return 'saved'
+      window.setTheme(get().theme)
+      return 'applied'
     },
 
     setZoomPercent: (newZoomPercent) => {

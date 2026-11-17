@@ -6,10 +6,10 @@
 import type { CustomTheme } from '../../common/types/customTheme'
 import { BUILTIN_TOKENS, isBuiltInThemeKey } from './builtinTokens'
 import { LIVE_DERIVED_TOKENS, NON_COLOUR_TOKENS } from './tokens'
+import { normaliseColour } from './colour'
 import {
-  isValidGradient,
+  isValidTokenValue,
   looksLikeGradient,
-  validateColourInput,
   type SupportsFn
 } from './validate'
 
@@ -68,18 +68,24 @@ const KNOWN_TOKENS: ReadonlySet<string> = new Set(
 const TOKEN_NAME_PATTERN = /^--[a-z0-9-]+$/
 
 /** The canonical stored form of one token value, or null when it must be dropped. */
-function cleanTokenValue(value: unknown, supports?: SupportsFn): string | null {
+function cleanTokenValue(
+  name: string,
+  value: unknown,
+  supports?: SupportsFn
+): string | null {
   if (typeof value !== 'string' || value.length > MAX_TOKEN_VALUE_LENGTH) {
     return null
   }
-  if (looksLikeGradient(value)) {
-    return isValidGradient(value, supports) ? value : null
-  }
-  const colour = validateColourInput(value)
-  return colour.ok ? colour.value : null
+  if (!isValidTokenValue(name, value, supports)) return null
+  return looksLikeGradient(value) ? value : normaliseColour(value)
 }
 
-function cleanTokens(
+/**
+ * Keeps only the tokens that are well-named, in the known universe and valid, with colours in
+ * canonical form. null when `raw` is not a plain object or holds too many tokens. Shared by the
+ * parser and by Save, so what is written is what a later boot will keep.
+ */
+export function cleanTokens(
   raw: unknown,
   supports?: SupportsFn
 ): Record<string, string> | null {
@@ -89,7 +95,7 @@ function cleanTokens(
   const kept: Record<string, string> = {}
   for (const name of names) {
     if (!TOKEN_NAME_PATTERN.test(name) || !KNOWN_TOKENS.has(name)) continue
-    const value = cleanTokenValue(raw[name], supports)
+    const value = cleanTokenValue(name, raw[name], supports)
     if (value !== null) kept[name] = value
   }
   return kept
