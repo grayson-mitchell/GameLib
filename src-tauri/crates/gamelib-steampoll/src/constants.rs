@@ -36,3 +36,9 @@ pub const RUNNING_DRAIN_MS: u64 = 20_000;
 pub const STATE_FLAG_FULLY_INSTALLED: u32 = 0x4;
 /// How long a state event waits for the sidecar's ack before it counts as not acked (D-05).
 pub const ACK_TIMEOUT_MS: u64 = 5000;
+
+/// Adoption-watch tick (ms, Phase 81 D-07). A slow cadence: adoption evidence changes on the
+/// scale of a Steam restart or sign-in, and each tick costs a process probe and a small file read.
+pub const ADOPTION_TICK_MS: u64 = 5_000;
+/// The largest ACF the adoption watch reads or accepts as a baseline (T-81-02).
+pub const ADOPTION_ACF_MAX_BYTES: u64 = 1_048_576;

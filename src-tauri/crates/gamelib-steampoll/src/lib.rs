@@ -53,6 +53,7 @@
 
 pub mod acf_copies;
 pub mod acf_state;
+pub mod adoption;
 pub mod constants;
 pub mod dispatch;
 pub mod effects;

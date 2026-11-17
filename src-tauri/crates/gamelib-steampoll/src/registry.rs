@@ -17,6 +17,8 @@ pub enum PollKind {
     Install,
     Uninstall,
     Running,
+    /// Phase 81 D-07: the one adoption-watch task (key "adoption").
+    Adoption,
 }
 
 type Key = (PollKind, String);
