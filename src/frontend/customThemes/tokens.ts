@@ -22,6 +22,7 @@ export const LIVE_DERIVED_TOKENS: Readonly<Record<string, string>> = {
 /** Tokens that are not colours; no colour editor or colour seed applies to them. */
 export const NON_COLOUR_TOKENS = ['--focus-ring-width'] as const
 
+/** @public exported on purpose ahead of its first cross-module import: the editor group ids that plans 64-05 onward key their section headings and i18n labels by. */
 export type CoreTokenGroupId =
   | 'surfaces'
   | 'navigation'
