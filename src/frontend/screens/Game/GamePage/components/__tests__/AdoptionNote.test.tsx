@@ -6,20 +6,39 @@
 import 'frontend/testUtils/tauriWindow'
 import { readFileSync } from 'fs'
 import { join } from 'path'
+import React from 'react'
 import type { ReactElement } from 'react'
+// react-i18next re-exports through non-configurable getters, so the module that owns the hook is spied.
+const useTranslationModule = jest.requireActual<{
+  useTranslation: () => unknown
+}>(
+  '../../../../../../../node_modules/react-i18next/dist/commonjs/useTranslation.js'
+)
 import type { GameInfo } from 'common/types'
+import * as libraryStateModule from 'frontend/state/libraryState'
+import { faithfulReactI18next } from './faithfulTranslate'
+import AdoptionNote from '../AdoptionNote'
+import * as adoptionStore from 'frontend/state/SteamAdoptionStatus'
 
+// No jest.mock anywhere (the backend-di ceiling): React's hooks, the two zustand hooks and
+// react-i18next are spied on their real modules in beforeEach (resetMocks clears them between tests).
 const slots: unknown[] = []
 let idx = 0
 let effects: Array<{ fn: () => unknown; deps: unknown[] | undefined }> = []
 let mockContext: { is: Record<string, boolean>; statusContext?: string } = {
   is: {}
 }
+let mockStatuses: Array<{ appName: string; status: string }> = []
 
-jest.mock('react', () => ({
-  ...jest.requireActual<typeof import('react')>('react'),
-  useContext: () => mockContext,
-  useState: (init: unknown) => {
+// The real stores hold the state; their hooks are spied so this harness, which never renders, can
+// read them through the selector without React's external-store hook.
+const realStore = adoptionStore.useSteamAdoptionStatus
+beforeEach(() => {
+  idx = 0
+  jest
+    .spyOn(React, 'useContext')
+    .mockImplementation((() => mockContext) as never)
+  jest.spyOn(React, 'useState').mockImplementation(((init: unknown) => {
     const i = idx++
     if (!(i in slots)) slots[i] = init
     return [
@@ -28,34 +47,22 @@ jest.mock('react', () => ({
         slots[i] = v
       }
     ]
-  },
-  useEffect: (fn: () => unknown, deps?: unknown[]) => {
+  }) as never)
+  jest.spyOn(React, 'useEffect').mockImplementation(((
+    fn: () => unknown,
+    deps?: unknown[]
+  ) => {
     idx++
     effects.push({ fn, deps })
-  }
-}))
-let mockStatuses: Array<{ appName: string; status: string }> = []
-jest.mock('frontend/state/libraryState', () => ({
-  __esModule: true,
-  default: (sel: (s: { libraryStatus: typeof mockStatuses }) => unknown) =>
-    sel({ libraryStatus: mockStatuses })
-}))
-jest.mock('../../../GameContext', () => ({ __esModule: true, default: {} }))
-jest.mock('../AdoptionNote.scss', () => ({}))
-jest.mock('react-i18next', () => {
-  const { faithfulReactI18next } = jest.requireActual<
-    typeof import('./faithfulTranslate')
-  >('./faithfulTranslate')
-  return faithfulReactI18next()
-})
-
-import AdoptionNote from '../AdoptionNote'
-import * as adoptionStore from 'frontend/state/SteamAdoptionStatus'
-
-// The real push store holds the state; its hook is spied (not jest.mock'ed) so this harness, which
-// never renders, can read it through the selector without React's external-store hook.
-const realStore = adoptionStore.useSteamAdoptionStatus
-beforeEach(() => {
+  }) as never)
+  jest
+    .spyOn(useTranslationModule, 'useTranslation')
+    .mockImplementation(faithfulReactI18next().useTranslation as never)
+  jest
+    .spyOn(libraryStateModule, 'default')
+    .mockImplementation(((
+      sel: (s: { libraryStatus: typeof mockStatuses }) => unknown
+    ) => sel({ libraryStatus: mockStatuses })) as never)
   const spy = jest
     .spyOn(adoptionStore, 'useSteamAdoptionStatus')
     .mockImplementation(((
@@ -142,13 +149,6 @@ describe('AdoptionNote (D-01)', () => {
     }
   )
 
-  test('renders nothing for a non-Steam runner and never asks the backend', async () => {
-    useStatus({ pending: true, steamSignedIn: null })
-    const out = await mount(steam({ runner: 'legendary' } as Partial<GameInfo>))
-    expect(out).toBeNull()
-    expect(statusApi).not.toHaveBeenCalled()
-  })
-
   test('renders nothing when nothing is pending', async () => {
     useStatus({ pending: false, steamSignedIn: null })
     expect(await mount(steam())).toBeNull()
@@ -171,8 +171,8 @@ describe('AdoptionNote (D-01)', () => {
     const first = effects[0]?.deps
     mockStatuses = [{ appName: '112100', status: 'done' }]
     render(steam())
-    expect(effects[0]?.deps).toEqual(['112100', true, 'done'])
-    expect(first).toEqual(['112100', true, 'installing'])
+    expect(effects[0]?.deps).toEqual(['112100', 'done'])
+    expect(first).toEqual(['112100', 'installing'])
   })
 
   test('every hook runs before an early return (same slot and effect count with and without a result)', async () => {

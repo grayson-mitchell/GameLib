@@ -1,6 +1,5 @@
 import { useContext, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { isStore } from 'common/storeCapabilities'
 import type { GameInfo } from 'common/types'
 import type { SteamAdoptionStatus } from 'common/types/steam'
 import useLibraryState from 'frontend/state/libraryState'
@@ -42,13 +41,14 @@ const readStatus = async (appName: string): Promise<StatusRead> => {
  * (`steam-waiting-for-restart`, RESEARCH Open Question 1): there it is the action alone, no note,
  * because Play is not available on that path.
  *
+ * Steam only: the game page mounts this for a Steam game alone (it never narrows the GameInfo here).
+ *
  * Hooks run unconditionally before any early return.
  */
 const AdoptionNote = ({ gameInfo }: Props) => {
   const { t } = useTranslation('gamelib')
   const { is, statusContext } = useContext(GameContext)
   const appName = gameInfo.app_name
-  const steam = isStore(gameInfo, 'steam')
   const [read, setRead] = useState<StatusRead>({ status: null, floor: 0 })
   const pushed = useSteamAdoptionStatus((s) => s.byApp[appName])
   // True while an action is in flight (T-81-28: no repeated clicks).
@@ -59,10 +59,6 @@ const AdoptionNote = ({ gameInfo }: Props) => {
   )
 
   useEffect(() => {
-    if (!steam) {
-      setRead({ status: null, floor: 0 })
-      return
-    }
     let cancelled = false
     readStatus(appName)
       .then((result) => {
@@ -72,9 +68,7 @@ const AdoptionNote = ({ gameInfo }: Props) => {
     return () => {
       cancelled = true
     }
-  }, [appName, steam, libraryStatus])
-
-  if (!steam) return null
+  }, [appName, libraryStatus])
 
   const status: SteamAdoptionStatus | null =
     pushed && pushed.seq > read.floor ? pushed : read.status

@@ -596,7 +596,9 @@ export default React.memo(function GamePage(): JSX.Element | null {
                           handleUpdate={handleUpdate}
                           hasUpdate={hasUpdate}
                         />
-                        <AdoptionNote gameInfo={gameInfo} />
+                        {isStore(runner, 'steam') && (
+                          <AdoptionNote gameInfo={gameInfo} />
+                        )}
                         <div className="buttons">
                           <MainButton
                             gameInfo={gameInfo}
