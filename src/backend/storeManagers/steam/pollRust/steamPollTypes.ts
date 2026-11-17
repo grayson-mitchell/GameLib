@@ -14,6 +14,7 @@ export const STEAMPOLL_OPS = [
   'steampoll_acf_read_update_from_dir',
   'steampoll_acf_remove_copy',
   'steampoll_acf_scan_downloading',
+  'steampoll_adoption_watch',
   'steampoll_breadcrumb_installed_on_disk',
   'steampoll_bridge_finalized',
   'steampoll_install_cancel_delegated',

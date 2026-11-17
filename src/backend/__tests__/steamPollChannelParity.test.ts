@@ -37,7 +37,7 @@ const OPS = extractOps(dispatchRs)
 
 describe('steampoll channel parity (plan 80-18)', () => {
   it('anti-vacuity: extraction found the ops and the extractor rejects a missing const', () => {
-    expect(OPS).toHaveLength(24)
+    expect(OPS).toHaveLength(25)
     expect(() => extractOps('nothing here')).toThrow('OPS not found')
   })
 

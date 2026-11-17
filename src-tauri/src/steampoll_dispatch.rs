@@ -46,6 +46,11 @@ pub(crate) fn rpc_steampoll_acf_scan_downloading(args: &[Value]) -> Result<Value
     gamelib_steampoll::dispatch("steampoll_acf_scan_downloading", args)
 }
 
+pub(crate) fn rpc_steampoll_adoption_watch(args: &[Value]) -> Result<Value, String> {
+    SteampollAdoptionWatchArgs::from_args(args)?;
+    gamelib_steampoll::dispatch("steampoll_adoption_watch", args)
+}
+
 pub(crate) fn rpc_steampoll_breadcrumb_installed_on_disk(args: &[Value]) -> Result<Value, String> {
     SteampollBreadcrumbInstalledOnDiskArgs::from_args(args)?;
     gamelib_steampoll::dispatch("steampoll_breadcrumb_installed_on_disk", args)
@@ -723,6 +728,52 @@ mod tests {
             .find("self.await_reply(&id, &channel, &rx, Some(left))")
             .unwrap();
         assert!(lock < recheck && recheck < write && write < left && left < wait);
+    }
+
+    #[test]
+    fn adoption_watch_args_accept_the_zod_shaped_object() {
+        let a = SteampollAdoptionWatchArgs::from_args(&[json!({
+            "appId": "1234",
+            "manifestPath": "/steam/steamapps/appmanifest_1234.acf",
+            "baselineContent": "x",
+            "recordedAtMs": 1_700_000_000_000.0,
+            "steamPid": 0
+        })])
+        .unwrap();
+        assert_eq!(a.app_id, "1234");
+        assert_eq!(a.install_app_fallback, None);
+        let with = SteampollAdoptionWatchArgs::from_args(&[json!({
+            "appId": "1234",
+            "manifestPath": "/steam/steamapps/appmanifest_1234.acf",
+            "baselineContent": "x",
+            "recordedAtMs": 1.0,
+            "steamPid": 4242,
+            "installAppFallback": true
+        })])
+        .unwrap();
+        assert_eq!(with.install_app_fallback, Some(true));
+        assert_eq!(
+            SteampollAdoptionWatchArgs::from_args(&[]).unwrap_err(),
+            "steampoll_adoption_watch:bad-args"
+        );
+    }
+
+    #[test]
+    fn adoption_watch_rejects_an_unknown_key_with_its_own_bad_args() {
+        // The generated struct tolerates extra keys (genIpcContract emits no deny_unknown_fields),
+        // so the crate's strict parse is what refuses them; it runs before any facade lookup.
+        let args = [json!({
+            "appId": "1234",
+            "manifestPath": "/steam/steamapps/appmanifest_1234.acf",
+            "baselineContent": "x",
+            "recordedAtMs": 1.0,
+            "steamPid": 0,
+            "extra": true
+        })];
+        assert_eq!(
+            rpc_steampoll_adoption_watch(&args).unwrap_err(),
+            "steampoll_adoption_watch:bad-args"
+        );
     }
 
     #[test]

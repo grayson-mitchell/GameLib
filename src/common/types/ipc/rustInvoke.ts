@@ -35,6 +35,7 @@ import {
   RUST_STEAMPOLL_ACF_READ_UPDATE_FROM_DIR,
   RUST_STEAMPOLL_ACF_REMOVE_COPY,
   RUST_STEAMPOLL_ACF_SCAN_DOWNLOADING,
+  RUST_STEAMPOLL_ADOPTION_WATCH,
   RUST_STEAMPOLL_BREADCRUMB_INSTALLED_ON_DISK,
   RUST_STEAMPOLL_BRIDGE_FINALIZED,
   RUST_STEAMPOLL_INSTALL_CANCEL_DELEGATED,
@@ -165,6 +166,29 @@ const pollRoots = z
   .strict()
 const pollSource = z.enum(['native', 'bottle', 'bridge'])
 const pollAppArg = z.tuple([z.object({ appId: z.string() }).strict()])
+
+// One pending adoption (Phase 81 D-07). The generated shell struct has no string-pattern or
+// length keywords (genIpcContract supports neither), so the appId and size bounds are refinements:
+// zod enforces them here, the generator sees plain strings, and the crate re-validates all of it.
+const adoptionWatchArgs = z
+  .object({
+    appId: z
+      .string()
+      .refine((v) => /^\d{1,10}$/.test(v), 'appId: 1 to 10 digits'),
+    manifestPath: z
+      .string()
+      .refine(
+        (v) => v.length >= 1 && v.length <= 4096,
+        'manifestPath: 1 to 4096'
+      ),
+    baselineContent: z
+      .string()
+      .refine((v) => v.length <= 1048576, 'baselineContent: at most 1 MiB'),
+    recordedAtMs: z.number().finite(),
+    steamPid: z.number().int().min(0).max(4294967295),
+    installAppFallback: z.boolean().optional()
+  })
+  .strict()
 const pollRootsAppArg = z.tuple([
   z.object({ roots: pollRoots, appId: z.string() }).strict()
 ])
@@ -362,6 +386,7 @@ export const rustInvokeArgs = {
   [RUST_STEAMPOLL_ACF_SCAN_DOWNLOADING]: z.tuple([
     z.object({ roots: pollRoots }).strict()
   ]),
+  [RUST_STEAMPOLL_ADOPTION_WATCH]: z.tuple([adoptionWatchArgs]),
   [RUST_STEAMPOLL_BREADCRUMB_INSTALLED_ON_DISK]: pollDirAppArg,
   [RUST_STEAMPOLL_BRIDGE_FINALIZED]: z.tuple([
     z.object({ appId: z.string(), finalized: z.boolean() }).strict()

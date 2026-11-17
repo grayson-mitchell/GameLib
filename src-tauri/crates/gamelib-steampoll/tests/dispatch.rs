@@ -400,3 +400,50 @@ async fn async_ops_refuse_to_run_inside_a_runtime() {
         Err("steampoll_mac_arch_verdict:wrong-thread".to_string())
     );
 }
+
+fn watch_args(tmp: &std::path::Path, app_id: &str) -> Value {
+    json!({
+        "appId": app_id,
+        "manifestPath": tmp.join("steamapps").join(format!("appmanifest_{app_id}.acf")).to_string_lossy(),
+        "baselineContent": "baseline",
+        "recordedAtMs": 1_700_000_000_000.0,
+        "steamPid": 0
+    })
+}
+
+#[test]
+fn adoption_watch_is_listed_and_round_trips_through_the_facade() {
+    let _g = guard();
+    assert!(OPS.contains(&"steampoll_adoption_watch"));
+    let tmp = tempfile::tempdir().unwrap();
+    install(tmp.path());
+    assert_eq!(
+        ok("steampoll_adoption_watch", watch_args(tmp.path(), "1234")),
+        json!(true)
+    );
+    let f = facade::current().unwrap();
+    assert_eq!(f.adoption.watched_app_ids(), vec!["1234".to_string()]);
+    assert!(f.adoption.unwatch("1234"));
+}
+
+#[test]
+fn adoption_watch_rejects_invalid_args_with_its_own_bad_args() {
+    let _g = guard();
+    let tmp = tempfile::tempdir().unwrap();
+    install(tmp.path());
+    let bad = Err("steampoll_adoption_watch:bad-args".to_string());
+    let mut relative = watch_args(tmp.path(), "1234");
+    relative["manifestPath"] = json!("steamapps/appmanifest_1234.acf");
+    assert_eq!(dispatch("steampoll_adoption_watch", &[relative]), bad);
+    let mut bad_id = watch_args(tmp.path(), "1234");
+    bad_id["appId"] = json!("12; rm");
+    assert_eq!(dispatch("steampoll_adoption_watch", &[bad_id]), bad);
+    let mut unknown = watch_args(tmp.path(), "1234");
+    unknown["extra"] = json!(1);
+    assert_eq!(dispatch("steampoll_adoption_watch", &[unknown]), bad);
+    assert!(facade::current()
+        .unwrap()
+        .adoption
+        .watched_app_ids()
+        .is_empty());
+}

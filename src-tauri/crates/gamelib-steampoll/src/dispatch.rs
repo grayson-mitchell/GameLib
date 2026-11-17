@@ -13,6 +13,7 @@ use crate::acf_copies::{
 use crate::acf_state::{
     read_acf_state, read_acf_update_fields_from_dir, read_acf_update_state, AcfSource, PollRoots,
 };
+use crate::adoption::{validate_watch_args, AdoptionWatchArgs};
 use crate::constants::STATE_FLAG_FULLY_INSTALLED;
 use crate::install_loop::StartInstallArgs;
 use crate::mac_arch::mac_arch_verdict;
@@ -32,6 +33,7 @@ pub const OPS: &[&str] = &[
     "steampoll_acf_read_update_from_dir",
     "steampoll_acf_remove_copy",
     "steampoll_acf_scan_downloading",
+    "steampoll_adoption_watch",
     "steampoll_breadcrumb_installed_on_disk",
     "steampoll_bridge_finalized",
     "steampoll_install_cancel_delegated",
@@ -53,6 +55,7 @@ pub const OPS: &[&str] = &[
 
 /// The process-wide facade: the one set of collaborators the shell installs at boot.
 pub mod facade {
+    use crate::adoption::AdoptionWatch;
     use crate::host::{Clock, HoldSink, PollHost, ProcessRunner};
     use crate::install_loop::InstallPolls;
     use crate::monitor::DownloadMonitor;
@@ -70,6 +73,7 @@ pub mod facade {
         pub outbox: Arc<Outbox>,
         pub polls: InstallPolls,
         pub running: RunningPoll,
+        pub adoption: AdoptionWatch,
         pub hold: Arc<dyn HoldSink>,
         pub profile: SidecarProfile,
         pub runner: Arc<dyn ProcessRunner>,
@@ -132,11 +136,18 @@ pub mod facade {
             home.clone(),
             profile.default_steam_path(),
         );
+        let adoption = AdoptionWatch::new(
+            registry.clone(),
+            outbox.clone(),
+            platform,
+            profile.default_steam_path().map(PathBuf::from),
+        );
         Arc::new(Facade {
             registry,
             outbox,
             polls,
             running,
+            adoption,
             hold,
             profile,
             runner,
@@ -376,6 +387,12 @@ fn run_op(op: &str, args: &[Value]) -> Result<Value, String> {
         "steampoll_acf_scan_downloading" => {
             let a: RootsOnly = parse(op, args)?;
             out(op, scan_downloading_app_ids(&a.roots))
+        }
+        "steampoll_adoption_watch" => {
+            let a: AdoptionWatchArgs = parse(op, args)?;
+            validate_watch_args(&a).map_err(|_| bad_args(op))?;
+            configured()?.adoption.watch(a).map_err(|_| bad_args(op))?;
+            out(op, true)
         }
         "steampoll_breadcrumb_installed_on_disk" => {
             let a: DirApp = parse(op, args)?;

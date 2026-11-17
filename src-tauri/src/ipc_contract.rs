@@ -115,6 +115,7 @@ pub(crate) enum RustInvokeChannel {
     SteampollAcfReadUpdateFromDir,
     SteampollAcfRemoveCopy,
     SteampollAcfScanDownloading,
+    SteampollAdoptionWatch,
     SteampollBreadcrumbInstalledOnDisk,
     SteampollBridgeFinalized,
     SteampollInstallCancelDelegated,
@@ -231,6 +232,7 @@ impl RustInvokeChannel {
         RustInvokeChannel::SteampollAcfReadUpdateFromDir,
         RustInvokeChannel::SteampollAcfRemoveCopy,
         RustInvokeChannel::SteampollAcfScanDownloading,
+        RustInvokeChannel::SteampollAdoptionWatch,
         RustInvokeChannel::SteampollBreadcrumbInstalledOnDisk,
         RustInvokeChannel::SteampollBridgeFinalized,
         RustInvokeChannel::SteampollInstallCancelDelegated,
@@ -347,6 +349,7 @@ impl RustInvokeChannel {
             "steampoll_acf_read_update_from_dir" => Some(RustInvokeChannel::SteampollAcfReadUpdateFromDir),
             "steampoll_acf_remove_copy" => Some(RustInvokeChannel::SteampollAcfRemoveCopy),
             "steampoll_acf_scan_downloading" => Some(RustInvokeChannel::SteampollAcfScanDownloading),
+            "steampoll_adoption_watch" => Some(RustInvokeChannel::SteampollAdoptionWatch),
             "steampoll_breadcrumb_installed_on_disk" => Some(RustInvokeChannel::SteampollBreadcrumbInstalledOnDisk),
             "steampoll_bridge_finalized" => Some(RustInvokeChannel::SteampollBridgeFinalized),
             "steampoll_install_cancel_delegated" => Some(RustInvokeChannel::SteampollInstallCancelDelegated),
@@ -465,6 +468,7 @@ impl RustInvokeChannel {
             RustInvokeChannel::SteampollAcfReadUpdateFromDir => "steampoll_acf_read_update_from_dir",
             RustInvokeChannel::SteampollAcfRemoveCopy => "steampoll_acf_remove_copy",
             RustInvokeChannel::SteampollAcfScanDownloading => "steampoll_acf_scan_downloading",
+            RustInvokeChannel::SteampollAdoptionWatch => "steampoll_adoption_watch",
             RustInvokeChannel::SteampollBreadcrumbInstalledOnDisk => "steampoll_breadcrumb_installed_on_disk",
             RustInvokeChannel::SteampollBridgeFinalized => "steampoll_bridge_finalized",
             RustInvokeChannel::SteampollInstallCancelDelegated => "steampoll_install_cancel_delegated",
@@ -2195,6 +2199,30 @@ impl SteampollAcfScanDownloadingArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let first = args.first().ok_or_else(|| "steampoll_acf_scan_downloading:bad-args".to_string())?;
         serde_json::from_value(first.clone()).map_err(|_| "steampoll_acf_scan_downloading:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteampollAdoptionWatchArgs {
+    #[serde(rename = "appId")]
+    pub(crate) app_id: String,
+    #[serde(rename = "manifestPath")]
+    pub(crate) manifest_path: String,
+    #[serde(rename = "baselineContent")]
+    pub(crate) baseline_content: String,
+    #[serde(rename = "recordedAtMs")]
+    pub(crate) recorded_at_ms: f64,
+    #[serde(rename = "steamPid")]
+    pub(crate) steam_pid: i64,
+    #[serde(rename = "installAppFallback")]
+    #[serde(default)]
+    pub(crate) install_app_fallback: Option<bool>,
+}
+
+impl SteampollAdoptionWatchArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steampoll_adoption_watch:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steampoll_adoption_watch:bad-args".to_string())
     }
 }
 

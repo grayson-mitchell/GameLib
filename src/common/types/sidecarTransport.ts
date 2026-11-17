@@ -604,6 +604,12 @@ export const RUST_STEAMPOLL_BREADCRUMB_INSTALLED_ON_DISK =
   'steampoll_breadcrumb_installed_on_disk' as const
 
 /**
+ * Rust-side channel name: Phase 81 steampoll op `steampoll_adoption_watch`. Starts (or replaces) the Rust watch of one pending adoption. Args `{ appId, manifestPath, baselineContent, recordedAtMs, steamPid, installAppFallback? }`.
+ * Resolves `true`. Bad args reject `steampoll_adoption_watch:bad-args`.
+ */
+export const RUST_STEAMPOLL_ADOPTION_WATCH = 'steampoll_adoption_watch' as const
+
+/**
  * Rust-side channel name: Phase 80 steampoll op `steampoll_bridge_finalized`. Records that the bridge finalized an install. Args `{ appId, finalized }`.
  * Bad args reject `steampoll_bridge_finalized:bad-args`.
  */
@@ -1044,6 +1050,7 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_STEAMPOLL_ACF_READ_UPDATE_FROM_DIR,
   RUST_STEAMPOLL_ACF_REMOVE_COPY,
   RUST_STEAMPOLL_ACF_SCAN_DOWNLOADING,
+  RUST_STEAMPOLL_ADOPTION_WATCH,
   RUST_STEAMPOLL_BREADCRUMB_INSTALLED_ON_DISK,
   RUST_STEAMPOLL_BRIDGE_FINALIZED,
   RUST_STEAMPOLL_INSTALL_CANCEL_DELEGATED,
@@ -1108,6 +1115,7 @@ export const RUST_STEAMPOLL_CHANNELS = [
   RUST_STEAMPOLL_ACF_READ_UPDATE_FROM_DIR,
   RUST_STEAMPOLL_ACF_REMOVE_COPY,
   RUST_STEAMPOLL_ACF_SCAN_DOWNLOADING,
+  RUST_STEAMPOLL_ADOPTION_WATCH,
   RUST_STEAMPOLL_BREADCRUMB_INSTALLED_ON_DISK,
   RUST_STEAMPOLL_BRIDGE_FINALIZED,
   RUST_STEAMPOLL_INSTALL_CANCEL_DELEGATED,
