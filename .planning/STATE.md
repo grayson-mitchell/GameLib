@@ -5,16 +5,16 @@ milestone_name: Foundations
 current_phase: 64
 current_phase_name: UI to edit themes
 status: executing
-stopped_at: Completed 81-10-PLAN.md
-last_updated: "2026-11-17T18:48:53.776Z"
+stopped_at: Completed 64-02-PLAN.md
+last_updated: "2026-11-17T19:02:52.524Z"
 last_activity: 2026-11-18
 last_activity_desc: Phase 64 execution started
-state_head: df23325aa319f807da4584a33c232ee57af810c3
+state_head: 4f2d04081479c1a08868a9fce1818bcb388ec988
 progress:
   total_phases: 26
   completed_phases: 23
   total_plans: 521
-  completed_plans: 503
+  completed_plans: 504
   percent: 88
 ---
 
@@ -286,6 +286,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 81 P09 | 50min | 2 tasks | 33 files |
 | Phase 64 P03 | 25 min | 2 tasks | 15 files |
 | Phase 81 P10 | 50min | 2 tasks | 21 files |
+| Phase 64 P02 | 19 min | 2 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -468,6 +469,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 64]: 64-03: a refused confirmed configStore write resolves false (not a rejection); only an exact true from sidecar:store-set-checked counts as persisted and moves the renderer snapshot
 - [Phase 64]: 64-03: configStore.customThemes is one array under one allow-listed key of { id, name, base, tokens }; reshaping needs a Phase 68 store/config migration
 - [Phase 81]: 81-10: the restart hold never arms; a native handoff reports Installed on the first ACF tick on every OS and the restart toast is bottle-only (1026 wait unchanged)
+- [Phase 64]: Built-in token seeds resolve root tokens in :root scope and body/theme tokens in body scope, never storing LIVE_DERIVED_TOKENS or --focus-ring-width (OD-1) — A token declared only on :root is computed at :root, so a theme override never reaches it; derived tokens must keep following Body background and Accent.
+- [Phase 64]: Core tokens a built-in leaves undeclared are seeded from the real consumer fallback chain; zombie --primary seeds to #00000000 — A later release declaring one in themes.scss must not change an existing copy, and .button background var(--primary) has no fallback.
 
 ### Pending Todos
 
@@ -843,8 +846,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-17T18:48:50.010Z
-Stopped at: Completed 81-10-PLAN.md
+Last session: 2026-11-17T19:02:49.164Z
+Stopped at: Completed 64-02-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
