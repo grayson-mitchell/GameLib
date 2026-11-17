@@ -13,6 +13,9 @@ import {
   type SupportsFn
 } from './validate'
 
+/**
+ * i18n-gate-exempt: the `custom:` literal is the persisted theme-key prefix, never rendered to a user
+ */
 export const CUSTOM_THEME_PREFIX = 'custom:'
 export const DEFAULT_THEME_KEY = 'midnightMirage'
 
