@@ -173,7 +173,7 @@ const WALK_MAX_ENTRIES = 20000
 
 /**
  * Bounded walk for shipped Steam API files: a libsteam_api.dylib file or a
- * steam_api.bundle / steam_api.framework directory. Never follows symlinks.
+ * steam_api.bundle / steam_api.framework directory. Never follows links.
  */
 export async function findMacSteamApiFiles(root: string): Promise<string[]> {
   const found: string[] = []

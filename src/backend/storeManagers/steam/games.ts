@@ -34,6 +34,12 @@ import type { EnginePin } from 'backend/engine/enginePins'
 import { isNative, isBottleEligible } from './gameEligibility'
 import { install, ensureBuiltInEngineForInstall } from './gameInstall'
 import { launch, sendLaunchDone } from './gameLaunch'
+import { getSteamDirectLaunchVerdict } from './directLaunch/directLaunchProbes'
+import { launchWithoutSteam } from './directLaunch/launchWithoutSteam'
+import {
+  STEAM_DIRECT_TRACK_RUNNER,
+  type DirectLaunchVerdict
+} from './directLaunch/directLaunchVerdict'
 import { stopSteamLaunchedGame } from './stopSteamLaunchedGame'
 import { cancelSteamLaunchWatch } from './steamLaunchWatch'
 import { steamLaunchedStopDeps } from './steamLaunchedDeps'
@@ -388,6 +394,16 @@ export default class SteamGame implements Game {
     return launch(this, _logWriter, _launchArguments, _args, _skipVersionCheck)
   }
 
+  /** quick 261117-p38: whether this game may launch without the Steam client. */
+  getDirectLaunchVerdict(): Promise<DirectLaunchVerdict> {
+    return getSteamDirectLaunchVerdict(this)
+  }
+
+  /** quick 261117-p38: launch without Steam (Mac-native spawn or bridge hand-off). */
+  launchWithoutSteam(): Promise<boolean> {
+    return launchWithoutSteam(this)
+  }
+
   moveInstall(_newInstallPath: string): Promise<InstallResult> {
     return moveInstall(this, _newInstallPath)
   }
@@ -599,6 +615,21 @@ export default class SteamGame implements Game {
       )
     }
     if (cancelledDelegated) return
+
+    // quick 261117-p38: a Mac-native game launched without Steam is a GameLib
+    // child (tracked at spawn), so Stop ends it directly.
+    if (
+      this.deps.runner.killTracked({
+        runner: STEAM_DIRECT_TRACK_RUNNER,
+        key: this.appId
+      }) > 0
+    ) {
+      logInfo(
+        `SteamGame.stop: stopping directly-launched appId ${this.appId}`,
+        LogPrefix.Steam
+      )
+      return
+    }
 
     // quick 261024-urq: bridge route. GameLib spawned the Wine command itself,
     // so (unlike bottled Steam) it can and must end it. Kill only the game's

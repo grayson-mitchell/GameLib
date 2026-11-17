@@ -1,4 +1,5 @@
 import { createTestVersioning } from 'backend/testUtils/testStoreRoot'
+import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 import type { GameConfigSlice } from 'backend/game_config'
 import type { SteamDrm } from '../bridge/drm/drmLaunchSetup'
 import { createTestHostServices } from 'backend/testUtils/testHostServices'
@@ -466,6 +467,8 @@ const steamTestDeps = createTestManagerDeps({
   }),
   stores: createTestStores({ steam: steamStoresModule }),
   commandRunner: { runWineCommand } as never,
+  // stop() asks the runner to end a direct (without-Steam) child first; none is tracked here.
+  runner: createScriptedRunner([]),
   libraryManagers: createTestManagers({
     library: { steam: { launchWatches } as never }
   }).library

@@ -99,13 +99,29 @@ export async function fireBridgeWineLaunch(
   exePath: string,
   bridgeBottleSettingsIn: GameSettings,
   drm?: DrmWineLaunch,
-  overlay?: OverlayLaunchPayload
+  overlay?: OverlayLaunchPayload,
+  opts?: { withoutSteam?: { args: string[] } }
 ): Promise<boolean> {
   const reportLaunchFailure = (error: unknown) => {
     logWarning(
       [`SteamGame: bridge launch failed for appId ${steamGame.appId}`, error],
       LogPrefix.Steam
     )
+    if (opts?.withoutSteam) {
+      // A direct-launch failure must not poison the bridge route for this session.
+      const game = steamGame.getGameInfo().title
+      notify(steamGame.deps, {
+        title: game,
+        // Same call shape as the file's other i18next.t uses; the lint ceiling counts warnings.
+        // eslint-disable-next-line import-x/no-named-as-default-member
+        body: i18next.t(
+          'gamelib:steam.directLaunch.failed',
+          'Could not launch {{game}} without Steam.',
+          { game }
+        )
+      })
+      return
+    }
     if (drm) {
       // D-13: no session mark, no steamBridgeSetupRequired.
       maybeNotifyDrmModeFailed(
@@ -621,12 +637,15 @@ export async function fireBridgeWineLaunch(
     const winePromise = runWineCommand({
       commandParts: drm
         ? [...drmCommandPrefix, drm.ready.bottle.helperWinPath, drm.gameWinPath]
-        : steamBridgeLaunchCommandParts(
-            steamGame.deps,
-            steamGame.appId,
-            exePath,
-            installRoot
-          ),
+        : [
+            ...steamBridgeLaunchCommandParts(
+              steamGame.deps,
+              steamGame.appId,
+              exePath,
+              installRoot
+            ),
+            ...(opts?.withoutSteam?.args ?? [])
+          ],
       gameSettings: launchSettings,
       wait: false,
       protonVerb: 'run',

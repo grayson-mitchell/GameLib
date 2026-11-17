@@ -53,8 +53,17 @@ import {
 import { fireBridgeWineLaunch } from './gameBridgeWineLaunch'
 import { prepareTcpOverlay } from './gameLaunchOverlay'
 
+/**
+ * quick 261117-p38: `withoutSteam` runs the exe in its bridge bottle with no
+ * shim, no bridge helper, no overlay and no steamclient-layer DRM mode.
+ */
+export interface BridgeLaunchOptions {
+  withoutSteam?: { args: string[] }
+}
+
 export async function launchBridgeGameBody(
-  steamGame: SteamGame
+  steamGame: SteamGame,
+  opts?: BridgeLaunchOptions
 ): Promise<boolean> {
   // G25: one fresh connectivity check at Play (the monitor can be stale); the launch-target
   // read and the early offline refusal both use this result.
@@ -160,11 +169,32 @@ export async function launchBridgeGameBody(
     'steamclient-layer'
   // 59-REVIEW WR-04 / 59-15: persist what this launch routed on so the engine
   // state keeps the override off DRM-mode titles.
-  writeBridgeModeVerdict(
-    steamGame.deps,
-    steamGame.appId,
-    wantsDrm ? 'steamclient-layer' : 'tcp'
-  )
+  if (opts?.withoutSteam && wantsDrm) {
+    // A stale verdict: DRM mode needs Steam, so it is not a direct-launch game.
+    logWarning(
+      `SteamGame: appId ${steamGame.appId} needs Steam DRM mode — refusing to launch without Steam`,
+      LogPrefix.Steam
+    )
+    notify(steamGame.deps, {
+      title: steamGame.getGameInfo().title,
+      // Same call shape as the file's other i18next.t uses; the lint ceiling counts warnings.
+      // eslint-disable-next-line import-x/no-named-as-default-member
+      body: i18next.t(
+        'gamelib:steam.directLaunch.notEligible',
+        'This game can no longer launch without Steam. Use Play instead.'
+      )
+    })
+    sendLaunchDone(steamGame)
+    return false
+  }
+  // A direct launch must not rewrite the persisted bridge-mode verdict.
+  if (!opts?.withoutSteam) {
+    writeBridgeModeVerdict(
+      steamGame.deps,
+      steamGame.appId,
+      wantsDrm ? 'steamclient-layer' : 'tcp'
+    )
+  }
   const drmInstallRoot = wantsDrm
     ? resolveBridgeGameInstallRoot(
         steamGame,
@@ -272,10 +302,27 @@ export async function launchBridgeGameBody(
     const tcp = await prepareTcpOverlay(
       steamGame,
       bridgeBottleSettings,
-      previousRunner
+      previousRunner,
+      opts?.withoutSteam ? { overlayOff: true } : undefined
     )
     bridgeBottleSettings = tcp.settings
     overlayLaunch = tcp.overlayLaunch
+    if (opts?.withoutSteam) {
+      // Nothing below runs for a direct launch: no shim, no verdict writes, no
+      // CEG refusal, no bridge helper, no gamelib_bridge.cfg.
+      logInfo(
+        `SteamGame: launching appId ${steamGame.appId} in its bridge bottle without Steam (${exePath})`,
+        LogPrefix.Steam
+      )
+      return fireBridgeWineLaunch(
+        steamGame,
+        exePath,
+        bridgeBottleSettings,
+        undefined,
+        undefined,
+        { withoutSteam: opts.withoutSteam }
+      )
+    }
   } else if (drm.status === 'error') {
     // D-13: no markBridgeFailedThisSession, no steamBridgeSetupRequired, no
     // bottled Steam. drmLaunchSetup's fail() sends the terminal 'done' when

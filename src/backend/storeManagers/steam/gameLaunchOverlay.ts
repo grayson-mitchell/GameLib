@@ -279,7 +279,10 @@ export function overlayProbeArg(steamGame: SteamGame):
 export async function prepareTcpOverlay(
   steamGame: SteamGame,
   settings: GameSettings,
-  previousRunner: ReturnType<DrmBridgeRunners['getDrmBridgeRunner']>
+  previousRunner: ReturnType<DrmBridgeRunners['getDrmBridgeRunner']>,
+  // quick 261117-p38: a without-Steam launch never injects the overlay (it needs
+  // Mac Steam), but the runner-change cleanup below still runs.
+  opts?: { overlayOff?: boolean }
 ): Promise<{
   settings: GameSettings
   overlayLaunch?: OverlayLaunchPayload
@@ -308,7 +311,7 @@ export async function prepareTcpOverlay(
       | Extract<OverlayLaunchPayload, { kind: 'env' }>['vars']
       | undefined
     if (fallbackEngine) {
-      if (resolveLaunchOverlay(steamGame).enabled) {
+      if (!opts?.overlayOff && resolveLaunchOverlay(steamGame).enabled) {
         inputArg = overlayInputArg(steamGame, 'env')
         const result = await prepareOverlayEnv({
           appId: steamGame.appId,
@@ -327,7 +330,7 @@ export async function prepareTcpOverlay(
           )
         }
       }
-    } else if (resolveLaunchOverlay(steamGame).enabled) {
+    } else if (!opts?.overlayOff && resolveLaunchOverlay(steamGame).enabled) {
       inputArg = overlayInputArg(steamGame, 'tcp-clone')
       const result = await prepareOverlayLaunch(
         {

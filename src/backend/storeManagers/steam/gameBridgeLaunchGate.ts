@@ -9,6 +9,7 @@ import { logInfo, LogPrefix } from 'backend/logger'
 import { notify } from 'backend/dialog/dialog'
 import { launchBridgeGameBody } from './gameBridgeLaunch'
 import type SteamGame from './games'
+import type { BridgeLaunchOptions } from './gameBridgeLaunch'
 
 /**
  * Phase 24 Plan 08 (R4/R6/R7), reordered by Phase 51 Plan 01 (D-51-01):
@@ -34,7 +35,10 @@ import type SteamGame from './games'
  * optimistically flips any running state.
  *
  */
-export function launchBridgeGame(steamGame: SteamGame): Promise<boolean> {
+export function launchBridgeGame(
+  steamGame: SteamGame,
+  opts?: BridgeLaunchOptions
+): Promise<boolean> {
   const appId = steamGame.appId
   const { bridgeLaunchesInFlight } = steamGame.deps.steamSession.gameSession
   const existing = bridgeLaunchesInFlight.get(appId)
@@ -54,7 +58,7 @@ export function launchBridgeGame(steamGame: SteamGame): Promise<boolean> {
     })
     return existing
   }
-  const run = runBridgeLaunch(steamGame)
+  const run = runBridgeLaunch(steamGame, opts)
   bridgeLaunchesInFlight.set(appId, run)
   run
     .finally(() => {
@@ -71,10 +75,13 @@ export function launchBridgeGame(steamGame: SteamGame): Promise<boolean> {
  * must not outlive a launch that did not start. A started launch keeps it
  * until the process monitor's onStopped clears it.
  */
-export async function runBridgeLaunch(steamGame: SteamGame): Promise<boolean> {
+export async function runBridgeLaunch(
+  steamGame: SteamGame,
+  opts?: BridgeLaunchOptions
+): Promise<boolean> {
   let started = false
   try {
-    started = await launchBridgeGameBody(steamGame)
+    started = await launchBridgeGameBody(steamGame, opts)
     return started
   } finally {
     if (!started) {
