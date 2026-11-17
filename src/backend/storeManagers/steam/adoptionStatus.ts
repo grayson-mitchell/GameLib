@@ -87,6 +87,16 @@ export function pushSteamAdoptionStatus(
   }
 }
 
+/** D-03: stores the Rust watch's signed-in reading for `appId` and pushes the page status once. */
+export function noteAdoptionSignedIn(
+  deps: AdoptionPushDeps,
+  appId: string,
+  signedIn: boolean | null
+): void {
+  deps.steamInstallRuntime.adoption.signedIn.set(appId, signedIn)
+  pushSteamAdoptionStatus(deps, appId)
+}
+
 /** The `steamAdoptionStatus` handler body: a bad appId or any failure answers "not pending". */
 export function answerSteamAdoptionStatus(
   deps: AdoptionStatusDeps,

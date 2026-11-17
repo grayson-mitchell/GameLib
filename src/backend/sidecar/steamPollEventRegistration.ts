@@ -60,6 +60,7 @@ import { invalidateSteamUpdateState } from '../storeManagers/steam/updateDetecti
 import { clearForcedWindowsViaBottle } from '../storeManagers/steam/gameSessionState'
 import { markBridgeGameUninstalled } from '../storeManagers/steam/bridgeInstallState'
 import { clearAndUnwatchPendingAdoption } from '../storeManagers/steam/adoptionWatch'
+import { noteAdoptionSignedIn } from '../storeManagers/steam/adoptionStatus'
 
 export interface PollAckReply {
   applied: boolean
@@ -195,6 +196,8 @@ async function applyEvent(
       }
       return { applied: true }
     case 'adoptionState':
+      // Phase 81 D-03: store the watch's signed-in reading and push the page status once; the
+      // note switches between "restart once" and "Sign in to Steam" without a reload.
       // D-07: Steam adopted the install, so the pending-adoption record is done. The clear drops
       // the cached reading and pushes pending:false (the note goes away); unwatching an entry
       // Rust already dropped is a no-op, and clearing an absent record is too.
@@ -204,6 +207,8 @@ async function applyEvent(
           `steamPollStateEvent adoptionState appId=${ev.appId} adopted`,
           LogPrefix.Steam
         )
+      } else {
+        noteAdoptionSignedIn(deps, ev.appId, ev.signedIn)
       }
       return { applied: true, title: titleOf(ev.appId) }
   }

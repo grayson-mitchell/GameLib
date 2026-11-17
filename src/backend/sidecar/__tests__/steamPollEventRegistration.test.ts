@@ -426,15 +426,53 @@ describe('steamPollStateEvent handler', () => {
     const statusPushes = (sent: Array<[string, unknown]>) =>
       sent.filter(([c]) => c === 'steamAdoptionStatusChanged').map(([, p]) => p)
 
-    test('adopted pushes pending:false once and drops any cached reading (D-07)', async () => {
+    test('a signed-out reading is cached and pushed once as pending with steamSignedIn false (D-03)', async () => {
       const { deps, sent, send } = setup()
       seedRecord(deps)
-      deps.steamInstallRuntime.adoption.signedIn.set('480', false)
+      const reply = await send(adoption(false, 1, false))
+      expect(reply).toEqual({ applied: true, title: 'Spacewar' })
+      expect(deps.steamInstallRuntime.adoption.signedIn.get('480')).toBe(false)
+      expect(statusPushes(sent)).toEqual([
+        { appName: '480', pending: true, steamSignedIn: false, seq: 1 }
+      ])
+      // The record stays: only adopted:true clears it.
+      expect(
+        readPendingAdoption('480', pendingAdoptionStoreFrom(deps))
+      ).toBeDefined()
+    })
+
+    test('a later signed-in reading pushes again with a higher seq (D-03)', async () => {
+      const { deps, sent, send } = setup()
+      seedRecord(deps)
+      await send(adoption(false, 1, false))
+      await send(adoption(false, 2, true))
+      expect(statusPushes(sent)).toEqual([
+        { appName: '480', pending: true, steamSignedIn: false, seq: 1 },
+        { appName: '480', pending: true, steamSignedIn: true, seq: 2 }
+      ])
+    })
+
+    test('adopted pushes pending:false once and drops the cached reading (D-07)', async () => {
+      const { deps, sent, send } = setup()
+      seedRecord(deps)
+      await send(adoption(false, 1, false))
+      sent.length = 0
       await send(adoption(true, 2, true))
       expect(statusPushes(sent)).toEqual([
-        { appName: '480', pending: false, steamSignedIn: null, seq: 1 }
+        { appName: '480', pending: false, steamSignedIn: null, seq: 2 }
       ])
       expect(deps.steamInstallRuntime.adoption.signedIn.has('480')).toBe(false)
+    })
+
+    test('a stale adoptionState event is consumed without a push', async () => {
+      const { deps, sent, send } = setup()
+      seedRecord(deps)
+      await send(adoption(false, 5, false))
+      sent.length = 0
+      const reply = await send(adoption(false, 4, true))
+      expect(reply.applied).toBe(true)
+      expect(statusPushes(sent)).toEqual([])
+      expect(deps.steamInstallRuntime.adoption.signedIn.get('480')).toBe(false)
     })
 
     test('adopted with no record replies applied and writes nothing', async () => {

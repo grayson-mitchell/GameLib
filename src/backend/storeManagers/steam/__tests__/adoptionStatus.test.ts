@@ -23,6 +23,7 @@ import {
   answerSteamAdoptionRestartNow,
   answerSteamAdoptionStatus,
   getSteamAdoptionStatus,
+  noteAdoptionSignedIn,
   openSteamForAdoption,
   pushSteamAdoptionStatus,
   restartSteamNowForAdoption
@@ -137,6 +138,24 @@ describe('the signed-in cache and the page push (D-03, D-07)', () => {
       throw new Error('transport down')
     })
     expect(() => pushSteamAdoptionStatus(deps, APP_ID)).not.toThrow()
+  })
+
+  test('noteAdoptionSignedIn stores the reading and pushes once', () => {
+    const deps = depsWith([[APP_ID, record()]])
+    noteAdoptionSignedIn(deps, APP_ID, false)
+    expect(deps.steamInstallRuntime.adoption.signedIn.get(APP_ID)).toBe(false)
+    expect(pushesOf(deps)).toEqual([
+      [
+        'steamAdoptionStatusChanged',
+        { appName: APP_ID, pending: true, steamSignedIn: false, seq: 1 }
+      ]
+    ])
+    noteAdoptionSignedIn(deps, APP_ID, true)
+    expect(pushesOf(deps)).toHaveLength(2)
+    expect(pushesOf(deps)[1][1]).toMatchObject({
+      steamSignedIn: true,
+      seq: 2
+    })
   })
 
   test('answerSteamAdoptionStatus includes the cached reading', () => {
