@@ -141,6 +141,30 @@
         "extraInfoStaleBody": "This result was cached before load outcomes were recorded, so it may be out of date. Refresh to check.",
         "hiddenAchievement": "Hidden Achievement",
         "moreActions": "More actions",
+        "nativePort": {
+            "copyPath": "Copy install path",
+            "intro": "{{name}} is a community source port that runs this game natively using your game files.",
+            "licence": "Licence: {{licence}}",
+            "notTracked": "Steam playtime and achievements are not tracked when you play through the port.",
+            "openLink": "Get {{name}}",
+            "platform": {
+                "linux": "Linux",
+                "mac-arm64": "macOS (Apple silicon)",
+                "mac-universal": "macOS (Apple silicon and Intel)",
+                "mac-x86": "macOS (Intel)",
+                "windows": "Windows"
+            },
+            "platforms": "Runs on: {{platforms}}",
+            "setupHeading": "Setup",
+            "showFolder": "Show data folder",
+            "steps": {
+                "copy": "Copy these from the game folder into the port's folder — copy, don't move, so Steam's install stays intact: {{files}}",
+                "import": "The port imports the game data from the original installer — follow its first-run setup.",
+                "point": "When the port asks for the game data, point it at the game's install folder.",
+                "sideload": "Then add the port to your library with Add Game so you can launch it from GameLib."
+            },
+            "title": "Native port available"
+        },
         "steamInstallingPercent": "Installing… {{percent}}%",
         "steamShortcut": {
             "failed": "Updating the Steam shortcut failed."
