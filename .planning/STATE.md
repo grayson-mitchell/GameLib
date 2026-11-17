@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v0.10
 milestone_name: Foundations
 status: ready_to_plan
-stopped_at: Phase 78 complete (5/5) — ready to discuss Phase 79
+stopped_at: Phase 78 complete (5/5) — next open phase is 81 (79 and 80 already complete)
 last_updated: 2026-11-17T00:39:11.056Z
 last_activity: 2026-11-17
 progress:
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 79 — rust cm client replacing steam user and steam session
+**Current focus:** Phase 81 — unify the Steam restart hold into restart-on-Play (not planned)
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -72,7 +72,7 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 
 ## Current Position
 
-Phase: 79
+Phase: 81
 Plan: Not started
 Status: Ready to plan
 Last activity: 2026-11-17
