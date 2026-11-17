@@ -320,6 +320,10 @@ export const routes: RouteObject[] = [
         lazy: makeLazyFunc(import('./screens/Accessibility'))
       },
       {
+        path: 'accessibility/themes/:id',
+        lazy: makeLazyFunc(import('./screens/Accessibility/ThemeEditor'))
+      },
+      {
         path: 'console',
         lazy: makeLazyFunc(import('./screens/ConsoleMode'))
       },
