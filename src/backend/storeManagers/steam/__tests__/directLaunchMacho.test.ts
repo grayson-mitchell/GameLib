@@ -3,6 +3,8 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 import {
   findMacSteamApiFiles,
+  cpuTypesRunnable,
+  listMachOCpuTypes,
   listMachODylibs,
   machOLinksSteamApi,
   type RangedRead
@@ -200,5 +202,49 @@ describe('machOLinksSteamApi and findMacSteamApiFiles (temp dir)', () => {
     writeFileSync(join(dir, 'a', 'b', 'game'), 'x')
     writeFileSync(join(dir, 'a', 'steam_api_notes.txt'), 'x')
     expect(await findMacSteamApiFiles(dir)).toEqual([])
+  })
+})
+
+describe('listMachOCpuTypes and cpuTypesRunnable', () => {
+  const I386 = 7
+  const X86_64 = 0x01000007
+  const ARM64 = 0x0100000c
+  const PPC = 18
+  const thinOf = (cpu: number, le = true) => {
+    const b = Buffer.alloc(28)
+    if (le) {
+      b.writeUInt32LE(0xfeedface, 0)
+      b.writeUInt32LE(cpu, 4)
+    } else {
+      b.writeUInt32BE(0xfeedface, 0)
+      b.writeUInt32BE(cpu, 4)
+    }
+    return b
+  }
+  const fatOf = (cpus: number[]) => {
+    const b = Buffer.alloc(8 + cpus.length * 20)
+    b.writeUInt32BE(0xcafebabe, 0)
+    b.writeUInt32BE(cpus.length, 4)
+    cpus.forEach((c, i) => b.writeUInt32BE(c, 8 + i * 20))
+    return b
+  }
+
+  test('reads thin (both byte orders) and fat cpu types', async () => {
+    expect(await listMachOCpuTypes(reader(thinOf(I386)))).toEqual([I386])
+    expect(await listMachOCpuTypes(reader(thinOf(I386, false)))).toEqual([I386])
+    expect(await listMachOCpuTypes(reader(fatOf([I386, PPC])))).toEqual([
+      I386,
+      PPC
+    ])
+    expect(await listMachOCpuTypes(reader(Buffer.from('nope')))).toBeNull()
+  })
+
+  test('i386/PPC-only never runs; x86_64 runs everywhere; arm64 only on Apple silicon', () => {
+    expect(cpuTypesRunnable([I386], 'arm64')).toBe(false)
+    expect(cpuTypesRunnable([I386, PPC], 'x64')).toBe(false)
+    expect(cpuTypesRunnable([I386, X86_64], 'arm64')).toBe(true)
+    expect(cpuTypesRunnable([X86_64], 'x64')).toBe(true)
+    expect(cpuTypesRunnable([ARM64], 'arm64')).toBe(true)
+    expect(cpuTypesRunnable([ARM64], 'x64')).toBe(false)
   })
 })

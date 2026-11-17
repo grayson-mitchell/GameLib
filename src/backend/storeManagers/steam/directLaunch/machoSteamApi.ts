@@ -141,6 +141,72 @@ export async function listMachODylibs(
   }
 }
 
+const CPU_TYPE_X86_64 = 0x01000007
+const CPU_TYPE_ARM64 = 0x0100000c
+
+/** The CPU types of every slice (thin or fat), or null when the bytes are not a Mach-O. */
+export async function listMachOCpuTypes(
+  read: RangedRead
+): Promise<number[] | null> {
+  try {
+    const head = await readExact(read, 0, 8)
+    if (!head) return null
+    const magic = head.readUInt32BE(0)
+    if (magic === MH_MAGIC || magic === MH_MAGIC_64)
+      return [head.readUInt32BE(4)]
+    if (magic === MH_CIGAM || magic === MH_CIGAM_64)
+      return [head.readUInt32LE(4)]
+    if (magic !== FAT_MAGIC && magic !== FAT_MAGIC_64) return null
+    const nfat = head.readUInt32BE(4)
+    if (nfat === 0 || nfat > MAX_FAT_ARCHES) return null
+    const entrySize = magic === FAT_MAGIC_64 ? 32 : 20
+    const table = await readExact(read, 8, nfat * entrySize)
+    if (!table) return null
+    const types: number[] = []
+    for (let i = 0; i < nfat; i++) types.push(table.readUInt32BE(i * entrySize))
+    return types
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Whether a slice can execute on this Mac: arm64 natively or x86_64 (via Rosetta) on Apple
+ * silicon, x86_64 on Intel. An i386- or PPC-only binary is 'no' (macOS dropped 32-bit in
+ * Catalina; the spawn fails with EBADARCH -86, e.g. Legends of Aethereus).
+ */
+export function cpuTypesRunnable(
+  types: readonly number[],
+  hostArch: string
+): boolean {
+  return types.some(
+    (t) =>
+      t === CPU_TYPE_X86_64 || (hostArch === 'arm64' && t === CPU_TYPE_ARM64)
+  )
+}
+
+export async function machORunnableHere(
+  path: string,
+  hostArch: string = process.arch
+): Promise<'yes' | 'no' | 'unreadable'> {
+  let handle
+  try {
+    handle = await open(path, 'r')
+    const fh = handle
+    const types = await listMachOCpuTypes(async (offset, length) => {
+      const buf = Buffer.alloc(length)
+      const { bytesRead } = await fh.read(buf, 0, length, offset)
+      return buf.subarray(0, bytesRead)
+    })
+    if (types === null) return 'unreadable'
+    return cpuTypesRunnable(types, hostArch) ? 'yes' : 'no'
+  } catch {
+    return 'unreadable'
+  } finally {
+    await handle?.close().catch(() => undefined)
+  }
+}
+
 export type MachOLinkResult = 'links' | 'clean' | 'unreadable'
 
 /** Whether the Mach-O at `path` loads a libsteam_api dylib. Never throws. */

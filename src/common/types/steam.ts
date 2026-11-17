@@ -340,6 +340,8 @@ export type SteamDirectLaunchWarning = 'none' | 'steam-api' | 'unknown'
  */
 export type SteamDirectLaunchUnavailableReason =
   | 'host-unsupported'
+  /** The Mac binary has no slice this Mac can execute (i386/PPC only). */
+  | 'mac-arch-unsupported'
   | 'not-installed'
   | 'route-unsupported'
   | 'steam-drm'

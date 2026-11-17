@@ -138,4 +138,9 @@ Operator, this Mac. Restart `pnpm tauri:dev` first (it does not rebuild the side
 - Row (a) candidates on this Mac (no steam_api file, no Steam link per otool): Legends of
   Aethereus (248410) and Dead Age 2 (951430). Every other installed Mac-native game ships a
   Steam API.
-- Still to run: a row-(a) game with Steam quit; steps 5-7.
+- Legends of Aethereus (248410): Play did nothing visible. Its Mac binary is i386-only, so every
+  spawn failed with EBADARCH (-86); the "could not launch" notification was sent but not seen.
+  The verdict now reads each slice's CPU type and does not apply when no slice can run here
+  (`mac-arch-unsupported`, toggle hidden); cache v4. Not a row-(a) candidate after all.
+- Still to run: Dead Age 2 (951430, universal x86_64+arm64, no Steam API) with Steam quit;
+  steps 5-7.

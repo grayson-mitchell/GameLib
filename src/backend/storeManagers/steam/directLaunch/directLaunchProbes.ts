@@ -38,7 +38,11 @@ import {
   STEAM_PICS_TIMEOUT_MS,
   withTimeout
 } from '../withTimeout'
-import { findMacSteamApiFiles, machOLinksSteamApi } from './machoSteamApi'
+import {
+  findMacSteamApiFiles,
+  machOLinksSteamApi,
+  machORunnableHere
+} from './machoSteamApi'
 import {
   getDirectLaunchVerdict,
   type DirectLaunchInput,
@@ -175,6 +179,7 @@ function buildDirectLaunchProbes(steamGame: SteamGame): DirectLaunchProbes {
       locateMachOBinary(installPath, executable, LogPrefix.Steam),
     macSteamApiFiles: (installPath) => findMacSteamApiFiles(installPath),
     macLinks: (binaryPath) => machOLinksSteamApi(binaryPath),
+    macRunnable: (binaryPath) => machORunnableHere(binaryPath),
     resolveBridgeExe: resolveExe,
     peDrm: async (exePath) => {
       const { drmWrapper, drmExe } = await detectLaunchDrmWrapper(

@@ -75,6 +75,7 @@ describe('describeLaunchWithoutSteamControl', () => {
   test.each([
     [undefined],
     [{ applies: false, reason: 'host-unsupported' }],
+    [{ applies: false, reason: 'mac-arch-unsupported' }],
     [{ applies: false, reason: 'route-unsupported' }],
     [{ applies: false, reason: 'not-installed' }],
     [{ applies: false, reason: 'error' }]

@@ -55,6 +55,7 @@ export interface DirectLaunchProbes {
   locateMacBinary(installPath: string, executable?: string): string | null
   macSteamApiFiles(installPath: string): Promise<string[]>
   macLinks(binaryPath: string): Promise<'links' | 'clean' | 'unreadable'>
+  macRunnable(binaryPath: string): Promise<'yes' | 'no' | 'unreadable'>
   // bridge
   resolveBridgeExe(): Promise<string | undefined>
   peDrm(exePath: string): Promise<'steamstub' | 'ceg' | 'none' | undefined>
@@ -135,6 +136,10 @@ async function computeMacNative(
       launch: { args, ...workingDir }
     }
   }
+  // A binary this Mac cannot execute (i386/PPC only) can't be launched directly at all.
+  if ((await probes.macRunnable(binaryPath)) === 'no') {
+    return no('mac-arch-unsupported')
+  }
   let warning: SteamDirectLaunchWarning = 'none'
   const files = await probes.macSteamApiFiles(installPath)
   if (files.length > 0) warning = 'steam-api'
@@ -180,7 +185,8 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 }
 
 // v3: libsteam_api.bundle detection (WazHack); v2 records may wrongly say 'none'.
-const CACHE_VERSION = 3
+// v4: runnable-arch check (Legends of Aethereus, i386); v3 records may wrongly apply.
+const CACHE_VERSION = 4
 
 function readCached(
   deps: DirectLaunchDeps,

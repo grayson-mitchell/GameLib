@@ -18,6 +18,7 @@ function makeProbes(over: Partial<DirectLaunchProbes> = {}): {
     locateMacBinary: jest.fn(() => '/inst/Game.app/Contents/MacOS/Game'),
     macSteamApiFiles: jest.fn(() => Promise.resolve([] as string[])),
     macLinks: jest.fn(() => Promise.resolve('clean')),
+    macRunnable: jest.fn(() => Promise.resolve('yes')),
     resolveBridgeExe: jest.fn(() => Promise.resolve('/b/Game.exe')),
     peDrm: jest.fn(() => Promise.resolve('none')),
     peImports: jest.fn(() => Promise.resolve('none')),
@@ -110,7 +111,23 @@ describe('mac-native', () => {
     ).toMatchObject({ applies: true, warning: 'steam-api' })
   })
 
-  test('a ceg known fix is the only thing that does not apply', async () => {
+  test('a Mac binary this Mac cannot run (i386/PPC only) does not apply', async () => {
+    const i386 = makeProbes({
+      macRunnable: jest.fn(() => Promise.resolve('no'))
+    })
+    expect(await getDirectLaunchVerdict(makeDeps(i386), macInput)).toEqual({
+      applies: false,
+      reason: 'mac-arch-unsupported'
+    })
+    const unreadable = makeProbes({
+      macRunnable: jest.fn(() => Promise.resolve('unreadable'))
+    })
+    expect(
+      (await getDirectLaunchVerdict(makeDeps(unreadable), macInput)).applies
+    ).toBe(true)
+  })
+
+  test('a ceg known fix is the only drm signal that does not apply', async () => {
     const ceg = makeProbes({ knownFixCeg: jest.fn(() => true) })
     expect(await getDirectLaunchVerdict(makeDeps(ceg), macInput)).toEqual({
       applies: false,
@@ -238,7 +255,7 @@ describe('cache', () => {
     await getDirectLaunchVerdict(d, { ...macInput, ...change })
     expect(probes.knownFixCeg.mock.calls.length).toBeGreaterThan(before)
     const stored = d.map.get('10') as Record<string, unknown>
-    expect(stored.v).toBe(3)
+    expect(stored.v).toBe(4)
     expect(stored.buildid).toBe(
       (change as { buildid?: string }).buildid ?? '100'
     )
@@ -257,9 +274,9 @@ describe('cache', () => {
     expect(d.map.size).toBe(0)
   })
 
-  test('corrupt, v1 and v2 records are recomputed', async () => {
+  test('corrupt and older-version records are recomputed', async () => {
     const good = {
-      v: 3,
+      v: 4,
       kind: 'mac-native',
       installPath: '/inst',
       buildid: '100'
@@ -267,6 +284,16 @@ describe('cache', () => {
     for (const bad of [
       'junk',
       { v: 1 },
+      {
+        ...good,
+        v: 3,
+        verdict: {
+          applies: true,
+          kind: 'mac-native',
+          warning: 'none',
+          launch: { args: [] }
+        }
+      },
       {
         ...good,
         v: 2,
