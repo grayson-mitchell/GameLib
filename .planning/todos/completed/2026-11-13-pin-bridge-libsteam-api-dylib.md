@@ -38,3 +38,19 @@ their own old `steam_api` for years. A pinned dylib would therefore not move whe
   ships itself (InitFlat, SteamUser, overlay, callbacks)? Spike it against the live client.
 - Code signing and notarization implications of shipping or fetching a dylib next to the helper.
 - Keep the Steam-copy path as a fallback?
+
+## Resolution (2026-11-17)
+
+Spiked: all three spikes VALIDATED. Build follow-up: `2026-11-17-build-pinned-bridge-libsteam-api.md`.
+
+- **IPC from a pinned older dylib (087):** the live client serves it identically to its own copy
+  (InitFlat, identity, manual dispatch, call results). The pin must match the SDK the dispatch is
+  generated from (MMS v003 today).
+- **Source, signing, licensing (089):** Valve's client-update CDN (`webhelpers_osx` package,
+  `sha2vz` + dylib sha256 + Valve team `MXGJJ98X76`). It is genuine and standalone-signed, and GameLib ships no Valve binary.
+  The helper is unhardened, so there is no library-validation change. A hardened build needs
+  disable-library-validation either way.
+- **Real game (088):** the real helper on the pin ran ELEX (shim mode) end to end. Shim attach,
+  game `SteamAPI_Init`, stats/achievement callbacks and the in-game overlay all worked. DRM-mode
+  titles never spawn the helper.
+- **Keep the Steam-copy fallback?** Yes, as a logged `UNPINNED` last resort (089).

@@ -17,5 +17,5 @@ unzip -o -q "$out/pkg.zip" "$MEMBER" -d "$out/x"
 cp "$out/x/$MEMBER" "$out/libsteam_api.dylib"
 echo "$DYLIB_SHA  $out/libsteam_api.dylib" | shasum -a256 -c -
 codesign -v "$out/libsteam_api.dylib"
-codesign -dv "$out/libsteam_api.dylib" 2>&1 | grep -q "TeamIdentifier=$VALVE_TEAM"
+codesign -dv "$out/libsteam_api.dylib" 2>&1 | grep "TeamIdentifier=$VALVE_TEAM" >/dev/null
 echo "pinned dylib OK: $out/libsteam_api.dylib (Valve $VALVE_TEAM, $(nm -gU "$out/libsteam_api.dylib" | grep -oE 'SteamAPI_SteamUser_v[0-9]+'))"
