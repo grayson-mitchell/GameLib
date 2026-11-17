@@ -138,7 +138,7 @@ fn ack_reply_is_lenient() {
 #[test]
 fn ops_sorted_and_unique() {
     let ops = gamelib_steampoll::OPS;
-    assert_eq!(ops.len(), 24);
+    assert_eq!(ops.len(), 27);
     assert!(ops.windows(2).all(|w| w[0] < w[1]));
 }
 
