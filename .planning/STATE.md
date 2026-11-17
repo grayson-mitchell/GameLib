@@ -807,7 +807,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 ## Session Continuity
 
 Last session: 2026-11-17T05:03:16.878Z
-Stopped at: Completed 47-12-PLAN.md (ITAD user-key precedence + one-shot 401/403 fallback in itad.ts; itad.getKeyStatus/itad.setApiKey channels end to end; codecheck green); 47-02 D-07 reply pending operator; Phase 81 context gathered
+Stopped at: Completed 47-10-PLAN.md (cached-at "Price from" lines on rows and breakdown sub-rows, country-aware breakdown fetch, en strings; sidecar rebuilt; live check pending operator; codecheck green); 47-02 D-07 reply pending operator; Phase 81 context gathered
 Resume file: .planning/phases/81-unify-the-steam-restart-hold-into-restart-on-play/81-CONTEXT.md
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
