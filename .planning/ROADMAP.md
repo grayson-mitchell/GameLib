@@ -17,6 +17,7 @@ GameLib forks Heroic Games Launcher and adds Steam as a first-class platform alo
 - ✅ **v0.8 Tauri Shell** — Phases 27–50 plus parked Phase 22 (shipped 2026-10-16, **override closeout** — see MILESTONES.md) — archive: `milestones/v0.8-ROADMAP.md` (full phase details, 6008 lines), `milestones/v0.8-phases/`
 - ✅ **v0.9 Steam Bridge & Engine** — Phases 51–60 (shipped 2026-11-06; audit `tech_debt`, no blockers) — archive: `milestones/v0.9-ROADMAP.md`, `milestones/v0.9-MILESTONE-AUDIT.md`, `milestones/v0.9-phases/`. Phases 61–75 were run unassigned and adopted by v0.10.
 - 🚧 **v0.10 Foundations** — Phases 61–78 plus Phase 47 (started 2026-11-12; adopts Phases 61–75, 11 already complete) — requirements: `REQUIREMENTS.md`
+- 📋 **v0.11 Node Sidecar Retirement** — Phases 82–99 (planned 2026-11-17, alongside v0.10; starts when v0.10 closes) — requirements: `REQUIREMENTS-v0.11.md`
 
 v0.2–v0.7 were never archived through `/gsd-complete-milestone`; their phase directories (5–26) remain under `.planning/phases/` and their full roadmap entries are preserved verbatim in `milestones/v0.8-ROADMAP.md` lines 238–1051.
 
@@ -174,6 +175,27 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 80: Steam install, uninstall and update polling state machines in Rust** — 33 plans; planned (completed 2026-11-16)
 - [ ] **Phase 81: Unify the Steam restart hold into restart-on-Play** — not planned
 - [ ] **Phase 47: Migrate aggregated store search from CheapShark to IsThereAnyDeal** — 13 plans; ITAD gates closed 2026-11-12; planned 2026-11-14 (moved from v0.8)
+
+**v0.11 Node Sidecar Retirement** (planned 2026-11-17; requirements `REQUIREMENTS-v0.11.md`)
+
+- [ ] **Phase 82: Guardrails, hygiene and shared safety primitives** — not planned
+- [ ] **Phase 83: Native seam, gamelib-core and process/shutdown contract** — not planned
+- [ ] **Phase 84: Logger** — not planned
+- [ ] **Phase 85: Store host, config and versioned migrations** — not planned
+- [ ] **Phase 86: Pure leaf services** — not planned
+- [ ] **Phase 87: Engine, Wine and tools** — not planned
+- [ ] **Phase 88: Launch pipeline** — not planned
+- [ ] **Phase 89: Steam library state** — not planned
+- [ ] **Phase 90: Steam services and TypeScript depot path** — not planned
+- [ ] **Phase 91: Epic (legendary) runner** — not planned
+- [ ] **Phase 92: GOG, Amazon and sideloaded runners** — not planned
+- [ ] **Phase 93: Download manager** — not planned
+- [ ] **Phase 94: Humble Bundle and shortcuts** — not planned
+- [ ] **Phase 95: Steam bridge install** — not planned
+- [ ] **Phase 96: Steam bridge launch and bottle lifecycle** — not planned
+- [ ] **Phase 97: Steam bridge DRM mode, overlay and known fixes** — not planned
+- [ ] **Phase 98: Shell cutover** — not planned
+- [ ] **Phase 99: Sidecar deletion** — not planned
 
 ## Phase Details
 
@@ -1486,7 +1508,7 @@ Plans:
 
 **Requirements**: PRICE-01, PRICE-02, PRICE-03 (phase-level IDs minted during `/gsd-plan-phase 47`). Moved into v0.10 Foundations 2026-11-12.
 **Depends on:** Phase 20 (Aggregated Store Search — CheapShark), which minted the provider-neutral `common/types/storeSearch` vocabulary (D-11/D-12/D-13) this phase is the second implementation of. **Not** Phase 46 — `phase.add` fills `Depends on` with the immediately-preceding phase number as a positional guess, and Phase 46 (Windows single-instance guard) is unrelated; corrected by hand at filing time.
-**Plans:** 12/13 plans executed
+**Plans:** 13/13 plans executed
 
 **Research is already complete** — `.planning/quick/260916-gdg-answer-q2-cheapshark-to-itad-migration-cost/260916-gdg-RESEARCH.md` answers `questions.md` Q2 with claims graded MEASURED / SPEC / UNKNOWN. Do not re-derive it; do preserve its grades when quoting.
 
@@ -1546,7 +1568,7 @@ Plans:
 
 **Wave 7** *(blocked on Wave 6 completion)*
 
-- [ ] 47-13-PLAN.md — Settings > Advanced ITAD key field with rejected-key warning (D-05/D-06)
+- [x] 47-13-PLAN.md — Settings > Advanced ITAD key field with rejected-key warning (D-05/D-06)
 
 ### Phase 76: Engine-correct bottle for DRM-mode launches (v0.9 audit S9)
 
@@ -1845,3 +1867,297 @@ Plans:
 
 Plans:
 - [ ] TBD (run /gsd-plan-phase 81 to break down)
+
+## v0.11 Phase Details
+
+Milestone v0.11 Node Sidecar Retirement. Planned 2026-11-17 alongside v0.10; starts when v0.10 closes. Requirements: `REQUIREMENTS-v0.11.md`. Research: `research/v0.11/SUMMARY.md`. Rules that apply to every port phase: the phase's last plan deletes the TypeScript it replaced and its sidecar channel registrations; any `GAMELIB_<SLICE>=rust|ts` fallback flag is removed in the same phase unless a named fallback window is recorded in the phase's plan; live gates are authored before coding; golden traces are recorded from TS before porting.
+
+### Phase 82: Guardrails, hygiene and shared safety primitives
+
+**Goal**: The backend test suite is trustworthy and the shared safety rules exist before any code is ported, so no later slice can fail open, delete a sibling game, or pass a drift gate vacuously.
+**Requirements**: FND-01, FND-02
+**Depends on**: Nothing (first v0.11 phase; starts when v0.10 closes)
+**Research flag**: Standard
+**Success Criteria** (what must be TRUE):
+  1. `pnpm test` runs every backend suite green, or each previously red suite is retired with a recorded reason in a ledger; no suite is left on a known-red list
+  2. The IPC census and flow-registration census gates fail when their input set is empty or truncated (a deliberate empty-input test proves they cannot pass vacuously)
+  3. Uninstalling a game, removing a bottle or resetting a store refuses with a visible error when the guarding check returns "unknown" (one injected-rejection test per guard)
+  4. Uninstalling a game never deletes a sibling game co-installed beside it, proven by an adversarial path table (nested installdir, `.\x`, `C:\x`, UNC, symlink, case, NFC/NFD) on macOS, Windows and Linux
+  5. The `utils.ts` and `bootstrap.ts` responsibility inventory and the milestone-wide state-ownership table are committed, and the zero-risk deletions (type-only files, dead exports, `legendary/commands/*`, `CI=e2e` mocks; `fileStore.ts` only after the live-or-dead check) are gone
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 82 to break down)
+
+### Phase 83: Native seam, gamelib-core and process/shutdown contract
+
+**Goal**: Rust can serve a renderer channel natively with the sidecar as fallback, and quitting or killing GameLib leaves no orphaned helpers, so every later slice is a leaf over a stable Rust substrate.
+**Requirements**: FND-03, FND-04
+**Depends on**: Phase 82
+**Research flag**: Needs research-phase and spike (send-kind channel ordering through `SidecarSendQueue`, invoke/send interleave, `[GAMELIB_IPC_INVALID_CHANNEL]` behaviour)
+**Success Criteria** (what must be TRUE):
+  1. One real shell-only channel is served by the native router with the sidecar still present as fallback, and a test fails if any channel has zero or two owners
+  2. A renderer call with malformed or unknown arguments to a native channel is rejected in Rust with a negative test per migrated channel (the Phase 72 trust boundary holds), and the IPC schema diff gate fails on an unreviewed channel change
+  3. Quitting GameLib, and SIGKILL of the parent, leaves no orphaned helper process on macOS, Windows and Linux (launched games excepted), proven on all three OS legs
+  4. `gamelib-core` (paths, emitter, clock, `ProcessRunner`, `Shutdown` token) and `gamelib-proc` kill-tree exist, and the TS shim the first migrated channel used is deleted in this phase
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 83 to break down)
+
+### Phase 84: Logger
+
+**Goal**: Logging is owned by Rust with the same format, files, rotation and redaction, so every later slice logs through one native writer.
+**Requirements**: FND-05
+**Depends on**: Phase 83
+**Research flag**: Standard
+**Success Criteria** (what must be TRUE):
+  1. A before/after golden comparison shows `gamelib.log` and the per-prefix files keep their line format, location, rotation and 0600 mode, and renderer log messages are still redacted
+  2. Log upload, delete-uploaded and "show in folder" work from the UI against the native logger
+  3. Diagnostics from steam-vent and reqwest appear in the log, and a repeating error is rate-limited rather than flooding the file
+  4. The TS logger is reduced to a fire-and-forget forwarder, and the shell's second log path (`shell_diag`) and the TS log registrations are deleted
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 84 to break down)
+
+### Phase 85: Store host, config and versioned migrations
+
+**Goal**: Rust is the only disk writer for settings, caches and per-game config, and an upgrade loads existing data unchanged without new Keychain prompts.
+**Requirements**: FND-06, FND-07
+**Depends on**: Phase 84
+**Research flag**: Needs deeper research and spike (sync TS reads over async Rust ownership, read-your-writes, `storeChanged` vs snapshot ordering, byte-compatible JSON both ways, Windows atomic rename with an open file, real-file corpus harvest)
+**Success Criteria** (what must be TRUE):
+  1. Existing settings, caches and per-game config from the operator profile and older-release corpus load unchanged after upgrade, with unknown keys preserved and a roundtrip diff test green
+  2. Before a migration runs the previous state is backed up; a corrupt store file is kept and reported, never reset; a file written by a newer version is read-only
+  3. After upgrading a signed release over a previous one, stored credentials still work and no new Keychain prompt appears
+  4. The legendary store migration is ported only if a supported upgrade path still reaches it (reachability recorded), otherwise it is deleted
+  5. The TS write-through mirror's deletion point is named and executed for every family flipped in this phase, and `storeVersioning`, `storeMigrations` and `migration/*` TypeScript are deleted
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 85 to break down)
+
+### Phase 86: Pure leaf services
+
+**Goal**: The self-contained information and cache services run in Rust and behave as before.
+**Requirements**: SVC-01
+**Depends on**: Phase 85
+**Research flag**: Standard
+**Success Criteria** (what must be TRUE):
+  1. Wiki game info, the CrossOver compatibility index, store search and discounts, and anti-cheat info return the same results for the recorded fixtures as the TypeScript did
+  2. Recent games, per-game overrides and the artwork and image caches read and write the existing files with no data change after upgrade
+  3. Recorded fixtures exist for each previously untested directory before it is ported
+  4. Each ported slice's TypeScript and sidecar registrations are deleted in this phase (the delete gate per slice passes)
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 86 to break down)
+
+### Phase 87: Engine, Wine and tools
+
+**Goal**: Engine selection, bottles and Wine tooling run in Rust with the same behaviour on real engines.
+**Requirements**: SVC-02
+**Depends on**: Phase 86
+**Research flag**: Needs deeper research (empirical CrossOver/Staging behaviour)
+**Success Criteria** (what must be TRUE):
+  1. A game uses CrossOver first and falls back to the pinned Wine-Staging with DXVK exactly as before, verified live on real engines
+  2. Per-game bottles are created, reused and removed as before; removing a bottle never touches a sibling game
+  3. Wine, CrossOver and Staging downloads, Winetricks and DXVK/DXMT/vkd3d tools install and report progress as before
+  4. `wine/`, `tools/` and engine TypeScript and their sidecar registrations are deleted in this phase
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 87 to break down)
+
+### Phase 88: Launch pipeline
+
+**Goal**: Launching any game builds the same command line and environment from Rust.
+**Requirements**: SVC-03
+**Depends on**: Phase 87
+**Research flag**: Needs deeper research (golden argv/env traces recorded from TS first)
+**Success Criteria** (what must be TRUE):
+  1. For native, Wine/Proton/CrossOver, gamescope/mangohud, known-fix overlay and pre/post-script launches, the Rust command line and environment match golden traces recorded from the TypeScript
+  2. A game launched from the UI starts and runs on macOS, Windows and Linux with a single in-flight launch per game
+  3. Anti-cheat handling at launch and the remaining `utils.ts` pieces behave as before
+  4. `launcher.ts`, `commandRunner`, known-fixes and the replaced `utils.ts` code and their registrations are deleted in this phase
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 88 to break down)
+
+### Phase 89: Steam library state
+
+**Goal**: Steam library state, game sessions and update detection live in one Rust owner, and the TypeScript poll event machinery is gone.
+**Requirements**: STM-01
+**Depends on**: Phase 88
+**Research flag**: Needs deeper research (Phase 80 open warnings A-WR-01, A-WR-02 and the poison-event cap resolved first or inside)
+**Success Criteria** (what must be TRUE):
+  1. The Steam library, installed state, game sessions and update-available badges update live in the UI with no TypeScript state owner
+  2. The Phase 80 state-event handler, the outbox/ack/seq code and the `polls=ts` fallback are deleted from the repo
+  3. Installing, updating and launching a Steam game still moves its state correctly with no stale write-back
+  4. `steamPollEventRegistration.ts` and the TS poll remnants and their sidecar registrations are deleted in this phase
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 89 to break down)
+
+### Phase 90: Steam services and TypeScript depot path
+
+**Goal**: Every Steam operation is served by Rust with no TypeScript Steam services left.
+**Requirements**: STM-02
+**Depends on**: Phase 89
+**Research flag**: Standard
+**Success Criteria** (what must be TRUE):
+  1. A user can sign in to Steam (QR, credentials, SteamGuard), redeem a key, install, update, uninstall and launch a Steam game end to end
+  2. Mac Steam adoption of a GameLib install, including the pending-adoption record and restart-on-Play, works as before
+  3. The CM session and depot calls are in-process Rust calls with no `ShellJobHost` sidecar round trip
+  4. `games.ts`, `depot/`, `depotRust/`, `gameLaunch`, `steamLaunchWatch`, `macSteam*` and the Steam TS shims and their sidecar registrations are deleted in this phase
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 90 to break down)
+
+### Phase 91: Epic (legendary) runner
+
+**Goal**: Epic sign-in, library and game management run from Rust over the bundled legendary binary.
+**Requirements**: STO-01
+**Depends on**: Phase 90
+**Research flag**: Needs deeper research (external binary output formats, Windows process-tree kill and quoting; parsers first with real captured transcripts)
+**Success Criteria** (what must be TRUE):
+  1. A user can sign in to Epic and see their library, and install, update, repair, move and uninstall a game
+  2. An Epic game launches with the EOS overlay working
+  3. Output parsers pass against real captured legendary transcripts
+  4. The legendary TypeScript and its sidecar registrations are deleted in this phase
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 91 to break down)
+
+### Phase 92: GOG, Amazon and sideloaded runners
+
+**Goal**: GOG, Amazon and sideloaded apps run from Rust over the bundled binaries.
+**Requirements**: STO-02, STO-03
+**Depends on**: Phase 91
+**Research flag**: Needs deeper research (gogdl/comet/nile binary formats, Windows kill and quoting)
+**Success Criteria** (what must be TRUE):
+  1. A user can sign in to GOG, see the library, install, update, repair, move and uninstall a game, launch it, and sync cloud saves
+  2. A user can sign in to Amazon, see the library, and install, launch and uninstall an Amazon game
+  3. A sideloaded app can be added, launched and removed as before
+  4. Discord rich presence is absent by the recorded operator decision, not by accident
+  5. The gog, nile and sideload TypeScript, `storeManagerCommon`, `save_sync` and their sidecar registrations are deleted in this phase
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 92 to break down)
+
+### Phase 93: Download manager
+
+**Goal**: The download queue runs in Rust and keeps every behaviour users rely on.
+**Requirements**: STO-04
+**Depends on**: Phase 92
+**Research flag**: Needs deeper research (regression scenarios from `steam-dm-queue-wedge` and `gog-download-resume-from-zero`)
+**Success Criteria** (what must be TRUE):
+  1. Downloads can be paused and resumed, and a download interrupted by quitting resumes after relaunch without restarting from zero
+  2. A stalled download is detected and recovered without wedging the queue, covering the Steam and GOG regression scenarios
+  3. The finished list and persisted queue state survive restart
+  4. The TypeScript download manager, `easydl` and their sidecar registrations are deleted in this phase
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 93 to break down)
+
+### Phase 94: Humble Bundle and shortcuts
+
+**Goal**: Humble key handling and desktop shortcuts run from Rust.
+**Requirements**: SVC-04, SVC-05
+**Depends on**: Phase 93 (Humble is independent of the managers and may slide earlier, to right after Phase 86)
+**Research flag**: Standard
+**Success Criteria** (what must be TRUE):
+  1. Humble keys sync, can be claimed and redeemed as before, with secrets still read through the keyring dispatch and no new Keychain prompt
+  2. Shortcuts are created and removed as before on macOS, Windows and Linux
+  3. The Humble and shortcut test oracles are ported as Rust tests or recorded fixtures
+  4. The Humble and shortcuts TypeScript and their sidecar registrations are deleted in this phase
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 94 to break down)
+
+### Phase 95: Steam bridge install
+
+**Goal**: Installing a game through the Steam bridge runs in Rust.
+**Requirements**: STM-03
+**Depends on**: Phase 90
+**Research flag**: Needs deeper research (run the bridge spike early; may overlap Phases 91-94 if a second lane exists)
+**Success Criteria** (what must be TRUE):
+  1. A bridge install performs the import scan, shim placement and shared redistributable install and produces the same installed layout as before
+  2. An already bridge-verified title installs and still verifies under the strict bridge-verified criterion
+  3. The bridge install TypeScript and its sidecar registrations are deleted in this phase
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 95 to break down)
+
+### Phase 96: Steam bridge launch and bottle lifecycle
+
+**Goal**: Launching a bridged game and managing its bottle run in Rust.
+**Requirements**: STM-04
+**Depends on**: Phase 95
+**Research flag**: Needs deeper research
+**Success Criteria** (what must be TRUE):
+  1. A bridged game launches, runs and stops cleanly, and its bottle is created, reused and removed without touching a sibling
+  2. Every title previously bridge-verified (HELLO plus clean game Steam-init log) is still verified after the port
+  3. The bridge launch and bottle TypeScript and their sidecar registrations are deleted in this phase
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 96 to break down)
+
+### Phase 97: Steam bridge DRM mode, overlay and known fixes
+
+**Goal**: DRM mode, the in-game overlay and per-game fixes for bridged games run in Rust.
+**Requirements**: STM-05
+**Depends on**: Phase 96
+**Research flag**: Needs deeper research (DRM boundary rules apply)
+**Success Criteria** (what must be TRUE):
+  1. Grim Dawn, Raft and Ranch Simulator launch and stay bridge-verified
+  2. The Shift+Tab Steam overlay opens in a bridged game
+  3. A DRM-mode launch works with the same lsteamclient game-process trace as before
+  4. Bridge known fixes apply per game, and all remaining bridge TypeScript and its registrations are deleted in this phase
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 97 to break down)
+
+### Phase 98: Shell cutover
+
+**Goal**: Links, single-instance, quit and boot run with no sidecar, and dev builds stop prompting for the Keychain.
+**Requirements**: RET-01, RET-04
+**Depends on**: Phases 94, 97
+**Research flag**: Standard
+**Success Criteria** (what must be TRUE):
+  1. A `gamelib://` link opens the right screen in a running app and in a cold start, and a second launch focuses the existing window
+  2. Quitting the app (menu, window close, tray) exits cleanly with no sidecar involved
+  3. A dev build launched with the dev-vault flag does not prompt for the Keychain on every launch, and release builds contain no dev vault code
+  4. `protocol.ts`, `quitHandler`, the TS boot sequence, `processGuards` and all remaining `sidecar/` registrations are replaced or deleted in this phase, with unreachable leftovers (`legacyZoomDataCleanup`, `devEpicCookieSweep`, `nativeImageShim`) deleted
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 98 to break down)
+
+### Phase 99: Sidecar deletion
+
+**Goal**: GameLib ships and updates with no Node runtime, and a gate keeps it that way.
+**Requirements**: RET-02, RET-03
+**Depends on**: Phase 98
+**Research flag**: Needs deeper research (packaged macOS build with sidecar absent, updater-from-previous-release test)
+**Success Criteria** (what must be TRUE):
+  1. The macOS, Windows and Linux packages contain no Node runtime or sidecar binary, and the signed and notarized macOS build passes `codesign --verify --deep`
+  2. Auto-update from the previous release to this build succeeds, and credentials and settings carry over
+  3. `src/backend`, the SEA build, the backend jest project, `smoke:sidecar` and the sidecar CI steps are deleted, and `nodeRetired.test.ts` fails if any of them returns
+  4. `cargo test --workspace` is green on all three OS legs, and the package size delta is recorded
+  5. The CLAUDE.md sidecar convention is replaced by the Rust shutdown contract
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 99 to break down)
