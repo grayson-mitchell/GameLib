@@ -28,7 +28,8 @@ jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (_k: string, d: string) => d })
 }))
 jest.mock('frontend/components/UI', () => ({
-  ToggleSwitch: () => null
+  ToggleSwitch: () => null,
+  InfoBox: () => null
 }))
 jest.mock('@fortawesome/react-fontawesome', () => ({
   FontAwesomeIcon: () => null
@@ -126,12 +127,19 @@ describe('LaunchWithoutSteam', () => {
     expect(verdict).toHaveBeenCalledWith('570')
   })
 
-  test('DRM view: disabled, off, with the badge', () => {
+  test('DRM view: disabled, off, reason behind the (i)', () => {
     mockView = { applies: false, reason: 'steam-drm' }
     mockStored = true
     const el = render()
     expect(toggle(el)).toMatchObject({ disabled: true, value: false })
-    expect(infoBoxes(el)).toEqual(['infoBox'])
+    // The reason is a label-line (i), not a badge row below the toggle.
+    expect((el?.props as Props).className).toBe('toggleWithInfo')
+    expect((parts(el)[1] as ReactElement).props).toMatchObject({
+      text: 'infobox.help',
+      iconOnly: true,
+      children:
+        'Not available: this game uses Steam DRM, which needs the Steam app.'
+    })
   })
 
   test('steam-api view with the setting on shows the yellow warning', () => {

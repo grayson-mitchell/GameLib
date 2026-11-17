@@ -1,13 +1,10 @@
 import { useContext, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ToggleSwitch } from 'frontend/components/UI'
+import { InfoBox, ToggleSwitch } from 'frontend/components/UI'
 import useSetting from 'frontend/hooks/useSetting'
 import SettingsContext from '../SettingsContext'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import {
-  faExclamationTriangle,
-  faLock
-} from '@fortawesome/free-solid-svg-icons'
+import { faExclamationTriangle } from '@fortawesome/free-solid-svg-icons'
 import type { SteamDirectLaunchView } from 'common/types/steam'
 
 type Control =
@@ -61,8 +58,9 @@ const LaunchWithoutSteam = () => {
 
   const title = t('steam.directLaunch.label', 'Launch without Steam')
   if (control.kind === 'disabled-drm') {
+    // Help-icon pattern: the reason sits behind an (i) on the label line, not a row below.
     return (
-      <>
+      <div className="toggleWithInfo">
         <ToggleSwitch
           htmlId="launchWithoutSteam"
           value={false}
@@ -70,14 +68,13 @@ const LaunchWithoutSteam = () => {
           handleChange={() => undefined}
           title={title}
         />
-        <div className="infoBox">
-          <FontAwesomeIcon icon={faLock} />
+        <InfoBox text="infobox.help" iconOnly>
           {t(
             'steam.directLaunch.drmBadge',
             'Not available: this game uses Steam DRM, which needs the Steam app.'
           )}
-        </div>
-      </>
+        </InfoBox>
+      </div>
     )
   }
   return (
