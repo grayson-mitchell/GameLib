@@ -474,6 +474,7 @@ fn keyring_account(slot: &str) -> Result<&'static str, String> {
         "humble-session" => Ok("humble-session"),
         "humble-csrf" => Ok("humble-csrf"),
         "steamgrid-api-key" => Ok("steamgrid-api-key"),
+        "itad-api-key" => Ok("itad-api-key"),
         _ => Err("keyring:unknown-slot".to_string()),
     }
 }
@@ -2995,6 +2996,26 @@ mod tests {
         assert!(keyring_account("SteamGrid-Api-Key").is_err());
     }
 
+    #[test]
+    fn keyring_account_maps_itad_api_key_to_its_own_distinct_account() {
+        // Phase 47 D-05: the optional user-supplied IsThereAnyDeal key. Must resolve to its own
+        // account and never alias any other slot's account.
+        let itad = keyring_account("itad-api-key");
+        assert_eq!(itad, Ok("itad-api-key"));
+        let itad = itad.unwrap();
+        for other in [
+            "steam-refresh-token",
+            "humble-session",
+            "humble-csrf",
+            "steamgrid-api-key",
+        ] {
+            assert_ne!(itad, keyring_account(other).unwrap());
+        }
+        assert!(keyring_account("itad_api_key").is_err());
+        assert!(keyring_account("itad-api-keys").is_err());
+        assert!(keyring_account("ITAD-Api-Key").is_err());
+    }
+
     // ---- keyring slot argument (34.4.1 gap cycle plan 11, D-GAP-01; now the generated Args) ----
     //
     // Separate concern from keyring_account: this is the ONE deliberate default (absent slot
@@ -3129,6 +3150,7 @@ mod tests {
             "humble-session",
             "humble-csrf",
             "steamgrid-api-key",
+            "itad-api-key",
         ] {
             let account = keyring_account(slot).expect("allowlisted slot must resolve");
             assert_ne!(

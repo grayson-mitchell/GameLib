@@ -61,6 +61,7 @@ import type {
   HumbleSecretKey
 } from 'backend/humble/secretStore'
 import type { SteamGridDbSecretStore } from 'backend/steamgrid/secretStore'
+import type { ItadKeyStore } from 'backend/storeSearch/itadSecrets'
 
 /** The exact-match env var this vault gates on. Read ONLY inside `createDevSecretVault()` —
  * grepped at plan-verify time (`grep -rn "GAMELIB_DEV_SECRET_VAULT" src/`) to confirm this is
@@ -84,9 +85,11 @@ type VaultSlot =
   | 'sessionCookie'
   | 'csrfToken'
   | 'steamGridDbApiKey'
+  | 'itadApiKey'
 
 const STEAM_SLOT: VaultSlot = 'steam-refresh-token'
 const STEAMGRID_SLOT: VaultSlot = 'steamGridDbApiKey'
+const ITAD_SLOT: VaultSlot = 'itadApiKey'
 
 /** The write direction logged alongside a slot identifier (guardrail (b)/T-fz5-02). A closed
  * two-member set, never a free string — mirrors `VaultSlot`'s own closed-union discipline one
@@ -267,12 +270,33 @@ class DevVaultSteamGridDbSecretStore implements SteamGridDbSecretStore {
   }
 }
 
-/** The three stores the vault stands in for, built by `createDevSecretVault()` (D-66.3-01: the
+/** The ITAD user-key half of the vault (Phase 47 D-05), bound to the fixed `itadApiKey` slot.
+ * Total-method contract, same as the real `SidecarItadKeyStore` it stands in for. Dev-only
+ * plaintext, behind `GAMELIB_DEV_SECRET_VAULT`, same posture as the SteamGridDB slot (T-47-40). */
+class DevVaultItadKeyStore implements ItadKeyStore {
+  constructor(private readonly path: string) {}
+
+  async getApiKey(): Promise<string | undefined> {
+    const value = readSlot(this.path, ITAD_SLOT)
+    return value ? value : undefined
+  }
+
+  async setApiKey(value: string): Promise<void> {
+    writeSlot(this.path, ITAD_SLOT, value, 'store')
+  }
+
+  async clearApiKey(): Promise<void> {
+    clearSlot(this.path, ITAD_SLOT)
+  }
+}
+
+/** The four stores the vault stands in for, built by `createDevSecretVault()` (D-66.3-01: the
  * boot selects and injects them; nothing is swapped into a module-level registry here). */
 export interface DevSecretVault {
   tokenStore: TokenStore
   humbleSecretStore: HumbleSecretStore
   steamGridDbSecretStore: SteamGridDbSecretStore
+  itadKeyStore: ItadKeyStore
 }
 
 /**
@@ -343,6 +367,7 @@ export function createDevSecretVault(
   return {
     tokenStore: new DevVaultTokenStore(path),
     humbleSecretStore: new DevVaultHumbleSecretStore(path),
-    steamGridDbSecretStore: new DevVaultSteamGridDbSecretStore(path)
+    steamGridDbSecretStore: new DevVaultSteamGridDbSecretStore(path),
+    itadKeyStore: new DevVaultItadKeyStore(path)
   }
 }

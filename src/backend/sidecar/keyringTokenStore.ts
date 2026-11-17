@@ -27,6 +27,8 @@ export const KEYRING_SLOT_STEAM_REFRESH_TOKEN = 'steam-refresh-token'
 export const KEYRING_SLOT_HUMBLE_SESSION = 'humble-session'
 export const KEYRING_SLOT_HUMBLE_CSRF = 'humble-csrf'
 export const KEYRING_SLOT_STEAMGRID_API_KEY = 'steamgrid-api-key'
+/** Phase 47 D-05: the optional user-supplied IsThereAnyDeal API key. */
+export const KEYRING_SLOT_ITAD_API_KEY = 'itad-api-key'
 
 /**
  * Bounded negative-result memo window for `getToken()` (34.5 gap cycle 3 plan 25, closing
