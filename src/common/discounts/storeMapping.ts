@@ -1,24 +1,26 @@
 import type { Runner } from '../types'
 
 /**
- * CheapShark numeric `storeID` -> GameLib `Runner` mapping (Phase 20,
- * RESEARCH Open Question 1). CheapShark identifies stores by a small
- * numeric ID string in its `/games` and `/stores` responses; GameLib
- * identifies stores by the `Runner` union. This is the single source of
- * truth for that mapping — do not restring store names anywhere else.
+ * IsThereAnyDeal numeric shop id (as a string) -> GameLib `Runner` mapping
+ * (Phase 47). ITAD identifies shops by a numeric id in its deals responses;
+ * GameLib identifies stores by the `Runner` union. This is the single source
+ * of truth for that mapping — do not restring store names anywhere else.
  *
- * Amazon (`'4'`) is mapped for forward-compat but is `isActive:0` on
- * CheapShark today (RESEARCH Pitfall 2) — it will simply never match at
- * runtime. This does not affect the "Owned on Amazon" badge, which reads
- * GameLib's own `amazon.library`, not this mapping.
+ * The ids are copied from `src/backend/storeSearch/itadCoverage.ts`
+ * (ITAD_SHOP_ID_STEAM / _GOG / _EPIC, measured in 47-ITAD-COVERAGE.json) as
+ * literals: src/common only imports backend/ as `import type`, so the
+ * renderer bundle cannot pull a backend module. storeMapping.test.ts asserts
+ * each literal equals the matching constant so they cannot drift.
+ *
+ * Amazon has no entry: ITAD does not track Amazon. The "Owned on Amazon"
+ * badge reads GameLib's own `amazon.library` and is unaffected.
  */
-export const CHEAPSHARK_STORE_TO_RUNNER: Record<string, Runner> = {
-  '1': 'steam',
-  '7': 'gog',
-  '25': 'legendary',
-  '4': 'nile'
+export const ITAD_SHOP_TO_RUNNER: Record<string, Runner> = {
+  '61': 'steam',
+  '35': 'gog',
+  '16': 'legendary'
 }
 
 export function resolveRunner(storeId: string): Runner | undefined {
-  return CHEAPSHARK_STORE_TO_RUNNER[storeId]
+  return ITAD_SHOP_TO_RUNNER[storeId]
 }

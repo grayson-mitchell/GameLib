@@ -1,43 +1,72 @@
 /**
- * Unit tests for the CheapShark storeID -> Runner mapping constant
- * (common/discounts/storeMapping.ts — Phase 20, RESEARCH Open Question 1).
+ * Unit tests for the ITAD shop id -> Runner mapping constant
+ * (common/discounts/storeMapping.ts, Phase 47).
  *
- * Asserts each of the four confirmed mappings by value so the constant
- * cannot silently drift.
+ * The literals in common/ are asserted equal to the measured constants in
+ * itadCoverage.ts so the two cannot drift.
  */
 
 import {
-  CHEAPSHARK_STORE_TO_RUNNER,
+  ITAD_SHOP_TO_RUNNER,
   resolveRunner
 } from 'common/discounts/storeMapping'
+import {
+  ITAD_SHOP_ID_EPIC,
+  ITAD_SHOP_ID_GOG,
+  ITAD_SHOP_ID_STEAM
+} from 'backend/storeSearch/itadCoverage'
+import {
+  STORE_SEARCH_ERROR_MARKER,
+  storeSearchErrorCode
+} from 'common/types/storeSearch'
 
-describe('CHEAPSHARK_STORE_TO_RUNNER', () => {
-  it('maps storeID 1 to steam', () => {
-    expect(CHEAPSHARK_STORE_TO_RUNNER['1']).toBe('steam')
+describe('ITAD_SHOP_TO_RUNNER', () => {
+  it('keys the measured shop ids', () => {
+    expect(ITAD_SHOP_TO_RUNNER[ITAD_SHOP_ID_STEAM]).toBe('steam')
+    expect(ITAD_SHOP_TO_RUNNER[ITAD_SHOP_ID_GOG]).toBe('gog')
+    expect(ITAD_SHOP_TO_RUNNER[ITAD_SHOP_ID_EPIC]).toBe('legendary')
   })
 
-  it('maps storeID 7 to gog', () => {
-    expect(CHEAPSHARK_STORE_TO_RUNNER['7']).toBe('gog')
-  })
-
-  it('maps storeID 25 to legendary (Epic)', () => {
-    expect(CHEAPSHARK_STORE_TO_RUNNER['25']).toBe('legendary')
-  })
-
-  it('maps storeID 4 to nile (Amazon, inactive on CheapShark today)', () => {
-    expect(CHEAPSHARK_STORE_TO_RUNNER['4']).toBe('nile')
+  it('has exactly the three mapped shops (no Amazon)', () => {
+    expect(Object.keys(ITAD_SHOP_TO_RUNNER).sort()).toEqual(
+      [ITAD_SHOP_ID_STEAM, ITAD_SHOP_ID_GOG, ITAD_SHOP_ID_EPIC].sort()
+    )
   })
 })
 
 describe('resolveRunner', () => {
-  it('resolves a known storeID to its Runner', () => {
-    expect(resolveRunner('1')).toBe('steam')
-    expect(resolveRunner('7')).toBe('gog')
-    expect(resolveRunner('25')).toBe('legendary')
-    expect(resolveRunner('4')).toBe('nile')
+  it('resolves a known shop id to its Runner', () => {
+    expect(resolveRunner(ITAD_SHOP_ID_STEAM)).toBe('steam')
+    expect(resolveRunner(ITAD_SHOP_ID_GOG)).toBe('gog')
+    expect(resolveRunner(ITAD_SHOP_ID_EPIC)).toBe('legendary')
   })
 
-  it('returns undefined for an unknown storeID', () => {
+  it('returns undefined for Amazon and unknown ids', () => {
+    expect(resolveRunner('4')).toBeUndefined()
     expect(resolveRunner('999')).toBeUndefined()
+  })
+})
+
+describe('storeSearchErrorCode', () => {
+  it('reads the marker from an Error message', () => {
+    expect(
+      storeSearchErrorCode(new Error('[storeSearch:rateLimited] prices 429'))
+    ).toBe('rateLimited')
+    expect(
+      storeSearchErrorCode(
+        new Error(`${STORE_SEARCH_ERROR_MARKER.notConfigured} search none`)
+      )
+    ).toBe('notConfigured')
+  })
+
+  it('reads the marker from a string rejection (as Tauri delivers)', () => {
+    expect(
+      storeSearchErrorCode('Error: [storeSearch:notConfigured] search none')
+    ).toBe('notConfigured')
+  })
+
+  it('falls back to provider', () => {
+    expect(storeSearchErrorCode(new Error('boom'))).toBe('provider')
+    expect(storeSearchErrorCode(undefined)).toBe('provider')
   })
 })
