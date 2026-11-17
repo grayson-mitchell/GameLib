@@ -2,7 +2,7 @@
  * Curated enrichment-channel registration (Phase 34.2 Plan 06, D-04/D-07/
  * D-10, REQ-34.2-04/REQ-34.2-11/REQ-34.2-12/REQ-34.2-14).
  *
- * Registers the 17 enrichment channels the game-details page and store
+ * Registers the 19 enrichment channels the game-details page and store
  * search container depend on, onto platformApi's own `ipcMain` recorder,
  * importing the REAL underlying bodies plans 34.2-01/34.2-03 already
  * extracted or wired unchanged (mirrors `gameDetailsFlowRegistration.ts`'s
@@ -123,6 +123,11 @@
  * rejected promise, which is the existing Electron contract for every one
  * of these five channels.
  *
+ * `itad.*` (2) — Phase 47 D-05/D-06: `itad.getKeyStatus` returns `{ hasKey, rejected }` booleans
+ * only, `itad.setApiKey` saves or clears the optional user key through `deps.itadSecrets`. The
+ * key value never leaves the sidecar; the adapter (`storeSearch/itad.ts`) reads the same owner
+ * through `deps` for its user > env > baked key precedence.
+ *
  * `steamgriddb.*` (5) / `getGogDiscounts` (1) — Phase 34.6 Plan 09,
  * REQ-34.6-02/REQ-34.6-04/REQ-34.6-08/REQ-34.6-13, Amendment A-03:
  *
@@ -176,6 +181,7 @@ import {
 import { getRunsForMeMap, setRunsForMeByUser } from '../runsForMe'
 import { removeRecentGame } from '../recent_games/recent_games'
 import type { SteamGridDbSecretStore } from '../steamgrid/secretStore'
+import type { ItadSecrets } from '../storeSearch/itadSecrets'
 import * as SteamGridDB from '../steamgrid/utils'
 import { getGogDiscounts } from '../discounts/fetchDiscounts'
 import { logError, logWarning, LogPrefix } from '../logger'
@@ -216,6 +222,8 @@ export interface EnrichmentFlowDeps
   >
   /** The boot-built SteamGridDB API-key owner (D-66.3-17); the key never touches GlobalConfig here. */
   steamGridSecrets: SteamGridDbSecretStore
+  /** The optional ITAD user-key owner (Phase 47 D-05); the key never leaves the sidecar. */
+  itadSecrets: ItadSecrets
 }
 import type { CatalogLocaleSettings } from 'common/types/discounts'
 import type { OnlineMonitor } from '../online_monitor'
@@ -229,7 +237,7 @@ const RUNS_FOR_ME_RUNNERS: readonly string[] = Object.freeze([
 ] as const)
 
 /**
- * Registers the 17 enrichment channels. Called once from `handlers.ts`
+ * Registers the 19 enrichment channels. Called once from `handlers.ts`
  * — this module owns no side effects at import time beyond the imports
  * above; the caller decides when registration onto the handler registry
  * happens.
@@ -407,6 +415,30 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
         return
       }
       await deps.steamGridSecrets.setApiKey(key)
+    }
+  )
+
+  // ── itad.* (2) — the optional user key (Phase 47 D-05, D-06). The renderer gets two booleans,
+  // never the key (T-47-41); the adapter reads the same owner through `deps` for key precedence.
+
+  deps.ipc.handle('itad.getKeyStatus', async () => ({
+    hasKey: !!(await deps.itadSecrets.getApiKey()),
+    rejected: deps.itadSecrets.isRejected()
+  }))
+
+  deps.ipc.handle(
+    'itad.setApiKey',
+    async (_event: unknown, ...args: unknown[]) => {
+      // Same WR-01 boundary guard as steamgriddb.setApiKey: a cast is not a check (T-47-42).
+      const key = args[0]
+      if (typeof key !== 'string') {
+        logWarning(
+          'itad.setApiKey: ignored a non-string key',
+          LogPrefix.Backend
+        )
+        return
+      }
+      await deps.itadSecrets.setApiKey(key)
     }
   )
 

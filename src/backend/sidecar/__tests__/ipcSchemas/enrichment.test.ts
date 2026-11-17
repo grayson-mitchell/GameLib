@@ -80,6 +80,11 @@ const table: FixtureTable<typeof enrichmentAsyncArgs> = {
     valid: [[['220', '400']], [[]]],
     invalid: [[['abc']], [[220]], [Array(5001).fill('1')]]
   },
+  'itad.getKeyStatus': noArgs,
+  'itad.setApiKey': {
+    valid: [['k'], ['']],
+    invalid: [[], [1], ['x'.repeat(257)]]
+  },
   'steamgriddb.hasApiKey': noArgs,
   'steamgriddb.setApiKey': {
     valid: [['abcdef0123'], ['']],
@@ -100,9 +105,9 @@ const table: FixtureTable<typeof enrichmentAsyncArgs> = {
 }
 
 describe('enrichment channel schemas', () => {
-  it('has a fixture for every key (17 total)', () => {
+  it('has a fixture for every key (19 total)', () => {
     expectFixtureCoverage(enrichmentAsyncArgs, table)
-    expect(Object.keys(enrichmentAsyncArgs).length).toBe(17)
+    expect(Object.keys(enrichmentAsyncArgs).length).toBe(19)
   })
   runFixtureTable(enrichmentAsyncArgs, table)
 

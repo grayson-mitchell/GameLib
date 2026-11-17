@@ -342,6 +342,7 @@ import { UNPORTED_CHANNEL_MARKER } from 'common/types/sidecarTransport'
 import type { GameInfo } from 'common/types'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
 import { createTestOnlineMonitor } from 'backend/testUtils/testOnlineMonitor'
+import { createItadSecrets } from 'backend/storeSearch/itadSecrets'
 
 // ── CR-03 / WR-01 containment guard — MUST run before the first
 // beforeEach's destructive rmSync/configStore.set calls (jest runs
@@ -426,7 +427,27 @@ function freshRegistry(): void {
 
 // The monitor the boot hands out: the two members this suite drives are the jest.fns above, read
 // at call time so a per-test re-arm is honoured.
-const boot = () =>
+/**
+ * A real ITAD user-key owner over an in-memory store. The boot's own owner reads the OS keyring
+ * through a Rust peer this suite does not have, which would hang every search; every boot here
+ * hands it this one instead.
+ */
+function inMemoryItadSecrets() {
+  let stored: string | undefined
+  return createItadSecrets({
+    store: {
+      getApiKey: async () => stored,
+      setApiKey: async (value) => {
+        stored = value
+      },
+      clearApiKey: async () => {
+        stored = undefined
+      }
+    }
+  })
+}
+
+const boot = (itadSecrets = inMemoryItadSecrets()) =>
   bootFresh({
     reuseRegistry: true,
     // The anticheat data path is ctx.paths.appFolder (66.4-14): the shimmed app folder. The known-fix
@@ -437,6 +458,7 @@ const boot = () =>
     },
     services: {
       storeRoot: testRoot,
+      itadSecrets,
       onlineMonitor: {
         ...createTestOnlineMonitor(),
         isOnline: () => mockedIsOnline() as boolean,
@@ -1140,6 +1162,72 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
       const response = await waitForResponse(frames, 'gai-4')
       expect(response?.ok).toBe(true)
       expect(response?.result).toBeNull()
+    })
+  })
+
+  // ── Phase 47 D-05/D-06 (T-47-41/42): itad.getKeyStatus / itad.setApiKey go through the boot's
+  // one deps.itadSecrets owner and never return or log the key.
+  describe('Phase 47 itad.getKeyStatus + itad.setApiKey (invoke)', () => {
+    const SEEDED = 'itad-seeded-test-value'
+
+    it('reports hasKey false and rejected false with no key set', async () => {
+      const { input, frames } = boot()
+      writeInvoke(input, 'itad-status-0', 'itad.getKeyStatus', [])
+      await flush()
+      expect(findResponse(frames, 'itad-status-0')?.result).toEqual({
+        hasKey: false,
+        rejected: false
+      })
+    })
+
+    it('setApiKey then getKeyStatus reports hasKey true, and the frame never carries the key', async () => {
+      const { input, frames } = boot()
+      writeInvoke(input, 'itad-set-1', 'itad.setApiKey', [SEEDED])
+      await flush()
+      expect(findResponse(frames, 'itad-set-1')?.ok).toBe(true)
+
+      writeInvoke(input, 'itad-status-1', 'itad.getKeyStatus', [])
+      await flush()
+      const status = findResponse(frames, 'itad-status-1')
+      expect(status?.result).toEqual({ hasKey: true, rejected: false })
+      expect(JSON.stringify(status)).not.toContain(SEEDED)
+    })
+
+    it('reports rejected true after the owner marks the key rejected, and clearing resets it', async () => {
+      const owner = inMemoryItadSecrets()
+      const { input, frames } = boot(owner)
+      writeInvoke(input, 'itad-set-2', 'itad.setApiKey', [SEEDED])
+      await flush()
+      owner.markRejected()
+      writeInvoke(input, 'itad-status-2', 'itad.getKeyStatus', [])
+      await flush()
+      expect(findResponse(frames, 'itad-status-2')?.result).toEqual({
+        hasKey: true,
+        rejected: true
+      })
+
+      writeInvoke(input, 'itad-clear', 'itad.setApiKey', [''])
+      await flush()
+      writeInvoke(input, 'itad-status-3', 'itad.getKeyStatus', [])
+      await flush()
+      expect(findResponse(frames, 'itad-status-3')?.result).toEqual({
+        hasKey: false,
+        rejected: false
+      })
+    })
+
+    it('ignores a non-string key: the call is rejected and the status is unchanged', async () => {
+      const { input, frames } = boot()
+      writeInvoke(input, 'itad-bad', 'itad.setApiKey', [42])
+      await flush()
+      expect(findResponse(frames, 'itad-bad')?.ok).toBe(false)
+
+      writeInvoke(input, 'itad-status-4', 'itad.getKeyStatus', [])
+      await flush()
+      expect(findResponse(frames, 'itad-status-4')?.result).toEqual({
+        hasKey: false,
+        rejected: false
+      })
     })
   })
 

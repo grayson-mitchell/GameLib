@@ -291,6 +291,7 @@ exports	src/preload/api/storeEmbed.ts	StoreEmbed.storeEmbedShow
 exports	src/preload/api/storeEmbed.ts	StoreEmbed.storeEmbedTakeNavEvents
 exports	src/preload/api/storeSearch.ts	StoreSearch.getItadSteamGids
 exports	src/preload/api/storeSearch.ts	StoreSearch.getStoreSearchDeals
+exports	src/preload/api/storeSearch.ts	StoreSearch.itad
 exports	src/preload/api/storeSearch.ts	StoreSearch.searchStores
 exports	src/preload/api/wine.ts	Wine.downloadRuntime
 exports	src/preload/api/wine.ts	Wine.handleProgressOfWineManager

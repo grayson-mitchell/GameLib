@@ -608,6 +608,8 @@ pub(crate) const RENDERER_CHANNELS: &[&str] = &[
     "isRuntimeInstalled",
     "isSteamBottleEligible",
     "isSteamBottleProvisioned",
+    "itad.getKeyStatus",
+    "itad.setApiKey",
     "kill",
     "launch",
     "listEngineOptions",

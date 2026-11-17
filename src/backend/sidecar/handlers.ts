@@ -298,6 +298,7 @@ export function registerHandlers(deps: {
     gogRuntime: deps.services.gogRuntime,
     paths: deps.services.paths,
     steamGridSecrets: deps.services.steamGridSecrets,
+    itadSecrets: deps.services.itadSecrets,
     sendFrontendMessage: deps.services.host.sendFrontendMessage
   })
   // Phase 34.3 Plans 01+02 (REQ-34.3-01/-02/-13): the shell/link-opener and

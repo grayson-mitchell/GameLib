@@ -303,7 +303,10 @@ const ENRICHMENT_CHANNELS = [
   'getGamelibFixStatus',
   // Quick 261029-mkz (d601ff705): +2 invoke, the 16th/17th enrichment channels
   'getRunsForMeMap',
-  'setRunsForMe'
+  'setRunsForMe',
+  // Phase 47-12: +2 invoke, the 18th/19th enrichment channels (optional ITAD user key)
+  'itad.getKeyStatus',
+  'itad.setApiKey'
 ]
 
 const ALL_CHANNELS = [
@@ -612,7 +615,7 @@ describe('completeness — all 66 channels are registered with the right kind, a
     restoreCanonicalRegistrations()
   })
 
-  it('exactly 70 channels are handle-kind and exactly 2 are listen-kind (Quick 261029-mkz, d601ff705: 68/2 -> 70/2, +2 invoke getRunsForMeMap/setRunsForMe, +0 send; Quick 261027-ch9, a2385f6bf: 67/2 -> 68/2, +1 invoke getGamelibFixStatus, +0 send; Quick 261012-ca6, 2026-10-12: 65/4 -> 67/2, +2 invoke -2 send, kind-swapped not added, total channels unchanged; Phase 34.6 Plan 10: 59/5 -> 62/5, +3 invoke +0 send; Phase 45 Plan 01, 2026-10-10: 62/5 -> 65/5, +3 invoke winetricksApply/winetricksQueueState/winetricksCancelRemaining +0 send; Phase 45 Plan 02, 2026-10-10: 65/5 -> 65/4, +0 invoke -1 send — winetricksInstall retired outright, not kind-swapped)', () => {
+  it('exactly 72 channels are handle-kind and exactly 2 are listen-kind (Phase 47 Plan 12: 70/2 -> 72/2, +2 invoke itad.getKeyStatus/itad.setApiKey; Quick 261029-mkz, d601ff705: 68/2 -> 70/2, +2 invoke getRunsForMeMap/setRunsForMe, +0 send; Quick 261027-ch9, a2385f6bf: 67/2 -> 68/2, +1 invoke getGamelibFixStatus, +0 send; Quick 261012-ca6, 2026-10-12: 65/4 -> 67/2, +2 invoke -2 send, kind-swapped not added, total channels unchanged; Phase 34.6 Plan 10: 59/5 -> 62/5, +3 invoke +0 send; Phase 45 Plan 01, 2026-10-10: 62/5 -> 65/5, +3 invoke winetricksApply/winetricksQueueState/winetricksCancelRemaining +0 send; Phase 45 Plan 02, 2026-10-10: 65/5 -> 65/4, +0 invoke -1 send — winetricksInstall retired outright, not kind-swapped)', () => {
     const handleChannels = [...handlerRegistry.keys()]
     const listenChannels = [...listenerRegistry.entries()]
       .filter(([, listeners]) => listeners.length > 0)
@@ -630,7 +633,8 @@ describe('completeness — all 66 channels are registered with the right kind, a
     // invoke, 4-2=2 send; the declared total of 66 is unchanged.
     // Quick 261029-mkz (d601ff705): getRunsForMeMap/setRunsForMe are invoke-kind -- 68+2=70
     // invoke, 2+0=2 send.
-    expect(handleChannels.length).toBe(70)
+    // Phase 47 Plan 12: itad.getKeyStatus/itad.setApiKey are invoke-kind -- 70+2=72 invoke, 2+0=2 send.
+    expect(handleChannels.length).toBe(72)
     expect(listenChannels.length).toBe(2)
   })
 
@@ -661,12 +665,12 @@ describe('completeness — all 66 channels are registered with the right kind, a
     }
   )
 
-  it('per-module declared counts are exactly 11 / 12 / 7 / 14 / 8 / 17, totalling 69 (Quick 261029-mkz, d601ff705: enrichment 15 -> 17; Quick 261027-ch9, a2385f6bf: enrichment 14 -> 15; Phase 34.6 Plan 10: registerRunnerMiscFlows grew 11 -> 14; Phase 45 Plan 02 retired winetricksInstall from registerWineToolsFlows, 13 -> 12)', () => {
+  it('per-module declared counts are exactly 11 / 12 / 7 / 14 / 8 / 19, totalling 71 (Phase 47 Plan 12: enrichment 17 -> 19; Quick 261029-mkz, d601ff705: enrichment 15 -> 17; Quick 261027-ch9, a2385f6bf: enrichment 14 -> 15; Phase 34.6 Plan 10: registerRunnerMiscFlows grew 11 -> 14; Phase 45 Plan 02 retired winetricksInstall from registerWineToolsFlows, 13 -> 12)', () => {
     const counts = MODULES.map((m) => m.declaredChannels.length)
     // Measured (jest failure ACTUAL) and independently re-derived (64 prior total + 3 new = 67,
-    // then -1 for winetricksInstall's retirement = 66, then +1 getGamelibFixStatus = 67, then +2 getRunsForMeMap/setRunsForMe = 69) — agree.
-    expect(counts).toEqual([11, 12, 7, 14, 8, 17])
-    expect(counts.reduce((sum, n) => sum + n, 0)).toBe(69)
+    // then -1 for winetricksInstall's retirement = 66, then +1 getGamelibFixStatus = 67, then +2 getRunsForMeMap/setRunsForMe = 69, then +2 itad.getKeyStatus/itad.setApiKey = 71) — agree.
+    expect(counts).toEqual([11, 12, 7, 14, 8, 19])
+    expect(counts.reduce((sum, n) => sum + n, 0)).toBe(71)
   })
 
   afterAll(() => {

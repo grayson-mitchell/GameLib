@@ -74,6 +74,9 @@ export const enrichmentAsyncArgs = {
   getItadSteamGids: z.tuple([
     z.array(z.string().regex(/^\d{1,10}$/)).max(5000)
   ]),
+  // Phase 47 D-05: the optional ITAD user key. Status is booleans only; the key is bounded.
+  'itad.getKeyStatus': noArgs,
+  'itad.setApiKey': z.tuple([z.string().max(256)]),
   'steamgriddb.hasApiKey': noArgs,
   // T-67-50: bounded; a rejection never echoes the key (value-free rejection log).
   'steamgriddb.setApiKey': z.tuple([z.string().max(256)]),
@@ -97,6 +100,8 @@ interface EnrichmentAsyncReturns {
   searchStores: Promise<StoreSearchResponse>
   getStoreSearchDeals: Promise<StoreSearchDeal[]>
   getItadSteamGids: Promise<Record<string, string>>
+  'itad.getKeyStatus': Promise<{ hasKey: boolean; rejected: boolean }>
+  'itad.setApiKey': Promise<void>
   'steamgriddb.hasApiKey': Promise<boolean>
   'steamgriddb.setApiKey': Promise<void>
   'steamgriddb.searchGame': Promise<Array<{ id: number; name: string }>>
