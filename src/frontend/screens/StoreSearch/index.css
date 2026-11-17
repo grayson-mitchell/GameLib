@@ -22,6 +22,33 @@
   margin-bottom: var(--space-md);
 }
 
+/* PRICE-01 region caption: always visible under the search box. */
+.storeSearchScreen__region {
+  margin: var(--space-2xs) 0 var(--space-sm);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* D-13 region-fallback note: informational, same box metrics as the error
+   banner, status-info accent instead of status-danger. */
+.storeSearchScreen__regionNote {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  background: rgba(44, 234, 199, 0.1);
+  border-left: 3px solid var(--status-info);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--space-3xs);
+  margin-bottom: var(--space-sm);
+  color: var(--text-default);
+  font-size: var(--text-md);
+}
+
+.storeSearchScreen__regionNote > svg {
+  color: var(--status-info);
+}
+
 .storeSearchScreen__results {
   display: flex;
   flex-direction: column;

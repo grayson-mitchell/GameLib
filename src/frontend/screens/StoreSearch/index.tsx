@@ -1,7 +1,10 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faMagnifyingGlassDollar } from '@fortawesome/free-solid-svg-icons'
+import {
+  faCircleInfo,
+  faMagnifyingGlassDollar
+} from '@fortawesome/free-solid-svg-icons'
 
 import SearchBar from 'frontend/components/UI/SearchBar'
 import {
@@ -12,11 +15,18 @@ import {
   useSteamAccount
 } from 'frontend/state/accountHooks'
 import { selectKeysWaiting } from 'common/humble/viewFilters'
+import { toShippedLanguage } from 'common/languages'
 import {
   resolveStoreSearchBadges,
   type StoreOwnershipMatch
 } from 'common/discounts/badges'
+import {
+  getLocaleSettings,
+  getStoredRegionOverride
+} from 'frontend/screens/Discounts/helpers'
 import { useDebouncedStoreSearch } from './hooks/useDebouncedStoreSearch'
+import { useOwnedSteamGids } from './hooks/useOwnedSteamGids'
+import { formatCountryName } from './helpers'
 import StoreSearchRow from './components/StoreSearchRow'
 import './index.css'
 
@@ -33,14 +43,34 @@ import './index.css'
  * fuzzy-false-positive risk source).
  */
 export default function StoreSearch() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  // PRICE-01 / D3: the same country derivation the Deals screen uses (its
+  // stored region override wins, else the language-derived country).
+  // `toShippedLanguage` because i18n.language is a BCP-47 tag while
+  // COUNTRY_CURRENCY_MAP is keyed by the shipped code (see Discounts/index.tsx).
+  const countryCode = useMemo(
+    () =>
+      getLocaleSettings(
+        toShippedLanguage(i18n.language),
+        getStoredRegionOverride()
+      ).countryCode,
+    [i18n.language]
+  )
   const epic = useEpicAccount()
   const gog = useGogAccount()
   const amazon = useAmazonAccount()
   const steam = useSteamAccount()
   const humble = useHumbleAccount()
-  const { query, setQuery, results, status, loading, retry } =
-    useDebouncedStoreSearch()
+  const {
+    query,
+    setQuery,
+    results,
+    status,
+    loading,
+    retry,
+    pricedCountry,
+    errorCode
+  } = useDebouncedStoreSearch(countryCode)
 
   // Same waiting-key derivation Discounts/index.tsx uses before calling its
   // sibling resolver — a redeemed/expired key must not present as
@@ -49,6 +79,11 @@ export default function StoreSearch() {
     () => selectKeysWaiting(humble.keys ?? []),
     [humble.keys]
   )
+
+  // PRICE-02: ITAD result ids are gids; this maps them back to the user's
+  // Steam appids so the resolver's exact-appid arm still fires. Empty on
+  // lookup failure (no Steam badge is ever shown wrongly).
+  const gidToAppId = useOwnedSteamGids(steam.library, keysWaiting)
 
   // D-05/STORESEARCH-05/06: resolved ONCE per results array via useMemo —
   // StoreSearchRow only ever renders the resolved literal (T-20-03).
@@ -61,7 +96,7 @@ export default function StoreSearch() {
       map.set(
         result.gameId,
         resolveStoreSearchBadges(
-          result,
+          { ...result, steamAppId: gidToAppId.get(result.gameId) },
           {
             steam: steam.library,
             gog: gog.library,
@@ -79,7 +114,8 @@ export default function StoreSearch() {
     gog.library,
     epic.library,
     amazon.library,
-    keysWaiting
+    keysWaiting,
+    gidToAppId
   ])
 
   return (
@@ -97,21 +133,57 @@ export default function StoreSearch() {
         />
       </div>
 
+      <p className="storeSearchScreen__region">
+        {t('storeSearch.region', 'Showing prices for {{country}}.', {
+          country: formatCountryName(countryCode, i18n.language)
+        })}
+      </p>
+
+      {status === 'results' &&
+        pricedCountry &&
+        pricedCountry !== countryCode && (
+          <div className="storeSearchScreen__regionNote" role="note">
+            <FontAwesomeIcon icon={faCircleInfo} aria-hidden />
+            <span>
+              {t(
+                'storeSearch.regionFallback',
+                "Prices aren't available for {{country}} yet, so these are shown for {{pricedCountry}}.",
+                {
+                  country: formatCountryName(countryCode, i18n.language),
+                  pricedCountry: formatCountryName(pricedCountry, i18n.language)
+                }
+              )}
+            </span>
+          </div>
+        )}
+
       {status === 'error' && (
-        <div className="storeSearchScreen__errorBanner">
+        <div className="storeSearchScreen__errorBanner" role="alert">
           <span className="storeSearchScreen__errorMessage">
-            {t(
-              'storeSearch.error.provider',
-              "Couldn't reach the price provider."
-            )}
+            {errorCode === 'rateLimited'
+              ? t(
+                  'storeSearch.error.rateLimited',
+                  'Price lookups are busy right now. Try again in a minute.'
+                )
+              : errorCode === 'notConfigured'
+                ? t(
+                    'storeSearch.error.notConfigured',
+                    "Price lookups aren't set up in this build. Add an IsThereAnyDeal API key in Settings > Advanced."
+                  )
+                : t(
+                    'storeSearch.error.provider',
+                    "Couldn't reach the price provider."
+                  )}
           </span>
-          <button
-            type="button"
-            className="storeSearchScreen__retryButton"
-            onClick={retry}
-          >
-            {t('storeSearch.error.retry', 'Retry search')}
-          </button>
+          {errorCode !== 'notConfigured' && (
+            <button
+              type="button"
+              className="storeSearchScreen__retryButton"
+              onClick={retry}
+            >
+              {t('storeSearch.error.retry', 'Retry search')}
+            </button>
+          )}
         </div>
       )}
 

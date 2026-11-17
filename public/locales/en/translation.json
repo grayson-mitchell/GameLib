@@ -1191,13 +1191,17 @@
             "ownedOnOverflow": "Owned on {{stores}} +{{count}} more"
         },
         "error": {
+            "notConfigured": "Price lookups aren't set up in this build. Add an IsThereAnyDeal API key in Settings > Advanced.",
             "provider": "Couldn't reach the price provider.",
+            "rateLimited": "Price lookups are busy right now. Try again in a minute.",
             "retry": "Retry search"
         },
         "loadingStores": "Loading store prices…",
         "noResults": "No results for \"{{query}}\". Try a different spelling or a shorter title.",
         "placeholder": "Search for a game title…",
         "prompt": "Search a title to compare prices across every store — GameLib will tell you if you already own it.",
+        "region": "Showing prices for {{country}}.",
+        "regionFallback": "Prices aren't available for {{country}} yet, so these are shown for {{pricedCountry}}.",
         "sidebar": "Store Search",
         "title": "Store Search"
     },

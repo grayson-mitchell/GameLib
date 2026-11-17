@@ -42,6 +42,7 @@ jest.mock('../index.css', () => ({}))
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
+    i18n: { language: 'en' },
     t: (
       _key: string,
       defaultValue: string,
@@ -179,6 +180,7 @@ const mockApi = {
   searchStores: jest.fn(),
   logError: jest.fn(),
   getStoreSearchDeals: jest.fn(),
+  getItadSteamGids: jest.fn(),
   openExternalUrl: jest.fn()
 }
 // Imported after the mocks above (textual order — this project's ts-jest
@@ -303,6 +305,18 @@ function makeResult(
   }
 }
 
+/** Concatenated string children of an element subtree (no DOM available). */
+function allText(node: ReactNode): string {
+  return collectElements(node, [])
+    .flatMap((el) => {
+      const c = el.props?.children
+      return (Array.isArray(c) ? c : [c]).filter(
+        (x): x is string => typeof x === 'string'
+      )
+    })
+    .join('|')
+}
+
 /** The mocked SearchBar is referenced (never invoked) via JSX, so it's
  * found the same way any other element is — by its props shape, since its
  * `type` is a function reference, not a string. */
@@ -340,6 +354,8 @@ describe('StoreSearch screen container', () => {
     seedStores()
     mockApi.searchStores.mockReset()
     mockApi.logError.mockReset()
+    mockApi.getItadSteamGids.mockReset()
+    mockApi.getItadSteamGids.mockResolvedValue({})
   })
 
   afterEach(() => {
@@ -430,6 +446,8 @@ describe('StoreSearch screen container', () => {
       humble: { keys: [] }
     }
     seedStores()
+    // PRICE-02: ownership is joined through ITAD's gid -> appid mapping.
+    mockApi.getItadSteamGids.mockResolvedValue({ '400': 'game-1' })
     mockApi.searchStores.mockResolvedValue({
       results: [
         makeResult({ gameId: 'game-1', title: 'Portal', steamAppId: '400' })
@@ -457,5 +475,187 @@ describe('StoreSearch screen container', () => {
     )
     expect(source).toContain('useSteamAccount()')
     expect(source).not.toMatch(/sideloadedLibrary/)
+  })
+
+  it('always shows the region caption naming the country', () => {
+    mount()
+    const tree = rerender()
+
+    const caption = findByClassNamePart(tree, 'storeSearchScreen__region')
+    expect(caption).toBeDefined()
+    expect(caption?.props.children).toBe('Showing prices for United States.')
+  })
+
+  it('sends the derived country with the search', async () => {
+    mockApi.searchStores.mockResolvedValue({ results: [], pricedCountry: 'US' })
+    mount()
+
+    await search('portal')
+
+    expect(mockApi.searchStores).toHaveBeenCalledWith('portal', 'US')
+  })
+
+  it('renders the region-fallback note only when pricedCountry differs from the requested country', async () => {
+    mockApi.searchStores.mockResolvedValue({
+      results: [makeResult()],
+      pricedCountry: 'US'
+    })
+    mount()
+    let tree = await search('portal')
+    expect(
+      findByClassNamePart(tree, 'storeSearchScreen__regionNote')
+    ).toBeUndefined()
+
+    mockApi.searchStores.mockResolvedValue({
+      results: [makeResult()],
+      pricedCountry: 'CA'
+    })
+    mount()
+    tree = await search('portal')
+    const note = findByClassNamePart(tree, 'storeSearchScreen__regionNote')
+    expect(note).toBeDefined()
+    expect(note?.props.role).toBe('note')
+    expect(allText(note)).toContain(
+      "Prices aren't available for United States yet, so these are shown for Canada."
+    )
+  })
+
+  it('a rateLimited failure shows the busy copy with Retry; the SearchBar stays enabled', async () => {
+    mockApi.searchStores.mockRejectedValue(
+      new Error('x [storeSearch:rateLimited]')
+    )
+    mount()
+
+    const tree = await search('portal')
+
+    const banner = findByClassNamePart(tree, 'storeSearchScreen__errorBanner')
+    expect(banner?.props.role).toBe('alert')
+    expect(allText(banner)).toContain(
+      'Price lookups are busy right now. Try again in a minute.'
+    )
+    expect(
+      findByClassNamePart(tree, 'storeSearchScreen__retryButton')
+    ).toBeDefined()
+    expect(findSearchBar(tree)?.props.disabled).toBeUndefined()
+  })
+
+  it('a notConfigured failure shows the Settings > Advanced copy and NO Retry button', async () => {
+    mockApi.searchStores.mockRejectedValue(
+      new Error('x [storeSearch:notConfigured]')
+    )
+    mount()
+
+    const tree = await search('portal')
+
+    const banner = findByClassNamePart(tree, 'storeSearchScreen__errorBanner')
+    expect(allText(banner)).toContain(
+      "Price lookups aren't set up in this build. Add an IsThereAnyDeal API key in Settings > Advanced."
+    )
+    expect(
+      findByClassNamePart(tree, 'storeSearchScreen__retryButton')
+    ).toBeUndefined()
+    expect(findSearchBar(tree)).toBeDefined()
+  })
+
+  it('a generic failure keeps the provider copy', async () => {
+    mockApi.searchStores.mockRejectedValue(new Error('network down'))
+    mount()
+
+    const tree = await search('portal')
+
+    const banner = findByClassNamePart(tree, 'storeSearchScreen__errorBanner')
+    expect(allText(banner)).toContain("Couldn't reach the price provider.")
+    expect(
+      findByClassNamePart(tree, 'storeSearchScreen__retryButton')
+    ).toBeDefined()
+  })
+
+  it('PRICE-02: a result whose gid maps to a library appid is Owned on Steam', async () => {
+    contextValue.steam.library = [
+      { app_name: '400', title: 'Some Other Name' } as unknown as GameInfo
+    ]
+    seedStores()
+    mockApi.getItadSteamGids.mockResolvedValue({ '400': 'gid-portal' })
+    mockApi.searchStores.mockResolvedValue({
+      results: [
+        makeResult({
+          gameId: 'gid-portal',
+          title: 'Portal',
+          steamAppId: undefined
+        })
+      ],
+      pricedCountry: 'US'
+    })
+    mount()
+
+    const tree = await search('portal')
+
+    expect(mockApi.getItadSteamGids).toHaveBeenCalledWith(['400'])
+    expect(findByType(tree, StoreSearchRow)?.props.badges).toEqual({
+      owned: [{ store: 'steam', confidence: 'exact' }],
+      keyAvailable: false
+    })
+  })
+
+  it('PRICE-02: a failed gid lookup shows no Steam badge and search still works', async () => {
+    contextValue.steam.library = [
+      { app_name: '400', title: 'Some Other Name' } as unknown as GameInfo
+    ]
+    seedStores()
+    mockApi.getItadSteamGids.mockRejectedValue(new Error('offline'))
+    mockApi.searchStores.mockResolvedValue({
+      results: [
+        makeResult({
+          gameId: 'gid-portal',
+          title: 'Portal',
+          steamAppId: undefined
+        })
+      ],
+      pricedCountry: 'US'
+    })
+    mount()
+
+    const tree = await search('portal')
+
+    expect(findByType(tree, StoreSearchRow)?.props.badges).toEqual({
+      owned: [],
+      keyAvailable: false
+    })
+    expect(mockApi.logError).toHaveBeenCalledWith(
+      expect.stringContaining('gid lookup failed')
+    )
+  })
+
+  it('PRICE-02: a waiting Humble key whose appid maps to the result gid yields Key available', async () => {
+    contextValue.humble.keys = [
+      {
+        title: 'Unrelated Key Title',
+        steamAppId: '400',
+        state: 'UNREVEALED',
+        platform: 'steam',
+        ownedElsewhere: false
+      } as unknown as HumbleKey
+    ]
+    seedStores()
+    mockApi.getItadSteamGids.mockResolvedValue({ '400': 'gid-portal' })
+    mockApi.searchStores.mockResolvedValue({
+      results: [
+        makeResult({
+          gameId: 'gid-portal',
+          title: 'Portal',
+          steamAppId: undefined
+        })
+      ],
+      pricedCountry: 'US'
+    })
+    mount()
+
+    const tree = await search('portal')
+
+    expect(mockApi.getItadSteamGids).toHaveBeenCalledWith(['400'])
+    expect(findByType(tree, StoreSearchRow)?.props.badges).toEqual({
+      owned: [],
+      keyAvailable: true
+    })
   })
 })
