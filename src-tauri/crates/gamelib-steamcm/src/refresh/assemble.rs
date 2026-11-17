@@ -39,12 +39,15 @@ pub struct InstallStateInput {
     pub incomplete: BTreeSet<u32>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PlaytimeMode {
     /// Playtime and last-played come from the owned-games rows.
     Fresh,
-    /// The Mac Steam path (79-36): they come from the previous library entry, else 0.
-    CarryForward,
+    /// The Mac Steam path (79-36): values come from the previous library entry and from Mac
+    /// Steam's localconfig.vdf; per field the larger wins, because both are monotonic (playtime
+    /// only grows, last-played only moves forward), so a CM-sourced value is never lowered and a
+    /// fresher local value fills in; else 0 (DV-79-13 closed by quick-261117-q52).
+    CarryForward(BTreeMap<u32, gamelib_steamfiles::readers::LocalPlaytime>),
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
@@ -91,7 +94,7 @@ pub struct AssembleInput<'a> {
     pub previous_games: &'a [Value],
     pub bridge_allowlist: &'a BTreeSet<String>,
     pub is_mac: bool,
-    pub playtime: PlaytimeMode,
+    pub playtime: &'a PlaytimeMode,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -297,10 +300,15 @@ pub fn assemble_library(input: AssembleInput) -> Vec<Value> {
                 app.playtime_forever.unwrap_or(0),
                 app.rtime_last_played.unwrap_or(0),
             ),
-            PlaytimeMode::CarryForward => (
-                previous_extra_number(input.previous_games, &id_str, "steamPlaytimeMinutes"),
-                previous_extra_number(input.previous_games, &id_str, "steamLastPlayed"),
-            ),
+            PlaytimeMode::CarryForward(local) => {
+                let l = local.get(&app.appid);
+                (
+                    previous_extra_number(input.previous_games, &id_str, "steamPlaytimeMinutes")
+                        .max(l.and_then(|l| l.playtime_minutes).unwrap_or(0)),
+                    previous_extra_number(input.previous_games, &id_str, "steamLastPlayed")
+                        .max(l.and_then(|l| l.last_played).unwrap_or(0)),
+                )
+            }
         };
         extra.insert("steamPlaytimeMinutes".into(), json!(minutes));
         extra.insert("steamLastPlayed".into(), json!(last_played));
@@ -368,7 +376,7 @@ mod tests {
                 previous_games: &self.prev,
                 bridge_allowlist: &self.allow,
                 is_mac: self.is_mac,
-                playtime: self.mode,
+                playtime: &self.mode,
             })
         }
     }
@@ -628,7 +636,7 @@ mod tests {
     #[test]
     fn carry_forward_takes_playtime_from_the_previous_entry_else_zero() {
         let mut fx = Fx::new(vec![app(1, "a", 999, 999), app(2, "b", 999, 999)]);
-        fx.mode = PlaytimeMode::CarryForward;
+        fx.mode = PlaytimeMode::CarryForward(BTreeMap::new());
         fx.prev = vec![json!({"app_name": "1", "extra": {
             "steamPlaytimeMinutes": 42, "steamLastPlayed": 7}})];
         // cached extra is overridden in carry-forward mode as well
@@ -641,6 +649,68 @@ mod tests {
         assert_eq!(out[0]["extra"]["steamLastPlayed"], 7);
         assert_eq!(out[1]["extra"]["steamPlaytimeMinutes"], 0);
         assert_eq!(out[1]["extra"]["steamLastPlayed"], 0);
+    }
+
+    fn local(entries: &[(u32, Option<i64>, Option<i64>)]) -> PlaytimeMode {
+        use gamelib_steamfiles::readers::LocalPlaytime;
+        PlaytimeMode::CarryForward(
+            entries
+                .iter()
+                .map(|(id, p, l)| {
+                    (
+                        *id,
+                        LocalPlaytime {
+                            playtime_minutes: *p,
+                            last_played: *l,
+                        },
+                    )
+                })
+                .collect(),
+        )
+    }
+
+    #[test]
+    fn carry_forward_takes_the_larger_of_carried_and_local() {
+        let mut fx = Fx::new(vec![
+            app(1, "a", 0, 0),
+            app(2, "b", 0, 0),
+            app(3, "c", 0, 0),
+            app(4, "d", 0, 0),
+            app(5, "e", 0, 0),
+        ]);
+        fx.mode = local(&[
+            (1, Some(100), Some(50)),
+            (2, Some(10), Some(3)),
+            (3, None, Some(99)),
+            (4, Some(8), Some(9)),
+        ]);
+        fx.prev = ["1", "2", "3"]
+            .iter()
+            .map(|id| {
+                json!({"app_name": id, "extra": {
+                    "steamPlaytimeMinutes": 42, "steamLastPlayed": 7}})
+            })
+            .collect();
+        let out = fx.run();
+        let pair = |i: usize| {
+            (
+                out[i]["extra"]["steamPlaytimeMinutes"].as_i64().unwrap(),
+                out[i]["extra"]["steamLastPlayed"].as_i64().unwrap(),
+            )
+        };
+        assert_eq!(pair(0), (100, 50)); // local fresher wins
+        assert_eq!(pair(1), (42, 7)); // never regresses a carried value
+        assert_eq!(pair(2), (42, 99)); // fields merge independently
+        assert_eq!(pair(3), (8, 9)); // no prev, local entry
+        assert_eq!(pair(4), (0, 0)); // neither
+    }
+
+    #[test]
+    fn fresh_ignores_local_data_by_construction() {
+        let mut fx = Fx::new(vec![app(1, "a", 5, 6)]);
+        fx.mode = PlaytimeMode::Fresh;
+        let out = fx.run();
+        assert_eq!(out[0]["extra"]["steamPlaytimeMinutes"], 5);
     }
 
     #[test]

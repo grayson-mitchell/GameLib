@@ -18,6 +18,8 @@ pub mod store_http;
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
+
+use gamelib_steamfiles::readers::{localconfig_path_for, read_localconfig_playtime, LocalPlaytime};
 use std::time::Duration;
 
 use serde::Deserialize;
@@ -216,6 +218,15 @@ where
                 let mut apps = OwnedApp::from_owned(&mac.owned);
                 let owned_count = apps.len();
                 apps.extend(mac.demos.iter().map(OwnedApp::from));
+                // Per-app playtime from Mac Steam's own localconfig.vdf (DV-79-13): a file read,
+                // no logon (D-14). The real file is tens of MiB, so it is parsed off the async
+                // runtime; any failure is an empty map (pure carry-forward).
+                let root = gamelib_steamfiles::discover::discover_default().path;
+                let local = tokio::task::spawn_blocking(move || {
+                    mac_local_playtime(Path::new(&root), steam_id)
+                })
+                .await
+                .unwrap_or_default();
                 (
                     apps,
                     owned_count,
@@ -223,7 +234,7 @@ where
                     json!(false),
                     Value::Null,
                     None,
-                    PlaytimeMode::CarryForward,
+                    PlaytimeMode::CarryForward(local),
                     "macSteam",
                 )
             }
@@ -257,7 +268,7 @@ where
         previous_games: &args.previous_games,
         bridge_allowlist: &allow,
         is_mac: args.is_mac,
-        playtime,
+        playtime: &playtime,
     });
 
     // Step 4: bounded enrichment. Apps it does not reach keep their cached art and are served by
@@ -364,6 +375,15 @@ fn details_json(d: &StoreDetails) -> Value {
         "macMinOs": d.mac_min_os,
         "macArch": d.mac_arch,
     })
+}
+
+/// localconfig.vdf playtime for a SteamID64 under a Steam root; empty when the id is not an
+/// individual account or the file is missing, oversized or malformed.
+fn mac_local_playtime(steam_root: &Path, steam_id: u64) -> BTreeMap<u32, LocalPlaytime> {
+    match localconfig_path_for(steam_root, steam_id) {
+        Some(path) => read_localconfig_playtime(&path),
+        None => BTreeMap::new(),
+    }
 }
 
 #[cfg(test)]
@@ -645,8 +665,26 @@ mod tests {
         );
     }
 
+    #[test]
+    fn mac_local_playtime_reads_the_account_file_or_is_empty() {
+        let root = tempfile::tempdir().unwrap();
+        assert!(mac_local_playtime(root.path(), 76561198000000001).is_empty());
+        let cfg = root.path().join("userdata/39734273/config");
+        std::fs::create_dir_all(&cfg).unwrap();
+        std::fs::write(
+            cfg.join("localconfig.vdf"),
+            "\"UserLocalConfigStore\"{\"Software\"{\"Valve\"{\"Steam\"{\"apps\"{\"10\"{\"Playtime\" \"12\" \"LastPlayed\" \"34\"}}}}}}",
+        )
+        .unwrap();
+        let m = mac_local_playtime(root.path(), 76561198000000001);
+        assert_eq!(m[&10].playtime_minutes, Some(12));
+        assert_eq!(m[&10].last_played, Some(34));
+        assert!(mac_local_playtime(root.path(), 5).is_empty());
+    }
+
     #[cfg(target_os = "macos")]
     #[tokio::test]
+    // accountId 39734273 has no userdata dir on a real machine, so this stays pure carry-forward.
     async fn mac_source_runs_anonymously_and_carries_playtime_forward() {
         use std::os::unix::fs::PermissionsExt;
         let dir = tempfile::tempdir().unwrap();
