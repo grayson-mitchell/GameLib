@@ -38,3 +38,9 @@ Out-of-scope discoveries logged by plan executors. Not fixed in the plan that fo
 - `src/frontend/components/UI/NavShell/__tests__/themeTokens.test.ts` render-site census expects 34 `is-text` sites and
   finds 37: `screens/Game/GamePage/components/NativePortInfo.tsx` carries 3 that the census does not list. The
   file is from the native-port work outside this phase; 81-07 touches no `is-text` markup.
+
+## Orchestrator note (after 81-08): 1026 edge "Restart Steam now" is a no-op — IN SCOPE, unplanned
+
+- Found by 81-08: at the GameLib 1026 waiting edge (`steam-waiting-for-restart`) the AdoptionNote shows "Restart Steam now" without the note, but there is no pending-adoption record, so `restartSteamNowForAdoption` answers `no-record` and the button does nothing visible.
+- 81-10/81-14 keep the 1026 wait unchanged (RESEARCH Open Question 1) but no plan gives the action a target there.
+- This is caused by this phase (D-02 action shown on the 1026 path), so it is NOT pre-existing. Route to the phase verifier as a gap; candidate fix: the 1026 path restarts Steam without requiring a record, or writes a record at the 1026 handoff.
