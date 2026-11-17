@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
 import useSettingsState from 'frontend/state/settingsState'
+import { useThemeSaveFailedNotice } from 'frontend/state/ThemeSaveFailedNotice'
 import type { CustomTheme } from 'common/types/customTheme'
 import { customThemeKey } from 'frontend/customThemes/customTheme'
 import { resolveThemeLabel } from 'frontend/components/UI/ThemeSelector/themeLabels'
@@ -61,6 +62,9 @@ function EditorBody({ theme }: { theme: CustomTheme }) {
       } else if (outcome === 'saved') {
         setStatus(t('gamelib:customThemes.saved', 'Saved'))
       }
+      // A refused write announces nothing as saved; the draft stays dirty and the notice says why.
+      if (outcome === 'failed')
+        useThemeSaveFailedNotice.getState().show(theme.name)
       return outcome
     } finally {
       inFlight.current = false

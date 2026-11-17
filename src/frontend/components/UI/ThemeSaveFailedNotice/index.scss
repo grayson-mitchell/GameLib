@@ -1,0 +1,8 @@
+// Phase 64: position and the toast surface (sketch 006 variant A) come from
+// NoticeStack/index.scss, and so do the icon, text and dismiss X (the shared
+// .noticeStackIcon / Text / Title / Dismiss rules). Like the read-only stores
+// notice this one has no countdown hairline: a Save that did not reach disk
+// stays until acknowledged.
+.themeSaveFailedNotice {
+  align-items: flex-start;
+}

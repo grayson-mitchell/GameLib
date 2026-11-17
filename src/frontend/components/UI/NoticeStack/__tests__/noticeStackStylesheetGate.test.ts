@@ -68,6 +68,12 @@ const SLOTS: SlotEntry[] = [
     tsx: `${UI}/ReadOnlyStoresNotice/index.tsx`,
     scss: `${UI}/ReadOnlyStoresNotice/index.scss`,
     rootBase: 'readOnlyStoresNotice'
+  },
+  {
+    name: 'ThemeSaveFailedNotice',
+    tsx: `${UI}/ThemeSaveFailedNotice/index.tsx`,
+    scss: `${UI}/ThemeSaveFailedNotice/index.scss`,
+    rootBase: 'themeSaveFailedNotice'
   }
 ]
 
@@ -436,7 +442,9 @@ function missingSharedClasses(tsxSource: string): string[] {
   const tsx = strip(tsxSource)
   const missing: string[] = []
   for (const part of SHARED_PARTS) {
-    if (part === 'Action') continue
+    // Action and Body are optional: a one-line notice (the theme save failure) has only a Title.
+    // A className that names either part must still carry the shared class (loop below).
+    if (part === 'Action' || part === 'Body') continue
     if (!tsx.includes(`noticeStack${part}`)) missing.push(`noticeStack${part}`)
   }
   const classNames = tsx.match(/className="[^"]*"/g) ?? []
