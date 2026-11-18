@@ -216,19 +216,22 @@
   padding: 0;
 }
 
-@media (max-width: 1100px) {
+/*
+ * Two columns until the main content area (the window minus the tier-2 nav panel) is 1240px
+ * wide. The six-column grid sits 66px inside it (screen and panel padding plus border), and its
+ * Operating system and Suitable for age columns only fit their labels on one line from a ~1130px
+ * grid (measured in WKWebView with a PEGI value showing; Cabin's synthetic bold is wider than
+ * Chrome's). A viewport query ignored the 256px tier-2 panel, so labels wrapped from about
+ * 1455px down to the old 1100px switch (G-47-14c). The one-column rule was removed because the
+ * 900px window minimum (tauri.conf.json) meant it could never fire, and as a container rule it
+ * would fire at the minimum for no reason.
+ */
+@container main-content (max-width: 1239.98px) {
   .discountFilters__row--inputs {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .discountFilters__row--sliders {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 700px) {
-  .discountFilters__row--inputs,
-  .discountFilters__row--sliders {
-    grid-template-columns: 1fr;
   }
 }
 
