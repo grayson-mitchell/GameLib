@@ -6,23 +6,31 @@ findings:
   - id: WR-01
     severity: warning
     disposition: open
-    title: "Offline \"Try again\" can re-request the previous store's URL after a store switch"
+    title: "Kept rows can be up to ~2 hours old; the \"never older than the cache\" claim is false"
   - id: WR-02
     severity: warning
     disposition: open
-    title: "Offline banner is driven by app connectivity alone, so it overrides a healthy loaded page"
+    title: "First frame of a remount shows the \"Search a title…\" prompt beside a filled search box"
   - id: WR-03
     severity: warning
     disposition: open
-    title: "RegionPicker has no accessible name for its combobox"
+    title: "`limitTags={2}` plus the removed Tooltip leaves blurred Genres/Features hiding chips; the comment says otherwise"
   - id: IN-01
     severity: info
     disposition: open
-    title: "Impossible-state guard on `connectivity?.status`"
+    title: "`storeSearchSession.test.ts` replaces `globalThis.localStorage`/`sessionStorage` and never restores them"
   - id: IN-02
     severity: info
     disposition: open
-    title: "\"Showing prices for {{country}}\" caption now duplicates the region picker"
+    title: "`rowSurfaceTheme.test.ts` hard-codes \"ten built-in themes\""
+  - id: IN-03
+    severity: info
+    disposition: open
+    title: "Container-query comment contradicts itself about the one-column rule"
+  - id: IN-04
+    severity: info
+    disposition: open
+    title: "`meta/i18nGateScope.json` `generatedBy` is an append-only multi-KB history string"
   - id: WR-04
     severity: warning
     disposition: open
@@ -31,17 +39,9 @@ findings:
     severity: warning
     disposition: open
     title: "Owned-on-Steam join silently disables itself for libraries over 5000 appids"
-  - id: IN-03
-    severity: info
-    disposition: open
-    title: "Dead/unused configuration code (necessity)"
-  - id: IN-04
-    severity: info
-    disposition: open
-    title: "Expanded breakdown renders an empty panel when ITAD returns no deals"
 open: 9
 total: 9
-recorded: 2026-11-18T10:46:00.038Z
+recorded: 2026-11-18T18:58:05.363Z
 ---
 
 # Phase 47: Code Review Disposition
@@ -53,10 +53,10 @@ recorded: 2026-11-18T10:46:00.038Z
 | WR-03 | warning | open | - |
 | IN-01 | info | open | - |
 | IN-02 | info | open | - |
+| IN-03 | info | open | - |
+| IN-04 | info | open | - |
 | WR-04 | warning | open | - (not in the current review) |
 | WR-05 | warning | open | - (not in the current review) |
-| IN-03 | info | open | - (not in the current review) |
-| IN-04 | info | open | - (not in the current review) |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
