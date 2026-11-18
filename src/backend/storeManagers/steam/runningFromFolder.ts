@@ -14,6 +14,10 @@
  * process table and runs with -NoProfile, so no env is passed (the two-profile
  * rule: nothing profile-dependent, hence no real-profile arm), exactly as the
  * posix `ps` arm and steamClientProcess.ts do.
+ *
+ * quick 261119-gzt: on darwin, `lsof -d txt` resolves the executable path of a
+ * process whose ps argv[0] is relative (`./Game.bin.osx`). Like `ps` it reads
+ * only the process table and passes no env, so no real-profile arm is needed.
  */
 import { isAbsolute, parse, resolve, sep, win32 } from 'path'
 
@@ -49,11 +53,30 @@ const STEAM_HELPER =
   /steam_osx|steamwebhelper|steamerrorreporter|ipcserver|gameoverlayui|Steam Helper|Steam\.AppBundle\//i
 
 /**
- * Pids from `ps -o pid=,args=` output whose executable (argv[0]) lives inside
- * `folder`. startsWith, not includes: only the process whose executable is in
- * the install folder may be signalled, so a sibling folder, a process that
- * merely names the folder as an argument, and Steam helpers are excluded. The
- * boolean delete-route check above is intentionally broader.
+ * An sh-family interpreter, zero or more single-dash option tokens, then a
+ * script operand. Matched at the start of a ps `args` text; the rest must then
+ * start with the install-folder prefix. `-c` is allowed as an option token, so
+ * `bash -c <folder>/run.sh` matches, but `zsh -c source x && cd <folder>/y`
+ * does not, because the text after the options does not start with the folder.
+ */
+const SHELL_LAUNCHER =
+  /^(?:\/[^\s]*\/)?(?:sh|bash|dash|ksh|zsh)\s+(?:-[A-Za-z]+\s+)*/
+
+const PS_LINE = /^\s*(\d+)\s+(.+)$/
+
+function usablePid(pid: number, excludePids: readonly number[]): boolean {
+  return Number.isSafeInteger(pid) && pid > 1 && !excludePids.includes(pid)
+}
+
+/**
+ * Pids from `ps -o pid=,args=` output that belong to `folder`. startsWith, not
+ * includes: a process matches when its executable (argv[0]) lives inside the
+ * folder, or when it is an sh-family interpreter running a script that lives
+ * there (the shell launcher of a game, e.g. Bastion's
+ * `/bin/bash <folder>/Bastion.app/Contents/MacOS/Bastion`). A sibling folder, a
+ * process that merely names the folder as an argument (`tail -f <folder>/log`,
+ * `zsh -c source ... <folder>/x`), and Steam helpers are excluded. The boolean
+ * delete-route check above is intentionally broader.
  */
 export function psOutputPidsInFolder(
   output: string,
@@ -63,17 +86,74 @@ export function psOutputPidsInFolder(
   const prefix = normalizeFolder(folder) + sep
   const pids = new Set<number>()
   for (const line of output.split('\n')) {
-    const m = /^\s*(\d+)\s+(.+)$/.exec(line)
+    const m = PS_LINE.exec(line)
     if (!m) continue
     const pid = Number(m[1])
     const args = m[2] ?? ''
-    if (!Number.isSafeInteger(pid) || pid <= 1) continue
-    if (excludePids.includes(pid)) continue
-    if (!args.startsWith(prefix)) continue
+    if (!usablePid(pid, excludePids)) continue
+    if (!args.startsWith(prefix)) {
+      const shell = SHELL_LAUNCHER.exec(args)
+      if (!shell || !args.slice(shell[0].length).startsWith(prefix)) continue
+    }
     if (STEAM_HELPER.test(args)) continue
     pids.add(pid)
   }
   return [...pids].sort((a, b) => a - b)
+}
+
+/**
+ * Pids from `ps -o pid=,args=` output whose argv[0] is a relative path
+ * (`./Game.bin.osx`, `../bin/game`, `a/b`): ps prints argv, not the executable
+ * path, so these can only be matched to the install folder by resolving their
+ * real executable. Excludes `-zsh`, `login` and `(sshd)` (no slash), absolute
+ * paths, Steam helpers and unusable or excluded pids.
+ */
+export function psOutputRelativeArgvPids(
+  output: string,
+  excludePids: readonly number[] = []
+): number[] {
+  const pids = new Set<number>()
+  for (const line of output.split('\n')) {
+    const m = PS_LINE.exec(line)
+    if (!m) continue
+    const pid = Number(m[1])
+    const args = m[2] ?? ''
+    if (!usablePid(pid, excludePids)) continue
+    const argv0 = args.split(/\s+/)[0] ?? ''
+    if (argv0.startsWith('/') || !argv0.includes('/')) continue
+    if (STEAM_HELPER.test(args)) continue
+    pids.add(pid)
+  }
+  return [...pids].sort((a, b) => a - b)
+}
+
+/**
+ * Parse `lsof -F pn` output (with `-d txt`): a `p<pid>` line starts a record,
+ * and the first `n` line after an `ftxt` line is that pid's executable (the
+ * kernel-reported path, like proc_pidpath). Later txt names (dyld, dylibs) and
+ * non-txt descriptors are ignored. Never throws.
+ */
+export function lsofExecutablePaths(output: string): Map<number, string> {
+  const out = new Map<number, string>()
+  let pid: number | undefined
+  let sawTxt = false
+  for (const line of output.split('\n')) {
+    const tag = line[0]
+    const value = line.slice(1)
+    if (tag === 'p') {
+      const n = /^\d+$/.test(value) ? Number(value) : NaN
+      pid = Number.isSafeInteger(n) ? n : undefined
+      sawTxt = false
+    } else if (tag === 'f') {
+      sawTxt = value === 'txt'
+    } else if (tag === 'n') {
+      if (pid !== undefined && sawTxt && !out.has(pid) && value) {
+        out.set(pid, value)
+      }
+      sawTxt = false
+    }
+  }
+  return out
 }
 
 /**
@@ -156,8 +236,83 @@ export function windowsProcessListPidsInFolder(
 export interface PidScanDeps {
   runner: { run: ProcessRunner['run'] }
   platform: NodeJS.Platform
+  /** linux: /proc/<pid>/exe, resolves a relative-argv candidate */
+  readExe?: (pid: number) => string | undefined
+  realpath?: (p: string) => string
 }
 
+/**
+ * Resolve ps lines whose argv[0] is relative to a real executable path and keep
+ * those inside `folder` (or its realpath). darwin: one bounded lsof over only
+ * the candidate pids, never with an empty list. linux: `readExe`
+ * (/proc/<pid>/exe). Admission is by the kernel-reported executable, never by
+ * argv text. Never throws: a failed lookup means "no relative matches".
+ */
+async function resolveRelativeArgvPids(
+  deps: PidScanDeps,
+  folder: string,
+  candidates: readonly number[],
+  timeoutMs: number
+): Promise<number[]> {
+  if (candidates.length === 0) return []
+  const roots = [normalizeFolder(folder) + sep]
+  try {
+    const real = deps.realpath?.(folder)
+    if (real) roots.push(normalizeFolder(real) + sep)
+  } catch {
+    // fall back to the folder alone
+  }
+  const inFolder = (exe: string | undefined): boolean =>
+    exe !== undefined &&
+    roots.some((r) => exe.startsWith(r)) &&
+    !STEAM_HELPER.test(exe)
+
+  if (deps.platform === 'darwin') {
+    let stdout: string
+    try {
+      const res = await deps.runner.run(
+        '/usr/sbin/lsof',
+        ['-a', '-nP', '-p', candidates.join(','), '-d', 'txt', '-F', 'pn'],
+        { timeoutMs, stdin: '' }
+      )
+      // lsof exits 1 when a listed pid has exited (bottleProcesses.ts)
+      if (
+        res.timedOut ||
+        res.aborted ||
+        res.truncated ||
+        (res.code !== 0 && res.code !== 1)
+      ) {
+        return []
+      }
+      stdout = res.stdout
+    } catch {
+      return []
+    }
+    const exes = lsofExecutablePaths(stdout)
+    return candidates.filter((pid) => inFolder(exes.get(pid)))
+  }
+  if (deps.platform === 'linux') {
+    return candidates.filter((pid) => {
+      let exe: string | undefined
+      try {
+        exe = deps.readExe?.(pid)?.replace(/ \(deleted\)$/, '')
+      } catch {
+        exe = undefined
+      }
+      return inFolder(exe)
+    })
+  }
+  return []
+}
+
+/**
+ * Pids running from `folder`. posix: `ps` argv prefix and shell-launcher rule,
+ * plus relative-argv processes resolved by executable path (see
+ * resolveRelativeArgvPids). On linux a shell-launcher pid admitted by the args
+ * rule is then dropped by scanSteamLaunchedPids' /proc exe filter (its exe is
+ * the interpreter); that is intended, since the relative child admitted
+ * through readExe is the game. A ps failure throws; a lookup failure does not.
+ */
 export async function findPidsRunningFromFolder(
   deps: PidScanDeps,
   folder: string,
@@ -183,17 +338,30 @@ export async function findPidsRunningFromFolder(
     return windowsProcessListPidsInFolder(res.stdout, folder, opts.excludePids)
   }
   normalizeFolder(folder) // reject a bad folder before anything runs
+  const timeoutMs = opts.timeoutMs ?? 2000
   const res = await deps.runner.run(
     '/bin/ps',
     ['-A', '-ww', '-o', 'pid=,args='],
-    { timeoutMs: opts.timeoutMs ?? 2000 }
+    { timeoutMs }
   )
   if (res.timedOut || res.aborted || res.code !== 0) {
     throw new Error(
       `ps failed (code ${res.code}${res.timedOut ? ', timed out' : ''})`
     )
   }
-  return psOutputPidsInFolder(res.stdout, folder, opts.excludePids)
+  const direct = psOutputPidsInFolder(res.stdout, folder, opts.excludePids)
+  const candidates = psOutputRelativeArgvPids(
+    res.stdout,
+    opts.excludePids
+  ).filter((pid) => !direct.includes(pid))
+  if (candidates.length === 0) return direct
+  const resolved = await resolveRelativeArgvPids(
+    deps,
+    folder,
+    candidates,
+    timeoutMs
+  )
+  return [...new Set([...direct, ...resolved])].sort((a, b) => a - b)
 }
 
 export interface RunningFromFolderDeps {

@@ -633,4 +633,111 @@ describe('steamLaunchWatch', () => {
     await tick(clock, 2)
     clock.assertNoKeepAlive()
   })
+
+  // quick 261119-gzt: an already-watching relaunch keeps the watch scanning for
+  // a full start window from the relaunch, so a game that appears after the
+  // original window (t = 10 s) but inside the relaunch window (t = 16 s) is seen.
+  it('T12 already-watching relaunch: game appears after the original window', async () => {
+    const { deps, clock, registry, sent } = setup([
+      ...Array.from({ length: 6 }, () => EMPTY),
+      PRESENT,
+      EMPTY,
+      EMPTY
+    ])
+    const { settled } = startSteamLaunchWatch(deps, '264160', {
+      startWindowMs: 10000
+    })
+    await tick(clock, 3)
+    expect(startSteamLaunchWatch(deps, '264160').status).toBe(
+      'already-watching'
+    )
+    // t = 12 s: past the original 10 s window, still inside the relaunch's
+    await tick(clock, 3)
+    expect(registry.has('264160')).toBe(true)
+    expect(sent).toEqual([])
+    await tick(clock) // t = 14 s: the game first appears
+    expect(sent).toEqual(['playing'])
+    await tick(clock, 2)
+    await settled
+    expect(sent).toEqual(['playing', 'done'])
+    expect(registry.size).toBe(0)
+    expect(clock.pendingCount()).toBe(0)
+  })
+
+  // The incident (Phase 81 live gate L2): Bastion's launcher is a bash script
+  // and its child runs as `./Bastion.bin.osx`, so ps argv never starts with the
+  // install folder. The measured shapes, scripted: no real process is spawned.
+  it('T13 already-watching relaunch of a script-launched game (Bastion shapes)', async () => {
+    const BASTION = '/lib/steamapps/common/Bastion'
+    const BASTION_PS: ScriptStep = {
+      cmd: '/bin/ps',
+      result: {
+        code: 0,
+        stdout:
+          `501 /bin/bash ${BASTION}/Bastion.app/Contents/MacOS/Bastion\n` +
+          '502 ./Bastion.bin.osx\n' +
+          '900 ./gamelib-shell\n'
+      }
+    }
+    const LSOF: ScriptStep = {
+      cmd: '/usr/sbin/lsof',
+      repeat: true,
+      result: {
+        code: 0,
+        stdout: [
+          'p502',
+          'ftxt',
+          `n${BASTION}/Bastion.app/Contents/MacOS/Bastion.bin.osx`,
+          'ftxt',
+          'n/usr/lib/dyld'
+        ].join('\n')
+      }
+    }
+    const { deps, clock, log, registry, runner, sent } = setup(
+      [
+        ...Array.from({ length: 6 }, () => EMPTY),
+        BASTION_PS,
+        EMPTY,
+        EMPTY,
+        LSOF
+      ],
+      { acf: 'Bastion' }
+    )
+    const { settled } = startSteamLaunchWatch(deps, '107100', {
+      startWindowMs: 10000
+    })
+    await tick(clock, 3)
+    expect(startSteamLaunchWatch(deps, '107100').status).toBe(
+      'already-watching'
+    )
+    await tick(clock, 4) // t = 14 s
+    expect(sent).toEqual(['playing'])
+    expect(
+      log.lines.some(
+        (l) =>
+          l.level === 'info' &&
+          l.msg.includes(
+            `appId 107100 running: pids [501, 502] under ${BASTION}`
+          )
+      )
+    ).toBe(true)
+    const lsofCalls = runner.calls.filter((c) => c.cmd === '/usr/sbin/lsof')
+    expect(lsofCalls.length).toBeGreaterThan(0)
+    for (const c of lsofCalls) {
+      expect(c.argv).toEqual([
+        '-a',
+        '-nP',
+        '-p',
+        '502',
+        '-d',
+        'txt',
+        '-F',
+        'pn'
+      ])
+    }
+    await tick(clock, 2)
+    await settled
+    expect(sent).toEqual(['playing', 'done'])
+    expect(registry.size).toBe(0)
+  })
 })
