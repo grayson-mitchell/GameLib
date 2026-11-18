@@ -61,6 +61,7 @@ function outcome(
       chunksFetched: 0,
       containers: { vz: 0, vsza: 0, pk: 0 },
       machoExecApplied: 0,
+      shebangExecApplied: 0,
       pathCollisions: 0,
       elapsedMs: 0
     }

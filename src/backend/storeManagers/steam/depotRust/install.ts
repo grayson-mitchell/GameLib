@@ -60,7 +60,7 @@ export function logOutcome(job: RustDepotJob, o: RustOutcome): void {
   logInfo(
     `[depot-rust] outcome appId=${job.appId} jobId=${job.jobId} mode=${job.mode} ` +
       `status=${o.status} acf=${o.acf?.stateFlags ?? 'none'} vz=${s.containers.vz} ` +
-      `vsza=${s.containers.vsza} pk=${s.containers.pk} macho=${s.machoExecApplied} ` +
+      `vsza=${s.containers.vsza} pk=${s.containers.pk} macho=${s.machoExecApplied} shebang=${s.shebangExecApplied} ` +
       `collisions=${s.pathCollisions} skipped=${(o.skippedDepots ?? []).join(',')} bytes=${s.bytesFetched} elapsedMs=${s.elapsedMs}`,
     LogPrefix.Steam
   )

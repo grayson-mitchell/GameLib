@@ -166,6 +166,7 @@ export interface RustOutcome {
     chunksFetched: number
     containers: { vz: number; vsza: number; pk: number }
     machoExecApplied: number
+    shebangExecApplied: number
     pathCollisions: number
     elapsedMs: number
   }

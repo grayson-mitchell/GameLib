@@ -71,6 +71,7 @@ export function stubOutcome(
       chunksFetched: 1,
       containers: { vz: 1, vsza: 0, pk: 0 },
       machoExecApplied: 0,
+      shebangExecApplied: 0,
       pathCollisions: 0,
       elapsedMs: 5
     },
