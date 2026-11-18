@@ -79,7 +79,7 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 Phase: 47 (Migrate aggregated store search from CheapShark to IsThereAnyDeal) — EXECUTING
 Plan: 22 of 22
 Status: Phase complete — ready for verification
-Last activity: 2026-11-19 — Completed quick task 261119-pdz: Clear pre-push find-deadcode and backend-di-ceilings failures
+Last activity: 2026-11-19 — Completed quick task 261119-box: Windows Steam-client update progress reads the steam.exe write counter
 
 Progress: [█████████░] 88%
 
@@ -717,6 +717,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261119-p3z | macOS/Linux Steam Play holds Launching until the watch finds the game (no Play flicker) | 2026-11-19 | 7508b0858 | — | [261119-p3z-macos-linux-steam-play-holds-launching-u](./quick/261119-p3z-macos-linux-steam-play-holds-launching-u/) |
 | 261119-pdz | Clear pre-push find-deadcode and backend-di-ceilings failures | 2026-11-19 | 6c4e83f22 | — | [261119-pdz-clear-pre-push-find-deadcode-and-backend](./quick/261119-pdz-clear-pre-push-find-deadcode-and-backend/) |
 | fast | Pending-adoption log line says "Steam pid" on every OS, not "steam_osx pid" (todo closed) | 2026-11-19 | 2cc0c0e50 | prettier clean; no test or gate pins the literal | — |
+| 261119-box | Windows: Steam-client update progress reads the steam.exe write counter, not the ACF alone (todo closed; live update check pending) | 2026-11-19 | 7c01b89ef | — | [261119-box-windows-steam-client-update-progress-rea](./quick/261119-box-windows-steam-client-update-progress-rea/) |
 
 ## Deferred Items
 
