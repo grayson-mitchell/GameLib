@@ -5,16 +5,16 @@ milestone_name: Foundations
 current_phase: 64
 current_phase_name: UI to edit themes
 status: executing
-stopped_at: Completed 81-14-PLAN.md
-last_updated: "2026-11-18T05:51:08.199Z"
+stopped_at: Completed 81-15-PLAN.md
+last_updated: "2026-11-18T05:58:30.888Z"
 last_activity: 2026-11-18
 last_activity_desc: Phase 64 execution started
-state_head: a2045090441af8b9a0c3da99359c7ed26e86ebe2
+state_head: f774ac51c47474b131a6f14fedd70c650cd1a3f0
 progress:
   total_phases: 26
   completed_phases: 23
   total_plans: 521
-  completed_plans: 514
+  completed_plans: 515
   percent: 88
 ---
 
@@ -297,6 +297,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 81 P12 | 40min | 2 tasks | 17 files |
 | Phase 81 P13 | 30min | 2 tasks | 15 files |
 | Phase 81 P14 | 50min | 2 tasks | 16 files |
+| Phase 81 P81-15 | 25min | 2 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -500,6 +501,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 81]: 81-13: migrateRestartHolds keeps steam_restart_hold.json when any hold could not be evaluated (rejected lookup); strict library list so a rejection never reads as acf-gone
 - [Phase 81]: 81-13: StateEvent::app_id returns &str; rearmSettled removed from Rust, fixture, zod, handler and parity
 - [Phase 81]: 81-14: the install poll has no hold state machine; PollStatus.holding is always empty and each install's steamHold is the constant 'unprobed' until 81-17 removes both wire fields
+- [Phase 81]: 81-15: HoldSink trait, HoldStore and hold.rs stay for 81-16; the effect path (apply_effects, InstallPolls, start_uninstall, facade, shell) has no hold sink
 
 ### Pending Todos
 
@@ -875,8 +877,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-18T05:51:04.446Z
-Stopped at: Completed 81-14-PLAN.md
+Last session: 2026-11-18T05:58:27.166Z
+Stopped at: Completed 81-15-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
