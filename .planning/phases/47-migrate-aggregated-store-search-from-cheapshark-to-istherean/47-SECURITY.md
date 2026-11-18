@@ -11,7 +11,7 @@ created: "2026-11-18"
 # Phase 47 — Security
 
 > Per-phase security contract: threat register, accepted risks, and audit trail.
-> Register authored at plan time across plans 47-01..47-18 (58 unique IDs; T-47-SC is repeated in 47-14..47-18 and listed once). Only plans 14-18 declare severity; elsewhere severity is inferred by the auditor and marked `(i)`.
+> Register authored at plan time across plans 47-01..47-22 (64 unique IDs; T-47-SC is repeated in 47-14..47-18 and listed once). Only plans 14-18 declare severity; elsewhere severity is inferred by the auditor and marked `(i)`.
 
 ---
 
@@ -105,7 +105,13 @@ created: "2026-11-18"
 | T-47-54 | Denial of service | rapid region switching | low | accept | see AR-08 | closed |
 | T-47-55 | Tampering | thumbnail URL selection | low | accept | see AR-09 | closed |
 | T-47-56 | Tampering | stored region (Deals) | low | mitigate | `getStoredRegionOverride` filters to REGION_OPTIONS; `storeRegion.test.ts:100` | closed |
-| T-47-SC | Tampering | npm/pip/cargo installs (47-14..18) | low | accept | see AR-10 | closed |
+| T-47-57 | Information disclosure | storeSearchSession.ts (47-19) | low | mitigate | module memory only; no `localStorage`/`sessionStorage` use (the one mention is the doc comment, `storeSearchSession.ts:9`); no-storage test in `storeSearchSession.test.ts` | closed |
+| T-47-58 | Tampering | restored price rows (47-19) | low | mitigate | restored only for same trimmed query + country, under `KEPT_RESULTS_MAX_AGE_MS` (1h), from results/empty status; error never restored (`storeSearchSession.test.ts`, `useDebouncedStoreSearch.test.ts`) | closed |
+| T-47-59 | Tampering | SearchBar / Winetricks searchbox / TextInputField values (47-20) | medium | mitigate | `spellCheck={false}` + `autoCorrect="off"` on all three inputs; pinned by `searchBarTextChecking`, `everythingElse`, `textInputFieldTextChecking` tests; live macOS check pending (UAT) | closed |
+| T-47-60 | Spoofing | RegionPicker closed display (47-20) | low | mitigate | `displayEmpty` on the Select (`RegionPicker/index.tsx`); render-level `RegionPicker.test.tsx` | closed |
+| T-47-61 | Tampering | user custom themes (47-21) | low | accept | see AR-11 | closed |
+| T-47-62 | Denial of service | Deals filter layout (47-22) | low | accept | see AR-12 | closed |
+| T-47-SC | Tampering | npm/pip/cargo installs (47-14..22) | low | accept | see AR-10 | closed |
 
 *Status: open · closed · open — below high threshold (non-blocking)*
 *Severity: critical > high > medium > low — only open threats at or above workflow.security_block_on count toward threats_open*
@@ -132,7 +138,9 @@ created: "2026-11-18"
 | AR-07 | T-47-50 | Close/recreate race unreachable at runtime: close only at app teardown, new webview only after `reset_for_new_webview`; Linux/Windows `url()` do not unwrap | planner (47-14-PLAN) | 2026-11-18 |
 | AR-08 | T-47-54 | Region switching re-runs the committed query once through the existing debounce; results cached per country; 429 keeps existing states | planner (47-16-PLAN) | 2026-11-18 |
 | AR-09 | T-47-55 | Thumbnail trust unchanged: same ITAD asset fields, same host, existing CachedImage path | planner (47-17-PLAN) | 2026-11-18 |
-| AR-10 | T-47-SC | No package installs or lockfile changes in 47-14..18 (verified against git) | planner (47-14..18-PLAN) | 2026-11-18 |
+| AR-10 | T-47-SC | No package installs or lockfile changes in 47-14..22 (verified against git; 47-19..22 re-checked 2026-11-19) | planner (47-14..22-PLAN) | 2026-11-18 |
+| AR-11 | T-47-61 | A custom theme can set `--gamecard-title-color` illegibly; that is the theme author's choice and already governs Library tile titles; built-ins pinned at 4.5:1 by `rowSurfaceTheme.test.ts` | planner (47-21-PLAN) | 2026-11-19 |
+| AR-12 | T-47-62 | Chip-holding controls can grow the filter panel; selection is bounded by GOG's genre/feature lists and the page scrolls | planner (47-22-PLAN) | 2026-11-19 |
 
 *Accepted risks do not resurface in future audit runs.*
 
@@ -143,6 +151,7 @@ created: "2026-11-18"
 | Audit Date | Threats Total | Closed | Open | Run By |
 |------------|---------------|--------|------|--------|
 | 2026-11-18 | 58 | 58 | 0 | gsd-security-auditor (ASVS L1, block_on high) via /gsd-execute-phase 47 --gaps-only |
+| 2026-11-19 | 64 | 64 | 0 | orchestrator L1 short-circuit (plan-time register, ASVS L1, block_on high) for gap plans 47-19..47-22 via /gsd-execute-phase 47 --gaps-only |
 
 ---
 
@@ -153,4 +162,12 @@ created: "2026-11-18"
 - [x] `threats_open: 0` confirmed
 - [x] `status: verified` set in frontmatter
 
-**Approval:** verified 2026-11-18
+**Approval:** verified 2026-11-19 (re-audited for gap plans 47-19..47-22)
+
+## Security Audit 2026-11-18
+
+| Metric | Count |
+|---|---|
+| Threats found | 64 |
+| Closed | 64 |
+| Open | 0 |
