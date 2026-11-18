@@ -5,16 +5,16 @@ milestone_name: Foundations
 current_phase: 64
 current_phase_name: UI to edit themes
 status: executing
-stopped_at: Completed 81-18-PLAN.md
-last_updated: "2026-11-18T06:22:50.283Z"
+stopped_at: Completed 81-19-PLAN.md
+last_updated: "2026-11-18T06:30:02.914Z"
 last_activity: 2026-11-18
 last_activity_desc: Phase 64 execution started
-state_head: 7a00a4081ab09379234f8b454e91c3b38f80fcbf
+state_head: 46b2cfa36d4388042e207aaf689984a128e424f9
 progress:
   total_phases: 26
   completed_phases: 23
   total_plans: 521
-  completed_plans: 518
+  completed_plans: 519
   percent: 88
 ---
 
@@ -301,6 +301,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 81 P16 | 35min | 3 tasks | 13 files |
 | Phase 81 P17 | 25min | 2 tasks | 13 files |
 | Phase 81 P18 | 25min | 2 tasks | 10 files |
+| Phase 81 P19 | 50min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -508,6 +509,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 81]: 81-16: hold.rs deleted; read_hold_store in hold_migration.rs is the only reader of steam_restart_hold.json, Steam pid probes live in steam_process.rs
 - [Phase 81]: 81-17: refreshInstallState keeps one steampoll_status read for activeInstallPolls; the hold filter and rustRefresh's status read are gone; steampoll_status is {installs[appId,delegatedToSteamClient,awaitingUpdate], uninstalls}
 - [Phase 81]: 81-18: the Phase 81 deletion gate scans comment-stripped Rust with a string-aware stripper, allow-lists hold_migration.rs and profile.rs for steam_restart_hold, and asserts the legitimate survivors never match a forbidden needle
+- [Phase 81]: 81-19: the live-gate contract runs Mac items in order 1,2,5,6,8,4,3,9,7,12 because any Steam restart or sign-in adopts every pending ACF
 
 ### Pending Todos
 
@@ -883,8 +885,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-18T06:22:46.668Z
-Stopped at: Completed 81-18-PLAN.md
+Last session: 2026-11-18T06:29:59.090Z
+Stopped at: Completed 81-19-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
