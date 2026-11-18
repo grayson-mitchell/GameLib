@@ -2,19 +2,19 @@
 gsd_state_version: "1.0"
 milestone: v0.10
 milestone_name: Foundations
-current_phase: 64
-current_phase_name: UI to edit themes
+current_phase: 47
+current_phase_name: Migrate aggregated store search from CheapShark to IsThereAnyDeal
 status: executing
-stopped_at: Completed 81-19-PLAN.md
-last_updated: "2026-11-18T09:35:17.580Z"
+stopped_at: Completed 47-14-PLAN.md
+last_updated: "2026-11-18T09:49:27.499Z"
 last_activity: 2026-11-18
-last_activity_desc: Phase 64 execution started
-state_head: e70d022f38408ca22ac50ac6aacaa62e10a59cbe
+last_activity_desc: Phase 47 execution started
+state_head: e83918c2f974d61815bcb9e5d488c5444b99e91e
 progress:
   total_phases: 26
   completed_phases: 23
-  total_plans: 521
-  completed_plans: 519
+  total_plans: 526
+  completed_plans: 521
   percent: 88
 ---
 
@@ -25,7 +25,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 64 — UI to edit themes
+**Current focus:** Phase 47 — Migrate aggregated store search from CheapShark to IsThereAnyDeal
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -76,10 +76,10 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 
 ## Current Position
 
-Phase: 64 (UI to edit themes) — EXECUTING
-Plan: 10 of 10
+Phase: 47 (Migrate aggregated store search from CheapShark to IsThereAnyDeal) — EXECUTING
+Plan: 15 of 18
 Status: Ready to execute
-Last activity: 2026-11-18 — Phase 64 execution started
+Last activity: 2026-11-18 — Phase 47 execution started
 
 Progress: [█████████░] 88%
 
@@ -302,6 +302,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 81 P17 | 25min | 2 tasks | 13 files |
 | Phase 81 P18 | 25min | 2 tasks | 10 files |
 | Phase 81 P19 | 50min | 2 tasks | 1 files |
+| Phase 47 P14 | 40min | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -510,6 +511,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 81]: 81-17: refreshInstallState keeps one steampoll_status read for activeInstallPolls; the hold filter and rustRefresh's status read are gone; steampoll_status is {installs[appId,delegatedToSteamClient,awaitingUpdate], uninstalls}
 - [Phase 81]: 81-18: the Phase 81 deletion gate scans comment-stripped Rust with a string-aware stripper, allow-lists hold_migration.rs and profile.rs for steam_restart_hold, and asserts the legitimate survivors never match a forbidden needle
 - [Phase 81]: 81-19: the live-gate contract runs Mac items in order 1,2,5,6,8,4,3,9,7,12 because any Steam restart or sign-in adopts every pending ACF
+- [Phase 47]: 47-14: store embed drain reads the live URL only after a Finished for the current webview (G-47-9); offline surface reuses the notice row
 
 ### Pending Todos
 
@@ -886,8 +888,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-18T06:29:59.090Z
-Stopped at: Completed 81-19-PLAN.md
+Last session: 2026-11-18T09:49:22.881Z
+Stopped at: Completed 47-14-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

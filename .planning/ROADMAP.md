@@ -1533,7 +1533,7 @@ Plans:
 
 **Requirements**: PRICE-01, PRICE-02, PRICE-03 (phase-level IDs minted during `/gsd-plan-phase 47`). Moved into v0.10 Foundations 2026-11-12.
 **Depends on:** Phase 20 (Aggregated Store Search — CheapShark), which minted the provider-neutral `common/types/storeSearch` vocabulary (D-11/D-12/D-13) this phase is the second implementation of. **Not** Phase 46 — `phase.add` fills `Depends on` with the immediately-preceding phase number as a positional guess, and Phase 46 (Windows single-instance guard) is unrelated; corrected by hand at filing time.
-**Plans:** 13/13 plans executed
+**Plans:** 14/18 plans executed
 
 **Research is already complete** — `.planning/quick/260916-gdg-answer-q2-cheapshark-to-itad-migration-cost/260916-gdg-RESEARCH.md` answers `questions.md` Q2 with claims graded MEASURED / SPEC / UNKNOWN. Do not re-derive it; do preserve its grades when quoting.
 
@@ -1597,7 +1597,7 @@ Plans:
 
 **Gap closure (UAT 2026-11-18, `47-UAT.md` G-47-6..9)** — Wave 1:
 
-- [ ] 47-14-PLAN.md — Store embed: no `Webview::url()` read before a page has loaded (offline Stores crash, G-47-9); offline notice row
+- [x] 47-14-PLAN.md — Store embed: no `Webview::url()` read before a page has loaded (offline Stores crash, G-47-9); offline notice row
 - [ ] 47-15-PLAN.md — Stores panel highlights the deep-linked store on `/store-page` (G-47-6)
 - [ ] 47-16-PLAN.md — Shared region store and RegionPicker on Store Search; operator decides the country list (G-47-8)
 
