@@ -34,3 +34,17 @@ file named by the bundle's `Contents/Info.plist` `CFBundleExecutable` and for fi
 `*.app/Contents/MacOS/`. Mirror the Mach-O probe's shape (bounded read, report counter)
 and add a unit test with a shebang fixture. Confirm live afterwards: a fresh GameLib
 install of 107100 launches through Steam without a manual `chmod`.
+
+## Resolution
+
+Fixed by quick 261119-8rf (commits 25487537d, fc4d35a8b, ade7147ab). Scope decision: the
+shebang fallback needs content AND path, a file starting with `#!` whose resolved destination
+is inside `*.app/Contents/MacOS/`; a path never grants +x on its own. No `Info.plist` parse,
+because `CFBundleExecutable` always names a file in that directory, and it avoids a
+cross-file ordering dependency between concurrently landing files. The count is reported as
+`stats.shebangExecApplied` and `shebang=N` in the `[depot-rust] outcome` log line.
+
+**Follow-up (human, live):** a fresh GameLib depot install of 107100 on the Mac launches
+through Steam with no manual chmod. `ls -l` on `Bastion.app/Contents/MacOS/Bastion` shows
+`-rwxr-xr-x`, and gamelib.log's `[depot-rust] outcome appId=107100` line shows `shebang=1`.
+The Phase 81 live gate re-run of `81-HUMAN-UAT.md` item 3 (launch L2) can carry this.
