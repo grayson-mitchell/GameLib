@@ -15,7 +15,7 @@ use crate::acf_state::{
 };
 use crate::adoption::{validate_watch_args, AdoptionWatchArgs};
 use crate::constants::STATE_FLAG_FULLY_INSTALLED;
-use crate::hold_migration::drain_hold_records;
+use crate::hold_migration::{discard_hold_store, drain_hold_records};
 use crate::install_loop::StartInstallArgs;
 use crate::mac_arch::mac_arch_verdict;
 use crate::running::read_running_app_id;
@@ -39,6 +39,7 @@ pub const OPS: &[&str] = &[
     "steampoll_adoption_watch",
     "steampoll_breadcrumb_installed_on_disk",
     "steampoll_bridge_finalized",
+    "steampoll_hold_discard",
     "steampoll_hold_drain",
     "steampoll_install_cancel_delegated",
     "steampoll_install_start",
@@ -422,6 +423,13 @@ fn run_op(op: &str, args: &[Value]) -> Result<Value, String> {
                 .polls
                 .set_bridge_finalized(&a.app_id, a.finalized);
             Ok(Value::Null)
+        }
+        "steampoll_hold_discard" => {
+            // Takes no args: only the facade profile's store file is ever deleted (T-81-35).
+            out(
+                op,
+                discard_hold_store(Path::new(&configured()?.profile.restart_hold_store_path)),
+            )
         }
         "steampoll_hold_drain" => {
             // Takes no args: the store path is the facade profile's, never the caller's (T-81-35).

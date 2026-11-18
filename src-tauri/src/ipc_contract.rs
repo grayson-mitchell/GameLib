@@ -120,6 +120,7 @@ pub(crate) enum RustInvokeChannel {
     SteampollAdoptionWatch,
     SteampollBreadcrumbInstalledOnDisk,
     SteampollBridgeFinalized,
+    SteampollHoldDiscard,
     SteampollHoldDrain,
     SteampollInstallCancelDelegated,
     SteampollInstallStart,
@@ -240,6 +241,7 @@ impl RustInvokeChannel {
         RustInvokeChannel::SteampollAdoptionWatch,
         RustInvokeChannel::SteampollBreadcrumbInstalledOnDisk,
         RustInvokeChannel::SteampollBridgeFinalized,
+        RustInvokeChannel::SteampollHoldDiscard,
         RustInvokeChannel::SteampollHoldDrain,
         RustInvokeChannel::SteampollInstallCancelDelegated,
         RustInvokeChannel::SteampollInstallStart,
@@ -360,6 +362,7 @@ impl RustInvokeChannel {
             "steampoll_adoption_watch" => Some(RustInvokeChannel::SteampollAdoptionWatch),
             "steampoll_breadcrumb_installed_on_disk" => Some(RustInvokeChannel::SteampollBreadcrumbInstalledOnDisk),
             "steampoll_bridge_finalized" => Some(RustInvokeChannel::SteampollBridgeFinalized),
+            "steampoll_hold_discard" => Some(RustInvokeChannel::SteampollHoldDiscard),
             "steampoll_hold_drain" => Some(RustInvokeChannel::SteampollHoldDrain),
             "steampoll_install_cancel_delegated" => Some(RustInvokeChannel::SteampollInstallCancelDelegated),
             "steampoll_install_start" => Some(RustInvokeChannel::SteampollInstallStart),
@@ -482,6 +485,7 @@ impl RustInvokeChannel {
             RustInvokeChannel::SteampollAdoptionWatch => "steampoll_adoption_watch",
             RustInvokeChannel::SteampollBreadcrumbInstalledOnDisk => "steampoll_breadcrumb_installed_on_disk",
             RustInvokeChannel::SteampollBridgeFinalized => "steampoll_bridge_finalized",
+            RustInvokeChannel::SteampollHoldDiscard => "steampoll_hold_discard",
             RustInvokeChannel::SteampollHoldDrain => "steampoll_hold_drain",
             RustInvokeChannel::SteampollInstallCancelDelegated => "steampoll_install_cancel_delegated",
             RustInvokeChannel::SteampollInstallStart => "steampoll_install_start",
@@ -2306,6 +2310,15 @@ impl SteampollBridgeFinalizedArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let first = args.first().ok_or_else(|| "steampoll_bridge_finalized:bad-args".to_string())?;
         serde_json::from_value(first.clone()).map_err(|_| "steampoll_bridge_finalized:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct SteampollHoldDiscardArgs;
+
+impl SteampollHoldDiscardArgs {
+    pub(crate) fn from_args(_args: &[Value]) -> Result<Self, String> {
+        Ok(Self)
     }
 }
 

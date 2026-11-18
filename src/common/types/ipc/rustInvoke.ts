@@ -40,6 +40,7 @@ import {
   RUST_STEAMPOLL_ADOPTION_WATCH,
   RUST_STEAMPOLL_BREADCRUMB_INSTALLED_ON_DISK,
   RUST_STEAMPOLL_BRIDGE_FINALIZED,
+  RUST_STEAMPOLL_HOLD_DISCARD,
   RUST_STEAMPOLL_HOLD_DRAIN,
   RUST_STEAMPOLL_INSTALL_CANCEL_DELEGATED,
   RUST_STEAMPOLL_INSTALL_START,
@@ -396,6 +397,7 @@ export const rustInvokeArgs = {
   [RUST_STEAMPOLL_BRIDGE_FINALIZED]: z.tuple([
     z.object({ appId: z.string(), finalized: z.boolean() }).strict()
   ]),
+  [RUST_STEAMPOLL_HOLD_DISCARD]: empty,
   [RUST_STEAMPOLL_HOLD_DRAIN]: empty,
   [RUST_STEAMPOLL_INSTALL_CANCEL_DELEGATED]: pollAppArg,
   // options (PollOptions) is validated in-crate with deny_unknown_fields, so it stays opaque here.

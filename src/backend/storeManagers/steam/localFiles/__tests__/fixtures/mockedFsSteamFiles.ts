@@ -285,6 +285,7 @@ export function mockedFsSteamFiles(
     steampoll_uninstall_start: () => undefined,
     steampoll_uninstall_stop: () => undefined,
     steampoll_bridge_finalized: () => undefined,
+    steampoll_hold_discard: () => true,
     steampoll_hold_drain: () => [],
     steampoll_next_notice_seq: () => ++noticeSeq,
     ...pollAcfHandlers(),

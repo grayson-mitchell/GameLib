@@ -2,7 +2,7 @@
 //! probes are scripted (`ScriptedRunner`), the store files are temp files, and the TS-written
 //! fixture is the shape the real CacheStore produced.
 
-use gamelib_steampoll::hold_migration::{drain_hold_records, DrainedHold};
+use gamelib_steampoll::hold_migration::{discard_hold_store, drain_hold_records, DrainedHold};
 use gamelib_steampoll::host::RunOutput;
 use gamelib_steampoll::profile::Platform;
 use gamelib_steampoll::testing::ScriptedRunner;
@@ -237,4 +237,69 @@ fn drained_hold_serialises_camel_case() {
         v,
         json!({"appId": "7", "steamPid": 5, "recordedAtMs": 12.0})
     );
+}
+
+#[test]
+fn discard_deletes_the_store_file_and_answers_true() {
+    let (_d, path) = store_with(FIXTURE);
+    assert!(discard_hold_store(&path));
+    assert!(!path.exists());
+}
+
+#[test]
+fn discard_of_a_missing_file_is_done() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir
+        .path()
+        .join("store_cache")
+        .join("steam_restart_hold.json");
+    assert!(discard_hold_store(&path));
+    assert!(discard_hold_store(&path), "twice is still done");
+    assert!(!path.parent().unwrap().exists(), "discard creates nothing");
+}
+
+#[test]
+fn discard_deletes_nothing_but_the_path_it_is_given() {
+    let (d, path) = store_with(FIXTURE);
+    let sibling = path.parent().unwrap().join("steam_pending_adoption.json");
+    std::fs::write(&sibling, "{}").unwrap();
+    let outside = d.path().join("unrelated.txt");
+    std::fs::write(&outside, "x").unwrap();
+    assert!(discard_hold_store(&path));
+    assert!(
+        sibling.exists(),
+        "the TS pending-adoption store is never touched"
+    );
+    assert!(outside.exists());
+    assert!(path.parent().unwrap().exists(), "the directory stays");
+}
+
+#[test]
+fn discard_answers_false_when_the_path_cannot_be_deleted_as_a_file() {
+    // A directory at the store path is an I/O failure on every platform (not NotFound).
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("steam_restart_hold.json");
+    std::fs::create_dir(&path).unwrap();
+    std::fs::write(path.join("inner"), "x").unwrap();
+    assert!(!discard_hold_store(&path));
+    assert!(path.join("inner").exists(), "nothing inside was touched");
+}
+
+#[cfg(unix)]
+#[test]
+fn discard_answers_false_when_the_delete_fails() {
+    use std::os::unix::fs::PermissionsExt;
+    let (_d, path) = store_with(FIXTURE);
+    let dir = path.parent().unwrap().to_path_buf();
+    std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o500)).unwrap();
+    let denied = discard_hold_store(&path);
+    // Restore before asserting so the temp dir can always be cleaned up.
+    std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o700)).unwrap();
+    // A user that bypasses directory permissions (root) deletes it; the contract is only that a
+    // failed delete answers false and that the file then still exists.
+    if path.exists() {
+        assert!(!denied);
+    } else {
+        assert!(denied);
+    }
 }

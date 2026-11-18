@@ -19,6 +19,7 @@ export const STEAMPOLL_OPS = [
   'steampoll_adoption_watch',
   'steampoll_breadcrumb_installed_on_disk',
   'steampoll_bridge_finalized',
+  'steampoll_hold_discard',
   'steampoll_hold_drain',
   'steampoll_install_cancel_delegated',
   'steampoll_install_start',

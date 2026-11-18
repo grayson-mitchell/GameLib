@@ -1,4 +1,4 @@
-//! Handlers for the 28 `steampoll_*` rustInvoke channels (Phase 80 plan 18, Phase 81 plan 02). Each validates through
+//! Handlers for the 29 `steampoll_*` rustInvoke channels (Phase 80 plan 18, Phase 81 plan 02). Each validates through
 //! its generated Args struct then calls the Tauri-free `gamelib-steampoll` dispatch on the calling
 //! worker thread (the four async ops block on the crate's own runtime and answer `wrong-thread` if
 //! called from inside one). Nothing here formats an argument, path or title into a log line (T-28-04).
@@ -69,6 +69,11 @@ pub(crate) fn rpc_steampoll_breadcrumb_installed_on_disk(args: &[Value]) -> Resu
 pub(crate) fn rpc_steampoll_bridge_finalized(args: &[Value]) -> Result<Value, String> {
     SteampollBridgeFinalizedArgs::from_args(args)?;
     gamelib_steampoll::dispatch("steampoll_bridge_finalized", args)
+}
+
+pub(crate) fn rpc_steampoll_hold_discard(args: &[Value]) -> Result<Value, String> {
+    SteampollHoldDiscardArgs::from_args(args)?;
+    gamelib_steampoll::dispatch("steampoll_hold_discard", args)
 }
 
 pub(crate) fn rpc_steampoll_hold_drain(args: &[Value]) -> Result<Value, String> {
@@ -825,6 +830,8 @@ mod tests {
         // The store path is the crate profile's, never the caller's (T-81-35).
         assert!(SteampollHoldDrainArgs::from_args(&[]).is_ok());
         assert!(SteampollHoldDrainArgs::from_args(&[json!({"path": "/etc/passwd"})]).is_ok());
+        assert!(SteampollHoldDiscardArgs::from_args(&[]).is_ok());
+        assert!(SteampollHoldDiscardArgs::from_args(&[json!({"path": "/etc/passwd"})]).is_ok());
     }
 
     #[test]

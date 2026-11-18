@@ -76,6 +76,7 @@ fn bad_args_are_named_per_op() {
                 | "steampoll_running_stop"
                 | "steampoll_status"
                 | "steampoll_read_running_app_id"
+                | "steampoll_hold_discard"
                 | "steampoll_hold_drain"
         ) {
             continue;
@@ -577,6 +578,44 @@ fn hold_drain_is_not_configured_before_install() {
     facade::reset_for_test();
     assert_eq!(
         dispatch("steampoll_hold_drain", &[]),
+        Err("steampoll:not-configured".to_string())
+    );
+}
+
+#[test]
+fn hold_discard_is_listed_deletes_only_the_profile_store_and_ignores_its_args() {
+    let _g = guard();
+    assert!(OPS.contains(&"steampoll_hold_discard"));
+    let tmp = tempfile::tempdir().unwrap();
+    install(tmp.path());
+    let store = profile_store(tmp.path());
+    std::fs::create_dir_all(store.parent().unwrap()).unwrap();
+    std::fs::write(&store, "{}").unwrap();
+    let sibling = store.parent().unwrap().join("other_store.json");
+    std::fs::write(&sibling, "{}").unwrap();
+    let victim = tmp.path().join("victim.txt");
+    std::fs::write(&victim, "keep").unwrap();
+    // A path in the args never redirects the delete.
+    assert_eq!(
+        dispatch(
+            "steampoll_hold_discard",
+            &[json!({"path": victim.to_string_lossy()})]
+        ),
+        Ok(json!(true))
+    );
+    assert!(!store.exists());
+    assert!(sibling.exists(), "nothing but the store is deleted");
+    assert!(victim.exists(), "the args never name a path");
+    // Already gone: still done.
+    assert_eq!(dispatch("steampoll_hold_discard", &[]), Ok(json!(true)));
+}
+
+#[test]
+fn hold_discard_is_not_configured_before_install() {
+    let _g = guard();
+    facade::reset_for_test();
+    assert_eq!(
+        dispatch("steampoll_hold_discard", &[]),
         Err("steampoll:not-configured".to_string())
     );
 }

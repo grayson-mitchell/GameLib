@@ -95,3 +95,20 @@ pub async fn drain_hold_records(
     }
     drained
 }
+
+/// Deletes the store file and nothing else. A missing file is done (`true`); an I/O failure
+/// answers `false`, logged by op name only. 81-13 calls this only after every drained record has
+/// been written as a pending-adoption record.
+pub fn discard_hold_store(store_path: &Path) -> bool {
+    match std::fs::remove_file(store_path) {
+        Ok(()) => true,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => true,
+        Err(e) => {
+            eprintln!(
+                "gamelib-steampoll: hold store discard failed (op steampoll_hold_discard): {}",
+                e.kind()
+            );
+            false
+        }
+    }
+}

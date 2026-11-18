@@ -630,6 +630,12 @@ export const RUST_STEAMPOLL_BRIDGE_FINALIZED =
   'steampoll_bridge_finalized' as const
 
 /**
+ * Rust-side channel name: Phase 81 steampoll op `steampoll_hold_discard`. Deletes the old restart-hold store file (`steam_restart_hold.json`) and nothing else. No args; the store path is the Rust profile's, never the caller's.
+ * Resolves `true` when the file is gone (a missing file counts), `false` on an I/O failure. Call it only after every drained record has been persisted elsewhere.
+ */
+export const RUST_STEAMPOLL_HOLD_DISCARD = 'steampoll_hold_discard' as const
+
+/**
  * Rust-side channel name: Phase 81 steampoll op `steampoll_hold_drain`. Reads the restart-hold store an older build wrote (`steam_restart_hold.json`) and answers the records still worth adopting. No args; the store path is the Rust profile's, never the caller's.
  * Resolves `DrainedHold[]` (`{ appId, steamPid, recordedAtMs }`). Writes nothing.
  */
@@ -1074,6 +1080,7 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_STEAMPOLL_ADOPTION_WATCH,
   RUST_STEAMPOLL_BREADCRUMB_INSTALLED_ON_DISK,
   RUST_STEAMPOLL_BRIDGE_FINALIZED,
+  RUST_STEAMPOLL_HOLD_DISCARD,
   RUST_STEAMPOLL_HOLD_DRAIN,
   RUST_STEAMPOLL_INSTALL_CANCEL_DELEGATED,
   RUST_STEAMPOLL_INSTALL_START,
@@ -1142,6 +1149,7 @@ export const RUST_STEAMPOLL_CHANNELS = [
   RUST_STEAMPOLL_ADOPTION_WATCH,
   RUST_STEAMPOLL_BREADCRUMB_INSTALLED_ON_DISK,
   RUST_STEAMPOLL_BRIDGE_FINALIZED,
+  RUST_STEAMPOLL_HOLD_DISCARD,
   RUST_STEAMPOLL_HOLD_DRAIN,
   RUST_STEAMPOLL_INSTALL_CANCEL_DELEGATED,
   RUST_STEAMPOLL_INSTALL_START,
