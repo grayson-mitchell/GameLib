@@ -60,9 +60,3 @@ pub trait ProcessRunner: Send + Sync + 'static {
 pub trait Clock: Send + Sync + 'static {
     fn now_ms(&self) -> u64;
 }
-
-/// Restart-hold store seam: `hold::HoldStore` implements it, `outbox::apply_effects` uses it.
-pub trait HoldSink: Send + Sync + 'static {
-    fn record(&self, app_id: &str, record: Value, now_ms: u64);
-    fn clear(&self, app_id: &str);
-}

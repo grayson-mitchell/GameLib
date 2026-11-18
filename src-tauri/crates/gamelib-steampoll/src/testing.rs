@@ -3,8 +3,7 @@
 
 use crate::events::{AckReply, StateEvent};
 use crate::host::{
-    BoxFuture, Clock, HoldSink, Notification, NotifyText, PollHost, ProcessRunner, RunOutput,
-    StreamingChild,
+    BoxFuture, Clock, Notification, NotifyText, PollHost, ProcessRunner, RunOutput, StreamingChild,
 };
 use serde::Serialize;
 use serde_json::Value;
@@ -120,23 +119,6 @@ impl PollHost for RecordingHost {
     }
     fn shell_pid(&self) -> u32 {
         1
-    }
-}
-
-impl HoldSink for RecordingHost {
-    fn record(&self, app_id: &str, record: Value, _now_ms: u64) {
-        self.push(StreamRecord::File {
-            op: "record".into(),
-            app_id: app_id.into(),
-            record: Some(record),
-        });
-    }
-    fn clear(&self, app_id: &str) {
-        self.push(StreamRecord::File {
-            op: "clear".into(),
-            app_id: app_id.into(),
-            record: None,
-        });
     }
 }
 

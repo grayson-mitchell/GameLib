@@ -17,8 +17,7 @@ use gamelib_i18n::Catalog;
 use gamelib_steampoll::acf_state::{AcfSource, PollRoots};
 use gamelib_steampoll::events::{AckReply, StateEvent};
 use gamelib_steampoll::host::{
-    BoxFuture, HoldSink, Notification, NotifyText, PollHost, ProcessRunner, RunOutput,
-    StreamingChild,
+    BoxFuture, Notification, NotifyText, PollHost, ProcessRunner, RunOutput, StreamingChild,
 };
 use gamelib_steampoll::install_loop::{InstallPolls, PollOptions, StartInstallArgs};
 use gamelib_steampoll::monitor::{DownloadMonitor, DownloadReading};
@@ -253,16 +252,6 @@ impl PollHost for ReplayHost {
 
     fn shell_pid(&self) -> u32 {
         1
-    }
-}
-
-impl HoldSink for ReplayHost {
-    fn record(&self, app_id: &str, record: Value, _now_ms: u64) {
-        self.push(json!({"file": {"op": "record", "appId": app_id, "record": record}}));
-    }
-
-    fn clear(&self, app_id: &str) {
-        self.push(json!({"file": {"op": "clear", "appId": app_id, "record": null}}));
     }
 }
 

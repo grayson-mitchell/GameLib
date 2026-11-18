@@ -2,11 +2,15 @@
 //! probes are scripted (`ScriptedRunner`), the store files are temp files, and the TS-written
 //! fixture is the shape the real CacheStore produced.
 
-use gamelib_steampoll::hold_migration::{discard_hold_store, drain_hold_records, DrainedHold};
+use gamelib_steampoll::hold_migration::{
+    decide_rearm, discard_hold_store, drain_hold_records, parse_record, read_hold_store,
+    DrainedHold, DropReason, PidToken, RearmDecision, RestartHoldRecord,
+};
 use gamelib_steampoll::host::RunOutput;
 use gamelib_steampoll::profile::Platform;
 use gamelib_steampoll::testing::ScriptedRunner;
-use serde_json::json;
+use serde_json::{json, Value};
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 const PGREP: &str = "/usr/bin/pgrep -x steam_osx";
@@ -302,4 +306,199 @@ fn discard_answers_false_when_the_delete_fails() {
     } else {
         assert!(denied);
     }
+}
+
+// ---- parse_record (steamRestartHold.test.ts) --------------------------------------------------
+
+fn rec() -> RestartHoldRecord {
+    RestartHoldRecord {
+        pids: vec![PidToken {
+            pid: 111,
+            start_token: "T1".into(),
+        }],
+        recorded_at: 1000.0,
+        mac_native_route: true,
+        skipped_depots: vec!["5".into()],
+    }
+}
+
+/// The CacheStore value shape of `rec()`, as the older builds wrote it.
+fn rec_value() -> Value {
+    json!({
+        "pids": [{"pid": 111, "startToken": "T1"}],
+        "recordedAt": 1000,
+        "macNativeRoute": true,
+        "skippedDepots": ["5"],
+    })
+}
+
+#[test]
+fn parse_round_trips_the_shape_older_builds_wrote() {
+    assert_eq!(parse_record(&rec_value()), Some(rec()));
+}
+
+#[test]
+fn read_rejects_invalid_records() {
+    let good = rec_value();
+    let with = |k: &str, v: Value| {
+        let mut g = good.clone();
+        g[k] = v;
+        g
+    };
+    let cases: Vec<(&str, Value)> = vec![
+        ("non-object", json!("x")),
+        ("missing pids", {
+            let mut g = good.clone();
+            g.as_object_mut().unwrap().remove("pids");
+            g
+        }),
+        ("empty pids", with("pids", json!([]))),
+        (
+            "zero pid",
+            with("pids", json!([{"pid": 0, "startToken": "a"}])),
+        ),
+        (
+            "negative pid",
+            with("pids", json!([{"pid": -3, "startToken": "a"}])),
+        ),
+        (
+            "non-integer pid",
+            with("pids", json!([{"pid": 1.5, "startToken": "a"}])),
+        ),
+        (
+            "non-string token",
+            with("pids", json!([{"pid": 1, "startToken": 7}])),
+        ),
+        (
+            "empty token",
+            with("pids", json!([{"pid": 1, "startToken": ""}])),
+        ),
+        ("non-number recordedAt", with("recordedAt", json!("1"))),
+        ("non-string depots", with("skippedDepots", json!([1]))),
+    ];
+    for (name, v) in cases {
+        assert_eq!(parse_record(&v), None, "{name}");
+    }
+    // JSON cannot carry Infinity, so the non-finite case arrives as null.
+    assert_eq!(parse_record(&with("recordedAt", Value::Null)), None);
+}
+
+#[test]
+fn mac_native_route_defaults_false() {
+    let mut v = rec_value();
+    v.as_object_mut().unwrap().remove("macNativeRoute");
+    assert!(!parse_record(&v).unwrap().mac_native_route);
+}
+
+// ---- steamRestartHold.test.ts: decideSteamRestartHoldRearm ------------------------------------
+
+fn tokens(pairs: &[(u32, &str)]) -> HashMap<u32, String> {
+    pairs.iter().map(|(p, t)| (*p, t.to_string())).collect()
+}
+
+#[test]
+fn decide_unknown_when_live_pids_is_none() {
+    let t = tokens(&[(111, "T1")]);
+    assert_eq!(
+        decide_rearm(&rec(), None, Some(&t), 2000, 10_000),
+        RearmDecision::Unknown
+    );
+}
+
+#[test]
+fn decide_drops_when_expired() {
+    let t = tokens(&[(111, "T1")]);
+    assert_eq!(
+        decide_rearm(&rec(), Some(&[111]), Some(&t), 11_000, 10_000),
+        RearmDecision::Drop {
+            reason: DropReason::Expired
+        }
+    );
+}
+
+#[test]
+fn decide_drops_when_no_recorded_pid_is_live() {
+    let t = tokens(&[(111, "T1")]);
+    assert_eq!(
+        decide_rearm(&rec(), Some(&[9]), Some(&t), 2000, 10_000),
+        RearmDecision::Drop {
+            reason: DropReason::SteamExited
+        }
+    );
+}
+
+#[test]
+fn decide_unknown_when_tokens_unavailable() {
+    assert_eq!(
+        decide_rearm(&rec(), Some(&[111]), None, 2000, 10_000),
+        RearmDecision::Unknown
+    );
+}
+
+#[test]
+fn decide_drops_on_a_differing_token_pid_reuse() {
+    let t = tokens(&[(111, "T2")]);
+    assert_eq!(
+        decide_rearm(&rec(), Some(&[111]), Some(&t), 2000, 10_000),
+        RearmDecision::Drop {
+            reason: DropReason::PidReused
+        }
+    );
+}
+
+#[test]
+fn decide_arms_with_only_the_matching_pids() {
+    let mut r = rec();
+    r.pids.push(PidToken {
+        pid: 222,
+        start_token: "X".into(),
+    });
+    let t = tokens(&[(111, "T1"), (222, "Y")]);
+    assert_eq!(
+        decide_rearm(&r, Some(&[111, 222]), Some(&t), 2000, 10_000),
+        RearmDecision::Arm { pids: vec![111] }
+    );
+}
+
+// ---- read_hold_store: the file the real TS CacheStore wrote (D-16, R3) ------------------------
+
+#[test]
+fn reads_both_records_the_real_ts_store_wrote() {
+    let (_d, path) = store_with(FIXTURE);
+    let list = read_hold_store(&path);
+    let ids: Vec<&str> = list.iter().map(|(k, _)| k.as_str()).collect();
+    assert_eq!(list.len(), 2, "{ids:?}");
+    let first = &list.iter().find(|(k, _)| k == "43160").unwrap().1;
+    assert_eq!(first.pids[0].pid, 4242);
+    assert_eq!(first.pids[0].start_token, "Mon Nov 16 09:12:03 2026");
+    assert!(first.mac_native_route);
+    assert_eq!(first.skipped_depots, vec!["43161".to_string()]);
+    let second = &list.iter().find(|(k, _)| k == "238320").unwrap().1;
+    assert_eq!(second.pids.len(), 2);
+}
+
+#[test]
+fn read_hold_store_returns_only_valid_pairs() {
+    let mut raw = json!({"730": rec_value(), "bad": {"nope": true}});
+    raw["__internal__"] = json!({"gamelib": {"schemaVersion": 1}});
+    let (_d, path) = store_with(&raw.to_string());
+    assert_eq!(read_hold_store(&path), vec![("730".to_string(), rec())]);
+}
+
+#[test]
+fn a_flat_timestamp_key_is_not_a_record() {
+    let mut v = json!({"7": rec_value(), "__timestamp.7": rec_value(), "__timestamp": rec_value()});
+    v["__internal__"] = rec_value();
+    let (_d, path) = store_with(&v.to_string());
+    let list = read_hold_store(&path);
+    assert_eq!(list, vec![("7".to_string(), rec())]);
+}
+
+#[test]
+fn an_unparseable_or_missing_store_reads_empty_and_stays_untouched() {
+    let (_d, path) = store_with("{not json");
+    assert!(read_hold_store(&path).is_empty());
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), "{not json");
+    let dir = tempfile::tempdir().unwrap();
+    assert!(read_hold_store(&dir.path().join("none.json")).is_empty());
 }

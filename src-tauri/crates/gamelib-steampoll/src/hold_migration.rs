@@ -10,14 +10,168 @@
 //! never from op args (T-81-35).
 //!
 //! Logging rule (T-28-04): op name and counts only, never a path or a record body.
+//!
+//! This is the only code that reads `steam_restart_hold.json`. Nothing writes the store any more
+//! (Phase 81 D-11), so the record types, [`parse_record`], [`decide_rearm`] and the read half of
+//! the old store live here with the drain that uses them.
+//!
+//! The store file is the sidecar's `CacheStore` layout:
+//! `{ "<appId>": record, "__timestamp": { "<appId>": "<date text>" }, "__internal__": {..} }`, and
+//! a flat `"__timestamp.<appId>"` key (the in-memory `CacheStore` shape) is skipped like the
+//! other bookkeeping keys.
 
-use crate::hold::{decide_rearm, DropReason, HoldStore, RearmDecision};
 use crate::host::ProcessRunner;
 use crate::profile::Platform;
 use crate::steam_process::{list_steam_client_pids, read_steam_process_start_tokens};
 use serde::Serialize;
+use serde_json::Value;
 use std::collections::HashMap;
 use std::path::Path;
+
+// ---------------------------------------------------------------------------------------------
+// Records and parsing
+// ---------------------------------------------------------------------------------------------
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PidToken {
+    pub pid: u32,
+    pub start_token: String,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct RestartHoldRecord {
+    pub pids: Vec<PidToken>,
+    /// Epoch ms. Any finite number is accepted on read, like TS.
+    pub recorded_at: f64,
+    pub mac_native_route: bool,
+    pub skipped_depots: Vec<String>,
+}
+
+/// Safe-parse of untrusted disk content (steamRestartHold.ts `parseRecord`).
+pub fn parse_record(value: &Value) -> Option<RestartHoldRecord> {
+    let v = value.as_object()?;
+    let raw_pids = v.get("pids")?.as_array()?;
+    if raw_pids.is_empty() {
+        return None;
+    }
+    let mut pids = Vec::with_capacity(raw_pids.len());
+    for entry in raw_pids {
+        let e = entry.as_object()?;
+        let pid = e.get("pid")?.as_u64()?;
+        let token = e.get("startToken")?.as_str()?;
+        if pid == 0 || pid > u32::MAX as u64 || token.is_empty() {
+            return None;
+        }
+        pids.push(PidToken {
+            pid: pid as u32,
+            start_token: token.to_string(),
+        });
+    }
+    let recorded_at = v.get("recordedAt")?.as_f64().filter(|n| n.is_finite())?;
+    let skipped = v.get("skippedDepots")?.as_array()?;
+    let skipped_depots = skipped
+        .iter()
+        .map(|d| d.as_str().map(str::to_string))
+        .collect::<Option<Vec<_>>>()?;
+    Some(RestartHoldRecord {
+        pids,
+        recorded_at,
+        mac_native_route: v.get("macNativeRoute").and_then(Value::as_bool) == Some(true),
+        skipped_depots,
+    })
+}
+
+// ---------------------------------------------------------------------------------------------
+// Re-arm decision
+// ---------------------------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DropReason {
+    Expired,
+    SteamExited,
+    PidReused,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RearmDecision {
+    Arm {
+        pids: Vec<u32>,
+    },
+    Drop {
+        reason: DropReason,
+    },
+    /// A probe was inconclusive: neither arm nor delete the record.
+    Unknown,
+}
+
+/// Pure re-arm decision (`decideSteamRestartHoldRearm`).
+pub fn decide_rearm(
+    record: &RestartHoldRecord,
+    live_pids: Option<&[u32]>,
+    start_tokens: Option<&HashMap<u32, String>>,
+    now_ms: u64,
+    max_age_ms: u64,
+) -> RearmDecision {
+    let Some(live) = live_pids else {
+        return RearmDecision::Unknown;
+    };
+    if now_ms as f64 - record.recorded_at >= max_age_ms as f64 {
+        return RearmDecision::Drop {
+            reason: DropReason::Expired,
+        };
+    }
+    let candidates: Vec<&PidToken> = record
+        .pids
+        .iter()
+        .filter(|p| live.contains(&p.pid))
+        .collect();
+    if candidates.is_empty() {
+        return RearmDecision::Drop {
+            reason: DropReason::SteamExited,
+        };
+    }
+    let Some(tokens) = start_tokens else {
+        return RearmDecision::Unknown;
+    };
+    let matching: Vec<u32> = candidates
+        .iter()
+        .filter(|p| tokens.get(&p.pid) == Some(&p.start_token))
+        .map(|p| p.pid)
+        .collect();
+    if matching.is_empty() {
+        return RearmDecision::Drop {
+            reason: DropReason::PidReused,
+        };
+    }
+    RearmDecision::Arm { pids: matching }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Reading the store
+// ---------------------------------------------------------------------------------------------
+
+fn is_bookkeeping_key(key: &str) -> bool {
+    key == "__internal__" || key == "__timestamp" || key.starts_with("__timestamp.")
+}
+
+/// Every valid record in the store file, in file order. A missing, unreadable or non-object file
+/// reads as empty, and the file is never written.
+pub fn read_hold_store(path: &Path) -> Vec<(String, RestartHoldRecord)> {
+    let Ok(text) = std::fs::read_to_string(path) else {
+        return vec![];
+    };
+    let Ok(Value::Object(map)) = serde_json::from_str::<Value>(&text) else {
+        return vec![];
+    };
+    map.iter()
+        .filter(|(k, _)| !is_bookkeeping_key(k))
+        .filter_map(|(k, v)| parse_record(v).map(|r| (k.clone(), r)))
+        .collect()
+}
+
+// ---------------------------------------------------------------------------------------------
+// Drain and discard
+// ---------------------------------------------------------------------------------------------
 
 /// A persisted hold that is still worth adopting: the older build's Steam has not exited since,
 /// or that could not be checked.
@@ -44,8 +198,7 @@ pub async fn drain_hold_records(
     now_ms: u64,
 ) -> Vec<DrainedHold> {
     // Only numeric appIds (1 to 10 digits) migrate: the id later reaches a watch op and a path.
-    let records: Vec<_> = HoldStore::new(store_path)
-        .list()
+    let records: Vec<_> = read_hold_store(store_path)
         .into_iter()
         .filter(|(id, _)| (1..=10).contains(&id.len()) && id.bytes().all(|b| b.is_ascii_digit()))
         .collect();
