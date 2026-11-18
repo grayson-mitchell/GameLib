@@ -11,6 +11,8 @@ updated: 2026-11-18
 Authored by plan 81-19 and run by plan 81-20 (standing rule D-E: the plan that writes a gate never runs it).
 Nothing below has been run. Every `result:` is `pending` until 81-20 records the operator's report.
 
+Run record (81-20, 2026-11-18): session directory `/tmp/gamelib-gate-20261118T063108Z`. Preflight done before launch 1: `pnpm build-steam-bridge` and `pnpm build:sidecar` both exit 0 (helper built 19:30, `build/main/sidecar.js` 19:31 NZDT, both newer than the last backend commit), no `target/debug/gamelib-shell` running, Mac Steam running. A leftover `store_cache/steam_restart_hold.json` was found (an empty store: no records, only the internal schema keys, dated Nov 17); moved into the session directory as `leftover-steam_restart_hold.json` per the Preconditions. The pending-adoption store held no records at preflight. InstallApp setting: OFF (contract default; confirm at launch 1).
+
 Item map: items 1-9 and 12 run on the operator's Mac; item 10 on Windows 11; item 11 on Linux.
 Decision coverage: D-01 (items 2, 8), D-02 (4, 10, 11), D-03 (3, 10, 11), D-04 (2, 5), D-05 (5), D-07 (3, 10, 11), D-08 (1), D-09 (7), D-12 (6), D-14 (10, 11).
 Owed-from-earlier-waves coverage: 81-04 helper in three states (item 1), 81-05 Windows/Linux adoption evidence (items 10, 11), 81-07 refused-restart notice with "Launch without Steam" (item 5), 81-08 `steam://open/main` relaunch on all three OSes (items 4, 10, 11) and the three themes (item 8), 81-09 the 112100 regression (item 3), 81-13 boot migration (item 6), the RESEARCH Linux real-game launch after relaunch (item 11), and the known 1026-edge gap (item 12, expected to fail today).
@@ -74,7 +76,7 @@ Mac run: item 1, then item 2, then 5, then 6, then 8, then 4, then 3, then 9, th
 
 ### 1. Helper live reading in three states (macOS, D-08, 81-04)
 expected: With Steam signed in, `public/bin/arm64/darwin/steam-bridge-helper --steam-appstate <an installed appId>` prints exactly one JSON line `{"result":"ok","loggedOn":1,"state":...}` whose state has bit 4 (value 4 for an adopted game); at Steam's sign-in screen it prints `{"result":"ok","loggedOn":0,...}`; with Steam quit it prints `{"result":"unavailable","reason":"steam-not-running"}`; no line contains a SteamID (grep the three lines for a 17-digit number starting 7656119: no match).
-result: pending
+result: [pending — sub-check (a) read by the 81-20 executor against live Mac Steam, real profile: appId 22000 and appId 112100 each printed `{"result":"ok","loggedOn":1,"state":4,"installed":16}` (one line each, state bit 4 set, no 7656119 number; saved in `/tmp/gamelib-gate-20261118T063108Z/helper.log`). Sub-checks (b) signed-out, (c) Steam quit and (d) sign back in await the operator.]
 launch: none (the helper is run from a terminal, no app launch needed; run before launch 1). Real-profile arm: the helper reads the real Steam profile, not a fake HOME (D-08; `gl_ia_find_method_slot` with the interface-17 marker resolves `GetAppInstallState`, proven only against a live client).
 runs on: Mac. Steps: (a) signed in, run it for an installed appId and for appId 112100 if not installed; (b) Steam menu, sign out so the sign-in window shows, run it again; (c) quit Steam, run it again; (d) relaunch Steam and sign in again.
 scores: the three stdout lines (terminal). The helper is a standalone process, so its output is neither of the app's sinks; paste it into the session directory with `tee -a "$SESSION/helper.log"`.
