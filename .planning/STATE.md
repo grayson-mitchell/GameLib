@@ -6,10 +6,10 @@ current_phase: 47
 current_phase_name: Migrate aggregated store search from CheapShark to IsThereAnyDeal
 status: verifying
 stopped_at: Completed 47-18-PLAN.md
-last_updated: "2026-11-18T10:18:53.387Z"
+last_updated: "2026-11-18T17:41:09.809Z"
 last_activity: 2026-11-18
 last_activity_desc: Phase 47 execution started
-state_head: 1f517f7c95ce9676a15a6492ef18c089bcd96f32
+state_head: 20240b7b3a31f3cf2b22ee0882f46f7333a4a4c5
 progress:
   total_phases: 26
   completed_phases: 23
@@ -79,7 +79,7 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 Phase: 47 (Migrate aggregated store search from CheapShark to IsThereAnyDeal) — EXECUTING
 Plan: 18 of 18
 Status: Phase complete — ready for verification
-Last activity: 2026-11-18 — Phase 47 execution started
+Last activity: 2026-11-19 - Completed quick task 261119-8rf: Depot install makes shebang shell-script launchers executable
 
 Progress: [█████████░] 88%
 
@@ -701,6 +701,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261117-sin | Field-anchor gate's drift check now scans gsd-core's `~/.claude/gsd-core/bin/lib/*.cjs` (compiled call shapes + `stateFieldValue`) instead of the 1.42.3 SDK it never found; pinned Completed Phases, State Head, milestone as required-0. Self-test 13 -> 14. | 2026-11-17 | | planning-gates 12/12; no-install fallback passes; planted literal fails | [261117-sin-repoint-field-anchor-gate-drift-check-at](./quick/261117-sin-repoint-field-anchor-gate-drift-check-at/) |
 | 261117-ubb | Load a pinned CDN-fetched libsteam_api.dylib in the macOS bridge helper | 2026-11-17 | 1aff893bb | — | [261117-ubb-load-a-pinned-cdn-fetched-libsteam-api-d](./quick/261117-ubb-load-a-pinned-cdn-fetched-libsteam-api-d/) |
 | 261118-uma | Mac running-game signal for restart-on-Play refusal (phase 81 item 5) | 2026-11-18 | e70d022f3 | — | [261118-uma-mac-running-game-signal-for-restart-on-p](./quick/261118-uma-mac-running-game-signal-for-restart-on-p/) |
+| 261119-8rf | Depot install: make #! launchers inside *.app/Contents/MacOS/ executable (Bastion opened in TextEdit); counted as shebang=N in the depot outcome log | 2026-11-19 | 20240b7b3 | — | [261119-8rf-depot-install-make-shebang-shell-script-](./quick/261119-8rf-depot-install-make-shebang-shell-script-/) |
 
 ## Deferred Items
 
