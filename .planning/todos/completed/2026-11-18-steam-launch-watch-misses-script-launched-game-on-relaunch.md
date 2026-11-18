@@ -38,3 +38,25 @@ process shows `/bin/bash` as its executable with the script as an argument, and 
 whether `noteRelaunch()` restarts the scan as well as the start window. Add a test for an
 `already-watching` relaunch whose game appears after the relaunch. Verify live with a
 script-launched Mac game (Bastion 107100, once its launcher is executable).
+
+## Resolution
+
+Done by quick 261119-gzt (fix 362934e4f, tests 8b5b07cd7).
+
+Root cause: `psOutputPidsInFolder` admitted a pid only when its `ps -o pid=,args=` text
+started with the install folder, and macOS `ps` prints argv, not the executable path. Bastion's
+launcher shows as `/bin/bash <folder>/Bastion.app/Contents/MacOS/Bastion` and its child as
+`./Bastion.bin.osx`, so neither matched and every scan returned no pids until the start window
+ran out. On Linux the same args pre-filter dropped the relative child before the /proc exe
+filter saw it. `noteRelaunch()` was not at fault: the bail came 92 s after the relaunch (the
+90 s window plus one poll), and the new T12 (a game that first appears after the original window
+but inside the relaunch window) passes at HEAD before any source change.
+
+Fix: `psOutputPidsInFolder` now also admits an sh-family interpreter running a script inside the
+folder, and a relative argv[0] is resolved by executable path (one bounded `lsof -d txt` over
+only the candidate pids on darwin, `/proc/<pid>/exe` on linux), so the launch watch sends
+`playing` and Stop gets real pids. No process outside the folder, sibling folder or Steam helper
+is matched.
+
+Live check pending (ready: live-gate): Bastion 107100 Play shows Playing and Stop ends it; run
+after a `pnpm tauri:dev` restart.
