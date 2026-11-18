@@ -7,6 +7,8 @@
  * inventing its own tab-id type or route-matching rules.
  */
 
+import { resolveStoreForUrl } from 'frontend/screens/WebView/storeEmbedOrigins'
+
 /** The five tier-1 tabs, in navbar left-to-right order. */
 export const NAV_TAB_IDS = [
   'accounts',
@@ -78,6 +80,31 @@ export function resolveActiveTab(pathname: string): NavTabId | null {
     pathname.includes('/wiki')
   ) {
     return 'settings'
+  }
+
+  return null
+}
+
+/**
+ * Resolves the store whose tier-2 row should read as active for the current
+ * route, or `null` when the route owns no store (G-47-6). `/store/:store`
+ * yields its own key; a `/store-page?store-url=` deep link (Deals card, the
+ * game page's Store link, the Humble Keys claim) yields the key of the store
+ * its URL belongs to. Host matching is `resolveStoreForUrl`'s (exact or
+ * dot-suffix, https only) -- no second rule is written here.
+ */
+export function resolveActiveStore(
+  pathname: string,
+  search?: string
+): string | null {
+  const storeKey = /^\/store\/([^/]+)\/?$/.exec(pathname)?.[1]
+  if (storeKey !== undefined) {
+    return STORE_KEYS.includes(storeKey) ? storeKey : null
+  }
+
+  if (pathname.includes('store-page')) {
+    const url = new URLSearchParams(search ?? '').get('store-url')
+    return url ? (resolveStoreForUrl(url)?.key ?? null) : null
   }
 
   return null

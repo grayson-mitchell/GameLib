@@ -28,8 +28,13 @@ import NavItem from '../NavItem'
  * standing project decision to drop it: the ported source still renders one
  * conditionally, but it is intentionally absent from this settled list, not
  * an oversight.
+ *
+ * Deep-link routes (`/store-page`) highlight the owning store's row via
+ * `resolveActiveStore` (G-47-6), passed in as `activeStore`.
  */
-export default function StoresPanel() {
+export default function StoresPanel({
+  activeStore = null
+}: { activeStore?: string | null } = {}) {
   const { t } = useTranslation()
   const { t: tGamelib } = useTranslation('gamelib')
   const humble = useAuthState((s) => s.humble)
@@ -45,6 +50,7 @@ export default function StoresPanel() {
       />
       <NavItem
         url="/store/amazon"
+        isActiveFallback={activeStore === 'amazon'}
         iconElement={
           <StoreLogos runner="nile" className="NavItem__storeLogo" />
         }
@@ -52,6 +58,7 @@ export default function StoresPanel() {
       />
       <NavItem
         url="/store/epic"
+        isActiveFallback={activeStore === 'epic'}
         iconElement={
           <StoreLogos runner="legendary" className="NavItem__storeLogo" />
         }
@@ -59,11 +66,13 @@ export default function StoresPanel() {
       />
       <NavItem
         url="/store/gog"
+        isActiveFallback={activeStore === 'gog'}
         iconElement={<StoreLogos runner="gog" className="NavItem__storeLogo" />}
         label={t('gog-store', 'GOG Store')}
       />
       <NavItem
         url="/store/steam"
+        isActiveFallback={activeStore === 'steam'}
         iconElement={
           <StoreLogos runner="steam" className="NavItem__storeLogo" />
         }
@@ -77,6 +86,7 @@ export default function StoresPanel() {
       {humble?.isLoggedIn && (
         <NavItem
           url="/humble-keys"
+          isActiveFallback={activeStore === 'humble'}
           icon={faKey}
           label={t('sidebar.humbleKeys', 'Humble Keys')}
         />

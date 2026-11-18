@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import classNames from 'classnames'
 
 import { Tier2PortalContext } from './Tier2PortalContext'
-import { resolveActiveTab } from './navTabs'
+import { resolveActiveStore, resolveActiveTab } from './navTabs'
 import { rememberTabLocation } from './tabLocationMemory'
 import NavTabs from './components/NavTabs'
 import GamesPanel from './components/GamesPanel'
@@ -42,6 +42,7 @@ export default function NavShell() {
   const { filled } = useContext(Tier2PortalContext)
 
   const activeTab = resolveActiveTab(location.pathname)
+  const activeStore = resolveActiveStore(location.pathname, location.search)
 
   // Session tab memory: remember where the user is so coming back to this
   // tab lands them there (tabLocationMemory.ts).
@@ -82,7 +83,7 @@ export default function NavShell() {
   if (activeTab === 'games') {
     tier2Panel = <GamesPanel />
   } else if (activeTab === 'stores') {
-    tier2Panel = <StoresPanel />
+    tier2Panel = <StoresPanel activeStore={activeStore} />
   } else if (activeTab === 'settings') {
     tier2Panel = <SettingsPanel />
   }
