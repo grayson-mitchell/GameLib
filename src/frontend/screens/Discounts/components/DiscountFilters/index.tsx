@@ -8,8 +8,7 @@ import {
   MenuItem,
   Select,
   Slider,
-  TextField,
-  Tooltip
+  TextField
 } from '@mui/material'
 import { ExpandMore } from '@mui/icons-material'
 import SearchBar from 'frontend/components/UI/SearchBar'
@@ -99,59 +98,38 @@ const MultiSelectChips = <T extends SlugOption>({
           <span className="discountFilters__labelMeta">{selected.length}</span>
         )}
       </label>
-      <Tooltip
-        arrow
-        placement="bottom-start"
-        disableHoverListener={selected.length <= 3}
-        title={
-          selected.length > 3 ? (
-            <div className="discountFilters__tooltipChips">
-              {selectedOptions.map((o) => (
-                <Chip
-                  key={o.slug}
-                  size="small"
-                  label={o.name}
-                  className="discountFilters__chip"
-                />
-              ))}
-            </div>
-          ) : (
-            ''
-          )
+      {/* The control shows every chip itself, so no hover bubble is needed (G-47-14b). */}
+      <Autocomplete
+        multiple
+        size="small"
+        limitTags={2}
+        options={options}
+        value={selectedOptions}
+        onChange={(_, value) => onChange(value.map((o) => o.slug))}
+        getOptionLabel={(o) => o.name}
+        isOptionEqualToValue={(a, b) => a.slug === b.slug}
+        renderTags={(value, getTagProps) =>
+          value.map((option, index) => {
+            const { key, ...rest } = getTagProps({ index })
+            return (
+              <Chip
+                key={key}
+                size="small"
+                label={option.name}
+                {...rest}
+                className="discountFilters__chip"
+              />
+            )
+          })
         }
-      >
-        <Autocomplete
-          multiple
-          size="small"
-          limitTags={2}
-          options={options}
-          value={selectedOptions}
-          onChange={(_, value) => onChange(value.map((o) => o.slug))}
-          getOptionLabel={(o) => o.name}
-          isOptionEqualToValue={(a, b) => a.slug === b.slug}
-          renderTags={(value, getTagProps) =>
-            value.map((option, index) => {
-              const { key, ...rest } = getTagProps({ index })
-              return (
-                <Chip
-                  key={key}
-                  size="small"
-                  label={option.name}
-                  {...rest}
-                  className="discountFilters__chip"
-                />
-              )
-            })
-          }
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              placeholder={selected.length === 0 ? placeholder : ''}
-            />
-          )}
-          className="discountFilters__autocomplete"
-        />
-      </Tooltip>
+        renderInput={(params) => (
+          <TextField
+            {...params}
+            placeholder={selected.length === 0 ? placeholder : ''}
+          />
+        )}
+        className="discountFilters__autocomplete"
+      />
     </div>
   )
 }

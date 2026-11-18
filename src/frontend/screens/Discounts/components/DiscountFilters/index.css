@@ -268,11 +268,17 @@
   text-transform: none;
 }
 
+/*
+ * The control grows to hold its chips (limitTags only trims them while blurred). A fixed
+ * height with overflow hidden made the browser scroll the box to the caret, cropping chips
+ * and detaching the notched outline (G-47-14b). The inputs grid is align-items start, so a
+ * taller control does not stretch its neighbours.
+ */
 .discountFilters__autocomplete .MuiInputBase-root {
-  height: 40px;
-  overflow: hidden;
+  min-height: 40px;
+  height: auto;
   align-items: center;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   padding-block: var(--space-3xs);
 }
 
@@ -296,13 +302,6 @@
 
 .discountFilters__chip .MuiChip-deleteIcon:hover {
   opacity: 1;
-}
-
-.discountFilters__tooltipChips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3xs);
-  max-width: 280px;
 }
 
 /* Segmented control for OS */
