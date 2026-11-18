@@ -3,7 +3,7 @@ status: diagnosed
 phase: 47-migrate-aggregated-store-search-from-cheapshark-to-istherean
 source: [47-VERIFICATION.md]
 started: 2026-11-17T23:10:00Z
-updated: 2026-11-18T17:16:10.261Z
+updated: 2026-11-18T23:22:47.000Z
 ---
 
 ## Current Test
@@ -84,12 +84,28 @@ severity: major
 expected: With a Steam library loaded, search a title you own on Steam; the row shows 'Owned on Steam'. A title you do not own shows no Steam badge.
 result: pass
 
+### 16. Store Search keeps its query and rows on leave and return (47-19, G-47-12a)
+expected: macOS, `pnpm tauri:dev` (never `tauri:dev:run`). Stores > Store Search, search 'xcom', wait for rows. Open Settings and change the theme, then return via the Stores tab: the box still holds 'xcom' and the same rows show on the first frame with no spinner and no new request. Repeat after more than 15 minutes away (or after changing the region in between): the first frame shows the loading spinner beside the filled 'xcom' box, never the 'Search a title...' prompt, and the rows then refresh. Quit and relaunch: the box is empty (nothing persisted).
+result: pending
+
+### 17. Autocorrect on blur no longer rewrites the query, and the region Auto label paints (47-20, G-47-12b and G-47-14a)
+expected: Type 'xcom' in the Library search and in Store Search, click outside the box: it stays 'xcom' and the Library grid does not re-filter. With Auto selected (Store Search and Deals, including after picking New Zealand on Store Search and switching to Deals) the region picker reads 'Auto (...)', never blank.
+result: pending
+
+### 18. Light-theme and multi-theme surfaces (47-21, G-47-12c)
+expected: In Nord Light the Store Search rows and the Deals filter panel are light plates with dark legible text, and hover on a breakdown row, a filter toggle or an OS segment is visible. In midnightMirage, gruvbox_dark and dracula the rows are dark plates with light text and the same hovers are visible.
+result: pending
+
+### 19. Deals filter reflow and chip growth (47-22 with WR-03, G-47-14b and G-47-14c)
+expected: Stores > Deals. Shrink the window from wide to the 900px minimum: 'Operating system' and 'Suitable for age' (also with a PEGI value showing) never wrap to two lines in the six-column layout; the filters switch to two columns before they would. Select many Genres and many Features: the control grows taller to hold every chip, blurred or focused, with no '+N' counter, no chip cropped or off-centre, no chip outside the outline, and no hover bubble.
+result: pending
+
 ## Summary
 
-total: 15
+total: 19
 passed: 9
 issues: 6
-pending: 0
+pending: 4
 skipped: 0
 blocked: 0
 
