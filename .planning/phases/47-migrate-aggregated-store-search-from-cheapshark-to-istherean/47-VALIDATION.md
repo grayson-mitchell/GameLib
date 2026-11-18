@@ -1,9 +1,9 @@
 ---
 phase: 47
 slug: migrate-aggregated-store-search-from-cheapshark-to-istherean
-status: planned
+status: validated
 nyquist_compliant: true
-wave_0_complete: false
+wave_0_complete: true
 created: 2026-11-12
 ---
 
@@ -69,6 +69,17 @@ Every task carries an `<automated>` command in its PLAN.md `<verify>` block (eac
 | 47-12-T2 | 12 | 6 | PRICE-01 | itad.getKeyStatus / itad.setApiKey channels; contract regenerated | unit + gate | `pnpm gen:ipc-contract && pnpm check:ipc-contract && pnpm exec jest --selectProjects Backend (enrichmentFlows, runnerSliceRegistration, ipcSchemas/enrichment, rendererAllowList) && pnpm codecheck` | ✅ (update) | ⬜ pending |
 | 47-13-T1 | 13 | 7 | PRICE-01 | ItadApiKey settings component incl. rejected warning | component | `pnpm exec jest --selectProjects Frontend --runTestsByPath src/frontend/screens/Settings/components/__tests__/ItadApiKey.test.tsx && pnpm exec jest --selectProjects Meta (backendDiCeilings)` | ❌ W0 | ⬜ pending |
 | 47-13-T2 | 13 | 7 | PRICE-01 | Mounted in Advanced settings; en strings | component + gate | `pnpm exec jest --selectProjects Frontend src/frontend/screens/Settings && pnpm codecheck && pnpm lint:src && hardcodedStringGate && pnpm i18n-churn-guard` | ✅ | ⬜ pending |
+| 47-14-T1 | 14 | 1 (gap) | PRICE-03 | Store embed nav-event drain never reads the URL before a page Finished (G-47-9 offline crash) | unit (Rust) | `cd src-tauri && cargo test --bin gamelib-shell store_embed_finished_guard` (5) + full gamelib-shell suite + clippy ratchet | ✅ | ✅ green |
+| 47-14-T2 | 14 | 1 (gap) | PRICE-03 | Offline notice row with Try again above the store embed | component + gate | `pnpm exec jest --selectProjects Frontend src/frontend/screens/WebView && backendDiCeilings && hardcodedStringGate && pnpm codecheck && pnpm lint:src && pnpm planning-gates` | ✅ | ✅ green |
+| 47-15-T1 | 15 | 1 (gap) | PRICE-01 | `resolveActiveStore` maps a store-page deep link to its owning store row (G-47-6) | unit | `pnpm exec jest --selectProjects Frontend --runTestsByPath (navTabs, StoresPanel, NavShell, destinationCoverage)` | ✅ | ✅ green |
+| 47-15-T2 | 15 | 1 (gap) | PRICE-01 | Row highlight pinned at panel and shell level | component | `pnpm exec jest --selectProjects Frontend src/frontend/components/UI/NavShell && backendDiCeilings` | ✅ | ✅ green |
+| 47-16-T1 | 16 | 1 (gap) | PRICE-01 | Operator decision: Store Search region list (`itad-list`) | decision | n/a (checkpoint:decision, answered 2026-11-18) | — | ✅ decided |
+| 47-16-T2 | 16 | 1 (gap) | PRICE-01 | Store Search sets and persists its own region; out-of-list stored code reads as Auto (G-47-8) | component | `pnpm exec jest --selectProjects Frontend src/frontend/screens/StoreSearch src/frontend/screens/Discounts && backendDiCeilings && hardcodedStringGate` | ✅ | ✅ green |
+| 47-16-T3 | 16 | 1 (gap) | PRICE-01 | Shared RegionPicker rendering (Auto item, sort, optional currency pill) | component | `pnpm exec jest --selectProjects Frontend --runTestsByPath src/frontend/components/UI/RegionPicker/__tests__/RegionPicker.test.tsx` | ✅ | ✅ green |
+| 47-17-T1 | 17 | 2 (gap) | PRICE-01 | `thumbOf` prefers banner300; landscape contain box (G-47-7) | unit | `pnpm exec jest --selectProjects Backend --runTestsByPath src/backend/storeSearch/__tests__/itad.test.ts` | ✅ | ✅ green |
+| 47-17-T2 | 17 | 2 (gap) | PRICE-01 | Thumbnail box ratio coupled to the thumbOf asset family | unit | `pnpm exec jest --selectProjects Frontend --runTestsByPath src/frontend/screens/StoreSearch/__tests__/storeSearchThumbBox.test.ts` | ✅ | ✅ green |
+| 47-18-T1 | 18 | 2 (gap) | PRICE-01 | Deals renders the shared RegionPicker with its own filter-reset handler | component | `pnpm exec jest --selectProjects Frontend src/frontend/screens/Discounts src/frontend/components/UI/RegionPicker && hardcodedStringGate` | ✅ | ✅ green |
+| 47-18-T2 | 18 | 2 (gap) | PRICE-01 | Shared region-store contract (one key, per-screen validation) | unit | `pnpm exec jest --selectProjects Frontend --runTestsByPath src/frontend/helpers/__tests__/storeRegion.test.ts` | ✅ | ✅ green |
 
 Requirement coverage: PRICE-01 (every plan), PRICE-02 (01, 05, 06, 07, 08, 09), PRICE-03 (03, 05, 06, 07, 08, 09, 10).
 
@@ -96,6 +107,10 @@ Framework install: none.
 |----------|-------------|------------|-------------------|
 | Country/currency coverage sweep | PRICE-01 | Needs operator's ITAD key (never committed) | `GAMELIB_ITAD_API_KEY=... node meta/runTs.cjs --bundle --platform=node --target=node22 meta/measureItadCoverage.ts` (D-02 env var name; Plan 47-01 Task 2) |
 | Live search in running app, localised prices, cached-price line | PRICE-01/03 | Needs key + built sidecar | Plan 47-10 Task 3 (non-blocking): `pnpm build:sidecar`, export `GAMELIB_ITAD_API_KEY`, restart `pnpm tauri:dev` (never `tauri:dev:run`; tauri dev does not rebuild the sidecar); non-US region search; stale cache + network cut for the cached line (a real 429 would burn the shared app budget; the 429 arm is pinned by itad.test.ts) |
+| Stores while offline shows the notice row, no crash; no new entry in `~/Library/Logs/GameLib/gamelib-shell-panic.log` | PRICE-03 | Needs a live network toggle on macOS | Plan 47-14 Task 2 human-check: rebuilt `pnpm tauri:dev`, Wi-Fi off, click Stores, Try again after Wi-Fi on; watch for a startup flash (connectivity defaults to offline until sidecar sync) |
+| GOG Store row lit from Deals card, game-page Store link and Stores > GOG Store | PRICE-01 | Live navigation | Plan 47-15 human-check in `pnpm tauri:dev` |
+| Store Search region picker placement and persistence; Deals picker parity and filter reset; NZ cross-screen Auto | PRICE-01 | Visual, both themes | Plans 47-16 / 47-18 human-checks |
+| Store Search art shows whole and rows align | PRICE-01 | Visual; cached rows keep banner145 for up to 1h | Plan 47-17 human-check: restart `pnpm tauri:dev`, fresh 'hades' and 'xcom' searches |
 
 ---
 
@@ -108,4 +123,12 @@ Framework install: none.
 - [ ] Feedback latency < 60s
 - [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** planned (wave 0 not yet executed; `wave_0_complete` stays false until Plans 47-01..47-06 land)
+**Approval:** validated 2026-11-18 (all 18 plans summarized, including gap closure 47-14..47-18; per-task map green; live checks listed under Manual-Only)
+
+## Validation Audit 2026-11-18
+
+| Metric | Count |
+|---|---|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
