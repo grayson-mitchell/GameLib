@@ -4,6 +4,11 @@
  * chips outgrew it the browser scrolled the clipped root to the caret, cropping chips and carrying
  * the notched outline away. The root must be allowed to grow.
  *
+ * G-47-14c: 'Operating system' and 'Suitable for age' wrapped onto two lines before the filters
+ * switched to two columns. The 6 -> 2 reflow was a viewport media query at 1100px, but the grid is
+ * the viewport minus the 256px tier-2 panel and padding, so labels wrapped from about 1455px down
+ * to 1100px. The reflow now keys on the main-content container, not the viewport.
+ *
  * Source-text only (no jsdom in this project, see `src/frontend/jest.config.js`): it pins the
  * stylesheet and the component markup, not WebKit's painted layout -- that is a live check.
  */
@@ -12,6 +17,12 @@ import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 
 const css = readFileSync(join(__dirname, '..', 'index.css'), 'utf-8')
+// __dirname is src/frontend/screens/Discounts/components/DiscountFilters/__tests__; App.css is
+// src/frontend/App.css.
+const appCss = readFileSync(
+  join(__dirname, '..', '..', '..', '..', '..', 'App.css'),
+  'utf-8'
+)
 const tsx = readFileSync(join(__dirname, '..', 'index.tsx'), 'utf-8')
 
 function stripCssComments(source: string): string {
@@ -107,5 +118,46 @@ describe('Deals filters: Genres and Features controls grow to hold their chips (
     expect(source).not.toMatch(/\bTooltip\b/)
     expect(source).toMatch(/limitTags=\{2\}/)
     expect(source).toMatch(/<Autocomplete/)
+  })
+})
+
+describe('Deals filters: reflow to two columns on the content width (G-47-14c)', () => {
+  const REFLOW = '@container main-content (max-width: 1239.98px)'
+  const TWO_COLUMNS = 'repeat(2, minmax(0, 1fr))'
+
+  it('has no viewport media rule at 1100px or 700px', () => {
+    expect(stripped).not.toMatch(/@media[^{]*max-width:\s*(1100|700)px/)
+  })
+
+  it('has exactly one main-content container block at the 1240px threshold', () => {
+    expect(blocks.filter((b) => b.header === REFLOW)).toHaveLength(1)
+  })
+
+  it('switches both rows to two columns inside the container block', () => {
+    const block = blocks.find((b) => b.header === REFLOW)
+    if (!block) throw new Error('container block not found')
+    const inner = topLevelBlocks(block.body)
+    for (const selector of [
+      '.discountFilters__row--inputs',
+      '.discountFilters__row--sliders'
+    ]) {
+      const rule = inner.find((b) => b.header === selector)
+      if (!rule) throw new Error(`${selector} not found in container block`)
+      expect(declarations(rule.body)['grid-template-columns']).toBe(TWO_COLUMNS)
+    }
+  })
+
+  it('keeps the six-track inputs row and three-track sliders row at top level', () => {
+    const inputs = topLevelRule('.discountFilters__row--inputs')
+    expect(inputs['grid-template-columns']).toContain('minmax(140px, 180px)')
+    expect(inputs['grid-template-columns']).toContain('minmax(90px, 110px)')
+    const sliders = topLevelRule('.discountFilters__row--sliders')
+    expect(sliders['grid-template-columns']).toBe('repeat(3, minmax(0, 1fr))')
+  })
+
+  it('queries a container that App.css declares', () => {
+    expect(stripCssComments(appCss)).toMatch(
+      /container:\s*main-content\s*\/\s*inline-size/
+    )
   })
 })
