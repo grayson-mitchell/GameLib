@@ -43,6 +43,51 @@ pub(crate) fn bridge_invite_nav_allowed(url: &tauri::Url, dev_url: Option<&tauri
     bundle || dev_url.is_some_and(|dev| url.origin() == dev.origin())
 }
 
+/// The base URL tauri-2.11.5 gives `WebviewUrl::App` (`AppManager::get_app_url`,
+/// `src/manager/mod.rs:339-368`): `build.dev_url` in dev, else a `frontendDist` URL when that is
+/// one, else the tauri protocol origin (`http://tauri.localhost` on Windows, `tauri://localhost`
+/// elsewhere). https is false because this builder never calls `use_https_scheme`. `is_dev` must
+/// be `tauri::is_dev()`, the same `custom-protocol` signal as tauri's internal `cfg(dev)`. A tauri
+/// upgrade must re-check `get_app_url` and the `WebviewUrl::App` arm
+/// (`src/manager/webview.rs:444-459`) against this mirror.
+pub(crate) fn bridge_invite_app_base(
+    dev_url: Option<&tauri::Url>,
+    frontend_dist: Option<&tauri::utils::config::FrontendDist>,
+    is_dev: bool,
+    windows_scheme: bool,
+) -> Result<tauri::Url, String> {
+    if is_dev {
+        if let Some(dev) = dev_url {
+            return Ok(dev.clone());
+        }
+    }
+    if let Some(tauri::utils::config::FrontendDist::Url(u)) = frontend_dist {
+        return Ok(u.clone());
+    }
+    let origin = if windows_scheme {
+        "http://tauri.localhost"
+    } else {
+        "tauri://localhost"
+    };
+    tauri::Url::parse(origin).map_err(|e| format!("bridge_invite_picker_open:build-failed:{e}"))
+}
+
+/// Join the picker path onto the config-derived app base. The URL source is injected (the base
+/// from `bridge_invite_app_base`) and this function is never handed a window, so it cannot ask
+/// one. Reading the window's live URL is forbidden here: wry 0.55.1 `url_from_webview` unwraps a
+/// nil `WKWebView.URL` on the main thread when the window's first navigation failed, which
+/// panics the event loop and no Result chain on our side can catch it (G-47-9,
+/// `.planning/debug/offline-stores-tab-crash.md`, quick 261119-9d9). Side benefit: joining onto
+/// the live URL resolved relative to whatever page the picker happened to be on.
+pub(crate) fn bridge_invite_reuse_url(
+    app_base: &tauri::Url,
+    path: &str,
+) -> Result<tauri::Url, String> {
+    app_base
+        .join(path)
+        .map_err(|e| format!("bridge_invite_picker_open:build-failed:{e}"))
+}
+
 /// macOS focus bookkeeping for the invite picker: remember which app was frontmost (the game) so
 /// closing the picker hands focus back to it instead of promoting the GameLib main window.
 #[cfg(target_os = "macos")]
@@ -126,13 +171,15 @@ pub(crate) fn rpc_bridge_invite_picker_open(args: &[Value], app: &AppHandle) -> 
 
     let window = if let Some(existing) = app.get_webview_window(BRIDGE_INVITE_WINDOW_LABEL)
     {
-        let url = existing
-            .url()
-            .and_then(|u| {
-                u.join(&path)
-                    .map_err(|e| tauri::Error::InvalidUrl(e.into()))
-            })
-            .map_err(|e| format!("bridge_invite_picker_open:build-failed:{e}"))?;
+        // The window is never asked for its URL: see `bridge_invite_reuse_url`.
+        let build = &app.config().build;
+        let base = bridge_invite_app_base(
+            build.dev_url.as_ref(),
+            build.frontend_dist.as_ref(),
+            tauri::is_dev(),
+            cfg!(windows),
+        )?;
+        let url = bridge_invite_reuse_url(&base, &path)?;
         existing
             .navigate(url)
             .map_err(|e| format!("bridge_invite_picker_open:build-failed:{e}"))?;
@@ -286,5 +333,96 @@ mod tests {
             Some(&dev)
         ));
         assert!(!bridge_invite_nav_allowed(&u("about:blank"), Some(&dev)));
+    }
+
+    // ---- quick 261119-9d9: the reuse path never asks the webview for its URL ----
+
+    #[test]
+    fn bridge_invite_no_live_url_app_base_mirrors_tauri_get_app_url() {
+        use tauri::utils::config::FrontendDist;
+        let u = |s: &str| tauri::Url::parse(s).unwrap();
+        let dev = u("http://localhost:5173");
+        let dir = FrontendDist::Directory("../build/renderer".into());
+        let remote = u("https://example.test/app/");
+        let url_dist = FrontendDist::Url(remote.clone());
+        let files = FrontendDist::Files(vec![]);
+
+        // (a) dev with a dev url gives exactly the dev url.
+        assert_eq!(
+            bridge_invite_app_base(Some(&dev), Some(&dir), true, false).unwrap(),
+            dev
+        );
+        // (b) dev without a dev url falls through to the protocol origin.
+        assert_eq!(
+            bridge_invite_app_base(None, Some(&dir), true, false).unwrap(),
+            u("tauri://localhost")
+        );
+        // (c) production ignores the dev url even though it is still populated.
+        assert_eq!(
+            bridge_invite_app_base(Some(&dev), Some(&dir), false, false).unwrap(),
+            u("tauri://localhost")
+        );
+        assert_eq!(
+            bridge_invite_app_base(Some(&dev), Some(&dir), false, true).unwrap(),
+            u("http://tauri.localhost/")
+        );
+        // (d) production with a frontendDist URL uses it.
+        assert_eq!(
+            bridge_invite_app_base(Some(&dev), Some(&url_dist), false, false).unwrap(),
+            remote
+        );
+        // (e) Files / None fall to the protocol origin.
+        assert_eq!(
+            bridge_invite_app_base(Some(&dev), Some(&files), false, false).unwrap(),
+            u("tauri://localhost")
+        );
+        assert_eq!(
+            bridge_invite_app_base(None, None, false, true).unwrap(),
+            u("http://tauri.localhost/")
+        );
+    }
+
+    #[test]
+    fn bridge_invite_no_live_url_reuse_target_matches_create_path() {
+        let u = |s: &str| tauri::Url::parse(s).unwrap();
+        let dev = u("http://localhost:5173");
+        let path = bridge_invite_picker_path("3205720", "a1b2-C3d4").unwrap();
+        let q = "index.html?window=bridge-invite&appId=3205720&ackId=a1b2-C3d4";
+        let cases = [
+            (dev.clone(), format!("http://localhost:5173/{q}"), true),
+            (
+                u("tauri://localhost"),
+                format!("tauri://localhost/{q}"),
+                false,
+            ),
+            (
+                u("http://tauri.localhost"),
+                format!("http://tauri.localhost/{q}"),
+                false,
+            ),
+        ];
+        for (base, expected, with_dev) in cases {
+            let got = bridge_invite_reuse_url(&base, &path).unwrap();
+            assert_eq!(got.as_str(), expected);
+            let dev_arg = if with_dev { Some(&dev) } else { None };
+            assert!(bridge_invite_nav_allowed(&got, dev_arg), "{expected}");
+        }
+    }
+
+    #[test]
+    fn bridge_invite_no_live_url_source_gate() {
+        let src = include_str!("invite_picker.rs");
+        let production = src.split("\n#[cfg(test)]\n").next().unwrap();
+        let code: String = production
+            .lines()
+            .filter(|l| !l.trim_start().starts_with("//"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(
+            !code.contains(".url()"),
+            "invite_picker.rs production code calls a live webview URL getter: wry 0.55.1 \
+             url_from_webview unwraps a nil WKWebView.URL after a failed first load and panics \
+             the event loop (G-47-9, quick 261119-9d9). Build the URL from config instead."
+        );
     }
 }

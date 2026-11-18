@@ -50,6 +50,8 @@ const CLIPPY_CEILINGS = {
   // 2026-11-07 quick-261107-uh4: needless_borrow fell 2 -> 0 (intervening
   // commits; CI run 42417450472 on 4422ba2f3, macos-latest), entry deleted;
   // darwin not re-measured locally.
+  // 2026-11-19 quick-261119-9d9: useless_conversion fell 1 -> 0 (the invite picker's
+  // reuse-URL chain with its `e.into()` was removed), entry deleted on darwin and win32.
   darwin: {
     'clippy::doc_lazy_continuation': 5,
     'clippy::type_complexity': 2,
@@ -60,7 +62,6 @@ const CLIPPY_CEILINGS = {
     'clippy::incompatible_msrv': 1,
     'clippy::match_like_matches_macro': 1,
     'clippy::manual_hash_one': 1,
-    'clippy::useless_conversion': 1,
     'clippy::bool_comparison': 1,
     'clippy::needless_borrows_for_generic_args': 1,
     'clippy::if_same_then_else': 1
@@ -83,7 +84,6 @@ const CLIPPY_CEILINGS = {
     'clippy::incompatible_msrv': 1,
     'clippy::match_like_matches_macro': 1,
     'clippy::manual_hash_one': 1,
-    'clippy::useless_conversion': 1,
     'clippy::needless_borrows_for_generic_args': 1,
     'clippy::if_same_then_else': 1
   }
