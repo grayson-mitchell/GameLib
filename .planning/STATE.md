@@ -6,10 +6,10 @@ current_phase: 47
 current_phase_name: Migrate aggregated store search from CheapShark to IsThereAnyDeal
 status: executing
 stopped_at: Completed 47-19-PLAN.md
-last_updated: "2026-11-18T18:25:33.291Z"
+last_updated: "2026-11-18T18:28:16.941Z"
 last_activity: 2026-11-19
 last_activity_desc: Phase 47 execution started
-state_head: 0d4e83efc30780a4271fda5f0a82d80ce67149d5
+state_head: 9e60dc46f0546ab3b5e85485e84a643554997bc0
 progress:
   total_phases: 26
   completed_phases: 23
@@ -79,7 +79,7 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 Phase: 47 (Migrate aggregated store search from CheapShark to IsThereAnyDeal) — EXECUTING
 Plan: 20 of 22
 Status: Ready to execute
-Last activity: 2026-11-19 — Phase 47 execution started
+Last activity: 2026-11-19 — Completed quick task 261119-a23: CI weekly HEAD-check of the pinned libsteam_api CDN package
 
 Progress: [█████████░] 88%
 
@@ -705,6 +705,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261118-uma | Mac running-game signal for restart-on-Play refusal (phase 81 item 5) | 2026-11-18 | e70d022f3 | — | [261118-uma-mac-running-game-signal-for-restart-on-p](./quick/261118-uma-mac-running-game-signal-for-restart-on-p/) |
 | 261119-8rf | Depot install: make #! launchers inside *.app/Contents/MacOS/ executable (Bastion opened in TextEdit); counted as shebang=N in the depot outcome log | 2026-11-19 | 20240b7b3 | — | [261119-8rf-depot-install-make-shebang-shell-script-](./quick/261119-8rf-depot-install-make-shebang-shell-script-/) |
 | 261119-9d9 | Bridge invite-picker reads existing.url() and panics if its first load failed | 2026-11-19 | 32b865819 | — | [261119-9d9-bridge-invite-picker-reads-existing-url-](./quick/261119-9d9-bridge-invite-picker-reads-existing-url-/) |
+| 261119-a23 | CI: weekly HEAD-check that Valve's CDN still serves the pinned libsteam_api package | 2026-11-19 | 9e60dc46f | — | [261119-a23-ci-weekly-head-check-that-valve-s-cdn-st](./quick/261119-a23-ci-weekly-head-check-that-valve-s-cdn-st/) |
 
 ## Deferred Items
 
