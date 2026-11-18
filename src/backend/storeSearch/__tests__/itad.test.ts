@@ -175,6 +175,31 @@ describe('searchGames', () => {
 
     // 20 search items, prices only for three ids of which one (Portal) is in the search.
     expect(res.results.map((r) => r.title)).toEqual(['Portal'])
+    // G-47-7: Portal carries banner145, banner300 and boxart; the row takes banner300.
+    expect(defined(res.results[0], 'portal row').thumb).toMatch(
+      /\/banner300\.jpg/
+    )
+  })
+
+  it('prefers banner300 over banner145 for a row thumbnail (G-47-7)', async () => {
+    serve(
+      [
+        {
+          id: GID_A,
+          title: 'Half-Life 2',
+          assets: {
+            banner145: 'https://a/145.jpg',
+            banner300: 'https://a/300.jpg',
+            boxart: 'https://a/box.jpg'
+          }
+        }
+      ],
+      pricesUS
+    )
+
+    const res = await searchGames(deps, 'half-life', 'US')
+
+    expect(defined(res.results[0], 'row a').thumb).toBe('https://a/300.jpg')
   })
 
   it('passes the deal url through byte-for-byte', async () => {

@@ -302,7 +302,9 @@ function pricesById(json: unknown): Map<string, StoreSearchDeal[]> {
 
 function thumbOf(item: ItadSearchItem): string {
   const a = item.assets
-  return a?.banner145 ?? a?.banner300 ?? a?.boxart ?? ''
+  // The Store Search thumbnail box (StoreSearch/index.css .storeSearchRow__thumb) is sized to
+  // banner300's 300x140 ratio, so the two change together (G-47-7).
+  return a?.banner300 ?? a?.banner145 ?? a?.boxart ?? ''
 }
 
 /** Keeps search order, one row per game from its cheapest deal; a game with no deal is dropped (D-11). */

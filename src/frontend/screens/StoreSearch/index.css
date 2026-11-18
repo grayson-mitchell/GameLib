@@ -138,10 +138,13 @@
   outline: none;
 }
 
+/* Landscape box matched to ITAD banner300 (300x140, measured 2026-11-18); contain so
+   banner145, boxart and the 2:3 fallback card are letterboxed rather than cropped.
+   Supersedes the Phase 20 portrait cover box (20-UI-SPEC:168, G-47-7). */
 .storeSearchRow__thumb {
-  width: 60px;
-  aspect-ratio: 3 / 4;
-  object-fit: cover;
+  width: 120px;
+  aspect-ratio: 300 / 140;
+  object-fit: contain;
   flex-shrink: 0;
   border-radius: var(--space-3xs);
 }
