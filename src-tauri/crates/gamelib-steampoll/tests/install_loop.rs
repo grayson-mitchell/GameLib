@@ -976,20 +976,23 @@ async fn concurrent_uninstall_starts_spawn_exactly_one_poll() {
     }
 }
 
-// ---- TS-pushed mirrors and the re-arm bookkeeping --------------------------------------------
+// ---- TS-pushed mirrors and the retired restoredSteamHold option ------------------------------
 
 #[tokio::test(start_paused = true)]
-async fn pending_rearm_counts_as_holding_and_sets_the_reconcile_flag() {
+async fn a_start_carrying_restored_steam_hold_behaves_like_one_without_it() {
+    // Phase 81 D-11: the boot re-arm is gone, so an older sidecar's `restoredSteamHold` is
+    // accepted (deny_unknown_fields must not reject it) and ignored.
     let r = rig().await;
+    let options: PollOptions = serde_json::from_value(serde_json::json!({
+        "restoredSteamHold": { "pids": [4242], "startTicks": 7 }
+    }))
+    .expect("restoredSteamHold must still deserialize");
+    start(&r, options);
+    let status = r.polls.status();
+    assert_eq!(status.installs.len(), 1);
+    assert_eq!(status.installs[0].steam_hold, "unprobed");
+    assert!(status.holding.is_empty());
     assert!(r.polls.holding_app_ids().is_empty());
-    assert!(!r.polls.reconcile_ran_during_rearm());
-    r.polls.set_pending_rearm("555", true);
-    assert_eq!(r.polls.status().holding, vec!["555".to_string()]);
-    assert!(r.polls.reconcile_ran_during_rearm());
-    r.polls.set_reconcile_ran_during_rearm(false);
-    r.polls.set_pending_rearm("555", false);
-    assert!(r.polls.holding_app_ids().is_empty());
-    assert!(!r.polls.reconcile_ran_during_rearm());
 }
 
 #[tokio::test(start_paused = true)]
