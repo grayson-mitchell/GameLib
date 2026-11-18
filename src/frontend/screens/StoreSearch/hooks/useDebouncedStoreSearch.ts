@@ -186,7 +186,7 @@ export function useDebouncedStoreSearch(
     ) {
       // The rows on screen are already for this query and country (restored
       // on return), so a fetch would only blank the body with 'loading' to get
-      // the same hour-fresh rows (G-47-12a).
+      // the same rows (G-47-12a).
       return
     }
     fetchResults(debouncedQuery)

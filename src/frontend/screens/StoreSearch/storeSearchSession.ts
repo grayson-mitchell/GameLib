@@ -7,8 +7,8 @@ import type { StoreSearchResult } from 'common/types/storeSearch'
  *
  * Same lifetime rule as `Library/librarySessionSearch.ts` (quick 261029-n4v,
  * D-22 / WR-11): never localStorage or sessionStorage. The rows carry prices
- * and the backend treats a search as fresh for one hour, so a copy that
- * survived a relaunch would show stale prices as current. Module memory dies
+ * and the backend may serve a search from a cache entry up to an hour old, so a
+ * copy that survived a relaunch would show stale prices as current. Module memory dies
  * with the webview (relaunch or window reload).
  *
  * Safe for the lazily loaded StoreSearch route: the module is imported once
@@ -23,11 +23,16 @@ export type StoreSearchStatus =
 
 export const STORE_SEARCH_MIN_QUERY_LENGTH = 3
 
-/** Kept rows are restored only when fetched at most this long ago. Mirrors the
- * backend's `ITAD_FRESH_MS` (`src/backend/storeSearch/itadCache.ts`), which the
- * renderer cannot import, so kept rows are never older than the cache that
- * produced them. */
-export const KEPT_RESULTS_MAX_AGE_MS = 60 * 60 * 1000
+/** Kept rows are restored only when received at most this long ago.
+ *
+ * The age is measured from when the renderer received the response, not from
+ * when the backend fetched it: `StoreSearchResponse` carries no fetch time, and
+ * the backend may answer from an ITAD cache entry of up to `ITAD_FRESH_MS`
+ * (1h, `src/backend/storeSearch/itadCache.ts`) old. So a restored row can be up
+ * to `ITAD_FRESH_MS` + this value old end to end (1h15m). The renderer half is
+ * kept short for that reason; a restore past it re-asks the backend, which is
+ * cheap when its own entry is still fresh. */
+export const KEPT_RESULTS_MAX_AGE_MS = 15 * 60 * 1000
 
 /** The trimmed query and the requested country a set of rows was fetched for,
  * and when (ms since epoch). */

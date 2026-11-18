@@ -1,9 +1,9 @@
 /**
  * Session-only Store Search query and rows (G-47-12a). In-memory module
  * state; D-22 / WR-11 forbid any storage key, because the rows carry prices
- * that the backend only treats as fresh for an hour.
+ * that the backend may serve from a cache entry up to an hour old.
  *
- * The restore rules are what stop a region change, an hour-old price or a
+ * The restore rules are what stop a region change, a stale price or a
  * failed search from coming back as current: the query always comes back, the
  * rows only when they were fetched for the same trimmed query and country,
  * within KEPT_RESULTS_MAX_AGE_MS, and ended in 'results' or 'empty'.
@@ -76,8 +76,11 @@ beforeEach(() => {
 })
 
 describe('storeSearchSession', () => {
-  it('keeps rows for one hour, the backend search freshness window', () => {
-    expect(KEPT_RESULTS_MAX_AGE_MS).toBe(3_600_000)
+  it('keeps rows for 15 minutes, so a restored row is at most 1h15m old end to end', () => {
+    // The renderer stamps the age at response time, and the backend may have
+    // served the response from a cache entry up to ITAD_FRESH_MS (1h) old.
+    expect(KEPT_RESULTS_MAX_AGE_MS).toBe(15 * 60_000)
+    expect(KEPT_RESULTS_MAX_AGE_MS).toBeLessThan(60 * 60_000)
   })
 
   it('starts empty', () => {
@@ -112,7 +115,7 @@ describe('storeSearchSession', () => {
     )
   })
 
-  it('restores the query only once the rows are over an hour old', () => {
+  it('restores the query only once the rows are past the max age', () => {
     keepRows()
     expect(
       restoreStoreSearchSession('US', T + KEPT_RESULTS_MAX_AGE_MS + 1)
