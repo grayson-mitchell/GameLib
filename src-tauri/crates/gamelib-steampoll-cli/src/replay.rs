@@ -38,7 +38,7 @@ const EPOCH_MS: u64 = 1_700_000_000_000;
 const TICK_MS: u64 = 3000;
 const RUNNING_TICK_MS: u64 = 5000;
 
-/// One record of the output stream (`{frontend}`, `{notify}`, `{state}` or `{file}`).
+/// One record of the output stream (`{frontend}`, `{notify}` or `{state}`).
 pub type StreamRecord = Value;
 
 fn lock<T>(m: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {

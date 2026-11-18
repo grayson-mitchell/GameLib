@@ -32,7 +32,6 @@ fn kinds(host: &RecordingHost) -> Vec<String> {
             StreamRecord::State(e) => format!("state:{}:{}", e.kind(), e.seq()),
             StreamRecord::Frontend { channel, .. } => format!("fe:{channel}"),
             StreamRecord::Notify { .. } => "notify".into(),
-            StreamRecord::File { op, .. } => format!("file:{op}"),
         })
         .collect()
 }

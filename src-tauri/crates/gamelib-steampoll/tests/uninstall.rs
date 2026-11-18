@@ -556,7 +556,6 @@ fn labels(host: &RecordingHost) -> Vec<String> {
             }
             StreamRecord::Frontend { channel, .. } => format!("fe:{channel}"),
             StreamRecord::Notify { .. } => "notify".into(),
-            StreamRecord::File { op, .. } => format!("file:{op}"),
         })
         .collect()
 }

@@ -14,25 +14,13 @@ use std::sync::Mutex;
 use std::time::Duration;
 
 /// One recorded effect, serialised as `{"frontend":{channel,args}}`, `{"notify":{title,body}}`,
-/// `{"state":{...event}}` or `{"file":{op,appId,record}}`.
+/// or `{"state":{...event}}`.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum StreamRecord {
-    Frontend {
-        channel: String,
-        args: Vec<Value>,
-    },
-    Notify {
-        title: String,
-        body: String,
-    },
+    Frontend { channel: String, args: Vec<Value> },
+    Notify { title: String, body: String },
     State(StateEvent),
-    #[serde(rename_all = "camelCase")]
-    File {
-        op: String,
-        app_id: String,
-        record: Option<Value>,
-    },
 }
 
 /// How `state_event` answers.
