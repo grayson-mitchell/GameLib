@@ -3,7 +3,7 @@ status: diagnosed
 phase: 47-migrate-aggregated-store-search-from-cheapshark-to-istherean
 source: [47-VERIFICATION.md]
 started: 2026-11-17T23:10:00Z
-updated: 2026-11-18T09:00:00Z
+updated: 2026-11-18T13:00:00Z
 ---
 
 ## Current Test
@@ -56,12 +56,36 @@ result: issue
 reported: "when i click on stores when offline gamelib crashes"
 severity: blocker
 
+### 10. Offline Stores tab does not crash (47-14 live item, G-47-9)
+expected: macOS, `pnpm tauri:dev` (never `tauri:dev:run`). With the network ON open Library; turn Wi-Fi OFF, wait ~5 s, click Stores and open Amazon Luna (or GOG), watch ~10 s, click Try again once, turn Wi-Fi ON, click Try again again. GameLib never crashes or quits; while offline a notice row under the store controls reads 'You're offline, so this store can't load.' with a Try again button (the embed area may be blank); after Wi-Fi returns and Try again is clicked the row is gone and the store loads; ~/Library/Logs/GameLib/gamelib-shell-panic.log gains no new entry.
+result: [pending]
+
+### 11. Store-page deep link highlights the owning store row (47-15 live item, G-47-6)
+expected: Stores > Deals, click a game card (opens it in the in-app GOG store); then open a GOG game's page in Library and click its Store link; then click Stores > GOG Store directly. In all three the Stores panel shows the GOG Store row highlighted; coming from Deals the highlight moves from Deals to GOG Store; no case leaves no row highlighted.
+result: [pending]
+
+### 12. Store Search region picker (47-16 live item, G-47-8)
+expected: Stores > Store Search shows the picker on the title row (title left, picker right), styled like the Deals picker, no currency pill. Search 'xcom'; change to Germany (euro prices, 'Showing prices for Germany.'), then New Zealand, then Auto (language default); each change re-runs the search; the choice survives leaving and re-opening Store Search; legible in a dark and a light theme.
+result: [pending]
+
+### 13. Store Search art is shown whole (47-17 live item, G-47-7)
+expected: Restart `pnpm tauri:dev` so the sidecar carries the new thumbOf; search 'hades' then 'xcom'. Each row's art is a wide banner shown whole with no side cut off; a game with no art shows the GameLib card whole; title, badges and price stay centred against the thumbnail.
+result: [pending]
+
+### 14. Deals picker unchanged and one shared region (47-18 live item, G-47-8)
+expected: Stores > Deals: set a genre and hide-DLC, change the region to Germany. The picker looks and sits as before (label STORE REGION, outlined select, currency pill per country, 'Germany · EUR' when selected); changing region clears the Deals filters and reloads in euros. Store Search then shows Germany selected with euro prices. Pick New Zealand on Store Search, go back to Deals: Deals shows 'Auto (...)'.
+result: [pending]
+
+### 15. Owned-on-Steam badge on a live ITAD result (PRICE-02, never had a live item)
+expected: With a Steam library loaded, search a title you own on Steam; the row shows 'Owned on Steam'. A title you do not own shows no Steam badge.
+result: [pending]
+
 ## Summary
 
-total: 9
+total: 15
 passed: 5
 issues: 4
-pending: 0
+pending: 6
 skipped: 0
 blocked: 0
 
