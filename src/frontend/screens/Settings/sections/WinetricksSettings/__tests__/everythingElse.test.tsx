@@ -238,6 +238,9 @@ describe('Everything else, expanded', () => {
     expect(input.props.type).toBe('text')
     expect(input.props.role).toBe('searchbox')
     expect(input.props.autoComplete).toBe('off')
+    // macOS commits an invisible autocorrection on blur otherwise (G-47-12b).
+    expect(input.props.spellCheck).toBe(false)
+    expect(input.props.autoCorrect).toBe('off')
     expect(input.props.placeholder).toBe('Search components…')
     expect(input.props['aria-label']).toBe('Search components…')
     expect(findAll(wrapper[0], (el) => el.type === 'input')).toHaveLength(1)
