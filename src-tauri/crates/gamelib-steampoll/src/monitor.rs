@@ -400,7 +400,8 @@ impl DownloadMonitor {
     /// Windows live reading for `app_id` against the ACF's current `BytesToStage` and
     /// `BytesToDownload`, or `None` when the poller must use the ACF as before (not a Windows
     /// build, Steam unreadable, or the ACF has no totals yet). The first call for an appId takes
-    /// the write-counter baseline, so the loop calls it only while the ACF is downloading.
+    /// the write-counter baseline, so the loop calls it only while Steam is doing the work: an
+    /// install's Downloading ACF, or an update's running update fields (`is_update_running`).
     pub fn read_windows(
         &self,
         app_id: &str,

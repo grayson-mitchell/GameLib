@@ -1,5 +1,5 @@
-//! Windows live progress for a download the Steam client performs itself (debug
-//! `win-steam-handoff-progress-zero`).
+//! Windows live progress for a download or update the Steam client performs itself (debug
+//! `win-steam-handoff-progress-zero`, then quick 261119-box for updates).
 //!
 //! macOS reads steam_osx's per-flow `bytes_in` through nettop (`monitor.rs`). Windows had nothing
 //! comparable, and Windows Steam does not help: for a `steam://install` download it writes the ACF
@@ -18,6 +18,13 @@
 //! So progress is the counter's growth since the poll's first downloading observation, over
 //! `BytesToStage`, rescaled to the download size so the byte figures the UI shows stay on the scale
 //! Steam itself reports.
+//!
+//! The same source serves an update the Steam client performs. Update polls read it through
+//! `install_loop.rs` `windows_update_live_active`. The baseline is the first tick the update ACF
+//! carries UpdateRunning/UpdateStarted (`update::is_update_running`), not the hand-off, because a
+//! pending update can wait while Steam writes other things. The denominator is the update's own
+//! `BytesToStage`, the changed content Steam stages, with the same `BytesToDownload` fallback.
+//! Windows Steam's update ACF writes were not measured, so a real update is the open live check.
 //!
 //! The counter is process-wide, so concurrent Steam writes (a second queued download, cloud sync)
 //! inflate it; the fraction is therefore clamped below 100 %, which only StateFlags bit 4 grants
