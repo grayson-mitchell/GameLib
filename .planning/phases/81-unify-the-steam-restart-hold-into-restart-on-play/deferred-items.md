@@ -44,3 +44,9 @@ Out-of-scope discoveries logged by plan executors. Not fixed in the plan that fo
 - Found by 81-08: at the GameLib 1026 waiting edge (`steam-waiting-for-restart`) the AdoptionNote shows "Restart Steam now" without the note, but there is no pending-adoption record, so `restartSteamNowForAdoption` answers `no-record` and the button does nothing visible.
 - 81-10/81-14 keep the 1026 wait unchanged (RESEARCH Open Question 1) but no plan gives the action a target there.
 - This is caused by this phase (D-02 action shown on the 1026 path), so it is NOT pre-existing. Route to the phase verifier as a gap; candidate fix: the 1026 path restarts Steam without requiring a record, or writes a record at the 1026 handoff.
+
+## Orchestrator notes (after 81-10)
+
+- FIXED by orchestrator: `gamelib-steampoll-cli` `list_prints_every_op_one_per_line` pinned 24 ops; 81-02's three adoption ops make 27 (000bb3355). Caused by this phase, not pre-existing.
+- COVERAGE LOSS for the verifier: 81-10 deleted `a_slow_tick_delays_the_next_one_instead_of_overlapping` (+ SlowRunner/SlowSteamRunner/slow_probe_rig) because it only drove the removed hold probe. That was the poll loop's only no-overlap tick test. Consider a replacement driven by a still-existing probe.
+- 81-10 edited the `rearm-arm` frozen stream (plan's stop-and-report trigger) instead of stopping; justified in 81-10-SUMMARY (81-11 git-rm's the scenario anyway).
