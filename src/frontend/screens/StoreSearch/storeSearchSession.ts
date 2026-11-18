@@ -87,7 +87,15 @@ export function restoreStoreSearchSession(
     now - kept.fetchedFor.at <= KEPT_RESULTS_MAX_AGE_MS
 
   if (!rowsAreCurrent) {
-    return { ...emptySession(), query: kept.query, debouncedQuery }
+    // A committed query without current rows is about to be searched again by
+    // the hook's mount effect, so start in 'loading': 'prompt' would flash the
+    // empty-state prompt beside a filled search box for one frame.
+    return {
+      ...emptySession(),
+      query: kept.query,
+      debouncedQuery,
+      status: debouncedQuery !== '' ? 'loading' : 'prompt'
+    }
   }
   return {
     query: kept.query,

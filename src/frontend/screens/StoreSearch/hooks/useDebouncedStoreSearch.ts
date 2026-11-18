@@ -89,7 +89,9 @@ export function useDebouncedStoreSearch(
   )
   const [errorCode, setErrorCode] = useState<StoreSearchErrorCode | null>(null)
   const [debouncePending, setDebouncePending] = useState(false)
-  const [fetching, setFetching] = useState(false)
+  // A restored committed query without current rows (status 'loading') is
+  // fetched by the mount effect below, so the spinner shows from the first frame.
+  const [fetching, setFetching] = useState(seed.status === 'loading')
   const generationRef = useRef(0)
 
   // Debounce stage: query -> debouncedQuery.

@@ -62,11 +62,13 @@ function keepRows(
   return rows
 }
 
+// A committed query with no current rows restores as 'loading' (the hook's
+// mount effect re-runs the search); a query too short to commit stays 'prompt'.
 const queryOnly = (query: string, debouncedQuery: string) => ({
   query,
   debouncedQuery,
   results: [],
-  status: 'prompt',
+  status: debouncedQuery === '' ? 'prompt' : 'loading',
   pricedCountry: null,
   fetchedFor: null
 })
@@ -135,7 +137,7 @@ describe('storeSearchSession', () => {
       keepRows({ status })
       const restored = restoreStoreSearchSession('US', T)
       expect(restored).toEqual(queryOnly('portal', 'portal'))
-      expect(restored.status).not.toBe('error')
+      expect(restored.status).toBe('loading')
     }
   )
 

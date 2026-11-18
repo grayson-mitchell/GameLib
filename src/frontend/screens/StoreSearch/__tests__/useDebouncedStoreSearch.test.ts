@@ -114,7 +114,10 @@ import type {
 import fs from 'fs'
 import path from 'path'
 import { defined } from '../../__tests__/fixtures/indexed'
-import { resetStoreSearchSessionForTests } from '../storeSearchSession'
+import {
+  KEPT_RESULTS_MAX_AGE_MS,
+  resetStoreSearchSessionForTests
+} from '../storeSearchSession'
 
 const DEBOUNCE_WINDOW = 400
 
@@ -520,6 +523,9 @@ describe('useDebouncedStoreSearch session keep (G-47-12a)', () => {
     hook = mount()
     expect(hook.query).toBe('portal')
     expect(hook.results).toEqual([])
+    // First frame: not the empty-state prompt beside the filled search box.
+    expect(hook.status).toBe('loading')
+    expect(hook.loading).toBe(true)
     // Fired by the mount's own effects, before any timer advances.
     expect(mockApi.searchStores).toHaveBeenCalledTimes(1)
     expect(mockApi.searchStores).toHaveBeenCalledWith('portal', 'DE')
@@ -539,10 +545,48 @@ describe('useDebouncedStoreSearch session keep (G-47-12a)', () => {
 
     hook = mount()
     expect(hook.query).toBe('portal')
-    expect(hook.status).not.toBe('error')
+    // First frame: neither the resurrected error nor the empty-state prompt.
+    expect(hook.status).toBe('loading')
+    expect(hook.loading).toBe(true)
     hook = await settle(hook)
 
     expect(mockApi.searchStores).toHaveBeenCalledTimes(1)
     expect(hook.status).toBe('results')
+  })
+
+  it('rows older than the max age restore the query in "loading" on the first frame and re-run the search', async () => {
+    const nowSpy = jest.spyOn(Date, 'now')
+    nowSpy.mockReturnValue(1_000_000)
+    mockApi.searchStores.mockResolvedValue(envelope([makeResult()]))
+
+    let hook = mount()
+    hook.setQuery('portal')
+    hook = rerender()
+    jest.advanceTimersByTime(DEBOUNCE_WINDOW)
+    hook = await settle(hook)
+    expect(hook.status).toBe('results')
+    mockApi.searchStores.mockClear()
+
+    nowSpy.mockReturnValue(1_000_000 + KEPT_RESULTS_MAX_AGE_MS + 1)
+    hook = mount()
+    nowSpy.mockRestore()
+    expect(hook.query).toBe('portal')
+    expect(hook.results).toEqual([])
+    expect(hook.status).toBe('loading')
+    expect(hook.loading).toBe(true)
+    expect(mockApi.searchStores).toHaveBeenCalledTimes(1)
+    expect(mockApi.searchStores).toHaveBeenCalledWith('portal', 'US')
+  })
+
+  it('a query shorter than three characters restores as the prompt, not loading', () => {
+    let hook = mount()
+    hook.setQuery('po')
+    hook = rerender()
+    hook = rerender()
+
+    hook = mount()
+    expect(hook.query).toBe('po')
+    expect(hook.status).toBe('prompt')
+    expect(hook.loading).toBe(false)
   })
 })
