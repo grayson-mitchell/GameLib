@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
@@ -21,9 +21,12 @@ import {
   type StoreOwnershipMatch
 } from 'common/discounts/badges'
 import {
+  STORE_SEARCH_REGION_CODES,
   getLocaleSettings,
-  getStoredRegionOverride
-} from 'frontend/screens/Discounts/helpers'
+  getStoredRegionFor,
+  setStoredRegionOverride
+} from 'frontend/helpers/storeRegion'
+import RegionPicker from 'frontend/components/UI/RegionPicker'
 import { useDebouncedStoreSearch } from './hooks/useDebouncedStoreSearch'
 import { useOwnedSteamGids } from './hooks/useOwnedSteamGids'
 import { formatCountryName } from './helpers'
@@ -44,16 +47,32 @@ import './index.css'
  */
 export default function StoreSearch() {
   const { t, i18n } = useTranslation()
-  // PRICE-01 / D3: the same country derivation the Deals screen uses (its
-  // stored region override wins, else the language-derived country).
+  // PRICE-01 / G-47-8: the region is chosen here, on the title row. The
+  // stored value is shared with the Deals screen, but this screen only honours
+  // a code it can price (STORE_SEARCH_REGION_CODES); anything else is Auto.
+  const [regionOverride, setRegionOverride] = useState<string | null>(() =>
+    getStoredRegionFor(STORE_SEARCH_REGION_CODES)
+  )
   // `toShippedLanguage` because i18n.language is a BCP-47 tag while
   // COUNTRY_CURRENCY_MAP is keyed by the shipped code (see Discounts/index.tsx).
-  const countryCode = useMemo(
+  const autoCountry = useMemo(
+    () => getLocaleSettings(toShippedLanguage(i18n.language), null).countryCode,
+    [i18n.language]
+  )
+  // The override is NOT routed through getLocaleSettings: it drops any code
+  // outside REGION_OPTIONS, which would discard countries only ITAD prices.
+  const countryCode = regionOverride ?? autoCountry
+  // Not Deals' handler: that one also resets the Deals filters.
+  const handleRegionChange = (code: string | null) => {
+    setRegionOverride(code)
+    setStoredRegionOverride(code)
+  }
+  const regionOptions = useMemo(
     () =>
-      getLocaleSettings(
-        toShippedLanguage(i18n.language),
-        getStoredRegionOverride()
-      ).countryCode,
+      STORE_SEARCH_REGION_CODES.map((code) => ({
+        countryCode: code,
+        label: formatCountryName(code, i18n.language)
+      })),
     [i18n.language]
   )
   const epic = useEpicAccount()
@@ -120,9 +139,23 @@ export default function StoreSearch() {
 
   return (
     <div className="storeSearchScreen">
-      <h2 className="storeSearchScreen__header">
-        {t('storeSearch.title', 'Store Search')}
-      </h2>
+      <div className="storeSearchScreen__topbar">
+        <h2 className="storeSearchScreen__header">
+          {t('storeSearch.title', 'Store Search')}
+        </h2>
+        <RegionPicker
+          id="storeSearchRegionSelect"
+          className="storeSearchScreen__picker"
+          label={t('discounts.region.label', 'Store region')}
+          autoLabel={t('discounts.region.auto', 'Auto ({{code}})', {
+            code: formatCountryName(autoCountry, i18n.language)
+          })}
+          value={regionOverride}
+          options={regionOptions}
+          onChange={handleRegionChange}
+          locale={i18n.language.replace('_', '-')}
+        />
+      </div>
 
       <div className="storeSearchScreen__searchWrapper">
         <SearchBar

@@ -187,6 +187,8 @@ const mockApi = {
 // setup does not hoist jest.mock like babel-jest).
 import StoreSearch from '../index'
 import StoreSearchRow from '../components/StoreSearchRow'
+import RegionPicker from 'frontend/components/UI/RegionPicker'
+import { STORE_SEARCH_REGION_CODES } from 'frontend/helpers/storeRegion'
 import useAuthState from 'frontend/state/authState'
 import useLibraryState from 'frontend/state/libraryState'
 import { resetAllStores } from 'frontend/state/storeKit'
@@ -657,5 +659,126 @@ describe('StoreSearch screen container', () => {
       owned: [],
       keyAvailable: true
     })
+  })
+})
+
+describe('StoreSearch region picker (G-47-8)', () => {
+  const REGION_KEY = 'discounts.regionOverride'
+  let stored: Record<string, string>
+  let setItem: jest.Mock
+  let removeItem: jest.Mock
+
+  beforeEach(() => {
+    jest.useFakeTimers()
+    contextValue = {
+      epic: { library: [] },
+      gog: { library: [] },
+      amazon: { library: [] },
+      steam: { library: [] },
+      humble: { keys: [] }
+    }
+    ;(globalThis as unknown as { window: { api: unknown } }).window.api =
+      mockApi
+    seedStores()
+    mockApi.searchStores.mockReset()
+    mockApi.searchStores.mockResolvedValue({ results: [], pricedCountry: 'US' })
+    mockApi.getItadSteamGids.mockReset()
+    mockApi.getItadSteamGids.mockResolvedValue({})
+    stored = {}
+    setItem = jest.fn((key: string, value: string) => {
+      stored[key] = value
+    })
+    removeItem = jest.fn((key: string) => {
+      delete stored[key]
+    })
+    ;(globalThis as unknown as { localStorage: unknown }).localStorage = {
+      getItem: (key: string) => stored[key] ?? null,
+      setItem,
+      removeItem
+    }
+  })
+
+  afterEach(() => {
+    jest.useRealTimers()
+    resetAllStores()
+    delete (globalThis as unknown as { localStorage?: unknown }).localStorage
+  })
+
+  function picker(tree: ReactNode) {
+    return findByType(tree, RegionPicker) as ReactElement<{
+      value: string | null
+      autoLabel: string
+      options: { countryCode: string; label: string; currencyCode?: string }[]
+      onChange: (code: string | null) => void
+    }>
+  }
+
+  it('mounts with Auto, the ITAD-priced country list and no currency pills', async () => {
+    const tree = mount()
+    const el = picker(tree)
+
+    expect(el.props.value).toBeNull()
+    expect(el.props.autoLabel).toBe('Auto (United States)')
+    expect(el.props.options.map((o) => o.countryCode)).toEqual([
+      ...STORE_SEARCH_REGION_CODES
+    ])
+    expect(el.props.options).toHaveLength(32)
+    expect(el.props.options.some((o) => o.currencyCode !== undefined)).toBe(
+      false
+    )
+    expect(
+      findByClassNamePart(tree, 'storeSearchScreen__region')?.props.children
+    ).toBe('Showing prices for United States.')
+
+    await search('portal')
+    expect(mockApi.searchStores).toHaveBeenCalledWith('portal', 'US')
+  })
+
+  it('choosing a country persists it, updates the caption and re-runs the committed search there', async () => {
+    mount()
+    await search('portal')
+    mockApi.searchStores.mockClear()
+
+    picker(rerender()).props.onChange('DE')
+    const tree = await settle()
+
+    expect(setItem).toHaveBeenCalledWith(REGION_KEY, 'DE')
+    expect(
+      findByClassNamePart(tree, 'storeSearchScreen__region')?.props.children
+    ).toBe('Showing prices for Germany.')
+    expect(picker(tree).props.value).toBe('DE')
+    expect(mockApi.searchStores).toHaveBeenCalledWith('portal', 'DE')
+  })
+
+  it('choosing Auto removes the override and returns to the language country', async () => {
+    stored[REGION_KEY] = 'DE'
+    mount()
+    await search('portal')
+    mockApi.searchStores.mockClear()
+
+    picker(rerender()).props.onChange(null)
+    const tree = await settle()
+
+    expect(removeItem).toHaveBeenCalledWith(REGION_KEY)
+    expect(picker(tree).props.value).toBeNull()
+    expect(mockApi.searchStores).toHaveBeenCalledWith('portal', 'US')
+  })
+
+  it('uses a stored code from the Store Search list at mount', async () => {
+    stored[REGION_KEY] = 'NZ'
+    const tree = mount()
+
+    expect(picker(tree).props.value).toBe('NZ')
+    await search('portal')
+    expect(mockApi.searchStores).toHaveBeenCalledWith('portal', 'NZ')
+  })
+
+  it('treats a stored code outside the Store Search list as Auto', async () => {
+    stored[REGION_KEY] = 'IL'
+    const tree = mount()
+
+    expect(picker(tree).props.value).toBeNull()
+    await search('portal')
+    expect(mockApi.searchStores).toHaveBeenCalledWith('portal', 'US')
   })
 })
