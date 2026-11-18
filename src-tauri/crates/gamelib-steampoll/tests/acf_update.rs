@@ -187,6 +187,47 @@ fn keeps_build_ids_as_exact_strings_and_counters_numeric() {
 }
 
 #[test]
+fn reads_bytes_to_stage_but_keeps_it_off_the_wire() {
+    let tmp = TempDir::new().unwrap();
+    let dir = write_one(
+        &tmp,
+        "\"AppState\"
+{
+\"buildid\" \"100\"
+\"StateFlags\" \"1030\"
+\"TargetBuildID\" \"200\"
+\"BytesToDownload\" \"120000000\"
+\"BytesDownloaded\" \"0\"
+\"BytesToStage\" \"400000000\"
+}
+",
+    );
+    let f = read_acf_update_fields_from_dir(&dir, "77").unwrap();
+    assert_eq!(f.bytes_to_stage, 400_000_000);
+    let wire = serde_json::to_value(&f).unwrap();
+    let mut keys: Vec<&str> = wire
+        .as_object()
+        .unwrap()
+        .keys()
+        .map(String::as_str)
+        .collect();
+    keys.sort_unstable();
+    assert_eq!(
+        keys,
+        vec![
+            "betaKey",
+            "buildid",
+            "bytesDownloaded",
+            "bytesToDownload",
+            "scheduledAutoUpdate",
+            "stateFlags",
+            "steamappsDir",
+            "targetBuildId",
+        ]
+    );
+}
+
+#[test]
 fn feeds_pending_rules_target_and_scheduled() {
     let tmp = TempDir::new().unwrap();
     let dir = write_one(&tmp, "\"AppState\"\n{\n\"buildid\" \"100\"\n\"StateFlags\" \"4\"\n\"TargetBuildID\" \"200\"\n}\n");

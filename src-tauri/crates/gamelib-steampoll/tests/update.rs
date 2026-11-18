@@ -380,6 +380,43 @@ fn live_progress_on_mac_native_uses_monitor_reading() {
     );
 }
 
+fn windows_obs(live: bool) -> UpdateObservation {
+    let mut f = fields(1030, "100", Some("200"));
+    f.bytes_to_download = 1000;
+    f.bytes_downloaded = 400;
+    let mut o = obs(Some(f));
+    o.windows_live = live;
+    o.monitor = Some(DownloadReading {
+        bytes_done: 700.0,
+        bytes_total: 1000.0,
+        speed_bytes_per_sec: None,
+    });
+    o
+}
+
+fn percent_of(s: &UpdateStep) -> serde_json::Value {
+    progress_payload(&s.effects).unwrap()["progress"]["percent"].clone()
+}
+
+#[test]
+fn a_windows_live_reading_drives_the_update_percent() {
+    let mut a = AwaitingUpdate::new("100", None, 0);
+    let o = windows_obs(true);
+    let s = update_step(&mut a, 1, AcfSource::Native, APP, &o);
+    assert_eq!(percent_of(&s), json!(70));
+    // a bottle poll ignores the reading and shows the ACF's own 400/1000
+    let mut b = AwaitingUpdate::new("100", None, 0);
+    let s = update_step(&mut b, 1, AcfSource::Bottle, APP, &o);
+    assert_eq!(percent_of(&s), json!(40));
+}
+
+#[test]
+fn without_a_live_gate_the_update_step_reads_the_acf_alone() {
+    let mut a = AwaitingUpdate::new("100", None, 0);
+    let s = update_step(&mut a, 1, AcfSource::Native, APP, &windows_obs(false));
+    assert_eq!(percent_of(&s), json!(40));
+}
+
 #[test]
 fn file_size_matches_filesize_base2() {
     assert_eq!(format_file_size(0.0), "0 B");

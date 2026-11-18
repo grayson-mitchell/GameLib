@@ -296,6 +296,9 @@ impl InstallPolls {
 
     /// The existing-entry branch of `startInstallPolling`: field-by-field upgrade rules.
     fn upgrade(&self, app_id: &str, poll: &mut ActiveInstall, o: &PollOptions) {
+        // Captured before any mutation: an install poll upgraded into an update must not keep
+        // the install's write-counter baseline.
+        let was_update = poll.awaiting_update.is_some();
         if o.is_native_handoff == Some(true) {
             poll.handoff.is_native_handoff = true;
             // Never discard a non-empty skippedDepots list already on the entry.
@@ -342,10 +345,15 @@ impl InstallPolls {
         }
         // quick 261029-sex: an upgrade to handoff or a retarget ends eligibility; a delegated
         // native poll gains it. Start is idempotent per appId. A Windows poll that still reads the
-        // write counter keeps its baseline (stop would drop it and the percent would restart).
+        // write counter keeps its baseline (stop would drop it and the percent would restart): an
+        // install poll repeat-started as an install, or an update poll repeat-started as an update.
+        // An install poll upgraded into an update is stopped and re-baselines at the update's first
+        // running tick, and a poll that loses eligibility (handoff, retarget) is stopped.
         if live_monitor_eligible(self.platform, poll) {
             self.spawn_monitor_start(app_id, poll.roots.clone());
-        } else if !windows_live_active(self.platform, poll) {
+        } else if !(windows_live_active(self.platform, poll)
+            || (was_update && windows_update_live_active(self.platform, poll)))
+        {
             self.monitor.stop(app_id);
         }
     }

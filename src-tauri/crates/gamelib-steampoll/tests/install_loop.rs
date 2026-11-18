@@ -1167,6 +1167,114 @@ async fn only_a_windows_delegated_native_install_poll_reads_the_counter() {
     }
 }
 
+fn delegated_update() -> PollOptions {
+    PollOptions {
+        delegated_to_steam_client: Some(true),
+        ..awaiting(false)
+    }
+}
+
+#[tokio::test(start_paused = true)]
+async fn the_windows_update_baseline_is_the_first_running_tick_not_the_hand_off() {
+    let (source, counter) = Counter::new();
+    let r = rig_build(Platform::Win32, false, Some(source), AckReply::default()).await;
+    // Pending (UpdateRequired) but not running: Steam has not started the update yet.
+    write_win_update_in(&r.steamapps, "6", "7");
+    start(&r, delegated_update());
+    ticks(2).await;
+    assert_eq!(
+        counter.calls(),
+        0,
+        "a pending update never reads the counter"
+    );
+
+    // Steam wrote 700 MB of other things meanwhile; the update counts from its first running tick.
+    counter.set(700_000_000);
+    write_win_update_in(&r.steamapps, "1030", "7");
+    ticks(1).await;
+    counter.set(700_000_000 + WIN_UPDATE_TO_STAGE / 2);
+    ticks(1).await;
+    let all = percents(&r.host);
+    assert_eq!(&all[all.len() - 2..], &[0, 50]);
+    r.polls.stop_install(APP);
+}
+
+#[tokio::test(start_paused = true)]
+async fn only_a_windows_delegated_native_update_poll_reads_the_counter() {
+    let cases: Vec<(&str, Platform, PollOptions)> = vec![
+        ("not delegated", Platform::Win32, awaiting(false)),
+        (
+            "depot handoff",
+            Platform::Win32,
+            PollOptions {
+                delegated_to_steam_client: Some(true),
+                is_native_handoff: Some(true),
+                ..awaiting(false)
+            },
+        ),
+        (
+            "bottle source",
+            Platform::Win32,
+            PollOptions {
+                delegated_to_steam_client: Some(true),
+                source: Some(AcfSource::Bottle),
+                ..awaiting(false)
+            },
+        ),
+        ("linux", Platform::Linux, delegated_update()),
+        ("macos", Platform::Darwin, delegated_update()),
+    ];
+    for (name, platform, options) in cases {
+        let (source, counter) = Counter::new();
+        let r = rig_build(platform, false, Some(source), AckReply::default()).await;
+        write_win_update_in(&r.steamapps, "1030", "7");
+        write_win_update_in(&r.bottle, "1030", "7");
+        start(&r, options);
+        ticks(3).await;
+        assert_eq!(counter.calls(), 0, "{name}: the counter must not be read");
+        r.polls.stop_install(APP);
+    }
+}
+
+#[tokio::test(start_paused = true)]
+async fn the_windows_update_baseline_survives_a_repeat_start_of_the_same_update_poll() {
+    let (source, counter) = Counter::new();
+    let r = rig_build(Platform::Win32, false, Some(source), AckReply::default()).await;
+    write_win_update_in(&r.steamapps, "1030", "7");
+    start(&r, delegated_update());
+    ticks(1).await;
+    counter.set(WIN_UPDATE_TO_STAGE / 2);
+    ticks(1).await;
+    // The same update poll is started again (idempotent): the percent must not restart.
+    start(&r, delegated_update());
+    ticks(1).await;
+    assert_eq!(percents(&r.host), vec![0, 50, 50]);
+    r.polls.stop_install(APP);
+}
+
+#[tokio::test(start_paused = true)]
+async fn an_install_poll_upgraded_to_an_update_takes_a_fresh_baseline() {
+    let (source, counter) = Counter::new();
+    let r = rig_build(Platform::Win32, false, Some(source), AckReply::default()).await;
+    write_win_downloading(&r);
+    start(&r, delegated());
+    ticks(1).await;
+    counter.set(WIN_TO_STAGE / 2);
+    ticks(1).await;
+    assert_eq!(percents(&r.host), vec![0, 50]);
+
+    // The same app turns into an update: the install baseline must not carry over.
+    write_win_update_in(&r.steamapps, "1030", "7");
+    start(&r, delegated_update());
+    ticks(1).await;
+    let all = percents(&r.host);
+    assert_eq!(all.last(), Some(&0), "a carried baseline would read 99");
+    counter.set(WIN_TO_STAGE / 2 + WIN_UPDATE_TO_STAGE / 2);
+    ticks(1).await;
+    assert_eq!(percents(&r.host).last(), Some(&50));
+    r.polls.stop_install(APP);
+}
+
 // ---- concurrent uninstall starts (80-REVIEW A/WR-06) -----------------------------------------
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]

@@ -9,6 +9,7 @@ use gamelib_steampoll::install_once::{
     ActiveInstall, InstallObservation, InstallStep,
 };
 use gamelib_steampoll::mac_arch::MacArch;
+use gamelib_steampoll::monitor::DownloadReading;
 use gamelib_steampoll::profile::Platform;
 use gamelib_steampoll::testing::ScriptedRunner;
 use gamelib_steampoll::update::AwaitingUpdate;
@@ -438,6 +439,47 @@ fn awaiting_update_surfaces_the_install_app_retry_request() {
         step.update.as_ref().map(|u| u.library_path.clone()),
         Some(Some("/lib".to_string()))
     );
+}
+
+fn update_percent(effects: &[Effect]) -> Option<i64> {
+    effects.iter().find_map(|e| match e {
+        Effect::Frontend { channel, args } if channel == "progressUpdate" => {
+            args[0]["progress"]["percent"].as_i64()
+        }
+        _ => None,
+    })
+}
+
+#[test]
+fn a_windows_delegated_update_poll_hands_the_live_reading_to_the_update_step() {
+    // (name, platform, delegated, native handoff, expected percent): the live reading is 700 of
+    // 1000 bytes, the ACF's own figure is 0 of 1000.
+    let cases = [
+        ("windows delegated", Platform::Win32, true, false, 70),
+        ("linux", Platform::Linux, true, false, 0),
+        ("not delegated", Platform::Win32, false, false, 0),
+        ("depot handoff", Platform::Win32, true, true, 0),
+        ("macos", Platform::Darwin, false, false, 70),
+    ];
+    for (name, platform, delegated, is_handoff, expected) in cases {
+        let mut p = poll(AcfSource::Native);
+        p.awaiting_update = Some(AwaitingUpdate::new("100", Some("200"), 0));
+        p.delegated_to_steam_client = delegated;
+        p.handoff.is_native_handoff = is_handoff;
+        p.ticks = 1;
+        let mut o = obs(installed_acf());
+        o.platform = platform;
+        let mut f = update_fields(1030, "100", Some("200"));
+        f.bytes_to_download = 1000;
+        o.update_fields = Some(f);
+        o.monitor = Some(DownloadReading {
+            bytes_done: 700.0,
+            bytes_total: 1000.0,
+            speed_bytes_per_sec: None,
+        });
+        let step = install_step(APP, &mut p, &o);
+        assert_eq!(update_percent(&step.effects), Some(expected), "{name}");
+    }
 }
 
 // ---- Mac arch follow-up ----------------------------------------------------------------------
