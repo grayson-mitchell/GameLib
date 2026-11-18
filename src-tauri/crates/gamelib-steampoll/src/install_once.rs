@@ -4,11 +4,11 @@
 //! awaits. The two TS awaits inside a tick become requests the loop satisfies and feeds back by
 //! calling the step again for the same tick:
 //!
-//! - the restart-hold decision (`shouldHoldForSteamRestart` spawns Steam-process probes):
-//!   `InstallStep::hold_probe`; the loop runs `hold::should_hold` on `poll.hold` and re-enters with
-//!   `InstallObservation::hold = Some(..)`. The first call mutates nothing and emits nothing, so
-//!   re-entry preserves the TS order within a tick;
 //! - the InstallApp retry of the update tick (`InstallStep::update`).
+//!
+//! There is no restart hold (Phase 81, D-11): a native handoff runs start -> downloading ->
+//! Installed, and the "restart Steam" wait is restart-on-Play's pending-adoption record, written by
+//! the sidecar, not this poll.
 //!
 //! Completion order (D-05, R2): the `installed` state event goes out first; after the ack
 //! `Continuation::Installed` emits `gameStatusUpdate` done (or the bridge finishing context), the
@@ -23,13 +23,10 @@
 //! the step runs and not after the ack.
 
 use crate::acf_state::{AcfSource, AcfState, AcfUpdateFields, PollRoots};
-use crate::constants::{
-    BYTES_PER_MIB, GAMELIB_HANDOFF_STATE_FLAGS, MANIFEST_GONE_TICKS, STALLED_TICKS_THRESHOLD,
-};
-use crate::effects::{status_update, Continuation, Effect, LogLevel};
+use crate::constants::{BYTES_PER_MIB, GAMELIB_HANDOFF_STATE_FLAGS, STALLED_TICKS_THRESHOLD};
+use crate::effects::{Continuation, Effect, LogLevel};
 use crate::events::{AckReply, StateEvent};
-use crate::hold::{release_hold, restart_to_finish_notification, HoldPoll, HoldState};
-use crate::host::ProcessRunner;
+use crate::host::{Notification, NotifyText, ProcessRunner};
 use crate::mac_arch::{mac_arch_verdict, MacArch};
 use crate::monitor::DownloadReading;
 use crate::profile::Platform;
@@ -43,8 +40,17 @@ use crate::update::{
 use serde_json::{json, Map, Value};
 use std::path::Path;
 
-/// Port of `ActiveInstallPoll` minus `timer` and `restartHoldStore` (hold persistence goes
-/// through effects). The hold lifecycle fields live in [`HoldPoll`] (`hold`).
+/// The poll-side fields of a GameLib depot handoff (D-11: no hold lifecycle, no probe state).
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct HandoffPoll {
+    pub is_native_handoff: bool,
+    pub skipped_depots: Vec<String>,
+    pub seen_downloading: bool,
+    pub absent_ticks_since_seen: u32,
+}
+
+/// Port of `ActiveInstallPoll` minus `timer`. The handoff fields live in [`HandoffPoll`]
+/// (`handoff`).
 #[derive(Debug, Clone)]
 pub struct ActiveInstall {
     pub title: String,
@@ -62,9 +68,8 @@ pub struct ActiveInstall {
     pub notified_depot_skipped: bool,
     pub delegated_to_steam_client: bool,
     pub delegated_since_tick: u32,
-    /// Hold lifecycle plus `isNativeHandoff`, `macNativeRoute`, `skippedDepots`, `seenDownloading`,
-    /// `absentTicksSinceSeen`.
-    pub hold: HoldPoll,
+    /// `isNativeHandoff`, `skippedDepots`, `seenDownloading`, `absentTicksSinceSeen`.
+    pub handoff: HandoffPoll,
     /// Phase 74 (D-11): this poll watches an update of an installed game.
     pub awaiting_update: Option<AwaitingUpdate>,
 }
@@ -83,17 +88,10 @@ impl ActiveInstall {
             notified_depot_skipped: false,
             delegated_to_steam_client: false,
             delegated_since_tick: 0,
-            hold: HoldPoll::default(),
+            handoff: HandoffPoll::default(),
             awaiting_update: None,
         }
     }
-}
-
-/// The result of the loop's `should_hold` run (poll.hold already updated by it).
-#[derive(Debug, Clone, PartialEq)]
-pub struct HoldOutcome {
-    pub holding: bool,
-    pub effects: Vec<Effect>,
 }
 
 #[derive(Debug, Clone)]
@@ -108,18 +106,10 @@ pub struct InstallObservation {
     pub platform: Platform,
     /// `isBridgeInstallFinalized(appId)`, read when the step runs.
     pub bridge_finalized: bool,
-    /// Present on the re-entry after a `hold_probe`.
-    pub hold: Option<HoldOutcome>,
     /// Outcome of the InstallApp request the previous update step asked for.
     pub install_app_outcome: Option<SteamInstallAppOutcome>,
     /// Sequence number for the state event this step may emit.
     pub seq: u64,
-}
-
-/// Ask the loop to run `hold::should_hold` on `poll.hold` and call the step again.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct HoldProbeRequest {
-    pub source: AcfSource,
 }
 
 /// Run `update::request_steam_install_app` with this library path and feed the outcome into the
@@ -142,7 +132,6 @@ pub struct InstallStep {
     pub effects: Vec<Effect>,
     /// The poll is over; the loop stops it.
     pub stop: bool,
-    pub hold_probe: Option<HoldProbeRequest>,
     pub update: Option<UpdateRequest>,
     /// Off-tick, fire-and-forget; run only when the ack reply allows it.
     pub mac_arch: Option<MacArchFollowUp>,
@@ -153,7 +142,6 @@ impl InstallStep {
         Self {
             effects,
             stop: false,
-            hold_probe: None,
             update: None,
             mac_arch: None,
         }
@@ -228,7 +216,7 @@ pub fn install_step(
             buildid,
             ..
         } => installed(app_id, poll, obs, install_path, size_on_disk, buildid),
-        AcfState::Absent => absent(app_id, poll),
+        AcfState::Absent => absent(poll),
         AcfState::Unknown => InstallStep::effects(vec![]),
     }
 }
@@ -255,7 +243,6 @@ fn update_tick(app_id: &str, poll: &mut ActiveInstall, obs: &InstallObservation)
     InstallStep {
         effects: step.effects,
         stop: step.stop,
-        hold_probe: None,
         update: step
             .request_install_app
             .map(|library_path| UpdateRequest { library_path }),
@@ -272,30 +259,14 @@ fn downloading(
 ) -> InstallStep {
     let [bytes_downloaded, bytes_to_download, bytes_staged, bytes_to_stage] = bytes;
     let mut fx: Vec<Effect> = Vec::new();
-    poll.hold.seen_downloading = true;
-    poll.hold.absent_ticks_since_seen = 0;
-    // D-UAT-13: a manifest finalized at StateFlags=4 that is an active download again means Steam
-    // itself picked it up; the wait is over.
-    if poll.hold.steam_hold == HoldState::Holding {
-        fx.push(release_hold(app_id, &mut poll.hold));
-        fx.push(log(
-            LogLevel::Info,
-            format!(
-                "Steam: Steam is now rewriting the manifest for appId {app_id} (StateFlags {}) — releasing steam-waiting-for-restart (D-UAT-13)",
-                state_flags.map_or("NaN".to_string(), |f| f.to_string())
-            ),
-        ));
-    }
+    poll.handoff.seen_downloading = true;
+    poll.handoff.absent_ticks_since_seen = 0;
 
     // D-UAT-04: GameLib writes StateFlags exactly 1026 on handoff. Only a poll that follows
     // GameLib's own depot download may read it as a finished handoff (1026 is also Steam's own
     // ordinary active-download state).
     let is_waiting =
-        state_flags == Some(GAMELIB_HANDOFF_STATE_FLAGS) && poll.hold.is_native_handoff;
-    // Once the 1026 wait is shown, the later 1026 -> 4 flip must never arm a hold.
-    if is_waiting {
-        fx.push(release_hold(app_id, &mut poll.hold));
-    }
+        state_flags == Some(GAMELIB_HANDOFF_STATE_FLAGS) && poll.handoff.is_native_handoff;
 
     // quick 261030-o77: a bottle-source handoff at 1026 is incomplete and resumable, never
     // "waiting on bottled Steam".
@@ -322,7 +293,7 @@ fn downloading(
     // quick 261029-sex: on an eligible macOS native poll the monitor supplies the effective bytes.
     let is_mac = obs.platform == Platform::Darwin;
     let live: Option<DownloadReading> =
-        if is_mac && poll.source == AcfSource::Native && !poll.hold.is_native_handoff {
+        if is_mac && poll.source == AcfSource::Native && !poll.handoff.is_native_handoff {
             obs.monitor
         } else {
             None
@@ -438,28 +409,10 @@ fn downloading(
     InstallStep::effects(fx)
 }
 
-fn absent(app_id: &str, poll: &mut ActiveInstall) -> InstallStep {
-    // Grace/cap logic lives in the loop; only the manifest-gone-while-holding rule is here.
-    if !poll.hold.seen_downloading {
-        return InstallStep::effects(vec![]);
-    }
-    poll.hold.absent_ticks_since_seen += 1;
-    if poll.hold.steam_hold == HoldState::Holding
-        && poll.hold.absent_ticks_since_seen >= MANIFEST_GONE_TICKS
-    {
-        // stopInstallPolling clears the persisted record of a stopped holding poll.
-        return InstallStep::stopped(vec![
-            log(
-                LogLevel::Warn,
-                format!(
-                    "Steam: install polling for appId {app_id} stopped — manifest disappeared while waiting for a Steam restart"
-                ),
-            ),
-            status_update(app_id, "done", None),
-            Effect::ClearHoldRecord {
-                app_id: app_id.to_string(),
-            },
-        ]);
+fn absent(poll: &mut ActiveInstall) -> InstallStep {
+    // Grace/cap logic lives in the loop; this only counts the ticks the manifest has been gone.
+    if poll.handoff.seen_downloading {
+        poll.handoff.absent_ticks_since_seen += 1;
     }
     InstallStep::effects(vec![])
 }
@@ -478,9 +431,10 @@ fn installed(
     // installBridgeGame owns the final 'done' and the toast.
     let installer_owns_completion = poll.source == AcfSource::Bridge;
 
-    let skipped_depots = if !poll.hold.skipped_depots.is_empty() && !poll.notified_depot_skipped {
+    let skipped_depots = if !poll.handoff.skipped_depots.is_empty() && !poll.notified_depot_skipped
+    {
         poll.notified_depot_skipped = true;
-        poll.hold.skipped_depots.clone()
+        poll.handoff.skipped_depots.clone()
     } else {
         Vec::new()
     };
@@ -488,7 +442,7 @@ fn installed(
     // Phase 81 (D-11/D-14): restart-on-Play replaced the "restart Steam" notice for native
     // installs on every OS, so a StateFlags=4 handoff only asks for a restart on the bottle
     // source, where restart-on-Play does not apply (a bottled-Steam restart adopts it).
-    let notify_restart_steam = poll.hold.is_native_handoff
+    let notify_restart_steam = poll.handoff.is_native_handoff
         && poll.source == AcfSource::Bottle
         && !installer_owns_completion
         && !poll.notified_waiting;
@@ -530,6 +484,21 @@ fn installed(
     InstallStep {
         mac_arch,
         ..InstallStep::stopped(fx)
+    }
+}
+
+/// The one-shot "Restart Steam to finish installing {{game}}" toast for a native handoff at the
+/// GameLib 1026 wait (`notifyRestartSteamToFinish`).
+pub fn restart_to_finish_notification(title: &str) -> Notification {
+    let mut params = Map::new();
+    params.insert("game".into(), json!(title));
+    Notification {
+        title: NotifyText::Literal(title.to_string()),
+        body: NotifyText::Key {
+            key: "steam.waitingForSteam.notify".into(),
+            default: "Restart Steam to finish installing {{game}}".into(),
+            params,
+        },
     }
 }
 

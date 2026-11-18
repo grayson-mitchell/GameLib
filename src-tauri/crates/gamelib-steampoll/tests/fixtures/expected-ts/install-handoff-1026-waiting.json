@@ -1,12 +1,5 @@
 [
   {
-    "file": {
-      "op": "clear",
-      "appId": "1000",
-      "record": null
-    }
-  },
-  {
     "frontend": {
       "channel": "gameStatusUpdate",
       "args": [
@@ -31,13 +24,6 @@
     }
   },
   {
-    "file": {
-      "op": "clear",
-      "appId": "1000",
-      "record": null
-    }
-  },
-  {
     "frontend": {
       "channel": "gameStatusUpdate",
       "args": [
@@ -48,13 +34,6 @@
           "context": "steam-waiting-for-restart"
         }
       ]
-    }
-  },
-  {
-    "file": {
-      "op": "clear",
-      "appId": "1000",
-      "record": null
     }
   },
   {

@@ -1,12 +1,5 @@
 [
   {
-    "file": {
-      "op": "clear",
-      "appId": "1000",
-      "record": null
-    }
-  },
-  {
     "state": {
       "kind": "installIncomplete",
       "appId": "1000"

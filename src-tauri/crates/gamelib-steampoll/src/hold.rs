@@ -1,9 +1,7 @@
-//! Port of the restart hold: `library/restartHold.ts` (decision half), `steamRestartHold.ts` (the
-//! persisted `steam_restart_hold` store) and the `steamClientProcess.ts` probes it uses (plan 07).
-//!
-//! The hold keeps a native install in "Restart Steam to finish" until the Steam client that was
-//! running when GameLib wrote the manifest has exited (D-UAT-13), and persists the Steam pid and an
-//! opaque start token so the hold survives a GameLib restart (quick 261029-pkp).
+//! What is left of the restart hold: `steamRestartHold.ts` (the persisted `steam_restart_hold`
+//! store, read once at boot by the migration to pending-adoption records) and the
+//! `steamClientProcess.ts` probes the adoption read uses (plan 07). The hold decision itself
+//! is gone (Phase 81, D-11); 81-16 deletes this file.
 //!
 //! The store file is the sidecar's `CacheStore` layout, dual-readable by TS and Rust (D-16):
 //! `{ "<appId>": record, "__timestamp": { "<appId>": "<date text>" }, "__internal__": {..} }`. A
@@ -13,10 +11,7 @@
 //! Disk content is untrusted (T-80-19): `parse_record` is the TS `parseRecord`, and an invalid
 //! record is ignored. Probes spawn fixed programs with argv arrays and integer pids only (T-80-22).
 
-use crate::acf_state::AcfSource;
-use crate::constants::STEAM_HOLD_PROBE_MIN_INTERVAL_MS;
-use crate::effects::{Effect, LogLevel};
-use crate::host::{Clock, HoldSink, Notification, NotifyText, ProcessRunner};
+use crate::host::{HoldSink, ProcessRunner};
 use crate::profile::Platform;
 use serde_json::{json, Map, Value};
 use std::collections::HashMap;
@@ -574,183 +569,4 @@ pub async fn read_steam_process_start_tokens(
             .filter_map(|pid| parsed.get(&pid).map(|t| (pid, t.clone())))
             .collect(),
     )
-}
-
-// ---------------------------------------------------------------------------------------------
-// Hold decision (library/restartHold.ts shouldHoldForSteamRestart)
-// ---------------------------------------------------------------------------------------------
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum HoldState {
-    #[default]
-    Unprobed,
-    Holding,
-    Released,
-}
-
-/// The poll-side fields `shouldHoldForSteamRestart` reads and writes (ActiveInstallPoll). The
-/// install loop (plan 09/11) embeds this in its poll state.
-#[derive(Debug, Clone, Default, PartialEq)]
-pub struct HoldPoll {
-    pub steam_hold: HoldState,
-    pub steam_pids_at_handoff: Vec<u32>,
-    pub last_steam_probe_ms: u64,
-    pub is_native_handoff: bool,
-    pub mac_native_route: bool,
-    pub skipped_depots: Vec<String>,
-    pub seen_downloading: bool,
-    pub absent_ticks_since_seen: u32,
-}
-
-/// The single place a hold ends: `Released` plus an effect that deletes the persisted record so
-/// it can never re-arm a finished hold.
-pub fn release_hold(app_id: &str, poll: &mut HoldPoll) -> Effect {
-    poll.steam_hold = HoldState::Released;
-    Effect::ClearHoldRecord {
-        app_id: app_id.to_string(),
-    }
-}
-
-fn log(level: LogLevel, message: String) -> Effect {
-    Effect::Log { level, message }
-}
-
-/// Whether a poll that just read a fully-installed manifest must keep waiting for a Steam
-/// restart. Returns `(hold, effects)`; effects (record write, record clear, logs) are applied by
-/// the caller so the machines stay pure. `still_current` answers "is this poll still the active
-/// one" and is consulted after each probe (the poll may have been stopped while a child ran).
-///
-/// Scope: GameLib's own native handoff on the native Steam root only. Fail-open everywhere: no
-/// Steam running or an inconclusive first probe releases immediately; a hold is only entered on
-/// positive evidence of a live Steam client, and only positive evidence of exit releases it.
-pub async fn should_hold(
-    runner: &dyn ProcessRunner,
-    clock: &dyn Clock,
-    platform: Platform,
-    app_id: &str,
-    poll: &mut HoldPoll,
-    source: AcfSource,
-    still_current: &(dyn Fn() -> bool + Send + Sync),
-) -> (bool, Vec<Effect>) {
-    let mut fx = Vec::new();
-    if !poll.is_native_handoff || source != AcfSource::Native {
-        return (false, fx);
-    }
-    if poll.steam_hold == HoldState::Released {
-        return (false, fx);
-    }
-
-    if poll.steam_hold == HoldState::Unprobed {
-        let pids = list_steam_client_pids(runner, platform).await;
-        if !still_current() {
-            return (false, fx);
-        }
-        poll.last_steam_probe_ms = clock.now_ms();
-        let pids = match pids {
-            Some(p) if !p.is_empty() => p,
-            _ => {
-                // Also removes a stale record left by an earlier hold of this app.
-                fx.push(release_hold(app_id, poll));
-                return (false, fx);
-            }
-        };
-        poll.steam_pids_at_handoff = pids.clone();
-        poll.steam_hold = HoldState::Holding;
-        // The manifest HAS been seen, just not yet reported: keeps the grace window from tearing
-        // the hold down and lets a manifest that vanishes mid-hold be counted.
-        poll.seen_downloading = true;
-        fx.push(log(
-            LogLevel::Info,
-            format!(
-                "Steam: native install of appId {app_id} finalized while the Steam client (pid {}) is running; holding in steam-waiting-for-restart until it restarts (D-UAT-13)",
-                join_pids(&pids)
-            ),
-        ));
-        // Persist the hold so it survives a GameLib restart. Can never change the decision.
-        let tokens = read_steam_process_start_tokens(runner, platform, &pids).await;
-        if still_current() && poll.steam_hold == HoldState::Holding {
-            let recorded: Vec<PidToken> = pids
-                .iter()
-                .filter_map(|pid| {
-                    tokens
-                        .as_ref()
-                        .and_then(|t| t.get(pid))
-                        .filter(|t| !t.is_empty())
-                        .map(|t| PidToken {
-                            pid: *pid,
-                            start_token: t.clone(),
-                        })
-                })
-                .collect();
-            if recorded.is_empty() {
-                fx.push(log(
-                    LogLevel::Warn,
-                    format!(
-                        "Steam: could not read Steam process start time for appId {app_id}; the steam-waiting-for-restart hold will not survive a GameLib restart"
-                    ),
-                ));
-            } else {
-                let record = RestartHoldRecord {
-                    pids: recorded,
-                    recorded_at: clock.now_ms() as f64,
-                    mac_native_route: poll.mac_native_route,
-                    skipped_depots: poll.skipped_depots.clone(),
-                };
-                fx.push(Effect::WriteHoldRecord {
-                    app_id: app_id.to_string(),
-                    record: record.to_value(),
-                });
-            }
-        }
-        return (true, fx);
-    }
-
-    // HoldState::Holding
-    poll.absent_ticks_since_seen = 0;
-    let now = clock.now_ms();
-    if now.saturating_sub(poll.last_steam_probe_ms) >= STEAM_HOLD_PROBE_MIN_INTERVAL_MS {
-        poll.last_steam_probe_ms = now;
-        let pids = list_steam_client_pids(runner, platform).await;
-        if !still_current() {
-            return (false, fx);
-        }
-        // `None` (probe inconclusive) keeps holding: only positive evidence that every recorded
-        // process is gone may release.
-        if let Some(live) = pids {
-            if !live.iter().any(|p| poll.steam_pids_at_handoff.contains(p)) {
-                fx.push(release_hold(app_id, poll));
-                fx.push(log(
-                    LogLevel::Info,
-                    format!(
-                        "Steam: the Steam client that was running when appId {app_id} finalized (pid {}) has exited; releasing steam-waiting-for-restart (D-UAT-13)",
-                        join_pids(&poll.steam_pids_at_handoff)
-                    ),
-                ));
-                return (false, fx);
-            }
-        }
-    }
-    (true, fx)
-}
-
-fn join_pids(pids: &[u32]) -> String {
-    pids.iter()
-        .map(u32::to_string)
-        .collect::<Vec<_>>()
-        .join(", ")
-}
-
-/// The one-shot "Restart Steam to finish installing {{game}}" toast for a native handoff on the
-/// native Steam root (`notifyRestartSteamToFinish`).
-pub fn restart_to_finish_notification(title: &str) -> Notification {
-    let mut params = Map::new();
-    params.insert("game".into(), json!(title));
-    Notification {
-        title: NotifyText::Literal(title.to_string()),
-        body: NotifyText::Key {
-            key: "steam.waitingForSteam.notify".into(),
-            default: "Restart Steam to finish installing {{game}}".into(),
-            params,
-        },
-    }
 }

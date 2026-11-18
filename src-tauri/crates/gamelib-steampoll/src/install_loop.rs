@@ -10,9 +10,9 @@
 //! One tokio task per appId ticks every 3 s with `MissedTickBehavior::Delay` (D-10): a slow tick
 //! delays the next one instead of overlapping it. Ticks are integer counters.
 //!
-//! Per tick (installPolling.ts:225-431): `ticks++`, the `MAX_TICKS` cap (releasing a holding poll
-//! first), then observe, `install_step`, the hold probe and InstallApp request the step asks for,
-//! `apply_effects`, and the grace / no-activity / manifest-gone rules. The Mac arch follow-up runs
+//! Per tick (installPolling.ts:225-431): `ticks++`, the `MAX_TICKS` cap, then observe,
+//! `install_step`, the InstallApp request the step asks for, `apply_effects`, and the grace /
+//! no-activity / manifest-gone rules. There is no restart hold (D-11). The Mac arch follow-up runs
 //! off-tick and only when the `installed` ack says `macArchCheck`.
 //!
 //! Lock discipline: the poll map is locked only for synchronous work, never across an await.
@@ -24,10 +24,9 @@ use crate::constants::{
     GRACE_TICKS, MANIFEST_GONE_TICKS, MAX_TICKS, STEAM_REQUEST_NO_ACTIVITY_TICKS, TICK_INTERVAL_MS,
 };
 use crate::effects::{status_update, Effect, LogLevel};
-use crate::hold::{release_hold, should_hold, HoldPoll, HoldState};
 use crate::host::{HoldSink, PollHost};
 use crate::install_once::{
-    install_step, run_mac_arch_followup, wants_mac_arch_probe, ActiveInstall, HoldOutcome,
+    install_step, run_mac_arch_followup, wants_mac_arch_probe, ActiveInstall, HandoffPoll,
     InstallObservation,
 };
 use crate::monitor::DownloadMonitor;
@@ -81,7 +80,7 @@ pub struct PollOptions {
     pub delegated_to_steam_client: Option<bool>,
     pub adopted_by_steam_client: Option<bool>,
     /// Accepted and ignored (Phase 81 D-11): the boot re-arm that sent it is gone. Kept only so
-    /// `deny_unknown_fields` does not reject an older sidecar's start until 81-14 removes the TS
+    /// `deny_unknown_fields` does not reject an older sidecar's start until Task 2 removes the TS
     /// sender; a start carrying it behaves exactly like one without it.
     pub restored_steam_hold: Option<serde_json::Value>,
     pub awaiting_update: Option<AwaitingUpdateOpt>,
@@ -135,13 +134,9 @@ fn valid_app_id(app_id: &str) -> bool {
     (1..=10).contains(&app_id.len()) && app_id.bytes().all(|b| b.is_ascii_digit())
 }
 
-fn hold_name(h: HoldState) -> &'static str {
-    match h {
-        HoldState::Unprobed => "unprobed",
-        HoldState::Holding => "holding",
-        HoldState::Released => "released",
-    }
-}
+/// The `steamHold` every install reports until 81-17 removes the field from the wire: what a
+/// never-held poll reported before the hold went (D-11).
+const STEAM_HOLD_WIRE: &str = "unprobed";
 
 /// Every this many ticks an eligible poll restarts a download monitor that is not live
 /// (15 s at the 3 s tick): bounds the pgrep cost while Steam is down (80-REVIEW A/WR-09).
@@ -149,7 +144,9 @@ const MONITOR_RESTART_TICKS: u32 = 5;
 
 /// quick 261029-sex: only macOS native polls are downloaded by Steam itself.
 fn live_monitor_eligible(platform: Platform, poll: &ActiveInstall) -> bool {
-    platform == Platform::Darwin && poll.source == AcfSource::Native && !poll.hold.is_native_handoff
+    platform == Platform::Darwin
+        && poll.source == AcfSource::Native
+        && !poll.handoff.is_native_handoff
 }
 
 fn retry_from(o: &InstallAppRetryOpt) -> InstallAppRetry {
@@ -262,16 +259,8 @@ impl InstallPolls {
 
         let mut poll = ActiveInstall::new(&title, roots.clone(), source);
         poll.delegated_to_steam_client = delegated;
-        poll.hold = HoldPoll {
-            steam_hold: if adopted {
-                HoldState::Released
-            } else {
-                HoldState::Unprobed
-            },
-            steam_pids_at_handoff: Vec::new(),
-            last_steam_probe_ms: 0,
+        poll.handoff = HandoffPoll {
             is_native_handoff,
-            mac_native_route: o.mac_native_route.unwrap_or(false),
             skipped_depots: skipped,
             seen_downloading: false,
             absent_ticks_since_seen: 0,
@@ -305,14 +294,11 @@ impl InstallPolls {
     /// The existing-entry branch of `startInstallPolling`: field-by-field upgrade rules.
     fn upgrade(&self, app_id: &str, poll: &mut ActiveInstall, o: &PollOptions) {
         if o.is_native_handoff == Some(true) {
-            poll.hold.is_native_handoff = true;
-            if o.mac_native_route == Some(true) {
-                poll.hold.mac_native_route = true;
-            }
+            poll.handoff.is_native_handoff = true;
             // Never discard a non-empty skippedDepots list already on the entry.
-            if poll.hold.skipped_depots.is_empty() {
+            if poll.handoff.skipped_depots.is_empty() {
                 if let Some(s) = o.skipped_depots.as_ref().filter(|s| !s.is_empty()) {
-                    poll.hold.skipped_depots = s.clone();
+                    poll.handoff.skipped_depots = s.clone();
                 }
             }
             // quick 261027-g9o: only the handoff call may retarget the source.
@@ -327,7 +313,7 @@ impl InstallPolls {
                 poll.last_bytes_downloaded = None;
                 poll.last_tick_ms = None;
                 poll.stalled_ticks = 0;
-                poll.hold.absent_ticks_since_seen = 0;
+                poll.handoff.absent_ticks_since_seen = 0;
                 // `ticks` is deliberately kept: MAX_TICKS stays an absolute cap.
             }
             log_line(&format!(
@@ -345,13 +331,6 @@ impl InstallPolls {
                 "upgrading in-flight install poll for appId {app_id} to delegatedToSteamClient"
             ));
         }
-        if o.adopted_by_steam_client == Some(true) && poll.hold.steam_hold != HoldState::Released {
-            let _ = release_hold(app_id, &mut poll.hold);
-            self.hold.clear(app_id);
-            log_line(&format!(
-                "in-flight install poll for appId {app_id} adopted by the Steam client; restart hold released"
-            ));
-        }
         if let Some(a) = o.awaiting_update.as_ref() {
             poll.awaiting_update = Some(awaiting_from(a, poll.delegated_since_tick));
             log_line(&format!(
@@ -367,23 +346,19 @@ impl InstallPolls {
         }
     }
 
-    /// `stopInstallPolling`: clears a holding poll's persisted record, stops its monitor and the
-    /// task. Idempotent; false when no poll was running.
+    /// `stopInstallPolling`: stops the poll's monitor and task. Idempotent; false when no poll was
+    /// running.
     pub fn stop_install(&self, app_id: &str) -> bool {
         let removed = self.polls().remove(app_id);
-        let Some(slot) = removed else {
+        if removed.is_none() {
             return false;
-        };
-        self.finish_slot(app_id, &slot.poll);
+        }
+        self.finish_slot(app_id);
         self.registry.cancel(PollKind::Install, app_id);
         true
     }
 
-    fn finish_slot(&self, app_id: &str, poll: &ActiveInstall) {
-        // quick 261029-pkp: a stopped holding poll must not leave a record that re-arms at boot.
-        if poll.hold.steam_hold == HoldState::Holding {
-            self.hold.clear(app_id);
-        }
+    fn finish_slot(&self, app_id: &str) {
         self.monitor.stop(app_id);
         log_line(&format!("stopped install polling for appId {app_id}"));
     }
@@ -398,8 +373,8 @@ impl InstallPolls {
                 None
             }
         };
-        if let Some(slot) = removed {
-            self.finish_slot(app_id, &slot.poll);
+        if removed.is_some() {
+            self.finish_slot(app_id);
         }
     }
 
@@ -438,7 +413,7 @@ impl InstallPolls {
                 app_id: app_id.clone(),
                 delegated_to_steam_client: s.poll.delegated_to_steam_client,
                 awaiting_update: s.poll.awaiting_update.is_some(),
-                steam_hold: hold_name(s.poll.hold.steam_hold).to_string(),
+                steam_hold: STEAM_HOLD_WIRE.to_string(),
             })
             .collect();
         installs.sort_by(|a, b| a.app_id.cmp(&b.app_id));
@@ -449,17 +424,10 @@ impl InstallPolls {
         }
     }
 
-    /// `isHoldingForSteamRestart` for every app: the live polls that are holding (dormant until
-    /// 81-14 removes the hold state).
+    /// Always empty: no install poll holds for a Steam restart any more (D-11). The wire field
+    /// stays until 81-17 removes it with its TS readers.
     pub fn holding_app_ids(&self) -> Vec<String> {
-        let mut out: Vec<String> = self
-            .polls()
-            .iter()
-            .filter(|(_, s)| s.poll.hold.steam_hold == HoldState::Holding)
-            .map(|(id, _)| id.clone())
-            .collect();
-        out.sort();
-        out
+        Vec::new()
     }
 
     /// TS-pushed mirror of `gameSession.isNativeInstallInFlight` (R7), read by the next tick.
@@ -522,8 +490,7 @@ impl InstallPolls {
                 break;
             }
         }
-        // Shutdown cancel leaves a holding poll's record on disk (it re-arms at boot); only the
-        // slot goes, and only if it is still this task's.
+        // Only the slot goes, and only if it is still this task's.
         let mut polls = self.polls();
         if polls.get(app_id).is_some_and(|s| s.gen == gen) {
             polls.remove(app_id);
@@ -576,29 +543,16 @@ impl InstallPolls {
             title: String,
             restart_monitor: bool,
         }
-        let (snap, pre, cap_stop) = {
+        let (snap, cap_stop) = {
             let mut polls = self.polls();
             let Some(slot) = polls.get_mut(app_id).filter(|s| s.gen == gen) else {
                 return false;
             };
             let poll = &mut slot.poll;
             poll.ticks += 1;
-            let mut pre: Vec<Effect> = vec![];
             let mut cap_stop: Option<bool> = None;
             if poll.ticks >= MAX_TICKS {
-                if poll.hold.steam_hold == HoldState::Holding {
-                    // D-UAT-13: release the hold and let this tick fall through to the step, whose
-                    // installed flow reports the game installed and stops the poll.
-                    pre.push(Effect::Log {
-                        level: LogLevel::Warn,
-                        message: format!(
-                            "install polling for appId {app_id} hit safety cap ({MAX_TICKS} ticks) while waiting for a Steam restart; reporting it installed"
-                        ),
-                    });
-                    pre.push(release_hold(app_id, &mut poll.hold));
-                } else {
-                    cap_stop = Some(poll.awaiting_update.is_some());
-                }
+                cap_stop = Some(poll.awaiting_update.is_some());
             }
             (
                 Snap {
@@ -609,7 +563,6 @@ impl InstallPolls {
                     restart_monitor: live_monitor_eligible(self.platform, poll)
                         && poll.ticks % MONITOR_RESTART_TICKS == 0,
                 },
-                pre,
                 cap_stop,
             )
         };
@@ -630,9 +583,6 @@ impl InstallPolls {
             self.apply(fx, &mut title).await;
             return false;
         }
-        if !pre.is_empty() {
-            self.apply(pre, &mut title).await;
-        }
 
         // 80-REVIEW A/WR-09: a monitor whose nettop child died (the watched steam_osx exited in
         // a Steam restart) or that never found Steam is restarted, throttled, so live progress
@@ -648,20 +598,19 @@ impl InstallPolls {
         } else {
             None
         };
-        let mut obs = InstallObservation {
+        let obs = InstallObservation {
             acf,
             update_fields,
             monitor: self.monitor.read(app_id),
             now_ms: reg.clock().now_ms(),
             platform: self.platform,
             bridge_finalized: lock(&self.shared.bridge_finalized).contains(app_id),
-            hold: None,
             install_app_outcome: pending_outcome.take(),
             seq: reg.next_event_seq(),
         };
 
-        // Phase C: step, with the hold handshake.
-        let mut step = {
+        // Phase C: step.
+        let step = {
             let mut polls = self.polls();
             let Some(slot) = polls.get_mut(app_id).filter(|s| s.gen == gen) else {
                 return false;
@@ -672,59 +621,6 @@ impl InstallPolls {
             }
             install_step(app_id, &mut slot.poll, &obs)
         };
-        if let Some(req) = step.hold_probe.take() {
-            let mut hold = {
-                let polls = self.polls();
-                let Some(slot) = polls.get(app_id).filter(|s| s.gen == gen) else {
-                    return false;
-                };
-                slot.poll.hold.clone()
-            };
-            // What the probe started from; an upgrade may change it while the lock is dropped.
-            let hold_before = hold.steam_hold;
-            let probe_token = token.clone();
-            let (holding, effects) = should_hold(
-                reg.runner().as_ref(),
-                reg.clock().as_ref(),
-                self.platform,
-                app_id,
-                &mut hold,
-                req.source,
-                &move || !probe_token.is_cancelled(),
-            )
-            .await;
-            if token.is_cancelled() {
-                return false;
-            }
-            step = {
-                let mut polls = self.polls();
-                let Some(slot) = polls.get_mut(app_id).filter(|s| s.gen == gen) else {
-                    return false;
-                };
-                // 80-REVIEW A/WR-04: an upgrade during the probe (adoptedBySteamClient releases
-                // the hold and clears its record) moved the hold state under us. Copying the
-                // probe's result back would resurrect the hold and re-persist the record, so
-                // drop it; the next tick decides from the current state. The first step only
-                // asked for the probe and changed nothing, so nothing is lost.
-                if slot.poll.hold.steam_hold != hold_before {
-                    return true;
-                }
-                // 80-REVIEW A/WR-05: a retarget during the probe means `obs.acf` was read from
-                // the old root; re-entering would report it under the new source. Next tick.
-                if slot.poll.source != snap.source {
-                    return true;
-                }
-                // Only the fields should_hold writes; an upgrade between the two locks keeps the
-                // rest.
-                slot.poll.hold.steam_hold = hold.steam_hold;
-                slot.poll.hold.steam_pids_at_handoff = hold.steam_pids_at_handoff;
-                slot.poll.hold.last_steam_probe_ms = hold.last_steam_probe_ms;
-                slot.poll.hold.seen_downloading = hold.seen_downloading;
-                slot.poll.hold.absent_ticks_since_seen = hold.absent_ticks_since_seen;
-                obs.hold = Some(HoldOutcome { holding, effects });
-                install_step(app_id, &mut slot.poll, &obs)
-            };
-        }
 
         // A poll stopped mid-tick emits nothing further.
         if token.is_cancelled() {
@@ -766,8 +662,8 @@ impl InstallPolls {
             let p = &slot.poll;
             (
                 p.delegated_to_steam_client,
-                p.hold.seen_downloading,
-                p.hold.absent_ticks_since_seen,
+                p.handoff.seen_downloading,
+                p.handoff.absent_ticks_since_seen,
                 p.ticks,
                 p.delegated_since_tick,
                 p.awaiting_update.is_some(),

@@ -1,6 +1,5 @@
-//! Port of `library.installPolling.test.ts` plus the loop behaviours plan 15 adds (hold probe,
-//! Mac arch follow-up, InstallApp feedback, query surface). The mapping table is in
-//! 80-15-SUMMARY.md.
+//! Port of `library.installPolling.test.ts` plus the loop behaviours plan 15 adds (Mac arch
+//! follow-up, InstallApp feedback, query surface). The mapping table is in 80-15-SUMMARY.md.
 //!
 //! Every test runs the real ACF readers over a temp steamapps root against `RecordingHost`
 //! under paused time.
@@ -257,7 +256,13 @@ async fn test_a_live_native_download_survives_the_grace_window() {
 async fn test_c_handoff_start_upgrades_the_poll_and_keeps_one_task() {
     let r = rig().await;
     start(&r, PollOptions::default());
-    assert!(!r.polls.snapshot_poll(APP).unwrap().hold.is_native_handoff);
+    assert!(
+        !r.polls
+            .snapshot_poll(APP)
+            .unwrap()
+            .handoff
+            .is_native_handoff
+    );
     start(
         &r,
         PollOptions {
@@ -267,9 +272,8 @@ async fn test_c_handoff_start_upgrades_the_poll_and_keeps_one_task() {
         },
     );
     let p = r.polls.snapshot_poll(APP).unwrap();
-    assert!(p.hold.is_native_handoff);
-    assert!(p.hold.mac_native_route);
-    assert_eq!(p.hold.skipped_depots, vec!["731".to_string()]);
+    assert!(p.handoff.is_native_handoff);
+    assert_eq!(p.handoff.skipped_depots, vec!["731".to_string()]);
     assert_eq!(r.polls.status().installs.len(), 1);
     // A second upgrade never discards a non-empty list.
     start(
@@ -280,7 +284,7 @@ async fn test_c_handoff_start_upgrades_the_poll_and_keeps_one_task() {
         },
     );
     assert_eq!(
-        r.polls.snapshot_poll(APP).unwrap().hold.skipped_depots,
+        r.polls.snapshot_poll(APP).unwrap().handoff.skipped_depots,
         vec!["731".to_string()]
     );
     r.polls.stop_install(APP);
@@ -291,7 +295,13 @@ async fn test_d_a_bare_call_never_clears_the_handoff_flag() {
     let r = rig().await;
     start(&r, handoff(None));
     start(&r, PollOptions::default());
-    assert!(r.polls.snapshot_poll(APP).unwrap().hold.is_native_handoff);
+    assert!(
+        r.polls
+            .snapshot_poll(APP)
+            .unwrap()
+            .handoff
+            .is_native_handoff
+    );
     r.polls.stop_install(APP);
 }
 
@@ -331,7 +341,7 @@ async fn retarget_resets_the_per_root_baselines() {
     assert_eq!(p.last_bytes_downloaded, None);
     assert_eq!(p.last_tick_ms, None);
     assert_eq!(p.stalled_ticks, 0);
-    assert_eq!(p.hold.absent_ticks_since_seen, 0);
+    assert_eq!(p.handoff.absent_ticks_since_seen, 0);
     r.polls.stop_install(APP);
 }
 
@@ -348,7 +358,7 @@ async fn test_f_source_without_handoff_never_retargets() {
     );
     let p = r.polls.snapshot_poll(APP).unwrap();
     assert_eq!(p.source, AcfSource::Native);
-    assert!(!p.hold.is_native_handoff);
+    assert!(!p.handoff.is_native_handoff);
     r.polls.stop_install(APP);
 }
 
@@ -365,7 +375,7 @@ async fn test_g_handoff_without_source_never_resets_a_bottle_poll() {
     start(&r, handoff(None));
     let p = r.polls.snapshot_poll(APP).unwrap();
     assert_eq!(p.source, AcfSource::Bottle);
-    assert!(p.hold.is_native_handoff);
+    assert!(p.handoff.is_native_handoff);
     r.polls.stop_install(APP);
 }
 
@@ -574,7 +584,7 @@ async fn d2_stops_after_manifest_gone_ticks_but_not_after_one_absent_tick() {
         r.polls
             .snapshot_poll(APP)
             .unwrap()
-            .hold
+            .handoff
             .absent_ticks_since_seen,
         0
     );
@@ -715,7 +725,7 @@ async fn d4_d5_only_a_delegated_download_flags_managed_by_steam() {
     r2.polls.stop_install(APP);
 }
 
-// ---- hold, stop, completion ------------------------------------------------------------------
+// ---- stop, completion ------------------------------------------------------------------
 
 #[tokio::test(start_paused = true)]
 async fn installed_ack_then_done_and_the_poll_ends() {

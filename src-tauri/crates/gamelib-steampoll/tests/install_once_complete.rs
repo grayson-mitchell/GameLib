@@ -30,7 +30,7 @@ fn poll(source: AcfSource) -> ActiveInstall {
 
 fn handoff(source: AcfSource) -> ActiveInstall {
     let mut p = poll(source);
-    p.hold.is_native_handoff = true;
+    p.handoff.is_native_handoff = true;
     p
 }
 
@@ -51,7 +51,6 @@ fn obs(acf: AcfState) -> InstallObservation {
         now_ms: 0,
         platform: Platform::Linux,
         bridge_finalized: false,
-        hold: None,
         install_app_outcome: None,
         seq: 7,
     }
@@ -207,15 +206,6 @@ fn a_bottle_handoff_still_fires_the_restart_steam_notice() {
 }
 
 #[test]
-fn mac_native_route_fires_finished_and_not_restart_steam() {
-    // The flag no longer changes the outcome: a native source never gets the toast.
-    let mut p = handoff(AcfSource::Native);
-    p.hold.mac_native_route = true;
-    let (_, flat) = full(&mut p, &obs(installed_acf()));
-    assert_eq!(notify_keys(&flat), vec!["notify.install.finished"]);
-}
-
-#[test]
 fn bottle_install_event_carries_the_bottle_source_for_the_windows_platform() {
     let mut p = poll(AcfSource::Bottle);
     let mut o = obs(installed_acf());
@@ -295,7 +285,7 @@ fn depot_notices(effects: &[Effect]) -> Vec<(String, Value)> {
 #[test]
 fn skipped_depot_notice_names_the_depot_in_the_params_without_a_count_key() {
     let mut p = poll(AcfSource::Native);
-    p.hold.skipped_depots = vec!["229006".into()];
+    p.handoff.skipped_depots = vec!["229006".into()];
     let (_, flat) = full(&mut p, &obs(installed_acf()));
     let notices = depot_notices(&flat);
     assert_eq!(notices.len(), 1);
@@ -307,7 +297,7 @@ fn skipped_depot_notice_names_the_depot_in_the_params_without_a_count_key() {
 #[test]
 fn several_skipped_depots_join_into_one_comma_separated_value() {
     let mut p = poll(AcfSource::Native);
-    p.hold.skipped_depots = vec!["1".into(), "2".into(), "3".into()];
+    p.handoff.skipped_depots = vec!["1".into(), "2".into(), "3".into()];
     let (_, flat) = full(&mut p, &obs(installed_acf()));
     assert_eq!(depot_notices(&flat)[0].1["depots"], "1, 2, 3");
 }
@@ -316,7 +306,7 @@ fn several_skipped_depots_join_into_one_comma_separated_value() {
 fn all_three_notices_fire_in_one_confirmed_installed_tick() {
     // Bottle source: it is the only handoff that still gets the restart-Steam notice.
     let mut p = handoff(AcfSource::Bottle);
-    p.hold.skipped_depots = vec!["229006".into()];
+    p.handoff.skipped_depots = vec!["229006".into()];
     let (_, flat) = full(&mut p, &obs(installed_acf()));
     // The shared-guard trap: the two fire-once flags are independent, order as in the TS.
     assert_eq!(
@@ -332,7 +322,7 @@ fn all_three_notices_fire_in_one_confirmed_installed_tick() {
 #[test]
 fn skip_notice_fires_at_most_once_per_poll() {
     let mut p = poll(AcfSource::Native);
-    p.hold.skipped_depots = vec!["229006".into()];
+    p.handoff.skipped_depots = vec!["229006".into()];
     let (_, first) = full(&mut p, &obs(installed_acf()));
     let (_, second) = full(&mut p, &obs(installed_acf()));
     assert_eq!(depot_notices(&first).len(), 1);
@@ -352,7 +342,7 @@ fn skip_notice_independent_of_the_restart_flag() {
     // An OFF-path poll is never given skipped depots; the notice also does not consume the
     // restart-Steam fire-once flag.
     let mut p = poll(AcfSource::Native);
-    p.hold.skipped_depots = vec!["9".into()];
+    p.handoff.skipped_depots = vec!["9".into()];
     full(&mut p, &obs(installed_acf()));
     assert!(p.notified_depot_skipped);
     assert!(!p.notified_waiting);
@@ -362,13 +352,12 @@ fn skip_notice_independent_of_the_restart_flag() {
 
 #[test]
 fn a_native_handoff_reports_installed_on_the_first_tick_on_every_platform() {
-    // The hold never arms: no probe request, no steam-waiting-for-restart status, no wait.
+    // There is no hold: no steam-waiting-for-restart status, no wait.
     for platform in [Platform::Darwin, Platform::Win32, Platform::Linux] {
         let mut p = handoff(AcfSource::Native);
         let mut o = obs(installed_acf());
         o.platform = platform;
         let step = install_step(APP, &mut p, &o);
-        assert!(step.hold_probe.is_none(), "{platform:?}: no hold probe");
         assert!(step.stop, "{platform:?}: completes on the first tick");
         assert!(
             installed_event(&step.effects).is_some(),

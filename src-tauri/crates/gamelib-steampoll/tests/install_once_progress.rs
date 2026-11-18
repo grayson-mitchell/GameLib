@@ -5,9 +5,10 @@ use gamelib_steampoll::acf_state::{AcfSource, AcfState, PollRoots};
 use gamelib_steampoll::constants::{MANIFEST_GONE_TICKS, STALLED_TICKS_THRESHOLD};
 use gamelib_steampoll::effects::{Continuation, Effect, LogLevel};
 use gamelib_steampoll::events::{AckReply, StateEvent};
-use gamelib_steampoll::hold::HoldState;
 use gamelib_steampoll::host::NotifyText;
-use gamelib_steampoll::install_once::{install_step, ActiveInstall, InstallObservation};
+use gamelib_steampoll::install_once::{
+    install_step, restart_to_finish_notification, ActiveInstall, InstallObservation,
+};
 use gamelib_steampoll::monitor::DownloadReading;
 use gamelib_steampoll::profile::Platform;
 use serde_json::Value;
@@ -28,7 +29,7 @@ fn poll(source: AcfSource) -> ActiveInstall {
 
 fn handoff(source: AcfSource) -> ActiveInstall {
     let mut p = poll(source);
-    p.hold.is_native_handoff = true;
+    p.handoff.is_native_handoff = true;
     p
 }
 
@@ -50,7 +51,6 @@ fn obs(acf: AcfState, now_ms: u64) -> InstallObservation {
         now_ms,
         platform: Platform::Linux,
         bridge_finalized: false,
-        hold: None,
         install_app_outcome: None,
         seq: 1,
     }
@@ -110,7 +110,7 @@ fn sends_installing_when_downloading() {
     assert_eq!(s[0]["runner"], "steam");
     assert!(s[0].get("context").is_none());
     assert_eq!(notifies(&fx), 0, "no toast on an interim tick");
-    assert!(p.hold.seen_downloading);
+    assert!(p.handoff.seen_downloading);
 }
 
 #[test]
@@ -357,15 +357,6 @@ fn native_handoff_at_1026_emits_waiting_context_and_the_native_notify() {
 }
 
 #[test]
-fn mac_native_route_at_1026_keeps_waiting_and_the_restart_hint() {
-    let mut p = handoff(AcfSource::Native);
-    p.hold.mac_native_route = true;
-    let fx = tick(&mut p, dl(1026, 0, 0, 0, 0), 0);
-    assert_eq!(restart_notifies(&fx), 1);
-    assert_eq!(statuses(&fx)[0]["context"], "steam-waiting-for-restart");
-}
-
-#[test]
 fn waiting_notice_fires_exactly_once_across_ticks() {
     let mut p = handoff(AcfSource::Native);
     let mut total = 0;
@@ -407,7 +398,7 @@ fn cold_start_tick_of_an_off_path_1026_poll_never_flashes_waiting() {
 fn state_flags_1042_is_an_ordinary_download_regardless_of_handoff() {
     for is_handoff in [false, true] {
         let mut p = poll(AcfSource::Native);
-        p.hold.is_native_handoff = is_handoff;
+        p.handoff.is_native_handoff = is_handoff;
         let fx = tick(&mut p, dl(1042, 5_000_000, 10_000_000, 0, 0), 0);
         assert!(statuses(&fx)[0].get("context").is_none());
         assert_eq!(progress(&fx)[0]["progress"]["percent"], 50);
@@ -499,70 +490,59 @@ fn hand_written_1026_bottle_manifest_reads_as_installing_via_the_bottle_poller()
     assert!(!fx.iter().any(|e| matches!(e, Effect::Transition { .. })));
 }
 
-// ---- hold release and absent -----------------------------------------------------------------
-
-#[test]
-fn rewritten_manifest_releases_a_holding_poll() {
-    let mut p = handoff(AcfSource::Native);
-    p.hold.steam_hold = HoldState::Holding;
-    let fx = tick(&mut p, dl(2, 1, 10, 0, 0), 0);
-    assert_eq!(p.hold.steam_hold, HoldState::Released);
-    assert!(fx
-        .iter()
-        .any(|e| matches!(e, Effect::ClearHoldRecord { app_id } if app_id == APP)));
-}
+// ---- absent -----------------------------------------------------------------
 
 #[test]
 fn absent_before_any_manifest_is_a_no_op() {
     let mut p = poll(AcfSource::Native);
     let step = install_step(APP, &mut p, &obs(AcfState::Absent, 0));
     assert!(step.effects.is_empty() && !step.stop);
-    assert_eq!(p.hold.absent_ticks_since_seen, 0);
+    assert_eq!(p.handoff.absent_ticks_since_seen, 0);
 }
 
 #[test]
 fn unknown_state_skips_the_tick() {
     let mut p = poll(AcfSource::Native);
-    p.hold.seen_downloading = true;
+    p.handoff.seen_downloading = true;
     let step = install_step(APP, &mut p, &obs(AcfState::Unknown, 0));
     assert!(step.effects.is_empty() && !step.stop);
-    assert_eq!(p.hold.absent_ticks_since_seen, 0);
+    assert_eq!(p.handoff.absent_ticks_since_seen, 0);
 }
 
 #[test]
 fn absent_counts_only_after_a_manifest_was_seen_and_resets_on_download() {
     let mut p = poll(AcfSource::Native);
-    p.hold.seen_downloading = true;
+    p.handoff.seen_downloading = true;
     install_step(APP, &mut p, &obs(AcfState::Absent, 0));
     install_step(APP, &mut p, &obs(AcfState::Absent, 0));
-    assert_eq!(p.hold.absent_ticks_since_seen, 2);
+    assert_eq!(p.handoff.absent_ticks_since_seen, 2);
     tick(&mut p, dl(2, 1, 10, 0, 0), 0);
-    assert_eq!(p.hold.absent_ticks_since_seen, 0);
+    assert_eq!(p.handoff.absent_ticks_since_seen, 0);
 }
 
 #[test]
-fn manifest_gone_while_holding_ends_the_hold_after_the_tolerance() {
-    let mut p = handoff(AcfSource::Native);
-    p.hold.steam_hold = HoldState::Holding;
-    p.hold.seen_downloading = true;
-    for _ in 0..MANIFEST_GONE_TICKS - 1 {
-        let step = install_step(APP, &mut p, &obs(AcfState::Absent, 0));
-        assert!(!step.stop);
-    }
-    let step = install_step(APP, &mut p, &obs(AcfState::Absent, 0));
-    assert!(step.stop);
-    assert_eq!(statuses(&step.effects)[0]["status"], "done");
-    assert!(step
-        .effects
-        .iter()
-        .any(|e| matches!(e, Effect::ClearHoldRecord { .. })));
-}
-
-#[test]
-fn absent_without_a_hold_never_stops() {
+fn absent_never_stops_the_step_itself() {
     let mut p = poll(AcfSource::Native);
-    p.hold.seen_downloading = true;
+    p.handoff.seen_downloading = true;
     for _ in 0..MANIFEST_GONE_TICKS + 3 {
         assert!(!install_step(APP, &mut p, &obs(AcfState::Absent, 0)).stop);
+    }
+}
+
+#[test]
+fn restart_to_finish_notification_uses_the_waiting_key() {
+    let n = restart_to_finish_notification("Dark Game");
+    assert_eq!(n.title, NotifyText::Literal("Dark Game".into()));
+    match n.body {
+        NotifyText::Key {
+            key,
+            default,
+            params,
+        } => {
+            assert_eq!(key, "steam.waitingForSteam.notify");
+            assert_eq!(default, "Restart Steam to finish installing {{game}}");
+            assert_eq!(params["game"], "Dark Game");
+        }
+        other => panic!("{other:?}"),
     }
 }
