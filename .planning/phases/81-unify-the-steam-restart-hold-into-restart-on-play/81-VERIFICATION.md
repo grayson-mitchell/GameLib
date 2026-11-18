@@ -182,3 +182,5 @@ The phase gate is also open for a non-gap reason: Windows (item 10) and Linux (i
 
 _Verified: 2026-11-18T09:06:43Z_
 _Verifier: Claude (gsd-verifier)_
+
+> Update 2026-11-18: Gap 1 (macOS running-game refusal) is closed by quick 261118-uma (`41f68fc03`, `e70d022f3`); live re-run of UAT item 5 passed.

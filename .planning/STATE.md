@@ -6,10 +6,10 @@ current_phase: 64
 current_phase_name: UI to edit themes
 status: executing
 stopped_at: Completed 81-19-PLAN.md
-last_updated: "2026-11-18T06:30:02.914Z"
+last_updated: "2026-11-18T09:35:17.580Z"
 last_activity: 2026-11-18
 last_activity_desc: Phase 64 execution started
-state_head: 46b2cfa36d4388042e207aaf689984a128e424f9
+state_head: e70d022f38408ca22ac50ac6aacaa62e10a59cbe
 progress:
   total_phases: 26
   completed_phases: 23
@@ -690,6 +690,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261117-sf6 | Field-anchor gate check 5 now accepts gsd-core's own `Plan: Not started` (written by gsd-core at ready-to-plan/execute) besides `<N> of <M>`; anything else still fails. Self-test 11 -> 13 cases. | 2026-11-17 | | planning-gates 12/12 | [261117-sf6-field-anchor-gate-accepts-gsd-core-s-own](./quick/261117-sf6-field-anchor-gate-accepts-gsd-core-s-own/) |
 | 261117-sin | Field-anchor gate's drift check now scans gsd-core's `~/.claude/gsd-core/bin/lib/*.cjs` (compiled call shapes + `stateFieldValue`) instead of the 1.42.3 SDK it never found; pinned Completed Phases, State Head, milestone as required-0. Self-test 13 -> 14. | 2026-11-17 | | planning-gates 12/12; no-install fallback passes; planted literal fails | [261117-sin-repoint-field-anchor-gate-drift-check-at](./quick/261117-sin-repoint-field-anchor-gate-drift-check-at/) |
 | 261117-ubb | Load a pinned CDN-fetched libsteam_api.dylib in the macOS bridge helper | 2026-11-17 | 1aff893bb | — | [261117-ubb-load-a-pinned-cdn-fetched-libsteam-api-d](./quick/261117-ubb-load-a-pinned-cdn-fetched-libsteam-api-d/) |
+| 261118-uma | Mac running-game signal for restart-on-Play refusal (phase 81 item 5) | 2026-11-18 | e70d022f3 | — | [261118-uma-mac-running-game-signal-for-restart-on-p](./quick/261118-uma-mac-running-game-signal-for-restart-on-p/) |
 
 ## Deferred Items
 

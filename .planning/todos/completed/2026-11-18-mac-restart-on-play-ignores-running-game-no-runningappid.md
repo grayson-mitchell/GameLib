@@ -46,3 +46,7 @@ check before adding a scan. Keep the Windows/Linux path on RunningAppID, which w
 
 Verify live on the Mac: re-run item 5 of `81-HUMAN-UAT.md` (refusal notice, "Launch
 without Steam", Steam not quit) and confirm item 4's refusal while a game runs.
+
+## Resolution
+
+Fixed by quick 261118-uma (`41f68fc03`, `e70d022f3`): on macOS the running game is read from the process table instead of registry.vdf. Live re-run 2026-11-18 passed: with Avadon 112100 running, Play and "Restart Steam now" on 211820 were refused (`[Steam] not restarting Steam for 211820: game 112100 is running`), Steam's pid was unchanged, and "Launch without Steam" started the game once and kept the record pending.
