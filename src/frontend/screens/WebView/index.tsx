@@ -57,6 +57,7 @@ export default function WebView() {
     'signInProbeOutcomes'
   )
   const platform = useUiState((s) => s.platform)
+  const connectivity = useUiState((s) => s.connectivity)
   const { refreshLibrary, refreshing, refreshingByRunner } =
     useLibraryState.keys('refreshLibrary', 'refreshing', 'refreshingByRunner')
   const navigate = useNavigate()
@@ -414,6 +415,14 @@ export default function WebView() {
     window.api.openExternalUrl(embedHost.currentUrl)
   }, [embedHost.currentUrl])
 
+  // G-47-9: the offline notice's Try again. Re-requests the embed's CURRENT URL instead of
+  // reloading, because a reload on a webview that never committed a page does nothing. Not an
+  // external open, so the file's single chokepoint count is unchanged.
+  const { onNavigate: navigateEmbed, currentUrl: embedCurrentUrl } = embedHost
+  const retryEmbedLoad = useCallback(() => {
+    navigateEmbed(embedCurrentUrl)
+  }, [navigateEmbed, embedCurrentUrl])
+
   useEffect(() => {
     if (pathname !== '/loginweb/nile') return
     // Quick task 260806-teb Task 1 / Phase 35 plan 17: this effect used to load Amazon
@@ -652,6 +661,8 @@ export default function WebView() {
         timedOut={embedHost.loadTimedOut}
         onReload={embedHost.onReload}
         onOpenInBrowser={openEmbedInBrowser}
+        offline={connectivity?.status === 'offline'}
+        onTryAgain={retryEmbedLoad}
       />
       <EpicLauncherBlockedNotice
         visible={launcherNoticeVisible}

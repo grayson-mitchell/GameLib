@@ -1315,6 +1315,10 @@
             "forward": "Go forward",
             "openInBrowser": "Open in browser",
             "reload": "Reload page"
+        },
+        "offline": {
+            "message": "You're offline, so this store can't load.",
+            "tryAgain": "Try again"
         }
     },
     "window": {

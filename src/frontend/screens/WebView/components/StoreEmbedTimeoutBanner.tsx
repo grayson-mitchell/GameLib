@@ -10,6 +10,14 @@ interface StoreEmbedTimeoutBannerProps {
   timedOut: boolean
   onReload: () => void
   onOpenInBrowser: () => void
+  /**
+   * G-47-9: the app's connectivity status is offline. Driven by the sidecar-owned
+   * `uiState.connectivity`; this component never probes the network itself. Takes
+   * precedence over `timedOut`.
+   */
+  offline?: boolean
+  /** Re-requests the embed's current URL (offline variant's only action). */
+  onTryAgain?: () => void
 }
 
 /**
@@ -33,13 +41,54 @@ interface StoreEmbedTimeoutBannerProps {
  * Hookless beyond `useTranslation`, props-driven, fail-soft: a missing
  * callback disables its own affordance instead of throwing (Phase 40
  * D-22/D-23 chrome discipline, T-40-07-06).
+ *
+ * G-47-9: the row has two variants, both props-driven with no timer. The
+ * offline variant (`offline`) is driven by the sidecar-owned connectivity
+ * status and wins over the timeout variant. Its Try again re-requests the
+ * embed's CURRENT URL, because a reload on a WKWebView that never committed a
+ * page does nothing.
  */
 export default function StoreEmbedTimeoutBanner({
   timedOut,
   onReload,
-  onOpenInBrowser
+  onOpenInBrowser,
+  offline,
+  onTryAgain
 }: StoreEmbedTimeoutBannerProps) {
   const { t: tGamelib } = useTranslation('gamelib')
+  const { t } = useTranslation()
+
+  if (offline) {
+    const canTryAgain = typeof onTryAgain === 'function'
+    return (
+      <div className="WebView__embedNoticeRow" role="status">
+        <FontAwesomeIcon
+          icon={faTriangleExclamation}
+          className="WebView__embedNoticeRow-icon"
+        />
+        <span className="WebView__embedNoticeRow-message">
+          {t(
+            'webview.offline.message',
+            "You're offline, so this store can't load."
+          )}
+        </span>
+        <div className="WebView__embedNoticeRow-actions">
+          <button
+            type="button"
+            className="WebView__embedNoticeRow-action"
+            disabled={!canTryAgain}
+            onClick={() => {
+              if (canTryAgain) {
+                onTryAgain()
+              }
+            }}
+          >
+            {t('webview.offline.tryAgain', 'Try again')}
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   if (!timedOut) {
     return null

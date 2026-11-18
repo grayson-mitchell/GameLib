@@ -199,6 +199,111 @@ describe('StoreEmbedTimeoutBanner (D-07/D-08/D-11)', () => {
     expect(() => browserButton.props.onClick?.()).not.toThrow()
   })
 
+  describe('offline variant (G-47-9)', () => {
+    it('renders the notice row with the offline message and exactly one Try again action', () => {
+      const element = StoreEmbedTimeoutBanner({
+        timedOut: false,
+        onReload: noop,
+        onOpenInBrowser: noop,
+        offline: true,
+        onTryAgain: noop
+      }) as AnyReactElement
+
+      expect(element).not.toBeNull()
+      expect(element.props.className).toBe('WebView__embedNoticeRow')
+      expect(element.props).toMatchObject({ role: 'status' })
+      expect(collectText(element)).toContain(
+        "You're offline, so this store can't load."
+      )
+      const buttons = findAllByClassName(
+        element,
+        'WebView__embedNoticeRow-action'
+      )
+      expect(buttons).toHaveLength(1)
+      expect(collectText(at(buttons, 0))).toBe('Try again')
+    })
+
+    it('clicking Try again calls onTryAgain once and never onReload or onOpenInBrowser', () => {
+      const onReload = jest.fn()
+      const onOpenInBrowser = jest.fn()
+      const onTryAgain = jest.fn()
+      const element = StoreEmbedTimeoutBanner({
+        timedOut: false,
+        onReload,
+        onOpenInBrowser,
+        offline: true,
+        onTryAgain
+      }) as AnyReactElement
+
+      const buttons = findAllByClassName(
+        element,
+        'WebView__embedNoticeRow-action'
+      )
+      at(buttons, 0).props.onClick?.()
+
+      expect(onTryAgain).toHaveBeenCalledTimes(1)
+      expect(onReload).not.toHaveBeenCalled()
+      expect(onOpenInBrowser).not.toHaveBeenCalled()
+    })
+
+    it('wins over the timeout variant: offline message, no Reload or Open in browser', () => {
+      const element = StoreEmbedTimeoutBanner({
+        timedOut: true,
+        onReload: noop,
+        onOpenInBrowser: noop,
+        offline: true,
+        onTryAgain: noop
+      }) as AnyReactElement
+
+      const text = collectText(element)
+      expect(text).toContain("You're offline, so this store can't load.")
+      expect(text).not.toContain('Reload')
+      expect(text).not.toContain('Open in browser')
+      expect(text).not.toContain('Epic is taking a while to load')
+    })
+
+    it('fail-soft: a missing onTryAgain disables Try again rather than throwing', () => {
+      const element = StoreEmbedTimeoutBanner({
+        timedOut: false,
+        onReload: noop,
+        onOpenInBrowser: noop,
+        offline: true
+      }) as AnyReactElement
+
+      const buttons = findAllByClassName(
+        element,
+        'WebView__embedNoticeRow-action'
+      )
+      const tryAgain = at(buttons, 0)
+      expect(tryAgain.props.disabled).toBe(true)
+      expect(() => tryAgain.props.onClick?.()).not.toThrow()
+    })
+
+    it('offline false leaves every existing behaviour unchanged', () => {
+      expect(
+        StoreEmbedTimeoutBanner({
+          timedOut: false,
+          onReload: noop,
+          onOpenInBrowser: noop,
+          offline: false,
+          onTryAgain: noop
+        })
+      ).toBeNull()
+
+      const timedOut = StoreEmbedTimeoutBanner({
+        timedOut: true,
+        onReload: noop,
+        onOpenInBrowser: noop,
+        offline: false,
+        onTryAgain: noop
+      }) as AnyReactElement
+      const text = collectText(timedOut)
+      expect(text).toContain('Reload')
+      expect(text).toContain('Open in browser')
+      expect(text).not.toContain('Try again')
+    })
+  })
+
   it('reuses the existing open-in-browser key rather than minting a duplicate', () => {
     const source = readFileSync(
       join(__dirname, '../StoreEmbedTimeoutBanner.tsx'),
