@@ -107,6 +107,23 @@ fn bad_args_are_named_per_op() {
         ),
         Err("steampoll_install_start:bad-args".to_string())
     );
+    // D-11: the three removed hold options are unknown keys now.
+    for (key, value) in [
+        ("macNativeRoute", json!(true)),
+        ("adoptedBySteamClient", json!(true)),
+        ("restoredSteamHold", json!({"pids": [1], "startTicks": 1})),
+    ] {
+        assert_eq!(
+            dispatch(
+                "steampoll_install_start",
+                &[
+                    json!({"appId": "1", "title": "t", "roots": roots("/x"), "options": {key: value}})
+                ]
+            ),
+            Err("steampoll_install_start:bad-args".to_string()),
+            "{key}"
+        );
+    }
 }
 
 #[test]

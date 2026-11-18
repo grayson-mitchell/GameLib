@@ -267,7 +267,6 @@ async fn test_c_handoff_start_upgrades_the_poll_and_keeps_one_task() {
         &r,
         PollOptions {
             skipped_depots: Some(vec!["731".into()]),
-            mac_native_route: Some(true),
             ..handoff(None)
         },
     );
@@ -986,23 +985,36 @@ async fn concurrent_uninstall_starts_spawn_exactly_one_poll() {
     }
 }
 
-// ---- TS-pushed mirrors and the retired restoredSteamHold option ------------------------------
+// ---- TS-pushed mirrors and the removed hold options -----------------------------------------
+
+#[test]
+fn the_removed_hold_options_fail_deserialisation() {
+    // Phase 81 D-11 / T-81-41: no hold field on the start contract; deny_unknown_fields rejects
+    // each of the three that used to carry hold state.
+    for (key, value) in [
+        ("macNativeRoute", serde_json::json!(true)),
+        ("adoptedBySteamClient", serde_json::json!(true)),
+        (
+            "restoredSteamHold",
+            serde_json::json!({ "pids": [4242], "startTicks": 7 }),
+        ),
+    ] {
+        let parsed: Result<PollOptions, _> =
+            serde_json::from_value(serde_json::json!({ key: value }));
+        assert!(parsed.is_err(), "{key} must no longer deserialize");
+    }
+}
 
 #[tokio::test(start_paused = true)]
-async fn a_start_carrying_restored_steam_hold_behaves_like_one_without_it() {
-    // Phase 81 D-11: the boot re-arm is gone, so an older sidecar's `restoredSteamHold` is
-    // accepted (deny_unknown_fields must not reject it) and ignored.
+async fn status_reports_no_hold_for_any_install() {
     let r = rig().await;
-    let options: PollOptions = serde_json::from_value(serde_json::json!({
-        "restoredSteamHold": { "pids": [4242], "startTicks": 7 }
-    }))
-    .expect("restoredSteamHold must still deserialize");
-    start(&r, options);
+    start(&r, handoff(None));
     let status = r.polls.status();
     assert_eq!(status.installs.len(), 1);
     assert_eq!(status.installs[0].steam_hold, "unprobed");
     assert!(status.holding.is_empty());
     assert!(r.polls.holding_app_ids().is_empty());
+    r.polls.stop_install(APP);
 }
 
 #[tokio::test(start_paused = true)]

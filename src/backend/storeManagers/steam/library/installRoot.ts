@@ -45,26 +45,12 @@ export type PollOptions = {
   intervalMs?: number
   source?: AcfSource
   isNativeHandoff?: boolean
-  /** Native Mac GameLib depot install (quick 261029-ji2): Steam adopts it at
-   *  its next start, which Play forces, so the "Restart Steam to finish" hint
-   *  never applies to a FullyInstalled install on this route. */
-  macNativeRoute?: boolean
   skippedDepots?: string[]
   /** True only when Steam (native `steam://install`) owns the download, so
    *  GameLib must wait for Steam to start/self-update/log in and for the
    *  user to confirm Steam's dialog before any appmanifest exists. Install-
    *  poller-only (quick 261024-exo). */
   delegatedToSteamClient?: boolean
-  /** True only when a running Steam client accepted GameLib's finished depot
-   *  install via InstallApp, so Steam already knows the manifest and the
-   *  D-UAT-13 restart hold's premise does not apply. The poll starts with the
-   *  hold released, never probes Steam PIDs and never persists a restart hold.
-   *  Install-poller-only (quick 261105-sqe). */
-  adoptedBySteamClient?: boolean
-  /** Boot re-arm only (quick 261029-pkp): start the poll already holding for
-   *  a Steam restart, with `startTicks` already elapsed so the MAX_TICKS cap
-   *  stays measured from the original finalize. */
-  restoredSteamHold?: { pids: number[]; startTicks: number }
   /** Phase 74 (D-11): this poll watches a Steam-owned UPDATE of an installed game, not an install.
    *  `fromBuild` is the buildid the ACF had when the update was requested. Update polls are routed
    *  to pollUpdateOnce and never revert is_installed. */

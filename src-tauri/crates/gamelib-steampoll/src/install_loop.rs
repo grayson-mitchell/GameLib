@@ -68,21 +68,17 @@ pub struct AwaitingUpdateOpt {
     pub install_app_retry: Option<InstallAppRetryOpt>,
 }
 
-/// `PollOptions` (installRoot.ts), every field.
+/// `PollOptions` (installRoot.ts), every field. There is no hold field (D-11): the removed
+/// `macNativeRoute`, `adoptedBySteamClient` and `restoredSteamHold` are rejected by
+/// `deny_unknown_fields`.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default, deny_unknown_fields)]
 pub struct PollOptions {
     pub interval_ms: Option<u64>,
     pub source: Option<AcfSource>,
     pub is_native_handoff: Option<bool>,
-    pub mac_native_route: Option<bool>,
     pub skipped_depots: Option<Vec<String>>,
     pub delegated_to_steam_client: Option<bool>,
-    pub adopted_by_steam_client: Option<bool>,
-    /// Accepted and ignored (Phase 81 D-11): the boot re-arm that sent it is gone. Kept only so
-    /// `deny_unknown_fields` does not reject an older sidecar's start until Task 2 removes the TS
-    /// sender; a start carrying it behaves exactly like one without it.
-    pub restored_steam_hold: Option<serde_json::Value>,
     pub awaiting_update: Option<AwaitingUpdateOpt>,
 }
 
@@ -249,10 +245,9 @@ impl InstallPolls {
         let source = o.source.unwrap_or(AcfSource::Native);
         let is_native_handoff = o.is_native_handoff.unwrap_or(false);
         let delegated = o.delegated_to_steam_client.unwrap_or(false);
-        let adopted = o.adopted_by_steam_client.unwrap_or(false);
         let skipped = o.skipped_depots.clone().unwrap_or_default();
         log_line(&format!(
-            "starting install polling for appId {app_id} (interval {interval_ms}ms, source {}, isNativeHandoff {is_native_handoff}, skippedDepots {}, delegatedToSteamClient {delegated}, adoptedBySteamClient {adopted})",
+            "starting install polling for appId {app_id} (interval {interval_ms}ms, source {}, isNativeHandoff {is_native_handoff}, skippedDepots {}, delegatedToSteamClient {delegated})",
             crate::uninstall::source_name(source),
             skipped.len()
         ));

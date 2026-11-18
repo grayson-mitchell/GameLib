@@ -7,7 +7,6 @@ import { dirname, join } from 'node:path'
 import { InstallArgs } from 'common/types'
 import { InstallResult } from 'common/types/game_manager'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { isMac } from 'backend/constants/environment'
 import { hostPlatform } from './playAdoption'
 import { startInstallPolling } from './library/installPolling'
 import * as resumeBreadcrumbs from './library/resumeBreadcrumbs'
@@ -259,8 +258,7 @@ export async function runNativeDepotDownload(
     // (steam-client, bottle, bridge, pollerSource) never reach this branch.
     // quick 261105-ord (macOS only, experimental setting): with InstallApp ON, a
     // running Steam is first asked to adopt the install directly; only a non-ok
-    // outcome falls through to the record below. An ok adoption also tells the
-    // poller Steam already knows the install (quick 261105-sqe).
+    // outcome falls through to the record below.
     if (deferredPoll.handoff && leasedResult.status === 'done') {
       const handoff = deferredPoll.handoff
       const pid = await adoption
@@ -298,7 +296,8 @@ export async function runNativeDepotDownload(
         }
       }
       if (adoptedByInstallApp) {
-        // Steam already knows the install; nothing to record.
+        // Steam already knows the install and its ACF is Steam's; nothing to record, and no poll
+        // flag: with no restart hold there is nothing to release (Phase 81 D-11).
       } else if (pid !== null) {
         const baseline = await adoption.readAcfSnapshot(
           steamGame.deps,
@@ -326,9 +325,7 @@ export async function runNativeDepotDownload(
       }
       await startInstallPolling(steamGame.deps, steamGame.appId, {
         isNativeHandoff: true,
-        skippedDepots: handoff.skippedDepots,
-        macNativeRoute: isMac,
-        ...(adoptedByInstallApp ? { adoptedBySteamClient: true } : {})
+        skippedDepots: handoff.skippedDepots
       })
     }
     return leasedResult

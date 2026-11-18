@@ -4132,8 +4132,7 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
     // correctly read as "waiting for Steam restart", not an active download.
     expect(startInstallPollingSpy).toHaveBeenCalledWith(steamTestDeps, APP_ID, {
       isNativeHandoff: true,
-      skippedDepots: [],
-      macNativeRoute: false
+      skippedDepots: []
     })
     expect(result).toEqual({ status: 'done' })
   })
@@ -4256,8 +4255,7 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
 
     expect(startInstallPollingSpy).toHaveBeenCalledWith(steamTestDeps, APP_ID, {
       isNativeHandoff: true,
-      skippedDepots: ['1771304'],
-      macNativeRoute: false
+      skippedDepots: ['1771304']
     })
     expect(result).toEqual({ status: 'done' })
   })
@@ -4271,8 +4269,7 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
 
     expect(startInstallPollingSpy).toHaveBeenCalledWith(steamTestDeps, APP_ID, {
       isNativeHandoff: true,
-      skippedDepots: [],
-      macNativeRoute: false
+      skippedDepots: []
     })
     const call = (startInstallPollingSpy as jest.Mock).mock.calls.find(
       ([, appId]) => appId === APP_ID
@@ -15495,7 +15492,7 @@ describe('SteamGame — quick 261029-ji2 pending Steam adoption', () => {
       ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
     })
 
-    it('Steam running: records the pending adoption once with its PID and baseline, polls with macNativeRoute, never fires steam://install', async () => {
+    it('Steam running: records the pending adoption once with its PID and baseline, polls with no hold option, never fires steam://install', async () => {
       adoption().probeSteamPid.mockResolvedValue(123)
 
       const result = await new SteamGame(APP_ID, steamTestDeps).install(
@@ -15518,14 +15515,13 @@ describe('SteamGame — quick 261029-ji2 pending Steam adoption', () => {
         APP_ID,
         {
           isNativeHandoff: true,
-          skippedDepots: [],
-          macNativeRoute: true
+          skippedDepots: []
         }
       )
       expect(shellOpenExternal).not.toHaveBeenCalled()
     })
 
-    it('Steam not running: no record is written (a stale one is cleared), still polls with macNativeRoute', async () => {
+    it('Steam not running: no record is written (a stale one is cleared), still polls', async () => {
       adoption().probeSteamPid.mockResolvedValue(null)
 
       await new SteamGame(APP_ID, steamTestDeps).install({} as any)
@@ -15538,12 +15534,12 @@ describe('SteamGame — quick 261029-ji2 pending Steam adoption', () => {
       expect(startInstallPollingSpy).toHaveBeenCalledWith(
         steamTestDeps,
         APP_ID,
-        expect.objectContaining({ macNativeRoute: true })
+        expect.objectContaining({ isNativeHandoff: true })
       )
     })
 
     it.each<['linux' | 'win32']>([['linux'], ['win32']])(
-      '%s: Steam running: records the pending adoption, watches it and polls without macNativeRoute (Phase 81 D-14)',
+      '%s: Steam running: records the pending adoption, watches it and polls with no hold option (Phase 81 D-14)',
       async (host) => {
         envMock.isMac = false
         envMock.isLinux = host === 'linux'
@@ -15579,8 +15575,7 @@ describe('SteamGame — quick 261029-ji2 pending Steam adoption', () => {
           APP_ID,
           {
             isNativeHandoff: true,
-            skippedDepots: [],
-            macNativeRoute: false
+            skippedDepots: []
           }
         )
         // InstallApp is a macOS-only attempt.
@@ -15956,7 +15951,7 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
       ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
     })
 
-    it('Steam running + ok: no pending record, record cleared, polling marked adopted by the Steam client, library root derived from the manifest', async () => {
+    it('Steam running + ok: no pending record, record cleared, polling started with no hold option, library root derived from the manifest', async () => {
       settingOn()
       adoption().probeSteamPid.mockResolvedValue(123)
       installApp().mockResolvedValue({ kind: 'ok', folderIndex: 0 })
@@ -15981,9 +15976,7 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
         APP_ID,
         {
           isNativeHandoff: true,
-          skippedDepots: [],
-          macNativeRoute: true,
-          adoptedBySteamClient: true
+          skippedDepots: []
         }
       )
     })
@@ -16014,8 +16007,7 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
           APP_ID,
           {
             isNativeHandoff: true,
-            skippedDepots: [],
-            macNativeRoute: true
+            skippedDepots: []
           }
         )
       }
@@ -16038,11 +16030,94 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
         APP_ID,
         {
           isNativeHandoff: true,
-          skippedDepots: [],
-          macNativeRoute: true
+          skippedDepots: []
         }
       )
     })
+
+    // D-14 invariant (the assumption-delta test promised by 81-06): GameLib's own depot install
+    // that the running Steam has not adopted is recorded once and watched once on EVERY OS, and
+    // the poll starts with no hold field (D-11).
+    describe.each<['darwin' | 'win32' | 'linux']>([
+      ['darwin'],
+      ['win32'],
+      ['linux']
+    ])(
+      'D-14 invariant on %s: a depot install the running Steam has not adopted',
+      (host) => {
+        const REMOVED_HOLD_KEYS = [
+          'macNativeRoute',
+          'adoptedBySteamClient',
+          'restoredSteamHold'
+        ]
+        let watchSpy: jest.SpyInstance
+        const expectNoHoldOption = () => {
+          expect(startInstallPollingSpy).toHaveBeenCalledTimes(1)
+          const options = startInstallPollingSpy.mock.calls[0][2]
+          expect(options).toEqual({ isNativeHandoff: true, skippedDepots: [] })
+          for (const key of REMOVED_HOLD_KEYS) {
+            expect(Object.keys(options)).not.toContain(key)
+          }
+        }
+
+        beforeEach(() => {
+          envMock.isMac = host === 'darwin'
+          envMock.isWindows = host === 'win32'
+          envMock.isLinux = host === 'linux'
+          adoption().probeSteamPid.mockResolvedValue(123)
+          watchSpy = jest.spyOn(
+            adoptionWatchModule,
+            'recordAndWatchPendingAdoption'
+          )
+        })
+
+        afterEach(() => {
+          watchSpy.mockRestore()
+        })
+
+        it('InstallApp not used: one pending-adoption record and watch, one poll with no hold option', async () => {
+          const result = await new SteamGame(APP_ID, steamTestDeps).install(
+            {} as any
+          )
+
+          expect(result).toEqual({ status: 'done' })
+          expect(installApp()).not.toHaveBeenCalled()
+          expect(watchSpy).toHaveBeenCalledTimes(1)
+          expect(adoption().recordPendingAdoption).toHaveBeenCalledTimes(1)
+          expectNoHoldOption()
+        })
+
+        if (host === 'darwin') {
+          it.each([
+            [{ kind: 'unavailable', reason: 'not-signed-in' }],
+            [{ kind: 'error', code: 18 }]
+          ])(
+            'InstallApp %j: still exactly one record and watch, one poll with no hold option',
+            async (outcome) => {
+              settingOn()
+              installApp().mockResolvedValue(outcome)
+
+              await new SteamGame(APP_ID, steamTestDeps).install({} as any)
+
+              expect(watchSpy).toHaveBeenCalledTimes(1)
+              expect(adoption().recordPendingAdoption).toHaveBeenCalledTimes(1)
+              expectNoHoldOption()
+            }
+          )
+
+          it('InstallApp ok: no record is written and the poll still carries no hold option', async () => {
+            settingOn()
+            installApp().mockResolvedValue({ kind: 'ok', folderIndex: 0 })
+
+            await new SteamGame(APP_ID, steamTestDeps).install({} as any)
+
+            expect(watchSpy).not.toHaveBeenCalled()
+            expect(adoption().recordPendingAdoption).not.toHaveBeenCalled()
+            expectNoHoldOption()
+          })
+        }
+      }
+    )
 
     it('setting OFF: helper never called, pending adoption recorded as today', async () => {
       adoption().probeSteamPid.mockResolvedValue(123)
@@ -16056,8 +16131,7 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
         APP_ID,
         {
           isNativeHandoff: true,
-          skippedDepots: [],
-          macNativeRoute: true
+          skippedDepots: []
         }
       )
     })
