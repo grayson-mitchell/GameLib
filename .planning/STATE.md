@@ -5,16 +5,16 @@ milestone_name: Foundations
 current_phase: 47
 current_phase_name: Migrate aggregated store search from CheapShark to IsThereAnyDeal
 status: executing
-stopped_at: Completed 47-14-PLAN.md
-last_updated: "2026-11-18T09:49:27.499Z"
+stopped_at: Completed 47-15-PLAN.md
+last_updated: "2026-11-18T09:55:59.178Z"
 last_activity: 2026-11-18
 last_activity_desc: Phase 47 execution started
-state_head: e83918c2f974d61815bcb9e5d488c5444b99e91e
+state_head: 8e8bb65376d7b8423bfd0f249ef600cac51cd86b
 progress:
   total_phases: 26
   completed_phases: 23
   total_plans: 526
-  completed_plans: 521
+  completed_plans: 522
   percent: 88
 ---
 
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 ## Current Position
 
 Phase: 47 (Migrate aggregated store search from CheapShark to IsThereAnyDeal) — EXECUTING
-Plan: 15 of 18
+Plan: 16 of 18
 Status: Ready to execute
 Last activity: 2026-11-18 — Phase 47 execution started
 
@@ -303,6 +303,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 81 P18 | 25min | 2 tasks | 10 files |
 | Phase 81 P19 | 50min | 2 tasks | 1 files |
 | Phase 47 P14 | 40min | 2 tasks | 10 files |
+| Phase 47 P15 | 20 min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -512,6 +513,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 81]: 81-18: the Phase 81 deletion gate scans comment-stripped Rust with a string-aware stripper, allow-lists hold_migration.rs and profile.rs for steam_restart_hold, and asserts the legitimate survivors never match a forbidden needle
 - [Phase 81]: 81-19: the live-gate contract runs Mac items in order 1,2,5,6,8,4,3,9,7,12 because any Steam restart or sign-in adopts every pending ACF
 - [Phase 47]: 47-14: store embed drain reads the live URL only after a Finished for the current webview (G-47-9); offline surface reuses the notice row
+- [Phase 47]: 47-15: deep-link store highlight via resolveActiveStore delegating to resolveStoreForUrl (no second host rule); rememberLastStore not called for deep links
 
 ### Pending Todos
 
@@ -888,8 +890,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-18T09:49:22.881Z
-Stopped at: Completed 47-14-PLAN.md
+Last session: 2026-11-18T09:55:54.507Z
+Stopped at: Completed 47-15-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
