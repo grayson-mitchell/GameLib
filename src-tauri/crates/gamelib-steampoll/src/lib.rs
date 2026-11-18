@@ -39,8 +39,9 @@
 //!   libraryState + steamLibraryStore. Moving that state is deferred (CONTEXT `<deferred>`), so
 //!   the poll's `markSteamInstallIncomplete` call becomes the `installIncomplete` state event, and
 //!   the only file work, `breadcrumbAppIsFullyInstalledOnDisk`, moves to Rust. The boot path that
-//!   actually restarts polls is `rearmPersistedSteamRestartHolds` (resume.ts:285), so that is
-//!   what D-09 moves to Rust; the init() breadcrumb surfacing starts no poll and stays TS.
+//!   actually restarted polls was `rearmPersistedSteamRestartHolds` (resume.ts:285); D-09 moved
+//!   it to Rust and Phase 81 D-11 deleted it. The init() breadcrumb surfacing starts no poll and
+//!   stays TS.
 //! - R6 (D-06 Mac arch): Rust owns the probe (locate the Mach-O binary, `lipo -archs` / `file`,
 //!   verdict). Applying the verdict (steamMetadataStore, libraryState, known-fix reports, the i386
 //!   recovery prompt that reinstalls through SteamGame) is sidecar state and install routing, so
@@ -69,7 +70,6 @@ pub mod monitor;
 pub mod outbox;
 pub mod profile;
 pub mod progress;
-pub mod rearm;
 pub mod registry;
 pub mod running;
 pub mod runtime;

@@ -154,19 +154,13 @@ pub(crate) fn mark_sidecar_ready() {
     SIDECAR_READY.store(true, Ordering::SeqCst);
 }
 
-/// Boot work: rearm persisted restart holds and start the running poll. Spawns on the steampoll
-/// runtime and returns at once (T-80-65).
+/// Boot work: start the running poll (D-11: nothing re-arms a persisted restart hold at boot).
+/// Returns at once (T-80-65).
 pub(crate) fn steampoll_boot() {
     let Some(facade) = gamelib_steampoll::dispatch::facade::current() else {
         shell_eprintln!("[shell] steampoll boot skipped: no facade");
         return;
     };
-    // D-09: boot resume of persisted restart holds, before the sidecar could ask.
-    let polls = facade.polls.clone();
-    let profile = facade.profile.clone();
-    gamelib_steampoll::runtime::handle().spawn(async move {
-        let _ = gamelib_steampoll::rearm::rearm_persisted_holds(&polls, &profile).await;
-    });
     // The running poll starts at boot (first probe after 5 s).
     facade.running.start();
 }

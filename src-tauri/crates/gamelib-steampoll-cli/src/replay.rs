@@ -1,7 +1,7 @@
 //! Replays a plan-02 timeline through the Rust machines under paused time (D-14).
 //!
 //! The same file the TS driver (`src/backend/testUtils/steamPollReplay/tsDriver.ts`) consumes goes
-//! through `InstallPolls` / `start_uninstall` / `RunningPoll` / `rearm_persisted_holds` with a
+//! through `InstallPolls` / `start_uninstall` / `RunningPoll` with a
 //! recording host, a scripted process runner and a fake clock. Each tick advances tokio time by
 //! one interval (3 s, 5 s for `running`). The output is the stream the README specifies: relative
 //! paths, no `seq`.
@@ -12,13 +12,10 @@
 //!   so this module writes the text itself, escaping through its `vdf_escape`), and every temp
 //!   prefix is stripped from the output.
 //! - `monitor` readings are injected into `DownloadMonitor` (nettop rows are plan 06's tests).
-//! - Rearm clears done by `HoldStore` itself are reported as `file clear` records by diffing the
-//!   store before and after.
 
 use gamelib_i18n::Catalog;
 use gamelib_steampoll::acf_state::{AcfSource, PollRoots};
 use gamelib_steampoll::events::{AckReply, StateEvent};
-use gamelib_steampoll::hold::{parse_record, HoldStore};
 use gamelib_steampoll::host::{
     BoxFuture, HoldSink, Notification, NotifyText, PollHost, ProcessRunner, RunOutput,
     StreamingChild,
@@ -26,13 +23,13 @@ use gamelib_steampoll::host::{
 use gamelib_steampoll::install_loop::{InstallPolls, PollOptions, StartInstallArgs};
 use gamelib_steampoll::monitor::{DownloadMonitor, DownloadReading};
 use gamelib_steampoll::outbox::Outbox;
-use gamelib_steampoll::profile::{Platform, SidecarProfile};
+use gamelib_steampoll::profile::Platform;
 use gamelib_steampoll::registry::Registry;
 use gamelib_steampoll::running::{ClaimId, RunningPoll};
 use gamelib_steampoll::testing::FakeClock;
 use gamelib_steampoll::uninstall::{start_uninstall, StartUninstallArgs};
 use serde_json::{json, Map, Value};
-use std::collections::{BTreeSet, HashMap};
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -619,36 +616,6 @@ async fn run(timeline: &Value) -> Result<Vec<StreamRecord>, String> {
         bridge_steamapps_root: bridge.map(|p| p.to_string_lossy().into_owned()),
     };
 
-    // Scratch profile (config.json carries defaultSteamPath for the boot rearm).
-    let user_data = base.join("profile").join("GameLib");
-    let store_path = user_data
-        .join("store_cache")
-        .join("steam_restart_hold.json");
-    let config_path = user_data.join("config.json");
-    std::fs::create_dir_all(&user_data).map_err(|e| format!("mkdir: {e}"))?;
-    std::fs::write(
-        &config_path,
-        json!({"defaultSettings": {"defaultSteamPath": roots.steam_root}}).to_string(),
-    )
-    .map_err(|e| format!("write config: {e}"))?;
-    let profile = SidecarProfile {
-        user_data: user_data.to_string_lossy().into_owned(),
-        config_path: config_path.to_string_lossy().into_owned(),
-        restart_hold_store_path: store_path.to_string_lossy().into_owned(),
-        locales_dir: Some(locales_dir()),
-    };
-    let store = HoldStore::new(&store_path);
-    if let Some(records) = timeline
-        .get("store")
-        .and_then(|s| s.get("restartHold"))
-        .and_then(Value::as_object)
-    {
-        for (id, rec) in records {
-            let parsed = parse_record(rec).ok_or_else(|| format!("bad restartHold record {id}"))?;
-            store.record(id, &parsed, EPOCH_MS);
-        }
-    }
-
     // Collaborators.
     let world: SharedWorld = Arc::new(Mutex::new(World::fresh()));
     let helper = std::env::current_exe().map_err(|e| format!("current_exe: {e}"))?;
@@ -740,15 +707,6 @@ async fn run(timeline: &Value) -> Result<Vec<StreamRecord>, String> {
                 },
             )
             .map_err(|e| format!("start: {e}"))?;
-        }
-        "rearm" => {
-            let before: BTreeSet<String> = store.list().into_iter().map(|(id, _)| id).collect();
-            gamelib_steampoll::rearm::rearm_persisted_holds(&polls, &profile).await;
-            let after: BTreeSet<String> = store.list().into_iter().map(|(id, _)| id).collect();
-            for gone in before.difference(&after) {
-                host.clear(gone);
-            }
-            settle().await;
         }
         "running" => running.start(),
         other => return Err(format!("timeline {name}: bad machine {other}")),

@@ -80,7 +80,7 @@ fn rust_replay_equals_frozen_ts_streams_except_ledgered_records() {
         })
         .collect();
     names.sort();
-    assert!(names.len() >= 34);
+    assert!(names.len() >= 31);
     for scenario in by_scenario.keys() {
         assert!(
             names.contains(scenario),
