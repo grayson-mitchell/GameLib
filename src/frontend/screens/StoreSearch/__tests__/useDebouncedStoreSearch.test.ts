@@ -504,4 +504,45 @@ describe('useDebouncedStoreSearch session keep (G-47-12a)', () => {
     expect(hook.loading).toBe(false)
     expect(hook.status).toBe('results')
   })
+
+  it('a region change between visits keeps the query, drops the rows and re-runs the search at once for the new country', async () => {
+    mockApi.searchStores.mockResolvedValue(envelope([makeResult()]))
+
+    let hook = mount()
+    hook.setQuery('portal')
+    hook = rerender()
+    jest.advanceTimersByTime(DEBOUNCE_WINDOW)
+    hook = await settle(hook)
+    expect(hook.status).toBe('results')
+    mockApi.searchStores.mockClear()
+
+    country = 'DE'
+    hook = mount()
+    expect(hook.query).toBe('portal')
+    expect(hook.results).toEqual([])
+    // Fired by the mount's own effects, before any timer advances.
+    expect(mockApi.searchStores).toHaveBeenCalledTimes(1)
+    expect(mockApi.searchStores).toHaveBeenCalledWith('portal', 'DE')
+  })
+
+  it('a failed search is not resurrected: the query returns and the search re-runs once', async () => {
+    mockApi.searchStores.mockRejectedValueOnce(new Error('network down'))
+
+    let hook = mount()
+    hook.setQuery('portal')
+    hook = rerender()
+    jest.advanceTimersByTime(DEBOUNCE_WINDOW)
+    hook = await settle(hook)
+    expect(hook.status).toBe('error')
+    mockApi.searchStores.mockClear()
+    mockApi.searchStores.mockResolvedValue(envelope([makeResult()]))
+
+    hook = mount()
+    expect(hook.query).toBe('portal')
+    expect(hook.status).not.toBe('error')
+    hook = await settle(hook)
+
+    expect(mockApi.searchStores).toHaveBeenCalledTimes(1)
+    expect(hook.status).toBe('results')
+  })
 })

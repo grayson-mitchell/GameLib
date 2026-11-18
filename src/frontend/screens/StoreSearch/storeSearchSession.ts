@@ -23,6 +23,12 @@ export type StoreSearchStatus =
 
 export const STORE_SEARCH_MIN_QUERY_LENGTH = 3
 
+/** Kept rows are restored only when fetched at most this long ago. Mirrors the
+ * backend's `ITAD_FRESH_MS` (`src/backend/storeSearch/itadCache.ts`), which the
+ * renderer cannot import, so kept rows are never older than the cache that
+ * produced them. */
+export const KEPT_RESULTS_MAX_AGE_MS = 60 * 60 * 1000
+
 /** The trimmed query and the requested country a set of rows was fetched for,
  * and when (ms since epoch). */
 export type StoreSearchFetchKey = {
@@ -65,14 +71,15 @@ export function restoreStoreSearchSession(
   countryCode: string,
   now: number
 ): RestoredStoreSearchSession {
-  void now
   const trimmed = kept.query.trim()
   const debouncedQuery =
     trimmed.length >= STORE_SEARCH_MIN_QUERY_LENGTH ? trimmed : ''
   const rowsAreCurrent =
     (kept.status === 'results' || kept.status === 'empty') &&
     kept.fetchedFor !== null &&
-    kept.fetchedFor.countryCode === countryCode
+    kept.fetchedFor.countryCode === countryCode &&
+    kept.fetchedFor.query === trimmed &&
+    now - kept.fetchedFor.at <= KEPT_RESULTS_MAX_AGE_MS
 
   if (!rowsAreCurrent) {
     return { ...emptySession(), query: kept.query, debouncedQuery }
