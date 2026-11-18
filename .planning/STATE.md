@@ -5,16 +5,16 @@ milestone_name: Foundations
 current_phase: 47
 current_phase_name: Migrate aggregated store search from CheapShark to IsThereAnyDeal
 status: executing
-stopped_at: Completed 47-20-PLAN.md
-last_updated: "2026-11-18T18:35:38.148Z"
+stopped_at: Completed 47-21-PLAN.md
+last_updated: "2026-11-18T18:40:24.346Z"
 last_activity: 2026-11-19
 last_activity_desc: Phase 47 execution started
-state_head: 3d2a31112470a1fd7db44a44bc31e7954670d66d
+state_head: 10b7251bd2cb61f9addbdc1228e1a55a8a41df40
 progress:
   total_phases: 26
   completed_phases: 23
   total_plans: 530
-  completed_plans: 527
+  completed_plans: 528
   percent: 88
 ---
 
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 ## Current Position
 
 Phase: 47 (Migrate aggregated store search from CheapShark to IsThereAnyDeal) — EXECUTING
-Plan: 21 of 22
+Plan: 22 of 22
 Status: Ready to execute
 Last activity: 2026-11-19 — Completed quick task 261119-a23: CI weekly HEAD-check of the pinned libsteam_api CDN package
 
@@ -309,6 +309,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 47 P18 | 12min | 2 tasks | 3 files |
 | Phase 47 P19 | 25 min | 3 tasks | 8 files |
 | Phase 47 P20 | 9 min | 3 tasks | 8 files |
+| Phase 47 P21 | 4 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -524,6 +525,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 47]: 47-18: Deals keeps its own filter-resetting handleRegionChange and passes it to the shared RegionPicker; one stored region, validated per screen against its own list
 - [Phase 47]: 47-19: Store Search query and rows kept in a session-only module store (never localStorage); rows restored only for the same trimmed query and country, under one hour old, from a results or empty status
 - [Phase 47]: 47-20: TextInputField defaults spellCheck/autoCorrect off (before the inputProps spread so callers can opt back in); SearchBar and Winetricks searchbox opt out too; RegionPicker uses displayEmpty so Auto shows its label
+- [Phase 47]: 47-21: Store Search rows and the Deals filter panel use --gamecard-title-color (themeable plate) instead of the hardcoded-black overlay gradient; hover/pill tints are color-mix of --text-default
 
 ### Pending Todos
 
@@ -903,8 +905,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-18T18:35:34.821Z
-Stopped at: Completed 47-20-PLAN.md
+Last session: 2026-11-18T18:40:21.030Z
+Stopped at: Completed 47-21-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
