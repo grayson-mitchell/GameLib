@@ -39,3 +39,9 @@ gate over the file's production code, and the gate was shown red by a mutation c
 trigger the bridge invite picker twice from a bridged game. The second open must not crash the
 shell, and `gamelib-shell-panic.log` must gain no new entry. A production build's base is
 `tauri://localhost` (embedded assets), so the dev-server-down case is the realistic trigger.
+
+**Live check: pass (2026-11-19, operator, Mac, `pnpm tauri:dev`).** Vite was stopped before the
+first open. The picker opened blank, and the second open (the reuse path) also opened blank
+without crashing the shell. During this run, Steam's own invite picker came up under ours and
+appeared to work. That is followed up in
+`.planning/todos/pending/2026-11-19-test-steam-native-invite-picker-then-decommission-custom-picker.md`.
