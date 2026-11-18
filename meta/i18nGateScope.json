@@ -48,6 +48,7 @@
     "src/frontend/components/UI/PopoverComponent/index.tsx",
     "src/frontend/components/UI/RedeemSteamKeyDialog/copy.ts",
     "src/frontend/components/UI/RedeemSteamKeyDialog/index.tsx",
+    "src/frontend/components/UI/RegionPicker/index.tsx",
     "src/frontend/components/UI/SearchBar/index.tsx",
     "src/frontend/components/UI/SelectField/index.tsx",
     "src/frontend/components/UI/SteamBridgeInviteDialog/index.tsx",
