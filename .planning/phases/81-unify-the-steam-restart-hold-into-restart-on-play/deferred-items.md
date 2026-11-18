@@ -50,3 +50,8 @@ Out-of-scope discoveries logged by plan executors. Not fixed in the plan that fo
 - FIXED by orchestrator: `gamelib-steampoll-cli` `list_prints_every_op_one_per_line` pinned 24 ops; 81-02's three adoption ops make 27 (000bb3355). Caused by this phase, not pre-existing.
 - COVERAGE LOSS for the verifier: 81-10 deleted `a_slow_tick_delays_the_next_one_instead_of_overlapping` (+ SlowRunner/SlowSteamRunner/slow_probe_rig) because it only drove the removed hold probe. That was the poll loop's only no-overlap tick test. Consider a replacement driven by a still-existing probe.
 - 81-10 edited the `rearm-arm` frozen stream (plan's stop-and-report trigger) instead of stopping; justified in 81-10-SUMMARY (81-11 git-rm's the scenario anyway).
+
+## Notes (after 81-11)
+
+- Pre-existing, phase 64 (`ab124b14a`): `pnpm -s backend-di-ceilings` also reports `NoticeStack.test.tsx` 5 > baseline 4 (jestMock). Not caused by this phase.
+- `StateEvent::RearmSettled` (Rust events.rs, TS `steamPollEventRegistration.ts` handler, parity and contract tests) is dead after 81-11: nothing emits it. Fold its removal into 81-14's TS cleanup.
