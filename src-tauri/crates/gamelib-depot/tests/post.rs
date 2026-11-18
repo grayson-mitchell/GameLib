@@ -230,6 +230,145 @@ mod macho {
     }
 }
 
+mod shebang {
+    use super::*;
+
+    fn probe(bytes: &[u8]) -> bool {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("script");
+        std::fs::write(&p, bytes).unwrap();
+        shebang_wants_exec(&p).unwrap()
+    }
+
+    #[test]
+    fn probe_accepts_only_a_leading_shebang() {
+        assert!(probe(b"#!/bin/bash\necho hi\n"));
+        assert!(probe(b"#!"));
+        let mut big = vec![b'x'; 1024 * 1024];
+        big[0] = b'#';
+        big[1] = b'!';
+        assert!(probe(&big));
+    }
+
+    #[test]
+    fn probe_rejects_everything_else() {
+        assert!(!probe(b""));
+        assert!(!probe(b"#"));
+        assert!(!probe(b"\xEF\xBB\xBF#!/bin/sh\n"));
+        assert!(!probe(b" #!/bin/sh\n"));
+        assert!(!probe(b"!#/bin/sh\n"));
+        assert!(!probe(&[0xcf, 0xfa, 0xed, 0xfe, 0, 0, 0, 0, 2, 0, 0, 0]));
+    }
+
+    #[test]
+    fn probe_errors_on_a_missing_path() {
+        assert!(shebang_wants_exec(Path::new("/nonexistent/gamelib-depot-shebang")).is_err());
+    }
+
+    #[test]
+    fn path_gate_accepts_files_in_an_app_bundle_macos_dir() {
+        for p in [
+            "/r/Foo.app/Contents/MacOS/Foo",
+            "/r/Foo.app/Contents/MacOS/bin/run",
+            "/r/Outer.app/Contents/Frameworks/Helper.app/Contents/MacOS/helper",
+            "/r/foo.APP/contents/macos/Foo",
+            "/lib/steamapps/common/Game.app/Contents/MacOS/Game",
+        ] {
+            assert!(in_app_bundle_macos_dir(Path::new(p)), "{p}");
+        }
+    }
+
+    #[test]
+    fn path_gate_accepts_a_backslash_manifest_name_once_resolved() {
+        let dir = tempfile::tempdir().unwrap();
+        let resolved = resolve_contained_path(dir.path(), "Foo.app\\Contents\\MacOS\\Foo").unwrap();
+        assert!(in_app_bundle_macos_dir(&resolved), "{}", resolved.display());
+    }
+
+    #[test]
+    fn path_gate_rejects_everything_else() {
+        for p in [
+            "/r/Foo.app/Contents/Resources/run.sh",
+            "/r/Foo.app/Contents/Info.plist",
+            "/r/Foo.app/Contents/MacOS",
+            "/r/tools/run.sh",
+            "/r/Contents/MacOS/run",
+            "/r/Foo.bundle/Contents/MacOS/x",
+        ] {
+            assert!(!in_app_bundle_macos_dir(Path::new(p)), "{p}");
+        }
+    }
+
+    /// Writes `rel` (0o644) under a tempdir, runs the fallback, returns (mode, applied, report).
+    #[cfg(unix)]
+    fn run(rel: &str, bytes: &[u8], flags: u32) -> (u32, bool, ModeReport) {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join(rel);
+        std::fs::create_dir_all(p.parent().unwrap()).unwrap();
+        std::fs::write(&p, bytes).unwrap();
+        std::fs::set_permissions(&p, std::fs::Permissions::from_mode(0o644)).unwrap();
+        let mut r = ModeReport::default();
+        let applied = apply_shebang_fallback(&p, flags, &mut r);
+        let mode = std::fs::metadata(&p).unwrap().permissions().mode() & 0o7777;
+        (mode, applied, r)
+    }
+
+    const LAUNCHER: &str = "X.app/Contents/MacOS/X";
+
+    #[cfg(unix)]
+    #[test]
+    fn apply_chmods_an_unflagged_bundle_launcher() {
+        let (mode, applied, r) = run(LAUNCHER, b"#!/bin/bash\n", 0);
+        assert!(applied);
+        assert_eq!(mode, 0o755);
+        assert_eq!(
+            r.warnings.iter().filter(|w| w.contains("shebang")).count(),
+            1
+        );
+        assert_eq!(r.warnings.len(), 1);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn apply_leaves_manifest_flagged_files_to_the_manifest() {
+        for flags in [32, 128] {
+            let (mode, applied, _) = run(LAUNCHER, b"#!/bin/bash\n", flags);
+            assert!(!applied, "flags {flags}");
+            assert_eq!(mode, 0o644, "flags {flags}");
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn apply_ignores_a_shebang_file_outside_the_bundle() {
+        let (mode, applied, r) = run("tools/run.sh", b"#!/bin/sh\n", 0);
+        assert!(!applied);
+        assert_eq!(mode, 0o644);
+        assert!(r.warnings.is_empty());
+    }
+
+    // 23-08 invariant: a path never grants +x on its own.
+    #[cfg(unix)]
+    #[test]
+    fn apply_ignores_a_non_shebang_file_in_contents_macos() {
+        let (mode, applied, r) = run(LAUNCHER, b"plain text, not a script\n", 0);
+        assert!(!applied);
+        assert_eq!(mode, 0o644);
+        assert!(r.warnings.is_empty());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn apply_warns_and_survives_a_missing_file_in_the_bundle() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("X.app/Contents/MacOS/ghost");
+        let mut r = ModeReport::default();
+        assert!(!apply_shebang_fallback(&p, 0, &mut r));
+        assert_eq!(r.warnings.len(), 1);
+    }
+}
+
 mod contain {
     use super::*;
 
