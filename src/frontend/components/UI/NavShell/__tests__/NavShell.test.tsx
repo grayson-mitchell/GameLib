@@ -23,6 +23,7 @@ type MockPortalContextValue = { filled: boolean }
 
 let contextValue: MockPortalContextValue = { filled: false }
 let pathname = '/'
+let search = ''
 let effectCleanup: void | (() => void)
 
 jest.mock('../index.scss', () => ({}))
@@ -38,7 +39,7 @@ jest.mock('react', () => ({
 
 const navigateMock = jest.fn()
 jest.mock('react-router-dom', () => ({
-  useLocation: () => ({ pathname }),
+  useLocation: () => ({ pathname, search }),
   useNavigate: () => navigateMock
 }))
 
@@ -145,6 +146,7 @@ function shellChildren(): { navbar: AnyElement; tier2: AnyElement } {
 beforeEach(() => {
   contextValue = { filled: false }
   pathname = '/'
+  search = ''
   effectCleanup = undefined
   navigateMock.mockClear()
   handleGoToScreenMock.mockClear()
@@ -211,6 +213,30 @@ describe('NavShell', () => {
     )
     expect(slot).toBeDefined()
     expect(slot?.props.hidden).toBe(false)
+  })
+
+  it('passes the deep-linked store to StoresPanel as activeStore (G-47-6)', () => {
+    pathname = '/store-page'
+    search = '?store-url=https%3A%2F%2Fwww.gog.com%2Fgame%2Fportal'
+    const { tier2 } = shellChildren()
+    const panel = collectElements(tier2.props.children).find(
+      (el) => el.type === StoresPanel
+    )
+
+    expect(panel).toBeDefined()
+    expect(panel?.props.activeStore).toBe('gog')
+  })
+
+  it('passes a null activeStore for a store-page deep link to a non-store host (G-47-6)', () => {
+    pathname = '/store-page'
+    search = '?store-url=https%3A%2F%2Fexample.com%2Fx'
+    const { tier2 } = shellChildren()
+    const panel = collectElements(tier2.props.children).find(
+      (el) => el.type === StoresPanel
+    )
+
+    expect(panel).toBeDefined()
+    expect(panel?.props.activeStore).toBeNull()
   })
 
   it('with activeTab stores the tier-2 column contains StoresPanel and neither SettingsPanel nor GamesPanel', () => {

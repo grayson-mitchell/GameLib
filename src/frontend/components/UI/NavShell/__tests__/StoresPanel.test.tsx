@@ -158,4 +158,52 @@ describe('StoresPanel', () => {
     ;(redeemItem?.props.onClick as () => void)()
     expect(handleRedeemKeyDialog).toHaveBeenCalledWith(true)
   })
+
+  describe('activeStore highlight (G-47-6)', () => {
+    function activeLabels(tree: ReactElement): string[] {
+      return navItemsOf(tree)
+        .filter((el) => el.props?.isActiveFallback === true)
+        .map((el) => el.props.label as string)
+    }
+
+    it('lights only the GOG Store row for activeStore gog', () => {
+      seed({ humbleLoggedIn: true, steamUsername: 'TestUser' })
+      const tree = StoresPanel({
+        activeStore: 'gog'
+      }) as unknown as ReactElement
+
+      expect(activeLabels(tree)).toEqual(['GOG Store'])
+    })
+
+    it.each([
+      ['amazon', 'Amazon Luna'],
+      ['epic', 'Epic Store'],
+      ['steam', 'Steam Store']
+    ])('lights only the %s row for its activeStore', (key, label) => {
+      seed({ humbleLoggedIn: true })
+      const tree = StoresPanel({ activeStore: key }) as unknown as ReactElement
+
+      expect(activeLabels(tree)).toEqual([label])
+    })
+
+    it('lights only the Humble Keys row for activeStore humble', () => {
+      seed({ humbleLoggedIn: true, steamUsername: 'TestUser' })
+      const tree = StoresPanel({
+        activeStore: 'humble'
+      }) as unknown as ReactElement
+
+      expect(activeLabels(tree)).toEqual(['Humble Keys'])
+    })
+
+    it('lights no row for a null activeStore or a bare call', () => {
+      seed({ humbleLoggedIn: true, steamUsername: 'TestUser' })
+
+      expect(
+        activeLabels(
+          StoresPanel({ activeStore: null }) as unknown as ReactElement
+        )
+      ).toEqual([])
+      expect(activeLabels(StoresPanel() as unknown as ReactElement)).toEqual([])
+    })
+  })
 })
