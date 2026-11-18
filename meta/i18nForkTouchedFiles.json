@@ -1,7 +1,7 @@
 {
   "baseCommit": "b5b5cad3fa2e822602d320b70788d87240fc056e",
   "baseVersion": "2.22.0",
-  "generatedAt": "2026-11-17T20:57:52.233Z",
+  "generatedAt": "2026-11-18T10:24:35.144Z",
   "generatedBy": "pnpm gen-i18n-gate-scope",
   "purpose": "A-17: the CI-readable input to the i18n scope staleness ratchet — every fork-touched src/frontend source file eligible for the hardcoded-string gate (D-17 deferrals already removed, exactly the operand the ratchet compares against), INCLUDING those not yet listed in i18nGateScope.json. Regenerate with `pnpm gen-i18n-gate-scope`.",
   "files": [
@@ -68,6 +68,7 @@
     "src/frontend/components/UI/ReadOnlyStoresNotice/index.tsx",
     "src/frontend/components/UI/RedeemSteamKeyDialog/copy.ts",
     "src/frontend/components/UI/RedeemSteamKeyDialog/index.tsx",
+    "src/frontend/components/UI/RegionPicker/index.tsx",
     "src/frontend/components/UI/SearchBar/index.tsx",
     "src/frontend/components/UI/SelectField/index.tsx",
     "src/frontend/components/UI/SliderField/index.tsx",
@@ -128,6 +129,7 @@
     "src/frontend/helpers/steamKeyValidation.ts",
     "src/frontend/helpers/steamUpdateConfirm.ts",
     "src/frontend/helpers/storeDisplayName.ts",
+    "src/frontend/helpers/storeRegion.ts",
     "src/frontend/helpers/stores.ts",
     "src/frontend/hooks/constants.ts",
     "src/frontend/hooks/engineDownloadLabel.ts",
