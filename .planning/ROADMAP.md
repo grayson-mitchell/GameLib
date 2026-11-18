@@ -1533,7 +1533,7 @@ Plans:
 
 **Requirements**: PRICE-01, PRICE-02, PRICE-03 (phase-level IDs minted during `/gsd-plan-phase 47`). Moved into v0.10 Foundations 2026-11-12.
 **Depends on:** Phase 20 (Aggregated Store Search — CheapShark), which minted the provider-neutral `common/types/storeSearch` vocabulary (D-11/D-12/D-13) this phase is the second implementation of. **Not** Phase 46 — `phase.add` fills `Depends on` with the immediately-preceding phase number as a positional guess, and Phase 46 (Windows single-instance guard) is unrelated; corrected by hand at filing time.
-**Plans:** 16/18 plans executed
+**Plans:** 17/18 plans executed
 
 **Research is already complete** — `.planning/quick/260916-gdg-answer-q2-cheapshark-to-itad-migration-cost/260916-gdg-RESEARCH.md` answers `questions.md` Q2 with claims graded MEASURED / SPEC / UNKNOWN. Do not re-derive it; do preserve its grades when quoting.
 
@@ -1603,7 +1603,7 @@ Plans:
 
 **Gap closure Wave 2** *(blocked on 47-16)*
 
-- [ ] 47-17-PLAN.md — Landscape Store Search thumbnail, banner300 first, contain fit (G-47-7)
+- [x] 47-17-PLAN.md — Landscape Store Search thumbnail, banner300 first, contain fit (G-47-7)
 - [ ] 47-18-PLAN.md — Deals adopts the shared RegionPicker (G-47-8)
 
 ### Phase 76: Engine-correct bottle for DRM-mode launches (v0.9 audit S9)
