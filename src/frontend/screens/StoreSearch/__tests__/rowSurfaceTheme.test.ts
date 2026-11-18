@@ -23,7 +23,19 @@ import { parseColour, tryContrast } from 'frontend/customThemes/colour'
 // __dirname is src/frontend/screens/StoreSearch/__tests__; screens/ is two levels up.
 const SCREENS = join(__dirname, '..', '..')
 
-const STYLESHEETS = [join(SCREENS, 'StoreSearch', 'index.css')]
+const STORE_SEARCH_CSS = join(SCREENS, 'StoreSearch', 'index.css')
+const DISCOUNT_FILTERS_CSS = join(
+  SCREENS,
+  'Discounts',
+  'components',
+  'DiscountFilters',
+  'index.css'
+)
+
+const STYLESHEETS = [STORE_SEARCH_CSS, DISCOUNT_FILTERS_CSS]
+
+const TEXT_TINT =
+  /^color-mix\(in srgb, var\(--text-default\) \d+%, transparent\)$/
 
 const WHITE_ALPHA = /^rgba\(\s*255\s*,\s*255\s*,\s*255\s*,/i
 
@@ -83,7 +95,7 @@ describe('stylesheet surfaces are theme-safe (G-47-12c)', () => {
   })
 
   it('.storeSearchRow is the theme title-plate surface', () => {
-    expect(backgroundOfRule(STYLESHEETS[0] ?? '', '.storeSearchRow')).toBe(
+    expect(backgroundOfRule(STORE_SEARCH_CSS, '.storeSearchRow')).toBe(
       'var(--gamecard-title-color)'
     )
   })
@@ -91,10 +103,24 @@ describe('stylesheet surfaces are theme-safe (G-47-12c)', () => {
   it('the breakdown item hover tint derives from the theme text colour', () => {
     expect(
       backgroundOfRule(
-        STYLESHEETS[0] ?? '',
+        STORE_SEARCH_CSS,
         '.storeSearchRow__breakdownItem:hover, .storeSearchRow__breakdownItem:focus-visible'
       )
-    ).toMatch(/^color-mix\(in srgb, var\(--text-default\) \d+%, transparent\)$/)
+    ).toMatch(TEXT_TINT)
+  })
+
+  it('.discountFilters is the same theme title-plate surface', () => {
+    expect(backgroundOfRule(DISCOUNT_FILTERS_CSS, '.discountFilters')).toBe(
+      'var(--gamecard-title-color)'
+    )
+  })
+
+  it.each([
+    '.discountFilters__toggle:hover',
+    '.discountFilters__segment:hover:not(.discountFilters__segment--active)',
+    '.discountFilters__labelMeta'
+  ])('%s tint derives from the theme text colour', (selector) => {
+    expect(backgroundOfRule(DISCOUNT_FILTERS_CSS, selector)).toMatch(TEXT_TINT)
   })
 })
 
