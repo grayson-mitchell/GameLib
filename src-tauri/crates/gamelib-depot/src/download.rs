@@ -28,9 +28,9 @@ use crate::outcome::{
     Outcome, SelectedFile, Stats, Status, FAILURE_LOG_CAP,
 };
 use crate::post::{
-    apply_file_modes, apply_macho_fallback, check_symlink_target, detect_path_collisions,
-    probe_case_insensitive, resolve_contained_path, CollisionDepot, FlagsCensus, ModeReport,
-    CUSTOM_EXECUTABLE_FLAG, DIRECTORY_FLAG, EXECUTABLE_FLAG, SYMLINK_FLAG,
+    apply_file_modes, apply_macho_fallback, apply_shebang_fallback, check_symlink_target,
+    detect_path_collisions, probe_case_insensitive, resolve_contained_path, CollisionDepot,
+    FlagsCensus, ModeReport, CUSTOM_EXECUTABLE_FLAG, DIRECTORY_FLAG, EXECUTABLE_FLAG, SYMLINK_FLAG,
 };
 use crate::reconcile::{reconcile_partial_state, sha1_file, verify_structural_integrity};
 use crate::stall::StallTracker;
@@ -111,6 +111,8 @@ pub struct Counters {
     pub chmod_attempts: AtomicU64,
     /// Files given +x by the Mach-O fallback.
     pub macho_exec: AtomicU64,
+    /// Files given +x by the shebang fallback (a `#!` file inside an app bundle's Contents/MacOS).
+    pub shebang_exec: AtomicU64,
     pub mode_warnings: AtomicU64,
     pub last_host: Mutex<Option<String>>,
 }
@@ -251,8 +253,9 @@ pub(crate) fn write_all_at(f: &fs::File, buf: &[u8], offset: u64) -> io::Result<
 // Mode application (shared by fresh files and the reconciled-file heal)
 // ---------------------------------------------------------------------------
 
-/// Port of `applyEDepotFileModes` + the Mach-O fallback, with the TS `chmodAttempts` counter.
-/// `macho` is false for the zero-byte path, which TS never ran the fallback on.
+/// Port of `applyEDepotFileModes` + the Mach-O fallback (and the shebang fallback), with the TS
+/// `chmodAttempts` counter. `macho` gates both content fallbacks and is false for the
+/// zero-byte path, which can carry neither signature (TS never ran the fallback on it).
 pub(crate) fn apply_modes_sync(
     counters: &Counters,
     dest: &Path,
@@ -270,8 +273,12 @@ pub(crate) fn apply_modes_sync(
             return Err(msg.clone());
         }
     }
-    if macho && apply_macho_fallback(dest, flags, &mut report) {
-        counters.macho_exec.fetch_add(1, Ordering::Relaxed);
+    if macho {
+        if apply_macho_fallback(dest, flags, &mut report) {
+            counters.macho_exec.fetch_add(1, Ordering::Relaxed);
+        } else if apply_shebang_fallback(dest, flags, &mut report) {
+            counters.shebang_exec.fetch_add(1, Ordering::Relaxed);
+        }
     }
     counters
         .mode_warnings
@@ -1161,7 +1168,7 @@ async fn run_install_inner(
     let mode_notes = counters.mode_warnings.load(Ordering::Relaxed);
     if mode_notes > 0 {
         emitter.warn(format!(
-            "file mode notes: {mode_notes} (hidden-flag no-ops, Mach-O fallbacks)"
+            "file mode notes: {mode_notes} (hidden-flag no-ops, Mach-O and shebang fallbacks)"
         ));
     }
 
@@ -1207,6 +1214,7 @@ async fn run_install_inner(
             pk: c.pk.load(Ordering::Relaxed),
         },
         macho_exec_applied: c.macho_exec.load(Ordering::Relaxed) as u32,
+        shebang_exec_applied: c.shebang_exec.load(Ordering::Relaxed) as u32,
         path_collisions,
         elapsed_ms: started.elapsed().as_millis() as u64,
     };

@@ -1,6 +1,7 @@
 //! Per-file post-processing that needs the parsed manifest (D-10): EDepotFileFlag modes and
-//! Windows attributes, the Mach-O +x fallback, path containment, cross-depot path collisions
-//! with the case-insensitivity probe, and the flags census.
+//! Windows attributes, the Mach-O +x fallback, the shebang +x fallback (app-bundle launchers),
+//! path containment, cross-depot path collisions with the case-insensitivity probe, and the
+//! flags census.
 //!
 //! Ports `depot/fileAttributes.ts`, `depot/machO.ts`, `resolveContainedPath` and the symlink
 //! guard in `depot/download.ts`, `depot/pathCollisions.ts` and `depot/flagsCensus.ts`.
@@ -412,6 +413,104 @@ pub fn apply_macho_fallback(path: &Path, flags: u32, report: &mut ModeReport) ->
         Err(e) => {
             report.warnings.push(format!(
                 "downloadDepotFiles: Mach-O executable fallback failed for {}, continuing without it: {e}",
+                path.display()
+            ));
+            false
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Shebang executable fallback (quick 261119-8rf)
+// ---------------------------------------------------------------------------
+//
+// Bastion (107100) ships `Bastion.app/Contents/MacOS/Bastion` as a bash script with no
+// Executable flag in the manifest; without +x LaunchServices opens it in TextEdit. Scope: the
+// file must start with `#!` (content) AND sit inside `*.app/Contents/MacOS/` (path). A path
+// never grants +x by itself (the 23-08 content-gated invariant: no blanket chmod of
+// Contents/MacOS), and `#!` alone is too weak a signal to apply everywhere (bundled runtimes
+// ship `#!`-headed modules). Not covered on purpose: `#!` scripts in Contents/Resources, in a
+// `.bundle`, or outside any bundle. Widen only on a title's evidence.
+
+const SHEBANG_PROBE_BYTES: usize = 2;
+
+/// Do `path`'s first two bytes read `#!`? Content-gated only; reads at most 2 bytes. The caller
+/// owns the flag, Windows and path gates: see [`apply_shebang_fallback`].
+pub fn shebang_wants_exec(path: &Path) -> io::Result<bool> {
+    let mut file = fs::File::open(path)?;
+    let mut buf = [0u8; SHEBANG_PROBE_BYTES];
+    let mut n = 0;
+    while n < buf.len() {
+        let read = file.read(&mut buf[n..])?;
+        if read == 0 {
+            break;
+        }
+        n += read;
+    }
+    Ok(n == SHEBANG_PROBE_BYTES && &buf == b"#!")
+}
+
+/// Is `path` (the destination already resolved by `resolve_contained_path`) a file inside an
+/// app bundle's `Contents/MacOS` directory, at any depth and in any nested `.app`? Pure, no
+/// I/O. `CFBundleExecutable` always names a file in this directory, so no `Info.plist` parse is
+/// needed; a `.bundle` is excluded because it is dlopen'd and never launched.
+pub fn in_app_bundle_macos_dir(path: &Path) -> bool {
+    let parts: Vec<Option<&str>> = path
+        .components()
+        .filter_map(|c| match c {
+            Component::Normal(p) => Some(p.to_str()),
+            _ => None,
+        })
+        .collect();
+    if parts.len() < 4 {
+        return false;
+    }
+    // A 4-wide window: the `.app/Contents/MacOS` triple plus at least one part after it (the file).
+    parts.windows(4).any(|w| match (w[0], w[1], w[2]) {
+        (Some(app), Some(contents), Some(macos)) => {
+            app.len() > 4
+                && app.is_char_boundary(app.len() - 4)
+                && app[app.len() - 4..].eq_ignore_ascii_case(".app")
+                && contents.eq_ignore_ascii_case("Contents")
+                && macos.eq_ignore_ascii_case("MacOS")
+        }
+        _ => false,
+    })
+}
+
+/// Best-effort `chmod 0o755` for a landed file whose manifest carried no executable flag, that
+/// sits in an app bundle's `Contents/MacOS` and starts with `#!`. Never run on Windows; every
+/// failure is swallowed into a warning. Returns whether it chmod-ed.
+pub fn apply_shebang_fallback(path: &Path, flags: u32, report: &mut ModeReport) -> bool {
+    if cfg!(windows) || flags & (EXECUTABLE_FLAG | CUSTOM_EXECUTABLE_FLAG) != 0 {
+        return false;
+    }
+    if !in_app_bundle_macos_dir(path) {
+        return false;
+    }
+    match shebang_wants_exec(path) {
+        Ok(true) => {
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                if let Err(e) = fs::set_permissions(path, fs::Permissions::from_mode(0o755)) {
+                    report.warnings.push(format!(
+                        "downloadDepotFiles: shebang executable fallback failed for {}, continuing without it: {e}",
+                        path.display()
+                    ));
+                    return false;
+                }
+            }
+            report.warnings.push(format!(
+                "downloadDepotFiles: applied secondary shebang executable fallback (chmod 0o755) to \"{}\" - its manifest carried no Executable/CustomExecutable flag, but it starts with #! inside an app bundle's Contents/MacOS directory",
+                path.display()
+            ));
+            true
+        }
+        Ok(false) => false,
+        Err(e) => {
+            report.warnings.push(format!(
+                "downloadDepotFiles: shebang executable fallback failed for {}, continuing without it: {e}",
                 path.display()
             ));
             false

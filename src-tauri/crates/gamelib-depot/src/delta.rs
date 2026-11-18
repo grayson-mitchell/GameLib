@@ -1727,6 +1727,7 @@ async fn delta_body(
             pk: c.pk.load(Ordering::Relaxed),
         },
         macho_exec_applied: c.macho_exec.load(Ordering::Relaxed) as u32,
+        shebang_exec_applied: c.shebang_exec.load(Ordering::Relaxed) as u32,
         path_collisions,
         elapsed_ms: started.elapsed().as_millis() as u64,
     };
@@ -1945,7 +1946,7 @@ async fn delta_body(
     let mode_notes = counters.mode_warnings.load(Ordering::Relaxed);
     if mode_notes > 0 {
         emitter.warn(format!(
-            "file mode notes: {mode_notes} (hidden-flag no-ops, Mach-O fallbacks)"
+            "file mode notes: {mode_notes} (hidden-flag no-ops, Mach-O and shebang fallbacks)"
         ));
     }
 

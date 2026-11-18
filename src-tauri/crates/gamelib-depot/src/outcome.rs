@@ -130,6 +130,9 @@ pub struct Stats {
     pub containers: Containers,
     /// Files given +x by the Mach-O content fallback.
     pub macho_exec_applied: u32,
+    /// Files given +x by the shebang fallback (a #! file inside an app bundle's Contents/MacOS).
+    #[serde(default)]
+    pub shebang_exec_applied: u32,
     /// Cross-depot path collisions detected.
     pub path_collisions: u32,
     pub elapsed_ms: u64,

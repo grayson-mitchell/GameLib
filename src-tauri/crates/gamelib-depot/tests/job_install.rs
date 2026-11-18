@@ -547,3 +547,57 @@ fn non_blocked_node_error_still_fails_the_job() {
     assert_eq!(out.failures[0].eresult, None);
     assert!(out.skipped_depots.is_empty());
 }
+
+// Quick 261119-8rf: the Bastion launcher shape. A `#!` script inside an app bundle's
+// Contents/MacOS with no manifest exec flag must land 0o755; `#!` files elsewhere must not.
+#[cfg(unix)]
+#[test]
+fn shebang_launcher_in_app_bundle_lands_executable() {
+    use std::os::unix::fs::PermissionsExt;
+    let f =
+        |path: &str, body: &str| FixtureFile::new(path, body.as_bytes().to_vec(), 1024, Codec::Vz);
+    let case = custom_case(
+        "shebang-launcher",
+        910_050,
+        vec![
+            f(
+                "Shebang.app/Contents/MacOS/Shebang",
+                "#!/bin/bash\necho synthetic launcher\n",
+            ),
+            f(
+                "Shebang.app/Contents/Info.plist",
+                "<?xml version=\"1.0\"?>\n<plist><dict><key>CFBundleExecutable</key><string>Shebang</string></dict></plist>\n",
+            ),
+            f(
+                "Shebang.app/Contents/Resources/helper.sh",
+                "#!/bin/sh\necho helper\n",
+            ),
+            f("tools/run.sh", "#!/bin/sh\necho tool\n"),
+        ],
+    );
+    let env = setup(&case);
+    let out = env.run(env.job("ji-shebang", Value::Null));
+
+    assert_eq!(out.status, Status::Completed, "{:?}", out.failures);
+    assert!(out.all_modes_applied);
+    let mode = |rel: &str| {
+        std::fs::metadata(env.root().join(rel))
+            .unwrap()
+            .permissions()
+            .mode()
+    };
+    assert_eq!(
+        mode("Shebang.app/Contents/MacOS/Shebang") & 0o7777,
+        0o755,
+        "launcher must be executable"
+    );
+    for decoy in [
+        "Shebang.app/Contents/Info.plist",
+        "Shebang.app/Contents/Resources/helper.sh",
+        "tools/run.sh",
+    ] {
+        assert_eq!(mode(decoy) & 0o111, 0, "{decoy} must stay non-exec");
+    }
+    assert_eq!(out.stats.shebang_exec_applied, 1);
+    assert_eq!(out.stats.macho_exec_applied, 0);
+}
