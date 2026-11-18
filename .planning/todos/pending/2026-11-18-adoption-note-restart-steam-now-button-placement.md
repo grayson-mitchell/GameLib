@@ -32,3 +32,9 @@ restarts Steam once, so the button is a convenience), or move the action onto Pl
 the 1026 waiting edge (`steam-waiting-for-restart`) shows the same button and has a known
 no-op gap recorded in the phase's `deferred-items.md`; decide both together. Check the
 result in midnightMirage, gruvbox_dark and dracula (item 8's themes).
+
+## Decision (2026-11-19, Phase 81 item 10, Windows)
+
+The operator saw the same layout on Windows and decided the direction: "Restart Steam now" belongs
+next to the Play button, not on its own line after the note. Keep the note text under the status
+line. The 1026 waiting edge question above is still open.
