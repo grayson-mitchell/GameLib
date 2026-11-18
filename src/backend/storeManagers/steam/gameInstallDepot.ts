@@ -311,7 +311,7 @@ export async function runNativeDepotDownload(
             recordedAt: Date.now()
           })
           logInfo(
-            `SteamGame: recorded pending Steam adoption for ${steamGame.appId} (steam_osx pid ${pid})`,
+            `SteamGame: recorded pending Steam adoption for ${steamGame.appId} (Steam pid ${pid})`,
             LogPrefix.Steam
           )
         } else {
