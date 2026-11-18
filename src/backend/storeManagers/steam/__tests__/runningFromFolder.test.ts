@@ -14,6 +14,8 @@ import {
   isProcessRunningFromFolder,
   psOutputHasFolder,
   psOutputPidsInFolder,
+  lsofExecutablePaths,
+  psOutputRelativeArgvPids,
   windowsProcessListPidsInFolder,
   windowsSystem32Path
 } from '../runningFromFolder'
@@ -68,8 +70,85 @@ describe('psOutputPidsInFolder', () => {
       )
     ).toEqual([9])
   })
+  it.each([
+    '/bin/bash /x/common/Bastion/Bastion.app/Contents/MacOS/Bastion',
+    'bash /x/common/Bastion/run.sh',
+    '/bin/sh -e /x/common/Bastion/run.sh',
+    '/bin/zsh /x/common/Bastion/x',
+    '/bin/bash -c /x/common/Bastion/run.sh'
+  ])('admits the shell launcher %p', (args) => {
+    expect(psOutputPidsInFolder(`501 ${args}`, '/x/common/Bastion')).toEqual([
+      501
+    ])
+  })
+  it.each([
+    '/bin/bash /x/common/Bastion2/run.sh',
+    '/bin/zsh -c source /tmp/s.sh && cd /x/common/Bastion/x',
+    '/usr/bin/tail -f /x/common/Bastion/log.txt',
+    '/usr/bin/python3 /x/common/Bastion/x.py',
+    '/bin/bash /x/common/Bastion/steam_osx'
+  ])('rejects %p', (args) => {
+    expect(psOutputPidsInFolder(`501 ${args}`, '/x/common/Bastion')).toEqual([])
+  })
+  it('rejects an excluded shell-launcher pid', () => {
+    expect(
+      psOutputPidsInFolder(
+        '501 /bin/bash /x/common/Bastion/run.sh',
+        '/x/common/Bastion',
+        [501]
+      )
+    ).toEqual([])
+  })
   it.each(['', 'relative/dir', '/'])('throws on folder %p', (f) => {
     expect(() => psOutputPidsInFolder('1 x', f)).toThrow()
+  })
+})
+
+describe('psOutputRelativeArgvPids', () => {
+  it('returns relative-argv0 pids only', () => {
+    const out = [
+      '  502 ./Bastion.bin.osx',
+      '  503 ../bin/game -x',
+      '  504 target/debug/gamelib-shell',
+      '  505 /abs/path/game',
+      '  506 -zsh',
+      '  507 login',
+      '  508 (sshd)',
+      '    1 ./init',
+      '  509 ./steamwebhelper',
+      '  510 ./excluded',
+      'garbage line',
+      ''
+    ].join('\n')
+    expect(psOutputRelativeArgvPids(out, [510])).toEqual([502, 503, 504])
+  })
+})
+
+describe('lsofExecutablePaths', () => {
+  it('maps each pid to its first txt name only', () => {
+    const out = [
+      'p502',
+      'ftxt',
+      'n/x/common/Bastion/Bastion.bin.osx',
+      'ftxt',
+      'n/usr/lib/dyld',
+      'p503',
+      'ftxt',
+      'n/x/common/Other/game',
+      'ftxt',
+      'n/usr/lib/dyld'
+    ].join('\n')
+    expect([...lsofExecutablePaths(out)]).toEqual([
+      [502, '/x/common/Bastion/Bastion.bin.osx'],
+      [503, '/x/common/Other/game']
+    ])
+  })
+  it('skips a record with only a cwd fd', () => {
+    const out = ['p502', 'fcwd', 'n/x/common/Bastion', 'p503', 'ftxt', 'n/a/b']
+    expect([...lsofExecutablePaths(out.join('\n'))]).toEqual([[503, '/a/b']])
+  })
+  it('returns an empty map for garbage', () => {
+    expect(lsofExecutablePaths('hello\n\npabc\nn/x\nftxt').size).toBe(0)
   })
 })
 
@@ -163,6 +242,158 @@ describe('findPidsRunningFromFolder (scripted runner)', () => {
       findPidsRunningFromFolder({ runner, platform: 'darwin' }, '')
     ).rejects.toThrow()
     expect(runner.calls).toHaveLength(0)
+  })
+  describe('relative-argv processes (quick 261119-gzt)', () => {
+    const bastion = '/x/common/Bastion'
+    const LSOF = '/usr/sbin/lsof'
+    const ps = (stdout: string) => ({
+      cmd: '/bin/ps',
+      result: { code: 0, stdout }
+    })
+    const lsofOut = (pid: number, exe: string) =>
+      ['p' + pid, 'ftxt', 'n' + exe, 'ftxt', 'n/usr/lib/dyld'].join('\n')
+    const bastionPs =
+      '501 /bin/bash /x/common/Bastion/Bastion.app/Contents/MacOS/Bastion\n' +
+      '502 ./Bastion.bin.osx\n'
+    const run = (
+      steps: Parameters<typeof createScriptedRunner>[0],
+      o: Partial<Parameters<typeof findPidsRunningFromFolder>[0]> = {},
+      opts: Parameters<typeof findPidsRunningFromFolder>[2] = {}
+    ) => {
+      const runner = createScriptedRunner(steps)
+      return {
+        runner,
+        result: findPidsRunningFromFolder(
+          { runner, platform: 'darwin', ...o },
+          bastion,
+          opts
+        )
+      }
+    }
+    const lsofCalls = (r: ReturnType<typeof createScriptedRunner>) =>
+      r.calls.filter((c) => c.cmd === LSOF)
+
+    it('darwin: the Bastion shape returns both pids with one lsof call', async () => {
+      const { runner, result } = run([
+        ps(bastionPs),
+        {
+          cmd: LSOF,
+          result: {
+            code: 0,
+            stdout: lsofOut(502, `${bastion}/Bastion.app/Contents/MacOS/b`)
+          }
+        }
+      ])
+      await expect(result).resolves.toEqual([501, 502])
+      const calls = lsofCalls(runner)
+      expect(calls).toHaveLength(1)
+      expect(calls[0]?.argv).toEqual([
+        '-a',
+        '-nP',
+        '-p',
+        '502',
+        '-d',
+        'txt',
+        '-F',
+        'pn'
+      ])
+      expect(calls[0]?.opts).toMatchObject({ timeoutMs: 2000, stdin: '' })
+    })
+    it('darwin: an exec-style relative child alone is found', async () => {
+      const { result } = run([
+        ps('502 ./Bastion.bin.osx\n'),
+        { cmd: LSOF, result: { code: 0, stdout: lsofOut(502, `${bastion}/b`) } }
+      ])
+      await expect(result).resolves.toEqual([502])
+    })
+    it('darwin: no relative lines means ps only', async () => {
+      const { runner, result } = run([ps('42 /x/common/Bastion/run\n')])
+      await expect(result).resolves.toEqual([42])
+      expect(runner.calls).toHaveLength(1)
+    })
+    it('darwin: an excluded relative pid spawns no lsof', async () => {
+      const { runner, result } = run(
+        [ps('900 ./gamelib-shell\n')],
+        {},
+        { excludePids: [900] }
+      )
+      await expect(result).resolves.toEqual([])
+      expect(runner.calls).toHaveLength(1)
+    })
+    it('darwin: the realpath of the folder is accepted', async () => {
+      const { result } = run(
+        [
+          ps('502 ./Bastion.bin.osx\n'),
+          {
+            cmd: LSOF,
+            result: {
+              code: 0,
+              stdout: lsofOut(502, '/private/x/common/Bastion/b')
+            }
+          }
+        ],
+        { realpath: () => '/private/x/common/Bastion' }
+      )
+      await expect(result).resolves.toEqual([502])
+    })
+    it.each([
+      '/x/common/Bastion2/b',
+      '/Users/u/dev/target/debug/gamelib-shell'
+    ])('darwin: an executable at %p is rejected', async (exe) => {
+      const { result } = run([
+        ps('502 ./b\n'),
+        { cmd: LSOF, result: { code: 0, stdout: lsofOut(502, exe) } }
+      ])
+      await expect(result).resolves.toEqual([])
+    })
+    it('darwin: lsof code 1 with stdout is parsed', async () => {
+      const { result } = run([
+        ps('502 ./b\n'),
+        { cmd: LSOF, result: { code: 1, stdout: lsofOut(502, `${bastion}/b`) } }
+      ])
+      await expect(result).resolves.toEqual([502])
+    })
+    it.each([
+      ['timedOut', { code: null, timedOut: true, stdout: '' }],
+      ['code 2', { code: 2, stdout: lsofOut(502, '/x/common/Bastion/b') }],
+      ['truncated', { code: 0, truncated: true, stdout: '' }]
+    ] as const)(
+      'darwin: lsof %s degrades to the direct matches',
+      async (_n, r) => {
+        const { result } = run([ps(bastionPs), { cmd: LSOF, result: { ...r } }])
+        await expect(result).resolves.toEqual([501])
+      }
+    )
+    it('darwin: an unscripted (throwing) lsof degrades to the direct matches', async () => {
+      const { result } = run([ps(bastionPs)])
+      await expect(result).resolves.toEqual([501])
+    })
+    it('darwin: a ps failure still rejects', async () => {
+      const { result } = run([{ cmd: '/bin/ps', result: { code: 1 } }])
+      await expect(result).rejects.toThrow(/ps failed/)
+    })
+    it.each([
+      '/x/common/Bastion/Bastion.bin.x86_64',
+      '/x/common/Bastion/Bastion.bin.x86_64 (deleted)'
+    ])('linux: readExe %p admits the relative child', async (exe) => {
+      const { runner, result } = run([ps('502 ./Bastion.bin.x86_64\n')], {
+        platform: 'linux',
+        readExe: () => exe
+      })
+      await expect(result).resolves.toEqual([502])
+      expect(lsofCalls(runner)).toHaveLength(0)
+    })
+    it.each([
+      ['undefined', undefined],
+      ['an outside path', '/usr/bin/game']
+    ])('linux: readExe returning %s admits nothing', async (_n, exe) => {
+      const { runner, result } = run([ps('502 ./game\n')], {
+        platform: 'linux',
+        readExe: () => exe
+      })
+      await expect(result).resolves.toEqual([])
+      expect(lsofCalls(runner)).toHaveLength(0)
+    })
   })
   describe('win32 PowerShell lister', () => {
     const winFolder = 'C:\\Steam\\steamapps\\common\\WazHack'
