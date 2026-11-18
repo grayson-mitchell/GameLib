@@ -35,6 +35,8 @@ import {
   type PendingAdoptionStore,
   type RestartDeps
 } from '../macSteamAdoption'
+import { RUST_STEAMPOLL_READ_RUNNING_APP_ID } from 'common/types/sidecarTransport'
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import type { AdoptionReading } from '../pollRust/steamPollTypes'
 import { stubRustSteamFiles } from '../localFiles/__tests__/fixtures/stubRustSteamFiles'
 import { at } from './fixtures/indexed'
@@ -629,6 +631,44 @@ describe('createRestartDeps', () => {
     ])
     const deps = createRestartDeps(base({ platform: 'linux', runner }))
     await expect(deps.isSteamRunning()).resolves.toBe(false)
+  })
+
+  // Quick 261118-uma: no readRunningAppId stub. The Rust op is the only source, so a non-zero
+  // reply on darwin must reach the refusal through the real createRestartDeps seam.
+  test('darwin: a non-zero steampoll reply refuses the restart without quitting Steam', async () => {
+    const requestRustInvoke = jest.fn().mockResolvedValue(112100)
+    const openUrlDetached = jest.fn()
+    const sendFrontendMessage = jest.fn()
+    const deps = createRestartDeps(
+      base({
+        requestRustInvoke:
+          requestRustInvoke as unknown as RustInvokeDeps['requestRustInvoke'],
+        sendFrontendMessage,
+        macSteam: {
+          isSteamRunning: jest.fn().mockResolvedValue(true),
+          openUrlDetached
+        }
+      })
+    )
+    await expect(restartSteamForAdoption('208400', deps)).resolves.toEqual({
+      kind: 'game-running',
+      runningAppId: 112100
+    })
+    expect(requestRustInvoke).toHaveBeenCalledWith(
+      RUST_STEAMPOLL_READ_RUNNING_APP_ID,
+      [{ strict: false }]
+    )
+    expect(openUrlDetached).not.toHaveBeenCalled()
+    expect(sendFrontendMessage).not.toHaveBeenCalled()
+  })
+
+  test('darwin: a rejected steampoll invoke reads as no game running (non-strict)', async () => {
+    const deps = createRestartDeps(
+      base({
+        requestRustInvoke: () => Promise.reject(new Error('rust down'))
+      })
+    )
+    await expect(deps.readRunningAppId()).resolves.toBe(0)
   })
 })
 

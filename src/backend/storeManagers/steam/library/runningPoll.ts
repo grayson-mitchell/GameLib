@@ -28,7 +28,12 @@ async function readRunningAppIdViaRust(
   }
 }
 
-/** The macOS reader: the Rust probe (registry.vdf parse with exact casing, T-06-06). */
+/**
+ * The macOS reader: the Rust op reads registry.vdf first (exact casing, T-06-06) and then,
+ * because Mac Steam writes no RunningAppID there, scans the process table by executable path
+ * under every Steam library's `steamapps/common/<installdir>` (quick 261118-uma). The 5 s poller
+ * does not scan; only this on-demand read does.
+ */
 export function readMacRunningAppId(
   deps: Pick<RunningPollProbeDeps, 'requestRustInvoke'>,
   strict = false
@@ -37,7 +42,8 @@ export function readMacRunningAppId(
 }
 
 /**
- * Reads the currently running Steam game AppID, cross-platform (the probe is Rust, D-13).
+ * Reads the currently running Steam game AppID, cross-platform (the probe is Rust, D-13). On
+ * macOS the Rust op adds the process-scan fallback described on {@link readMacRunningAppId}.
  * Returns 0 when no game is running or on any error. Never throws.
  */
 export function readRunningAppId(
