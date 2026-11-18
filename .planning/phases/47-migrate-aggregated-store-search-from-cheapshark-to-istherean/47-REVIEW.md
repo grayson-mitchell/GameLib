@@ -1,124 +1,89 @@
 ---
 phase: 47-migrate-aggregated-store-search-from-cheapshark-to-istherean
-reviewed: 2026-11-18T00:00:00Z
+reviewed: 2026-11-19T00:00:00Z
 depth: standard
-files_reviewed: 31
+scope: gap-closure plans 47-19..47-22 (incremental, diff_base af88c70d8)
+files_reviewed: 21
 files_reviewed_list:
   - meta/__tests__/genI18nGateScope.test.ts
   - meta/i18nForkTouchedFiles.json
   - meta/i18nGateScope.json
-  - public/locales/en/translation.json
-  - src-tauri/src/store_embed/controls.rs
-  - src-tauri/src/store_embed/open.rs
-  - src-tauri/src/store_embed/state.rs
-  - src/backend/storeSearch/__tests__/itad.test.ts
-  - src/backend/storeSearch/itad.ts
-  - src/frontend/components/UI/NavShell/__tests__/NavShell.test.tsx
-  - src/frontend/components/UI/NavShell/__tests__/StoresPanel.test.tsx
-  - src/frontend/components/UI/NavShell/__tests__/navTabs.test.ts
-  - src/frontend/components/UI/NavShell/components/StoresPanel/index.tsx
-  - src/frontend/components/UI/NavShell/index.tsx
-  - src/frontend/components/UI/NavShell/navTabs.ts
   - src/frontend/components/UI/RegionPicker/__tests__/RegionPicker.test.tsx
-  - src/frontend/components/UI/RegionPicker/index.css
   - src/frontend/components/UI/RegionPicker/index.tsx
-  - src/frontend/helpers/__tests__/storeRegion.test.ts
-  - src/frontend/helpers/storeRegion.ts
-  - src/frontend/screens/Discounts/helpers.ts
-  - src/frontend/screens/Discounts/index.css
-  - src/frontend/screens/Discounts/index.tsx
+  - src/frontend/components/UI/SearchBar/__tests__/searchBarTextChecking.test.tsx
+  - src/frontend/components/UI/SearchBar/index.tsx
+  - src/frontend/components/UI/TextInputField/__tests__/textInputFieldTextChecking.test.ts
+  - src/frontend/components/UI/TextInputField/index.tsx
+  - src/frontend/screens/Discounts/components/DiscountFilters/__tests__/filterLayout.test.ts
+  - src/frontend/screens/Discounts/components/DiscountFilters/index.css
+  - src/frontend/screens/Discounts/components/DiscountFilters/index.tsx
+  - src/frontend/screens/Settings/sections/WinetricksSettings/EverythingElseGroup/index.tsx
+  - src/frontend/screens/Settings/sections/WinetricksSettings/__tests__/everythingElse.test.tsx
   - src/frontend/screens/StoreSearch/__tests__/StoreSearchScreen.test.tsx
-  - src/frontend/screens/StoreSearch/__tests__/storeSearchThumbBox.test.ts
+  - src/frontend/screens/StoreSearch/__tests__/rowSurfaceTheme.test.ts
+  - src/frontend/screens/StoreSearch/__tests__/storeSearchSession.test.ts
+  - src/frontend/screens/StoreSearch/__tests__/useDebouncedStoreSearch.test.ts
+  - src/frontend/screens/StoreSearch/hooks/useDebouncedStoreSearch.ts
   - src/frontend/screens/StoreSearch/index.css
-  - src/frontend/screens/StoreSearch/index.tsx
-  - src/frontend/screens/WebView/components/StoreEmbedTimeoutBanner.tsx
-  - src/frontend/screens/WebView/components/__tests__/StoreEmbedTimeoutBanner.test.tsx
-  - src/frontend/screens/WebView/index.tsx
-  - src/frontend/screens/WebView/useStoreEmbedHost.ts
+  - src/frontend/screens/StoreSearch/storeSearchSession.ts
 findings:
   critical: 0
   warning: 3
-  info: 2
-  total: 5
-  necessity: 1
+  info: 4
+  total: 7
+  necessity: 0
 status: issues_found
 ---
 
-# Phase 47: Code Review Report (gap-closure round, plans 47-14..47-18)
+# Phase 47 — Code Review (gap closure 47-19..47-22)
 
-**Reviewed:** 2026-11-18
-**Depth:** standard (incremental: `git diff d4278f3a4..HEAD` over the 31 scoped paths)
-**Files Reviewed:** 31
-**Status:** issues_found
-
-The prior round's review lives in git history at `aa2e10ee1` (dispositions in `47-REVIEW-DISPOSITION.md`).
-
-## Summary
-
-This round covers G-47-6 (store-page deep link lights the owning store row), G-47-7 (Store Search thumbnail box), G-47-8 (shared RegionPicker plus a Store Search region picker), G-47-9 (offline first-load crash guard plus offline banner) and two i18n gate-scope commits.
-
-The core G-47-9 Rust guard holds up. I confirmed against the vendored wry 0.55.1 source that `url_from_webview` does `webview.URL().unwrap()` and that `PageLoadEvent::Finished` is emitted only from `did_finish_navigation`. The `page_finished` flag lifecycle (set on every Finished, reset on `clear()` and `reset_for_new_webview()`, kept across a store switch) is consistent, and the drain releases the state lock before the URL read. `resolveActiveStore` reuses `resolveStoreForUrl`, so there is no second host-matching rule. The ITAD country list matches the 32 the tests assert, and the shared `discounts.regionOverride` key is validated per screen. The i18n scope edits are internally consistent: fork-touched 439, scope 317.
-
-No Critical issues. The three warnings are all on the new offline banner and the shared RegionPicker.
+Incremental review of the changes since the 47-14..47-18 review (`af88c70d8`). The prior report is in git history.
+Verified clean: RegionPicker `displayEmpty`; the SearchBar / TextInputField / Winetricks spellcheck and autocorrect
+opt-outs; the hook's debounce early-return and fetch-skip guards across the remount, country-change, error and
+short-query paths; the i18n scope / fork-touched JSONs (sorted, mutually consistent, 318 / 440 counts match).
+The `--gamecard-title-color` token and the `main-content` container declaration (`App.css:61`) were checked against the code. No tests were run by the reviewer.
 
 ## Warnings
 
-### WR-01: Offline "Try again" can re-request the previous store's URL after a store switch
+### WR-01: Kept rows can be up to ~2 hours old; the "never older than the cache" claim is false
+**File:** `src/frontend/screens/StoreSearch/hooks/useDebouncedStoreSearch.ts:156-160`, `src/frontend/screens/StoreSearch/storeSearchSession.ts:345-349`
+**Issue:** The hook stamps `fetchedFor.at` with renderer `Date.now()` when the response arrives, but the backend serves ITAD rows from its cache for up to `ITAD_FRESH_MS` (1h, `src/backend/storeSearch/itad.ts:349`) and `StoreSearchResponse` carries no fetch time. A search answered from a 59-minute-old backend entry is stamped "now", and `restoreStoreSearchSession` keeps it for a further hour — prices up to ~2h old shown as current. The doc comment ("kept rows are never older than the cache that produced them") is wrong; `storeSearchSession.test.ts` pins only the 1h constant, not the end-to-end bound.
+**Fix:** Add a `fetchedAt` (backend cache timestamp) to `StoreSearchResponse` and stamp `at` from it; or use a shorter renderer max age (e.g. 30 min) and correct the comment; or at minimum correct the comment to state the ~2h bound.
 
-**File:** `src/frontend/screens/WebView/index.tsx:421-424` (reads `useStoreEmbedHost.ts:1005`)
-**Issue:** `retryEmbedLoad` calls `navigateEmbed(embedHost.currentUrl)`, and `currentUrl` is `navState.url`. The hook's own comments (`useStoreEmbedHost.ts:410-434` and `:904-905`) record that `/store/:store` is one mounted route and that on a store switch `navState.url` "still holds the previous store's last URL". The failing case is the one this banner exists for:
-1. The embed has loaded store A.
-2. The user goes offline and switches to store B.
-3. `existing.navigate(urlB)` fails, so no Finished arrives and `navState.url` stays on A's page.
-4. The banner shows, and Try again navigates the shared embed back to A's URL while the route says B.
-Rust's `store_embed_navigate` also pushes A's URL into the store-B history. The hook's existing `onTryAgain` (`useStoreEmbedHost.ts:986-990`) already avoids this by retrying `startUrl`, with the same rationale.
-**Fix:** Retry the route's own URL rather than `navState.url`. Either reuse `startUrl`, or fall back to it when `resolveStoreForUrl(currentUrl)?.key !== store`:
-```tsx
-const retryEmbedLoad = useCallback(() => {
-  const owner = resolveStoreForUrl(embedCurrentUrl)
-  navigateEmbed(owner?.key === store ? embedCurrentUrl : startUrl)
-}, [navigateEmbed, embedCurrentUrl, store, startUrl])
-```
-Add a `StoreEmbedTimeoutBanner`/WebView-level test for the switch case. The current banner tests only prove the callback is wired.
+### WR-02: First frame of a remount shows the "Search a title…" prompt beside a filled search box
+**File:** `src/frontend/screens/StoreSearch/storeSearchSession.ts:403-405`, `src/frontend/screens/StoreSearch/hooks/useDebouncedStoreSearch.ts:177-192`
+**Issue:** When the query is restored but rows are not current (different country, >1h, last status error/loading, query edited after fetch), `restoreStoreSearchSession` returns `status: 'prompt'` with a non-empty `debouncedQuery`. `index.tsx:223` renders the full prompt panel for `'prompt'`, and the restoring fetch only sets `'loading'` after the first commit — a one-frame flash of the empty-state prompt with the query already in the box. Only the fresh-rows path asserts the first frame (G-47-12a); the stale/error/region tests do not.
+**Fix:** In the restore path, return `status: 'loading'` when `debouncedQuery !== ''` and rows are not current (or initialise `fetching` to `seed.debouncedQuery !== '' && seed.status === 'prompt'`); add first-render assertions to the stale-rows tests.
 
-### WR-02: Offline banner is driven by app connectivity alone, so it overrides a healthy loaded page
-
-**File:** `src/frontend/screens/WebView/index.tsx:664`, `src/frontend/screens/WebView/components/StoreEmbedTimeoutBanner.tsx:63-90`
-**Issue:** `offline={connectivity?.status === 'offline'}` makes the banner render whenever the sidecar reports offline, regardless of whether the embed's page committed. Offline wins over `timedOut`. A user who already has a store page showing (or a Humble/Steam page that is cached) sees "You're offline, so this store can't load." sitting over a page that did load. That message is false, and the single action is a navigate that re-requests the page. The `uiState` default is `{ status: 'offline' }` (`uiState.ts:67`), so a mount that precedes the first `connectivitySync` result also flashes this banner as an app-wide false positive.
-**Fix:** Gate the offline variant on the embed not having committed a page. The nav state does not expose this today, so either add a `pageFinished`/`loaded` field to the Rust nav-state JSON (the flag already exists in `StoreEmbedState`), or combine offline with the load-in-flight/timed-out signal:
-```tsx
-offline={connectivity.status === 'offline' && !embedHost.hasLoadedPage}
-```
-At minimum, reword the message so it is true when a page is already visible.
-
-### WR-03: RegionPicker has no accessible name for its combobox
-
-**File:** `src/frontend/components/UI/RegionPicker/index.tsx:50-58`
-**Issue:** The label is wired as `<label htmlFor={id}>` with `<Select id={id}>`. In the installed MUI 5.17.1, `Select`'s `id` reaches the hidden native input, not the visible `role="combobox"` div. In `SelectInput.js:448` the div's `aria-labelledby` is built from `labelId` and `buttonId`, and both are undefined here. A screen reader therefore announces an unnamed combobox, and clicking the label does not open or focus it. The defect was inherited from the Deals markup, but this round promotes it into a shared component and adds a second consumer.
-**Fix:** Give the label an id and pass it as `labelId`:
-```tsx
-<label className="regionPicker__label" id={`${id}-label`} htmlFor={id}>{label}</label>
-<Select id={id} labelId={`${id}-label`} ...>
-```
-Add an assertion in `RegionPicker.test.tsx` that `labelId` is set.
+### WR-03: `limitTags={2}` plus the removed Tooltip leaves blurred Genres/Features hiding chips; the comment says otherwise
+**File:** `src/frontend/screens/Discounts/components/DiscountFilters/index.tsx:101-131`
+**Issue:** The comment says "The control shows every chip itself, so no hover bubble is needed", but `limitTags={2}` still collapses a blurred control to two chips + "+N". The hover bubble was the only way to see the hidden selections without focusing; mouse users lose it and keyboard / screen-reader users get no description of what is hidden. The comment is inaccurate for the default (blurred) state.
+**Fix:** Drop `limitTags` (the control now grows to hold every chip), or keep it, correct the comment, and give "+N" a `title`/`aria-label` listing the hidden names via `getLimitTagsText`.
 
 ## Info
 
-### IN-01: Impossible-state guard on `connectivity?.status`
+### IN-01: `storeSearchSession.test.ts` replaces `globalThis.localStorage`/`sessionStorage` and never restores them
+**File:** `src/frontend/screens/StoreSearch/__tests__/storeSearchSession.test.ts` (D-22 test, ~lines 150-165)
+**Issue:** Mocks are left in place after the test; only Jest's per-file isolation protects other files, and later tests in this file would inherit them. The assertion is near-vacuous for a module that never references storage; the source-gate `describe` covers the same ground.
+**Fix:** Save and restore in `afterEach`, or `jest.spyOn(Storage.prototype, …)`, or drop it in favour of the source gate.
 
-**Category:** necessity
-**File:** `src/frontend/screens/WebView/index.tsx:664`
-**Issue:** `connectivity` comes from `useUiState((s) => s.connectivity)`, typed `{ status; retryIn }` and initialised to a concrete object at `uiState.ts:67`. It is never undefined, and the sibling consumers (`GamePage/index.tsx:202`, `GameCard/index.tsx:785`, `DownloadSizeInfo.tsx`) read `connectivity.status` without `?.`. The optional chain guards a state the type and the store default rule out. Judgment-level, not a bug.
-**Fix:** `connectivity.status === 'offline'`.
+### IN-02: `rowSurfaceTheme.test.ts` hard-codes "ten built-in themes"
+**File:** `src/frontend/screens/StoreSearch/__tests__/rowSurfaceTheme.test.ts`
+**Issue:** Adding or removing a built-in theme fails a G-47-12c contrast test on an unrelated count. `isLight` is also silently false when `--body-background` is not a plain colour (`tryContrast` returns null); the "at least one light theme" test only partly covers this.
+**Fix:** Assert `themes.length > 0` or compare against the generator's own theme count instead of the literal 10.
 
-### IN-02: "Showing prices for {{country}}" caption now duplicates the region picker
+### IN-03: Container-query comment contradicts itself about the one-column rule
+**File:** `src/frontend/screens/Discounts/components/DiscountFilters/index.css:219-228`
+**Issue:** It says the 700px rule "could never fire" (true as a viewport rule at the 900px window minimum) and then that "as a container rule it would fire at the minimum for no reason" — at the minimum, main-content is ~644px, so a container rule would fire. Removing it is defensible; the rationale is muddled.
+**Fix:** Reword: a one-column container rule was judged unnecessary because two columns at ~644px are acceptable.
 
-**File:** `src/frontend/screens/StoreSearch/index.tsx:168-172`
-**Issue:** The picker on the title row shows the active country (or "Auto (Germany)"), and the caption directly below still says "Showing prices for Germany." The two say the same thing. The caption is also pinned by tests. Not a bug, but it is redundant copy on the screen the picker was added to.
-**Fix:** Drop the caption, or keep it only when the effective country differs from the picker's value. The existing `regionNote` already covers the fallback case.
+### IN-04: `meta/i18nGateScope.json` `generatedBy` is an append-only multi-KB history string
+**File:** `meta/i18nGateScope.json:5`
+**Issue:** 47-19 appended another clause to a single-line, hand-maintained provenance string now several KB long (existing pattern), making every diff of this file unreadable.
+**Fix:** Move the history to a `history` array or a changelog file; keep `generatedBy` short.
 
 ---
 
-_Reviewed: 2026-11-18_
-_Reviewer: Claude (gsd-code-reviewer)_
+_Reviewed: 2026-11-19_
+_Reviewer: Claude (gsd-code-reviewer); written to disk by the execute-phase orchestrator from the reviewer's returned text (reviewer had no write tool)_
 _Depth: standard_
