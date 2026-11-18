@@ -688,7 +688,6 @@ async fn pvk4_status_reports_delegated_only_for_a_live_delegated_poll() {
     assert_eq!(st.installs.len(), 2);
     assert!(st.installs[0].delegated_to_steam_client);
     assert!(!st.installs[1].delegated_to_steam_client);
-    assert_eq!(st.installs[1].steam_hold, "unprobed");
     r.polls.stop_install("100");
     assert!(!r.polls.status().installs.iter().any(|i| i.app_id == "100"));
     r.polls.stop_install("200");
@@ -1001,14 +1000,22 @@ fn the_removed_hold_options_fail_deserialisation() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn status_reports_no_hold_for_any_install() {
+async fn status_wire_shape_carries_no_hold_for_any_install() {
     let r = rig().await;
     start(&r, handoff(None));
-    let status = r.polls.status();
-    assert_eq!(status.installs.len(), 1);
-    assert_eq!(status.installs[0].steam_hold, "unprobed");
-    assert!(status.holding.is_empty());
-    assert!(r.polls.holding_app_ids().is_empty());
+    let wire = serde_json::to_value(r.polls.status()).unwrap();
+    // D-11: exactly {installs, uninstalls}, and each install exactly the three fields.
+    assert_eq!(
+        wire,
+        serde_json::json!({
+            "installs": [{
+                "appId": APP,
+                "delegatedToSteamClient": false,
+                "awaitingUpdate": false
+            }],
+            "uninstalls": []
+        })
+    );
     r.polls.stop_install(APP);
 }
 

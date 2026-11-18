@@ -99,18 +99,14 @@ pub struct InstallStatus {
     pub app_id: String,
     pub delegated_to_steam_client: bool,
     pub awaiting_update: bool,
-    /// `unprobed` | `holding` | `released`
-    pub steam_hold: String,
 }
 
-/// Everything TS read synchronously from `activePolls` and the hold bookkeeping.
+/// Everything TS read synchronously from `activePolls`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PollStatus {
     pub installs: Vec<InstallStatus>,
     pub uninstalls: Vec<String>,
-    /// Apps whose live install poll is holding for a Steam restart.
-    pub holding: Vec<String>,
 }
 
 struct Slot {
@@ -129,10 +125,6 @@ struct Shared {
 fn valid_app_id(app_id: &str) -> bool {
     (1..=10).contains(&app_id.len()) && app_id.bytes().all(|b| b.is_ascii_digit())
 }
-
-/// The `steamHold` every install reports until 81-17 removes the field from the wire: what a
-/// never-held poll reported before the hold went (D-11).
-const STEAM_HOLD_WIRE: &str = "unprobed";
 
 /// Every this many ticks an eligible poll restarts a download monitor that is not live
 /// (15 s at the 3 s tick): bounds the pgrep cost while Steam is down (80-REVIEW A/WR-09).
@@ -396,7 +388,7 @@ impl InstallPolls {
         self.polls().get(app_id).map(|s| s.poll.clone())
     }
 
-    /// Installs, uninstall appIds and holding appIds in one snapshot (sorted).
+    /// Installs and uninstall appIds in one snapshot (sorted).
     pub fn status(&self) -> PollStatus {
         let mut installs: Vec<InstallStatus> = self
             .polls()
@@ -405,21 +397,13 @@ impl InstallPolls {
                 app_id: app_id.clone(),
                 delegated_to_steam_client: s.poll.delegated_to_steam_client,
                 awaiting_update: s.poll.awaiting_update.is_some(),
-                steam_hold: STEAM_HOLD_WIRE.to_string(),
             })
             .collect();
         installs.sort_by(|a, b| a.app_id.cmp(&b.app_id));
         PollStatus {
             installs,
             uninstalls: self.registry.active_app_ids(PollKind::Uninstall),
-            holding: self.holding_app_ids(),
         }
-    }
-
-    /// Always empty: no install poll holds for a Steam restart any more (D-11). The wire field
-    /// stays until 81-17 removes it with its TS readers.
-    pub fn holding_app_ids(&self) -> Vec<String> {
-        Vec::new()
     }
 
     /// TS-pushed mirror of `gameSession.isNativeInstallInFlight` (R7), read by the next tick.

@@ -95,10 +95,8 @@ export interface PollStatus {
     appId: string
     delegatedToSteamClient: boolean
     awaitingUpdate: boolean
-    steamHold: 'unprobed' | 'holding' | 'released'
   }>
   uninstalls: string[]
-  holding: string[]
 }
 
 /**

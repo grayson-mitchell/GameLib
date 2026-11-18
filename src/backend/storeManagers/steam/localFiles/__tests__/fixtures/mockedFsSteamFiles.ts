@@ -268,8 +268,8 @@ export function mockedFsSteamFiles(
         return { runningAppId: 0 }
       }
     },
-    // The Rust registry read the TS restart-hold guard makes: an empty registry (no poll running).
-    steampoll_status: () => ({ installs: [], uninstalls: [], holding: [] }),
+    // The Rust registry read: an empty registry (no poll running).
+    steampoll_status: () => ({ installs: [], uninstalls: [] }),
     steampoll_install_start: () => undefined,
     steampoll_install_stop: () => undefined,
     steampoll_install_cancel_delegated: () => false,

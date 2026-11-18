@@ -115,8 +115,7 @@ describe('rust branch', () => {
         { appId: '10', delegatedToSteamClient: true },
         { appId: '11', delegatedToSteamClient: false }
       ],
-      uninstalls: [],
-      holding: []
+      uninstalls: []
     }
     const { deps, calls } = makeDeps(status)
     expect(await isDelegatedInstallPolling(deps, '10')).toBe(true)

@@ -59,11 +59,9 @@ const game = {
         installs: [...activePolls].map(([appId, poll]) => ({
           appId,
           delegatedToSteamClient: false,
-          awaitingUpdate: poll.awaitingUpdate !== undefined,
-          steamHold: 'unprobed'
+          awaitingUpdate: poll.awaitingUpdate !== undefined
         })),
-        uninstalls: [],
-        holding: []
+        uninstalls: []
       }),
     config: {},
     paths: {},

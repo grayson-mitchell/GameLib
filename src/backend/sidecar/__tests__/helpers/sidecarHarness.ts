@@ -260,7 +260,7 @@ export function answerPollStatus(input: PassThrough, frames: Frame[]): void {
     if (answeredPollStatus.has(f.id as string)) continue
     answeredPollStatus.add(f.id as string)
     input.write(
-      `${JSON.stringify({ id: f.id, ok: true, result: { installs: [], uninstalls: [], holding: [] } })}\n`
+      `${JSON.stringify({ id: f.id, ok: true, result: { installs: [], uninstalls: [] } })}\n`
     )
   }
 }
