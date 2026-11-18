@@ -98,11 +98,10 @@ const MultiSelectChips = <T extends SlugOption>({
           <span className="discountFilters__labelMeta">{selected.length}</span>
         )}
       </label>
-      {/* The control shows every chip itself, so no hover bubble is needed (G-47-14b). */}
+      {/* No limitTags: the control wraps and grows to show every chip, blurred or focused, so nothing is hidden behind a "+N" and no hover bubble is needed (G-47-14b). */}
       <Autocomplete
         multiple
         size="small"
-        limitTags={2}
         options={options}
         value={selectedOptions}
         onChange={(_, value) => onChange(value.map((o) => o.slug))}

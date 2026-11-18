@@ -272,7 +272,8 @@
 }
 
 /*
- * The control grows to hold its chips (limitTags only trims them while blurred). A fixed
+ * The control grows to hold every chip (the component sets no limitTags, so a blurred
+ * control hides none behind a "+N"). A fixed
  * height with overflow hidden made the browser scroll the box to the caret, cropping chips
  * and detaching the notched outline (G-47-14b). The inputs grid is align-items start, so a
  * taller control does not stretch its neighbours.

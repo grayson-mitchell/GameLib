@@ -113,10 +113,10 @@ describe('Deals filters: Genres and Features controls grow to hold their chips (
     expect(stripped).not.toMatch(/discountFilters__tooltipChips/)
   })
 
-  it('has no hover bubble in the component, still trims blurred chips to two', () => {
+  it('has no hover bubble and no limitTags in the component, so no chip is ever hidden', () => {
     const source = stripSourceComments(tsx)
     expect(source).not.toMatch(/\bTooltip\b/)
-    expect(source).toMatch(/limitTags=\{2\}/)
+    expect(source).not.toMatch(/limitTags/)
     expect(source).toMatch(/<Autocomplete/)
   })
 })
