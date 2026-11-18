@@ -25,7 +25,6 @@ import { bridgeAllowlist } from '../bridge/allowlist'
 import { listKnownFixMac32AppIds } from '../macArchKnownFix'
 import { leaseIdOf } from '../cm/RustCmClient'
 import { invokeSteamCm } from '../cm/rustSteamCm'
-import { withoutSteamRestartHolds } from '../pollRust/rustSteamPoll'
 import type { RefreshResult } from '../cm/steamCmTypes'
 import type { SteamMetadataCacheEntry } from '../stores'
 import { restoreLocalSteamLibrary } from './localLibrary'
@@ -87,11 +86,8 @@ type InstallStateArg = RustRefreshInputs['installState']
 async function readInstallState(
   deps: ManagerDeps
 ): Promise<{ installState: InstallStateArg; bridgeAppIds: string[] }> {
-  // D-UAT-13: apps holding for a Steam restart are not installed yet as far as the UI goes.
-  const installedMap = await withoutSteamRestartHolds(
-    deps,
-    await buildInstalledMap(deps)
-  )
+  // D-11: the installed map is the ACF scan as read, with no hold filter.
+  const installedMap = await buildInstalledMap(deps)
   const bottleMap =
     isMac && deps.steamBottle.isSteamBottleProvisioned()
       ? await buildBottleInstalledMap(deps)

@@ -42,12 +42,6 @@ import { createTestAnonymousClient } from 'backend/testUtils/testAnonymousClient
 import { logWarning } from 'backend/logger'
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 
-// Rust owns the restart-hold registry: the status read reports `holding`, the apps whose install is
-// held for a Steam restart.
-let holding: string[] = []
-const statusOverride = {
-  steampoll_status: () => ({ installs: [], uninstalls: [], holding })
-}
 const libDeps = {
   config: createTestGlobalConfig(),
   requestRustInvoke: mockedFsSteamFiles().requestRustInvoke
@@ -62,20 +56,20 @@ const getAnonymousPicsClient = jest.fn()
 // 66.3-15: the bottle helpers are read through the deps slice, so they are plain mocks here.
 const getSteamBottleSettings = jest.fn()
 const isSteamBottleProvisioned = jest.fn()
-const holdTransport = {
+const statusTransport = {
   ...createTestHostServices({
     rustInvoke: (channel) =>
       Promise.resolve(
         channel === 'steampoll_status'
-          ? { installs: [], uninstalls: [], holding }
+          ? { installs: [], uninstalls: [] }
           : undefined
       )
   }),
   appRuntime: createTestAppRuntime()
 }
 const steamTestDeps = createTestManagerDeps({
-  steamInstallRuntime: createTestSteamInstallRuntime(holdTransport),
-  requestRustInvoke: mockedFsSteamFiles(statusOverride).requestRustInvoke,
+  steamInstallRuntime: createTestSteamInstallRuntime(statusTransport),
+  requestRustInvoke: mockedFsSteamFiles().requestRustInvoke,
   sendFrontendMessage,
   steamUser,
   steamBottle: { getSteamBottleSettings, isSteamBottleProvisioned } as never,
@@ -1108,7 +1102,7 @@ describe('SteamLibraryManager', () => {
       )
     })
 
-    it("D-UAT-13: a game holding for a Steam restart is NOT flipped to installed by the window-focus reconcile (it would show Play, and Play opens Steam's install dialog) — it is once the hold ends", async () => {
+    it('D-11: the window-focus reconcile flips an ACF-installed game to installed with no hold filter', async () => {
       library.set('570', {
         runner: 'steam',
         app_name: '570',
@@ -1133,28 +1127,17 @@ describe('SteamLibraryManager', () => {
           SizeOnDisk: '50000'
         }
       })
-      // GameLib's own finalize just wrote the StateFlags=4 manifest while the
-      // Steam client was running: the Rust poller reports the app as holding.
-      holding = ['570']
-      try {
-        jest.mocked(sendFrontendMessage).mockClear()
+      jest.mocked(sendFrontendMessage).mockClear()
 
-        // The user alt-tabs back from Steam: the focus reconcile re-reads the
-        // ACF (bit 4 set) but must leave the held game alone.
-        await manager.refreshInstallState()
-        expect(sendFrontendMessage).not.toHaveBeenCalled()
-        expect(library.get('570')?.is_installed).toBe(false)
-      } finally {
-        holding = [] // hold ends (e.g. released/cap/uninstalled)
-      }
-
-      // Control: the identical ACF DOES flip it once nothing is holding it, so
-      // the assertion above is not vacuous.
+      // D-01 badge: the manifest reads fully installed, so the one reconcile shows Installed. A
+      // game whose Steam client has not adopted it yet is handled by Play's gate and the page
+      // note, not by hiding the badge.
       await manager.refreshInstallState()
       expect(sendFrontendMessage).toHaveBeenCalledWith(
         'pushGameToLibrary',
         expect.objectContaining({ app_name: '570', is_installed: true })
       )
+      expect(library.get('570')?.is_installed).toBe(true)
     })
 
     it('installState() is a no-op (install state is ACF-derived, not boolean-driven)', () => {

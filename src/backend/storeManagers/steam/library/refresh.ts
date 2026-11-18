@@ -14,10 +14,7 @@ import { restoreLocalSteamLibrary } from './localLibrary'
 import { syncOwnedLibraryRust, tryMacSteamRefresh } from './rustRefresh'
 import { macSteamPathEnabled } from './macSteamPathFlag'
 import { RUST_STEAMPOLL_STATUS } from 'common/types/sidecarTransport'
-import {
-  invokeSteamPoll,
-  withoutSteamRestartHolds
-} from '../pollRust/rustSteamPoll'
+import { invokeSteamPoll } from '../pollRust/rustSteamPoll'
 import type { PollStatus } from '../pollRust/steamPollTypes'
 import { verifyMacArchGroundTruth } from './macArch'
 import {
@@ -161,8 +158,8 @@ export async function refresh(deps: ManagerDeps): Promise<ExecResult | null> {
 export async function refreshInstallState(deps: ManagerDeps): Promise<void> {
   const { steamLibraryStore } = deps.stores.steam
   // D-01: the poll registry lives in Rust. One status call per reconcile, made inside the scan
-  // `try` below and shared by the restart-hold filter and the active-poll check, so a rejected
-  // status read skips the reconcile before any entry is touched (80-REVIEW C-WR-07).
+  // `try` below, so a rejected status read skips the reconcile before any entry is touched
+  // (80-REVIEW C-WR-07).
   let activeInstallPolls: Set<string>
   // WR-01 (75 review): a rejected manifest scan (rustInvoke timeout, shell
   // restart) says nothing about what is installed. Skip this reconcile
@@ -176,16 +173,13 @@ export async function refreshInstallState(deps: ManagerDeps): Promise<void> {
     ReturnType<typeof buildBridgeInstalledMap>
   > | null
   try {
-    // D-UAT-13: a window-focus reconcile (the user alt-tabbing to Steam to
-    // restart it) must not flip a game that is holding for a Steam restart to
-    // installed — see withoutSteamRestartHolds().
-    const scanned = await buildInstalledMap(deps)
+    // D-11: the installed map is the ACF scan as read, with no hold filter.
+    installedMap = await buildInstalledMap(deps)
     const status = (await invokeSteamPoll(
       deps,
       RUST_STEAMPOLL_STATUS
     )) as PollStatus
     activeInstallPolls = new Set(status.installs.map((i) => i.appId))
-    installedMap = await withoutSteamRestartHolds(deps, scanned, status)
     bottleInstalledMap =
       isMac && deps.steamBottle.isSteamBottleProvisioned()
         ? await buildBottleInstalledMap(deps)

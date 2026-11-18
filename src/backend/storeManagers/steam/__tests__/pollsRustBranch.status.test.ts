@@ -1,5 +1,4 @@
 import * as logger from 'backend/logger'
-import { withoutSteamRestartHolds } from '../pollRust/rustSteamPoll'
 import { createSteamGameSessionState } from '../gameSessionState'
 
 type Call = { channel: string; args: unknown[] }
@@ -19,42 +18,6 @@ beforeEach(() => {
 })
 afterEach(() => {
   jest.restoreAllMocks()
-})
-
-const status = {
-  installs: [
-    {
-      appId: '5',
-      delegatedToSteamClient: false,
-      awaitingUpdate: true,
-      steamHold: 'holding'
-    },
-    {
-      appId: '6',
-      delegatedToSteamClient: false,
-      awaitingUpdate: false,
-      steamHold: 'unprobed'
-    }
-  ],
-  uninstalls: [],
-  holding: ['5', '7']
-}
-
-describe('status readers', () => {
-  it('rust: withoutSteamRestartHolds drops status.holding (incl. pending rearm) with one call', async () => {
-    const { calls, requestRustInvoke } = fakeRust(status)
-    const out = await withoutSteamRestartHolds(
-      { requestRustInvoke: requestRustInvoke as never },
-      new Map<number, string>([
-        [5, 'a'],
-        [6, 'b'],
-        [7, 'c'],
-        [8, 'd']
-      ])
-    )
-    expect([...out.keys()]).toEqual([6, 8])
-    expect(calls).toEqual([{ channel: 'steampoll_status', args: [] }])
-  })
 })
 
 describe('native in-flight mirror', () => {
