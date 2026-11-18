@@ -80,6 +80,16 @@ Every task carries an `<automated>` command in its PLAN.md `<verify>` block (eac
 | 47-17-T2 | 17 | 2 (gap) | PRICE-01 | Thumbnail box ratio coupled to the thumbOf asset family | unit | `pnpm exec jest --selectProjects Frontend --runTestsByPath src/frontend/screens/StoreSearch/__tests__/storeSearchThumbBox.test.ts` | ✅ | ✅ green |
 | 47-18-T1 | 18 | 2 (gap) | PRICE-01 | Deals renders the shared RegionPicker with its own filter-reset handler | component | `pnpm exec jest --selectProjects Frontend src/frontend/screens/Discounts src/frontend/components/UI/RegionPicker && hardcodedStringGate` | ✅ | ✅ green |
 | 47-18-T2 | 18 | 2 (gap) | PRICE-01 | Shared region-store contract (one key, per-screen validation) | unit | `pnpm exec jest --selectProjects Frontend --runTestsByPath src/frontend/helpers/__tests__/storeRegion.test.ts` | ✅ | ✅ green |
+| 47-19-T1 | 19 | 1 (gap) | PRICE-01 | Store Search keeps its query and rows across a remount (G-47-12a) | component | `pnpm exec jest --selectProjects Frontend --runTestsByPath src/frontend/screens/StoreSearch/__tests__/useDebouncedStoreSearch.test.ts src/frontend/screens/StoreSearch/__tests__/StoreSearchScreen.test.tsx && pnpm codecheck` | ✅ | ✅ green |
+| 47-19-T2 | 19 | 1 (gap) | PRICE-01 | Kept rows restored only for same trimmed query + country, under 1h, from results/empty | unit + component | `pnpm exec jest --selectProjects Frontend --runTestsByPath src/frontend/screens/StoreSearch/__tests__/storeSearchSession.test.ts (+ hook, screen) && pnpm codecheck && pnpm lint:src` | ✅ | ✅ green |
+| 47-19-T3 | 19 | 1 (gap) | PRICE-01 | storeSearchSession.ts recorded in the i18n gate scope | gate | `pnpm exec jest --selectProjects Meta --runTestsByPath meta/__tests__/genI18nGateScope.test.ts meta/__tests__/hardcodedStringGate.test.ts` | ✅ | ✅ green |
+| 47-20-T1 | 20 | 1 (gap) | PRICE-01 | SearchBar opts out of spellcheck/autocorrect (G-47-12b) | component | `pnpm exec jest --selectProjects Frontend --runTestsByPath src/frontend/components/UI/SearchBar/__tests__/searchBarTextChecking.test.tsx (+ typing race) && hardcodedStringGate && pnpm codecheck` | ✅ | ✅ green |
+| 47-20-T2 | 20 | 1 (gap) | PRICE-01 | Winetricks searchbox and TextInputField opt out (caller can opt back in) | component | `pnpm exec jest --selectProjects Frontend --runTestsByPath …/WinetricksSettings/__tests__/everythingElse.test.tsx …/TextInputField/__tests__/textInputFieldTextChecking.test.ts && hardcodedStringGate` | ✅ | ✅ green |
+| 47-20-T3 | 20 | 1 (gap) | PRICE-01 | RegionPicker shows the Auto label (displayEmpty, render-level) (G-47-14a) | component | `pnpm exec jest --selectProjects Frontend --runTestsByPath src/frontend/components/UI/RegionPicker/__tests__/RegionPicker.test.tsx && pnpm codecheck` | ✅ | ✅ green |
+| 47-21-T1 | 21 | 1 (gap) | PRICE-01 | Store Search rows use the themeable title plate; 4.5:1 text contrast in all 10 themes (G-47-12c) | unit (stylesheet + tokens) | `pnpm exec jest --selectProjects Frontend --runTestsByPath src/frontend/screens/StoreSearch/__tests__/rowSurfaceTheme.test.ts src/frontend/screens/StoreSearch/__tests__/storeSearchThumbBox.test.ts && pnpm lint:src` | ✅ | ✅ green |
+| 47-21-T2 | 21 | 1 (gap) | PRICE-01 | Deals filter panel gets the same surface and --text-default tints | unit (stylesheet) | `pnpm exec jest --selectProjects Frontend --runTestsByPath src/frontend/screens/StoreSearch/__tests__/rowSurfaceTheme.test.ts && pnpm lint:src` | ✅ | ✅ green |
+| 47-22-T1 | 22 | 2 (gap) | PRICE-01 | Genres/Features controls grow to hold chips; no hover bubble (G-47-14b) | unit (stylesheet + source) | `pnpm exec jest --selectProjects Frontend --runTestsByPath src/frontend/screens/Discounts/components/DiscountFilters/__tests__/filterLayout.test.ts (+ rowSurfaceTheme) && hardcodedStringGate && pnpm codecheck && pnpm lint:src` | ✅ | ✅ green |
+| 47-22-T2 | 22 | 2 (gap) | PRICE-01 | Filters reflow on `@container main-content (max-width: 1239.98px)`, not the viewport (G-47-14c) | unit (stylesheet) | `pnpm exec jest --selectProjects Frontend --runTestsByPath src/frontend/screens/Discounts/components/DiscountFilters/__tests__/filterLayout.test.ts (+ rowSurfaceTheme) && pnpm lint:src` | ✅ | ✅ green |
 
 Requirement coverage: PRICE-01 (every plan), PRICE-02 (01, 05, 06, 07, 08, 09), PRICE-03 (03, 05, 06, 07, 08, 09, 10).
 
@@ -111,6 +121,10 @@ Framework install: none.
 | GOG Store row lit from Deals card, game-page Store link and Stores > GOG Store | PRICE-01 | Live navigation | Plan 47-15 human-check in `pnpm tauri:dev` |
 | Store Search region picker placement and persistence; Deals picker parity and filter reset; NZ cross-screen Auto | PRICE-01 | Visual, both themes | Plans 47-16 / 47-18 human-checks |
 | Store Search art shows whole and rows align | PRICE-01 | Visual; cached rows keep banner145 for up to 1h | Plan 47-17 human-check: restart `pnpm tauri:dev`, fresh 'hades' and 'xcom' searches |
+| Store Search query and rows survive leaving and returning; region change reloads; cleared box returns to the prompt | PRICE-01 | Live navigation in the running app | Plan 47-19 Task 2 human-check in `pnpm tauri:dev` |
+| macOS no longer rewrites a typed word ('xcom') on blur; Auto label paints in the region select | PRICE-01 | WKWebView autocorrect could not be reproduced in a harness; painted Select value | Plan 47-20 human-checks in `pnpm tauri:dev` on macOS |
+| Store Search rows and Deals filter panel are light in light themes | PRICE-01 | WebKit paint, not stylesheet text | Plan 47-21 Task 2 human-check: Nord Light, midnightMirage, gruvbox_dark, dracula |
+| Deals labels do not wrap before the two-column reflow; Genres chips behave on focus | PRICE-01 | WKWebView layout at real widths | Plan 47-22 Task 2 human-check (threshold is English-tuned) |
 
 ---
 
@@ -123,7 +137,7 @@ Framework install: none.
 - [ ] Feedback latency < 60s
 - [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** validated 2026-11-18 (all 18 plans summarized, including gap closure 47-14..47-18; per-task map green; live checks listed under Manual-Only)
+**Approval:** validated 2026-11-19 (all 22 plans summarized, including gap closure 47-14..47-22; per-task map green; live checks listed under Manual-Only)
 
 ## Validation Audit 2026-11-18
 
