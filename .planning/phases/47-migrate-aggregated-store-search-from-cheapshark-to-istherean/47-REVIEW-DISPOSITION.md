@@ -5,15 +5,15 @@ titles: json
 findings:
   - id: WR-01
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Kept rows can be up to ~2 hours old; the \"never older than the cache\" claim is false"
   - id: WR-02
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "First frame of a remount shows the \"Search a title…\" prompt beside a filled search box"
   - id: WR-03
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "`limitTags={2}` plus the removed Tooltip leaves blurred Genres/Features hiding chips; the comment says otherwise"
   - id: IN-01
     severity: info
@@ -39,18 +39,18 @@ findings:
     severity: warning
     disposition: open
     title: "Owned-on-Steam join silently disables itself for libraries over 5000 appids"
-open: 9
+open: 6
 total: 9
-recorded: 2026-11-18T18:58:05.363Z
+recorded: 2026-11-18T23:19:00.735Z
 ---
 
 # Phase 47: Code Review Disposition
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-01 | warning | open | - |
-| WR-02 | warning | open | - |
-| WR-03 | warning | open | - |
+| WR-01 | warning | fixed | 47-REVIEW-FIX.md |
+| WR-02 | warning | fixed | 47-REVIEW-FIX.md |
+| WR-03 | warning | fixed | 47-REVIEW-FIX.md |
 | IN-01 | info | open | - |
 | IN-02 | info | open | - |
 | IN-03 | info | open | - |
