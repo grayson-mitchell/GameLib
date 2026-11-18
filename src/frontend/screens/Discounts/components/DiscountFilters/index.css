@@ -1,10 +1,12 @@
+/* Same theme-safe surface as .storeSearchRow (the title-plate token, not the overlay gradient
+   whose first stop is a hardcoded black): light in light themes (G-47-12c). */
 .discountFilters {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
   margin-bottom: var(--space-md);
   padding: var(--space-md);
-  background: var(--gradient-gamecard, var(--background-darker));
+  background: var(--gamecard-title-color);
   border: 1px solid var(--divider, rgba(255, 255, 255, 0.08));
   border-radius: var(--space-xs);
 }
@@ -42,7 +44,7 @@
 }
 
 .discountFilters__toggle:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: color-mix(in srgb, var(--text-default) 8%, transparent);
   border-color: var(--accent);
   color: var(--accent);
 }
@@ -252,7 +254,7 @@
 .discountFilters__labelMeta {
   padding: 1px var(--space-2xs);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
+  background: color-mix(in srgb, var(--text-default) 12%, transparent);
   color: var(--text-default);
   font-size: calc(var(--text-sm) * 0.9);
   font-weight: var(--semibold);
@@ -335,7 +337,7 @@
 }
 
 .discountFilters__segment:hover:not(.discountFilters__segment--active) {
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: color-mix(in srgb, var(--text-default) 8%, transparent);
   color: var(--text-default);
 }
 
