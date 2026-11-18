@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 47-migrate-aggregated-store-search-from-cheapshark-to-istherean
 source: [47-VERIFICATION.md]
 started: 2026-11-17T23:10:00Z
@@ -192,45 +192,107 @@ blocked: 0
   reason: "User reported: the search does not survive leaving the page (to change theme for example)"
   severity: major
   test: 12
-  artifacts: []
-  missing: []
+  root_cause: "Store Search keeps query, debouncedQuery, results, status, pricedCountry and errorCode in component-local useState (useDebouncedStoreSearch). The store-search leaf route under Root's Outlet (App.tsx:269) unmounts on navigation, so returning remounts it empty; the Stores tab remembers /store-search (quick 261029-n4v tabLocationMemory) so the user lands on a blank screen. Omission since Phase 20, not a regression. Only the region survives (localStorage discounts.regionOverride)."
+  artifacts:
+    - path: "src/frontend/screens/StoreSearch/hooks/useDebouncedStoreSearch.ts"
+      issue: "all search state is plain useState seeded empty (lines 63-72)"
+    - path: "src/frontend/screens/StoreSearch/index.tsx"
+      issue: "consumes the hook; only region is persisted"
+    - path: "src/frontend/App.tsx"
+      issue: "store-search route unmounts on leave (line 269)"
+  missing:
+    - "Module-scope in-memory session store storeSearchSession.ts mirroring Library/librarySessionSearch.ts (no localStorage/sessionStorage: prices go stale after the 1h backend TTL)"
+    - "Seed query (and results/debouncedQuery/pricedCountry plus fetched-for country) in lazy useState initialisers; drop kept results but keep query when country differs"
+    - "Do not flash loading when kept rows are shown; a query under 3 chars clears the kept copy; never keep error status"
+    - "resetStoreSearchSessionForTests() in StoreSearch test beforeEach; source gate that no storage setItem mentions the query"
+  debug_session: ".planning/debug/store-search-query-lost-on-leave.md"
 - gap_id: G-47-12b
   truth: "Search inputs (Store Search and Library) never rewrite the typed query on blur: no OS autocorrect replacement fires when clicking outside the control (e.g. 'xcom' stays 'xcom', not 'com')"
   status: failed
   reason: "User reported: as part of the search testing I have deturmined thee major issue with the auto spell check of the control. if you click outside the control the 'correction' is activated. In library this has the most noticibal effect, you might be about to click on a game when the whole set of tiles change because the search wording changes while you are not even in the control! (xcom is a good example - changes to 'com'"
   severity: major
   test: 12
-  artifacts: []
-  missing: []
+  root_cause: "The shared SearchBar <input> (components/UI/SearchBar/index.tsx:95) sets no spellcheck/autocorrect opt-out, so macOS WKWebView automatic spelling correction (on by default, following NSSpellChecker) commits its correction on blur ('xcom' -> 'com' confirmed via NSSpellChecker on this machine); the commit arrives as a native input event that SearchBar forwards to onInputChanged, rewriting Library filterText / Store Search query. Not app logic; no Tauri/wry switch exists. One fix point covers Library, Store Search, Deals, Wine Manager and Humble Keys."
+  artifacts:
+    - path: "src/frontend/components/UI/SearchBar/index.tsx"
+      issue: "<input> at line 95 lacks spellCheck={false} / autoCorrect=\"off\""
+    - path: "src/frontend/screens/Settings/sections/WinetricksSettings/EverythingElseGroup/index.tsx"
+      issue: "standalone searchbox input (line 93) with same exposure"
+    - path: "src/frontend/components/UI/TextInputField/index.tsx"
+      issue: "22 callers (paths, launch args) with same class of exposure; unreported"
+  missing:
+    - "Add spellCheck={false} and autoCorrect=\"off\" (optionally autoCapitalize=\"off\", autoComplete=\"off\") to the SearchBar input"
+    - "Same on the Winetricks searchbox; decide whether TextInputField should default spellCheck off"
+    - "Attribute-pinning test beside SearchBar/__tests__/searchBarTypingRace.test.ts"
+    - "Live re-check on macOS: type xcom in Library and Store Search, click away, stays xcom (WebKit-source-based claim, not empirically reproduced in harness)"
+  debug_session: ".planning/debug/search-input-autocorrect-on-blur.md"
 - gap_id: G-47-12c
   truth: "In a light theme the Store Search game rows use a light background with legible dark text"
   status: failed
   reason: "User reported: light theme has dark grey game bars, with black text. would expect the game bars to be a light color"
   severity: cosmetic
   test: 12
-  artifacts: []
-  missing: []
+  root_cause: ".storeSearchRow (StoreSearch/index.css:128) uses `background: var(--gradient-gamecard)`, a card-art overlay gradient whose first stop is hardcoded rgba(0,0,0,0.418) (themes.scss:250, _colors.scss:56) that no theme can override, so light themes get a dark-grey band with dark text. Deals cards and Library tiles escape only because they declare background-color: with the gradient (invalid at computed-value time, paints nothing). Phase 20 spec said to match .discountCard; 20-05 wrote the shorthand. Sibling: .discountFilters (DiscountFilters/index.css:7) uses the same shorthand."
+  artifacts:
+    - path: "src/frontend/screens/StoreSearch/index.css"
+      issue: ".storeSearchRow background: var(--gradient-gamecard) (line 128); breakdownItem:hover rgba(255,255,255,0.05) invisible on light"
+    - path: "src/frontend/screens/Discounts/components/DiscountFilters/index.css"
+      issue: ".discountFilters same shorthand (line 7)"
+  missing:
+    - "Replace row surface with a theme-safe token, e.g. background: var(--gamecard-title-color) (Library tile title plate pattern, GameCard/index.css:311), or transparent like Deals cards"
+    - "Same change on .discountFilters"
+    - "Token-based hover tint for .storeSearchRow__breakdownItem:hover"
+    - "Stylesheet source test forbidding --gradient-gamecard as a background: value on row surfaces; check nord-light, dracula, gruvbox_dark, default"
+  debug_session: ".planning/debug/store-search-rows-dark-in-light-theme.md"
 - gap_id: G-47-14a
   truth: "When the region is Auto, the region select displays 'Auto (...)', never a blank value"
   status: failed
   reason: "User reported: 1. Auto select shows as blank"
   severity: major
   test: 14
-  artifacts: []
-  missing: []
+  root_cause: "The shared RegionPicker MUI Select represents Auto as value='' and handles it in renderValue, but displayEmpty is not set; MUI 5.17.1 (SelectInput.js:333-341) only calls renderValue when isFilled(value) || displayEmpty, so for Auto it renders a zero-width-space placeholder. Affects both pickers in every Auto state, including the cross-picker case (NZ chosen on Store Search is not in Deals' REGION_OPTIONS -> null -> ''). Pre-existing since the original Deals picker (927f1565c), copied by 47-16. Test was a false green: it calls renderValue directly without rendering MUI Select. Reproduced via SSR; displayEmpty alone fixes it."
+  artifacts:
+    - path: "src/frontend/components/UI/RegionPicker/index.tsx"
+      issue: "Select (lines 50-67) lacks displayEmpty"
+    - path: "src/frontend/components/UI/RegionPicker/__tests__/RegionPicker.test.tsx"
+      issue: "renderValue test bypasses MUI gate (false green)"
+  missing:
+    - "Add displayEmpty to the RegionPicker Select"
+    - "Render-level regression test via react-dom/server: value=null shows autoLabel, a code shows its label; must fail on current code"
+  debug_session: ".planning/debug/region-picker-auto-shows-blank.md"
 - gap_id: G-47-14b
   truth: "The Deals Genres filter control never crops or re-centres at narrow window widths, and selected genres stay inside the control's box"
   status: failed
   reason: "User reported: 2. windows size formating broken for Genres field control.  if runs out of space the control gets centered and cropped. control should never crop.  also adding more genres starts happening outside of the box!"
   severity: major
   test: 14
-  artifacts: []
-  missing: []
+  root_cause: "The Genres (and Features) multi-value MUI Autocomplete root is forced into `height:40px; overflow:hidden; flex-wrap:nowrap` (DiscountFilters/index.css:269-275) while its chips are unbounded (limitTags only applies when blurred; custom renderTags emits all chips; MUI's own flex-wrap:wrap ties at equal specificity). Focused or narrow, chips wrap/overflow and the browser scrolls the overflow:hidden root to the caret, cropping and shifting chips and scrolling the notched outline away (\"outside of the box\"). Reproduced in headless Chrome with the real component even at vw=1500. Pre-existing since 927f1565c; 47-18 did not touch DiscountFilters."
+  artifacts:
+    - path: "src/frontend/screens/Discounts/components/DiscountFilters/index.css"
+      issue: "fixed height + overflow:hidden + nowrap on .discountFilters__autocomplete .MuiInputBase-root (lines 269-279)"
+    - path: "src/frontend/screens/Discounts/components/DiscountFilters/index.tsx"
+      issue: "MultiSelectChips (lines 85-157): limitTags, custom renderTags, Tooltip duplicate-chip bubble workaround"
+    - path: "src/frontend/screens/Discounts/index.css"
+      issue: "line 35 min-height:40px already a floor"
+  missing:
+    - "Replace with min-height:40px; height:auto; flex-wrap:wrap so the control grows and the outline stays attached (grid is align-items:start)"
+    - "Remove the now-redundant Tooltip chip bubble"
+    - "CSS-contract test: no height+overflow:hidden pair on that selector"
+  debug_session: ".planning/debug/deals-genres-control-crops.md"
 - gap_id: G-47-14c
   truth: "As the window narrows, the Deals filters reflow to the 2x2 layout before any filter label (e.g. 'Operating system', 'Suitable for age') wraps onto two lines and pushes its control down"
   status: failed
   reason: "User reported: 3. when you shrink the window the longer titles \"operating system\" and \"suitable for age\" move to being over two lines and those two controls move down, making for ugly look.  byt that stage horizontal room makes everying thing look very cramped anyhow.  If you horizontaly shrink just a bit more then the filters split to a 2 by 2 model.  this should happen before those two titles are split over 2 lines."
   severity: cosmetic
   test: 14
-  artifacts: []
-  missing: []
+  root_cause: "The 6->2 column reflow is a viewport media query (`max-width:1100px`, DiscountFilters/index.css:217-231) but the grid width is vw-322 (256px NavShell tier-2 + paddings/border), so the weighted 6-col tracks squeeze Operating system / Suitable for age labels into wrapping from vw ~1455 down to the 1100 switch (~350px band containing the default 1280 window). Breakpoints unchanged since upstream 927f1565c; never re-based for the tier-2 panel. Measured in real WKWebView (synthetic-bold Cabin widens labels); worst case PEGI label needs grid >= ~1130 (content >= ~1200)."
+  artifacts:
+    - path: "src/frontend/screens/Discounts/components/DiscountFilters/index.css"
+      issue: "grid tracks and viewport media queries (lines 198-231)"
+    - path: "src/frontend/App.css"
+      issue: "existing container main-content / inline-size on .App .content (line 61)"
+  missing:
+    - "Replace the 1100px media rule with @container main-content (max-width: 1239.98px) switching inputs and sliders rows to repeat(2, minmax(0,1fr)) (or a local dfilters container at 1169.98px); validated in WKWebView: no label wraps 900-1561"
+    - "Leave/delete the unreachable 700px rule; do not convert it to a container query"
+    - "Optional: fixed label row height / subgrid for long-locale labels"
+  debug_session: ".planning/debug/deals-filters-reflow-breakpoint.md"
