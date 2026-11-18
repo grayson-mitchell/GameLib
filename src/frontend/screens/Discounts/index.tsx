@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { MenuItem, Select } from '@mui/material'
 
 import { UpdateComponent } from 'frontend/components/UI'
+import RegionPicker from 'frontend/components/UI/RegionPicker'
 import type {
   CatalogFeature,
   CatalogGenre,
@@ -566,65 +566,21 @@ export default function Discounts() {
           {t('discounts.title', 'GOG Deals')}
         </h2>
 
-        <div className="discountsScreen__region">
-          <label
-            className="discountsScreen__regionLabel"
-            htmlFor="discountsScreen__regionSelect"
-          >
-            {t('discounts.region.label', 'Store region')}
-          </label>
-          <Select
-            id="discountsScreen__regionSelect"
-            size="small"
-            value={regionOverride ?? ''}
-            onChange={(e) => {
-              const value = e.target.value
-              handleRegionChange(value === '' ? null : value)
-            }}
-            className="discountsScreen__regionSelect"
-            renderValue={(value) => {
-              if (!value) {
-                return t('discounts.region.auto', 'Auto ({{code}})', {
-                  code: `${localeSettings.countryCode} · ${localeSettings.currencyCode}`
-                })
-              }
-              const match = REGION_OPTIONS.find((r) => r.countryCode === value)
-              if (!match) return value
-              const label = t(
-                `discounts.region.countries.${match.countryCode}`,
-                match.label
-              )
-              return `${label} · ${match.currencyCode}`
-            }}
-          >
-            <MenuItem value="">
-              {t('discounts.region.auto', 'Auto ({{code}})', {
-                code: `${localeSettings.countryCode} · ${localeSettings.currencyCode}`
-              })}
-            </MenuItem>
-            {REGION_OPTIONS.map((r) => ({
-              ...r,
-              localizedLabel: t(
-                `discounts.region.countries.${r.countryCode}`,
-                r.label
-              )
-            }))
-              .sort((a, b) =>
-                a.localizedLabel.localeCompare(
-                  b.localizedLabel,
-                  i18n.language.replace('_', '-')
-                )
-              )
-              .map((r) => (
-                <MenuItem key={r.countryCode} value={r.countryCode}>
-                  {r.localizedLabel}
-                  <span className="discountsScreen__regionCurrency">
-                    {r.currencyCode}
-                  </span>
-                </MenuItem>
-              ))}
-          </Select>
-        </div>
+        <RegionPicker
+          id="discountsScreen__regionSelect"
+          label={t('discounts.region.label', 'Store region')}
+          value={regionOverride}
+          autoLabel={t('discounts.region.auto', 'Auto ({{code}})', {
+            code: `${localeSettings.countryCode} · ${localeSettings.currencyCode}`
+          })}
+          options={REGION_OPTIONS.map((r) => ({
+            countryCode: r.countryCode,
+            currencyCode: r.currencyCode,
+            label: t(`discounts.region.countries.${r.countryCode}`, r.label)
+          }))}
+          onChange={handleRegionChange}
+          locale={i18n.language.replace('_', '-')}
+        />
       </div>
 
       {loading && (

@@ -24,32 +24,6 @@
   font-size: var(--text-2xl);
 }
 
-.discountsScreen__region {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2xs);
-  min-width: 0;
-}
-
-.discountsScreen__regionLabel {
-  font-size: var(--text-sm);
-  font-weight: var(--semibold);
-  color: var(--text-secondary);
-  letter-spacing: 0.01em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.discountsScreen__regionSelect.MuiInputBase-root {
-  min-width: 220px;
-}
-
-.discountsScreen__regionSelect .MuiSelect-select {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2xs);
-}
-
 /* Shared MUI outlined-input appearance for all inputs in the Discounts screen.
    Keeps per-component styles from each re-declaring the same overrides. */
 .discountsScreen .MuiOutlinedInput-root {
@@ -70,27 +44,6 @@
   .MuiOutlinedInput-notchedOutline {
   border-color: var(--accent);
   border-width: 1px;
-}
-
-.discountsScreen__regionCurrency {
-  margin-left: auto;
-  padding: 1px var(--space-2xs);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--text-secondary);
-  font-size: calc(var(--text-sm) * 0.85);
-  font-weight: var(--semibold);
-  letter-spacing: 0.02em;
-}
-
-@media (max-width: 700px) {
-  .discountsScreen__region {
-    width: 100%;
-  }
-
-  .discountsScreen__regionSelect.MuiInputBase-root {
-    flex: 1;
-  }
 }
 
 .discountsScreen__grid {
