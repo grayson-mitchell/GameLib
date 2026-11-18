@@ -65,6 +65,12 @@ const TextInputField = ({
         id={htmlId}
         value={value}
         ref={input}
+        // These fields hold paths, launch arguments, API keys and titles, and
+        // macOS WKWebView would otherwise commit an invisible autocorrection
+        // when the field loses focus (G-47-12b). Placed before the spread so
+        // a caller can opt back in.
+        spellCheck={false}
+        autoCorrect="off"
         {...inputProps}
         // passing this dummy onChange function to avoid a React warning
         // we are handling the change with the eventListener above

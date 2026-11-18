@@ -94,6 +94,10 @@ export default function EverythingElseGroup({
                 type="text"
                 role="searchbox"
                 autoComplete="off"
+                // macOS WKWebView commits an invisible autocorrection of the
+                // typed word when this field loses focus (G-47-12b).
+                spellCheck={false}
+                autoCorrect="off"
                 className="WinetricksEverythingElse__input"
                 value={query}
                 placeholder={searchLabel}
