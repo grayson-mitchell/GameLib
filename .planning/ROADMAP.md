@@ -174,7 +174,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 79: Rust CM client replacing steam-user and steam-session** — 44 plans in 21 waves; planned (spike 085 gate satisfied) (completed 2026-11-15)
 - [x] **Phase 80: Steam install, uninstall and update polling state machines in Rust** — 33 plans; planned (completed 2026-11-16)
 - [ ] **Phase 81: Unify the Steam restart hold into restart-on-Play** — 20 plans; planned
-- [ ] **Phase 47: Migrate aggregated store search from CheapShark to IsThereAnyDeal** — 18 plans (13 + 5 gap closure from UAT 2026-11-18); ITAD gates closed 2026-11-12; planned 2026-11-14 (moved from v0.8)
+- [ ] **Phase 47: Migrate aggregated store search from CheapShark to IsThereAnyDeal** — 22 plans (13 + 5 gap closure from UAT 2026-11-18 + 4 from UAT 2026-11-19); ITAD gates closed 2026-11-12; planned 2026-11-14 (moved from v0.8)
 
 **v0.11 Node Sidecar Retirement** (planned 2026-11-17; requirements `REQUIREMENTS-v0.11.md`)
 
@@ -1533,7 +1533,7 @@ Plans:
 
 **Requirements**: PRICE-01, PRICE-02, PRICE-03 (phase-level IDs minted during `/gsd-plan-phase 47`). Moved into v0.10 Foundations 2026-11-12.
 **Depends on:** Phase 20 (Aggregated Store Search — CheapShark), which minted the provider-neutral `common/types/storeSearch` vocabulary (D-11/D-12/D-13) this phase is the second implementation of. **Not** Phase 46 — `phase.add` fills `Depends on` with the immediately-preceding phase number as a positional guess, and Phase 46 (Windows single-instance guard) is unrelated; corrected by hand at filing time.
-**Plans:** 18/18 plans executed
+**Plans:** 18/22 plans executed
 
 **Research is already complete** — `.planning/quick/260916-gdg-answer-q2-cheapshark-to-itad-migration-cost/260916-gdg-RESEARCH.md` answers `questions.md` Q2 with claims graded MEASURED / SPEC / UNKNOWN. Do not re-derive it; do preserve its grades when quoting.
 
@@ -1605,6 +1605,16 @@ Plans:
 
 - [x] 47-17-PLAN.md — Landscape Store Search thumbnail, banner300 first, contain fit (G-47-7)
 - [x] 47-18-PLAN.md — Deals adopts the shared RegionPicker (G-47-8)
+
+**Gap closure 2 (UAT 2026-11-19, `47-UAT.md` G-47-12a..c, G-47-14a..c)** — Wave 1:
+
+- [ ] 47-19-PLAN.md — Store Search keeps its query and rows across leaving and returning, in session memory only (G-47-12a)
+- [ ] 47-20-PLAN.md — Search and text inputs opt out of macOS on-blur autocorrect (G-47-12b); region picker shows its Auto label (G-47-14a)
+- [ ] 47-21-PLAN.md — Theme-safe Store Search row and Deals filter panel surfaces and tints (G-47-12c)
+
+**Gap closure 2 Wave 2** *(blocked on 47-21)*
+
+- [ ] 47-22-PLAN.md — Deals Genres/Features controls grow to hold their chips; filters reflow on the content width (G-47-14b, G-47-14c)
 
 ### Phase 76: Engine-correct bottle for DRM-mode launches (v0.9 audit S9)
 
