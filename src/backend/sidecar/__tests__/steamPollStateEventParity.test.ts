@@ -40,7 +40,6 @@ const KINDS: Record<SteamPollStateEvent['kind'], true> = {
   bridgeUninstalled: true,
   forcedWindowsViaBottleCleared: true,
   macArchVerdict: true,
-  rearmSettled: true,
   adoptionState: true
 }
 
@@ -87,8 +86,7 @@ describe('steamPollStateEvent wire parity with gamelib-steampoll', () => {
           if (channel === 'steamPollStateEvent') handler = h
         }
       } as never,
-      manager: () => deps,
-      refreshInstallState: () => Promise.resolve()
+      manager: () => deps
     })
     for (const ev of producerEvents()) {
       const reply = await handler!({}, ev)

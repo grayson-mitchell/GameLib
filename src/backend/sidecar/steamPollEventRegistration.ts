@@ -5,7 +5,7 @@
  *   invoke (ipcMain.handle, 1):
  *     - `steamPollStateEvent` -> applies one state event (installed, installIncomplete,
  *       updateDone, uninstalled, bridgeUninstalled, forcedWindowsViaBottleCleared,
- *       macArchVerdict, rearmSettled, adoptionState) by calling the EXISTING TS functions, and replies
+ *       macArchVerdict, adoptionState) by calling the EXISTING TS functions, and replies
  *       `{applied, title?, macArchCheck?, bridgeAuthoritative?}` (gamelib-steampoll `AckReply`).
  *
  * `caller: 'shell'` (sidecarInternal.ts): it never reaches the renderer surface, and the payload
@@ -130,8 +130,7 @@ function applyUninstalled(deps: ManagerDeps, ev: UninstalledEvent): void {
 
 async function applyEvent(
   deps: ManagerDeps,
-  ev: SteamPollStateEvent,
-  refreshInstallState: () => Promise<void>
+  ev: SteamPollStateEvent
 ): Promise<PollAckReply> {
   const titleOf = (appId: string) =>
     deps.steamSession.libraryState.library.get(appId)?.title ?? ''
@@ -181,20 +180,6 @@ async function applyEvent(
     case 'macArchVerdict':
       await applyMacArchVerdict(deps, ev.appId, ev.verdict)
       return { applied: true, title: titleOf(ev.appId) }
-    case 'rearmSettled':
-      // Acked at once, the reconcile runs detached (80-REVIEW C-WR-08): a full reconcile at boot
-      // can outlast the shell's ack bound, and an unacked rearmSettled is re-sent every 10 s,
-      // reconciling again each time. Nothing in Rust waits on the reconcile.
-      if (ev.needsReconcile) {
-        void refreshInstallState().catch((err: unknown) => {
-          const name = err instanceof Error ? err.name : typeof err
-          logWarning(
-            `steamPollStateEvent rearmSettled reconcile failed (${name})`,
-            LogPrefix.Steam
-          )
-        })
-      }
-      return { applied: true }
     case 'adoptionState':
       // Phase 81 D-03: store the watch's signed-in reading and push the page status once; the
       // note switches between "restart once" and "Sign in to Steam" without a reload.
@@ -253,7 +238,6 @@ export function registerSteamPollEventFlows(deps: {
   ipc: Pick<IpcRegistry, 'handle'>
   /** Built per call: ManagerDeps is assembled from services at call time. */
   manager: () => ManagerDeps
-  refreshInstallState: () => Promise<void>
 }): void {
   const seqGuard = createSeqGuard()
   deps.ipc.handle(
@@ -265,26 +249,16 @@ export function registerSteamPollEventFlows(deps: {
           // Consumed, not applied: a newer event for the same state already landed.
           const manager = deps.manager()
           const title =
-            'appId' in ev
-              ? (manager.steamSession.libraryState.library.get(ev.appId)
-                  ?.title ?? '')
-              : undefined
-          return title === undefined
-            ? { applied: true }
-            : { applied: true, title }
+            manager.steamSession.libraryState.library.get(ev.appId)?.title ?? ''
+          return { applied: true, title }
         }
-        const reply = await applyEvent(
-          deps.manager(),
-          ev,
-          deps.refreshInstallState
-        )
+        const reply = await applyEvent(deps.manager(), ev)
         if (reply.applied) seqGuard.noteApplied(ev)
         return reply
       } catch (err) {
         const name = err instanceof Error ? err.name : typeof err
-        const appId = 'appId' in ev ? ev.appId : '?'
         logWarning(
-          `steamPollStateEvent failed for app ${appId} kind ${ev.kind} (${name})`,
+          `steamPollStateEvent failed for app ${ev.appId} kind ${ev.kind} (${name})`,
           LogPrefix.Steam
         )
         return { applied: false }

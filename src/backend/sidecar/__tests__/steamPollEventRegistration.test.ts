@@ -4,6 +4,7 @@
  */
 import * as logger from 'backend/logger'
 
+import { validateInbound } from '../ipcValidation'
 import { createTestManagerDeps } from 'backend/testUtils/testServices'
 import { isMac } from 'backend/constants/environment'
 import { installPlatformForSource } from '../../storeManagers/steam/library/installRoot'
@@ -42,19 +43,17 @@ function setup(seed: SteamGameInfo | null = game()) {
   })
   if (seed) deps.steamSession.libraryState.library.set(seed.app_name, seed)
   let handler: Handler | undefined
-  const refreshInstallState = jest.fn(() => Promise.resolve(undefined))
   registerSteamPollEventFlows({
     ipc: {
       handle: (channel: string, h: Handler) => {
         if (channel === 'steamPollStateEvent') handler = h
       }
     } as never,
-    manager: () => deps,
-    refreshInstallState
+    manager: () => deps
   })
   const send = (ev: SteamPollStateEvent) => handler!({}, ev)
   const entry = () => deps.steamSession.libraryState.library.get('480')
-  return { deps, sent, send, entry, refreshInstallState }
+  return { deps, sent, send, entry }
 }
 
 const installed: SteamPollStateEvent = {
@@ -218,43 +217,11 @@ describe('steamPollStateEvent handler', () => {
     expect(entry()?.mac_arch).toBe('64')
   })
 
-  test('rearmSettled reconciles only when needsReconcile', async () => {
-    const { send, refreshInstallState } = setup()
-    await send({ kind: 'rearmSettled', seq: 10, needsReconcile: false })
-    expect(refreshInstallState).not.toHaveBeenCalled()
-    await send({ kind: 'rearmSettled', seq: 11, needsReconcile: true })
-    expect(refreshInstallState).toHaveBeenCalledTimes(1)
-  })
-
-  test('C-WR-08 rearmSettled acks before the reconcile finishes, and a failed reconcile is logged', async () => {
-    const { send, refreshInstallState } = setup()
-    let finish!: () => void
-    refreshInstallState.mockImplementationOnce(
-      () =>
-        new Promise<undefined>((r) => {
-          finish = () => r(undefined)
-        })
-    )
-    const reply = await send({
-      kind: 'rearmSettled',
-      seq: 1,
-      needsReconcile: true
-    })
-    expect(reply).toEqual({ applied: true })
-    expect(refreshInstallState).toHaveBeenCalledTimes(1)
-    finish()
-
-    refreshInstallState.mockImplementationOnce(() =>
-      Promise.reject(new Error('scan failed'))
-    )
-    expect(
-      await send({ kind: 'rearmSettled', seq: 2, needsReconcile: true })
-    ).toEqual({ applied: true })
-    await new Promise((r) => setImmediate(r))
-    expect(logger.logWarning).toHaveBeenCalledWith(
-      expect.stringContaining('rearmSettled reconcile failed'),
-      expect.anything()
-    )
+  test('D-11: a rearmSettled payload is rejected by the inbound schema (the boot re-arm is gone)', () => {
+    const verdict = validateInbound('steamPollStateEvent', 'invoke', [
+      { kind: 'rearmSettled', seq: 10, needsReconcile: true }
+    ])
+    expect(verdict.ok).toBe(false)
   })
 
   test('C-WR-08 a raw empty or non-numeric sizeOnDisk is stored as 0 bytes', async () => {

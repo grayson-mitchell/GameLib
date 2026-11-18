@@ -174,7 +174,7 @@ fn uninstalled_ev(app_id: &str, seq: u64) -> StateEvent {
 fn state_transition(event: StateEvent) -> Effect {
     Effect::Transition {
         then: Continuation::UpdateDone {
-            app_id: event.app_id().unwrap_or("").into(),
+            app_id: event.app_id().into(),
             completed: false,
         },
         event,

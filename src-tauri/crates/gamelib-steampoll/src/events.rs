@@ -63,9 +63,6 @@ pub enum StateEvent {
         seq: u64,
         verdict: String,
     },
-    /// Boot rearm finished. `needsReconcile` => the sidecar runs its library reconcile.
-    #[serde(rename = "rearmSettled", rename_all = "camelCase")]
-    RearmSettled { seq: u64, needs_reconcile: bool },
     /// D-07: Steam adopted (or has not adopted) a GameLib-written install; `signedIn` is the
     /// latest signed-in reading, None when unknown.
     #[serde(rename = "adoptionState", rename_all = "camelCase")]
@@ -77,7 +74,7 @@ pub enum StateEvent {
     },
 }
 
-/// Outbox latest-wins key: (appId, kind). `rearmSettled` uses an empty appId.
+/// Outbox latest-wins key: (appId, kind). Every event carries an appId.
 pub type StateEventKey = (String, &'static str);
 
 impl StateEvent {
@@ -90,12 +87,11 @@ impl StateEvent {
             StateEvent::BridgeUninstalled { .. } => "bridgeUninstalled",
             StateEvent::ForcedWindowsViaBottleCleared { .. } => "forcedWindowsViaBottleCleared",
             StateEvent::MacArchVerdict { .. } => "macArchVerdict",
-            StateEvent::RearmSettled { .. } => "rearmSettled",
             StateEvent::AdoptionState { .. } => "adoptionState",
         }
     }
 
-    pub fn app_id(&self) -> Option<&str> {
+    pub fn app_id(&self) -> &str {
         match self {
             StateEvent::Installed { app_id, .. }
             | StateEvent::InstallIncomplete { app_id, .. }
@@ -104,8 +100,7 @@ impl StateEvent {
             | StateEvent::BridgeUninstalled { app_id, .. }
             | StateEvent::ForcedWindowsViaBottleCleared { app_id, .. }
             | StateEvent::MacArchVerdict { app_id, .. }
-            | StateEvent::AdoptionState { app_id, .. } => Some(app_id),
-            StateEvent::RearmSettled { .. } => None,
+            | StateEvent::AdoptionState { app_id, .. } => app_id,
         }
     }
 
@@ -118,13 +113,12 @@ impl StateEvent {
             | StateEvent::BridgeUninstalled { seq, .. }
             | StateEvent::ForcedWindowsViaBottleCleared { seq, .. }
             | StateEvent::MacArchVerdict { seq, .. }
-            | StateEvent::RearmSettled { seq, .. }
             | StateEvent::AdoptionState { seq, .. } => *seq,
         }
     }
 
     pub fn key(&self) -> StateEventKey {
-        (self.app_id().unwrap_or("").to_string(), self.kind())
+        (self.app_id().to_string(), self.kind())
     }
 }
 

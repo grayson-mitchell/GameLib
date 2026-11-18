@@ -96,12 +96,13 @@ const invokeTable: FixtureTable<typeof sidecarInternalInvokeArgs> = {
           buildid: null
         }
       ],
-      [{ kind: 'rearmSettled', seq: 2, needsReconcile: true }],
       [{ kind: 'macArchVerdict', appId: '480', seq: 3, verdict: '64' }]
     ],
     invalid: [
       [],
       [{ kind: 'bogus', appId: '480', seq: 1 }],
+      // Phase 81 D-11: the boot re-arm is gone, so its event is no longer a kind.
+      [{ kind: 'rearmSettled', seq: 2, needsReconcile: true }],
       [{ kind: 'installIncomplete', appId: 'abc', seq: 1 }],
       [{ kind: 'installIncomplete', appId: '480', seq: 1, extra: 1 }],
       [{ kind: 'macArchVerdict', appId: '480', seq: 3, verdict: '16' }]

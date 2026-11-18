@@ -79,11 +79,6 @@
     "verdict": "64"
   },
   {
-    "kind": "rearmSettled",
-    "seq": 12,
-    "needsReconcile": true
-  },
-  {
     "kind": "adoptionState",
     "appId": "480",
     "seq": 13,

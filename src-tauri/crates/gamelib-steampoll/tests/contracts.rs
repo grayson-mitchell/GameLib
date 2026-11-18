@@ -98,13 +98,6 @@ fn state_events_serialise_to_the_camelcase_wire_shape() {
             },
             json!({"kind":"macArchVerdict","appId":"10","seq":7,"verdict":"32"}),
         ),
-        (
-            StateEvent::RearmSettled {
-                seq: 8,
-                needs_reconcile: false,
-            },
-            json!({"kind":"rearmSettled","seq":8,"needsReconcile":false}),
-        ),
     ];
     for (ev, wire) in cases {
         assert_eq!(serde_json::to_value(&ev).unwrap(), wire);
@@ -306,10 +299,6 @@ fn state_event_wire_fixture_matches_every_variant() {
             seq: 11,
             verdict: "64".into(),
         },
-        StateEvent::RearmSettled {
-            seq: 12,
-            needs_reconcile: true,
-        },
         StateEvent::AdoptionState {
             app_id: "480".into(),
             seq: 13,
@@ -325,7 +314,7 @@ fn state_event_wire_fixture_matches_every_variant() {
     ];
     // Every kind is covered.
     let kinds: std::collections::BTreeSet<&str> = events.iter().map(StateEvent::kind).collect();
-    assert_eq!(kinds.len(), 9);
+    assert_eq!(kinds.len(), 8);
 
     let wire = serde_json::to_string_pretty(&events).unwrap() + "\n";
     let path =

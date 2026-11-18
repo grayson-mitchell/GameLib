@@ -59,8 +59,9 @@ export default class SteamLibraryManager implements LibraryManager {
       )
     }
 
-    // quick 261029-pkp / D-09: the shell re-arms persisted "Restart Steam to finish" holds at
-    // start and the reconcile arrives as rearmSettled.
+    // quick 261029-pkp / D-09: the shell used to re-arm persisted "Restart Steam to finish" holds
+    // at start. Phase 81 removed that re-arm; boot migrates any hold an older build persisted into
+    // a watched pending-adoption record (adoptionWatch.migrateRestartHolds) and no hold survives.
 
     // steam-startup-resume-crash (2026-07-18) / D-04 softened: DETECT any
     // in-progress download left on disk (D-07) and SURFACE it as resumable —

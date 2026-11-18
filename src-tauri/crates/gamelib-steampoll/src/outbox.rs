@@ -108,9 +108,7 @@ impl Outbox {
         if !is_install_state_kind(ev.kind()) {
             return false;
         }
-        let Some(app_id) = ev.app_id() else {
-            return false;
-        };
+        let app_id = ev.app_id();
         self.applied_state_seq
             .lock()
             .unwrap_or_else(|e| e.into_inner())
@@ -126,23 +124,22 @@ impl Outbox {
         let key = ev.key();
         let install_state = is_install_state_kind(ev.kind());
         if install_state {
-            if let Some(app_id) = ev.app_id() {
-                let mut applied = self
-                    .applied_state_seq
-                    .lock()
-                    .unwrap_or_else(|e| e.into_inner());
-                let slot = applied.entry(app_id.to_string()).or_insert(0);
-                *slot = (*slot).max(seq);
-                while applied.len() > MAX_APPLIED_SEQ_APP_IDS {
-                    let Some(oldest) = applied
-                        .iter()
-                        .min_by_key(|(_, s)| **s)
-                        .map(|(k, _)| k.clone())
-                    else {
-                        break;
-                    };
-                    applied.remove(&oldest);
-                }
+            let app_id = ev.app_id();
+            let mut applied = self
+                .applied_state_seq
+                .lock()
+                .unwrap_or_else(|e| e.into_inner());
+            let slot = applied.entry(app_id.to_string()).or_insert(0);
+            *slot = (*slot).max(seq);
+            while applied.len() > MAX_APPLIED_SEQ_APP_IDS {
+                let Some(oldest) = applied
+                    .iter()
+                    .min_by_key(|(_, s)| **s)
+                    .map(|(k, _)| k.clone())
+                else {
+                    break;
+                };
+                applied.remove(&oldest);
             }
         }
         let mut q = self.queue.lock().unwrap_or_else(|e| e.into_inner());
@@ -163,7 +160,7 @@ impl Outbox {
         if self.superseded_by_applied(&ev) {
             self.log(format!(
                 "appId {} kind {}: superseded by a newer applied event, not queued",
-                ev.app_id().unwrap_or(""),
+                ev.app_id(),
                 ev.kind()
             ));
             return;
@@ -196,7 +193,7 @@ impl Outbox {
                 let Some(oldest) = q.values().min_by_key(|e| e.seq()) else {
                     break;
                 };
-                let victim = oldest.app_id().unwrap_or("").to_string();
+                let victim = oldest.app_id().to_string();
                 q.retain(|k, _| k.0 != victim);
                 dropped.push(victim);
             }
@@ -308,7 +305,7 @@ pub async fn apply_effects_with(
                         None => {
                             outbox.log(format!(
                                 "appId {} kind {}: ack timeout",
-                                event.app_id().unwrap_or(""),
+                                event.app_id(),
                                 event.kind()
                             ));
                             AckReply::not_acked()

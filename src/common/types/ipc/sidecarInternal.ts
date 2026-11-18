@@ -145,12 +145,6 @@ const steamPollStateEvent = z.discriminatedUnion('kind', [
     kind: z.literal('macArchVerdict'),
     verdict: z.enum(['32', '64'])
   }),
-  // rearmSettled has no appId.
-  z.strictObject({
-    seq: count,
-    kind: z.literal('rearmSettled'),
-    needsReconcile: z.boolean()
-  }),
   // Phase 81 D-07: Steam adopted (or has not adopted) a GameLib-written install. `signedIn` is
   // the latest signed-in reading, null when unknown.
   z.strictObject({
