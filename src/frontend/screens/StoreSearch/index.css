@@ -120,12 +120,16 @@
   outline: none;
 }
 
+/* The row surface is the Library tile title-plate token: every built-in theme sets it (light in
+   Nord Light) and the theme editor exposes it. The card-art overlay gradient used before has a
+   hardcoded black first stop, so light themes got a dark band under dark text (G-47-12c).
+   rowSurfaceTheme.test.ts measures the text contrast in every built-in theme. */
 .storeSearchRow {
   display: flex;
   align-items: center;
   gap: var(--space-md);
   padding: var(--space-sm) var(--space-md);
-  background: var(--gradient-gamecard);
+  background: var(--gamecard-title-color);
   border-radius: var(--space-3xs);
   /* UI-SPEC-specified shadow value, matches .discountCard's shadow exactly. */
   box-shadow: 0px 0px 12px 4px #00000055;
@@ -275,8 +279,9 @@
 
 .storeSearchRow__breakdownItem:hover,
 .storeSearchRow__breakdownItem:focus-visible {
-  /* UI-SPEC-specified hover value, matches .discountFilters__toggle:hover. */
-  background: rgba(255, 255, 255, 0.05);
+  /* A tint of the theme's own text colour, so the hover shows on light and dark surfaces alike
+     (G-47-12c). */
+  background: color-mix(in srgb, var(--text-default) 8%, transparent);
   outline: none;
 }
 
