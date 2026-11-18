@@ -1,152 +1,124 @@
 ---
 phase: 47-migrate-aggregated-store-search-from-cheapshark-to-istherean
-reviewed: 2026-11-17T00:00:00Z
+reviewed: 2026-11-18T00:00:00Z
 depth: standard
-files_reviewed: 40
+files_reviewed: 31
 files_reviewed_list:
-  - .github/workflows/release-tauri.yml
-  - meta/buildSidecar.ts
-  - meta/buildSidecarSea.ts
-  - meta/esbuildWorkerBundleShared.ts
-  - meta/measureItadCoverage.ts
-  - src-tauri/src/ipc_contract.rs
-  - src-tauri/src/main.rs
-  - src/backend/miscRuntime.ts
-  - src/backend/services/types.ts
-  - src/backend/sidecar/bootstrap.ts
-  - src/backend/sidecar/devSecretVault.ts
-  - src/backend/sidecar/enrichmentFlowRegistration.ts
-  - src/backend/sidecar/gameDetailsFlowRegistration.ts
-  - src/backend/sidecar/handlers.ts
-  - src/backend/sidecar/itadSecretStore.ts
-  - src/backend/sidecar/keyringTokenStore.ts
-  - src/backend/storeSearch/handlers.ts
+  - meta/__tests__/genI18nGateScope.test.ts
+  - meta/i18nForkTouchedFiles.json
+  - meta/i18nGateScope.json
+  - public/locales/en/translation.json
+  - src-tauri/src/store_embed/controls.rs
+  - src-tauri/src/store_embed/open.rs
+  - src-tauri/src/store_embed/state.rs
+  - src/backend/storeSearch/__tests__/itad.test.ts
   - src/backend/storeSearch/itad.ts
-  - src/backend/storeSearch/itadCache.ts
-  - src/backend/storeSearch/itadCoverage.ts
-  - src/backend/storeSearch/itadKey.ts
-  - src/backend/storeSearch/itadSecrets.ts
-  - src/backend/storeSearch/stores.ts
-  - src/backend/stores/createStores.ts
-  - src/backend/testUtils/testMiscRuntime.ts
-  - src/backend/testUtils/testServices.ts
-  - src/common/discounts/storeMapping.ts
-  - src/common/types/ipc/enrichment.ts
-  - src/common/types/storeSearch.ts
-  - src/frontend/screens/Settings/components/ItadApiKey.tsx
-  - src/frontend/screens/Settings/components/index.ts
-  - src/frontend/screens/Settings/sections/AdvancedSettings/index.tsx
-  - src/frontend/screens/StoreSearch/components/StoreSearchBreakdown/index.tsx
-  - src/frontend/screens/StoreSearch/components/StoreSearchRow/index.tsx
-  - src/frontend/screens/StoreSearch/helpers.ts
-  - src/frontend/screens/StoreSearch/hooks/useDebouncedStoreSearch.ts
-  - src/frontend/screens/StoreSearch/hooks/useOwnedSteamGids.ts
+  - src/frontend/components/UI/NavShell/__tests__/NavShell.test.tsx
+  - src/frontend/components/UI/NavShell/__tests__/StoresPanel.test.tsx
+  - src/frontend/components/UI/NavShell/__tests__/navTabs.test.ts
+  - src/frontend/components/UI/NavShell/components/StoresPanel/index.tsx
+  - src/frontend/components/UI/NavShell/index.tsx
+  - src/frontend/components/UI/NavShell/navTabs.ts
+  - src/frontend/components/UI/RegionPicker/__tests__/RegionPicker.test.tsx
+  - src/frontend/components/UI/RegionPicker/index.css
+  - src/frontend/components/UI/RegionPicker/index.tsx
+  - src/frontend/helpers/__tests__/storeRegion.test.ts
+  - src/frontend/helpers/storeRegion.ts
+  - src/frontend/screens/Discounts/helpers.ts
+  - src/frontend/screens/Discounts/index.css
+  - src/frontend/screens/Discounts/index.tsx
+  - src/frontend/screens/StoreSearch/__tests__/StoreSearchScreen.test.tsx
+  - src/frontend/screens/StoreSearch/__tests__/storeSearchThumbBox.test.ts
   - src/frontend/screens/StoreSearch/index.css
   - src/frontend/screens/StoreSearch/index.tsx
-  - src/preload/api/storeSearch.ts
+  - src/frontend/screens/WebView/components/StoreEmbedTimeoutBanner.tsx
+  - src/frontend/screens/WebView/components/__tests__/StoreEmbedTimeoutBanner.test.tsx
+  - src/frontend/screens/WebView/index.tsx
+  - src/frontend/screens/WebView/useStoreEmbedHost.ts
 findings:
   critical: 0
-  warning: 5
-  info: 4
-  total: 9
+  warning: 3
+  info: 2
+  total: 5
   necessity: 1
 status: issues_found
 ---
 
-# Phase 47: Code Review Report
+# Phase 47: Code Review Report (gap-closure round, plans 47-14..47-18)
 
-**Reviewed:** 2026-11-17
-**Depth:** standard
-**Files Reviewed:** 40 (phase-47 hunks only for the shared files)
+**Reviewed:** 2026-11-18
+**Depth:** standard (incremental: `git diff d4278f3a4..HEAD` over the 31 scoped paths)
+**Files Reviewed:** 31
 **Status:** issues_found
+
+The prior round's review lives in git history at `aa2e10ee1` (dispositions in `47-REVIEW-DISPOSITION.md`).
 
 ## Summary
 
-Scope was limited to phase-47 commits (git log `--grep='^[a-z]*(47-NN)'`). The key-handling surface is sound: the built-in key is baked via an esbuild `--define` that is never logged, the release workflow secret is step-scoped and used with `test -n` only, the adapter logs `{endpoint,status}` and never the axios error or config, `StoreSearchError` messages carry only a marker, an endpoint label and a status, and `itad.getKeyStatus` returns two booleans. No key-shaped strings were found in the committed fixtures, the coverage JSON or the summaries. The 429 gate is timestamp-only with no timers or handles, so the sidecar exit contract holds. Zod schemas bound every new channel (gid regex, digits-only appids with max 5000, key max 256, country max 16 with a handler-side `^[A-Z]{2}$` normalisation). Stale-cache fallback with `cachedAt` is correct for 429, network and 5xx.
+This round covers G-47-6 (store-page deep link lights the owning store row), G-47-7 (Store Search thumbnail box), G-47-8 (shared RegionPicker plus a Store Search region picker), G-47-9 (offline first-load crash guard plus offline banner) and two i18n gate-scope commits.
 
-No Critical findings. The Warnings below are robustness problems: a user-key save path that reports success when nothing was persisted, per-keystroke persistence of a secret with no write ordering, an unbounded search stall on the Keychain, a lookup loop that does not stop on 429, and a silent cliff on large Steam libraries.
+The core G-47-9 Rust guard holds up. I confirmed against the vendored wry 0.55.1 source that `url_from_webview` does `webview.URL().unwrap()` and that `PageLoadEvent::Finished` is emitted only from `did_finish_navigation`. The `page_finished` flag lifecycle (set on every Finished, reset on `clear()` and `reset_for_new_webview()`, kept across a store switch) is consistent, and the drain releases the state lock before the URL read. `resolveActiveStore` reuses `resolveStoreForUrl`, so there is no second host-matching rule. The ITAD country list matches the 32 the tests assert, and the shared `discounts.regionOverride` key is validated per screen. The i18n scope edits are internally consistent: fork-touched 439, scope 317.
+
+No Critical issues. The three warnings are all on the new offline banner and the shared RegionPicker.
 
 ## Warnings
 
-### WR-01: `itad.setApiKey` reports success when the keyring write failed; UI shows "Key saved"
+### WR-01: Offline "Try again" can re-request the previous store's URL after a store switch
 
-**File:** `src/backend/storeSearch/itadSecrets.ts:52-65`, `src/frontend/screens/Settings/components/ItadApiKey.tsx:40-47`
-**Issue:** `createItadSecrets.setApiKey` is "total": it catches the store failure, logs a warning and resolves. The IPC handler (`enrichmentFlowRegistration.ts:432-443`) therefore always resolves, and `ItadApiKey.persistKey` then runs `setHasKey(!!newValue)`. If the Keychain/keyring write fails or times out, the field switches to the "Key saved" placeholder, but nothing was stored and the key silently disappears at the next boot. The `unavailable` branch can only be reached by an IPC/zod rejection (for example a pasted value over 256 chars, see WR-02), never by a keyring failure. `getKeyStatus` also reads `getApiKey()` which swallows read failures into `undefined`, so a status re-read cannot expose it either.
-**Fix:** Let the owner report the outcome and propagate it to the renderer.
-```ts
-// itadSecrets.ts
-setApiKey(value): Promise<boolean> // true when persisted
-// enrichmentFlowRegistration.ts
-const ok = await deps.itadSecrets.setApiKey(key)
-if (!ok) throw new Error('itad: could not store the key')   // or return { ok }
-// ItadApiKey.tsx: only setHasKey(!!newValue) on success; show a "could not save" state otherwise
-```
-
-### WR-02: Key is persisted on every keystroke with no write ordering; an oversize paste permanently disables the field
-
-**File:** `src/frontend/screens/Settings/components/ItadApiKey.tsx:32-48`
-**Issue:** `onChange` fires `window.api.itad.setApiKey(newValue)` per keystroke (copied from the SteamGridDB field). Consequences specific to ITAD: (1) each keystroke is a separate OS-keyring write, and each partial key is immediately live: `resolveKey` prefers the stored user key, so any search issued mid-typing sends a truncated key to ITAD, gets a 403 and calls `markRejected()` (logging a warning each time) until the next keystroke resets it. (2) The sidecar handlers are independent async calls over the keyring invoke; nothing orders them, so an earlier partial value can land after the final one and the stored key ends up truncated, with `hasKey` still true. (3) A pasted value over 256 chars is rejected by zod, the catch runs `setUnavailable(true)` and the field is disabled until the settings page is remounted, with the misleading text "Unavailable on this build".
-**Fix:** Persist on blur or an explicit Save, serialise writes, and keep `unavailable` for a failed `getKeyStatus` only.
+**File:** `src/frontend/screens/WebView/index.tsx:421-424` (reads `useStoreEmbedHost.ts:1005`)
+**Issue:** `retryEmbedLoad` calls `navigateEmbed(embedHost.currentUrl)`, and `currentUrl` is `navState.url`. The hook's own comments (`useStoreEmbedHost.ts:410-434` and `:904-905`) record that `/store/:store` is one mounted route and that on a store switch `navState.url` "still holds the previous store's last URL". The failing case is the one this banner exists for:
+1. The embed has loaded store A.
+2. The user goes offline and switches to store B.
+3. `existing.navigate(urlB)` fails, so no Finished arrives and `navState.url` stays on A's page.
+4. The banner shows, and Try again navigates the shared embed back to A's URL while the route says B.
+Rust's `store_embed_navigate` also pushes A's URL into the store-B history. The hook's existing `onTryAgain` (`useStoreEmbedHost.ts:986-990`) already avoids this by retrying `startUrl`, with the same rationale.
+**Fix:** Retry the route's own URL rather than `navState.url`. Either reuse `startUrl`, or fall back to it when `resolveStoreForUrl(currentUrl)?.key !== store`:
 ```tsx
-const [draft, setDraft] = useState('')
-const save = () => window.api.itad.setApiKey(draft.trim()).then(...)  // onBlur / Enter / Save button
-// on a setApiKey rejection: show an inline "invalid key" error, do not setUnavailable(true)
+const retryEmbedLoad = useCallback(() => {
+  const owner = resolveStoreForUrl(embedCurrentUrl)
+  navigateEmbed(owner?.key === store ? embedCurrentUrl : startUrl)
+}, [navigateEmbed, embedCurrentUrl, store, startUrl])
 ```
+Add a `StoreEmbedTimeoutBanner`/WebView-level test for the switch case. The current banner tests only prove the callback is wired.
 
-### WR-03: Optional user-key read can stall every search (and the Advanced settings page) on a Keychain prompt
+### WR-02: Offline banner is driven by app connectivity alone, so it overrides a healthy loaded page
 
-**File:** `src/backend/storeSearch/itad.ts:130-142` (called at 479 and 553), `src/backend/sidecar/enrichmentFlowRegistration.ts:424-427`
-**Issue:** `resolveKey` awaits `secrets.getApiKey()` before the request is made. For a user who has saved a key, the first read goes through `SidecarKeyringSlotStore.readToken`, which on macOS can raise a Keychain approval dialog and is bounded only by the 45 s `KEYRING_READ_TIMEOUT` (see the module's own doc comment). The built-in key needs no I/O, yet the search is held for up to that long behind an optional secret, and `itad.getKeyStatus` triggers the same read just by opening Settings > Advanced. A failed read is memoised for 120 s, but each caller before the memo is armed still waits.
-**Fix:** Cap the user-key lookup in `resolveKey` (for example `Promise.race` with a 2-3 s timeout that falls through to the built-in key, using no timer handle that outlives the call, or a `readToken()`-style non-blocking peek of the cached value), and have `getKeyStatus` use the cached/memoised outcome rather than forcing a prompt.
-
-### WR-04: `lookupSteamGids` keeps hammering ITAD after a 429 or network failure
-
-**File:** `src/backend/storeSearch/itad.ts:606-628`
-**Issue:** The chunk loop catches every failure, logs and continues to the next chunk. With the schema's 5000-appid ceiling and a chunk size of 200 that is up to 25 sequential requests, all of which will fail the same way after a 429 or an offline error, extending the rate-limit window and delaying the caller. The comment says the keyless route's limit is separate, but a 429 is still a signal to stop. A 200 response with an unexpected body shape (for example an HTML error page, so `data?.[...]` is `undefined`) also caches `null` for every id in the chunk for a full day (`ITAD_GID_MISS_TTL_MS`), poisoning the ownership join.
-**Fix:**
-```ts
-} catch (err) {
-  logWarning(...)
-  break // a failed lookup will not be fixed by the next chunk
-}
-// and before the write loop:
-if (data === null || typeof data !== 'object' || Array.isArray(data)) continue // do not cache misses from a malformed body
+**File:** `src/frontend/screens/WebView/index.tsx:664`, `src/frontend/screens/WebView/components/StoreEmbedTimeoutBanner.tsx:63-90`
+**Issue:** `offline={connectivity?.status === 'offline'}` makes the banner render whenever the sidecar reports offline, regardless of whether the embed's page committed. Offline wins over `timedOut`. A user who already has a store page showing (or a Humble/Steam page that is cached) sees "You're offline, so this store can't load." sitting over a page that did load. That message is false, and the single action is a navigate that re-requests the page. The `uiState` default is `{ status: 'offline' }` (`uiState.ts:67`), so a mount that precedes the first `connectivitySync` result also flashes this banner as an app-wide false positive.
+**Fix:** Gate the offline variant on the embed not having committed a page. The nav state does not expose this today, so either add a `pageFinished`/`loaded` field to the Rust nav-state JSON (the flag already exists in `StoreEmbedState`), or combine offline with the load-in-flight/timed-out signal:
+```tsx
+offline={connectivity.status === 'offline' && !embedHost.hasLoadedPage}
 ```
+At minimum, reword the message so it is true when a page is already visible.
 
-### WR-05: Owned-on-Steam join silently disables itself for libraries over 5000 appids
+### WR-03: RegionPicker has no accessible name for its combobox
 
-**File:** `src/frontend/screens/StoreSearch/hooks/useOwnedSteamGids.ts:49-52`, `src/common/types/ipc/enrichment.ts:75`
-**Issue:** The hook sends the whole distinct appid set in one `getItadSteamGids` call, while the schema rejects arrays over 5000 entries. A large Steam library plus waiting Humble keys exceeds that, the call rejects with an invalid-args error, the catch logs and resets to an empty map, and every Steam badge falls back to the fuzzy arms with no visible signal.
-**Fix:** Chunk renderer-side (`appIds.slice(i, i + 5000)`) and merge the records, or raise the schema bound to match the backend's own chunking.
+**File:** `src/frontend/components/UI/RegionPicker/index.tsx:50-58`
+**Issue:** The label is wired as `<label htmlFor={id}>` with `<Select id={id}>`. In the installed MUI 5.17.1, `Select`'s `id` reaches the hidden native input, not the visible `role="combobox"` div. In `SelectInput.js:448` the div's `aria-labelledby` is built from `labelId` and `buttonId`, and both are undefined here. A screen reader therefore announces an unnamed combobox, and clicking the label does not open or focus it. The defect was inherited from the Deals markup, but this round promotes it into a shared component and adds a second consumer.
+**Fix:** Give the label an id and pass it as `labelId`:
+```tsx
+<label className="regionPicker__label" id={`${id}-label`} htmlFor={id}>{label}</label>
+<Select id={id} labelId={`${id}-label`} ...>
+```
+Add an assertion in `RegionPicker.test.tsx` that `labelId` is set.
 
 ## Info
 
-### IN-01: Release gate accepts a whitespace-only `ITAD_API_KEY` secret
+### IN-01: Impossible-state guard on `connectivity?.status`
 
-**File:** `.github/workflows/release-tauri.yml:341-342`
-**Issue:** The gate is `test -n "$IN_ITAD_API_KEY"`, but `itadKeyDefineFlag` and `resolveBuiltInItadKey` both `.trim()` the value. A secret that is only whitespace or a newline passes the fail-fast step and then bakes `""`, shipping a build that reports "not set up in this build" which is the exact outcome D-04 exists to prevent.
-**Fix:** `test -n "$(printf %s "$IN_ITAD_API_KEY" | tr -d '[:space:]')"`.
+**Category:** necessity
+**File:** `src/frontend/screens/WebView/index.tsx:664`
+**Issue:** `connectivity` comes from `useUiState((s) => s.connectivity)`, typed `{ status; retryIn }` and initialised to a concrete object at `uiState.ts:67`. It is never undefined, and the sibling consumers (`GamePage/index.tsx:202`, `GameCard/index.tsx:785`, `DownloadSizeInfo.tsx`) read `connectivity.status` without `?.`. The optional chain guards a state the type and the store default rule out. Judgment-level, not a bug.
+**Fix:** `connectivity.status === 'offline'`.
 
-### IN-02: A rejected built-in key surfaces as a generic provider error and does not use the stale copy
+### IN-02: "Showing prices for {{country}}" caption now duplicates the region picker
 
-**File:** `src/backend/storeSearch/itad.ts:246-260, 521-526, 572-577`
-**Issue:** A 401/403 on the built-in key (revoked or expired shared key) maps to `provider` ("Couldn't reach the price provider" with a Retry button that cannot help), and `isStaleCoverable` excludes 4xx so an available stale copy is not served either. The distinct `notConfigured` copy ("Add an IsThereAnyDeal API key in Settings > Advanced") is the one that would actually let a user recover.
-**Fix:** In `toStoreSearchError`, map 401/403 from a non-user key to `notConfigured`, and consider treating it as stale-coverable.
-
-### IN-03: Dead/unused configuration code (necessity)
-
-**File:** `src/backend/storeSearch/itad.ts:194-209`, `src/backend/storeSearch/itadCoverage.ts:74-80`
-**Issue:** **Category:** necessity. `ITAD_PRICE_AMOUNT_SOURCE` is the constant `'amount'`, so the `amountInt` branch and `fractionDigits()` in `priceString` can never run (generality without instantiation: the only value ever measured is `'amount'`, per `47-ITAD-COVERAGE.json`). `ITAD_AUTH_STYLE` is an unexported const kept alive by an `eslint-disable no-unused-vars` and is read nowhere.
-**Fix:** Delete the `amountInt` branch, `fractionDigits`, and `ITAD_AUTH_STYLE` (move the measured facts into the file's doc comment); the sweep script retains the measurement.
-
-### IN-04: Expanded breakdown renders an empty panel when ITAD returns no deals
-
-**File:** `src/frontend/screens/StoreSearch/components/StoreSearchBreakdown/index.tsx:76-81`
-**Issue:** `getGameDeals` legitimately returns `[]` (and caches it for an hour, `itad.ts:564-570`), after which `deals.map` renders an empty bordered container with no message.
-**Fix:** Render a "No store prices found for this game" line when `deals.length === 0`.
+**File:** `src/frontend/screens/StoreSearch/index.tsx:168-172`
+**Issue:** The picker on the title row shows the active country (or "Auto (Germany)"), and the caption directly below still says "Showing prices for Germany." The two say the same thing. The caption is also pinned by tests. Not a bug, but it is redundant copy on the screen the picker was added to.
+**Fix:** Drop the caption, or keep it only when the effective country differs from the picker's value. The existing `regionNote` already covers the fallback case.
 
 ---
 
-_Reviewed: 2026-11-17_
+_Reviewed: 2026-11-18_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
