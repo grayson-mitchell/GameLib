@@ -716,6 +716,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261119-p7k | NativePortInfo: gate on runner string so the narrowing ceiling passes | 2026-11-19 | 0261a5d82 | — | [261119-p7k-nativeportinfo-gate-on-runner-string-so-](./quick/261119-p7k-nativeportinfo-gate-on-runner-string-so-/) |
 | 261119-p3z | macOS/Linux Steam Play holds Launching until the watch finds the game (no Play flicker) | 2026-11-19 | 7508b0858 | — | [261119-p3z-macos-linux-steam-play-holds-launching-u](./quick/261119-p3z-macos-linux-steam-play-holds-launching-u/) |
 | 261119-pdz | Clear pre-push find-deadcode and backend-di-ceilings failures | 2026-11-19 | 6c4e83f22 | — | [261119-pdz-clear-pre-push-find-deadcode-and-backend](./quick/261119-pdz-clear-pre-push-find-deadcode-and-backend/) |
+| fast | Pending-adoption log line says "Steam pid" on every OS, not "steam_osx pid" (todo closed) | 2026-11-19 | 2cc0c0e50 | prettier clean; no test or gate pins the literal | — |
 
 ## Deferred Items
 
