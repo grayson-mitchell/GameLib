@@ -5,16 +5,16 @@ milestone_name: Foundations
 current_phase: 47
 current_phase_name: Migrate aggregated store search from CheapShark to IsThereAnyDeal
 status: executing
-stopped_at: Completed 47-15-PLAN.md
-last_updated: "2026-11-18T09:55:59.178Z"
+stopped_at: Completed 47-16-PLAN.md
+last_updated: "2026-11-18T10:09:17.354Z"
 last_activity: 2026-11-18
 last_activity_desc: Phase 47 execution started
-state_head: 8e8bb65376d7b8423bfd0f249ef600cac51cd86b
+state_head: 246393f5c9d02284b71f7bccc72eb9bda51fd171
 progress:
   total_phases: 26
   completed_phases: 23
   total_plans: 526
-  completed_plans: 522
+  completed_plans: 523
   percent: 88
 ---
 
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 ## Current Position
 
 Phase: 47 (Migrate aggregated store search from CheapShark to IsThereAnyDeal) — EXECUTING
-Plan: 16 of 18
+Plan: 17 of 18
 Status: Ready to execute
 Last activity: 2026-11-18 — Phase 47 execution started
 
@@ -304,6 +304,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 81 P19 | 50min | 2 tasks | 1 files |
 | Phase 47 P14 | 40min | 2 tasks | 10 files |
 | Phase 47 P15 | 20 min | 2 tasks | 6 files |
+| Phase 47 P16 | 25min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -514,6 +515,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 81]: 81-19: the live-gate contract runs Mac items in order 1,2,5,6,8,4,3,9,7,12 because any Steam restart or sign-in adopts every pending ACF
 - [Phase 47]: 47-14: store embed drain reads the live URL only after a Finished for the current webview (G-47-9); offline surface reuses the notice row
 - [Phase 47]: 47-15: deep-link store highlight via resolveActiveStore delegating to resolveStoreForUrl (no second host rule); rememberLastStore not called for deep links
+- [Phase 47]: 47-16 Task 1 (operator decision, id itad-list): Store Search offers ITAD's 32 priced countries; Deals keeps its 29 REGION_OPTIONS; no currency pill on Store Search
 
 ### Pending Todos
 
@@ -890,8 +892,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-18T09:55:54.507Z
-Stopped at: Completed 47-15-PLAN.md
+Last session: 2026-11-18T10:09:12.821Z
+Stopped at: Completed 47-16-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

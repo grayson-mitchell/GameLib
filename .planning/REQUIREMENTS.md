@@ -47,7 +47,7 @@ complete and verified per their own VERIFICATION.md files; they carry no new req
 
 ### Price search
 
-- [ ] **PRICE-01**: User sees store-search prices in their own currency (IsThereAnyDeal replaces CheapShark)
+- [x] **PRICE-01**: User sees store-search prices in their own currency (IsThereAnyDeal replaces CheapShark)
 - [ ] **PRICE-02**: The "you already own this" badge keeps working on IsThereAnyDeal results
 - [x] **PRICE-03**: When rate-limited, user sees the cached price with its timestamp instead of an error
 
@@ -88,7 +88,7 @@ complete and verified per their own VERIFICATION.md files; they carry no new req
 | STEAM-03 | 75 | Complete |
 | THEME-01 | 64 | Complete |
 | THEME-02 | 64 | Complete |
-| PRICE-01 | 47 | Pending |
+| PRICE-01 | 47 | Complete |
 | PRICE-02 | 47 | Pending |
 | PRICE-03 | 47 | Complete |
 | DEBT-01 | 76 | Complete |
