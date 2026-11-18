@@ -284,6 +284,18 @@ export const RUST_MAIN_WINDOW_RAISE = 'main_window_raise' as const
 export const RUST_MAIN_WINDOW_HIDE = 'main_window_hide' as const
 
 /**
+ * Rust-side channel name: bring Steam's own window forward on Windows. Backs the adoption note's
+ * "Open Steam" (`openSteamForAdoption`): a signed-out Steam holds `steam://open/main` until login
+ * finishes (measured in Steam's console_log), so the URL cannot raise the sign-in window. The shell
+ * is the foreground process at click time, so it raises the window itself (restore if minimized,
+ * then `SetForegroundWindow`). Picks the topmost visible, unowned, titled top-level window owned by
+ * `steam.exe` or `steamwebhelper.exe`. Takes no args; resolves a boolean: `true` when a Steam window
+ * was found and brought forward, `false` when none was (Steam not running or hidden to the tray)
+ * or on any other OS (the arm is a no-op off Windows).
+ */
+export const RUST_STEAM_WINDOW_RAISE = 'steam_window_raise' as const
+
+/**
  * Rust-side channel name: open or reuse the `bridge-invite` Tauri window that hosts the
  * bridge invite picker (quick 261101-llf). Takes `[{ appId, ackId }]` (validated again in
  * Rust, since both land in a URL) and resolves null. It never touches the main window,
@@ -995,6 +1007,7 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_APP_HIDE,
   RUST_MAIN_WINDOW_RAISE,
   RUST_MAIN_WINDOW_HIDE,
+  RUST_STEAM_WINDOW_RAISE,
   RUST_BRIDGE_INVITE_PICKER_OPEN,
   RUST_CLIPBOARD_WRITE_TEXT,
   RUST_CLIPBOARD_READ_TEXT,

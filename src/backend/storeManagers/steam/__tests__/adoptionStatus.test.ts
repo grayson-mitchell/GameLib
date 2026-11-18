@@ -13,6 +13,7 @@ import type { Clock } from 'backend/process/types'
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 import * as backendUtils from 'backend/utils'
 import {
+  RUST_STEAM_WINDOW_RAISE,
   RUST_STEAMPOLL_ADOPTION_UNWATCH,
   RUST_STEAMPOLL_NEXT_NOTICE_SEQ,
   RUST_STEAMPOLL_READ_RUNNING_APP_ID
@@ -455,6 +456,59 @@ describe('openSteamForAdoption (D-03)', () => {
     expect(h.openExternal).toHaveBeenCalledTimes(1)
     expect(h.openExternal).toHaveBeenCalledWith('steam://open/main')
   })
+
+  const raised = (h: Harness) =>
+    h.rust.filter((c) => c.channel === RUST_STEAM_WINDOW_RAISE)
+
+  // Phase 81 live gate item 10 (e): a signed-out Windows Steam holds steam://open/main until login
+  // finishes (no ExecCommandLine in its console_log for the presses), so the shell raises the
+  // sign-in window itself.
+  test('Windows: the shell raises Steam first, then the URL still goes out', async () => {
+    const h = harness()
+    const order: string[] = []
+    const deps = h.game.deps
+    const calls: unknown[][] = []
+    deps.requestRustInvoke = ((channel: string, args: unknown[]) => {
+      order.push(`rust:${channel}`)
+      calls.push([channel, args])
+      return Promise.resolve(true)
+    }) as never
+    h.openExternal.mockImplementation((url: string) => {
+      order.push(`open:${url}`)
+      return Promise.resolve(undefined)
+    })
+    await openSteamForAdoption(deps, 'win32')
+    expect(calls).toEqual([[RUST_STEAM_WINDOW_RAISE, []]])
+    expect(order).toEqual([
+      `rust:${RUST_STEAM_WINDOW_RAISE}`,
+      'open:steam://open/main'
+    ])
+  })
+
+  test('Windows: a refused or failing raise never stops the open', async () => {
+    const h = harness()
+    const deps = h.game.deps
+    deps.requestRustInvoke = jest
+      .fn()
+      .mockResolvedValueOnce(false)
+      .mockRejectedValueOnce(new Error('shell gone')) as never
+    await openSteamForAdoption(deps, 'win32')
+    await expect(openSteamForAdoption(deps, 'win32')).resolves.toBeUndefined()
+    expect(deps.requestRustInvoke).toHaveBeenCalledTimes(2)
+    expect(h.openExternal).toHaveBeenCalledTimes(2)
+    expect(h.openExternal).toHaveBeenLastCalledWith('steam://open/main')
+  })
+
+  test.each([['darwin'], ['linux']] as const)(
+    '%s: no shell raise, the URL alone (unchanged)',
+    async (platform) => {
+      const h = harness()
+      await openSteamForAdoption(h.game.deps, platform)
+      expect(raised(h)).toHaveLength(0)
+      expect(h.openExternal).toHaveBeenCalledTimes(1)
+      expect(h.openExternal).toHaveBeenCalledWith('steam://open/main')
+    }
+  )
 })
 
 describe('the action handler bodies reject a bad appId before doing anything (T-81-27)', () => {

@@ -5,6 +5,7 @@ area: steam
 severity: medium
 platform: windows
 ready: live-gate
+status: 'RESOLVED 2026-11-19 (debug windows-open-steam-not-foreground). Cause was not the foreground lock: a signed-out Windows Steam defers steam://open/main until login. Fix: Windows-only steam_window_raise shell channel raises the Steam window before the URL. Operator confirmed fixed live on Windows 11.'
 files:
   - src/backend/storeManagers/steam/adoptionStatus.ts
 ---

@@ -137,6 +137,7 @@ mod steampoll_dispatch;
 mod steamcm_dispatch;
 mod depot_dispatch;
 mod app_lifecycle;
+mod steam_window;
 use clipboard::*;
 use keyring_dispatch::*;
 use wake_lock::*;
@@ -158,6 +159,7 @@ use steampoll_dispatch::*;
 use steamcm_dispatch::*;
 use depot_dispatch::*;
 use app_lifecycle::*;
+use steam_window::*;
 
 /// Invoke response timeout — a skeleton guardrail so a hung sidecar cannot wedge a command.
 const INVOKE_TIMEOUT: Duration = Duration::from_secs(60);
@@ -2062,6 +2064,7 @@ mod tests {
         "steamfiles_dispatch.rs",
         "steampoll_dispatch.rs",
         "steamcm_dispatch.rs",
+        "steam_window.rs",
         "shell_state.rs",
         "shell_open.rs",
         "sidecar.rs",
@@ -2111,6 +2114,7 @@ mod tests {
         include_str!("steamfiles_dispatch.rs"),
         include_str!("steampoll_dispatch.rs"),
         include_str!("steamcm_dispatch.rs"),
+        include_str!("steam_window.rs"),
         include_str!("shell_state.rs"),
         include_str!("shell_open.rs"),
         include_str!("sidecar.rs"),

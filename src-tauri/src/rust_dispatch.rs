@@ -50,6 +50,10 @@ pub(crate) fn dispatch_rust_channel(
         RustInvokeChannel::AppHide => rpc_app_hide(app),
         RustInvokeChannel::MainWindowRaise => rpc_main_window_raise(app),
         RustInvokeChannel::MainWindowHide => rpc_main_window_hide(app),
+        // Windows-only raise of Steam's own window for the adoption note's "Open Steam": a
+        // signed-out Steam holds `steam://open/main` until login, so the shell raises the sign-in
+        // window itself. A `false` no-op on other platforms.
+        RustInvokeChannel::SteamWindowRaise => rpc_steam_window_raise(args),
         RustInvokeChannel::BridgeInvitePickerOpen => rpc_bridge_invite_picker_open(args, app),
         RustInvokeChannel::TraySetIcon => rpc_tray_set_icon(args, app),
         RustInvokeChannel::DialogSave => rpc_dialog_save(args, app),

@@ -481,9 +481,9 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     expect(matches.length).toBe(1)
   })
 
-  test('71-07 rust_dispatch.rs is a flat router: 117 one-line arms and no catch-all arm', () => {
+  test('71-07 rust_dispatch.rs is a flat router: 118 one-line arms and no catch-all arm', () => {
     const router = readTauriShellProductionFile('rust_dispatch.rs')
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(117)
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(118)
     expect(router).not.toContain('_ =>')
   })
 
@@ -571,6 +571,11 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // Quick 261108-kpc: hides GameLib for a game launch (macOS AppHandle::hide, elsewhere
       // window.hide); no args, no pure logic to unit-test, so its proof is live only.
       'main_window_hide',
+      // Phase 81 live gate item 10 (e): raises Steam's own window on Windows for the adoption
+      // note's "Open Steam" (a signed-out Steam holds steam://open/main until login). The pure
+      // window pick and the exe-name parse are unit-tested in `steam_window.rs`; the Win32 walk and
+      // raise are proven by its #[ignore]d live test plus the operator gate on Windows.
+      'steam_window_raise',
       // Quick 261101-llf: opens or reuses the dedicated `bridge-invite` window that hosts the
       // Steam bridge invite picker, instead of raising the main window over the game.
       // PROOF STATUS: the pure path/nav helpers (`bridge_invite_picker_path`,

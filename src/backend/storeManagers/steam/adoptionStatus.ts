@@ -13,6 +13,7 @@
  */
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { ManagerDeps } from 'backend/services/types'
+import { RUST_STEAM_WINDOW_RAISE } from 'common/types/sidecarTransport'
 import { clearAndUnwatchPendingAdoption } from './adoptionWatch'
 import {
   createRestartDeps,
@@ -191,11 +192,43 @@ export async function restartSteamNowForAdoption(
   return joined ? 'in-progress' : outcome
 }
 
-/** D-03: brings Steam forward (no activate:false, which would send the open to the background). */
+/**
+ * Windows only: asks the shell to raise Steam's own window. The note shows "Open Steam" only while
+ * Steam is signed out, and a signed-out Steam holds `steam://open/main` until login finishes (its
+ * console_log shows no `ExecCommandLine` for the presses made at the sign-in window, then one
+ * deferred `steam://open/main` right after login), so the URL alone never brings the sign-in window
+ * forward (Phase 81 live gate item 10 (e)). The shell is the foreground process at the click, so it
+ * may raise the window. A failure or "no window" answer only logs: the URL still goes out after it.
+ */
+async function raiseSteamWindowForAdoption(
+  deps: Pick<ManagerDeps, 'requestRustInvoke'>
+): Promise<void> {
+  try {
+    const raised = await deps.requestRustInvoke(RUST_STEAM_WINDOW_RAISE, [])
+    logInfo(
+      `SteamGame: shell raised the Steam window: ${raised === true}`,
+      LogPrefix.Steam
+    )
+  } catch (err) {
+    logWarning(
+      `SteamGame: raising the Steam window failed: ${String(err)}`,
+      LogPrefix.Steam
+    )
+  }
+}
+
+/**
+ * D-03: brings Steam forward (no activate:false, which would send the open to the background).
+ * macOS and Linux: the URL alone does it. Windows: the shell raises Steam's window first (see
+ * `raiseSteamWindowForAdoption`), then the same URL goes out, which still starts Steam when it is
+ * not running and shows the main window when it is hidden in the tray.
+ */
 export async function openSteamForAdoption(
-  deps: Pick<ManagerDeps, 'openExternal'>
+  deps: Pick<ManagerDeps, 'openExternal' | 'requestRustInvoke'>,
+  platform: NodeJS.Platform = hostPlatform()
 ): Promise<void> {
   logInfo('SteamGame: opening Steam from the adoption note', LogPrefix.Steam)
+  if (platform === 'win32') await raiseSteamWindowForAdoption(deps)
   await deps.openExternal.openExternal('steam://open/main')
 }
 
