@@ -8,6 +8,10 @@
 //! the two-profile rule has no real-profile arm). The child is the `/bin/sh` watchdog, anchored on
 //! the shell pid from `PollHost::shell_pid`, never on this process. `stop`/`stop_all` cancel the
 //! child's kill token, and `kill_on_drop` in the runner backs that up.
+//!
+//! Windows has no nettop. `read_windows` serves the Windows live source (`win_live.rs`: steam.exe's
+//! cumulative write counter) through the same monitor object, so the install loop's `stop` and
+//! `stop_all` clean up both and the macOS path above is untouched.
 
 use crate::acf_state::PollRoots;
 use crate::host::{Clock, PollHost, ProcessRunner};
@@ -15,6 +19,7 @@ use crate::progress::{
     active_count, apply_content_log_event, apply_nettop_row, parse_content_log_line,
     parse_nettop_row, window_rate, FlowAccumulator, NettopRow, Sample, UpdateTracker,
 };
+use crate::win_live::{CounterSource, WindowsLiveSource};
 use std::collections::HashMap;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
@@ -188,6 +193,8 @@ pub struct DownloadMonitor {
     clock: Arc<dyn Clock>,
     darwin: bool,
     monitors: Mutex<HashMap<String, Shared>>,
+    /// The Windows live source: disabled unless this is a Windows build or a test injects one.
+    win: WindowsLiveSource,
     /// Parity replay: a reading the harness supplies instead of nettop rows (plan 17).
     #[cfg(any(test, feature = "testing"))]
     injected: Mutex<HashMap<String, Option<DownloadReading>>>,
@@ -199,10 +206,13 @@ impl DownloadMonitor {
         runner: Arc<dyn ProcessRunner>,
         clock: Arc<dyn Clock>,
     ) -> Self {
-        Self::with_platform(host, runner, clock, cfg!(target_os = "macos"))
+        let mut monitor = Self::with_platform(host, runner, clock, cfg!(target_os = "macos"));
+        monitor.win = WindowsLiveSource::system();
+        monitor
     }
 
-    /// `darwin` overrides the platform guard (tests).
+    /// `darwin` overrides the platform guard (tests). The Windows live source is disabled here, so
+    /// no test reads a real process unless it injects a source with [`Self::with_windows_source`].
     pub fn with_platform(
         host: Arc<dyn PollHost>,
         runner: Arc<dyn ProcessRunner>,
@@ -215,9 +225,16 @@ impl DownloadMonitor {
             clock,
             darwin,
             monitors: Mutex::new(HashMap::new()),
+            win: WindowsLiveSource::disabled(),
             #[cfg(any(test, feature = "testing"))]
             injected: Mutex::new(HashMap::new()),
         }
+    }
+
+    /// Replaces the Windows live source's counter reader (tests; production uses the real one).
+    pub fn with_windows_source(mut self, source: Arc<CounterSource>) -> Self {
+        self.win = WindowsLiveSource::with_source(source);
+        self
     }
 
     /// Makes `read(app_id)` answer `reading` (`None` = no reading) without a nettop child. The
@@ -380,6 +397,19 @@ impl DownloadMonitor {
         })
     }
 
+    /// Windows live reading for `app_id` against the ACF's current `BytesToStage` and
+    /// `BytesToDownload`, or `None` when the poller must use the ACF as before (not a Windows
+    /// build, Steam unreadable, or the ACF has no totals yet). The first call for an appId takes
+    /// the write-counter baseline, so the loop calls it only while the ACF is downloading.
+    pub fn read_windows(
+        &self,
+        app_id: &str,
+        bytes_to_stage: u64,
+        bytes_to_download: u64,
+    ) -> Option<DownloadReading> {
+        self.win.read(app_id, bytes_to_stage, bytes_to_download)
+    }
+
     /// Whether a monitor for `app_id` is registered and has not failed (it may still be looking
     /// up the Steam pid). The install loop restarts a monitor that is not live.
     pub fn is_live(&self, app_id: &str) -> bool {
@@ -387,6 +417,7 @@ impl DownloadMonitor {
     }
 
     pub fn stop(&self, app_id: &str) {
+        self.win.stop(app_id);
         let m = self.map().remove(app_id);
         if let Some(m) = m {
             kill_monitor(&m);
@@ -394,6 +425,7 @@ impl DownloadMonitor {
     }
 
     pub fn stop_all(&self) {
+        self.win.stop_all();
         let all: Vec<Shared> = self.map().drain().map(|(_, m)| m).collect();
         for m in all {
             kill_monitor(&m);

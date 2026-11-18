@@ -79,5 +79,6 @@ pub mod steam_process;
 pub mod testing;
 pub mod uninstall;
 pub mod update;
+pub mod win_live;
 
 pub use dispatch::{dispatch, OPS};

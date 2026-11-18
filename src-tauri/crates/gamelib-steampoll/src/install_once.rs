@@ -100,7 +100,8 @@ pub struct InstallObservation {
     pub acf: AcfState,
     /// ACF update fields, read by the loop only while `awaiting_update` is set.
     pub update_fields: Option<AcfUpdateFields>,
-    /// The macOS download monitor reading for this app, if any.
+    /// The live download reading for this app, if any: the macOS nettop monitor's, or on Windows
+    /// the steam.exe write counter's (see [`windows_live_applies`]).
     pub monitor: Option<DownloadReading>,
     pub now_ms: u64,
     pub platform: Platform,
@@ -157,6 +158,17 @@ impl InstallStep {
 
 fn log(level: LogLevel, message: String) -> Effect {
     Effect::Log { level, message }
+}
+
+/// Whether the Windows live source (steam.exe's write counter, `win_live.rs`) is this poll's
+/// progress source: a native poll that follows a download the Steam client performs itself, that
+/// is, one delegated to Steam and not a GameLib depot handoff. On macOS the same polls use the
+/// nettop monitor; Linux has no live source and reads the ACF alone.
+pub fn windows_live_applies(platform: Platform, poll: &ActiveInstall) -> bool {
+    platform == Platform::Win32
+        && poll.delegated_to_steam_client
+        && poll.source == AcfSource::Native
+        && !poll.handoff.is_native_handoff
 }
 
 fn js_round(x: f64) -> f64 {
@@ -291,9 +303,13 @@ fn downloading(
     }
 
     // quick 261029-sex: on an eligible macOS native poll the monitor supplies the effective bytes.
+    // Windows delegated native polls get theirs from steam.exe's write counter (win_live.rs).
+    // Linux stays ACF-only.
     let is_mac = obs.platform == Platform::Darwin;
     let live: Option<DownloadReading> =
-        if is_mac && poll.source == AcfSource::Native && !poll.handoff.is_native_handoff {
+        if (is_mac && poll.source == AcfSource::Native && !poll.handoff.is_native_handoff)
+            || windows_live_applies(obs.platform, poll)
+        {
             obs.monitor
         } else {
             None
