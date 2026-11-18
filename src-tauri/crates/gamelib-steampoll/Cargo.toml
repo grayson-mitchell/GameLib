@@ -16,6 +16,12 @@ tokio-util = "0.7"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
+# running_scan.rs calls libproc (proc_listallpids, proc_pidpath) directly. libc is already resolved
+# in Cargo.lock at this version (the shell crate declares it), so no new crate enters the tree: the
+# same "declare what your own code calls" discipline as src-tauri/Cargo.toml's libc comment.
+[target.'cfg(target_os = "macos")'.dependencies]
+libc = "0.2.186"
+
 [features]
 # RecordingHost / ScriptedRunner / FakeClock for the parity harness and the CLI replay runner.
 testing = []

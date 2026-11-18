@@ -18,7 +18,8 @@ use crate::constants::STATE_FLAG_FULLY_INSTALLED;
 use crate::hold_migration::{discard_hold_store, drain_hold_records};
 use crate::install_loop::StartInstallArgs;
 use crate::mac_arch::mac_arch_verdict;
-use crate::running::read_running_app_id;
+use crate::running::read_running_app_id_or_process_scan;
+use crate::running_scan::list_process_exe_paths;
 use crate::uninstall::{start_uninstall, stop_uninstall, StartUninstallArgs};
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
@@ -491,7 +492,14 @@ fn run_op(op: &str, args: &[Value]) -> Result<Value, String> {
             let root = f.profile.default_steam_path();
             let id = block_on(
                 op,
-                read_running_app_id(platform, &f.home, root.as_deref(), &*f.runner, a.strict),
+                read_running_app_id_or_process_scan(
+                    platform,
+                    &f.home,
+                    root.as_deref(),
+                    &*f.runner,
+                    a.strict,
+                    &list_process_exe_paths,
+                ),
             )?
             .map_err(|e| format!("{op}:{e}"))?;
             out(op, id)

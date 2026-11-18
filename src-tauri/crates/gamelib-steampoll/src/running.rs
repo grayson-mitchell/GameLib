@@ -2,7 +2,9 @@
 //!
 //! `read_running_app_id` is the per-platform probe: Windows reads HKCU natively (no reg.exe),
 //! macOS reads `registry.vdf`, Linux reads `~/.steam/registry.vdf` and falls back to the reaper
-//! scan when that reads 0. `RunningPoll` is the 5 s poll: one task on the registry, `Delay` ticks
+//! scan when that reads 0. Mac Steam writes no RunningAppID, so the on-demand op uses
+//! [`read_running_app_id_or_process_scan`], which adds a Darwin process scan by executable path
+//! (quick 261118-uma). `RunningPoll` is the 5 s poll: one task on the registry, `Delay` ticks
 //! so a slow probe never overlaps the next tick, launch-watch claims, the 20 s drain.
 //!
 //! Status goes out as `gameStatusUpdate` frontend messages only; the running poll has no sidecar
@@ -12,6 +14,7 @@ use crate::constants::{RUNNING_DRAIN_MS, RUNNING_POLL_INTERVAL_MS};
 use crate::host::{BoxFuture, ProcessRunner};
 use crate::profile::Platform;
 use crate::registry::{PollKind, Registry};
+use crate::running_scan::{scan_running_app_id, ExeLister};
 use serde_json::json;
 use std::collections::HashMap;
 use std::path::Path;
@@ -57,7 +60,9 @@ async fn linux_fallback(runner: &dyn ProcessRunner) -> u32 {
 /// (no profile home) is an error instead of "no game running", so a safety guard can refuse.
 /// Windows is never strict (the TS reg.exe path never threw).
 ///
-/// `_steam_root` is accepted for the shell's call shape; no probe needs it.
+/// `_steam_root` is accepted for the shell's call shape; no probe here needs it. On macOS this is
+/// registry-only and reads 0 for a real running game (Mac Steam writes no RunningAppID); the
+/// on-demand op calls [`read_running_app_id_or_process_scan`] instead.
 pub async fn read_running_app_id(
     platform: Platform,
     profile_home: &Path,
@@ -84,6 +89,25 @@ pub async fn read_running_app_id(
         return Ok(from_registry);
     }
     Ok(linux_fallback(runner).await)
+}
+
+/// [`read_running_app_id`], then on macOS only, when that reads 0, a process-table scan by
+/// executable path under every Steam library (quick 261118-uma). Windows and Linux answers are
+/// returned unchanged and `lister` is never called off Darwin. A strict error from the registry
+/// step (no profile home) surfaces before any scan.
+pub async fn read_running_app_id_or_process_scan(
+    platform: Platform,
+    profile_home: &Path,
+    steam_root: Option<&str>,
+    runner: &dyn ProcessRunner,
+    strict: bool,
+    lister: &ExeLister,
+) -> Result<u32, String> {
+    let id = read_running_app_id(platform, profile_home, steam_root, runner, strict).await?;
+    if id != 0 || platform != Platform::Darwin {
+        return Ok(id);
+    }
+    scan_running_app_id(profile_home, steam_root, strict, lister)
 }
 
 /// A probe the poll calls each tick; never fails (0 means nothing running).
@@ -161,6 +185,11 @@ impl RunningPoll {
     }
 
     /// The production probe: [`read_running_app_id`] for `platform`, non-strict.
+    ///
+    /// The Darwin probe deliberately stays registry-only (quick 261118-uma): Mac Playing status
+    /// belongs to the launch watch (261111-9mj), a scan would also report games GameLib launched
+    /// without Steam, and it would scan the process table every 5 s tick. Only the on-demand op
+    /// uses the process scan.
     pub fn for_platform(
         registry: Registry,
         platform: Platform,

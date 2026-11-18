@@ -634,3 +634,118 @@ fn hold_discard_is_not_configured_before_install() {
         Err("steampoll:not-configured".to_string())
     );
 }
+
+// Quick 261118-uma. Mac Steam writes no RunningAppID to registry.vdf, so the on-demand op falls
+// back to a process-table scan by executable path under every Steam library.
+
+/// The sleeper the live test spawns from a COPY of this test binary (a copy of an Apple platform
+/// binary is SIGKILLed at exec; an ad-hoc-signed local build runs). Bounded at 30 s even if
+/// orphaned, and a no-op unless the marker variable is set.
+#[test]
+#[ignore]
+fn running_scan_sleeper() {
+    if std::env::var_os("GAMELIB_RUNNING_SCAN_SLEEPER").is_some() {
+        std::thread::sleep(std::time::Duration::from_secs(30));
+    }
+}
+
+#[cfg(target_os = "macos")]
+struct KillOnDrop(std::process::Child);
+
+#[cfg(target_os = "macos")]
+impl Drop for KillOnDrop {
+    fn drop(&mut self) {
+        let _ = self.0.kill();
+        let _ = self.0.wait();
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn write_acf_with_installdir(dir: &std::path::Path, app_id: &str, installdir: &str) {
+    std::fs::create_dir_all(dir).unwrap();
+    std::fs::write(
+        dir.join(format!("appmanifest_{app_id}.acf")),
+        format!(
+            "\"AppState\"\n{{\n\t\"appid\"\t\t\"{app_id}\"\n\t\"installdir\"\t\t\"{installdir}\"\n\t\"StateFlags\"\t\t\"4\"\n}}\n"
+        ),
+    )
+    .unwrap();
+}
+
+#[cfg(target_os = "macos")]
+fn wait_for_running_app_id(strict: bool, want: u32) -> Value {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+    loop {
+        let got = ok("steampoll_read_running_app_id", json!({ "strict": strict }));
+        if got == json!(want) || std::time::Instant::now() >= deadline {
+            return got;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(50));
+    }
+}
+
+#[cfg(target_os = "macos")]
+#[test]
+fn darwin_running_app_id_finds_a_steam_library_process_by_executable_path() {
+    use std::os::unix::process::CommandExt;
+    let _g = guard();
+    let home = tempfile::tempdir().unwrap();
+    let ext = tempfile::tempdir().unwrap();
+    install(home.path());
+
+    let root = home
+        .path()
+        .join("Library")
+        .join("Application Support")
+        .join("Steam");
+    let ext_lib = ext.path().join("Ext Lib");
+    std::fs::create_dir_all(root.join("steamapps")).unwrap();
+    std::fs::write(
+        root.join("steamapps").join("libraryfolders.vdf"),
+        format!(
+            "\"libraryfolders\"\n{{\n\t\"0\"\n\t{{\n\t\t\"path\"\t\t\"{}\"\n\t}}\n\t\"1\"\n\t{{\n\t\t\"path\"\t\t\"{}\"\n\t}}\n}}\n",
+            root.display(),
+            ext_lib.display()
+        ),
+    )
+    .unwrap();
+    write_acf_with_installdir(&ext_lib.join("steamapps"), "4242", "Fixture Game");
+    let exe_dir = ext_lib
+        .join("steamapps")
+        .join("common")
+        .join("Fixture Game")
+        .join("Fixture.app")
+        .join("Contents")
+        .join("MacOS");
+    std::fs::create_dir_all(&exe_dir).unwrap();
+    let exe = exe_dir.join("fixture");
+    std::fs::copy(std::env::current_exe().unwrap(), &exe).unwrap();
+
+    assert_eq!(
+        ok("steampoll_read_running_app_id", json!({"strict": false})),
+        json!(0)
+    );
+
+    let child = std::process::Command::new(&exe)
+        .arg0("./fixture")
+        .env_clear()
+        .env("GAMELIB_RUNNING_SCAN_SLEEPER", "1")
+        .args([
+            "--exact",
+            "running_scan_sleeper",
+            "--ignored",
+            "--test-threads=1",
+        ])
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .unwrap();
+    let mut child = KillOnDrop(child);
+
+    assert_eq!(wait_for_running_app_id(false, 4242), json!(4242));
+    assert_eq!(wait_for_running_app_id(true, 4242), json!(4242));
+
+    child.0.kill().unwrap();
+    child.0.wait().unwrap();
+    assert_eq!(wait_for_running_app_id(false, 0), json!(0));
+}

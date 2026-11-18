@@ -72,6 +72,7 @@ pub mod profile;
 pub mod progress;
 pub mod registry;
 pub mod running;
+pub mod running_scan;
 pub mod runtime;
 pub mod steam_process;
 #[cfg(any(test, feature = "testing"))]
