@@ -6,6 +6,7 @@ import {
   faTicket
 } from '@fortawesome/free-solid-svg-icons'
 
+import { isStore } from 'common/storeCapabilities'
 import useAuthState from 'frontend/state/authState'
 import useUiState from 'frontend/state/uiState'
 import StoreLogos from 'frontend/components/UI/StoreLogos'
@@ -66,13 +67,13 @@ export default function StoresPanel({
       />
       <NavItem
         url="/store/gog"
-        isActiveFallback={activeStore === 'gog'}
+        isActiveFallback={isStore(activeStore, 'gog')}
         iconElement={<StoreLogos runner="gog" className="NavItem__storeLogo" />}
         label={t('gog-store', 'GOG Store')}
       />
       <NavItem
         url="/store/steam"
-        isActiveFallback={activeStore === 'steam'}
+        isActiveFallback={isStore(activeStore, 'steam')}
         iconElement={
           <StoreLogos runner="steam" className="NavItem__storeLogo" />
         }
@@ -86,7 +87,7 @@ export default function StoresPanel({
       {humble?.isLoggedIn && (
         <NavItem
           url="/humble-keys"
-          isActiveFallback={activeStore === 'humble'}
+          isActiveFallback={isStore(activeStore, 'humble')}
           icon={faKey}
           label={t('sidebar.humbleKeys', 'Humble Keys')}
         />
