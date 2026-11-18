@@ -5,16 +5,16 @@ milestone_name: Foundations
 current_phase: 64
 current_phase_name: UI to edit themes
 status: executing
-stopped_at: Completed 81-11-PLAN.md
-last_updated: "2026-11-18T05:18:55.120Z"
+stopped_at: Completed 81-12-PLAN.md
+last_updated: "2026-11-18T05:29:20.078Z"
 last_activity: 2026-11-18
 last_activity_desc: Phase 64 execution started
-state_head: 51e62299ca24d13ee36a0cfbf5f8d607920170b7
+state_head: 79776e9f5b5e3e0c1996fa04606883fead004324
 progress:
   total_phases: 26
   completed_phases: 23
   total_plans: 521
-  completed_plans: 511
+  completed_plans: 512
   percent: 88
 ---
 
@@ -294,6 +294,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 64 P08 | 50 min | 3 tasks | 17 files |
 | Phase 64 P09 | 40 min | 3 tasks | 15 files |
 | Phase 81 P11 | 35min | 2 tasks | 16 files |
+| Phase 81 P12 | 40min | 2 tasks | 17 files |
 
 ## Accumulated Context
 
@@ -493,6 +494,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 64]: 64-09: leave prompt resolves via a resolved flag plus queueMicrotask because MessageBoxModal runs onClose before the clicked button onClick; Escape/backdrop/X mean Keep editing
 - [Phase 64]: 64-09: save-failure notice has no auto-hide (like ReadOnlyStoresNotice); noticeStackStylesheetGate treats Body as optional for one-sentence notices
 - [Phase 81]: 81-11: PollOptions.restored_steam_hold kept as accepted-and-ignored serde_json::Value until 81-14; StateEvent::RearmSettled now dead, left for 81-14 TS cleanup
+- [Phase 81]: 81-12: hold drain filters to numeric appIds (1-10 digits) on top of HoldStore::list; both hold ops take no args and use only the facade profile's store path
 
 ### Pending Todos
 
@@ -868,8 +870,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-18T05:18:51.492Z
-Stopped at: Completed 81-11-PLAN.md
+Last session: 2026-11-18T05:29:15.959Z
+Stopped at: Completed 81-12-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

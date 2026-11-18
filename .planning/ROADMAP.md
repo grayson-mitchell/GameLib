@@ -1888,7 +1888,7 @@ Plans:
 **Goal:** One mechanism, not two, for a GameLib depot install that the running Steam client has not adopted. Today macOS has both the D-UAT-13 poll hold ("Restart Steam to finish", `gamelib-steampoll` `hold.rs` after Phase 80, with the persisted `steam_restart_hold` store and boot re-arm from quick 261029-pkp) and restart-on-Play (`macSteamAdoption.ts`, quick 261029-ji2: a pending-adoption record, and Play quits and relaunches Steam when the same Steam process has not adopted the game). The hold is the brittle half: it releases only when the recorded Steam pid exits, so a sign-in rescan that adopts the game leaves it stuck (261105-ord gate item 6, appId 112100), and its boot re-arm fails closed to "not installed". Scope: report the game installed once the ACF says so and let restart-on-Play handle the unadopted case at Play; delete the hold, its persisted store and the boot re-arm where restart-on-Play applies; release the pending-adoption record on spike 083's evidence (sign-in reloads every appmanifest, observable via content_log `Loaded N apps from install folder` and helper `GetAppInstallState` 1026 -> 4), with "Sign in to Steam to finish" for a signed-out Steam; keep the experimental InstallApp setting (quick 261105-ord/261105-sqe) as the preferred macOS path when on, with restart-on-Play as its fallback; give the user an in-app action rather than passive text. Windows/Linux: extend restart-on-Play only if the todos `2026-11-16-spike-steam-startup-and-sign-in-adoption-on-windows.md` and `2026-11-17-spike-steam-startup-and-sign-in-adoption-on-linux.md` find Steam adopts at startup without a dialog there; otherwise they keep a simplified hold. Do not re-spike `steam://install` (047/048: needs a click in Steam's install dialog). Absorbs todo `2026-11-05-steam-restart-hold-brittle-discuss.md`. Came from the operator's discussion on 2026-11-16.
 **Requirements**: TBD (scope is CONTEXT.md D-01..D-15; every decision is cited in a plan)
 **Depends on:** Phase 80
-**Plans:** 11/20 plans executed
+**Plans:** 12/20 plans executed
 
 Plans 81-10 through 81-13 ship in the same release (operator decision 2026-11-17): between the boot re-arm's deletion and the boot drain, a hold persisted by an older build is neither re-armed nor migrated.
 
@@ -1923,7 +1923,7 @@ Plans:
 - [x] 81-11-PLAN.md — delete the boot re-arm
 
 **Wave 10** *(blocked on Wave 9 completion)*
-- [ ] 81-12-PLAN.md — drain and discard ops for persisted holds (Rust reads, validates, deletes)
+- [x] 81-12-PLAN.md — drain and discard ops for persisted holds (Rust reads, validates, deletes)
 
 **Wave 11** *(blocked on Wave 10 completion)*
 - [ ] 81-13-PLAN.md — D-12 boot migration of persisted holds; rearmSettled off the wire
