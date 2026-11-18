@@ -26,3 +26,16 @@ a regression test the way plan 47-14 did for the store embed (inject the URL sou
 is never asked).
 
 Links: G-47-9, plan `47-14`.
+
+## Resolution
+
+Fixed by quick 261119-9d9 (commit dd8da808a). The reuse branch now joins the path onto a base
+recomputed from the app config by `bridge_invite_app_base`, which mirrors tauri-2.11.5
+`get_app_url`, and the window is never asked. The create path still uses `WebviewUrl::App`.
+Three `bridge_invite_no_live_url_*` tests pin the base matrix, create-path parity and a source
+gate over the file's production code, and the gate was shown red by a mutation check.
+
+**Follow-up (human, live):** in `pnpm tauri:dev` on the Mac, stop the Vite dev server, then
+trigger the bridge invite picker twice from a bridged game. The second open must not crash the
+shell, and `gamelib-shell-panic.log` must gain no new entry. A production build's base is
+`tauri://localhost` (embedded assets), so the dev-server-down case is the realistic trigger.
