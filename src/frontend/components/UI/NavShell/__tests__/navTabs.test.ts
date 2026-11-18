@@ -12,6 +12,7 @@ import {
   NAV_TAB_IDS,
   NAV_TAB_INDEX,
   resolveActiveTab,
+  resolveActiveStore,
   rememberLastStore,
   resolveDefaultStore,
   type NavStoreSessions
@@ -152,6 +153,79 @@ describe('navTabs', () => {
 
     it('resolves an unrouted path to null', () => {
       expect(resolveActiveTab('/some-unrouted-path')).toBeNull()
+    })
+  })
+
+  describe('resolveActiveStore', () => {
+    // G-47-6: a store-page deep link must light the owning store's row.
+    it.each(['epic', 'gog', 'amazon', 'steam'])(
+      'resolves /store/%s to its own key',
+      (key) => {
+        expect(resolveActiveStore(`/store/${key}`, '')).toBe(key)
+      }
+    )
+
+    it('resolves the encoded Deals-card deep link to gog', () => {
+      expect(
+        resolveActiveStore(
+          '/store-page',
+          '?store-url=https%3A%2F%2Faf.gog.com%2Fgame%2Fportal_knights%3Fas%3D1838482841'
+        )
+      ).toBe('gog')
+    })
+
+    it('resolves the unencoded game-page deep link to gog', () => {
+      expect(
+        resolveActiveStore(
+          '/store-page',
+          '?store-url=https://www.gog.com/en/game/portal'
+        )
+      ).toBe('gog')
+    })
+
+    it('resolves humble and steam deep links', () => {
+      expect(
+        resolveActiveStore(
+          '/store-page',
+          '?store-url=https%3A%2F%2Fwww.humblebundle.com%2Fhome%2Fkeys'
+        )
+      ).toBe('humble')
+      expect(
+        resolveActiveStore(
+          '/store-page',
+          '?store-url=https%3A%2F%2Fstore.steampowered.com%2Fapp%2F10'
+        )
+      ).toBe('steam')
+    })
+
+    it('returns null for a non-store host, an http URL, or a lookalike host', () => {
+      expect(
+        resolveActiveStore('/store-page', '?store-url=https://example.com/x')
+      ).toBeNull()
+      expect(
+        resolveActiveStore('/store-page', '?store-url=http://www.gog.com/x')
+      ).toBeNull()
+      expect(
+        resolveActiveStore('/store-page', '?store-url=https://evilgog.com/x')
+      ).toBeNull()
+    })
+
+    it('returns null for a store-page with no store-url or no search', () => {
+      expect(resolveActiveStore('/store-page', '')).toBeNull()
+      expect(resolveActiveStore('/store-page', undefined)).toBeNull()
+      expect(resolveActiveStore('/store-page', '?other=1')).toBeNull()
+    })
+
+    it('returns null for routes that own no store', () => {
+      for (const path of [
+        '/discounts',
+        '/store-search',
+        '/humble-keys',
+        '/',
+        '/store/not-a-store'
+      ]) {
+        expect(resolveActiveStore(path, '')).toBeNull()
+      }
     })
   })
 
