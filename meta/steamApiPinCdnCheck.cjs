@@ -110,11 +110,11 @@ function parsePin(source) {
   const afterOpen = rest.slice(declMatch.index + declMatch[0].length)
   const close = afterOpen.indexOf('];')
   if (close === -1) throw new Error('CDN_HOSTS: unterminated list')
+  // Strip `//` comments, but never from inside a quoted literal (a host such as
+  // "https://x/y" must reach the host-shape check intact).
   const body = afterOpen
     .slice(0, close)
-    .split('\n')
-    .map((l) => l.replace(/\/\/.*$/, ''))
-    .join('\n')
+    .replace(/"[^"]*"|\/\/[^\n]*/g, (m) => (m.startsWith('"') ? m : ''))
   const hosts = []
   const leftover = body.replace(/"([^"]*)"/g, (_m, h) => {
     hosts.push(h)
@@ -181,10 +181,58 @@ async function checkPin(pin, options = {}) {
   return { ok: results.some((r) => r.verdict === 'ok'), results }
 }
 
-async function main() {
+/**
+ * Pure: turn a checkPin result into output lines and an exit code.
+ * `::error::` and `::warning::` lines belong on stderr, the rest on stdout.
+ */
+function formatReport(pin, result) {
+  const lines = []
+  const failing = result.results.filter((r) => r.verdict !== 'ok')
+  if (result.ok) {
+    lines.push(
+      `PASS: ${pin.package} (${pin.packageSize} bytes) served by ${
+        result.results.length - failing.length
+      }/${result.results.length} hosts`
+    )
+    for (const r of failing) lines.push(`::warning::${r.host} ${r.verdict}`)
+    return { lines, exitCode: 0 }
+  }
+  const pairs = result.results.map((r) => `${r.host}=${r.verdict}`).join(', ')
+  if (result.results.every((r) => r.verdict.startsWith('error-'))) {
+    lines.push(
+      `::error::Valve's CDN was unreachable from every host (${pairs}). A transport failure on every host is more likely the network than the pin: re-run via workflow_dispatch before re-pinning.`
+    )
+  } else {
+    lines.push(
+      `::error::Valve's CDN no longer serves the pinned libsteam_api package from any host (${pairs}), so a fresh install would land UNPINNED. Re-pin by choosing a new client package, updating PIN in ${PIN_FILE}, running \`pnpm gen-vtables\`, and updating the sha in native/steam-bridge/helper/gamelib_steam_api_pin.h (the coherence tests in steam_api_pin.rs fail until all three agree). Or host the dylib ourselves.`
+    )
+  }
+  return { lines, exitCode: 1 }
+}
+
+function emit(lines) {
+  for (const l of lines) {
+    const stream = l.startsWith('::') ? process.stderr : process.stdout
+    stream.write(`${l}\n`)
+  }
+}
+
+async function main(argv) {
+  let pinFile = PIN_FILE
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i] === '--pin-file' && i + 1 < argv.length) {
+      pinFile = argv[++i]
+    } else {
+      process.stderr.write(
+        'usage: node meta/steamApiPinCdnCheck.cjs [--pin-file <path>]\n'
+      )
+      process.exitCode = 2
+      return
+    }
+  }
   let pin
   try {
-    const file = path.resolve(process.cwd(), PIN_FILE)
+    const file = path.resolve(process.cwd(), pinFile)
     pin = parsePin(fs.readFileSync(file, 'utf8'))
   } catch (err) {
     process.stderr.write(`::error::${err.message}\n`)
@@ -197,20 +245,13 @@ async function main() {
       `${r.host}: ${r.verdict} (status ${r.status}, content-length ${r.contentLength})\n`
     )
   }
-  if (result.ok) {
-    process.stdout.write(
-      `PASS: ${pin.package} (${pin.packageSize} bytes) served\n`
-    )
-  } else {
-    process.stderr.write(
-      '::error::Valve CDN does not serve the pinned libsteam_api package\n'
-    )
-    process.exitCode = 1
-  }
+  const report = formatReport(pin, result)
+  emit(report.lines)
+  process.exitCode = report.exitCode
 }
 
-module.exports = { PIN_FILE, parsePin, checkPin }
+module.exports = { PIN_FILE, parsePin, checkPin, formatReport }
 
 if (require.main === module) {
-  main()
+  main(process.argv.slice(2))
 }
