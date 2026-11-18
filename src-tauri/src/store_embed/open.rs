@@ -114,6 +114,9 @@ pub(crate) fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value,
             }
             if payload.event() == tauri::webview::PageLoadEvent::Finished {
                 if let Ok(mut state) = store_embed_state().lock() {
+                    // G-47-9: a Finished means this webview committed a page, so the drain may
+                    // now read its live URL. Counted even when the push below is suppressed.
+                    state.note_page_finished();
                     if state.push_at(payload.url().to_string(), std::time::Instant::now())
                         == Some(StoreEmbedHistoryChange::Replaced)
                     {
@@ -291,6 +294,12 @@ pub(crate) fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value,
     // macOS: same titlebar-band correction as `store_embed_apply_rect`.
     #[cfg(target_os = "macos")]
     let y = y + macos_epic_embed::main_window_content_top_inset(app)?;
+    // G-47-9: a new webview has delivered no Finished yet, whatever the previous one did.
+    if let Ok(mut state) = store_embed_state().lock() {
+        state.reset_for_new_webview();
+    } else {
+        shell_eprintln!("[shell] WARN: store_embed history registry poisoned -- continuing");
+    }
     match window.add_child(
         builder,
         tauri::LogicalPosition::new(x, y),

@@ -72,6 +72,13 @@ fn store_embed_close(app: &AppHandle) -> Result<Value, String> {
 /// anchored to a SURVIVOR, and the embed's handle dies with the embed; this state does not, so
 /// a drain issued while the embed is closed resolves an empty array rather than erroring.
 ///
+/// The live URL is read ONLY after this webview delivered a `PageLoadEvent::Finished` (G-47-9).
+/// A WKWebView whose first navigation failed (offline, DNS, TLS) has a nil `URL` indefinitely,
+/// and wry 0.55.1 `url_from_webview` unwraps it inside the main-thread `WebviewMessage::Url`
+/// handler: the shell panics there, so the `.ok()` on the result can never catch it. The guard
+/// must not key on `current_url()`: `prepare_open` seeds the store's home entry before any load,
+/// so a seeded history says nothing about whether the webview ever committed a page.
+///
 /// A poisoned lock IS surfaced as an error here, unlike the `on_page_load` push path (which
 /// logs and continues rather than panicking a webview navigation callback). The asymmetry is
 /// deliberate: a failed push loses one event, while a failed drain that resolved `[]` would be
@@ -88,17 +95,34 @@ fn store_embed_take_nav_events(app: &AppHandle) -> Result<Value, String> {
             return macos_epic_embed::take_nav_events();
         }
     }
+    take_nav_events_with(store_embed_state(), || {
+        app.get_webview(STORE_EMBED_LABEL)
+            .and_then(|webview| webview.url().ok())
+    })
+}
+
+/// The drain core behind `store_embed_take_nav_events`, with the live-URL reader injected so the
+/// G-47-9 guard is testable without a webview. `read_live_url` runs only when the state says a
+/// page has finished loading in the current webview.
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+fn take_nav_events_with<F>(
+    state: &Mutex<StoreEmbedState>,
+    read_live_url: F,
+) -> Result<Value, String>
+where
+    F: FnOnce() -> Option<tauri::Url>,
+{
     // Never call into the webview while holding the state lock: the main-thread `on_page_load`
     // handler takes that lock and `Webview::url()` round-trips to the main thread, so holding
     // it across the read can deadlock.
-    let generation = store_embed_state()
-        .lock()
-        .map_err(|_| "store_embed_take_nav_events:history-registry-poisoned".to_string())?
-        .nav_generation();
-    let live_url = app
-        .get_webview(STORE_EMBED_LABEL)
-        .and_then(|webview| webview.url().ok());
-    let mut state = store_embed_state()
+    let (generation, finished_page) = {
+        let guard = state
+            .lock()
+            .map_err(|_| "store_embed_take_nav_events:history-registry-poisoned".to_string())?;
+        (guard.nav_generation(), guard.has_finished_page())
+    };
+    let live_url = if finished_page { read_live_url() } else { None };
+    let mut state = state
         .lock()
         .map_err(|_| "store_embed_take_nav_events:history-registry-poisoned".to_string())?;
     if let Some(live) = live_url {
@@ -404,5 +428,106 @@ mod tests {
             None,
             "parked histories are dropped too"
         );
+    }
+
+    // ---- G-47-9: the drain must never ask a never-loaded embed for its URL ----
+    //
+    // wry 0.55.1 unwraps a nil WKWebView URL on the main thread, so a first load that failed
+    // offline panicked the shell. These drive the drain core with a recording reader instead of
+    // a webview.
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    const GUARD_HOME: &str = "https://gaming.amazon.com/home";
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    fn guard_seeded_state() -> StoreEmbedState {
+        // The exact shape the live crash had: select_store + prepare_open seed a home entry, so
+        // `current_url()` is Some although no page has loaded.
+        let mut state = StoreEmbedState::default();
+        state.select_store("amazon");
+        state.prepare_open("https://gaming.amazon.com/claim/y", Some(GUARD_HOME));
+        assert_eq!(state.current_url().as_deref(), Some(GUARD_HOME));
+        state
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_finished_guard_drain_skips_url_read_before_finished() {
+        let state = Mutex::new(guard_seeded_state());
+        let calls = std::cell::Cell::new(0u32);
+        let result = take_nav_events_with(&state, || {
+            calls.set(calls.get() + 1);
+            None
+        });
+        assert_eq!(
+            calls.get(),
+            0,
+            "a webview that never finished a page must not be asked for its URL"
+        );
+        assert!(matches!(result, Ok(Value::Array(_))));
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_finished_guard_drain_reads_url_after_finished() {
+        let mut seeded = guard_seeded_state();
+        seeded.note_page_finished();
+        let state = Mutex::new(seeded);
+        let calls = std::cell::Cell::new(0u32);
+        let claim = "https://gaming.amazon.com/claim/x";
+        let result = take_nav_events_with(&state, || {
+            calls.set(calls.get() + 1);
+            tauri::Url::parse(claim).ok()
+        });
+        assert_eq!(calls.get(), 1);
+        let Ok(Value::Array(events)) = result else {
+            panic!("the drain must resolve an array");
+        };
+        assert_eq!(events.len(), 1, "the same-origin URL was reconciled");
+        assert_eq!(
+            state.lock().unwrap().current_url().as_deref(),
+            Some(claim),
+            "observe path reached: same-document navigation is recorded as before"
+        );
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_finished_guard_store_switch_keeps_flag() {
+        let mut state = StoreEmbedState::default();
+        state.note_page_finished();
+        state.select_store("gog");
+        state.prepare_open(
+            "https://www.gog.com/en/game/foo",
+            Some("https://www.gog.com/en/"),
+        );
+        assert!(
+            state.has_finished_page(),
+            "a store switch reuses the same webview, which already committed a page"
+        );
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_finished_guard_clear_and_new_webview_reset() {
+        let mut state = StoreEmbedState::default();
+        state.note_page_finished();
+        state.clear();
+        assert!(!state.has_finished_page(), "close drops the evidence");
+        state.note_page_finished();
+        state.reset_for_new_webview();
+        assert!(
+            !state.has_finished_page(),
+            "a new webview has delivered no Finished yet"
+        );
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_finished_guard_chrome_push_is_not_a_finish() {
+        // store_embed_navigate pushes BEFORE the load; that must not count as a committed page.
+        let mut state = guard_seeded_state();
+        state.push("https://gaming.amazon.com/claim/z".to_string());
+        assert!(!state.has_finished_page());
     }
 }

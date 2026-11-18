@@ -357,8 +357,10 @@ export function useStoreEmbedHost({
   //
   // ANCHORED TO A SURVIVOR (the 013-015 rule). The interval belongs to THIS hook, which lives
   // in the main webview and outlives the embed. It holds no embed handle -- `storeEmbedTakeNavEvents`
-  // reads a process-static queue in Rust, not the webview -- so a drain issued while the embed
-  // is hidden, closed, or was never opened resolves empty rather than erroring.
+  // drains a process-static queue in Rust. Rust reads the embed's live URL only after the embed
+  // has finished loading a page (G-47-9) and returns the queue alone otherwise, so a drain issued
+  // while the embed is hidden, closed, never opened or never loaded resolves empty rather than
+  // erroring.
   useEffect(() => {
     let cancelled = false
     let inFlight = false

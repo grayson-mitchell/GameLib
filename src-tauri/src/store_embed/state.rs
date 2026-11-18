@@ -120,6 +120,16 @@ pub(crate) struct StoreEmbedState {
     /// arming flag. Worst case of an initial canonicalization rewrite is one extra Back step
     /// whose landing is itself settled, so it terminates.
     settle_until: Option<std::time::Instant>,
+    /// True once THIS webview delivered a `PageLoadEvent::Finished` (G-47-9). This is the guard
+    /// for the drain's live-URL read: on macOS wry fires Finished only from
+    /// `didFinishNavigation`, so a Finished means the WKWebView committed a page and its URL
+    /// stays non-nil for that webview's lifetime. A fresh WKWebView whose first navigation
+    /// failed (offline, DNS, TLS) has a nil URL indefinitely, and wry 0.55.1 `url_from_webview`
+    /// unwraps it on the main thread, which panics the shell before any `.ok()` sees a result.
+    /// Never derive this from `current_url()`: `prepare_open` seeds a home entry before the
+    /// first load. A store switch reuses the same webview, so it keeps the flag; `clear()` and
+    /// `reset_for_new_webview()` drop it.
+    page_finished: bool,
 }
 
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
@@ -335,8 +345,28 @@ impl StoreEmbedState {
         std::mem::take(&mut self.pending_nav_events)
     }
 
+    /// PURE: this webview delivered a `PageLoadEvent::Finished` (G-47-9). Called for every
+    /// Finished, including a suppressed one (the landing of a chrome back/forward/reload/
+    /// navigate): the page committed either way.
+    pub(crate) fn note_page_finished(&mut self) {
+        self.page_finished = true;
+    }
+
+    /// PURE: whether the live webview has ever finished a page, i.e. whether its URL may be
+    /// read without risking wry's nil-URL unwrap (G-47-9).
+    pub(crate) fn has_finished_page(&self) -> bool {
+        self.page_finished
+    }
+
+    /// PURE: a brand-new webview is about to be created, so none of the previous one's
+    /// committed-page evidence applies (G-47-9).
+    pub(crate) fn reset_for_new_webview(&mut self) {
+        self.page_finished = false;
+    }
+
     /// PURE: drop all recorded history. Called on `store_embed_close` (D-21 teardown).
     pub(crate) fn clear(&mut self) {
+        self.page_finished = false;
         self.history.clear();
         self.cursor = 0;
         self.suppress_next_push = false;
