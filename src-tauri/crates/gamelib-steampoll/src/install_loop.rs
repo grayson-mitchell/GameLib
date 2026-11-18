@@ -40,7 +40,7 @@ use crate::update::{
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 use std::collections::{HashMap, HashSet};
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Duration;
 use tokio::time::{interval_at, Instant, MissedTickBehavior};
@@ -52,14 +52,6 @@ fn log_line(message: &str) {
 
 fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
     m.lock().unwrap_or_else(|e| e.into_inner())
-}
-
-/// `PollOptions.restoredSteamHold` (boot re-arm only).
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase", default)]
-pub struct RestoredSteamHold {
-    pub pids: Vec<u32>,
-    pub start_ticks: u32,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -88,7 +80,10 @@ pub struct PollOptions {
     pub skipped_depots: Option<Vec<String>>,
     pub delegated_to_steam_client: Option<bool>,
     pub adopted_by_steam_client: Option<bool>,
-    pub restored_steam_hold: Option<RestoredSteamHold>,
+    /// Accepted and ignored (Phase 81 D-11): the boot re-arm that sent it is gone. Kept only so
+    /// `deny_unknown_fields` does not reject an older sidecar's start until 81-14 removes the TS
+    /// sender; a start carrying it behaves exactly like one without it.
+    pub restored_steam_hold: Option<serde_json::Value>,
     pub awaiting_update: Option<AwaitingUpdateOpt>,
 }
 
@@ -119,7 +114,7 @@ pub struct InstallStatus {
 pub struct PollStatus {
     pub installs: Vec<InstallStatus>,
     pub uninstalls: Vec<String>,
-    /// Apps holding for a Steam restart, plus every app in the boot re-arm pending set.
+    /// Apps whose live install poll is holding for a Steam restart.
     pub holding: Vec<String>,
 }
 
@@ -134,8 +129,6 @@ struct Shared {
     next_gen: AtomicU64,
     native_in_flight: Mutex<HashSet<String>>,
     bridge_finalized: Mutex<HashSet<String>>,
-    pending_rearm: Mutex<HashSet<String>>,
-    reconcile_ran_during_rearm: AtomicBool,
 }
 
 fn valid_app_id(app_id: &str) -> bool {
@@ -267,30 +260,20 @@ impl InstallPolls {
             skipped.len()
         ));
 
-        let restored = o.restored_steam_hold.as_ref();
         let mut poll = ActiveInstall::new(&title, roots.clone(), source);
-        // quick 261029-pkp: a restored hold resumes the elapsed tick count.
-        poll.ticks = restored.map_or(0, |r| r.start_ticks);
-        poll.notified_waiting = restored.is_some();
         poll.delegated_to_steam_client = delegated;
         poll.hold = HoldPoll {
-            steam_hold: if restored.is_some() {
-                HoldState::Holding
-            } else if adopted {
+            steam_hold: if adopted {
                 HoldState::Released
             } else {
                 HoldState::Unprobed
             },
-            steam_pids_at_handoff: restored.map(|r| r.pids.clone()).unwrap_or_default(),
-            last_steam_probe_ms: if restored.is_some() {
-                self.registry.clock().now_ms()
-            } else {
-                0
-            },
+            steam_pids_at_handoff: Vec::new(),
+            last_steam_probe_ms: 0,
             is_native_handoff,
             mac_native_route: o.mac_native_route.unwrap_or(false),
             skipped_depots: skipped,
-            seen_downloading: restored.is_some(),
+            seen_downloading: false,
             absent_ticks_since_seen: 0,
         };
         poll.awaiting_update = o.awaiting_update.as_ref().map(|a| awaiting_from(a, 0));
@@ -466,25 +449,15 @@ impl InstallPolls {
         }
     }
 
-    /// `isHoldingForSteamRestart` for every app: holding polls plus the boot re-arm pending set
-    /// (fail closed). Reporting a pending app sets the reconcile-ran flag.
+    /// `isHoldingForSteamRestart` for every app: the live polls that are holding (dormant until
+    /// 81-14 removes the hold state).
     pub fn holding_app_ids(&self) -> Vec<String> {
-        let mut ids: HashSet<String> = self
+        let mut out: Vec<String> = self
             .polls()
             .iter()
             .filter(|(_, s)| s.poll.hold.steam_hold == HoldState::Holding)
             .map(|(id, _)| id.clone())
             .collect();
-        {
-            let pending = lock(&self.shared.pending_rearm);
-            if !pending.is_empty() {
-                self.shared
-                    .reconcile_ran_during_rearm
-                    .store(true, Ordering::SeqCst);
-                ids.extend(pending.iter().cloned());
-            }
-        }
-        let mut out: Vec<String> = ids.into_iter().collect();
         out.sort();
         out
     }
@@ -529,28 +502,6 @@ impl InstallPolls {
 
     pub fn outbox(&self) -> &Arc<Outbox> {
         &self.outbox
-    }
-
-    /// Boot re-arm bookkeeping (plan 16): the pending-verification set.
-    pub fn set_pending_rearm(&self, app_id: &str, pending: bool) {
-        let mut set = lock(&self.shared.pending_rearm);
-        if pending {
-            set.insert(app_id.to_string());
-        } else {
-            set.remove(app_id);
-        }
-    }
-
-    pub fn reconcile_ran_during_rearm(&self) -> bool {
-        self.shared
-            .reconcile_ran_during_rearm
-            .load(Ordering::SeqCst)
-    }
-
-    pub fn set_reconcile_ran_during_rearm(&self, ran: bool) {
-        self.shared
-            .reconcile_ran_during_rearm
-            .store(ran, Ordering::SeqCst);
     }
 
     // -----------------------------------------------------------------------------------------

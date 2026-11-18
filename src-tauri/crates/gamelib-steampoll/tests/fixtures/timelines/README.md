@@ -33,7 +33,7 @@ All data is synthetic: appId `1000`, title `Test Game`, `/fake/...` paths. No re
 `<lib>/steamapps`; `bottle`: the CrossOver bottle's steamapps dir; `bridge`: the bridge bottle's steamapps dir),
 and the `startInstallPolling` / `startUninstallPolling` options: `source` (`native`|`bottle`|`bridge`),
 `isNativeHandoff`, `macNativeRoute`, `skippedDepots`, `delegatedToSteamClient`, `adoptedBySteamClient`,
-`restoredSteamHold` (`{pids, startTicks}`), `awaitingUpdate` (`{fromBuild, targetBuild?, installAppRetry?}`).
+`restoredSteamHold` (accepted and ignored since Phase 81 D-11), `awaitingUpdate` (`{fromBuild, targetBuild?, installAppRetry?}`).
 The interval is fixed: 3000 ms per tick (5000 ms for `running`).
 
 ### Ticks
