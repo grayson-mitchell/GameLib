@@ -15,7 +15,6 @@ fn poll_constants_hold_their_pinned_values() {
     // The TS poll these once mirrored is gone; the values stay pinned here because the
     // frontend copy and the saved UAT contract both quote them.
     assert_eq!(GAMELIB_HANDOFF_STATE_FLAGS, 1026);
-    assert_eq!(STEAM_HOLD_PROBE_MIN_INTERVAL_MS, 10_000);
     assert_eq!(GRACE_TICKS, 20);
     assert_eq!(MAX_TICKS, 7200);
     assert_eq!(STEAM_REQUEST_NO_ACTIVITY_TICKS, 40);

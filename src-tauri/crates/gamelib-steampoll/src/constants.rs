@@ -5,8 +5,6 @@
 pub const GAMELIB_HANDOFF_STATE_FLAGS: u32 = 1026;
 /// Status context while a bridge install runs its post-download tail.
 pub const STEAM_BRIDGE_FINISHING_CONTEXT: &str = "steam-bridge-finishing";
-/// Minimum gap between Steam-process re-probes while holding for a Steam restart.
-pub const STEAM_HOLD_PROBE_MIN_INTERVAL_MS: u64 = 10_000;
 /// Stop if no manifest appeared (about 60 s).
 pub const GRACE_TICKS: u32 = 20;
 /// Absolute safety cap (about 6 h).
