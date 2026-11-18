@@ -55,3 +55,9 @@ Out-of-scope discoveries logged by plan executors. Not fixed in the plan that fo
 
 - Pre-existing, phase 64 (`ab124b14a`): `pnpm -s backend-di-ceilings` also reports `NoticeStack.test.tsx` 5 > baseline 4 (jestMock). Not caused by this phase.
 - `StateEvent::RearmSettled` (Rust events.rs, TS `steamPollEventRegistration.ts` handler, parity and contract tests) is dead after 81-11: nothing emits it. Fold its removal into 81-14's TS cleanup.
+
+## Notes (after 81-20, live gate Mac part)
+
+- `pnpm planning-gates` is 11/12 at 81-20: `34.5-.../preload-surface-gate.py` fails because the preload channels `steamAdoptionOpenSteam`, `steamAdoptionRestartNow`, `steamAdoptionStatus` (81-08) and `steamLaunchWithoutSteamOnce` (81-07) are in no bucket line of `IPC-PORT-INVENTORY.md`. Caused by this phase, not by 81-20 (it writes no source); fix is a bucket line per channel in that inventory. The todo-frontmatter gate passes, so the six new 81-20 todos are clean.
+- Items 10 (Windows 11) and 11 (Linux) of `81-HUMAN-UAT.md` are not run: the operator deferred them. The phase gate is open until they are.
+- Item 12 (1026 edge) recorded `blocked` (edge not reproduced); the gap stays as the orchestrator note after 81-08 above, no todo filed.
