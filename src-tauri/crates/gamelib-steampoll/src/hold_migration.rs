@@ -11,12 +11,10 @@
 //!
 //! Logging rule (T-28-04): op name and counts only, never a path or a record body.
 
-use crate::hold::{
-    decide_rearm, list_steam_client_pids, read_steam_process_start_tokens, DropReason, HoldStore,
-    RearmDecision,
-};
+use crate::hold::{decide_rearm, DropReason, HoldStore, RearmDecision};
 use crate::host::ProcessRunner;
 use crate::profile::Platform;
+use crate::steam_process::{list_steam_client_pids, read_steam_process_start_tokens};
 use serde::Serialize;
 use std::collections::HashMap;
 use std::path::Path;

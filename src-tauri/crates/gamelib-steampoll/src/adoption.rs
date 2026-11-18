@@ -421,7 +421,7 @@ impl AdoptionWatch {
     /// helper is always asked once (Play consults it before restarting Steam, RESEARCH Open
     /// Question 4); `helper_state` and `signed_in` carry its answer. Never fires InstallApp.
     pub async fn read(&self, args: &AdoptionWatchArgs) -> AdoptionReading {
-        let pids = crate::hold::list_steam_client_pids(
+        let pids = crate::steam_process::list_steam_client_pids(
             &**self.inner.registry.runner(),
             self.inner.platform,
         )
@@ -619,7 +619,7 @@ impl AdoptionWatch {
         if !snapshot.is_empty() {
             // Every OS: `steamRunning` and the signed-in readings need the live Steam pid list. Only
             // macOS reads a pid change as evidence.
-            let pids = crate::hold::list_steam_client_pids(
+            let pids = crate::steam_process::list_steam_client_pids(
                 &**self.inner.registry.runner(),
                 self.inner.platform,
             )

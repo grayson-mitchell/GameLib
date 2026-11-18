@@ -74,6 +74,7 @@ pub mod progress;
 pub mod registry;
 pub mod running;
 pub mod runtime;
+pub mod steam_process;
 #[cfg(any(test, feature = "testing"))]
 pub mod testing;
 pub mod uninstall;
