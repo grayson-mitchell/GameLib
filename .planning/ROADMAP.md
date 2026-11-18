@@ -1533,7 +1533,7 @@ Plans:
 
 **Requirements**: PRICE-01, PRICE-02, PRICE-03 (phase-level IDs minted during `/gsd-plan-phase 47`). Moved into v0.10 Foundations 2026-11-12.
 **Depends on:** Phase 20 (Aggregated Store Search — CheapShark), which minted the provider-neutral `common/types/storeSearch` vocabulary (D-11/D-12/D-13) this phase is the second implementation of. **Not** Phase 46 — `phase.add` fills `Depends on` with the immediately-preceding phase number as a positional guess, and Phase 46 (Windows single-instance guard) is unrelated; corrected by hand at filing time.
-**Plans:** 19/22 plans executed
+**Plans:** 20/22 plans executed
 
 **Research is already complete** — `.planning/quick/260916-gdg-answer-q2-cheapshark-to-itad-migration-cost/260916-gdg-RESEARCH.md` answers `questions.md` Q2 with claims graded MEASURED / SPEC / UNKNOWN. Do not re-derive it; do preserve its grades when quoting.
 
@@ -1609,7 +1609,7 @@ Plans:
 **Gap closure 2 (UAT 2026-11-19, `47-UAT.md` G-47-12a..c, G-47-14a..c)** — Wave 1:
 
 - [x] 47-19-PLAN.md — Store Search keeps its query and rows across leaving and returning, in session memory only (G-47-12a)
-- [ ] 47-20-PLAN.md — Search and text inputs opt out of macOS on-blur autocorrect (G-47-12b); region picker shows its Auto label (G-47-14a)
+- [x] 47-20-PLAN.md — Search and text inputs opt out of macOS on-blur autocorrect (G-47-12b); region picker shows its Auto label (G-47-14a)
 - [ ] 47-21-PLAN.md — Theme-safe Store Search row and Deals filter panel surfaces and tints (G-47-12c)
 
 **Gap closure 2 Wave 2** *(blocked on 47-21)*
