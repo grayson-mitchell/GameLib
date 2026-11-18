@@ -53,8 +53,8 @@ now provably the real one, not merely the originally-transcribed one.
 
 | | Count |
 |---|---:|
-| Unique channels | 248 |
-| Ported to sidecar | 93 |
+| Unique channels | 252 |
+| Ported to sidecar | 97 |
 | **Unported** | **159** |
 
 Reconciles with SEAM.md line 366 ("~208 of the 220 total IPC endpoints ... remain") and its
@@ -180,7 +180,7 @@ goes 68 → 71. `Unported` is unchanged: the channels are born ported.
 
 ## Already ported (34)
 
-`cancelDownload`, `checkGameUpdates`, `checkSteamInstalled`, `connectivity-changed`, `getDMQueueInformation`, `get-connectivity-status`, `getItadSteamGids`, `getLogContent`, `getMaxCpus`, `getSteamDeleteRoute`, `getSteamInstallAppTargets`, `getSteamUpdateInfo`, `getSystemInfo`, `hasExecutable`, `install`, `isNative`, `isSteamBottleEligible`, `itad.getKeyStatus`, `itad.setApiKey`, `launch`, `listSteamLibraryTargets`, `logError`, `oauthCaptureLogin`, `openDialog`, `pauseCurrentDownload`, `persistBottleWineVersion`, `refreshLibrary`, `removeFromDMQueue`, `requestAppSettings`, `requestGameSettings`, `resumeCurrentDownload`, `setSetting`, `showUpdateSetting`, `steamDirectLaunchVerdict`, `steamPollQR`, `steamRemoveAllCopies`, `steamStartQR`, `uninstall`, `updateGame`, `writeConfig`
+`cancelDownload`, `checkGameUpdates`, `checkSteamInstalled`, `connectivity-changed`, `get-connectivity-status`, `getDMQueueInformation`, `getItadSteamGids`, `getLogContent`, `getMaxCpus`, `getSteamDeleteRoute`, `getSteamInstallAppTargets`, `getSteamUpdateInfo`, `getSystemInfo`, `hasExecutable`, `install`, `isNative`, `isSteamBottleEligible`, `itad.getKeyStatus`, `itad.setApiKey`, `launch`, `listSteamLibraryTargets`, `logError`, `oauthCaptureLogin`, `openDialog`, `pauseCurrentDownload`, `persistBottleWineVersion`, `refreshLibrary`, `removeFromDMQueue`, `requestAppSettings`, `requestGameSettings`, `resumeCurrentDownload`, `setSetting`, `showUpdateSetting`, `steamAdoptionOpenSteam`, `steamAdoptionRestartNow`, `steamAdoptionStatus`, `steamDirectLaunchVerdict`, `steamLaunchWithoutSteamOnce`, `steamPollQR`, `steamRemoveAllCopies`, `steamStartQR`, `uninstall`, `updateGame`, `writeConfig`
 
 `logError` was ported early by Phase 34.2 gap cycle 2 (plan 34.2-16) — see the Phase 34.3 list
 below, which now excludes it, and `34.2-PORTED-CHANNELS.md`'s gap-cycle-2 subsection for the full
@@ -763,3 +763,14 @@ setting that Play (`launchDispatch.ts`) honours; only `steamDirectLaunchVerdict`
 the IsThereAnyDeal migration added three channels, born ported and filed in the "Already ported" bucket line:
 `getItadSteamGids` (Plan 08) and `itad.getKeyStatus` and `itad.setApiKey` (Plan 12). It deleted `getStoreSearchStoreMap`
 (Plan 08, CheapShark store map), now removed from the Phase 34.2 line. Net +2 on both counts; `Unported` (159) is unchanged.
+
+## Phase 81 — restart-on-Play adoption (4 channels) — **PORTED**
+
+`steamLaunchWithoutSteamOnce` (Plan 07) and `steamAdoptionStatus`, `steamAdoptionRestartNow` and
+`steamAdoptionOpenSteam` (Plan 08) are BRAND NEW, invoke-kind (`makeHandlerInvoker`,
+`src/preload/api/steam.ts`) and registered only in the sidecar. All four are filed in the "Already
+ported" bucket line. There is no Electron leg. The inventory was not updated when they landed; the
+gap surfaced at the 81-20 live gate's `pnpm planning-gates` run.
+
+**Unique channels raised 248 → 252, Ported to sidecar raised 93 → 97 (Phase 81, 2026-11-18):**
+both numbers moved together by +4 and `Unported` (159) is unchanged.
