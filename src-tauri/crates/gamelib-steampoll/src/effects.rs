@@ -17,13 +17,6 @@ pub enum Effect {
         event: StateEvent,
         then: Continuation,
     },
-    WriteHoldRecord {
-        app_id: String,
-        record: Value,
-    },
-    ClearHoldRecord {
-        app_id: String,
-    },
     Log {
         level: LogLevel,
         message: String,

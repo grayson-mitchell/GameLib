@@ -23,7 +23,7 @@
 use crate::constants::ACK_TIMEOUT_MS;
 use crate::effects::{Effect, LogLevel};
 use crate::events::{AckReply, StateEvent, StateEventKey};
-use crate::host::{HoldSink, PollHost};
+use crate::host::PollHost;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
@@ -272,12 +272,11 @@ async fn send_with_timeout(host: &dyn PollHost, ev: StateEvent) -> Option<AckRep
 /// from the `installed` one).
 pub async fn apply_effects(
     host: &dyn PollHost,
-    hold: &dyn HoldSink,
     outbox: &Outbox,
     effects: Vec<Effect>,
     title_cache: &mut String,
 ) -> Vec<AckReply> {
-    apply_effects_with(host, hold, outbox, effects, title_cache, None).await
+    apply_effects_with(host, outbox, effects, title_cache, None).await
 }
 
 /// [`apply_effects`] with a live read of the bridge-finalized marker. When `bridge_finalized` is
@@ -286,7 +285,6 @@ pub async fn apply_effects(
 /// between that read and the status emit.
 pub async fn apply_effects_with(
     host: &dyn PollHost,
-    hold: &dyn HoldSink,
     outbox: &Outbox,
     effects: Vec<Effect>,
     title_cache: &mut String,
@@ -334,10 +332,6 @@ pub async fn apply_effects_with(
                     work.push_front(e);
                 }
             }
-            Effect::WriteHoldRecord { app_id, record } => {
-                hold.record(&app_id, record, now_ms());
-            }
-            Effect::ClearHoldRecord { app_id } => hold.clear(&app_id),
             Effect::Log { level, message } => {
                 let tag = match level {
                     LogLevel::Info => "info",
@@ -348,11 +342,4 @@ pub async fn apply_effects_with(
         }
     }
     replies
-}
-
-fn now_ms() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_millis() as u64)
-        .unwrap_or(0)
 }

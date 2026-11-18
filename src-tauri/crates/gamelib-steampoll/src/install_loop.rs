@@ -24,7 +24,7 @@ use crate::constants::{
     GRACE_TICKS, MANIFEST_GONE_TICKS, MAX_TICKS, STEAM_REQUEST_NO_ACTIVITY_TICKS, TICK_INTERVAL_MS,
 };
 use crate::effects::{status_update, Effect, LogLevel};
-use crate::host::{HoldSink, PollHost};
+use crate::host::PollHost;
 use crate::install_once::{
     install_step, run_mac_arch_followup, wants_mac_arch_probe, ActiveInstall, HandoffPoll,
     InstallObservation,
@@ -178,7 +178,6 @@ fn emit(host: &dyn PollHost, effect: Effect) {
 pub struct InstallPolls {
     registry: Registry,
     outbox: Arc<Outbox>,
-    hold: Arc<dyn HoldSink>,
     monitor: Arc<DownloadMonitor>,
     platform: Platform,
     shared: Arc<Shared>,
@@ -188,14 +187,12 @@ impl InstallPolls {
     pub fn new(
         registry: Registry,
         outbox: Arc<Outbox>,
-        hold: Arc<dyn HoldSink>,
         monitor: Arc<DownloadMonitor>,
         platform: Platform,
     ) -> Self {
         InstallPolls {
             registry,
             outbox,
-            hold,
             monitor,
             platform,
             shared: Arc::new(Shared::default()),
@@ -505,7 +502,6 @@ impl InstallPolls {
         let is_finalized = move |app_id: &str| lock(&shared.bridge_finalized).contains(app_id);
         apply_effects_with(
             self.registry.host().as_ref(),
-            self.hold.as_ref(),
             &self.outbox,
             effects,
             title,

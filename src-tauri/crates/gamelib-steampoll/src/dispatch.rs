@@ -61,7 +61,7 @@ pub const OPS: &[&str] = &[
 /// The process-wide facade: the one set of collaborators the shell installs at boot.
 pub mod facade {
     use crate::adoption::AdoptionWatch;
-    use crate::host::{Clock, HoldSink, PollHost, ProcessRunner};
+    use crate::host::{Clock, PollHost, ProcessRunner};
     use crate::install_loop::InstallPolls;
     use crate::monitor::DownloadMonitor;
     use crate::outbox::Outbox;
@@ -79,7 +79,6 @@ pub mod facade {
         pub polls: InstallPolls,
         pub running: RunningPoll,
         pub adoption: AdoptionWatch,
-        pub hold: Arc<dyn HoldSink>,
         pub profile: SidecarProfile,
         pub runner: Arc<dyn ProcessRunner>,
         pub home: PathBuf,
@@ -110,7 +109,6 @@ pub mod facade {
         host: Arc<dyn PollHost>,
         runner: Arc<dyn ProcessRunner>,
         clock: Arc<dyn Clock>,
-        hold: Arc<dyn HoldSink>,
         profile: SidecarProfile,
     ) -> Arc<Facade> {
         let platform = Platform::current();
@@ -122,13 +120,7 @@ pub mod facade {
         );
         let outbox = Arc::new(Outbox::new());
         let monitor = Arc::new(DownloadMonitor::new(host, runner.clone(), clock));
-        let polls = InstallPolls::new(
-            registry.clone(),
-            outbox.clone(),
-            hold.clone(),
-            monitor,
-            platform,
-        );
+        let polls = InstallPolls::new(registry.clone(), outbox.clone(), monitor, platform);
         let home = std::env::var("HOME")
             .ok()
             .or_else(|| std::env::var("USERPROFILE").ok())
@@ -153,7 +145,6 @@ pub mod facade {
             polls,
             running,
             adoption,
-            hold,
             profile,
             runner,
             home,
@@ -166,14 +157,13 @@ pub mod facade {
         host: Arc<dyn PollHost>,
         runner: Arc<dyn ProcessRunner>,
         clock: Arc<dyn Clock>,
-        hold: Arc<dyn HoldSink>,
         profile: SidecarProfile,
     ) -> bool {
         let mut slot = lock(&SLOT);
         if slot.is_some() {
             return false;
         }
-        *slot = Some(build(host, runner, clock, hold, profile));
+        *slot = Some(build(host, runner, clock, profile));
         true
     }
 
@@ -183,10 +173,9 @@ pub mod facade {
         host: Arc<dyn PollHost>,
         runner: Arc<dyn ProcessRunner>,
         clock: Arc<dyn Clock>,
-        hold: Arc<dyn HoldSink>,
         profile: SidecarProfile,
     ) -> Arc<Facade> {
-        let f = build(host, runner, clock, hold, profile);
+        let f = build(host, runner, clock, profile);
         *lock(&SLOT) = Some(f.clone());
         f
     }
@@ -538,7 +527,6 @@ fn run_op(op: &str, args: &[Value]) -> Result<Value, String> {
             let started = start_uninstall(
                 &f.registry,
                 f.outbox.clone(),
-                f.hold.clone(),
                 StartUninstallArgs {
                     app_id: a.app_id,
                     title: a.title,

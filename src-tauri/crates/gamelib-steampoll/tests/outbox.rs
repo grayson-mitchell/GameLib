@@ -64,7 +64,7 @@ async fn ready_and_acked_orders_state_then_frontend_then_notify() {
             survivor_source: None,
         },
     }];
-    apply_effects(&host, &host, &outbox, fx, &mut title).await;
+    apply_effects(&host, &outbox, fx, &mut title).await;
     assert_eq!(
         kinds(&host),
         vec!["state:uninstalled:1", "fe:gameStatusUpdate", "notify"]
@@ -80,7 +80,7 @@ async fn ready_without_ack_waits_five_seconds_then_logs() {
     outbox.mark_ready(&host).await;
     let mut title = String::new();
     let start = tokio::time::Instant::now();
-    apply_effects(&host, &host, &outbox, vec![transition("7", 3)], &mut title).await;
+    apply_effects(&host, &outbox, vec![transition("7", 3)], &mut title).await;
     assert!(start.elapsed() >= Duration::from_millis(5000));
     assert!(start.elapsed() < Duration::from_millis(5100));
     assert_eq!(
@@ -105,7 +105,7 @@ async fn not_ready_queues_and_runs_post_ack_effects_at_once() {
     let outbox = Outbox::new();
     let mut title = String::new();
     let start = tokio::time::Instant::now();
-    apply_effects(&host, &host, &outbox, vec![transition("7", 3)], &mut title).await;
+    apply_effects(&host, &outbox, vec![transition("7", 3)], &mut title).await;
     assert_eq!(start.elapsed(), Duration::ZERO);
     // No state record: the event was queued, not sent.
     assert_eq!(
@@ -191,7 +191,6 @@ async fn a_newer_applied_uninstalled_drops_the_queued_older_installed() {
     let mut title = String::new();
     apply_effects(
         &host,
-        &host,
         &outbox,
         vec![state_transition(installed_ev("a", 5))],
         &mut title,
@@ -200,7 +199,6 @@ async fn a_newer_applied_uninstalled_drops_the_queued_older_installed() {
     assert_eq!(outbox.queued_len(), 1);
     host.set_ack(acked(None));
     apply_effects(
-        &host,
         &host,
         &outbox,
         vec![state_transition(uninstalled_ev("a", 9))],
@@ -225,7 +223,6 @@ async fn an_older_state_event_failing_after_a_newer_applied_one_is_not_queued() 
     let mut title = String::new();
     apply_effects(
         &host,
-        &host,
         &outbox,
         vec![state_transition(uninstalled_ev("a", 9))],
         &mut title,
@@ -233,7 +230,6 @@ async fn an_older_state_event_failing_after_a_newer_applied_one_is_not_queued() 
     .await;
     host.set_ack(AckMode::Reply(AckReply::not_acked()));
     apply_effects(
-        &host,
         &host,
         &outbox,
         vec![state_transition(installed_ev("a", 5))],
@@ -273,7 +269,7 @@ async fn retry_pending_replays_an_unacked_event_while_ready() {
     let outbox = Outbox::new();
     outbox.mark_ready(&host).await;
     let mut title = String::new();
-    apply_effects(&host, &host, &outbox, vec![transition("7", 3)], &mut title).await;
+    apply_effects(&host, &outbox, vec![transition("7", 3)], &mut title).await;
     assert_eq!(outbox.queued_len(), 1);
     // Still not acking: the retry keeps it queued.
     assert_eq!(outbox.retry_pending(&host).await, 1);
@@ -298,7 +294,7 @@ async fn progress_effects_never_wait_and_send_no_state() {
         channel: "progressUpdate".into(),
         args: vec![json!({"percent": 10})],
     }];
-    apply_effects(&host, &host, &outbox, fx, &mut title).await;
+    apply_effects(&host, &outbox, fx, &mut title).await;
     assert_eq!(start.elapsed(), Duration::ZERO);
     assert_eq!(kinds(&host), vec!["fe:progressUpdate"]);
 }
@@ -333,14 +329,14 @@ async fn title_comes_from_reply_or_the_cached_title() {
     let outbox = Outbox::new();
     outbox.mark_ready(&host).await;
     let mut title = "Cached".to_string();
-    apply_effects(&host, &host, &outbox, vec![installed("1")], &mut title).await;
+    apply_effects(&host, &outbox, vec![installed("1")], &mut title).await;
     assert_eq!(notify_title(&host).as_deref(), Some("From Reply"));
 
     let host = RecordingHost::new(acked(None));
     let outbox = Outbox::new();
     outbox.mark_ready(&host).await;
     let mut title = "Cached".to_string();
-    apply_effects(&host, &host, &outbox, vec![installed("1")], &mut title).await;
+    apply_effects(&host, &outbox, vec![installed("1")], &mut title).await;
     assert_eq!(notify_title(&host).as_deref(), Some("Cached"));
 }
 
@@ -362,35 +358,28 @@ async fn queue_is_bounded_by_app_id_cap() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn effect_order_and_side_records_are_preserved() {
+async fn effect_order_is_preserved() {
     let host = RecordingHost::new(acked(Some("T")));
     let outbox = Outbox::new();
     outbox.mark_ready(&host).await;
     let mut title = String::new();
     let fx = vec![
         status_update("1", "installing", None),
-        Effect::WriteHoldRecord {
-            app_id: "1".into(),
-            record: json!({"a": 1}),
-        },
         transition("1", 1),
         Effect::Log {
             level: LogLevel::Info,
             message: "x".into(),
         },
-        Effect::ClearHoldRecord { app_id: "1".into() },
         status_update("1", "done", None),
     ];
-    apply_effects(&host, &host, &outbox, fx, &mut title).await;
+    apply_effects(&host, &outbox, fx, &mut title).await;
     assert_eq!(
         kinds(&host),
         vec![
             "fe:gameStatusUpdate",
-            "file:record",
             "state:updateDone:1",
             "fe:gameStatusUpdate",
             "fe:gameStatusUpdate",
-            "file:clear",
             "fe:gameStatusUpdate"
         ]
     );
@@ -444,7 +433,6 @@ async fn finalization_during_the_ack_suppresses_the_finishing_status() {
     tokio::join!(
         apply_effects_with(
             &host,
-            &host,
             &outbox,
             vec![bridge_installed("1")],
             &mut title,
@@ -463,7 +451,6 @@ async fn an_unfinalized_bridge_install_still_reports_finishing() {
     let read = |_: &str| false;
     let mut title = String::new();
     apply_effects_with(
-        &host,
         &host,
         &outbox,
         vec![bridge_installed("1")],
@@ -487,13 +474,6 @@ async fn without_a_live_read_the_snapshot_decides() {
     let outbox = Outbox::new();
     outbox.mark_ready(&host).await;
     let mut title = String::new();
-    apply_effects(
-        &host,
-        &host,
-        &outbox,
-        vec![bridge_installed("1")],
-        &mut title,
-    )
-    .await;
+    apply_effects(&host, &outbox, vec![bridge_installed("1")], &mut title).await;
     assert_eq!(status_frontends(&host), 1);
 }

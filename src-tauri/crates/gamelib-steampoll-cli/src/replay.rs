@@ -645,13 +645,7 @@ async fn run(timeline: &Value) -> Result<Vec<StreamRecord>, String> {
         clock.clone(),
         false,
     ));
-    let polls = InstallPolls::new(
-        registry.clone(),
-        outbox.clone(),
-        host.clone(),
-        monitor.clone(),
-        platform,
-    );
+    let polls = InstallPolls::new(registry.clone(), outbox.clone(), monitor.clone(), platform);
     let running = {
         let w = world.clone();
         RunningPoll::new(
@@ -696,7 +690,6 @@ async fn run(timeline: &Value) -> Result<Vec<StreamRecord>, String> {
             start_uninstall(
                 &registry,
                 outbox.clone(),
-                host.clone(),
                 StartUninstallArgs {
                     app_id: app_id.clone(),
                     title: title.clone(),

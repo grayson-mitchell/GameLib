@@ -24,7 +24,6 @@ fn install(home: &std::path::Path) -> Arc<RecordingHost> {
         host.clone(),
         Arc::new(ScriptedRunner::default()),
         Arc::new(FakeClock::new(1_700_000_000_000)),
-        host.clone(),
         profile,
     );
     host
@@ -390,7 +389,6 @@ fn strict_running_read_errors_without_a_profile_home() {
         host.clone(),
         Arc::new(ScriptedRunner::default()),
         Arc::new(FakeClock::new(0)),
-        host,
         SidecarProfile::resolve(Platform::current(), "/fake", &|_| None),
     );
     let e = dispatch("steampoll_read_running_app_id", &[json!({"strict": true})])

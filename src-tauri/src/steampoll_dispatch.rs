@@ -477,14 +477,10 @@ pub(crate) fn install_steampoll_host(app: &AppHandle) {
         locales_dir,
         helper,
     });
-    let hold = Arc::new(gamelib_steampoll::hold::HoldStore::new(
-        profile.restart_hold_store_path.clone(),
-    ));
     gamelib_steampoll::dispatch::facade::install(
         host,
         Arc::new(gamelib_steampoll::runtime::TokioRunner),
         Arc::new(gamelib_steampoll::runtime::SystemClock),
-        hold,
         profile,
     );
 }

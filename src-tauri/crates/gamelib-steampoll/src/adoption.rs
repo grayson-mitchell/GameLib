@@ -56,13 +56,11 @@ use crate::constants::{
 };
 use crate::effects::{Continuation, Effect};
 use crate::events::StateEvent;
-use crate::host::HoldSink;
 use crate::outbox::{apply_effects, Outbox};
 use crate::profile::Platform;
 use crate::registry::{PollKind, Registry};
 use gamelib_steamfiles::readers::{RealRegistry, RegistryDword};
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
@@ -165,14 +163,6 @@ fn read_manifest(path: &Path) -> Option<String> {
     }
     let bytes = std::fs::read(path).ok()?;
     Some(String::from_utf8_lossy(&bytes).into_owned())
-}
-
-/// The adoption transition touches no hold record (81-15 removes the hold parameter).
-struct NoHoldSink;
-
-impl HoldSink for NoHoldSink {
-    fn record(&self, _: &str, _: Value, _: u64) {}
-    fn clear(&self, _: &str) {}
 }
 
 type Emitted = (bool, Option<bool>);
@@ -704,7 +694,6 @@ impl AdoptionWatch {
         let mut title = String::new();
         apply_effects(
             &**registry.host(),
-            &NoHoldSink,
             &self.inner.outbox,
             vec![Effect::Transition {
                 event: StateEvent::AdoptionState {

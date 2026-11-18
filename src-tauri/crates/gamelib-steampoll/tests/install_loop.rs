@@ -10,7 +10,7 @@ use gamelib_steampoll::constants::{
     GRACE_TICKS, MANIFEST_GONE_TICKS, MAX_TICKS, STEAM_REQUEST_NO_ACTIVITY_TICKS,
 };
 use gamelib_steampoll::events::{AckReply, StateEvent};
-use gamelib_steampoll::host::{HoldSink, RunOutput};
+use gamelib_steampoll::host::RunOutput;
 use gamelib_steampoll::install_loop::{
     AwaitingUpdateOpt, InstallAppRetryOpt, InstallPolls, PollOptions, StartInstallArgs,
 };
@@ -84,8 +84,7 @@ async fn rig_with(platform: Platform, darwin_monitor: bool, ack: AckReply) -> Ri
         clock,
         darwin_monitor,
     ));
-    let hold: Arc<dyn HoldSink> = host.clone();
-    let polls = InstallPolls::new(reg.clone(), outbox, hold, monitor, platform);
+    let polls = InstallPolls::new(reg.clone(), outbox, monitor, platform);
     let roots = PollRoots {
         steam_root: steam.to_string_lossy().into_owned(),
         bottle_steamapps_root: Some(bottle.to_string_lossy().into_owned()),
@@ -941,16 +940,13 @@ async fn concurrent_uninstall_starts_spawn_exactly_one_poll() {
         let threads: Vec<_> = (0..8)
             .map(|_| {
                 let reg = r.reg.clone();
-                let host = r.host.clone();
                 let roots = r.roots.clone();
                 let barrier = barrier.clone();
                 std::thread::spawn(move || {
-                    let hold: Arc<dyn HoldSink> = host;
                     barrier.wait();
                     start_uninstall(
                         &reg,
                         Arc::new(Outbox::new()),
-                        hold,
                         StartUninstallArgs {
                             app_id: APP.into(),
                             title: "Game".into(),
@@ -1021,12 +1017,10 @@ async fn status_reports_no_hold_for_any_install() {
 async fn status_lists_uninstall_polls_too() {
     let r = rig().await;
     let outbox = Arc::new(Outbox::new());
-    let hold: Arc<dyn HoldSink> = r.host.clone();
     write(&r, "2052");
     start_uninstall(
         &r.reg,
         outbox,
-        hold,
         StartUninstallArgs {
             app_id: APP.into(),
             title: "Game".into(),

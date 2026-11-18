@@ -537,7 +537,7 @@ fn args(r: &Rig, source: AcfSource) -> StartUninstallArgs {
 }
 
 fn start(r: &Rig, source: AcfSource) -> Result<bool, String> {
-    start_uninstall(&r.reg, r.outbox.clone(), r.host.clone(), args(r, source))
+    start_uninstall(&r.reg, r.outbox.clone(), args(r, source))
 }
 
 async fn settle() {
@@ -582,7 +582,7 @@ async fn rejects_a_non_numeric_app_id() {
     let r = rig().await;
     let mut a = args(&r, AcfSource::Native);
     a.app_id = "../x".into();
-    assert!(start_uninstall(&r.reg, r.outbox.clone(), r.host.clone(), a).is_err());
+    assert!(start_uninstall(&r.reg, r.outbox.clone(), a).is_err());
 }
 
 #[tokio::test(start_paused = true)]

@@ -20,7 +20,6 @@ use crate::acf_state::{read_acf_state, AcfSource, AcfState, PollRoots};
 use crate::constants::{MAX_TICKS, STEAM_REQUEST_NO_ACTIVITY_TICKS, TICK_INTERVAL_MS};
 use crate::effects::{status_update, Continuation, Effect, LogLevel};
 use crate::events::{StateEvent, Survivor};
-use crate::host::HoldSink;
 use crate::outbox::{apply_effects, Outbox};
 use crate::registry::{PollKind, Registry};
 use serde_json::{json, Map, Value};
@@ -321,7 +320,6 @@ fn valid_app_id(app_id: &str) -> bool {
 pub fn start_uninstall(
     registry: &Registry,
     outbox: Arc<Outbox>,
-    hold: Arc<dyn HoldSink>,
     args: StartUninstallArgs,
 ) -> Result<bool, String> {
     if !valid_app_id(&args.app_id) {
@@ -360,7 +358,7 @@ pub fn start_uninstall(
             };
             let (effects, stop) =
                 uninstall_step(&mut poll, &args.app_id, &obs, &mut || reg.next_notice_seq());
-            apply_effects(host.as_ref(), hold.as_ref(), &outbox, effects, &mut title).await;
+            apply_effects(host.as_ref(), &outbox, effects, &mut title).await;
             if stop {
                 break;
             }
