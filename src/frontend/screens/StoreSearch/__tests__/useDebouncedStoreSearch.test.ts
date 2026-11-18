@@ -114,6 +114,7 @@ import type {
 import fs from 'fs'
 import path from 'path'
 import { defined } from '../../__tests__/fixtures/indexed'
+import { resetStoreSearchSessionForTests } from '../storeSearchSession'
 
 const DEBOUNCE_WINDOW = 400
 
@@ -183,6 +184,7 @@ function envelope(results: StoreSearchResult[]): StoreSearchResponse {
 describe('useDebouncedStoreSearch', () => {
   beforeEach(() => {
     jest.useFakeTimers()
+    resetStoreSearchSessionForTests()
     mockApi.searchStores.mockReset()
     mockApi.logError.mockReset()
     country = 'US'
@@ -438,5 +440,68 @@ describe('useDebouncedStoreSearch', () => {
       'utf8'
     )
     expect(source).not.toContain('new AbortController')
+  })
+})
+
+describe('useDebouncedStoreSearch session keep (G-47-12a)', () => {
+  beforeEach(() => {
+    jest.useFakeTimers()
+    resetStoreSearchSessionForTests()
+    mockApi.searchStores.mockReset()
+    mockApi.logError.mockReset()
+    country = 'US'
+  })
+
+  afterEach(() => {
+    jest.useRealTimers()
+  })
+
+  it('a remount restores the query and rows on the first render and sends no new request', async () => {
+    const rows = [makeResult()]
+    mockApi.searchStores.mockResolvedValue(envelope(rows))
+
+    let hook = mount()
+    hook.setQuery('portal')
+    hook = rerender()
+    jest.advanceTimersByTime(DEBOUNCE_WINDOW)
+    hook = await settle(hook)
+    expect(hook.status).toBe('results')
+    mockApi.searchStores.mockClear()
+
+    // Leave and come back: a fresh mount; only the module store survives.
+    hook = mount()
+    expect(hook.query).toBe('portal')
+    expect(hook.status).toBe('results')
+    expect(hook.results).toEqual(rows)
+    expect(hook.loading).toBe(false)
+
+    jest.advanceTimersByTime(DEBOUNCE_WINDOW)
+    hook = await settle(hook)
+    expect(mockApi.searchStores).not.toHaveBeenCalled()
+    expect(hook.loading).toBe(false)
+    expect(hook.status).toBe('results')
+  })
+
+  it('re-submitting the same trimmed query starts no timer and sends no request', async () => {
+    mockApi.searchStores.mockResolvedValue(envelope([makeResult()]))
+
+    let hook = mount()
+    hook.setQuery('portal')
+    hook = rerender()
+    jest.advanceTimersByTime(DEBOUNCE_WINDOW)
+    hook = await settle(hook)
+    mockApi.searchStores.mockClear()
+
+    hook.setQuery('portal ')
+    hook = rerender()
+    // A second render makes any state the effect set visible (see settle()).
+    hook = rerender()
+    expect(hook.loading).toBe(false)
+    jest.advanceTimersByTime(DEBOUNCE_WINDOW)
+    hook = await settle(hook)
+
+    expect(mockApi.searchStores).not.toHaveBeenCalled()
+    expect(hook.loading).toBe(false)
+    expect(hook.status).toBe('results')
   })
 })

@@ -193,6 +193,7 @@ import useAuthState from 'frontend/state/authState'
 import useLibraryState from 'frontend/state/libraryState'
 import { resetAllStores } from 'frontend/state/storeKit'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
+import { resetStoreSearchSessionForTests } from '../storeSearchSession'
 
 // The screen reads the account libraries and humble keys from the stores;
 // contextValue stays the fixture holder and is pushed into them here.
@@ -344,6 +345,7 @@ async function search(query: string): Promise<ReactElement> {
 describe('StoreSearch screen container', () => {
   beforeEach(() => {
     jest.useFakeTimers()
+    resetStoreSearchSessionForTests()
     contextValue = {
       epic: { library: [] },
       gog: { library: [] },
@@ -497,6 +499,28 @@ describe('StoreSearch screen container', () => {
     expect(mockApi.searchStores).toHaveBeenCalledWith('portal', 'US')
   })
 
+  it('G-47-12a: leaving and returning shows the same query and rows on the first frame with no new request', async () => {
+    mockApi.searchStores.mockResolvedValue({
+      results: [makeResult()],
+      pricedCountry: 'US'
+    })
+    mount()
+    await search('portal')
+    expect(mockApi.searchStores).toHaveBeenCalledTimes(1)
+
+    // Leave and come back: a fresh mount; only the module store survives.
+    const tree = mount()
+    expect(findSearchBar(tree)?.props.value).toBe('portal')
+    expect(findByType(tree, StoreSearchRow)).toBeDefined()
+    expect(
+      findByClassNamePart(tree, 'storeSearchScreen__message--prompt')
+    ).toBeUndefined()
+
+    jest.advanceTimersByTime(400)
+    await settle()
+    expect(mockApi.searchStores).toHaveBeenCalledTimes(1)
+  })
+
   it('renders the region-fallback note only when pricedCountry differs from the requested country', async () => {
     mockApi.searchStores.mockResolvedValue({
       results: [makeResult()],
@@ -512,6 +536,8 @@ describe('StoreSearch screen container', () => {
       results: [makeResult()],
       pricedCountry: 'CA'
     })
+    // A second, independent session, not a return visit to the first.
+    resetStoreSearchSessionForTests()
     mount()
     tree = await search('portal')
     const note = findByClassNamePart(tree, 'storeSearchScreen__regionNote')
@@ -670,6 +696,7 @@ describe('StoreSearch region picker (G-47-8)', () => {
 
   beforeEach(() => {
     jest.useFakeTimers()
+    resetStoreSearchSessionForTests()
     contextValue = {
       epic: { library: [] },
       gog: { library: [] },

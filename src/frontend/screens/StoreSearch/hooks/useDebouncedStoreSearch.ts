@@ -5,6 +5,13 @@ import {
   type StoreSearchErrorCode,
   type StoreSearchResult
 } from 'common/types/storeSearch'
+import {
+  restoreStoreSearchSession,
+  STORE_SEARCH_MIN_QUERY_LENGTH,
+  writeStoreSearchSession,
+  type StoreSearchFetchKey,
+  type StoreSearchStatus
+} from '../storeSearchSession'
 
 /**
  * STORESEARCH-02/D-11 debounce + min-3-char + generation-counter-cancel hook.
@@ -31,15 +38,17 @@ import {
  * detection idiom): every fetch captures its own generation number, and a
  * resolve/reject is discarded if a newer fetch has since started.
  *
+ * G-47-12a: the query and the last rows are seeded from, and written back to,
+ * the session-only module store in `../storeSearchSession.ts`, so leaving the
+ * screen and returning shows them again without a new request.
+ *
  * Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
  * flagged the previously-exported form as a used-in-module finding -- there
  * is no external consumer, so the export served no purpose).
  */
 
-type StoreSearchStatus = 'prompt' | 'loading' | 'results' | 'empty' | 'error'
-
 const DEBOUNCE_MS = 400
-const MIN_QUERY_LENGTH = 3
+const MIN_QUERY_LENGTH = STORE_SEARCH_MIN_QUERY_LENGTH
 
 interface UseDebouncedStoreSearchResult {
   query: string
@@ -63,11 +72,21 @@ interface UseDebouncedStoreSearchResult {
 export function useDebouncedStoreSearch(
   countryCode: string
 ): UseDebouncedStoreSearchResult {
-  const [query, setQuery] = useState('')
-  const [debouncedQuery, setDebouncedQuery] = useState('')
-  const [results, setResults] = useState<StoreSearchResult[]>([])
-  const [status, setStatus] = useState<StoreSearchStatus>('prompt')
-  const [pricedCountry, setPricedCountry] = useState<string | null>(null)
+  // G-47-12a: the first render restores the kept query and, when they are
+  // still current for this country, its rows (see restoreStoreSearchSession).
+  const [seed] = useState(() =>
+    restoreStoreSearchSession(countryCode, Date.now())
+  )
+  const [query, setQuery] = useState(seed.query)
+  const [debouncedQuery, setDebouncedQuery] = useState(seed.debouncedQuery)
+  const [results, setResults] = useState<StoreSearchResult[]>(seed.results)
+  const [status, setStatus] = useState<StoreSearchStatus>(seed.status)
+  const [pricedCountry, setPricedCountry] = useState<string | null>(
+    seed.pricedCountry
+  )
+  const [fetchedFor, setFetchedFor] = useState<StoreSearchFetchKey | null>(
+    seed.fetchedFor
+  )
   const [errorCode, setErrorCode] = useState<StoreSearchErrorCode | null>(null)
   const [debouncePending, setDebouncePending] = useState(false)
   const [fetching, setFetching] = useState(false)
@@ -87,8 +106,17 @@ export function useDebouncedStoreSearch(
       setFetching(false)
       setDebouncedQuery('')
       setResults([])
+      setFetchedFor(null)
       setErrorCode(null)
       setStatus('prompt')
+      return
+    }
+
+    if (trimmed === debouncedQuery) {
+      // A restored or unchanged query must not show the spinner or re-run the
+      // search. debouncedQuery is deliberately not a dependency: only a query
+      // change should start the debounce.
+      setDebouncePending(false)
       return
     }
 
@@ -111,11 +139,12 @@ export function useDebouncedStoreSearch(
       return
     }
     const generation = ++generationRef.current
+    const requestedCountry = countryCode
     setFetching(true)
     setStatus('loading')
 
     window.api
-      .searchStores(searchQuery, countryCode)
+      .searchStores(searchQuery, requestedCountry)
       .then((response) => {
         if (generationRef.current !== generation) {
           // Superseded by a newer query — discard this stale resolution.
@@ -124,6 +153,11 @@ export function useDebouncedStoreSearch(
         setFetching(false)
         setResults(response.results)
         setPricedCountry(response.pricedCountry)
+        setFetchedFor({
+          query: searchQuery.trim(),
+          countryCode: requestedCountry,
+          at: Date.now()
+        })
         setErrorCode(null)
         setStatus(response.results.length === 0 ? 'empty' : 'results')
       })
@@ -144,6 +178,17 @@ export function useDebouncedStoreSearch(
     if (!debouncedQuery) {
       return
     }
+    if (
+      (status === 'results' || status === 'empty') &&
+      fetchedFor !== null &&
+      fetchedFor.query === debouncedQuery &&
+      fetchedFor.countryCode === countryCode
+    ) {
+      // The rows on screen are already for this query and country (restored
+      // on return), so a fetch would only blank the body with 'loading' to get
+      // the same hour-fresh rows (G-47-12a).
+      return
+    }
     fetchResults(debouncedQuery)
     // fetchResults is intentionally omitted from the deps array: it's a
     // plain closure recreated every render, and depending on it would
@@ -158,6 +203,17 @@ export function useDebouncedStoreSearch(
       generationRef.current++
     }
   }, [debouncedQuery, countryCode])
+
+  // Keep the query and last rows for the session (G-47-12a).
+  useEffect(() => {
+    writeStoreSearchSession({
+      query,
+      results,
+      status,
+      pricedCountry,
+      fetchedFor
+    })
+  }, [query, results, status, pricedCountry, fetchedFor])
 
   return {
     query,
