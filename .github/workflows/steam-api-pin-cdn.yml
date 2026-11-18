@@ -1,0 +1,58 @@
+name: Steam API pin CDN check
+permissions:
+  contents: read
+
+# What this job proves: Valve's client-update CDN still answers HEAD 200 with the pinned byte
+# count for the package that src-tauri/crates/gamelib-depot/src/steam_api_pin.rs names. The package,
+# its size and the hosts are read from that file at run time, so a pin bump updates the check
+# automatically.
+#
+# What it does NOT catch: HEAD downloads no body, so the package sha2vz, the VZ decode, the member
+# extraction, the dylib sha256 and the Valve signature are not proven (the app checks all of these
+# on every fetch). The job runs from GitHub's ubuntu runners, not from users' regional CDN edges.
+# A cached pin never needs the CDN, so a red run affects only fresh installs and cleared caches.
+#
+# This job can go red with no change in the repo (Valve drops the build), so it is deliberately NOT
+# a required check. That is why it may carry a `paths:` filter, unlike rust-test.yml and audit.yml,
+# whose required status must be reported on every PR.
+#
+# GitHub disables scheduled workflows in a public repo after 60 days with no repository activity.
+#
+# On red: re-pin (choose a new client package, update PIN in steam_api_pin.rs, run
+# `pnpm gen-vtables`, and update the sha in native/steam-bridge/helper/gamelib_steam_api_pin.h) or
+# host the dylib ourselves. A run where every host was unreachable should be re-run via
+# workflow_dispatch before acting.
+on:
+  schedule:
+    - cron: '30 6 * * 1'
+  workflow_dispatch:
+  push:
+    branches: [main, stable]
+    paths:
+      - src-tauri/crates/gamelib-depot/src/steam_api_pin.rs
+      - meta/steamApiPinCdnCheck.cjs
+      - .github/workflows/steam-api-pin-cdn.yml
+  pull_request:
+    branches: [main, stable]
+    paths:
+      - src-tauri/crates/gamelib-depot/src/steam_api_pin.rs
+      - meta/steamApiPinCdnCheck.cjs
+      - .github/workflows/steam-api-pin-cdn.yml
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  head-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: 'package.json'
+      # No `pnpm install` is needed: the script uses node builtins only.
+      - name: HEAD-check the pinned libsteam_api package
+        run: pnpm check:steam-api-pin-cdn

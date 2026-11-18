@@ -64,6 +64,7 @@
     "gen:theme-tokens": "node meta/runTs.cjs --bundle --platform=node --target=node22 meta/genThemeTokens.ts",
     "check:ipc-contract": "node meta/runTs.cjs --bundle --platform=node --target=node22 meta/genIpcContract.ts --check",
     "check:build-bin-mirror": "node meta/runTs.cjs --bundle --platform=node --target=node22 meta/checkBuildBinMirror.ts",
+    "check:steam-api-pin-cdn": "node meta/steamApiPinCdnCheck.cjs",
     "capture:shell-scrollback": "node meta/runTs.cjs --bundle --platform=node --target=node22 meta/captureShellScrollback.ts",
     "smoke:exit-check": "node meta/runTs.cjs --bundle --platform=node --target=node22 meta/sidecarExitCheck.ts",
     "check:runner-invocations": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/checkRunnerInvocations.ts",

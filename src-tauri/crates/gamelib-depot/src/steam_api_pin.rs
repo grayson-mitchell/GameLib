@@ -27,6 +27,9 @@ use crate::download::hex;
 /// `native/steam-bridge/helper/gamelib_steam_api_pin.h`: the pin selects which SteamUser /
 /// MatchmakingServers versions the helper's dispatch table can resolve. The coherence test in this
 /// module fails when the three disagree.
+/// `meta/steamApiPinCdnCheck.cjs` (the weekly CI check, see
+/// `.github/workflows/steam-api-pin-cdn.yml`) reads `PIN.package`, `PIN.package_size` and
+/// `CDN_HOSTS` from this file's source text, so each must stay a literal.
 #[derive(Debug, Clone, Copy)]
 pub struct SteamApiPin {
     /// Package file name on the CDN (client build in `client_build`, built 2026-10-21).
