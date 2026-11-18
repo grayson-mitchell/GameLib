@@ -181,6 +181,11 @@ pub struct AcfUpdateFields {
     pub state_flags: u32,
     pub bytes_to_download: u64,
     pub bytes_downloaded: u64,
+    /// BytesToStage, the update's stage size, read only as the Windows live source's denominator
+    /// (`install_loop.rs` `windows_update_live_active`). Serde skips it, so the
+    /// `steampoll_acf_read_update` reply and TS `AcfUpdateFields` keep their shape.
+    #[serde(skip)]
+    pub bytes_to_stage: u64,
     pub scheduled_auto_update: u64,
     pub beta_key: Option<String>,
 }
@@ -222,6 +227,7 @@ pub fn read_acf_update_fields_from_dir(
         state_flags: rec.state_flags.unwrap_or(0),
         bytes_to_download: bytes_field(&rec.bytes_to_download),
         bytes_downloaded: bytes_field(&rec.bytes_downloaded),
+        bytes_to_stage: bytes_field(&rec.bytes_to_stage),
         scheduled_auto_update: bytes_field(&rec.scheduled_auto_update),
         beta_key: rec.beta_key.filter(|k| !k.is_empty()),
     })

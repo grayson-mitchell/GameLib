@@ -28,6 +28,7 @@ fn fields(stage: u32, buildid: &str, target: Option<&str>) -> AcfUpdateFields {
         state_flags: stage,
         bytes_to_download: 0,
         bytes_downloaded: 0,
+        bytes_to_stage: 0,
         scheduled_auto_update: 0,
         beta_key: None,
     }
@@ -40,6 +41,7 @@ fn obs(f: Option<AcfUpdateFields>) -> UpdateObservation {
         install_app_outcome: None,
         seq: 1,
         is_mac: false,
+        windows_live: false,
     }
 }
 

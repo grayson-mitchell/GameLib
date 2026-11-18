@@ -163,7 +163,8 @@ fn log(level: LogLevel, message: String) -> Effect {
 /// Whether the Windows live source (steam.exe's write counter, `win_live.rs`) is this poll's
 /// progress source: a native poll that follows a download the Steam client performs itself, that
 /// is, one delegated to Steam and not a GameLib depot handoff. On macOS the same polls use the
-/// nettop monitor; Linux has no live source and reads the ACF alone.
+/// nettop monitor; Linux has no live source and reads the ACF alone. Update polls use it too,
+/// through `update_tick`.
 pub fn windows_live_applies(platform: Platform, poll: &ActiveInstall) -> bool {
     platform == Platform::Win32
         && poll.delegated_to_steam_client
@@ -236,6 +237,7 @@ pub fn install_step(
 fn update_tick(app_id: &str, poll: &mut ActiveInstall, obs: &InstallObservation) -> InstallStep {
     let ticks = poll.ticks;
     let source = poll.source;
+    let windows_live = windows_live_applies(obs.platform, poll);
     let Some(awaiting) = poll.awaiting_update.as_mut() else {
         return InstallStep::effects(vec![]);
     };
@@ -250,6 +252,7 @@ fn update_tick(app_id: &str, poll: &mut ActiveInstall, obs: &InstallObservation)
             install_app_outcome: obs.install_app_outcome.clone(),
             seq: obs.seq,
             is_mac: obs.platform == Platform::Darwin,
+            windows_live,
         },
     );
     InstallStep {

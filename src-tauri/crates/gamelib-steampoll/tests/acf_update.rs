@@ -53,6 +53,7 @@ fn base() -> AcfUpdateFields {
         state_flags: 4,
         bytes_to_download: 100,
         bytes_downloaded: 100,
+        bytes_to_stage: 0,
         scheduled_auto_update: 0,
         beta_key: None,
     }
@@ -178,6 +179,7 @@ fn keeps_build_ids_as_exact_strings_and_counters_numeric() {
             state_flags: 4,
             bytes_to_download: 2048,
             bytes_downloaded: 1024,
+            bytes_to_stage: 0,
             scheduled_auto_update: 5,
             beta_key: Some("beta_a".into()),
         }

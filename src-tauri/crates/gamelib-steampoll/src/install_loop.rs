@@ -34,7 +34,8 @@ use crate::outbox::{apply_effects_with, Outbox};
 use crate::profile::Platform;
 use crate::registry::{PollKind, Registry};
 use crate::update::{
-    request_steam_install_app, AwaitingUpdate, InstallAppRetry, SteamInstallAppOutcome,
+    is_update_running, request_steam_install_app, AwaitingUpdate, InstallAppRetry,
+    SteamInstallAppOutcome,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
@@ -143,10 +144,16 @@ fn live_monitor_eligible(platform: Platform, poll: &ActiveInstall) -> bool {
         && !poll.handoff.is_native_handoff
 }
 
-/// The Windows live source is read for this poll: a delegated native install poll (an update poll
-/// has its own step and does not use it).
+/// The Windows live source is read for this poll's install arm: a delegated native install poll.
+/// Update polls read the same source through [`windows_update_live_active`].
 fn windows_live_active(platform: Platform, poll: &ActiveInstall) -> bool {
     windows_live_applies(platform, poll) && poll.awaiting_update.is_none()
+}
+
+/// The Windows live source is read for this poll's update arm: a delegated native update poll. The
+/// reading itself exists only while the update runs (`is_update_running`).
+fn windows_update_live_active(platform: Platform, poll: &ActiveInstall) -> bool {
+    windows_live_applies(platform, poll) && poll.awaiting_update.is_some()
 }
 
 fn retry_from(o: &InstallAppRetryOpt) -> InstallAppRetry {
@@ -531,6 +538,7 @@ impl InstallPolls {
             title: String,
             restart_monitor: bool,
             windows_live: bool,
+            windows_update_live: bool,
         }
         let (snap, cap_stop) = {
             let mut polls = self.polls();
@@ -552,6 +560,7 @@ impl InstallPolls {
                     restart_monitor: live_monitor_eligible(self.platform, poll)
                         && poll.ticks % MONITOR_RESTART_TICKS == 0,
                     windows_live: windows_live_active(self.platform, poll),
+                    windows_update_live: windows_update_live_active(self.platform, poll),
                 },
                 cap_stop,
             )
@@ -600,6 +609,17 @@ impl InstallPolls {
                 } => self
                     .monitor
                     .read_windows(app_id, *bytes_to_stage, *bytes_to_download),
+                _ => None,
+            }
+        } else if snap.windows_update_live {
+            // The baseline is the first tick Steam runs the update, not the hand-off: a pending
+            // update can wait while Steam writes other things. Bit 4 stays set through an update,
+            // so the update fields, not `AcfState`, say when it runs.
+            match &update_fields {
+                Some(f) if is_update_running(f) => {
+                    self.monitor
+                        .read_windows(app_id, f.bytes_to_stage, f.bytes_to_download)
+                }
                 _ => None,
             }
         } else {

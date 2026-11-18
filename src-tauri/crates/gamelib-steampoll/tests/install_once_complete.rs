@@ -382,6 +382,7 @@ fn update_fields(flags: u32, build: &str, target: Option<&str>) -> AcfUpdateFiel
         state_flags: flags,
         bytes_to_download: 0,
         bytes_downloaded: 0,
+        bytes_to_stage: 0,
         scheduled_auto_update: 0,
         beta_key: None,
     }

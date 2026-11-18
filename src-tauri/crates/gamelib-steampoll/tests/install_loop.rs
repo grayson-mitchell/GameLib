@@ -990,6 +990,34 @@ fn write_win_downloading_in(dir: &std::path::Path) {
     std::fs::write(dir.join(format!("appmanifest_{APP}.acf")), text).unwrap();
 }
 
+/// An update's own sizes: the changed content Steam stages is far smaller than the installed size
+/// (`SizeOnDisk`), and the compressed download smaller again.
+const WIN_UPDATE_TO_DOWNLOAD: u64 = 120_000_000;
+const WIN_UPDATE_TO_STAGE: u64 = 400_000_000;
+
+/// The Windows update ACF: an installed game (bit 4) with an update in progress. `flags` carries
+/// the update bits ("6" pending, "1030" started), `buildid` the installed build; TargetBuildID is 8.
+fn write_win_update_in(dir: &std::path::Path, flags: &str, buildid: &str) {
+    let text = format!(
+        "\"AppState\"
+{{
+	\"appid\"		\"{APP}\"
+	\"StateFlags\"		\"{flags}\"
+	\"installdir\"		\"Game\"
+	\"name\"		\"Game\"
+	\"SizeOnDisk\"		\"3335661215\"
+	\"buildid\"		\"{buildid}\"
+	\"TargetBuildID\"		\"8\"
+	\"BytesToDownload\"		\"{WIN_UPDATE_TO_DOWNLOAD}\"
+	\"BytesDownloaded\"		\"0\"
+	\"BytesToStage\"		\"{WIN_UPDATE_TO_STAGE}\"
+	\"BytesStaged\"		\"0\"
+}}
+"
+    );
+    std::fs::write(dir.join(format!("appmanifest_{APP}.acf")), text).unwrap();
+}
+
 fn percents(host: &RecordingHost) -> Vec<i64> {
     host.records()
         .iter()
@@ -1028,6 +1056,35 @@ async fn a_windows_delegated_poll_climbs_with_the_write_counter_then_flips_to_in
     ticks(1).await;
     assert!(!active(&r, APP));
     assert!(labels(&r.host).iter().any(|l| l == "state:installed"));
+    assert_eq!(percents(&r.host).len(), 4, "no progress after the commit");
+}
+
+#[tokio::test(start_paused = true)]
+async fn a_windows_update_poll_climbs_with_the_write_counter_then_completes() {
+    let (source, counter) = Counter::new();
+    let r = rig_build(Platform::Win32, false, Some(source), AckReply::default()).await;
+    // FullyInstalled | UpdateRequired | UpdateStarted: the ACF byte fields stay frozen.
+    write_win_update_in(&r.steamapps, "1030", "7");
+    start(
+        &r,
+        PollOptions {
+            delegated_to_steam_client: Some(true),
+            ..awaiting(false)
+        },
+    );
+    ticks(1).await;
+    counter.set(WIN_UPDATE_TO_STAGE / 4);
+    ticks(1).await;
+    counter.set(WIN_UPDATE_TO_STAGE / 2);
+    ticks(1).await;
+    counter.set(WIN_UPDATE_TO_STAGE * 3);
+    ticks(1).await;
+    assert_eq!(percents(&r.host), vec![0, 25, 50, 99]);
+
+    // Steam commits the update: the build changes and the poll completes.
+    write_win_update_in(&r.steamapps, "4", "8");
+    ticks(1).await;
+    assert!(!active(&r, APP));
     assert_eq!(percents(&r.host).len(), 4, "no progress after the commit");
 }
 
@@ -1071,8 +1128,9 @@ async fn the_windows_baseline_survives_a_repeat_start_of_the_same_delegated_poll
 
 #[tokio::test(start_paused = true)]
 async fn only_a_windows_delegated_native_install_poll_reads_the_counter() {
-    // Not delegated (GameLib's own depot download), a depot handoff, a bottle poll, an update
-    // poll, and every other platform: the counter is never read.
+    // Not delegated (GameLib's own depot download), a depot handoff, a bottle poll, and every
+    // other platform: the counter is never read. (A delegated Win32 update poll reads it once the
+    // update runs; see `only_a_windows_delegated_native_update_poll_reads_the_counter`.)
     let cases: Vec<(&str, Platform, PollOptions)> = vec![
         ("not delegated", Platform::Win32, PollOptions::default()),
         (
@@ -1090,14 +1148,6 @@ async fn only_a_windows_delegated_native_install_poll_reads_the_counter() {
                 delegated_to_steam_client: Some(true),
                 source: Some(AcfSource::Bottle),
                 ..PollOptions::default()
-            },
-        ),
-        (
-            "awaiting update",
-            Platform::Win32,
-            PollOptions {
-                delegated_to_steam_client: Some(true),
-                ..awaiting(false)
             },
         ),
         ("linux", Platform::Linux, delegated()),
