@@ -3,18 +3,30 @@
  * list fed from it. Driven through an in-memory store fake and a fake requestRustInvoke that records
  * channel and args; no module is mocked.
  */
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  writeFileSync
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { initHeadless } from 'backend/logger'
 import {
+  RUST_STEAMFILES_FIND_ACF,
+  RUST_STEAMFILES_READ_ACF,
+  RUST_STEAMFILES_READ_LIBRARY_FOLDERS,
   RUST_STEAMPOLL_ADOPTION_READ,
   RUST_STEAMPOLL_ADOPTION_UNWATCH,
-  RUST_STEAMPOLL_ADOPTION_WATCH
+  RUST_STEAMPOLL_ADOPTION_WATCH,
+  RUST_STEAMPOLL_HOLD_DISCARD,
+  RUST_STEAMPOLL_HOLD_DRAIN
 } from 'common/types/sidecarTransport'
 import {
   adoptionWatchArgs,
   clearAndUnwatchPendingAdoption,
+  migrateRestartHolds,
   readSteamAdoption,
   recordAndWatchPendingAdoption,
   resumeAdoptionWatches,
@@ -34,7 +46,7 @@ interface Call {
   args: unknown[]
 }
 
-type Reply = (channel: string) => unknown
+type Reply = (channel: string, args: unknown[]) => unknown
 
 function makeDeps(
   options: {
@@ -71,13 +83,14 @@ function makeDeps(
     steamInstallRuntime: { adoption: { pushSeq: { last: 0 }, signedIn } },
     config: {
       getSettings: () => ({
+        defaultSteamPath: '/nonexistent-steam',
         steamExperimentalInstallApp: options.installApp === true
       })
     },
     requestRustInvoke: (channel: string, args: unknown[]) => {
       calls.push({ channel, args })
       if (options.reply) {
-        const out = options.reply(channel)
+        const out = options.reply(channel, args)
         if (out instanceof Error) return Promise.reject(out)
         return Promise.resolve(out)
       }
@@ -344,5 +357,210 @@ describe('resumeAdoptionWatches', () => {
       }
     } as unknown as AdoptionWatchDeps
     await expect(resumeAdoptionWatches(broken)).resolves.toBe(0)
+  })
+})
+
+describe('migrateRestartHolds (D-12, D-13)', () => {
+  let dir: string
+  let steamapps: string
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'adoption-migrate-'))
+    steamapps = join(dir, 'steamapps')
+    mkdirSync(steamapps)
+  })
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true })
+  })
+
+  const hold = (
+    appId: string,
+    steamPid = 4242,
+    recordedAtMs = 1_650_000_000
+  ) => ({
+    appId,
+    steamPid,
+    recordedAtMs
+  })
+
+  function acfFor(appId: string): string {
+    const p = join(steamapps, `appmanifest_${appId}.acf`)
+    writeFileSync(p, '"AppState" { "appid" "' + appId + '" }')
+    return p
+  }
+
+  /** A fake shell routing by channel: the hold ops, the library list, find_acf and read_acf. */
+  function router(
+    options: {
+      drain?: unknown
+      adopted?: Set<string>
+      discard?: unknown
+      findRejects?: boolean
+    } = {}
+  ): Reply {
+    return (channel, args) => {
+      const arg = (args[0] ?? {}) as Record<string, unknown>
+      switch (channel) {
+        case RUST_STEAMPOLL_HOLD_DRAIN:
+          return options.drain ?? []
+        case RUST_STEAMPOLL_HOLD_DISCARD:
+          return options.discard ?? true
+        case RUST_STEAMFILES_READ_LIBRARY_FOLDERS:
+          return { exists: true, parsed: true, readError: null, paths: [dir] }
+        case RUST_STEAMFILES_FIND_ACF: {
+          if (options.findRejects) return new Error('timeout')
+          const dirs = arg.steamappsDirs as string[]
+          const id = String(arg.appId)
+          const hit = dirs.find((d) => d === steamapps)
+          const present =
+            hit !== undefined &&
+            existsSync(join(steamapps, `appmanifest_${id}.acf`))
+          return present
+            ? { found: true, steamappsDir: steamapps, record: {} }
+            : { found: false, steamappsDir: null, record: null }
+        }
+        case RUST_STEAMFILES_READ_ACF:
+          return {
+            parsed: true,
+            record: { stateFlags: 2, buildid: '0' }
+          }
+        case RUST_STEAMPOLL_ADOPTION_READ:
+          return {
+            adopted: options.adopted?.has(String(arg.appId)) === true,
+            signedIn: true,
+            steamRunning: true,
+            helperState: null,
+            evidence: null
+          }
+        default:
+          return true
+      }
+    }
+  }
+
+  const channels = (calls: Call[]) => calls.map((c) => c.channel)
+
+  test('a hold whose ACF exists and is unadopted becomes a pending record and is watched', async () => {
+    const manifest = acfFor('112100')
+    const { deps, calls, store } = makeDeps({
+      reply: router({ drain: [hold('112100')] })
+    })
+    await expect(migrateRestartHolds(deps)).resolves.toBe(1)
+    const written = store.get('112100') as PendingAdoptionRecord
+    expect(written.steamPid).toBe(4242)
+    expect(written.manifestPath).toBe(manifest)
+    expect(written.recordedAt).toBe(1_650_000_000)
+    expect(written.baseline.content).toContain('112100')
+    expect(channels(calls)).toContain(RUST_STEAMPOLL_ADOPTION_WATCH)
+  })
+
+  test('a hold whose ACF is gone is dropped (acf-gone), never written or watched', async () => {
+    const { deps, calls, store } = makeDeps({
+      reply: router({ drain: [hold('999')] })
+    })
+    await expect(migrateRestartHolds(deps)).resolves.toBe(0)
+    expect(store.size).toBe(0)
+    expect(channels(calls)).not.toContain(RUST_STEAMPOLL_ADOPTION_WATCH)
+    expect(
+      channels(calls).filter((c) => c === RUST_STEAMPOLL_HOLD_DISCARD)
+    ).toHaveLength(1)
+  })
+
+  test('a hold the adoption read already reports adopted is dropped (Pitfall 5)', async () => {
+    acfFor('7')
+    const { deps, calls, store } = makeDeps({
+      reply: router({ drain: [hold('7')], adopted: new Set(['7']) })
+    })
+    await expect(migrateRestartHolds(deps)).resolves.toBe(0)
+    expect(store.size).toBe(0)
+    expect(channels(calls)).not.toContain(RUST_STEAMPOLL_ADOPTION_WATCH)
+    expect(
+      channels(calls).filter((c) => c === RUST_STEAMPOLL_HOLD_DISCARD)
+    ).toHaveLength(1)
+  })
+
+  test('discard runs exactly once, after every record was handled', async () => {
+    acfFor('1')
+    acfFor('2')
+    const { deps, calls } = makeDeps({
+      reply: router({ drain: [hold('1'), hold('2'), hold('3')] })
+    })
+    await expect(migrateRestartHolds(deps)).resolves.toBe(2)
+    const all = channels(calls)
+    expect(all.filter((c) => c === RUST_STEAMPOLL_HOLD_DISCARD)).toHaveLength(1)
+    expect(all[all.length - 1]).toBe(RUST_STEAMPOLL_HOLD_DISCARD)
+    expect(all.indexOf(RUST_STEAMPOLL_HOLD_DRAIN)).toBe(0)
+  })
+
+  test('a rejected drain never discards the file and resolves 0', async () => {
+    const { deps, calls, store } = makeDeps({
+      reply: router({ drain: new Error('shell restart') })
+    })
+    await expect(migrateRestartHolds(deps)).resolves.toBe(0)
+    expect(channels(calls)).not.toContain(RUST_STEAMPOLL_HOLD_DISCARD)
+    expect(store.size).toBe(0)
+  })
+
+  test('a malformed drain reply never discards the file', async () => {
+    const { deps, calls } = makeDeps({ reply: router({ drain: { nope: 1 } }) })
+    await expect(migrateRestartHolds(deps)).resolves.toBe(0)
+    expect(channels(calls)).not.toContain(RUST_STEAMPOLL_HOLD_DISCARD)
+  })
+
+  test('a hold that could not be evaluated (lookup rejected) keeps the file for the next boot', async () => {
+    const { deps, calls, store } = makeDeps({
+      reply: router({ drain: [hold('5')], findRejects: true })
+    })
+    await expect(migrateRestartHolds(deps)).resolves.toBe(0)
+    expect(store.size).toBe(0)
+    expect(channels(calls)).not.toContain(RUST_STEAMPOLL_HOLD_DISCARD)
+  })
+
+  test('a re-run after a crash overwrites the same record (idempotent)', async () => {
+    acfFor('112100')
+    const { deps, store } = makeDeps({
+      reply: router({ drain: [hold('112100')] })
+    })
+    await migrateRestartHolds(deps)
+    const first = store.get('112100')
+    await expect(migrateRestartHolds(deps)).resolves.toBe(1)
+    expect(store.size).toBe(1)
+    expect(store.get('112100')).toEqual(first)
+  })
+
+  test('an existing pending record for the same appId is overwritten by the migrated one', async () => {
+    const manifest = acfFor('112100')
+    const { deps, store } = makeDeps({
+      seed: { '112100': { ...record(manifest), steamPid: 1 } },
+      reply: router({ drain: [hold('112100', 4242)] })
+    })
+    await migrateRestartHolds(deps)
+    expect((store.get('112100') as PendingAdoptionRecord).steamPid).toBe(4242)
+  })
+
+  test('never opens a steam:// URL and never signals Steam (only drain, lookups, watch, read, discard)', async () => {
+    acfFor('112100')
+    const { deps, calls } = makeDeps({
+      reply: router({ drain: [hold('112100')] })
+    })
+    await migrateRestartHolds(deps)
+    expect(new Set(channels(calls))).toEqual(
+      new Set([
+        RUST_STEAMPOLL_HOLD_DRAIN,
+        RUST_STEAMFILES_READ_LIBRARY_FOLDERS,
+        RUST_STEAMFILES_FIND_ACF,
+        RUST_STEAMFILES_READ_ACF,
+        RUST_STEAMPOLL_ADOPTION_READ,
+        RUST_STEAMPOLL_ADOPTION_WATCH,
+        RUST_STEAMPOLL_HOLD_DISCARD
+      ])
+    )
+  })
+
+  test('a rejected discard is swallowed and the migration still resolves the count', async () => {
+    acfFor('112100')
+    const { deps } = makeDeps({
+      reply: router({ drain: [hold('112100')], discard: new Error('disk') })
+    })
+    await expect(migrateRestartHolds(deps)).resolves.toBe(1)
   })
 })

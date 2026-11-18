@@ -93,7 +93,10 @@ import {
   clearOrphanedElectronToken
 } from '../storeManagers/steam/tokenStore'
 import { createSteamBottle } from '../storeManagers/steam/bottle'
-import { resumeAdoptionWatches } from '../storeManagers/steam/adoptionWatch'
+import {
+  migrateRestartHolds,
+  resumeAdoptionWatches
+} from '../storeManagers/steam/adoptionWatch'
 import { SidecarKeyringTokenStore } from './keyringTokenStore'
 import {
   createSidecarHumbleSecretStore,
@@ -2862,24 +2865,34 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       name: 'steam-adoption-resume',
       // Phase 81 (D-07): Rust's adoption watch list is in memory, so every stored pending-adoption
       // record is re-registered once per boot (a record whose manifest is gone is cleared instead).
-      // rustInvoke is bounded by RUST_INVOKE_TIMEOUT_MS and this makes one invoke per stored record,
-      // so it is bounded boot work (sidecar exit contract, half 2); no timer or handle is created and
-      // every rejection is caught. It must run after 'rpc-server' (requestRustInvoke writes frames).
+      // D-12, D-13: first, the restart holds an older build persisted (steam_restart_hold.json)
+      // become pending-adoption records and the old file is discarded, so no persisted hold survives
+      // this boot. Migration never quits or signals Steam. It is crash-safe: the file is discarded
+      // only after every record was written, so a crash in between re-runs on the next boot and
+      // overwrites the same records, and a failed drain never deletes the file. The resume then
+      // watches the migrated records along with the rest.
+      // rustInvoke is bounded by RUST_INVOKE_TIMEOUT_MS and both halves make a bounded number of
+      // invokes per stored record, so this is bounded boot work (sidecar exit contract, half 2); no
+      // timer or handle is created and every rejection is caught. It must run after 'rpc-server'
+      // (requestRustInvoke writes frames).
       run: (_ctx, _io, state) => {
         const { host, stores, config, steamInstallRuntime } =
           requireServices(state)
-        void resumeAdoptionWatches({
+        const adoptionDeps = {
           requestRustInvoke: host.requestRustInvoke,
           sendFrontendMessage: host.sendFrontendMessage,
           steamInstallRuntime,
           stores,
           config
-        }).catch((err: unknown) => {
-          logWarning(
-            `[Steam] adoption watch resume failed: ${String(err)}`,
-            LogPrefix.Steam
-          )
-        })
+        }
+        void migrateRestartHolds(adoptionDeps)
+          .then(() => resumeAdoptionWatches(adoptionDeps))
+          .catch((err: unknown) => {
+            logWarning(
+              `[Steam] adoption watch resume failed: ${String(err)}`,
+              LogPrefix.Steam
+            )
+          })
       }
     },
     {
