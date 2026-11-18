@@ -56,6 +56,10 @@ export default function RegionPicker({
           onChange(next === '' ? null : next)
         }}
         className="regionPicker__select"
+        // Auto is the empty value, and MUI only calls renderValue for an
+        // empty value when displayEmpty is set, so without it the closed
+        // select rendered blank for Auto on both screens (G-47-14a).
+        displayEmpty
         renderValue={(selected) => {
           if (!selected) return autoLabel
           const match = options.find((o) => o.countryCode === selected)
