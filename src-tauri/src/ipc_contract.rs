@@ -120,6 +120,7 @@ pub(crate) enum RustInvokeChannel {
     SteampollAdoptionWatch,
     SteampollBreadcrumbInstalledOnDisk,
     SteampollBridgeFinalized,
+    SteampollHoldDrain,
     SteampollInstallCancelDelegated,
     SteampollInstallStart,
     SteampollInstallStop,
@@ -239,6 +240,7 @@ impl RustInvokeChannel {
         RustInvokeChannel::SteampollAdoptionWatch,
         RustInvokeChannel::SteampollBreadcrumbInstalledOnDisk,
         RustInvokeChannel::SteampollBridgeFinalized,
+        RustInvokeChannel::SteampollHoldDrain,
         RustInvokeChannel::SteampollInstallCancelDelegated,
         RustInvokeChannel::SteampollInstallStart,
         RustInvokeChannel::SteampollInstallStop,
@@ -358,6 +360,7 @@ impl RustInvokeChannel {
             "steampoll_adoption_watch" => Some(RustInvokeChannel::SteampollAdoptionWatch),
             "steampoll_breadcrumb_installed_on_disk" => Some(RustInvokeChannel::SteampollBreadcrumbInstalledOnDisk),
             "steampoll_bridge_finalized" => Some(RustInvokeChannel::SteampollBridgeFinalized),
+            "steampoll_hold_drain" => Some(RustInvokeChannel::SteampollHoldDrain),
             "steampoll_install_cancel_delegated" => Some(RustInvokeChannel::SteampollInstallCancelDelegated),
             "steampoll_install_start" => Some(RustInvokeChannel::SteampollInstallStart),
             "steampoll_install_stop" => Some(RustInvokeChannel::SteampollInstallStop),
@@ -479,6 +482,7 @@ impl RustInvokeChannel {
             RustInvokeChannel::SteampollAdoptionWatch => "steampoll_adoption_watch",
             RustInvokeChannel::SteampollBreadcrumbInstalledOnDisk => "steampoll_breadcrumb_installed_on_disk",
             RustInvokeChannel::SteampollBridgeFinalized => "steampoll_bridge_finalized",
+            RustInvokeChannel::SteampollHoldDrain => "steampoll_hold_drain",
             RustInvokeChannel::SteampollInstallCancelDelegated => "steampoll_install_cancel_delegated",
             RustInvokeChannel::SteampollInstallStart => "steampoll_install_start",
             RustInvokeChannel::SteampollInstallStop => "steampoll_install_stop",
@@ -2302,6 +2306,15 @@ impl SteampollBridgeFinalizedArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let first = args.first().ok_or_else(|| "steampoll_bridge_finalized:bad-args".to_string())?;
         serde_json::from_value(first.clone()).map_err(|_| "steampoll_bridge_finalized:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct SteampollHoldDrainArgs;
+
+impl SteampollHoldDrainArgs {
+    pub(crate) fn from_args(_args: &[Value]) -> Result<Self, String> {
+        Ok(Self)
     }
 }
 

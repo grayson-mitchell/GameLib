@@ -19,6 +19,7 @@ export const STEAMPOLL_OPS = [
   'steampoll_adoption_watch',
   'steampoll_breadcrumb_installed_on_disk',
   'steampoll_bridge_finalized',
+  'steampoll_hold_drain',
   'steampoll_install_cancel_delegated',
   'steampoll_install_start',
   'steampoll_install_stop',
@@ -110,4 +111,14 @@ export interface AdoptionReading {
   helperState: number | null
   /** `'acf'` or `'pid'` in 81-01; 81-04 and 81-05 add more. */
   evidence: string | null
+}
+
+/**
+ * @public `steampoll_hold_drain` element (serde camelCase): one persisted hold from an older
+ * build that is still unadopted. Consumed by the 81-13 boot migration.
+ */
+export interface DrainedHold {
+  appId: string
+  steamPid: number
+  recordedAtMs: number
 }

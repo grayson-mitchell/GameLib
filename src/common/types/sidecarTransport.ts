@@ -630,6 +630,12 @@ export const RUST_STEAMPOLL_BRIDGE_FINALIZED =
   'steampoll_bridge_finalized' as const
 
 /**
+ * Rust-side channel name: Phase 81 steampoll op `steampoll_hold_drain`. Reads the restart-hold store an older build wrote (`steam_restart_hold.json`) and answers the records still worth adopting. No args; the store path is the Rust profile's, never the caller's.
+ * Resolves `DrainedHold[]` (`{ appId, steamPid, recordedAtMs }`). Writes nothing.
+ */
+export const RUST_STEAMPOLL_HOLD_DRAIN = 'steampoll_hold_drain' as const
+
+/**
  * Rust-side channel name: Phase 80 steampoll op `steampoll_install_cancel_delegated`. Cancels a delegated install poll. Args `{ appId }`.
  * Bad args reject `steampoll_install_cancel_delegated:bad-args`.
  */
@@ -1068,6 +1074,7 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_STEAMPOLL_ADOPTION_WATCH,
   RUST_STEAMPOLL_BREADCRUMB_INSTALLED_ON_DISK,
   RUST_STEAMPOLL_BRIDGE_FINALIZED,
+  RUST_STEAMPOLL_HOLD_DRAIN,
   RUST_STEAMPOLL_INSTALL_CANCEL_DELEGATED,
   RUST_STEAMPOLL_INSTALL_START,
   RUST_STEAMPOLL_INSTALL_STOP,
@@ -1135,6 +1142,7 @@ export const RUST_STEAMPOLL_CHANNELS = [
   RUST_STEAMPOLL_ADOPTION_WATCH,
   RUST_STEAMPOLL_BREADCRUMB_INSTALLED_ON_DISK,
   RUST_STEAMPOLL_BRIDGE_FINALIZED,
+  RUST_STEAMPOLL_HOLD_DRAIN,
   RUST_STEAMPOLL_INSTALL_CANCEL_DELEGATED,
   RUST_STEAMPOLL_INSTALL_START,
   RUST_STEAMPOLL_INSTALL_STOP,

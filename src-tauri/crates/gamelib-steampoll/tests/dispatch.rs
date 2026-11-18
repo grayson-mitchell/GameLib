@@ -76,6 +76,7 @@ fn bad_args_are_named_per_op() {
                 | "steampoll_running_stop"
                 | "steampoll_status"
                 | "steampoll_read_running_app_id"
+                | "steampoll_hold_drain"
         ) {
             continue;
         }
@@ -503,5 +504,79 @@ async fn adoption_read_refuses_to_run_inside_a_runtime_without_panicking() {
     assert_eq!(
         dispatch("steampoll_adoption_read", &[watch_args(tmp.path(), "1234")]),
         Err("steampoll_adoption_read:wrong-thread".to_string())
+    );
+}
+
+// ---- Phase 81 D-12: the hold migration ops ---------------------------------------------------
+
+fn profile_store(home: &std::path::Path) -> std::path::PathBuf {
+    std::path::PathBuf::from(
+        SidecarProfile::resolve(Platform::current(), &home.to_string_lossy(), &|_| None)
+            .restart_hold_store_path,
+    )
+}
+
+#[test]
+fn hold_drain_is_listed_and_ignores_its_args() {
+    let _g = guard();
+    assert!(OPS.contains(&"steampoll_hold_drain"));
+    let tmp = tempfile::tempdir().unwrap();
+    install(tmp.path());
+    // No store under the profile: an empty list, whatever the args are.
+    assert_eq!(dispatch("steampoll_hold_drain", &[]), Ok(json!([])));
+    assert_eq!(
+        dispatch(
+            "steampoll_hold_drain",
+            &[json!({"storePath": "/etc/passwd", "__nope": true})]
+        ),
+        Ok(json!([]))
+    );
+}
+
+#[test]
+fn hold_drain_reads_only_the_facade_profile_store() {
+    let _g = guard();
+    let tmp = tempfile::tempdir().unwrap();
+    install(tmp.path());
+    let store = profile_store(tmp.path());
+    std::fs::create_dir_all(store.parent().unwrap()).unwrap();
+    // An unreadable store: empty answer, file untouched.
+    std::fs::write(&store, "{not json").unwrap();
+    assert_eq!(dispatch("steampoll_hold_drain", &[]), Ok(json!([])));
+    assert_eq!(std::fs::read_to_string(&store).unwrap(), "{not json");
+    // A path in the args never redirects the read.
+    let other = tmp.path().join("other.json");
+    std::fs::write(
+        &other,
+        r#"{"5":{"pids":[{"pid":9,"startToken":"T"}],"recordedAt":1,"skippedDepots":[]}}"#,
+    )
+    .unwrap();
+    assert_eq!(
+        dispatch(
+            "steampoll_hold_drain",
+            &[json!({"path": other.to_string_lossy()})]
+        ),
+        Ok(json!([]))
+    );
+}
+
+#[tokio::test]
+async fn hold_drain_refuses_to_run_inside_a_runtime() {
+    let _g = guard();
+    let tmp = tempfile::tempdir().unwrap();
+    install(tmp.path());
+    assert_eq!(
+        dispatch("steampoll_hold_drain", &[]),
+        Err("steampoll_hold_drain:wrong-thread".to_string())
+    );
+}
+
+#[test]
+fn hold_drain_is_not_configured_before_install() {
+    let _g = guard();
+    facade::reset_for_test();
+    assert_eq!(
+        dispatch("steampoll_hold_drain", &[]),
+        Err("steampoll:not-configured".to_string())
     );
 }

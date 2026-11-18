@@ -99,6 +99,7 @@ pub(crate) fn dispatch_rust_channel(
         RustInvokeChannel::SteampollAdoptionWatch => rpc_steampoll_adoption_watch(args),
         RustInvokeChannel::SteampollBreadcrumbInstalledOnDisk => rpc_steampoll_breadcrumb_installed_on_disk(args),
         RustInvokeChannel::SteampollBridgeFinalized => rpc_steampoll_bridge_finalized(args),
+        RustInvokeChannel::SteampollHoldDrain => rpc_steampoll_hold_drain(args),
         RustInvokeChannel::SteampollInstallCancelDelegated => rpc_steampoll_install_cancel_delegated(args),
         RustInvokeChannel::SteampollInstallStart => rpc_steampoll_install_start(args),
         RustInvokeChannel::SteampollInstallStop => rpc_steampoll_install_stop(args),

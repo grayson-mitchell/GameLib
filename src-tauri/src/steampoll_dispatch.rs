@@ -1,6 +1,6 @@
-//! Handlers for the 27 `steampoll_*` rustInvoke channels (Phase 80 plan 18, Phase 81 plan 02). Each validates through
+//! Handlers for the 28 `steampoll_*` rustInvoke channels (Phase 80 plan 18, Phase 81 plan 02). Each validates through
 //! its generated Args struct then calls the Tauri-free `gamelib-steampoll` dispatch on the calling
-//! worker thread (the three async ops block on the crate's own runtime and answer `wrong-thread` if
+//! worker thread (the four async ops block on the crate's own runtime and answer `wrong-thread` if
 //! called from inside one). Nothing here formats an argument, path or title into a log line (T-28-04).
 
 use super::*;
@@ -69,6 +69,11 @@ pub(crate) fn rpc_steampoll_breadcrumb_installed_on_disk(args: &[Value]) -> Resu
 pub(crate) fn rpc_steampoll_bridge_finalized(args: &[Value]) -> Result<Value, String> {
     SteampollBridgeFinalizedArgs::from_args(args)?;
     gamelib_steampoll::dispatch("steampoll_bridge_finalized", args)
+}
+
+pub(crate) fn rpc_steampoll_hold_drain(args: &[Value]) -> Result<Value, String> {
+    SteampollHoldDrainArgs::from_args(args)?;
+    gamelib_steampoll::dispatch("steampoll_hold_drain", args)
 }
 
 pub(crate) fn rpc_steampoll_install_cancel_delegated(args: &[Value]) -> Result<Value, String> {
@@ -813,6 +818,13 @@ mod tests {
             rpc_steampoll_adoption_watch(&args).unwrap_err(),
             "steampoll_adoption_watch:bad-args"
         );
+    }
+
+    #[test]
+    fn hold_drain_takes_no_args_and_ignores_any_that_are_sent() {
+        // The store path is the crate profile's, never the caller's (T-81-35).
+        assert!(SteampollHoldDrainArgs::from_args(&[]).is_ok());
+        assert!(SteampollHoldDrainArgs::from_args(&[json!({"path": "/etc/passwd"})]).is_ok());
     }
 
     #[test]

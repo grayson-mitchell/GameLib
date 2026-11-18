@@ -62,6 +62,7 @@ pub mod dispatch;
 pub mod effects;
 pub mod events;
 pub mod hold;
+pub mod hold_migration;
 pub mod host;
 pub mod install_loop;
 pub mod install_once;

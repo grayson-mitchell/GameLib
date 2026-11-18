@@ -3,9 +3,9 @@
 //! unknown op, a missing facade, a wrong thread or a panic (`{op}:panic`, T-80-52).
 //!
 //! Threading: the shell calls `dispatch` on a worker thread, never from inside a tokio runtime
-//! (as `gamelib-steamcm` does). The three async ops (`steampoll_read_running_app_id`,
-//! `steampoll_mac_arch_verdict`, `steampoll_adoption_read`) `block_on` the crate runtime and
-//! answer `{op}:wrong-thread` when called from inside a runtime.
+//! (as `gamelib-steamcm` does). The four async ops (`steampoll_read_running_app_id`,
+//! `steampoll_mac_arch_verdict`, `steampoll_adoption_read`, `steampoll_hold_drain`) `block_on` the
+//! crate runtime and answer `{op}:wrong-thread` when called from inside a runtime.
 
 use crate::acf_copies::{
     enumerate_copies, find_other_manifests_with_installdir, remove_copy, scan_downloading_app_ids,
@@ -15,6 +15,7 @@ use crate::acf_state::{
 };
 use crate::adoption::{validate_watch_args, AdoptionWatchArgs};
 use crate::constants::STATE_FLAG_FULLY_INSTALLED;
+use crate::hold_migration::drain_hold_records;
 use crate::install_loop::StartInstallArgs;
 use crate::mac_arch::mac_arch_verdict;
 use crate::running::read_running_app_id;
@@ -38,6 +39,7 @@ pub const OPS: &[&str] = &[
     "steampoll_adoption_watch",
     "steampoll_breadcrumb_installed_on_disk",
     "steampoll_bridge_finalized",
+    "steampoll_hold_drain",
     "steampoll_install_cancel_delegated",
     "steampoll_install_start",
     "steampoll_install_stop",
@@ -420,6 +422,24 @@ fn run_op(op: &str, args: &[Value]) -> Result<Value, String> {
                 .polls
                 .set_bridge_finalized(&a.app_id, a.finalized);
             Ok(Value::Null)
+        }
+        "steampoll_hold_drain" => {
+            // Takes no args: the store path is the facade profile's, never the caller's (T-81-35).
+            let f = configured()?;
+            let platform = f.polls.platform();
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_or(0, |d| d.as_millis() as u64);
+            let drained = block_on(
+                op,
+                drain_hold_records(
+                    &*f.runner,
+                    platform,
+                    Path::new(&f.profile.restart_hold_store_path),
+                    now,
+                ),
+            )?;
+            out(op, drained)
         }
         "steampoll_install_cancel_delegated" => {
             let a: AppOnly = parse(op, args)?;

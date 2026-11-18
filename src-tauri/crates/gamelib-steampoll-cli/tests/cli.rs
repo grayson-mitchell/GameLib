@@ -21,7 +21,7 @@ fn list_prints_every_op_one_per_line() {
     let text = String::from_utf8_lossy(&out.stdout);
     let ops: Vec<&str> = text.lines().collect();
     assert_eq!(ops.len(), gamelib_steampoll::OPS.len());
-    assert_eq!(ops.len(), 27);
+    assert_eq!(ops.len(), 28);
     assert!(ops.contains(&"steampoll_install_start"));
 }
 
