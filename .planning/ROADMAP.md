@@ -174,7 +174,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 79: Rust CM client replacing steam-user and steam-session** — 44 plans in 21 waves; planned (spike 085 gate satisfied) (completed 2026-11-15)
 - [x] **Phase 80: Steam install, uninstall and update polling state machines in Rust** — 33 plans; planned (completed 2026-11-16)
 - [ ] **Phase 81: Unify the Steam restart hold into restart-on-Play** — 20 plans; planned
-- [ ] **Phase 47: Migrate aggregated store search from CheapShark to IsThereAnyDeal** — 13 plans; ITAD gates closed 2026-11-12; planned 2026-11-14 (moved from v0.8)
+- [ ] **Phase 47: Migrate aggregated store search from CheapShark to IsThereAnyDeal** — 18 plans (13 + 5 gap closure from UAT 2026-11-18); ITAD gates closed 2026-11-12; planned 2026-11-14 (moved from v0.8)
 
 **v0.11 Node Sidecar Retirement** (planned 2026-11-17; requirements `REQUIREMENTS-v0.11.md`)
 
@@ -1594,6 +1594,17 @@ Plans:
 **Wave 7** *(blocked on Wave 6 completion)*
 
 - [x] 47-13-PLAN.md — Settings > Advanced ITAD key field with rejected-key warning (D-05/D-06)
+
+**Gap closure (UAT 2026-11-18, `47-UAT.md` G-47-6..9)** — Wave 1:
+
+- [ ] 47-14-PLAN.md — Store embed: no `Webview::url()` read before a page has loaded (offline Stores crash, G-47-9); offline notice row
+- [ ] 47-15-PLAN.md — Stores panel highlights the deep-linked store on `/store-page` (G-47-6)
+- [ ] 47-16-PLAN.md — Shared region store and RegionPicker on Store Search; operator decides the country list (G-47-8)
+
+**Gap closure Wave 2** *(blocked on 47-16)*
+
+- [ ] 47-17-PLAN.md — Landscape Store Search thumbnail, banner300 first, contain fit (G-47-7)
+- [ ] 47-18-PLAN.md — Deals adopts the shared RegionPicker (G-47-8)
 
 ### Phase 76: Engine-correct bottle for DRM-mode launches (v0.9 audit S9)
 
