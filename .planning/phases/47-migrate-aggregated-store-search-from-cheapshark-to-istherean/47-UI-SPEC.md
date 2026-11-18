@@ -37,7 +37,7 @@ Add a one-line pointer at the top of `20-UI-SPEC.md`'s Currency Contract: "Super
 |---|---|
 | 47-RESEARCH `<user_constraints>` | Rate-limited rows show the cached price with a visible timestamp, not an error; optional user-supplied ITAD key; `deal.url` verbatim; no OAuth/proxy; Amazon has no ITAD price coverage |
 | 47-RESEARCH D2 | `Intl.NumberFormat` formatter, ISO code always visible, try/catch fallback |
-| 47-RESEARCH D3 | Country from `getLocaleSettings(...)`; no new picker this phase |
+| 47-RESEARCH D3 | Country from `getLocaleSettings(...)`; no new picker this phase. **Superseded for Store Search by G-47-8** (plan 47-16): Store Search now has its own picker, see section 1a |
 | 47-RESEARCH D6 / Open Q1 | Do not claim "your own quota" in copy until ITAD confirms |
 | Project memory | Settings help = icon-only (i) on the label line, no "Help" text link below inputs |
 | 20-UI-SPEC | Every other visual decision |
@@ -126,12 +126,23 @@ The `formatUsdPrice` tests are replaced with a `formatPrice` describe covering: 
 
 ## Component Contract Changes
 
-### 1. Region caption (new, no control)
+### 1. Region caption (new)
 
 - Position: directly under `SearchBar`, above the results/state area. Single line, `--text-sm`, `--text-secondary`.
 - Copy: `t('storeSearch.region', 'Showing prices for {{country}}.', { country })`, `country` from `new Intl.DisplayNames([toI18nextCode(language)], { type: 'region' }).of(countryCode)` (fallback to the raw 2-letter code if DisplayNames throws).
 - Always visible whenever the screen is mounted (including the initial prompt state) so the user knows which region drives prices before searching.
-- No picker this phase (RESEARCH D3). The override still lives on the Deals screen; do not link to it and do not add helper copy about it. This is a recorded limitation: language-derived country is coarse (`en` -> US).
+- The picker that changes this region is specified in section 1a (amended for G-47-8). Language-derived country is still the Auto default and is coarse (`en` -> US), which is why the picker exists.
+
+### 1a. Region picker (amended 2026-11-18, gap G-47-8, plan 47-16)
+
+- Position: on the title row, title left and picker right, mirroring the Deals top bar (`storeSearchScreen__topbar`, flex, space-between, wraps on narrow widths). The caption and fallback note below stay exactly as in section 1.
+- Component: the shared `RegionPicker` (`src/frontend/components/UI/RegionPicker`), the same outlined MUI Select the Deals screen uses; tokens only.
+- Copy: reuses `discounts.region.label` ('Store region') and `discounts.region.auto` ('Auto ({{code}})'), with `{{code}}` naming the country Auto resolves to (the language-derived country, as an Intl region name). No new strings.
+- Option list (operator decision `itad-list`, plan 47-16 Task 1): the 32 countries IsThereAnyDeal prices in their own currency (`ITAD_PRICED_COUNTRIES`). The Deals screen keeps its own 29 `REGION_OPTIONS` (GOG needs a currency per country). Every country Store Search offers gets real local prices, and none silently falls back to US.
+- Country names: the same `Intl.DisplayNames` region names as the caption (`formatCountryName`), sorted for the UI language.
+- No currency pill. ITAD's currency for a country differs from GOG's for 11 of the 29 Deals countries (CZ, DK, HU, JP, NO, RO, KR, SE, CH, TW, TR), so a pill would mislead. The ISO code on each price is the truthful currency label (Currency Contract rule 7).
+- One shared stored region (localStorage `discounts.regionOverride`, unchanged key, so existing choices survive). Each screen validates it against its OWN list: a stored code outside the screen's list reads as Auto there (for example, a Deals choice of IL, RU or UA shows as Auto on Store Search; a Store Search choice of NZ shows as Auto on Deals) until it is changed on that screen.
+- Behaviour: choosing a country (or Auto) persists immediately and re-runs the committed query once in that country; results are cached per country, so a revisit is a cache hit. The Store Search handler does not touch any Deals filter.
 
 ### 2. Cached-at line (rate-limited -> cached price) — PRICE-03
 
@@ -210,6 +221,7 @@ Coverage is pending the operator measurement sweep (RESEARCH Measurement Task). 
 | Search while ITAD is rate-limiting, cache exists | Rows render; each stale price has "Price from {{time}}"; no error |
 | Search while rate-limited, no cache | Danger banner "Price lookups are busy right now. Try again in a minute." + Retry search |
 | Country not priced by ITAD | Info note above results explaining which country was priced; prices keep real ISO code |
+| User changes the region picker | Choice persists; caption names the new country; the committed query re-runs once in that country (Auto returns to the language default) |
 | Build has no embedded key and no user key | Danger banner (no Retry) pointing to Settings > Advanced |
 | User key rejected | Inline status under the Settings field; search keeps working on the built-in key |
 | Expand row, deals cached | Sub-row price + "Price from {{time}}" on that sub-row |

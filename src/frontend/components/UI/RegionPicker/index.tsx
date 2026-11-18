@@ -1,5 +1,7 @@
 import { MenuItem, Select } from '@mui/material'
 
+import './index.css'
+
 export interface RegionPickerOption {
   countryCode: string
   label: string

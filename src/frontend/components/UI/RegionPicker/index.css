@@ -1,0 +1,72 @@
+/* Shared price-region picker (G-47-8). Tokens only, no hex; a few rgba()
+   values are carried over verbatim from the Deals rules they were hoisted
+   from. The MUI menu renders in a portal outside .regionPicker, so rules for
+   menu items (the currency pill) are top-level selectors. */
+
+.regionPicker {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  min-width: 0;
+}
+
+.regionPicker__label {
+  font-size: var(--text-sm);
+  font-weight: var(--semibold);
+  color: var(--text-secondary);
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.regionPicker__select.MuiInputBase-root {
+  min-width: 220px;
+}
+
+.regionPicker__select .MuiSelect-select {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+}
+
+/* MUI outlined-input appearance, scoped to the picker. */
+.regionPicker .MuiOutlinedInput-root {
+  min-height: 40px;
+  background-color: var(--input-background, var(--background));
+  color: var(--text-default);
+  border-radius: var(--space-3xs);
+}
+
+.regionPicker .MuiOutlinedInput-notchedOutline {
+  border-color: var(--divider, rgba(255, 255, 255, 0.12));
+  transition: border-color 150ms ease;
+}
+
+.regionPicker .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline,
+.regionPicker
+  .MuiOutlinedInput-root.Mui-focused
+  .MuiOutlinedInput-notchedOutline {
+  border-color: var(--accent);
+  border-width: 1px;
+}
+
+.regionPicker__currency {
+  margin-left: auto;
+  padding: 1px var(--space-2xs);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+  font-size: calc(var(--text-sm) * 0.85);
+  font-weight: var(--semibold);
+  letter-spacing: 0.02em;
+}
+
+@media (max-width: 700px) {
+  .regionPicker {
+    width: 100%;
+  }
+
+  .regionPicker__select.MuiInputBase-root {
+    flex: 1;
+  }
+}
