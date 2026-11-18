@@ -1,9 +1,9 @@
 ---
-status: diagnosed
+status: complete
 phase: 47-migrate-aggregated-store-search-from-cheapshark-to-istherean
 source: [47-VERIFICATION.md]
 started: 2026-11-17T23:10:00Z
-updated: 2026-11-18T13:00:00Z
+updated: 2026-11-18T17:16:10.261Z
 ---
 
 ## Current Test
@@ -58,34 +58,38 @@ severity: blocker
 
 ### 10. Offline Stores tab does not crash (47-14 live item, G-47-9)
 expected: macOS, `pnpm tauri:dev` (never `tauri:dev:run`). With the network ON open Library; turn Wi-Fi OFF, wait ~5 s, click Stores and open Amazon Luna (or GOG), watch ~10 s, click Try again once, turn Wi-Fi ON, click Try again again. GameLib never crashes or quits; while offline a notice row under the store controls reads 'You're offline, so this store can't load.' with a Try again button (the embed area may be blank); after Wi-Fi returns and Try again is clicked the row is gone and the store loads; ~/Library/Logs/GameLib/gamelib-shell-panic.log gains no new entry.
-result: [pending]
+result: pass
 
 ### 11. Store-page deep link highlights the owning store row (47-15 live item, G-47-6)
 expected: Stores > Deals, click a game card (opens it in the in-app GOG store); then open a GOG game's page in Library and click its Store link; then click Stores > GOG Store directly. In all three the Stores panel shows the GOG Store row highlighted; coming from Deals the highlight moves from Deals to GOG Store; no case leaves no row highlighted.
-result: [pending]
+result: pass
 
 ### 12. Store Search region picker (47-16 live item, G-47-8)
 expected: Stores > Store Search shows the picker on the title row (title left, picker right), styled like the Deals picker, no currency pill. Search 'xcom'; change to Germany (euro prices, 'Showing prices for Germany.'), then New Zealand, then Auto (language default); each change re-runs the search; the choice survives leaving and re-opening Store Search; legible in a dark and a light theme.
-result: [pending]
+result: issue
+reported: "3 issues: 1. the search does not survive leaving the page (to change theme for example) 2. as part of the search testing I have deturmined thee major issue with the auto spell check of the control.  > if you click outside the control the 'correction' is activated.  In library this has the most noticibal effect, you might be about to click on a game when the whole set of tiles change because the search wording changes while you are not even in the control!  (xcom is a good example - changes to 'com' 3. light theme has dark grey game bars, with black text.  would expect the game bars to be a light color"
+severity: major
 
 ### 13. Store Search art is shown whole (47-17 live item, G-47-7)
 expected: Restart `pnpm tauri:dev` so the sidecar carries the new thumbOf; search 'hades' then 'xcom'. Each row's art is a wide banner shown whole with no side cut off; a game with no art shows the GameLib card whole; title, badges and price stay centred against the thumbnail.
-result: [pending]
+result: pass
 
 ### 14. Deals picker unchanged and one shared region (47-18 live item, G-47-8)
 expected: Stores > Deals: set a genre and hide-DLC, change the region to Germany. The picker looks and sits as before (label STORE REGION, outlined select, currency pill per country, 'Germany · EUR' when selected); changing region clears the Deals filters and reloads in euros. Store Search then shows Germany selected with euro prices. Pick New Zealand on Store Search, go back to Deals: Deals shows 'Auto (...)'.
-result: [pending]
+result: issue
+reported: "issues 1. Auto select shows as blank 2. windows size formating broken for Genres field control.  if runs out of space the control gets centered and cropped. control should never crop.  also adding more genres starts happening outside of the box! 3. when you shrink the window the longer titles \"operating system\" and \"suitable for age\" move to being over two lines and those two controls move down, making for ugly look.  byt that stage horizontal room makes everying thing look very cramped anyhow.  If you horizontaly shrink just a bit more then the filters split to a 2 by 2 model.  this should happen before those two titles are split over 2 lines."
+severity: major
 
 ### 15. Owned-on-Steam badge on a live ITAD result (PRICE-02, never had a live item)
 expected: With a Steam library loaded, search a title you own on Steam; the row shows 'Owned on Steam'. A title you do not own shows no Steam badge.
-result: [pending]
+result: pass
 
 ## Summary
 
 total: 15
-passed: 5
-issues: 4
-pending: 6
+passed: 9
+issues: 6
+pending: 0
 skipped: 0
 blocked: 0
 
@@ -93,7 +97,9 @@ blocked: 0
 
 - gap_id: G-47-6
   truth: "Opening the GOG store from a game link switches the left navigation to the GOG panel instead of leaving it blank"
-  status: failed
+  status: resolved
+  resolved_by: 47-15-PLAN.md
+  resolved_at: 2026-11-19
   reason: "User reported: minor bug, if you click on portal takes you to the gog store, the left navigation goes blank rather than changing to gog"
   severity: minor
   test: 6
@@ -114,7 +120,9 @@ blocked: 0
   debug_session: ".planning/debug/gog-store-open-blank-left-nav.md"
 - gap_id: G-47-7
   truth: "Each Store Search row shows the game's art without significant cropping"
-  status: failed
+  status: resolved
+  resolved_by: 47-17-PLAN.md
+  resolved_at: 2026-11-19
   reason: "User reported: gameart in search is cropped (significantly)"
   severity: cosmetic
   test: 7
@@ -131,7 +139,9 @@ blocked: 0
   debug_session: ".planning/debug/store-search-art-cropped.md"
 - gap_id: G-47-8
   truth: "The Store Search price region can be chosen without going to the Deals screen"
-  status: failed
+  status: resolved
+  resolved_by: 47-18-PLAN.md
+  resolved_at: 2026-11-19
   reason: "User reported: setting region in deals only is not a good ux. (47-RESEARCH D3 recorded reusing the Deals override as a known limitation, no new picker this phase)"
   severity: minor
   test: 8
@@ -154,7 +164,9 @@ blocked: 0
   debug_session: ".planning/debug/store-search-region-only-in-deals.md"
 - gap_id: G-47-9
   truth: "With the network off, clicking Stores does not crash GameLib"
-  status: failed
+  status: resolved
+  resolved_by: 47-14-PLAN.md
+  resolved_at: 2026-11-19
   reason: "User reported: when i click on stores when offline gamelib crashes"
   severity: blocker
   test: 9
@@ -174,3 +186,51 @@ blocked: 0
     - "Offline / failed-first-load surface in the renderer instead of a blank embed"
     - "Regression test driving the drain against an embed with no Finished event; fix the stale comment"
   debug_session: ".planning/debug/offline-stores-tab-crash.md"
+- gap_id: G-47-12a
+  truth: "The Store Search query and its results survive leaving and re-opening Store Search (e.g. to change theme)"
+  status: failed
+  reason: "User reported: the search does not survive leaving the page (to change theme for example)"
+  severity: major
+  test: 12
+  artifacts: []
+  missing: []
+- gap_id: G-47-12b
+  truth: "Search inputs (Store Search and Library) never rewrite the typed query on blur: no OS autocorrect replacement fires when clicking outside the control (e.g. 'xcom' stays 'xcom', not 'com')"
+  status: failed
+  reason: "User reported: as part of the search testing I have deturmined thee major issue with the auto spell check of the control. if you click outside the control the 'correction' is activated. In library this has the most noticibal effect, you might be about to click on a game when the whole set of tiles change because the search wording changes while you are not even in the control! (xcom is a good example - changes to 'com'"
+  severity: major
+  test: 12
+  artifacts: []
+  missing: []
+- gap_id: G-47-12c
+  truth: "In a light theme the Store Search game rows use a light background with legible dark text"
+  status: failed
+  reason: "User reported: light theme has dark grey game bars, with black text. would expect the game bars to be a light color"
+  severity: cosmetic
+  test: 12
+  artifacts: []
+  missing: []
+- gap_id: G-47-14a
+  truth: "When the region is Auto, the region select displays 'Auto (...)', never a blank value"
+  status: failed
+  reason: "User reported: 1. Auto select shows as blank"
+  severity: major
+  test: 14
+  artifacts: []
+  missing: []
+- gap_id: G-47-14b
+  truth: "The Deals Genres filter control never crops or re-centres at narrow window widths, and selected genres stay inside the control's box"
+  status: failed
+  reason: "User reported: 2. windows size formating broken for Genres field control.  if runs out of space the control gets centered and cropped. control should never crop.  also adding more genres starts happening outside of the box!"
+  severity: major
+  test: 14
+  artifacts: []
+  missing: []
+- gap_id: G-47-14c
+  truth: "As the window narrows, the Deals filters reflow to the 2x2 layout before any filter label (e.g. 'Operating system', 'Suitable for age') wraps onto two lines and pushes its control down"
+  status: failed
+  reason: "User reported: 3. when you shrink the window the longer titles \"operating system\" and \"suitable for age\" move to being over two lines and those two controls move down, making for ugly look.  byt that stage horizontal room makes everying thing look very cramped anyhow.  If you horizontaly shrink just a bit more then the filters split to a 2 by 2 model.  this should happen before those two titles are split over 2 lines."
+  severity: cosmetic
+  test: 14
+  artifacts: []
+  missing: []
