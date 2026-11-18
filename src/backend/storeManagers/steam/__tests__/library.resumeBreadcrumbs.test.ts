@@ -165,10 +165,7 @@ jest.mock('../platformCapture', () => ({
 // the D-UAT-13 describe below drives it explicitly. Never a real child spawn.
 // quick 261029-sex: bare jest.fn = undefined = no live signal = ACF behaviour.
 jest.mock('../steamClientProcess', () => ({
-  listSteamClientPids: jest.fn(),
-  // quick 261029-pkp: start-time identity probe (bare jest.fn = undefined =
-  // "unknown": no record is persisted, so pre-existing tests are unaffected).
-  readSteamProcessStartTokens: jest.fn()
+  listSteamClientPids: jest.fn()
 }))
 
 // ── Shared fixtures ───────────────────────────────────────────────────────────

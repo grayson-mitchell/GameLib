@@ -17,11 +17,8 @@ import {
 import {
   listSteamClientPids,
   parsePgrepPids,
-  parsePidTokenLines,
-  readSteamProcessStartTokens,
   parseTasklistSteamPids
 } from '../steamClientProcess'
-import { at } from './fixtures/indexed'
 
 jest.mock('backend/logger', () => ({
   logWarning: jest.fn(),
@@ -210,97 +207,5 @@ describe('listSteamClientPids()', () => {
       listSteamClientPids(deps, 'freebsd' as unknown as NodeJS.Platform)
     ).resolves.toBeUndefined()
     expect(runner.calls).toHaveLength(0)
-  })
-})
-
-describe('parsePidTokenLines()', () => {
-  it('parses ps lstart lines and tick lines, ignoring noise', () => {
-    expect(parsePidTokenLines('  4410 Thu Oct 29  12:12:31 2026\n')).toEqual(
-      new Map([[4410, 'Thu Oct 29 12:12:31 2026']])
-    )
-    expect(parsePidTokenLines('13712 638659123450000000\r\n')).toEqual(
-      new Map([[13712, '638659123450000000']])
-    )
-    expect(parsePidTokenLines('\nPID START\nabc 5\n')).toEqual(new Map())
-  })
-})
-
-describe('readSteamProcessStartTokens()', () => {
-  it('spawns nothing for an empty or invalid pid list', async () => {
-    const { runner, deps } = probe()
-    await expect(
-      readSteamProcessStartTokens(deps, [], 'linux')
-    ).resolves.toEqual(new Map())
-    await expect(
-      readSteamProcessStartTokens(deps, [-1, 1.5, NaN], 'win32')
-    ).resolves.toEqual(new Map())
-    expect(runner.calls).toHaveLength(0)
-  })
-
-  it('darwin uses /bin/ps with lstart and the 15 s bound', async () => {
-    const { runner, deps } = probe(
-      step('/bin/ps', 0, '4410 Thu Oct 29 12:12:31 2026\n')
-    )
-    const r = await readSteamProcessStartTokens(deps, [4410, 4411], 'darwin')
-    expect(r).toEqual(new Map([[4410, 'Thu Oct 29 12:12:31 2026']]))
-    expect(runner.calls[0]?.cmd).toBe('/bin/ps')
-    expect(runner.calls[0]?.argv).toEqual([
-      '-o',
-      'pid=,lstart=',
-      '-p',
-      '4410,4411'
-    ])
-    expect(runner.calls[0]?.opts).toMatchObject({ timeoutMs: 15000 })
-  })
-
-  it('linux uses bare ps; code 1 is empty, other codes unknown', async () => {
-    const first = probe(step('ps', 0, '900 Thu Oct 29 12:12:31 2026\n'))
-    await readSteamProcessStartTokens(first.deps, [900], 'linux')
-    expect(first.runner.calls[0]?.cmd).toBe('ps')
-    await expect(
-      readSteamProcessStartTokens(probe(step('ps', 1)).deps, [900], 'linux')
-    ).resolves.toEqual(new Map())
-    await expect(
-      readSteamProcessStartTokens(probe(step('ps', 2)).deps, [900], 'linux')
-    ).resolves.toBeUndefined()
-  })
-
-  it('win32 uses PowerShell Get-Process ticks', async () => {
-    const ps = join(
-      sysRoot(),
-      'System32',
-      'WindowsPowerShell',
-      'v1.0',
-      'powershell.exe'
-    )
-    const { runner, deps } = probe(
-      step(ps, 0, '13712 638659123450000000\r\n99 5\r\n')
-    )
-    const r = await readSteamProcessStartTokens(deps, [13712, 4410], 'win32')
-    expect(r).toEqual(new Map([[13712, '638659123450000000']]))
-    const args = runner.calls[0]?.argv ?? []
-    expect(runner.calls[0]?.cmd).toMatch(/powershell\.exe$/)
-    expect(args.slice(0, 3)).toEqual([
-      '-NoProfile',
-      '-NonInteractive',
-      '-Command'
-    ])
-    expect(args[3]).toContain('Get-Process -Id 13712,4410')
-    expect(args[3]).toContain('-ErrorAction SilentlyContinue')
-    expect(args[3]).toContain('StartTime.ToUniversalTime().Ticks')
-    expect(at(args, 3).endsWith('exit 0')).toBe(true)
-    await expect(
-      readSteamProcessStartTokens(probe(step(ps, 1)).deps, [13712], 'win32')
-    ).resolves.toBeUndefined()
-  })
-
-  it('is undefined on an unsupported platform', async () => {
-    await expect(
-      readSteamProcessStartTokens(
-        probe().deps,
-        [1],
-        'freebsd' as unknown as NodeJS.Platform
-      )
-    ).resolves.toBeUndefined()
   })
 })

@@ -70,8 +70,7 @@ jest.mock('../../library/installPolling', () => ({
 }))
 jest.mock('../../library/acfState', () => ({ readAcfState: jest.fn() }))
 jest.mock('../../steamClientProcess', () => ({
-  listSteamClientPids: jest.fn(),
-  readSteamProcessStartTokens: jest.fn()
+  listSteamClientPids: jest.fn()
 }))
 jest.mock('backend/constants/environment', () => ({
   isMac: true,

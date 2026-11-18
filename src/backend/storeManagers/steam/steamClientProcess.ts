@@ -1,19 +1,10 @@
 /**
- * debug/steam-waiting-for-restart-windows (D-UAT-13): which native Steam
- * client process(es) are running RIGHT NOW.
+ * Which native Steam client process(es) are running RIGHT NOW.
  *
- * Why this exists. Steam only scans for new `appmanifest_*.acf` files at
- * startup (debug/wazhack-uninstall-reverts Rounds 3-4: a running client never
- * re-reads a manifest GameLib wrote, and a full client restart adopts it
- * byte-for-byte). When GameLib's own depot download finishes it writes the
- * manifest at StateFlags 4 (Phase 23 "trustworthy 4" fast path), and the
- * install poller used to flip straight to Play even though the Steam client
- * that was alive at that moment had never seen the file; Play then opened
- * Steam's *install* dialog. The ACF cannot carry the adoption signal (Steam
- * adopts it verbatim, without rewriting it), so the poller records which
- * Steam process was alive when GameLib wrote the manifest and treats that
- * process exiting as "the client has restarted, so it will adopt the
- * manifest on its next start".
+ * Steam only scans for new `appmanifest_*.acf` files at startup, so callers
+ * (updateDetection and the adoption Play gate) ask "which Steam client pids
+ * exist". The Rust steam_process.rs is the only start-token probe left
+ * (Phase 81 D-11); this module reads no start times.
  *
  * This module is a LEAF with one question: "which Steam client PIDs exist?".
  * It decides nothing, never drives Steam (T-21-16-02), and never throws.
@@ -43,13 +34,6 @@
  * short-lived child bounded by `PROBE_TIMEOUT_MS` (the runner kills it on
  * expiry), so no unbounded in-flight work and no long-lived handle. It is
  * only ever called from the install poller, never at boot.
- *
- * Start-time identity (quick 261029-pkp). A persisted "Restart Steam to
- * finish" hold must survive a GameLib restart without being pinned by PID
- * reuse, so `readSteamProcessStartTokens` returns an opaque per-process
- * start-time token. The token is compared for string equality only and never
- * parsed, so it does not depend on locale. It is only called at boot when a
- * hold record exists (zero records means zero spawns), or when a hold arms.
  */
 import { join } from 'path'
 import type { ProcessRunner } from 'backend/process/types'
@@ -57,9 +41,6 @@ import { logWarning, LogPrefix } from 'backend/logger'
 
 /** Hard bound on a single probe child (tasklist measured ~200 ms cold). */
 const PROBE_TIMEOUT_MS = 5000
-
-/** Cold PowerShell start is much slower than tasklist; still one bounded child. */
-const START_TOKEN_TIMEOUT_MS = 15_000
 
 /**
  * Parses `tasklist /FO CSV /NH` output into steam.exe PIDs. Only rows whose
@@ -102,12 +83,11 @@ export interface SteamProbeDeps {
 async function run(
   deps: SteamProbeDeps,
   file: string,
-  args: string[],
-  timeoutMs: number = PROBE_TIMEOUT_MS
+  args: string[]
 ): Promise<ExecResult> {
   try {
     const r = await deps.runner.run(file, args, {
-      timeoutMs,
+      timeoutMs: PROBE_TIMEOUT_MS,
       windowsHide: true,
       stdin: ''
     })
@@ -159,86 +139,6 @@ export async function listSteamClientPids(
   } catch (error) {
     logWarning(
       ['Steam: Steam client process probe failed unexpectedly:', error],
-      LogPrefix.Steam
-    )
-  }
-  return undefined
-}
-
-/**
- * Parses `<pid> <token>` lines (ps `pid=,lstart=` or the PowerShell tick
- * lines) into a PID -> opaque token map. Internal whitespace in the token is
- * collapsed so equal instants compare equal.
- */
-export function parsePidTokenLines(stdout: string): Map<number, string> {
-  const out = new Map<number, string>()
-  for (const line of stdout.split(/\r?\n/)) {
-    const match = /^(\d+)\s+(.+)$/.exec(line.trim())
-    if (!match) continue
-    const pid = Number(match[1])
-    const token = match[2]
-    if (!Number.isSafeInteger(pid) || pid <= 0 || token === undefined) continue
-    out.set(pid, token.replace(/\s+/g, ' '))
-  }
-  return out
-}
-
-/**
- * Start-time tokens for the given PIDs (quick 261029-pkp). Never rejects.
- * Empty Map = none of them exist; `undefined` = unknown (probe failed).
- * Only PIDs that were asked for appear in the result.
- */
-export async function readSteamProcessStartTokens(
-  deps: SteamProbeDeps,
-  pids: number[],
-  platform: NodeJS.Platform = process.platform
-): Promise<Map<number, string> | undefined> {
-  // Only safe positive integers are ever interpolated (injection guard).
-  const wanted = pids.filter((p) => Number.isSafeInteger(p) && p > 0)
-  if (wanted.length === 0) return new Map()
-  const csv = wanted.join(',')
-  try {
-    let result: ExecResult | undefined
-    if (platform === 'darwin' || platform === 'linux') {
-      const file = platform === 'darwin' ? '/bin/ps' : 'ps'
-      result = await run(
-        deps,
-        file,
-        ['-o', 'pid=,lstart=', '-p', csv],
-        START_TOKEN_TIMEOUT_MS
-      )
-      if (result.code === 1) return new Map()
-    } else if (platform === 'win32') {
-      const powershell = join(
-        process.env.SystemRoot ?? 'C:\\Windows',
-        'System32',
-        'WindowsPowerShell',
-        'v1.0',
-        'powershell.exe'
-      )
-      const script =
-        `Get-Process -Id ${csv} -ErrorAction SilentlyContinue | ` +
-        'ForEach-Object { "$($_.Id) $($_.StartTime.ToUniversalTime().Ticks)" }; exit 0'
-      result = await run(
-        deps,
-        powershell,
-        ['-NoProfile', '-NonInteractive', '-Command', script],
-        START_TOKEN_TIMEOUT_MS
-      )
-    } else {
-      return undefined
-    }
-    if (result.code !== 0) return undefined
-    const parsed = parsePidTokenLines(result.stdout)
-    const out = new Map<number, string>()
-    for (const pid of wanted) {
-      const token = parsed.get(pid)
-      if (token !== undefined) out.set(pid, token)
-    }
-    return out
-  } catch (error) {
-    logWarning(
-      ['Steam: Steam process start-time probe failed unexpectedly:', error],
       LogPrefix.Steam
     )
   }
