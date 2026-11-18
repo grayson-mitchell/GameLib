@@ -101,6 +101,22 @@ export default function SearchBar({
         // and in src/helpers/gamepad.ts#isSearchInput
         id="search"
         className="searchBarInput"
+        // macOS WKWebView runs automatic spelling correction on unmarked text
+        // fields (it follows the system "Correct spelling automatically"
+        // setting, with no squiggle shown) and commits the correction when the
+        // field loses focus, as a native input event this component forwards,
+        // so a Library search for 'xcom' became 'com' when the user clicked a
+        // tile (G-47-12b). Turning spellchecking off stops WebKit's
+        // check-and-correct pipeline for the field; the autocorrect opt-out
+        // separately disables automatic correction; autocapitalize is inert
+        // on macOS and kept for parity. One fix point for Library, Store
+        // Search, Deals, Wine Manager and Humble Keys. Do not add
+        // type="search": WKWebView draws native search-field chrome (Phase 45
+        // live gate 45-12).
+        spellCheck={false}
+        autoCorrect="off"
+        autoCapitalize="off"
+        autoComplete="off"
       />
       {value.length > 0 && (
         <button className="clearSearchButton" onClick={onClear} tabIndex={-1}>
