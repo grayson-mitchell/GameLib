@@ -2,14 +2,14 @@
 gsd_state_version: "1.0"
 milestone: v0.10
 milestone_name: Foundations
-current_phase: 47
-current_phase_name: Migrate aggregated store search from CheapShark to IsThereAnyDeal
+current_phase: 81
+current_phase_name: Unify the Steam restart hold into restart-on-Play
 status: verifying
-stopped_at: Completed 47-22-PLAN.md
-last_updated: "2026-11-19T08:04:47.465Z"
+stopped_at: Phase 47 complete; Phase 81 verification has gaps
+last_updated: "2026-11-19T08:31:57.268Z"
 last_activity: 2026-11-19
-last_activity_desc: Phase 47 execution started
-state_head: dcfd163f58f75bc92f2b9c971fd5f465ab066044
+last_activity_desc: Phase 47 complete (UAT 19/19, verification passed); next is Phase 81 gap closure
+state_head: 9c3177be72efb8bcf313b906cebe941b2b7ec500
 progress:
   total_phases: 26
   completed_phases: 23
@@ -25,7 +25,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 47 — Migrate aggregated store search from CheapShark to IsThereAnyDeal
+**Current focus:** Phase 81 — Unify the Steam restart hold into restart-on-Play
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -76,10 +76,10 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 
 ## Current Position
 
-Phase: 47 (Migrate aggregated store search from CheapShark to IsThereAnyDeal) — EXECUTING
-Plan: 22 of 22
-Status: Phase complete — ready for verification
-Last activity: 2026-11-19 — Completed quick task 261119-se9: Mac Steam restart guards count running bridged (bottled) games
+Phase: 81 (Unify the Steam restart hold into restart-on-Play) — VERIFYING
+Plan: 20 of 20 executed
+Status: Verification gaps_found; human UAT partial — next /gsd-plan-phase 81 --gaps
+Last activity: 2026-11-19 — Phase 47 complete (UAT 19/19, verification passed)
 
 Progress: [█████████░] 88%
 
@@ -914,7 +914,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 ## Session Continuity
 
 Last session: 2026-11-18T18:46:35.138Z
-Stopped at: Completed 47-22-PLAN.md
+Stopped at: Phase 47 complete; Phase 81 verification has gaps
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
