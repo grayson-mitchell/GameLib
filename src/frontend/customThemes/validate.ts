@@ -12,8 +12,17 @@ export type SupportsFn = (property: string, value: string) => boolean
 // CR-01). The CSP `img-src` allows https:, so that layer would be a network fetch on every app
 // start. The one-layer rule therefore runs BEFORE the engine is asked (T-64-12, T-64-21).
 // Anything that could fetch (`url(`), alias (`var(`), end the declaration (`;`, `{`, `}`, `@`,
-// `!important`) or hide any of those from this scan (a backslash escape) is refused too.
-const GRADIENT_DENY = /var\(|url\(|;|\{|\}|@|!important|\\/i
+// `!important`) or hide any of those from this scan (a backslash escape) is refused too. So are
+// the image functions that take a URL or a string (`image-set(`, which also matches the
+// `-webkit-` form, `cross-fade(`, `element(`, `src(`), quote characters and comments. With
+// quotes, backslashes and comments refused, the character-level paren walk below sees the same
+// nesting the CSS tokenizer does, so one layer cannot be faked.
+const GRADIENT_DENY =
+  /var\(|url\(|image-set\(|cross-fade\(|element\(|src\(|\/\*|["']|;|\{|\}|@|!important|\\/i
+// Gradient tokens are named `--gradient-*`. The four real ones are --gradient-01, --gradient-02,
+// --gradient-gamecard (all in the built-in seeds) and the live-derived --gradient-body-background
+// (in no seed, OD-1), so the rule is the name prefix, not "the seed value is a gradient" (IN-03).
+const GRADIENT_TOKEN_PATTERN = /^--gradient-/
 const GRADIENT_START = /^(?:repeating-)?(?:linear|radial|conic)-gradient\(/i
 
 // Fails closed: with no `CSS.supports` (jsdom, node, an old engine) no gradient is accepted.
@@ -59,11 +68,13 @@ export const looksLikeGradient = (value: string): boolean =>
   GRADIENT_START.test(value.trim())
 
 export function isValidTokenValue(
-  _name: string,
+  name: string,
   value: string,
   supports?: SupportsFn
 ): boolean {
+  // A gradient is valid only for a gradient token, so one cannot be planted in a colour
+  // token such as `--accent` (IN-03). A colour value on a gradient token stays accepted.
   return looksLikeGradient(value)
-    ? isValidGradient(value, supports)
+    ? GRADIENT_TOKEN_PATTERN.test(name) && isValidGradient(value, supports)
     : validateColourInput(value).ok
 }

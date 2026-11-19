@@ -10,7 +10,10 @@ interface GradientFieldProps {
   label: string
   /** The last good value. */
   value: string
-  /** Called only with a gradient `isValidGradient` accepted, trimmed (T-64-12, T-64-21). */
+  /**
+   * Called only with a gradient `isValidGradient` accepted, trimmed: exactly one gradient
+   * function and nothing that can fetch or hide a fetch (T-64-12, T-64-21).
+   */
   onCommit: (value: string) => void
   /** Injected in tests; defaults to `CSS.supports`, failing closed when it is absent. */
   supports?: SupportsFn
@@ -22,8 +25,8 @@ interface GradientFieldProps {
 
 /**
  * Raw-text gradient editing (D-14): a two-row monospace textarea, validated on every change by
- * `isValidGradient` (which refuses var(, url(, ;, {, }, @, !important and backslashes BEFORE the
- * engine is asked), committed on blur when valid and reverted when not. There is no picker. The
+ * `isValidGradient` (exactly one gradient function, and nothing that can fetch or hide a fetch,
+ * all refused BEFORE the engine is asked), committed on blur when valid and reverted when not. There is no picker. The
  * 24px strip below paints only the last value that validated, so an untrusted string can never
  * reach an inline `background-image` (T-64-21).
  */
