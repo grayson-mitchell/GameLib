@@ -17429,7 +17429,11 @@ describe('Steam launch watch wiring (261111-9mj)', () => {
     getBottleProcessMonitorPhase.mockReturnValue(null)
     startSpy = jest
       .spyOn(steamLaunchWatchModule, 'startSteamLaunchWatch')
-      .mockReturnValue({ status: 'started', settled: Promise.resolve() })
+      .mockReturnValue({
+        status: 'started',
+        settled: Promise.resolve(),
+        launchingDecided: Promise.resolve()
+      })
     stopSpy = jest.spyOn(stopSteamLaunchedModule, 'stopSteamLaunchedGame')
     // an earlier describe may leave a delegated-install poll that stop() takes first
     delegatedSpy = jest

@@ -6,9 +6,9 @@
  * macOS registry.vdf carries no RunningAppID (measured 2026-11-11, WazHack
  * 264160), so this watch is the Playing signal for rungameid launches and keeps
  * the Stop button (261111-9b7) reachable. posix (darwin/linux): poll the game's
- * install folder with ps, send `playing` when PIDs appear and one `done` when
- * they are all gone; when the poller reports the appId, pollerReports hands
- * status to it.
+ * install folder with ps, send `launching` as the watch starts, `playing` when
+ * PIDs appear and one `done` when they are all gone; when the poller reports the
+ * appId, pollerReports hands status to it.
  *
  * win32 (quick 261111-a9g): the poller alone returns Play about 4.6 s after the
  * exe exits (Steam clears RunningAppID 2.1 s later, plus up to a 5 s poll
@@ -26,20 +26,26 @@
  *     scan either finds a successor (launcher -> game chain, self-restart) or
  *     sends `done`.
  *
- * win32 wire (quick 261111-am0): the watch also holds Launching. It sends `launching` in
- * the same synchronous turn as its poller claim, so the button does not drop back to Play when the
- * `launch` IPC resolves and the frontend click latch is released. Steam launches bypass
- * launcher.ts, so nothing else sends a status between the click and these frames.
- *   - Normal: [watch launching, watch playing, watch done]; the poller is silent under the claim.
+ * Wire (am0 win32, 261119-p3z macOS/Linux): the watch also holds Launching. It
+ * sends `launching` as it starts (win32: once its poller claim has landed), and
+ * the `launch` IPC waits for that decision (`launchingDecided`, bounded by
+ * `decideWaitMs`), so the frontend click latch never drops onto Play. Steam
+ * launches bypass launcher.ts, so nothing else sends a status between the click
+ * and these frames.
+ *   - Normal: [launching, playing, done] on both platforms; on win32 the poller
+ *     is silent under the claim.
  *   - Stop during Launching: [launching, stop done].
- *   - Never detected within the window (also the 5-empty-scan bail with the poller not reading
- *     the appId, no install folder, an unexpected error): [launching, done].
- *   - Already running at Play (the poller reports the appId): no `launching` at all.
- *   - Hand-back when the poller already reads the appId: [launching, poller playing].
+ *   - Never detected (start window, no install folder, an unexpected error, and
+ *     on win32 the 5-empty-scan bail with the poller not reading the appId):
+ *     [launching, done].
+ *   - Already running at Play (the poller reports the appId): no `launching`.
+ *   - Hand-back when the poller reads the appId: [launching, poller playing] on
+ *     win32 and [launching, watch playing] on posix (posix holds no claim, so the
+ *     watch ends Launching itself).
  *
- * Bounds: a start window (on posix nothing is sent if no PID ever appears), a scan
- * timeout, a consecutive-failure cap, and only unref'd timers from the
- * injected clock. One watch per appId.
+ * Bounds: a start window, a decide wait (`decideWaitMs`), a scan timeout, a
+ * consecutive-failure cap, and only unref'd timers from the injected clock. One
+ * watch per appId.
  *
  * The registry is injected, not module state (backend-di-ceilings): the
  * caller owns the Map, this module never imports it.
@@ -108,11 +114,18 @@ export interface SteamLaunchWatchOptions {
   alivePollMs?: number
   /** win32: empty scans tolerated while Steam reports the appId. */
   maxEmptyWhileReported?: number
+  /** Bound on how long `launchingDecided` waits for the `launching` decision. */
+  decideWaitMs?: number
 }
 
 export interface StartSteamLaunchWatchResult {
   status: 'started' | 'already-watching'
   settled: Promise<void>
+  /**
+   * Settles once the watch has sent `launching` or decided not to, when it is cancelled or
+   * finishes, or after `decideWaitMs`, whichever comes first. Never rejects.
+   */
+  launchingDecided: Promise<void>
 }
 
 /** Runs `then` with the poller's answer: in the same turn when it is sync, else once it resolves. */
@@ -121,7 +134,12 @@ function whenPollerReports(
   appId: string,
   then: (reports: boolean) => void
 ): void {
-  const reports = deps.pollerReports(appId)
+  let reports: boolean | Promise<boolean>
+  try {
+    reports = deps.pollerReports(appId)
+  } catch {
+    reports = false
+  }
   if (typeof reports === 'boolean') then(reports)
   else void reports.then(then, () => then(false))
 }
@@ -134,7 +152,11 @@ export function startSteamLaunchWatch(
   const existing = deps.registry.get(appId)
   if (existing) {
     existing.noteRelaunch()
-    return { status: 'already-watching', settled: existing.settled }
+    return {
+      status: 'already-watching',
+      settled: existing.settled,
+      launchingDecided: Promise.resolve()
+    }
   }
 
   const win = deps.platform === 'win32'
@@ -145,6 +167,7 @@ export function startSteamLaunchWatch(
   const maxScanFailures = opts.maxScanFailures ?? 10
   const alivePollMs = opts.alivePollMs ?? 500
   const maxEmptyWhileReported = opts.maxEmptyWhileReported ?? 5
+  const decideWaitMs = opts.decideWaitMs ?? 1000
 
   let cancelled = false
   let reassert = false
@@ -155,12 +178,26 @@ export function startSteamLaunchWatch(
   const settled = new Promise<void>((r) => {
     finish = r
   })
+  let decided = false
+  let decideTimer: TimerHandle | undefined
+  let resolveDecided!: () => void
+  const launchingDecided = new Promise<void>((r) => {
+    resolveDecided = r
+  })
+  const markDecided = () => {
+    if (decided) return
+    decided = true
+    if (decideTimer) deps.clock.clear(decideTimer)
+    decideTimer = undefined
+    resolveDecided()
+  }
 
   const entry: SteamLaunchWatch = {
     shown: false,
     settled,
     cancel() {
       cancelled = true
+      markDecided()
       if (timer) deps.clock.clear(timer)
       timer = undefined
       if (deps.registry.get(appId) === entry) deps.registry.delete(appId)
@@ -168,7 +205,7 @@ export function startSteamLaunchWatch(
     },
     noteRelaunch() {
       origin = deps.clock.now()
-      if (entry.shown) reassert = true
+      if (playingSent) reassert = true
     }
   }
   deps.registry.set(appId, entry)
@@ -178,17 +215,18 @@ export function startSteamLaunchWatch(
   let playingSent = false
   // Set first thing in the run's `finally`: from then on nothing may send `launching`.
   let finished = false
-  // win32 (quick 261111-am0): hold Launching from the hand-off until the search finds the game.
-  // When the poller has already reported the appId the game was running before this Play, and
-  // its `playing` must not be overwritten. The claim is an async invoke into Rust (Phase 80), so
-  // the poller is silenced only once it lands: the last-app-id read and the `launching` decision
-  // wait for it (80-REVIEW C-WR-06). That wait can outlast the search, so a late decision sends
-  // nothing once the watch is cancelled, has sent `playing` or `done`, or has finished: a late
-  // `launching` would overwrite `playing`, or (after the run ended without `done`) leave the card
-  // on Launching with no watch left to end it (80-REVIEW C-WR-01, iteration 2).
-  if (win) {
-    const decideLaunching = () =>
-      whenPollerReports(deps, appId, (reports) => {
+  // quick 261111-am0 (win32) / 261119-p3z (posix): hold Launching from the hand-off until the
+  // search finds the game. When the poller has already reported the appId the game was running
+  // before this Play, and its `playing` must not be overwritten. On win32 the claim is an async
+  // invoke into Rust (Phase 80), so the poller is silenced only once it lands: the last-app-id
+  // read and the `launching` decision wait for it (80-REVIEW C-WR-06). posix takes no claim and
+  // decides at once. That wait can outlast the search, so a late decision sends nothing once the
+  // watch is cancelled, has sent `playing` or `done`, or has finished: a late `launching` would
+  // overwrite `playing`, or (after the run ended without `done`) leave the card on Launching with
+  // no watch left to end it (80-REVIEW C-WR-01, iteration 2). Every path settles `launchingDecided`.
+  const decideLaunching = () =>
+    whenPollerReports(deps, appId, (reports) => {
+      try {
         if (reports || cancelled || doneSent || playingSent || finished) return
         launchingSent = true
         entry.shown = true
@@ -197,11 +235,16 @@ export function startSteamLaunchWatch(
         } catch (e) {
           deps.log.warn(`appId ${appId}: launching status failed: ${String(e)}`)
         }
-      })
-    const held = releasePoller?.held
-    if (held) void held.then(decideLaunching, decideLaunching)
-    else decideLaunching()
-  }
+      } finally {
+        markDecided()
+      }
+    })
+  const held = releasePoller?.held
+  if (held) void held.then(decideLaunching, decideLaunching)
+  else decideLaunching()
+  // The IPC must not wait on Rust for ever: bound the decision. Armed only while pending, from
+  // the injected clock without keepAlive (so unref'd), and cleared the moment it lands.
+  if (!decided) decideTimer = deps.clock.setTimeout(markDecided, decideWaitMs)
   const sendDone = () => {
     doneSent = true
     deps.sendStatus(appId, 'done')
@@ -234,11 +277,11 @@ export function startSteamLaunchWatch(
       } catch (e) {
         fails++
         if (cancelled) return
-        if (entry.shown && fails >= maxScanFailures) {
+        if (playingSent && fails >= maxScanFailures) {
           deps.log.warn(
             `appId ${appId}: ${fails} consecutive scan failures (${String(e)}); ending watch`
           )
-          deps.sendStatus(appId, 'done')
+          sendDone()
           return
         }
       }
@@ -247,7 +290,8 @@ export function startSteamLaunchWatch(
         fails = 0
         if (pids.length > 0) {
           gone = 0
-          if (!entry.shown) {
+          if (!playingSent) {
+            playingSent = true
             entry.shown = true
             deps.log.info(
               `appId ${appId} running: pids [${pids.join(', ')}] under ${folder}`
@@ -256,13 +300,13 @@ export function startSteamLaunchWatch(
           }
           continue
         }
-        if (entry.shown && ++gone >= goneScans) {
+        if (playingSent && ++gone >= goneScans) {
           deps.log.info(`appId ${appId} no longer running`)
-          deps.sendStatus(appId, 'done')
+          sendDone()
           return
         }
       }
-      if (!entry.shown && deps.clock.now() - origin >= startWindowMs) {
+      if (!playingSent && deps.clock.now() - origin >= startWindowMs) {
         deps.log.info(`appId ${appId}: no process within start window`)
         return
       }
@@ -376,11 +420,12 @@ export function startSteamLaunchWatch(
     })
     .finally(() => {
       finished = true
+      markDecided()
       if (deps.registry.get(appId) === entry) deps.registry.delete(appId)
       releasePoller?.(doneSent || cancelled)
       // release(false) ran first: if the poller already reads the appId it has just sent
       // `playing`, and the pollerReports check below suppresses this fallback `done`.
-      if (!(win && launchingSent && !playingSent && !doneSent && !cancelled)) {
+      if (!(launchingSent && !playingSent && !doneSent && !cancelled)) {
         finish()
         return
       }
@@ -390,12 +435,19 @@ export function startSteamLaunchWatch(
             `appId ${appId}: not detected running; ending Launching`
           )
           deps.sendStatus(appId, 'done')
+        } else if (!win) {
+          // posix holds no claim, so the poller's own `playing` may predate our `launching`:
+          // end Launching as Playing here rather than leave the card on Launching.
+          deps.log.info(
+            `appId ${appId}: the RunningAppID poller reports it running; ending Launching as Playing`
+          )
+          deps.sendStatus(appId, 'playing')
         }
         finish()
       })
     })
 
-  return { status: 'started', settled }
+  return { status: 'started', settled, launchingDecided }
 }
 
 export function cancelSteamLaunchWatch(

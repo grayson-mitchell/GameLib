@@ -115,9 +115,9 @@ describe('steamLaunchWatch', () => {
     const { deps, clock, registry, sent } = setup([EMPTY, PRESENT, PRESENT])
     startSteamLaunchWatch(deps, '264160')
     await tick(clock)
-    expect(sent).toEqual([])
+    expect(sent).toEqual(['launching'])
     await tick(clock, 2)
-    expect(sent).toEqual(['playing'])
+    expect(sent).toEqual(['launching', 'playing'])
     expect(registry.has('264160')).toBe(true)
   })
 
@@ -126,7 +126,7 @@ describe('steamLaunchWatch', () => {
     const { settled } = startSteamLaunchWatch(deps, '264160')
     await tick(clock, 4)
     await settled
-    expect(sent).toEqual(['playing', 'done'])
+    expect(sent).toEqual(['launching', 'playing', 'done'])
     expect(registry.size).toBe(0)
     expect(clock.pendingCount()).toBe(0)
   })
@@ -135,31 +135,32 @@ describe('steamLaunchWatch', () => {
     const { deps, clock, sent } = setup([PRESENT, EMPTY, PRESENT, PRESENT])
     startSteamLaunchWatch(deps, '264160')
     await tick(clock, 4)
-    expect(sent).toEqual(['playing'])
+    expect(sent).toEqual(['launching', 'playing'])
   })
 
-  it('T4 sends nothing when no pid shows inside the start window', async () => {
+  it('T4 no pid inside the start window: launching then exactly one done', async () => {
     const { deps, clock, registry, sent } = setup([{ ...EMPTY, repeat: true }])
     const { settled } = startSteamLaunchWatch(deps, '264160', {
       startWindowMs: 10000
     })
     await tick(clock, 8)
     await settled
-    expect(sent).toEqual([])
+    expect(sent).toEqual(['launching', 'done'])
     expect(registry.size).toBe(0)
     expect(clock.pendingCount()).toBe(0)
   })
 
-  it('T5 no folder: no ps, no status, entry removed', async () => {
+  it('T5 no folder: no ps, launching then done, entry removed', async () => {
     const a = setup([], { libs: undefined })
     const r = startSteamLaunchWatch(a.deps, '264160')
     await r.settled
     expect(a.runner.calls).toHaveLength(0)
-    expect(a.sent).toEqual([])
+    expect(a.sent).toEqual(['launching', 'done'])
     expect(a.registry.size).toBe(0)
     const b = setup([], { acf: '  ' })
     await startSteamLaunchWatch(b.deps, '264160').settled
     expect(b.runner.calls).toHaveLength(0)
+    expect(b.sent).toEqual(['launching', 'done'])
     expect(b.registry.size).toBe(0)
   })
 
@@ -397,7 +398,7 @@ describe('steamLaunchWatch', () => {
     await startSteamLaunchWatch(t.deps, '264160').settled
     expect(t.holds).toEqual([])
     expect(t.released).toEqual([])
-    expect(t.sent).toEqual([])
+    expect(t.sent).toEqual(['launching', 'done'])
   })
 
   it('A1 (am0) win32 already running: no launching, the poller playing is not overwritten', async () => {
@@ -519,15 +520,15 @@ describe('steamLaunchWatch', () => {
     const { deps, clock, runner, sent } = setup([{ ...PRESENT, repeat: true }])
     startSteamLaunchWatch(deps, '264160')
     await tick(clock, 2)
-    expect(sent).toEqual(['playing'])
+    expect(sent).toEqual(['launching', 'playing'])
     const again = startSteamLaunchWatch(deps, '264160')
     expect(again.status).toBe('already-watching')
     const before = runner.calls.length
     await tick(clock)
     expect(runner.calls.length - before).toBe(1)
-    expect(sent).toEqual(['playing', 'playing'])
+    expect(sent).toEqual(['launching', 'playing', 'playing'])
     await tick(clock)
-    expect(sent).toEqual(['playing', 'playing'])
+    expect(sent).toEqual(['launching', 'playing', 'playing'])
   })
 
   it('T7b relaunch before playing resets the start window', async () => {
@@ -540,9 +541,11 @@ describe('steamLaunchWatch', () => {
     await tick(clock, 3)
     // 12s after first start, 6s after the relaunch: still watching
     expect(deps.registry.has('264160')).toBe(true)
+    expect(sent).not.toContain('playing')
     await tick(clock, 3)
     await settled
-    expect(sent).toEqual([])
+    expect(sent).not.toContain('playing')
+    expect(sent).toEqual(['launching', 'done'])
     expect(deps.registry.size).toBe(0)
   })
 
@@ -559,7 +562,7 @@ describe('steamLaunchWatch', () => {
     const calls = runner.calls.length
     await tick(clock, 3)
     expect(runner.calls.length).toBe(calls)
-    expect(sent).toEqual(['playing'])
+    expect(sent).toEqual(['launching', 'playing'])
     expect(clock.pendingCount()).toBe(0)
     expect(cancelSteamLaunchWatch(registry, 'nope')).toEqual({
       cancelled: false,
@@ -580,7 +583,7 @@ describe('steamLaunchWatch', () => {
     cancelSteamLaunchWatch(registry, '264160')
     runner.release('/bin/ps')
     await settled
-    expect(sent).toEqual([])
+    expect(sent).toEqual(['launching'])
   })
 
   it('T9 poller reporting the appId ends the watch quietly', async () => {
@@ -596,7 +599,7 @@ describe('steamLaunchWatch', () => {
     report = true
     await tick(clock)
     await settled
-    expect(sent).toEqual(['playing'])
+    expect(sent).toEqual(['launching', 'playing'])
     expect(registry.size).toBe(0)
   })
 
@@ -612,7 +615,7 @@ describe('steamLaunchWatch', () => {
     })
     await tick(clock, 6)
     await settled
-    expect(sent).toEqual(['playing', 'done'])
+    expect(sent).toEqual(['launching', 'playing', 'done'])
     expect(log.lines.some((l) => l.level === 'warn')).toBe(true)
   })
 
@@ -624,7 +627,7 @@ describe('steamLaunchWatch', () => {
     })
     await tick(clock, 5)
     await settled
-    expect(sent).toEqual([])
+    expect(sent).toEqual(['launching', 'done'])
   })
 
   it('T11 no keepAlive timers while live', async () => {
@@ -654,12 +657,12 @@ describe('steamLaunchWatch', () => {
     // t = 12 s: past the original 10 s window, still inside the relaunch's
     await tick(clock, 3)
     expect(registry.has('264160')).toBe(true)
-    expect(sent).toEqual([])
+    expect(sent).toEqual(['launching'])
     await tick(clock) // t = 14 s: the game first appears
-    expect(sent).toEqual(['playing'])
+    expect(sent).toEqual(['launching', 'playing'])
     await tick(clock, 2)
     await settled
-    expect(sent).toEqual(['playing', 'done'])
+    expect(sent).toEqual(['launching', 'playing', 'done'])
     expect(registry.size).toBe(0)
     expect(clock.pendingCount()).toBe(0)
   })
@@ -711,7 +714,7 @@ describe('steamLaunchWatch', () => {
       'already-watching'
     )
     await tick(clock, 4) // t = 14 s
-    expect(sent).toEqual(['playing'])
+    expect(sent).toEqual(['launching', 'playing'])
     expect(
       log.lines.some(
         (l) =>
@@ -737,7 +740,178 @@ describe('steamLaunchWatch', () => {
     }
     await tick(clock, 2)
     await settled
-    expect(sent).toEqual(['playing', 'done'])
+    expect(sent).toEqual(['launching', 'playing', 'done'])
     expect(registry.size).toBe(0)
+  })
+
+  // quick 261119-p3z: macOS/Linux hold Launching from the hand-off, and the launch IPC
+  // waits (bounded) for that decision through `launchingDecided`.
+  async function flush(n = 10) {
+    for (let j = 0; j < n; j++) await Promise.resolve()
+  }
+
+  it('P1 (p3z) posix normal wire: launching at start, then playing, then one done', async () => {
+    const order: string[] = []
+    const t = setup([PRESENT, EMPTY, EMPTY])
+    t.deps.sendStatus = (_id, status) => void order.push(status)
+    const r = startSteamLaunchWatch(t.deps, '264160')
+    expect(order).toEqual(['launching'])
+    void r.launchingDecided.then(() => order.push('decided'))
+    await flush()
+    expect(order).toEqual(['launching', 'decided'])
+    await tick(t.clock, 4)
+    await r.settled
+    expect(order).toEqual(['launching', 'decided', 'playing', 'done'])
+    expect(t.registry.size).toBe(0)
+  })
+
+  it('P2 (p3z) posix already running: no launching, nothing sent through the hand-back', async () => {
+    const t = setup([{ ...PRESENT, repeat: true }], { poller: () => true })
+    const r = startSteamLaunchWatch(t.deps, '264160')
+    expect(t.sent).toEqual([])
+    await r.launchingDecided
+    await tick(t.clock, 2)
+    await r.settled
+    expect(t.sent).toEqual([])
+    expect(t.registry.size).toBe(0)
+  })
+
+  it('P3 (p3z) posix async poller: launching waits for the answer, then launchingDecided settles', async () => {
+    const order: string[] = []
+    const t = setup([{ ...EMPTY, repeat: true }])
+    t.deps.sendStatus = (_id, status) => void order.push(status)
+    let answer!: (v: boolean) => void
+    let first = true
+    t.deps.pollerReports = () => {
+      if (first) {
+        first = false
+        return new Promise<boolean>((resolve) => {
+          answer = resolve
+        })
+      }
+      return Promise.resolve(false)
+    }
+    const r = startSteamLaunchWatch(t.deps, '264160')
+    void r.launchingDecided.then(() => order.push('decided'))
+    await flush()
+    expect(order).toEqual([])
+    answer(false)
+    await flush()
+    expect(order).toEqual(['launching', 'decided'])
+    cancelSteamLaunchWatch(t.registry, '264160')
+  })
+
+  it('P4 (p3z) posix async poller answering true: no launching, launchingDecided resolves', async () => {
+    const t = setup([{ ...EMPTY, repeat: true }])
+    t.deps.pollerReports = () => Promise.resolve(true)
+    const r = startSteamLaunchWatch(t.deps, '264160')
+    await r.launchingDecided
+    await flush()
+    expect(t.sent).toEqual([])
+    cancelSteamLaunchWatch(t.registry, '264160')
+  })
+
+  it('P5 (p3z) the decision wait is bounded by decideWaitMs and holds no keepAlive', async () => {
+    const t = setup([{ ...EMPTY, repeat: true }])
+    t.deps.pollerReports = () => new Promise<boolean>(() => undefined)
+    const r = startSteamLaunchWatch(t.deps, '264160', { decideWaitMs: 1000 })
+    let settledFlag = false
+    void r.launchingDecided.then(() => {
+      settledFlag = true
+    })
+    await flush()
+    expect(settledFlag).toBe(false)
+    t.clock.advance(1000)
+    await flush()
+    expect(settledFlag).toBe(true)
+    expect(t.sent).toEqual([])
+    t.clock.assertNoKeepAlive()
+    cancelSteamLaunchWatch(t.registry, '264160')
+  })
+
+  it('P6 (p3z) posix Stop during Launching: shown is true and the watch sends nothing more', async () => {
+    const t = setup([{ ...EMPTY, repeat: true }])
+    startSteamLaunchWatch(t.deps, '264160')
+    expect(t.sent).toEqual(['launching'])
+    expect(cancelSteamLaunchWatch(t.registry, '264160')).toEqual({
+      cancelled: true,
+      shown: true
+    })
+    await tick(t.clock, 46)
+    expect(t.sent).toEqual(['launching'])
+    expect(t.registry.size).toBe(0)
+    expect(t.clock.pendingCount()).toBe(0)
+  })
+
+  it('P7 (p3z) posix relaunch during Launching: one watch, no playing before the game, no second launching', async () => {
+    const t = setup([EMPTY, EMPTY, EMPTY, PRESENT, EMPTY, EMPTY])
+    const first = startSteamLaunchWatch(t.deps, '264160', {
+      startWindowMs: 6000
+    })
+    await tick(t.clock, 2) // t = 4 s
+    const again = startSteamLaunchWatch(t.deps, '264160', {
+      startWindowMs: 6000
+    })
+    expect(again.status).toBe('already-watching')
+    expect(t.clock.pendingCount()).toBe(1)
+    expect(t.sent).toEqual(['launching'])
+    await tick(t.clock) // t = 6 s: the original window would have ended
+    expect(t.sent).toEqual(['launching'])
+    await tick(t.clock) // t = 8 s: the game appears
+    expect(t.sent).toEqual(['launching', 'playing'])
+    await tick(t.clock, 3)
+    await first.settled
+    expect(t.sent).toEqual(['launching', 'playing', 'done'])
+    expect(t.registry.size).toBe(0)
+  })
+
+  it('P8 (p3z) posix hand-back: the poller reading the appId ends Launching as Playing', async () => {
+    let report = false
+    const t = setup([{ ...EMPTY, repeat: true }], { poller: () => report })
+    const { settled } = startSteamLaunchWatch(t.deps, '264160')
+    await tick(t.clock)
+    report = true
+    await tick(t.clock)
+    await settled
+    expect(t.sent).toEqual(['launching', 'playing'])
+    expect(t.registry.size).toBe(0)
+    expect(
+      t.log.lines.some(
+        (l) =>
+          l.level === 'info' && l.msg.includes('ending Launching as Playing')
+      )
+    ).toBe(true)
+  })
+
+  it('P9 (p3z) a synchronously throwing poller: launching, one warn, then done', async () => {
+    const t = setup([{ ...EMPTY, repeat: true }])
+    t.deps.pollerReports = () => {
+      throw new Error('boom')
+    }
+    let started: ReturnType<typeof startSteamLaunchWatch> | undefined
+    expect(() => {
+      started = startSteamLaunchWatch(t.deps, '264160')
+    }).not.toThrow()
+    expect(t.sent).toEqual(['launching'])
+    await tick(t.clock, 2)
+    await started?.settled
+    expect(t.sent).toEqual(['launching', 'done'])
+    expect(t.registry.size).toBe(0)
+    expect(t.log.lines.filter((l) => l.level === 'warn')).toHaveLength(1)
+  })
+
+  it('P10 (p3z) already-watching returns a launchingDecided that is already settled', async () => {
+    const t = setup([{ ...EMPTY, repeat: true }])
+    t.deps.pollerReports = () => new Promise<boolean>(() => undefined)
+    startSteamLaunchWatch(t.deps, '264160')
+    const again = startSteamLaunchWatch(t.deps, '264160')
+    expect(again.status).toBe('already-watching')
+    let settledFlag = false
+    void again.launchingDecided.then(() => {
+      settledFlag = true
+    })
+    await flush()
+    expect(settledFlag).toBe(true)
+    cancelSteamLaunchWatch(t.registry, '264160')
   })
 })
