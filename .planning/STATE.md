@@ -6,10 +6,10 @@ current_phase: 47
 current_phase_name: Migrate aggregated store search from CheapShark to IsThereAnyDeal
 status: verifying
 stopped_at: Completed 47-22-PLAN.md
-last_updated: "2026-11-19T07:39:56.231Z"
+last_updated: "2026-11-19T08:04:47.465Z"
 last_activity: 2026-11-19
 last_activity_desc: Phase 47 execution started
-state_head: fffce88fea24b95847093f8aab94a8a6c8007305
+state_head: dcfd163f58f75bc92f2b9c971fd5f465ab066044
 progress:
   total_phases: 26
   completed_phases: 23
@@ -717,6 +717,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261119-p3z | macOS/Linux Steam Play holds Launching until the watch finds the game (no Play flicker) | 2026-11-19 | 7508b0858 | — | [261119-p3z-macos-linux-steam-play-holds-launching-u](./quick/261119-p3z-macos-linux-steam-play-holds-launching-u/) |
 | 261119-pdz | Clear pre-push find-deadcode and backend-di-ceilings failures | 2026-11-19 | 6c4e83f22 | — | [261119-pdz-clear-pre-push-find-deadcode-and-backend](./quick/261119-pdz-clear-pre-push-find-deadcode-and-backend/) |
 | 261119-se9 | Mac Steam restart guards count running bridged (bottled) games | 2026-11-19 | fffce88fe | — | [261119-se9-mac-steam-restart-guards-count-running-b](./quick/261119-se9-mac-steam-restart-guards-count-running-b/) |
+| 147 | Resolve dev-build uninstall notification todo: Terminal identity denied, not a defect | 2026-11-19 | dcfd163f5 | — | — |
 
 ## Deferred Items
 
