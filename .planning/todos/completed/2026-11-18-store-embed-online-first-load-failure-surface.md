@@ -35,3 +35,25 @@ existing `StoreEmbedTimeoutBanner` row in the renderer. The Epic surface already
 variant of that row and its own Rust-side monitor to copy the shape from.
 
 Links: G-47-9 (`47-UAT.md`), plan `47-14`, `.planning/debug/offline-stores-tab-crash.md`.
+
+## Closed 2026-11-20 (quick 261120-8i5)
+
+- Rust: the Tauri store embed now has a load clock (`STORE_EMBED_LOAD_TIMEOUT`, 20 s). It is armed by
+  `store_embed_open` (cold and warm), `navigate`, `back` and `forward`, never by `reload`, and it is
+  evaluated in the existing `store_embed_take_nav_events` drain (DD-1: no thread, no timer). One raise
+  per armed load puts a `loadTimedOut: true` event, carrying the URL that did not load, last in its
+  batch. Any later Finished, suppressed or not, queues the clear.
+- Wire: `coerceNavState` accepts `loadTimedOut` on non-Epic events as an optional boolean (kept when
+  present, absent when omitted, a non-boolean throws). The Epic contract is unchanged.
+- Renderer: `StoreEmbedTimeoutBanner` shows "This page hasn't finished loading" with Reload and Open in
+  browser off the Epic surface. Reload navigates to the URL that did not load, because a WKWebView
+  reload of a never-committed page does nothing. The offline row still wins, so there is never a
+  second notice. The in-batch sticky latch is now Epic-only (property 46 intact; latest event wins on
+  the Tauri embed).
+- Catalogues: `webview.storeEmbed.timeout.message` translated in all 49 `gamelib.json` and listed in
+  the 48 `gamelib.mt.json` manifests; the presence baseline is unchanged.
+- Tests: 9 Rust (`store_embed_load_timeout_*`), Backend `storeEmbedFlows` 79 -> 82, Frontend
+  (banner, host, contract) 113 -> 120.
+- Owed live check (macOS, not gating): restart `pnpm tauri:dev` after `pnpm build:sidecar`; online,
+  block one store host in /etc/hosts and open that store tab (row within about 20 s); remove the block
+  and press Reload (page loads, row clears); go offline briefly and confirm only the offline row shows.

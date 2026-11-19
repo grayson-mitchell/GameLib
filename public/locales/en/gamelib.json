@@ -1125,6 +1125,11 @@
                 }
             }
         },
+        "storeEmbed": {
+            "timeout": {
+                "message": "This page hasn't finished loading"
+            }
+        },
         "storeEmbedControls": {
             "hostLabel": "Currently viewing {{host}}"
         },

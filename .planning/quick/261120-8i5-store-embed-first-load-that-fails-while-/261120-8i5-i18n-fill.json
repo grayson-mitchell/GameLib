@@ -1,0 +1,149 @@
+{
+  "en": {
+    "webview.storeEmbed.timeout.message": "This page hasn't finished loading"
+  },
+  "ar": {
+    "webview.storeEmbed.timeout.message": "لم يكتمل تحميل هذه الصفحة بعد"
+  },
+  "az": {
+    "webview.storeEmbed.timeout.message": "Bu səhifənin yüklənməsi hələ başa çatmayıb"
+  },
+  "be": {
+    "webview.storeEmbed.timeout.message": "Гэтая старонка яшчэ не скончыла загрузку"
+  },
+  "bg": {
+    "webview.storeEmbed.timeout.message": "Тази страница все още не е приключила със зареждането"
+  },
+  "br": {
+    "webview.storeEmbed.timeout.message": "N’eo ket echu c’hoazh ar bajenn-mañ gant ar c’hargañ"
+  },
+  "bs": {
+    "webview.storeEmbed.timeout.message": "Ova stranica se još nije učitala do kraja"
+  },
+  "ca": {
+    "webview.storeEmbed.timeout.message": "Aquesta pàgina encara no ha acabat de carregar-se"
+  },
+  "cs": {
+    "webview.storeEmbed.timeout.message": "Tato stránka se ještě nenačetla"
+  },
+  "da": {
+    "webview.storeEmbed.timeout.message": "Denne side er ikke færdig med at indlæse"
+  },
+  "de": {
+    "webview.storeEmbed.timeout.message": "Diese Seite wurde noch nicht fertig geladen"
+  },
+  "el": {
+    "webview.storeEmbed.timeout.message": "Αυτή η σελίδα δεν έχει ολοκληρώσει ακόμη τη φόρτωση"
+  },
+  "es": {
+    "webview.storeEmbed.timeout.message": "Esta página todavía no ha terminado de cargar"
+  },
+  "et": {
+    "webview.storeEmbed.timeout.message": "See leht pole veel laadimist lõpetanud"
+  },
+  "eu": {
+    "webview.storeEmbed.timeout.message": "Orri hau ez da oraindik kargatzen amaitu"
+  },
+  "fa": {
+    "webview.storeEmbed.timeout.message": "بارگذاری این صفحه هنوز کامل نشده است"
+  },
+  "fi": {
+    "webview.storeEmbed.timeout.message": "Tämän sivun lataus ei ole vielä valmistunut"
+  },
+  "fr": {
+    "webview.storeEmbed.timeout.message": "Cette page n’a pas fini de se charger"
+  },
+  "ga": {
+    "webview.storeEmbed.timeout.message": "Níl an leathanach seo críochnaithe ag lódáil fós"
+  },
+  "gl": {
+    "webview.storeEmbed.timeout.message": "Esta páxina aínda non rematou de cargar"
+  },
+  "he": {
+    "webview.storeEmbed.timeout.message": "טעינת הדף הזה עדיין לא הסתיימה"
+  },
+  "hr": {
+    "webview.storeEmbed.timeout.message": "Ova stranica se još nije učitala do kraja"
+  },
+  "hu": {
+    "webview.storeEmbed.timeout.message": "Ez az oldal még nem töltődött be teljesen"
+  },
+  "id": {
+    "webview.storeEmbed.timeout.message": "Halaman ini belum selesai dimuat"
+  },
+  "it": {
+    "webview.storeEmbed.timeout.message": "Questa pagina non ha ancora finito di caricarsi"
+  },
+  "ja": {
+    "webview.storeEmbed.timeout.message": "このページはまだ読み込みが完了していません"
+  },
+  "ka": {
+    "webview.storeEmbed.timeout.message": "ამ გვერდის ჩატვირთვა ჯერ არ დასრულებულა"
+  },
+  "ko": {
+    "webview.storeEmbed.timeout.message": "이 페이지가 아직 로드를 마치지 않았습니다"
+  },
+  "lt": {
+    "webview.storeEmbed.timeout.message": "Šis puslapis dar neužsikrovė"
+  },
+  "ml": {
+    "webview.storeEmbed.timeout.message": "ഈ പേജ് ലോഡ് ചെയ്യുന്നത് ഇതുവരെ പൂർത്തിയായിട്ടില്ല"
+  },
+  "nb_NO": {
+    "webview.storeEmbed.timeout.message": "Denne siden er ikke ferdig lastet"
+  },
+  "nl": {
+    "webview.storeEmbed.timeout.message": "Deze pagina is nog niet klaar met laden"
+  },
+  "pl": {
+    "webview.storeEmbed.timeout.message": "Ta strona nie zakończyła jeszcze wczytywania"
+  },
+  "pt": {
+    "webview.storeEmbed.timeout.message": "Esta página ainda não acabou de carregar"
+  },
+  "pt_BR": {
+    "webview.storeEmbed.timeout.message": "Esta página ainda não terminou de carregar"
+  },
+  "ro": {
+    "webview.storeEmbed.timeout.message": "Această pagină nu a terminat încă de încărcat"
+  },
+  "ru": {
+    "webview.storeEmbed.timeout.message": "Эта страница ещё не завершила загрузку"
+  },
+  "sk": {
+    "webview.storeEmbed.timeout.message": "Táto stránka sa ešte nenačítala"
+  },
+  "sl": {
+    "webview.storeEmbed.timeout.message": "Ta stran se še ni končala nalagati"
+  },
+  "sr": {
+    "webview.storeEmbed.timeout.message": "Ова страница још није завршила учитавање"
+  },
+  "sv": {
+    "webview.storeEmbed.timeout.message": "Den här sidan har inte laddats klart"
+  },
+  "ta": {
+    "webview.storeEmbed.timeout.message": "இந்தப் பக்கம் இன்னும் ஏற்றி முடிக்கப்படவில்லை"
+  },
+  "th": {
+    "webview.storeEmbed.timeout.message": "หน้านี้ยังโหลดไม่เสร็จ"
+  },
+  "tr": {
+    "webview.storeEmbed.timeout.message": "Bu sayfanın yüklenmesi henüz tamamlanmadı"
+  },
+  "uk": {
+    "webview.storeEmbed.timeout.message": "Ця сторінка ще не завершила завантаження"
+  },
+  "uz": {
+    "webview.storeEmbed.timeout.message": "Bu sahifa hali yuklanib bo‘lmadi"
+  },
+  "vi": {
+    "webview.storeEmbed.timeout.message": "Trang này chưa tải xong"
+  },
+  "zh_Hans": {
+    "webview.storeEmbed.timeout.message": "此页面尚未加载完成"
+  },
+  "zh_Hant": {
+    "webview.storeEmbed.timeout.message": "此頁面尚未載入完成"
+  }
+}
