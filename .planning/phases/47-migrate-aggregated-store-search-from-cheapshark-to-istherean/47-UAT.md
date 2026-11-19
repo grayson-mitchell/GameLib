@@ -1,9 +1,9 @@
 ---
-status: diagnosed
+status: complete
 phase: 47-migrate-aggregated-store-search-from-cheapshark-to-istherean
 source: [47-VERIFICATION.md]
 started: 2026-11-17T23:10:00Z
-updated: 2026-11-18T23:22:47.000Z
+updated: 2026-11-19T08:28:58.994Z
 ---
 
 ## Current Test
@@ -86,26 +86,26 @@ result: pass
 
 ### 16. Store Search keeps its query and rows on leave and return (47-19, G-47-12a)
 expected: macOS, `pnpm tauri:dev` (never `tauri:dev:run`). Stores > Store Search, search 'xcom', wait for rows. Open Settings and change the theme, then return via the Stores tab: the box still holds 'xcom' and the same rows show on the first frame with no spinner and no new request. Repeat after more than 15 minutes away (or after changing the region in between): the first frame shows the loading spinner beside the filled 'xcom' box, never the 'Search a title...' prompt, and the rows then refresh. Quit and relaunch: the box is empty (nothing persisted).
-result: pending
+result: pass
 
 ### 17. Autocorrect on blur no longer rewrites the query, and the region Auto label paints (47-20, G-47-12b and G-47-14a)
 expected: Type 'xcom' in the Library search and in Store Search, click outside the box: it stays 'xcom' and the Library grid does not re-filter. With Auto selected (Store Search and Deals, including after picking New Zealand on Store Search and switching to Deals) the region picker reads 'Auto (...)', never blank.
-result: pending
+result: pass
 
 ### 18. Light-theme and multi-theme surfaces (47-21, G-47-12c)
 expected: In Nord Light the Store Search rows and the Deals filter panel are light plates with dark legible text, and hover on a breakdown row, a filter toggle or an OS segment is visible. In midnightMirage, gruvbox_dark and dracula the rows are dark plates with light text and the same hovers are visible.
-result: pending
+result: pass
 
 ### 19. Deals filter reflow and chip growth (47-22 with WR-03, G-47-14b and G-47-14c)
 expected: Stores > Deals. Shrink the window from wide to the 900px minimum: 'Operating system' and 'Suitable for age' (also with a PEGI value showing) never wrap to two lines in the six-column layout; the filters switch to two columns before they would. Select many Genres and many Features: the control grows taller to hold every chip, blurred or focused, with no '+N' counter, no chip cropped or off-centre, no chip outside the outline, and no hover bubble.
-result: pending
+result: pass
 
 ## Summary
 
 total: 19
-passed: 9
+passed: 13
 issues: 6
-pending: 4
+pending: 0
 skipped: 0
 blocked: 0
 
@@ -204,7 +204,9 @@ blocked: 0
   debug_session: ".planning/debug/offline-stores-tab-crash.md"
 - gap_id: G-47-12a
   truth: "The Store Search query and its results survive leaving and re-opening Store Search (e.g. to change theme)"
-  status: failed
+  status: resolved
+  resolved_by: 47-19-PLAN.md
+  resolved_at: 2026-11-19
   reason: "User reported: the search does not survive leaving the page (to change theme for example)"
   severity: major
   test: 12
@@ -224,7 +226,9 @@ blocked: 0
   debug_session: ".planning/debug/store-search-query-lost-on-leave.md"
 - gap_id: G-47-12b
   truth: "Search inputs (Store Search and Library) never rewrite the typed query on blur: no OS autocorrect replacement fires when clicking outside the control (e.g. 'xcom' stays 'xcom', not 'com')"
-  status: failed
+  status: resolved
+  resolved_by: 47-20-PLAN.md
+  resolved_at: 2026-11-19
   reason: "User reported: as part of the search testing I have deturmined thee major issue with the auto spell check of the control. if you click outside the control the 'correction' is activated. In library this has the most noticibal effect, you might be about to click on a game when the whole set of tiles change because the search wording changes while you are not even in the control! (xcom is a good example - changes to 'com'"
   severity: major
   test: 12
@@ -244,7 +248,9 @@ blocked: 0
   debug_session: ".planning/debug/search-input-autocorrect-on-blur.md"
 - gap_id: G-47-12c
   truth: "In a light theme the Store Search game rows use a light background with legible dark text"
-  status: failed
+  status: resolved
+  resolved_by: 47-21-PLAN.md
+  resolved_at: 2026-11-19
   reason: "User reported: light theme has dark grey game bars, with black text. would expect the game bars to be a light color"
   severity: cosmetic
   test: 12
@@ -262,7 +268,9 @@ blocked: 0
   debug_session: ".planning/debug/store-search-rows-dark-in-light-theme.md"
 - gap_id: G-47-14a
   truth: "When the region is Auto, the region select displays 'Auto (...)', never a blank value"
-  status: failed
+  status: resolved
+  resolved_by: 47-20-PLAN.md
+  resolved_at: 2026-11-19
   reason: "User reported: 1. Auto select shows as blank"
   severity: major
   test: 14
@@ -278,7 +286,9 @@ blocked: 0
   debug_session: ".planning/debug/region-picker-auto-shows-blank.md"
 - gap_id: G-47-14b
   truth: "The Deals Genres filter control never crops or re-centres at narrow window widths, and selected genres stay inside the control's box"
-  status: failed
+  status: resolved
+  resolved_by: 47-22-PLAN.md
+  resolved_at: 2026-11-19
   reason: "User reported: 2. windows size formating broken for Genres field control.  if runs out of space the control gets centered and cropped. control should never crop.  also adding more genres starts happening outside of the box!"
   severity: major
   test: 14
@@ -297,7 +307,9 @@ blocked: 0
   debug_session: ".planning/debug/deals-genres-control-crops.md"
 - gap_id: G-47-14c
   truth: "As the window narrows, the Deals filters reflow to the 2x2 layout before any filter label (e.g. 'Operating system', 'Suitable for age') wraps onto two lines and pushes its control down"
-  status: failed
+  status: resolved
+  resolved_by: 47-22-PLAN.md
+  resolved_at: 2026-11-19
   reason: "User reported: 3. when you shrink the window the longer titles \"operating system\" and \"suitable for age\" move to being over two lines and those two controls move down, making for ugly look.  byt that stage horizontal room makes everying thing look very cramped anyhow.  If you horizontaly shrink just a bit more then the filters split to a 2 by 2 model.  this should happen before those two titles are split over 2 lines."
   severity: cosmetic
   test: 14
