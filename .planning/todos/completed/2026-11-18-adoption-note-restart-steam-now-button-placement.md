@@ -47,3 +47,7 @@ button on the same line. The decision above stands and is now not open to re-ask
 next to Play on the same row; the note text stays under the status line. `ready` moved from `human`
 to `code` because the direction is decided; only the 1026 waiting-edge question remains, and it must
 not hold this layout change. Nothing in the UI has changed since the first report.
+
+## Resolution
+
+Fixed by quick tasks in commits `1ae713663` (the Restart Steam action sits on the Play button row) and `c2109b6e1` (the note stays above the buttons, only the action joins Play's row). Live-checked on Linux on 2026-11-20 (Phase 81 item 11): the operator confirmed the action beside Play on the same row with the note under the status line. The three themes (midnightMirage, gruvbox_dark, dracula) were not itemised; it is one overall operator confirmation. The 1026 waiting edge question this todo carried is handled by quick 261120-88x (`62a27f932`).
