@@ -60,6 +60,7 @@ import * as gameBridgeLaunchModule from '../gameBridgeLaunch'
 import * as gameBridgeLaunchGateModule from '../gameBridgeLaunchGate'
 import { launchBridgeGame } from '../gameBridgeLaunchGate'
 import { fireBridgeWineLaunch } from '../gameBridgeWineLaunch'
+import { DIRECT_LAUNCH_EARLY_EXIT_MS } from '../directLaunch/directLaunchOutcome'
 import { prepareTcpOverlay } from '../gameLaunchOverlay'
 import * as gameInstallBridgeModule from '../gameInstallBridge'
 import { checkBottleEligibility } from '../gameEligibility'
@@ -15422,6 +15423,186 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         await flush()
         expect(exitNotices(id)).toHaveLength(1)
         expect(jest.getTimerCount()).toBeLessThanOrEqual(1)
+      })
+    })
+
+    describe('launch without Steam outcome (quick 261120-8hb)', () => {
+      type Monitor = {
+        onFirstMatch: () => void
+        onStopped: () => void
+      }
+      let monitor: Monitor | undefined
+      const mon = (): Monitor => {
+        if (!monitor) throw new Error('process monitor was not started')
+        return monitor
+      }
+      let rejectWine: (e: unknown) => void
+      const STEAMAPPS = '/mock/bridge/bottle/steamapps'
+      const EXE = `${STEAMAPPS}/common/Game/game.exe`
+      const T = 1_800_000_000_000
+      const flush = async () => {
+        for (let i = 0; i < 20; i++) await Promise.resolve()
+      }
+      const requestKinds = () =>
+        sendFrontendMessage.mock.calls
+          .filter((c) => c[0] === 'steamRequestNotice')
+          .map((c) => (c[1] as { kind: string }).kind)
+      const fire = (id: string, withoutSteam: boolean) => {
+        const game = new SteamGame(id, steamTestDeps)
+        return {
+          game,
+          launched: fireBridgeWineLaunch(
+            game,
+            EXE,
+            (getBridgeBottleSettings as jest.Mock)(steamTestDeps, id),
+            undefined,
+            undefined,
+            withoutSteam ? { withoutSteam: { args: [] } } : undefined
+          )
+        }
+      }
+
+      beforeEach(() => {
+        jest.useFakeTimers()
+        jest.setSystemTime(T)
+        monitor = undefined
+        sendFrontendMessage.mockClear()
+        ;(getBottleSteamappsDir as jest.Mock).mockReturnValue(STEAMAPPS)
+        ;(notify as jest.Mock).mockClear()
+        ;(logInfo as jest.Mock).mockClear()
+        ;(detectDrmWrapper as jest.Mock).mockResolvedValue('none')
+        ;(getBridgeBottleSettings as jest.Mock).mockImplementation(
+          (_deps: unknown, id: string) => ({
+            wineCrossoverBottle: bottleFor(id),
+            wineVersion: {
+              bin: '/stock/bin/wine',
+              name: 'stock',
+              type: 'crossover'
+            },
+            enviromentOptions: []
+          })
+        )
+        startBottleProcessMonitor.mockImplementation(
+          (_deps: unknown, a: Monitor) => {
+            monitor = a
+            return { launcherExited: jest.fn() }
+          }
+        )
+        runWineCommand.mockImplementation(
+          () =>
+            new Promise((_resolve, reject) => {
+              rejectWine = reject
+            })
+        )
+      })
+      afterEach(() => {
+        // Stand the armed launch deadline down (module-level registry).
+        monitor?.onFirstMatch()
+        jest.useRealTimers()
+      })
+
+      it('a successful fire logs the bridge started line with the exe path', async () => {
+        const id = freshId()
+        expect(await fire(id, true).launched).toBe(true)
+        expect(
+          (logInfo as jest.Mock).mock.calls.some(
+            (c) =>
+              c[0] ===
+              `launch without Steam started for appId ${id}: kind bridge, exe ${EXE}`
+          )
+        ).toBe(true)
+      })
+
+      it('a normal bridge launch does not log the started line', async () => {
+        const id = freshId()
+        expect(await fire(id, false).launched).toBe(true)
+        expect(
+          (logInfo as jest.Mock).mock.calls.some((c) =>
+            String(c[0]).includes('launch without Steam started')
+          )
+        ).toBe(false)
+      })
+
+      it('onStopped one ms inside the window after the first sighting pushes one needs-Steam notice', async () => {
+        const id = freshId()
+        await fire(id, true).launched
+        jest.setSystemTime(T + 40_000)
+        mon().onFirstMatch()
+        jest.setSystemTime(T + 40_000 + DIRECT_LAUNCH_EARLY_EXIT_MS - 1)
+        mon().onStopped()
+        await flush()
+        expect(requestKinds()).toEqual(['direct-launch-needs-steam'])
+      })
+
+      it('the window starts at the first sighting, not at the launch start', async () => {
+        const id = freshId()
+        await fire(id, true).launched
+        // Wine boot ate 40 s before the game appeared: still an early exit.
+        jest.setSystemTime(T + 40_000)
+        mon().onFirstMatch()
+        jest.setSystemTime(T + 40_000 + 1_000)
+        mon().onStopped()
+        await flush()
+        expect(requestKinds()).toEqual(['direct-launch-needs-steam'])
+      })
+
+      it('a game never sighted falls back to the launch start', async () => {
+        const id = freshId()
+        await fire(id, true).launched
+        jest.setSystemTime(T + DIRECT_LAUNCH_EARLY_EXIT_MS - 1)
+        mon().onStopped()
+        await flush()
+        expect(requestKinds()).toEqual(['direct-launch-needs-steam'])
+      })
+
+      it('onStopped at exactly the window pushes nothing', async () => {
+        const id = freshId()
+        await fire(id, true).launched
+        mon().onFirstMatch()
+        jest.setSystemTime(T + DIRECT_LAUNCH_EARLY_EXIT_MS)
+        mon().onStopped()
+        await flush()
+        expect(requestKinds()).toEqual([])
+      })
+
+      it('Stop (the record deleted first) pushes nothing', async () => {
+        const id = freshId()
+        await fire(id, true).launched
+        mon().onFirstMatch()
+        steamTestDeps.steamSession.gameSession.bridgeLaunchBottles.delete(id)
+        jest.setSystemTime(T + 1_000)
+        mon().onStopped()
+        await flush()
+        expect(requestKinds()).toEqual([])
+      })
+
+      it('a wine rejection pushes one direct-launch-failed, no setup-required, no OS notification', async () => {
+        const id = freshId()
+        await fire(id, true).launched
+        rejectWine(new Error('wine failed'))
+        await flush()
+        expect(requestKinds()).toEqual(['direct-launch-failed'])
+        expect(
+          sendFrontendMessage.mock.calls.some(
+            (c) => c[0] === 'steamBridgeSetupRequired'
+          )
+        ).toBe(false)
+        expect(notify).not.toHaveBeenCalled()
+        // The monitor ending afterwards must not add a needs-Steam notice.
+        jest.setSystemTime(T + 500)
+        mon().onStopped()
+        await flush()
+        expect(requestKinds()).toEqual(['direct-launch-failed'])
+      })
+
+      it('a normal bridge launch stopped early pushes no direct-launch kind', async () => {
+        const id = freshId()
+        await fire(id, false).launched
+        mon().onFirstMatch()
+        jest.setSystemTime(T + 1_000)
+        mon().onStopped()
+        await flush()
+        expect(requestKinds()).toEqual([])
       })
     })
   })

@@ -30,6 +30,12 @@ import { buildOverlayPaths } from './bridge/overlay/overlayPaths'
 import { formatOverlayExitNoticeLine } from './bridge/overlay/overlayNotice'
 import { STEAM_ENGINE_RUNNER } from './engine/steamEngineDeps'
 import type { LaunchDeadline } from 'backend/engine/launchDeadline'
+import {
+  formatDirectLaunchStartedLine,
+  isDirectLaunchEarlyExit,
+  pushDirectLaunchNotice,
+  reportDirectLaunchEarlyExit
+} from './directLaunch/directLaunchOutcome'
 import { drmStepError } from './bridge/drm/steamclientLayerMode'
 import { resolveBridgeLaunchWorkingDir } from './bridge/launchTarget'
 import {
@@ -109,17 +115,7 @@ export async function fireBridgeWineLaunch(
     )
     if (opts?.withoutSteam) {
       // A direct-launch failure must not poison the bridge route for this session.
-      const game = steamGame.getGameInfo().title
-      notify(steamGame.deps, {
-        title: game,
-        // Same call shape as the file's other i18next.t uses; the lint ceiling counts warnings.
-        // eslint-disable-next-line import-x/no-named-as-default-member
-        body: i18next.t(
-          'gamelib:steam.directLaunch.failed',
-          'Could not launch {{game}} without Steam.',
-          { game }
-        )
-      })
+      void pushDirectLaunchNotice(steamGame, 'direct-launch-failed')
       return
     }
     if (drm) {
@@ -477,6 +473,8 @@ export async function fireBridgeWineLaunch(
     // inline button would need a settings deep link the app does not have).
     // Never retries, never changes settings.
     let firstMatchAt: number | undefined
+    // quick 261120-8hb: the monitor's first sighting of a launch-without-Steam game.
+    let directFirstMatchAt: number | undefined
     let stoppedAt: number | undefined
     let wrapperSettled = false
     let wrapperCode: number | undefined
@@ -535,6 +533,7 @@ export async function fireBridgeWineLaunch(
           kind: 'bridge',
           onFirstMatch: () => {
             deadline?.cancel('first-match')
+            if (opts?.withoutSteam) directFirstMatchAt ??= Date.now()
             if (overlayInjected) {
               firstMatchAt ??= Date.now()
               startAttachWatch()
@@ -542,11 +541,28 @@ export async function fireBridgeWineLaunch(
           },
           onUnavailable: () => deadline?.cancel('monitor-unavailable'),
           onStopped: () => {
+            // Stop, a superseding launch, a wine rejection and the launch deadline
+            // all clear or replace the record first, so only a self-exit is "on its own".
+            const endedOnItsOwn =
+              steamGame.deps.steamSession.gameSession.bridgeLaunchBottles.get(
+                steamGame.appId
+              ) === launchRecord
             clearLaunchRecord()
             steamGame.deps.bridgeHelpers.stop(steamGame.appId)
             clearEngineSelection(steamGame.appId)
             markGameStopped(ledgerBottle, steamGame.appId)
             relogOnce()
+            if (opts?.withoutSteam && endedOnItsOwn) {
+              const endedAt = Date.now()
+              const startedAt = directFirstMatchAt ?? launchStartedAt
+              if (isDirectLaunchEarlyExit(startedAt, endedAt)) {
+                void reportDirectLaunchEarlyExit(
+                  steamGame,
+                  'bridge',
+                  endedAt - startedAt
+                )
+              }
+            }
             if (overlayInjected && stoppedAt === undefined) {
               stoppedAt = Date.now()
               if (!wrapperSettled && !overlayExitDecided) {
@@ -701,6 +717,12 @@ export async function fireBridgeWineLaunch(
       }
     )
 
+    if (opts?.withoutSteam) {
+      logInfo(
+        formatDirectLaunchStartedLine(steamGame.appId, 'bridge', exePath),
+        LogPrefix.Steam
+      )
+    }
     return true
   } catch (error) {
     deadline?.cancel('launch-error')

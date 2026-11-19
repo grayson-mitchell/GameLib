@@ -20,7 +20,12 @@ import type LogWriter from 'backend/logger/log_writer'
 import type { ProcessRunner } from 'backend/process/types'
 import type SteamGame from '../games'
 import { launchBridgeGame } from '../gameBridgeLaunchGate'
-import { pushDirectLaunchNotice } from './directLaunchOutcome'
+import {
+  formatDirectLaunchStartedLine,
+  isDirectLaunchEarlyExit,
+  pushDirectLaunchNotice,
+  reportDirectLaunchEarlyExit
+} from './directLaunchOutcome'
 import { getSteamDirectLaunchVerdict } from './directLaunchProbes'
 import {
   STEAM_DIRECT_TRACK_RUNNER,
@@ -32,6 +37,10 @@ export interface MacNativeLaunchDeps {
   runner: Pick<ProcessRunner, 'run'>
   sendStatus(status: 'playing' | 'done'): void
   log(message: string): void
+  info(message: string): void
+  now(): number
+  /** quick 261120-8hb: the binary exited on its own within DIRECT_LAUNCH_EARLY_EXIT_MS of spawn. */
+  onEarlyExit(elapsedMs: number): void
 }
 
 function isInside(root: string, candidate: string): boolean {
@@ -67,6 +76,7 @@ export function launchMacNativeWithoutSteam(
 
   return new Promise<boolean>((resolveStarted) => {
     let started = false
+    let spawnedAt = 0
     deps.runner
       .run(binaryPath, launch.args, {
         cwd,
@@ -78,8 +88,23 @@ export function launchMacNativeWithoutSteam(
         resolveOn: 'exit',
         onSpawn: () => {
           started = true
+          spawnedAt = deps.now()
+          deps.info(
+            formatDirectLaunchStartedLine(appId, 'mac-native', binaryPath)
+          )
           deps.sendStatus('playing')
           resolveStarted(true)
+        }
+      })
+      .then((res) => {
+        // Stop sets killedByUs, so a user Stop never reads as "needs Steam".
+        if (!started || res.killedByUs === true) return
+        const stoppedAt = deps.now()
+        if (!isDirectLaunchEarlyExit(spawnedAt, stoppedAt)) return
+        try {
+          deps.onEarlyExit(stoppedAt - spawnedAt)
+        } catch {
+          // A notice can never change the launch's result or log a false failure.
         }
       })
       .catch((err: unknown) => {
@@ -155,7 +180,11 @@ export async function launchWithoutSteam(
       runner: deps.runner,
       sendStatus: (status) =>
         sendGameStatusUpdate(deps, { appName: appId, runner: 'steam', status }),
-      log: (m) => logWarning(m, LogPrefix.Steam)
+      log: (m) => logWarning(m, LogPrefix.Steam),
+      info: (m) => logInfo(m, LogPrefix.Steam),
+      now: () => Date.now(),
+      onEarlyExit: (ms) =>
+        void reportDirectLaunchEarlyExit(steamGame, 'mac-native', ms)
     },
     appId,
     installPath,

@@ -4,7 +4,12 @@ import { join } from 'path'
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 import { initHeadless } from 'backend/logger'
 import { notify } from 'backend/dialog/dialog'
-import { pushDirectLaunchNotice } from '../directLaunch/directLaunchOutcome'
+import {
+  DIRECT_LAUNCH_EARLY_EXIT_MS,
+  formatDirectLaunchStartedLine,
+  isDirectLaunchEarlyExit,
+  pushDirectLaunchNotice
+} from '../directLaunch/directLaunchOutcome'
 import {
   launchMacNativeWithoutSteam,
   launchWithoutSteam
@@ -18,6 +23,37 @@ jest.mock('backend/dialog/dialog', () => ({ notify: jest.fn() }))
 
 // The real logger needs a writer; HOME is redirected by the backend jest containment setup.
 beforeAll(() => initHeadless())
+
+describe('early-exit predicate and started-line formatter (quick 261120-8hb)', () => {
+  test('is true strictly inside the window', () => {
+    expect(
+      isDirectLaunchEarlyExit(1000, 1000 + DIRECT_LAUNCH_EARLY_EXIT_MS - 1)
+    ).toBe(true)
+    expect(isDirectLaunchEarlyExit(1000, 1000)).toBe(true)
+  })
+  test('is false at the boundary, for negative elapsed and for non-finite input', () => {
+    expect(
+      isDirectLaunchEarlyExit(1000, 1000 + DIRECT_LAUNCH_EARLY_EXIT_MS)
+    ).toBe(false)
+    expect(isDirectLaunchEarlyExit(1000, 999)).toBe(false)
+    expect(isDirectLaunchEarlyExit(NaN, 1000)).toBe(false)
+    expect(isDirectLaunchEarlyExit(1000, Infinity)).toBe(false)
+  })
+  test('formats the started line per route', () => {
+    expect(
+      formatDirectLaunchStartedLine(
+        '10',
+        'mac-native',
+        '/i/G.app/Contents/MacOS/G'
+      )
+    ).toBe(
+      'launch without Steam started for appId 10: kind mac-native, binary /i/G.app/Contents/MacOS/G'
+    )
+    expect(formatDirectLaunchStartedLine('10', 'bridge', 'C:\\G\\g.exe')).toBe(
+      'launch without Steam started for appId 10: kind bridge, exe C:\\G\\g.exe'
+    )
+  })
+})
 
 describe('launchMacNativeWithoutSteam', () => {
   let install: string
@@ -37,12 +73,18 @@ describe('launchMacNativeWithoutSteam', () => {
   function setup(script: Parameters<typeof createScriptedRunner>[0]) {
     const runner = createScriptedRunner(script)
     const statuses: string[] = []
+    const info = jest.fn()
+    const now = jest.fn()
+    const onEarlyExit = jest.fn()
     const deps = {
       runner,
       sendStatus: (s: 'playing' | 'done') => void statuses.push(s),
-      log: () => undefined
+      log: () => undefined,
+      info,
+      now,
+      onEarlyExit
     }
-    return { runner, statuses, deps }
+    return { runner, statuses, deps, info, now, onEarlyExit }
   }
 
   test('spawns the binary with the PICS args, tracked, and reports playing then done', async () => {
@@ -68,6 +110,66 @@ describe('launchMacNativeWithoutSteam', () => {
     expect(statuses).toEqual(['playing', 'done'])
   })
 
+  test('a spawn logs the started line once', async () => {
+    const { deps, info, now } = setup([{ cmd: binary }])
+    now.mockReturnValue(1000)
+    await launchMacNativeWithoutSteam(deps, '10', install, {
+      binaryPath: binary,
+      args: []
+    })
+    expect(info).toHaveBeenCalledTimes(1)
+    expect(info).toHaveBeenCalledWith(
+      `launch without Steam started for appId 10: kind mac-native, binary ${binary}`
+    )
+  })
+
+  test.each([
+    ['one ms inside the window', DIRECT_LAUNCH_EARLY_EXIT_MS - 1, 1],
+    ['exactly at the window', DIRECT_LAUNCH_EARLY_EXIT_MS, 0]
+  ])('exit %s: onEarlyExit calls %d', async (_n, elapsed, calls) => {
+    const { deps, now, onEarlyExit } = setup([{ cmd: binary }])
+    now.mockReturnValueOnce(1000).mockReturnValueOnce(1000 + elapsed)
+    await launchMacNativeWithoutSteam(deps, '10', install, {
+      binaryPath: binary,
+      args: []
+    })
+    await new Promise((r) => setImmediate(r))
+    expect(onEarlyExit).toHaveBeenCalledTimes(calls)
+    if (calls) expect(onEarlyExit).toHaveBeenCalledWith(elapsed)
+  })
+
+  test('a Stop (killedByUs) inside the window does not report an early exit', async () => {
+    const { deps, now, onEarlyExit } = setup([
+      { cmd: binary, result: { killedByUs: true } }
+    ])
+    now.mockReturnValueOnce(1000).mockReturnValueOnce(1500)
+    await launchMacNativeWithoutSteam(deps, '10', install, {
+      binaryPath: binary,
+      args: []
+    })
+    await new Promise((r) => setImmediate(r))
+    expect(onEarlyExit).not.toHaveBeenCalled()
+  })
+
+  test('a throwing onEarlyExit never reaches the failed log or changes statuses', async () => {
+    const log = jest.fn()
+    const { deps, now, onEarlyExit, statuses } = setup([{ cmd: binary }])
+    now.mockReturnValueOnce(1000).mockReturnValueOnce(1100)
+    onEarlyExit.mockImplementation(() => {
+      throw new Error('boom')
+    })
+    const ok = await launchMacNativeWithoutSteam(
+      { ...deps, log },
+      '10',
+      install,
+      { binaryPath: binary, args: [] }
+    )
+    await new Promise((r) => setImmediate(r))
+    expect(ok).toBe(true)
+    expect(log).not.toHaveBeenCalled()
+    expect(statuses).toEqual(['playing', 'done'])
+  })
+
   test.each([
     ['dot-dot escape', () => join(install, '..', 'evil')],
     ['absolute elsewhere', () => '/bin/sh'],
@@ -83,7 +185,7 @@ describe('launchMacNativeWithoutSteam', () => {
   })
 
   test('a spawn error before onSpawn resolves false and sends done', async () => {
-    const { statuses, deps } = setup([
+    const { statuses, deps, info, onEarlyExit } = setup([
       { cmd: binary, error: { code: 'ENOENT' } }
     ])
     const ok = await launchMacNativeWithoutSteam(deps, '10', install, {
@@ -92,6 +194,8 @@ describe('launchMacNativeWithoutSteam', () => {
     })
     expect(ok).toBe(false)
     expect(statuses).toEqual(['done'])
+    expect(info).not.toHaveBeenCalled()
+    expect(onEarlyExit).not.toHaveBeenCalled()
   })
 
   test('a working dir outside the install falls back to the binary folder', async () => {
