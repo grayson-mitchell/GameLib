@@ -1,9 +1,9 @@
 ---
 phase: "64"
 slug: "ui-to-edit-themes"
-status: draft
+status: verified
 # threats_open = count of OPEN threats at or above workflow.security_block_on severity (the blocking gate)
-threats_open: 2
+threats_open: 0
 asvs_level: 1
 created: "2026-11-19"
 ---
@@ -25,6 +25,7 @@ created: "2026-11-19"
 | stored token -> body.style / SVG fills | token names and values become CSS custom properties and `fill` attributes | CSS text |
 | typed gradient text -> preview strip | untrusted CSS text reaches an inline `background-image` | CSS text (outbound-fetch risk) |
 | user-typed theme name -> cards, dialogs, notice | the name is rendered in cards, tooltips, aria-labels, dialogs and the save-failure notice | free text |
+| validator -> CSS engine | `CSS.supports` validates grammar only and is not the security control: a second `image-set("https://...")` layer is grammatical | CSS text (outbound-fetch risk) |
 | npm registry -> node_modules | `react-colorful` is a new dependency | third-party code |
 
 ---
@@ -44,7 +45,7 @@ created: "2026-11-19"
 | T-64-09 | Repudiation | refused writes | low | mitigate | Each refusal keeps its stderr line (non-string guard logs at `storeWriteHandlers.ts:356`) | closed |
 | T-64-10 | Denial of service | `parseCustomThemes` at boot | high | mitigate | Total parse with caps (`MAX_CUSTOM_THEMES = 50`, `customTheme.ts:22`), 500-structure test (64-04-SUMMARY) | closed |
 | T-64-11 | Tampering | `applyTheme` setProperty | high | mitigate | `TOKEN_NAME_PATTERN = /^--[a-z0-9-]+$/` (`customTheme.ts:71`) plus known-token universe | closed |
-| T-64-12 | Information disclosure | gradient values | high | mitigate | `GRADIENT_DENY` rejects `url(`, `var(`, `;`, `{`, `}`, `@`, `!important`, backslash before `CSS.supports` (`validate.ts:13,32`) REOPENED (2026-11-20): CR-01 / 64-VERIFICATION.md truth 8, a layered image-set value carrying a quoted https URL passes this control; fix in plan 64-11 | open |
+| T-64-12 | Information disclosure | gradient values | high | mitigate | `isValidGradient` (`validate.ts`) accepts exactly one gradient function whose opening paren closes at the final character, and refuses url, var, image-set (including -webkit-), cross-fade, element, src, quotes, comments, the semicolon, braces, the at-sign, the backslash and !important before `CSS.supports`; gradients are accepted only for `--gradient-` tokens. Evidence: the `CR-01` cases in `validate.test.ts`, `applyTheme.test.ts` (boot path, `supports = () => true`) and `GradientField.test.tsx`, plus the `IN-03` cases in `validate.test.ts`, `customTheme.test.ts` and `AdvancedSection.test.tsx`; 21 of them fail against the pre-fix `validate.ts` of 128b513c7 (failing-direction check, 64-11-SUMMARY). History: reopened (2026-11-20) on CR-01 / 64-VERIFICATION.md truth 8, re-closed (2026-11-20) by plan 64-11 | closed |
 | T-64-13 | Tampering | prototype pollution via ids | medium | mitigate | `THEME_ID_PATTERN = /^[0-9a-f]{16}$/` (`customTheme.ts:26`); single fixed key | closed |
 | T-64-14 | Tampering | built-in themes | medium | mitigate | Setters refuse non-custom ids; zero-write tests for `nord-light`; `themes.scss` untouched (THEME-02) | closed |
 | T-64-15 | Tampering | `ThemeThumbnail` fills | medium | mitigate | `safeColour` canonical hex via `thumbnailPalette.ts`; hostile-value markup test | closed |
@@ -53,13 +54,14 @@ created: "2026-11-19"
 | T-64-18 | Tampering | ColourField commit | medium | mitigate | Only canonical hex from `validateColourInput`/`normaliseColour` enters the draft (`ColourField.tsx` uses `safeColour`) | closed |
 | T-64-19 | Tampering | draft -> app | medium | mitigate | Draft feeds only the preview; the app changes only via `saveCustomThemeTokens`, which re-validates (`settingsState.ts:208-214`) | closed |
 | T-64-20 | Tampering | react-colorful `<style>` injection | low | accept | See Accepted Risks Log | closed |
-| T-64-21 | Information disclosure | GradientField strip | high | mitigate | Strip paints only the last value `isValidGradient` accepted; url()/var() refused even when supports is true (64-08-SUMMARY); live UAT test 10 passed REOPENED (2026-11-20): CR-01 / 64-VERIFICATION.md truth 8, a layered image-set value carrying a quoted https URL passes this control; fix in plan 64-11 | open |
+| T-64-21 | Information disclosure | GradientField strip | high | mitigate | Strip paints only `lastValid`, which is set only when `isValidGradient` accepts; a typed or stored layered image-set payload is never painted or committed even with `supports = () => true` (the two `CR-01` cases in `GradientField.test.tsx`, failing against the pre-fix validator of 128b513c7); url()/var() still refused; live UAT test 10 passed. History: reopened (2026-11-20), re-closed (2026-11-20) by plan 64-11 | closed |
 | T-64-22 | Denial of service | checkFloors on every keystroke | low | mitigate | `tryContrast` total and O(1); three pairs per render | closed |
 | T-64-23 | Tampering | unsaved prompt message | medium | mitigate | Message is a React element; the name renders as text | closed |
 | T-64-24 | Repudiation | refused Save shown as saved | medium | mitigate | `ThemeEditor/index.tsx:68-69` shows the failure notice on `failed`; live UAT test 17 passed with a forced refusal | closed |
 | T-64-25 | Tampering | gate baselines | medium | mitigate | `a7bf4dfe5` adds only the 100 `customThemes.*` keys to the presence baseline, no key removed; `i18nGateScope.json`/`i18nForkTouchedFiles.json` only gained files (wider coverage, not looser gates) | closed |
+| T-64-26 | Tampering | `isValidTokenValue` / `cleanTokens` (a gradient in a colour token) | low | mitigate | Gradients accepted only for names matching the `--gradient-` prefix; seed invariant (`customTheme.test.ts`) and routing test (`AdvancedSection.test.tsx`) prove no real token is rejected (IN-03) | closed |
 | T-64-SC | Tampering | `pnpm add react-colorful` (Plans 07, 10) | high | mitigate | Exact pin `"react-colorful": "5.8.1"` in `package.json:136`; `pnpm-lock.yaml:4851` resolves `react-colorful@5.8.1` with integrity hash | closed |
-| T-64-SC (01-06, 08, 09) | Tampering | npm/pip/cargo installs | high | accept | No package installed in those plans; see Accepted Risks Log | closed |
+| T-64-SC (01-06, 08, 09, 11) | Tampering | npm/pip/cargo installs | high | accept | No package installed in those plans; see Accepted Risks Log | closed |
 
 *Status: open · closed · open — below high threshold (non-blocking)*
 *Severity: critical > high > medium > low — only open threats at or above workflow.security_block_on count toward threats_open*
@@ -73,7 +75,7 @@ created: "2026-11-19"
 |---------|------------|-----------|-------------|------|
 | AR-64-01 | T-64-07 | Same trust level as the existing fire-and-forget `storeSet` (local renderer, zod-bounded name/key length); value size capped renderer-side by the theme and token limits | plan 64-03 threat model | 2026-11-19 |
 | AR-64-02 | T-64-20 | CSP already allows `style-src 'unsafe-inline'`; react-colorful's injected CSS styles only the picker | plan 64-07 threat model | 2026-11-19 |
-| AR-64-03 | T-64-SC (01-06, 08, 09) | Those plans installed no package; nothing to verify | plan threat models | 2026-11-19 |
+| AR-64-03 | T-64-SC (01-06, 08, 09, 11) | Those plans installed no package; nothing to verify | plan threat models | 2026-11-19 |
 
 ---
 
@@ -83,6 +85,7 @@ created: "2026-11-19"
 |------------|---------------|--------|------|--------|
 | 2026-11-19 | 27 | 27 | 0 | /gsd-secure-phase 64 (orchestrator, ASVS L1 grep-depth; plan-time register, auditor short-circuited) |
 | 2026-11-20 | 27 | 25 | 2 | gap closure 64-11 Task 1: T-64-12 and T-64-21 reopened on CR-01 (64-VERIFICATION.md truth 8) |
+| 2026-11-20 | 28 | 28 | 0 | gap closure 64-11 Task 3: T-64-12 and T-64-21 re-closed with test evidence; T-64-26 added and closed |
 
 ---
 
@@ -90,7 +93,7 @@ created: "2026-11-19"
 
 - [x] All threats have a disposition (mitigate / accept / transfer)
 - [x] Accepted risks documented in Accepted Risks Log
-- [ ] `threats_open: 0` confirmed
-- [ ] `status: verified` set in frontmatter
+- [x] `threats_open: 0` confirmed
+- [x] `status: verified` set in frontmatter
 
-**Approval:** reopened 2026-11-20 on CR-01; re-close pending plan 64-11
+**Approval:** verified (2026-11-20), re-closed after the CR-01 / IN-03 fix (plan 64-11)
