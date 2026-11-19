@@ -830,6 +830,7 @@
             "drmBadge": "Not available: this game uses Steam DRM, which needs the Steam app.",
             "failed": "Could not launch {{game}} without Steam.",
             "label": "Launch without Steam",
+            "needsSteam": "{{game}} closed right after starting without Steam, so it probably needs the Steam app. If Launch without Steam is on for this game, turn it off in its settings: Run > Launch without Steam.",
             "warning": "This game uses the Steam API, or GameLib could not check. Without Steam it may quit, run without Steam features, or reopen Steam. You lose Steam Cloud sync, playtime, achievements and the overlay."
         },
         "download": {

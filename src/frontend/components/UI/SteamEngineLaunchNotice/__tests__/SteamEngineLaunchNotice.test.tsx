@@ -681,6 +681,14 @@ describe('SteamEngineLaunchNotice request slot (quick 261106-pvk)', () => {
       "Dota 2 Steam didn't quit, so Dota 2 couldn't be set up. Quit Steam and press Play again."
     ],
     [
+      { kind: 'direct-launch-failed', title: 'Legends of Aethereus' },
+      'Legends of Aethereus Could not launch Legends of Aethereus without Steam.'
+    ],
+    [
+      { kind: 'direct-launch-needs-steam', title: 'Avernum 6' },
+      'Avernum 6 Avernum 6 closed right after starting without Steam, so it probably needs the Steam app. If Launch without Steam is on for this game, turn it off in its settings: Run > Launch without Steam.'
+    ],
+    [
       { kind: 'uninstall-failed', title: '' },
       "Steam Couldn't finish uninstalling Steam. Some files may remain; try uninstalling again."
     ],
@@ -692,6 +700,23 @@ describe('SteamEngineLaunchNotice request slot (quick 261106-pvk)', () => {
     requestState = req(over)
     expect(text(render())).toBe(expected)
   })
+
+  it.each(['direct-launch-failed', 'direct-launch-needs-steam'])(
+    'renders %s with the warning icon and no action button',
+    (kind) => {
+      requestState = req({ kind, title: 'Avernum 6' })
+      const out = render()
+      expect(
+        find(out, (e) => e.props.icon === faTriangleExclamation)
+      ).toBeDefined()
+      expect(
+        find(out, (e) => e.props.icon === faRightToBracket)
+      ).toBeUndefined()
+      expect(
+        find(out, (e) => cls(e).includes('noticeStackAction'))
+      ).toBeUndefined()
+    }
+  )
 
   describe('Phase 81 D-05: Launch without Steam on a refused Play restart', () => {
     const adopt = (over: Record<string, unknown> = {}) =>

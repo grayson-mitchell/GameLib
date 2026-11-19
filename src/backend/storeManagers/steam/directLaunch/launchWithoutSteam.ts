@@ -12,16 +12,15 @@
  * the normal Steam launch, never a failure. Nothing in this folder writes, copies or
  * emulates steam_api (DRM boundary).
  */
-import i18next from 'i18next'
 import { existsSync } from 'graceful-fs'
 import { dirname, isAbsolute, relative, resolve } from 'node:path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { notify } from 'backend/dialog/dialog'
 import { sendGameStatusUpdate } from 'backend/utils'
 import type LogWriter from 'backend/logger/log_writer'
 import type { ProcessRunner } from 'backend/process/types'
 import type SteamGame from '../games'
 import { launchBridgeGame } from '../gameBridgeLaunchGate'
+import { pushDirectLaunchNotice } from './directLaunchOutcome'
 import { getSteamDirectLaunchVerdict } from './directLaunchProbes'
 import {
   STEAM_DIRECT_TRACK_RUNNER,
@@ -90,19 +89,6 @@ export function launchMacNativeWithoutSteam(
         deps.sendStatus('done')
         if (!started) resolveStarted(false)
       })
-  })
-}
-
-function notifyFailed(steamGame: SteamGame): void {
-  const game = steamGame.getGameInfo().title
-  notify(steamGame.deps, {
-    title: game,
-    // eslint-disable-next-line import-x/no-named-as-default-member
-    body: i18next.t(
-      'gamelib:steam.directLaunch.failed',
-      'Could not launch {{game}} without Steam.',
-      { game }
-    )
   })
 }
 
@@ -175,6 +161,6 @@ export async function launchWithoutSteam(
     installPath,
     verdict.launch
   )
-  if (!started) notifyFailed(steamGame)
+  if (!started) await pushDirectLaunchNotice(steamGame, 'direct-launch-failed')
   return started
 }

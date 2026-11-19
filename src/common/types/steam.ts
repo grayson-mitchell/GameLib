@@ -250,6 +250,9 @@ export interface SteamRequestNoticePayload {
     | 'adopt-restart-game-running'
     | 'adopt-restart-busy'
     | 'adopt-restart-quit-timeout'
+    /** quick 261120-8hb: a launch without Steam did not start, or its process ended within the early-exit window */
+    | 'direct-launch-failed'
+    | 'direct-launch-needs-steam'
   /** only for uninstall-steam-error */
   code?: number
   /** only for adopt-restart-* kinds: the backend's direct-launch verdict applies (Phase 81 D-05) */

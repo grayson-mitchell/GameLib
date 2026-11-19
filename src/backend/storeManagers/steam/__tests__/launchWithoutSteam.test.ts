@@ -3,6 +3,8 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 import { initHeadless } from 'backend/logger'
+import { notify } from 'backend/dialog/dialog'
+import { pushDirectLaunchNotice } from '../directLaunch/directLaunchOutcome'
 import {
   launchMacNativeWithoutSteam,
   launchWithoutSteam
@@ -11,6 +13,8 @@ import {
   STEAM_DIRECT_TRACK_RUNNER,
   type DirectLaunchVerdict
 } from '../directLaunch/directLaunchVerdict'
+
+jest.mock('backend/dialog/dialog', () => ({ notify: jest.fn() }))
 
 // The real logger needs a writer; HOME is redirected by the backend jest containment setup.
 beforeAll(() => initHeadless())
@@ -217,5 +221,108 @@ describe('launchWithoutSteam (setting-driven, never fails the launch)', () => {
     } finally {
       body.mockRestore()
     }
+  })
+})
+
+describe('launchWithoutSteam Mac-native start failure (quick 261120-8hb)', () => {
+  let install: string
+  let binary: string
+  beforeEach(() => {
+    install = mkdtempSync(join(tmpdir(), '8hb-launch-'))
+    mkdirSync(join(install, 'Game.app', 'Contents', 'MacOS'), {
+      recursive: true
+    })
+    binary = join(install, 'Game.app', 'Contents', 'MacOS', 'Game')
+    writeFileSync(binary, 'x')
+    jest.mocked(notify).mockClear()
+  })
+  afterEach(() => {
+    rmSync(install, { recursive: true, force: true })
+  })
+
+  function macGame(
+    script: Parameters<typeof createScriptedRunner>[0],
+    overrides: {
+      requestRustInvoke?: jest.Mock
+      sendFrontendMessage?: jest.Mock
+    } = {}
+  ) {
+    const sendFrontendMessage = overrides.sendFrontendMessage ?? jest.fn()
+    return {
+      sendFrontendMessage,
+      game: {
+        appId: '10',
+        deps: {
+          runner: createScriptedRunner(script),
+          sendFrontendMessage,
+          requestRustInvoke:
+            overrides.requestRustInvoke ?? jest.fn().mockResolvedValue(7),
+          steamInstallRuntime: { noticeSeq: { last: 0 } },
+          steamSession: {
+            gameSession: { bridgeLaunchesInFlight: new Map() },
+            libraryState: { library: new Map([['10', { title: 'T' }]]) }
+          },
+          appRuntime: { events: { emit: jest.fn() } },
+          engineRuntime: { registry: { clearEngineSelection: jest.fn() } }
+        },
+        getGameInfo: () => ({
+          title: 'T',
+          install: { install_path: install }
+        }),
+        launch: jest.fn()
+      } as never
+    }
+  }
+  const macVerdict = () => ({
+    getVerdict: () =>
+      Promise.resolve({
+        applies: true,
+        kind: 'mac-native',
+        warning: 'none',
+        launch: { binaryPath: binary, args: [] }
+      } as DirectLaunchVerdict)
+  })
+  const requestNotices = (send: jest.Mock) =>
+    send.mock.calls.filter((c) => c[0] === 'steamRequestNotice')
+
+  test('a spawn error resolves false and pushes one direct-launch-failed notice, no OS notification', async () => {
+    const { game, sendFrontendMessage } = macGame([
+      { cmd: binary, error: { code: 'EBADARCH' } }
+    ])
+    const ok = await launchWithoutSteam(game, macVerdict())
+    expect(ok).toBe(false)
+    expect(requestNotices(sendFrontendMessage)).toEqual([
+      [
+        'steamRequestNotice',
+        { appId: '10', title: 'T', kind: 'direct-launch-failed', seq: 7 }
+      ]
+    ])
+    expect(notify).not.toHaveBeenCalled()
+  })
+
+  test('pushDirectLaunchNotice falls back to the local seq when the Rust invoke rejects', async () => {
+    const { game, sendFrontendMessage } = macGame(
+      [{ cmd: binary, error: { code: 'EBADARCH' } }],
+      { requestRustInvoke: jest.fn().mockRejectedValue(new Error('down')) }
+    )
+    await expect(launchWithoutSteam(game, macVerdict())).resolves.toBe(false)
+    const calls = requestNotices(sendFrontendMessage)
+    expect(calls).toHaveLength(1)
+    expect(calls[0]?.[1]).toMatchObject({ kind: 'direct-launch-failed' })
+    expect(typeof calls[0]?.[1].seq).toBe('number')
+  })
+
+  test('pushDirectLaunchNotice never rejects when sendFrontendMessage throws', async () => {
+    const throwing = jest.fn(() => {
+      throw new Error('ipc closed')
+    })
+    const { game } = macGame([{ cmd: binary, error: { code: 'EBADARCH' } }], {
+      sendFrontendMessage: throwing
+    })
+    // gameStatusUpdate also goes through sendFrontendMessage; the throwing mock
+    // would reject launchMacNative, so only the notice push is exercised here.
+    await expect(
+      pushDirectLaunchNotice(game, 'direct-launch-failed')
+    ).resolves.toBeUndefined()
   })
 })

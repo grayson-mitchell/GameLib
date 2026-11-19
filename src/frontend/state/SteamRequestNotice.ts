@@ -27,7 +27,9 @@ const REQUEST_KINDS: ReadonlySet<string> = new Set([
   'uninstall-failed',
   'adopt-restart-game-running',
   'adopt-restart-busy',
-  'adopt-restart-quit-timeout'
+  'adopt-restart-quit-timeout',
+  'direct-launch-failed',
+  'direct-launch-needs-steam'
 ])
 
 // Standalone so tests can simulate the push without mounting GlobalState.

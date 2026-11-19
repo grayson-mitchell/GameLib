@@ -64,6 +64,8 @@ type RequestKind =
   | 'adopt-restart-game-running'
   | 'adopt-restart-busy'
   | 'adopt-restart-quit-timeout'
+  | 'direct-launch-failed'
+  | 'direct-launch-needs-steam'
 const REQUEST_KINDS: readonly string[] = [
   'install-not-started',
   'uninstall-not-started',
@@ -73,7 +75,9 @@ const REQUEST_KINDS: readonly string[] = [
   'uninstall-failed',
   'adopt-restart-game-running',
   'adopt-restart-busy',
-  'adopt-restart-quit-timeout'
+  'adopt-restart-quit-timeout',
+  'direct-launch-failed',
+  'direct-launch-needs-steam'
 ]
 interface ShownRequest {
   kind: RequestKind
@@ -157,7 +161,8 @@ const isReason = (r: unknown): r is Reason =>
 // uninstall" (SteamRequestNotice store, fed by the steamRequestNotice push),
 // which used to be a system notification that could land on another monitor.
 // Same rules: once per seq, frozen until GameLib is in front, catalogue
-// strings chosen by the closed `kind` only (T-pvk-01).
+// strings chosen by the closed `kind` only (T-pvk-01). Quick 261120-8hb's
+// launch-without-Steam failure and needs-Steam notices ride this request stream.
 // 61-27 (WR-02): a fifth stream shows the launch-deadline notice ("couldn't
 // confirm the game started"), which used to raise the main window with a modal
 // over a running game. Same rules: once per seq, frozen until GameLib is in
@@ -752,6 +757,18 @@ export default function SteamEngineLaunchNotice() {
           "Steam didn't quit, so {{game}} couldn't be set up. Quit Steam and press Play again.",
           { game }
         )
+      case 'direct-launch-failed':
+        return t(
+          'steam.directLaunch.failed',
+          'Could not launch {{game}} without Steam.',
+          { game }
+        )
+      case 'direct-launch-needs-steam':
+        return t(
+          'steam.directLaunch.needsSteam',
+          '{{game}} closed right after starting without Steam, so it probably needs the Steam app. If Launch without Steam is on for this game, turn it off in its settings: Run > Launch without Steam.',
+          { game }
+        )
     }
   }
 
@@ -763,7 +780,9 @@ export default function SteamEngineLaunchNotice() {
         overlay: false,
         paused: hoveredRequest,
         waiting: waitingRequest,
-        icon: faRightToBracket,
+        icon: shownRequest.kind.startsWith('direct-launch-')
+          ? faTriangleExclamation
+          : faRightToBracket,
         title: requestGame,
         body: requestBody(shownRequest, requestGame),
         // Phase 81 D-05: the backend's direct-launch verdict decided whether the button shows;
