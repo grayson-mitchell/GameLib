@@ -5,16 +5,16 @@ milestone_name: Foundations
 current_phase: 64
 current_phase_name: UI to edit themes
 status: verifying
-stopped_at: Phase 47 complete; Phase 81 verification has gaps
-last_updated: "2026-11-19T10:06:14.708Z"
-last_activity: 2026-11-19
-last_activity_desc: Phase 47 complete (UAT 19/19, verification passed); next is Phase 81 gap closure
-state_head: 750de5cebc49bfe3e3b3cc5f7eb099bdd5a54410
+stopped_at: Completed 64-11-PLAN.md
+last_updated: "2026-11-19T15:25:19.406Z"
+last_activity: 2026-11-20
+last_activity_desc: Phase 64 execution started
+state_head: 4fbb1e5aed262a4c6dcba3d608eb25914cccad4e
 progress:
   total_phases: 26
   completed_phases: 23
   total_plans: 531
-  completed_plans: 530
+  completed_plans: 531
   percent: 88
 ---
 
@@ -25,7 +25,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-14)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 81 — Unify the Steam restart hold into restart-on-Play
+**Current focus:** Phase 64 — UI to edit themes
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -76,10 +76,10 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 
 ## Current Position
 
-Phase: 64 (UI to edit themes) — READY TO EXECUTE
-Plan: 20 of 20 executed
-Status: Verification gaps_found; human UAT partial — next /gsd-plan-phase 81 --gaps
-Last activity: 2026-11-19 — Phase 47 complete (UAT 19/19, verification passed)
+Phase: 64 (UI to edit themes) — EXECUTING
+Plan: 11 of 11
+Status: Phase complete — ready for verification
+Last activity: 2026-11-20 — Phase 64 execution started
 
 Progress: [█████████░] 88%
 
@@ -311,6 +311,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 47 P20 | 9 min | 3 tasks | 8 files |
 | Phase 47 P21 | 4 min | 2 tasks | 3 files |
 | Phase 47 P22 | 5 min | 2 tasks | 3 files |
+| Phase 64 P11 | 9 min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -528,6 +529,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 47]: 47-20: TextInputField defaults spellCheck/autoCorrect off (before the inputProps spread so callers can opt back in); SearchBar and Winetricks searchbox opt out too; RegionPicker uses displayEmpty so Auto shows its label
 - [Phase 47]: 47-21: Store Search rows and the Deals filter panel use --gamecard-title-color (themeable plate) instead of the hardcoded-black overlay gradient; hover/pill tints are color-mix of --text-default
 - [Phase 47]: 47-22: Deals Genres/Features controls grow (min-height + flex-wrap), hover bubble removed, limitTags={2} kept; filter reflow keys on @container main-content (max-width: 1239.98px), 700px rule deleted
+- [Phase 64]: 64-11: IN-03 gradient gate is the name prefix /^--gradient-/ (not a seed-value rule), because --gradient-body-background is live-derived and in no seed; CSS.supports stays the final gate (D-14)
 
 ### Pending Todos
 
@@ -913,8 +915,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-18T18:46:35.138Z
-Stopped at: Phase 47 complete; Phase 81 verification has gaps
+Last session: 2026-11-19T15:25:16.479Z
+Stopped at: Completed 64-11-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
