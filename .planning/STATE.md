@@ -2,14 +2,14 @@
 gsd_state_version: "1.0"
 milestone: v0.10
 milestone_name: Foundations
-current_phase: 64
-current_phase_name: UI to edit themes
-status: verifying
-stopped_at: Completed 64-11-PLAN.md
-last_updated: "2026-11-19T15:25:19.406Z"
+current_phase: 81
+current_phase_name: Unify the Steam restart hold into restart-on-Play
+status: planning
+stopped_at: Phase 64 complete; Phase 81 has open verification gaps
+last_updated: "2026-11-19T16:20:22.011Z"
 last_activity: 2026-11-20
-last_activity_desc: Phase 64 execution started
-state_head: 4fbb1e5aed262a4c6dcba3d608eb25914cccad4e
+last_activity_desc: Phase 64 complete (re-verified 8/8)
+state_head: ba0556a5d71a52d94dd910c2aaf09d0932c2637c
 progress:
   total_phases: 26
   completed_phases: 23
@@ -76,10 +76,10 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 
 ## Current Position
 
-Phase: 64 (UI to edit themes) — EXECUTING
-Plan: 11 of 11
-Status: Phase complete — ready for verification
-Last activity: 2026-11-20 — Phase 64 execution started
+Phase: 81 (Unify the Steam restart hold into restart-on-Play)
+Plan: 20 plans executed
+Status: Gaps found — needs gap-closure planning
+Last activity: 2026-11-20 — Phase 64 complete (re-verified 8/8)
 
 Progress: [█████████░] 88%
 
@@ -916,7 +916,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 ## Session Continuity
 
 Last session: 2026-11-19T15:25:16.479Z
-Stopped at: Completed 64-11-PLAN.md
+Stopped at: Phase 64 complete; Phase 81 has open verification gaps
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
