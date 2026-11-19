@@ -1,9 +1,9 @@
 ---
 phase: "64"
 slug: "ui-to-edit-themes"
-status: verified
+status: draft
 # threats_open = count of OPEN threats at or above workflow.security_block_on severity (the blocking gate)
-threats_open: 0
+threats_open: 2
 asvs_level: 1
 created: "2026-11-19"
 ---
@@ -44,7 +44,7 @@ created: "2026-11-19"
 | T-64-09 | Repudiation | refused writes | low | mitigate | Each refusal keeps its stderr line (non-string guard logs at `storeWriteHandlers.ts:356`) | closed |
 | T-64-10 | Denial of service | `parseCustomThemes` at boot | high | mitigate | Total parse with caps (`MAX_CUSTOM_THEMES = 50`, `customTheme.ts:22`), 500-structure test (64-04-SUMMARY) | closed |
 | T-64-11 | Tampering | `applyTheme` setProperty | high | mitigate | `TOKEN_NAME_PATTERN = /^--[a-z0-9-]+$/` (`customTheme.ts:71`) plus known-token universe | closed |
-| T-64-12 | Information disclosure | gradient values | high | mitigate | `GRADIENT_DENY` rejects `url(`, `var(`, `;`, `{`, `}`, `@`, `!important`, backslash before `CSS.supports` (`validate.ts:13,32`) | closed |
+| T-64-12 | Information disclosure | gradient values | high | mitigate | `GRADIENT_DENY` rejects `url(`, `var(`, `;`, `{`, `}`, `@`, `!important`, backslash before `CSS.supports` (`validate.ts:13,32`) REOPENED (2026-11-20): CR-01 / 64-VERIFICATION.md truth 8, a layered image-set value carrying a quoted https URL passes this control; fix in plan 64-11 | open |
 | T-64-13 | Tampering | prototype pollution via ids | medium | mitigate | `THEME_ID_PATTERN = /^[0-9a-f]{16}$/` (`customTheme.ts:26`); single fixed key | closed |
 | T-64-14 | Tampering | built-in themes | medium | mitigate | Setters refuse non-custom ids; zero-write tests for `nord-light`; `themes.scss` untouched (THEME-02) | closed |
 | T-64-15 | Tampering | `ThemeThumbnail` fills | medium | mitigate | `safeColour` canonical hex via `thumbnailPalette.ts`; hostile-value markup test | closed |
@@ -53,7 +53,7 @@ created: "2026-11-19"
 | T-64-18 | Tampering | ColourField commit | medium | mitigate | Only canonical hex from `validateColourInput`/`normaliseColour` enters the draft (`ColourField.tsx` uses `safeColour`) | closed |
 | T-64-19 | Tampering | draft -> app | medium | mitigate | Draft feeds only the preview; the app changes only via `saveCustomThemeTokens`, which re-validates (`settingsState.ts:208-214`) | closed |
 | T-64-20 | Tampering | react-colorful `<style>` injection | low | accept | See Accepted Risks Log | closed |
-| T-64-21 | Information disclosure | GradientField strip | high | mitigate | Strip paints only the last value `isValidGradient` accepted; url()/var() refused even when supports is true (64-08-SUMMARY); live UAT test 10 passed | closed |
+| T-64-21 | Information disclosure | GradientField strip | high | mitigate | Strip paints only the last value `isValidGradient` accepted; url()/var() refused even when supports is true (64-08-SUMMARY); live UAT test 10 passed REOPENED (2026-11-20): CR-01 / 64-VERIFICATION.md truth 8, a layered image-set value carrying a quoted https URL passes this control; fix in plan 64-11 | open |
 | T-64-22 | Denial of service | checkFloors on every keystroke | low | mitigate | `tryContrast` total and O(1); three pairs per render | closed |
 | T-64-23 | Tampering | unsaved prompt message | medium | mitigate | Message is a React element; the name renders as text | closed |
 | T-64-24 | Repudiation | refused Save shown as saved | medium | mitigate | `ThemeEditor/index.tsx:68-69` shows the failure notice on `failed`; live UAT test 17 passed with a forced refusal | closed |
@@ -82,6 +82,7 @@ created: "2026-11-19"
 | Audit Date | Threats Total | Closed | Open | Run By |
 |------------|---------------|--------|------|--------|
 | 2026-11-19 | 27 | 27 | 0 | /gsd-secure-phase 64 (orchestrator, ASVS L1 grep-depth; plan-time register, auditor short-circuited) |
+| 2026-11-20 | 27 | 25 | 2 | gap closure 64-11 Task 1: T-64-12 and T-64-21 reopened on CR-01 (64-VERIFICATION.md truth 8) |
 
 ---
 
@@ -89,7 +90,7 @@ created: "2026-11-19"
 
 - [x] All threats have a disposition (mitigate / accept / transfer)
 - [x] Accepted risks documented in Accepted Risks Log
-- [x] `threats_open: 0` confirmed
-- [x] `status: verified` set in frontmatter
+- [ ] `threats_open: 0` confirmed
+- [ ] `status: verified` set in frontmatter
 
-**Approval:** verified 2026-11-19
+**Approval:** reopened 2026-11-20 on CR-01; re-close pending plan 64-11
