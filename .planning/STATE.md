@@ -912,6 +912,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | fast | Removed the dead `BoundedOutputCapture` type re-export from signInProbe/classify.ts (added by 4234aa0da). The knip ratchet flagged it as a new types finding, which blocked the push of spike 087. | 2026-11-17 | 067d4d62a | find-deadcode PASS (335 baselined); tsc --noEmit clean; prettier clean | — |
 | fast | Recorded the macOS compile and clippy pass for the rpc_humble_login_open split in its todo: Rust test run 43063757130 on cad0bd7d0, the first run carrying ea210b612, had cargo-test (macos-latest) green. The macOS and Windows live sign-in gates are still owed. | 2026-11-17 | 6c037d884 | prettier clean; todo-frontmatter gate PASS | — |
 | fast | Recorded the operator's Windows live sign-in pass (2026-11-17) for the rpc_humble_login_open split in its todo. The macOS live sign-in gate is still owed. | 2026-11-17 | 60c779698 | prettier clean; todo-frontmatter gate PASS | — |
+| 261120-8hb | Launch without Steam follow-ups: started log line names route and binary; start failures and early exits (<15 s, DIRECT_LAUNCH_EARLY_EXIT_MS) show in-app notices via the steamRequestNotice slot instead of OS notifications; needsSteam in 48 locales. | 2026-11-20 | a36a40f7f, 5696823ed, f2c9da129 | jest 130+785+185 pass; codecheck, find-deadcode, i18n gates green; live checks OWED | [261120-8hb-launch-without-steam-follow-ups-success-](./quick/261120-8hb-launch-without-steam-follow-ups-success-/) |
 
 ## Session Continuity
 
