@@ -577,6 +577,7 @@
             "drmBadge": "Níl sé ar fáil: úsáideann an cluiche seo DRM Steam, a bhfuil aip Steam ag teastáil uaidh.",
             "failed": "Níorbh fhéidir {{game}} a sheoladh gan Steam.",
             "label": "Seol gan Steam",
+            "needsSteam": "Dhúnadh {{game}} díreach tar éis dó tosú gan Steam, mar sin is dócha go bhfuil feidhmchlár Steam ag teastáil uaidh. Má tá “Seol gan Steam” ar siúl don chluiche seo, cuir as é i socruithe an chluiche: Rith > Seol gan Steam.",
             "warning": "Úsáideann an cluiche seo API Steam, nó níorbh fhéidir le GameLib é a sheiceáil. Gan Steam, d'fhéadfadh sé scor, rith gan gnéithe Steam, nó Steam a athoscailt. Caillfidh tú sioncronú Steam Cloud, am súgartha, éachtaí agus an forleagan."
         },
         "download": {
@@ -781,6 +782,11 @@
         },
         "storeEmbedControls": {
             "hostLabel": "Ag féachaint ar {{host}} faoi láthair"
+        },
+        "storeEmbed": {
+            "timeout": {
+                "message": "Níl an leathanach seo críochnaithe ag lódáil fós"
+            }
         }
     },
     "welcome": {

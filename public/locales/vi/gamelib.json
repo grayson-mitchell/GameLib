@@ -550,6 +550,7 @@
             "drmBadge": "Không khả dụng: trò chơi này dùng Steam DRM, vốn cần ứng dụng Steam.",
             "failed": "Không thể khởi chạy {{game}} khi không có Steam.",
             "label": "Khởi chạy không cần Steam",
+            "needsSteam": "{{game}} đã đóng ngay sau khi khởi chạy không cần Steam, nên có thể cần ứng dụng Steam. Nếu “Khởi chạy không cần Steam” đang bật cho game này, hãy tắt trong phần cài đặt của game: Chạy > Khởi chạy không cần Steam.",
             "warning": "Trò chơi này dùng Steam API, hoặc GameLib không thể kiểm tra. Khi không có Steam, trò chơi có thể thoát, chạy mà không có tính năng của Steam hoặc mở lại Steam. Bạn sẽ mất đồng bộ Steam Cloud, thời gian chơi, thành tựu và overlay."
         },
         "download": {
@@ -754,6 +755,11 @@
         },
         "storeEmbedControls": {
             "hostLabel": "Đang xem {{host}}"
+        },
+        "storeEmbed": {
+            "timeout": {
+                "message": "Trang này chưa tải xong"
+            }
         }
     },
     "welcome": {

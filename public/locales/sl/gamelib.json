@@ -568,6 +568,7 @@
             "drmBadge": "Ni na voljo: ta igra uporablja Steam DRM, ki potrebuje aplikacijo Steam.",
             "failed": "Igre {{game}} ni bilo mogoče zagnati brez Steama.",
             "label": "Zaženi brez Steama",
+            "needsSteam": "Igra {{game}} se je zaprla takoj po zagonu brez Steama, zato verjetno potrebuje aplikacijo Steam. Če je za to igro vklopljeno »Zaženi brez Steama«, to izklopite v nastavitvah igre: Zagon > Zaženi brez Steama.",
             "warning": "Ta igra uporablja Steam API ali pa GameLib tega ni mogel preveriti. Brez Steama se lahko zapre, deluje brez funkcij Steam ali znova odpre Steam. Izgubili boste sinhronizacijo Steam Cloud, igralni čas, dosežke in prekrivni sloj."
         },
         "download": {
@@ -772,6 +773,11 @@
         },
         "storeEmbedControls": {
             "hostLabel": "Trenutno si ogledujete {{host}}"
+        },
+        "storeEmbed": {
+            "timeout": {
+                "message": "Ta stran se še ni končala nalagati"
+            }
         }
     },
     "welcome": {

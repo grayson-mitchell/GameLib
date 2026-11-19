@@ -559,6 +559,7 @@
             "drmBadge": "Indisponível: este jogo usa o DRM do Steam, que precisa da aplicação Steam.",
             "failed": "Não foi possível iniciar {{game}} sem o Steam.",
             "label": "Iniciar sem o Steam",
+            "needsSteam": "{{game}} fechou logo após iniciar sem o Steam, por isso provavelmente precisa da aplicação Steam. Se «Iniciar sem o Steam» estiver ativado para este jogo, desative-o nas definições do jogo: Execução > Iniciar sem o Steam.",
             "warning": "Este jogo usa a API do Steam, ou o GameLib não conseguiu verificar. Sem o Steam, pode fechar-se, funcionar sem as funcionalidades do Steam ou reabrir o Steam. Perde a sincronização do Steam Cloud, o tempo de jogo, as conquistas e a sobreposição."
         },
         "download": {
@@ -763,6 +764,11 @@
         },
         "storeEmbedControls": {
             "hostLabel": "A visualizar atualmente {{host}}"
+        },
+        "storeEmbed": {
+            "timeout": {
+                "message": "Esta página ainda não acabou de carregar"
+            }
         }
     },
     "welcome": {

@@ -550,6 +550,7 @@
             "drmBadge": "Inte tillgängligt: det här spelet använder Steam DRM, som kräver Steam-appen.",
             "failed": "Det gick inte att starta {{game}} utan Steam.",
             "label": "Starta utan Steam",
+            "needsSteam": "{{game}} stängdes direkt efter start utan Steam, så det behöver förmodligen Steam-appen. Om ”Starta utan Steam” är på för det här spelet, stäng av det i spelets inställningar: Kör > Starta utan Steam.",
             "warning": "Det här spelet använder Steam API, eller så kunde GameLib inte kontrollera det. Utan Steam kan det avslutas, köras utan Steam-funktioner eller öppna Steam igen. Du förlorar Steam Cloud-synkronisering, spelstid, prestationer och overlayen."
         },
         "download": {
@@ -754,6 +755,11 @@
         },
         "storeEmbedControls": {
             "hostLabel": "Visar för närvarande {{host}}"
+        },
+        "storeEmbed": {
+            "timeout": {
+                "message": "Den här sidan har inte laddats klart"
+            }
         }
     },
     "welcome": {

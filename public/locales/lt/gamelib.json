@@ -568,6 +568,7 @@
             "drmBadge": "Nepasiekiama: šis žaidimas naudoja Steam DRM, kuriai reikalinga Steam programa.",
             "failed": "Nepavyko paleisti {{game}} be Steam.",
             "label": "Paleisti be Steam",
+            "needsSteam": "{{game}} užsidarė iškart po paleidimo be Steam, todėl greičiausiai jam reikia Steam programos. Jei šiam žaidimui įjungta „Paleisti be Steam“, išjunkite tai žaidimo nustatymuose: Paleidimas > Paleisti be Steam.",
             "warning": "Šis žaidimas naudoja Steam API arba GameLib negalėjo patikrinti. Be Steam jis gali užsidaryti, veikti be Steam funkcijų arba vėl atidaryti Steam. Prarasite Steam Cloud sinchronizavimą, žaidimo laiką, pasiekimus ir perdangą."
         },
         "download": {
@@ -772,6 +773,11 @@
         },
         "storeEmbedControls": {
             "hostLabel": "Šiuo metu peržiūrima {{host}}"
+        },
+        "storeEmbed": {
+            "timeout": {
+                "message": "Šis puslapis dar neužsikrovė"
+            }
         }
     },
     "welcome": {

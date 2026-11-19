@@ -586,6 +586,7 @@
             "drmBadge": "غير متاح: تستخدم هذه اللعبة Steam DRM الذي يتطلب تطبيق Steam.",
             "failed": "تعذّر تشغيل {{game}} دون Steam.",
             "label": "التشغيل دون Steam",
+            "needsSteam": "تم إغلاق {{game}} فور بدء تشغيلها دون Steam، لذا ربما تحتاج إلى تطبيق Steam. إذا كان خيار «التشغيل دون Steam» مفعّلًا لهذه اللعبة، فأوقفه في إعدادات اللعبة: تشغيل > التشغيل دون Steam.",
             "warning": "تستخدم هذه اللعبة Steam API، أو تعذّر على GameLib التحقق. من دون Steam قد تُغلق اللعبة أو تعمل دون ميزات Steam أو تعيد فتح Steam. ستفقد مزامنة Steam Cloud ووقت اللعب والإنجازات وتراكب Steam."
         },
         "download": {
@@ -790,6 +791,11 @@
         },
         "storeEmbedControls": {
             "hostLabel": "تعرض حاليًا {{host}}"
+        },
+        "storeEmbed": {
+            "timeout": {
+                "message": "لم يكتمل تحميل هذه الصفحة بعد"
+            }
         }
     },
     "welcome": {

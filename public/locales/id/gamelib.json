@@ -550,6 +550,7 @@
             "drmBadge": "Tidak tersedia: game ini memakai Steam DRM, yang memerlukan aplikasi Steam.",
             "failed": "Tidak dapat menjalankan {{game}} tanpa Steam.",
             "label": "Jalankan tanpa Steam",
+            "needsSteam": "{{game}} langsung tertutup setelah dimulai tanpa Steam, jadi kemungkinan membutuhkan aplikasi Steam. Jika “Jalankan tanpa Steam” aktif untuk game ini, matikan di pengaturan game: Jalankan > Jalankan tanpa Steam.",
             "warning": "Game ini memakai Steam API, atau GameLib tidak dapat memeriksanya. Tanpa Steam, game mungkin menutup sendiri, berjalan tanpa fitur Steam, atau membuka Steam kembali. Anda kehilangan sinkronisasi Steam Cloud, waktu bermain, pencapaian, dan overlay."
         },
         "download": {
@@ -754,6 +755,11 @@
         },
         "storeEmbedControls": {
             "hostLabel": "Sedang melihat {{host}}"
+        },
+        "storeEmbed": {
+            "timeout": {
+                "message": "Halaman ini belum selesai dimuat"
+            }
         }
     },
     "welcome": {

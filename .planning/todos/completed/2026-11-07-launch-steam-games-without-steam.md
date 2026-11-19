@@ -147,3 +147,14 @@ Operator, this Mac. Restart `pnpm tauri:dev` first (it does not rebuild the side
   cycles at 20:10:31 and 20:10:57. Gap: a successful direct spawn logs nothing, so the log
   cannot prove the route on its own.
 - Still to run: Stop on a direct launch; steps 5-7.
+
+Follow-ups (quick 261120-8hb), all OWED, not run:
+
+- The started log line now names the route (`launch without Steam started for appId ...: kind
+  mac-native, binary ...` or `kind bridge, exe ...`). Re-check it on Dead Age 2.
+- A spawn or launch failure of a launch without Steam now shows an in-app toast in the
+  bottom-right stack instead of an OS notification. Live-check it on whatever direct launch next
+  fails to start.
+- A process gone within 15 s (`DIRECT_LAUNCH_EARLY_EXIT_MS`) shows the needs-Steam toast.
+  Live-check it on Avernum 6 (bridge) and WazHack (Mac-native), and check that Stop on a direct
+  launch shows no needs-Steam toast.

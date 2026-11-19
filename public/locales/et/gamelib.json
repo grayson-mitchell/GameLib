@@ -529,6 +529,7 @@
             "drmBadge": "Pole saadaval: see mäng kasutab Steami DRM-i, mis vajab Steami rakendust.",
             "failed": "Mängu {{game}} ei õnnestunud ilma Steamita käivitada.",
             "label": "Käivita ilma Steamita",
+            "needsSteam": "{{game}} sulgus kohe pärast Steamita käivitamist, seega vajab see tõenäoliselt Steami rakendust. Kui selle mängu jaoks on „Käivita ilma Steamita“ sisse lülitatud, lülita see mängu seadetes välja: Käivitus > Käivita ilma Steamita.",
             "warning": "See mäng kasutab Steami API-t või GameLib ei saanud seda kontrollida. Ilma Steamita võib see sulguda, töötada ilma Steami funktsioonideta või avada Steami uuesti. Kaotad Steam Cloudi sünkroonimise, mänguaja, saavutused ja ülekatte."
         },
         "download": {
@@ -751,6 +752,11 @@
         },
         "storeEmbedControls": {
             "hostLabel": "Praegu vaatad {{host}}"
+        },
+        "storeEmbed": {
+            "timeout": {
+                "message": "See leht pole veel laadimist lõpetanud"
+            }
         }
     },
     "welcome": {

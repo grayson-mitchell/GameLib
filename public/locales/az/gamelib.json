@@ -550,6 +550,7 @@
             "drmBadge": "Əlçatan deyil: bu oyun Steam tətbiqini tələb edən Steam DRM istifadə edir.",
             "failed": "{{game}} Steam olmadan işə salına bilmədi.",
             "label": "Steam olmadan işə sal",
+            "needsSteam": "{{game}} Steam olmadan başladıqdan dərhal sonra bağlandı, ona görə də yəqin ki, Steam tətbiqi tələb edir. Bu oyun üçün “Steam olmadan işə sal” aktivdirsə, onu oyunun ayarlarında söndürün: İşə sal > Steam olmadan işə sal.",
             "warning": "Bu oyun Steam API istifadə edir və ya GameLib yoxlaya bilmədi. Steam olmadan oyun bağlana, Steam funksiyaları olmadan işləyə və ya Steam-i yenidən aça bilər. Steam Cloud sinxronizasiyasını, oyun vaxtını, nailiyyətləri və overlay-i itirəcəksiniz."
         },
         "download": {
@@ -754,6 +755,11 @@
         },
         "storeEmbedControls": {
             "hostLabel": "Hazırda {{host}} baxılır"
+        },
+        "storeEmbed": {
+            "timeout": {
+                "message": "Bu səhifənin yüklənməsi hələ başa çatmayıb"
+            }
         }
     },
     "welcome": {

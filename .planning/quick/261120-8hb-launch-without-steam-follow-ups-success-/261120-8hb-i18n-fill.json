@@ -1,0 +1,149 @@
+{
+  "en": {
+    "steam.directLaunch.needsSteam": "{{game}} closed right after starting without Steam, so it probably needs the Steam app. If Launch without Steam is on for this game, turn it off in its settings: Run > Launch without Steam."
+  },
+  "ar": {
+    "steam.directLaunch.needsSteam": "تم إغلاق {{game}} فور بدء تشغيلها دون Steam، لذا ربما تحتاج إلى تطبيق Steam. إذا كان خيار «التشغيل دون Steam» مفعّلًا لهذه اللعبة، فأوقفه في إعدادات اللعبة: تشغيل > التشغيل دون Steam."
+  },
+  "az": {
+    "steam.directLaunch.needsSteam": "{{game}} Steam olmadan başladıqdan dərhal sonra bağlandı, ona görə də yəqin ki, Steam tətbiqi tələb edir. Bu oyun üçün “Steam olmadan işə sal” aktivdirsə, onu oyunun ayarlarında söndürün: İşə sal > Steam olmadan işə sal."
+  },
+  "be": {
+    "steam.directLaunch.needsSteam": "Гульня {{game}} закрылася адразу пасля запуску без Steam, таму, верагодна, ёй патрэбна праграма Steam. Калі для гэтай гульні ўключана «Запусціць без Steam», выключыце гэта ў наладах гульні: Запуск > Запусціць без Steam."
+  },
+  "bg": {
+    "steam.directLaunch.needsSteam": "Играта {{game}} се затвори веднага след стартирането без Steam, така че вероятно се нуждае от приложението Steam. Ако „Стартиране без Steam“ е включено за тази игра, изключете го в настройките на играта: Стартиране > Стартиране без Steam."
+  },
+  "br": {
+    "steam.directLaunch.needsSteam": "{{game}} a zo serret diouzhtu goude bezañ loc'het hep Steam, setu emichañs en deus ezhomm eus an arload Steam. Mar eo gweredekaet « Loc'hañ hep Steam » evit ar c'hoari-mañ, diweredekait en arventennoù ar c'hoari: Lañsañ > Loc'hañ hep Steam."
+  },
+  "bs": {
+    "steam.directLaunch.needsSteam": "Igra {{game}} zatvorila se odmah nakon pokretanja bez Steama, pa vjerovatno treba aplikaciju Steam. Ako je „Pokreni bez Steama“ uključeno za ovu igru, isključite to u postavkama igre: Pokretanje > Pokreni bez Steama."
+  },
+  "ca": {
+    "steam.directLaunch.needsSteam": "{{game}} s'ha tancat just després d'iniciar-se sense Steam, així que probablement necessita l'aplicació Steam. Si «Inicia sense Steam» està activat per a aquest joc, desactiva'l a la configuració del joc: Execució > Inicia sense Steam."
+  },
+  "cs": {
+    "steam.directLaunch.needsSteam": "Hra {{game}} se zavřela hned po spuštění bez Steamu, takže pravděpodobně potřebuje aplikaci Steam. Pokud je pro tuto hru zapnuto „Spustit bez Steamu“, vypněte to v nastavení hry: Spuštění > Spustit bez Steamu."
+  },
+  "da": {
+    "steam.directLaunch.needsSteam": "{{game}} lukkede lige efter start uden Steam, så det kræver sandsynligvis Steam-appen. Hvis “Start uden Steam” er slået til for dette spil, så slå det fra i spillets indstillinger: Kør > Start uden Steam."
+  },
+  "de": {
+    "steam.directLaunch.needsSteam": "{{game}} wurde direkt nach dem Start ohne Steam beendet und braucht deshalb wahrscheinlich die Steam-App. Falls „Ohne Steam starten“ für dieses Spiel aktiviert ist, schalte es in den Einstellungen des Spiels aus: Ausführen > Ohne Steam starten."
+  },
+  "el": {
+    "steam.directLaunch.needsSteam": "Το {{game}} έκλεισε αμέσως μετά την εκκίνηση χωρίς Steam, οπότε πιθανώς χρειάζεται την εφαρμογή Steam. Αν η επιλογή «Εκκίνηση χωρίς Steam» είναι ενεργή για αυτό το παιχνίδι, απενεργοποιήστε την στις ρυθμίσεις του παιχνιδιού: Εκτέλεση > Εκκίνηση χωρίς Steam."
+  },
+  "es": {
+    "steam.directLaunch.needsSteam": "{{game}} se cerró justo después de iniciarse sin Steam, así que probablemente necesita la aplicación de Steam. Si «Iniciar sin Steam» está activado para este juego, desactívalo en los ajustes del juego: Ejecución > Iniciar sin Steam."
+  },
+  "et": {
+    "steam.directLaunch.needsSteam": "{{game}} sulgus kohe pärast Steamita käivitamist, seega vajab see tõenäoliselt Steami rakendust. Kui selle mängu jaoks on „Käivita ilma Steamita“ sisse lülitatud, lülita see mängu seadetes välja: Käivitus > Käivita ilma Steamita."
+  },
+  "eu": {
+    "steam.directLaunch.needsSteam": "{{game}} Steam gabe abiarazi eta berehala itxi da, beraz, ziurrenik Steam aplikazioa behar du. Joko honetarako «Abiarazi Steam gabe» aktibatuta badago, desaktiba ezazu jokoaren ezarpenetan: Exekuzioa > Abiarazi Steam gabe."
+  },
+  "fa": {
+    "steam.directLaunch.needsSteam": "{{game}} بلافاصله پس از اجرا بدون Steam بسته شد، بنابراین احتمالاً به برنامهٔ Steam نیاز دارد. اگر «اجرا بدون Steam» برای این بازی روشن است، آن را در تنظیمات بازی خاموش کنید: اجرا > اجرا بدون Steam."
+  },
+  "fi": {
+    "steam.directLaunch.needsSteam": "{{game}} sulkeutui heti käynnistyksen jälkeen ilman Steamia, joten se tarvitsee todennäköisesti Steam-sovelluksen. Jos ”Käynnistä ilman Steamia” on päällä tälle pelille, poista se käytöstä pelin asetuksissa: Käynnistys > Käynnistä ilman Steamia."
+  },
+  "fr": {
+    "steam.directLaunch.needsSteam": "{{game}} s’est fermé juste après son démarrage sans Steam ; il a donc probablement besoin de l’application Steam. Si « Lancer sans Steam » est activé pour ce jeu, désactivez-le dans les paramètres du jeu : Exécution > Lancer sans Steam."
+  },
+  "ga": {
+    "steam.directLaunch.needsSteam": "Dhúnadh {{game}} díreach tar éis dó tosú gan Steam, mar sin is dócha go bhfuil feidhmchlár Steam ag teastáil uaidh. Má tá “Seol gan Steam” ar siúl don chluiche seo, cuir as é i socruithe an chluiche: Rith > Seol gan Steam."
+  },
+  "gl": {
+    "steam.directLaunch.needsSteam": "{{game}} pechouse xusto despois de iniciarse sen Steam, polo que probablemente necesita a aplicación de Steam. Se «Iniciar sen Steam» está activado para este xogo, desactívao nos axustes do xogo: Execución > Iniciar sen Steam."
+  },
+  "he": {
+    "steam.directLaunch.needsSteam": "{{game}} נסגר מיד לאחר ההפעלה ללא Steam, ולכן כנראה שהוא זקוק לאפליקציית Steam. אם האפשרות \"הפעל ללא Steam\" מופעלת עבור משחק זה, כבו אותה בהגדרות המשחק: הרצה > הפעל ללא Steam."
+  },
+  "hr": {
+    "steam.directLaunch.needsSteam": "Igra {{game}} zatvorila se odmah nakon pokretanja bez Steama, pa vjerojatno treba aplikaciju Steam. Ako je „Pokreni bez Steama” uključeno za ovu igru, isključite to u postavkama igre: Pokretanje > Pokreni bez Steama."
+  },
+  "hu": {
+    "steam.directLaunch.needsSteam": "A(z) {{game}} közvetlenül az indítás után bezárult Steam nélkül, ezért valószínűleg szüksége van a Steam alkalmazásra. Ha a(z) „Indítás Steam nélkül” be van kapcsolva ennél a játéknál, kapcsolja ki a játék beállításaiban: Futtatás > Indítás Steam nélkül."
+  },
+  "id": {
+    "steam.directLaunch.needsSteam": "{{game}} langsung tertutup setelah dimulai tanpa Steam, jadi kemungkinan membutuhkan aplikasi Steam. Jika “Jalankan tanpa Steam” aktif untuk game ini, matikan di pengaturan game: Jalankan > Jalankan tanpa Steam."
+  },
+  "it": {
+    "steam.directLaunch.needsSteam": "{{game}} si è chiuso subito dopo l’avvio senza Steam, quindi probabilmente richiede l’app Steam. Se «Avvia senza Steam» è attivo per questo gioco, disattivalo nelle impostazioni del gioco: Esecuzione > Avvia senza Steam."
+  },
+  "ja": {
+    "steam.directLaunch.needsSteam": "{{game}}はSteamなしで起動した直後に終了しました。Steamアプリが必要な可能性があります。このゲームで「Steamなしで起動」がオンの場合は、ゲームの設定でオフにしてください：実行 > Steamなしで起動。"
+  },
+  "ka": {
+    "steam.directLaunch.needsSteam": "{{game}} Steam-ის გარეშე გაშვებისთანავე დაიხურა, ამიტომ ალბათ Steam-ის აპლიკაცია სჭირდება. თუ ამ თამაშისთვის ჩართულია „გაშვება Steam-ის გარეშე“, გამორთეთ თამაშის პარამეტრებში: გაშვება > გაშვება Steam-ის გარეშე."
+  },
+  "ko": {
+    "steam.directLaunch.needsSteam": "{{game}}이(가) Steam 없이 시작한 직후 종료되었습니다. Steam 앱이 필요할 수 있습니다. 이 게임에서 'Steam 없이 실행' 옵션이 켜져 있다면 게임 설정에서 끄세요: 실행 > Steam 없이 실행."
+  },
+  "lt": {
+    "steam.directLaunch.needsSteam": "{{game}} užsidarė iškart po paleidimo be Steam, todėl greičiausiai jam reikia Steam programos. Jei šiam žaidimui įjungta „Paleisti be Steam“, išjunkite tai žaidimo nustatymuose: Paleidimas > Paleisti be Steam."
+  },
+  "ml": {
+    "steam.directLaunch.needsSteam": "Steam ഇല്ലാതെ ആരംഭിച്ച ഉടൻ {{game}} അടഞ്ഞുപോയി, അതിനാൽ ഇതിന് Steam ആപ്പ് ആവശ്യമായിരിക്കും. ഈ ഗെയിമിന് “Steam ഇല്ലാതെ ലോഞ്ച് ചെയ്യുക” ഓണാണെങ്കിൽ, ഗെയിമിന്റെ ക്രമീകരണങ്ങളിൽ അത് ഓഫാക്കുക: പ്രവർത്തിപ്പിക്കുക > Steam ഇല്ലാതെ ലോഞ്ച് ചെയ്യുക."
+  },
+  "nb_NO": {
+    "steam.directLaunch.needsSteam": "{{game}} lukket seg rett etter oppstart uten Steam, så det trenger sannsynligvis Steam-appen. Hvis «Start uten Steam» er slått på for dette spillet, slå det av i spillets innstillinger: Kjør > Start uten Steam."
+  },
+  "nl": {
+    "steam.directLaunch.needsSteam": "{{game}} sloot direct na het starten zonder Steam, dus heeft waarschijnlijk de Steam-app nodig. Staat “Starten zonder Steam” aan voor deze game, zet het dan uit in de instellingen van de game: Uitvoeren > Starten zonder Steam."
+  },
+  "pl": {
+    "steam.directLaunch.needsSteam": "Gra {{game}} zamknęła się zaraz po uruchomieniu bez Steam, więc prawdopodobnie potrzebuje aplikacji Steam. Jeśli dla tej gry włączono „Uruchom bez Steam”, wyłącz tę opcję w ustawieniach gry: Uruchamianie > Uruchom bez Steam."
+  },
+  "pt": {
+    "steam.directLaunch.needsSteam": "{{game}} fechou logo após iniciar sem o Steam, por isso provavelmente precisa da aplicação Steam. Se «Iniciar sem o Steam» estiver ativado para este jogo, desative-o nas definições do jogo: Execução > Iniciar sem o Steam."
+  },
+  "pt_BR": {
+    "steam.directLaunch.needsSteam": "{{game}} fechou logo depois de iniciar sem o Steam, então provavelmente precisa do aplicativo Steam. Se “Iniciar sem o Steam” estiver ativado para este jogo, desative-o nas configurações do jogo: Execução > Iniciar sem o Steam."
+  },
+  "ro": {
+    "steam.directLaunch.needsSteam": "{{game}} s-a închis imediat după pornirea fără Steam, deci probabil are nevoie de aplicația Steam. Dacă „Pornește fără Steam” este activată pentru acest joc, dezactivați-o în setările jocului: Rulare > Pornește fără Steam."
+  },
+  "ru": {
+    "steam.directLaunch.needsSteam": "Игра {{game}} закрылась сразу после запуска без Steam, поэтому, вероятно, ей нужно приложение Steam. Если для этой игры включено «Запустить без Steam», отключите это в настройках игры: Запуск > Запустить без Steam."
+  },
+  "sk": {
+    "steam.directLaunch.needsSteam": "Hra {{game}} sa zavrela hneď po spustení bez Steamu, takže pravdepodobne potrebuje aplikáciu Steam. Ak je pre túto hru zapnuté „Spustiť bez Steamu“, vypnite to v nastaveniach hry: Spustenie > Spustiť bez Steamu."
+  },
+  "sl": {
+    "steam.directLaunch.needsSteam": "Igra {{game}} se je zaprla takoj po zagonu brez Steama, zato verjetno potrebuje aplikacijo Steam. Če je za to igro vklopljeno »Zaženi brez Steama«, to izklopite v nastavitvah igre: Zagon > Zaženi brez Steama."
+  },
+  "sr": {
+    "steam.directLaunch.needsSteam": "Игра {{game}} се затворила одмах након покретања без Steam-а, па вероватно треба апликацију Steam. Ако је за ову игру укључено „Покрени без Steam-а“, искључите то у подешавањима игре: Покретање > Покрени без Steam-а."
+  },
+  "sv": {
+    "steam.directLaunch.needsSteam": "{{game}} stängdes direkt efter start utan Steam, så det behöver förmodligen Steam-appen. Om ”Starta utan Steam” är på för det här spelet, stäng av det i spelets inställningar: Kör > Starta utan Steam."
+  },
+  "ta": {
+    "steam.directLaunch.needsSteam": "Steam இல்லாமல் தொடங்கிய உடனேயே {{game}} மூடப்பட்டது, எனவே இதற்கு Steam பயன்பாடு தேவைப்படலாம். இந்த விளையாட்டுக்கு “Steam இல்லாமல் தொடங்கு” இயக்கப்பட்டிருந்தால், விளையாட்டின் அமைப்புகளில் அதை முடக்கவும்: இயக்கு > Steam இல்லாமல் தொடங்கு."
+  },
+  "th": {
+    "steam.directLaunch.needsSteam": "{{game}} ปิดทันทีหลังเริ่มโดยไม่ใช้ Steam จึงอาจต้องใช้แอป Steam หากเปิด “เปิดโดยไม่ใช้ Steam” สำหรับเกมนี้ ให้ปิดในการตั้งค่าของเกม: เรียกใช้ > เปิดโดยไม่ใช้ Steam"
+  },
+  "tr": {
+    "steam.directLaunch.needsSteam": "{{game}}, Steam olmadan başlatıldıktan hemen sonra kapandı; bu yüzden muhtemelen Steam uygulamasına ihtiyaç duyuyor. Bu oyun için “Steam olmadan başlat” açıksa oyunun ayarlarından kapatın: Çalıştır > Steam olmadan başlat."
+  },
+  "uk": {
+    "steam.directLaunch.needsSteam": "Гра {{game}} закрилася одразу після запуску без Steam, тому, ймовірно, їй потрібен застосунок Steam. Якщо для цієї гри ввімкнено «Запустити без Steam», вимкніть це в налаштуваннях гри: Запуск > Запустити без Steam."
+  },
+  "uz": {
+    "steam.directLaunch.needsSteam": "{{game}} Steam'siz ishga tushirilgach, darhol yopildi, shuning uchun unga Steam ilovasi kerak bo‘lishi mumkin. Agar bu o‘yin uchun “Steam'siz ishga tushirish” yoqilgan bo‘lsa, uni o‘yin sozlamalarida o‘chiring: Ishga tushirish > Steam'siz ishga tushirish."
+  },
+  "vi": {
+    "steam.directLaunch.needsSteam": "{{game}} đã đóng ngay sau khi khởi chạy không cần Steam, nên có thể cần ứng dụng Steam. Nếu “Khởi chạy không cần Steam” đang bật cho game này, hãy tắt trong phần cài đặt của game: Chạy > Khởi chạy không cần Steam."
+  },
+  "zh_Hans": {
+    "steam.directLaunch.needsSteam": "{{game}} 在不通过 Steam 启动后随即关闭，可能需要 Steam 应用。如果此游戏已开启“不通过 Steam 启动”，请在游戏设置中将其关闭：运行 > 不通过 Steam 启动。"
+  },
+  "zh_Hant": {
+    "steam.directLaunch.needsSteam": "{{game}} 在不透過 Steam 啟動後隨即關閉，可能需要 Steam 應用程式。若此遊戲已開啟「不透過 Steam 啟動」，請在遊戲設定中將其關閉：執行 > 不透過 Steam 啟動。"
+  }
+}

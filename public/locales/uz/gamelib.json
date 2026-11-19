@@ -550,6 +550,7 @@
             "drmBadge": "Mavjud emas: bu o'yin Steam DRM'dan foydalanadi, unga Steam ilovasi kerak.",
             "failed": "{{game}} o'yinini Steam'siz ishga tushirib bo'lmadi.",
             "label": "Steam'siz ishga tushirish",
+            "needsSteam": "{{game}} Steam'siz ishga tushirilgach, darhol yopildi, shuning uchun unga Steam ilovasi kerak bo‘lishi mumkin. Agar bu o‘yin uchun “Steam'siz ishga tushirish” yoqilgan bo‘lsa, uni o‘yin sozlamalarida o‘chiring: Ishga tushirish > Steam'siz ishga tushirish.",
             "warning": "Bu o'yin Steam API'dan foydalanadi yoki GameLib uni tekshira olmadi. Steam'siz u yopilib qolishi, Steam funksiyalarisiz ishlashi yoki Steam'ni qayta ochishi mumkin. Steam Cloud sinxronizatsiyasi, o'yin vaqti, yutuqlar va overlay'dan mahrum bo'lasiz."
         },
         "download": {
@@ -754,6 +755,11 @@
         },
         "storeEmbedControls": {
             "hostLabel": "Hozir {{host}} ko'rilmoqda"
+        },
+        "storeEmbed": {
+            "timeout": {
+                "message": "Bu sahifa hali yuklanib bo‘lmadi"
+            }
         }
     },
     "welcome": {

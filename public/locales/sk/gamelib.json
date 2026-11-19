@@ -568,6 +568,7 @@
             "drmBadge": "Nedostupné: táto hra používa Steam DRM, ktoré vyžaduje aplikáciu Steam.",
             "failed": "Hru {{game}} sa nepodarilo spustiť bez Steamu.",
             "label": "Spustiť bez Steamu",
+            "needsSteam": "Hra {{game}} sa zavrela hneď po spustení bez Steamu, takže pravdepodobne potrebuje aplikáciu Steam. Ak je pre túto hru zapnuté „Spustiť bez Steamu“, vypnite to v nastaveniach hry: Spustenie > Spustiť bez Steamu.",
             "warning": "Táto hra používa Steam API, alebo to GameLib nedokázal overiť. Bez Steamu sa môže ukončiť, bežať bez funkcií Steamu alebo znova otvoriť Steam. Prídete o synchronizáciu Steam Cloud, herný čas, úspechy a prekrytie."
         },
         "download": {
@@ -772,6 +773,11 @@
         },
         "storeEmbedControls": {
             "hostLabel": "Práve si prezeráte {{host}}"
+        },
+        "storeEmbed": {
+            "timeout": {
+                "message": "Táto stránka sa ešte nenačítala"
+            }
         }
     },
     "welcome": {

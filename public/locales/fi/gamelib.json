@@ -550,6 +550,7 @@
             "drmBadge": "Ei käytettävissä: tämä peli käyttää Steam DRM:ää, joka tarvitsee Steam-sovelluksen.",
             "failed": "Peliä {{game}} ei voitu käynnistää ilman Steamia.",
             "label": "Käynnistä ilman Steamia",
+            "needsSteam": "{{game}} sulkeutui heti käynnistyksen jälkeen ilman Steamia, joten se tarvitsee todennäköisesti Steam-sovelluksen. Jos ”Käynnistä ilman Steamia” on päällä tälle pelille, poista se käytöstä pelin asetuksissa: Käynnistys > Käynnistä ilman Steamia.",
             "warning": "Tämä peli käyttää Steamin API:a, tai GameLib ei voinut tarkistaa sitä. Ilman Steamia se voi sulkeutua, toimia ilman Steam-ominaisuuksia tai avata Steamin uudelleen. Menetät Steam Cloud -synkronoinnin, peliajan, saavutukset ja päällysteen."
         },
         "download": {
@@ -754,6 +755,11 @@
         },
         "storeEmbedControls": {
             "hostLabel": "Katselet nyt kohdetta {{host}}"
+        },
+        "storeEmbed": {
+            "timeout": {
+                "message": "Tämän sivun lataus ei ole vielä valmistunut"
+            }
         }
     },
     "welcome": {

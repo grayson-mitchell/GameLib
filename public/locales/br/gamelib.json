@@ -577,6 +577,7 @@
             "drmBadge": "Dihegerz: ar c'hoari-mañ a implij Steam DRM, hag en deus ezhomm eus arval Steam.",
             "failed": "N'eus ket bet gallet loc'hañ {{game}} hep Steam.",
             "label": "Loc'hañ hep Steam",
+            "needsSteam": "{{game}} a zo serret diouzhtu goude bezañ loc'het hep Steam, setu emichañs en deus ezhomm eus an arload Steam. Mar eo gweredekaet « Loc'hañ hep Steam » evit ar c'hoari-mañ, diweredekait en arventennoù ar c'hoari: Lañsañ > Loc'hañ hep Steam.",
             "warning": "Ar c'hoari-mañ a implij Steam API, pe n'eo ket bet gouest GameLib da wiriañ. Hep Steam e c'hall ehanañ, mont en-dro hep perzhioù Steam, pe lakaat Steam da loc'hañ en-dro. Kollet e vo ganeoc'h sinkronekadur Steam Cloud, prantad c'hoari, kutuilhoù hag an overlay."
         },
         "download": {
@@ -781,6 +782,11 @@
         },
         "storeEmbedControls": {
             "hostLabel": "O sellet ouzh {{host}} evit ar mare"
+        },
+        "storeEmbed": {
+            "timeout": {
+                "message": "N’eo ket echu c’hoazh ar bajenn-mañ gant ar c’hargañ"
+            }
         }
     },
     "welcome": {

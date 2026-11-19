@@ -550,6 +550,7 @@
             "drmBadge": "不可用：这款游戏使用 Steam DRM，需要 Steam 应用。",
             "failed": "无法在没有 Steam 的情况下启动 {{game}}。",
             "label": "不通过 Steam 启动",
+            "needsSteam": "{{game}} 在不通过 Steam 启动后随即关闭，可能需要 Steam 应用。如果此游戏已开启“不通过 Steam 启动”，请在游戏设置中将其关闭：运行 > 不通过 Steam 启动。",
             "warning": "这款游戏使用 Steam API，或 GameLib 无法检查。没有 Steam 时，它可能会退出、在没有 Steam 功能的情况下运行，或重新打开 Steam。你将失去 Steam Cloud 同步、游戏时长、成就和叠加层。"
         },
         "download": {
@@ -754,6 +755,11 @@
         },
         "storeEmbedControls": {
             "hostLabel": "当前正在查看 {{host}}"
+        },
+        "storeEmbed": {
+            "timeout": {
+                "message": "此页面尚未加载完成"
+            }
         }
     },
     "welcome": {

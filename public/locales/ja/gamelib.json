@@ -550,6 +550,7 @@
             "drmBadge": "利用できません：このゲームはSteam DRMを使用しており、Steamアプリが必要です。",
             "failed": "{{game}}をSteamなしで起動できませんでした。",
             "label": "Steamなしで起動",
+            "needsSteam": "{{game}}はSteamなしで起動した直後に終了しました。Steamアプリが必要な可能性があります。このゲームで「Steamなしで起動」がオンの場合は、ゲームの設定でオフにしてください：実行 > Steamなしで起動。",
             "warning": "このゲームはSteam APIを使用しているか、GameLibが確認できませんでした。Steamなしでは、終了したり、Steamの機能なしで動作したり、Steamが再び開いたりすることがあります。Steamクラウドの同期、プレイ時間、実績、オーバーレイは利用できなくなります。"
         },
         "download": {
@@ -754,6 +755,11 @@
         },
         "storeEmbedControls": {
             "hostLabel": "現在 {{host}} を表示中"
+        },
+        "storeEmbed": {
+            "timeout": {
+                "message": "このページはまだ読み込みが完了していません"
+            }
         }
     },
     "welcome": {

@@ -550,6 +550,7 @@
             "drmBadge": "Nem érhető el: ez a játék Steam DRM-et használ, amelyhez szükség van a Steam alkalmazásra.",
             "failed": "Nem sikerült a(z) {{game}} indítása Steam nélkül.",
             "label": "Indítás Steam nélkül",
+            "needsSteam": "A(z) {{game}} közvetlenül az indítás után bezárult Steam nélkül, ezért valószínűleg szüksége van a Steam alkalmazásra. Ha a(z) „Indítás Steam nélkül” be van kapcsolva ennél a játéknál, kapcsolja ki a játék beállításaiban: Futtatás > Indítás Steam nélkül.",
             "warning": "Ez a játék a Steam API-t használja, vagy a GameLib nem tudta ellenőrizni. Steam nélkül bezárulhat, Steam-funkciók nélkül futhat, vagy újra megnyithatja a Steamet. Elveszíted a Steam Cloud-szinkronizálást, a játékidőt, a teljesítményeket és az átfedést."
         },
         "download": {
@@ -754,6 +755,11 @@
         },
         "storeEmbedControls": {
             "hostLabel": "Jelenleg megtekintve: {{host}}"
+        },
+        "storeEmbed": {
+            "timeout": {
+                "message": "Ez az oldal még nem töltődött be teljesen"
+            }
         }
     },
     "welcome": {

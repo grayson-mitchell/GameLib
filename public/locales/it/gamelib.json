@@ -559,6 +559,7 @@
             "drmBadge": "Non disponibile: questo gioco usa il DRM di Steam, che richiede l'app Steam.",
             "failed": "Impossibile avviare {{game}} senza Steam.",
             "label": "Avvia senza Steam",
+            "needsSteam": "{{game}} si è chiuso subito dopo l’avvio senza Steam, quindi probabilmente richiede l’app Steam. Se «Avvia senza Steam» è attivo per questo gioco, disattivalo nelle impostazioni del gioco: Esecuzione > Avvia senza Steam.",
             "warning": "Questo gioco usa l'API di Steam, oppure GameLib non ha potuto verificarlo. Senza Steam potrebbe chiudersi, funzionare senza le funzioni di Steam o riaprire Steam. Perderai la sincronizzazione Steam Cloud, il tempo di gioco, gli obiettivi e l'overlay."
         },
         "download": {
@@ -763,6 +764,11 @@
         },
         "storeEmbedControls": {
             "hostLabel": "Visualizzazione attuale: {{host}}"
+        },
+        "storeEmbed": {
+            "timeout": {
+                "message": "Questa pagina non ha ancora finito di caricarsi"
+            }
         }
     },
     "welcome": {

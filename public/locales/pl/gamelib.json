@@ -568,6 +568,7 @@
             "drmBadge": "Niedostępne: ta gra korzysta z Steam DRM, które wymaga aplikacji Steam.",
             "failed": "Nie udało się uruchomić gry {{game}} bez Steam.",
             "label": "Uruchom bez Steam",
+            "needsSteam": "Gra {{game}} zamknęła się zaraz po uruchomieniu bez Steam, więc prawdopodobnie potrzebuje aplikacji Steam. Jeśli dla tej gry włączono „Uruchom bez Steam”, wyłącz tę opcję w ustawieniach gry: Uruchamianie > Uruchom bez Steam.",
             "warning": "Ta gra korzysta z Steam API albo GameLib nie mógł tego sprawdzić. Bez Steam może się zamknąć, działać bez funkcji Steam albo ponownie otworzyć Steam. Utracisz synchronizację Steam Cloud, czas gry, osiągnięcia i nakładkę."
         },
         "download": {
@@ -772,6 +773,11 @@
         },
         "storeEmbedControls": {
             "hostLabel": "Obecnie przeglądasz {{host}}"
+        },
+        "storeEmbed": {
+            "timeout": {
+                "message": "Ta strona nie zakończyła jeszcze wczytywania"
+            }
         }
     },
     "welcome": {

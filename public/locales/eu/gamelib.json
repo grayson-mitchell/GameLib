@@ -550,6 +550,7 @@
             "drmBadge": "Ez dago erabilgarri: joko honek Steam DRM erabiltzen du, eta honek Steam aplikazioa behar du.",
             "failed": "Ezin izan da {{game}} Steam gabe abiarazi.",
             "label": "Abiarazi Steam gabe",
+            "needsSteam": "{{game}} Steam gabe abiarazi eta berehala itxi da, beraz, ziurrenik Steam aplikazioa behar du. Joko honetarako «Abiarazi Steam gabe» aktibatuta badago, desaktiba ezazu jokoaren ezarpenetan: Exekuzioa > Abiarazi Steam gabe.",
             "warning": "Joko honek Steam API erabiltzen du, edo GameLibek ezin izan du egiaztatu. Steam gabe, itxi egin daiteke, Steam eginbiderik gabe exekutatu daiteke edo Steam berriro ireki dezake. Steam Cloud sinkronizazioa, jokatutako denbora, lorpenak eta overlay-a galduko dituzu."
         },
         "download": {
@@ -754,6 +755,11 @@
         },
         "storeEmbedControls": {
             "hostLabel": "Une honetan ikusten: {{host}}"
+        },
+        "storeEmbed": {
+            "timeout": {
+                "message": "Orri hau ez da oraindik kargatzen amaitu"
+            }
         }
     },
     "welcome": {

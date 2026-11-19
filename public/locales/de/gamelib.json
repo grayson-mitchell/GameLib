@@ -441,6 +441,7 @@
             "drmBadge": "Nicht verfügbar: Dieses Spiel verwendet Steam DRM, wofür die Steam-App nötig ist.",
             "failed": "{{game}} konnte nicht ohne Steam gestartet werden.",
             "label": "Ohne Steam starten",
+            "needsSteam": "{{game}} wurde direkt nach dem Start ohne Steam beendet und braucht deshalb wahrscheinlich die Steam-App. Falls „Ohne Steam starten“ für dieses Spiel aktiviert ist, schalte es in den Einstellungen des Spiels aus: Ausführen > Ohne Steam starten.",
             "warning": "Dieses Spiel nutzt die Steam-API, oder GameLib konnte es nicht prüfen. Ohne Steam kann es sich beenden, ohne Steam-Funktionen laufen oder Steam erneut öffnen. Du verlierst Steam-Cloud-Synchronisierung, Spielzeit, Erfolge und das Overlay."
         },
         "install": {
@@ -754,6 +755,11 @@
         },
         "storeEmbedControls": {
             "hostLabel": "Momentan angezeigt: {{host}}"
+        },
+        "storeEmbed": {
+            "timeout": {
+                "message": "Diese Seite wurde noch nicht fertig geladen"
+            }
         }
     },
     "welcome": {
