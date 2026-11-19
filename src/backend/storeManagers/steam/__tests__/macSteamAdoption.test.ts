@@ -45,6 +45,7 @@ import {
   createScriptedRunner,
   type ScriptStep
 } from 'backend/testUtils/scriptedRunner'
+import { logWarning } from 'backend/logger'
 
 function acf(fields: Record<string, string>, mtimeMs = 1000): AcfSnapshot {
   const body = Object.entries({ appid: '264160', ...fields })
@@ -664,6 +665,69 @@ describe('createRestartDeps', () => {
     )
     expect(openUrlDetached).not.toHaveBeenCalled()
     expect(sendFrontendMessage).not.toHaveBeenCalled()
+  })
+
+  // Quick 261119-se9: a bridged session GameLib launched runs as wine processes, which the Rust
+  // scan cannot map to an appId; the launch bookkeeping is the signal and the Rust read is skipped.
+  test.each(['bridgeLaunchBottles', 'bridgeLaunchesInFlight'] as const)(
+    'darwin: a bridged launch in %s refuses the restart, Steam untouched, Rust not read',
+    async (mapName) => {
+      const requestRustInvoke = jest.fn().mockResolvedValue(0)
+      const openUrlDetached = jest.fn()
+      const sendFrontendMessage = jest.fn()
+      const gameSession = {
+        bridgeLaunchBottles: new Map<string, { bottle: string }>(),
+        bridgeLaunchesInFlight: new Map<string, Promise<boolean>>()
+      }
+      if (mapName === 'bridgeLaunchBottles') {
+        gameSession.bridgeLaunchBottles.set('206040', {
+          bottle: 'GameLibSteamBridge-206040'
+        })
+      } else {
+        gameSession.bridgeLaunchesInFlight.set('206040', Promise.resolve(true))
+      }
+      const deps = createRestartDeps(
+        base({
+          requestRustInvoke:
+            requestRustInvoke as unknown as RustInvokeDeps['requestRustInvoke'],
+          sendFrontendMessage,
+          macSteam: {
+            isSteamRunning: jest.fn().mockResolvedValue(true),
+            openUrlDetached
+          },
+          gameSession
+        })
+      )
+      await expect(restartSteamForAdoption('208400', deps)).resolves.toEqual({
+        kind: 'game-running',
+        runningAppId: 206040
+      })
+      expect(requestRustInvoke).not.toHaveBeenCalledWith(
+        RUST_STEAMPOLL_READ_RUNNING_APP_ID,
+        expect.anything()
+      )
+      expect(openUrlDetached).not.toHaveBeenCalled()
+      expect(sendFrontendMessage).not.toHaveBeenCalled()
+      expect(logWarning).toHaveBeenCalledWith(
+        '[Steam] not restarting Steam for 208400: game 206040 is running',
+        'Steam'
+      )
+    }
+  )
+
+  test('darwin: with no bridged session the read falls through to the Rust read', async () => {
+    const requestRustInvoke = jest.fn().mockResolvedValue(0)
+    const deps = createRestartDeps(
+      base({
+        requestRustInvoke:
+          requestRustInvoke as unknown as RustInvokeDeps['requestRustInvoke']
+      })
+    )
+    await expect(deps.readRunningAppId()).resolves.toBe(0)
+    expect(requestRustInvoke).toHaveBeenCalledWith(
+      RUST_STEAMPOLL_READ_RUNNING_APP_ID,
+      [{ strict: false }]
+    )
   })
 
   test('darwin: a rejected steampoll invoke reads as no game running (non-strict)', async () => {

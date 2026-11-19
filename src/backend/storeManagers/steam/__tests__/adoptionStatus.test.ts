@@ -394,6 +394,31 @@ describe('restartSteamNowForAdoption (D-02)', () => {
     ])
   })
 
+  test('macOS: a running bridged game refuses Restart Steam now with the game-running notice (quick 261119-se9)', async () => {
+    const h = harness({
+      script: [{ cmd: '/usr/bin/pgrep', result: { code: 0, stdout: '100\n' } }],
+      bridgeLaunched: { '206040': 'GameLibSteamBridge-206040' },
+      runningAppId: 0
+    })
+    await expect(restartSteamNowForAdoption(h.game, 'darwin')).resolves.toBe(
+      'game-running'
+    )
+    expect(h.openExternal).not.toHaveBeenCalled()
+    expect(
+      h.game.deps.steamProcesses.macSteam.openUrlDetached
+    ).not.toHaveBeenCalled()
+    expect(h.store.has(APP_ID)).toBe(true)
+    expect(notices(h)).toEqual([
+      {
+        appId: APP_ID,
+        title: 'Dota 2',
+        kind: 'adopt-restart-game-running',
+        launchWithoutSteam: false,
+        seq: 7
+      }
+    ])
+  })
+
   test('Steam never quits within 30 s: quit-timeout notice, only steam://exit fired, record kept', async () => {
     const h = harness({ script: [{ ...pgrepRunning, repeat: true }] })
     await expect(restartSteamNowForAdoption(h.game, 'linux')).resolves.toBe(

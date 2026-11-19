@@ -1,4 +1,7 @@
-import { createSteamGameSessionState } from '../gameSessionState'
+import {
+  createSteamGameSessionState,
+  runningBridgedAppId
+} from '../gameSessionState'
 
 /**
  * 66.3-13 (D-05): the per-session game maps are one boot-owned instance, not module state, so each
@@ -39,4 +42,49 @@ describe('createSteamGameSessionState', () => {
     expect(two.loggedEmptyGameInfoMisses.size).toBe(0)
     expect(two.bridgeLaunchesInFlight.size).toBe(0)
   })
+})
+
+describe('runningBridgedAppId (quick 261119-se9)', () => {
+  it('is 0 with empty maps', () => {
+    expect(runningBridgedAppId(createSteamGameSessionState())).toBe(0)
+  })
+
+  it('counts a spawned bridged launch', () => {
+    const session = createSteamGameSessionState()
+    session.bridgeLaunchBottles.set('206040', {
+      bottle: 'GameLibSteamBridge-206040'
+    })
+    expect(runningBridgedAppId(session)).toBe(206040)
+  })
+
+  it('counts a launch that is only in pre-flight', () => {
+    const session = createSteamGameSessionState()
+    session.bridgeLaunchesInFlight.set('206040', Promise.resolve(true))
+    expect(runningBridgedAppId(session)).toBe(206040)
+  })
+
+  it('returns the numeric minimum across both maps, not the lexicographic one', () => {
+    const session = createSteamGameSessionState()
+    session.bridgeLaunchBottles.set('206040', { bottle: 'a' })
+    session.bridgeLaunchesInFlight.set('99999', Promise.resolve(true))
+    expect(runningBridgedAppId(session)).toBe(99999)
+  })
+
+  it('is 0 again once both keys are deleted', () => {
+    const session = createSteamGameSessionState()
+    session.bridgeLaunchBottles.set('206040', { bottle: 'a' })
+    session.bridgeLaunchesInFlight.set('206040', Promise.resolve(true))
+    session.bridgeLaunchBottles.delete('206040')
+    session.bridgeLaunchesInFlight.delete('206040')
+    expect(runningBridgedAppId(session)).toBe(0)
+  })
+
+  it.each(['', '0', 'abc'])(
+    'ignores the non-positive-integer key %p',
+    (key) => {
+      const session = createSteamGameSessionState()
+      session.bridgeLaunchBottles.set(key, { bottle: 'a' })
+      expect(runningBridgedAppId(session)).toBe(0)
+    }
+  )
 })
