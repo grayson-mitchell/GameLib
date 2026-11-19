@@ -7,10 +7,14 @@ import { applyTheme } from '../applyTheme'
 import {
   customThemeKey,
   DEFAULT_THEME_KEY,
+  parseCustomThemes,
   resolveThemeKey
 } from '../customTheme'
 
 const FALLBACK = DEFAULT_THEME_KEY
+// CR-01 (64-REVIEW): attacker.example is a reserved name; jsdom fetches nothing.
+const LAYERED_IMAGE_SET =
+  'linear-gradient(red, blue), image-set("https://attacker.example/p.png" 1x)'
 const builtinKeys = Object.keys(defaultThemes)
 
 const dracula: CustomTheme = {
@@ -52,6 +56,31 @@ describe('applyTheme', () => {
     expect(themeClassesOn(body)).toEqual(['dracula'])
     expect(body.style.getPropertyValue('--accent')).toBe('#112233')
     expect(body.style.getPropertyValue('--background')).toBe('#000000')
+  })
+
+  it('CR-01: a stored layered image-set gradient never reaches body.style at boot', () => {
+    const id = 'aaaaaaaaaaaaaaaa'
+    const raw = [
+      {
+        id,
+        name: 'Planted',
+        base: 'dracula',
+        tokens: {
+          '--gradient-gamecard': LAYERED_IMAGE_SET,
+          '--gradient-01': 'linear-gradient(90deg, #000, #333)',
+          '--accent': '#112233'
+        }
+      }
+    ]
+    // `() => true` stands in for WKWebView's CSS.supports, which CR-01 measured
+    // returning true for the payload.
+    const parsed = parseCustomThemes(raw, () => true)
+    expect(parsed[0].tokens).not.toHaveProperty('--gradient-gamecard')
+    expect(parsed[0].tokens).toHaveProperty('--gradient-01')
+    expect(parsed[0].tokens).toHaveProperty('--accent')
+    applyTheme(body, customThemeKey(id), parsed, FALLBACK)
+    expect(body.style.getPropertyValue('--gradient-gamecard')).toBe('')
+    expect(body.style.cssText).not.toContain('image-set')
   })
 
   it('removes the inline properties when switching to a built-in theme', () => {

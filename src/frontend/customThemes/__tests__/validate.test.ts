@@ -6,6 +6,10 @@ import {
 
 const yes = () => true
 const GOOD = 'linear-gradient(90deg, #000, #333)'
+// CR-01 (64-REVIEW): a second comma-separated layer is grammatical, so WKWebView's
+// CSS.supports answered true for this. attacker.example is a reserved name.
+const LAYERED_IMAGE_SET =
+  'linear-gradient(red, blue), image-set("https://attacker.example/p.png" 1x)'
 
 describe('validateColourInput', () => {
   it('re-stores a colour canonically', () => {
@@ -95,5 +99,41 @@ describe('isValidTokenValue', () => {
         yes
       )
     ).toBe(false)
+  })
+})
+
+describe('CR-01: one gradient layer only (T-64-12)', () => {
+  it('refuses the layered image-set payload before asking supports', () => {
+    const supports = jest.fn(() => true)
+    expect(isValidGradient(LAYERED_IMAGE_SET, supports)).toBe(false)
+    expect(supports).not.toHaveBeenCalled()
+    expect(
+      isValidTokenValue('--gradient-01', LAYERED_IMAGE_SET, supports)
+    ).toBe(false)
+    expect(supports).not.toHaveBeenCalled()
+  })
+
+  it('refuses a second gradient layer even though each layer is valid', () => {
+    const supports = jest.fn(() => true)
+    expect(
+      isValidGradient(
+        'linear-gradient(red, blue), linear-gradient(green, black)',
+        supports
+      )
+    ).toBe(false)
+    expect(supports).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['a doubled final paren', 'linear-gradient(red, blue))'],
+    ['a doubled opening paren', 'linear-gradient((red, blue)'],
+    [
+      'two space-joined gradients',
+      'linear-gradient(red, blue) linear-gradient(green, black)'
+    ]
+  ])('refuses a gradient with %s', (_n, text) => {
+    const supports = jest.fn(() => true)
+    expect(isValidGradient(text, supports)).toBe(false)
+    expect(supports).not.toHaveBeenCalled()
   })
 })

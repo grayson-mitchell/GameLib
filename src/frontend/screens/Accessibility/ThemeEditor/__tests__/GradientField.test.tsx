@@ -20,6 +20,9 @@ const ERROR =
   'Enter a plain CSS gradient, for example linear-gradient(90deg, #000, #333). var() and url() aren’t allowed.'
 const yes = () => true
 const no = () => false
+// CR-01 (64-REVIEW): attacker.example is a reserved name; jsdom fetches nothing.
+const LAYERED_IMAGE_SET =
+  'linear-gradient(red, blue), image-set("https://attacker.example/p.png" 1x)'
 
 afterEach(cleanup)
 
@@ -111,6 +114,23 @@ describe('GradientField', () => {
 
   it('never paints an untrusted stored value the engine does not accept', () => {
     const { strip } = setup('url(https://x)')
+    expect(strip().dataset.gradient).toBe('')
+    expect(strip().style.backgroundImage).toBe('')
+  })
+
+  it('CR-01: never paints or commits a typed layered image-set payload', () => {
+    const { field, onCommit, strip, type } = setup(GOOD)
+    type(LAYERED_IMAGE_SET)
+    expect(screen.getByText(ERROR)).toBeTruthy()
+    expect(strip().dataset.gradient).toContain('linear-gradient(90deg')
+    expect(strip().dataset.gradient).not.toContain('image-set')
+    fireEvent.blur(field)
+    expect(onCommit).not.toHaveBeenCalled()
+    expect(field.value).toBe(GOOD)
+  })
+
+  it('CR-01: never paints a stored layered image-set payload', () => {
+    const { strip } = setup(LAYERED_IMAGE_SET)
     expect(strip().dataset.gradient).toBe('')
     expect(strip().style.backgroundImage).toBe('')
   })
