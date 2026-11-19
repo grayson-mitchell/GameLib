@@ -9,7 +9,6 @@
     "src/frontend/components/UI/Header/__tests__/headerTourAnchors.test.tsx": 20,
     "src/frontend/components/UI/HumbleExpiryToast/__tests__/humbleExpiryToastSuppression.test.tsx": 5,
     "src/frontend/components/UI/InfoIcon/__tests__/index.test.tsx": 5,
-    "src/frontend/components/UI/NoticeStack/__tests__/NoticeStack.test.tsx": 4,
     "src/frontend/components/UI/PathSelectionBox/__tests__/index.test.tsx": 7,
     "src/frontend/components/UI/PopoverComponent/__tests__/index.test.tsx": 1,
     "src/frontend/components/UI/ReadOnlyStoresNotice/__tests__/ReadOnlyStoresNotice.test.tsx": 5,

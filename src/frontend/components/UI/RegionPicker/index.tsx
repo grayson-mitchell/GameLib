@@ -2,7 +2,7 @@ import { MenuItem, Select } from '@mui/material'
 
 import './index.css'
 
-export interface RegionPickerOption {
+interface RegionPickerOption {
   countryCode: string
   label: string
   /** Shown as a pill and in the selected value; omitted for Store Search. */

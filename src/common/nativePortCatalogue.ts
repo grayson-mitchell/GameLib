@@ -11,8 +11,8 @@
  */
 import catalogueJson from './nativePortCatalogue.json'
 
-export type NativePortMac = 'arm64' | 'universal' | 'x86' | 'none'
-export type NativePortDataStyle = 'point' | 'copy' | 'import'
+type NativePortMac = 'arm64' | 'universal' | 'x86' | 'none'
+type NativePortDataStyle = 'point' | 'copy' | 'import'
 
 export interface NativePortEntry {
   readonly id: string

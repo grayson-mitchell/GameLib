@@ -1,32 +1,11 @@
+/**
+ * @jest-environment jsdom
+ */
+import 'frontend/testUtils/jsdomNoticeEnv'
 import type { ReactElement } from 'react'
 
-jest.mock('../index.scss', () => ({}))
-jest.mock('frontend/components/UI/SteamEngineLaunchNotice', () => ({
-  __esModule: true,
-  default: function SteamStub() {
-    return null
-  }
-}))
-jest.mock('frontend/components/UI/ReadOnlyStoresNotice', () => ({
-  __esModule: true,
-  default: function ReadOnlyStub() {
-    return null
-  }
-}))
-jest.mock('frontend/components/UI/ThemeSaveFailedNotice', () => ({
-  __esModule: true,
-  default: function ThemeSaveFailedStub() {
-    return null
-  }
-}))
-jest.mock('frontend/components/UI/HumbleExpiryToast', () => ({
-  __esModule: true,
-  default: function HumbleStub() {
-    return null
-  }
-}))
-
-// Imported after the mocks above (no jest.mock hoisting in this setup).
+// The real notice modules are loaded; the test checks element-type identity
+// only, so nothing renders.
 import SteamEngineLaunchNotice from 'frontend/components/UI/SteamEngineLaunchNotice'
 import ReadOnlyStoresNotice from 'frontend/components/UI/ReadOnlyStoresNotice'
 import ThemeSaveFailedNotice from 'frontend/components/UI/ThemeSaveFailedNotice'
