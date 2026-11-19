@@ -1728,6 +1728,7 @@ async fn delta_body(
         },
         macho_exec_applied: c.macho_exec.load(Ordering::Relaxed) as u32,
         shebang_exec_applied: c.shebang_exec.load(Ordering::Relaxed) as u32,
+        elf_exec_applied: c.elf_exec.load(Ordering::Relaxed) as u32,
         path_collisions,
         elapsed_ms: started.elapsed().as_millis() as u64,
     };

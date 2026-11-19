@@ -167,6 +167,7 @@ export interface RustOutcome {
     containers: { vz: number; vsza: number; pk: number }
     machoExecApplied: number
     shebangExecApplied: number
+    elfExecApplied?: number
     pathCollisions: number
     elapsedMs: number
   }

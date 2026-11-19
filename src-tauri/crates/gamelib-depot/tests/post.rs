@@ -899,3 +899,69 @@ fn windows_drive_root_keeps_its_prefix() {
         PathBuf::from(r"\\?\C:\Temp\lib\a\b.bin")
     );
 }
+
+mod elf_fallback {
+    use super::*;
+    use gamelib_depot::post::{apply_elf_fallback, is_shared_object_name};
+
+    fn elf(e_type: u16, data: u8) -> Vec<u8> {
+        let mut b = vec![0u8; 64];
+        b[..4].copy_from_slice(b"\x7fELF");
+        b[4] = 2;
+        b[5] = data;
+        let t = if data == 1 {
+            e_type.to_le_bytes()
+        } else {
+            e_type.to_be_bytes()
+        };
+        b[16..18].copy_from_slice(&t);
+        b
+    }
+
+    #[cfg(unix)]
+    fn run(rel: &str, bytes: &[u8], flags: u32) -> (u32, bool) {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join(rel);
+        std::fs::create_dir_all(p.parent().unwrap()).unwrap();
+        std::fs::write(&p, bytes).unwrap();
+        std::fs::set_permissions(&p, std::fs::Permissions::from_mode(0o644)).unwrap();
+        let mut r = ModeReport::default();
+        let applied = apply_elf_fallback(&p, flags, &mut r);
+        (
+            std::fs::metadata(&p).unwrap().permissions().mode() & 0o7777,
+            applied,
+        )
+    }
+
+    #[test]
+    fn so_names() {
+        for n in ["/r/libx.so", "/r/libx.so.1.2", "/r/LIBX.SO"] {
+            assert!(is_shared_object_name(Path::new(n)), "{n}");
+        }
+        for n in ["/r/adom", "/r/Amnesia.bin.x86_64", "/r/solver"] {
+            assert!(!is_shared_object_name(Path::new(n)), "{n}");
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn chmods_exec_and_pie_both_endians() {
+        assert_eq!(run("adom", &elf(2, 1), 0), (0o755, true));
+        assert_eq!(run("bin/game", &elf(3, 1), 0), (0o755, true));
+        assert_eq!(run("game", &elf(2, 2), 0), (0o755, true));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn leaves_everything_else_alone() {
+        assert_eq!(run("libx.so", &elf(3, 1), 0), (0o644, false));
+        assert_eq!(run("x.o", &elf(1, 1), 0), (0o644, false)); // ET_REL
+        assert_eq!(
+            run("data.bin", b"not an elf at all, just text", 0),
+            (0o644, false)
+        );
+        assert_eq!(run("short", b"\x7fELF", 0), (0o644, false));
+        assert_eq!(run("flagged", &elf(2, 1), 32), (0o644, false)); // flag owns it
+    }
+}
