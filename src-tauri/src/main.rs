@@ -115,51 +115,51 @@ mod store_embed_handoff_policy;
 // macOS-only module above for the same reason.
 mod epic_embed_js_dialog;
 
+mod app_lifecycle;
 mod clipboard;
-mod keyring_dispatch;
-mod wake_lock;
-mod terminate_veto;
-mod tray;
-mod relay_commands;
-mod shell_open;
-mod login_window;
-mod store_embed;
-mod rust_dispatch;
-mod single_instance;
-mod ipc_contract;
-mod sidecar;
-mod shell_state;
-mod notification_show;
+mod depot_dispatch;
 mod dialogs;
+mod ipc_contract;
+mod keyring_dispatch;
+mod login_window;
+mod notification_show;
+mod relay_commands;
+mod rust_dispatch;
 mod scan_dispatch;
+mod shell_open;
+mod shell_state;
+mod sidecar;
+mod single_instance;
+mod steam_window;
+mod steamcm_dispatch;
 mod steamfiles_dispatch;
 mod steampoll_dispatch;
-mod steamcm_dispatch;
-mod depot_dispatch;
-mod app_lifecycle;
-mod steam_window;
+mod store_embed;
+mod terminate_veto;
+mod tray;
+mod wake_lock;
+use app_lifecycle::*;
 use clipboard::*;
-use keyring_dispatch::*;
-use wake_lock::*;
-use terminate_veto::*;
-use tray::*;
-use relay_commands::*;
-use login_window::*;
-use store_embed::*;
-use rust_dispatch::*;
-use single_instance::*;
-use ipc_contract::*;
-use sidecar::*;
-use shell_state::*;
-use notification_show::*;
+use depot_dispatch::*;
 use dialogs::*;
+use ipc_contract::*;
+use keyring_dispatch::*;
+use login_window::*;
+use notification_show::*;
+use relay_commands::*;
+use rust_dispatch::*;
 use scan_dispatch::*;
+use shell_state::*;
+use sidecar::*;
+use single_instance::*;
+use steam_window::*;
+use steamcm_dispatch::*;
 use steamfiles_dispatch::*;
 use steampoll_dispatch::*;
-use steamcm_dispatch::*;
-use depot_dispatch::*;
-use app_lifecycle::*;
-use steam_window::*;
+use store_embed::*;
+use terminate_veto::*;
+use tray::*;
+use wake_lock::*;
 
 /// Invoke response timeout — a skeleton guardrail so a hung sidecar cannot wedge a command.
 const INVOKE_TIMEOUT: Duration = Duration::from_secs(60);
@@ -750,7 +750,10 @@ type PrimaryListener = WindowsPrimaryPipe;
 type PrimaryListener = ();
 
 /// `RunEvent::Exit`: cancel depot jobs, reap the sidecar, release power assertions, remove the socket.
-fn handle_exit(app_handle: &tauri::AppHandle, single_instance_socket_path: Option<&std::path::Path>) {
+fn handle_exit(
+    app_handle: &tauri::AppHandle,
+    single_instance_socket_path: Option<&std::path::Path>,
+) {
     // D-08: cancel every depot job and give finalize (the 1026 record) up to 5 s to
     // land BEFORE the sidecar is killed. Count only; no job detail is logged.
     let still_running = gamelib_depot::registry::cancel_all_and_wait(EXIT_FINALIZE_WAIT);
@@ -820,18 +823,9 @@ fn spawn_sidecar_state(app: &tauri::App) -> Result<Arc<SidecarState>, Box<dyn st
     };
     #[cfg(windows)]
     let job = create_kill_on_close_job(&child);
-    let stdin = child
-        .stdin
-        .take()
-        .ok_or("sidecar stdin unavailable")?;
-    let stdout = child
-        .stdout
-        .take()
-        .ok_or("sidecar stdout unavailable")?;
-    let stderr = child
-        .stderr
-        .take()
-        .ok_or("sidecar stderr unavailable")?;
+    let stdin = child.stdin.take().ok_or("sidecar stdin unavailable")?;
+    let stdout = child.stdout.take().ok_or("sidecar stdout unavailable")?;
+    let stderr = child.stderr.take().ok_or("sidecar stderr unavailable")?;
 
     let state = Arc::new(SidecarState {
         stdin: Mutex::new(stdin),
@@ -873,9 +867,7 @@ fn start_single_instance_accept_loop(
                 let stream = match incoming {
                     Ok(s) => s,
                     Err(e) => {
-                        shell_eprintln!(
-                            "[shell] WARN: single-instance accept() failed: {e}"
-                        );
+                        shell_eprintln!("[shell] WARN: single-instance accept() failed: {e}");
                         continue;
                     }
                 };
@@ -974,7 +966,9 @@ fn start_single_instance_accept_loop(
     if let Some(primary) = primary_listener {
         let accept_state = state.clone();
         let accept_app_handle = app.handle().clone();
-        thread::spawn(move || run_windows_single_instance_accept_loop(primary, accept_state, accept_app_handle));
+        thread::spawn(move || {
+            run_windows_single_instance_accept_loop(primary, accept_state, accept_app_handle)
+        });
     }
 
     #[cfg(not(any(unix, windows)))]
@@ -1311,9 +1305,7 @@ fn build_tray_icon(app: &tauri::App, no_tray_icon: bool) {
     // `noTrayIcon` (tray_icon.ts:20's `if (noTrayIcon) return null`). Decided BEFORE
     // the tray is built, so the user never sees an icon they asked not to have.
     if no_tray_icon {
-        shell_eprintln!(
-            "[shell] tray suppressed by the noTrayIcon setting -- not building a tray"
-        );
+        shell_eprintln!("[shell] tray suppressed by the noTrayIcon setting -- not building a tray");
     } else {
         match build_tray_menu(app.handle()) {
             Some(menu) => {
@@ -1435,8 +1427,7 @@ fn install_login_sheet_esc_monitor(app: &tauri::App) {
     // cancel strip (above) remains the primary route.
     let esc_app_handle = app.handle().clone();
     let esc_monitor_handler = block2::RcBlock::new(
-        move |event: std::ptr::NonNull<objc2_app_kit::NSEvent>|
-              -> *mut objc2_app_kit::NSEvent {
+        move |event: std::ptr::NonNull<objc2_app_kit::NSEvent>| -> *mut objc2_app_kit::NSEvent {
             // SAFETY: AppKit hands local monitor handlers a valid, live `NSEvent`
             // for the duration of this call.
             let event_ref = unsafe { event.as_ref() };
@@ -1478,13 +1469,10 @@ fn install_login_sheet_esc_monitor(app: &tauri::App) {
             let Some(event_window) = event_ref.window(mtm) else {
                 return event.as_ptr();
             };
-            let event_window_addr =
-                (&*event_window) as *const objc2_app_kit::NSWindow as usize;
+            let event_window_addr = (&*event_window) as *const objc2_app_kit::NSWindow as usize;
 
             for label in &presented {
-                if login_window_ns_window(&esc_app_handle, label)
-                    == Some(event_window_addr)
-                {
+                if login_window_ns_window(&esc_app_handle, label) == Some(event_window_addr) {
                     // 5. Match: dismiss and consume -- the page never also sees
                     // this Esc.
                     request_login_sheet_cancel(&esc_app_handle, label, "esc");
@@ -1532,9 +1520,9 @@ fn hide_for_no_gui_or_open_devtools(app: &tauri::App, no_gui: bool) {
                 let _ = window.hide();
                 shell_eprintln!("[shell] --no-gui: main window hidden");
             }
-            None => shell_eprintln!(
-                "[shell] WARN: --no-gui: no 'main' webview window found to hide"
-            ),
+            None => {
+                shell_eprintln!("[shell] WARN: --no-gui: no 'main' webview window found to hide")
+            }
         }
     } else {
         // Dev-only: force the webview devtools open (the dev webview exposes no
@@ -1845,7 +1833,9 @@ fn main() {
                     macos_terminate_veto::mark_exiting();
                 }
             }
-            tauri::RunEvent::Exit => handle_exit(app_handle, single_instance_socket_path_var.as_deref()),
+            tauri::RunEvent::Exit => {
+                handle_exit(app_handle, single_instance_socket_path_var.as_deref())
+            }
             _ => {}
         });
 }
@@ -1918,8 +1908,8 @@ fn install_os_deep_link_handler(app: &tauri::App, state: &Arc<SidecarState>) {
         // Ends only when the sender is dropped, i.e. at process exit.
         for url in deep_link_rx {
             let started = std::time::Instant::now();
-            let outcome = deep_link_state
-                .invoke("handleProtocolUrl".to_string(), vec![Value::String(url)]);
+            let outcome =
+                deep_link_state.invoke("handleProtocolUrl".to_string(), vec![Value::String(url)]);
             let elapsed_ms = started.elapsed().as_millis();
             match outcome {
                 Ok(_) => shell_diag(&format!(
@@ -2160,7 +2150,10 @@ mod tests {
         if !mentions_test {
             return CfgTest::Other;
         }
-        let Some(inner) = line.strip_prefix("#[cfg(all(").and_then(|r| r.strip_suffix("))]")) else {
+        let Some(inner) = line
+            .strip_prefix("#[cfg(all(")
+            .and_then(|r| r.strip_suffix("))]"))
+        else {
             return CfgTest::Ambiguous;
         };
         let mut args: Vec<String> = Vec::new();
@@ -2248,15 +2241,22 @@ mod tests {
     /// The shell source with each file's own test modules cut, so a literal needle cannot
     /// self-match in a co-located test.
     fn shell_production_source() -> String {
-        SHELL_SOURCE_PARTS.iter().map(|p| cut_test_modules(p)).collect::<Vec<_>>().join("\n")
+        SHELL_SOURCE_PARTS
+            .iter()
+            .map(|p| cut_test_modules(p))
+            .collect::<Vec<_>>()
+            .join("\n")
     }
 
     #[test]
     fn shell_source_parts_align_with_file_names() {
         assert_eq!(SHELL_SOURCE_PARTS.len(), SHELL_SOURCE_FILES.len());
         for (i, name) in SHELL_SOURCE_FILES.iter().enumerate() {
-            let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src").join(name);
-            let on_disk = std::fs::read_to_string(&path).expect("shell source file must be readable");
+            let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("src")
+                .join(name);
+            let on_disk =
+                std::fs::read_to_string(&path).expect("shell source file must be readable");
             assert!(SHELL_SOURCE_PARTS[i] == on_disk, "part {i} is not {name}");
         }
     }
@@ -2300,8 +2300,13 @@ mod tests {
     fn shell_production_source_main_part_equals_pre_test_slice() {
         let main = SHELL_SOURCE_PARTS[0];
         let opener = concat!("#[cfg(test)]\n", "mod tests", " {");
-        let at = main.find(opener).expect("main.rs test module opener not found");
-        assert!(cut_test_modules(main) == main[..at], "main.rs production text differs from the pre-test slice");
+        let at = main
+            .find(opener)
+            .expect("main.rs test module opener not found");
+        assert!(
+            cut_test_modules(main) == main[..at],
+            "main.rs production text differs from the pre-test slice"
+        );
     }
 
     /// Guard: a new shell module file must be named in `SHELL_SOURCE_FILES`, or the source-text
@@ -2331,8 +2336,15 @@ mod tests {
             }
         }
         let mut found = Vec::new();
-        walk(&std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src"), "", &mut found);
-        assert!(found.len() > PRE_EXISTING_SIBLINGS.len(), "src walk found too few files");
+        walk(
+            &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src"),
+            "",
+            &mut found,
+        );
+        assert!(
+            found.len() > PRE_EXISTING_SIBLINGS.len(),
+            "src walk found too few files"
+        );
         let missing: Vec<&String> = found
             .iter()
             .filter(|f| !PRE_EXISTING_SIBLINGS.contains(&f.as_str()))
@@ -2363,7 +2375,9 @@ mod tests {
         ];
         assert!(!needles.is_empty());
         let main = include_str!("main.rs");
-        let at = main.find(concat!("\n", "mod tests", " {")).expect("tests module opener");
+        let at = main
+            .find(concat!("\n", "mod tests", " {"))
+            .expect("tests module opener");
         let tests_text = &main[at..];
         for needle in needles {
             assert!(
@@ -2460,7 +2474,10 @@ mod tests {
     // and the first failing field in declared order wins (T-67-69).
     #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
     fn open_obj_with(key: &str, bad: Value) -> Vec<Value> {
-        let mut obj = wire_args("store_embed_open")[0].as_object().unwrap().clone();
+        let mut obj = wire_args("store_embed_open")[0]
+            .as_object()
+            .unwrap()
+            .clone();
         obj.insert(key.to_string(), bad);
         vec![Value::Object(obj)]
     }
@@ -2476,20 +2493,35 @@ mod tests {
             );
         }
         // Absent required field, not just a wrong type.
-        let mut obj = wire_args("store_embed_open")[0].as_object().unwrap().clone();
+        let mut obj = wire_args("store_embed_open")[0]
+            .as_object()
+            .unwrap()
+            .clone();
         obj.remove("storeKey");
         assert_eq!(
             store_embed_open_args(&[Value::Object(obj)]).unwrap_err(),
             "store_embed_open:bad-args:storeKey"
         );
         // Optional homeUrl: absent and null are fine.
-        let mut obj = wire_args("store_embed_open")[0].as_object().unwrap().clone();
+        let mut obj = wire_args("store_embed_open")[0]
+            .as_object()
+            .unwrap()
+            .clone();
         obj.remove("homeUrl");
-        assert!(store_embed_open_args(&[Value::Object(obj.clone())]).unwrap().6.is_none());
+        assert!(store_embed_open_args(&[Value::Object(obj.clone())])
+            .unwrap()
+            .6
+            .is_none());
         obj.insert("homeUrl".into(), Value::Null);
-        assert!(store_embed_open_args(&[Value::Object(obj)]).unwrap().6.is_none());
+        assert!(store_embed_open_args(&[Value::Object(obj)])
+            .unwrap()
+            .6
+            .is_none());
         // Missing / non-object argument is the bare string.
-        assert_eq!(store_embed_open_args(&[]).unwrap_err(), "store_embed_open:bad-args");
+        assert_eq!(
+            store_embed_open_args(&[]).unwrap_err(),
+            "store_embed_open:bad-args"
+        );
         assert_eq!(
             store_embed_open_args(&[Value::Null]).unwrap_err(),
             "store_embed_open:bad-args"
@@ -2500,7 +2532,10 @@ mod tests {
     #[test]
     fn store_embed_set_bounds_field_errors_name_each_bad_field() {
         for key in ["x", "y", "w", "h"] {
-            let mut obj = wire_args("store_embed_set_bounds")[0].as_object().unwrap().clone();
+            let mut obj = wire_args("store_embed_set_bounds")[0]
+                .as_object()
+                .unwrap()
+                .clone();
             obj.insert(key.to_string(), Value::String("nope".into()));
             assert_eq!(
                 store_embed_set_bounds_args(&[Value::Object(obj)]).unwrap_err(),
@@ -3744,7 +3779,9 @@ mod tests {
         // fail based on the deliberately-unfixed twin site elsewhere in this file.
         let end = lines[start + 1..]
             .iter()
-            .position(|l| l.starts_with("fn ") || l.starts_with("pub fn ") || l.starts_with("pub(crate) fn "))
+            .position(|l| {
+                l.starts_with("fn ") || l.starts_with("pub fn ") || l.starts_with("pub(crate) fn ")
+            })
             .map(|offset| start + 1 + offset)
             .expect(concat!(
                 "epic-cold-jar-login-timeout regression: could not find the end of ",
@@ -4377,7 +4414,10 @@ mod tests {
     #[test]
     fn steam_root_default_env_is_passed_on_both_spawn_paths() {
         let src = include_str!("sidecar.rs");
-        assert_eq!(src.matches(".env(\"GAMELIB_STEAM_ROOT_DEFAULT\"").count(), 2);
+        assert_eq!(
+            src.matches(".env(\"GAMELIB_STEAM_ROOT_DEFAULT\"").count(),
+            2
+        );
         assert!(src.contains("gamelib_steamfiles::discover::discover_default()"));
     }
 }

@@ -1704,6 +1704,7 @@ dependencies = [
  "webview2-com",
  "windows",
  "windows-sys 0.60.2",
+ "x11rb",
 ]
 
 [[package]]

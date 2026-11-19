@@ -193,7 +193,7 @@ export async function restartSteamNowForAdoption(
 }
 
 /**
- * Windows only: asks the shell to raise Steam's own window. The note shows "Open Steam" only while
+ * Windows and Linux (X11): asks the shell to raise Steam's own window. The note shows "Open Steam" only while
  * Steam is signed out, and a signed-out Steam holds `steam://open/main` until login finishes (its
  * console_log shows no `ExecCommandLine` for the presses made at the sign-in window, then one
  * deferred `steam://open/main` right after login), so the URL alone never brings the sign-in window
@@ -219,7 +219,7 @@ async function raiseSteamWindowForAdoption(
 
 /**
  * D-03: brings Steam forward (no activate:false, which would send the open to the background).
- * macOS and Linux: the URL alone does it. Windows: the shell raises Steam's window first (see
+ * macOS: the URL alone does it. Windows and Linux (X11): the shell raises Steam's window first (see
  * `raiseSteamWindowForAdoption`), then the same URL goes out, which still starts Steam when it is
  * not running and shows the main window when it is hidden in the tray.
  */
@@ -228,7 +228,8 @@ export async function openSteamForAdoption(
   platform: NodeJS.Platform = hostPlatform()
 ): Promise<void> {
   logInfo('SteamGame: opening Steam from the adoption note', LogPrefix.Steam)
-  if (platform === 'win32') await raiseSteamWindowForAdoption(deps)
+  if (platform === 'win32' || platform === 'linux')
+    await raiseSteamWindowForAdoption(deps)
   await deps.openExternal.openExternal('steam://open/main')
 }
 

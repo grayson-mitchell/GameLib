@@ -1,21 +1,21 @@
-    use std::sync::mpsc::{channel as mpsc_channel, Sender};
-    use std::sync::OnceLock;
-    use std::thread;
+use std::sync::mpsc::{channel as mpsc_channel, Sender};
+use std::sync::OnceLock;
+use std::thread;
 
-    pub const ES_CONTINUOUS: u32 = 0x8000_0000;
-    pub const ES_SYSTEM_REQUIRED: u32 = 0x0000_0001;
-    pub const ES_DISPLAY_REQUIRED: u32 = 0x0000_0002;
+pub const ES_CONTINUOUS: u32 = 0x8000_0000;
+pub const ES_SYSTEM_REQUIRED: u32 = 0x0000_0001;
+pub const ES_DISPLAY_REQUIRED: u32 = 0x0000_0002;
 
-    #[link(name = "kernel32")]
-    extern "system" {
-        fn SetThreadExecutionState(es_flags: u32) -> u32;
-    }
+#[link(name = "kernel32")]
+extern "system" {
+    fn SetThreadExecutionState(es_flags: u32) -> u32;
+}
 
-    static FLAG_THREAD: OnceLock<Sender<u32>> = OnceLock::new();
+static FLAG_THREAD: OnceLock<Sender<u32>> = OnceLock::new();
 
-    /// Post a recomputed flag word to the long-lived holder thread, starting it if needed.
-    pub fn apply(flags: u32) -> Result<(), String> {
-        let sender = FLAG_THREAD.get_or_init(|| {
+/// Post a recomputed flag word to the long-lived holder thread, starting it if needed.
+pub fn apply(flags: u32) -> Result<(), String> {
+    let sender = FLAG_THREAD.get_or_init(|| {
             let (tx, rx) = mpsc_channel::<u32>();
             thread::spawn(move || {
                 // This thread must OUTLIVE every assertion it takes; it parks here for the
@@ -34,7 +34,7 @@
             });
             tx
         });
-        sender
-            .send(flags)
-            .map_err(|_| "wake_lock:flag-thread-gone".to_string())
-    }
+    sender
+        .send(flags)
+        .map_err(|_| "wake_lock:flag-thread-gone".to_string())
+}

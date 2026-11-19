@@ -101,8 +101,7 @@ pub(crate) fn rpc_keyring_get(channel: &str, args: &[Value]) -> Result<Value, St
     let a = KeyringGetArgs::from_args(args)?;
     let account = keyring_account(a.slot.as_deref().unwrap_or(KEYRING_DEFAULT_SLOT))?;
     let result = bounded_keyring_read(KEYRING_READ_TIMEOUT, move || {
-        let outcome =
-            Entry::new(KEYRING_SERVICE, account).and_then(|entry| entry.get_password());
+        let outcome = Entry::new(KEYRING_SERVICE, account).and_then(|entry| entry.get_password());
         keyring_get_result(outcome)
     });
     // Four explicit branches, each emitting exactly one line: the Ok arm is split on
@@ -229,8 +228,7 @@ pub(crate) fn rpc_keyring_available(channel: &str, args: &[Value]) -> Result<Val
     //
     // Validated for its rejection contract, intentionally unused for the lookup.
     let a = KeyringAvailableArgs::from_args(args)?;
-    let _validated_slot =
-        keyring_account(a.slot.as_deref().unwrap_or(KEYRING_DEFAULT_SLOT))?;
+    let _validated_slot = keyring_account(a.slot.as_deref().unwrap_or(KEYRING_DEFAULT_SLOT))?;
     match Entry::new(KEYRING_SERVICE, KEYRING_REACHABILITY_PROBE_ACCOUNT) {
         Ok(entry) => match entry.get_password() {
             // THE expected healthy answer. The backend answered, and answered that this

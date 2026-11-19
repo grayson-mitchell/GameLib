@@ -245,7 +245,10 @@ fn create_single_instance_pipe_instance(
 /// sidecar while the PREVIOUS instance's sidecar is still tearing down -- already an accepted,
 /// shared-with-Unix category of risk, out of this phase's scope to close.
 #[cfg(windows)]
-pub(crate) fn acquire_single_instance_windows(user_sid: &str, session_id: u32) -> WindowsSingleInstanceRole {
+pub(crate) fn acquire_single_instance_windows(
+    user_sid: &str,
+    session_id: u32,
+) -> WindowsSingleInstanceRole {
     use windows_sys::Win32::Foundation::{GetLastError, ERROR_ALREADY_EXISTS};
     use windows_sys::Win32::System::Threading::CreateMutexW;
 

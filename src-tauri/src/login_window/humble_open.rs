@@ -201,9 +201,7 @@ pub(crate) fn rpc_humble_login_open(args: &[Value], app: &AppHandle) -> Result<V
     #[cfg(debug_assertions)]
     if visible && should_auto_open_devtools(std::env::consts::OS) {
         window.open_devtools();
-        shell_eprintln!(
-            "[shell] humble_login_open: devtools opened for '{label}' (debug build)"
-        );
+        shell_eprintln!("[shell] humble_login_open: devtools opened for '{label}' (debug build)");
     } else if visible {
         shell_eprintln!(
             "[shell] humble_login_open: devtools NOT auto-opened for '{label}' on linux (debug build) -- the inspector attach races page boot; right-click > Inspect Element opens it"
@@ -477,9 +475,7 @@ fn build_login_window(
         // Humble's marketing footer is visual noise on Windows and Linux too, so it runs
         // unconditionally inside this `if visible` block on every platform.
         builder = builder.initialization_script(&login_chrome_css_script());
-        shell_eprintln!(
-            "[shell] humble_login_open: login chrome CSS injected for '{label}'"
-        );
+        shell_eprintln!("[shell] humble_login_open: login chrome CSS injected for '{label}'");
         // F-4 machine record (Phase 34.4.1 Plan 24): `.focused(true)` above is
         // a ONE-SHOT raise-on-creation with no persistent state to inspect
         // afterwards, so without this line there is no record of what
@@ -589,11 +585,7 @@ fn build_login_window(
                 // (T-34.4.1-106).
                 #[cfg(target_os = "macos")]
                 {
-                    update_native_login_bar_origin(
-                        &app_for_origin,
-                        &label_for_origin,
-                        &new_origin,
-                    );
+                    update_native_login_bar_origin(&app_for_origin, &label_for_origin, &new_origin);
                     shell_eprintln!(
                         "[shell] humble_login_open: origin banner updated len={}",
                         new_origin.len()
@@ -636,14 +628,7 @@ fn install_native_bar_for_sheet_macos(
                 let Some(container) = (unsafe { wk.superview() }) else {
                     return false;
                 };
-                install_native_login_bar(
-                    &container,
-                    wk,
-                    &bar_origin,
-                    bar_app,
-                    bar_label,
-                    mtm,
-                );
+                install_native_login_bar(&container, wk, &bar_origin, bar_app, bar_label, mtm);
                 true
             })();
             let _ = bar_tx.send(ok);

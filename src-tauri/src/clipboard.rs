@@ -90,7 +90,9 @@ mod tests {
     fn clipboard_text_arg_accepts_empty_string() {
         // An empty string is a VALID clipboard write, not a missing argument.
         assert_eq!(
-            ClipboardWriteTextArgs::from_args(&[json!("")]).unwrap().text,
+            ClipboardWriteTextArgs::from_args(&[json!("")])
+                .unwrap()
+                .text,
             ""
         );
     }
@@ -98,7 +100,9 @@ mod tests {
     #[test]
     fn clipboard_text_arg_accepts_nonempty_string() {
         assert_eq!(
-            ClipboardWriteTextArgs::from_args(&[json!("hi")]).unwrap().text,
+            ClipboardWriteTextArgs::from_args(&[json!("hi")])
+                .unwrap()
+                .text,
             "hi"
         );
     }

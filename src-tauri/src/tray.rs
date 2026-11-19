@@ -253,7 +253,6 @@ pub(crate) fn open_about_window_from_tray(app: &AppHandle) {
     }
 }
 
-
 /// Dispatch a recent-game launch to the sidecar, in-process.
 ///
 /// One hop when the cached entry carries a runner, two when it does not — both on a spawned
@@ -274,7 +273,11 @@ pub(crate) fn open_about_window_from_tray(app: &AppHandle) {
 /// worker thread blocks for the session, which is fine because it is this call's own thread and
 /// never the UI thread. The outcome is still only logged, not surfaced, because the tray has
 /// nothing to show the user either way.
-pub(crate) fn dispatch_tray_launch(app: &AppHandle, app_name: String, known_runner: Option<String>) {
+pub(crate) fn dispatch_tray_launch(
+    app: &AppHandle,
+    app_name: String,
+    known_runner: Option<String>,
+) {
     let Some(state) = app.try_state::<Arc<SidecarState>>() else {
         shell_eprintln!("[shell] WARN: tray recent-game launch: no sidecar state -- skipping");
         return;
@@ -327,7 +330,6 @@ pub(crate) fn dispatch_tray_launch(app: &AppHandle, app_name: String, known_runn
         }
     });
 }
-
 
 // Swap the real Tauri tray's icon (Phase 34.1 Plan 06, D-11). Backs the sidecar's
 // `changeTrayColor` registration (`appShellFlowRegistration.ts`), which reads

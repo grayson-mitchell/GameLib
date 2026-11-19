@@ -51,9 +51,8 @@ pub(crate) fn rpc_humble_login_cookies(args: &[Value], app: &AppHandle) -> Resul
             let outcome: Result<(), String> = (|| {
                 // Bound but not otherwise read -- see `count_matching`'s identical
                 // `_mtm` binding, above, for why this is kept as a live safety proof.
-                let _mtm = objc2::MainThreadMarker::new().ok_or_else(|| {
-                    "humble_login_cookies:no-main-thread-marker".to_string()
-                })?;
+                let _mtm = objc2::MainThreadMarker::new()
+                    .ok_or_else(|| "humble_login_cookies:no-main-thread-marker".to_string())?;
                 // SAFETY: mirrors `humble_login_cookies_for_domain`'s own cast --
                 // `webview.inner()` is a live `WKWebView*` for the duration of a
                 // `with_webview` closure running on the main thread; `mtm` proves
@@ -171,7 +170,10 @@ pub(crate) fn rpc_humble_login_cookies(args: &[Value], app: &AppHandle) -> Resul
 // the census. Same `total`-is-the-liveness-proof contract, same never-`cookies_for_url()`
 // / never-`clear_all_browsing_data()` discipline, same never-logs-a-cookie-value
 // discipline (T-34.4.1-02, T-34.4.1-94) as `humble_login_cookies` above.
-pub(crate) fn rpc_humble_login_cookies_for_domain(args: &[Value], app: &AppHandle) -> Result<Value, String> {
+pub(crate) fn rpc_humble_login_cookies_for_domain(
+    args: &[Value],
+    app: &AppHandle,
+) -> Result<Value, String> {
     let a = HumbleLoginCookiesForDomainArgs::from_args(args)?;
     let label = a.label.as_str();
     let domain = a.domain.as_str();
@@ -204,8 +206,7 @@ pub(crate) fn rpc_humble_login_cookies_for_domain(args: &[Value], app: &AppHandl
     // the routing is identical, not merely similar.
     #[cfg(target_os = "macos")]
     if existing_window.is_none()
-        && (epic_cookie_domain_matches(domain)
-            || store_logout_cookie_domain_matches(domain))
+        && (epic_cookie_domain_matches(domain) || store_logout_cookie_domain_matches(domain))
     {
         return default_data_store_cookies_for_domain(app, domain, &names);
     }
@@ -264,10 +265,7 @@ pub(crate) fn rpc_humble_login_cookies_for_domain(args: &[Value], app: &AppHandl
                         let matched: Vec<Value> = all_cookies
                             .into_iter()
                             .filter(|c| {
-                                cookie_domain_matches(
-                                    &c.domain().to_string(),
-                                    Some(&filter_domain),
-                                )
+                                cookie_domain_matches(&c.domain().to_string(), Some(&filter_domain))
                             })
                             .filter(|c| {
                                 filter_names.is_empty()
@@ -358,7 +356,10 @@ pub(crate) fn rpc_humble_login_cookies_for_domain(args: &[Value], app: &AppHandl
 // will hold Epic/GOG/Amazon cookies once Phase 34.5 lands. The macOS branch below
 // uses `WKWebsiteDataRecord.displayName()` filtering (domain-suffix, the same
 // discipline `cookie_domain_matches` uses) rather than a bulk API.
-pub(crate) fn rpc_humble_login_clear_cookies(args: &[Value], app: &AppHandle) -> Result<Value, String> {
+pub(crate) fn rpc_humble_login_clear_cookies(
+    args: &[Value],
+    app: &AppHandle,
+) -> Result<Value, String> {
     let a = HumbleLoginClearCookiesArgs::from_args(args)?;
     let label = a.label.as_str();
     let domain = a.domain.as_str();
@@ -422,14 +423,12 @@ pub(crate) fn rpc_humble_login_clear_cookies(args: &[Value], app: &AppHandle) ->
     // drift this note replaces.
     #[cfg(target_os = "macos")]
     if existing_window.is_none()
-        && (epic_cookie_domain_matches(domain)
-            || store_logout_cookie_domain_matches(domain))
+        && (epic_cookie_domain_matches(domain) || store_logout_cookie_domain_matches(domain))
     {
         return clear_default_data_store_cookies_for_domain(app, domain);
     }
 
-    let window =
-        existing_window.ok_or_else(|| format!("humble_login:no-window:{label}"))?;
+    let window = existing_window.ok_or_else(|| format!("humble_login:no-window:{label}"))?;
 
     // The SAME clear-direction filter as before (unedited by Plan 23, Plan 22
     // already proved it correct against Defect A): the cookie's OWN domain first,
@@ -549,8 +548,7 @@ fn count_window_cookies_matching_macos(
             // main thread, the same safety receipt `mtm` serves everywhere else
             // in this file even where no ObjC call actually takes it as an arg.
             let _mtm = objc2::MainThreadMarker::new().ok_or_else(|| {
-                "humble_login_clear_cookies:count-matching:no-main-thread-marker"
-                    .to_string()
+                "humble_login_clear_cookies:count-matching:no-main-thread-marker".to_string()
             })?;
             // SAFETY: mirrors `remove_window_cookies_macos`'s cast, below --
             // `webview.inner()` is a live `WKWebView*` for the duration of a
@@ -575,10 +573,7 @@ fn count_window_cookies_matching_macos(
                         .to_vec()
                         .iter()
                         .filter(|cookie| {
-                            cookie_domain_matches(
-                                &cookie.domain().to_string(),
-                                Some(&target),
-                            )
+                            cookie_domain_matches(&cookie.domain().to_string(), Some(&target))
                         })
                         .count();
                     let _ = tx_fetch.send(Ok(count));

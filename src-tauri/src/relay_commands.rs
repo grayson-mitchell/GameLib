@@ -11,7 +11,13 @@ fn echo_channel(channel: &str) -> String {
     channel
         .chars()
         .take(RELAY_CHANNEL_ECHO_MAX)
-        .map(|c| if c.is_ascii_graphic() || c == ' ' { c } else { '?' })
+        .map(|c| {
+            if c.is_ascii_graphic() || c == ' ' {
+                c
+            } else {
+                '?'
+            }
+        })
         .collect()
 }
 
@@ -186,7 +192,8 @@ where
 /// command, so `generate_handler!` reaches it without the capability system being consulted
 /// at all (Rust-side plugin calls bypass capabilities) -- this const is the only allow-list
 /// this command has.
-pub(crate) const OPEN_EXTERNAL_ALLOWED_SCHEMES: &[&str] = &["https", "http", "mailto", "tel", "steam"];
+pub(crate) const OPEN_EXTERNAL_ALLOWED_SCHEMES: &[&str] =
+    &["https", "http", "mailto", "tel", "steam"];
 
 /// Exact URLs allowed in addition to the scheme list (quick 261026-b9r, T-b9r-01). The macOS
 /// App Management deep link is allowed byte-for-byte and case-sensitively; the
@@ -234,7 +241,9 @@ pub(crate) fn open_external(url: String, app: AppHandle) -> Result<(), String> {
 
 /// Requests the sidecar's minimal store snapshot for the renderer's synchronous store bridge.
 #[tauri::command]
-pub(crate) async fn sidecar_store_snapshot(state: State<'_, Arc<SidecarState>>) -> Result<Value, String> {
+pub(crate) async fn sidecar_store_snapshot(
+    state: State<'_, Arc<SidecarState>>,
+) -> Result<Value, String> {
     let state = state.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
         state.invoke(STORE_SNAPSHOT_CHANNEL.to_string(), vec![])
@@ -242,7 +251,6 @@ pub(crate) async fn sidecar_store_snapshot(state: State<'_, Arc<SidecarState>>) 
     .await
     .map_err(|e| e.to_string())?
 }
-
 
 #[cfg(test)]
 mod relay_allow_list_tests {

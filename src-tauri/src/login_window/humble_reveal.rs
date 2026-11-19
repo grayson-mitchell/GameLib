@@ -278,7 +278,10 @@ pub(crate) fn rpc_humble_reveal_post(args: &[Value], app: &AppHandle) -> Result<
 //   - script injection failure: closed immediately below, then returns the error.
 //   - success / script-parse-failure / timeout (after `rx.recv_timeout`): the single
 //     close call right after the recv covers all three of these outcomes at once.
-pub(crate) fn rpc_humble_login_clear_storage(args: &[Value], app: &AppHandle) -> Result<Value, String> {
+pub(crate) fn rpc_humble_login_clear_storage(
+    args: &[Value],
+    app: &AppHandle,
+) -> Result<Value, String> {
     let parsed = clear_storage_args(args)?;
     let label = next_login_window_label();
     let (tx, rx) = mpsc_channel::<String>();
@@ -322,9 +325,7 @@ pub(crate) fn rpc_humble_login_clear_storage(args: &[Value], app: &AppHandle) ->
 
     match outcome {
         Ok(raw) => serde_json::from_str::<Value>(&raw).map_err(|e| {
-            shell_eprintln!(
-                "[shell] humble_login_clear_storage: exfil payload parse failed: {e}"
-            );
+            shell_eprintln!("[shell] humble_login_clear_storage: exfil payload parse failed: {e}");
             format!("humble_login_clear_storage:script:{e}")
         }),
         Err(_) => Err("humble_login_clear_storage:timeout".to_string()),

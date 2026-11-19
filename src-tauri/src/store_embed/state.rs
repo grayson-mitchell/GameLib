@@ -155,7 +155,11 @@ impl StoreEmbedState {
     /// PURE: `push` that also drives the post-landing settle window (quick 261102-szs). A
     /// suppressed Finished opens the window; a non-suppressed one inside it replaces the
     /// current entry. Returns the history change, `None` when nothing was recorded.
-    pub(crate) fn push_at(&mut self, url: String, now: std::time::Instant) -> Option<StoreEmbedHistoryChange> {
+    pub(crate) fn push_at(
+        &mut self,
+        url: String,
+        now: std::time::Instant,
+    ) -> Option<StoreEmbedHistoryChange> {
         self.push_inner(url, Some(now))
     }
 
@@ -533,7 +537,8 @@ pub(crate) fn store_embed_open_args(
     let home_url = match a.home_url.as_deref() {
         None => None,
         Some(home_str) => Some(
-            tauri::Url::parse(home_str).map_err(|e| format!("store_embed_open:bad-home-url:{e}"))?,
+            tauri::Url::parse(home_str)
+                .map_err(|e| format!("store_embed_open:bad-home-url:{e}"))?,
         ),
     };
     Ok((url, a.x, a.y, a.w, a.h, a.store_key, home_url))

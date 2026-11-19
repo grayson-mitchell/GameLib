@@ -499,16 +499,21 @@ describe('openSteamForAdoption (D-03)', () => {
     expect(h.openExternal).toHaveBeenLastCalledWith('steam://open/main')
   })
 
-  test.each([['darwin'], ['linux']] as const)(
-    '%s: no shell raise, the URL alone (unchanged)',
-    async (platform) => {
-      const h = harness()
-      await openSteamForAdoption(h.game.deps, platform)
-      expect(raised(h)).toHaveLength(0)
-      expect(h.openExternal).toHaveBeenCalledTimes(1)
-      expect(h.openExternal).toHaveBeenCalledWith('steam://open/main')
-    }
-  )
+  test('darwin: no shell raise, the URL alone (unchanged)', async () => {
+    const h = harness()
+    await openSteamForAdoption(h.game.deps, 'darwin')
+    expect(raised(h)).toHaveLength(0)
+    expect(h.openExternal).toHaveBeenCalledTimes(1)
+    expect(h.openExternal).toHaveBeenCalledWith('steam://open/main')
+  })
+
+  test('linux: the shell raises first, then the URL goes out', async () => {
+    const h = harness()
+    await openSteamForAdoption(h.game.deps, 'linux')
+    expect(raised(h)).toHaveLength(1)
+    expect(h.openExternal).toHaveBeenCalledTimes(1)
+    expect(h.openExternal).toHaveBeenCalledWith('steam://open/main')
+  })
 })
 
 describe('the action handler bodies reject a bad appId before doing anything (T-81-27)', () => {

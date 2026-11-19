@@ -252,7 +252,8 @@ const SHEET_PRESENT_WKWEBVIEW_WARMUP_DELAY: Duration = Duration::from_millis(250
 /// registry's exactly-three-call-sites test (Plan 11) is load-bearing and this is a
 /// structurally different concern (pre-presentation vs. already-presented).
 #[cfg(target_os = "macos")]
-pub(crate) static PENDING_VISIBLE_LOGIN_WINDOW: Mutex<Option<(String, std::time::Instant)>> = Mutex::new(None);
+pub(crate) static PENDING_VISIBLE_LOGIN_WINDOW: Mutex<Option<(String, std::time::Instant)>> =
+    Mutex::new(None);
 
 /// T-34.4.2-41 (NEW, Phase 34.4.2 Plan 14): bounds how long `PENDING_VISIBLE_LOGIN_WINDOW` may
 /// stay armed before its entry is treated as absent. This is a safety requirement, not a

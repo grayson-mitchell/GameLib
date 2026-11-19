@@ -11,8 +11,23 @@ use super::*;
 /// Directory extensions the OS treats as launchable/installable bundles. `app` is the required
 /// one; the rest are an assumption (72-RESEARCH A3) covering other bundle types Finder runs.
 pub(crate) const OPEN_PATH_BUNDLE_EXTENSIONS: &[&str] = &[
-    "app", "prefpane", "saver", "workflow", "action", "plugin", "bundle", "framework",
-    "component", "kext", "mdimporter", "qlgenerator", "xpc", "appex", "wdgt", "pkg", "mpkg",
+    "app",
+    "prefpane",
+    "saver",
+    "workflow",
+    "action",
+    "plugin",
+    "bundle",
+    "framework",
+    "component",
+    "kext",
+    "mdimporter",
+    "qlgenerator",
+    "xpc",
+    "appex",
+    "wdgt",
+    "pkg",
+    "mpkg",
 ];
 
 /// True when the path's extension (ASCII case-insensitive) names a launchable bundle.

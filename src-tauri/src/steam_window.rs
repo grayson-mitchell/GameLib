@@ -1,4 +1,4 @@
-//! The `steam_window_raise` rustInvoke channel: bring Steam's own window forward on Windows.
+//! The `steam_window_raise` rustInvoke channel: bring Steam's own window forward on Windows and on Linux (X11).
 //!
 //! Why the shell does this and not a `steam://open/main` URL: a signed-out Steam holds a command
 //! line until login finishes (Steam's `console_log.txt` logs `ExecCommandLine` only after sign-in,
@@ -75,7 +75,8 @@ mod win32 {
     use std::collections::HashMap;
     use windows_sys::Win32::Foundation::{CloseHandle, HWND, LPARAM};
     use windows_sys::Win32::System::Threading::{
-        OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_WIN32, PROCESS_QUERY_LIMITED_INFORMATION,
+        OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_WIN32,
+        PROCESS_QUERY_LIMITED_INFORMATION,
     };
     use windows_sys::Win32::UI::WindowsAndMessaging::{
         EnumWindows, GetWindow, GetWindowLongW, GetWindowTextLengthW, GetWindowThreadProcessId,
@@ -100,7 +101,10 @@ mod win32 {
         // SAFETY: the callback only reads its `LPARAM` as the `Vec` pointer passed here, and
         // `EnumWindows` does not return until the walk is done.
         unsafe {
-            EnumWindows(Some(collect_hwnd), &mut handles as *mut Vec<isize> as LPARAM);
+            EnumWindows(
+                Some(collect_hwnd),
+                &mut handles as *mut Vec<isize> as LPARAM,
+            );
         }
         handles
     }
@@ -116,7 +120,8 @@ mod win32 {
             }
             let mut buf = [0u16; IMAGE_PATH_CAPACITY];
             let mut len = buf.len() as u32;
-            let ok = QueryFullProcessImageNameW(process, PROCESS_NAME_WIN32, buf.as_mut_ptr(), &mut len);
+            let ok =
+                QueryFullProcessImageNameW(process, PROCESS_NAME_WIN32, buf.as_mut_ptr(), &mut len);
             CloseHandle(process);
             if ok == 0 {
                 return None;
@@ -185,17 +190,148 @@ mod win32 {
         };
         shell_eprintln!(
             "[shell] steam_window_raise: {}",
-            if raised { "raised" } else { "foreground change refused" }
+            if raised {
+                "raised"
+            } else {
+                "foreground change refused"
+            }
         );
         raised
     }
 }
 
-/// Off Windows there is nothing to raise: Steam is brought forward by `open steam://open/main`.
-#[cfg(not(windows))]
+/// What the Linux pick needs to know about one window the window manager manages.
+#[cfg(any(target_os = "linux", test))]
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct X11Window {
+    id: u32,
+    /// `WM_CLASS` instance and class names.
+    classes: Vec<String>,
+    has_title: bool,
+    /// `_NET_WM_WINDOW_TYPE` is absent or `_NET_WM_WINDOW_TYPE_NORMAL`.
+    normal_type: bool,
+}
+
+/// The window to raise: the topmost (`windows` is bottom-to-top, as `_NET_CLIENT_LIST_STACKING`
+/// gives it) managed, titled, normal-type window whose `WM_CLASS` names Steam (`steam`,
+/// `Steam`, `steamwebhelper`; never `steam_app_<id>`, a running game).
+#[cfg(any(target_os = "linux", test))]
+fn pick_x11_steam_window(windows: &[X11Window]) -> Option<u32> {
+    windows
+        .iter()
+        .rev()
+        .find(|w| {
+            w.has_title
+                && w.normal_type
+                && w.classes.iter().any(|c| {
+                    c.eq_ignore_ascii_case("steam") || c.eq_ignore_ascii_case("steamwebhelper")
+                })
+        })
+        .map(|w| w.id)
+}
+
+#[cfg(target_os = "linux")]
+mod x11 {
+    use super::{pick_x11_steam_window, X11Window};
+    use x11rb::connection::Connection;
+    use x11rb::protocol::xproto::{
+        Atom, AtomEnum, ClientMessageEvent, ConnectionExt, EventMask, Window,
+    };
+    use x11rb::rust_connection::RustConnection;
+
+    fn atom(conn: &RustConnection, name: &str) -> Option<Atom> {
+        Some(
+            conn.intern_atom(false, name.as_bytes())
+                .ok()?
+                .reply()
+                .ok()?
+                .atom,
+        )
+    }
+
+    fn u32_list(conn: &RustConnection, win: Window, prop: Atom, ty: AtomEnum) -> Vec<u32> {
+        conn.get_property(false, win, prop, ty, 0, 4096)
+            .ok()
+            .and_then(|c| c.reply().ok())
+            .and_then(|r| r.value32().map(|v| v.collect()))
+            .unwrap_or_default()
+    }
+
+    fn bytes(conn: &RustConnection, win: Window, prop: Atom, ty: impl Into<Atom>) -> Vec<u8> {
+        conn.get_property(false, win, prop, ty, 0, 1024)
+            .ok()
+            .and_then(|c| c.reply().ok())
+            .map(|r| r.value)
+            .unwrap_or_default()
+    }
+
+    /// X11 only: no `DISPLAY` or a Wayland-only session answers `false` and touches nothing.
+    pub(super) fn raise_steam_window() -> bool {
+        let Ok((conn, screen_num)) = x11rb::connect(None) else {
+            shell_eprintln!("[shell] steam_window_raise: no X11 display");
+            return false;
+        };
+        let root = conn.setup().roots[screen_num].root;
+        let (Some(stacking), Some(active), Some(wm_class), Some(wm_type), Some(normal), Some(name)) = (
+            atom(&conn, "_NET_CLIENT_LIST_STACKING"),
+            atom(&conn, "_NET_ACTIVE_WINDOW"),
+            atom(&conn, "WM_CLASS"),
+            atom(&conn, "_NET_WM_WINDOW_TYPE"),
+            atom(&conn, "_NET_WM_WINDOW_TYPE_NORMAL"),
+            atom(&conn, "_NET_WM_NAME"),
+        ) else {
+            return false;
+        };
+        let windows: Vec<X11Window> = u32_list(&conn, root, stacking, AtomEnum::WINDOW)
+            .into_iter()
+            .map(|id| {
+                let classes = bytes(&conn, id, wm_class, AtomEnum::STRING)
+                    .split(|b| *b == 0)
+                    .filter(|s| !s.is_empty())
+                    .map(|s| String::from_utf8_lossy(s).into_owned())
+                    .collect();
+                let types = u32_list(&conn, id, wm_type, AtomEnum::ATOM);
+                X11Window {
+                    id,
+                    classes,
+                    has_title: !bytes(&conn, id, name, AtomEnum::ANY).is_empty()
+                        || !bytes(&conn, id, AtomEnum::WM_NAME.into(), AtomEnum::ANY).is_empty(),
+                    normal_type: types.is_empty() || types.contains(&normal),
+                }
+            })
+            .collect();
+        let Some(target) = pick_x11_steam_window(&windows) else {
+            shell_eprintln!("[shell] steam_window_raise: no Steam window");
+            return false;
+        };
+        // Source 2 = a pager-style request, which window managers honour without focus-stealing
+        // prevention; the shell is the foreground app at the click.
+        let event = ClientMessageEvent::new(32, target, active, [2, 0, 0, 0, 0]);
+        let sent = conn
+            .send_event(
+                false,
+                root,
+                EventMask::SUBSTRUCTURE_REDIRECT | EventMask::SUBSTRUCTURE_NOTIFY,
+                event,
+            )
+            .is_ok()
+            && conn.flush().is_ok();
+        shell_eprintln!(
+            "[shell] steam_window_raise: {}",
+            if sent { "raised" } else { "request failed" }
+        );
+        sent
+    }
+}
+
+/// Off Windows and Linux there is nothing to raise: `open steam://open/main` brings Steam forward.
+#[cfg(not(any(windows, target_os = "linux")))]
 fn raise_steam_window() -> bool {
     false
 }
+
+#[cfg(target_os = "linux")]
+use x11::raise_steam_window;
 
 #[cfg(windows)]
 use win32::raise_steam_window;
@@ -224,7 +360,10 @@ mod tests {
     #[test]
     fn picks_a_steamwebhelper_window_not_only_steam_exe() {
         // Measured on Windows 11: the visible "Steam" window belongs to steamwebhelper.exe.
-        let windows = [window(1, Some("Code.exe")), window(2, Some("steamwebhelper.exe"))];
+        let windows = [
+            window(1, Some("Code.exe")),
+            window(2, Some("steamwebhelper.exe")),
+        ];
         assert_eq!(pick_steam_window(&windows), Some(2));
     }
 
@@ -259,7 +398,10 @@ mod tests {
     #[test]
     fn a_minimized_window_is_still_visible_so_it_qualifies() {
         // `IsWindowVisible` is true for a minimized window; the glue restores it before raising.
-        assert_eq!(pick_steam_window(&[window(9, Some("steamwebhelper.exe"))]), Some(9));
+        assert_eq!(
+            pick_steam_window(&[window(9, Some("steamwebhelper.exe"))]),
+            Some(9)
+        );
     }
 
     #[test]
@@ -279,14 +421,41 @@ mod tests {
             exe_file_name(r"C:\Program Files (x86)\Steam\bin\cef\cef.win64\steamwebhelper.exe"),
             Some("steamwebhelper.exe".to_string())
         );
-        assert_eq!(exe_file_name("/a/b/steam.exe"), Some("steam.exe".to_string()));
+        assert_eq!(
+            exe_file_name("/a/b/steam.exe"),
+            Some("steam.exe".to_string())
+        );
         assert_eq!(exe_file_name("steam.exe"), Some("steam.exe".to_string()));
         assert_eq!(exe_file_name(r"C:\dir\"), None);
         assert_eq!(exe_file_name(""), None);
     }
 
-    // Windows answers whether a real Steam window was raised, which a unit test cannot assume.
-    #[cfg(not(windows))]
+    fn x11(id: u32, classes: &[&str], has_title: bool, normal_type: bool) -> X11Window {
+        X11Window {
+            id,
+            classes: classes.iter().map(|c| c.to_string()).collect(),
+            has_title,
+            normal_type,
+        }
+    }
+
+    #[test]
+    fn x11_pick_takes_the_topmost_titled_normal_steam_window() {
+        let windows = [
+            x11(1, &["steamwebhelper", "steam"], true, true),
+            x11(2, &["Steam", "Steam"], true, false), // a menu
+            x11(3, &["steamwebhelper", "Steamwebhelper"], false, true), // untitled helper
+            x11(4, &["firefox", "Firefox"], true, true),
+            x11(5, &["steam_app_57300", "steam_app_57300"], true, true), // a running game
+        ];
+        assert_eq!(pick_x11_steam_window(&windows), Some(1));
+        assert_eq!(pick_x11_steam_window(&windows[1..]), None);
+        assert_eq!(pick_x11_steam_window(&[]), None);
+    }
+
+    // Windows and Linux answer whether a real Steam window was raised, which a unit test cannot
+    // assume.
+    #[cfg(not(any(windows, target_os = "linux")))]
     #[test]
     fn off_windows_the_arm_answers_false() {
         assert_eq!(rpc_steam_window_raise(&[]).unwrap(), Value::Bool(false));
@@ -303,6 +472,14 @@ mod tests {
         let picked = pick_steam_window(&windows).expect("a visible Steam window");
         println!("picked hwnd={picked}");
         assert!(super::win32::raise_steam_window());
+    }
+
+    /// LIVE, by hand on an X11 desktop with Steam running: `cargo test live_x11_steam -- --ignored`.
+    #[cfg(target_os = "linux")]
+    #[test]
+    #[ignore = "needs a running Steam client on an X11 desktop"]
+    fn live_x11_steam_window_is_raised() {
+        assert!(super::x11::raise_steam_window());
     }
 
     #[cfg(windows)]

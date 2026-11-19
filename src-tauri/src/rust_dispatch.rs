@@ -92,20 +92,28 @@ pub(crate) fn dispatch_rust_channel(
         RustInvokeChannel::SteamfilesShortcutsApply => rpc_steamfiles_shortcuts_apply(args),
         RustInvokeChannel::SteamfilesShortcutsRead => rpc_steamfiles_shortcuts_read(args),
         RustInvokeChannel::SteampollAcfEnumerateCopies => rpc_steampoll_acf_enumerate_copies(args),
-        RustInvokeChannel::SteampollAcfFindOtherManifests => rpc_steampoll_acf_find_other_manifests(args),
+        RustInvokeChannel::SteampollAcfFindOtherManifests => {
+            rpc_steampoll_acf_find_other_manifests(args)
+        }
         RustInvokeChannel::SteampollAcfReadState => rpc_steampoll_acf_read_state(args),
         RustInvokeChannel::SteampollAcfReadUpdate => rpc_steampoll_acf_read_update(args),
-        RustInvokeChannel::SteampollAcfReadUpdateFromDir => rpc_steampoll_acf_read_update_from_dir(args),
+        RustInvokeChannel::SteampollAcfReadUpdateFromDir => {
+            rpc_steampoll_acf_read_update_from_dir(args)
+        }
         RustInvokeChannel::SteampollAcfRemoveCopy => rpc_steampoll_acf_remove_copy(args),
         RustInvokeChannel::SteampollAcfScanDownloading => rpc_steampoll_acf_scan_downloading(args),
         RustInvokeChannel::SteampollAdoptionRead => rpc_steampoll_adoption_read(args),
         RustInvokeChannel::SteampollAdoptionUnwatch => rpc_steampoll_adoption_unwatch(args),
         RustInvokeChannel::SteampollAdoptionWatch => rpc_steampoll_adoption_watch(args),
-        RustInvokeChannel::SteampollBreadcrumbInstalledOnDisk => rpc_steampoll_breadcrumb_installed_on_disk(args),
+        RustInvokeChannel::SteampollBreadcrumbInstalledOnDisk => {
+            rpc_steampoll_breadcrumb_installed_on_disk(args)
+        }
         RustInvokeChannel::SteampollBridgeFinalized => rpc_steampoll_bridge_finalized(args),
         RustInvokeChannel::SteampollHoldDiscard => rpc_steampoll_hold_discard(args),
         RustInvokeChannel::SteampollHoldDrain => rpc_steampoll_hold_drain(args),
-        RustInvokeChannel::SteampollInstallCancelDelegated => rpc_steampoll_install_cancel_delegated(args),
+        RustInvokeChannel::SteampollInstallCancelDelegated => {
+            rpc_steampoll_install_cancel_delegated(args)
+        }
         RustInvokeChannel::SteampollInstallStart => rpc_steampoll_install_start(args),
         RustInvokeChannel::SteampollInstallStop => rpc_steampoll_install_stop(args),
         RustInvokeChannel::SteampollMacArchVerdict => rpc_steampoll_mac_arch_verdict(args),
@@ -135,13 +143,17 @@ pub(crate) fn dispatch_rust_channel(
         RustInvokeChannel::SteamcmRefresh => rpc_steamcm_refresh(args),
         RustInvokeChannel::SteamcmSessionAcquire => rpc_steamcm_session_acquire(args),
         RustInvokeChannel::SteamcmSessionAcquireOpen => rpc_steamcm_session_acquire_open(args),
-        RustInvokeChannel::SteamcmSessionEnsureConnected => rpc_steamcm_session_ensure_connected(args),
+        RustInvokeChannel::SteamcmSessionEnsureConnected => {
+            rpc_steamcm_session_ensure_connected(args)
+        }
         RustInvokeChannel::SteamcmSessionLogout => rpc_steamcm_session_logout(args),
         RustInvokeChannel::SteamcmSessionRelease => rpc_steamcm_session_release(args),
         RustInvokeChannel::SteamcmSessionShutdown => rpc_steamcm_session_shutdown(args),
         RustInvokeChannel::SteamcmSessionStatus => rpc_steamcm_session_status(args),
         RustInvokeChannel::SteamcmSigninCancel => rpc_steamcm_signin_cancel(args),
-        RustInvokeChannel::SteamcmSigninCredentialsStart => rpc_steamcm_signin_credentials_start(args),
+        RustInvokeChannel::SteamcmSigninCredentialsStart => {
+            rpc_steamcm_signin_credentials_start(args)
+        }
         RustInvokeChannel::SteamcmSigninGuardSubmit => rpc_steamcm_signin_guard_submit(args),
         RustInvokeChannel::SteamcmSigninQrStart => rpc_steamcm_signin_qr_start(args),
         RustInvokeChannel::SteamcmSigninStatus => rpc_steamcm_signin_status(args),
