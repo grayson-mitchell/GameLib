@@ -35,6 +35,10 @@ import {
   type MacSteamClient
 } from './macSteamClient'
 import { listSteamClientPids } from './steamClientProcess'
+import {
+  runningBridgedAppId,
+  type SteamGameSessionState
+} from './gameSessionState'
 import type { AdoptionReading } from './pollRust/steamPollTypes'
 
 /** Graceful quit is bounded; Steam is never killed. */
@@ -334,7 +338,8 @@ export interface RestartDeps {
  * from the clock (unref'd by default). macOS keeps the boot-built Mac Steam
  * instance (process probe, detached `open -g`) and the go-offline owed-wrap file;
  * Windows and Linux probe with listSteamClientPids (an unknown answer counts as
- * still running), fire steam://exit through openExternal, and never owe a wrap.
+ * still running), fire steam://exit through openExternal, and never owe a wrap. A bridged
+ * session GameLib launched counts as a game running (quick 261119-se9).
  */
 export function createRestartDeps(deps: {
   platform: NodeJS.Platform
@@ -347,11 +352,25 @@ export function createRestartDeps(deps: {
   relaunch: () => Promise<unknown>
   sendFrontendMessage: StatusUpdateDeps['sendFrontendMessage']
   appRuntime: StatusUpdateDeps['appRuntime']
+  gameSession: Pick<
+    SteamGameSessionState,
+    'bridgeLaunchBottles' | 'bridgeLaunchesInFlight'
+  >
 }): RestartDeps {
   const { clock, macSteam, platform } = deps
   const mac = platform === 'darwin'
   return {
     readRunningAppId: () => {
+      // GameLib's own bridged launch bookkeeping first: a synchronous read that cannot fail, so a
+      // slow or failed Rust read can never hide a known bridged session.
+      const bridged = runningBridgedAppId(deps.gameSession)
+      if (bridged !== 0) {
+        logInfo(
+          `[Steam] bridged session for game ${bridged} is active; it counts as a game running in Steam`,
+          LogPrefix.Steam
+        )
+        return Promise.resolve(bridged)
+      }
       /* eslint-disable @typescript-eslint/no-require-imports */
       const { readMacRunningAppId } =
         require('./library/runningPoll') as typeof import('./library/runningPoll')

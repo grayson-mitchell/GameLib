@@ -133,6 +133,8 @@ function harness(options: {
   readAcf?: unknown
   // The backend's launch-without-Steam verdict for the game (D-05); a rejection counts as false.
   directLaunch?: boolean | Error
+  // appId -> bottle of a bridged session GameLib launched (quick 261119-se9).
+  bridgeLaunched?: Record<string, string>
 }): Harness {
   const store = new Map<string, unknown>()
   if (options.withRecord !== false) store.set(APP_ID, record())
@@ -185,6 +187,15 @@ function harness(options: {
     steamSession: {
       libraryState: {
         library: new Map([[APP_ID, { title: 'Dota 2' }]])
+      },
+      gameSession: {
+        bridgeLaunchBottles: new Map<string, { bottle: string }>(
+          Object.entries(options.bridgeLaunched ?? {}).map(([id, bottle]) => [
+            id,
+            { bottle }
+          ])
+        ),
+        bridgeLaunchesInFlight: new Map<string, Promise<boolean>>()
       }
     },
     steamInstallRuntime: {
@@ -322,6 +333,32 @@ describe('gatePlayOnAdoption', () => {
       }
     ])
     expect(notify).not.toHaveBeenCalled()
+    expect(rungameidOpened(h)).toBe(false)
+  })
+
+  test('macOS: a running bridged game refuses the restart with the game-running notice, Steam untouched (quick 261119-se9)', async () => {
+    const h = harness({
+      script: [{ cmd: '/usr/bin/pgrep', result: { code: 0, stdout: '100\n' } }],
+      bridgeLaunched: { '206040': 'GameLibSteamBridge-206040' },
+      runningAppId: 0
+    })
+    await expect(gatePlayOnAdoption(h.game, 'darwin')).resolves.toBe('refused')
+    const macSteam = h.game.deps.steamProcesses.macSteam
+    expect(macSteam.openUrlDetached).not.toHaveBeenCalled()
+    expect(h.openExternal).not.toHaveBeenCalled()
+    expect(stored(h)).toBeDefined()
+    expect(noticesOf(h)).toEqual([
+      {
+        appId: APP_ID,
+        title: 'Dota 2',
+        kind: 'adopt-restart-game-running',
+        launchWithoutSteam: false,
+        seq: 7
+      }
+    ])
+    expect(
+      h.rust.some((c) => c.channel === RUST_STEAMPOLL_READ_RUNNING_APP_ID)
+    ).toBe(false)
     expect(rungameidOpened(h)).toBe(false)
   })
 

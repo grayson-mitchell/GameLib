@@ -566,6 +566,10 @@ describe('createRestartDeps', () => {
       openUrlDetached: jest.fn()
     },
     relaunch: () => Promise.resolve(),
+    gameSession: {
+      bridgeLaunchBottles: new Map<string, { bottle: string }>(),
+      bridgeLaunchesInFlight: new Map<string, Promise<boolean>>()
+    },
     ...over
   })
 

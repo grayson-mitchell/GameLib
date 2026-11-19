@@ -127,6 +127,7 @@ export async function gatePlayOnAdoption(
       macSteam: deps.steamProcesses.macSteam,
       sendFrontendMessage: deps.sendFrontendMessage,
       appRuntime: deps.appRuntime,
+      gameSession: deps.steamSession.gameSession,
       relaunch: () => deps.openExternal.openExternal(url, { activate: false })
     })
   )

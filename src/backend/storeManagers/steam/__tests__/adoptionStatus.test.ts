@@ -255,6 +255,8 @@ function harness(
     runningAppId?: number
     relaunchFails?: boolean
     holdRestart?: boolean
+    // appId -> bottle of a bridged session GameLib launched (quick 261119-se9).
+    bridgeLaunched?: Record<string, string>
   } = {}
 ): Harness {
   const store = new Map<string, unknown>()
@@ -307,7 +309,16 @@ function harness(
     sendFrontendMessage,
     appRuntime: { launchFlights: flights },
     steamSession: {
-      libraryState: { library: new Map([[APP_ID, { title: 'Dota 2' }]]) }
+      libraryState: { library: new Map([[APP_ID, { title: 'Dota 2' }]]) },
+      gameSession: {
+        bridgeLaunchBottles: new Map<string, { bottle: string }>(
+          Object.entries(options.bridgeLaunched ?? {}).map(([id, bottle]) => [
+            id,
+            { bottle }
+          ])
+        ),
+        bridgeLaunchesInFlight: new Map<string, Promise<boolean>>()
+      }
     },
     steamInstallRuntime: {
       noticeSeq: { last: 0 },

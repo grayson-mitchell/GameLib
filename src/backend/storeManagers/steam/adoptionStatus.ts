@@ -139,6 +139,7 @@ async function runRestartNow(
       macSteam: deps.steamProcesses.macSteam,
       sendFrontendMessage: deps.sendFrontendMessage,
       appRuntime: deps.appRuntime,
+      gameSession: deps.steamSession.gameSession,
       // Steam itself, not a game: one URL on all three OSes. The user pressed the button, so Steam
       // comes up in front (no activate:false).
       relaunch: () => deps.openExternal.openExternal('steam://open/main')

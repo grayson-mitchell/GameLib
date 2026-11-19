@@ -39,7 +39,8 @@ export interface SteamGameSessionState {
    * G26: a second Play during bridge pre-flight joined nothing and ran a
    * concurrent engine switch in the same bottle (UAT 38: DXVK removal failed,
    * marker dxvk:"failed"). One launch per appId at a time, released when it
-   * settles.
+   * settles. Also feeds the Steam restart guards (runningBridgedAppId, quick
+   * 261119-se9).
    */
   bridgeLaunchesInFlight: Map<string, Promise<boolean>>
   /**
@@ -49,7 +50,8 @@ export interface SteamGameSessionState {
    * install root is unresolved, and it does not carry the bottle name). The
    * value is an object so a late settlement of an earlier launch can tell its
    * own record from a superseding relaunch's (identity compare). Cleared when
-   * the game ends on its own, when the launch fails, and by stop().
+   * the game ends on its own, when the launch fails, and by stop(). Also feeds
+   * the Steam restart guards (runningBridgedAppId, quick 261119-se9).
    */
   bridgeLaunchBottles: Map<string, { bottle: string }>
   /**
@@ -155,6 +157,37 @@ class MirroredInFlightMap extends Map<string, NativeInstallEntry> {
     super.clear()
     for (const appId of appIds) this.push(appId, false)
   }
+}
+
+/**
+ * The appId of a bridged session GameLib launched that is still active, or 0 (quick
+ * 261119-se9). Counts every appId in `bridgeLaunchesInFlight` (Play through pre-flight, until the
+ * wine spawn settles) and `bridgeLaunchBottles` (spawned, not yet seen to end), and returns the
+ * lowest positive one so the answer is deterministic. The Mac Steam restart guards treat it as a
+ * game running in Steam: quitting Mac Steam mid-session breaks the bridge's connection to it.
+ *
+ * It is launch bookkeeping, not a process scan, because a bridged game's processes are wine
+ * binaries that no path scan can map to an appId, and no helper, HELLO marker, engine ledger or
+ * monitor phase covers the whole session (a no-steam-api launch spawns no helper; HELLO arrives
+ * after pre-flight; the monitor also covers bottled Steam). The bookkeeping lives for one boot, so
+ * a session left over from a previous GameLib process is not counted.
+ */
+export function runningBridgedAppId(
+  session: Pick<
+    SteamGameSessionState,
+    'bridgeLaunchBottles' | 'bridgeLaunchesInFlight'
+  >
+): number {
+  let lowest = 0
+  for (const key of [
+    ...session.bridgeLaunchBottles.keys(),
+    ...session.bridgeLaunchesInFlight.keys()
+  ]) {
+    const id = Number(key)
+    if (!Number.isSafeInteger(id) || id <= 0) continue
+    if (lowest === 0 || id < lowest) lowest = id
+  }
+  return lowest
 }
 
 /** One instance per boot (D-05, D-66.3-13): every map and set is per-instance, so two boots never share a session. */
