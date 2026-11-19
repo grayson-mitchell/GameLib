@@ -47,20 +47,22 @@ export interface StoreEmbedBounds {
  * never defaulted: every event the Tauri-managed embed emits predates this field and omits it,
  * and `storeEmbedFlowRegistration.ts`'s `coerceNavState` only validates it when present.
  *
- * `loadTimedOut` (Phase 50 Plan 02) is the Epic surface's load-timeout flag
- * (`EPIC_EMBED_LOAD_TIMEOUT`, `macos_epic_embed.rs`): `true` once a navigation has been in
- * flight past the bound with no `didFinishNavigation`/failure callback, reset on the next
- * `didStartProvisionalNavigation` or a successful finish. REQUIRED (never optional) when
- * `surface` is `'epic'` — a boolean the caller cannot tell apart from "not timed out" if it were
- * allowed to default — and FORBIDDEN on every other event, since no other surface tracks this
- * state. `coerceNavState` enforces both directions and throws rather than coercing either one.
+ * `loadTimedOut` (Phase 50 Plan 02) is a load-timeout flag. REQUIRED (never optional) when
+ * `surface` is `'epic'` (`EPIC_EMBED_LOAD_TIMEOUT`, `macos_epic_embed.rs`): `true` once a
+ * navigation has been in flight past the bound with no `didFinishNavigation`/failure callback,
+ * reset on the next `didStartProvisionalNavigation` or a successful finish -- a boolean the
+ * caller cannot tell apart from "not timed out" if it were allowed to default. OPTIONAL on the
+ * Tauri-managed embed (quick 261120-8i5), where `STORE_EMBED_LOAD_TIMEOUT` (`store_embed/state.rs`)
+ * raises it from the `store_embed_take_nav_events` drain when an open or chrome navigation sees
+ * no `PageLoadEvent::Finished` in time; any later Finished queues `false`. `coerceNavState`
+ * keeps it when present, leaves it absent when omitted, and throws on a non-boolean.
  *
  * `challenged` (Phase 50 Plan 02, D-09/D-10) is `true` once a main-frame response has carried
  * Cloudflare's `cf-mitigated: challenge` header (or matched the host/path fallback,
  * `epic_embed_response_is_challenged` in `macos_epic_embed.rs`) — the signal the renderer uses
  * to swap the subview for `WebviewUnavailablePanel`'s `'epic-challenged'` reason. Cleared by
  * `navigate()` and by the next `didStartProvisionalNavigation` (D-11: no stickiness). Same
- * REQUIRED-on-`'epic'`/FORBIDDEN-otherwise discipline as `loadTimedOut`, for the same reason: a
+ * REQUIRED-on-`'epic'`/FORBIDDEN-otherwise discipline, for the reason `loadTimedOut` is required there: a
  * defaulted `false` would be indistinguishable from "genuinely not challenged".
  *
  * `blockedLauncherSchemeCount` (Phase 50 Plan 02, D-14) is a MONOTONIC count of navigations

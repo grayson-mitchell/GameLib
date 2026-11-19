@@ -143,23 +143,27 @@ function coerceNavState(channel: string, result: unknown): StoreEmbedNavEvent {
       `${channel}: malformed response (surface must be 'tauri' or 'epic' when present): ${JSON.stringify(result)}`
     )
   }
-  // `loadTimedOut` (Phase 50 Plan 02) is the Epic surface's load-timeout flag -- REQUIRED when
-  // `surface` is `'epic'` (a missing value cannot be told apart from "not timed out" if
-  // defaulted) and FORBIDDEN on every other event, since no other surface tracks this state.
-  // Both directions throw rather than coerce, matching this function's own documented contract.
+  // `loadTimedOut` has a two-sided contract. On the macOS Epic surface (Phase 50 Plan 02) it is
+  // REQUIRED -- a missing value cannot be told apart from "not timed out" if defaulted. On the
+  // Tauri-managed embed (quick 261120-8i5) it is OPTIONAL: Rust's `STORE_EMBED_LOAD_TIMEOUT`
+  // raises it from the nav-event drain, so it is kept when present and left absent when omitted,
+  // never defaulted. A non-boolean throws on both sides rather than coerce.
   if (candidate.surface === 'epic') {
     if (typeof candidate.loadTimedOut !== 'boolean') {
       throw new Error(
         `${channel}: malformed response (loadTimedOut must be a boolean when surface is 'epic'): ${JSON.stringify(result)}`
       )
     }
-  } else if (candidate.loadTimedOut !== undefined) {
+  } else if (
+    candidate.loadTimedOut !== undefined &&
+    typeof candidate.loadTimedOut !== 'boolean'
+  ) {
     throw new Error(
-      `${channel}: malformed response (loadTimedOut is only valid when surface is 'epic'): ${JSON.stringify(result)}`
+      `${channel}: malformed response (loadTimedOut must be a boolean when present): ${JSON.stringify(result)}`
     )
   }
-  // `challenged` (Phase 50 Plan 02, D-09) and `blockedLauncherSchemeCount` (D-14) carry the SAME
-  // REQUIRED-on-`'epic'`/FORBIDDEN-otherwise discipline as `loadTimedOut`, above -- see
+  // `challenged` (Phase 50 Plan 02, D-09) and `blockedLauncherSchemeCount` (D-14) are
+  // REQUIRED-on-`'epic'`/FORBIDDEN-otherwise (unlike `loadTimedOut`, above) -- see
   // `StoreEmbedNavEvent`'s own doc comment for why each cannot be allowed to default.
   // `blockedLauncherSchemeCount` is additionally checked for being a non-negative INTEGER: the
   // Rust side is a `u64` counter, so a fractional or negative wire value means the field no
@@ -197,6 +201,9 @@ function coerceNavState(channel: string, result: unknown): StoreEmbedNavEvent {
     canGoBack: candidate.canGoBack,
     canGoForward: candidate.canGoForward,
     ...(candidate.surface !== undefined ? { surface: candidate.surface } : {}),
+    ...(candidate.surface !== 'epic' && candidate.loadTimedOut !== undefined
+      ? { loadTimedOut: candidate.loadTimedOut as boolean }
+      : {}),
     ...(candidate.surface === 'epic'
       ? {
           loadTimedOut: candidate.loadTimedOut as boolean,

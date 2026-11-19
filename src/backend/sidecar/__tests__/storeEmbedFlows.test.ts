@@ -609,9 +609,9 @@ describe('nav-methods-reach-their-rust-channel — all five navigation methods r
     )
   })
 
-  // ── Phase 50 Plan 02, Task 2: `loadTimedOut` is REQUIRED on `surface: 'epic'` and FORBIDDEN
-  // everywhere else -- both directions throw rather than coerce (same discipline as `surface`
-  // itself, Task 1). ──
+  // ── Phase 50 Plan 02, Task 2: `loadTimedOut` is REQUIRED on `surface: 'epic'`. Quick
+  // 261120-8i5 made it OPTIONAL (an optional boolean) everywhere else: kept when present, absent
+  // when omitted, a non-boolean throws. ──
   it("takeNavEvents throws when a surface: 'epic' event is missing loadTimedOut", async () => {
     const { input, frames } = startTransport()
     const promise = createRustStoreEmbedSeam(requestRustInvoke).takeNavEvents()
@@ -639,7 +639,7 @@ describe('nav-methods-reach-their-rust-channel — all five navigation methods r
     )
   })
 
-  it("takeNavEvents throws when a surface: 'tauri' event carries loadTimedOut", async () => {
+  it("takeNavEvents keeps loadTimedOut on a surface: 'tauri' event", async () => {
     const { input, frames } = startTransport()
     const promise = createRustStoreEmbedSeam(requestRustInvoke).takeNavEvents()
     await flush()
@@ -662,12 +662,79 @@ describe('nav-methods-reach-their-rust-channel — all five navigation methods r
         ]
       })}\n`
     )
+    await expect(promise).resolves.toEqual([
+      {
+        url: 'https://www.gog.com/',
+        host: 'www.gog.com',
+        canGoBack: false,
+        canGoForward: false,
+        surface: 'tauri',
+        loadTimedOut: false
+      }
+    ])
+  })
+
+  it('takeNavEvents preserves loadTimedOut on a surface-less event (Tauri embed load timeout)', async () => {
+    const { input, frames } = startTransport()
+    const promise = createRustStoreEmbedSeam(requestRustInvoke).takeNavEvents()
+    await flush()
+    const frame = frames.find(
+      (f) => f.channel === RUST_STORE_EMBED_TAKE_NAV_EVENTS
+    )
+    input.write(
+      `${JSON.stringify({
+        id: frame?.id,
+        ok: true,
+        result: [
+          {
+            url: 'https://gaming.amazon.com/claim/y',
+            host: 'gaming.amazon.com',
+            canGoBack: false,
+            canGoForward: false,
+            loadTimedOut: true
+          }
+        ]
+      })}\n`
+    )
+    await expect(promise).resolves.toEqual([
+      {
+        url: 'https://gaming.amazon.com/claim/y',
+        host: 'gaming.amazon.com',
+        canGoBack: false,
+        canGoForward: false,
+        loadTimedOut: true
+      }
+    ])
+  })
+
+  it('takeNavEvents rejects a surface-less event whose loadTimedOut is not a boolean', async () => {
+    const { input, frames } = startTransport()
+    const promise = createRustStoreEmbedSeam(requestRustInvoke).takeNavEvents()
+    await flush()
+    const frame = frames.find(
+      (f) => f.channel === RUST_STORE_EMBED_TAKE_NAV_EVENTS
+    )
+    input.write(
+      `${JSON.stringify({
+        id: frame?.id,
+        ok: true,
+        result: [
+          {
+            url: 'https://gaming.amazon.com/claim/y',
+            host: 'gaming.amazon.com',
+            canGoBack: false,
+            canGoForward: false,
+            loadTimedOut: 'true'
+          }
+        ]
+      })}\n`
+    )
     await expect(promise).rejects.toThrow(
-      /store_embed_take_nav_events\[0\]: malformed response \(loadTimedOut is only valid when surface is 'epic'\)/
+      /store_embed_take_nav_events\[0\]: malformed response \(loadTimedOut must be a boolean when present\)/
     )
   })
 
-  it('takeNavEvents throws when a surface-less event carries loadTimedOut', async () => {
+  it('takeNavEvents leaves loadTimedOut absent on a surface-less event that omits it', async () => {
     const { input, frames } = startTransport()
     const promise = createRustStoreEmbedSeam(requestRustInvoke).takeNavEvents()
     await flush()
@@ -683,15 +750,45 @@ describe('nav-methods-reach-their-rust-channel — all five navigation methods r
             url: 'https://www.gog.com/',
             host: 'www.gog.com',
             canGoBack: false,
-            canGoForward: false,
-            loadTimedOut: false
+            canGoForward: false
           }
         ]
       })}\n`
     )
-    await expect(promise).rejects.toThrow(
-      /store_embed_take_nav_events\[0\]: malformed response \(loadTimedOut is only valid when surface is 'epic'\)/
+    const events = await promise
+    expect(events).toHaveLength(1)
+    expect(
+      Object.prototype.hasOwnProperty.call(events[0], 'loadTimedOut')
+    ).toBe(false)
+  })
+
+  it('navigate keeps loadTimedOut on a surface-less nav state', async () => {
+    const { input, frames } = startTransport()
+    const promise = createRustStoreEmbedSeam(requestRustInvoke).navigate(
+      'https://example.com/next'
     )
+    await flush()
+    const frame = frames.find((f) => f.channel === RUST_STORE_EMBED_NAVIGATE)
+    input.write(
+      `${JSON.stringify({
+        id: frame?.id,
+        ok: true,
+        result: {
+          url: 'https://example.com/next',
+          host: 'example.com',
+          canGoBack: true,
+          canGoForward: false,
+          loadTimedOut: false
+        }
+      })}\n`
+    )
+    await expect(promise).resolves.toEqual({
+      url: 'https://example.com/next',
+      host: 'example.com',
+      canGoBack: true,
+      canGoForward: false,
+      loadTimedOut: false
+    })
   })
 
   // ── Phase 50 Plan 02, Task 3: `challenged` and `blockedLauncherSchemeCount` carry the SAME

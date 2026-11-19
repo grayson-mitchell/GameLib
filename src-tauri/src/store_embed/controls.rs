@@ -95,19 +95,25 @@ fn store_embed_take_nav_events(app: &AppHandle) -> Result<Value, String> {
             return macos_epic_embed::take_nav_events();
         }
     }
-    take_nav_events_with(store_embed_state(), || {
-        app.get_webview(STORE_EMBED_LABEL)
-            .and_then(|webview| webview.url().ok())
-    })
+    take_nav_events_with(
+        store_embed_state(),
+        || {
+            app.get_webview(STORE_EMBED_LABEL)
+                .and_then(|webview| webview.url().ok())
+        },
+        std::time::Instant::now(),
+    )
 }
 
 /// The drain core behind `store_embed_take_nav_events`, with the live-URL reader injected so the
 /// G-47-9 guard is testable without a webview. `read_live_url` runs only when the state says a
-/// page has finished loading in the current webview.
+/// page has finished loading in the current webview. `now` is injected so the load-timeout raise
+/// (quick 261120-8i5) is testable without waiting `STORE_EMBED_LOAD_TIMEOUT`.
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 fn take_nav_events_with<F>(
     state: &Mutex<StoreEmbedState>,
     read_live_url: F,
+    now: std::time::Instant,
 ) -> Result<Value, String>
 where
     F: FnOnce() -> Option<tauri::Url>,
@@ -127,7 +133,7 @@ where
         .map_err(|_| "store_embed_take_nav_events:history-registry-poisoned".to_string())?;
     if let Some(live) = live_url {
         if let Some(change) =
-            state.observe_live_url_at(live.as_str(), generation, std::time::Instant::now())
+            state.observe_live_url_at(live.as_str(), generation, now)
         {
             shell_eprintln!(
                 "[shell] store_embed: same-document navigation {} host={}",
@@ -135,6 +141,17 @@ where
                 live.host_str().unwrap_or("")
             );
         }
+    }
+    // Quick 261120-8i5: evaluate the load clock here, under the same lock, because the renderer
+    // already polls this drain every 250 ms whenever the notice row could be visible, so no
+    // thread or timer is needed. The raise is queued immediately before the take, so it is
+    // always the LAST event of its batch. Host only, never the URL (D-23).
+    if let Some(host) = state.raise_load_timeout_if_due(now) {
+        shell_eprintln!(
+            "[shell] store_embed: load timed out after {}s without a Finished host={}",
+            STORE_EMBED_LOAD_TIMEOUT.as_secs(),
+            host
+        );
     }
     Ok(Value::Array(state.take_nav_events()))
 }
@@ -179,6 +196,7 @@ fn store_embed_back(app: &AppHandle) -> Result<Value, String> {
         let Some(target_url) = state.go_back() else {
             return Err("store_embed_back:no-back-entry".to_string());
         };
+        state.arm_load_timeout(&target_url, std::time::Instant::now());
         (target_url, store_embed_nav_state_json(&state))
     };
     let parsed_url = tauri::Url::parse(&target_url)
@@ -210,6 +228,7 @@ fn store_embed_forward(app: &AppHandle) -> Result<Value, String> {
         let Some(target_url) = state.go_forward() else {
             return Err("store_embed_forward:no-forward-entry".to_string());
         };
+        state.arm_load_timeout(&target_url, std::time::Instant::now());
         (target_url, store_embed_nav_state_json(&state))
     };
     let parsed_url = tauri::Url::parse(&target_url)
@@ -243,6 +262,9 @@ fn store_embed_reload(app: &AppHandle) -> Result<Value, String> {
         let mut state = store_embed_state()
             .lock()
             .map_err(|_| "store_embed_reload:history-registry-poisoned".to_string())?;
+        // Deliberately not arming the load clock: a WKWebView reload of a never-committed page
+        // produces no event at all, so the clock would raise against a load nobody can see
+        // (quick 261120-8i5). The renderer routes a notice-row Reload through navigate instead.
         state.arm_reload_suppression();
         store_embed_nav_state_json(&state)
     };
@@ -277,6 +299,8 @@ pub(crate) fn store_embed_navigate(app: &AppHandle, args: &[Value]) -> Result<Va
         let mut state = store_embed_state()
             .lock()
             .map_err(|_| "store_embed_navigate:history-registry-poisoned".to_string())?;
+        // Armed BEFORE the push so every event the push queues carries loadTimedOut false.
+        state.arm_load_timeout(url.as_str(), std::time::Instant::now());
         state.push(url.to_string());
         state.arm_reload_suppression();
         store_embed_nav_state_json(&state)
@@ -455,10 +479,14 @@ mod tests {
     fn store_embed_finished_guard_drain_skips_url_read_before_finished() {
         let state = Mutex::new(guard_seeded_state());
         let calls = std::cell::Cell::new(0u32);
-        let result = take_nav_events_with(&state, || {
-            calls.set(calls.get() + 1);
-            None
-        });
+        let result = take_nav_events_with(
+            &state,
+            || {
+                calls.set(calls.get() + 1);
+                None
+            },
+            std::time::Instant::now(),
+        );
         assert_eq!(
             calls.get(),
             0,
@@ -475,10 +503,14 @@ mod tests {
         let state = Mutex::new(seeded);
         let calls = std::cell::Cell::new(0u32);
         let claim = "https://gaming.amazon.com/claim/x";
-        let result = take_nav_events_with(&state, || {
-            calls.set(calls.get() + 1);
-            tauri::Url::parse(claim).ok()
-        });
+        let result = take_nav_events_with(
+            &state,
+            || {
+                calls.set(calls.get() + 1);
+                tauri::Url::parse(claim).ok()
+            },
+            std::time::Instant::now(),
+        );
         assert_eq!(calls.get(), 1);
         let Ok(Value::Array(events)) = result else {
             panic!("the drain must resolve an array");
@@ -529,5 +561,44 @@ mod tests {
         let mut state = guard_seeded_state();
         state.push("https://gaming.amazon.com/claim/z".to_string());
         assert!(!state.has_finished_page());
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_load_timeout_drain_raises_without_reading_the_url() {
+        let claim = "https://gaming.amazon.com/claim/y";
+        let t0 = std::time::Instant::now();
+        let mut seeded = guard_seeded_state();
+        seeded.arm_load_timeout(claim, t0);
+        let state = Mutex::new(seeded);
+        let calls = std::cell::Cell::new(0u32);
+        let reader = || {
+            calls.set(calls.get() + 1);
+            None
+        };
+
+        let early = take_nav_events_with(
+            &state,
+            reader,
+            t0 + STORE_EMBED_LOAD_TIMEOUT - Duration::from_millis(1),
+        );
+        assert_eq!(early, Ok(Value::Array(vec![])));
+
+        let due = take_nav_events_with(&state, reader, t0 + STORE_EMBED_LOAD_TIMEOUT);
+        assert_eq!(
+            due,
+            Ok(Value::Array(vec![serde_json::json!({
+                "url": claim,
+                "host": "gaming.amazon.com",
+                "canGoBack": false,
+                "canGoForward": false,
+                "loadTimedOut": true,
+            })]))
+        );
+        assert_eq!(
+            calls.get(),
+            0,
+            "the G-47-9 guard holds: no Finished, no URL read"
+        );
     }
 }

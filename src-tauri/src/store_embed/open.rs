@@ -44,6 +44,10 @@ pub(crate) fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value,
     // returned above keeps its own native history and is unaffected.
     if let Ok(mut state) = store_embed_state().lock() {
         state.select_store(&store_key);
+        // Quick 261120-8i5: arm the load clock for this open (cold and warm) BEFORE
+        // `prepare_open`, so its reopen event already carries loadTimedOut false. The macOS Epic
+        // arm returned above and never arms this clock.
+        state.arm_load_timeout(url.as_str(), std::time::Instant::now());
         state.prepare_open(url.as_str(), home_url.as_ref().map(tauri::Url::as_str));
     } else {
         shell_eprintln!("[shell] WARN: store_embed history registry poisoned -- continuing");
@@ -104,6 +108,8 @@ pub(crate) fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value,
                 *host = payload.url().host_str().map(str::to_string);
             }
             if payload.event() == tauri::webview::PageLoadEvent::Started {
+                // Started deliberately does not stop the load clock: on Linux it fires before
+                // commit, so only Finished is a cross-platform end-of-load signal (DD-3).
                 if let Ok(mut state) = store_embed_state().lock() {
                     state.begin_page_load();
                 } else {

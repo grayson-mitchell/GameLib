@@ -38,6 +38,32 @@ pub(crate) const STORE_EMBED_NAV_EVENTS_CAP: usize = 50;
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 pub(crate) const STORE_EMBED_LANDING_SETTLE: Duration = Duration::from_secs(3);
 
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+/// How long a store open or chrome navigation may go without a `PageLoadEvent::Finished`
+/// before the embed reports `loadTimedOut` (quick 261120-8i5, G-47-9 follow-up). wry 0.55.1's
+/// macOS navigation delegate has no load-failure callback (Started is `didCommitNavigation`,
+/// Finished is `didFinishNavigation`, nothing else), so a failed first navigation (DNS, TLS,
+/// captive portal, blocked host) sends neither event and "no Finished within a bound" is the
+/// only signal there is. 20 s is Nielsen's 10 s attention limit doubled for slow store pages,
+/// and shorter than the Epic surface's 45 s because the failure case here is a blank pane. A
+/// false positive on a slow page costs one notice row above a still-visible page, cleared by
+/// the page's own Finished.
+///
+/// Keyed on Finished, NOT Started: on Linux Started fires before commit, so only Finished is
+/// a cross-platform end-of-load signal. Linux (WebKitGTK) and Windows (WebView2) deliver
+/// Finished even for a failed load and paint their own error page, so there the raise rarely
+/// fires. Tune it against the `load timed out` diagnostic's frequency on slow-but-healthy
+/// store pages.
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+pub(crate) const STORE_EMBED_LOAD_TIMEOUT: Duration = Duration::from_secs(20);
+
+/// PURE: whether `elapsed` has reached `bound`. Inclusive at the boundary, mirroring
+/// `epic_embed_load_timed_out`.
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+pub(crate) fn store_embed_load_timed_out(elapsed: Duration, bound: Duration) -> bool {
+    elapsed >= bound
+}
+
 /// What a history change did, for the shell diagnostic (host-only logging, D-23).
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -130,6 +156,17 @@ pub(crate) struct StoreEmbedState {
     /// first load. A store switch reuses the same webview, so it keeps the flag; `clear()` and
     /// `reset_for_new_webview()` drop it.
     page_finished: bool,
+    /// When the load clock was armed (open, navigate, back, forward), `None` once a Finished
+    /// ends it or the timeout raised (one-shot: the clock stops on raise, as in the Epic
+    /// monitor). See `STORE_EMBED_LOAD_TIMEOUT`.
+    load_started_at: Option<std::time::Instant>,
+    /// The URL the armed load is for, held until a Finished lands. A raise reports THIS as the
+    /// page that did not load: on a first load the cursor entry is the seeded home (or empty),
+    /// which would name the wrong page.
+    load_url: Option<String>,
+    /// True once the load clock raised and no Finished has cleared it. Surfaced on every nav
+    /// state as `loadTimedOut` through `load_timed_out()`.
+    load_timed_out: bool,
 }
 
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
@@ -331,11 +368,80 @@ impl StoreEmbedState {
     /// early `return` in `push()` above is what enforces that, so this method is never reached
     /// on the suppressed path.
     fn enqueue_nav_event(&mut self) {
-        let event = store_embed_nav_state_json(self);
+        let event = self.nav_event_json();
+        self.push_event(event);
+    }
+
+    /// The single capped, oldest-dropped push onto the drain queue, so the cap rule lives in
+    /// one place.
+    fn push_event(&mut self, event: Value) {
         self.pending_nav_events.push(event);
         if self.pending_nav_events.len() > STORE_EMBED_NAV_EVENTS_CAP {
             self.pending_nav_events.remove(0);
         }
+    }
+
+    /// `store_embed_nav_state_json(self)` with `url` and `host` replaced by the armed load's URL
+    /// while one is in flight or has timed out, so a load-timeout event names the page that did
+    /// not load rather than the seeded home entry (or an empty URL on a first load).
+    fn nav_event_json(&self) -> Value {
+        let mut event = store_embed_nav_state_json(self);
+        if let (Some(load_url), Some(object)) = (self.load_url.as_deref(), event.as_object_mut()) {
+            let host = tauri::Url::parse(load_url)
+                .ok()
+                .and_then(|parsed| parsed.host_str().map(str::to_string))
+                .unwrap_or_default();
+            object.insert("url".to_string(), Value::String(load_url.to_string()));
+            object.insert("host".to_string(), Value::String(host));
+        }
+        event
+    }
+
+    /// PURE: arms the load clock for `url` (open, navigate, back, forward; never reload, because
+    /// a WKWebView reload of a never-committed page produces no event at all). Clears a raised
+    /// flag; if one WAS raised, queues one event so the renderer learns of the clear even when
+    /// nothing else queues.
+    pub(crate) fn arm_load_timeout(&mut self, url: &str, now: std::time::Instant) {
+        let was_raised = self.load_timed_out;
+        self.load_started_at = Some(now);
+        self.load_url = Some(url.to_string());
+        self.load_timed_out = false;
+        if was_raised {
+            self.enqueue_nav_event();
+        }
+    }
+
+    /// PURE: raises `loadTimedOut` once when the armed clock has run `STORE_EMBED_LOAD_TIMEOUT`
+    /// with no Finished. Returns the host of the URL that did not load (host only, D-23), or
+    /// `None` when already raised, not armed, or not yet due. One-shot: the clock stops on
+    /// raise. The event is queued here, so a caller that drains straight after sees it as the
+    /// LAST event of its batch.
+    pub(crate) fn raise_load_timeout_if_due(&mut self, now: std::time::Instant) -> Option<String> {
+        if self.load_timed_out {
+            return None;
+        }
+        let started = self.load_started_at?;
+        if !store_embed_load_timed_out(
+            now.saturating_duration_since(started),
+            STORE_EMBED_LOAD_TIMEOUT,
+        ) {
+            return None;
+        }
+        self.load_timed_out = true;
+        self.load_started_at = None;
+        let host = self
+            .load_url
+            .as_deref()
+            .and_then(|url| tauri::Url::parse(url).ok())
+            .and_then(|parsed| parsed.host_str().map(str::to_string))
+            .unwrap_or_default();
+        self.enqueue_nav_event();
+        Some(host)
+    }
+
+    /// PURE: whether the load clock raised and no Finished has cleared it.
+    pub(crate) fn load_timed_out(&self) -> bool {
+        self.load_timed_out
     }
 
     /// PURE: DRAINS (never merely reads) the queued navigation states -- the same
@@ -348,8 +454,19 @@ impl StoreEmbedState {
     /// PURE: this webview delivered a `PageLoadEvent::Finished` (G-47-9). Called for every
     /// Finished, including a suppressed one (the landing of a chrome back/forward/reload/
     /// navigate): the page committed either way.
+    ///
+    /// Also ends the load clock and clears a raised `loadTimedOut`, queueing the clear even on a
+    /// suppressed landing (where `push_inner` queues nothing). Known limit: a stale Finished
+    /// from the previous page that lands just after a re-arm ends the new clock early. That
+    /// costs a missed notice, never a false one.
     pub(crate) fn note_page_finished(&mut self) {
         self.page_finished = true;
+        self.load_started_at = None;
+        self.load_url = None;
+        if self.load_timed_out {
+            self.load_timed_out = false;
+            self.enqueue_nav_event();
+        }
     }
 
     /// PURE: whether the live webview has ever finished a page, i.e. whether its URL may be
@@ -359,7 +476,8 @@ impl StoreEmbedState {
     }
 
     /// PURE: a brand-new webview is about to be created, so none of the previous one's
-    /// committed-page evidence applies (G-47-9).
+    /// committed-page evidence applies (G-47-9). Deliberately leaves the load clock alone: the
+    /// cold open path arms it BEFORE this runs.
     pub(crate) fn reset_for_new_webview(&mut self) {
         self.page_finished = false;
     }
@@ -367,6 +485,9 @@ impl StoreEmbedState {
     /// PURE: drop all recorded history. Called on `store_embed_close` (D-21 teardown).
     pub(crate) fn clear(&mut self) {
         self.page_finished = false;
+        self.load_started_at = None;
+        self.load_url = None;
+        self.load_timed_out = false;
         self.history.clear();
         self.cursor = 0;
         self.suppress_next_push = false;
@@ -490,7 +611,8 @@ impl StoreEmbedState {
 /// for it to use), and back/forward availability DERIVED from the cursor -- there is no handle
 /// to synchronously ask, so this state IS the read. Field names match
 /// `StoreEmbedNavEvent` (`src/backend/store/storeEmbedSeam.ts`) exactly: `url`, `host`,
-/// `canGoBack`, `canGoForward`.
+/// `canGoBack`, `canGoForward`, `loadTimedOut` (quick 261120-8i5: the load-clock flag, always
+/// present as a boolean).
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 pub(crate) fn store_embed_nav_state_json(state: &StoreEmbedState) -> Value {
     let url = state.current_url().unwrap_or_default();
@@ -503,6 +625,7 @@ pub(crate) fn store_embed_nav_state_json(state: &StoreEmbedState) -> Value {
         "host": host,
         "canGoBack": state.can_go_back(),
         "canGoForward": state.can_go_forward(),
+        "loadTimedOut": state.load_timed_out(),
     })
 }
 
@@ -1270,5 +1393,186 @@ mod tests {
             state.take_nav_events().is_empty(),
             "a suppressed push must not queue a duplicate of state the caller already has"
         );
+    }
+
+    // ---- load clock (quick 261120-8i5): STORE_EMBED_LOAD_TIMEOUT, armed on open/navigate,
+    // raised once from the drain, cleared by any Finished ----
+
+    const LOAD_CLAIM: &str = "https://gaming.amazon.com/claim/y";
+    const LOAD_HOME: &str = "https://gaming.amazon.com/home";
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    fn load_ms(ms: u64) -> Duration {
+        Duration::from_millis(ms)
+    }
+
+    /// A state opened the way `store_embed_open` does: `select_store`, a home seed beneath the
+    /// claim page, then the clock armed for the claim page at `t0`.
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    fn load_armed_state(t0: std::time::Instant) -> StoreEmbedState {
+        let mut state = StoreEmbedState::default();
+        state.select_store("amazon");
+        state.prepare_open(LOAD_CLAIM, Some(LOAD_HOME));
+        state.arm_load_timeout(LOAD_CLAIM, t0);
+        state
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_load_timeout_bound_is_inclusive() {
+        let bound = STORE_EMBED_LOAD_TIMEOUT;
+        assert!(!store_embed_load_timed_out(bound - load_ms(1), bound));
+        assert!(store_embed_load_timed_out(bound, bound));
+        assert!(store_embed_load_timed_out(bound + load_ms(1), bound));
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_load_timeout_open_with_no_finished_raises_once() {
+        let t0 = std::time::Instant::now();
+        let mut state = load_armed_state(t0);
+        assert_eq!(store_embed_nav_state_json(&state)["loadTimedOut"], false);
+        assert!(state.take_nav_events().is_empty());
+
+        assert_eq!(
+            state.raise_load_timeout_if_due(t0 + STORE_EMBED_LOAD_TIMEOUT - load_ms(1)),
+            None
+        );
+        assert!(state.take_nav_events().is_empty());
+
+        assert_eq!(
+            state.raise_load_timeout_if_due(t0 + STORE_EMBED_LOAD_TIMEOUT),
+            Some("gaming.amazon.com".to_string())
+        );
+        let events = state.take_nav_events();
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0]["loadTimedOut"], true);
+        assert!(state.load_timed_out());
+
+        assert_eq!(
+            state.raise_load_timeout_if_due(t0 + STORE_EMBED_LOAD_TIMEOUT * 3),
+            None
+        );
+        assert!(state.take_nav_events().is_empty());
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_load_timeout_raise_reports_the_url_that_did_not_load() {
+        let t0 = std::time::Instant::now();
+        let mut state = load_armed_state(t0);
+        // The cursor entry is the seeded home; the page that did not load is the claim URL.
+        assert_eq!(state.current_url().as_deref(), Some(LOAD_HOME));
+        state.raise_load_timeout_if_due(t0 + STORE_EMBED_LOAD_TIMEOUT);
+        let events = state.take_nav_events();
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0]["url"], LOAD_CLAIM);
+        assert_eq!(events[0]["host"], "gaming.amazon.com");
+        assert_eq!(events[0]["canGoBack"], false);
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_load_timeout_finished_in_time_never_raises() {
+        let t0 = std::time::Instant::now();
+        let mut state = load_armed_state(t0);
+        state.note_page_finished();
+        assert_eq!(
+            state.raise_load_timeout_if_due(t0 + STORE_EMBED_LOAD_TIMEOUT * 3),
+            None
+        );
+        assert!(state.take_nav_events().is_empty());
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_load_timeout_late_suppressed_finished_clears() {
+        let t0 = std::time::Instant::now();
+        let mut state = StoreEmbedState::default();
+        state.push("https://a.example/".to_string());
+        state.push("https://b.example/".to_string());
+        let target = state.go_back().unwrap();
+        assert_eq!(target, "https://a.example/");
+        state.arm_load_timeout(&target, t0);
+        state.raise_load_timeout_if_due(t0 + STORE_EMBED_LOAD_TIMEOUT);
+        let _ = state.take_nav_events();
+
+        state.note_page_finished();
+        assert_eq!(
+            state.push_at(target.clone(), t0 + STORE_EMBED_LOAD_TIMEOUT + load_ms(5)),
+            None
+        );
+        let events = state.take_nav_events();
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0]["loadTimedOut"], false);
+        assert_eq!(events[0]["url"], "https://a.example/");
+        assert!(!state.load_timed_out());
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_load_timeout_late_finished_on_a_first_load_ends_on_the_loaded_url() {
+        let t0 = std::time::Instant::now();
+        let mut state = load_armed_state(t0);
+        state.raise_load_timeout_if_due(t0 + STORE_EMBED_LOAD_TIMEOUT);
+        let _ = state.take_nav_events();
+
+        state.note_page_finished();
+        assert_eq!(
+            state.push_at(
+                LOAD_CLAIM.to_string(),
+                t0 + STORE_EMBED_LOAD_TIMEOUT + load_ms(5)
+            ),
+            Some(StoreEmbedHistoryChange::Recorded)
+        );
+        let events = state.take_nav_events();
+        let last = events
+            .last()
+            .expect("the landing queues at least one event");
+        assert_eq!(last["url"], LOAD_CLAIM);
+        assert_eq!(last["loadTimedOut"], false);
+        assert_eq!(last["canGoBack"], true);
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_load_timeout_rearm_clears_and_restarts_the_clock() {
+        let t0 = std::time::Instant::now();
+        let mut state = load_armed_state(t0);
+        state.raise_load_timeout_if_due(t0 + STORE_EMBED_LOAD_TIMEOUT);
+        let _ = state.take_nav_events();
+
+        let t1 = t0 + STORE_EMBED_LOAD_TIMEOUT * 2;
+        state.arm_load_timeout("https://gaming.amazon.com/other", t1);
+        let events = state.take_nav_events();
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0]["loadTimedOut"], false);
+        assert_eq!(events[0]["url"], "https://gaming.amazon.com/other");
+
+        assert_eq!(
+            state.raise_load_timeout_if_due(t1 + STORE_EMBED_LOAD_TIMEOUT - load_ms(1)),
+            None
+        );
+        assert!(state
+            .raise_load_timeout_if_due(t1 + STORE_EMBED_LOAD_TIMEOUT)
+            .is_some());
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_load_timeout_close_disarms_but_a_new_webview_does_not() {
+        let t0 = std::time::Instant::now();
+        let mut state = load_armed_state(t0);
+        state.clear();
+        assert_eq!(
+            state.raise_load_timeout_if_due(t0 + STORE_EMBED_LOAD_TIMEOUT * 10),
+            None
+        );
+
+        let mut state = load_armed_state(t0);
+        state.reset_for_new_webview();
+        assert!(state
+            .raise_load_timeout_if_due(t0 + STORE_EMBED_LOAD_TIMEOUT)
+            .is_some());
     }
 }
