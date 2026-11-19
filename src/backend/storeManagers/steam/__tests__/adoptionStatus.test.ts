@@ -16,7 +16,8 @@ import {
   RUST_STEAM_WINDOW_RAISE,
   RUST_STEAMPOLL_ADOPTION_UNWATCH,
   RUST_STEAMPOLL_NEXT_NOTICE_SEQ,
-  RUST_STEAMPOLL_READ_RUNNING_APP_ID
+  RUST_STEAMPOLL_READ_RUNNING_APP_ID,
+  RUST_STEAMPOLL_STATUS
 } from 'common/types/sidecarTransport'
 import {
   type AdoptionPushDeps,
@@ -247,6 +248,10 @@ interface Harness {
   flights: ReturnType<typeof createLaunchFlights>
   /** Hold the running-app read until released, to keep the restart in flight. */
   hold: { release: () => void } | null
+  macSteam: {
+    isSteamRunning: jest.Mock
+    openUrlDetached: jest.Mock
+  }
 }
 
 function harness(
@@ -256,6 +261,14 @@ function harness(
     runningAppId?: number
     relaunchFails?: boolean
     holdRestart?: boolean
+    /** What Rust's steampoll_status lists as active install polls (default: none). */
+    installPolls?: Array<{
+      appId: string
+      delegatedToSteamClient: boolean
+      awaitingUpdate: boolean
+    }>
+    /** steampoll_status rejects. */
+    pollStatusFails?: boolean
   } = {}
 ): Harness {
   const store = new Map<string, unknown>()
@@ -274,6 +287,10 @@ function harness(
       : Promise.resolve(undefined)
   )
   const sendFrontendMessage = jest.fn()
+  const macSteam = {
+    isSteamRunning: jest.fn().mockResolvedValue(false),
+    openUrlDetached: jest.fn()
+  }
   const deps = {
     stores: {
       steam: {
@@ -289,6 +306,10 @@ function harness(
     requestRustInvoke: async (channel: string, args: unknown[]) => {
       rust.push({ channel, args })
       if (channel === RUST_STEAMPOLL_NEXT_NOTICE_SEQ) return 7
+      if (channel === RUST_STEAMPOLL_STATUS) {
+        if (options.pollStatusFails) throw new Error('steampoll down')
+        return { installs: options.installPolls ?? [], uninstalls: [] }
+      }
       if (channel === RUST_STEAMPOLL_READ_RUNNING_APP_ID) {
         if (gate) await gate
         return options.runningAppId ?? 0
@@ -300,10 +321,7 @@ function harness(
     clock: instantClock(),
     paths: { appFolder: dir, userHome: dir },
     steamProcesses: {
-      macSteam: {
-        isSteamRunning: jest.fn().mockResolvedValue(false),
-        openUrlDetached: jest.fn()
-      }
+      macSteam
     },
     sendFrontendMessage,
     appRuntime: { launchFlights: flights },
@@ -323,7 +341,8 @@ function harness(
     rust,
     sendFrontendMessage,
     flights,
-    hold: gate ? { release } : null
+    hold: gate ? { release } : null,
+    macSteam
   }
 }
 
@@ -337,13 +356,14 @@ const rungameidOpened = (h: Harness) =>
   h.openExternal.mock.calls.some(([url]) => String(url).includes('rungameid'))
 
 describe('restartSteamNowForAdoption (D-02)', () => {
-  test('no record: answers no-record and touches nothing', async () => {
+  test('no record and no GameLib install poll (not the 1026 edge): answers no-record and touches nothing', async () => {
     const h = harness({ withRecord: false })
     await expect(restartSteamNowForAdoption(h.game, 'linux')).resolves.toBe(
       'no-record'
     )
     expect(h.openExternal).not.toHaveBeenCalled()
     expect(notices(h)).toEqual([])
+    expect(sendGameStatusUpdate).not.toHaveBeenCalled()
   })
 
   test('quits Steam gracefully and relaunches Steam itself, never a game; only that clears the record', async () => {
@@ -446,6 +466,196 @@ describe('restartSteamNowForAdoption (D-02)', () => {
     expect(
       h.openExternal.mock.calls.filter(([u]) => u === 'steam://exit')
     ).toHaveLength(1)
+  })
+})
+
+describe('Restart Steam now at the GameLib 1026 edge, no pending record (D-02, Phase 81 Gap 2)', () => {
+  const gamelibPoll = [
+    { appId: APP_ID, delegatedToSteamClient: false, awaitingUpdate: false }
+  ]
+  const edge = (
+    options: Omit<
+      Parameters<typeof harness>[0],
+      'withRecord' | 'installPolls'
+    > = {}
+  ) => harness({ ...options, withRecord: false, installPolls: gamelibPoll })
+  const pollStatusCalls = (h: Harness) =>
+    h.rust.filter((c) => c.channel === RUST_STEAMPOLL_STATUS)
+  const touchedNothingElse = (h: Harness) => {
+    expect(h.store.has(APP_ID)).toBe(false)
+    expect(unwatched(h)).toBe(false)
+    expect(sendGameStatusUpdate).not.toHaveBeenCalled()
+    expect(rungameidOpened(h)).toBe(false)
+  }
+  const gameRunningNotice = {
+    appId: APP_ID,
+    title: 'Dota 2',
+    kind: 'adopt-restart-game-running',
+    launchWithoutSteam: false,
+    seq: 7
+  }
+
+  test('Steam not running: starts Steam with steam://open/main alone and answers relaunched', async () => {
+    const h = edge()
+    await expect(restartSteamNowForAdoption(h.game, 'linux')).resolves.toBe(
+      'relaunched'
+    )
+    expect(h.openExternal.mock.calls).toEqual([['steam://open/main']])
+    touchedNothingElse(h)
+    expect(notices(h)).toEqual([])
+  })
+
+  test('the handler body reaches the same restart end to end', async () => {
+    const h = edge()
+    await expect(
+      answerSteamAdoptionRestartNow(() => h.game, APP_ID)
+    ).resolves.toBe('relaunched')
+    expect(h.openExternal.mock.calls).toEqual([['steam://open/main']])
+  })
+
+  test('with a record the poll status is never read and the restart is unchanged', async () => {
+    const h = harness({ installPolls: gamelibPoll })
+    await expect(restartSteamNowForAdoption(h.game, 'linux')).resolves.toBe(
+      'relaunched'
+    )
+    expect(h.openExternal.mock.calls).toEqual([
+      ['steam://exit', { activate: false }],
+      ['steam://open/main']
+    ])
+    expect(pollStatusCalls(h)).toEqual([])
+  })
+
+  test('Steam running (linux): the graceful restart, never a game, no status emits', async () => {
+    const h = edge({ script: [pgrepRunning, pgrepGone] })
+    await expect(restartSteamNowForAdoption(h.game, 'linux')).resolves.toBe(
+      'relaunched'
+    )
+    expect(h.openExternal.mock.calls).toEqual([
+      ['steam://exit', { activate: false }],
+      ['steam://open/main']
+    ])
+    touchedNothingElse(h)
+  })
+
+  test('Steam running (darwin): exits through the detached opener, then starts Steam', async () => {
+    const h = edge()
+    h.macSteam.isSteamRunning
+      .mockResolvedValueOnce(true)
+      .mockResolvedValue(false)
+    await expect(restartSteamNowForAdoption(h.game, 'darwin')).resolves.toBe(
+      'relaunched'
+    )
+    expect(h.macSteam.openUrlDetached).toHaveBeenCalledWith('steam://exit')
+    expect(h.openExternal.mock.calls).toEqual([['steam://open/main']])
+    touchedNothingElse(h)
+  })
+
+  test('Steam not running (darwin): starts Steam, no steam://exit', async () => {
+    const h = edge()
+    await expect(restartSteamNowForAdoption(h.game, 'darwin')).resolves.toBe(
+      'relaunched'
+    )
+    expect(h.macSteam.openUrlDetached).not.toHaveBeenCalled()
+    expect(h.openExternal.mock.calls).toEqual([['steam://open/main']])
+  })
+
+  test('a game running in Steam, Steam running: game-running notice, Steam untouched', async () => {
+    const h = edge({ runningAppId: 4000, script: [pgrepRunning] })
+    await expect(restartSteamNowForAdoption(h.game, 'linux')).resolves.toBe(
+      'game-running'
+    )
+    expect(h.openExternal).not.toHaveBeenCalled()
+    expect(notices(h)).toEqual([gameRunningNotice])
+    touchedNothingElse(h)
+  })
+
+  test('a game running in Steam, Steam not running: game-running notice, Steam not started', async () => {
+    const h = edge({ runningAppId: 4000 })
+    await expect(restartSteamNowForAdoption(h.game, 'linux')).resolves.toBe(
+      'game-running'
+    )
+    expect(h.openExternal).not.toHaveBeenCalled()
+    expect(notices(h)).toEqual([gameRunningNotice])
+  })
+
+  test.each([
+    ['Steam running', true],
+    ['Steam not running', false]
+  ])(
+    'macOS with a go-offline wrap owed, %s: steam-busy notice, Steam untouched',
+    async (_label, steamRunning) => {
+      writeFileSync(join(dir, MAC_STEAM_OFFLINE_OWED_FILE), '{}')
+      const h = edge()
+      h.macSteam.isSteamRunning.mockResolvedValueOnce(steamRunning)
+      await expect(restartSteamNowForAdoption(h.game, 'darwin')).resolves.toBe(
+        'steam-busy'
+      )
+      expect(h.openExternal).not.toHaveBeenCalled()
+      expect(h.macSteam.openUrlDetached).not.toHaveBeenCalled()
+      expect(notices(h)).toEqual([
+        expect.objectContaining({
+          kind: 'adopt-restart-busy',
+          launchWithoutSteam: false
+        })
+      ])
+    }
+  )
+
+  test('Steam never quits: quit-timeout notice, only steam://exit fired', async () => {
+    const h = edge({ script: [{ ...pgrepRunning, repeat: true }] })
+    await expect(restartSteamNowForAdoption(h.game, 'linux')).resolves.toBe(
+      'quit-timeout'
+    )
+    expect(h.openExternal.mock.calls).toEqual([
+      ['steam://exit', { activate: false }]
+    ])
+    expect(notices(h)).toEqual([
+      expect.objectContaining({
+        kind: 'adopt-restart-quit-timeout',
+        launchWithoutSteam: false
+      })
+    ])
+  })
+
+  test.each([
+    [
+      'a poll for another appId',
+      {
+        installPolls: [
+          { appId: '999', delegatedToSteamClient: false, awaitingUpdate: false }
+        ]
+      }
+    ],
+    [
+      'a delegated poll',
+      {
+        installPolls: [
+          { appId: APP_ID, delegatedToSteamClient: true, awaitingUpdate: false }
+        ]
+      }
+    ],
+    ['a rejected steampoll_status', { pollStatusFails: true }],
+    ['a malformed steampoll_status answer', { malformed: true }]
+  ])('fails closed on %s: no-record, nothing touched', async (_label, opts) => {
+    const { malformed, ...harnessOptions } = opts as {
+      malformed?: boolean
+      installPolls?: NonNullable<Parameters<typeof harness>[0]>['installPolls']
+      pollStatusFails?: boolean
+    }
+    const h = harness({ ...harnessOptions, withRecord: false })
+    if (malformed) {
+      const original = h.game.deps.requestRustInvoke
+      h.game.deps.requestRustInvoke = ((channel: string, args: unknown[]) =>
+        channel === RUST_STEAMPOLL_STATUS
+          ? Promise.resolve(true)
+          : original(channel as never, args as never)) as never
+    }
+    await expect(restartSteamNowForAdoption(h.game, 'linux')).resolves.toBe(
+      'no-record'
+    )
+    expect(h.openExternal).not.toHaveBeenCalled()
+    expect(notices(h)).toEqual([])
+    expect(sendGameStatusUpdate).not.toHaveBeenCalled()
   })
 })
 
