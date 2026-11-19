@@ -39,3 +39,15 @@ The shape is from spike 089's Results. 087 and 088 show it works live.
 Live gate: two shim-mode titles (ELEX plus Avernum 6 or XCOM: EU) launch with `HELLO` + `GINIT ok=1`
 and a working Shift+Tab overlay. The identity-only (480) fallback still works. With the cache and
 network removed, the helper falls back to the client copy and logs `UNPINNED`.
+
+## Resolution (2026-11-20)
+
+Built in quick 261117-ubb (`1aff893bb`). Live gate passed on the operator's Mac:
+
+1. Cold cache, ELEX (411300): `steam api pin: source=fetched … elapsedMs=728`, helper `PIN source=pinned`,
+   `HELLO` + `GINIT ok=1`, Shift+Tab overlay opened. Cache dir 0700, dylib 0444.
+2. Avernum 6 (206060): `source=cached … elapsedMs=12`, pinned, `GINIT ok=1`, overlay opened.
+3. Identity-only (480) fallback: skipped, no family-shared or licence-refused title to hand. It is
+   covered by `helperIntegration.test.ts` (the identity-only helper loads the pinned dylib) but has not been run live.
+4. No cache, network off, Avernum 6: `UNPINNED (cache=miss;client=mismatch;cdn=…:connect;cdn=…:connect)`,
+   helper `PIN source=UNPINNED reason=no-flag … loaded=1`, `GINIT ok=1`, game launched.

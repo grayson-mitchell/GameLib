@@ -240,7 +240,7 @@ helper; T-ubb-06 10 s sidecar cap with an unref'd cleared timer and a `.catch`, 
 T-ubb-07 Content-Length equality plus a byte-count stop on the chunk loop (tested against a local
 server); T-ubb-08 strict reply parse.
 
-## HUMAN CHECK: pending operator verification (live gate, verbatim from the plan)
+## HUMAN CHECK: PASSED 2026-11-20 (steps 1, 2, 4 pass; step 3 skipped, no 480-fallback title to hand). Details in the completed todo. Plan text follows verbatim.
 
 LIVE GATE. The operator runs it after execution. It is not an executor step, and the todo stays in pending/ until it passes. Log: ~/Library/Logs/GameLib/gamelib.log.
 Prep: `pnpm build-steam-bridge`, then restart `pnpm tauri:dev` (not tauri:dev:run). tauri dev does not rebuild the sidecar, so confirm build/main/sidecar.js is newer than the last commit. Mac Steam is signed in.
