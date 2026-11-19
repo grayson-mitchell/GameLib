@@ -4,7 +4,7 @@ title: 'Adoption note: "Restart Steam now" button is cluttered and sits on its o
 area: steam
 severity: minor
 platform: any
-ready: human
+ready: code
 files:
   - src/frontend/screens/Game/GamePage/components/AdoptionNote.tsx
   - src/frontend/screens/Game/GamePage/components/AdoptionNote.scss
@@ -38,3 +38,12 @@ result in midnightMirage, gruvbox_dark and dracula (item 8's themes).
 The operator saw the same layout on Windows and decided the direction: "Restart Steam now" belongs
 next to the Play button, not on its own line after the note. Keep the note text under the status
 line. The 1026 waiting edge question above is still open.
+
+## Decision confirmed a third time (2026-11-20, Phase 81 item 11, Linux)
+
+The operator reported the same layout on Linux, the third OS in a row (macOS items 2 and 4, Windows
+item 10, Linux item 11): the "Restart Steam now" button appears after the note, not next to the Play
+button on the same line. The decision above stands and is now not open to re-asking: the button goes
+next to Play on the same row; the note text stays under the status line. `ready` moved from `human`
+to `code` because the direction is decided; only the 1026 waiting-edge question remains, and it must
+not hold this layout change. Nothing in the UI has changed since the first report.
