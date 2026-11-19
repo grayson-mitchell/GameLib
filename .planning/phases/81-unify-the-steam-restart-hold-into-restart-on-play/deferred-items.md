@@ -45,6 +45,8 @@ Out-of-scope discoveries logged by plan executors. Not fixed in the plan that fo
 - 81-10/81-14 keep the 1026 wait unchanged (RESEARCH Open Question 1) but no plan gives the action a target there.
 - This is caused by this phase (D-02 action shown on the 1026 path), so it is NOT pre-existing. Route to the phase verifier as a gap; candidate fix: the 1026 path restarts Steam without requiring a record, or writes a record at the 1026 handoff.
 
+- Update 2026-11-20: fixed in code by quick 261120-88x (`62a27f932`). The 1026-edge press with no record now starts or restarts Steam behind the D-05 guards. Live item 12 is deferred by operator decision and is still unrun; the new refusal copy still says "press Play" at that edge (todo `2026-11-20-1026-edge-refusal-notices-tell-the-user-to-press-play.md`).
+
 ## Orchestrator notes (after 81-10)
 
 - FIXED by orchestrator: `gamelib-steampoll-cli` `list_prints_every_op_one_per_line` pinned 24 ops; 81-02's three adoption ops make 27 (000bb3355). Caused by this phase, not pre-existing.
