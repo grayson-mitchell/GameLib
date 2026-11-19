@@ -14,6 +14,7 @@ import { readInstalledAtStart } from './library/manifestFlags'
 import * as adoption from './macSteamAdoption'
 import {
   clearAndUnwatchPendingAdoption,
+  readSteamAdoption,
   recordAndWatchPendingAdoption
 } from './adoptionWatch'
 import type { AuthSessionRefusal } from './userTypes'
@@ -259,12 +260,17 @@ export async function runNativeDepotDownload(
     // quick 261105-ord (macOS only, experimental setting): with InstallApp ON, a
     // running Steam is first asked to adopt the install directly; only a non-ok
     // outcome falls through to the record below.
+    // quick 261120-963: the one-shot adoption reading comes AFTER the InstallApp verdict and
+    // BEFORE the record. It seeds Steam's signed-in state into the record's first push (7b: a
+    // null there rendered the restart-on-Play note for a signed-out Steam until the watch's
+    // first tick), and a reading that already says Steam adopted the install writes no record.
     if (deferredPoll.handoff && leasedResult.status === 'done') {
       const handoff = deferredPoll.handoff
       const pid = await adoption
         .probeSteamPid({ runner: steamGame.deps.runner }, hostPlatform())
         .catch(() => null)
-      let adoptedByInstallApp = false
+      // One flag: Steam owns this install now (InstallApp ok, or the reading says it adopted).
+      let steamAdopted = false
       if (
         pid !== null &&
         isSteamExperimentalInstallAppEnabled(steamGame.deps.config)
@@ -278,7 +284,7 @@ export async function runNativeDepotDownload(
           }
         )
         if (outcome.kind === 'ok') {
-          adoptedByInstallApp = true
+          steamAdopted = true
           clearAndUnwatchPendingAdoption(steamGame.deps, steamGame.appId)
           logInfo(
             `SteamGame: Steam adopted appId ${steamGame.appId} via InstallApp without a restart`,
@@ -295,7 +301,7 @@ export async function runNativeDepotDownload(
           )
         }
       }
-      if (adoptedByInstallApp) {
+      if (steamAdopted) {
         // Steam already knows the install and its ACF is Steam's; nothing to record, and no poll
         // flag: with no restart hold there is nothing to release (Phase 81 D-11).
       } else if (pid !== null) {
@@ -304,16 +310,46 @@ export async function runNativeDepotDownload(
           handoff.manifestPath
         )
         if (baseline) {
-          await recordAndWatchPendingAdoption(steamGame.deps, steamGame.appId, {
+          const candidate = {
             steamPid: pid,
             manifestPath: handoff.manifestPath,
             baseline,
             recordedAt: Date.now()
-          })
+          }
+          const reading = await readSteamAdoption(
+            steamGame.deps,
+            steamGame.appId,
+            candidate
+          )
           logInfo(
-            `SteamGame: recorded pending Steam adoption for ${steamGame.appId} (steam_osx pid ${pid})`,
+            `SteamGame: adoption reading for ${steamGame.appId} at install end: ${
+              reading === null
+                ? 'unavailable'
+                : `signedIn ${String(reading.signedIn)}`
+            }`,
             LogPrefix.Steam
           )
+          if (reading?.adopted === true) {
+            steamAdopted = true
+            clearAndUnwatchPendingAdoption(steamGame.deps, steamGame.appId)
+            logInfo(
+              `SteamGame: Steam already adopted appId ${steamGame.appId} at install end (${
+                reading.evidence ?? 'no evidence word'
+              }); no restart-on-Play record`,
+              LogPrefix.Steam
+            )
+          } else {
+            await recordAndWatchPendingAdoption(
+              steamGame.deps,
+              steamGame.appId,
+              candidate,
+              reading
+            )
+            logInfo(
+              `SteamGame: recorded pending Steam adoption for ${steamGame.appId} (steam_osx pid ${pid})`,
+              LogPrefix.Steam
+            )
+          }
         } else {
           logWarning(
             `SteamGame: no manifest at ${handoff.manifestPath}; not recording pending adoption for ${steamGame.appId}`,
@@ -323,8 +359,14 @@ export async function runNativeDepotDownload(
       } else {
         clearAndUnwatchPendingAdoption(steamGame.deps, steamGame.appId)
       }
+      // 7a (quick 261120-963): once Steam has adopted the install its ACF is Steam's, so a
+      // StateFlags 1026 there is Steam's own InstallApp validation or repair, never GameLib's
+      // finished handoff (spike mac-steam-client-integration.md section 3: the UI must not read
+      // that as waiting for a Steam restart; install_once.rs is_waiting needs isNativeHandoff).
+      // An in-flight poll is left as it is: Rust's upgrade only acts on isNativeHandoff true.
+      // Not adopted (including Steam not running) keeps the handoff flag.
       await startInstallPolling(steamGame.deps, steamGame.appId, {
-        isNativeHandoff: true,
+        isNativeHandoff: !steamAdopted,
         skippedDepots: handoff.skippedDepots
       })
     }

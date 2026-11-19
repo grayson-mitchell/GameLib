@@ -15659,6 +15659,8 @@ describe('SteamGame — quick 261029-ji2 pending Steam adoption', () => {
 
   afterEach(() => {
     startInstallPollingSpy.mockRestore()
+    // quick 261120-963 leak guard: steamTestDeps is shared across the file.
+    steamTestDeps.steamInstallRuntime.adoption.signedIn.delete(APP_ID)
     envMock.isMac = false
   })
 
@@ -15700,6 +15702,77 @@ describe('SteamGame — quick 261029-ji2 pending Steam adoption', () => {
         }
       )
       expect(shellOpenExternal).not.toHaveBeenCalled()
+    })
+
+    it('261120-963 (7b): the adoption reading is taken before the record, and the first push already carries steamSignedIn false', async () => {
+      adoption().probeSteamPid.mockResolvedValue(123)
+      adoption().recordPendingAdoption.mockImplementation(() => {
+        adoption().readPendingAdoption.mockReturnValue(RECORD)
+      })
+      const readSpy = jest
+        .spyOn(adoptionWatchModule, 'readSteamAdoption')
+        .mockResolvedValue({
+          adopted: false,
+          signedIn: false,
+          steamRunning: true,
+          helperState: 0,
+          evidence: null
+        })
+      try {
+        await new SteamGame(APP_ID, steamTestDeps).install({} as any)
+
+        expect(readSpy).toHaveBeenCalledTimes(1)
+        expect(readSpy).toHaveBeenCalledWith(
+          steamTestDeps,
+          APP_ID,
+          expect.objectContaining({
+            steamPid: 123,
+            manifestPath: `/mock/steam/steamapps/appmanifest_${APP_ID}.acf`
+          })
+        )
+        expect(readSpy.mock.invocationCallOrder[0]).toBeLessThan(
+          adoption().recordPendingAdoption.mock.invocationCallOrder[0] ?? 0
+        )
+        const pushes = sendFrontendMessage.mock.calls.filter(
+          (c) =>
+            c[0] === 'steamAdoptionStatusChanged' && c[1].appName === APP_ID
+        )
+        expect(pushes[0][1]).toMatchObject({
+          pending: true,
+          steamSignedIn: false
+        })
+      } finally {
+        readSpy.mockRestore()
+      }
+    })
+
+    it('261120-963: a reading that says Steam already adopted writes no record, clears a stale one and polls as a non-handoff (7a)', async () => {
+      adoption().probeSteamPid.mockResolvedValue(123)
+      const readSpy = jest
+        .spyOn(adoptionWatchModule, 'readSteamAdoption')
+        .mockResolvedValue({
+          adopted: true,
+          signedIn: true,
+          steamRunning: true,
+          helperState: 4,
+          evidence: 'helper'
+        })
+      try {
+        await new SteamGame(APP_ID, steamTestDeps).install({} as any)
+
+        expect(adoption().recordPendingAdoption).not.toHaveBeenCalled()
+        expect(adoption().clearPendingAdoption).toHaveBeenCalledWith(
+          APP_ID,
+          mockAdoptionStore
+        )
+        expect(startInstallPollingSpy).toHaveBeenCalledWith(
+          steamTestDeps,
+          APP_ID,
+          { isNativeHandoff: false, skippedDepots: [] }
+        )
+      } finally {
+        readSpy.mockRestore()
+      }
     })
 
     it('Steam not running: no record is written (a stale one is cleared), still polls', async () => {
@@ -16156,10 +16229,33 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
         steamTestDeps,
         APP_ID,
         {
-          isNativeHandoff: true,
+          isNativeHandoff: false,
           skippedDepots: []
         }
       )
+    })
+
+    it('261120-963 (7a): InstallApp ok starts the poll as a non-handoff and takes no adoption reading or record', async () => {
+      settingOn()
+      adoption().probeSteamPid.mockResolvedValue(123)
+      installApp().mockResolvedValue({ kind: 'ok', folderIndex: 0 })
+      const readSpy = jest
+        .spyOn(adoptionWatchModule, 'readSteamAdoption')
+        .mockResolvedValue(null)
+      try {
+        await new SteamGame(APP_ID, steamTestDeps).install({} as any)
+
+        expect(startInstallPollingSpy).toHaveBeenCalledTimes(1)
+        expect(startInstallPollingSpy).toHaveBeenCalledWith(
+          steamTestDeps,
+          APP_ID,
+          { isNativeHandoff: false, skippedDepots: [] }
+        )
+        expect(readSpy).not.toHaveBeenCalled()
+        expect(adoption().recordPendingAdoption).not.toHaveBeenCalled()
+      } finally {
+        readSpy.mockRestore()
+      }
     })
 
     it.each([
@@ -16232,10 +16328,13 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
           'restoredSteamHold'
         ]
         let watchSpy: jest.SpyInstance
-        const expectNoHoldOption = () => {
+        const expectNoHoldOption = (handoff = true) => {
           expect(startInstallPollingSpy).toHaveBeenCalledTimes(1)
           const options = startInstallPollingSpy.mock.calls[0][2]
-          expect(options).toEqual({ isNativeHandoff: true, skippedDepots: [] })
+          expect(options).toEqual({
+            isNativeHandoff: handoff,
+            skippedDepots: []
+          })
           for (const key of REMOVED_HOLD_KEYS) {
             expect(Object.keys(options)).not.toContain(key)
           }
@@ -16286,7 +16385,7 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
             }
           )
 
-          it('InstallApp ok: no record is written and the poll still carries no hold option', async () => {
+          it('InstallApp ok: no record is written and the poll starts as a non-handoff with no hold option', async () => {
             settingOn()
             installApp().mockResolvedValue({ kind: 'ok', folderIndex: 0 })
 
@@ -16294,7 +16393,7 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
 
             expect(watchSpy).not.toHaveBeenCalled()
             expect(adoption().recordPendingAdoption).not.toHaveBeenCalled()
-            expectNoHoldOption()
+            expectNoHoldOption(false)
           })
         }
       }

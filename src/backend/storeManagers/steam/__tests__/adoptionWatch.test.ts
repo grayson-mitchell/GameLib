@@ -168,6 +168,28 @@ describe('the page status push (D-07)', () => {
     })
   })
 
+  test('261120-963: a reading passed to recordAndWatchPendingAdoption seeds the signed-in cache before the one push', async () => {
+    const { deps, pushes, signedIn } = makeDeps()
+    await recordAndWatchPendingAdoption(deps, '112100', record(), {
+      adopted: false,
+      signedIn: false,
+      steamRunning: true,
+      helperState: 0,
+      evidence: null
+    })
+    expect(payloads(pushes)).toEqual([
+      { appName: '112100', pending: true, steamSignedIn: false, seq: 1 }
+    ])
+    expect(signedIn.get('112100')).toBe(false)
+  })
+
+  test('261120-963: a null reading seeds nothing and the push stays null (D-10)', async () => {
+    const { deps, pushes, signedIn } = makeDeps()
+    await recordAndWatchPendingAdoption(deps, '112100', record(), null)
+    expect(payloads(pushes)[0]?.steamSignedIn).toBeNull()
+    expect(signedIn.has('112100')).toBe(false)
+  })
+
   test('clearAndUnwatchPendingAdoption pushes pending:false once and drops the signed-in reading', async () => {
     const { deps, pushes, signedIn } = makeDeps({
       seed: { '112100': record() }
@@ -451,6 +473,18 @@ describe('migrateRestartHolds (D-12, D-13)', () => {
     expect(written.recordedAt).toBe(1_650_000_000)
     expect(written.baseline.content).toContain('112100')
     expect(channels(calls)).toContain(RUST_STEAMPOLL_ADOPTION_WATCH)
+  })
+
+  test('261120-963: a migrated record pushes with the signed-in value of the reading it already took', async () => {
+    acfFor('112100')
+    const { deps, pushes } = makeDeps({
+      reply: router({ drain: [hold('112100')] })
+    })
+    await expect(migrateRestartHolds(deps)).resolves.toBe(1)
+    const payload = pushes.find(
+      (p) => (p.args[0] as { appName: string }).appName === '112100'
+    )?.args[0] as Record<string, unknown>
+    expect(payload).toMatchObject({ pending: true, steamSignedIn: true })
   })
 
   test('a hold whose ACF is gone is dropped (acf-gone), never written or watched', async () => {

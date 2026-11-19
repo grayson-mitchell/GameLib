@@ -98,12 +98,24 @@ async function watchPendingAdoption(
   }
 }
 
-/** Writes the record, then watches it. The record stays even when the watch invoke fails. */
+/**
+ * Writes the record, then watches it. The record stays even when the watch invoke fails.
+ *
+ * `reading` is the one-shot Rust reading the caller took after any InstallApp verdict. When
+ * present its signed-in value seeds the page's cache BEFORE the record's push, so the page never
+ * renders the restart-on-Play variant while the watch's first reading (up to one tick away) is
+ * still in flight (todo 2026-11-18, 81-HUMAN-UAT item 7b). No reading (null or omitted) leaves
+ * the cache alone and the push carries null, as before the watch existed (D-10).
+ */
 export async function recordAndWatchPendingAdoption(
   deps: AdoptionWatchDeps,
   appId: string,
-  record: PendingAdoptionRecord
+  record: PendingAdoptionRecord,
+  reading?: AdoptionReading | null
 ): Promise<void> {
+  if (reading) {
+    deps.steamInstallRuntime.adoption.signedIn.set(appId, reading.signedIn)
+  }
   recordPendingAdoption(appId, record, pendingAdoptionStoreFrom(deps))
   pushSteamAdoptionStatus(deps, appId)
   await watchPendingAdoption(deps, appId, record)
@@ -254,7 +266,7 @@ async function migrateOneHold(
   // the install would make Play restart a Steam that has nothing to adopt.
   const reading = await readSteamAdoption(deps, appId, candidate)
   if (reading?.adopted === true) return 'already-adopted'
-  await recordAndWatchPendingAdoption(deps, appId, candidate)
+  await recordAndWatchPendingAdoption(deps, appId, candidate, reading)
   return 'migrated'
 }
 
