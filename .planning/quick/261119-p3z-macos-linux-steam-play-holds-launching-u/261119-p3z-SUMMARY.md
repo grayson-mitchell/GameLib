@@ -102,7 +102,7 @@ None.
 
 `graphify update .` ran (graphify-out is not tracked). `pnpm build:sidecar` ran so the live check picks up the change. The user must restart `pnpm tauri:dev` (never `tauri:dev:run`).
 
-## Post-fix human check: pending
+## Post-fix human check: passed (2026-11-19, operator reported "pass")
 
 Operator to run on macOS:
 

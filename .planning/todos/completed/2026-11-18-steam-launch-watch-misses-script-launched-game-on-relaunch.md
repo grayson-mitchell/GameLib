@@ -58,5 +58,4 @@ only the candidate pids on darwin, `/proc/<pid>/exe` on linux), so the launch wa
 `playing` and Stop gets real pids. No process outside the folder, sibling folder or Steam helper
 is matched.
 
-Live check pending (ready: live-gate): Bastion 107100 Play shows Playing and Stop ends it; run
-after a `pnpm tauri:dev` restart.
+Live check passed 2026-11-19 (operator, macOS): Bastion 107100 detected (gamelib.log 12:36:19 `running: pids [17140, 17144]`), Stop SIGTERMed both pids. The Launching step it exposed was fixed in quick 261119-p3z, whose live check (Play → Launching → Playing → Stop → Play, no flicker) also passed.

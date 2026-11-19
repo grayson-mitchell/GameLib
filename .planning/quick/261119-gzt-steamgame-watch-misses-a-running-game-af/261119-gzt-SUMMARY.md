@@ -82,7 +82,7 @@ None. The only new process spawn is `/usr/sbin/lsof` through the runner (argv ar
 
 ## Post-fix human check
 
-**pending** (non-blocking, todo `ready: live-gate`):
+**passed** 2026-11-19 (operator). Detection and Stop confirmed in gamelib.log (pids [17140, 17144]); the missing Launching step it surfaced was fixed in quick 261119-p3z. Steps run:
 1. Restart with `pnpm tauri:dev`; confirm `sidecar.js` is newer than 362934e4f (dev does not rebuild the sidecar).
 2. Play Bastion (107100): the button shows Playing, and gamelib.log has `SteamGame.watch: appId 107100 running: pids [<bash pid>, <Bastion.bin.osx pid>] under .../steamapps/common/Bastion`.
 3. Stop: Bastion quits, gamelib.log has `SteamGame.stop: stopping Steam-launched appId 107100: SIGTERM pids [...]`, and the button returns to Play.
