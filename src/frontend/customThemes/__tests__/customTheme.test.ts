@@ -6,6 +6,7 @@ import {
   MAX_TOKENS_PER_THEME,
   MAX_TOKEN_VALUE_LENGTH,
   THEME_ID_PATTERN,
+  cleanTokens,
   customThemeKey,
   makeCopy,
   newCustomThemeId,
@@ -178,6 +179,32 @@ describe('parseCustomThemes token handling', () => {
       expect(tokensOf({ '--gradient-01': bad })).toEqual({})
     }
   })
+
+  it('IN-03: drops a stored gradient planted in a colour token', () => {
+    const good = 'linear-gradient(90deg, #000, #333)'
+    expect(tokensOf({ '--accent': good, '--gradient-01': good })).toEqual({
+      '--gradient-01': good
+    })
+  })
+
+  it('CR-01: the Save filter drops a layered image-set gradient', () => {
+    const good = 'linear-gradient(90deg, #000, #333)'
+    const layered =
+      'linear-gradient(red, blue), image-set("https://attacker.example/p.png" 1x)'
+    expect(
+      cleanTokens({ '--gradient-01': layered, '--gradient-02': good }, yes)
+    ).toEqual({ '--gradient-02': good })
+  })
+
+  it.each(Object.keys(BUILTIN_TOKENS))(
+    'keeps every token of the %s seed',
+    (key) => {
+      const seed = BUILTIN_TOKENS[key] ?? {}
+      expect(Object.keys(cleanTokens(seed, yes) ?? {}).sort()).toEqual(
+        Object.keys(seed).sort()
+      )
+    }
+  )
 
   it('fails closed on gradients when CSS.supports is unavailable', () => {
     const good = 'linear-gradient(90deg, #000, #333)'

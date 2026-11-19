@@ -6,7 +6,11 @@ import 'frontend/testUtils/jsdomNoticeEnv'
 import i18next from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { builtinSeed } from 'frontend/customThemes/builtinTokens'
+import {
+  BUILTIN_TOKENS,
+  builtinSeed
+} from 'frontend/customThemes/builtinTokens'
+import { isValidTokenValue } from 'frontend/customThemes/validate'
 import {
   CORE_TOKENS,
   LIVE_DERIVED_TOKENS,
@@ -114,6 +118,35 @@ describe('AdvancedSection', () => {
     ) as string
     expect(container.querySelector(`input#token${colourToken}`)).toBeTruthy()
   })
+
+  it.each(Object.keys(BUILTIN_TOKENS))(
+    'IN-03: a %s copy edits exactly the four gradient tokens as gradients, each accepted by the validator',
+    (key) => {
+      const copy: Record<string, string> = { ...builtinSeed(key) }
+      const { container } = render(
+        <AdvancedSection base={key} draft={copy} onCommit={jest.fn()} />
+      )
+      fireEvent.click(screen.getByRole('button', { name: /Advanced/ }))
+      const names = Array.from(container.querySelectorAll('textarea'))
+        .map((el) => el.id.replace(/^token/, ''))
+        .sort()
+      expect(names).toEqual([
+        '--gradient-01',
+        '--gradient-02',
+        '--gradient-body-background',
+        '--gradient-gamecard'
+      ])
+      for (const name of names) {
+        expect(
+          isValidTokenValue(
+            name,
+            'linear-gradient(90deg, #000, #333)',
+            () => true
+          )
+        ).toBe(true)
+      }
+    }
+  )
 
   it('commits an edited colour through onCommit with the token name', () => {
     const colourToken = universe.find(

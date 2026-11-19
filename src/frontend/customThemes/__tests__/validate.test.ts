@@ -3,6 +3,7 @@ import {
   isValidTokenValue,
   validateColourInput
 } from '../validate'
+import { BUILTIN_TOKENS } from '../builtinTokens'
 
 const yes = () => true
 const GOOD = 'linear-gradient(90deg, #000, #333)'
@@ -49,7 +50,21 @@ describe('isValidGradient', () => {
     ['@', 'linear-gradient(90deg, #000, #333)@import'],
     ['!important', 'linear-gradient(90deg, #000, #333) !important'],
     ['backslash', 'linear-gradient(90deg, \\75rl(x), #333)'],
-    ['uppercase VAR(', 'linear-gradient(90deg, VAR(--x), #333)']
+    ['uppercase VAR(', 'linear-gradient(90deg, VAR(--x), #333)'],
+    ['image-set(', 'linear-gradient(90deg, image-set(x 1x), #333)'],
+    [
+      '-webkit-image-set(',
+      'linear-gradient(90deg, -webkit-image-set(x 1x), #333)'
+    ],
+    ['cross-fade(', 'linear-gradient(90deg, cross-fade(red, blue), #333)'],
+    ['element(', 'linear-gradient(90deg, element(#x), #333)'],
+    ['src(', 'linear-gradient(90deg, src(x), #333)'],
+    ['a double quote', 'linear-gradient(90deg, "red", #333)'],
+    ['a single quote', "linear-gradient(90deg, 'red', #333)"],
+    [
+      'a comment (masks a second layer from a paren walk)',
+      'linear-gradient(red, blue /*(*/), linear-gradient(green, black /*)*/)'
+    ]
   ])('rejects text containing %s before calling supports', (_n, text) => {
     const supports = jest.fn(() => true)
     expect(isValidGradient(text, supports)).toBe(false)
@@ -135,5 +150,65 @@ describe('CR-01: one gradient layer only (T-64-12)', () => {
     const supports = jest.fn(() => true)
     expect(isValidGradient(text, supports)).toBe(false)
     expect(supports).not.toHaveBeenCalled()
+  })
+})
+
+describe('CR-01: -webkit-image-set carrying a URL (T-64-12)', () => {
+  const webkit = '-webkit-image-set("https://attacker.example/p.png" 1x)'
+
+  it('refuses it on its own', () => {
+    const supports = jest.fn(() => true)
+    expect(isValidGradient(webkit, supports)).toBe(false)
+    expect(supports).not.toHaveBeenCalled()
+  })
+
+  it('refuses it as a second layer after a gradient', () => {
+    const supports = jest.fn(() => true)
+    expect(
+      isValidGradient(`linear-gradient(red, blue), ${webkit}`, supports)
+    ).toBe(false)
+    expect(supports).not.toHaveBeenCalled()
+  })
+})
+
+describe('one-layer gradients that must keep validating', () => {
+  const gamecard = BUILTIN_TOKENS.midnightMirage?.['--gradient-gamecard'] ?? ''
+
+  it.each([
+    'linear-gradient(90deg, rgba(0, 0, 0, 0.5) 10%, #000 90%)',
+    'radial-gradient(circle at 50% 50%, rgb(0 0 0 / 50%), transparent)',
+    'conic-gradient(from 90deg, hsl(0 100% 50%), #fff)',
+    'repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.1) 0 10px, transparent 10px 20px)',
+    'linear-gradient(90deg, color-mix(in srgb, #000 50%, #fff), #333)',
+    gamecard
+  ])('accepts %s and asks supports once with the trimmed text', (text) => {
+    expect(text).toMatch(/gradient\(/)
+    const supports = jest.fn(() => true)
+    expect(isValidGradient(`  ${text}  `, supports)).toBe(true)
+    expect(supports).toHaveBeenCalledTimes(1)
+    expect(supports).toHaveBeenCalledWith('background-image', text.trim())
+  })
+})
+
+describe('IN-03: gradients only for gradient tokens', () => {
+  it.each(['--accent', '--body-background'])(
+    'refuses a valid gradient on the colour token %s',
+    (name) => {
+      expect(isValidTokenValue(name, GOOD, yes)).toBe(false)
+    }
+  )
+
+  it.each([
+    '--gradient-01',
+    '--gradient-02',
+    '--gradient-gamecard',
+    '--gradient-body-background'
+  ])('accepts a valid gradient on %s', (name) => {
+    expect(isValidTokenValue(name, GOOD, yes)).toBe(true)
+  })
+
+  it('leaves colour validation unchanged', () => {
+    expect(isValidTokenValue('--accent', '#112233', yes)).toBe(true)
+    expect(isValidTokenValue('--accent', 'var(--x)', yes)).toBe(false)
   })
 })
