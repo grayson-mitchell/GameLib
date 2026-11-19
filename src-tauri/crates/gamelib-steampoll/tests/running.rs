@@ -169,6 +169,45 @@ async fn linux_falls_back_to_the_reaper_scan_only_when_the_vdf_is_zero() {
 }
 
 #[tokio::test]
+async fn linux_reaper_scan_reads_every_accepted_appid_form() {
+    let home = tempfile::tempdir().unwrap();
+    for (line, want) in [
+        // Real capture from this Steam build (appId only).
+        (
+            ".../steamrt64/reaper SteamLaunch AppId=57300 -- /mnt/x/_v2-entry-point --verb=waitforexitand",
+            57300,
+        ),
+        (
+            "/bin/sh -c .../steam-launch-wrapper -- .../reaper SteamLaunch AppId=203830 -- foo",
+            203830,
+        ),
+        ("reaper SteamLaunch --AppId 431960 -- foo", 431960),
+        ("reaper SteamLaunch --AppId=7 -- foo", 7),
+    ] {
+        let runner = ScriptedRunner::default();
+        runner.on("ps -eo args", vec![ps_out(Some(0), &format!("/sbin/init\n{line}\n"))]);
+        let v = read_running_app_id(Platform::Linux, home.path(), None, &runner, false).await;
+        assert_eq!(v, Ok(want), "{line}");
+    }
+}
+
+#[tokio::test]
+async fn linux_reaper_line_without_steamlaunch_or_digits_reads_zero() {
+    let home = tempfile::tempdir().unwrap();
+    for out in [
+        "reaper AppId=57300 -- foo",
+        "/usr/bin/reaper --AppId 57300",
+        "reaper SteamLaunch AppId= -- foo",
+        "reaper SteamLaunch -- foo",
+    ] {
+        let runner = ScriptedRunner::default();
+        runner.on("ps -eo args", vec![ps_out(Some(0), out)]);
+        let v = read_running_app_id(Platform::Linux, home.path(), None, &runner, false).await;
+        assert_eq!(v, Ok(0), "{out}");
+    }
+}
+
+#[tokio::test]
 async fn linux_reaper_scan_is_zero_on_no_match_timeout_or_nonzero_exit() {
     let home = tempfile::tempdir().unwrap();
     for out in [

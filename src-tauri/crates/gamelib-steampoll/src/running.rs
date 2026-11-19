@@ -26,7 +26,9 @@ use tokio_util::sync::CancellationToken;
 
 /// The registry key every running poll registers under (single instance).
 const POLL_KEY: &str = "running";
-const REAPER_MARKER: &str = "reaper SteamLaunch --AppId ";
+/// A game's reaper line reads `reaper SteamLaunch AppId=<id> -- ...` on current Steam builds
+/// (captured live, 2026-11-20); `--AppId <id>` and `--AppId=<id>` are kept for older ones.
+const REAPER_MARKER: &str = "reaper SteamLaunch ";
 
 fn read_registry_vdf(path: &Path) -> u32 {
     gamelib_steamfiles::readers::read_running_app_id(path).running_app_id
@@ -44,14 +46,27 @@ async fn linux_fallback(runner: &dyn ProcessRunner) -> u32 {
     if out.code != Some(0) {
         return 0;
     }
-    let Some(at) = out.stdout.find(REAPER_MARKER) else {
-        return 0;
-    };
-    let digits: String = out.stdout[at + REAPER_MARKER.len()..]
-        .chars()
-        .take_while(char::is_ascii_digit)
-        .collect();
-    digits.parse().unwrap_or(0)
+    parse_reaper_app_id(&out.stdout)
+}
+
+/// The app id from the first `reaper SteamLaunch <AppId form><digits>` in a `ps` listing, 0 when
+/// no line carries one (a `reaper` line without `SteamLaunch`, or without digits, never matches).
+fn parse_reaper_app_id(ps: &str) -> u32 {
+    let mut rest = ps;
+    while let Some(at) = rest.find(REAPER_MARKER) {
+        rest = &rest[at + REAPER_MARKER.len()..];
+        let after = ["AppId=", "--AppId=", "--AppId "]
+            .iter()
+            .find_map(|form| rest.strip_prefix(form));
+        let Some(after) = after else { continue };
+        let digits: String = after.chars().take_while(char::is_ascii_digit).collect();
+        if let Ok(id) = digits.parse::<u32>() {
+            if id != 0 {
+                return id;
+            }
+        }
+    }
+    0
 }
 
 /// The currently running Steam game AppID, 0 when none or on any error.
