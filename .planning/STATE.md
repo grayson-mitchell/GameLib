@@ -6,10 +6,10 @@ current_phase: 81
 current_phase_name: Unify the Steam restart hold into restart-on-Play
 status: planning
 stopped_at: Phase 64 complete; Phase 81 has open verification gaps
-last_updated: "2026-11-19T17:32:29.820Z"
+last_updated: "2026-11-19T17:54:45.871Z"
 last_activity: 2026-11-20
 last_activity_desc: Phase 64 complete (re-verified 8/8)
-state_head: 5d1112a47e4ac1089b9c8a1e97b5a040cebe1f14
+state_head: d0459b101bd5e459e58fc83f64565addcd0bd8ff
 progress:
   total_phases: 26
   completed_phases: 23
@@ -79,7 +79,7 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 Phase: 81 (Unify the Steam restart hold into restart-on-Play)
 Plan: 20 plans executed
 Status: Gaps found — needs gap-closure planning
-Last activity: 2026-11-20 - Completed quick task 261120-8i5: Store embed first load that fails while online leaves a blank embed with no notice
+Last activity: 2026-11-20 - Completed quick task 261120-963: Restart note and "Restart Steam now" flash for 1-2 s at install end before the state settles
 
 Progress: [█████████░] 88%
 
@@ -721,6 +721,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261119-se9 | Mac Steam restart guards count running bridged (bottled) games | 2026-11-19 | fffce88fe | — | [261119-se9-mac-steam-restart-guards-count-running-b](./quick/261119-se9-mac-steam-restart-guards-count-running-b/) |
 | 147 | Resolve dev-build uninstall notification todo: Terminal identity denied, not a defect | 2026-11-19 | dcfd163f5 | — | — |
 | 261120-8i5 | Store embed first load that fails while online leaves a blank embed with no notice | 2026-11-20 | 5d1112a47 | — | [261120-8i5-store-embed-first-load-that-fails-while-](./quick/261120-8i5-store-embed-first-load-that-fails-while-/) |
+| 261120-963 | Restart note and "Restart Steam now" flash for 1-2 s at install end before the state settles | 2026-11-20 | d0459b101 | — | [261120-963-restart-note-and-restart-steam-now-flash](./quick/261120-963-restart-note-and-restart-steam-now-flash/) |
 
 ## Deferred Items
 
