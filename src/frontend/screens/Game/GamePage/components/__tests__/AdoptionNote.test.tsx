@@ -407,5 +407,6 @@ describe('AdoptionNote source (D-04, theme tokens)', () => {
     expect(scss).not.toMatch(/#[0-9a-fA-F]{3,6}\b|rgb\(|hsl\(/)
     expect(scss).toContain('var(--text-secondary)')
     expect(scss).toContain('var(--secondary-font-family)')
+    expect(scss).toContain('var(--space-xs)')
   })
 })

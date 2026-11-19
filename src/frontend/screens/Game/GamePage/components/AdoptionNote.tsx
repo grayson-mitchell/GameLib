@@ -9,6 +9,11 @@ import './AdoptionNote.scss'
 
 interface Props {
   gameInfo: GameInfo
+  /**
+   * Which half to render: the note text (above the buttons), the action button (on the Play row),
+   * or both together (default).
+   */
+  part?: 'note' | 'action'
 }
 
 /** One query answer with the push seq the store held when the query was issued (a newer push wins). */
@@ -45,7 +50,7 @@ const readStatus = async (appName: string): Promise<StatusRead> => {
  *
  * Hooks run unconditionally before any early return.
  */
-const AdoptionNote = ({ gameInfo }: Props) => {
+const AdoptionNote = ({ gameInfo, part }: Props) => {
   const { t } = useTranslation('gamelib')
   const { is, statusContext } = useContext(GameContext)
   const appName = gameInfo.app_name
@@ -101,25 +106,38 @@ const AdoptionNote = ({ gameInfo }: Props) => {
     setBusy(false)
   }
 
+  const action = (
+    <button
+      type="button"
+      className="button is-secondary steamAdoptionNote__action"
+      disabled={busy || is.launching || is.playing}
+      onClick={() =>
+        run(() =>
+          signedOut
+            ? window.api.steamAdoptionOpenSteam(appName)
+            : window.api.steamAdoptionRestartNow(appName)
+        )
+      }
+    >
+      {signedOut
+        ? t('steam.adoption.action.openSteam', 'Open Steam')
+        : t('steam.adoption.action.restartNow', 'Restart Steam now')}
+    </button>
+  )
+
+  if (part === 'action') return action
+  if (part === 'note') {
+    return text ? (
+      <div className="steamAdoptionNote" role="status">
+        <span className="steamAdoptionNote__text">{text}</span>
+      </div>
+    ) : null
+  }
+
   return (
     <div className="steamAdoptionNote" role="status">
       {text && <span className="steamAdoptionNote__text">{text}</span>}
-      <button
-        type="button"
-        className="button is-secondary steamAdoptionNote__action"
-        disabled={busy || is.launching || is.playing}
-        onClick={() =>
-          run(() =>
-            signedOut
-              ? window.api.steamAdoptionOpenSteam(appName)
-              : window.api.steamAdoptionRestartNow(appName)
-          )
-        }
-      >
-        {signedOut
-          ? t('steam.adoption.action.openSteam', 'Open Steam')
-          : t('steam.adoption.action.restartNow', 'Restart Steam now')}
-      </button>
+      {action}
     </div>
   )
 }
