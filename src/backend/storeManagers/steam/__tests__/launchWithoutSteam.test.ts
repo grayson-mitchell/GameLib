@@ -2,13 +2,7 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
-// The logger writes through a writer initialised at app boot; the setting-driven cases log.
-jest.mock('backend/logger', () => ({
-  logInfo: jest.fn(),
-  logWarning: jest.fn(),
-  LogPrefix: { Steam: 'Steam' }
-}))
-
+import { initHeadless } from 'backend/logger'
 import {
   launchMacNativeWithoutSteam,
   launchWithoutSteam
@@ -17,6 +11,9 @@ import {
   STEAM_DIRECT_TRACK_RUNNER,
   type DirectLaunchVerdict
 } from '../directLaunch/directLaunchVerdict'
+
+// The real logger needs a writer; HOME is redirected by the backend jest containment setup.
+beforeAll(() => initHeadless())
 
 describe('launchMacNativeWithoutSteam', () => {
   let install: string

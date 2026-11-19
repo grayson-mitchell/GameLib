@@ -1,31 +1,23 @@
-import type { ReactElement, ReactNode } from 'react'
+/**
+ * @jest-environment jsdom
+ */
+import 'frontend/testUtils/jsdomNoticeEnv'
+import { use as registerI18nPlugin } from 'i18next'
+import { initReactI18next } from 'react-i18next'
+import { cleanup, fireEvent, render } from '@testing-library/react'
 import type { GameInfo } from 'common/types'
-
-jest.mock('react-i18next', () => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { gamelibT } = require('./gamelibT')
-  return { useTranslation: () => ({ t: gamelibT }) }
-})
-
+import gamelib from '../../../../../../../public/locales/en/gamelib.json'
 import NativePortInfo from '../NativePortInfo'
 
-type El = ReactElement<{ children?: ReactNode; onClick?: () => unknown }>
-const flat = (n: ReactNode, out: El[] = []): El[] => {
-  if (Array.isArray(n)) n.forEach((c) => flat(c, out))
-  else if (n && typeof n === 'object') {
-    out.push(n as El)
-    flat((n as El).props.children, out)
-  }
-  return out
-}
-const text = (n: ReactNode): string =>
-  Array.isArray(n)
-    ? n.map(text).join('')
-    : typeof n === 'string'
-      ? n
-      : n && typeof n === 'object'
-        ? text((n as El).props.children)
-        : ''
+// Real i18next over the shipped en catalogue, so assertions measure the shipped strings.
+void registerI18nPlugin(initReactI18next).init({
+  lng: 'en',
+  ns: ['gamelib'],
+  defaultNS: 'gamelib',
+  resources: { en: { gamelib } },
+  initImmediate: false,
+  interpolation: { escapeValue: false }
+})
 
 const makeGameInfo = (over: Partial<GameInfo> = {}): GameInfo => ({
   runner: 'steam',
@@ -39,45 +31,40 @@ const makeGameInfo = (over: Partial<GameInfo> = {}): GameInfo => ({
   ...over
 })
 
-const els = (gameInfo: GameInfo, platform: string) =>
-  flat(NativePortInfo({ gameInfo, platform }) as ReactNode).filter(
-    (e) => typeof e.type === 'string'
+const renderInfo = (gameInfo: GameInfo, platform: string) =>
+  render(<NativePortInfo gameInfo={gameInfo} platform={platform} />).container
+const button = (container: HTMLElement, label: string) =>
+  Array.from(container.querySelectorAll('button')).find(
+    (b) => b.textContent === label
   )
-const button = (list: El[], label: string) =>
-  list.find((e) => (e.type as string) === 'button' && text(e) === label)
 
 const openExternalUrl = jest.fn()
 const openFolder = jest.fn()
 const clipboardWriteText = jest.fn()
 beforeEach(() => {
   jest.clearAllMocks()
-  ;(globalThis as unknown as { window: unknown }).window = {
+  Object.assign(window, {
     api: { openExternalUrl, openFolder, clipboardWriteText }
-  }
+  })
 })
+afterEach(cleanup)
 
 describe('NativePortInfo', () => {
   it('renders nothing for non-Steam, unknown AppId or unsupported platform', () => {
     expect(
-      NativePortInfo({
-        gameInfo: makeGameInfo({ runner: 'gog' }),
-        platform: 'darwin'
-      })
+      renderInfo(makeGameInfo({ runner: 'gog' }), 'darwin').firstChild
     ).toBeNull()
+    cleanup()
     expect(
-      NativePortInfo({
-        gameInfo: makeGameInfo({ app_name: '730' }),
-        platform: 'darwin'
-      })
+      renderInfo(makeGameInfo({ app_name: '730' }), 'darwin').firstChild
     ).toBeNull()
-    expect(
-      NativePortInfo({ gameInfo: makeGameInfo(), platform: 'unknown' })
-    ).toBeNull()
+    cleanup()
+    expect(renderInfo(makeGameInfo(), 'unknown').firstChild).toBeNull()
   })
 
   it('renders the block with setup help and wires the buttons', () => {
-    const list = els(makeGameInfo(), 'darwin')
-    const all = list.map((e) => text(e)).join('|')
+    const container = renderInfo(makeGameInfo(), 'darwin')
+    const all = container.textContent ?? ''
     expect(all).toContain('Native port available')
     expect(all).toContain('fallout1-ce')
     expect(all).toContain('Sustainable Use License')
@@ -89,13 +76,19 @@ describe('NativePortInfo', () => {
     expect(all).toContain('MASTER.DAT, CRITTER.DAT, DATA/')
     expect(all).toContain('Add Game')
 
-    button(list, 'Get fallout1-ce')?.props.onClick?.()
+    const get = button(container, 'Get fallout1-ce')
+    expect(get).toBeDefined()
+    fireEvent.click(get as HTMLElement)
     expect(openExternalUrl).toHaveBeenCalledWith(
       'https://github.com/alexbatalov/fallout1-ce/releases'
     )
-    button(list, 'Show data folder')?.props.onClick?.()
+    const show = button(container, 'Show data folder')
+    expect(show).toBeDefined()
+    fireEvent.click(show as HTMLElement)
     expect(openFolder).toHaveBeenCalledWith('/x/Fallout')
-    button(list, 'Copy install path')?.props.onClick?.()
+    const copy = button(container, 'Copy install path')
+    expect(copy).toBeDefined()
+    fireEvent.click(copy as HTMLElement)
     expect(clipboardWriteText).toHaveBeenCalledWith('/x/Fallout')
   })
 
@@ -104,17 +97,18 @@ describe('NativePortInfo', () => {
       makeGameInfo({ is_installed: false }),
       makeGameInfo({ install: {} })
     ]) {
-      const list = els(info, 'darwin')
-      expect(list.length).toBeGreaterThan(0)
-      expect(button(list, 'Show data folder')).toBeUndefined()
-      expect(button(list, 'Copy install path')).toBeUndefined()
-      expect(button(list, 'Get fallout1-ce')).toBeDefined()
+      const container = renderInfo(info, 'darwin')
+      expect(container.querySelector('[role="note"]')).not.toBeNull()
+      expect(button(container, 'Show data folder')).toBeUndefined()
+      expect(button(container, 'Copy install path')).toBeUndefined()
+      expect(button(container, 'Get fallout1-ce')).toBeDefined()
+      cleanup()
     }
   })
 
   it('uses the point step for point-style ports', () => {
-    const list = els(makeGameInfo({ app_name: '22320' }), 'darwin')
-    expect(list.map((e) => text(e)).join('|')).toContain(
+    const container = renderInfo(makeGameInfo({ app_name: '22320' }), 'darwin')
+    expect(container.textContent).toContain(
       "point it at the game's install folder"
     )
   })

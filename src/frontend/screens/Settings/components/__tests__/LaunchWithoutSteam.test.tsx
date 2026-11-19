@@ -1,75 +1,78 @@
-import type { ReactElement } from 'react'
+/**
+ * @jest-environment jsdom
+ */
+import 'frontend/testUtils/jsdomNoticeEnv'
+import { use as registerI18nPlugin } from 'i18next'
+import { initReactI18next } from 'react-i18next'
+import { act, cleanup, fireEvent, render } from '@testing-library/react'
 import type { SteamDirectLaunchView } from 'common/types/steam'
-
-// No DOM renderer in this project: drive the component function directly with
-// hooks stubbed (effects run synchronously).
-let mockIsDefault = false
-let mockStored: unknown = false
-let mockView: SteamDirectLaunchView | undefined
-const mockSetter = jest.fn()
-const mockSetView = jest.fn()
-jest.mock('react', () => ({
-  ...jest.requireActual('react'),
-  useContext: () => ({ isDefault: mockIsDefault, appName: '570' }),
-  useState: () => [mockView, mockSetView],
-  useEffect: (fn: () => void) => {
-    fn()
-  }
-}))
-jest.mock('frontend/screens/Settings/SettingsContext', () => ({
-  __esModule: true,
-  default: {}
-}))
-jest.mock('frontend/hooks/useSetting', () => ({
-  __esModule: true,
-  default: () => [mockStored, mockSetter]
-}))
-jest.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (_k: string, d: string) => d })
-}))
-jest.mock('frontend/components/UI', () => ({
-  ToggleSwitch: () => null,
-  InfoBox: () => null
-}))
-jest.mock('@fortawesome/react-fontawesome', () => ({
-  FontAwesomeIcon: () => null
-}))
-
+import type { SettingsContextType } from 'frontend/types'
+import SettingsContext from 'frontend/screens/Settings/SettingsContext'
 import LaunchWithoutSteam, {
   describeLaunchWithoutSteamControl
 } from '../LaunchWithoutSteam'
 
+// Empty resources: t(key, default) returns the English default, and the InfoBox help key returns itself.
+void registerI18nPlugin(initReactI18next).init({
+  lng: 'en',
+  resources: {},
+  initImmediate: false,
+  interpolation: { escapeValue: false }
+})
+
 const verdict = jest.fn()
+const setSetting = jest.fn()
 
-const render = (): ReactElement | null =>
-  (LaunchWithoutSteam as unknown as () => ReactElement | null)()
-
-type Props = Record<string, unknown> & { children?: unknown }
-function parts(el: ReactElement | null): ReactElement[] {
-  if (!el) return []
-  const kids = (el.props as { children: unknown }).children
-  return (Array.isArray(kids) ? kids : [kids]).filter(
-    (k): k is ReactElement => typeof k === 'object' && k !== null
-  )
+function ctx(
+  isDefault: boolean,
+  appName: string,
+  stored: unknown
+): SettingsContextType {
+  return {
+    getSetting: ((key: string, fallback: unknown) =>
+      key === 'launchWithoutSteam'
+        ? stored
+        : fallback) as SettingsContextType['getSetting'],
+    setSetting,
+    config: {},
+    isDefault,
+    appName,
+    runner: 'legendary',
+    gameInfo: undefined,
+    isMacNative: false,
+    isLinuxNative: false
+  }
 }
-const toggle = (el: ReactElement | null): Props =>
-  (parts(el)[0] as ReactElement).props as Props
-const infoBoxes = (el: ReactElement | null) =>
-  parts(el)
-    .slice(1)
-    .map((p) => (p.props as Props).className)
+
+const tree = (value: SettingsContextType) => (
+  <SettingsContext.Provider value={value}>
+    <LaunchWithoutSteam />
+  </SettingsContext.Provider>
+)
+
+async function mount(value: SettingsContextType) {
+  let result!: ReturnType<typeof render>
+  await act(() => {
+    result = render(tree(value))
+    return Promise.resolve()
+  })
+  return result
+}
+
+const checkbox = (c: HTMLElement) =>
+  c.querySelector<HTMLInputElement>('#launchWithoutSteam')
+
+const clean: SteamDirectLaunchView = {
+  applies: true,
+  kind: 'mac-native',
+  warning: 'none'
+}
 
 beforeEach(() => {
-  mockIsDefault = false
-  mockStored = false
-  mockView = undefined
-  mockSetter.mockClear()
-  mockSetView.mockClear()
   verdict.mockReset().mockResolvedValue({ applies: false, reason: 'error' })
-  ;(globalThis as unknown as { window: unknown }).window = {
-    api: { steamDirectLaunchVerdict: verdict }
-  }
+  Object.assign(window, { api: { steamDirectLaunchVerdict: verdict } })
 })
+afterEach(cleanup)
 
 describe('describeLaunchWithoutSteamControl', () => {
   test.each([
@@ -117,63 +120,71 @@ describe('describeLaunchWithoutSteamControl', () => {
 })
 
 describe('LaunchWithoutSteam', () => {
-  test('the default settings context renders nothing and never asks the backend', () => {
-    mockIsDefault = true
-    expect(render()).toBeNull()
+  test('the default settings context renders nothing and never asks the backend', async () => {
+    const { container } = await mount(ctx(true, 'default', false))
+    expect(container.firstChild).toBeNull()
     expect(verdict).not.toHaveBeenCalled()
   })
 
-  test('asks the backend for the verdict of this game', () => {
-    render()
+  test('asks the backend for the verdict of this game', async () => {
+    await mount(ctx(false, '570', false))
     expect(verdict).toHaveBeenCalledWith('570')
   })
 
-  test('DRM view: disabled, off, reason behind the (i)', () => {
-    mockView = { applies: false, reason: 'steam-drm' }
-    mockStored = true
-    const el = render()
-    expect(toggle(el)).toMatchObject({ disabled: true, value: false })
+  test('DRM view: disabled, off, reason behind the (i)', async () => {
+    verdict.mockResolvedValue({ applies: false, reason: 'steam-drm' })
+    const { container } = await mount(ctx(false, '570', true))
+    expect(container.querySelector('.toggleWithInfo')).not.toBeNull()
+    const box = checkbox(container)
+    expect(box?.disabled).toBe(true)
+    expect(box?.checked).toBe(false)
     // The reason is a label-line (i), not a badge row below the toggle.
-    expect((el?.props as Props).className).toBe('toggleWithInfo')
-    expect((parts(el)[1] as ReactElement).props).toMatchObject({
-      text: 'infobox.help',
-      iconOnly: true,
-      children:
-        'Not available: this game uses Steam DRM, which needs the Steam app.'
+    expect(container.querySelector('.saves-warning')).toBeNull()
+    const help = container.querySelector('.helpLink--iconOnly')
+    expect(help?.getAttribute('aria-label')).toBe('infobox.help')
+    fireEvent.click(help as Element)
+    expect(container.querySelector('.poppedElement')?.textContent).toBe(
+      'Not available: this game uses Steam DRM, which needs the Steam app.'
+    )
+  })
+
+  test('steam-api view with the setting on shows the yellow warning', async () => {
+    verdict.mockResolvedValue({
+      applies: true,
+      kind: 'bridge',
+      warning: 'steam-api'
     })
+    const { container } = await mount(ctx(false, '570', true))
+    const box = checkbox(container)
+    expect(box?.checked).toBe(true)
+    expect(box?.disabled).toBe(false)
+    expect(container.querySelectorAll('.infoBox.saves-warning')).toHaveLength(1)
   })
 
-  test('steam-api view with the setting on shows the yellow warning', () => {
-    mockView = { applies: true, kind: 'bridge', warning: 'steam-api' }
-    mockStored = true
-    const el = render()
-    expect(toggle(el)).toMatchObject({ value: true })
-    expect(toggle(el).disabled).toBeUndefined()
-    expect(infoBoxes(el)).toEqual(['infoBox saves-warning'])
+  test('clean view with the setting on has no warning', async () => {
+    verdict.mockResolvedValue(clean)
+    const { container } = await mount(ctx(false, '570', true))
+    expect(checkbox(container)?.checked).toBe(true)
+    expect(container.querySelector('.saves-warning')).toBeNull()
   })
 
-  test('clean view with the setting on has no warning', () => {
-    mockView = { applies: true, kind: 'mac-native', warning: 'none' }
-    mockStored = true
-    const el = render()
-    expect(toggle(el)).toMatchObject({ value: true })
-    expect(infoBoxes(el)).toEqual([])
-  })
-
-  test('toggling writes the negated value', () => {
-    mockView = { applies: true, kind: 'mac-native', warning: 'none' }
-    mockStored = false
-    ;(toggle(render()).handleChange as () => void)()
-    expect(mockSetter).toHaveBeenCalledWith(true)
+  test('toggling writes the negated value', async () => {
+    verdict.mockResolvedValue(clean)
+    const { container } = await mount(ctx(false, '570', false))
+    fireEvent.click(checkbox(container) as HTMLElement)
+    expect(setSetting).toHaveBeenCalledWith('launchWithoutSteam', true)
   })
 
   test('a failed verdict request hides the toggle', async () => {
+    verdict.mockResolvedValueOnce(clean)
+    const { container, rerender } = await mount(ctx(false, '570', false))
+    expect(checkbox(container)).not.toBeNull()
     verdict.mockRejectedValue(new Error('x'))
-    render()
-    await new Promise((r) => setImmediate(r))
-    expect(mockSetView).toHaveBeenCalledWith({
-      applies: false,
-      reason: 'error'
+    await act(() => {
+      rerender(tree(ctx(false, '440', false)))
+      return Promise.resolve()
     })
+    expect(verdict).toHaveBeenCalledWith('440')
+    expect(container.firstChild).toBeNull()
   })
 })
