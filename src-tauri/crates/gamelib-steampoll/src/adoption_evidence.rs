@@ -20,7 +20,7 @@
 //!
 //! Linux: Steam lists an adopted app in the `apps` map of `steamapps/libraryfolders.vdf`, and never
 //! rewrites the ACF (spike 088), so [`library_folders_list_app`] is its evidence. Signed-in is the
-//! last `Logged On` / `Logged Off` state line of `logs/connection_log.txt`
+//! last `Logged On` / `Logged Off` state line (skipping `Connecting`) of `logs/connection_log.txt`
 //! ([`connection_log_signed_in`]). Windows: signed-in is `HKCU\Software\Valve\Steam\ActiveProcess`
 //! `ActiveUser` ([`windows_signed_in`]); 0 means signed out. A Steam pid change, including Steam not
 //! running, is never evidence on either OS: a sign-out restarts Steam without adopting anything.
@@ -247,9 +247,10 @@ fn state_word(line: &str) -> Option<&str> {
     Some(word)
 }
 
-/// Linux signed-in: the last state line in the final
+/// Linux signed-in: the last `Logged On` / `Logged Off` state line in the final
 /// [`ADOPTION_CONNECTION_LOG_TAIL_BYTES`] of `connection_log.txt`. `Logged On` is signed in,
-/// `Logged Off` signed out; any other state word, no state line or an unreadable file is unknown.
+/// `Logged Off` signed out; other state words (`Connecting`) are skipped, and no such line or an
+/// unreadable file is unknown.
 pub fn connection_log_signed_in(path: &Path) -> Option<bool> {
     let mut file = File::open(path).ok()?;
     let meta = file.metadata().ok()?;
@@ -267,9 +268,13 @@ pub fn connection_log_signed_in(path: &Path) -> Option<bool> {
         // The window began inside a line: drop that fragment.
         lines.next();
     }
-    match lines.filter_map(state_word).next_back()? {
-        "Logged On" => Some(true),
-        "Logged Off" => Some(false),
-        _ => None,
-    }
+    // Scan back past transient words (`Connecting` ...): a signed-out Steam keeps writing them.
+    lines
+        .filter_map(state_word)
+        .rev()
+        .find_map(|word| match word {
+            "Logged On" => Some(true),
+            "Logged Off" => Some(false),
+            _ => None,
+        })
 }
