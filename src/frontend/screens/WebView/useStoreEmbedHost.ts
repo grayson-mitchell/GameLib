@@ -208,7 +208,8 @@ export interface StoreEmbedHostState {
   /**
    * Phase 50 Plan 05 (D-07/D-08/D-11): mirrors Rust's load-timeout monitor (Plan 02), surfaced
    * through this hook's existing drain -- see the derivation below for why no new state slot or
-   * poll loop was needed.
+   * poll loop was needed. Quick 261120-8i5: on the Tauri embed it mirrors
+   * `STORE_EMBED_LOAD_TIMEOUT`, raised in the Rust drain and cleared by any later Finished.
    */
   loadTimedOut: boolean
   /**
@@ -300,8 +301,10 @@ export function useStoreEmbedHost({
   // ── EPIC NAV-SIGNAL SURFACING (Phase 50 Plan 05, D-07/D-10/D-11/D-14) ──────────────────────
   //
   // Plan 02 (Rust) emits three new OPTIONAL `StoreEmbedNavEvent` fields on an `'epic'` surface
-  // only -- REQUIRED there, FORBIDDEN everywhere else (`coerceNavState` enforces this in
-  // `storeEmbedFlowRegistration.ts`), so `?? false` below is a safe default rather than a
+  // only -- REQUIRED there. `challenged` and `blockedLauncherSchemeCount` are FORBIDDEN
+  // everywhere else (`coerceNavState` enforces this in `storeEmbedFlowRegistration.ts`);
+  // `loadTimedOut` is OPTIONAL elsewhere (quick 261120-8i5: the Tauri embed's
+  // `STORE_EMBED_LOAD_TIMEOUT` raise), so `?? false` below is a safe default rather than a
   // channel that could ever go dark on a store that actually emits it. `StoreEmbedNavState` is
   // structurally identical to the exported `StoreEmbedNavEvent` -- no new type declaration is
   // needed for either field, and the drain effect just below (unchanged) is the only thing that
@@ -377,21 +380,24 @@ export function useStoreEmbedHost({
           // Superseded fields (url/host/canGoBack/canGoForward) take the LAST event in the
           // batch -- the earlier ones are intermediate states this drain already superseded, so
           // setting each in turn would render a burst of stale hosts. `loadTimedOut` is a
-          // ONE-SHOT RAISE, not a superseded state, so it does not get the same treatment: if it
+          // ONE-SHOT RAISE on Epic, not a superseded state, so it does not get the same treatment: if it
           // clears later in the SAME batch (G-50-16's live sequence -- raise, then the -999
           // failure, then the next provisional start, all landing inside one 250 ms poll
           // interval), applying only the last event would coalesce the raise away before the
           // renderer ever saw it. Merge it stickily across the whole batch instead, same spirit
           // as `blockedLauncherSchemeCount` just above being a counter rather than a flag for
-          // exactly this coalescing reason. Strict `=== true` (not truthiness) so a non-Epic
-          // batch, where the field is absent on every event, latches nothing.
+          // exactly this coalescing reason. Strict `=== true` (not truthiness) so an Epic batch
+          // with no raise latches nothing. The latch is Epic-only (quick 261120-8i5): the
+          // Tauri embed's raise is queued immediately before the drain's take, so it is always
+          // the LAST event of its batch and latest-wins is exact there -- which is also what
+          // lets a late Finished's clear, landing in the same batch, clear the row.
           const latest = events[events.length - 1]
           if (!latest) return
           // Quick 261030-qqh: arm from EVERY event -- the coalescing above would otherwise
           // drop an app page followed by another load inside one tick.
           for (const event of events) noteVisitedUrlRef.current(event.url)
           const loadTimedOut = events.some(
-            (event) => event.loadTimedOut === true
+            (event) => event.surface === 'epic' && event.loadTimedOut === true
           )
             ? true
             : latest.loadTimedOut

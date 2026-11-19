@@ -4,10 +4,17 @@ import { useTranslation } from 'react-i18next'
 
 interface StoreEmbedTimeoutBannerProps {
   /**
-   * Pushed by the Rust-side load-timeout monitor (Phase 50 Plan 02); this
-   * component never owns a timer of its own.
+   * Pushed by a Rust-side load-timeout: the Epic surface's monitor (Phase 50
+   * Plan 02), or on the Tauri embed `STORE_EMBED_LOAD_TIMEOUT`, raised in the
+   * Rust nav-event drain (quick 261120-8i5). This component never owns a
+   * timer of its own.
    */
   timedOut: boolean
+  /**
+   * The macOS Epic surface. Picks the timeout variant's message: Epic keeps
+   * its own copy, every other store says the page has not finished loading.
+   */
+  isEpicSurface: boolean
   onReload: () => void
   onOpenInBrowser: () => void
   /**
@@ -38,6 +45,11 @@ interface StoreEmbedTimeoutBannerProps {
  *    component never retries on its own; every reload is a direct result of
  *    the user's own click (D-08).
  *
+ * Quick 261120-8i5: the timeout variant also serves the Tauri-managed embed,
+ * where a failed first navigation while ONLINE sends no event at all on
+ * macOS. Only the message differs (`isEpicSurface`); Reload and Open in
+ * browser are shared.
+ *
  * Hookless beyond `useTranslation`, props-driven, fail-soft: a missing
  * callback disables its own affordance instead of throwing (Phase 40
  * D-22/D-23 chrome discipline, T-40-07-06).
@@ -50,6 +62,7 @@ interface StoreEmbedTimeoutBannerProps {
  */
 export default function StoreEmbedTimeoutBanner({
   timedOut,
+  isEpicSurface,
   onReload,
   onOpenInBrowser,
   offline,
@@ -94,10 +107,15 @@ export default function StoreEmbedTimeoutBanner({
     return null
   }
 
-  const message = tGamelib(
-    'webview.epicEmbed.timeout.message',
-    'Epic is taking a while to load'
-  )
+  const message = isEpicSurface
+    ? tGamelib(
+        'webview.epicEmbed.timeout.message',
+        'Epic is taking a while to load'
+      )
+    : tGamelib(
+        'webview.storeEmbed.timeout.message',
+        "This page hasn't finished loading"
+      )
   const reloadLabel = tGamelib('webview.epicEmbed.timeout.reload', 'Reload')
   const openInBrowserLabel = tGamelib(
     'webview.unavailable.open-in-browser',

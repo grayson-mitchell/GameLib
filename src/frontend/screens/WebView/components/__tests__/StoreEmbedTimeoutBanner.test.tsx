@@ -83,6 +83,7 @@ function stripCssComments(source: string): string {
 describe('StoreEmbedTimeoutBanner (D-07/D-08/D-11)', () => {
   it('returns null when timedOut is false', () => {
     const element = StoreEmbedTimeoutBanner({
+      isEpicSurface: true,
       timedOut: false,
       onReload: noop,
       onOpenInBrowser: noop
@@ -93,6 +94,7 @@ describe('StoreEmbedTimeoutBanner (D-07/D-08/D-11)', () => {
 
   it('renders a non-null row when timedOut is true', () => {
     const element = StoreEmbedTimeoutBanner({
+      isEpicSurface: true,
       timedOut: true,
       onReload: noop,
       onOpenInBrowser: noop
@@ -104,6 +106,7 @@ describe('StoreEmbedTimeoutBanner (D-07/D-08/D-11)', () => {
 
   it('renders the locked message, a Reload action, and an Open in browser action, in that order', () => {
     const element = StoreEmbedTimeoutBanner({
+      isEpicSurface: true,
       timedOut: true,
       onReload: noop,
       onOpenInBrowser: noop
@@ -120,6 +123,7 @@ describe('StoreEmbedTimeoutBanner (D-07/D-08/D-11)', () => {
     const onReload = jest.fn()
     const onOpenInBrowser = jest.fn()
     const element = StoreEmbedTimeoutBanner({
+      isEpicSurface: true,
       timedOut: true,
       onReload,
       onOpenInBrowser
@@ -140,6 +144,7 @@ describe('StoreEmbedTimeoutBanner (D-07/D-08/D-11)', () => {
     const onReload = jest.fn()
     const onOpenInBrowser = jest.fn()
     const element = StoreEmbedTimeoutBanner({
+      isEpicSurface: true,
       timedOut: true,
       onReload,
       onOpenInBrowser
@@ -157,6 +162,7 @@ describe('StoreEmbedTimeoutBanner (D-07/D-08/D-11)', () => {
 
   it('renders no spinner and no progress indicator', () => {
     const element = StoreEmbedTimeoutBanner({
+      isEpicSurface: true,
       timedOut: true,
       onReload: noop,
       onOpenInBrowser: noop
@@ -169,6 +175,7 @@ describe('StoreEmbedTimeoutBanner (D-07/D-08/D-11)', () => {
 
   it('fail-soft: a missing onReload disables the Reload affordance rather than throwing', () => {
     const element = StoreEmbedTimeoutBanner({
+      isEpicSurface: true,
       timedOut: true,
       onReload: undefined as unknown as () => void,
       onOpenInBrowser: noop
@@ -185,6 +192,7 @@ describe('StoreEmbedTimeoutBanner (D-07/D-08/D-11)', () => {
 
   it('fail-soft: a missing onOpenInBrowser disables that affordance rather than throwing', () => {
     const element = StoreEmbedTimeoutBanner({
+      isEpicSurface: true,
       timedOut: true,
       onReload: noop,
       onOpenInBrowser: undefined as unknown as () => void
@@ -202,6 +210,7 @@ describe('StoreEmbedTimeoutBanner (D-07/D-08/D-11)', () => {
   describe('offline variant (G-47-9)', () => {
     it('renders the notice row with the offline message and exactly one Try again action', () => {
       const element = StoreEmbedTimeoutBanner({
+        isEpicSurface: true,
         timedOut: false,
         onReload: noop,
         onOpenInBrowser: noop,
@@ -228,6 +237,7 @@ describe('StoreEmbedTimeoutBanner (D-07/D-08/D-11)', () => {
       const onOpenInBrowser = jest.fn()
       const onTryAgain = jest.fn()
       const element = StoreEmbedTimeoutBanner({
+        isEpicSurface: true,
         timedOut: false,
         onReload,
         onOpenInBrowser,
@@ -248,6 +258,7 @@ describe('StoreEmbedTimeoutBanner (D-07/D-08/D-11)', () => {
 
     it('wins over the timeout variant: offline message, no Reload or Open in browser', () => {
       const element = StoreEmbedTimeoutBanner({
+        isEpicSurface: true,
         timedOut: true,
         onReload: noop,
         onOpenInBrowser: noop,
@@ -264,6 +275,7 @@ describe('StoreEmbedTimeoutBanner (D-07/D-08/D-11)', () => {
 
     it('fail-soft: a missing onTryAgain disables Try again rather than throwing', () => {
       const element = StoreEmbedTimeoutBanner({
+        isEpicSurface: true,
         timedOut: false,
         onReload: noop,
         onOpenInBrowser: noop,
@@ -282,6 +294,7 @@ describe('StoreEmbedTimeoutBanner (D-07/D-08/D-11)', () => {
     it('offline false leaves every existing behaviour unchanged', () => {
       expect(
         StoreEmbedTimeoutBanner({
+          isEpicSurface: true,
           timedOut: false,
           onReload: noop,
           onOpenInBrowser: noop,
@@ -291,6 +304,7 @@ describe('StoreEmbedTimeoutBanner (D-07/D-08/D-11)', () => {
       ).toBeNull()
 
       const timedOut = StoreEmbedTimeoutBanner({
+        isEpicSurface: true,
         timedOut: true,
         onReload: noop,
         onOpenInBrowser: noop,
@@ -301,6 +315,69 @@ describe('StoreEmbedTimeoutBanner (D-07/D-08/D-11)', () => {
       expect(text).toContain('Reload')
       expect(text).toContain('Open in browser')
       expect(text).not.toContain('Try again')
+    })
+  })
+
+  describe('non-Epic variant (quick 261120-8i5)', () => {
+    it('online and timed out: the page-not-loaded message, Reload, then Open in browser, never Epic copy', () => {
+      const element = StoreEmbedTimeoutBanner({
+        isEpicSurface: false,
+        timedOut: true,
+        onReload: noop,
+        onOpenInBrowser: noop,
+        offline: false
+      }) as AnyReactElement
+
+      const text = collectText(element)
+      expect(text).toContain("This page hasn't finished loading")
+      expect(text).toContain('Reload')
+      expect(text).toContain('Open in browser')
+      expect(text.indexOf('Reload')).toBeLessThan(
+        text.indexOf('Open in browser')
+      )
+      expect(text).not.toContain('Epic')
+    })
+
+    it('timed out and offline: only the offline row, never a second notice', () => {
+      const element = StoreEmbedTimeoutBanner({
+        isEpicSurface: false,
+        timedOut: true,
+        onReload: noop,
+        onOpenInBrowser: noop,
+        offline: true,
+        onTryAgain: noop
+      }) as AnyReactElement
+
+      const text = collectText(element)
+      expect(text).toContain("You're offline, so this store can't load.")
+      expect(text).not.toContain("This page hasn't finished loading")
+      expect(text).not.toContain('Reload')
+      expect(text).not.toContain('Open in browser')
+    })
+
+    it('not timed out and online: renders nothing', () => {
+      expect(
+        StoreEmbedTimeoutBanner({
+          isEpicSurface: false,
+          timedOut: false,
+          onReload: noop,
+          onOpenInBrowser: noop,
+          offline: false
+        })
+      ).toBeNull()
+    })
+
+    it('names the new message key once and shares the one Reload key', () => {
+      const source = readFileSync(
+        join(__dirname, '../StoreEmbedTimeoutBanner.tsx'),
+        'utf8'
+      )
+      expect(
+        source.match(/webview\.storeEmbed\.timeout\.message/g)
+      ).toHaveLength(1)
+      expect(source.match(/webview\.epicEmbed\.timeout\.reload/g)).toHaveLength(
+        1
+      )
     })
   })
 

@@ -1433,6 +1433,72 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
     expect(after.loadTimedOut).toBe(false)
   })
 
+  // ── Tauri-embed load timeout (quick 261120-8i5) ──────────────────────────────────────────
+  //
+  // Rust's `STORE_EMBED_LOAD_TIMEOUT` raises `loadTimedOut` on SURFACE-LESS events (the Tauri
+  // embed). The raise is always the last event of its batch, so latest-wins is exact there.
+
+  function gogEvent(loadTimedOut: boolean) {
+    return {
+      url: 'https://www.gog.com/en/',
+      host: 'www.gog.com',
+      canGoBack: false,
+      canGoForward: false,
+      loadTimedOut
+    }
+  }
+
+  // Property 48. A surface-less raise surfaces, and a later batch with false clears it.
+  it('48. a Tauri-embed loadTimedOut raise surfaces and a later false batch clears it', async () => {
+    const options: MountOptions = {
+      slotRef: makeSlot({ x: 0, y: 0, width: 100, height: 100 }).ref,
+      startUrl: 'https://www.gog.com/en/',
+      storeKey: 'gog',
+      platform: 'linux'
+    }
+    mount(options)
+    jest.advanceTimersByTime(40)
+
+    mockApi.storeEmbedTakeNavEvents.mockResolvedValueOnce([gogEvent(true)])
+    jest.advanceTimersByTime(250)
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(reinvoke(options).loadTimedOut).toBe(true)
+
+    // Let the first drain's `.finally` release the in-flight guard before the next tick.
+    await Promise.resolve()
+    await Promise.resolve()
+    mockApi.storeEmbedTakeNavEvents.mockResolvedValueOnce([gogEvent(false)])
+    jest.advanceTimersByTime(250)
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(reinvoke(options).loadTimedOut).toBe(false)
+  })
+
+  // Property 49. Observed-red against the all-surface sticky merge: a raise followed by a late
+  // Finished's clear in the SAME batch must end cleared off Epic (latest wins). Epic's G-50-16
+  // latch (property 46) is unchanged.
+  it('49. a Tauri-embed raise followed by a clear in the same drain batch ends cleared', async () => {
+    const options: MountOptions = {
+      slotRef: makeSlot({ x: 0, y: 0, width: 100, height: 100 }).ref,
+      startUrl: 'https://www.gog.com/en/',
+      storeKey: 'gog',
+      platform: 'linux'
+    }
+    mount(options)
+    jest.advanceTimersByTime(40)
+
+    mockApi.storeEmbedTakeNavEvents.mockResolvedValueOnce([
+      gogEvent(true),
+      gogEvent(false)
+    ])
+    jest.advanceTimersByTime(250)
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(reinvoke(options).loadTimedOut).toBe(false)
+  })
+
   // Property 28. Observed-red mutation: seeding the baseline from `0`/`undefined` instead of the
   // first OBSERVED count turns this red -- a store whose count starts above zero (a restored
   // session) would fire a spurious notice on its very first drain.

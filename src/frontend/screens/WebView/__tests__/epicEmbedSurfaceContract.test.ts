@@ -218,6 +218,16 @@ describe('WebView index.tsx — Epic nav-signal chrome wiring (Phase 50 Plan 05,
     )
   })
 
+  // Quick 261120-8i5: the banner serves both surfaces. Reload on the Epic surface stays the
+  // native reload; off Epic it re-requests the URL that did not load, because a WKWebView
+  // reload of a never-committed page does nothing.
+  it('passes the banner its surface and routes Reload to a navigate-based retry off Epic', () => {
+    expect(finalReturnSource).toMatch(/isEpicSurface=\{isEpicSurface\}/)
+    expect(finalReturnSource).toMatch(
+      /onReload=\{isEpicSurface \? embedHost\.onReload : retryEmbedLoad\}/
+    )
+  })
+
   // Review finding 6 (D-06/D-10/D-11/D-19): the slot's children are ONE component that picks
   // exactly one of challenged panel / placeholder / nothing -- its choice is tested behaviourally
   // in `components/__tests__/StoreEmbedSlotContents.test.tsx`. This half pins the WIRING, since

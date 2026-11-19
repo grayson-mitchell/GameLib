@@ -659,7 +659,12 @@ export default function WebView() {
       />
       <StoreEmbedTimeoutBanner
         timedOut={embedHost.loadTimedOut}
-        onReload={embedHost.onReload}
+        isEpicSurface={isEpicSurface}
+        // Off Epic the URL that did not load is `embedHost.currentUrl` (the Rust raise reports
+        // it). A WKWebView reload of a never-committed page does nothing, and on a warm
+        // webview it would reload the previous store's page, so Reload navigates instead:
+        // that re-arms the load clock and returns a `loadTimedOut: false` state.
+        onReload={isEpicSurface ? embedHost.onReload : retryEmbedLoad}
         onOpenInBrowser={openEmbedInBrowser}
         offline={connectivity?.status === 'offline'}
         onTryAgain={retryEmbedLoad}
