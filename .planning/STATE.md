@@ -6,10 +6,10 @@ current_phase: 47
 current_phase_name: Migrate aggregated store search from CheapShark to IsThereAnyDeal
 status: verifying
 stopped_at: Completed 47-22-PLAN.md
-last_updated: "2026-11-18T23:32:38.307Z"
+last_updated: "2026-11-19T05:13:16.462Z"
 last_activity: 2026-11-19
 last_activity_desc: Phase 47 execution started
-state_head: f08e264a26275a40512266c5a39f67aa5b6e63fb
+state_head: 0261a5d829469737c5c9d35963ff2b64a7ec5b67
 progress:
   total_phases: 26
   completed_phases: 23
@@ -79,7 +79,7 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 Phase: 47 (Migrate aggregated store search from CheapShark to IsThereAnyDeal) — EXECUTING
 Plan: 22 of 22
 Status: Phase complete — ready for verification
-Last activity: 2026-11-19 — Completed quick task 261119-gzt: SteamGame.watch misses a running game after a failed launch; button stays "Play"
+Last activity: 2026-11-19 — Completed quick task 261119-p7k: NativePortInfo: gate on runner string so the narrowing ceiling passes
 
 Progress: [█████████░] 88%
 
@@ -713,6 +713,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261119-9d9 | Bridge invite-picker reads existing.url() and panics if its first load failed | 2026-11-19 | 32b865819 | — | [261119-9d9-bridge-invite-picker-reads-existing-url-](./quick/261119-9d9-bridge-invite-picker-reads-existing-url-/) |
 | 261119-a23 | CI: weekly HEAD-check that Valve's CDN still serves the pinned libsteam_api package | 2026-11-19 | 9e60dc46f | — | [261119-a23-ci-weekly-head-check-that-valve-s-cdn-st](./quick/261119-a23-ci-weekly-head-check-that-valve-s-cdn-st/) |
 | 261119-gzt | SteamGame.watch misses a running game after a failed launch; button stays "Play" | 2026-11-19 | f08e264a2 | — | [261119-gzt-steamgame-watch-misses-a-running-game-af](./quick/261119-gzt-steamgame-watch-misses-a-running-game-af/) |
+| 261119-p7k | NativePortInfo: gate on runner string so the narrowing ceiling passes | 2026-11-19 | 0261a5d82 | — | [261119-p7k-nativeportinfo-gate-on-runner-string-so-](./quick/261119-p7k-nativeportinfo-gate-on-runner-string-so-/) |
 
 ## Deferred Items
 
