@@ -75,9 +75,9 @@ describe('applyTheme', () => {
     // `() => true` stands in for WKWebView's CSS.supports, which CR-01 measured
     // returning true for the payload.
     const parsed = parseCustomThemes(raw, () => true)
-    expect(parsed[0].tokens).not.toHaveProperty('--gradient-gamecard')
-    expect(parsed[0].tokens).toHaveProperty('--gradient-01')
-    expect(parsed[0].tokens).toHaveProperty('--accent')
+    expect(parsed[0]!.tokens).not.toHaveProperty('--gradient-gamecard')
+    expect(parsed[0]!.tokens).toHaveProperty('--gradient-01')
+    expect(parsed[0]!.tokens).toHaveProperty('--accent')
     applyTheme(body, customThemeKey(id), parsed, FALLBACK)
     expect(body.style.getPropertyValue('--gradient-gamecard')).toBe('')
     expect(body.style.cssText).not.toContain('image-set')
