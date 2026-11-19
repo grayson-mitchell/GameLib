@@ -19,7 +19,7 @@ interface Props {
 const NativePortInfo = ({ gameInfo, platform }: Props) => {
   const { t } = useTranslation('gamelib')
 
-  if (!isStore(gameInfo, 'steam')) return null
+  if (!isStore(gameInfo.runner, 'steam')) return null
   const entry = findNativePort(gameInfo.app_name, platform)
   if (!entry) return null
 
