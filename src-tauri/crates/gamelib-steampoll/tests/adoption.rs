@@ -8,16 +8,20 @@ use gamelib_steampoll::adoption::{
     ADOPTION_POLL_KEY,
 };
 use gamelib_steampoll::constants::{
-    ADOPTION_ACF_MAX_BYTES, ADOPTION_HELPER_SIGNED_IN_MIN_INTERVAL_MS, ADOPTION_TICK_MS,
+    ADOPTION_ACF_MAX_BYTES, ADOPTION_HELPER_SIGNED_IN_MIN_INTERVAL_MS, ADOPTION_HELPER_TIMEOUT_MS,
+    ADOPTION_TICK_MS,
 };
 use gamelib_steampoll::events::{AckReply, StateEvent};
-use gamelib_steampoll::host::{BoxFuture, Notification, PollHost, RunOutput};
+use gamelib_steampoll::host::{
+    BoxFuture, Notification, PollHost, ProcessRunner, RunOutput, StreamingChild,
+};
 use gamelib_steampoll::outbox::Outbox;
 use gamelib_steampoll::profile::Platform;
 use gamelib_steampoll::registry::{PollKind, Registry};
 use gamelib_steampoll::testing::{AckMode, FakeClock, RecordingHost, ScriptedRunner, StreamRecord};
 use serde_json::Value;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -72,11 +76,22 @@ async fn rig_with_helper(platform: Platform) -> Rig {
 }
 
 async fn rig_inner(platform: Platform, with_helper: bool) -> Rig {
+    let runner = Arc::new(ScriptedRunner::default());
+    rig_with_runner(platform, with_helper, runner.clone(), runner).await
+}
+
+/// `runner` stays the rig's scripting handle; `registry_runner` is what the registry (and so the
+/// watch's probes) actually runs through. They are the same object unless a test wraps it.
+async fn rig_with_runner(
+    platform: Platform,
+    with_helper: bool,
+    runner: Arc<ScriptedRunner>,
+    registry_runner: Arc<dyn ProcessRunner>,
+) -> Rig {
     let host = Arc::new(RecordingHost::new(AckMode::Reply(AckReply {
         applied: true,
         ..AckReply::default()
     })));
-    let runner = Arc::new(ScriptedRunner::default());
     let clock = Arc::new(FakeClock::new(1_000_000));
     let (helper_dir, helper_path) = if with_helper {
         let dir = tempfile::tempdir().unwrap();
@@ -96,7 +111,7 @@ async fn rig_inner(platform: Platform, with_helper: bool) -> Rig {
     let registry = Registry::new(
         tokio::runtime::Handle::current(),
         path_host as Arc<dyn PollHost>,
-        runner.clone(),
+        registry_runner,
         clock.clone(),
     );
     let outbox = Arc::new(Outbox::new());
@@ -1430,4 +1445,338 @@ async fn read_fills_steam_running_from_a_pid_probe_on_every_os() {
     assert_eq!(win.watch.read(&args).await.steam_running, Some(true));
     win.script_tasklist(&[]);
     assert_eq!(win.watch.read(&args).await.steam_running, Some(false));
+}
+
+// ---- a slow probe never overlaps the next tick (Phase 81 truth 15, Phase 80 D-10) ----
+
+/// How long a slow probe blocks, and how many matching calls are slow. 8 s is longer than one 5 s
+/// tick but shorter than a real helper's 10 s `ADOPTION_HELPER_TIMEOUT_MS`, so the macOS case is
+/// a slowness the production runner allows. A real `pgrep` is cut at 5 s, so the Linux case
+/// stands for any tick made slow some other way (pgrep plus file reads on a slow disk).
+const SLOW_MS: u64 = 8_000;
+const SLOW_CALLS: usize = 2;
+// The scenario must miss a tick without exceeding the helper timeout.
+const _: () = assert!(SLOW_MS > ADOPTION_TICK_MS && SLOW_MS < ADOPTION_HELPER_TIMEOUT_MS);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Edge {
+    Start,
+    Finish,
+}
+
+type Call = (Edge, tokio::time::Instant, String);
+
+/// Decrements the in-flight counter when the call's future finishes or is dropped, so a future
+/// dropped unpolled or mid-sleep cannot leave the counter high.
+struct InFlightGuard(Arc<AtomicUsize>);
+
+impl Drop for InFlightGuard {
+    fn drop(&mut self) {
+        self.0.fetch_sub(1, Ordering::SeqCst);
+    }
+}
+
+/// Wraps the rig's `ScriptedRunner`: answers come from it, but a matching call blocks for
+/// `SLOW_MS` of paused time first, and every call is counted and logged in order.
+struct SlowRunner {
+    scripted: Arc<ScriptedRunner>,
+    slow_match: &'static str,
+    slow_left: AtomicUsize,
+    in_flight: Arc<AtomicUsize>,
+    max_in_flight: AtomicUsize,
+    log: Arc<Mutex<Vec<Call>>>,
+}
+
+impl SlowRunner {
+    fn new(scripted: Arc<ScriptedRunner>, slow_match: &'static str, slow_calls: usize) -> Self {
+        SlowRunner {
+            scripted,
+            slow_match,
+            slow_left: AtomicUsize::new(slow_calls),
+            in_flight: Arc::new(AtomicUsize::new(0)),
+            max_in_flight: AtomicUsize::new(0),
+            log: Arc::new(Mutex::new(Vec::new())),
+        }
+    }
+
+    fn max_in_flight(&self) -> usize {
+        self.max_in_flight.load(Ordering::SeqCst)
+    }
+
+    fn in_flight_now(&self) -> usize {
+        self.in_flight.load(Ordering::SeqCst)
+    }
+
+    fn slow_left(&self) -> usize {
+        self.slow_left.load(Ordering::SeqCst)
+    }
+
+    fn log(&self) -> Vec<Call> {
+        self.log.lock().unwrap_or_else(|e| e.into_inner()).clone()
+    }
+}
+
+impl ProcessRunner for SlowRunner {
+    fn run(&self, program: &str, argv: Vec<String>, timeout: Duration) -> BoxFuture<RunOutput> {
+        let key = std::iter::once(program)
+            .chain(argv.iter().map(String::as_str))
+            .collect::<Vec<_>>()
+            .join(" ");
+        let slow = key.contains(self.slow_match)
+            && self
+                .slow_left
+                .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |n| n.checked_sub(1))
+                .is_ok();
+        // Records the call for `helper_calls()` and carries the scripted output.
+        let answer = self.scripted.run(program, argv, timeout);
+        // Synchronously, before the future is polled: a second call made while this one is out
+        // is counted even if the caller never polls it.
+        let now = self.in_flight.fetch_add(1, Ordering::SeqCst) + 1;
+        self.max_in_flight.fetch_max(now, Ordering::SeqCst);
+        self.log.lock().unwrap_or_else(|e| e.into_inner()).push((
+            Edge::Start,
+            tokio::time::Instant::now(),
+            key.clone(),
+        ));
+        let guard = InFlightGuard(self.in_flight.clone());
+        let log = self.log.clone();
+        Box::pin(async move {
+            if slow {
+                tokio::time::sleep(Duration::from_millis(SLOW_MS)).await;
+            }
+            let out = answer.await;
+            log.lock().unwrap_or_else(|e| e.into_inner()).push((
+                Edge::Finish,
+                tokio::time::Instant::now(),
+                key,
+            ));
+            drop(guard);
+            out
+        })
+    }
+
+    fn spawn_streaming(&self, program: &str, argv: Vec<String>) -> std::io::Result<StreamingChild> {
+        self.scripted.spawn_streaming(program, argv)
+    }
+}
+
+fn ms(t0: tokio::time::Instant, at: tokio::time::Instant) -> u64 {
+    at.duration_since(t0).as_millis() as u64
+}
+
+/// The first overlap in an ordered Start/Finish log, described; `None` when every call finished
+/// before the next one started.
+fn overlap_in(log: &[Call], t0: tokio::time::Instant) -> Option<String> {
+    let mut open: Option<(&str, u64)> = None;
+    for (edge, at, key) in log {
+        let at_ms = ms(t0, *at);
+        match (edge, open) {
+            (Edge::Start, Some((open_key, open_ms))) => {
+                return Some(format!(
+                    "`{key}` started at {at_ms} ms while `{open_key}` (started {open_ms} ms) was still out"
+                ));
+            }
+            (Edge::Start, None) => open = Some((key, at_ms)),
+            (Edge::Finish, Some((open_key, _))) if open_key == key => open = None,
+            (Edge::Finish, _) => {
+                return Some(format!(
+                    "`{key}` finished at {at_ms} ms but it was not the open call"
+                ));
+            }
+        }
+    }
+    None
+}
+
+/// The Start instants, in ms after `t0`, of the calls whose key contains `matching`.
+fn starts(log: &[Call], t0: tokio::time::Instant, matching: &str) -> Vec<u64> {
+    log.iter()
+        .filter(|(e, _, k)| *e == Edge::Start && k.contains(matching))
+        .map(|(_, at, _)| ms(t0, *at))
+        .collect()
+}
+
+/// The Finish instants, in ms after `t0`, of the calls whose key contains `matching`.
+fn finishes(log: &[Call], t0: tokio::time::Instant, matching: &str) -> Vec<u64> {
+    log.iter()
+        .filter(|(e, _, k)| *e == Edge::Finish && k.contains(matching))
+        .map(|(_, at, _)| ms(t0, *at))
+        .collect()
+}
+
+/// Finish minus Start for each matching call. Valid only once `overlap_in` is `None`.
+fn durations(log: &[Call], t0: tokio::time::Instant, matching: &str) -> Vec<u64> {
+    starts(log, t0, matching)
+        .into_iter()
+        .zip(finishes(log, t0, matching))
+        .map(|(s, f)| f - s)
+        .collect()
+}
+
+async fn slow_rig(
+    platform: Platform,
+    slow_match: &'static str,
+    slow_calls: usize,
+) -> (Rig, Arc<SlowRunner>) {
+    let scripted = Arc::new(ScriptedRunner::default());
+    let slow = Arc::new(SlowRunner::new(scripted.clone(), slow_match, slow_calls));
+    let r = rig_with_runner(
+        platform,
+        platform == Platform::Darwin,
+        scripted,
+        slow.clone(),
+    )
+    .await;
+    (r, slow)
+}
+
+/// The real adoption task loop, with only the probes faked. The first `SLOW_CALLS` matching
+/// probes block `SLOW_MS` (longer than one tick). The loop must keep one evaluation in flight, start
+/// the next tick the instant the slow call returns (tokio's `Delay`), never burst to catch up,
+/// and go back to its 5 s cadence, still evaluating and adopting.
+///
+/// With T = `ADOPTION_TICK_MS` and S = `SLOW_MS`: tick1 at T runs to T+S, so tick2 starts at T+S
+/// (not 2T), runs to T+2S, so tick3 starts at T+2S, then 2T+2S, 3T+2S and so on.
+async fn a_slow_probe_delays_the_next_tick(platform: Platform) {
+    const T: u64 = ADOPTION_TICK_MS;
+    const S: u64 = SLOW_MS;
+    let darwin = platform == Platform::Darwin;
+    let (slow_match, expected_signed_in) = if darwin {
+        ("--steam-appstate", Some(false))
+    } else {
+        ("pgrep", None)
+    };
+    let (r, slow) = slow_rig(platform, slow_match, SLOW_CALLS).await;
+    if darwin {
+        r.script_pgrep(vec![pgrep(Some(0), "500\n")]);
+        // Signed out is probed every tick (D-08).
+        r.script_helper("480", vec![helper_ok(0, None, None)]);
+    } else {
+        r.script_linux_steam(&[500]);
+    }
+    let lib = library();
+    lib.write("480", &handoff_acf("480"));
+    let t0 = tokio::time::Instant::now();
+    // Steam pid 0: no pid rule.
+    r.watch.watch(lib.args("480", 0)).unwrap();
+    let at = |ms: u64| t0 + Duration::from_millis(ms);
+
+    // Phase 1: both slow calls and the three fast ticks after them have run.
+    tokio::time::sleep_until(at(5 * T + 2 * S + 1_000)).await;
+    let log = slow.log();
+    assert_eq!(
+        slow.max_in_flight(),
+        1,
+        "two probes were in flight at once: {log:?}"
+    );
+    assert_eq!(slow.in_flight_now(), 0, "a probe is still out: {log:?}");
+    assert_eq!(overlap_in(&log, t0), None, "overlap in the log: {log:?}");
+    assert_eq!(
+        slow.slow_left(),
+        0,
+        "the slow calls did not all run: {log:?}"
+    );
+    let slow_durations = durations(&log, t0, slow_match);
+    assert_eq!(
+        slow_durations.get(..SLOW_CALLS),
+        Some(&[S, S][..]),
+        "durations {slow_durations:?}: {log:?}"
+    );
+    let pin = vec![
+        T,
+        T + S,
+        T + 2 * S,
+        2 * T + 2 * S,
+        3 * T + 2 * S,
+        4 * T + 2 * S,
+        5 * T + 2 * S,
+    ];
+    let tick_starts = starts(&log, t0, "pgrep");
+    assert!(
+        tick_starts.windows(2).all(|w| w[0] < w[1]),
+        "two ticks started at one instant (a catch-up burst): {tick_starts:?}"
+    );
+    assert_eq!(tick_starts, pin, "tick starts: {log:?}");
+    assert_eq!(
+        Some(&tick_starts[1]),
+        finishes(&log, t0, slow_match).first(),
+        "the next tick did not start exactly when the slow call finished: {log:?}"
+    );
+    if darwin {
+        assert_eq!(
+            starts(&log, t0, "--steam-appstate"),
+            pin,
+            "the entry was not evaluated on every completed tick: {log:?}"
+        );
+    }
+    assert_eq!(
+        r.events(),
+        vec![("480".to_string(), false, expected_signed_in)]
+    );
+    assert!(r.active());
+    assert_eq!(r.watch.watched_app_ids(), vec!["480".to_string()]);
+
+    // Phase 2: Steam rewrites the ACF; the next 5 s tick adopts it.
+    lib.write("480", &adopted_acf("480"));
+    tokio::time::sleep_until(at(6 * T + 2 * S + 1_000)).await;
+    let log = slow.log();
+    let mut expected_starts = pin.clone();
+    expected_starts.push(6 * T + 2 * S);
+    assert_eq!(starts(&log, t0, "pgrep"), expected_starts, "{log:?}");
+    assert_eq!(
+        r.events(),
+        vec![
+            ("480".to_string(), false, expected_signed_in),
+            ("480".to_string(), true, None),
+        ]
+    );
+    assert!(r.watch.watched_app_ids().is_empty());
+    assert!(!r.active());
+    assert_eq!(slow.max_in_flight(), 1, "{log:?}");
+
+    // Phase 3: the task has exited, so nothing ticks any more.
+    tokio::time::sleep_until(at(60_000)).await;
+    assert_eq!(
+        starts(&slow.log(), t0, "pgrep"),
+        expected_starts,
+        "the watch kept ticking after it adopted"
+    );
+}
+
+#[tokio::test(start_paused = true)]
+async fn on_linux_a_slow_pgrep_delays_the_next_tick_and_never_overlaps() {
+    a_slow_probe_delays_the_next_tick(Platform::Linux).await;
+}
+
+#[tokio::test(start_paused = true)]
+async fn on_macos_a_slow_helper_delays_the_next_tick_and_never_overlaps() {
+    a_slow_probe_delays_the_next_tick(Platform::Darwin).await;
+}
+
+/// Negative control. `read` is the on-demand op (adoption.rs:420-438) that runs outside the tick
+/// schedule and writes nothing back, so running beside a tick is by design and not what truth 15
+/// forbids. It is used here because it is a real second evaluation on the same
+/// `registry.runner()` the tick probes through. That proves the counter and the ordered log sit
+/// on the watch's own probe path, and that both report an overlap when one exists.
+#[tokio::test(start_paused = true)]
+async fn the_in_flight_instrument_sees_a_second_concurrent_evaluation() {
+    let (r, slow) = slow_rig(Platform::Linux, "pgrep", 2).await;
+    r.script_linux_steam(&[500]);
+    let lib = library();
+    lib.write("480", &handoff_acf("480"));
+    let args = lib.args("480", 0);
+    let t0 = tokio::time::Instant::now();
+    r.watch.watch(args.clone()).unwrap();
+
+    // Tick1's slow pgrep is out from 5000 to 13000.
+    tokio::time::sleep_until(t0 + Duration::from_millis(6_000)).await;
+    assert_eq!(slow.in_flight_now(), 1, "{:?}", slow.log());
+    assert_eq!(slow.max_in_flight(), 1, "{:?}", slow.log());
+
+    // Its pgrep is the second slow call: [6000, 14000].
+    let reading = r.watch.read(&args).await;
+    let log = slow.log();
+    assert_eq!(slow.max_in_flight(), 2, "{log:?}");
+    assert!(overlap_in(&log, t0).is_some(), "{log:?}");
+    assert!(!reading.adopted);
 }
