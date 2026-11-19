@@ -49,3 +49,10 @@ loaded). Mirror the Mach-O probe's shape (bounded read, report counter, for exam
 with an ELF-header fixture. Confirm live: a fresh GameLib install of 57300 and of 333300 on
 Linux shows `-rwxr-xr-x` on the launch binary and launches through Steam with no manual
 chmod.
+
+## Resolution
+
+Closed 2026-11-20 by quick 261120-elf (`c3e6d3ae4`): `apply_elf_fallback` in `post.rs`, counted as
+`stats.elfExecApplied` and `elf=N` in the outcome line. Live: ADOM (333300) reinstalled through GameLib
+is `-rwxr-xr-x` and launches. Amnesia (57300) reinstall not run. ADOM also needed i386 libs on the host
+(a machine issue, not this defect).
