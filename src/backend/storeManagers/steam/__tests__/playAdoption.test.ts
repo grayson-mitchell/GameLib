@@ -45,7 +45,7 @@ beforeEach(() => {
     .mockImplementation(() => undefined)
   watchSteamLaunch = jest
     .spyOn(launchedDeps, 'watchSteamLaunch')
-    .mockImplementation(() => undefined)
+    .mockResolvedValue(undefined)
   jest
     .spyOn(i18next, 't')
     .mockImplementation(((_key: string, fallback: string) => fallback) as never)
@@ -258,6 +258,31 @@ describe('gatePlayOnAdoption', () => {
       expect(notify).not.toHaveBeenCalled()
     }
   )
+
+  test('linux: the relaunched branch waits for the watch launchingDecided before it resolves', async () => {
+    const h = harness({
+      script: [probe('linux', true), probe('linux', false)]
+    })
+    let decide!: () => void
+    watchSteamLaunch.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        decide = resolve
+      })
+    )
+    let resolved = false
+    const gated = gatePlayOnAdoption(h.game, 'linux').then((value) => {
+      resolved = true
+      return value
+    })
+    for (let i = 0; i < 50 && watchSteamLaunch.mock.calls.length === 0; i++) {
+      await new Promise<void>((r) => setImmediate(r))
+    }
+    expect(watchSteamLaunch).toHaveBeenCalledTimes(1)
+    for (let i = 0; i < 5; i++) await new Promise<void>((r) => setImmediate(r))
+    expect(resolved).toBe(false)
+    decide()
+    await expect(gated).resolves.toBe('launched')
+  })
 
   test('running but signed out: opens Steam forward, sends done, keeps the record, restarts nothing (D-03)', async () => {
     const h = harness({

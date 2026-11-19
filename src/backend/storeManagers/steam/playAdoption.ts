@@ -132,7 +132,7 @@ export async function gatePlayOnAdoption(
   )
   if (outcome.kind === 'relaunched') {
     clearAndUnwatchPendingAdoption(deps, appId)
-    watchSteamLaunch(deps, appId)
+    await watchSteamLaunch(deps, appId)
     return 'launched'
   }
 

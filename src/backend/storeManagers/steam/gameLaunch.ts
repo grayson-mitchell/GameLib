@@ -200,7 +200,9 @@ export async function launch(
   if (gate === 'launched') return true
   if (gate === 'opened-steam' || gate === 'refused') return false
   await steamGame.deps.openExternal.openExternal(url, { activate: false })
-  watchSteamLaunch(steamGame.deps, steamGame.appId)
+  // The launch IPC must not resolve before the watch's `launching` frame, or the Play click
+  // latch drops onto Play for a frame (quick 261119-p3z).
+  await watchSteamLaunch(steamGame.deps, steamGame.appId)
   return true
 }
 

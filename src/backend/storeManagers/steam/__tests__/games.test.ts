@@ -17526,4 +17526,31 @@ describe('Steam launch watch wiring (261111-9mj)', () => {
     expect(shell.openExternal).not.toHaveBeenCalled()
     expect(startSpy).not.toHaveBeenCalled()
   })
+
+  it('G8 (p3z) launch resolves only after the watch has decided on launching', async () => {
+    jest.useRealTimers()
+    let decide!: () => void
+    startSpy.mockReturnValueOnce({
+      status: 'started',
+      settled: Promise.resolve(),
+      launchingDecided: new Promise<void>((resolve) => {
+        decide = resolve
+      })
+    })
+    let resolved = false
+    const launched = new SteamGame(APP_ID, steamTestDeps)
+      .launch({} as any)
+      .then((value) => {
+        resolved = true
+        return value
+      })
+    for (let i = 0; i < 50 && startSpy.mock.calls.length === 0; i++) {
+      await new Promise<void>((r) => setImmediate(r))
+    }
+    expect(startSpy).toHaveBeenCalledTimes(1)
+    for (let i = 0; i < 5; i++) await new Promise<void>((r) => setImmediate(r))
+    expect(resolved).toBe(false)
+    decide()
+    await expect(launched).resolves.toBe(true)
+  })
 })

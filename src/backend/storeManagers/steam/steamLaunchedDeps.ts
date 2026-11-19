@@ -149,14 +149,23 @@ export function steamLaunchWatchDeps(deps: ManagerDeps): SteamLaunchWatchDeps {
   }
 }
 
-/** Start the launch watch; a watch problem must never fail a launch. */
-export function watchSteamLaunch(deps: ManagerDeps, appId: string): void {
+/**
+ * Start the launch watch. Resolves once the watch has sent `launching` or decided not to
+ * (bounded by the watch's decide wait, never rejecting), so the launch IPC can wait for it
+ * and the click latch never drops onto Play. A watch problem must never fail a launch.
+ */
+export function watchSteamLaunch(
+  deps: ManagerDeps,
+  appId: string
+): Promise<void> {
   try {
-    void startSteamLaunchWatch(steamLaunchWatchDeps(deps), appId)
+    return startSteamLaunchWatch(steamLaunchWatchDeps(deps), appId)
+      .launchingDecided
   } catch (e) {
     logWarning(
       `SteamGame.watch: could not start for ${appId}: ${String(e)}`,
       LogPrefix.Steam
     )
+    return Promise.resolve()
   }
 }
