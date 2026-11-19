@@ -3,6 +3,22 @@ phase: 64
 review: 64-REVIEW.md
 titles: json
 findings:
+  - id: WR-06
+    severity: warning
+    disposition: open
+    title: "Gradient is validated on `trim()` but stored and applied untrimmed"
+  - id: IN-07
+    severity: info
+    disposition: open
+    title: "validate.ts comment overstates the paren-walk equivalence; the bracket case is untested"
+  - id: IN-08
+    severity: info
+    disposition: open
+    title: "AdvancedSection IN-03 test title overclaims"
+  - id: IN-09
+    severity: info
+    disposition: open
+    title: "Editor error text no longer names what is refused"
   - id: CR-01
     severity: critical
     disposition: fixed
@@ -51,27 +67,31 @@ findings:
     severity: info
     disposition: open
     title: "A module in the production `customThemes` tree imports from `testUtils`"
-open: 10
-total: 12
-recorded: 2026-11-19T15:22:59.679Z
+open: 14
+total: 16
+recorded: 2026-11-19T16:18:05.449Z
 ---
 
 # Phase 64: Code Review Disposition
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| CR-01 | critical | fixed | 64-REVIEW-FIX.md |
-| WR-01 | warning | open | - |
-| WR-02 | warning | open | - |
-| WR-03 | warning | open | - |
-| WR-04 | warning | open | - |
-| WR-05 | warning | open | - |
-| IN-01 | info | open | - |
-| IN-02 | info | open | - |
-| IN-03 | info | fixed | 64-REVIEW-FIX.md |
-| IN-04 | info | open | - |
-| IN-05 | info | open | - |
-| IN-06 | info | open | - |
+| WR-06 | warning | open | - |
+| IN-07 | info | open | - |
+| IN-08 | info | open | - |
+| IN-09 | info | open | - |
+| CR-01 | critical | fixed | 64-REVIEW-FIX.md (not in the current review) |
+| WR-01 | warning | open | - (not in the current review) |
+| WR-02 | warning | open | - (not in the current review) |
+| WR-03 | warning | open | - (not in the current review) |
+| WR-04 | warning | open | - (not in the current review) |
+| WR-05 | warning | open | - (not in the current review) |
+| IN-01 | info | open | - (not in the current review) |
+| IN-02 | info | open | - (not in the current review) |
+| IN-03 | info | fixed | 64-REVIEW-FIX.md (not in the current review) |
+| IN-04 | info | open | - (not in the current review) |
+| IN-05 | info | open | - (not in the current review) |
+| IN-06 | info | open | - (not in the current review) |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
