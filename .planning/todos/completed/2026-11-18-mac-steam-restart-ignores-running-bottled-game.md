@@ -39,7 +39,7 @@ Fix: `runningBridgedAppId` (`gameSessionState.ts`) reads GameLib's own bridged l
 
 Scope: the uninstall/update guards, the 5 s RunningPoll and the Rust op are unchanged. Known limit: the bookkeeping is per boot, so a session left over from a previous GameLib process is not counted.
 
-Live check PENDING (operator). Start with `pnpm tauri:dev`, restarted after these commits, since tauri dev does not rebuild the sidecar; check the sidecar.js mtime. Run a bridged game, e.g. Avernum 5 / 206040, and note `pgrep -x steam_osx`. Press Play on a pending native game. Expect:
+Live check procedure. Start with `pnpm tauri:dev`, restarted after these commits, since tauri dev does not rebuild the sidecar; check the sidecar.js mtime. Run a bridged game, e.g. Avernum 5 / 206040, and note `pgrep -x steam_osx`. Press Play on a pending native game. Expect:
 
 - the "Quit the game running in Steam, then press Play to finish setting up <name>." notice;
 - gamelib.log lines `[Steam] bridged session for game 206040 is active` and `[Steam] not restarting Steam for <pending>: game 206040 is running`;
@@ -47,3 +47,5 @@ Live check PENDING (operator). Start with `pnpm tauri:dev`, restarted after thes
 - an unchanged steam_osx pid.
 
 Repeat with "Restart Steam now". Then quit the bridged game and confirm Play restarts Steam as before.
+
+Live check passed 2026-11-19 (operator, macOS): with a bridged game running, Play on a pending native game and "Restart Steam now" both refused with the game-running notice and left steam_osx running; after the bridged game quit, Play restarted Steam as before.
