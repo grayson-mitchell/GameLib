@@ -6,10 +6,10 @@ current_phase: 47
 current_phase_name: Migrate aggregated store search from CheapShark to IsThereAnyDeal
 status: verifying
 stopped_at: Completed 47-22-PLAN.md
-last_updated: "2026-11-19T05:25:51.863Z"
+last_updated: "2026-11-19T05:32:54.699Z"
 last_activity: 2026-11-19
 last_activity_desc: Phase 47 execution started
-state_head: 7508b0858babea37b9b465922e476361f7c96557
+state_head: 6c4e83f22f9f45959ce33ef226c8ab1d35617483
 progress:
   total_phases: 26
   completed_phases: 23
@@ -79,7 +79,7 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 Phase: 47 (Migrate aggregated store search from CheapShark to IsThereAnyDeal) — EXECUTING
 Plan: 22 of 22
 Status: Phase complete — ready for verification
-Last activity: 2026-11-19 — Completed quick task 261119-p3z: macOS/Linux Steam Play holds Launching until the watch finds the game (no Play flicker)
+Last activity: 2026-11-19 — Completed quick task 261119-pdz: Clear pre-push find-deadcode and backend-di-ceilings failures
 
 Progress: [█████████░] 88%
 
@@ -715,6 +715,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261119-gzt | SteamGame.watch misses a running game after a failed launch; button stays "Play" | 2026-11-19 | f08e264a2 | — | [261119-gzt-steamgame-watch-misses-a-running-game-af](./quick/261119-gzt-steamgame-watch-misses-a-running-game-af/) |
 | 261119-p7k | NativePortInfo: gate on runner string so the narrowing ceiling passes | 2026-11-19 | 0261a5d82 | — | [261119-p7k-nativeportinfo-gate-on-runner-string-so-](./quick/261119-p7k-nativeportinfo-gate-on-runner-string-so-/) |
 | 261119-p3z | macOS/Linux Steam Play holds Launching until the watch finds the game (no Play flicker) | 2026-11-19 | 7508b0858 | — | [261119-p3z-macos-linux-steam-play-holds-launching-u](./quick/261119-p3z-macos-linux-steam-play-holds-launching-u/) |
+| 261119-pdz | Clear pre-push find-deadcode and backend-di-ceilings failures | 2026-11-19 | 6c4e83f22 | — | [261119-pdz-clear-pre-push-find-deadcode-and-backend](./quick/261119-pdz-clear-pre-push-find-deadcode-and-backend/) |
 
 ## Deferred Items
 
