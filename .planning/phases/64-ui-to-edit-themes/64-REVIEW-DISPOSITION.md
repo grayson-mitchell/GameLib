@@ -5,7 +5,7 @@ titles: json
 findings:
   - id: CR-01
     severity: critical
-    disposition: open
+    disposition: fixed
     title: "Gradient validator lets a layered `image-set(\"https://...\")` through, so a token value can fetch from the network (T-64-12 bypass)"
   - id: WR-01
     severity: warning
@@ -37,7 +37,7 @@ findings:
     title: "The gallery marks no card as active when the stored key falls back to the default theme"
   - id: IN-03
     severity: info
-    disposition: open
+    disposition: fixed
     title: "`cleanTokens` accepts a gradient for any token, including colour tokens"
   - id: IN-04
     severity: info
@@ -51,16 +51,16 @@ findings:
     severity: info
     disposition: open
     title: "A module in the production `customThemes` tree imports from `testUtils`"
-open: 12
+open: 10
 total: 12
-recorded: 2026-11-19T09:42:26.117Z
+recorded: 2026-11-19T15:22:59.679Z
 ---
 
 # Phase 64: Code Review Disposition
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| CR-01 | critical | open | - |
+| CR-01 | critical | fixed | 64-REVIEW-FIX.md |
 | WR-01 | warning | open | - |
 | WR-02 | warning | open | - |
 | WR-03 | warning | open | - |
@@ -68,7 +68,7 @@ recorded: 2026-11-19T09:42:26.117Z
 | WR-05 | warning | open | - |
 | IN-01 | info | open | - |
 | IN-02 | info | open | - |
-| IN-03 | info | open | - |
+| IN-03 | info | fixed | 64-REVIEW-FIX.md |
 | IN-04 | info | open | - |
 | IN-05 | info | open | - |
 | IN-06 | info | open | - |
