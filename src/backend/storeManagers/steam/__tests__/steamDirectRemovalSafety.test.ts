@@ -14,7 +14,7 @@ import {
   writeFileSync
 } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { isAbsolute, join, relative } from 'node:path'
 import type { RequestRustInvoke } from 'backend/host'
 import { initHeadless } from 'backend/logger'
 import * as environment from 'backend/constants/environment'
@@ -66,15 +66,18 @@ interface HarnessOptions extends FakeSafetyOptions {
   decideFromRequest?: boolean
 }
 
+/** `child` strictly inside `parent`, separator-agnostic (a `/` literal fails on win32 paths). */
+function isInside(parent: string, child: string): boolean {
+  const rel = relative(parent, child)
+  return rel !== '' && !rel.startsWith('..') && !isAbsolute(rel)
+}
+
 /** What the Rust check answers for a request whose known installs sit inside a target. */
 function nestedItems(req: SafetyRequest): SafetyItem[] | null {
   const items: SafetyItem[] = []
   for (const target of req.targets) {
     const inside = req.knownInstalls?.find(
-      (k) =>
-        k.key !== req.selfKey &&
-        k.path.startsWith(`${target.path}/`) &&
-        k.path !== target.path
+      (k) => k.key !== req.selfKey && isInside(target.path, k.path)
     )
     if (inside) {
       items.push({
