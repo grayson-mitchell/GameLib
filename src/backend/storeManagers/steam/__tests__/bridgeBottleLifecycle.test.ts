@@ -21,7 +21,11 @@ import {
 // below. Distinct local name so it never collides with the mocked
 // `graceful-fs` `readFileSync` import above (manifest.test.ts precedent).
 import { readFileSync as readRealFile } from 'node:fs'
-import { dirname as dirnameOf, join as joinPath } from 'node:path'
+import {
+  basename as basenameOf,
+  dirname as dirnameOf,
+  join as joinPath
+} from 'node:path'
 import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
 import { checkWineBeforeLaunch, downloadFile } from 'backend/utils'
 import * as engineServicesModule from 'backend/services/engineServices'
@@ -970,7 +974,10 @@ describe('quick 261024-cjq: CrossOver precondition', () => {
     mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
     await provisionBridgeBottle(spawnDeps, { bottleName: 'GameLibSteamBridge' })
     expect(mockedSpawnAsync.mock.calls[0][0]).toBe(
-      `${userHome}/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/cxbottle`
+      joinPath(
+        userHome,
+        'Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/cxbottle'
+      )
     )
   })
 })
@@ -1167,7 +1174,9 @@ describe('Phase 59 engine registry', () => {
 
     test('killBridgeBottleWineServer uses CrossOver when nothing is registered', async () => {
       await killBridgeBottleWineServer(spawnDeps, '620', 5000)
-      expect(mockedSpawnAsync.mock.calls[0][0]).toBe(`${CX_BIN_DIR}/wineserver`)
+      expect(mockedSpawnAsync.mock.calls[0][0]).toBe(
+        joinPath(CX_BIN_DIR, 'wineserver')
+      )
     })
 
     test('killBridgeBottleWineServer refuses a non-numeric appId', async () => {
@@ -1232,7 +1241,7 @@ describe('Phase 59 engine registry', () => {
       )
       mockedSpawnAsync.mockImplementation(
         async (bin: string, args: string[]) => {
-          order.push(`${bin.split('/').pop()} ${args.join(' ')}`)
+          order.push(`${basenameOf(bin)} ${args.join(' ')}`)
           return { code: 0, stdout: '', stderr: '' }
         }
       )
@@ -1494,7 +1503,7 @@ describe('Phase 59 engine registry', () => {
     test('cxbottle --create timing out returns CROSSOVER_CREATE_TIMEOUT, kills the wineserver, removes the new dir', async () => {
       mockedSpawnAsync.mockImplementation(
         async (bin: string, args: string[]) => {
-          order.push(`${bin.split('/').pop()} ${args.join(' ')}`)
+          order.push(`${basenameOf(bin)} ${args.join(' ')}`)
           return bin.includes('cxbottle')
             ? { code: null, stdout: '', stderr: '' }
             : { code: 0, stdout: '', stderr: '' }
@@ -1560,7 +1569,7 @@ describe('Phase 59 engine registry', () => {
     test('WR-04: create-failed branches stop the wineserver before removing the dir', async () => {
       mockedSpawnAsync.mockImplementation(
         async (bin: string, args: string[]) => {
-          order.push(`${bin.split('/').pop()} ${args.join(' ')}`)
+          order.push(`${basenameOf(bin)} ${args.join(' ')}`)
           return { code: 1, stdout: '', stderr: 'x' }
         }
       )
@@ -1575,7 +1584,7 @@ describe('Phase 59 engine registry', () => {
       order.length = 0
       mockedSpawnAsync.mockImplementation(
         async (bin: string, args: string[]) => {
-          order.push(`${bin.split('/').pop()} ${args.join(' ')}`)
+          order.push(`${basenameOf(bin)} ${args.join(' ')}`)
           if (bin.includes('cxbottle')) throw new Error('spawn failed')
           return { code: 0, stdout: '', stderr: '' }
         }
@@ -1607,7 +1616,7 @@ describe('Phase 59 engine registry', () => {
       const ac = new AbortController()
       mockedSpawnAsync.mockImplementation(
         async (bin: string, args: string[]) => {
-          order.push(`${bin.split('/').pop()} ${args.join(' ')}`)
+          order.push(`${basenameOf(bin)} ${args.join(' ')}`)
           if (bin === engine.wineBin) {
             ac.abort()
             throw Object.assign(new Error('aborted'), { name: 'AbortError' })
@@ -1633,7 +1642,7 @@ describe('Phase 59 engine registry', () => {
         const ac = new AbortController()
         mockedSpawnAsync.mockImplementation(
           async (bin: string, args: string[]) => {
-            order.push(`${bin.split('/').pop()} ${args.join(' ')}`)
+            order.push(`${basenameOf(bin)} ${args.join(' ')}`)
             if (step === 'wineserver -w' && args[0] === '-w') ac.abort()
             return { code: 0, stdout: '', stderr: '' }
           }
@@ -1659,7 +1668,7 @@ describe('Phase 59 engine registry', () => {
       const ac = new AbortController()
       mockedSpawnAsync.mockImplementation(
         async (bin: string, args: string[]) => {
-          order.push(`${bin.split('/').pop()} ${args.join(' ')}`)
+          order.push(`${basenameOf(bin)} ${args.join(' ')}`)
           if (bin.includes('cxbottle')) {
             ac.abort()
             throw Object.assign(new Error('aborted'), { name: 'AbortError' })
@@ -1727,7 +1736,7 @@ describe('Phase 59 engine registry', () => {
       )
       mockedSpawnAsync.mockImplementation(
         async (bin: string, args: string[]) => {
-          order.push(`${bin.split('/').pop()} ${args.join(' ')}`)
+          order.push(`${basenameOf(bin)} ${args.join(' ')}`)
           return { code: 0, stdout: '', stderr: '' }
         }
       )

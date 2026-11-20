@@ -1,3 +1,4 @@
+import { join as joinPath } from 'node:path'
 import { createTestManagerDeps } from 'backend/testUtils/testServices'
 import { createTestOnlineMonitor } from 'backend/testUtils/testOnlineMonitor'
 import type { GOGManagerDeps } from '../library'
@@ -480,10 +481,10 @@ describe('D-35-19-16 -- changeGameInstallPath does not double the macOS bundle n
     // bundle is not selectable as a directory.
     await manager.changeGameInstallPath(APP_NAME, '/Users/u/Dest')
 
-    expect(recordedPath()).toBe('/Users/u/Dest/Endless Sky.app')
-    expect(installedArray[0]?.install_path).toBe(
-      '/Users/u/Dest/Endless Sky.app'
-    )
+    // The parent and the bundle name are joined with the host's own separator.
+    const expected = joinPath('/Users/u/Dest', 'Endless Sky.app')
+    expect(recordedPath()).toBe(expected)
+    expect(installedArray[0]?.install_path).toBe(expected)
   })
 
   it('non-osx installs are recorded verbatim, with no append at all', async () => {
