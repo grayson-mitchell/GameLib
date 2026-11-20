@@ -846,6 +846,39 @@ fn app_data_file_inside_its_trust_root_is_removed_alone() {
     run("app-data file", &fx, &removed());
 }
 
+/// quick 261120-ux8: the shape Node's `join(fixesPath, '../escape-steam.json')` hands the guard,
+/// already normalised, so containment (not the lexical dot-segment check) is what refuses it.
+#[test]
+fn app_data_file_outside_its_trust_root_is_refused_and_kept() {
+    let c = common();
+    let app = seg(c.home.root(), &["appdata"]);
+    let fixes = seg(&app, &["fixes"]);
+    fs::create_dir_all(&fixes).unwrap();
+    let escaped = seg(&app, &["escape-steam.json"]);
+    touch(&escaped);
+    let fx = Fixture {
+        req: request(
+            vec![tgt(
+                "fix-file",
+                s(&escaped),
+                TargetKind::AppData,
+                Some(&fixes),
+            )],
+            Some(vec![]),
+            None,
+            vec![],
+        ),
+        case: CaseMode::Auto,
+        target: escaped.clone(),
+        precious: vec![c.sentinel.clone(), escaped],
+    };
+    run(
+        "app-data file outside its trust root",
+        &fx,
+        &refused(Reason::OutsideTrustRoot),
+    );
+}
+
 #[test]
 fn unknown_a_path_component_that_is_a_file_cannot_be_canonicalised() {
     let c = common();

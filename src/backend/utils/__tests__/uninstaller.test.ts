@@ -31,7 +31,7 @@ jest.mock('i18next', () => ({ t: jest.fn((_k: string, d: string) => d) }))
 
 import { removeFixFile, uninstallGameCallback } from '../uninstaller'
 import { notify } from 'backend/dialog/dialog'
-import { logInfo } from 'backend/logger'
+import { logInfo, logWarning } from 'backend/logger'
 import { resolveGameTitle } from 'backend/utils/gameTitle'
 import { fakeSafetyRustInvoke } from 'backend/testUtils/fakeSafetyRust'
 import type { RequestRustInvoke } from 'backend/host'
@@ -79,30 +79,147 @@ describe('removeFixFile', () => {
   it.each([
     ['284100', 'steam', 'steam'],
     ['1207658930', 'gog', 'gog']
-  ] as const)('deletes the downloaded %s file only', (app, runner, store) => {
-    const downloaded = join(fixesPath, `${app}-${store}.json`)
-    const local = join(localFixesPath, `${app}-${store}.json`)
-    const profile = join(fixesPath, `${app}-${store}.profile.json`)
-    writeFileSync(downloaded, '{}')
-    writeFileSync(local, '{}')
-    writeFileSync(profile, '{}')
+  ] as const)(
+    'deletes the downloaded %s file only',
+    async (app, runner, store) => {
+      const downloaded = join(fixesPath, `${app}-${store}.json`)
+      const local = join(localFixesPath, `${app}-${store}.json`)
+      const profile = join(fixesPath, `${app}-${store}.profile.json`)
+      writeFileSync(downloaded, '{}')
+      writeFileSync(local, '{}')
+      writeFileSync(profile, '{}')
 
-    removeFixFile(deps, app, runner)
+      await removeFixFile(deps, app, runner)
 
-    expect(existsSync(downloaded)).toBe(false)
-    expect(existsSync(local)).toBe(true)
-    expect(existsSync(profile)).toBe(true)
-  })
+      expect(existsSync(downloaded)).toBe(false)
+      expect(existsSync(local)).toBe(true)
+      expect(existsSync(profile)).toBe(true)
+    }
+  )
 
-  it('sideload deletes nothing and does not throw', () => {
+  it('sideload deletes nothing and does not throw', async () => {
     const stray = join(fixesPath, 'x-undefined.json')
     writeFileSync(stray, '{}')
-    expect(() => removeFixFile(deps, 'x', 'sideload')).not.toThrow()
+    await expect(removeFixFile(deps, 'x', 'sideload')).resolves.toBeUndefined()
     expect(existsSync(stray)).toBe(true)
   })
 
-  it('a missing file does not throw', () => {
-    expect(() => removeFixFile(deps, 'nope', 'steam')).not.toThrow()
+  it('a missing file does not throw', async () => {
+    await expect(removeFixFile(deps, 'nope', 'steam')).resolves.toBeUndefined()
+  })
+})
+
+// quick 261120-ux8: the fake transport does not enforce trust roots, so these tests prove the
+// request shape and the refusal handling; the crate row in gamelib-safety's adversarial.rs
+// (app_data_file_outside_its_trust_root_is_refused_and_kept) proves the real outside-trust-root
+// semantics.
+describe('fix-file guard (261120-ux8)', () => {
+  const warnings = () =>
+    (logWarning as jest.Mock).mock.calls
+      .flat()
+      .map((a) => String(a))
+      .join('\n')
+  const removalNotices = () =>
+    (deps.sendFrontendMessage as jest.Mock).mock.calls.filter(
+      (c) => c[0] === 'removalRefusedNotice'
+    )
+  const withRust = (requestRustInvoke: RequestRustInvoke) =>
+    ({ ...deps, requestRustInvoke }) as typeof deps
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it('a traversal appName sends one guarded app-data request and keeps the escaped file', async () => {
+    const escaped = join(fixesPath, '..', 'escape-steam.json')
+    writeFileSync(escaped, '{}')
+    const { requestRustInvoke, calls } = fakeSafetyRustInvoke({
+      checkVerdict: 'no',
+      reason: 'outside-trust-root'
+    })
+
+    const result = await removeFixFile(
+      withRust(requestRustInvoke),
+      '../escape',
+      'steam'
+    )
+
+    expect(existsSync(escaped)).toBe(true)
+    expect(calls.map((c) => c.channel)).toEqual(['safety_check_removal'])
+    const req = calls[0]?.args[0] as {
+      targets: unknown[]
+      knownInstalls: unknown
+      protectedRoots: string[]
+    }
+    expect(req.targets).toMatchObject([
+      { kind: 'app-data', trustRoot: fixesPath, path: escaped }
+    ])
+    expect(Array.isArray(req.knownInstalls)).toBe(true)
+    expect(req.protectedRoots.length).toBeGreaterThan(0)
+    expect(result).toMatchObject({
+      outcome: 'refused',
+      reason: 'outside-trust-root'
+    })
+    expect(warnings()).toContain(
+      '[safety] remove-fix-file refused: outside-trust-root'
+    )
+    expect(warnings()).not.toMatch(/escape|264160|fixes/)
+    expect(removalNotices()).toEqual([])
+  })
+
+  it('an injected check rejection deletes nothing', async () => {
+    const fix = join(fixesPath, '264160-steam.json')
+    writeFileSync(fix, '{}')
+    const { requestRustInvoke } = fakeSafetyRustInvoke({ rejectCheck: true })
+
+    const result = await removeFixFile(
+      withRust(requestRustInvoke),
+      '264160',
+      'steam'
+    )
+
+    expect(existsSync(fix)).toBe(true)
+    expect(result).toMatchObject({
+      outcome: 'refused',
+      reason: 'rust-invoke-failed'
+    })
+    expect(warnings()).toContain(
+      '[safety] remove-fix-file refused: rust-invoke-failed'
+    )
+    expect(warnings()).not.toMatch(/escape|264160|fixes/)
+    expect(removalNotices()).toEqual([])
+  })
+
+  it('an injected remove rejection reports failed and pushes no notice', async () => {
+    const fix = join(fixesPath, '264160-steam.json')
+    writeFileSync(fix, '{}')
+    const { requestRustInvoke } = fakeSafetyRustInvoke({ rejectRemove: true })
+
+    const result = await removeFixFile(
+      withRust(requestRustInvoke),
+      '264160',
+      'steam'
+    )
+
+    expect(existsSync(fix)).toBe(true)
+    expect(result).toMatchObject({
+      outcome: 'failed',
+      reason: 'rust-invoke-failed'
+    })
+    expect(warnings()).toContain(
+      '[safety] remove-fix-file failed: rust-invoke-failed'
+    )
+    expect(removalNotices()).toEqual([])
+  })
+
+  it('no candidate file makes no safety call at all', async () => {
+    const { requestRustInvoke, calls } = fakeSafetyRustInvoke()
+
+    await expect(
+      removeFixFile(withRust(requestRustInvoke), '264160', 'steam')
+    ).resolves.toBeUndefined()
+
+    expect(calls).toEqual([])
   })
 })
 

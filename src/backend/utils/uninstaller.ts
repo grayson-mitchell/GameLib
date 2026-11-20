@@ -1,6 +1,6 @@
 import type { AppRuntimeSlice } from 'backend/appRuntime'
 import { notify } from 'backend/dialog/dialog'
-import { logError, logInfo, LogPrefix } from 'backend/logger'
+import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { ManagerDeps } from 'backend/services/types'
 import type { GlobalConfigSlice } from 'backend/config'
 import { sendGameStatusUpdate } from 'backend/utils'
@@ -95,21 +95,69 @@ const removePrefix = async (
   )
 }
 
-export const removeFixFile = (
-  deps: Pick<UninstallerDeps, 'paths'>,
+/** What the app-data file deletes need: the guard's transport, the known installs and the roots. */
+type AppDataRemovalDeps = Pick<
+  UninstallerDeps,
+  'paths' | 'requestRustInvoke' | 'libraryManagers' | 'config'
+>
+
+/**
+ * Deletes GameLib's own per-game data files through the Rust guard. The paths are built from
+ * `appName`, which is renderer text, and `join` is not containment (`'../config'` reaches
+ * `appFolder/config.json`), so each file is an `app-data` target and the guard's `trustRoot` is the
+ * containment check: an escaping path is refused `outside-trust-root` and nothing is deleted
+ * (quick 261120-ux8, todo 2026-11-20-uninstall-file-deletes-trust-renderer-appname).
+ *
+ * Only existing candidates are sent. That is not a safety check (everything sent is still guarded
+ * and the crate re-checks on delete); it spares a Rust round trip, and a canonicalize-failed
+ * refusal for a missing trust root, in the common no-file case. Resolves `undefined` when there
+ * is nothing to delete. A refusal or failure is one closed-set warning line, never the appName or
+ * a path; the game is already uninstalled, so there is no toast.
+ */
+async function removeAppDataFiles(
+  deps: AppDataRemovalDeps,
+  op: 'remove-fix-file' | 'remove-settings',
+  trustRoot: string,
+  candidates: { id: string; path: string }[]
+): Promise<GuardedRemoval | undefined> {
+  const existing = candidates.filter(({ path }) => existsSync(path))
+  if (existing.length === 0) return undefined
+  const removed = await guardedRemoveTree(deps, {
+    targets: existing.map(({ id, path }) => ({
+      id,
+      path,
+      kind: 'app-data' as const,
+      trustRoot
+    })),
+    knownInstalls: collectKnownInstalls(deps),
+    protectedRoots: protectedRootsFor(deps)
+  })
+  if (removed.outcome !== 'removed') {
+    logWarning(
+      `[safety] ${op} ${removed.outcome}: ${removed.reason ?? 'bad-reply'}`,
+      LogPrefix.Backend
+    )
+  }
+  return removed
+}
+
+export const removeFixFile = async (
+  deps: AppDataRemovalDeps,
   appName: string,
   runner: Runner
-) => {
+): Promise<GuardedRemoval | undefined> => {
   // The downloaded tier-1 copy is re-fetched at install from GameLib's repo for
   // every store (quick 261026-avw), so deleting it is safe. Local
   // (`fixes/local/`) and bundled files live elsewhere and are never touched;
   // `.profile.json` is never downloaded and is not deleted.
   const store = storeMap[runner]
-  if (!store) return
-  const fixFilePath = join(deps.paths.fixesPath, `${appName}-${store}.json`)
-  if (existsSync(fixFilePath)) {
-    rmSync(fixFilePath)
-  }
+  if (!store) return undefined
+  return removeAppDataFiles(deps, 'remove-fix-file', deps.paths.fixesPath, [
+    {
+      id: 'fix-file',
+      path: join(deps.paths.fixesPath, `${appName}-${store}.json`)
+    }
+  ])
 }
 
 const removeSettingsAndLogs = (
@@ -249,7 +297,7 @@ export const uninstallGameCallback = async (
     if (shouldRemoveSetting) {
       removeSettingsAndLogs(deps, appName)
     }
-    removeFixFile(deps, appName, runner)
+    await removeFixFile(deps, appName, runner)
 
     // GAME-03: Steam uninstall is confirmed by the ACF poller (pollUninstallOnce),
     // which fires the "Game Uninstalled" toast when the manifest disappears.
