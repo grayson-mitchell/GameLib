@@ -1659,6 +1659,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "gamelib-proc"
+version = "0.1.0"
+dependencies = [
+ "gamelib-core",
+ "gamelib-proc",
+ "gamelib-testutil",
+ "libc",
+ "serde_json",
+ "tokio",
+ "tokio-util",
+ "windows-sys 0.61.2",
+]
+
+[[package]]
 name = "gamelib-safety"
 version = "0.1.0"
 dependencies = [

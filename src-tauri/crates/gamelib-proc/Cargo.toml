@@ -1,0 +1,50 @@
+[package]
+name = "gamelib-proc"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.77.2"
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+gamelib-core = { path = "../gamelib-core" }
+tokio = { version = "1", features = ["rt-multi-thread", "sync", "time", "process", "macros", "io-util"] }
+tokio-util = "0.7"
+serde_json = "1"
+
+# kill-tree signals process groups (libc::kill(-pgid, ..), setsid in the Game class) and the macOS
+# liveness probe calls proc_pidinfo. libc 0.2.186 is already resolved in Cargo.lock.
+[target.'cfg(unix)'.dependencies]
+libc = "0.2.186"
+
+# job.rs: one kill-on-close Job Object per Helper spawn. CreateJobObjectW is gated on
+# Win32_Security; OpenProcess / GetExitCodeProcess / TerminateProcess on Win32_System_Threading.
+# windows-sys 0.61.2 is already locked for steampoll, steamfiles and depot, so no new crate enters
+# the tree; Windows-target-gated, so macOS and Linux builds never see it.
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_System_JobObjects",
+    "Win32_System_Threading",
+] }
+
+[features]
+# The stand-in binary behind tests/orphans.rs. Never part of a shipped build.
+harness = []
+
+[[bin]]
+name = "gamelib-proc-standin"
+path = "src/bin/standin.rs"
+required-features = ["harness"]
+
+[dev-dependencies]
+gamelib-proc = { path = ".", features = ["harness"] }
+gamelib-testutil = { path = "../gamelib-testutil" }
+tokio = { version = "1", features = ["test-util"] }
+
+[lints.clippy]
+dbg_macro = "deny"
+todo = "deny"

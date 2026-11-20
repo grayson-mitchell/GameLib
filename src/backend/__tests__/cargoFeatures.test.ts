@@ -215,7 +215,7 @@ const EXPECTED_LOCKFILE_CRATE_NAMES = [
   "find-msvc-tools", "fixedbitset", "flate2", "fnv", "foldhash", "foreign-types",
   "foreign-types-macros", "foreign-types-shared", "form_urlencoded", "fs_extra", "futures-channel", "futures-core",
   "futures-executor", "futures-io", "futures-lite", "futures-macro", "futures-sink", "futures-task",
-  "futures-util", "gamelib-core", "gamelib-depot", "gamelib-depot-cli", "gamelib-i18n", "gamelib-safety", "gamelib-scan", "gamelib-scan-cli", "gamelib-shell",
+  "futures-util", "gamelib-core", "gamelib-depot", "gamelib-depot-cli", "gamelib-i18n", "gamelib-proc", "gamelib-safety", "gamelib-scan", "gamelib-scan-cli", "gamelib-shell",
   "gamelib-steamcm", "gamelib-steamcm-cli", "gamelib-steamfiles", "gamelib-steamfiles-cli", "gamelib-steampoll", "gamelib-steampoll-cli", "gamelib-testutil", "gdk", "gdk-pixbuf",
   "gdk-pixbuf-sys", "gdk-sys", "gdkwayland-sys", "gdkx11", "gdkx11-sys", "generic-array",
   "gethostname", "getrandom", "gilrs", "gilrs-core", "gio", "gio-sys",
