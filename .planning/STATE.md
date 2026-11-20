@@ -5,10 +5,10 @@ current_phase: 82
 current_phase_name: Guardrails, hygiene and shared safety primitives
 status: Awaiting next milestone
 stopped_at: v0.10 closed 2026-11-20 (override closeout); next is v0.11, Phase 82 context gathered
-last_updated: "2026-11-20T05:49:16.964Z"
+last_updated: "2026-11-20T06:22:57.881Z"
 last_activity: 2026-11-20
 last_activity_desc: Milestone v0.10 completed and archived
-state_head: 297830be7a0bbbdf569a56a83cd9d680e282e9af
+state_head: 7f5e50053cd4a4b173abf644aa2b09ef389c529f
 progress:
   total_phases: 27
   completed_phases: 23
@@ -78,7 +78,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 Phase: 82 (Guardrails, hygiene and shared safety primitives) — READY TO EXECUTE
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-11-20 - Completed quick task 261120-p2j: Steam Verify for Mac-native and bridge games
+Last activity: 2026-11-20 - Completed quick task 261120-pp4: Decommission the custom bridge invite picker now that Steam's own picker passed on CrossOver and Wine-Staging
 
 ## Native-Install Arc Phase Map (21–25)
 
@@ -569,6 +569,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | # | Description | Date | Commit | Status | Directory |
 | --- | ------------- | ------ | -------- | -------- | ----------- |
 | 261120-p2j | Steam Verify for Mac-native (StartValidatingApp) and bridge games (chunk-level depot repair); Move split to its own todo | 2026-11-20 | 6369f1d3b | — | [261120-p2j-steam-verify-for-mac-native-startvalidat](./quick/261120-p2j-steam-verify-for-mac-native-startvalidat/) |
+| 261120-pp4 | Decommission the custom bridge invite picker now that Steam's own picker passed on CrossOver and Wine-Staging | 2026-11-20 | 7f5e50053 | — | [261120-pp4-decommission-the-custom-bridge-invite-pi](./quick/261120-pp4-decommission-the-custom-bridge-invite-pi/) |
 
 ## Deferred Items
 
