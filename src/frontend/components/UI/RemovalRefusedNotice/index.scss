@@ -1,0 +1,17 @@
+// Phase 82 D-13: position and the toast surface (sketch 006 variant A) come from
+// NoticeStack/index.scss, and so do the icon, text, title, body and dismiss X (the shared
+// .noticeStackIcon / Text / Title / Body / Dismiss rules; the stylesheet gate forbids a notice
+// restyling them). Like the read-only stores notice this one has no countdown hairline: a refused
+// or failed removal stays until acknowledged.
+//
+// The one difference is the error stripe: --status-danger on the leading edge only, never a tint
+// over the whole surface (sketch 006, "what to avoid"). The icon keeps the shared accent, as the
+// sketch's token table has it. The rule is compound so it outranks the region sheet's
+// `.noticeStackToast`, which loads after this one.
+.removalRefusedNotice {
+  align-items: flex-start;
+}
+
+.noticeStackToast.removalRefusedNotice {
+  border-inline-start-color: var(--status-danger);
+}

@@ -9,6 +9,9 @@ export const handleGameSettingWriteFailed = frontendListenerSlot('gameSettingWri
 // Phase 68 D-05: one read-only stores notice per launch, pushed from frontendReady.
 // @public consumed through window.api (preload spread), not an import edge.
 export const handleReadOnlyStoresNotice = frontendListenerSlot('readOnlyStoresNotice')
+// Phase 82 D-13: a guarded removal was refused or failed; pushed from the backend guard sites.
+// @public consumed through window.api (preload spread), not an import edge.
+export const handleRemovalRefusedNotice = frontendListenerSlot('removalRefusedNotice')
 
 const setSettingIpc = makeListenerCaller('setSetting')
 

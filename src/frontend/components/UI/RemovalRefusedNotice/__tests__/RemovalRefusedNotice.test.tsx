@@ -1,0 +1,104 @@
+/**
+ * @jest-environment jsdom
+ */
+import 'frontend/testUtils/jsdomNoticeEnv'
+
+import i18next from 'i18next'
+import { initReactI18next } from 'react-i18next'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { useRemovalRefusedNotice } from 'frontend/state/RemovalRefusedNotice'
+import type { RemovalRefusalPayload } from 'common/types/removalRefusal'
+import RemovalRefusedNotice from '../index'
+
+// Real i18next with no catalogs: t() returns the default text, so the copy is the shipped English.
+void i18next.use(initReactI18next).init({
+  lng: 'en',
+  resources: {},
+  initImmediate: false,
+  interpolation: { escapeValue: false }
+})
+
+const push = (p: RemovalRefusalPayload) =>
+  act(() => useRemovalRefusedNotice.getState().push(p))
+
+const nested: RemovalRefusalPayload = {
+  kind: 'uninstall',
+  outcome: 'refused',
+  reason: 'nested-known-install',
+  title: 'Half-Life 2',
+  otherTitle: 'Portal'
+}
+
+beforeEach(() => {
+  useRemovalRefusedNotice.setState({ notices: [], nextId: 1 })
+})
+afterEach(() => {
+  cleanup()
+  jest.useRealTimers()
+})
+
+describe('RemovalRefusedNotice', () => {
+  it('renders nothing when no refusal is queued', () => {
+    const { container } = render(<RemovalRefusedNotice />)
+    expect(container.firstChild).toBeNull()
+  })
+
+  it('names the game, the other game and that nothing was deleted', () => {
+    render(<RemovalRefusedNotice />)
+    push(nested)
+    expect(screen.getByText("Couldn't uninstall Half-Life 2")).toBeTruthy()
+    expect(
+      screen.getByText('Portal is installed inside this folder.')
+    ).toBeTruthy()
+    expect(screen.getByText('Nothing was deleted.')).toBeTruthy()
+    expect(screen.getByRole('alert')).toBeTruthy()
+  })
+
+  it('dismiss leaves through the slot phases and then drops the notice from the store', () => {
+    render(<RemovalRefusedNotice />)
+    push(nested)
+    fireEvent.click(screen.getByLabelText('Dismiss'))
+    const toast = screen
+      .getByText("Couldn't uninstall Half-Life 2")
+      .closest('.noticeStackToast')
+    expect(toast?.className).toContain('noticeStackToast--leaving')
+    // The store keeps the notice until the exit finishes.
+    expect(useRemovalRefusedNotice.getState().notices).toHaveLength(1)
+    fireEvent.animationEnd(toast as Element, {
+      animationName: 'noticeStackToastOut'
+    })
+    const slot = document.querySelector('.noticeStackSlot--collapsing')
+    expect(slot).not.toBeNull()
+    fireEvent.animationEnd(slot as Element, {
+      animationName: 'noticeStackSlotClose'
+    })
+    expect(useRemovalRefusedNotice.getState().notices).toEqual([])
+    expect(screen.queryByText("Couldn't uninstall Half-Life 2")).toBeNull()
+  })
+
+  it('falls back to removing the notice when no animationend arrives', () => {
+    jest.useFakeTimers()
+    render(<RemovalRefusedNotice />)
+    push(nested)
+    fireEvent.click(screen.getByLabelText('Dismiss'))
+    act(() => void jest.advanceTimersByTime(600))
+    act(() => void jest.advanceTimersByTime(600))
+    expect(useRemovalRefusedNotice.getState().notices).toEqual([])
+  })
+
+  it('stays on screen with no auto-hide', () => {
+    jest.useFakeTimers()
+    render(<RemovalRefusedNotice />)
+    push(nested)
+    act(() => void jest.advanceTimersByTime(60_000))
+    expect(screen.getByText("Couldn't uninstall Half-Life 2")).toBeTruthy()
+  })
+
+  it('shows one toast, in its own slot, per queued refusal', () => {
+    render(<RemovalRefusedNotice />)
+    push(nested)
+    push({ ...nested, title: 'Portal 2', otherTitle: 'Half-Life 2' })
+    expect(screen.getAllByRole('alert')).toHaveLength(2)
+    expect(document.querySelectorAll('.noticeStackSlot')).toHaveLength(2)
+  })
+})

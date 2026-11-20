@@ -57,6 +57,7 @@ import { handleEngineStateChangedSignal } from './EngineState'
 import { handleSteamRequestNoticeSignal } from './SteamRequestNotice'
 import { handleSteamAdoptionStatusChangedSignal } from './SteamAdoptionStatus'
 import { handleReadOnlyStoresNoticeSignal } from './ReadOnlyStoresNotice'
+import { handleRemovalRefusedNoticeSignal } from './RemovalRefusedNotice'
 import { handleSteamBottleLaunchWaitingSignal } from './BottleLaunchWaiting'
 
 /**
@@ -238,6 +239,8 @@ export function initStateSubscriptions(): void {
     handleSteamAdoptionStatusChangedSignal
   )
   window.api.handleReadOnlyStoresNotice(handleReadOnlyStoresNoticeSignal)
+  // Phase 82 D-13: a guarded removal was refused or failed; shown as a toast.
+  window.api.handleRemovalRefusedNotice(handleRemovalRefusedNoticeSignal)
   // Phase 51 Plan 08 (D-51-16): records a bottled-Steam launch's "waiting for
   // Steam" classification; the matching clear() lives in handleGameStatus.
   window.api.handleSteamBottleLaunchWaiting(

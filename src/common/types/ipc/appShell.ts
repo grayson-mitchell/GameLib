@@ -1,6 +1,11 @@
 import { z } from 'zod'
 
 import { READ_ONLY_AREAS, READ_ONLY_REASONS } from '../readOnlyStores'
+import {
+  REMOVAL_REFUSAL_KINDS,
+  REMOVAL_REFUSAL_OUTCOMES
+} from '../removalRefusal'
+import { REMOVAL_REASONS } from '../safety'
 
 import type {
   ButtonOptions,
@@ -106,6 +111,19 @@ export const appShellFrontendMessagesArgs = {
           reason: z.enum(READ_ONLY_REASONS)
         })
       )
+    })
+  ]),
+  // Phase 82 D-13: a destructive removal was refused or failed; closed-set kind/outcome/reason and
+  // game titles only, never a path or raw error text
+  removalRefusedNotice: z.tuple([
+    z.strictObject({
+      kind: z.enum(REMOVAL_REFUSAL_KINDS),
+      outcome: z.enum(REMOVAL_REFUSAL_OUTCOMES),
+      reason: z.enum(REMOVAL_REASONS),
+      title: z.string().max(300).optional(),
+      appName: z.string().max(300).optional(),
+      runner: runnerArg().optional(),
+      otherTitle: z.string().max(300).optional()
     })
   ]),
   progressOfWineManager: z.tuple([z.string(), z.custom<WineManagerStatus>()]),

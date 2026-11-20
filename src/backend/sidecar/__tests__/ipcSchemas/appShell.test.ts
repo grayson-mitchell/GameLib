@@ -105,6 +105,45 @@ const pushTable: FixtureTable<typeof pushArgs> = {
       [{ entries: [], extra: 1 }]
     ]
   },
+  removalRefusedNotice: {
+    valid: [
+      [{ kind: 'uninstall', outcome: 'refused', reason: 'is-protected-root' }],
+      [
+        {
+          kind: 'remove-prefix',
+          outcome: 'failed',
+          reason: 'nested-known-install',
+          title: 'Game',
+          appName: 'abc',
+          runner: 'gog',
+          otherTitle: 'Other'
+        }
+      ],
+      [{ kind: 'reset', outcome: 'refused', reason: 'bad-reply' }]
+    ],
+    invalid: [
+      [],
+      [{ kind: 'uninstall', outcome: 'refused', reason: 'bogus' }],
+      [{ kind: 'bogus', outcome: 'refused', reason: 'is-protected-root' }],
+      [{ kind: 'uninstall', outcome: 'removed', reason: 'is-protected-root' }],
+      [
+        {
+          kind: 'uninstall',
+          outcome: 'refused',
+          reason: 'is-protected-root',
+          path: '/home/u/Games/x'
+        }
+      ],
+      [
+        {
+          kind: 'uninstall',
+          outcome: 'refused',
+          reason: 'is-protected-root',
+          runner: 'bogus'
+        }
+      ]
+    ]
+  },
   progressOfWineManager: {
     valid: [['Wine-1', { state: 'downloading' }]],
     invalid: [[], ['v']]

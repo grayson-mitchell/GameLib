@@ -88,6 +88,8 @@ const NO_REGISTRATION_OWNER: Record<string, string> = {
   'FrontendMessages:steamAdoptionStatusChanged': 'steam',
   'FrontendMessages:gameSettingWriteFailed': 'appShell',
   'FrontendMessages:readOnlyStoresNotice': 'appShell',
+  // Phase 82 Plan 06: backend-pushed removal-refusal notice; no *FlowRegistration owns a push.
+  'FrontendMessages:removalRefusedNotice': 'appShell',
   'FrontendMessages:steamBridgeRouteNotice': 'steam',
   'FrontendMessages:steamBottleLaunchWaiting': 'steam',
   'FrontendMessages:steamClientSetupRequired': 'steam',
@@ -273,7 +275,8 @@ describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
     // Phase 81 Plan 08 task 2: +2 Async (steamAdoptionRestartNow, steamAdoptionOpenSteam).
     // Phase 81 Plan 09: +1 FrontendMessages (steamAdoptionStatusChanged, the live adoption status push); owner-less allowlist 65 -> 66.
     // Quick 261120-pp4: -2 (the bridge friend-list and invite channels, deleted with the custom invite picker).
-    expect(total).toBe(294)
+    // Phase 82 Plan 06: +1 FrontendMessages (removalRefusedNotice, the guard refusal toast); owner-less allowlist 66 -> 67.
+    expect(total).toBe(295)
     // Floor (Phase 67): originally measured - 6. Re-measured at 290 after quick 261115-tk8's deliberate
     // six-channel deletion and quick 261117-p38's two added channels (288 + 2), so the floor moves
     // 290 -> 284 and the parse-miss margin stays the same 6.
@@ -302,7 +305,7 @@ describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
       }
     }
     expect(computed).toEqual(NO_REGISTRATION_OWNER)
-    expect(Object.keys(NO_REGISTRATION_OWNER)).toHaveLength(66)
+    expect(Object.keys(NO_REGISTRATION_OWNER)).toHaveLength(67)
   })
 
   it('parseDomainFile reads the const-args conversion form', () => {

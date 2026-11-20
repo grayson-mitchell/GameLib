@@ -74,6 +74,12 @@ const SLOTS: SlotEntry[] = [
     tsx: `${UI}/ThemeSaveFailedNotice/index.tsx`,
     scss: `${UI}/ThemeSaveFailedNotice/index.scss`,
     rootBase: 'themeSaveFailedNotice'
+  },
+  {
+    name: 'RemovalRefusedNotice',
+    tsx: `${UI}/RemovalRefusedNotice/index.tsx`,
+    scss: `${UI}/RemovalRefusedNotice/index.scss`,
+    rootBase: 'removalRefusedNotice'
   }
 ]
 

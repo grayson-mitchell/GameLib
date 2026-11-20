@@ -146,6 +146,7 @@ const MOVED_LISTENERS = [
   'handleEngineStateChanged',
   'handleSteamRequestNotice',
   'handleReadOnlyStoresNotice',
+  'handleRemovalRefusedNotice',
   'handleSteamBottleLaunchWaiting',
   'handleDMQueueInformation',
   'handleHumbleAuthState',
