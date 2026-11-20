@@ -1,6 +1,5 @@
 {
   "jestMock": {
-    "src/frontend/bridgeInvitePicker/__tests__/BridgeInvitePickerRoot.test.tsx": 4,
     "src/frontend/helpers/__tests__/gamepadDisconnect.test.ts": 1,
     "src/frontend/helpers/__tests__/gamepadHoverSeed.test.ts": 1,
     "src/frontend/helpers/__tests__/gamepadRepeatTiming.test.ts": 1,

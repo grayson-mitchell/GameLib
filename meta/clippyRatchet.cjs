@@ -52,6 +52,10 @@ const CLIPPY_CEILINGS = {
   // darwin not re-measured locally.
   // 2026-11-19 quick-261119-9d9: useless_conversion fell 1 -> 0 (the invite picker's
   // reuse-URL chain with its `e.into()` was removed), entry deleted on darwin and win32.
+  // 2026-11-20 quick-261120-pp4: match_like_matches_macro fell 1 -> 0 (the picker's
+  // navigation-allow `match` of `=> true, _ => false` lived in the deleted window module,
+  // platform-independent code), entry deleted on darwin and win32; win32 not re-measured
+  // locally, the windows-latest CI clippy leg is its measurement.
   darwin: {
     'clippy::doc_lazy_continuation': 5,
     'clippy::type_complexity': 2,
@@ -60,7 +64,6 @@ const CLIPPY_CEILINGS = {
     non_snake_case: 2,
     dead_code: 1,
     'clippy::incompatible_msrv': 1,
-    'clippy::match_like_matches_macro': 1,
     'clippy::manual_hash_one': 1,
     'clippy::bool_comparison': 1,
     'clippy::needless_borrows_for_generic_args': 1,
@@ -82,7 +85,6 @@ const CLIPPY_CEILINGS = {
     'clippy::cloned_ref_to_slice_refs': 2,
     non_snake_case: 2,
     'clippy::incompatible_msrv': 1,
-    'clippy::match_like_matches_macro': 1,
     'clippy::manual_hash_one': 1,
     'clippy::needless_borrows_for_generic_args': 1,
     'clippy::if_same_then_else': 1

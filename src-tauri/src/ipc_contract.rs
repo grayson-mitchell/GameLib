@@ -36,7 +36,6 @@ pub(crate) enum RustInvokeChannel {
     MainWindowRaise,
     MainWindowHide,
     SteamWindowRaise,
-    BridgeInvitePickerOpen,
     ClipboardWriteText,
     ClipboardReadText,
     TraySetIcon,
@@ -158,7 +157,6 @@ impl RustInvokeChannel {
         RustInvokeChannel::MainWindowRaise,
         RustInvokeChannel::MainWindowHide,
         RustInvokeChannel::SteamWindowRaise,
-        RustInvokeChannel::BridgeInvitePickerOpen,
         RustInvokeChannel::ClipboardWriteText,
         RustInvokeChannel::ClipboardReadText,
         RustInvokeChannel::TraySetIcon,
@@ -280,7 +278,6 @@ impl RustInvokeChannel {
             "main_window_raise" => Some(RustInvokeChannel::MainWindowRaise),
             "main_window_hide" => Some(RustInvokeChannel::MainWindowHide),
             "steam_window_raise" => Some(RustInvokeChannel::SteamWindowRaise),
-            "bridge_invite_picker_open" => Some(RustInvokeChannel::BridgeInvitePickerOpen),
             "clipboard_write_text" => Some(RustInvokeChannel::ClipboardWriteText),
             "clipboard_read_text" => Some(RustInvokeChannel::ClipboardReadText),
             "tray_set_icon" => Some(RustInvokeChannel::TraySetIcon),
@@ -404,7 +401,6 @@ impl RustInvokeChannel {
             RustInvokeChannel::MainWindowRaise => "main_window_raise",
             RustInvokeChannel::MainWindowHide => "main_window_hide",
             RustInvokeChannel::SteamWindowRaise => "steam_window_raise",
-            RustInvokeChannel::BridgeInvitePickerOpen => "bridge_invite_picker_open",
             RustInvokeChannel::ClipboardWriteText => "clipboard_write_text",
             RustInvokeChannel::ClipboardReadText => "clipboard_read_text",
             RustInvokeChannel::TraySetIcon => "tray_set_icon",
@@ -985,21 +981,6 @@ pub(crate) struct SteamWindowRaiseArgs;
 impl SteamWindowRaiseArgs {
     pub(crate) fn from_args(_args: &[Value]) -> Result<Self, String> {
         Ok(Self)
-    }
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub(crate) struct BridgeInvitePickerOpenArgs {
-    #[serde(rename = "appId")]
-    pub(crate) app_id: String,
-    #[serde(rename = "ackId")]
-    pub(crate) ack_id: String,
-}
-
-impl BridgeInvitePickerOpenArgs {
-    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
-        let first = args.first().ok_or_else(|| "bridge_invite_picker_open:bad-args".to_string())?;
-        serde_json::from_value(first.clone()).map_err(|_| "bridge_invite_picker_open:bad-args".to_string())
     }
 }
 

@@ -19,7 +19,6 @@ import {
   RUST_APP_EXIT,
   RUST_APP_HIDE,
   RUST_APP_RELAUNCH,
-  RUST_BRIDGE_INVITE_PICKER_OPEN,
   RUST_CLIPBOARD_WRITE_TEXT,
   RUST_MAIN_WINDOW_HIDE,
   RUST_MAIN_WINDOW_RAISE,
@@ -43,11 +42,6 @@ export interface AppState {
   /** As above, for the in-app (renderer) dialog path; also counts the raise. */
   raiseMainWindowForInAppDialog(): void
   inAppDialogRaiseCount(): number
-  /** Resolves true on success, false (after a warn) on failure. Never rejects. */
-  openBridgeInvitePicker(payload: {
-    appId: string
-    ackId: string
-  }): Promise<boolean>
   wakeLock: {
     start(type: string): number
     stop(id: number): void
@@ -142,18 +136,6 @@ export function createAppState(deps: {
     },
     inAppDialogRaiseCount() {
       return inAppDialogRaises
-    },
-    openBridgeInvitePicker(payload) {
-      return requestRustInvoke(RUST_BRIDGE_INVITE_PICKER_OPEN, [payload]).then(
-        () => true,
-        (error) => {
-          console.warn(
-            `[host] appState.openBridgeInvitePicker(): ${RUST_BRIDGE_INVITE_PICKER_OPEN} failed:`,
-            reason(error)
-          )
-          return false
-        }
-      )
     },
     wakeLock: {
       // Real Electron's powerSaveBlocker.start() is SYNCHRONOUS and callers store the number

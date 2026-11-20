@@ -13,7 +13,6 @@
     "src/frontend/components/UI/PopoverComponent/__tests__/index.test.tsx": 1,
     "src/frontend/components/UI/ReadOnlyStoresNotice/__tests__/ReadOnlyStoresNotice.test.tsx": 5,
     "src/frontend/components/UI/SearchBar/__tests__/searchBarTypingRace.test.ts": 2,
-    "src/frontend/components/UI/SteamBridgeInviteDialog/__tests__/SteamBridgeInviteDialog.test.tsx": 5,
     "src/frontend/components/UI/SteamEngineLaunchNotice/__tests__/SteamEngineLaunchNotice.test.tsx": 7,
     "src/frontend/components/UI/StoreEmbedControls/__tests__/StoreEmbedControls.test.tsx": 3,
     "src/frontend/components/UI/TwoColTableInput/__tests__/index.test.tsx": 7

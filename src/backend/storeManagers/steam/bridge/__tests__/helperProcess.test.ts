@@ -19,7 +19,6 @@
  * an object overrides `this`), so each test fully controls what each
  * successive CONTROL probe "receives" over the wire.
  */
-import { createDisplayAcks } from 'backend/dialog/displayAck'
 import { at } from '../../__tests__/fixtures/indexed'
 import { EventEmitter } from 'node:events'
 import { createChildBackedRunner } from 'backend/testUtils/childBackedRunner'
@@ -78,7 +77,6 @@ const fakeRunner = createChildBackedRunner(mockedSpawn)
 // 261027-aue: the default Steam starter calls openExternal on macOS only; both services arrive
 // through the deps slice (66.3-08).
 const mockedOpenExternal = jest.fn().mockResolvedValue(undefined)
-const mockedOpenBridgeInvitePicker = jest.fn().mockResolvedValue(true)
 // One registry per case (D-66.3-14): the schedule, helper path and spawn env are constructor deps.
 // The deps read it through a getter so the cases below stay as they were.
 let registry: BridgeHelperRegistry
@@ -94,12 +92,10 @@ function newRegistry(
 }
 const helperDeps = {
   sendFrontendMessage,
-  dialogs: { displayAcks: createDisplayAcks() },
   get bridgeHelpers() {
     return registry
   },
   runner: fakeRunner.runner,
-  appState: { openBridgeInvitePicker: mockedOpenBridgeInvitePicker },
   openExternal: { openExternal: mockedOpenExternal },
   paths: { steamBridgeHelperStateDir }
 }

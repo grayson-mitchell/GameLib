@@ -78,7 +78,6 @@ const STORE_SPECIFIC_EXEMPT = [
     'src/frontend/helpers/steamUpdateConfirm.ts',
     'src/frontend/screens/ConsoleMode/InstallOverlay/consoleSteamTarget.ts',
     'src/frontend/state/SteamBottleSetup.ts',
-    'src/frontend/state/SteamBridgeInvite.ts',
     'src/frontend/state/SteamBridgeRouteNotice.ts',
     'src/frontend/state/SteamBridgeSetup.ts',
     'src/frontend/state/SteamClientSetup.ts',

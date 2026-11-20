@@ -52,8 +52,6 @@ export const steamAdoptionOpenSteam = makeHandlerInvoker('steamAdoptionOpenSteam
 // Phase 58 Plan 31 (M-01 Direction A): the friend picker's list and invite channels -- sidecar-only.
 export const steamBridgeListFriends = makeHandlerInvoker('steamBridgeListFriends')
 export const steamBridgeInviteFriend = makeHandlerInvoker('steamBridgeInviteFriend')
-// Quick 261101-llf: the invite request is no longer pushed to the main window; helperProcess.ts
-// opens the dedicated `bridge-invite` window through the shell instead.
 // One-way push (17-05 emits, 17-06 subscribes) — no handler, listener only.
 export const handleSteamBottleSetupRequired = frontendListenerSlot('steamBottleSetupRequired')
 // quick 261027-tot: one-way push (setupDownloads.ts emits, SteamSetupDownloads.ts

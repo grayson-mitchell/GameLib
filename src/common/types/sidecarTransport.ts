@@ -266,8 +266,7 @@ export const RUST_APP_HIDE = 'app_hide' as const
  * that happens while a game is in front is not rendered into a hidden window.
  * Callers: the bridge notice, and `app.raiseMainWindowIfHiddenByGameLib()` (quick
  * 261108-kpc), which every dialog path runs first so a dialog is never rendered into a window
- * GameLib itself hid for a launch. The bridge invite picker moved to
- * `RUST_BRIDGE_INVITE_PICKER_OPEN` (quick 261101-llf). On macOS the
+ * GameLib itself hid for a launch. On macOS the
  * arm also requests Critical user attention as a fallback (Dock bounce) when
  * activation is declined with a game frontmost.
  * Takes no args; resolves null. Never called for unrelated dialogs.
@@ -294,15 +293,6 @@ export const RUST_MAIN_WINDOW_HIDE = 'main_window_hide' as const
  * or on any other OS (the arm is a no-op off Windows).
  */
 export const RUST_STEAM_WINDOW_RAISE = 'steam_window_raise' as const
-
-/**
- * Rust-side channel name: open or reuse the `bridge-invite` Tauri window that hosts the
- * bridge invite picker (quick 261101-llf). Takes `[{ appId, ackId }]` (validated again in
- * Rust, since both land in a URL) and resolves null. It never touches the main window,
- * except to re-hide it when GameLib was Cmd+H-hidden before the picker opened.
- */
-export const RUST_BRIDGE_INVITE_PICKER_OPEN =
-  'bridge_invite_picker_open' as const
 
 /**
  * Rust-side channel name: write text to the OS clipboard via `tauri-plugin-clipboard-manager`
@@ -1008,7 +998,6 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_MAIN_WINDOW_RAISE,
   RUST_MAIN_WINDOW_HIDE,
   RUST_STEAM_WINDOW_RAISE,
-  RUST_BRIDGE_INVITE_PICKER_OPEN,
   RUST_CLIPBOARD_WRITE_TEXT,
   RUST_CLIPBOARD_READ_TEXT,
   RUST_TRAY_SET_ICON,

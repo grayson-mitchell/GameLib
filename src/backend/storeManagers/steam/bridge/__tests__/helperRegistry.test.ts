@@ -22,7 +22,6 @@
 
 // Phase 65 Plan 15 (D-03): helperRegistry.ts (D-10 registry state, seams and teardown) -- split out of helperProcess.test.ts by owning module.
 
-import { createDisplayAcks } from 'backend/dialog/displayAck'
 import { EventEmitter } from 'node:events'
 import { createChildBackedRunner } from 'backend/testUtils/childBackedRunner'
 import { Socket } from 'node:net'
@@ -63,7 +62,6 @@ const fakeRunner = createChildBackedRunner(mockedSpawn)
 // 261027-aue: the default Steam starter calls openExternal on macOS only; both services arrive
 // through the deps slice (66.3-08).
 const mockedOpenExternal = jest.fn().mockResolvedValue(undefined)
-const mockedOpenBridgeInvitePicker = jest.fn().mockResolvedValue(true)
 const PACKAGED_HELPER_PATH = '/mock/bundle/arm64/darwin/steam-bridge-helper'
 // One registry per case (D-66.3-14): the schedule, helper path and spawn env are constructor deps.
 function newRegistry(
@@ -78,9 +76,7 @@ function newRegistry(
 }
 let registry: BridgeHelperRegistry
 let helperDeps: {
-  dialogs: { displayAcks: ReturnType<typeof createDisplayAcks> }
   runner: typeof fakeRunner.runner
-  appState: { openBridgeInvitePicker: jest.Mock }
   openExternal: { openExternal: jest.Mock }
   bridgeHelpers: BridgeHelperRegistry
   paths: { steamBridgeHelperStateDir: string }
@@ -88,9 +84,7 @@ let helperDeps: {
 }
 function depsFor(bridgeHelpers: BridgeHelperRegistry): typeof helperDeps {
   return {
-    dialogs: { displayAcks: createDisplayAcks() },
     runner: fakeRunner.runner,
-    appState: { openBridgeInvitePicker: mockedOpenBridgeInvitePicker },
     openExternal: { openExternal: mockedOpenExternal },
     bridgeHelpers,
     paths: { steamBridgeHelperStateDir: '/mock/state/steam-bridge' },

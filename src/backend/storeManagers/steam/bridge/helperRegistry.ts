@@ -39,8 +39,6 @@ export interface BridgeHelperEntry {
    * via env only (never argv) and to the shim via gamelib_bridge.cfg. Never
    * logged. */
   secret: string
-  /** Phase 58 Plan 31: Date.now() of the last invite-dialog push (debounce). */
-  lastInviteRequestMs: number
 }
 
 /**

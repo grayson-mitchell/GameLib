@@ -54,7 +54,6 @@ pub(crate) fn dispatch_rust_channel(
         // signed-out Steam holds `steam://open/main` until login, so the shell raises the sign-in
         // window itself. A `false` no-op on other platforms.
         RustInvokeChannel::SteamWindowRaise => rpc_steam_window_raise(args),
-        RustInvokeChannel::BridgeInvitePickerOpen => rpc_bridge_invite_picker_open(args, app),
         RustInvokeChannel::TraySetIcon => rpc_tray_set_icon(args, app),
         RustInvokeChannel::DialogSave => rpc_dialog_save(args, app),
         RustInvokeChannel::HumbleLoginOpen => rpc_humble_login_open(args, app),

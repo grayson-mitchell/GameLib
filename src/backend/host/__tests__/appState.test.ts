@@ -197,16 +197,4 @@ describe('clipboard and bridge picker', () => {
     expect(t.invoke).toHaveBeenCalledWith(RUST_CLIPBOARD_WRITE_TEXT, ['hi'])
     expect(warn).toHaveBeenCalledTimes(1)
   })
-
-  it('openBridgeInvitePicker resolves true, or false after a warn', async () => {
-    await expect(
-      build().state.openBridgeInvitePicker({ appId: '1', ackId: 'a' })
-    ).resolves.toBe(true)
-    await expect(
-      build(() => Promise.reject(new Error('x'))).state.openBridgeInvitePicker({
-        appId: '1',
-        ackId: 'a'
-      })
-    ).resolves.toBe(false)
-  })
 })

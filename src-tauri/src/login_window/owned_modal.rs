@@ -127,8 +127,7 @@ pub(crate) fn present_owned_login_window(
     // 1. Register.
     with_owned_labels(|labels| owned_label_register(labels, label));
     // 2. Second close listener. Aliased so it is not mistaken for the main window's quit-routing
-    // close handler by the shell-source gates that locate that one (invite_picker.rs does the
-    // same). Never vetoes the close. The close-requested variant covers the title-bar close and
+    // close handler by the shell-source gates that locate that one. Never vetoes the close. The close-requested variant covers the title-bar close and
     // `humble_login_close`'s `window.close()`; `Destroyed` is the catch-all for `destroy()` and
     // owner teardown.
     {

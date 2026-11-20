@@ -121,9 +121,8 @@ describe('tauriAttach (BLOCKER-1 fix, 27-01)', () => {
     expect(win.isSteamDeckGameMode).toBe(false)
   })
 
-  // Quick 261101-llf: the bridge invite picker window attaches window.api but installs no
-  // window chrome, so it looks the same whether frameless is OFF or ON.
-  describe('bridge invite picker window (261101-llf)', () => {
+  // The attach module always runs the three window-chrome installs.
+  describe('window chrome installs', () => {
     const mockChrome = () => {
       const chrome = {
         applyFramelessDecorations: jest.fn(),
@@ -142,22 +141,7 @@ describe('tauriAttach (BLOCKER-1 fix, 27-01)', () => {
       return { chrome, gamepads }
     }
 
-    it('attaches window.api but installs no frameless, drag-region or native-gamepad handling', async () => {
-      installWindowStub()
-      ;(readWindowStub() as { location?: unknown }).location = {
-        search: '?window=bridge-invite&appId=3205720&ackId=abc-123'
-      }
-      const { chrome, gamepads } = mockChrome()
-
-      await import('../tauriAttach')
-
-      expect(typeof readWindowStub().api).toBe('object')
-      expect(chrome.applyFramelessDecorations).not.toHaveBeenCalled()
-      expect(chrome.installDragRegionHandlers).not.toHaveBeenCalled()
-      expect(gamepads.installNativeGamepads).not.toHaveBeenCalled()
-    })
-
-    it('without picker params the chrome installs still run', async () => {
+    it('runs the frameless, drag-region and native-gamepad installs', async () => {
       installWindowStub()
       ;(readWindowStub() as { location?: unknown }).location = { search: '' }
       const { chrome, gamepads } = mockChrome()

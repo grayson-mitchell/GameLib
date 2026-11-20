@@ -51,7 +51,6 @@ const sendFrontendMessage = jest.fn()
  * `helperPath` dep) -- real isolation,
  * not ambient propagation that never happens.
  */
-import { createDisplayAcks } from 'backend/dialog/displayAck'
 import { logInfo, logWarning } from 'backend/logger'
 import { at } from '../../__tests__/fixtures/indexed'
 import { execFileSync, spawn } from 'node:child_process'
@@ -274,13 +273,10 @@ describeDarwinOnly(
     // The registry is built in beforeAll, once the compiled helper path and the fake profile exist.
     let registry: BridgeHelperRegistry
     const stopBridgeHelper = (appId: string) => registry.stop(appId)
-    const displayAcks = createDisplayAcks()
     const helperDeps = () => ({
       sendFrontendMessage,
-      dialogs: { displayAcks },
       bridgeHelpers: registry,
       runner: realRunner.runner,
-      appState: { openBridgeInvitePicker: async () => true },
       openExternal: { openExternal: async () => undefined },
       paths: { steamBridgeHelperStateDir }
     })

@@ -1,7 +1,5 @@
 use super::*;
 
-mod invite_picker;
-pub(crate) use invite_picker::*;
 mod humble_cookies;
 pub(crate) use humble_cookies::*;
 mod humble_reveal;

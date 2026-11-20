@@ -3,7 +3,6 @@ import {
   RUST_APP_EXIT,
   RUST_APP_HIDE,
   RUST_APP_RELAUNCH,
-  RUST_BRIDGE_INVITE_PICKER_OPEN,
   RUST_CLIPBOARD_READ_TEXT,
   RUST_CLIPBOARD_WRITE_TEXT,
   RUST_DIALOG_MESSAGE,
@@ -279,9 +278,6 @@ export const rustInvokeArgs = {
   [RUST_MAIN_WINDOW_RAISE]: empty,
   [RUST_MAIN_WINDOW_HIDE]: empty,
   [RUST_STEAM_WINDOW_RAISE]: empty,
-  [RUST_BRIDGE_INVITE_PICKER_OPEN]: z.tuple([
-    z.object({ appId: z.string(), ackId: z.string() })
-  ]),
   // ---- Clipboard, tray
   [RUST_CLIPBOARD_WRITE_TEXT]: z.tuple([z.string().meta({ title: 'text' })]),
   [RUST_CLIPBOARD_READ_TEXT]: empty,

@@ -87,8 +87,8 @@ pub(crate) fn rpc_app_hide(app: &AppHandle) -> Result<Value, String> {
 
 // Bring the main window to the front before a bridge-notice dialog. Same three calls as
 // the tray About arm (`open_about_window_from_tray`); takes no args, so there is no
-// injection surface. A missing window is reported, not fatal. The invite
-// picker no longer uses this (quick 261101-llf); bridge-notice dialogs still do.
+// injection surface. A missing window is reported, not fatal. Bridge-notice
+// dialogs call this through `rpc_main_window_raise`.
 pub(crate) fn rpc_main_window_raise(app: &AppHandle) -> Result<Value, String> {
     let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) else {
         return Err("main_window_raise:no-main-window".to_string());

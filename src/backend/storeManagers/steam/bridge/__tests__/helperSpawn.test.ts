@@ -34,7 +34,6 @@ import {
   createBridgeHelperRegistry,
   type BridgeHelperRegistry
 } from '../helperRegistry'
-import { createDisplayAcks } from 'backend/dialog/displayAck'
 
 jest.mock('backend/logger', () => ({
   logError: jest.fn(),
@@ -66,27 +65,19 @@ const fakeRunner = createChildBackedRunner(mockedSpawn)
 // 261027-aue: the default Steam starter calls openExternal on macOS only; both services arrive
 // through the deps slice (66.3-08).
 const mockedOpenExternal = jest.fn().mockResolvedValue(undefined)
-const mockedOpenBridgeInvitePicker = jest.fn().mockResolvedValue(true)
-const mockedRaiseMainWindow = jest.fn()
 // One registry per case (D-66.3-14); the deps read it through a getter so the cases below stay as
 // they were.
 let registry: BridgeHelperRegistry
 const helperDeps = {
   sendFrontendMessage,
-  dialogs: { displayAcks: createDisplayAcks() },
   get bridgeHelpers() {
     return registry
   },
   runner: fakeRunner.runner,
-  appState: {
-    openBridgeInvitePicker: mockedOpenBridgeInvitePicker,
-    raiseMainWindow: mockedRaiseMainWindow
-  },
   openExternal: { openExternal: mockedOpenExternal },
   paths: { steamBridgeHelperStateDir: '/mock/state/steam-bridge' }
 }
 const MockedSocket = Socket as unknown as jest.Mock
-const mockedSendFrontendMessage = sendFrontendMessage
 
 // PROBE_REQUEST_ID is 1 inside helperProcess.ts -- mirrored here so the
 // fixture responses this test hands back decode as matching the request.
@@ -177,139 +168,6 @@ describe('helperSpawn.ts (spawn, stderr relay, line parsing)', () => {
     })
     fakeRunner.reset()
     mockedSpawn.mockReset()
-  })
-
-  // Phase 58 Plan 31 (T-58-103): the helper's INVITE dialog line opens the picker window,
-  // own-stream and own-appid only, debounced. Quick 261101-llf: it opens the dedicated
-  // `bridge-invite` window instead of raising and pushing to the main window.
-  describe('INVITE dialog line', () => {
-    const invite = (appId: string) =>
-      Buffer.from(`[2026-11-01T00:00:00Z] INVITE dialog appid=${appId}\n`)
-    const open = mockedOpenBridgeInvitePicker
-    beforeEach(() => {
-      mockedSendFrontendMessage.mockClear()
-      open.mockClear()
-      open.mockResolvedValue(true)
-    })
-    const inviteCalls = () => open.mock.calls
-
-    test('own appid -> one picker window open, no main-window raise or push', () => {
-      const child = new FakeChildProcess()
-      mockedSpawn.mockReturnValue(child)
-      ;(logInfo as jest.Mock).mockClear()
-      void ensureBridgeHelperReady(helperDeps, '3205720')
-      child.stderr.emit('data', invite('3205720'))
-      expect(open).toHaveBeenCalledTimes(1)
-      expect(open).toHaveBeenCalledWith({
-        appId: '3205720',
-        ackId: expect.stringMatching(/.+/)
-      })
-      expect(mockedRaiseMainWindow).not.toHaveBeenCalled()
-      expect(
-        mockedSendFrontendMessage.mock.calls.filter(
-          (c) => c[0] === 'steamBridgeInviteRequest'
-        )
-      ).toHaveLength(0)
-      expect(logInfo).toHaveBeenCalledWith(
-        'bridge invite [3205720]: picker window requested',
-        'Steam'
-      )
-    })
-
-    test('a failed picker open is logged', async () => {
-      open.mockResolvedValue(false)
-      const child = new FakeChildProcess()
-      mockedSpawn.mockReturnValue(child)
-      ;(logWarning as jest.Mock).mockClear()
-      void ensureBridgeHelperReady(helperDeps, '3205720')
-      child.stderr.emit('data', invite('3205720'))
-      await Promise.resolve()
-      await Promise.resolve()
-      expect(logWarning).toHaveBeenCalledWith(
-        'bridge invite [3205720]: picker window failed',
-        'Steam'
-      )
-    })
-
-    test('no ack -> display=unconfirmed after the bounded timeout', () => {
-      jest.useFakeTimers()
-      try {
-        const child = new FakeChildProcess()
-        mockedSpawn.mockReturnValue(child)
-        ;(logInfo as jest.Mock).mockClear()
-        void ensureBridgeHelperReady(helperDeps, '3205720')
-        child.stderr.emit('data', invite('3205720'))
-        jest.advanceTimersByTime(15_000)
-        expect(logInfo).toHaveBeenCalledWith(
-          'bridge invite [3205720]: display=unconfirmed timeout=15000',
-          'Steam'
-        )
-      } finally {
-        jest.useRealTimers()
-      }
-    })
-
-    test('ack before the timeout -> display=confirmed', () => {
-      const child = new FakeChildProcess()
-      mockedSpawn.mockReturnValue(child)
-      ;(logInfo as jest.Mock).mockClear()
-      void ensureBridgeHelperReady(helperDeps, '3205720')
-      child.stderr.emit('data', invite('3205720'))
-      const ackId = inviteCalls()[0][0].ackId
-      expect(helperDeps.dialogs.displayAcks.acknowledge(ackId)).toBe(true)
-      expect(logInfo).toHaveBeenCalledWith(
-        expect.stringMatching(
-          /^bridge invite \[3205720\]: display=confirmed elapsedMs=\d+$/
-        ),
-        'Steam'
-      )
-    })
-
-    test('a line naming another appid does nothing', () => {
-      const child = new FakeChildProcess()
-      mockedSpawn.mockReturnValue(child)
-      void ensureBridgeHelperReady(helperDeps, '3205720')
-      child.stderr.emit('data', invite('999'))
-      expect(inviteCalls()).toHaveLength(0)
-      expect(mockedRaiseMainWindow).not.toHaveBeenCalled()
-    })
-
-    test('a line from a stale child does nothing', () => {
-      const child = new FakeChildProcess()
-      mockedSpawn.mockReturnValue(child)
-      void ensureBridgeHelperReady(helperDeps, '3205720')
-      registry.helpers.clear()
-      child.stderr.emit('data', invite('3205720'))
-      expect(inviteCalls()).toHaveLength(0)
-    })
-
-    test('58 WR-05: the text embedded inside another line does nothing', () => {
-      const child = new FakeChildProcess()
-      mockedSpawn.mockReturnValue(child)
-      void ensureBridgeHelperReady(helperDeps, '3205720')
-      child.stderr.emit(
-        'data',
-        Buffer.from(
-          '[2026-11-01T00:00:00Z] VER    name=x INVITE dialog appid=3205720\n'
-        )
-      )
-      child.stderr.emit(
-        'data',
-        Buffer.from('INVITE dialog appid=3205720 trailing\n')
-      )
-      expect(inviteCalls()).toHaveLength(0)
-      expect(mockedRaiseMainWindow).not.toHaveBeenCalled()
-    })
-
-    test('two lines within 2000 ms give one picker open', () => {
-      const child = new FakeChildProcess()
-      mockedSpawn.mockReturnValue(child)
-      void ensureBridgeHelperReady(helperDeps, '3205720')
-      child.stderr.emit('data', invite('3205720'))
-      child.stderr.emit('data', invite('3205720'))
-      expect(inviteCalls()).toHaveLength(1)
-      expect(mockedRaiseMainWindow).not.toHaveBeenCalled()
-    })
   })
 
   // 53-13 WR-03 (relay side): one log call per non-empty stderr line, each

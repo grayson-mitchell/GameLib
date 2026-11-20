@@ -1,6 +1,6 @@
 /**
  * Phase 65 Plan 15 (D-08/D-10) -- spawns a per-appId native bridge helper and
- * wires its stderr/stdout relay, LISTEN/READY/INIT/INVITE line parsing and
+ * wires its stderr/stdout relay, LISTEN/READY/INIT line parsing and
  * exit handling. Split out of `helperProcess.ts`; all registry state is
  * reached through `./helperRegistry` exports. Readiness (probing, Steam wait
  * loop) stays in `helperProcess.ts`.
@@ -12,9 +12,7 @@ import { join } from 'node:path'
 
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { AppPaths } from 'backend/process/context'
-import type { AppState } from 'backend/host/appState'
 import type { OpenExternal } from 'backend/host/openExternal'
-import type { Dialogs } from 'backend/host/dialogs'
 import type { LongLivedHandle, ProcessRunner } from 'backend/process/types'
 import { BRIDGE_SECRET_ENV } from './protocol'
 import type { BridgeHelperEntry, BridgeHelperSlice } from './helperRegistry'
@@ -39,18 +37,6 @@ const READY_LINE = /READY {2}init=(ok|failed|dylib-missing) appid=(\d+)/
 const INIT_FAILED_LINE =
   /InitFlat failed r=-?\d+ err=(.*?) appid=(\d+) \(is Steam running/
 
-// Phase 58 Plan 31 (M-01): the helper logs this when the game calls
-// ActivateGameOverlayInviteDialog -- MUST match bridge_helper.c's
-// `logts_f("INVITE", "dialog appid=%s", ...)` (INVITE fills the 6-char
-// category column, so ONE space follows it). Carries no lobby or user ids.
-// 58 WR-05: anchored to logts's whole-line shape `[ts] CAT    msg` so another
-// line merely containing this text (a game-controlled string) cannot raise
-// the window. `\r?` tolerates a CRLF split.
-const INVITE_DIALOG_LINE = /^\[[^\]]*\] INVITE +dialog appid=(\d+)\r?$/
-
-// Backend debounce on top of the helper's own 1/2 s rate limit.
-const INVITE_REQUEST_DEBOUNCE_MS = 2000
-
 export type InitFlatErrorCause = 'steam-not-running' | 'steam-not-signed-in'
 
 /**
@@ -73,9 +59,6 @@ export function classifyInitFlatError(
 
 export type HelperSpawnDeps = {
   runner: Pick<ProcessRunner, 'spawnLongLived'>
-  appState: Pick<AppState, 'openBridgeInvitePicker'>
-  /** The boot's display-ack table the invite picker's ack is tracked in (66.4-18). */
-  dialogs: Pick<Dialogs, 'displayAcks'>
   openExternal: Pick<OpenExternal, 'openExternal'>
   /** The boot-owned helper registry (D-66.3-14). */
   bridgeHelpers: BridgeHelperSlice
@@ -217,50 +200,6 @@ export function ensureHelperSpawned(
     handleListenLine(line)
     handleInitFailedLine(line)
     handleReadyLine(line)
-    handleInviteDialogLine(line)
-  }
-
-  // Phase 58 Plan 31 (T-58-103): same appid rule and own-stream rule as
-  // LISTEN/READY. Debounced; not logged again (the relay already logged it).
-  const handleInviteDialogLine = (line: string) => {
-    const match = INVITE_DIALOG_LINE.exec(line)
-    if (!match) return
-    if (match[1] !== expectedListenAppId) return
-    const entry = helpers.get(appId)
-    if (!entry || entry.child !== handle) return
-    const now = Date.now()
-    if (
-      entry.lastInviteRequestMs !== 0 &&
-      now - entry.lastInviteRequestMs < INVITE_REQUEST_DEBOUNCE_MS
-    ) {
-      return
-    }
-    entry.lastInviteRequestMs = now
-    // Quick 261101-llf: the picker gets its own `bridge-invite` window, so the main window no
-    // longer comes forward over the game (58-36 raised it). The picker window echoes the
-    // display ack itself; nothing is pushed to the main window, whose render would
-    // false-confirm it.
-    logInfo(
-      `bridge invite [${appId}]: picker window requested`,
-      LogPrefix.Steam
-    )
-    const ackId = deps.dialogs.displayAcks.newId()
-    deps.dialogs.displayAcks.track(ackId, (result) =>
-      logInfo(
-        result.confirmed
-          ? `bridge invite [${appId}]: display=confirmed elapsedMs=${result.elapsedMs}`
-          : `bridge invite [${appId}]: display=unconfirmed timeout=${result.timeoutMs}`,
-        LogPrefix.Steam
-      )
-    )
-    void deps.appState.openBridgeInvitePicker({ appId, ackId }).then((ok) => {
-      if (!ok) {
-        logWarning(
-          `bridge invite [${appId}]: picker window failed`,
-          LogPrefix.Steam
-        )
-      }
-    })
   }
 
   // 261027-aue: same appid rule and own-stream rule as LISTEN/READY (T-aue-01).
@@ -396,8 +335,7 @@ export function ensureHelperSpawned(
     initReady,
     unregister: () => handle.unregister(),
     identityOnly,
-    secret,
-    lastInviteRequestMs: 0
+    secret
   }
   own.entry = entry
   helpers.set(appId, entry)
