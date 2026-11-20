@@ -137,11 +137,30 @@ const table: FixtureTable<typeof installAsyncArgs> = {
   uninstall: {
     valid: [
       ['220', 'steam', false, false],
-      ['abc', 'gog', true, true]
+      ['abc', 'gog', true, true],
+      ['1207658930', 'gog', true, true],
+      ['Fortnite', 'legendary', true, true],
+      ['9d2d0eb64d5c44529cece33fe2a46482', 'legendary', false, true],
+      [
+        'amzn1.adg.product.5ab3f3b2-1b2c-4d3e-8f90-123456789abc',
+        'nile',
+        false,
+        false
+      ],
+      ['mJ5bK8qZr2Xn4Wd7Tf9Ys', 'sideload', true, false],
+      ['__gamelib_steam_bottle__', 'steam', false, false]
     ],
     invalid: [
       ['220', 'steam', false],
-      ['220', 'nope', false, false]
+      ['220', 'nope', false, false],
+      // quick 261120-ux8: an appName is joined into delete paths, so it must name one entry
+      ['../../x', 'gog', true, true],
+      ['../config', 'legendary', false, true],
+      ['a/b', 'steam', false, false],
+      ['a\\b', 'steam', false, false],
+      ['..', 'gog', false, false],
+      ['.', 'gog', false, false],
+      [`a${String.fromCharCode(0)}b`, 'steam', false, false]
     ]
   },
   moveInstall: {

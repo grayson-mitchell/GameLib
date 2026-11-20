@@ -28,6 +28,21 @@ export function nonEmptyString(max = 4096) {
 }
 
 /**
+ * Shape-only plain name: one directory entry's worth of text, with no `/`, no backslash, no NUL and
+ * not `.` or `..`. Like `absolutePathArg` it is fs-free. It stops a renderer value from naming
+ * another directory when a handler joins it into a file name. It is defence in depth: the Rust
+ * guard's trust root (quick 261120-ux8) stays the containment check. It deliberately does not
+ * reject `:` or dots inside a name, because Amazon ids (`amzn1.adg.product.<uuid>`) carry dots and
+ * none of the five runners' ids contain a separator.
+ */
+export function plainNameArg(max = 4096) {
+  return nonEmptyString(max)
+    .refine((n) => !/[/\\]/.test(n), 'path separator')
+    .refine((n) => !n.includes(String.fromCharCode(0)), 'NUL byte')
+    .refine((n) => n !== '.' && n !== '..', 'dot name')
+}
+
+/**
  * Shape-only absolute path (D-05): no fs access, no settings, no containment. Handler-level
  * `rendererPathGuard` calls remain the containment check.
  */

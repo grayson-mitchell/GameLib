@@ -7,6 +7,7 @@ import { gameInfoSchema, installPlatform } from './gameInfoSchema'
 import {
   nonEmptyString,
   optionalArg,
+  plainNameArg,
   runnerArg,
   wineInstallationArg,
   type InvokeFns
@@ -48,7 +49,7 @@ export const installAsyncArgs = {
     optionalArg(z.strictObject({ computeSize: z.boolean() }))
   ]),
   install: z.tuple([z.strictObject(installFields)]),
-  uninstall: z.tuple([nonEmptyString(), runnerArg(), z.boolean(), z.boolean()]),
+  uninstall: z.tuple([plainNameArg(), runnerArg(), z.boolean(), z.boolean()]),
   // `path` is a bounded string, deliberately NOT absolutePathArg(): the handler's
   // assertPlausibleAbsolutePath owns the rejection, and that is what emits the localisable
   // dialog and the terminal 'done' status (T-34.6-31). A boundary reject would skip both (D-05).
