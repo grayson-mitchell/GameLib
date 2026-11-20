@@ -13,14 +13,22 @@
 //!   keep succeeding after the parent is gone.
 //! - `game-child`: idle.
 //! - `lines`: prints its own pid as one line on stdout, then idles (the streaming-runner test).
+//! - `--gamelib-reaper` (as argv[1]): reaper mode. `main` hands over to the reaper before doing
+//!   anything else, exactly as the shell's `fn main` does (plan 83-08), because the reaper is this
+//!   same executable re-exec'd.
+//!
+//! `parent` flags: `--no-reaper` skips starting the reaper (the negative control: a SIGKILL of the
+//! parent must then leave its helpers alive).
 
-use gamelib_proc::{global, spawn_game, spawn_helper, spawn_helper_with_pipes};
+use gamelib_proc::{global, reaper, spawn_game, spawn_helper, spawn_helper_with_pipes};
 use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
 fn main() {
+    // First statement: a re-exec'd reaper must never reach anything else in this binary.
+    reaper::dispatch_if_requested();
     let args: Vec<String> = std::env::args().skip(1).collect();
     match args.first().map(String::as_str) {
         Some("idle") | Some("game-child") => idle(),
@@ -51,6 +59,10 @@ fn self_command(mode: &str, extra: &[&str]) -> Command {
         .stdout(Stdio::null())
         .stderr(Stdio::null());
     cmd
+}
+
+fn has_flag(args: &[String], name: &str) -> bool {
+    args.iter().any(|a| a == name)
 }
 
 fn flag(args: &[String], name: &str) -> PathBuf {
@@ -121,6 +133,14 @@ fn parent(args: &[String]) {
     let game_log = flag(args, "--game-log");
     let game_pids = flag(args, "--game-pids");
 
+    // The reaper starts before anything it must protect is spawned. Unix only: Windows has the
+    // per-helper Job instead.
+    let reaper_pid: Option<u32> = if cfg!(unix) && !has_flag(args, "--no-reaper") {
+        Some(reaper::start().expect("start reaper"))
+    } else {
+        None
+    };
+
     let h1 = spawn_helper(self_command("idle", &[]), "standin-idle-1").expect("spawn helper 1");
     let h2 = spawn_helper(self_command("idle", &[]), "standin-idle-2").expect("spawn helper 2");
 
@@ -141,8 +161,9 @@ fn parent(args: &[String]) {
     let game = spawn_game(game_cmd, Some(&game_log)).expect("spawn game");
     let game_child = read_pid_file(&game_pids);
 
+    let reaper_json = reaper_pid.map_or("null".to_string(), |p| p.to_string());
     let manifest = format!(
-        r#"{{"helpers":[{h1},{h2},{tree_pid}],"grandchildren":[{grandchild}],"games":[{},{game_child}]}}"#,
+        r#"{{"helpers":[{h1},{h2},{tree_pid}],"grandchildren":[{grandchild}],"games":[{},{game_child}],"reaper":{reaper_json}}}"#,
         game.id()
     );
     let mut out = std::io::stdout();
@@ -159,5 +180,7 @@ fn parent(args: &[String]) {
         }
     }
     global().terminate_all(Duration::from_millis(1500));
+    // Graceful quit: the reaper signals nothing and exits.
+    reaper::disarm();
     std::process::exit(0);
 }

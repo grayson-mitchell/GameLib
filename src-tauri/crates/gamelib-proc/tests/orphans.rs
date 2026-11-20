@@ -67,6 +67,8 @@ fn kill_pid(pid: u32) {
 struct Paths {
     game_log: PathBuf,
     game_pids: PathBuf,
+    /// The stand-in's stderr, which its reaper inherits: where `[reaper] ...` lines land.
+    standin_err: PathBuf,
 }
 
 impl Paths {
@@ -74,24 +76,29 @@ impl Paths {
         Paths {
             game_log: home.root().join("game.log"),
             game_pids: home.root().join("game-pids.txt"),
+            standin_err: home.root().join("standin.err"),
         }
     }
 }
 
 /// The stand-in parent with the fake profile applied (Convention 2: never a hand-rolled env
-/// literal) and stdin/stdout piped for the driver.
-fn standin(home: &FakeHome, paths: &Paths) -> Command {
+/// literal) and stdin/stdout piped for the driver. `extra` are stand-in flags (`--no-reaper`, ...).
+fn standin(home: &FakeHome, paths: &Paths, extra: &[&str]) -> Command {
     let mut cmd = Command::new(env!("CARGO_BIN_EXE_gamelib-proc-standin"));
     cmd.arg("parent")
         .arg("--game-log")
         .arg(&paths.game_log)
         .arg("--game-pids")
         .arg(&paths.game_pids)
+        .args(extra)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
-        // Not inherited: if a bug leaves an orphan behind, it must not hold the test runner's
-        // stderr pipe open and turn a red run into a hung one.
-        .stderr(Stdio::null());
+        // A file, never the runner's stderr pipe: if a bug leaves an orphan (or the reaper) behind,
+        // it must not hold that pipe open and turn a red run into a hung one. The reaper inherits
+        // this file, so its status lines are readable after the fact.
+        .stderr(Stdio::from(
+            std::fs::File::create(&paths.standin_err).expect("create stand-in stderr file"),
+        ));
     home.apply(&mut cmd);
     cmd
 }
@@ -104,7 +111,11 @@ struct Run {
 
 impl Run {
     fn start(home: &FakeHome, paths: &Paths) -> Run {
-        let mut child = standin(home, paths).spawn().expect("spawn stand-in");
+        Run::start_with(home, paths, &[])
+    }
+
+    fn start_with(home: &FakeHome, paths: &Paths, extra: &[&str]) -> Run {
+        let mut child = standin(home, paths, extra).spawn().expect("spawn stand-in");
         let stdout = child.stdout.take().expect("piped stdout");
         let stdin = child.stdin.take();
         // Read the manifest line on a thread so a hung stand-in fails the test, not hangs it.
@@ -138,8 +149,13 @@ impl Run {
         stdin.flush().expect("flush quit");
     }
 
+    /// The reaper's pid, when the stand-in started one (unix, without `--no-reaper`).
+    #[cfg(unix)]
+    fn reaper_pid(&self) -> Option<u32> {
+        self.manifest["reaper"].as_u64().map(|p| p as u32)
+    }
+
     /// Hard-kills the stand-in parent: SIGKILL on unix, TerminateProcess on Windows.
-    #[cfg(windows)]
     fn kill_parent(&mut self) {
         self.child.kill().expect("kill the stand-in parent");
     }
@@ -158,6 +174,12 @@ impl Drop for Run {
         let _ = self.child.kill();
         let _ = self.child.wait();
     }
+}
+
+/// Everything the stand-in (and so its reaper) wrote to stderr.
+#[cfg(unix)]
+fn standin_stderr(paths: &Paths) -> String {
+    std::fs::read_to_string(&paths.standin_err).unwrap_or_default()
 }
 
 fn file_len(path: &PathBuf) -> u64 {
@@ -241,4 +263,40 @@ fn sigkill_kills_helpers_and_grandchildren_and_spares_the_game() {
     run.kill_parent();
     run.wait_for_parent_exit();
     assert_helpers_die_and_game_survives(&run, &paths);
+}
+
+/// Unix has a reaper: after SIGKILL of the parent, a separate process sees the control pipe hit EOF
+/// and kills every registered group. The game tree is not registered, so it survives (D-08).
+#[cfg(unix)]
+#[test]
+fn sigkill_kills_helpers_and_spares_the_game() {
+    let home = FakeHome::new("gamelib-proc-orphans");
+    let paths = Paths::new(&home);
+    let mut run = Run::start(&home, &paths);
+    let _strays = Strays(run.pids("games"));
+    let reaper = run.reaper_pid().expect("the stand-in started a reaper");
+    assert!(is_alive(reaper), "reaper alive before the kill");
+    for p in run
+        .pids("helpers")
+        .into_iter()
+        .chain(run.pids("grandchildren"))
+    {
+        assert!(is_alive(p), "pid {p} alive before the kill");
+    }
+
+    run.kill_parent();
+    run.wait_for_parent_exit();
+    assert_helpers_die_and_game_survives(&run, &paths);
+    // The reaper exits on its own once it has reaped, and says so.
+    wait_until("the reaper to exit", || !is_alive(reaper));
+    wait_until("the reaper's status line", || {
+        standin_stderr(&paths).contains("[reaper] parent gone: signalled ")
+    });
+    println!("{}", standin_stderr(&paths));
+    for g in run.pids("games") {
+        assert!(
+            is_alive(g),
+            "game process {g} must survive the reaper's exit"
+        );
+    }
 }

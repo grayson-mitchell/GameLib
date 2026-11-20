@@ -9,6 +9,8 @@ pub mod diag;
 pub mod job;
 pub mod kill_tree;
 pub mod probe;
+pub mod proto;
+pub mod reaper;
 pub mod runner;
 pub mod spawn;
 

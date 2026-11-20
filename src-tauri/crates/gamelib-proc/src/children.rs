@@ -48,6 +48,7 @@ impl ChildSet {
             job,
         };
         self.lock().insert(pid, entry);
+        register_with_reaper(pid, label);
         pid
     }
 
@@ -59,10 +60,12 @@ impl ChildSet {
             job,
         };
         self.lock().insert(pid, entry);
+        register_with_reaper(pid, label);
     }
 
     pub(crate) fn unregister(&self, pid: u32) {
         self.lock().remove(&pid);
+        unregister_with_reaper(pid);
     }
 
     /// Number of registered helpers.
@@ -94,7 +97,28 @@ impl ChildSet {
         // Take the entries out first: waiting up to `grace` under the lock would stall every
         // `HelperGuard::drop` on a tokio worker. A drained entry's later unregister is a no-op.
         let entries: Vec<(u32, Entry)> = self.lock().drain().collect();
-        terminate_entries(entries, grace)
+        let pids: Vec<u32> = entries.iter().map(|(pid, _)| *pid).collect();
+        let hard_killed = terminate_entries(entries, grace);
+        // Every group is gone (or was never ours to keep): tell the reaper so it cannot later
+        // signal a recycled id.
+        for pid in pids {
+            unregister_with_reaper(pid);
+        }
+        hard_killed
+    }
+}
+
+/// A helper's pid is its process group id (unix `process_group(0)`); a pid that does not fit an
+/// `i32` cannot be a group the reaper could signal, so it is not registered.
+fn register_with_reaper(pid: u32, label: &str) {
+    if let Ok(pgid) = i32::try_from(pid) {
+        crate::reaper::register_group(pgid, label);
+    }
+}
+
+fn unregister_with_reaper(pid: u32) {
+    if let Ok(pgid) = i32::try_from(pid) {
+        crate::reaper::unregister_group(pgid);
     }
 }
 
