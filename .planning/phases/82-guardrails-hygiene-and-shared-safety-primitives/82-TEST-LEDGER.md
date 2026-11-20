@@ -253,6 +253,22 @@ The D-20 depot `fetch.rs` question is closed without a decision: the three Windo
 - Fix attempts so far: none.
 - Recommendation: FIX as the file already does it: add `RUSTSEC-2026-0545` and `RUSTSEC-2026-0548` to the `ignore` list in `src-tauri/deny.toml`, with the same reason text as the four `zip 4.x` entries (updater extract path only; no GameLib caller; AES path also needs `by_name_decrypt` with the `aes-crypto` feature). This is a standing documented risk acceptance, not a baseline widening in the D-03 sense, but it is the operator's call: say so if you would rather leave the audit red or pin `tauri-plugin-updater` differently.
 
+### Operator decisions (D-03), 2026-11-21
+
+The operator decided each entry on 2026-11-21: **keep fixing (a), (b), (c), (d) and (e); retire nothing.** No suite was deleted, skipped or put on a known-red list. Constraints the operator set per entry, and what was done (fix commits are filled in below as they land; CI proof is in "CI proof, 82-12 fix rounds"):
+
+| Entry | Decision (2026-11-21) | Fix as decided | Commit |
+| --- | --- | --- | --- |
+| (a) `moduleStateCensus` + `diPhaseGates` | keep-fixing | build the set inside a function (`x86NullObjectVersionSet()`, like `shimServedInterfaceVersions()`), call sites updated, `shimCoverage.ts` NOT added to `SANCTIONED`. Local proof: both suites and `shimCoverage.test.ts` green (293 tests) | `11996d3ed` |
+| (b) `gamelib-steamcm` `wrap::tests::connection_log_path_is_absolute_without_a_usable_home` | keep-fixing | `NO_HOME` is `cfg(windows)`-absolute (`C:\nonexistent-home`), the test picks an absolute usable home per OS with `cfg!(windows)`; the Windows invariant is kept, no `#[cfg(unix)]` gate. Local proof: macOS `cargo test -p gamelib-steamcm` (309 passed) and clippy `-D warnings`; Windows proof is CI | `8f32bcb9d` |
+| (c) `steamLaunchRuntime.test.ts` (Linux) | keep-fixing | optional `platform` (default `process.platform`) injected into `createBottledSteamRaiser` and `SteamLaunchRuntimeDeps`; the raise-loop tests (and `bottledSteam.test.ts`'s raiser) pass `'darwin'`; no new `jest.mock`. Local proof: macOS green; the forced-linux reproduction (`process.platform` = linux for the jest process) now passes the two files (26 tests) and the whole steam `__tests__` tree (105 suites, 2724 passed) | `eac686d51` |
+| (d) `callbackRegistryHost.test.ts` `cr_buffer_zeroed` (Linux) | keep-fixing | zeroing observed on live memory: the transport stub scans the buffer the registry hands back to a later pull of the same run (exactly `cap` bytes); the case keeps its name and also proves the seed was present. Mutation check: with `gl_cb_zero(crbuf, ...)` removed from `gen_vtables.ts` the case fails (`g_crresidue == 0`), restored after. Proof: Linux CI; if still red, a second diagnosis, not retirement | `5ff4c193c` |
+| (e) `cargo-deny` zip 4.6.1 | operator ACCEPTS the risk | `RUSTSEC-2026-0545` and `RUSTSEC-2026-0548` added to `src-tauri/deny.toml` `ignore` with the same reason text as the earlier zip 4.x entries (only `tauri-plugin-updater 2.10.1`, latest stable, reaches zip 4.6.1). `cargo-deny` is not installed on this host; the TOML parses (8 entries); proof is the Supply-chain audit run | `606d761ac` |
+
+Correction to entry (d) above: `FAIL cr_buffer_zeroed left == 0:1311` carries the harness SOURCE LINE (1311, the `CHECK(left == 0)`), not a count of 1311 leftover bytes; the earlier "1311 leftover `0xCD` bytes" wording was a misreading. The over-read is also worth noting: the case scanned 2600 bytes of a 2596-byte buffer (`GL_CR_DRAIN_RESP_MAX_BYTES` = 4+8+4+4+4+2572), so it read four bytes of neighbouring dead stack as well.
+
+`sharedRedistInstall`'s "restores after an installer timeout" case: the operator asked for a per-test timeout only if it reds again; it has not (this plan), so nothing was changed.
+
 ### Load flakes, not reds
 
 Each passes alone and does not count against FND-01 criterion 1; the fix direction is a race or timeout repair, never retirement.
