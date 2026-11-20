@@ -12,6 +12,8 @@ rust-version = "1.77.2"
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
+# Phase 83 (FND-04): Tauri-free trait and composition-root crate (Clock, ProcessRunner, paths, emitter, Shutdown).
+gamelib-core = { path = "crates/gamelib-core" }
 # Phase 63 (D-03): Tauri-free scanner library behind the scan_* rustInvoke arms.
 gamelib-scan = { path = "crates/gamelib-scan" }
 # Phase 82 (D-07): Tauri-free destructive-path safety library behind the safety_* arms.
@@ -451,6 +453,7 @@ strip = true
 
 [workspace]
 members = [
+  "crates/gamelib-core",
   "crates/gamelib-scan",
   "crates/gamelib-scan-cli",
   "crates/gamelib-depot",

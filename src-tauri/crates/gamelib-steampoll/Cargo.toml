@@ -9,6 +9,7 @@ publish = false
 path = "src/lib.rs"
 
 [dependencies]
+gamelib-core = { path = "../gamelib-core" }
 gamelib-steamfiles = { path = "../gamelib-steamfiles" }
 gamelib-i18n = { path = "../gamelib-i18n" }
 tokio = { version = "1", features = ["rt-multi-thread", "sync", "time", "process", "macros", "io-util"] }

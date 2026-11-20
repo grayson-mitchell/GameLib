@@ -3,10 +3,10 @@
 //! The runtime is crate-private and exposed only as a `Handle`. Children are spawned argv-only,
 //! never with an `env` literal, with `kill_on_drop(true)` and a null stdin.
 
-use crate::host::{BoxFuture, Clock, ProcessRunner, RunOutput, StreamingChild};
+use crate::host::{BoxFuture, ProcessRunner, RunOutput, StreamingChild};
 use std::process::Stdio;
 use std::sync::OnceLock;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::runtime::{Handle, Runtime};
 
@@ -28,16 +28,7 @@ pub fn handle() -> Handle {
     runtime().handle().clone()
 }
 
-pub struct SystemClock;
-
-impl Clock for SystemClock {
-    fn now_ms(&self) -> u64 {
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map(|d| d.as_millis() as u64)
-            .unwrap_or(0)
-    }
-}
+pub use gamelib_core::clock::SystemClock;
 
 pub struct TokioRunner;
 

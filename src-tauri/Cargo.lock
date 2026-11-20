@@ -1601,6 +1601,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "gamelib-core"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
+ "tokio",
+ "tokio-util",
+]
+
+[[package]]
 name = "gamelib-depot"
 version = "0.1.0"
 dependencies = [
@@ -1685,6 +1694,7 @@ version = "0.8.0"
 dependencies = [
  "block2",
  "dispatch2",
+ "gamelib-core",
  "gamelib-depot",
  "gamelib-i18n",
  "gamelib-safety",
@@ -1772,6 +1782,7 @@ dependencies = [
 name = "gamelib-steampoll"
 version = "0.1.0"
 dependencies = [
+ "gamelib-core",
  "gamelib-i18n",
  "gamelib-steamfiles",
  "gamelib-steampoll",
