@@ -4,11 +4,11 @@ milestone: v0.10
 current_phase: 82
 current_phase_name: Guardrails, hygiene and shared safety primitives
 status: executing
-stopped_at: Completed 82-08-PLAN.md
-last_updated: "2026-11-20T09:34:04.515Z"
+stopped_at: Completed 82-09-PLAN.md
+last_updated: "2026-11-20T09:56:23.996Z"
 last_activity: 2026-11-20
 last_activity_desc: Phase 82 execution started
-state_head: 08e863eb5e6014418739c6656fdfd004beba8f0c
+state_head: 027c9db837ccf5f1df8a0bd26e1370cfb2a36b51
 progress:
   total_phases: 27
   completed_phases: 23
@@ -76,7 +76,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 82 (Guardrails, hygiene and shared safety primitives) — EXECUTING
-Plan: 11 of 16
+Plan: 12 of 16
 Status: Ready to execute
 Last activity: 2026-11-20 - Completed quick task 261120-ux8: Guard removeFixFile and removeSettingsAndLogs deletes against renderer-supplied appName path traversal
 
@@ -317,6 +317,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 82 P14 | 40 min | 2 tasks | 2 files |
 | Phase 82 P07 | 75min | 3 tasks | 14 files |
 | Phase 82 P08 | 70min | 2 tasks | 10 files |
+| Phase 82 P09 | 65 min | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -556,6 +557,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 82]: 82-07: the D-22 exec-bit over-refusal (native Linux folders with helper scripts) surfaces as the existing folder-looks-shared copy ('holds other programs'); no new i18n key. No UI path passes deleteFiles today, so the branch is unreachable from the app
 - [Phase 82]: 82-08: BottleRemovalDeps is a separate intersection type (not a widened BottleLifecycleDeps) so stop/kill/provision helpers keep the narrow deps; steamSafetyRequest takes { appId, deps } so the bottle remover (no SteamGame) shares it
 - [Phase 82]: 82-08: a 'failed' guard outcome on the shared-bottle uninstall reports through removalRefusedNotice (outcome failed) instead of steamRequestNotice; the manifest is kept until the install-root delete is confirmed
+- [Phase 82]: 82-09: copy pre-check derives its trust root from Rust's installPath only when the installdir is one plain folder under common; cancel-delete asks the guard only when it will delete the root (a shared installdir removes manifests alone)
+- [Phase 82]: 82-09: installdirShape and rawInstalldirFromInstallPath live in steam/installdirShape.ts (lifted modules may not re-export); a gamelib-safety copy refusal rides RemoveCopyResult.safety so Phase 80 refusal reasons keep their behaviour
 
 ### Pending Todos
 
@@ -802,8 +805,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-20T09:34:04.485Z
-Stopped at: Completed 82-08-PLAN.md
+Last session: 2026-11-20T09:56:23.967Z
+Stopped at: Completed 82-09-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
