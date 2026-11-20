@@ -217,6 +217,22 @@ Reds found at round 1, both second diagnoses (no retirement):
 1. `callbackRegistryHost` (Linux): `cr_buffer_zeroed` now passes (the first Linux observation of the live-memory scan), but the harness stops at its first failure and the red moved to `FAIL no_hold_168 left == 0:912`. Three more cases (`buffer_zeroed`, `no_hold_168`, `mms_unknown_handle_dropped`) scan a drain buffer through a pointer into the registry's dead stack frame; `no_hold_168` passed at `064d8f5c7` and failed at `633217fa8` with no registry change, which confirms the cause is stack layout rather than a missing zeroing. Fix: those cases run `gl_cb_run_callbacks` on a pthread whose stack is a harness-owned block (`9ab56bdbe`).
 2. Windows clippy ratchet (reached for the first time because the steamcm test now passes): `dead_code: 8 found, ceiling is 5` and `unused_imports: 1, no ceiling`. The three new `dead_code` and the import are `gamelib-safety/src/safe_path.rs:189 flip_ascii_case` (only the unix probe calls it) and `gamelib-depot/tests/post.rs` `LAUNCHER`, `elf`, `apply_elf_fallback` (only cfg(unix) tests use them). Fix: `#[cfg(unix)]` on each, ceilings untouched (`b7a411b6a`). `cargo clippy --target x86_64-pc-windows-msvc -p gamelib-safety --all-targets` is clean locally; gamelib-depot cannot be cross-checked on this host (`ring`'s C build needs a Windows sysroot).
 
+### Round 2: `964e2b7f73d8239850c293dbe0a58e5e4a6cd3b9` (pushed `633217fa8..964e2b7f7`, 2026-11-21)
+
+No other session's commits were carried (the three pushed were all 82-12).
+
+| Workflow | Run | Conclusion |
+| --- | --- | --- |
+| Rust test | 44791256415 | SUCCESS on all three legs (ubuntu, macos, windows) |
+| Test | 44791256524 | failure: one load flake, see below |
+| Code check | 44791256354 | success |
+| Lint | 44791256388 | success |
+| Supply-chain audit | 44791256457 | success |
+
+Rust test per leg: macos, ubuntu and windows all green. On Windows every step passed, including the multi-crate step, the static codec linkage, the Tauri shell test and the clippy ratchet (the round 1 `dead_code` and `unused_imports` reds are gone with no ceiling touched). So D-18 and D-20 are observed green on all three legs at this sha.
+
+Test: `Test Suites: 1 failed, 10 skipped, 1094 passed, 1095 of 1105 total`, `Tests: 1 failed, 190 skipped, 23060 passed, 23251 total`. `callbackRegistryHost` is green on the Linux runner (entry (d) observed fixed). The one failure is `sharedRedistInstall.test.ts` "installer timeout > records timedOut, stops all further entries and statuses, and does not settle" (`Exceeded timeout of 5000 ms`): the same load flake as the "restores after an installer timeout" case recorded at `064d8f5c7`, a different test of the same shape (500 `setImmediate` turns under fake timers; 62/62 pass locally). Per the operator's instruction it gets a per-test timeout, applied to all three tests of that shape (`records timedOut ...`, `restores after an installer timeout`, `Graphics query times out`): 30 s, no retry, no skip.
+
 ## Decision brief (D-03)
 
 Prepared by plan 82-12 Task 1 at HEAD `064d8f5c7` (CI runs: Rust test 44784193543, Test 44784193642, Supply-chain audit 44784193419; see "CI proof follow-up at `064d8f5c7`"). Nothing is decided here and no test or source file was changed. No suite is proposed for retirement by the executor: each red below has a concrete fix by cause, and D-03 makes fixing the default. The operator decides per entry (retire, or keep fixing). "Fix attempts so far" is none for every entry (none of these is phase 82's work and none was touched by this phase).
