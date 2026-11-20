@@ -90,7 +90,12 @@ export function readTauriShellFile(
   relPath: string,
   repoRoot: string = DEFAULT_REPO_ROOT
 ): string {
-  return readFileSync(join(repoRoot, SHELL_SRC_REL, relPath), 'utf-8')
+  // A checkout may hold CRLF (core.autocrlf on win32 against a file the repo stores as LF); every
+  // line-anchored matcher here (`^mod x {$`, column-0 attributes) reads LF, so normalise. No-op on LF.
+  return readFileSync(join(repoRoot, SHELL_SRC_REL, relPath), 'utf-8').replace(
+    /\r\n/g,
+    '\n'
+  )
 }
 
 /**
