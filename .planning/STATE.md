@@ -3,12 +3,12 @@ gsd_state_version: "1.0"
 milestone: v0.10
 current_phase: 82
 current_phase_name: Guardrails, hygiene and shared safety primitives
-status: Awaiting next milestone
-stopped_at: v0.10 closed 2026-11-20 (override closeout); next is v0.11, Phase 82 context gathered
-last_updated: "2026-11-20T06:22:57.881Z"
+status: executing
+stopped_at: Completed 82-01-PLAN.md
+last_updated: "2026-11-20T07:04:27.180Z"
 last_activity: 2026-11-20
-last_activity_desc: Milestone v0.10 completed and archived
-state_head: 7f5e50053cd4a4b173abf644aa2b09ef389c529f
+last_activity_desc: Phase 82 execution started
+state_head: cbb9c51cef855458fa8a8e86bb711a5e4074fd51
 progress:
   total_phases: 27
   completed_phases: 23
@@ -24,7 +24,7 @@ milestone_name: Foundations
 See: .planning/PROJECT.md (updated 2026-11-20)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Milestone v0.11 Node Sidecar Retirement — Phase 82 (Guardrails, hygiene and shared safety primitives), context gathered
+**Current focus:** Phase 82 — Guardrails, hygiene and shared safety primitives
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -75,10 +75,10 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 
 ## Current Position
 
-Phase: 82 (Guardrails, hygiene and shared safety primitives) — READY TO EXECUTE
-Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-11-20 - Completed quick task 261120-pp4: Decommission the custom bridge invite picker now that Steam's own picker passed on CrossOver and Wine-Staging
+Phase: 82 (Guardrails, hygiene and shared safety primitives) — EXECUTING
+Plan: 2 of 16
+Status: Ready to execute
+Last activity: 2026-11-20 — Phase 82 execution started
 
 ## Native-Install Arc Phase Map (21–25)
 
@@ -307,6 +307,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 47 P21 | 4 min | 2 tasks | 3 files |
 | Phase 47 P22 | 5 min | 2 tasks | 3 files |
 | Phase 64 P11 | 9 min | 3 tasks | 10 files |
+| Phase 82 P01 | 70 min | 3 tasks | 18 files |
 
 ## Accumulated Context
 
@@ -525,6 +526,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 47]: 47-21: Store Search rows and the Deals filter panel use --gamecard-title-color (themeable plate) instead of the hardcoded-black overlay gradient; hover/pill tints are color-mix of --text-default
 - [Phase 47]: 47-22: Deals Genres/Features controls grow (min-height + flex-wrap), hover bubble removed, limitTags={2} kept; filter reflow keys on @container main-content (max-width: 1239.98px), 700px rule deleted
 - [Phase 64]: 64-11: IN-03 gradient gate is the name prefix /^--gradient-/ (not a seed-value rule), because --gradient-body-background is live-derived and in no seed; CSS.supports stays the final gate (D-14)
+- [Phase 82]: 82-01: steam_direct_launch_verdict pinned as kind cache; themeTokens is-text census re-derived 34 -> 39 per site — Derivable eligibility verdict (cache-vs-user-state rule); the five new sites are pure button is-text and none escaped the contrast census
+- [Phase 82]: 82-01: new test-only jest.mock gets a collaborators seam, never a baseline entry — backend-di-ceilings forbids a baseline for a new violation; validateNative and verifyBridge take optional collaborators with real defaults
 
 ### Pending Todos
 
@@ -767,9 +770,9 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-20T03:57:20.566Z
-Stopped at: Phase 82 context gathered (v0.11 prep); Phase 81 still has open verification gaps
-Resume file: .planning/phases/82-guardrails-hygiene-and-shared-safety-primitives/82-CONTEXT.md
+Last session: 2026-11-20T07:04:27.151Z
+Stopped at: Completed 82-01-PLAN.md
+Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
 
