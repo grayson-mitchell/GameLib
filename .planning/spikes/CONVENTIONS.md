@@ -148,6 +148,13 @@ question requires otherwise.
   indices drift (12 new `IClientUser` slots on the 2026-10-22 build). Stop the vtable walk with
   `dladdr` at the end of steamclient. A probe that has to survive sign-out/in re-attaches on every
   tick. *(084, 083)*
+- **A unique function-ID match does not prove the argument shape: disassemble the proxy first.**
+  Before calling a method whose shape comes only from OpenSteamClient, print its proxy offset
+  (`dladdr`, 090's `addr.c`) and `lldb disassemble` it. Check which arguments are serialized and
+  which are written to after the reply. `CanMoveApp(appId, folder)` drifted to `(appId, uint32 *out)`
+  and segfaulted with a folder index. Steam app-manager probes `#include`
+  `native/steam-bridge/helper/gamelib_installapp.h`, so they use the production trust model rather
+  than a copy. *(090, 091)*
 - **Mac Steam logon oracle without CM traffic:** 084's `probe whoami` (`GetSteamID` +
   `BLoggedOn`) every 30 s beside the mirrored `connection_log.txt`. For install state, mirror
   `content_log.txt` too: it names the rescan ("Loaded N apps from install folder") and whether

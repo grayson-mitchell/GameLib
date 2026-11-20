@@ -1,0 +1,4 @@
+{"step":"StartValidatingApp","t":1795153062,"appId":264160,"ret":1,"slot":27}
+{"step":"steam-url-validate","t":1795157424}
+{"step":"StartValidatingApp","t":1795157441,"appId":264160,"ret":1,"slot":27}
+{"step":"StartValidatingApp","note":"game running","t":1795157515,"appId":264160,"ret":0,"slot":27}
