@@ -5,10 +5,10 @@ current_phase: 82
 current_phase_name: Guardrails, hygiene and shared safety primitives
 status: executing
 stopped_at: "Completed 82-11-PLAN.md (D-18 open: Windows/Linux safety step red, fix 5a86d54ac unpushed)"
-last_updated: "2026-11-20T17:27:36.251Z"
+last_updated: "2026-11-20T17:50:21.171Z"
 last_activity: 2026-11-20
 last_activity_desc: Phase 82 execution started
-state_head: 376647841f5fab63df85a44016bd3f751abc00ba
+state_head: 11996d3ed48f60e55ac6dd2e3cbdfdbf2a765f51
 progress:
   total_phases: 27
   completed_phases: 23
@@ -78,7 +78,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 Phase: 82 (Guardrails, hygiene and shared safety primitives) — EXECUTING
 Plan: 16 of 16
 Status: Ready to execute
-Last activity: 2026-11-20 - Completed quick task 261120-ux8: Guard removeFixFile and removeSettingsAndLogs deletes against renderer-supplied appName path traversal
+Last activity: 2026-11-21 - Completed quick task 261121-97s: Download queue logs "handed off to the Steam client" instead of "Finished Installation" at a Steam-client handoff
 Progress: [█████████░] 88% (14 of 16 phase 82 plans have a SUMMARY; 82-11 proving, 82-12 pending)
 
 ## Native-Install Arc Phase Map (21–25)
@@ -617,6 +617,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261120-st3 | Honour config.optionaldlc in Steam depot selection: depots of opt-in DLC (DLC app extended.optionaldlc=1, e.g. Dota 2 Workshop Tools 381450, 5.9 GB) are no longer selected; package 0 grants them to every account. DepotSelectOpts.enabledOptInDlc re-includes a named DLC (no caller yet). Follow-up todo filed for the enable path and the update/ACF drop. | 2026-11-20 | 5687a2970 | — | [261120-st3-honour-config-optionaldlc-in-steam-depot](./quick/261120-st3-honour-config-optionaldlc-in-steam-depot/) |
 | 261120-tbr | Treat installed opt-in DLC depots as enabled in Steam depot selection (update, verify, update estimate) | 2026-11-20 | 2111cec0b | — | [261120-tbr-opt-in-dlc-depots-treat-installed-opt-in](./quick/261120-tbr-opt-in-dlc-depots-treat-installed-opt-in/) |
 | 261120-ux8 | Guard removeFixFile and removeSettingsAndLogs deletes against renderer-supplied appName path traversal | 2026-11-20 | f747e126e | — | [261120-ux8-guard-removefixfile-and-removesettingsan](./quick/261120-ux8-guard-removefixfile-and-removesettingsan/) |
+| 261121-97s | Download queue logs "handed off to the Steam client" instead of "Finished Installation" at a Steam-client handoff | 2026-11-21 | f16f58990 | — | [261121-97s-download-queue-logs-handed-off-to-the-st](./quick/261121-97s-download-queue-logs-handed-off-to-the-st/) |
 
 ## Deferred Items
 
