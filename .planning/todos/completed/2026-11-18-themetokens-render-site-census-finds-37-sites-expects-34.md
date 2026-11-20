@@ -32,3 +32,13 @@ written (the list printed in the failure shows `GameSubMenu/index.tsx` repeated)
 whether each belongs in the `.is-link` family, then update the pinned counts and the
 case title together. Do not just bump 34 to 37 without looking at the sites, because the
 case exists to catch a new site that escaped the contrast census.
+
+## Resolution
+
+Resolved by phase 82 plan 01 (commit `013e721c8`). The census was re-derived site by site: at HEAD it found 39 `is-text` sites, not 37, against the pin of 34. The five new sites are all pure `button is-text` (no `.link`, no `.is-link`), so the `.is-link` subset stays at 27:
+
+- `NativePortInfo.tsx` x3, added by quick 261117-r4c (`20e70fdc1`)
+- `ThemeEditor/index.tsx` Back, added by phase 64-07 (`eb33e8668`)
+- `ThemeEditor/index.tsx` Rename, added by phase 64-09 (`1f9c0efa1`)
+
+None of the five declares a colour or background of its own (`ThemeEditor/index.scss` and `GamePage/index.css` only lay them out), so none escaped the contrast census: they take the theme-global `.button.is-text` colour and hover pair that the pure-family tests already measure. The pin is now 39, with named per-file counts for the two new files and an accounting assertion (27 is-link + 12 pure = 39) so a future site in neither list fails instead of being absorbed by a bumped total. No frontend source file changed.
