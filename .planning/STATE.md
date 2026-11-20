@@ -4,11 +4,11 @@ milestone: v0.10
 current_phase: 82
 current_phase_name: Guardrails, hygiene and shared safety primitives
 status: executing
-stopped_at: Completed 82-07-PLAN.md
-last_updated: "2026-11-20T09:32:52.535Z"
+stopped_at: Completed 82-08-PLAN.md
+last_updated: "2026-11-20T09:34:04.515Z"
 last_activity: 2026-11-20
 last_activity_desc: Phase 82 execution started
-state_head: f747e126e2cd0c97694840c0c867fd4f48932dde
+state_head: 08e863eb5e6014418739c6656fdfd004beba8f0c
 progress:
   total_phases: 27
   completed_phases: 23
@@ -76,7 +76,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 82 (Guardrails, hygiene and shared safety primitives) — EXECUTING
-Plan: 10 of 16
+Plan: 11 of 16
 Status: Ready to execute
 Last activity: 2026-11-20 - Completed quick task 261120-ux8: Guard removeFixFile and removeSettingsAndLogs deletes against renderer-supplied appName path traversal
 
@@ -316,6 +316,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 82 P13 | 12 min | 2 tasks | 15 files |
 | Phase 82 P14 | 40 min | 2 tasks | 2 files |
 | Phase 82 P07 | 75min | 3 tasks | 14 files |
+| Phase 82 P08 | 70min | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -553,6 +554,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 82]: 82-14: every registry store flips to the Rust StoreHost at 85 (single slice), because 85 deletes the TS store versioning engine; uploadedLogs flips at 84 (Phase 84 carries the minimal StoreHost core) or the table has one double move
 - [Phase 82]: 82-07: sideload deletes the folder first and drops the library entry only on success; GOG splices a copy and writes the installed store only after both folders are confirmed removed, so a failed delete stays retryable
 - [Phase 82]: 82-07: the D-22 exec-bit over-refusal (native Linux folders with helper scripts) surfaces as the existing folder-looks-shared copy ('holds other programs'); no new i18n key. No UI path passes deleteFiles today, so the branch is unreachable from the app
+- [Phase 82]: 82-08: BottleRemovalDeps is a separate intersection type (not a widened BottleLifecycleDeps) so stop/kill/provision helpers keep the narrow deps; steamSafetyRequest takes { appId, deps } so the bottle remover (no SteamGame) shares it
+- [Phase 82]: 82-08: a 'failed' guard outcome on the shared-bottle uninstall reports through removalRefusedNotice (outcome failed) instead of steamRequestNotice; the manifest is kept until the install-root delete is confirmed
 
 ### Pending Todos
 
@@ -799,8 +802,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-20T09:18:55.870Z
-Stopped at: Completed 82-07-PLAN.md
+Last session: 2026-11-20T09:34:04.485Z
+Stopped at: Completed 82-08-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

@@ -301,7 +301,7 @@ Milestone v0.11 Node Sidecar Retirement. Planned 2026-11-17 alongside v0.10; sta
   4. Uninstalling a game never deletes a sibling game co-installed beside it, proven by an adversarial path table (nested installdir, `.\x`, `C:\x`, UNC, symlink, case, NFC/NFD) on macOS, Windows and Linux
   5. The `utils.ts` and `bootstrap.ts` responsibility inventory and the milestone-wide state-ownership table are committed, and the zero-risk deletions (type-only files, dead exports, `legendary/commands/*`, `CI=e2e` mocks; `fileStore.ts` only after the live-or-dead check) are gone
 
-**Plans:** 9/16 plans executed
+**Plans:** 10/16 plans executed
 
 Plans:
 **Wave 1**
@@ -318,7 +318,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 - [x] 82-07-PLAN.md — Guard uninstall pre-flight, prefix, GOG, sideload (D-22) and resetHeroic
-- [ ] 82-08-PLAN.md — Guard Steam bridge uninstall and per-game bridge bottle removal
+- [x] 82-08-PLAN.md — Guard Steam bridge uninstall and per-game bridge bottle removal
 
 **Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 82-09-PLAN.md — Guard Steam bottle-direct uninstall, copy removal and cancel-delete; Steam delete gate
