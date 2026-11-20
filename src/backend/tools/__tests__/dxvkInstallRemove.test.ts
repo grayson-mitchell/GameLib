@@ -19,6 +19,7 @@ import {
   rmSync,
   writeFileSync
 } from 'fs'
+import { rm } from 'fs/promises'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import type { GameSettings } from 'common/types'
@@ -132,8 +133,17 @@ beforeEach(() => {
   )
 })
 
-afterEach(() => {
-  rmSync(prefix, { recursive: true, force: true })
+afterEach(async () => {
+  // The backup path fires its DLL copyFile calls without awaiting them, so a case can end with a
+  // copy still in flight. win32 refuses to delete a directory holding an open handle (EPERM), so
+  // retry asynchronously (letting the copy callbacks run) until they settle; POSIX deletes open
+  // files freely and succeeds first time.
+  await rm(prefix, {
+    recursive: true,
+    force: true,
+    maxRetries: 40,
+    retryDelay: 25
+  })
 })
 
 afterAll(() => {
