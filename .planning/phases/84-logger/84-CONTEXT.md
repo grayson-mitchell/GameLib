@@ -103,7 +103,7 @@ Not in scope: porting the code that spawns games or runners (Phases 88, 91 and 9
 - `src/backend/sidecar/loggerFlowRegistration.ts` (~11 registrations): deleted, and its channels move native
 - TS writers of game/runner logs, which switch to the forwarder: `src/backend/launcher.ts`, `commandRunner.ts`, `storeManagers/{gog,legendary,nile}/*`, `storeManagers/steam/provisionBottle.ts`, `sidecar/steamFlowRegistration.ts`, `sidecar/settingsFlowRegistration.ts`
 - `src/backend/sidecar/bootstrap.ts`: the logger boot step (logger first)
-- `handle_exit` / `run_exit` Shutdown stages (Phase 83 83-09): the logger registers as the final stage
+- `handle_exit` / `run_exit` Shutdown stages (Phase 83 83-09): the logger flushes explicitly as the final step of `finish` (D-13 amendment). It holds no registrant.
 
 </code_context>
 
