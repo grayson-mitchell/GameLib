@@ -2,6 +2,7 @@
 //! The exit path drains it (`terminate_all`). Games are never registered here (D-08).
 
 use crate::diag::diag;
+use crate::job::JobSlot;
 use std::collections::HashMap;
 use std::process::Child;
 use std::sync::{Mutex, MutexGuard, OnceLock};
@@ -16,6 +17,10 @@ struct Entry {
     /// `Some` for `spawn_helper` (the set owns and reaps the child); `None` for a tokio child
     /// that its own task owns and only registered through a `HelperGuard`.
     owned: Option<Child>,
+    /// Windows: the helper's own kill-on-close Job (closed, so the members killed, when the entry
+    /// is dropped). Nothing on other platforms.
+    #[cfg_attr(not(windows), allow(dead_code))]
+    job: JobSlot,
 }
 
 pub struct ChildSet {
@@ -34,23 +39,25 @@ impl ChildSet {
         self.inner.lock().unwrap_or_else(|e| e.into_inner())
     }
 
-    pub(crate) fn register_owned(&self, label: &'static str, child: Child) -> u32 {
+    pub(crate) fn register_owned(&self, label: &'static str, child: Child, job: JobSlot) -> u32 {
         let pid = child.id();
         let entry = Entry {
             label,
             start: crate::probe::start_time(pid),
             owned: Some(child),
+            job,
         };
         self.lock().insert(pid, entry);
         pid
     }
 
     #[allow(dead_code)] // used by spawn_helper_tokio (Task 3)
-    pub(crate) fn register_pid(&self, label: &'static str, pid: u32) {
+    pub(crate) fn register_pid(&self, label: &'static str, pid: u32, job: JobSlot) {
         let entry = Entry {
             label,
             start: crate::probe::start_time(pid),
             owned: None,
+            job,
         };
         self.lock().insert(pid, entry);
     }
@@ -179,15 +186,21 @@ fn terminate_entries(mut entries: Vec<(u32, Entry)>, grace: Duration) -> Vec<&'s
 #[cfg(windows)]
 fn terminate_entries(mut entries: Vec<(u32, Entry)>, _grace: Duration) -> Vec<&'static str> {
     for (_, e) in entries.iter_mut() {
+        // The Job kills the helper and every descendant it still has; without one (creation
+        // failed and was logged) fall back to killing the helper alone.
+        let jobbed = e.job.as_ref().is_some_and(|j| j.terminate());
         if let Some(child) = e.owned.as_mut() {
-            if let Err(err) = child.kill() {
-                diag(&format!("kill failed for helper '{}': {err}", e.label));
+            if !jobbed {
+                if let Err(err) = child.kill() {
+                    diag(&format!("kill failed for helper '{}': {err}", e.label));
+                }
             }
             if let Err(err) = child.wait() {
                 diag(&format!("wait failed for helper '{}': {err}", e.label));
             }
         }
     }
+    // Dropping the entries closes each Job handle.
     Vec::new()
 }
 

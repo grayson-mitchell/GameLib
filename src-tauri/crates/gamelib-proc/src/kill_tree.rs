@@ -145,6 +145,30 @@ mod unix {
         }
 
         #[test]
+        fn terminate_group_ends_a_sigterm_responsive_leader_and_reaps_it() {
+            let home = FakeHome::new("gamelib-proc-kill-");
+            let mut cmd = Command::new("/bin/sh");
+            cmd.args(["-c", "sleep 30"])
+                .env_clear()
+                .env("PATH", "/bin:/usr/bin")
+                .process_group(0)
+                .stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null());
+            home.apply(&mut cmd);
+            let mut child = cmd.spawn().expect("spawn /bin/sh");
+            let pgid = child.id() as i32;
+            let started = Instant::now();
+            terminate_group(pgid, &mut child, Duration::from_secs(5));
+            assert!(
+                started.elapsed() < Duration::from_secs(5),
+                "SIGTERM should end the leader inside the grace period"
+            );
+            // `wait()` already reaped it, so a second try_wait still reports the exit status.
+            assert!(matches!(child.try_wait(), Ok(Some(_))));
+        }
+
+        #[test]
         fn kill_process_group_on_empty_group_is_esrch() {
             let home = FakeHome::new("gamelib-proc-kill-");
             let (leader, _member, mut rest) = spawn_orphaned_group(&home);
