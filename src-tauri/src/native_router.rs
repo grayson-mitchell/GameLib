@@ -512,6 +512,195 @@ mod tests {
         assert_eq!(native_handlers::app_version(), env!("CARGO_PKG_VERSION"));
     }
 
+    fn job(channel: &'static str, url: &str) -> NativeSendJob {
+        NativeSendJob {
+            channel,
+            url: url.to_string(),
+        }
+    }
+
+    fn collect(rx: &Receiver<String>, n: usize) -> Vec<String> {
+        (0..n)
+            .map(|_| rx.recv_timeout(Duration::from_secs(5)).unwrap())
+            .collect()
+    }
+
+    #[test]
+    fn slice_queue_runs_fifty_jobs_in_enqueue_order() {
+        let (done_tx, done_rx) = mpsc_channel::<String>();
+        let queue = spawn_slice_worker("fifo-test", Shutdown::new(), move |job| {
+            let _ = done_tx.send(job.url);
+            Ok(())
+        });
+        let want: Vec<String> = (0..50)
+            .map(|i| format!("https://example.com/{i}"))
+            .collect();
+        for url in &want {
+            queue.enqueue(job("openExternalUrl", url)).unwrap();
+        }
+        assert_eq!(collect(&done_rx, 50), want);
+    }
+
+    #[test]
+    fn slice_queue_enqueue_does_not_wait_for_a_blocked_handler() {
+        // The defect class: a send handled on the main thread froze the UI. Enqueueing must return
+        // while the worker is stuck inside a job.
+        let (release_tx, release_rx) = mpsc_channel::<()>();
+        let (done_tx, done_rx) = mpsc_channel::<String>();
+        let queue = spawn_slice_worker("block-test", Shutdown::new(), move |job| {
+            let _ = release_rx.recv();
+            let _ = done_tx.send(job.url);
+            Ok(())
+        });
+        let started = std::time::Instant::now();
+        for url in ["a", "b", "c"] {
+            queue.enqueue(job("openExternalUrl", url)).unwrap();
+        }
+        assert!(
+            started.elapsed() < Duration::from_millis(500),
+            "enqueue must not block on the handler"
+        );
+        for _ in 0..3 {
+            release_tx.send(()).unwrap();
+        }
+        assert_eq!(collect(&done_rx, 3), ["a", "b", "c"]);
+    }
+
+    #[test]
+    fn slice_queue_keeps_going_after_a_failed_job() {
+        let (done_tx, done_rx) = mpsc_channel::<String>();
+        let queue = spawn_slice_worker("fail-test", Shutdown::new(), move |job| {
+            let _ = done_tx.send(job.url.clone());
+            if job.url == "broken" {
+                Err("handler failed".into())
+            } else {
+                Ok(())
+            }
+        });
+        queue.enqueue(job("openExternalUrl", "broken")).unwrap();
+        queue.enqueue(job("openExternalUrl", "after")).unwrap();
+        assert_eq!(collect(&done_rx, 2), ["broken", "after"]);
+    }
+
+    #[test]
+    fn slice_queue_keeps_going_after_a_panicking_job() {
+        let (done_tx, done_rx) = mpsc_channel::<String>();
+        let queue = spawn_slice_worker("panic-test", Shutdown::new(), move |job| {
+            if job.url == "boom" {
+                panic!("handler panicked");
+            }
+            let _ = done_tx.send(job.url);
+            Ok(())
+        });
+        queue.enqueue(job("openExternalUrl", "boom")).unwrap();
+        queue.enqueue(job("openExternalUrl", "after")).unwrap();
+        assert_eq!(collect(&done_rx, 1), ["after"]);
+    }
+
+    #[test]
+    fn a_native_queue_and_the_sidecar_send_queue_each_keep_their_own_order() {
+        // No order across the two queues is asserted (D-02): each only preserves its own.
+        let (native_tx, native_rx) = mpsc_channel::<String>();
+        let native = spawn_slice_worker("interleave-test", Shutdown::new(), move |job| {
+            let _ = native_tx.send(job.url);
+            Ok(())
+        });
+        let (sidecar_tx, sidecar_rx) = mpsc_channel::<String>();
+        let sidecar = crate::relay_commands::spawn_send_writer(move |req| {
+            let _ = sidecar_tx.send(req.channel.clone());
+            Ok(())
+        });
+        for i in 0..20 {
+            native
+                .enqueue(job("openExternalUrl", &format!("n{i}")))
+                .unwrap();
+            sidecar
+                .send(crate::SidecarRpcRequest {
+                    id: i.to_string(),
+                    kind: "send",
+                    channel: format!("s{i}"),
+                    args: Vec::new(),
+                })
+                .unwrap();
+        }
+        let want = |p: &str| (0..20).map(|i| format!("{p}{i}")).collect::<Vec<_>>();
+        assert_eq!(collect(&native_rx, 20), want("n"));
+        assert_eq!(collect(&sidecar_rx, 20), want("s"));
+    }
+
+    /// A host whose `open_url` blocks until released, for the first URL only.
+    struct BlockingHost {
+        tx: Sender<String>,
+        release: std::sync::Mutex<Option<Receiver<()>>>,
+    }
+
+    impl NativeHost for BlockingHost {
+        fn open_url(&self, url: String) {
+            let _ = self.tx.send(url);
+            let held = self.release.lock().unwrap().take();
+            if let Some(rx) = held {
+                let _ = rx.recv();
+            }
+        }
+    }
+
+    #[test]
+    fn a_blocked_open_url_does_not_stall_the_next_open_external_url() {
+        // Pitfall 3 / D-UAT-19: on Windows `open_url` blocks while the OS shows a dialog. The
+        // handler hands the URL to its own short-lived thread, so the slice worker moves on.
+        let (tx, opened) = mpsc_channel::<String>();
+        let (release_tx, release_rx) = mpsc_channel::<()>();
+        let host = BlockingHost {
+            tx,
+            release: std::sync::Mutex::new(Some(release_rx)),
+        };
+        let router = NativeRouter::with_shutdown(Arc::new(host), Shutdown::new());
+        for url in ["https://blocked.example/", "https://next.example/"] {
+            assert_eq!(
+                router.route_send("openExternalUrl", &[json!(url)]),
+                Some(Ok(()))
+            );
+        }
+        let first = opened.recv_timeout(Duration::from_secs(1)).unwrap();
+        let second = opened.recv_timeout(Duration::from_secs(1));
+        let _ = release_tx.send(());
+        assert_eq!(first, "https://blocked.example/");
+        assert_eq!(
+            second.as_deref(),
+            Ok("https://next.example/"),
+            "the second URL must reach the host while the first open_url is still blocked"
+        );
+    }
+
+    #[test]
+    fn the_worker_holds_a_registrant_only_while_a_job_runs_and_drops_jobs_after_cancel() {
+        let shutdown = Shutdown::new();
+        let (started_tx, started_rx) = mpsc_channel::<()>();
+        let (release_tx, release_rx) = mpsc_channel::<()>();
+        let (ran_tx, ran_rx) = mpsc_channel::<String>();
+        let queue = spawn_slice_worker("shutdown-test", shutdown.clone(), move |job| {
+            let _ = ran_tx.send(job.url.clone());
+            if job.url == "first" {
+                let _ = started_tx.send(());
+                let _ = release_rx.recv();
+            }
+            Ok(())
+        });
+        queue.enqueue(job("openExternalUrl", "first")).unwrap();
+        started_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+        // The job is running, so the slice is registered: the drain cancels the token and times out
+        // naming it.
+        assert_eq!(shutdown.drain(Duration::from_millis(50)), ["shutdown-test"]);
+        queue.enqueue(job("openExternalUrl", "second")).unwrap();
+        release_tx.send(()).unwrap();
+        assert_eq!(collect(&ran_rx, 1), ["first"]);
+        assert!(
+            ran_rx.recv_timeout(Duration::from_millis(200)).is_err(),
+            "a job queued after the token was cancelled must be dropped"
+        );
+        assert!(shutdown.drain(Duration::from_secs(2)).is_empty());
+    }
+
     #[test]
     fn sanitise_path_matches_the_ts_rules() {
         assert_eq!(sanitise_path("(args)"), "(args)");
