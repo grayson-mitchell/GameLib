@@ -293,6 +293,13 @@ export async function prepareTcpOverlay(
   let inputArg: { inputModulePath: string } | Record<string, never> | undefined
   let carried: readonly string[] = []
   const { appFolder, userHome, builtOverlayShimPath } = steamGame.deps.paths
+  // A previous overlay runner is gone from the registry by now (drmLaunchSetup
+  // clears it for every non-DRM title), so the settings are read again to name
+  // the runner the current engine selection really implies.
+  const settingsAfterRunnerClear = (): GameSettings =>
+    previousRunner?.kind === 'overlay'
+      ? getBridgeBottleSettings(steamGame.deps, steamGame.appId)
+      : settings
   try {
     const { isNonCrossover } = await import('backend/engine/engineTypes')
     const sel = steamGame.deps.engineRuntime.registry.getEngineSelection(
@@ -391,17 +398,20 @@ export async function prepareTcpOverlay(
     }
     // Stock CrossOver (or the fallback engine) again: a previous overlay
     // entry was already cleared by drmLaunchSetup, so a stale clone
-    // wineVersion must not ride along.
-    if (previousRunner?.kind === 'overlay' && !fallbackEngine) {
-      return {
-        settings: getBridgeBottleSettings(steamGame.deps, steamGame.appId)
-      }
-    }
+    // wineVersion must not ride along. That holds for the fallback engine
+    // too: `settings` came from selectLaunchEngine BEFORE the clear, when the
+    // registered clone still outranked the engine selection in
+    // getBridgeBottleSettings, so it names the clone's runner and not the
+    // engine's (debug engine-override-ignored-bridge).
+    const launchSettings = settingsAfterRunnerClear()
     if (envVars) {
       carried = envVars.map((v) => `${v.key}=${v.value}`)
-      return { settings, overlayLaunch: { kind: 'env', vars: envVars } }
+      return {
+        settings: launchSettings,
+        overlayLaunch: { kind: 'env', vars: envVars }
+      }
     }
-    return { settings }
+    return { settings: launchSettings }
   } catch (error) {
     logWarning(
       `SteamGame: appId ${steamGame.appId} overlay setup threw, launching without the overlay: ${String(error)}`,
@@ -412,7 +422,12 @@ export async function prepareTcpOverlay(
         steamGame.appId
       )
     }
-    return { settings }
+    try {
+      return { settings: settingsAfterRunnerClear() }
+    } catch {
+      // The read can only throw for a bad appId; keep what we were handed.
+      return { settings }
+    }
   } finally {
     if (inputArg) logOverlayInputOutcome(steamGame, inputArg, carried)
   }
