@@ -57,6 +57,7 @@ import {
   RUST_STEAMCM_SIGNIN_CREDENTIALS_START,
   RUST_STEAMCM_SIGNIN_GUARD_SUBMIT,
   RUST_STEAMCM_WRAP_RESTORE_IF_OWED,
+  RUST_SAFETY_REMOVE_TREE,
   RUST_DIALOG_MESSAGE,
   RUST_DIALOG_OPEN,
   RUST_DIALOG_SAVE,
@@ -127,6 +128,13 @@ const RUST_INVOKE_TIMEOUT_MS = 60_000
  *
  * Third (Phase 79): the Rust CM channels. Rust bounds these (COMMAND_DEADLINE 120 s, LOGON_BOUND
  * 35 s, wrap 5 s + 15 s spacing); the generic 60 s cap would cut a reconnect short.
+ *
+ * Fourth (Phase 82, WR-03): `safety_remove_tree` runs a guarded recursive delete whose duration
+ * scales with the install tree (tens of GB on an HDD), not with a clock. A 60 s cut-off would
+ * report `failed` while Rust keeps deleting, and a retry could start a second delete over the same
+ * tree. The read-only `safety_check_removal` stays bounded. Rust catches panics in dispatch and the
+ * shell owns the worker thread, so an unanswered entry cannot outlive the sidecar. The entry holds
+ * no timer, so the exit contract is unaffected.
  */
 const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_DIALOG_OPEN,
@@ -151,7 +159,8 @@ const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_STEAMCM_SIGNIN_QR_START,
   RUST_STEAMCM_SIGNIN_CREDENTIALS_START,
   RUST_STEAMCM_SIGNIN_GUARD_SUBMIT,
-  RUST_STEAMCM_WRAP_RESTORE_IF_OWED
+  RUST_STEAMCM_WRAP_RESTORE_IF_OWED,
+  RUST_SAFETY_REMOVE_TREE
 ]
 
 function isValidRequest(value: unknown): value is SidecarRpcRequest {

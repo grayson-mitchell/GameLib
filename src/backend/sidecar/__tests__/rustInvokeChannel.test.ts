@@ -44,6 +44,8 @@ const BOOT_OPTS = {
 import {
   RUST_KEYRING_GET,
   RUST_CLIPBOARD_READ_TEXT,
+  RUST_SAFETY_CHECK_REMOVAL,
+  RUST_SAFETY_REMOVE_TREE,
   type RustInvokeChannel
 } from 'common/types/sidecarTransport'
 
@@ -258,5 +260,42 @@ describe('sidecar->Rust rustInvoke channel (transport shape, Rust side stubbed)'
 
     await keyringAssertion
     await clipboardAssertion
+  })
+
+  // Phase 82 WR-03: a long guarded delete must not be cut off at 60 s and reported failed while
+  // Rust keeps deleting. The read-only check keeps the bound.
+  it('leaves safety_remove_tree unbounded while safety_check_removal still times out at 60s', async () => {
+    jest.useFakeTimers()
+    const { services } = bootFresh(BOOT_OPTS)
+    const { requestRustInvoke } = services.host
+    const body = {
+      targets: [
+        {
+          id: 'a',
+          path: '/g/a',
+          kind: 'game-install' as const,
+          trustRoot: '/g'
+        }
+      ],
+      knownInstalls: null,
+      protectedRoots: ['/home']
+    }
+    const request: [typeof body] = [body]
+
+    let removeSettled = false
+    const remove = requestRustInvoke(RUST_SAFETY_REMOVE_TREE, request)
+    remove.then(
+      () => (removeSettled = true),
+      () => (removeSettled = true)
+    )
+    const check = requestRustInvoke(RUST_SAFETY_CHECK_REMOVAL, request)
+    const checkAssertion = expect(check).rejects.toThrow(
+      'rustInvoke timed out after 60000ms: safety_check_removal'
+    )
+
+    jest.advanceTimersByTime(60_000)
+
+    await checkAssertion
+    expect(removeSettled).toBe(false)
   })
 })
