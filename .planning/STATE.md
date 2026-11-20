@@ -78,7 +78,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 Phase: 83 (Native seam, gamelib-core and process/shutdown contract) — EXECUTING
 Plan: 11 of 11
 Status: Ready to execute
-Last activity: 2026-11-20 — Phase 83 execution started
+Last activity: 2026-11-21 - Completed quick task 261121-dzl: Game settings dialog redesign per sketch 009 B
 Progress: [██████████] 100% (19 of 19 phase 82 plans have a SUMMARY; verification human_needed)
 
 ## Native-Install Arc Phase Map (21–25)
@@ -652,6 +652,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261120-tbr | Treat installed opt-in DLC depots as enabled in Steam depot selection (update, verify, update estimate) | 2026-11-20 | 2111cec0b | — | [261120-tbr-opt-in-dlc-depots-treat-installed-opt-in](./quick/261120-tbr-opt-in-dlc-depots-treat-installed-opt-in/) |
 | 261120-ux8 | Guard removeFixFile and removeSettingsAndLogs deletes against renderer-supplied appName path traversal | 2026-11-20 | f747e126e | — | [261120-ux8-guard-removefixfile-and-removesettingsan](./quick/261120-ux8-guard-removefixfile-and-removesettingsan/) |
 | 261121-97s | Download queue logs "handed off to the Steam client" instead of "Finished Installation" at a Steam-client handoff | 2026-11-21 | f16f58990 | — | [261121-97s-download-queue-logs-handed-off-to-the-st](./quick/261121-97s-download-queue-logs-handed-off-to-the-st/) |
+| 261121-dzl | Game settings dialog redesign per sketch 009 B | 2026-11-21 | 3ff5d2ad8 | — | [261121-dzl-game-settings-dialog-redesign-per-sketch](./quick/261121-dzl-game-settings-dialog-redesign-per-sketch/) |
 
 ## Deferred Items
 
