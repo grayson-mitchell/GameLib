@@ -4,11 +4,11 @@ milestone: v0.10
 current_phase: 82
 current_phase_name: Guardrails, hygiene and shared safety primitives
 status: executing
-stopped_at: Completed 82-10-PLAN.md
-last_updated: "2026-11-20T10:01:14.146Z"
+stopped_at: Completed 82-15-PLAN.md
+last_updated: "2026-11-20T10:11:39.042Z"
 last_activity: 2026-11-20
 last_activity_desc: Phase 82 execution started
-state_head: 4e9de4f12b44179ead67b30c5c5669fd61ffa19d
+state_head: 424d790c4a98a5e94e05ce9e631bfe52a08c025f
 progress:
   total_phases: 27
   completed_phases: 23
@@ -76,7 +76,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 82 (Guardrails, hygiene and shared safety primitives) — EXECUTING
-Plan: 13 of 16
+Plan: 14 of 16
 Status: Ready to execute
 Last activity: 2026-11-20 - Completed quick task 261120-ux8: Guard removeFixFile and removeSettingsAndLogs deletes against renderer-supplied appName path traversal
 
@@ -319,6 +319,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 82 P08 | 70min | 2 tasks | 10 files |
 | Phase 82 P09 | 65 min | 3 tasks | 11 files |
 | Phase 82 P10 | 12 min | 1 tasks | 11 files |
+| Phase 82 P15 | 25min | 2 tasks | 23 files |
 
 ## Accumulated Context
 
@@ -561,6 +562,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 82]: 82-09: copy pre-check derives its trust root from Rust's installPath only when the installdir is one plain folder under common; cancel-delete asks the guard only when it will delete the root (a shared installdir removes manifests alone)
 - [Phase 82]: 82-09: installdirShape and rawInstalldirFromInstallPath live in steam/installdirShape.ts (lifted modules may not re-export); a gamelib-safety copy refusal rides RemoveCopyResult.safety so Phase 80 refusal reasons keep their behaviour
 - [Phase 82]: 82-10: gogdl e2e stub deleted end to end; census total 295 -> 293, owner-less 67 -> 65, diPhaseGates 66.4 owned-list floor 80 -> 79 with the deleted entry (floor still equals list length)
+- [Phase 82]: 82-15: onTestOnly, RunnerCommandStub and the testOnly bucket of ipcSchemaCoverage deleted with the last TestSync channel; 66.4 owned-list floor 79 -> 77 equals the list length; DECLARATIONS_FLOOR stays 284 (total 289)
 
 ### Pending Todos
 
@@ -807,8 +809,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-20T10:01:14.115Z
-Stopped at: Completed 82-10-PLAN.md
+Last session: 2026-11-20T10:11:39.010Z
+Stopped at: Completed 82-15-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

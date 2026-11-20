@@ -301,7 +301,7 @@ Milestone v0.11 Node Sidecar Retirement. Planned 2026-11-17 alongside v0.10; sta
   4. Uninstalling a game never deletes a sibling game co-installed beside it, proven by an adversarial path table (nested installdir, `.\x`, `C:\x`, UNC, symlink, case, NFC/NFD) on macOS, Windows and Linux
   5. The `utils.ts` and `bootstrap.ts` responsibility inventory and the milestone-wide state-ownership table are committed, and the zero-risk deletions (type-only files, dead exports, `legendary/commands/*`, `CI=e2e` mocks; `fileStore.ts` only after the live-or-dead check) are gone
 
-**Plans:** 12/16 plans executed
+**Plans:** 13/16 plans executed
 
 Plans:
 **Wave 1**
@@ -325,7 +325,7 @@ Plans:
 - [x] 82-10-PLAN.md — Delete the gogdl CI=e2e stub end to end (tracer for the e2e surface)
 
 **Wave 5** *(blocked on Wave 4 completion)*
-- [ ] 82-15-PLAN.md — Delete the legendary and nile CI=e2e stubs and the TestSync kind
+- [x] 82-15-PLAN.md — Delete the legendary and nile CI=e2e stubs and the TestSync kind
 
 **Wave 6** *(blocked on Wave 5 completion)*
 - [ ] 82-16-PLAN.md — Remove the remaining CI === 'e2e' branches; e2eSurfaceGone zero-hit gate
