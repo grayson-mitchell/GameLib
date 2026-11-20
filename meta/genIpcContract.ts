@@ -39,9 +39,13 @@ import {
   STORE_SNAPSHOT_CHANNEL
 } from '../src/common/types/sidecarTransport'
 import { rustInvokeArgs } from '../src/common/types/ipc/rustInvoke'
-import { channelSchemas } from '../src/common/types/ipc/channelSchemas'
+import {
+  channelSchemas,
+  collidingPushSchemas
+} from '../src/common/types/ipc/channelSchemas'
 
 const OUTPUT_REL = 'src-tauri/src/ipc_contract.rs'
+const SNAPSHOT_REL = 'src/common/types/ipc/ipcSchemaSnapshot.json'
 const NATIVE_MANIFEST_REL = 'src/common/types/ipc/nativeChannels.json'
 const GENERATOR = 'meta/genIpcContract.ts'
 const REGEN_CMD = 'pnpm gen:ipc-contract'
@@ -604,6 +608,36 @@ export interface ContractInput {
    * NATIVE_INVOKE_CHANNELS / NATIVE_SEND_CHANNELS sets are emitted. Omitted = no native sets.
    */
   native?: NativeManifest
+  /**
+   * Names in the colliding-push map (`collidingPushSchemas`). Together with `entries` they are the
+   * sidecar's schema names; a native channel naming one of them has two owners (83-05).
+   */
+  collidingPush?: readonly string[]
+}
+
+/**
+ * Phase 83-05 (D-06): a channel is owned by the Rust native router or by the sidecar, never both.
+ * Throws naming the channel when a manifest name is also a schema entry or a colliding push name.
+ * One helper so the contract and the snapshot cannot disagree about what counts as a collision.
+ */
+function assertSingleOwner(
+  native: NativeManifest | undefined,
+  entries: Record<string, unknown> | undefined,
+  collidingPush: readonly string[] | undefined
+): void {
+  if (native === undefined) return
+  const push = new Set(collidingPush ?? [])
+  for (const name of Object.keys(native.channels).sort()) {
+    if (
+      (entries !== undefined &&
+        Object.prototype.hasOwnProperty.call(entries, name)) ||
+      push.has(name)
+    ) {
+      throw new Error(
+        `native channel ${name} also has a sidecar schema (two owners)`
+      )
+    }
+  }
 }
 
 /** Sorted manifest names of one kind. */
@@ -633,6 +667,7 @@ function rendererChannelNames(
 }
 
 export function renderIpcContract(input: ContractInput): string {
+  assertSingleOwner(input.native, input.entries, input.collidingPush)
   const consts = Object.entries(input.constants)
     .map(([k, v]) => `pub(crate) const ${k}: &str = ${rustStr(v)};`)
     .join('\n')
@@ -700,6 +735,90 @@ export function renderIpcContract(input: ContractInput): string {
   return `${parts.join('\n\n')}\n`
 }
 
+/** One sidecar schema entry as the snapshot reads it (the shape of `ChannelEntry`). */
+interface SnapshotEntryInput {
+  caller: string
+  kind: string
+  args: z.ZodType
+}
+
+/**
+ * Lowest renderer-channel count the snapshot generator accepts (83-05, D-06 vacuous-pass guard).
+ * Measured at execution on 2026-11-20: 237 renderer channels (236 sidecar plus 1 native,
+ * getHeroicVersion); the floor is that minus 6.
+ * A truncated or empty scan fails loudly instead of writing, or passing `--check` against, a
+ * snapshot that proves nothing. Raise it when the channel set grows for good; never lower it to
+ * make a red run green.
+ */
+export const SNAPSHOT_CHANNELS_FLOOR = 231
+
+/**
+ * The committed IPC schema snapshot (83-05, D-06): one entry per renderer channel with its kind,
+ * its owner (native router or sidecar) and its argument schema. Sidecar args are the zod tuple's
+ * JSON Schema in input mode; native args are the manifest's args description (plus `returns`).
+ *
+ * Sorted by channel name; each entry's keys are emitted in a fixed order, so two runs on the same
+ * tree are byte-identical. A reviewer sees every renderer-reachable channel change as a diff.
+ */
+export function renderIpcSchemaSnapshot(input: {
+  entries: Record<string, SnapshotEntryInput>
+  native: NativeManifest
+  floor: number
+  collidingPush?: readonly string[]
+}): string {
+  assertSingleOwner(input.native, input.entries, input.collidingPush)
+  const rows: {
+    channel: string
+    kind: string
+    owner: 'native' | 'sidecar'
+    args: unknown
+    returns?: string
+  }[] = []
+  for (const name of rendererChannelNames(input.entries)) {
+    const e = input.entries[name]
+    if (e === undefined) continue
+    const schema = z.toJSONSchema(e.args, {
+      io: 'input',
+      unrepresentable: 'any'
+    }) as JsonNode
+    delete schema.$schema
+    rows.push({ channel: name, kind: e.kind, owner: 'sidecar', args: schema })
+  }
+  for (const name of Object.keys(input.native.channels)) {
+    const spec = input.native.channels[name]
+    if (spec === undefined) continue
+    rows.push({
+      channel: name,
+      kind: spec.kind,
+      owner: 'native',
+      args: spec.args,
+      returns: spec.returns
+    })
+  }
+  rows.sort((a, b) =>
+    a.channel < b.channel ? -1 : a.channel > b.channel ? 1 : 0
+  )
+  if (rows.length < input.floor) {
+    throw new Error(
+      `ipc schema snapshot: scanned ${rows.length} renderer channels, below the floor ${input.floor}`
+    )
+  }
+  // Keys are listed explicitly so the emitted order is fixed regardless of how a row was built.
+  const channels = rows.map((r) =>
+    r.returns === undefined
+      ? { channel: r.channel, kind: r.kind, owner: r.owner, args: r.args }
+      : {
+          channel: r.channel,
+          kind: r.kind,
+          owner: r.owner,
+          args: r.args,
+          returns: r.returns
+        }
+  )
+  const doc = { generatedBy: GENERATOR, channelCount: rows.length, channels }
+  return `${JSON.stringify(doc, null, 2)}\n`
+}
+
 // ---------------------------------------------------------------------------
 // CLI
 // ---------------------------------------------------------------------------
@@ -719,6 +838,14 @@ export function parseCliFlags(argv: string[]): { check: boolean } {
     )
   }
   return { check }
+}
+
+function loadNative(): NativeManifest {
+  return parseNativeManifest(
+    JSON.parse(
+      readFileSync(join(process.cwd(), NATIVE_MANIFEST_REL), 'utf8')
+    ) as unknown
+  )
 }
 
 function buildContract(): string {
@@ -744,11 +871,17 @@ function buildContract(): string {
     // in collidingPushSchemas and are NOT here, so a push name never opens (or shadows) the
     // renderer invoke/send direction.
     entries: channelSchemas,
-    native: parseNativeManifest(
-      JSON.parse(
-        readFileSync(join(process.cwd(), NATIVE_MANIFEST_REL), 'utf8')
-      ) as unknown
-    )
+    native: loadNative(),
+    collidingPush: Object.keys(collidingPushSchemas)
+  })
+}
+
+function buildSnapshot(): string {
+  return renderIpcSchemaSnapshot({
+    entries: channelSchemas,
+    native: loadNative(),
+    floor: SNAPSHOT_CHANNELS_FLOOR,
+    collidingPush: Object.keys(collidingPushSchemas)
   })
 }
 
@@ -760,24 +893,33 @@ function main(): void {
     console.error(`::error::${(e as Error).message}`)
     process.exit(1)
   }
-  const out = join(process.cwd(), OUTPUT_REL)
-  const next = buildContract()
+  const outputs = [
+    { rel: OUTPUT_REL, next: buildContract() },
+    { rel: SNAPSHOT_REL, next: buildSnapshot() }
+  ]
   if (flags.check) {
-    let current = ''
-    try {
-      current = readFileSync(out, 'utf8')
-    } catch {
-      // missing counts as stale
+    let stale = false
+    for (const { rel, next } of outputs) {
+      let current = ''
+      try {
+        current = readFileSync(join(process.cwd(), rel), 'utf8')
+      } catch {
+        // missing counts as stale
+      }
+      if (current !== next) {
+        console.error(`::error::${rel} is stale; run ${REGEN_CMD}`)
+        stale = true
+      } else {
+        console.log(`${rel} is up to date`)
+      }
     }
-    if (current !== next) {
-      console.error(`::error::${OUTPUT_REL} is stale; run ${REGEN_CMD}`)
-      process.exit(1)
-    }
-    console.log(`${OUTPUT_REL} is up to date`)
+    if (stale) process.exit(1)
     return
   }
-  writeFileSync(out, next)
-  console.log(`wrote ${OUTPUT_REL}`)
+  for (const { rel, next } of outputs) {
+    writeFileSync(join(process.cwd(), rel), next)
+    console.log(`wrote ${rel}`)
+  }
 }
 
 // Guarded so the jest suite can import the pure emitter without running the CLI.

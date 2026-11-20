@@ -6,12 +6,18 @@ import {
 } from '../../src/common/types/sidecarTransport'
 import { at } from './fixtures/indexed'
 import {
+  channelSchemas,
+  collidingPushSchemas
+} from '../../src/common/types/ipc/channelSchemas'
+import {
   newCtx,
   parseCliFlags,
   parseNativeManifest,
   renderArgsStruct,
   renderIpcContract,
-  rustTypeFor
+  renderIpcSchemaSnapshot,
+  rustTypeFor,
+  SNAPSHOT_CHANNELS_FLOOR
 } from '../genIpcContract'
 
 type Node = Record<string, unknown>
@@ -305,13 +311,24 @@ describe('native channel manifest (Phase 83)', () => {
     expect(out).toContain('fn is_native_invoke_channel(name: &str) -> bool')
     expect(out).toContain('fn is_native_send_channel(name: &str) -> bool')
   })
-  it('a name present in both the schema entries and the manifest is listed once', () => {
-    const out = renderIpcContract({
-      ...input,
-      entries: { a: { caller: 'renderer', kind: 'invoke' } },
-      native: parseNativeManifest({ channels: { a: spec } })
-    })
-    expect(out).toContain('RENDERER_CHANNELS: &[&str] = &[\n    "a",\n];')
+  it('a name present in both the schema entries and the manifest is refused as two owners (83-05)', () => {
+    expect(() =>
+      renderIpcContract({
+        ...input,
+        entries: { a: { caller: 'renderer', kind: 'invoke' } },
+        native: parseNativeManifest({ channels: { a: spec } })
+      })
+    ).toThrow('native channel a also has a sidecar schema (two owners)')
+  })
+  it('a manifest name that is a colliding push name is refused as two owners (83-05)', () => {
+    expect(() =>
+      renderIpcContract({
+        ...input,
+        entries: {},
+        collidingPush: ['a'],
+        native: parseNativeManifest({ channels: { a: spec } })
+      })
+    ).toThrow('native channel a also has a sidecar schema (two owners)')
   })
   it('emits no native sets without a manifest and accepts an empty channels map', () => {
     expect(renderIpcContract(input)).not.toContain('NATIVE_INVOKE_CHANNELS')
@@ -430,5 +447,170 @@ describe('parseCliFlags', () => {
     expect(parseCliFlags(['--check'])).toEqual({ check: true })
     expect(parseCliFlags([])).toEqual({ check: false })
     expect(() => parseCliFlags(['--chek'])).toThrow(/unrecognised/)
+  })
+})
+
+describe('IPC schema snapshot (83-05, D-06)', () => {
+  const spec = {
+    kind: 'invoke',
+    slice: 'app-shell',
+    args: [],
+    returns: 'string',
+    valid: [[]],
+    invalid: [['extra']]
+  }
+  const noNative = parseNativeManifest({ channels: {} })
+  const synthetic = {
+    zeta: {
+      caller: 'renderer',
+      kind: 'send',
+      args: z.tuple([z.string()])
+    },
+    alpha: {
+      caller: 'renderer',
+      kind: 'invoke',
+      args: z.tuple([z.number().int()])
+    },
+    // not renderer-reachable, so absent from the snapshot
+    shellOnly: { caller: 'local', kind: 'invoke', args: z.tuple([]) }
+  }
+
+  it('lists renderer channels sorted by name with kind, owner and the zod input schema', () => {
+    const doc = JSON.parse(
+      renderIpcSchemaSnapshot({
+        entries: synthetic,
+        native: noNative,
+        floor: 2
+      })
+    ) as {
+      channelCount: number
+      channels: { channel: string; kind: string; owner: string; args: object }[]
+    }
+    expect(doc.channelCount).toBe(2)
+    expect(doc.channels.map((c) => c.channel)).toEqual(['alpha', 'zeta'])
+    expect(doc.channels.map((c) => [c.kind, c.owner])).toEqual([
+      ['invoke', 'sidecar'],
+      ['send', 'sidecar']
+    ])
+    expect(at(doc.channels, 0).args).toMatchObject({
+      type: 'array',
+      prefixItems: [{ type: 'integer' }]
+    })
+    expect(at(doc.channels, 0).args).not.toHaveProperty('$schema')
+  })
+  it('emits each entry keys in the fixed order channel, kind, owner, args', () => {
+    const out = renderIpcSchemaSnapshot({
+      entries: synthetic,
+      native: noNative,
+      floor: 2
+    })
+    const doc = JSON.parse(out) as { channels: object[] }
+    expect(Object.keys(at(doc.channels, 0))).toEqual([
+      'channel',
+      'kind',
+      'owner',
+      'args'
+    ])
+    expect(Object.keys(JSON.parse(out) as object)).toEqual([
+      'generatedBy',
+      'channelCount',
+      'channels'
+    ])
+  })
+  it('a manifest channel gets owner native, its manifest args and its returns, sorted in', () => {
+    const doc = JSON.parse(
+      renderIpcSchemaSnapshot({
+        entries: synthetic,
+        native: parseNativeManifest({ channels: { middle: spec } }),
+        floor: 3
+      })
+    ) as { channels: Record<string, unknown>[] }
+    expect(doc.channels.map((c) => c.channel)).toEqual([
+      'alpha',
+      'middle',
+      'zeta'
+    ])
+    const middle = at(doc.channels, 1)
+    expect(middle).toEqual({
+      channel: 'middle',
+      kind: 'invoke',
+      owner: 'native',
+      args: [],
+      returns: 'string'
+    })
+    expect(Object.keys(middle)).toEqual([
+      'channel',
+      'kind',
+      'owner',
+      'args',
+      'returns'
+    ])
+  })
+  it('two renders of the same input are identical strings', () => {
+    const run = (): string =>
+      renderIpcSchemaSnapshot({
+        entries: synthetic,
+        native: parseNativeManifest({ channels: { middle: spec } }),
+        floor: 3
+      })
+    expect(run()).toBe(run())
+    expect(run().endsWith('\n')).toBe(true)
+  })
+  it('an empty channel input throws the floor error', () => {
+    expect(() =>
+      renderIpcSchemaSnapshot({
+        entries: {},
+        native: noNative,
+        floor: SNAPSHOT_CHANNELS_FLOOR
+      })
+    ).toThrow(
+      `ipc schema snapshot: scanned 0 renderer channels, below the floor ${SNAPSHOT_CHANNELS_FLOOR}`
+    )
+  })
+  it('a truncated channel input (the real entries cut to 10) throws the floor error', () => {
+    const truncated = Object.fromEntries(
+      Object.entries(channelSchemas)
+        .filter(([, e]) => e.caller === 'renderer')
+        .slice(0, 10)
+    )
+    expect(() =>
+      renderIpcSchemaSnapshot({
+        entries: truncated,
+        native: noNative,
+        floor: SNAPSHOT_CHANNELS_FLOOR
+      })
+    ).toThrow(/scanned 10 renderer channels, below the floor/)
+  })
+  it('the real tree clears the floor', () => {
+    const doc = JSON.parse(
+      renderIpcSchemaSnapshot({
+        entries: channelSchemas,
+        native: parseNativeManifest({
+          channels: {
+            getHeroicVersion: { ...spec, slice: 'app-shell' }
+          }
+        }),
+        floor: SNAPSHOT_CHANNELS_FLOOR,
+        collidingPush: Object.keys(collidingPushSchemas)
+      })
+    ) as { channelCount: number }
+    expect(doc.channelCount).toBeGreaterThanOrEqual(SNAPSHOT_CHANNELS_FLOOR)
+  })
+  it('refuses a native channel that also has a sidecar schema or a colliding push (two owners)', () => {
+    expect(() =>
+      renderIpcSchemaSnapshot({
+        entries: synthetic,
+        native: parseNativeManifest({ channels: { alpha: spec } }),
+        floor: 1
+      })
+    ).toThrow('native channel alpha also has a sidecar schema (two owners)')
+    expect(() =>
+      renderIpcSchemaSnapshot({
+        entries: synthetic,
+        native: parseNativeManifest({ channels: { pushy: spec } }),
+        floor: 1,
+        collidingPush: ['pushy']
+      })
+    ).toThrow('native channel pushy also has a sidecar schema (two owners)')
   })
 })
