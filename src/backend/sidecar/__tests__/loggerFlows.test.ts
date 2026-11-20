@@ -91,6 +91,7 @@
 jest.unmock('i18next')
 
 import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
+import { settleLogFile } from '../../testUtils/settleLogFile'
 
 // Per case (reset in freshRegistry): the boot is handed this root so the stores a case seeds
 // and the boot's own stores share one file-cell table, as the old module-level registry did.
@@ -325,17 +326,23 @@ describe('WR-02: the containment root is minted, not derived from a predictable 
   const realPath = jest.requireActual<typeof import('path')>('path')
   const realOs = jest.requireActual<typeof import('os')>('os')
 
-  it('exists, sits directly under the real os.tmpdir(), and is mode 0700', () => {
-    expect(realFs.existsSync(mockTmpRoot)).toBe(true)
-    expect(realFs.statSync(mockTmpRoot).isDirectory()).toBe(true)
-    expect(realPath.dirname(mockTmpRoot)).toBe(realOs.tmpdir())
+  // win32 has no POSIX modes (statSync reports 0o666 for every directory), so the 0700 half of
+  // this proof cannot hold there; it stays active on Linux and macOS.
+  const itPosix = process.platform === 'win32' ? it.skip : it
+  itPosix(
+    'exists, sits directly under the real os.tmpdir(), and is mode 0700',
+    () => {
+      expect(realFs.existsSync(mockTmpRoot)).toBe(true)
+      expect(realFs.statSync(mockTmpRoot).isDirectory()).toBe(true)
+      expect(realPath.dirname(mockTmpRoot)).toBe(realOs.tmpdir())
 
-    // 0700 is what mkdtempSync requests; the explicit assertion is here
-    // because the request is masked by umask (measured under IN-05: `umask
-    // 0277` yields 0500), so a hostile umask would show up here rather than
-    // silently.
-    expect(realFs.statSync(mockTmpRoot).mode & 0o777).toBe(0o700)
-  })
+      // 0700 is what mkdtempSync requests; the explicit assertion is here
+      // because the request is masked by umask (measured under IN-05: `umask
+      // 0277` yields 0500), so a hostile umask would show up here rather than
+      // silently.
+      expect(realFs.statSync(mockTmpRoot).mode & 0o777).toBe(0o700)
+    }
+  )
 
   it('carries an mkdtemp suffix rather than a name any other process can compute', () => {
     const name = realPath.basename(mockTmpRoot)
@@ -430,6 +437,12 @@ const boot = () =>
     reuseRegistry: true,
     services: { storeRoot: testRoot }
   })
+
+// Windows: the previous case's un-awaited log appends must be closed before the next boot's
+// writer rotates the log (see settleLogFile). A no-op elsewhere.
+beforeEach(async () => {
+  await settleLogFile(getLogFilePath({}))
+})
 
 // freshRegistry() runs in the booting describes' own beforeEach below, NOT
 // file-wide: the WR-02 block asserts facts about the file's original module

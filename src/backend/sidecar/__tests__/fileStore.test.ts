@@ -137,23 +137,29 @@ describe('sidecar fileStore', () => {
     expect(store.get('overrides')).toEqual({ a: 1 })
   })
 
-  it('WR-06: a persisted store file is 0o600 and its directory 0o700', () => {
-    const cwd = 'perms_test'
-    const store = new FileStore({ root, cwd })
-    store.set('token', 'ciphertext')
+  // win32 has no POSIX modes (statSync reports 0o666 for files), so the 0o600/0o700 proof cannot
+  // hold there; it stays active on Linux and macOS.
+  const itPosix = process.platform === 'win32' ? it.skip : it
+  itPosix(
+    'WR-06: a persisted store file is 0o600 and its directory 0o700',
+    () => {
+      const cwd = 'perms_test'
+      const store = new FileStore({ root, cwd })
+      store.set('token', 'ciphertext')
 
-    const dir = join(testUserDataDir(), cwd)
+      const dir = join(testUserDataDir(), cwd)
 
-    expect(statSync(join(dir, 'config.json')).mode & 0o777).toBe(0o600)
+      expect(statSync(join(dir, 'config.json')).mode & 0o777).toBe(0o600)
 
-    expect(statSync(dir).mode & 0o777).toBe(0o700)
+      expect(statSync(dir).mode & 0o777).toBe(0o700)
 
-    // A REWRITE must not widen the mode back out — temp+rename replaces the inode,
-    // so the mode has to be set on the temp file each time.
-    store.set('token', 'ciphertext-2')
+      // A REWRITE must not widen the mode back out — temp+rename replaces the inode,
+      // so the mode has to be set on the temp file each time.
+      store.set('token', 'ciphertext-2')
 
-    expect(statSync(join(dir, 'config.json')).mode & 0o777).toBe(0o600)
-  })
+      expect(statSync(join(dir, 'config.json')).mode & 0o777).toBe(0o600)
+    }
+  )
 
   it('WR-05: a failing rename leaves no orphan .tmp file behind', () => {
     const cwd = 'orphan_tmp_test'

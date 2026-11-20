@@ -40,6 +40,8 @@
 jest.unmock('i18next')
 
 import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
+import { settleLogFile } from '../../testUtils/settleLogFile'
+import { getLogFilePath } from 'backend/logger/paths'
 
 // Per case (reset in freshRegistry): the boot is handed this root so the stores a case seeds
 // and the boot's own stores share one file-cell table, as the old module-level registry did.
@@ -300,6 +302,12 @@ async function waitForResponse(
 
 let warnSpy: jest.SpyInstance
 
+// Windows: the previous case's un-awaited log appends must be closed before the next boot's
+// writer rotates the log (see settleLogFile). A no-op elsewhere.
+beforeEach(async () => {
+  await settleLogFile(getLogFilePath({}))
+})
+
 describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3-01/REQ-34.3-02)', () => {
   beforeEach(() => {
     freshRegistry()
@@ -466,16 +474,45 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
     const { input, frames } = bootFresh({
       reuseRegistry: true,
       context: {
-        script: [
-          {
-            cmd: 'df',
-            argv: ['-P', '-k', tmpdir()],
-            result: {
-              stdout:
-                'Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/disk1 100 90 10 90% /'
-            }
-          }
-        ]
+        // getDiskInfo probes per platform: `df` on linux/darwin, a PowerShell CIM query on win32.
+        // Script the probe the host actually runs; the assertions below are the same on both.
+        script:
+          process.platform === 'win32'
+            ? [
+                {
+                  cmd: 'powershell',
+                  argv: [
+                    'Get-CimInstance',
+                    '-Class',
+                    'Win32_LogicalDisk',
+                    '-Property',
+                    'Caption,FreeSpace,Size',
+                    '|',
+                    'Select-Object',
+                    'Caption,FreeSpace,Size',
+                    '|',
+                    'ConvertTo-Json',
+                    '-Compress'
+                  ],
+                  result: {
+                    stdout: JSON.stringify({
+                      Caption: tmpdir().slice(0, 2),
+                      FreeSpace: 10240,
+                      Size: 102400
+                    })
+                  }
+                }
+              ]
+            : [
+                {
+                  cmd: 'df',
+                  argv: ['-P', '-k', tmpdir()],
+                  result: {
+                    stdout:
+                      'Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/disk1 100 90 10 90% /'
+                  }
+                }
+              ]
       }
     })
     writeInvoke(input, 'disk-1', 'checkDiskSpace', [tmpdir()])

@@ -23,6 +23,14 @@
 import { defined } from 'backend/testUtils/indexed'
 import { PassThrough } from 'node:stream'
 import { bootFresh } from './helpers/sidecarHarness'
+import { settleLogFile } from 'backend/testUtils/settleLogFile'
+import { getLogFilePath } from 'backend/logger/paths'
+
+// Windows: the previous case's un-awaited log appends must be closed before the next boot's
+// writer rotates the log (see settleLogFile). A no-op elsewhere.
+beforeEach(async () => {
+  await settleLogFile(getLogFilePath({}))
+})
 
 // On a macOS host the boot's Rosetta probe runs through the scripted context runner (66.2-11);
 // answer it as installed so the boot emits no Rosetta dialog frame into the frames under test.
