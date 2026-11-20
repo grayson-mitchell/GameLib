@@ -185,7 +185,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 82: Guardrails, hygiene and shared safety primitives** — not planned
 - [ ] **Phase 83: Native seam, gamelib-core and process/shutdown contract** — not planned
-- [ ] **Phase 84: Logger** — not planned
+- [ ] **Phase 84: Logger** — 14 plans in 9 waves; planned 2026-11-21 (executes after Phase 83 closes)
 - [ ] **Phase 85: Store host, config and versioned migrations** — not planned
 - [ ] **Phase 86: Pure leaf services** — not planned
 - [ ] **Phase 87: Engine, Wine and tools** — not planned
@@ -391,10 +391,40 @@ Plans:
   3. Diagnostics from steam-vent and reqwest appear in the log, and a repeating error is rate-limited rather than flooding the file
   4. The TS logger is reduced to a fire-and-forget forwarder, and the shell's second log path (`shell_diag`) and the TS log registrations are deleted
 
-**Plans:** 0 plans
+**Plans:** 14 plans in 9 waves; planned 2026-11-21; executes only after Phase 83 closes (83-11 live gate passed, D-02)
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 84 to break down)
+**Wave 1**
+- [ ] 84-01-PLAN.md — Live macOS gate contract (84-HUMAN-UAT.md), authored before code (run by 84-14)
+- [ ] 84-02-PLAN.md — Golden from the real TS writer plus shared `log` frame vectors, committed before any logger TS changes
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 84-03-PLAN.md — `gamelib-log` crate (format, writer, rotation, 0600 per D-18, frame contract), log paths in gamelib-core, CI wiring
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 84-04-PLAN.md — Tracer: sidecar `logInfo` → `kind:"log"` frame → native writer → gamelib.log; bounded TS forwarder
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 84-05-PLAN.md — Runner, per-game and gog-redist logs through the native writer (batched forwarding)
+- [ ] 84-06-PLAN.md — Native router widened; logError/logInfo/showLogFileInFolder/getLogContent in Rust with the renderer sanitiser
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 84-07-PLAN.md — gamelib.log rate limiter (identical-line suppression, scripted-clock golden)
+- [ ] 84-08-PLAN.md — Minimal StoreHost core (D-09) and log upload via reqwest (D-07)
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 84-09-PLAN.md — Uploaded list and delete-uploaded in Rust; uploader/loggerFlowRegistration and uploadedLogs census deletions; COVERAGE.md
+- [ ] 84-10-PLAN.md — tracing Layer + `log` bridge (steam-vent, reqwest), `GAMELIB_LOG_LEVEL`; VentLogForwarder deleted
+
+**Wave 7** *(blocked on Wave 6 completion)*
+- [ ] 84-11-PLAN.md — `shell_diag` → `shell_log` into gamelib.log; run_exit `FinishContext` and the final flush inside the 5 s budget (D-13 as amended, D-21)
+
+**Wave 8** *(blocked on Wave 7 completion)*
+- [ ] 84-12-PLAN.md — `loggerPortComplete` gate and deletion of the TS logger internals and oracle (fixtures kept)
+
+**Wave 9** *(blocked on Wave 8 completion)*
+- [ ] 84-13-PLAN.md — Clean-worktree proof, push checkpoint, three-OS CI proof
+- [ ] 84-14-PLAN.md — Run the live macOS gate
 
 ### Phase 85: Store host, config and versioned migrations
 
