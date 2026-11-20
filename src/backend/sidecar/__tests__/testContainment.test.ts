@@ -1073,6 +1073,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'legacyZoomDataCleanup.test.ts',
   'loggerCallSiteGuard.test.ts',
   'migrationsWiring.test.ts',
+  'nativeChannelOwnership.test.ts',
   'nativeImageShim.test.ts',
   'oauthLoginCapture.test.ts',
   'onlineMonitorWiring.test.ts',

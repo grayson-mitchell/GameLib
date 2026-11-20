@@ -5,6 +5,7 @@
  * done here (T-67-63).
  */
 import { defined } from 'backend/testUtils/indexed'
+import { nativeChannelNames } from 'backend/testUtils/ipcDomainParse'
 import { readdirSync, readFileSync } from 'fs'
 import { join } from 'path'
 
@@ -63,15 +64,17 @@ function preloadChannels(): Map<string, string> {
   return bound
 }
 
+/**
+ * Phase 83 (D-06/D-14): the generator's RENDERER_CHANNELS is every renderer invoke/send schema
+ * entry PLUS every channel the Rust native router owns (`nativeChannels.json`, which has no zod
+ * entry). The native names are read from the manifest, as the other censuses do, never a hand list.
+ */
 function computedRendererSet(): string[] {
-  return Object.keys(channelSchemas)
-    .filter((n) => {
-      const e = defined(channelSchemas[n], `channel schema ${n}`)
-      return (
-        e.caller === 'renderer' && (e.kind === 'invoke' || e.kind === 'send')
-      )
-    })
-    .sort()
+  const schemaNames = Object.keys(channelSchemas).filter((n) => {
+    const e = defined(channelSchemas[n], `channel schema ${n}`)
+    return e.caller === 'renderer' && (e.kind === 'invoke' || e.kind === 'send')
+  })
+  return [...new Set([...schemaNames, ...nativeChannelNames()])].sort()
 }
 
 function rustList(): string[] {
