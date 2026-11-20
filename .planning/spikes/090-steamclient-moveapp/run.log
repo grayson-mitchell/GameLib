@@ -1,0 +1,8 @@
+{"step":"GetMoveAppProgress","t":1795150964,"appId":264160,"ret":0,"a":0,"b":0,"c":0}
+{"step":"CanMoveApp","t":1795150964,"appId":264160,"folder":0,"ret":0,"slot":67}
+{"step":"CanMoveApp","t":1795151014,"appId":264160,"ret":0,"out":0,"slot":67}
+{"step":"CanMoveApp","t":1795151021,"appId":281990,"ret":0,"out":0,"slot":67}
+{"step":"CanMoveApp","t":1795151021,"appId":440,"ret":18,"out":0,"slot":67}
+{"step":"CanMoveApp","t":1795151021,"appId":22000,"ret":0,"out":0,"slot":67}
+{"step":"MoveApp","t":1795151032,"appId":264160,"folder":1,"EAppUpdateError":0,"slot":68}
+{"step":"MoveApp","t":1795152947,"appId":264160,"folder":0,"EAppUpdateError":0,"slot":68}

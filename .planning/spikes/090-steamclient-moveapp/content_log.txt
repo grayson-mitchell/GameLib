@@ -1,0 +1,54 @@
+[2026-11-20 18:03:51] AppID 264160 moving from "/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/WazHack" to "/Users/graysonmitchell/GameLibParity/SteamLibrary/steamapps/steamapps/common/WazHack"
+[2026-11-20 18:03:51] AppID 264160 state changed : Fully Installed,Moving Folder,
+[2026-11-20 18:03:52] AppID 264160 state changed : Fully Installed,
+[2026-11-20 18:03:52] AppID 264160 state changed : Update Required,Fully Installed,Files Missing,
+[2026-11-20 18:03:53] AppID 264160 scheduler update : Priority Auto Update, not played for 252140 seconds, update disabled for 0 seconds
+[2026-11-20 18:03:53] AppID 264160 state changed : Update Required,Fully Installed,Update Queued,Files Missing,
+[2026-11-20 18:03:53] AppID 264160 state changed : Update Required,Fully Installed,Update Queued,Files Missing,Update Running,
+[2026-11-20 18:03:53] AppID 264160 App update changed : Running Update,
+[2026-11-20 18:03:53] AppID 264160 App update changed : Running Update,Reconfiguring,
+[2026-11-20 18:03:53] AppID 264160 App update changed : Running Update,
+[2026-11-20 18:03:53] AppID 264160 App update changed : Running Update,Verifying Installed,
+[2026-11-20 18:03:53] AppID 264160 state changed : Update Required,Fully Installed,Update Queued,Update Running,
+[2026-11-20 18:03:53] AppID 264160 App update changed : Running Update,
+[2026-11-20 18:03:53] AppID 264160 has no changes, 1 active: 264162 (3306037234848478854), 1 target: 264162 (3306037234848478854),
+[2026-11-20 18:03:53] AppID 264160 state changed : Update Required,Fully Installed,Update Queued,Update Running,Update Started,
+[2026-11-20 18:03:53] AppID 264160 App update changed : Running Update,Staging,
+[2026-11-20 18:03:53] AppID 264160 App update changed : Running Update,
+[2026-11-20 18:03:53] AppID 264160 App update changed : Running Update,Committing,
+[2026-11-20 18:03:53] AppID 264160 starting commit from "/Users/graysonmitchell/GameLibParity/SteamLibrary/steamapps/steamapps/downloading/264160" to "/Users/graysonmitchell/GameLibParity/SteamLibrary/steamapps/steamapps/common/WazHack" : 0 updated, 0 moved, 0 deleted files
+[2026-11-20 18:03:53] AppID 264160 state changed : Fully Installed,Update Queued,Update Running,
+[2026-11-20 18:03:53] AppID 264160 finished update, 1 mounted depots (BuildID 9044149) : 264162 (3306037234848478854),
+[2026-11-20 18:03:53] AppID 264160 App update changed : Running Update,
+[2026-11-20 18:03:53] AppID 264160 App update changed : None
+[2026-11-20 18:03:53] AppID 264160 state changed : Fully Installed,Update Queued,
+[2026-11-20 18:03:53] AppID 264160 state changed : Fully Installed,
+[2026-11-20 18:03:53] AppID 264160 scheduler finished : removed from schedule (result No Error, state 0xc) 
+[2026-11-20 18:35:31] AppID 264160 state changed : Fully Installed,App Running,
+[2026-11-20 18:35:41] AppID 264160 state changed : Fully Installed,
+[2026-11-20 18:35:47] AppID 264160 moving from "/Users/graysonmitchell/GameLibParity/SteamLibrary/steamapps/steamapps/common/WazHack" to "/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/WazHack"
+[2026-11-20 18:35:47] AppID 264160 state changed : Fully Installed,Moving Folder,
+[2026-11-20 18:35:48] AppID 264160 state changed : Fully Installed,
+[2026-11-20 18:35:48] AppID 264160 state changed : Update Required,Fully Installed,Files Missing,
+[2026-11-20 18:35:54] AppID 264160 scheduler update : Priority Auto Update, not played for 12 seconds, update disabled for 0 seconds
+[2026-11-20 18:35:54] AppID 264160 state changed : Update Required,Fully Installed,Update Queued,Files Missing,
+[2026-11-20 18:35:54] AppID 264160 state changed : Update Required,Fully Installed,Update Queued,Files Missing,Update Running,
+[2026-11-20 18:35:54] AppID 264160 App update changed : Running Update,
+[2026-11-20 18:35:54] AppID 264160 App update changed : Running Update,Reconfiguring,
+[2026-11-20 18:35:54] AppID 264160 App update changed : Running Update,
+[2026-11-20 18:35:54] AppID 264160 App update changed : Running Update,Verifying Installed,
+[2026-11-20 18:35:54] AppID 264160 state changed : Update Required,Fully Installed,Update Queued,Update Running,
+[2026-11-20 18:35:54] AppID 264160 App update changed : Running Update,
+[2026-11-20 18:35:54] AppID 264160 has no changes, 1 active: 264162 (3306037234848478854), 1 target: 264162 (3306037234848478854),
+[2026-11-20 18:35:54] AppID 264160 state changed : Update Required,Fully Installed,Update Queued,Update Running,Update Started,
+[2026-11-20 18:35:54] AppID 264160 App update changed : Running Update,Staging,
+[2026-11-20 18:35:54] AppID 264160 App update changed : Running Update,
+[2026-11-20 18:35:54] AppID 264160 App update changed : Running Update,Committing,
+[2026-11-20 18:35:54] AppID 264160 starting commit from "/Users/graysonmitchell/Library/Application Support/Steam/steamapps/downloading/264160" to "/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/WazHack" : 0 updated, 0 moved, 0 deleted files
+[2026-11-20 18:35:54] AppID 264160 state changed : Fully Installed,Update Queued,Update Running,
+[2026-11-20 18:35:54] AppID 264160 finished update, 1 mounted depots (BuildID 9044149) : 264162 (3306037234848478854),
+[2026-11-20 18:35:54] AppID 264160 App update changed : Running Update,
+[2026-11-20 18:35:54] AppID 264160 App update changed : None
+[2026-11-20 18:35:54] AppID 264160 state changed : Fully Installed,Update Queued,
+[2026-11-20 18:35:54] AppID 264160 state changed : Fully Installed,
+[2026-11-20 18:35:54] AppID 264160 scheduler finished : removed from schedule (result No Error, state 0xc) 
