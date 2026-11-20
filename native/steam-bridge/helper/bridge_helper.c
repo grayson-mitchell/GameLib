@@ -197,7 +197,8 @@
 #include "gamelib_cbqueue.h"
 #include "gamelib_callresult.h"
 #include "gamelib_overlay_signal.h"
-// quick 261105-ord: --steam-installapp subcommand (runtime-resolved InstallApp).
+// quick 261105-ord: --steam-installapp subcommand (runtime-resolved InstallApp);
+// quick 261120-p2j adds --steam-validateapp (StartValidatingApp).
 #include "gamelib_installapp.h"
 // Phase 79 (D-14/D-15): --steam-owned-apps subcommand.
 #include "gamelib_ownedapps.h"
@@ -3263,6 +3264,10 @@ int main(int argc, char **argv) {
   // quick 261106-s3n: one-shot UninstallApp subcommand, same isolation.
   if (argc > 1 && strcmp(argv[1], "--steam-uninstallapp") == 0) {
     return gamelib_uninstallapp_main(argc, argv);
+  }
+  // quick 261120-p2j: one-shot StartValidatingApp (Verify) subcommand, same isolation.
+  if (argc > 1 && strcmp(argv[1], "--steam-validateapp") == 0) {
+    return gamelib_validateapp_main(argc, argv);
   }
   // Phase 81 (D-08): one-shot signed-in + app install state read, same isolation.
   if (argc > 1 && strcmp(argv[1], "--steam-appstate") == 0) {

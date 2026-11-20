@@ -408,6 +408,38 @@ describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
     )
   })
 
+  it.each([
+    ['handedOffToSteam', { handedOffToSteam: true }],
+    ['abort', { abort: true }]
+  ])(
+    'quick 261120-p2j repair resolving %s sends repairing then done and NO success notify',
+    async (_name, result) => {
+      isOnlineMock.mockReturnValue(true)
+      managerMocks.steam.getGame.mockReturnValue(
+        makeGameDouble({
+          getGameInfo: jest.fn().mockReturnValue({ title: 'Portal 2' }),
+          repair: jest
+            .fn()
+            .mockResolvedValue({ stdout: '', stderr: '', ...result })
+        })
+      )
+
+      await repair(dispatchDeps, '440', 'steam')
+
+      expect(sendGameStatusUpdateMock).toHaveBeenNthCalledWith(
+        1,
+        expect.anything(),
+        expect.objectContaining({ status: 'repairing' })
+      )
+      expect(sendGameStatusUpdateMock).toHaveBeenNthCalledWith(
+        2,
+        expect.anything(),
+        expect.objectContaining({ status: 'done' })
+      )
+      expect(notifyMock).not.toHaveBeenCalled()
+    }
+  )
+
   // IN-02 (34.2-REVIEW.md round 1). This test USED to assert the opposite --
   // "calls notify TWICE (error then finished) and still ends with
   // status:'done'" -- pinning the upstream fall-through bug as the contract.

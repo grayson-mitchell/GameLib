@@ -1,7 +1,8 @@
 /**
  * quick 261105-ord: backend caller for the bridge helper's
  * `--steam-installapp` subcommand, and (quick 261106-s3n) its
- * `--steam-uninstallapp` subcommand (native/steam-bridge/helper/
+ * `--steam-uninstallapp` subcommand and (quick 261120-p2j) its `--steam-validateapp`
+ * subcommand (native/steam-bridge/helper/
  * gamelib_installapp.h). Never throws; every failure maps to a typed
  * 'unavailable' outcome so callers fall back to today's behaviour.
  *
@@ -38,11 +39,30 @@ interface SteamInstallAppDeps {
   run: (
     file: string,
     args: string[],
-    timeoutMs: number
+    timeoutMs: number,
+    signal?: AbortSignal
   ) => Promise<SteamInstallAppRunResult>
 }
 
 const HELPER_TIMEOUT_MS = 30000
+
+/**
+ * quick 261120-p2j: the bound on a `--steam-validateapp --wait` helper child. It must track
+ * GL_IA_VALIDATE_WAIT_CAP_S (21600 s) in gamelib_installapp.h, plus 120 s margin so the helper's
+ * own cap fires first and reports `wait-cap` instead of being timeout-killed.
+ */
+export const VALIDATE_WAIT_TIMEOUT_MS = (21600 + 120) * 1000
+
+export type SteamValidateAppOutcome =
+  | {
+      kind: 'ok'
+      tracked: boolean
+      finished: boolean
+      installState: number | null
+      reason?: string
+    }
+  | { kind: 'refused' }
+  | { kind: 'unavailable'; reason: string }
 
 /**
  * The helper-run seam over the process runner. Helper truncation, timeout and
@@ -53,15 +73,17 @@ export function createSteamInstallAppRun(deps: {
 }): (
   file: string,
   args: string[],
-  timeoutMs: number
+  timeoutMs: number,
+  signal?: AbortSignal
 ) => Promise<SteamInstallAppRunResult> {
-  return async (file, args, timeoutMs) => {
+  return async (file, args, timeoutMs, signal) => {
     try {
       const r = await deps.runner.run(file, args, {
         timeoutMs,
         maxBufferBytes: 64 * 1024,
         windowsHide: true,
-        stdin: ''
+        stdin: '',
+        ...(signal ? { signal } : {})
       })
       return {
         stdout: r.stdout,
@@ -86,16 +108,20 @@ type HelperCall =
   | { ok: true; parsed: Record<string, unknown>; stderr: string }
   | { ok: false; reason: string; stderr: string }
 
-/** Shared spawn + last-line JSON parse for both subcommands. */
+/** Shared spawn + last-line JSON parse for every subcommand. */
 async function callHelper(
   appId: string,
   helperPath: string,
   args: string[],
-  deps: SteamInstallAppDeps
+  deps: SteamInstallAppDeps,
+  opts: { timeoutMs?: number; signal?: AbortSignal } = {}
 ): Promise<HelperCall> {
   let res: SteamInstallAppRunResult
   try {
-    res = await deps.run(helperPath, args, HELPER_TIMEOUT_MS)
+    const timeoutMs = opts.timeoutMs ?? HELPER_TIMEOUT_MS
+    res = opts.signal
+      ? await deps.run(helperPath, args, timeoutMs, opts.signal)
+      : await deps.run(helperPath, args, timeoutMs)
   } catch (error) {
     warn(appId, `helper-failed (${String(error)})`)
     return { ok: false, reason: 'helper-failed', stderr: '' }
@@ -205,6 +231,67 @@ export async function requestSteamUninstallApp(
       stderr
     )
     return { kind: 'error', code: parsed.eAppUpdateError, installedApps }
+  }
+  warn(appId, 'helper-failed (unrecognised result line)', stderr)
+  return { kind: 'unavailable', reason: 'helper-failed' }
+}
+
+/**
+ * quick 261120-p2j: ask running, signed-in Mac Steam to StartValidatingApp(appId) (Verify).
+ * With `wait` the helper holds until Steam's IPC app state says it is done (a validate never moves
+ * the ACF), so the returned promise is the "Steam finished" signal; the child is bounded by the
+ * helper's own 6 h cap plus margin and by `signal` (stdin-EOF release aborts it). Not gated on the
+ * experimental InstallApp setting: spike 069 measured validate as silent, and uninstall is not
+ * gated either. macOS arm64 only; for any doubt the caller falls back to steam://validate.
+ */
+export async function requestSteamValidateApp(
+  appId: string,
+  opts: { wait: boolean; signal?: AbortSignal },
+  deps: SteamInstallAppDeps
+): Promise<SteamValidateAppOutcome> {
+  if (!/^\d{1,10}$/.test(appId)) {
+    return { kind: 'unavailable', reason: 'bad-appid' }
+  }
+  if ((deps.platform ?? process.platform) !== 'darwin') {
+    return { kind: 'unavailable', reason: 'unsupported-platform' }
+  }
+  const helperPath = deps.paths.steamBridgeHelperPath
+  if (!existsSync(helperPath)) {
+    warn(appId, 'helper-missing')
+    return { kind: 'unavailable', reason: 'helper-missing' }
+  }
+
+  const args = ['--steam-validateapp', appId]
+  if (opts.wait) args.push('--wait')
+  const call = await callHelper(
+    appId,
+    helperPath,
+    args,
+    deps,
+    opts.wait
+      ? { timeoutMs: VALIDATE_WAIT_TIMEOUT_MS, signal: opts.signal }
+      : {}
+  )
+  if (!call.ok) return { kind: 'unavailable', reason: call.reason }
+  const { parsed, stderr } = call
+
+  if (parsed.result === 'ok') {
+    const state = parsed.installState
+    return {
+      kind: 'ok',
+      tracked: parsed.tracked === true,
+      finished: parsed.finished === true,
+      installState: typeof state === 'number' ? state : null,
+      ...(typeof parsed.reason === 'string' ? { reason: parsed.reason } : {})
+    }
+  }
+  if (parsed.result === 'refused') {
+    warn(appId, 'StartValidatingApp refused', stderr)
+    return { kind: 'refused' }
+  }
+  if (parsed.result === 'unavailable' && typeof parsed.reason === 'string') {
+    warn(appId, `validate unavailable: ${parsed.reason}`, stderr)
+    return { kind: 'unavailable', reason: parsed.reason }
   }
   warn(appId, 'helper-failed (unrecognised result line)', stderr)
   return { kind: 'unavailable', reason: 'helper-failed' }

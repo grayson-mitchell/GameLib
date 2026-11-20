@@ -11,7 +11,13 @@ import { ExecResult } from 'common/types'
 import { GOGCloudSavesLocation } from 'common/types/gog'
 import { InstallResult } from 'common/types/game_manager'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { isBridgeBottleReady, getBridgeBottleSettings } from './bridgeBottle'
+import {
+  findBridgeInstallBottle,
+  isBridgeBottleReady,
+  getBridgeBottleSettings
+} from './bridgeBottle'
+import { readAcfUpdateState } from './library/acfUpdateState'
+import { validateRegisteredSteamGame } from './validateNative'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
 import { restoreBridgeSteamApiOriginals } from './bridge/originalRestore'
 import { resolveBridgeLaunchExe } from './bridge/launchTarget'
@@ -33,6 +39,18 @@ export async function moveInstall(
 }
 
 export async function repair(steamGame: SteamGame): Promise<ExecResult> {
+  // Same route predicates as SteamGame.update(): bridge first, then Steam-registered.
+  if (!findBridgeInstallBottle(steamGame.deps.paths, steamGame.appId)) {
+    if (
+      (await readAcfUpdateState(steamGame.deps, steamGame.appId, 'native')) !==
+      null
+    ) {
+      return validateRegisteredSteamGame(steamGame)
+    }
+    throw new Error(
+      `Steam verifies this game inside its bottle (appId ${steamGame.appId})`
+    )
+  }
   const scoped = (): Error =>
     new Error(
       `Repair restores bridge steam_api originals; appId ${steamGame.appId} has no bridge install (a full depot verify is not supported)`

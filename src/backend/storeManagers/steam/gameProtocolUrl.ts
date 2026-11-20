@@ -9,7 +9,8 @@ import { NUMERIC_APP_ID } from './gameConstants'
  * are rejected here — this is the single chokepoint that mitigates appId
  * injection into steam:// URLs (threat T-03-01).
  *
- * Reused by install/uninstall (plan 03-02) for the same guard.
+ * Reused by install/uninstall (plan 03-02) for the same guard. `validate` (quick 261120-p2j) is the
+ * Verify fallback `steam://validate/<appId>`.
  *
  * `launch` (Windows Play, quick 261029-i1n) is the only verb with a suffix.
  * The suffix is the fixed literal `/Dialog`, never caller input, so the numeric
@@ -17,7 +18,13 @@ import { NUMERIC_APP_ID } from './gameConstants'
  * update hand-off) likewise uses the fixed literal prefix `nav/games/details/`.
  */
 export function buildSteamProtocolUrl(
-  verb: 'rungameid' | 'launch' | 'install' | 'uninstall' | 'details',
+  verb:
+    | 'rungameid'
+    | 'launch'
+    | 'install'
+    | 'uninstall'
+    | 'details'
+    | 'validate',
   appId: string
 ): string | null {
   if (!NUMERIC_APP_ID.test(appId)) {

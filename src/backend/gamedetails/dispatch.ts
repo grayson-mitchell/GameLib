@@ -202,9 +202,10 @@ export async function kill(
   return deps.managers.library[runner].getGame(appName).stop()
 }
 
-// SteamGame.repair() (storeManagers/steam/games.ts) restores a bridge title's
-// steam_api originals (quick 261026-lif); a throw from it surfaces below as
-// "Error Repairing".
+// SteamGame.repair() (storeManagers/steam/games.ts) is Verify (quick 261120-p2j): a
+// Steam-registered game asks Mac Steam to validate it and resolves when Steam finishes (or hands
+// the work to Steam and returns `handedOffToSteam`); a bridge game runs a chunk-level depot verify.
+// A throw from it surfaces below as "Error Repairing".
 //
 // The two `i18next.t(...)` calls below are the sites plan 34.2-01's D-02
 // bootstrap init exists to make return real strings under the sidecar.
@@ -252,9 +253,18 @@ export async function repair(
   // The flag, rather than moving the success notify inside the `try`, keeps a
   // throwing `notify()` from being mistaken for a repair failure.
   let repairFailed = false
+  // quick 261120-p2j: a verify handed to Steam (or stopped) did not finish a repair itself.
+  let repairHandedOff = false
 
   try {
-    await deps.managers.library[runner].getGame(appName).repair()
+    const result = await deps.managers.library[runner].getGame(appName).repair()
+    if (result?.handedOffToSteam) {
+      repairHandedOff = true
+      logInfo('Verify handed to Steam', LogPrefix.Backend)
+    } else if (result?.abort) {
+      repairHandedOff = true
+      logInfo('Verify stopped', LogPrefix.Backend)
+    }
   } catch (error) {
     repairFailed = true
     notify(deps, {
@@ -264,7 +274,7 @@ export async function repair(
     logError(error, LogPrefix.Backend)
   }
 
-  if (!repairFailed) {
+  if (!repairFailed && !repairHandedOff) {
     notify(deps, { title, body: i18next.t('notify.finished.reparing') })
     logInfo('Finished repairing', LogPrefix.Backend)
   }

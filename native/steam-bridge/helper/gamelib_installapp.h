@@ -39,6 +39,16 @@
  *   {"result":"error","appId":N,"eAppUpdateError":E,"installedApps":K} exit 3
  * (error 18 with installedApps 0 = signed-out Steam; nothing was deleted.)
  *
+ * quick 261120-p2j. `steam-bridge-helper --steam-validateapp <appId> [--wait]
+ * [--dry-run]` asks the same running client to StartValidatingApp (Verify,
+ * spike 069: silent, no Steam window). The slot is only called when it is
+ * resolved by its unique 0x5078 function ID and CancelValidation (0x9949) sits
+ * at that slot + 1. With --wait it then polls GetAppInstallState /
+ * GetDownloadingAppID once a second until Steam reports the app inactive (a
+ * validate never moves the ACF, so IPC state is the only completion signal).
+ *   {"result":"ok","tracked":true,"finished":B,"installState":N[,"reason":"..."]}
+ *   {"result":"refused"}                                            exit 3
+ *
  * Output: exactly ONE JSON line on the original stdout; everything Steam logs
  * goes to stderr (fd 1 is redirected to fd 2 while Steam code runs).
  *   {"result":"ok",...}                       exit 0
@@ -78,6 +88,17 @@
 #define GL_IA_FN_NUMINSTALLED 0xde40u
 #define GL_IA_FN_NUMFOLDERS 0xab50u
 #define GL_IA_FN_FOLDERPATH 0xf27cu
+/* quick 261120-p2j: Verify (StartValidatingApp) and its completion signal. */
+#define GL_IA_FN_STARTVALIDATING 0x5078u
+#define GL_IA_FN_CANCELVALIDATION 0x9949u
+#define GL_IA_FN_INSTALLSTATE 0xeaf2u
+#define GL_IA_FN_DOWNLOADINGAPP 0xae86u
+/* Must track VALIDATE_WAIT_TIMEOUT_MS in steamInstallApp.ts (cap + margin). */
+#define GL_IA_VALIDATE_WAIT_CAP_S 21600
+#define GL_IA_VALIDATE_START_GRACE_S 20
+/* UpdateQueued | UpdateRunning | UpdateStarted | Validating */
+#define GL_IA_ACTIVE_STATE_MASK (0x8u | 0x100u | 0x400u | 0x20000u)
+#define GL_IA_STATE_UPDATE_PAUSED 0x200u
 
 #define GL_IA_CHILD_TIMEOUT_MS 3000
 #define GL_IA_SCAN_CAP_MS 20000
@@ -527,6 +548,127 @@ static int gl_ia_run_uninstall(uint32_t app_id, bool dry_run) {
   return GL_IA_EXIT_ERROR;
 }
 
+/*
+ * quick 261120-p2j: --steam-validateapp. Same attach order as the uninstall run.
+ * Without --wait: fire StartValidatingApp and report. With --wait: poll IPC app
+ * state until Steam is done with the app (the ACF does not move on a validate).
+ */
+static int gl_ia_run_validate(uint32_t app_id, bool wait, bool dry_run) {
+  fflush(NULL);
+  gl_ia_out_fd = dup(1);
+  if (gl_ia_out_fd < 0) gl_ia_out_fd = 1;
+  else dup2(2, 1);
+
+  const char *reason = NULL;
+  int getter_slot = gl_ia_find_getter_slot(&reason);
+  if (getter_slot < 0) return gl_ia_unavailable(reason ? reason : "app-manager-not-found");
+
+  gl_ia_session s = {0};
+  const char *why = gl_ia_attach(&s);
+  if (why) return gl_ia_unavailable(why);
+  void *apm = gl_ia_call_getter(&s, getter_slot);
+  if (!apm || !strstr(gl_ia_rtti(apm), "IClientAppManager"))
+    return gl_ia_unavailable("app-manager-not-found");
+
+  void **vt = gl_ia_vt(apm);
+  /* Slot guard: unique StartValidatingApp ID, CancelValidation right after. */
+  int validate_slot = gl_ia_find_method_slot(vt, GL_IA_FN_STARTVALIDATING);
+  if (validate_slot < 0 ||
+      gl_ia_slot_hi(vt, validate_slot + 1) != (int)GL_IA_FN_CANCELVALIDATION ||
+      gl_ia_find_method_slot(vt, GL_IA_FN_CANCELVALIDATION) != validate_slot + 1)
+    return gl_ia_unavailable("method-unverified:StartValidatingApp");
+
+  if (dry_run) {
+    int state_slot = gl_ia_find_method_slot(vt, GL_IA_FN_INSTALLSTATE);
+    int dl_slot = gl_ia_find_method_slot(vt, GL_IA_FN_DOWNLOADINGAPP);
+    gl_ia_emit("{\"result\":\"ok\",\"appId\":%u,\"dryRun\":true,"
+               "\"engineSlot\":%d,\"validateSlot\":%d,\"installStateSlot\":%d,"
+               "\"downloadingAppSlot\":%d}",
+               app_id, getter_slot, validate_slot, state_slot, dl_slot);
+    return GL_IA_EXIT_OK;
+  }
+
+  /* Resolve the wait-state slots BEFORE the call so an unverified one is
+   * reported without a half-tracked validate; untracked is still a success. */
+  int state_slot = -1;
+  int dl_slot = -1;
+  const char *untracked = NULL;
+  if (wait) {
+    state_slot = gl_ia_find_method_slot(vt, GL_IA_FN_INSTALLSTATE);
+    dl_slot = gl_ia_find_method_slot(vt, GL_IA_FN_DOWNLOADINGAPP);
+    if (state_slot < 0) untracked = "method-unverified:GetAppInstallState";
+    else if (dl_slot < 0) untracked = "method-unverified:GetDownloadingAppID";
+  }
+
+  int ok = ((int (*)(void *, uint32_t))vt[validate_slot])(apm, app_id) & 0xff;
+  if (!ok) {
+    gl_ia_emit("{\"result\":\"refused\",\"appId\":%u}", app_id);
+    return GL_IA_EXIT_ERROR;
+  }
+  if (!wait) {
+    gl_ia_emit("{\"result\":\"ok\",\"appId\":%u,\"tracked\":false}", app_id);
+    return GL_IA_EXIT_OK;
+  }
+  if (untracked) {
+    gl_ia_emit("{\"result\":\"ok\",\"appId\":%u,\"tracked\":false,\"reason\":\"%s\"}",
+               app_id, untracked);
+    return GL_IA_EXIT_OK;
+  }
+
+  long started = gl_ia_now_ms();
+  bool seen_active = false;
+  int inactive_run = 0;
+  uint32_t last_state = 0;
+  uint32_t prev_state = 0xFFFFFFFFu;
+  const char *stop_reason = NULL;
+  bool finished = false;
+  for (;;) {
+    uint32_t st = ((uint32_t (*)(void *, uint32_t))vt[state_slot])(apm, app_id);
+    uint32_t dl = ((uint32_t (*)(void *))vt[dl_slot])(apm);
+    last_state = st;
+    bool active = (dl == app_id) || ((st & GL_IA_ACTIVE_STATE_MASK) != 0);
+    if (st != prev_state) {
+      fprintf(stderr, "[validateapp] app %u installState=%u downloading=%u active=%d\n",
+              app_id, st, dl, active ? 1 : 0);
+      prev_state = st;
+    }
+    long elapsed_s = (gl_ia_now_ms() - started) / 1000L;
+    if (active) {
+      seen_active = true;
+      inactive_run = 0;
+      if (st & GL_IA_STATE_UPDATE_PAUSED) {
+        stop_reason = "paused";
+        break;
+      }
+    } else {
+      inactive_run++;
+      if (seen_active && inactive_run >= 2) {
+        finished = true;
+        break;
+      }
+      if (!seen_active && elapsed_s >= GL_IA_VALIDATE_START_GRACE_S) {
+        finished = true; /* never started tracking: Steam finished before we saw it */
+        break;
+      }
+    }
+    if (elapsed_s >= GL_IA_VALIDATE_WAIT_CAP_S) {
+      stop_reason = "wait-cap";
+      break;
+    }
+    usleep(1000000);
+  }
+  if (finished) {
+    gl_ia_emit("{\"result\":\"ok\",\"appId\":%u,\"tracked\":true,"
+               "\"finished\":true,\"installState\":%u}",
+               app_id, last_state);
+  } else {
+    gl_ia_emit("{\"result\":\"ok\",\"appId\":%u,\"tracked\":true,"
+               "\"finished\":false,\"installState\":%u,\"reason\":\"%s\"}",
+               app_id, last_state, stop_reason ? stop_reason : "unknown");
+  }
+  return GL_IA_EXIT_OK;
+}
+
 #endif /* __aarch64__ */
 
 /* Shared appId parse: 1..10 digits, 1..0xFFFFFFFF. Returns a usage exit code
@@ -590,6 +732,31 @@ static int gamelib_uninstallapp_main(int argc, char **argv) {
 #if defined(__aarch64__)
   return gl_ia_run_uninstall(app_id, dry_run);
 #else
+  (void)dry_run;
+  (void)app_id;
+  return gl_ia_unavailable("unsupported-arch");
+#endif
+}
+
+/* argv[1] == "--steam-validateapp" (quick 261120-p2j). Same isolation as the
+ * other subcommands; accepts --wait and --dry-run. */
+static int gamelib_validateapp_main(int argc, char **argv) {
+  uint32_t app_id = 0;
+  int rc = gl_ia_parse_app_id(argc, argv, &app_id);
+  if (rc >= 0) return rc;
+
+  bool wait = false;
+  bool dry_run = false;
+  for (int i = 3; i < argc; i++) {
+    if (strcmp(argv[i], "--wait") == 0) wait = true;
+    else if (strcmp(argv[i], "--dry-run") == 0) dry_run = true;
+    else return gl_ia_usage("unknown-argument");
+  }
+
+#if defined(__aarch64__)
+  return gl_ia_run_validate(app_id, wait, dry_run);
+#else
+  (void)wait;
   (void)dry_run;
   (void)app_id;
   return gl_ia_unavailable("unsupported-arch");

@@ -113,6 +113,8 @@ import {
   killBridgeBottleWineServer
 } from '../bridgeBottleLifecycle'
 import { isBridgeBottleReady, getBridgeBottleSettings } from '../bridgeBottle'
+import * as acfUpdateStateModule from '../library/acfUpdateState'
+import * as validateNativeModule from '../validateNative'
 import {
   tellBottledSteamToLaunch,
   tellBottledSteamToUninstall
@@ -2100,10 +2102,6 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
         () => (resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(undefined)
       ],
       [
-        'bottle not ready',
-        () => (isBridgeBottleReady as jest.Mock).mockReturnValue(false)
-      ],
-      [
         'exe absent on disk',
         () => (existsSync as jest.Mock).mockReturnValue(false)
       ]
@@ -2127,6 +2125,46 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
         expect(restoreBridgeSteamApiOriginals).not.toHaveBeenCalled()
       }
     )
+
+    describe('quick 261120-p2j: Verify routing', () => {
+      afterEach(() => {
+        jest.restoreAllMocks()
+      })
+
+      it('a Steam-registered install (no bridge bottle) goes to validateRegisteredSteamGame', async () => {
+        ;(isBridgeBottleReady as jest.Mock).mockReturnValue(false)
+        jest
+          .spyOn(acfUpdateStateModule, 'readAcfUpdateState')
+          .mockResolvedValue({ buildid: '1' } as never)
+        const validate = jest
+          .spyOn(validateNativeModule, 'validateRegisteredSteamGame')
+          .mockResolvedValue({ stdout: 'v', stderr: '' })
+
+        const game = new SteamGame(APP_ID, steamTestDeps)
+        await expect(game.repair()).resolves.toEqual({
+          stdout: 'v',
+          stderr: ''
+        })
+        expect(validate).toHaveBeenCalledWith(game)
+        expect(restoreBridgeSteamApiOriginals).not.toHaveBeenCalled()
+      })
+
+      it('neither a bridge nor a registered install: clear error, no helper call', async () => {
+        ;(isBridgeBottleReady as jest.Mock).mockReturnValue(false)
+        jest
+          .spyOn(acfUpdateStateModule, 'readAcfUpdateState')
+          .mockResolvedValue(null)
+        const validate = jest.spyOn(
+          validateNativeModule,
+          'validateRegisteredSteamGame'
+        )
+
+        await expect(
+          new SteamGame(APP_ID, steamTestDeps).repair()
+        ).rejects.toThrow(/Steam verifies this game inside its bottle/)
+        expect(validate).not.toHaveBeenCalled()
+      })
+    })
 
     it('launch threads persistedOriginalFingerprints from the persisted scan, and omits the key when absent', async () => {
       ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)

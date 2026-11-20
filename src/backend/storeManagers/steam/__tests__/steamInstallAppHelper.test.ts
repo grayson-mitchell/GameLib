@@ -140,5 +140,40 @@ describeDarwinOnly(
         expect(oneLine(res.stdout)).toEqual({ result: 'usage', error })
       })
     })
+
+    describe('--steam-validateapp (quick 261120-p2j)', () => {
+      it('reports steamclient-missing under a fresh HOME, one line, exit 2', () => {
+        const res = run('--steam-validateapp', '264160')
+        expect(res.status).toBe(2)
+        expect(oneLine(res.stdout)).toEqual({
+          result: 'unavailable',
+          reason: 'steamclient-missing'
+        })
+        expect(res.stderr).not.toMatch(/^AUTH/m)
+      })
+
+      it.each([['--wait'], ['--dry-run'], ['--wait', '--dry-run']])(
+        'accepts %s with the same unavailable result',
+        (...flags) => {
+          const res = run('--steam-validateapp', '264160', ...flags)
+          expect(res.status).toBe(2)
+          expect(oneLine(res.stdout).reason).toBe('steamclient-missing')
+        }
+      )
+
+      it.each([
+        ['non-numeric appId', ['--steam-validateapp', 'abc'], 'bad-appid'],
+        ['missing appId', ['--steam-validateapp'], 'missing-appid'],
+        [
+          'an unknown argument',
+          ['--steam-validateapp', '264160', '--library', '/x'],
+          'unknown-argument'
+        ]
+      ])('rejects %s with a usage line and exit 64', (_n, args, error) => {
+        const res = run(...args)
+        expect(res.status).toBe(64)
+        expect(oneLine(res.stdout)).toEqual({ result: 'usage', error })
+      })
+    })
   }
 )

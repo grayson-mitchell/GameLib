@@ -3,7 +3,9 @@ import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 import {
   createSteamInstallAppRun,
   requestSteamInstallApp,
-  requestSteamUninstallApp
+  requestSteamUninstallApp,
+  requestSteamValidateApp,
+  VALIDATE_WAIT_TIMEOUT_MS
 } from '../steamInstallApp'
 
 jest.mock('backend/logger', () => ({
@@ -238,6 +240,138 @@ describe('requestSteamUninstallApp (quick 261106-s3n)', () => {
   })
 })
 
+describe('requestSteamValidateApp (quick 261120-p2j)', () => {
+  beforeEach(() => {
+    mockedExists.mockReturnValue(true)
+  })
+  const deps = (run: jest.Mock) => ({
+    paths: { steamBridgeHelperPath: '/h' },
+    platform: 'darwin' as const,
+    run
+  })
+
+  it('reports unsupported-platform off darwin without spawning', async () => {
+    const run = jest.fn()
+    await expect(
+      requestSteamValidateApp(
+        '440',
+        { wait: true },
+        { ...deps(run), platform: 'linux' }
+      )
+    ).resolves.toEqual({ kind: 'unavailable', reason: 'unsupported-platform' })
+    expect(run).not.toHaveBeenCalled()
+  })
+
+  it('rejects a bad appId without spawning', async () => {
+    const run = jest.fn()
+    await expect(
+      requestSteamValidateApp('4;40', { wait: false }, deps(run))
+    ).resolves.toEqual({ kind: 'unavailable', reason: 'bad-appid' })
+    expect(run).not.toHaveBeenCalled()
+  })
+
+  it('reports helper-missing when the binary is absent', async () => {
+    mockedExists.mockReturnValue(false)
+    const run = jest.fn()
+    await expect(
+      requestSteamValidateApp('440', { wait: true }, deps(run))
+    ).resolves.toEqual({ kind: 'unavailable', reason: 'helper-missing' })
+    expect(run).not.toHaveBeenCalled()
+  })
+
+  it('passes --wait, the long timeout and the signal to run', async () => {
+    const run = runWith(
+      '{"result":"ok","tracked":true,"finished":true,"installState":4}'
+    )
+    const signal = new AbortController().signal
+    await requestSteamValidateApp('440', { wait: true, signal }, deps(run))
+    expect(run).toHaveBeenCalledWith(
+      '/h',
+      ['--steam-validateapp', '440', '--wait'],
+      VALIDATE_WAIT_TIMEOUT_MS,
+      signal
+    )
+  })
+
+  it('without wait uses the short default timeout and no --wait', async () => {
+    const run = runWith('{"result":"ok","tracked":false}')
+    await requestSteamValidateApp('440', { wait: false }, deps(run))
+    const [, args, timeout] = run.mock.calls[0]
+    expect(args).toEqual(['--steam-validateapp', '440'])
+    expect(timeout).toBeLessThan(VALIDATE_WAIT_TIMEOUT_MS)
+  })
+
+  it('maps ok tracked/finished', async () => {
+    const run = runWith(
+      '{"result":"ok","tracked":true,"finished":true,"installState":4}'
+    )
+    await expect(
+      requestSteamValidateApp('440', { wait: true }, deps(run))
+    ).resolves.toEqual({
+      kind: 'ok',
+      tracked: true,
+      finished: true,
+      installState: 4
+    })
+  })
+
+  it('maps ok untracked and a stopped wait', async () => {
+    await expect(
+      requestSteamValidateApp(
+        '440',
+        { wait: true },
+        deps(
+          runWith(
+            '{"result":"ok","tracked":false,"reason":"method-unverified:X"}'
+          )
+        )
+      )
+    ).resolves.toEqual({
+      kind: 'ok',
+      tracked: false,
+      finished: false,
+      installState: null,
+      reason: 'method-unverified:X'
+    })
+    await expect(
+      requestSteamValidateApp(
+        '440',
+        { wait: true },
+        deps(
+          runWith(
+            '{"result":"ok","tracked":true,"finished":false,"installState":516,"reason":"paused"}'
+          )
+        )
+      )
+    ).resolves.toMatchObject({ finished: false, reason: 'paused' })
+  })
+
+  it('maps refused', async () => {
+    await expect(
+      requestSteamValidateApp(
+        '440',
+        { wait: true },
+        deps(runWith('{"result":"refused","appId":440}', 3))
+      )
+    ).resolves.toEqual({ kind: 'refused' })
+  })
+
+  it('maps unavailable and a missing result line', async () => {
+    await expect(
+      requestSteamValidateApp(
+        '440',
+        { wait: true },
+        deps(
+          runWith('{"result":"unavailable","reason":"steam-not-running"}', 2)
+        )
+      )
+    ).resolves.toEqual({ kind: 'unavailable', reason: 'steam-not-running' })
+    await expect(
+      requestSteamValidateApp('440', { wait: true }, deps(runWith('', null)))
+    ).resolves.toEqual({ kind: 'unavailable', reason: 'helper-failed' })
+  })
+})
+
 describe('createSteamInstallAppRun (scripted runner)', () => {
   const helper = (result: object) =>
     createScriptedRunner([{ cmd: '/h', result }])
@@ -253,6 +387,13 @@ describe('createSteamInstallAppRun (scripted runner)', () => {
       stdin: ''
     })
     expect(runner.calls[0]?.env).toBeUndefined()
+  })
+
+  it('forwards an abort signal to the runner', async () => {
+    const runner = helper({ code: 0, stdout: '' })
+    const signal = new AbortController().signal
+    await createSteamInstallAppRun({ runner })('/h', [], 1000, signal)
+    expect(runner.calls[0]?.opts).toMatchObject({ signal })
   })
 
   it('keeps a non-zero exit code', async () => {

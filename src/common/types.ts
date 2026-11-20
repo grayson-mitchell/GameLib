@@ -193,6 +193,12 @@ export type ExecResult = {
   error?: string
   abort?: boolean
   /**
+   * Set by a repair/verify that was handed to the Steam client (a steam:// link, or a validate
+   * Steam did not finish while GameLib watched). The work is not known to be done, so the
+   * dispatcher skips its "Finished Repairing" notification (quick 261120-p2j).
+   */
+  handedOffToSteam?: boolean
+  /**
    * Set by an uninstall that declined and changed nothing.
    * uninstallGameCallback then skips all post-uninstall cleanup
    * (quick 261107-td5).
