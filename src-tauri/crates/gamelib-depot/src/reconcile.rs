@@ -12,6 +12,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::io::{self, Read};
 use std::path::Path;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
 use sha1::{Digest, Sha1};
@@ -184,6 +185,20 @@ pub async fn reconcile_partial_state(
     cancel: &CancellationToken,
     hash_threads: usize,
 ) -> Result<ReconcileResult, ReconcileError> {
+    reconcile_with_progress(root, files, cancel, hash_threads, None).await
+}
+
+/// [`reconcile_partial_state`] that also adds each file's size to `progress` as soon as its hash
+/// verifies, so a heartbeat during a long walk (a Verify over a large tree) shows done-bytes
+/// rising instead of sitting at 0 until the walk ends. The caller's final store of
+/// `bytes_verified` lands on a total at or above the running sum.
+pub async fn reconcile_with_progress(
+    root: &Path,
+    files: &[&ManifestFile],
+    cancel: &CancellationToken,
+    hash_threads: usize,
+    progress: Option<&AtomicU64>,
+) -> Result<ReconcileResult, ReconcileError> {
     let sem = Arc::new(Semaphore::new(hash_threads.max(1)));
     // Per-index verdict: None = undecided.
     let mut verdict: Vec<Option<Decision>> = Vec::with_capacity(files.len());
@@ -226,6 +241,11 @@ pub async fn reconcile_partial_state(
     for (i, h) in tasks {
         match h.await {
             Ok(Ok(ok)) => {
+                if ok {
+                    if let Some(p) = progress {
+                        p.fetch_add(files[i].size, Ordering::Relaxed);
+                    }
+                }
                 hashed.insert(i, ok);
             }
             // A file that vanished or became unreadable between stat and hash is just queued.

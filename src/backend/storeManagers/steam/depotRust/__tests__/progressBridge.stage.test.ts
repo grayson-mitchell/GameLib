@@ -166,4 +166,29 @@ describe('progressBridge update mode (WR-07)', () => {
       progress: { percent: 50 }
     })
   })
+
+  it('repair: planned and progress events send repairing, never installing or updating (261120-p2j)', () => {
+    const b = createProgressBridge(
+      { sendFrontendMessage: jest.fn(), appRuntime: createTestAppRuntime() },
+      '777',
+      'steam',
+      () => 1000,
+      { repair: true }
+    )
+    b.onEvent({ jobId: 'j', seq: 0, kind: 'planned', totalBytes: 100 } as never)
+    b.onEvent({
+      jobId: 'j',
+      seq: 1,
+      kind: 'progress',
+      doneBytes: 10,
+      netBytes: 0,
+      totalBytes: 100
+    } as never)
+    expect(jest.mocked(sendGameStatusUpdate).mock.calls[0]?.[1]).toMatchObject({
+      status: 'repairing'
+    })
+    expect(jest.mocked(sendProgressUpdate).mock.calls[0]?.[1]).toMatchObject({
+      status: 'repairing'
+    })
+  })
 })

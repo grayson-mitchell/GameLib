@@ -210,6 +210,30 @@ async fn cancel_returns_incomplete() {
     assert!(r.skipped.is_empty() && r.queued.is_empty());
 }
 
+// quick 261120-p2j: the hash walk feeds done-bytes as each file verifies (Verify progress).
+#[tokio::test]
+async fn progress_counter_rises_with_verified_files() {
+    let d = tempfile::tempdir().unwrap();
+    put(d.path(), "a.bin", b"hello");
+    put(d.path(), "b.bin", b"wrong-bytes");
+    let files = [file("a.bin", b"hello"), file("b.bin", b"world")];
+    let refs: Vec<&ManifestFile> = files.iter().collect();
+    let progress = std::sync::atomic::AtomicU64::new(0);
+    let r = reconcile_with_progress(
+        d.path(),
+        &refs,
+        &CancellationToken::new(),
+        2,
+        Some(&progress),
+    )
+    .await
+    .unwrap();
+    // Only the file that verified counts; the walk total never exceeds the final one.
+    assert_eq!(progress.load(std::sync::atomic::Ordering::Relaxed), 5);
+    assert_eq!(r.bytes_verified, 5);
+    assert_eq!(r.queued, vec![1]);
+}
+
 #[test]
 fn sha1_file_streams_multi_buffer_file() {
     let d = tempfile::tempdir().unwrap();

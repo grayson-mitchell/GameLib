@@ -333,6 +333,86 @@ fn cancel_resume_fetches_only_missing() {
     assert!(env.acf().contains("\"StateFlags\"\t\t\"4\""));
 }
 
+fn sha_hex_of(piece: &[u8]) -> String {
+    use sha1::{Digest, Sha1};
+    Sha1::digest(piece)
+        .iter()
+        .map(|x| format!("{x:02x}"))
+        .collect()
+}
+
+/// quick 261120-p2j: Verify over a finished tree is an `install` job. One corrupted chunk of a
+/// 3-chunk file is the only chunk fetched; the file is restored byte-for-byte, the ACF stays
+/// installed, and files the manifest does not own are never touched.
+#[test]
+fn install_over_corrupt_file_fetches_only_bad_chunks() {
+    let a: Vec<u8> = (0..3_000).map(|i| (i * 11 % 241) as u8).collect();
+    let app_id = 921_000u32;
+    let case = custom_case(
+        "verify-corrupt",
+        app_id,
+        vec![FixtureFile::new("a.bin", a.clone(), 1000, Codec::Vz)],
+    );
+    let env = setup(&case);
+    env.script_chunks(&case);
+    let first = env.run(env.job("jm-verify-1", "install", None, true));
+    assert_eq!(first.status, Status::Completed, "{:?}", first.failures);
+
+    // Unowned neighbours: a user file and a GameLib steam_api backup.
+    let extra = env.root().join("extra/user.cfg");
+    std::fs::create_dir_all(extra.parent().unwrap()).unwrap();
+    std::fs::write(&extra, b"user settings").unwrap();
+    let orig = env.root().join("a.bin.gamelib-orig");
+    std::fs::write(&orig, b"genuine dll bytes").unwrap();
+
+    // Corrupt one byte inside chunk 1 (1000..2000), keeping the size.
+    let mut bad = a.clone();
+    bad[1500] ^= 0xff;
+    std::fs::write(env.root().join("a.bin"), &bad).unwrap();
+
+    let baseline = env.chunk_hits().len();
+    let out = env.run(env.job("jm-verify-2", "install", None, true));
+    assert_eq!(out.status, Status::Completed, "{:?}", out.failures);
+    assert_eq!(std::fs::read(env.root().join("a.bin")).unwrap(), a);
+    let new_hits: Vec<String> = env.chunk_hits().split_off(baseline);
+    let want = format!("/depot/{}/chunk/{}", app_id + 1, sha_hex_of(&a[1000..2000]));
+    assert_eq!(new_hits, vec![want], "only the bad chunk is fetched");
+    assert_eq!(std::fs::read(&extra).unwrap(), b"user settings");
+    assert_eq!(std::fs::read(&orig).unwrap(), b"genuine dll bytes");
+    assert!(env.acf().contains("\"StateFlags\"\t\t\"4\""));
+}
+
+/// A file cut short (1500 of 3000 bytes) keeps chunk 0 and fetches only the tail chunks.
+#[test]
+fn install_over_truncated_file_fetches_only_tail_chunks() {
+    let a: Vec<u8> = (0..3_000).map(|i| (i * 11 % 241) as u8).collect();
+    let app_id = 922_000u32;
+    let case = custom_case(
+        "verify-truncated",
+        app_id,
+        vec![FixtureFile::new("a.bin", a.clone(), 1000, Codec::Vz)],
+    );
+    let env = setup(&case);
+    env.script_chunks(&case);
+    let first = env.run(env.job("jm-trunc-1", "install", None, true));
+    assert_eq!(first.status, Status::Completed, "{:?}", first.failures);
+
+    std::fs::write(env.root().join("a.bin"), &a[..1500]).unwrap();
+
+    let baseline = env.chunk_hits().len();
+    let out = env.run(env.job("jm-trunc-2", "install", None, true));
+    assert_eq!(out.status, Status::Completed, "{:?}", out.failures);
+    assert_eq!(std::fs::read(env.root().join("a.bin")).unwrap(), a);
+    let mut new_hits: Vec<String> = env.chunk_hits().split_off(baseline);
+    new_hits.sort();
+    let mut want: Vec<String> = [&a[1000..2000], &a[2000..3000]]
+        .iter()
+        .map(|p| format!("/depot/{}/chunk/{}", app_id + 1, sha_hex_of(p)))
+        .collect();
+    want.sort();
+    assert_eq!(new_hits, want, "only chunks 1 and 2 are fetched");
+}
+
 #[test]
 fn redist_job_writes_no_acf() {
     let case = case_named("shared-redist");

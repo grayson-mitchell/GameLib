@@ -17,6 +17,7 @@
 
 use crate::acf::{self, AcfWritten, AttemptedDepot, RunOutcome, RunResult};
 use crate::container::{decode_chunk, ContainerKind};
+use crate::delta::read_exact_at;
 use crate::events::{ProgressEmitter, Snapshot};
 use crate::fetch::{FetchError, Fetcher, ERESULT_BLOCKED};
 use crate::inflight::{InflightLimiter, TARGET_INFLIGHT_CHUNKS};
@@ -33,11 +34,12 @@ use crate::post::{
     CollisionDepot, FlagsCensus, ModeReport, CUSTOM_EXECUTABLE_FLAG, DIRECTORY_FLAG,
     EXECUTABLE_FLAG, SYMLINK_FLAG,
 };
-use crate::reconcile::{reconcile_partial_state, sha1_file, verify_structural_integrity};
+use crate::reconcile::{reconcile_with_progress, sha1_file, verify_structural_integrity};
 use crate::stall::StallTracker;
 use crate::{JobContext, JobHost};
 use futures_util::future::BoxFuture;
 use futures_util::stream::{self, StreamExt};
+use sha1::{Digest, Sha1};
 use std::collections::HashSet;
 use std::fs;
 use std::io;
@@ -473,6 +475,39 @@ async fn chunk_task(
     Ok(())
 }
 
+/// Indexes of `chunks` whose bytes already on disk at `dest` are intact: the range lies inside the
+/// current file and SHA-1 of the bytes read equals `chunk.sha`. Empty when `dest` is absent, a
+/// symlink or not a regular file (never read through a link). A read error just means "not good".
+/// The whole-file SHA-1 check after the write stays the correctness backstop.
+fn locally_good_chunks(dest: &Path, chunks: &[ChunkRef]) -> HashSet<usize> {
+    let mut good = HashSet::new();
+    let Ok(meta) = fs::symlink_metadata(dest) else {
+        return good;
+    };
+    if !meta.file_type().is_file() {
+        return good;
+    }
+    let Ok(f) = fs::File::open(dest) else {
+        return good;
+    };
+    let len = meta.len();
+    let mut buf: Vec<u8> = Vec::new();
+    for (ci, c) in chunks.iter().enumerate() {
+        let n = u64::from(c.cb_original);
+        if n == 0 || c.offset.saturating_add(n) > len {
+            continue;
+        }
+        buf.resize(n as usize, 0);
+        if read_exact_at(&f, &mut buf, c.offset).is_err() {
+            continue;
+        }
+        if Sha1::digest(&buf).as_slice() == c.sha {
+            good.insert(ci);
+        }
+    }
+    good
+}
+
 /// Materialise one manifest entry under `root`. Port of `downloadSingleFile`.
 pub async fn write_file(ctx: &RunCtx, root: &Path, job: &FileJob) -> Result<(), FileErr> {
     let file = job.file();
@@ -553,14 +588,23 @@ pub async fn write_file(ctx: &RunCtx, root: &Path, job: &FileJob) -> Result<(), 
     }
 
     let size = file.size;
+    // Chunk reuse (Verify): a regular file already on disk (a reconcile-queued mismatch or the
+    // partial file of an interrupted install) keeps every chunk whose local bytes hash to the
+    // chunk's SHA-1; only the rest are fetched. A missing file takes the unchanged path.
+    let reusable: HashSet<usize> = {
+        let (d, chunks) = (dest.clone(), file.chunks.clone());
+        blocking(move || locally_good_chunks(&d, &chunks), name).await?
+    };
     let d = dest.clone();
+    let keep_existing = !reusable.is_empty();
     let opened = blocking(
         move || -> io::Result<fs::File> {
-            let f = fs::OpenOptions::new()
-                .write(true)
-                .create(true)
-                .truncate(true)
-                .open(&d)?;
+            let mut o = fs::OpenOptions::new();
+            o.write(true).create(true);
+            if !keep_existing {
+                o.truncate(true);
+            }
+            let f = o.open(&d)?;
             f.set_len(size)?;
             Ok(f)
         },
@@ -575,7 +619,19 @@ pub async fn write_file(ctx: &RunCtx, root: &Path, job: &FileJob) -> Result<(), 
     let fc = ctx.cancel.child_token();
     let mut first_err: Option<FileErr> = None;
     {
+        let mut reused_bytes = 0u64;
+        for &ci in &reusable {
+            reused_bytes += u64::from(file.chunks[ci].cb_original);
+        }
+        if reused_bytes > 0 {
+            ctx.counters
+                .done_bytes
+                .fetch_add(reused_bytes, Ordering::Relaxed);
+            ctx.stall.record_progress();
+            ctx.emitter.progress(ctx.snapshot());
+        }
         let mut pool = stream::iter(file.chunks.iter().enumerate())
+            .filter(|(ci, _)| futures_util::future::ready(!reusable.contains(ci)))
             .map(|(ci, chunk)| chunk_task(ctx, &fc, job, chunk, ci, &out))
             .buffer_unordered(CHUNK_CONCURRENCY);
         while let Some(r) = pool.next().await {
@@ -1086,7 +1142,15 @@ async fn run_install_inner(
     // A reconcile error falls back to a full re-download, like the TS.
     let refs: Vec<&ManifestFile> = all.iter().map(|j| j.file()).collect();
     let (queued, skipped, reconciled): (Vec<FileJob>, Vec<FileJob>, bool) =
-        match reconcile_partial_state(&root, &refs, &cancel, decode_threads).await {
+        match reconcile_with_progress(
+            &root,
+            &refs,
+            &cancel,
+            decode_threads,
+            Some(&counters.done_bytes),
+        )
+        .await
+        {
             Ok(r) => {
                 counters
                     .done_bytes

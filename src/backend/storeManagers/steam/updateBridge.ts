@@ -32,7 +32,8 @@ import {
   type SteamUpdateEstimate
 } from './updateDetection'
 
-function isRunning(steamGame: SteamGame): boolean {
+/** True while the bridge game's bottle runs it or a bridge launch is in flight (one source for update and verify). */
+export function isBridgeGameRunning(steamGame: SteamGame): boolean {
   const { deps, appId } = steamGame
   return (
     deps.steamLaunchRuntime.monitors.getBottleProcessMonitorPhase(appId) !==
@@ -61,7 +62,7 @@ export async function updateBridgeGame(
   const { deps, appId } = steamGame
   const title = steamGame.getGameInfo().title || appId
 
-  if (isRunning(steamGame)) {
+  if (isBridgeGameRunning(steamGame)) {
     return {
       status: 'error',
       error: i18next.t(

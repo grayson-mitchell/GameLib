@@ -32,7 +32,9 @@ export function createProgressBridge(
   appName: string,
   runner: Runner = 'steam',
   now: () => number = Date.now,
-  opts: { update?: boolean } = {}
+  // `repair` (quick 261120-p2j, bridge Verify): the job is an install-mode run over a finished
+  // tree, but the card must read 'repairing', never 'installing' or 'updating'.
+  opts: { update?: boolean; repair?: boolean } = {}
 ): { onEvent(ev: RustJobEvent): void } {
   let totalBytes = 0
   let tStart = 0
@@ -49,7 +51,9 @@ export function createProgressBridge(
       switch (ev.kind) {
         case 'planned':
           totalBytes = ev.totalBytes
-          if (opts.update) {
+          if (opts.repair) {
+            sendGameStatusUpdate(deps, { appName, runner, status: 'repairing' })
+          } else if (opts.update) {
             sendGameStatusUpdate(deps, { appName, runner, status: 'updating' })
           }
           return
@@ -128,7 +132,7 @@ export function createProgressBridge(
           sendProgressUpdate(deps, {
             appName,
             runner,
-            status: 'installing',
+            status: opts.repair ? 'repairing' : 'installing',
             progress: {
               percent:
                 totalBytes > 0

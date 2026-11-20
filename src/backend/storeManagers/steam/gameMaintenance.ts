@@ -5,24 +5,15 @@
 // (gameEligibility/gameLaunchOverlay -> gameInstall -> gameLaunch ->
 // gameBridgeLaunch). A call a test spies on stays a `steamGame.X()` call
 // (quick-261107-an2).
-import { existsSync } from 'graceful-fs'
-import { basename, relative, resolve } from 'node:path'
 import { ExecResult } from 'common/types'
 import { GOGCloudSavesLocation } from 'common/types/gog'
 import { InstallResult } from 'common/types/game_manager'
-import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import {
-  findBridgeInstallBottle,
-  isBridgeBottleReady,
-  getBridgeBottleSettings
-} from './bridgeBottle'
+import { logWarning, LogPrefix } from 'backend/logger'
+import { findBridgeInstallBottle } from './bridgeBottle'
 import { readAcfUpdateState } from './library/acfUpdateState'
 import { validateRegisteredSteamGame } from './validateNative'
-import { getBottleDir } from 'backend/engine/bottlePrimitives'
-import { restoreBridgeSteamApiOriginals } from './bridge/originalRestore'
-import { resolveBridgeLaunchExe } from './bridge/launchTarget'
+import { verifyBridgeGame } from './verifyBridge'
 import type SteamGame from './games'
-import { resolveBridgeGameInstallRoot } from './bridgeInstallState'
 
 export async function moveInstall(
   steamGame: SteamGame,
@@ -38,6 +29,10 @@ export async function moveInstall(
   }
 }
 
+// repair() is Verify (quick 261120-p2j), routed like SteamGame.update(): a bridge install runs a
+// chunk-level depot verify (verifyBridge.ts); a Steam-registered install asks Mac Steam to
+// StartValidatingApp, or opens steam://validate (validateNative.ts); anything else is a Phase 17
+// bottle install that verifies inside its own bottle.
 export async function repair(steamGame: SteamGame): Promise<ExecResult> {
   // Same route predicates as SteamGame.update(): bridge first, then Steam-registered.
   if (!findBridgeInstallBottle(steamGame.deps.paths, steamGame.appId)) {
@@ -51,56 +46,7 @@ export async function repair(steamGame: SteamGame): Promise<ExecResult> {
       `Steam verifies this game inside its bottle (appId ${steamGame.appId})`
     )
   }
-  const scoped = (): Error =>
-    new Error(
-      `Repair restores bridge steam_api originals; appId ${steamGame.appId} has no bridge install (a full depot verify is not supported)`
-    )
-  const exePath = await resolveBridgeLaunchExe(steamGame.deps, steamGame.appId)
-  const bottle = getBridgeBottleSettings(
-    steamGame.deps,
-    steamGame.appId
-  ).wineCrossoverBottle
-  if (
-    !exePath ||
-    !isBridgeBottleReady(steamGame.deps.paths, bottle) ||
-    !existsSync(exePath)
-  ) {
-    throw scoped()
-  }
-  const installRoot = resolveBridgeGameInstallRoot(steamGame, exePath, bottle)
-  if (!installRoot) throw scoped()
-
-  const result = await restoreBridgeSteamApiOriginals({
-    installRuntime: steamGame.deps.steamInstallRuntime,
-    steamUser: steamGame.deps.steamUser,
-    config: steamGame.deps.config,
-    appId: steamGame.appId,
-    bottleDir: resolve(getBottleDir(steamGame.deps.paths, bottle)),
-    installRoot,
-    installdir: basename(installRoot)
-  })
-  const lines = result.outcomes.map((o) => {
-    const rel = relative(installRoot, o.path)
-    return `${rel}: ${o.outcome}${o.detail ? ` (${o.detail})` : ''}`
-  })
-  for (const line of lines) {
-    logInfo(
-      `SteamGame.repair appId ${steamGame.appId}: ${line}`,
-      LogPrefix.Steam
-    )
-  }
-  if (result.status !== 'ok') {
-    const failed = result.outcomes
-      .filter((o) => o.outcome === 'download-failed' || o.outcome === 'refused')
-      .map(
-        (o) =>
-          `${relative(installRoot, o.path)}: ${o.outcome}${o.detail ? ` (${o.detail})` : ''}`
-      )
-    throw new Error(
-      `Could not restore steam_api originals for appId ${steamGame.appId}${failed.length ? `: ${failed.join('; ')}` : ' (restore failed)'}`
-    )
-  }
-  return { stdout: lines.join('\n'), stderr: '' }
+  return verifyBridgeGame(steamGame)
 }
 
 export async function syncSaves(

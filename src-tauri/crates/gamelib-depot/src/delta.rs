@@ -214,13 +214,13 @@ pub fn shape_failure(job: &DepotJob) -> Option<Failure> {
 // ---------------------------------------------------------------------------
 
 #[cfg(unix)]
-fn read_exact_at(f: &fs::File, buf: &mut [u8], offset: u64) -> io::Result<()> {
+pub(crate) fn read_exact_at(f: &fs::File, buf: &mut [u8], offset: u64) -> io::Result<()> {
     use std::os::unix::fs::FileExt;
     f.read_exact_at(buf, offset)
 }
 
 #[cfg(windows)]
-fn read_exact_at(f: &fs::File, buf: &mut [u8], offset: u64) -> io::Result<()> {
+pub(crate) fn read_exact_at(f: &fs::File, buf: &mut [u8], offset: u64) -> io::Result<()> {
     use std::os::windows::fs::FileExt;
     let mut done = 0usize;
     while done < buf.len() {
