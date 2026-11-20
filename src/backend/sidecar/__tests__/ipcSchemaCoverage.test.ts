@@ -10,8 +10,8 @@
  * Registered set = the union of
  *   - runtime registries after `import('backend/sidecar/handlers')` and
  *     `signInProbe.outcomes.registerHandler()`;
- *   - a static scan of non-test `src/backend/**` for `ipcMain.handle/on/once`, `addHandler`,
- *     `addListener` (catches bootstrap-time registrations -- handleProtocolUrl,
+ *   - the static scan in `backend/testUtils/ipcRegistrationScan` of non-test `src/backend/**` for
+ *     `ipcMain.handle/on/once`, `addHandler`, `addListener` (catches bootstrap-time registrations -- handleProtocolUrl,
  *     the online monitor -- which importing the handlers does not populate). `initOnlineMonitor()` is deliberately never called here: it pings
  *     sites and arms retries.
  */
@@ -19,16 +19,15 @@ import { createTestShellState } from 'backend/testUtils/testShellState'
 import { createTestServices } from 'backend/testUtils/testServices'
 import { createCaptureLog } from 'backend/testUtils/captureLog'
 import { defined } from 'backend/testUtils/indexed'
-import { readdirSync, readFileSync, statSync } from 'fs'
 import { join } from 'path'
 
 import {
   domainSources,
   nativeChannelNames,
   parseDomainFile,
-  sharedConstants,
   type DomainPart
 } from 'backend/testUtils/ipcDomainParse'
+import { scanRegistrations } from 'backend/testUtils/ipcRegistrationScan'
 import {
   channelSchemas,
   collidingPushSchemas,
@@ -38,55 +37,6 @@ import {
 type Bucket = 'invoke' | 'send' | 'push' | 'local'
 
 const BACKEND_DIR = join(__dirname, '..', '..')
-
-function sourceFiles(dir: string, out: string[] = []): string[] {
-  for (const name of readdirSync(dir)) {
-    if (name === '__tests__' || name === 'node_modules') continue
-    const full = join(dir, name)
-    if (statSync(full).isDirectory()) sourceFiles(full, out)
-    else if (/\.tsx?$/.test(name) && !/\.test\.tsx?$/.test(name)) out.push(full)
-  }
-  return out
-}
-
-interface Scanned {
-  invoke: Set<string>
-  send: Set<string>
-}
-
-function staticScan(): Scanned {
-  const constants = sharedConstants()
-  const out: Scanned = {
-    invoke: new Set(),
-    send: new Set()
-  }
-  const re =
-    /\b(ipcMain\.handle|ipcMain\.on|ipcMain\.once|ipc\.handle|ipc\.on|addHandler|addListener)\(\s*(?:'([^']+)'|([A-Z][A-Z0-9_]*)\s*,)/g
-  for (const file of sourceFiles(BACKEND_DIR)) {
-    const src = readFileSync(file, 'utf-8')
-    // A file-local `const NAME = 'channel'` (devEpicCookieSweepRegistration's, not exported).
-    const local = new Map<string, string>()
-    for (const c of src.matchAll(
-      /\bconst\s+([A-Z][A-Z0-9_]*)\s*=\s*'([^']+)'/g
-    )) {
-      if (c[1] && c[2]) local.set(c[1], c[2])
-    }
-    for (const m of src.matchAll(re)) {
-      const channel =
-        m[2] ??
-        (m[3] === undefined ? undefined : (constants[m[3]] ?? local.get(m[3])))
-      if (!channel) continue
-      if (
-        m[1] === 'ipcMain.handle' ||
-        m[1] === 'ipc.handle' ||
-        m[1] === 'addHandler'
-      )
-        out.invoke.add(channel)
-      else out.send.add(channel)
-    }
-  }
-  return out
-}
 
 function declaredParts(): DomainPart[] {
   return Object.values(domainSources()).flatMap((s) => parseDomainFile(s))
@@ -107,7 +57,7 @@ async function registered(): Promise<{
     shellState: createTestShellState(services)
   })
   services.signInProbe.outcomes.registerHandler()
-  const scan = staticScan()
+  const scan = scanRegistrations(BACKEND_DIR)
   // Every registration writes into the test host's injected registry.
   const invoke = new Set([
     ...services.host.ipc.handlerMap().keys(),
