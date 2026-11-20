@@ -4,11 +4,11 @@ milestone: v0.10
 current_phase: 83
 current_phase_name: Native seam, gamelib-core and process/shutdown contract
 status: executing
-stopped_at: Completed 83-04-PLAN.md
-last_updated: "2026-11-20T09:43:51.341Z"
+stopped_at: Completed 83-05-PLAN.md
+last_updated: "2026-11-20T09:54:44.762Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 83 execution started
-state_head: afacd26eefde2ccca93947f76079a30db5e9a204
+state_head: a2e1ea93189f7615a96491de84689574863160bb
 progress:
   total_phases: 27
   completed_phases: 23
@@ -76,7 +76,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 83 (Native seam, gamelib-core and process/shutdown contract) — EXECUTING
-Plan: 4 of 11
+Plan: 6 of 11
 Status: Ready to execute
 Last activity: 2026-11-20 — Phase 83 execution started
 Progress: [██████████] 100% (19 of 19 phase 82 plans have a SUMMARY; verification human_needed)
@@ -331,6 +331,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 83 P02 | 35 min | 3 tasks | 17 files |
 | Phase 83 P03 | 30 min | 3 tasks | 20 files |
 | Phase 83 P04 | ~20 min | 3 tasks | 17 files |
+| Phase 83 P05 | 40 min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -587,6 +588,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 83]: 83-03: native router test module is named tests (D-10 census allows only three topic-named test mods); nativeChannelNames() shared in ipcDomainParse
 - [Phase 83]: gamelib-proc uses one kill-on-close Windows Job per Helper spawn (not one process-wide Job), so reaping a dead sidecar's Job never kills unrelated helpers
 - [Phase 83]: ChildSet::terminate_all drains entries under the lock then signals without it; unix hard-kills only groups whose leader did not exit within grace; Windows has no graceful stage and reports no stragglers
+- [Phase 83]: 83-05: snapshot floor 231 (237 measured renderer channels minus 6); native snapshot entries carry returns as a last key; MULTI_REGISTRATION pins exact file sets because the shared scan does not strip comments
 
 ### Pending Todos
 
@@ -835,8 +837,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-20T09:43:51.315Z
-Stopped at: Completed 83-04-PLAN.md
+Last session: 2026-11-20T09:54:44.730Z
+Stopped at: Completed 83-05-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
