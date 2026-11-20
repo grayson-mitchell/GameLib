@@ -40,8 +40,6 @@ import {
   installdirShape,
   rawInstalldirFromInstallPath
 } from './installdirShape'
-
-export { installdirShape, rawInstalldirFromInstallPath }
 import { refuseWithRemovalNotice, steamSafetyRequest } from './safeSteamRemove'
 import {
   getBridgeBottleSettings,

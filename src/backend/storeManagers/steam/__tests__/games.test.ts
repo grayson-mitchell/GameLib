@@ -138,7 +138,10 @@ import {
   isSteamNativeInstallEnabled
 } from '../nativeInstallSetting'
 import { decideSteamNativeDelete } from '../nativeDelete'
-import { installdirShape, rawInstalldirFromInstallPath } from '../gameUninstall'
+import {
+  installdirShape,
+  rawInstalldirFromInstallPath
+} from '../installdirShape'
 import { isSteamExperimentalInstallAppEnabled } from '../experimentalInstallAppSetting'
 import { requestSteamInstallApp } from '../steamInstallApp'
 import { downloadSteamDepots, prescreenBridgeDepots } from '../depot'
