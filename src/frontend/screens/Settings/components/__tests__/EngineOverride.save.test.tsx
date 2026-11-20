@@ -160,7 +160,9 @@ describe('EngineOverride save chain (G17)', () => {
       onChange,
       t: gamelibT
     }) as El
-    const sel = (view.props.children as El[]).find((c) => c.props.htmlId) as El
+    const sel = [view.props.children as El | El[]]
+      .flat()
+      .find((c) => c.props.htmlId) as El
     expect(sel.props.value).toBe('wine-manager:0.0-missing')
     const items = sel.props.children as El[]
     const extra = at(items, items.length - 1)

@@ -47,7 +47,10 @@ const EnvVariablesTable = () => {
 
   return (
     <TableInput
-      label={t('options.advanced.title', 'Environment Variables')}
+      label={t(
+        'gamelib:settings.fields.environment.label',
+        'Environment variables'
+      )}
       htmlId={'enviromentOptions'}
       header={{
         key: t('options.advanced.key', 'Variable Name'),

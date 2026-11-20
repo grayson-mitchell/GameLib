@@ -9,6 +9,8 @@ files:
 severity: minor
 platform: any
 ready: code
+resolved: 2026-11-21
+resolution: "Per the sketch 009 README note the twisties were on Wine (Engine) and Run (Steam overlay), not Advanced; both are now plain fields with (i) help, and Advanced is grouped into headed cards."
 ---
 
 ## Problem
@@ -31,3 +33,7 @@ The operator wants a plain heading per section with the content always visible.
   collapsed block.
 - Check `runAdvancedTabs.test.ts` and any test that clicks a twisty open.
 - Run `npx prettier --check` scoped to the files written.
+
+## Resolution (2026-11-21, quick 261121-dzl)
+
+Per the sketch 009 README note, the twisties were on the Wine tab (Engine) and the Run tab (Steam overlay), not Advanced. Both are now plain always-visible selects with (i) help, and Advanced is grouped into headed cards (Launch target, Scripts, Wrappers & environment, Diagnostics & updates).

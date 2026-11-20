@@ -40,15 +40,17 @@ const OfflineMode = () => {
         htmlId="offlinemode"
         value={offlineMode}
         handleChange={() => setOfflineMode(!offlineMode)}
-        title={t('setting.offlinemode')}
+        title={t('gamelib:settings.fields.offline.label', 'Run offline')}
       />
       {!canRunOffline && offlineMode && (
-        <div className="infoBox saves-warning">
-          <FontAwesomeIcon icon={faExclamationTriangle} color={'yellow'} />
-          {t(
-            'settings.offline.warning',
-            'This game does not explicitly allow offline mode, turn this on at your own risk. The game may not work.'
-          )}
+        <div className="settingsWarning" role="note">
+          <FontAwesomeIcon icon={faExclamationTriangle} />
+          <span>
+            {t(
+              'settings.offline.warning',
+              'This game does not explicitly allow offline mode, turn this on at your own risk. The game may not work.'
+            )}
+          </span>
         </div>
       )}
     </>

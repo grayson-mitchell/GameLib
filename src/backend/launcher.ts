@@ -290,7 +290,7 @@ async function runLaunchEventCallback(
       forceLog: true
     })
     await logWriter.logWarning(
-      "Enable verbose logs in Game's settings > Advanced tab > 'Enable verbose logs' before reporting an issue.",
+      "Turn on Verbose logs in the game's settings (Advanced tab) before reporting an issue.",
       { forceLog: true }
     )
   }

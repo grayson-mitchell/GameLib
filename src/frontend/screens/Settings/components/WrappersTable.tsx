@@ -38,6 +38,11 @@ const WrappersTable = () => {
   const wrapperInfo = (
     <InfoBox text="infobox.help" iconOnly>
       {t(
+        'gamelib:settings.fields.wrappers.help',
+        'Commands the game is launched through, in order.'
+      )}
+      <br />
+      {t(
         'options.wrapper.arguments_example',
         'Arguments example: --arg; --extra-file="file-path/ with/spaces"'
       )}
@@ -46,7 +51,7 @@ const WrappersTable = () => {
 
   return (
     <TableInput
-      label={t('options.wrapper.title', 'Wrapper command:')}
+      label={t('gamelib:settings.fields.wrappers.label', 'Wrapper commands')}
       htmlId={'wrapperOptions'}
       header={{
         key: t('options.wrapper.exe', 'Wrapper'),

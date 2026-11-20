@@ -1,5 +1,4 @@
 import type { ReactElement } from 'react'
-import { at } from '../../../__tests__/fixtures/indexed'
 
 // No DOM renderer in this project: drive the component function directly with
 // hooks stubbed (effects run synchronously).
@@ -53,8 +52,7 @@ const render = (): ReactElement | null =>
   (SteamOverlayOverride as unknown as () => ReactElement | null)()
 
 const select = (el: ReactElement): ReactElement => {
-  const kids = (el.props as { children: ReactElement[] }).children
-  return at(kids, 1)
+  return (el.props as { children: ReactElement }).children
 }
 
 beforeEach(() => {
@@ -69,13 +67,11 @@ beforeEach(() => {
 })
 
 describe('SteamOverlayOverride', () => {
-  it('renders a details with the summary and an automatic select', () => {
+  it('261121-dzl: renders an always-visible div with an automatic select, no disclosure', () => {
     const el = render()!
-    expect(el.type).toBe('details')
-    const kids = (el.props as { children: ReactElement[] }).children
-    expect((at(kids, 0).props as Props).children).toBe(
-      'Steam overlay (advanced)'
-    )
+    expect(el.type).toBe('div')
+    expect((el.props as Props).className).toBe('steamOverlayOverride')
+    expect(el.type).not.toBe('details')
     expect((select(el).props as Props).value).toBe('automatic')
   })
 

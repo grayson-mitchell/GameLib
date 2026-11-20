@@ -8,6 +8,8 @@ files:
 severity: minor
 platform: any
 ready: live-gate
+resolved: 2026-11-21
+resolution: "The close X now has its own column in a header row beside the thumbnail and title (Dialog header slot, sketch 009 #1); live short/long-title check is the quick's post-execution UAT."
 ---
 
 ## Problem
@@ -27,3 +29,7 @@ the top-right of the first row or tab content.
 - Give the close button its own reserved space, or move the colliding control. Keep the
   macOS traffic-light and theme rules from the sketch findings in mind.
 - Verify live in `pnpm tauri:dev` with both a short and a long game title.
+
+## Resolution (2026-11-21, quick 261121-dzl)
+
+The close X now has its own column in a header row beside the game thumbnail and title, through the new opt-in `header` slot on `Dialog` (`.Dialog__header`). `SettingsModal` no longer renders `DialogHeader`, so there is exactly one close button and nothing floats over the content. The long and short title live check is this quick's post-execution UAT (items 1 and 2).

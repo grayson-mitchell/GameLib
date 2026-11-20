@@ -50,10 +50,7 @@ const SteamOverlayOverride = () => {
   if (!eligible) return null
 
   return (
-    <details className="steamOverlayOverride">
-      <summary>
-        {t('steam.overlay.override.summary', 'Steam overlay (advanced)')}
-      </summary>
+    <div className="steamOverlayOverride">
       <SelectField
         htmlId="steamOverlayOverride"
         value={parseOverlayValue(override)}
@@ -81,7 +78,7 @@ const SteamOverlayOverride = () => {
           {t('steam.overlay.override.off', 'Off')}
         </MenuItem>
       </SelectField>
-    </details>
+    </div>
   )
 }
 

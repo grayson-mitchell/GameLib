@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import SettingsContext from '../SettingsContext'
 import useSetting from 'frontend/hooks/useSetting'
 import { PathSelectionBox } from 'frontend/components/UI'
+import InfoIcon from 'frontend/components/UI/InfoIcon'
 
 const BeforeLaunchScriptPath = () => {
   const { t } = useTranslation()
@@ -18,10 +19,15 @@ const BeforeLaunchScriptPath = () => {
       pathDialogTitle={t('box.select.script', 'Select script ...')}
       pathDialogDefaultPath={gameInfo?.install.install_path}
       placeholder={scriptPath || t('box.select.script', 'Select script ...')}
-      label={t(
-        'setting.before-launch-script-path',
-        'Select a script to run before the game is launched'
-      )}
+      label={t('gamelib:settings.fields.beforeLaunch.label', 'Before launch')}
+      labelHelp={
+        <InfoIcon
+          text={t(
+            'gamelib:settings.fields.beforeLaunch.help',
+            'A script GameLib runs before the game starts. The game waits for it to finish.'
+          )}
+        />
+      }
       htmlId="before-launch-script-path"
     />
   )

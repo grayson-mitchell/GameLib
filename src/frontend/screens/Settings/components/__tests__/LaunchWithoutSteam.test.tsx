@@ -148,7 +148,7 @@ describe('LaunchWithoutSteam', () => {
     )
   })
 
-  test('steam-api view with the setting on shows the yellow warning', async () => {
+  test('261121-dzl: steam-api view with the setting on shows one amber risk-only warning', async () => {
     verdict.mockResolvedValue({
       applies: true,
       kind: 'bridge',
@@ -158,7 +158,25 @@ describe('LaunchWithoutSteam', () => {
     const box = checkbox(container)
     expect(box?.checked).toBe(true)
     expect(box?.disabled).toBe(false)
-    expect(container.querySelectorAll('.infoBox.saves-warning')).toHaveLength(1)
+    const warnings = container.querySelectorAll('.settingsWarning')
+    expect(warnings).toHaveLength(1)
+    const text = warnings[0]?.textContent ?? ''
+    expect(text).toBe(
+      "This game uses the Steam API, or GameLib couldn't check. Without Steam it may quit, lose Steam features, or reopen Steam."
+    )
+    expect(text).not.toContain('You lose')
+    expect(warnings[0]?.querySelector('svg')?.hasAttribute('color')).toBe(false)
+    expect(container.querySelector('.saves-warning')).toBeNull()
+  })
+
+  test('261121-dzl: every toggle view shows the losses once in a visible description', async () => {
+    verdict.mockResolvedValue(clean)
+    const { container } = await mount(ctx(false, '570', false))
+    const desc = container.querySelectorAll('.settingsToggleDescription')
+    expect(desc).toHaveLength(1)
+    expect(desc[0]?.textContent).toBe(
+      'Starts the game directly: no Steam Cloud sync, no playtime tracking, no achievements and no Steam overlay.'
+    )
   })
 
   test('clean view with the setting on has no warning', async () => {
@@ -166,6 +184,7 @@ describe('LaunchWithoutSteam', () => {
     const { container } = await mount(ctx(false, '570', true))
     expect(checkbox(container)?.checked).toBe(true)
     expect(container.querySelector('.saves-warning')).toBeNull()
+    expect(container.querySelector('.settingsWarning')).toBeNull()
   })
 
   test('toggling writes the negated value', async () => {

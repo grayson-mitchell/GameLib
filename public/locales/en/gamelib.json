@@ -22,8 +22,8 @@
             "launch": {
                 "epic": {
                     "credentials": "Your Epic Games sign-in has expired, so {{title}} didn't start. Log out of Epic Games, log in again, then press Play.",
-                    "loginFailed": "GameLib couldn't sign in to Epic Games, so {{title}} didn't start. Check your internet connection, or log out of Epic Games and log in again. If this game can run offline, turn on Run Game Offline in its settings.",
-                    "network": "GameLib couldn't reach Epic Games to sign in, so {{title}} didn't start. Check your internet connection and try again. If this game can run offline, turn on Run Game Offline in its settings."
+                    "loginFailed": "GameLib couldn't sign in to Epic Games, so {{title}} didn't start. Check your internet connection, or log out of Epic Games and log in again. If this game can run offline, turn on Run offline on the Run tab of its settings.",
+                    "network": "GameLib couldn't reach Epic Games to sign in, so {{title}} didn't start. Check your internet connection and try again. If this game can run offline, turn on Run offline on the Run tab of its settings."
                 }
             }
         },
@@ -670,6 +670,49 @@
         "eosOverlayInstallConfirmTitle": "Confirm overlay install",
         "eosOverlayUpdateConfirmBody": "Update the EOS Overlay to the latest version?",
         "eosOverlayUpdateConfirmTitle": "Confirm overlay update",
+        "fields": {
+            "afterExit": {
+                "help": "A script GameLib runs after the game closes.",
+                "label": "After exit"
+            },
+            "alternativeExe": {
+                "help": "Run a different .exe from the game folder instead of the game's usual one.",
+                "label": "Alternative executable"
+            },
+            "beforeLaunch": {
+                "help": "A script GameLib runs before the game starts. The game waits for it to finish.",
+                "label": "Before launch"
+            },
+            "environment": {
+                "label": "Environment variables"
+            },
+            "language": {
+                "label": "Game language"
+            },
+            "launchArguments": {
+                "help": "Passed to the game executable after its own arguments, for example -nolauncher to skip the launcher in some games.",
+                "label": "Launch arguments"
+            },
+            "offline": {
+                "label": "Run offline"
+            },
+            "showFps": {
+                "help": "Draws a frame counter for DirectX 9, 10 and 11 games.",
+                "label": "Show FPS"
+            },
+            "statsOverlay": {
+                "help": "Shows Apple's Metal performance HUD over the game.",
+                "label": "Stats overlay"
+            },
+            "verboseLogs": {
+                "help": "Writes extra Wine and GameLib detail to the game's log.",
+                "label": "Verbose logs"
+            },
+            "wrappers": {
+                "help": "Commands the game is launched through, in order.",
+                "label": "Wrapper commands"
+            }
+        },
         "framelessWindowDescription": "Use frameless window",
         "gamepadInitialRepeatDelay": "Gamepad input initial repeat delay",
         "gamepadRepeatFrequency": "Gamepad input repeat frequency",
@@ -860,10 +903,12 @@
         },
         "directLaunch": {
             "confirmMessage": "This starts the game directly, without the Steam client. For this session there is no Steam Cloud sync, no playtime tracking, no achievements and no Steam overlay.",
+            "description": "Starts the game directly: no Steam Cloud sync, no playtime tracking, no achievements and no Steam overlay.",
             "drmBadge": "Not available: this game uses Steam DRM, which needs the Steam app.",
             "failed": "Could not launch {{game}} without Steam.",
             "label": "Launch without Steam",
             "needsSteam": "{{game}} closed right after starting without Steam, so it probably needs the Steam app. If Launch without Steam is on for this game, turn it off in its settings: Run > Launch without Steam.",
+            "risk": "This game uses the Steam API, or GameLib couldn't check. Without Steam it may quit, lose Steam features, or reopen Steam.",
             "warning": "This game uses the Steam API, or GameLib could not check. Without Steam it may quit, run without Steam features, or reopen Steam. You lose Steam Cloud sync, playtime, achievements and the overlay."
         },
         "download": {
@@ -959,7 +1004,7 @@
         },
         "install": {
             "bottleNameReadonlyHelper": "GameLib manages one shared CrossOver bottle for Steam. Naming a separate bottle per game isn't supported yet.",
-            "bridgeEngineNotice": "This game gets its own bottle. To change the engine it runs on, use Engine (advanced) in the game's settings.",
+            "bridgeEngineNotice": "This game gets its own bottle. To change the engine it runs on, use Engine on the Wine tab of the game's settings.",
             "contentLightNotice": "This installs through Steam's own client, so there's nothing to choose here. Turn on native Steam installs in Settings to manage install location and Windows compatibility from GameLib.",
             "contentLightSingleLibraryNotice": "There's only one Steam library on this system, so there's nothing to choose here — GameLib will install this game into it.",
             "crossoverRequired": "CrossOver is required to install Windows games on macOS. Install it from codeweavers.com, then try again.",

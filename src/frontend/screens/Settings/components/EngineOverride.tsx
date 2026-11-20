@@ -25,8 +25,8 @@ type T = (
  * Phase 61 D-10, D-11: the one Engine control for every store and the macOS
  * defaults page.
  * Originally D-14: the per-game engine override. On the Wine tab (quick 261104-tm6;
- * D-14 placed it under Advanced), collapsed, defaults to
- * Automatic, and loudly unsupported when used. D-08: this select is the only
+ * D-14 placed it under Advanced), always visible (quick 261121-dzl, no
+ * "(advanced)" disclosure), defaults to Automatic, and loudly unsupported when used. D-08: this select is the only
  * route to the previous pinned build -- there is no separate rollback toggle.
  * Only ids returned by listEngineOptions are offered (T-59-52), and no
  * filesystem path is ever built or shown.
@@ -118,7 +118,7 @@ interface ViewProps {
   loaded: boolean
   onChange: (id: string) => void
   t: T
-  /** Install dialogs show the select expanded. */
+  /** No-op since quick 261121-dzl: the field is always expanded. Kept so callers compile. */
   open?: boolean
 }
 
@@ -127,8 +127,7 @@ export function EngineOverrideView({
   value,
   loaded,
   onChange,
-  t,
-  open
+  t
 }: ViewProps) {
   const shown = visibleOptions(options, value)
   const extra = storedExtraOption(value, shown, loaded, t)
@@ -154,10 +153,7 @@ export function EngineOverrideView({
       : [])
   ]
   return (
-    <details className="engineOverride" open={open}>
-      <summary>
-        {t('steam.engine.override.summary', 'Engine (advanced)')}
-      </summary>
+    <div className="engineOverride">
       <SelectField
         htmlId="engineOverride"
         value={value}
@@ -185,7 +181,7 @@ export function EngineOverrideView({
       >
         {items}
       </SelectField>
-    </details>
+    </div>
   )
 }
 

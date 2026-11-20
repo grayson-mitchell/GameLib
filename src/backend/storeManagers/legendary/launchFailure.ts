@@ -64,14 +64,14 @@ export function legendaryLaunchFailureDialog(
     case 'network':
       message = t(
         'gamelib:box.error.launch.epic.network',
-        "GameLib couldn't reach Epic Games to sign in, so {{title}} didn't start. Check your internet connection and try again. If this game can run offline, turn on Run Game Offline in its settings.",
+        "GameLib couldn't reach Epic Games to sign in, so {{title}} didn't start. Check your internet connection and try again. If this game can run offline, turn on Run offline on the Run tab of its settings.",
         { title: gameTitle }
       )
       break
     case 'login':
       message = t(
         'gamelib:box.error.launch.epic.loginFailed',
-        "GameLib couldn't sign in to Epic Games, so {{title}} didn't start. Check your internet connection, or log out of Epic Games and log in again. If this game can run offline, turn on Run Game Offline in its settings.",
+        "GameLib couldn't sign in to Epic Games, so {{title}} didn't start. Check your internet connection, or log out of Epic Games and log in again. If this game can run offline, turn on Run offline on the Run tab of its settings.",
         { title: gameTitle }
       )
       break

@@ -29,10 +29,7 @@ const PreferedLanguage = () => {
 
   return (
     <TextInputField
-      label={t(
-        'setting.prefered_language',
-        'Prefered Language (Language Code)'
-      )}
+      label={t('gamelib:settings.fields.language.label', 'Game language')}
       htmlId="prefered-language"
       placeholder={t(
         'placeholder.prefered_language',

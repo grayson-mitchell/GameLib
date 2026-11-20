@@ -84,18 +84,22 @@ const LaunchWithoutSteam = () => {
         value={on === true}
         handleChange={() => setOn(!on)}
         title={title}
-        description={t(
-          'steam.directLaunch.confirmMessage',
-          'This starts the game directly, without the Steam client. For this session there is no Steam Cloud sync, no playtime tracking, no achievements and no Steam overlay.'
-        )}
       />
+      <p className="settingsToggleDescription">
+        {t(
+          'steam.directLaunch.description',
+          'Starts the game directly: no Steam Cloud sync, no playtime tracking, no achievements and no Steam overlay.'
+        )}
+      </p>
       {control.warn && (
-        <div className="infoBox saves-warning">
-          <FontAwesomeIcon icon={faExclamationTriangle} color={'yellow'} />
-          {t(
-            'steam.directLaunch.warning',
-            'This game uses the Steam API, or GameLib could not check. Without Steam it may quit, run without Steam features, or reopen Steam. You lose Steam Cloud sync, playtime, achievements and the overlay.'
-          )}
+        <div className="settingsWarning" role="note">
+          <FontAwesomeIcon icon={faExclamationTriangle} />
+          <span>
+            {t(
+              'steam.directLaunch.risk',
+              "This game uses the Steam API, or GameLib couldn't check. Without Steam it may quit, lose Steam features, or reopen Steam."
+            )}
+          </span>
         </div>
       )}
     </>

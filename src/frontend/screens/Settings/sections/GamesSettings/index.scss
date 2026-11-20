@@ -75,6 +75,36 @@
     }
   }
 
+  // quick-261121-dzl (sketch 009 #5): amber risk-only warning, theme tokens only.
+  // `div` scoped: WrappersTable's bold amber inline span keeps its own class
+  // of the same name (Settings/index.css).
+  div.settingsWarning {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-sm);
+    font-size: var(--text-sm);
+    line-height: 1.45;
+    border-radius: 6px;
+    padding: var(--space-sm) var(--space-md);
+    margin: 0 0 var(--space-md);
+    text-align: start;
+    background: color-mix(in srgb, var(--status-warning) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--status-warning) 40%, transparent);
+    color: var(--text-default);
+
+    svg {
+      flex: none;
+      color: var(--status-warning);
+    }
+  }
+
+  // Visible explanation under a toggle; hugs the toggle above it.
+  .settingsToggleDescription {
+    margin: calc(-1 * var(--space-sm)) 0 var(--space-md);
+    font-size: var(--text-sm);
+    color: var(--text-secondary, var(--text-default));
+  }
+
   .settingsCard__title {
     margin: 0 0 var(--space-sm);
     font-size: var(--text-sm);
@@ -174,17 +204,4 @@ details {
 
 .Field {
   text-align: left;
-}
-
-.engineOverride {
-  margin-top: 1rem;
-
-  summary {
-    cursor: pointer;
-    font-weight: 600;
-  }
-
-  &[open] summary {
-    margin-bottom: 0.5rem;
-  }
 }

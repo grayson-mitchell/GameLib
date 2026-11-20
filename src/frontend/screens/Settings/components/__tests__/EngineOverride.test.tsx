@@ -132,16 +132,28 @@ const render = (stored: string | undefined, over = {}) =>
     ...over
   }) as El
 
-const select = (el: El) =>
-  (el.props.children as El[]).find((c) => c.props.htmlId) as El
+const childrenOf = (el: El): El[] => [el.props.children as El | El[]].flat()
+const select = (el: El) => childrenOf(el).find((c) => c.props.htmlId) as El
 
 describe('EngineOverride', () => {
-  it('is a collapsed details with the Engine (advanced) summary', () => {
+  it('261121-dzl: is an always-visible div holding the Engine select, no disclosure', () => {
     const el = render('automatic')
-    expect(el.type).toBe('details')
-    expect(el.props.open).toBeUndefined()
-    const summary = at(el.props.children as El[], 0)
-    expect(summary.props.children).toBe('Engine (advanced)')
+    expect(el.type).toBe('div')
+    expect(el.props.className).toBe('engineOverride')
+    expect(el.type).not.toBe('details')
+    expect(childrenOf(el).some((c) => c.type === 'summary')).toBe(false)
+    const sel = select(el)
+    expect(sel.props.htmlId).toBe('engineOverride')
+    expect(sel.props.label).toBe('Engine')
+    expect(sel.props.labelHelp).toBeTruthy()
+  })
+
+  it('261121-dzl: the legacy open prop changes nothing', () => {
+    const closed = render('automatic')
+    const opened = render('automatic', { open: true })
+    expect(opened.type).toBe('div')
+    expect(opened.props.className).toBe(closed.props.className)
+    expect(opened.props).not.toHaveProperty('open')
   })
 
   it('labels options and disables unavailable ones', () => {

@@ -750,7 +750,7 @@ export default function SteamDialog({
                   <p>
                     {tGamelib(
                       'gamelib:steam.install.bridgeEngineNotice',
-                      "This game gets its own bottle. To change the engine it runs on, use Engine (advanced) in the game's settings."
+                      "This game gets its own bottle. To change the engine it runs on, use Engine on the Wine tab of the game's settings."
                     )}
                   </p>
                 )}

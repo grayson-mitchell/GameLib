@@ -38,13 +38,10 @@ const LauncherArgs = () => {
 
   const launcherArgsInfo = (
     <InfoBox text="infobox.help" iconOnly>
-      <span>
-        {t('help.other.part4')}
-        <strong>{t('help.other.part5')}</strong>
-        {t('help.other.part6')}
-        <strong>{` -nolauncher `}</strong>
-        {t('help.other.part7')}
-      </span>
+      {t(
+        'gamelib:settings.fields.launchArguments.help',
+        'Passed to the game executable after its own arguments, for example -nolauncher to skip the launcher in some games.'
+      )}
     </InfoBox>
   )
 
@@ -56,8 +53,8 @@ const LauncherArgs = () => {
   return (
     <TextInputField
       label={t(
-        'options.gameargs.title',
-        'Game Arguments (appended to game launch command)'
+        'gamelib:settings.fields.launchArguments.label',
+        'Launch arguments'
       )}
       htmlId="launcherArgs"
       placeholder={t('options.gameargs.placeholder')}
