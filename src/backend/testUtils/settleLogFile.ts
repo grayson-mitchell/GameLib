@@ -20,16 +20,22 @@ export async function settleLogFile(
   if (process.platform !== 'win32') return
   const probe = `${logPath}.settle-probe`
   const deadline = Date.now() + timeoutMs
-  for (;;) {
+  // A single clean rename only proves no handle is open at this instant: a straggling append (or
+  // a scanner that opened the freshly written file) can still land right after it. Require the
+  // file to stay renamable across a few spaced probes before calling it settled.
+  let clean = 0
+  while (clean < 3) {
     if (!existsSync(logPath)) return
     try {
       renameSync(logPath, probe)
       renameSync(probe, logPath)
-      return
+      clean++
+      await sleep(15)
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code
       if (code !== 'EPERM' && code !== 'EBUSY') throw error
       if (Date.now() >= deadline) throw error
+      clean = 0
       await sleep(20)
     }
   }
