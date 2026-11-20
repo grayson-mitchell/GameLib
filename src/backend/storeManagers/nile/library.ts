@@ -547,10 +547,6 @@ export default class NileLibraryManager implements LibraryManager {
     commandParts: string[],
     options?: CallRunnerOptions
   ): Promise<ExecResult> {
-    if (process.env.CI === 'e2e') {
-      return this.deps.nileRuntime.stubs.run(commandParts)
-    }
-
     const { dir, bin } = getNileBin(this.deps)
 
     // Set NILE_CONFIG_PATH to a custom, Heroic-specific location so user-made

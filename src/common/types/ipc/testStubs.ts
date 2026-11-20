@@ -15,27 +15,6 @@ export const testStubsSyncArgs = {
   ])
 }
 
-/*
- * These events should only be used during tests to stub/mock
- *
- * We have to handle them in another interface because these
- * events don't have an IpcMainEvent first argument when handled
- */
-// JSON cannot carry `RunnerCommandStub.response` (a Promise), so only the serialisable fields
-// are accepted.
-const runnerCommandStubs = z.array(
-  z.strictObject({
-    commandParts: z.array(z.string().max(4096)).max(256),
-    stdout: z.string().optional(),
-    stderr: z.string().optional()
-  })
-)
-
-export const testStubsTestSyncArgs = {
-  setNileCommandStub: z.tuple([runnerCommandStubs]),
-  resetNileCommandStub: noArgs
-}
-
 export const testStubsAsyncArgs = {
   updateAll: noArgs,
   // Served by the preload (`tauriGamepadInput.ts`); the sidecar registers nothing for it, so the
@@ -49,7 +28,6 @@ interface TestStubsAsyncReturns {
 }
 
 export type TestStubsSync = SendFns<typeof testStubsSyncArgs>
-export type TestStubsTestSync = SendFns<typeof testStubsTestSyncArgs>
 export type TestStubsAsync = InvokeFns<
   typeof testStubsAsyncArgs,
   TestStubsAsyncReturns

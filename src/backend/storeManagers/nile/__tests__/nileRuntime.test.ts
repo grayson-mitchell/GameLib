@@ -75,21 +75,6 @@ describe('createNileRuntime login flight', () => {
   })
 })
 
-describe('createNileRuntime stubs', () => {
-  it('default to the --version answer, can be replaced and reset, and are per runtime', async () => {
-    const a = createNileRuntime()
-    const b = createNileRuntime()
-    expect((await a.stubs.run(['--version'])).stdout).toContain('1.0.0')
-
-    a.stubs.set([{ commandParts: ['library'], stdout: 'lib' }])
-    expect((await a.stubs.run(['library', 'sync'])).stdout).toBe('lib')
-    expect((await b.stubs.run(['--version'])).stdout).toContain('1.0.0')
-
-    a.stubs.reset()
-    expect((await a.stubs.run(['--version'])).stdout).toContain('1.0.0')
-  })
-})
-
 describe('deriveNilePaths', () => {
   it('derives every location from the root with today values', () => {
     const base = join('/app/GameLib', 'nile_config', 'nile')

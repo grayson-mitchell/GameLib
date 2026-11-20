@@ -1228,13 +1228,6 @@ export interface UploadedLogData {
   uploadedAt: number
 }
 
-export interface RunnerCommandStub {
-  commandParts: string[]
-  response?: Promise<ExecResult>
-  stdout?: string
-  stderr?: string
-}
-
 export interface SGDBGrid {
   id: number
   url: string

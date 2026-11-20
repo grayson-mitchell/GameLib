@@ -6,8 +6,7 @@ import {
 } from 'common/types/ipc/mainProcess'
 import {
   testStubsAsyncArgs,
-  testStubsSyncArgs,
-  testStubsTestSyncArgs
+  testStubsSyncArgs
 } from 'common/types/ipc/testStubs'
 import { windowAsyncArgs, windowSyncArgs } from 'common/types/ipc/window'
 import {
@@ -53,14 +52,6 @@ const stubsSync: FixtureTable<typeof testStubsSyncArgs> = {
     invalid: [[], ['up'], [1]]
   }
 }
-const stubList = {
-  valid: [[[{ commandParts: ['legendary', 'list'], stdout: '[]' }]], [[]]],
-  invalid: [[], [[{ stdout: 'x' }]], [[{ commandParts: [1] }]], ['x']]
-}
-const stubsTest: FixtureTable<typeof testStubsTestSyncArgs> = {
-  setNileCommandStub: stubList,
-  resetNileCommandStub: noArgs
-}
 const stubsAsync: FixtureTable<typeof testStubsAsyncArgs> = {
   updateAll: noArgs,
   gamepadAction: {
@@ -75,20 +66,15 @@ describe('mainProcess / window / testStubs schemas', () => {
   expectFixtureCoverage(windowSyncArgs, winSync)
   expectFixtureCoverage(windowAsyncArgs, winAsync)
   expectFixtureCoverage(testStubsSyncArgs, stubsSync)
-  expectFixtureCoverage(testStubsTestSyncArgs, stubsTest)
   expectFixtureCoverage(testStubsAsyncArgs, stubsAsync)
   runFixtureTable(mainProcessSyncArgs, mainSync)
   runFixtureTable(mainProcessAsyncArgs, mainAsync)
   runFixtureTable(windowSyncArgs, winSync)
   runFixtureTable(windowAsyncArgs, winAsync)
   runFixtureTable(testStubsSyncArgs, stubsSync)
-  runFixtureTable(testStubsTestSyncArgs, stubsTest)
   runFixtureTable(testStubsAsyncArgs, stubsAsync)
 
-  it('tags TestSync as testOnly and window / preload-served channels as local', () => {
-    for (const k of Object.keys(testStubsTestSyncArgs)) {
-      expect(defined(channelSchemas[k], k).testOnly).toBe(true)
-    }
+  it('tags window / preload-served channels as local', () => {
     for (const k of [
       ...Object.keys(windowSyncArgs),
       ...Object.keys(windowAsyncArgs),

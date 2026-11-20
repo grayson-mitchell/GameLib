@@ -53,7 +53,6 @@ import { createStores } from '../stores/createStores'
 import { createStoreRegistry } from '../stores/storeRegistry'
 import { createStoreRoot, type StoreRoot } from '../stores/storeRoot'
 import { createStoreManagers } from '../storeManagers'
-import { registerNileStubListeners } from '../storeManagers/nile/e2eMock'
 import {
   createSteamProcesses,
   type SteamProcesses
@@ -2786,12 +2785,6 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           services,
           shellState: requireShellState(state)
         })
-        // e2e-only command stubs (66.3-07): each registers only when CI === 'e2e'.
-        registerNileStubListeners(
-          services.host.ipc,
-          { CI: process.env.CI },
-          services.nileRuntime.stubs
-        )
       }
     },
     {

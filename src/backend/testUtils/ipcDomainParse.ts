@@ -17,16 +17,10 @@
 import { readdirSync, readFileSync } from 'fs'
 import { join } from 'path'
 
-export const KINDS = ['Sync', 'TestSync', 'Async', 'FrontendMessages'] as const
+export const KINDS = ['Sync', 'Async', 'FrontendMessages'] as const
 export type Kind = (typeof KINDS)[number]
 
-// TestSync must be tested before Sync: `FooTestSync` also ends in `Sync`.
-const DETECT_ORDER: readonly Kind[] = [
-  'TestSync',
-  'FrontendMessages',
-  'Async',
-  'Sync'
-]
+const DETECT_ORDER: readonly Kind[] = ['FrontendMessages', 'Async', 'Sync']
 
 export interface DomainPart {
   name: string

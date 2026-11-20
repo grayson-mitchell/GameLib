@@ -1,9 +1,4 @@
-import {
-  createIpcRegistry,
-  handleTyped,
-  onTestOnly,
-  onTyped
-} from '../ipcRegistry'
+import { createIpcRegistry, handleTyped, onTyped } from '../ipcRegistry'
 
 describe('createIpcRegistry', () => {
   it('registers, reads and removes a handler', () => {
@@ -72,13 +67,5 @@ describe('typed helpers', () => {
     const ipc = createIpcRegistry()
     onTyped(ipc, 'quit', jest.fn())
     expect(ipc.getListeners('quit')).toHaveLength(1)
-  })
-
-  it('onTestOnly registers only when the passed env has CI === e2e', () => {
-    const ipc = createIpcRegistry()
-    onTestOnly(ipc, { CI: 'true' }, 'setSetting' as never, jest.fn())
-    expect(ipc.getListeners('setSetting')).toEqual([])
-    onTestOnly(ipc, { CI: 'e2e' }, 'setSetting' as never, jest.fn())
-    expect(ipc.getListeners('setSetting')).toHaveLength(1)
   })
 })

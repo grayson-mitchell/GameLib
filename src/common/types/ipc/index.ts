@@ -30,11 +30,7 @@ import type { ShortcutsSync, ShortcutsAsync } from './shortcuts'
 import type { SteamAsync, SteamFrontendMessages } from './steam'
 import type { SteamAuthSync, SteamAuthAsync } from './steamAuth'
 import type { StoreEmbedSync, StoreEmbedAsync } from './storeEmbed'
-import type {
-  TestStubsSync,
-  TestStubsTestSync,
-  TestStubsAsync
-} from './testStubs'
+import type { TestStubsSync, TestStubsAsync } from './testStubs'
 import type { WindowSync, WindowAsync } from './window'
 import type { WineToolsAsync, WineToolsFrontendMessages } from './wineTools'
 
@@ -56,8 +52,6 @@ export type SyncIPCFunctions = AppShellSync &
   StoreEmbedSync &
   TestStubsSync &
   WindowSync
-
-export type TestSyncIPCFunctions = TestStubsTestSync
 
 export type AsyncIPCFunctions = AppShellAsync &
   ClipboardAsync &

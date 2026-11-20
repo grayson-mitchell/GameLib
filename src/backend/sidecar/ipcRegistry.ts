@@ -9,11 +9,7 @@
  * registry as their first argument instead of reaching for a module singleton.
  */
 
-import type {
-  AsyncIPCFunctions,
-  SyncIPCFunctions,
-  TestSyncIPCFunctions
-} from 'common/types/ipc'
+import type { AsyncIPCFunctions, SyncIPCFunctions } from 'common/types/ipc'
 import type { IpcMainEvent } from 'common/types/hostTypes'
 
 /** The event object handed to a handler. `sidecarRpc` dispatches with `undefined`. */
@@ -115,14 +111,4 @@ export function onTyped<ChannelName extends keyof SyncIPCFunctions>(
   ) => void
 ): void {
   ipc.on(channel, listener as never)
-}
-
-/** Registers only when `env.CI === 'e2e'`; the env is passed in, not read from `process.env`. */
-export function onTestOnly<ChannelName extends keyof TestSyncIPCFunctions>(
-  ipc: Pick<IpcRegistry, 'on'>,
-  env: Pick<NodeJS.ProcessEnv, 'CI'>,
-  channel: ChannelName,
-  listener: (...args: Parameters<TestSyncIPCFunctions[ChannelName]>) => void
-): void {
-  if (env.CI === 'e2e') ipc.on(channel, listener as never)
 }

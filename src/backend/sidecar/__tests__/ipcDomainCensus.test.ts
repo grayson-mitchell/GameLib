@@ -33,7 +33,6 @@ const SIDECAR_DIR = join(__dirname, '..')
 
 const UMBRELLA: Record<Kind, string> = {
   Sync: 'SyncIPCFunctions',
-  TestSync: 'TestSyncIPCFunctions',
   Async: 'AsyncIPCFunctions',
   FrontendMessages: 'FrontendMessages'
 }
@@ -53,8 +52,6 @@ const NO_REGISTRATION_OWNER: Record<string, string> = {
   'Sync:unmaximizeWindow': 'window',
   'Sync:closeWindow': 'window',
   'Sync:setFullscreen': 'window',
-  'TestSync:setNileCommandStub': 'testStubs',
-  'TestSync:resetNileCommandStub': 'testStubs',
   'Async:updateAll': 'testStubs',
   'Async:isFullscreen': 'window',
   'Async:isFrameless': 'window',
@@ -274,7 +271,9 @@ describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
     // Phase 82 Plan 06: +1 FrontendMessages (removalRefusedNotice, the guard refusal toast); owner-less allowlist 66 -> 67.
     // Phase 82 Plan 10: -2 TestSync (setGogdlCommandStub, resetGogdlCommandStub, the gogdl e2e stub deleted, D-19); owner-less allowlist 67 -> 65.
     // Phase 82 Plan 15: -2 TestSync (setLegendaryCommandStub, resetLegendaryCommandStub, the legendary e2e stub deleted, D-19); owner-less allowlist 65 -> 63.
-    expect(total).toBe(291)
+    // Phase 82 Plan 15: -2 TestSync (setNileCommandStub, resetNileCommandStub, the nile e2e stub deleted, D-19); owner-less allowlist 63 -> 61.
+    // That removed the last TestSync channel, so the TestSync kind left the census.
+    expect(total).toBe(289)
     // Floor (Phase 67): originally measured - 6. Re-measured at 290 after quick 261115-tk8's deliberate
     // six-channel deletion and quick 261117-p38's two added channels (288 + 2), so the floor moves
     // 290 -> 284 and the parse-miss margin stays the same 6.
@@ -303,7 +302,7 @@ describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
       }
     }
     expect(computed).toEqual(NO_REGISTRATION_OWNER)
-    expect(Object.keys(NO_REGISTRATION_OWNER)).toHaveLength(63)
+    expect(Object.keys(NO_REGISTRATION_OWNER)).toHaveLength(61)
   })
 
   it('parseDomainFile reads the const-args conversion form', () => {
@@ -314,11 +313,9 @@ describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
       { name: 'FooSync', kind: 'Sync', keys: ['bar', 'baz-q'] }
     ])
     const sat = parseDomainFile(
-      'export const fooTestSyncArgs = {\n  a: z.tuple([])\n} satisfies ArgsMap\n'
+      'export const fooAsyncArgs = {\n  a: z.tuple([])\n} satisfies ArgsMap\n'
     )
-    expect(sat).toEqual([
-      { name: 'FooTestSync', kind: 'TestSync', keys: ['a'] }
-    ])
+    expect(sat).toEqual([{ name: 'FooAsync', kind: 'Async', keys: ['a'] }])
   })
 
   it('near-miss: (a) fails for a registration of an undeclared channel', () => {

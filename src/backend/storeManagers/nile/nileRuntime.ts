@@ -1,13 +1,12 @@
 /**
- * The Nile (Amazon) per-boot state (D-05, 66.4-11): the login-data single-flight slot and the e2e nile
- * stub slot. Both were module-level state (user.ts, e2eMock.ts); they are now closure fields of the
- * factories below, built once by the 'nile-runtime' boot step and read through ManagerDeps.nileRuntime.
+ * The Nile (Amazon) per-boot state (D-05, 66.4-11): the login-data single-flight slot. It was
+ * module-level state (user.ts); it is now a closure field of the factory below, built once by the
+ * 'nile-runtime' boot step and read through ManagerDeps.nileRuntime.
  *
- * Construction allocates no I/O, timer or handle (sidecar exit contract). Light module: no value
- * imports besides the stub factory.
+ * Construction allocates no I/O, timer or handle (sidecar exit contract). Light module: type-only
+ * imports.
  */
 import type { NileLoginData } from 'common/types/nile'
-import { createNileStubs, type NileStubs } from './e2eMock'
 
 /**
  * Single-flight around `nile auth --login --non-interactive`. Deliberately NO value cache and NO TTL:
@@ -43,12 +42,10 @@ function createNileLoginFlight(): NileLoginFlight {
 
 export interface NileRuntime {
   loginFlight: NileLoginFlight
-  stubs: NileStubs
 }
 
 export function createNileRuntime(): NileRuntime {
   return {
-    loginFlight: createNileLoginFlight(),
-    stubs: createNileStubs()
+    loginFlight: createNileLoginFlight()
   }
 }

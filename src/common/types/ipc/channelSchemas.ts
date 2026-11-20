@@ -44,11 +44,7 @@ import { gogFrontendMessagesArgs } from './gog'
 import { legendaryFrontendMessagesArgs } from './legendary'
 import { mainProcessAsyncArgs, mainProcessSyncArgs } from './mainProcess'
 import { windowAsyncArgs, windowSyncArgs } from './window'
-import {
-  testStubsAsyncArgs,
-  testStubsSyncArgs,
-  testStubsTestSyncArgs
-} from './testStubs'
+import { testStubsAsyncArgs, testStubsSyncArgs } from './testStubs'
 import { shellFilesAsyncArgs, shellFilesSyncArgs } from './shellFiles'
 import {
   sidecarInternalCallers,
@@ -125,7 +121,6 @@ const inboundEntries = mergeChannelEntries(
     caller: 'renderer',
     callers: { createNewWindow: 'local', clearDMFinished: 'local' }
   }),
-  defineChannelEntries('send', testStubsTestSyncArgs, { testOnly: true }),
   defineChannelEntries('invoke', testStubsAsyncArgs, { caller: 'local' })
 )
 
