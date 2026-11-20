@@ -75,6 +75,9 @@ interface DepotConfig {
   language?: string
   realm?: string
   steamdeck?: string | number
+  /** PICS key naming the DLC app this depot belongs to when that DLC is a
+   *  Steam "do not auto-download" (opt-in) DLC. */
+  optionaldlc?: string | number
 }
 
 interface DepotEntry {
@@ -89,6 +92,8 @@ export interface SteamAppInfo {
   depots?: Record<string, DepotEntry>
   extended?: {
     listofdlc?: string
+    /** "1" on a DLC app that Steam leaves unticked until the user enables it. */
+    optionaldlc?: string | number
   }
 }
 
@@ -123,11 +128,12 @@ export function selectAllDepots(
   opts: DepotSelectOpts,
   baseAppId: string
 ): DepotDescriptor[] {
-  const all = [...selectDepots(appinfo, owned, opts, baseAppId)]
+  const notEnabled = optInDlcNotEnabled(dlcInfos)
+  const all = [...selectDepots(appinfo, owned, opts, baseAppId, notEnabled)]
   const seen = new Set(all.map((d) => d.id))
 
   for (const [dlcAppId, dlc] of Object.entries(dlcInfos ?? {})) {
-    for (const d of selectDepots(dlc, owned, opts, dlcAppId)) {
+    for (const d of selectDepots(dlc, owned, opts, dlcAppId, notEnabled)) {
       if (!seen.has(d.id)) {
         seen.add(d.id)
         all.push(d)
@@ -141,6 +147,21 @@ export function selectAllDepots(
   )
 
   return all
+}
+
+/**
+ * DLC appIds (as strings) whose own appinfo says `extended.optionaldlc` is "1",
+ * i.e. DLC that Steam leaves unticked by default. A DLC absent from `dlcInfos`
+ * is never in the set, so its depots keep the current behaviour (selected).
+ */
+function optInDlcNotEnabled(
+  dlcInfos: Record<string, SteamAppInfo> | undefined
+): Set<string> {
+  const out = new Set<string>()
+  for (const [dlcAppId, dlc] of Object.entries(dlcInfos ?? {})) {
+    if (String(dlc?.extended?.optionaldlc) === '1') out.add(dlcAppId)
+  }
+  return out
 }
 
 const gidOfEntry = (e: string | DepotManifestEntry | undefined) =>
@@ -192,12 +213,16 @@ export function branchManifestGid(
  *                   as `ownerAppId` (D-UAT-08). This is NOT necessarily the
  *                   base game's appId — selectAllDepots calls this once per
  *                   DLC/sub-app with THAT app's own id.
+ * @param disabledOptInDlc DLC appIds whose `config.optionaldlc` depots are
+ *                   skipped (opt-in DLC the caller has not enabled). Defaults
+ *                   to an empty set: no depot is skipped on this axis.
  */
 export function selectDepots(
   appinfo: SteamAppInfo,
   owned: OwnedSets,
   opts: DepotSelectOpts,
-  ownerAppId: string
+  ownerAppId: string,
+  disabledOptInDlc: ReadonlySet<string> = new Set()
 ): DepotDescriptor[] {
   const { os, arch = '64', language = 'english', branch = 'public' } = opts
   const out: DepotDescriptor[] = []
@@ -289,6 +314,15 @@ export function selectDepots(
     if (String(steamdeck) === '1') {
       logInfo(
         `Steam depot selection: skipped depot ${id} (steamdeck=${steamdeck}, not a Steam Deck install)`,
+        LogPrefix.Steam
+      )
+      continue
+    }
+
+    const optInDlc = cfg.optionaldlc
+    if (optInDlc && disabledOptInDlc.has(String(optInDlc))) {
+      logInfo(
+        `Steam depot selection: skipped depot ${id} (optionaldlc=${optInDlc}: opt-in DLC not enabled)`,
         LogPrefix.Steam
       )
       continue

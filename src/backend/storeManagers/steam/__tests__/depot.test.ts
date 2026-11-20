@@ -24,6 +24,12 @@ import { formatEta, rollingRateMiBs } from '../depotRust/progress'
 import { classifyDepotError, isNonRetryableDepotError } from '../depotErrors'
 import { isDecodeStageError } from '../depotDecodeErrors'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
+import { logInfo } from 'backend/logger'
+import {
+  selectAllDepots,
+  type OwnedSets,
+  type SteamAppInfo
+} from '../depot/select'
 
 // ── Logger mock (factory form) ────────────────────────────────────────────────
 jest.mock('backend/logger', () => ({
@@ -65,20 +71,55 @@ function readDepotFoldedSources(): string {
  */
 describe('23.2-03 (G-23-01): skip-and-warn EResult 40 Blocked depots', () => {
   describe('D-02/D-04/D-05 source censuses (no essentiality axis at selection time, no bypass parameter on the completeness gate, no skip-driven recovery path)', () => {
-    it('D-02: select.ts (after stripSourceComments) has no eresult reference and no essentiality/required/optional depot-selection-time classification — there is no such signal in appinfo, and D-02 explicitly rejects inventing one', () => {
-      const source = stripSourceComments(
+    /**
+     * `optionaldlc` is the per-depot PICS config key Steam uses for its "do not auto-download
+     * this DLC" setting (quick 261120-st3). It is a config filter like realm/steamdeck, not an
+     * essentiality classification, so the census exempts it. Only the exact, case-sensitive,
+     * word-bounded key is exempt: `optional`, `isOptional` and `optionaldlcFlag` still trip.
+     */
+    const d02CensusText = (source: string): string =>
+      stripSourceComments(source).replace(/\boptionaldlc\b/g, '')
+    const D02_REGEX = /eresult|essential|required|optional/i
+
+    it('D-02: select.ts (after stripSourceComments, exact optionaldlc PICS key exempt) has no eresult reference and no essentiality/required/optional depot-selection-time classification — there is no such signal in appinfo, and D-02 explicitly rejects inventing one', () => {
+      const source = d02CensusText(
         readFileSync(join(__dirname, '..', 'depot', 'select.ts'), 'utf8')
       )
-      expect(source).not.toMatch(/eresult|essential|required|optional/i)
+      expect(source).not.toMatch(D02_REGEX)
     })
 
     it('D-02 RED: the census DOES trip on a known-bad specimen that adds an essentiality classification', () => {
-      const specimen = stripSourceComments(
+      const specimen = d02CensusText(
         'export function classifyEssential(depotId: string): boolean {\n' +
           '  return isEssential(depotId)\n' +
           '}\n'
       )
-      expect(specimen).toMatch(/eresult|essential|required|optional/i)
+      expect(specimen).toMatch(D02_REGEX)
+    })
+
+    it.each([
+      [
+        'a bare optional field next to cfg.optionaldlc',
+        'if (cfg.optionaldlc && d.optional) continue\n'
+      ],
+      ['an isOptional call', 'if (isOptional(d)) continue\n'],
+      [
+        'an optionaldlcFlag identifier',
+        'const optionaldlcFlag = cfg.optionaldlc\n'
+      ]
+    ])(
+      'D-02 RED: the census still trips after the optionaldlc narrowing on %s',
+      (_label, code) => {
+        expect(d02CensusText(code)).toMatch(D02_REGEX)
+      }
+    )
+
+    it('D-02 control: a specimen using only the exact optionaldlc key does NOT trip the narrowed census', () => {
+      const specimen = d02CensusText(
+        'const dlc = String(cfg.optionaldlc)\n' +
+          'if (disabledOptInDlc.has(dlc)) continue\n'
+      )
+      expect(specimen).not.toMatch(D02_REGEX)
     })
 
     it('D-05: depot.ts (after stripSourceComments) has no retry/repair/re-check path keyed on skippedDepots — the skipped set is read for reporting only (D-05: no recovery path)', () => {
@@ -108,6 +149,61 @@ describe('23.2-03 (G-23-01): skip-and-warn EResult 40 Blocked depots', () => {
         true
       )
     })
+  })
+})
+
+/**
+ * Quick 261120-st3: config.optionaldlc opt-in DLC depots.
+ *
+ * Owned sets come from package 0 (the base "Steam" licence every account holds), which lists
+ * appids 570/313250/401530/476580 and depotids 381450/401531 (packageinfo.vdf, 2026-11-20).
+ * The DLC apps' own `extended.optionaldlc` values come from the 2026-10-29 todo's evidence table
+ * (anonymous getProductInfo): 313250 and 401530 are '1', 476580 carries none. The Dota 2 base
+ * fixture does not carry the DLC apps' appinfo, so dlcInfos is built inline.
+ */
+describe('config.optionaldlc opt-in DLC (quick 261120-st3)', () => {
+  const dota = JSON.parse(
+    readFileSync(join(__dirname, 'fixtures', 'appinfo-64bit.json'), 'utf8')
+  ) as SteamAppInfo
+
+  const package0 = (): OwnedSets => ({
+    apps: new Set([570, 313250, 401530, 476580]),
+    depots: new Set([381450, 401531])
+  })
+  const dlcInfos = (): Record<string, SteamAppInfo> => ({
+    '313250': { extended: { optionaldlc: '1' } },
+    '401530': { extended: { optionaldlc: '1' } },
+    '476580': { extended: {} }
+  })
+  const winOpts = { os: 'windows', arch: '64' }
+  const ids = (ds: { id: string }[]) => ds.map((d) => d.id)
+
+  beforeEach(() => {
+    ;(logInfo as jest.Mock).mockClear()
+  })
+
+  it('Test A: skips the opt-in DLC depots (381450, 401531) by default and keeps the Vulkan depots', () => {
+    const out = ids(
+      selectAllDepots(dota, dlcInfos(), package0(), winOpts, '570')
+    )
+    expect(out).not.toContain('381450')
+    expect(out).not.toContain('401531')
+    expect(out).toContain('401535')
+    expect(out).toContain('401536')
+  })
+
+  it('Test B: logs one ids-only skip line per opt-in depot and none for the kept ones', () => {
+    selectAllDepots(dota, dlcInfos(), package0(), winOpts, '570')
+    const msgs = (logInfo as jest.Mock).mock.calls.map((c) => String(c[0]))
+    const skip381450 = msgs.filter((m) => m.includes('skipped depot 381450'))
+    expect(skip381450).toHaveLength(1)
+    expect(skip381450[0]).toContain('optionaldlc=313250')
+    expect(skip381450[0]).toContain('opt-in DLC not enabled')
+    const skip401531 = msgs.filter((m) => m.includes('skipped depot 401531'))
+    expect(skip401531).toHaveLength(1)
+    expect(skip401531[0]).toContain('optionaldlc=401530')
+    expect(msgs.some((m) => m.includes('skipped depot 401535'))).toBe(false)
+    expect(msgs.some((m) => m.includes('skipped depot 401536'))).toBe(false)
   })
 })
 
