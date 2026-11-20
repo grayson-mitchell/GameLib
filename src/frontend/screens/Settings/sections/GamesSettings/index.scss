@@ -33,6 +33,55 @@
     border-radius: var(--space-3xs);
   }
 
+  // quick-261121-dzl (sketch 009 #2): a hint is a neutral accent-tinted note,
+  // not a danger fill. Legacy keeps `.defaults-hint` above.
+  .settingsNote {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-sm);
+    font-size: var(--text-sm);
+    line-height: 1.45;
+    border-radius: 6px;
+    padding: var(--space-sm) var(--space-md);
+    margin: 0 0 var(--space-md);
+    text-align: start;
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+    color: var(--text-secondary, var(--text-default));
+
+    svg {
+      flex: none;
+      color: var(--accent);
+    }
+  }
+
+  // quick-261121-dzl (sketch 009 #7): bordered cards. Relational background:
+  // some themes set --modal-background equal to --body-background, so a
+  // body-coloured card would vanish there.
+  .settingsCard {
+    background: color-mix(
+      in srgb,
+      var(--input-background) 35%,
+      var(--modal-background)
+    );
+    border: 1px solid var(--modal-border, var(--input-background));
+    border-radius: 8px;
+    padding: var(--space-md) var(--space-lg) var(--space-2xs);
+    margin: 0 0 var(--space-md);
+
+    // A card whose fields all render nothing keeps only its heading: hide it.
+    &:not(:has(> :not(.settingsCard__title))) {
+      display: none;
+    }
+  }
+
+  .settingsCard__title {
+    margin: 0 0 var(--space-sm);
+    font-size: var(--text-sm);
+    font-weight: var(--semibold);
+    color: var(--text-title, var(--text-default));
+  }
+
   section:not(:nth-of-type(0)) {
     padding-top: var(--space-xl);
     min-width: 500px;

@@ -45,7 +45,8 @@ describe('Engine control placement (quick 261104-tm6)', () => {
     expect(ternary).toBeGreaterThan(-1)
     expect(engine).toBeGreaterThan(ternary)
     expect(selector).toBeGreaterThan(engine)
-    expect(wine).toContain('gamelib:engine.wineTabHint')
+    expect(wine).toContain('gamelib:engine.wineTabNote')
+    expect(wine).not.toContain('gamelib:engine.wineTabHint')
     expect(wine).not.toContain('gamelib:steam.engine.wineTabHint')
   })
 
@@ -89,13 +90,23 @@ describe('Engine control placement (quick 261104-tm6)', () => {
     expect(advanced).not.toContain('<EngineOverride />')
     expect(advanced).not.toContain('<SteamOverlayOverride />')
     const run = slice("index={'run'}>")
-    expect(run).toContain('isMacSteamTitle && <SteamOverlayOverride />')
+    const gate = run.indexOf('{isMacSteamTitle && (')
+    expect(gate).toBeGreaterThan(-1)
+    expect(run.indexOf('<SteamOverlayOverride />')).toBeGreaterThan(gate)
   })
 
-  test('catalogue carries the hint text', () => {
-    expect(locale.engine.wineTabHint).toBe(
-      'GameLib chooses the Wine engine and bottle for this game.'
+  test('catalogue carries the note text', () => {
+    expect(locale.engine.wineTabNote).toBe(
+      "GameLib picks the Wine engine and bottle for this game. Change it only if the game won't run."
     )
+  })
+
+  test('261121-dzl: the Wine note is neutral, the Legacy banner keeps the danger style (#2)', () => {
+    const wine = slice("index={'wine'}>")
+    expect(wine).toContain('settingsNote')
+    expect(wine).not.toContain('defaults-hint')
+    const legacy = slice("index={'legacy'}>")
+    expect(legacy).toContain('defaults-hint')
   })
 })
 

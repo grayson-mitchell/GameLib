@@ -2,6 +2,7 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 
 const source = readFileSync(join(__dirname, '..', 'index.tsx'), 'utf8')
+const tabsSource = readFileSync(join(__dirname, '..', 'tabs.ts'), 'utf8')
 const locale = JSON.parse(
   readFileSync(
     join(
@@ -71,20 +72,13 @@ describe('Run + Advanced settings tabs (quick 261104-unp)', () => {
   })
 
   test('Run tab and panel are unconditional', () => {
-    expect(source).toContain('value="run"')
+    // 261121-dzl: tabs are mapped from settingsTabOrder, where run is always present.
     expect(source).toContain("t('gamelib:settings.navbar.run', 'Run')")
-    const tabAt = source.indexOf("<Tab\n          label={t('gamelib:settings")
-    const tabAlt = source.indexOf("<Tab label={t('gamelib:settings.navbar.run'")
-    const tab = tabAt > -1 ? tabAt : tabAlt
-    expect(tab).toBeGreaterThan(-1)
-    const beforeTab = source.slice(
-      Math.max(
-        source.lastIndexOf('/>', tab - 1),
-        source.lastIndexOf('>', tab - 1)
-      ) + 1,
-      tab
-    )
-    expect(beforeTab).not.toContain('&&')
+    expect(tabsSource).toMatch(/order\.push\('run'\)/)
+    const runPushes = tabsSource.split("order.push('run')").length - 1
+    expect(runPushes).toBe(2)
+    expect(tabsSource).toContain("if (runFirst) order.push('run')")
+    expect(tabsSource).toContain("if (!runFirst) order.push('run')")
 
     const panel = source.indexOf("<TabPanel value={value} index={'run'}>")
     expect(panel).toBeGreaterThan(-1)
@@ -98,8 +92,13 @@ describe('Run + Advanced settings tabs (quick 261104-unp)', () => {
     expect(beforePanel).not.toContain('&&')
   })
 
-  test('Run panel order is strict', () => {
+  test('settingsTabOrder is called with runFirst: isMacEngineGame (261121-dzl)', () => {
+    expect(source).toMatch(/settingsTabOrder\(\{\s*runFirst: isMacEngineGame/)
+  })
+
+  test('Run panel order is strict inside the Launch card', () => {
     const run = slice("index={'run'}>")
+    expect(run).toContain("'gamelib:settings.cards.launch'")
     let last = -1
     for (const tag of runTags) {
       const at = run.indexOf(tag)
@@ -108,9 +107,22 @@ describe('Run + Advanced settings tabs (quick 261104-unp)', () => {
     }
   })
 
+  test('the Steam card is gated by isMacSteamTitle and holds both Steam controls', () => {
+    const run = slice("index={'run'}>")
+    const gate = run.indexOf('{isMacSteamTitle && (')
+    expect(gate).toBeGreaterThan(-1)
+    const steam = run.slice(gate)
+    expect(steam).toContain("'gamelib:settings.cards.steam'")
+    expect(steam.indexOf('<LaunchWithoutSteam />')).toBeGreaterThan(-1)
+    expect(steam.indexOf('<SteamOverlayOverride />')).toBeGreaterThan(
+      steam.indexOf('<LaunchWithoutSteam />')
+    )
+    // The inner components carry no gate of their own any more.
+    expect(run).not.toContain('isMacSteamTitle && <')
+  })
+
   test('Run panel keeps its gates', () => {
     const run = slice("index={'run'}>")
-    expect(run).toContain('isMacSteamTitle && <SteamOverlayOverride />')
     expect(run).toContain('showStatsOverlay && <ShowFPS />')
     for (const tag of ['<PreferedLanguage />', '<OfflineMode />']) {
       const guard = run.indexOf('!isSideloaded')
@@ -164,11 +176,11 @@ describe('Run + Advanced settings tabs (quick 261104-unp)', () => {
   })
 
   test('starting tab is Wine or Run only', () => {
-    const start = source.indexOf('function getStartingTab')
-    const end = source.indexOf('export default function GamesSettings')
+    const start = tabsSource.indexOf('export function getStartingTab')
+    const end = tabsSource.indexOf('export function settingsTabOrder')
     expect(start).toBeGreaterThan(-1)
     expect(end).toBeGreaterThan(start)
-    const fn = source.slice(start, end)
+    const fn = tabsSource.slice(start, end)
     expect(fn).toContain("'run'")
     expect(fn).toContain("'wine'")
     expect(fn).not.toContain("'advanced'")
@@ -176,7 +188,9 @@ describe('Run + Advanced settings tabs (quick 261104-unp)', () => {
   })
 
   test('a saved other tab falls back to run', () => {
-    expect(source).toMatch(/latestTabIndex === 'other'[\s\S]{0,120}'run'/)
+    expect(tabsSource).toMatch(
+      /export function initialSettingsTab[\s\S]*stored === 'other' \? 'run'/
+    )
   })
 
   test('catalogue carries the Run label', () => {

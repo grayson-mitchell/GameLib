@@ -50,7 +50,15 @@ import useSetting from 'frontend/hooks/useSetting'
 import { defaultWineVersion } from '../..'
 import SyncSaves from '../SyncSaves'
 import { Tabs, Tab } from '@mui/material'
-import { GameInfo } from 'common/types'
+import SettingsCard from './SettingsCard'
+import {
+  getStartingTab,
+  initialSettingsTab,
+  readRememberedTab,
+  rememberTab,
+  settingsTabOrder,
+  SettingsTab
+} from './tabs'
 import DisableUMU from '../../components/DisableUMU'
 import VerboseLogs from '../../components/VerboseLogs'
 import WinetricksSettings from '../WinetricksSettings'
@@ -60,23 +68,6 @@ import {
 } from '../WinetricksSettings/visibility'
 import { hasCapability, isStore } from 'common/storeCapabilities'
 import { engineStateKey, useEngineState } from 'frontend/state/EngineState'
-
-const windowsPlatforms = ['Win32', 'Windows', 'windows']
-function getStartingTab(platform: string, gameInfo?: GameInfo | null): string {
-  if (!gameInfo) {
-    if (platform !== 'win32') {
-      return 'wine'
-    }
-    return 'run'
-  }
-  if (platform === 'win32') {
-    return 'run'
-  } else if (windowsPlatforms.includes(gameInfo?.install.platform || '')) {
-    return 'wine'
-  } else {
-    return 'run'
-  }
-}
 
 export default function GamesSettings() {
   const { t } = useTranslation()
@@ -144,34 +135,40 @@ export default function GamesSettings() {
     wineToolsHidden: hideWineTools
   })
 
-  // Get the latest used tab index for the current game
-  const localStorageKey = gameInfo
-    ? `${gameInfo.app_name}-setting_tab`
-    : 'default'
-  let latestTabIndex =
-    localStorage.getItem(localStorageKey) || getStartingTab(platform, gameInfo)
-  // A tab persisted from a previous render (or a previous game) can be hidden
-  // under the CURRENT render's visibility -- most concretely the winetricks
-  // tab, whose gate depends on `runner`/`isCrossover`, neither of which is
-  // stable across the Default-page / per-game Settings boundary. Falling
-  // back to the same starting tab a fresh mount would pick keeps `value`
-  // from ever pointing at a `<Tab>` that was not rendered.
-  // The Other tab was removed in 261104-unp; 'advanced' remains a valid saved value.
-  if (latestTabIndex === 'other') {
-    latestTabIndex = 'run'
-  }
-  if (latestTabIndex === 'winetricks' && !showWinetricksTab) {
-    latestTabIndex = getStartingTab(platform, gameInfo)
-  }
-  const [value, setValue] = useState(latestTabIndex)
+  const tabOrder = settingsTabOrder({
+    runFirst: isMacEngineGame,
+    showWineTab,
+    showWinetricksTab,
+    showCloudSavesTab,
+    showGamescopeTab: isLinux,
+    showLegacyTab: isLinux && !isNative
+  })
+  // Lazy: the remembered tab (and its one-time key migration) is read once on
+  // mount, not on every render.
+  const [value, setValue] = useState(() =>
+    initialSettingsTab(readRememberedTab(localStorage, gameInfo), {
+      visible: tabOrder,
+      startingTab: getStartingTab(platform, gameInfo)
+    })
+  )
 
   const handleChange = (
     event: React.ChangeEvent<unknown>,
     newValue: string
   ) => {
     setValue(newValue)
-    // Store the latest used tab index for the current game
-    localStorage.setItem(localStorageKey, newValue.toString())
+    // Store the latest used tab for the current game
+    rememberTab(localStorage, gameInfo, newValue.toString())
+  }
+
+  const tabLabels: Record<SettingsTab, string> = {
+    wine: t('gamelib:settings.navbar.wine', 'Wine'),
+    winetricks: t('gamelib:settings.navbar.winetricks', 'Winetricks'),
+    run: t('gamelib:settings.navbar.run', 'Run'),
+    advanced: t('settings.navbar.advanced', 'Advanced'),
+    saves: t('settings.navbar.sync', 'Cloud Saves Sync'),
+    gamescope: t('settings.navbar.gamescope', 'Gamescope'),
+    legacy: t('settings.navbar.legacy', 'Legacy')
   }
 
   useEffect(() => {
@@ -190,12 +187,14 @@ export default function GamesSettings() {
   return (
     <>
       {isDefault && (
-        <p className="defaults-hint">
+        <p className="settingsNote">
           <FontAwesomeIcon icon={faInfoCircle} />
-          {t(
-            'settings.default_hint',
-            'Changes in this section only apply as default values when installing games. If you want to change the settings of an already installed game, use the Settings button in the game page.'
-          )}
+          <span>
+            {t(
+              'settings.default_hint',
+              'Changes in this section only apply as default values when installing games. If you want to change the settings of an already installed game, use the Settings button in the game page.'
+            )}
+          </span>
         </p>
       )}
 
@@ -205,29 +204,9 @@ export default function GamesSettings() {
         aria-label="settings tabs"
         variant="scrollable"
       >
-        {showWineTab && <Tab label="Wine" value="wine" />}
-        {showWinetricksTab && <Tab label="Winetricks" value="winetricks" />}
-        <Tab label={t('gamelib:settings.navbar.run', 'Run')} value="run" />
-        <Tab
-          label={t('settings.navbar.advanced', 'Advanced')}
-          value="advanced"
-        />
-
-        {showCloudSavesTab && (
-          <Tab
-            label={t('settings.navbar.sync', 'Cloud Saves Sync')}
-            value="saves"
-          />
-        )}
-        {isLinux && (
-          <Tab
-            label={t('settings.navbar.gamescope', 'Gamescope')}
-            value="gamescope"
-          />
-        )}
-        {isLinux && !isNative && (
-          <Tab label={t('settings.navbar.legacy', 'Legacy')} value="legacy" />
-        )}
+        {tabOrder.map((tab) => (
+          <Tab key={tab} label={tabLabels[tab]} value={tab} />
+        ))}
       </Tabs>
 
       <TabPanel value={value} index={'wine'}>
@@ -237,32 +216,38 @@ export default function GamesSettings() {
             wineCrossoverBottle are not read by the bridge launch
             (titleSettings.ts LD-2; bottle.ts getBridgeBottleSettings), so they
             are hidden for these titles to leave one which-Wine control. */}
-        {isMacEngineGame ? (
-          <>
-            <span className="defaults-hint">
-              <FontAwesomeIcon icon={faInfoCircle} />
-              {t(
-                'gamelib:engine.wineTabHint',
-                'GameLib chooses the Wine engine and bottle for this game.'
-              )}
-            </span>
-            <EngineOverride />
-            {!isMacSteamTitle &&
-              (engineState?.prefixKind === 'plain' ||
-                engineState?.prefixKind === 'legacy') && <WinePrefix />}
-          </>
-        ) : isDefault && isMac ? (
-          <>
-            <EngineOverride />
-            <WinePrefix />
-          </>
-        ) : (
-          <>
-            <WineVersionSelector />
-            <WinePrefix />
-            <CrossoverBottle />
-          </>
-        )}
+        <SettingsCard
+          title={t('gamelib:settings.cards.wineEngine', 'Wine engine')}
+        >
+          {isMacEngineGame ? (
+            <>
+              <div className="settingsNote">
+                <FontAwesomeIcon icon={faInfoCircle} />
+                <span>
+                  {t(
+                    'gamelib:engine.wineTabNote',
+                    "GameLib picks the Wine engine and bottle for this game. Change it only if the game won't run."
+                  )}
+                </span>
+              </div>
+              <EngineOverride />
+              {!isMacSteamTitle &&
+                (engineState?.prefixKind === 'plain' ||
+                  engineState?.prefixKind === 'legacy') && <WinePrefix />}
+            </>
+          ) : isDefault && isMac ? (
+            <>
+              <EngineOverride />
+              <WinePrefix />
+            </>
+          ) : (
+            <>
+              <WineVersionSelector />
+              <WinePrefix />
+              <CrossoverBottle />
+            </>
+          )}
+        </SettingsCard>
         {/* quick 261104-uxr: for macOS Steam titles these toggles write the
             per-game file, which the bridged launch never reads for them:
             getBridgeBottleSettings spreads GlobalConfig, and
@@ -301,40 +286,63 @@ export default function GamesSettings() {
       )}
 
       <TabPanel value={value} index={'run'}>
-        <LaunchOptionSelector />
-        <LauncherArgs />
-        {!isSideloaded && <PreferedLanguage />}
-        {!isSideloaded && <OfflineMode />}
-        {showStatsOverlay && <ShowFPS />}
-        <Mangohud />
-        <GameMode />
-        <NvidiaPrime />
+        <SettingsCard title={t('gamelib:settings.cards.launch', 'Launch')}>
+          <LaunchOptionSelector />
+          <LauncherArgs />
+          {!isSideloaded && <PreferedLanguage />}
+          {!isSideloaded && <OfflineMode />}
+          {showStatsOverlay && <ShowFPS />}
+          <Mangohud />
+          <GameMode />
+          <NvidiaPrime />
+        </SettingsCard>
         {/* quick 261117-q1t: per-game launch without the Steam app. macOS scope is
-            isMacSteamTitle; route scope comes from the backend verdict. */}
-        {isMacSteamTitle && <LaunchWithoutSteam />}
-        {/* Phase 60 D-02: per-game overlay off switch; eligibility comes from
+            isMacSteamTitle; route scope comes from the backend verdict.
+            Phase 60 D-02: per-game overlay off switch; eligibility comes from
             the backend and includes DRM-mode titles. */}
-        {isMacSteamTitle && <SteamOverlayOverride />}
+        {isMacSteamTitle && (
+          <SettingsCard title={t('gamelib:settings.cards.steam', 'Steam')}>
+            <LaunchWithoutSteam />
+            <SteamOverlayOverride />
+          </SettingsCard>
+        )}
       </TabPanel>
 
       <TabPanel value={value} index={'advanced'}>
-        <AlternativeExe />
-        <div className="Field">
-          <label>{t('setting.scripts', 'Scripts:')}</label>
+        <SettingsCard
+          title={t('gamelib:settings.cards.launchTarget', 'Launch target')}
+        >
+          <AlternativeExe />
+        </SettingsCard>
+        <SettingsCard title={t('gamelib:settings.cards.scripts', 'Scripts')}>
           <BeforeLaunchScriptPath />
           <AfterLaunchScriptPath />
-        </div>
-        <WrappersTable />
-        <EnvVariablesTable />
-        <VerboseLogs />
-        {!isSideloaded && <IgnoreGameUpdates />}
-        {isLinux && <PreferSystemLibs />}
-        {!isNative && (
-          <>
-            <BattlEyeRuntime />
-            <EacRuntime />
-          </>
-        )}
+        </SettingsCard>
+        <SettingsCard
+          title={t(
+            'gamelib:settings.cards.wrappersEnvironment',
+            'Wrappers & environment'
+          )}
+        >
+          <WrappersTable />
+          <EnvVariablesTable />
+          {isLinux && <PreferSystemLibs />}
+          {!isNative && (
+            <>
+              <BattlEyeRuntime />
+              <EacRuntime />
+            </>
+          )}
+        </SettingsCard>
+        <SettingsCard
+          title={t(
+            'gamelib:settings.cards.diagnosticsUpdates',
+            'Diagnostics & updates'
+          )}
+        >
+          <VerboseLogs />
+          {!isSideloaded && <IgnoreGameUpdates />}
+        </SettingsCard>
       </TabPanel>
 
       <TabPanel value={value} index={'saves'}>
