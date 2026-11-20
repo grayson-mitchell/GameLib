@@ -353,7 +353,7 @@ Plans:
   3. Quitting GameLib, and SIGKILL of the parent, leaves no orphaned helper process on macOS, Windows and Linux (launched games excepted), proven on all three OS legs
   4. `gamelib-core` (paths, emitter, clock, `ProcessRunner`, `Shutdown` token) and `gamelib-proc` kill-tree exist, and the TS shim the first migrated channel used is deleted in this phase
 
-**Plans:** 7/11 plans executed
+**Plans:** 8/11 plans executed
 
 Plans:
 **Wave 1**
@@ -370,7 +370,7 @@ Plans:
 - [x] 83-07-PLAN.md — Unix reaper, SIGKILL legs, negative control and Node stand-in leg
 
 **Wave 4** *(blocked on Wave 3 completion)*
-- [ ] 83-08-PLAN.md — Shell SIGKILL wiring: reaper mode and start, sidecar group registered, Windows Job and Rust helpers via gamelib-proc, D-15 recorded
+- [x] 83-08-PLAN.md — Shell SIGKILL wiring: reaper mode and start, sidecar group registered, Windows Job and Rust helpers via gamelib-proc, D-15 recorded
 
 **Wave 5** *(blocked on Wave 4 completion)*
 - [ ] 83-09-PLAN.md — One exit deadline: handle_exit on run_exit, shutdown_child via gamelib-proc, gates rewritten, D-14 convention

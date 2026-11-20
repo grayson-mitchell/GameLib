@@ -4,11 +4,11 @@ milestone: v0.10
 current_phase: 83
 current_phase_name: Native seam, gamelib-core and process/shutdown contract
 status: executing
-stopped_at: Completed 83-07-PLAN.md
-last_updated: "2026-11-20T10:30:12.188Z"
+stopped_at: Completed 83-08-PLAN.md
+last_updated: "2026-11-20T10:41:48.371Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 83 execution started
-state_head: 86552f3cefda9b6cba5d444a6abe2c8596414a38
+state_head: ec2d83af5c71726ea0134bb643a9f666b534c60b
 progress:
   total_phases: 27
   completed_phases: 23
@@ -76,7 +76,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 83 (Native seam, gamelib-core and process/shutdown contract) — EXECUTING
-Plan: 8 of 11
+Plan: 9 of 11
 Status: Ready to execute
 Last activity: 2026-11-20 — Phase 83 execution started
 Progress: [██████████] 100% (19 of 19 phase 82 plans have a SUMMARY; verification human_needed)
@@ -334,6 +334,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 83 P05 | 40 min | 3 tasks | 9 files |
 | Phase 83 P06 | 19 min | 3 tasks | 20 files |
 | Phase 83 P07 | n/a | 3 tasks | 6 files |
+| Phase 83 P08 | not captured | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -595,6 +596,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 83]: 83-06: open_external stays as a shell-internal helper (no #[tauri::command], not in generate_handler!) because store_embed and macos_epic_embed call it directly
 - [Phase 83]: 83-06: one-arg native channels decode as a real (T,) tuple; a one-field tuple struct is a serde newtype
 - [Phase 83]: 83-07: disarm() closes the reaper control pipe itself so EOF follows at once; the getppid trigger waits 200 ms so a just-written disarm is not lost; Windows reaper::start is Unsupported (Job does the work)
+- [Phase 83]: 83-08: the shell's Windows sidecar Job is gamelib_proc::job::Job and reap_dead_sidecar_tree unregisters the reaped pgid from the reaper; the shell keeps no private kill/job code
+- [Phase 83]: 83-08: D-15 interim recorded - on unix a SIGKILL of GameLib now kills TS-launched games (sidecar group); triaged as a ready: blocked todo until Phases 88 and 95-97
 
 ### Pending Todos
 
@@ -843,8 +846,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-20T10:30:12.149Z
-Stopped at: Completed 83-07-PLAN.md
+Last session: 2026-11-20T10:41:48.344Z
+Stopped at: Completed 83-08-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
