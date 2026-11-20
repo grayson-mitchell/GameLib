@@ -301,13 +301,13 @@ Milestone v0.11 Node Sidecar Retirement. Planned 2026-11-17 alongside v0.10; sta
   4. Uninstalling a game never deletes a sibling game co-installed beside it, proven by an adversarial path table (nested installdir, `.\x`, `C:\x`, UNC, symlink, case, NFC/NFD) on macOS, Windows and Linux
   5. The `utils.ts` and `bootstrap.ts` responsibility inventory and the milestone-wide state-ownership table are committed, and the zero-risk deletions (type-only files, dead exports, `legendary/commands/*`, `CI=e2e` mocks; `fileStore.ts` only after the live-or-dead check) are gone
 
-**Plans:** 2/16 plans executed
+**Plans:** 3/16 plans executed
 
 Plans:
 **Wave 1**
 - [x] 82-01-PLAN.md — Re-measure the red set from a clean worktree, fix the jest reds and the D-20 Rust CI reds, open 82-TEST-LEDGER.md
 - [x] 82-02-PLAN.md — Floor + empty-input guards on every census-style gate (D-05)
-- [ ] 82-03-PLAN.md — gamelib-safety + gamelib-testutil crates, adversarial path table, TS wire mirror, first CI step, README rules
+- [x] 82-03-PLAN.md — gamelib-safety + gamelib-testutil crates, adversarial path table, TS wire mirror, first CI step, README rules
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 82-04-PLAN.md — Delete fileStore.ts after the live-or-dead check; D-05 guard on diPhaseGates

@@ -4,11 +4,11 @@ milestone: v0.10
 current_phase: 82
 current_phase_name: Guardrails, hygiene and shared safety primitives
 status: executing
-stopped_at: Completed 82-02-PLAN.md
-last_updated: "2026-11-20T07:22:02.427Z"
+stopped_at: Completed 82-03-PLAN.md
+last_updated: "2026-11-20T07:35:18.219Z"
 last_activity: 2026-11-20
 last_activity_desc: Phase 82 execution started
-state_head: 23987838e571c3b3744100929aa49877b057669d
+state_head: 4a129f733be631f405f7e353e4d2f591f2369564
 progress:
   total_phases: 27
   completed_phases: 23
@@ -76,7 +76,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 82 (Guardrails, hygiene and shared safety primitives) — EXECUTING
-Plan: 3 of 16
+Plan: 4 of 16
 Status: Ready to execute
 Last activity: 2026-11-20 — Phase 82 execution started
 
@@ -309,6 +309,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 64 P11 | 9 min | 3 tasks | 10 files |
 | Phase 82 P01 | 70 min | 3 tasks | 18 files |
 | Phase 82 P02 | 44 min | 3 tasks | 22 files |
+| Phase 82 P03 | 16 min | 3 tasks | 17 files |
 
 ## Accumulated Context
 
@@ -530,6 +531,10 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 82]: 82-01: steam_direct_launch_verdict pinned as kind cache; themeTokens is-text census re-derived 34 -> 39 per site — Derivable eligibility verdict (cache-vs-user-state rule); the five new sites are pure button is-text and none escaped the contrast census
 - [Phase 82]: 82-01: new test-only jest.mock gets a collaborators seam, never a baseline entry — backend-di-ceilings forbids a baseline for a new violation; validateNative and verifyBridge take optional collaborators with real defaults
 - [Phase 82]: 82-02: census gates share assertAtOrAboveFloor and each carries an empty-input test; bridgeCensus now exits 1 on zero titles; lintScoped.cjs is require-safe and exports scopeFloorFailure
+- [Phase 82]: A trailing path separator is trimmed before any safety lookup (lstat of 'link/' follows the link on Unix, which would delete the referent and break D-15)
+- [Phase 82]: gamelib-safety unlinks a symlinked install root while gamelib-steampoll guard_install_root keeps refusing it (D-21); both leave the target data intact
+- [Phase 82]: Sideload exec-bit rule over-refuses native Linux game folders holding helper scripts, per D-22; refusal copy in 82-07/08 should say so
+- [Phase 82]: Windows junctions are created with cmd /C mklink /J (no junction crate); link tests use require_link, which panics under CI
 
 ### Pending Todos
 
@@ -773,8 +778,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-20T07:18:03.595Z
-Stopped at: Completed 82-02-PLAN.md
+Last session: 2026-11-20T07:35:18.183Z
+Stopped at: Completed 82-03-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
