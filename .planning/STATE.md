@@ -79,6 +79,7 @@ Phase: 82 (Guardrails, hygiene and shared safety primitives) — EXECUTING
 Plan: 15 of 16
 Status: Ready to execute
 Last activity: 2026-11-20 - Completed quick task 261120-ux8: Guard removeFixFile and removeSettingsAndLogs deletes against renderer-supplied appName path traversal
+Progress: [█████████░] 88% (14 of 16 phase 82 plans have a SUMMARY; 82-11 proving, 82-12 pending)
 
 ## Native-Install Arc Phase Map (21–25)
 
