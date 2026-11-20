@@ -114,8 +114,10 @@ export const SIDECAR_INVOKE = 'sidecar_invoke' as const
 export const SIDECAR_SEND = 'sidecar_send' as const
 
 /**
- * Tauri command name for the `shell.openExternal` parity path (steam:// opens).
- * The Rust `#[command]` shells the URL through tauri-plugin-opener.
+ * Channel name carried by the sidecar's `openExternal` frame (the `shell.openExternal` parity
+ * path, steam:// opens). It is not a Tauri command: the Rust command of this name was removed in
+ * Phase 83 plan 06 (D-17), and the shell reads the frame in `sidecar.rs` and opens the URL
+ * through tauri-plugin-opener after the scheme check.
  */
 export const OPEN_EXTERNAL = 'open_external' as const
 

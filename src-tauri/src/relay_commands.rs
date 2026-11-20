@@ -204,15 +204,14 @@ where
     tx
 }
 
-/// The only schemes the renderer may ask the shell to hand to the OS (CR-01,
-/// `35-REVIEW.md`). `steam:` is the reason this command exists at all -- the `opener`
-/// plugin's own `allow-default-urls` scope (`capabilities/default.json`) excludes it, so a
-/// call through `plugin:opener|open_url` directly would never reach Steam. The other four
-/// mirror that same plugin scope exactly, so this app-defined arm is never WIDER than the
-/// plugin arm the capability file already restricts. `open_external` is an app-defined
-/// command, so `generate_handler!` reaches it without the capability system being consulted
-/// at all (Rust-side plugin calls bypass capabilities) -- this const is the only allow-list
-/// this command has.
+/// The only schemes the shell hands to the OS opener (CR-01, `35-REVIEW.md`). `steam:` is the
+/// reason this list exists at all -- the `opener` plugin's own `allow-default-urls` scope
+/// (`capabilities/default.json`) excludes it, so a call through `plugin:opener|open_url`
+/// directly would never reach Steam. The other four mirror that same plugin scope exactly, so
+/// this Rust-side check is never WIDER than the plugin arm the capability file already
+/// restricts. Rust-side plugin calls bypass capabilities, so this const is the only allow-list
+/// they have. Its users: the native `openExternalUrl` check (`native_handlers.rs`), the sidecar's
+/// `openExternal` frame arm (`sidecar.rs`) and the shell-internal `open_external` helper below.
 pub(crate) const OPEN_EXTERNAL_ALLOWED_SCHEMES: &[&str] =
     &["https", "http", "mailto", "tel", "steam"];
 
@@ -245,14 +244,16 @@ pub(crate) fn open_external_scheme_check(url: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// shell.openExternal parity — opens the URL (e.g. steam://rungameid/<appId>) via
-/// tauri-plugin-opener (/usr/bin/open → Steam.app, the registered steam:// handler).
-/// The URL is built upstream by the backend's numeric-appId-guarded buildSteamProtocolUrl
-/// (threat T-27-02), but that upstream guarantee does not reach this command -- the renderer
-/// invokes it directly (the `__TAURI_INTERNALS__` invoke bridge is reachable from the page; `withGlobalTauri` is false since Phase 72 D-10), so `url` here is
-/// renderer-controlled and validated against `OPEN_EXTERNAL_ALLOWED_SCHEMES` before anything
-/// is opened (CR-01, `35-REVIEW.md`).
-#[tauri::command]
+/// Opens `url` (e.g. steam://rungameid/<appId>) via tauri-plugin-opener (/usr/bin/open →
+/// Steam.app, the registered steam:// handler), after `open_external_scheme_check`.
+///
+/// Phase 83 plan 06 (D-17): this is no longer a Tauri command. It used to be listed in
+/// `generate_handler!`, which made it a second path the renderer could reach through the
+/// `__TAURI_INTERNALS__` invoke bridge (`withGlobalTauri` is false since Phase 72 D-10, but the
+/// bridge is still reachable from the page) and nothing in the renderer called it. The renderer's
+/// URL opens now go through the native `openExternalUrl` channel. This function stays only as the
+/// shell-internal hand-off the store/wiki embed (`store_embed/open.rs`, `macos_epic_embed`) calls
+/// for popups and downloads, where `url` is page-controlled and so is validated here too (CR-01).
 pub(crate) fn open_external(url: String, app: AppHandle) -> Result<(), String> {
     open_external_scheme_check(&url)?;
     app.opener()

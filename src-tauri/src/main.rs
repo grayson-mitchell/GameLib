@@ -4,12 +4,13 @@
 //   1. Host the plain-Vite renderer output (../build/renderer, via tauri.conf.json frontendDist).
 //   2. Spawn the Node sidecar (the existing backend behind a stdio JSON-RPC loop, produced
 //      by 27-02's `build:sidecar`) and hold its stdin/stdout.
-//   3. Expose four Tauri #[command]s that relay renderer↔sidecar traffic per the shared
+//   3. Expose three Tauri #[command]s that relay renderer↔sidecar traffic per the shared
 //      contract in src/common/types/sidecarTransport.ts:
 //        - sidecar_invoke        (req/resp   — ipcRenderer.invoke parity)
 //        - sidecar_send          (fire-and-forget — ipcRenderer.send parity)
-//        - open_external         (shell.openExternal parity — steam:// via tauri-plugin-opener)
 //        - sidecar_store_snapshot(minimal store snapshot for the synchronous store bridge)
+//      (shell.openExternal parity is not a command: renderer opens go through the native
+//      `openExternalUrl` channel, the sidecar's `openExternal` frame is read in sidecar.rs.)
 //   4. Read SidecarNotification lines from the sidecar's stdout and re-emit them to the
 //      webview as the `frontend_message` Tauri event (ipcRenderer.on backend→frontend parity).
 //   5. Build a bounded Tauri tray at setup (Phase 34.1 Plan 06, D-11) -- tooltip, left-click
@@ -1809,7 +1810,6 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             sidecar_invoke,
             sidecar_send,
-            open_external,
             sidecar_store_snapshot
         ])
         .build(tauri::generate_context!())
@@ -2562,6 +2562,9 @@ mod tests {
 
     #[test]
     fn open_external_command_body_calls_the_scheme_check_before_opening() {
+        // (Phase 83 plan 06: `open_external` is a plain shell-internal helper now, not a Tauri
+        // command; the name above is kept because other comments cite it. The store embed's
+        // page-controlled popup and download hand-offs still call it, so the order stays pinned.)
         // `open_external` cannot be driven from a `#[test]` -- `app.opener()` needs a live
         // `AppHandle` a unit test structurally cannot construct. The helper tests above only
         // prove `open_external_scheme_check` in isolation; they say nothing about whether
