@@ -106,8 +106,8 @@
   },
   "STEAMAPPS_INTERFACE_VERSION008": {
     "family": "SteamApps",
-    "arches": ["x64"],
-    "titles": ["411300"]
+    "arches": ["x86", "x64"],
+    "titles": ["411300", "57300"]
   },
   "STEAMREMOTESTORAGE_INTERFACE_VERSION013": {
     "family": "SteamRemoteStorage",
@@ -141,7 +141,7 @@
   },
   "SteamFriends017": {
     "family": "SteamFriends",
-    "arches": ["x64"],
+    "arches": ["x86", "x64"],
     "titles": [
       "1167950",
       "1284190",
@@ -151,12 +151,13 @@
       "1603180",
       "1363080",
       "427410",
-      "1119730"
+      "1119730",
+      "57300"
     ]
   },
   "SteamUtils010": {
     "family": "SteamUtils",
-    "arches": ["x64"],
+    "arches": ["x86", "x64"],
     "titles": [
       "1167950",
       "1284190",
@@ -168,12 +169,13 @@
       "1363080",
       "427410",
       "1119730",
-      "648410"
+      "648410",
+      "57300"
     ]
   },
   "STEAMUSERSTATS_INTERFACE_VERSION012": {
     "family": "SteamUserStats",
-    "arches": ["x64"],
+    "arches": ["x86", "x64"],
     "titles": [
       "1167950",
       "1284190",
@@ -182,7 +184,8 @@
       "1782460",
       "1363080",
       "427410",
-      "648410"
+      "648410",
+      "57300"
     ]
   },
   "STEAMUSERSTATS_INTERFACE_VERSION013": {
@@ -302,8 +305,8 @@
   },
   "SteamUtils009": {
     "family": "SteamUtils",
-    "arches": ["x64"],
-    "titles": ["1691190"]
+    "arches": ["x86", "x64"],
+    "titles": ["1691190", "576770"]
   },
   "SteamController006": {
     "family": "SteamController",
@@ -409,5 +412,26 @@
     "titles": ["3205720"],
     "helperInterface": "SteamAPI_SteamNetworkingSockets_SteamAPI_v013",
     "flatAccessor": "SteamAPI_SteamNetworkingSockets_SteamAPI_v012"
+  },
+  "SteamUser020": {
+    "family": "SteamUser",
+    "arches": ["x86"],
+    "titles": ["576770"],
+    "helperInterface": "SteamAPI_SteamUser_v023"
+  },
+  "STEAMUGC_INTERFACE_VERSION013": {
+    "family": "SteamUGC",
+    "arches": ["x86"],
+    "titles": ["576770"]
+  },
+  "SteamController007": {
+    "family": "SteamController",
+    "arches": ["x86"],
+    "titles": ["576770"]
+  },
+  "SteamInput001": {
+    "family": "SteamInput",
+    "arches": ["x86"],
+    "titles": ["576770"]
   }
 }

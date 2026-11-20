@@ -22,7 +22,10 @@ import {
   familyOfInterfaceVersion,
   resolveRequiredInterfaceVersions
 } from '../interfaceVersions'
-import { SHIM64_GENERATED_EXPORTS } from '../shimExports.generated'
+import {
+  SHIM64_GENERATED_EXPORTS,
+  SHIM86_NULL_OBJECT_VERSIONS
+} from '../shimExports.generated'
 import {
   SHIM_EXPORTED_SYMBOLS,
   SHIM64_EXPORTED_SYMBOLS,
@@ -423,7 +426,9 @@ describe('SHIM_EXPORT_SET_VERSION / computeExportSetVersion', () => {
       x64ExportedSymbols: SHIM64_EXPORTED_SYMBOLS,
       x86ServedVersions: shimServedInterfaceVersions(),
       x64ServedVersions: shim64ServedInterfaceVersions(),
-      x64NullObjectFallback: SHIM_X64_NULL_OBJECT_FALLBACK
+      x64NullObjectFallback: SHIM_X64_NULL_OBJECT_FALLBACK,
+      // quick 261120-rdo: the real export-set version now includes the x86 null-object set
+      x86NullObjectVersions: new Set(SHIM86_NULL_OBJECT_VERSIONS)
     }
     expect(computeExportSetVersion(inputs)).toBe(SHIM_EXPORT_SET_VERSION)
   })
@@ -1678,7 +1683,9 @@ describe('58-12 SteamMatchMaking009 coverage verdicts (D-13)', () => {
       x64ExportedSymbols: SHIM64_EXPORTED_SYMBOLS,
       x86ServedVersions: shimServedInterfaceVersions(),
       x64ServedVersions: shim64ServedInterfaceVersions(),
-      x64NullObjectFallback: SHIM_X64_NULL_OBJECT_FALLBACK
+      x64NullObjectFallback: SHIM_X64_NULL_OBJECT_FALLBACK,
+      // quick 261120-rdo: the real export-set version now includes the x86 null-object set
+      x86NullObjectVersions: new Set(SHIM86_NULL_OBJECT_VERSIONS)
     }
     expect(computeExportSetVersion(inputs)).toBe(SHIM_EXPORT_SET_VERSION)
     const stubbed = new Map(shim64ServedInterfaceVersions())
@@ -1742,5 +1749,273 @@ describe('undertale-shim-placed-no-hello: runner export gap helpers', () => {
         originalExports: new Set(['SteamAPI_InitSafe'])
       })
     ).toEqual(['SteamAPI_InitSafe'])
+  })
+})
+
+// quick 261120-rdo (D-53-09 tier 1): the x86 shim now exports the modern SteamInternal_* family and
+// answers a manifest-known, x86-unserved version with a per-version x86 null object (arity-exact
+// for __thiscall). Measured 2026-11-20 from the installed bridge bottles; copied here, never read
+// from a bottle. The SteamClient ambiguity is set aside because it is version resolution
+// (two SteamClient strings in the dll), not coverage.
+const AMNESIA_X86_SYMBOLS = [
+  'SteamAPI_GetHSteamUser',
+  'SteamAPI_Init',
+  'SteamAPI_IsSteamRunning',
+  'SteamAPI_RegisterCallResult',
+  'SteamAPI_RegisterCallback',
+  'SteamAPI_RunCallbacks',
+  'SteamAPI_UnregisterCallResult',
+  'SteamAPI_UnregisterCallback',
+  'SteamInternal_ContextInit',
+  'SteamInternal_FindOrCreateUserInterface'
+]
+const AMNESIA_EXE_VERSIONS = [
+  'STEAMUGC_INTERFACE_VERSION017',
+  'STEAMUSERSTATS_INTERFACE_VERSION012',
+  'SteamFriends017',
+  'SteamUser023',
+  'SteamUtils010'
+]
+const AMNESIA_DLL_VERSIONS = [
+  'STEAMAPPLIST_INTERFACE_VERSION001',
+  'STEAMAPPS_INTERFACE_VERSION008',
+  'STEAMHTMLSURFACE_INTERFACE_VERSION_005',
+  'STEAMHTTP_INTERFACE_VERSION003',
+  'STEAMINVENTORY_INTERFACE_V003',
+  'STEAMMUSICREMOTE_INTERFACE_VERSION001',
+  'STEAMMUSIC_INTERFACE_VERSION001',
+  'STEAMPARENTALSETTINGS_INTERFACE_VERSION001',
+  'STEAMREMOTEPLAY_INTERFACE_VERSION001',
+  'STEAMREMOTESTORAGE_INTERFACE_VERSION016',
+  'STEAMSCREENSHOTS_INTERFACE_VERSION003',
+  'STEAMUGC_INTERFACE_VERSION017',
+  'STEAMUSERSTATS_INTERFACE_VERSION012',
+  'STEAMVIDEO_INTERFACE_V002',
+  'SteamClient017',
+  'SteamClient020',
+  'SteamController008',
+  'SteamFriends017',
+  'SteamGameServer015',
+  'SteamGameServerStats001',
+  'SteamInput006',
+  'SteamMatchGameSearch001',
+  'SteamMatchMaking009',
+  'SteamMatchMakingServers002',
+  'SteamNetworking006',
+  'SteamNetworkingMessages002',
+  'SteamNetworkingSockets012',
+  'SteamNetworkingUtils004',
+  'SteamParties002',
+  'SteamUser023',
+  'SteamUtils010'
+]
+const LMA_X86_SYMBOLS = [
+  'SteamAPI_GetHSteamUser',
+  'SteamAPI_Init',
+  'SteamAPI_RegisterCallResult',
+  'SteamAPI_RestartAppIfNecessary',
+  'SteamAPI_RunCallbacks',
+  'SteamAPI_Shutdown',
+  'SteamAPI_UnregisterCallResult',
+  'SteamInternal_ContextInit',
+  'SteamInternal_FindOrCreateUserInterface'
+]
+const LMA_EXE_VERSIONS = [
+  'STEAMUGC_INTERFACE_VERSION013',
+  'STEAMUSERSTATS_INTERFACE_VERSION011',
+  'SteamUser020'
+]
+const LMA_DLL_VERSIONS = [
+  'SteamClient017',
+  'SteamClient019',
+  'SteamController007',
+  'SteamGameServer012',
+  'SteamInput001',
+  'SteamUser020',
+  'SteamUtils009'
+]
+
+describe('quick 261120-rdo: x86 null-object coverage for the modern SteamInternal_* family', () => {
+  function evaluate(
+    symbols: string[],
+    dllVersions: string[],
+    exeVersions: string[]
+  ) {
+    const { required, problems } = resolveRequiredInterfaceVersions({
+      importedSymbols: symbols,
+      dllVersions,
+      exeVersions
+    })
+    const input = {
+      arch: 'x86' as const,
+      symbols,
+      requiredInterfaceVersions: required
+    }
+    return {
+      required,
+      problems,
+      coverage: evaluateShimCoverage({ ...input, versionProblems: [] }),
+      classified: classifyUnservableInterfaceVersions(input)
+    }
+  }
+
+  test('SHIM86_NULL_OBJECT_VERSIONS is the sorted set of manifest versions that are not x86-served', () => {
+    const manifests = readdirSync(SDK_MANIFEST_DIR)
+      .filter((f) => f.endsWith('.manifest.json'))
+      .map(
+        (f) =>
+          JSON.parse(readFileSync(join(SDK_MANIFEST_DIR, f), 'utf-8')) as {
+            interface: string
+            arches: string[]
+          }
+      )
+    const expected = manifests
+      .filter((m) => !m.arches.includes('x86'))
+      .map((m) => m.interface)
+      .sort()
+    expect([...SHIM86_NULL_OBJECT_VERSIONS]).toEqual(expected)
+    const x86Served = shimServedInterfaceVersions()
+    for (const v of SHIM86_NULL_OBJECT_VERSIONS) {
+      expect(x86Served.has(v)).toBe(false)
+    }
+  })
+
+  test('Amnesia 57300 (x86): only the SteamClient ambiguity remains, no missing symbol, no blocking gap, SteamUGC is stubbed', () => {
+    const r = evaluate(
+      AMNESIA_X86_SYMBOLS,
+      AMNESIA_DLL_VERSIONS,
+      AMNESIA_EXE_VERSIONS
+    )
+    expect(r.problems).toEqual([
+      'SteamClient@ambiguous(SteamClient017,SteamClient020)'
+    ])
+    expect(r.coverage.missingSymbols).toEqual([])
+    expect(r.coverage.stubbedInterfaces).toContain('SteamUGC')
+    expect(r.classified.blocking).toEqual([])
+  })
+
+  test('Low Magic Age 576770 (x86): only the SteamClient ambiguity remains, no missing symbol, no blocking gap', () => {
+    const r = evaluate(LMA_X86_SYMBOLS, LMA_DLL_VERSIONS, LMA_EXE_VERSIONS)
+    expect(r.problems).toEqual([
+      'SteamClient@ambiguous(SteamClient017,SteamClient019)'
+    ])
+    expect(r.coverage.missingSymbols).toEqual([])
+    expect(r.classified.blocking).toEqual([])
+    // the five versions Low Magic Age really requests are served on x86
+    const served = shimServedInterfaceVersions()
+    for (const v of [
+      ...LMA_EXE_VERSIONS,
+      'SteamUser020',
+      'SteamUtils009',
+      'SteamController007',
+      'SteamInput001'
+    ]) {
+      expect(served.has(v)).toBe(true)
+    }
+  })
+
+  test('an x86 runtime-lookup title requiring a version with NO manifest is still missing and blocking (NULL: no arity data)', () => {
+    const symbols = ['SteamAPI_Init', 'SteamInternal_FindOrCreateUserInterface']
+    const input = {
+      arch: 'x86' as const,
+      symbols,
+      requiredInterfaceVersions: {
+        SteamNetworkingSockets: 'SteamNetworkingSockets008'
+      }
+    }
+    expect(
+      evaluateShimCoverage({ ...input, versionProblems: [] }).missingSymbols
+    ).toEqual(['SteamNetworkingSockets008'])
+    expect(classifyUnservableInterfaceVersions(input).blocking).toEqual([
+      'SteamNetworkingSockets008'
+    ])
+  })
+
+  test('an x86 title reaching a manifest-known unserved version through a BARE accessor is still missing (CR-03)', () => {
+    const symbols = [
+      'SteamAPI_Init',
+      'SteamInternal_ContextInit',
+      'SteamNetworking'
+    ]
+    const input = {
+      arch: 'x86' as const,
+      symbols,
+      requiredInterfaceVersions: { SteamNetworking: 'SteamNetworking006' }
+    }
+    expect(
+      evaluateShimCoverage({ ...input, versionProblems: [] }).missingSymbols
+    ).toEqual(['SteamNetworking006'])
+    expect(classifyUnservableInterfaceVersions(input).blocking).toEqual([
+      'SteamNetworking006'
+    ])
+  })
+
+  test('version skew on x86: SteamNetworking006 is null-object answered while 005 is served, so it is unservable but non-core and not blocking', () => {
+    const input = {
+      arch: 'x86' as const,
+      symbols: ['SteamAPI_Init', 'SteamInternal_FindOrCreateUserInterface'],
+      requiredInterfaceVersions: { SteamNetworking: 'SteamNetworking006' }
+    }
+    expect(findUnservableInterfaceVersions(input)).toEqual([
+      'SteamNetworking006'
+    ])
+    expect(classifyUnservableInterfaceVersions(input)).toEqual({
+      blocking: [],
+      nonCore: ['SteamNetworking006']
+    })
+  })
+
+  test('evaluateShimCoverageWith without x86NullObjectVersions behaves exactly as before: an unserved x86 version is missing', () => {
+    const sets = {
+      x86ExportedSymbols: SHIM_EXPORTED_SYMBOLS,
+      x64ExportedSymbols: SHIM64_EXPORTED_SYMBOLS,
+      x86ServedVersions: shimServedInterfaceVersions(),
+      x64ServedVersions: shim64ServedInterfaceVersions(),
+      x64NullObjectFallback: SHIM_X64_NULL_OBJECT_FALLBACK
+    }
+    const input = {
+      arch: 'x86' as const,
+      symbols: ['SteamAPI_Init', 'SteamInternal_FindOrCreateUserInterface'],
+      requiredInterfaceVersions: { SteamUGC: 'STEAMUGC_INTERFACE_VERSION017' },
+      versionProblems: []
+    }
+    expect(evaluateShimCoverageWith(sets, input).missingSymbols).toEqual([
+      'STEAMUGC_INTERFACE_VERSION017'
+    ])
+    const withNull = evaluateShimCoverageWith(
+      {
+        ...sets,
+        x86NullObjectVersions: new Set(['STEAMUGC_INTERFACE_VERSION017'])
+      },
+      input
+    )
+    expect(withNull.missingSymbols).toEqual([])
+    expect(withNull.stubbedInterfaces).toEqual(['SteamUGC'])
+  })
+
+  test('computeExportSetVersion is unchanged without x86NullObjectVersions and changes with it', () => {
+    const base = {
+      x86ExportedSymbols: SHIM_EXPORTED_SYMBOLS,
+      x64ExportedSymbols: SHIM64_EXPORTED_SYMBOLS,
+      x86ServedVersions: shimServedInterfaceVersions(),
+      x64ServedVersions: shim64ServedInterfaceVersions(),
+      x64NullObjectFallback: SHIM_X64_NULL_OBJECT_FALLBACK
+    }
+    const plain = computeExportSetVersion(base)
+    expect(
+      computeExportSetVersion({ ...base, x86NullObjectVersions: new Set() })
+    ).toBe(plain)
+    expect(
+      computeExportSetVersion({
+        ...base,
+        x86NullObjectVersions: new Set(['STEAMUGC_INTERFACE_VERSION017'])
+      })
+    ).not.toBe(plain)
+    expect(SHIM_EXPORT_SET_VERSION).toBe(
+      computeExportSetVersion({
+        ...base,
+        x86NullObjectVersions: new Set(SHIM86_NULL_OBJECT_VERSIONS)
+      })
+    )
   })
 })

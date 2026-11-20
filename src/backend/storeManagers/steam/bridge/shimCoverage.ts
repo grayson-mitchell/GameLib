@@ -25,7 +25,10 @@ import {
   BARE_ACCESSOR_FAMILY,
   usesRuntimeInterfaceLookup
 } from './interfaceVersions'
-import { SHIM64_GENERATED_EXPORTS } from './shimExports.generated'
+import {
+  SHIM64_GENERATED_EXPORTS,
+  SHIM86_NULL_OBJECT_VERSIONS
+} from './shimExports.generated'
 
 // Mirrors meta/gen_vtables.ts's FLAT_EXPORTS_SUPERSET PLUS the two
 // per-interface accessor exports `generateDefFile` appends
@@ -153,7 +156,24 @@ export const SHIM_EXPORTED_SYMBOLS: SymbolTable = Object.freeze({
   SteamInternal_FindOrCreateUserInterface: true,
   SteamInternal_FindOrCreateGameServerInterface: true,
   SteamInternal_GameServer_Init_V2: true,
-  SteamInternal_GameServer_Init: true
+  SteamInternal_GameServer_Init: true,
+  // quick 261120-rdo: the nine versions Amnesia 57300 and Low Magic Age 576770 need
+  // on x86, each manifest's own `flatAccessor` (meta/sdk/isteamfriends017, isteamutils010,
+  // isteamutils009, isteamuserstats012, isteamapps008 widened to x86; isteamuser020,
+  // isteamugc013, isteamcontroller007, isteaminput001 new x86-only manifests), plus the
+  // bare legacy accessors for the three new x86 families.
+  SteamAPI_SteamApps_v008: true,
+  SteamAPI_SteamFriends_v017: true,
+  SteamAPI_SteamUtils_v010: true,
+  SteamAPI_SteamUserStats_v012: true,
+  SteamAPI_SteamUtils_v009: true,
+  SteamAPI_SteamUser_v020: true,
+  SteamAPI_SteamUGC_v013: true,
+  SteamAPI_SteamController_v007: true,
+  SteamAPI_SteamInput_v001: true,
+  SteamController: true,
+  SteamInput: true,
+  SteamUGC: true
 })
 
 // 51-15: D-51-13 GO -- the Win64 shim ships. Mirrors
@@ -245,7 +265,26 @@ export function shimServedInterfaceVersions(): ReadonlyMap<
     [
       'STEAMREMOTESTORAGE_INTERFACE_VERSION008',
       { family: 'SteamRemoteStorage', mode: 'stub' }
-    ]
+    ],
+    // quick 261120-rdo (D-53-09 tier 1): the versions Amnesia (57300) and Low Magic Age
+    // (576770) request. The first five are the SAME manifests the x64 map serves, with
+    // `arches` widened to x86 (SteamUtils009's and SteamFriends017's shimLocal and
+    // helperCustom bodies already compile on i386 through SteamUtils005 and
+    // SteamFriends018). STEAMAPPS008 is core, so a null object would be blocking skew.
+    // SteamUser020 is 'wire' (the SteamUser016 precedent); the other three are x86-only
+    // stub manifests extracted from Proton at the pinned SHA.
+    ['SteamFriends017', { family: 'SteamFriends', mode: 'wire' }],
+    ['SteamUtils010', { family: 'SteamUtils', mode: 'wire' }],
+    ['SteamUtils009', { family: 'SteamUtils', mode: 'wire' }],
+    [
+      'STEAMUSERSTATS_INTERFACE_VERSION012',
+      { family: 'SteamUserStats', mode: 'wire' }
+    ],
+    ['STEAMAPPS_INTERFACE_VERSION008', { family: 'SteamApps', mode: 'wire' }],
+    ['SteamUser020', { family: 'SteamUser', mode: 'wire' }],
+    ['STEAMUGC_INTERFACE_VERSION013', { family: 'SteamUGC', mode: 'stub' }],
+    ['SteamController007', { family: 'SteamController', mode: 'stub' }],
+    ['SteamInput001', { family: 'SteamInput', mode: 'stub' }]
   ])
 }
 
@@ -471,6 +510,12 @@ export function shim64ServedInterfaceVersions(): ReadonlyMap<
   ])
 }
 
+/** quick 261120-rdo: the generated set of versions the x86 shim answers with a
+ * per-version null object (every manifest that does not target x86). */
+const X86_NULL_OBJECT_VERSION_SET: ReadonlySet<string> = new Set(
+  SHIM86_NULL_OBJECT_VERSIONS
+)
+
 // 51-15: D-51-13 GO -- the Win64 shim answers an unserved required
 // interface version with a null-object fallback (a real pointer to a
 // do-nothing vtable, X64_NULL_OBJECT_SLOTS in meta/gen_vtables.ts) rather
@@ -491,6 +536,10 @@ interface ExportSetVersionInputs {
   x86ServedVersions: ReadonlyMap<string, ServedInterface>
   x64ServedVersions: ReadonlyMap<string, ServedInterface>
   x64NullObjectFallback: boolean
+  /** quick 261120-rdo: the versions the x86 shim answers with a per-version,
+   * manifest-backed null object (SHIM86_NULL_OBJECT_VERSIONS). Optional: absent
+   * or empty means no x86 null-object fallback, exactly as before. */
+  x86NullObjectVersions?: ReadonlySet<string>
 }
 
 function sortedServedEntries(
@@ -525,7 +574,10 @@ export function computeExportSetVersion(
   ]
     .sort()
     .join(',')
-  const payload = `${x86}|${x64}|${served}|${inputs.x64NullObjectFallback}`
+  const x86Null = [...(inputs.x86NullObjectVersions ?? [])].sort().join(',')
+  const payload =
+    `${x86}|${x64}|${served}|${inputs.x64NullObjectFallback}` +
+    (x86Null === '' ? '' : `|${x86Null}`)
   return createHash('sha256').update(payload).digest('hex').slice(0, 12)
 }
 
@@ -537,7 +589,8 @@ export const SHIM_EXPORT_SET_VERSION = computeExportSetVersion({
   x64ExportedSymbols: SHIM64_EXPORTED_SYMBOLS,
   x86ServedVersions: shimServedInterfaceVersions(),
   x64ServedVersions: shim64ServedInterfaceVersions(),
-  x64NullObjectFallback: SHIM_X64_NULL_OBJECT_FALLBACK
+  x64NullObjectFallback: SHIM_X64_NULL_OBJECT_FALLBACK,
+  x86NullObjectVersions: X86_NULL_OBJECT_VERSION_SET
 })
 
 interface EvaluateShimCoverageInput {
@@ -567,6 +620,8 @@ interface ShimCoverageSets {
   x86ServedVersions: ReadonlyMap<string, ServedInterface>
   x64ServedVersions: ReadonlyMap<string, ServedInterface>
   x64NullObjectFallback: boolean
+  /** quick 261120-rdo: see ExportSetVersionInputs. Defaults to empty. */
+  x86NullObjectVersions?: ReadonlySet<string>
 }
 
 /**
@@ -605,8 +660,11 @@ export function evaluateShimCoverageWith(
     if (!served) {
       // D-51-13: on x64, a null-object fallback answers an unserved version
       // with a real (do-nothing) pointer rather than nothing at all -- that
-      // is a stub, not a missing symbol. Arch-scoped: the fallback never
-      // applies to x86 (there is no x86 null-object fallback concept).
+      // is a stub, not a missing symbol. quick 261120-rdo: x86 has a
+      // per-VERSION, manifest-backed fallback (arity-exact for __thiscall
+      // callee-cleans), so it applies only to a version in
+      // `x86NullObjectVersions`; a version GameLib has no manifest for
+      // answers NULL on x86 and stays a miss.
       // CR-03: the shim's resolve_bare_iface returns NULL for an unserved
       // version, so the fallback only holds for a family reached purely
       // through runtime lookup (SteamInternal_CreateInterface/SteamClient);
@@ -614,12 +672,17 @@ export function evaluateShimCoverageWith(
       const reachedBare = input.symbols.some(
         (s) => BARE_ACCESSOR_FAMILY[s] === family
       )
-      if (
+      const x64Fallback =
         input.arch === 'x64' &&
         sets.x64NullObjectFallback &&
         usesRuntimeInterfaceLookup(input.symbols) &&
         !reachedBare
-      ) {
+      const x86Fallback =
+        input.arch === 'x86' &&
+        (sets.x86NullObjectVersions?.has(version) ?? false) &&
+        usesRuntimeInterfaceLookup(input.symbols) &&
+        !reachedBare
+      if (x64Fallback || x86Fallback) {
         stubbedInterfaces.push(family)
       } else {
         missingSymbols.push(version)
@@ -650,25 +713,29 @@ export function evaluateShimCoverage(
       x64ExportedSymbols: SHIM64_EXPORTED_SYMBOLS,
       x86ServedVersions: shimServedInterfaceVersions(),
       x64ServedVersions: shim64ServedInterfaceVersions(),
-      x64NullObjectFallback: SHIM_X64_NULL_OBJECT_FALLBACK
+      x64NullObjectFallback: SHIM_X64_NULL_OBJECT_FALLBACK,
+      x86NullObjectVersions: X86_NULL_OBJECT_VERSION_SET
     },
     input
   )
 }
 
-/** Shared null-object eligibility (x64 runtime lookup, not a bare accessor). */
+/**
+ * Shared null-object eligibility: runtime lookup and not a bare accessor. x64
+ * answers any unserved version with the null object. quick 261120-rdo: x86 does
+ * so only for a version in SHIM86_NULL_OBJECT_VERSIONS (a manifest-backed,
+ * arity-exact object); any other x86 version answers NULL.
+ */
 function isNullObjectEligible(
   arch: 'x86' | 'x64',
   symbols: string[],
-  family: string
+  family: string,
+  version: string
 ): boolean {
   const reachedBare = symbols.some((s) => BARE_ACCESSOR_FAMILY[s] === family)
-  return (
-    arch === 'x64' &&
-    SHIM_X64_NULL_OBJECT_FALLBACK &&
-    usesRuntimeInterfaceLookup(symbols) &&
-    !reachedBare
-  )
+  if (!usesRuntimeInterfaceLookup(symbols) || reachedBare) return false
+  if (arch === 'x64') return SHIM_X64_NULL_OBJECT_FALLBACK
+  return X86_NULL_OBJECT_VERSION_SET.has(version)
 }
 
 /**
@@ -677,10 +744,11 @@ function isNullObjectEligible(
  *
  * A required version counts when it is not in the arch's served map (any
  * mode) AND either
- *  - it would be answered NULL (x86, or x64 without runtime lookup, or the
- *    family is reached through a bare accessor: resolve_bare_iface returns
- *    NULL), or
- *  - it would be answered by the x64 null object while the shim serves a
+ *  - it would be answered NULL (x86 for a version with no manifest, or x64
+ *    without runtime lookup, or the family is reached through a bare accessor:
+ *    resolve_bare_iface returns NULL), or
+ *  - it would be answered by a null object (x64 for any version; x86 for a
+ *    manifest-known version, quick 261120-rdo) while the shim serves a
  *    DIFFERENT version of the same family (version skew, e.g. SteamFriends017
  *    when 015 and 018 are served): the game gets a do-nothing object where a
  *    real one exists, and faults at the first call.
@@ -711,7 +779,8 @@ export function findUnservableInterfaceVersions(input: {
     const nullObjectEligible = isNullObjectEligible(
       input.arch,
       input.symbols,
-      family
+      family,
+      version
     )
     if (nullObjectEligible) {
       let familyServed = false
@@ -746,9 +815,10 @@ export const CORE_STARTUP_FAMILIES: SymbolTable = Object.freeze({
  * Quick 261026-mhg (operator option a, 2026-10-26): splits the raw
  * unservable list into gaps that BLOCK placement and gaps that are merely
  * non-core. A gap is blocking when its family is a core startup family OR the
- * shim would answer it with NULL (x86, no runtime lookup, bare accessor): a
- * NULL fails context init. Everything else is answered by the x64 null object,
- * which ELEX and Age of Decadence ran on; callers place the shim and still
+ * shim would answer it with NULL (an x86 version with no manifest, no runtime
+ * lookup, bare accessor): a NULL fails context init. Everything else is
+ * answered by a null object (x64: ELEX and Age of Decadence ran on it; x86: the
+ * manifest-backed per-version object, quick 261120-rdo); callers place the shim and still
  * name those gaps in the verdict. An unknown family counts as non-core.
  * Output lists keep entry order, de-duplicated.
  */
@@ -766,7 +836,7 @@ export function classifyUnservableInterfaceVersions(input: {
     if (!unservable.has(version)) continue
     const isBlocking =
       Object.hasOwn(CORE_STARTUP_FAMILIES, family) ||
-      !isNullObjectEligible(input.arch, input.symbols, family)
+      !isNullObjectEligible(input.arch, input.symbols, family, version)
     const list = isBlocking ? blocking : nonCore
     if (
       !list.includes(version) &&

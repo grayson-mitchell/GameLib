@@ -42,6 +42,7 @@ import {
   selectLatestUnrealLogs,
   classifyCensusTitle,
   countX86ModernOrFlat,
+  countX86ModernOrFlatUnexported,
   detectEngine,
   isInitOnlyImportSet,
   formatCensusMarkdown,
@@ -1313,6 +1314,47 @@ describe('D-53-12 census shares the install scan', () => {
       ])
     ).toEqual({ count: 2, appids: ['2', '4'] })
     expect(countX86ModernOrFlat([])).toEqual({ count: 0, appids: [] })
+  })
+
+  it('counts an x86 title only when a modern or flat symbol is not in the x86 export table (quick 261120-rdo)', () => {
+    // Amnesia 57300's measured static imports: every modern name is exported on x86 now.
+    const amnesia = {
+      appid: '57300',
+      arch: 'x86' as const,
+      symbols: [
+        'SteamAPI_GetHSteamUser',
+        'SteamAPI_Init',
+        'SteamInternal_ContextInit',
+        'SteamInternal_FindOrCreateUserInterface'
+      ]
+    }
+    expect(countX86ModernOrFlatUnexported([amnesia])).toEqual({
+      count: 0,
+      appids: []
+    })
+    // ... while it still NEEDS them (the need line is unchanged).
+    expect(countX86ModernOrFlat([amnesia]).count).toBe(1)
+    // Cat Quest: the flat tier is not built, so its flat symbol stays unexported.
+    const flat = {
+      appid: '593280',
+      arch: 'x86' as const,
+      symbols: ['SteamAPI_ISteamClient_GetISteamUser']
+    }
+    expect(countX86ModernOrFlatUnexported([amnesia, flat])).toEqual({
+      count: 1,
+      appids: ['593280']
+    })
+    // x64 titles never count; an explicit export table is honoured.
+    expect(
+      countX86ModernOrFlatUnexported([
+        { appid: '9', arch: 'x64', symbols: ['SteamInternal_ContextInit'] }
+      ])
+    ).toEqual({ count: 0, appids: [] })
+    expect(
+      countX86ModernOrFlatUnexported([amnesia], {
+        SteamInternal_ContextInit: true
+      }).count
+    ).toBe(1)
   })
 
   it('keeps no parallel scan copy: imports bridgeScan, defines no walkUnreal*/findRuntimeSteamApiDll/arch reader', () => {

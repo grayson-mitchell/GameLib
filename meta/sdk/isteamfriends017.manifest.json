@@ -3,7 +3,7 @@
   "interface": "SteamFriends017",
   "family": "SteamFriends",
   "ordinal": 28,
-  "arches": ["x64"],
+  "arches": ["x86", "x64"],
   "mode": "stub",
   "complete": true,
   "flatAccessor": "SteamAPI_SteamFriends_v017",

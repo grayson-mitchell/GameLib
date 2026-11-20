@@ -3,7 +3,7 @@
   "interface": "STEAMAPPS_INTERFACE_VERSION008",
   "family": "SteamApps",
   "ordinal": 20,
-  "arches": ["x64"],
+  "arches": ["x86", "x64"],
   "mode": "stub",
   "complete": true,
   "flatAccessor": "SteamAPI_SteamApps_v008",

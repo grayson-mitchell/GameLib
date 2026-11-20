@@ -2782,12 +2782,25 @@ describe('Phase 53 flat API', () => {
     expect(ts).toContain(
       'export const SHIM64_GENERATED_EXPORTS: readonly string[] = ['
     )
-    const listed = [...ts.matchAll(/^ {2}'([^']+)',?$/gm)].map((x) => x[1])
+    // quick 261120-rdo: the file now carries a second constant after the x64 list.
+    const [x64Part = '', x86NullPart = ''] = ts.split(
+      'export const SHIM86_NULL_OBJECT_VERSIONS'
+    )
+    const listed = [...x64Part.matchAll(/^ {2}'([^']+)',?$/gm)].map((x) => x[1])
     const defNames = generateDefFile(real, 'x64')
       .split('\n')
       .slice(2)
       .filter(Boolean)
     expect(listed).toEqual([...defNames].sort())
+    const nullListed = [...x86NullPart.matchAll(/^ {2}'([^']+)',?$/gm)].map(
+      (x) => x[1]
+    )
+    expect(nullListed).toEqual(
+      real
+        .filter((m) => !m.arches.includes('x86'))
+        .map((m) => m.interface)
+        .sort()
+    )
     expect(ts).not.toMatch(/^[^/\n].*;\s*$/m)
     expect(ts.endsWith(']\n')).toBe(true)
   })

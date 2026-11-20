@@ -639,12 +639,11 @@ describe('shimGenerate', () => {
       if (result.status === 'withheld') {
         expect(result.restored).toEqual([])
         expect(result.verdict.arch).toBe('x86')
-        expect(result.verdict.missingSymbols).toEqual(
-          expect.arrayContaining([
-            'SteamAPI_InitSafe',
-            'SteamAPI_GetHSteamPipe',
-            'SteamAPI_GetHSteamUser'
-          ])
+        // quick 261120-rdo: SteamAPI_GetHSteamPipe/User are exported on x86 now (D-53-09
+        // tier 1), so only SteamAPI_InitSafe is still missing: the withhold stands.
+        expect(result.verdict.missingSymbols).toEqual(['SteamAPI_InitSafe'])
+        expect(result.verdict.missingSymbols).not.toContain(
+          'SteamAPI_GetHSteamPipe'
         )
         expect(result.verdict.missingSymbols).not.toContain(
           'SteamAPI_RunCallbacks'

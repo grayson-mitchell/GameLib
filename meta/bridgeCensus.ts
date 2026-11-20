@@ -125,7 +125,9 @@ import {
 } from '../src/backend/storeManagers/steam/bridge/interfaceVersions'
 import {
   evaluateShimCoverage,
-  SHIM64_EXPORTED_SYMBOLS
+  SHIM_EXPORTED_SYMBOLS,
+  SHIM64_EXPORTED_SYMBOLS,
+  type SymbolTable
 } from '../src/backend/storeManagers/steam/bridge/shimCoverage'
 import {
   appLogPayload,
@@ -650,7 +652,8 @@ const X86_MODERN_OR_FLAT = [
 ]
 
 /** D-53-09: the x86-launch titles whose judged symbols need the modern
- * SteamInternal_* family or the flat API. Pure. */
+ * SteamInternal_* family or the flat API. Pure. This is the NEED measurement
+ * (the todo's unblock trigger): it ignores what the shim exports. */
 export function countX86ModernOrFlat(items: JudgedSymbols[]): {
   count: number
   appids: string[]
@@ -661,6 +664,28 @@ export function countX86ModernOrFlat(items: JudgedSymbols[]): {
         i.arch === 'x86' &&
         i.symbols.some((sym) =>
           X86_MODERN_OR_FLAT.some((prefix) => sym.startsWith(prefix))
+        )
+    )
+    .map((i) => i.appid)
+  return { count: appids.length, appids: [...new Set(appids)].sort() }
+}
+
+/** quick 261120-rdo: the coverage-aware companion of countX86ModernOrFlat. An
+ * x86 title counts only when at least one of its modern-or-flat symbols is NOT
+ * in the given x86 export table (default: the shipped SHIM_EXPORTED_SYMBOLS),
+ * so a title the x86 shim now fully covers drops out. Pure. */
+export function countX86ModernOrFlatUnexported(
+  items: JudgedSymbols[],
+  exported: SymbolTable = SHIM_EXPORTED_SYMBOLS
+): { count: number; appids: string[] } {
+  const appids = items
+    .filter(
+      (i) =>
+        i.arch === 'x86' &&
+        i.symbols.some(
+          (sym) =>
+            X86_MODERN_OR_FLAT.some((prefix) => sym.startsWith(prefix)) &&
+            !Object.hasOwn(exported, sym)
         )
     )
     .map((i) => i.appid)
@@ -2628,6 +2653,10 @@ async function main(): Promise<void> {
   const x86 = countX86ModernOrFlat(judgedSymbols)
   console.log(
     `x86 titles needing modern SteamInternal_* or flat API: ${x86.count} (${x86.appids.join(', ') || 'none'})`
+  )
+  const x86Unexported = countX86ModernOrFlatUnexported(judgedSymbols)
+  console.log(
+    `x86 titles whose modern SteamInternal_* or flat API need the x86 shim does not export: ${x86Unexported.count} (${x86Unexported.appids.join(', ') || 'none'})`
   )
   console.log(`Scan warnings: ${scanWarnings}`)
 }

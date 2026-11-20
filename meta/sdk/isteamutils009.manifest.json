@@ -3,7 +3,7 @@
   "interface": "SteamUtils009",
   "family": "SteamUtils",
   "ordinal": 54,
-  "arches": ["x64"],
+  "arches": ["x86", "x64"],
   "mode": "stub",
   "complete": true,
   "flatAccessor": "SteamAPI_SteamUtils_v009",

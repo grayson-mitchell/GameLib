@@ -1,7 +1,8 @@
 // GENERATED FILE -- DO NOT EDIT BY HAND.
 // Produced by meta/gen_vtables.ts (`pnpm gen-vtables`): the exact export table of
-// native/steam-bridge/generated/steam_api64.def, sorted. It must not be edited;
-// regenerate it instead.
+// native/steam-bridge/generated/steam_api64.def, sorted, and the interface versions the
+// x86 shim answers with a per-version null object. It must not be edited; regenerate it
+// instead.
 
 export const SHIM64_GENERATED_EXPORTS: readonly string[] = [
   'SteamAPI_GetHSteamPipe',
@@ -1143,4 +1144,60 @@ export const SHIM64_GENERATED_EXPORTS: readonly string[] = [
   'Steam_RegisterInterfaceFuncs',
   'Steam_RunCallbacks',
   'g_pSteamClientGameServer'
+]
+
+export const SHIM86_NULL_OBJECT_VERSIONS: readonly string[] = [
+  'STEAMAPPLIST_INTERFACE_VERSION001',
+  'STEAMAPPS_INTERFACE_VERSION007',
+  'STEAMHTMLSURFACE_INTERFACE_VERSION_003',
+  'STEAMHTMLSURFACE_INTERFACE_VERSION_005',
+  'STEAMHTTP_INTERFACE_VERSION002',
+  'STEAMHTTP_INTERFACE_VERSION003',
+  'STEAMINVENTORY_INTERFACE_V001',
+  'STEAMINVENTORY_INTERFACE_V003',
+  'STEAMMUSICREMOTE_INTERFACE_VERSION001',
+  'STEAMMUSIC_INTERFACE_VERSION001',
+  'STEAMPARENTALSETTINGS_INTERFACE_VERSION001',
+  'STEAMREMOTEPLAY_INTERFACE_VERSION001',
+  'STEAMREMOTEPLAY_INTERFACE_VERSION002',
+  'STEAMREMOTESTORAGE_INTERFACE_VERSION012',
+  'STEAMREMOTESTORAGE_INTERFACE_VERSION013',
+  'STEAMREMOTESTORAGE_INTERFACE_VERSION016',
+  'STEAMSCREENSHOTS_INTERFACE_VERSION002',
+  'STEAMSCREENSHOTS_INTERFACE_VERSION003',
+  'STEAMTIMELINE_INTERFACE_V001',
+  'STEAMUGC_INTERFACE_VERSION007',
+  'STEAMUGC_INTERFACE_VERSION010',
+  'STEAMUGC_INTERFACE_VERSION016',
+  'STEAMUGC_INTERFACE_VERSION017',
+  'STEAMUGC_INTERFACE_VERSION020',
+  'STEAMUSERSTATS_INTERFACE_VERSION013',
+  'STEAMVIDEO_INTERFACE_V001',
+  'STEAMVIDEO_INTERFACE_V002',
+  'STEAMVIDEO_INTERFACE_V007',
+  'SteamClient014',
+  'SteamClient017',
+  'SteamClient020',
+  'SteamClient021',
+  'SteamController006',
+  'SteamController008',
+  'SteamFriends015',
+  'SteamGameServer012',
+  'SteamGameServer014',
+  'SteamGameServer015',
+  'SteamGameServerStats001',
+  'SteamInput006',
+  'SteamMatchGameSearch001',
+  'SteamMatchMakingServers003',
+  'SteamNetworking006',
+  'SteamNetworkingMessages002',
+  'SteamNetworkingSockets012',
+  'SteamNetworkingSockets013',
+  'SteamNetworkingUtils004',
+  'SteamParties002',
+  'SteamUser018',
+  'SteamUser019',
+  'SteamUser021',
+  'SteamUtils007',
+  'SteamUtils008'
 ]

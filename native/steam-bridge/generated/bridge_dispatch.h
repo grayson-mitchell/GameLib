@@ -5,7 +5,7 @@
  * native/steam-bridge/generated/steam_api_shim.c marshals the shim side
  * of. #include'd from native/steam-bridge/helper/bridge_helper.c.
  *
- * Interfaces covered: SteamUser023, SteamFriends018, SteamUser016, SteamFriends011, SteamUtils005, STEAMAPPS_INTERFACE_VERSION004, STEAMUSERSTATS_INTERFACE_VERSION010, SteamFriends013, STEAMAPPS_INTERFACE_VERSION005, STEAMUSERSTATS_INTERFACE_VERSION011, SteamMatchMaking009, SteamUser019, SteamFriends015, SteamUtils008, STEAMAPPS_INTERFACE_VERSION008, SteamNetworking006, SteamUser021, SteamFriends017, SteamUtils010, STEAMUSERSTATS_INTERFACE_VERSION012, STEAMUSERSTATS_INTERFACE_VERSION013, SteamUtils009, SteamUser018, SteamUtils007, STEAMAPPS_INTERFACE_VERSION007, SteamMatchMakingServers003, SteamNetworkingSockets013, SteamNetworkingUtils004, SteamNetworkingMessages002, SteamNetworkingSockets012.
+ * Interfaces covered: SteamUser023, SteamFriends018, SteamUser016, SteamFriends011, SteamUtils005, STEAMAPPS_INTERFACE_VERSION004, STEAMUSERSTATS_INTERFACE_VERSION010, SteamFriends013, STEAMAPPS_INTERFACE_VERSION005, STEAMUSERSTATS_INTERFACE_VERSION011, SteamMatchMaking009, SteamUser019, SteamFriends015, SteamUtils008, STEAMAPPS_INTERFACE_VERSION008, SteamNetworking006, SteamUser021, SteamFriends017, SteamUtils010, STEAMUSERSTATS_INTERFACE_VERSION012, STEAMUSERSTATS_INTERFACE_VERSION013, SteamUtils009, SteamUser018, SteamUtils007, STEAMAPPS_INTERFACE_VERSION007, SteamMatchMakingServers003, SteamNetworkingSockets013, SteamNetworkingUtils004, SteamNetworkingMessages002, SteamNetworkingSockets012, SteamUser020.
  */
 #ifndef GAMELIB_BRIDGE_DISPATCH_H
 #define GAMELIB_BRIDGE_DISPATCH_H
@@ -123,7 +123,7 @@ Method modes:
 // tuples BRIDGE_SHIM_TABLE_HASH (steam_api_shim.c) embeds -- a drift
 // between the two means the shim and this dispatch table disagree about
 // what is on the wire.
-#define BRIDGE_DISPATCH_TABLE_HASH "e0eae15e3690"
+#define BRIDGE_DISPATCH_TABLE_HASH "7d3be0e970e3"
 
 // Response scratch -- bridge_dispatch() never writes past respCap, which
 // the caller (bridge_helper.c) sizes to this constant.
@@ -305,6 +305,9 @@ static void *g_bd_self_steamnetworkingmessages002;
 #define BD_ORDINAL_SteamNetworkingSockets012 73
 static BDAccessorFn_t g_bd_accessor_steamnetworkingsockets012;
 static void *g_bd_self_steamnetworkingsockets012;
+#define BD_ORDINAL_SteamUser020 75
+static BDAccessorFn_t g_bd_accessor_steamuser020;
+static void *g_bd_self_steamuser020;
 
 #define BD_SLOT_SteamUser023_GetHSteamUser 0
 typedef int32_t (*BDFlatFn_SteamUser023_GetHSteamUser_t)(void *);
@@ -1362,6 +1365,21 @@ static BDFlatFn_SteamNetworkingSockets012_ReceiveMessagesOnPollGroup_t g_bd_flat
 #define BD_SLOT_SteamNetworkingSockets012_ResetIdentity 40
 typedef void (*BDFlatFn_SteamNetworkingSockets012_ResetIdentity_t)(void *, const void *);
 static BDFlatFn_SteamNetworkingSockets012_ResetIdentity_t g_bd_flat_SteamNetworkingSockets012_ResetIdentity;
+#define BD_SLOT_SteamUser020_GetHSteamUser 0
+typedef int32_t (*BDFlatFn_SteamUser020_GetHSteamUser_t)(void *);
+static BDFlatFn_SteamUser020_GetHSteamUser_t g_bd_flat_SteamUser020_GetHSteamUser;
+#define BD_SLOT_SteamUser020_BLoggedOn 1
+typedef int (*BDFlatFn_SteamUser020_BLoggedOn_t)(void *);
+static BDFlatFn_SteamUser020_BLoggedOn_t g_bd_flat_SteamUser020_BLoggedOn;
+#define BD_SLOT_SteamUser020_GetSteamID 2
+typedef uint64_t (*BDFlatFn_SteamUser020_GetSteamID_t)(void *);
+static BDFlatFn_SteamUser020_GetSteamID_t g_bd_flat_SteamUser020_GetSteamID;
+#define BD_SLOT_SteamUser020_GetAuthSessionTicket 13
+typedef uint32_t (*BDFlatFn_SteamUser020_GetAuthSessionTicket_t)(void *, void *, int32_t, uint32_t *, const void *);
+static BDFlatFn_SteamUser020_GetAuthSessionTicket_t g_bd_flat_SteamUser020_GetAuthSessionTicket;
+#define BD_SLOT_SteamUser020_CancelAuthTicket 16
+typedef void (*BDFlatFn_SteamUser020_CancelAuthTicket_t)(void *, uint32_t);
+static BDFlatFn_SteamUser020_CancelAuthTicket_t g_bd_flat_SteamUser020_CancelAuthTicket;
 
 // D-51-04: identity-only mode -- set once by bridge_helper.c's argv
 // parsing (--identity-only/--report-appid), read by every dispatch case
@@ -1821,12 +1839,19 @@ int bridge_dispatch_init(void *dylibHandle, void (*log)(const char *cat, const c
   g_bd_flat_SteamNetworkingSockets012_SetConnectionPollGroup = (BDFlatFn_SteamNetworkingSockets012_SetConnectionPollGroup_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingSockets_SetConnectionPollGroup");
   g_bd_flat_SteamNetworkingSockets012_ReceiveMessagesOnPollGroup = (BDFlatFn_SteamNetworkingSockets012_ReceiveMessagesOnPollGroup_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingSockets_ReceiveMessagesOnPollGroup");
   g_bd_flat_SteamNetworkingSockets012_ResetIdentity = (BDFlatFn_SteamNetworkingSockets012_ResetIdentity_t)dlsym(dylibHandle, "SteamAPI_ISteamNetworkingSockets_ResetIdentity");
+  g_bd_accessor_steamuser020 = g_bd_accessor_steamuser023;
+  g_bd_self_steamuser020 = g_bd_accessor_steamuser020 ? g_bd_accessor_steamuser020() : NULL;
+  g_bd_flat_SteamUser020_GetHSteamUser = (BDFlatFn_SteamUser020_GetHSteamUser_t)dlsym(dylibHandle, "SteamAPI_ISteamUser_GetHSteamUser");
+  g_bd_flat_SteamUser020_BLoggedOn = (BDFlatFn_SteamUser020_BLoggedOn_t)dlsym(dylibHandle, "SteamAPI_ISteamUser_BLoggedOn");
+  g_bd_flat_SteamUser020_GetSteamID = (BDFlatFn_SteamUser020_GetSteamID_t)dlsym(dylibHandle, "SteamAPI_ISteamUser_GetSteamID");
+  g_bd_flat_SteamUser020_GetAuthSessionTicket = (BDFlatFn_SteamUser020_GetAuthSessionTicket_t)dlsym(dylibHandle, "SteamAPI_ISteamUser_GetAuthSessionTicket");
+  g_bd_flat_SteamUser020_CancelAuthTicket = (BDFlatFn_SteamUser020_CancelAuthTicket_t)dlsym(dylibHandle, "SteamAPI_ISteamUser_CancelAuthTicket");
   return 1;
 }
 
 // 53-06 (D-53-13): game-originated call trace tables. Not a wire tuple,
 // so BRIDGE_DISPATCH_TABLE_HASH is unaffected.
-#define BD_CALL_COUNT 352
+#define BD_CALL_COUNT 357
 static int bd_call_index(uint16_t ordinal, uint16_t slot) {
   switch (((uint32_t)ordinal << 16) | (uint32_t)slot) {
     case (((uint32_t)BD_ORDINAL_SteamUser023 << 16) | (uint32_t)BD_SLOT_SteamUser023_GetHSteamUser): return 0;
@@ -2181,6 +2206,11 @@ static int bd_call_index(uint16_t ordinal, uint16_t slot) {
     case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_SetConnectionPollGroup): return 349;
     case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_ReceiveMessagesOnPollGroup): return 350;
     case (((uint32_t)BD_ORDINAL_SteamNetworkingSockets012 << 16) | (uint32_t)BD_SLOT_SteamNetworkingSockets012_ResetIdentity): return 351;
+    case (((uint32_t)BD_ORDINAL_SteamUser020 << 16) | (uint32_t)BD_SLOT_SteamUser020_GetHSteamUser): return 352;
+    case (((uint32_t)BD_ORDINAL_SteamUser020 << 16) | (uint32_t)BD_SLOT_SteamUser020_BLoggedOn): return 353;
+    case (((uint32_t)BD_ORDINAL_SteamUser020 << 16) | (uint32_t)BD_SLOT_SteamUser020_GetSteamID): return 354;
+    case (((uint32_t)BD_ORDINAL_SteamUser020 << 16) | (uint32_t)BD_SLOT_SteamUser020_GetAuthSessionTicket): return 355;
+    case (((uint32_t)BD_ORDINAL_SteamUser020 << 16) | (uint32_t)BD_SLOT_SteamUser020_CancelAuthTicket): return 356;
     default: return -1;
   }
 }
@@ -2538,6 +2568,11 @@ static const char *bd_call_name(int idx) {
     case 349: return "SteamNetworkingSockets012.SetConnectionPollGroup";
     case 350: return "SteamNetworkingSockets012.ReceiveMessagesOnPollGroup";
     case 351: return "SteamNetworkingSockets012.ResetIdentity";
+    case 352: return "SteamUser020.GetHSteamUser";
+    case 353: return "SteamUser020.BLoggedOn";
+    case 354: return "SteamUser020.GetSteamID";
+    case 355: return "SteamUser020.GetAuthSessionTicket";
+    case 356: return "SteamUser020.CancelAuthTicket";
     default: return "";
   }
 }
@@ -7154,6 +7189,62 @@ uint8_t bridge_dispatch(uint16_t ordinal, uint16_t slot, const uint8_t *arg, uin
         arg_pIdentity = arg_pIdentity_buf;
       }
       g_bd_flat_SteamNetworkingSockets012_ResetIdentity(g_bd_self_steamnetworkingsockets012, arg_pIdentity);
+      *respLen = 0; return 0;
+    }
+    case (((uint32_t)75) << 16 | 0u): { // SteamUser020.GetHSteamUser
+      if (g_bd_flat_SteamUser020_GetHSteamUser == NULL || g_bd_self_steamuser020 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      int32_t __ret = g_bd_flat_SteamUser020_GetHSteamUser(g_bd_self_steamuser020);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)75) << 16 | 1u): { // SteamUser020.BLoggedOn
+      if (g_bd_flat_SteamUser020_BLoggedOn == NULL || g_bd_self_steamuser020 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      int __ret = g_bd_flat_SteamUser020_BLoggedOn(g_bd_self_steamuser020);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)75) << 16 | 2u): { // SteamUser020.GetSteamID
+      if (g_bd_flat_SteamUser020_GetSteamID == NULL || g_bd_self_steamuser020 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      uint64_t __ret = g_bd_flat_SteamUser020_GetSteamID(g_bd_self_steamuser020);
+      if (respCap < 8) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 8);
+      *respLen = 8;
+      return 0;
+    }
+    case (((uint32_t)75) << 16 | 13u): { // SteamUser020.GetAuthSessionTicket
+      if (g_bd_flat_SteamUser020_GetAuthSessionTicket == NULL || g_bd_self_steamuser020 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      static uint8_t g_bd_flat_SteamUser020_GetAuthSessionTicket_pTicket_buf[BD_WIRE_OUT_BUFFER_MAX_BYTES];
+      uint32_t cap_pTicket = 0;
+      if (argLen < 0u + 4) { *respLen = 0; return 1; }
+      memcpy(&cap_pTicket, arg + 0u, 4);
+      if (cap_pTicket > BD_WIRE_OUT_BUFFER_MAX_BYTES) cap_pTicket = BD_WIRE_OUT_BUFFER_MAX_BYTES;
+      if (respCap < 12) { *respLen = 0; return 1; }
+      if (cap_pTicket > respCap - 12) cap_pTicket = (uint32_t)(respCap - 12); // response must fit the scratch
+      memset(g_bd_flat_SteamUser020_GetAuthSessionTicket_pTicket_buf, 0, cap_pTicket); // no earlier call's bytes cross into the game (53-17 WR-04)
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_cbMaxTicket; memcpy(&arg_cbMaxTicket, arg + (0u + 4), 4);
+      uint32_t arg_pcbTicket = 0;
+      if ((int64_t)arg_cbMaxTicket < 0 || (int64_t)arg_cbMaxTicket > (int64_t)cap_pTicket) arg_cbMaxTicket = (int32_t)cap_pTicket;
+      uint32_t __ret = g_bd_flat_SteamUser020_GetAuthSessionTicket(g_bd_self_steamuser020, g_bd_flat_SteamUser020_GetAuthSessionTicket_pTicket_buf, arg_cbMaxTicket, &arg_pcbTicket, NULL);
+      if (respCap < 12) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      memcpy(resp + 4, &arg_pcbTicket, 4);
+      uint32_t outLen_pTicket = cap_pTicket;
+      if ((uint32_t)arg_pcbTicket < outLen_pTicket) outLen_pTicket = (uint32_t)arg_pcbTicket;
+      memcpy(resp + 8, &outLen_pTicket, 4);
+      memcpy(resp + 8 + 4, g_bd_flat_SteamUser020_GetAuthSessionTicket_pTicket_buf, outLen_pTicket);
+      *respLen = 8 + 4 + outLen_pTicket;
+      return 0;
+    }
+    case (((uint32_t)75) << 16 | 16u): { // SteamUser020.CancelAuthTicket
+      if (g_bd_flat_SteamUser020_CancelAuthTicket == NULL || g_bd_self_steamuser020 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      uint32_t arg_hAuthTicket; memcpy(&arg_hAuthTicket, arg + 0u, 4);
+      g_bd_flat_SteamUser020_CancelAuthTicket(g_bd_self_steamuser020, arg_hAuthTicket);
       *respLen = 0; return 0;
     }
     default:

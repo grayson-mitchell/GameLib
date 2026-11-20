@@ -72,5 +72,9 @@
   "SteamNetworkingUtils004": 71,
   "SteamNetworkingMessages002": 72,
   "SteamNetworkingSockets012": 73,
-  "STEAMREMOTESTORAGE_INTERFACE_VERSION008": 74
+  "STEAMREMOTESTORAGE_INTERFACE_VERSION008": 74,
+  "SteamUser020": 75,
+  "STEAMUGC_INTERFACE_VERSION013": 76,
+  "SteamController007": 77,
+  "SteamInput001": 78
 }
