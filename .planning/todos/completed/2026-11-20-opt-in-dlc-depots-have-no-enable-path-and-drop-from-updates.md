@@ -11,6 +11,8 @@ files:
 severity: medium
 platform: any
 ready: code
+resolved: 2026-11-20
+resolution: "fixed by quick 261120-tbr: buildDepotRefs treats installed opt-in DLC depots as enabled (update delta, verify, update estimate); the enable path moved to 2026-11-20-opt-in-dlc-has-no-enable-path-in-the-install-dialog.md"
 ---
 
 Quick 261120-st3 made `selectAllDepots` skip `config.optionaldlc` depots of opt-in DLC (the DLC
@@ -39,3 +41,31 @@ library carried it on 2026-11-20, so this is unconfirmed.
 
 **Scope.** Arms for `os: 'windows'` (Windows native installs and the bottle path). macOS native Dota
 2 installs never selected these windows-only depots.
+
+## Resolution (2026-11-20, quick 261120-tbr)
+
+**The fix.** `select.ts` gained `optInDlcOfInstalledDepots(appinfo, dlcInfos, installedDepotIds)`,
+which maps each installed depot id through its PICS `config.optionaldlc` to a DLC appId.
+`buildDepotRefs` (`plan.ts`) unions the update delta's `oldGidByDepot` keys with a new
+`DownloadSteamDepotsOpts.installedDepotIds` and passes the result as `enabledOptInDlc` to
+`selectAllDepots` (one ids-only log line when non-empty). `verify.ts` and the update estimate
+(`updateEstimate.ts`) supply `installedDepotIds` from the ACF's installed depots. An installed
+opt-in depot therefore stays in the plan, is retained as `selected`, stays in the attempted set and
+so stays in the ACF `InstalledDepots`.
+
+**Fresh installs still skip opt-in DLC.** With no delta and no `installedDepotIds`, nothing is passed
+as `enabledOptInDlc`, and Steam's unticked default holds. An installed set holding only depots
+without `config.optionaldlc` enables nothing.
+
+**Correction to the verify claim above.** `verify.ts` (quick 261120-p2j) already pinned every ACF
+installed depot, so the opt-in depot never left the verify job. After 261120-st3 the plan skipped
+it, so its key came from the fallback with owner `dlcappid` (313250 instead of the base app 570).
+Whether Steam issues the 381450 key under 313250 was not tested. The fix restores the base-app
+owner, because the plan selects the depot again.
+
+**No Rust change.** `gamelib-depot/src/acf.rs` needed none: once `buildDepotRefs` selects the depot it
+is in the job and in the attempted set. Commits: `38ade8ea5` (select, plan, planModel and tests) and
+`d566c2770` (verify and update estimate).
+
+The enable path (an install-dialog tick, add-to-existing-install, untick) is filed as
+`2026-11-20-opt-in-dlc-has-no-enable-path-in-the-install-dialog.md`.

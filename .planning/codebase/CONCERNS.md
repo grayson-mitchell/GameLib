@@ -120,7 +120,7 @@ These are already filed. They are listed so that new work does not re-file them.
 - Downloads history is lost on tab return: `2026-11-05-downloads-history-lost-on-tab-return.md`
 - CrossOver rating API returns 403: `2026-11-07-codeweavers-crossover-rating-api-403.md`
 - winebus IOHID wedges on the PowerA pad: `2026-10-29-winebus-iohid-wedges-on-powera-switch2-pad.md`
-- Opt-in DLC depots have no enable path and drop from updates: `2026-11-20-opt-in-dlc-depots-have-no-enable-path-and-drop-from-updates.md`
+- Opt-in DLC has no enable path (install-dialog tick): `2026-11-20-opt-in-dlc-has-no-enable-path-in-the-install-dialog.md`
 
 **DXVK state cache written to the process working directory (unverified root cause):**
 - Symptoms: an untracked, un-ignored `Schedule I Free Sample.dxvk-cache` (117,886 bytes, dated
