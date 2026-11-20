@@ -4,11 +4,11 @@ milestone: v0.10
 current_phase: 83
 current_phase_name: Native seam, gamelib-core and process/shutdown contract
 status: executing
-stopped_at: Completed 83-05-PLAN.md
-last_updated: "2026-11-20T09:54:44.762Z"
+stopped_at: Completed 83-06-PLAN.md
+last_updated: "2026-11-20T10:15:53.596Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 83 execution started
-state_head: a2e1ea93189f7615a96491de84689574863160bb
+state_head: 75af816a734e75dcdba8dbf8fe5a34f64ee827f5
 progress:
   total_phases: 27
   completed_phases: 23
@@ -76,7 +76,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 83 (Native seam, gamelib-core and process/shutdown contract) — EXECUTING
-Plan: 6 of 11
+Plan: 7 of 11
 Status: Ready to execute
 Last activity: 2026-11-20 — Phase 83 execution started
 Progress: [██████████] 100% (19 of 19 phase 82 plans have a SUMMARY; verification human_needed)
@@ -332,6 +332,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 83 P03 | 30 min | 3 tasks | 20 files |
 | Phase 83 P04 | ~20 min | 3 tasks | 17 files |
 | Phase 83 P05 | 40 min | 3 tasks | 9 files |
+| Phase 83 P06 | 19 min | 3 tasks | 20 files |
 
 ## Accumulated Context
 
@@ -589,6 +590,9 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 83]: gamelib-proc uses one kill-on-close Windows Job per Helper spawn (not one process-wide Job), so reaping a dead sidecar's Job never kills unrelated helpers
 - [Phase 83]: ChildSet::terminate_all drains entries under the lock then signals without it; unix hard-kills only groups whose leader did not exit within grace; Windows has no graceful stage and reports no stragglers
 - [Phase 83]: 83-05: snapshot floor 231 (237 measured renderer channels minus 6); native snapshot entries carry returns as a last key; MULTI_REGISTRATION pins exact file sets because the shared scan does not strip comments
+- [Phase 83]: 83-06: openExternalUrl hand-off to the OS opener runs on its own short-lived thread spawned by native_handlers::open_external_url, not on the slice worker
+- [Phase 83]: 83-06: open_external stays as a shell-internal helper (no #[tauri::command], not in generate_handler!) because store_embed and macos_epic_embed call it directly
+- [Phase 83]: 83-06: one-arg native channels decode as a real (T,) tuple; a one-field tuple struct is a serde newtype
 
 ### Pending Todos
 
@@ -837,8 +841,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-20T09:54:44.730Z
-Stopped at: Completed 83-05-PLAN.md
+Last session: 2026-11-20T10:15:53.525Z
+Stopped at: Completed 83-06-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

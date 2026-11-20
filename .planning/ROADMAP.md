@@ -353,7 +353,7 @@ Plans:
   3. Quitting GameLib, and SIGKILL of the parent, leaves no orphaned helper process on macOS, Windows and Linux (launched games excepted), proven on all three OS legs
   4. `gamelib-core` (paths, emitter, clock, `ProcessRunner`, `Shutdown` token) and `gamelib-proc` kill-tree exist, and the TS shim the first migrated channel used is deleted in this phase
 
-**Plans:** 5/11 plans executed
+**Plans:** 6/11 plans executed
 
 Plans:
 **Wave 1**
@@ -366,7 +366,7 @@ Plans:
 - [x] 83-05-PLAN.md — Seam gates: IPC schema snapshot diff gate, one-owner census, *PortComplete template, version parity
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 83-06-PLAN.md — Native send seam: openExternalUrl FIFO slice queue and Rust URL check; its TS deleted; open_external command deleted (D-17)
+- [x] 83-06-PLAN.md — Native send seam: openExternalUrl FIFO slice queue and Rust URL check; its TS deleted; open_external command deleted (D-17)
 - [ ] 83-07-PLAN.md — Unix reaper, SIGKILL legs, negative control and Node stand-in leg
 
 **Wave 4** *(blocked on Wave 3 completion)*
