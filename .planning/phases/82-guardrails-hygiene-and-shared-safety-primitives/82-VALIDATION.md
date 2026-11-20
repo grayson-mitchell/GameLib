@@ -93,7 +93,7 @@ Status reflects Linux CI (Test run 44834013151 on 456600895, Rust test runs 4482
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
-**Windows note:** on the operator's Windows box, 15 of the 89 Phase 82 test files are red for environment reasons (path separators, file modes, log-rotate EPERM, CRLF; see `82-TEST-LEDGER.md` and memory `windows-local-jest-failures`). Every one of them passes on Linux CI, which is the arbiter (CI is ubuntu-only for jest).
+**Windows note:** the 2026-11-20 audit found 13 Phase 82 test files red on the operator's Windows box for environment reasons only; all were green on Linux CI. The same day, the gap-fill pass made all 13 pass on Windows too (see the second audit below). Four win32-only skips remain, each named in its test file and active on Linux and macOS: the macOS steamclient-layer DRM `launch` block and the DRM 0700 trace-dir test in steam `games.test.ts`, fileStore WR-06 (0o600/0o700) and loggerFlows WR-02 (0700); Windows has no POSIX modes and `gameDrmLaunch` requires a `/`-rooted host path.
 
 ---
 
@@ -140,3 +140,23 @@ Status reflects Linux CI (Test run 44834013151 on 456600895, Rust test runs 4482
 | Escalated | 0 |
 
 Discovery ran 89 test files locally (74 pass, 15 env-red on Windows), `cargo test -p gamelib-safety -p gamelib-testutil` (24 + 45 + 2 + 6, all green), and `pnpm planning-gates` (12/12). CI Test on 456600895 failed 3 suites, none of them Phase 82's: `rendererAllowList` and `testContainment` (Phase 83 work in `src/backend/sidecar/`), and `logSecretGate`, which flagged `gog/windowsElevation.ts` from quick 261120-uzn logging raw stderr. That is fixed in f2dc264bd (78/78 locally), with CI confirmation owed after the next push.
+
+## Validation Audit 2026-11-20 (Windows gap fill)
+
+| Metric | Count |
+|--------|-------|
+| Gaps found | 13 test files red on Windows only (about 100 tests) |
+| Resolved | 13 (all 13 pass together on Windows: 1376 passed, 115 win32-only skips, 0 failed) |
+| Escalated | 0 (depotPortComplete was a stale, gitignored `lzmaNativeResolvedPaths.generated.cjs` from before Phase 73; moved out of the tree, 54/54 pass) |
+
+The causes were all in the tests, none in product code:
+- `steamDirectRemovalSafety`: its fake matched nested paths with `startsWith(path + '/')`; it now uses `path.relative`.
+- Log-rotate EPERM in `shellFilesFlows`, `loggerFlows` and `rustInvokeChannel`: an unawaited append still held the log file during rotation. The new `testUtils/settleLogFile.ts` waits for that on win32 only.
+- `checkDiskSpace` on win32 runs the PowerShell probe, which the test now scripts.
+- Steam `games.test.ts`: `/mock` path literals (IN-08) now go through a host-path helper.
+- `bridgeBottleLifecycle` and the gog library tests compared `/` separators.
+- `diPhaseGates` and `createStores` census regexes expected posix paths, so on Windows their scan floors were starved. "17 stores modules" found 1.
+- `tauriShellSource`: the CRLF working copy of `relay_commands.rs` is now normalised when read.
+- `dxvkInstallRemove`: unawaited `copyFile` calls held files at teardown; cleanup now uses an async `rm` with retries.
+
+No implementation file was changed, `jestMock` stayed at 1865, and no Linux assertion was loosened. Commits: 8cd067cd3, aab0354e3, 289bd75f9, e554173d9, 11a23ae6a, 36b1b5a7d, b3a059a8f, e572574b7. Residual risk: `rustInvokeChannel` can still print an EPERM log line while passing, because the product's log writes are unawaited. That is a product-side concern and is not tracked here.
