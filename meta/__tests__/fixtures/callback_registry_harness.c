@@ -112,13 +112,24 @@ static int gl_cb_transport_drain(uint8_t *buf, uint32_t cap,
 static reply_t g_cq[MAXQ];
 static int g_cqhead, g_cqtail;
 static int g_ctcalls;
-static uint8_t *g_lastcrbuf;
+/* The registry hands every slot-11 pull of one run the SAME stack buffer and zeroes it after each
+ * result. g_crseed_seen is how many 0xCD seed bytes the first pull left in that buffer (proves the
+ * probe can see them); g_crresidue is how many were still there when a LATER pull of the same run
+ * received the buffer back, i.e. read on live memory, never from the dead frame after return. */
+static int g_crseed_seen;
+static int g_crresidue;
+static int g_crscans;
 
 static int gl_cb_transport_drain_cr(uint8_t *buf, uint32_t cap,
                                     uint32_t *lenOut) {
   int r;
+  uint32_t k;
   g_ctcalls++;
-  g_lastcrbuf = buf;
+  if (g_ctcalls > 1) {
+    g_crscans++;
+    for (k = 0; k < cap; k++)
+      if (buf[k] == 0xCD) g_crresidue++;
+  }
   r = pthread_mutex_trylock(&g_reg);
   CHECK(r == 0); /* registry lock must NOT be held across the transport */
   pthread_mutex_unlock(&g_reg);
@@ -132,6 +143,9 @@ static int gl_cb_transport_drain_cr(uint8_t *buf, uint32_t cap,
     if (!q->ok) return 0;
     CHECK(q->len <= cap);
     memcpy(buf, q->data, q->len);
+    if (g_ctcalls == 1)
+      for (k = 0; k < cap; k++)
+        if (buf[k] == 0xCD) g_crseed_seen++;
     *lenOut = q->len;
     return 1;
   }
@@ -422,7 +436,7 @@ static void reset(void) {
   g_rcalls = 0;
   g_cqhead = g_cqtail = 0;
   g_ctcalls = 0;
-  g_lastcrbuf = NULL;
+  g_crseed_seen = g_crresidue = g_crscans = 0;
   g_nrep = 0;
   g_ncreg = 0;
   gl_cbreg_n = gl_cbreg_flushed = 0;
@@ -1297,18 +1311,20 @@ static void case_cr_max_per_run_and_backoff(void) {
 }
 
 static void case_cr_buffer_zeroed(void) {
-  int left = 0;
-  uint32_t i;
   g_case = "cr_buffer_zeroed";
   reset();
   gl_cr_register(&objC, 0x41);
   push_cr(0x41, 504, 0, 0xCD);
   gl_cb_run_callbacks();
   CHECK(objC.cr_calls == 1);
-  CHECK(g_lastcrbuf != NULL);
-  for (i = 0; i < 2600; i++)
-    if (g_lastcrbuf[i] == 0xCD) left++;
-  CHECK(left == 0);
+  /* The result body (24 bytes of 0xCD) really was in the buffer after the first pull (stale stack
+   * may add more, never fewer) ... */
+  CHECK(g_crseed_seen >= 24);
+  /* ... the registry pulled again after delivering it (the loop only stops on an empty reply) ... */
+  CHECK(g_crscans >= 1);
+  /* ... and the buffer it handed back held none of it: zeroed on live memory. The previous form
+   * read the registry's dead stack frame after return, which no platform guarantees. */
+  CHECK(g_crresidue == 0);
   PASS();
 }
 
