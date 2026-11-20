@@ -238,8 +238,22 @@ pub fn plan_reap(
     registry: &Registry,
     current_start: impl Fn(i32) -> Option<u64>,
 ) -> (Vec<i32>, usize) {
-    let _ = (registry, current_start);
-    (Vec::new(), 0)
+    let mut signal = Vec::new();
+    let mut skipped = 0;
+    for (&pgid, &(start, _)) in registry {
+        if pgid <= 1 {
+            continue;
+        }
+        if start == 0 {
+            signal.push(pgid);
+            continue;
+        }
+        match current_start(pgid) {
+            Some(now) if now != start => skipped += 1,
+            _ => signal.push(pgid),
+        }
+    }
+    (signal, skipped)
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -288,27 +302,124 @@ fn next_line<R: BufRead>(r: &mut R) -> Next {
     }
 }
 
-/// The reaper process. Reads the control pipe on stdin until EOF, then reaps. Returns the exit
-/// code. Never touches Tauri, AppKit or the filesystem.
+/// How often the secondary trigger looks at `getppid()`.
+#[cfg(unix)]
+const PPID_POLL: Duration = Duration::from_millis(500);
+
+/// State shared by the two triggers (stdin EOF on the main thread, a changed `getppid()` on the
+/// poll thread). Whichever fires first reaps; the other does nothing.
+#[cfg(unix)]
+struct Shared {
+    state: Mutex<State>,
+    triggered: std::sync::atomic::AtomicBool,
+}
+
+#[cfg(unix)]
+impl Shared {
+    fn state(&self) -> MutexGuard<'_, State> {
+        self.state.lock().unwrap_or_else(|e| e.into_inner())
+    }
+}
+
+/// The reaper must outlive its parent, so a terminal Ctrl-C (SIGINT), a closed terminal (SIGHUP) or
+/// a group SIGTERM aimed at the app cannot take it down first. Pitfall 6.
+#[cfg(unix)]
+fn ignore_terminal_signals() {
+    for sig in [libc::SIGINT, libc::SIGHUP, libc::SIGTERM] {
+        // SAFETY: `signal` with SIG_IGN installs no handler code, so nothing can run in a signal
+        // context; it only changes the disposition of this process.
+        unsafe {
+            libc::signal(sig, libc::SIG_IGN);
+        }
+    }
+}
+
+/// Runs the first trigger's reap and returns the exit code, or `None` if the other trigger got
+/// there first (that one exits the process).
+#[cfg(unix)]
+fn finish(shared: &Shared) -> Option<i32> {
+    use std::sync::atomic::Ordering;
+    if shared.triggered.swap(true, Ordering::SeqCst) {
+        return None;
+    }
+    let (disarmed, registry, malformed) = {
+        let s = shared.state();
+        (s.disarmed, s.registry.clone(), s.malformed)
+    };
+    if disarmed {
+        eprintln!("[reaper] disarmed");
+    } else {
+        let (to_signal, skipped) =
+            plan_reap(&registry, |pgid| crate::probe::start_time(pgid as u32));
+        let signalled = terminate_groups(&to_signal);
+        if skipped > 0 {
+            eprintln!(
+                "[reaper] parent gone: signalled {signalled} group(s), skipped {skipped} recycled"
+            );
+        } else {
+            eprintln!("[reaper] parent gone: signalled {signalled} group(s)");
+        }
+    }
+    if malformed > 0 {
+        eprintln!("[reaper] ignored {malformed} malformed line(s)");
+    }
+    Some(0)
+}
+
+/// The reaper process. Reads the control pipe on stdin until EOF, then reaps; a changed
+/// `getppid()` (polled every 500 ms) triggers the same reap, so a leaked duplicate of the pipe's
+/// write end cannot keep it waiting after the parent died. Returns the exit code. Never touches
+/// Tauri, AppKit or the filesystem.
 #[cfg(unix)]
 pub fn run() -> i32 {
+    use std::sync::atomic::AtomicBool;
+    use std::sync::Arc;
+
+    ignore_terminal_signals();
+    // SAFETY: getppid takes no arguments, cannot fail and dereferences nothing.
+    let original_ppid = unsafe { libc::getppid() };
+    let shared = Arc::new(Shared {
+        state: Mutex::new(State::default()),
+        triggered: AtomicBool::new(false),
+    });
+
+    {
+        let shared = Arc::clone(&shared);
+        let spawned = std::thread::Builder::new()
+            .name("reaper-ppid".into())
+            .spawn(move || loop {
+                std::thread::sleep(PPID_POLL);
+                // SAFETY: as above.
+                if unsafe { libc::getppid() } != original_ppid {
+                    // Let the main thread drain whatever the parent wrote just before it died (a
+                    // `disarm`, a late registration) before reaping.
+                    std::thread::sleep(Duration::from_millis(200));
+                    if let Some(code) = finish(&shared) {
+                        std::process::exit(code);
+                    }
+                    return;
+                }
+            });
+        if spawned.is_err() {
+            diag("reaper: ppid poll thread failed to start; EOF is the only trigger");
+        }
+    }
+
     let stdin = std::io::stdin();
     let mut input = stdin.lock();
-    let mut state = State::default();
     loop {
         match next_line(&mut input) {
             Next::Eof => break,
-            other => state.apply(other),
+            other => shared.state().apply(other),
         }
     }
-    if state.disarmed {
-        eprintln!("[reaper] disarmed");
-        return 0;
+    match finish(&shared) {
+        Some(code) => code,
+        // The poll thread is already reaping and will exit the process.
+        None => loop {
+            std::thread::sleep(Duration::from_secs(1));
+        },
     }
-    let pgids: Vec<i32> = state.registry.keys().copied().collect();
-    let signalled = terminate_groups(&pgids);
-    eprintln!("[reaper] parent gone: signalled {signalled} group(s)");
-    0
 }
 
 /// Not reachable on this target: `dispatch_if_requested` is the only caller and the reaper is

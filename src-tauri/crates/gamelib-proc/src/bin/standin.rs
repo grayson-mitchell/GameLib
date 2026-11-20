@@ -18,7 +18,8 @@
 //!   same executable re-exec'd.
 //!
 //! `parent` flags: `--no-reaper` skips starting the reaper (the negative control: a SIGKILL of the
-//! parent must then leave its helpers alive).
+//! parent must then leave its helpers alive). `--leak-pipe` (unix) adds a fourth helper holding a
+//! duplicate of the reaper pipe's write end as its stdin, so EOF never reaches the reaper.
 
 use gamelib_proc::{global, reaper, spawn_game, spawn_helper, spawn_helper_with_pipes};
 use std::io::{BufRead, BufReader, Write};
@@ -161,9 +162,24 @@ fn parent(args: &[String]) {
     let game = spawn_game(game_cmd, Some(&game_log)).expect("spawn game");
     let game_child = read_pid_file(&game_pids);
 
+    // `mut` and `vec!` are only needed by the unix-only leaky helper below.
+    #[cfg_attr(not(unix), allow(unused_mut, clippy::useless_vec))]
+    let mut helpers = vec![h1, h2, tree_pid];
+    #[cfg(unix)]
+    if has_flag(args, "--leak-pipe") {
+        let fd = reaper::harness_dup_write_end().expect("a running reaper to leak the pipe of");
+        let mut leak_cmd = self_command("idle", &[]);
+        leak_cmd.stdin(Stdio::from(fd));
+        helpers.push(spawn_helper(leak_cmd, "standin-leak").expect("spawn leaky helper"));
+    }
+    let helpers_json = helpers
+        .iter()
+        .map(u32::to_string)
+        .collect::<Vec<_>>()
+        .join(",");
     let reaper_json = reaper_pid.map_or("null".to_string(), |p| p.to_string());
     let manifest = format!(
-        r#"{{"helpers":[{h1},{h2},{tree_pid}],"grandchildren":[{grandchild}],"games":[{},{game_child}],"reaper":{reaper_json}}}"#,
+        r#"{{"helpers":[{helpers_json}],"grandchildren":[{grandchild}],"games":[{},{game_child}],"reaper":{reaper_json}}}"#,
         game.id()
     );
     let mut out = std::io::stdout();
