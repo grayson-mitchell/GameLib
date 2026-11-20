@@ -618,3 +618,144 @@ describe('uninstallGameCallback prefix guard (82-07)', () => {
     expect(existsSync(prefix)).toBe(true)
   })
 })
+
+// quick 261120-ux8: `'../config'` resolves to `appFolder/config.json`, GameLib's own global
+// settings file, which is the concrete stake of this fix. The fake transport does not enforce
+// trust roots, so Test E proves the request shape and that a refusal deletes nothing.
+describe('settings guard (261120-ux8)', () => {
+  const getSettings = jest.fn()
+  const uninstall = jest.fn()
+  const statuses = () =>
+    (sendGameStatusUpdate as jest.Mock).mock.calls.map((c) => c[1].status)
+  const removalNotices = () =>
+    (deps.sendFrontendMessage as jest.Mock).mock.calls.filter(
+      (c) => c[0] === 'removalRefusedNotice'
+    )
+  const warnings = () =>
+    (logWarning as jest.Mock).mock.calls
+      .flat()
+      .map((a) => String(a))
+      .join('\n')
+  const withRust = (requestRustInvoke: RequestRustInvoke) =>
+    ({ ...deps, requestRustInvoke }) as typeof deps
+  const gameFiles = (app: string) => [
+    join(gamesConfigPath, `${app}.json`),
+    join(gamesConfigPath, `${app}.log`),
+    join(gamesConfigPath, `${app}-lastPlay.log`)
+  ]
+  const writeAll = (files: string[]) => {
+    mkdirSync(gamesConfigPath, { recursive: true })
+    for (const f of files) writeFileSync(f, '{}')
+  }
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    uninstall.mockResolvedValue({ stdout: '', stderr: '' })
+    libraryManagerMap.legendary = manager(uninstall, getSettings)
+  })
+
+  it('a ../config appName never deletes GameLib config.json (one guarded app-data request)', async () => {
+    const files = [
+      paths.configPath,
+      join(gamesConfigPath, '..', 'config.log'),
+      join(gamesConfigPath, '..', 'config-lastPlay.log')
+    ]
+    mkdirSync(join(gamesConfigPath, '..'), { recursive: true })
+    for (const f of files) writeFileSync(f, '{}')
+    const { requestRustInvoke, calls } = fakeSafetyRustInvoke({
+      checkVerdict: 'no',
+      reason: 'outside-trust-root'
+    })
+
+    await uninstallGameCallback(
+      withRust(requestRustInvoke),
+      {} as any,
+      '../config',
+      'legendary',
+      false,
+      true
+    )
+
+    for (const f of files) expect(existsSync(f)).toBe(true)
+    expect(calls.map((c) => c.channel)).toEqual(['safety_check_removal'])
+    const req = calls[0]?.args[0] as { targets: { path: string }[] }
+    expect(req.targets).toHaveLength(3)
+    expect(req.targets.map((t) => t.path)).toEqual(files)
+    for (const t of req.targets) {
+      expect(t).toMatchObject({ kind: 'app-data', trustRoot: gamesConfigPath })
+    }
+    expect(warnings()).toContain(
+      '[safety] remove-settings refused: outside-trust-root'
+    )
+    expect(warnings()).not.toMatch(/config|264160|GamesConfig/)
+  })
+
+  it('an injected check rejection deletes nothing and the uninstall still completes', async () => {
+    const files = gameFiles('264160')
+    writeAll(files)
+    const { requestRustInvoke } = fakeSafetyRustInvoke({ rejectCheck: true })
+
+    await uninstallGameCallback(
+      withRust(requestRustInvoke),
+      {} as any,
+      '264160',
+      'legendary',
+      false,
+      true
+    )
+
+    for (const f of files) expect(existsSync(f)).toBe(true)
+    expect(notify).toHaveBeenCalledTimes(1)
+    expect(statuses()).toEqual(['uninstalling', 'done'])
+    expect(removalNotices()).toEqual([])
+    expect(warnings()).toContain(
+      '[safety] remove-settings refused: rust-invoke-failed'
+    )
+    expect(warnings()).not.toMatch(/config|264160|GamesConfig/)
+  })
+
+  it('a legitimate appName removes all three files in one guarded request', async () => {
+    const files = gameFiles('264160')
+    writeAll(files)
+    const { requestRustInvoke, calls } = fakeSafetyRustInvoke()
+
+    await uninstallGameCallback(
+      withRust(requestRustInvoke),
+      {} as any,
+      '264160',
+      'legendary',
+      false,
+      true
+    )
+
+    for (const f of files) expect(existsSync(f)).toBe(false)
+    expect(calls.map((c) => c.channel)).toEqual([
+      'safety_check_removal',
+      'safety_remove_tree'
+    ])
+  })
+
+  it('an injected remove rejection reports failed and the uninstall still completes', async () => {
+    const files = gameFiles('264160')
+    writeAll(files)
+    const { requestRustInvoke } = fakeSafetyRustInvoke({ rejectRemove: true })
+
+    await uninstallGameCallback(
+      withRust(requestRustInvoke),
+      {} as any,
+      '264160',
+      'legendary',
+      false,
+      true
+    )
+
+    for (const f of files) expect(existsSync(f)).toBe(true)
+    expect(warnings()).toContain(
+      '[safety] remove-settings failed: rust-invoke-failed'
+    )
+    expect(warnings()).not.toMatch(/config|264160|GamesConfig/)
+    expect(notify).toHaveBeenCalledTimes(1)
+    expect(statuses()).toEqual(['uninstalling', 'done'])
+    expect(removalNotices()).toEqual([])
+  })
+})

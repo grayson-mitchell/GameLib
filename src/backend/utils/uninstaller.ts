@@ -22,7 +22,7 @@ import {
 import { protectedRootsFor } from 'backend/safety/protectedRoots'
 import { pushRemovalRefusal } from 'backend/safety/refusal'
 import type { SafetyRequest } from 'common/types/safety'
-import { existsSync, rmSync } from 'graceful-fs'
+import { existsSync } from 'graceful-fs'
 import i18next from 'i18next'
 import { join } from 'path'
 
@@ -160,21 +160,25 @@ export const removeFixFile = async (
   ])
 }
 
-const removeSettingsAndLogs = (
-  deps: Pick<UninstallerDeps, 'paths'>,
-  appName: string
-) => {
-  const removeIfExists = (filename: string) => {
+const removeSettingsAndLogs = (deps: AppDataRemovalDeps, appName: string) => {
+  const { gamesConfigPath } = deps.paths
+  const files: [string, string][] = [
+    ['settings', appName.concat('.json')],
+    ['log', appName.concat('.log')],
+    ['last-play-log', appName.concat('-lastPlay.log')]
+  ]
+  for (const [, filename] of files) {
     logInfo(`Removing ${filename}`, LogPrefix.Backend)
-    const gameSettingsFile = join(deps.paths.gamesConfigPath, filename)
-    if (existsSync(gameSettingsFile)) {
-      rmSync(gameSettingsFile)
-    }
   }
-
-  removeIfExists(appName.concat('.json'))
-  removeIfExists(appName.concat('.log'))
-  removeIfExists(appName.concat('-lastPlay.log'))
+  return removeAppDataFiles(
+    deps,
+    'remove-settings',
+    gamesConfigPath,
+    files.map(([id, filename]) => ({
+      id,
+      path: join(gamesConfigPath, filename)
+    }))
+  )
 }
 
 /** The other game's display title for a nested/inside refusal, as an optional payload field. */
@@ -295,7 +299,7 @@ export const uninstallGameCallback = async (
       }
     }
     if (shouldRemoveSetting) {
-      removeSettingsAndLogs(deps, appName)
+      await removeSettingsAndLogs(deps, appName)
     }
     await removeFixFile(deps, appName, runner)
 
