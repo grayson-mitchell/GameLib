@@ -7,8 +7,8 @@ import {
 } from 'common/types'
 import { sendGameStatusUpdate, shutdownWine } from '../../utils'
 import { logInfo, LogPrefix, logWarning } from 'backend/logger'
-import { dirname } from 'path'
-import { existsSync, rmSync } from 'graceful-fs'
+import { basename, dirname } from 'path'
+import { existsSync } from 'graceful-fs'
 import i18next from 'i18next'
 import {
   addShortcuts as addShortcutsUtil,
@@ -17,7 +17,19 @@ import {
 import { notify } from '../../dialog/dialog'
 import { launchGame } from 'backend/storeManagers/storeManagerCommon/games'
 import { Game, InstallResult, RemoveArgs } from 'common/types/game_manager'
-import { removePrefix } from 'backend/utils/uninstaller'
+import {
+  checkRemoval,
+  firstBlockingItem,
+  guardedRemoveTree
+} from 'backend/safety/rustSafety'
+import {
+  collectKnownInstalls,
+  knownInstallKey,
+  titleForKnownKey
+} from 'backend/safety/knownInstalls'
+import { protectedRootsFor } from 'backend/safety/protectedRoots'
+import { pushRemovalRefusal } from 'backend/safety/refusal'
+import type { SafetyRequest } from 'common/types/safety'
 import { removeRecentGame } from 'backend/recent_games/recent_games'
 import { isLinux, isMac, isWindows } from 'backend/constants/environment'
 import { removeNonSteamGame } from 'backend/shortcuts/nonesteamgame/nonesteamgame'
@@ -128,10 +140,27 @@ export default class SideloadGame implements Game {
     }
   }
 
-  async uninstall({
-    shouldRemovePrefix,
-    deleteFiles = false
-  }: RemoveArgs): Promise<ExecResult> {
+  private pushRefusal(
+    outcome: 'refused' | 'failed',
+    title: string,
+    reason: Parameters<typeof pushRemovalRefusal>[1]['reason'],
+    otherKey?: string
+  ) {
+    const otherTitle = otherKey
+      ? titleForKnownKey(this.deps, otherKey)
+      : undefined
+    pushRemovalRefusal(this.deps, {
+      kind: 'uninstall',
+      outcome,
+      reason,
+      title,
+      appName: this.id,
+      runner: 'sideload',
+      ...(otherTitle ? { otherTitle } : {})
+    })
+  }
+
+  async uninstall({ deleteFiles = false }: RemoveArgs): Promise<ExecResult> {
     sendGameStatusUpdate(this.deps, {
       appName: this.id,
       runner: 'sideload',
@@ -147,14 +176,50 @@ export default class SideloadGame implements Game {
       install: { executable }
     } = gameInfo
 
-    if (shouldRemovePrefix) {
-      removePrefix(this.deps, this.id, 'sideload')
+    // Phase 82 (D-22): the prefix is removed by uninstallGameCallback, through the guarded path
+    // (sideload is not a client-handoff store). The only GameLib-side recursive delete here is the
+    // game's own folder, and only when the user asked for the files to go.
+
+    let folderRequest: SafetyRequest | undefined
+    if (deleteFiles && executable !== undefined) {
+      folderRequest = {
+        targets: [
+          {
+            id: 'folder',
+            path: dirname(executable),
+            kind: 'sideload-folder',
+            executable: basename(executable)
+          }
+        ],
+        knownInstalls: collectKnownInstalls(this.deps, {
+          runner: 'sideload',
+          appName: this.id
+        }),
+        selfKey: knownInstallKey('sideload', this.id),
+        protectedRoots: protectedRootsFor(this.deps)
+      }
+      // Checked BEFORE the library entry is touched: a refusal leaves the entry and the files
+      // alone and the tile back at rest. (The Linux exec-bit rule can over-refuse a folder that
+      // holds helper scripts or libraries; the notice says the folder may be shared.)
+      const check = await checkRemoval(this.deps, folderRequest)
+      if (check.overall !== 'yes') {
+        const blocking = firstBlockingItem(check)
+        const reason = blocking?.reason ?? 'bad-reply'
+        this.pushRefusal('refused', title, reason, blocking?.otherKey)
+        return { stdout: '', stderr: reason, refused: true }
+      }
+    }
+
+    if (folderRequest) {
+      const removed = await guardedRemoveTree(this.deps, folderRequest)
+      if (removed.outcome !== 'removed') {
+        // The delete ran or its effect is unconfirmed: keep the library entry so a retry works.
+        const reason = removed.reason ?? 'bad-reply'
+        this.pushRefusal('failed', title, reason, removed.otherKey)
+        return { stdout: '', stderr: reason, failed: true }
+      }
     }
     this.deps.stores.sideload.libraryStore.set('games', current)
-
-    if (deleteFiles && executable !== undefined) {
-      rmSync(dirname(executable), { recursive: true })
-    }
 
     notify(this.deps, { title, body: i18next.t('notify.uninstalled') })
 

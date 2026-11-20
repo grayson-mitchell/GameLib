@@ -28,6 +28,20 @@ import type {
 } from 'common/types/gog'
 import { existsSync, rmSync } from 'graceful-fs'
 import {
+  checkRemoval,
+  firstBlockingItem,
+  guardedRemoveTree
+} from 'backend/safety/rustSafety'
+import {
+  collectKnownInstalls,
+  knownInstallKey,
+  titleForKnownKey
+} from 'backend/safety/knownInstalls'
+import { protectedRootsFor } from 'backend/safety/protectedRoots'
+import { pushRemovalRefusal } from 'backend/safety/refusal'
+import type { SafetyRequest } from 'common/types/safety'
+import { resolveGameTitle } from 'backend/utils/gameTitle'
+import {
   logError,
   logInfo,
   LogPrefix,
@@ -1100,13 +1114,82 @@ export default class GOGGame implements Game {
     return fullOutput
   }
 
+  /**
+   * Phase 82 (D-10, D-16): the install folder and the support folder are checked together by the
+   * Rust guard. Another store's known install inside either folder refuses naming that game.
+   */
+  private removalRequest(installPath: string): SafetyRequest {
+    const { gogSupportPath } = this.gogPaths
+    return {
+      targets: [
+        { id: 'install', path: installPath, kind: 'game-install' },
+        {
+          id: 'support',
+          path: join(gogSupportPath, this.id),
+          kind: 'game-support',
+          trustRoot: gogSupportPath
+        }
+      ],
+      knownInstalls: collectKnownInstalls(this.deps, {
+        runner: 'gog',
+        appName: this.id
+      }),
+      selfKey: knownInstallKey('gog', this.id),
+      protectedRoots: protectedRootsFor(this.deps)
+    }
+  }
+
+  private pushRefusal(
+    outcome: 'refused' | 'failed',
+    reason: Parameters<typeof pushRemovalRefusal>[1]['reason'],
+    otherKey?: string
+  ) {
+    const otherTitle = otherKey
+      ? titleForKnownKey(this.deps, otherKey)
+      : undefined
+    pushRemovalRefusal(this.deps, {
+      kind: 'uninstall',
+      outcome,
+      reason,
+      title: resolveGameTitle(this.deps.libraryManagers, 'gog', this.id),
+      appName: this.id,
+      runner: 'gog',
+      ...(otherTitle ? { otherTitle } : {})
+    })
+  }
+
   async uninstall({ shouldRemovePrefix }: RemoveArgs): Promise<ExecResult> {
-    const array = this.deps.stores.gog.installedGamesStore.get('installed', [])
-    const index = array.findIndex((game) => game.appName === this.id)
-    if (index === -1) {
+    const installed = this.deps.stores.gog.installedGamesStore.get(
+      'installed',
+      []
+    )
+    const index = installed.findIndex((game) => game.appName === this.id)
+    const entry = installed[index]
+    if (index === -1 || !entry) {
       throw Error("Game isn't installed")
     }
 
+    // D-10: check BEFORE the installed list is touched and before unins000.exe runs. A refusal
+    // leaves the store, the files and the support folder exactly as they were, so clicking
+    // Uninstall again re-runs the same checks.
+    const request = this.removalRequest(entry.install_path)
+    const check = await checkRemoval(this.deps, request)
+    if (check.overall !== 'yes') {
+      const blocking = firstBlockingItem(check)
+      this.pushRefusal(
+        'refused',
+        blocking?.reason ?? 'bad-reply',
+        blocking?.otherKey
+      )
+      return {
+        stdout: '',
+        stderr: blocking?.reason ?? 'bad-reply',
+        refused: true
+      }
+    }
+
+    // A copy: the store's array is only replaced once the delete has succeeded.
+    const array = [...installed]
     const [object] = array.splice(index, 1)
     if (!object) {
       throw Error("Game isn't installed")
@@ -1164,8 +1247,23 @@ export default class GOGGame implements Game {
         ])
       }
     }
-    if (existsSync(object.install_path)) {
-      rmSync(object.install_path, { recursive: true })
+    // One guarded delete over both folders. unins000.exe may already have removed files, so a
+    // non-removed outcome is reported as failed, never as "nothing was deleted".
+    const removed = await guardedRemoveTree(
+      this.deps,
+      this.removalRequest(object.install_path)
+    )
+    if (removed.outcome !== 'removed') {
+      this.pushRefusal(
+        'failed',
+        removed.reason ?? 'bad-reply',
+        removed.otherKey
+      )
+      return {
+        stdout: '',
+        stderr: removed.reason ?? 'bad-reply',
+        failed: true
+      }
     }
     const manifestPath = join(
       this.gogPaths.gogdlConfigPath,
@@ -1174,10 +1272,6 @@ export default class GOGGame implements Game {
     )
     if (existsSync(manifestPath)) {
       rmSync(manifestPath) // Delete manifest so gogdl won't try to patch the not installed game
-    }
-    const supportPath = join(this.gogPaths.gogSupportPath, this.id)
-    if (existsSync(supportPath)) {
-      rmSync(supportPath, { recursive: true }) // Remove unnecessary support dir
     }
     this.deps.stores.gog.installedGamesStore.set('installed', array)
     this.deps.libraryManagers.gog.refreshInstalled()

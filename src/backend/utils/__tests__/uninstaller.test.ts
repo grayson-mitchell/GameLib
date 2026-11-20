@@ -346,9 +346,9 @@ describe('uninstallGameCallback prefix guard (82-07)', () => {
   it('a yes verdict uninstalls, then removes the prefix before the done status', async () => {
     const { requestRustInvoke, calls } = fakeSafetyRustInvoke()
     const order: string[] = []
-    uninstall.mockImplementation(async () => {
+    uninstall.mockImplementation(() => {
       order.push('uninstall')
-      return { stdout: '', stderr: '' }
+      return Promise.resolve({ stdout: '', stderr: '' })
     })
 
     await uninstallGameCallback(
