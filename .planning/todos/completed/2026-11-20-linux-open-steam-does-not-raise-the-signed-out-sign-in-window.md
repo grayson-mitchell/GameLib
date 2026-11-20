@@ -28,3 +28,9 @@ Add a Linux raise (X11 via the window manager; Wayland may not allow one, so dec
 to degrade to a short hint in the note) behind the same `RUST_STEAM_WINDOW_RAISE` channel,
 log the outcome, and keep the URL after it. Confirm live: sign out, press Open Steam, the
 sign-in window comes to the front.
+
+## Resolution
+
+Fixed in `ec530001e` (X11 `_NET_ACTIVE_WINDOW` raise in `steam_window.rs`). Live-verified 2026-11-20 on
+X11: with the signed-out sign-in window covered, "Open Steam" brought it to the front (operator-observed;
+the stderr `raised` line was not captured). Wayland not tested.
