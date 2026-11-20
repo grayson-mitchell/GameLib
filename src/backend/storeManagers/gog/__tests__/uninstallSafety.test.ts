@@ -255,6 +255,27 @@ describe('GOGGame.uninstall guard (82-07)', () => {
     expect(notices(h)).toEqual([])
   })
 
+  it('an absent gog-support folder does not block the uninstall (CR-01)', async () => {
+    rmSync(gogSupportPath, { recursive: true, force: true })
+    const { requestRustInvoke, calls } = fakeSafetyRustInvoke()
+    const h = build(requestRustInvoke)
+
+    const res = await h.game.uninstall({ shouldRemovePrefix: false })
+
+    expect(res).toEqual({ stdout: '', stderr: '' })
+    expect(existsSync(installDir)).toBe(false)
+    expect(existsSync(manifest)).toBe(false)
+    expect(h.installedSet).toEqual([[]])
+    expect(notices(h)).toEqual([])
+    const req = calls[0]?.args[0] as {
+      targets: { id: string; trustRoot?: string }[]
+    }
+    expect(req.targets.find((t) => t.id === 'support')?.trustRoot).toBe(
+      gogSupportPath
+    )
+    expect(existsSync(gogSupportPath)).toBe(false)
+  })
+
   it('a delete that rejects after the check reports failed and keeps the installed store', async () => {
     const { requestRustInvoke } = fakeSafetyRustInvoke({ rejectRemove: true })
     const h = build(requestRustInvoke)

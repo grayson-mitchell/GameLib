@@ -68,6 +68,41 @@ describe('fakeSafetyRustInvoke', () => {
     expect(existsSync(dir)).toBe(true)
   })
 
+  it('a target outside its trust root is refused with outside-trust-root and deletes nothing', async () => {
+    const dir = game('outside-root')
+    const other = join(root, 'other-root')
+    mkdirSync(other, { recursive: true })
+    const fake = fakeSafetyRustInvoke()
+    const req: SafetyRequest = {
+      targets: [{ id: 't', path: dir, kind: 'game-install', trustRoot: other }],
+      knownInstalls: [],
+      protectedRoots: []
+    }
+    const reply = (await fake.requestRustInvoke(RUST_SAFETY_REMOVE_TREE, [
+      req
+    ])) as { outcome: string; items: { reason: string }[] }
+    expect(reply.outcome).toBe('refused')
+    expect(reply.items[0]?.reason).toBe('outside-trust-root')
+    expect(existsSync(join(dir, 'a.bin'))).toBe(true)
+  })
+
+  it('a target with no trustRoot still gets the configured verdict', async () => {
+    const fake = fakeSafetyRustInvoke({
+      checkVerdict: 'no',
+      reason: 'is-protected-root'
+    })
+    const req: SafetyRequest = {
+      targets: [{ id: 't', path: game('no-root'), kind: 'game-install' }],
+      knownInstalls: [],
+      protectedRoots: []
+    }
+    const out = await checkRemoval(
+      { requestRustInvoke: fake.requestRustInvoke },
+      req
+    )
+    expect(out.items[0]?.reason).toBe('is-protected-root')
+  })
+
   it('reads an absent path as absent', async () => {
     const fake = fakeSafetyRustInvoke()
     const out = await checkRemoval(
@@ -142,8 +177,21 @@ describe('fakeSafetyRustInvoke', () => {
     // The repo's own src folder exists, so the fake reaches its delete and must refuse it.
     const srcDir = join(process.cwd(), 'src')
     expect(existsSync(srcDir)).toBe(true)
+    // The trust root is the repo itself, so the trust-root model passes and the temp-dir
+    // confinement is what stops the delete.
+    const req: SafetyRequest = {
+      ...request(srcDir),
+      targets: [
+        {
+          id: 't',
+          path: srcDir,
+          kind: 'game-install',
+          trustRoot: process.cwd()
+        }
+      ]
+    }
     expect(() =>
-      fake.requestRustInvoke(RUST_SAFETY_REMOVE_TREE, [request(srcDir)])
+      fake.requestRustInvoke(RUST_SAFETY_REMOVE_TREE, [req])
     ).toThrow(/outside the OS temp dir/)
     expect(existsSync(srcDir)).toBe(true)
   })
