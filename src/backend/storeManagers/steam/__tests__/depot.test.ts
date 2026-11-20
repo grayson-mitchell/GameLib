@@ -27,6 +27,7 @@ import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { logInfo } from 'backend/logger'
 import {
   selectAllDepots,
+  selectDepots,
   type OwnedSets,
   type SteamAppInfo
 } from '../depot/select'
@@ -204,6 +205,67 @@ describe('config.optionaldlc opt-in DLC (quick 261120-st3)', () => {
     expect(skip401531[0]).toContain('optionaldlc=401530')
     expect(msgs.some((m) => m.includes('skipped depot 401535'))).toBe(false)
     expect(msgs.some((m) => m.includes('skipped depot 401536'))).toBe(false)
+  })
+
+  it('re-includes 381450 when the caller enables DLC 313250, and still excludes 401531', () => {
+    const out = selectAllDepots(
+      dota,
+      dlcInfos(),
+      package0(),
+      { ...winOpts, enabledOptInDlc: new Set(['313250']) },
+      '570'
+    )
+    expect(ids(out)).toContain('381450')
+    expect(ids(out)).not.toContain('401531')
+    const d = out.find((x) => x.id === '381450')
+    expect(d?.manifest).toBe('3731324120960268617')
+    expect(d?.ownerAppId).toBe('570')
+  })
+
+  it('keeps 381450 when the DLC appinfo is missing from dlcInfos (current behaviour)', () => {
+    const infos = dlcInfos()
+    delete infos['313250']
+    const out = ids(selectAllDepots(dota, infos, package0(), winOpts, '570'))
+    expect(out).toContain('381450')
+    expect(out).not.toContain('401531')
+  })
+
+  it('treats a numeric extended.optionaldlc 1 like the string "1"', () => {
+    const infos = dlcInfos()
+    infos['313250'] = { extended: { optionaldlc: 1 } }
+    const out = ids(selectAllDepots(dota, infos, package0(), winOpts, '570'))
+    expect(out).not.toContain('381450')
+  })
+
+  it('selectDepots without the trailing argument selects all four opt-in-shaped depots', () => {
+    const out = ids(selectDepots(dota, package0(), winOpts, '570'))
+    expect(out).toEqual(
+      expect.arrayContaining(['381450', '401531', '401535', '401536'])
+    )
+  })
+
+  it('keeps a legacy depot-level optional "1" depot with no config.optionaldlc (Witcher EE 20902 shape)', () => {
+    const witcher = {
+      depots: {
+        '20902': {
+          dlcappid: '20902',
+          optional: '1',
+          systemdefined: '1',
+          config: { oslist: 'windows' },
+          manifests: { public: { gid: '1234567890123456789', size: 10 } }
+        }
+      }
+    }
+    const out = ids(
+      selectAllDepots(
+        witcher,
+        { '20902': { extended: {} } },
+        { apps: new Set([20902]), depots: new Set() },
+        winOpts,
+        '20900'
+      )
+    )
+    expect(out).toContain('20902')
   })
 })
 

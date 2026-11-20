@@ -6,9 +6,19 @@
 // KEY INSIGHT (spike 001): depot ownership is granted at the PACKAGE level.
 // Every owned package's `packageinfo.depotids` lists the depots it grants. That
 // set — not any combination of `dlcappid` / `optional` / `systemdefined` flags —
-// is what decides whether Steam installs a depot. (`config.realm` and
-// `config.steamdeck` ARE filtered below as per-depot config properties, like
-// oslist/osarch/language - distinct from the ownership flags named above.)
+// is what decides whether Steam installs a depot. (`config.realm`,
+// `config.steamdeck` and `config.optionaldlc` ARE filtered below as per-depot
+// config properties, like oslist/osarch/language - distinct from the ownership
+// flags named above.)
+//
+// `config.optionaldlc` (quick 261120-st3): package 0, the base licence every
+// account holds, grants depots such as Dota 2's 381450/401531, so the ownership
+// gate alone does not keep opt-in DLC out. A depot is skipped when its
+// `config.optionaldlc` names a DLC app whose own `extended.optionaldlc` is "1"
+// and the caller has not named that DLC in `DepotSelectOpts.enabledOptInDlc`. A
+// DLC with no appinfo keeps its depots. The legacy depot-level `optional` /
+// `dlcappid` / `systemdefined` flags still do not decide selection (quick
+// 261029-ge1).
 //
 // This subsumes the DLC heuristic: a DLC's depots are granted by the DLC's
 // package, so owning the DLC puts its depots in the owned set automatically.
@@ -21,7 +31,7 @@
 // this with a Windows OS filter; the native path calls it with the host OS).
 //
 // T-21-16-01 (mitigated): observability logging added below logs ONLY
-// app/depot ids, manifest gids, sizes, and the os/arch/oslist/language/realm/steamdeck
+// app/depot ids, manifest gids, sizes, and the os/arch/oslist/language/realm/steamdeck/optionaldlc
 // strings used for the selection decision — never a decryption key, token,
 // or SteamID64/LastOwner (none of those are in scope of this module).
 
@@ -43,6 +53,10 @@ export interface DepotSelectOpts {
   arch?: string
   language?: string
   branch?: string
+  /** DLC appIds the user has explicitly enabled; their `config.optionaldlc`
+   *  depots are selected again. Absent means none (Steam's default, the box
+   *  unticked). `buildDepotRefs` in plan.ts does not pass it. */
+  enabledOptInDlc?: ReadonlySet<string>
 }
 
 export interface DepotDescriptor {
@@ -128,7 +142,7 @@ export function selectAllDepots(
   opts: DepotSelectOpts,
   baseAppId: string
 ): DepotDescriptor[] {
-  const notEnabled = optInDlcNotEnabled(dlcInfos)
+  const notEnabled = optInDlcNotEnabled(dlcInfos, opts.enabledOptInDlc)
   const all = [...selectDepots(appinfo, owned, opts, baseAppId, notEnabled)]
   const seen = new Set(all.map((d) => d.id))
 
@@ -151,15 +165,18 @@ export function selectAllDepots(
 
 /**
  * DLC appIds (as strings) whose own appinfo says `extended.optionaldlc` is "1",
- * i.e. DLC that Steam leaves unticked by default. A DLC absent from `dlcInfos`
+ * i.e. DLC that Steam leaves unticked by default, minus the ones the caller
+ * enabled via `opts.enabledOptInDlc`. A DLC absent from `dlcInfos`
  * is never in the set, so its depots keep the current behaviour (selected).
  */
 function optInDlcNotEnabled(
-  dlcInfos: Record<string, SteamAppInfo> | undefined
+  dlcInfos: Record<string, SteamAppInfo> | undefined,
+  enabled: ReadonlySet<string> | undefined
 ): Set<string> {
   const out = new Set<string>()
   for (const [dlcAppId, dlc] of Object.entries(dlcInfos ?? {})) {
-    if (String(dlc?.extended?.optionaldlc) === '1') out.add(dlcAppId)
+    if (String(dlc?.extended?.optionaldlc) === '1' && !enabled?.has(dlcAppId))
+      out.add(dlcAppId)
   }
   return out
 }
@@ -207,6 +224,8 @@ export function branchManifestGid(
  *   - its language matches the user's selection, or it has none
  *   - its realm is absent or includes steamglobal (never steamchina-only)
  *   - its steamdeck flag is not set (GameLib never installs as a Steam Deck)
+ *   - its `config.optionaldlc` DLC is not in the skip set (an opt-in DLC whose
+ *     appinfo says `extended.optionaldlc` "1" that the caller has not enabled)
  *
  * @param ownerAppId the appId `appinfo` itself belongs to (base game or a
  *                   DLC/sub-app) — stamped onto every emitted DepotDescriptor
