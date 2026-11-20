@@ -5,7 +5,7 @@
  * accessors.
  */
 import { dirname, isAbsolute, relative, resolve } from 'path'
-import { existsSync, rmSync } from 'graceful-fs'
+import { existsSync } from 'graceful-fs'
 import type { WineInstallation } from 'common/types'
 import type { GlobalConfigSlice } from 'backend/config'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
@@ -37,6 +37,14 @@ import {
   sanitizeBottleName
 } from 'backend/engine/bottlePrimitives'
 import type { AppPaths } from 'backend/process/context'
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
+import {
+  checkRemoval,
+  firstBlockingItem,
+  guardedRemoveTree
+} from 'backend/safety/rustSafety'
+import type { RemovalReason } from 'common/types/safety'
+import { steamSafetyRequest, type SteamSafetyDeps } from './safeSteamRemove'
 import type { EngineRuntime } from 'backend/engine/engineRuntime'
 import {
   getBottleDir,
@@ -56,6 +64,15 @@ export type BottleLifecycleDeps = KillBottleDeps & {
   config: Pick<GlobalConfigSlice, 'getSettings'>
   steamBottle: Pick<SteamBottle, 'configStore' | 'persistedWineBins'>
 }
+
+/**
+ * BottleLifecycleDeps plus what the Rust removal guard reads (Phase 82, D-11): the transport, every
+ * store's library for the cross-store known installs, and the settings and app paths behind the
+ * protected roots. Only the removal needs it, so the stop/kill/provision helpers keep the narrower type.
+ */
+export type BottleRemovalDeps = BottleLifecycleDeps &
+  SteamSafetyDeps &
+  RustInvokeDeps
 
 function guardPerGameBridgeBottleName(
   deps: Pick<BottleLifecycleDeps, 'config' | 'steamBottle' | 'paths'>,
@@ -163,11 +180,12 @@ function guardPerGameBridgeBottleName(
  * STEAM_SETUP_EXE_URL) — a per-game bridge bottle never has one to clean up.
  */
 export async function removePerGameBridgeBottle(
-  deps: BottleLifecycleDeps,
+  deps: BottleRemovalDeps,
   appId: string
 ): Promise<
   | { status: 'removed' }
   | { status: 'absent' }
+  | { status: 'refused'; reason: RemovalReason; otherKey?: string }
   | { status: 'error'; error: string }
 > {
   const guard = guardPerGameBridgeBottleName(
@@ -186,49 +204,81 @@ export async function removePerGameBridgeBottle(
     return { status: 'absent' }
   }
 
-  // (6) Stop the bottle's own wineserver first (best-effort), then delete
-  // via the same locked cxbottle mechanism provisionBottle uses, with an
-  // rmSync fallback if the dir survives.
-  await killBottleWineServer(deps, name)
-
-  const removeBinDir =
-    await deps.engineRuntime.crossover.resolveCrossoverBinDirAsync(
-      { runner: deps.runner },
-      { hintWineBins: deps.steamBottle.persistedWineBins() }
-    )
-  if (!removeBinDir) {
+  // (6) Phase 82 (D-11): ask the Rust guard BEFORE the wineserver is stopped or cxbottle is run, so
+  // a refusal touches nothing. The trust root is the Bottles directory the name guard already
+  // used, derived from paths, never from the bottle itself.
+  const request = steamSafetyRequest({ deps, appId }, [
+    {
+      id: 'bottle',
+      path: bottleDir,
+      kind: 'bottle',
+      trustRoot: dirname(getBottleDir(deps.paths, DEFAULT_BRIDGE_BOTTLE_NAME))
+    }
+  ])
+  const check = await checkRemoval(deps, request)
+  if (check.overall !== 'yes') {
+    const blocking = firstBlockingItem(check)
     logWarning(
-      `removePerGameBridgeBottle: no CrossOver install found, skipping cxbottle --delete for "${name}" (rmSync fallback follows)`,
+      `removePerGameBridgeBottle: the removal guard declined "${name}" for appId "${appId}" (${blocking?.reason ?? 'bad-reply'})`,
       LogPrefix.Steam
     )
+    return {
+      status: 'refused',
+      reason: blocking?.reason ?? 'bad-reply',
+      ...(blocking?.otherKey !== undefined
+        ? { otherKey: blocking.otherKey }
+        : {})
+    }
+  }
+
+  // (7) A symlinked bottle is only unlinked (D-15): cxbottle --delete follows a link into its
+  // referent, so it is never run on one, and the guard removes the link itself.
+  const isLink = check.items.some((item) => item.id === 'bottle' && item.isLink)
+  if (isLink) {
+    const unlinked = await guardedRemoveTree(deps, request)
+    if (unlinked.outcome !== 'removed') {
+      return refusedOrError(name, unlinked)
+    }
   } else {
-    try {
-      await deps.spawnAsync(cxbottleIn(removeBinDir), [
-        '--bottle',
-        name,
-        '--delete',
-        '--force'
-      ])
-    } catch (error) {
+    // Stop the bottle's own wineserver first (best-effort), then delete via the same locked
+    // cxbottle mechanism provisionBottle uses, with a guarded delete if the dir survives.
+    await killBottleWineServer(deps, name)
+
+    const removeBinDir =
+      await deps.engineRuntime.crossover.resolveCrossoverBinDirAsync(
+        { runner: deps.runner },
+        { hintWineBins: deps.steamBottle.persistedWineBins() }
+      )
+    if (!removeBinDir) {
       logWarning(
-        ['removePerGameBridgeBottle: cxbottle --delete threw', error],
+        `removePerGameBridgeBottle: no CrossOver install found, skipping cxbottle --delete for "${name}" (guarded delete follows)`,
         LogPrefix.Steam
       )
+    } else {
+      try {
+        await deps.spawnAsync(cxbottleIn(removeBinDir), [
+          '--bottle',
+          name,
+          '--delete',
+          '--force'
+        ])
+      } catch (error) {
+        logWarning(
+          ['removePerGameBridgeBottle: cxbottle --delete threw', error],
+          LogPrefix.Steam
+        )
+      }
+    }
+
+    if (existsSync(bottleDir)) {
+      const leftover = await guardedRemoveTree(deps, request)
+      if (leftover.outcome !== 'removed') {
+        return refusedOrError(name, leftover)
+      }
     }
   }
 
-  if (existsSync(bottleDir)) {
-    try {
-      rmSync(bottleDir, { recursive: true, force: true })
-    } catch (error) {
-      logWarning(
-        ['removePerGameBridgeBottle: fallback rmSync threw', error],
-        LogPrefix.Steam
-      )
-    }
-  }
-
-  // (7) Final confirmation.
+  // (8) Final confirmation.
   if (existsSync(bottleDir)) {
     const error = `Bottle directory "${bottleDir}" still exists after removal attempt`
     logError(`removePerGameBridgeBottle: ${error}`, LogPrefix.Steam)
@@ -240,6 +290,29 @@ export async function removePerGameBridgeBottle(
     LogPrefix.Steam
   )
   return { status: 'removed' }
+}
+
+/**
+ * A guarded delete that did not remove the bottle: `refused` when the guard stopped it before a
+ * delete ran (the verdict changed since the first check), `error` when a delete ran and is not
+ * confirmed clean.
+ */
+function refusedOrError(
+  name: string,
+  result: { outcome: string; reason?: RemovalReason; otherKey?: string }
+):
+  | { status: 'refused'; reason: RemovalReason; otherKey?: string }
+  | { status: 'error'; error: string } {
+  if (result.outcome === 'refused') {
+    return {
+      status: 'refused',
+      reason: result.reason ?? 'bad-reply',
+      ...(result.otherKey !== undefined ? { otherKey: result.otherKey } : {})
+    }
+  }
+  const error = `Bottle "${name}" could not be removed (${result.reason ?? 'delete-failed'})`
+  logError(`removePerGameBridgeBottle: ${error}`, LogPrefix.Steam)
+  return { status: 'error', error }
 }
 
 /**

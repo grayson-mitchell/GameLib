@@ -6,13 +6,16 @@
  */
 import {
   existsSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   rmSync,
+  symlinkSync,
   writeFileSync
 } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import type { RequestRustInvoke } from 'backend/host'
 import { initHeadless } from 'backend/logger'
 import {
@@ -28,15 +31,29 @@ import {
 import type { ManagerDeps } from 'backend/services/types'
 import type { GameInfo } from 'common/types'
 import type { RemovalRefusalPayload } from 'common/types/removalRefusal'
+import type { SafetyRequest } from 'common/types/safety'
+import { createTestEngineRuntime } from 'backend/testUtils/testEngineRuntime'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
 import { setBridgeLaunchTarget } from '../bridge/bridgeVerdict'
 import { DEFAULT_BRIDGE_BOTTLE_NAME, getBottleSteamappsDir } from '../bottle'
 import { uninstall } from '../gameUninstall'
+import { removePerGameBridgeBottle } from '../bridgeBottleLifecycle'
 import * as uninstallPollingModule from '../library/uninstallPolling'
 import type SteamGame from '../games'
 import type { SteamGameInfo } from 'common/types/steam'
 
 const APP_ID = '206040'
+const CX_BIN_DIR =
+  '/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin'
+
+function isSymlink(path: string | undefined): boolean {
+  if (!path) return false
+  try {
+    return lstatSync(path).isSymbolicLink()
+  } catch {
+    return false
+  }
+}
 const TITLE = 'Avernum 4'
 
 type Sent = [string, unknown]
@@ -48,6 +65,8 @@ interface Harness {
   sent: Sent[]
   safetyCalls: { channel: string }[]
   spawned: { bin: string; args: string[] }[]
+  /** Safety calls and spawns in the order they happened, so a test can pin check-before-spawn. */
+  events: string[]
   /** The tmp bottle dir for a bottle name (what getBottleDir resolves). */
   bottleDir: (name: string) => string
   steamapps: (name: string) => string
@@ -68,16 +87,24 @@ function makeHarness(
     ...options,
     base: () => Promise.reject(new Error('unexpected non-safety rustInvoke'))
   })
+  const events: string[] = []
   const requestRustInvoke: RequestRustInvoke = async (channel, args) => {
+    events.push(`safety:${channel}`)
     const reply = (await safety.requestRustInvoke(channel, args)) as {
-      items?: { verdict: string }[]
+      items?: { id: string; verdict: string }[]
     }
-    if (!options.otherKey || !reply.items) return reply
+    if (!reply.items) return reply
+    const request = (args as unknown as [SafetyRequest])[0]
     return {
       ...reply,
-      items: reply.items.map((item) =>
-        item.verdict === 'yes' ? item : { ...item, otherKey: options.otherKey }
-      )
+      items: reply.items.map((item) => ({
+        ...item,
+        // The crate reports a symlink target as a link; the fake does not model that.
+        isLink: isSymlink(request.targets.find((t) => t.id === item.id)?.path),
+        ...(options.otherKey && item.verdict !== 'yes'
+          ? { otherKey: options.otherKey }
+          : {})
+      }))
     }
   }
   const managers = createTestManagers().library
@@ -103,8 +130,23 @@ function makeHarness(
     sendFrontendMessage: ((name: string, payload: unknown) => {
       sent.push([name, payload])
     }) as ManagerDeps['sendFrontendMessage'],
+    // CrossOver is installed (a fixed bin dir); its cxbottle --delete removes the bottle like the real one.
+    engineRuntime: {
+      ...createTestEngineRuntime(),
+      crossover: {
+        resolveCrossoverBinDir: () => CX_BIN_DIR,
+        resolveCrossoverBinDirAsync: () => Promise.resolve(CX_BIN_DIR)
+      }
+    } as unknown as ManagerDeps['engineRuntime'],
     spawnAsync: ((bin: string, args: string[]) => {
       spawned.push({ bin, args })
+      events.push(`spawn:${basename(bin)}`)
+      if (basename(bin) === 'cxbottle' && args.includes('--delete')) {
+        rmSync(getBottleDir(paths, args[args.indexOf('--bottle') + 1] ?? ''), {
+          recursive: true,
+          force: true
+        })
+      }
       return Promise.resolve({ code: 0, stdout: '', stderr: '' })
     }) as ManagerDeps['spawnAsync']
   })
@@ -140,6 +182,7 @@ function makeHarness(
     sent,
     safetyCalls: safety.calls,
     spawned,
+    events,
     bottleDir: (name) => getBottleDir(paths, name),
     steamapps: (name) => getBottleSteamappsDir(paths, name)
   }
@@ -344,5 +387,161 @@ describe('bridge shared-bottle uninstall (D-10, D-12, D-13, D-16)', () => {
         trustRoot: join(h.steamapps(DEFAULT_BRIDGE_BOTTLE_NAME), 'common')
       }
     ])
+  })
+})
+
+describe('per-game bridge bottle removal (D-11, D-12, D-15, D-16)', () => {
+  const PER_GAME = `GameLibSteamBridge-${APP_ID}`
+  let h: Harness
+  let bottleDir: string
+
+  function seedPerGame(options?: Parameters<typeof makeHarness>[0]): void {
+    h = makeHarness(options)
+    seedBottle(h, PER_GAME)
+    bottleDir = h.bottleDir(PER_GAME)
+  }
+
+  afterEach(() => {
+    rmSync(h.root, { recursive: true, force: true })
+  })
+
+  it('yes: checks first, then stops the wineserver and runs cxbottle --delete, and reports removed', async () => {
+    seedPerGame()
+
+    const result = await removePerGameBridgeBottle(h.deps, APP_ID)
+
+    expect(result).toEqual({ status: 'removed' })
+    expect(existsSync(bottleDir)).toBe(false)
+    expect(h.events).toEqual([
+      'safety:safety_check_removal',
+      'spawn:wineserver',
+      'spawn:cxbottle'
+    ])
+    const deleteCall = h.spawned.find((c) => basename(c.bin) === 'cxbottle')
+    expect(deleteCall?.args).toEqual([
+      '--bottle',
+      PER_GAME,
+      '--delete',
+      '--force'
+    ])
+    const request = (h.safetyCalls[0] as unknown as { args: [SafetyRequest] })
+      .args[0]
+    expect(request.selfKey).toBe(`steam:${APP_ID}`)
+    expect(request.targets).toEqual([
+      {
+        id: 'bottle',
+        path: bottleDir,
+        kind: 'bottle',
+        trustRoot: join(bottleDir, '..')
+      }
+    ])
+  })
+
+  it('D-12 rejection: a failed check refuses and touches nothing (no wineserver stop, no cxbottle, bottle intact)', async () => {
+    seedPerGame({ rejectCheck: true })
+
+    const result = await removePerGameBridgeBottle(h.deps, APP_ID)
+
+    expect(result).toEqual({ status: 'refused', reason: 'rust-invoke-failed' })
+    expect(existsSync(bottleDir)).toBe(true)
+    expect(existsSync(join(bottleDir, 'cxbottle.conf'))).toBe(true)
+    expect(h.spawned).toEqual([])
+    expect(h.events).toEqual(['safety:safety_check_removal'])
+  })
+
+  it('D-16: a bottle holding another store game is refused naming that game, and nothing is touched', async () => {
+    seedPerGame({
+      checkVerdict: 'no',
+      reason: 'nested-known-install',
+      otherKey: 'gog:gog-1'
+    })
+
+    const result = await removePerGameBridgeBottle(h.deps, APP_ID)
+
+    expect(result).toEqual({
+      status: 'refused',
+      reason: 'nested-known-install',
+      otherKey: 'gog:gog-1'
+    })
+    expect(existsSync(bottleDir)).toBe(true)
+    expect(h.spawned).toEqual([])
+  })
+
+  it('D-15: a symlinked bottle is only unlinked; its referent survives and cxbottle never runs', async () => {
+    h = makeHarness()
+    const referent = join(h.root, 'precious-referent')
+    mkdirSync(referent, { recursive: true })
+    writeFileSync(join(referent, 'precious.txt'), 'keep me')
+    bottleDir = h.bottleDir(PER_GAME)
+    mkdirSync(join(bottleDir, '..'), { recursive: true })
+    symlinkSync(referent, bottleDir)
+
+    const result = await removePerGameBridgeBottle(h.deps, APP_ID)
+
+    expect(result).toEqual({ status: 'removed' })
+    expect(isSymlink(bottleDir)).toBe(false)
+    expect(existsSync(bottleDir)).toBe(false)
+    expect(readFileSync(join(referent, 'precious.txt'), 'utf8')).toBe('keep me')
+    expect(h.spawned).toEqual([])
+    expect(h.events).toEqual([
+      'safety:safety_check_removal',
+      'safety:safety_check_removal',
+      'safety:safety_remove_tree'
+    ])
+  })
+
+  it('an absent bottle needs no guard call at all', async () => {
+    h = makeHarness()
+
+    const result = await removePerGameBridgeBottle(h.deps, APP_ID)
+
+    expect(result).toEqual({ status: 'absent' })
+    expect(h.events).toEqual([])
+  })
+
+  describe('through the uninstall route (D-13)', () => {
+    let pollSpy: jest.SpyInstance
+
+    beforeEach(() => {
+      pollSpy = jest
+        .spyOn(uninstallPollingModule, 'pollUninstallOnce')
+        .mockResolvedValue(undefined)
+    })
+    afterEach(() => pollSpy.mockRestore())
+
+    it('a refused bottle pushes the generic notice, settles the tile and keeps the bottle', async () => {
+      seedPerGame({ rejectCheck: true })
+
+      const result = await uninstall(h.steamGame, {})
+
+      expect(result.refused).toBe(true)
+      expect(result.failed).toBeUndefined()
+      expect(existsSync(bottleDir)).toBe(true)
+      expect(h.spawned).toEqual([])
+      expect(pollSpy).not.toHaveBeenCalled()
+      expect(messages(h, 'removalRefusedNotice')).toEqual([
+        {
+          kind: 'uninstall',
+          outcome: 'refused',
+          reason: 'rust-invoke-failed',
+          title: TITLE,
+          appName: APP_ID,
+          runner: 'steam'
+        }
+      ])
+      expect(messages(h, 'steamRequestNotice')).toEqual([])
+      expect(statuses(h).at(-1)).toBe('done')
+    })
+
+    it('a yes removes the bottle and completes through the poll with no refusal notice', async () => {
+      seedPerGame()
+
+      const result = await uninstall(h.steamGame, {})
+
+      expect(result).toEqual({ stdout: '', stderr: '' })
+      expect(existsSync(bottleDir)).toBe(false)
+      expect(pollSpy).toHaveBeenCalledWith(h.deps, APP_ID, 'bridge')
+      expect(messages(h, 'removalRefusedNotice')).toEqual([])
+    })
   })
 })

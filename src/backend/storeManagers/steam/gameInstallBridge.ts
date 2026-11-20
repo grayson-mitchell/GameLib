@@ -89,6 +89,21 @@ async function stopInstallPollingBestEffort(
   )
 }
 
+/**
+ * The log text for a rollback whose bottle removal did not finish. A `refused` removal (Phase 82,
+ * D-11) is logged with the guard's reason exactly like an `error`: the rollback carries on either
+ * way, and the bottle is left in place for the user to retry or remove.
+ */
+function bottleRemovalProblem(
+  result:
+    | { status: 'error'; error: string }
+    | { status: 'refused'; reason: string }
+): string {
+  return result.status === 'error'
+    ? result.error
+    : `the removal guard refused it (${result.reason})`
+}
+
 export async function installBridgeGame(
   steamGame: SteamGame,
   args: InstallArgs
@@ -599,9 +614,12 @@ export async function installBridgeGameLeased(
         steamGame.deps,
         steamGame.appId
       )
-      if (removeResult.status === 'error') {
+      if (
+        removeResult.status === 'error' ||
+        removeResult.status === 'refused'
+      ) {
         logWarning(
-          `SteamGame: installBridgeGame could not remove the per-game bridge bottle for appId ${steamGame.appId} after a win64-no-shim: ${removeResult.error}`,
+          `SteamGame: installBridgeGame could not remove the per-game bridge bottle for appId ${steamGame.appId} after a win64-no-shim: ${bottleRemovalProblem(removeResult)}`,
           LogPrefix.Steam
         )
       }
@@ -663,9 +681,9 @@ export async function installBridgeGameLeased(
       steamGame.deps,
       steamGame.appId
     )
-    if (removeResult.status === 'error') {
+    if (removeResult.status === 'error' || removeResult.status === 'refused') {
       logWarning(
-        `SteamGame: installBridgeGame could not remove the per-game bridge bottle for appId ${steamGame.appId} after detecting Steam CEG DRM: ${removeResult.error}`,
+        `SteamGame: installBridgeGame could not remove the per-game bridge bottle for appId ${steamGame.appId} after detecting Steam CEG DRM: ${bottleRemovalProblem(removeResult)}`,
         LogPrefix.Steam
       )
     }

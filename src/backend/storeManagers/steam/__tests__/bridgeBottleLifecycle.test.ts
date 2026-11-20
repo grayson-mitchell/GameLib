@@ -29,7 +29,15 @@ import * as engineSwitchModule from 'backend/engine/engineSwitch'
 import { ENGINE_PINS } from 'backend/engine/enginePins'
 import type { EngineServicesSource } from 'backend/services/engineServices'
 import { writeCxbottleConf } from 'backend/engine/adoptBottle'
-import { createTestStores } from 'backend/testUtils/testServices'
+import {
+  createTestManagers,
+  createTestStores
+} from 'backend/testUtils/testServices'
+import {
+  fakeSafetyRustInvoke,
+  type FakeSafetyOptions
+} from 'backend/testUtils/fakeSafetyRust'
+import type { RequestRustInvoke } from 'backend/host'
 import {
   createSteamBottle,
   bottleWineArch,
@@ -46,7 +54,7 @@ import {
   stopPerGameBridgeBottle,
   endPerGameBridgeBottleSession,
   killBridgeBottleWineServer,
-  type BottleLifecycleDeps
+  type BottleRemovalDeps
 } from '../bridgeBottleLifecycle'
 import { getBridgeBottleSettings } from '../bridgeBottle'
 import { killBottleWineServerWith } from 'backend/engine/bottlePrimitives'
@@ -62,7 +70,7 @@ const clearEngineSelection = (key: string) =>
 import type { NonCrossoverSelection } from 'backend/engine/engineTypes'
 import { DEFAULT_STEAM_BOTTLE_NAME } from '../constants'
 import type { WineInstallation, GameSettings } from 'common/types'
-import type { Stores } from 'backend/services/types'
+import type { ManagerDeps, Stores } from 'backend/services/types'
 
 const { steamBottleConfigStore } =
   jest.requireMock<Stores['steam']>('../stores')
@@ -162,14 +170,31 @@ const bridgeDeps = {
 const mockedSpawnAsync = jest.fn()
 // provisionBridgeBottle also takes the manager slices engineServicesFrom reads; only the fallback
 // cases reach them, and those spy engineServicesFrom (below), so the spawn fake is all that is real.
-const spawnDeps = {
-  spawnAsync: mockedSpawnAsync,
-  config: bridgeDeps.config,
-  steamBottle,
-  paths,
-  engineRuntime,
-  steamLaunchRuntime
-} as unknown as BottleLifecycleDeps & EngineServicesSource
+// Phase 82: the removal asks the Rust guard first; every manager answers an empty library so the
+// known-installs list reads, and the fake answers the two safety channels (`yes` unless a case says so).
+const emptyLibraries = Object.fromEntries(
+  Object.entries(createTestManagers().library).map(([runner, manager]) => [
+    runner,
+    { ...manager, getListOfGames: () => [] }
+  ])
+) as unknown as ManagerDeps['libraryManagers']
+const withSafety = (
+  requestRustInvoke: RequestRustInvoke = fakeSafetyRustInvoke()
+    .requestRustInvoke
+) =>
+  ({
+    spawnAsync: mockedSpawnAsync,
+    config: bridgeDeps.config,
+    steamBottle,
+    paths,
+    engineRuntime,
+    steamLaunchRuntime,
+    libraryManagers: emptyLibraries,
+    requestRustInvoke
+  }) as unknown as BottleRemovalDeps & EngineServicesSource
+const spawnDeps = withSafety()
+const depsWithSafety = (options: FakeSafetyOptions) =>
+  withSafety(fakeSafetyRustInvoke(options).requestRustInvoke)
 const mockedDownloadFile = downloadFile as jest.Mock
 const mockedCheckWineBeforeLaunch = checkWineBeforeLaunch as jest.Mock
 const mockedRunWineCommand = jest.fn()
@@ -501,42 +526,45 @@ describe('bottle.ts', () => {
         expect(mockedRmSync).not.toHaveBeenCalled()
       })
 
-      test('when the dir survives cxbottle, rmSync runs and removal still succeeds', async () => {
-        mockedExistsSync.mockImplementation(
-          (path: string) => path === perGameDir
-        )
-        mockedSpawnAsync.mockImplementation((bin: string) => {
-          if (String(bin).includes('cxbottle')) {
-            mockedRmSync.mockImplementation((path: string) => {
-              if (path === perGameDir) {
-                mockedExistsSync.mockImplementation(() => false)
-              }
-            })
-          }
-          return Promise.resolve({ code: 0, stdout: '', stderr: '' })
-        })
-
-        const result = await removePerGameBridgeBottle(spawnDeps, '206040')
-
-        expect(result).toEqual({ status: 'removed' })
-        expect(mockedRmSync).toHaveBeenCalledWith(perGameDir, {
-          recursive: true,
-          force: true
-        })
-      })
-
-      test('when rmSync throws and the dir still exists, returns error without throwing', async () => {
+      test('when the dir survives cxbottle, the guarded delete runs and removal still succeeds', async () => {
         mockedExistsSync.mockImplementation(
           (path: string) => path === perGameDir
         )
         mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
-        mockedRmSync.mockImplementation(() => {
-          throw new Error('EPERM')
-        })
+        // The guarded delete is the safety channel: its reply is what makes the dir go away here.
+        const safety = fakeSafetyRustInvoke()
+        const result = await removePerGameBridgeBottle(
+          withSafety((channel, args) => {
+            if (channel === 'safety_remove_tree') {
+              mockedExistsSync.mockImplementation(() => false)
+            }
+            return safety.requestRustInvoke(channel, args)
+          }),
+          '206040'
+        )
 
-        const result = await removePerGameBridgeBottle(spawnDeps, '206040')
+        expect(result).toEqual({ status: 'removed' })
+        expect(safety.calls.map((c) => c.channel)).toEqual([
+          'safety_check_removal',
+          'safety_check_removal',
+          'safety_remove_tree'
+        ])
+        expect(mockedRmSync).not.toHaveBeenCalled()
+      })
+
+      test('when the guarded delete fails and the dir still exists, returns error without throwing', async () => {
+        mockedExistsSync.mockImplementation(
+          (path: string) => path === perGameDir
+        )
+        mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
+
+        const result = await removePerGameBridgeBottle(
+          depsWithSafety({ rejectRemove: true }),
+          '206040'
+        )
 
         expect(result.status).toBe('error')
+        expect(mockedRmSync).not.toHaveBeenCalled()
       })
 
       test('absent dir: returns absent with no spawnAsync and no rmSync', async () => {

@@ -217,9 +217,10 @@ describe('removeSteamInstallCopy rust arm', () => {
   })
 
   it('folds a failed bottle removal into bottleRemoved false', async () => {
-    jest
-      .spyOn(lifecycle, 'removePerGameBridgeBottle')
-      .mockResolvedValue({ status: 'refused' } as never)
+    jest.spyOn(lifecycle, 'removePerGameBridgeBottle').mockResolvedValue({
+      status: 'refused',
+      reason: 'nested-known-install'
+    })
     const { deps } = makeDeps(() => ({
       status: 'removed',
       source: 'bridge',

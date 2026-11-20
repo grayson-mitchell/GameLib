@@ -237,6 +237,18 @@ async function uninstallBridgeGame(steamGame: SteamGame): Promise<ExecResult> {
       steamGame.deps,
       steamGame.appId
     )
+    if (result.status === 'refused') {
+      // Phase 82 (D-11/D-13): the guard stopped the bottle removal before anything was touched.
+      logWarning(
+        `SteamGame: uninstallBridgeGame refused to remove per-game bottle "${bottleName}" for appId ${steamGame.appId} (${result.reason})`,
+        LogPrefix.Steam
+      )
+      return refuseWithRemovalNotice(steamGame, {
+        outcome: 'refused',
+        reason: result.reason,
+        ...(result.otherKey !== undefined ? { otherKey: result.otherKey } : {})
+      })
+    }
     if (result.status === 'error') {
       logWarning(
         `SteamGame: uninstallBridgeGame failed to remove per-game bottle "${bottleName}" for appId ${steamGame.appId}: ${result.error}`,

@@ -21,7 +21,7 @@ import type {
 import { DEFAULT_BRIDGE_BOTTLE_NAME, type BottleSettingsDeps } from '../bottle'
 import {
   removePerGameBridgeBottle,
-  type BottleLifecycleDeps
+  type BottleRemovalDeps
 } from '../bridgeBottleLifecycle'
 import { NUMERIC_APP_ID } from '../gameConstants'
 import type { AcfSource } from './installRoot'
@@ -256,7 +256,7 @@ export type RemoveCopyResult =
  * Exported for unit testing.
  */
 export async function removeSteamInstallCopy(
-  deps: BottleLifecycleDeps & SteamLibrariesDeps & BottleSettingsDeps,
+  deps: BottleRemovalDeps & SteamLibrariesDeps & BottleSettingsDeps,
   appId: string,
   source: AcfSource
 ): Promise<RemoveCopyResult> {
@@ -276,7 +276,7 @@ export async function removeSteamInstallCopy(
  * a file. Only the per-game bridge bottle goes through removePerGameBridgeBottle, as on the ts arm.
  */
 async function removeCopyViaRust(
-  deps: BottleLifecycleDeps & SteamLibrariesDeps & BottleSettingsDeps,
+  deps: BottleRemovalDeps & SteamLibrariesDeps & BottleSettingsDeps,
   appId: string,
   source: AcfSource
 ): Promise<RemoveCopyResult> {
@@ -317,8 +317,14 @@ async function removeCopyViaRust(
   const bottleResult = await removePerGameBridgeBottle(deps, appId)
   const bottleRemoved = bottleResult.status === 'removed'
   if (!bottleRemoved) {
+    // A 'refused' bottle (Phase 82, D-11) is left in place like an 'error' one, never counted as
+    // removed; the reason names the check that stopped it.
+    const why =
+      bottleResult.status === 'refused'
+        ? `'refused', ${bottleResult.reason}`
+        : `'${bottleResult.status}'`
     logWarning(
-      `SteamLibraryManager: removeSteamInstallCopy left bridge bottle "${res.bridgeBottle}" in place for appId ${appId} (removePerGameBridgeBottle returned '${bottleResult.status}')`,
+      `SteamLibraryManager: removeSteamInstallCopy left bridge bottle "${res.bridgeBottle}" in place for appId ${appId} (removePerGameBridgeBottle returned ${why})`,
       LogPrefix.Steam
     )
   }
