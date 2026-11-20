@@ -2,13 +2,13 @@
 gsd_state_version: "1.0"
 milestone: v0.10
 current_phase: 82
-current_phase_name: guardrails-hygiene-and-shared-safety-primitives
+current_phase_name: Guardrails, hygiene and shared safety primitives
 status: executing
-stopped_at: Completed 82-12-PLAN.md
-last_updated: "2026-11-20T07:16:05.869Z"
+stopped_at: Completed 82-19-PLAN.md
+last_updated: "2026-11-20T07:48:55.731Z"
 last_activity: 2026-11-21
-last_activity_desc: Phase 82 execution started
-state_head: 65981a6c4a6d987ef00b168d434a400d6aa414a5
+last_activity_desc: Phase 82 gap closure executed; verification human_needed
+state_head: c0a50506db499b94f6d232eaaa0c842c8cb41ab8
 progress:
   total_phases: 27
   completed_phases: 23
@@ -75,11 +75,11 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 
 ## Current Position
 
-Phase: 82 (guardrails-hygiene-and-shared-safety-primitives) — READY TO EXECUTE
-Plan: 16 of 16
-Status: Ready to execute
-Last activity: 2026-11-21 - Completed quick task 261121-97s: Download queue logs "handed off to the Steam client" instead of "Finished Installation" at a Steam-client handoff
-Progress: [█████████░] 88% (14 of 16 phase 82 plans have a SUMMARY; 82-11 proving, 82-12 pending)
+Phase: 82 (Guardrails, hygiene and shared safety primitives) — VERIFYING (human_needed)
+Plan: 19 of 19
+Status: Awaiting human verification (82-UAT.md)
+Last activity: 2026-11-20 — Phase 82 gap closure (82-17..82-19) executed; verification human_needed
+Progress: [██████████] 100% (19 of 19 phase 82 plans have a SUMMARY; verification human_needed)
 
 ## Native-Install Arc Phase Map (21–25)
 
@@ -324,6 +324,9 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 82 P16 | 30min | 2 tasks | 16 files |
 | Phase 82 P11 | multi-session | 3 tasks | 4 files |
 | Phase 82 P12 | 75min | 3 tasks | 12 files |
+| Phase 82 P17 | 35 min | 3 tasks | 7 files |
+| Phase 82 P18 | 25min | 3 tasks | 6 files |
+| Phase 82 P19 | 40min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -570,6 +573,10 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 82]: 82-16: e2eSurfaceGone is a two-tier gate (shipped source forbids any quoted e2e literal; tests forbid only stub symbols) because tauriShellSource.test.ts legitimately pins the Rust shell's CI=e2e protocol-registration guard
 - [Phase 82]: 82-11: CI-only fix under push-once stays on a local branch (5a86d54ac), returned to the operator rather than pushed
 - [Phase 82]: 82-12: operator chose keep-fixing for all five CI reds (nothing retired); cargo-deny zip 4.6.1 advisories accepted with a recorded reason (2026-11-21)
+- [Phase 82]: 82-17: existing trust root resolved with links followed (dunce::canonicalize), absent root at nearest existing ancestor, empty trustRoot is unknown/no-trust-root
+- [Phase 82]: 82-18: raw-delete detector over-reports rm-family calls on any receiver and opaque options by design; blind spots are written as non-goals in its header
+- [Phase 82]: 82-18: safety_remove_tree is unbounded in UNBOUNDED_RUST_CHANNELS (WR-03); safety_check_removal keeps the 60 s bound
+- [Phase 82]: 82-19: fakeSafetyRustInvoke has no option to disable the trust-root model; fake and crate share trust-root-contract.json, each with a 12-row floor
 
 ### Pending Todos
 
@@ -817,8 +824,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-20T18:56:57.146Z
-Stopped at: Completed 82-12-PLAN.md
+Last session: 2026-11-20T07:48:55.577Z
+Stopped at: Completed 82-19-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
