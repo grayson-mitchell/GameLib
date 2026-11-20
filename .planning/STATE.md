@@ -3,7 +3,7 @@ gsd_state_version: "1.0"
 milestone: v0.10
 milestone_name: Foundations
 status: Awaiting next milestone
-stopped_at: Phase 82 context gathered (v0.11 prep); Phase 81 still has open verification gaps
+stopped_at: v0.10 closed 2026-11-20 (override closeout); next is v0.11, Phase 82 context gathered
 last_updated: "2026-11-20T04:36:59.146Z"
 last_activity: 2026-11-20
 last_activity_desc: Milestone v0.10 completed and archived
@@ -14,18 +14,18 @@ progress:
   total_plans: 531
   completed_plans: 531
   percent: 85
-current_phase: 81
-current_phase_name: Unify the Steam restart hold into restart-on-Play
+current_phase: 82
+current_phase_name: Guardrails, hygiene and shared safety primitives
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-11-14)
+See: .planning/PROJECT.md (updated 2026-11-20)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 64 — UI to edit themes
+**Current focus:** Milestone v0.11 Node Sidecar Retirement — Phase 82 (Guardrails, hygiene and shared safety primitives), context gathered
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:

@@ -4,6 +4,14 @@
 
 **Phases completed:** 26 phases, 531 plans, 61 tasks
 
+**Delivered:** Backend DI with module state at zero, one process runner, IPC schemas and versioned stores, GlobalStateV2 and the GameInfo split; the Steam stack in Rust (scanners, depot pipeline, local file formats, CM client replacing steam-user/steam-session, install/uninstall/update polls); Steam game updates, the theme gallery and editor, IsThereAnyDeal store search, a unified macOS Engine control, restart-on-Play; all six v0.9 audit debts closed. Phases 47, 61–81 incl. 66.1–66.4; 3,423 commits over 14 days since the v0.9 tag.
+
+**Closeout:** override_closeout. Audit `milestones/v0.10-MILESTONE-AUDIT.md`: `tech_debt`, requirements 17/17, phases 26/26 verified, integration 7/7, flows 7/7, no blockers. Phases 72, 74 and 81 closed `human_needed`; Phase 81 UAT item 12 (1026 waiting edge) deferred by the operator. Nyquist: 14 compliant, 1 partial (64), 11 not validated.
+
+**Known verification overrides:** 210 newly acknowledged, 412 carried forward from a prior close (see STATE.md Deferred Items). 140 evidence-table rows in five archived v0.8 deferred-items.md files stay open: gsd-core cannot acknowledge a table row.
+
+**Archive:** `milestones/v0.10-ROADMAP.md`, `milestones/v0.10-REQUIREMENTS.md`, `milestones/v0.10-MILESTONE-AUDIT.md`, `milestones/v0.10-phases/`, `milestones/v0.10-quick/` (all quick tasks to date, not only v0.10's).
+
 **Key accomplishments:**
 - A session-only module store (`storeSearchSession.ts`) seeds `useDebouncedStoreSearch` so Store Search returns with the same query and rows on the first frame, with no request, no spinner and no stale price shown as current.
 - Spellcheck and autocorrect opt-outs on SearchBar, the Winetricks searchbox and TextInputField (G-47-12b), plus `displayEmpty` on RegionPicker so Auto shows its label instead of a blank select (G-47-14a), both pinned by server-rendered tests
