@@ -12,8 +12,8 @@ Every requirement below is a "still works after the port" guarantee unless it sa
 
 ### Foundations
 
-- [x] **FND-01**: Every backend test suite is green, or retired with a recorded reason, before the first port slice; drift-gate suites (IPC census, flow-registration census) cannot pass vacuously
-- [x] **FND-02**: Destructive operations (uninstall, bottle removal, store reset) refuse when a check returns "unknown"; uninstalling a game never deletes a sibling game co-installed beside it, on macOS, Windows and Linux
+- [ ] **FND-01**: Every backend test suite is green, or retired with a recorded reason, before the first port slice; drift-gate suites (IPC census, flow-registration census) cannot pass vacuously
+- [ ] **FND-02**: Destructive operations (uninstall, bottle removal, store reset) refuse when a check returns "unknown"; uninstalling a game never deletes a sibling game co-installed beside it, on macOS, Windows and Linux
 - [ ] **FND-03**: Rust can serve a renderer channel natively with the sidecar as fallback; each channel has exactly one owner, and renderer arguments are validated in Rust (the Phase 72 trust boundary is kept)
 - [ ] **FND-04**: Quitting or killing GameLib leaves no orphaned helper processes on macOS, Windows or Linux (launched games excepted)
 - [ ] **FND-05**: Logs keep their format, location, rotation and redaction; log upload and "show in folder" still work
@@ -67,8 +67,8 @@ Every requirement below is a "still works after the port" guarantee unless it sa
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FND-01 | Phase 82 | Complete |
-| FND-02 | Phase 82 | Complete |
+| FND-01 | Phase 82 | Pending |
+| FND-02 | Phase 82 | Pending |
 | FND-03 | Phase 83 | Pending |
 | FND-04 | Phase 83 | Pending |
 | FND-05 | Phase 84 | Pending |
