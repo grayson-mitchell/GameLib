@@ -7,10 +7,12 @@ use gamelib_steampoll::effects::{Continuation, Effect, LogLevel};
 use gamelib_steampoll::events::{AckReply, StateEvent};
 use gamelib_steampoll::host::NotifyText;
 use gamelib_steampoll::install_once::{
-    install_step, restart_to_finish_notification, ActiveInstall, InstallObservation,
+    install_step, restart_to_finish_notification, windows_live_applies, ActiveInstall,
+    InstallObservation,
 };
 use gamelib_steampoll::monitor::DownloadReading;
 use gamelib_steampoll::profile::Platform;
+use gamelib_steampoll::win_live::reading_from_write_delta;
 use serde_json::Value;
 
 const APP: &str = "730";
@@ -334,6 +336,171 @@ fn the_monitor_is_ignored_off_macos() {
     o.monitor = live(5e9, Some(25e6));
     let fx = install_step(APP, &mut p, &o).effects;
     assert_eq!(progress(&fx)[0]["progress"]["percent"], 0);
+}
+
+// ---- Windows live source (steam.exe write counter, win_live.rs) ------------------------------
+//
+// Windows Steam writes the ACF byte fields at setup (1026 with the totals, downloaded 0) and at
+// the commit only, so the ACF reads 0 % for the whole download. The numbers are the live run of
+// 2026-11-19 (Banner Saga 237990).
+
+const WIN_TO_DOWNLOAD: u64 = 3_184_165_888;
+const WIN_TO_STAGE: u64 = 3_335_661_215;
+
+/// The Windows ACF mid-download: 1026, both totals set, nothing downloaded or staged.
+fn win_acf() -> AcfState {
+    dl(1026, 0, WIN_TO_DOWNLOAD, 0, WIN_TO_STAGE)
+}
+
+fn delegated(source: AcfSource) -> ActiveInstall {
+    let mut p = poll(source);
+    p.delegated_to_steam_client = true;
+    p
+}
+
+/// What the Windows source reads once `written` bytes were written against the ACF's totals.
+fn win_reading(written: u64) -> Option<DownloadReading> {
+    reading_from_write_delta(written, WIN_TO_STAGE, WIN_TO_DOWNLOAD)
+}
+
+fn plat_tick(
+    p: &mut ActiveInstall,
+    platform: Platform,
+    monitor: Option<DownloadReading>,
+    now_ms: u64,
+) -> Vec<Effect> {
+    p.ticks += 1;
+    let mut o = obs(win_acf(), now_ms);
+    o.platform = platform;
+    o.monitor = monitor;
+    install_step(APP, p, &o).effects
+}
+
+fn percent(fx: &[Effect]) -> i64 {
+    progress(fx)[0]["progress"]["percent"].as_i64().unwrap()
+}
+
+#[test]
+fn a_windows_delegated_poll_shows_the_write_counter_progress_while_the_acf_is_frozen() {
+    let mut p = delegated(AcfSource::Native);
+    let fx = plat_tick(&mut p, Platform::Win32, win_reading(WIN_TO_STAGE / 2), 0);
+    assert_eq!(percent(&fx), 50);
+    let pr = &progress(&fx)[0]["progress"];
+    // The byte figure is on Steam's own download scale, half of 3.18 GB.
+    assert_eq!(pr["bytes"], "1.48 GiB");
+}
+
+#[test]
+fn the_windows_percent_climbs_with_the_counter_and_never_reaches_100() {
+    let mut p = delegated(AcfSource::Native);
+    let mut last = -1;
+    for (i, frac) in [0.0, 0.1, 0.45, 0.8, 0.991, 3.0].iter().enumerate() {
+        let written = (WIN_TO_STAGE as f64 * frac) as u64;
+        let fx = plat_tick(
+            &mut p,
+            Platform::Win32,
+            win_reading(written),
+            i as u64 * 3000,
+        );
+        let now = percent(&fx);
+        assert!(now >= last, "never backwards: {last} then {now}");
+        assert!(now <= 99, "100 % comes only from StateFlags 4, got {now}");
+        last = now;
+    }
+    assert_eq!(last, 99);
+}
+
+#[test]
+fn the_windows_source_gives_a_speed_and_an_eta_and_is_never_paused_while_it_advances() {
+    let mut p = delegated(AcfSource::Native);
+    plat_tick(&mut p, Platform::Win32, win_reading(0), 0);
+    // 15 MB/s of staged writes for 3 s.
+    let fx = plat_tick(&mut p, Platform::Win32, win_reading(45_000_000), 3000);
+    let pr = &progress(&fx)[0]["progress"];
+    assert!(pr["downSpeed"].as_f64().unwrap() > 0.0);
+    assert_ne!(pr["eta"], "");
+    for i in 2..=6u64 {
+        let fx = plat_tick(
+            &mut p,
+            Platform::Win32,
+            win_reading(i * 45_000_000),
+            i * 3000,
+        );
+        for s in statuses(&fx) {
+            assert_ne!(s["context"], "steam-paused");
+        }
+    }
+}
+
+#[test]
+fn a_frozen_windows_counter_reads_as_paused() {
+    let mut p = delegated(AcfSource::Native);
+    let mut last = vec![];
+    for i in 0..5u64 {
+        last = plat_tick(&mut p, Platform::Win32, win_reading(200_000_000), i * 3000);
+    }
+    assert_eq!(statuses(&last).last().unwrap()["context"], "steam-paused");
+}
+
+#[test]
+fn a_windows_poll_without_a_reading_falls_back_to_the_acf() {
+    let mut p = delegated(AcfSource::Native);
+    let fx = plat_tick(&mut p, Platform::Win32, None, 0);
+    assert_eq!(percent(&fx), 0);
+    assert!(progress(&fx)[0]["progress"].get("downSpeed").is_none());
+}
+
+#[test]
+fn the_windows_reading_is_ignored_unless_the_poll_is_a_delegated_native_install() {
+    let live = win_reading(WIN_TO_STAGE / 2);
+    // Not delegated: GameLib's own depot download, nothing Steam is downloading.
+    let mut p = poll(AcfSource::Native);
+    assert_eq!(percent(&plat_tick(&mut p, Platform::Win32, live, 0)), 0);
+    // A depot handoff.
+    let mut p = handoff(AcfSource::Native);
+    p.delegated_to_steam_client = true;
+    assert_eq!(percent(&plat_tick(&mut p, Platform::Win32, live, 0)), 0);
+    // A bottle poll.
+    let mut p = delegated(AcfSource::Bottle);
+    assert_eq!(percent(&plat_tick(&mut p, Platform::Win32, live, 0)), 0);
+}
+
+#[test]
+fn linux_stays_acf_only_even_for_a_delegated_poll() {
+    let mut p = delegated(AcfSource::Native);
+    let fx = plat_tick(&mut p, Platform::Linux, win_reading(WIN_TO_STAGE / 2), 0);
+    assert_eq!(percent(&fx), 0);
+}
+
+#[test]
+fn windows_live_applies_matches_the_step_gate() {
+    assert!(windows_live_applies(
+        Platform::Win32,
+        &delegated(AcfSource::Native)
+    ));
+    assert!(!windows_live_applies(
+        Platform::Win32,
+        &poll(AcfSource::Native)
+    ));
+    assert!(!windows_live_applies(
+        Platform::Win32,
+        &delegated(AcfSource::Bottle)
+    ));
+    assert!(!windows_live_applies(
+        Platform::Win32,
+        &delegated(AcfSource::Bridge)
+    ));
+    let mut h = handoff(AcfSource::Native);
+    h.delegated_to_steam_client = true;
+    assert!(!windows_live_applies(Platform::Win32, &h));
+    assert!(!windows_live_applies(
+        Platform::Darwin,
+        &delegated(AcfSource::Native)
+    ));
+    assert!(!windows_live_applies(
+        Platform::Linux,
+        &delegated(AcfSource::Native)
+    ));
 }
 
 // ---- 1026 handoff and the waiting notice -----------------------------------------------------

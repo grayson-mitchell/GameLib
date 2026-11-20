@@ -265,6 +265,13 @@ struct Inner {
     /// The Windows HKCU reader (`ActiveUser`); the real registry unless a test swaps it.
     registry_reader: Arc<dyn RegistryDword + Send + Sync>,
     state: Mutex<State>,
+    /// Held for the whole body of a tick, by whichever task runs it. It lives here, not in a task,
+    /// so a task spawned by a re-watch shares it with the task `unwatch` cancelled: that old task
+    /// cannot stop a tick it is already awaiting, and without this the two would evaluate at once
+    /// (the `running.rs` `in_flight` guard, 80 D-10). A tokio mutex rather than that flag because
+    /// the new task must wait for the old tick, not skip it. Released on drop, so a cancelled or
+    /// panicking tick cannot leave it held (tokio mutexes do not poison).
+    tick_gate: tokio::sync::Mutex<()>,
 }
 
 /// The adoption watcher, a boot-built instance. Cheap to clone.
@@ -297,6 +304,7 @@ impl AdoptionWatch {
                 resolved_root: OnceLock::new(),
                 registry_reader: Arc::new(RealRegistry),
                 state: Mutex::new(State::default()),
+                tick_gate: tokio::sync::Mutex::new(()),
             }),
         }
     }
@@ -314,6 +322,7 @@ impl AdoptionWatch {
                 resolved_root: OnceLock::new(),
                 registry_reader: reader,
                 state: Mutex::new(State::default()),
+                tick_gate: tokio::sync::Mutex::new(()),
             }),
         }
     }
@@ -382,6 +391,14 @@ impl AdoptionWatch {
                     tokio::select! {
                         _ = token.cancelled() => break,
                         _ = ticks.tick() => {
+                            // Uncontended in steady state, so tick timing is unchanged. After
+                            // a re-watch it waits here for the old task's tick (FIFO), then
+                            // runs at once. Biased so a cancelled task never takes the gate.
+                            let _busy = tokio::select! {
+                                biased;
+                                _ = token.cancelled() => break,
+                                busy = watch.inner.tick_gate.lock() => busy,
+                            };
                             if !watch.tick().await {
                                 break;
                             }

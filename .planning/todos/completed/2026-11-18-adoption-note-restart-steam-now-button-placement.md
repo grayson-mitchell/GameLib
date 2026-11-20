@@ -1,0 +1,53 @@
+---
+created: 2026-11-18T00:00:00.000Z
+title: 'Adoption note: "Restart Steam now" button is cluttered and sits on its own line'
+area: steam
+severity: minor
+platform: any
+ready: code
+files:
+  - src/frontend/screens/Game/GamePage/components/AdoptionNote.tsx
+  - src/frontend/screens/Game/GamePage/components/AdoptionNote.scss
+  - src/frontend/screens/Game/GamePage/index.tsx
+---
+
+## Problem
+
+Phase 81 live gate, items 2 and 4 (`81-HUMAN-UAT.md`, launches L1 and L2, 2026-11-18).
+Both items passed on behaviour, but the operator does not like the layout of the note
+under the status line:
+
+- item 2: the "Restart Steam now" button beside the note "Steam will restart once when
+  you press Play." looks cluttered; the operator wants the note only;
+- item 4: the button sits on its own line instead of on the same row as Play.
+
+The button is D-02 (81-CONTEXT.md), placed by 81-08 in `AdoptionNote.tsx` and mounted at
+`GamePage/index.tsx`.
+
+## Direction
+
+Needs a decision before code: drop the button and keep the note only (Play already
+restarts Steam once, so the button is a convenience), or move the action onto Play's row
+(for example as a secondary action or a menu item). Review D-02 with the operator. Note
+the 1026 waiting edge (`steam-waiting-for-restart`) shows the same button and has a known
+no-op gap recorded in the phase's `deferred-items.md`; decide both together. Check the
+result in midnightMirage, gruvbox_dark and dracula (item 8's themes).
+
+## Decision (2026-11-19, Phase 81 item 10, Windows)
+
+The operator saw the same layout on Windows and decided the direction: "Restart Steam now" belongs
+next to the Play button, not on its own line after the note. Keep the note text under the status
+line. The 1026 waiting edge question above is still open.
+
+## Decision confirmed a third time (2026-11-20, Phase 81 item 11, Linux)
+
+The operator reported the same layout on Linux, the third OS in a row (macOS items 2 and 4, Windows
+item 10, Linux item 11): the "Restart Steam now" button appears after the note, not next to the Play
+button on the same line. The decision above stands and is now not open to re-asking: the button goes
+next to Play on the same row; the note text stays under the status line. `ready` moved from `human`
+to `code` because the direction is decided; only the 1026 waiting-edge question remains, and it must
+not hold this layout change. Nothing in the UI has changed since the first report.
+
+## Resolution
+
+Fixed by quick tasks in commits `1ae713663` (the Restart Steam action sits on the Play button row) and `c2109b6e1` (the note stays above the buttons, only the action joins Play's row). Live-checked on Linux on 2026-11-20 (Phase 81 item 11): the operator confirmed the action beside Play on the same row with the note under the status line. The three themes (midnightMirage, gruvbox_dark, dracula) were not itemised; it is one overall operator confirmation. The 1026 waiting edge question this todo carried is handled by quick 261120-88x (`62a27f932`).

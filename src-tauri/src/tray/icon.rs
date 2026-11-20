@@ -131,7 +131,9 @@ pub(crate) fn tray_set_icon_mode_from_args(args: &[Value]) -> TrayIconMode {
 /// `None` (unreadable) is the white-glyph fallback -- the Windows 11 default dark taskbar and the
 /// tray's historical startup variant; mirrors `TRAY_ICON_AUTO_FALLBACK` in
 /// `src/common/trayIconVariant.ts`.
-pub(crate) fn tray_glyph_dark_for_system_uses_light_theme(system_uses_light_theme: Option<u32>) -> bool {
+pub(crate) fn tray_glyph_dark_for_system_uses_light_theme(
+    system_uses_light_theme: Option<u32>,
+) -> bool {
     match system_uses_light_theme {
         Some(0) => false,
         Some(_) => true,
@@ -141,7 +143,10 @@ pub(crate) fn tray_glyph_dark_for_system_uses_light_theme(system_uses_light_them
 
 /// Resolve a mode to "use the dark (black) glyph?". `Light` and `Dark` ignore the registry
 /// argument; `Auto` follows the taskbar value (see `read_system_uses_light_theme`).
-pub(crate) fn resolve_tray_icon_dark(mode: TrayIconMode, system_uses_light_theme: Option<u32>) -> bool {
+pub(crate) fn resolve_tray_icon_dark(
+    mode: TrayIconMode,
+    system_uses_light_theme: Option<u32>,
+) -> bool {
     match mode {
         TrayIconMode::Light => false,
         TrayIconMode::Dark => true,

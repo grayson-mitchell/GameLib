@@ -3,7 +3,6 @@
 
 use super::*;
 
-
 /// Holds the `AppHandle` the delegate's `WKUIDelegate` popup hook (Phase 50 Plan 02, D-12) needs
 /// to call `crate::open_external` -- `open()`'s own `app: &AppHandle` parameter is already in
 /// scope at the one construction site (`EpicEmbedNavDelegate::new`, below), so this stores an

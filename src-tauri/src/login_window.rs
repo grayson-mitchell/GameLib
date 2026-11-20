@@ -53,7 +53,8 @@ static LOGIN_WINDOW_LABEL_COUNTER: AtomicU64 = AtomicU64::new(0);
 /// rather than `Mutex<HashMap<..>>` because `HashMap::new()` is not a `const fn` (its
 /// default `RandomState` seed is not const-constructible) -- the map is created lazily on
 /// first use instead.
-pub(crate) static LOGIN_WINDOW_EVENTS: Mutex<Option<HashMap<String, Vec<Value>>>> = Mutex::new(None);
+pub(crate) static LOGIN_WINDOW_EVENTS: Mutex<Option<HashMap<String, Vec<Value>>>> =
+    Mutex::new(None);
 
 /// Per-label cap on `LOGIN_WINDOW_EVENTS`, oldest-dropped past this bound (threat
 /// T-34.4.1-09): a page that navigates in a loop must not grow the queue without bound

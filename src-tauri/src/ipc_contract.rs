@@ -35,6 +35,7 @@ pub(crate) enum RustInvokeChannel {
     AppHide,
     MainWindowRaise,
     MainWindowHide,
+    SteamWindowRaise,
     BridgeInvitePickerOpen,
     ClipboardWriteText,
     ClipboardReadText,
@@ -156,6 +157,7 @@ impl RustInvokeChannel {
         RustInvokeChannel::AppHide,
         RustInvokeChannel::MainWindowRaise,
         RustInvokeChannel::MainWindowHide,
+        RustInvokeChannel::SteamWindowRaise,
         RustInvokeChannel::BridgeInvitePickerOpen,
         RustInvokeChannel::ClipboardWriteText,
         RustInvokeChannel::ClipboardReadText,
@@ -277,6 +279,7 @@ impl RustInvokeChannel {
             "app_hide" => Some(RustInvokeChannel::AppHide),
             "main_window_raise" => Some(RustInvokeChannel::MainWindowRaise),
             "main_window_hide" => Some(RustInvokeChannel::MainWindowHide),
+            "steam_window_raise" => Some(RustInvokeChannel::SteamWindowRaise),
             "bridge_invite_picker_open" => Some(RustInvokeChannel::BridgeInvitePickerOpen),
             "clipboard_write_text" => Some(RustInvokeChannel::ClipboardWriteText),
             "clipboard_read_text" => Some(RustInvokeChannel::ClipboardReadText),
@@ -400,6 +403,7 @@ impl RustInvokeChannel {
             RustInvokeChannel::AppHide => "app_hide",
             RustInvokeChannel::MainWindowRaise => "main_window_raise",
             RustInvokeChannel::MainWindowHide => "main_window_hide",
+            RustInvokeChannel::SteamWindowRaise => "steam_window_raise",
             RustInvokeChannel::BridgeInvitePickerOpen => "bridge_invite_picker_open",
             RustInvokeChannel::ClipboardWriteText => "clipboard_write_text",
             RustInvokeChannel::ClipboardReadText => "clipboard_read_text",
@@ -970,6 +974,15 @@ impl MainWindowRaiseArgs {
 pub(crate) struct MainWindowHideArgs;
 
 impl MainWindowHideArgs {
+    pub(crate) fn from_args(_args: &[Value]) -> Result<Self, String> {
+        Ok(Self)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct SteamWindowRaiseArgs;
+
+impl SteamWindowRaiseArgs {
     pub(crate) fn from_args(_args: &[Value]) -> Result<Self, String> {
         Ok(Self)
     }

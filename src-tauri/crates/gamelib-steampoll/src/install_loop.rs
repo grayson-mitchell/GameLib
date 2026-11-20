@@ -19,22 +19,23 @@
 //!
 //! Logging rule (T-28-04): appId, kind and counts only.
 
-use crate::acf_state::{read_acf_state, read_acf_update_state, AcfSource, PollRoots};
+use crate::acf_state::{read_acf_state, read_acf_update_state, AcfSource, AcfState, PollRoots};
 use crate::constants::{
     GRACE_TICKS, MANIFEST_GONE_TICKS, MAX_TICKS, STEAM_REQUEST_NO_ACTIVITY_TICKS, TICK_INTERVAL_MS,
 };
 use crate::effects::{status_update, Effect, LogLevel};
 use crate::host::PollHost;
 use crate::install_once::{
-    install_step, run_mac_arch_followup, wants_mac_arch_probe, ActiveInstall, HandoffPoll,
-    InstallObservation,
+    install_step, run_mac_arch_followup, wants_mac_arch_probe, windows_live_applies, ActiveInstall,
+    HandoffPoll, InstallObservation,
 };
 use crate::monitor::DownloadMonitor;
 use crate::outbox::{apply_effects_with, Outbox};
 use crate::profile::Platform;
 use crate::registry::{PollKind, Registry};
 use crate::update::{
-    request_steam_install_app, AwaitingUpdate, InstallAppRetry, SteamInstallAppOutcome,
+    is_update_running, request_steam_install_app, AwaitingUpdate, InstallAppRetry,
+    SteamInstallAppOutcome,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
@@ -130,11 +131,29 @@ fn valid_app_id(app_id: &str) -> bool {
 /// (15 s at the 3 s tick): bounds the pgrep cost while Steam is down (80-REVIEW A/WR-09).
 const MONITOR_RESTART_TICKS: u32 = 5;
 
-/// quick 261029-sex: only macOS native polls are downloaded by Steam itself.
+/// quick 261029-sex: the nettop child exists only for macOS native polls that Steam downloads
+/// itself.
+///
+/// Windows delegates the same way (`enableSteamNativeInstall` off) but has no child to start: its
+/// live source is [`windows_live_applies`], read in place each tick, one `GetProcessIoCounters`
+/// call on steam.exe (`win_live.rs`). Linux delegates too and stays ACF-only, because only macOS
+/// and Windows have a measured live source.
 fn live_monitor_eligible(platform: Platform, poll: &ActiveInstall) -> bool {
     platform == Platform::Darwin
         && poll.source == AcfSource::Native
         && !poll.handoff.is_native_handoff
+}
+
+/// The Windows live source is read for this poll's install arm: a delegated native install poll.
+/// Update polls read the same source through [`windows_update_live_active`].
+fn windows_live_active(platform: Platform, poll: &ActiveInstall) -> bool {
+    windows_live_applies(platform, poll) && poll.awaiting_update.is_none()
+}
+
+/// The Windows live source is read for this poll's update arm: a delegated native update poll. The
+/// reading itself exists only while the update runs (`is_update_running`).
+fn windows_update_live_active(platform: Platform, poll: &ActiveInstall) -> bool {
+    windows_live_applies(platform, poll) && poll.awaiting_update.is_some()
 }
 
 fn retry_from(o: &InstallAppRetryOpt) -> InstallAppRetry {
@@ -277,6 +296,9 @@ impl InstallPolls {
 
     /// The existing-entry branch of `startInstallPolling`: field-by-field upgrade rules.
     fn upgrade(&self, app_id: &str, poll: &mut ActiveInstall, o: &PollOptions) {
+        // Captured before any mutation: an install poll upgraded into an update must not keep
+        // the install's write-counter baseline.
+        let was_update = poll.awaiting_update.is_some();
         if o.is_native_handoff == Some(true) {
             poll.handoff.is_native_handoff = true;
             // Never discard a non-empty skippedDepots list already on the entry.
@@ -322,10 +344,16 @@ impl InstallPolls {
             ));
         }
         // quick 261029-sex: an upgrade to handoff or a retarget ends eligibility; a delegated
-        // native poll gains it. Start is idempotent per appId.
+        // native poll gains it. Start is idempotent per appId. A Windows poll that still reads the
+        // write counter keeps its baseline (stop would drop it and the percent would restart): an
+        // install poll repeat-started as an install, or an update poll repeat-started as an update.
+        // An install poll upgraded into an update is stopped and re-baselines at the update's first
+        // running tick, and a poll that loses eligibility (handoff, retarget) is stopped.
         if live_monitor_eligible(self.platform, poll) {
             self.spawn_monitor_start(app_id, poll.roots.clone());
-        } else {
+        } else if !(windows_live_active(self.platform, poll)
+            || (was_update && windows_update_live_active(self.platform, poll)))
+        {
             self.monitor.stop(app_id);
         }
     }
@@ -517,6 +545,8 @@ impl InstallPolls {
             awaiting: bool,
             title: String,
             restart_monitor: bool,
+            windows_live: bool,
+            windows_update_live: bool,
         }
         let (snap, cap_stop) = {
             let mut polls = self.polls();
@@ -537,6 +567,8 @@ impl InstallPolls {
                     title: poll.title.clone(),
                     restart_monitor: live_monitor_eligible(self.platform, poll)
                         && poll.ticks % MONITOR_RESTART_TICKS == 0,
+                    windows_live: windows_live_active(self.platform, poll),
+                    windows_update_live: windows_update_live_active(self.platform, poll),
                 },
                 cap_stop,
             )
@@ -573,10 +605,38 @@ impl InstallPolls {
         } else {
             None
         };
+        // Windows: the live reading exists only while the ACF says Steam is downloading, so the
+        // write counter's baseline is taken at the first downloading observation, not at poll
+        // start (Steam writes other things before the download begins).
+        let monitor = if snap.windows_live {
+            match &acf {
+                AcfState::Downloading {
+                    bytes_to_download,
+                    bytes_to_stage,
+                    ..
+                } => self
+                    .monitor
+                    .read_windows(app_id, *bytes_to_stage, *bytes_to_download),
+                _ => None,
+            }
+        } else if snap.windows_update_live {
+            // The baseline is the first tick Steam runs the update, not the hand-off: a pending
+            // update can wait while Steam writes other things. Bit 4 stays set through an update,
+            // so the update fields, not `AcfState`, say when it runs.
+            match &update_fields {
+                Some(f) if is_update_running(f) => {
+                    self.monitor
+                        .read_windows(app_id, f.bytes_to_stage, f.bytes_to_download)
+                }
+                _ => None,
+            }
+        } else {
+            self.monitor.read(app_id)
+        };
         let obs = InstallObservation {
             acf,
             update_fields,
-            monitor: self.monitor.read(app_id),
+            monitor,
             now_ms: reg.clock().now_ms(),
             platform: self.platform,
             bridge_finalized: lock(&self.shared.bridge_finalized).contains(app_id),

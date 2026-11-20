@@ -11,7 +11,11 @@ use super::*;
 /// backend; `Ok` is also accepted as buttons[0] in case a backend reports the first button
 /// generically. Everything else -- `Cancel` above all, which is what a dismissal yields -- is
 /// `None`, so the caller falls back to its declared `cancelId` instead of guessing a button.
-pub(crate) fn two_button_choice(result: &rfd::MessageDialogResult, label0: &str, label1: &str) -> Option<u8> {
+pub(crate) fn two_button_choice(
+    result: &rfd::MessageDialogResult,
+    label0: &str,
+    label1: &str,
+) -> Option<u8> {
     match result {
         rfd::MessageDialogResult::Custom(s) if s == label0 => Some(0),
         rfd::MessageDialogResult::Custom(s) if s == label1 => Some(1),
@@ -25,7 +29,10 @@ pub(crate) fn two_button_choice(result: &rfd::MessageDialogResult, label0: &str,
 /// 0/1 for backends that report standard variants for custom buttons. `Ok` is deliberately NOT
 /// mapped: on a three-button box it can only come from a fallback, and a fallback must never
 /// pick a button for the user -- the TS host maps `None` to the caller's `cancelId`.
-pub(crate) fn three_button_choice(result: &rfd::MessageDialogResult, labels: &[String; 3]) -> Option<u8> {
+pub(crate) fn three_button_choice(
+    result: &rfd::MessageDialogResult,
+    labels: &[String; 3],
+) -> Option<u8> {
     match result {
         rfd::MessageDialogResult::Custom(s) => labels.iter().position(|l| l == s).map(|i| i as u8),
         rfd::MessageDialogResult::Yes => Some(0),
@@ -87,28 +94,28 @@ fn show_three_button_alert_macos(
     let alert_window = alert.window();
     let handler_window = alert_window.clone();
     // Reads ONLY keyCode() and modifierFlags() -- never characters() (T-74-88).
-    let handler = block2::RcBlock::new(
-        move |event: std::ptr::NonNull<NSEvent>| -> *mut NSEvent {
-            // SAFETY: AppKit hands local monitor handlers a valid, live NSEvent for this call.
-            let event_ref = unsafe { event.as_ref() };
-            if !is_bare_escape(event_ref.keyCode(), event_ref.modifierFlags().0) {
-                return event.as_ptr();
+    let handler = block2::RcBlock::new(move |event: std::ptr::NonNull<NSEvent>| -> *mut NSEvent {
+        // SAFETY: AppKit hands local monitor handlers a valid, live NSEvent for this call.
+        let event_ref = unsafe { event.as_ref() };
+        if !is_bare_escape(event_ref.keyCode(), event_ref.modifierFlags().0) {
+            return event.as_ptr();
+        }
+        let Some(mtm) = objc2::MainThreadMarker::new() else {
+            return event.as_ptr();
+        };
+        let app = NSApplication::sharedApplication(mtm);
+        match app.modalWindow() {
+            Some(w) if std::ptr::eq(&*w, &*handler_window) => {
+                app.stopModalWithCode(objc2_app_kit::NSModalResponseCancel);
+                std::ptr::null_mut()
             }
-            let Some(mtm) = objc2::MainThreadMarker::new() else {
-                return event.as_ptr();
-            };
-            let app = NSApplication::sharedApplication(mtm);
-            match app.modalWindow() {
-                Some(w) if std::ptr::eq(&*w, &*handler_window) => {
-                    app.stopModalWithCode(objc2_app_kit::NSModalResponseCancel);
-                    std::ptr::null_mut()
-                }
-                _ => event.as_ptr(),
-            }
-        },
-    );
+            _ => event.as_ptr(),
+        }
+    });
     // SAFETY: the handler is a valid block; AppKit copies it when registering.
-    let monitor = unsafe { NSEvent::addLocalMonitorForEventsMatchingMask_handler(NSEventMask::KeyDown, &handler) };
+    let monitor = unsafe {
+        NSEvent::addLocalMonitorForEventsMatchingMask_handler(NSEventMask::KeyDown, &handler)
+    };
     if monitor.is_none() {
         shell_eprintln!("[shell] WARN: launch-prompt esc monitor: addLocalMonitorForEventsMatchingMask failed -- Esc will not dismiss");
     }
@@ -252,7 +259,11 @@ pub(crate) fn rpc_dialog_message(args: &[Value], app: &AppHandle) -> Result<Valu
         })
         .unwrap_or(MessageDialogKind::Info);
     let title = opts.title.clone();
-    if let Some(btns) = opts.buttons.as_ref().filter(|b| b.len() == 2 || b.len() == 3) {
+    if let Some(btns) = opts
+        .buttons
+        .as_ref()
+        .filter(|b| b.len() == 2 || b.len() == 3)
+    {
         let label0 = btns[0].clone();
         let label1 = btns[1].clone();
         let label2 = btns.get(2).cloned();
@@ -268,7 +279,9 @@ pub(crate) fn rpc_dialog_message(args: &[Value], app: &AppHandle) -> Result<Valu
             let (tx, rx) = mpsc_channel::<Option<u8>>();
             app.run_on_main_thread(move || {
                 let choice = match objc2::MainThreadMarker::new() {
-                    Some(mtm) => show_three_button_alert_macos(mtm, &title, &message, level, &labels),
+                    Some(mtm) => {
+                        show_three_button_alert_macos(mtm, &title, &message, level, &labels)
+                    }
                     None => None,
                 };
                 let _ = tx.send(choice);
@@ -278,7 +291,9 @@ pub(crate) fn rpc_dialog_message(args: &[Value], app: &AppHandle) -> Result<Valu
             return Ok(choice.map_or(Value::Null, Value::from));
         }
         let buttons = match &label2 {
-            Some(l2) => rfd::MessageButtons::YesNoCancelCustom(label0.clone(), label1.clone(), l2.clone()),
+            Some(l2) => {
+                rfd::MessageButtons::YesNoCancelCustom(label0.clone(), label1.clone(), l2.clone())
+            }
             None => rfd::MessageButtons::OkCancelCustom(label0.clone(), label1.clone()),
         };
         let (tx, rx) = mpsc_channel::<rfd::MessageDialogResult>();

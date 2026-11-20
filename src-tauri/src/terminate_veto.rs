@@ -26,7 +26,11 @@ const QUIT_PROBE_TIMEOUT: Duration = Duration::from_secs(3);
 ///
 /// The probe runs on its own thread and is waited on with `recv_timeout`, so the bound also
 /// covers a probe stuck behind the stdin mutex on a full pipe, not only a slow answer.
-pub(crate) fn route_quit_via_sidecar<P, S>(probe: P, bound: Duration, send_quit: S) -> Result<(), String>
+pub(crate) fn route_quit_via_sidecar<P, S>(
+    probe: P,
+    bound: Duration,
+    send_quit: S,
+) -> Result<(), String>
 where
     P: FnOnce() -> Result<Value, String> + Send + 'static,
     S: FnOnce() -> Result<(), String>,

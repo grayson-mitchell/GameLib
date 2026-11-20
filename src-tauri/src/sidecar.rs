@@ -181,7 +181,6 @@ pub(crate) fn app_root_env_value(app_root: Result<std::path::PathBuf, String>) -
         .unwrap_or_else(|_| String::new())
 }
 
-
 /// DEV MODE: spawn `node <sidecar-entry>` with piped stdio, logging exactly what it runs so a
 /// spawn/path failure is visible in the `tauri dev` terminal (previously the whole leg was
 /// invisible: a piped stdout consumed by the reader thread and no diagnostics meant even a
@@ -446,7 +445,11 @@ pub(crate) fn start_stderr_forwarder(stderr: std::process::ChildStderr) {
 /// on a spawned worker thread (Phase 28 — keyring calls); `kind == "openExternal"` opens the
 /// URL via the same facility `open_external` uses, fire-and-forget. Any other frame kind is
 /// logged via an explicit diagnostic rather than silently dropped.
-pub(crate) fn start_reader(app: AppHandle, state: Arc<SidecarState>, stdout: std::process::ChildStdout) {
+pub(crate) fn start_reader(
+    app: AppHandle,
+    state: Arc<SidecarState>,
+    stdout: std::process::ChildStdout,
+) {
     thread::spawn(move || {
         let reader = BufReader::new(stdout);
         for line in reader.lines() {
@@ -710,7 +713,11 @@ pub(crate) fn sidecar_eof_teardown<D, R, S>(
 /// Decides whether a sidecar EOF is surfaced to the user (D-03). Pure and `AppHandle`-free so
 /// `#[cfg(test)] mod tests` can prove it: nothing when an intentional shutdown began first, and
 /// at most once otherwise.
-pub(crate) fn on_sidecar_eof<F: FnOnce()>(shutting_down: &AtomicBool, surfaced: &AtomicBool, surface: F) {
+pub(crate) fn on_sidecar_eof<F: FnOnce()>(
+    shutting_down: &AtomicBool,
+    surfaced: &AtomicBool,
+    surface: F,
+) {
     if shutting_down.load(Ordering::SeqCst) {
         return;
     }
@@ -869,7 +876,11 @@ mod tests {
     fn kill_process_group_reaps_members_after_leader_exits() {
         let (leader, member, mut rest) = spawn_orphaned_group();
         // SAFETY: signal 0 only probes existence.
-        assert_eq!(unsafe { libc::kill(member, 0) }, 0, "member alive after leader exit");
+        assert_eq!(
+            unsafe { libc::kill(member, 0) },
+            0,
+            "member alive after leader exit"
+        );
         kill_process_group(leader).expect("group outlives its leader");
         let (tx, rx) = std::sync::mpsc::channel();
         thread::spawn(move || {
@@ -877,7 +888,8 @@ mod tests {
             let _ = rest.read_to_end(&mut sink);
             let _ = tx.send(());
         });
-        rx.recv_timeout(Duration::from_secs(5)).expect("EOF once the member is killed");
+        rx.recv_timeout(Duration::from_secs(5))
+            .expect("EOF once the member is killed");
     }
 
     #[cfg(unix)]
@@ -887,8 +899,8 @@ mod tests {
         kill_process_group(leader).expect("first reap");
         let mut sink = Vec::new();
         let _ = rest.read_to_end(&mut sink); // EOF => member dead
-        // The killed member may linger as an unreaped zombie (macOS then reports EPERM, a
-        // reaper-less Linux container reports Ok); once reaped the group is empty -> ESRCH.
+                                             // The killed member may linger as an unreaped zombie (macOS then reports EPERM, a
+                                             // reaper-less Linux container reports Ok); once reaped the group is empty -> ESRCH.
         for _ in 0..50 {
             match kill_process_group(leader) {
                 Err(e) if e.raw_os_error() == Some(libc::ESRCH) => return,
@@ -896,7 +908,10 @@ mod tests {
             }
         }
         let err = kill_process_group(leader).expect_err("empty group");
-        assert!(matches!(err.raw_os_error(), Some(libc::ESRCH) | Some(libc::EPERM)));
+        assert!(matches!(
+            err.raw_os_error(),
+            Some(libc::ESRCH) | Some(libc::EPERM)
+        ));
     }
 
     // ---- shell_exe_env_value (Phase 34.5 Plan 01, REQ-34.5-01, D-10) ----

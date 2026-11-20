@@ -78,8 +78,8 @@ See: .planning/PROJECT.md (updated 2026-11-14)
 
 Phase: 81 (Unify the Steam restart hold into restart-on-Play)
 Plan: 20 plans executed
-Status: Gaps found — needs gap-closure planning
-Last activity: 2026-11-20 - Completed quick task 261120-963: Restart note and "Restart Steam now" flash for 1-2 s at install end before the state settles
+Status: Human verification needed — re-verified human_needed, 14/15
+Last activity: 2026-11-20 - Completed quick task 261120-my5: adoption watch re-watch overlap fixed; Phase 81 re-verified 14/15
 
 Progress: [█████████░] 88%
 
@@ -722,6 +722,12 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 147 | Resolve dev-build uninstall notification todo: Terminal identity denied, not a defect | 2026-11-19 | dcfd163f5 | — | — |
 | 261120-8i5 | Store embed first load that fails while online leaves a blank embed with no notice | 2026-11-20 | 5d1112a47 | — | [261120-8i5-store-embed-first-load-that-fails-while-](./quick/261120-8i5-store-embed-first-load-that-fails-while-/) |
 | 261120-963 | Restart note and "Restart Steam now" flash for 1-2 s at install end before the state settles | 2026-11-20 | d0459b101 | — | [261120-963-restart-note-and-restart-steam-now-flash](./quick/261120-963-restart-note-and-restart-steam-now-flash/) |
+| fast | Pending-adoption log line says "Steam pid" on every OS, not "steam_osx pid" (todo closed) | 2026-11-19 | 2cc0c0e50 | prettier clean; no test or gate pins the literal | — |
+| 261119-box | Windows: Steam-client update progress reads the steam.exe write counter, not the ACF alone (todo closed; live update check pending) | 2026-11-19 | 7c01b89ef | — | [261119-box-windows-steam-client-update-progress-rea](./quick/261119-box-windows-steam-client-update-progress-rea/) |
+| 261120-elf | Depot install gives unflagged Linux ELF executables +x (ADOM, Amnesia; todo closed; ADOM and Amnesia live-verified) | 2026-11-20 | c3e6d3ae4 | — | [261120-elf-depot-elf-exec-fallback](./quick/261120-elf-depot-elf-exec-fallback/) |
+| 261120-88x | Phase 81 Gap 2: the 1026-edge "Restart Steam now" with no pending record now starts Steam (open/main only) or runs the graceful restart, with both D-05 guards; live item 12 still unrun | 2026-11-20 | 62a27f932 | — | [261120-88x-phase-81-gap-2-give-the-gamelib-1026-wai](./quick/261120-88x-phase-81-gap-2-give-the-gamelib-1026-wai/) |
+| 261120-96e | Phase 81 truth 15: steady-state slow-tick no-overlap tests for the adoption watch (Linux pgrep, macOS helper, negative control); the re-watch race is a real defect, filed as a todo, not fixed | 2026-11-20 | 11e3c4308 | — | [261120-96e-phase-81-truth-15-test-that-the-adoption](./quick/261120-96e-phase-81-truth-15-test-that-the-adoption/) |
+| 261120-my5 | Adoption watch re-watch overlap fixed: one shared tokio Mutex tick gate across the old and new task, so a re-watch during a slow tick waits for it (delayed, not skipped); regression test added, failed before the fix; todo closed | 2026-11-20 | 01ea1d788 | adoption target 48/48, 10/10 runs; crate green | [261120-my5-fix-the-adoption-watch-re-watch-overlap](./quick/261120-my5-fix-the-adoption-watch-re-watch-overlap/) |
 
 ## Deferred Items
 

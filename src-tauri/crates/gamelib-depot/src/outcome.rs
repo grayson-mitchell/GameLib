@@ -133,6 +133,9 @@ pub struct Stats {
     /// Files given +x by the shebang fallback (a #! file inside an app bundle's Contents/MacOS).
     #[serde(default)]
     pub shebang_exec_applied: u32,
+    /// Files given +x by the ELF fallback (a Linux EXEC/DYN image that is not a `.so`).
+    #[serde(default)]
+    pub elf_exec_applied: u32,
     /// Cross-depot path collisions detected.
     pub path_collisions: u32,
     pub elapsed_ms: u64,

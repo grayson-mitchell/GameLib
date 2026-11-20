@@ -408,8 +408,21 @@ fn connection_log_reads_crlf_and_skips_lines_that_are_not_state_lines() {
 }
 
 #[test]
-fn connection_log_with_another_final_state_no_state_line_or_no_file_is_unknown() {
-    let log = log_with(&format!("{}{}", state("Logged On"), state("Connecting")));
+fn connection_log_skips_connecting_lines_after_a_sign_out_or_sign_in() {
+    let out = format!(
+        "{}{}{}",
+        state("Logged On"),
+        state("Logged Off"),
+        state("Connecting").repeat(2)
+    );
+    assert_eq!(connection_log_signed_in(&log_with(&out).path), Some(false));
+    let back = format!("{out}{}{}", state("Connecting"), state("Logged On"));
+    assert_eq!(connection_log_signed_in(&log_with(&back).path), Some(true));
+}
+
+#[test]
+fn connection_log_with_only_transient_states_no_state_line_or_no_file_is_unknown() {
+    let log = log_with(&state("Connecting"));
     assert_eq!(connection_log_signed_in(&log.path), None);
     let log = log_with("[2026-11-18 09:00:05] nothing to see here\n");
     assert_eq!(connection_log_signed_in(&log.path), None);

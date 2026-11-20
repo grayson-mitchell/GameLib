@@ -142,7 +142,10 @@ pub(crate) mod macos_invite_focus {
 // the whole GameLib window over the game. `args[0]` is `{ appId, ackId }`; both are
 // re-validated by `bridge_invite_picker_path` because they land in a URL. The main window
 // is touched only to re-hide it after a Cmd+H-hidden GameLib was unhidden by activation.
-pub(crate) fn rpc_bridge_invite_picker_open(args: &[Value], app: &AppHandle) -> Result<Value, String> {
+pub(crate) fn rpc_bridge_invite_picker_open(
+    args: &[Value],
+    app: &AppHandle,
+) -> Result<Value, String> {
     let a = BridgeInvitePickerOpenArgs::from_args(args)?;
     let (appid, ack) = (a.app_id.as_str(), a.ack_id.as_str());
     let path = bridge_invite_picker_path(appid, ack)?;
@@ -169,8 +172,7 @@ pub(crate) fn rpc_bridge_invite_picker_open(args: &[Value], app: &AppHandle) -> 
         }
     }
 
-    let window = if let Some(existing) = app.get_webview_window(BRIDGE_INVITE_WINDOW_LABEL)
-    {
+    let window = if let Some(existing) = app.get_webview_window(BRIDGE_INVITE_WINDOW_LABEL) {
         // The window is never asked for its URL: see `bridge_invite_reuse_url`.
         let build = &app.config().build;
         let base = bridge_invite_app_base(
@@ -225,9 +227,7 @@ pub(crate) fn rpc_bridge_invite_picker_open(args: &[Value], app: &AppHandle) -> 
                 PickerEvt::Destroyed => {
                     let rec = macos_invite_focus::lock().take();
                     if rec.is_some_and(|r| r.main_hidden_by_picker) {
-                        if let Some(main) =
-                            app_for_event.get_webview_window(MAIN_WINDOW_LABEL)
-                        {
+                        if let Some(main) = app_for_event.get_webview_window(MAIN_WINDOW_LABEL) {
                             let _ = main.show();
                         }
                         // Back-to-back show + hide restores the pre-invite Cmd+H state.

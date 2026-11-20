@@ -34,6 +34,12 @@ const HELPER_MAX_STDOUT_BYTES: usize = 64 * 1024;
 const STATE_FLAGS_RUNNING: u32 = 0x100 | 0x400;
 const STATE_FLAG_UPDATE_REQUIRED: u32 = 0x2;
 
+/// UpdateRunning (0x100) or UpdateStarted (0x400) means Steam is performing the update now, as
+/// opposed to an update that is only pending (bit 0x2).
+pub fn is_update_running(f: &AcfUpdateFields) -> bool {
+    f.state_flags & STATE_FLAGS_RUNNING != 0
+}
+
 // ---------------------------------------------------------------------------------------------
 // InstallApp helper request
 // ---------------------------------------------------------------------------------------------
@@ -174,14 +180,18 @@ impl AwaitingUpdate {
 pub struct UpdateObservation {
     /// This tick's ACF update fields; `None` when the manifest could not be read.
     pub fields: Option<AcfUpdateFields>,
-    /// The macOS download monitor reading for this app, if any.
+    /// The live download reading for this app, if any: the macOS nettop monitor's, or on Windows
+    /// steam.exe's write counter (see `windows_live`).
     pub monitor: Option<DownloadReading>,
     /// Outcome of the InstallApp request the previous step asked for.
     pub install_app_outcome: Option<SteamInstallAppOutcome>,
     /// Sequence number for the `updateDone` event this step may emit.
     pub seq: u64,
-    /// `isMac` (the live monitor is only consulted for native polls on macOS).
+    /// `isMac` (the nettop reading is only consulted for native polls on macOS).
     pub is_mac: bool,
+    /// The poll is a Windows delegated native update poll (see
+    /// `install_once::windows_live_applies`); its `monitor` reading is steam.exe's write counter.
+    pub windows_live: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -397,7 +407,7 @@ pub fn update_step(
             awaiting.settled_at_start_ticks = 0;
         }
 
-        let live = if obs.is_mac && source == AcfSource::Native {
+        let live = if source == AcfSource::Native && (obs.is_mac || obs.windows_live) {
             obs.monitor.as_ref().and_then(|m| {
                 live_progress(&LiveProgressInput {
                     download_done: m.bytes_done,

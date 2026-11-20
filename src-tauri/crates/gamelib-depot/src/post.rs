@@ -1,5 +1,5 @@
 //! Per-file post-processing that needs the parsed manifest (D-10): EDepotFileFlag modes and
-//! Windows attributes, the Mach-O +x fallback, the shebang +x fallback (app-bundle launchers),
+//! Windows attributes, the Mach-O +x fallback, the shebang +x fallback (app-bundle launchers), the ELF +x fallback,
 //! path containment, cross-depot path collisions with the case-insensitivity probe, and the
 //! flags census.
 //!
@@ -511,6 +511,91 @@ pub fn apply_shebang_fallback(path: &Path, flags: u32, report: &mut ModeReport) 
         Err(e) => {
             report.warnings.push(format!(
                 "downloadDepotFiles: shebang executable fallback failed for {}, continuing without it: {e}",
+                path.display()
+            ));
+            false
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// ELF executable fallback (Linux depots)
+// ---------------------------------------------------------------------------
+//
+// Linux depots such as ADOM (333300) and Amnesia (57300) land their launch binaries without an
+// Executable flag in the manifest, so the install is `-rw-rw-r--` and the launch dies at once.
+// Content AND path gate (the 23-08 invariant: a path never grants +x alone): the file must start
+// with `\x7fELF` and carry e_type ET_EXEC or ET_DYN (PIE executables are ET_DYN), and its name
+// must not be a shared object (`.so`, `.so.N`), which is loaded, never exec'd.
+
+const ELF_PROBE_BYTES: usize = 18;
+
+/// Does `path`'s header read as an ELF executable image? Reads at most 18 bytes.
+pub fn elf_wants_exec(path: &Path) -> io::Result<bool> {
+    let mut file = fs::File::open(path)?;
+    let mut buf = [0u8; ELF_PROBE_BYTES];
+    let mut n = 0;
+    while n < buf.len() {
+        let read = file.read(&mut buf[n..])?;
+        if read == 0 {
+            break;
+        }
+        n += read;
+    }
+    if n < ELF_PROBE_BYTES || &buf[..4] != b"\x7fELF" {
+        return Ok(false);
+    }
+    // EI_DATA at 5: 1 = little-endian, 2 = big-endian. e_type is the u16 at offset 16.
+    let e_type = match buf[5] {
+        1 => u16::from_le_bytes([buf[16], buf[17]]),
+        2 => u16::from_be_bytes([buf[16], buf[17]]),
+        _ => return Ok(false),
+    };
+    Ok(e_type == 2 || e_type == 3)
+}
+
+/// Is `path`'s file name a shared object (`libfoo.so`, `libfoo.so.1.2`)? Pure, no I/O.
+pub fn is_shared_object_name(path: &Path) -> bool {
+    let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
+        return false;
+    };
+    let lower = name.to_ascii_lowercase();
+    lower.ends_with(".so") || lower.contains(".so.")
+}
+
+/// Best-effort `chmod 0o755` for a landed file whose manifest carried no executable flag, that is
+/// not named like a shared object and whose bytes are an ELF EXEC/DYN image. Never run on
+/// Windows; every failure is swallowed into a warning. Returns whether it chmod-ed.
+pub fn apply_elf_fallback(path: &Path, flags: u32, report: &mut ModeReport) -> bool {
+    if cfg!(windows)
+        || flags & (EXECUTABLE_FLAG | CUSTOM_EXECUTABLE_FLAG) != 0
+        || is_shared_object_name(path)
+    {
+        return false;
+    }
+    match elf_wants_exec(path) {
+        Ok(true) => {
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                if let Err(e) = fs::set_permissions(path, fs::Permissions::from_mode(0o755)) {
+                    report.warnings.push(format!(
+                        "downloadDepotFiles: ELF executable fallback failed for {}, continuing without it: {e}",
+                        path.display()
+                    ));
+                    return false;
+                }
+            }
+            report.warnings.push(format!(
+                "downloadDepotFiles: applied secondary ELF executable fallback (chmod 0o755) to \"{}\" - its manifest carried no Executable/CustomExecutable flag, but its own bytes are an ELF EXEC/DYN image",
+                path.display()
+            ));
+            true
+        }
+        Ok(false) => false,
+        Err(e) => {
+            report.warnings.push(format!(
+                "downloadDepotFiles: ELF executable fallback failed for {}, continuing without it: {e}",
                 path.display()
             ));
             false

@@ -670,15 +670,15 @@ describe('SteamEngineLaunchNotice request slot (quick 261106-pvk)', () => {
     ],
     [
       { kind: 'adopt-restart-game-running', title: 'Dota 2' },
-      'Dota 2 Quit the game running in Steam, then press Play to finish setting up Dota 2.'
+      'Dota 2 Quit the game running in Steam, then try again to finish setting up Dota 2.'
     ],
     [
       { kind: 'adopt-restart-busy', title: 'Dota 2' },
-      'Dota 2 Steam is busy with a GameLib sign-in. Try Play again in a moment.'
+      'Dota 2 Steam is busy with a GameLib sign-in. Try again in a moment.'
     ],
     [
       { kind: 'adopt-restart-quit-timeout', title: 'Dota 2' },
-      "Dota 2 Steam didn't quit, so Dota 2 couldn't be set up. Quit Steam and press Play again."
+      "Dota 2 Steam didn't quit, so Dota 2 couldn't be set up. Quit Steam and try again."
     ],
     [
       { kind: 'direct-launch-failed', title: 'Legends of Aethereus' },

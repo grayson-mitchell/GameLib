@@ -28,6 +28,7 @@ fn fields(stage: u32, buildid: &str, target: Option<&str>) -> AcfUpdateFields {
         state_flags: stage,
         bytes_to_download: 0,
         bytes_downloaded: 0,
+        bytes_to_stage: 0,
         scheduled_auto_update: 0,
         beta_key: None,
     }
@@ -40,6 +41,7 @@ fn obs(f: Option<AcfUpdateFields>) -> UpdateObservation {
         install_app_outcome: None,
         seq: 1,
         is_mac: false,
+        windows_live: false,
     }
 }
 
@@ -376,6 +378,43 @@ fn live_progress_on_mac_native_uses_monitor_reading() {
         progress_payload(&s.effects).unwrap()["progress"]["percent"],
         json!(10)
     );
+}
+
+fn windows_obs(live: bool) -> UpdateObservation {
+    let mut f = fields(1030, "100", Some("200"));
+    f.bytes_to_download = 1000;
+    f.bytes_downloaded = 400;
+    let mut o = obs(Some(f));
+    o.windows_live = live;
+    o.monitor = Some(DownloadReading {
+        bytes_done: 700.0,
+        bytes_total: 1000.0,
+        speed_bytes_per_sec: None,
+    });
+    o
+}
+
+fn percent_of(s: &UpdateStep) -> serde_json::Value {
+    progress_payload(&s.effects).unwrap()["progress"]["percent"].clone()
+}
+
+#[test]
+fn a_windows_live_reading_drives_the_update_percent() {
+    let mut a = AwaitingUpdate::new("100", None, 0);
+    let o = windows_obs(true);
+    let s = update_step(&mut a, 1, AcfSource::Native, APP, &o);
+    assert_eq!(percent_of(&s), json!(70));
+    // a bottle poll ignores the reading and shows the ACF's own 400/1000
+    let mut b = AwaitingUpdate::new("100", None, 0);
+    let s = update_step(&mut b, 1, AcfSource::Bottle, APP, &o);
+    assert_eq!(percent_of(&s), json!(40));
+}
+
+#[test]
+fn without_a_live_gate_the_update_step_reads_the_acf_alone() {
+    let mut a = AwaitingUpdate::new("100", None, 0);
+    let s = update_step(&mut a, 1, AcfSource::Native, APP, &windows_obs(false));
+    assert_eq!(percent_of(&s), json!(40));
 }
 
 #[test]

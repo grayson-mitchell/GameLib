@@ -23,6 +23,7 @@ import {
   RUST_KEYRING_SET,
   RUST_MAIN_WINDOW_RAISE,
   RUST_MAIN_WINDOW_HIDE,
+  RUST_STEAM_WINDOW_RAISE,
   RUST_NOTIFICATION_SHOW,
   RUST_DEPOT_FINALIZE,
   RUST_DEPOT_JOB_CANCEL,
@@ -277,6 +278,7 @@ export const rustInvokeArgs = {
   [RUST_APP_HIDE]: empty,
   [RUST_MAIN_WINDOW_RAISE]: empty,
   [RUST_MAIN_WINDOW_HIDE]: empty,
+  [RUST_STEAM_WINDOW_RAISE]: empty,
   [RUST_BRIDGE_INVITE_PICKER_OPEN]: z.tuple([
     z.object({ appId: z.string(), ackId: z.string() })
   ]),

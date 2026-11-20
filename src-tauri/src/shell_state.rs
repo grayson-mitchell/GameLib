@@ -166,7 +166,6 @@ impl SidecarState {
                         libc::kill(-pgid, libc::SIGKILL);
                     }
                 }
-        
             }
         }
 

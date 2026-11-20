@@ -352,7 +352,10 @@ pub(crate) fn rpc_store_embed_close(args: &[Value], app: &AppHandle) -> Result<V
 // state for navigations the USER's own chrome initiated, so clicking a link inside the
 // embed moved this process's cursor while the renderer's `canGoBack` stayed false
 // forever. Drains, never peeks -- same contract as `humble_login_take_events` above.
-pub(crate) fn rpc_store_embed_take_nav_events(args: &[Value], app: &AppHandle) -> Result<Value, String> {
+pub(crate) fn rpc_store_embed_take_nav_events(
+    args: &[Value],
+    app: &AppHandle,
+) -> Result<Value, String> {
     StoreEmbedTakeNavEventsArgs::from_args(args)?;
     #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
     {

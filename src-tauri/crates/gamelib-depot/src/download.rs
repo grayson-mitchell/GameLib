@@ -28,9 +28,10 @@ use crate::outcome::{
     Outcome, SelectedFile, Stats, Status, FAILURE_LOG_CAP,
 };
 use crate::post::{
-    apply_file_modes, apply_macho_fallback, apply_shebang_fallback, check_symlink_target,
-    detect_path_collisions, probe_case_insensitive, resolve_contained_path, CollisionDepot,
-    FlagsCensus, ModeReport, CUSTOM_EXECUTABLE_FLAG, DIRECTORY_FLAG, EXECUTABLE_FLAG, SYMLINK_FLAG,
+    apply_elf_fallback, apply_file_modes, apply_macho_fallback, apply_shebang_fallback,
+    check_symlink_target, detect_path_collisions, probe_case_insensitive, resolve_contained_path,
+    CollisionDepot, FlagsCensus, ModeReport, CUSTOM_EXECUTABLE_FLAG, DIRECTORY_FLAG,
+    EXECUTABLE_FLAG, SYMLINK_FLAG,
 };
 use crate::reconcile::{reconcile_partial_state, sha1_file, verify_structural_integrity};
 use crate::stall::StallTracker;
@@ -113,6 +114,8 @@ pub struct Counters {
     pub macho_exec: AtomicU64,
     /// Files given +x by the shebang fallback (a `#!` file inside an app bundle's Contents/MacOS).
     pub shebang_exec: AtomicU64,
+    /// Files given +x by the ELF fallback (a Linux EXEC/DYN image that is not a `.so`).
+    pub elf_exec: AtomicU64,
     pub mode_warnings: AtomicU64,
     pub last_host: Mutex<Option<String>>,
 }
@@ -278,6 +281,8 @@ pub(crate) fn apply_modes_sync(
             counters.macho_exec.fetch_add(1, Ordering::Relaxed);
         } else if apply_shebang_fallback(dest, flags, &mut report) {
             counters.shebang_exec.fetch_add(1, Ordering::Relaxed);
+        } else if apply_elf_fallback(dest, flags, &mut report) {
+            counters.elf_exec.fetch_add(1, Ordering::Relaxed);
         }
     }
     counters
@@ -1215,6 +1220,7 @@ async fn run_install_inner(
         },
         macho_exec_applied: c.macho_exec.load(Ordering::Relaxed) as u32,
         shebang_exec_applied: c.shebang_exec.load(Ordering::Relaxed) as u32,
+        elf_exec_applied: c.elf_exec.load(Ordering::Relaxed) as u32,
         path_collisions,
         elapsed_ms: started.elapsed().as_millis() as u64,
     };

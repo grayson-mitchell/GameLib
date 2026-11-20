@@ -22,6 +22,17 @@ serde_json = "1"
 [target.'cfg(target_os = "macos")'.dependencies]
 libc = "0.2.186"
 
+# win_live.rs reads steam.exe's cumulative I/O write counter (GetProcessIoCounters) and finds the
+# process by image name (a ToolHelp snapshot): no child process, no new crate. windows-sys 0.61 is
+# already resolved in Cargo.lock for gamelib-steamfiles and gamelib-depot; Windows-target-gated, so
+# macOS and Linux builds never see it.
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_System_Diagnostics_ToolHelp",
+    "Win32_System_Threading",
+] }
+
 [features]
 # RecordingHost / ScriptedRunner / FakeClock for the parity harness and the CLI replay runner.
 testing = []

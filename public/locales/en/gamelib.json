@@ -699,10 +699,10 @@
             }
         },
         "adoptRestart": {
-            "busy": "Steam is busy with a GameLib sign-in. Try Play again in a moment.",
-            "gameRunning": "Quit the game running in Steam, then press Play to finish setting up {{game}}.",
+            "busy": "Steam is busy with a GameLib sign-in. Try again in a moment.",
+            "gameRunning": "Quit the game running in Steam, then try again to finish setting up {{game}}.",
             "launchWithoutSteam": "Launch without Steam",
-            "quitTimeout": "Steam didn't quit, so {{game}} couldn't be set up. Quit Steam and press Play again."
+            "quitTimeout": "Steam didn't quit, so {{game}} couldn't be set up. Quit Steam and try again."
         },
         "bottle": {
             "statusPollTimeout": "GameLib stopped hearing back about the Steam bottle setup. It may still be running — check for a Steam installer window, then try again.",

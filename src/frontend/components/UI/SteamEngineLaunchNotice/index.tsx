@@ -743,18 +743,18 @@ export default function SteamEngineLaunchNotice() {
       case 'adopt-restart-game-running':
         return t(
           'steam.adoptRestart.gameRunning',
-          'Quit the game running in Steam, then press Play to finish setting up {{game}}.',
+          'Quit the game running in Steam, then try again to finish setting up {{game}}.',
           { game }
         )
       case 'adopt-restart-busy':
         return t(
           'steam.adoptRestart.busy',
-          'Steam is busy with a GameLib sign-in. Try Play again in a moment.'
+          'Steam is busy with a GameLib sign-in. Try again in a moment.'
         )
       case 'adopt-restart-quit-timeout':
         return t(
           'steam.adoptRestart.quitTimeout',
-          "Steam didn't quit, so {{game}} couldn't be set up. Quit Steam and press Play again.",
+          "Steam didn't quit, so {{game}} couldn't be set up. Quit Steam and try again.",
           { game }
         )
       case 'direct-launch-failed':
