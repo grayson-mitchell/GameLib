@@ -134,11 +134,14 @@ Valve's. Paths with spaces are fine inside the single quotes.
   generations, and pin a tested macOS/CrossOver set as DRM mode does.
 - **Steam side:** needs Mac Steam running and signed in; the overlay belongs to that client. No
   Steam.app patching is needed (NotProton's Steam-side half is irrelevant to GameLib).
-- **CrossOver only so far.** Every run used CrossOver 26.3.0.39832. Wine-Staging, GPTK and the
-  pinned DXVK engine are untested.
+- **CrossOver only so far for the overlay itself.** Every overlay run used CrossOver 26.3.0.39832.
+  Wine-Staging, GPTK and the pinned DXVK engine are untested for the overlay.
 - **Untested:** HDR (`RGBA16Float`) titles, DXMT, WineD3D-GL (the shim has `CGLFlushDrawable`
-  hooks), fullscreen on the D3D11 paths, and the interplay between the overlay's invite dialog and
-  GameLib's own invite picker (`ActivateGameOverlayInviteDialog`, 58-29..36).
+  hooks), and fullscreen on the D3D11 paths.
+- **Invite dialog, tested:** Steam's own invite picker (`ActivateGameOverlayInviteDialog`) opened,
+  listed friends and sent a joinable invite in bridged games on CrossOver and on the Wine-Staging
+  fallback (operator live gate, 2026-11-20). GameLib's custom picker was removed in quick
+  261120-pp4, so Steam's picker is the only one.
 
 ## Origin
 
