@@ -460,6 +460,7 @@ async function updateQueueElement(
 ): Promise<{
   status: DMStatus
   error?: string | undefined
+  handedOffToSteam?: boolean
 }> {
   const { appName, runner } = params
   const library = deps.managers.library
@@ -527,7 +528,7 @@ async function updateQueueElement(
       errorMessage('')
     }
 
-    return { status }
+    return { status, handedOffToSteam }
   } catch (error) {
     errorMessage(`${error}`)
     return { status: 'error' }

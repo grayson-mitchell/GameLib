@@ -798,6 +798,23 @@ describe('downloadqueue.ts — quick 261121-97s: a Steam-client hand-off is "han
     expect(__store.queue).toEqual([])
   })
 
+  it('an update handed off to the Steam client logs "Update of ... handed off", never "Finished"', async () => {
+    const lines = await runHead(
+      { ...makeQueueElement('555'), type: 'update' },
+      { status: 'done', handedOffToSteam: true }
+    )
+    expect(lines).toContain('Update of 555 handed off to the Steam client')
+    expect(lines.some((l) => l.includes('Finished'))).toBe(false)
+  })
+
+  it('an update without the hand-off flag still logs "Finished Update of"', async () => {
+    const lines = await runHead(
+      { ...makeQueueElement('555'), type: 'update' },
+      { status: 'done', handedOffToSteam: false }
+    )
+    expect(lines).toContain('Finished Update of 555')
+  })
+
   it('an install without the hand-off flag still logs "Finished Installation of"', async () => {
     const lines = await runHead(makeQueueElement('555'), {
       status: 'done',

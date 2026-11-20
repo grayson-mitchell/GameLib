@@ -1156,7 +1156,7 @@ describe('updateQueueElement - 74-27: Steam hand-off holds Updating (UAT 17)', (
   it('a flagged done sends updating (managedBySteam) and no done', async () => {
     updateMock.mockResolvedValue({ status: 'done', handedOffToSteam: true })
     const r = await updateQueueElement(queueDeps, makeParams())
-    expect(r).toEqual({ status: 'done' })
+    expect(r).toEqual({ status: 'done', handedOffToSteam: true })
     expect(lastStatus()).toMatchObject({
       status: 'updating',
       managedBySteam: true
@@ -1173,13 +1173,46 @@ describe('updateQueueElement - 74-27: Steam hand-off holds Updating (UAT 17)', (
     ['an abort', { status: 'abort' }]
   ])('%s still sends done', async (_n, result) => {
     updateMock.mockResolvedValue(result)
-    await updateQueueElement(queueDeps, makeParams())
+    const r = await updateQueueElement(queueDeps, makeParams())
     expect(lastStatus()).toMatchObject({ status: 'done' })
+    expect(r.handedOffToSteam).toBe(false)
   })
 
   it('a throw still sends done', async () => {
     updateMock.mockRejectedValue(new Error('boom'))
     await updateQueueElement(queueDeps, makeParams())
     expect(lastStatus()).toMatchObject({ status: 'done' })
+  })
+})
+
+describe('installQueueElement — quick 261121-97s: forwards the Steam hand-off flag', () => {
+  beforeEach(() => {
+    sendGameStatusUpdateMock.mockClear()
+    getGameInfoMock.mockReturnValue({ title: 'Test Game' })
+    stopMock.mockResolvedValue(undefined)
+    libraryManagerMap.steam.getGame.mockReturnValue({
+      install: installMock,
+      getGameInfo: getGameInfoMock,
+      stop: stopMock
+    })
+    isOnline.mockReturnValue(true)
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+  })
+
+  it('a handed-off done reports handedOffToSteam and the badge stays with the ACF poller', async () => {
+    installMock.mockResolvedValue({ status: 'done', handedOffToSteam: true })
+    const result = await installQueueElement(queueDeps, makeParams())
+    expect(result.status).toBe('done')
+    expect(result.handedOffToSteam).toBe(true)
+    expect(sendGameStatusUpdateMock).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ status: 'done' })
+    )
+  })
+
+  it('an unflagged done reports handedOffToSteam false', async () => {
+    installMock.mockResolvedValue({ status: 'done' })
+    const result = await installQueueElement(queueDeps, makeParams())
+    expect(result.handedOffToSteam).toBe(false)
   })
 })
