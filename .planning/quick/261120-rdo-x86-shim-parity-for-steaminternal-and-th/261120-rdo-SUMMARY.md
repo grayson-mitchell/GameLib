@@ -141,3 +141,9 @@ None. The new x86 export surface (version-string and context-block arguments fro
 ## Self-Check: PASSED
 
 Created files and commits `d475531e7`, `a94108e3e`, `23987838e` verified present; `pnpm gen-vtables` leaves no drift.
+
+## Live results (operator, 2026-11-20 20:32-20:38)
+
+- **57300 Amnesia: verified.** HELLO, `GINIT fn=SteamAPI_Init ret=1 ok=1`, game calls `SteamUser023.BLoggedOn` (identity) and `SteamUtils010.GetAppID`; `X86Null_STEAMUGC_INTERFACE_VERSION017` slots 70/71 answered as stubs; 49s of play, clean stop. Census: `verified`.
+- **576770 Low Magic Age: unverified (1 game call; needs 2 incl. identity).** HELLO, `GINIT ok=1`, `STEAMUSERSTATS011.GetAchievement`, `STEAMUGC013.GetNumSubscribedItems` stub. Operator: the process ran with audio (music) but no visible window, despite `raiseWineGameWindow: raised`. The game writes no log. This looks like a display or window issue separate from the shim; there is no baseline, since it could not load before this task.
+- **593280 Cat Quest: unverified (no HELLO), as expected.** Its `error.log` shows `[Steamworks.NET] SteamAPI_Init() failed`, the same as the 2026-11-07 baseline; it exited after 20s with `overlay-exit-abnormal`. The flat tier is still open.

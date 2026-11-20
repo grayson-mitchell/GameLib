@@ -144,3 +144,7 @@ Avernum 6 (206060) reached HELLO and the operator saw the menu, but it made no g
 ```
 
 It writes no game log, so it cannot produce a call beyond init; Avernum 4 is the same class. The census still reports 0 x86 titles needing the modern or flat API, so the deferral stands. `ready:` unchanged.
+
+## Live baseline after tier 1 (2026-11-20 20:37)
+
+Cat Quest launched, with no HELLO. Its `error.log` (`AppData/LocalLow/The Gentlebros Pte_ Ltd_/Cat Quest/error.log`) reads `[Steamworks.NET] SteamAPI_Init() failed`, then `InvalidOperationException: Steamworks is not initialized` from `SteamUser.GetSteamID`, identical to the 2026-11-07 run. It exited after 20s (`overlay-exit-abnormal`). This is the baseline the flat tier must move. Tier-1 titles: 57300 is verified; 576770 reaches GINIT ok=1 but shows no window (a separate issue).
