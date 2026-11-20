@@ -26,6 +26,10 @@ const CONTROL = 0xffff
 const SLOT_HELLO = 2
 const SLOT_DRAIN = 6
 const SLOT_CBDISP = 10
+// quick 261106-qvp: the shim reports each game registration of an unlisted callback id (and a
+// manual-dispatch init) as CBREG: {i32 iCallback, u32 path}, path 0 = register, 1 = manual-dispatch
+// init. The harness game registers callbacks, so the frame is legitimate traffic.
+const SLOT_CBREG = 15
 
 interface Frame {
   conn: number
@@ -317,7 +321,13 @@ describe('x86 callback dispatch under Wine (P55-9)', () => {
     expect(cbFrame.args.readUInt32LE(4)).toBe(3)
     expect(cbFrame.args.readUInt32LE(8)).toBe(0)
     for (const fr of f) {
-      expect([SLOT_HELLO, SLOT_DRAIN, SLOT_CBDISP]).toContain(fr.slot)
+      expect([SLOT_HELLO, SLOT_DRAIN, SLOT_CBDISP, SLOT_CBREG]).toContain(
+        fr.slot
+      )
+    }
+    for (const fr of f.filter((x) => x.slot === SLOT_CBREG)) {
+      expect(fr.args.length).toBe(8)
+      expect([0, 1]).toContain(fr.args.readUInt32LE(4))
     }
   })
 
