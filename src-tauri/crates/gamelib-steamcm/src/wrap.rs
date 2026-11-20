@@ -38,6 +38,11 @@ const CONNECTION_LOG_REL: &str = "Library/Application Support/Steam/logs/connect
 
 /// Stands in for the home directory when none is known. It cannot exist, so the log probe fails
 /// as a missing file rather than reading a path relative to the current directory.
+/// Absolute on every OS: `Path::is_absolute` needs a drive or UNC prefix on Windows, so the POSIX
+/// spelling would be a relative path there.
+#[cfg(windows)]
+const NO_HOME: &str = r"C:\nonexistent-home";
+#[cfg(not(windows))]
 const NO_HOME: &str = "/nonexistent-home";
 
 /// `connection_log.txt` under `home`. B/IN-04: a missing or relative home gives a path that cannot
@@ -460,9 +465,20 @@ mod tests {
             assert!(p.is_absolute(), "{home:?} -> {p:?}");
             assert!(p.starts_with(super::NO_HOME), "{home:?} -> {p:?}");
         }
+        // A usable home must itself be absolute on the host OS (a drive prefix on Windows).
+        let usable = if cfg!(windows) {
+            r"C:\Users\u"
+        } else {
+            "/Users/u"
+        };
         assert_eq!(
-            super::connection_log_path_in(Some(PathBuf::from("/Users/u"))),
-            PathBuf::from("/Users/u/Library/Application Support/Steam/logs/connection_log.txt")
+            super::connection_log_path_in(Some(PathBuf::from(usable))),
+            PathBuf::from(usable)
+                .join("Library")
+                .join("Application Support")
+                .join("Steam")
+                .join("logs")
+                .join("connection_log.txt")
         );
         assert!(super::default_connection_log_path().is_absolute());
     }
