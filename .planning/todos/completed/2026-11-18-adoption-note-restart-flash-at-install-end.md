@@ -75,3 +75,13 @@ OWED live check on the Mac (not run):
 - (c) Setting OFF at the end; record that.
 - Close the todo (git mv to completed/ with a Live result section) only after (a) and (b)
   pass.
+
+## Live result, 2026-11-20
+
+Operator ran the owed checks on the Mac against the `d0459b101` fix.
+
+- (a) **passed**. InstallApp setting ON, Mac Steam signed in: no "Restart Steam now" or restart
+  note at install end.
+- (b) **passed**. Steam signed out: the page went from installing straight to "Sign in to Steam
+  to finish setup", with no restart note or button in between.
+- (c) setting-OFF state at the end was not reported.
