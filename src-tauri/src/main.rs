@@ -125,6 +125,7 @@ mod login_window;
 mod notification_show;
 mod relay_commands;
 mod rust_dispatch;
+mod safety_dispatch;
 mod scan_dispatch;
 mod shell_open;
 mod shell_state;
@@ -148,6 +149,7 @@ use login_window::*;
 use notification_show::*;
 use relay_commands::*;
 use rust_dispatch::*;
+use safety_dispatch::*;
 use scan_dispatch::*;
 use shell_state::*;
 use sidecar::*;
@@ -2048,6 +2050,7 @@ mod tests {
         "notification_show.rs",
         "relay_commands.rs",
         "rust_dispatch.rs",
+        "safety_dispatch.rs",
         "depot_dispatch.rs",
         "scan_dispatch.rs",
         "steamfiles_dispatch.rs",
@@ -2097,6 +2100,7 @@ mod tests {
         include_str!("notification_show.rs"),
         include_str!("relay_commands.rs"),
         include_str!("rust_dispatch.rs"),
+        include_str!("safety_dispatch.rs"),
         include_str!("depot_dispatch.rs"),
         include_str!("scan_dispatch.rs"),
         include_str!("steamfiles_dispatch.rs"),
@@ -4383,6 +4387,68 @@ mod tests {
             let err = gamelib_scan::dispatch(s, &[]).expect_err(s);
             assert!(err.ends_with(":bad-args"), "{s}: {err}");
         }
+    }
+
+    #[test]
+    fn safety_channels_are_gamelib_safety_app_ops() {
+        for s in ["safety_check_removal", "safety_remove_tree"] {
+            assert!(
+                gamelib_safety::OPS.contains(&s) && !gamelib_safety::CLI_ONLY_OPS.contains(&s),
+                "{s}"
+            );
+            let err = gamelib_safety::dispatch(s, &[]).expect_err(s);
+            assert!(err.ends_with(":bad-args"), "{s}: {err}");
+        }
+    }
+
+    /// Phase 82 (D-07): a real request through the shell arm. A game folder that contains another
+    /// store's install refuses as `nested-known-install`, and nothing on disk is touched.
+    #[test]
+    fn safety_check_removal_arm_refuses_a_nested_known_install() {
+        let home = gamelib_testutil::FakeHome::new("gamelib-shell-safety-");
+        let common = home.root().join("common");
+        let studio = common.join("Studio");
+        let game_b = studio.join("GameB");
+        std::fs::create_dir_all(&game_b).unwrap();
+        std::fs::write(game_b.join("b.exe"), b"b").unwrap();
+        std::fs::write(studio.join("a.exe"), b"a").unwrap();
+        let req = serde_json::json!({
+            "targets": [{
+                "id": "studio",
+                "path": studio.to_str().unwrap(),
+                "kind": "game-install",
+                "trustRoot": common.to_str().unwrap()
+            }],
+            "knownInstalls": [{"key": "steam:gameb", "path": game_b.to_str().unwrap()}],
+            "selfKey": "steam:studio",
+            "protectedRoots": []
+        });
+        let reply = rpc_safety_check_removal(std::slice::from_ref(&req)).unwrap();
+        assert_eq!(reply["overall"], "no");
+        assert_eq!(reply["items"][0]["reason"], "nested-known-install");
+        assert_eq!(reply["items"][0]["otherKey"], "steam:gameb");
+        let removed = rpc_safety_remove_tree(&[req]).unwrap();
+        assert_eq!(removed["outcome"], "refused");
+        assert!(game_b.join("b.exe").exists() && studio.join("a.exe").exists());
+
+        // No argument at all is rejected by the generated Args before the crate runs.
+        assert_eq!(
+            rpc_safety_check_removal(&[]).unwrap_err(),
+            "safety_check_removal:bad-args"
+        );
+        // An unreadable known-installs list (null) comes back unknown, never a permissive yes.
+        let unreadable = serde_json::json!({
+            "targets": [{
+                "id": "studio",
+                "path": studio.to_str().unwrap(),
+                "kind": "game-install",
+                "trustRoot": common.to_str().unwrap()
+            }],
+            "knownInstalls": null,
+            "protectedRoots": []
+        });
+        let unk = rpc_safety_check_removal(&[unreadable]).unwrap();
+        assert_eq!(unk["overall"], "unknown");
     }
 
     #[test]

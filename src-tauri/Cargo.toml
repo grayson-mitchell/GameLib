@@ -14,6 +14,8 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 # Phase 63 (D-03): Tauri-free scanner library behind the scan_* rustInvoke arms.
 gamelib-scan = { path = "crates/gamelib-scan" }
+# Phase 82 (D-07): Tauri-free destructive-path safety library behind the safety_* arms.
+gamelib-safety = { path = "crates/gamelib-safety" }
 gamelib-steamfiles = { path = "crates/gamelib-steamfiles" }
 # Phase 80: Tauri-free install/uninstall/running poll state machines behind the steampoll_* arms.
 gamelib-steampoll = { path = "crates/gamelib-steampoll" }
@@ -430,6 +432,10 @@ windows-sys = { version = "0.60", features = [
 # `windows-sys`) because the WebView2 bindings are COM interfaces typed against it.
 webview2-com = "0.38.2"
 windows = "0.61"
+
+# Phase 82 (D-07): the shell round-trip test for the safety arm builds its tree in a FakeHome.
+[dev-dependencies]
+gamelib-testutil = { path = "crates/gamelib-testutil" }
 
 # Restriction lints denied outright: both were at 0 hits on 2026-11-07 (quick 261107-8yq).
 # Everything else is held by meta/clippyRatchet.cjs rather than denied, so the warn-only baseline

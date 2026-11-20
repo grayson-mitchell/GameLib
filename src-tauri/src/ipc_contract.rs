@@ -65,6 +65,8 @@ pub(crate) enum RustInvokeChannel {
     ScanPeImportedDlls,
     ScanContainedReal,
     ScanWinemacMetalExports,
+    SafetyCheckRemoval,
+    SafetyRemoveTree,
     DepotFinalize,
     DepotJobCancel,
     DepotJobRun,
@@ -186,6 +188,8 @@ impl RustInvokeChannel {
         RustInvokeChannel::ScanPeImportedDlls,
         RustInvokeChannel::ScanContainedReal,
         RustInvokeChannel::ScanWinemacMetalExports,
+        RustInvokeChannel::SafetyCheckRemoval,
+        RustInvokeChannel::SafetyRemoveTree,
         RustInvokeChannel::DepotFinalize,
         RustInvokeChannel::DepotJobCancel,
         RustInvokeChannel::DepotJobRun,
@@ -307,6 +311,8 @@ impl RustInvokeChannel {
             "scan_pe_imported_dlls" => Some(RustInvokeChannel::ScanPeImportedDlls),
             "scan_contained_real" => Some(RustInvokeChannel::ScanContainedReal),
             "scan_winemac_metal_exports" => Some(RustInvokeChannel::ScanWinemacMetalExports),
+            "safety_check_removal" => Some(RustInvokeChannel::SafetyCheckRemoval),
+            "safety_remove_tree" => Some(RustInvokeChannel::SafetyRemoveTree),
             "depot_finalize" => Some(RustInvokeChannel::DepotFinalize),
             "depot_job_cancel" => Some(RustInvokeChannel::DepotJobCancel),
             "depot_job_run" => Some(RustInvokeChannel::DepotJobRun),
@@ -430,6 +436,8 @@ impl RustInvokeChannel {
             RustInvokeChannel::ScanPeImportedDlls => "scan_pe_imported_dlls",
             RustInvokeChannel::ScanContainedReal => "scan_contained_real",
             RustInvokeChannel::ScanWinemacMetalExports => "scan_winemac_metal_exports",
+            RustInvokeChannel::SafetyCheckRemoval => "safety_check_removal",
+            RustInvokeChannel::SafetyRemoveTree => "safety_remove_tree",
             RustInvokeChannel::DepotFinalize => "depot_finalize",
             RustInvokeChannel::DepotJobCancel => "depot_job_cancel",
             RustInvokeChannel::DepotJobRun => "depot_job_run",
@@ -1370,6 +1378,112 @@ impl ScanWinemacMetalExportsArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let first = args.first().ok_or_else(|| "scan_winemac_metal_exports:bad-args".to_string())?;
         serde_json::from_value(first.clone()).map_err(|_| "scan_winemac_metal_exports:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SafetyCheckRemovalArgs {
+    pub(crate) targets: Vec<SafetyCheckRemovalArgsTargetsItem>,
+    #[serde(rename = "knownInstalls")]
+    pub(crate) known_installs: Option<Vec<SafetyCheckRemovalArgsKnownInstallsItem>>,
+    #[serde(rename = "selfKey")]
+    #[serde(default)]
+    pub(crate) self_key: Option<String>,
+    #[serde(rename = "protectedRoots")]
+    pub(crate) protected_roots: Vec<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub(crate) enum SafetyCheckRemovalArgsTargetsItemKind {
+    #[serde(rename = "game-install")]
+    GameInstall,
+    #[serde(rename = "game-support")]
+    GameSupport,
+    #[serde(rename = "prefix")]
+    Prefix,
+    #[serde(rename = "bottle")]
+    Bottle,
+    #[serde(rename = "sideload-folder")]
+    SideloadFolder,
+    #[serde(rename = "app-data")]
+    AppData,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SafetyCheckRemovalArgsTargetsItem {
+    pub(crate) id: String,
+    pub(crate) path: String,
+    pub(crate) kind: SafetyCheckRemovalArgsTargetsItemKind,
+    #[serde(rename = "trustRoot")]
+    #[serde(default)]
+    pub(crate) trust_root: Option<String>,
+    #[serde(default)]
+    pub(crate) executable: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SafetyCheckRemovalArgsKnownInstallsItem {
+    pub(crate) key: String,
+    pub(crate) path: String,
+}
+
+impl SafetyCheckRemovalArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "safety_check_removal:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "safety_check_removal:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SafetyRemoveTreeArgs {
+    pub(crate) targets: Vec<SafetyRemoveTreeArgsTargetsItem>,
+    #[serde(rename = "knownInstalls")]
+    pub(crate) known_installs: Option<Vec<SafetyRemoveTreeArgsKnownInstallsItem>>,
+    #[serde(rename = "selfKey")]
+    #[serde(default)]
+    pub(crate) self_key: Option<String>,
+    #[serde(rename = "protectedRoots")]
+    pub(crate) protected_roots: Vec<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub(crate) enum SafetyRemoveTreeArgsTargetsItemKind {
+    #[serde(rename = "game-install")]
+    GameInstall,
+    #[serde(rename = "game-support")]
+    GameSupport,
+    #[serde(rename = "prefix")]
+    Prefix,
+    #[serde(rename = "bottle")]
+    Bottle,
+    #[serde(rename = "sideload-folder")]
+    SideloadFolder,
+    #[serde(rename = "app-data")]
+    AppData,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SafetyRemoveTreeArgsTargetsItem {
+    pub(crate) id: String,
+    pub(crate) path: String,
+    pub(crate) kind: SafetyRemoveTreeArgsTargetsItemKind,
+    #[serde(rename = "trustRoot")]
+    #[serde(default)]
+    pub(crate) trust_root: Option<String>,
+    #[serde(default)]
+    pub(crate) executable: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SafetyRemoveTreeArgsKnownInstallsItem {
+    pub(crate) key: String,
+    pub(crate) path: String,
+}
+
+impl SafetyRemoveTreeArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "safety_remove_tree:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "safety_remove_tree:bad-args".to_string())
     }
 }
 

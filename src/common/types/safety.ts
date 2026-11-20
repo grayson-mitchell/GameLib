@@ -53,18 +53,15 @@ export const REMOVAL_REASONS = [
   ...SAFETY_ADAPTER_REASONS
 ] as const
 
-/** @public exported ahead of its first cross-module import: the rustSafety adapter and refusal notice of plans 82-05 and 82-06 consume it. */
 export type SafetyVerdict = (typeof SAFETY_VERDICTS)[number]
-/** @public Wire type, see SafetyVerdict. */
+/** @public Wire type exported ahead of its first cross-module import (the guard sites of plans 82-07 to 82-09). */
 export type SafetyTargetKind = (typeof SAFETY_TARGET_KINDS)[number]
-/** @public Wire type, see SafetyVerdict. */
+/** @public Wire type exported ahead of its first cross-module import (the guard sites of plans 82-07 to 82-09). */
 export type SafetyReason = (typeof SAFETY_REASONS)[number]
-/** @public Wire type, see SafetyVerdict. */
 export type RemovalReason = (typeof REMOVAL_REASONS)[number]
-/** @public Wire type, see SafetyVerdict. */
 export type SafetyOutcome = (typeof SAFETY_OUTCOMES)[number]
 
-/** @public Wire type, see SafetyVerdict. */
+/** @public Wire type exported ahead of its first cross-module import (the guard sites of plans 82-07 to 82-09). */
 export interface SafetyTarget {
   id: string
   path: string
@@ -75,13 +72,12 @@ export interface SafetyTarget {
   executable?: string | null
 }
 
-/** @public Wire type, see SafetyVerdict. */
+/** @public Wire type exported ahead of its first cross-module import (the guard sites of plans 82-07 to 82-09). */
 export interface SafetyKnownInstall {
   key: string
   path: string
 }
 
-/** @public Wire type, see SafetyVerdict. */
 export interface SafetyRequest {
   targets: SafetyTarget[]
   /** `null` means the list could not be read; the verdict is then `unknown`. */
@@ -91,7 +87,6 @@ export interface SafetyRequest {
   protectedRoots: string[]
 }
 
-/** @public Wire type, see SafetyVerdict. */
 export interface SafetyItem {
   id: string
   verdict: SafetyVerdict
@@ -104,13 +99,11 @@ export interface SafetyItem {
   absent: boolean
 }
 
-/** @public Wire type, see SafetyVerdict. */
 export interface SafetyReply {
   overall: SafetyVerdict
   items: SafetyItem[]
 }
 
-/** @public Wire type, see SafetyVerdict. */
 export interface SafetyRemoveReply extends SafetyReply {
   outcome: SafetyOutcome
 }

@@ -21,7 +21,8 @@ describe('rustInvokeArgs', () => {
       [...RUST_INVOKE_CHANNELS].sort()
     )
     // Quick 261120-pp4: 118 -> 117, the picker-window open channel deleted with the custom invite picker.
-    expect(RUST_INVOKE_CHANNELS).toHaveLength(117)
+    // Phase 82 plan 05: 117 -> 119, the two safety_* channels.
+    expect(RUST_INVOKE_CHANNELS).toHaveLength(119)
   })
 
   it('parses the store-embed wire fixtures', () => {
@@ -49,6 +50,28 @@ describe('rustInvokeArgs', () => {
     expect(
       rustInvokeArgs.store_embed_set_bounds.safeParse([{ x: 1 }]).success
     ).toBe(false)
+  })
+
+  it('accepts a safety request, keeps an unreadable known-installs null, and rejects drift', () => {
+    const target = {
+      id: 'a',
+      path: '/g/a',
+      kind: 'game-install',
+      trustRoot: '/g'
+    }
+    const ok = [
+      { targets: [target], knownInstalls: null, protectedRoots: ['/home'] }
+    ]
+    expect(rustInvokeArgs.safety_check_removal.safeParse(ok).success).toBe(true)
+    expect(rustInvokeArgs.safety_remove_tree.safeParse(ok).success).toBe(true)
+    const extra = [{ ...ok[0], bogus: 1 }]
+    expect(rustInvokeArgs.safety_check_removal.safeParse(extra).success).toBe(
+      false
+    )
+    const badKind = [{ ...ok[0], targets: [{ ...target, kind: 'elsewhere' }] }]
+    expect(rustInvokeArgs.safety_check_removal.safeParse(badKind).success).toBe(
+      false
+    )
   })
 
   it.each([...RUST_INVOKE_CHANNELS])(

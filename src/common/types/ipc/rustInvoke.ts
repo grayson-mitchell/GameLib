@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { SAFETY_TARGET_KINDS } from '../safety'
 import {
   RUST_APP_EXIT,
   RUST_APP_HIDE,
@@ -86,6 +87,8 @@ import {
   RUST_STEAMCM_STORE_ENRICH,
   RUST_STEAMCM_WRAP_RESTORE_IF_OWED,
   RUST_STEAM_API_PIN_RESOLVE,
+  RUST_SAFETY_CHECK_REMOVAL,
+  RUST_SAFETY_REMOVE_TREE,
   RUST_SCAN_CONTAINED_REAL,
   RUST_SCAN_PE_IMPORTED_DLLS,
   RUST_SCAN_STEAMSTUB_SECTION,
@@ -219,6 +222,31 @@ const applyArg = z.tuple([
     .object({
       path: z.string(),
       mutation: z.unknown().meta({ title: 'mutation', 'x-rust-value': true })
+    })
+    .strict()
+])
+// Phase 82 (D-07): the safety request, mirroring gamelib-safety wire.rs `Request` field for field
+// (deny_unknown_fields there, strict here). `knownInstalls: null` means "the list could not be
+// read" and yields `unknown` in the crate, so it must survive the boundary as null.
+const safetyRequestArg = z.tuple([
+  z
+    .object({
+      targets: z.array(
+        z
+          .object({
+            id: z.string(),
+            path: z.string(),
+            kind: z.enum(SAFETY_TARGET_KINDS),
+            trustRoot: z.string().nullish(),
+            executable: z.string().nullish()
+          })
+          .strict()
+      ),
+      knownInstalls: z
+        .array(z.object({ key: z.string(), path: z.string() }).strict())
+        .nullable(),
+      selfKey: z.string().nullish(),
+      protectedRoots: z.array(z.string())
     })
     .strict()
 ])
@@ -359,6 +387,9 @@ export const rustInvokeArgs = {
   [RUST_SCAN_WINEMAC_METAL_EXPORTS]: z.tuple([
     z.object({ wineBundlePath: z.string() })
   ]),
+  // ---- Destructive-path safety (Phase 82; D-06/D-07)
+  [RUST_SAFETY_CHECK_REMOVAL]: safetyRequestArg,
+  [RUST_SAFETY_REMOVE_TREE]: safetyRequestArg,
   // ---- Steam local files (Phase 75; paths in, typed results out)
   [RUST_STEAMFILES_FIND_ACF]: dirsAppArg,
   [RUST_STEAMFILES_PARSE_VALVE_MANIFEST]: pathArg,

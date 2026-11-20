@@ -413,6 +413,26 @@ export const RUST_SCAN_WINEMAC_METAL_EXPORTS =
   'scan_winemac_metal_exports' as const
 
 /**
+ * Rust-side channel name: Phase 82 (D-07) destructive-path check `safety_check_removal`, a
+ * pass-through to the Tauri-free `gamelib-safety` crate.
+ *
+ * Takes ONE object arg (a `SafetyRequest`, see `common/types/safety.ts`) validated in-crate with
+ * `deny_unknown_fields`. Resolves a `SafetyReply` (verdict per target plus `overall`); a refusal or
+ * an unreadable path RESOLVES as `no`/`unknown`. Bad args reject `safety_check_removal:bad-args`.
+ * Callers go through `backend/safety/rustSafety.ts`, which reads any rejection as `unknown`.
+ */
+export const RUST_SAFETY_CHECK_REMOVAL = 'safety_check_removal' as const
+
+/**
+ * Rust-side channel name: Phase 82 (D-07) guarded delete `safety_remove_tree`, a pass-through to the
+ * Tauri-free `gamelib-safety` crate. Re-runs every check inside the delete call (D-14).
+ *
+ * Takes ONE object arg (a `SafetyRequest`). Resolves a `SafetyRemoveReply` (`outcome` is `refused`,
+ * `removed` or `failed`). Bad args reject `safety_remove_tree:bad-args`.
+ */
+export const RUST_SAFETY_REMOVE_TREE = 'safety_remove_tree' as const
+
+/**
  * Rust-side channel name: Phase 75 (D-03) Steam depot `depot_finalize`, a no-download ACF finalize
  * (zero-depot install, failed resume verify) through the depot crate's own finalize rules.
  * Takes ONE object arg `{ appId, finalize, depots, outcome }` (validated in-crate with
@@ -1027,6 +1047,8 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_SCAN_PE_IMPORTED_DLLS,
   RUST_SCAN_CONTAINED_REAL,
   RUST_SCAN_WINEMAC_METAL_EXPORTS,
+  RUST_SAFETY_CHECK_REMOVAL,
+  RUST_SAFETY_REMOVE_TREE,
   RUST_DEPOT_FINALIZE,
   RUST_DEPOT_JOB_CANCEL,
   RUST_DEPOT_JOB_RUN,
@@ -1112,6 +1134,14 @@ export const RUST_SCAN_CHANNELS = [
 ] as const
 
 export type RustScanChannel = (typeof RUST_SCAN_CHANNELS)[number]
+
+/** Phase 82 (D-07): the safety channels, a subset of {@link RUST_INVOKE_CHANNELS}. */
+export const RUST_SAFETY_CHANNELS = [
+  RUST_SAFETY_CHECK_REMOVAL,
+  RUST_SAFETY_REMOVE_TREE
+] as const
+
+export type RustSafetyChannel = (typeof RUST_SAFETY_CHANNELS)[number]
 
 /** Phase 75: the steamfiles channels, a subset of {@link RUST_INVOKE_CHANNELS}. */
 export const RUST_STEAMFILES_CHANNELS = [

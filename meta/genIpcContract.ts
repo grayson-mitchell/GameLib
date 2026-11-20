@@ -195,6 +195,18 @@ export function rustTypeFor(node: JsonNode, ctx: RenderCtx): string {
     ctx.usesValue = true
     return 'Value'
   }
+  // A nullable non-primitive (`z.array(...).nullable()`) arrives as `anyOf: [X, { type: 'null' }]`
+  // (primitives collapse to a `type` array instead). That one shape is `Option<X>`; any other
+  // `anyOf` is a real union and stays unsupported.
+  if (Array.isArray(node.anyOf) && node.anyOf.length === 2) {
+    const [a, b] = node.anyOf as JsonNode[]
+    const isNull = (n: JsonNode | undefined): boolean =>
+      n !== undefined && n.type === 'null' && Object.keys(n).length === 1
+    const inner = isNull(b) ? a : isNull(a) ? b : undefined
+    if (inner !== undefined && !isNull(inner)) {
+      return `Option<${rustTypeFor(inner, ctx)}>`
+    }
+  }
   for (const k of ['oneOf', 'anyOf', 'allOf', 'not', '$ref']) {
     if (k in node) fail(ctx, `"${k}" is not supported`)
   }

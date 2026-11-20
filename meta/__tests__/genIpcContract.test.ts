@@ -43,6 +43,15 @@ describe('rustTypeFor', () => {
     ).toBe('Value')
     expect(ctx.usesValue).toBe(true)
   })
+  it('maps a nullable array (anyOf [X, null]) to Option<Vec<X>>', () => {
+    const ctx = newCtx('x')
+    expect(rustTypeFor(js(z.array(z.string()).nullable()), ctx)).toBe(
+      'Option<Vec<String>>'
+    )
+    expect(() =>
+      ty(js(z.union([z.array(z.string()), z.array(z.number())])))
+    ).toThrow(/anyOf/)
+  })
   it('throws naming channel and pointer', () => {
     expect(() =>
       rustTypeFor(js(z.union([z.string(), z.number()])), newCtx('bad_chan'))

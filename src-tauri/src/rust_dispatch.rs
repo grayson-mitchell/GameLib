@@ -74,6 +74,8 @@ pub(crate) fn dispatch_rust_channel(
         RustInvokeChannel::ScanPeImportedDlls => rpc_scan_pe_imported_dlls(args),
         RustInvokeChannel::ScanContainedReal => rpc_scan_contained_real(args),
         RustInvokeChannel::ScanWinemacMetalExports => rpc_scan_winemac_metal_exports(args),
+        RustInvokeChannel::SafetyCheckRemoval => rpc_safety_check_removal(args),
+        RustInvokeChannel::SafetyRemoveTree => rpc_safety_remove_tree(args),
         RustInvokeChannel::SteamfilesFindAcf => rpc_steamfiles_find_acf(args),
         RustInvokeChannel::SteamfilesParseValveManifest => {
             rpc_steamfiles_parse_valve_manifest(args)

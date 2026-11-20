@@ -481,9 +481,9 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     expect(matches.length).toBe(1)
   })
 
-  test('71-07 rust_dispatch.rs is a flat router: 117 one-line arms and no catch-all arm', () => {
+  test('71-07 rust_dispatch.rs is a flat router: 119 one-line arms and no catch-all arm', () => {
     const router = readTauriShellProductionFile('rust_dispatch.rs')
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(117)
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(119)
     expect(router).not.toContain('_ =>')
   })
 
@@ -716,6 +716,14 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       'scan_pe_imported_dlls',
       'scan_contained_real',
       'scan_winemac_metal_exports',
+
+      // Phase 82 plan 05 (D-06, D-07) -- two pass-through arms into the Tauri-free `gamelib-safety`
+      // crate, one per RUST_SAFETY_* channel. PROVEN: `safetyChannelParity.test.ts` pins arms ==
+      // crate OPS == RUST_SAFETY_CHANNELS, and the shell tests in main.rs
+      // (`safety_channels_are_gamelib_safety_app_ops`, the nested-known-install round trip) pin the
+      // arm through the generated Args. NOT ATTEMPTED here: a live sidecar round trip.
+      'safety_check_removal',
+      'safety_remove_tree',
 
       // Phase 73 plan 12 (D-03, D-06, D-08) -- three pass-through arms into the Tauri-free
       // `gamelib-depot` crate, one per RUST_DEPOT_* channel. PROVEN: `depotChannelParity.test.ts`
