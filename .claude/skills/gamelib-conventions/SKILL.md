@@ -1,6 +1,6 @@
 ---
 name: gamelib-conventions
-description: GameLib's five load-bearing repo conventions in full, with the measurements and incident history behind each — todo triage frontmatter (the three keys CI enforces), fake-HOME isolation (the two-profile rule), the sidecar's exit contract (unref every handle; bound in-flight boot work), UAT item shape (inline `expected:`, `result:` opens with a status word), and the mandatory `npx prettier --check` in every task's `<verify>` block. Read this BEFORE writing a `.planning/todos/pending/` file, spawning a child process in `src/` or `meta/`, creating a timer/watcher/socket in the sidecar, editing a `*-UAT.md` item, or writing a `<verify>` block. Auto-loaded during planning, todo, test-harness, UAT, and formatter work.
+description: GameLib's six load-bearing repo conventions in full, with the measurements and incident history behind each — todo triage frontmatter (the three keys CI enforces), fake-HOME isolation (the two-profile rule), the sidecar's exit contract (unref every handle; bound in-flight boot work), the Rust shutdown contract (spawn through gamelib-proc, register with the Shutdown token, bound boot work), UAT item shape (inline `expected:`, `result:` opens with a status word), and the mandatory `npx prettier --check` in every task's `<verify>` block. Read this BEFORE writing a `.planning/todos/pending/` file, spawning a child process in `src/` or `meta/`, creating a timer/watcher/socket in the sidecar, spawning a process or adding a task, timer or exit work in Rust (`src-tauri/`), editing a `*-UAT.md` item, or writing a `<verify>` block. Auto-loaded during planning, todo, test-harness, UAT, and formatter work.
 ---
 
 <context>
@@ -9,11 +9,12 @@ These are the full texts of GameLib's repo conventions. They were moved out of `
 2026-10-04 (quick task: CLAUDE.md context trim) because they cost ~6,394 tokens on every turn of
 every session while being relevant only to specific kinds of work.
 
-**`CLAUDE.md` retains a five-line imperative index of these rules**, so every session still knows
+**`CLAUDE.md` retains a six-line imperative index of these rules**, so every session still knows
 the rules exist and when to load this file. What lives here is the rationale, the measurements,
 and the incident history — the part that makes each rule stick and that you need before acting
-on one. Three of the five are explicitly discipline-only (no gate can see them), so if your work
-touches one, read its section here in full rather than acting on the one-line summary.
+on one. Three of the six are explicitly discipline-only (no gate can see them), and the Rust
+shutdown contract is discipline at its call sites (its mechanism is tested, adoption is not), so
+if your work touches one, read its section here in full rather than acting on the one-line summary.
 
 
 ## Conventions
@@ -196,6 +197,81 @@ the optional call, because jest's fake-timer substitute is not required to imple
 census grepping `\.unref()` returns **5** real sites and looks complete; grepping bare `unref`
 sweeps in comment prose and inflates the count instead. Match both spellings _and_ strip comment
 lines, or the number you get will be confidently wrong in one direction or the other.
+
+### The Rust shutdown contract (gamelib-core Shutdown, gamelib-proc spawns)
+
+> **Spawn through `gamelib-proc`, hold a `Shutdown` registrant for in-flight work, fit the one 5 s
+> exit budget, and bound boot work.**
+
+This is the Rust counterpart of the sidecar's exit contract above, for `src-tauri/`. The sidecar
+section stays as it is until Phase 99 retires the sidecar; this one governs everything Rust.
+
+**The rule.**
+
+1. **Spawn through `gamelib-proc`.** `SpawnClass::Helper` (`ProcRunner::helper("<label>")`,
+   `spawn_helper`, `spawn_helper_tokio`) for anything GameLib runs for its own purposes;
+   `SpawnClass::Game` only for what must outlive GameLib (a user's game). Never a bare
+   `Command::spawn` in a domain crate or the shell for a long-lived child. Short synchronous probes
+   (`osascript`, `reg`, `pgrep`, `codesign`, `ps`) stay on `Command::output()`.
+2. **Hold a registrant for in-flight work.** Work that must finish (or be cancelled) before exit
+   holds a `gamelib_core::shutdown::global()` `Registrant` for exactly as long as it is in flight,
+   and watches `global().token()` for cancellation. A registrant held after the work ends makes
+   exit wait for nothing; one never taken makes exit not wait for something that needed it.
+3. **Exit work fits one budget.** `ExitBudget::DEFAULT` is 5 s in total with a 1.5 s child grace,
+   so drains get 3.5 s. Do not add a wait of your own to the exit path; add a drain to
+   `handle_exit` or hold a registrant, and take the bound you are handed.
+4. **Bound boot work.** Nothing started at boot may wait without a limit, for the same reason as
+   half 2 of the sidecar's contract: unbounded in-flight work is what holds a process open.
+5. **Never `PR_SET_PDEATHSIG`, never a hand-rolled kill.** Parent-death signals are per-thread and
+   fire when the spawning thread ends, not when the process dies; a hand-rolled `libc::kill` skips
+   the pgid <= 1 refusal that keeps `kill(-1)` and `kill(0)` out of reach. One implementation:
+   `gamelib_proc::kill_tree::terminate_group`.
+
+**Why it is a rule.**
+
+- The `nettop` orphan (T-80-16, Phase 80) was **found only by a live Force Quit**: monitor
+  children outlived GameLib. Nothing in unit tests could have seen it, because SIGKILL skips every
+  exit path the process owns.
+- SIGKILL skips every exit path, so a helper can only be reclaimed by something that survives
+  GameLib: the reaper on unix and the per-helper kill-on-close Job on Windows.
+- The old exit was serial: depot finalize (up to 5 s), steamcm logoff (up to 5 s), steampoll drain
+  (up to 5 s), then the sidecar grace (2 s), about 17 s worst case. An OS logout waits about 5 s
+  before it force-kills apps (research A5, assumed, not measured), so a slow subsystem lost the
+  steamcm restore for everyone behind it.
+
+**The mechanics.**
+
+- `gamelib_core::shutdown::run_exit(global(), ExitBudget::DEFAULT, drains, children, finish)` spends
+  the budget in three stages. **Drains** run concurrently on detached threads, each holding a
+  registrant, within the 3.5 s drain budget (`depot`, `steamcm`, `steampoll` today). **Children**
+  then get what is left, at most 1.5 s: the sidecar's process group (`shutdown_child(grace)` ->
+  `terminate_group`) and the `ChildSet`'s helpers. **Finish** runs reaper disarm, wake-lock
+  release and socket cleanup. A drain that overruns is abandoned, not joined, and named in
+  `still running at exit deadline: <names> (<count>)`; `exit finished in <ms> ms` is always
+  logged. Both go through `shell_diag` (stderr and `gamelib-shell.log`), names and counts only,
+  never job detail. The deadline starts at `handle_exit`, after the TS pending-operations confirm.
+- A drain that detects it overran holds its registrant open (`hold_exit_drain_open`), because the
+  drain's own timeout and the stage deadline are the same instant and would otherwise race, leaving
+  the overrun unnamed.
+- Helper vs Game: a helper gets its own process group (unix) or its own kill-on-close Job
+  (Windows) and is registered in the `ChildSet`; a game gets its own session, no Job, and is never
+  registered, so a game tree survives GameLib.
+- The unix reaper is GameLib's own binary re-exec'd with `--gamelib-reaper`, holding the read end
+  of a pipe GameLib keeps the write end of. When GameLib dies for any reason the pipe closes, and
+  the reaper SIGTERMs every registered helper group, SIGKILLs the rest after 2 s and exits. A
+  graceful quit sends `disarm` first (last, in the finish stage), so it signals nothing.
+- **D-15 interim:** games launched from TS (not yet through `gamelib-proc`) still share the
+  sidecar's fate: they die with the sidecar's group or Job on a SIGKILL. That ends when Phase 88
+  moves launch into Rust (`.planning/todos/pending/2026-11-21-ts-launched-games-die-on-gamelib-sigkill-unix.md`).
+
+**What is enforced, honestly.** `cargo test -p gamelib-proc` (its own CI step, three OS legs) runs
+the orphan harness: a stand-in parent, a SIGKILL or a graceful quit, then probes from outside that
+helpers and grandchildren are gone and the game tree is not. That proves the **mechanism**.
+`83-HUMAN-UAT.md` proves the live app once. `run_exit`'s deadline is unit-tested in core, and the
+TS source-text gates (`quitTeardownWiring`, `sidecarShutdownFlagSource`, `tauriShellSource`) pin
+`handle_exit`'s shape. **Nothing checks that a new call site uses `gamelib-proc`**, and nothing
+fails when an exit drain forgets its registrant. This section is most of the enforcement for that
+half; do not read it as stronger than it is.
 
 ### UAT item shape (`expected:` inline by preference; `result:` opens with a status word)
 

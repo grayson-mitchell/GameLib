@@ -14,7 +14,7 @@ The app crate (`src-tauri`) stays the workspace root. Each port adds:
 | `src-tauri/crates/<name>`     | Tauri-free library. No `tauri` dependency, ever.              |
 | `src-tauri/crates/<name>-cli` | Optional bin, only if `meta/` tools need the code headlessly. |
 
-Current crates: `gamelib-scan`, `gamelib-depot`, `gamelib-steamfiles`, `gamelib-steampoll`, each with a `-cli`, and `gamelib-i18n` (library only).
+Current crates: `gamelib-scan`, `gamelib-depot`, `gamelib-steamfiles`, `gamelib-steampoll` and `gamelib-steamcm`, each with a `-cli`, and the library-only `gamelib-i18n`, `gamelib-core` (traits and the shutdown budget), `gamelib-proc` (process spawning, tracking and killing), `gamelib-safety` (destructive-path guards) and `gamelib-testutil` (test fixtures such as `FakeHome`). Section 2c covers core and proc.
 
 Phase 80 is complete: `gamelib-steampoll` (with `gamelib-steampoll-cli`) is the only implementation of the Steam install, uninstall, update and running polls, the restart hold and the download monitor, and `gamelib-i18n` translates their notification text in Rust. The TS poll loops and the `GAMELIB_STEAM_POLLS` flag are deleted.
 
@@ -40,7 +40,8 @@ because their dependencies need it (aes 0.9: 1.89; cbc, sha1, prost: 1.85). Addi
 
 Anything that deletes user files goes through `gamelib-safety` (a Tauri-free crate; ops
 `safety_check_removal` and `safety_remove_tree`). These rules apply to every crate that guards a
-destructive operation, now or after Phase 83 re-homes `gamelib-safety` into `gamelib-core`.
+destructive operation. `gamelib-safety` stays its own crate (its CI step runs first, section 8); it
+was not re-homed into `gamelib-core` in Phase 83.
 
 Destructive guards refuse on Unknown. Readers return a tri-state (Yes | No | Unknown) or a Probe that distinguishes absent from could-not-read; a transport failure is Unknown, never the permissive answer.
 
@@ -74,6 +75,55 @@ One shared safe_path (gamelib-safety). Never derive a trust root from the data b
   a directory symlink needs `SeCreateSymbolicLinkPrivilege`.
 - `cargo test -p gamelib-safety -p gamelib-testutil` is its own first step in `rust-test.yml` on
   all three OS legs, so a red crate further down cannot mask the adversarial table.
+
+## 2c. Process lifetime and shutdown (Phase 83)
+
+Two crates, split by what they hold:
+
+- `gamelib-core` holds the **traits and the composition-root types**: `Clock`, `ProcessRunner`
+  (with `RunOutput` and `StreamingChild`), `FrontendEmitter`, the profile path maths, and the
+  `shutdown` module (`Shutdown`, `Registrant`, `ExitBudget`, `run_exit`, `global()`). It has no
+  tokio runtime of its own and no Tauri.
+- `gamelib-proc` **implements** them: `ProcRunner` (core's `ProcessRunner` over real children),
+  the spawn classes, the `ChildSet`, the unix reaper and the per-helper Windows Job.
+
+A domain crate (`gamelib-steampoll`, `gamelib-steamcm`, `gamelib-depot`) depends on `gamelib-core`
+and never on another domain crate except through a trait. The shell wires the implementations in at
+startup.
+
+**Spawn classes.** Spawn through `gamelib-proc`, never `Command::spawn` in a domain crate.
+
+- `SpawnClass::Helper` is something GameLib runs for itself and must clean up: its own process
+  group on unix, its own kill-on-close Job on Windows, registered in `gamelib_proc::children::global()`
+  so the exit path can terminate it (`ProcRunner::helper("<label>")`, `spawn_helper_tokio`).
+- `SpawnClass::Game` is the user's: its own session on unix, no Job, never registered, so it
+  outlives GameLib. Use it only for what must survive a quit. (Interim, D-15: games launched from
+  TS still share the sidecar's fate until Phase 88 moves launch into Rust.)
+
+**The reaper.** SIGKILL skips every exit path, so on unix GameLib re-execs its own binary with
+`--gamelib-reaper` in a separate process group and keeps the write end of a pipe to it. Every
+helper group is registered with it; when the pipe closes (GameLib died, however it died) the reaper
+SIGTERMs the registered groups, SIGKILLs the stragglers after `REAPER_GRACE` (2 s) and exits. A
+graceful quit calls `reaper::disarm()` first, so the reaper signals nothing. Windows needs no
+reaper: closing the last handle to a helper's Job kills its whole tree. Never use `PR_SET_PDEATHSIG`
+and never hand-roll a kill: both skip the one implementation (`kill_tree::terminate_group`, which
+refuses pgid <= 1).
+
+**The exit budget.** `handle_exit` runs `gamelib_core::shutdown::run_exit` with
+`ExitBudget::DEFAULT`: 5 s in total, 1.5 s of it kept for children. Stage 1 runs every drain
+concurrently with the 3.5 s drain budget (each holds a `Registrant` while it works). Stage 2 kills
+the children (the sidecar group, then the `ChildSet`) with the time left, at most 1.5 s. Stage 3 is
+`finish`: reaper disarm, wake-lock release, socket cleanup. Drains run on detached threads, so an
+overrunning one cannot hold exit past the deadline; it is named in `still running at exit
+deadline: <names> (<count>)`, and `exit finished in <ms> ms` is always logged, both through
+`shell_diag`. Names and counts only, never job detail. New exit work either becomes a drain in
+`handle_exit` or holds a `gamelib_core::shutdown::global()` `Registrant` while work is in flight,
+and must fit that one budget. Bound boot work too: nothing at startup may wait without a limit.
+
+**Proof.** `cargo test -p gamelib-proc` runs the orphan harness (`tests/orphans.rs`: a stand-in
+parent, a SIGKILL or graceful quit, then probes that helpers and grandchildren are gone and the
+`Game` tree survives) on all three OS legs as its own CI step (section 8). It proves the mechanism.
+That a new call site uses `gamelib-proc` at all is discipline; nothing checks it.
 
 ## 3. App path
 
@@ -142,8 +192,11 @@ persisted user setting would have needed UI, migration and a removal path.
 
 ## 8. CI
 
-`.github/workflows/rust-test.yml` runs an explicit `cargo test -p gamelib-scan -p gamelib-scan-cli -p gamelib-depot -p gamelib-depot-cli -p gamelib-steamfiles -p gamelib-steamfiles-cli -p gamelib-steampoll -p gamelib-steampoll-cli -p gamelib-i18n`
-and `clippy --workspace` on both legs. Workspace crates are not default members, so a plain
+`.github/workflows/rust-test.yml` runs, in order: `cargo test -p gamelib-safety -p gamelib-testutil`
+(Phase 82, first so a red crate further down cannot mask the adversarial table), `cargo test -p gamelib-proc`
+(Phase 83, the process-lifetime harness, its own step for the same reason), then an explicit
+`cargo test -p gamelib-scan -p gamelib-scan-cli -p gamelib-depot -p gamelib-depot-cli -p gamelib-steamfiles -p gamelib-steamfiles-cli -p gamelib-steamcm -p gamelib-steamcm-cli -p gamelib-steampoll -p gamelib-steampoll-cli -p gamelib-i18n -p gamelib-core`,
+`cargo test --bin gamelib-shell` on all three legs (Windows, macOS, Linux) and `clippy --workspace` on the Windows and macOS legs. Workspace crates are not default members, so a plain
 `cargo test` in `src-tauri` silently skips them. A new crate needs its own `-p` entry.
 
 ## 9. Lessons from the scanner port
@@ -187,8 +240,9 @@ parse, chunk download, decrypt and decompress, file post-processing, reconcile, 
   start-then-poll, so a lost event cannot strand the caller, and the sidecar keeps
   `await downloadSteamDepots(...)`. A pending Promise is not a handle, so the sidecar exit contract
   still holds. The shell owns job lifetime. When its reader hits sidecar stdout EOF it calls
-  `cancel_all()` and logs `[shell] depot jobs cancelled on sidecar EOF: <n>`. At app exit it waits
-  at most 5 s for finalize. On the TS side, stdin-EOF abort fires the cancel and does not wait for it.
+  `cancel_all()` and logs `[shell] depot jobs cancelled on sidecar EOF: <n>`. At app exit the
+  depot cancel-and-finalize is one of the three concurrent drains of the single 5 s exit budget
+  (3.5 s drain stage, section 2c), still ahead of any kill. On the TS side, stdin-EOF abort fires the cancel and does not wait for it.
 - **Capture the TS oracle before you delete it.** 73-08 ran the real TS pipeline over the
   synthetic corpus, serving chunks from a local HTTP server, and committed the result as
   `gamelib-depot/tests/fixtures/expected.json`. The Rust golden test asserts against that file. The
