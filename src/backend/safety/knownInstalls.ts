@@ -28,7 +28,7 @@ function installFolder(runner: Runner, game: GameInfo): string | undefined {
   const installPath = game.install.install_path
   if (installPath) return installPath
   const executable = game.install.executable
-  if (isStore({ runner }, 'sideload') && executable) {
+  if (isStore(runner, 'sideload') && executable) {
     return dirname(executable)
   }
   return undefined
