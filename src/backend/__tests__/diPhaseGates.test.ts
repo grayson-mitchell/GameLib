@@ -9,9 +9,18 @@
  *
  * Every scan asserts a minimum file count so a half-empty walk cannot pass.
  */
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync
+} from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join, relative } from 'node:path'
 import * as ts from 'typescript'
+import { assertAtOrAboveFloor } from 'backend/testUtils/censusFloor'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 
 const BACKEND = join(__dirname, '..')
@@ -87,9 +96,24 @@ const STORES_MODULES = [
     )
 ]
 
+describe('census floors cannot pass vacuously (D-05)', () => {
+  it('an empty directory walk fails the floor guard', () => {
+    const empty = mkdtempSync(join(tmpdir(), 'gamelib-diphasegates-empty-'))
+    try {
+      const scanned = walk(empty).filter((f) => /\.ts$/.test(f))
+      expect(scanned).toHaveLength(0)
+      expect(() =>
+        assertAtOrAboveFloor('empty walk', scanned.length, 400)
+      ).toThrow(/below the floor/)
+    } finally {
+      rmSync(empty, { recursive: true, force: true })
+    }
+  })
+})
+
 describe('66.1 end state: removed collaborators', () => {
   it('scans a full backend tree', () => {
-    expect(nonTestSources.length).toBeGreaterThanOrEqual(400)
+    assertAtOrAboveFloor('66.1 nonTestSources', nonTestSources.length, 400)
   })
 
   const FORBIDDEN = [
@@ -174,7 +198,8 @@ describe('66.1 end state: stores modules', () => {
     const files = walk(join(BACKEND, 'testUtils')).filter((f) =>
       /\.ts$/.test(f)
     )
-    expect(files.length).toBeGreaterThan(3)
+    // Measured 53 testUtils .ts files at c0fbfa775; a floor of 3 passed on a nearly empty walk.
+    assertAtOrAboveFloor('66.1 testUtils walk', files.length, 50)
     const importRe =
       /^(import|export)\s+(type\s+)?[\s\S]*?\sfrom\s+['"]([^'"]+)['"]|(?<!typeof\s)(?:require|import)\(\s*['"]([^'"]+)['"]\s*\)/gm
     const offenders: string[] = []
@@ -196,7 +221,7 @@ describe('66.1 end state: stores modules', () => {
 
   it('storeManagers/index.ts and every stores module have no top-level new', () => {
     const files = ['storeManagers/index.ts', ...STORES_MODULES]
-    expect(files.length).toBeGreaterThanOrEqual(17)
+    assertAtOrAboveFloor('66.1 stores modules', files.length, 17)
     const offenders: string[] = []
     for (const f of files) {
       const text = source(join(BACKEND, f))
@@ -213,7 +238,7 @@ describe('66.1 end state: no direct child_process', () => {
   )
 
   it('finds the flow registrations', () => {
-    expect(registrations.length).toBeGreaterThanOrEqual(24)
+    assertAtOrAboveFloor('66.1 flow registrations', registrations.length, 24)
   })
 
   it('launcher, runner front doors and every registration import no child_process', () => {
@@ -325,7 +350,7 @@ describe('66.3 end state: shim, config and process-wide owners at zero', () => {
   ] as const
 
   it('scans a full backend tree', () => {
-    expect(nonTestSources.length).toBeGreaterThanOrEqual(400)
+    assertAtOrAboveFloor('66.3 nonTestSources', nonTestSources.length, 400)
   })
 
   it('importsPlatformShim fires on shim imports and not on comments or siblings', () => {
@@ -427,7 +452,7 @@ describe('66.3 end state: shim, config and process-wide owners at zero', () => {
   it('no non-test file under src imports backend/platform', () => {
     // The walk covers every source file of the repo's TypeScript tree (backend, common, preload
     // and frontend), so a type import from the retired facade is caught as well.
-    expect(srcFiles.length).toBeGreaterThanOrEqual(1500)
+    assertAtOrAboveFloor('66.3 src walk', srcFiles.length, 1500)
     const offenders = srcFiles
       .filter((f) => !isTestInfra(f) && !/\/__tests__\//.test(f))
       .filter((f) => importsPlatformShim(readFileSync(f, 'utf-8')))
@@ -570,7 +595,7 @@ describe('66.3 end state: shim, config and process-wide owners at zero', () => {
     const self = join(BACKEND, '__tests__', 'diPhaseGates.test.ts')
     const scanned = srcFiles.filter((f) => f !== self)
     // A walk that saw only a handful of files would pass vacuously.
-    expect(scanned.length).toBeGreaterThanOrEqual(400)
+    assertAtOrAboveFloor('66.3 interim scaffolding scan', scanned.length, 400)
     const offenders = scanned
       .map(
         (f) =>
@@ -712,7 +737,7 @@ describe('66.4 end state: long tail at zero, census is a test, path shim gone', 
   })
 
   it('the owned list is a full scan (floor)', () => {
-    expect(OWNED_66_4.length).toBeGreaterThanOrEqual(80)
+    assertAtOrAboveFloor('66.4 owned list', OWNED_66_4.length, 80)
   })
 
   it.each(OWNED_66_4)('%s is absent from the census', (file) => {
@@ -727,7 +752,7 @@ describe('66.4 end state: long tail at zero, census is a test, path shim gone', 
     const files = walk(join(root, 'src')).filter((f) =>
       /\.(ts|tsx|js|cjs)$/.test(f)
     )
-    expect(files.length).toBeGreaterThanOrEqual(1500)
+    assertAtOrAboveFloor('66.4 src walk', files.length, 1500)
     const offenders = files
       .filter(
         (f) =>
@@ -749,7 +774,7 @@ describe('66.4 end state: long tail at zero, census is a test, path shim gone', 
     expect(sections?.[1]).not.toContain('moduleState')
     const dir = join(root, 'meta/backendDiCeilings')
     const shards = readdirSync(dir).filter((f) => f.endsWith('.json'))
-    expect(shards.length).toBeGreaterThan(0)
+    assertAtOrAboveFloor('66.4 ceilings shards', shards.length, 1)
     for (const name of shards)
       expect(
         Object.keys(JSON.parse(readFileSync(join(dir, name), 'utf-8')))
