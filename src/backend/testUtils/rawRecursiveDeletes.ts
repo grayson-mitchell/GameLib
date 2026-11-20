@@ -92,10 +92,31 @@ function matchingParen(text: string, open: number): number {
   return -1
 }
 
-const CALL =
-  /(?<![\w$.])(?:(?:fs|fsp|promises|fsPromises)\s*\.\s*)*(?:rmSync|rmdirSync|rm|rmdir)\s*\(/g
+/** The name of an rm-family call, after any non-identifier character (`.`, `?.`, `)`, whitespace). */
+const CALL = /(?<![\w$])(?:rmSync|rmdirSync|rm|rmdir)\s*\(/g
 
-/** Every `rm`/`rmdir` call (bare or `fs.`/`fsp.`/`promises.` qualified) whose arguments say `recursive`. */
+/**
+ * Where the reported call text starts: the head of an immediately preceding receiver chain
+ * (identifiers joined by `.` or `?.`, whitespace allowed around the dots), or the name itself.
+ */
+function receiverStart(text: string, nameStart: number): number {
+  let start = nameStart
+  for (;;) {
+    let i = start - 1
+    while (i >= 0 && /\s/.test(text.charAt(i))) i--
+    if (text.charAt(i) !== '.') break
+    i--
+    if (text.charAt(i) === '?') i--
+    while (i >= 0 && /\s/.test(text.charAt(i))) i--
+    let j = i
+    while (j >= 0 && /[\w$]/.test(text.charAt(j))) j--
+    if (j === i) break
+    start = j + 1
+  }
+  return start
+}
+
+/** Every `rm`/`rmdir` call on any receiver (bare or member) whose arguments say `recursive`. */
 export function findRawRecursiveDeletes(
   source: string,
   file: string
@@ -103,15 +124,17 @@ export function findRawRecursiveDeletes(
   const text = blankComments(source)
   const found: RawRecursiveDelete[] = []
   for (const m of text.matchAll(CALL)) {
-    const start = m.index
-    const open = start + m[0].length - 1
+    const nameAt = m.index
+    const open = nameAt + m[0].length - 1
     const close = matchingParen(text, open)
     if (close < 0) continue
     if (!/\brecursive\b/.test(text.slice(open, close + 1))) continue
     found.push({
       file,
-      line: text.slice(0, start).split('\n').length,
-      call: text.slice(start, close + 1).replace(/\s+/g, ' ')
+      line: text.slice(0, nameAt).split('\n').length,
+      call: text
+        .slice(receiverStart(text, nameAt), close + 1)
+        .replace(/\s+/g, ' ')
     })
   }
   return found.sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line)

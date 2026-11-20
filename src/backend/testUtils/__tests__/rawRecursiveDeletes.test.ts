@@ -45,15 +45,37 @@ describe('findRawRecursiveDeletes', () => {
     expect(findRawRecursiveDeletes(src, 'd.ts')[0]?.line).toBe(5)
   })
 
-  it('ignores a non-recursive single-file delete and an unrelated method named rm', () => {
+  it('ignores non-recursive deletes', () => {
     const src = [
       `rmSync(file)`,
       `rmSync(file, { force: true })`,
       `unlinkSync(file)`,
-      `store.rm(key, { recursive: true })`,
-      `deps.fs.rmSync(dir, { recursive: true })`
+      `fs.rmdirSync(dir)`
     ].join('\n')
     expect(findRawRecursiveDeletes(src, 'e.ts')).toEqual([])
+  })
+
+  it('finds member calls whatever the receiver (WR-07)', () => {
+    const probes = [
+      `deps.rm(x, { recursive: true })`,
+      `deps.fs.rmSync(x, { recursive: true })`,
+      `nfs.rmSync(x, { recursive: true })`,
+      `this.deps.fs.promises.rm(x, { recursive: true })`,
+      `deps?.fs?.rmSync(x, { recursive: true })`,
+      `store.rm(key, { recursive: true })`
+    ]
+    const out = findRawRecursiveDeletes(probes.join('\n'), 'g.ts')
+    expect(out.map((o) => o.line)).toEqual([1, 2, 3, 4, 5, 6])
+    expect(out.map((o) => o.call)).toEqual(probes)
+    expect(out[1]?.call.startsWith('deps.fs.rmSync(')).toBe(true)
+  })
+
+  it('matches the name only at an identifier boundary', () => {
+    const src = [
+      `formSync(x, { recursive: true })`,
+      `xrm(x, { recursive: true })`
+    ].join('\n')
+    expect(findRawRecursiveDeletes(src, 'h.ts')).toEqual([])
   })
 
   it('does not trip on a string that merely contains parentheses or comment markers', () => {

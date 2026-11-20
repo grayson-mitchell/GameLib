@@ -6,7 +6,7 @@
  * in these files fails here instead of shipping an unguarded delete.
  */
 import { readFileSync } from 'fs'
-import { join } from 'path'
+import { join, sep } from 'path'
 import {
   findRawRecursiveDeletes,
   scanGuardedFiles,
@@ -58,7 +58,14 @@ function scan(): RawRecursiveDelete[] {
   return scanGuardedFiles(
     GUARDED_FILES.map((f) => join(REPO_ROOT, f)),
     FLOOR
-  ).map((d) => ({ ...d, file: d.file.slice(REPO_ROOT.length + 1) }))
+  ).map((d) => ({
+    ...d,
+    // Forward slashes on every OS, so the comparison with ALLOWED holds on Windows too.
+    file: d.file
+      .slice(REPO_ROOT.length + 1)
+      .split(sep)
+      .join('/')
+  }))
 }
 
 const isAllowed = (d: RawRecursiveDelete): boolean =>
@@ -92,5 +99,12 @@ describe('non-Steam uninstall/reset files hold no raw recursive delete (82-07)',
     )
     expect(injected).toHaveLength(1)
     expect(injected.filter((d) => !isAllowed(d))).toHaveLength(1)
+    // The DI-converted shape (WR-07): a member call on an injected deps object.
+    const di = findRawRecursiveDeletes(
+      'deps.fs.rmSync(prefix, { recursive: true })\n',
+      'src/backend/utils/uninstaller.ts'
+    )
+    expect(di).toHaveLength(1)
+    expect(di.filter((d) => !isAllowed(d))).toHaveLength(1)
   })
 })
