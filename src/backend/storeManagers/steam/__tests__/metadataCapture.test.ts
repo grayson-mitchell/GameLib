@@ -251,7 +251,7 @@ describe('source gate: Phase 51 Plan 09 bridge verdict carry-forward (D-51-07)',
 
   it('assembleBridgeRouteInput never reads forcedWindowsViaBottle (D-17 pin — composes isBottleEligibleFromPlatforms only)', () => {
     const fnMatch = eligibilitySource.match(
-      /export function assembleBridgeRouteInput\([^)]*\)[^{]*\{[\s\S]*?\n\}/
+      /function assembleBridgeRouteInput\([^)]*\)[^{]*\{[\s\S]*?\n\}/
     )
     expect(fnMatch).not.toBeNull()
     expect(fnMatch![0]).not.toMatch(/forcedWindowsViaBottle/)

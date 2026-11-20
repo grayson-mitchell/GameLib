@@ -41,7 +41,7 @@ export function isNative(steamGame: SteamGame): boolean {
  * the D-17 forced verdict (see `isBottleEligible()`'s own doc comment for
  * why). Body is byte-identical to the pre-34.13-14 `isBottleEligible()`.
  */
-export function isBottleEligibleFromPlatforms(steamGame: SteamGame): boolean {
+function isBottleEligibleFromPlatforms(steamGame: SteamGame): boolean {
   if (!isMac) return false
   const meta = steamGame.deps.stores.steam.steamMetadataStore.get(
     steamGame.appId
@@ -111,7 +111,7 @@ export function isBottleEligible(steamGame: SteamGame): boolean {
  * install()'s WR-08 `hasBottledSteamCopy` guard still covers a title whose
  * bits already live in `GameLibSteam`.
  */
-export function assembleBridgeRouteInput(
+function assembleBridgeRouteInput(
   steamGame: SteamGame,
   options?: { windowsBuildChosen?: boolean }
 ): BridgeRouteInput {

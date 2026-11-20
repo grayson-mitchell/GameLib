@@ -122,7 +122,7 @@ export function notifyOverlaySetupFailed(
   })
 }
 
-export function overlayInputLine(
+function overlayInputLine(
   steamGame: SteamGame,
   applied: boolean,
   reason?: string
@@ -195,7 +195,7 @@ export function overlayInputArg(
  * otherwise (prepare error, runner refused, unsafe path dropped by the value
  * builder, a throw) applied=false reason=not-injected. Never throws.
  */
-export function logOverlayInputOutcome(
+function logOverlayInputOutcome(
   steamGame: SteamGame,
   arg: { inputModulePath: string } | Record<string, never>,
   carried: readonly string[]

@@ -335,7 +335,7 @@ async function uninstallBridgeGame(steamGame: SteamGame): Promise<ExecResult> {
  * quick 261106-s3n: the ON route for a native-root uninstall. Every refusal
  * sends `done` itself because uninstaller.ts suppresses it for steam.
  */
-export async function uninstallNativeInGameLib(
+async function uninstallNativeInGameLib(
   steamGame: SteamGame
 ): Promise<ExecResult> {
   const installPath = steamGame.deps.steamSession.libraryState.library.get(
@@ -434,7 +434,7 @@ export async function uninstallNativeInGameLib(
  * uninstallBottleGameDirectly's); completion is pollUninstallOnce, which
  * flips is_installed, pushes, sends done and fires the toast.
  */
-export async function uninstallUnadoptedNativeDirectly(
+async function uninstallUnadoptedNativeDirectly(
   steamGame: SteamGame
 ): Promise<ExecResult | null> {
   const record = readPendingAdoption(
@@ -494,7 +494,7 @@ export async function uninstallUnadoptedNativeDirectly(
  * extracted this from uninstallUnadoptedNativeDirectly): files via
  * removeSteamInstallCopy's guards, completion via pollUninstallOnce.
  */
-export async function removeNativeInstallDirectly(
+async function removeNativeInstallDirectly(
   steamGame: SteamGame
 ): Promise<ExecResult> {
   let failure: string
@@ -668,7 +668,7 @@ export function rawInstalldirFromInstallPath(
  * pollUninstallOnce() ALSO checks the native root for a surviving copy
  * (dual-install partial removal, item 4/5) — see its own JSDoc.
  */
-export async function uninstallBottleGameDirectly(
+async function uninstallBottleGameDirectly(
   steamGame: SteamGame
 ): Promise<ExecResult> {
   // 34.13 review A-12: validate the appId BEFORE building either delete

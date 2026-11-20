@@ -52,8 +52,8 @@ import type {
 
 /** Local copy by directory convention (see library.ts). */
 
-export const CANCEL_DELETE_POLL_MS = 100
-export const CANCEL_DELETE_TIMEOUT_MS = 60000
+const CANCEL_DELETE_POLL_MS = 100
+const CANCEL_DELETE_TIMEOUT_MS = 60000
 
 type CancelDeleteResult = { status: 'deleted' | 'refused'; reason?: string }
 

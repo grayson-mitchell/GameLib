@@ -512,9 +512,7 @@ export async function install(
  * wrapped in try/catch and only `logWarning`s on failure, following the
  * same shape as `resumeInterruptedSteamInstall`'s own call site above.
  */
-export async function removeDemotedNativeOrphan(
-  steamGame: SteamGame
-): Promise<void> {
+async function removeDemotedNativeOrphan(steamGame: SteamGame): Promise<void> {
   try {
     if (!isAppleSiliconMac) {
       return
@@ -568,7 +566,7 @@ export async function removeDemotedNativeOrphan(
  * GameLibSteam install never reaches install() (it is already installed),
  * so the breadcrumb covers the resume case the review names.
  */
-export function hasBottledSteamCopy(steamGame: SteamGame): boolean {
+function hasBottledSteamCopy(steamGame: SteamGame): boolean {
   const breadcrumb = steamGame.deps.steamSession.libraryState.library.get(
     steamGame.appId
   )?.install?.steamResumeTargetSteamappsDir
@@ -582,7 +580,7 @@ export function hasBottledSteamCopy(steamGame: SteamGame): boolean {
   return resolve(breadcrumb) === resolve(steamappsDir)
 }
 
-export function crossoverRequiredError(_steamGame: SteamGame): InstallResult {
+function crossoverRequiredError(_steamGame: SteamGame): InstallResult {
   return {
     status: 'error',
     error: i18next.t(

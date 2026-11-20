@@ -48,7 +48,7 @@ export const DRM_DLLOVERRIDES_CHANNEL: DrmDllOverridesChannel = 'dll-option'
 // The Research staging recipe (NotProton compat_run.sh). The genuine
 // steamclient64.dll loads native from its full SteamClientDll64 path, and
 // lsteamclient loads builtin from the clone.
-export const DRM_DLL_OVERRIDES = 'steamclient=n;steamclient64=n;lsteamclient=b'
+const DRM_DLL_OVERRIDES = 'steamclient=n;steamclient64=n;lsteamclient=b'
 
 export const DRM_TRACE_KEEP_PER_APP = 8
 export const DRM_REGISTRY_TIMEOUT_MS = 30000
