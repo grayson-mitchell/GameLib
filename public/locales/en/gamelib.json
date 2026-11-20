@@ -582,6 +582,33 @@
         "title": "Redeem a Steam key",
         "viewInLibrary": "View in library"
     },
+    "removalRefused": {
+        "dismiss": "Dismiss",
+        "outcome": {
+            "failed": "Some files may already have been removed. Try again to finish.",
+            "refused": "Nothing was deleted."
+        },
+        "reason": {
+            "deleteFailed": "Some files could not be removed.",
+            "folderLooksShared": "The game's folder also holds other programs, so it may be shared with other software.",
+            "insideKnownInstall": "This folder is inside the install of {{other}}.",
+            "insideKnownInstallUnnamed": "This folder is inside the install of another game.",
+            "nestedKnownInstall": "{{other}} is installed inside this folder.",
+            "nestedKnownInstallUnnamed": "Another game is installed inside this folder.",
+            "notAPrefix": "The folder doesn't look like a Wine prefix.",
+            "outsideTrustRoot": "The folder isn't inside the expected install location.",
+            "protectedRoot": "The folder is a protected location, such as your home folder or the default install folder.",
+            "unconfirmed": "GameLib couldn't confirm the install location."
+        },
+        "title": {
+            "cancelInstall": "Couldn't clean up the cancelled install of {{game}}",
+            "removeBottle": "Couldn't remove the bottle for {{game}}",
+            "removePrefix": "Couldn't remove the Wine prefix for {{game}}",
+            "reset": "Couldn't reset GameLib",
+            "uninstall": "Couldn't uninstall {{game}}"
+        },
+        "unknownGame": "this game"
+    },
     "reportProblem": {
         "email": "Email for a reply (optional)",
         "emailHint": "Only used to answer this report.",

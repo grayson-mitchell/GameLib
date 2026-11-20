@@ -2,6 +2,7 @@ import 'frontend/testUtils/tauriWindow'
 import useAuthState from 'frontend/state/authState'
 import { resetAllStores } from 'frontend/state/storeKit'
 import { useReadOnlyStoresNotice } from 'frontend/state/ReadOnlyStoresNotice'
+import { useRemovalRefusedNotice } from 'frontend/state/RemovalRefusedNotice'
 import { useSteamRequestNotice } from 'frontend/state/SteamRequestNotice'
 import { registerNoticePreview } from '../noticePreview'
 import type { NoticePreviewApi } from '../noticePreview'
@@ -22,6 +23,7 @@ afterEach(() => {
     visible: false,
     dismissed: false
   })
+  useRemovalRefusedNotice.setState({ notices: [], nextId: 1 })
 })
 
 describe('noticePreview', () => {
@@ -36,6 +38,7 @@ describe('noticePreview', () => {
       'clear',
       'humble',
       'readOnly',
+      'removal',
       'steam'
     ])
   })
@@ -127,5 +130,20 @@ describe('noticePreview', () => {
     const st = useReadOnlyStoresNotice.getState()
     expect(st.visible).toBe(false)
     expect(st.entries).toEqual([])
+  })
+
+  it('removal() queues a refused and a failed notice through the real validator', () => {
+    const api = register()
+    expect(api.removal()).toBe(true)
+    const queued = useRemovalRefusedNotice.getState().notices
+    expect(queued.map((n) => n.outcome)).toEqual(['refused', 'failed'])
+  })
+
+  it('all() and clear() cover the removal queue', () => {
+    const api = register()
+    api.all()
+    expect(useRemovalRefusedNotice.getState().notices).toHaveLength(2)
+    api.clear()
+    expect(useRemovalRefusedNotice.getState().notices).toEqual([])
   })
 })

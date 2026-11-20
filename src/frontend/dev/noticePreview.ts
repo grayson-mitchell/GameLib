@@ -14,6 +14,10 @@ import {
   useReadOnlyStoresNotice
 } from 'frontend/state/ReadOnlyStoresNotice'
 import {
+  handleRemovalRefusedNoticeSignal,
+  useRemovalRefusedNotice
+} from 'frontend/state/RemovalRefusedNotice'
+import {
   handleSteamRequestNoticeSignal,
   useSteamRequestNotice
 } from 'frontend/state/SteamRequestNotice'
@@ -22,6 +26,7 @@ export interface NoticePreviewApi {
   humble(): void
   steam(kind?: SteamRequestNoticePayload['kind']): boolean
   readOnly(): boolean
+  removal(): boolean
   both(): void
   all(): void
   clear(): void
@@ -32,6 +37,10 @@ declare global {
     __gamelibNotices?: NoticePreviewApi
   }
 }
+
+// The fixture game title: data the backend would send, never translated. The one literal the i18n
+// allowlist counts in this file, shared by every preview payload.
+const FIXTURE_TITLE = 'Half-Life 2'
 
 let previewSeq = 0
 
@@ -60,7 +69,7 @@ export function registerNoticePreview(
         ) + 1
       const payload: SteamRequestNoticePayload = {
         appId: '220',
-        title: 'Half-Life 2',
+        title: FIXTURE_TITLE,
         kind,
         ...(kind === 'uninstall-steam-error' ? { code: 2 } : {}),
         seq: previewSeq
@@ -82,6 +91,25 @@ export function registerNoticePreview(
       })
       return useReadOnlyStoresNotice.getState().visible
     },
+    removal() {
+      // Phase 82 D-13. Both outcomes, to check the two honest sentences and the stacked slots.
+      // The real validator, so the preview cannot bypass the closed sets.
+      const e = {} as IpcRendererEvent
+      handleRemovalRefusedNoticeSignal(e, {
+        kind: 'uninstall',
+        outcome: 'refused',
+        reason: 'nested-known-install',
+        title: FIXTURE_TITLE,
+        otherTitle: FIXTURE_TITLE.split(' ')[0]
+      })
+      handleRemovalRefusedNoticeSignal(e, {
+        kind: 'remove-prefix',
+        outcome: 'failed',
+        reason: 'delete-failed',
+        title: FIXTURE_TITLE
+      })
+      return useRemovalRefusedNotice.getState().notices.length > 0
+    },
     both() {
       api.steam()
       api.humble()
@@ -89,6 +117,7 @@ export function registerNoticePreview(
     all() {
       api.steam()
       api.readOnly()
+      api.removal()
       api.humble()
     },
     /**
@@ -106,6 +135,9 @@ export function registerNoticePreview(
       }))
       useSteamRequestNotice.setState({ latest: null })
       useReadOnlyStoresNotice.setState(READ_ONLY_INITIAL)
+      // A removal toast already on screen leaves only through its X (no auto-hide), as a real one
+      // does; this empties the queue for the next preview.
+      useRemovalRefusedNotice.setState({ notices: [] })
     }
   }
   target.__gamelibNotices = api

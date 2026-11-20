@@ -7,7 +7,12 @@ import i18next from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { useRemovalRefusedNotice } from 'frontend/state/RemovalRefusedNotice'
-import type { RemovalRefusalPayload } from 'common/types/removalRefusal'
+import {
+  REMOVAL_REFUSAL_KINDS,
+  type RemovalRefusalKind,
+  type RemovalRefusalPayload
+} from 'common/types/removalRefusal'
+import { REMOVAL_REASONS } from 'common/types/safety'
 import RemovalRefusedNotice from '../index'
 
 // Real i18next with no catalogs: t() returns the default text, so the copy is the shipped English.
@@ -100,5 +105,101 @@ describe('RemovalRefusedNotice', () => {
     push({ ...nested, title: 'Portal 2', otherTitle: 'Half-Life 2' })
     expect(screen.getAllByRole('alert')).toHaveLength(2)
     expect(document.querySelectorAll('.noticeStackSlot')).toHaveLength(2)
+  })
+
+  describe('copy', () => {
+    const TITLES: Record<RemovalRefusalKind, string> = {
+      uninstall: "Couldn't uninstall Half-Life 2",
+      'remove-prefix': "Couldn't remove the Wine prefix for Half-Life 2",
+      'remove-bottle': "Couldn't remove the bottle for Half-Life 2",
+      reset: "Couldn't reset GameLib",
+      'cancel-install': "Couldn't clean up the cancelled install of Half-Life 2"
+    }
+
+    it('covers every kind with its own title', () => {
+      expect(Object.keys(TITLES).sort()).toEqual(
+        [...REMOVAL_REFUSAL_KINDS].sort()
+      )
+      for (const kind of REMOVAL_REFUSAL_KINDS) {
+        cleanup()
+        useRemovalRefusedNotice.setState({ notices: [], nextId: 1 })
+        render(<RemovalRefusedNotice />)
+        push({
+          kind,
+          outcome: 'refused',
+          reason: 'is-protected-root',
+          ...(kind === 'reset' ? {} : { title: 'Half-Life 2' })
+        })
+        expect(screen.getByText(TITLES[kind])).toBeTruthy()
+      }
+    })
+
+    it('renders real copy for every non-ok reason and never a raw key', () => {
+      const bodies = new Set<string>()
+      for (const reason of REMOVAL_REASONS.filter((r) => r !== 'ok')) {
+        cleanup()
+        useRemovalRefusedNotice.setState({ notices: [], nextId: 1 })
+        const { container } = render(<RemovalRefusedNotice />)
+        push({
+          kind: 'uninstall',
+          outcome: 'refused',
+          reason,
+          title: 'Half-Life 2',
+          otherTitle: 'Portal'
+        })
+        const text = container.textContent ?? ''
+        expect(text).not.toContain('removalRefused.')
+        expect(text).not.toContain('{{')
+        const body = container.querySelectorAll('.noticeStackBody')[0]
+        expect((body?.textContent ?? '').length).toBeGreaterThan(10)
+        bodies.add(body?.textContent ?? '')
+      }
+      // Eight distinct bodies: the 'unconfirmed' group collapses the check-could-not-run reasons.
+      expect(bodies.size).toBe(8)
+    })
+
+    it('interpolates the other title for both known-install reasons', () => {
+      render(<RemovalRefusedNotice />)
+      push({ ...nested, reason: 'inside-known-install' })
+      expect(
+        screen.getByText('This folder is inside the install of Portal.')
+      ).toBeTruthy()
+    })
+
+    it('says nothing was deleted only for a refused outcome', () => {
+      render(<RemovalRefusedNotice />)
+      push({ ...nested, outcome: 'failed' })
+      expect(
+        screen.getByText(
+          'Some files may already have been removed. Try again to finish.'
+        )
+      ).toBeTruthy()
+      expect(document.body.textContent).not.toContain('Nothing was deleted')
+    })
+
+    it('never says nothing was deleted for delete-failed, even if marked refused', () => {
+      render(<RemovalRefusedNotice />)
+      push({ ...nested, outcome: 'refused', reason: 'delete-failed' })
+      expect(screen.getByText('Some files could not be removed.')).toBeTruthy()
+      expect(document.body.textContent).not.toContain('Nothing was deleted')
+    })
+
+    it('uses neutral wording when the game title is unknown', () => {
+      render(<RemovalRefusedNotice />)
+      push({ kind: 'uninstall', outcome: 'refused', reason: 'not-a-prefix' })
+      expect(screen.getByText("Couldn't uninstall this game")).toBeTruthy()
+      push({ ...nested, title: undefined, otherTitle: undefined })
+      expect(
+        screen.getByText('Another game is installed inside this folder.')
+      ).toBeTruthy()
+      push({
+        ...nested,
+        reason: 'inside-known-install',
+        otherTitle: undefined
+      })
+      expect(
+        screen.getByText('This folder is inside the install of another game.')
+      ).toBeTruthy()
+    })
   })
 })

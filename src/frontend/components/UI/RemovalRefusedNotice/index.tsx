@@ -12,7 +12,10 @@ import {
   useNoticePhaseFallback
 } from 'frontend/components/UI/NoticeStack/noticeSlot'
 import type { NoticePhase } from 'frontend/components/UI/NoticeStack/noticeSlot'
-import type { RemovalRefusalKind } from 'common/types/removalRefusal'
+import type {
+  RemovalRefusalKind,
+  RemovalRefusalOutcome
+} from 'common/types/removalRefusal'
 import type { RemovalReason } from 'common/types/safety'
 import './index.scss'
 
@@ -64,21 +67,31 @@ function title(t: TFunction, kind: RemovalRefusalKind, game: string): string {
 function reasonBody(
   t: TFunction,
   reason: RemovalReason,
-  other: string
+  other: string | undefined
 ): string {
   switch (reason) {
     case 'nested-known-install':
-      return t(
-        'removalRefused.reason.nestedKnownInstall',
-        '{{other}} is installed inside this folder.',
-        { other }
-      )
+      return other === undefined
+        ? t(
+            'removalRefused.reason.nestedKnownInstallUnnamed',
+            'Another game is installed inside this folder.'
+          )
+        : t(
+            'removalRefused.reason.nestedKnownInstall',
+            '{{other}} is installed inside this folder.',
+            { other }
+          )
     case 'inside-known-install':
-      return t(
-        'removalRefused.reason.insideKnownInstall',
-        'This folder is inside the install of {{other}}.',
-        { other }
-      )
+      return other === undefined
+        ? t(
+            'removalRefused.reason.insideKnownInstallUnnamed',
+            'This folder is inside the install of another game.'
+          )
+        : t(
+            'removalRefused.reason.insideKnownInstall',
+            'This folder is inside the install of {{other}}.',
+            { other }
+          )
     case 'is-protected-root':
       return t(
         'removalRefused.reason.protectedRoot',
@@ -118,7 +131,7 @@ function reasonBody(
 
 function outcomeBody(
   t: TFunction,
-  outcome: QueuedRemovalNotice['outcome'],
+  outcome: RemovalRefusalOutcome,
   reason: RemovalReason
 ): string {
   // delete-failed means a delete ran, so it can never be paired with "nothing was deleted".
@@ -155,11 +168,9 @@ function RemovalRefusedToast({ notice }: { notice: QueuedRemovalNotice }) {
   }
 
   const game = notice.title ?? unknownGame(t)
-  const other =
-    notice.otherTitle ?? t('removalRefused.unknownOther', 'another game')
 
   return renderNoticeSlot({
-    slotKey: `removalRefused-${notice.id}`,
+    slotKey: 'removalRefused',
     toastKey: notice.id,
     phase,
     toastClassName: 'removalRefusedNotice',
@@ -176,7 +187,7 @@ function RemovalRefusedToast({ notice }: { notice: QueuedRemovalNotice }) {
             {title(t, notice.kind, game)}
           </div>
           <div className="noticeStackBody removalRefusedNoticeBody">
-            {reasonBody(t, notice.reason, other)}
+            {reasonBody(t, notice.reason, notice.otherTitle)}
           </div>
           <div className="noticeStackBody removalRefusedNoticeBody">
             {outcomeBody(t, notice.outcome, notice.reason)}
