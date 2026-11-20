@@ -300,3 +300,109 @@ fn sigkill_kills_helpers_and_spares_the_game() {
         );
     }
 }
+
+/// Negative control (Pitfall 7): with the reaper disabled, a SIGKILL of the parent leaves its
+/// helper alive. This is what makes the positive leg above non-vacuous: the probe demonstrably sees
+/// an orphan. The test kills the survivors itself so CI never accumulates them.
+#[cfg(unix)]
+#[test]
+fn sigkill_without_reaper_leaves_the_helper_alive() {
+    let home = FakeHome::new("gamelib-proc-orphans");
+    let paths = Paths::new(&home);
+    let mut run = Run::start_with(&home, &paths, &["--no-reaper"]);
+    assert_eq!(
+        run.reaper_pid(),
+        None,
+        "--no-reaper must not start a reaper"
+    );
+    let survivors: Vec<u32> = run
+        .pids("helpers")
+        .into_iter()
+        .chain(run.pids("grandchildren"))
+        .chain(run.pids("games"))
+        .collect();
+    let _strays = Strays(survivors.clone());
+
+    run.kill_parent();
+    run.wait_for_parent_exit();
+    // Longer than a working reaper needs to SIGTERM an idle helper: if one were running, these
+    // would be dead by now. A bounded observation window, not a fixed sleep for a result.
+    let until = Instant::now() + Duration::from_millis(2500);
+    while Instant::now() < until {
+        for p in &survivors {
+            assert!(is_alive(*p), "pid {p} should be an orphan, still alive");
+        }
+        std::thread::sleep(POLL);
+    }
+    println!("orphans alive without a reaper: {survivors:?}");
+}
+
+/// Graceful quit: `disarm` then EOF makes the reaper exit by itself without signalling anything
+/// (the helpers are already gone through `terminate_all`, the game was never registered).
+#[cfg(unix)]
+#[test]
+fn graceful_quit_disarms_the_reaper() {
+    let home = FakeHome::new("gamelib-proc-orphans");
+    let paths = Paths::new(&home);
+    let mut run = Run::start(&home, &paths);
+    let _strays = Strays(run.pids("games"));
+    let reaper = run.reaper_pid().expect("the stand-in started a reaper");
+    assert!(is_alive(reaper), "reaper alive before quit");
+
+    run.quit();
+    run.wait_for_parent_exit();
+    let quit_at = Instant::now();
+    wait_until("the reaper to exit by itself", || !is_alive(reaper));
+    assert!(
+        quit_at.elapsed() < Duration::from_secs(5),
+        "reaper took {:?} to exit after a graceful quit",
+        quit_at.elapsed()
+    );
+    wait_until("the reaper's disarmed line", || {
+        standin_stderr(&paths).contains("[reaper] disarmed")
+    });
+    assert!(
+        !standin_stderr(&paths).contains("parent gone"),
+        "a graceful quit must not reap: {}",
+        standin_stderr(&paths)
+    );
+    assert_helpers_die_and_game_survives(&run, &paths);
+}
+
+/// A leaked duplicate of the control pipe's write end (here: a sleeper helper holding it as its
+/// stdin) keeps the pipe open after the parent dies, so EOF never arrives. The reaper's
+/// `getppid()` poll is the secondary trigger that still reaps.
+#[cfg(unix)]
+#[test]
+fn sigkill_with_a_leaked_pipe_still_reaps() {
+    let home = FakeHome::new("gamelib-proc-orphans");
+    let paths = Paths::new(&home);
+    let mut run = Run::start_with(&home, &paths, &["--leak-pipe"]);
+    let _strays = Strays(run.pids("games"));
+    let reaper = run.reaper_pid().expect("the stand-in started a reaper");
+    assert_eq!(
+        run.pids("helpers").len(),
+        4,
+        "the sleeper is the fourth helper"
+    );
+    let sleeper = run.pids("helpers")[3];
+    assert!(is_alive(sleeper), "sleeper alive before the kill");
+
+    run.kill_parent();
+    run.wait_for_parent_exit();
+    let killed_at = Instant::now();
+    wait_until("the leaked-pipe reap", || {
+        run.pids("helpers")
+            .iter()
+            .chain(run.pids("grandchildren").iter())
+            .all(|p| !is_alive(*p))
+            && !is_alive(reaper)
+    });
+    assert!(
+        killed_at.elapsed() < Duration::from_secs(8),
+        "the getppid trigger took {:?}",
+        killed_at.elapsed()
+    );
+    assert_helpers_die_and_game_survives(&run, &paths);
+    assert!(standin_stderr(&paths).contains("[reaper] parent gone: signalled "));
+}

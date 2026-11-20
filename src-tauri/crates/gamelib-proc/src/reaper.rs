@@ -192,11 +192,14 @@ static WRITE_FD: OnceLock<i32> = OnceLock::new();
 // Reaper side.
 // ---------------------------------------------------------------------------------------------
 
-/// What the reaper knows: the registered groups (pgid -> (leader start stamp, label)).
+/// The registered groups: pgid -> (leader start stamp, label). A start stamp of 0 means unknown.
+pub type Registry = BTreeMap<i32, (u64, String)>;
+
+/// What the reaper knows.
 #[derive(Default)]
 #[cfg_attr(not(unix), allow(dead_code))]
 struct State {
-    registry: BTreeMap<i32, (u64, String)>,
+    registry: Registry,
     disarmed: bool,
     malformed: usize,
 }
@@ -219,6 +222,24 @@ impl State {
             Next::Eof => {}
         }
     }
+}
+
+/// Which registered groups to signal, and how many were skipped because their leader's pid now
+/// belongs to a different process (a recycled id: signalling its group would hit a stranger).
+///
+/// - recorded start 0 (unknown): signal, there is nothing to compare;
+/// - leader gone (`current_start` is `None`): signal anyway; a group outlives its leader while any
+///   member remains, and an empty group just answers ESRCH;
+/// - leader present with the recorded stamp: signal;
+/// - leader present with a different stamp: skip and count;
+/// - pgid <= 1: never signalled (and not counted: it can only be corruption, not recycling).
+#[cfg_attr(not(unix), allow(dead_code))]
+pub fn plan_reap(
+    registry: &Registry,
+    current_start: impl Fn(i32) -> Option<u64>,
+) -> (Vec<i32>, usize) {
+    let _ = (registry, current_start);
+    (Vec::new(), 0)
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -376,6 +397,42 @@ mod tests {
         assert!(!s.disarmed);
         s.apply(Next::Line("disarm".into()));
         assert!(s.disarmed);
+    }
+
+    fn registry(entries: &[(i32, u64, &str)]) -> Registry {
+        entries
+            .iter()
+            .map(|(pgid, start, label)| (*pgid, (*start, label.to_string())))
+            .collect()
+    }
+
+    #[test]
+    fn plan_reap_skips_and_counts_a_recycled_leader() {
+        let reg = registry(&[(10, 100, "a"), (11, 200, "b")]);
+        let plan = plan_reap(&reg, |pgid| match pgid {
+            10 => Some(999), // the pid now belongs to a different process
+            11 => Some(200),
+            _ => None,
+        });
+        assert_eq!(plan, (vec![11], 1));
+    }
+
+    #[test]
+    fn plan_reap_still_signals_a_group_whose_leader_is_gone() {
+        let reg = registry(&[(12, 300, "c")]);
+        assert_eq!(plan_reap(&reg, |_| None), (vec![12], 0));
+    }
+
+    #[test]
+    fn plan_reap_does_not_check_a_group_with_an_unknown_start() {
+        let reg = registry(&[(13, 0, "d")]);
+        assert_eq!(plan_reap(&reg, |_| Some(5)), (vec![13], 0));
+    }
+
+    #[test]
+    fn plan_reap_never_signals_pgid_one_or_less() {
+        let reg = registry(&[(-5, 0, "x"), (0, 0, "y"), (1, 0, "z"), (2, 0, "ok")]);
+        assert_eq!(plan_reap(&reg, |_| None), (vec![2], 0));
     }
 
     /// A sink the test can read back, shared with the client.
