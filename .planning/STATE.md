@@ -5,10 +5,10 @@ current_phase: 82
 current_phase_name: Guardrails, hygiene and shared safety primitives
 status: executing
 stopped_at: Completed 82-02-PLAN.md
-last_updated: "2026-11-20T07:18:03.632Z"
+last_updated: "2026-11-20T07:22:02.427Z"
 last_activity: 2026-11-20
 last_activity_desc: Phase 82 execution started
-state_head: f4e814f8bd6a7d410f8132c19ba23e3b9ed7247e
+state_head: 23987838e571c3b3744100929aa49877b057669d
 progress:
   total_phases: 27
   completed_phases: 23
@@ -575,6 +575,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | --- | ------------- | ------ | -------- | -------- | ----------- |
 | 261120-p2j | Steam Verify for Mac-native (StartValidatingApp) and bridge games (chunk-level depot repair); Move split to its own todo | 2026-11-20 | 6369f1d3b | — | [261120-p2j-steam-verify-for-mac-native-startvalidat](./quick/261120-p2j-steam-verify-for-mac-native-startvalidat/) |
 | 261120-pp4 | Decommission the custom bridge invite picker now that Steam's own picker passed on CrossOver and Wine-Staging | 2026-11-20 | 7f5e50053 | — | [261120-pp4-decommission-the-custom-bridge-invite-pi](./quick/261120-pp4-decommission-the-custom-bridge-invite-pi/) |
+| 261120-rdo | x86 shim parity for SteamInternal_* and the flat API (D-53-09): tier 1 landed; flat tier for Cat Quest stays open | 2026-11-20 | 23987838e | — | [261120-rdo-x86-shim-parity-for-steaminternal-and-th](./quick/261120-rdo-x86-shim-parity-for-steaminternal-and-th/) |
 
 ## Deferred Items
 
