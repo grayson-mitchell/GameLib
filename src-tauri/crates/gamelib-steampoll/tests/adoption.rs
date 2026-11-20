@@ -1780,3 +1780,56 @@ async fn the_in_flight_instrument_sees_a_second_concurrent_evaluation() {
     assert!(overlap_in(&log, t0).is_some(), "{log:?}");
     assert!(!reading.adopted);
 }
+
+/// Truth 15, the re-watch half. `unwatch` cancels the old task's token but cannot stop the tick
+/// that is already awaiting a slow probe, and a `watch` right after spawns a second task. The two
+/// tasks share one tick gate, so the new task's first tick waits for the old tick to finish
+/// instead of running a second evaluation beside it (it is delayed, not skipped).
+///
+/// The assertions are decided inside the old tick's window, [5000, 13000]. Nothing is asserted
+/// about which task ticks after 13000: the old task's `select!` is not biased between its
+/// cancelled and tick arms, so that count is random.
+#[tokio::test(start_paused = true)]
+async fn rewatching_while_a_slow_tick_is_in_flight_never_runs_two_evaluations_at_once() {
+    const OLD_START: u64 = ADOPTION_TICK_MS;
+    const OLD_FINISH: u64 = ADOPTION_TICK_MS + SLOW_MS;
+    let (r, slow) = slow_rig(Platform::Linux, "pgrep", 1).await;
+    r.script_linux_steam(&[500]);
+    let lib = library();
+    lib.write("480", &handoff_acf("480"));
+    let args = lib.args("480", 0);
+    let t0 = tokio::time::Instant::now();
+    r.watch.watch(args.clone()).unwrap();
+
+    // Tick1's slow pgrep is out from 5000 to 13000.
+    tokio::time::sleep_until(t0 + Duration::from_millis(6_000)).await;
+    assert_eq!(slow.in_flight_now(), 1, "{:?}", slow.log());
+
+    // A cleared record followed by a new one, with no await between. The new task's first tick
+    // is due at 11000, while the old call is still out.
+    assert!(r.watch.unwatch("480"));
+    r.watch.watch(args.clone()).unwrap();
+
+    // 12000: the new task's tick is due and is waiting on the gate, the old call is still out.
+    tokio::time::sleep_until(t0 + Duration::from_millis(12_000)).await;
+    assert_eq!(slow.in_flight_now(), 1, "{:?}", slow.log());
+    assert_eq!(starts(&slow.log(), t0, "pgrep"), vec![OLD_START]);
+
+    tokio::time::sleep_until(t0 + Duration::from_millis(22_000)).await;
+    let log = slow.log();
+    assert_eq!(
+        slow.max_in_flight(),
+        1,
+        "two adoption evaluations ran at once: the re-watch spawned a new task while the old task's slow tick was still in flight: {log:?}"
+    );
+    assert_eq!(overlap_in(&log, t0), None, "{log:?}");
+    let begun = starts(&log, t0, "pgrep");
+    assert_eq!(begun.first(), Some(&OLD_START), "{log:?}");
+    assert!(
+        begun.iter().skip(1).all(|s| *s >= OLD_FINISH),
+        "an evaluation started before the old tick finished at {OLD_FINISH} ms: {log:?}"
+    );
+    // Delayed, not dropped: the new task's delayed tick ran the instant the gate opened.
+    assert_eq!(begun.get(1), Some(&OLD_FINISH), "{log:?}");
+    assert!(r.active());
+}
