@@ -16,7 +16,10 @@
 // gate alone does not keep opt-in DLC out. A depot is skipped when its
 // `config.optionaldlc` names a DLC app whose own `extended.optionaldlc` is "1"
 // and the caller has not named that DLC in `DepotSelectOpts.enabledOptInDlc`. A
-// DLC with no appinfo keeps its depots. The legacy depot-level `optional` /
+// DLC with no appinfo keeps its depots. `buildDepotRefs` passes the DLCs of the
+// opt-in depots that are already installed (quick 261120-tbr), so an installed
+// opt-in DLC stays enabled on update, verify and the update estimate; a fresh
+// install passes none. The legacy depot-level `optional` /
 // `dlcappid` / `systemdefined` flags still do not decide selection (quick
 // 261029-ge1).
 //
@@ -55,7 +58,8 @@ export interface DepotSelectOpts {
   branch?: string
   /** DLC appIds the user has explicitly enabled; their `config.optionaldlc`
    *  depots are selected again. Absent means none (Steam's default, the box
-   *  unticked). `buildDepotRefs` in plan.ts does not pass it. */
+   *  unticked). `buildDepotRefs` in plan.ts passes the DLCs of the opt-in depots
+   *  already installed (see `optInDlcOfInstalledDepots`), and none on a fresh install. */
   enabledOptInDlc?: ReadonlySet<string>
 }
 
@@ -177,6 +181,33 @@ function optInDlcNotEnabled(
   for (const [dlcAppId, dlc] of Object.entries(dlcInfos ?? {})) {
     if (String(dlc?.extended?.optionaldlc) === '1' && !enabled?.has(dlcAppId))
       out.add(dlcAppId)
+  }
+  return out
+}
+
+/**
+ * The DLC appIds (as strings) named by the `config.optionaldlc` of each installed
+ * depot, looked up in the base app's depots and in every DLC app's own depots.
+ * An installed opt-in DLC depot means the user has that DLC enabled (Steam's own
+ * tick, or a GameLib install that carried it), so it is passed as
+ * `enabledOptInDlc` and the depot stays selected. This does not filter on the DLC
+ * app's own `extended.optionaldlc`: `optInDlcNotEnabled` already decides which
+ * DLCs are opt-in, so naming one that is not changes nothing. Ids that are not
+ * all digits are ignored; values are only `String()`-coerced (quick 261120-tbr).
+ */
+export function optInDlcOfInstalledDepots(
+  appinfo: SteamAppInfo,
+  dlcInfos: Record<string, SteamAppInfo> | undefined,
+  installedDepotIds: Iterable<string>
+): Set<string> {
+  const out = new Set<string>()
+  const apps = [appinfo, ...Object.values(dlcInfos ?? {})]
+  for (const id of installedDepotIds) {
+    if (!/^\d+$/.test(id)) continue
+    for (const app of apps) {
+      const dlc = app?.depots?.[id]?.config?.optionaldlc
+      if (dlc !== undefined && dlc !== null && dlc !== '') out.add(String(dlc))
+    }
   }
   return out
 }

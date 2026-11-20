@@ -99,6 +99,10 @@ export interface DownloadSteamDepotsOpts {
   /** Phase 74: run as a chunk-level delta. Installed GIDs as strings read from the raw ACF,
    *  never vdf-parsed (they exceed 2^53). Only depots absent from the branch's full PICS depot list (base + DLC apps) are retired; skipped or unselected (ownership, language, OS) depots stay. */
   delta?: { oldGidByDepot: ReadonlyMap<string, string> }
+  /** Depot ids the ACF records as installed, supplied by verify and the update estimate. With
+   *  `delta.oldGidByDepot`'s keys, an installed `config.optionaldlc` depot marks its opt-in DLC
+   *  enabled in selection, so it stays in the plan (quick 261120-tbr). A fresh install leaves it absent. */
+  installedDepotIds?: ReadonlySet<string>
 }
 
 /** Narrow, ADDITIONAL view of PICS appinfo's `common.name` field — not part of

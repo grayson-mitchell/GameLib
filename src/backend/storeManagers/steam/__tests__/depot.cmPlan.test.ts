@@ -19,7 +19,7 @@ import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { logError, logWarning } from 'backend/logger'
+import { logError, logInfo, logWarning } from 'backend/logger'
 const requestRustInvoke = jest.fn()
 const depotTransport = {
   requestRustInvoke,
@@ -168,6 +168,115 @@ describe('buildDepotRefs', () => {
       wire([depot('111', APP_ID, '9007199254740993')])
       const refs = await buildDepotRefs(APP_ID, BASE_OPTS)
       expect(at(refs.depots, 0).gid).toBe('9007199254740993')
+    })
+  })
+
+  describe('quick 261120-tbr: installed opt-in DLC depots stay selected', () => {
+    const OPT_IN_DEPOT = '381450'
+    const OPT_IN_GID = '3731324120960268617'
+
+    // The real selectAllDepots over a base app that declares an opt-in DLC depot (Dota 2 shape).
+    function wireOptIn(): FakeClient {
+      wire([])
+      jest
+        .mocked(selectAllDepots)
+        .mockImplementation(
+          jest.requireActual<typeof import('../depot/select')>(
+            '../depot/select'
+          ).selectAllDepots
+        )
+      client.licenses = [{ package_id: 0 }]
+      client.getProductInfo.mockResolvedValue({
+        apps: {
+          12345: {
+            appinfo: {
+              extended: { listofdlc: '313250' },
+              depots: {
+                '111': {
+                  config: { oslist: 'windows' },
+                  manifests: { public: { gid: '111000000000', size: 1 } }
+                },
+                [OPT_IN_DEPOT]: {
+                  dlcappid: '313250',
+                  config: {
+                    oslist: 'windows',
+                    osarch: '64',
+                    optionaldlc: '313250'
+                  },
+                  manifests: { public: { gid: OPT_IN_GID, size: 1 } }
+                }
+              }
+            }
+          },
+          313250: { appinfo: { extended: { optionaldlc: '1' } } }
+        },
+        packages: {
+          0: {
+            packageinfo: { appids: [12345, 313250], depotids: [111, 381450] }
+          }
+        },
+        unknownApps: [],
+        unknownPackages: []
+      } as never)
+      return client
+    }
+    const depotIds = (refs: { depots: { depotId: string }[] }) =>
+      refs.depots.map((d) => d.depotId)
+
+    it('a fresh install skips the opt-in depot and passes no enabledOptInDlc', async () => {
+      wireOptIn()
+      const refs = await buildDepotRefs(APP_ID, BASE_OPTS)
+      expect(depotIds(refs)).toEqual(['111'])
+      const selectOpts = jest.mocked(selectAllDepots).mock.calls[0]?.[3]
+      expect(selectOpts).toBeDefined()
+      expect(selectOpts).not.toHaveProperty('enabledOptInDlc')
+    })
+
+    it('an update whose delta lists the installed opt-in depot keeps it, and logs ids only', async () => {
+      wireOptIn()
+      const refs = await buildDepotRefs(APP_ID, {
+        ...BASE_OPTS,
+        delta: {
+          oldGidByDepot: new Map([
+            ['111', '1'],
+            [OPT_IN_DEPOT, '2']
+          ])
+        }
+      })
+      expect(depotIds(refs)).toEqual(
+        expect.arrayContaining(['111', OPT_IN_DEPOT])
+      )
+      const entry = refs.depots.find((d) => d.depotId === OPT_IN_DEPOT)
+      expect(entry?.ownerAppId).toBe(APP_ID)
+      expect(entry?.gid).toBe(OPT_IN_GID)
+      const lines = jest
+        .mocked(logInfo)
+        .mock.calls.map((c) => String(c[0]))
+        .filter((m) => m.includes('installed opt-in DLC'))
+      expect(lines).toHaveLength(1)
+      expect(lines[0]).toContain('313250')
+      expect(lines[0]).toContain(APP_ID)
+      expect(lines[0]).not.toContain('76561198012345678')
+    })
+
+    it('installedDepotIds alone, with no delta, also keeps the opt-in depot', async () => {
+      wireOptIn()
+      const refs = await buildDepotRefs(APP_ID, {
+        ...BASE_OPTS,
+        installedDepotIds: new Set([OPT_IN_DEPOT])
+      })
+      expect(depotIds(refs)).toContain(OPT_IN_DEPOT)
+    })
+
+    it('an update whose delta lists only base content still excludes the opt-in depot', async () => {
+      wireOptIn()
+      const refs = await buildDepotRefs(APP_ID, {
+        ...BASE_OPTS,
+        delta: { oldGidByDepot: new Map([['111', '1']]) }
+      })
+      expect(depotIds(refs)).toEqual(['111'])
+      const selectOpts = jest.mocked(selectAllDepots).mock.calls[0]?.[3]
+      expect(selectOpts).not.toHaveProperty('enabledOptInDlc')
     })
   })
 

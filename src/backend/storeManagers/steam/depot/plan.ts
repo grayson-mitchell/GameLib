@@ -6,6 +6,7 @@ import { prescreenBridgeDepotsRust } from '../depotRust/secondary'
 import { chooseInstallBranch, resolveUserBetaKey } from './betaBranch'
 import {
   selectAllDepots,
+  optInDlcOfInstalledDepots,
   dlcAppIds,
   branchManifestGid,
   type SteamAppInfo,
@@ -450,6 +451,14 @@ function resolveSteamIdentity(
   }
 }
 
+/** The depot ids already installed: the update delta's keys plus the ACF ids verify and the estimate pass. */
+function installedDepotIdsOf(opts: DownloadSteamDepotsOpts): Set<string> {
+  return new Set([
+    ...(opts.delta?.oldGidByDepot.keys() ?? []),
+    ...(opts.installedDepotIds ?? [])
+  ])
+}
+
 export async function buildDepotRefs(
   appId: string,
   opts: DownloadSteamDepotsOpts
@@ -508,10 +517,24 @@ export async function buildDepotRefs(
   )
   throwIfAborted(opts.signal)
 
+  // quick 261120-tbr: an installed opt-in DLC depot means that DLC is enabled, so it stays
+  // selected on update, verify and the update estimate. A fresh install has no installed set.
+  const enabledOptInDlc = optInDlcOfInstalledDepots(
+    appinfo,
+    dlcInfos,
+    installedDepotIdsOf(opts)
+  )
+  if (enabledOptInDlc.size > 0) {
+    logInfo(
+      `buildDepotRefs: installed opt-in DLC ${[...enabledOptInDlc].join(',')} enabled for app ${appId}`,
+      LogPrefix.Steam
+    )
+  }
   const selectOpts: DepotSelectOpts = {
     os: opts.os,
     language: opts.language,
-    branch
+    branch,
+    ...(enabledOptInDlc.size > 0 ? { enabledOptInDlc } : {})
   }
   const descriptors = selectAllDepots(
     appinfo,

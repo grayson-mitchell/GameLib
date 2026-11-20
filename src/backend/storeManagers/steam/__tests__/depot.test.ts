@@ -26,6 +26,7 @@ import { isDecodeStageError } from '../depotDecodeErrors'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { logInfo } from 'backend/logger'
 import {
+  optInDlcOfInstalledDepots,
   selectAllDepots,
   selectDepots,
   type OwnedSets,
@@ -266,6 +267,59 @@ describe('config.optionaldlc opt-in DLC (quick 261120-st3)', () => {
       )
     )
     expect(out).toContain('20902')
+  })
+
+  describe('installed opt-in DLC depots (quick 261120-tbr)', () => {
+    it('names the DLC of every installed depot that carries config.optionaldlc', () => {
+      expect(
+        optInDlcOfInstalledDepots(dota, dlcInfos(), [
+          '381450',
+          '401535',
+          '401536'
+        ])
+      ).toEqual(new Set(['313250', '476580']))
+    })
+
+    it('ignores an unknown id, and a depot without config.optionaldlc enables nothing', () => {
+      expect(
+        optInDlcOfInstalledDepots(dota, dlcInfos(), ['401531', '999999999'])
+      ).toEqual(new Set(['401530']))
+      expect(optInDlcOfInstalledDepots(dota, dlcInfos(), ['373303'])).toEqual(
+        new Set()
+      )
+    })
+
+    it('finds a depot declared in a DLC app own depots, with a numeric config.optionaldlc', () => {
+      const base: SteamAppInfo = { depots: {} }
+      const infos: Record<string, SteamAppInfo> = {
+        '313250': {
+          extended: { optionaldlc: '1' },
+          depots: { '381450': { config: { optionaldlc: 313250 } } }
+        }
+      }
+      expect(optInDlcOfInstalledDepots(base, infos, ['381450'])).toEqual(
+        new Set(['313250'])
+      )
+    })
+
+    it('re-selects the installed opt-in depot through selectAllDepots and still excludes 401531', () => {
+      const out = ids(
+        selectAllDepots(
+          dota,
+          dlcInfos(),
+          package0(),
+          {
+            ...winOpts,
+            enabledOptInDlc: optInDlcOfInstalledDepots(dota, dlcInfos(), [
+              '381450'
+            ])
+          },
+          '570'
+        )
+      )
+      expect(out).toContain('381450')
+      expect(out).not.toContain('401531')
+    })
   })
 })
 
