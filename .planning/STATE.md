@@ -5,10 +5,10 @@ current_phase: 82
 current_phase_name: Guardrails, hygiene and shared safety primitives
 status: executing
 stopped_at: Completed 82-05-PLAN.md
-last_updated: "2026-11-20T08:08:07.587Z"
+last_updated: "2026-11-20T08:25:18.591Z"
 last_activity: 2026-11-20
 last_activity_desc: Phase 82 execution started
-state_head: b6962bb8c9dbe42945f53d3c90ecb869d33a8384
+state_head: 2111cec0bb4d9d213dd01524ed0b648b823ed6e1
 progress:
   total_phases: 27
   completed_phases: 23
@@ -78,7 +78,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 Phase: 82 (Guardrails, hygiene and shared safety primitives) — EXECUTING
 Plan: 6 of 16
 Status: Ready to execute
-Last activity: 2026-11-20 — Phase 82 execution started
+Last activity: 2026-11-20 - Completed quick task 261120-tbr: Treat installed opt-in DLC depots as enabled in Steam depot selection
 
 ## Native-Install Arc Phase Map (21–25)
 
@@ -588,6 +588,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261120-pp4 | Decommission the custom bridge invite picker now that Steam's own picker passed on CrossOver and Wine-Staging | 2026-11-20 | 7f5e50053 | — | [261120-pp4-decommission-the-custom-bridge-invite-pi](./quick/261120-pp4-decommission-the-custom-bridge-invite-pi/) |
 | 261120-rdo | x86 shim parity for SteamInternal_* and the flat API (D-53-09): tier 1 landed; flat tier for Cat Quest stays open | 2026-11-20 | 23987838e | — | [261120-rdo-x86-shim-parity-for-steaminternal-and-th](./quick/261120-rdo-x86-shim-parity-for-steaminternal-and-th/) |
 | 261120-st3 | Honour config.optionaldlc in Steam depot selection: depots of opt-in DLC (DLC app extended.optionaldlc=1, e.g. Dota 2 Workshop Tools 381450, 5.9 GB) are no longer selected; package 0 grants them to every account. DepotSelectOpts.enabledOptInDlc re-includes a named DLC (no caller yet). Follow-up todo filed for the enable path and the update/ACF drop. | 2026-11-20 | 5687a2970 | — | [261120-st3-honour-config-optionaldlc-in-steam-depot](./quick/261120-st3-honour-config-optionaldlc-in-steam-depot/) |
+| 261120-tbr | Treat installed opt-in DLC depots as enabled in Steam depot selection (update, verify, update estimate) | 2026-11-20 | 2111cec0b | — | [261120-tbr-opt-in-dlc-depots-treat-installed-opt-in](./quick/261120-tbr-opt-in-dlc-depots-treat-installed-opt-in/) |
 
 ## Deferred Items
 
