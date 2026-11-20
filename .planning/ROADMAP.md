@@ -348,10 +348,31 @@ Plans:
   3. Quitting GameLib, and SIGKILL of the parent, leaves no orphaned helper process on macOS, Windows and Linux (launched games excepted), proven on all three OS legs
   4. `gamelib-core` (paths, emitter, clock, `ProcessRunner`, `Shutdown` token) and `gamelib-proc` kill-tree exist, and the TS shim the first migrated channel used is deleted in this phase
 
-**Plans:** 0 plans
+**Plans:** 11 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 83 to break down)
+**Wave 1**
+- [ ] 83-01-PLAN.md — Live macOS Force Quit gate contract and Structural Reachability Review, authored before code (run by 83-11)
+- [ ] 83-02-PLAN.md — gamelib-core: Clock/ProcessRunner hoist, Paths, FrontendEmitter, Shutdown with the 5 s / 1.5 s exit budget
+- [ ] 83-03-PLAN.md — Native invoke seam: getHeroicVersion served in Rust from the channel manifest; its TS deleted
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 83-04-PLAN.md — gamelib-proc: spawn classes, kill-tree, ChildSet, per-helper Windows Job, ProcRunner, stand-in harness (graceful leg)
+- [ ] 83-05-PLAN.md — Seam gates: IPC schema snapshot diff gate, one-owner census, *PortComplete template, version parity
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 83-06-PLAN.md — Native send seam: openExternalUrl FIFO slice queue and Rust URL check; its TS deleted; open_external command deleted (D-17)
+- [ ] 83-07-PLAN.md — Unix reaper, SIGKILL legs, negative control and Node stand-in leg
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 83-08-PLAN.md — Shell SIGKILL wiring: reaper mode and start, sidecar group registered, Windows Job and Rust helpers via gamelib-proc, D-15 recorded
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 83-09-PLAN.md — One exit deadline: handle_exit on run_exit, shutdown_child via gamelib-proc, gates rewritten, D-14 convention
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 83-10-PLAN.md — Phase proof: clean-worktree gates, push checkpoint, three-OS CI proof
+- [ ] 83-11-PLAN.md — Run the live macOS gate (Force Quit, graceful quit, reaper visibility, native channels)
 
 ### Phase 84: Logger
 
