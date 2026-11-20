@@ -11,6 +11,8 @@ path = "src/lib.rs"
 
 [dependencies]
 gamelib-steamfiles = { path = "../gamelib-steamfiles" }
+# Phase 83 (D-08): the mac-owned helper is spawned as a gamelib-proc Helper.
+gamelib-proc = { path = "../gamelib-proc" }
 # CF-02: pinned by git rev, never a branch. Codeberg main 767481ad carries the anonymous-logon fix that
 # crates.io 0.5.x lacks; revisit when steam-vent 0.6.0 is published.
 steam-vent = { git = "https://codeberg.org/steam-vent/steam-vent", rev = "767481ad4eb91dd73f1c70bea6b15f8123a0a040" }

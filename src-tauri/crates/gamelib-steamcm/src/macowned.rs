@@ -159,14 +159,16 @@ async fn run_helper(
     // The SteamID64 goes on argv, so other local users can see it in `ps`. That is accepted:
     // a SteamID64 is public (it is in every Steam profile URL) and is not a credential. It must
     // still never be logged (A/IN-08, operator decision 2026-11-16).
-    let child = Command::new(helper_path)
-        .args(["--steam-owned-apps", "--expect-steamid"])
+    let mut cmd = Command::new(helper_path);
+    cmd.args(["--steam-owned-apps", "--expect-steamid"])
         .arg(steam_id.to_string())
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .kill_on_drop(true)
-        .spawn()
+        .stderr(Stdio::piped());
+    // Phase 83 (D-08): a gamelib-proc Helper (own process group, kill_on_drop, registered with the
+    // exit path and the SIGKILL reaper), so a helper holding the Steam session cannot outlive
+    // GameLib. The guard unregisters it once `wait_with_output` has returned.
+    let (child, _guard) = gamelib_proc::spawn::spawn_helper_tokio(&mut cmd, "mac-owned")
         .map_err(|_| FallbackReason::HelperFailed)?;
     // A timeout drops the future, and `kill_on_drop` kills the child.
     let out = match tokio::time::timeout(bound, child.wait_with_output()).await {

@@ -1,13 +1,10 @@
-//! Process-wide runtime (R4) and the real `ProcessRunner` / `Clock`.
+//! Process-wide runtime (R4) and the real `Clock`.
 //!
-//! The runtime is crate-private and exposed only as a `Handle`. Children are spawned argv-only,
-//! never with an `env` literal, with `kill_on_drop(true)` and a null stdin.
+//! The runtime is crate-private and exposed only as a `Handle`. The production `ProcessRunner` is
+//! `gamelib_proc::runner::ProcRunner` (Phase 83, D-14), built by the shell; the crate's own
+//! real-spawn runner below exists only under the `testing` feature.
 
-use crate::host::{BoxFuture, ProcessRunner, RunOutput, StreamingChild};
-use std::process::Stdio;
 use std::sync::OnceLock;
-use std::time::Duration;
-use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::runtime::{Handle, Runtime};
 
 fn runtime() -> &'static Runtime {
@@ -30,66 +27,84 @@ pub fn handle() -> Handle {
 
 pub use gamelib_core::clock::SystemClock;
 
-pub struct TokioRunner;
+/// A real-spawn `ProcessRunner` for this crate's own tests (argv only, null stdin, `kill_on_drop`).
+/// Production spawns go through `gamelib_proc::runner::ProcRunner` (D-14), which also registers
+/// every child with the exit path and the reaper, so this runner is compiled only with `testing`.
+#[cfg(feature = "testing")]
+pub use tokio_runner::TokioRunner;
 
-impl ProcessRunner for TokioRunner {
-    fn run(&self, program: &str, argv: Vec<String>, timeout: Duration) -> BoxFuture<RunOutput> {
-        let program = program.to_string();
-        Box::pin(async move {
-            let mut cmd = tokio::process::Command::new(&program);
+#[cfg(feature = "testing")]
+mod tokio_runner {
+    use crate::host::{BoxFuture, ProcessRunner, RunOutput, StreamingChild};
+    use std::process::Stdio;
+    use std::time::Duration;
+    use tokio::io::{AsyncBufReadExt, BufReader};
+
+    pub struct TokioRunner;
+
+    impl ProcessRunner for TokioRunner {
+        fn run(&self, program: &str, argv: Vec<String>, timeout: Duration) -> BoxFuture<RunOutput> {
+            let program = program.to_string();
+            Box::pin(async move {
+                let mut cmd = tokio::process::Command::new(&program);
+                cmd.args(&argv)
+                    .stdin(Stdio::null())
+                    .stdout(Stdio::piped())
+                    .stderr(Stdio::piped())
+                    .kill_on_drop(true);
+                let Ok(child) = cmd.spawn() else {
+                    return RunOutput::default();
+                };
+                // On timeout the wait future is dropped, and kill_on_drop kills the child.
+                match tokio::time::timeout(timeout, child.wait_with_output()).await {
+                    Ok(Ok(out)) => RunOutput {
+                        code: out.status.code(),
+                        stdout: String::from_utf8_lossy(&out.stdout).into_owned(),
+                        stderr: String::from_utf8_lossy(&out.stderr).into_owned(),
+                    },
+                    _ => RunOutput::default(),
+                }
+            })
+        }
+
+        fn spawn_streaming(
+            &self,
+            program: &str,
+            argv: Vec<String>,
+        ) -> std::io::Result<StreamingChild> {
+            let mut cmd = tokio::process::Command::new(program);
             cmd.args(&argv)
                 .stdin(Stdio::null())
                 .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
+                .stderr(Stdio::null())
                 .kill_on_drop(true);
-            let Ok(child) = cmd.spawn() else {
-                return RunOutput::default();
-            };
-            // On timeout the wait future is dropped, and kill_on_drop kills the child.
-            match tokio::time::timeout(timeout, child.wait_with_output()).await {
-                Ok(Ok(out)) => RunOutput {
-                    code: out.status.code(),
-                    stdout: String::from_utf8_lossy(&out.stdout).into_owned(),
-                    stderr: String::from_utf8_lossy(&out.stderr).into_owned(),
-                },
-                _ => RunOutput::default(),
-            }
-        })
-    }
-
-    fn spawn_streaming(&self, program: &str, argv: Vec<String>) -> std::io::Result<StreamingChild> {
-        let mut cmd = tokio::process::Command::new(program);
-        cmd.args(&argv)
-            .stdin(Stdio::null())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::null())
-            .kill_on_drop(true);
-        let mut child = cmd.spawn()?;
-        let stdout = child
-            .stdout
-            .take()
-            .ok_or_else(|| std::io::Error::other("no stdout"))?;
-        let (tx, rx) = tokio::sync::mpsc::channel(256);
-        let kill = tokio_util::sync::CancellationToken::new();
-        let token = kill.clone();
-        tokio::spawn(async move {
-            let mut lines = BufReader::new(stdout).lines();
-            loop {
-                tokio::select! {
-                    _ = token.cancelled() => break,
-                    line = lines.next_line() => match line {
-                        Ok(Some(l)) => {
-                            if tx.send(l).await.is_err() {
-                                break;
+            let mut child = cmd.spawn()?;
+            let stdout = child
+                .stdout
+                .take()
+                .ok_or_else(|| std::io::Error::other("no stdout"))?;
+            let (tx, rx) = tokio::sync::mpsc::channel(256);
+            let kill = tokio_util::sync::CancellationToken::new();
+            let token = kill.clone();
+            tokio::spawn(async move {
+                let mut lines = BufReader::new(stdout).lines();
+                loop {
+                    tokio::select! {
+                        _ = token.cancelled() => break,
+                        line = lines.next_line() => match line {
+                            Ok(Some(l)) => {
+                                if tx.send(l).await.is_err() {
+                                    break;
+                                }
                             }
-                        }
-                        _ => break,
-                    },
+                            _ => break,
+                        },
+                    }
                 }
-            }
-            // Dropping `child` here kills it (kill_on_drop).
-            drop(child);
-        });
-        Ok(StreamingChild { lines: rx, kill })
+                // Dropping `child` here kills it (kill_on_drop).
+                drop(child);
+            });
+            Ok(StreamingChild { lines: rx, kill })
+        }
     }
 }

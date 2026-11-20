@@ -491,7 +491,7 @@ pub(crate) fn install_steampoll_host(app: &AppHandle) {
     });
     gamelib_steampoll::dispatch::facade::install(
         host,
-        Arc::new(gamelib_steampoll::runtime::TokioRunner),
+        Arc::new(gamelib_proc::runner::ProcRunner::helper("steampoll")),
         Arc::new(gamelib_steampoll::runtime::SystemClock),
         profile,
     );
