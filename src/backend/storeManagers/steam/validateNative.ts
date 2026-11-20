@@ -26,13 +26,27 @@ import { readRunningAppId } from './library/runningPoll'
 const STATE_FILES_MISSING = 0x20
 const STATE_FILES_CORRUPT = 0x80
 
+/** The collaborators a validate run reaches; a test passes fakes instead of mocking the modules. */
+interface ValidateNativeCollaborators {
+  requestValidate: typeof requestSteamValidateApp
+  readRunningApp: typeof readRunningAppId
+  createRun: typeof createSteamInstallAppRun
+}
+
+const defaultCollaborators: ValidateNativeCollaborators = {
+  requestValidate: requestSteamValidateApp,
+  readRunningApp: readRunningAppId,
+  createRun: createSteamInstallAppRun
+}
+
 export async function validateRegisteredSteamGame(
-  steamGame: SteamGame
+  steamGame: SteamGame,
+  collab: ValidateNativeCollaborators = defaultCollaborators
 ): Promise<ExecResult> {
   const { deps, appId } = steamGame
   const title = steamGame.getGameInfo().title
 
-  const runningAppId = await readRunningAppId(deps)
+  const runningAppId = await collab.readRunningApp(deps)
   if (runningAppId !== 0 && String(runningAppId) === appId) {
     throw new Error(`Quit ${title} before verifying it.`)
   }
@@ -43,12 +57,12 @@ export async function validateRegisteredSteamGame(
     ? deps.aborts.getSignal(appId)
     : deps.aborts.create(appId).signal
   try {
-    const outcome = await requestSteamValidateApp(
+    const outcome = await collab.requestValidate(
       appId,
       { wait: true, signal },
       {
         paths: deps.paths,
-        run: createSteamInstallAppRun({ runner: deps.runner })
+        run: collab.createRun({ runner: deps.runner })
       }
     )
 

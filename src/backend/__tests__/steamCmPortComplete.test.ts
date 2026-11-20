@@ -68,6 +68,9 @@ const SELF = join(__dirname, 'steamCmPortComplete.test.ts')
 function walk(dir: string, out: string[]): void {
   for (const e of readdirSync(dir, { withFileTypes: true })) {
     if (e.name === 'node_modules' || e.name === '__tests__') continue
+    // meta/__tests__/runTsSignals.test.ts writes meta/runTs.__probe__.cjs for a moment; a scan that
+    // lists the file and then reads it after the unlink died with ENOENT under full-suite load.
+    if (e.name.includes('.__probe__.')) continue
     const full = join(dir, e.name)
     if (e.isDirectory()) walk(full, out)
     else if (/\.(ts|tsx|cjs|js)$/.test(e.name)) out.push(full)

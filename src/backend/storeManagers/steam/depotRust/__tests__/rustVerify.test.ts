@@ -7,13 +7,12 @@
 import { createTestAppRuntime } from 'backend/testUtils/testAppRuntime'
 import { createTestSteamInstallRuntime } from 'backend/testUtils/testSteamInstallRuntime'
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
+import { initHeadless } from 'backend/logger'
 import { mkdtempSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
-import { sendGameStatusUpdate } from 'backend/utils'
 import { createMockSteamUser } from 'backend/testUtils/testSteamUser'
 import { mockLeaseOk, mockOpenLease } from '../../__tests__/depotLeaseMocks'
-import { selectAllDepots } from '../../depot/select'
 import { verifyInstalledDepotsRust } from '../verify'
 import { createStubRustDepot } from './fixtures/stubRustDepot'
 
@@ -25,28 +24,6 @@ const depotTransport = {
 }
 const steamUser = createMockSteamUser()
 
-jest.mock('backend/logger', () => ({
-  logInfo: jest.fn(),
-  logError: jest.fn(),
-  logWarning: jest.fn(),
-  logDebug: jest.fn(),
-  getRunnerLogWriter: jest.fn().mockReturnValue({}),
-  LogPrefix: { Steam: 'Steam', Backend: 'Backend' }
-}))
-jest.mock('backend/utils', () => ({
-  getFileSize: jest.fn(),
-  sendProgressUpdate: jest.fn(),
-  sendGameStatusUpdate: jest.fn()
-}))
-jest.mock('../../depot/select', () => ({
-  ...jest.requireActual('../../depot/select'),
-  selectAllDepots: jest.fn()
-}))
-jest.mock('i18next', () => ({
-  __esModule: true,
-  default: { t: (_key: string, fallback = '') => fallback }
-}))
-
 const invokeMock = requestRustInvoke as unknown as jest.Mock
 const APP_ID = '12345'
 const INSTALLED_222 = '5555555555555555555'
@@ -56,16 +33,34 @@ let client: ReturnType<typeof makeClient>
 
 function makeClient() {
   return {
-    licenses: [] as Array<{ package_id: number }>,
+    // One owned package grants depot 222: the real selectAllDepots picks it from the app info.
+    licenses: [{ package_id: 7 }] as Array<{ package_id: number }>,
     steamID: { getSteamID64: jest.fn().mockReturnValue('76561198012345678') },
-    getProductInfo: jest.fn((ids: number[]) => {
+    getProductInfo: jest.fn((ids: number[], packageIds: number[] = []) => {
+      if (packageIds.length > 0) {
+        return Promise.resolve({
+          apps: {},
+          packages: {
+            7: { packageinfo: { appids: [Number(APP_ID)], depotids: [222] } }
+          }
+        })
+      }
       const id = ids[0] ?? 0
+      // The branch's CURRENT plan: depot 222 at a NEWER manifest, no depot 333.
       return Promise.resolve({
         apps: {
           [id]: {
             appinfo: {
               common: { name: 'Some Game' },
-              depots: { branches: { public: { buildid: 999 } } },
+              depots: {
+                '222': {
+                  manifests: {
+                    public: { gid: '9999999999999999999', size: 0 }
+                  },
+                  config: { oslist: 'windows' }
+                },
+                branches: { public: { buildid: 999 } }
+              },
               config: { installdir: 'SomeGame' },
               extended: {}
             }
@@ -104,6 +99,9 @@ const opts = (over: Record<string, unknown> = {}) => ({
   ...over
 })
 
+// The real logger needs a writer; jest.setupContainment keeps the log file under a fake HOME.
+beforeAll(() => initHeadless())
+
 beforeEach(() => {
   jest.resetAllMocks()
   steamapps = mkdtempSync(join(tmpdir(), 'rustverify-'))
@@ -114,15 +112,6 @@ beforeEach(() => {
     .mockReturnValue('76561198012345678')
   mockLeaseOk(steamUser)
   mockOpenLease(steamUser)
-  // The branch's CURRENT plan: depot 222 at a NEWER manifest, no depot 333.
-  jest.mocked(selectAllDepots).mockReturnValue([
-    {
-      id: '222',
-      manifest: '9999999999999999999',
-      size: 0,
-      ownerAppId: APP_ID
-    }
-  ])
 })
 
 afterEach(() => {
@@ -166,9 +155,10 @@ describe('verifyInstalledDepotsRust (quick 261120-p2j)', () => {
     )
     expect(by.get('333')?.key).toBe(Buffer.alloc(32, 333 % 250).toString('hex'))
     // The progress bridge was created in repair mode.
-    expect(jest.mocked(sendGameStatusUpdate).mock.calls[0]?.[1]).toMatchObject({
-      status: 'repairing'
-    })
+    expect(depotTransport.sendFrontendMessage).toHaveBeenCalledWith(
+      'gameStatusUpdate',
+      expect.objectContaining({ appName: APP_ID, status: 'repairing' })
+    )
   })
 
   it('keeps a null buildid when the ACF recorded none', async () => {

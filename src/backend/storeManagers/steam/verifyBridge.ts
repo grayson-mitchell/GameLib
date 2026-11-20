@@ -23,13 +23,31 @@ import { resolveBridgeUpdateContext } from './depotRust/updateEstimate'
 import { readAcfInstalledDepots } from './acfInstalledDepots'
 import { isBridgeGameRunning } from './updateBridge'
 
+/** The collaborators a bridge verify reaches; a test passes fakes instead of mocking the modules. */
+interface VerifyBridgeCollaborators {
+  isRunning: typeof isBridgeGameRunning
+  resolveContext: typeof resolveBridgeUpdateContext
+  readInstalledDepots: typeof readAcfInstalledDepots
+  verifyDepots: typeof verifyInstalledDepotsRust
+  runFollowUps: typeof runBridgeUpdateFollowUps
+}
+
+const defaultCollaborators: VerifyBridgeCollaborators = {
+  isRunning: isBridgeGameRunning,
+  resolveContext: resolveBridgeUpdateContext,
+  readInstalledDepots: readAcfInstalledDepots,
+  verifyDepots: verifyInstalledDepotsRust,
+  runFollowUps: runBridgeUpdateFollowUps
+}
+
 export async function verifyBridgeGame(
-  steamGame: SteamGame
+  steamGame: SteamGame,
+  collab: VerifyBridgeCollaborators = defaultCollaborators
 ): Promise<ExecResult> {
   const { deps, appId } = steamGame
   const title = steamGame.getGameInfo().title || appId
 
-  if (isBridgeGameRunning(steamGame)) {
+  if (collab.isRunning(steamGame)) {
     throw new Error(`Quit ${title} before verifying it.`)
   }
 
@@ -45,7 +63,7 @@ export async function verifyBridgeGame(
     await existing.promise.catch(() => undefined)
   }
 
-  const run = runBridgeVerify(steamGame, title)
+  const run = runBridgeVerify(steamGame, title, collab)
   const entry = {
     promise: run.then(
       (): InstallResult => ({ status: 'done' }),
@@ -68,13 +86,18 @@ export async function verifyBridgeGame(
 
 async function runBridgeVerify(
   steamGame: SteamGame,
-  title: string
+  title: string,
+  collab: VerifyBridgeCollaborators
 ): Promise<ExecResult> {
   const { deps, appId } = steamGame
 
-  const ctx = await resolveBridgeUpdateContext(steamGame)
+  const ctx = await collab.resolveContext(steamGame)
   if ('error' in ctx) throw new Error(ctx.error)
-  const installed = await readAcfInstalledDepots(deps, ctx.steamappsDir, appId)
+  const installed = await collab.readInstalledDepots(
+    deps,
+    ctx.steamappsDir,
+    appId
+  )
   if (!installed) throw new Error('The install manifest could not be read')
 
   const reused =
@@ -87,7 +110,7 @@ async function runBridgeVerify(
       `verifyBridgeGame: appId ${appId} starting verify (branch ${ctx.branch}, build ${installed.buildid ?? 'unknown'}, ${installed.installedDepots.length} depot(s))`,
       LogPrefix.Steam
     )
-    const outcome = await verifyInstalledDepotsRust(appId, {
+    const outcome = await collab.verifyDepots(appId, {
       installRuntime: deps.steamInstallRuntime,
       steamUser: deps.steamUser,
       config: deps.config,
@@ -104,7 +127,7 @@ async function runBridgeVerify(
 
     // The job was attempted: re-place the shim and re-check the shared-redist ledger whatever
     // the outcome.
-    const report = await runBridgeUpdateFollowUps(steamGame, {
+    const report = await collab.runFollowUps(steamGame, {
       changedPaths: [],
       fullReconcile: true,
       bridgeBottleName: ctx.bridgeBottleName

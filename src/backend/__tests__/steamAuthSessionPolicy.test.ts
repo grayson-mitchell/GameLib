@@ -83,6 +83,10 @@ const ACQUIRE_AUTH_ALLOW = [
   // only from an explicit "Show update size" click or from updateBridgeGame itself, never on
   // refresh or page open (updateInfo.ts gates it on computeSize).
   `${S}depotRust/updateEstimate.ts`,
+  // quick 261120-p2j: the bridge Verify job takes the same depot lease for its CM half (appinfo,
+  // keys for installed depots, request codes) before the chunk-level repair in Rust. It runs only
+  // from an explicit Verify click (verifyBridge.ts), never on refresh or page open.
+  `${S}depotRust/verify.ts`,
   INSTALL,
   INSTALL_DEPOT,
   INSTALL_BRIDGE
