@@ -4,11 +4,11 @@ milestone: v0.10
 current_phase: 82
 current_phase_name: Guardrails, hygiene and shared safety primitives
 status: executing
-stopped_at: Completed 82-05-PLAN.md
-last_updated: "2026-11-20T08:25:18.591Z"
+stopped_at: Completed 82-06-PLAN.md
+last_updated: "2026-11-20T08:37:04.145Z"
 last_activity: 2026-11-20
 last_activity_desc: Phase 82 execution started
-state_head: 2111cec0bb4d9d213dd01524ed0b648b823ed6e1
+state_head: 5aa82aac0cff393ce1a3efdd09304c6dd962803c
 progress:
   total_phases: 27
   completed_phases: 23
@@ -76,7 +76,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 82 (Guardrails, hygiene and shared safety primitives) — EXECUTING
-Plan: 6 of 16
+Plan: 7 of 16
 Status: Ready to execute
 Last activity: 2026-11-20 - Completed quick task 261120-tbr: Treat installed opt-in DLC depots as enabled in Steam depot selection
 
@@ -312,6 +312,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 82 P03 | 16 min | 3 tasks | 17 files |
 | Phase 82 P04 | 25 min | 1 tasks | 1 files |
 | Phase 82 P05 | 40 min | 2 tasks | 24 files |
+| Phase 82 P06 | 55min | 2 tasks | 23 files |
 
 ## Accumulated Context
 
@@ -541,6 +542,10 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 82]: 82-05: the rustSafety adapter validates a reply against its request (item count and ids match the targets, overall equals the fold of the items, outcome agrees with the verdict), so a shape-valid but inconsistent reply reads as bad-reply, never permission.
 - [Phase 82]: 82-05: genIpcContract maps anyOf [X, null] to Option<X> (and nothing else in anyOf), so knownInstalls: null (unreadable list, answered unknown by the crate) crosses the zod/serde boundary instead of becoming an empty list.
 - [Phase 82]: 82-05: sideload known-install path is dirname(install.executable) because sideload entries carry no install_path; legendary, gog, nile and steam use install.install_path; entries with no resolvable path are skipped.
+- [Phase 82]: Refusal toast has no auto-hide and no countdown: the user must acknowledge whether anything was deleted
+- [Phase 82]: Error colour is the leading stripe only (--status-danger); the icon keeps the shared accent because the stack stylesheet gate forbids restyling it
+- [Phase 82]: A delete-failed reason is never paired with 'Nothing was deleted', even when marked refused (T-82-19)
+- [Phase 82]: Renderer refusal queue is capped at the newest five notices
 
 ### Pending Todos
 
@@ -786,8 +791,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-20T08:08:04.185Z
-Stopped at: Completed 82-05-PLAN.md
+Last session: 2026-11-20T08:37:04.111Z
+Stopped at: Completed 82-06-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
