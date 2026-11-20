@@ -301,10 +301,40 @@ Milestone v0.11 Node Sidecar Retirement. Planned 2026-11-17 alongside v0.10; sta
   4. Uninstalling a game never deletes a sibling game co-installed beside it, proven by an adversarial path table (nested installdir, `.\x`, `C:\x`, UNC, symlink, case, NFC/NFD) on macOS, Windows and Linux
   5. The `utils.ts` and `bootstrap.ts` responsibility inventory and the milestone-wide state-ownership table are committed, and the zero-risk deletions (type-only files, dead exports, `legendary/commands/*`, `CI=e2e` mocks; `fileStore.ts` only after the live-or-dead check) are gone
 
-**Plans:** 0 plans
+**Plans:** 16 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 82 to break down)
+**Wave 1**
+- [ ] 82-01-PLAN.md — Re-measure the red set from a clean worktree, fix the jest reds and the D-20 Rust CI reds, open 82-TEST-LEDGER.md
+- [ ] 82-02-PLAN.md — Floor + empty-input guards on every census-style gate (D-05)
+- [ ] 82-03-PLAN.md — gamelib-safety + gamelib-testutil crates, adversarial path table, TS wire mirror, first CI step, README rules
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 82-04-PLAN.md — Delete fileStore.ts after the live-or-dead check; D-05 guard on diPhaseGates
+- [ ] 82-05-PLAN.md — Shell arms + IPC contract + fail-closed rustSafety adapter, known installs, protected roots, test tooling
+- [ ] 82-06-PLAN.md — Refusal notice vertical slice (FrontendMessage, store, toast, i18n)
+- [ ] 82-13-PLAN.md — Delete proxy-types.ts and the dead src/backend exports/types, lowering the knip baseline
+- [ ] 82-14-PLAN.md — utils.ts/bootstrap.ts responsibility inventory and the milestone-wide state-ownership table
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 82-07-PLAN.md — Guard uninstall pre-flight, prefix, GOG, sideload (D-22) and resetHeroic
+- [ ] 82-08-PLAN.md — Guard Steam bridge uninstall and per-game bridge bottle removal
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 82-09-PLAN.md — Guard Steam bottle-direct uninstall, copy removal and cancel-delete; Steam delete gate
+- [ ] 82-10-PLAN.md — Delete the gogdl CI=e2e stub end to end (tracer for the e2e surface)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 82-15-PLAN.md — Delete the legendary and nile CI=e2e stubs and the TestSync kind
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 82-16-PLAN.md — Remove the remaining CI === 'e2e' branches; e2eSurfaceGone zero-hit gate
+
+**Wave 7** *(blocked on Wave 6 completion)*
+- [ ] 82-11-PLAN.md — Final clean-worktree proof (explicit provenance), push checkpoint, three-OS CI proof
+
+**Wave 8** *(blocked on Wave 7 completion)*
+- [ ] 82-12-PLAN.md — Per-suite retirement decisions (D-03) and ledger close
 
 ### Phase 83: Native seam, gamelib-core and process/shutdown contract
 

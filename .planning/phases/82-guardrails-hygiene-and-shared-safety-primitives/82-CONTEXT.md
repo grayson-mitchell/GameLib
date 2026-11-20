@@ -66,6 +66,13 @@ No new user-facing capability. The only user-visible change is a refusal notice 
 - **`2026-11-18-themetokens-render-site-census-finds-37-sites-expects-34.md`**: `themeTokens.test.ts` finds 37 `.is-link` render sites against a pin of 34. It's a red suite under D-01, so fix it (or retire it with approval, per D-03).
 - **`2026-11-17-backend-di-jestmock-ratchet-red-five-frontend-tests.md`**: `backend-di-ceilings` jestMock ratchet red on five frontend tests (NoticeStackTwoToast, steamLoginPollLifecycle, GameStatus.bottleWaiting/.redistSpinner/.steamUpdate). It's a ratchet gate under D-01, and the fix is rewriting the tests to drop `jest.mock`, never raising the baseline. One earlier attempt (dropping the SteamUpdateInfo stub) broke suite load, so read the todo first.
 
+### Post-research rulings (operator, 2026-11-20, during /gsd-plan-phase 82)
+- **D-19:** `legendary/commands/*` and the FEATURES "type-only files" are **deferred to Phase 91**. Research found live importers (10 for `legendary/commands`, runtime zod brands in `base.ts`). Phase 82's criterion-5 deletions are the truly dead set: `fileStore.ts` (proven dead by esbuild metafile), `proxy-types.ts`, the dead `src/backend` exports in the knip baseline, and the `CI=e2e` surface. `82-TEST-LEDGER.md` records why the other criterion-5 items moved.
+- **D-20:** The Rust CI reds are **in scope**. The macOS clippy `deprecated` at `gamelib-steampoll/tests/adoption.rs` gets fixed. The three Windows `gamelib-depot` `tests/fetch.rs` failures get fixed from CI logs, or proposed for retirement under D-03 with a `checkpoint:decision`. The new crates also get their own first CI step, so D-18 stays provable either way.
+- **D-21:** Symlinked install root: **gamelib-safety unlinks per D-15. Phase 80's `gamelib-steampoll` `guard_install_root` keeps refusing.** The README rules section and the ledger state the difference.
+- **D-22:** Sideload uninstall is **stricter**. It refuses with a notice unless the executable's folder is dedicated to the game. Refusal triggers when that folder is a protected root, contains another known install, or looks shared (e.g. other top-level executables or app bundles). The exact heuristic is at Claude's discretion, and the adversarial table covers it.
+- **Claude's discretion (post-research):** confirm `steam_direct_launch_verdict` as kind `cache`. Put `FakeHome` in a small `gamelib-testutil` crate (or a `testing` feature on the safety crate). File the `appName` path-injection on `removeFixFile`/`removeSettingsAndLogs` as a todo (outside D-10/D-11) unless the fix is trivial.
+
 </decisions>
 
 <canonical_refs>
