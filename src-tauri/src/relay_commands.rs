@@ -7,7 +7,7 @@ const RELAY_CHANNEL_ECHO_MAX: usize = 64;
 
 /// A channel name made safe to echo: cut to 64 characters and anything that is not printable
 /// ASCII replaced by `?`, so a hostile name can neither flood nor forge a log line.
-fn echo_channel(channel: &str) -> String {
+pub(crate) fn echo_channel(channel: &str) -> String {
     channel
         .chars()
         .take(RELAY_CHANNEL_ECHO_MAX)
@@ -22,7 +22,7 @@ fn echo_channel(channel: &str) -> String {
 }
 
 /// D-14: the renderer may name only channels on the generated allow-list. Checked before anything
-/// crosses the pipe; arguments are still validated only in the sidecar.
+/// crosses the pipe; arguments are validated in the sidecar, or in Rust for native channels.
 pub(crate) fn relay_channel_verdict(channel: &str) -> Result<(), String> {
     if is_renderer_channel(channel) {
         Ok(())
@@ -34,14 +34,26 @@ pub(crate) fn relay_channel_verdict(channel: &str) -> Result<(), String> {
     }
 }
 
-/// ipcRenderer.invoke parity: req/resp round-trip to the sidecar.
+/// ipcRenderer.invoke parity: req/resp round-trip to the sidecar, except for channels the Rust
+/// native router owns (Phase 83, D-01): those are answered here and the sidecar is never asked.
+///
+/// D-04: a native-owned channel has no fallback. Its handler's `Err` is the invoke's `Err`; there
+/// is no flag and no error-driven retry against the sidecar. Native rejections reuse the
+/// `IPC_INVALID_CHANNEL_MARKER` (the verdict above) and `IPC_INVALID_ARGS_MARKER` (the handler)
+/// per D-03 as refined by research F3, so the renderer classifies them as it does sidecar ones.
 #[tauri::command]
 pub(crate) async fn sidecar_invoke(
     channel: String,
     args: Vec<Value>,
     state: State<'_, Arc<SidecarState>>,
+    router: State<'_, NativeRouter>,
 ) -> Result<Value, String> {
     relay_channel_verdict(&channel)?;
+    if let Some(handler) = router.invoke_handler(&channel) {
+        return tauri::async_runtime::spawn_blocking(move || handler(&args))
+            .await
+            .map_err(|e| e.to_string())?;
+    }
     let state = state.inner().clone();
     // Run the blocking channel-write + recv off the async runtime's worker.
     tauri::async_runtime::spawn_blocking(move || state.invoke(channel, args))

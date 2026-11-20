@@ -1,0 +1,12 @@
+{
+  "channels": {
+    "getHeroicVersion": {
+      "kind": "invoke",
+      "slice": "app-shell",
+      "args": [],
+      "returns": "string",
+      "valid": [[]],
+      "invalid": [["extra"], [null], [1, 2]]
+    }
+  }
+}

@@ -29,6 +29,8 @@ import { join } from 'path'
 import { z } from 'zod'
 import {
   FRONTEND_MESSAGE_EVENT,
+  IPC_INVALID_ARGS,
+  IPC_INVALID_ARGS_MARKER,
   IPC_INVALID_CHANNEL_MARKER,
   READY_SENTINEL,
   RUST_INVOKE_CHANNELS,
@@ -40,6 +42,7 @@ import { rustInvokeArgs } from '../src/common/types/ipc/rustInvoke'
 import { channelSchemas } from '../src/common/types/ipc/channelSchemas'
 
 const OUTPUT_REL = 'src-tauri/src/ipc_contract.rs'
+const NATIVE_MANIFEST_REL = 'src/common/types/ipc/nativeChannels.json'
 const GENERATOR = 'meta/genIpcContract.ts'
 const REGEN_CMD = 'pnpm gen:ipc-contract'
 
@@ -514,6 +517,78 @@ function renderStructInto(
   return renderStruct(name, node, ctx)
 }
 
+/** One channel the Rust native router owns (Phase 83, D-06/D-07). */
+export interface NativeChannelSpec {
+  kind: 'invoke' | 'send'
+  /** kebab-case slice name, e.g. 'app-shell' */
+  slice: string
+  /** documentation of the positional args; the Rust args type is the schema authority */
+  args: unknown[]
+  returns: string
+  /** positional-arg arrays the handler must accept */
+  valid: unknown[][]
+  /** positional-arg arrays the handler must reject; never empty */
+  invalid: unknown[][]
+}
+
+export interface NativeManifest {
+  channels: Record<string, NativeChannelSpec>
+}
+
+const NATIVE_NAME = /^[A-Za-z0-9:_-]+$/
+const NATIVE_SLICE = /^[a-z0-9]+(-[a-z0-9]+)*$/
+
+function isArrayOfArrays(v: unknown): v is unknown[][] {
+  return Array.isArray(v) && v.every((x) => Array.isArray(x))
+}
+
+/**
+ * Validates `nativeChannels.json`. Every refusal names the channel. The name charset is the
+ * reason sorted output equals the byte order Rust's `binary_search` needs.
+ */
+export function parseNativeManifest(raw: unknown): NativeManifest {
+  const bad = (name: string, what: string): never => {
+    throw new Error(`genIpcContract: native channel "${name}": ${what}`)
+  }
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+    throw new Error('genIpcContract: native manifest must be an object')
+  }
+  const channels = (raw as { channels?: unknown }).channels
+  if (
+    typeof channels !== 'object' ||
+    channels === null ||
+    Array.isArray(channels)
+  ) {
+    throw new Error('genIpcContract: native manifest needs a "channels" object')
+  }
+  const out: Record<string, NativeChannelSpec> = {}
+  for (const [name, value] of Object.entries(channels)) {
+    if (!NATIVE_NAME.test(name)) {
+      bad(name, 'name must match [A-Za-z0-9:_-]')
+    }
+    const e = value as Partial<Record<keyof NativeChannelSpec, unknown>> | null
+    if (typeof e !== 'object' || e === null)
+      bad(name, 'entry must be an object')
+    const spec = e as Partial<Record<keyof NativeChannelSpec, unknown>>
+    if (spec.kind !== 'invoke' && spec.kind !== 'send') {
+      bad(name, 'kind must be "invoke" or "send"')
+    }
+    if (typeof spec.slice !== 'string' || !NATIVE_SLICE.test(spec.slice)) {
+      bad(name, 'slice must be a kebab-case string')
+    }
+    if (!Array.isArray(spec.args)) bad(name, 'args must be an array')
+    if (typeof spec.returns !== 'string') bad(name, 'returns must be a string')
+    if (!isArrayOfArrays(spec.valid)) {
+      bad(name, 'valid must be an array of positional arg arrays')
+    }
+    if (!isArrayOfArrays(spec.invalid) || spec.invalid.length === 0) {
+      bad(name, 'invalid must be a non-empty array of positional arg arrays')
+    }
+    out[name] = spec as unknown as NativeChannelSpec
+  }
+  return { channels: out }
+}
+
 export interface ContractInput {
   constants: Record<string, string>
   channels: readonly string[]
@@ -524,6 +599,21 @@ export interface ContractInput {
    * 'renderer' and kind invoke|send only. Omitted = no allow-list is emitted.
    */
   entries?: Record<string, { caller: string; kind: string }>
+  /**
+   * Native channel manifest (Phase 83). Its names join RENDERER_CHANNELS and the sorted
+   * NATIVE_INVOKE_CHANNELS / NATIVE_SEND_CHANNELS sets are emitted. Omitted = no native sets.
+   */
+  native?: NativeManifest
+}
+
+/** Sorted manifest names of one kind. */
+function nativeNames(
+  native: NativeManifest,
+  kind: 'invoke' | 'send'
+): string[] {
+  return Object.keys(native.channels)
+    .filter((n) => native.channels[n]?.kind === kind)
+    .sort()
 }
 
 /** Sorted names the renderer may invoke or send (D-14). Shell, local and push are excluded. */
@@ -573,8 +663,25 @@ export function renderIpcContract(input: ContractInput): string {
 
   let allowList = ''
   if (input.entries) {
-    const names = rendererChannelNames(input.entries)
-    allowList = `/// Channel names the renderer may name through \`sidecar_invoke\` / \`sidecar_send\` (D-14): every\n/// schema entry with caller 'renderer' and kind invoke or send, sorted. Shell-only, local and push\n/// channels are absent. Arguments are validated only in the sidecar.\npub(crate) const RENDERER_CHANNELS: &[&str] = &[\n${names.map((n) => `    ${rustStr(n)},`).join('\n')}\n];\n\npub(crate) fn is_renderer_channel(name: &str) -> bool {\n    RENDERER_CHANNELS.binary_search(&name).is_ok()\n}`
+    const names = [
+      ...new Set([
+        ...rendererChannelNames(input.entries),
+        ...(input.native ? Object.keys(input.native.channels) : [])
+      ])
+    ].sort()
+    allowList = `/// Channel names the renderer may name through \`sidecar_invoke\` / \`sidecar_send\` (D-14): every\n/// schema entry with caller 'renderer' and kind invoke or send, plus every native channel, sorted.\n/// Shell-only, local and push channels are absent. Arguments are validated in the sidecar, or in\n/// Rust for NATIVE_* channels.\npub(crate) const RENDERER_CHANNELS: &[&str] = &[\n${names.map((n) => `    ${rustStr(n)},`).join('\n')}\n];\n\npub(crate) fn is_renderer_channel(name: &str) -> bool {\n    RENDERER_CHANNELS.binary_search(&name).is_ok()\n}`
+  }
+
+  let nativeBlock = ''
+  if (input.native) {
+    const native = input.native
+    const set = (kind: 'invoke' | 'send'): string => {
+      const body = nativeNames(native, kind)
+        .map((n) => `    ${rustStr(n)},`)
+        .join('\n')
+      return body.length > 0 ? `[\n${body}\n]` : '[]'
+    }
+    nativeBlock = `/// Renderer invoke channels owned by the Rust native router (Phase 83), sorted. Generated from\n/// src/common/types/ipc/nativeChannels.json.\npub(crate) const NATIVE_INVOKE_CHANNELS: &[&str] = &${set('invoke')};\n\n/// Renderer send channels owned by the Rust native router (Phase 83), sorted.\npub(crate) const NATIVE_SEND_CHANNELS: &[&str] = &${set('send')};\n\npub(crate) fn is_native_invoke_channel(name: &str) -> bool {\n    NATIVE_INVOKE_CHANNELS.binary_search(&name).is_ok()\n}\n\npub(crate) fn is_native_send_channel(name: &str) -> bool {\n    NATIVE_SEND_CHANNELS.binary_search(&name).is_ok()\n}`
   }
 
   const uses: string[] = []
@@ -587,6 +694,7 @@ export function renderIpcContract(input: ContractInput): string {
     consts,
     `#[derive(Debug, Clone, Copy, PartialEq, Eq)]\npub(crate) enum RustInvokeChannel {\n${variants}\n}\n\nimpl RustInvokeChannel {\n    pub(crate) const ALL: &'static [RustInvokeChannel] = &[\n${all}\n    ];\n\n    pub(crate) fn from_name(name: &str) -> Option<Self> {\n        match name {\n${fromName}\n            _ => None,\n        }\n    }\n\n    pub(crate) fn as_str(self) -> &'static str {\n        match self {\n${asStr}\n        }\n    }\n}`,
     allowList,
+    nativeBlock,
     ...structBlocks
   ].filter((p) => p.length > 0)
   return `${parts.join('\n\n')}\n`
@@ -626,14 +734,21 @@ function buildContract(): string {
       SHELL_WINDOW_FOCUSED,
       STORE_SNAPSHOT_CHANNEL,
       RUST_INVOKE_KIND,
-      IPC_INVALID_CHANNEL_MARKER
+      IPC_INVALID_CHANNEL_MARKER,
+      IPC_INVALID_ARGS_MARKER,
+      IPC_INVALID_ARGS
     },
     channels: RUST_INVOKE_CHANNELS,
     schemas,
     // channelSchemas is inbound-keyed: pushes whose names collide with an inbound channel live
     // in collidingPushSchemas and are NOT here, so a push name never opens (or shadows) the
     // renderer invoke/send direction.
-    entries: channelSchemas
+    entries: channelSchemas,
+    native: parseNativeManifest(
+      JSON.parse(
+        readFileSync(join(process.cwd(), NATIVE_MANIFEST_REL), 'utf8')
+      ) as unknown
+    )
   })
 }
 

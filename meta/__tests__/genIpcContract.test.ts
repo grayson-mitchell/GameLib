@@ -1,9 +1,14 @@
 import { z } from 'zod'
-import { IPC_INVALID_CHANNEL_MARKER } from '../../src/common/types/sidecarTransport'
+import {
+  IPC_INVALID_ARGS,
+  IPC_INVALID_ARGS_MARKER,
+  IPC_INVALID_CHANNEL_MARKER
+} from '../../src/common/types/sidecarTransport'
 import { at } from './fixtures/indexed'
 import {
   newCtx,
   parseCliFlags,
+  parseNativeManifest,
   renderArgsStruct,
   renderIpcContract,
   rustTypeFor
@@ -261,6 +266,100 @@ describe('renderIpcContract', () => {
     })
     expect(out).toContain(
       `pub(crate) const IPC_INVALID_CHANNEL_MARKER: &str = "${IPC_INVALID_CHANNEL_MARKER}";`
+    )
+  })
+})
+
+describe('native channel manifest (Phase 83)', () => {
+  const spec = {
+    kind: 'invoke',
+    slice: 'app-shell',
+    args: [],
+    returns: 'string',
+    valid: [[]],
+    invalid: [['extra']]
+  }
+  const input = {
+    constants: { READY_SENTINEL: 'r' },
+    channels: ['keyring_get'],
+    schemas: {}
+  }
+  it('a manifest-only name lands in RENDERER_CHANNELS and NATIVE_INVOKE_CHANNELS in sorted position', () => {
+    const out = renderIpcContract({
+      ...input,
+      entries: {
+        zeta: { caller: 'renderer', kind: 'invoke' },
+        alpha: { caller: 'renderer', kind: 'send' }
+      },
+      native: parseNativeManifest({ channels: { middle: spec } })
+    })
+    expect(out).toContain(
+      'pub(crate) const RENDERER_CHANNELS: &[&str] = &[\n    "alpha",\n    "middle",\n    "zeta",\n];'
+    )
+    expect(out).toContain(
+      'pub(crate) const NATIVE_INVOKE_CHANNELS: &[&str] = &[\n    "middle",\n];'
+    )
+    expect(out).toContain(
+      'pub(crate) const NATIVE_SEND_CHANNELS: &[&str] = &[];'
+    )
+    expect(out).toContain('fn is_native_invoke_channel(name: &str) -> bool')
+    expect(out).toContain('fn is_native_send_channel(name: &str) -> bool')
+  })
+  it('a name present in both the schema entries and the manifest is listed once', () => {
+    const out = renderIpcContract({
+      ...input,
+      entries: { a: { caller: 'renderer', kind: 'invoke' } },
+      native: parseNativeManifest({ channels: { a: spec } })
+    })
+    expect(out).toContain('RENDERER_CHANNELS: &[&str] = &[\n    "a",\n];')
+  })
+  it('emits no native sets without a manifest and accepts an empty channels map', () => {
+    expect(renderIpcContract(input)).not.toContain('NATIVE_INVOKE_CHANNELS')
+    const out = renderIpcContract({
+      ...input,
+      native: parseNativeManifest({ channels: {} })
+    })
+    expect(out).toContain('NATIVE_INVOKE_CHANNELS: &[&str] = &[];')
+  })
+  it('splits invoke and send names', () => {
+    const out = renderIpcContract({
+      ...input,
+      native: parseNativeManifest({
+        channels: { b: { ...spec, kind: 'send' }, a: spec }
+      })
+    })
+    expect(out).toContain('NATIVE_INVOKE_CHANNELS: &[&str] = &[\n    "a",\n];')
+    expect(out).toContain('NATIVE_SEND_CHANNELS: &[&str] = &[\n    "b",\n];')
+  })
+  it('parseNativeManifest throws naming the channel for an empty invalid list', () => {
+    expect(() =>
+      parseNativeManifest({ channels: { ch: { ...spec, invalid: [] } } })
+    ).toThrow(/"ch".*invalid/)
+  })
+  it('parseNativeManifest throws for a bad kind, a bad slice and a non-ASCII name', () => {
+    expect(() =>
+      parseNativeManifest({ channels: { ch: { ...spec, kind: 'push' } } })
+    ).toThrow(/"ch".*kind/)
+    expect(() =>
+      parseNativeManifest({ channels: { ch: { ...spec, slice: 'App Shell' } } })
+    ).toThrow(/"ch".*slice/)
+    expect(() =>
+      parseNativeManifest({ channels: { 'caf\u00e9': spec } })
+    ).toThrow(/caf.*name must match/)
+    expect(() =>
+      parseNativeManifest({ channels: { ch: { ...spec, valid: [1] } } })
+    ).toThrow(/"ch".*valid/)
+  })
+  it('emits the invalid-args marker constants equal to the TS exports', () => {
+    const out = renderIpcContract({
+      ...input,
+      constants: { IPC_INVALID_ARGS_MARKER, IPC_INVALID_ARGS }
+    })
+    expect(out).toContain(
+      `pub(crate) const IPC_INVALID_ARGS_MARKER: &str = "${IPC_INVALID_ARGS_MARKER}";`
+    )
+    expect(out).toContain(
+      `pub(crate) const IPC_INVALID_ARGS: &str = "${IPC_INVALID_ARGS}";`
     )
   })
 })

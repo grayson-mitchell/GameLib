@@ -122,6 +122,8 @@ mod dialogs;
 mod ipc_contract;
 mod keyring_dispatch;
 mod login_window;
+mod native_handlers;
+mod native_router;
 mod notification_show;
 mod relay_commands;
 mod rust_dispatch;
@@ -146,6 +148,7 @@ use dialogs::*;
 use ipc_contract::*;
 use keyring_dispatch::*;
 use login_window::*;
+use native_router::*;
 use notification_show::*;
 use relay_commands::*;
 use rust_dispatch::*;
@@ -1610,6 +1613,9 @@ fn run_setup(
     install_steampoll_host(app.handle());
     // D-11/D-16: starts the running poll; returns at once.
     steampoll_boot();
+    // Phase 83: native channel ownership. Managed before the sidecar is spawned so a native hit
+    // never needs the sidecar.
+    app.manage(NativeRouter::new());
     let state = spawn_sidecar_state(app)?;
     start_single_instance_accept_loop(app, &state, primary_listener);
     install_os_deep_link_handler(app, &state);

@@ -17,6 +17,8 @@ pub(crate) const SHELL_WINDOW_FOCUSED: &str = "shellWindowFocused";
 pub(crate) const STORE_SNAPSHOT_CHANNEL: &str = "sidecar:store-snapshot";
 pub(crate) const RUST_INVOKE_KIND: &str = "rustInvoke";
 pub(crate) const IPC_INVALID_CHANNEL_MARKER: &str = "[GAMELIB_IPC_INVALID_CHANNEL]";
+pub(crate) const IPC_INVALID_ARGS_MARKER: &str = "[GAMELIB_IPC_INVALID_ARGS]";
+pub(crate) const IPC_INVALID_ARGS: &str = "IPC_INVALID_ARGS";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum RustInvokeChannel {
@@ -515,8 +517,9 @@ impl RustInvokeChannel {
 }
 
 /// Channel names the renderer may name through `sidecar_invoke` / `sidecar_send` (D-14): every
-/// schema entry with caller 'renderer' and kind invoke or send, sorted. Shell-only, local and push
-/// channels are absent. Arguments are validated only in the sidecar.
+/// schema entry with caller 'renderer' and kind invoke or send, plus every native channel, sorted.
+/// Shell-only, local and push channels are absent. Arguments are validated in the sidecar, or in
+/// Rust for NATIVE_* channels.
 pub(crate) const RENDERER_CHANNELS: &[&str] = &[
     "abort",
     "addNewApp",
@@ -759,6 +762,23 @@ pub(crate) const RENDERER_CHANNELS: &[&str] = &[
 
 pub(crate) fn is_renderer_channel(name: &str) -> bool {
     RENDERER_CHANNELS.binary_search(&name).is_ok()
+}
+
+/// Renderer invoke channels owned by the Rust native router (Phase 83), sorted. Generated from
+/// src/common/types/ipc/nativeChannels.json.
+pub(crate) const NATIVE_INVOKE_CHANNELS: &[&str] = &[
+    "getHeroicVersion",
+];
+
+/// Renderer send channels owned by the Rust native router (Phase 83), sorted.
+pub(crate) const NATIVE_SEND_CHANNELS: &[&str] = &[];
+
+pub(crate) fn is_native_invoke_channel(name: &str) -> bool {
+    NATIVE_INVOKE_CHANNELS.binary_search(&name).is_ok()
+}
+
+pub(crate) fn is_native_send_channel(name: &str) -> bool {
+    NATIVE_SEND_CHANNELS.binary_search(&name).is_ok()
 }
 
 #[derive(Debug, Clone)]
