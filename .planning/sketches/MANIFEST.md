@@ -37,6 +37,7 @@ a usable tab style.
 | 006 | launch-notice-toast | What surface, accent and motion make the bottom-right Steam launch notice feel polished in every theme? | **A — refined stripe** | toast, notice, motion, steam, multi-theme |
 | 007 | settings-nav-icons | Every Settings tier-2 row iconed, or icons only on help & app actions? | **Option 1** — icons on every row, two groups split by a divider | navigation, tier-2, settings, icons |
 | 008 | game-page-action-bar | Where should the game page's primary actions live so Play is never pushed down or clipped? | **A′ — synthesis**: A's 3fr/2fr card with the action bar in a docked footer; notices under the title | game-page, layout, action-bar, menu, multi-theme |
+| 009 | game-settings-dialog | How should the per-game settings dialog fix its header, hints, disclosures, default tab and grouping? | **B: header card + grouped cards** (all items) | settings, dialog, game-settings, macos, steam |
 
 ## Outcome — Phases 34.10 and 34.11
 
