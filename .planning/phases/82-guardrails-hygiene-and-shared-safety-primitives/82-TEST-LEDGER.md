@@ -1,5 +1,11 @@
 # Phase 82 test ledger
 
+## Proof head
+
+- Proof head P: `a8eb655b5ed6bc4d19976dd60821442eb38cb873` (`fix(82-11): name the sideload runner check without a GameInfo narrowing`), 2026-11-20. Measured in a clean `git worktree add --detach` checkout with its own `pnpm install --frozen-lockfile` (its `node_modules` is a real directory, never a symlink to the main tree's).
+Provenance: `git worktree add --detach <scratchpad>/proof-82 413bbb533400e7d056a27ac32971c550eafbc23d` created the worktree; `git -C <scratchpad>/proof-82 rev-parse HEAD` printed `413bbb533400e7d056a27ac32971c550eafbc23d` before any install. The first run at 413bbb533 found one red gate (gameinfo-narrowing-ceiling, below), fixed by cause in `a8eb655b5`; the same worktree was then moved with `git checkout --detach a8eb655b5ed6bc4d19976dd60821442eb38cb873` (HEAD re-read as `a8eb655b5ed6bc4d19976dd60821442eb38cb873`, `git status --short` empty), re-installed with `pnpm install --frozen-lockfile`, and EVERY measurement below was re-run at P. The 14 SUMMARY files checked are 82-01..82-10 and 82-13..82-16; 51 commit shas listed under their "## Task Commits" were verified ancestors of HEAD with `git merge-base --is-ancestor`, and 82-04 and 82-13 (whose SUMMARYs have no "## Task Commits" section) were verified through their frontmatter `plan_head_after` (`c3e3855c6`, `92c81d999`), also ancestors: 53 commits in all. This repo runs `workflow.use_worktrees=false` with `git.branching_strategy=none`, so each prior plan committed straight onto main. The main checkout had 14 uncommitted entries (other sessions' `.planning/` debug, spike and todo files, `public/locales/en/gamelib.json`, and an untracked `*.dxvk-cache`) when the worktree was made, plus this plan's own ledger and inventory edits; none is in the proof by construction. `git diff --name-only 413bbb533 a8eb655b5` lists only `src/backend/safety/knownInstalls.ts`.
+- The proof is of P, which is origin/main plus every commit that has landed on local main since (see the push checkpoint's commit list); it includes other sessions' commits, such as the `quick-261120-rdo` one named in the surviving reds below.
+
 ## Measurement head
 
 - Measured head: `8ba2ba40a33fd294198eaeff476bec1b180547c8` (`docs(todo): Launch without Steam live gate passed (steps A-G, 2026-11-20)`), measured 2026-11-20.
@@ -8,13 +14,23 @@
 
 ## Full-run counts
 
-Full `pnpm test --silent --json` at `8ba2ba40a` (all jest projects):
+Full `pnpm test --silent --json` at the proof head `a8eb655b5` (all jest projects, clean worktree):
 
 ```
-Test Suites: 7 failed, 5 skipped, 1074 passed, 1081 of 1086 total
-Tests:       8 failed, 36 skipped, 22920 passed, 22964 total
-Time:        212.074 s
+Test Suites: 3 failed, 5 skipped, 1097 passed, 1100 of 1105 total
+Tests:       3 failed, 36 skipped, 23206 passed, 23245 total
+Time:        236.885 s
 ```
+
+The 3 failed suites in that run, and their disposition:
+
+| Suite | Verdict |
+| --- | --- |
+| `src/backend/__tests__/moduleStateCensus.test.ts` ("has no site outside SANCTIONED") | SURVIVING RED, not phase 82's: `src/backend/storeManagers/steam/bridge/shimCoverage.ts:515` `X86_NULL_OBJECT_VERSION_SET` is a module-level `new Set`, added by `a94108e3e` (quick-261120-rdo, another session). Still present at HEAD when re-checked at the end of this plan. See Retirement proposals. |
+| `src/backend/__tests__/diPhaseGates.test.ts` ("66.3 end state ... shimCoverage.ts has no module state") | SURVIVING RED, same cause and same file. |
+| `src/backend/sidecar/__tests__/rustInvokeChannel.test.ts` ("writes a single well-formed rustInvoke frame...") | observed flaky: `Exceeded timeout of 5000 ms` under full-suite load; 9/9 pass alone, three runs in a row. Not a defect. |
+
+The earlier run of this proof at `413bbb533` (before the gameinfo fix) had the same two surviving reds plus `dxvkInstallRemove.test.ts` (`ENOTEMPTY` in the `afterEach` `rmSync`, 25/25 pass alone three times); that run's counts were `Test Suites: 3 failed, 5 skipped, 1097 passed, 1100 of 1105 total`, `Tests: 3 failed, 36 skipped, 23206 passed, 23245 total`. The first plan-82-01 measurement (at `8ba2ba40a`) was `7 failed, 5 skipped, 1074 passed` and is superseded; its red set is the table below.
 
 ## Measured red set
 
@@ -35,16 +51,23 @@ Gate red outside jest (recorded in the Gates table): `backend-di-ceilings` is re
 
 ## Gates (D-01)
 
+All at the proof head `a8eb655b5`, in the clean worktree, run one at a time (`find-deadcode` alone, never beside jest).
+
 | Gate | Result | Evidence line |
 | --- | --- | --- |
-| `pnpm test` (all jest projects) | RED, 7 suites (table above) | `Test Suites: 7 failed, 5 skipped, 1074 passed, 1081 of 1086 total` |
-| `pnpm backend-di-ceilings` | RED | `FAIL: shrank: lower src/backend/storeManagers/steam/__tests__/games.test.ts to 45 in this commit (jestMock baseline says 46)`; `new violation: ...validateNative.test.ts has 4 (jestMock) and no baseline entry`; same for `verifyBridge.test.ts` (6) and `depotRust/__tests__/rustVerify.test.ts` (4) |
-| `pnpm steam-line-ceiling` | PASS | `PASS (199 files scanned, 0 allowlisted over 1000)` |
-| `pnpm find-deadcode` | PASS | `PASS (334 baselined knip findings; binaries: 3, dependencies: 1, devDependencies: 7, duplicates: 3, exports: 293, files: 7, types: 13, unlisted: 6, unresolved: 1)` |
-| `pnpm lint` | PASS | `619 problems (0 errors, 619 warnings)`; `production: PASS \| tests: PASS` |
-| `pnpm i18n --fail-on-update` | PASS | exit 0 on the clean worktree (the main tree is dirty in `public/locales/en/gamelib.json`, so it is not a valid place to read this gate) |
-| `pnpm gameinfo-narrowing-ceiling` | PASS | `PASS (867 files scanned, 46 allowlisted)` |
-| `pnpm planning-gates` | RED 11/12 | `.planning/state-sdk-field-anchor-gate.py`: `PROBLEM: Plan: value '—' is neither <N> of <M> ... nor gsd-core's own between-phases value Not started` (`.planning/STATE.md`, mid-milestone-transition fields) |
+| `pnpm test` (all jest projects) | 2 SURVIVING REDS (not phase 82's), 1 load flake | `Test Suites: 3 failed, 5 skipped, 1097 passed, 1100 of 1105 total` (see Full-run counts) |
+| `pnpm backend-di-ceilings` | PASS | `backend-di-ceilings: PASS childProcess=1 (1 files) jestMock=1865 (448 files) sanctioned=1` |
+| `pnpm steam-line-ceiling` | PASS | `PASS (201 files scanned, 0 allowlisted over 1000)` |
+| `pnpm find-deadcode` | PASS | `PASS (312 baselined knip findings; binaries: 3, dependencies: 1, devDependencies: 7, duplicates: 3, exports: 274, files: 7, types: 10, unlisted: 6, unresolved: 1)` |
+| `pnpm lint` | PASS | `622 problems (0 errors, 622 warnings)`; `production: PASS \| tests: PASS` |
+| `pnpm i18n --fail-on-update` | PASS | exit 0; `Added keys: 0`, `Restored keys: 0`, `Unreferenced keys: 0`. The run re-sorts a few `themeEditor` keys in `public/locales/en/gamelib.json` on disk (a collation-order difference, `contrastSummaryNone` and `saveFailed`/`saved`); it is not counted as an update, and the worktree copy was restored after the run |
+| `pnpm gameinfo-narrowing-ceiling` | PASS | `PASS (876 files scanned, 46 allowlisted)`. Was RED at `413bbb533`: `FAIL [grew]: src/backend/safety/knownInstalls.ts has 1, baseline 0` (82-05's `isStore({ runner }, 'sideload')`); fixed by cause in `a8eb655b5` with `isStore(runner, 'sideload')`, no baseline entry added |
+| `pnpm planning-gates` | PASS | `12/12 planning gates passed` (was 11/12: STATE.md `Progress` anchor missing; fixed in `413bbb533` by adding the line, the gate untouched) |
+| `pnpm codecheck` | PASS | `tsc --noEmit && tsc -p tsconfig.meta.json --noEmit`, exit 0 |
+| `pnpm prettier` | PASS | `All matched files use Prettier code style!` |
+| `pnpm boundaries` | PASS | `no dependency violations found (1392 modules, 8524 dependencies cruised)` |
+| `pnpm check:ipc-contract` | PASS | `src-tauri/src/ipc_contract.rs is up to date` |
+| `cargo test -p gamelib-safety -p gamelib-testutil` (macOS, local) | PASS | `25 passed` (unit), `42 passed` (`tests/adversarial.rs`), `8 passed` (gamelib-testutil); the Windows and Linux legs are CI-only (D-18) |
 
 ## Skipped suites
 
@@ -85,11 +108,29 @@ Same clean worktree (own `node_modules`), detached at the final code head of pla
 
 ## Retirement proposals (D-03)
 
-None proposed.
+Nothing is proposed for retirement. Two suites are red at the proof head and neither is phase 82's work; both are written up here for plan 82-12's per-suite decision, with the recommended path being a fix, not a retirement:
+
+| Suite | Evidence | Recommended |
+| --- | --- | --- |
+| `moduleStateCensus.test.ts` and `diPhaseGates.test.ts` ("shimCoverage.ts has no module state") | `src/backend/storeManagers/steam/bridge/shimCoverage.ts:515` `const X86_NULL_OBJECT_VERSION_SET: ReadonlySet<string> = new Set(SHIM86_NULL_OBJECT_VERSIONS)` is a module-level `new Set`, introduced by `a94108e3e` (quick-261120-rdo, 2026-11-20). `moduleStateCensus` reports `shimCoverage.ts:515 X86_NULL_OBJECT_VERSION_SET new Set` ("1 site(s), not a sanctioned file"); `diPhaseGates` expects `undefined` and receives `1`. Both pass at every phase 82 wave head before that commit landed. | Fix it where it was introduced: build the set inside the function that uses it (it is read at `shimCoverage.ts:593` and `:717`), or add `shimCoverage.ts` to the census sanction list with a reason. Do NOT retire either suite: both guard the 66.4 "no module state" end state, which this commit broke. The operator chose to continue past this red during phase 82. |
 
 ## Notes
 
 - The `backend-di-ceilings` jestMock todo (`2026-11-17-backend-di-jestmock-ratchet-red-five-frontend-tests`) was already resolved by quick 261117-omv; CONTEXT folded it and nothing is left to do for it. The `backend-di-ceilings` red above is a new one from different tests.
 - `.husky/pre-push` runs codecheck, lint, prettier, i18n, find-deadcode, boundaries and the three ceilings, but NOT jest and NOT planning-gates. So the D-01 exit condition is the union list in this ledger, proven in plan 82-11, not "the hook passes".
-- `planning-gates` is red only because `.planning/STATE.md`'s Current Position fields are mid-milestone-transition (the field-anchor gate sees `Plan: —`). That is fixed at proof time by plan 82-11. This plan does not edit STATE.md's Current Position fields beyond the executor's normal plan-advance (parallel executors share the file).
+- `planning-gates` was red 11/12 only because `.planning/STATE.md` had no anchored `Progress:` line in Current Position (the field-anchor gate wants exactly one). Fixed at proof time by plan 82-11 (`413bbb533`); the gate was not edited. It is 12/12 at the proof head.
 - No suite was skipped, deleted or retired, and no baseline, ceiling, pinned count or floor was widened to turn anything green. Where a pin moved, the row says why.
+- Surviving reds are not caused by phase 82: `moduleStateCensus.test.ts` and `diPhaseGates.test.ts` are red from `a94108e3e` (quick-261120-rdo). `.husky/pre-push` does not run jest, so the push is not blocked by them; they would be red on `test.yml` too (see CI proof).
+- Load flakes seen across the six wave gates and the two proof runs, each green alone: `dxvkInstallRemove.test.ts` (`ENOTEMPTY` in the `afterEach` `rmSync` under load), `steamLoginPollLifecycle.test.tsx` (5 s timeouts under load), `rustInvokeChannel.test.ts` (5 s timeout under load, proof run 2). The `runTs.__probe__.cjs` `ENOENT` race is fixed in `steamCmPortComplete` (82-01) and `steamPollsPortComplete` (orchestrator, wave 4). `depotPortComplete.test.ts` and `steamFilesPortComplete.test.ts` also walk `meta/` (their `walk(join(ROOT, 'meta'), files)` calls) with no `.__probe__.` skip, so they carry the same latent race; it did not red in either proof run and is not fixed here (a source change would move the proof head). `scannerPortComplete.test.ts` walks only `src/`, so it is not exposed.
+- D-01 exit condition: `.husky/pre-push` runs nine checks (codecheck, lint, prettier, i18n, find-deadcode, boundaries, steam-line-ceiling, backend-di-ceilings, gameinfo-narrowing-ceiling), not jest and not planning-gates. The union of the D-01 set is proven by the Gates table above plus the push, which runs the hook without `--no-verify`.
+- D-19 (moved to Phase 91, not deleted here): `src/backend/storeManagers/legendary/commands/*` (14 files) have 10 live importers, and `commands/base.ts` is in the bundle and exports runtime zod brands that `save_sync.ts`, `compatibility_layers.ts` and the legendary `games`, `library` and `user` modules use; deleting it is a Phase 91 (Epic runner) act. The FEATURES type-only files each have live importers: they are erased at runtime but not unused, so they move with their importers in Phase 91.
+- D-21: `gamelib-safety` unlinks a symlinked install root (it removes the link, never the target), while `gamelib-steampoll`'s `guard_install_root` keeps refusing a symlinked install root; both leave the target data intact. The two behaviours differ on purpose (the shared primitive deletes a user-chosen folder, the steampoll guard guards a poller's working root) and are recorded here so neither is "unified" by accident.
+- Delete-site classifications (outside the D-10/D-11 set): `shortcuts.ts` `removeShortcuts` is reachable from uninstall but removes a shortcut (lstat-based; it unlinks a link), not a game folder. `utils.ts` `removeFolder` (download-queue partial cleanup) and the `provisionBottle` and `bottlePrimitives` rollback deletes are outside D-10/D-11. `cancelDelete`'s delete stays a synchronous Node delete (a Phase 75 critical section), pre-checked by `gamelib-safety`. Sideload's delete-files path has no UI caller today. The appName file-delete finding (`removeFixFile`, `removeSettingsAndLogs`) was filed as a todo and closed by quick 261120-ux8.
+- Plan items NOT delivered (record, do not paper over): 82-04 did NOT delete `src/backend/sidecar/fileStore.ts` (about 27 sidecar jest suites still `requireActual('../fileStore')` through `store_backend` mocks; Phase 85 or a gap follow-up). 82-13 did NOT delete `src/common/types/proxy-types.ts` (it is the only declaration of the global `Window.api` type; deleting it adds 808 TS errors).
+- Owed proofs: the live sidecar-to-shell safety round trip was never exercised (82-05/07/08/09 all used `fakeSafetyRustInvoke`); the Windows and Linux legs of `gamelib-safety` (82-03), the Windows depot fetch fix and the clippy legs (82-01) need CI (D-18/D-20), collected below.
+- `.planning/STATE.md` could not be advanced with `state.update-progress`: STATE.md asserts milestone `v0.10`, which matches no ROADMAP heading, and requirements live in `REQUIREMENTS-v0.11.md` rather than `REQUIREMENTS.md`. The Progress line was written by hand.
+- The `legendary-runtime` and `nile-runtime` step comments in `bootstrap.ts` (lines 2257 and 2267) still mention "the e2e legendary/nile stub slot"; the slots themselves are gone (comment text only, left alone so the proof head did not move).
+
+## CI proof (D-18)
+
+pending push (plan 82-11 Task 2)
