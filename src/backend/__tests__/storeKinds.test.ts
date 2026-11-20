@@ -93,6 +93,9 @@ const EXPECTED_KINDS: Record<string, Kind> = {
   // Phase 74 D-06: per-build "don't ask again" acks; losing them re-prompts the user.
   steam_update_prompt_ack: 'user-state',
   steam_known_fix_reports: 'user-state',
+  // quick 261117-p38: a derivable "Launch without Steam" eligibility verdict (appId ->
+  // verdict), recomputed from the install on demand, so cache, not user state.
+  steam_direct_launch_verdict: 'cache',
   steam_engine_notices: 'user-state',
   gog_api_info: 'cache',
   gog_achievements: 'cache',

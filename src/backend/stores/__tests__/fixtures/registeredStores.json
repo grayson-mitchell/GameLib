@@ -339,6 +339,18 @@
     "registeredAs": null,
     "options": {
       "cwd": "store_cache",
+      "name": "steam_direct_launch_verdict",
+      "clearInvalidConfig": true,
+      "schemaKeys": null
+    },
+    "declaration": {
+      "kind": "cache"
+    }
+  },
+  {
+    "registeredAs": null,
+    "options": {
+      "cwd": "store_cache",
       "name": "steam_known_fix_reports",
       "clearInvalidConfig": true,
       "schemaKeys": null
