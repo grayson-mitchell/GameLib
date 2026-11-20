@@ -5,65 +5,65 @@ titles: json
 findings:
   - id: CR-01
     severity: critical
-    disposition: open
+    disposition: fixed
     title: "GOG uninstall is refused whenever `gog-support` does not exist"
   - id: WR-01
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Cancelled-install cleanup refuses (and keeps manifest and breadcrumb) when `steamapps/common` is absent"
   - id: WR-02
     severity: warning
-    disposition: open
+    disposition: deferred
     title: "One unresolvable protected-root or known-install path blocks every removal"
   - id: WR-03
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "`safety_remove_tree` runs under the 60 s rustInvoke timeout; a long delete reports `failed` while Rust keeps deleting"
   - id: WR-04
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "An empty `trustRoot` string is read as \"no trust root\", and game-install/prefix/sideload targets then skip containment"
   - id: WR-05
     severity: warning
-    disposition: open
+    disposition: deferred
     title: "Steam copy-removal guard is advisory and fails open to an unguarded delete in the crate"
   - id: WR-06
     severity: warning
-    disposition: open
+    disposition: deferred
     title: "Sideload \"shared folder\" heuristic ignores sub-directories entirely"
   - id: WR-07
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "`findRawRecursiveDeletes` has blind spots, so the \"no raw recursive delete\" gates can pass while one exists"
   - id: WR-08
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Adversarial lexical rows pass vacuously if a row name drifts"
   - id: WR-09
     severity: warning
-    disposition: open
+    disposition: deferred
     title: "Deletes that run after the Rust check but outside the Rust delete-time re-check"
   - id: IN-01
     severity: info
-    disposition: open
+    disposition: deferred
     title: "Windows `is_link_metadata` treats every reparse point as a link"
   - id: IN-02
     severity: info
-    disposition: open
+    disposition: deferred
     title: "`remove-bottle` refusal kind is never emitted"
   - id: IN-03
     severity: info
-    disposition: open
+    disposition: deferred
     title: "Sideload reports a `refused` second-stage guard as `failed`"
   - id: IN-04
     severity: info
-    disposition: open
+    disposition: deferred
     title: "Known-install list ignores entries that are not yet `is_installed`"
   - id: IN-05
     severity: info
-    disposition: open
+    disposition: deferred
     title: "CI and supply-chain hygiene in touched files"
-open: 15
+open: 0
 total: 15
 recorded: 2026-11-20T19:12:20.955Z
 ---
@@ -72,21 +72,21 @@ recorded: 2026-11-20T19:12:20.955Z
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| CR-01 | critical | open | - |
-| WR-01 | warning | open | - |
-| WR-02 | warning | open | - |
-| WR-03 | warning | open | - |
-| WR-04 | warning | open | - |
-| WR-05 | warning | open | - |
-| WR-06 | warning | open | - |
-| WR-07 | warning | open | - |
-| WR-08 | warning | open | - |
-| WR-09 | warning | open | - |
-| IN-01 | info | open | - |
-| IN-02 | info | open | - |
-| IN-03 | info | open | - |
-| IN-04 | info | open | - |
-| IN-05 | info | open | - |
+| CR-01 | critical | fixed | 82-17-SUMMARY.md and 82-19-SUMMARY.md |
+| WR-01 | warning | fixed | 82-17-SUMMARY.md and 82-19-SUMMARY.md |
+| WR-02 | warning | deferred | fail-closed (over-refuses, never deletes). A lexical fallback for unresolvable reference paths is a design change, and its Windows unplugged-drive branch can only be proven on the CI Windows leg. Todo: .planning/todos/pending/2026-11-21-phase-82-deferred-review-findings.md |
+| WR-03 | warning | fixed | 82-18-SUMMARY.md |
+| WR-04 | warning | fixed | 82-17-SUMMARY.md |
+| WR-05 | warning | deferred | bounded by remove_copy own symlink-root, installdir-shape and downloading guards (D-21). The TS pre-check goes away when Phase 90 ports Steam uninstall, and remove_copy should then take the gamelib-safety verdict itself. Todo: .planning/todos/pending/2026-11-21-phase-82-deferred-review-findings.md |
+| WR-06 | warning | deferred | a sub-directory rule would refuse nearly every real game folder (Data or Engine beside the exe). What marks a sibling game directory needs its own decision. Todo: .planning/todos/pending/2026-11-21-phase-82-deferred-review-findings.md |
+| WR-07 | warning | fixed | 82-18-SUMMARY.md |
+| WR-08 | warning | fixed | 82-17-SUMMARY.md |
+| WR-09 | warning | deferred | both are named, accepted exceptions (the Phase 75 critical section; cxbottle deletes by bottle name). Re-asserting the check after cxbottle and at the cancel delete is follow-up work. Todo: .planning/todos/pending/2026-11-21-phase-82-deferred-review-findings.md |
+| IN-01 | info | deferred | needs the Windows reparse tag, which std metadata does not expose; fails safe as delete-failed. Todo: .planning/todos/pending/2026-11-21-phase-82-deferred-review-findings.md |
+| IN-02 | info | deferred | cosmetic toast title for bottle removal. Todo: .planning/todos/pending/2026-11-21-phase-82-deferred-review-findings.md |
+| IN-03 | info | deferred | sideload toast wording for a refused second-stage guard. Todo: .planning/todos/pending/2026-11-21-phase-82-deferred-review-findings.md |
+| IN-04 | info | deferred | in-progress installs are outside the D-16 known-install list today. Todo: .planning/todos/pending/2026-11-21-phase-82-deferred-review-findings.md |
+| IN-05 | info | deferred | the rust-test.yml job timeout and the deny.toml advisory reasons need the network advisory DB and a workflow-pin test change. Todo: .planning/todos/pending/2026-11-21-phase-82-deferred-review-findings.md |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
