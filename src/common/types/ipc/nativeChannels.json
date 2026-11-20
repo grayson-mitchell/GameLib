@@ -21,12 +21,21 @@
         }
       ],
       "returns": "void",
-      "valid": [["https://example.com/a"], ["steam://rungameid/220"]],
+      "valid": [
+        ["https://example.com/a"],
+        ["steam://rungameid/220"],
+        ["mailto:a@b.c"],
+        ["tel:+15551234"]
+      ],
       "invalid": [
         [],
         [null],
+        [7],
         [""],
         ["file:///etc/passwd"],
+        ["javascript:alert(1)"],
+        ["https://"],
+        ["http://exa mple.com"],
         ["https://a", "extra"]
       ]
     }

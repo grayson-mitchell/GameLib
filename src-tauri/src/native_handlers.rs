@@ -8,6 +8,8 @@
 use crate::native_router::{invalid_args, NativeHost};
 use crate::relay_commands::open_external_scheme_check;
 use serde_json::Value;
+use std::sync::Arc;
+use std::thread;
 
 /// The app version the shell was built as. The shell, `package.json` and `tauri.conf.json` agree
 /// on it (plan 83-05 adds the parity gate), so this is what the renderer's About screen shows.
@@ -59,10 +61,16 @@ pub(crate) fn parse_open_external_url(args: &[Value]) -> Result<String, &'static
     Ok(url)
 }
 
-/// `openExternalUrl` (send): hand a validated URL to the host's opener. The host returns at once
-/// (its opener runs on a short-lived thread), so this never holds the slice queue open.
-pub(crate) fn open_external_url(host: &dyn NativeHost, url: String) {
-    host.open_url(url);
+/// `openExternalUrl` (send): hand a validated URL to the host's opener on a short-lived thread and
+/// return at once. On Windows `open_url` blocks while the OS shows a dialog (D-UAT-19), so calling
+/// it on the slice worker would stall every later send behind it (Pitfall 3).
+pub(crate) fn open_external_url(host: &Arc<dyn NativeHost>, url: String) -> Result<(), String> {
+    let host = Arc::clone(host);
+    thread::Builder::new()
+        .name("native-open-url".to_string())
+        .spawn(move || host.open_url(url))
+        .map(|_| ())
+        .map_err(|_| "could not start the opener thread".to_string())
 }
 
 #[cfg(test)]

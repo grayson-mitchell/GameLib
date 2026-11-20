@@ -23,6 +23,7 @@ use crate::relay_commands::echo_channel;
 use gamelib_core::shutdown::Shutdown;
 use serde_json::{json, Value};
 use std::collections::HashMap;
+use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::mpsc::{channel as mpsc_channel, Sender};
 use std::sync::Arc;
 use std::thread;
@@ -47,28 +48,20 @@ pub(crate) type SendValidator = fn(&[Value]) -> Result<String, &'static str>;
 /// What a native handler needs from the app. A trait so the router and its queue are tested with
 /// a recording fake and no `AppHandle`.
 pub(crate) trait NativeHost: Send + Sync + 'static {
-    /// Hand `url` to the OS opener. Must return promptly: on Windows `open_url` blocks while the
-    /// OS shows a dialog, and the slice worker calls this inline (Pitfall 3, D-UAT-19).
+    /// Hand `url` to the OS opener. It may block (on Windows `open_url` waits while the OS shows
+    /// a dialog), so `native_handlers::open_external_url` calls it on its own short-lived thread
+    /// and never on a slice worker (Pitfall 3, D-UAT-19).
     fn open_url(&self, url: String);
 }
 
-/// The real host. `open_url` runs the plugin call on a short-lived thread and returns, so a
-/// blocked OS dialog stalls that thread and never the slice worker behind it.
+/// The real host: the opener plugin through the app handle.
 pub(crate) struct AppNativeHost(pub(crate) AppHandle);
 
 impl NativeHost for AppNativeHost {
     fn open_url(&self, url: String) {
-        let app = self.0.clone();
-        let spawned = thread::Builder::new()
-            .name("native-open-url".to_string())
-            .spawn(move || {
-                if app.opener().open_url(&url, None::<&str>).is_err() {
-                    // Fixed line: the URL is renderer-controlled (T-83-19).
-                    shell_eprintln!("[shell] native openExternalUrl: the OS opener failed");
-                }
-            });
-        if spawned.is_err() {
-            shell_eprintln!("[shell] native openExternalUrl: could not start the opener thread");
+        if self.0.opener().open_url(&url, None::<&str>).is_err() {
+            // Fixed line: the URL is renderer-controlled (T-83-19).
+            shell_eprintln!("[shell] native openExternalUrl: the OS opener failed");
         }
     }
 }
@@ -117,11 +110,17 @@ where
                 }
                 let _held = shutdown.register(slice);
                 let channel = job.channel;
-                if let Err(e) = handler(job) {
-                    shell_eprintln!(
+                // A panicking handler must not kill the slice's only worker: every later send on
+                // it would be silently lost. The slice name is all the log line carries.
+                match catch_unwind(AssertUnwindSafe(|| handler(job))) {
+                    Ok(Ok(())) => {}
+                    Ok(Err(e)) => shell_eprintln!(
                         "[shell] native send failed: {} (slice {slice}): {e}",
                         echo_channel(channel)
-                    );
+                    ),
+                    Err(_) => {
+                        shell_eprintln!("[shell] native send handler panicked (slice {slice})")
+                    }
                 }
             }
         });
@@ -149,12 +148,9 @@ pub(crate) struct NativeRouter {
 const APP_SHELL_SLICE: &str = "app-shell";
 
 /// Run one queued send on its slice worker: the channel picks the handler.
-fn run_send_job(host: &dyn NativeHost, job: NativeSendJob) -> Result<(), String> {
+fn run_send_job(host: &Arc<dyn NativeHost>, job: NativeSendJob) -> Result<(), String> {
     match job.channel {
-        "openExternalUrl" => {
-            native_handlers::open_external_url(host, job.url);
-            Ok(())
-        }
+        "openExternalUrl" => native_handlers::open_external_url(host, job.url),
         other => Err(format!(
             "no native send handler for {}",
             echo_channel(other)
@@ -182,7 +178,7 @@ impl NativeRouter {
         queues.insert(
             APP_SHELL_SLICE,
             spawn_slice_worker(APP_SHELL_SLICE, shutdown, move |job| {
-                run_send_job(host.as_ref(), job)
+                run_send_job(&host, job)
             }),
         );
         Self {
@@ -453,17 +449,17 @@ mod tests {
     }
 
     #[test]
-    fn a_valid_open_external_url_reaches_the_host_on_the_slice_worker() {
+    fn a_valid_open_external_url_reaches_the_host_on_the_opener_thread() {
         let (router, opened) = recording_router();
         let outcome = router.route_send("openExternalUrl", &[json!("https://example.com/a")]);
         assert_eq!(outcome, Some(Ok(())));
         let (url, thread_name) = opened.recv_timeout(Duration::from_secs(5)).unwrap();
         assert_eq!(url, "https://example.com/a");
-        assert_eq!(thread_name.as_deref(), Some("native-send-app-shell"));
+        assert_eq!(thread_name.as_deref(), Some("native-open-url"));
         assert_ne!(
             thread_name.as_deref(),
             thread::current().name(),
-            "the handler must not run on the caller's thread"
+            "the opener must not run on the caller's thread"
         );
     }
 

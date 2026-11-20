@@ -3,11 +3,14 @@
  *
  * The Rust shell (`shell_open.rs`, `relay_commands.rs`) is authoritative and
  * re-checks everything. This module rejects early in the sidecar so a bad
- * renderer value never reaches the platform call, and so the two renderer
- * channels stay strictly split: `openExternalUrl` is URL-only, `openFolder`
- * opens existing non-bundle directories and REVEALS everything else (files,
- * executables, bundles). The constants below mirror the Rust ones; a parity
- * test in `__tests__/openPolicy.test.ts` fails if they drift.
+ * renderer value never reaches the platform call. `openExternalUrl` is no
+ * longer served here: since Phase 83 the Rust native router
+ * (`native_router.rs`, `native_handlers.rs`) validates and opens it.
+ * `assertOpenableExternalUrl` stays for `openWebviewPage` and the mirror
+ * parity test. `openFolder` opens existing non-bundle directories and REVEALS
+ * everything else (files, executables, bundles). The constants below mirror
+ * the Rust ones; a parity test in `__tests__/openPolicy.test.ts` fails if they
+ * drift.
  *
  * Error messages and log lines are fixed literals naming the context and a
  * category only, never the renderer-supplied value (T-28-04 / T-34.6-32).

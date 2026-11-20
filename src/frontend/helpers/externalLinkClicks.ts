@@ -6,9 +6,9 @@
  * That needs the `opener:default` grant, which Phase 72 D-10 removed (it was a
  * direct webview path to the OS opener that bypassed every check). The plugin
  * is registered with `open_js_links_on_click(false)` and this handler replaces
- * the script, so changelog links keep opening through the sidecar's
- * `assertOpenableExternalUrl`, which stays the enforcing check. This handler
- * is routing only.
+ * the script, so changelog links keep opening through the Rust native router
+ * (`src-tauri/src/native_router.rs`, Phase 83), which is the enforcing check
+ * for `openExternalUrl`. This handler is routing only.
  */
 const ROUTED_PROTOCOLS = new Set(['http:', 'https:', 'mailto:', 'tel:'])
 
