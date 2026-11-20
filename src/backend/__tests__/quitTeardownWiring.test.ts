@@ -49,10 +49,39 @@ const GOG_GAMES_TS_PATH = join(
 
 const BACKEND_SRC_DIR = join(__dirname, '..')
 
+const KILL_TREE_RS_PATH = join(
+  __dirname,
+  '..',
+  '..',
+  '..',
+  'src-tauri',
+  'crates',
+  'gamelib-proc',
+  'src',
+  'kill_tree.rs'
+)
+
 /** Mirrors `tauriShellSource.test.ts`'s `loadMainRsCode` two-stage strip verbatim. */
 function loadMainRsCode(): string {
   const raw = readTauriShellProductionSource()
   return stripSourceComments(raw)
+    .split('\n')
+    .filter((line) => !line.trim().startsWith('//'))
+    .map(stripTrailingLineComment)
+    .join('\n')
+}
+
+/**
+ * gamelib-proc's `kill_tree.rs` cut at its indented `#[cfg(test)]` module (the tests there spawn
+ * `/bin/sh` and quote the very tokens under assertion; `stripRustTestModules` only sees column-0
+ * modules, and this one sits inside `mod unix`), then comment-stripped by the same two-stage
+ * convention as `loadMainRsCode`.
+ */
+function loadKillTreeRsCode(): string {
+  const raw = readFileSync(KILL_TREE_RS_PATH, 'utf-8').replace(/\r\n/g, '\n')
+  const cut = raw.indexOf('    #[cfg(test)]')
+  expect(cut).toBeGreaterThan(-1)
+  return stripSourceComments(raw.slice(0, cut))
     .split('\n')
     .filter((line) => !line.trim().startsWith('//'))
     .map(stripTrailingLineComment)
@@ -138,17 +167,45 @@ describe('Layer B -- Rust process-group spawn + group reap (quick 260907-juv)', 
     expect(matches.length).toBe(3)
   })
 
-  test('C4: shutdown_child reaps the process GROUP (SIGTERM -> bounded grace via try_wait -> SIGKILL -> wait())', () => {
+  test('C4: shutdown_child skips a reaped tree and delegates the group stop to gamelib-proc terminate_group', () => {
     const code = loadMainRsCode()
     const body = extractBracedBlock(code, 'fn shutdown_child(')
-    expect(body).toContain('libc::kill(')
-    expect(body).toContain('SIGTERM')
-    expect(body).toContain('SIGKILL')
-    // A negated pgid argument -- `libc::kill(-pgid, ...)`, never a bare/positive pid,
-    // which would signal a single process rather than its whole group.
-    expect(body).toMatch(/libc::kill\(\s*-/)
-    expect(body).toContain('try_wait')
+    // Phase 83: the SIGTERM -> try_wait -> SIGKILL -> wait sequence moved into gamelib-proc
+    // (C4b pins it there); the shell keeps the tree_reaped guard and the delegation.
+    expect(body).toContain('tree_reaped.load(')
+    expect(body).toContain('terminate_group(')
+    expect(body.indexOf('tree_reaped.load(')).toBeLessThan(
+      body.indexOf('terminate_group(')
+    )
+    // The group's leader pid is the pgid, and the leader is handed over unreaped.
+    expect(body).toContain('child.id() as i32')
+    expect(body).toMatch(/terminate_group\(\s*pgid,\s*&mut child,\s*grace\s*\)/)
+    // No inline signalling left behind to drift from the shared implementation.
+    expect(body).not.toContain('libc::kill(')
     expect(body).toContain('child.wait()')
+  })
+
+  test('C4b: gamelib-proc terminate_group is SIGTERM to the negated pgid -> bounded try_wait -> SIGKILL -> wait()', () => {
+    const code = loadKillTreeRsCode()
+    const term = extractBracedBlock(code, 'pub fn terminate_group(')
+    const sigterm = term.indexOf('libc::SIGTERM')
+    const poll = term.indexOf('try_wait()')
+    const sigkill = term.indexOf('kill_process_group(pgid)')
+    const reap = term.indexOf('child.wait()')
+    for (const at of [sigterm, poll, sigkill, reap]) {
+      expect(at).toBeGreaterThan(-1)
+    }
+    expect(sigterm).toBeLessThan(poll)
+    expect(poll).toBeLessThan(sigkill)
+    expect(sigkill).toBeLessThan(reap)
+    // The signal itself: a negated pgid (the whole group, never one pid) with the 1-or-less
+    // refusal that keeps kill(-1) and kill(0) out of reach.
+    const signal = extractBracedBlock(code, 'fn signal_group(')
+    expect(signal).toMatch(/libc::kill\(\s*-pgid/)
+    expect(signal).toContain('pgid <= 1')
+    // The SIGKILL half goes through the same negated-pgid signal.
+    const kill = extractBracedBlock(code, 'pub fn kill_process_group(')
+    expect(kill).toContain('signal_group(pgid, libc::SIGKILL)')
   })
 
   test('C5: the Windows arm still calls child.kill() (Layer B degrades, never regresses)', () => {

@@ -64,9 +64,14 @@ describe('sidecar shutdown flag call sites (D-03)', () => {
     const src = code('shell_state.rs')
     const body = slice(src, 'fn shutdown_child', 'fn write_raw')
     const flag = body.indexOf('begin_shutdown()')
+    // Phase 83: the unix group stop is gamelib-proc's terminate_group, no longer an inline libc::kill.
+    const group = body.indexOf('terminate_group(')
+    const kill = body.indexOf('child.kill()')
     expect(flag).toBeGreaterThanOrEqual(0)
-    expect(flag).toBeLessThan(body.indexOf('libc::kill'))
-    expect(flag).toBeLessThan(body.indexOf('child.kill()'))
+    expect(group).toBeGreaterThan(-1)
+    expect(kill).toBeGreaterThan(-1)
+    expect(flag).toBeLessThan(group)
+    expect(flag).toBeLessThan(kill)
   })
 
   it('the AppExit arm sets the flag before app.exit', () => {

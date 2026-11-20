@@ -1278,13 +1278,20 @@ describe('REQ-34.3-08 main.rs clipboard seam (Phase 34.3 Plan 03, D-01/D-02/D-07
       1
     )
     expect(armBody).toContain('app.restart()')
-    expect(armBody).not.toContain('shutdown_child()')
+    // Phase 83: the method takes the caller's grace, so the old zero-arg text would now pass
+    // vacuously; the open-paren form catches a call with any argument.
+    expect(armBody).not.toContain('shutdown_child(')
   })
 
-  test('REQ-34.3-08 / D-05 no-fix: shutdown_child() has exactly one call site in the whole file (the RunEvent::Exit handler)', () => {
+  test('REQ-34.3-08 / D-05 no-fix: shutdown_child( has exactly one call site in the whole shell, inside handle_exit (the RunEvent::Exit path)', () => {
     const code = loadMainRsCode()
-    const callSites = code.match(/shutdown_child\(\)/g) ?? []
-    expect(callSites.length).toBe(1)
+    const calls = code.match(/shutdown_child\(/g) ?? []
+    const definitions = code.match(/fn shutdown_child\(/g) ?? []
+    // Exactly one definition, and one call once the definition is excluded.
+    expect(definitions.length).toBe(1)
+    expect(calls.length - definitions.length).toBe(1)
+    const exitBody = readTopLevelFnBody(code, 'handle_exit', 5)
+    expect(exitBody.match(/shutdown_child\(/g)?.length ?? 0).toBe(1)
   })
 
   test('REQ-34.3-08 / D-02 zero-capability-grant: capabilities/default.json contains no "clipboard" string', () => {
@@ -5255,12 +5262,53 @@ describe('Phase 80 plan 21: steampoll lifecycle wiring', () => {
     expect(code).toContain('on_sidecar_eof_steampoll();')
   })
 
-  test('steampoll_exit_shutdown runs before shutdown_child in handle_exit', () => {
+  test('handle_exit drains depot, steamcm and steampoll before the children stage signals the sidecar (Phase 83, D-12)', () => {
+    const body = readTopLevelFnBody(loadMainRsCode(), 'handle_exit', 5)
+    const depot = body.indexOf('"depot"')
+    const steamcm = body.indexOf('"steamcm"')
+    const steampoll = body.indexOf('"steampoll"')
+    for (const at of [depot, steamcm, steampoll]) expect(at).toBeGreaterThan(-1)
+    // Each named drain runs its own subsystem's exit call with the drain bound it is handed.
+    const cancel = body.indexOf('cancel_all_and_wait(bound)')
+    const cm = body.indexOf('steamcm_exit_shutdown(bound)')
+    const poll = body.indexOf('steampoll_exit_shutdown(bound)')
+    expect(cancel).toBeGreaterThan(depot)
+    expect(cm).toBeGreaterThan(steamcm)
+    expect(poll).toBeGreaterThan(steampoll)
+    // The children closure is declared after every drain, holds the one shutdown_child call
+    // (and the ChildSet kill), and is the argument run_exit receives after the drains.
+    const children = body.indexOf('let children = |grace')
+    const sidecar = body.indexOf('shutdown_child(grace)')
+    const helpers = body.indexOf('children::global().terminate_all(grace)')
+    const run = body.search(
+      /run_exit\(global\(\),\s*ExitBudget::DEFAULT,\s*drains,\s*children,\s*finish\s*\)/
+    )
+    expect(children).toBeGreaterThan(Math.max(cancel, cm, poll))
+    expect(sidecar).toBeGreaterThan(children)
+    expect(helpers).toBeGreaterThan(sidecar)
+    expect(run).toBeGreaterThan(helpers)
+    // The one deadline is the shared default budget, never a hand-rolled one.
+    expect(body).toContain('ExitBudget::DEFAULT')
+  })
+
+  test('handle_exit finishes with reaper disarm, wake-lock release and socket removal, and logs the two exit lines through shell_diag', () => {
     const code = loadMainRsCode()
-    const exit = code.indexOf('steampoll_exit_shutdown();')
-    const shutdown = code.indexOf('shutdown_child()')
-    expect(exit).toBeGreaterThan(-1)
-    expect(exit).toBeLessThan(shutdown)
+    const body = readTopLevelFnBody(code, 'handle_exit', 5)
+    const finish = body.indexOf('let finish = ||')
+    const disarm = body.indexOf('reaper::disarm()')
+    const wake = body.indexOf('wake_lock_release_all()')
+    const socket = body.indexOf('remove_file(path)')
+    expect(finish).toBeGreaterThan(-1)
+    expect(disarm).toBeGreaterThan(finish)
+    expect(wake).toBeGreaterThan(disarm)
+    expect(socket).toBeGreaterThan(wake)
+    expect(body).toMatch(/shell_diag\(&format!\(\s*"exit finished in \{\} ms"/)
+    expect(body).toMatch(
+      /shell_diag\(&format!\(\s*"still running at exit deadline: \{\} \(\{\}\)"/
+    )
+    // The old per-subsystem lines carried the same phrase and would muddy the overrun scoring.
+    expect(code).not.toContain('jobs still running at exit deadline')
+    expect(code).not.toContain('polls still running at exit deadline')
   })
 
   test('steampoll_boot runs after the host install and before spawn_sidecar_state', () => {

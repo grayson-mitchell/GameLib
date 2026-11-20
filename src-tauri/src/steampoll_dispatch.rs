@@ -281,21 +281,19 @@ pub(crate) fn on_sidecar_eof_steampoll() {
     }
 }
 
-/// `RunEvent::Exit`: cancel every poll and kill every monitor child, bounded (D-07).
-pub(crate) fn steampoll_exit_shutdown() {
+/// `RunEvent::Exit`: cancel every poll and kill every monitor child, within `bound` (D-07, D-12).
+/// Returns `true` when polls were still running at `bound`; the caller names that overrun.
+pub(crate) fn steampoll_exit_shutdown(bound: Duration) -> bool {
     // End the outbox retry loop first, so it starts no new replay while the polls and the
     // sidecar go down. A replay already running is not waited for.
     RETRY_STOP.lock().unwrap_or_else(|e| e.into_inner()).take();
     let Some(facade) = gamelib_steampoll::dispatch::facade::current() else {
-        return;
+        return false;
     };
     let registry = facade.registry.clone();
-    let still = gamelib_steampoll::runtime::handle()
-        .block_on(registry.cancel_all_and_wait(EXIT_FINALIZE_WAIT));
+    let still = gamelib_steampoll::runtime::handle().block_on(registry.cancel_all_and_wait(bound));
     facade.polls.stop_all_monitors();
-    if still > 0 {
-        shell_eprintln!("[shell] steampoll polls still running at exit deadline: {still}");
-    }
+    still > 0
 }
 
 /// The Node `process.arch` spelling `appPaths.ts` puts in `public/bin/<arch>/...`.
@@ -508,8 +506,9 @@ mod tests {
         steampoll_boot();
         on_sidecar_ready_steampoll();
         on_sidecar_eof_steampoll();
-        steampoll_exit_shutdown();
-        assert!(start.elapsed() < EXIT_FINALIZE_WAIT);
+        let bound = Duration::from_millis(3_500);
+        assert!(!steampoll_exit_shutdown(bound));
+        assert!(start.elapsed() < bound);
         SIDECAR_READY.store(false, Ordering::SeqCst);
     }
 

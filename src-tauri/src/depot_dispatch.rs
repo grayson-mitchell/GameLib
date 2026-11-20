@@ -11,8 +11,6 @@ use std::sync::mpsc::{sync_channel, SyncSender, TrySendError};
 
 /// Bound on the per-job event queue. A full queue drops progress, never blocks the job.
 const EVENT_QUEUE_BOUND: usize = 64;
-/// Longest the app waits for depot jobs to finalize at exit (D-08).
-pub(crate) const EXIT_FINALIZE_WAIT: Duration = Duration::from_secs(5);
 
 /// Rejects an install root that is not absolute, has a `.` or `..` segment, or has no `steamapps`
 /// component above its leaf (T-73-45). Segments are split on both separators by hand because

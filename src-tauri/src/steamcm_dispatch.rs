@@ -347,9 +347,14 @@ pub(crate) fn install_steamcm_host(app: &AppHandle) {
     gamelib_steamcm::facade::set_wrap_host(Arc::new(ShellWrapHost::new(app)));
 }
 
-fn steamcm_shutdown(context: &str) {
-    let result = gamelib_steamcm::facade::shutdown_all(STEAMCM_SHUTDOWN_BOUND);
+/// Runs the shutdown within `bound`, logs its outcome, and reports whether it timed out.
+fn steamcm_shutdown(context: &str, bound: Duration) -> bool {
+    let result = gamelib_steamcm::facade::shutdown_all(bound);
     shell_eprintln!("{}", steamcm_shutdown_line(context, &result));
+    matches!(
+        result,
+        Ok(gamelib_steamcm::session::RestoreOutcome::TimedOut)
+    )
 }
 
 /// Outcome name or refusal code only, never any session detail (T-28-04). B/IN-03: a refused
@@ -366,12 +371,13 @@ fn steamcm_shutdown_line(
 
 /// Sidecar stdout EOF: no consumer remains for any lease, so drop them all and pay any owed goonline.
 pub(crate) fn on_sidecar_eof_drop_steamcm() {
-    steamcm_shutdown("sidecar eof");
+    steamcm_shutdown("sidecar eof", STEAMCM_SHUTDOWN_BOUND);
 }
 
 /// `RunEvent::Exit`: pays any owed goonline and logs off before the sidecar dies (Pitfall 1, D-03).
-pub(crate) fn steamcm_exit_shutdown() {
-    steamcm_shutdown("exit");
+/// `bound` is the exit drain budget (D-12); returns `true` when the restore did not confirm in it.
+pub(crate) fn steamcm_exit_shutdown(bound: Duration) -> bool {
+    steamcm_shutdown("exit", bound)
 }
 
 #[cfg(test)]
@@ -383,8 +389,9 @@ mod tests {
     fn eof_and_exit_hooks_return_within_bound_when_unconfigured() {
         let start = Instant::now();
         on_sidecar_eof_drop_steamcm();
-        steamcm_exit_shutdown();
-        assert!(start.elapsed() < STEAMCM_SHUTDOWN_BOUND * 2);
+        let exit_bound = Duration::from_millis(3_500);
+        assert!(!steamcm_exit_shutdown(exit_bound));
+        assert!(start.elapsed() < STEAMCM_SHUTDOWN_BOUND + exit_bound);
     }
 
     #[test]

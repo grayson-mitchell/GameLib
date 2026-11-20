@@ -755,44 +755,99 @@ type PrimaryListener = WindowsPrimaryPipe;
 #[cfg(not(any(unix, windows)))]
 type PrimaryListener = ();
 
-/// `RunEvent::Exit`: cancel depot jobs, reap the sidecar, release power assertions, remove the socket.
+/// Keeps an exit drain's `Registrant` held until the process ends, so `run_exit` names the drain
+/// in its overrun report instead of racing the drain's own timeout against the same deadline.
+/// Only reached on the exit path, on a detached drain thread the process is about to outlive.
+fn hold_exit_drain_open() -> ! {
+    loop {
+        std::thread::park();
+    }
+}
+
+/// `RunEvent::Exit`: the one app-wide exit budget (Phase 83, D-12, D-16;
+/// `gamelib_core::shutdown::ExitBudget::DEFAULT`, total 5 s with 1.5 s kept for children).
+///
+/// Three stages, each spending part of that one deadline instead of the old serial waits (about
+/// 17 s worst case):
+///
+/// 1. Drains, concurrently, each with the drain budget (3.5 s): the depot cancel-and-finalize
+///    (D-08: the 1026 record lands before any kill), the steamcm owed-record restore and logoff
+///    (Pitfall 1, D-03) and the steampoll stop plus nettop kill (D-07). All finish, or reach the
+///    deadline, before the sidecar is signalled, which keeps the old order's intent.
+/// 2. Children, with the time left (at most 1.5 s): the sidecar's process group
+///    (`shutdown_child`), then every helper in the `ChildSet`.
+/// 3. Finish: the reaper disarm (D-11, a graceful quit makes the reaper signal nothing), the OS
+///    power-assertion release (Phase 35 Plan 08) and the single-instance socket cleanup (Phase 34.5
+///    gap cycle 6 plan 44).
+///
+/// Logs `exit finished in <ms> ms` always and `still running at exit deadline: <names> (<count>)`
+/// only when a drain overran; registrant names and counts, never job detail (D-12).
 fn handle_exit(
     app_handle: &tauri::AppHandle,
     single_instance_socket_path: Option<&std::path::Path>,
 ) {
-    // D-08: cancel every depot job and give finalize (the 1026 record) up to 5 s to
-    // land BEFORE the sidecar is killed. Count only; no job detail is logged.
-    let still_running = gamelib_depot::registry::cancel_all_and_wait(EXIT_FINALIZE_WAIT);
-    if still_running > 0 {
-        shell_eprintln!("[shell] depot jobs still running at exit deadline: {still_running}");
+    use gamelib_core::shutdown::{global, run_exit, Drain, ExitBudget};
+    let drains: Vec<Drain> = vec![
+        (
+            "depot",
+            Box::new(|bound| {
+                if gamelib_depot::registry::cancel_all_and_wait(bound) > 0 {
+                    hold_exit_drain_open();
+                }
+            }),
+        ),
+        (
+            "steamcm",
+            Box::new(|bound| {
+                if steamcm_exit_shutdown(bound) {
+                    hold_exit_drain_open();
+                }
+            }),
+        ),
+        (
+            "steampoll",
+            Box::new(|bound| {
+                if steampoll_exit_shutdown(bound) {
+                    hold_exit_drain_open();
+                }
+            }),
+        ),
+    ];
+    let children = |grace: Duration| {
+        if let Some(state) = app_handle.try_state::<Arc<SidecarState>>() {
+            state.shutdown_child(grace);
+        }
+        let _ = gamelib_proc::children::global().terminate_all(grace);
+    };
+    let finish = || {
+        // The reaper is told first: from here a graceful quit signals nothing (D-11).
+        gamelib_proc::reaper::disarm();
+        // Phase 35 Plan 08 (D-08, REQ-35-06, threat T-35-31): drop every OS power assertion still
+        // held -- a leaked one outlives the process and keeps the machine awake with no UI left
+        // to release it.
+        wake_lock_release_all();
+        // Phase 34.5 gap cycle 6 plan 44 (D-44-A): best-effort socket cleanup on a clean quit, so a
+        // fresh start does not have to fall through `acquire_single_instance`'s stale-socket
+        // recovery path. Swallowed: an unwind here is worse than a leaked socket file.
+        #[cfg(unix)]
+        if let Some(path) = single_instance_socket_path {
+            let _ = std::fs::remove_file(path);
+        }
+        #[cfg(not(unix))]
+        let _ = single_instance_socket_path;
+    };
+    let report = run_exit(global(), ExitBudget::DEFAULT, drains, children, finish);
+    shell_diag(&format!(
+        "exit finished in {} ms",
+        report.elapsed.as_millis()
+    ));
+    if !report.still_running.is_empty() {
+        shell_diag(&format!(
+            "still running at exit deadline: {} ({})",
+            report.still_running.join(", "),
+            report.still_running.len()
+        ));
     }
-    // Pays any owed goonline and logs off before the sidecar dies (Pitfall 1, D-03).
-    steamcm_exit_shutdown();
-    // Kills Rust-owned nettop children and stops polls before the sidecar dies (D-07).
-    steampoll_exit_shutdown();
-    if let Some(state) = app_handle.try_state::<Arc<SidecarState>>() {
-        state.shutdown_child();
-    }
-    // Phase 35 Plan 08 (D-08, REQ-35-06, threat T-35-31): drop every OS power
-    // assertion still held. Same exit-path discipline as `shutdown_child()` above
-    // and the socket cleanup below -- a leaked assertion outlives the process and
-    // keeps the user's machine awake with no UI left to release it, which on a
-    // laptop means an unattended drain to zero.
-    wake_lock_release_all();
-    // Phase 34.5 gap cycle 6 plan 44 (D-44-A): best-effort socket cleanup on a
-    // clean quit, so a fresh start does not have to fall through
-    // `acquire_single_instance`'s stale-socket recovery path. Swallowed, like
-    // `shutdown_child()`'s own exit-path discipline -- an unwind here is worse
-    // than a leaked socket file.
-    #[cfg(unix)]
-    if let Some(path) = single_instance_socket_path {
-        let _ = std::fs::remove_file(path);
-    }
-    #[cfg(not(unix))]
-    let _ = single_instance_socket_path;
-    // Last step (Phase 83, D-11): a graceful quit tells the reaper to signal nothing, so it never
-    // reaps. Plan 83-09 moves this into the Shutdown finish stage.
-    gamelib_proc::reaper::disarm();
 }
 
 /// Spawns the sidecar, wires its reader and stderr forwarder, and returns the shared state.

@@ -114,14 +114,19 @@ impl SidecarState {
     /// by construction; that registry only ever runs from the in-app `handleExit()` quit
     /// path, `backend/utils.ts`). On unix, `configure_sidecar_process_group` (called at both
     /// spawn sites, `spawn_sidecar_dev`/`spawn_sidecar_packaged`) puts the sidecar in its OWN
-    /// process group, so this now signals that WHOLE group -- SIGTERM first (catchable,
-    /// giving comet/the bridge helper a chance at their own graceful exit; the todo's own
-    /// evidence measured comet exiting ~1s after a plain SIGTERM), a bounded grace period
-    /// polled via `try_wait()`, then SIGKILL if still alive after the grace window. Windows
-    /// has no process-group-signal equivalent reachable from this crate, so it keeps the
-    /// pre-existing sidecar-only `child.kill()` (`#[cfg(not(unix))]` below) -- a narrower
-    /// fix than unix's group reap, not a regression of what existed before this quick task.
-    pub(crate) fn shutdown_child(&self) {
+    /// process group, so this signals that WHOLE group through
+    /// `gamelib_proc::kill_tree::terminate_group` -- SIGTERM first (catchable, giving
+    /// comet/the bridge helper a chance at their own graceful exit; the todo's own evidence
+    /// measured comet exiting ~1s after a plain SIGTERM), a bounded grace period polled via
+    /// `try_wait()`, then SIGKILL if still alive after the grace window. Windows has no
+    /// process-group-signal equivalent reachable from this crate, so it keeps the
+    /// sidecar-only `child.kill()` plus dropping the kill-on-close Job (`#[cfg(not(unix))]`
+    /// below).
+    ///
+    /// Phase 83 (D-12, D-16): `grace` is the share of the one 5 s exit budget the caller has left
+    /// for killing children (`ExitBudget::child_grace` at most), not a fixed 2 s. Its one call
+    /// site is `handle_exit`'s children stage, after the steamcm, steampoll and depot drains.
+    pub(crate) fn shutdown_child(&self, grace: Duration) {
         self.begin_shutdown();
         let mut child = match self.child.lock() {
             Ok(guard) => guard,
@@ -138,43 +143,17 @@ impl SidecarState {
             if !self.tree_reaped.load(Ordering::SeqCst) {
                 // `configure_sidecar_process_group` put the sidecar in its own process group at
                 // spawn time (`process_group(0)`), making its pgid equal to its own pid -- so
-                // this pid IS the group id to signal.
+                // this pid IS the group id to signal. `terminate_group` refuses pgid <= 1, runs
+                // SIGTERM -> `try_wait` poll -> SIGKILL, and waits (reaps) the leader.
                 let pgid = child.id() as i32;
-                // SAFETY: `libc::kill` with a negative first argument signals every process in
-                // the group `-pgid`, never a single arbitrary pid this code does not own -- the
-                // sidecar created that group itself at spawn time. No pointers are dereferenced;
-                // the call can only fail (ESRCH/EPERM), never crash.
-                unsafe {
-                    libc::kill(-pgid, libc::SIGTERM);
-                }
-                let grace_deadline = std::time::Instant::now() + Duration::from_millis(2000);
-                let mut exited = false;
-                while std::time::Instant::now() < grace_deadline {
-                    match child.try_wait() {
-                        Ok(Some(_)) => {
-                            exited = true;
-                            break;
-                        }
-                        Ok(None) => thread::sleep(Duration::from_millis(50)),
-                        Err(e) => {
-                            shell_eprintln!(
-                                "[shell] sidecar try_wait() failed during exit shutdown grace period: {e}"
-                            );
-                            break;
-                        }
-                    }
-                }
-                if !exited {
-                    // SAFETY: same group-only guarantee as the SIGTERM call above.
-                    unsafe {
-                        libc::kill(-pgid, libc::SIGKILL);
-                    }
-                }
+                gamelib_proc::kill_tree::terminate_group(pgid, &mut child, grace);
             }
         }
 
         #[cfg(not(unix))]
         {
+            // No group signal to grace-period on Windows: the kill is immediate.
+            let _ = grace;
             if let Err(e) = child.kill() {
                 shell_eprintln!("[shell] sidecar kill() failed during exit shutdown (may have already exited): {e}");
             }
