@@ -637,13 +637,15 @@ fn case_insensitive_mode_refuses_a_differently_cased_nested_install() {
     ex.other_key = Some("gameb");
     run("case, insensitive", &fx, &ex);
 
-    let (c, fx) = build(CaseMode::Sensitive);
+    let (c, mut fx) = build(CaseMode::Sensitive);
     if volume_is_case_insensitive(&c.common) {
         // The volume itself folds case: `common/studio/GameB` resolves to the real folder, so
         // even a Sensitive comparison of canonical paths refuses.
         run("case, sensitive on an insensitive volume", &fx, &ex);
     } else {
-        // Two distinct names on a case-sensitive volume.
+        // Two distinct names on a case-sensitive volume: the target is not nested over the known
+        // install, so it is removed whole, and the `b.exe` inside it goes with it.
+        fx.precious.retain(|p| !p.starts_with(&fx.target));
         run("case, sensitive", &fx, &removed());
     }
 }
@@ -669,12 +671,14 @@ fn nfc_and_nfd_spellings_match_only_when_insensitive() {
     ex.other_key = Some("gameb");
     run("nfc/nfd, insensitive", &fx, &ex);
 
-    let (c, fx) = build(CaseMode::Sensitive);
-    // APFS and NTFS treat the two spellings as one name; ext4 keeps them distinct.
+    let (c, mut fx) = build(CaseMode::Sensitive);
+    // APFS treats the two spellings as one name; ext4 and NTFS keep them distinct.
     let same_name = exists(&seg(&c.common, &[nfd]));
     if same_name {
         run("nfc/nfd, sensitive on a normalising volume", &fx, &ex);
     } else {
+        // Two distinct names: the target is removed whole, and the `b.exe` inside it goes too.
+        fx.precious.retain(|p| !p.starts_with(&fx.target));
         run("nfc/nfd, sensitive", &fx, &removed());
     }
 }
