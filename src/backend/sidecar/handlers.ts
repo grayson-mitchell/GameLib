@@ -244,7 +244,6 @@ export function registerHandlers(deps: {
     ipc,
     readOnly: deps.services.storeRoot.readOnly,
     appRuntime: deps.services.appRuntime,
-    appInfo: deps.services.appInfo,
     aborts: deps.services.aborts,
     openExternal: deps.services.host.openExternal,
     requestRustInvoke: deps.services.host.requestRustInvoke,

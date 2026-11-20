@@ -3,6 +3,10 @@
  * no exemption list: the ratchet from plan 67-02 reached zero in plan 67-18, so adding a channel
  * without a schema now fails here.
  *
+ * Two schema sources: `channelSchemas` (zod, the sidecar owner) and `nativeChannels.json` (the Rust
+ * native router's manifest, Phase 83 D-07 -- the Rust args type is that owner's schema authority).
+ * A channel covered by the manifest needs no zod entry; the manifest is read, not listed here.
+ *
  * Registered set = the union of
  *   - runtime registries after `import('backend/sidecar/handlers')` and
  *     `signInProbe.outcomes.registerHandler()`;
@@ -20,6 +24,7 @@ import { join } from 'path'
 
 import {
   domainSources,
+  nativeChannelNames,
   parseDomainFile,
   sharedConstants,
   type DomainPart
@@ -132,19 +137,39 @@ function bucketOf(entry: (typeof channelSchemas)[string]): Bucket {
   return entry.kind
 }
 
+/**
+ * Names with no schema in `bucket`: neither a `channelSchemas` entry of that bucket nor a native
+ * manifest channel. Shared by the real run and the near-miss below.
+ */
+function schemaMisses(
+  names: Iterable<string>,
+  bucket: Bucket,
+  native: ReadonlySet<string>
+): string[] {
+  return [...names].filter((name) => {
+    if (native.has(name)) return false
+    const entry = bucket === 'push' ? pushSchemaFor(name) : channelSchemas[name]
+    return !entry || bucketOf(entry) !== bucket
+  })
+}
+
 describe('IPC schema coverage (D-15)', () => {
   it.each(['invoke', 'send', 'push', 'local'] as Bucket[])(
     'bucket %s: every channel has a schema in that bucket (no exemptions)',
     async (bucket) => {
       const reg = await registered()
-      const missing = [...reg[bucket]].filter((name) => {
-        const entry =
-          bucket === 'push' ? pushSchemaFor(name) : channelSchemas[name]
-        return !entry || bucketOf(entry) !== bucket
-      })
-      expect(missing).toEqual([])
+      expect(schemaMisses(reg[bucket], bucket, nativeChannelNames())).toEqual(
+        []
+      )
     }
   )
+
+  it('near-miss: a declared channel in neither schema source is reported; a manifest channel is not', () => {
+    const unknown = 'definitelyNotAChannel'
+    expect(schemaMisses([unknown], 'local', new Set())).toEqual([unknown])
+    expect(schemaMisses([unknown], 'local', new Set([unknown]))).toEqual([])
+    expect(nativeChannelNames().has('getHeroicVersion')).toBe(true)
+  })
 
   it('every channelSchemas key is registered or declared', async () => {
     const reg = await registered()

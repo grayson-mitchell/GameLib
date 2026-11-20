@@ -38,6 +38,19 @@ const TRANSPORT = join(
   'sidecarTransport.ts'
 )
 
+/**
+ * Channel names the Rust native router owns (Phase 83): the keys of `nativeChannels.json`. Read
+ * from the manifest, never a hand list, so the censuses that accept a native owner stay honest.
+ */
+export function nativeChannelNames(
+  manifestPath = join(IPC_DIR, 'nativeChannels.json')
+): Set<string> {
+  const raw = JSON.parse(readFileSync(manifestPath, 'utf-8')) as {
+    channels: Record<string, unknown>
+  }
+  return new Set(Object.keys(raw.channels))
+}
+
 /** A capture group that the pattern guarantees on every match; throws if the pattern ever stops doing so. */
 function group(m: RegExpExecArray | RegExpMatchArray, i: number): string {
   const g = m[i]

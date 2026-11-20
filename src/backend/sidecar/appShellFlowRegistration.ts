@@ -2,21 +2,19 @@
  * Curated app-shell channel registration (Phase 34.1 Plan 04,
  * D-03/D-08/D-09/D-13, REQ-34.1-05/REQ-34.1-09/REQ-34.1-12).
  *
- * Registers the 20 sidecar-routed app-shell channels (7 invoke + 13 send) onto platformApi's
+ * Registers the 19 sidecar-routed app-shell channels (6 invoke + 13 send) onto platformApi's
  * `ipcMain` recorder, importing the REAL `backend/appshell/*` functions
  * extracted by Plan 34.1-02 unchanged (mirrors `installFlowRegistration.ts`'s
  * / `settingsFlowRegistration.ts`'s own objective — prove the real logic runs
  * behind the new transport, not a reimplementation):
  *
- *   invoke (7, `deps.ipc.handle`):
+ *   invoke (6, `deps.ipc.handle`):
  *     - `getLoginBackground` -> `appshell/themes.ts` (the custom-theme and
  *       Custom CSS reads beside it were removed in quick 261031-bst)
  *     - `getAppManagementStatus` (quick 261026-b9r) -> `appshell/appManagement.ts`
  *       create-and-unlink probe inside the CrossOver bundle (macOS only)
- *     - `getHeroicVersion` -> `platformApi`'s `deps.appInfo.version` — Electron
- *       parity is the BARE `deps.appInfo.version` (`main.ts:754`), not the
- *       decorated `utils/systeminfo/heroicVersion.ts` form; do not "improve"
- *       it
+ *     - `getHeroicVersion` is NOT registered here: the Rust native router
+ *       serves it (`src-tauri/src/native_router.rs`, Phase 83 D-01)
  *     - `getLatestReleases`/`getCurrentChangelog` -> `appshell/releases.ts`
  *       (`main.ts:765/767`)
  *     - `getWebviewPreloadPath` -> a declared-empty `''` (D-12: Tauri has no
@@ -202,7 +200,7 @@ import type {
 import type { IpcRegistry } from './ipcRegistry'
 import type { AppState } from '../host/appState'
 import type { OpenExternal } from '../host/openExternal'
-import type { AppInfo, AppPaths } from '../process/context'
+import type { AppPaths } from '../process/context'
 import type { RequestRustInvoke } from '../host'
 import type { Clock, TimerHandle } from '../process/types'
 import { RUST_TRAY_SET_ICON } from '../../common/types/sidecarTransport'
@@ -343,7 +341,6 @@ export interface AppShellFlowDeps
   stores: Pick<Stores, 'kvs' | 'legendary'>
   config: Pick<GlobalConfigSlice, 'getSettings' | 'setSetting'>
   ipc: Pick<IpcRegistry, 'handle' | 'on'>
-  appInfo: Pick<AppInfo, 'version'>
   paths: Pick<AppPaths, 'publicDir'>
   /** This boot's app-shell state instance ('app-shell-state' step, 66.4-16). */
   appShell: AppShellState
@@ -363,7 +360,7 @@ export interface AppShellFlowDeps
 }
 
 /**
- * Registers the 20 app-shell channels (7 invoke + 13 send). Called once from
+ * Registers the 19 app-shell channels (6 invoke + 13 send). Called once from
  * `handlers.ts` — this
  * module owns no side effects at import time beyond the imports above; the
  * caller decides when registration onto the handler registry happens.
@@ -374,16 +371,13 @@ export interface AppShellFlowDeps
  * caller that invokes it directly (see the call site below for the full rationale).
  */
 export function registerAppShellFlows(deps: AppShellFlowDeps): void {
-  // ── invoke (7) ─────────────────────────────────────────────────────────
+  // ── invoke (6) ─────────────────────────────────────────────────────────
   // Was 8 under the original Phase 34.1 D-01 set; `getLoginBackground` is a
-  // later addition (user-selectable Manage Accounts background artwork).
+  // later addition (user-selectable Manage Accounts background artwork), and
+  // `getHeroicVersion` moved to the Rust native router in Phase 83 (83-03).
   // `getCustomThemes`/`getThemeCSS`/`getCustomCSS` removed in quick 261031-bst.
 
   deps.ipc.handle('getLoginBackground', async () => getLoginBackground(deps))
-
-  // Electron parity is the bare app.getVersion() (main.ts:754) — do not
-  // decorate with the versionNames form from heroicVersion.ts.
-  deps.ipc.handle('getHeroicVersion', async () => deps.appInfo.version)
 
   // Quick 261026-b9r: the probe only runs when invoked (never at boot).
   deps.ipc.handle('getAppManagementStatus', async () =>

@@ -78,7 +78,10 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   //
   // Quick 261115-tk8 (2026-11-15, 6254354b2): send 14 -> 13 -- the dead Heroic-era `openReleases`
   // link channel deleted.
-  'appShellFlowRegistration.ts': { invoke: 7, send: 13 },
+  //
+  // Phase 83 Plan 03 / 83-03 (2026-11-20): invoke 7 -> 6 -- `getHeroicVersion` is served by the Rust native
+  // router (nativeChannels.json), so its sidecar registration is gone. Send count unchanged.
+  'appShellFlowRegistration.ts': { invoke: 6, send: 13 },
   'clipboardFlowRegistration.ts': { invoke: 1, send: 2 },
   // Phase 61 Plan 13 (2026-11-07): the store-agnostic engine domain (getEngineState, listEngineOptions,
   // getDefaultEngine, getPerGameBottleName, dismissEngineNotice)

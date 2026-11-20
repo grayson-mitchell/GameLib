@@ -11,7 +11,8 @@
  *   (c) COMPLETENESS: every part interface is named in the matching index intersection.
  *   (d) OWNER-LESS TRIPWIRE: declared channels with no FlowRegistration owner are an explicit,
  *       dated allowlist (push-only FrontendMessages, window controls, test stubs, main-process
- *       handlers registered through addHandler/addListener).
+ *       handlers registered through addHandler/addListener). A channel in nativeChannels.json is
+ *       owned by the Rust native router (Phase 83), so it is excluded rather than listed.
  *
  * Plain fs reads rooted at __dirname; no backend module is imported or executed.
  */
@@ -25,6 +26,7 @@ import {
   parseDomainFile,
   sharedConstants,
   domainSources,
+  nativeChannelNames,
   type DomainPart,
   type Kind
 } from 'backend/testUtils/ipcDomainParse'
@@ -161,6 +163,28 @@ function registrationFiles(): string[] {
     .sort()
 }
 
+/**
+ * Declared channels no FlowRegistration registers and no native manifest owns, keyed
+ * `<Kind>:<channel>` -> domain file. A manifest-owned channel is owned by Rust, not owner-less.
+ */
+function ownerlessChannels(
+  domains: Record<string, DomainPart[]>,
+  registered: ReadonlySet<string>,
+  native: ReadonlySet<string>
+): Record<string, string> {
+  const computed: Record<string, string> = {}
+  for (const [domain, parts] of Object.entries(domains)) {
+    for (const p of parts) {
+      for (const key of p.keys) {
+        if (!registered.has(key) && !native.has(key)) {
+          computed[`${p.kind}:${key}`] = domain
+        }
+      }
+    }
+  }
+  return computed
+}
+
 /** Floors (D-05). Never lower: a parse miss must turn the census red, not shrink it. */
 const FILES_FLOOR = 22
 const DECLARATIONS_FLOOR = 284
@@ -293,16 +317,32 @@ describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
         registered.add(c)
       }
     }
-    const computed: Record<string, string> = {}
-    for (const [domain, parts] of Object.entries(domains)) {
-      for (const p of parts) {
-        for (const key of p.keys) {
-          if (!registered.has(key)) computed[`${p.kind}:${key}`] = domain
-        }
-      }
-    }
+    const computed = ownerlessChannels(
+      domains,
+      registered,
+      nativeChannelNames()
+    )
     expect(computed).toEqual(NO_REGISTRATION_OWNER)
     expect(Object.keys(NO_REGISTRATION_OWNER)).toHaveLength(61)
+  })
+
+  it('(d) near-miss: a manifest-owned channel leaves the computed owner-less set', () => {
+    const fakeDomains: Record<string, DomainPart[]> = {
+      fake: [
+        { kind: 'Async', name: 'FakeAsync', keys: ['nativeOwned', 'orphan'] }
+      ]
+    }
+    const none = ownerlessChannels(fakeDomains, new Set(), new Set())
+    expect(none).toEqual({
+      'Async:nativeOwned': 'fake',
+      'Async:orphan': 'fake'
+    })
+    const withNative = ownerlessChannels(
+      fakeDomains,
+      new Set(),
+      new Set(['nativeOwned'])
+    )
+    expect(withNative).toEqual({ 'Async:orphan': 'fake' })
   })
 
   it('parseDomainFile reads the const-args conversion form', () => {

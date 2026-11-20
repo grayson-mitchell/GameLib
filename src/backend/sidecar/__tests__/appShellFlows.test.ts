@@ -296,7 +296,6 @@ import {
   RUST_WAKE_LOCK_START,
   RUST_WAKE_LOCK_STOP
 } from 'common/types/sidecarTransport'
-import pkgJson from '../../../../package.json'
 import { resolveAppInfo } from '../../host/appInfo'
 import { createAppShellState } from '../appShellFlowRegistration'
 import { createClock } from '../../process/clock'
@@ -373,7 +372,6 @@ function directDeps(stores: unknown = {}, sendFrontendMessage = jest.fn()) {
   directIpc = createIpcRegistry() as IpcRegistry
   return {
     ipc: directIpc,
-    appInfo: { version: pkgJson.version },
     // The scoped registry's scriptable transport fn, and a recording push.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     requestRustInvoke: require('../sidecarRpc').requestRustInvoke,
@@ -488,21 +486,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     warnSpy.mockRestore()
   })
 
-  // ── invoke (8) ──────────────────────────────────────────────────────────
-
-  it('REQ-34.1-05/T-34.1-17 getHeroicVersion (invoke) resolves a real, non-empty version, never the 0.0.0 fallback', async () => {
-    const { input, frames } = boot()
-    writeInvoke(input, 'version-1', 'getHeroicVersion', [])
-    await flush()
-
-    const response = frames.find((f) => f.id === 'version-1') as
-      | { ok: boolean; result?: unknown }
-      | undefined
-    expect(response?.ok).toBe(true)
-    expect(typeof response?.result).toBe('string')
-    expect(response?.result).not.toBe('0.0.0')
-    expect(response?.result).toBe(pkgJson.version)
-  })
+  // ── invoke (getHeroicVersion moved to the Rust native router in Phase 83) ──
 
   it('REQ-34.1-05 getLatestReleases (invoke) resolves [] when checkForUpdatesOnStartup is false', async () => {
     mockAppSettings({ checkForUpdatesOnStartup: false })
