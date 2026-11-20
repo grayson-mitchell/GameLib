@@ -6,7 +6,7 @@
  * which kept its config in `<appData>/heroic`. On the first launch after the rebrand the
  * folder moves to `<appData>/GameLib` so existing settings and library data carry over.
  * Skipped when `GameLib` already exists. Non-fatal: the worst case is an app that starts with a
- * fresh config. (The `CI=e2e` temp-folder branch was deleted in Phase 82, D-19.)
+ * fresh config. (The e2e temp-folder branch was deleted in Phase 82, D-19.)
  *
  * It runs before 'logger', 'stores', 'migrations', 'config' and 'secret-vault', because every one
  * of them reads under the app folder; `pathsBootOrder.test.ts` pins that.
