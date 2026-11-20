@@ -790,6 +790,9 @@ fn handle_exit(
     }
     #[cfg(not(unix))]
     let _ = single_instance_socket_path;
+    // Last step (Phase 83, D-11): a graceful quit tells the reaper to signal nothing, so it never
+    // reaps. Plan 83-09 moves this into the Shutdown finish stage.
+    gamelib_proc::reaper::disarm();
 }
 
 /// Spawns the sidecar, wires its reader and stderr forwarder, and returns the shared state.
@@ -827,6 +830,12 @@ fn spawn_sidecar_state(app: &tauri::App) -> Result<Arc<SidecarState>, Box<dyn st
             std::process::exit(1);
         }
     };
+    // The sidecar is its own group leader (`configure_sidecar_process_group`, pgid == pid), so
+    // registering that group with the reaper makes a SIGKILL of GameLib kill the sidecar and every
+    // helper it spawned (D-10's TS-spawned case; D-15 records that this includes games the TS
+    // runner launched).
+    #[cfg(unix)]
+    gamelib_proc::reaper::register_group(child.id() as i32, "sidecar");
     #[cfg(windows)]
     let job = create_kill_on_close_job(&child);
     let stdin = child.stdin.take().ok_or("sidecar stdin unavailable")?;
@@ -1702,9 +1711,18 @@ fn run_setup(
 }
 
 fn main() {
-    // Installed FIRST, before any other statement, so it covers the single-instance guard and
-    // every `.setup()` callback rather than only the code after `Builder::default()`.
+    // The panic hook is installed FIRST, before any other statement, so it covers the
+    // single-instance guard and every `.setup()` callback rather than only the code after
+    // `Builder::default()`. Reaper-mode dispatch is SECOND (Phase 83, D-11): `GameLib
+    // --gamelib-reaper` is this same executable acting as the SIGKILL reaper, and it must never
+    // reach the crypto provider, the single-instance guard, the Tauri builder or AppKit (it would
+    // otherwise show a second app in the Dock). A reaper panic is still written to
+    // gamelib-shell-panic.log because the hook is already in place.
     install_panic_hook();
+    gamelib_proc::reaper::dispatch_if_requested();
+    // gamelib-proc's own diagnostics (job creation, group-signal failures, reaper wiring) go
+    // through the shell's log sink, so they land in stderr and gamelib-shell.log.
+    gamelib_proc::diag::set_diag_sink(shell_diag);
     // Explicit ring rustls provider before any reqwest/steam-vent client can pick one by crate
     // install order (spike 082, CF-07).
     gamelib_steamcm::install_crypto_provider();
@@ -1779,6 +1797,16 @@ fn main() {
 
     #[cfg(not(any(unix, windows)))]
     let primary_listener: Option<PrimaryListener> = None;
+
+    // Phase 83 (FND-04, D-11): the SIGKILL reaper. Started only now that this process is the
+    // primary instance (a secondary has already exited above, so it never spawns one) and before
+    // the Tauri builder. A failure here is logged and startup continues: never `?`, never a
+    // panic out of `did_finish_launching` (the SIGABRT history in `spawn_sidecar_state`).
+    #[cfg(unix)]
+    match gamelib_proc::reaper::start() {
+        Ok(pid) => shell_diag(&format!("reaper started (pid {pid})")),
+        Err(e) => shell_diag(&format!("reaper unavailable: {:?}", e.kind())),
+    }
 
     tauri::Builder::default()
         .plugin(
@@ -2319,6 +2347,60 @@ mod tests {
             cut_test_modules(main) == main[..at],
             "main.rs production text differs from the pre-test slice"
         );
+    }
+
+    /// Phase 83 (D-11): reaper mode is dispatched right after the panic hook and before anything
+    /// that could start the app, and the reaper itself is started only by the primary instance,
+    /// after both single-instance blocks and before the Tauri builder. Comment lines are dropped
+    /// so prose naming these calls cannot satisfy or break the order.
+    #[test]
+    fn fn_main_dispatches_reaper_mode_first_and_starts_it_after_the_single_instance_guard() {
+        let src = shell_production_source();
+        let from = src.find("\nfn main() {").expect("fn main not found");
+        let rest = &src[from + 1..];
+        let end = rest.find("\n}\n").expect("end of fn main not found");
+        let body: String = rest[..end]
+            .lines()
+            .filter(|l| !l.trim_start().starts_with("//"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let at = |needle: &str| {
+            body.find(needle)
+                .unwrap_or_else(|| panic!("fn main does not contain `{needle}`"))
+        };
+        let panic_hook = at("install_panic_hook();");
+        let dispatch = at("gamelib_proc::reaper::dispatch_if_requested()");
+        assert!(
+            panic_hook < dispatch,
+            "the panic hook comes before reaper dispatch"
+        );
+        for later in [
+            "install_crypto_provider",
+            "acquire_single_instance(",
+            "acquire_single_instance_windows(",
+            "gamelib_proc::reaper::start()",
+            "tauri::Builder::default()",
+        ] {
+            assert!(
+                dispatch < at(later),
+                "reaper dispatch must precede `{later}` in fn main"
+            );
+        }
+        let windows_block_end = at("WindowsSingleInstanceRole::PrimaryWithoutListener");
+        let start = at("gamelib_proc::reaper::start()");
+        assert!(
+            windows_block_end < start,
+            "the reaper starts after the windows single-instance block"
+        );
+        assert!(
+            start < at("tauri::Builder::default()"),
+            "the reaper starts before the Tauri builder"
+        );
+        // Neither failure arm may propagate or panic out of startup.
+        let arm = &body[start..at("tauri::Builder::default()")];
+        assert!(arm.contains("reaper started (pid "));
+        assert!(arm.contains("reaper unavailable: "));
+        assert!(!arm.contains(")?") && !arm.contains("unwrap") && !arm.contains("expect"));
     }
 
     /// Guard: a new shell module file must be named in `SHELL_SOURCE_FILES`, or the source-text

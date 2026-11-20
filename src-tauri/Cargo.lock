@@ -1711,6 +1711,7 @@ dependencies = [
  "gamelib-core",
  "gamelib-depot",
  "gamelib-i18n",
+ "gamelib-proc",
  "gamelib-safety",
  "gamelib-scan",
  "gamelib-steamcm",
