@@ -158,7 +158,11 @@ async function spawnElevated(
   if (res.code !== 0) {
     // A declined UAC prompt lands here.
     logWarning(
-      ['Elevated step exited with code', res.code, res.stderr.trim()],
+      [
+        'Elevated step exited with code',
+        res.code,
+        `stderrLength=${res.stderr.length}`
+      ],
       LogPrefix.Gog
     )
     return { failed: true }
