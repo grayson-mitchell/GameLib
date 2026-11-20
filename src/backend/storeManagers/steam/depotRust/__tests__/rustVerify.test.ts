@@ -161,6 +161,104 @@ describe('verifyInstalledDepotsRust (quick 261120-p2j)', () => {
     )
   })
 
+  it('quick 261120-tbr: an installed opt-in DLC depot is planned, so its key uses the base app', async () => {
+    const OPT_IN_DLC = 313250
+    const OPT_IN_DEPOT = 381450
+    const OPT_IN_INSTALLED = '1111111111111111111'
+    client.getProductInfo.mockImplementation(((
+      ids: number[],
+      packageIds: number[] = []
+    ) => {
+      if (packageIds.length > 0) {
+        return Promise.resolve({
+          apps: {},
+          packages: {
+            7: {
+              packageinfo: {
+                appids: [Number(APP_ID), OPT_IN_DLC],
+                depotids: [222, OPT_IN_DEPOT]
+              }
+            }
+          }
+        })
+      }
+      if (ids[0] === OPT_IN_DLC) {
+        return Promise.resolve({
+          apps: {
+            [OPT_IN_DLC]: { appinfo: { extended: { optionaldlc: '1' } } }
+          },
+          packages: {}
+        })
+      }
+      return Promise.resolve({
+        apps: {
+          [Number(APP_ID)]: {
+            appinfo: {
+              common: { name: 'Some Game' },
+              depots: {
+                '222': {
+                  manifests: {
+                    public: { gid: '9999999999999999999', size: 0 }
+                  },
+                  config: { oslist: 'windows' }
+                },
+                [String(OPT_IN_DEPOT)]: {
+                  dlcappid: String(OPT_IN_DLC),
+                  manifests: {
+                    public: { gid: '3731324120960268617', size: 0 }
+                  },
+                  config: {
+                    oslist: 'windows',
+                    osarch: '64',
+                    optionaldlc: String(OPT_IN_DLC)
+                  }
+                },
+                branches: { public: { buildid: 999 } }
+              },
+              config: { installdir: 'SomeGame' },
+              extended: { listofdlc: String(OPT_IN_DLC) }
+            }
+          }
+        },
+        packages: {}
+      })
+    }) as never)
+    const stub = createStubRustDepot()
+    invokeMock.mockImplementation(stub.invoke)
+
+    const out = await verifyInstalledDepotsRust(
+      APP_ID,
+      opts({
+        installed: {
+          buildid: '321',
+          depots: [
+            { depotId: '222', manifest: INSTALLED_222, size: '0' },
+            {
+              depotId: String(OPT_IN_DEPOT),
+              manifest: OPT_IN_INSTALLED,
+              size: '0',
+              dlcAppId: String(OPT_IN_DLC)
+            }
+          ]
+        }
+      })
+    )
+
+    expect(out.status).toBe('done')
+    const by = new Map(stub.jobs[0]?.depots.map((d) => [d.depotId, d]))
+    expect(by.get(String(OPT_IN_DEPOT))?.manifestId).toBe(OPT_IN_INSTALLED)
+    expect(client.getDepotDecryptionKey).toHaveBeenCalledWith(
+      Number(APP_ID),
+      OPT_IN_DEPOT,
+      expect.any(Function)
+    )
+    expect(client.getDepotDecryptionKey).not.toHaveBeenCalledWith(
+      OPT_IN_DLC,
+      OPT_IN_DEPOT,
+      expect.any(Function)
+    )
+  })
+
   it('keeps a null buildid when the ACF recorded none', async () => {
     const stub = createStubRustDepot()
     invokeMock.mockImplementation(stub.invoke)

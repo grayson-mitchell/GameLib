@@ -124,6 +124,18 @@ describe('estimateBridgeUpdate', () => {
     )
   })
 
+  it('quick 261120-tbr: passes the ACF installed depot ids to buildDepotRefs', async () => {
+    jest.mocked(summarizeDepots).mockResolvedValue({
+      skippedDepots: [],
+      depots: [{ delta: delta(10 * GB, 600) }, { delta: delta(3 * GB, 300) }]
+    } as never)
+    await estimateBridgeUpdate(game, {})
+    expect(buildDepotRefs).toHaveBeenCalledWith(
+      '12345',
+      expect.objectContaining({ installedDepotIds: new Set(['100', '101']) })
+    )
+  })
+
   it.each([[true], [false]])(
     'the lease opts are exactly the reason and appName (unattended=%s)',
     async (unattended) => {

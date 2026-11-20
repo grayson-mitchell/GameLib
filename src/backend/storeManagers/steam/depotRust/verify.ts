@@ -7,6 +7,9 @@
 // CURRENT manifests and buildid, and a verify run on those would silently become an update. Every
 // ref's gid is replaced by the installed manifest, and finalize carries the installed buildid.
 //
+// Installed opt-in DLC depots are selected by the plan (quick 261120-tbr), so they take the plan's
+// owner app rather than the ACF dlcappid fallback below.
+//
 // Node does the CM half; Rust reads manifests; no timers or handles are created here. Abort is
 // forwarded by runDepotJob.
 
@@ -87,7 +90,10 @@ export async function verifyInstalledDepotsRust(
       )
     }
 
-    const refs = await buildDepotRefs(appId, opts)
+    const refs = await buildDepotRefs(appId, {
+      ...opts,
+      installedDepotIds: new Set(opts.installed.depots.map((d) => d.depotId))
+    })
     const client = getDepotClient(opts.steamUser)
     const hosts: ContentServerHosts = await getContentServerHosts(
       client,

@@ -100,6 +100,8 @@ export async function estimateBridgeUpdate(
       installdir: ctx.installdir,
       os: 'windows',
       branch: ctx.branch,
+      // Not `delta`: that means "run as a chunk-level delta job", and the estimate is not one.
+      installedDepotIds: new Set(ctx.oldGidByDepot.keys()),
       signal
     }
     const refs = await buildDepotRefs(appId, depotOpts)
