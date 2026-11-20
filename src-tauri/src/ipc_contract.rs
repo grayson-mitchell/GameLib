@@ -771,7 +771,9 @@ pub(crate) const NATIVE_INVOKE_CHANNELS: &[&str] = &[
 ];
 
 /// Renderer send channels owned by the Rust native router (Phase 83), sorted.
-pub(crate) const NATIVE_SEND_CHANNELS: &[&str] = &[];
+pub(crate) const NATIVE_SEND_CHANNELS: &[&str] = &[
+    "openExternalUrl",
+];
 
 pub(crate) fn is_native_invoke_channel(name: &str) -> bool {
     NATIVE_INVOKE_CHANNELS.binary_search(&name).is_ok()

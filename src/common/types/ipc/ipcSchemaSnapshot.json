@@ -5364,19 +5364,17 @@
     {
       "channel": "openExternalUrl",
       "kind": "send",
-      "owner": "sidecar",
-      "args": {
-        "type": "array",
-        "prefixItems": [
-          {
-            "type": "string",
-            "maxLength": 8192
-          }
-        ],
-        "items": false,
-        "minItems": 1,
-        "maxItems": 1
-      }
+      "owner": "native",
+      "args": [
+        {
+          "name": "url",
+          "type": "string",
+          "maxLength": 8192,
+          "maxLengthUnit": "utf16",
+          "format": "url"
+        }
+      ],
+      "returns": "void"
     },
     {
       "channel": "openFolder",

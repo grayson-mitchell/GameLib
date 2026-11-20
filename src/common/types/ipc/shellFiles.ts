@@ -4,7 +4,6 @@ import type { DiskSpaceData } from '../../types'
 import {
   nonEmptyString,
   optionalArg,
-  urlArg,
   type InvokeFns,
   type SendFns
 } from './schemaTypes'
@@ -12,7 +11,6 @@ import {
 const noArgs = z.tuple([])
 
 export const shellFilesSyncArgs = {
-  openExternalUrl: z.tuple([urlArg()]),
   openFolder: z.tuple([nonEmptyString()]),
   openLoginPage: noArgs,
   openKofiPage: noArgs,

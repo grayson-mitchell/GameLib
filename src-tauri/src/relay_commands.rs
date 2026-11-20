@@ -136,16 +136,25 @@ pub(crate) fn send_trace_enabled() -> bool {
 /// `spawn_blocking` pool would not). The always-on `write_frame` failure line moved there with
 /// the write; an IO failure no longer reaches the renderer as a rejection, which -- per the
 /// paragraph above -- was the path where it got lost anyway.
+///
+/// NATIVE SENDS (Phase 83, D-01/D-02/D-04): right after the verdict, a channel the Rust native
+/// router owns (`openExternalUrl`) is validated and enqueued on its slice's one FIFO worker, and
+/// this command returns on any outcome. The sidecar is never asked and there is no fallback to it.
+/// The router only validates and enqueues, so the main thread still does no blocking work here.
 #[tauri::command]
 pub(crate) fn sidecar_send(
     channel: String,
     args: Vec<Value>,
     state: State<'_, Arc<SidecarState>>,
     queue: State<'_, SidecarSendQueue>,
+    router: State<'_, NativeRouter>,
 ) -> Result<(), String> {
     if let Err(e) = relay_channel_verdict(&channel) {
         shell_eprintln!("[shell] relay rejected send: {}", echo_channel(&channel));
         return Err(e);
+    }
+    if let Some(outcome) = router.route_send(&channel, &args) {
+        return outcome;
     }
     let req = SidecarRpcRequest {
         id: state.next_id(),

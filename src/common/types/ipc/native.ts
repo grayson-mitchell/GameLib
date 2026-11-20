@@ -4,8 +4,12 @@
  * schema authority for a native channel (D-07), and the manifest's valid/invalid vectors pin it.
  *
  * The keys below must equal the manifest's channels by kind (`ipcDomainCensus` test (e)): invoke
- * channels in `NativeAsync`, send channels in a `NativeSync` added with the first native send.
+ * channels in `NativeAsync`, send channels in `NativeSync`.
  */
 export interface NativeAsync {
   getHeroicVersion: () => string
+}
+
+export interface NativeSync {
+  openExternalUrl: (url: string) => void
 }

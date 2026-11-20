@@ -2,12 +2,11 @@
  * Curated shell/files/diagnostics channel registration (Phase 34.3 Plans 01
  * and 02, D-14, REQ-34.3-01/REQ-34.3-02/REQ-34.3-05/REQ-34.3-06/REQ-34.3-13).
  *
- * Registers 14 of this slice's 22 channels onto platformApi's `ipcMain`
+ * Registers 13 of this slice's 22 channels onto platformApi's `ipcMain`
  * recorder, importing the REAL `backend/utils.ts` / `backend/utils/filesystem`
  * functions UNCHANGED:
  *
- *   send (deps.ipc.on, 11; `removeFolder` deleted in Phase 72 D-09; `openSupportPage`/`openWeblate`/`openDiscordLink`/`openGithubSponsorsPage`/`openWikiLink` deleted in quick 261115-tk8):
- *     - `openExternalUrl` -> `assertOpenableExternalUrl` then `shell.openExternal` (Phase 72 D-07)
+ *   send (deps.ipc.on, 10; `removeFolder` deleted in Phase 72 D-09; `openSupportPage`/`openWeblate`/`openDiscordLink`/`openGithubSponsorsPage`/`openWikiLink` deleted in quick 261115-tk8; `openExternalUrl` moved to the Rust native router in Phase 83 plan 06, see `nativeChannels.json`):
  *     - `openFolder` -> `classifyFolderTarget`: open a directory, reveal a file or bundle (Phase 72 D-07/D-08)
  *     - `openLoginPage` -> `shell.openExternal(epicLoginUrl)` (`main.ts:741`)
  *     - `openKofiPage` -> `shell.openExternal(kofiPage)` (`main.ts:744`)
@@ -87,7 +86,7 @@
 import type { AppState } from '../host/appState'
 import type { OpenExternal } from '../host/openExternal'
 import type { IpcRegistry } from './ipcRegistry'
-import { assertOpenableExternalUrl, classifyFolderTarget } from './openPolicy'
+import { classifyFolderTarget } from './openPolicy'
 import { assertContainedPath } from './rendererPathGuard'
 import {
   showItemInFolder as showItemInFolderImpl,
@@ -127,9 +126,9 @@ function logSendFailure(channel: string, error: unknown): void {
 }
 
 /**
- * Registers this module's 14 shell/files/diagnostics channels (3 invoke + 11
+ * Registers this module's 13 shell/files/diagnostics channels (3 invoke + 10
  * send; quick 261115-tk8 deleted five link-opener sends, Phase 72 D-09 deleted
- * `removeFolder`).
+ * `removeFolder`, Phase 83 plan 06 moved `openExternalUrl` to Rust).
  * Called once from `handlers.ts` — this module owns no side effects at
  * import time beyond the imports above; the caller decides when
  * registration onto the handler registry happens.
@@ -169,19 +168,7 @@ export function registerShellFilesFlows(deps: {
   /** The sidecar -> Rust leg the safety guard asks (82-07). */
   requestRustInvoke: HostServices['requestRustInvoke']
 }): void {
-  // ── send (11): the URL openers (constant URLs go straight to shell.openExternal) ────
-
-  deps.ipc.on('openExternalUrl', (_event: unknown, ...args: unknown[]) => {
-    try {
-      void Promise.resolve(
-        deps.openExternal.openExternal(
-          assertOpenableExternalUrl(args[0], 'openExternalUrl')
-        )
-      ).catch((error) => logSendFailure('openExternalUrl', error))
-    } catch (error) {
-      logSendFailure('openExternalUrl', error)
-    }
-  })
+  // ── send (10): the URL openers (constant URLs go straight to shell.openExternal) ────
 
   deps.ipc.on('openFolder', (_event: unknown, ...args: unknown[]) => {
     void (async () => {

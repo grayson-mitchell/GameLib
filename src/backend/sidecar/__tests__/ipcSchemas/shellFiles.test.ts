@@ -11,13 +11,6 @@ import {
 const noArgs = { valid: [[]], invalid: [['unexpected']] }
 
 const syncTable: FixtureTable<typeof shellFilesSyncArgs> = {
-  openExternalUrl: {
-    valid: [
-      ['https://www.humblebundle.com/home/keys'],
-      ['gamelib://deep-link']
-    ],
-    invalid: [['not a url'], []]
-  },
   openFolder: {
     valid: [['/home/user/Games/Prefix']],
     invalid: [[''], [undefined]]

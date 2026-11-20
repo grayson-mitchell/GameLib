@@ -7,6 +7,28 @@
       "returns": "string",
       "valid": [[]],
       "invalid": [["extra"], [null], [1, 2]]
+    },
+    "openExternalUrl": {
+      "kind": "send",
+      "slice": "app-shell",
+      "args": [
+        {
+          "name": "url",
+          "type": "string",
+          "maxLength": 8192,
+          "maxLengthUnit": "utf16",
+          "format": "url"
+        }
+      ],
+      "returns": "void",
+      "valid": [["https://example.com/a"], ["steam://rungameid/220"]],
+      "invalid": [
+        [],
+        [null],
+        [""],
+        ["file:///etc/passwd"],
+        ["https://a", "extra"]
+      ]
     }
   }
 }

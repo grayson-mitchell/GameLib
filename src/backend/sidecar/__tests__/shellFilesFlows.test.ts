@@ -352,20 +352,8 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
     }
   })
 
-  // ── REQ-34.3-01: openExternalUrl / openFolder — forward args[0] verbatim ──
-
-  it('REQ-34.3-01 openExternalUrl (send) forwards args[0] verbatim to shell.openExternal', async () => {
-    const { input, frames } = boot()
-    const synthetic = 'https://example.com/synthetic-open-external-url-test'
-    writeSend(input, 'open-external-url-1', 'openExternalUrl', [synthetic])
-    await flush()
-
-    const pushed = frames.find((f) => f.kind === 'openExternal') as
-      | { args?: unknown[] }
-      | undefined
-    expect(pushed).toBeDefined()
-    expect((pushed?.args as unknown[])?.[0]).toBe(synthetic)
-  })
+  // ── REQ-34.3-01: openFolder — forward args[0] verbatim (`openExternalUrl` is native since
+  // Phase 83 plan 06: the Rust router's tests cover its validation) ──
 
   it('openFolder (send) opens an existing directory via shell.openPath', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'gamelib-open-folder-'))
@@ -404,30 +392,6 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
     writeSend(input, 'open-folder-3', 'openFolder', ['relative/dir'])
     await flushFs()
     expect(mockRequestRustInvoke).not.toHaveBeenCalled()
-    expect(frames.find((f) => f.kind === 'openExternal')).toBeUndefined()
-  })
-
-  it('openExternalUrl (send) rejects a file:// URL with no platform call', async () => {
-    const { input, frames } = boot()
-    // The boot's own steamcm_configure and boot restore (Phase 79) are not handler calls.
-    await flush()
-    mockRequestRustInvoke.mockClear()
-    writeSend(input, 'open-external-url-3', 'openExternalUrl', ['file:///x'])
-    await flush()
-    expect(frames.find((f) => f.kind === 'openExternal')).toBeUndefined()
-    expect(mockRequestRustInvoke).not.toHaveBeenCalled()
-  })
-
-  it('openExternalUrl (send) does not treat a non-http scheme that merely starts with "http" as a URL', async () => {
-    // Todo `sidecar-log-output-shares-the-rpc-stdout-pipe`: the old helper
-    // used `startsWith('http')`, so `httpfoo:` reached the shell's
-    // `openExternal` frame arm.
-    const { input, frames } = boot()
-    writeSend(input, 'open-external-url-2', 'openExternalUrl', [
-      'httpfoo:synthetic'
-    ])
-    await flush()
-
     expect(frames.find((f) => f.kind === 'openExternal')).toBeUndefined()
   })
 
@@ -843,7 +807,6 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
   // — derived from a literal table, not from the module under test ──────────
 
   const CHANNEL_KINDS: Record<string, 'send' | 'invoke'> = {
-    openExternalUrl: 'send',
     openFolder: 'send',
     openLoginPage: 'send',
     openKofiPage: 'send',
@@ -859,7 +822,7 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
     pathExists: 'invoke'
   }
 
-  it("REQ-34.3-01/REQ-34.3-02/REQ-34.3-05/REQ-34.3-06 send-vs-handle contract: every one of this module's 14 channels is registered with the kind that matches main.ts", () => {
+  it("REQ-34.3-01/REQ-34.3-02/REQ-34.3-05/REQ-34.3-06 send-vs-handle contract: every one of this module's 13 channels is registered with the kind that matches main.ts", () => {
     boot()
 
     // Phase 72 D-09: the renderer removeFolder channel is gone.
@@ -876,7 +839,7 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
       expect(listenerRegistry.get(removed)?.length ?? 0).toBe(0)
       expect(handlerRegistry.has(removed)).toBe(false)
     }
-    expect(Object.keys(CHANNEL_KINDS)).toHaveLength(14)
+    expect(Object.keys(CHANNEL_KINDS)).toHaveLength(13)
 
     for (const [channel, kind] of Object.entries(CHANNEL_KINDS)) {
       if (kind === 'send') {

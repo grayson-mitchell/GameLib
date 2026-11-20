@@ -1615,7 +1615,7 @@ fn run_setup(
     steampoll_boot();
     // Phase 83: native channel ownership. Managed before the sidecar is spawned so a native hit
     // never needs the sidecar.
-    app.manage(NativeRouter::new());
+    app.manage(NativeRouter::new(Arc::new(AppNativeHost(app.handle().clone()))));
     let state = spawn_sidecar_state(app)?;
     start_single_instance_accept_loop(app, &state, primary_listener);
     install_os_deep_link_handler(app, &state);

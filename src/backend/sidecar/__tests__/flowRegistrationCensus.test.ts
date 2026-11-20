@@ -117,7 +117,9 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   // Quick 261115-tk8 (2026-11-15, 6254354b2): send 16 -> 11 -- the dead Heroic-era link channels
   // `openWeblate`, `openSupportPage`, `openDiscordLink`, `openGithubSponsorsPage` and
   // `openWikiLink` deleted.
-  'shellFilesFlowRegistration.ts': { invoke: 3, send: 11 },
+  // Phase 83 Plan 06 / 83-06 (2026-11-20): send 11 -> 10 -- `openExternalUrl` moved to the Rust native
+  // router (`nativeChannels.json`); its registration is deleted here.
+  'shellFilesFlowRegistration.ts': { invoke: 3, send: 10 },
   // Quick 261012-ca6 (2026-10-12): invoke 4 -> 6, send 3 -> 1 -- `addShortcut` and
   // `removeShortcut` moved from send to invoke so the renderer can learn the write's outcome.
   'shortcutsFlowRegistration.ts': { invoke: 6, send: 1 },

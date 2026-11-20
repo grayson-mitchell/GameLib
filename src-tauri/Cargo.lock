@@ -1739,6 +1739,7 @@ dependencies = [
  "tauri-plugin-opener",
  "tauri-plugin-shell",
  "tauri-plugin-updater",
+ "url",
  "webview2-com",
  "windows",
  "windows-sys 0.60.2",
