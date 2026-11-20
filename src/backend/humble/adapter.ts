@@ -75,7 +75,6 @@ const OrderDetailSchema = z.looseObject({
 })
 
 export type OrderDetail = z.infer<typeof OrderDetailSchema>
-export type OrderDetailTpk = z.infer<typeof OrderDetailTpkSchema>
 
 // WR-04: axios's default timeout is 0 (unlimited). A hung transport (stalled
 // TCP, captive portal, Humble blackholing the request) would otherwise pin

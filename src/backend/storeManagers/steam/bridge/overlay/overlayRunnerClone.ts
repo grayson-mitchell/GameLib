@@ -216,7 +216,7 @@ function readyFor(
  * Per-launch verification: marker, clone loader hashes, source loader hashes
  * and the dyld entitlement on both clone loaders. Never throws.
  */
-export async function verifyOverlayRunnerClone(
+async function verifyOverlayRunnerClone(
   runnerDir: string,
   crossover: OverlayCrossover,
   run: RunTool

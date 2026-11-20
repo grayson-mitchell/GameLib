@@ -4,12 +4,6 @@
 export const HUMBLE_TOKEN_STORE_KEY = 'sessionCookie'
 export const HUMBLE_TOKEN_PREFIX = 'humble:v1:'
 
-// Persistent (Chromium-backed) session partition shared between the
-// /loginweb/humble embedded WebView (renderer) and this main-process cookie
-// watch (D-18). Renamed from the in-memory 'humble-login' value so the login
-// survives restarts and reconnect (D-11) can skip re-authentication.
-export const HUMBLE_LOGIN_PARTITION = 'persist:humble'
-
 export const HUMBLE_BASE_URL = 'https://www.humblebundle.com'
 // Humble moved to Next.js: www.humblebundle.com/login now 404s. Sign-in lives on
 // the Ory-backed auth host (redirects to /login?flow=...), 2026-11-12.
@@ -72,12 +66,3 @@ export const HUMBLE_COOLDOWN_MS = 15 * 60 * 1000
 //       be re-classified once — without this bump, `frozen`/server-terminal
 //       orders keep the old zero-key result and the fix never reaches them.
 export const HUMBLE_CLASSIFIER_VERSION = 7
-
-// HDEDUP-01 success criterion 3 (Phase 12 dedup fuzzy-name fallback):
-// locked at 85%+, NOT the community-norm 70% — DLC titles false-positive
-// match base games at lower thresholds and false positives waste gift links.
-// Phase 20 (D-02): single source of truth moved to
-// common/matching/titleMatch.ts (shared with the store-search badge
-// resolver); re-exported here so every existing importer of this constant
-// from constants.ts keeps compiling unchanged.
-export { HUMBLE_FUZZY_MATCH_THRESHOLD } from 'common/matching/titleMatch'

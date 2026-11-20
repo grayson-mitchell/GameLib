@@ -25,11 +25,6 @@ exports	meta/runnerLiteralSelectors.cjs	RUNNER_NAME
 exports	meta/runnerLiteralSelectors.cjs	SCOPE_FILES
 exports	meta/runnerLiteralSelectors.cjs	SCOPE_IGNORES
 exports	meta/updaterSigningKey.ts	readCommittedPubkey
-exports	src/backend/humble/constants.ts	HUMBLE_FUZZY_MATCH_THRESHOLD
-exports	src/backend/humble/constants.ts	HUMBLE_LOGIN_PARTITION
-exports	src/backend/storeManagers/steam/bridge/drm/runnerEntitlements.ts	parseEntitlementKeys
-exports	src/backend/storeManagers/steam/bridge/overlay/overlayNotice.ts	OVERLAY_CAUSE_MAX_CHARS
-exports	src/backend/storeManagers/steam/bridge/overlay/overlayRunnerClone.ts	verifyOverlayRunnerClone
 exports	src/backend/storeManagers/steam/cancelDelete.ts	CANCEL_DELETE_POLL_MS
 exports	src/backend/storeManagers/steam/cancelDelete.ts	CANCEL_DELETE_TIMEOUT_MS
 exports	src/backend/storeManagers/steam/gameDrmLaunch.ts	DRM_DLL_OVERRIDES
@@ -323,9 +318,6 @@ types	meta/hardcodedStringGate.ts	Violation
 types	meta/logSecretGate.ts	Exemption
 types	meta/logSecretGate.ts	Violation
 types	meta/logSecretGate.ts	ViolationKind
-types	src/backend/humble/adapter.ts	OrderDetailTpk
-types	src/backend/storeManagers/steam/bridge/drm/steamclientLayerInstall.ts	SteamclientLayerArchiveFetch
-types	src/backend/storeManagers/steam/bridge/protocol.ts	InterfaceOrdinalName
 types	src/common/types/steam.ts	SteamCredentials
 types	src/frontend/types.ts	Category
 types	src/frontend/types.ts	CrossoverRatingFilters

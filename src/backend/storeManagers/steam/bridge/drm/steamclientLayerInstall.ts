@@ -72,7 +72,7 @@ export type SteamclientLayerReady = {
   source: 'cache' | 'download'
 }
 
-export type SteamclientLayerArchiveFetch = (
+type SteamclientLayerArchiveFetch = (
   url: string,
   opts: { signal: AbortSignal; maxBytes: number }
 ) => Promise<Buffer>

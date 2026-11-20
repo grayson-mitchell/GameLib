@@ -99,8 +99,6 @@ export const INTERFACE_ORDINAL = {
   friends: 2
 } as const
 
-export type InterfaceOrdinalName = keyof typeof INTERFACE_ORDINAL
-
 /** Reserved ordinal for the CONTROL frame (review finding #7) -- never a
  * real Steamworks interface, so it is placed at the top of the uint16
  * range, far from any plausible future interface ordinal. */

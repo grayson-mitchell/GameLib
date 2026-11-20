@@ -14,7 +14,7 @@ export const OVERLAY_STEPS = [
 
 export type OverlayStep = (typeof OVERLAY_STEPS)[number]
 
-export const OVERLAY_CAUSE_MAX_CHARS = 160
+const OVERLAY_CAUSE_MAX_CHARS = 160
 
 export type OverlayStepError = {
   status: 'error'

@@ -27,7 +27,7 @@ export const STOCK_LOADER_ENTITLEMENTS: readonly string[] = [
   'com.apple.security.device.camera'
 ]
 
-export function parseEntitlementKeys(stdout: string): string[] | null {
+function parseEntitlementKeys(stdout: string): string[] | null {
   const start = stdout.search(/<\?xml|<plist/)
   if (start < 0) return null
   const text = stdout.slice(start)
