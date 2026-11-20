@@ -5,8 +5,6 @@ import type {
   SteamBottleConfig,
   SteamBottleEligibilityVerdict,
   SteamBridgeRouteReason,
-  BridgeListFriendsResult,
-  BridgeInviteResult,
   SteamBridgeRouteVerdict,
   SteamUserData
 } from '../steam'
@@ -101,12 +99,6 @@ export const steamAuthAsyncArgs = {
   ]),
   // quick-260821-le0: sweeps every recorded install root for a Steam title.
   steamRemoveAllCopies: z.tuple([nonEmptyString(64)]),
-  // Phase 58 Plan 31: sidecar-only friend picker channels.
-  steamBridgeListFriends: z.tuple([steamAppIdArg()]),
-  steamBridgeInviteFriend: z.tuple([
-    steamAppIdArg(),
-    z.number().int().nonnegative()
-  ]),
   // Phase 34.13 (34.13-07), D-14: persists the install form's chosen wine engine.
   persistBottleWineVersion: z.tuple([wineInstallationArg()]),
   // Phase 21 (21-10), D-10: guided native Steam client install.
@@ -167,8 +159,6 @@ interface SteamAuthAsyncReturns {
     refused: number
     error?: string
   }>
-  steamBridgeListFriends: Promise<BridgeListFriendsResult>
-  steamBridgeInviteFriend: Promise<BridgeInviteResult>
   persistBottleWineVersion: Promise<{
     status: 'done' | 'error'
     error?: string

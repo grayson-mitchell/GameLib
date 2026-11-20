@@ -207,33 +207,6 @@ export interface SteamSetupDownloadProgress {
 }
 
 /**
- * Phase 58 Plan 31 (M-01): one friend in the invite picker. No SteamID.
- * `ordinal` is an opaque helper token bound to the list call that produced it
- * (58 WR-04): pass it back unchanged; a token from an older list is refused
- * as `bad-ordinal`.
- */
-export interface BridgeFriend {
-  ordinal: number
-  name: string
-  online: boolean
-  playingThisApp: boolean
-}
-
-/** Phase 58 Plan 31 (M-01): closed result words of an invite attempt. */
-export type BridgeInviteResult =
-  | 'sent'
-  | 'steam-refused'
-  | 'no-pending'
-  | 'expired'
-  | 'bad-ordinal'
-  | 'no-helper'
-  | 'error'
-
-export type BridgeListFriendsResult =
-  | { ok: true; friends: BridgeFriend[] }
-  | { ok: false; reason: 'no-helper' | 'error' }
-
-/**
  * quick 261106-pvk: Steam never picked up a delegated request. The renderer
  * maps `kind` to catalogue strings and shows each notice once per `seq`.
  */

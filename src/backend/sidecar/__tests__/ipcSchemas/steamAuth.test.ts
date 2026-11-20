@@ -99,17 +99,6 @@ const asyncTable: FixtureTable<typeof steamAuthAsyncArgs> = {
     valid: [['570']],
     invalid: [[''], [570], []]
   },
-  steamBridgeListFriends: {
-    valid: [['570']],
-    invalid: [['abc'], [570], []]
-  },
-  steamBridgeInviteFriend: {
-    valid: [
-      ['570', 0],
-      ['570', 3]
-    ],
-    invalid: [['570', -1], ['570', 1.5], ['570', '1'], ['abc', 0], ['570']]
-  },
   persistBottleWineVersion: {
     // persisted-config values may carry extra keys or null lib fields (67 review WR-04)
     valid: [

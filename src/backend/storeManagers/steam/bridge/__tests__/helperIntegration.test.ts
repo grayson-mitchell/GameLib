@@ -86,7 +86,6 @@ import {
   HELLO_ROLE_PROBE,
   encodeControl,
   encodeHello,
-  encodeInviteFriendArgs,
   encodeRequest,
   decodeResponse,
   CONTROL_ORDINAL,
@@ -1998,7 +1997,7 @@ describeDarwinOnly(
         socket.resume()
       })
 
-    test('58-35: held shim connection -- a second connection gets control slots 13/14 answered within 1000 ms while the shim stays open', async () => {
+    test('58-35: held shim connection -- a second connection gets control round trips answered within 1000 ms while the shim stays open', async () => {
       const h = await startAuthHelper('p58-35-held-', authedEnv())
       const socks: Socket[] = []
       try {
@@ -2015,21 +2014,16 @@ describeDarwinOnly(
         )
         expect(hello.res.status).toBe(STATUS_OK)
         expect(hello.ms).toBeLessThan(1000)
-        const list = await timedFrame(
+        const health1 = await timedFrame(
           control,
-          encodeRequest(3, CONTROL_ORDINAL, CONTROL_SLOT.listFriends)
+          encodeRequest(3, CONTROL_ORDINAL, CONTROL_SLOT.health)
         )
-        expect(list.ms).toBeLessThan(1000)
-        const invite = await timedFrame(
+        expect(health1.ms).toBeLessThan(1000)
+        const health2 = await timedFrame(
           control,
-          encodeRequest(
-            5,
-            CONTROL_ORDINAL,
-            CONTROL_SLOT.inviteFriend,
-            encodeInviteFriendArgs(0)
-          )
+          encodeRequest(5, CONTROL_ORDINAL, CONTROL_SLOT.health)
         )
-        expect(invite.ms).toBeLessThan(1000)
+        expect(health2.ms).toBeLessThan(1000)
         expect((await sendFrameOnSocket(shim, drainFrame(4))).status).toBe(
           STATUS_OK
         )

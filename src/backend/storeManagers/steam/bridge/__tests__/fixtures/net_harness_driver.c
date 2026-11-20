@@ -108,8 +108,8 @@ static void queue_n(int which, uint32_t handle, int n) {
   }
 }
 
-/* 58-29: invite path fakes. Fake SteamIDs are 17-digit decimals so a log leak
- * is detectable; the response must not contain their little-endian bytes. */
+/* 58-29: the dialog fake. The helper forwards the game's ActivateGameOverlayInviteDialog
+ * to Mac Steam; this records the call and the lobby id it carried. */
 static int g_dialog_calls = 0;
 static uint64_t g_dialog_lobby = 0;
 static void fake_dialog(void *self, uint64_t lobby) {
@@ -117,44 +117,9 @@ static void fake_dialog(void *self, uint64_t lobby) {
   g_dialog_calls++;
   g_dialog_lobby = lobby;
 }
-static const uint64_t k_fid[3] = {76561198000000001ull, 76561198000000002ull, 76561198000000003ull};
-static int fake_friend_count(void *self, int flags) {
-  (void)self; (void)flags;
-  return 3;
-}
-static uint64_t fake_friend_by_index(void *self, int i, int flags) {
-  (void)self; (void)flags;
-  return k_fid[i];
-}
-static int fake_friend_state(void *self, uint64_t id) {
-  (void)self;
-  return id == k_fid[1] ? 0 : 1;
-}
-static int fake_friend_played(void *self, uint64_t id, void *info) {
-  uint64_t gid = 3205720ull;
-  (void)self;
-  if (id != k_fid[2]) return 0;
-  memcpy(info, &gid, 8);
-  return 1;
-}
-static const char *fake_friend_name(void *self, uint64_t id) {
-  (void)self;
-  return id == k_fid[0] ? "Alice" : id == k_fid[1] ? "Bob" : "Cara";
-}
-static int g_inv_calls = 0;
-static uint64_t g_inv_lobby = 0, g_inv_target = 0;
-static int fake_invite(void *self, uint64_t lobby, uint64_t invitee) {
-  (void)self;
-  g_inv_calls++;
-  g_inv_lobby = lobby;
-  g_inv_target = invitee;
-  return 1;
-}
 
 static void setup_invite_fakes(void) {
   g_bd_flat_SteamFriends017_ActivateGameOverlayInviteDialog = fake_dialog;
-  g_bd_flat_SteamFriends017_GetFriendPersonaName = fake_friend_name;
-  g_bd_flat_SteamMatchMaking009_InviteUserToLobby = fake_invite;
 }
 /* quick-261101-mv3: 513 injector driven through the real pump. */
 #define INJ_MAX 4
@@ -217,10 +182,6 @@ static void inj_setup(void) {
   g_md_get_next = inj_get_next;
   g_md_free_last = inj_free_last;
 }
-int SteamAPI_ISteamFriends_GetFriendCount(void *self, int f) { return fake_friend_count(self, f); }
-uint64_t SteamAPI_ISteamFriends_GetFriendByIndex(void *self, int i, int f) { return fake_friend_by_index(self, i, f); }
-int SteamAPI_ISteamFriends_GetFriendPersonaState(void *self, uint64_t id) { return fake_friend_state(self, id); }
-int SteamAPI_ISteamFriends_GetFriendGamePlayed(void *self, uint64_t id, void *info) { return fake_friend_played(self, id, info); }
 
 /* 58-30: server-browser fakes. */
 static int g_ping_calls = 0, g_cancel_calls = 0, g_relreq_calls = 0;
@@ -533,9 +494,8 @@ int main(int argc, char **argv) {
     printf("unlisted-cub done\n");
     return 0;
   }
-  if (strncmp(c, "invite-", 7) == 0 || strcmp(c, "list-friends") == 0 || strcmp(c, "control-unauth") == 0 ||
-      strcmp(c, "mms-lobby-args") == 0) {
-    uint8_t body[GL_INVITE_FRIENDS_RESP_MAX];
+  if (strncmp(c, "invite-", 7) == 0 || strcmp(c, "control-retired") == 0 || strcmp(c, "mms-lobby-args") == 0) {
+    uint8_t body[256];
     uint8_t status = 9;
     uint8_t arg[16];
     uint32_t ord;
@@ -583,143 +543,18 @@ int main(int argc, char **argv) {
       gl_mms_lobby_log(ciType, a, 12);
       return 0;
     }
-    if (strcmp(c, "list-friends") == 0) {
-      uint32_t fn = 0;
-      int rc;
-      g_dispatch_respbuf[0] = 0;
-      rc = gl_invite_list_friends((void *)1, body, sizeof body, &fn);
-      printf("rc=%d len=%u leak=", rc, fn);
-      {
-        int leak = 0;
-        for (int k = 0; k < 3; k++)
-          for (uint32_t o = 0; o + 8 <= fn; o++)
-            if (memcmp(body + o, &k_fid[k], 8) == 0) leak = 1;
-        printf("%d\n", leak);
-      }
-      {
-        uint32_t cnt, off = 4;
-        memcpy(&cnt, body, 4);
-        printf("count=%u\n", cnt);
-        for (uint32_t i = 0; i < cnt; i++) {
-          uint32_t o;
-          uint16_t nl;
-          memcpy(&o, body + off, 4);
-          memcpy(&nl, body + off + 6, 2);
-          /* 58 WR-04: the ordinal is a (generation << 8) | index token. */
-          printf("f idx=%u gen=%u online=%u playing=%u name=%.*s\n", o & 0xffu, o >> 8, body[off + 4], body[off + 5], (int)nl,
-                 (const char *)body + off + 8);
-          off += 8u + nl;
-        }
-      }
-      return 0;
-    }
-    if (strcmp(c, "invite-ok") == 0) {
-      uint64_t lobby = 109775240000000001ull;
-      uint32_t rl = 0, fn = 0;
-      int32_t r;
-      memcpy(arg, &lobby, 8);
-      gl_friends_invite_dialog((void *)1, arg, 8, body, sizeof body, &rl);
-      gl_invite_list_friends((void *)1, body, sizeof body, &fn);
-      r = gl_invite_send((void *)2, (g_friend_snapshot_gen << 8) | 2u);
-      printf("r=%d calls=%d lobbyok=%d targetok=%d\n", r, g_inv_calls, g_inv_lobby == lobby, g_inv_target == k_fid[2]);
-      return 0;
-    }
-    if (strcmp(c, "invite-zero-adopt") == 0) {
-      uint64_t lobby = 109775240000000002ull;
-      uint32_t rl = 0, fn = 0;
-      int32_t pre, r;
-      inj_setup();
-      memset(arg, 0, 8);
-      gl_friends_invite_dialog((void *)1, arg, 8, body, sizeof body, &rl);
-      gl_invite_list_friends((void *)1, body, sizeof body, &fn);
-      pre = gl_invite_send((void *)2, (g_friend_snapshot_gen << 8) | 2u);
-      inj_push(513, 1, lobby);
-      inj_pump();
-      r = gl_invite_send((void *)2, (g_friend_snapshot_gen << 8) | 2u);
-      printf("pre=%d r=%d calls=%d lobbyok=%d targetok=%d\n", pre, r, g_inv_calls, g_inv_lobby == lobby,
-             g_inv_target == k_fid[2]);
-      return 0;
-    }
-    if (strcmp(c, "invite-zero-guards") == 0) {
-      uint64_t l1 = 109775240000000011ull, l2 = 109775240000000012ull, l3 = 109775240000000013ull,
-               l4 = 109775240000000014ull;
-      uint32_t rl = 0;
-      int badres, zerolobby, explicit_, cr, oneshot;
-      inj_setup();
-      memset(arg, 0, 8);
-      gl_friends_invite_dialog((void *)1, arg, 8, body, sizeof body, &rl);
-      inj_push(513, 2, l2);
-      inj_pump();
-      badres = g_invite_lobby != 0;
-      g_invite_lobby = 0;
-      gl_friends_invite_dialog((void *)1, arg, 8, body, sizeof body, &rl);
-      inj_push(513, 1, 0);
-      inj_pump();
-      zerolobby = g_invite_lobby != 0;
-      memcpy(arg, &l1, 8);
-      gl_friends_invite_dialog((void *)1, arg, 8, body, sizeof body, &rl);
-      inj_push(513, 1, l2);
-      inj_pump();
-      explicit_ = g_invite_lobby == l1;
-      g_invite_lobby = 0;
-      memset(arg, 0, 8);
-      gl_friends_invite_dialog((void *)1, arg, 8, body, sizeof body, &rl);
-      g_md_get_api_call_result = inj_get_api_call_result;
-      gl_helper_cr_track(0x1234ull, 513);
-      inj_push_703(0x1234ull, 1, l3);
-      inj_pump();
-      cr = g_invite_lobby == l3;
-      inj_push(513, 1, l4);
-      inj_pump();
-      oneshot = g_invite_lobby == l3;
-      printf("badres=%d zerolobby=%d explicit=%d cr=%d oneshot=%d\n", badres, zerolobby, explicit_, cr, oneshot);
-      return 0;
-    }
-    if (strcmp(c, "invite-refusals") == 0) {
-      uint64_t lobby = 109775240000000001ull;
-      uint32_t rl = 0, fn = 0;
-      int32_t a1, a2, a3, a4;
-      a1 = gl_invite_send((void *)2, 0);
-      memcpy(arg, &lobby, 8);
-      gl_friends_invite_dialog((void *)1, arg, 8, body, sizeof body, &rl);
-      a3 = gl_invite_send((void *)2, 0); /* no snapshot yet */
-      gl_invite_list_friends((void *)1, body, sizeof body, &fn);
-      a4 = gl_invite_send((void *)2, (g_friend_snapshot_gen << 8) | 3u);
-      {
-        /* 58 WR-04: a token from a superseded snapshot, a bare index and a
-         * current token. Only the last one reaches InviteUserToLobby. */
-        uint32_t stale = (g_friend_snapshot_gen << 8) | 0u;
-        int32_t s1, s2, s3;
-        gl_invite_list_friends((void *)1, body, sizeof body, &fn);
-        s1 = gl_invite_send((void *)2, stale);
-        s2 = gl_invite_send((void *)2, 0);
-        s3 = gl_invite_send((void *)2, (g_friend_snapshot_gen << 8) | 0u);
-        printf("stale=%d bare=%d current=%d target0=%d\n", s1, s2, s3, g_inv_target == k_fid[0]);
-      }
-      g_invite_born_ms = gl_invite_now_ms() - 601000ull;
-      a2 = gl_invite_send((void *)2, (g_friend_snapshot_gen << 8) | 0u);
-      printf("nopending=%d expired=%d nosnap=%d badord=%d calls=%d\n", a1, a2, a3, a4, g_inv_calls);
-      {
-        uint8_t st = 9;
-        g_invite_born_ms = gl_invite_now_ms();
-        ord = 0;
-        memcpy(arg, &ord, 4);
-        n = control_call(1, CONTROL_SLOT_INVITE_FRIEND, arg, 3, &st, body, sizeof body);
-        printf("badlen status=%u\n", st);
-      }
-      return 0;
-    }
-    /* control-unauth */
+    /* control-retired: slots 13 and 14 were retired in quick 261120-pp4. They answer STATUS_ERR
+     * whether or not the connection is authenticated. */
     g_inited = 1;
-    n = control_call(0, CONTROL_SLOT_LIST_FRIENDS, NULL, 0, &status, body, sizeof body);
+    n = control_call(0, 13, NULL, 0, &status, body, sizeof body);
     printf("unauth13 status=%u n=%d\n", status, n);
     ord = 0;
     memcpy(arg, &ord, 4);
-    n = control_call(0, CONTROL_SLOT_INVITE_FRIEND, arg, 4, &status, body, sizeof body);
+    n = control_call(0, 14, arg, 4, &status, body, sizeof body);
     printf("unauth14 status=%u n=%d\n", status, n);
-    n = control_call(1, CONTROL_SLOT_LIST_FRIENDS, NULL, 0, &status, body, sizeof body);
+    n = control_call(1, 13, NULL, 0, &status, body, sizeof body);
     printf("auth13 status=%u n=%d\n", status, n);
-    n = control_call(1, CONTROL_SLOT_INVITE_FRIEND, arg, 4, &status, body, sizeof body);
+    n = control_call(1, 14, arg, 4, &status, body, sizeof body);
     printf("auth14 status=%u n=%d\n", status, n);
     return 0;
   }

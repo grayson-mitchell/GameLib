@@ -49,9 +49,6 @@ export const steamAdoptionStatus = makeHandlerInvoker('steamAdoptionStatus')
 export const steamAdoptionRestartNow = makeHandlerInvoker('steamAdoptionRestartNow')
 /** @public reached only as `window.api.steamAdoptionOpenSteam` through the preload api bundle, which knip cannot trace */
 export const steamAdoptionOpenSteam = makeHandlerInvoker('steamAdoptionOpenSteam')
-// Phase 58 Plan 31 (M-01 Direction A): the friend picker's list and invite channels -- sidecar-only.
-export const steamBridgeListFriends = makeHandlerInvoker('steamBridgeListFriends')
-export const steamBridgeInviteFriend = makeHandlerInvoker('steamBridgeInviteFriend')
 // One-way push (17-05 emits, 17-06 subscribes) — no handler, listener only.
 export const handleSteamBottleSetupRequired = frontendListenerSlot('steamBottleSetupRequired')
 // quick 261027-tot: one-way push (setupDownloads.ts emits, SteamSetupDownloads.ts

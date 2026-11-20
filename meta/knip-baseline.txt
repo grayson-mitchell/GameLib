@@ -269,8 +269,6 @@ exports	src/preload/api/steam.ts	Steam.logoutSteam
 exports	src/preload/api/steam.ts	Steam.redeemSteamKey
 exports	src/preload/api/steam.ts	Steam.steamBottleProvision
 exports	src/preload/api/steam.ts	Steam.steamBottleStatus
-exports	src/preload/api/steam.ts	Steam.steamBridgeInviteFriend
-exports	src/preload/api/steam.ts	Steam.steamBridgeListFriends
 exports	src/preload/api/steam.ts	Steam.steamClientSetupRecheck
 exports	src/preload/api/steam.ts	Steam.steamClientSetupStart
 exports	src/preload/api/steam.ts	Steam.steamPollCredential

@@ -436,7 +436,7 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
     expect(warned).not.toContain(secret)
   }, 10000)
 
-  // 78-REVIEW WR-02: the sibling of 58 IN-01 (inviteBridge controlRoundTrip).
+  // 78-REVIEW WR-02: the sibling of 58 IN-01 (a control round trip's socket error handling).
   // A one-shot 'error' listener is consumed by the first error, so a second
   // one on the destroyed probe socket would be an unhandled 'error' event.
   test('78 WR-02: a second socket error after the probe settles does not throw (persistent handler)', async () => {

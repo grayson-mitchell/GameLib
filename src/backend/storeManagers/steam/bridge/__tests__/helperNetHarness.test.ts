@@ -236,7 +236,7 @@ describeDarwinOnly(
       expect(err).not.toMatch(/[0-9]{17}/)
     })
 
-    // 58 WR-01: the line is the backend's picker trigger, so it has no
+    // 58 WR-01: the line is a diagnostic only (no backend consumer), so it has no
     // per-process count cap -- only the 2 s gap. 1 for the burst + 40 spaced.
     test('invite-dialog-ratelimit: a burst logs once, every gap-separated call logs (no count cap)', () => {
       const { out, err } = runBoth('invite-dialog-ratelimit')
@@ -292,60 +292,12 @@ describeDarwinOnly(
       expect(out).toContain('first=1 same=1 collide=0 is2=0')
     })
 
-    test('list-friends: ordinals, flags and names, never a SteamID', () => {
-      const { out, err } = runBoth('list-friends')
-      expect(out).toContain('rc=0')
-      expect(out).toContain('leak=0')
-      expect(out).toContain('count=3')
-      expect(out).toContain('f idx=0 gen=1 online=1 playing=0 name=Alice')
-      expect(out).toContain('f idx=1 gen=1 online=0 playing=0 name=Bob')
-      expect(out).toContain('f idx=2 gen=1 online=1 playing=1 name=Cara')
-      expect(lines(err, /INVITE +friends n=3$/)).toHaveLength(1)
-      expect(err).not.toMatch(/[0-9]{17}/)
-    })
-
-    test('invite-ok: invites the snapshot friend to the game-set lobby', () => {
-      const { out, err } = runBoth('invite-ok')
-      expect(out).toContain('r=1 calls=1 lobbyok=1 targetok=1')
-      expect(lines(err, /INVITE +sent ok=1$/)).toHaveLength(1)
-    })
-
-    test('invite-refusals: no-pending, expired, bad-ordinal, stale snapshot token, bad length', () => {
-      const { out, err } = runBoth('invite-refusals')
-      // 58 WR-04: a token from an earlier list and a bare index are refused.
-      expect(out).toContain('stale=-3 bare=-3 current=1 target0=1')
-      expect(out).toContain(
-        'nopending=-1 expired=-2 nosnap=-3 badord=-3 calls=1'
-      )
-      expect(out).toContain('badlen status=1')
-      expect(lines(err, /reason=no-pending$/)).toHaveLength(1)
-      expect(lines(err, /reason=expired$/)).toHaveLength(1)
-      expect(lines(err, /reason=bad-ordinal$/)).toHaveLength(4)
-    })
-
-    test('invite-zero-adopt: dialog with lobby 0 adopts the id from the first 513', () => {
-      const { out, err } = runBoth('invite-zero-adopt')
-      expect(out).toContain('pre=-1 r=1 calls=1 lobbyok=1 targetok=1')
-      expect(lines(err, /INVITE +sent ok=1$/)).toHaveLength(1)
-      expect(lines(err, /INVITE +lobby adopted$/)).toHaveLength(1)
-      expect(lines(err, /reason=lobby-pending$/)).toHaveLength(1)
-      expect(lines(err, /reason=no-pending/)).toHaveLength(0)
-      expect(err).not.toMatch(/[0-9]{17}/)
-    })
-
-    test('invite-zero-guards: failed result, zero lobby, explicit lobby, call result, one-shot', () => {
-      const { out, err } = runBoth('invite-zero-guards')
-      expect(out).toContain('badres=0 zerolobby=0 explicit=1 cr=1 oneshot=1')
-      expect(lines(err, /INVITE +lobby adopted$/)).toHaveLength(1)
-      expect(err).not.toMatch(/[0-9]{17}/)
-    })
-
-    test('control-unauth: slots 13 and 14 refuse an unauthenticated connection', () => {
-      const { out } = runBoth('control-unauth')
+    test('control-retired: slots 13 and 14 answer STATUS_ERR, authenticated or not', () => {
+      const { out } = runBoth('control-retired')
       expect(out).toContain('unauth13 status=1 n=0')
       expect(out).toContain('unauth14 status=1 n=0')
-      expect(out).toContain('auth13 status=0')
-      expect(out).toContain('auth14 status=0 n=4')
+      expect(out).toContain('auth13 status=1 n=0')
+      expect(out).toContain('auth14 status=1 n=0')
     })
   }
 )

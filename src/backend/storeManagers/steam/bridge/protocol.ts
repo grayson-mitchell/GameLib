@@ -153,15 +153,8 @@ export const CONTROL_SLOT = {
   // [i32 value][u32 cub][cub bytes]. Nothing in the sidecar sends this; an old
   // helper answers STATUS_ERR.
   drainServerEvents: 12,
-  // Phase 58 (58-29): GameLib's own invite picker. Empty request; reply is the
-  // signed-in account's immediate friends as ordinals (see decodeFriendList).
-  // SteamIDs never leave the helper. Authenticated connections only.
-  listFriends: 13,
-  // Phase 58 (58-29): request [u32 ordinal] into the latest listFriends
-  // snapshot; reply [i32 result] (see INVITE_RESULT). The target lobby is the
-  // one the game itself named via ActivateGameOverlayInviteDialog. Never D-08
-  // evidence.
-  inviteFriend: 14,
+  // Slots 13 and 14 were the custom invite picker's friend-list and send-invite
+  // slots (58-29), retired in quick 261120-pp4. Never reuse them.
   // quick 261106-qvp: the shim reports game registrations of unlisted callback
   // ids. Request {i32 iCallback, u32 path}; path 0 = register, 1 =
   // manual-dispatch init (iCallback 0). Logged by the helper as CBREG. An old
@@ -423,64 +416,4 @@ export function encodeHello(
       ? secretBytes
       : Buffer.concat([secretBytes, Buffer.from([role])])
   return encodeRequest(requestId, CONTROL_ORDINAL, CONTROL_SLOT.hello, blob)
-}
-
-// ── Invite path (58-29) ─────────────────────────────────────────────────────
-
-/** Result codes of CONTROL inviteFriend. */
-export const INVITE_RESULT = {
-  ok: 1,
-  macRefused: 0,
-  noPending: -1,
-  expired: -2,
-  badOrdinal: -3
-} as const
-
-const FRIEND_NAME_MAX_BYTES = 128
-
-export function encodeInviteFriendArgs(ordinal: number): Buffer {
-  assertUint32(ordinal, 'ordinal')
-  const b = Buffer.alloc(4)
-  b.writeUInt32LE(ordinal, 0)
-  return b
-}
-
-export function decodeFriendList(payload: Buffer): Array<{
-  ordinal: number
-  online: boolean
-  playingThisApp: boolean
-  name: string
-}> {
-  if (payload.length < 4) {
-    throw new RangeError('friend list payload shorter than its count field')
-  }
-  const count = payload.readUInt32LE(0)
-  if (count > 100) {
-    throw new RangeError(`friend list count ${count} exceeds 100`)
-  }
-  const out = []
-  let off = 4
-  for (let i = 0; i < count; i++) {
-    if (off + 8 > payload.length) {
-      throw new RangeError('friend list truncated inside a record header')
-    }
-    const ordinal = payload.readUInt32LE(off)
-    const online = payload[off + 4] !== 0
-    const playingThisApp = payload[off + 5] !== 0
-    const nameLen = payload.readUInt16LE(off + 6)
-    if (nameLen > FRIEND_NAME_MAX_BYTES) {
-      throw new RangeError(`friend name length ${nameLen} exceeds 128`)
-    }
-    if (off + 8 + nameLen > payload.length) {
-      throw new RangeError('friend list truncated inside a name')
-    }
-    out.push({
-      ordinal,
-      online,
-      playingThisApp,
-      name: payload.toString('utf8', off + 8, off + 8 + nameLen)
-    })
-    off += 8 + nameLen
-  }
-  return out
 }

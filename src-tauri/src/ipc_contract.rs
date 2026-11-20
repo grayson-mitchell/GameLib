@@ -708,8 +708,6 @@ pub(crate) const RENDERER_CHANNELS: &[&str] = &[
     "steamAdoptionStatus",
     "steamBottleProvision",
     "steamBottleStatus",
-    "steamBridgeInviteFriend",
-    "steamBridgeListFriends",
     "steamClientSetupRecheck",
     "steamClientSetupStart",
     "steamDirectLaunchVerdict",
