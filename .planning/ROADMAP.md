@@ -353,13 +353,13 @@ Plans:
   3. Quitting GameLib, and SIGKILL of the parent, leaves no orphaned helper process on macOS, Windows and Linux (launched games excepted), proven on all three OS legs
   4. `gamelib-core` (paths, emitter, clock, `ProcessRunner`, `Shutdown` token) and `gamelib-proc` kill-tree exist, and the TS shim the first migrated channel used is deleted in this phase
 
-**Plans:** 2/11 plans executed
+**Plans:** 3/11 plans executed
 
 Plans:
 **Wave 1**
 - [x] 83-01-PLAN.md — Live macOS Force Quit gate contract and Structural Reachability Review, authored before code (run by 83-11)
 - [x] 83-02-PLAN.md — gamelib-core: Clock/ProcessRunner hoist, Paths, FrontendEmitter, Shutdown with the 5 s / 1.5 s exit budget
-- [ ] 83-03-PLAN.md — Native invoke seam: getHeroicVersion served in Rust from the channel manifest; its TS deleted
+- [x] 83-03-PLAN.md — Native invoke seam: getHeroicVersion served in Rust from the channel manifest; its TS deleted
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 83-04-PLAN.md — gamelib-proc: spawn classes, kill-tree, ChildSet, per-helper Windows Job, ProcRunner, stand-in harness (graceful leg)
