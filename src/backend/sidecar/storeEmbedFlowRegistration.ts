@@ -202,7 +202,7 @@ function coerceNavState(channel: string, result: unknown): StoreEmbedNavEvent {
     canGoForward: candidate.canGoForward,
     ...(candidate.surface !== undefined ? { surface: candidate.surface } : {}),
     ...(candidate.surface !== 'epic' && candidate.loadTimedOut !== undefined
-      ? { loadTimedOut: candidate.loadTimedOut as boolean }
+      ? { loadTimedOut: candidate.loadTimedOut }
       : {}),
     ...(candidate.surface === 'epic'
       ? {

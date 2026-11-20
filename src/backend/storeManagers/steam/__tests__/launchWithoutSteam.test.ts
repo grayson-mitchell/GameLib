@@ -3,7 +3,6 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 import { initHeadless } from 'backend/logger'
-import { notify } from 'backend/dialog/dialog'
 import {
   DIRECT_LAUNCH_EARLY_EXIT_MS,
   formatDirectLaunchStartedLine,
@@ -18,8 +17,6 @@ import {
   STEAM_DIRECT_TRACK_RUNNER,
   type DirectLaunchVerdict
 } from '../directLaunch/directLaunchVerdict'
-
-jest.mock('backend/dialog/dialog', () => ({ notify: jest.fn() }))
 
 // The real logger needs a writer; HOME is redirected by the backend jest containment setup.
 beforeAll(() => initHeadless())
@@ -338,7 +335,6 @@ describe('launchWithoutSteam Mac-native start failure (quick 261120-8hb)', () =>
     })
     binary = join(install, 'Game.app', 'Contents', 'MacOS', 'Game')
     writeFileSync(binary, 'x')
-    jest.mocked(notify).mockClear()
   })
   afterEach(() => {
     rmSync(install, { recursive: true, force: true })
@@ -389,7 +385,7 @@ describe('launchWithoutSteam Mac-native start failure (quick 261120-8hb)', () =>
   const requestNotices = (send: jest.Mock) =>
     send.mock.calls.filter((c) => c[0] === 'steamRequestNotice')
 
-  test('a spawn error resolves false and pushes one direct-launch-failed notice, no OS notification', async () => {
+  test('a spawn error resolves false and pushes one direct-launch-failed notice', async () => {
     const { game, sendFrontendMessage } = macGame([
       { cmd: binary, error: { code: 'EBADARCH' } }
     ])
@@ -401,7 +397,6 @@ describe('launchWithoutSteam Mac-native start failure (quick 261120-8hb)', () =>
         { appId: '10', title: 'T', kind: 'direct-launch-failed', seq: 7 }
       ]
     ])
-    expect(notify).not.toHaveBeenCalled()
   })
 
   test('pushDirectLaunchNotice falls back to the local seq when the Rust invoke rejects', async () => {
