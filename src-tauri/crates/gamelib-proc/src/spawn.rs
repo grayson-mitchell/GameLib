@@ -48,6 +48,10 @@ pub fn spawn_helper_with_pipes(
         stdin: child.stdin.take(),
         stdout: child.stdout.take(),
     };
+    // `JobSlot` is `()` off Windows, so on unix this binding is a unit value (clippy::let_unit_value)
+    // by construction: the Windows build needs the Job taken from the child BEFORE the child moves
+    // into the set, and the call must stay one shape on every OS.
+    #[allow(clippy::let_unit_value)]
     let job = job_for(&child);
     let pid = global().register_owned(label, child, job);
     Ok((pid, pipes))
@@ -92,8 +96,7 @@ pub fn spawn_helper_tokio(
     let pid = child
         .id()
         .ok_or_else(|| std::io::Error::other("helper exited before it could be registered"))?;
-    let job = tokio_job_for(&child);
-    global().register_pid(label, pid, job);
+    global().register_pid(label, pid, tokio_job_for(&child));
     Ok((child, HelperGuard::new(pid)))
 }
 
