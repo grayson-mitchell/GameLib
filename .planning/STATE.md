@@ -5,11 +5,11 @@ milestone_name: Foundations
 current_phase: 81
 current_phase_name: Unify the Steam restart hold into restart-on-Play
 status: planning
-stopped_at: Phase 64 complete; Phase 81 has open verification gaps
-last_updated: "2026-11-19T17:54:45.871Z"
+stopped_at: Phase 82 context gathered (v0.11 prep); Phase 81 still has open verification gaps
+last_updated: "2026-11-20T03:57:24.367Z"
 last_activity: 2026-11-20
 last_activity_desc: Phase 64 complete (re-verified 8/8)
-state_head: d0459b101bd5e459e58fc83f64565addcd0bd8ff
+state_head: 47a42284cf774665e63659195790808508cdaef6
 progress:
   total_phases: 26
   completed_phases: 23
@@ -925,9 +925,9 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-19T15:25:16.479Z
-Stopped at: Phase 64 complete; Phase 81 has open verification gaps
-Resume file: None
+Last session: 2026-11-20T03:57:20.566Z
+Stopped at: Phase 82 context gathered (v0.11 prep); Phase 81 still has open verification gaps
+Resume file: .planning/phases/82-guardrails-hygiene-and-shared-safety-primitives/82-CONTEXT.md
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
 
