@@ -353,7 +353,7 @@ Plans:
   3. Quitting GameLib, and SIGKILL of the parent, leaves no orphaned helper process on macOS, Windows and Linux (launched games excepted), proven on all three OS legs
   4. `gamelib-core` (paths, emitter, clock, `ProcessRunner`, `Shutdown` token) and `gamelib-proc` kill-tree exist, and the TS shim the first migrated channel used is deleted in this phase
 
-**Plans:** 9/11 plans executed
+**Plans:** 10/11 plans executed
 
 Plans:
 **Wave 1**
@@ -376,7 +376,7 @@ Plans:
 - [x] 83-09-PLAN.md — One exit deadline: handle_exit on run_exit, shutdown_child via gamelib-proc, gates rewritten, D-14 convention
 
 **Wave 6** *(blocked on Wave 5 completion)*
-- [ ] 83-10-PLAN.md — Phase proof: clean-worktree gates, push checkpoint, three-OS CI proof
+- [x] 83-10-PLAN.md — Phase proof: clean-worktree gates, push checkpoint, three-OS CI proof
 - [ ] 83-11-PLAN.md — Run the live macOS gate (Force Quit, graceful quit, reaper visibility, native channels)
 
 ### Phase 84: Logger
