@@ -4,7 +4,9 @@
  * through rustInvoke). Fails if a deleted TS file, the npm CM clients, the
  * retired D-08 flags or the pnpm patches come back.
  */
-import { existsSync, readdirSync, readFileSync } from 'fs'
+import { assertAtOrAboveFloor } from 'backend/testUtils/censusFloor'
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'fs'
+import { tmpdir } from 'os'
 import { join, relative } from 'path'
 
 const ROOT = join(__dirname, '..', '..', '..')
@@ -64,6 +66,9 @@ const KEPT = [
 
 // This file names every forbidden symbol by design.
 const SELF = join(__dirname, 'steamCmPortComplete.test.ts')
+
+/** Floor on files scanned (D-05): the original `>= 500`. Never lower. */
+const SCANNED_FILES_FLOOR = 500
 
 function walk(dir: string, out: string[]): void {
   for (const e of readdirSync(dir, { withFileTypes: true })) {
@@ -144,6 +149,29 @@ describe('steam CM port complete (Phase 79 CF-01)', () => {
   })
 
   it('anti-vacuity: the walk scanned a real tree', () => {
+    assertAtOrAboveFloor(
+      'steamCmPortComplete files',
+      scanned.length,
+      SCANNED_FILES_FLOOR
+    )
     expect(scanned.length).toBeGreaterThanOrEqual(500)
+  })
+
+  it('empty-input (D-05): an empty directory walks no files and fails the scan floor', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'port-complete-'))
+    try {
+      const found: string[] = []
+      walk(dir, found)
+      expect(found).toHaveLength(0)
+      expect(() =>
+        assertAtOrAboveFloor(
+          'steamCmPortComplete files',
+          found.length,
+          SCANNED_FILES_FLOOR
+        )
+      ).toThrow(/steamCmPortComplete files/)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 })

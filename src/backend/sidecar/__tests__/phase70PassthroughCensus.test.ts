@@ -2,7 +2,9 @@
  * Phase 70 (D-11): `phase70Passthrough()` is deleted and nothing may reintroduce it. A plain
  * file walk over src/ and meta/; it spawns nothing.
  */
-import { readdirSync, readFileSync } from 'fs'
+import { assertAtOrAboveFloor } from 'backend/testUtils/censusFloor'
+import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'fs'
+import { tmpdir } from 'os'
 import { join, resolve } from 'path'
 
 const ROOT = resolve(__dirname, '../../../..')
@@ -20,12 +22,19 @@ function walk(dir: string, out: string[]) {
   }
 }
 
+/** Floor on files walked (D-05); the original `> 100` bound, unchanged. */
+const FILES_FLOOR = 101
+
 describe('phase70Passthrough census', () => {
   it('finds no use of the deleted helper under src/ or meta/', () => {
     const files: string[] = []
     walk(join(ROOT, 'src'), files)
     walk(join(ROOT, 'meta'), files)
-    expect(files.length).toBeGreaterThan(100)
+    assertAtOrAboveFloor(
+      'phase70PassthroughCensus files',
+      files.length,
+      FILES_FLOOR
+    )
     const hits = files
       .filter((f) => resolve(f) !== SELF)
       .filter((f) => {
@@ -33,5 +42,25 @@ describe('phase70Passthrough census', () => {
         return NEEDLES.some((n) => text.includes(n))
       })
     expect(hits).toEqual([])
+  })
+
+  describe('cannot pass vacuously (D-05)', () => {
+    it('an empty directory walk fails the files floor', () => {
+      const dir = mkdtempSync(join(tmpdir(), 'phase70-census-'))
+      try {
+        const files: string[] = []
+        walk(dir, files)
+        expect(files).toHaveLength(0)
+        expect(() =>
+          assertAtOrAboveFloor(
+            'phase70PassthroughCensus files',
+            files.length,
+            FILES_FLOOR
+          )
+        ).toThrow(/phase70PassthroughCensus files/)
+      } finally {
+        rmSync(dir, { recursive: true, force: true })
+      }
+    })
   })
 })

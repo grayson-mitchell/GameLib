@@ -27,9 +27,11 @@
  * traversal conventions in this same directory rather than inventing new ones.
  */
 
+import { assertAtOrAboveFloor } from 'backend/testUtils/censusFloor'
 import { defined } from 'backend/testUtils/indexed'
 import * as ts from 'typescript'
-import { readFileSync, readdirSync, statSync } from 'fs'
+import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'fs'
+import { tmpdir } from 'os'
 import { join, relative, resolve } from 'path'
 
 const REPO_ROOT = resolve(join(__dirname, '../../../..'))
@@ -127,6 +129,9 @@ function toRepoRelative(absolutePath: string): string {
   return relative(REPO_ROOT, absolutePath).split('\\').join('/')
 }
 
+/** Floor on source files scanned (D-05): the original `>= 200`. Never lower. */
+const SCANNED_FILES_FLOOR = 200
+
 describe('externalDynamicImportGate (quick/260815-vvz, defect 1 RED-prover)', () => {
   let scannedFiles: string[]
   let allHits: DynamicImportHit[]
@@ -172,7 +177,29 @@ describe('externalDynamicImportGate (quick/260815-vvz, defect 1 RED-prover)', ()
     // __tests__/__mocks__). 200 is comfortably under that -- a resolver that silently stops
     // traversing (a broken glob, an over-eager filter) would make Gate 1 pass vacuously against
     // an empty or near-empty set; this floor rules that out.
+    assertAtOrAboveFloor(
+      'externalDynamicImportGate scanned files',
+      scannedFiles.length,
+      SCANNED_FILES_FLOOR
+    )
     expect(scannedFiles.length).toBeGreaterThanOrEqual(200)
+  })
+
+  it('Gate 2 empty-input: an empty directory collects no files and fails the scan floor (D-05)', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ext-dyn-import-'))
+    try {
+      const files = collectSourceFiles(dir)
+      expect(files).toHaveLength(0)
+      expect(() =>
+        assertAtOrAboveFloor(
+          'externalDynamicImportGate scanned files',
+          files.length,
+          SCANNED_FILES_FLOOR
+        )
+      ).toThrow(/externalDynamicImportGate scanned files/)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 
   describe('Gate 3 (known-bad self-test, committed permanently -- proves Gate 1 is not vacuous)', () => {

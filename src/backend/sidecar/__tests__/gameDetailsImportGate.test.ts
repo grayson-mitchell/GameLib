@@ -24,7 +24,9 @@
 
 import { defined } from 'backend/testUtils/indexed'
 import { createHash } from 'node:crypto'
-import { readFileSync, readdirSync } from 'fs'
+import { assertAtOrAboveFloor } from 'backend/testUtils/censusFloor'
+import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'fs'
+import { tmpdir } from 'os'
 import { join } from 'path'
 import { stripSourceComments as stripComments } from 'backend/testUtils/stripSourceComments'
 
@@ -57,13 +59,26 @@ function listTsFiles(dir: string): string[] {
     .map((entry) => entry.name)
 }
 
+/**
+ * Scan floors (D-05), replacing the old `files.length > 0`. Measured at 1080f5c25 (2026-11-20):
+ * 53 .ts files directly under src/backend/sidecar/ and 2 under src/backend/gamedetails/. Pinned at
+ * a margin just below the sidecar measure and at the exact gamedetails measure (a one-file scan of
+ * that directory is no longer the gate's subject). Never lower.
+ */
+const SIDECAR_FILES_FLOOR = 45
+const GAMEDETAILS_FILES_FLOOR = 2
+
 describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/REQ-34.2-10/REQ-34.2-14)', () => {
   // ── Gate 1: no file directly under src/backend/sidecar/ imports the real
   // 'electron' module ─────────────────────────────────────────────────────
   it('REQ-34.2-14 Gate 1: no .ts file directly under src/backend/sidecar/ imports the real electron module', () => {
     const sidecarDir = join(__dirname, '..')
     const files = listTsFiles(sidecarDir)
-    expect(files.length).toBeGreaterThan(0)
+    assertAtOrAboveFloor(
+      'gameDetailsImportGate sidecar files',
+      files.length,
+      SIDECAR_FILES_FLOOR
+    )
 
     for (const file of files) {
       const stripped = stripComments(
@@ -92,7 +107,11 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   it('REQ-34.2-14 Gate 3: no .ts file under src/backend/gamedetails/ matches electron, backend/ipc, ../ipc, ../launcher, or main_window', () => {
     const gamedetailsDir = join(__dirname, '../../gamedetails')
     const files = listTsFiles(gamedetailsDir)
-    expect(files.length).toBeGreaterThan(0)
+    assertAtOrAboveFloor(
+      'gameDetailsImportGate gamedetails files',
+      files.length,
+      GAMEDETAILS_FILES_FLOOR
+    )
 
     for (const file of files) {
       const stripped = stripComments(
@@ -432,5 +451,35 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
     // update ELECTRON_UNTOUCHED_SHA256 above, and state the reason in the
     // commit message.
     expect(digest).toBe(ELECTRON_UNTOUCHED_SHA256)
+  })
+
+  describe('cannot pass vacuously (D-05)', () => {
+    it('an empty directory fails every scan floor', () => {
+      const dir = mkdtempSync(join(tmpdir(), 'gamedetails-gate-'))
+      try {
+        const files = listTsFiles(dir)
+        expect(files).toHaveLength(0)
+        for (const [label, floor] of [
+          ['gameDetailsImportGate sidecar files', SIDECAR_FILES_FLOOR],
+          ['gameDetailsImportGate gamedetails files', GAMEDETAILS_FILES_FLOOR]
+        ] as const) {
+          expect(() =>
+            assertAtOrAboveFloor(label, files.length, floor)
+          ).toThrow(new RegExp(label))
+        }
+      } finally {
+        rmSync(dir, { recursive: true, force: true })
+      }
+    })
+
+    it('a one-file scan fails the sidecar floor (single-file case)', () => {
+      expect(() =>
+        assertAtOrAboveFloor(
+          'gameDetailsImportGate sidecar files',
+          1,
+          SIDECAR_FILES_FLOOR
+        )
+      ).toThrow(/gameDetailsImportGate sidecar files/)
+    })
   })
 })

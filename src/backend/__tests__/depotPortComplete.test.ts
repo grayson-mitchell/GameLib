@@ -5,7 +5,9 @@
  * retired GAMELIB_DEPOT_PIPELINE flag comes back -- and, just as loudly, if the
  * two codec packages steam-user still requires at import go missing.
  */
-import { existsSync, readdirSync, readFileSync } from 'fs'
+import { assertAtOrAboveFloor } from 'backend/testUtils/censusFloor'
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'fs'
+import { tmpdir } from 'os'
 import { join, relative } from 'path'
 
 const ROOT = join(__dirname, '..', '..', '..')
@@ -87,6 +89,9 @@ const KEPT = [
 // This file names every forbidden symbol by design.
 const SELF = join(__dirname, 'depotPortComplete.test.ts')
 
+/** Floor on files scanned (D-05): the original `>= 500`. Never lower. */
+const SCANNED_FILES_FLOOR = 500
+
 function walk(dir: string, out: string[]): void {
   for (const e of readdirSync(dir, { withFileTypes: true })) {
     if (e.name === 'node_modules' || e.name === '__tests__') continue
@@ -155,6 +160,29 @@ describe('depot port complete (Phase 73 D-15)', () => {
   })
 
   it('anti-vacuity: the walk scanned a real tree', () => {
+    assertAtOrAboveFloor(
+      'depotPortComplete files',
+      scanned.length,
+      SCANNED_FILES_FLOOR
+    )
     expect(scanned.length).toBeGreaterThanOrEqual(500)
+  })
+
+  it('empty-input (D-05): an empty directory walks no files and fails the scan floor', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'port-complete-'))
+    try {
+      const found: string[] = []
+      walk(dir, found)
+      expect(found).toHaveLength(0)
+      expect(() =>
+        assertAtOrAboveFloor(
+          'depotPortComplete files',
+          found.length,
+          SCANNED_FILES_FLOOR
+        )
+      ).toThrow(/depotPortComplete files/)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 })

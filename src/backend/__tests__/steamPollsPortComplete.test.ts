@@ -8,7 +8,9 @@
  * second block fails if a restart-hold file, symbol, the re-arm, or a writer of
  * `steam_restart_hold.json` comes back; only the D-12 migration reads that file.
  */
-import { existsSync, readdirSync, readFileSync } from 'fs'
+import { assertAtOrAboveFloor } from 'backend/testUtils/censusFloor'
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'fs'
+import { tmpdir } from 'os'
 import { join, relative } from 'path'
 
 const ROOT = join(__dirname, '..', '..', '..')
@@ -54,6 +56,9 @@ const KEPT = [
 
 // This file names every forbidden symbol by design.
 const SELF = join(__dirname, 'steamPollsPortComplete.test.ts')
+
+/** Floor on files scanned (D-05): the original `>= 500`. Never lower. */
+const SCANNED_FILES_FLOOR = 500
 
 function walk(dir: string, out: string[]): void {
   for (const e of readdirSync(dir, { withFileTypes: true })) {
@@ -116,7 +121,30 @@ describe('steam polls port complete (Phase 80 P80-gate)', () => {
   })
 
   it('anti-vacuity: the walk scanned a real tree', () => {
+    assertAtOrAboveFloor(
+      'steamPollsPortComplete files',
+      scanned.length,
+      SCANNED_FILES_FLOOR
+    )
     expect(scanned.length).toBeGreaterThanOrEqual(500)
+  })
+
+  it('empty-input (D-05): an empty directory walks no files and fails the scan floor', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'port-complete-'))
+    try {
+      const found: string[] = []
+      walk(dir, found)
+      expect(found).toHaveLength(0)
+      expect(() =>
+        assertAtOrAboveFloor(
+          'steamPollsPortComplete files',
+          found.length,
+          SCANNED_FILES_FLOOR
+        )
+      ).toThrow(/steamPollsPortComplete files/)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 })
 

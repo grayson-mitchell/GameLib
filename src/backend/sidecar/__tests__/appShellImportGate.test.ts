@@ -21,7 +21,9 @@
  */
 
 import { execFileSync } from 'node:child_process'
-import { readFileSync, readdirSync } from 'fs'
+import { assertAtOrAboveFloor } from 'backend/testUtils/censusFloor'
+import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'fs'
+import { tmpdir } from 'os'
 import { join } from 'path'
 import { stripSourceComments as stripComments } from 'backend/testUtils/stripSourceComments'
 
@@ -35,13 +37,26 @@ function listTsFiles(dir: string): string[] {
     .map((entry) => entry.name)
 }
 
+/**
+ * Scan floors (D-05), replacing the old `files.length > 0`. Measured at 1080f5c25 (2026-11-20):
+ * 53 .ts files directly under src/backend/sidecar/ and 4 under src/backend/appshell/. Each is
+ * pinned with a margin just below the measure so a legitimate merge does not turn the gate red,
+ * while a mis-rooted or emptied scan still does. Never lower.
+ */
+const SIDECAR_FILES_FLOOR = 45
+const APPSHELL_FILES_FLOOR = 3
+
 describe('appShellImportGate (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-12)', () => {
   // ── Gate 1: no file directly under src/backend/sidecar/ imports the real
   // 'electron' module ─────────────────────────────────────────────────────
   it('REQ-34.1-12/D-09 Gate 1: no .ts file directly under src/backend/sidecar/ imports the real electron module', () => {
     const sidecarDir = join(__dirname, '..')
     const files = listTsFiles(sidecarDir)
-    expect(files.length).toBeGreaterThan(0)
+    assertAtOrAboveFloor(
+      'appShellImportGate sidecar files',
+      files.length,
+      SIDECAR_FILES_FLOOR
+    )
 
     for (const file of files) {
       const stripped = stripComments(
@@ -86,7 +101,11 @@ describe('appShellImportGate (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-12)', 
   it('REQ-34.1-12/D-09 Gate 3: no .ts file under src/backend/appshell/ imports the real electron module', () => {
     const appshellDir = join(__dirname, '../../appshell')
     const files = listTsFiles(appshellDir)
-    expect(files.length).toBeGreaterThan(0)
+    assertAtOrAboveFloor(
+      'appShellImportGate appshell files',
+      files.length,
+      APPSHELL_FILES_FLOOR
+    )
 
     for (const file of files) {
       const stripped = stripComments(
@@ -164,5 +183,35 @@ describe('appShellImportGate (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-12)', 
         /keyringTokenStore\.ts and bootstrap\.ts never reference configStore/
       )
     }
+  })
+
+  describe('cannot pass vacuously (D-05)', () => {
+    it('an empty directory fails every scan floor', () => {
+      const dir = mkdtempSync(join(tmpdir(), 'appshell-gate-'))
+      try {
+        const files = listTsFiles(dir)
+        expect(files).toHaveLength(0)
+        for (const [label, floor] of [
+          ['appShellImportGate sidecar files', SIDECAR_FILES_FLOOR],
+          ['appShellImportGate appshell files', APPSHELL_FILES_FLOOR]
+        ] as const) {
+          expect(() =>
+            assertAtOrAboveFloor(label, files.length, floor)
+          ).toThrow(new RegExp(label))
+        }
+      } finally {
+        rmSync(dir, { recursive: true, force: true })
+      }
+    })
+
+    it('a one-file scan fails the sidecar floor (single-file case)', () => {
+      expect(() =>
+        assertAtOrAboveFloor(
+          'appShellImportGate sidecar files',
+          1,
+          SIDECAR_FILES_FLOOR
+        )
+      ).toThrow(/appShellImportGate sidecar files/)
+    })
   })
 })

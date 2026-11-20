@@ -52,6 +52,7 @@
  * traversal, not a vacuous one that visited nothing.
  */
 
+import { assertAtOrAboveFloor } from 'backend/testUtils/censusFloor'
 import * as ts from 'typescript'
 import { readFileSync } from 'fs'
 import { dirname, join, relative, resolve } from 'path'
@@ -538,6 +539,9 @@ function computeElectronReach(
   return { visitedFiles: visited, electronImportingFiles }
 }
 
+/** Floor on files the reach walk visits (D-05): the original `> 224`. Never lower. */
+const VISITED_FILES_FLOOR = 225
+
 describe('electronReachLedger (Phase 34.2 Plan 11 — REQ-34.2-03, gap #3 / WR-02)', () => {
   let reachResult: ElectronReachResult
 
@@ -689,6 +693,11 @@ describe('electronReachLedger (Phase 34.2 Plan 11 — REQ-34.2-03, gap #3 / WR-0
     // the full BEFORE/AFTER measurement). 247 is comfortably above the
     // existing 224 floor, so the floor is NOT raised, per this test's own
     // never-lower/only-raise-when-no-longer-meaningful instruction.
+    assertAtOrAboveFloor(
+      'electronReachLedger visited files',
+      reachResult.visitedFiles.size,
+      VISITED_FILES_FLOOR
+    )
     expect(reachResult.visitedFiles.size).toBeGreaterThan(224)
   }, 30000)
 
@@ -711,4 +720,18 @@ describe('electronReachLedger (Phase 34.2 Plan 11 — REQ-34.2-03, gap #3 / WR-0
       reachResult.electronImportingFiles.has('src/backend/dialog/dialog.ts')
     ).toBe(false)
   }, 30000)
+
+  describe('cannot pass vacuously (D-05)', () => {
+    it('a walk with no entry points visits nothing and fails the visited-files floor', () => {
+      const empty = computeElectronReach([], loadCompilerOptions())
+      expect(empty.visitedFiles.size).toBe(0)
+      expect(() =>
+        assertAtOrAboveFloor(
+          'electronReachLedger visited files',
+          empty.visitedFiles.size,
+          VISITED_FILES_FLOOR
+        )
+      ).toThrow(/electronReachLedger visited files/)
+    }, 30000)
+  })
 })

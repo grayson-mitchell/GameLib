@@ -3,6 +3,7 @@
  * ceiling in meta/backendDiCeilings; it is now a test: no non-test src/backend file may hold a
  * top-level mutable binding (the D-06 census) except the sanctioned sites below. Zero jest.mock.
  */
+import { assertAtOrAboveFloor } from 'backend/testUtils/censusFloor'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -58,11 +59,60 @@ function violations(
   return out
 }
 
+/** Floor on backend files scanned (D-05). Never lower. */
+const BACKEND_FILES_FLOOR = 445
+
 describe('module-state census is zero outside the sanctioned list (D-66.4-02)', () => {
   const current = ceilings.census()
 
   it('scans a rooted backend tree (floor)', () => {
+    assertAtOrAboveFloor(
+      'moduleStateCensus backend files',
+      current.backendFiles,
+      BACKEND_FILES_FLOOR
+    )
     expect(current.backendFiles).toBeGreaterThanOrEqual(445)
+  })
+
+  describe('cannot pass vacuously (D-05)', () => {
+    it('an empty root fails the backend-files floor', () => {
+      const dir = mkdtempSync(join(tmpdir(), 'ms-census-empty-'))
+      try {
+        const empty = ceilings.census(dir)
+        expect(empty.backendFiles).toBe(0)
+        expect(() =>
+          assertAtOrAboveFloor(
+            'moduleStateCensus backend files',
+            empty.backendFiles,
+            BACKEND_FILES_FLOOR
+          )
+        ).toThrow(/moduleStateCensus backend files/)
+      } finally {
+        rmSync(dir, { recursive: true, force: true })
+      }
+    })
+
+    it('a single-file root fails the backend-files floor', () => {
+      const dir = mkdtempSync(join(tmpdir(), 'ms-census-one-'))
+      try {
+        mkdirSync(join(dir, 'src', 'backend'), { recursive: true })
+        writeFileSync(
+          join(dir, 'src', 'backend', 'one.ts'),
+          'export const a = 1\n'
+        )
+        const one = ceilings.census(dir)
+        expect(one.backendFiles).toBe(1)
+        expect(() =>
+          assertAtOrAboveFloor(
+            'moduleStateCensus backend files',
+            one.backendFiles,
+            BACKEND_FILES_FLOOR
+          )
+        ).toThrow(/moduleStateCensus backend files/)
+      } finally {
+        rmSync(dir, { recursive: true, force: true })
+      }
+    })
   })
 
   it('has no site outside SANCTIONED and exactly the sanctioned counts', () => {

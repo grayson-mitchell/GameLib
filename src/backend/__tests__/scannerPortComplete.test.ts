@@ -3,7 +3,9 @@
  * (crates/gamelib-scan). Fails if a deleted TS parser, the fallback flag, or an
  * app-side objdump use comes back.
  */
-import { existsSync, readdirSync, readFileSync } from 'fs'
+import { assertAtOrAboveFloor } from 'backend/testUtils/censusFloor'
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'fs'
+import { tmpdir } from 'os'
 import { join, relative } from 'path'
 
 const ROOT = join(__dirname, '..', '..', '..')
@@ -28,6 +30,9 @@ const FORBIDDEN = [
   'parseMachODefinedExternals',
   'runScanner('
 ]
+
+/** Floor on files scanned (D-05): the original `>= 500`. Never lower. */
+const SCANNED_FILES_FLOOR = 500
 
 function walk(dir: string, out: string[]): void {
   for (const e of readdirSync(dir, { withFileTypes: true })) {
@@ -88,6 +93,29 @@ describe('scanner port complete (D-13)', () => {
   })
 
   it('anti-vacuity: the walk scanned a real tree', () => {
+    assertAtOrAboveFloor(
+      'scannerPortComplete files',
+      files.length,
+      SCANNED_FILES_FLOOR
+    )
     expect(files.length).toBeGreaterThanOrEqual(500)
+  })
+
+  it('empty-input (D-05): an empty directory walks no files and fails the scan floor', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'port-complete-'))
+    try {
+      const found: string[] = []
+      walk(dir, found)
+      expect(found).toHaveLength(0)
+      expect(() =>
+        assertAtOrAboveFloor(
+          'scannerPortComplete files',
+          found.length,
+          SCANNED_FILES_FLOOR
+        )
+      ).toThrow(/scannerPortComplete files/)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 })
