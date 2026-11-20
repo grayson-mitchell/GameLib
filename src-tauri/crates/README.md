@@ -57,6 +57,10 @@ One shared safe_path (gamelib-safety). Never derive a trust root from the data b
 - Comparisons use the canonical on-disk real path and compare component vectors, never string
   prefixes. On a case-insensitive volume components are NFC-normalised and case-folded. A
   canonicalisation failure other than "not found" is `Unknown`, so the op refuses (D-17).
+- A trust root that exists is canonicalised with links followed. An absent trust root is placed at
+  its nearest existing ancestor plus the missing names, so it can only ever admit absent targets,
+  which are never deleted. A trust root that exists but cannot be resolved is `Unknown`, and so is
+  an empty trust-root string.
 - Another store's known install nested under, equal to, or containing the target refuses (D-16);
   a sideload folder holding a second executable or app bundle refuses as shared (D-22). Both
   over-refuse on purpose.

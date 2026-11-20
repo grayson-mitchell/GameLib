@@ -71,13 +71,16 @@ fn check_protected(req: &Request, loc: &Location, insensitive: bool) -> Result<(
 /// admit absent targets, because an existing target's canonical path cannot pass through a name
 /// that does not exist, and `remove_tree` skips absent targets. So this never authorises deleting
 /// anything that exists.
+/// An empty `trustRoot` is refused as unknown (`no-trust-root`) and never read as "no trust root".
 fn check_trust_root(
     t: &Target,
     req: &Request,
     loc: &Location,
     sensitive_fold: bool,
 ) -> Result<(), Refusal> {
-    match t.trust_root.as_deref().filter(|s| !s.is_empty()) {
+    match t.trust_root.as_deref() {
+        // WR-04: an empty string is a caller bug the guard must surface, never "no trust root".
+        Some("") => Err(unknown(Reason::NoTrustRoot)),
         Some(raw) => {
             let p = safe_path::parse_absolute(raw).map_err(|_| unknown(Reason::NotAbsolute))?;
             let root = safe_path::resolve_trust_root(&p).map_err(unknown)?;

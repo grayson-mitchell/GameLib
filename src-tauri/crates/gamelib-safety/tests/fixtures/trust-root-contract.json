@@ -104,6 +104,19 @@
         "reason": "not-absolute",
         "absent": false
       }
+    },
+    {
+      "name": "empty root with a protected root supplied",
+      "kind": "game-install",
+      "dirs": [["common", "Game"], ["protected"]],
+      "protectedRoots": [["protected"]],
+      "target": ["common", "Game"],
+      "trustRoot": "",
+      "expect": {
+        "verdict": "unknown",
+        "reason": "no-trust-root",
+        "absent": false
+      }
     }
   ]
 }

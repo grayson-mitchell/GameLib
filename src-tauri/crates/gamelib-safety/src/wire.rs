@@ -24,7 +24,10 @@ pub struct Target {
     pub path: String,
     pub kind: TargetKind,
     /// The folder the target must lie strictly inside. Only ever a caller-supplied parameter,
-    /// never derived from a manifest, a library entry or an executable path.
+    /// never derived from a manifest, a library entry or an executable path. An empty string is
+    /// refused as unknown (`no-trust-root`): a caller with no root omits the field. A root folder
+    /// that does not exist yet is judged at its nearest existing ancestor, so it admits only
+    /// targets that are themselves absent.
     #[serde(default)]
     pub trust_root: Option<String>,
     /// A sideload game's own executable (absolute, or relative to the folder).

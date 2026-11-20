@@ -16,7 +16,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 /// D-05: an emptied or truncated fixture must fail, not pass on zero rows.
-const CONTRACT_FLOOR: usize = 11;
+const CONTRACT_FLOOR: usize = 12;
 
 const FIXTURE: &str = include_str!("fixtures/trust-root-contract.json");
 
