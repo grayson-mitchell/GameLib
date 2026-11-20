@@ -37,8 +37,14 @@ Not in scope: porting the code that spawns games or runners (Phases 88, 91 and 9
 ### Noise policy
 - **D-14:** **Rate limiting suppresses identical lines and writes a summary.** It counts lines with the same prefix, level and message (after redaction) within a time window. The first N are written and the rest are counted. When the window closes, one `repeated K more times` line is written. Research/planning picks the window and N (the starting point is about 60 s). The behaviour must be testable with a golden comparison.
 - **D-15:** **Rate limiting applies to `gamelib.log` only.** Game and runner logs are raw process transcripts that users upload, so they stay byte-faithful. Rotation keeps them bounded.
-- **D-16:** **Crate diagnostics enter at WARN and above by default.** The existing verbose/debug log setting raises them to DEBUG.
+- **D-16 (amended by D-19):** **Crate diagnostics enter at WARN and above by default.** Only the environment variable `GAMELIB_LOG_LEVEL=debug` raises them to DEBUG (see D-19). They are not bound to `verboseLogs`.
 - **D-17:** **A `tracing` Layer maps targets onto the existing `LogPrefix` values.** It uses the `tracing` facade, which gamelib-steamcm already depends on, with a fixed map from target to prefix: steam-vent and gamelib-steamcm map to `Steam`, the shell maps to the new `Shell`, and unknown targets map to `Backend`. Per STACK.md, the writer is GameLib's own port of `log_writer.ts`, not `tracing-appender`, `log4rs` or `tauri-plugin-log`.
+
+### Resolved at planning (2026-11-20, research Open Questions)
+- **D-18 (OQ1):** **New log files are created with mode 0600. This deliberately tightens today's behaviour.** Research found the TS writer never set a mode: today's files are `0o666 & ~umask` (usually 0644), and the roadmap's "keep 0600" describes a mode that never existed. Rust creates new log files 0600 on unix. Existing `.old` files from older releases are left alone. The golden comparison pins everything except mode. A separate unix test asserts 0600. Record the deviation in the golden notes and in SUMMARY.
+- **D-19 (OQ2):** **Only the environment variable raises crate diagnostics to DEBUG.** The default is WARN, and `GAMELIB_LOG_LEVEL=debug` raises it. There is no settings coupling: no `verboseLogs` binding, no new setting and no `setLogVerbosity` channel. `verboseLogs` defaults to true, so binding to it would make DEBUG the default.
+- **D-20 (OQ3):** **`gog-redist.log` becomes a typed Rust target in its current location.** The `gogRedist` target is resolved by Rust from `Paths` (it needs a games-config dir), and the file stays at `<userData>/GamesConfig/gog-redist.log`. The Rust writer never accepts an arbitrary path from TS.
+- **D-21 (OQ4):** **Phase 84 owns the `run_exit` change.** `finish` receives `still_running` so the `still running at exit deadline` line is written inside the budget. This changes a Phase 83 API, which is safe because 83 is closed before 84 executes (D-02), and it is covered by the existing `shutdown::tests`.
 
 ### Claude's Discretion
 - Whether the writer is its own `gamelib-log` crate or a module of gamelib-core (STACK.md allows either).
