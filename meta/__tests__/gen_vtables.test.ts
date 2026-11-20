@@ -13,6 +13,7 @@ import {
   helperAccessorProbe,
   generateShimC,
   generateShimExportsTs,
+  emitX86NullObjects,
   emitFlatExports,
   flatMethodName,
   LIFECYCLE_NOOP_EXPORTS,
@@ -2027,12 +2028,12 @@ describe('gen_vtables', () => {
         expect(def).not.toContain('SteamAPI_GameLibX64Only_v001')
       })
 
-      it('lists SteamInternal_CreateInterface / SteamAPI_GetHSteamUser / SteamAPI_GetHSteamPipe on x64 but not on x86 (Win64-only modern lookup family)', () => {
+      it('lists the modern lookup family (SteamInternal_CreateInterface / SteamAPI_GetHSteamUser / SteamAPI_GetHSteamPipe ...) on BOTH arches (x86 since quick 261120-rdo, D-53-09 tier 1)', () => {
         const defX64 = generateDefFile([x86OnlyManifest], 'x64')
         const defX86 = generateDefFile([x86OnlyManifest], 'x86')
         for (const name of MODERN_LOOKUP_FLAT_EXPORTS) {
           expect(defX64.split('\n')).toContain(name)
-          expect(defX86.split('\n')).not.toContain(name)
+          expect(defX86.split('\n')).toContain(name)
         }
       })
     })
@@ -2188,12 +2189,12 @@ describe('gen_vtables', () => {
       return block.slice(at, next === -1 ? undefined : next + 3)
     }
 
-    it('x64 .def lists all five; x86 .def lists none', () => {
+    it('x64 .def and x86 .def both list all five (x86 since quick 261120-rdo, D-53-09 tier 1)', () => {
       const x64 = generateDefFile(manifests, 'x64')
       const x86 = generateDefFile(manifests, 'x86')
       for (const n of FIVE) {
         expect(x64).toMatch(new RegExp(`^\\s*${n}\\s*$`, 'm'))
-        expect(x86).not.toContain(n)
+        expect(x86).toMatch(new RegExp(`^\\s*${n}\\s*$`, 'm'))
       }
       expect(generateDefFile(loadAllManifests(), 'x86')).toBe(
         readFileSync(
@@ -2227,13 +2228,13 @@ describe('gen_vtables', () => {
       expect(b).not.toContain('return 0;')
     })
 
-    it('Phase 53 (D-53-11): pre-V2 SteamInternal_GameServer_Init is x64-only, returns bool false and never reaches the helper', () => {
+    it('Phase 53 (D-53-11): pre-V2 SteamInternal_GameServer_Init is exported on both arches (x86 since quick 261120-rdo), returns bool false and never reaches the helper', () => {
       const all = loadAllManifests()
       expect(generateDefFile(all, 'x64')).toMatch(
         /^\s*SteamInternal_GameServer_Init\s*$/m
       )
-      expect(generateDefFile(all, 'x86')).not.toContain(
-        'SteamInternal_GameServer_Init'
+      expect(generateDefFile(all, 'x86')).toMatch(
+        /^\s*SteamInternal_GameServer_Init\s*$/m
       )
       const b = body('SteamInternal_GameServer_Init')
       expect(b).toContain('return 0;')
@@ -2487,7 +2488,10 @@ function flatMethod(
     name,
     returns,
     returnKind,
-    stackBytes: 0,
+    // quick 261120-rdo: these x64-only fixtures now also reach emitX86NullObjects,
+    // which fails closed on an sret return whose stackBytes cannot hold the hidden
+    // pointer. A class return carries that 4-byte pointer on i386.
+    stackBytes: returnKind === 'class' ? 4 : 0,
     params: params.map(([type, pname]) => ({ type, name: pname })),
     ...extra
   }
@@ -3552,7 +3556,7 @@ describe('quick k51: RequestCurrentStats notify and dispatch report (shim)', () 
   const c = generateShimC(loadAllManifests())
   const fallbackBodies = [
     ...c.matchAll(
-      /static [^\n]*THISCALL (vt_[A-Za-z0-9_]*_RequestCurrentStats)\([^\n]*\{\n[\s\S]*?\n\}\n/g
+      /static [^\n]*THISCALL (vt_(?!X86Null_)[A-Za-z0-9_]*_RequestCurrentStats)\([^\n]*\{\n[\s\S]*?\n\}\n/g
     )
   ]
 
@@ -4276,6 +4280,12 @@ describe('quick 261027-jgs: STUBCALL first-call reporting in the shim', () => {
         ) {
           expected++
           bySite.set(`${m.interface}.${x.name}:${x.slot}`, 1)
+        }
+        // quick 261120-rdo: every non-lookup method of an x64-only manifest also
+        // has a forced-stub x86 null clone `X86Null_<interface>` with its own site.
+        if (!m.arches.includes('x86')) {
+          expected++
+          bySite.set(`X86Null_${m.interface}.${x.name}:${x.slot}`, 1)
         }
       }
     }
@@ -6046,5 +6056,170 @@ describe('stub methods that return a SteamAPICall_t complete as a failure', () =
       'vt_STEAMUGC_INTERFACE_VERSION016_CreateQueryUGCDetailsRequest'
     )
     expect(fn).toContain('return 0LL;')
+  })
+})
+
+describe('quick 261120-rdo: x86 modern lookup family and manifest-backed x86 null objects (D-53-09 tier 1)', () => {
+  const x86Only: InterfaceManifestV2 = {
+    schemaVersion: 2,
+    interface: 'GameLibRdoX86001',
+    family: 'GameLibRdoX86',
+    ordinal: 9101,
+    arches: ['x86'],
+    mode: 'stub',
+    complete: true,
+    flatAccessor: 'SteamAPI_GameLibRdoX86_v001',
+    source: { kind: 'synthetic', ref: 'unit test', file: 'n/a' },
+    methods: [
+      {
+        slot: 0,
+        name: 'Noop_TESTONLY',
+        returns: 'void',
+        returnKind: 'void',
+        stackBytes: 0,
+        params: []
+      }
+    ]
+  }
+  const x64Only: InterfaceManifestV2 = {
+    schemaVersion: 2,
+    interface: 'GameLibRdoX64001',
+    family: 'GameLibRdoX64',
+    ordinal: 9102,
+    arches: ['x64'],
+    mode: 'stub',
+    complete: true,
+    flatAccessor: 'SteamAPI_GameLibRdoX64_v001',
+    source: { kind: 'synthetic', ref: 'unit test', file: 'n/a' },
+    methods: [
+      {
+        slot: 0,
+        name: 'Wide_TESTONLY',
+        returns: 'uint64',
+        returnKind: 'int64',
+        stackBytes: 12,
+        params: []
+      },
+      {
+        slot: 1,
+        name: 'Sret_TESTONLY',
+        returns: 'Big_t',
+        returnKind: 'class',
+        structSize: 40,
+        stackBytes: 12,
+        params: [{ name: 'h', type: 'uint64' }]
+      }
+    ]
+  }
+
+  it('(a) the x86 .def lists each of the 9 modern names exactly once', () => {
+    const lines = generateDefFile([x86Only, x64Only], 'x86').split('\n')
+    expect(MODERN_LOOKUP_FLAT_EXPORTS).toHaveLength(9)
+    for (const name of MODERN_LOOKUP_FLAT_EXPORTS) {
+      expect(lines.filter((l) => l === name)).toHaveLength(1)
+    }
+  })
+
+  it('(b) generateShimC has an i386 modern block whose bodies use x86_null_object_for_version and never x64_', () => {
+    const c = generateShimC([x86Only, x64Only])
+    const start = c.indexOf(
+      '#if defined(__i386__)\nstatic uintptr_t g_gamelib_context_counter = 1;'
+    )
+    expect(start).toBeGreaterThan(-1)
+    const end = c.indexOf('\n#endif\n', start)
+    const block = c.slice(start, end)
+    expect(block).toContain('x86_null_object_for_version(pszVersion)')
+    expect(block).not.toContain('x64_')
+    expect(block).not.toContain('x86_64')
+    for (const name of MODERN_LOOKUP_FLAT_EXPORTS) {
+      expect(block).toMatch(new RegExp(`\\b${name}\\(`))
+    }
+  })
+
+  it('(c) an x64-only manifest gets an arity-exact x86 null clone: 12 stack bytes = 3 dummies, sret keeps the real pointer', () => {
+    const c = generateShimC([x86Only, x64Only])
+    expect(c).toContain('g_x86null_gamelibrdox64001_vtbl')
+    expect(c).toContain(
+      '{ "GameLibRdoX64001", &g_x86null_gamelibrdox64001_instance }'
+    )
+    const wide = c.match(/vt_X86Null_GameLibRdoX64001_Wide_TESTONLY\(([^)]*)\)/)
+    expect(wide).not.toBeNull()
+    expect(
+      (
+        at(wide as RegExpMatchArray, 1, 'wide params').match(
+          /uint32_t dummy/g
+        ) ?? []
+      ).length
+    ).toBe(3)
+    const sret = c.match(/vt_X86Null_GameLibRdoX64001_Sret_TESTONLY\(([^)]*)\)/)
+    expect(sret).not.toBeNull()
+    const sretParams = at(sret as RegExpMatchArray, 1, 'sret params')
+    expect(sretParams).toContain('void *sretOut')
+    expect((sretParams.match(/uint32_t dummy/g) ?? []).length).toBe(2)
+    expect(c).toContain('memset(sretOut, 0, 40);')
+    // an x86-served manifest never gets a null clone, and the table is only in the i386 block
+    expect(c).not.toContain('X86Null_GameLibRdoX86001')
+    expect(c).not.toContain('g_x86null_gamelibrdox86001')
+    expect(emitX86NullObjects([x86Only, x64Only])).toMatch(
+      /^[\s\S]*#if defined\(__i386__\)\n[\s\S]*#endif\n\n$/
+    )
+  })
+
+  it('(c2) the null clones are a fallback only: never rows of g_iface_table', () => {
+    const c = generateShimC([x86Only, x64Only])
+    const tableAt = c.indexOf('g_iface_table[] =')
+    expect(tableAt).toBeGreaterThan(-1)
+    const tableEnd = c.indexOf('};', tableAt)
+    expect(c.slice(tableAt, tableEnd)).not.toContain('x86null')
+  })
+
+  it('(d) the generator fails closed on an x64-only method whose stackBytes is not a multiple of 4, or an sret below 4', () => {
+    const bad = (stackBytes: number, kind: 'int64' | 'class') => ({
+      ...x64Only,
+      methods: [
+        {
+          slot: 0,
+          name: 'Bad_TESTONLY',
+          returns: kind === 'class' ? 'Big_t' : 'uint64',
+          returnKind: kind,
+          ...(kind === 'class' ? { structSize: 16 } : {}),
+          stackBytes,
+          params: []
+        }
+      ]
+    })
+    expect(() => emitX86NullObjects([bad(10, 'int64')])).toThrow(
+      /multiple of 4/
+    )
+    expect(() => emitX86NullObjects([bad(-4, 'int64')])).toThrow(
+      /multiple of 4/
+    )
+    expect(() => emitX86NullObjects([bad(0, 'class')])).toThrow(/sret/)
+    expect(() => emitX86NullObjects([bad(8, 'int64')])).not.toThrow()
+  })
+
+  it('(d2) with no x64-only manifest the lookup still compiles to a NULL answer', () => {
+    const c = emitX86NullObjects([x86Only])
+    expect(c).toContain('static void *x86_null_object_for_version')
+    expect(c).not.toContain('g_x86_null_table')
+  })
+
+  it('(e) the x64 modern block literal and the x64 .def are unchanged by the x86 block', () => {
+    const c = generateShimC([x86Only, x64Only])
+    expect(c).toContain(
+      '#if defined(__x86_64__)\nvoid *SteamInternal_CreateInterface'
+    )
+    const all = loadAllManifests()
+    expect(generateDefFile(all, 'x64')).toBe(
+      readFileSync(
+        join(
+          __dirname,
+          '..',
+          '..',
+          'native/steam-bridge/generated/steam_api64.def'
+        ),
+        'utf-8'
+      )
+    )
   })
 })

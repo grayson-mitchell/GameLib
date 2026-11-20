@@ -4772,27 +4772,27 @@ const FLAT_EXPORT_BODIES: Record<
     'void SteamAPI_UnregisterCallResult(void *pCallback, uint64_t hAPICall) { gl_cr_unregister(pCallback, hAPICall); }'
 }
 
-// 51-15: the modern-SDK lookup family (D-51-13 GO) -- Win64-only (ROADMAP
-// sub-decision 1: SteamInternal_CreateInterface, SteamAPI_GetHSteamUser,
-// SteamAPI_GetHSteamPipe). A game built against a modern steam_api64.dll
-// resolves EVERY interface through SteamInternal_CreateInterface(version),
-// never a per-version flat accessor -- these three symbols are therefore
-// emitted only into the x64 .def (generateDefFile's `arch === 'x64'`
-// branch) and only compiled under `#if defined(__x86_64__)` in the shim C
-// (generateShimC), never polluting the legacy x86 shim's export surface
-// (SHIM_EXPORTED_SYMBOLS' CR-02 pin stays untouched by this plan).
+// 51-15: the modern-SDK lookup family (D-51-13 GO) -- SteamInternal_CreateInterface,
+// SteamAPI_GetHSteamUser, SteamAPI_GetHSteamPipe. A game built against a modern
+// steam_api64.dll resolves EVERY interface through SteamInternal_CreateInterface(version),
+// never a per-version flat accessor.
 //
 // quick 261024-i94 added the SDK 1.58+ init family (SteamInternal_SteamAPI_Init,
 // _ContextInit, _FindOrCreateUserInterface, _FindOrCreateGameServerInterface,
-// _GameServer_Init_V2). They stay x64-only: x86 has no
-// SteamInternal_CreateInterface, no SteamAPI_GetHSteamUser/GetHSteamPipe and no
-// null-object fallback, and a modern-SDK x86 context init also calls
-// SteamAPI_GetHSteamUser -- exporting these five on x86 would mean widening the
-// whole family to x86 (a separate decision against D-51-13).
+// _GameServer_Init_V2).
+//
+// quick 261120-rdo (D-53-09 tier 1): the whole family now ships on BOTH arches.
+// The 2026-11-20 census measured Amnesia 57300 and Low Magic Age 576770 (x86)
+// statically importing SteamInternal_ContextInit and
+// SteamInternal_FindOrCreateUserInterface, which the x86 shim lacked. The
+// bodies are one source of truth: the x86 block (generateShimC) derives them by
+// replacing x64_null_object_for_version with x86_null_object_for_version. The
+// x86 unknown-version answer is the manifest-backed x86 null object (per
+// version, arity-exact for __thiscall callee-cleans), else NULL.
 //
 // Phase 56 (56-14, D-20) removed the Phase 52 SteamStub-path export along with
 // its forwarder; SteamStub titles now run in steamclient-layer DRM mode with no
-// shim. x86 stays deferred (orchestrator decision 6).
+// shim.
 export const MODERN_LOOKUP_FLAT_EXPORTS = [
   'SteamInternal_CreateInterface',
   'SteamAPI_GetHSteamUser',
@@ -4815,8 +4815,8 @@ const MODERN_LOOKUP_FLAT_EXPORT_BODIES: Record<
   // in the preamble so the SteamClient-family GetISteamXxx lookup stubs in
   // vtableSections, emitted earlier in the file, can call it too). An
   // unknown version answers the x64 null-object fallback (ROADMAP
-  // sub-decision 1: reported as stubbed, never missing) -- there is no x86
-  // leg here at all, this symbol only ever compiles under __x86_64__.
+  // sub-decision 1: reported as stubbed, never missing). quick 261120-rdo: the
+  // x86 block reuses this body with x86_null_object_for_version.
   SteamInternal_CreateInterface:
     'void *SteamInternal_CreateInterface(const char *pszVersion) {\n' +
     '  void *resolved = resolve_iface_by_exact_version(pszVersion);\n' +
@@ -5579,6 +5579,8 @@ function emitSteamClientVersionLookupStub(
     `  if (resolved != NULL) return resolved;\n` +
     `#if defined(__x86_64__)\n` +
     `  return x64_null_object_for_version(${versionParam.name});\n` +
+    `#elif defined(__i386__)\n` +
+    `  return x86_null_object_for_version(${versionParam.name});\n` +
     `#else\n` +
     `  return NULL;\n` +
     `#endif\n` +
@@ -6061,6 +6063,97 @@ function emitVtableArray(manifest: InterfaceManifest): string {
     `static vfn ${varName}[${sortedMethods.length}] = {\n${entries}\n};\n` +
     `struct ${structName} { vfn *vptr; };\n` +
     `static struct ${structName} ${instanceName} = { ${varName} };\n`
+  )
+}
+
+/**
+ * quick 261120-rdo (D-53-09 tier 1): the x86 per-version null objects.
+ *
+ * i386 `__thiscall` is callee-cleans, so a generic zero-returning slot would
+ * corrupt the caller's stack on every slot whose arity differs: each slot must
+ * pop exactly its own `stackBytes`. For every manifest that does NOT target x86
+ * this emits a forced-stub clone (`X86Null_<interface>`) through the EXISTING
+ * emitVtableStub, whose C signature is driven entirely by `stackBytes` (dummy
+ * dwords, plus the real sret pointer that is zero-filled and returned), or by
+ * the GetISteamXxx lookup stub for a SteamClient manifest. The clones are NOT
+ * put in g_iface_table: they are an unknown-version FALLBACK, not a served
+ * interface, which keeps D-53-07's flat-lookup NULL contract and the served /
+ * skew semantics intact. A version GameLib has no manifest for answers NULL,
+ * because there is no i386 arity data for it. Output is one
+ * `#if defined(__i386__)` block that also defines `x86_null_object_for_version`
+ * (exact strcmp over the table, NULL on a miss).
+ */
+export function emitX86NullObjects(
+  manifests: readonly InterfaceManifest[]
+): string {
+  const nulls = manifests
+    .filter((m) => !m.arches.includes('x86'))
+    .sort((a, b) => a.ordinal - b.ordinal)
+  const clones = nulls.map((m): InterfaceManifest => {
+    const methods = m.methods.map((method) => {
+      const {
+        helperFallback: _hf,
+        shimLocal: _sl,
+        helperCustom: _hc,
+        zeroHandleParam: _zh,
+        unmapHandle: _um,
+        ...kept
+      } = method
+      void _hf
+      void _sl
+      void _hc
+      void _zh
+      void _um
+      const sret = isSretReturn(method)
+      const b = method.stackBytes
+      if (!Number.isInteger(b) || b < 0 || b % 4 !== 0) {
+        throw new Error(
+          `emitX86NullObjects: ${m.interface}.${method.name} stackBytes ${String(b)} is not a non-negative multiple of 4`
+        )
+      }
+      if (sret && b < 4) {
+        throw new Error(
+          `emitX86NullObjects: ${m.interface}.${method.name} is an sret return but stackBytes ${b} < 4`
+        )
+      }
+      return { ...kept, mode: 'stub' as const }
+    })
+    return { ...m, interface: `X86Null_${m.interface}`, mode: 'stub', methods }
+  })
+  const sections = clones.map((c) => {
+    const stubs = [...c.methods]
+      .sort((a, b) => a.slot - b.slot)
+      .map((method) => emitVtableStub(c, method))
+      .join('\n')
+    return `// === ${c.interface} (x86 null object, family ${c.family}) ===\n\n${stubs}\n${emitVtableArray(c)}`
+  })
+  const rows = nulls.map(
+    (m) =>
+      `  { "${m.interface}", &g_x86null_${m.interface.toLowerCase()}_instance },`
+  )
+  return (
+    `// quick 261120-rdo (D-53-09): x86 per-version null objects -- __thiscall is\n` +
+    `// callee-cleans, so each slot pops exactly its manifest stackBytes. See\n` +
+    `// emitX86NullObjects (meta/gen_vtables.ts). Not in g_iface_table: a fallback,\n` +
+    `// never a served interface.\n` +
+    `#if defined(__i386__)\n` +
+    `static void *x86_null_object_for_version(const char *version);\n\n` +
+    sections.join('\n') +
+    (rows.length === 0
+      ? `\nstatic void *x86_null_object_for_version(const char *version) {\n  (void)version;\n  return NULL;\n}\n`
+      : `\nstruct GLibX86NullRow { const char *version; void *instance; };\n` +
+        `static const struct GLibX86NullRow g_x86_null_table[] = {\n` +
+        rows.join('\n') +
+        `\n};\n` +
+        `static void *x86_null_object_for_version(const char *version) {\n` +
+        `  size_t i;\n` +
+        `  if (version == NULL) return NULL;\n` +
+        `  for (i = 0; i < sizeof(g_x86_null_table) / sizeof(g_x86_null_table[0]); i++) {\n` +
+        `    if (strcmp(version, g_x86_null_table[i].version) == 0) return g_x86_null_table[i].instance;\n` +
+        `  }\n` +
+        `  return NULL;\n` +
+        `}\n`) +
+    `#endif\n\n`
   )
 }
 
@@ -7324,6 +7417,25 @@ static void *resolve_iface_by_exact_version(const char *version);
       (name) => MODERN_LOOKUP_FLAT_EXPORT_BODIES[name]
     ).join('\n') +
     `\n#endif\n`
+  // quick 261120-rdo (D-53-09 tier 1): the same family on x86. One source of
+  // truth: the bodies are the x64 ones with the null-object lookup swapped.
+  const x86ModernBodies = MODERN_LOOKUP_FLAT_EXPORTS.map((name) =>
+    MODERN_LOOKUP_FLAT_EXPORT_BODIES[name].replaceAll(
+      'x64_null_object_for_version',
+      'x86_null_object_for_version'
+    )
+  )
+  for (const body of x86ModernBodies) {
+    if (body.includes('x64_')) {
+      throw new Error(
+        'generateShimC: an x86 modern-lookup body still references x64_ -- derive it from the shared body'
+      )
+    }
+  }
+  const x86ModernLookupExports =
+    `#if defined(__i386__)\nstatic uintptr_t g_gamelib_context_counter = 1;\n` +
+    x86ModernBodies.join('\n') +
+    `\n#endif\n`
   // Phase 53 (53-04): the generated flat C API plus the lifecycle no-ops --
   // x64 only, in their own guard blocks so the x86 shim is untouched.
   const flatApi = emitFlatExports(
@@ -7379,13 +7491,15 @@ static void *resolve_iface_by_exact_version(const char *version);
     emitIfaceTableAndBareAccessors(sortedManifests)
 
   return (
-    `${header}${vtableSections}\n` +
+    `${header}${emitX86NullObjects(manifests)}${vtableSections}\n` +
     `// === Legacy bare accessors (51-06 Task 2, selected per game via gamelib_bridge.cfg's iface.<Family>=<Version>) ===\n\n` +
     `${ifaceTableAndBareAccessors}\n` +
     `// === Flat SteamAPI_* exports (acceptance-set superset, R3 finding #9) ===\n\n` +
     `${flatExports}\n\n` +
     `// === Modern-SDK lookup family (51-15, Win64 only -- D-51-13) ===\n\n` +
     `${modernLookupExports}\n\n` +
+    `// === Modern-SDK lookup family (quick 261120-rdo, x86 -- D-53-09 tier 1) ===\n\n` +
+    `${x86ModernLookupExports}\n` +
     `// === Steamworks flat C API (53-04, Win64 only -- D-53-01, generated from the manifests) ===\n\n` +
     `${flatApiBlock}\n` +
     `// === Steamworks.NET lifecycle no-ops (53-04, Win64 only -- D-53-06 as amended) ===\n\n` +
@@ -8608,7 +8722,9 @@ export function generateDefFile(
   const lines = [
     `LIBRARY ${libraryName}`,
     'EXPORTS',
-    ...defExportNames(manifests, arch)
+    ...(arch === 'x86'
+      ? x86DefExportNames(manifests)
+      : defExportNames(manifests, arch))
   ]
   return lines.join('\n') + '\n'
 }
@@ -8629,22 +8745,22 @@ function defExportNames(
     .filter((f) => !hasGameServerFlatStub(bareAccessorName(f)))
     .sort()
   const bareAccessorExports = families.map((f) => bareAccessorName(f))
-  // 51-15: the modern-SDK lookup family is Win64-only -- see
-  // MODERN_LOOKUP_FLAT_EXPORTS' doc comment. Phase 53: so are the generated
-  // flat C API and the Steamworks.NET lifecycle no-ops.
+  // Phase 53: the generated flat C API and the Steamworks.NET lifecycle
+  // no-ops are Win64-only (the modern lookup family is not: see below).
   const x64Only: string[] =
     arch === 'x64'
       ? [
-          ...MODERN_LOOKUP_FLAT_EXPORTS,
           ...emitFlatExports(manifests).names,
           ...LIFECYCLE_NOOP_EXPORTS,
           ...NETWORKING_UTILS_FLAT_INLINE_NAMES,
           ...LEGACY_CSTEAMWORKS_X64_EXPORTS
         ]
       : []
+  // quick 261120-rdo: the modern lookup family ships on both arches.
   return [
     ...FLAT_EXPORTS_SUPERSET,
     ...GAMESERVER_FLAT_STUBS,
+    ...MODERN_LOOKUP_FLAT_EXPORTS,
     ...x64Only,
     ...accessorExports,
     ...bareAccessorExports
@@ -8656,6 +8772,15 @@ function x64DefExportNames(manifests: InterfaceManifest[]): string[] {
   const dup = names.find((n, i) => names.indexOf(n) !== i)
   if (dup !== undefined) {
     throw new Error(`steam_api64 export '${dup}' is emitted twice`)
+  }
+  return names
+}
+
+function x86DefExportNames(manifests: InterfaceManifest[]): string[] {
+  const names = defExportNames(manifests, 'x86')
+  const dup = names.find((n, i) => names.indexOf(n) !== i)
+  if (dup !== undefined) {
+    throw new Error(`steam_api export '${dup}' is emitted twice`)
   }
   return names
 }

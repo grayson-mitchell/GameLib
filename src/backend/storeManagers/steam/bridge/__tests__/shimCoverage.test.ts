@@ -255,7 +255,9 @@ describe('SHIM64_EXPORTED_SYMBOLS (51-15 pin)', () => {
     expect(notInDef).toEqual([])
   })
 
-  test('the modern-SDK lookup family is x64-only -- never present in the x86 steam_api.def', () => {
+  // quick 261120-rdo (D-53-09 tier 1): this pin encoded the x86 deferral. The family is now
+  // exported on BOTH arches, so it must be present in the x86 steam_api.def too.
+  test('the modern-SDK lookup family is exported on both arches -- present in the x86 steam_api.def too', () => {
     const x86Symbols = new Set(readDefExports(STEAM_API_DEF_PATH))
     for (const name of [
       'SteamInternal_CreateInterface',
@@ -263,7 +265,7 @@ describe('SHIM64_EXPORTED_SYMBOLS (51-15 pin)', () => {
       'SteamAPI_GetHSteamPipe'
     ]) {
       expect(Object.hasOwn(SHIM64_EXPORTED_SYMBOLS, name)).toBe(true)
-      expect(x86Symbols.has(name)).toBe(false)
+      expect(x86Symbols.has(name)).toBe(true)
     }
   })
 })
@@ -902,7 +904,9 @@ describe('isScanVerdictNowCovered', () => {
 
 describe('isScanVerdictNowCovered is arch-scoped (CR-01)', () => {
   const cases: Array<['x86' | 'x64', string, boolean]> = [
-    ['x86', 'SteamInternal_CreateInterface', false],
+    // quick 261120-rdo: the x86 shim now exports the modern lookup family, so an
+    // old x86 verdict that missed it is covered (was false before D-53-09 tier 1).
+    ['x86', 'SteamInternal_CreateInterface', true],
     ['x64', 'SteamInternal_CreateInterface', true],
     ['x86', 'SteamUser019', false],
     ['x64', 'SteamUser023', true],
@@ -1299,9 +1303,10 @@ describe('Phase 53 sampled titles: no half-served family (Pitfall 4)', () => {
     expect(
       Object.hasOwn(SHIM64_EXPORTED_SYMBOLS, 'SteamInternal_GameServer_Init')
     ).toBe(true)
+    // quick 261120-rdo: x86 exports the whole modern lookup family now.
     expect(
       Object.hasOwn(SHIM_EXPORTED_SYMBOLS, 'SteamInternal_GameServer_Init')
-    ).toBe(false)
+    ).toBe(true)
   })
 
   test('a half-served family is still reported (skew guard works)', () => {
@@ -1724,8 +1729,9 @@ describe('undertale-shim-placed-no-hello: runner export gap helpers', () => {
       'SteamAPI_RunCallbacks',
       'SteamAPI_Unrelated'
     ])
+    // quick 261120-rdo: SteamAPI_GetHSteamPipe/User are exported on x86 now, so only
+    // SteamAPI_InitSafe (still unserved) and the unrelated name remain.
     expect(findRunnerUnservedExports({ arch: 'x86', runnerNames })).toEqual([
-      'SteamAPI_GetHSteamPipe',
       'SteamAPI_InitSafe',
       'SteamAPI_Unrelated'
     ])

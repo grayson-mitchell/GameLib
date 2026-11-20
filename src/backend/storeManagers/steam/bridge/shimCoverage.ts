@@ -140,7 +140,20 @@ export const SHIM_EXPORTED_SYMBOLS: SymbolTable = Object.freeze({
   SteamGameServer: true,
   SteamGameServerStats: true,
   SteamGameServerNetworking: true,
-  SteamGameServerUtils: true
+  SteamGameServerUtils: true,
+  // quick 261120-rdo (D-53-09 tier 1): the modern-SDK lookup family now ships
+  // on x86 too (meta/gen_vtables.ts MODERN_LOOKUP_FLAT_EXPORTS), unblocked by
+  // the 2026-11-20 census measurement of Amnesia 57300 and Low Magic Age
+  // 576770.
+  SteamInternal_CreateInterface: true,
+  SteamAPI_GetHSteamUser: true,
+  SteamAPI_GetHSteamPipe: true,
+  SteamInternal_SteamAPI_Init: true,
+  SteamInternal_ContextInit: true,
+  SteamInternal_FindOrCreateUserInterface: true,
+  SteamInternal_FindOrCreateGameServerInterface: true,
+  SteamInternal_GameServer_Init_V2: true,
+  SteamInternal_GameServer_Init: true
 })
 
 // 51-15: D-51-13 GO -- the Win64 shim ships. Mirrors
