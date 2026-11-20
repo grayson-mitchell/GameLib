@@ -511,10 +511,12 @@ export function shim64ServedInterfaceVersions(): ReadonlyMap<
 }
 
 /** quick 261120-rdo: the generated set of versions the x86 shim answers with a
- * per-version null object (every manifest that does not target x86). */
-const X86_NULL_OBJECT_VERSION_SET: ReadonlySet<string> = new Set(
-  SHIM86_NULL_OBJECT_VERSIONS
-)
+ * per-version null object (every manifest that does not target x86). Built per
+ * call, like `shimServedInterfaceVersions()`, so the module holds no `new Set`
+ * (the module-state census, D-66.4-02, flags a module-level one). */
+function x86NullObjectVersionSet(): ReadonlySet<string> {
+  return new Set(SHIM86_NULL_OBJECT_VERSIONS)
+}
 
 // 51-15: D-51-13 GO -- the Win64 shim answers an unserved required
 // interface version with a null-object fallback (a real pointer to a
@@ -590,7 +592,7 @@ export const SHIM_EXPORT_SET_VERSION = computeExportSetVersion({
   x86ServedVersions: shimServedInterfaceVersions(),
   x64ServedVersions: shim64ServedInterfaceVersions(),
   x64NullObjectFallback: SHIM_X64_NULL_OBJECT_FALLBACK,
-  x86NullObjectVersions: X86_NULL_OBJECT_VERSION_SET
+  x86NullObjectVersions: x86NullObjectVersionSet()
 })
 
 interface EvaluateShimCoverageInput {
@@ -714,7 +716,7 @@ export function evaluateShimCoverage(
       x86ServedVersions: shimServedInterfaceVersions(),
       x64ServedVersions: shim64ServedInterfaceVersions(),
       x64NullObjectFallback: SHIM_X64_NULL_OBJECT_FALLBACK,
-      x86NullObjectVersions: X86_NULL_OBJECT_VERSION_SET
+      x86NullObjectVersions: x86NullObjectVersionSet()
     },
     input
   )
@@ -735,7 +737,7 @@ function isNullObjectEligible(
   const reachedBare = symbols.some((s) => BARE_ACCESSOR_FAMILY[s] === family)
   if (!usesRuntimeInterfaceLookup(symbols) || reachedBare) return false
   if (arch === 'x64') return SHIM_X64_NULL_OBJECT_FALLBACK
-  return X86_NULL_OBJECT_VERSION_SET.has(version)
+  return x86NullObjectVersionSet().has(version)
 }
 
 /**
