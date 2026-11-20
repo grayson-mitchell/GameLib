@@ -35,6 +35,8 @@ import { hostPlatform } from './playAdoption'
 import { noticeSeq } from './noticeSeq'
 import { getBottleSteamappsDir } from './bottle'
 import { removePerGameBridgeBottle } from './bridgeBottleLifecycle'
+import { guardedRemoveTree } from 'backend/safety/rustSafety'
+import { refuseWithRemovalNotice, steamSafetyRequest } from './safeSteamRemove'
 import {
   getBridgeBottleSettings,
   bridgeBottleNameFor,
@@ -305,13 +307,38 @@ async function uninstallBridgeGame(steamGame: SteamGame): Promise<ExecResult> {
     `appmanifest_${steamGame.appId}.acf`
   )
 
+  // Phase 82 (D-10/D-13): the install root goes through the Rust guard; the trust root is the
+  // bridge bottle's own steamapps/common, derived from settings and paths, never from the manifest.
+  // A non-yes check leaves the install root and the manifest alone, so a second click re-runs the
+  // same checks; a delete that ran and is not confirmed clean keeps the manifest for the same reason.
+  const removal = await guardedRemoveTree(
+    steamGame.deps,
+    steamSafetyRequest(steamGame, [
+      {
+        id: 'install',
+        path: installRoot,
+        kind: 'game-install',
+        trustRoot: join(
+          getBottleSteamappsDir(steamGame.deps.paths, bottleName),
+          'common'
+        )
+      }
+    ])
+  )
+  if (removal.outcome !== 'removed') {
+    return refuseWithRemovalNotice(steamGame, {
+      outcome: removal.outcome,
+      ...(removal.reason ? { reason: removal.reason } : {}),
+      ...(removal.otherKey ? { otherKey: removal.otherKey } : {})
+    })
+  }
+
   try {
-    rmSync(installRoot, { recursive: true, force: true })
     rmSync(manifestPath, { force: true })
   } catch (error) {
     logWarning(
       [
-        `SteamGame: uninstallBridgeGame failed to remove "${installRoot}" or "${manifestPath}" for appId ${steamGame.appId}`,
+        `SteamGame: uninstallBridgeGame failed to remove "${manifestPath}" for appId ${steamGame.appId}`,
         error
       ],
       LogPrefix.Steam

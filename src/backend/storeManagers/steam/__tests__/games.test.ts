@@ -250,6 +250,7 @@ import { at } from './fixtures/indexed'
 import type { Stores } from 'backend/services/types'
 
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
+import { fakeSafetyRustInvoke } from 'backend/testUtils/fakeSafetyRust'
 
 // `libDeps` is declared before steamTestDeps; the scan reads the library map through the same instance.
 const libDeps = {
@@ -407,8 +408,13 @@ const bridgeMarkerCalls = (appId: string): boolean[] =>
     .map((c) => (c.args as { finalized: boolean }).finalized)
 const bridgeMarker = (appId: string): boolean =>
   bridgeMarkerCalls(appId).at(-1) ?? false
+// Phase 82: the bridge uninstall asks the Rust guard first; the fake answers yes and deletes the
+// test's own tmp tree, and every Steam-files channel still reaches the recording fake.
+const safetyRust = fakeSafetyRustInvoke({
+  base: rustSteamFiles.requestRustInvoke
+})
 const steamTestDeps = createTestManagerDeps({
-  requestRustInvoke: rustSteamFiles.requestRustInvoke,
+  requestRustInvoke: safetyRust.requestRustInvoke,
   config: createTestGlobalConfig({ defaultSteamPath: '/steam' }),
   sendFrontendMessage,
   aborts: {
@@ -11528,17 +11534,28 @@ describe('SteamGame.uninstall() — Phase 24 Plan 08 bridge routing (R4/R6)', ()
       expect(removePerGameBridgeBottle).not.toHaveBeenCalled()
     })
 
-    it('quick 261108-anw: an rm error on the install root returns failed, notices once, polls nothing', async () => {
+    it('quick 261108-anw: an rm error on the manifest returns failed, notices once, polls nothing', async () => {
       const pollSpy = jest
         .spyOn(uninstallPollingModule, 'pollUninstallOnce')
         .mockResolvedValue(undefined)
-      const rmSpy = failNextRmSync()
+      // The install root goes through the Rust guard now (Phase 82); only the manifest unlink
+      // is still a plain rmSync, so fail exactly that path and let every other delete run.
+      const nodeFs = jest.requireActual<typeof import('node:fs')>('node:fs')
+      const realRm = nodeFs.rmSync
+      const rmSpy = jest
+        .spyOn(nodeFs, 'rmSync')
+        .mockImplementation((path, options) => {
+          if (String(path) === manifestPath) {
+            throw Object.assign(new Error('EACCES'), { code: 'EACCES' })
+          }
+          realRm(path, options)
+        })
 
       const result = await new SteamGame(APP_ID, steamTestDeps).uninstall(
         {} as any
       )
 
-      expect(rmSpy).toHaveBeenCalled()
+      expect(rmSpy).toHaveBeenCalledWith(manifestPath, { force: true })
       rmSpy.mockRestore()
       expect(result.failed).toBe(true)
       expect(result.refused).toBeUndefined()
