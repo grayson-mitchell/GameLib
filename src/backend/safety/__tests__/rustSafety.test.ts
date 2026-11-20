@@ -59,7 +59,7 @@ function depsFor(handler: Handler): {
 
 describe('checkRemoval', () => {
   it('passes a well-formed yes reply through', async () => {
-    const { deps, channels } = depsFor(async () => yesReply)
+    const { deps, channels } = depsFor(() => Promise.resolve(yesReply))
     expect(await checkRemoval(deps, req)).toEqual(yesReply)
     expect(channels).toEqual([RUST_SAFETY_CHECK_REMOVAL])
   })
@@ -76,7 +76,7 @@ describe('checkRemoval', () => {
         item('b')
       ]
     }
-    const { deps } = depsFor(async () => reply)
+    const { deps } = depsFor(() => Promise.resolve(reply))
     expect(await checkRemoval(deps, req)).toEqual(reply)
   })
 
@@ -126,7 +126,7 @@ describe('checkRemoval', () => {
       { overall: 'yes', items: [item('a', { verdict: 'no' }), item('b')] }
     ]
   ])('a malformed reply (%s) reads as unknown / bad-reply', async (_n, raw) => {
-    const { deps } = depsFor(async () => raw)
+    const { deps } = depsFor(() => Promise.resolve(raw))
     const out = await checkRemoval(deps, req)
     expect(out.overall).toBe('unknown')
     expect(out.items.every((i) => i.reason === 'bad-reply')).toBe(true)
@@ -138,7 +138,7 @@ describe('checkRemoval', () => {
       overall: 'unknown',
       items: [item('a', { verdict: 'unknown', reason: 'bad-reply' }), item('b')]
     }
-    const { deps } = depsFor(async () => raw)
+    const { deps } = depsFor(() => Promise.resolve(raw))
     const out = await checkRemoval(deps, req)
     expect(out.items.every((i) => i.reason === 'bad-reply')).toBe(true)
     expect(out.items.every((i) => i.verdict === 'unknown')).toBe(true)
@@ -149,7 +149,7 @@ describe('removeTree', () => {
   const removed: SafetyRemoveReply = { ...yesReply, outcome: 'removed' }
 
   it('passes a removed reply through', async () => {
-    const { deps, channels } = depsFor(async () => removed)
+    const { deps, channels } = depsFor(() => Promise.resolve(removed))
     expect(await removeTree(deps, req)).toEqual(removed)
     expect(channels).toEqual([RUST_SAFETY_REMOVE_TREE])
   })
@@ -180,7 +180,7 @@ describe('removeTree', () => {
   ])(
     'a malformed reply (%s) is outcome failed / bad-reply',
     async (_n, raw) => {
-      const { deps } = depsFor(async () => raw)
+      const { deps } = depsFor(() => Promise.resolve(raw))
       const out = await removeTree(deps, req)
       expect(out.outcome).toBe('failed')
       expect(out.items.every((i) => i.reason === 'bad-reply')).toBe(true)
@@ -214,7 +214,7 @@ describe('guardedRemoveTree', () => {
         item('b')
       ]
     }
-    const { deps, channels } = depsFor(async () => nested)
+    const { deps, channels } = depsFor(() => Promise.resolve(nested))
     const out = await guardedRemoveTree(deps, req)
     expect(out.outcome).toBe('refused')
     expect(out.reason).toBe('nested-known-install')
@@ -232,10 +232,12 @@ describe('guardedRemoveTree', () => {
   })
 
   it('removes after a yes check and reports removed', async () => {
-    const { deps, channels } = depsFor(async (c) =>
-      c === RUST_SAFETY_CHECK_REMOVAL
-        ? yesReply
-        : ({ ...yesReply, outcome: 'removed' } satisfies SafetyRemoveReply)
+    const { deps, channels } = depsFor((c) =>
+      Promise.resolve(
+        c === RUST_SAFETY_CHECK_REMOVAL
+          ? yesReply
+          : ({ ...yesReply, outcome: 'removed' } satisfies SafetyRemoveReply)
+      )
     )
     const out = await guardedRemoveTree(deps, req)
     expect(out.outcome).toBe('removed')
@@ -252,8 +254,8 @@ describe('guardedRemoveTree', () => {
       items: [item('a', { verdict: 'no', reason: 'delete-failed' }), item('b')],
       outcome: 'failed'
     }
-    const { deps } = depsFor(async (c) =>
-      c === RUST_SAFETY_CHECK_REMOVAL ? yesReply : failed
+    const { deps } = depsFor((c) =>
+      Promise.resolve(c === RUST_SAFETY_CHECK_REMOVAL ? yesReply : failed)
     )
     const out = await guardedRemoveTree(deps, req)
     expect(out.outcome).toBe('failed')

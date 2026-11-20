@@ -72,7 +72,6 @@ export interface SafetyTarget {
   executable?: string | null
 }
 
-/** @public Wire type exported ahead of its first cross-module import (the guard sites of plans 82-07 to 82-09). */
 export interface SafetyKnownInstall {
   key: string
   path: string
