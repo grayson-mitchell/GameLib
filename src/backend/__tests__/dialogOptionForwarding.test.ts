@@ -213,10 +213,15 @@ describe('sidecarRpc UNBOUNDED_RUST_CHANNELS covers every human-gated dialog cha
     'RUST_STEAMCM_SIGNIN_QR_START',
     'RUST_STEAMCM_SIGNIN_CREDENTIALS_START',
     'RUST_STEAMCM_SIGNIN_GUARD_SUBMIT',
-    'RUST_STEAMCM_WRAP_RESTORE_IF_OWED'
+    'RUST_STEAMCM_WRAP_RESTORE_IF_OWED',
+    // Phase 82 WR-03: safety_remove_tree runs a guarded recursive delete whose duration scales
+    // with the install tree, not a clock; a 60 s cut-off would report failed while Rust keeps
+    // deleting (rustInvokeChannel.test.ts proves the channel is unbounded). The read-only
+    // safety_check_removal stays bounded. Not a dialog channel either.
+    'RUST_SAFETY_REMOVE_TREE'
   ]
 
-  test('contains exactly the dialog, depot and Rust CM channels', () => {
+  test('contains exactly the dialog, depot, Rust CM and safety remove channels', () => {
     // Set equality AND length, not `toContain`: `toContain` catches deletion but is blind to
     // EXTENSION, and an unrelated channel silently acquiring an unbounded timeout is exactly
     // as much of a defect as a dialog channel losing one.

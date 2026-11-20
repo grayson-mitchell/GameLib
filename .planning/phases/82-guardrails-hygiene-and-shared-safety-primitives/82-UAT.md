@@ -3,7 +3,7 @@ status: complete
 phase: 82-guardrails-hygiene-and-shared-safety-primitives
 source: [82-VERIFICATION.md]
 started: 2026-11-20T07:59:36Z
-updated: 2026-11-20T22:30:00Z
+updated: 2026-11-20T23:30:00Z
 ---
 
 ## Current Test
@@ -18,7 +18,7 @@ result: pass — run on Windows in pnpm tauri:dev, 2026-11-20. 1a pass: the nest
 
 ### 2. Three-OS CI green on the 82-17..82-19 gap-closure commits
 expected: After pushing main, the Rust test and Test workflows pass on ubuntu, macOS and Windows legs, including the gamelib-safety symlink and case-sensitivity rows that only run on macOS/Linux (last green CI sha dac99a816 predates the gap closure).
-result: issue — pushed dac99a816..c939280e5 on 2026-11-20. Rust test: the gamelib-safety step is green on all three legs (macOS: 47 adversarial incl. a_symlinked_trust_root_is_followed_and_a_game_under_it_is_removable, trust_root_contract ran). The macOS leg went red in the later steampoll step (watchdog_real::still_kills_the_grandchild_when_the_middle_process_dies_first, assertion alive(rig.grand)); gamelib-steampoll is untouched by this range, so it is treated as a timing flake and the job was rerun. Test workflow red: dialogOptionForwarding.test.ts pins UNBOUNDED_RUST_CHANNELS and does not list RUST_SAFETY_REMOVE_TREE, which 82-17..82-19 (WR-03) added.
+result: issue — pushed dac99a816..c939280e5 on 2026-11-20. Rust test: the gamelib-safety step is green on all three legs (macOS: 47 adversarial incl. a_symlinked_trust_root_is_followed_and_a_game_under_it_is_removable, trust_root_contract ran). The macOS leg went red in the later steampoll step (watchdog_real::still_kills_the_grandchild_when_the_middle_process_dies_first, assertion alive(rig.grand)); gamelib-steampoll is untouched by this range, so it is treated as a timing flake; the rerun of run 44823009090 went green on all three legs (flake confirmed). Test workflow red: dialogOptionForwarding.test.ts pins UNBOUNDED_RUST_CHANNELS and does not list RUST_SAFETY_REMOVE_TREE, which 82-17..82-19 (WR-03) added.
 reported: "Test workflow run 44823008791 failed: 1 suite, 1 test (dialogOptionForwarding.test.ts:223, UNBOUNDED_RUST_CHANNELS contains RUST_SAFETY_REMOVE_TREE, not in EXPECTED)"
 severity: major
 
@@ -35,7 +35,9 @@ blocked: 0
 
 - gap_id: G-82-2
   truth: "After pushing main, the Rust test and Test workflows pass on ubuntu, macOS and Windows legs"
-  status: failed
+  status: resolved
+  resolved_by: 261120-uzn
+  resolved_at: 2026-11-20
   reason: "User reported: Test workflow run 44823008791 failed in dialogOptionForwarding.test.ts:223 (UNBOUNDED_RUST_CHANNELS set-equality pin lacks RUST_SAFETY_REMOVE_TREE)"
   severity: major
   test: 2
@@ -50,7 +52,7 @@ blocked: 0
 ## Deferred Follow-Ups
 
 - test: 1
-  idea: "GOG on Windows shows external dialogs: 3 UAC prompts installing Balrum (gog + vcredist), a UAC prompt on uninstall, then GOG's own 'keep saved games?' dialog. Operator: 'what a mess, need try and get rid of all of those external windows'. Cause found: games.ts Windows uninstall branch drops /KEEPSAVES /ProductId /galaxyclient from the built command (only /verysilent + /dir passed); -Verb RunAs elevates per call (uninstall, and per redist at games.ts:1360). Not a Phase 82 regression."
+  idea: "GOG on Windows shows external dialogs: 3 UAC prompts installing Balrum (gog + vcredist), a UAC prompt on uninstall, then GOG's own 'keep saved games?' dialog. Operator: 'what a mess, need try and get rid of all of those external windows'. Cause found: games.ts Windows uninstall branch drops /KEEPSAVES /ProductId /galaxyclient from the built command (only /verysilent + /dir passed); -Verb RunAs elevates per call (uninstall, and per redist at games.ts:1360). Not a Phase 82 regression. Partially addressed by quick task 261120-uzn on 2026-11-20: the Windows uninstall now passes /VERYSILENT /ProductId /galaxyclient /KEEPSAVES and /dir with literal-safe quoting, so the keep-saved-games dialog should not appear, and paths with spaces now reach the uninstaller at all; GOG setup's elevated steps run under one UAC prompt instead of one each. Still open: the uninstall keeps one UAC prompt on purpose, and nothing is live-verified yet; both are tracked in .planning/todos/pending/2026-11-20-gog-windows-elevation-live-check.md."
   deferred_at: 2026-11-20
 - test: 1
   idea: "Sideload uninstall from the UI never deletes the game folder (uninstallGameCallback calls game.uninstall({ shouldRemovePrefix }) with no deleteFiles), so the sideload-folder safety guard (D-22) is unreachable from the app. Decide: offer a 'delete files' option for sideload, or retire the dead branch."
