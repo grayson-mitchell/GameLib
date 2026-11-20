@@ -25,9 +25,22 @@ import { createTestBridgeHelpers } from 'backend/testUtils/testBridgeHelpers'
  *  - ../state is NOT mocked — real library Map + pendingFetches Set used,
  *    cleared in beforeEach
  */
+/**
+ * The POSIX `/mock/...` fixtures name paths the product resolves and compares with the host's
+ * own `path` (`resolve`, `sep`), so on win32 an unqualified `/mock/x/y` never equals the
+ * `C:\mock\x\y` the product derives (80-REVIEW IN-08). This lifts each literal to the host's
+ * native absolute form; on Linux and macOS it is the identity, so nothing changes there.
+ * A function declaration with a lazy `require` so a hoisted `jest.mock` factory can call it.
+ */
+function mockNativePath(posixPath: string): string {
+  if (process.platform !== 'win32') return posixPath
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  return (require('node:path') as typeof import('node:path')).resolve(posixPath)
+}
+
 import i18next from 'i18next'
 import { readFileSync, rmSync } from 'fs'
-import { join } from 'path'
+import { join, sep } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 
 /**
@@ -1062,7 +1075,7 @@ function mockAppdetailsWrites(fixture: {
 // Shared fixtures so per-test setup only needs one line.
 /** A registered native Steam library root — resolveInstallRoot() consults
  *  getSteamLibraries() for this. */
-const NATIVE_LIBRARY_ROOT = '/mock/native/steam'
+const NATIVE_LIBRARY_ROOT = mockNativePath('/mock/native/steam')
 /** An install_path resolving inside NATIVE_LIBRARY_ROOT's steamapps/common/. */
 const NATIVE_INSTALL_PATH = `${NATIVE_LIBRARY_ROOT}/steamapps/common/Dota 2`
 
@@ -1866,8 +1879,10 @@ beforeEach(() => {
 
 describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/finding-3), reordered by Phase 51 Plan 01 (D-51-01)', () => {
   let envMock: any
-  const BRIDGE_STEAMAPPS_DIR = '/mock/bridge/bottle/steamapps'
-  const RESOLVED_EXE_PATH = `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/Avernum4.exe`
+  const BRIDGE_STEAMAPPS_DIR = mockNativePath('/mock/bridge/bottle/steamapps')
+  const RESOLVED_EXE_PATH = mockNativePath(
+    `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/Avernum4.exe`
+  )
 
   beforeEach(() => {
     resetBridgeFailedSession()
@@ -1926,7 +1941,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       .mockReturnValue(BRIDGE_STEAMAPPS_DIR)
     ;(getBottleDir as jest.Mock)
       .mockReset()
-      .mockReturnValue('/mock/bridge/bottle')
+      .mockReturnValue(mockNativePath('/mock/bridge/bottle'))
   })
 
   afterEach(() => {
@@ -2185,7 +2200,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     const monitorArgs = startBottleProcessMonitor.mock.calls[0][1]
     expect(monitorArgs.appId).toBe(APP_ID)
     expect(monitorArgs.kind).toBe('bridge')
-    expect(monitorArgs.bottleDir).toBe('/mock/bridge/bottle')
+    expect(monitorArgs.bottleDir).toBe(mockNativePath('/mock/bridge/bottle'))
     expect(typeof monitorArgs.onStopped).toBe('function')
 
     monitorArgs.onStopped()
@@ -2204,7 +2219,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       steamTestDeps,
       APP_ID,
       { wineCrossoverBottle: 'GameLibSteamBridge' },
-      `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4`,
+      mockNativePath(`${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4`),
       RESOLVED_EXE_PATH
     )
     const applierOrder = at(
@@ -2227,16 +2242,18 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     await new SteamGame(APP_ID, steamTestDeps).launch({} as any)
     expect(runWineCommand).toHaveBeenLastCalledWith(
       expect.objectContaining({
-        startFolder: `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4`
+        startFolder: mockNativePath(`${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4`)
       })
     )
     ;(resolveBridgeLaunchWorkingDir as jest.Mock).mockReturnValue(
-      `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/bin`
+      mockNativePath(`${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/bin`)
     )
     await new SteamGame(APP_ID, steamTestDeps).launch({} as any)
     expect(runWineCommand).toHaveBeenLastCalledWith(
       expect.objectContaining({
-        startFolder: `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/bin`
+        startFolder: mockNativePath(
+          `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/bin`
+        )
       })
     )
   })
@@ -2255,7 +2272,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
 
     expect(runWineCommand.mock.calls[0][0].gameSettings).toBe(withEnv)
     expect(startBottleProcessMonitor.mock.calls[0][1].bottleDir).toBe(
-      '/mock/bridge/bottle'
+      mockNativePath('/mock/bridge/bottle')
     )
   })
 
@@ -2752,7 +2769,9 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
 
   describe('quick 261023-ue0: shimPaths handed to writeBridgeConfig', () => {
     const UE0_APP_ID = '555558'
-    const UNITY_SHIM = `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/Game_Data/Plugins/x86_64/steam_api64.dll`
+    const UNITY_SHIM = mockNativePath(
+      `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/Game_Data/Plugins/x86_64/steam_api64.dll`
+    )
     const missVerdict = {
       status: 'miss' as const,
       arch: 'x64' as const,
@@ -2850,7 +2869,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       sendFrontendMessage.mockClear()
       ;(writeBridgeConfig as jest.Mock).mockImplementation(() => {
         callOrder.push('cfg')
-        return { status: 'written', path: '/mock/cfg' }
+        return { status: 'written', path: mockNativePath('/mock/cfg') }
       })
       runWineCommand.mockImplementation(() => {
         callOrder.push('wine')
@@ -3695,7 +3714,7 @@ describe('SteamGame.stop() — D-02 native depot-download abort', () => {
       .mockResolvedValue(false)
     ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({ ready: true })
     ;(resolveSteamInstallTarget as jest.Mock).mockResolvedValue({
-      targetSteamappsDir: '/mock/steam/steamapps',
+      targetSteamappsDir: mockNativePath('/mock/steam/steamapps'),
       installdir: APP_ID
     })
     createAbortController.mockReturnValue({
@@ -4015,7 +4034,7 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
   let startInstallPollingSpy: jest.SpyInstance
 
   const TARGET = {
-    targetSteamappsDir: '/mock/steam/steamapps',
+    targetSteamappsDir: mockNativePath('/mock/steam/steamapps'),
     installdir: APP_ID
   }
 
@@ -4415,7 +4434,7 @@ describe('260821-rb5 — case-C residue breadcrumb', () => {
   let startInstallPollingSpy: jest.SpyInstance
 
   const TARGET = {
-    targetSteamappsDir: '/mock/steam/steamapps',
+    targetSteamappsDir: mockNativePath('/mock/steam/steamapps'),
     installdir: APP_ID
   }
 
@@ -4682,7 +4701,7 @@ describe('SteamGame.install() — single-flight guard (T-23-12/T-23-13)', () => 
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
     ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({ ready: true })
     ;(resolveSteamInstallTarget as jest.Mock).mockResolvedValue({
-      targetSteamappsDir: '/mock/steam/steamapps',
+      targetSteamappsDir: mockNativePath('/mock/steam/steamapps'),
       installdir: APP_ID
     })
     createAbortController.mockReturnValue({
@@ -4990,12 +5009,12 @@ describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', (
 
   let envMock: any
 
-  const BOTTLE_STEAMAPPS_DIR = '/mock/bottle/steamapps'
+  const BOTTLE_STEAMAPPS_DIR = mockNativePath('/mock/bottle/steamapps')
   // resolveSteamInstallTarget's OWN targetSteamappsDir must be discarded on
   // the bottle path (it resolves a NATIVE macOS Steam library, irrelevant to
   // a bottle write target) — only its PICS-derived installdir is reused.
   const RESOLVED_TARGET = {
-    targetSteamappsDir: '/mock/native/steamapps',
+    targetSteamappsDir: mockNativePath('/mock/native/steamapps'),
     installdir: 'Dota 2'
   }
 
@@ -5168,13 +5187,14 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 
   let envMock: any
 
-  const BRIDGE_STEAMAPPS_DIR = '/mock/bridge/bottle/steamapps'
+  const BRIDGE_STEAMAPPS_DIR = mockNativePath('/mock/bridge/bottle/steamapps')
   const RESOLVED_TARGET = {
-    targetSteamappsDir: '/mock/native/steamapps',
+    targetSteamappsDir: mockNativePath('/mock/native/steamapps'),
     installdir: 'Avernum 4'
   }
-  const RESOLVED_EXE_PATH =
+  const RESOLVED_EXE_PATH = mockNativePath(
     '/mock/bridge/bottle/steamapps/common/Avernum 4/Avernum4.exe'
+  )
 
   beforeEach(() => {
     resetBridgeFailedSession()
@@ -5220,7 +5240,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       (_paths: unknown, bottleName: string) =>
         bottleName === `GameLibSteamBridge-${APP_ID}`
           ? BRIDGE_STEAMAPPS_DIR
-          : '/mock/bottle/steamapps'
+          : mockNativePath('/mock/bottle/steamapps')
     )
     ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({ ready: true })
     ;(resolveSteamInstallTarget as jest.Mock).mockResolvedValue(RESOLVED_TARGET)
@@ -5231,7 +5251,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
     ;(placeShimForGame as jest.Mock).mockResolvedValue({
       status: 'placed',
-      shimPath: `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/steam_api.dll`
+      shimPath: mockNativePath(
+        `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/steam_api.dll`
+      )
     })
   })
 
@@ -5522,7 +5544,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     }
     ;(placeShimForGame as jest.Mock).mockResolvedValue({
       status: 'placed-miss',
-      shimPaths: [`${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/steam_api.dll`],
+      shimPaths: [
+        mockNativePath(`${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/steam_api.dll`)
+      ],
       verdict: missVerdict
     })
 
@@ -5617,7 +5641,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
     ;(placeShimForGame as jest.Mock).mockResolvedValue({
       status: 'placed',
-      shimPath: `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/steam_api.dll`,
+      shimPath: mockNativePath(
+        `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/steam_api.dll`
+      ),
       verdict: {
         status: 'clean',
         arch: 'x86',
@@ -5659,7 +5685,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     it('quick 261031-ihs: an error result marks the install finalized and sends done', async () => {
       ;(placeShimForGame as jest.Mock).mockResolvedValue({
         status: 'placed',
-        shimPath: `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/steam_api.dll`,
+        shimPath: mockNativePath(
+          `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/steam_api.dll`
+        ),
         verdict: {
           status: 'clean',
           arch: 'x86',
@@ -5689,7 +5717,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     it('C-WR-02 removes the per-game bottle even when stopping the poll rejects', async () => {
       ;(placeShimForGame as jest.Mock).mockResolvedValue({
         status: 'placed',
-        shimPath: `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/steam_api.dll`,
+        shimPath: mockNativePath(
+          `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/steam_api.dll`
+        ),
         verdict: {
           status: 'clean',
           arch: 'x86',
@@ -5722,7 +5752,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     it('stops the install, removes the per-game bottle, persists drm and fires setup-required drm-wrapped', async () => {
       ;(placeShimForGame as jest.Mock).mockResolvedValue({
         status: 'placed',
-        shimPath: `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/steam_api.dll`,
+        shimPath: mockNativePath(
+          `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/steam_api.dll`
+        ),
         verdict: {
           status: 'clean',
           arch: 'x86',
@@ -5795,7 +5827,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       })
       ;(placeShimForGame as jest.Mock).mockResolvedValue({
         status: 'placed',
-        shimPath: `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/steam_api.dll`,
+        shimPath: mockNativePath(
+          `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/steam_api.dll`
+        ),
         drm: CEG_DRM
       })
 
@@ -5831,7 +5865,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       })
       ;(placeShimForGame as jest.Mock).mockResolvedValue({
         status: 'placed',
-        shimPath: `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/steam_api.dll`,
+        shimPath: mockNativePath(
+          `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/steam_api.dll`
+        ),
         drm: null
       })
 
@@ -5927,7 +5963,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     })
     ;(placeShimForGame as jest.Mock).mockResolvedValue({
       status: 'placed',
-      shimPath: `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/steam_api.dll`,
+      shimPath: mockNativePath(
+        `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/steam_api.dll`
+      ),
       verdict: {
         status: 'clean',
         arch: 'x86',
@@ -6019,7 +6057,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     const stored = library.get(APP_ID)
     expect(stored?.install.install_path).toContain(BRIDGE_STEAMAPPS_DIR)
     expect(stored?.install.install_path).toContain('common')
-    expect(stored?.install.install_path).not.toContain('/mock/bottle/steamapps')
+    expect(stored?.install.install_path).not.toContain(
+      mockNativePath('/mock/bottle/steamapps')
+    )
   })
 
   it('D-UAT-24-03 cascade (a): a successful bridge install calls clearBridgeFailedThisSession — proven by exercising the exported un-poison hook: after markBridgeFailedThisSession + clearBridgeFailedThisSession for the SAME appId, a subsequent install() reaches the bridge again rather than the bottled fallback', async () => {
@@ -6070,7 +6110,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       APP_ID,
       expect.objectContaining({
         os: 'windows',
-        targetSteamappsDir: '/mock/bottle/steamapps'
+        targetSteamappsDir: mockNativePath('/mock/bottle/steamapps')
       })
     )
     expect(secondResult).toEqual({ status: 'done' })
@@ -6269,7 +6309,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         APP_ID,
         expect.objectContaining({
           os: 'windows',
-          targetSteamappsDir: '/mock/bottle/steamapps'
+          targetSteamappsDir: mockNativePath('/mock/bottle/steamapps')
         })
       )
     })
@@ -6340,7 +6380,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
           badAppId,
           expect.objectContaining({
             os: 'windows',
-            targetSteamappsDir: '/mock/bottle/steamapps'
+            targetSteamappsDir: mockNativePath('/mock/bottle/steamapps')
           })
         )
       })
@@ -6387,7 +6427,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     })
 
     it('breadcrumb pointing at the GameLibSteam bottle: no bridge install, the bottled path runs instead', async () => {
-      setBreadcrumb('/mock/bottle/steamapps')
+      setBreadcrumb(mockNativePath('/mock/bottle/steamapps'))
 
       const game = new SteamGame(APP_ID, steamTestDeps)
       const result = await game.install({} as any)
@@ -7698,7 +7738,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       APP_ID,
       expect.objectContaining({
         os: 'windows',
-        targetSteamappsDir: '/mock/bottle/steamapps'
+        targetSteamappsDir: mockNativePath('/mock/bottle/steamapps')
       })
     )
     expect(sendFrontendMessage).not.toHaveBeenCalledWith(
@@ -7733,7 +7773,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       FALLBACK_TEST_APP_ID,
       expect.objectContaining({
         os: 'windows',
-        targetSteamappsDir: '/mock/bottle/steamapps'
+        targetSteamappsDir: mockNativePath('/mock/bottle/steamapps')
       })
     )
     expect(result).toEqual({ status: 'done' })
@@ -7763,7 +7803,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       APP_ID,
       expect.objectContaining({
         os: 'windows',
-        targetSteamappsDir: '/mock/bottle/steamapps'
+        targetSteamappsDir: mockNativePath('/mock/bottle/steamapps')
       })
     )
     expect(result).toEqual({ status: 'done' })
@@ -8644,7 +8684,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       wineCrossoverBottle: 'GameLibSteam'
     })
     ;(getBottleSteamappsDir as jest.Mock).mockReturnValue(
-      '/mock/bottle/steamapps'
+      mockNativePath('/mock/bottle/steamapps')
     )
     // debug/steam-bottle-uninstall-reverts (routing fix): the library
     // entry's own install_path is now the routing source of truth.
@@ -8652,14 +8692,16 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       APP_ID,
       makeEntry({
         title: 'Dota 2',
-        install: { install_path: '/mock/bottle/steamapps/common/Dota 2' }
+        install: {
+          install_path: mockNativePath('/mock/bottle/steamapps/common/Dota 2')
+        }
       })
     )
     const readAcfStateSpy = jest
       .spyOn(acfState, 'readAcfState')
       .mockResolvedValue({
         state: 'installed',
-        installPath: '/mock/bottle/steamapps/common/Dota 2'
+        installPath: mockNativePath('/mock/bottle/steamapps/common/Dota 2')
       })
     const pollUninstallOnceSpy = jest
       .spyOn(uninstallPollingModule, 'pollUninstallOnce')
@@ -8823,7 +8865,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       wineCrossoverBottle: 'GameLibSteam'
     })
     ;(getBottleSteamappsDir as jest.Mock).mockReturnValue(
-      '/mock/bottle/steamapps'
+      mockNativePath('/mock/bottle/steamapps')
     )
 
     shellOpenExternal.mockClear()
@@ -9732,7 +9774,7 @@ describe('SteamGame.uninstall() — quick 261029-l9w: unadopted Mac native insta
       wineCrossoverBottle: 'Steam'
     })
     ;(getBottleSteamappsDir as jest.Mock).mockReturnValue(
-      '/mock/bottle/steamapps'
+      mockNativePath('/mock/bottle/steamapps')
     )
   })
 
@@ -10014,7 +10056,7 @@ describe('SteamGame.uninstall() — quick 261106-s3n: delete in GameLib (ON)', (
       wineCrossoverBottle: 'Steam'
     })
     ;(getBottleSteamappsDir as jest.Mock).mockReturnValue(
-      '/mock/bottle/steamapps'
+      mockNativePath('/mock/bottle/steamapps')
     )
   })
 
@@ -10252,7 +10294,7 @@ describe('SteamGame.uninstall() — Phase 17 bottle routing (D-10/D-11)', () => 
       wineCrossoverBottle: 'GameLibSteam'
     })
     ;(getBottleSteamappsDir as jest.Mock).mockReturnValue(
-      '/mock/bottle/steamapps'
+      mockNativePath('/mock/bottle/steamapps')
     )
   })
 
@@ -10357,7 +10399,7 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
   // 'app_<id>' GameLib-authored name, proving the naming-convention
   // generalization: installRoot is derived purely from the ACF's own
   // on-disk installdir, never FALLBACK_INSTALLDIR_PREFIX.
-  const INSTALL_PATH = '/mock/bottle/steamapps/common/Hoard'
+  const INSTALL_PATH = mockNativePath('/mock/bottle/steamapps/common/Hoard')
 
   beforeEach(() => {
     library.clear()
@@ -10398,7 +10440,7 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
       wineCrossoverBottle: 'GameLibSteam'
     })
     ;(getBottleSteamappsDir as jest.Mock).mockReturnValue(
-      '/mock/bottle/steamapps'
+      mockNativePath('/mock/bottle/steamapps')
     )
   })
 
@@ -10744,7 +10786,7 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
       // Override the outer beforeEach's fake INSTALL_PATH — this nested
       // suite roots the bottle at a REAL tmp dir, so the library entry's own
       // install_path (the new routing source of truth) must resolve inside
-      // THIS real tree, not the fake '/mock/bottle/...' path.
+      // THIS real tree, not the fake mockNativePath('/mock/bottle/...') path.
       library.set(
         APP_ID,
         makeEntry({
@@ -10956,7 +10998,7 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
 
       it('a nested installdir is refused and the shared parent folder survives', async () => {
         const { result, conflictSpy } = await uninstallWithInstallPath(
-          `${steamappsDir}/common/Studio/GameB`
+          `${steamappsDir}${sep}common${sep}Studio/GameB`
         )
 
         expect(result.refused).toBe(true)
@@ -10979,7 +11021,7 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
         'an installdir with %s is refused and nothing is deleted',
         async (_label, installdir) => {
           const { result } = await uninstallWithInstallPath(
-            `${steamappsDir}/common/${installdir}`
+            `${steamappsDir}${sep}common${sep}${installdir}`
           )
 
           expect(result.refused).toBe(true)
@@ -10994,7 +11036,7 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
 
       it('DISCRIMINATOR: a trailing separator on a single folder still deletes that folder only', async () => {
         const { result } = await uninstallWithInstallPath(
-          `${steamappsDir}/common/Hoard/`
+          `${steamappsDir}${sep}common${sep}Hoard/`
         )
 
         expect(result).toEqual({ stdout: '', stderr: '' })
@@ -11026,16 +11068,30 @@ describe('80-REVIEW C/EXTRA-01: installdirShape and rawInstalldirFromInstallPath
   })
 
   it('recovers the verbatim installdir after <steamapps>/common/', () => {
+    // Rust joins with the host separator and keeps the installdir tail verbatim, so the fixed
+    // prefix is lifted to the host's separator and the tail is left exactly as written.
+    const host = (p: string) => p.replace(/\//g, sep)
     expect(
-      rawInstalldirFromInstallPath('/b/steamapps', '/b/steamapps/common/A/../B')
+      rawInstalldirFromInstallPath(
+        host('/b/steamapps'),
+        host('/b/steamapps/common/') + 'A/../B'
+      )
     ).toBe('A/../B')
     expect(
-      rawInstalldirFromInstallPath('/b/steamapps/', '/b/steamapps/common/A')
+      rawInstalldirFromInstallPath(
+        host('/b/steamapps/'),
+        host('/b/steamapps/common/') + 'A'
+      )
     ).toBe('A')
     // An absolute installdir replaces the whole path in Rust's join.
-    expect(rawInstalldirFromInstallPath('/b/steamapps', '/etc')).toBe(undefined)
     expect(
-      rawInstalldirFromInstallPath('/b/steamapps', '/b/steamapps/commonX/A')
+      rawInstalldirFromInstallPath(host('/b/steamapps'), host('/etc'))
+    ).toBe(undefined)
+    expect(
+      rawInstalldirFromInstallPath(
+        host('/b/steamapps'),
+        host('/b/steamapps/commonX/A')
+      )
     ).toBe(undefined)
   })
 })
@@ -11053,7 +11109,9 @@ describe('SteamGame.uninstall() — install_path-driven routing (debug/steam-bot
   let startUninstallPollingSpy: jest.SpyInstance
 
   let envMock: any
-  const BOTTLE_INSTALL_PATH = '/mock/bottle/steamapps/common/SomeGame'
+  const BOTTLE_INSTALL_PATH = mockNativePath(
+    '/mock/bottle/steamapps/common/SomeGame'
+  )
 
   beforeEach(() => {
     library.clear()
@@ -11075,7 +11133,7 @@ describe('SteamGame.uninstall() — install_path-driven routing (debug/steam-bot
       wineCrossoverBottle: 'GameLibSteam'
     })
     ;(getBottleSteamappsDir as jest.Mock).mockReturnValue(
-      '/mock/bottle/steamapps'
+      mockNativePath('/mock/bottle/steamapps')
     )
   })
 
@@ -11353,8 +11411,9 @@ describe('SteamGame.uninstall() — install_path-driven routing (debug/steam-bot
 
 describe('SteamGame.uninstall() — Phase 24 Plan 08 bridge routing (R4/R6)', () => {
   let envMock: any
-  const RESOLVED_EXE_PATH =
+  const RESOLVED_EXE_PATH = mockNativePath(
     '/mock/bridge/bottle/steamapps/common/Avernum 4/Avernum4.exe'
+  )
 
   beforeEach(() => {
     resetBridgeFailedSession()
@@ -11386,8 +11445,8 @@ describe('SteamGame.uninstall() — Phase 24 Plan 08 bridge routing (R4/R6)', ()
     ;(getBottleSteamappsDir as jest.Mock).mockImplementation(
       (_paths: unknown, bottleName: string) =>
         bottleName === 'GameLibSteamBridge'
-          ? '/mock/bridge/bottle/steamapps'
-          : '/mock/bottle/steamapps'
+          ? mockNativePath('/mock/bridge/bottle/steamapps')
+          : mockNativePath('/mock/bottle/steamapps')
     )
   })
 
@@ -11636,14 +11695,16 @@ describe('SteamGame.uninstall() — Phase 24 Plan 08 bridge routing (R4/R6)', ()
       makeEntry({
         title: 'Avernum 4',
         is_installed: true,
-        install: { install_path: '/mock/bottle/steamapps/common/Hoard' }
+        install: {
+          install_path: mockNativePath('/mock/bottle/steamapps/common/Hoard')
+        }
       })
     )
     const readAcfStateSpy = jest
       .spyOn(acfState, 'readAcfState')
       .mockResolvedValue({
         state: 'installed',
-        installPath: '/mock/bottle/steamapps/common/Hoard'
+        installPath: mockNativePath('/mock/bottle/steamapps/common/Hoard')
       })
     const pollUninstallOnceSpy = jest
       .spyOn(uninstallPollingModule, 'pollUninstallOnce')
@@ -12406,8 +12467,9 @@ describe('SteamGame supporting read methods — GAME-01 unblock', () => {
 // cannot disturb that ordering at all, so this builds its own complete
 // mock setup from scratch instead of reusing that describe's.
 describe('maybeNotifyBridgeLimited() — the one-time limited-features notice plus the every-launch [bridge-notice] log line', () => {
-  const RESOLVED_EXE_PATH =
+  const RESOLVED_EXE_PATH = mockNativePath(
     '/mock/bridge/bottle/steamapps/common/Avernum 4/Avernum4.exe'
+  )
 
   let envMock: any
   let setBridgeIdentityFallbackSpy: jest.SpyInstance
@@ -12442,9 +12504,11 @@ describe('maybeNotifyBridgeLimited() — the one-time limited-features notice pl
     stopBridgeHelper.mockReset()
     startBottleProcessMonitor.mockReset()
     ;(getBottleSteamappsDir as jest.Mock).mockReturnValue(
-      '/mock/bridge/bottle/steamapps'
+      mockNativePath('/mock/bridge/bottle/steamapps')
     )
-    ;(getBottleDir as jest.Mock).mockReturnValue('/mock/bridge/bottle')
+    ;(getBottleDir as jest.Mock).mockReturnValue(
+      mockNativePath('/mock/bridge/bottle')
+    )
 
     // bridgeVerdict.ts is real/unmocked in this file -- spy (not replace) so
     // the real steamMetadataStore.set() write still happens, mirroring this
@@ -12873,34 +12937,39 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
       expect(drmBottleWinPath('/b/x', '/b/x/drive_c/a\n.exe')).toBeNull()
     })
 
-    it('prepareDrmTraceFile makes a 0700 dir and prunes only this app', () => {
-      const root = makeTmp()
-      const traceRoot = realJoin(root, 'steam-bridge', 'drm', 'trace')
-      mkdirSync(traceRoot, { recursive: true })
-      for (let i = 1; i <= 10; i++) {
-        writeFileSync(realJoin(traceRoot, `219990-${i}.log`), 'x')
+    // win32 has no POSIX modes (a directory reports 0o666), so the 0700 half cannot hold there.
+    const itPosix = process.platform === 'win32' ? it.skip : it
+    itPosix(
+      'prepareDrmTraceFile makes a 0700 dir and prunes only this app',
+      () => {
+        const root = makeTmp()
+        const traceRoot = realJoin(root, 'steam-bridge', 'drm', 'trace')
+        mkdirSync(traceRoot, { recursive: true })
+        for (let i = 1; i <= 10; i++) {
+          writeFileSync(realJoin(traceRoot, `219990-${i}.log`), 'x')
+        }
+        writeFileSync(realJoin(traceRoot, '5-1.log'), 'x')
+        writeFileSync(realJoin(traceRoot, 'notes.txt'), 'x')
+        const r = prepareDrmTraceFile(root, '219990', 1761084000123)
+        expect(r).toEqual({
+          status: 'ok',
+          traceFile: realJoin(traceRoot, '219990-1761084000123.log'),
+          traceRoot
+        })
+        expect(realFs.statSync(traceRoot).mode & 0o777).toBe(0o700)
+        expect(
+          realExistsSync(realJoin(traceRoot, '219990-1761084000123.log'))
+        ).toBe(false)
+        const left = realFs
+          .readdirSync(traceRoot)
+          .filter((n) => n.startsWith('219990-'))
+        expect(left).toHaveLength(DRM_TRACE_KEEP_PER_APP - 1)
+        expect(left).toContain('219990-10.log')
+        expect(left).not.toContain('219990-1.log')
+        expect(realExistsSync(realJoin(traceRoot, '5-1.log'))).toBe(true)
+        expect(realExistsSync(realJoin(traceRoot, 'notes.txt'))).toBe(true)
       }
-      writeFileSync(realJoin(traceRoot, '5-1.log'), 'x')
-      writeFileSync(realJoin(traceRoot, 'notes.txt'), 'x')
-      const r = prepareDrmTraceFile(root, '219990', 1761084000123)
-      expect(r).toEqual({
-        status: 'ok',
-        traceFile: realJoin(traceRoot, '219990-1761084000123.log'),
-        traceRoot
-      })
-      expect(realFs.statSync(traceRoot).mode & 0o777).toBe(0o700)
-      expect(
-        realExistsSync(realJoin(traceRoot, '219990-1761084000123.log'))
-      ).toBe(false)
-      const left = realFs
-        .readdirSync(traceRoot)
-        .filter((n) => n.startsWith('219990-'))
-      expect(left).toHaveLength(DRM_TRACE_KEEP_PER_APP - 1)
-      expect(left).toContain('219990-10.log')
-      expect(left).not.toContain('219990-1.log')
-      expect(realExistsSync(realJoin(traceRoot, '5-1.log'))).toBe(true)
-      expect(realExistsSync(realJoin(traceRoot, 'notes.txt'))).toBe(true)
-    })
+    )
 
     it('56-20: drmWineLogPathFor, drmWineDebugFromEnv and the bounded appender', () => {
       expect(drmWineLogPathFor('/x/219990-17.log')).toBe(
@@ -13084,7 +13153,13 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
     })
   })
 
-  describe('launch', () => {
+  // The steamclient-layer DRM route is the macOS CrossOver bridge: gameDrmLaunch rejects any
+  // host path that does not start with '/' (and the tests lay real tmp trees under the host tmpdir),
+  // so on win32 every launch is refused as an invalid input before the behaviour under test runs.
+  // Active on Linux and macOS.
+  const describePosixHost =
+    process.platform === 'win32' ? describe.skip : describe
+  describePosixHost('launch', () => {
     const { __drmLaunchSetupMock } = jest.requireMock<{
       __drmLaunchSetupMock: jest.Mock
     }>('../bridge/drm/drmLaunchSetup')
@@ -15719,7 +15794,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         return monitor
       }
       let rejectWine: (e: unknown) => void
-      const STEAMAPPS = '/mock/bridge/bottle/steamapps'
+      const STEAMAPPS = mockNativePath('/mock/bridge/bottle/steamapps')
       const EXE = `${STEAMAPPS}/common/Game/game.exe`
       const T = 1_800_000_000_000
       const flush = async () => {
@@ -15905,12 +15980,14 @@ describe('SteamGame — quick 261029-ji2 pending Steam adoption', () => {
     )
   const RECORD = {
     steamPid: 123,
-    manifestPath: `/mock/steam/steamapps/appmanifest_${APP_ID}.acf`,
+    manifestPath: mockNativePath(
+      `/mock/steam/steamapps/appmanifest_${APP_ID}.acf`
+    ),
     baseline: { mtimeMs: 1, content: 'x' },
     recordedAt: 1
   }
   const TARGET = {
-    targetSteamappsDir: '/mock/steam/steamapps',
+    targetSteamappsDir: mockNativePath('/mock/steam/steamapps'),
     installdir: APP_ID
   }
 
@@ -15971,7 +16048,9 @@ describe('SteamGame — quick 261029-ji2 pending Steam adoption', () => {
         expect.objectContaining({
           steamPid: 123,
           baseline: RECORD.baseline,
-          manifestPath: `/mock/steam/steamapps/appmanifest_${APP_ID}.acf`
+          manifestPath: mockNativePath(
+            `/mock/steam/steamapps/appmanifest_${APP_ID}.acf`
+          )
         }),
         mockAdoptionStore
       )
@@ -16009,7 +16088,9 @@ describe('SteamGame — quick 261029-ji2 pending Steam adoption', () => {
           APP_ID,
           expect.objectContaining({
             steamPid: 123,
-            manifestPath: `/mock/steam/steamapps/appmanifest_${APP_ID}.acf`
+            manifestPath: mockNativePath(
+              `/mock/steam/steamapps/appmanifest_${APP_ID}.acf`
+            )
           })
         )
         expect(readSpy.mock.invocationCallOrder[0]).toBeLessThan(
@@ -16102,7 +16183,9 @@ describe('SteamGame — quick 261029-ji2 pending Steam adoption', () => {
           expect.objectContaining({
             steamPid: 123,
             baseline: RECORD.baseline,
-            manifestPath: `/mock/steam/steamapps/appmanifest_${APP_ID}.acf`
+            manifestPath: mockNativePath(
+              `/mock/steam/steamapps/appmanifest_${APP_ID}.acf`
+            )
           }),
           mockAdoptionStore
         )
@@ -16346,7 +16429,7 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
     (isSteamExperimentalInstallAppEnabled as jest.Mock).mockReturnValue(true)
   const installApp = () => requestSteamInstallApp as jest.Mock
   const TARGET = {
-    targetSteamappsDir: '/mock/steam/steamapps',
+    targetSteamappsDir: mockNativePath('/mock/steam/steamapps'),
     installdir: APP_ID
   }
 
@@ -16370,7 +16453,9 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
     })
     isBottleReady.mockReturnValue(false)
     ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({ ready: true })
-    ;(resolveSteamLibraryRoot as jest.Mock).mockResolvedValue('/mock/steam')
+    ;(resolveSteamLibraryRoot as jest.Mock).mockResolvedValue(
+      mockNativePath('/mock/steam')
+    )
     adoption().probeSteamPid.mockResolvedValue(null)
     adoption().readAcfSnapshot.mockResolvedValue({ mtimeMs: 1, content: 'x' })
     adoption().readPendingAdoption.mockReturnValue(undefined)
@@ -16391,17 +16476,17 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
       installApp().mockResolvedValue({ kind: 'ok', folderIndex: 0 })
 
       const result = await new SteamGame(APP_ID, steamTestDeps).install({
-        path: '/mock/steam'
+        path: mockNativePath('/mock/steam')
       } as any)
 
       expect(result).toEqual({ status: 'done', handedOffToSteam: true })
       expect(resolveSteamLibraryRoot).toHaveBeenCalledWith(
         expect.anything(),
-        '/mock/steam'
+        mockNativePath('/mock/steam')
       )
       expect(installApp()).toHaveBeenCalledWith(
         APP_ID,
-        { libraryPath: '/mock/steam' },
+        { libraryPath: mockNativePath('/mock/steam') },
         { paths: expect.anything(), run: 'install-app-run' }
       )
       expect(shellOpenExternal).not.toHaveBeenCalled()
@@ -16499,7 +16584,7 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
       expect(result).toEqual({ status: 'done' })
       expect(installApp()).toHaveBeenCalledWith(
         APP_ID,
-        { libraryPath: '/mock/steam' },
+        { libraryPath: mockNativePath('/mock/steam') },
         { paths: expect.anything(), run: 'install-app-run' }
       )
       expect(adoption().recordPendingAdoption).not.toHaveBeenCalled()
@@ -16703,7 +16788,9 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
 describe('SteamGame.launch() — phase 59 engine selection and launch deadline (59-10)', () => {
   const ID = '570'
   const PER_GAME = `GameLibSteamBridge-${ID}`
-  const EXE = '/mock/bridge/bottle/steamapps/common/Game/Game.exe'
+  const EXE = mockNativePath(
+    '/mock/bridge/bottle/steamapps/common/Game/Game.exe'
+  )
   let envMock: any
 
   const pinnedDecision = (
@@ -16780,12 +16867,14 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
     })
     ;(writeBridgeConfig as jest.Mock).mockReturnValue({
       status: 'written',
-      path: '/mock/gamelib_bridge.cfg'
+      path: mockNativePath('/mock/gamelib_bridge.cfg')
     })
     ;(getBottleSteamappsDir as jest.Mock).mockReturnValue(
-      '/mock/bridge/bottle/steamapps'
+      mockNativePath('/mock/bridge/bottle/steamapps')
     )
-    ;(getBottleDir as jest.Mock).mockReturnValue('/mock/bridge/bottle')
+    ;(getBottleDir as jest.Mock).mockReturnValue(
+      mockNativePath('/mock/bridge/bottle')
+    )
     getSteamBottleSettings.mockReturnValue({
       wineCrossoverBottle: 'GameLibSteam'
     })
