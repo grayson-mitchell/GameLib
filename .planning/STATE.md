@@ -4,11 +4,11 @@ milestone: v0.10
 current_phase: 82
 current_phase_name: Guardrails, hygiene and shared safety primitives
 status: executing
-stopped_at: Completed 82-16-PLAN.md
-last_updated: "2026-11-20T10:21:26.167Z"
+stopped_at: "Completed 82-11-PLAN.md (D-18 open: Windows/Linux safety step red, fix 5a86d54ac unpushed)"
+last_updated: "2026-11-20T17:27:36.251Z"
 last_activity: 2026-11-20
 last_activity_desc: Phase 82 execution started
-state_head: 2301e4475b25fe1fa6786a85895ff6389ee4f021
+state_head: 376647841f5fab63df85a44016bd3f751abc00ba
 progress:
   total_phases: 27
   completed_phases: 23
@@ -76,7 +76,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 82 (Guardrails, hygiene and shared safety primitives) — EXECUTING
-Plan: 15 of 16
+Plan: 16 of 16
 Status: Ready to execute
 Last activity: 2026-11-20 - Completed quick task 261120-ux8: Guard removeFixFile and removeSettingsAndLogs deletes against renderer-supplied appName path traversal
 Progress: [█████████░] 88% (14 of 16 phase 82 plans have a SUMMARY; 82-11 proving, 82-12 pending)
@@ -322,6 +322,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 82 P10 | 12 min | 1 tasks | 11 files |
 | Phase 82 P15 | 25min | 2 tasks | 23 files |
 | Phase 82 P16 | 30min | 2 tasks | 16 files |
+| Phase 82 P11 | multi-session | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -566,6 +567,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 82]: 82-10: gogdl e2e stub deleted end to end; census total 295 -> 293, owner-less 67 -> 65, diPhaseGates 66.4 owned-list floor 80 -> 79 with the deleted entry (floor still equals list length)
 - [Phase 82]: 82-15: onTestOnly, RunnerCommandStub and the testOnly bucket of ipcSchemaCoverage deleted with the last TestSync channel; 66.4 owned-list floor 79 -> 77 equals the list length; DECLARATIONS_FLOOR stays 284 (total 289)
 - [Phase 82]: 82-16: e2eSurfaceGone is a two-tier gate (shipped source forbids any quoted e2e literal; tests forbid only stub symbols) because tauriShellSource.test.ts legitimately pins the Rust shell's CI=e2e protocol-registration guard
+- [Phase 82]: 82-11: CI-only fix under push-once stays on a local branch (5a86d54ac), returned to the operator rather than pushed
 
 ### Pending Todos
 
@@ -812,8 +814,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-20T10:21:26.135Z
-Stopped at: Completed 82-16-PLAN.md
+Last session: 2026-11-20T17:27:36.214Z
+Stopped at: Completed 82-11-PLAN.md (D-18 open: Windows/Linux safety step red, fix 5a86d54ac unpushed)
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
