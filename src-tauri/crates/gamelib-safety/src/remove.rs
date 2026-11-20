@@ -7,7 +7,7 @@ use crate::safe_path::{
 };
 use crate::tri::Tri;
 use crate::wire::{Item, Known, Outcome, Reason, RemoveReply, Reply, Request, Target, TargetKind};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// A target that did not get a `Yes`.
 struct Refusal {
@@ -131,6 +131,129 @@ fn other(reason: Reason, k: &Known) -> Refusal {
     }
 }
 
+/// A Wine prefix (or Proton `pfx`) holds `drive_c` or `pfx` at its top level. Moves today's TS
+/// heuristic (uninstaller.ts: a non-empty folder must contain drive_c or pfx) into the one
+/// implementation. An empty directory passes: there is nothing in it to lose.
+fn check_prefix(loc: &Location) -> Result<(), Refusal> {
+    let md =
+        std::fs::symlink_metadata(&loc.path).map_err(|_| unknown(Reason::CanonicalizeFailed))?;
+    if !md.is_dir() {
+        return Err(no(Reason::NotAPrefix));
+    }
+    let entries = std::fs::read_dir(&loc.path).map_err(|_| unknown(Reason::CanonicalizeFailed))?;
+    let mut any = false;
+    for entry in entries {
+        let entry = entry.map_err(|_| unknown(Reason::CanonicalizeFailed))?;
+        any = true;
+        let name = entry.file_name().to_string_lossy().to_lowercase();
+        if name == "drive_c" || name == "pfx" {
+            return Ok(());
+        }
+    }
+    if any {
+        Err(no(Reason::NotAPrefix))
+    } else {
+        Ok(())
+    }
+}
+
+/// Extensions that make a top-level file look like something runnable (case-insensitive).
+const EXECUTABLE_EXTENSIONS: &[&str] = &[
+    ".exe",
+    ".bat",
+    ".cmd",
+    ".com",
+    ".msi",
+    ".lnk",
+    ".sh",
+    ".command",
+    ".appimage",
+    ".x86",
+    ".x86_64",
+];
+
+#[cfg(unix)]
+fn has_exec_bit(md: &std::fs::Metadata) -> bool {
+    use std::os::unix::fs::PermissionsExt;
+    md.permissions().mode() & 0o111 != 0
+}
+#[cfg(not(unix))]
+fn has_exec_bit(_md: &std::fs::Metadata) -> bool {
+    false
+}
+
+/// The first path segment of the game's own executable under the folder (so a `.app` bundle
+/// counts as the game's own). Absolute executables are made relative to the folder; one outside
+/// the folder names nothing.
+fn own_entry(folder: &Path, raw_target: &Path, executable: Option<&str>) -> Option<String> {
+    let exe = executable.filter(|e| !e.is_empty())?;
+    let p = Path::new(exe);
+    let rel: String = if p.is_absolute() {
+        let r = p
+            .strip_prefix(folder)
+            .or_else(|_| p.strip_prefix(raw_target))
+            .ok()?;
+        r.to_string_lossy().into_owned()
+    } else {
+        exe.to_string()
+    };
+    rel.split(['/', '\\'])
+        .find(|s| !s.is_empty() && *s != ".")
+        .map(|s| s.to_lowercase())
+}
+
+/// D-22: a sideload folder may be shared (a `Games` folder, a Downloads folder holding several
+/// installers). It is removable only when its top level holds no executable-looking entry or app
+/// bundle other than the game's own. Over-refusing is the intended direction: on Unix any regular
+/// file with an execute bit counts, so a native game folder with helper scripts or libraries
+/// refuses rather than risk a sibling.
+fn check_sideload(
+    loc: &Location,
+    raw_target: &Path,
+    executable: Option<&str>,
+) -> Result<(), Refusal> {
+    let md =
+        std::fs::symlink_metadata(&loc.path).map_err(|_| unknown(Reason::CanonicalizeFailed))?;
+    if !md.is_dir() {
+        return Ok(());
+    }
+    let own = own_entry(&loc.path, raw_target, executable);
+    let entries = std::fs::read_dir(&loc.path).map_err(|_| unknown(Reason::CanonicalizeFailed))?;
+    for entry in entries {
+        let entry = entry.map_err(|_| unknown(Reason::CanonicalizeFailed))?;
+        let name = entry.file_name().to_string_lossy().to_lowercase();
+        if own.as_deref() == Some(name.as_str()) {
+            continue;
+        }
+        let emd = entry
+            .metadata()
+            .map_err(|_| unknown(Reason::CanonicalizeFailed))?;
+        let looks_runnable = if emd.is_dir() {
+            name.ends_with(".app")
+        } else {
+            EXECUTABLE_EXTENSIONS.iter().any(|ext| name.ends_with(ext))
+                || (emd.is_file() && has_exec_bit(&emd))
+        };
+        if looks_runnable {
+            return Err(no(Reason::FolderLooksShared));
+        }
+    }
+    Ok(())
+}
+
+fn check_kind(t: &Target, raw: &Path, loc: &Location) -> Result<(), Refusal> {
+    // A link is removed as a link and an absent target has nothing in it: the content rules
+    // only apply to a real, existing directory or file.
+    if loc.is_link || loc.absent {
+        return Ok(());
+    }
+    match t.kind {
+        TargetKind::Prefix => check_prefix(loc),
+        TargetKind::SideloadFolder => check_sideload(loc, raw, t.executable.as_deref()),
+        _ => Ok(()),
+    }
+}
+
 fn check_one(t: &Target, req: &Request, case: CaseMode) -> Result<Location, Refusal> {
     let raw = safe_path::lexical_check(&t.path).map_err(no)?;
     let loc = canonical_location(&raw).map_err(unknown)?;
@@ -141,6 +264,7 @@ fn check_one(t: &Target, req: &Request, case: CaseMode) -> Result<Location, Refu
     check_protected(req, &loc, fold_eq)?;
     check_trust_root(t, req, &loc, fold_contain)?;
     check_known(req, &loc, fold_eq)?;
+    check_kind(t, &raw, &loc)?;
     Ok(loc)
 }
 
@@ -188,9 +312,36 @@ pub fn check_removal(req: &Request, case: CaseMode) -> Reply {
     }
 }
 
+/// Unlink a symlink or junction. The referent is never opened, listed or removed.
+#[cfg(unix)]
+fn remove_link(p: &Path, _md: &std::fs::Metadata) -> std::io::Result<()> {
+    std::fs::remove_file(p)
+}
+/// A directory symlink or junction is removed with `remove_dir`, a file symlink with
+/// `remove_file`; neither touches the referent.
+#[cfg(windows)]
+fn remove_link(p: &Path, md: &std::fs::Metadata) -> std::io::Result<()> {
+    use std::os::windows::fs::MetadataExt;
+    const FILE_ATTRIBUTE_DIRECTORY: u32 = 0x10;
+    if md.file_attributes() & FILE_ATTRIBUTE_DIRECTORY != 0 {
+        std::fs::remove_dir(p)
+    } else {
+        std::fs::remove_file(p)
+    }
+}
+#[cfg(not(any(unix, windows)))]
+fn remove_link(p: &Path, _md: &std::fs::Metadata) -> std::io::Result<()> {
+    std::fs::remove_file(p)
+}
+
+/// Link-ness is re-read here, not carried from the check: a link is unlinked (D-15), a real
+/// directory goes through `remove_dir_all` (which never follows links inside the tree and
+/// unlinks a symlink swapped into place mid-delete), anything else is a single file.
 fn delete_location(loc: &Location) -> std::io::Result<()> {
     let md = std::fs::symlink_metadata(&loc.path)?;
-    if md.is_dir() {
+    if safe_path::is_link_metadata(&md) {
+        remove_link(&loc.path, &md)
+    } else if md.is_dir() {
         std::fs::remove_dir_all(&loc.path)
     } else {
         std::fs::remove_file(&loc.path)
