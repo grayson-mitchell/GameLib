@@ -679,6 +679,13 @@
         "loginBackgroundDialogTitle": "Select a background image",
         "loginBackgroundFilterName": "Images",
         "loginBackgroundHelp": "Image shown behind the Manage Accounts screen. Clear the field to go back to the bundled artwork. PNG, JPEG, WebP, AVIF and GIF are supported.",
+        "modal": {
+            "appId": "App ID",
+            "gameSettings": "Game settings",
+            "saved": "Saved",
+            "savedAutomatically": "Saved automatically",
+            "steamAppId": "Steam App ID"
+        },
         "navbar": {
             "run": "Run",
             "stores": "Stores"

@@ -49,7 +49,6 @@ import { faInfoCircle } from '@fortawesome/free-solid-svg-icons'
 import useSetting from 'frontend/hooks/useSetting'
 import { defaultWineVersion } from '../..'
 import SyncSaves from '../SyncSaves'
-import FooterInfo from '../FooterInfo'
 import { Tabs, Tab } from '@mui/material'
 import { GameInfo } from 'common/types'
 import DisableUMU from '../../components/DisableUMU'
@@ -359,8 +358,6 @@ export default function GamesSettings() {
           <DisableUMU />
         </TabPanel>
       )}
-
-      {!isDefault && <FooterInfo />}
     </>
   )
 }

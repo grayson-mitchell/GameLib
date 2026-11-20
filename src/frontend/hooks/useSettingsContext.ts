@@ -9,6 +9,8 @@ type Props = {
   appName: string
   gameInfo?: GameInfo
   runner?: Runner
+  // quick-261121-dzl: fires after a changed value is sent (never on a no-change).
+  onSettingWritten?: () => void
 }
 
 /**
@@ -74,6 +76,7 @@ type SetterDeps = {
     key: keyof AppSettings
     value: unknown
   }) => unknown
+  onWrite?: () => void
 }
 
 /**
@@ -84,7 +87,8 @@ export function createSettingSetter({
   appName,
   getConfig,
   setConfig,
-  send
+  send,
+  onWrite
 }: SetterDeps): SettingsContextType['setSetting'] {
   return (key, value) => {
     const currentConfig = getConfig()
@@ -92,10 +96,16 @@ export function createSettingSetter({
     if (JSON.stringify(value) === JSON.stringify(currentValue)) return
     setConfig({ ...currentConfig, [key]: value })
     send({ appName, key, value })
+    onWrite?.()
   }
 }
 
-const useSettingsContext = ({ appName, gameInfo, runner }: Props) => {
+const useSettingsContext = ({
+  appName,
+  gameInfo,
+  runner,
+  onSettingWritten
+}: Props) => {
   const [currentConfig, setCurrentConfig] = useState<Partial<AppSettings>>({})
   // Latest config, updated synchronously on every write. Two setSetting calls in one event
   // handler (the merged "When a game starts" select writes two keys) would otherwise both
@@ -177,7 +187,8 @@ const useSettingsContext = ({ appName, gameInfo, runner }: Props) => {
         configRef.current = config
         setCurrentConfig(config)
       },
-      send: (payload) => window.api.setSetting(payload)
+      send: (payload) => window.api.setSetting(payload),
+      onWrite: onSettingWritten
     }),
     config: currentConfig,
     isDefault,

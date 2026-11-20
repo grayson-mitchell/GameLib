@@ -8,3 +8,25 @@
   justify-content: end;
   padding-top: var(--space-md);
 }
+
+/* quick-261121-dzl: header row for dialogs that pass a `header` (game settings). */
+.Dialog__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  flex: none;
+  padding: var(--space-md) var(--space-sm) var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--modal-border, var(--input-background));
+}
+
+/* width: 0 with flex-grow keeps a long one-line title from widening the paper
+   (InstallModal__dialog sets min-width: fit-content). */
+.Dialog__headerContent {
+  flex: 1 1 0;
+  min-width: 0;
+  width: 0;
+}
+
+.Dialog__header + .MuiDialogContent-root {
+  padding-top: 0;
+}

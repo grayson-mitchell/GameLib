@@ -57,6 +57,46 @@ describe('createSettingSetter (G17)', () => {
   })
 })
 
+describe('createSettingSetter onWrite (261121-dzl)', () => {
+  const make = (initial: Record<string, unknown>, withOnWrite = true) => {
+    let config = initial
+    const order: string[] = []
+    const send = jest.fn(() => order.push('send'))
+    const onWrite = jest.fn(() => order.push('onWrite'))
+    const set = createSettingSetter({
+      appName: '576770',
+      getConfig: () => config,
+      setConfig: (c) => {
+        config = c as Record<string, unknown>
+      },
+      send,
+      ...(withOnWrite ? { onWrite } : {})
+    })
+    return { set, send, onWrite, order }
+  }
+
+  it('261121-dzl A: a real change calls send, then onWrite exactly once', () => {
+    const { set, send, onWrite, order } = make({ engineOverride: 'a' })
+    set('engineOverride', 'automatic')
+    expect(send).toHaveBeenCalledTimes(1)
+    expect(onWrite).toHaveBeenCalledTimes(1)
+    expect(order).toEqual(['send', 'onWrite'])
+  })
+
+  it('261121-dzl B: a JSON-equal no-change calls neither send nor onWrite', () => {
+    const { set, send, onWrite } = make({ engineOverride: 'crossover' })
+    set('engineOverride', 'crossover')
+    expect(send).not.toHaveBeenCalled()
+    expect(onWrite).not.toHaveBeenCalled()
+  })
+
+  it('261121-dzl C: a setter built without onWrite still sends', () => {
+    const { set, send } = make({ engineOverride: 'a' }, false)
+    set('engineOverride', 'automatic')
+    expect(send).toHaveBeenCalledTimes(1)
+  })
+})
+
 describe('shouldRefetchOnWriteFailure (WR-04)', () => {
   it('WR-04: true for a payload naming this appName with a string key', () => {
     expect(

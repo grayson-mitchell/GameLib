@@ -29,6 +29,10 @@ interface DialogProps {
   open?: boolean
   // quick-261113-wro: fires once the exit transition has completed.
   onExited?: () => void
+  // quick-261121-dzl: opt-in header row. When set, the close button renders in
+  // `.Dialog__header` beside this content instead of floating over the body.
+  // Omitted, the dialog renders exactly as before for every other consumer.
+  header?: ReactNode
 }
 
 // quick-260820-kq0 round 3: MuiDialog's `TransitionProps` type is the bare
@@ -79,7 +83,8 @@ export const Dialog: React.FC<DialogProps> = ({
   showCloseButton = false,
   onClose,
   open: requestedOpen = true,
-  onExited
+  onExited,
+  header
 }) => {
   const [open, setOpen] = useState(true)
   const disableDialogBackdropClose = useSettingsState(
@@ -151,20 +156,38 @@ export const Dialog: React.FC<DialogProps> = ({
       TransitionProps={{ onExited }}
     >
       <>
-        <IconButton
-          aria-label="close"
-          onClick={close}
-          sx={{
-            position: 'absolute',
-            right: 8,
-            // showCloseButton used for gamepad back actions, should always be in DOM
-            display: showCloseButton ? 'auto' : 'none',
-            top: 8,
-            color: 'var(--text-default)'
-          }}
-        >
-          <CloseIcon />
-        </IconButton>
+        {header ? (
+          <div className="Dialog__header">
+            <div className="Dialog__headerContent">{header}</div>
+            <IconButton
+              aria-label="close"
+              onClick={close}
+              sx={{
+                flex: 'none',
+                // showCloseButton used for gamepad back actions, should always be in DOM
+                display: showCloseButton ? 'auto' : 'none',
+                color: 'var(--text-default)'
+              }}
+            >
+              <CloseIcon />
+            </IconButton>
+          </div>
+        ) : (
+          <IconButton
+            aria-label="close"
+            onClick={close}
+            sx={{
+              position: 'absolute',
+              right: 8,
+              // showCloseButton used for gamepad back actions, should always be in DOM
+              display: showCloseButton ? 'auto' : 'none',
+              top: 8,
+              color: 'var(--text-default)'
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        )}
         <DialogContent>{children}</DialogContent>
       </>
     </MuiDialog>
