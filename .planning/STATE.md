@@ -4,11 +4,11 @@ milestone: v0.10
 current_phase: 82
 current_phase_name: Guardrails, hygiene and shared safety primitives
 status: executing
-stopped_at: Completed 82-19-PLAN.md
-last_updated: "2026-11-20T07:48:55.731Z"
+stopped_at: Completed 83-01-PLAN.md
+last_updated: "2026-11-20T08:58:39.856Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 82 gap closure executed; verification human_needed
-state_head: c0a50506db499b94f6d232eaaa0c842c8cb41ab8
+state_head: cf350231ad87c9b549f91fd824c2f7e7c5801951
 progress:
   total_phases: 27
   completed_phases: 23
@@ -327,6 +327,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 82 P17 | 35 min | 3 tasks | 7 files |
 | Phase 82 P18 | 25min | 3 tasks | 6 files |
 | Phase 82 P19 | 40min | 3 tasks | 10 files |
+| Phase 83 P01 | 10 min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -577,6 +578,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 82]: 82-18: raw-delete detector over-reports rm-family calls on any receiver and opaque options by design; blind spots are written as non-goals in its header
 - [Phase 82]: 82-18: safety_remove_tree is unbounded in UNBOUNDED_RUST_CHANNELS (WR-03); safety_check_removal keeps the 60 s bound
 - [Phase 82]: 82-19: fakeSafetyRustInvoke has no option to disable the trust-root model; fake and crate share trust-root-contract.json, each with a 12-row floor
+- [Phase 83]: 83-01: external-link gate gesture is Settings > General > Language report link (About URL is plain text; Donate uses openKofiPage)
+- [Phase 83]: 83-01: gamelib-shell.log is append-only; gate scores shell-log lines by pid, reaper stderr literals are transcript-only
 
 ### Pending Todos
 
@@ -824,8 +827,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-20T07:48:55.577Z
-Stopped at: Completed 82-19-PLAN.md
+Last session: 2026-11-20T08:58:39.834Z
+Stopped at: Completed 83-01-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
