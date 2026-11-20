@@ -194,6 +194,29 @@ Rust test per leg at `064d8f5c7`:
 - Test (`test.yml`) at `064d8f5c7`: `Test Suites: 5 failed, 10 skipped, 1090 passed, 1095 of 1105 total`, `Tests: 31 failed, 190 skipped, 23024 passed, 23245 total` (25 of the 31 are the C harness's per-case `PASS` rows that all fail together when the harness exits non-zero). The 5 are: `diPhaseGates.test.ts` and `moduleStateCensus.test.ts` (the shimCoverage module-state red), `steamLaunchRuntime.test.ts` (3 tests, Linux), `meta/__tests__/callbackRegistryHost.test.ts` (Linux), and a NEW load flake `sharedRedistInstall.test.ts` ("restores after an installer timeout", `Exceeded timeout of 5000 ms`). At `e4f5c0e45` (run 44781299279) the same job reported `4 failed` (the first four of these); `sharedRedistInstall` passed there.
 - Supply-chain audit at `064d8f5c7`: `cargo-deny` red on two new advisories against `zip 4.6.1` (RUSTSEC-2026-0545 and RUSTSEC-2026-0548), reached only through `tauri-plugin-updater 2.10.1` (`zip = '^4'`). See the Decision brief.
 
+## CI proof, 82-12 fix rounds
+
+Push authority for these rounds was a standing operator grant (fast-forward only, hook never bypassed, at most 4 rounds). Local main also carried other sessions' commits each push, listed per round.
+
+### Round 1: `633217fa8bf8b3e1931ab4867d926a915633556d` (pushed `064d8f5c7..633217fa8`, 2026-11-21)
+
+Carried besides the 82-12 commits: `2c72b10a7`, `f16f58990`, `7c61e07e0`, `2e443f0e6` (quick-261121-97s, another session).
+
+| Workflow | Run | Conclusion |
+| --- | --- | --- |
+| Rust test | 44788203590 | failure (windows clippy ratchet only; macos and ubuntu all green) |
+| Test | 44788203604 | failure (1 suite: `callbackRegistryHost`) |
+| Code check | 44788203627 | success |
+| Lint | 44788203639 | success |
+| Supply-chain audit | 44788203665 | success (e: the two advisories are ignored; `cargo-deny` green) |
+
+Observed fixed at this sha: (a) `moduleStateCensus` and `diPhaseGates` pass on the Linux Test job; (c) `steamLaunchRuntime.test.ts` passes on Linux; (b) the Windows multi-crate step (`gamelib-steamcm` `wrap` test, then `golden.rs`, `vent_api_shapes.rs`, the CLI crates, all `gamelib-steampoll` and `gamelib-i18n` suites) passes for the first time, and so do the Windows static codec linkage and Tauri shell test; (e) Supply-chain audit is green. Test: `Test Suites: 1 failed, 10 skipped, 1094 passed, 1095 of 1105 total`.
+
+Reds found at round 1, both second diagnoses (no retirement):
+
+1. `callbackRegistryHost` (Linux): `cr_buffer_zeroed` now passes (the first Linux observation of the live-memory scan), but the harness stops at its first failure and the red moved to `FAIL no_hold_168 left == 0:912`. Three more cases (`buffer_zeroed`, `no_hold_168`, `mms_unknown_handle_dropped`) scan a drain buffer through a pointer into the registry's dead stack frame; `no_hold_168` passed at `064d8f5c7` and failed at `633217fa8` with no registry change, which confirms the cause is stack layout rather than a missing zeroing. Fix: those cases run `gl_cb_run_callbacks` on a pthread whose stack is a harness-owned block (`9ab56bdbe`).
+2. Windows clippy ratchet (reached for the first time because the steamcm test now passes): `dead_code: 8 found, ceiling is 5` and `unused_imports: 1, no ceiling`. The three new `dead_code` and the import are `gamelib-safety/src/safe_path.rs:189 flip_ascii_case` (only the unix probe calls it) and `gamelib-depot/tests/post.rs` `LAUNCHER`, `elf`, `apply_elf_fallback` (only cfg(unix) tests use them). Fix: `#[cfg(unix)]` on each, ceilings untouched (`b7a411b6a`). `cargo clippy --target x86_64-pc-windows-msvc -p gamelib-safety --all-targets` is clean locally; gamelib-depot cannot be cross-checked on this host (`ring`'s C build needs a Windows sysroot).
+
 ## Decision brief (D-03)
 
 Prepared by plan 82-12 Task 1 at HEAD `064d8f5c7` (CI runs: Rust test 44784193543, Test 44784193642, Supply-chain audit 44784193419; see "CI proof follow-up at `064d8f5c7`"). Nothing is decided here and no test or source file was changed. No suite is proposed for retirement by the executor: each red below has a concrete fix by cause, and D-03 makes fixing the default. The operator decides per entry (retire, or keep fixing). "Fix attempts so far" is none for every entry (none of these is phase 82's work and none was touched by this phase).
