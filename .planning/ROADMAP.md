@@ -301,7 +301,7 @@ Milestone v0.11 Node Sidecar Retirement. Planned 2026-11-17 alongside v0.10; sta
   4. Uninstalling a game never deletes a sibling game co-installed beside it, proven by an adversarial path table (nested installdir, `.\x`, `C:\x`, UNC, symlink, case, NFC/NFD) on macOS, Windows and Linux
   5. The `utils.ts` and `bootstrap.ts` responsibility inventory and the milestone-wide state-ownership table are committed, and the zero-risk deletions (type-only files, dead exports, `legendary/commands/*`, `CI=e2e` mocks; `fileStore.ts` only after the live-or-dead check) are gone
 
-**Plans:** 4/16 plans executed
+**Plans:** 5/16 plans executed
 
 Plans:
 **Wave 1**
@@ -311,7 +311,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [x] 82-04-PLAN.md — Delete fileStore.ts after the live-or-dead check; D-05 guard on diPhaseGates
-- [ ] 82-05-PLAN.md — Shell arms + IPC contract + fail-closed rustSafety adapter, known installs, protected roots, test tooling
+- [x] 82-05-PLAN.md — Shell arms + IPC contract + fail-closed rustSafety adapter, known installs, protected roots, test tooling
 - [ ] 82-06-PLAN.md — Refusal notice vertical slice (FrontendMessage, store, toast, i18n)
 - [ ] 82-13-PLAN.md — Delete proxy-types.ts and the dead src/backend exports/types, lowering the knip baseline
 - [ ] 82-14-PLAN.md — utils.ts/bootstrap.ts responsibility inventory and the milestone-wide state-ownership table

@@ -4,11 +4,11 @@ milestone: v0.10
 current_phase: 82
 current_phase_name: Guardrails, hygiene and shared safety primitives
 status: executing
-stopped_at: Completed 82-04-PLAN.md
-last_updated: "2026-11-20T08:02:34.195Z"
+stopped_at: Completed 82-05-PLAN.md
+last_updated: "2026-11-20T08:08:07.587Z"
 last_activity: 2026-11-20
 last_activity_desc: Phase 82 execution started
-state_head: 0f01dd5c37d82fc0872afaefef61a70f715edc7b
+state_head: b6962bb8c9dbe42945f53d3c90ecb869d33a8384
 progress:
   total_phases: 27
   completed_phases: 23
@@ -76,7 +76,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 82 (Guardrails, hygiene and shared safety primitives) — EXECUTING
-Plan: 5 of 16
+Plan: 6 of 16
 Status: Ready to execute
 Last activity: 2026-11-20 — Phase 82 execution started
 
@@ -311,6 +311,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 82 P02 | 44 min | 3 tasks | 22 files |
 | Phase 82 P03 | 16 min | 3 tasks | 17 files |
 | Phase 82 P04 | 25 min | 1 tasks | 1 files |
+| Phase 82 P05 | 40 min | 2 tasks | 24 files |
 
 ## Accumulated Context
 
@@ -537,6 +538,9 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 82]: Sideload exec-bit rule over-refuses native Linux game folders holding helper scripts, per D-22; refusal copy in 82-07/08 should say so
 - [Phase 82]: Windows junctions are created with cmd /C mklink /J (no junction crate); link tests use require_link, which panics under CI
 - [Phase 82]: 82-04: fileStore.ts deletion halted - ~27 Jest suites mock backend/store_backend with jest.requireActual('../fileStore'); deletion is Phase 85 scope, research importer claim was wrong
+- [Phase 82]: 82-05: the rustSafety adapter validates a reply against its request (item count and ids match the targets, overall equals the fold of the items, outcome agrees with the verdict), so a shape-valid but inconsistent reply reads as bad-reply, never permission.
+- [Phase 82]: 82-05: genIpcContract maps anyOf [X, null] to Option<X> (and nothing else in anyOf), so knownInstalls: null (unreadable list, answered unknown by the crate) crosses the zod/serde boundary instead of becoming an empty list.
+- [Phase 82]: 82-05: sideload known-install path is dirname(install.executable) because sideload entries carry no install_path; legendary, gog, nile and steam use install.install_path; entries with no resolvable path are skipped.
 
 ### Pending Todos
 
@@ -781,8 +785,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-20T07:56:01.291Z
-Stopped at: Completed 82-04-PLAN.md
+Last session: 2026-11-20T08:08:04.185Z
+Stopped at: Completed 82-05-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
