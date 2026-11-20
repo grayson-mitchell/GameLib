@@ -151,6 +151,27 @@ const SCOPES = {
 }
 
 /**
+ * Phase 82 Plan 02 (D-05): the per-scope file-count floor, as a pure function so a test can drive
+ * it with an empty result set. Returns the failure message when `fileCount` is below the scope's
+ * `minFiles`, otherwise null.
+ *
+ * @param {{ label: string, minFiles: number }} scope
+ * @param {number} fileCount how many files the scope linted
+ * @returns {string | null}
+ */
+function scopeFloorFailure(scope, fileCount) {
+  if (fileCount < scope.minFiles) {
+    return (
+      `Scope "${scope.label}" linted ${fileCount} file(s), below its ` +
+      `minFiles floor of ${scope.minFiles}. A scope that silently matches ` +
+      'fewer files than this either collapsed to near-nothing or its ' +
+      'patterns are wrong -- fix the patterns, do not lower the floor.'
+    )
+  }
+  return null
+}
+
+/**
  * Lints one scope and reports every failing condition it finds -- it does
  * NOT short-circuit on the first failure, because a developer who only
  * ever sees the first reported problem for a scope has to make a second
@@ -183,13 +204,9 @@ async function runScope(name) {
     failures.push(`${errorCount} error(s) in the ${scope.label} scope.`)
   }
 
-  if (results.length < scope.minFiles) {
-    failures.push(
-      `Scope "${scope.label}" linted ${results.length} file(s), below its ` +
-        `minFiles floor of ${scope.minFiles}. A scope that silently matches ` +
-        'fewer files than this either collapsed to near-nothing or its ' +
-        'patterns are wrong -- fix the patterns, do not lower the floor.'
-    )
+  const floorFailure = scopeFloorFailure(scope, results.length)
+  if (floorFailure !== null) {
+    failures.push(floorFailure)
   }
 
   if (warningCount > scope.maxWarnings) {
@@ -247,8 +264,13 @@ async function main() {
   process.exit(ok ? 0 : 1)
 }
 
-main().catch((err) => {
-  // A runner that crashes must never look like a pass.
-  console.error('lintScoped.cjs crashed:', err)
-  process.exit(1)
-})
+module.exports = { SCOPES, scopeFloorFailure }
+
+// Run only as the CLI: a test requires this file for `scopeFloorFailure` and must not lint the repo.
+if (require.main === module) {
+  main().catch((err) => {
+    // A runner that crashes must never look like a pass.
+    console.error('lintScoped.cjs crashed:', err)
+    process.exit(1)
+  })
+}

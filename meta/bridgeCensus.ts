@@ -2257,6 +2257,21 @@ function scanExeSteamDrm(
  * prints an ACF field beyond appid/name/installdir (T-51-39). */
 let lastLogsRead: string[] = []
 
+/**
+ * Phase 82 Plan 02 (D-05): a census over zero titles proves nothing -- no bottles, no manifests or a
+ * broken bottle walk all printed an empty table and exited 0. Zero inputs must fail, with a message
+ * that says so, so the empty case can never be read as "every title is covered".
+ */
+export function assertCensusInputs(count: number): void {
+  if (!Number.isInteger(count) || count < 1) {
+    throw new Error(
+      `bridge-census: zero inputs (${String(count)} installed titles found in any bridge bottle); ` +
+        'a census over nothing is a failure, not a clean pass. Install a title through the bridge ' +
+        'or check that the bottle directories are readable.'
+    )
+  }
+}
+
 export async function runCensus(): Promise<CensusRow[]> {
   // 63 WR-02: without the CLI every exe would read as "no delay imports, not
   // CEG" and the verdict table would be plausible but wrong. Abort instead.
@@ -2603,6 +2618,7 @@ async function main(): Promise<void> {
     return
   }
   const rows = await runCensus()
+  assertCensusInputs(rows.length)
   if (process.argv.includes('--json')) {
     console.log(JSON.stringify(rows, null, 2))
     return

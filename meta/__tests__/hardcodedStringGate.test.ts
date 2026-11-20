@@ -17,6 +17,7 @@ import {
   scanSource
 } from '../hardcodedStringGate'
 import { at } from './fixtures/indexed'
+import { assertAtOrAboveFloor } from '../../src/backend/testUtils/censusFloor'
 
 const EMPTY_GLOSSARY = { glossary: [] as string[] }
 
@@ -1871,6 +1872,20 @@ describe('hardcodedStringGate', () => {
         ScopeLoadError
       )
     })
+
+    it('an empty scope snapshot throws ScopeLoadError instead of passing everything (D-05)', () => {
+      const scopePath = join(dir, 'scope.json')
+      writeScope(scopePath, [])
+      const allowlistPath = join(dir, 'allowlist.json')
+      writeAllowlist(allowlistPath, [])
+
+      expect(() => scanScope({ scopePath, allowlistPath })).toThrow(
+        ScopeLoadError
+      )
+      expect(() => scanScope({ scopePath, allowlistPath })).toThrow(
+        /has no files/
+      )
+    })
   })
 
   describe('scope orchestration', () => {
@@ -1917,6 +1932,18 @@ describe('hardcodedStringGate', () => {
       it('genuinely scanned something — a zero here would mean an unscanned scope masquerading as a clean one (T-34.8-29)', () => {
         const report = scanScope()
         expect(report.totalCandidates).toBeGreaterThan(0)
+      })
+
+      // D-05 floor: measured 315 scanned files at 1080f5c25 (2026-11-20). A scope snapshot that
+      // collapses and is committed together with its own length would pass the equality below, so
+      // the count also has to clear a floor that does not move with the snapshot. Never lower.
+      it('scannedFiles clears a pinned floor, so a collapsed snapshot cannot pass (D-05)', () => {
+        const report = scanScope()
+        assertAtOrAboveFloor(
+          'hardcodedStringGate scanned files',
+          report.scannedFiles,
+          300
+        )
       })
 
       it('scannedFiles matches the committed scope snapshot exactly', () => {

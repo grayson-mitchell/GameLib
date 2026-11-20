@@ -616,6 +616,15 @@ describe('backendDiCeilings CLI', () => {
     expect(r.status).toBe(1)
     expect(r.stderr).toContain('below the floor')
   })
+  it('exits 1 on a zero-file root: an empty scan cannot pass (D-05)', () => {
+    rmSync(join(tmp, 'src'), { recursive: true, force: true })
+    mkdirSync(join(tmp, 'src', 'backend'), { recursive: true })
+    expect(census(tmp).backendFiles).toBe(0)
+    const r = run()
+    expect(r.status).toBe(1)
+    expect(r.stderr).toContain('scanned only 0 backend files')
+    expect(r.stderr).toContain('below the floor')
+  })
   it('--shard restricts evaluation to the paths that shard lists', () => {
     write(
       'baselines/two.json',

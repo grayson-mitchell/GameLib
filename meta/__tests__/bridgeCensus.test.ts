@@ -28,6 +28,7 @@ import { join } from 'node:path'
 import { at } from './fixtures/indexed'
 
 import {
+  assertCensusInputs,
   drmAppLogSegmentFor,
   appLogSegmentFor,
   attributeHelperLines,
@@ -2293,5 +2294,19 @@ describe('75-17: readManifests reads bottle ACFs through the steamfiles CLI resu
     const scan = jest.fn()
     expect(readManifests(join(dir, 'nope'), 'b', scan)).toEqual([])
     expect(scan).not.toHaveBeenCalled()
+  })
+})
+
+describe('assertCensusInputs: a census cannot pass vacuously (D-05)', () => {
+  it('fails on zero inputs with a message saying zero inputs must fail', () => {
+    expect(() => assertCensusInputs(0)).toThrow(/zero inputs/)
+  })
+
+  it('fails on a non-finite count', () => {
+    expect(() => assertCensusInputs(Number.NaN)).toThrow(/zero inputs/)
+  })
+
+  it('passes with a single title (the adjacent boundary)', () => {
+    expect(() => assertCensusInputs(1)).not.toThrow()
   })
 })

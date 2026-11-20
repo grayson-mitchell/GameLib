@@ -217,6 +217,20 @@ describe('steamLineCeiling CLI', () => {
     }
   })
 
+  it('exits non-zero on an empty root: zero files scanned cannot pass (D-05)', () => {
+    const root = seed({})
+    const baseline = join(root, 'baseline.json')
+    writeFileSync(baseline, '{}')
+    try {
+      const r = run(['--root', root, '--baseline', baseline])
+      expect(r.status).toBe(1)
+      expect(r.stderr).toMatch(/floor/)
+      expect(r.stderr).toMatch(/\b0\b/)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
   it('exits non-zero on an over-ceiling file and zero once allowlisted', () => {
     const big = 'x\n'.repeat(1001)
     const root = seed({ 'big.ts': big })
