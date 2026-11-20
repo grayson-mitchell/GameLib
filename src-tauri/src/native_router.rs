@@ -624,18 +624,20 @@ mod tests {
         assert_eq!(collect(&sidecar_rx, 20), want("s"));
     }
 
-    /// A host whose `open_url` blocks until released, for the first URL only.
+    const BLOCKED_URL: &str = "https://blocked.example/";
+
+    /// A host whose `open_url` blocks until released, for `BLOCKED_URL` only.
     struct BlockingHost {
         tx: Sender<String>,
-        release: std::sync::Mutex<Option<Receiver<()>>>,
+        release: std::sync::Mutex<Receiver<()>>,
     }
 
     impl NativeHost for BlockingHost {
         fn open_url(&self, url: String) {
+            let blocks = url == BLOCKED_URL;
             let _ = self.tx.send(url);
-            let held = self.release.lock().unwrap().take();
-            if let Some(rx) = held {
-                let _ = rx.recv();
+            if blocks {
+                let _ = self.release.lock().unwrap().recv();
             }
         }
     }
@@ -648,22 +650,25 @@ mod tests {
         let (release_tx, release_rx) = mpsc_channel::<()>();
         let host = BlockingHost {
             tx,
-            release: std::sync::Mutex::new(Some(release_rx)),
+            release: std::sync::Mutex::new(release_rx),
         };
         let router = NativeRouter::with_shutdown(Arc::new(host), Shutdown::new());
-        for url in ["https://blocked.example/", "https://next.example/"] {
+        for url in [BLOCKED_URL, "https://next.example/"] {
             assert_eq!(
                 router.route_send("openExternalUrl", &[json!(url)]),
                 Some(Ok(()))
             );
         }
-        let first = opened.recv_timeout(Duration::from_secs(1)).unwrap();
-        let second = opened.recv_timeout(Duration::from_secs(1));
+        // Each URL runs on its own opener thread, so which of the two reaches the host first is
+        // not specified; that both do, while the blocked one is still blocked, is.
+        let mut seen: Vec<String> = (0..2)
+            .filter_map(|_| opened.recv_timeout(Duration::from_secs(1)).ok())
+            .collect();
         let _ = release_tx.send(());
-        assert_eq!(first, "https://blocked.example/");
+        seen.sort();
         assert_eq!(
-            second.as_deref(),
-            Ok("https://next.example/"),
+            seen,
+            [BLOCKED_URL, "https://next.example/"],
             "the second URL must reach the host while the first open_url is still blocked"
         );
     }
