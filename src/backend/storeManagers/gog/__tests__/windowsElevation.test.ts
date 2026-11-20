@@ -19,6 +19,8 @@ import { initHeadless } from 'backend/logger'
 import { createSpawnAsync, type SpawnAsync } from 'backend/spawnAsync'
 import { createRealRunner } from 'backend/testUtils/realRunner'
 import {
+  MAX_BATCH_STATEMENT_CHARS,
+  batchStatement,
   elevatedStartProcessArgs,
   gogUninstallerSwitches,
   gogUninstallStep,
@@ -186,6 +188,74 @@ describe('261120-uzn runElevatedSteps', () => {
   })
 })
 
+describe('261120-uzn batched elevation', () => {
+  const steps: ElevatedStep[] = [
+    { filePath: 'C:\\a b\\one.exe', args: ['/x', 'y z'] },
+    { filePath: 'C:\\two.exe', args: [], workingDirectory: 'C:\\w' },
+    { filePath: 'C:\\three.exe', args: ["it's"] }
+  ]
+
+  function decodeBatch(statement: string): string[] {
+    const encoded = /'(-EncodedCommand)','([A-Za-z0-9+/=]+)'/.exec(
+      statement
+    )?.[2]
+    return Buffer.from(encoded as string, 'base64')
+      .toString('utf16le')
+      .split('\n')
+  }
+
+  it('batchStatement is one hidden elevated Start-Process of an encoded script, one line per step', () => {
+    const statement = batchStatement(steps, { elevate: true })
+    expect(
+      statement.startsWith("Start-Process -FilePath 'powershell.exe'")
+    ).toBe(true)
+    expect(statement).toContain('-WindowStyle Hidden')
+    expect(statement).toContain('-Verb RunAs')
+    expect(statement).toContain('-Wait')
+    expect(statement).toContain(
+      "'-NoProfile','-NonInteractive','-EncodedCommand','"
+    )
+    const lines = decodeBatch(statement)
+    expect(lines).toEqual(
+      steps.map((step) => startProcessStatement(step, { elevate: false }))
+    )
+    for (const line of lines) expect(line).not.toContain('RunAs')
+  })
+
+  it('runElevatedSteps puts several steps under ONE spawn', async () => {
+    const { spawnAsync, calls } = recordingSpawn({ code: 0 })
+    expect(await runElevatedSteps({ spawnAsync }, steps)).toEqual({
+      spawns: 1,
+      failed: 0
+    })
+    expect(calls).toEqual([
+      {
+        command: 'powershell',
+        args: powershellCommandArgs(batchStatement(steps, { elevate: true })),
+        options: { windowsHide: true }
+      }
+    ])
+  })
+
+  it('falls back to one elevated spawn per step when the batch is too long', async () => {
+    const big: ElevatedStep[] = [
+      { filePath: 'C:\\a.exe', args: ['a'.repeat(20_000)] },
+      { filePath: 'C:\\b.exe', args: ['b'.repeat(20_000)] }
+    ]
+    expect(batchStatement(big, { elevate: true }).length).toBeGreaterThan(
+      MAX_BATCH_STATEMENT_CHARS
+    )
+    const { spawnAsync, calls } = recordingSpawn({ code: 0 })
+    expect(await runElevatedSteps({ spawnAsync }, big)).toEqual({
+      spawns: 2,
+      failed: 0
+    })
+    expect(calls.map((call) => call.args)).toEqual(
+      big.map((step) => elevatedStartProcessArgs(step))
+    )
+  })
+})
+
 /** Writes argv (after the output path) and the cwd to argv[2] as JSON. */
 const PROBE = `
 const fs = require('fs')
@@ -236,5 +306,63 @@ winDescribe('261120-uzn real PowerShell round trip (not elevated)', () => {
     expect(recorded.args).toEqual(probeArgs)
     expect(recorded.cwd).toBe(folder)
     expect(existsSync(marker)).toBe(false)
+  })
+})
+
+/** Records whether argv[3] existed on entry, then writes argv (after the output path) there. */
+const ORDER_PROBE = `
+const fs = require('fs')
+fs.writeFileSync(process.argv[2], JSON.stringify({ args: process.argv.slice(4), sawBefore: fs.existsSync(process.argv[3]) }))
+`
+
+winDescribe('261120-uzn batch round trip (not elevated)', () => {
+  jest.setTimeout(60_000)
+  const harness = createRealRunner()
+  const spawnAsync = createSpawnAsync({ runner: harness.runner })
+  const folder = mkdtempSync(join(tmpdir(), "gl o'brien [b] "))
+
+  afterAll(() => {
+    harness.dispose()
+    rmSync(folder, { recursive: true, force: true })
+  })
+
+  it('runs the steps in order, waits for each, and a missing executable does not stop the next', async () => {
+    const probe = join(folder, 'probe.js')
+    writeFileSync(probe, ORDER_PROBE)
+    const out1 = join(folder, 'out1.json')
+    const out2 = join(folder, 'out2.json')
+    const step1: ElevatedStep = {
+      filePath: process.execPath,
+      args: [probe, out1, join(folder, 'does-not-exist'), 'one $env:USERNAME'],
+      workingDirectory: folder
+    }
+    const missing: ElevatedStep = {
+      filePath: join(folder, 'missing.exe'),
+      args: ['/x']
+    }
+    const step2: ElevatedStep = {
+      filePath: process.execPath,
+      args: [probe, out2, out1, "two it's"],
+      workingDirectory: folder
+    }
+
+    await spawnAsync(
+      'powershell',
+      powershellCommandArgs(
+        batchStatement([step1, missing, step2], { elevate: false })
+      ),
+      { windowsHide: true }
+    )
+
+    const first = JSON.parse(readFileSync(out1, 'utf8')) as {
+      args: string[]
+      sawBefore: boolean
+    }
+    const second = JSON.parse(readFileSync(out2, 'utf8')) as {
+      args: string[]
+      sawBefore: boolean
+    }
+    expect(first).toEqual({ args: ['one $env:USERNAME'], sawBefore: false })
+    expect(second).toEqual({ args: ["two it's"], sawBefore: true })
   })
 })

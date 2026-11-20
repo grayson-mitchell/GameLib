@@ -62,7 +62,7 @@ export function toWindowsArgument(arg: string): string {
 }
 
 /** The -ArgumentList value: every argument Windows-quoted, then a PowerShell literal. */
-export function toStartProcessArgumentList(args: readonly string[]): string {
+function toStartProcessArgumentList(args: readonly string[]): string {
   return args
     .map((arg) => toPowerShellLiteral(toWindowsArgument(arg)))
     .join(',')
@@ -117,6 +117,35 @@ export function gogUninstallStep(
   }
 }
 
+/**
+ * The longest batch statement that is sent as one elevated launch. CreateProcess caps a command
+ * line at 32,767 characters, and a 32,560-character -EncodedCommand went through Start-Process on
+ * 2026-11-20; 30,000 stays safely below both. A longer batch falls back to one prompt per step.
+ */
+export const MAX_BATCH_STATEMENT_CHARS = 30_000
+
+/**
+ * One Start-Process statement that launches a hidden powershell.exe running every step, one
+ * statement per line, in order. $ErrorActionPreference is left alone on purpose: each step stays
+ * independent, so one failing step does not stop the next.
+ */
+export function batchStatement(
+  steps: readonly ElevatedStep[],
+  opts: { elevate: boolean }
+): string {
+  const script = steps
+    .map((step) => startProcessStatement(step, { elevate: false }))
+    .join('\n')
+  const encoded = Buffer.from(script, 'utf16le').toString('base64')
+  return startProcessStatement(
+    {
+      filePath: 'powershell.exe',
+      args: ['-NoProfile', '-NonInteractive', '-EncodedCommand', encoded]
+    },
+    { elevate: opts.elevate, hidden: true }
+  )
+}
+
 async function spawnElevated(
   deps: { spawnAsync: SpawnAsync },
   args: string[],
@@ -138,21 +167,42 @@ async function spawnElevated(
 }
 
 /**
- * Runs the steps elevated. A failing step is counted, never thrown; a spawn that rejects is not
- * swallowed.
+ * Runs the steps elevated. Several steps share ONE UAC prompt through batchStatement; a batch
+ * that is too long, and a single step, elevate directly (one prompt per step). A failing step is
+ * counted, never thrown; a spawn that rejects is not swallowed.
  */
 export async function runElevatedSteps(
   deps: { spawnAsync: SpawnAsync },
   steps: readonly ElevatedStep[]
 ): Promise<{ spawns: number; failed: number }> {
-  let spawns = 0
-  let failed = 0
   for (const step of steps) {
     logInfo(
       ['Running elevated', step.filePath, step.args.join(' ')],
       LogPrefix.Gog
     )
   }
+  if (steps.length === 0) return { spawns: 0, failed: 0 }
+  if (steps.length > 1) {
+    const statement = batchStatement(steps, { elevate: true })
+    if (statement.length <= MAX_BATCH_STATEMENT_CHARS) {
+      logInfo(
+        ['Running', steps.length, 'elevated steps under one prompt'],
+        LogPrefix.Gog
+      )
+      const result = await spawnElevated(
+        deps,
+        powershellCommandArgs(statement),
+        undefined
+      )
+      return { spawns: 1, failed: result.failed ? 1 : 0 }
+    }
+    logWarning(
+      ['Elevated batch is too long, elevating one step at a time'],
+      LogPrefix.Gog
+    )
+  }
+  let spawns = 0
+  let failed = 0
   for (const step of steps) {
     spawns++
     const result = await spawnElevated(

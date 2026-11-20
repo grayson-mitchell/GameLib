@@ -23,6 +23,7 @@ import {
 } from 'common/types/gog'
 import { deriveGogPaths } from './constants'
 import { isWindows } from 'backend/constants/environment'
+import { runElevatedSteps, type ElevatedStep } from './windowsElevation'
 import {
   endEngineLaunch,
   selectEngineForLaunch
@@ -56,45 +57,28 @@ export type SetupDeps = StatusUpdateDeps &
   >
 
 /*
- * Automatially executes command properly according to operating system
- *  on Windows pre-appends powershell command to spawn UAC prompt
+ * Automatially executes command properly according to operating system.
+ * On Windows the step is queued, and runGogSetup flushes the whole queue through
+ * runElevatedSteps so every elevated step shares one UAC prompt (quick 261120-uzn).
  */
-async function runSetupCommand(deps: SetupDeps, wineArgs: WineCommandArgs) {
+async function runSetupCommand(
+  deps: SetupDeps,
+  wineArgs: WineCommandArgs,
+  elevated: ElevatedStep[]
+) {
   if (isWindows) {
-    // Run shell
     const [exe, ...args] = wineArgs.commandParts
     if (exe === undefined) {
       throw Error('Setup command is empty')
     }
-    return deps.spawnAsync(
-      'powershell',
-      [
-        '-NoProfile',
-        'Start-Process',
-        '-FilePath',
-        exe,
-        '-Verb',
-        'RunAs',
-        '-Wait',
-        '-ArgumentList',
-        // TODO: Verify how Powershell will handle those
-        args
-          .map((argument) => {
-            if (argument.includes(' ')) {
-              // Add super quotes:tm:
-              argument = '`"' + argument + '`"'
-            }
-            // Add normal quotes
-            argument = '"' + argument + '"'
-            return argument
-          })
-          .join(',')
-      ],
-      { cwd: wineArgs.startFolder }
-    )
-  } else {
-    return deps.commandRunner.runWineCommand(wineArgs)
+    elevated.push({
+      filePath: exe,
+      args,
+      workingDirectory: wineArgs.startFolder
+    })
+    return
   }
+  return deps.commandRunner.runWineCommand(wineArgs)
 }
 
 /**
@@ -172,12 +156,49 @@ async function setup(
   return runGogSetup(deps, appName, gameInfo, stored, installRedist)
 }
 
+/**
+ * Runs GOG's setup. On Windows every elevated step is queued while the setup is walked, then
+ * flushed once, so the steps share one UAC prompt. The flush is in a finally, so steps queued
+ * before an early return or a throw still run, as they did when each step ran at once.
+ */
 async function runGogSetup(
   deps: SetupDeps,
   appName: string,
   gameInfo: GogGameInfo,
   gameSettings: GameSettings,
   installRedist: boolean
+): Promise<void> {
+  const elevated: ElevatedStep[] = []
+  try {
+    await collectGogSetupSteps(
+      deps,
+      appName,
+      gameInfo,
+      gameSettings,
+      installRedist,
+      elevated
+    )
+  } finally {
+    if (elevated.length > 0) {
+      // The per-redist labels were sent while collecting; show one label for the single prompt.
+      sendGameStatusUpdate(deps, {
+        appName,
+        runner: 'gog',
+        status: 'redist',
+        context: 'GOG'
+      })
+      await runElevatedSteps(deps, elevated)
+    }
+  }
+}
+
+async function collectGogSetupSteps(
+  deps: SetupDeps,
+  appName: string,
+  gameInfo: GogGameInfo,
+  gameSettings: GameSettings,
+  installRedist: boolean,
+  elevated: ElevatedStep[]
 ): Promise<void> {
   // Make sure prefix is initalized correctly
   if (!isWindows) await deps.launcher.verifyWinePrefix(gameSettings)
@@ -289,15 +310,19 @@ async function runGogSetup(
             '/nodesktopshorctut', // YES THEY MADE A TYPO
             '/nodesktopshortcut'
           ]
-          await runSetupCommand(deps, {
-            commandParts: [absPath, ...exeArgs],
-            gameSettings,
-            wait: false,
-            protonVerb: 'run',
-            gameInstallPath: gameInfo.install.install_path,
-            skipPrefixCheckIKnowWhatImDoing: true,
-            startFolder: gameInfo.install.install_path
-          })
+          await runSetupCommand(
+            deps,
+            {
+              commandParts: [absPath, ...exeArgs],
+              gameSettings,
+              wait: false,
+              protonVerb: 'run',
+              gameInstallPath: gameInfo.install.install_path,
+              skipPrefixCheckIKnowWhatImDoing: true,
+              startFolder: gameInfo.install.install_path
+            },
+            elevated
+          )
         }
       }
     }
@@ -348,15 +373,19 @@ async function runGogSetup(
             '/nodesktopshortcut'
           ]
 
-          await runSetupCommand(deps, {
-            commandParts: [isiPath, ...exeArgs],
-            gameSettings,
-            wait: false,
-            protonVerb: 'run',
-            gameInstallPath: gameInfo.install.install_path,
-            skipPrefixCheckIKnowWhatImDoing: true,
-            startFolder: gameInfo.install.install_path
-          })
+          await runSetupCommand(
+            deps,
+            {
+              commandParts: [isiPath, ...exeArgs],
+              gameSettings,
+              wait: false,
+              protonVerb: 'run',
+              gameInstallPath: gameInfo.install.install_path,
+              skipPrefixCheckIKnowWhatImDoing: true,
+              startFolder: gameInfo.install.install_path
+            },
+            elevated
+          )
         }
       }
     } else {
@@ -394,15 +423,19 @@ async function runGogSetup(
           '/nodesktopshorctut',
           '/nodesktopshortcut'
         ]
-        await runSetupCommand(deps, {
-          commandParts: [absPath, ...exeArgs],
-          gameSettings,
-          wait: false,
-          protonVerb: 'run',
-          gameInstallPath: gameInfo.install.install_path,
-          skipPrefixCheckIKnowWhatImDoing: true,
-          startFolder: gameInfo.install.install_path
-        })
+        await runSetupCommand(
+          deps,
+          {
+            commandParts: [absPath, ...exeArgs],
+            gameSettings,
+            wait: false,
+            protonVerb: 'run',
+            gameInstallPath: gameInfo.install.install_path,
+            skipPrefixCheckIKnowWhatImDoing: true,
+            startFolder: gameInfo.install.install_path
+          },
+          elevated
+        )
       }
     }
   }
@@ -467,15 +500,19 @@ async function runGogSetup(
         context: foundDep.readableName
       })
 
-      await runSetupCommand(deps, {
-        commandParts,
-        gameSettings,
-        startFolder: gogRedistPath,
-        wait: false,
-        protonVerb: 'run',
-        skipPrefixCheckIKnowWhatImDoing: true, // We are running those commands after we check if prefix is valid, this shouldn't cause issues
-        gameInstallPath: gameInfo.install.install_path!
-      })
+      await runSetupCommand(
+        deps,
+        {
+          commandParts,
+          gameSettings,
+          startFolder: gogRedistPath,
+          wait: false,
+          protonVerb: 'run',
+          skipPrefixCheckIKnowWhatImDoing: true, // We are running those commands after we check if prefix is valid, this shouldn't cause issues
+          gameInstallPath: gameInfo.install.install_path!
+        },
+        elevated
+      )
     }
   }
 
