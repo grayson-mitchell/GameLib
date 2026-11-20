@@ -5,10 +5,10 @@ current_phase: 82
 current_phase_name: Guardrails, hygiene and shared safety primitives
 status: executing
 stopped_at: Completed 82-04-PLAN.md
-last_updated: "2026-11-20T07:56:01.322Z"
+last_updated: "2026-11-20T08:02:34.195Z"
 last_activity: 2026-11-20
 last_activity_desc: Phase 82 execution started
-state_head: 8c673f5cc129be0fdb1fd827ab174818b09e004b
+state_head: 0f01dd5c37d82fc0872afaefef61a70f715edc7b
 progress:
   total_phases: 27
   completed_phases: 23
@@ -543,7 +543,6 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [2026-09-14] [build] 'Windows releases ship UNSIGNED — no Windows code-signing cert is enrolled, so SmartScreen warns on every d… — [todo file](.planning/todos/pending/2026-09-14-windows-releases-ship-unsigned-no-windows-cert-enrolled.md)
 - [2026-09-17] [build] "Packaged .app renders blank — FIXED: the data router rendered its initial-load state as nothing; empty-ro… — [todo file](.planning/todos/pending/2026-09-17-packaged-app-renders-blank-on-roughly-one-launch-in-four.md)
 - [2026-10-25] [steam-bridge] "x86 shim parity for the modern SteamInternal_* family and the flat API is deferred until a title needs it … — [todo file](.planning/todos/pending/2026-10-25-x86-shim-modern-sdk-and-flat-api-parity-deferred.md)
-- [2026-10-29] [steam-depot-download] "Depot selection does not honour config.optionaldlc, so owned opt-in DLC (e.g. Dota 2 Worksho… — [todo file](.planning/todos/pending/2026-10-29-depot-selection-installs-config-optionaldlc-opt-in-dlc.md)
 - [2026-10-29] [known-fixes] "Offline dev tool to import umu-protonfixes as candidate local fixes" — [todo file](.planning/todos/pending/2026-10-29-protonfixes-import-dev-tool.md)
 - [2026-10-29] [steam-bridge] "winebus's IOHID path wedges winedevice on the PowerA Switch 2 wired pad" — [todo file](.planning/todos/pending/2026-10-29-winebus-iohid-wedges-on-powera-switch2-pad.md)
 - [2026-10-30] [store-embed] "Live-verify the Amazon store-exit library refresh (Epic, GOG done in 261030-ts4)" — [todo file](.planning/todos/pending/2026-10-30-store-exit-library-refresh-for-epic-gog-amazon.md)
@@ -560,6 +559,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [2026-11-11] [launch] 'Revive the Steam RunningAppID poller under Tauri (it never starts; Windows Steam launches never show Playing)' — [todo file](.planning/todos/pending/2026-11-11-revive-steam-runningappid-poller-under-tauri.md)
 - [2026-11-11] [shell] 'WebView2 DeleteCookie leaves non-partitioned Humble cookies' — [todo file](.planning/todos/pending/2026-11-11-webview2-deletecookie-leaves-non-partitioned-humble-cookies.md)
 - [2026-11-11] [launch] 'Windows Steam launch Stop is a no-op (the game reaches Playing, but Stop does nothing)' — [todo file](.planning/todos/pending/2026-11-11-windows-steam-launch-stop-is-a-no-op.md)
+- [2026-11-20] [steam-depot-download] "Opt-in DLC depots have no enable path and drop from updates (config.optionaldlc filter, quick 261120-st3)" — [todo file](.planning/todos/pending/2026-11-20-opt-in-dlc-depots-have-no-enable-path-and-drop-from-updates.md)
 
 ### Blockers/Concerns
 
@@ -583,6 +583,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261120-p2j | Steam Verify for Mac-native (StartValidatingApp) and bridge games (chunk-level depot repair); Move split to its own todo | 2026-11-20 | 6369f1d3b | — | [261120-p2j-steam-verify-for-mac-native-startvalidat](./quick/261120-p2j-steam-verify-for-mac-native-startvalidat/) |
 | 261120-pp4 | Decommission the custom bridge invite picker now that Steam's own picker passed on CrossOver and Wine-Staging | 2026-11-20 | 7f5e50053 | — | [261120-pp4-decommission-the-custom-bridge-invite-pi](./quick/261120-pp4-decommission-the-custom-bridge-invite-pi/) |
 | 261120-rdo | x86 shim parity for SteamInternal_* and the flat API (D-53-09): tier 1 landed; flat tier for Cat Quest stays open | 2026-11-20 | 23987838e | — | [261120-rdo-x86-shim-parity-for-steaminternal-and-th](./quick/261120-rdo-x86-shim-parity-for-steaminternal-and-th/) |
+| 261120-st3 | Honour config.optionaldlc in Steam depot selection: depots of opt-in DLC (DLC app extended.optionaldlc=1, e.g. Dota 2 Workshop Tools 381450, 5.9 GB) are no longer selected; package 0 grants them to every account. DepotSelectOpts.enabledOptInDlc re-includes a named DLC (no caller yet). Follow-up todo filed for the enable path and the update/ACF drop. | 2026-11-20 | 5687a2970 | — | [261120-st3-honour-config-optionaldlc-in-steam-depot](./quick/261120-st3-honour-config-optionaldlc-in-steam-depot/) |
 
 ## Deferred Items
 
