@@ -96,6 +96,10 @@ pub fn spawn_helper_tokio(
     let pid = child
         .id()
         .ok_or_else(|| std::io::Error::other("helper exited before it could be registered"))?;
+    // `JobSlot` is `()` off Windows, so on unix this argument is a unit value (clippy::unit_arg); a
+    // `let` binding instead trips clippy::let_unit_value. The Job must be taken from the child before
+    // `child` moves into the return tuple, and the call stays one shape on every OS.
+    #[allow(clippy::unit_arg)]
     global().register_pid(label, pid, tokio_job_for(&child));
     Ok((child, HelperGuard::new(pid)))
 }

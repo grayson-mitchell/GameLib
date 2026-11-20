@@ -568,6 +568,8 @@ mod tests {
         // The set registers a helper's pid with the reaper, and the HelperGuard drop unregisters it.
         // The pid is not a real process: only the lines written to the reaper matter here.
         let pid = 987_654u32;
+        // `JobSlot` is `()` off Windows, so `Default::default()` is a unit value on unix (clippy::unit_arg).
+        #[allow(clippy::unit_arg)]
         global().register_pid("reaper-wiring", pid, Default::default());
         let text = String::from_utf8(cap.0.lock().unwrap().clone()).unwrap();
         assert!(
