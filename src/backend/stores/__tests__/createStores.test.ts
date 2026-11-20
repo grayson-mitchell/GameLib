@@ -1,4 +1,4 @@
-import { basename, dirname, join } from 'node:path'
+import { basename, dirname, join, sep } from 'node:path'
 import CacheStore from '../../cache'
 import { TypeCheckedStoreBackend } from '../../typed_store'
 import { defined } from '../../testUtils/indexed'
@@ -101,10 +101,11 @@ describe('createStores', () => {
       >
       const { schema, ...actualOptions } = actual
       // An absolute cwd (game_overrides, runsForMe, macArch) is pinned relative to userData.
-      const cwd = String(actualOptions.cwd).replace(
-        testUserDataDir(),
-        '<userData>'
-      )
+      // The declared pins are `/`-separated, so a win32 host's `\` is read in that form.
+      const cwd = String(actualOptions.cwd)
+        .replace(testUserDataDir(), '<userData>')
+        .split(sep)
+        .join('/')
       expect({ ...actualOptions, cwd }).toEqual(options)
       expect(schema ? Object.keys(schema).sort() : null).toEqual(schemaKeys)
       expect(registry.getDeclaration(name)).toEqual(entry.declaration)

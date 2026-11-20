@@ -18,12 +18,21 @@ import {
   statSync
 } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join, relative } from 'node:path'
+import { join, relative as nodeRelative, sep } from 'node:path'
 import * as ts from 'typescript'
 import { assertAtOrAboveFloor } from 'backend/testUtils/censusFloor'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 
 const BACKEND = join(__dirname, '..')
+
+/**
+ * Every census here matches `/`-separated text (regexes, `startsWith('stores/')`, `includes`), so
+ * paths are read in their `/` form on every host; on win32 `path.relative` and `join` would
+ * otherwise hand them back with backslashes and each scan would silently match nothing.
+ */
+const posix = (p: string): string => p.split(sep).join('/')
+const relative = (from: string, to: string): string =>
+  posix(nodeRelative(from, to))
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
@@ -234,7 +243,7 @@ describe('66.1 end state: stores modules', () => {
 
 describe('66.1 end state: no direct child_process', () => {
   const registrations = nonTestSources.filter((f) =>
-    /\/sidecar\/[^/]*Registration\.ts$/.test(f)
+    /\/sidecar\/[^/]*Registration\.ts$/.test(posix(f))
   )
 
   it('finds the flow registrations', () => {
@@ -454,7 +463,7 @@ describe('66.3 end state: shim, config and process-wide owners at zero', () => {
     // and frontend), so a type import from the retired facade is caught as well.
     assertAtOrAboveFloor('66.3 src walk', srcFiles.length, 1500)
     const offenders = srcFiles
-      .filter((f) => !isTestInfra(f) && !/\/__tests__\//.test(f))
+      .filter((f) => !isTestInfra(f) && !/\/__tests__\//.test(posix(f)))
       .filter((f) => importsPlatformShim(readFileSync(f, 'utf-8')))
       .map((f) => relative(SRC, f))
     expect(offenders).toEqual([])
@@ -513,8 +522,8 @@ describe('66.3 end state: shim, config and process-wide owners at zero', () => {
       .filter(
         (f) =>
           f !== __filename &&
-          !/sidecar\/__tests__\/testContainment\.test\.ts$/.test(f) &&
-          !/drm\/__tests__\/steamclientLayerInstall\.test\.ts$/.test(f)
+          !/sidecar\/__tests__\/testContainment\.test\.ts$/.test(posix(f)) &&
+          !/drm\/__tests__\/steamclientLayerInstall\.test\.ts$/.test(posix(f))
       )
     const SPECIFIER =
       /['"][^'"]*(constants\/paths|sidecar\/pathShim|\.\/pathShim|\.\.\/pathShim|steam\/bottleDirs|\.\/bottleDirs|pathShimPaths)['"]/
