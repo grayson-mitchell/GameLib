@@ -10,55 +10,8 @@
 use serde_json::Value;
 use std::path::PathBuf;
 
-/// The three OS flavours the TS `resolveAppDataDir` switches on.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Platform {
-    Darwin,
-    Win32,
-    Linux,
-}
-
-impl Platform {
-    pub fn current() -> Platform {
-        if cfg!(target_os = "macos") {
-            Platform::Darwin
-        } else if cfg!(windows) {
-            Platform::Win32
-        } else {
-            Platform::Linux
-        }
-    }
-
-    /// Parses the Node `process.platform` spelling the fixtures use; anything else is Linux.
-    pub fn from_node(name: &str) -> Platform {
-        match name {
-            "darwin" => Platform::Darwin,
-            "win32" => Platform::Win32,
-            _ => Platform::Linux,
-        }
-    }
-
-    fn sep(self) -> char {
-        if self == Platform::Win32 {
-            '\\'
-        } else {
-            '/'
-        }
-    }
-}
-
-/// Node `path.join` for one flavour, for the plain segments the profile uses (no `..`).
-fn join(platform: Platform, base: &str, parts: &[&str]) -> String {
-    let sep = platform.sep();
-    let mut out = base.trim_end_matches(sep).to_string();
-    for p in parts {
-        out.push(sep);
-        out.push_str(p);
-    }
-    out
-}
-
-const APP_NAME_SEGMENT: &str = "GameLib";
+pub use gamelib_core::paths::Platform;
+use gamelib_core::paths::{join, resolve as resolve_app_paths};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SidecarProfile {
@@ -77,25 +30,15 @@ impl SidecarProfile {
         home: &str,
         env_lookup: &dyn Fn(&str) -> Option<String>,
     ) -> SidecarProfile {
-        let non_empty = |k: &str| env_lookup(k).filter(|v| !v.is_empty());
-        let app_data = match platform {
-            Platform::Darwin => join(platform, home, &["Library", "Application Support"]),
-            Platform::Win32 => non_empty("APPDATA")
-                .unwrap_or_else(|| join(platform, home, &["AppData", "Roaming"])),
-            Platform::Linux => {
-                non_empty("XDG_CONFIG_HOME").unwrap_or_else(|| join(platform, home, &[".config"]))
-            }
-        };
-        let user_data = join(platform, &app_data, &[APP_NAME_SEGMENT]);
-        let config_path = join(platform, &user_data, &["config.json"]);
+        let paths = resolve_app_paths(platform, home, env_lookup);
         let restart_hold_store_path = join(
             platform,
-            &user_data,
-            &["store_cache", "steam_restart_hold.json"],
+            &paths.store_cache_dir,
+            &["steam_restart_hold.json"],
         );
         SidecarProfile {
-            user_data,
-            config_path,
+            user_data: paths.user_data,
+            config_path: paths.config_path,
             restart_hold_store_path,
             locales_dir: None,
         }

@@ -6,5 +6,7 @@
 //! `tauri` dependency and builds no tokio runtime of its own.
 
 pub mod clock;
+pub mod emitter;
+pub mod paths;
 pub mod process;
 pub mod shutdown;

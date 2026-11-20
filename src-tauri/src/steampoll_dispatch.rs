@@ -374,9 +374,27 @@ fn ack_from_invoke(result: Result<Value, String>) -> AckReply {
     }
 }
 
+/// The one place in the shell that builds the `FRONTEND_MESSAGE_EVENT` payload for a push that
+/// originates in Rust. The sidecar relay (`sidecar.rs`) builds its own for sidecar-originated ones.
+pub(crate) struct TauriFrontendEmitter(AppHandle);
+
+impl gamelib_core::emitter::FrontendEmitter for TauriFrontendEmitter {
+    fn emit(&self, channel: &str, args: Vec<Value>) {
+        // Same payload the sidecar relay emits, so the frontend is unchanged (D-04).
+        let _ = self.0.emit(
+            FRONTEND_MESSAGE_EVENT,
+            FrontendMessagePayload {
+                channel: channel.to_string(),
+                args,
+            },
+        );
+    }
+}
+
 /// The production poll host. Logs only channel names and appIds (T-80-62).
 pub(crate) struct ShellPollHost {
     app: AppHandle,
+    emitter: TauriFrontendEmitter,
     profile: SidecarProfile,
     locales_dir: PathBuf,
     helper: Option<PathBuf>,
@@ -384,14 +402,7 @@ pub(crate) struct ShellPollHost {
 
 impl PollHost for ShellPollHost {
     fn emit_frontend(&self, channel: &str, args: Vec<Value>) {
-        // Same payload the sidecar relay emits, so the frontend is unchanged (D-04).
-        let _ = self.app.emit(
-            FRONTEND_MESSAGE_EVENT,
-            FrontendMessagePayload {
-                channel: channel.to_string(),
-                args,
-            },
-        );
+        gamelib_core::emitter::FrontendEmitter::emit(&self.emitter, channel, args);
     }
 
     fn notify(&self, n: Notification) {
@@ -473,6 +484,7 @@ pub(crate) fn install_steampoll_host(app: &AppHandle) {
     let helper = bundled_bridge_helper_path(app);
     let host = Arc::new(ShellPollHost {
         app: app.clone(),
+        emitter: TauriFrontendEmitter(app.clone()),
         profile: profile.clone(),
         locales_dir,
         helper,
