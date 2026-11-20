@@ -186,6 +186,8 @@ pub fn is_fs_root(p: &Path) -> bool {
         .any(|c| matches!(c, Component::Normal(_)))
 }
 
+/// Only the unix probe flips case (Windows is always case-insensitive and never probes).
+#[cfg(unix)]
 fn flip_ascii_case(s: &str) -> String {
     s.chars()
         .map(|c| {

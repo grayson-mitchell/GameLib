@@ -314,6 +314,7 @@ mod shebang {
         (mode, applied, r)
     }
 
+    #[cfg(unix)]
     const LAUNCHER: &str = "X.app/Contents/MacOS/X";
 
     #[cfg(unix)]
@@ -902,8 +903,11 @@ fn windows_drive_root_keeps_its_prefix() {
 
 mod elf_fallback {
     use super::*;
-    use gamelib_depot::post::{apply_elf_fallback, is_shared_object_name};
+    #[cfg(unix)]
+    use gamelib_depot::post::apply_elf_fallback;
+    use gamelib_depot::post::is_shared_object_name;
 
+    #[cfg(unix)]
     fn elf(e_type: u16, data: u8) -> Vec<u8> {
         let mut b = vec![0u8; 64];
         b[..4].copy_from_slice(b"\x7fELF");
