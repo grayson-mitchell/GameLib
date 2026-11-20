@@ -1,0 +1,16 @@
+[package]
+name = "gamelib-testutil"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.77.2"
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+tempfile = "3"
+
+[lints.clippy]
+dbg_macro = "deny"
+todo = "deny"

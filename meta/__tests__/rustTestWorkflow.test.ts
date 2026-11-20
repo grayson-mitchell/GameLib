@@ -15,6 +15,8 @@ const workflow = readFileSync(
 )
 
 const TEST_RUN = 'run: cargo test -p gamelib-scan -p gamelib-scan-cli'
+// Phase 82 D-18: the safety crates run as their own step BEFORE the multi-crate step.
+const SAFETY_TEST_RUN = 'run: cargo test -p gamelib-safety -p gamelib-testutil'
 
 function steps(text: string): string[] {
   return text.split(/^ {6}- /m)
@@ -26,6 +28,21 @@ function hasScanCrateStep(text: string): boolean {
   return (
     block.includes('working-directory: src-tauri') && !/^\s*if:/m.test(block)
   )
+}
+
+function hasSafetyCrateStep(text: string): boolean {
+  const block = steps(text).find((s) => s.includes(SAFETY_TEST_RUN))
+  if (!block) return false
+  return (
+    block.includes('working-directory: src-tauri') && !/^\s*if:/m.test(block)
+  )
+}
+
+function safetyStepComesFirst(text: string): boolean {
+  const all = steps(text)
+  const safety = all.findIndex((s) => s.includes(SAFETY_TEST_RUN))
+  const multi = all.findIndex((s) => s.includes(TEST_RUN))
+  return safety !== -1 && multi !== -1 && safety < multi
 }
 
 function hasUngatedClippy(text: string): boolean {
@@ -55,6 +72,14 @@ describe('rust-test.yml covers the gamelib-scan crates', () => {
     expect(hasScanCrateStep(workflow)).toBe(true)
   })
 
+  test('has an unconditional gamelib-safety/gamelib-testutil step in src-tauri (Phase 82 D-18)', () => {
+    expect(hasSafetyCrateStep(workflow)).toBe(true)
+  })
+
+  test('the safety step runs before the multi-crate step so a red crate cannot mask it', () => {
+    expect(safetyStepComesFirst(workflow)).toBe(true)
+  })
+
   test('clippy ratchet lints the whole workspace', () => {
     expect(hasWorkspaceClippy(workflow)).toBe(true)
   })
@@ -82,6 +107,33 @@ describe('anti-vacuity: the predicates reject mutated workflows', () => {
     )
     expect(mutated).not.toBe(workflow)
     expect(hasScanCrateStep(mutated)).toBe(false)
+  })
+
+  test('rejects a workflow without the safety step', () => {
+    const mutated = workflow.replace(SAFETY_TEST_RUN, 'run: true')
+    expect(mutated).not.toBe(workflow)
+    expect(hasSafetyCrateStep(mutated)).toBe(false)
+  })
+
+  test('rejects a workflow whose safety step is conditional', () => {
+    const anchor =
+      '- name: cargo test (gamelib-safety and gamelib-testutil, run first so an earlier red crate cannot mask them; Phase 82 D-18)\n'
+    const mutated = workflow.replace(
+      anchor,
+      `${anchor}        if: runner.os == 'macOS'\n`
+    )
+    expect(mutated).not.toBe(workflow)
+    expect(hasSafetyCrateStep(mutated)).toBe(false)
+  })
+
+  test('rejects a workflow whose safety step runs after the multi-crate step', () => {
+    // Swap the two commands, so the safety command sits in the later step.
+    const mutated = workflow
+      .replace(SAFETY_TEST_RUN, '__SAFETY__')
+      .replace(TEST_RUN, SAFETY_TEST_RUN)
+      .replace('__SAFETY__', TEST_RUN)
+    expect(mutated).not.toBe(workflow)
+    expect(safetyStepComesFirst(mutated)).toBe(false)
   })
 
   test('rejects clippy without --workspace', () => {

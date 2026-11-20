@@ -162,7 +162,8 @@ describe('Phase 34.4.2 Plan 13 (operator decision D-A) objc2-app-kit NSGraphicsC
  * EXPECTED_LOCKFILE_CRATE_NAMES below was machine-generated from the current
  * `src-tauri/Cargo.lock` (`grep '^name = ' Cargo.lock | sed ... | sort -u`), not hand-typed.
  * Re-pinned by quick 261103-wjs after `70f7022af` (gilrs gamepad reader) added 9 crates, and by
- * Phase 79-01 (gamelib-steamcm, the steam-vent tree).
+ * Phase 79-01 (gamelib-steamcm, the steam-vent tree), and by Phase 82-03 (gamelib-safety,
+ * gamelib-testutil, unicode-normalization; its tinyvec dependency was already locked).
  */
 const CARGO_LOCK_PATH = join(
   __dirname,
@@ -214,8 +215,8 @@ const EXPECTED_LOCKFILE_CRATE_NAMES = [
   "find-msvc-tools", "fixedbitset", "flate2", "fnv", "foldhash", "foreign-types",
   "foreign-types-macros", "foreign-types-shared", "form_urlencoded", "fs_extra", "futures-channel", "futures-core",
   "futures-executor", "futures-io", "futures-lite", "futures-macro", "futures-sink", "futures-task",
-  "futures-util", "gamelib-depot", "gamelib-depot-cli", "gamelib-i18n", "gamelib-scan", "gamelib-scan-cli", "gamelib-shell",
-  "gamelib-steamcm", "gamelib-steamcm-cli", "gamelib-steamfiles", "gamelib-steamfiles-cli", "gamelib-steampoll", "gamelib-steampoll-cli", "gdk", "gdk-pixbuf",
+  "futures-util", "gamelib-depot", "gamelib-depot-cli", "gamelib-i18n", "gamelib-safety", "gamelib-scan", "gamelib-scan-cli", "gamelib-shell",
+  "gamelib-steamcm", "gamelib-steamcm-cli", "gamelib-steamfiles", "gamelib-steamfiles-cli", "gamelib-steampoll", "gamelib-steampoll-cli", "gamelib-testutil", "gdk", "gdk-pixbuf",
   "gdk-pixbuf-sys", "gdk-sys", "gdkwayland-sys", "gdkx11", "gdkx11-sys", "generic-array",
   "gethostname", "getrandom", "gilrs", "gilrs-core", "gio", "gio-sys",
   "glib", "glib-macros", "glib-sys", "glob", "gobject-sys", "gtk",
@@ -271,7 +272,7 @@ const EXPECTED_LOCKFILE_CRATE_NAMES = [
   "toml_edit", "toml_parser", "toml_writer", "tower", "tower-http", "tower-layer",
   "tower-service", "tracing", "tracing-attributes", "tracing-core", "tray-icon", "tree_magic_mini",
   "try-lock", "tungstenite", "typeid", "typenum", "uds_windows", "unic-char-property",
-  "unic-char-range", "unic-common", "unic-ucd-ident", "unic-ucd-version", "unicode-ident", "unicode-segmentation",
+  "unic-char-range", "unic-common", "unic-ucd-ident", "unic-ucd-version", "unicode-ident", "unicode-normalization", "unicode-segmentation",
   "untrusted", "url", "urlpattern", "utf8_iter", "uuid", "vec_map",
   "version-compare", "version_check", "vswhom", "vswhom-sys", "walkdir", "want",
   "wasi", "wasip2", "wasm-bindgen", "wasm-bindgen-futures", "wasm-bindgen-macro", "wasm-bindgen-macro-support",

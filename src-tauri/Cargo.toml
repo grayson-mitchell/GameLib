@@ -456,5 +456,7 @@ members = [
   "crates/gamelib-steampoll",
   "crates/gamelib-steampoll-cli",
   "crates/gamelib-i18n",
+  "crates/gamelib-safety",
+  "crates/gamelib-testutil",
 ]
 resolver = "2"
