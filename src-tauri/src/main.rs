@@ -836,8 +836,13 @@ fn spawn_sidecar_state(app: &tauri::App) -> Result<Arc<SidecarState>, Box<dyn st
     // runner launched).
     #[cfg(unix)]
     gamelib_proc::reaper::register_group(child.id() as i32, "sidecar");
+    // D-20 / Phase 83: the kill-on-close Job (same flags, same log-and-fall-back rule) is now
+    // created by gamelib-proc; dropping it closes the last handle and kills every member.
     #[cfg(windows)]
-    let job = create_kill_on_close_job(&child);
+    let job = {
+        use std::os::windows::io::AsRawHandle;
+        gamelib_proc::job::Job::create_for(child.as_raw_handle())
+    };
     let stdin = child.stdin.take().ok_or("sidecar stdin unavailable")?;
     let stdout = child.stdout.take().ok_or("sidecar stdout unavailable")?;
     let stderr = child.stderr.take().ok_or("sidecar stderr unavailable")?;

@@ -42,7 +42,7 @@ pub(crate) struct SidecarState {
     /// Windows kill-on-close Job Object holding the sidecar tree (D-20). `None` if creation
     /// failed (shell then falls back to `child.kill()`).
     #[cfg(windows)]
-    pub(crate) job: Mutex<Option<std::os::windows::io::OwnedHandle>>,
+    pub(crate) job: Mutex<Option<gamelib_proc::job::Job>>,
 }
 
 impl SidecarState {
@@ -68,7 +68,7 @@ impl SidecarState {
         #[cfg(unix)]
         {
             let pgid = child.id() as i32;
-            if let Err(e) = kill_process_group(pgid) {
+            if let Err(e) = gamelib_proc::kill_tree::kill_process_group(pgid) {
                 if e.raw_os_error() != Some(libc::ESRCH) {
                     shell_eprintln!("[shell] dead-sidecar group kill failed: {e}");
                 }
@@ -90,6 +90,10 @@ impl SidecarState {
         if let Err(e) = child.wait() {
             shell_eprintln!("[shell] dead-sidecar wait() failed: {e}");
         }
+        // The tree is reaped and the leader waited: a restart can recycle this pgid, so the
+        // reaper must stop holding it (D-11; a stale registration could signal an unrelated group).
+        #[cfg(unix)]
+        gamelib_proc::reaper::unregister_group(child.id() as i32);
         self.tree_reaped.store(true, Ordering::SeqCst);
     }
 
