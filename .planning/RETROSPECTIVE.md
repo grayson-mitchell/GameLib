@@ -130,6 +130,48 @@ On macOS, Windows-only Steam games now run against the user's native Mac Steam c
 - Sessions: not counted. There were 213 quick tasks in the window, and the debug directory holds 45 sessions (29 open at close).
 - Notable: the milestone ran 21 days against v0.8's 88, with roughly half v0.8's plans (264 vs 554) and all of them verified.
 
+## Milestone: v0.10 — Foundations
+
+**Shipped:** 2026-11-20 (override closeout, tech debt)
+**Phases:** 26 | **Plans:** 531 (142 quick tasks in the milestone window)
+
+### What Was Built
+
+The backend and shell are on firmer foundations, and most of the Steam stack now runs in Rust. Backend: module boundaries and a store-capability table (62), dependency injection with every service built at boot, one process runner and a `child_process` ban, and module state to zero under a test-enforced census (66–66.4). IPC payloads are schema-checked (67) and persisted stores are versioned with migrations (68). The renderer has one state system, GlobalStateV2 (69), and a shared `GameInfo` core with per-store shapes (70). The Rust shell was decomposed (71) and the renderer trust boundary hardened (72). In Rust: executable scanners (63), the depot pipeline (73), Steam's local file formats (75), the CM client replacing steam-user and steam-session (79), and the install/uninstall/update polls (80). User-facing: one Engine control for every store on macOS (61), the theme gallery and editor (64), Steam game updates (74), IsThereAnyDeal store search (47) and restart-on-Play (81). The six v0.9 audit debts were closed (76–78). 3,423 commits over 14 days.
+
+### What Worked
+
+- **One recipe for every Rust port.** Phase 63 wrote it down: a Tauri-free crate with a CLI, rustInvoke with the TS signatures unchanged, a parity harness, a dev fallback flag, a live gate, then a deletion gate. Phases 73, 75, 79 and 80 followed it, and each deleted its TypeScript at the end.
+- **Shrink-only ratchets, then a zero-tolerance test.** The moduleState, childProcess and jestMock ceilings in 66–66.4 gave each plan a number to lower, and the census became a test once it reached zero.
+- **Parity replay before deleting stateful code.** Phases 75 and 80 replayed real Steam files and poll traces against both implementations and listed every divergence for the operator to accept.
+- **The integration check found no broken seams** across the 73 → 75 → 80 → 81 → 74 chain, even though later phases rewrote earlier phases' code.
+
+### What Was Inefficient
+
+- **Retroactive adoption.** Phases 61–75 ran without a milestone and were adopted when v0.10 was defined. Their requirement IDs were never cited in SUMMARYs (ARCH-01, ARCH-02, DEBT-04, DEBT-06 rest on verification text alone), and Nyquist validation was never reconciled for 11 phases.
+- **The milestone kept growing.** It started as Phases 61–78 plus 47. Phases 79–81 were added mid-milestone, so the close waited on 81's live gate, which still has an item that cannot be reproduced on this machine.
+- **Verification statuses went stale.** 72 and 74 kept `human_needed` after their human items were resolved or triaged, and REQUIREMENTS.md still listed 69's UAT as pending.
+- **The same 140 v0.8 table rows blocked the close again.** gsd-core cannot mark a table row, so they resurface at every scan.
+
+### Patterns Established
+
+- **Every port phase deletes its TypeScript, and a deletion test keeps it deleted** (`scannerPortComplete`, `steamFilesPortComplete`, `steamCmPortComplete`, `steamPollsPortComplete`).
+- **Boot owns everything.** No backend module holds mutable state; timers and pollers are boot steps, unref'd and stopped at stdin EOF.
+- **Strict schemas at both ends of IPC and on disk**, with versioned migrations that back up first and fail read-only.
+
+### Key Lessons
+
+1. **Define the milestone before running its phases.** Adopting 15 finished phases cost traceability that is cheap to write at planning time and expensive to rebuild at audit time.
+2. **Freeze the milestone scope or close it early.** Adding 79–81 mid-milestone tied the close to the slowest live gate.
+3. **Update a verification's frontmatter status in the commit that resolves its human items.**
+4. **Restructure deferred-items tables when you write them.** Bullet entries can be acknowledged; table rows never can.
+
+### Cost Observations
+
+- Model mix: not measured for this milestone.
+- Sessions: not counted. 142 quick tasks in the window; the debug directory holds 52 sessions (19 open at close, all acknowledged).
+- Notable: 26 phases and 531 plans in 14 days, twice v0.9's plan count in two-thirds of the time.
+
 ## Cross-Milestone Trends
 
 | Milestone | Phases | Plans | Audit | Notable |
@@ -138,3 +180,4 @@ On macOS, Windows-only Steam games now run against the user's native Mac Steam c
 | v0.2–v0.7 | 22 | ~200 | v0.2 gaps_found; others none | never archived; v0.7 never closed (Phase 23 gaps) |
 | v0.8 Tauri Shell | 45 | 554 (+235 quick) | partial, gaps_found (27–28 only) | override closeout; 26/45 unverified; 429 acknowledged, 140 table rows un-markable |
 | v0.9 Steam Bridge & Engine | 10 | 264 (+213 quick) | tech_debt (full scope, no blockers) | verified closeout; 10/10 passed; 782 deferred unmarked |
+| v0.10 Foundations | 26 | 531 (+142 quick) | tech_debt (17/17, no blockers) | override closeout; 72/74/81 human_needed; 210 acknowledged with markers, 140 v0.8 table rows still open |
