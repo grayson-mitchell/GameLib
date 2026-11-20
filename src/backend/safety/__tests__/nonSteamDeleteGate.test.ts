@@ -106,5 +106,12 @@ describe('non-Steam uninstall/reset files hold no raw recursive delete (82-07)',
     )
     expect(di).toHaveLength(1)
     expect(di.filter((d) => !isAllowed(d))).toHaveLength(1)
+    // Options held in a variable are suspect too.
+    const opaque = findRawRecursiveDeletes(
+      'rmSync(prefix, OPTS)\n',
+      'src/backend/utils/uninstaller.ts'
+    )
+    expect(opaque).toHaveLength(1)
+    expect(opaque.filter((d) => !isAllowed(d))).toHaveLength(1)
   })
 })

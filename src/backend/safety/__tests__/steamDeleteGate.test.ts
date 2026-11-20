@@ -113,6 +113,10 @@ describe('Steam uninstall/cancel/copy files hold no raw recursive delete (82-09)
       )
       expect(di).toHaveLength(1)
       expect(di.filter((d) => !isAllowed(d))).toHaveLength(1)
+      // Options held in a variable are suspect too.
+      const opaque = findRawRecursiveDeletes('rmSync(prefix, OPTS)\n', file)
+      expect(opaque).toHaveLength(1)
+      expect(opaque.filter((d) => !isAllowed(d))).toHaveLength(1)
     }
   })
 })

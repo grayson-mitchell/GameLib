@@ -78,6 +78,46 @@ describe('findRawRecursiveDeletes', () => {
     expect(findRawRecursiveDeletes(src, 'h.ts')).toEqual([])
   })
 
+  it('reports an options argument that is not an object literal as opaque-options', () => {
+    const probes = [
+      `rmSync(x, OPTS)`,
+      `rm(x, { ...opts })`,
+      `fs.rmSync(x, makeOpts())`,
+      `rmSync(x, cond ? a : b)`,
+      `rm(...args)`
+    ]
+    const out = findRawRecursiveDeletes(probes.join('\n'), 'i.ts')
+    expect(out.map((o) => o.line)).toEqual([1, 2, 3, 4, 5])
+    expect(out.every((o) => o.reason === 'opaque-options')).toBe(true)
+  })
+
+  it('tags a literal recursive option as recursive-option', () => {
+    const out = findRawRecursiveDeletes(
+      `deps.fs.rmSync(x, { recursive: true })\nrmSync(x, OPTS)\n`,
+      'j.ts'
+    )
+    expect(out.map((o) => o.reason)).toEqual([
+      'recursive-option',
+      'opaque-options'
+    ])
+  })
+
+  it('does not report declarations, only calls', () => {
+    const src = [
+      `function rm(path: string, opts: RmOptions) {}`,
+      `class A {`,
+      `  async rmdir(p, o) {}`,
+      `}`,
+      `const x = { rm(a, b) { return a } }`
+    ].join('\n')
+    expect(findRawRecursiveDeletes(src, 'k.ts')).toEqual([])
+  })
+
+  it('does not report a single-argument rmdirSync or a literal non-recursive options object', () => {
+    const src = [`rmdirSync(dir)`, `rmSync(x, { force: true })`].join('\n')
+    expect(findRawRecursiveDeletes(src, 'l.ts')).toEqual([])
+  })
+
   it('does not trip on a string that merely contains parentheses or comment markers', () => {
     const src = `rmSync(join(a, ')//'), { recursive: true })\n`
     const out = findRawRecursiveDeletes(src, 'f.ts')
