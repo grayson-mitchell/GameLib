@@ -1,12 +1,11 @@
 /**
  * The boot's `resolveAppPaths` seams that moved out of the retired `sidecar/pathShim`:
- * the lazy `exe` accessor (GAMELIB_SHELL_EXE, T-34.5-01/02) and the CI=e2e config root, which is
- * a name only (no I/O: the 'app-folder' step creates it). Jest's `setupFiles` redirect the home
+ * the lazy `exe` accessor (GAMELIB_SHELL_EXE, T-34.5-01/02) and the production config root (the OS
+ * appData, with no I/O: the 'app-folder' step owns the rename). Jest's `setupFiles` redirect the home
  * and the XDG/APPDATA variables, so everything resolved here is contained.
  */
-import { existsSync, realpathSync } from 'fs'
+import { existsSync } from 'fs'
 import { dirname } from 'path'
-import { tmpdir } from 'os'
 
 function freshResolve(): () => Record<string, unknown> {
   let resolveAppPaths!: () => Record<string, unknown>
@@ -19,11 +18,9 @@ function freshResolve(): () => Record<string, unknown> {
 
 describe('resolveAppPaths', () => {
   let savedExe: string | undefined
-  let savedCi: string | undefined
 
   beforeEach(() => {
     savedExe = process.env.GAMELIB_SHELL_EXE
-    savedCi = process.env.CI
     delete process.env.GAMELIB_SHELL_EXE
   })
 
@@ -32,8 +29,6 @@ describe('resolveAppPaths', () => {
     // unset" case pass for the wrong reason.
     if (savedExe === undefined) delete process.env.GAMELIB_SHELL_EXE
     else process.env.GAMELIB_SHELL_EXE = savedExe
-    if (savedCi === undefined) delete process.env.CI
-    else process.env.CI = savedCi
   })
 
   it('exe returns GAMELIB_SHELL_EXE verbatim when set', () => {
@@ -64,13 +59,10 @@ describe('resolveAppPaths', () => {
     expect(paths.knownFolder('documents')).toMatch(/Documents$/)
   })
 
-  it('CI=e2e: appFolder sits under a fresh temp name and resolving it creates nothing', () => {
-    process.env.CI = 'e2e'
+  it('appFolder sits directly under the OS appData and resolving it creates nothing', () => {
     const paths = freshResolve()() as { appFolder: string; userData: string }
-    const configRoot = dirname(paths.appFolder)
-    expect(dirname(configRoot)).toBe(realpathSync(tmpdir()))
-    expect(existsSync(configRoot)).toBe(false)
-    // userData still follows the OS appData, not the e2e root.
-    expect(paths.userData).not.toContain(configRoot)
+    // The config root and userData share the OS appData parent: no redirected root.
+    expect(dirname(paths.appFolder)).toBe(dirname(paths.userData))
+    expect(existsSync(paths.appFolder)).toBe(false)
   })
 })

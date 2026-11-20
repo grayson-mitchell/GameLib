@@ -11,7 +11,6 @@ export const fetchLastestReleases = (
     onlineMonitor: Pick<OnlineMonitor, 'runOnceWhenOnline'>
   } & AppRuntimeSlice<'events'>
 ) => {
-  if (process.env.CI === 'e2e') return
   if (isWindows) return
 
   deps.onlineMonitor.runOnceWhenOnline(async () => {

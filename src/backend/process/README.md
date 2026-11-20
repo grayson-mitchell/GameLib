@@ -239,8 +239,7 @@ runs from one named step once per process), so a second call is a bug the boot-s
 than a state variable that hides it. Sanctioning five more files would have widened the list the census
 test treats as a reviewed decision.
 
-**New boot steps, one line each:** `app-folder` (first step: heroic -> GameLib rename and the CI=e2e app
-folder); `stores` (builds the `StoreRoot` from `ctx.paths.userData`); `engine-runtime`; the Steam launch,
+**New boot steps, one line each:** `app-folder` (first step: the heroic -> GameLib config-folder rename); `stores` (builds the `StoreRoot` from `ctx.paths.userData`); `engine-runtime`; the Steam launch,
 bridge and install runtimes; the GOG, Legendary and Nile runtimes; `info-caches` (system info and
 HowLongToBeat); `abort-registry` (abort controllers and the Wine window raiser); the tools state;
 `app-shell-state` (before `register-handlers`); `app-runtime` (event bus, frontend-ready flag, launch
@@ -271,8 +270,7 @@ Phase 66.4 owns:
   `userDataPath`, `publicDir` from `GAMELIB_APP_ROOT`/`isPackagedSidecar()`), `steam/constants.ts`
   (`steamSupportPath`). (Done in 66.4-20: `constants/paths.ts`, `sidecar/pathShim.ts` and the Steam
   `bottleDirs.ts` shim are deleted. `process/appPaths.ts` derives every path from explicit roots,
-  `resolveAppPaths` in the boot supplies them, and the heroic -> GameLib rename plus the CI=e2e app
-  folder run in the first boot step, `app-folder`.)
+  `resolveAppPaths` in the boot supplies them, and the heroic -> GameLib rename runs in the first boot step, `app-folder`.)
 - **Latches (done, 66.4-19: converted, D-66.4-01; originally listed as surviving):** the module-level `registered` / `currentRegistry` guards in
   `devEpicCookieSweep`, `runnerAuth` and the store-layer registrations.
 - **D-66.3-05 (open until 66.4-22):** the live macOS smoke with the scripted orphan/exit checker.

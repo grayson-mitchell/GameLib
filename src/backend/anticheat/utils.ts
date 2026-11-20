@@ -30,7 +30,6 @@ async function downloadAntiCheatData(
   },
   latestFileHash?: string
 ) {
-  if (process.env.CI === 'e2e') return
   if (isWindows) return
 
   if (existsSync(anticheatDataPath(deps.paths))) {

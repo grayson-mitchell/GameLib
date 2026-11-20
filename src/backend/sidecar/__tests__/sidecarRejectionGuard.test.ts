@@ -538,17 +538,7 @@ const EXIT_LISTENER_CEILING = 32
 process.setMaxListeners(EXIT_LISTENER_CEILING)
 
 describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2 / CR-02 / T-34.2-38..41)', () => {
-  let originalCi: string | undefined
-
   beforeAll(() => {
-    // downloadAntiCheatData and fetchLastestReleases both early-return on
-    // `process.env.CI === 'e2e'` -- this suite must never be under that value (mirrors
-    // bootstrapWirings.test.ts).
-    originalCi = process.env.CI
-    if (process.env.CI === 'e2e') {
-      delete process.env.CI
-    }
-
     // T-34.2-42 / CR-03 / WR-01 containment tripwire: prove `appFolder`, `userDataPath`,
     // `fixesPath` (via the `pathShim` mock) AND `getLogFilePath({})` (via the
     // `backend/logger/paths` mock) all resolve inside `os.tmpdir()`, using the SAME
@@ -574,11 +564,6 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
   })
 
   afterAll(() => {
-    if (originalCi === undefined) {
-      delete process.env.CI
-    } else {
-      process.env.CI = originalCi
-    }
     // Deviation precedent (bootstrapWirings.test.ts's own `afterAll`): deleting the tmp home
     // directory tree here is deliberately NOT done -- `initLogger()`'s fire-and-forget log
     // writes can still be mid-flight when this hook runs, and a directory removal out from

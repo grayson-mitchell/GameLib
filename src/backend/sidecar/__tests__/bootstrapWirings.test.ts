@@ -321,23 +321,7 @@ function bootWirings(beforeBoot?: (h: WiringHandles) => void): WiringHandles & {
 }
 
 describe('sidecar bootstrap wirings (Phase 34.2 Plan 01 -- REQ-34.2-02/04/07/14)', () => {
-  let originalCi: string | undefined
-
-  beforeAll(() => {
-    // Both fetchLastestReleases and downloadAntiCheatData early-return on
-    // `process.env.CI === 'e2e'` -- this suite must never be under that value.
-    originalCi = process.env.CI
-    if (process.env.CI === 'e2e') {
-      delete process.env.CI
-    }
-  })
-
   afterAll(() => {
-    if (originalCi === undefined) {
-      delete process.env.CI
-    } else {
-      process.env.CI = originalCi
-    }
     // Deviation (Rule 1 -- bug, found empirically running this suite repeatedly):
     // deleting the tmp home directory tree here -- even once, after every test's own
     // `await`s have settled -- reproducibly crashed the WHOLE Node process with an

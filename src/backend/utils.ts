@@ -922,8 +922,6 @@ const getLatestReleases = async (): Promise<Release[]> => {
 const getCurrentChangelog = async (deps: {
   paths: Pick<AppPaths, 'publicDir'>
 }): Promise<Release | null> => {
-  if (process.env.CI === 'e2e') return null
-
   try {
     const changelogPath = join(deps.paths.publicDir, 'changelog.json')
     const content = readFileSync(changelogPath, 'utf-8')

@@ -140,15 +140,8 @@ export function derivePaths(roots: AppPathRoots): Readonly<DerivedAppPaths> {
   // every bundled asset (helper, shim, icon, preload, locales). getAppPath() is
   // depth-independent and already the established fix for the sibling
   // build/preload lookup that main_window.ts once did. Non-packaged points at the source
-  // `public/` tree (where build-steam-bridge stages the helper); packaged/CI
+  // `public/` tree (where build-steam-bridge stages the helper); packaged
   // points at the flattened `build/` output root.
-  // `CI === 'e2e'` IS CURRENTLY UNREACHABLE, and that is a recorded decision, not an
-  // oversight. Phase 35 Plan 14 deleted the Playwright suite along with the Electron shell it
-  // launched, and `test:e2e` was the ONLY thing in the repo that set `CI=e2e`. The clause is
-  // kept deliberately (Task 2, option-c): it is the cheap packaged-asset-resolution harness
-  // that `35-CONTEXT.md` D-19 and the ROADMAP both point at, and whoever builds the Tauri e2e
-  // path will want the hook already here with an explanation rather than an orphan to
-  // reverse-engineer. DO NOT delete it as dead code without reading D-35-14-01.
   const publicDir = resolve(roots.appRoot, roots.assetDir)
   const darwinBin = (file: string) =>
     fixAsarPath(join(publicDir, 'bin', arch, 'darwin', file))

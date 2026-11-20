@@ -20,8 +20,7 @@ import {
 } from './outboundHttpRegistry'
 
 import type { Readable, Writable } from 'node:stream'
-import { existsSync, mkdirSync, renameSync } from 'graceful-fs'
-import { dirSync, tmpNameSync } from 'tmp'
+import { existsSync, renameSync } from 'graceful-fs'
 import { join } from 'node:path'
 import Backend from 'i18next-fs-backend'
 import i18next from 'i18next'
@@ -296,7 +295,7 @@ import MigrationSystem from '../migration'
  * before its channel exists); READY precedes the sign-in probe and the
  * startup protocol URL.
  *
- * 'app-folder' is FIRST (D-66.4-04): the heroic -> GameLib rename and the CI=e2e app folder must
+ * 'app-folder' is FIRST (D-66.4-04): the heroic -> GameLib config-folder rename must
  * precede every step that reads under the app folder (pathsBootOrder.test.ts pins it).
  *
  * 'stores' follows 'logger' and precedes 'migrations' (which reads `migrationsStore`);
@@ -1357,17 +1356,12 @@ export function resolveAppPaths(): AppPaths {
   const appRoot = process.env.GAMELIB_APP_ROOT || process.cwd()
   const derived = derivePaths({
     appData,
-    // CI=e2e (unreachable, D-35-14-01): a name only, no I/O; the 'app-folder' step creates it.
-    configRoot:
-      process.env.CI === 'e2e'
-        ? tmpNameSync({ prefix: 'gamelib-e2e-' })
-        : appData,
+    configRoot: appData,
     home,
     userHome: isSnap ? process.env.SNAP_REAL_HOME! : home,
     flatpakHome: process.env.XDG_DATA_HOME?.replace('/data', '') || home,
     appRoot,
-    assetDir:
-      isPackagedSidecar() || process.env.CI === 'e2e' ? 'build' : 'public',
+    assetDir: isPackagedSidecar() ? 'build' : 'public',
     arch: process.arch,
     tempDir: tmpdir()
   })
@@ -1501,14 +1495,11 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
   return [
     {
       name: 'app-folder',
-      // The heroic -> GameLib config-folder move and the CI=e2e app folder, ahead of every step that
+      // The heroic -> GameLib config-folder move, ahead of every step that
       // reads under the app folder (D-66.4-04). Synchronous and bounded; holds no handle.
       run: (ctx) => {
         prepareAppFolder(ctx.paths, {
-          env: process.env,
-          fs: { existsSync, mkdirSync, renameSync },
-          dirSync,
-          log: (line) => console.log(line),
+          fs: { existsSync, renameSync },
           logError: (line) => console.error(line)
         })
       }
@@ -3057,7 +3048,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // Block B — fetchLastestReleases() (D-07). Must run AFTER initOnlineMonitor() above,
         // because fetchLastestReleases wraps its work in runOnceWhenOnline, and AFTER Block A so
         // the releasesInfoReady listener exists before the event it responds to can fire. Its own
-        // `process.env.CI === 'e2e'` and `isWindows` early-returns are preserved unchanged by
+        // `isWindows` early-return is preserved unchanged by
         // calling it as-is — not replicated or bypassed here.
         try {
           fetchLastestReleases({

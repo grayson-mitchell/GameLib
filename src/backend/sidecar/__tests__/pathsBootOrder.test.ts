@@ -1,7 +1,6 @@
 /**
  * Boot-order gate for the 'app-folder' step (D-66.4-04). Boots nothing and mocks nothing: it
- * reads BOOT_STEP_NAMES from source text. The heroic -> GameLib config-folder rename (and the
- * CI=e2e app folder) must happen before anything reads under the app folder, and `constants/paths`
+ * reads BOOT_STEP_NAMES from source text. The heroic -> GameLib config-folder rename must happen before anything reads under the app folder, and `constants/paths`
  * used to guarantee that implicitly by running at import. 'app-folder' is therefore the FIRST
  * step, ahead of 'logger', 'stores', 'migrations', 'config' and 'secret-vault'.
  */

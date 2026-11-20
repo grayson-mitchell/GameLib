@@ -221,7 +221,7 @@ export function createProcessGuards() {
    *
    * TWO THINGS FROM THE ELECTRON ORIGINAL ARE DELIBERATELY NOT PORTED:
    *
-   *   1. `if (process.env.CI === 'e2e') return`. That early return existed for exactly one
+   *   1. The e2e-harness early return (an environment check on `CI`). It existed for exactly one
    *      reason, stated in its own comment: to skip the error BOX, which would block the
    *      Electron e2e harness until its timeout. It never gated the logging (`logError` ran
    *      first, above it). Plan 35-01's census established that harness is Electron-only and

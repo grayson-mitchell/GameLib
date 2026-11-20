@@ -219,11 +219,6 @@ export function createOnlineMonitor(deps: OnlineMonitorDeps): OnlineMonitor {
   }
 
   const pingSites = () => {
-    if (process.env.CI === 'e2e') {
-      setStatus('online')
-      return
-    }
-
     // Always called with nothing in flight: `setStatus` cancels whatever was running before it
     // starts a round (that is how a second request to check, which the renderer's DOM `online`
     // event echoes, replaces the running round instead of racing it), and the countdown only
@@ -323,7 +318,7 @@ export function createOnlineMonitor(deps: OnlineMonitorDeps): OnlineMonitor {
       // Backend-owned offline detection. Clock timers are unref'd by default (exit is by
       // event-loop drain at stdin EOF), and the first tick is one interval after boot, so
       // nothing extra is in flight at boot.
-      if (deps.freshOfflineCheck && process.env.CI !== 'e2e') {
+      if (deps.freshOfflineCheck) {
         deps.clock.setInterval(
           watchTick,
           deps.offlineWatchIntervalMs ?? OFFLINE_WATCH_INTERVAL_MS

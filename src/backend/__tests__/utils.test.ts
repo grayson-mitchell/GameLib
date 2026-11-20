@@ -111,14 +111,6 @@ describe('backend/utils.ts', () => {
   })
 
   describe('getCurrentChangelog', () => {
-    it('returns null in e2e CI mode', async () => {
-      const originalCI = process.env.CI
-      process.env.CI = 'e2e'
-      const result = await utils.getCurrentChangelog({ paths })
-      expect(result).toBeNull()
-      process.env.CI = originalCI
-    })
-
     it('reads Release from local bundled file (not GitHub API)', async () => {
       const mockRelease = {
         id: 1,
