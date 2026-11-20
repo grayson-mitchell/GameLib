@@ -81,7 +81,7 @@ async function readWinePrefix(
  * has no prefix configured, otherwise the guard's result: only `outcome: 'removed'` means the
  * prefix is gone (an already-absent prefix reads as removed).
  */
-export const removePrefix = async (
+const removePrefix = async (
   deps: UninstallerDeps,
   appName: string,
   runner: Runner

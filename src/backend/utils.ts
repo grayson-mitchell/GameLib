@@ -14,7 +14,7 @@ import https from 'node:https'
 // `sidecar/platform/index.ts`: `process.env.npm_package_version` is UNSET in the packaged
 // SEA sidecar binary, so it cannot be the source of the User-Agent version below.
 import pkg_json from 'backend/../../package.json'
-import { existsSync, mkdirSync, readFileSync, rmSync } from 'graceful-fs'
+import { existsSync, mkdirSync, readFileSync } from 'graceful-fs'
 import i18next, { t } from 'i18next'
 import { tOrFallback } from './i18nFallback'
 
@@ -67,6 +67,13 @@ import { isStore } from 'common/storeCapabilities'
 import type { SpawnAsync } from './spawnAsync'
 import type { RustInvokeDeps } from './host/rustInvokeDeps'
 import { RUST_STEAMFILES_READ_LIBRARY_FOLDERS } from 'common/types/sidecarTransport'
+import { guardedRemoveTree } from './safety/rustSafety'
+import { collectKnownInstalls, titleForKnownKey } from './safety/knownInstalls'
+import {
+  protectedRootsFor,
+  type ProtectedRootsDeps
+} from './safety/protectedRoots'
+import { pushRemovalRefusal } from './safety/refusal'
 import { invokeSteamFiles } from './storeManagers/steam/localFiles/rustSteamFiles'
 
 /**
@@ -376,19 +383,55 @@ function clearAchievementCache(
   deps.stores.gog.achievementStore.delete(appName)
 }
 
-function resetHeroic(deps: {
-  appState: Pick<AppState, 'relaunch' | 'quit'>
-  paths: Pick<AppPaths, 'gamesConfigPath' | 'configPath'>
-}) {
-  const appFolders = [deps.paths.gamesConfigPath, deps.paths.configPath]
-  appFolders.forEach((folder) => {
-    rmSync(folder, { recursive: true, force: true })
+/**
+ * Phase 82 (D-11, D-14): resetting deletes GameLib's own data (the per-game config folder and
+ * config.json) through the Rust guard. Both targets must sit strictly inside the app folder and
+ * clear the protected roots and known installs BEFORE either is deleted. A refusal tells the user
+ * and returns without starting the relaunch, so a refused reset leaves the app running as it was.
+ */
+async function resetHeroic(
+  deps: {
+    appState: Pick<AppState, 'relaunch' | 'quit'>
+    paths: Pick<AppPaths, 'gamesConfigPath' | 'configPath'> &
+      ProtectedRootsDeps['paths']
+    config: ProtectedRootsDeps['config']
+    libraryManagers: ManagerDeps['libraryManagers']
+  } & RustInvokeDeps &
+    Pick<ManagerDeps, 'sendFrontendMessage'>
+): Promise<void> {
+  const trustRoot = deps.paths.appFolder
+  const removed = await guardedRemoveTree(deps, {
+    targets: [
+      {
+        id: 'games-config',
+        path: deps.paths.gamesConfigPath,
+        kind: 'app-data',
+        trustRoot
+      },
+      { id: 'config', path: deps.paths.configPath, kind: 'app-data', trustRoot }
+    ],
+    knownInstalls: collectKnownInstalls(deps),
+    protectedRoots: protectedRootsFor(deps)
   })
-  // wait a sec to avoid racing conditions
-  setTimeout(() => {
+  if (removed.outcome !== 'removed') {
+    const otherTitle = removed.otherKey
+      ? titleForKnownKey(deps, removed.otherKey)
+      : undefined
+    pushRemovalRefusal(deps, {
+      kind: 'reset',
+      outcome: removed.outcome,
+      reason: removed.reason ?? 'bad-reply',
+      ...(otherTitle ? { otherTitle } : {})
+    })
+    return
+  }
+  // wait a sec to avoid racing conditions; unref'd so a pending relaunch never holds the
+  // sidecar's event loop open past stdin EOF (exit contract)
+  const timer = setTimeout(() => {
     deps.appState.relaunch()
     deps.appState.quit()
   }, 1000)
+  timer.unref?.()
 }
 
 function showItemInFolder(

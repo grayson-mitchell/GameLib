@@ -148,7 +148,11 @@ jest.mock('../../storeManagers/legendary/stores', () => {
 // manager. Without this stub that reaches the REAL legendary runner machinery (`launcher.ts`'s
 // `callRunner`, an actual `child_process.spawn()`) ────────────────────────────────────────────
 jest.mock('backend/storeManagers', () => {
-  const libraryManagerMap = { legendary: { runRunnerCommand: jest.fn() } }
+  // `getListOfGames` is a plain function, not a jest.fn: resetMocks would wipe its return value, and
+  // the safety guard (82-07) reads every manager's installed list for the known-installs check.
+  const libraryManagerMap = {
+    legendary: { runRunnerCommand: jest.fn(), getListOfGames: () => [] }
+  }
   return {
     libraryManagerMap,
     // The boot builds its managers through this factory (66.1-23); it hands back the stub table.
@@ -203,6 +207,7 @@ import {
   sidInfoUrl
 } from '../../constants/urls'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
+import { fakeSafetyRustInvoke } from 'backend/testUtils/fakeSafetyRust'
 
 // The config paths a boot derives for the jest-contained HOME (`jest.setupContainment`).
 const { configPath, gamesConfigPath } = createContainedHomeAppPaths()
@@ -743,6 +748,12 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
         expect(configPath.startsWith(realTmpDir)).toBe(true)
         expect(gamesConfigPath.startsWith(realTmpDir)).toBe(true)
 
+        // Phase 82 (D-11): the delete goes through the Rust guard; answer it with the fake.
+        mockRequestRustInvoke.mockImplementation(
+          fakeSafetyRustInvoke({ base: () => Promise.resolve(undefined) })
+            .requestRustInvoke
+        )
+
         mkdirSync(dirname(configPath), { recursive: true })
         writeFileSync(configPath, '{}')
         mkdirSync(gamesConfigPath, { recursive: true })
@@ -771,6 +782,57 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
           RUST_APP_RELAUNCH,
           []
         )
+      })
+
+      // D-12: an injected rejection of the safety check refuses the reset, deletes nothing,
+      // tells the user and never relaunches or quits.
+      it('rejects: a failed safety check keeps both targets, reports a reset notice and never relaunches', async () => {
+        mockRequestRustInvoke.mockImplementation(
+          fakeSafetyRustInvoke({
+            rejectCheck: true,
+            base: () => Promise.resolve(undefined)
+          }).requestRustInvoke
+        )
+        mkdirSync(dirname(configPath), { recursive: true })
+        writeFileSync(configPath, '{}')
+        mkdirSync(gamesConfigPath, { recursive: true })
+
+        const { input, frames } = boot()
+        writeSend(input, 'reset-heroic-2', 'resetHeroic', [])
+        await flush()
+        jest.advanceTimersByTime(5000)
+        await flush()
+
+        expect(existsSync(configPath)).toBe(true)
+        expect(existsSync(gamesConfigPath)).toBe(true)
+        expect(mockRequestRustInvoke).not.toHaveBeenCalledWith(
+          RUST_APP_RELAUNCH,
+          []
+        )
+        const notices = frames.filter(
+          (f) =>
+            f.kind === 'frontendMessage' && f.channel === 'removalRefusedNotice'
+        )
+        expect(notices).toHaveLength(1)
+        expect(JSON.stringify(notices[0])).toContain('"kind":"reset"')
+        expect(JSON.stringify(notices[0])).toContain('"outcome":"refused"')
+        expect(JSON.stringify(notices[0])).toContain(
+          '"reason":"rust-invoke-failed"'
+        )
+        // Not a single delete was requested.
+        const channels = mockRequestRustInvoke.mock.calls.map((c) => c[0])
+        expect(channels).not.toContain('safety_remove_tree')
+        // A refused reset is retryable: clicking again gives the same verdict.
+        writeSend(input, 'reset-heroic-3', 'resetHeroic', [])
+        await flush()
+        expect(existsSync(configPath)).toBe(true)
+        expect(
+          frames.filter(
+            (f) =>
+              f.kind === 'frontendMessage' &&
+              f.channel === 'removalRefusedNotice'
+          )
+        ).toHaveLength(2)
       })
     })
   })

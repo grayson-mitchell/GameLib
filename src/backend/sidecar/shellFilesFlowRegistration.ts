@@ -26,10 +26,11 @@
  *       which never throws), reproducing `main.ts:787-803`'s exact body
  *     - `clearAchievementCache` -> `utils.ts`'s `clearAchievementCache(appName)`
  *       + `logInfo(...)` from `../logger` (`main.ts:805-811`)
- *     - `resetHeroic` -> `utils.ts`'s `resetHeroic()`, UNMODIFIED — no
- *       build-conditional branch added here or in `utils.ts`; the
- *       `app.relaunch()` -> `app.quit()` ordering race is fixed entirely
- *       inside `platformApi` by plan 34.3-05 (`main.ts:813`)
+ *     - `resetHeroic` -> `utils.ts`'s `resetHeroic(deps)`. Since Phase 82 plan 07 it is async
+ *       and guarded: both targets are checked by the Rust safety guard before either is deleted,
+ *       a refusal pushes a notice and does NOT relaunch or quit; no build-conditional branch
+ *       is added here or in `utils.ts`; the `app.relaunch()` -> `app.quit()` ordering race
+ *       is fixed entirely inside `platformApi` by plan 34.3-05 (`main.ts:813`)
  *
  *   invoke (deps.ipc.handle, 3):
  *     - `checkDiskSpace` -> `utils/filesystem`'s `getDiskInfo`/`isWritable`/
@@ -148,8 +149,25 @@ export function registerShellFilesFlows(deps: {
   /** This boot's backend -> frontend push (66.4-15). */
   pushFrontendMessage: HostServices['pushFrontendMessage']
   sendFrontendMessage: HostServices['sendFrontendMessage']
-  /** The boot's paths (66.4-16): the config file and the per-game config folder. */
-  paths: Pick<BootServices['paths'], 'configPath' | 'gamesConfigPath'>
+  /**
+   * The boot's paths (66.4-16): the config file and the per-game config folder, plus the app folder
+   * and the roots the safety guard protects (82-07, D-11).
+   */
+  paths: Pick<
+    BootServices['paths'],
+    | 'configPath'
+    | 'gamesConfigPath'
+    | 'appFolder'
+    | 'userHome'
+    | 'heroicInstallPath'
+    | 'defaultWinePrefixDir'
+    | 'defaultWinePrefix'
+    | 'sharedWinePrefix'
+  >
+  /** Settings, for the guard's protected roots (82-07). */
+  config: Pick<BootServices['config'], 'getSettings'>
+  /** The sidecar -> Rust leg the safety guard asks (82-07). */
+  requestRustInvoke: HostServices['requestRustInvoke']
 }): void {
   // ── send (11): the URL openers (constant URLs go straight to shell.openExternal) ────
 
@@ -284,25 +302,24 @@ export function registerShellFilesFlows(deps: {
     }
   )
 
-  // ── send (1): resetHeroic — main.ts:813. Calls the UNMODIFIED utils.ts
-  // body; no build-conditional branch here or in utils.ts. The relaunch/quit
+  // ── send (1): resetHeroic — main.ts:813. Calls utils.ts's guarded, async
+  // resetHeroic (82-07); no build-conditional branch here or in utils.ts. The relaunch/quit
   // ordering race is fixed entirely inside platformApi by plan 34.3-05.
   // Real blast radius: deletes ONLY configPath + gamesConfigPath — every
   // other electron-store file in appFolder (Steam token/library, all 10
   // Humble stores, download manager, Wine/wiki/crossover caches) survives ──
 
   deps.ipc.on('resetHeroic', () => {
-    try {
-      resetHeroic({
-        ...deps,
-        paths: {
-          configPath: deps.paths.configPath,
-          gamesConfigPath: deps.paths.gamesConfigPath
-        }
-      })
-    } catch (error) {
-      logSendFailure('resetHeroic', error)
-    }
+    // Async since 82-07: the guard answers from Rust. The listener returns at once; a failure
+    // outside the guard's own refusal handling (which never throws) is logged here.
+    void resetHeroic({
+      appState: deps.appState,
+      paths: deps.paths,
+      config: deps.config,
+      libraryManagers: deps.managers.library,
+      requestRustInvoke: deps.requestRustInvoke,
+      sendFrontendMessage: deps.sendFrontendMessage
+    }).catch((error) => logSendFailure('resetHeroic', error))
   })
 
   // ── invoke (3): filesystem/diagnostics ────────────────────────────────────
