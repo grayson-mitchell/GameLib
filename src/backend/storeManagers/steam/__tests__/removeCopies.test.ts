@@ -41,6 +41,7 @@ import type { Stores } from 'backend/services/types'
 
 import { createTestGlobalConfig } from 'backend/testUtils/testConfig'
 import { EMPTY_POLL_STATUS } from 'backend/testUtils/steamPollStatusFake'
+import { fakeSafetyRustInvoke } from 'backend/testUtils/fakeSafetyRust'
 
 // 66.3-15: the bottle helpers are read through the deps slice, so they are plain mocks here.
 // quick 261024-cjq: plain function (survives resetMocks) — CrossOver present.
@@ -74,8 +75,11 @@ const requestRustInvoke = (
   return Promise.reject(new Error(`unscripted rust channel ${channel}`))
 }
 
+// Phase 82 (D-16): a copy is checked on the safety channel before remove_copy runs; every other
+// channel reaches the scripted handlers above.
 const steamTestDeps = createTestManagerDeps({
-  requestRustInvoke: requestRustInvoke as never,
+  requestRustInvoke: fakeSafetyRustInvoke({ base: requestRustInvoke as never })
+    .requestRustInvoke,
   config: createTestGlobalConfig({ defaultSteamPath: '/steam' }),
   steamUser,
   steamBottle: steamBottle as never,

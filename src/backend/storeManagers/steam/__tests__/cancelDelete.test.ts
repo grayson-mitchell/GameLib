@@ -5,9 +5,12 @@ import {
 } from 'backend/testUtils/testServices'
 import {
   existsSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   rmSync,
+  symlinkSync,
   writeFileSync
 } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -27,6 +30,16 @@ import type { AcfReadResult } from '../localFiles/steamFilesTypes'
 import { at } from './fixtures/indexed'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
 import { createSteamStores } from '../stores'
+import {
+  fakeSafetyRustInvoke,
+  type FakeSafetyOptions
+} from 'backend/testUtils/fakeSafetyRust'
+import { createTestManagers } from 'backend/testUtils/testServices'
+import type { ManagerDeps } from 'backend/services/types'
+import type { RequestRustInvoke } from 'backend/host'
+import type { GameInfo } from 'common/types'
+import type { RemovalRefusalPayload } from 'common/types/removalRefusal'
+import type { SafetyRequest } from 'common/types/safety'
 
 const steamStoresModule = createSteamStores({
   registry: createStoreRegistry(),
@@ -36,8 +49,12 @@ const steamStoresModule = createSteamStores({
 // 66.3-15: the bottle settings are read through the deps slice, not a module import.
 const getSteamBottleSettings = jest.fn()
 
+// Phase 82 (D-16): the cleanup asks the two safety channels, so every channel here is answered by
+// the fake, which forwards the Steam-files channels to the file-backed stub.
 const steamTestDeps = createTestManagerDeps({
-  requestRustInvoke: fsBackedSteamFiles().requestRustInvoke,
+  requestRustInvoke: fakeSafetyRustInvoke({
+    base: fsBackedSteamFiles().requestRustInvoke
+  }).requestRustInvoke,
   steamBottle: { getSteamBottleSettings } as never,
   stores: createTestStores({ steam: steamStoresModule })
 })
@@ -295,6 +312,189 @@ describe('deleteCancelledSteamInstall', () => {
     expect(existsSync(join(steamapps, 'common', 'Cool Game'))).toBe(false)
   })
 
+  describe('Phase 82 safety pre-check (D-12, D-15, D-16)', () => {
+    type Sent = [string, unknown]
+
+    /** Deps whose safety channels follow `options`; `otherKey` is stamped on every non-yes item. */
+    function guarded(
+      options: FakeSafetyOptions & {
+        otherKey?: string
+        otherGames?: GameInfo[]
+      } = {}
+    ) {
+      const sent: Sent[] = []
+      const safety = fakeSafetyRustInvoke({
+        ...options,
+        base: fsBackedSteamFiles().requestRustInvoke
+      })
+      const requestRustInvoke: RequestRustInvoke = async (channel, args) => {
+        const reply = (await safety.requestRustInvoke(channel, args)) as {
+          items?: { verdict: string }[]
+        }
+        if (!reply.items || !options.otherKey) return reply
+        return {
+          ...reply,
+          items: reply.items.map((item) =>
+            item.verdict === 'yes'
+              ? item
+              : { ...item, otherKey: options.otherKey }
+          )
+        }
+      }
+      const others = options.otherGames ?? []
+      const libraryManagers = Object.fromEntries(
+        Object.entries(createTestManagers().library).map(
+          ([runner, manager]) => [
+            runner,
+            {
+              ...manager,
+              getListOfGames: () => (runner === 'gog' ? others : []),
+              getGame: (appName: string) => ({
+                getGameInfo: () => others.find((g) => g.app_name === appName)
+              })
+            }
+          ]
+        )
+      ) as unknown as ManagerDeps['libraryManagers']
+      const deps = {
+        ...steamTestDeps,
+        requestRustInvoke,
+        libraryManagers,
+        sendFrontendMessage: ((name: string, payload: unknown) => {
+          sent.push([name, payload])
+        }) as ManagerDeps['sendFrontendMessage']
+      }
+      const notices = () =>
+        sent
+          .filter(([name]) => name === 'removalRefusedNotice')
+          .map(([, payload]) => payload as RemovalRefusalPayload)
+      return { deps, calls: safety.calls, notices }
+    }
+
+    it('hands the guard the partial root with the steamapps common dir as its trust root', async () => {
+      const { deps, calls } = guarded()
+      const r = await deleteCancelledSteamInstall(deps, '123', OPTS)
+      expect(r.status).toBe('deleted')
+      const check = calls.find((c) => c.channel === 'safety_check_removal')
+        ?.args[0] as SafetyRequest
+      expect(check.selfKey).toBe('steam:123')
+      expect(check.targets).toEqual([
+        {
+          id: 'partial',
+          path: join(steamapps, 'common', 'Cool Game'),
+          kind: 'game-install',
+          trustRoot: join(steamapps, 'common')
+        }
+      ])
+    })
+
+    it('D-12 rejection: a failed check keeps files and breadcrumb and pushes a cancel-install notice', async () => {
+      library.set('123', {
+        app_name: '123',
+        title: 'Cool Game Title',
+        install: {
+          steamResumePending: true,
+          steamResumeTargetSteamappsDir: steamapps,
+          steamResumeInstalldir: 'Cool Game'
+        }
+      } as unknown as SteamGameInfo)
+      const { deps, notices } = guarded({ rejectCheck: true })
+
+      const r = await deleteCancelledSteamInstall(deps, '123', OPTS)
+
+      expect(r.status).toBe('refused')
+      expect(r.reason).toMatch(/safety check answered unknown/)
+      expect(allPresent()).toBe(true)
+      expect(clearSteamResumeBreadcrumb).not.toHaveBeenCalled()
+      expect(sendProgressUpdate).not.toHaveBeenCalled()
+      expect(notices()).toEqual([
+        {
+          kind: 'cancel-install',
+          outcome: 'refused',
+          reason: 'rust-invoke-failed',
+          title: 'Cool Game Title',
+          appName: '123',
+          runner: 'steam'
+        }
+      ])
+    })
+
+    it('D-16: another store game inside the partial root refuses naming it, and nothing is deleted', async () => {
+      const others: GameInfo[] = [
+        {
+          runner: 'gog',
+          app_name: 'gog-1',
+          title: 'Other GOG Game',
+          is_installed: true,
+          install: {
+            install_path: join(steamapps, 'common', 'Cool Game', 'nested')
+          }
+        } as unknown as GameInfo
+      ]
+      const { deps, calls, notices } = guarded({
+        checkVerdict: 'no',
+        reason: 'nested-known-install',
+        otherKey: 'gog:gog-1',
+        otherGames: others
+      })
+
+      const r = await deleteCancelledSteamInstall(deps, '123', OPTS)
+
+      expect(r.status).toBe('refused')
+      expect(allPresent()).toBe(true)
+      expect(clearSteamResumeBreadcrumb).not.toHaveBeenCalled()
+      const check = calls.find((c) => c.channel === 'safety_check_removal')
+        ?.args[0] as SafetyRequest
+      expect(check.knownInstalls).toEqual([
+        {
+          key: 'gog:gog-1',
+          path: join(steamapps, 'common', 'Cool Game', 'nested')
+        }
+      ])
+      expect(notices()).toHaveLength(1)
+      expect(notices()[0]).toMatchObject({
+        kind: 'cancel-install',
+        outcome: 'refused',
+        reason: 'nested-known-install',
+        otherTitle: 'Other GOG Game'
+      })
+    })
+
+    it('a shared installdir removes the manifests only and asks the guard nothing', async () => {
+      jest.mocked(findOtherManifestsWithInstalldir).mockResolvedValue(['456'])
+      const { deps, calls, notices } = guarded({ rejectCheck: true })
+
+      const r = await deleteCancelledSteamInstall(deps, '123', OPTS)
+
+      expect(r.status).toBe('deleted')
+      expect(calls.filter((c) => c.channel.startsWith('safety_'))).toEqual([])
+      expect(notices()).toEqual([])
+      expect(existsSync(join(steamapps, 'common', 'Cool Game', 'a.bin'))).toBe(
+        true
+      )
+    })
+
+    it('D-15: a symlinked partial-install root is removed as a link and the referent survives', async () => {
+      const referent = join(tmp, 'referent')
+      mkdirSync(referent, { recursive: true })
+      writeFileSync(join(referent, 'precious.txt'), 'keep me')
+      rmSync(join(steamapps, 'common', 'Cool Game'), {
+        recursive: true,
+        force: true
+      })
+      symlinkSync(referent, join(steamapps, 'common', 'Cool Game'))
+      const { deps } = guarded()
+
+      const r = await deleteCancelledSteamInstall(deps, '123', OPTS)
+
+      expect(r.status).toBe('deleted')
+      expect(() => lstatSync(join(steamapps, 'common', 'Cool Game'))).toThrow()
+      expect(readFileSync(join(referent, 'precious.txt'), 'utf8')).toBe(
+        'keep me'
+      )
+    })
+  })
+
   it('never throws when getSteamLibraries rejects', async () => {
     jest.mocked(getSteamLibraries).mockRejectedValue(new Error('boom'))
     const r = await deleteCancelledSteamInstall(steamTestDeps, '123', OPTS)
@@ -358,7 +558,12 @@ describe('deleteCancelledSteamInstall, rust branch', () => {
     return {
       stub,
       result: deleteCancelledSteamInstall(
-        { ...steamTestDeps, ...stub },
+        {
+          ...steamTestDeps,
+          requestRustInvoke: fakeSafetyRustInvoke({
+            base: stub.requestRustInvoke
+          }).requestRustInvoke
+        },
         '123',
         OPTS
       )

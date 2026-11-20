@@ -10092,6 +10092,40 @@ describe('SteamGame.uninstall() — quick 261106-s3n: delete in GameLib (ON)', (
     expect(result.refused).toBe(true)
   })
 
+  it('Phase 82 D-13/D-16: a copy refused by gamelib-safety pushes the generic removal notice and sends done once', async () => {
+    ;(decideSteamNativeDelete as jest.Mock).mockResolvedValue({
+      route: 'fallback',
+      why: 'steam-not-running'
+    })
+    removeCopySpy.mockResolvedValue({
+      status: 'refused',
+      source: 'native',
+      reason: 'nested-known-install',
+      safety: { reason: 'nested-known-install' }
+    })
+
+    const result = await new SteamGame(APP_ID, steamTestDeps).uninstall(
+      {} as any
+    )
+
+    expect(pollOnceSpy).not.toHaveBeenCalled()
+    expect(result.refused).toBe(true)
+    expect(sendFrontendMessage).toHaveBeenCalledWith('removalRefusedNotice', {
+      kind: 'uninstall',
+      outcome: 'refused',
+      reason: 'nested-known-install',
+      title: 'Dota 2',
+      appName: APP_ID,
+      runner: 'steam'
+    })
+    expect(
+      sendFrontendMessage.mock.calls.filter(
+        ([name, payload]) =>
+          name === 'gameStatusUpdate' && payload.status === 'done'
+      )
+    ).toHaveLength(1)
+  })
+
   it('quick 261108-anw: fallback with a caught rm error returns failed, notices once, sends no route-level done', async () => {
     ;(decideSteamNativeDelete as jest.Mock).mockResolvedValue({
       route: 'fallback',

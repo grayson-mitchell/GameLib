@@ -44,6 +44,10 @@ import { sanitizeInstalldir } from './installLocation'
 import { RUST_STEAMFILES_READ_ACF } from 'common/types/sidecarTransport'
 import { invokeSteamFiles } from './localFiles/rustSteamFiles'
 import { NUMERIC_APP_ID } from './gameConstants'
+import { checkRemoval, firstBlockingItem } from 'backend/safety/rustSafety'
+import { titleForKnownKey } from 'backend/safety/knownInstalls'
+import { pushRemovalRefusal } from 'backend/safety/refusal'
+import { steamSafetyRequest, type SteamSafetyDeps } from './safeSteamRemove'
 import type { SteamStoresDeps } from './library/installRoot'
 import type {
   SteamGameSessionDeps,
@@ -107,7 +111,8 @@ export async function deleteCancelledSteamInstall(
     BottleSettingsDeps &
     SteamLibraryStateDeps &
     SteamGameSessionDeps &
-    StatusUpdateDeps,
+    StatusUpdateDeps &
+    SteamSafetyDeps,
   appId: string,
   opts?: { pollMs?: number; timeoutMs?: number }
 ): Promise<CancelDeleteResult> {
@@ -215,6 +220,45 @@ export async function deleteCancelledSteamInstall(
       appId
     )
 
+    // Phase 82 (D-16): another store's game installed inside the partial root, or a check that could
+    // not run, keeps the files and the breadcrumb. Only a root that is about to be deleted is asked
+    // about; a shared installdir below removes the manifest alone. This is the last await before the
+    // synchronous section: the in-flight re-check and the delete must stay adjacent.
+    if (conflicting.length === 0) {
+      const verdict = await checkRemoval(
+        deps,
+        steamSafetyRequest({ deps, appId }, [
+          {
+            id: 'partial',
+            path: installRoot,
+            kind: 'game-install',
+            trustRoot: commonRoot
+          }
+        ])
+      )
+      if (verdict.overall !== 'yes') {
+        const item = firstBlockingItem(verdict)
+        const reason = item?.reason ?? 'bad-reply'
+        const title = entry.title
+        const otherTitle = item?.otherKey
+          ? titleForKnownKey(deps, item.otherKey)
+          : undefined
+        pushRemovalRefusal(deps, {
+          kind: 'cancel-install',
+          outcome: 'refused',
+          reason,
+          ...(title ? { title } : {}),
+          appName: appId,
+          runner: 'steam',
+          ...(otherTitle ? { otherTitle } : {})
+        })
+        return refuse(
+          appId,
+          `safety check answered ${verdict.overall}: ${reason}`
+        )
+      }
+    }
+
     // The Rust reads above awaited; re-check nothing started meanwhile.
     if (deps.steamSession.gameSession.isNativeInstallInFlight(appId)) {
       return refuse(appId, 'install restarted')
@@ -222,6 +266,9 @@ export async function deleteCancelledSteamInstall(
 
     try {
       if (conflicting.length === 0) {
+        // Phase 75 critical section: no await between the in-flight check above and this delete, so a
+        // restarted install cannot race it. The path was pre-checked by gamelib-safety (D-16); a
+        // Node recursive delete unlinks a link root rather than following it (D-15).
         rmSync(installRoot, { recursive: true, force: true })
       } else {
         logWarning(

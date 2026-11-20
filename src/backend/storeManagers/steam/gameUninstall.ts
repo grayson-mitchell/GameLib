@@ -36,6 +36,12 @@ import { noticeSeq } from './noticeSeq'
 import { getBottleSteamappsDir } from './bottle'
 import { removePerGameBridgeBottle } from './bridgeBottleLifecycle'
 import { guardedRemoveTree } from 'backend/safety/rustSafety'
+import {
+  installdirShape,
+  rawInstalldirFromInstallPath
+} from './installdirShape'
+
+export { installdirShape, rawInstalldirFromInstallPath }
 import { refuseWithRemovalNotice, steamSafetyRequest } from './safeSteamRemove'
 import {
   getBridgeBottleSettings,
@@ -550,6 +556,14 @@ async function removeNativeInstallDirectly(
     }
     failure = `Refused to uninstall: ${result.reason} for appId ${steamGame.appId}`
     logWarning(`SteamGame: ${failure}`, LogPrefix.Steam)
+    // Phase 82 (D-13/D-16): gamelib-safety's refusal gets the generic notice, which also settles the tile.
+    if (result.safety) {
+      return refuseWithRemovalNotice(steamGame, {
+        outcome: 'refused',
+        reason: result.safety.reason,
+        ...(result.safety.otherKey ? { otherKey: result.safety.otherKey } : {})
+      })
+    }
     // uninstallGameCallback set "Uninstalling" and suppresses done for steam;
     // clear it (same reason as the A-10 refusal in uninstallBottleGameDirectly).
     // The record is kept, and no steam://uninstall fallback: Steam ignores it.
@@ -566,57 +580,6 @@ async function removeNativeInstallDirectly(
     // returns `failed` and uninstallGameCallback sends the one done.
     return await failUninstall(steamGame, failure)
   }
-}
-
-/**
- * 80-REVIEW C/EXTRA-01: the shape of an untrusted manifest `installdir`, mirroring
- * `installdir_shape` in gamelib-steampoll's acf_copies.rs. Only a `single` plain folder name
- * may be deleted as `common/<installdir>`; a `nested` one (`Studio/GameB`) names a parent
- * other apps may share. A backslash, `:` and NUL are refused on every OS so one manifest means one
- * thing everywhere; so are an absolute path and any `.` or `..` segment (stricter than Rust,
- * which drops a non-leading `.`). Empty segments from repeated or trailing `/` are ignored,
- * as Rust's `Path::components` does.
- *
- * Exported for unit testing.
- */
-export function installdirShape(
-  installdir: string
-):
-  | { kind: 'single'; segment: string }
-  | { kind: 'nested' }
-  | { kind: 'escaping' } {
-  if (/[\\:\0]/.test(installdir) || installdir.startsWith('/')) {
-    return { kind: 'escaping' }
-  }
-  const segments = installdir.split('/').filter((s) => s !== '')
-  if (segments.length === 0 || segments.some((s) => s === '.' || s === '..')) {
-    return { kind: 'escaping' }
-  }
-  const [segment] = segments
-  if (segment === undefined) return { kind: 'escaping' }
-  return segments.length === 1
-    ? { kind: 'single', segment }
-    : { kind: 'nested' }
-}
-
-/**
- * 80-REVIEW C/EXTRA-01: the raw `installdir` behind a Rust `readAcfState` installPath. Rust
- * builds it as `Path::new(steamappsDir).join("common").join(installdir)` with no
- * normalization, so the installdir is the verbatim tail after `<steamappsDir>/common/`. An
- * installPath without that prefix (an absolute installdir replaces the whole path) yields
- * `undefined`, which the caller refuses.
- *
- * Exported for unit testing.
- */
-export function rawInstalldirFromInstallPath(
-  steamappsDir: string,
-  installPath: string
-): string | undefined {
-  const withSep = (p: string) => (p.endsWith(sep) ? p : p + sep)
-  const prefix = withSep(withSep(steamappsDir) + 'common')
-  return installPath.startsWith(prefix)
-    ? installPath.slice(prefix.length)
-    : undefined
 }
 
 /**

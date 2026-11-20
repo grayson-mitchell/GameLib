@@ -59,7 +59,15 @@ export interface DownloadQueueDeps
   paths: BottleSettingsDeps['paths'] &
     Pick<
       AppPaths,
-      'appFolder' | 'toolsPath' | 'userData' | 'gamesConfigPath' | 'fixesPath'
+      | 'appFolder'
+      | 'toolsPath'
+      | 'userData'
+      | 'gamesConfigPath'
+      | 'fixesPath'
+      | 'heroicInstallPath'
+      | 'defaultWinePrefixDir'
+      | 'defaultWinePrefix'
+      | 'sharedWinePrefix'
     >
 }
 
@@ -96,7 +104,9 @@ export function createDownloadQueue(deps: DownloadQueueDeps) {
     steamLaunchRuntime: deps.steamLaunchRuntime,
     paths: deps.paths,
     sendFrontendMessage: deps.sendFrontendMessage,
-    appRuntime: deps.appRuntime
+    appRuntime: deps.appRuntime,
+    // Phase 82 (D-16): the cancelled-install cleanup asks gamelib-safety about other stores' installs.
+    libraryManagers: deps.managers.library
   }
 
   function onConnectivity(status: ConnectivityStatus) {

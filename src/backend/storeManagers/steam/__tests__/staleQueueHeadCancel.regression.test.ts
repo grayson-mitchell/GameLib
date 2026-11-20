@@ -1,4 +1,5 @@
 import { fsBackedSteamFiles } from '../localFiles/__tests__/fixtures/stubRustSteamFiles'
+import { fakeSafetyRustInvoke } from 'backend/testUtils/fakeSafetyRust'
 import {
   createTestManagerDeps,
   createTestStores
@@ -46,7 +47,10 @@ const getSteamBottleSettings = jest.fn()
 const createAbortController = jest.fn()
 
 const steamTestDeps = createTestManagerDeps({
-  requestRustInvoke: fsBackedSteamFiles().requestRustInvoke,
+  // Phase 82: the cancelled-install cleanup asks the safety channels before it deletes.
+  requestRustInvoke: fakeSafetyRustInvoke({
+    base: fsBackedSteamFiles().requestRustInvoke
+  }).requestRustInvoke,
   aborts: {
     create: (id: string) => createAbortController(id),
     delete: () => undefined,

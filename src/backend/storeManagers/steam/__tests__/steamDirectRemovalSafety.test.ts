@@ -35,6 +35,8 @@ import type { RemovalRefusalPayload } from 'common/types/removalRefusal'
 import type { SafetyItem, SafetyRequest } from 'common/types/safety'
 import { getBottleSteamappsDir } from '../bottle'
 import { uninstall } from '../gameUninstall'
+import { removeAllSteamInstallCopies } from '../removeAllCopies'
+import { removeSteamInstallCopy } from '../library/acfState'
 import * as acfState from '../library/acfState'
 import * as uninstallPollingModule from '../library/uninstallPolling'
 import type SteamGame from '../games'
@@ -94,10 +96,12 @@ function makeHarness(options: HarnessOptions = {}): Harness {
   const sent: Sent[] = []
   const safety = fakeSafetyRustInvoke({
     ...options,
-    base: () => Promise.reject(new Error('unexpected non-safety rustInvoke'))
+    base:
+      options.base ??
+      (() => Promise.reject(new Error('unexpected non-safety rustInvoke')))
   })
   const requestRustInvoke: RequestRustInvoke = async (channel, args) => {
-    if (options.decideFromRequest) {
+    if (options.decideFromRequest && channel.startsWith('safety_')) {
       const request = (args as unknown as [SafetyRequest])[0]
       const blocked = nestedItems(request)
       if (blocked) {
@@ -126,7 +130,7 @@ function makeHarness(options: HarnessOptions = {}): Harness {
   ) as unknown as ManagerDeps['libraryManagers']
   const deps = createTestManagerDeps({
     paths,
-    config: createTestGlobalConfig(),
+    config: createTestGlobalConfig({ defaultSteamPath: join(root, 'steam') }),
     libraryManagers,
     requestRustInvoke,
     sendFrontendMessage: ((name: string, payload: unknown) => {
@@ -371,5 +375,170 @@ describe('bottle-direct uninstall (D-09, D-12, D-13)', () => {
         otherTitle: 'Game B'
       })
     })
+  })
+})
+
+describe('copy removal pre-check before Rust remove_copy (D-12, D-16, D-21)', () => {
+  let h: Harness
+  let copyRoot: string
+  let readReply: Record<string, unknown>
+  let removeReply: Record<string, unknown>
+
+  /** The steampoll channels remove_copy reaches, scripted; the safety channels go to the fake. */
+  const steampoll: RequestRustInvoke = (channel) => {
+    if (channel === 'steampoll_acf_read_state')
+      return Promise.resolve(readReply)
+    if (channel === 'steampoll_acf_enumerate_copies') {
+      return Promise.resolve([
+        { source: 'bottle', installPath: copyRoot, sizeOnDisk: '1' }
+      ])
+    }
+    if (channel === 'steampoll_acf_remove_copy') {
+      return Promise.resolve(removeReply)
+    }
+    return Promise.reject(new Error(`unscripted channel ${channel}`))
+  }
+
+  const removeCalls = (): unknown[] =>
+    h.safetyCalls.filter((c) => c.channel === 'steampoll_acf_remove_copy')
+  const safetyCalls = (): { channel: string }[] =>
+    h.safetyCalls.filter((c) => c.channel.startsWith('safety_'))
+
+  function seed(
+    options: HarnessOptions = {},
+    installdir: string = TITLE
+  ): void {
+    h = makeHarness({ ...options, base: steampoll })
+    copyRoot = join(h.steamapps, 'common', installdir)
+    mkdirSync(copyRoot, { recursive: true })
+    writeFileSync(join(copyRoot, 'Hoard.exe'), 'binary-stub')
+    readReply = {
+      state: 'installed',
+      stateFlags: 4,
+      installPath: copyRoot,
+      sizeOnDisk: '1'
+    }
+    removeReply = {
+      status: 'removed',
+      source: 'bottle',
+      manifestOnly: false,
+      bridgeBottle: null
+    }
+  }
+
+  afterEach(() => {
+    rmSync(h.root, { recursive: true, force: true })
+  })
+
+  it('yes: asks the guard about the copy root, then remove_copy runs once', async () => {
+    seed()
+
+    const result = await removeSteamInstallCopy(h.deps, APP_ID, 'bottle')
+
+    expect(result).toMatchObject({ status: 'removed', source: 'bottle' })
+    expect(removeCalls()).toHaveLength(1)
+    const check = h.safetyCalls.find(
+      (c) => c.channel === 'safety_check_removal'
+    )?.args[0] as SafetyRequest
+    expect(check.selfKey).toBe(`steam:${APP_ID}`)
+    expect(check.targets).toEqual([
+      {
+        id: 'copy',
+        path: copyRoot,
+        kind: 'game-install',
+        trustRoot: join(h.steamapps, 'common')
+      }
+    ])
+    // The check came first.
+    expect(h.safetyCalls.map((c) => c.channel)).toEqual([
+      'steampoll_acf_read_state',
+      'safety_check_removal',
+      'steampoll_acf_remove_copy'
+    ])
+  })
+
+  it('D-12 rejection: a failed check returns refused, never calls remove_copy and leaves the files', async () => {
+    seed({ rejectCheck: true })
+
+    const result = await removeSteamInstallCopy(h.deps, APP_ID, 'bottle')
+
+    expect(result).toEqual({
+      status: 'refused',
+      source: 'bottle',
+      reason: 'rust-invoke-failed',
+      safety: { reason: 'rust-invoke-failed' }
+    })
+    expect(removeCalls()).toEqual([])
+    expect(existsSync(join(copyRoot, 'Hoard.exe'))).toBe(true)
+  })
+
+  it('D-16: another store game inside the copy root is refused naming it, and remove_copy is not called', async () => {
+    const others: GameInfo[] = []
+    seed({ decideFromRequest: true, otherGames: others })
+    const gameB = join(copyRoot, 'GameB')
+    mkdirSync(gameB, { recursive: true })
+    others.push({
+      runner: 'gog',
+      app_name: 'gog-1',
+      title: 'Game B',
+      is_installed: true,
+      install: { install_path: gameB }
+    } as unknown as GameInfo)
+
+    const result = await removeSteamInstallCopy(h.deps, APP_ID, 'bottle')
+
+    expect(result).toMatchObject({
+      status: 'refused',
+      reason: 'nested-known-install',
+      safety: { reason: 'nested-known-install', otherKey: 'gog:gog-1' }
+    })
+    expect(removeCalls()).toEqual([])
+    expect(existsSync(gameB)).toBe(true)
+  })
+
+  it('remove-copies: a copy the guard refuses is counted refused, and remove_copy is not called', async () => {
+    seed({ rejectCheck: true })
+    const pollSpy = jest
+      .spyOn(uninstallPollingModule, 'pollUninstallOnce')
+      .mockResolvedValue(undefined)
+
+    const sweep = await removeAllSteamInstallCopies(h.deps, APP_ID)
+    pollSpy.mockRestore()
+
+    expect(sweep).toEqual({ removed: 0, refused: 1 })
+    expect(removeCalls()).toEqual([])
+    expect(existsSync(join(copyRoot, 'Hoard.exe'))).toBe(true)
+  })
+
+  it('an absent copy skips the check and lets remove_copy report absent', async () => {
+    seed()
+    readReply = { state: 'absent' }
+    removeReply = { status: 'absent', source: 'bottle' }
+
+    const result = await removeSteamInstallCopy(h.deps, APP_ID, 'bottle')
+
+    expect(result).toEqual({ status: 'absent', source: 'bottle' })
+    expect(safetyCalls()).toEqual([])
+    expect(removeCalls()).toHaveLength(1)
+  })
+
+  it('a nested installdir is not placed by the check: remove_copy decides and its refusal carries no safety field', async () => {
+    seed({}, 'Studio')
+    readReply = { ...readReply, installPath: join(copyRoot, 'GameB') }
+    removeReply = {
+      status: 'refused',
+      source: 'bottle',
+      reason: 'installdir is not a single folder'
+    }
+
+    const result = await removeSteamInstallCopy(h.deps, APP_ID, 'bottle')
+
+    expect(result).toEqual({
+      status: 'refused',
+      source: 'bottle',
+      reason: 'installdir is not a single folder'
+    })
+    expect(safetyCalls()).toEqual([])
+    expect(removeCalls()).toHaveLength(1)
   })
 })

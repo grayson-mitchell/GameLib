@@ -2,6 +2,9 @@ import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { SteamLibrariesDeps } from 'backend/utils'
 import type { SteamLibraryStateDeps } from 'backend/services/types'
 import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
+import { basename, dirname, join } from 'node:path'
+import { checkRemoval, firstBlockingItem } from 'backend/safety/rustSafety'
+import type { RemovalReason } from 'common/types/safety'
 import {
   RUST_STEAMPOLL_ACF_ENUMERATE_COPIES,
   RUST_STEAMPOLL_ACF_FIND_OTHER_MANIFESTS,
@@ -24,6 +27,8 @@ import {
   type BottleRemovalDeps
 } from '../bridgeBottleLifecycle'
 import { NUMERIC_APP_ID } from '../gameConstants'
+import { installdirShape } from '../installdirShape'
+import { steamSafetyRequest } from '../safeSteamRemove'
 import type { AcfSource } from './installRoot'
 
 /**
@@ -225,7 +230,13 @@ export type RemoveCopyResult =
       bottleRemoved?: boolean
     }
   | { status: 'absent'; source: AcfSource }
-  | { status: 'refused'; source: AcfSource; reason: string }
+  | {
+      status: 'refused'
+      source: AcfSource
+      reason: string
+      /** Set when gamelib-safety refused (Phase 82, D-16); absent for Phase 80's own refusals. */
+      safety?: { reason: RemovalReason; otherKey?: string }
+    }
 
 /**
  * quick-260821-le0: deletes ONE root's install copy for `appId`. Ports the
@@ -272,6 +283,71 @@ export async function removeSteamInstallCopy(
 }
 
 /**
+ * Phase 82 (D-16): the install root of the copy `installPath` names, when it is exactly
+ * `<steamapps>/common/<one plain folder>`. Rust builds `installPath` as `<steamapps>/common/<installdir>`
+ * with no normalisation, so a single plain installdir makes the parent the steamapps dir Rust scanned.
+ * Anything else (a nested, absolute or dotted installdir) returns null and is left to remove_copy's own
+ * installdir_shape refusal.
+ */
+function copyInstallRoot(
+  installPath: string
+): { root: string; commonRoot: string } | null {
+  const root = installPath.replace(/[\\/]+$/, '')
+  const folder = basename(root)
+  const shape = installdirShape(folder)
+  if (shape.kind !== 'single' || shape.segment !== folder) return null
+  const commonRoot = dirname(root)
+  if (basename(commonRoot) !== 'common') return null
+  return { root: join(commonRoot, folder), commonRoot }
+}
+
+/**
+ * Phase 82 (D-16): ask gamelib-safety about the copy before Rust remove_copy runs, so a game of
+ * another store installed inside it is refused naming it. remove_copy's own guards (symlinked root,
+ * installdir shape, downloading) are unchanged (D-21). A copy that is absent, mid-download or
+ * unreadable is left to remove_copy to report, and so is an installdir this check cannot place.
+ */
+async function refuseUnsafeCopy(
+  deps: BottleRemovalDeps & SteamLibrariesDeps & BottleSettingsDeps,
+  appId: string,
+  source: AcfSource
+): Promise<RemoveCopyResult | null> {
+  const acf = await readAcfState(deps, appId, source)
+  const placed =
+    acf.state === 'installed' && acf.installPath
+      ? copyInstallRoot(acf.installPath)
+      : null
+  if (!placed) return null
+  const verdict = await checkRemoval(
+    deps,
+    steamSafetyRequest({ deps, appId }, [
+      {
+        id: 'copy',
+        path: placed.root,
+        kind: 'game-install',
+        trustRoot: placed.commonRoot
+      }
+    ])
+  )
+  if (verdict.overall === 'yes') return null
+  const item = firstBlockingItem(verdict)
+  const reason: RemovalReason = item?.reason ?? 'bad-reply'
+  logWarning(
+    `SteamLibraryManager: removeSteamInstallCopy refused appId ${appId} source '${source}': gamelib-safety answered ${verdict.overall} (${reason})`,
+    LogPrefix.Steam
+  )
+  return {
+    status: 'refused',
+    source,
+    reason,
+    safety: {
+      reason,
+      ...(item?.otherKey !== undefined ? { otherKey: item.otherKey } : {})
+    }
+  }
+}
+
+/**
  * D-12 / T-80-73: on this arm Rust owns the whole guard set and the deletion; nothing here removes
  * a file. Only the per-game bridge bottle goes through removePerGameBridgeBottle, as on the ts arm.
  */
@@ -281,6 +357,8 @@ async function removeCopyViaRust(
   source: AcfSource
 ): Promise<RemoveCopyResult> {
   const roots = pollRootsFor(deps, appId, source)
+  const blocked = await refuseUnsafeCopy(deps, appId, source)
+  if (blocked) return blocked
   let res: RustRemoveCopyResult
   try {
     res = (await invokeSteamPoll(
