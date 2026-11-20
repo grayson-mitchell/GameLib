@@ -1,14 +1,14 @@
 ---
 gsd_state_version: "1.0"
 milestone: v0.10
-current_phase: 82
-current_phase_name: Guardrails, hygiene and shared safety primitives
+current_phase: 83
+current_phase_name: Native seam, gamelib-core and process/shutdown contract
 status: executing
-stopped_at: Completed 83-01-PLAN.md
-last_updated: "2026-11-20T08:58:39.856Z"
+stopped_at: Completed 83-02-PLAN.md
+last_updated: "2026-11-20T09:11:15.115Z"
 last_activity: 2026-11-21
-last_activity_desc: Phase 82 gap closure executed; verification human_needed
-state_head: cf350231ad87c9b549f91fd824c2f7e7c5801951
+last_activity_desc: Phase 83 execution started
+state_head: 2e579689d1080633c324f8cfde7260603638f1eb
 progress:
   total_phases: 27
   completed_phases: 23
@@ -24,7 +24,7 @@ milestone_name: Foundations
 See: .planning/PROJECT.md (updated 2026-11-20)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 82 — Guardrails, hygiene and shared safety primitives
+**Current focus:** Phase 83 — Native seam, gamelib-core and process/shutdown contract
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -75,10 +75,10 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 
 ## Current Position
 
-Phase: 82 (Guardrails, hygiene and shared safety primitives) — VERIFYING (human_needed)
-Plan: 19 of 19
-Status: Awaiting human verification (82-UAT.md)
-Last activity: 2026-11-20 — Phase 82 gap closure (82-17..82-19) executed; verification human_needed
+Phase: 83 (Native seam, gamelib-core and process/shutdown contract) — EXECUTING
+Plan: 2 of 11
+Status: Ready to execute
+Last activity: 2026-11-20 — Phase 83 execution started
 Progress: [██████████] 100% (19 of 19 phase 82 plans have a SUMMARY; verification human_needed)
 
 ## Native-Install Arc Phase Map (21–25)
@@ -328,6 +328,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 82 P18 | 25min | 3 tasks | 6 files |
 | Phase 82 P19 | 40min | 3 tasks | 10 files |
 | Phase 83 P01 | 10 min | 2 tasks | 1 files |
+| Phase 83 P02 | 35 min | 3 tasks | 17 files |
 
 ## Accumulated Context
 
@@ -580,6 +581,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 82]: 82-19: fakeSafetyRustInvoke has no option to disable the trust-root model; fake and crate share trust-root-contract.json, each with a 12-row floor
 - [Phase 83]: 83-01: external-link gate gesture is Settings > General > Language report link (About URL is plain text; Donate uses openKofiPage)
 - [Phase 83]: 83-01: gamelib-shell.log is append-only; gate scores shell-log lines by pid, reaper stderr literals are transcript-only
+- [Phase 83]: 83-02: gamelib-safety stays out of gamelib-core this phase; paths::join is public; drain deadline is exclusive-end; run_exit drains on detached threads
 
 ### Pending Todos
 
@@ -827,8 +829,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-20T08:58:39.834Z
-Stopped at: Completed 83-01-PLAN.md
+Last session: 2026-11-20T09:11:15.044Z
+Stopped at: Completed 83-02-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
