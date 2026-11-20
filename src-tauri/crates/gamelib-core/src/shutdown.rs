@@ -4,8 +4,8 @@
 //! everything is `std` threads, a `Mutex` + `Condvar` and a `tokio_util` cancellation token (the
 //! token is a plain atomic-backed type; it needs no runtime to cancel).
 
-use std::sync::{Arc, Condvar, Mutex, OnceLock};
-use std::time::Duration;
+use std::sync::{Arc, Condvar, Mutex, MutexGuard, OnceLock};
+use std::time::{Duration, Instant};
 use tokio_util::sync::CancellationToken;
 
 /// The single deadline GameLib's exit path lives inside (D-12), and the slice of it kept for
@@ -24,7 +24,7 @@ impl ExitBudget {
 
     /// What the drains get: the total minus the child grace, never negative.
     pub fn drain_budget(&self) -> Duration {
-        Duration::ZERO
+        self.total.saturating_sub(self.child_grace)
     }
 }
 
@@ -37,6 +37,13 @@ pub struct Registrant {
 struct Inner {
     token: CancellationToken,
     registry: (Mutex<Vec<&'static str>>, Condvar),
+}
+
+impl Inner {
+    /// Poison-tolerant: a panic in some holder must never stop the exit path (T-83-04).
+    fn lock(&self) -> MutexGuard<'_, Vec<&'static str>> {
+        self.registry.0.lock().unwrap_or_else(|e| e.into_inner())
+    }
 }
 
 /// The app-wide shutdown signal plus the registry of work that must finish before exit.
@@ -66,6 +73,7 @@ impl Shutdown {
     }
 
     pub fn register(&self, name: &'static str) -> Registrant {
+        self.inner.lock().push(name);
         Registrant {
             inner: self.inner.clone(),
             name,
@@ -74,15 +82,41 @@ impl Shutdown {
 
     /// Cancel the token, then wait up to `budget` for every registrant to drop. Returns the names
     /// still held at the deadline, sorted.
-    pub fn drain(&self, _budget: Duration) -> Vec<&'static str> {
+    pub fn drain(&self, budget: Duration) -> Vec<&'static str> {
         self.inner.token.cancel();
-        Vec::new()
+        let start = Instant::now();
+        let mut held = self.inner.lock();
+        loop {
+            if held.is_empty() {
+                return Vec::new();
+            }
+            // The wait ends when now >= deadline (exclusive end): `left` is zero from then on.
+            let left = budget.saturating_sub(start.elapsed());
+            if left.is_zero() {
+                break;
+            }
+            held = self
+                .inner
+                .registry
+                .1
+                .wait_timeout(held, left)
+                .unwrap_or_else(|e| e.into_inner())
+                .0;
+        }
+        let mut names = held.clone();
+        names.sort_unstable();
+        names
     }
 }
 
 impl Drop for Registrant {
     fn drop(&mut self) {
-        let _ = (&self.inner, self.name);
+        let mut held = self.inner.lock();
+        if let Some(i) = held.iter().position(|n| *n == self.name) {
+            held.swap_remove(i);
+        }
+        drop(held);
+        self.inner.registry.1.notify_all();
     }
 }
 
@@ -102,16 +136,41 @@ pub struct ExitReport {
 /// One exit-time drain: its registrant name and the work it runs with the drain budget.
 pub type Drain = (&'static str, Box<dyn FnOnce(Duration) + Send>);
 
+/// Spend one exit budget in stages: every drain concurrently (each holding a `Registrant`), then
+/// the child kills with the time left (at most `child_grace`), then `finish`.
+///
+/// Drains run on detached `std` threads, never a scoped join: a join would wait for an
+/// overrunning drain and break the deadline (T-83-03). An abandoned drain is named in
+/// `still_running`; the caller logs the report (counts and names only, D-12).
 pub fn run_exit(
-    _shutdown: &Shutdown,
-    _budget: ExitBudget,
-    _drains: Vec<Drain>,
-    _children: impl FnOnce(Duration),
-    _finish: impl FnOnce(),
+    shutdown: &Shutdown,
+    budget: ExitBudget,
+    drains: Vec<Drain>,
+    children: impl FnOnce(Duration),
+    finish: impl FnOnce(),
 ) -> ExitReport {
+    let start = Instant::now();
+    let drain_budget = budget.drain_budget();
+    for (name, work) in drains {
+        let registrant = shutdown.register(name);
+        // A failed spawn drops the closure and with it the registrant, so the name is released.
+        let _ = std::thread::Builder::new()
+            .name(format!("exit-drain-{name}"))
+            .spawn(move || {
+                work(drain_budget);
+                drop(registrant);
+            });
+    }
+    let still_running = shutdown.drain(drain_budget);
+    let remaining = budget
+        .total
+        .saturating_sub(start.elapsed())
+        .min(budget.child_grace);
+    children(remaining);
+    finish();
     ExitReport {
-        elapsed: Duration::ZERO,
-        still_running: Vec::new(),
+        elapsed: start.elapsed(),
+        still_running,
     }
 }
 
