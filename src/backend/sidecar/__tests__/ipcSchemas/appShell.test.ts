@@ -51,7 +51,6 @@ const syncTable: FixtureTable<typeof appShellSyncArgs> = {
 }
 
 const asyncTable: FixtureTable<typeof appShellAsyncArgs> = {
-  getHeroicVersion: noArgs,
   getAppManagementStatus: noArgs,
   getLatestReleases: noArgs,
   getCurrentChangelog: noArgs,

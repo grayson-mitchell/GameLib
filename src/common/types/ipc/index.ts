@@ -21,6 +21,7 @@ import type { InstallAsync } from './install'
 import type { LegendaryFrontendMessages } from './legendary'
 import type { LoggerSync, LoggerAsync, LoggerFrontendMessages } from './logger'
 import type { MainProcessSync, MainProcessAsync } from './mainProcess'
+import type { NativeAsync } from './native'
 import type { OauthLoginAsync } from './oauthLogin'
 import type { RunnerAuthSync, RunnerAuthAsync } from './runnerAuth'
 import type { RunnerMiscAsync } from './runnerMisc'
@@ -66,6 +67,7 @@ export type AsyncIPCFunctions = AppShellAsync &
   InstallAsync &
   LoggerAsync &
   MainProcessAsync &
+  NativeAsync &
   OauthLoginAsync &
   RunnerAuthAsync &
   RunnerMiscAsync &

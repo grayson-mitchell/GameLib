@@ -518,7 +518,7 @@ function renderStructInto(
 }
 
 /** One channel the Rust native router owns (Phase 83, D-06/D-07). */
-export interface NativeChannelSpec {
+interface NativeChannelSpec {
   kind: 'invoke' | 'send'
   /** kebab-case slice name, e.g. 'app-shell' */
   slice: string

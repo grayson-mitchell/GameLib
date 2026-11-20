@@ -13,6 +13,8 @@
  *       dated allowlist (push-only FrontendMessages, window controls, test stubs, main-process
  *       handlers registered through addHandler/addListener). A channel in nativeChannels.json is
  *       owned by the Rust native router (Phase 83), so it is excluded rather than listed.
+ *   (e) NATIVE DECLARATIONS: native.ts declares exactly the manifest's channels (Async for
+ *       invoke, Sync for send), and no manifest channel is declared in any other domain file.
  *
  * Plain fs reads rooted at __dirname; no backend module is imported or executed.
  */
@@ -297,6 +299,7 @@ describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
     // Phase 82 Plan 15: -2 TestSync (setLegendaryCommandStub, resetLegendaryCommandStub, the legendary e2e stub deleted, D-19); owner-less allowlist 65 -> 63.
     // Phase 82 Plan 15: -2 TestSync (setNileCommandStub, resetNileCommandStub, the nile e2e stub deleted, D-19); owner-less allowlist 63 -> 61.
     // That removed the last TestSync channel, so the TestSync kind left the census.
+    // Phase 83 Plan 03 (2026-11-20): getHeroicVersion moved from appShell.ts to native.ts (NativeAsync), net 0.
     expect(total).toBe(289)
     // Floor (Phase 67): originally measured - 6. Re-measured at 290 after quick 261115-tk8's deliberate
     // six-channel deletion and quick 261117-p38's two added channels (288 + 2), so the floor moves
@@ -343,6 +346,39 @@ describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
       new Set(['nativeOwned'])
     )
     expect(withNative).toEqual({ 'Async:orphan': 'fake' })
+  })
+
+  it('(e) native.ts declares exactly the manifest channels by kind, and no other domain file declares one', () => {
+    const manifest = JSON.parse(
+      readFileSync(join(IPC_DIR, 'nativeChannels.json'), 'utf-8')
+    ) as { channels: Record<string, { kind: 'invoke' | 'send' }> }
+    const byKind = (kind: 'invoke' | 'send') =>
+      Object.entries(manifest.channels)
+        .filter(([, spec]) => spec.kind === kind)
+        .map(([name]) => name)
+        .sort()
+    const declared = (kind: Kind) =>
+      (domains['native'] ?? [])
+        .filter((p) => p.kind === kind)
+        .flatMap((p) => p.keys)
+        .sort()
+    expect(Object.keys(domains)).toContain('native')
+    expect(declared('Async')).toEqual(byKind('invoke'))
+    expect(declared('Sync')).toEqual(byKind('send'))
+    expect(declared('FrontendMessages')).toEqual([])
+    // Non-vacuity: the manifest names at least one channel, so the equalities above bind.
+    expect(Object.keys(manifest.channels).length).toBeGreaterThan(0)
+    const native = nativeChannelNames()
+    const elsewhere = Object.entries(domains)
+      .filter(([domain]) => domain !== 'native')
+      .flatMap(([domain, parts]) =>
+        parts
+          .filter((p) => p.kind === 'Async' || p.kind === 'Sync')
+          .flatMap((p) => p.keys)
+          .filter((k) => native.has(k))
+          .map((k) => `${domain}:${k}`)
+      )
+    expect(elsewhere).toEqual([])
   })
 
   it('parseDomainFile reads the const-args conversion form', () => {

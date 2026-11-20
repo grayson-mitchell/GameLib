@@ -62,7 +62,6 @@ export const appShellSyncArgs = {
 }
 
 export const appShellAsyncArgs = {
-  getHeroicVersion: noArgs,
   getAppManagementStatus: noArgs,
   getLatestReleases: noArgs,
   getCurrentChangelog: noArgs,
@@ -71,7 +70,6 @@ export const appShellAsyncArgs = {
 }
 
 interface AppShellAsyncReturns {
-  getHeroicVersion: string
   getAppManagementStatus: Promise<AppManagementStatus>
   getLatestReleases: Promise<Release[]>
   getCurrentChangelog: Promise<Release | null>
