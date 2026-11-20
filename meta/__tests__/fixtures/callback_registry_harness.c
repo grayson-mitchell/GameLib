@@ -393,6 +393,41 @@ static void init_obj(fobj *o) {
   o->vptr = g_vt;
 }
 
+/* The dead-frame problem: gl_cb_run_callbacks keeps its drain buffer on the stack, so a case that
+ * wants to know the buffer was zeroed AFTER the call has nothing to read but a dead frame, and every
+ * later call, CHECK or printf of the harness may overwrite or leave stale bytes there (the earlier
+ * "inline scan, no calls" cases were red on the Linux runner and green on macOS, and which case went
+ * red moved with unrelated harness edits). So the zeroing cases run the registry on a stack this
+ * harness OWNS: a pthread whose stack is a malloc'd block pre-filled with 0x5A. After the join the
+ * block is still ours, nothing else ever runs on it, and g_lastbuf/g_lastmmsbuf point INTO it, so
+ * what the scan reads is exactly what the registry left. */
+static void *g_ostack;
+static void *owned_stack_run(void *unused) {
+  (void)unused;
+  gl_cb_run_callbacks();
+  return NULL;
+}
+static void run_callbacks_on_owned_stack(void) {
+  const size_t sz = 256u * 1024u;
+  pthread_attr_t at;
+  pthread_t th;
+  int r;
+  free(g_ostack);
+  g_ostack = NULL;
+  r = posix_memalign(&g_ostack, 4096, sz);
+  CHECK(r == 0);
+  memset(g_ostack, 0x5A, sz);
+  r = pthread_attr_init(&at);
+  CHECK(r == 0);
+  r = pthread_attr_setstack(&at, g_ostack, sz);
+  CHECK(r == 0);
+  r = pthread_create(&th, &at, owned_stack_run, NULL);
+  CHECK(r == 0);
+  r = pthread_join(th, NULL);
+  CHECK(r == 0);
+  pthread_attr_destroy(&at);
+}
+
 static void reset(void) {
   size_t i;
   gl_cb_clear_all();
@@ -760,14 +795,11 @@ static void case_buffer_zeroed(void) {
   reset();
   gl_cb_register(&objA, 168);
   push_msg(168, 1, 2572, 2572);
-  gl_cb_run_callbacks();
-  /* inline scan, no calls: the dead frame is still intact */
-  if (g_lastbuf) {
-    for (i = 0; i < CAP; i++)
-      if (g_lastbuf[i] == 0xAB) left++;
-  }
+  run_callbacks_on_owned_stack();
   CHECK(objA.calls == 1);
   CHECK(g_lastbuf != NULL);
+  for (i = 0; i < CAP; i++)
+    if (g_lastbuf[i] == 0xAB) left++;
   CHECK(left == 0);
   PASS();
 }
@@ -896,7 +928,7 @@ static void case_no_hold_168(void) {
   objG.flags = 0x02; /* gameserver-only: no live target */
   gl_cb_register(&objG, 168);
   push_msg(168, 1, 2572, 2572);
-  gl_cb_run_callbacks();
+  run_callbacks_on_owned_stack();
   CHECK(gl_cb_no_target == 1);
   CHECK(!held_valid(168));
   CHECK(g_nrep == 1);
@@ -1752,17 +1784,14 @@ static void case_mms_unknown_handle_dropped(void) {
   memset(pay, 0xAB, sizeof pay);
   push_mevent(4, 77, 0, 0, pay, 380); /* a ping event for a handle never issued */
   push_mevent(3, 77, 0, 0, NULL, 0);
-  gl_cb_run_callbacks();
+  run_callbacks_on_owned_stack();
   CHECK(mlist.calls[0] == 0 && mlist.calls[1] == 0 && mlist.calls[2] == 0);
   CHECK(mping.calls[0] == 0);
   CHECK(gl_mms_dropped == 2);
   CHECK(gl_mms_count == 1);
-  /* inline scan, no calls: the dead frame is still intact */
-  if (g_lastmmsbuf) {
-    for (i = 0; i < GL_MMS_DRAIN_RESP_MAX_BYTES; i++)
-      if (g_lastmmsbuf[i] == 0xAB) left++;
-  }
   CHECK(g_lastmmsbuf != NULL);
+  for (i = 0; i < GL_MMS_DRAIN_RESP_MAX_BYTES; i++)
+    if (g_lastmmsbuf[i] == 0xAB) left++;
   CHECK(left == 0);
   PASS();
 }
