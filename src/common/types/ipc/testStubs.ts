@@ -32,8 +32,6 @@ const runnerCommandStubs = z.array(
 )
 
 export const testStubsTestSyncArgs = {
-  setLegendaryCommandStub: z.tuple([runnerCommandStubs]),
-  resetLegendaryCommandStub: noArgs,
   setNileCommandStub: z.tuple([runnerCommandStubs]),
   resetNileCommandStub: noArgs
 }

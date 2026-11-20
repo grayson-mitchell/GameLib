@@ -58,8 +58,6 @@ const stubList = {
   invalid: [[], [[{ stdout: 'x' }]], [[{ commandParts: [1] }]], ['x']]
 }
 const stubsTest: FixtureTable<typeof testStubsTestSyncArgs> = {
-  setLegendaryCommandStub: stubList,
-  resetLegendaryCommandStub: noArgs,
   setNileCommandStub: stubList,
   resetNileCommandStub: noArgs
 }

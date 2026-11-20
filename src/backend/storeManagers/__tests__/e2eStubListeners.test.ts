@@ -1,19 +1,7 @@
 import { createIpcRegistry } from 'backend/sidecar/ipcRegistry'
-import {
-  createLegendaryStubs,
-  registerLegendaryStubListeners
-} from '../legendary/e2eMock'
 import { createNileStubs, registerNileStubListeners } from '../nile/e2eMock'
 
 const registrars = [
-  [
-    'legendary',
-    (
-      ipc: Parameters<typeof registerLegendaryStubListeners>[0],
-      env: Parameters<typeof registerLegendaryStubListeners>[1]
-    ) => registerLegendaryStubListeners(ipc, env, createLegendaryStubs()),
-    'setLegendaryCommandStub'
-  ],
   [
     'nile',
     (

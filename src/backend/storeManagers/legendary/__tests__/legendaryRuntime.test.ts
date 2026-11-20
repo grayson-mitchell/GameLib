@@ -1,6 +1,6 @@
 /**
  * 66.4-11: the Legendary runtime holds per-instance state. Two runtimes share no account games,
- * installed games, library entries or stubs; deriveLegendaryPaths is pure over its roots and keeps the
+ * installed games or library entries; deriveLegendaryPaths is pure over its roots and keeps the
  * snap arm.
  */
 import type {
@@ -10,7 +10,6 @@ import type {
 import { join } from 'path'
 import { createLegendaryRuntime } from '../legendaryRuntime'
 import { deriveLegendaryPaths } from '../constants'
-import type { LegendaryCommand } from '../commands'
 
 describe('createLegendaryRuntime', () => {
   it('starts with empty collections', () => {
@@ -42,31 +41,6 @@ describe('createLegendaryRuntime', () => {
     b.libraryState.installedGames.set('Keep', {} as InstalledJsonMetadata)
     a.libraryState.installedGames = new Map()
     expect(b.libraryState.installedGames.has('Keep')).toBe(true)
-  })
-
-  it('stubs default to the --version answer, can be replaced and reset, and are per runtime', async () => {
-    const a = createLegendaryRuntime()
-    const b = createLegendaryRuntime()
-    const version = { subcommand: '--version' } as unknown as LegendaryCommand
-    // The default stub matches a command whose `--version` part is set.
-    const versionCmd = { '--version': true } as unknown as LegendaryCommand
-    expect((await a.stubs.run(versionCmd)).stdout).toContain(
-      'legendary version'
-    )
-    expect(await a.stubs.run(version)).toEqual({ stdout: '', stderr: '' })
-
-    a.stubs.set([{ commandParts: ['list'], stdout: 'listed' }])
-    expect(
-      (await a.stubs.run({ list: true } as unknown as LegendaryCommand)).stdout
-    ).toBe('listed')
-    expect((await b.stubs.run(versionCmd)).stdout).toContain(
-      'legendary version'
-    )
-
-    a.stubs.reset()
-    expect((await a.stubs.run(versionCmd)).stdout).toContain(
-      'legendary version'
-    )
   })
 })
 

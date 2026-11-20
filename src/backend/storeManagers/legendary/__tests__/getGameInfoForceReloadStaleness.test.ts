@@ -77,7 +77,7 @@ import { createTestOnlineMonitor } from 'backend/testUtils/testOnlineMonitor'
  *    file does not exist in the fixture root, so it returns `[]`, which is the real,
  *    intended behaviour for a game with no third-party install record),
  *    `./commands`/`./commands/base` (pure zod schemas, no side effects), `backend/schemas`,
- *    `backend/constants/environment`, `../e2eMock`/`backend/ipc`/`backend/platform`/
+ *    `backend/constants/environment`, `backend/ipc`/`backend/platform`/
  *    `backend/main_window` (the sidecar Electron-replacement stub is deliberately
  *    import-safe by design — see `backend/platform/index.ts`'s own header comment).
  */

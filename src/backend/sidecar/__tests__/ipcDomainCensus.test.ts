@@ -53,8 +53,6 @@ const NO_REGISTRATION_OWNER: Record<string, string> = {
   'Sync:unmaximizeWindow': 'window',
   'Sync:closeWindow': 'window',
   'Sync:setFullscreen': 'window',
-  'TestSync:setLegendaryCommandStub': 'testStubs',
-  'TestSync:resetLegendaryCommandStub': 'testStubs',
   'TestSync:setNileCommandStub': 'testStubs',
   'TestSync:resetNileCommandStub': 'testStubs',
   'Async:updateAll': 'testStubs',
@@ -275,7 +273,8 @@ describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
     // Quick 261120-pp4: -2 (the bridge friend-list and invite channels, deleted with the custom invite picker).
     // Phase 82 Plan 06: +1 FrontendMessages (removalRefusedNotice, the guard refusal toast); owner-less allowlist 66 -> 67.
     // Phase 82 Plan 10: -2 TestSync (setGogdlCommandStub, resetGogdlCommandStub, the gogdl e2e stub deleted, D-19); owner-less allowlist 67 -> 65.
-    expect(total).toBe(293)
+    // Phase 82 Plan 15: -2 TestSync (setLegendaryCommandStub, resetLegendaryCommandStub, the legendary e2e stub deleted, D-19); owner-less allowlist 65 -> 63.
+    expect(total).toBe(291)
     // Floor (Phase 67): originally measured - 6. Re-measured at 290 after quick 261115-tk8's deliberate
     // six-channel deletion and quick 261117-p38's two added channels (288 + 2), so the floor moves
     // 290 -> 284 and the parse-miss margin stays the same 6.
@@ -304,7 +303,7 @@ describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
       }
     }
     expect(computed).toEqual(NO_REGISTRATION_OWNER)
-    expect(Object.keys(NO_REGISTRATION_OWNER)).toHaveLength(65)
+    expect(Object.keys(NO_REGISTRATION_OWNER)).toHaveLength(63)
   })
 
   it('parseDomainFile reads the const-args conversion form', () => {

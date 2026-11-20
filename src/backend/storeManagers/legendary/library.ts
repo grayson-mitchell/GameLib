@@ -776,10 +776,6 @@ export default class LegendaryLibraryManager implements LibraryManager {
     command: LegendaryCommand,
     options?: CallRunnerOptions
   ): Promise<ExecResult> {
-    if (process.env.CI === 'e2e') {
-      return this.deps.legendaryRuntime.stubs.run(command)
-    }
-
     const { dir, bin } = getLegendaryBin(this.deps)
 
     // Set LEGENDARY_CONFIG_PATH to a custom, Heroic-specific location so user-made
