@@ -110,7 +110,7 @@ describe('createSteamLaunchRuntime', () => {
     })
   })
 
-  describe('bottled-Steam raise loop', () => {
+  describe('bottled-Steam raise loop (macOS-only: the platform is injected, not read from the host)', () => {
     const makeDeps = (
       runtime: ReturnType<typeof createSteamLaunchRuntime>
     ): { deps: BottledRaiseDeps; hide: jest.Mock; spawn: jest.Mock } => {
@@ -134,7 +134,7 @@ describe('createSteamLaunchRuntime', () => {
 
     it('sleeps on the injected clock and cancelRaiseLoops clears every pending timer', async () => {
       const clock = createFakeClock()
-      const runtime = createSteamLaunchRuntime({ clock })
+      const runtime = createSteamLaunchRuntime({ clock, platform: 'darwin' })
       const { deps, hide } = makeDeps(runtime)
       void runtime.raiser.raiseFrontmostBottledProcess(deps, 'test', 'script')
       await flush()
@@ -151,7 +151,7 @@ describe('createSteamLaunchRuntime', () => {
 
     it('a fresh loop after a cancel is not suppressed (the flag resets per loop)', async () => {
       const clock = createFakeClock()
-      const runtime = createSteamLaunchRuntime({ clock })
+      const runtime = createSteamLaunchRuntime({ clock, platform: 'darwin' })
       const { deps } = makeDeps(runtime)
       runtime.raiser.cancelRaiseLoops()
       void runtime.raiser.raiseFrontmostBottledProcess(deps, 'test', 'script')
@@ -163,8 +163,8 @@ describe('createSteamLaunchRuntime', () => {
     it('the cancel of one runtime leaves another runtime loop untouched', async () => {
       const clockA = createFakeClock()
       const clockB = createFakeClock()
-      const a = createSteamLaunchRuntime({ clock: clockA })
-      const b = createSteamLaunchRuntime({ clock: clockB })
+      const a = createSteamLaunchRuntime({ clock: clockA, platform: 'darwin' })
+      const b = createSteamLaunchRuntime({ clock: clockB, platform: 'darwin' })
       void b.raiser.raiseFrontmostBottledProcess(
         makeDeps(b).deps,
         'test',

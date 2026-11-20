@@ -131,7 +131,10 @@ const library = steamSession.libraryState.library
 // real per-file instance on the global-timer clock so jest fake timers drive it (66.4-06).
 const mockedStartBottleProcessMonitor = jest.fn()
 const mockedStopBottleProcessMonitor = jest.fn()
-const raiser = createBottledSteamRaiser({ clock: createGlobalTimerClock() })
+const raiser = createBottledSteamRaiser({
+  clock: createGlobalTimerClock(),
+  platform: 'darwin'
+})
 const bottledDeps = {
   steamLaunchRuntime: {
     raiser,
@@ -410,7 +413,7 @@ describe('bottle.ts', () => {
 
       jest.useFakeTimers()
       // Fire-and-forget, exactly as dispatchToBottledSteam does. The raise loop
-      // awaits the (mocked) isMac import, then schedules the first unref'd
+      // checks the injected platform, then schedules the first unref'd
       // sleep(1500) retry timer.
       void tellBottledSteamToUninstall(bottledDeps, '440')
       await flushMicrotasks()

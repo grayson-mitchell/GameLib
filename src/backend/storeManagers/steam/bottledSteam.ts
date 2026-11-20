@@ -99,7 +99,11 @@ export interface BottledSteamRaiser {
  */
 export function createBottledSteamRaiser(deps: {
   clock: Pick<Clock, 'setTimeout' | 'clear'>
+  /** Host platform; defaults to `process.platform`. The raise loop is macOS-only, so tests that
+   * exercise it pass 'darwin' rather than depending on the host they run on. */
+  platform?: NodeJS.Platform
 }): BottledSteamRaiser {
+  const platform = deps.platform ?? process.platform
   let cancelled = false
   const activeTimers = new Set<TimerHandle>()
 
@@ -126,6 +130,7 @@ export function createBottledSteamRaiser(deps: {
       raiseLoop(
         {
           sleep,
+          platform,
           isCancelled: () => cancelled,
           reset: () => {
             cancelled = false
@@ -140,6 +145,7 @@ export function createBottledSteamRaiser(deps: {
 
 interface RaiseLoopState {
   sleep: (ms: number) => Promise<void>
+  platform: NodeJS.Platform
   isCancelled: () => boolean
   reset: () => void
 }
@@ -163,8 +169,7 @@ async function raiseLoop(
     // suppresses loops that are already in flight, never future ones).
     loop.reset()
 
-    const { isMac } = await import('backend/constants/environment')
-    if (!isMac || loop.isCancelled()) {
+    if (loop.platform !== 'darwin' || loop.isCancelled()) {
       return
     }
 

@@ -32,6 +32,8 @@ export interface SteamLaunchRuntime {
 
 export interface SteamLaunchRuntimeDeps {
   clock: Clock
+  /** Host platform for the macOS-only bottled-Steam raise loop; defaults to `process.platform`. */
+  platform?: NodeJS.Platform
 }
 
 export function createSteamLaunchRuntime(
@@ -39,7 +41,10 @@ export function createSteamLaunchRuntime(
 ): SteamLaunchRuntime {
   return {
     monitors: createBottleProcessMonitors({ clock: deps.clock }),
-    raiser: createBottledSteamRaiser({ clock: deps.clock }),
+    raiser: createBottledSteamRaiser({
+      clock: deps.clock,
+      platform: deps.platform
+    }),
     drmRunners: createDrmBridgeRunners(),
     drmNotice: createDrmModeNoticeLatch(),
     platformCapture: createPlatformCaptureQueue()
