@@ -56,6 +56,11 @@ import {
   removeShortcuts as removeShortcutsUtil
 } from '../../shortcuts/shortcuts/shortcuts'
 import setup from './setup'
+import {
+  gogUninstallerSwitches,
+  gogUninstallStep,
+  runElevatedSteps
+} from './windowsElevation'
 import { removeNonSteamGame } from '../../shortcuts/nonesteamgame/nonesteamgame'
 import shlex from 'shlex'
 import {
@@ -1210,15 +1215,20 @@ export default class GOGGame implements Game {
             gameSettings
           })
 
-      const command = [
-        uninstallerPath,
-        '/VERYSILENT',
-        `/ProductId=${this.id}`,
-        '/galaxyclient',
-        '/KEEPSAVES'
-      ]
+      const switches = gogUninstallerSwitches(this.id)
+      const command = [uninstallerPath, ...switches]
 
-      logInfo(['Executing uninstall command', command.join(' ')], LogPrefix.Gog)
+      logInfo(
+        [
+          'Executing uninstall command',
+          isWindows
+            ? [uninstallerPath, ...switches, `/dir=${installDirectory}`].join(
+                ' '
+              )
+            : command.join(' ')
+        ],
+        LogPrefix.Gog
+      )
 
       if (!isWindows) {
         if (existsSync(gameSettings.winePrefix) && !shouldRemovePrefix) {
@@ -1229,21 +1239,13 @@ export default class GOGGame implements Game {
           })
         }
       } else {
-        const adminCommand = [
-          '-NoProfile',
-          'Start-Process',
-          '-FilePath',
-          uninstallerPath,
-          '-Verb',
-          'RunAs',
-          '-Wait',
-          '-ArgumentList'
-        ]
-
-        await this.deps.spawnAsync('powershell', [
-          ...adminCommand,
-          `"/verysilent","\`"/dir=${installDirectory}\`""`,
-          ``
+        // Elevation stays (quick 261120-uzn). No GOG unins000.exe was available to read its
+        // manifest, and either outcome of dropping it is no gain: launched without elevation the
+        // uninstaller would self-elevate (the same single prompt) or run unelevated and leave
+        // the machine-wide registry entries that the elevated setup step wrote orphaned while
+        // the files are deleted anyway.
+        await runElevatedSteps(this.deps, [
+          gogUninstallStep(uninstallerPath, this.id, installDirectory)
         ])
       }
     }
@@ -1351,34 +1353,20 @@ export default class GOGGame implements Game {
             // Run uninstall on DLC
             const uninstallExeFile = uninstallerFile.replace('ini', 'exe')
             if (isWindows) {
-              const adminCommand = [
-                '-NoProfile',
-                'Start-Process',
-                '-FilePath',
-                uninstallExeFile,
-                '-Verb',
-                'RunAs',
-                '-Wait',
-                '-ArgumentList'
-              ]
-              await this.deps.spawnAsync(
-                'powershell',
-                [
-                  ...adminCommand,
-                  `"/ProductId=${productId}","/VERYSILENT","/galaxyclient","/KEEPSAVES"`
-                ],
-                { cwd: gameData.install.install_path }
-              )
+              await runElevatedSteps(this.deps, [
+                {
+                  filePath: uninstallExeFile,
+                  args: gogUninstallerSwitches(productId),
+                  workingDirectory: gameData.install.install_path!
+                }
+              ])
             } else {
               await this.deps.commandRunner.runWineCommand({
                 gameSettings: gameConfig,
                 protonVerb: 'run',
                 commandParts: [
                   uninstallExeFile,
-                  `/ProductId=${productId}`,
-                  '/VERYSILENT',
-                  '/galaxyclient',
-                  '/KEEPSAVES'
+                  ...gogUninstallerSwitches(productId)
                 ],
                 startFolder: gameData.install.install_path!
               })

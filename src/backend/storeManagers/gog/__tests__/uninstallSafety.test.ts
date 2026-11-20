@@ -9,6 +9,7 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 import { initHeadless } from 'backend/logger'
 import GOGGame from '../games'
+import { elevatedStartProcessArgs, gogUninstallStep } from '../windowsElevation'
 import { deriveGogPaths } from '../constants'
 import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
 import { fakeSafetyRustInvoke } from 'backend/testUtils/fakeSafetyRust'
@@ -28,6 +29,7 @@ interface Harness {
   sent: [string, unknown][]
   installedSet: unknown[]
   unins: { wine: number; spawn: number; winePath: number }
+  spawnCalls: { command: string; args: string[]; options: unknown }[]
   installedList: { appName: string; install_path: string }[]
 }
 
@@ -39,6 +41,7 @@ function build(
   const installedSet: unknown[] = []
   const sent: [string, unknown][] = []
   const unins = { wine: 0, spawn: 0, winePath: 0 }
+  const spawnCalls: Harness['spawnCalls'] = []
   const info = { app_name: ID, title: 'Some Game', is_installed: true }
   const libraryManagers = {
     gog: {
@@ -105,8 +108,9 @@ function build(
         return Promise.resolve({ stdout: '', stderr: '' })
       }
     },
-    spawnAsync: () => {
+    spawnAsync: (command: string, args: string[], options?: unknown) => {
       unins.spawn++
+      spawnCalls.push({ command, args, options })
       return Promise.resolve({ stdout: '', stderr: '' })
     },
     runner: { run: () => Promise.resolve({ stdout: '', stderr: '' }) }
@@ -116,6 +120,7 @@ function build(
     sent,
     installedSet,
     unins,
+    spawnCalls,
     installedList
   }
 }
@@ -254,6 +259,40 @@ describe('GOGGame.uninstall guard (82-07)', () => {
     expect(h.installedSet).toEqual([[]])
     expect(notices(h)).toEqual([])
   })
+
+  // 261120-uzn: the Windows branch elevates once, with the full Galaxy switch set, and the path
+  // (it holds a space) reaches PowerShell as a literal.
+  const winIt = process.platform === 'win32' ? it : it.skip
+  winIt(
+    'a yes verdict runs unins000.exe once, elevated, with the full switch set (261120-uzn)',
+    async () => {
+      const { requestRustInvoke } = fakeSafetyRustInvoke()
+      const h = build(requestRustInvoke)
+
+      await h.game.uninstall({ shouldRemovePrefix: false })
+
+      const step = gogUninstallStep(
+        join(installDir, 'unins000.exe'),
+        ID,
+        installDir
+      )
+      expect(h.spawnCalls).toEqual([
+        {
+          command: 'powershell',
+          args: elevatedStartProcessArgs(step),
+          options: { windowsHide: true }
+        }
+      ])
+      const statement = h.spawnCalls[0]?.args[3] as string
+      for (const item of [
+        "'/KEEPSAVES'",
+        "'/galaxyclient'",
+        `'/ProductId=${ID}'`
+      ]) {
+        expect(statement).toContain(item)
+      }
+    }
+  )
 
   it('an absent gog-support folder does not block the uninstall (CR-01)', async () => {
     rmSync(gogSupportPath, { recursive: true, force: true })
