@@ -1,0 +1,109 @@
+{
+  "rows": [
+    {
+      "name": "root exists, target inside it",
+      "kind": "game-install",
+      "dirs": [["common", "Game"]],
+      "target": ["common", "Game"],
+      "trustRoot": ["common"],
+      "expect": { "verdict": "yes", "reason": "ok", "absent": false }
+    },
+    {
+      "name": "root exists, target absent inside it",
+      "kind": "game-install",
+      "dirs": [["common"]],
+      "target": ["common", "Gone"],
+      "trustRoot": ["common"],
+      "expect": { "verdict": "yes", "reason": "ok", "absent": true }
+    },
+    {
+      "name": "root absent, target absent under it (GOG gog-support shape)",
+      "kind": "game-support",
+      "dirs": [["heroic_gogdl"]],
+      "target": ["heroic_gogdl", "gog-support", "1207658930"],
+      "trustRoot": ["heroic_gogdl", "gog-support"],
+      "expect": { "verdict": "yes", "reason": "ok", "absent": true }
+    },
+    {
+      "name": "root absent, target absent under it (cancel before the first write)",
+      "kind": "game-install",
+      "dirs": [["lib", "steamapps"]],
+      "target": ["lib", "steamapps", "common", "Cool Game"],
+      "trustRoot": ["lib", "steamapps", "common"],
+      "expect": { "verdict": "yes", "reason": "ok", "absent": true }
+    },
+    {
+      "name": "root and several ancestors absent",
+      "kind": "game-install",
+      "dirs": [],
+      "target": ["a", "b", "c", "d"],
+      "trustRoot": ["a", "b", "c"],
+      "expect": { "verdict": "yes", "reason": "ok", "absent": true }
+    },
+    {
+      "name": "root absent, existing target outside it",
+      "kind": "game-install",
+      "dirs": [["elsewhere", "Game"]],
+      "target": ["elsewhere", "Game"],
+      "trustRoot": ["missing", "root"],
+      "expect": {
+        "verdict": "no",
+        "reason": "outside-trust-root",
+        "absent": false
+      }
+    },
+    {
+      "name": "root absent, target equal to it",
+      "kind": "game-install",
+      "dirs": [],
+      "target": ["missing", "root"],
+      "trustRoot": ["missing", "root"],
+      "expect": { "verdict": "no", "reason": "is-trust-root", "absent": false }
+    },
+    {
+      "name": "root exists, target equal to it",
+      "kind": "game-install",
+      "dirs": [["common"]],
+      "target": ["common"],
+      "trustRoot": ["common"],
+      "expect": { "verdict": "no", "reason": "is-trust-root", "absent": false }
+    },
+    {
+      "name": "root exists, string-prefix lookalike outside it",
+      "kind": "game-install",
+      "dirs": [["common"], ["commonX", "Game"]],
+      "target": ["commonX", "Game"],
+      "trustRoot": ["common"],
+      "expect": {
+        "verdict": "no",
+        "reason": "outside-trust-root",
+        "absent": false
+      }
+    },
+    {
+      "name": "root runs through a regular file",
+      "kind": "game-install",
+      "dirs": [["common", "Game"]],
+      "files": [["common", "file.txt"]],
+      "target": ["common", "Game"],
+      "trustRoot": ["common", "file.txt", "root"],
+      "expect": {
+        "verdict": "unknown",
+        "reason": "canonicalize-failed",
+        "absent": false
+      }
+    },
+    {
+      "name": "relative root",
+      "kind": "game-install",
+      "dirs": [["common", "Game"]],
+      "target": ["common", "Game"],
+      "trustRoot": "relative/root",
+      "expect": {
+        "verdict": "unknown",
+        "reason": "not-absolute",
+        "absent": false
+      }
+    }
+  ]
+}

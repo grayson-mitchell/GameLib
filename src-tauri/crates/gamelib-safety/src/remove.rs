@@ -63,6 +63,14 @@ fn check_protected(req: &Request, loc: &Location, insensitive: bool) -> Result<(
     Ok(())
 }
 
+/// The target must lie strictly inside its trust root. The root is resolved by
+/// `safe_path::resolve_trust_root`: an existing root is canonicalised with links followed, an
+/// absent root is placed at its nearest existing ancestor (absent is not a canonicalisation
+/// failure; GOG's `gog-support` folder and Steam's `steamapps/common` usually do not exist yet),
+/// and a root that exists but cannot be resolved is `Unknown`. An absent trust root can only ever
+/// admit absent targets, because an existing target's canonical path cannot pass through a name
+/// that does not exist, and `remove_tree` skips absent targets. So this never authorises deleting
+/// anything that exists.
 fn check_trust_root(
     t: &Target,
     req: &Request,
@@ -72,7 +80,7 @@ fn check_trust_root(
     match t.trust_root.as_deref().filter(|s| !s.is_empty()) {
         Some(raw) => {
             let p = safe_path::parse_absolute(raw).map_err(|_| unknown(Reason::NotAbsolute))?;
-            let root = dunce::canonicalize(&p).map_err(|_| unknown(Reason::CanonicalizeFailed))?;
+            let root = safe_path::resolve_trust_root(&p).map_err(unknown)?;
             let rk = fold_key(&root, sensitive_fold);
             let lk = fold_key(&loc.path, sensitive_fold);
             if lk == rk {

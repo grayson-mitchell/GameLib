@@ -974,19 +974,68 @@ fn unknown_no_trust_root_for_a_support_folder_or_bottle() {
     }
 }
 
+/// CR-01 / WR-01: an absent trust root is placed at its nearest existing ancestor, so a target
+/// under it is absent (yes, nothing to delete) and neither folder is created. Asserted inline
+/// because `run` asserts the target exists after the check.
 #[test]
-fn unknown_a_missing_trust_root_refuses() {
-    let c = common();
-    let game = seg(&c.common, &["Game"]);
-    touch(&seg(&game, &["g.exe"]));
-    let mut fx = game_fixture(&c, &game, vec![]);
-    fx.req.targets[0].trust_root = Some(s(&seg(c.home.root(), &["no", "such", "root"])));
-    fx.precious.push(seg(&game, &["g.exe"]));
-    run(
-        "trust root missing",
-        &fx,
-        &unknown_with(Reason::CanonicalizeFailed),
-    );
+fn trust_root_absent_and_target_absent_is_yes_and_nothing_is_touched() {
+    // (a) the GOG shape: only `heroic_gogdl` exists, the trust root is its `gog-support`.
+    // (b) the cancel shape: only `lib/steamapps` exists, the trust root is `steamapps/common`.
+    struct Shape {
+        name: &'static str,
+        dir: &'static [&'static str],
+        root: &'static [&'static str],
+        target: &'static [&'static str],
+        kind: TargetKind,
+    }
+    let shapes = [
+        Shape {
+            name: "gog-support",
+            dir: &["heroic_gogdl"],
+            root: &["heroic_gogdl", "gog-support"],
+            target: &["heroic_gogdl", "gog-support", "1207658930"],
+            kind: TargetKind::GameSupport,
+        },
+        Shape {
+            name: "cancel before the first write",
+            dir: &["lib", "steamapps"],
+            root: &["lib", "steamapps", "common"],
+            target: &["lib", "steamapps", "common", "Cool Game"],
+            kind: TargetKind::GameInstall,
+        },
+    ];
+    for Shape {
+        name,
+        dir,
+        root: root_parts,
+        target: target_parts,
+        kind,
+    } in shapes
+    {
+        let c = common();
+        fs::create_dir_all(seg(c.home.root(), dir)).unwrap();
+        let trust_root = seg(c.home.root(), root_parts);
+        let target = seg(c.home.root(), target_parts);
+        let req = request(
+            vec![tgt("t", s(&target), kind, Some(&trust_root))],
+            Some(vec![]),
+            None,
+            vec![],
+        );
+        let reply = check_removal(&req, CaseMode::Auto);
+        assert_eq!(reply.overall, Tri::Yes, "{name}: overall");
+        assert_eq!(reply.items[0].reason, Reason::Ok, "{name}: reason");
+        assert!(reply.items[0].absent, "{name}: absent");
+        let rm = remove_tree(&req, CaseMode::Auto);
+        assert_eq!(rm.outcome, Outcome::Removed, "{name}: outcome");
+        assert!(rm.items[0].absent, "{name}: remove item absent");
+        assert!(
+            !exists(&trust_root),
+            "{name}: the trust root must not be created"
+        );
+        assert!(!exists(&target), "{name}: the target must not be created");
+        assert!(exists(&c.sentinel), "{name}: sentinel deleted");
+    }
 }
 
 #[test]

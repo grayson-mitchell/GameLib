@@ -156,6 +156,27 @@ fn absent_location(p: &Path) -> Result<Location, Reason> {
     }
 }
 
+/// Where a trust root really is. Three cases, and they are different on purpose:
+/// - the root EXISTS: canonicalise it with links followed (`dunce::canonicalize`). A symlinked
+///   `steamapps/common` or config folder is the real root, and a target reached through it
+///   canonicalises to the referent. This must NOT use `canonical_location`, which for a link
+///   returns the link's own location (canonical parent plus name) and would turn every game under
+///   a symlinked root into `outside-trust-root`;
+/// - the root is genuinely ABSENT (`NotFound`): the nearest existing ancestor, canonical, plus
+///   the missing names. Such a root can only ever admit an absent target, because an existing
+///   target's canonical path cannot pass through a name that does not exist;
+/// - anything else (a path component that is a regular file, a dangling link, an unreadable
+///   entry) cannot be resolved: `CanonicalizeFailed`.
+///
+/// Read-only: nothing is created, and an absent root stays absent.
+pub fn resolve_trust_root(p: &Path) -> Result<PathBuf, Reason> {
+    match std::fs::symlink_metadata(p) {
+        Ok(_) => dunce::canonicalize(p).map_err(|_| Reason::CanonicalizeFailed),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => canonical_location(p).map(|l| l.path),
+        Err(_) => Err(Reason::CanonicalizeFailed),
+    }
+}
+
 /// Component vector used for every comparison (never a string prefix). With `insensitive`
 /// each component is NFC-normalised then lowercased.
 pub fn fold_key(p: &Path, insensitive: bool) -> Vec<String> {
@@ -397,6 +418,66 @@ mod tests {
             loc.path,
             dunce::canonicalize(dir.path()).unwrap().join("link")
         );
+    }
+
+    #[test]
+    fn trust_root_that_exists_is_canonical() {
+        let dir = tempfile::tempdir().unwrap();
+        assert_eq!(
+            resolve_trust_root(dir.path()),
+            Ok(dunce::canonicalize(dir.path()).unwrap())
+        );
+    }
+
+    #[test]
+    fn trust_root_that_is_absent_sits_at_its_nearest_existing_ancestor() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("missing").join("deeper");
+        assert_eq!(
+            resolve_trust_root(&p),
+            Ok(dunce::canonicalize(dir.path())
+                .unwrap()
+                .join("missing")
+                .join("deeper"))
+        );
+        assert!(
+            !dir.path().join("missing").exists(),
+            "resolving an absent root must not create it"
+        );
+    }
+
+    #[test]
+    fn trust_root_through_a_regular_file_cannot_be_resolved() {
+        let dir = tempfile::tempdir().unwrap();
+        let f = dir.path().join("file");
+        std::fs::write(&f, b"x").unwrap();
+        assert_eq!(
+            resolve_trust_root(&f.join("root")),
+            Err(Reason::CanonicalizeFailed)
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_symlinked_trust_root_resolves_to_its_referent() {
+        let dir = tempfile::tempdir().unwrap();
+        let real = dir.path().join("real");
+        std::fs::create_dir(&real).unwrap();
+        let link = dir.path().join("link");
+        std::os::unix::fs::symlink(&real, &link).unwrap();
+        assert_eq!(
+            resolve_trust_root(&link),
+            Ok(dunce::canonicalize(&real).unwrap())
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_dangling_symlink_trust_root_cannot_be_resolved() {
+        let dir = tempfile::tempdir().unwrap();
+        let link = dir.path().join("dangling");
+        std::os::unix::fs::symlink(dir.path().join("gone"), &link).unwrap();
+        assert_eq!(resolve_trust_root(&link), Err(Reason::CanonicalizeFailed));
     }
 
     #[test]
