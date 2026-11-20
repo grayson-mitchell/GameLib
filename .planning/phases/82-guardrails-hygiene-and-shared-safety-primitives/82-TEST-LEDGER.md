@@ -133,4 +133,36 @@ Nothing is proposed for retirement. Two suites are red at the proof head and nei
 
 ## CI proof (D-18)
 
-pending push (plan 82-11 Task 2)
+Pushed once from the main checkout by plan 82-11 (operator decision `push-once`): `826373aa0..76fd0e112 main -> main`, `.husky/pre-push` run without `--no-verify` and exit 0 (all nine checks passed in the main tree, which carried another session's dirty `public/locales/en/gamelib.json`: codecheck, lint `production: PASS | tests: PASS`, prettier, i18n `--fail-on-update`, find-deadcode `PASS (312 baselined knip findings)`, boundaries, steam-line-ceiling `PASS (201 files)`, backend-di-ceilings `PASS`, gameinfo-narrowing-ceiling `PASS (876 files, 46 allowlisted)`; the best-effort graphify refresh then ran).
+
+CI ran at **`e4f5c0e45`**, not `76fd0e112`: another session pushed a one-file `.planning/todos` commit on top within moments, so GitHub started workflows for the tip only. `git diff --stat 76fd0e112 e4f5c0e45` is that one todo file, so the code CI measured is exactly the pushed phase 82 code (and, per the Proof head, the measured proof head plus `.planning/` and the 82-11 knownInstalls fix).
+
+| Workflow | Run | Conclusion |
+| --- | --- | --- |
+| Rust test (`rust-test.yml`) | 44781299137 | failure (windows, ubuntu); macos green |
+| Test (`test.yml`) | 44781299279 | failure (`ci` job; see below) |
+| Code check | 44781299232 | success |
+| Lint | 44781299291 | success |
+| Supply-chain audit | 44781299234 | failure (`cargo-deny` step; also failed on `826373aa0`, run 44671043932, so not new) |
+
+Rust test per leg (steps in file order):
+
+| Leg | gamelib-safety + gamelib-testutil (first step, D-18) | multi-crate step (gamelib-depot `fetch.rs`, D-20) | clippy ratchet | Tauri shell test |
+| --- | --- | --- | --- | --- |
+| macos-latest | success | success | success | success |
+| windows-latest | FAILURE: `adversarial.rs` `nfc_and_nfd_spellings_match_only_when_insensitive` (1 failed, 39 passed), line 150: `nfc/nfd, sensitive: after remove_tree: ...\common\Café\GameB\b.exe was deleted` | SKIPPED (the red first step stops the job, so the D-20 depot `fetch.rs` result is NOT observed) | SKIPPED | SKIPPED |
+| ubuntu-latest | FAILURE: `adversarial.rs` `case_insensitive_mode_refuses_a_differently_cased_nested_install` and `nfc_and_nfd_spellings_match_only_when_insensitive` (2 failed, 40 passed), line 150: `case, sensitive: after remove_tree: /tmp/.../common/Studio/GameB/b.exe was deleted` | SKIPPED | SKIPPED | SKIPPED |
+
+The D-18 proof is therefore NOT complete: the first safety step is red on two of three legs, and because it runs first (by design, so an earlier red cannot mask it) it also hides the D-20 Windows depot result and the Windows/Linux clippy legs. macOS is fully green, including the clippy ratchet fixed in `a4f3660d0`.
+
+Cause of the safety reds (phase 82-03's own test, a test-fixture bug, not a defect in `gamelib-safety`): in the "sensitive" branch of those two rows the fixture keeps the `b.exe` inside the target in `fx.precious`, yet the row expects the target to be removed whole (`removed()`), so `assert_precious` flags the legitimate deletion. macOS folds case and normalises NFC/NFD, so it always took the other branch and the removed branch never ran there. Linux hits the removed branch in both rows; Windows hits it in the NFC/NFD row only (NTFS keeps NFC and NFD as distinct names, contrary to the old comment, now corrected). Fix: `fx.precious.retain(|p| !p.starts_with(&fx.target))` before the two `removed()` calls. Written and committed locally on branch `fix/82-11-safety-adversarial-precious` (`5a86d54ac`, a worktree off `e4f5c0e45`), NOT pushed (push-once: it returns to the operator as a new decision). Verified locally on a case-sensitive APFS disk image (the same branch Linux takes): `42 passed; 0 failed`.
+
+Test (`test.yml`, `ci` job) failed on 6 suites. None is phase 82's work and `.husky/pre-push` does not run jest, so none blocked the push:
+
+| Suite | Failure | Cause | Owner |
+| --- | --- | --- | --- |
+| `diPhaseGates.test.ts` ("shimCoverage.ts has no module state") and `moduleStateCensus.test.ts` | the two surviving reds already in "Retirement proposals (D-03)" | `a94108e3e` (quick-261120-rdo) `shimCoverage.ts:515` module-level `new Set` | 82-12 (fix, do not retire) |
+| `steamLaunchRuntime.test.ts` (3 tests: `sleeps on the injected clock and cancelRaiseLoops clears every pending timer`, `a fresh loop after a cancel is not suppressed`, `the cancel of one runtime leaves another runtime loop untouched`) | `expect(clock.pendingCount()).toBe(1)` received `0` at `steamLaunchRuntime.test.ts:141` | Linux-only: green on macOS in the clean proof worktree. Last touched by `0c5c35a32` (66.4-06), untouched by phase 82 | 82-12 (CI-only red) |
+| `meta/__tests__/callbackRegistryHost.test.ts` ("callback registry host harness (P55-3)", 50 `PASS ...` rows) | `FAIL cr_buffer_zeroed left == 0:1311` from the C harness `callback_registry_harness.c` on the Linux runner | Linux-only: green on macOS. Harness last touched by `4234aa0da` (quick-261117-pfj), untouched by phase 82 | 82-12 (CI-only red) |
+
+Remaining before D-18/D-20 can close: push the safety-test fix (operator decision), then re-collect the Rust test run so the Windows depot `fetch.rs` step, the clippy legs on Windows and Linux, and the Tauri shell test are observed for the first time.
