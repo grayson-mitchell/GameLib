@@ -15,6 +15,7 @@
  *
  * Plain fs reads rooted at __dirname; no backend module is imported or executed.
  */
+import { assertAtOrAboveFloor } from 'backend/testUtils/censusFloor'
 import { defined } from 'backend/testUtils/indexed'
 import { readdirSync, readFileSync } from 'fs'
 import { join } from 'path'
@@ -165,12 +166,37 @@ function registrationFiles(): string[] {
     .sort()
 }
 
+/** Floors (D-05). Never lower: a parse miss must turn the census red, not shrink it. */
+const FILES_FLOOR = 22
+const DECLARATIONS_FLOOR = 284
+
+/** Declared channels across every domain part, all kinds. */
+function declarationTotal(domains: Record<string, DomainPart[]>): number {
+  return Object.values(domains)
+    .flat()
+    .reduce((n, p) => n + p.keys.length, 0)
+}
+
+/**
+ * The vacuous-scan guard shared by the real run and the negative cases below, so the negative
+ * cases exercise the same code the census does.
+ */
+function checkCensusNotVacuous(scan: { files: number; total: number }): void {
+  assertAtOrAboveFloor('ipcDomainCensus files', scan.files, FILES_FLOOR)
+  assertAtOrAboveFloor(
+    'ipcDomainCensus declarations',
+    scan.total,
+    DECLARATIONS_FLOOR
+  )
+}
+
 describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
   const constants = sharedConstants()
   const domains = parsedDomains()
 
   it('(a) every channel a FlowRegistration registers is declared in its paired ipc/<domain>.ts', () => {
     const files = registrationFiles()
+    assertAtOrAboveFloor('ipcDomainCensus files', files.length, FILES_FLOOR)
     expect(files.length).toBe(22)
     for (const f of files) {
       const domain = f.replace('FlowRegistration.ts', '')
@@ -253,7 +279,8 @@ describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
     // 290 -> 284 and the parse-miss margin stays the same 6.
     // A parse miss in either declaration form (interface or const-args) turns this red instead of
     // silently shrinking the census.
-    expect(total).toBeGreaterThanOrEqual(284)
+    checkCensusNotVacuous({ files: registrationFiles().length, total })
+    expect(total).toBeGreaterThanOrEqual(DECLARATIONS_FLOOR)
   })
 
   it('(d) the owner-less channel allowlist equals the computed set', () => {
@@ -313,5 +340,69 @@ describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
     )
     expect(duplicateDeclarations({ a, b })).toEqual(['Async:dup-key'])
     expect(duplicateDeclarations({ a })).toEqual([])
+  })
+
+  describe('cannot pass vacuously (D-05)', () => {
+    it('the real tree clears both floors', () => {
+      expect(() =>
+        checkCensusNotVacuous({
+          files: registrationFiles().length,
+          total: declarationTotal(domains)
+        })
+      ).not.toThrow()
+    })
+
+    it('fails on empty input: zero registration files and zero declarations', () => {
+      expect(() => checkCensusNotVacuous({ files: 0, total: 0 })).toThrow(
+        /ipcDomainCensus files/
+      )
+      expect(declarationTotal({})).toBe(0)
+      expect(() =>
+        checkCensusNotVacuous({
+          files: FILES_FLOOR,
+          total: declarationTotal({})
+        })
+      ).toThrow(/ipcDomainCensus declarations/)
+    })
+
+    it('fails on a single-file scan', () => {
+      const [first] = Object.entries(domains)
+      expect(first).toBeDefined()
+      const one = Object.fromEntries([defined(first, 'first domain')])
+      expect(() =>
+        checkCensusNotVacuous({ files: 1, total: declarationTotal(one) })
+      ).toThrow(/ipcDomainCensus files/)
+    })
+
+    it('fails on truncated input: all but the first domain dropped', () => {
+      const [first] = Object.entries(domains)
+      const truncated = Object.fromEntries([defined(first, 'first domain')])
+      expect(() =>
+        checkCensusNotVacuous({
+          files: FILES_FLOOR,
+          total: declarationTotal(truncated)
+        })
+      ).toThrow(/ipcDomainCensus declarations/)
+    })
+
+    it('fails on truncated input: about two thirds of the declarations survive', () => {
+      const keep = Math.floor((declarationTotal(domains) * 2) / 3)
+      expect(keep).toBeLessThan(DECLARATIONS_FLOOR)
+      expect(() =>
+        checkCensusNotVacuous({ files: FILES_FLOOR, total: keep })
+      ).toThrow(/ipcDomainCensus declarations/)
+    })
+
+    it('fails when one declaration short of the floor (the adjacent boundary)', () => {
+      expect(() =>
+        checkCensusNotVacuous({
+          files: FILES_FLOOR,
+          total: DECLARATIONS_FLOOR - 1
+        })
+      ).toThrow(/ipcDomainCensus declarations/)
+      expect(() =>
+        checkCensusNotVacuous({ files: FILES_FLOOR, total: DECLARATIONS_FLOOR })
+      ).not.toThrow()
+    })
   })
 })

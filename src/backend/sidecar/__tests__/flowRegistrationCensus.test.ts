@@ -36,8 +36,16 @@
  * generator rather than a gate. Gate 2 reads one specific position instead:
  * the token immediately after `Registers` in the `register*Flows()` docstring.
  */
+import { assertAtOrAboveFloor } from 'backend/testUtils/censusFloor'
 import { defined } from 'backend/testUtils/indexed'
-import { readdirSync, readFileSync } from 'fs'
+import {
+  copyFileSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync
+} from 'fs'
+import { tmpdir } from 'os'
 import { join } from 'path'
 
 const SIDECAR_DIR = join(__dirname, '..')
@@ -184,14 +192,14 @@ const NUMBER_WORDS: Record<string, number> = {
   twenty: 20
 }
 
-function registrationFiles(): string[] {
-  return readdirSync(SIDECAR_DIR)
+function registrationFiles(dir: string = SIDECAR_DIR): string[] {
+  return readdirSync(dir)
     .filter((f) => f.endsWith('FlowRegistration.ts'))
     .sort()
 }
 
-function read(file: string): string {
-  return readFileSync(join(SIDECAR_DIR, file), 'utf-8')
+function read(file: string, dir: string = SIDECAR_DIR): string {
+  return readFileSync(join(dir, file), 'utf-8')
 }
 
 // Registrations write through `ipcMain` (not yet converted) or the injected `deps.ipc` (66.3-09).
@@ -292,10 +300,25 @@ function callSiteComments(): { call: string; comment: string }[] {
   return out
 }
 
+/** Floor on registrations counted across the family (D-05); the self-test asserts it too. */
+const REGISTRATIONS_FLOOR = 151
+
+/** Total registrations across every *FlowRegistration.ts file in `dir`. */
+function totalRegistrations(dir: string): number {
+  return registrationFiles(dir)
+    .map((f) => countRegistrations(read(f, dir)))
+    .reduce((n, c) => n + c.invoke + c.send, 0)
+}
+
 describe('sidecar flow-registration census (IN-01)', () => {
   // ── Gate 1: the table is the whole family, and it is accurate ──────────
   it('IN-01 the EXPECTED table names exactly the *FlowRegistration.ts modules on disk', () => {
     expect(registrationFiles()).toEqual(Object.keys(EXPECTED).sort())
+    assertAtOrAboveFloor(
+      'flowRegistrationCensus modules',
+      registrationFiles().length,
+      Object.keys(EXPECTED).length
+    )
   })
 
   it.each(registrationFiles())(
@@ -355,6 +378,11 @@ describe('sidecar flow-registration census (IN-01)', () => {
         const { invoke, send } = countRegistrations(read(f))
         return invoke + send
       })
+      assertAtOrAboveFloor(
+        'flowRegistrationCensus registrations',
+        totals.reduce((a, b) => a + b, 0),
+        REGISTRATIONS_FLOOR
+      )
       expect(totals.reduce((a, b) => a + b, 0)).toBeGreaterThan(150)
       expect(totals.filter((t) => t > 0).length).toBeGreaterThanOrEqual(15)
     })
@@ -408,6 +436,71 @@ describe('sidecar flow-registration census (IN-01)', () => {
       expect(sites.filter((s) => s.comment.length > 0).length).toBeGreaterThan(
         8
       )
+    })
+  })
+
+  describe('cannot pass vacuously (D-05)', () => {
+    const tmpDirs: string[] = []
+    afterEach(() => {
+      for (const d of tmpDirs.splice(0)) {
+        rmSync(d, { recursive: true, force: true })
+      }
+    })
+    const makeTmp = (): string => {
+      const d = mkdtempSync(join(tmpdir(), 'flow-census-'))
+      tmpDirs.push(d)
+      return d
+    }
+
+    /** The two checks a census run makes: the module list and the registrations floor. */
+    function checkFamily(dir: string): void {
+      const files = registrationFiles(dir)
+      expect(files).toEqual(Object.keys(EXPECTED).sort())
+      assertAtOrAboveFloor(
+        'flowRegistrationCensus modules',
+        files.length,
+        Object.keys(EXPECTED).length
+      )
+      assertAtOrAboveFloor(
+        'flowRegistrationCensus registrations',
+        totalRegistrations(dir),
+        REGISTRATIONS_FLOOR
+      )
+    }
+
+    it('the real sidecar dir passes both checks', () => {
+      expect(() => checkFamily(SIDECAR_DIR)).not.toThrow()
+    })
+
+    it('an empty directory fails both the module-list check and the registrations floor', () => {
+      const dir = makeTmp()
+      expect(registrationFiles(dir)).not.toEqual(Object.keys(EXPECTED).sort())
+      expect(() => checkFamily(dir)).toThrow()
+      expect(() =>
+        assertAtOrAboveFloor(
+          'flowRegistrationCensus registrations',
+          totalRegistrations(dir),
+          REGISTRATIONS_FLOOR
+        )
+      ).toThrow(/flowRegistrationCensus registrations/)
+    })
+
+    it('a directory holding one copied *FlowRegistration.ts fails both checks', () => {
+      const dir = makeTmp()
+      copyFileSync(
+        join(SIDECAR_DIR, 'gameDetailsFlowRegistration.ts'),
+        join(dir, 'gameDetailsFlowRegistration.ts')
+      )
+      expect(registrationFiles(dir)).toHaveLength(1)
+      expect(registrationFiles(dir)).not.toEqual(Object.keys(EXPECTED).sort())
+      expect(() =>
+        assertAtOrAboveFloor(
+          'flowRegistrationCensus registrations',
+          totalRegistrations(dir),
+          REGISTRATIONS_FLOOR
+        )
+      ).toThrow(/flowRegistrationCensus registrations/)
+      expect(() => checkFamily(dir)).toThrow()
     })
   })
 })
