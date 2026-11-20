@@ -44,3 +44,9 @@ guard: it also covers a probe that ignores cancellation. Bring back the executor
 the regression test (it is in the quick task's SUMMARY); it should go green with the fix and its
 assertions must not count ticks after the old one ends, because the `select!` is not `biased`.
 Re-run the 10-run flakiness loop used for `tests/adoption.rs`.
+
+## Resolution
+
+Fixed 2026-11-20 by quick task 261120-my5, commit `01ea1d788`. `Inner` now holds a `tick_gate: tokio::sync::Mutex<()>` shared by every task the watcher spawns. A task takes it for the whole tick body, so a task spawned by a re-watch waits for the old task's in-flight tick (FIFO) and then runs: delayed, not skipped. The wait is raced `biased` against the task's cancel token, so a cancelled task never takes the gate. A guard drops on cancel and on panic, and a tokio mutex does not poison. It is a mutex rather than the `running.rs` `AtomicBool` because the new task must wait, not skip.
+
+Evidence: the regression test `rewatching_while_a_slow_tick_is_in_flight_never_runs_two_evaluations_at_once` (`tests/adoption.rs`) failed on the unfixed code (the new task's pgrep started at 11000 ms beside the old call, `[5000, 11000]` where `[5000]` was expected) and passes with the fix: max in-flight 1, no start before the old tick finished at 13000 ms, and the new task's delayed tick starts at 13000 ms exactly. `tests/adoption.rs` 48 passed, 10/10 runs of the target green, whole crate green, steady-state tick starts of the three 261120-96e tests unchanged.
