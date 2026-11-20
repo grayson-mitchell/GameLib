@@ -26,8 +26,8 @@ The 3 failed suites in that run, and their disposition:
 
 | Suite | Verdict |
 | --- | --- |
-| `src/backend/__tests__/moduleStateCensus.test.ts` ("has no site outside SANCTIONED") | SURVIVING RED, not phase 82's: `src/backend/storeManagers/steam/bridge/shimCoverage.ts:515` `X86_NULL_OBJECT_VERSION_SET` is a module-level `new Set`, added by `a94108e3e` (quick-261120-rdo, another session). Still present at HEAD when re-checked at the end of this plan. See Retirement proposals. |
-| `src/backend/__tests__/diPhaseGates.test.ts` ("66.3 end state ... shimCoverage.ts has no module state") | SURVIVING RED, same cause and same file. |
+| `src/backend/__tests__/moduleStateCensus.test.ts` ("has no site outside SANCTIONED") | SURVIVING RED, not phase 82's: `src/backend/storeManagers/steam/bridge/shimCoverage.ts:515` `X86_NULL_OBJECT_VERSION_SET` is a module-level `new Set`, added by `a94108e3e` (quick-261120-rdo, another session). Still present at HEAD when re-checked at the end of this plan. See Retirement proposals. FIXED by plan 82-12 in `11996d3ed` (operator decision keep-fixing, 2026-11-21). |
+| `src/backend/__tests__/diPhaseGates.test.ts` ("66.3 end state ... shimCoverage.ts has no module state") | SURVIVING RED, same cause and same file. FIXED by plan 82-12 in `11996d3ed`. |
 | `src/backend/sidecar/__tests__/rustInvokeChannel.test.ts` ("writes a single well-formed rustInvoke frame...") | observed flaky: `Exceeded timeout of 5000 ms` under full-suite load; 9/9 pass alone, three runs in a row. Not a defect. |
 
 The earlier run of this proof at `413bbb533` (before the gameinfo fix) had the same two surviving reds plus `dxvkInstallRemove.test.ts` (`ENOTEMPTY` in the `afterEach` `rmSync`, 25/25 pass alone three times); that run's counts were `Test Suites: 3 failed, 5 skipped, 1097 passed, 1100 of 1105 total`, `Tests: 3 failed, 36 skipped, 23206 passed, 23245 total`. The first plan-82-01 measurement (at `8ba2ba40a`) was `7 failed, 5 skipped, 1074 passed` and is superseded; its red set is the table below.
@@ -90,6 +90,8 @@ Silent skips (the suite returns early and reports PASS, so they are not in the 3
 - `src/backend/__tests__/steamCmPortComplete.test.ts`: red under full-suite load (see the red set), green alone. Cause is a read of a file another suite had just unlinked. Fix direction taken: skip the transient probe file in the scan, never retirement.
 - `src/backend/tools/__tests__/dxvkInstallRemove.test.ts`: the research saw one `ENOTEMPTY` in `afterEach` under load. It did NOT red in this measurement (passed). Fix direction if it reds again: an `rmSync` `maxRetries` race fix, never retirement.
 
+- `src-tauri/crates/gamelib-steampoll/tests/monitor.rs` `watchdog_real::still_kills_the_grandchild_when_the_middle_process_dies_first`: red once on the macOS CI leg at `2345c2686` (attempt 1), green on attempt 2 and in 6 of 6 local runs alone. The test finds the inner shell's first child with `pgrep` and asserts it alive 300 ms after killing the shell; a loaded runner can stretch either step. Fix direction if it reds again: pin the grandchild by command line (`sleep 300`) instead of taking the first child, never retirement.
+
 ## CI-only reds (D-20)
 
 | Where | Failure | Cause | Fix commit |
@@ -107,6 +109,8 @@ Same clean worktree (own `node_modules`), detached at the final code head of pla
 - A `find-deadcode` run made while jest ran concurrently failed on `meta/runTs.__probe__.cjs` (the same transient file as the steamCmPortComplete race, seen by knip as a stray file). It is an artifact of running the two at once, not a repo defect; the gate was clean when run alone.
 
 ## Retirement proposals (D-03)
+
+DECIDED 2026-11-21 (plan 82-12): the operator chose keep-fixing for every entry; nothing was retired (see "Operator decisions (D-03), 2026-11-21" below). Original proposal text follows.
 
 Nothing is proposed for retirement. Two suites are red at the proof head and neither is phase 82's work; both are written up here for plan 82-12's per-suite decision, with the recommended path being a fix, not a retirement:
 
@@ -232,6 +236,30 @@ No other session's commits were carried (the three pushed were all 82-12).
 Rust test per leg: macos, ubuntu and windows all green. On Windows every step passed, including the multi-crate step, the static codec linkage, the Tauri shell test and the clippy ratchet (the round 1 `dead_code` and `unused_imports` reds are gone with no ceiling touched). So D-18 and D-20 are observed green on all three legs at this sha.
 
 Test: `Test Suites: 1 failed, 10 skipped, 1094 passed, 1095 of 1105 total`, `Tests: 1 failed, 190 skipped, 23060 passed, 23251 total`. `callbackRegistryHost` is green on the Linux runner (entry (d) observed fixed). The one failure is `sharedRedistInstall.test.ts` "installer timeout > records timedOut, stops all further entries and statuses, and does not settle" (`Exceeded timeout of 5000 ms`): the same load flake as the "restores after an installer timeout" case recorded at `064d8f5c7`, a different test of the same shape (500 `setImmediate` turns under fake timers; 62/62 pass locally). Per the operator's instruction it gets a per-test timeout, applied to all three tests of that shape (`records timedOut ...`, `restores after an installer timeout`, `Graphics query times out`): 30 s, no retry, no skip.
+
+### Round 3: `2345c268686399287ac5d504e7f03999dbfe5b48` (pushed `964e2b7f7..2345c2686`, 2026-11-21): the final proof sha
+
+No other session's commits were carried (the two pushed were 82-12's timeout fix and the round 2 ledger note).
+
+| Workflow | Run | Conclusion |
+| --- | --- | --- |
+| Rust test | 44794278539 | success on all three legs (macos on attempt 2, see below) |
+| Test | 44794278022 | success |
+| Code check | 44794278012 | success |
+| Lint | 44794278173 | success |
+| Supply-chain audit | 44794278157 | success |
+
+Test: green, so `sharedRedistInstall` (per-test timeout) and `callbackRegistryHost` pass on the Linux runner. Rust test: ubuntu, windows and macos all success. On attempt 1 the macos leg failed one test, `gamelib-steampoll` `tests/monitor.rs` `watchdog_real::still_kills_the_grandchild_when_the_middle_process_dies_first` (`assertion failed: alive(rig.grand)` at `monitor.rs:711`, `19 passed; 1 failed`); the identical test passed on macOS in every other run in this plan (064d8f5c7, 633217fa8, 964e2b7f7) and 6 of 6 times locally alone, and the files are untouched by this phase, so it is a timing flake of a real-process watchdog test (it samples the inner shell's first child with `pgrep` and sleeps 300 ms before asserting the grandchild is alive). Re-running the failed macos job on the same sha (`gh run rerun --failed`, no new push) passed. It is recorded under "Observed flaky" below, not retired and not fixed here.
+
+## Verdict
+
+FND-01 criterion 1 holds at the final proof sha **`2345c268686399287ac5d504e7f03999dbfe5b48`**:
+
+- Rust test run **44794278539** (all three legs success; the macos leg on attempt 2 after the one load flake above) and Test run **44794278022** (success), with Code check 44794278012, Lint 44794278173 and Supply-chain audit 44794278157 all success, at that one sha.
+- Every row under "Measured red set" reads fixed (cause and commit), and every CI-only red found afterwards is fixed with its commit in "Operator decisions (D-03), 2026-11-21" and the CI proof rounds above: the Windows `fetch.rs` cases (`a4f3660d0`, D-20), the gamelib-safety adversarial fixture (`064d8f5c7`), shimCoverage module state (`11996d3ed`), the steamcm Windows test (`8f32bcb9d`), steamLaunchRuntime on Linux (`eac686d51`), the callback registry harness on Linux (`5ff4c193c`, `9ab56bdbe`), the Windows clippy ratchet (`b7a411b6a`), the cargo-deny advisories accepted by the operator (`606d761ac`), and the load-flake timeouts (`5b969edd8`).
+- Nothing was retired. No suite is skipped as known-red or on a known-red list, and no skip list, retirement file, ceiling, baseline or pin was widened by this plan (the Windows clippy ceilings and the jest `jestMock` ceiling are untouched). The only risk acceptance is the operator's own: `RUSTSEC-2026-0545` and `RUSTSEC-2026-0548` in `src-tauri/deny.toml`, 2026-11-21.
+- D-18 (gamelib-safety and gamelib-testutil on all three legs) and D-20 (Windows `gamelib-depot` `tests/fetch.rs`, plus the previously unobserved Windows steamcm, steampoll, i18n, static codec linkage, Tauri shell test and clippy ratchet) are observed green at this sha.
+- Remaining honest caveats: the live sidecar-to-shell safety round trip was never exercised; the Linux leg has no clippy step by workflow design; load flakes (`steampoll` watchdog on macOS, `dxvkInstallRemove`, `steamLoginPollLifecycle`, `rustInvokeChannel`) pass alone and are not reds.
 
 ## Decision brief (D-03)
 

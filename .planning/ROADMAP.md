@@ -301,7 +301,7 @@ Milestone v0.11 Node Sidecar Retirement. Planned 2026-11-17 alongside v0.10; sta
   4. Uninstalling a game never deletes a sibling game co-installed beside it, proven by an adversarial path table (nested installdir, `.\x`, `C:\x`, UNC, symlink, case, NFC/NFD) on macOS, Windows and Linux
   5. The `utils.ts` and `bootstrap.ts` responsibility inventory and the milestone-wide state-ownership table are committed, and the zero-risk deletions (type-only files, dead exports, `legendary/commands/*`, `CI=e2e` mocks; `fileStore.ts` only after the live-or-dead check) are gone
 
-**Plans:** 15/16 plans executed
+**Plans:** 16/16 plans executed
 
 Plans:
 **Wave 1**
@@ -334,7 +334,7 @@ Plans:
 - [x] 82-11-PLAN.md — Final clean-worktree proof (explicit provenance), push checkpoint, three-OS CI proof
 
 **Wave 8** *(blocked on Wave 7 completion)*
-- [ ] 82-12-PLAN.md — Per-suite retirement decisions (D-03) and ledger close
+- [x] 82-12-PLAN.md — Per-suite retirement decisions (D-03) and ledger close
 
 ### Phase 83: Native seam, gamelib-core and process/shutdown contract
 

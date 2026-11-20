@@ -3,12 +3,12 @@ gsd_state_version: "1.0"
 milestone: v0.10
 current_phase: 82
 current_phase_name: Guardrails, hygiene and shared safety primitives
-status: executing
-stopped_at: "Completed 82-11-PLAN.md (D-18 open: Windows/Linux safety step red, fix 5a86d54ac unpushed)"
-last_updated: "2026-11-20T17:50:21.171Z"
-last_activity: 2026-11-20
+status: verifying
+stopped_at: Completed 82-12-PLAN.md
+last_updated: "2026-11-20T18:56:57.191Z"
+last_activity: 2026-11-21
 last_activity_desc: Phase 82 execution started
-state_head: 11996d3ed48f60e55ac6dd2e3cbdfdbf2a765f51
+state_head: 2345c268686399287ac5d504e7f03999dbfe5b48
 progress:
   total_phases: 27
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 
 Phase: 82 (Guardrails, hygiene and shared safety primitives) — EXECUTING
 Plan: 16 of 16
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-11-21 - Completed quick task 261121-97s: Download queue logs "handed off to the Steam client" instead of "Finished Installation" at a Steam-client handoff
 Progress: [█████████░] 88% (14 of 16 phase 82 plans have a SUMMARY; 82-11 proving, 82-12 pending)
 
@@ -323,6 +323,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 82 P15 | 25min | 2 tasks | 23 files |
 | Phase 82 P16 | 30min | 2 tasks | 16 files |
 | Phase 82 P11 | multi-session | 3 tasks | 4 files |
+| Phase 82 P12 | 75min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -568,6 +569,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 82]: 82-15: onTestOnly, RunnerCommandStub and the testOnly bucket of ipcSchemaCoverage deleted with the last TestSync channel; 66.4 owned-list floor 79 -> 77 equals the list length; DECLARATIONS_FLOOR stays 284 (total 289)
 - [Phase 82]: 82-16: e2eSurfaceGone is a two-tier gate (shipped source forbids any quoted e2e literal; tests forbid only stub symbols) because tauriShellSource.test.ts legitimately pins the Rust shell's CI=e2e protocol-registration guard
 - [Phase 82]: 82-11: CI-only fix under push-once stays on a local branch (5a86d54ac), returned to the operator rather than pushed
+- [Phase 82]: 82-12: operator chose keep-fixing for all five CI reds (nothing retired); cargo-deny zip 4.6.1 advisories accepted with a recorded reason (2026-11-21)
 
 ### Pending Todos
 
@@ -815,8 +817,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-20T17:27:36.214Z
-Stopped at: Completed 82-11-PLAN.md (D-18 open: Windows/Linux safety step red, fix 5a86d54ac unpushed)
+Last session: 2026-11-20T18:56:57.146Z
+Stopped at: Completed 82-12-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
