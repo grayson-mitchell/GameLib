@@ -1,15 +1,16 @@
 ---
 created: 2026-10-25
-title: "x86 shim parity for the modern SteamInternal_* family and the flat API is deferred until a title needs it (D-53-09)"
+title: "x86 flat API (SteamAPI_ISteam*) parity for Steamworks.NET titles, which Cat Quest 593280 needs (D-53-09 remainder)"
 area: steam-bridge
 files:
+  - meta/gen_vtables.ts
   - meta/bridgeCensus.ts
   - native/steam-bridge/generated/steam_api.def
   - native/steam-bridge/generated/steam_api_shim.c
   - src/backend/storeManagers/steam/bridge/shimCoverage.ts
-severity: minor
+severity: medium
 platform: any
-ready: blocked
+ready: code
 audit_acknowledged:
   milestone: v0.10
   at: 2026-11-20
@@ -45,13 +46,87 @@ line; this todo is unblocked the first time that count is above 0.
 
 ## Scope to build if a title appears
 
-- an x86 `CreateInterface` export
-- a fallback object for unserved interfaces
-- the `SteamInternal_*` exports the x64 shim carries (`SteamInternal_SteamAPI_Init`,
-  `SteamInternal_ContextInit`, `SteamInternal_FindOrCreateUserInterface`,
-  `SteamInternal_FindOrCreateGameServerInterface`, `SteamInternal_GameServer_Init`,
-  `SteamInternal_GameServer_Init_V2`, `SteamInternal_CreateInterface`)
-- the flat exports, dispatching via `__thiscall` into the proxy vtable
+- [done, quick 261120-rdo] an x86 `CreateInterface` export
+- [done, quick 261120-rdo] a fallback object for unserved interfaces: per-version,
+  manifest-backed `X86Null_<interface>` objects whose every slot pops exactly its
+  manifest `stackBytes` (`__thiscall` is callee-cleans); a version with no manifest
+  answers NULL because there is no i386 arity data for it
+- [done, quick 261120-rdo] the `SteamInternal_*` exports the x64 shim carries
+  (`SteamInternal_SteamAPI_Init`, `SteamInternal_ContextInit`,
+  `SteamInternal_FindOrCreateUserInterface`, `SteamInternal_FindOrCreateGameServerInterface`,
+  `SteamInternal_GameServer_Init`, `SteamInternal_GameServer_Init_V2`,
+  `SteamInternal_CreateInterface`, plus `SteamAPI_GetHSteamUser` / `SteamAPI_GetHSteamPipe`)
+- [open] the flat exports, dispatching via `__thiscall` into the proxy vtable (see
+  "Remainder (flat tier)" below)
+
+## 2026-11-20 measurement
+
+`pnpm bridge-census` (2026-11-20, HEAD after the tier-1 commits) printed:
+
+```
+x86 titles needing modern SteamInternal_* or flat API: 3 (57300, 576770, 593280)
+x86 titles whose modern SteamInternal_* or flat API need the x86 shim does not export: 1 (593280)
+```
+
+On 2026-10-25 the need line printed 0, so the unblock trigger fired. Three installed x86
+titles:
+
+| AppID  | Title                    | x86 evidence                                                                 | SDK vintage                                  |
+| ------ | ------------------------ | ---------------------------------------------------------------------------- | -------------------------------------------- |
+| 57300  | Amnesia: The Dark Descent | static imports `SteamInternal_ContextInit`, `SteamInternal_FindOrCreateUserInterface`, `SteamAPI_GetHSteamUser`, callbacks | modern lookup (exe: UGC017, UserStats012, Friends017, User023, Utils010) |
+| 576770 | Low Magic Age            | static imports `SteamInternal_ContextInit`, `SteamInternal_FindOrCreateUserInterface`, `SteamAPI_GetHSteamUser`, `SteamAPI_RestartAppIfNecessary` | modern lookup (exe: UGC013, UserStats011, User020) |
+| 593280 | Cat Quest                | Unity/Mono, no static steam imports; `Assembly-CSharp-firstpass.dll` carries 902 `SteamAPI_*` / `SteamInternal*` names | Steamworks.NET (SteamClient020 / SteamUser020 / ManualDispatch vintage) |
+
+Tier 1 landed in quick 261120-rdo: commit `d475531e7` (the x86 `SteamInternal_*` family,
+the manifest-backed x86 null object and a CrossOver Wine harness) and `a94108e3e` (serves
+the 57300 / 576770 versions on x86, teaches `shimCoverage.ts` the x86 fallback and adds the
+coverage-aware census line). 57300 and 576770 are now covered on x86: their measured static
+imports are all exported and every interface version they resolve is served or
+null-object answered, so the not-exported count dropped from 3 to 1.
+
+Census rows after the run, verbatim:
+
+```
+| 57300 | Amnesia: The Dark Descent | Amnesia The Dark Descent | x86 | unknown-version | no | unverified (no HELLO) | SteamClient@ambiguous(SteamClient017,SteamClient020) |
+| 576770 | Low Magic Age | LowMagicAge | x86 | unknown-version | no | unverified (no HELLO) | SteamClient@ambiguous(SteamClient017,SteamClient019) |
+| 593280 | Cat Quest | Cat Quest | x86 | unknown-version | no | unverified (no HELLO) | SteamController@ambiguous(SteamController006,SteamController007); +351 unserved-family imports (lazy) |
+```
+
+The 57300 and 576770 rows still read `unknown-version`. That is version resolution, not
+coverage: the shipped `steam_api.dll` carries two `SteamClient` version strings, which puts
+the SteamClient family in the runtime-lookup version pool as `@ambiguous`
+(`interfaceVersions.ts`). A unit test in `shimCoverage.test.ts` proves that with that one
+ambiguity set aside coverage is complete (no missing symbol, no blocking gap). Neither
+title has been launched yet; the strict bridge-verified criterion is untouched.
+
+## Remainder (flat tier)
+
+Cat Quest's Steamworks.NET runs `CSteamAPIContext.Init`, which fails if any one of its
+roughly 25 flat `SteamAPI_ISteamClient_GetISteam*` lookups answers NULL (the D-53-07
+flat-lookup contract; 53-12 had to serve the whole Init set on x64 for exactly this
+reason). Initializing only a "core" subset would still fail Init at the first unserved
+lookup (`SteamMatchGameSearch001`), so a partial flat tier changes nothing for it. Needed:
+
+- (a) `emitFlatExports` per arch, with `THISCALL` in the slot casts, under an
+  `#if defined(__i386__)` block, keeping the D-53-07 NULL flat-lookup contract.
+- (b) serve on x86 every `CSteamAPIContext.Init` version Cat Quest requests. Already x86
+  after quick 261120-rdo: SteamUser020, SteamFriends017, SteamUtils009,
+  STEAMUSERSTATS011, STEAMAPPS008, SteamMatchMaking009, SteamMatchMakingServers002,
+  SteamController007, SteamInput001. To widen to x86: SteamClient020,
+  SteamMatchGameSearch001, SteamNetworking006, STEAMSCREENSHOTS003, STEAMHTTP003,
+  STEAMAPPLIST001, STEAMMUSIC001, STEAMMUSICREMOTE001, STEAMHTMLSURFACE005,
+  STEAMINVENTORY_V003, STEAMVIDEO_V002, STEAMPARENTALSETTINGS001, STEAMREMOTEPLAY001,
+  SteamParties002. To extract: STEAMREMOTESTORAGE014, STEAMUGC014, and check
+  SteamNetworkingSockets008 / SteamNetworkingUtils003 / SteamGameServer013.
+- (c) turn the x86 export list into a generated list like `SHIM64_GENERATED_EXPORTS`
+  (about 900 names) instead of the hand-pinned `SHIM_EXPORTED_SYMBOLS`.
+- (d) audit which x64-only subsystems Steamworks.NET touches on x86 (ManualDispatch
+  `gl_md_*`, `GL_NET`, the `gl_mms` relay) and port or stub them.
+- (e) the 53-12 precedent: Init fails on any NULL lookup, so (b) must be complete, not
+  partial.
+
+Cat Quest's census row also reads `SteamController@ambiguous(SteamController006,SteamController007)`,
+a second version-resolution ambiguity independent of this remainder.
 
 ## 53-15 evidence: Avernum 6 206060 (2026-10-25)
 
