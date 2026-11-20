@@ -146,9 +146,9 @@ Operator, this Mac. Restart `pnpm tauri:dev` first (it does not rebuild the side
   warning none; no fallback or spawn-failure line; no steam_osx process was started. Game-status
   cycles at 20:10:31 and 20:10:57. Gap: a successful direct spawn logs nothing, so the log
   cannot prove the route on its own.
-- Still to run: Stop on a direct launch; steps 5-7.
+- Still to run: Stop on a direct launch; steps 5-7 (run 2026-11-20, below).
 
-Follow-ups (quick 261120-8hb), all OWED, not run:
+Follow-ups (quick 261120-8hb), owed at the time; results below:
 
 - The started log line now names the route (`launch without Steam started for appId ...: kind
   mac-native, binary ...` or `kind bridge, exe ...`). Re-check it on Dead Age 2.
@@ -158,3 +158,36 @@ Follow-ups (quick 261120-8hb), all OWED, not run:
 - A process gone within 15 s (`DIRECT_LAUNCH_EARLY_EXIT_MS`) shows the needs-Steam toast.
   Live-check it on Avernum 6 (bridge) and WazHack (Mac-native), and check that Stop on a direct
   launch shows no needs-Steam toast.
+
+### Live results (2026-11-20, operator, after 261120-8hb)
+
+All gate steps pass. Steam was fully quit (no `steam_osx`) before each direct launch.
+
+- A. Dead Age 2 (951430, Mac-native): **pass**. `launch without Steam started for appId 951430:
+  kind mac-native, binary .../DeadAge2.app/Contents/MacOS/DeadAge2` (18:40:51); ran ~3 min, no
+  needs-Steam notice.
+- B. Stop on a direct launch: **pass**. Started 18:44:37, Stop at 18:44:40
+  (`SteamGame.stop: stopping directly-launched appId 951430`); no needs-Steam notice despite
+  the 3 s run. Stop also logs a harmless `Aborting not possible. Could not find a matching abort
+  controller` ERROR (generic stop path looking for an install to cancel); log noise only.
+- C. Avernum 6 (206060, bridge): **pass**. `kind bridge, exe ...` started 18:48:28; `ended 3091
+  ms after start, under the 15000 ms early-exit window`; needs-Steam notice shown in-app.
+- D. WazHack (264160, Mac-native): **pass**. Started 18:59:52, ended 5726 ms later as it
+  relaunched through Steam; needs-Steam notice shown; the game then ran under Steam.
+- E. Toggle off: **pass**. `launching appId 951430 via steam://rungameid/951430`, no direct
+  line.
+- F. DRM fallback, Grim Dawn (219990) with a hand-set `launchWithoutSteam: true`: **pass**.
+  `launch without Steam skipped for appId 219990 (steam-drm); using the normal Steam launch`.
+  With Steam quit, the normal DRM-mode bridge launch then stopped at its own steam-check
+  (`drm-steam-not-running` dialog), which is the existing behaviour with the toggle off too.
+  With Steam running it launched normally (overlay attached 19:30). Setting reset to false.
+  The settings screen always draws a DRM title's toggle off and disabled, so a stored `true`
+  stays hidden there (inert, since Play always falls back).
+- G. Verdict recompute: **pass**. With the ACF buildid changed 20299076 -> 20299077,
+  `direct-launch verdict for appId 951430 recomputed (mac-native, buildid 20299077): applies
+  (warning none)` at 19:32:07. Buildid restored afterwards.
+- Failure toast: at 18:31:52 a WazHack Play was refused (`binary is missing`) and the log shows
+  `notice direct-launch-failed pushed ... (surface=in-app)`; its on-screen display was not
+  confirmed. Open question: the 18:35 run used a WazHack binary under
+  `~/GameLibParity/SteamLibrary/...`, the 18:59 run one under
+  `~/Library/Application Support/Steam/...`, so two installs may be resolving inconsistently.
