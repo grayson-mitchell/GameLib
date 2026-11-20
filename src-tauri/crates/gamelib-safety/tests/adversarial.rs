@@ -373,10 +373,19 @@ fn lexical_rows(filter: &[&str]) {
     // The real folder these strings try to alias: it and the sentinel must survive.
     let studio = seg(&c.common, &["Studio"]);
     touch(&seg(&studio, &["a.exe"]));
-    for row in lexical_table(&c)
+    let table = lexical_table(&c);
+    // D-05 / WR-08: a filter that names no row would let the test pass on zero rows.
+    for f in filter {
+        assert!(
+            table.iter().any(|r| r.name.starts_with(f)),
+            "lexical_rows: filter {f:?} matched no row"
+        );
+    }
+    let rows: Vec<Lexical> = table
         .into_iter()
         .filter(|r| filter.iter().any(|f| r.name.starts_with(f)))
-    {
+        .collect();
+    for row in rows {
         let mut fx = game_fixture(&c, &studio, vec![]);
         fx.req.targets[0].path = row.raw.clone();
         fx.precious.push(seg(&studio, &["a.exe"]));
@@ -400,6 +409,12 @@ fn lexical_rows(filter: &[&str]) {
         assert_precious(&fx, row.name);
         assert!(exists(&studio), "{}: aliased folder deleted", row.name);
     }
+}
+
+#[test]
+#[should_panic(expected = "matched no row")]
+fn lexical_rows_panics_when_a_filter_matches_no_row() {
+    lexical_rows(&["a filter that names no lexical row"]);
 }
 
 #[test]
@@ -1035,6 +1050,117 @@ fn trust_root_absent_and_target_absent_is_yes_and_nothing_is_touched() {
         );
         assert!(!exists(&target), "{name}: the target must not be created");
         assert!(exists(&c.sentinel), "{name}: sentinel deleted");
+    }
+}
+
+/// An absent trust root never admits an existing target: the target's canonical path cannot pass
+/// through the missing names, so it is outside.
+#[test]
+fn an_absent_trust_root_never_admits_an_existing_target() {
+    let c = common();
+    let game = seg(c.home.root(), &["elsewhere", "Game"]);
+    touch(&seg(&game, &["g.exe"]));
+    let mut fx = game_fixture(&c, &game, vec![]);
+    fx.req.targets[0].trust_root = Some(s(&seg(c.home.root(), &["missing", "root"])));
+    fx.precious.push(seg(&game, &["g.exe"]));
+    run(
+        "absent root, existing target",
+        &fx,
+        &refused(Reason::OutsideTrustRoot),
+    );
+}
+
+/// A root that EXISTS but cannot be resolved stays unknown: only genuine absence is placed at an
+/// ancestor.
+#[test]
+fn unknown_a_trust_root_that_exists_but_cannot_be_resolved_refuses() {
+    // (a) the root runs through a regular file.
+    let c = common();
+    let game = seg(&c.common, &["Game"]);
+    touch(&seg(&game, &["g.exe"]));
+    touch(&seg(&c.common, &["file.txt"]));
+    let mut fx = game_fixture(&c, &game, vec![]);
+    fx.req.targets[0].trust_root = Some(s(&seg(&c.common, &["file.txt", "root"])));
+    fx.precious.push(seg(&game, &["g.exe"]));
+    run(
+        "root through a regular file",
+        &fx,
+        &unknown_with(Reason::CanonicalizeFailed),
+    );
+
+    // (b) the root is a link whose referent is gone.
+    for kind in link_kinds() {
+        let c = common();
+        let game = seg(&c.common, &["Game"]);
+        touch(&seg(&game, &["g.exe"]));
+        let victim = seg(c.home.root(), &["victim"]);
+        fs::create_dir_all(&victim).unwrap();
+        let dangling = seg(c.home.root(), &["dangling"]);
+        if !link(&victim, &dangling, kind) {
+            continue;
+        }
+        fs::remove_dir_all(&victim).unwrap();
+        let mut fx = game_fixture(&c, &game, vec![]);
+        fx.req.targets[0].trust_root = Some(s(&dangling));
+        fx.precious.push(seg(&game, &["g.exe"]));
+        run(
+            &format!("{kind:?} dangling root"),
+            &fx,
+            &unknown_with(Reason::CanonicalizeFailed),
+        );
+    }
+}
+
+/// A symlinked or junctioned trust root that exists is followed to its referent, so a game under
+/// it stays removable. (Resolving it as a link location would make every such game outside.)
+#[test]
+fn a_symlinked_trust_root_is_followed_and_a_game_under_it_is_removable() {
+    for kind in link_kinds() {
+        let c = common();
+        let real = seg(c.home.root(), &["realcommon"]);
+        touch(&seg(&real, &["Game", "g.exe"]));
+        touch(&seg(&real, &["Other", "o.exe"]));
+        let root_link = seg(c.home.root(), &["common_link"]);
+        if !link(&real, &root_link, kind) {
+            continue;
+        }
+        let game = seg(&root_link, &["Game"]);
+        let mut fx = game_fixture(&c, &game, vec![]);
+        fx.req.targets[0].trust_root = Some(s(&root_link));
+        fx.precious.push(seg(&real, &["Other", "o.exe"]));
+        fx.precious.push(root_link.clone());
+        run(&format!("{kind:?} linked root"), &fx, &removed());
+        assert!(
+            !exists(&seg(&real, &["Game"])),
+            "{kind:?}: the game under the linked root must be gone"
+        );
+    }
+}
+
+/// WR-04: an empty trustRoot is a caller bug, never "no trust root", even when protected roots
+/// would let the no-root path skip containment.
+#[test]
+fn unknown_an_empty_trust_root_refuses_even_with_protected_roots() {
+    for kind in [
+        TargetKind::GameInstall,
+        TargetKind::Prefix,
+        TargetKind::SideloadFolder,
+    ] {
+        let c = common();
+        let dir = seg(&c.common, &["Thing"]);
+        touch(&seg(&dir, &["f.txt"]));
+        let protected = seg(c.home.root(), &["protected"]);
+        fs::create_dir_all(&protected).unwrap();
+        let mut fx = game_fixture(&c, &dir, vec![]);
+        fx.req.targets[0].kind = kind;
+        fx.req.targets[0].trust_root = Some(String::new());
+        fx.req.protected_roots = vec![s(&protected)];
+        fx.precious.push(seg(&dir, &["f.txt"]));
+        run(
+            &format!("{kind:?} with an empty trust root"),
+            &fx,
+            &unknown_with(Reason::NoTrustRoot),
+        );
     }
 }
 
