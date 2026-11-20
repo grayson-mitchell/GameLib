@@ -19,6 +19,8 @@
  *
  * `appinfo.config.launch` is a real Steam PICS map keyed by numeric-string
  * index ("0", "1", ...), not a JS array -- iterated via Object.values().
+ * Entries gated to other beta branches (`config.betakey`) are skipped and the
+ * `type: "default"` entry is preferred (see pickWindowsLaunch).
  * We prefer the entry whose OWN `config.oslist === 'windows'` (the same
  * oslist vocabulary games.ts's hostSteamDepotOs() note already documents),
  * but FALL BACK to a single untagged entry (no `oslist`) -- D-UAT-24-03:
@@ -58,7 +60,13 @@ import { NUMERIC_APP_ID } from '../gameConstants'
 interface AppLaunchEntry {
   executable?: string
   workingdir?: string
-  config?: { oslist?: string }
+  /** PICS `config.launch.<n>.type`: "default" marks the public launch option. */
+  type?: string
+  config?: {
+    oslist?: string
+    /** Comma-separated beta branches the entry is gated to (absent = every branch). */
+    betakey?: string
+  }
 }
 
 /**
@@ -82,23 +90,78 @@ interface WindowsLaunch {
   workingdir?: string
 }
 
+/** The branch a launch entry is resolved for when no installed branch is known. */
+const DEFAULT_LAUNCH_BRANCH = 'public'
+
+/**
+ * Whether a launch entry applies to `branch`. An entry with no `config.betakey`
+ * applies to every branch; otherwise the comma-separated list must name it.
+ * Gothic 1 Remake (1297900) lists a dev-only `G1R.exe` entry first, gated to
+ * "calom, magicbarrier, releasebranch_dev, ..." -- Steam never offers it on the
+ * public branch, and the depot does not even contain that exe.
+ */
+function launchEntryAppliesToBranch(
+  entry: AppLaunchEntry,
+  branch: string
+): boolean {
+  const betakey = entry.config?.betakey
+  if (typeof betakey !== 'string' || betakey.trim() === '') return true
+  return betakey
+    .split(',')
+    .map((key) => key.trim())
+    .includes(branch)
+}
+
+/** Lower sorts first: the "default" launch option, then an untyped entry, then the rest. */
+function launchEntryTypeRank(entry: AppLaunchEntry): number {
+  if (entry.type === 'default') return 0
+  return entry.type == null || entry.type === '' ? 1 : 2
+}
+
+/**
+ * The entries the branch gate admits, in PICS order, with the "default" launch
+ * option ahead of the rest. `Array.prototype.sort` is stable, so PICS order
+ * still decides between entries of the same rank.
+ */
+function branchLaunchEntries(
+  entries: AppLaunchEntry[],
+  branch: string
+): AppLaunchEntry[] {
+  return entries
+    .filter(
+      (candidate) =>
+        candidate?.executable && launchEntryAppliesToBranch(candidate, branch)
+    )
+    .sort((a, b) => launchEntryTypeRank(a) - launchEntryTypeRank(b))
+}
+
 /**
  * Prefer an explicit windows-tagged entry; fall back to a single untagged
  * entry (no oslist) for Windows-only titles that don't tag it at all
  * (D-UAT-24-03). Never fall back to a mac/linux-tagged entry.
+ *
+ * Only entries that apply to the installed `branch` are considered (a missing
+ * `config.betakey` applies to every branch), and within a tier the `type:
+ * "default"` entry wins -- a dev-beta entry listed first must not shadow the
+ * public one. `branch` defaults to `public`: the launch-target resolver does
+ * not read the installed ACF's BetaKey, so a title installed from a non-public
+ * beta whose only entries are gated to that beta resolves to nothing rather
+ * than to a dev-only executable.
  */
-function pickWindowsLaunch(appinfo: unknown): WindowsLaunch | undefined {
+function pickWindowsLaunch(
+  appinfo: unknown,
+  branch: string = DEFAULT_LAUNCH_BRANCH
+): WindowsLaunch | undefined {
   const info = appinfo as AppLaunchInfo | undefined
-  const launchEntries = Object.values(info?.config?.launch ?? {})
+  const launchEntries = branchLaunchEntries(
+    Object.values(info?.config?.launch ?? {}),
+    branch
+  )
   const windowsEntry =
+    launchEntries.find((candidate) => candidate.config?.oslist === 'windows') ??
     launchEntries.find(
       (candidate) =>
-        candidate?.executable && candidate.config?.oslist === 'windows'
-    ) ??
-    launchEntries.find(
-      (candidate) =>
-        candidate?.executable &&
-        (candidate.config?.oslist == null || candidate.config.oslist === '')
+        candidate.config?.oslist == null || candidate.config.oslist === ''
     )
   if (!windowsEntry?.executable) return undefined
   const workingdir =

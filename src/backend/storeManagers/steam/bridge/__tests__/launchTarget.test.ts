@@ -266,6 +266,165 @@ describe('resolveBridgeLaunchExe', () => {
     )
   })
 
+  // Gothic 1 Remake (1297900), live PICS 2026-11-21: a dev-beta-only "G1R.exe"
+  // entry is listed first and is windows-tagged. The depot has no such file; the
+  // public launch is entry "3" (type "default").
+  const GOTHIC_REMAKE_LAUNCH = {
+    '0': {
+      executable: 'G1R.exe',
+      type: 'option1',
+      description: 'Dev Exe',
+      config: {
+        oslist: 'windows',
+        betakey:
+          'calom, magicbarrier, releasebranch_dev, clown, testgate, evaluation'
+      }
+    },
+    '1': {
+      executable: 'G1R-Win64-Shipping.exe',
+      type: 'option1',
+      config: {
+        betakey: 'calom, releasebranch_dev, releasebranch_fordistribution'
+      }
+    },
+    '2': {
+      executable: 'G1R-Win64-Test.exe',
+      type: 'option1',
+      config: { betakey: 'calom, releasebranch_dev' }
+    },
+    '3': {
+      executable: 'G1R-Win64-Shipping.exe',
+      type: 'default',
+      config: {
+        oslist: 'windows',
+        betakey:
+          'public, clbe, combat, press, pressspecial, reviews, valve, loca, publictesting, previousrelease, releasebranch_fordistribution'
+      }
+    },
+    '5': {
+      executable: 'G1R-Win64-Shipping.exe',
+      arguments: '-ModManagementUI',
+      type: 'option1',
+      config: { oslist: 'windows', betakey: 'public' }
+    }
+  }
+
+  it('skips a windows-tagged entry gated to non-public betas and picks the public type "default" entry (Gothic 1 Remake 1297900)', async () => {
+    jest.mocked(getAnonymousPicsClient).mockResolvedValue(
+      makeFakeClient({
+        getProductInfo: mockProductInfo(1297900, {
+          config: {
+            installdir: 'Gothic 1 Remake',
+            launch: GOTHIC_REMAKE_LAUNCH
+          }
+        })
+      }) as any
+    )
+
+    const result = await resolveBridgeLaunchExe(DEPS, '1297900')
+
+    expect(result).toBe(
+      join(
+        BRIDGE_STEAMAPPS_DIR,
+        'common',
+        'Gothic 1 Remake',
+        'G1R-Win64-Shipping.exe'
+      )
+    )
+    // The persisted target is what a later launch and the offline path reuse.
+    expect(setBridgeLaunchTarget).toHaveBeenCalledWith(DEPS, '1297900', {
+      executable: 'G1R-Win64-Shipping.exe',
+      installdir: 'Gothic 1 Remake'
+    })
+  })
+
+  it('never resolves to a dev-only exe that the public branch does not offer, even when every entry is gated to another branch', async () => {
+    jest.mocked(getAnonymousPicsClient).mockResolvedValue(
+      makeFakeClient({
+        getProductInfo: mockProductInfo(1297900, {
+          config: {
+            installdir: 'Gothic 1 Remake',
+            launch: {
+              '0': {
+                executable: 'G1R.exe',
+                config: {
+                  oslist: 'windows',
+                  betakey: 'calom, releasebranch_dev'
+                }
+              }
+            }
+          }
+        })
+      }) as any
+    )
+
+    const result = await resolveBridgeLaunchExe(DEPS, '1297900')
+
+    expect(result).toBeUndefined()
+    expect(setBridgeLaunchTarget).not.toHaveBeenCalled()
+  })
+
+  it('matches the public branch by exact key, not by substring, and trims list entries', async () => {
+    jest.mocked(getAnonymousPicsClient).mockResolvedValue(
+      makeFakeClient({
+        getProductInfo: mockProductInfo(777, {
+          config: {
+            installdir: 'Branchy',
+            launch: {
+              '0': {
+                executable: 'substring.exe',
+                config: {
+                  oslist: 'windows',
+                  betakey: 'publictesting,notpublic'
+                }
+              },
+              '1': {
+                executable: 'spaced.exe',
+                config: { oslist: 'windows', betakey: 'beta ,  public  ' }
+              }
+            }
+          }
+        })
+      }) as any
+    )
+
+    const result = await resolveBridgeLaunchExe(DEPS, '777')
+
+    expect(result).toBe(
+      join(BRIDGE_STEAMAPPS_DIR, 'common', 'Branchy', 'spaced.exe')
+    )
+  })
+
+  it('prefers the type "default" entry over an earlier ungated windows entry of another type', async () => {
+    jest.mocked(getAnonymousPicsClient).mockResolvedValue(
+      makeFakeClient({
+        getProductInfo: mockProductInfo(778, {
+          config: {
+            installdir: 'Modal',
+            launch: {
+              '0': {
+                executable: 'Modal-Editor.exe',
+                type: 'option1',
+                config: { oslist: 'windows' }
+              },
+              '1': {
+                executable: 'Modal.exe',
+                type: 'default',
+                config: { oslist: 'windows' }
+              }
+            }
+          }
+        })
+      }) as any
+    )
+
+    const result = await resolveBridgeLaunchExe(DEPS, '778')
+
+    expect(result).toBe(
+      join(BRIDGE_STEAMAPPS_DIR, 'common', 'Modal', 'Modal.exe')
+    )
+  })
+
   it('returns undefined when the only launch entry is linux/macos (no windows launch target) -- never throws', async () => {
     jest.mocked(getAnonymousPicsClient).mockResolvedValue(
       makeFakeClient({

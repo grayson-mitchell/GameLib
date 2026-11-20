@@ -2400,14 +2400,14 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       }
     )
 
-    // Poisoned this session -- a later launch() for the SAME appId skips
-    // the bridge entirely (finding #3 lineage).
+    // Poisoned this session, but the bits live in the bridge bottle -- a later
+    // launch() for the SAME appId retries the bridge and never reroutes to
+    // bottled Steam, which has no copy and would re-download the game.
+    ;(placeShimForGame as jest.Mock).mockClear()
     const secondResult = await game.launch({} as any)
-    expect(tellBottledSteamToLaunch).toHaveBeenCalledWith(
-      steamTestDeps,
-      SHIM_FAIL_APP_ID
-    )
-    expect(secondResult).toBe(true)
+    expect(tellBottledSteamToLaunch).not.toHaveBeenCalled()
+    expect(placeShimForGame).toHaveBeenCalledTimes(1)
+    expect(secondResult).toBe(false)
   })
 
   it('shim-not-built with arch x64 fires steamBridgeSetupRequired with reason win64-no-shim (D-51-13), not the generic shim-refresh-failed', async () => {
@@ -2485,7 +2485,16 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
         expect.objectContaining({ post: expect.any(Function) })
       )
 
-      // Breaker armed: the next launch skips the bridge.
+      // Breaker armed and the CEG verdict persisted (the metadata store is a
+      // mock here, so hand the second launch the record the first one wrote):
+      // CEG needs the Windows Steam client, so the next launch skips the
+      // bridge. This is the one case a bridge-bottle install reaches bottled
+      // Steam.
+      ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+        platformsCaptured: true,
+        is_mac_native: false,
+        bridge: { drm: 'ceg' }
+      })
       isBottleReady.mockReturnValue(true)
       ;(tellBottledSteamToLaunch as jest.Mock).mockResolvedValue({
         status: 'done'
@@ -3258,7 +3267,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     expect(runWineCommand).not.toHaveBeenCalled()
   })
 
-  it('R7 forced failure: ensureBridgeHelperReady not-ready — game is NOT launched, markBridgeFailedThisSession applied, steamBridgeSetupRequired fired, and a subsequent launch() for the SAME appId skips the bridge (finding #3 bypass)', async () => {
+  it('R7 forced failure: ensureBridgeHelperReady not-ready — game is NOT launched, markBridgeFailedThisSession applied, steamBridgeSetupRequired fired, and a subsequent launch() for the SAME appId retries the bridge, never bottled Steam (bits live in the bridge bottle)', async () => {
     // A dedicated appId, never reused elsewhere in this file, so this
     // test's bridgeFailedThisSession mutation cannot leak into other tests.
     const FAILING_APP_ID = '888888'
@@ -3289,15 +3298,66 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       }
     )
 
-    // A subsequent launch() re-invocation (e.g. the D-05 fallback dialog's
-    // own re-invocation) must now skip the bridge entirely (finding #3) and
-    // route to the existing bottled path instead.
+    // A subsequent launch() for the same appId must NOT reroute to bottled
+    // Steam: the bits live in the bridge bottle, so bottled Steam would answer
+    // AppError_18 and re-download the game. It retries the bridge instead.
+    ;(ensureBridgeHelperReady as jest.Mock).mockClear()
     const secondResult = await game.launch({} as any)
+    expect(tellBottledSteamToLaunch).not.toHaveBeenCalled()
+    expect(ensureBridgeHelperReady).toHaveBeenCalledTimes(1)
+    expect(secondResult).toBe(false)
+  })
+
+  it('Gothic 1 Remake (1297900) incident: an install that failed at shim placement armed the breaker, the bits sit complete in the bridge bottle -- Play goes to the bridge, never bottled Steam, and launches once the exe resolves', async () => {
+    const STUCK_APP_ID = '1297900'
+    library.set(STUCK_APP_ID, makeEntry({ title: 'Gothic 1 Remake' }))
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    // isBridgeBottleReady drives findBridgeInstallBottle: the bridge bottle
+    // holds this appId's manifest.
+    isBottleReady.mockReturnValue(true)
+    ;(tellBottledSteamToLaunch as jest.Mock).mockResolvedValue({
+      status: 'done'
+    })
+    ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
+    // What installBridgeGame does when the resolved exe was wrong.
+    markBridgeFailedThisSession(STUCK_APP_ID)
+
+    const result = await new SteamGame(STUCK_APP_ID, steamTestDeps).launch(
+      {} as any
+    )
+
+    expect(tellBottledSteamToLaunch).not.toHaveBeenCalled()
+    expect(runWineCommand).toHaveBeenCalledWith(
+      expect.objectContaining({ commandParts: [RESOLVED_EXE_PATH] })
+    )
+    expect(result).toBe(true)
+  })
+
+  it('a persisted Steam CEG verdict is the one case a breaker-armed bridge-bottle install may still reach bottled Steam on launch', async () => {
+    const CEG_STUCK_APP_ID = '1297901'
+    library.set(CEG_STUCK_APP_ID, makeEntry({ title: 'CEG Bridge Copy' }))
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    isBottleReady.mockReturnValue(true)
+    ;(tellBottledSteamToLaunch as jest.Mock).mockResolvedValue({
+      status: 'done'
+    })
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false,
+      bridge: { drm: 'ceg' }
+    })
+    markBridgeFailedThisSession(CEG_STUCK_APP_ID)
+
+    const result = await new SteamGame(CEG_STUCK_APP_ID, steamTestDeps).launch(
+      {} as any
+    )
+
+    expect(runWineCommand).not.toHaveBeenCalled()
     expect(tellBottledSteamToLaunch).toHaveBeenCalledWith(
       steamTestDeps,
-      FAILING_APP_ID
+      CEG_STUCK_APP_ID
     )
-    expect(secondResult).toBe(true)
+    expect(result).toBe(true)
   })
 
   it('writeBridgeConfig rejects — game is NOT launched, markBridgeFailedThisSession applied, steamBridgeSetupRequired fired with reason bridge-config-write-failed', async () => {
@@ -3330,13 +3390,11 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
         fallbackAvailable: true
       }
     )
-
+    ;(writeBridgeConfig as jest.Mock).mockClear()
     const secondResult = await game.launch({} as any)
-    expect(tellBottledSteamToLaunch).toHaveBeenCalledWith(
-      steamTestDeps,
-      CONFIG_FAIL_APP_ID
-    )
-    expect(secondResult).toBe(true)
+    expect(tellBottledSteamToLaunch).not.toHaveBeenCalled()
+    expect(writeBridgeConfig).toHaveBeenCalledTimes(1)
+    expect(secondResult).toBe(false)
   })
 
   it('resolveBridgeLaunchExe returns undefined — launch() does NOT run a bare/undefined path, marks bridge-failed, fires steamBridgeSetupRequired', async () => {

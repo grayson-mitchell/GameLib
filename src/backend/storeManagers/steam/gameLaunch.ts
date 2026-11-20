@@ -44,6 +44,7 @@ import {
 } from './bridge/drm/steamclientLayerMode'
 import {
   markBridgeLimitedNoticeShown,
+  readBridgeVerdict,
   setBridgeIdentityFallback,
   writeBridgeModeVerdict
 } from './bridge/bridgeVerdict'
@@ -113,20 +114,45 @@ export async function launch(
     // manifest — the FIRST check inside this block, mirroring install()'s
     // own bridge sub-branch above (BLOCKER 1 rationale: the bridge has its
     // own readiness gate, ensureBridgeHelperReady(), independent of the
-    // unrelated Phase 17 GameLibSteam bottle's own state). The session
-    // circuit breaker (finding #3) is orthogonal to location — a bridge
-    // launch that already failed once this session must keep falling back
-    // to the bottled flow even though the bits are still sitting in the
-    // bridge bottle from the earlier attempt, so it is checked here too,
-    // not folded into findBridgeInstallBottle itself.
-    if (
-      findBridgeInstallBottle(steamGame.deps.paths, steamGame.appId) !== null &&
-      !steamGame.deps.steamSession.gameSession.bridgeFailedThisSession.has(
-        steamGame.appId
-      )
-    ) {
-      if ((await gateBridgeLaunchOnUpdate(steamGame)) === 'abort') return false
-      return launchBridgeGame(steamGame)
+    // unrelated Phase 17 GameLibSteam bottle's own state).
+    //
+    // The session circuit breaker (finding #3) is about where a NEW install
+    // goes, not where the bits are. It must NOT divert a launch of bits that
+    // sit in a bridge bottle: bottled Steam has no copy of them, so
+    // `-applaunch` answers AppError_18 and Steam starts a full re-download
+    // into its own library (Gothic 1 Remake 1297900, 2026-11-21: a 33 GB
+    // bridge copy was complete, a shim-placement failure set the breaker, and
+    // the next Play fetched the game again). Such a launch retries the bridge,
+    // which re-resolves everything and surfaces its own steamBridgeSetupRequired
+    // message on a real failure.
+    //
+    // The one exception is a persisted Steam CEG verdict: CEG needs the
+    // Windows Steam client, so bottled Steam is the only place the title can
+    // run, and it is the user's explicit "Fall back to bottled Steam" choice
+    // in the setup dialog that re-enters launch() after the breaker is set.
+    const bridgeBottleName = findBridgeInstallBottle(
+      steamGame.deps.paths,
+      steamGame.appId
+    )
+    if (bridgeBottleName !== null) {
+      const failedThisSession =
+        steamGame.deps.steamSession.gameSession.bridgeFailedThisSession.has(
+          steamGame.appId
+        )
+      const needsWindowsSteamClient =
+        readBridgeVerdict(steamGame.deps, steamGame.appId)?.drm === 'ceg'
+      if (!(failedThisSession && needsWindowsSteamClient)) {
+        if (failedThisSession) {
+          logInfo(
+            `SteamGame: appId ${steamGame.appId} bridge failed earlier this session but its bits live in ${bridgeBottleName}; retrying the bridge launch, never bottled Steam`,
+            LogPrefix.Steam
+          )
+        }
+        if ((await gateBridgeLaunchOnUpdate(steamGame)) === 'abort') {
+          return false
+        }
+        return launchBridgeGame(steamGame)
+      }
     }
 
     if (!steamGame.deps.steamBottle.isBottleReady()) {
