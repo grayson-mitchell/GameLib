@@ -472,6 +472,30 @@
       }
     },
     {
+      "id": "acfUpdate/readLocalConfigBetaKey/playtime/10",
+      "op": "steamfiles_read_localconfig_beta_key",
+      "args": {
+        "path": "${FIXTURES}/localconfig/playtime.vdf",
+        "appId": "10"
+      }
+    },
+    {
+      "id": "acfUpdate/readLocalConfigBetaKey/playtime/20",
+      "op": "steamfiles_read_localconfig_beta_key",
+      "args": {
+        "path": "${FIXTURES}/localconfig/playtime.vdf",
+        "appId": "20"
+      }
+    },
+    {
+      "id": "acfUpdate/readLocalConfigBetaKey/playtime/99",
+      "op": "steamfiles_read_localconfig_beta_key",
+      "args": {
+        "path": "${FIXTURES}/localconfig/playtime.vdf",
+        "appId": "99"
+      }
+    },
+    {
       "id": "acfUpdate/readLocalConfigBetaKey/missing-file",
       "op": "steamfiles_read_localconfig_beta_key",
       "args": {

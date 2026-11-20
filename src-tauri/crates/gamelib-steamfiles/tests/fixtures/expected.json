@@ -361,6 +361,22 @@
     "acfUpdate/readLocalConfigBetaKey/none/abc": {
       "oracle": null
     },
+    "acfUpdate/readLocalConfigBetaKey/playtime/10": {
+      "oracle": null,
+      "note": "hand-written (phase 82-01): playtime.vdf has no BetaKey or UserAppConfig under any Apps/<id>, which is what Steam's own beta-branch selection reads from localconfig.vdf, so no beta key exists for the app (null). Rust-verified through rust-results.json; no TS oracle behind it."
+    },
+    "acfUpdate/readLocalConfigBetaKey/playtime/20": {
+      "oracle": null,
+      "note": "hand-written (phase 82-01): playtime.vdf has no BetaKey or UserAppConfig under any Apps/<id>, which is what Steam's own beta-branch selection reads from localconfig.vdf, so no beta key exists for the app (null). Rust-verified through rust-results.json; no TS oracle behind it."
+    },
+    "acfUpdate/readLocalConfigBetaKey/playtime/99": {
+      "oracle": null,
+      "note": "hand-written (phase 82-01): playtime.vdf has no BetaKey or UserAppConfig under any Apps/<id>, which is what Steam's own beta-branch selection reads from localconfig.vdf, so no beta key exists for the app (null). Rust-verified through rust-results.json; no TS oracle behind it."
+    },
+    "acfUpdate/readLocalConfigBetaKey/playtime/abc": {
+      "oracle": null,
+      "note": "hand-written (phase 82-01): playtime.vdf has no BetaKey or UserAppConfig under any Apps/<id>, which is what Steam's own beta-branch selection reads from localconfig.vdf, so no beta key exists for the app (null). Rust-verified through rust-results.json; no TS oracle behind it."
+    },
     "acfUpdate/readLocalConfigBetaKey/userappconfig/10": {
       "oracle": null
     },

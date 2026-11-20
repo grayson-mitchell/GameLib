@@ -2552,6 +2552,20 @@ const STEAM_ENGINE_NOTICES_TSX = join(
   REPO_ROOT,
   'src/frontend/screens/Game/GamePage/components/EngineNotices.tsx'
 )
+// Phase 82 plan 01 (re-derived census): quick 261117-r4c (20e70fdc1) added NativePortInfo.tsx with
+// three pure `.button.is-text` actions, and phase 64 added the theme editor's header Back
+// (eb33e8668, 64-07) and Rename (1f9c0efa1, 64-09) buttons, also pure `.button.is-text`. None of
+// the five sets a colour or background of its own (ThemeEditor/index.scss and GamePage/index.css
+// only lay them out), so they take the theme-global `.button.is-text` colour and hover pair that the
+// pure-family contrast tests below already measure.
+const THEME_EDITOR_TSX = join(
+  REPO_ROOT,
+  'src/frontend/screens/Accessibility/ThemeEditor/index.tsx'
+)
+const NATIVE_PORT_INFO_TSX = join(
+  REPO_ROOT,
+  'src/frontend/screens/Game/GamePage/components/NativePortInfo.tsx'
+)
 const FRONTEND_DIR = join(REPO_ROOT, 'src/frontend')
 
 /**
@@ -2789,7 +2803,11 @@ describe('Game-menu .is-link family: render-site census, winning-rule resolution
   // entries to GameSubMenu (21 -> 26); quick 261117-p38 (481168a3c) added SteamDirectLaunchButton.tsx (1 is-link) and quick
   // 261117-q1t removed it again (the setting moved to the run tab). All use the same `link button is-text is-link
   // buttonWithIcon` shape, so the winning-rule and contrast tests below cover them.
-  it('render-site census: re-derived F1 counts match exactly (34 total, 27 is-link, 26 GameSubMenu, 1 MainButton, 1 pure DownloadManager, 2 pure SteamManagedItemView, 4 pure EngineNotices)', () => {
+  // Phase 82 plan 01 re-derived the pin from 34 to 39 site by site: five PURE `button is-text` sites
+  // (no `.link`, no `.is-link`) were added and none escaped the contrast census, so all five count
+  // in the pure family: NativePortInfo.tsx x3 (quick 261117-r4c, 20e70fdc1), ThemeEditor/index.tsx
+  // Back (phase 64-07, eb33e8668) and Rename (phase 64-09, 1f9c0efa1). The is-link subset (27) is unchanged.
+  it('render-site census: re-derived F1 counts match exactly (39 total, 27 is-link, 26 GameSubMenu, 1 MainButton, 1 pure DownloadManager, 2 pure SteamManagedItemView, 4 pure EngineNotices, 3 pure NativePortInfo, 2 pure ThemeEditor)', () => {
     const allFiles = walkTsxFiles(FRONTEND_DIR)
     expect(allFiles.length).toBeGreaterThan(100) // walk sanity, same floor as navTourAnchorCensus
 
@@ -2798,7 +2816,7 @@ describe('Game-menu .is-link family: render-site census, winning-rule resolution
       const matches = text.match(/className="[^"]*is-text[^"]*"/g) ?? []
       return matches.map(() => path)
     })
-    expect(isTextSites).toHaveLength(34)
+    expect(isTextSites).toHaveLength(39)
 
     // The is-link subset re-derived directly from file contents, not from
     // isTextSites, so a non-is-link site is never miscounted as one.
@@ -2826,6 +2844,17 @@ describe('Game-menu .is-link family: render-site census, winning-rule resolution
     expect(
       isTextSites.filter((path) => path === STEAM_ENGINE_NOTICES_TSX)
     ).toHaveLength(4)
+    expect(
+      isTextSites.filter((path) => path === NATIVE_PORT_INFO_TSX)
+    ).toHaveLength(3)
+    expect(
+      isTextSites.filter((path) => path === THEME_EDITOR_TSX)
+    ).toHaveLength(2)
+    // Every site is accounted for by name: 27 is-link + 12 pure = 39, so a new site that is in
+    // neither list fails here instead of being absorbed by a bumped total.
+    expect(isLinkOccurrences.length + 1 + 2 + 4 + 3 + 2).toBe(
+      isTextSites.length
+    )
   })
 
   it('non-vacuity: global tokens, all 5 candidates, the game-menu surface and the hover declaration all resolved', () => {

@@ -1478,22 +1478,33 @@ describe('D-35-29-01 (quick q93) the census arm falls back to the label-independ
   // the census arm's OWN return statement. Without that anchor a plain `.replace()` would
   // edit the first (clear-arm) occurrence, leave the census arm untouched, and the
   // assertion would fail for a reason unrelated to what it is testing.
-  const CENSUS_GUARD = [
-    '        && (epic_cookie_domain_matches(domain)',
-    '            || store_logout_cookie_domain_matches(domain))',
-    '    {',
-    '        return default_data_store_cookies_for_domain(app, domain, &names);'
-  ].join('\n')
+  //
+  // The guard is matched by a whitespace-tolerant REGEX, never a literal: `cargo fmt`
+  // re-wrapped it once (ec530001e), the multi-line literal stopped matching, `.replace()`
+  // became a no-op and both NARROWNESS cases failed for the very reason their own comment
+  // warns about. Capture groups 1-5 carry the source's own whitespace through, so the
+  // mutated text differs from the original ONLY by the mutation, whatever rustfmt chose.
+  const CENSUS_GUARD_RE =
+    /(if\s+)existing_window\.is_none\(\)(\s*&&\s*\(\s*)epic_cookie_domain_matches\(domain\)(\s*\|\|\s*store_logout_cookie_domain_matches\(domain\)\s*\)\s*\{\s*return default_data_store_cookies_for_domain\(app, domain, &names\);)/
+
+  function censusGuardMatches(code: string): number {
+    return code.match(new RegExp(CENSUS_GUARD_RE.source, 'g'))?.length ?? 0
+  }
+
+  test('NARROWNESS anchor: the census arm guard matches the whitespace-tolerant pattern exactly once', () => {
+    expect(censusGuardMatches(loadMainRsCode())).toBe(1)
+  })
 
   test('NARROWNESS: the widened guard pin still REJECTS an arm that keeps the disjunction but drops the Epic term', () => {
     const code = loadMainRsCode()
+    // Drop `epic_cookie_domain_matches(domain) ||`, keep the parenthesised remainder.
     const epicTermDeleted = code.replace(
-      CENSUS_GUARD,
-      [
-        '                && (store_logout_cookie_domain_matches(domain))',
-        '            {',
-        '                return default_data_store_cookies_for_domain(app, domain, &names);'
-      ].join('\n')
+      CENSUS_GUARD_RE,
+      (_m, ifKw: string, andOpen: string, rest: string) =>
+        `${ifKw}existing_window.is_none()${andOpen}${rest.replace(
+          /^\s*\|\|\s*/,
+          ''
+        )}`
     )
     // Guard against the edit silently no-opping — a narrowness test that mutated nothing
     // would pass for the wrong reason (this repo has recorded exactly that failure).
@@ -1506,8 +1517,9 @@ describe('D-35-29-01 (quick q93) the census arm falls back to the label-independ
   test('NARROWNESS: the widened guard pin still REJECTS an arm whose Epic check is no longer conjoined with is_none()', () => {
     const code = loadMainRsCode()
     const conjunctionSevered = code.replace(
-      `    if existing_window.is_none()\n${CENSUS_GUARD}`,
-      `    if true\n${CENSUS_GUARD}`
+      CENSUS_GUARD_RE,
+      (_m, ifKw: string, andOpen: string, rest: string) =>
+        `${ifKw}true${andOpen}epic_cookie_domain_matches(domain)${rest}`
     )
     expect(conjunctionSevered).not.toEqual(code)
     expect(censusFallbackViolations(conjunctionSevered)).toEqual(
