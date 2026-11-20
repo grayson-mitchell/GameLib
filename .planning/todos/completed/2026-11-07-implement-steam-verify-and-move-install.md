@@ -70,3 +70,11 @@ Installed Files → Verify / Move in the Steam app.
 Live gate: corrupt a file in a bridge game and in a Mac-native game; Verify repairs both and
 both still launch (bridge through the shim). Move a Mac-native game to a second Steam library;
 Steam and GameLib both show the new location and it launches.
+
+## Resolution (2026-11-20)
+
+- Verify was implemented by quick 261120-p2j on both routes: Steam-registered games ask Mac
+  Steam to StartValidatingApp through the bridge helper (fallback `steam://validate/<appId>`), and
+  bridge games run a chunk-level depot verify over the ACF's InstalledDepots GIDs.
+- Move was split into `2026-11-20-implement-steam-move-install.md` (spike first).
+- The Verify live gate is that plan's human check; it is still pending.
