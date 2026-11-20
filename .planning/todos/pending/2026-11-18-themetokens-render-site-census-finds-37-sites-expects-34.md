@@ -7,6 +7,9 @@ platform: any
 ready: code
 files:
   - src/frontend/components/UI/NavShell/__tests__/themeTokens.test.ts
+audit_acknowledged:
+  milestone: v0.10
+  at: 2026-11-20
 ---
 
 ## Problem

@@ -3,6 +3,10 @@ status: diagnosed
 trigger: "store-search-art-cropped: Each Store Search row shows the game's art without significant cropping (UAT 47 test 7, gap G-47-7)"
 created: 2026-11-18T00:00:00Z
 updated: 2026-11-18T00:00:00Z
+audit_acknowledged:
+  milestone: v0.10
+  at: 2026-11-20
+  status: diagnosed
 ---
 
 ## Current Focus

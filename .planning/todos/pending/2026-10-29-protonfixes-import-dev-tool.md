@@ -9,6 +9,9 @@ source: "quick 261029-8ws external fix-format research, 2026-10-29"
 related_seed: SEED-001
 files:
   - meta/ (new script)
+audit_acknowledged:
+  milestone: v0.10
+  at: 2026-11-20
 ---
 
 ## Problem

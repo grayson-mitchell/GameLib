@@ -8,6 +8,9 @@ ready: blocked
 source: "debug session drm-stage-winebus-hid-spin, live gate 2026-10-29"
 files:
   - src/backend/storeManagers/steam/bridge/drm/stageDrmBottle.ts
+audit_acknowledged:
+  milestone: v0.10
+  at: 2026-11-20
 ---
 
 ## Problem

@@ -1,5 +1,43 @@
 # Milestones
 
+## v0.10 Foundations (Shipped: 2026-11-20)
+
+**Phases completed:** 26 phases, 531 plans, 61 tasks
+
+**Key accomplishments:**
+- A session-only module store (`storeSearchSession.ts`) seeds `useDebouncedStoreSearch` so Store Search returns with the same query and rows on the first frame, with no request, no spinner and no stale price shown as current.
+- Spellcheck and autocorrect opt-outs on SearchBar, the Winetricks searchbox and TextInputField (G-47-12b), plus `displayEmpty` on RegionPicker so Auto shows its label instead of a blank select (G-47-14a), both pinned by server-rendered tests
+- Store Search rows and the Deals filter panel switched from the hardcoded-black card-art gradient to the themeable `--gamecard-title-color` plate, with text-colour `color-mix` hover tints, pinned across all ten built-in themes by a stylesheet and contrast test (G-47-12c)
+- Genres and Features controls now grow (min-height 40px, flex-wrap) to hold every chip and the hover bubble is gone, and the Deals filters reflow to two columns on the main-content container width (1240px) instead of the viewport, pinned by a stylesheet and source contract test (G-47-14b, G-47-14c)
+- dependency-cruiser 18.7.2 enforces five import-graph rules at `error`, with 16 pre-existing violations held in a shrink-only baseline and 14 seeded-violation tests proving each rule fires.
+- An ESLint AST selector set (===, !==, ==, !=, switch, array .includes) bans store literals compared to runner/store-named values, held by a both-direction ceiling: FRONTEND_CEILING 136, BACKEND_CEILING 65.
+- One `pnpm boundaries` script (depcruise with --ignore-known, then the ratchet) runs in CI's Lint job and the pre-push hook, pinned by a wiring test with a near-miss arm.
+- A single `satisfies Record<Runner, StoreCapabilities>` table with 15 behaviour flags, an `isStore` identity helper and a fail-safe `hasCapability` accessor, plus a classification of all 201 ratchet sites (98 behaviour, 103 identity) split across 62-14..62-19.
+- launcher.ts now reaches store managers only through `storeManagers/index`; all 14 runner-literal sites are gone, the launcher depcruise baseline is empty and BACKEND_CEILING dropped 65 to 51.
+- All 27 classification rows converted: BACKEND_CEILING 51 to 24 in two commits (20 then 7), no test assertion changed.
+- All 24 table rows converted; BACKEND_CEILING 24 to 16 to 0 in two commits; no new flag needed.
+- Three commits lower FRONTEND_CEILING 136 -> 114 -> 106 -> 84; no new capability flag.
+- The colour math, var()/color-mix resolver and SCSS block parsers now live in shared modules, a total never-throwing colour API exists for user-typed input, and one CONTRAST_FLOORS table drives both the CI theme test and the future editor.
+- Each of the 10 built-in themes is now committed, frozen data (every value literal canonical hex or var()-free gradient, all 27 core tokens present), produced by a two-tier browser-faithful flatten and held by a generator `--check` and a jest drift test.
+- `configStore.setChecked(key, value)` resolves true only after the sidecar persisted the write (via the new `sidecar:store-set-checked` invoke channel), and `configStore.customThemes` is a typed, allow-listed key holding `{ id, name, base, tokens }[]`.
+- Custom themes are stored token data under `custom:<id>`, parsed totally at boot, validated (colours canonical, gradients deny-listed before `CSS.supports`), applied by `applyTheme` as base class plus inline properties on body, and mutated only through settingsState setters that refuse built-ins and await the checked write on Save.
+- The Appearance dropdown is replaced by a gallery of SVG thumbnails drawn from each built-in theme's own token values (consumer fallback chains, `safeColour`-sanitised, Nord Light's base-owned buttons mirrored), where clicking a card applies it and the active card is marked.
+- The gallery gains a "Your themes" group with Duplicate on every card and Edit, Rename and Delete on custom cards, backed by a reusable Rename dialog, a limit dialog and a Delete confirmation whose default focus is "Keep theme" (new `ButtonOptions.autoFocus`).
+- A split-pane editor at `/accessibility/themes/:id`: grouped core-token rows with a react-colorful alpha picker and validated text field, a live preview thumbnail that is the only thing painting from the unsaved draft, and Save that persists and re-applies only when the edited theme is active.
+- The token list now tells the user, live and without blocking Save, when an edit drops Border/Accent under a 3:1 floor; every other resolved token is editable behind a filterable Advanced disclosure (gradients as validated raw text), and rows explain themselves with Derived / Not in preview / Set by base theme chips whose help sits behind an icon-only (i).
+- Leaving the theme editor with unsaved edits now goes through one useBlocker-driven Save / Discard / Keep editing prompt, a refused Save raises a bottom-right notice and keeps the draft dirty, and the header gains a Rename button that opens the gallery's Rename dialog.
+- Closed the phase: the presence baseline now records the customThemes keys, the whole automated gate is green, the built-in themes are provably untouched, and the operator ran the 17-item live UAT on macOS (16 pass, 1 skipped, 0 issues).
+- 7 pass, 1 blocked (pre-existing). Details in `66.1-HUMAN-UAT.md`.
+- Windows .lnk shortcuts now hand explorer.exe the gamelib:// URL as one double-quoted argument (inner quotes percent-encoded) and carry the game's own exe as their icon, found by a bounded install-dir scan when the store record has none.
+- The TS depot download pipeline, its decompress worker pool and both worker bundles are deleted (about 21k lines). The survivors moved first into `steam/depotPaths.ts`, `depot/finalizeAcf.ts` and `depot/appManifest.ts`, with their tests.
+- lzma-native and its SEA packaging are removed. A deletion gate now keeps the TS depot pipeline, the decompress worker and lzma-native deleted, and keeps `lzma`, `zstddec` and both patches, which steam-user still needs. The migration-pattern README now records the depot port as its second worked example.
+- Chunk-level delta update in `gamelib-depot`: SHA-1-verified reuse of local chunks, CDN fetch for the rest, temps built beside the old tree and committed by rename, with cancel/failure before commit leaving the old build and ACF untouched.
+- Journal-driven commit-resume for the chunk-level delta, 1026 ACF with the old GIDs on commit failure, D-14 file-level fallback when the old manifest is gone, and retired-depot cleanup, all in `gamelib-depot`.
+- `summarize` now accepts `fromManifest` and returns a per-depot `delta` estimate (exact changed-file bytes, CDN upper bound, file counts, `oldManifestAvailable`); `ManifestStore::prune` takes a protected-GID list.
+- On real Mac Steam, restart-on-Play, the 112100 sign-in case, Restart Steam now, the hold migration, InstallApp and the unadopted uninstall all passed. The D-05 refusal cannot be reached on Mac, because Mac Steam's registry.vdf carries no RunningAppID. Windows and Linux are not run yet.
+
+---
+
 ## v0.9 Steam Bridge & Engine (Shipped: 2026-11-06)
 
 **Scope:** Phases 51–60, the post-v0.8 Steam bridge and engine work on macOS. It widened the native Steam bridge (interface proxies, scan-derived eligibility, modern-SDK exports and the flat API), added a bridge-backed steamclient layer and a DRM mode for SteamStub titles, delivered web-API auth-ticket callbacks, removed every authenticated Steam logon from launch, browse and Play, added opt-in known-fix sharing through a relay, and added bridge multiplayer, a Wine-Staging + DXVK engine fallback for when CrossOver is unavailable, and the Steam overlay in bridged games. Phases 61–64 (0 plans each) are outside the scope and remain unassigned.

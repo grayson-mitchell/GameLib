@@ -8,6 +8,9 @@ ready: live-gate
 files:
   - src/frontend/screens/Game/GamePage/components/AdoptionNote.tsx
   - src/backend/storeManagers/steam/gameInstallDepot.ts
+audit_acknowledged:
+  milestone: v0.10
+  at: 2026-11-20
 ---
 
 ## Problem

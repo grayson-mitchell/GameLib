@@ -3,6 +3,10 @@ status: diagnosed
 trigger: "store-search-rows-dark-in-light-theme: In a light theme the Store Search game rows use a light background with legible dark text (UAT 47 test 12, item 3)"
 created: 2026-11-19T00:00:00Z
 updated: 2026-11-19T00:00:00Z
+audit_acknowledged:
+  milestone: v0.10
+  at: 2026-11-20
+  status: diagnosed
 ---
 
 ## Current Focus

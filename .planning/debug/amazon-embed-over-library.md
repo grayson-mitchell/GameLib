@@ -4,6 +4,10 @@ trigger: "Amazon store embed stays drawn over the Library game page after leavin
 created: 2026-11-04
 updated: 2026-11-04
 todo: .planning/todos/pending/2026-11-04-amazon-store-embed-stays-drawn-over-library-game-page.md
+audit_acknowledged:
+  milestone: v0.10
+  at: 2026-11-20
+  status: awaiting_human_verify
 ---
 
 ## Symptoms

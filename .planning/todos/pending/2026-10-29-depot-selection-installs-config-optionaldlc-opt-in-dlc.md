@@ -11,6 +11,9 @@ files:
 severity: minor
 platform: any
 ready: blocked
+audit_acknowledged:
+  milestone: v0.10
+  at: 2026-11-20
 ---
 
 `selectAllDepots` in `src/backend/storeManagers/steam/depot/select.ts` decides by ownership plus the

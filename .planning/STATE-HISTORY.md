@@ -8672,3 +8672,220 @@ Written by the v0.9 close. One row per item from the pre-close `gsd-sdk query au
 | quick_task | 261106-qvp-callback-1298-step-1-log-game-listener-r | missing | 2026-11-06 (v0.9 close) |
 | quick_task | 261106-qwz-themetokens-is-text-census-pins-managed- | missing | 2026-11-06 (v0.9 close) |
 | quick_task | 261106-s3n-gamelib-side-delete-for-steam-games | missing | 2026-11-06 (v0.9 close) |
+
+## Deferred Items archive — v0.10 close evidence rows (2026-11-20)
+
+Written by the v0.10 close. One row per item from the pre-close `audit-open` scan of 2026-11-20 that was acknowledged and deferred by the operator through the `audit-open acknowledge` writer (markers are in the artifacts; verdict-preserving, self-invalidating). The 140 evidence-table rows in five archived v0.8 deferred-items.md files (34.3: 6, 34.4.1: 30, 34.5: 2, 34.9: 38, 35: 64) are not listed: gsd-core cannot acknowledge a table row, the same 140 the v0.8 close left open, so they stay open and resurface at every scan.
+
+| Category | Item | Status | Deferred At |
+|----------|------|--------|-------------|
+| debug | abiotic-factor-loading-hang | root_cause_found | 2026-11-20 (v0.10 close) |
+| debug | amazon-embed-over-library | awaiting_human_verify | 2026-11-20 (v0.10 close) |
+| debug | cross-depot-collision-1026 | awaiting_human_verify | 2026-11-20 (v0.10 close) |
+| debug | deals-filters-reflow-breakpoint | diagnosed | 2026-11-20 (v0.10 close) |
+| debug | deals-genres-control-crops | diagnosed | 2026-11-20 (v0.10 close) |
+| debug | friends-signout-steam-user | root-cause-found | 2026-11-20 (v0.10 close) |
+| debug | g29-transient-demo-status-cx-broken | diagnosed | 2026-11-20 (v0.10 close) |
+| debug | g30-slow-dxvk-removal-on-crossover-restore | diagnosed | 2026-11-20 (v0.10 close) |
+| debug | gog-store-open-blank-left-nav | diagnosed | 2026-11-20 (v0.10 close) |
+| debug | offline-stores-tab-crash | diagnosed | 2026-11-20 (v0.10 close) |
+| debug | region-picker-auto-shows-blank | diagnosed | 2026-11-20 (v0.10 close) |
+| debug | search-input-autocorrect-on-blur | diagnosed | 2026-11-20 (v0.10 close) |
+| debug | shutdown-mid-connect-logon-survives | awaiting_human_verify | 2026-11-20 (v0.10 close) |
+| debug | store-search-art-cropped | diagnosed | 2026-11-20 (v0.10 close) |
+| debug | store-search-query-lost-on-leave | diagnosed | 2026-11-20 (v0.10 close) |
+| debug | store-search-region-only-in-deals | diagnosed | 2026-11-20 (v0.10 close) |
+| debug | store-search-rows-dark-in-light-theme | diagnosed | 2026-11-20 (v0.10 close) |
+| debug | unclaimed-world-wmv-mf | diagnosed | 2026-11-20 (v0.10 close) |
+| debug | uninstall-skips-confirmation | diagnosed | 2026-11-20 (v0.10 close) |
+| seed | SEED-001 gamelib-dashboard-upstream-monitoring | dormant | 2026-11-20 (v0.10 close) |
+| quick | 261022-tc3-downloads-tab-game-tile-uses-clipped-hor | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261023-og0-amend-d-51-08-known-bad-routes-to-bottle | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261023-oq7-scan-miss-routes-through-the-bridge-with | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261024-eg9-fix-packaged-build-on-fresh-mac-chain-se | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261024-g3m-wine-crossover-launched-game-windows-ope | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261024-i94-modern-sdk-steaminternal-exports-in-the- | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261024-ir1-bridge-scan-reads-the-unreal-bootstrap-e | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261024-j4l-bridge-scan-reads-delay-imports-and-refu | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261025-kax-avernum-6-init-only-bridge-verification- | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261025-kon-fix-phase-53-review-warnings-wr-02-then- | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261025-l4f-close-out-phase-51-gap-closed-by-phase-5 | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261025-mfz-steam-bridge-known-fixes-registry-key-wi | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261025-rkj-bridge-first-launch-steam-shared-redists | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261025-t7i-shim-legacy-csteamworks-exports-and-old- | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261025-vnf-split-known-fixes-into-tier-1-remote-all | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261026-avw-gamelib-known-fixes-repo-fetcher-downloa | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261026-ku9-bridgescan-iscontainedwithin-rejects-chi | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261026-kyv-pin-the-shim-bridge-srwlock-with-a-regre | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261026-lif-restore-missing-gamelib-orig-bridge-orig | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261026-mhg-revise-bridge-shim-withhold-rule-for-non | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261026-ng9-productionise-spike-034-shimfeatures-kno | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261026-ous-lift-hoard-63000-from-the-bridge-allowli | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261027-c4g-macos-shortcut-toast-names-desktop-when- | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261027-ch9-gamelib-compat-row-with-a-tick-in-instal | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261027-cux-steam-cancel-delete-files-steam-aware-pa | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261027-cwy-retire-f-9-generic-rpc-timeout-todo-q2-t | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261027-d5i-per-depot-chunk-attempt-counts-in-chunk- | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261027-g9o-install-poller-adopts-handoff-source-on- | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261027-gtd-add-tier-1-known-fix-drm-ceg-key-and-ceg | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261027-i4x-wr-03-per-version-sret-aware-x64-null-ob | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261027-ijs-log-first-call-of-each-x64-null-object-s | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261027-ish-rewrite-library-sorting-todo-with-decide | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261027-jgs-log-first-call-of-each-locally-stubbed-b | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261027-jjz-implement-library-sort-slice-1-sort-fiel | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261027-k51-forward-userstatsreceived-t-1101-from-he | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261027-l61-scrub-bridge-helper-secret-from-startup- | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261027-m1m-known-fix-registry-skip-reg-add-when-val | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261027-m1r-wine-pe-harness-for-x86-bridge-callback | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261027-n77-known-fix-overlays-plugin-directory-targ | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261027-nd3-run-bridge-shared-redist-step-under-wine | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261027-thn-localise-the-7-downloadmanager-canceldia | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261028-k7l-generic-gamemaker-2024-d3d11-runner-dete | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261029-iwy-fire-steam-install-after-native-steam-in | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261029-ji2-replace-steam-install-sync-with-restart- | human check outstanding (task 4) | 2026-11-20 (v0.10 close) |
+| quick | 261029-my4-contain-the-no-bottle-drm-fallback-exe-r | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261029-ocq-d-uat-12-library-card-shows-install-for- | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261029-pkp-persist-the-steam-restart-hold-across-ga | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261029-sbi-library-all-label-and-metacritic-sort | complete-pending-live-check | 2026-11-20 (v0.10 close) |
+| quick | 261029-v5a-focus-row-strips-snap-to-grid-columns-on | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261030-ah1-store-embed-origin-reason-panel-heading | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261030-ts4-store-exit-library-refresh-epic-gog-amazon | complete (amazon live check outstanding — needs prime) | 2026-11-20 (v0.10 close) |
+| quick | 261031-i0q-add-licensed-demos-to-steam-library-refr | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261031-ihs-fix-bridge-install-finishing-status-race | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261031-ixa-relay-lobbycreated-513-broadcast-gap-fix | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261031-lrx-controller-down-at-bottom-library-tile-s | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261031-mj9-land-spike-051-native-gamepad-reader-on- | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261031-nwz-macos-native-gamepad-source-for-pads-wkw | tasks 1-2 complete; task 3 live gate pending (operator) | 2026-11-20 (v0.10 close) |
+| quick | 261031-s3g-in-app-report-a-problem-form-via-web3for | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261101-cl4-fix-vite-watcher-oom-via-wine-prefix-sym | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261101-cvs-rewrite-default-steam-path-help-text | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261101-d0h-archive-old-quick-task-rows-to-completed | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261101-h8l-make-the-pre-push-gate-pass-so-main-can- | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261101-i00-fix-wr-05-per-request-iserver-stable-get | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261101-iah-legacy-p2p-fallback-accept-only-the-repo | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261101-ip5-exempt-1202-from-shim-per-id-report-budg | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261101-jbm-single-demo-status-probe-timeout-must-no | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261101-llf-host-the-steam-bridge-invite-picker-in-i | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261101-mmt-record-phase-58-live-check-results-and-f | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261101-mv3-fix-lobby-0-invite-dialog-adopt-lobby-id | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261101-tjv-clean-tile-mode-setting-hide-tile-button | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261101-tsq-hide-titles-toggle-never-show-tile-title | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261102-fvg-in-the-game-page-add-a-settings-button-n | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261102-szs-store-embed-treats-post-load-url-rewrite | complete-pending-live-retest | 2026-11-20 (v0.10 close) |
+| quick | 261103-wjs-fix-the-ten-jest-suites-failing-on-main- | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261103-x0l-preflight-guard-refuse-tauri-dev-run-wit | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261104-9ou-strict-dxvk-restore-judge-already-absent | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261104-rvy-bottle-eligible-steam-per-title-settings | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261105-ast-show-the-overlay-early-exit-notice-as-an | implemented-unverified-live | 2026-11-20 (v0.10 close) |
+| quick | 261105-gx2-bring-pnpm-lint-src-and-tests-warning-co | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261105-ord-steam-experimental-installapp-setting-ma | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261105-pnh-amazon-store-exit-refreshes-epic-and-gog | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261105-s7f-localise-the-remaining-8-steam-overlay-e | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261105-sqe-release-the-d-uat-13-restart-hold-when-s | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261105-svg-orphaned-nettop-monitor-child-survives-a | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261105-u96-localise-the-steam-managed-download-keys | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261105-upw-install-modal-should-own-disk-space-and- | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261105-vfq-recover-from-steam-install-and-uninstall | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261106-pvk-steam-delegated-give-up-notice-in-app-to | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261106-s3n-gamelib-side-delete-for-steam-games | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261107-8yq-run-cargo-clippy-in-ci-warn-only-with-a- | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261107-9lq-measure-then-adopt-nouncheckedindexedacc | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261107-a1j-rename-electron-era-store-modules-to-neu | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261107-aru-fix-dracula-theme-on-the-downloads-page- | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261107-brs-replace-ts-prune-with-knip-for-unused-ex | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261107-j08-codeweavers-crossover-rating-403-source- | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261107-k2l-library-grid-smoothness-raise-card-rootm | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261107-kn8-console-mode-steam-install-uses-the-shar | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261107-li0-steam-install-dialog-wine-section-per-ro | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261107-lum-route-forced-windows-steam-installs-of-m | complete (live gate: routing pass; strict bridge-verified not met on either title, recorded below) | 2026-11-20 (v0.10 close) |
+| quick | 261107-mr0-console-mode-steam-platform-row-for-dual | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261107-td5-fix-steam-delete-check-d-defects | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261107-v6q-inconclusive-pre-flight-leaves-wine-mana | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261108-anw-keep-settings-on-failed-steam-uninstall | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261108-avs-gate-overlay-desktop-smoke-tests | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261108-ca6-remove-the-steamgame-lift-stubs-and-spy- | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261108-eps-make-the-pre-push-gate-pass-so-main-can- | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261108-et5-adopt-nuia-backend-sidecar | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261108-et7-adopt-nuia-meta | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261108-et8-adopt-nuia-frontend-screens | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261108-lav-fix-phase-72-wr-01-reap-sidecar-group-on | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261108-mcc-close-phase-61-review-leftovers | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261108-ved-move-the-keyring-helpers-from-login-wind | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261109-vdw-split-single-instance-rs-and-tray-rs-bel | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261109-w52-version-the-per-bottle-gamelib-engine-js | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261110-h8k-split-rpc-humble-login-clear-cookies-int | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261110-nwy-deeper-theming-of-the-steam-launch-notic | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261110-u9k-installgame-push-stale-status-and-unread | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261110-uog-fix-logsecretgate-failure-uninstaller-ts | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261110-up7-depot-installs-honor-the-per-app-steam-b | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261110-v08-restore-wine-tools-on-crossover-bottles- | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261110-vdk-fix-comet-from-heroic-reading-heroic-gog | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261110-vi4-unhide-winecfg-run-exe-and-winetricks-fo | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261110-vnl-use-categories-instead-of-collections-in | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261111-9b7-stop-button-ends-steam-launched-games-by | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261111-9mj-detect-steam-launched-games-as-playing-b | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261112-90h-game-page-steam-uninstall-confirms-gamel | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261113-8m6-compact-steam-bridge-route-row-in-instal | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261114-aqa-stop-set-steam-offline-dialog-when-leavi | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261114-ca6-restore-exact-owned-on-steam-on-humble-k | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261114-gki-keep-sha-verified-temps-when-a-bridge-up | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261114-nn2-give-estimatebridgeupdate-a-unique-job-k | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261114-nxb-steam-game-page-update-button-and-update | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261114-obu-steam-update-size-as-async-label-after-i | missing | 2026-11-20 (v0.10 close) |
+| quick | 261114-pqm-midnight-mirage-modal-edge-invisible-wir | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261114-q34-merge-installed-platform-into-supported- | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261114-rc8-show-steam-acf-buildid-as-install-versio | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261114-twk-reword-the-pre-launch-update-prompt-for- | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261114-v4q-edit-env-var-rows-in-place-in-twocoltabl | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261115-t7m-move-frameless-window-and-tray-icon-sett | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261116-vt7-remove-the-dead-guided-go-offline-dialog | unknown | 2026-11-20 (v0.10 close) |
+| quick | 261117-p38-launch-without-steam-direct-launch-for-s | unknown | 2026-11-20 (v0.10 close) |
+| uat_gap | 66.3/66.3-UAT.md | diagnosed | 2026-11-20 (v0.10 close) |
+| uat_gap | 81/81-HUMAN-UAT.md | partial | 2026-11-20 (v0.10 close) |
+| verification_gap | 72/72-VERIFICATION.md | human_needed | 2026-11-20 (v0.10 close) |
+| verification_gap | 74/74-VERIFICATION.md | human_needed | 2026-11-20 (v0.10 close) |
+| verification_gap | 81/81-VERIFICATION.md | human_needed | 2026-11-20 (v0.10 close) |
+| todo | 2026-10-29-depot-selection-installs-config-optionaldlc-opt-in-dlc.md | (presence-only) | 2026-11-20 (v0.10 close) |
+| todo | 2026-10-25-x86-shim-modern-sdk-and-flat-api-parity-deferred.md | (presence-only) | 2026-11-20 (v0.10 close) |
+| todo | 2026-10-29-winebus-iohid-wedges-on-powera-switch2-pad.md | (presence-only) | 2026-11-20 (v0.10 close) |
+| todo | 2026-10-30-store-exit-library-refresh-for-epic-gog-amazon.md | (presence-only) | 2026-11-20 (v0.10 close) |
+| todo | 2026-11-07-implement-steam-verify-and-move-install.md | (presence-only) | 2026-11-20 (v0.10 close) |
+| todo | 2026-10-29-protonfixes-import-dev-tool.md | (presence-only) | 2026-11-20 (v0.10 close) |
+| todo | 2026-11-18-themetokens-render-site-census-finds-37-sites-expects-34.md | (presence-only) | 2026-11-20 (v0.10 close) |
+| todo | 2026-11-19-test-steam-native-invite-picker-then-decommission-custom-picker.md | (presence-only) | 2026-11-20 (v0.10 close) |
+| todo | 2026-11-19-download-queue-finished-installation-at-steam-handoff.md | (presence-only) | 2026-11-20 (v0.10 close) |
+| todo | 2026-11-20-bridged-game-launches-while-mac-steam-signed-out.md | (presence-only) | 2026-11-20 (v0.10 close) |
+| todo | 2026-11-18-adoption-note-restart-flash-at-install-end.md | (presence-only) | 2026-11-20 (v0.10 close) |
+| deferred_item | 62/deferred-items.md: Deferred items (62-04) - tauriShellSource.test.ts "no WebviewWindowBuilder chain passes a STRING LITERAL to .title(" fails on store_embed.rs `.title(format!(...))` (STORE_EMBED_LINK_POPUP). Pre-existi | acknowledged | 2026-11-20 (v0.10 close) |
+| deferred_item | 62/deferred-items.md: Deferred items (62-05) Pre-existing failures, each confirmed present before any 62-05 change; none caused or fixed here. - `games.test.ts` "channel constants equal the 56-01 SUMMARY values" reads `.pl | acknowledged | 2026-11-20 (v0.10 close) |
+| deferred_item | 62/deferred-items.md: Deferred items (62-06) Pre-existing failures, each confirmed at an unmodified HEAD (games.ts restored, new modules moved aside) before the 62-06 lift; not caused or fixed here. - `sidecar/__tests__/te | acknowledged | 2026-11-20 (v0.10 close) |
+| deferred_item | 66/deferred-items.md: testContainment.test.ts T-34.2-83 fails: outboundHttpRegistry.test.ts (commit 371298720, quick-261110-9w2) is unclassified. Pre-existing, outside 66-04. | acknowledged | 2026-11-20 (v0.10 close) |
+| deferred_item | 66/deferred-items.md: 66-08: "Cannot log after tests are done" console.info warnings (10-14 per `pnpm jest src/backend/sidecar/__tests__` run, varying; 0 in some runs). Cause: `registerDownloadQueueFlows()` (src/backend/si | acknowledged | 2026-11-20 (v0.10 close) |
+| deferred_item | 66/deferred-items.md: 66-08: `pnpm lint` fails with 20 errors in the tests scope that predate this plan: 19 `no-unused-vars` in src/backend/sidecar/__tests__/bootstrapUserReconcile.test.ts (from 66-04's bootedWorld destruc | acknowledged | 2026-11-20 (v0.10 close) |
+| deferred_item | 66/deferred-items.md: 66-08: `pnpm find-deadcode` reports two knip findings in src/backend/recent_games/recent_games.ts (getRecentGames, testingExportsRecentGames) that this plan did not touch. | acknowledged | 2026-11-20 (v0.10 close) |
+| deferred_item | 66/deferred-items.md: 66-08: `pnpm test:ci` ends with 10 failed tests in 8 suites, none touching bootstrap.ts or the sidecar harness: sidecar testContainment (the known T-34.2-83 outboundHttpRegistry item above), tauriShel | acknowledged | 2026-11-20 (v0.10 close) |
+| deferred_item | 68/deferred-items.md: Deferred items - 68-01: `meta/__tests__/logSecretGate.test.ts` fails on 2 pre-existing violations in `src/backend/utils/uninstaller.ts:131,142` (`result.stderr` logged unreduced; introduced by c3ddef3 | acknowledged | 2026-11-20 (v0.10 close) |
+| deferred_item | 70/deferred-items.md: 70-16 gate prep (other-session items, not fixed) - `pnpm backend-di-ceilings` fails: GameStatus.steamUpdate.test.tsx (7 jestMock) and SteamUpdateButton.test.tsx (4 jestMock) lack baseline entries; bot | acknowledged | 2026-11-20 (v0.10 close) |
+| deferred_item | 71/deferred-items.md: 71-19 - tauriShellSource.test.ts "WR-07 ... no WebviewWindowBuilder chain passes a STRING LITERAL to .title(" fails at HEAD before and after 71-19 (`.title(format!` match). Out of scope; pre-existing. | acknowledged | 2026-11-20 (v0.10 close) |
+| deferred_item | 72/deferred-items.md: 72-07: tauriShellSource.test.ts had 2 failures not caused by 72-07: 1. RESOLVED (b2e86b427): REQ-34.3-11 finder-reveal pin was a 72-04 regression in the test only; the code moved to shell_open.rs with | acknowledged | 2026-11-20 (v0.10 close) |
+| deferred_item | 73/deferred-items.md: macArchKnownFixRouting.test.ts 'Intel: never seeds...' fails on this host independent of 73-11 (verified with the import change reverted). | acknowledged | 2026-11-20 (v0.10 close) |
+| deferred_item | 73/deferred-items.md: 73-12 - `tauriShellSource.test.ts` WR-07 ".title( format!" fails on `src-tauri/src/store_embed` link-popup builder (`.title(format!("Sign in - ..."))`). Pre-existing, unrelated to depot work; not touc | acknowledged | 2026-11-20 (v0.10 close) |
+| deferred_item | 74/deferred-items.md: From 74-20 (out of scope, pre-existing) - `pnpm lint-translations:gamelib` and `lintTranslations.test.ts` (2 tests): 4 en keys are missing from all 48 catalogs and not recorded in `meta/i18nCatalogPre | acknowledged | 2026-11-20 (v0.10 close) |
+| deferred_item | 81/deferred-items.md: Found in 81-01 (2026-11-18) - `pnpm backend-di-ceilings` fails for `launchWithoutSteam.test.ts`, `NativePortInfo.test.tsx` and `LaunchWithoutSteam.test.tsx`. None touches steamPoll; pre-existing. - `p | acknowledged | 2026-11-20 (v0.10 close) |
+| deferred_item | 81/deferred-items.md: Found in 81-02 (2026-11-18) - `src/backend/storeManagers/steam/localFiles/__tests__/acfUpdateReplay.test.ts` fails with `no oracle case acfUpdate/readLocalConfigBetaKey/playtime/10` (a missing oracle  | acknowledged | 2026-11-20 (v0.10 close) |
+| deferred_item | 81/deferred-items.md: Found in 81-04 (2026-11-18) - `cargo test -p gamelib-steampoll --test contracts` fails `ops_sorted_and_unique`: it pins `OPS.len() == 24` but the op table has 27 entries since 81-02 added `steampoll_a | acknowledged | 2026-11-20 (v0.10 close) |
+| deferred_item | 81/deferred-items.md: Found in 81-06 (2026-11-18) - `src/backend/__tests__/storeKinds.test.ts` ("the scanned name -> kind table equals EXPECTED_KINDS exactly") fails: the scan finds `steam_direct_launch_verdict` (kind `cac | acknowledged | 2026-11-20 (v0.10 close) |
+| deferred_item | 81/deferred-items.md: Found in 81-07 (2026-11-18) - `src/frontend/components/UI/NavShell/__tests__/themeTokens.test.ts` render-site census expects 34 `is-text` sites and finds 37: `screens/Game/GamePage/components/NativePo | acknowledged | 2026-11-20 (v0.10 close) |
+| deferred_item | 81/deferred-items.md: Orchestrator note (after 81-08): 1026 edge "Restart Steam now" is a no-op — IN SCOPE, unplanned - Found by 81-08: at the GameLib 1026 waiting edge (`steam-waiting-for-restart`) the AdoptionNote shows  | acknowledged | 2026-11-20 (v0.10 close) |
+| deferred_item | 81/deferred-items.md: Orchestrator notes (after 81-10) - FIXED by orchestrator: `gamelib-steampoll-cli` `list_prints_every_op_one_per_line` pinned 24 ops; 81-02's three adoption ops make 27 (000bb3355). Caused by this phas | acknowledged | 2026-11-20 (v0.10 close) |
+| deferred_item | 81/deferred-items.md: Notes (after 81-11) - Pre-existing, phase 64 (`ab124b14a`): `pnpm -s backend-di-ceilings` also reports `NoticeStack.test.tsx` 5 > baseline 4 (jestMock). Not caused by this phase. - `StateEvent::RearmS | acknowledged | 2026-11-20 (v0.10 close) |
+| deferred_item | 81/deferred-items.md: Notes (after 81-20, live gate Mac part) - `pnpm planning-gates` is 11/12 at 81-20: `34.5-.../preload-surface-gate.py` fails because the preload channels `steamAdoptionOpenSteam`, `steamAdoptionRestart | acknowledged | 2026-11-20 (v0.10 close) |
+| deferred_item | (v0.9) 51/deferred-items.md: 51-27 - `pnpm planning-gates`: preload-surface-gate.py (phase 34.5) fails on channels getSteamBridgeRoute and setSteamBridgeUserRoute missing from IPC-PORT-INVENTORY.md. Pre-existing, unrelated to 51- | acknowledged | 2026-11-20 (v0.10 close) |
+| deferred_item | (v0.9) 52/deferred-items.md: Deferred by decision (recorded by 52-10) 1. **x86 `steamclient.dll`, x86 SteamClient manifests, and the `SteamClientDll` (32-bit) registry value** (decision 6). Reason: Grim Dawn is x64; only `steamcl | acknowledged | 2026-11-20 (v0.10 close) |
+| deferred_item | (v0.9) 52/deferred-items.md: Deferred from the 52 code review (recorded by 52-16) Reason for all entries: orchestrator decision 4 -- hardening, not goal-blocking. 1. **WR-05: stale HKCU `SteamClientDll64` across titles in a share | acknowledged | 2026-11-20 (v0.10 close) |
+| deferred_item | (v0.9) 52/deferred-items.md: Behaviors that differ from the plans (carried from earlier summaries) - 52-07: `FindOrCreateGameServerInterface` falls back to the null object and `ContextInit` uses a global counter (quick 261024-i94 | acknowledged | 2026-11-20 (v0.10 close) |
+| deferred_item | (v0.9) 52/deferred-items.md: Out of scope: pre-existing failures found during the desk gate (not phase 52) - `src/backend/sidecar/__tests__/testContainment.test.ts`: `steamNativeInstallDefault.test.ts` is unclassified (added by q | acknowledged | 2026-11-20 (v0.10 close) |
+| deferred_item | (v0.9) 53/deferred-items.md: 53-14: `pnpm planning-gates` fails planning-frontmatter-gate on 53-VERIFICATION.md (frontmatter does not parse at 4:82, "met; 6 of 18 verified, majority: no)"). Pre-existing, file untouched by 53-14;  | acknowledged | 2026-11-20 (v0.10 close) |
+| deferred_item | (v0.9) 54/deferred-items.md: Pre-existing backend jest failures (found in 54-03, out of scope) Three sidecar suites fail identically with the pre-phase `user.ts` (verified by running them against the version at 3e8823f00), so the | acknowledged | 2026-11-20 (v0.10 close) |
+| deferred_item | (v0.9) 54/deferred-items.md: Orchestrator post-wave gate (after 54-09, 2026-10-27) Bisected against the pre-phase commit `930254e4f` (scratch worktree, same node_modules): - **Phase-54 regressions, fixed in `10515ecc0`:** `skelet | acknowledged | 2026-11-20 (v0.10 close) |
+| deferred_item | (v0.9) 55/deferred-items.md: 55-05 - src/backend/sidecar/__tests__/testContainment.test.ts fails (Block C): steamNativeInstallDefault.test.ts unclassified. Not caused by 55-05 (no sidecar test files touched); found during pnpm te | acknowledged | 2026-11-20 (v0.10 close) |

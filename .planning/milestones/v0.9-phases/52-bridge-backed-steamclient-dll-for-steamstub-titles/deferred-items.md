@@ -32,6 +32,7 @@
    2026-10-24 round 4 (52-29..52-32): NOT resolved, class O1. A live pid removes the IsSteamRunning warning (arm A W1 to arm B W0) but Application Load Error 3 persists identically (M 1/1, D identical), so the file/forwarder check is the blocker; 52-29 landed WR-01/WR-02/IN-01. Operator chose option-closeout (52-UAT item 29) and approved the ROADMAP done-when amendment; the honest SteamStub notice is not yet implemented and static RE is a separate operator-owned decision. Entry stays open.
    2026-10-24 gap round 5 (52-33..52-35): NOT closed. Item 31 passes (steam://run 0, steamclient64.dll Loaded, HELLO 1) and item 30's log conjuncts hold, but the operator saw no notification (item 30 issue). Probable cause is the gate's raw-binary launch selecting the silent Plugin notification backend; re-run from GameLib.app is the next step. The entry stays open. Grim Dawn main menu via static RE remains an operator-owned decision, not yet recorded as a todo because the phase is not closed.
    2026-10-24 gap round 6 (52-36..52-37): item 32 passes from GameLib.app: forwarder placed, HELLO, 2 FWD, notice trigger and `dispatched=in-app-dialog+notify` logged, one delivery result (`was not delivered`, OS notification authorization not granted), operator saw the in-app dialog and no banner (operator says notifications are enabled; the app logged granted=false / authorization-not-determined, unresolved), game showed Application load error 3. Entry 7 is closed under the amended done-when (items 31-32). The Grim Dawn main menu via static RE stays an operator-owned decision, tracked in `.planning/todos/pending/2026-10-24-steamstub-launch-check-static-re-decision.md`. bridge-verified: not claimed.
+  status: acknowledged
 
 ## Deferred from the 52 code review (recorded by 52-16)
 
@@ -70,6 +71,7 @@ Reason for all entries: orchestrator decision 4 -- hardening, not goal-blocking.
     SteamFriends018, SteamUtils011, STEAMAPPS_INTERFACE_VERSION009, STEAMUSERSTATS_INTERFACE_VERSION013,
     SteamMatchMakingServers003). On the SteamStub-active path a forwarded GetISteam* for one of them
     returns NULL (item 6 above, A2). Revisit when: the 52-17 re-gate shows a fault after the FWD lines.
+  status: acknowledged
 
 ## Behaviors that differ from the plans (carried from earlier summaries)
 
@@ -80,6 +82,7 @@ Reason for all entries: orchestrator decision 4 -- hardening, not goal-blocking.
   `steamstub-unforwarded:withheld` notice cause).
 - 52-02: the helper's CREATE_INTERFACE real-profile (native=present) path was deferred to this live gate.
 - 52-03: `steamclient64.dll` has never been loaded in a Wine bottle before this gate.
+  status: acknowledged
 
 ## Out of scope: pre-existing failures found during the desk gate (not phase 52)
 
@@ -92,3 +95,4 @@ Reason for all entries: orchestrator decision 4 -- hardening, not goal-blocking.
 - `meta/__tests__/machineFillGamelib.test.ts`: `pluralCategoriesFor` returns ICU category order that
   differs from the tests' expectation (three tests).
 - `pnpm lint`: tests-scope warning cap exceeded at the pre-phase base too.
+  status: acknowledged

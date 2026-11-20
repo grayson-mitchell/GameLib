@@ -3,6 +3,10 @@ status: awaiting_human_verify
 trigger: "Phase 54 live gate item 11 (2026-10-28): shell kill -9 ~1 s into a wrapped Refresh; the authenticated logon completed 7 s AFTER stdin EOF while Mac Steam was back online, the refresh ran to completion, the wrap fired a late goonline, and the sidecar never exited (orphaned, PPID 1, alive 107 s later)."
 created: 2026-10-28
 updated: 2026-10-28
+audit_acknowledged:
+  milestone: v0.10
+  at: 2026-11-20
+  status: awaiting_human_verify
 ---
 
 ## Current Focus

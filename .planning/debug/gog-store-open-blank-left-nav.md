@@ -4,6 +4,10 @@ trigger: "Opening the GOG store from a game link switches the left navigation to
 created: 2026-11-18T08:00:00Z
 updated: 2026-11-18T08:45:00Z
 goal: find_root_cause_only
+audit_acknowledged:
+  milestone: v0.10
+  at: 2026-11-20
+  status: diagnosed
 ---
 
 ## Current Focus

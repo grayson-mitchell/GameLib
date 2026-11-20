@@ -3,6 +3,10 @@ status: diagnosed
 trigger: "uninstall-skips-confirmation — clicking Uninstall from a game's page uninstalls immediately with no confirmation dialog (66.3 UAT Test 5)"
 created: 2026-11-12T00:00:00Z
 updated: 2026-11-12T00:00:00Z
+audit_acknowledged:
+  milestone: v0.10
+  at: 2026-11-20
+  status: diagnosed
 ---
 
 ## Current Focus

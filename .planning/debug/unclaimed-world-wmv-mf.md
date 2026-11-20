@@ -3,6 +3,10 @@ status: diagnosed
 trigger: "Unclaimed World (284100) main-menu WMV (Content/MainMenu/TauCetiMainMenu.wmv) fails in bridge bottle Media Foundation: SharpDX SourceResolver.CreateObjectFromURL returns HRESULT 0xC00D36BB, game exits with fatal error. Todo: .planning/todos/pending/2026-10-25-unclaimed-world-mainmenu-wmv-fails-in-wine-media-foundation.md. Done-when: 284100 reaches main menu in bridge bottle via known-fixes data or a generic building block; never modify game files."
 created: 2026-10-26
 updated: 2026-10-26
+audit_acknowledged:
+  milestone: v0.10
+  at: 2026-11-20
+  status: diagnosed
 ---
 
 ## Symptoms

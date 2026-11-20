@@ -11,6 +11,9 @@ files:
 severity: medium
 platform: macos
 ready: live-gate
+audit_acknowledged:
+  milestone: v0.10
+  at: 2026-11-20
 ---
 
 ## Problem

@@ -4,6 +4,10 @@ trigger: "offline-stores-tab-crash -- With the network off, clicking Stores does
 created: 2026-11-18T20:10:00+13:00
 updated: 2026-11-18T20:40:00+13:00
 goal: find_root_cause_only
+audit_acknowledged:
+  milestone: v0.10
+  at: 2026-11-20
+  status: diagnosed
 ---
 
 ## Current Focus

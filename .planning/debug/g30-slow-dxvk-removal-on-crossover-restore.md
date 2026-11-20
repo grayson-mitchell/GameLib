@@ -4,6 +4,10 @@ trigger: "G30: pinned:wine-staging-11.20 -> crossover switch spends ~20 s in DXV
 created: 2026-11-03
 updated: 2026-11-03
 goal: find_root_cause_only
+audit_acknowledged:
+  milestone: v0.10
+  at: 2026-11-20
+  status: diagnosed
 ---
 
 ## Current Focus

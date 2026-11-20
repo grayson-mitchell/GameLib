@@ -5,6 +5,10 @@ planted: 2026-11-15
 planted_during: v0.10 Foundations / Phase 79 (rust-cm-client-replacing-steam-user-and-steam-session)
 trigger_when: when an upstream change (store API, Steam protocol, Wine/CrossOver/DXVK release, or umu-protonfixes data) breaks or silently degrades GameLib, or when the protonfixes importer todo is picked up
 scope: large
+audit_acknowledged:
+  milestone: v0.10
+  at: 2026-11-20
+  status: dormant
 ---
 
 # SEED-001: GameLib-Dashboard — upstream change and integration-health monitoring

@@ -3,6 +3,10 @@ status: diagnosed
 trigger: "region-picker-auto-shows-blank: When the region is Auto, the region select displays 'Auto (...)', never a blank value (G-47-14a, UAT test 14)"
 created: 2026-11-19T00:00:00Z
 updated: 2026-11-19T00:00:00Z
+audit_acknowledged:
+  milestone: v0.10
+  at: 2026-11-20
+  status: diagnosed
 ---
 
 ## Current Focus

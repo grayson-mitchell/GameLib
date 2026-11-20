@@ -3,6 +3,10 @@ status: diagnosed
 trigger: "G-47-14b (47-UAT Test 14, issue 2): The Deals Genres filter control never crops or re-centres at narrow window widths, and selected genres stay inside the control's box"
 created: 2026-11-19
 updated: 2026-11-19
+audit_acknowledged:
+  milestone: v0.10
+  at: 2026-11-20
+  status: diagnosed
 ---
 
 ## Current Focus

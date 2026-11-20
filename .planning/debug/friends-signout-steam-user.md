@@ -3,6 +3,10 @@ status: root-cause-found
 trigger: "GameLib's steam-user logon signs the Mac Steam Friends list out (status stuck 'Offline') until Mac Steam is restarted — todo .planning/todos/pending/2026-10-24-friends-sign-out-steam-user-logon.md (src/backend/storeManagers/steam/user.ts client.logOn({ refreshToken }))"
 created: 2026-10-25
 updated: 2026-10-27
+audit_acknowledged:
+  milestone: v0.10
+  at: 2026-11-20
+  status: root-cause-found
 ---
 
 ## Current Focus

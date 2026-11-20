@@ -3,6 +3,10 @@ status: diagnosed
 trigger: "store-search-region-only-in-deals — The Store Search price region can be chosen without going to the Deals screen (UAT 47 test 8, gap G-47-8)"
 created: 2026-11-18T00:00:00Z
 updated: 2026-11-18T00:00:00Z
+audit_acknowledged:
+  milestone: v0.10
+  at: 2026-11-20
+  status: diagnosed
 ---
 
 ## Current Focus

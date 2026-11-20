@@ -4,6 +4,10 @@ trigger: "Abiotic Factor (427410) still hangs at loading after GetAuthSessionTic
 created: 2026-10-26
 updated: 2026-10-26
 source_todo: .planning/todos/pending/2026-10-25-abiotic-factor-loading-hang-after-auth-ticket.md
+audit_acknowledged:
+  milestone: v0.10
+  at: 2026-11-20
+  status: root_cause_found
 ---
 
 ## Symptoms

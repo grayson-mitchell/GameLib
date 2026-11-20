@@ -7,6 +7,10 @@ updated: 2026-10-24
 source_todo: .planning/todos/pending/2026-10-22-unresolved-cross-depot-file-collisions-leave-install-stuck-at-1026.md
 related_todo: .planning/todos/pending/2026-10-23-bottled-route-restart-steam-to-finish-is-a-dead-end.md
 related_debug: .planning/debug/resolved/steam-1026-download-restart.md (different defect — 1026 misclassification on the OFF path; not this one)
+audit_acknowledged:
+  milestone: v0.10
+  at: 2026-11-20
+  status: awaiting_human_verify
 ---
 
 # Debug: cross-depot file collisions leave GameLib-direct install stuck at StateFlags=1026

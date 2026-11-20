@@ -3,6 +3,10 @@ status: diagnosed
 trigger: "search-input-autocorrect-on-blur — Search inputs (Store Search and Library) never rewrite the typed query on blur: no OS autocorrect replacement fires when clicking outside the control (e.g. 'xcom' stays 'xcom', not 'com') (UAT 47 test 12, issue 2, gap G-47-12b)"
 created: 2026-11-19T00:00:00Z
 updated: 2026-11-19T00:00:00Z
+audit_acknowledged:
+  milestone: v0.10
+  at: 2026-11-20
+  status: diagnosed
 ---
 
 ## Current Focus

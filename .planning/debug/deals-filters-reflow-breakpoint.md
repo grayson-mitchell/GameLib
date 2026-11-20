@@ -3,6 +3,10 @@ status: diagnosed
 trigger: "G-47-14c (47-UAT Test 14, issue 3): As the window narrows, the Deals filters reflow to the 2x2 layout before any filter label ('Operating system', 'Suitable for age') wraps onto two lines and pushes its control down"
 created: 2026-11-19
 updated: 2026-11-19
+audit_acknowledged:
+  milestone: v0.10
+  at: 2026-11-20
+  status: diagnosed
 ---
 
 ## Current Focus

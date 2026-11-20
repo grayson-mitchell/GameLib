@@ -14,6 +14,9 @@ platform: macos
 ready: blocked
 blocked_by: "no unclaimed Amazon Games-delivered Prime title left this month"
 revisit_trigger: "the next Prime Gaming batch adds an Amazon Games title - claim it, leave via the Library tab, confirm it shows without a manual Refresh"
+audit_acknowledged:
+  milestone: v0.10
+  at: 2026-11-20
 ---
 
 ## Status (2026-11-02, after quick 261102-s32)

@@ -10,6 +10,9 @@ files:
 severity: minor
 platform: any
 ready: blocked
+audit_acknowledged:
+  milestone: v0.10
+  at: 2026-11-20
 ---
 
 ## Decision (D-53-09)

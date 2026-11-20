@@ -3,6 +3,10 @@ status: diagnosed
 trigger: "store-search-query-lost-on-leave — The Store Search query and its results survive leaving and re-opening Store Search (e.g. to change theme) (UAT 47 test 12, issue 1)"
 created: 2026-11-19T00:00:00Z
 updated: 2026-11-19T00:00:00Z
+audit_acknowledged:
+  milestone: v0.10
+  at: 2026-11-20
+  status: diagnosed
 ---
 
 ## Current Focus

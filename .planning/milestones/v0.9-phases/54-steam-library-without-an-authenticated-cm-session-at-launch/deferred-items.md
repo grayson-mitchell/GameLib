@@ -9,6 +9,7 @@ Three sidecar suites fail identically with the pre-phase `user.ts` (verified by 
 - `src/backend/sidecar/__tests__/testContainment.test.ts` (channel-set containment, `addTestOnlyListener is not a function`)
 
 Also pre-existing: `macSteamOffline.ts` line ~91 has a `prefer-promise-reject-errors` eslint error from plan 54-01.
+  status: acknowledged
 
 ## Orchestrator post-wave gate (after 54-09, 2026-10-27)
 
@@ -21,3 +22,4 @@ Bisected against the pre-phase commit `930254e4f` (scratch worktree, same node_m
   - `meta/__tests__/machineFillGamelib.test.ts` `pluralCategoriesFor` (3 tests).
   - `meta/__tests__/findDeadcode.test.ts`: one used-in-module finding, `bridge/sharedRedists.ts - WINE_DRIVERS_KEY`.
 - Repo-wide `pnpm lint` walks `.claude/worktrees/quick-261027-tot` (another session's worktree) and reports tsconfig parse errors from it.
+  status: acknowledged

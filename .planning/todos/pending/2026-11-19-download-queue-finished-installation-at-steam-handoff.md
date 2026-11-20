@@ -8,6 +8,9 @@ ready: code
 files:
   - src/backend/downloadmanager/downloadqueue.ts
   - src/backend/storeManagers/steam/gameInstall.ts
+audit_acknowledged:
+  milestone: v0.10
+  at: 2026-11-20
 ---
 
 ## Problem
