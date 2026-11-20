@@ -100,13 +100,14 @@ None beyond the departures above. No Rule 1-4 deviations.
 - Against the operator's live Mac Steam, `public/bin/arm64/darwin/steam-bridge-helper --steam-validateapp 440 --dry-run` resolved engineSlot 43, validateSlot 27, installStateSlot 4, downloadingAppSlot 42, matching the spike measurements. No validate was actually started.
 - Formatter: `.c`/`.h` have no prettier parser and `.rs` is covered by `cargo fmt`; the `.planning` todo files are prettier-ignored, so no prettier check was written for them.
 
-## Live gate: PENDING (human)
+## Live gate: PASSED (operator, 2026-11-20)
 
-Not run by the executor. Prep: `pnpm build-steam-bridge`, `pnpm build:sidecar`, restart with `pnpm tauri:dev` (never `tauri:dev:run`).
+Run after `pnpm build-steam-bridge`, `pnpm build:sidecar`, restart with `pnpm tauri:dev`. Originals were backed up and SHA-1s recorded before corrupting; a script compared them after.
 
-(a) Mac-native: with Mac Steam running and signed in, take a small Steam-registered game, note the SHA-1 of a data file, corrupt a few bytes (`dd ... conv=notrunc`). Click Verify and Repair: Repairing shows, no Steam window or dialog appears, content_log shows "Start validating appID" then "scheduler finished", Repairing clears only after that, the SHA-1 matches again and the game launches. Repeat with Steam quit: `steam://validate` opens Steam, and no "Finished Repairing" toast appears.
+- **(b) Bridge, The Binding of Isaac (113200):** zeroed 64 KB mid-file in `Isaac.exe` (42 MB game binary) and deleted `FlashAchievements.exe`. Verify and Repair: Repairing with progress, then Finished. `Isaac.exe` is byte-identical to the original (742c1df7…) and `FlashAchievements.exe` is restored. `steam_api.dll` is byte-identical to the freshly built shim (`public/bin/arm64/darwin/steam_api.dll`, 41145cae…), with the genuine DLL in `steam_api.dll.gamelib-orig`. The game launched through the bridge. Risk (1) did not fire: Steam issued a request code for the installed manifest (buildid 624794).
+- **(a) Mac-native, World of Goo (22000):** zeroed 64 KB mid-file in the app's main Mach-O binary and in `unifont-16.0.04.otf`. Verify and Repair with Steam running: no Steam window, Repairing cleared, both files byte-identical to the originals, and the game launched.
 
-(b) Bridge: corrupt a few bytes in one large data file of a bridge game. Verify: Repairing shows with progress, and the `[depot-rust] outcome` log line shows net bytes on the order of one chunk. The file is restored, the `steam_api` DLL is shim bytes again with the genuine DLL in `<dll>.gamelib-orig`, and the game launches through the shim ("verified" = helper HELLO plus a clean game Steam-init log). With the game running, Verify is refused.
+Not run in this gate: Verify with Mac Steam quit (the `steam://validate` fallback) and the refusal while the game is running.
 
 Risks to watch in the live run: (1) Rust requests a manifest request code for the INSTALLED manifest GID on the branch; if Steam refuses codes for a manifest that is no longer current, bridge Verify will fail there (the same call the delta path makes for old manifests, but not yet proven for a verify). (2) The helper treats "never seen active within 20 s" as finished, so a very fast validate on a tiny game reads as done.
 
