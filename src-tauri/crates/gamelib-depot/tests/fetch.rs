@@ -413,6 +413,23 @@ async fn dead_addr() -> String {
     l.local_addr().unwrap().to_string()
 }
 
+/// A host whose every connection is accepted and dropped at once: a transport error (no HTTP
+/// status) that costs microseconds on every OS. A connect to a CLOSED port is refused at once on
+/// Unix but takes about a second on Windows (the TCP stack retries the SYN), which blows the
+/// 200-300 ms outage windows of the tests below (the Windows CI failures of fetch.rs:511/562/583),
+/// so those tests use this host. `dead_addr` stays for the tests that need the port closed so a
+/// server can bind it later.
+async fn dropping_addr() -> String {
+    let l = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = l.local_addr().unwrap().to_string();
+    tokio::spawn(async move {
+        while let Ok((conn, _)) = l.accept().await {
+            drop(conn);
+        }
+    });
+    addr
+}
+
 #[tokio::test]
 async fn connect_errors_outlast_the_attempt_budget_then_succeed() {
     let addr = dead_addr().await;
@@ -487,7 +504,7 @@ async fn permanent_http_failure_still_fails_after_the_attempt_budget() {
 /// failure message must carry the real attempt count, not the configured budget.
 #[tokio::test]
 async fn outage_exhaustion_reports_the_real_attempt_count() {
-    let addr = dead_addr().await;
+    let addr = dropping_addr().await;
     let f = fetcher(
         Arc::new(FakeHost::new()),
         vec![host_ref(&addr, "SteamCache", false)],
@@ -543,7 +560,7 @@ async fn http_exhaustion_does_not_claim_an_outage() {
 /// host's errors in host health, so the host is demoted instead of being picked at full weight.
 #[tokio::test]
 async fn errors_before_any_success_still_demote_a_dead_host_after_a_late_start() {
-    let addr = dead_addr().await;
+    let addr = dropping_addr().await;
     let f = fetcher(
         Arc::new(FakeHost::new()),
         vec![host_ref(&addr, "SteamCache", false)],
@@ -567,7 +584,7 @@ async fn errors_before_any_success_still_demote_a_dead_host_after_a_late_start()
 /// fetching began, transport errors are the link's fault and demote no host.
 #[tokio::test]
 async fn a_long_outage_after_fetching_began_demotes_no_host() {
-    let addr = dead_addr().await;
+    let addr = dropping_addr().await;
     let f = fetcher(
         Arc::new(FakeHost::new()),
         vec![host_ref(&addr, "SteamCache", false)],

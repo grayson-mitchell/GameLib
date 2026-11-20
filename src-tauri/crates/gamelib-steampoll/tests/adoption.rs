@@ -1476,6 +1476,23 @@ impl Drop for InFlightGuard {
     }
 }
 
+/// Takes one slow slot if any is left: `true` when a slot was taken. An explicit
+/// compare-exchange loop rather than the atomic closure-update method, which newer toolchains
+/// deprecate in favour of `try_update` (that name would raise `clippy::incompatible_msrv`
+/// against this crate's MSRV).
+fn take_slow_slot(left: &AtomicUsize) -> bool {
+    let mut current = left.load(Ordering::SeqCst);
+    loop {
+        let Some(next) = current.checked_sub(1) else {
+            return false;
+        };
+        match left.compare_exchange(current, next, Ordering::SeqCst, Ordering::SeqCst) {
+            Ok(_) => return true,
+            Err(seen) => current = seen,
+        }
+    }
+}
+
 /// Wraps the rig's `ScriptedRunner`: answers come from it, but a matching call blocks for
 /// `SLOW_MS` of paused time first, and every call is counted and logged in order.
 struct SlowRunner {
@@ -1522,11 +1539,7 @@ impl ProcessRunner for SlowRunner {
             .chain(argv.iter().map(String::as_str))
             .collect::<Vec<_>>()
             .join(" ");
-        let slow = key.contains(self.slow_match)
-            && self
-                .slow_left
-                .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |n| n.checked_sub(1))
-                .is_ok();
+        let slow = key.contains(self.slow_match) && take_slow_slot(&self.slow_left);
         // Records the call for `helper_calls()` and carries the scripted output.
         let answer = self.scripted.run(program, argv, timeout);
         // Synchronously, before the future is polled: a second call made while this one is out
