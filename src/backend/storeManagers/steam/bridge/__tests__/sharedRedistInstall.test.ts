@@ -214,6 +214,11 @@ afterEach(() => {
     rmSync(mockSupportDir, { recursive: true, force: true })
 })
 
+/** These three tests spin up to 500 setImmediate turns waiting for a call under fake timers; a
+ * loaded shared CI runner can stretch that past jest's 5 s default (Test run 44784193642 and
+ * 44791256524). A per-test timeout is the fix, never a retry or a skip. */
+const LOADED_RUNNER_TEST_TIMEOUT_MS = 30_000
+
 describe('installSteamBridgeSharedRedists', () => {
   it('installs DirectX: status, argv, reg add mark, ledger and settled', async () => {
     mockedDownload.mockResolvedValue(ok([dx()]))
@@ -905,40 +910,44 @@ describe('installSteamBridgeSharedRedists', () => {
   })
 
   describe('installer timeout', () => {
-    it('records timedOut, stops all further entries and statuses, and does not settle', async () => {
-      jest.useFakeTimers({ doNotFake: ['setImmediate', 'nextTick'] })
-      mockedDownload.mockResolvedValue(ok([vc2010(), dx()]))
-      mockedRun.mockImplementation(
-        ({ commandParts }: { commandParts: string[] }) => {
-          if (commandParts[0] === 'reg')
-            return Promise.resolve({ code: 1, stdout: '', stderr: '' })
-          return new Promise(() => undefined) // installer never settles
-        }
-      )
+    it(
+      'records timedOut, stops all further entries and statuses, and does not settle',
+      async () => {
+        jest.useFakeTimers({ doNotFake: ['setImmediate', 'nextTick'] })
+        mockedDownload.mockResolvedValue(ok([vc2010(), dx()]))
+        mockedRun.mockImplementation(
+          ({ commandParts }: { commandParts: string[] }) => {
+            if (commandParts[0] === 'reg')
+              return Promise.resolve({ code: 1, stdout: '', stderr: '' })
+            return new Promise(() => undefined) // installer never settles
+          }
+        )
 
-      const p = installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
-      for (let i = 0; i < 500 && installerCalls().length === 0; i++)
-        await new Promise((r) => setImmediate(r))
-      expect(installerCalls()).toHaveLength(1)
-      await jest.advanceTimersByTimeAsync(REDIST_PROCESS_TIMEOUT_MS)
-      await p
+        const p = installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
+        for (let i = 0; i < 500 && installerCalls().length === 0; i++)
+          await new Promise((r) => setImmediate(r))
+        expect(installerCalls()).toHaveLength(1)
+        await jest.advanceTimersByTimeAsync(REDIST_PROCESS_TIMEOUT_MS)
+        await p
 
-      // x86 timed out: no x64 entry, no DirectX, one redist status only.
-      expect(installerCalls()).toHaveLength(1)
-      expect(mockedStatus).toHaveBeenCalledTimes(1)
-      const l = ledger()
-      expect(l.done).toEqual({})
-      expect(Object.keys(l.timedOut)).toHaveLength(1)
-      expect(
-        new Date(Object.values(l.timedOut)[0] as string).getTime()
-      ).not.toBeNaN()
-      expect(l.settled).toBeUndefined()
-      expect(mockedWarn).toHaveBeenCalledWith(
-        expect.stringContaining('timed out'),
-        'Steam'
-      )
-      expect(jest.getTimerCount()).toBe(0)
-    })
+        // x86 timed out: no x64 entry, no DirectX, one redist status only.
+        expect(installerCalls()).toHaveLength(1)
+        expect(mockedStatus).toHaveBeenCalledTimes(1)
+        const l = ledger()
+        expect(l.done).toEqual({})
+        expect(Object.keys(l.timedOut)).toHaveLength(1)
+        expect(
+          new Date(Object.values(l.timedOut)[0] as string).getTime()
+        ).not.toBeNaN()
+        expect(l.settled).toBeUndefined()
+        expect(mockedWarn).toHaveBeenCalledWith(
+          expect.stringContaining('timed out'),
+          'Steam'
+        )
+        expect(jest.getTimerCount()).toBe(0)
+      },
+      LOADED_RUNNER_TEST_TIMEOUT_MS
+    )
 
     it('clears the timedOut marker on a later successful run', async () => {
       const key =
@@ -1074,22 +1083,26 @@ describe('installSteamBridgeSharedRedists', () => {
       expect(mockedEnd).toHaveBeenCalledTimes(2)
     })
 
-    it('restores after an installer timeout', async () => {
-      jest.useFakeTimers({ doNotFake: ['setImmediate', 'nextTick'] })
-      mockedDownload.mockResolvedValue(ok([vc2010()]))
-      const get = gfxWine(null, (p) =>
-        p[0] !== 'reg' ? new Promise(() => undefined) : undefined
-      )
-      const pr = installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
-      for (let i = 0; i < 500 && installerCalls().length === 0; i++)
-        await new Promise((r) => setImmediate(r))
-      await jest.advanceTimersByTimeAsync(REDIST_PROCESS_TIMEOUT_MS)
-      await pr
-      expect(get()).toBeNull()
-      expect(mutations().map((p) => p[1])).toEqual(['add', 'delete'])
-      expect(mockedEnd).toHaveBeenCalledTimes(2)
-      expect(ledger().displayDriver).toBeUndefined()
-    })
+    it(
+      'restores after an installer timeout',
+      async () => {
+        jest.useFakeTimers({ doNotFake: ['setImmediate', 'nextTick'] })
+        mockedDownload.mockResolvedValue(ok([vc2010()]))
+        const get = gfxWine(null, (p) =>
+          p[0] !== 'reg' ? new Promise(() => undefined) : undefined
+        )
+        const pr = installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
+        for (let i = 0; i < 500 && installerCalls().length === 0; i++)
+          await new Promise((r) => setImmediate(r))
+        await jest.advanceTimersByTimeAsync(REDIST_PROCESS_TIMEOUT_MS)
+        await pr
+        expect(get()).toBeNull()
+        expect(mutations().map((p) => p[1])).toEqual(['add', 'delete'])
+        expect(mockedEnd).toHaveBeenCalledTimes(2)
+        expect(ledger().displayDriver).toBeUndefined()
+      },
+      LOADED_RUNNER_TEST_TIMEOUT_MS
+    )
 
     describe('no switch', () => {
       const none = () => {
@@ -1188,23 +1201,27 @@ describe('installSteamBridgeSharedRedists', () => {
         expect(mockedEnd).not.toHaveBeenCalled()
         expect(installerCalls()).toHaveLength(1)
       })
-      it('Graphics query times out', async () => {
-        jest.useFakeTimers({ doNotFake: ['setImmediate', 'nextTick'] })
-        mockedDownload.mockResolvedValue(ok([dx()]))
-        defaultWine((p) =>
-          isGfx(p) && p[1] === 'query'
-            ? new Promise(() => undefined)
-            : undefined
-        )
-        const pr = installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
-        for (let i = 0; i < 500 && graphicsCalls().length === 0; i++)
-          await new Promise((r) => setImmediate(r))
-        await jest.advanceTimersByTimeAsync(15_000)
-        await pr
-        expect(mutations()).toEqual([])
-        expect(mockedEnd).not.toHaveBeenCalled()
-        expect(installerCalls()).toHaveLength(1)
-      })
+      it(
+        'Graphics query times out',
+        async () => {
+          jest.useFakeTimers({ doNotFake: ['setImmediate', 'nextTick'] })
+          mockedDownload.mockResolvedValue(ok([dx()]))
+          defaultWine((p) =>
+            isGfx(p) && p[1] === 'query'
+              ? new Promise(() => undefined)
+              : undefined
+          )
+          const pr = installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
+          for (let i = 0; i < 500 && graphicsCalls().length === 0; i++)
+            await new Promise((r) => setImmediate(r))
+          await jest.advanceTimersByTimeAsync(15_000)
+          await pr
+          expect(mutations()).toEqual([])
+          expect(mockedEnd).not.toHaveBeenCalled()
+          expect(installerCalls()).toHaveLength(1)
+        },
+        LOADED_RUNNER_TEST_TIMEOUT_MS
+      )
     })
 
     it('add-null failure: warns, restores, installers still run', async () => {
