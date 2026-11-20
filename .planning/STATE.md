@@ -4,11 +4,11 @@ milestone: v0.10
 current_phase: 82
 current_phase_name: Guardrails, hygiene and shared safety primitives
 status: executing
-stopped_at: Completed 82-01-PLAN.md
-last_updated: "2026-11-20T07:04:27.180Z"
+stopped_at: Completed 82-02-PLAN.md
+last_updated: "2026-11-20T07:18:03.632Z"
 last_activity: 2026-11-20
 last_activity_desc: Phase 82 execution started
-state_head: cbb9c51cef855458fa8a8e86bb711a5e4074fd51
+state_head: f4e814f8bd6a7d410f8132c19ba23e3b9ed7247e
 progress:
   total_phases: 27
   completed_phases: 23
@@ -76,7 +76,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 82 (Guardrails, hygiene and shared safety primitives) — EXECUTING
-Plan: 2 of 16
+Plan: 3 of 16
 Status: Ready to execute
 Last activity: 2026-11-20 — Phase 82 execution started
 
@@ -308,6 +308,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 47 P22 | 5 min | 2 tasks | 3 files |
 | Phase 64 P11 | 9 min | 3 tasks | 10 files |
 | Phase 82 P01 | 70 min | 3 tasks | 18 files |
+| Phase 82 P02 | 44 min | 3 tasks | 22 files |
 
 ## Accumulated Context
 
@@ -528,6 +529,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 64]: 64-11: IN-03 gradient gate is the name prefix /^--gradient-/ (not a seed-value rule), because --gradient-body-background is live-derived and in no seed; CSS.supports stays the final gate (D-14)
 - [Phase 82]: 82-01: steam_direct_launch_verdict pinned as kind cache; themeTokens is-text census re-derived 34 -> 39 per site — Derivable eligibility verdict (cache-vs-user-state rule); the five new sites are pure button is-text and none escaped the contrast census
 - [Phase 82]: 82-01: new test-only jest.mock gets a collaborators seam, never a baseline entry — backend-di-ceilings forbids a baseline for a new violation; validateNative and verifyBridge take optional collaborators with real defaults
+- [Phase 82]: 82-02: census gates share assertAtOrAboveFloor and each carries an empty-input test; bridgeCensus now exits 1 on zero titles; lintScoped.cjs is require-safe and exports scopeFloorFailure
 
 ### Pending Todos
 
@@ -770,8 +772,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-20T07:04:27.151Z
-Stopped at: Completed 82-01-PLAN.md
+Last session: 2026-11-20T07:18:03.595Z
+Stopped at: Completed 82-02-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
