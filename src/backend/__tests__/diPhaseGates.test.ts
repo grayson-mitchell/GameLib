@@ -651,7 +651,6 @@ describe('66.4 end state: long tail at zero, census is a test, path shim gone', 
     'src/backend/sidecar/storeWriteHandlers.ts',
     'src/backend/sidecar/wineToolsFlowRegistration.ts',
     'src/backend/store/storeEmbedSeam.ts',
-    'src/backend/storeManagers/gog/e2eMock.ts',
     'src/backend/storeManagers/gog/library.ts',
     'src/backend/storeManagers/gog/presence.ts',
     'src/backend/storeManagers/gog/resumeProgress.ts',
@@ -737,7 +736,9 @@ describe('66.4 end state: long tail at zero, census is a test, path shim gone', 
   })
 
   it('the owned list is a full scan (floor)', () => {
-    assertAtOrAboveFloor('66.4 owned list', OWNED_66_4.length, 80)
+    // Phase 82 Plan 10 deleted gog/e2eMock.ts (D-19), so the list is 79 entries and the floor moves 80 -> 79
+    // with the deliberate deletion; the floor stays equal to the list length, so a parse miss still turns it red.
+    assertAtOrAboveFloor('66.4 owned list', OWNED_66_4.length, 79)
   })
 
   it.each(OWNED_66_4)('%s is absent from the census', (file) => {

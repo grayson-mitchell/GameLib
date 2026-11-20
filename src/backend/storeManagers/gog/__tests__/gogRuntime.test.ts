@@ -32,7 +32,7 @@ describe('createGogRuntime', () => {
     expect(clock.pendingCount()).toBe(0)
   })
 
-  it('two runtimes share no library entries, installed games, baselines or stubs', async () => {
+  it('two runtimes share no library entries, installed games or baselines', () => {
     const a = make().rt
     const b = make().rt
     a.libraryState.library.set('1', { app_name: '1' } as GogGameInfo)
@@ -53,23 +53,8 @@ describe('createGogRuntime', () => {
       })
     ).toBe(5)
 
-    a.stubs.set([{ commandParts: ['x'], stdout: 'custom' }])
-    expect((await a.stubs.run(['x'])).stdout).toBe('custom')
-    expect((await b.stubs.run(['x'])).stdout).toBe('')
-
     a.credentials.put(CREDS)
     expect(b.credentials.getFresh()).toBeUndefined()
-  })
-
-  describe('stub slot', () => {
-    it('starts with the default --version stub; set replaces and reset restores it', async () => {
-      const { rt } = make()
-      expect((await rt.stubs.run(['--version'])).stdout).toBe('0.7.1')
-      rt.stubs.set([{ commandParts: ['--version'], stdout: '9.9.9' }])
-      expect((await rt.stubs.run(['--version'])).stdout).toBe('9.9.9')
-      rt.stubs.reset()
-      expect((await rt.stubs.run(['--version'])).stdout).toBe('0.7.1')
-    })
   })
 
   describe('credential cache', () => {

@@ -53,7 +53,6 @@ import { createStores } from '../stores/createStores'
 import { createStoreRegistry } from '../stores/storeRegistry'
 import { createStoreRoot, type StoreRoot } from '../stores/storeRoot'
 import { createStoreManagers } from '../storeManagers'
-import { registerGogdlStubListeners } from '../storeManagers/gog/e2eMock'
 import { registerLegendaryStubListeners } from '../storeManagers/legendary/e2eMock'
 import { registerNileStubListeners } from '../storeManagers/nile/e2eMock'
 import {
@@ -2254,7 +2253,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       name: 'gog-runtime',
       // Builds the one GOG runtime of this boot (D-05, 66.4-10): the library and installed-game maps, the
       // presence keep-alive slot, the resume-progress baselines, the credential cache with its single
-      // in-flight spawn and the e2e gogdl stub slot. Construction allocates empty maps and counters only:
+      // in-flight spawn. Construction allocates empty maps and counters only:
       // no I/O, no timer, no handle, so the sidecar exit contract holds; the presence interval is armed
       // later by 'gog-presence' on the boot clock (unref'd). After 'steam-install-runtime' and before
       // 'store-managers' so ManagerDeps carries it.
@@ -2789,11 +2788,6 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           shellState: requireShellState(state)
         })
         // e2e-only command stubs (66.3-07): each registers only when CI === 'e2e'.
-        registerGogdlStubListeners(
-          services.host.ipc,
-          { CI: process.env.CI },
-          services.gogRuntime.stubs
-        )
         registerLegendaryStubListeners(
           services.host.ipc,
           { CI: process.env.CI },

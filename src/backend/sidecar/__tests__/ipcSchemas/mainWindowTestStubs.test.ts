@@ -60,8 +60,6 @@ const stubList = {
 const stubsTest: FixtureTable<typeof testStubsTestSyncArgs> = {
   setLegendaryCommandStub: stubList,
   resetLegendaryCommandStub: noArgs,
-  setGogdlCommandStub: stubList,
-  resetGogdlCommandStub: noArgs,
   setNileCommandStub: stubList,
   resetNileCommandStub: noArgs
 }

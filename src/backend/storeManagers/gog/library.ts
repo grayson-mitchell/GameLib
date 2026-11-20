@@ -1625,10 +1625,6 @@ export default class GOGLibraryManager implements LibraryManager {
     commandParts: string[],
     options?: CallRunnerOptions
   ): Promise<ExecResult> {
-    if (process.env.CI === 'e2e') {
-      return this.deps.gogRuntime.stubs.run(commandParts)
-    }
-
     const { dir, bin } = getGOGdlBin(this.deps)
     const authConfig = deriveGogPaths(this.deps.paths).gogdlAuthConfig
 

@@ -1,7 +1,7 @@
 /**
  * The GOG per-boot state (D-05, 66.4-10): the in-memory library and installed-game maps, the presence
  * keep-alive slot, the resume-progress baselines, the credential cache with its single in-flight
- * spawn, and the e2e gogdl stub slot. Each was module-level state; they are now closure fields of the
+ * spawn. Each was module-level state; they are now closure fields of the
  * factories below, built once by the 'gog-runtime' boot step and read through ManagerDeps.gogRuntime.
  *
  * Construction allocates empty maps and counters only: no I/O, no timer, no handle (sidecar exit
@@ -14,7 +14,6 @@ import type { GogGameInfo, GogInstalledInfo } from 'common/types/gog'
 import type { GOGCredentials } from 'common/types/gog'
 import type { Clock, TimerHandle } from 'backend/process/types'
 import type { CredentialsWithVerdict } from './user'
-import { createGogdlStubs, type GogdlStubs } from './e2eMock'
 import {
   createGogResumeBaselines,
   type GogResumeBaselines
@@ -115,7 +114,6 @@ export interface GogRuntime {
   presence: GogPresence
   resumeBaselines: GogResumeBaselines
   credentials: GogCredentialCache<GOGCredentials, CredentialsWithVerdict>
-  stubs: GogdlStubs
 }
 
 export function createGogRuntime(deps: { clock: Clock }): GogRuntime {
@@ -123,7 +121,6 @@ export function createGogRuntime(deps: { clock: Clock }): GogRuntime {
     libraryState: createGogLibraryState(),
     presence: createGogPresence(deps),
     resumeBaselines: createGogResumeBaselines(),
-    credentials: createGogCredentialCache(deps),
-    stubs: createGogdlStubs()
+    credentials: createGogCredentialCache(deps)
   }
 }
