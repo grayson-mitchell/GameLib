@@ -69,6 +69,8 @@ struct Paths {
     game_pids: PathBuf,
     /// The stand-in's stderr, which its reaper inherits: where `[reaper] ...` lines land.
     standin_err: PathBuf,
+    /// Where the Node stand-in sidecar writes its two children's pids.
+    node_pids: PathBuf,
 }
 
 impl Paths {
@@ -77,6 +79,7 @@ impl Paths {
             game_log: home.root().join("game.log"),
             game_pids: home.root().join("game-pids.txt"),
             standin_err: home.root().join("standin.err"),
+            node_pids: home.root().join("node-pids.json"),
         }
     }
 }
@@ -405,4 +408,62 @@ fn sigkill_with_a_leaked_pipe_still_reaps() {
     );
     assert_helpers_die_and_game_survives(&run, &paths);
     assert!(standin_stderr(&paths).contains("[reaper] parent gone: signalled "));
+}
+
+/// `true` when `node` runs. Missing node is a hard failure on CI (a skipped leg there would be a
+/// green that proves nothing) and a printed skip locally, the rule `gamelib-testutil`'s
+/// `require_link` follows.
+fn node_available() -> bool {
+    let ok = Command::new("node")
+        .arg("--version")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false);
+    if !ok {
+        if std::env::var("CI").is_ok() {
+            panic!("node is required on CI for the Node stand-in leg but `node --version` failed");
+        }
+        println!("SKIP node_standin_children_die_with_the_parent: node is not installed");
+    }
+    ok
+}
+
+/// D-10: the TS runner's tracked children are plain (non-detached) `child_process.spawn` children,
+/// so they live in their parent's process group (unix, killed by the reaper) or its Job (Windows,
+/// killed by the kernel when the dead parent's handles close). A SIGKILL of the shell must take
+/// the Node sidecar and both of its children with it.
+#[test]
+fn node_standin_children_die_with_the_parent() {
+    if !node_available() {
+        return;
+    }
+    let home = FakeHome::new("gamelib-proc-orphans");
+    let paths = Paths::new(&home);
+    let node_pids = paths.node_pids.to_string_lossy().into_owned();
+    let mut run = Run::start_with(&home, &paths, &["--node-sidecar", &node_pids]);
+    let _strays = Strays(
+        run.pids("games")
+            .into_iter()
+            .chain(run.pids("helpers"))
+            .chain(run.pids("grandchildren"))
+            .collect(),
+    );
+    let helpers = run.pids("helpers");
+    let grandchildren = run.pids("grandchildren");
+    assert_eq!(helpers.len(), 4, "node sidecar is the fourth helper");
+    assert_eq!(grandchildren.len(), 3, "the node sidecar's two children");
+    let node = helpers[3];
+    for p in std::iter::once(&node).chain(&grandchildren[1..]) {
+        assert!(is_alive(*p), "pid {p} alive before the kill");
+    }
+
+    run.kill_parent();
+    run.wait_for_parent_exit();
+    wait_until("the node sidecar and both its children to die", || {
+        !is_alive(node) && grandchildren[1..].iter().all(|p| !is_alive(*p))
+    });
+    assert_helpers_die_and_game_survives(&run, &paths);
 }

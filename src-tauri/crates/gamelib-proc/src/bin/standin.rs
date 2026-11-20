@@ -20,6 +20,9 @@
 //! `parent` flags: `--no-reaper` skips starting the reaper (the negative control: a SIGKILL of the
 //! parent must then leave its helpers alive). `--leak-pipe` (unix) adds a fourth helper holding a
 //! duplicate of the reaper pipe's write end as its stdin, so EOF never reaches the reaper.
+//! `--node-sidecar <pids-file>` adds a Node process as a helper, standing in for the TS sidecar: it
+//! spawns two children with plain `child_process.spawn` (no options beyond `stdio`, exactly like the
+//! TS runner's tracked children), so they stay in its process group (unix) or Job (Windows).
 
 use gamelib_proc::{global, reaper, spawn_game, spawn_helper, spawn_helper_with_pipes};
 use std::io::{BufRead, BufReader, Write};
@@ -60,6 +63,52 @@ fn self_command(mode: &str, extra: &[&str]) -> Command {
         .stdout(Stdio::null())
         .stderr(Stdio::null());
     cmd
+}
+
+/// The Node stand-in sidecar. One line on purpose (a multi-line `-e` argument is a quoting hazard
+/// on Windows). It waits for `go` on stdin, so its children can never be created before the parent
+/// has assigned it to its Job (the known Windows limit), then spawns two children with nothing but
+/// `stdio: 'ignore'`, writes their pids to the file named by argv[1] and idles.
+const NODE_SIDECAR_SCRIPT: &str = concat!(
+    "const { spawn } = require('child_process');",
+    "const fs = require('fs');",
+    "const out = process.argv[1];",
+    "process.stdin.once('data', () => {",
+    "const kids = [0, 1].map(() => spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { stdio: 'ignore' }));",
+    "fs.writeFileSync(out, JSON.stringify(kids.map((k) => k.pid)) + '\\n');",
+    "});",
+    "setInterval(() => {}, 1000);"
+);
+
+/// Spawns the Node stand-in sidecar as a Helper and waits (bounded) for it to report its two
+/// children. Returns its pid, its children's pids, and its stdin (held so the pipe stays open).
+fn node_sidecar(pids_file: &PathBuf) -> (u32, Vec<u32>, std::process::ChildStdin) {
+    let mut cmd = Command::new("node");
+    cmd.arg("-e")
+        .arg(NODE_SIDECAR_SCRIPT)
+        .arg(pids_file)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    let (pid, pipes) = spawn_helper_with_pipes(cmd, "standin-node").expect("spawn node sidecar");
+    let mut stdin = pipes.stdin.expect("node stdin");
+    writeln!(stdin, "go").expect("tell node to go");
+    stdin.flush().expect("flush go");
+    let deadline = Instant::now() + Duration::from_secs(10);
+    loop {
+        if let Ok(text) = std::fs::read_to_string(pids_file) {
+            if let Ok(kids) = serde_json::from_str::<Vec<u32>>(text.trim()) {
+                if kids.len() == 2 {
+                    return (pid, kids, stdin);
+                }
+            }
+        }
+        assert!(
+            Instant::now() < deadline,
+            "node sidecar never reported its children"
+        );
+        std::thread::sleep(Duration::from_millis(50));
+    }
 }
 
 fn has_flag(args: &[String], name: &str) -> bool {
@@ -165,6 +214,16 @@ fn parent(args: &[String]) {
     // `mut` and `vec!` are only needed by the unix-only leaky helper below.
     #[cfg_attr(not(unix), allow(unused_mut, clippy::useless_vec))]
     let mut helpers = vec![h1, h2, tree_pid];
+    let mut grandchildren = vec![grandchild];
+    // Held until exit so the node sidecar's stdin stays open, as the shell's would.
+    let _node_stdin = if has_flag(args, "--node-sidecar") {
+        let (node, kids, stdin) = node_sidecar(&flag(args, "--node-sidecar"));
+        helpers.push(node);
+        grandchildren.extend(kids);
+        Some(stdin)
+    } else {
+        None
+    };
     #[cfg(unix)]
     if has_flag(args, "--leak-pipe") {
         let fd = reaper::harness_dup_write_end().expect("a running reaper to leak the pipe of");
@@ -172,14 +231,16 @@ fn parent(args: &[String]) {
         leak_cmd.stdin(Stdio::from(fd));
         helpers.push(spawn_helper(leak_cmd, "standin-leak").expect("spawn leaky helper"));
     }
-    let helpers_json = helpers
-        .iter()
-        .map(u32::to_string)
-        .collect::<Vec<_>>()
-        .join(",");
+    let join = |pids: &[u32]| {
+        pids.iter()
+            .map(u32::to_string)
+            .collect::<Vec<_>>()
+            .join(",")
+    };
+    let (helpers_json, grandchildren_json) = (join(&helpers), join(&grandchildren));
     let reaper_json = reaper_pid.map_or("null".to_string(), |p| p.to_string());
     let manifest = format!(
-        r#"{{"helpers":[{helpers_json}],"grandchildren":[{grandchild}],"games":[{},{game_child}],"reaper":{reaper_json}}}"#,
+        r#"{{"helpers":[{helpers_json}],"grandchildren":[{grandchildren_json}],"games":[{},{game_child}],"reaper":{reaper_json}}}"#,
         game.id()
     );
     let mut out = std::io::stdout();
