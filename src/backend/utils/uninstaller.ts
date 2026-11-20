@@ -8,75 +8,91 @@ import { resolveGameTitle } from 'backend/utils/gameTitle'
 import { Runner } from 'common/types'
 import { storeMap } from 'common/utils'
 import { storeCapabilities } from 'common/storeCapabilities'
-import { existsSync, readdirSync, rmSync } from 'graceful-fs'
+import {
+  checkRemoval,
+  firstBlockingItem,
+  guardedRemoveTree,
+  type GuardedRemoval
+} from 'backend/safety/rustSafety'
+import {
+  collectKnownInstalls,
+  knownInstallKey,
+  titleForKnownKey
+} from 'backend/safety/knownInstalls'
+import { protectedRootsFor } from 'backend/safety/protectedRoots'
+import { pushRemovalRefusal } from 'backend/safety/refusal'
+import type { SafetyRequest } from 'common/types/safety'
+import { existsSync, rmSync } from 'graceful-fs'
 import i18next from 'i18next'
 import { join } from 'path'
 
 /** R1 slice: the per-runner managers. */
 export type UninstallerDeps = Pick<
   ManagerDeps,
-  'libraryManagers' | 'notifications' | 'paths' | 'sendFrontendMessage'
+  | 'libraryManagers'
+  | 'notifications'
+  | 'paths'
+  | 'sendFrontendMessage'
+  | 'requestRustInvoke'
 > & {
   config: Pick<GlobalConfigSlice, 'getSettings'>
 } & AppRuntimeSlice<'events'>
 
+/**
+ * The Rust guard's request for one game's Wine prefix (D-11, D-14): the prefix is a `prefix` target,
+ * the known installs are every OTHER game across every store, and the protected roots come from
+ * settings and app paths. The drive_c/pfx shape rule and the default/shared prefix refusals live in
+ * gamelib-safety (`not-a-prefix`, `is-protected-root`), not here.
+ */
+function prefixRequest(
+  deps: UninstallerDeps,
+  appName: string,
+  runner: Runner,
+  winePrefix: string
+): SafetyRequest {
+  return {
+    targets: [{ id: 'prefix', path: winePrefix, kind: 'prefix' }],
+    knownInstalls: collectKnownInstalls(deps, { runner, appName }),
+    selfKey: knownInstallKey(runner, appName),
+    protectedRoots: protectedRootsFor(deps)
+  }
+}
+
+/** The game's configured Wine prefix, or `undefined` when none is set or settings cannot be read. */
+async function readWinePrefix(
+  deps: UninstallerDeps,
+  appName: string,
+  runner: Runner
+): Promise<string | undefined> {
+  try {
+    const { winePrefix } = await deps.libraryManagers[runner]
+      .getGame(appName)
+      .getSettings()
+    return winePrefix ? winePrefix : undefined
+  } catch (error) {
+    // No prefix path is known, so there is nothing this call could delete.
+    logError(error, LogPrefix.Backend)
+    return undefined
+  }
+}
+
+/**
+ * Deletes the game's Wine prefix through the Rust guard (D-11). Resolves `undefined` when the game
+ * has no prefix configured, otherwise the guard's result: only `outcome: 'removed'` means the
+ * prefix is gone (an already-absent prefix reads as removed).
+ */
 export const removePrefix = async (
   deps: UninstallerDeps,
   appName: string,
   runner: Runner
-) => {
-  const { winePrefix } = await deps.libraryManagers[runner]
-    .getGame(appName)
-    .getSettings()
+): Promise<GuardedRemoval | undefined> => {
+  const winePrefix = await readWinePrefix(deps, appName, runner)
+  if (!winePrefix) return undefined
   logInfo(`Removing prefix ${winePrefix}`, LogPrefix.Backend)
-
-  if (!existsSync(winePrefix)) {
-    logInfo(`Prefix folder ${winePrefix} doesn't exist, ignoring removal`)
-    return
-  }
-
-  // folder exists, do some sanity checks before deleting it
-  const { defaultInstallPath, sharedWinePrefix } = deps.config.getSettings()
-
-  if (winePrefix === defaultInstallPath) {
-    logInfo(
-      `Can't delete folder ${winePrefix}, prefix folder is the default install directory ${defaultInstallPath}`
-    )
-    return
-  }
-
-  if (winePrefix === sharedWinePrefix) {
-    logInfo(
-      `Can't delete folder ${winePrefix}, prefix folder is the shared prefix directory ${sharedWinePrefix}`
-    )
-    return
-  }
-
-  // keep this check for backwards compatibility
-  const { defaultWinePrefix } = deps.paths
-  if (winePrefix === defaultWinePrefix) {
-    logInfo(
-      `Can't delete folder ${winePrefix}, prefix folder is the default prefix directory ${defaultWinePrefix}`
-    )
-    return
-  }
-
-  const dirContent = readdirSync(winePrefix)
-
-  if (dirContent.length > 0) {
-    const driveCPath = join(winePrefix, 'drive_c')
-    const pfxPath = join(winePrefix, 'pfx')
-
-    if (!existsSync(driveCPath) && !existsSync(pfxPath)) {
-      logInfo(
-        `Can't delete folder ${winePrefix}, folder does not contain a drive_c/pfx folder. If this is the correct prefix folder, delete it manually.`
-      )
-      return
-    }
-  }
-
-  // if we got here, we are safe to delete this folder
-  rmSync(winePrefix, { recursive: true })
+  return guardedRemoveTree(
+    deps,
+    prefixRequest(deps, appName, runner, winePrefix)
+  )
 }
 
 export const removeFixFile = (
@@ -113,6 +129,15 @@ const removeSettingsAndLogs = (
   removeIfExists(appName.concat('-lastPlay.log'))
 }
 
+/** The other game's display title for a nested/inside refusal, as an optional payload field. */
+function otherTitleOf(
+  deps: UninstallerDeps,
+  otherKey: string | undefined
+): { otherTitle?: string } {
+  const otherTitle = otherKey ? titleForKnownKey(deps, otherKey) : undefined
+  return otherTitle ? { otherTitle } : {}
+}
+
 export const uninstallGameCallback = async (
   deps: UninstallerDeps,
   event: unknown,
@@ -133,6 +158,36 @@ export const uninstallGameCallback = async (
   // falls back to appName so neither the uninstall-error nor the
   // uninstall-success notification below is ever nameless.
   const title = resolveGameTitle(deps.libraryManagers, runner, appName)
+
+  const removesPrefix =
+    shouldRemovePrefix && !storeCapabilities[runner].installHandOffToClient
+
+  // D-14: check the prefix BEFORE the install is uninstalled. A refusal here leaves the game, its
+  // settings and the prefix exactly as they were, so clicking Uninstall again re-runs the same
+  // checks (nothing was mutated to change the verdict).
+  if (removesPrefix) {
+    const winePrefix = await readWinePrefix(deps, appName, runner)
+    if (winePrefix) {
+      const check = await checkRemoval(
+        deps,
+        prefixRequest(deps, appName, runner, winePrefix)
+      )
+      if (check.overall !== 'yes') {
+        const blocking = firstBlockingItem(check)
+        pushRemovalRefusal(deps, {
+          kind: 'uninstall',
+          outcome: 'refused',
+          reason: blocking?.reason ?? 'bad-reply',
+          title,
+          appName,
+          runner,
+          ...otherTitleOf(deps, blocking?.otherKey)
+        })
+        sendGameStatusUpdate(deps, { appName, runner, status: 'done' })
+        return
+      }
+    }
+  }
 
   let uninstalled = false
 
@@ -175,11 +230,21 @@ export const uninstallGameCallback = async (
     // quick 261112-90h: Steam bridge/bottle routes remove their own per-game
     // bottles, and a bottle-eligible title's winePrefix is the shared CrossOver
     // Steam bottle, which must never be deleted from an uninstall.
-    if (
-      shouldRemovePrefix &&
-      !storeCapabilities[runner].installHandOffToClient
-    ) {
-      removePrefix(deps, appName, runner)
+    if (removesPrefix) {
+      // The game itself is already uninstalled, so a refused or failed prefix delete does not undo
+      // that: the success notification and the done status below still fire.
+      const removed = await removePrefix(deps, appName, runner)
+      if (removed && removed.outcome !== 'removed') {
+        pushRemovalRefusal(deps, {
+          kind: 'remove-prefix',
+          outcome: removed.outcome,
+          reason: removed.reason ?? 'bad-reply',
+          title,
+          appName,
+          runner,
+          ...otherTitleOf(deps, removed.otherKey)
+        })
+      }
     }
     if (shouldRemoveSetting) {
       removeSettingsAndLogs(deps, appName)

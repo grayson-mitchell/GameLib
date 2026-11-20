@@ -44,6 +44,7 @@ export interface MacArchRecoveryDeps extends MiscRuntimeSlice<'macArchPrompts'> 
   dialogs: ManagerDeps['dialogs']
   notifications: ManagerDeps['notifications']
   sendFrontendMessage: ManagerDeps['sendFrontendMessage']
+  requestRustInvoke: ManagerDeps['requestRustInvoke']
   paths: ManagerDeps['paths']
   appRuntime: Pick<ManagerDeps['appRuntime'], 'events'>
 }
@@ -208,6 +209,7 @@ export async function offerWindowsReinstall(
         notifications: deps.notifications,
         paths: deps.paths,
         sendFrontendMessage: deps.sendFrontendMessage,
+        requestRustInvoke: deps.requestRustInvoke,
         appRuntime: deps.appRuntime
       },
       undefined as never,

@@ -283,6 +283,7 @@ export function registerInstallFlows(deps: InstallFlowDeps): void {
         notifications: deps.host.notifications,
         paths: deps.paths,
         sendFrontendMessage: deps.host.sendFrontendMessage,
+        requestRustInvoke: deps.host.requestRustInvoke,
         appRuntime: deps.appRuntime
       },
       event,
