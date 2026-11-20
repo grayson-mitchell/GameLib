@@ -938,13 +938,35 @@ async function uninstallBottleGameDirectly(
     return { stdout: '', stderr: '' }
   }
 
+  // Phase 82 (D-09): after every refusal above, the install root goes through the Rust guard. The
+  // trust root is the bottle's own steamapps/common (never the manifest) and the request carries
+  // every other store's known installs, so a game inside this root (common/Studio/GameB) refuses
+  // naming it. A non-yes verdict keeps the manifest so a second click re-runs the same checks.
+  const removal = await guardedRemoveTree(
+    steamGame.deps,
+    steamSafetyRequest(steamGame, [
+      {
+        id: 'install',
+        path: installRoot,
+        kind: 'game-install',
+        trustRoot: commonRoot
+      }
+    ])
+  )
+  if (removal.outcome !== 'removed') {
+    return refuseWithRemovalNotice(steamGame, {
+      outcome: removal.outcome,
+      ...(removal.reason ? { reason: removal.reason } : {}),
+      ...(removal.otherKey ? { otherKey: removal.otherKey } : {})
+    })
+  }
+
   try {
-    rmSync(installRoot, { recursive: true, force: true })
     rmSync(manifestPath, { force: true })
   } catch (error) {
     logWarning(
       [
-        `SteamGame: uninstallBottleGameDirectly failed to remove "${installRoot}" for appId ${steamGame.appId}`,
+        `SteamGame: uninstallBottleGameDirectly failed to remove the manifest "${manifestPath}" for appId ${steamGame.appId}`,
         error
       ],
       LogPrefix.Steam
