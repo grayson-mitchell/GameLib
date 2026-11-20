@@ -301,7 +301,7 @@ Milestone v0.11 Node Sidecar Retirement. Planned 2026-11-17 alongside v0.10; sta
   4. Uninstalling a game never deletes a sibling game co-installed beside it, proven by an adversarial path table (nested installdir, `.\x`, `C:\x`, UNC, symlink, case, NFC/NFD) on macOS, Windows and Linux
   5. The `utils.ts` and `bootstrap.ts` responsibility inventory and the milestone-wide state-ownership table are committed, and the zero-risk deletions (type-only files, dead exports, `legendary/commands/*`, `CI=e2e` mocks; `fileStore.ts` only after the live-or-dead check) are gone
 
-**Plans:** 17/19 plans executed (16 + 3 gap closure)
+**Plans:** 18/19 plans executed (16 + 3 gap closure)
 
 Plans:
 **Wave 1**
@@ -338,7 +338,7 @@ Plans:
 
 **Gap closure** *(82-VERIFICATION.md gaps 1-4; review CR-01, WR-01, WR-03, WR-04, WR-07, WR-08; planned 2026-11-20; run with `/gsd-execute-phase 82 --gaps-only`)*
 - [x] 82-17-PLAN.md — gamelib-safety: an absent trust root is judged at its nearest existing ancestor (CR-01/WR-01), an empty trustRoot is unknown (WR-04), lexical rows cannot pass vacuously (WR-08), shared trust-root contract fixture (gap closure, wave 1)
-- [ ] 82-18-PLAN.md — Raw-delete detector sees member calls on any receiver and opaque options, gates portable to Windows (WR-07); safety_remove_tree unbounded (WR-03) (gap closure, wave 1)
+- [x] 82-18-PLAN.md — Raw-delete detector sees member calls on any receiver and opaque options, gates portable to Windows (WR-07); safety_remove_tree unbounded (WR-03) (gap closure, wave 1)
 - [ ] 82-19-PLAN.md — Fake safety transport models trust roots and is pinned to the crate by the shared contract; GOG and cancel absent-folder tests; review dispositions and deferred-findings todo (gap closure, wave 2)
 
 ### Phase 83: Native seam, gamelib-core and process/shutdown contract
