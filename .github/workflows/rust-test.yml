@@ -67,7 +67,7 @@ concurrency:
 #       nothing about the real SEA sidecar or its externalBin naming/packaging -- a sidecar build
 #       that stopped emitting `gamelib-sidecar-<triple>` would still pass here and surface only in
 #       release-tauri.yml.
-#   (g) The Tauri-free crates (gamelib-core, gamelib-scan, gamelib-scan-cli, gamelib-depot, gamelib-depot-cli, gamelib-steamfiles, gamelib-steamfiles-cli, gamelib-steamcm, gamelib-steamcm-cli, gamelib-steampoll, gamelib-steampoll-cli, gamelib-i18n, gamelib-safety, gamelib-testutil) are covered only by the
+#   (g) The Tauri-free crates (gamelib-core, gamelib-proc, gamelib-scan, gamelib-scan-cli, gamelib-depot, gamelib-depot-cli, gamelib-steamfiles, gamelib-steamfiles-cli, gamelib-steamcm, gamelib-steamcm-cli, gamelib-steampoll, gamelib-steampoll-cli, gamelib-i18n, gamelib-safety, gamelib-testutil) are covered only by the
 #       explicit `-p` test step and the `--workspace` clippy run: `cargo test --bin gamelib-shell`
 #       alone selects only the root package. They run on the Linux leg too (Phase 72 D-14), via
 #       the same `-p` test step.
@@ -118,6 +118,14 @@ jobs:
         shell: bash
         working-directory: src-tauri
         run: cargo test -p gamelib-safety -p gamelib-testutil
+      # Phase 83 D-13: the process-lifetime harness. A stand-in shell spawns helpers, a helper with a
+      # grandchild and a Game-class tree through gamelib-proc; after a graceful quit (and, on
+      # Windows, TerminateProcess of the parent) every helper must be gone and the game tree alive.
+      # Own step, run early, so a red crate further down cannot mask it on any of the three legs.
+      - name: cargo test (gamelib-proc process-lifetime harness, run before the multi-crate step so an earlier red crate cannot mask it; Phase 83 D-13)
+        shell: bash
+        working-directory: src-tauri
+        run: cargo test -p gamelib-proc
       - name: cargo test (gamelib-core, gamelib-scan, gamelib-depot, gamelib-steamfiles, gamelib-steamcm, gamelib-steampoll and gamelib-i18n crates)
         shell: bash
         working-directory: src-tauri

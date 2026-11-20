@@ -51,7 +51,6 @@ impl ChildSet {
         pid
     }
 
-    #[allow(dead_code)] // used by spawn_helper_tokio (Task 3)
     pub(crate) fn register_pid(&self, label: &'static str, pid: u32, job: JobSlot) {
         let entry = Entry {
             label,
@@ -217,7 +216,6 @@ pub struct HelperGuard {
 }
 
 impl HelperGuard {
-    #[allow(dead_code)] // used by spawn_helper_tokio (Task 3)
     pub(crate) fn new(pid: u32) -> HelperGuard {
         HelperGuard { pid }
     }

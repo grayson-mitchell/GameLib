@@ -9,8 +9,12 @@ pub mod diag;
 pub mod job;
 pub mod kill_tree;
 pub mod probe;
+pub mod runner;
 pub mod spawn;
 
 pub use children::{global, ChildSet, HelperGuard};
 pub use diag::set_diag_sink;
-pub use spawn::{spawn_game, spawn_helper, spawn_helper_with_pipes, HelperPipes, SpawnClass};
+pub use runner::ProcRunner;
+pub use spawn::{
+    spawn_game, spawn_helper, spawn_helper_tokio, spawn_helper_with_pipes, HelperPipes, SpawnClass,
+};

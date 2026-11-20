@@ -17,6 +17,8 @@ const workflow = readFileSync(
 const TEST_RUN = 'run: cargo test -p gamelib-scan -p gamelib-scan-cli'
 // Phase 82 D-18: the safety crates run as their own step BEFORE the multi-crate step.
 const SAFETY_TEST_RUN = 'run: cargo test -p gamelib-safety -p gamelib-testutil'
+// Phase 83 D-13: the process-lifetime harness runs as its own step, before the multi-crate step.
+const PROC_TEST_RUN = 'run: cargo test -p gamelib-proc'
 
 function steps(text: string): string[] {
   return text.split(/^ {6}- /m)
@@ -55,6 +57,21 @@ function safetyStepComesFirst(text: string): boolean {
   return safety !== -1 && multi !== -1 && safety < multi
 }
 
+function hasProcCrateStep(text: string): boolean {
+  const block = steps(text).find((s) => s.includes(PROC_TEST_RUN))
+  if (!block) return false
+  return (
+    block.includes('working-directory: src-tauri') && !/^\s*if:/m.test(block)
+  )
+}
+
+function procStepComesBeforeMulti(text: string): boolean {
+  const all = steps(text)
+  const proc = all.findIndex((s) => s.includes(PROC_TEST_RUN))
+  const multi = all.findIndex((s) => s.includes(TEST_RUN))
+  return proc !== -1 && multi !== -1 && proc < multi
+}
+
 function hasUngatedClippy(text: string): boolean {
   const ratchet = steps(text).find((s) =>
     s.includes('node ../meta/clippyRatchet.cjs')
@@ -88,6 +105,14 @@ describe('rust-test.yml covers the gamelib-scan crates', () => {
 
   test('the safety step runs before the multi-crate step so a red crate cannot mask it', () => {
     expect(safetyStepComesFirst(workflow)).toBe(true)
+  })
+
+  test('has an unconditional gamelib-proc step in src-tauri (Phase 83 D-13)', () => {
+    expect(hasProcCrateStep(workflow)).toBe(true)
+  })
+
+  test('the gamelib-proc step runs before the multi-crate step so a red crate cannot mask it', () => {
+    expect(procStepComesBeforeMulti(workflow)).toBe(true)
   })
 
   test('the multi-crate step tests gamelib-core (Phase 83)', () => {
@@ -154,6 +179,33 @@ describe('anti-vacuity: the predicates reject mutated workflows', () => {
       .replace('__SAFETY__', TEST_RUN)
     expect(mutated).not.toBe(workflow)
     expect(safetyStepComesFirst(mutated)).toBe(false)
+  })
+
+  test('rejects a workflow without the gamelib-proc step', () => {
+    const mutated = workflow.replace(PROC_TEST_RUN, 'run: true')
+    expect(mutated).not.toBe(workflow)
+    expect(hasProcCrateStep(mutated)).toBe(false)
+  })
+
+  test('rejects a workflow whose gamelib-proc step is conditional', () => {
+    const anchor =
+      '- name: cargo test (gamelib-proc process-lifetime harness, run before the multi-crate step so an earlier red crate cannot mask it; Phase 83 D-13)\n'
+    const mutated = workflow.replace(
+      anchor,
+      `${anchor}        if: runner.os == 'macOS'\n`
+    )
+    expect(mutated).not.toBe(workflow)
+    expect(hasProcCrateStep(mutated)).toBe(false)
+  })
+
+  test('rejects a workflow whose gamelib-proc step runs after the multi-crate step', () => {
+    // Swap the two commands, so the proc command sits in the later step.
+    const mutated = workflow
+      .replace(PROC_TEST_RUN, '__PROC__')
+      .replace(TEST_RUN, PROC_TEST_RUN)
+      .replace('__PROC__', TEST_RUN)
+    expect(mutated).not.toBe(workflow)
+    expect(procStepComesBeforeMulti(mutated)).toBe(false)
   })
 
   test('rejects clippy without --workspace', () => {

@@ -1,7 +1,7 @@
 //! Spawn classes (D-15). A `Helper` is something GameLib runs for its own purposes and must clean
 //! up on exit; a `Game` is the user's, and outlives GameLib.
 
-use crate::children::global;
+use crate::children::{global, HelperGuard};
 use crate::job::JobSlot;
 use std::path::Path;
 use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
@@ -64,6 +64,38 @@ fn job_for(child: &Child) -> JobSlot {
 
 #[cfg(not(windows))]
 fn job_for(_child: &Child) -> JobSlot {}
+
+/// Windows: as `job_for`, for a tokio child (the raw handle is `None` once it has exited).
+#[cfg(windows)]
+fn tokio_job_for(child: &tokio::process::Child) -> JobSlot {
+    child.raw_handle().and_then(crate::job::Job::create_for)
+}
+
+#[cfg(not(windows))]
+fn tokio_job_for(_child: &tokio::process::Child) -> JobSlot {}
+
+/// Spawns a tokio `cmd` as a `SpawnClass::Helper`: own process group (unix) or own kill-on-close
+/// Job (Windows), `kill_on_drop(true)`, and the pid registered in the global `ChildSet` WITHOUT
+/// owning the child. Move the returned `HelperGuard` into the same future or task as the child,
+/// so the pid is unregistered exactly when the child is gone.
+///
+/// `kill_on_drop` kills the leader only; the exit path's `ChildSet::terminate_all` is what reaches
+/// its descendants.
+pub fn spawn_helper_tokio(
+    cmd: &mut tokio::process::Command,
+    label: &'static str,
+) -> std::io::Result<(tokio::process::Child, HelperGuard)> {
+    #[cfg(unix)]
+    cmd.process_group(0);
+    cmd.kill_on_drop(true);
+    let child = cmd.spawn()?;
+    let pid = child
+        .id()
+        .ok_or_else(|| std::io::Error::other("helper exited before it could be registered"))?;
+    let job = tokio_job_for(&child);
+    global().register_pid(label, pid, job);
+    Ok((child, HelperGuard::new(pid)))
+}
 
 /// Spawns `cmd` as a `SpawnClass::Game`: the user's process, which outlives GameLib.
 ///

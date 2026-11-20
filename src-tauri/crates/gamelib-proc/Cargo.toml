@@ -43,7 +43,6 @@ required-features = ["harness"]
 [dev-dependencies]
 gamelib-proc = { path = ".", features = ["harness"] }
 gamelib-testutil = { path = "../gamelib-testutil" }
-tokio = { version = "1", features = ["test-util"] }
 
 [lints.clippy]
 dbg_macro = "deny"

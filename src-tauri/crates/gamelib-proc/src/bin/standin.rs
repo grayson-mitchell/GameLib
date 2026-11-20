@@ -12,6 +12,7 @@
 //!   50 ms forever. Its stdout is a file or null, which is the Pitfall 5 point: the writes must
 //!   keep succeeding after the parent is gone.
 //! - `game-child`: idle.
+//! - `lines`: prints its own pid as one line on stdout, then idles (the streaming-runner test).
 
 use gamelib_proc::{global, spawn_game, spawn_helper, spawn_helper_with_pipes};
 use std::io::{BufRead, BufReader, Write};
@@ -24,6 +25,7 @@ fn main() {
     match args.first().map(String::as_str) {
         Some("idle") | Some("game-child") => idle(),
         Some("tree") => tree(),
+        Some("lines") => lines(),
         Some("game") => game(&args[1..]),
         Some("parent") => parent(&args[1..]),
         _ => {
@@ -60,6 +62,13 @@ fn flag(args: &[String], name: &str) -> PathBuf {
         args.get(i + 1)
             .unwrap_or_else(|| panic!("{name} needs a value")),
     )
+}
+
+fn lines() -> ! {
+    let mut out = std::io::stdout();
+    writeln!(out, "{}", std::process::id()).expect("write own pid");
+    out.flush().expect("flush own pid");
+    idle()
 }
 
 // The child is deliberately never waited for: it idles until something kills it.
