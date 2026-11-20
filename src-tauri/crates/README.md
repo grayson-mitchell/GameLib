@@ -36,19 +36,64 @@ because their dependencies need it (aes 0.9: 1.89; cbc, sha1, prost: 1.85). Addi
   then decide fail-open or fail-closed in one place.
 - All args are strings (paths). No bytes cross the pipe.
 
+## 2b. Destructive-path rules (Phase 82)
+
+Anything that deletes user files goes through `gamelib-safety` (a Tauri-free crate; ops
+`safety_check_removal` and `safety_remove_tree`). These rules apply to every crate that guards a
+destructive operation, now or after Phase 83 re-homes `gamelib-safety` into `gamelib-core`.
+
+Destructive guards refuse on Unknown. Readers return a tri-state (Yes | No | Unknown) or a Probe that distinguishes absent from could-not-read; a transport failure is Unknown, never the permissive answer.
+
+One shared safe_path (gamelib-safety). Never derive a trust root from the data being validated (a manifest, a library entry, an executable path).
+
+- Only `Yes` deletes. `Tri::and` is the Kleene AND (`No` beats `Unknown`), and `remove_tree`
+  re-runs every check itself for every target in the request, so a pre-flight verdict never
+  authorises a later delete. Nothing is deleted unless every target passes (D-14).
+- Symlinks and junctions are unlinked, never followed (D-15): a symlinked target is removed as a
+  link and its referent survives; a link inside a deleted tree is unlinked, not recursed through.
+  This differs on purpose from `gamelib-steampoll`'s `guard_install_root`, which keeps
+  REFUSING a symlinked install root: `gamelib-safety` unlinks it, `guard_install_root` refuses
+  it, and both leave the data behind the link intact. Do not "align" one to the other.
+- Comparisons use the canonical on-disk real path and compare component vectors, never string
+  prefixes. On a case-insensitive volume components are NFC-normalised and case-folded. A
+  canonicalisation failure other than "not found" is `Unknown`, so the op refuses (D-17).
+- Another store's known install nested under, equal to, or containing the target refuses (D-16);
+  a sideload folder holding a second executable or app bundle refuses as shared (D-22). Both
+  over-refuse on purpose.
+- The crate reads no env and no home directory: every root is a parameter. It logs nothing.
+- Tests build every fixture inside `gamelib_testutil::FakeHome`, whose root is 0700 (`tempfile`'s
+  default directory mode is not). Link-creating tests go through `make_dir_link` + `require_link`,
+  which panics when `CI` is set and only skips locally; never early-return when a link cannot be
+  made (`gamelib-steampoll/tests/acf_copies_security.rs` does, and silently passes).
+- Windows expected paths are built segment by segment (`a.join("b").join("c")`), never
+  `join("a/b")`. A Windows junction is made with `cmd /C mklink /J` (no privilege, no extra crate);
+  a directory symlink needs `SeCreateSymbolicLinkPrivilege`.
+- `cargo test -p gamelib-safety -p gamelib-testutil` is its own first step in `rust-test.yml` on
+  all three OS legs, so a red crate further down cannot mask the adversarial table.
+
 ## 3. App path
 
 1. A `RUST_*` const in `src/common/types/sidecarTransport.ts` and an entry in
-   `RUST_INVOKE_CHANNELS`.
-2. A one-line `"op" => {` arm in `dispatch_rust_channel` (`src-tauri/src/sidecar.rs`) calling
-   `<crate>::dispatch`.
-3. A static parity test in the style of `src/backend/scanners/__tests__/scanChannelParity.test.ts`:
-   `OPS` == the channel constants == the match arms.
-4. A typed helper (`invokeScan` in `src/backend/scanners/rustScan.ts`) over `requestRustInvoke`.
-5. Thin per-caller wrappers (`peScan.ts`, `importScan.ts`, `shimGenerate.ts`, `drmScanExe.ts`,
+   `RUST_INVOKE_CHANNELS`, plus the zod args tuple for the channel in
+   `src/common/types/ipc/rustInvoke.ts`.
+2. `pnpm gen:ipc-contract` regenerates `src-tauri/src/ipc_contract.rs` (the `RustInvokeChannel`
+   variant, its wire names and the `*Args` structs with `from_args`); `pnpm check:ipc-contract`
+   is the CI gate. Commit the regenerated file.
+3. A `<crate>_dispatch.rs` file in `src-tauri/src` with one `rpc_<op>` handler per channel: it
+   validates through the generated `*Args::from_args` then calls `<crate>::dispatch`
+   (see `scan_dispatch.rs`). Declare it next to `mod scan_dispatch;` in `main.rs`.
+4. A one-line arm in `src-tauri/src/rust_dispatch.rs`:
+   `RustInvokeChannel::<Op> => rpc_<op>(args),`.
+5. A static parity test in the style of `src/backend/scanners/__tests__/scanChannelParity.test.ts`
+   (or `steamPollChannelParity.test.ts`): `OPS` == the channel constants == the match arms, with
+   an anti-vacuity check on the extractor.
+6. A typed helper (`invokeScan` in `src/backend/scanners/rustScan.ts`) over `requestRustInvoke`.
+7. Thin per-caller wrappers (`peScan.ts`, `importScan.ts`, `shimGenerate.ts`, `drmScanExe.ts`,
    `machoExports.ts`) each with an explicit fail-closed `catch` mapping and unchanged log text.
-6. Caller tests mock `requestRustInvoke` (see `bridge/__tests__/fixtures/stubRustScan.ts`); parser
+8. Caller tests mock `requestRustInvoke` (see `bridge/__tests__/fixtures/stubRustScan.ts`); parser
    behaviour is tested in Rust only.
+9. A new crate changes `Cargo.lock`: add the new names to `EXPECTED_LOCKFILE_CRATE_NAMES` in
+   `src/backend/__tests__/cargoFeatures.test.ts` in the same commit.
 
 ## 4. Headless path
 
