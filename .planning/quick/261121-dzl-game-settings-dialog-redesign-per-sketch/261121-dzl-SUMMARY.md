@@ -101,41 +101,41 @@ None.
 
 None. No new endpoints, auth paths or trust-boundary file access. T-261121-dzl-01 (remembered tab) mitigated through `initialSettingsTab`/`readRememberedTab`; T-261121-dzl-05 mitigated through the single close button (tests D-F).
 
-## Human UAT (pending)
+## Human UAT (passed 2026-11-21)
 
 Run `pnpm tauri:dev` (never `tauri:dev:run`). Frontend-only checks; the launcher.ts and launchFailure.ts copy changes need `pnpm build:sidecar` and a dev restart to show and are not part of this list.
 
 ### 1. Header and X, short title
 expected: Low Magic Age (576770) settings: thumbnail, "Low Magic Age" alone, X in the same row, subline "Game settings · Steam App ID 576770 · Saved automatically"; nothing overlaps any (i) control.
-result: pending
+result: pass — operator live check in pnpm tauri:dev, 2026-11-21
 
 ### 2. Header and X, long title
 expected: A game with a long title clamps it to two lines beside the X, and the dialog does not widen past the window.
-result: pending
+result: pass — operator live check in pnpm tauri:dev, 2026-11-21
 
 ### 3. Saved flash
 expected: Toggling any setting flashes "Saved" in the subline for about a second, then it returns to "Saved automatically".
-result: pending
+result: pass — operator live check in pnpm tauri:dev, 2026-11-21
 
 ### 4. Opening tab and order on macOS
 expected: 576770 opens on Run with tabs Run, Wine, Winetricks, Advanced; a game with an old remembered tab still opens on that tab once.
-result: pending
+result: pass — operator live check in pnpm tauri:dev, 2026-11-21
 
 ### 5. Cards, notes and warning in three themes
 expected: In midnightMirage, gruvbox_dark and dracula, cards (Launch, Steam, Launch target, Scripts, Wrappers & environment, Diagnostics & updates, Wine engine), the neutral Wine-engine note and the amber Launch-without-Steam warning are all legible and distinct from the dialog surface.
-result: pending
+result: pass — operator live check in pnpm tauri:dev, 2026-11-21
 
 ### 6. Engine and Steam overlay
 expected: Both are plain always-visible selects with (i) help, with no "(advanced)" twisty.
-result: pending
+result: pass — operator live check in pnpm tauri:dev, 2026-11-21
 
 ### 7. Height and scrolling
 expected: The dialog stays at 80% height across tabs, and the header and tab strip stay visible while scrolling Advanced, with no gap above the strip.
-result: pending
+result: pass — operator live check in pnpm tauri:dev, 2026-11-21
 
 ### 8. Log, Categories and the Default settings page
 expected: The Log and Categories modals show the header with "Log" / "Categories" and no Saved indicator; Settings > Game Defaults still renders with the neutral note, cards and its own footer.
-result: pending
+result: pass — operator live check in pnpm tauri:dev, 2026-11-21
 
 ## Self-Check: PASSED
 
