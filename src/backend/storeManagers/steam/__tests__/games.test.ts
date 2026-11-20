@@ -3820,11 +3820,11 @@ describe('SteamGame.install() — GAME-02', () => {
     )
   })
 
-  it('GAME-02: install() resolves { status: "done" } for a valid numeric appId', async () => {
+  it('GAME-02: install() resolves { status: "done", handedOffToSteam: true } for a valid numeric appId', async () => {
     const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.install({} as any)
 
-    expect(result).toEqual({ status: 'done' })
+    expect(result).toEqual({ status: 'done', handedOffToSteam: true })
   })
 
   it('install() does NOT show a hand-off toast (toast feature removed)', async () => {
@@ -3993,7 +3993,7 @@ describe('SteamGame.install() — steam-startup-resume-crash resume-on-click (D-
     const result = await game.install({} as any)
 
     expect(resumeSpy).toHaveBeenCalledWith(steamTestDeps, APP_ID)
-    expect(result).toEqual({ status: 'done' })
+    expect(result).toEqual({ status: 'done', handedOffToSteam: true })
     expect(shellOpenExternal).toHaveBeenCalledWith(`steam://install/${APP_ID}`)
   })
 })
@@ -4058,7 +4058,7 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
       APP_ID
     )
     expect(resolveSteamInstallTarget).not.toHaveBeenCalled()
-    expect(result).toEqual({ status: 'done' })
+    expect(result).toEqual({ status: 'done', handedOffToSteam: true })
   })
 
   it('opt-in ON, non-bottle: install() calls ensureSteamClientReady -> resolveSteamInstallTarget -> downloadSteamDepots in order, with the resolved target + host os + an AbortSignal, then startInstallPolling', async () => {
@@ -9377,7 +9377,7 @@ describe('SteamGame.install() ensurePlatformsCaptured() — Phase 17 Plan 09 (MA
 
     expect(appdetailsFetchSpy).toHaveBeenCalled()
     expect(shellOpenExternal).toHaveBeenCalledWith(`steam://install/${APP_ID}`)
-    expect(result).toEqual({ status: 'done' })
+    expect(result).toEqual({ status: 'done', handedOffToSteam: true })
   })
 
   it('non-macOS install skips platform capture — the appdetails fetch is NOT triggered by ensurePlatformsCaptured, native path used unchanged', async () => {
@@ -9389,7 +9389,7 @@ describe('SteamGame.install() ensurePlatformsCaptured() — Phase 17 Plan 09 (MA
 
     expect(appdetailsFetchSpy).not.toHaveBeenCalled()
     expect(shellOpenExternal).toHaveBeenCalledWith(`steam://install/${APP_ID}`)
-    expect(result).toEqual({ status: 'done' })
+    expect(result).toEqual({ status: 'done', handedOffToSteam: true })
   })
 
   it('already-captured game skips the fetch — no redundant network on the hot path', async () => {
@@ -16132,7 +16132,7 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
         path: '/mock/steam'
       } as any)
 
-      expect(result).toEqual({ status: 'done' })
+      expect(result).toEqual({ status: 'done', handedOffToSteam: true })
       expect(resolveSteamLibraryRoot).toHaveBeenCalledWith(
         expect.anything(),
         '/mock/steam'
@@ -16163,7 +16163,7 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
         {} as any
       )
 
-      expect(result).toEqual({ status: 'done' })
+      expect(result).toEqual({ status: 'done', handedOffToSteam: true })
       expect(shellOpenExternal).toHaveBeenCalledWith(
         `steam://install/${APP_ID}`
       )

@@ -439,7 +439,9 @@ export async function install(
       await startInstallPolling(steamGame.deps, steamGame.appId, {
         delegatedToSteamClient: true
       })
-      return { status: 'done' }
+      // quick 261121-97s: Steam owns the download from here, so the queue must
+      // not log this as finished.
+      return { status: 'done', handedOffToSteam: true }
     }
     if (outcome.kind === 'error') {
       logError(
@@ -475,7 +477,9 @@ export async function install(
     delegatedToSteamClient: true
   })
 
-  return { status: 'done' }
+  // quick 261121-97s: Steam owns the download from here, so the queue must not
+  // log this as finished.
+  return { status: 'done', handedOffToSteam: true }
 }
 
 /**

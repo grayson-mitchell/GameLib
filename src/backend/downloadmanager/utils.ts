@@ -132,6 +132,7 @@ async function installQueueElement(
   status: DMStatus
   error?: string | undefined
   deferredToSetup?: boolean
+  handedOffToSteam?: boolean
 }> {
   const {
     appName,
@@ -287,7 +288,11 @@ async function installQueueElement(
       errorMessage(error ?? '')
     }
 
-    return { status: resultStatus, deferredToSetup }
+    return {
+      status: resultStatus,
+      deferredToSetup,
+      handedOffToSteam: installResult.handedOffToSteam === true
+    }
   } catch (error) {
     // 260817-dib: distinguish a genuine STALL trip (no observed progress
     // for the whole window) from an inner CM timeout (a stale-but-present

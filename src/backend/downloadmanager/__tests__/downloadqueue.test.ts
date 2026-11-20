@@ -750,6 +750,65 @@ describe('downloadqueue.ts — quick 261024-cjq: deferred-to-setup installs are 
   })
 })
 
+describe('downloadqueue.ts — quick 261121-97s: a Steam-client hand-off is "handed off", not "Finished"', () => {
+  beforeEach(() => {
+    jest.resetModules()
+    jest.clearAllMocks()
+    for (const key of Object.keys(__store)) delete __store[key]
+    gameGetGameInfoMock.mockReturnValue({ title: 'Some Game' })
+    resolveGameTitleMock.mockImplementation(
+      (libraryManagerMap, runner, appName, fallback) => {
+        const { title } = defined(libraryManagerMap[runner], 'library manager')
+          .getGame(appName)
+          .getGameInfo()
+        return title || fallback?.title || appName
+      }
+    )
+  })
+
+  async function runHead(
+    element: ReturnType<typeof makeQueueElement>,
+    result: Record<string, unknown>
+  ) {
+    __store.queue = [element]
+    __store.finished = []
+    const { installQueueElement, updateQueueElement } = await import('../utils')
+    const mocked =
+      element.type === 'install' ? installQueueElement : updateQueueElement
+    ;(mocked as jest.Mock).mockResolvedValue(result)
+    const { initQueue } = await makeQueue()
+    const { logInfo } = await import('backend/logger')
+    await initQueue(false)
+    return (logInfo as jest.Mock).mock.calls.map((c) =>
+      Array.isArray(c[0]) ? c[0].join(' ') : String(c[0])
+    )
+  }
+
+  it('an install handed off to the Steam client logs "handed off", never "Finished", and is still recorded and dequeued', async () => {
+    const lines = await runHead(makeQueueElement('555'), {
+      status: 'done',
+      deferredToSetup: false,
+      handedOffToSteam: true
+    })
+    expect(lines).toContain(
+      'Installation of 555 handed off to the Steam client'
+    )
+    expect(lines.some((l) => l.includes('Finished'))).toBe(false)
+    expect((__store.finished as unknown[]).length).toBe(1)
+    expect(__store.queue).toEqual([])
+  })
+
+  it('an install without the hand-off flag still logs "Finished Installation of"', async () => {
+    const lines = await runHead(makeQueueElement('555'), {
+      status: 'done',
+      deferredToSetup: false,
+      handedOffToSteam: false
+    })
+    expect(lines).toContain('Finished Installation of 555')
+    expect(lines.some((l) => l.includes('handed off'))).toBe(false)
+  })
+})
+
 describe('downloadqueue.ts — quick-261027-cux: Steam Delete Files routing', () => {
   beforeEach(() => {
     jest.resetModules()

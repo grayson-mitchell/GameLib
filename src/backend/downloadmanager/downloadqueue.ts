@@ -71,6 +71,13 @@ export interface DownloadQueueDeps
     >
 }
 
+// quick 261121-97s: what installQueueElement / updateQueueElement report back.
+type QueueElementOutcome = {
+  status: DMStatus
+  deferredToSetup?: boolean
+  handedOffToSteam?: boolean
+}
+
 export function createDownloadQueue(deps: DownloadQueueDeps) {
   const { downloadManager } = deps.stores.downloadManager
 
@@ -274,22 +281,19 @@ export function createDownloadQueue(deps: DownloadQueueDeps) {
         queueState
       )
 
-      const { status, deferredToSetup } =
+      const outcome: QueueElementOutcome =
         element.type === 'install'
           ? await installQueueElement(deps, element.params)
-          : {
-              ...(await updateQueueElement(deps, element.params)),
-              deferredToSetup: false
-            }
+          : await updateQueueElement(deps, element.params)
       element.endTime = Date.now()
 
-      processNotification(element, status, deferredToSetup)
+      processNotification(element, outcome)
 
       if (!isPaused()) {
         // quick 261024-cjq: a setup-deferred install installed nothing, so it is
         // not recorded as finished.
-        if (!deferredToSetup) {
-          addToFinished(element, status)
+        if (!outcome.deferredToSetup) {
+          addToFinished(element, outcome.status)
         }
         removeFromQueue(element.params.appName)
         element = getFirstQueueElement()
@@ -544,9 +548,13 @@ export function createDownloadQueue(deps: DownloadQueueDeps) {
   // notify the user based on the status of the element and the status of the queue
   function processNotification(
     element: DMQueueElement,
-    status: DMStatus,
-    deferredToSetup = false
+    outcome: QueueElementOutcome
   ) {
+    const {
+      status,
+      deferredToSetup = false,
+      handedOffToSteam = false
+    } = outcome
     const action = element.type === 'install' ? 'Installation' : 'Update'
     if (
       isStore(element.params.runner, 'gog') &&
@@ -620,6 +628,20 @@ export function createDownloadQueue(deps: DownloadQueueDeps) {
             'of',
             element.params.appName,
             'deferred to setup — nothing was installed'
+          ],
+          LogPrefix.DownloadManager
+        )
+        return
+      }
+      // quick 261121-97s: the Steam client owns the download from here; the ACF
+      // poller, not this queue, observes completion.
+      if (handedOffToSteam) {
+        logInfo(
+          [
+            action,
+            'of',
+            element.params.appName,
+            'handed off to the Steam client'
           ],
           LogPrefix.DownloadManager
         )
