@@ -109,10 +109,9 @@ type AppDataRemovalDeps = Pick<
  * (quick 261120-ux8, todo 2026-11-20-uninstall-file-deletes-trust-renderer-appname).
  *
  * Only existing candidates are sent. That is not a safety check (everything sent is still guarded
- * and the crate re-checks on delete); it spares a Rust round trip, and a canonicalize-failed
- * refusal for a missing trust root, in the common no-file case. Resolves `undefined` when there
- * is nothing to delete. A refusal or failure is one closed-set warning line, never the appName or
- * a path; the game is already uninstalled, so there is no toast.
+ * and the crate re-checks on delete); it spares a Rust round trip in the common no-file case.
+ * Resolves `undefined` when there is nothing to delete. A refusal or failure is one closed-set
+ * warning line, never the appName or a path; the game is already uninstalled, so there is no toast.
  */
 async function removeAppDataFiles(
   deps: AppDataRemovalDeps,

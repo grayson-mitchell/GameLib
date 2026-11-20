@@ -388,6 +388,24 @@ describe('deleteCancelledSteamInstall', () => {
       ])
     })
 
+    it('a cancel before the first write (no steamapps/common yet) still removes the manifests and clears the breadcrumb (WR-01)', async () => {
+      rmSync(join(steamapps, 'common'), { recursive: true, force: true })
+      const { deps, calls, notices } = guarded()
+
+      const r = await deleteCancelledSteamInstall(deps, '123', OPTS)
+
+      expect(r.status).toBe('deleted')
+      expect(existsSync(join(steamapps, 'appmanifest_123.acf'))).toBe(false)
+      expect(existsSync(join(steamapps, 'appmanifest_123.acf.tmp'))).toBe(false)
+      expect(clearSteamResumeBreadcrumb).toHaveBeenCalledTimes(1)
+      expect(clearSteamResumeBreadcrumb).toHaveBeenCalledWith(deps, '123')
+      expect(notices()).toEqual([])
+      const check = calls.find((c) => c.channel === 'safety_check_removal')
+        ?.args[0] as SafetyRequest
+      expect(check.targets[0]?.trustRoot).toBe(join(steamapps, 'common'))
+      expect(existsSync(join(steamapps, 'common'))).toBe(false)
+    })
+
     it('D-12 rejection: a failed check keeps files and breadcrumb and pushes a cancel-install notice', async () => {
       library.set('123', {
         app_name: '123',

@@ -66,7 +66,11 @@ export interface SafetyTarget {
   id: string
   path: string
   kind: SafetyTargetKind
-  /** Only ever a caller-supplied parameter, never derived from the data being validated. */
+  /**
+   * Only ever a caller-supplied parameter, never derived from the data being validated. An empty
+   * string is refused as unknown (`no-trust-root`), so omit the field instead. A root folder that
+   * does not exist is judged at its nearest existing ancestor.
+   */
   trustRoot?: string | null
   /** A sideload game's own executable (absolute, or relative to the folder). */
   executable?: string | null

@@ -210,7 +210,7 @@ import { createStoreRegistry } from 'backend/stores/storeRegistry'
 import { fakeSafetyRustInvoke } from 'backend/testUtils/fakeSafetyRust'
 
 // The config paths a boot derives for the jest-contained HOME (`jest.setupContainment`).
-const { configPath, gamesConfigPath } = createContainedHomeAppPaths()
+const { appFolder, configPath, gamesConfigPath } = createContainedHomeAppPaths()
 
 // D-08: every case boots the sidecar once, in a fresh module registry. Module
 // handles the cases configure or inspect are rebound from that registry in
@@ -246,7 +246,8 @@ const boot = () =>
     reuseRegistry: true,
     services: { storeRoot: testRoot },
     // The registration reads these from the boot's paths (66.4-16); the per-process tmp home.
-    context: { paths: { configPath, gamesConfigPath } }
+    // appFolder is the reset's trust root, so it must be the folder the two paths live in.
+    context: { paths: { appFolder, configPath, gamesConfigPath } }
   })
 
 /** Points the mocked createGlobalConfig() at a fresh settings object. */
