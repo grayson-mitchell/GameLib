@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 84-logger
 source: [84-VERIFICATION.md]
 started: 2026-11-21T09:40:00Z
