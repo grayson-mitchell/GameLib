@@ -3,14 +3,6 @@ phase: 82
 review: 82-REVIEW.md
 titles: json
 findings:
-  - id: WR-11
-    severity: warning
-    disposition: open
-    title: "sharedRedistInstall.test.ts: the last in-flight test leaves its install run unawaited, so `import('../depot')` fires after Jest teardown"
-  - id: IN-09
-    severity: info
-    disposition: open
-    title: "82-20 slowed-download tracer: 250 ms real timer never cleared, and the slow path's elapsed time is not asserted"
   - id: WR-10
     severity: warning
     disposition: open
@@ -27,6 +19,38 @@ findings:
     severity: info
     disposition: open
     title: "New `games.test.ts` cases copy a POSIX-only path literal and fail on a Windows host"
+  - id: WR-11
+    severity: warning
+    disposition: open
+    title: "the \"import after the Jest environment has been torn down\" warning is not fixed; it comes from the last test, not the waits"
+  - id: IN-09
+    severity: info
+    disposition: open
+    title: "slowed-download tracer test leaks a real timer on its failure path and does not prove the slow window elapsed"
+  - id: WR-12
+    severity: warning
+    disposition: open
+    title: "the WR-06 sibling-directory rule refuses the most common sideload layouts and has no override"
+  - id: WR-13
+    severity: warning
+    disposition: open
+    title: "the narrowed runTs shared-cache predicate can be bypassed by an ordinary spelling"
+  - id: IN-10
+    severity: info
+    disposition: open
+    title: "relative, NUL-containing and `~`-prefixed references are now skipped silently, which turns a fail-closed row into a fail-open one"
+  - id: IN-11
+    severity: info
+    disposition: open
+    title: "`refuseUnsafeCopy` docstring contradicts the WR-05 change, and the refusal reason is misleading"
+  - id: IN-12
+    severity: info
+    disposition: open
+    title: "the WR-09 re-assertions are weaker than their comments, and one fails open on a missing item"
+  - id: IN-13
+    severity: info
+    disposition: open
+    title: "new slowed-I/O tests leak a real timer on their failure path (same pattern as IN-09)"
   - id: CR-01
     severity: critical
     disposition: fixed
@@ -87,9 +111,9 @@ findings:
     severity: info
     disposition: fixed
     title: "CI and supply-chain hygiene in touched files"
-open: 4
-total: 19
-recorded: 2026-11-20T07:55:52.740Z
+open: 12
+total: 27
+recorded: 2026-11-21T06:39:30.595Z
 ---
 
 # Phase 82: Code Review Disposition
@@ -100,6 +124,14 @@ recorded: 2026-11-20T07:55:52.740Z
 | IN-06 | info | open | - |
 | IN-07 | info | open | - |
 | IN-08 | info | open | - |
+| WR-11 | warning | open | - |
+| IN-09 | info | open | - |
+| WR-12 | warning | open | - |
+| WR-13 | warning | open | - |
+| IN-10 | info | open | - |
+| IN-11 | info | open | - |
+| IN-12 | info | open | - |
+| IN-13 | info | open | - |
 | CR-01 | critical | fixed | 82-17-SUMMARY.md and 82-19-SUMMARY.md (not in the current review) |
 | WR-01 | warning | fixed | 82-17-SUMMARY.md and 82-19-SUMMARY.md (not in the current review) |
 | WR-02 | warning | fixed | quick 261121-o99 (261121-o99-SUMMARY.md) (not in the current review) |
