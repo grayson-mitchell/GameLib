@@ -420,7 +420,7 @@ Plans:
   3. Diagnostics from steam-vent and reqwest appear in the log, and a repeating error is rate-limited rather than flooding the file
   4. The TS logger is reduced to a fire-and-forget forwarder, and the shell's second log path (`shell_diag`) and the TS log registrations are deleted
 
-**Plans:** 12/18 plans executed (7 gap-closure plans 84-12..84-18 added 2026-11-22 from UAT); original 11 in 9 waves; planned 2026-11-21, consolidated from 14 the same day, then the consolidated 84-06 and 84-07 each split in two to stay inside the per-plan context budget; executes only after Phase 83 closes (83-11 live gate passed, D-02)
+**Plans:** 13/18 plans executed (7 gap-closure plans 84-12..84-18 added 2026-11-22 from UAT); original 11 in 9 waves; planned 2026-11-21, consolidated from 14 the same day, then the consolidated 84-06 and 84-07 each split in two to stay inside the per-plan context budget; executes only after Phase 83 closes (83-11 live gate passed, D-02)
 
 Plans:
 **Wave 1**
@@ -456,7 +456,7 @@ Plans:
 
 **Wave 1**
 - [x] 84-12-PLAN.md — WR-03 store persist never truncates the live file; WR-07 store the parsed paste URL (isolated for Phase 85 plan 85-09)
-- [ ] 84-13-PLAN.md — Amend live-contract items 4, 7 and 8 and re-score from existing captures (G-84-3)
+- [x] 84-13-PLAN.md — Amend live-contract items 4, 7 and 8 and re-score from existing captures (G-84-3)
 - [ ] 84-14-PLAN.md — Golden `tokenise` Windows path fix (G-84-1); WR-04, IN-01, IN-02, WR-05 Rust half
 - [ ] 84-15-PLAN.md — WR-01 sanitise at the producer, WR-05 TS half, WR-06 bounded flush
 
