@@ -316,6 +316,20 @@ describe('Install tab source gates', () => {
     )
   })
 
+  it('UninstallModal awaits an optional runUninstall and otherwise catches and logs the rejection (WR-05; proves a shape, the danger zone side is behavioural in installTabRows.test.tsx)', () => {
+    const modal = read(
+      __dirname,
+      ...Array(6).fill('..'),
+      'components',
+      'UI',
+      'UninstallModal',
+      'index.tsx'
+    )
+    expect(modal).toMatch(/runUninstall\?:/)
+    expect(modal).toContain('await runUninstall(')
+    expect(modal).toMatch(/catch[\s\S]*window\.api\.logError\(/)
+  })
+
   it('GamePage keeps no dead uninstall modal state (Pitfall 6)', () => {
     const page = read(TAB_DIR, '..', '..', 'index.tsx')
     expect(page).not.toContain('showUninstallModal')

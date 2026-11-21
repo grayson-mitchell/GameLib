@@ -125,6 +125,7 @@ import { FactAction } from '../FactRow'
 import VersionRow from '../VersionRow'
 import LocationRow from '../LocationRow'
 import DangerZone from '../DangerZone'
+import UninstallModal from 'frontend/components/UI/UninstallModal'
 import { RowFailure } from '../SwitchRow'
 
 const harness = React as unknown as {
@@ -711,5 +712,99 @@ describe('Danger zone (WR-05)', () => {
     expect(buttonByText(tree, REMOVE_ALL)).toBeUndefined()
     const busy = buttonByText(tree, 'Removing copies…')
     expect(busy?.props['aria-busy']).toBe(true)
+  })
+
+  describe('Uninstall', () => {
+    const UNINSTALL = 'Uninstall…'
+    const UNINSTALL_FAILED = 'Uninstall failed. Details are in the log.'
+    const DELEGATED = { delegated: true, gamelibDelete: false }
+
+    // Pre-handled, so a caller that drops the rejection (the defect under test)
+    // fails the assertions rather than crashing the jest worker.
+    const rejected = (message: string) => {
+      const rejection = Promise.reject(new Error(message))
+      rejection.catch(() => undefined)
+      return rejection
+    }
+
+    const flush = async () => {
+      for (let i = 0; i < 10; i++) await Promise.resolve()
+    }
+
+    const clickUninstall = async (game: GameInfo) => {
+      const button = buttonByText(renderDanger(game), UNINSTALL)
+      ;(button?.props.onClick as () => void)()
+      await flush()
+    }
+
+    it('shows an inline failure and logs it when the delegated Steam uninstall rejects', async () => {
+      const game = makeGame('steam')
+      mockApi.getSteamDeleteRoute.mockResolvedValue(DELEGATED)
+      mockApi.uninstall.mockReturnValue(rejected('steam said no'))
+      await clickUninstall(game)
+
+      expect(firstFailure(renderDanger(game)).props.message).toBe(
+        UNINSTALL_FAILED
+      )
+      expect(mockApi.logError).toHaveBeenCalledTimes(1)
+      expect(String(mockApi.logError.mock.calls[0]?.[0])).toContain(
+        'uninstall failed for 1234'
+      )
+    })
+
+    it('Retry asks the route again, so the confirmation decision is asked again (D-13)', async () => {
+      const game = makeGame('steam')
+      mockApi.getSteamDeleteRoute.mockResolvedValue(DELEGATED)
+      mockApi.uninstall.mockReturnValue(rejected('steam said no'))
+      await clickUninstall(game)
+      expect(mockApi.getSteamDeleteRoute).toHaveBeenCalledTimes(1)
+
+      const failure = firstFailure(renderDanger(game))
+      ;(failure.props.onRetry as () => void)()
+      await flush()
+
+      expect(mockApi.getSteamDeleteRoute).toHaveBeenCalledTimes(2)
+    })
+
+    it('reports a rejection that comes through the confirm modal in the same row', async () => {
+      const game = makeGame('legendary')
+      await clickUninstall(game)
+
+      const modal = walk(renderDanger(game)).find(
+        (el) => el.type === UninstallModal
+      )
+      expect(modal).toBeDefined()
+      const runUninstall = modal?.props.runUninstall as (
+        uninstall: () => Promise<void>
+      ) => Promise<void>
+      await expect(
+        runUninstall(() => rejected('rm failed'))
+      ).resolves.toBeUndefined()
+
+      expect(firstFailure(renderDanger(game)).props.message).toBe(
+        UNINSTALL_FAILED
+      )
+      expect(mockApi.logError).toHaveBeenCalledTimes(1)
+    })
+
+    it('reads "Uninstalling…" with aria-busy while its own invoke runs', async () => {
+      const game = makeGame('steam')
+      mockApi.getSteamDeleteRoute.mockResolvedValue(DELEGATED)
+      mockApi.uninstall.mockReturnValue(new Promise(() => undefined))
+      await clickUninstall(game)
+
+      const tree = renderDanger(game)
+      expect(buttonByText(tree, UNINSTALL)).toBeUndefined()
+      expect(buttonByText(tree, 'Uninstalling…')?.props['aria-busy']).toBe(true)
+    })
+
+    it('reads "Uninstalling…" while the game status says it is uninstalling', () => {
+      const game = makeGame('steam')
+      const tree = renderDanger(game, { uninstalling: true })
+
+      const busy = buttonByText(tree, 'Uninstalling…')
+      expect(busy?.props['aria-disabled']).toBe(true)
+      expect(busy?.props.title).toBeUndefined()
+    })
   })
 })
