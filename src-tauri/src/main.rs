@@ -143,6 +143,7 @@ mod steampoll_dispatch;
 mod store_boot;
 mod store_dispatch;
 mod store_embed;
+mod store_gate_dispatch;
 mod terminate_veto;
 mod tray;
 mod wake_lock;
@@ -167,6 +168,7 @@ use steamcm_dispatch::*;
 use steamfiles_dispatch::*;
 use steampoll_dispatch::*;
 use store_embed::*;
+use store_gate_dispatch::*;
 use terminate_veto::*;
 use tray::*;
 use wake_lock::*;
@@ -2358,6 +2360,7 @@ mod tests {
         "steampoll_dispatch.rs",
         "store_boot.rs",
         "store_dispatch.rs",
+        "store_gate_dispatch.rs",
         "steamcm_dispatch.rs",
         "steam_window.rs",
         "shell_state.rs",
@@ -2414,6 +2417,7 @@ mod tests {
         include_str!("steampoll_dispatch.rs"),
         include_str!("store_boot.rs"),
         include_str!("store_dispatch.rs"),
+        include_str!("store_gate_dispatch.rs"),
         include_str!("steamcm_dispatch.rs"),
         include_str!("steam_window.rs"),
         include_str!("shell_state.rs"),

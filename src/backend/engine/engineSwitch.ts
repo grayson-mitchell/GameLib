@@ -5,7 +5,9 @@
  * that is about to run: installed for a non-CrossOver engine, removed before CrossOver runs (a
  * CrossOver bottle carries its own graphics stack). The engine that last prepared a bottle is
  * recorded in `<bottle>/.gamelib-engine.json`, versioned by the Phase 68 store engine (quick
- * 261109-w52); a marker written by a newer build is never overwritten.
+ * 261109-w52, Phase 85 D-17); a marker written by a newer build is never overwritten. Rust decides
+ * that (`store_version_gate`, see backend/stores/bottleVersionGate.ts): the async entry points ask it
+ * first and the synchronous marker writers read the answer back.
  *
  * Nothing runs at import and there are no timers (sidecar exit contract).
  */
@@ -29,12 +31,13 @@ import { ENGINE_PINS, pinById } from './enginePins'
 import type { EnginePin } from './enginePins'
 import type { FallbackEngine } from './fallbackEngine'
 import type { EngineSelection, NonCrossoverEngine } from './engineTypes'
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import {
-  engineMarkerVersion,
-  ensureEngineMarkerMigrated,
-  isEngineMarkerReadOnly
-} from 'backend/storeVersioning/engineMarkerFile'
-import type { StoreVersioning } from 'backend/storeVersioning/engine'
+  BOTTLE_FILE_VERSION,
+  ENGINE_MARKER_CHAIN,
+  gateAllowsWrite
+} from 'backend/stores/bottleVersionGate'
+import type { BottleVersionGate } from 'backend/stores/bottleVersionGate'
 
 export const ENGINE_MARKER_FILE = '.gamelib-engine.json'
 
@@ -65,8 +68,10 @@ export interface EngineSwitchContext {
     | 'ensurePinnedEngine'
   >
   ledger: Pick<BottleLedger, 'otherGamesRunning'>
-  /** The boot's store-versioning engine: the bottle's engine marker is migrated through it. */
-  versioning: StoreVersioning
+  /** The sidecar -> Rust transport: the bottle marker's version gate asks Rust (D-17). */
+  requestRustInvoke: RustInvokeDeps['requestRustInvoke']
+  /** The engine runtime's memo of the gate's answers, read by the synchronous marker writers. */
+  bottleGate: BottleVersionGate
 }
 
 export interface EngineSwitchDeps {
@@ -154,7 +159,6 @@ export function switchServicesFrom(
     EngineServices,
     | 'paths'
     | 'engineRuntime'
-    | 'versioning'
     | 'runner'
     | 'spawnAsync'
     | 'installRemove'
@@ -197,11 +201,12 @@ export function switchServicesFrom(
 
 /** The switch's boot collaborators, read from the engine services. */
 export function switchContextFrom(
-  services: Pick<EngineServices, 'paths' | 'engineRuntime' | 'versioning'>
+  services: Pick<EngineServices, 'paths' | 'engineRuntime'>
 ): EngineSwitchContext {
   return {
     paths: services.paths,
-    versioning: services.versioning,
+    requestRustInvoke: services.engineRuntime.requestRustInvoke,
+    bottleGate: services.engineRuntime.bottleGate,
     fallback: services.engineRuntime.fallback,
     ledger: services.engineRuntime.ledger
   }
@@ -236,7 +241,7 @@ function isInside(root: string, path: string): boolean {
  * contradicted by DXVK-macOS reads as the pin, as the switch treats it (76 review WR-01).
  */
 export function readBottleEngineMarkerKind(
-  ctx: Pick<EngineSwitchContext, 'paths' | 'fallback' | 'versioning'>,
+  ctx: Pick<EngineSwitchContext, 'paths' | 'fallback'>,
   bottleName: string
 ): 'crossover' | 'non-crossover' | null {
   try {
@@ -254,7 +259,7 @@ export function readBottleEngineMarkerKind(
  * readBottleEngineMarkerKind: never infers or writes a marker.
  */
 export function readBottleEngineMarkerSummary(
-  ctx: Pick<EngineSwitchContext, 'paths' | 'fallback' | 'versioning'>,
+  ctx: Pick<EngineSwitchContext, 'paths' | 'fallback'>,
   bottleName: string
 ): {
   kind: 'crossover' | 'non-crossover'
@@ -296,7 +301,7 @@ export function readBottleEngineMarkerSummary(
  * and for any unreadable state.
  */
 export function restoreNeedsAbsentPin(
-  ctx: Pick<EngineSwitchContext, 'paths' | 'fallback' | 'versioning'>,
+  ctx: Pick<EngineSwitchContext, 'paths' | 'fallback'>,
   bottleName: string
 ): boolean {
   try {
@@ -326,10 +331,9 @@ export function restoreNeedsAbsentPin(
 
 function readMarker(
   bottleDir: string,
-  ctx: Pick<EngineSwitchContext, 'fallback' | 'versioning'>
+  ctx: Pick<EngineSwitchContext, 'fallback'>
 ): EngineMarker | null {
   try {
-    ensureEngineMarkerMigrated(ctx.versioning, markerPath(bottleDir))
     const raw = JSON.parse(
       readFileSync(markerPath(bottleDir), 'utf8')
     ) as Partial<EngineMarker>
@@ -370,23 +374,25 @@ function readMarker(
 }
 
 function writeMarker(
-  versioning: StoreVersioning,
+  ctx: Pick<EngineSwitchContext, 'bottleGate'>,
   bottleDir: string,
   marker: EngineMarker
 ): boolean {
   const tmp = join(bottleDir, `${ENGINE_MARKER_FILE}.tmp-${process.pid}`)
   try {
-    ensureEngineMarkerMigrated(versioning, markerPath(bottleDir))
-    if (isEngineMarkerReadOnly(versioning, markerPath(bottleDir))) {
+    const gate = ctx.bottleGate.state(markerPath(bottleDir))
+    if (!gateAllowsWrite(gate)) {
       logWarning(
-        'engine marker is from a newer GameLib build; not overwriting it',
+        gate === undefined
+          ? 'engine marker version gate was not asked first; not overwriting a marker that may be from a newer GameLib build'
+          : 'engine marker is from a newer GameLib build; not overwriting it',
         LogPrefix.Backend
       )
       return false
     }
     writeFileSync(
       tmp,
-      JSON.stringify({ ...marker, version: engineMarkerVersion(versioning) }),
+      JSON.stringify({ ...marker, version: BOTTLE_FILE_VERSION }),
       { mode: 0o644 }
     )
     renameSync(tmp, markerPath(bottleDir))
@@ -474,7 +480,7 @@ function isContradictedCrossover(
  */
 function viewMarker(
   bottleDir: string,
-  ctx: Pick<EngineSwitchContext, 'fallback' | 'versioning'>
+  ctx: Pick<EngineSwitchContext, 'fallback'>
 ): EngineMarker | null {
   const marker = readMarker(bottleDir, ctx)
   if (isContradictedCrossover(bottleDir, marker)) {
@@ -499,27 +505,49 @@ function trustedMarker(
   return marker
 }
 
-type MarkerCtx = Pick<EngineSwitchContext, 'paths' | 'fallback' | 'versioning'>
+/** What a marker write needs: the bottle paths, the pin owner and the gate (transport plus memo). */
+type MarkerCtx = Pick<
+  EngineSwitchContext,
+  'paths' | 'fallback' | 'requestRustInvoke' | 'bottleGate'
+>
+
+/**
+ * Asks Rust whether the bottle's marker may be rewritten and remembers the answer for the
+ * synchronous writers below. Every async entry that can reach `writeMarker` calls this first.
+ */
+async function primeMarkerGate(
+  ctx: Pick<EngineSwitchContext, 'requestRustInvoke' | 'bottleGate'>,
+  bottleDir: string
+): Promise<void> {
+  await ctx.bottleGate.prime(ctx, markerPath(bottleDir), ENGINE_MARKER_CHAIN)
+}
+
+/** False for a marker a newer build wrote, and for one whose gate nobody primed. */
+function markerGateAllows(
+  ctx: Pick<EngineSwitchContext, 'bottleGate'>,
+  bottleDir: string
+): boolean {
+  return gateAllowsWrite(ctx.bottleGate.state(markerPath(bottleDir)))
+}
 
 /**
  * 76 gap (CR-01): persist the bottle's engine before any CrossOver probe touches cxbottle.conf.
  * Writes only for a provisioned bottle whose marker is missing or contradicted by DXVK-macOS.
  */
-export function reconcileBottleEngineMarker(
+export async function reconcileBottleEngineMarker(
   ctx: MarkerCtx,
   bottleName: string
-): 'crossover' | 'pinned' | null {
+): Promise<'crossover' | 'pinned' | null> {
   try {
     if (sanitizeBottleName(bottleName) !== bottleName) return null
     const bottleDir = getBottleDir(ctx.paths, bottleName)
     if (!existsSync(join(bottleDir, 'cxbottle.conf'))) return null
-    ensureEngineMarkerMigrated(ctx.versioning, markerPath(bottleDir))
-    if (isEngineMarkerReadOnly(ctx.versioning, markerPath(bottleDir)))
-      return null
+    await primeMarkerGate(ctx, bottleDir)
+    if (!markerGateAllows(ctx, bottleDir)) return null
     const marker = readMarker(bottleDir, ctx)
     if (trustedMarker(bottleDir, bottleName, marker)) return null
     const inferred = inferMarker(bottleDir, () => defaultCurrentPinEngine(ctx))
-    if (!writeMarker(ctx.versioning, bottleDir, inferred)) return null
+    if (!writeMarker(ctx, bottleDir, inferred)) return null
     logInfo(
       `engine marker for "${bottleName}" reconciled before the CrossOver pre-flight: ${identityOf(inferred)} (${marker ? 'crossover marker contradicted by DXVK-macOS' : 'missing'})`,
       LogPrefix.Backend
@@ -530,15 +558,15 @@ export function reconcileBottleEngineMarker(
   }
 }
 
-function markerWritable(
+async function markerWritable(
   ctx: MarkerCtx,
   bottleName: string
-): { bottleDir: string } | null {
+): Promise<{ bottleDir: string } | null> {
   if (sanitizeBottleName(bottleName) !== bottleName) return null
   const bottleDir = getBottleDir(ctx.paths, bottleName)
   if (!existsSync(bottleDir)) return null
-  ensureEngineMarkerMigrated(ctx.versioning, markerPath(bottleDir))
-  if (isEngineMarkerReadOnly(ctx.versioning, markerPath(bottleDir))) return null
+  await primeMarkerGate(ctx, bottleDir)
+  if (!markerGateAllows(ctx, bottleDir)) return null
   return { bottleDir }
 }
 
@@ -546,15 +574,15 @@ function markerWritable(
  * 76 gap (CR-01): the marker a pinned-engine bottle gets at creation, so it is never marker-less
  * when CrossOver's probe later adds a Timestamp.
  */
-export function recordPinnedBottleEngine(
+export async function recordPinnedBottleEngine(
   ctx: MarkerCtx,
   bottleName: string,
   pinId: string,
   engine: NonCrossoverEngine
-): boolean {
+): Promise<boolean> {
   try {
     if (!/^[A-Za-z0-9._-]{1,64}$/.test(pinId)) return false
-    const target = markerWritable(ctx, bottleName)
+    const target = await markerWritable(ctx, bottleName)
     if (!target) return false
     const marker: EngineMarker = {
       kind: 'pinned',
@@ -564,7 +592,7 @@ export function recordPinnedBottleEngine(
     if (engine.dxvk && hasStagingDxvk(target.bottleDir)) {
       marker.dxvk = { dir: engine.dxvk.dir, version: engine.dxvk.version }
     }
-    if (!writeMarker(ctx.versioning, target.bottleDir, marker)) return false
+    if (!writeMarker(ctx, target.bottleDir, marker)) return false
     logInfo(
       `engine marker for "${bottleName}" recorded at creation: pinned:${pinId}`,
       LogPrefix.Backend
@@ -576,16 +604,16 @@ export function recordPinnedBottleEngine(
 }
 
 /** D-07a: the marker a CrossOver-created bridge bottle gets at creation. */
-export function recordCrossoverBottleEngine(
+export async function recordCrossoverBottleEngine(
   ctx: MarkerCtx,
   bottleName: string,
   binDir: string
-): boolean {
+): Promise<boolean> {
   try {
-    const target = markerWritable(ctx, bottleName)
+    const target = await markerWritable(ctx, bottleName)
     if (!target) return false
     const written = writeMarker(
-      ctx.versioning,
+      ctx,
       target.bottleDir,
       markerForBase({
         kind: 'crossover',
@@ -819,7 +847,7 @@ async function prepareBottleForEngineBody(
     n: Exclude<EngineSelection, { kind: 'crossover' }>
   ): Promise<PrepareResult> => {
     if (!n.dxvk) {
-      writeMarker(deps.ctx.versioning, bottleDir, markerFor(n))
+      writeMarker(deps.ctx, bottleDir, markerFor(n))
       return { ok: true, changed: true }
     }
     const ok = await deps.installRemove(
@@ -829,7 +857,7 @@ async function prepareBottleForEngineBody(
       n.dxvk
     )
     if (!ok || !existsSync(dxvkMarkerPath)) {
-      writeMarker(deps.ctx.versioning, bottleDir, markerFor(n, 'failed'))
+      writeMarker(deps.ctx, bottleDir, markerFor(n, 'failed'))
       return {
         ok: false,
         reason: 'dxvk-failed',
@@ -837,18 +865,21 @@ async function prepareBottleForEngineBody(
       }
     }
     writeMarker(
-      deps.ctx.versioning,
+      deps.ctx,
       bottleDir,
       markerFor(n, { dir: n.dxvk.dir, version: n.dxvk.version })
     )
     return { ok: true, changed: true }
   }
 
+  // Ask Rust before anything below can write the marker (D-17): the writers are synchronous and
+  // read the answer back. A gate that cannot be asked is treated as a newer marker.
+  await primeMarkerGate(deps.ctx, bottleDir)
   const marker = readMarker(bottleDir, deps.ctx)
   // Quick 261109-w52: a marker from a newer build is never inferred over or overwritten
   // (inferMarker would guess prev without the recorded DXVK dir, and the final write would
   // replace the only record). Same-engine launches proceed; every real change is refused.
-  if (isEngineMarkerReadOnly(deps.ctx.versioning, markerPath(bottleDir))) {
+  if (!markerGateAllows(deps.ctx, bottleDir)) {
     if (
       marker &&
       identityOf(marker) === identityOf(markerFor(next)) &&
@@ -874,7 +905,7 @@ async function prepareBottleForEngineBody(
       // The last switch into this engine left DXVK uninstalled: retry, no wineserver kill.
       return busyRefusal() ?? installNextDxvk(next)
     }
-    if (!known) writeMarker(deps.ctx.versioning, bottleDir, nextMarker)
+    if (!known) writeMarker(deps.ctx, bottleDir, nextMarker)
     return { ok: true, changed: false }
   }
 
@@ -979,7 +1010,7 @@ async function prepareBottleForEngineBody(
       // CR-03: the restore may have deleted DLLs/overrides before failing; record that so the
       // next launch on either engine repairs the bottle instead of reporting changed:false.
       if (prev.kind !== 'crossover') {
-        writeMarker(deps.ctx.versioning, bottleDir, { ...prev, dxvk: 'failed' })
+        writeMarker(deps.ctx, bottleDir, { ...prev, dxvk: 'failed' })
       }
       return {
         ok: false,
@@ -989,6 +1020,6 @@ async function prepareBottleForEngineBody(
     }
   }
 
-  writeMarker(deps.ctx.versioning, bottleDir, nextMarker)
+  writeMarker(deps.ctx, bottleDir, nextMarker)
   return { ok: true, changed: true }
 }

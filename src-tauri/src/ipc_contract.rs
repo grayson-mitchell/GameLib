@@ -71,6 +71,8 @@ pub(crate) enum RustInvokeChannel {
     ScanWinemacMetalExports,
     SafetyCheckRemoval,
     SafetyRemoveTree,
+    StoreVersionGate,
+    StoreBackupFile,
     DepotFinalize,
     DepotJobCancel,
     DepotJobRun,
@@ -195,6 +197,8 @@ impl RustInvokeChannel {
         RustInvokeChannel::ScanWinemacMetalExports,
         RustInvokeChannel::SafetyCheckRemoval,
         RustInvokeChannel::SafetyRemoveTree,
+        RustInvokeChannel::StoreVersionGate,
+        RustInvokeChannel::StoreBackupFile,
         RustInvokeChannel::DepotFinalize,
         RustInvokeChannel::DepotJobCancel,
         RustInvokeChannel::DepotJobRun,
@@ -319,6 +323,8 @@ impl RustInvokeChannel {
             "scan_winemac_metal_exports" => Some(RustInvokeChannel::ScanWinemacMetalExports),
             "safety_check_removal" => Some(RustInvokeChannel::SafetyCheckRemoval),
             "safety_remove_tree" => Some(RustInvokeChannel::SafetyRemoveTree),
+            "store_version_gate" => Some(RustInvokeChannel::StoreVersionGate),
+            "store_backup_file" => Some(RustInvokeChannel::StoreBackupFile),
             "depot_finalize" => Some(RustInvokeChannel::DepotFinalize),
             "depot_job_cancel" => Some(RustInvokeChannel::DepotJobCancel),
             "depot_job_run" => Some(RustInvokeChannel::DepotJobRun),
@@ -445,6 +451,8 @@ impl RustInvokeChannel {
             RustInvokeChannel::ScanWinemacMetalExports => "scan_winemac_metal_exports",
             RustInvokeChannel::SafetyCheckRemoval => "safety_check_removal",
             RustInvokeChannel::SafetyRemoveTree => "safety_remove_tree",
+            RustInvokeChannel::StoreVersionGate => "store_version_gate",
+            RustInvokeChannel::StoreBackupFile => "store_backup_file",
             RustInvokeChannel::DepotFinalize => "depot_finalize",
             RustInvokeChannel::DepotJobCancel => "depot_job_cancel",
             RustInvokeChannel::DepotJobRun => "depot_job_run",
@@ -1513,6 +1521,33 @@ impl SafetyRemoveTreeArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let first = args.first().ok_or_else(|| "safety_remove_tree:bad-args".to_string())?;
         serde_json::from_value(first.clone()).map_err(|_| "safety_remove_tree:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct StoreVersionGateArgs {
+    pub(crate) path: String,
+    pub(crate) chain: String,
+}
+
+impl StoreVersionGateArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "store_version_gate:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "store_version_gate:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct StoreBackupFileArgs {
+    pub(crate) path: String,
+    #[serde(rename = "fromVersion")]
+    pub(crate) from_version: i64,
+}
+
+impl StoreBackupFileArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "store_backup_file:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "store_backup_file:bad-args".to_string())
     }
 }
 

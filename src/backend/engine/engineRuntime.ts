@@ -29,6 +29,9 @@ import { createLaunchEngineState } from './launchEngine'
 import type { LaunchEngineState } from './launchEngine'
 import { createLaunchSettingsRegistry } from './launchSettings'
 import type { LaunchSettingsRegistry } from './launchSettings'
+import { createBottleVersionGate } from 'backend/stores/bottleVersionGate'
+import type { BottleVersionGate } from 'backend/stores/bottleVersionGate'
+import type { RustInvokeDeps } from 'backend/host/rustInvokeDeps'
 import { createPerGameBottleFlights } from './perGameBottle'
 import type { PerGameBottleFlights } from './perGameBottle'
 
@@ -42,6 +45,10 @@ export interface EngineRuntime {
   launchState: LaunchEngineState
   launchSettings: LaunchSettingsRegistry
   perGameBottle: PerGameBottleFlights
+  /** The sidecar -> Rust transport, for the bottle marker's version gate (Phase 85 D-17). */
+  requestRustInvoke: RustInvokeDeps['requestRustInvoke']
+  /** What the gate last said per bottle marker; the engine switch's synchronous writers read it. */
+  bottleGate: BottleVersionGate
 }
 
 export interface EngineRuntimeDeps {
@@ -49,6 +56,8 @@ export interface EngineRuntimeDeps {
   paths: Pick<AppPaths, 'userHome' | 'toolsPath'>
   /** The boot-owned abort registry the Steam engine download registers in (66.4-13). */
   aborts: Pick<AbortRegistry, 'create' | 'delete'>
+  /** The host's sidecar -> Rust transport (D-17): the engine marker's version gate asks Rust. */
+  requestRustInvoke: RustInvokeDeps['requestRustInvoke']
 }
 
 export function createEngineRuntime(deps: EngineRuntimeDeps): EngineRuntime {
@@ -65,6 +74,8 @@ export function createEngineRuntime(deps: EngineRuntimeDeps): EngineRuntime {
       registry,
       paths: deps.paths
     }),
-    perGameBottle: createPerGameBottleFlights()
+    perGameBottle: createPerGameBottleFlights(),
+    requestRustInvoke: deps.requestRustInvoke,
+    bottleGate: createBottleVersionGate()
   }
 }

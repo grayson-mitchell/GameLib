@@ -1348,10 +1348,10 @@ describe('Phase 59 engine registry', () => {
       beforeEach(() => {
         pinned = jest
           .spyOn(engineSwitchModule, 'recordPinnedBottleEngine')
-          .mockReturnValue(true)
+          .mockResolvedValue(true)
         crossover = jest
           .spyOn(engineSwitchModule, 'recordCrossoverBottleEngine')
-          .mockReturnValue(true)
+          .mockResolvedValue(true)
       })
       afterEach(() => {
         pinned.mockRestore()

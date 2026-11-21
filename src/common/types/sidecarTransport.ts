@@ -508,6 +508,29 @@ export const RUST_SAFETY_CHECK_REMOVAL = 'safety_check_removal' as const
 export const RUST_SAFETY_REMOVE_TREE = 'safety_remove_tree' as const
 
 /**
+ * Rust-side channel name: Phase 85 (D-17) version gate `store_version_gate` for the two bottle-local
+ * versioned files (`<bottle>/.gamelib-engine.json`, `<bottle>/gamelib-shared-redists.json`).
+ *
+ * Takes ONE object arg `{ path, chain }`: an absolute path with no `..` whose file name is one of
+ * the two marker names, and the chain key that file name belongs to (`engine/gamelib-engine-marker`,
+ * `steam_bridge/shared-redists`). Resolves `{ state, version, current }` where `state` is `absent`,
+ * `ok`, `unreadable` or `newer`; it never writes. Anything else rejects `store_version_gate:bad-args`.
+ * Callers go through `backend/stores/bottleVersionGate.ts`.
+ */
+export const RUST_STORE_VERSION_GATE = 'store_version_gate' as const
+
+/**
+ * Rust-side channel name: Phase 85 (D-17) `store_backup_file`, the pre-migration backup of one of
+ * the two bottle-local versioned files (`<name>.v<from>.<stamp>.bak.json`, 0600, beside the file, at
+ * most 3 kept, skipped when equal to the newest).
+ *
+ * Takes ONE object arg `{ path, fromVersion }` (the same path rule as `store_version_gate`).
+ * Resolves the backup's file name, or `null` when the file is absent or its bytes could not be
+ * backed up. Bad args reject `store_backup_file:bad-args`.
+ */
+export const RUST_STORE_BACKUP_FILE = 'store_backup_file' as const
+
+/**
  * Rust-side channel name: Phase 75 (D-03) Steam depot `depot_finalize`, a no-download ACF finalize
  * (zero-depot install, failed resume verify) through the depot crate's own finalize rules.
  * Takes ONE object arg `{ appId, finalize, depots, outcome }` (validated in-crate with
@@ -1135,6 +1158,8 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_SCAN_WINEMAC_METAL_EXPORTS,
   RUST_SAFETY_CHECK_REMOVAL,
   RUST_SAFETY_REMOVE_TREE,
+  RUST_STORE_VERSION_GATE,
+  RUST_STORE_BACKUP_FILE,
   RUST_DEPOT_FINALIZE,
   RUST_DEPOT_JOB_CANCEL,
   RUST_DEPOT_JOB_RUN,
@@ -1229,6 +1254,14 @@ export const RUST_SAFETY_CHANNELS = [
 ] as const
 
 export type RustSafetyChannel = (typeof RUST_SAFETY_CHANNELS)[number]
+
+/** Phase 85 (D-17): the bottle version-gate channels, a subset of {@link RUST_INVOKE_CHANNELS}. */
+export const RUST_STORE_GATE_CHANNELS = [
+  RUST_STORE_VERSION_GATE,
+  RUST_STORE_BACKUP_FILE
+] as const
+
+export type RustStoreGateChannel = (typeof RUST_STORE_GATE_CHANNELS)[number]
 
 /** Phase 75: the steamfiles channels, a subset of {@link RUST_INVOKE_CHANNELS}. */
 export const RUST_STEAMFILES_CHANNELS = [

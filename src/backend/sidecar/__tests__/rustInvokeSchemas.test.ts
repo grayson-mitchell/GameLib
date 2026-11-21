@@ -23,7 +23,8 @@ describe('rustInvokeArgs', () => {
     // Quick 261120-pp4: 118 -> 117, the picker-window open channel deleted with the custom invite picker.
     // Phase 82 plan 05: 117 -> 119, the two safety_* channels.
     // Debug bridged-launch-steam-signed-out: 119 -> 120, steamfiles_read_loginusers_offline_mode.
-    expect(RUST_INVOKE_CHANNELS).toHaveLength(120)
+    // Phase 85 plan 18: 120 -> 122, store_version_gate and store_backup_file.
+    expect(RUST_INVOKE_CHANNELS).toHaveLength(122)
   })
 
   it('parses the store-embed wire fixtures', () => {

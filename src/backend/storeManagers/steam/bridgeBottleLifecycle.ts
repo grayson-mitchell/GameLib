@@ -660,7 +660,7 @@ export async function provisionBridgeBottle(
       const { recordPinnedBottleEngine, switchContextFrom } =
         await import('backend/engine/engineSwitch')
       const { ENGINE_PINS } = await import('backend/engine/enginePins')
-      recordPinnedBottleEngine(
+      await recordPinnedBottleEngine(
         switchContextFrom(services),
         bottleName,
         opts.fallbackPinId ?? ENGINE_PINS.current.id,
@@ -783,7 +783,7 @@ export async function provisionBridgeBottle(
       await import('backend/engine/engineSwitch')
     const { engineServicesFrom } =
       await import('backend/services/engineServices')
-    recordCrossoverBottleEngine(
+    await recordCrossoverBottleEngine(
       switchContextFrom(engineServicesFrom(deps)),
       bottleName,
       binDir

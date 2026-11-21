@@ -9,7 +9,8 @@
 //! `backup` writes the side files that decision leaves, `migrate` holds the chains (the registry, the
 //! settings and library steps, and the strip over `schema`, the descriptor generated from zod), and
 //! `host` is the one owner of each open store file (ordered values, the write layout by flavour,
-//! read-only state, a change event).
+//! read-only state, a change event). `version_gate` is the read-only refuse-newer check for the two
+//! bottle-local versioned files (D-17), which sit outside the store tree and never migrate.
 
 pub mod atomic;
 pub mod backup;
@@ -22,3 +23,4 @@ pub mod migrate;
 pub mod ops;
 pub mod schema;
 pub mod table;
+pub mod version_gate;

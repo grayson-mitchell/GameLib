@@ -89,6 +89,8 @@ import {
   RUST_STEAM_API_PIN_RESOLVE,
   RUST_SAFETY_CHECK_REMOVAL,
   RUST_SAFETY_REMOVE_TREE,
+  RUST_STORE_BACKUP_FILE,
+  RUST_STORE_VERSION_GATE,
   RUST_SCAN_CONTAINED_REAL,
   RUST_SCAN_PE_IMPORTED_DLLS,
   RUST_SCAN_STEAMSTUB_SECTION,
@@ -391,6 +393,15 @@ export const rustInvokeArgs = {
   // ---- Destructive-path safety (Phase 82; D-06/D-07)
   [RUST_SAFETY_CHECK_REMOVAL]: safetyRequestArg,
   [RUST_SAFETY_REMOVE_TREE]: safetyRequestArg,
+  // ---- Bottle-local versioned files (Phase 85, D-17). Path and chain are validated again in Rust.
+  [RUST_STORE_VERSION_GATE]: z.tuple([
+    z.object({ path: z.string(), chain: z.string() }).strict()
+  ]),
+  [RUST_STORE_BACKUP_FILE]: z.tuple([
+    z
+      .object({ path: z.string(), fromVersion: z.number().int().min(0) })
+      .strict()
+  ]),
   // ---- Steam local files (Phase 75; paths in, typed results out)
   [RUST_STEAMFILES_FIND_ACF]: dirsAppArg,
   [RUST_STEAMFILES_PARSE_VALVE_MANIFEST]: pathArg,

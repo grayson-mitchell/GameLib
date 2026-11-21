@@ -2191,7 +2191,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       name: 'engine-runtime',
       // Builds the one engine runtime of this boot (D-05, 66.4-05): ledger, selection registry,
       // launch overlay contexts, launch deadlines, switch / bottle-creation / pinned-download
-      // single-flight maps, the CrossOver bin-dir memo. Construction only allocates empty maps: no
+      // single-flight maps, the CrossOver bin-dir memo, the bottle version-gate memo (it asks Rust only when a
+      // marker is about to be written). Construction only allocates empty maps: no
       // I/O and no timer (deadlines run on ctx.clock, whose timers are unref'd). After 'engine-state'
       // and before 'store-managers' so ManagerDeps and the launcher carry it.
       run: (ctx, _io, state) => {
@@ -2200,7 +2201,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           createEngineRuntime({
             clock: ctx.clock,
             paths: ctx.paths,
-            aborts: requireAborts(state)
+            aborts: requireAborts(state),
+            requestRustInvoke: requireHost(state).requestRustInvoke
           })
       }
     },

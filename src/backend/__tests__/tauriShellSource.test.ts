@@ -481,9 +481,9 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     expect(matches.length).toBe(1)
   })
 
-  test('71-07 rust_dispatch.rs is a flat router: 120 one-line arms and no catch-all arm', () => {
+  test('71-07 rust_dispatch.rs is a flat router: 122 one-line arms and no catch-all arm', () => {
     const router = readTauriShellProductionFile('rust_dispatch.rs')
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(120)
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(122)
     expect(router).not.toContain('_ =>')
   })
 
@@ -724,6 +724,14 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // arm through the generated Args. NOT ATTEMPTED here: a live sidecar round trip.
       'safety_check_removal',
       'safety_remove_tree',
+
+      // Phase 85 plan 18 (D-17) -- two arms into `gamelib-store` for the bottle-local versioned files
+      // (`.gamelib-engine.json`, `gamelib-shared-redists.json`): the refuse-newer gate and the
+      // unreadable-ledger backup. PROVEN: the `store_gate_*` shell tests in store_gate_dispatch.rs
+      // (every state through the arm, path and chain rejection, 0600 backups capped at 3) and
+      // `bottleVersionGate.test.ts` for the sidecar side. NOT ATTEMPTED here: a live sidecar round trip.
+      'store_version_gate',
+      'store_backup_file',
 
       // Phase 73 plan 12 (D-03, D-06, D-08) -- three pass-through arms into the Tauri-free
       // `gamelib-depot` crate, one per RUST_DEPOT_* channel. PROVEN: `depotChannelParity.test.ts`

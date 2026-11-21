@@ -197,11 +197,7 @@ function baseEngineDecisionDeps(rt: RunnerDeps): NonSpawnDefaults {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         require('./engineSwitch') as typeof import('./engineSwitch')
       return readBottleEngineMarkerSummary(
-        {
-          paths: rt.paths,
-          fallback: rt.engineRuntime.fallback,
-          versioning: rt.versioning
-        },
+        { paths: rt.paths, fallback: rt.engineRuntime.fallback },
         bottleName
       )
     },
