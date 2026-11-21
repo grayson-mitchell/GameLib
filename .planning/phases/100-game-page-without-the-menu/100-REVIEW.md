@@ -2,247 +2,118 @@
 phase: 100-game-page-without-the-menu
 reviewed: 2026-11-22T00:00:00Z
 depth: standard
-files_reviewed: 92
+files_reviewed: 21
 files_reviewed_list:
-  - meta/__tests__/genI18nGateScope.test.ts
-  - meta/backendDiCeilings/frontend-screens-game.json
-  - meta/gameInfoNarrowingBaseline.json
-  - meta/hardcodedStringGate.ts
-  - meta/i18nCatalogPresenceBaseline.json
-  - meta/i18nForkTouchedFiles.json
-  - meta/i18nGateScope.json
-  - public/locales/en/gamelib.json
-  - src/backend/__tests__/dialogOptionForwarding.test.ts
-  - src/frontend/components/UI/NavShell/__tests__/themeTokens.test.ts
+  - src-tauri/src/main.rs
+  - src/backend/__tests__/longRunningChannels.test.ts
   - src/frontend/components/UI/UninstallModal/index.tsx
-  - src/frontend/components/UI/index.tsx
-  - src/frontend/customThemes/builtinTokens.generated.json
-  - src/frontend/helpers/__tests__/declaredUnavailable.test.ts
-  - src/frontend/helpers/__tests__/steamInstallOptionsEntry.test.ts
-  - src/frontend/helpers/declaredUnavailable.ts
-  - src/frontend/helpers/steamInstallOptionsEntry.ts
-  - src/frontend/screens/Game/GamePage/__tests__/gamePageActionDock.test.ts
-  - src/frontend/screens/Game/GamePage/__tests__/gamePageTabs.test.ts
-  - src/frontend/screens/Game/GamePage/__tests__/playTimeSummary.test.ts
-  - src/frontend/screens/Game/GamePage/actions/__tests__/installCaret.test.ts
-  - src/frontend/screens/Game/GamePage/actions/__tests__/longRunningCallSiteGuard.test.ts
-  - src/frontend/screens/Game/GamePage/actions/__tests__/shortcutsToggle.test.ts
-  - src/frontend/screens/Game/GamePage/actions/__tests__/steamUninstallConfirm.test.ts
   - src/frontend/screens/Game/GamePage/actions/installActionGates.ts
-  - src/frontend/screens/Game/GamePage/actions/installCaret.ts
   - src/frontend/screens/Game/GamePage/actions/rowAction.ts
-  - src/frontend/screens/Game/GamePage/actions/shortcutsToggle.ts
-  - src/frontend/screens/Game/GamePage/actions/steamUninstallConfirm.ts
   - src/frontend/screens/Game/GamePage/actions/useInstallLocationActions.ts
-  - src/frontend/screens/Game/GamePage/actions/useSteamShortcut.ts
   - src/frontend/screens/Game/GamePage/actions/useUninstallActions.ts
-  - src/frontend/screens/Game/GamePage/components/DownloadSizeInfo.tsx
-  - src/frontend/screens/Game/GamePage/components/GameStatus.tsx
-  - src/frontend/screens/Game/GamePage/components/HumbleOriginInfo.tsx
+  - src/frontend/screens/Game/GamePage/actions/__tests__/installActionGates.test.ts
+  - src/frontend/screens/Game/GamePage/actions/__tests__/rowAction.test.ts
   - src/frontend/screens/Game/GamePage/components/InstallTab/DangerZone.tsx
-  - src/frontend/screens/Game/GamePage/components/InstallTab/EngineRow.tsx
-  - src/frontend/screens/Game/GamePage/components/InstallTab/IntegrationRows.tsx
-  - src/frontend/screens/Game/GamePage/components/InstallTab/NotInstalledFacts.tsx
-  - src/frontend/screens/Game/GamePage/components/InstallTab/SizeRow.tsx
-  - src/frontend/screens/Game/GamePage/components/InstallTab/StaticFactRows.tsx
+  - src/frontend/screens/Game/GamePage/components/InstallTab/LocationRow.tsx
   - src/frontend/screens/Game/GamePage/components/InstallTab/SwitchRow.tsx
   - src/frontend/screens/Game/GamePage/components/InstallTab/VersionRow.tsx
-  - src/frontend/screens/Game/GamePage/components/InstallTab/WhatsNewLink.tsx
-  - src/frontend/screens/Game/GamePage/components/InstallTab/__tests__/SwitchRow.test.tsx
-  - src/frontend/screens/Game/GamePage/components/InstallTab/__tests__/installTabSource.test.ts
-  - src/frontend/screens/Game/GamePage/components/InstallTab/index.css
   - src/frontend/screens/Game/GamePage/components/InstallTab/index.tsx
-  - src/frontend/screens/Game/GamePage/components/LeftCard/EditDetailsButton.tsx
-  - src/frontend/screens/Game/GamePage/components/LeftCard/FavouriteHeart.tsx
-  - src/frontend/screens/Game/GamePage/components/LeftCard/HiddenNotice.tsx
-  - src/frontend/screens/Game/GamePage/components/LeftCard/LibraryRow.tsx
-  - src/frontend/screens/Game/GamePage/components/LeftCard/StoreBadgeLink.tsx
-  - src/frontend/screens/Game/GamePage/components/LeftCard/__tests__/leftCardSource.test.ts
-  - src/frontend/screens/Game/GamePage/components/LeftCard/index.css
-  - src/frontend/screens/Game/GamePage/components/MainButton.tsx
-  - src/frontend/screens/Game/GamePage/components/NativePortInfo.tsx
-  - src/frontend/screens/Game/GamePage/components/PlatformSupport.tsx
-  - src/frontend/screens/Game/GamePage/components/ProtonDbLink.tsx
-  - src/frontend/screens/Game/GamePage/components/RunsForMeToggle.tsx
-  - src/frontend/screens/Game/GamePage/components/__tests__/GameStatus.redistSpinner.test.tsx
-  - src/frontend/screens/Game/GamePage/components/__tests__/MainButton.importDemotion.test.tsx
-  - src/frontend/screens/Game/GamePage/components/__tests__/MainButton.steamSplitButton.test.tsx
-  - src/frontend/screens/Game/GamePage/components/index.tsx
-  - src/frontend/screens/Game/GamePage/index.css
-  - src/frontend/screens/Game/GamePage/index.tsx
-  - src/frontend/screens/Game/GamePage/playTimeSummary.ts
-  - src/frontend/screens/Game/GamePage/usePlayTime.ts
-  - src/frontend/screens/Library/components/GameCard/__tests__/cardVisibility.test.ts
-  - src/frontend/screens/Library/components/InstallModal/__tests__/steamEligibilityWiring.test.ts
-  - src/frontend/screens/Settings/components/EosOverlaySetting.tsx
-  - src/frontend/screens/Settings/components/SettingsModal/SettingsModalHeader.tsx
-  - src/frontend/screens/Settings/components/SettingsModal/__tests__/SettingsModalHeader.test.tsx
-  - src/frontend/screens/Settings/components/SettingsModal/index.tsx
-  - src/frontend/screens/Settings/components/WinePrefix.tsx
-  - src/frontend/screens/Settings/components/__tests__/EosOverlaySetting.callSiteGuard.test.ts
-  - src/frontend/screens/Settings/components/__tests__/fieldLabels.test.ts
-  - src/frontend/screens/Settings/index.css
-  - src/frontend/screens/Settings/sections/GamesSettings/__tests__/logsTab.test.ts
-  - src/frontend/screens/Settings/sections/GamesSettings/__tests__/tabs.test.ts
-  - src/frontend/screens/Settings/sections/GamesSettings/index.scss
-  - src/frontend/screens/Settings/sections/GamesSettings/index.tsx
-  - src/frontend/screens/Settings/sections/GamesSettings/tabs.ts
-  - src/frontend/screens/Settings/sections/LogSettings/index.css
-  - src/frontend/screens/Settings/sections/LogSettings/index.tsx
-  - src/frontend/screens/Settings/sections/SyncSaves/gog.tsx
-  - src/frontend/screens/Settings/sections/SyncSaves/index.tsx
-  - src/frontend/screens/Settings/sections/SyncSaves/legendary.tsx
-  - src/frontend/state/__tests__/uiState.test.ts
-  - src/frontend/state/uiState.ts
-  - src/frontend/styles/_buttons.scss
-  - src/frontend/themes.scss
+  - src/frontend/screens/Game/GamePage/components/InstallTab/index.css
+  - src/frontend/screens/Game/GamePage/components/InstallTab/__tests__/SwitchRow.test.tsx
+  - src/frontend/screens/Game/GamePage/components/InstallTab/__tests__/installTabRows.test.tsx
+  - src/frontend/screens/Game/GamePage/components/InstallTab/__tests__/installTabSource.test.ts
+  - public/locales/en/gamelib.json
+  - meta/i18nCatalogPresenceBaseline.json
+  - meta/backendDiCeilings/frontend-screens-game.json
 findings:
-  critical: 2
-  warning: 5
-  info: 6
-  total: 13
+  critical: 0
+  warning: 3
+  info: 5
+  total: 8
+  necessity: 1
 status: issues_found
 ---
 
-# Phase 100: Code Review Report
+# Phase 100: Code Review Report (round 2, gap-closure round)
 
 **Reviewed:** 2026-11-22
 **Depth:** standard
-**Files Reviewed:** 92
+**Files Reviewed:** 21
 **Status:** issues_found
 
 ## Summary
 
-Reviewed the Install tab rows and gates, the left-card library row, the footer caret, the Logs tab and EOS switch in the settings dialog, the play-time hook, the themes and the `meta/` baselines. I read the deleted `GameSubMenu` and `DotsMenu` from `2e70177da` and checked every item they carried against its new home.
+This round reviews the diff from `b65ca20a9` (plans 100-11..14), which fixed round-1 CR-01, CR-02, WR-02, WR-04 and WR-05.
 
-All 20 old ⋮ actions have a new home. Two things are wrong with those homes:
+**ID numbering.** Round 1 ended at CR-02 / WR-05 / IN-06. This round starts after those: no new critical findings (the next would be CR-03), warnings are WR-06..WR-08, info items are IN-07..IN-11. None of these collide with ids in `100-REVIEW-DISPOSITION.md`.
 
-- Verify, Update and What's new share one row, and that row is hidden for any game with no `install.version`. That includes bridge-installed Steam games, so Verify and Repair is unreachable for them.
-- A Move longer than 60 s is reported as "Move failed" while it is still running. The Retry link can then start a second move.
+**Round-1 fixes, verified:**
+- CR-01 (Version row vanishing): fixed. `VersionRow` no longer keys on `install.version`, reads Unknown, and keeps Verify, Update and What's new reachable. The hooks sit above the early return.
+- CR-02 (Move over 60 s): fixed at the root. `moveInstall`, `changeInstallPath` and `steamRemoveAllCopies` are now in `LONG_RUNNING_CHANNELS`, so `timeout_for` returns `None`. Each is pinned by a Rust test and by the TS drift test. Move Retry is gated on `gates.move.disabled`, and the failure is hidden while `is.moving`. See WR-06 for a regression in that hiding and WR-07 for the now-dead hand-off.
+- WR-02 (Browse Files for third-party games): fixed. `open` is `unaffected(isInstalled)`, matching the old menu. The `isBrowserGame` input was removed from the type, the call site and the tests consistently.
+- WR-04 (sticky failures): fixed for the Location row only, via mutual dismissal plus an effect on `install_path`. See IN-11 for the rows it does not cover.
+- WR-05 (danger-zone unhandled rejections): fixed. Both confirms run through `useRowAction`, and `UninstallModal` has a runner path and a catch-and-log fallback. The partial-sweep-is-failure rule and the Retry-re-asks rule are tested.
 
-The `meta/` baselines were not loosened. Counts went down or were re-pathed, the scope and fork-touched counts match the test (348 and 471), and every `gamelib:` key used by the reviewed source exists in `public/locales/en/gamelib.json`. Tests are mostly source-text gates, which cannot catch either finding above.
-
-Checked and found fine:
-
-- `i18n.language` is BCP-47 in the renderer (`i18nextLanguageOptions` runs it through `toI18nextCode`), so `Intl.*(i18n.language)` in `usePlayTime` is safe for `pt_BR` and `zh_Hans`.
-- Hooks in `VersionRow`, `EngineRow`, `DangerZone` and `RunsForMeToggle` all run before their early returns.
-- `ProtonDbLink` encodes the title and app id.
-- `WhatsNewLink` renders the changelog through the sanitising `GameChangeLog`.
-
-## Critical Issues
-
-### CR-01: Verify, Update and What's new vanish for any installed game with no `install.version`
-
-**File:** `src/frontend/screens/Game/GamePage/components/InstallTab/VersionRow.tsx:49-57`
-**Issue:** `VersionRow` returns `null` when `!version`. The row is the only home of the Verify, Update and What's new actions (⋮ items "Verify and Repair", "Force Update" and "Show Changelog"). The old ⋮ items had no version precondition.
-
-`installActionGates` explicitly keeps Verify live for Steam, but Steam installs often have no version:
-- `markBridgeGameInstalled` (`src/backend/storeManagers/steam/bridgeInstallState.ts:164-170`) writes `install: { install_path, install_size: '', platform }` with no `version`. This is the Mac bridge path.
-- `installVersionField` (`src/backend/storeManagers/steam/library/installedMap.ts:58-67`) deliberately omits `version` for a null, empty or `'0'` ACF buildid.
-
-Result: for those installs the Install tab has no Verify, so the file-repair action is unreachable. The source-text tests cannot catch this, because they only grep for `useRowAction('repair'`.
-**Fix:** Do not gate the row on the version string. Render the row for any installed, non-sideloaded, non-third-party, non-browser game, and show the version text only when present:
-```tsx
-if (
-  !gameInfo.is_installed ||
-  isSideloaded ||
-  gameInfo.thirdPartyManagedApp ||
-  gameInfo.install.platform === 'Browser'
-) return null
-...
-{version ? <>{version} {hasUpdate ? ... : upToDate}</> : t('gamelib:gamepage.installTab.versionUnknown', 'Unknown')}
-```
-Add a unit or source gate that the row renders without a version.
-
-### CR-02: A Move that runs longer than 60 s is shown as "Move failed", and the Retry link can start a second move
-
-**File:** `src/frontend/screens/Game/GamePage/actions/useInstallLocationActions.ts:35-47` (Retry wiring at 92; row at `InstallTab/LocationRow.tsx:29-40`)
-**Issue:** `moveInstall` is not in the shell's `LONG_RUNNING_CHANNELS` (`src-tauri/src/main.rs:199-`). The list has `repair`, `install`, `syncSaves` and others, but not `moveInstall`, `changeInstallPath` or `steamRemoveAllCopies`. The handler (`src/backend/sidecar/installFlowRegistration.ts:490-546`) awaits the whole `moveInstall(path)` copy. Under Tauri the invoke therefore rejects at 60 s while the backend keeps moving the game.
-
-The old code let that rejection go unhandled. The new `moveRow.run` catches it and dispatches `fail`. The row then shows "Move failed. Details are in the log." with a Retry link for a move that is still running and may succeed.
-
-Retry is `retryMove`, which opens the folder picker and calls `moveInstall` again. It is not gated by `gates.move.disabled` or `is.moving`, so a second move can start against the same install. Large installs routinely take more than 60 s to copy, so this is the common case.
-**Fix:** Both, ideally:
-1. Add `"moveInstall"` (and `"changeInstallPath"`, `"steamRemoveAllCopies"`) to `LONG_RUNNING_CHANNELS`, with the usual measurement note.
-2. Make Retry inert while the game is moving. Pass `retryDisabled` from `gates.move.disabled`, or have `RowFailure` render only when `!is.moving`. In `useInstallLocationActions`, do not call `fail` when the rejection is the transport timeout while the game status is still `moving`.
+No critical defects found in the changed code. The i18n baseline delta (+240 pairs = 5 new keys x 48 locales), the ceiling file (3 `jest.mock` calls in `installTabRows.test.tsx`) and the new `en` keys are consistent with each other. The Rust change adds list entries and one test only, so the shutdown convention in CLAUDE.md is not engaged.
 
 ## Warnings
 
-### WR-01: The "Edit details" button sits on top of the 32-bit macOS badge
+### WR-06: A real Move rejection leaves the game stuck on "moving", and the new `!is.moving` suppression then hides the failure
 
-**File:** `src/frontend/screens/Game/GamePage/components/LeftCard/index.css:182-188` (and `src/frontend/screens/Game/GamePage/index.css:149-153`)
-**Issue:** `.editDetailsButton` is absolutely positioned at `top: var(--space-sm); right: var(--space-sm)` inside `.gameArtBand`. `.macArchBadge` is absolutely positioned inside the same `.gameArtBand` at `top: .5rem; right: .5rem` (rendered just before it, `index.tsx:553-554`). For a game with `mac_arch === '32'` the two controls occupy the same corner. The edit button has `z-index: 2` and is revealed on hover, so it covers the badge exactly when the user's pointer is on the art.
-**Fix:** Give the badge a different anchor, for example `left`, or stack them with a flex container. Alternatively offset the edit button by the badge width when the badge renders.
+**File:** `src/frontend/screens/Game/GamePage/components/InstallTab/LocationRow.tsx:35-39` (backend cause: `src/backend/sidecar/installFlowRegistration.ts:527-531` and `544-581`)
+**Issue:** `LocationRow` now shows no Move failure while `is.moving` (D-10). That is right for a timeout, but a genuine rejection of `moveInstall` also leaves the status at `moving`. The sidecar handler sends status `moving`, then awaits `getGame(appName).moveInstall(path)`, and only afterwards sends `done`. Only a returned `{status:'error'}` reaches that `done`. If the call throws, the handler rethrows with no `done` and the status stays `moving`. Legendary's `moveInstall` awaits `changeGameInstallPath` (which runs the runner) after a successful copy, outside any try, so a throw is reachable.
 
-### WR-02: Installed third-party-managed games lose "Browse Files"
+In the renderer, `moveRow.run` takes the `fail` branch and logs the error, as the test "reports a real rejection as a failure even while the game reads moving" asserts. `moveFailed` is true, but `LocationRow` hides it because `is.moving` is still true. The user sees "Moving…" indefinitely and every conflicting action reads "Wait for the move to finish". Nothing in the renderer clears the status.
 
-**File:** `src/frontend/screens/Game/GamePage/actions/installActionGates.ts:134` (`open: unaffected(isInstalled && !isThirdPartyManaged && !isBrowserGame)`; consumed at `InstallTab/LocationRow.tsx:26`)
-**Issue:** The old ⋮ "Browse Files" item was shown for every installed game (`GameSubMenu` line 788: `isInstalled && ...`). The old Location fact (`InstalledInfo`) hid its path for third-party games, but the menu item still opened `install_path || folder_name`. `LocationRow` returns `null` when `gates.open.show` is false, so the whole Location row and its Open button vanish for installed EA-managed and Ubisoft-managed games. If those games have a folder, that action now has no home.
-**Fix:** Either confirm and document that third-party games have no usable path, or show Open for them when `install_path || folder_name` is non-empty. For example, drop `!isThirdPartyManaged` from `open` and keep it only on Move, Set folder, Modify and Verify.
+The backend never resetting the status is older than this phase. What the gap round added is the suppression, which removes the only visible symptom. The test asserts `actions.moveFailed`, not what the row renders, so it does not catch this. I did not find another code path that resets the `moving` status on a rejected invoke; if one exists elsewhere, the cost here is only the missing test.
+**Fix:** Preferably fix the cause: wrap the `moveInstall` handler body after the `moving` status in `try { ... } finally { sendGameStatusUpdate(..., 'done') }`. In the renderer, if the cause stays, only suppress the message for the hand-off case instead of every rejection. For example, `moveRow` could record whether the last rejection was the timeout hand-off, and `LocationRow` hides the failure only then. Add a render-level test: a rejected move with status `moving` still shows the message.
 
-### WR-03: The long-action guard's header and the CloudSavesSync failure path point at a deleted behavioural test
+### WR-07: The move-timeout hand-off (`isInvokeTimeout`, `stillRunning`, `release`) cannot fire in the shipped stack
 
-**File:** `src/frontend/screens/Game/GamePage/actions/__tests__/longRunningCallSiteGuard.test.ts:15-20` (and `meta/backendDiCeilings/frontend-screens-game.json`)
-**Issue:** The header says `CloudSavesSync` "is covered behaviourally in `cloudSavesSyncFailure.test.tsx`". That file was deleted in this phase (its ceiling entry was removed, and no such file exists on disk), but the claim stayed.
+**Category:** necessity
+**File:** `src/frontend/screens/Game/GamePage/actions/rowAction.ts:49-66`, `115-123`, `149-159`; `src/frontend/screens/Game/GamePage/actions/useInstallLocationActions.ts:29-39`, `83`
+**Issue:** `moveInstall` is now exempt from the shell's bound (`timeout_for("moveInstall") == None`, pinned by `install_location_and_remove_all_copies_channels_are_exempt` in `main.rs`). `sidecar invoke timed out: <channel>` is produced only by the bounded path, so no `moveInstall` invoke can reject with it. Only `moveInstall` passes `stillRunning`. The `release` event, the `isStatusMoving` store read, the info log and the tests for them guard a state that cannot occur. They also read as proof that a timeout is still possible, which contradicts the Rust comment that exempted the channel. The Rust comment says a wedged invoke now surfaces as a never-settling promise, not a timeout.
 
-The rewritten `CloudSavesSync` (`useRowAction`, `lastSyncType`, Retry that re-prompts for force syncs, `pathMissing` gating) has no behavioural test. Neither does `VersionRow`, `LocationRow` or `DangerZone`; each is covered only by `readFileSync` greps. The reducer and `cloudSync.ts` helpers are tested, but not the components' use of them.
-**Fix:** Correct the header. Add behavioural tests for the CloudSavesSync failure and Retry path, using the same hook harness as the other tests, or at least a render-tree test as `SwitchRow.test.tsx` does.
+If it is kept as a second line of defence, that decision is not recorded anywhere.
+**Fix:** Remove `isInvokeTimeout`, `stillRunning`, `release` and `isStatusMoving` along with their tests. Or keep them and state in the `useInstallLocationActions` header that they are deliberate redundancy, so a later reader does not infer that moves can time out. Removing is preferable: it also deletes the unguarded `stillRunning?.(error)` call, which sits inside `catch` in a function documented as "Never rethrows".
 
-### WR-04: Row failure state is sticky, and a second simultaneous failure is hidden
+### WR-08: The two danger-zone buttons do not gate each other, and Remove all copies emits no status
 
-**File:** `src/frontend/screens/Game/GamePage/components/InstallTab/LocationRow.tsx:29-45`, `src/frontend/screens/Game/GamePage/actions/rowAction.ts:30-40`
-**Issue:** `failed` leaves only through `dismiss` (never called by any row) or a Retry. Nothing clears it when the user succeeds at something else or the game state changes. A failed Move keeps "Move failed" under the Location row after the user has moved the game via another route, or after Verify succeeded. Also `LocationRow` shows `moveFailed` in preference to `setFolderFailed`, so a Set-folder failure is invisible while a Move failure is showing.
-**Fix:** Clear a row's failure when a new action on that row starts (already true via `start`). Also call `dismiss` when another long action on the row begins, or on a status change that ends it. Show both messages, or the most recent.
-
-### WR-05: Danger-zone confirms have no failure path (unhandled rejections)
-
-**File:** `src/frontend/screens/Game/GamePage/actions/useUninstallActions.ts:42-43` and `51-54`
-**Issue:** `window.api.uninstall(appName, runner, false, false)` is neither awaited nor caught. `onRemoveAllCopiesYesClick` awaits `steamRemoveAllCopies` and then `refresh` with no `try`, and the dialog does not await its `onClick`, so a rejection becomes an unhandled promise rejection (console-warn only; it never reaches `gamelib.log`). `uninstall` and `steamRemoveAllCopies` can run long and are, or should be, bounded by the invoke timeout (see CR-02), so a false rejection is plausible. This is carried over from the ⋮ menu, but the phase rehomed these as part of the danger zone where a visible failure is expected.
-**Fix:** Wrap both in `reportRowActionFailure` or a `useRowAction`, and show a `RowFailure` in `DangerZone`. At minimum add `.catch((error) => reportRowActionFailure({...}))` so the failure reaches the log.
+**File:** `src/frontend/screens/Game/GamePage/components/InstallTab/DangerZone.tsx:47-49`, `64-96`; `src/frontend/screens/Game/GamePage/actions/useUninstallActions.ts:42-43`
+**Issue:** Each button disables itself from its own row (`uninstallIsBusy`, `removingAllCopies`) and from the shared gate. The gate reads `is.uninstalling` and other game-status flags. `removeAllSteamInstallCopies` does not send any game status (nothing in `removeAllCopies.ts` emits one). So during a sweep, which can now run without a timeout, `gates.uninstall` is live and "Uninstall…" can be clicked and confirmed. The opposite also holds: "Remove all copies…" stays live while an Uninstall row is busy, unless the backend status has reached `uninstalling`. Both delete the same install roots, and D-11 says conflicting actions are disabled with a reason.
+**Fix:** In `DangerZone`, add the other row's busy state to each button's inert condition. For example, `uninstallInert = uninstallGate.disabled || uninstallIsBusy || removingAllCopies` and `allCopiesInert = allCopiesGate.disabled || removingAllCopies || uninstallBusy`. Include both in the Retry `retryDisabled` conditions too. Add a test that the Uninstall button is `aria-disabled` while a sweep is pending.
 
 ## Info
 
-### IN-01: `StoreBadgeLink` interpolates the store URL into the query string unencoded
+### IN-07: The hook's docblock is detached by the new helper's docblock
 
-**File:** `src/frontend/screens/Game/GamePage/components/LeftCard/StoreBadgeLink.tsx:34`
-**Issue:** The `to` prop is `` `/store-page?store-url=${storeUrl}` ``. A store URL containing `&`, `#` or `+` is truncated or altered by `URLSearchParams.get('store-url')` in `WebView/index.tsx`. This is carried from the old ⋮ item.
-**Fix:** `` `/store-page?store-url=${encodeURIComponent(storeUrl)}` `` (the WebView side already decodes through `URLSearchParams`).
+**File:** `src/frontend/screens/Game/GamePage/actions/useInstallLocationActions.ts:9-39`
+**Issue:** The main JSDoc for `useInstallLocationActions` (D-01, D-13, D-18, CR-02, WR-04) is now followed directly by a second JSDoc and the `isStatusMoving` function, so it attaches to nothing. The hook itself has no docblock.
+**Fix:** Move the helper above the first docblock, or place the helper's comment inside the function body. Folds away if WR-07 removes `isStatusMoving`.
 
-### IN-02: `ProtonDbLink` dropped the `gamesdb.steamID` fallback
+### IN-08: Move and Set-folder Retry skip the confirmation that the danger-zone Retry keeps
 
-**File:** `src/frontend/screens/Game/GamePage/components/ProtonDbLink.tsx:30-34`
-**Issue:** The old ⋮ item resolved the Steam id from `info?.pcgamingwiki?.steamID ?? info?.gamesdb?.steamID` (`WikiInfo.gamesdb` still exists in `common/types.ts:994`). The new row, following `CompatibilityInfo`'s rule, uses only `pcgamingwiki.steamID`. A GOG game with only a GamesDB Steam id now links to a ProtonDB search instead of the app page.
-**Fix:** `const steamId = wikiInfo?.pcgamingwiki?.steamID ?? wikiInfo?.gamesdb?.steamID`.
+**File:** `src/frontend/screens/Game/GamePage/actions/useInstallLocationActions.ts:137-138`
+**Issue:** `retryMove` is `onMoveInstallYesClick` and `retrySetFolder` is `onChangeInstallYesClick`, so Retry goes straight to the folder picker. D-13 keeps the yes/no confirmation for Move and Set folder, and the danger zone's Retry re-asks (`retryRemoveAllCopies = startRemoveAllCopies`). The picker is arguably a confirmation in itself, but the two Retry paths are inconsistent and the decision is undocumented.
+**Fix:** Either route both Retries through `startMove` and `startSetFolder`, or say in a comment why the picker suffices for these two.
 
-### IN-03: Stale comments and naming left over from the plan-by-plan rollout
+### IN-09: New list entries are admitted "on shape", against the list's own stated rule, and `changeInstallPath` has no recovery if it wedges
 
-**File:** `src/frontend/screens/Game/GamePage/actions/useUninstallActions.ts:9`, `actions/rowAction.ts:14` and `119-123`, `components/MainButton.tsx` (class `SteamInstallCaret`)
-**Issue:**
-- `// The route classifier stays where the ⋮ menu keeps it; plan 09 moves it.` is wrong: the module already lives in `GamePage/actions/`.
-- `@public consumed by the Install-tab rows in plans 04-06` describes a past state.
-- The caret keeps the class `SteamInstallCaret` although D-20 extended it to every store.
-- `shortcutsToggle.ts` still describes "the old ⋮ menu" in its main docblock.
-**Fix:** Update or drop the comments, and rename the class (and its test and CSS selectors) to something store-neutral.
+**File:** `src-tauri/src/main.rs:187-198` and `301-325`
+**Issue:** The list's docblock says membership "is not free and is not granted on reasoning". The three new entries are explicitly "Added on shape, not timed". The `uninstall` entry has the same precedent, so this is not new, but `changeInstallPath` is weaker: the comment concedes that GOG's and Nile's versions only rewrite a record. `changeInstallPath` also feeds `settingFolder`, which `activeLongAction` treats as a long action that disables every conflicting action. With no bound, a wedged invoke leaves the install tab disabled until the sidecar dies.
+**Fix:** Record the measurement when UAT item 20 times a Move, or leave `changeInstallPath` bounded and accept a rare false failure. Optionally limit `settingFolder` to the picker phase.
 
-### IN-04: Two `useTranslation()` results with the same namespace in `EosOverlaySetting`
+### IN-10: `UninstallModal`'s fallback catch calls `window.api.logError` unguarded, and has no behavioural test
 
-**File:** `src/frontend/screens/Settings/components/EosOverlaySetting.tsx:21-24`
-**Issue:** `const { t } = useTranslation()` and `const { t: tDefault } = useTranslation()` are identical calls; the old file needed distinct `t`s for three namespaces. The comment justifying `tDefault` is a leftover. Also, if the user dismisses the "install now?" dialog through the backdrop rather than the "No" button, `eosOverlayRefresh` stays true and the switch stays disabled until the dialog is reopened. This is identical to the old menu's behaviour.
-**Fix:** Use one `t`, and reset the spinner via the dialog's close callback, if the dialog API provides one.
+**File:** `src/frontend/components/UI/UninstallModal/index.tsx:134-144`; `installTabSource.test.ts` (new modal test)
+**Issue:** The fallback exists so a rejection does not become unhandled. If `window.api.logError` throws, the catch itself throws and the rejection is unhandled again. `reportRowActionFailure` already wraps both log signals for this reason. The new test only greps the source (`catch[\s\S]*window\.api\.logError\(`), so it passes with the dead-simple shape but proves no behaviour. The Library `GameCard` and `DLC` callers use this path. `GameCard` shares the page's flow only in the `runUninstall` case.
+**Fix:** Call `reportRowActionFailure({ action: 'uninstall', appName, error })` from the catch. Add a render-level test of the no-`runUninstall` rejection, in the style of `installTabRows.test.tsx`.
 
-### IN-05: Accessibility details
+### IN-11: Failure-clearing covers only the Location row
 
-**File:** `src/frontend/screens/Game/GamePage/components/ProtonDbLink.tsx:42-55`, `src/frontend/screens/Settings/sections/GamesSettings/index.tsx` (Game log link), `LeftCard/index.css:97-105` and `180-205`
-**Issue:**
-- `ProtonDbLink` and the Game-log link are `<a role="button">` without `href`. `ProtonDbLink` has no `tabIndex` or key handler (not keyboard-reachable); the Game-log link handles Enter only, not Space.
-- The category-chip × (`opacity: 0`) and the Edit-details button (`opacity: 0`) are revealed only on hover or focus, so touch and Steam Deck touchscreen users cannot discover them. The comment shows the opacity trick is deliberate for the gamepad collector, but there is no touch affordance.
-**Fix:** Use `<button type="button">` (the `.iconWithText` style can be kept), and reveal the chips' × and the Edit button with `@media (hover: none)` or always-on.
-
-### IN-06: The footer play-time suffix appears for states that are not idle in practice
-
-**File:** `src/frontend/screens/Game/GamePage/components/GameStatus.tsx:418-427`, `src/frontend/screens/Game/GamePage/playTimeSummary.ts:94-112`
-**Issue:** `isStatusIdle` does not include `is.notAvailable`, `is.notSupportedGame` or `is.notInstallable`, and `usePlayTime` returns `null` only for `notInstallable`. A "Game not available" or "This game uses third party launcher" line gets " · Never played" appended. A not-installed game reads "Not installed · Never played".
-**Fix:** Pass `isStatusIdle(is) && gameInfo.is_installed && !is.notAvailable && !is.notSupportedGame` (and the Steam metadata case, where played minutes do exist for an uninstalled owned game, can stay as is).
+**File:** `src/frontend/screens/Game/GamePage/components/InstallTab/VersionRow.tsx:72-85`; `src/frontend/screens/Game/GamePage/actions/useUninstallActions.ts`
+**Issue:** The WR-04 fix dismisses failures for Move and Set folder. A failed Verify, Uninstall or Remove all copies still leaves its message until the user retries it. For example, an Uninstall failure remains visible after the user cancels the confirm that Retry reopened. The round-1 finding named "after Verify succeeded"; that case persists for Verify when the verification is restarted elsewhere. Low impact because the other entry points to these actions were removed with the menu.
+**Fix:** Dismiss the Verify failure when `is.reparing` becomes true, and dismiss the Uninstall failure when its confirm modal closes without confirming.
 
 ---
 
