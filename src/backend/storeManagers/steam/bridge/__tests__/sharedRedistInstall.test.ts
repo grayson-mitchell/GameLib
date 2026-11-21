@@ -219,6 +219,37 @@ afterEach(() => {
  * 44791256524). A per-test timeout is the fix, never a retry or a skip. */
 const LOADED_RUNNER_TEST_TIMEOUT_MS = 30_000
 
+/** Real-clock captures, evaluated at file load, before any test calls jest.useFakeTimers. Measured on
+ * jest 29.7 / @sinonjs/fake-timers 10.3: once fake timers are installed, performance.now, Date.now
+ * and process.hrtime all return a FROZEN value inside the test, and only a reference captured
+ * before that keeps reading real time. Here doNotFake spares only setImmediate and nextTick, so a
+ * deadline read from the live performance.now would never expire. */
+const realNow = performance.now.bind(performance)
+const realSetTimeout = setTimeout
+
+/** The real-time ceiling for yieldUntil. It sits inside the 30 s per-test timeout above, so a call
+ * that never comes fails at the expect right after the wait, not at jest's timeout. */
+const REAL_WAIT_DEADLINE_MS = 15_000
+
+/** How long the slowed-path regression test holds the download back, in real time. 500 idle
+ * setImmediate turns measured 6.7-9.8 ms on the dev Mac, so 250 ms is about 25 times what the old
+ * turn-counted wait allowed. */
+const SLOW_PRE_INSTALLER_MS = 250
+
+/** Wait until done() holds, bounded by elapsed real time, never by a count of turns. The code under
+ * test does real fs/promises I/O (the ledger read and the atomic ledger writes) and a dynamic
+ * import before its first installer call; a setImmediate turn lets those poll-phase callbacks land
+ * between checks. It returns rather than throws, so the caller's expect supplies the failure
+ * message (G-82-2-r2). */
+async function yieldUntil(
+  done: () => boolean,
+  deadlineMs = REAL_WAIT_DEADLINE_MS
+): Promise<void> {
+  const deadline = realNow() + deadlineMs
+  while (!done() && realNow() < deadline)
+    await new Promise((r) => setImmediate(r))
+}
+
 describe('installSteamBridgeSharedRedists', () => {
   it('installs DirectX: status, argv, reg add mark, ledger and settled', async () => {
     mockedDownload.mockResolvedValue(ok([dx()]))
@@ -924,8 +955,7 @@ describe('installSteamBridgeSharedRedists', () => {
         )
 
         const p = installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
-        for (let i = 0; i < 500 && installerCalls().length === 0; i++)
-          await new Promise((r) => setImmediate(r))
+        await yieldUntil(() => installerCalls().length > 0)
         expect(installerCalls()).toHaveLength(1)
         await jest.advanceTimersByTimeAsync(REDIST_PROCESS_TIMEOUT_MS)
         await p
@@ -944,6 +974,40 @@ describe('installSteamBridgeSharedRedists', () => {
           expect.stringContaining('timed out'),
           'Steam'
         )
+        expect(jest.getTimerCount()).toBe(0)
+      },
+      LOADED_RUNNER_TEST_TIMEOUT_MS
+    )
+
+    it(
+      'waits for the first installer call by real time when the pre-installer phase is slow',
+      async () => {
+        jest.useFakeTimers({ doNotFake: ['setImmediate', 'nextTick'] })
+        mockedDownload.mockImplementation(
+          () =>
+            new Promise((resolve) =>
+              realSetTimeout(
+                () => resolve(ok([vc2010()])),
+                SLOW_PRE_INSTALLER_MS
+              )
+            )
+        )
+        mockedRun.mockImplementation(
+          ({ commandParts }: { commandParts: string[] }) => {
+            if (commandParts[0] === 'reg')
+              return Promise.resolve({ code: 1, stdout: '', stderr: '' })
+            return new Promise(() => undefined) // installer never settles
+          }
+        )
+
+        const p = installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
+        await yieldUntil(() => installerCalls().length > 0)
+        expect(installerCalls()).toHaveLength(1)
+        await jest.advanceTimersByTimeAsync(REDIST_PROCESS_TIMEOUT_MS)
+        await p
+
+        expect(Object.keys(ledger().timedOut)).toHaveLength(1)
+        expect(ledger().settled).toBeUndefined()
         expect(jest.getTimerCount()).toBe(0)
       },
       LOADED_RUNNER_TEST_TIMEOUT_MS
