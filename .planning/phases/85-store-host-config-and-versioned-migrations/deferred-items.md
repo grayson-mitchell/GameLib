@@ -17,3 +17,5 @@
   flipped. Not touched by 85-18 (that plan only changed the arm count and added the two gate channels in the same file); each later
   family flip (85-13..) will move the same assertion, so the owner of the next flip should rewrite it to read the expected flips
   from one place instead of pinning "all false".
+  **Resolved by the orchestrator after wave 8:** the pin now asserts the post-85-12 state (cache family on, no per-store
+  override). 85-13 onward must move it with each flip.
