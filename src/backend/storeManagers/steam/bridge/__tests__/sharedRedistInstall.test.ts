@@ -214,9 +214,11 @@ afterEach(() => {
     rmSync(mockSupportDir, { recursive: true, force: true })
 })
 
-/** These three tests spin up to 500 setImmediate turns waiting for a call under fake timers; a
- * loaded shared CI runner can stretch that past jest's 5 s default (Test run 44784193642 and
- * 44791256524). A per-test timeout is the fix, never a retry or a skip. */
+/** The 30 s per-test timeout is only the outer bound for the four installer-timeout-shaped tests.
+ * Every wait inside them is bounded by elapsed real time through yieldUntil, because Test run
+ * 44850161668 at 90ca09d02 showed a turn-counted wait running out before the real fs I/O landed
+ * (G-82-2-r2), after Test run 44784193642 and 44791256524 had already shown a loaded shared CI
+ * runner stretching past jest's 5 s default. Neither a retry nor a skip is the fix. */
 const LOADED_RUNNER_TEST_TIMEOUT_MS = 30_000
 
 /** Real-clock captures, evaluated at file load, before any test calls jest.useFakeTimers. Measured on
@@ -1156,8 +1158,8 @@ describe('installSteamBridgeSharedRedists', () => {
           p[0] !== 'reg' ? new Promise(() => undefined) : undefined
         )
         const pr = installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
-        for (let i = 0; i < 500 && installerCalls().length === 0; i++)
-          await new Promise((r) => setImmediate(r))
+        await yieldUntil(() => installerCalls().length > 0)
+        expect(installerCalls()).toHaveLength(1)
         await jest.advanceTimersByTimeAsync(REDIST_PROCESS_TIMEOUT_MS)
         await pr
         expect(get()).toBeNull()
@@ -1276,8 +1278,8 @@ describe('installSteamBridgeSharedRedists', () => {
               : undefined
           )
           const pr = installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
-          for (let i = 0; i < 500 && graphicsCalls().length === 0; i++)
-            await new Promise((r) => setImmediate(r))
+          await yieldUntil(() => graphicsCalls().length > 0)
+          expect(graphicsCalls()).toHaveLength(1)
           await jest.advanceTimersByTimeAsync(15_000)
           await pr
           expect(mutations()).toEqual([])
