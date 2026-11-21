@@ -18,7 +18,7 @@ import Upload from '@mui/icons-material/Upload'
 import Cloud from '@mui/icons-material/Cloud'
 import classNames from 'classnames'
 
-import type { GetLogFileArgs } from 'backend/logger/paths'
+import type { GetLogFileArgs } from 'common/types/ipc/logger'
 import {} from 'common/storeCapabilities'
 
 interface LogBoxProps {

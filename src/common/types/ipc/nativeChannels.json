@@ -54,6 +54,36 @@
         ["a", "b"]
       ]
     },
+    "getLogContent": {
+      "kind": "invoke",
+      "slice": "logger",
+      "args": [
+        {
+          "name": "logFile",
+          "type": "{} | { runner } | { appName, runner, type? }",
+          "strict": true
+        }
+      ],
+      "returns": "string",
+      "valid": [
+        [{}],
+        [{ "runner": "legendary" }],
+        [{ "runner": "comet" }],
+        [{ "appName": "abc", "runner": "gog" }],
+        [{ "appName": "abc", "runner": "steam", "type": "install" }]
+      ],
+      "invalid": [
+        [],
+        [{ "appName": "../x", "runner": "steam" }],
+        [{ "runner": "epic" }],
+        [{ "appName": "a", "runner": "comet" }],
+        [{ "appName": "a", "runner": "gog", "type": "crash" }],
+        [{ "appName": "abc" }],
+        [{ "appName": "", "runner": "gog" }],
+        [{ "extra": 1 }],
+        ["x"]
+      ]
+    },
     "getHeroicVersion": {
       "kind": "invoke",
       "slice": "app-shell",
@@ -61,6 +91,36 @@
       "returns": "string",
       "valid": [[]],
       "invalid": [["extra"], [null], [1, 2]]
+    },
+    "showLogFileInFolder": {
+      "kind": "send",
+      "slice": "logger",
+      "args": [
+        {
+          "name": "logFile",
+          "type": "{} | { runner } | { appName, runner, type? }",
+          "strict": true
+        }
+      ],
+      "returns": "void",
+      "valid": [
+        [{}],
+        [{ "runner": "legendary" }],
+        [{ "runner": "comet" }],
+        [{ "appName": "abc", "runner": "gog" }],
+        [{ "appName": "abc", "runner": "steam", "type": "install" }]
+      ],
+      "invalid": [
+        [],
+        [{ "appName": "../x", "runner": "steam" }],
+        [{ "runner": "epic" }],
+        [{ "appName": "a", "runner": "comet" }],
+        [{ "appName": "a", "runner": "gog", "type": "crash" }],
+        [{ "appName": "abc" }],
+        [{ "appName": "", "runner": "gog" }],
+        [{ "extra": 1 }],
+        ["x"]
+      ]
     },
     "openExternalUrl": {
       "kind": "send",

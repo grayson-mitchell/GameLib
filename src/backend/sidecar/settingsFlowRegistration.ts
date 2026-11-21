@@ -30,8 +30,9 @@
  * WRITE side + generic reads (Phase 31 Plan 01, REQ-31-01/REQ-31-02/REQ-31-05/
  * REQ-31-07). Registers `setSetting` (send/listener) + `writeConfig` (invoke)
  * — the write path every Settings toggle and `ThemeSelector` depend on — plus
- * six confirmed generic reads (`getMaxCpus`, `showUpdateSetting`,
- * `getLogContent`, `getSystemInfo`, `hasExecutable`, `isNative`). See the
+ * generic reads (`getMaxCpus`, `showUpdateSetting`, `getSystemInfo`,
+ * `hasExecutable`, `isNative`; `getLogContent` moved to the Rust native router in
+ * Phase 84 plan 84-05). See the
  * write-path block comment above `registerSettingsFlows()`'s body for the
  * accepted D-02 Tauri↔Electron divergence.
  *
@@ -60,7 +61,6 @@ import type { SendFrontendMessage } from '../host/frontendMessage'
 import type { GameConfigs } from '../game_config'
 import type { GlobalConfigSlice } from '../config'
 import type { AppInfo } from '../process/context'
-import { existsSync, readFileSync } from 'graceful-fs'
 import { cpus } from 'os'
 import { isAbsolute, relative, resolve } from 'path'
 
@@ -72,7 +72,6 @@ import { isWritableEngineOverride } from '../engine/engineConfig'
 // `sendGameStatusUpdate` import from the same module — this named import
 // adds zero new module-graph cost (31-RESEARCH.md "Write-Path Mechanics").
 import { writeConfig } from '../utils'
-import { getLogFilePath } from '../logger/paths'
 import { hasExecutable } from '../utils/os/path'
 import { isFlatpak } from '../constants/environment'
 import type { AppSettings } from 'common/types'
@@ -98,7 +97,7 @@ function isContainedGameConfig(
 }
 
 /**
- * Registers the 12 settings read/write channels (11 invoke + 1 send:
+ * Registers the 11 settings read/write channels (10 invoke + 1 send:
  * `setSetting`). The name "the two settings-read invoke handlers" described
  * this module at Phase 30 plan 06 and was never updated as the write side and
  * the slice-6 diagnostics channels landed. Called once from
@@ -252,16 +251,8 @@ export function registerSettingsFlows(deps: {
   // main.ts:755
   deps.ipc.handle('showUpdateSetting', async () => !isFlatpak)
 
-  // logger/ipc_handler.ts:17-20
-  deps.ipc.handle(
-    'getLogContent',
-    async (_event: unknown, appNameOrRunner: unknown) => {
-      const logPath = getLogFilePath(
-        appNameOrRunner as Parameters<typeof getLogFilePath>[0]
-      )
-      return existsSync(logPath) ? readFileSync(logPath, 'utf-8') : ''
-    }
-  )
+  // `getLogContent` (logger/ipc_handler.ts:17-20) is served by the Rust native router since
+  // Phase 84 plan 84-05 (`nativeChannels.json`); it is no longer registered here.
 
   // utils/ipc_handler.ts:22
   deps.ipc.handle('getSystemInfo', async (_event: unknown, cache?: unknown) =>

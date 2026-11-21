@@ -87,17 +87,23 @@ pub(crate) fn reveal_path_policy_check(raw: &str) -> Result<std::path::PathBuf, 
     Ok(p.to_path_buf())
 }
 
-/// `ShellShowItemInFolder` body: policy check first (Rust is authoritative, D-06), then reveal
-/// via the opener plugin and, on macOS, the Finder reselect follow-up.
-pub(crate) fn shell_show_item_in_folder(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
-    let a = ShellShowItemInFolderArgs::from_args(args)?;
-    reveal_path_policy_check(a.path.as_str())?;
-    let path = a.path.as_str();
+/// Reveal `path` in the OS file manager: the policy check first (Rust is authoritative, D-06),
+/// then the opener plugin and, on macOS, the Finder reselect follow-up. Shared by the
+/// `ShellShowItemInFolder` command and the native `showLogFileInFolder` channel.
+pub(crate) fn reveal_item(app: &AppHandle, path: &str) -> Result<(), String> {
+    reveal_path_policy_check(path)?;
     app.opener()
         .reveal_item_in_dir(path)
         .map_err(|e| e.to_string())?;
     #[cfg(target_os = "macos")]
     macos_finder_reselect_workaround(path);
+    Ok(())
+}
+
+/// `ShellShowItemInFolder` body: [`reveal_item`] on the validated args.
+pub(crate) fn shell_show_item_in_folder(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
+    let a = ShellShowItemInFolderArgs::from_args(args)?;
+    reveal_item(app, a.path.as_str())?;
     Ok(Value::Null)
 }
 

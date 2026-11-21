@@ -768,6 +768,7 @@ pub(crate) fn is_renderer_channel(name: &str) -> bool {
 /// src/common/types/ipc/nativeChannels.json.
 pub(crate) const NATIVE_INVOKE_CHANNELS: &[&str] = &[
     "getHeroicVersion",
+    "getLogContent",
 ];
 
 /// Renderer send channels owned by the Rust native router (Phase 83), sorted.
@@ -775,6 +776,7 @@ pub(crate) const NATIVE_SEND_CHANNELS: &[&str] = &[
     "logError",
     "logInfo",
     "openExternalUrl",
+    "showLogFileInFolder",
 ];
 
 pub(crate) fn is_native_invoke_channel(name: &str) -> bool {

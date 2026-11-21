@@ -3,9 +3,7 @@ import { join } from 'path'
 
 import { isMac, isWindows } from '../constants/environment'
 
-import type { Runner } from 'common/types'
-import type { GameLogType } from 'common/types/sidecarTransport'
-import type { RunnerOrComet } from './types'
+import type { GetLogFileArgs } from 'common/types/ipc/logger'
 
 /**
  * Returns the base directory to store all logs
@@ -23,16 +21,6 @@ function getBaseLogPath(): string {
     process.env.XDG_STATE_HOME ?? join(homedir(), '.local', 'state')
   return join(stateHome, 'GameLib', 'logs')
 }
-
-// Which game log to return is `GameLogType` (common/types/sidecarTransport). By default, the launch
-// log is returned.
-type GetLogFileArgs =
-  // Heroic log
-  | { appName?: undefined; runner?: undefined }
-  // Runner log
-  | { appName?: undefined; runner: RunnerOrComet }
-  // Game log
-  | { appName: string; runner: Runner; type?: GameLogType }
 
 /**
  * Returns the path to the log file of a game / runner / Heroic
@@ -53,4 +41,3 @@ function getLogFilePath(args: GetLogFileArgs): string {
 }
 
 export { getLogFilePath }
-export type { GetLogFileArgs }

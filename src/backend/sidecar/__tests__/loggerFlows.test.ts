@@ -251,11 +251,9 @@ import {
   Frame,
   bootFresh,
   writeInvoke,
-  writeSend,
   handlerRegistry,
   listenerRegistry
 } from './helpers/sidecarHarness'
-import { RUST_SHELL_SHOW_ITEM_IN_FOLDER } from 'common/types/sidecarTransport'
 import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
 import { getLogFilePath } from 'backend/logger/paths'
 
@@ -501,17 +499,14 @@ async function waitForResponse(
 // `src/backend/sidecar/__tests__/loggerCallSiteGuard.test.ts`.
 
 /**
- * REQ-34.3-09 / REQ-34.3-01 Phase 34.3 plan 04 — round-trip coverage for the
- * 5 logger channels this plan registers: `logInfo`, `showLogFileInFolder`,
- * `uploadLogFile`, `deleteUploadedLogFile`, `getUploadedLogFiles`.
+ * REQ-34.3-01 Phase 34.3 plan 04 — round-trip coverage for the logger channels the sidecar still
+ * serves: `uploadLogFile`, `deleteUploadedLogFile`, `getUploadedLogFiles`. (`logError`, `logInfo`,
+ * `showLogFileInFolder` and `getLogContent` are served by the Rust native router since Phase 84
+ * plan 84-05 and are tested in `src-tauri/src/log_dispatch.rs`.)
  *
- * `logInfo` is observed via the SAME mechanism the existing `logError` spy
- * test above uses (`jest.spyOn` on the real `backend/logger` module,
- * asserting the call arguments) — no new observation point is invented.
- * `uploadLogFile`/`deleteUploadedLogFile`/`getUploadedLogFiles` mock only at
- * the HTTP boundary (`global.fetch`) or the store boundary
- * (`uploadedLogFileStore`), never by replacing the uploader functions
- * themselves with a jest double that skips their own logic.
+ * They mock only at the HTTP boundary (`global.fetch`) or the store boundary
+ * (`uploadedLogFileStore`), never by replacing the uploader functions themselves with a jest
+ * double that skips their own logic.
  */
 describe('REQ-34.3-09 / REQ-34.3-01 Phase 34.3 logger channels', () => {
   beforeEach(() => {
@@ -520,34 +515,19 @@ describe('REQ-34.3-09 / REQ-34.3-01 Phase 34.3 logger channels', () => {
     mockRequestRustInvoke.mockReset()
   })
 
-  it('REQ-34.3-01 showLogFileInFolder (send) reveals the real log file at the path getLogFilePath returns', async () => {
-    const logPath = getLogFilePath({})
-
-    const { input } = boot()
-    // Seed AFTER the boot: a fresh boot initialises the logger, whose
-    // archiveOldLogFile() moves an existing gamelib.log aside.
-    mkdirSync(dirname(logPath), { recursive: true })
-    writeFileSync(logPath, 'x')
-    writeSend(input, 'slf-1', 'showLogFileInFolder', [{}])
-    await flush()
-
-    expect(mockRequestRustInvoke).toHaveBeenCalledWith(
-      RUST_SHELL_SHOW_ITEM_IN_FOLDER,
-      [logPath]
-    )
-  })
-
-  it('REQ-34.3-01 send-vs-handle contract: showLogFileInFolder is a listener; uploadLogFile/deleteUploadedLogFile/getUploadedLogFiles are handlers', async () => {
+  it('REQ-34.3-01 send-vs-handle contract: uploadLogFile/deleteUploadedLogFile/getUploadedLogFiles are handlers; the native logger channels are not registered', async () => {
     boot()
     await flush()
 
-    // Phase 84: `logError` and `logInfo` are native sends, so the sidecar registers neither.
-    for (const channel of ['logError', 'logInfo']) {
+    // Phase 84: the renderer log channels are served by the Rust native router, so the sidecar
+    // registers none of them (a second owner would be refused by the contract generator).
+    for (const channel of [
+      'logError',
+      'logInfo',
+      'showLogFileInFolder',
+      'getLogContent'
+    ]) {
       expect(listenerRegistry.get(channel)).toBeUndefined()
-      expect(handlerRegistry.get(channel)).toBeUndefined()
-    }
-    for (const channel of ['showLogFileInFolder']) {
-      expect(listenerRegistry.get(channel)?.length).toBeGreaterThanOrEqual(1)
       expect(handlerRegistry.get(channel)).toBeUndefined()
     }
     for (const channel of [

@@ -21,7 +21,7 @@ use crate::ipc_contract::{IPC_INVALID_ARGS, IPC_INVALID_ARGS_MARKER};
 use crate::log_dispatch;
 use crate::native_handlers;
 use crate::relay_commands::echo_channel;
-use gamelib_core::paths::Platform;
+use gamelib_core::paths::{LogTarget, Platform};
 use gamelib_core::shutdown::Shutdown;
 use gamelib_log::sanitize::RendererMessage;
 use gamelib_log::Level;
@@ -56,7 +56,6 @@ pub(crate) struct LogPaths {
 /// What a native handler can reach. Built once in `run_setup` and shared by every handler.
 pub(crate) struct NativeCtx {
     pub(crate) host: Arc<dyn NativeHost>,
-    #[allow(dead_code)] // read by the log-file handlers added in this phase's next task
     pub(crate) log_paths: Option<LogPaths>,
 }
 
@@ -78,6 +77,8 @@ pub(crate) enum SendPayload {
         level: Level,
         message: RendererMessage,
     },
+    /// `showLogFileInFolder`: a typed log destination, never a path.
+    Reveal(LogTarget),
 }
 
 /// A native send validator: positional args in, the validated payload or a fixed category literal
@@ -91,6 +92,10 @@ pub(crate) trait NativeHost: Send + Sync + 'static {
     /// a dialog), so `native_handlers::open_external_url` calls it on its own short-lived thread
     /// and never on a slice worker (Pitfall 3, D-UAT-19).
     fn open_url(&self, url: String);
+
+    /// Reveal `path` in the OS file manager. Like `open_url` it may block, so the real host runs it
+    /// on a short-lived hand-off thread and never on a slice worker.
+    fn reveal_path(&self, path: String);
 }
 
 /// The real host: the opener plugin through the app handle.
@@ -101,6 +106,23 @@ impl NativeHost for AppNativeHost {
         if self.0.opener().open_url(&url, None::<&str>).is_err() {
             // Fixed line: the URL is renderer-controlled (T-83-19).
             shell_eprintln!("[shell] native openExternalUrl: the OS opener failed");
+        }
+    }
+
+    fn reveal_path(&self, path: String) {
+        let app = self.0.clone();
+        let spawned = thread::Builder::new()
+            .name("native-reveal-path".to_string())
+            .spawn(move || {
+                if crate::shell_open::reveal_item(&app, &path).is_err() {
+                    // Fixed line: the path is derived from renderer input (T-84-17).
+                    shell_eprintln!("[shell] native showLogFileInFolder: the reveal failed");
+                }
+            });
+        if spawned.is_err() {
+            shell_eprintln!(
+                "[shell] native showLogFileInFolder: could not start the reveal thread"
+            );
         }
     }
 }
@@ -201,6 +223,10 @@ fn run_send_job(ctx: &Arc<NativeCtx>, job: NativeSendJob) -> Result<(), String> 
             log_dispatch::log_from_renderer(level, &message);
             Ok(())
         }
+        ("showLogFileInFolder", SendPayload::Reveal(target)) => {
+            log_dispatch::show_log_file(ctx, &target);
+            Ok(())
+        }
         (other, _) => Err(format!(
             "no native send handler for {}",
             echo_channel(other)
@@ -210,7 +236,7 @@ fn run_send_job(ctx: &Arc<NativeCtx>, job: NativeSendJob) -> Result<(), String> 
 
 /// The line a rejected native send leaves behind: the channel name only, never an argument
 /// (D-03, T-34.6-16-02, T-84-17).
-fn rejection_line(channel: &str) -> String {
+pub(crate) fn rejection_line(channel: &str) -> String {
     format!("[shell] native send rejected: {}", echo_channel(channel))
 }
 
@@ -244,6 +270,14 @@ impl NativeRouter {
                 validate: log_dispatch::parse_log_info,
             },
         );
+        send.insert(
+            "showLogFileInFolder",
+            SendRoute {
+                slice: LOGGER_SLICE,
+                validate: log_dispatch::parse_show_log_file,
+            },
+        );
+        invoke.insert("getLogContent", log_dispatch::get_log_content);
         let mut queues: HashMap<&'static str, SliceQueue> = HashMap::new();
         for slice in [APP_SHELL_SLICE, LOGGER_SLICE] {
             let worker_ctx = Arc::clone(&ctx);
@@ -386,6 +420,8 @@ mod tests {
                 .tx
                 .send((url, thread::current().name().map(str::to_string)));
         }
+
+        fn reveal_path(&self, _path: String) {}
     }
 
     /// A router over a recording host and its own `Shutdown` (never the global one).
@@ -752,6 +788,8 @@ mod tests {
                 let _ = self.release.lock().unwrap().recv();
             }
         }
+
+        fn reveal_path(&self, _path: String) {}
     }
 
     #[test]

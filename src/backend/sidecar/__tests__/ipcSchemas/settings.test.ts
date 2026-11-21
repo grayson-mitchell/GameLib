@@ -98,21 +98,6 @@ const asyncTable: FixtureTable<typeof settingsAsyncArgs> = {
       [{ appName: 'abc', runner: 'gog', extra: 1 }]
     ]
   },
-  getLogContent: {
-    valid: [
-      [{}],
-      [{ runner: 'comet' }],
-      [{ appName: 'abc', runner: 'legendary' }],
-      [{ appName: 'abc', runner: 'legendary', type: 'install' }]
-    ],
-    invalid: [
-      [{ runner: 'epic' }],
-      [{ appName: 'abc', runner: 'gog', type: 'bogus' }],
-      [{ appName: '' }],
-      ['abc'],
-      [{ extra: 1 }]
-    ]
-  },
   getSystemInfo: {
     valid: [[], [true], [false]],
     invalid: [['yes'], [true, true]]

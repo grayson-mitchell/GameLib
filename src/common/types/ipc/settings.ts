@@ -2,7 +2,6 @@ import { z } from 'zod'
 
 import type { SystemInformation } from 'backend/utils/systeminfo'
 import type { AppSettings, GameSettings } from '../../types'
-import type { GetLogFileArgs } from 'backend/logger/paths'
 
 import {
   nonEmptyString,
@@ -45,23 +44,6 @@ const setSettingArg = z
     }
   })
 
-// GameLogType, listed so a rename fails the call-site type check in getLogContent's consumers.
-const LOG_TYPES = [
-  'launch',
-  'install',
-  'import',
-  'repair',
-  'update',
-  'setup'
-] as const
-
-// The cast restores the discriminated union the schema cannot express; the handler resolves it.
-const logFileArgs = z.strictObject({
-  appName: nonEmptyString().optional(),
-  runner: z.enum([...runnerArg().options, 'comet']).optional(),
-  type: z.enum(LOG_TYPES).optional()
-}) as unknown as z.ZodType<GetLogFileArgs, GetLogFileArgs>
-
 export const settingsSyncArgs = {
   setSetting: z.tuple([setSettingArg])
 }
@@ -77,9 +59,6 @@ export const settingsAsyncArgs = {
   isNative: z.tuple([
     z.strictObject({ appName: nonEmptyString(), runner: runnerArg() })
   ]),
-  // GetLogFileArgs is a three-way union (Heroic log / runner log / game log); the three arms
-  // collapse to one object with every key optional. The handler resolves which arm it is.
-  getLogContent: z.tuple([logFileArgs]),
   getSystemInfo: z.tuple([optionalArg(z.boolean())]),
   hasExecutable: z.tuple([nonEmptyString()]),
   // D-10: the password is bounded only; its value never reaches a log or a wire error.
@@ -94,7 +73,6 @@ interface SettingsAsyncReturns {
   requestGameSettings: Promise<GameSettings>
   writeConfig: void
   isNative: boolean
-  getLogContent: string
   getSystemInfo: Promise<SystemInformation>
   hasExecutable: Promise<boolean>
   setPrivateBranchPassword: void

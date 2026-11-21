@@ -1,18 +1,28 @@
 import { z } from 'zod'
 
-import type { UploadedLogData } from '../../types'
+import type { Runner, UploadedLogData } from '../../types'
+import type { GameLogType } from '../sidecarTransport'
 import {
   httpUrlArg,
   nonEmptyString,
   runnerArg,
   type InvokeFns,
-  type PushFns,
-  type SendFns
+  type PushFns
 } from './schemaTypes'
 
 const noArgs = z.tuple([])
 
-// Mirrors GetLogFileArgs in backend/logger/paths.ts: Heroic log, runner log, game log.
+// Which log file: the Heroic log, a runner log or a game log. By default (no `type`) a game's
+// launch log. The Rust native router decodes this strictly (`log_dispatch::parse_log_file_args`).
+export type GetLogFileArgs =
+  // Heroic log
+  | { appName?: undefined; runner?: undefined }
+  // Runner log
+  | { appName?: undefined; runner: Runner | 'comet' }
+  // Game log
+  | { appName: string; runner: Runner; type?: GameLogType }
+
+// The zod twin of GetLogFileArgs, still used by uploadLogFile (the one channel left on the sidecar).
 const getLogFileArgs = z.union([
   z.strictObject({
     appName: z.undefined().optional(),
@@ -27,10 +37,6 @@ const getLogFileArgs = z.union([
       .optional()
   })
 ])
-
-export const loggerSyncArgs = {
-  showLogFileInFolder: z.tuple([getLogFileArgs])
-}
 
 export const loggerAsyncArgs = {
   uploadLogFile: z.tuple([z.string().max(1024), getLogFileArgs]),
@@ -56,6 +62,5 @@ export const loggerFrontendMessagesArgs = {
   logFileUploadDeleted: z.tuple([z.string()])
 }
 
-export type LoggerSync = SendFns<typeof loggerSyncArgs>
 export type LoggerAsync = InvokeFns<typeof loggerAsyncArgs, LoggerAsyncReturns>
 export type LoggerFrontendMessages = PushFns<typeof loggerFrontendMessagesArgs>

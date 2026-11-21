@@ -4134,11 +4134,14 @@ describe('REQ-34.3-11 item 2 (debug session finder-reveal-no-selection) macOS Fi
     expect(code.slice(armStart, armEnd)).toContain(
       'shell_open::shell_show_item_in_folder('
     )
-    const fnStart = code.indexOf('pub(crate) fn shell_show_item_in_folder(')
+    // Phase 84 (84-05): the reveal + workaround body is `reveal_item`, shared with the native
+    // `showLogFileInFolder` channel; `shell_show_item_in_folder` validates its args and calls it.
+    const fnStart = code.indexOf('pub(crate) fn reveal_item(')
     expect(fnStart).toBeGreaterThan(-1)
     const fnEnd = code.indexOf('pub(crate) fn shell_open_path(', fnStart)
     expect(fnEnd).toBeGreaterThan(fnStart)
     const armBody = code.slice(fnStart, fnEnd)
+    expect(armBody).toContain('reveal_item(app, a.path.as_str())')
 
     const revealIdx = armBody.indexOf('.reveal_item_in_dir(')
     const callIdx = armBody.indexOf('macos_finder_reselect_workaround(')

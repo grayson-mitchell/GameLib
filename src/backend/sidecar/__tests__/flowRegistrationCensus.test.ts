@@ -106,15 +106,18 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   // ported byte-equivalently from main.ts (D-02); send count unchanged.
   // Phase 74 Plan 11 (2026-11-12): invoke 9 -> 10 -- getSteamUpdateInfo (STEAM-01).
   'installFlowRegistration.ts': { invoke: 10, send: 0 },
-  // Phase 84 Plan 05 / 84-05 (2026-11-21): send 3 -> 1 -- `logError` and `logInfo` are served by the Rust
-  // native router (`nativeChannels.json`, slice `logger`); their registrations are deleted here.
-  'loggerFlowRegistration.ts': { invoke: 3, send: 1 },
+  // Phase 84 Plan 05 / 84-05 (2026-11-21): send 3 -> 0 -- `logError`, `logInfo` and `showLogFileInFolder`
+  // are served by the Rust native router (`nativeChannels.json`, slice `logger`); their registrations
+  // are deleted here.
+  'loggerFlowRegistration.ts': { invoke: 3, send: 0 },
   'oauthLoginFlowRegistration.ts': { invoke: 1, send: 0 },
   'runnerAuthFlowRegistration.ts': { invoke: 10, send: 1 },
   // Phase 34.6 Plan 10 (2026-08-24): invoke 11 -> 14 -- getAchievements/getDefaultSavePath/
   // getPlaytimeFromRunner ported byte-equivalently from main.ts (D-14); send count unchanged.
   'runnerMiscFlowRegistration.ts': { invoke: 14, send: 0 },
-  'settingsFlowRegistration.ts': { invoke: 11, send: 1 },
+  // Phase 84 Plan 05 / 84-05 (2026-11-21): invoke 11 -> 10 -- `getLogContent` is served by the Rust
+  // native router (`nativeChannels.json`, slice `logger`); its registration is deleted here.
+  'settingsFlowRegistration.ts': { invoke: 10, send: 1 },
   // Phase 72 Plan 09 (2026-11-08): send 17 -> 16 -- the renderer `removeFolder` channel deleted (D-09).
   // Quick 261115-tk8 (2026-11-15, 6254354b2): send 16 -> 11 -- the dead Heroic-era link channels
   // `openWeblate`, `openSupportPage`, `openDiscordLink`, `openGithubSponsorsPage` and

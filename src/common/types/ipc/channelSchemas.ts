@@ -18,11 +18,7 @@ import { eosOverlayAsyncArgs } from './eosOverlay'
 import { shortcutsAsyncArgs, shortcutsSyncArgs } from './shortcuts'
 import { runnerMiscAsyncArgs } from './runnerMisc'
 import { engineAsyncArgs, engineFrontendMessagesArgs } from './engine'
-import {
-  loggerAsyncArgs,
-  loggerFrontendMessagesArgs,
-  loggerSyncArgs
-} from './logger'
+import { loggerAsyncArgs, loggerFrontendMessagesArgs } from './logger'
 import {
   humbleAsyncArgs,
   humbleFrontendMessagesArgs,
@@ -93,7 +89,6 @@ const inboundEntries = mergeChannelEntries(
   defineChannelEntries('invoke', shortcutsAsyncArgs),
   defineChannelEntries('invoke', runnerMiscAsyncArgs),
   defineChannelEntries('invoke', engineAsyncArgs),
-  defineChannelEntries('send', loggerSyncArgs),
   defineChannelEntries('invoke', loggerAsyncArgs),
   defineChannelEntries('send', humbleSyncArgs),
   defineChannelEntries('invoke', humbleAsyncArgs),

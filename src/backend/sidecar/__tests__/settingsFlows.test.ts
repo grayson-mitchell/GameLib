@@ -549,19 +549,6 @@ describe('sidecar settings generic reads (Phase 31 Plan 01)', () => {
     expect(typeof response?.result).toBe('boolean')
   })
 
-  it('getLogContent resolves without the unported marker (empty string for a nonexistent log)', async () => {
-    const { input, frames } = boot()
-    writeInvoke(input, 'log-content-1', 'getLogContent', [{}])
-    await flush()
-
-    const response = frames.find((frame) => frame.id === 'log-content-1') as
-      | { ok: boolean; result?: unknown; error?: string }
-      | undefined
-    expect(response?.ok).toBe(true)
-    expect(response?.error).toBeUndefined()
-    expect(typeof response?.result).toBe('string')
-  })
-
   it('getSystemInfo resolves without the unported marker and reaches the real (mocked) getSystemInfo(cache)', async () => {
     const { input, frames } = boot()
     writeInvoke(input, 'system-info-1', 'getSystemInfo', [false])

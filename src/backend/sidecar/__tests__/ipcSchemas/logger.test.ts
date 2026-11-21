@@ -1,7 +1,6 @@
 import {
   loggerAsyncArgs,
-  loggerFrontendMessagesArgs,
-  loggerSyncArgs
+  loggerFrontendMessagesArgs
 } from 'common/types/ipc/logger'
 import { channelSchemas } from 'common/types/ipc/channelSchemas'
 import {
@@ -9,27 +8,6 @@ import {
   runFixtureTable,
   type FixtureTable
 } from 'backend/testUtils/ipcSchemaFixtures'
-
-const syncTable: FixtureTable<typeof loggerSyncArgs> = {
-  showLogFileInFolder: {
-    valid: [
-      [{}],
-      [{ runner: 'legendary' }],
-      [{ runner: 'comet' }],
-      [{ appName: 'abc', runner: 'gog' }],
-      [{ appName: 'abc', runner: 'steam', type: 'install' }]
-    ],
-    invalid: [
-      [],
-      [{ runner: 'epic' }],
-      [{ appName: 'abc' }],
-      [{ appName: '', runner: 'gog' }],
-      [{ appName: 'abc', runner: 'gog', type: 'nope' }],
-      [{ runner: 'gog', extra: 1 }],
-      ['x']
-    ]
-  }
-}
 
 const asyncTable: FixtureTable<typeof loggerAsyncArgs> = {
   uploadLogFile: {
@@ -64,17 +42,14 @@ const pushTable: FixtureTable<typeof loggerFrontendMessagesArgs> = {
 
 describe('logger channel schemas', () => {
   it('has a fixture for every key', () => {
-    expectFixtureCoverage(loggerSyncArgs, syncTable)
     expectFixtureCoverage(loggerAsyncArgs, asyncTable)
     expectFixtureCoverage(loggerFrontendMessagesArgs, pushTable)
   })
-  runFixtureTable(loggerSyncArgs, syncTable)
   runFixtureTable(loggerAsyncArgs, asyncTable)
   runFixtureTable(loggerFrontendMessagesArgs, pushTable)
 
   it('registers every remaining logger channel in channelSchemas', () => {
     for (const k of [
-      ...Object.keys(loggerSyncArgs),
       ...Object.keys(loggerAsyncArgs),
       ...Object.keys(loggerFrontendMessagesArgs)
     ]) {

@@ -6,6 +6,8 @@
  * The keys below must equal the manifest's channels by kind (`ipcDomainCensus` test (e)): invoke
  * channels in `NativeAsync`, send channels in `NativeSync`.
  */
+import type { GetLogFileArgs } from './logger'
+
 /**
  * The renderer's log text: a string, an array of strings, or an Error-like object. A real `Error`
  * JSON-serialises to `{}` (its fields are non-enumerable), which the object arm accepts. The Rust
@@ -19,10 +21,12 @@ type LogMessage =
 
 export interface NativeAsync {
   getHeroicVersion: () => string
+  getLogContent: (args: GetLogFileArgs) => string
 }
 
 export interface NativeSync {
   logError: (message: LogMessage) => void
   logInfo: (message: LogMessage) => void
+  showLogFileInFolder: (args: GetLogFileArgs) => void
   openExternalUrl: (url: string) => void
 }

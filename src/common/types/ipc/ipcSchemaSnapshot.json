@@ -1705,48 +1705,15 @@
     {
       "channel": "getLogContent",
       "kind": "invoke",
-      "owner": "sidecar",
-      "args": {
-        "type": "array",
-        "prefixItems": [
-          {
-            "type": "object",
-            "properties": {
-              "appName": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 4096
-              },
-              "runner": {
-                "type": "string",
-                "enum": [
-                  "legendary",
-                  "gog",
-                  "sideload",
-                  "nile",
-                  "steam",
-                  "comet"
-                ]
-              },
-              "type": {
-                "type": "string",
-                "enum": [
-                  "launch",
-                  "install",
-                  "import",
-                  "repair",
-                  "update",
-                  "setup"
-                ]
-              }
-            },
-            "additionalProperties": false
-          }
-        ],
-        "items": false,
-        "minItems": 1,
-        "maxItems": 1
-      }
+      "owner": "native",
+      "args": [
+        {
+          "name": "logFile",
+          "type": "{} | { runner } | { appName, runner, type? }",
+          "strict": true
+        }
+      ],
+      "returns": "string"
     },
     {
       "channel": "getLoginBackground",
@@ -6978,90 +6945,15 @@
     {
       "channel": "showLogFileInFolder",
       "kind": "send",
-      "owner": "sidecar",
-      "args": {
-        "type": "array",
-        "prefixItems": [
-          {
-            "anyOf": [
-              {
-                "type": "object",
-                "properties": {
-                  "appName": {},
-                  "runner": {}
-                },
-                "additionalProperties": false
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "runner": {
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "enum": [
-                          "legendary",
-                          "gog",
-                          "sideload",
-                          "nile",
-                          "steam"
-                        ]
-                      },
-                      {
-                        "type": "string",
-                        "const": "comet"
-                      }
-                    ]
-                  }
-                },
-                "required": [
-                  "runner"
-                ],
-                "additionalProperties": false
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "appName": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 4096
-                  },
-                  "runner": {
-                    "type": "string",
-                    "enum": [
-                      "legendary",
-                      "gog",
-                      "sideload",
-                      "nile",
-                      "steam"
-                    ]
-                  },
-                  "type": {
-                    "type": "string",
-                    "enum": [
-                      "launch",
-                      "install",
-                      "import",
-                      "repair",
-                      "update",
-                      "setup"
-                    ]
-                  }
-                },
-                "required": [
-                  "appName",
-                  "runner"
-                ],
-                "additionalProperties": false
-              }
-            ]
-          }
-        ],
-        "items": false,
-        "minItems": 1,
-        "maxItems": 1
-      }
+      "owner": "native",
+      "args": [
+        {
+          "name": "logFile",
+          "type": "{} | { runner } | { appName, runner, type? }",
+          "strict": true
+        }
+      ],
+      "returns": "void"
     },
     {
       "channel": "showUpdateSetting",

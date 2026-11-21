@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
 
-import type { GetLogFileArgs } from 'backend/logger/paths'
+import type { GetLogFileArgs } from 'common/types/ipc/logger'
 import type { ConnectivityStatus, GameInfo } from 'common/types'
 import type {
   DialogModalOptions,
