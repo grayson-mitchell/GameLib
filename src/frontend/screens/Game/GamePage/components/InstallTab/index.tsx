@@ -65,6 +65,13 @@ const InstallTab = ({ gameInfo, platform, handleUpdate, hasUpdate }: Props) => {
           gates={gates}
           actions={locationActions}
         />
+        <SizeRow gameInfo={gameInfo} gates={gates} />
+        <VersionRow
+          gameInfo={gameInfo}
+          gates={gates}
+          handleUpdate={handleUpdate}
+          hasUpdate={hasUpdate}
+        />
       </div>
       <div className="legacyRows">
         <div>

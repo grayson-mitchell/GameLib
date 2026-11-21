@@ -3720,6 +3720,7 @@ describe('Phase 100 game page tokens in every theme (D-15, D-22)', () => {
     expect(installCss.length).toBeGreaterThan(0)
     expect(installCss.match(/#[0-9a-fA-F]{3,8}\b/g)).toBeNull()
     expect(installCss.match(/\b(?:rgba?|hsla?)\(/g)).toBeNull()
-    expect(installCss.match(/\b(?:black|white)\b/gi)).toBeNull()
+    // `white-space` (the ellipsis recipe in the fact rows) is a property, not the colour keyword.
+    expect(installCss.match(/\b(?:black|white)\b(?!-space)/gi)).toBeNull()
   })
 })

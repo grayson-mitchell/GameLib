@@ -108,4 +108,17 @@ describe('Install tab source gates', () => {
     expect(location).toBeGreaterThan(facts)
     expect(legacy).toBeGreaterThan(location)
   })
+
+  it('InstallTab renders Size then Version inside installFacts and hands VersionRow the update props', () => {
+    const code = read(TAB_DIR, 'index.tsx')
+    const location = code.indexOf('<LocationRow')
+    const size = code.indexOf('<SizeRow')
+    const version = code.indexOf('<VersionRow')
+    const legacy = code.indexOf('className="legacyRows"')
+    expect(size).toBeGreaterThan(location)
+    expect(version).toBeGreaterThan(size)
+    expect(legacy).toBeGreaterThan(version)
+    expect(code).toContain('handleUpdate={handleUpdate}')
+    expect(code).toContain('hasUpdate={hasUpdate}')
+  })
 })
