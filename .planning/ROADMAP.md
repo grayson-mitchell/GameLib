@@ -465,7 +465,7 @@ Plans:
   4. The legendary store migration is ported only if a supported upgrade path still reaches it (reachability recorded), otherwise it is deleted
   5. The TS write-through mirror's deletion point is named and executed for every family flipped in this phase, and `storeVersioning`, `storeMigrations` and `migration/*` TypeScript are deleted
 
-**Plans:** 3/25 plans executed in 20 waves; planned 2026-11-21
+**Plans:** 4/25 plans executed in 20 waves; planned 2026-11-21
 
 Plans:
 **Wave 1**
@@ -475,7 +475,7 @@ Plans:
 - [ ] 85-05-PLAN.md — D-16 checkpoint: the signed v0.10 baseline and its recorded signing identity
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 85-02-PLAN.md — Redacted real-file corpus (operator profile, its `*.bak.json`, v0.8/v0.9/v0.10 in fake HOMEs, edge cases) pinned by MANIFEST.json (D-09)
+- [x] 85-02-PLAN.md — Redacted real-file corpus (operator profile, its `*.bak.json`, v0.8/v0.9/v0.10 in fake HOMEs, edge cases) pinned by MANIFEST.json (D-09)
 - [ ] 85-06-PLAN.md — `gamelib-store` (+cli) crate: ordered JSON with JS number text and key order, dot-prop paths, atomic write; CI wiring
 
 **Wave 3** *(blocked on Wave 2 completion)*

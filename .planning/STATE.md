@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 85
 current_phase_name: Store host, config and versioned migrations
 status: executing
-stopped_at: Completed 85-04-PLAN.md
-last_updated: "2026-11-21T16:59:07.832Z"
+stopped_at: Completed 85-02-PLAN.md
+last_updated: "2026-11-21T17:24:54.783Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 85 execution started
-state_head: b12eb190774ba4f7ab83a0bb1eee882be8ae7441
+state_head: 1918c94af43953192a5b1b1f3c44b488ffb546dc
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 85 (Store host, config and versioned migrations) — EXECUTING
-Plan: 4 of 25
+Plan: 5 of 25
 Status: Ready to execute
 Last activity: 2026-11-22 — Phase 85 execution started
 Progress: [██████████] 100%
@@ -363,6 +363,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 85 P01 | 35 min | 3 tasks | 137 files |
 | Phase 85 P03 | 35 min | 3 tasks | 4 files |
 | Phase 85 P04 | 9 min | 2 tasks | 10 files |
+| Phase 85 P02 | 25 min | 3 tasks | 166 files |
 
 ## Accumulated Context
 
@@ -677,6 +678,10 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 85]: [85-04] A failed persist sends the originating sidecar a nack{originSeq}; without it the op is stranded in pending and the mirror shows a value Rust never stored
 - [Phase 85]: [85-04] Boot sweep caps: BOOT_SWEEP_MAX_FILES 10000, BOOT_SWEEP_MAX_MS 2000 (measured 106 files in a 6.77 ms median); queue warning STORE_QUEUE_HIGH_WATER 256 frames (worst burst high-water 44), counted log line only, queue stays unbounded
 - [Phase 85]: [85-04] D-21 confirmed by measurement: sync_all about 4 ms per write at 1 KB and 600 KB; sync_all for user-state, settings and account stores, none for caches
+- [Phase 85]: Tag files copied as raw bytes (no re-serialisation); the corpus byte-flavour check covers only operator and backup sources
+- [Phase 85]: Corpus expect derived from stored version vs chain current version; unstamped baseline-1 files are roundtrip
+- [Phase 85]: Humble gamekey prefixes in key names redacted to GKREDACTED placeholders; OS account name replaced in values and keys
+- [Phase 85]: Corpus tree is -text in .gitattributes so the CRLF edge fixture keeps its bytes under eol=lf
 
 ### Pending Todos
 
@@ -937,8 +942,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-21T16:59:07.514Z
-Stopped at: Completed 85-04-PLAN.md
+Last session: 2026-11-21T17:24:54.410Z
+Stopped at: Completed 85-02-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
