@@ -56,11 +56,8 @@ pub struct SystemTz;
 
 impl TzOffset for SystemTz {
     fn offset_minutes(&self, epoch_ms: u64) -> i32 {
-        use chrono::{Local, Offset, TimeZone};
-        Local
-            .timestamp_millis_opt(epoch_ms as i64)
-            .single()
-            .map(|d| d.offset().fix().local_minus_utc() / 60)
+        jiff::Timestamp::from_millisecond(epoch_ms as i64)
+            .map(|ts| jiff::tz::TimeZone::system().to_offset(ts).seconds() / 60)
             .unwrap_or(0)
     }
 }
