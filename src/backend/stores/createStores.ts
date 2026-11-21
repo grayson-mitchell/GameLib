@@ -9,7 +9,6 @@ import { createCrossoverIndexStores } from 'backend/crossover_index/stores'
 import { createDownloadManagerStores } from 'backend/downloadmanager/stores'
 import { createGameOverridesStores } from 'backend/game_overrides/stores'
 import { createHumbleStores } from 'backend/humble/stores'
-import { createLoggerStores } from 'backend/logger/stores'
 import { createMacArchStores } from 'backend/macArch/stores'
 import { createStoreSearchStores } from 'backend/storeSearch/stores'
 import { createMigrationStores } from 'backend/migration/stores'
@@ -34,7 +33,6 @@ export function createStores(deps: StoreFamilyDeps): Stores {
     downloadManager: createDownloadManagerStores(deps),
     gameOverrides: createGameOverridesStores(deps),
     humble: createHumbleStores(deps),
-    logger: createLoggerStores(deps),
     macArch: createMacArchStores(deps),
     migration: createMigrationStores(deps),
     runsForMe: createRunsForMeStores(deps),

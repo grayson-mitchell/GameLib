@@ -82,7 +82,7 @@ interface FileStoreOptions {
   // call-site compatibility and otherwise ignored.
   defaults?: Record<string, unknown>
   // CR-04: `false` makes every key a FLAT key (no dot-notation traversal),
-  // which is what `uploadedLogs` needs because its keys are dpaste URLs.
+  // which a store keyed by URLs needs (the keys contain dots).
   accessPropertiesByDotNotation?: boolean
   /** The boot's root: its `userData` and its shared-cell table (D-14). */
   root?: StoreRoot
@@ -242,14 +242,13 @@ export default class FileStore {
   /**
    * CR-04: electron-store's `accessPropertiesByDotNotation` option, which this class
    * previously accepted into its index signature and then never acted on.
-   * `uploadedLogFileStore` (src/backend/logger/stores.ts) sets it to `false`
-   * ON PURPOSE because its KEYS ARE dpaste URLs (`uploadedLogFileStore.set(url, …)`,
-   * uploader.ts) — split on `.`, `https://dpaste.com/AB12` was written as
+   * A store whose KEYS ARE URLs sets it to `false` ON PURPOSE (the uploaded-log record was one,
+   * until Phase 84 moved it to Rust) — split on `.`, `https://dpaste.com/AB12` was written as
    * `{"https://dpaste": {"com/AB12": {…}}}`. That broke the file's own headline
    * guarantee (a sidecar-written value and an Electron-build-written value read back
-   * identically) and made `getUploadedLogFiles()` compute `NaN` expiry from a missing
-   * `uploadedAt`, so every malformed entry was returned to the renderer as "valid" and
-   * never expired. Defaults to `true`, matching electron-store.
+   * identically) and made an expiry computed from the entry's timestamp read `NaN`, so every
+   * malformed entry was treated as valid and never expired. Defaults to `true`, matching
+   * electron-store.
    */
   private readonly dotNotation: boolean
 

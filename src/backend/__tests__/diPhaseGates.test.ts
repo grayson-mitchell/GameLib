@@ -159,8 +159,10 @@ describe('66.1 end state: removed collaborators', () => {
 })
 
 describe('66.1 end state: stores modules', () => {
-  it('finds the 17 stores modules', () => {
-    expect(STORES_MODULES).toHaveLength(17)
+  // 17 -> 16 at Phase 84 plan 84-06 (2026-11-21): logger/stores.ts was deleted (its one store,
+  // `uploadedLogs`, is owned by Rust now); the walk found one fewer module, not a parse miss.
+  it('finds the 16 stores modules', () => {
+    expect(STORES_MODULES).toHaveLength(16)
     for (const m of STORES_MODULES) {
       expect(existsSync(join(BACKEND, m))).toBe(true)
     }

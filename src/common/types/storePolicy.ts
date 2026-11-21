@@ -152,7 +152,6 @@ export const STORE_ALLOWLIST: Record<string, readonly string[] | '*'> = {
   gogSyncStore: '*',
   gogPrivateBranches: '*',
   wikigameinfo: '*',
-  uploadedLogs: '*',
   migrationsStore: ['appliedMigrations'],
   gameOverridesStore: ['overrides']
 }
@@ -411,7 +410,6 @@ export const LAZY_STORES: readonly string[] = [
   'gogSyncStore',
   'gogPrivateBranches',
   'wikigameinfo',
-  'uploadedLogs',
   'migrationsStore'
 ]
 

@@ -81,7 +81,6 @@ const EXPECTED_KINDS: Record<string, Kind> = {
   wineDownloaderInfoStore: 'cache',
   macArchStore: 'user-state',
   runsForMeStore: 'user-state',
-  uploadedLogs: 'cache',
   // CacheStore (33)
   steam_library: 'user-state',
   gog_library: 'user-state',

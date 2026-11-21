@@ -1,3 +1,5 @@
+import { readFileSync } from 'fs'
+import { join } from 'path'
 import { z } from 'zod'
 import {
   IPC_INVALID_ARGS,
@@ -582,14 +584,21 @@ describe('IPC schema snapshot (83-05, D-06)', () => {
     ).toThrow(/scanned 10 renderer channels, below the floor/)
   })
   it('the real tree clears the floor', () => {
+    // The real native manifest, not a one-channel stand-in: the floor counts renderer channels
+    // across both owners, so a channel moving from the sidecar to the Rust router (Phase 84 moved
+    // seven) leaves the count where it was instead of eroding it.
+    const realNative = parseNativeManifest(
+      JSON.parse(
+        readFileSync(
+          join(__dirname, '../../src/common/types/ipc/nativeChannels.json'),
+          'utf8'
+        )
+      ) as unknown
+    )
     const doc = JSON.parse(
       renderIpcSchemaSnapshot({
         entries: channelSchemas,
-        native: parseNativeManifest({
-          channels: {
-            getHeroicVersion: { ...spec, slice: 'app-shell' }
-          }
-        }),
+        native: realNative,
         floor: SNAPSHOT_CHANNELS_FLOOR,
         collidingPush: Object.keys(collidingPushSchemas)
       })

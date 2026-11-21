@@ -19,7 +19,6 @@ import { createItadSecrets } from '../storeSearch/itadSecrets'
 import { createDownloadManagerStores } from '../downloadmanager/stores'
 import { createGameOverridesStores } from '../game_overrides/stores'
 import { createHumbleStores } from '../humble/stores'
-import { createLoggerStores } from '../logger/stores'
 import { createMacArchStores } from '../macArch/stores'
 import { createMigrationStores } from '../migration/stores'
 import { createRunsForMeStores } from '../runsForMe/stores'
@@ -153,7 +152,6 @@ const STORE_KEYS = [
   'downloadManager',
   'gameOverrides',
   'humble',
-  'logger',
   'macArch',
   'migration',
   'runsForMe',
@@ -187,7 +185,6 @@ function familyBuilders(): FamilyBuilders {
     downloadManager: (deps) => createDownloadManagerStores(deps),
     gameOverrides: (deps) => createGameOverridesStores(deps),
     humble: (deps) => createHumbleStores(deps),
-    logger: (deps) => createLoggerStores(deps),
     macArch: (deps) => createMacArchStores(deps),
     migration: (deps) => createMigrationStores(deps),
     runsForMe: (deps) => createRunsForMeStores(deps),

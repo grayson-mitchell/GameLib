@@ -100,10 +100,6 @@ export function urlArg() {
     .refine((u) => URL.canParse(u), 'not a URL')
 }
 
-export function httpUrlArg() {
-  return z.url({ protocol: /^https?$/ }).max(8192)
-}
-
 export type ArgsMap = Record<string, z.ZodTuple>
 
 export type SendFns<A extends ArgsMap> = {

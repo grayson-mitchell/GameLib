@@ -93,7 +93,6 @@ export interface Stores {
     typeof import('backend/game_overrides/stores').createGameOverridesStores
   >
   humble: ReturnType<typeof import('backend/humble/stores').createHumbleStores>
-  logger: ReturnType<typeof import('backend/logger/stores').createLoggerStores>
   macArch: ReturnType<
     typeof import('backend/macArch/stores').createMacArchStores
   >

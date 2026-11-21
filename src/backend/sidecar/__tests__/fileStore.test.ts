@@ -245,16 +245,15 @@ describe('sidecar fileStore', () => {
   })
 
   it('CR-04: accessPropertiesByDotNotation:false keeps a URL key FLAT on disk', () => {
-    // Mirrors src/backend/logger/stores.ts's uploadedLogFileStore exactly —
-    // its keys are dpaste URLs (uploader.ts: `uploadedLogFileStore.set(url, data)`),
-    // which contain dots. Split on '.', the entry landed as
-    // {"https://dpaste": {"com/AB12": {…}}}, so getUploadedLogFiles() read
-    // `value.uploadedAt` as undefined -> NaN expiry -> the entry never expired.
+    // Mirrors the shape of the uploaded-log record (a Rust-owned store since Phase 84) — its
+    // keys are dpaste URLs, which contain dots. Split on '.', the entry landed as
+    // {"https://dpaste": {"com/AB12": {…}}}, so an expiry read of `value.uploadedAt` was
+    // undefined -> NaN -> the entry never expired.
     const cwd = 'dot_notation_off_test'
     const store = new FileStore({
       root,
       cwd,
-      name: 'uploadedLogs',
+      name: 'flat_url_keys',
       accessPropertiesByDotNotation: false
     })
 
@@ -272,13 +271,13 @@ describe('sidecar fileStore', () => {
     // The on-disk shape must be flat — interchangeable with the file the Electron
     // build's electron-store writes for this same store.
     const raw = JSON.parse(
-      readFileSync(join(testUserDataDir(), cwd, 'uploadedLogs.json'), 'utf-8')
+      readFileSync(join(testUserDataDir(), cwd, 'flat_url_keys.json'), 'utf-8')
     )
     expect(Object.keys(raw)).toEqual([url])
     expect(raw[url]).toEqual(uploadData)
 
-    // getUploadedLogFiles() iterates raw_store top-level entries — each value must
-    // carry a real `uploadedAt`, not `undefined`.
+    // An expiry pass iterates the top-level entries — each value must carry a real
+    // `uploadedAt`, not `undefined`.
     for (const [, value] of Object.entries(store.store)) {
       expect((value as { uploadedAt?: number }).uploadedAt).toBe(1_700_000)
     }

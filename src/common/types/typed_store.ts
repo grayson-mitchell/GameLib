@@ -12,8 +12,7 @@ import {
   DMQueueElement,
   AppSettings,
   WikiInfo,
-  WindowProps,
-  UploadedLogData
+  WindowProps
 } from 'common/types'
 import { UserData, GogInstalledInfo, GOGLoginData } from 'common/types/gog'
 import type { SideloadGameInfo } from 'common/types/sideload'
@@ -157,7 +156,6 @@ export interface StoreStructure {
   wikigameinfo: {
     [title: string]: WikiInfo
   }
-  uploadedLogs: Record<string, UploadedLogData>
   migrationsStore: {
     appliedMigrations: string[]
   }

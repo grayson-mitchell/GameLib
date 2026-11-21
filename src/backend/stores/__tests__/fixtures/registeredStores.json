@@ -621,18 +621,6 @@
     }
   },
   {
-    "registeredAs": "uploadedLogs",
-    "options": {
-      "cwd": "store",
-      "name": "uploadedLogs",
-      "accessPropertiesByDotNotation": false,
-      "schemaKeys": null
-    },
-    "declaration": {
-      "kind": "cache"
-    }
-  },
-  {
     "registeredAs": "wineDownloaderInfoStore",
     "options": {
       "cwd": "store",

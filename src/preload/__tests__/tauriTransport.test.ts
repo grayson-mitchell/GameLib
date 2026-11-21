@@ -195,10 +195,11 @@ describe('lazy hydrate', () => {
   it('a synchronous read of an un-hydrated store returns the caller default, warns exactly once with the STORE_LAZY_MISS_MARKER, and does not throw', () => {
     mockedInvoke.mockResolvedValue({})
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    // `migrationsStore` is an allow-listed lazy store, so the read uses its one allowed key.
 
     let result: unknown
     expect(() => {
-      result = snapshotGet('uploadedLogs', 'lazyMissA', 'FALLBACK')
+      result = snapshotGet('migrationsStore', 'appliedMigrations', 'FALLBACK')
     }).not.toThrow()
 
     expect(result).toBe('FALLBACK')
@@ -212,7 +213,7 @@ describe('lazy hydrate', () => {
     jest.spyOn(console, 'warn').mockImplementation(() => {})
 
     // A different, still-un-hydrated store from the test above -- the previous test's
-    // fetch of `uploadedLogs` resolves asynchronously and marks it hydrated, which would
+    // fetch of `migrationsStore` resolves asynchronously and marks it hydrated, which would
     // make a second miss on that same store name silently skip the fetch (correctly, per
     // D-03/D-04) and falsify this assertion.
     snapshotGet('gogSyncStore', 'lazyMissB', 'FALLBACK')

@@ -218,10 +218,6 @@ describe('round-trip', () => {
     // resolve it — it round-trips through the same mechanism as the D-13
     // cache stores instead, immediately below.
     //
-    // uploadedLogs is NOT excluded — plan 29-02 extracted it into its own
-    // thin stores.ts module for exactly this reason: it must
-    // round-trip like every other store.
-    'uploadedLogs',
     'migrationsStore',
     'gameOverridesStore',
     'runsForMeStore'
@@ -478,7 +474,6 @@ describe('boot set', () => {
   it('excludes the unbounded lazy-tier stores from the eager snapshot', async () => {
     const snapshot = await invokeStoreSnapshot()
     expect(snapshot).not.toHaveProperty('wikigameinfo')
-    expect(snapshot).not.toHaveProperty('uploadedLogs')
     expect(snapshot).not.toHaveProperty('timestampStore')
     expect(snapshot).not.toHaveProperty('downloadManager')
   })

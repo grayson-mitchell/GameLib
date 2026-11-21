@@ -80,7 +80,6 @@ describe('stores modules construct nothing at import (66.1-25, MH-1)', () => {
     'downloadmanager/stores.ts',
     'game_overrides/stores.ts',
     'humble/stores.ts',
-    'logger/stores.ts',
     'macArch/stores.ts',
     'migration/stores.ts',
     'runsForMe/stores.ts',
