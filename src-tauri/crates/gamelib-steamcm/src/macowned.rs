@@ -319,10 +319,27 @@ mod tests {
     use std::os::unix::fs::PermissionsExt;
     use std::sync::Arc;
 
+    /// Write an executable stub helper without ever holding a write fd on it in this process.
+    ///
+    /// Tests run on parallel threads, and several of them spawn children. If this process held
+    /// the stub open for writing while another thread forked, the forked child would inherit that
+    /// fd until its own exec, and on Linux exec'ing the stub in that window fails with ETXTBSY
+    /// ("Text file busy"). `run_helper` maps a spawn error to `HelperFailed`, so the
+    /// exit-code test intermittently read `HelperFailed` instead of `AccountMismatch` on ubuntu
+    /// (CI run 44872994911). The body goes to a side file that is never exec'd, and a `cp` child
+    /// creates the stub: its write fd lives only in that child, which exits before we exec.
     #[cfg(unix)]
     fn stub(dir: &Path, body: &str) -> std::path::PathBuf {
+        let src = dir.join("steam-bridge-helper.body");
         let p = dir.join("steam-bridge-helper");
-        std::fs::write(&p, format!("#!/bin/sh\n{body}\n")).unwrap();
+        std::fs::write(&src, format!("#!/bin/sh\n{body}\n")).unwrap();
+        let st = std::process::Command::new("cp")
+            .arg(&src)
+            .arg(&p)
+            .status()
+            .unwrap();
+        assert!(st.success(), "cp of the stub helper failed: {st}");
+        // chmod(2) by path: no fd is opened on the stub.
         std::fs::set_permissions(&p, std::fs::Permissions::from_mode(0o755)).unwrap();
         p
     }
