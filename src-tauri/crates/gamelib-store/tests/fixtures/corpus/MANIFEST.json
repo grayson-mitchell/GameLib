@@ -1,0 +1,32 @@
+{
+  "floor": 3,
+  "counts": {
+    "operator": 3
+  },
+  "files": [
+    {
+      "path": "operator/GamesConfig/1284190.json",
+      "sha256": "2d45ca4b215cb4fdc6d18f6b7d5a070b33079aa085bcd9c861066b5942610fcf",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "roundtrip",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/steam_store/config.json",
+      "sha256": "a791f0d844d91bbf172cb81da535cd7987fa4235afb70db41819218fbfc4e642",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "steam_store/config"
+    },
+    {
+      "path": "operator/store/timestamp.json",
+      "sha256": "75c7ee097ad3358c610dc977fde081f7e98995fb5a544bbfbd6d275366b76b8a",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store/timestamp"
+    }
+  ]
+}

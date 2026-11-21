@@ -1,0 +1,22 @@
+{
+	"bottleName": "GameLibSteam",
+	"wineCrossoverBottle": "GameLibSteam",
+	"wineVersion": {
+		"bin": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine",
+		"name": "CrossOver - 26.3",
+		"type": "crossover",
+		"wineserver": "/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineserver"
+	},
+	"provisioned": true,
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 1
+		}
+	},
+	"cmLogonId": 0,
+	"isLoggedIn": true,
+	"userData": {
+		"username": "REDACTED",
+		"steamId": "REDACTED"
+	}
+}
