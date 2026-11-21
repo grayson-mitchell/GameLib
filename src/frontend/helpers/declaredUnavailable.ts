@@ -143,10 +143,11 @@ const WINETRICKS_CHANNELS = [
  * workaround around the gate's intent.
  *
  * [Quick task 260919-tms] `EOS_FEATURE` extends the same reasoning to the EOS overlay cluster.
- * `GameSubMenu/index.tsx` (unlike `AdvancedSettings/index.tsx`, which keeps its own local
+ * `Settings/components/EosOverlaySetting.tsx` (which took over the old ⋮ menu's EOS handler
+ * in Phase 100; unlike `AdvancedSettings/index.tsx`, which keeps its own local
  * `EOS_FEATURE`/`EOS_DEFERRAL` duplicate and is intentionally left untouched) IS listed in
  * `meta/i18nGateScope.json`, so a local `const EOS_FEATURE = 'EOS Overlay'` there would be
- * flagged the same way. Centralizing it here keeps GameSubMenu's five wrapped EOS call sites
+ * flagged the same way. Centralizing it here keeps its wrapped EOS call sites
  * out of gate scope for the identical, measured reason.
  */
 export const STEAMGRIDDB_FEATURE = 'SteamGridDB artwork'

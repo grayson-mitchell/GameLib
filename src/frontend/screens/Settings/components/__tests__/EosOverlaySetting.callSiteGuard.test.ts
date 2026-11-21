@@ -1,10 +1,10 @@
 /**
  * Source-text structural gate over EosOverlaySetting's EOS call sites (Phase 100 D-02).
  *
- * Copied from GameSubMenuEosDeclineCallSiteGuard.test.ts when the EOS handler moved into
- * the game settings dialog; the handler is a verbatim copy, so the same five call sites and
- * six spinner releases hold. The GameSubMenu guard stays until plan 09 deletes the menu.
- * Original header (GameSubMenu, quick task 260919-tms):
+ * Copied from the old ⋮ menu's EOS decline guard when the EOS handler moved into the game
+ * settings dialog; the handler is a verbatim copy, so the same five call sites and six
+ * spinner releases hold. Phase 100 plan 09 deleted the menu and its guard; this file is now
+ * the only one. Original header (the ⋮ menu, `GameSubMenu`, quick task 260919-tms):
  *
  * Sibling to `AdvancedSettings/__tests__/EosDeclineCallSiteGuard.test.ts`, deliberately
  * separately named and separately scoped -- NOT a second edit to that file's
@@ -38,7 +38,7 @@
  * header for why (7 vacuous instances shipped in this project before that rule was adopted).
  * Negative assertions appear ONLY inside the self-test block, against synthetic strings.
  *
- * `GameSubMenu/index.tsx` cannot be imported under this project's `node`-environment Frontend
+ * The menu's component (and `EosOverlaySetting.tsx`) cannot be imported under this project's `node`-environment Frontend
  * jest project (no jsdom, no react-test-renderer -- see `src/frontend/jest.config.js`'s
  * header). Same documented constraint and same approach as the two sibling guards: read the
  * real source, collapse whitespace to a single space, assert the shape.

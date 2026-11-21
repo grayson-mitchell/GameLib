@@ -2272,8 +2272,8 @@ const ACCENT_FILL_CONTROLS: {
  * to a theme (`body.<theme> ...`) but does NOT carry `:not(.is-link)`.
  * An empty array means the override cannot reach an `.is-link` consumer
  * (Planner finding 1, 261011-pjv): without it, a bare override would
- * outrank `.gameConfigContainer .game-actions .gameTools .link` and repaint
- * the 22 `.is-text.is-link` game-menu render sites.
+ * outrank the `.is-link` button chain and repaint the `.is-text.is-link`
+ * render sites (the game page's ⋮ menu, which was the largest, is gone).
  */
 const themeOverridesReachingIsLink = (isTextBody: string): string[] =>
   nestedRules(isTextBody)
@@ -2638,13 +2638,6 @@ function pickWinningCandidate(candidates: ColourCandidate[]): ColourCandidate {
 }
 
 /**
- * The 5 candidate `color` declarations F2 lists for the game-menu family,
- * each read from its authored stylesheet on every run -- never a hardcoded
- * copy of the resolved value. `button`'s colour is declared inside the
- * `buttonDefaultStyle` mixin body, not inside the `button { }` rule itself
- * (which only `@include`s it), so it is read from the mixin block directly.
- */
-/**
  * The 4 `.button*`-family colour candidates shared by every render site
  * carrying `button is-text is-link` classes, read from `_buttons.scss` on
  * every run. `button`'s colour lives inside the `@mixin buttonDefaultStyle`
@@ -2675,63 +2668,10 @@ function buttonFamilyColourCandidates(buttonsScss: string): ColourCandidate[] {
 }
 
 /**
- * The 5 candidate `color` declarations F2 lists for the game-menu family:
- * the 4 shared `.button*` candidates plus
- * `.gameConfigContainer .game-actions .gameTools .link`, read from
- * `GamePage/index.css` on every run.
- */
-function gameMenuColourCandidates(
-  buttonsScss: string,
-  gamePageCss: string
-): ColourCandidate[] {
-  const gameMenuBlock = cssBlock(gamePageCss, '.gameTools .link')
-  const gameMenuDecls = declsAtDepthZero(gameMenuBlock, 'color')
-  if (gameMenuDecls.length !== 1) {
-    throw new Error(
-      `expected exactly one depth-0 color in .gameTools .link, found ${gameMenuDecls.length}`
-    )
-  }
-  return [
-    ...buttonFamilyColourCandidates(buttonsScss),
-    {
-      fullSelector: '.gameConfigContainer .game-actions .gameTools .link',
-      value: at(gameMenuDecls, 0),
-      file: 'gamePage',
-      position: gamePageCss.indexOf('.gameTools .link {')
-    }
-  ]
-}
-
-/**
- * The resolved game-menu base-state foreground for `themeClass`, modelling
- * IACVT (F3): `.gameTools .link`'s `color: var(--navbar-inactive)` carries
- * NO fallback, so in the 8 themes that do not declare `--navbar-inactive`
- * the declaration is invalid at computed-value time and becomes `unset`.
- * Because `color` is an inherited property, the element inherits its
- * parent's computed colour instead -- it does NOT fall back to the
- * next-losing cascade candidate (`.button.is-link`'s `var(--text-default)`).
- * This function therefore never reads `.button.is-link`'s declaration at
- * all; it only ever reads `--navbar-inactive` from `scope` or
- * `--text-default` from the inherited chain (`_colors.scss:69`).
- */
-function gameMenuBaseForeground(
-  scope: Map<string, string>,
-  globals: Map<string, string>
-): string {
-  if (scope.has('--navbar-inactive')) {
-    const declared = resolveValue('var(--navbar-inactive)', scope, globals)
-    if (declared === null)
-      throw new Error('--navbar-inactive declared but unresolvable')
-    return declared
-  }
-  const inherited = resolveValue('var(--text-default)', scope, globals)
-  if (inherited === null) throw new Error('--text-default unresolvable')
-  return inherited
-}
-
-/**
- * Per-theme WCAG 1.4.3 census for the game-menu `.is-link` family's own
- * text/background pair, base and hover (todo 2026-10-11, item 1/2).
+ * Render-site census and per-theme WCAG 1.4.3 contrast for the `.is-link` and
+ * pure `.is-text` button families that survive the game page's ⋮ menu
+ * (261015-7tt, trimmed by Phase 100 plan 09, which deleted the menu's own
+ * `.game-actions .gameTools` surface and the specs that measured it).
  *
  * Lives here for the same reason the other censuses in this file do: the
  * cross-theme resolver (`themeTokens`, `globalTokens`, `resolveValue`,
@@ -2740,60 +2680,14 @@ function gameMenuBaseForeground(
  * Reads the authored declarations FROM the stylesheets on every run, never
  * a hardcoded copy of them. Like every census in this file it cannot see a
  * pixel: no CSS engine runs under the node test environment, so a live
- * capture still adjudicates appearance -- none has been performed for this
- * plan (261015-7tt).
+ * capture still adjudicates appearance.
  */
-describe('Game-menu .is-link family: render-site census, winning-rule resolution and contrast in every theme (261015-7tt)', () => {
+describe('Button .is-link / .is-text families: render-site census and contrast in every theme (261015-7tt, Phase 100 plan 09)', () => {
   const themesScss = read(THEMES_SCSS)
   const buttonsScss = read(BUTTONS_SCSS)
   const gamePageCss = read(GAME_PAGE_CSS)
   const globals = globalTokens()
   const themeClasses = themeSelectors.map((s) => s.replace(/^body\./, ''))
-
-  const candidates = gameMenuColourCandidates(buttonsScss, gamePageCss)
-  const winner = pickWinningCandidate(candidates)
-
-  const gameToolsLinkBlock = cssBlock(gamePageCss, '.gameTools .link')
-  const gameToolsBlock = cssBlock(gamePageCss, '.gameTools')
-  const gameToolsSurfaceDecls = declsAtDepthZero(
-    gameToolsBlock,
-    'background-color'
-  )
-  const hoverRule = nestedRules(gameToolsLinkBlock).find(
-    (rule) => rule.selector === '&:hover'
-  )
-  if (!hoverRule) throw new Error('.gameTools .link has no &:hover rule')
-  const hoverColourDecls = declsAtDepthZero(hoverRule.body, 'color')
-  const hoverThemeOverrides = nestedRules(hoverRule.body)
-
-  /**
-   * The hover-state foreground for `themeClass`: a theme-scoped override
-   * nested inside `&:hover` (`body.<themeClass> & { color: ... }`) if one
-   * exists for this theme, else the base `&:hover` declaration read from
-   * `hoverColourDecls`. Mirrors `applyTextColourDecl`'s theme-override-vs-
-   * base idiom (line ~948) rather than duplicating its logic.
-   */
-  function gameMenuHoverForeground(
-    themeClass: string,
-    scope: Map<string, string>
-  ): string {
-    const override = hoverThemeOverrides.find(
-      (rule) => rule.selector === `body.${themeClass} &`
-    )
-    const decls = override
-      ? declsAtDepthZero(override.body, 'color')
-      : hoverColourDecls
-    if (decls.length !== 1) {
-      throw new Error(
-        `expected exactly one depth-0 hover color for ${themeClass}, found ${decls.length}`
-      )
-    }
-    const resolved = resolveValue(at(decls, 0), scope, globals)
-    if (resolved === null) {
-      throw new Error(`hover color for ${themeClass} did not resolve`)
-    }
-    return resolved
-  }
 
   // Census moves, each a deliberate change: the pin was 39 (27 is-link) until Phase 100 plan 09 deleted
   // the game page's ⋮ menu (GameSubMenu), which carried 26 of the is-link sites; 39 - 26 = 13. Earlier moves
@@ -2849,160 +2743,9 @@ describe('Game-menu .is-link family: render-site census, winning-rule resolution
     )
   })
 
-  it('non-vacuity: global tokens, all 5 candidates, the game-menu surface and the hover declaration all resolved', () => {
+  it('non-vacuity: global tokens and every theme class resolved', () => {
     expect(globals.size).toBeGreaterThan(0)
-    expect(candidates).toHaveLength(5)
-    expect(gameToolsSurfaceDecls).toHaveLength(1)
-    expect(gameToolsSurfaceDecls[0]).toBe('var(--navbar-background)')
-    expect(hoverColourDecls).toHaveLength(1)
-  })
-
-  it('winning-rule resolution: .gameConfigContainer .game-actions .gameTools .link (0,4,0) wins over .button.is-link and .button.is-text (both 0,2,0)', () => {
-    expect(classTokenSpecificity('button')).toEqual([0, 0, 1])
-    expect(classTokenSpecificity('.button')).toEqual([0, 1, 0])
-    expect(classTokenSpecificity('.button.is-text')).toEqual([0, 2, 0])
-    expect(classTokenSpecificity('.button.is-link')).toEqual([0, 2, 0])
-    expect(
-      classTokenSpecificity(
-        '.gameConfigContainer .game-actions .gameTools .link'
-      )
-    ).toEqual([0, 4, 0])
-
-    expect(winner.fullSelector).toBe(
-      '.gameConfigContainer .game-actions .gameTools .link'
-    )
-    expect(winner.value).toBe('var(--navbar-inactive)')
-  })
-
-  it('checker can fail: dropping the winning selector down to a bare .link flips the picked winner, in memory only', () => {
-    const sabotaged = candidates.map((c) =>
-      c.fullSelector === '.gameConfigContainer .game-actions .gameTools .link'
-        ? { ...c, fullSelector: '.link' }
-        : c
-    )
-    const sabotagedWinner = pickWinningCandidate(sabotaged)
-    expect(sabotagedWinner.fullSelector).toBe('.button.is-link')
-    expect(sabotagedWinner.value).toBe('var(--text-default)')
-  })
-
-  it('IACVT: --navbar-inactive is declared in exactly 2 of 10 theme blocks and nowhere global; the consuming declaration carries no fallback', () => {
-    const declaring = themeClasses.filter((t) =>
-      themeTokens(themesScss, `body.${t}`).has('--navbar-inactive')
-    )
-    expect(declaring).toEqual(['midnightMirage', 'nord-light'])
-    expect(globals.has('--navbar-inactive')).toBe(false)
-    expect(winner.value).toBe('var(--navbar-inactive)') // bare form, no `, fallback`
-  })
-
-  it('IACVT can-fail: the undeclared-theme path reads --text-default from the inherited chain and is live, not hardcoded', () => {
-    const scope = themeTokens(themesScss, 'body.dracula')
-    expect(scope.has('--navbar-inactive')).toBe(false)
-    const before = gameMenuBaseForeground(scope, globals)
-
-    // Moving ONLY the inherited chain's token must move the answer -- this
-    // proves the undeclared branch is live, not a hardcoded literal.
-    const movedInherited = new Map(scope)
-    movedInherited.set('--text-default', '#ff00ff')
-    const afterInheritedMove = gameMenuBaseForeground(movedInherited, globals)
-    expect(afterInheritedMove).toBe('#ff00ff')
-    expect(afterInheritedMove).not.toBe(before)
-  })
-
-  it('IACVT can-fail: the declared-theme path reads --navbar-inactive directly and does not fall through to --text-default', () => {
-    const scope = themeTokens(themesScss, 'body.midnightMirage')
-    expect(scope.has('--navbar-inactive')).toBe(true)
-    const before = gameMenuBaseForeground(scope, globals)
-
-    // Moving the declared token must move the answer.
-    const movedDeclared = new Map(scope)
-    movedDeclared.set('--navbar-inactive', '#ff00ff')
-    const afterDeclaredMove = gameMenuBaseForeground(movedDeclared, globals)
-    expect(afterDeclaredMove).toBe('#ff00ff')
-    expect(afterDeclaredMove).not.toBe(before)
-
-    // Moving ONLY --text-default, leaving --navbar-inactive declared and
-    // untouched, must NOT move the answer -- proving the declared branch
-    // never falls through to the inherited chain.
-    const movedInheritedOnly = new Map(scope)
-    movedInheritedOnly.set('--text-default', '#00ffff')
-    const afterInheritedOnlyMove = gameMenuBaseForeground(
-      movedInheritedOnly,
-      globals
-    )
-    expect(afterInheritedOnlyMove).toBe(before)
-  })
-
-  it.each(themeClasses)(
-    '%s: game-menu BASE text clears 4.5:1 against --navbar-background',
-    (theme) => {
-      const scope = themeTokens(themesScss, `body.${theme}`)
-      const fg = gameMenuBaseForeground(scope, globals)
-      const bg = resolveValue(at(gameToolsSurfaceDecls, 0), scope, globals)
-      expect(bg).not.toBeNull()
-      const ratio = contrastRatio(fg, bg as string)
-      expect({ theme, fg, bg, ratio, passes: ratio >= 4.5 }).toEqual({
-        theme,
-        fg,
-        bg,
-        ratio,
-        passes: true
-      })
-    }
-  )
-
-  it.each(themeClasses)(
-    '%s: game-menu HOVER text clears 4.5:1 against --navbar-background',
-    (theme) => {
-      const scope = themeTokens(themesScss, `body.${theme}`)
-      const fg = gameMenuHoverForeground(theme, scope)
-      const bg = resolveValue(at(gameToolsSurfaceDecls, 0), scope, globals)
-      expect(bg).not.toBeNull()
-      const ratio = contrastRatio(fg, bg as string)
-      expect({ theme, fg, bg, ratio, passes: ratio >= 4.5 }).toEqual({
-        theme,
-        fg,
-        bg,
-        ratio,
-        passes: true
-      })
-    }
-  )
-
-  it('dracula hover fix: the theme-scoped override is load-bearing -- removing it in memory reproduces the pre-fix 3.79:1 miss', () => {
-    const scope = themeTokens(themesScss, 'body.dracula')
-    const bg = resolveValue(at(gameToolsSurfaceDecls, 0), scope, globals)
-    expect(bg).not.toBeNull()
-
-    const fixed = gameMenuHoverForeground('dracula', scope)
-    const fixedRatio = contrastRatio(fixed, bg as string)
-    expect(fixedRatio).toBeGreaterThanOrEqual(4.5)
-
-    const withoutOverride = resolveValue(
-      at(hoverColourDecls, 0),
-      scope,
-      globals
-    ) as string
-    const preFixRatio = contrastRatio(withoutOverride, bg as string)
-    expect(preFixRatio).toBeCloseTo(3.7935597497017444, 5)
-    expect(preFixRatio).toBeLessThan(4.5)
-  })
-
-  it('dracula hover fix does not regress any other theme: no other theme carries a body.<theme> & override under &:hover', () => {
-    const otherThemeOverrides = hoverThemeOverrides.filter(
-      (rule) => rule.selector !== 'body.dracula &'
-    )
-    expect(otherThemeOverrides).toHaveLength(0)
-    // And every other theme's hover ratio (measured above) still passes
-    // through the unmodified bare &:hover declaration -- re-asserted here
-    // directly against the stylesheet rather than trusted from the
-    // it.each loop above.
-    const nonDraculaThemes = themeClasses.filter((t) => t !== 'dracula')
-    for (const theme of nonDraculaThemes) {
-      const scope = themeTokens(themesScss, `body.${theme}`)
-      const fg = gameMenuHoverForeground(theme, scope)
-      const bareFg = resolveValue(at(hoverColourDecls, 0), scope, globals)
-      expect(fg).toBe(bareFg)
-    }
+    expect(themeClasses).toHaveLength(10)
   })
 
   // --- Task 2 (261015-7tt): MainButton dropdown .is-link pair -----------
@@ -3126,9 +2869,8 @@ describe('Game-menu .is-link family: render-site census, winning-rule resolution
    * theme-scoped override nested inside `.SteamInstallCaret .dropdown
    * .link:hover` (`body.<themeClass> &:not(:disabled) { color: ... }`) if
    * one exists for this theme, else the global `.button.is-link:hover`
-   * declaration (`mainButtonHoverDecls`). Mirrors `gameMenuHoverForeground`
-   * (line ~2979) and `isTextHoverForeground` below -- the third copy of the
-   * same override-vs-base idiom in this file, each reading a different
+   * declaration (`mainButtonHoverDecls`). Mirrors `isTextHoverForeground`
+   * below -- the same override-vs-base idiom, reading a different
    * stylesheet location.
    */
   function mainButtonHoverForeground(themeClass: string): string {
@@ -3267,8 +3009,8 @@ describe('Game-menu .is-link family: render-site census, winning-rule resolution
    * themeClass)`). `.button.is-text:hover` declares no `color` of its own
    * (asserted in the non-vacuity test below), so a theme with no hover
    * override inherits the base colour unchanged -- the same override-vs-
-   * base idiom as `gameMenuHoverForeground` and `mainButtonHoverForeground`
-   * above, applied to a third stylesheet location.
+   * base idiom as `mainButtonHoverForeground` above, applied to another
+   * stylesheet location.
    */
   function isTextHoverForeground(themeClass: string): string {
     const scoped = new RegExp(

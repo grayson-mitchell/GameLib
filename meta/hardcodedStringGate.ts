@@ -239,7 +239,7 @@ const ICON_SIZE_MULTIPLIER_RE = /^\d+x$/
 // direct read in `34.8-AUDIT.md`'s `## Triage`/`## Closure`.
 const ALL_CAPS_TOKEN_RE = /^[A-Z][A-Z0-9]*$/
 // A 32-character hex string with no separators is a GUID/hash, not prose --
-// GameSubMenu/index.tsx's EOS overlay app-id constant.
+// Settings/components/EosOverlaySetting.tsx's EOS overlay app-id constant.
 const HEX_GUID_RE = /^[0-9a-fA-F]{32}$/
 // A CDN query-string fragment (`?h=800&resize=1&w=600`) -- the literal span
 // of a template expression whose interpolated head is the image URL

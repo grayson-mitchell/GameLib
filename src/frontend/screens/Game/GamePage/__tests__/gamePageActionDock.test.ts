@@ -169,8 +169,8 @@ describe('GamePage/index.tsx: card structure (D-02, D-03, D-04, D-06)', () => {
   })
 
   it('L6: no overflow menu is mounted (D-01) and no header row', () => {
-    expect(tsx).not.toMatch(/<DotsMenu/)
-    expect(tsx).not.toMatch(/GameSubMenu/)
+    expect(tsx).not.toMatch(/<\w*Menu\b/)
+    expect(tsx).not.toMatch(/faEllipsisV/)
     expect(tsx).not.toMatch(/topRowWrapper/)
   })
 })

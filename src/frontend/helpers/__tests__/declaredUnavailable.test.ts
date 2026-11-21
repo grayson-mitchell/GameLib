@@ -2,7 +2,7 @@
  * Behavioral proof of `callOrDeclare()` (Task 1, 34.5-48). Node-env, no DOM (see
  * `src/frontend/jest.config.js` header) -- `window` is stubbed directly on `globalThis`,
  * following the precedent in
- * `src/frontend/screens/Game/GameSubMenu/__tests__/repairFailure.test.ts`.
+ * `src/frontend/screens/Game/GamePage/actions/__tests__/rowAction.test.ts`.
  *
  * `resetDeclaredOnce()` runs in `beforeEach` so the dedupe assertions are independent of test
  * ordering: `resetMocks: true` in the Frontend jest config resets mock call history but never

@@ -423,12 +423,10 @@
            restores the already-passing base colour during hover rather than
            introducing a new hue; it measures 12.06:1 against #282828.
            Scoped to `.SteamInstallCaret .dropdown .link:hover` (0,4,0) --
-           MainButton's sole render site for this element, distinct from the
-           21 GameSubMenu .is-link sites under `.gameConfigContainer
-           .game-actions .gameTools .link` (different class chain entirely)
-           -- so this cannot regress Task 1's game-menu fix, and the other 9
-           themes already clear 4.5:1 through the bare `.button.is-link:hover`
-           chain and are left untouched. */
+           MainButton's sole render site for this element -- so it touches no
+           other `.is-link` button, and the other 9 themes already clear
+           4.5:1 through the bare `.button.is-link:hover` chain and are left
+           untouched. */
         .SteamInstallCaret .dropdown .link:hover {
           body.gruvbox_dark &:not(:disabled) {
             color: var(--text-default);
@@ -773,87 +771,6 @@
     }
   }
 
-  .game-actions {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-
-    .toggle {
-      align-self: flex-end;
-      border: none;
-      color: var(--navbar-inactive);
-      font-size: var(--text-2xl);
-      padding: var(--space-xs-fixed);
-      cursor: pointer;
-      position: relative;
-      transition: color 0.2s;
-      display: flex;
-      justify-content: center;
-      width: 44px;
-      height: 44px;
-      background-color: var(--navbar-background);
-      border-radius: 10px;
-    }
-
-    .toggle:hover,
-    .toggle[aria-expanded='true'] {
-      color: var(--navbar-active, var(--accent-overlay, var(--accent)));
-    }
-
-    .gameTools {
-      position: absolute;
-      display: none;
-      background-color: var(--navbar-background);
-      border: 1px solid var(--neutral-03);
-      border-radius: 5px;
-      z-index: 4;
-      padding: var(--space-md);
-      max-height: calc(100vh - 12rem);
-      overflow-y: auto;
-      right: 0;
-      top: auto;
-      bottom: calc(100% + 6px);
-      box-shadow: 4px 5px 5px -2px rgba(0, 0, 0, 0.2);
-    }
-
-    .gameTools .link {
-      width: 100%;
-      text-align: start;
-      white-space: nowrap;
-      font-size: 1rem;
-      background: none;
-      color: var(--navbar-inactive);
-
-      &:hover {
-        color: var(--navbar-active, var(--accent-overlay, var(--accent)));
-
-        // dracula's --navbar-active resolves to --accent (#bd93f9), which
-        // measures 3.79:1 on this menu's --navbar-background (#44475a) --
-        // under the 4.5:1 floor (261015-7tt census). Every other theme's
-        // hover state already clears 4.5:1 through the bare chain above, so
-        // this is a theme-scoped override, not a token retarget: widening
-        // the fix would touch 9 themes that already pass. --text-default
-        // (white) is dracula's own base-state colour for this same link,
-        // so the override does not introduce an unrelated hue.
-        body.dracula & {
-          color: var(--text-default);
-        }
-      }
-
-      &:first-child {
-        margin-top: 0;
-      }
-
-      &:last-child {
-        margin-bottom: 0;
-      }
-    }
-
-    &.is-open .gameTools {
-      display: block;
-    }
-  }
-
   & .backgroundImage {
     position: absolute;
     z-index: -1;
@@ -866,11 +783,6 @@
     filter: blur(15px);
     opacity: 0.3;
   }
-}
-
-.App.isRTL .gameConfigContainer .game-actions .gameTools {
-  left: 0;
-  right: unset;
 }
 
 .gameConfigContainer {

@@ -380,7 +380,7 @@ describe('MainButton — D-21 split button (steam)', () => {
   it('S10 (34.13 review C-04): renders NO caret for a DELISTED Steam game', () => {
     // `common/types.ts` documents a delisted game as "confirmed unavailable
     // on Steam ... not activatable", so an install-options door is a door to
-    // nothing. The two sibling entries (GameCard, GameSubMenu) already gate
+    // nothing. The sibling entry (GameCard) already gates
     // on this; the caret was the only one that did not, and neither
     // `notInstallable` (set only inside a `runner !== 'steam'` block) nor
     // `notSupportedGame` (keys on thirdPartyManagedApp) covered it.
@@ -395,7 +395,7 @@ describe('MainButton — D-21 split button (steam)', () => {
     expect(findAll(tree, (n) => n.type === Dropdown)).toHaveLength(1)
   })
 
-  it('S11 (34.13 review C-11): the caret panel item carries the same class vocabulary as its GameSubMenu sibling', () => {
+  it('S11 (34.13 review C-11): the caret panel item carries the shared `.button.is-link` class vocabulary', () => {
     const tree = invoke(makeGameInfo())
     const caret = at(
       findAll(tree, (n) => n.type === Dropdown),
@@ -408,7 +408,8 @@ describe('MainButton — D-21 split button (steam)', () => {
     // `Dropdown/index.scss`'s only rule reaching a panel child is
     // `.dropdownContainer .dropdown button { margin/padding/font-size }` --
     // spacing, with no surface, border, colour or hover state. These are the
-    // classes `GameSubMenu/index.tsx` gives the identical action.
+    // shared `.button.is-link` tokens the themeTokens MainButton contrast
+    // family measures.
     for (const token of ['link', 'button', 'is-text', 'is-link']) {
       expect(className.split(/\s+/)).toContain(token)
     }
