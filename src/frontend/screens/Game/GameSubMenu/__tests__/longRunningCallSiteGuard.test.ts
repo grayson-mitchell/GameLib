@@ -52,6 +52,15 @@ describe('long-running invoke call sites release their busy state on rejection',
     expect(blockAfter(body, 'finally')).toContain('setSteamRefresh(false)')
   })
 
+  test('useSteamShortcut handleAddToSteam clears steamRefresh in a finally block', () => {
+    const body = blockAfter(
+      read('screens/Game/GamePage/actions/useSteamShortcut.ts'),
+      'async function handleAddToSteam()'
+    )
+    expect(body).toContain('window.api')
+    expect(blockAfter(body, 'finally')).toContain('setSteamRefresh(false)')
+  })
+
   test('SideloadDialog handleRunExe clears runningSetup in a finally block (also covers the early return)', () => {
     const body = blockAfter(
       read('screens/Library/components/InstallModal/SideloadDialog/index.tsx'),

@@ -249,4 +249,17 @@ describe('Install tab source gates', () => {
       })
     }
   })
+
+  it('Show in Steam never opens a dialog and gates on canAddSteamShortcut, not on is_installed (D-01, D-12, D-18)', () => {
+    const hook = read(ACTIONS_DIR, 'useSteamShortcut.ts')
+    expect(hook).not.toContain('showDialogModal')
+    expect(hook).toContain('async function handleAddToSteam()')
+    expect(hook).toContain('reportRowActionFailure')
+    const code = read(TAB_DIR, 'IntegrationRows.tsx')
+    expect(code).toContain("hasCapability(runner, 'canAddSteamShortcut')")
+    expect(code).toContain('id="installTabShowInSteam"')
+    expect(code).toContain('useSteamShortcut(appName, runner, canShowInSteam)')
+    // The probe and the switch must not depend on the install state.
+    expect(code).not.toMatch(/canShowInSteam\s*=[^\n]*is_installed/)
+  })
 })

@@ -6,6 +6,7 @@ import useSetting from 'frontend/hooks/useSetting'
 import GameContext from '../../../GameContext'
 import { toggleShortcuts } from '../../../GameSubMenu/shortcutsToggle'
 import { cloudSavesPathMissing } from '../../actions/cloudSync'
+import { useSteamShortcut } from '../../actions/useSteamShortcut'
 import { SwitchRow } from './SwitchRow'
 
 interface Props {
@@ -15,8 +16,9 @@ interface Props {
 
 /**
  * Phase 100 (D-01): the "Library & integration" group of the Install tab.
- * Plan 01 carries the shortcuts switch and plan 05 adds Auto-sync saves; later
- * plans add Runs for me and Show in Steam here. The group renders only when a row applies.
+ * Shortcuts, Auto-sync saves and Show in Steam live here, with Runs for me first
+ * on macOS. A game that is not installed shows Show in Steam alone; the group
+ * renders only when a row applies.
  *
  * The switch flips from the backend's answer alone (`toggleShortcuts`), its
  * pending state pulses inside the row, and a failure shows fixed text with a
@@ -36,6 +38,12 @@ const IntegrationRows = ({ gameInfo, platform }: Props) => {
   const [shortcutsBusy, setShortcutsBusy] = useState(false)
   const [shortcutsFailed, setShortcutsFailed] = useState(false)
 
+  // Steam games are already in Steam; every other runner can be added as a
+  // non-Steam shortcut, installed or not.
+  const canShowInSteam = hasCapability(runner, 'canAddSteamShortcut')
+  const { addedToSteam, steamRefresh, steamFailed, handleAddToSteam } =
+    useSteamShortcut(appName, runner, canShowInSteam)
+
   useEffect(() => {
     if (!isInstalled) return
     let cancelled = false
@@ -52,7 +60,7 @@ const IntegrationRows = ({ gameInfo, platform }: Props) => {
     }
   }, [isInstalled, appName, runner])
 
-  if (!isInstalled) return null
+  if (!isInstalled && !canShowInSteam) return null
 
   const handleShortcuts = () =>
     toggleShortcuts({
@@ -95,12 +103,43 @@ const IntegrationRows = ({ gameInfo, platform }: Props) => {
     ? t('gamepage.installTab.switch.removing', 'Removing…')
     : t('gamepage.installTab.switch.adding', 'Adding…')
 
+  const steamBusyLabel = addedToSteam
+    ? t('gamepage.installTab.switch.removing', 'Removing…')
+    : t('gamepage.installTab.switch.adding', 'Adding…')
+
+  const showInSteamRow = canShowInSteam && (
+    <SwitchRow
+      id="installTabShowInSteam"
+      label={t('gamepage.installTab.showInSteam.label', 'Show in Steam')}
+      description={t(
+        'gamepage.installTab.showInSteam.description',
+        'Adds a non-Steam shortcut, so the game appears in Big Picture and on Steam Deck.'
+      )}
+      checked={addedToSteam}
+      busy={steamRefresh}
+      busyLabel={steamBusyLabel}
+      failure={
+        steamFailed && !steamRefresh
+          ? {
+              message: t(
+                'gamepage.installTab.showInSteam.failed',
+                "Couldn't update the Steam shortcut. Details are in the log."
+              ),
+              retryLabel: t('gamepage.installTab.retry', 'Retry'),
+              onRetry: handleAddToSteam
+            }
+          : undefined
+      }
+      onToggle={handleAddToSteam}
+    />
+  )
+
   return (
     <section className="installGroup">
       <h3 className="installGroup__title">
         {t('gamepage.installTab.libraryGroup', 'Library & integration')}
       </h3>
-      {showAutoSync && (
+      {isInstalled && showAutoSync && (
         <SwitchRow
           id="installTabAutoSync"
           label={t('gamepage.installTab.autoSync.label', 'Auto-sync saves')}
@@ -121,30 +160,33 @@ const IntegrationRows = ({ gameInfo, platform }: Props) => {
           onToggle={() => setAutoSyncSaves(!autoSyncSaves)}
         />
       )}
-      <SwitchRow
-        id="installTabShortcuts"
-        label={shortcutsLabel}
-        description={t(
-          'gamepage.installTab.shortcuts.description',
-          'Opens the game without opening GameLib first.'
-        )}
-        checked={hasShortcuts}
-        busy={shortcutsBusy}
-        busyLabel={busyLabel}
-        failure={
-          shortcutsFailed && !shortcutsBusy
-            ? {
-                message: t(
-                  'gamepage.installTab.shortcuts.failed',
-                  "Couldn't update the shortcuts. Details are in the log."
-                ),
-                retryLabel: t('gamepage.installTab.retry', 'Retry'),
-                onRetry: handleShortcuts
-              }
-            : undefined
-        }
-        onToggle={handleShortcuts}
-      />
+      {isInstalled && (
+        <SwitchRow
+          id="installTabShortcuts"
+          label={shortcutsLabel}
+          description={t(
+            'gamepage.installTab.shortcuts.description',
+            'Opens the game without opening GameLib first.'
+          )}
+          checked={hasShortcuts}
+          busy={shortcutsBusy}
+          busyLabel={busyLabel}
+          failure={
+            shortcutsFailed && !shortcutsBusy
+              ? {
+                  message: t(
+                    'gamepage.installTab.shortcuts.failed',
+                    "Couldn't update the shortcuts. Details are in the log."
+                  ),
+                  retryLabel: t('gamepage.installTab.retry', 'Retry'),
+                  onRetry: handleShortcuts
+                }
+              : undefined
+          }
+          onToggle={handleShortcuts}
+        />
+      )}
+      {showInSteamRow}
     </section>
   )
 }

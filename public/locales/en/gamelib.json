@@ -311,6 +311,11 @@
                 "macLabel": "Applications shortcut",
                 "windowsLabel": "Desktop & Start menu shortcuts"
             },
+            "showInSteam": {
+                "description": "Adds a non-Steam shortcut, so the game appears in Big Picture and on Steam Deck.",
+                "failed": "Couldn't update the Steam shortcut. Details are in the log.",
+                "label": "Show in Steam"
+            },
             "size": "Size",
             "switch": {
                 "adding": "Adding…",
