@@ -65,7 +65,7 @@ import { mkdirSync } from 'fs'
 import { deriveLegendaryPaths } from './constants'
 import { isCLINoGui, isMac, isWindows } from 'backend/constants/environment'
 
-import type LogWriter from 'backend/logger/log_writer'
+import type LogWriter from 'backend/logger/targetWriter'
 import { engineKeyFor } from 'backend/engine/gameKey'
 
 export default class LegendaryGame implements Game {

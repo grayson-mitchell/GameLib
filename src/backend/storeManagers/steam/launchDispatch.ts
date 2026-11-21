@@ -31,7 +31,7 @@ import i18next from 'i18next'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { notify } from 'backend/dialog/dialog'
 import { addRecentGame } from 'backend/recent_games/recent_games'
-import type LogWriter from 'backend/logger/log_writer'
+import type LogWriter from 'backend/logger/targetWriter'
 import type { ManagerDeps } from 'backend/services/types'
 
 type LaunchDispatchDeps = Pick<

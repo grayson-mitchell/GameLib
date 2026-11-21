@@ -59,7 +59,7 @@ import { isUmuSupported, type UmuDeps } from './utils/compatibility_layers'
 import { isLinux, isMac, isWindows } from './constants/environment'
 import { fixAsarPath } from './process/appPaths'
 
-import type LogWriter from 'backend/logger/log_writer'
+import type LogWriter from 'backend/logger/targetWriter'
 import type { OnlineMonitor } from './online_monitor'
 import type { Game } from 'common/types/game_manager'
 import type { ProcessRunner } from 'backend/process/types'

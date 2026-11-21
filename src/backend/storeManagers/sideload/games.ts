@@ -35,7 +35,7 @@ import { isLinux, isMac, isWindows } from 'backend/constants/environment'
 import { removeNonSteamGame } from 'backend/shortcuts/nonesteamgame/nonesteamgame'
 import type { ManagerDeps } from 'backend/services/types'
 
-import type LogWriter from 'backend/logger/log_writer'
+import type LogWriter from 'backend/logger/targetWriter'
 import { engineKeyFor } from 'backend/engine/gameKey'
 
 export default class SideloadGame implements Game {

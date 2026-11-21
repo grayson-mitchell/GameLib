@@ -44,7 +44,7 @@ import { getUmuId } from 'backend/wiki_game_info/umu/utils'
 import { isWindows } from 'backend/constants/environment'
 
 import { readKnownFixLaunchOverrides } from 'backend/knownFixLaunch'
-import type LogWriter from 'backend/logger/log_writer'
+import type LogWriter from 'backend/logger/targetWriter'
 import { engineKeyFor } from 'backend/engine/gameKey'
 
 export default class NileGameManager implements Game {

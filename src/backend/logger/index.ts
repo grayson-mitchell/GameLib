@@ -2,11 +2,15 @@ import os from 'os'
 
 import { LogPrefix, RunnerToLogPrefixMap } from './constants'
 import { LogForwarder } from './forwarder'
-import LogWriter from './log_writer'
 import { getLogFilePath } from './paths'
+import LogWriter from './targetWriter'
 
 import type { Runner } from 'common/types'
-import type { GameLogType } from 'common/types/sidecarTransport'
+import type {
+  GameLogType,
+  LogFrameEntry,
+  LogFrameTarget
+} from 'common/types/sidecarTransport'
 import type { LogLevel } from './constants'
 import type { LogTransport } from './forwarder'
 import type { LogOptions, RunnerOrComet } from './types'
@@ -77,6 +81,30 @@ const logInfoSettled = (
 }
 
 /**
+ * Queues one entry for a typed target on the process-wide forwarder. The per-target `LogWriter`
+ * facade (`./targetWriter`) reaches the forwarder through this and `logLine` at call time, so the
+ * forwarder stays this file's one module-state site.
+ */
+function enqueueLogEntry(
+  target: LogFrameTarget,
+  rotate: boolean,
+  entry: LogFrameEntry
+): void {
+  logForwarder.enqueue(target, rotate, entry)
+}
+
+/** Queues one structured line for a typed target (the facade's `logDebug|Info|Warning|Error`). */
+function logLine(
+  target: LogFrameTarget,
+  rotate: boolean,
+  level: LogLevel,
+  prefix: string,
+  message: unknown
+): void {
+  logForwarder.logLine(target, rotate, level, prefix, message)
+}
+
+/**
  * Binds the stdout transport the forwarder sends frames on (the 'sidecar-rpc' boot step). Lines
  * logged before this call wait in the forwarder's queue, up to its caps.
  */
@@ -105,8 +133,7 @@ function getRunnerLogWriter(
   if (writer) return writer
 
   const newWriter = new LogWriter(
-    getLogFilePath({ runner }),
-    false,
+    { kind: 'runner', runner },
     settings.disableLogs
   )
   runnerLogWriters.set(runner, newWriter)
@@ -126,8 +153,7 @@ async function createGameLogWriter(
   const logsDisabledPerGame = type === 'launch' ? !settings.verboseLogs : false
 
   return new LogWriter(
-    getLogFilePath({ appName, runner, type }),
-    false,
+    { kind: 'game', appName, runner, type },
     settings.disableLogs || logsDisabledPerGame
   )
 }
@@ -165,6 +191,8 @@ export function logBootFacts(): void {
 
 export {
   bindLogTransport,
+  enqueueLogEntry,
+  logLine,
   flushLogForwarder,
   initHeadless,
   logDebug,

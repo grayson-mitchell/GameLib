@@ -9,7 +9,7 @@ import {
   LaunchOption
 } from 'common/types'
 import { GOGCloudSavesLocation, GOGAchievement } from './gog'
-import type LogWriter from 'backend/logger/log_writer'
+import type LogWriter from 'backend/logger/targetWriter'
 
 // 37-02 (D-06/D-07): the structured affordance an install failure carries,
 // declared here (common/) rather than imported from

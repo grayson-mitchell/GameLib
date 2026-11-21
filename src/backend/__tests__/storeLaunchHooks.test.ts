@@ -38,7 +38,7 @@ jest.mock('backend/storeManagers/legendary/eos_overlay/eos_overlay', () => ({
   isEnabled: (...a: unknown[]) => isEnabledMock(...a)
 }))
 
-import type LogWriter from 'backend/logger/log_writer'
+import type LogWriter from 'backend/logger/targetWriter'
 import type { WineInstallation } from 'common/types'
 import { buildLaunchHooks } from 'backend/storeManagers'
 import {

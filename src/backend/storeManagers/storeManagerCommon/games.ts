@@ -12,7 +12,7 @@ import { sendGameStatusUpdate } from 'backend/utils'
 import { isLinux, isMac } from 'backend/constants/environment'
 import { withKnownFixEnv } from 'backend/knownFixOverlays'
 
-import type LogWriter from 'backend/logger/log_writer'
+import type LogWriter from 'backend/logger/targetWriter'
 import { Game } from '../../../common/types/game_manager'
 import { engineKeyFor } from 'backend/engine/gameKey'
 import { asStoreGame } from 'common/gameInfoNarrowing'

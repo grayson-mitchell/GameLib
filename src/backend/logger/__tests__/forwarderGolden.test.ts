@@ -11,10 +11,15 @@ import { join, resolve } from 'path'
 
 import { LogPrefix } from '../constants'
 
-import type { LogFrame, LogFrameEntry } from 'common/types/sidecarTransport'
+import type {
+  LogFrame,
+  LogFrameEntry,
+  LogFrameTarget
+} from 'common/types/sidecarTransport'
 import type { LogTransport } from '../forwarder'
 
 type LoggerIndex = typeof import('../index')
+type TargetWriterModule = typeof import('../targetWriter')
 
 const FIXTURE_ROOT = resolve(
   __dirname,
@@ -28,19 +33,26 @@ interface GoldenCase {
   id: string
   kind: 'line' | 'chunks' | 'rotate' | 'close' | 'renderer'
   oracle?: boolean
-  target?: { kind: string }
+  target?: LogFrameTarget
+  forceLog?: boolean
+  chunks?: (string | { text: string; forceLog: boolean })[]
   method?: 'debug' | 'info' | 'warning' | 'error'
   message?: unknown
   messageKind?: string
   prefix?: string
   disabled?: boolean
-  writers?: { message: string; raw?: boolean }[]
+  writers?: {
+    message: string
+    raw?: boolean
+    disabled?: boolean
+    forceLog?: boolean
+  }[]
 }
 
 interface CaseEntries {
   id: string
   frames?: {
-    target: { kind: string }
+    target: LogFrameTarget
     rotate: boolean
     entries: LogFrameEntry[]
   }[]
@@ -220,3 +232,167 @@ describe('forwarder golden (general-target cases)', () => {
     }
   )
 })
+
+// The non-general cases: a game, runner or gog redist writer built through the facade, driven the way
+// the oracle drove the old writer. One batch per writer instance (a rotate batch opens a new one), so
+// the batch list is compared as is.
+describe('forwarder golden (game, runner, redist, close and rotate cases)', () => {
+  const NON_GENERAL_LINE = cases.filter(
+    (c) =>
+      c.kind === 'line' && c.target?.kind !== 'general' && c.oracle !== false
+  )
+  const NON_GENERAL_CHUNKS = cases.filter(
+    (c) => c.kind === 'chunks' && c.target?.kind !== 'general'
+  )
+  const NON_GENERAL_ROTATE = cases.filter(
+    (c) => c.kind === 'rotate' && c.target?.kind !== 'general'
+  )
+  const CLOSE = cases.filter((c) => c.kind === 'close')
+
+  beforeEach(() => {
+    jest.useFakeTimers({
+      now: FAKE_NOW,
+      doNotFake: [
+        'hrtime',
+        'nextTick',
+        'performance',
+        'queueMicrotask',
+        'requestAnimationFrame',
+        'cancelAnimationFrame',
+        'requestIdleCallback',
+        'cancelIdleCallback',
+        'setImmediate',
+        'clearImmediate',
+        'setInterval',
+        'clearInterval',
+        'setTimeout',
+        'clearTimeout'
+      ]
+    })
+  })
+  afterEach(() => {
+    jest.useRealTimers()
+  })
+
+  async function replayWriters(
+    id: string,
+    drive: (
+      make: (target: LogFrameTarget, disabled: boolean) => WriterLike
+    ) => Promise<void>
+  ): Promise<void> {
+    let index: LoggerIndex | undefined
+    let facade: TargetWriterModule | undefined
+    jest.isolateModules(() => {
+      /* eslint-disable @typescript-eslint/no-require-imports */
+      index = require('../index') as LoggerIndex
+      facade = require('../targetWriter') as TargetWriterModule
+      /* eslint-enable @typescript-eslint/no-require-imports */
+    })
+    if (!index || !facade) throw new Error('logger did not load')
+    const frames: LogFrame[] = []
+    index.bindLogTransport(capturingTransport(frames))
+    const Writer = facade.default
+    await drive((target, disabled) => new Writer(target, disabled))
+    await index.flushLogForwarder()
+
+    const expected = entries.find((e) => e.id === id)
+    if (!expected?.frames)
+      throw new Error(`case ${id} has no entries.json frames`)
+    const normalise = (
+      batches: {
+        target: LogFrameTarget
+        rotate: boolean
+        entries: LogFrameEntry[]
+      }[]
+    ) =>
+      batches.map((b) => ({
+        target: b.target,
+        rotate: b.rotate,
+        entries: b.entries.map(wallClock)
+      }))
+    for (const frame of frames) expect(frame.kind).toBe('log')
+    expect(normalise(frames.flatMap((f) => f.batch))).toEqual(
+      normalise(expected.frames)
+    )
+  }
+
+  it('replays the non-general cases', () => {
+    // Guards the filters: a rename in cases.json must not leave the loops below empty.
+    expect(NON_GENERAL_LINE.length).toBeGreaterThanOrEqual(3)
+    expect(NON_GENERAL_CHUNKS.length).toBeGreaterThanOrEqual(8)
+    expect(NON_GENERAL_ROTATE.length).toBeGreaterThanOrEqual(8)
+    expect(CLOSE.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it.each(NON_GENERAL_LINE.map((c) => [c.id, c] as const))(
+    'line case %s matches entries.json',
+    async (_id, c) => {
+      await replayWriters(c.id, async (make) => {
+        const writer = make(c.target as LogFrameTarget, c.disabled === true)
+        const method = METHOD_BY_LEVEL[c.method ?? 'info']
+        await writer[method](buildMessage(c), {
+          prefix: prefixValue(c.prefix) as never,
+          forceLog: c.forceLog
+        })
+      })
+    }
+  )
+
+  it.each(NON_GENERAL_CHUNKS.map((c) => [c.id, c] as const))(
+    'chunks case %s matches entries.json',
+    async (_id, c) => {
+      await replayWriters(c.id, async (make) => {
+        const writer = make(c.target as LogFrameTarget, c.disabled === true)
+        for (const chunk of c.chunks ?? []) {
+          const text = typeof chunk === 'string' ? chunk : chunk.text
+          const forceLog = typeof chunk === 'string' ? false : chunk.forceLog
+          await writer.writeString(text, forceLog)
+        }
+      })
+    }
+  )
+
+  it.each(NON_GENERAL_ROTATE.map((c) => [c.id, c] as const))(
+    'rotate case %s matches entries.json',
+    async (_id, c) => {
+      await replayWriters(c.id, async (make) => {
+        for (const w of c.writers ?? []) {
+          const writer = make(c.target as LogFrameTarget, w.disabled === true)
+          if (w.raw) await writer.writeString(w.message, w.forceLog === true)
+          else
+            await writer.logInfo(w.message, {
+              prefix: LogPrefix.Backend,
+              forceLog: w.forceLog
+            })
+        }
+      })
+    }
+  )
+
+  it.each(CLOSE.map((c) => [c.id, c] as const))(
+    'close case %s matches entries.json and a later write throws',
+    async (_id, c) => {
+      await replayWriters(c.id, async (make) => {
+        const writer = make(c.target as LogFrameTarget, false)
+        for (const chunk of c.chunks ?? []) {
+          await writer.writeString(
+            typeof chunk === 'string' ? chunk : chunk.text
+          )
+        }
+        await writer.close()
+        await expect(writer.writeString('after close\n')).rejects.toThrow(
+          /after it was closed/
+        )
+      })
+    }
+  )
+})
+
+interface WriterLike {
+  writeString(message: string, forceLog?: boolean): Promise<void>
+  logDebug(message: unknown, options?: unknown): Promise<void>
+  logInfo(message: unknown, options?: unknown): Promise<void>
+  logWarning(message: unknown, options?: unknown): Promise<void>
+  logError(message: unknown, options?: unknown): Promise<void>
+  close(): Promise<void>
+}

@@ -15,7 +15,7 @@ import { GOGUser } from './user'
 import type { GOGManagerDeps } from './library'
 import { axiosClient } from 'backend/utils'
 import { deriveGogPaths } from './constants'
-import LogWriter from '../../logger/log_writer'
+import LogWriter from '../../logger/targetWriter'
 
 /** What the redist helpers read: the gog stores and the manager map. */
 export type RedistDeps = Pick<
@@ -200,7 +200,6 @@ export async function updateRedist(
 }> {
   const { maxWorkers } = deps.config.getSettings()
   const workers = maxWorkers ? ['--max-workers', `${maxWorkers}`] : []
-  const logPath = path.join(deps.paths.gamesConfigPath, 'gog-redist.log')
   const { gogRedistPath } = deriveGogPaths(deps.paths)
 
   const commandParts = [
@@ -216,7 +215,7 @@ export async function updateRedist(
     prefix: LogPrefix.Gog
   })
 
-  const redistLogWriter = new LogWriter(logPath, false, false)
+  const redistLogWriter = new LogWriter({ kind: 'gogRedist' }, false)
   const res = await deps.libraryManagers.gog.runRunnerCommand(commandParts, {
     abortId: 'gog-redist',
     logMessagePrefix: 'GOG REDIST:',

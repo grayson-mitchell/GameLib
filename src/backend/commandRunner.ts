@@ -37,7 +37,7 @@ import type { LegendaryCommand } from 'backend/storeManagers'
 
 import type { logDebug, logError, logInfo, logWarning } from './logger'
 import type { LogPrefix } from './logger/constants'
-import type LogWriter from './logger/log_writer'
+import type LogWriter from './logger/targetWriter'
 import type { ChildHandle, ProcessRunner, RunResult } from './process/types'
 
 export interface RunnerProps {

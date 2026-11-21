@@ -93,7 +93,7 @@ import { engineKeyFor } from './engine/gameKey'
 
 import type { AppRuntimeSlice } from './appRuntime'
 import type { PartialDeep } from 'type-fest'
-import type LogWriter from './logger/log_writer'
+import type LogWriter from './logger/targetWriter'
 import { Game } from 'common/types/game_manager'
 
 /** What the launcher is built from (66.1, D-02): constructed once per boot by createStoreManagers. */

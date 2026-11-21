@@ -20,7 +20,7 @@ import { buildUpdateQueueElement } from 'backend/downloadmanager/updateElement'
 
 import type { DMQueueElement, Runner, WineInstallation } from 'common/types'
 import type { LibraryManager } from 'common/types/game_manager'
-import type LogWriter from 'backend/logger/log_writer'
+import type LogWriter from 'backend/logger/targetWriter'
 
 // launcher.ts reaches store-specific code only through this module (D-13).
 export type { LegendaryCommand } from 'backend/storeManagers/legendary/commands'

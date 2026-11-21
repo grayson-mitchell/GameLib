@@ -86,7 +86,7 @@ import { checkInstalledMacArch } from 'backend/macArch/recovery'
 import type { LongLivedHandle } from 'backend/process/types'
 
 import { readKnownFixLaunchOverrides } from 'backend/knownFixLaunch'
-import type LogWriter from 'backend/logger/log_writer'
+import type LogWriter from 'backend/logger/targetWriter'
 import { engineKeyFor } from 'backend/engine/gameKey'
 
 // comet's output is untrusted and may echo tokens; split/join because tokens

@@ -6,7 +6,7 @@ import { logError, LogPrefix } from 'backend/logger'
 import type { LegendaryManagerDeps } from './library'
 import { deriveLegendaryPaths } from './constants'
 import { isLinux } from 'backend/constants/environment'
-import LogWriter from 'backend/logger/log_writer'
+import LogWriter from 'backend/logger/targetWriter'
 
 export const legendarySetup = async (
   deps: LegendaryManagerDeps,
