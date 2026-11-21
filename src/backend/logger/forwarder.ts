@@ -20,12 +20,19 @@ import type { LogLevel } from './constants'
  * stream drains).
  *
  * Constants (calibrated by `__tests__/forwarderCalibration.test.ts`, which replaces research
- * assumption A2; the measured table is printed by that test and recorded in 84-03-SUMMARY.md):
+ * assumption A2; the test prints this table and 84-03-SUMMARY.md records it). Measured with the
+ * defaults below (tick 50 ms, frame 32 KiB, 4,000 entries / 8 MiB), simulated for 5 s, every chunk
+ * sent to both a game and a runner target as `commandRunner.ts` does, through a modelled pipe
+ * (16 KiB high-water mark, reader at 32 MiB/s):
  *
- *   profile            rate                            frames/s   max queued   dropped
- *   burst              2 x 64 KiB chunks at 8 MiB/s    CALIB_BURST_FRAMES
- *   chatter            20,000 x 100 B chunks per s     CALIB_CHATTER_FRAMES
- *   stalled (2 s)      reader stops, then resumes      CALIB_STALLED_NOTE
+ *   profile        input (both targets)      frames/s avg (max)  max queued          dropped
+ *   burst          2 x 64 KiB at 8 MiB/s     256 (257)           1 entry, 0.06 MiB   0
+ *   chatter        2 x 20,000 x 100 B per s  227 (228)           179 entries, 0.03   0
+ *   stalled (2 s)  burst, reader stops 2 s   179 (382)           127 entries, 7.95   386, all reported
+ *
+ * No profile that keeps draining drops a line or comes near either cap, so the first-guess values
+ * (50 ms, 32 KiB, 4,000, 8 MiB) stand. The 8 MiB byte cap binds first under a stalled reader
+ * (127 x 64 KiB chunks), which is the intended bound on sidecar memory.
  *
  * The queue holds raw chunks as separate entries (never concatenated), so replaying a profile's
  * frames through the per-chunk newline rule reproduces the input bytes exactly.
@@ -394,7 +401,11 @@ export class LogForwarder {
       transport.onReady(() => {
         this.#awaitingReady = false
         this.#blocked = false
-        this.#pump()
+        // A settle in flight wants the queue out now. Otherwise coalesce: a pipe that drains every
+        // millisecond must not turn into one tiny frame per drain, so send on the tick or at the
+        // size cut, like any other entry.
+        if (this.#waiters.length > 0) this.#pump()
+        else this.#schedule()
       })
     } catch {
       // No ready signal to wait for: retry on the tick rather than stay blocked forever.

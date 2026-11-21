@@ -939,6 +939,7 @@ mod log_frame_tests {
 
     const TS_TRANSPORT: &str = include_str!("../../src/common/types/sidecarTransport.ts");
     const ENTRIES: &str = include_str!("../crates/gamelib-log/tests/fixtures/golden/entries.json");
+    const VECTORS: &str = include_str!("../../src/common/__fixtures__/logFrameVectors.json");
 
     struct FixedClock;
     impl Clock for FixedClock {
@@ -1033,5 +1034,82 @@ mod log_frame_tests {
         assert_eq!(err.as_str(), "unknown-field");
         assert!(logger.flush(Duration::from_secs(10)));
         assert!(!home.root().join("gamelib.log").exists());
+    }
+
+    fn files_under(dir: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
+        let Ok(read) = std::fs::read_dir(dir) else {
+            return;
+        };
+        for entry in read.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                files_under(&path, out);
+            } else {
+                out.push(path);
+            }
+        }
+    }
+
+    /// Every valid vector of the shared `logFrameVectors.json` goes through the reader's own
+    /// function; a frame with at least one entry puts a file in the throwaway home.
+    #[test]
+    fn log_frame_vectors_every_valid_vector_routes_into_a_logger() {
+        let vectors: Value = serde_json::from_str(VECTORS).expect("logFrameVectors.json");
+        let valid = vectors["valid"].as_array().expect("valid");
+        assert!(!valid.is_empty());
+        for item in valid {
+            let name = item["name"].as_str().expect("name");
+            let home = FakeHome::new("gamelib-shell-log-vectors-");
+            let logger = logger_on(&home);
+            let frame = item["frame"].clone();
+            let len = frame.to_string().len();
+            route_log_frame(&logger, len, frame.clone())
+                .unwrap_or_else(|r| panic!("valid vector {name:?} rejected: {}", r.as_str()));
+            assert!(logger.flush(Duration::from_secs(10)), "{name}: flush");
+            let has_entries = frame["batch"]
+                .as_array()
+                .expect("batch")
+                .iter()
+                .any(|b| !b["entries"].as_array().expect("entries").is_empty());
+            let mut files = Vec::new();
+            files_under(home.root(), &mut files);
+            if has_entries {
+                assert!(!files.is_empty(), "{name}: no file reached the log tree");
+            }
+        }
+    }
+
+    /// Every invalid vector is rejected with exactly its reason category (the `generate` stanza is
+    /// one general-target raw entry of `rawBytes` ASCII bytes), and nothing reaches the tree.
+    #[test]
+    fn log_frame_vectors_every_invalid_vector_returns_its_reason() {
+        let vectors: Value = serde_json::from_str(VECTORS).expect("logFrameVectors.json");
+        let invalid = vectors["invalid"].as_array().expect("invalid");
+        assert!(!invalid.is_empty());
+        for item in invalid {
+            let name = item["name"].as_str().expect("name");
+            let reason = item["reason"].as_str().expect("reason");
+            let frame = match item["frame"].get("generate") {
+                Some(spec) => {
+                    let raw = "a".repeat(spec["rawBytes"].as_u64().expect("rawBytes") as usize);
+                    serde_json::json!({"kind": LOG_FRAME_KIND, "batch": [
+                        {"target": {"kind": "general"}, "rotate": false, "entries": [{"raw": raw}]}
+                    ]})
+                }
+                None => item["frame"].clone(),
+            };
+            let home = FakeHome::new("gamelib-shell-log-vectors-");
+            let logger = logger_on(&home);
+            let len = frame.to_string().len();
+            let got = route_log_frame(&logger, len, frame);
+            match got {
+                Err(e) => assert_eq!(e.as_str(), reason, "vector {name:?}"),
+                Ok(()) => panic!("invalid vector {name:?} was accepted"),
+            }
+            assert!(logger.flush(Duration::from_secs(10)));
+            let mut files = Vec::new();
+            files_under(home.root(), &mut files);
+            assert!(files.is_empty(), "{name}: a rejected frame wrote a file");
+        }
     }
 }
