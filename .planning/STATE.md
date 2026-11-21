@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 100
 current_phase_name: Game page without the ⋮ menu
 status: executing
-stopped_at: Completed 100-04-PLAN.md
-last_updated: "2026-11-21T10:21:08.191Z"
+stopped_at: Completed 100-05-PLAN.md
+last_updated: "2026-11-21T10:34:14.947Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 100 execution started
-state_head: 84a2bc2eb37265c3d73f6e6e4f04f0c76b551c5a
+state_head: 97d1505416fdc88e914301828f3971a60da41ccf
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 100 (Game page without the ⋮ menu) — EXECUTING
-Plan: 5 of 10
+Plan: 6 of 10
 Status: Ready to execute
 Last activity: 2026-11-21 — Phase 100 execution started
 Progress: [██████████] 100%
@@ -354,6 +354,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 100 P02 | 25 min | 3 tasks | 16 files |
 | Phase 100 P03 | 10 min | 2 tasks | 21 files |
 | Phase 100 P04 | 25 min | 3 tasks | 20 files |
+| Phase 100 P05 | 16 min | 3 tasks | 25 files |
 
 ## Accumulated Context
 
@@ -649,6 +650,9 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 100]: Left card: the New category field matches names exactly after trim (case-sensitive) via validateNewCategoryName before addCategory, so an existing category is never wiped (T-100-04)
 - [Phase 100]: Play time lives in the footer status line (idle only); zero minutes counts as never played
 - [Phase 100]: 100-04: Retry on a failed Move or Set folder re-runs the picker without a second confirmation; Version row falls back to 'update available' when gameInstallInfo has no version
+- [Phase 100]: Retry on a failed cloud sync re-runs through handleSync, so a forced download or upload asks for its overwrite confirmation again (T-100-14)
+- [Phase 100]: Cloud saves label key is installTab.cloudSaves.label: i18next nests on '.', so a cloudSaves leaf cannot share a name with cloudSaves.syncing
+- [Phase 100]: InstallTab renders separate fact lists for installed and not-installed games; ThirdPartyRow serves both and DownloadSizeInfo no longer has a third-party branch
 
 ### Pending Todos
 
@@ -909,8 +913,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-21T10:21:07.885Z
-Stopped at: Completed 100-04-PLAN.md
+Last session: 2026-11-21T10:34:14.627Z
+Stopped at: Completed 100-05-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
