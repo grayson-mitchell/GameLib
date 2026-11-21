@@ -501,23 +501,26 @@ describe('showSteamMainButtonInstallOptions (34.13 review C-04)', () => {
     expect(showSteamMainButtonInstallOptions(delisted)).toBe(false)
   })
 
-  it('E5: the MainButton caret no longer inlines the conjunct — it calls the shared predicate', () => {
-    const source = stripSourceComments(
-      readFileSync(
-        join(
-          __dirname,
-          '..',
-          '..',
-          'screens/Game/GamePage/components/MainButton.tsx'
-        ),
-        'utf8'
+  it('E5: the MainButton caret no longer inlines the conjunct — it calls installCaretItem, which calls the shared predicate', () => {
+    const read = (...parts: string[]) =>
+      stripSourceComments(
+        readFileSync(
+          join(__dirname, '..', '..', 'screens/Game/GamePage', ...parts),
+          'utf8'
+        )
       )
-    )
-    expect(source).toMatch(/showSteamMainButtonInstallOptions\(\{/)
+    const mainButton = read('components/MainButton.tsx')
+    const installCaret = read('actions/installCaret.ts')
+    // Phase 100 (D-20): the caret serves every store, so MainButton reaches the
+    // Steam predicate through installCaretItem rather than calling it directly.
+    expect(mainButton).toMatch(/installCaretItem\(\{/)
+    expect(installCaret).toMatch(/showSteamMainButtonInstallOptions\(\{/)
     // The pre-fix inline form, which this module's doc comment says must
     // not exist in any component file.
-    expect(source).not.toMatch(
-      /gameInfo\.runner === 'steam' &&\s*!is_installed/
-    )
+    for (const source of [mainButton, installCaret]) {
+      expect(source).not.toMatch(
+        /gameInfo\.runner === 'steam' &&\s*!is_installed/
+      )
+    }
   })
 })
