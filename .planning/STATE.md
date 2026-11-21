@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 84
 current_phase_name: Logger
 status: executing
-stopped_at: Completed 84-05-PLAN.md
-last_updated: "2026-11-21T07:15:02.279Z"
+stopped_at: Completed 84-06-PLAN.md
+last_updated: "2026-11-21T07:27:00.104Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 84 execution started
-state_head: 6cec972e7853606f5d0e6ac68c24d0c9d489be8c
+state_head: ba1ac8808923ffb77254b5dd77d39183b76873e5
 progress:
   total_phases: 19
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 84 (Logger) — EXECUTING
-Plan: 6 of 11
+Plan: 7 of 11
 Status: Ready to execute
 Last activity: 2026-11-21 - Completed quick task 261121-p6z: Bound bootstrap.test.ts legacy-zoom cleanup wait by wall-clock via shared yieldUntil
 Progress: [██████████] 100%
@@ -344,6 +344,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 84 P03 | 25 min | 3 tasks | 28 files |
 | Phase 84 P04 | 40 min | 2 tasks | 30 files |
 | Phase 84 P05 | not measured | 3 tasks | 31 files |
+| Phase 84 P06 | 18 min | 2 tasks | 45 files |
 
 ## Accumulated Context
 
@@ -625,6 +626,9 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 84]: 84-05: a paste URL is stored or returned only if https on host exactly dpaste.com (no credentials or port); ReqwestPaste disables redirects and is shared with 84-06's delete
 - [Phase 84]: 84-05: uploadedLogs.json has two writers (Rust on upload, TS FileStore on list/delete) until 84-06; no push before 84-10 so the window never ships
 - [Phase 84]: 84-05: the deleteButtonReachability premise check was pulled forward from 84-06 and now reads PASTE_TOKEN in log_upload.rs
+- [Phase 84]: Rust owns the uploaded-log list and delete on StoreHost; uploadedLogs.json has one writer (84-06)
+- [Phase 84]: Delete-uploaded is proven by a localhost round-trip test, not the UI: its control is commented out, so ROADMAP criterion 2 'from the UI' holds for upload and show-in-folder only (84-06)
+- [Phase 84]: ipcDomainCensus FILES_FLOOR 22 -> 21 is a deliberate deletion of loggerFlowRegistration.ts; the os-mock-is-inert pin now lives in enrichmentFlows.test.ts (84-06)
 
 ### Pending Todos
 
@@ -881,8 +885,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-21T05:47:56.941Z
-Stopped at: Completed 84-05-PLAN.md
+Last session: 2026-11-21T07:26:59.786Z
+Stopped at: Completed 84-06-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
