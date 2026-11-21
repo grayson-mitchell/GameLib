@@ -7,7 +7,10 @@
 //! reach the disk.
 
 pub mod atomic;
+pub mod backup;
 pub mod dotpath;
+pub mod engine;
 pub mod envelope;
 pub mod json;
+pub mod migrate;
 pub mod ops;
