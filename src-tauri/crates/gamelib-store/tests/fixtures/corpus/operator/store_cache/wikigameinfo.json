@@ -1,0 +1,2209 @@
+{
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 1
+		}
+	},
+	"Dead Age 2": {
+		"pcgamingwiki": {
+			"steamID": "REDACTED",
+			"howLongToBeatID": "81570",
+			"metacritic": {
+				"score": "",
+				"urlid": ""
+			},
+			"opencritic": {
+				"score": "",
+				"urlid": ""
+			},
+			"igdb": {
+				"score": "",
+				"urlid": ""
+			},
+			"direct3DVersions": [
+				"11"
+			],
+			"genres": [
+				"RPG"
+			],
+			"releaseDate": [
+				"Windows: March 12, 2021",
+				"OS X: March 12, 2021",
+				"Linux: March 12, 2021"
+			]
+		},
+		"applegamingwiki": {
+			"crossoverRating": "",
+			"wineRating": "",
+			"crossoverLink": ""
+		},
+		"codeweavers": {
+			"macRating": null,
+			"linuxRating": null,
+			"slug": ""
+		},
+		"howlongtobeat": {
+			"mainStory": 55,
+			"mainExtra": 59,
+			"completionist": 0,
+			"gameId": 81570,
+			"gameName": "Dead Age 2",
+			"gameImageUrl": "https://howlongtobeat.com/games/81570_Dead_Age_2.jpg",
+			"gameWebLink": "https://howlongtobeat.com/game/81570"
+		},
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "ok",
+			"howlongtobeat": "ok"
+		}
+	},
+	"__timestamp": {
+		"Dead Age 2": "Tue Nov 17 2026 21:32:56 GMT+1300 (New Zealand Daylight Time)",
+		"Grim Dawn": "Tue Nov 17 2026 21:33:50 GMT+1300 (New Zealand Daylight Time)",
+		"ELEX": "Tue Nov 17 2026 21:41:21 GMT+1300 (New Zealand Daylight Time)",
+		"Schedule I Free Sample": "Sat Nov 21 2026 15:49:34 GMT+1300 (New Zealand Daylight Time)",
+		"Avernum 6": "Wed Nov 18 2026 07:19:46 GMT+1300 (New Zealand Daylight Time)",
+		"Avadon The Black Fortress": "Wed Nov 18 2026 20:52:23 GMT+1300 (New Zealand Daylight Time)",
+		"Avernum Escape From the Pit": "Wed Nov 18 2026 20:58:10 GMT+1300 (New Zealand Daylight Time)",
+		"The Dark Eye Chains of Satinav": "Wed Nov 18 2026 21:09:15 GMT+1300 (New Zealand Daylight Time)",
+		"Disco Elysium": "Wed Nov 18 2026 21:18:47 GMT+1300 (New Zealand Daylight Time)",
+		"LIMBO": "Wed Nov 18 2026 21:18:59 GMT+1300 (New Zealand Daylight Time)",
+		"Avernum 5": "Wed Nov 18 2026 21:19:16 GMT+1300 (New Zealand Daylight Time)",
+		"Avencast": "Wed Nov 18 2026 21:21:36 GMT+1300 (New Zealand Daylight Time)",
+		"Bastion": "Wed Nov 18 2026 21:22:00 GMT+1300 (New Zealand Daylight Time)",
+		"Wildermyth": "Wed Nov 18 2026 21:30:59 GMT+1300 (New Zealand Daylight Time)",
+		"Machinarium": "Wed Nov 18 2026 21:48:14 GMT+1300 (New Zealand Daylight Time)",
+		"Starbound": "Wed Nov 18 2026 22:28:29 GMT+1300 (New Zealand Daylight Time)",
+		"Balrum": "Thu Nov 19 2026 05:54:35 GMT+1300 (New Zealand Daylight Time)",
+		"Alan Wake": "Thu Nov 19 2026 05:54:24 GMT+1300 (New Zealand Daylight Time)",
+		"Sovereign Syndicate": "Thu Nov 19 2026 20:58:33 GMT+1300 (New Zealand Daylight Time)",
+		"Eschalon Book 1": "Thu Nov 19 2026 20:58:53 GMT+1300 (New Zealand Daylight Time)",
+		"The Bards Tale IV": "Thu Nov 19 2026 20:59:49 GMT+1300 (New Zealand Daylight Time)",
+		"Conquest of Elysium 3": "Thu Nov 19 2026 21:00:00 GMT+1300 (New Zealand Daylight Time)",
+		"Tomb Raider": "Thu Nov 19 2026 21:57:28 GMT+1300 (New Zealand Daylight Time)",
+		"DREDGE": "Thu Nov 19 2026 21:58:10 GMT+1300 (New Zealand Daylight Time)",
+		"Avernum 4": "Fri Nov 20 2026 06:00:40 GMT+1300 (New Zealand Daylight Time)",
+		"WazHack": "Fri Nov 20 2026 18:31:45 GMT+1300 (New Zealand Daylight Time)",
+		"The Binding of Isaac": "Fri Nov 20 2026 19:07:42 GMT+1300 (New Zealand Daylight Time)",
+		"World of Goo": "Fri Nov 20 2026 19:09:03 GMT+1300 (New Zealand Daylight Time)",
+		"Banquet for Fools": "Fri Nov 20 2026 19:13:19 GMT+1300 (New Zealand Daylight Time)",
+		"Oppidum": "Fri Nov 20 2026 19:13:27 GMT+1300 (New Zealand Daylight Time)",
+		"Wizardry 7 Crusaders of the Dark Savant": "Fri Nov 20 2026 19:13:33 GMT+1300 (New Zealand Daylight Time)",
+		"XCOM Chimera Squad": "Fri Nov 20 2026 19:14:40 GMT+1300 (New Zealand Daylight Time)",
+		"Wasteland 1 - The Original Classic": "Fri Nov 20 2026 19:14:48 GMT+1300 (New Zealand Daylight Time)",
+		"Wild Indigo Ranch": "Fri Nov 20 2026 19:16:19 GMT+1300 (New Zealand Daylight Time)",
+		"Amnesia The Dark Descent": "Fri Nov 20 2026 20:27:58 GMT+1300 (New Zealand Daylight Time)",
+		"Low Magic Age": "Fri Nov 20 2026 20:34:32 GMT+1300 (New Zealand Daylight Time)",
+		"Cat Quest": "Fri Nov 20 2026 20:37:50 GMT+1300 (New Zealand Daylight Time)",
+		"ADOM (Ancient Domains Of Mystery)": "Sat Nov 21 2026 08:56:36 GMT+1300 (New Zealand Daylight Time)",
+		"Gothic 1 Remake": "Sat Nov 21 2026 09:00:50 GMT+1300 (New Zealand Daylight Time)",
+		"The Age of Decadence": "Sat Nov 21 2026 10:53:50 GMT+1300 (New Zealand Daylight Time)",
+		"The Longest Journey": "Sat Nov 21 2026 16:32:49 GMT+1300 (New Zealand Daylight Time)",
+		"The Bards Tale IV Directors Cut": "Sat Nov 21 2026 16:33:46 GMT+1300 (New Zealand Daylight Time)",
+		"The Banner Saga": "Sat Nov 21 2026 16:33:55 GMT+1300 (New Zealand Daylight Time)",
+		"Hero of the Kingdom The Lost Tales 3": "Sat Nov 21 2026 21:38:25 GMT+1300 (New Zealand Daylight Time)",
+		"Racine": "Sat Nov 21 2026 22:02:39 GMT+1300 (New Zealand Daylight Time)",
+		"Colony Ship A Post-Earth Role Playing Game": "Sat Nov 21 2026 21:39:45 GMT+1300 (New Zealand Daylight Time)"
+	},
+	"Grim Dawn": {
+		"pcgamingwiki": {
+			"steamID": "REDACTED",
+			"howLongToBeatID": "11847",
+			"metacritic": {
+				"score": "83",
+				"urlid": "grim-dawn"
+			},
+			"opencritic": {
+				"score": "",
+				"urlid": ""
+			},
+			"igdb": {
+				"score": "82",
+				"urlid": "grim-dawn"
+			},
+			"direct3DVersions": [
+				"9Ex",
+				"11"
+			],
+			"genres": [
+				"ARPG",
+				"Hackandslash"
+			],
+			"releaseDate": [
+				"Windows: February 25, 2016"
+			]
+		},
+		"applegamingwiki": {
+			"crossoverRating": "playable",
+			"wineRating": "perfect",
+			"crossoverLink": ""
+		},
+		"codeweavers": {
+			"macRating": 5,
+			"linuxRating": null,
+			"slug": "grim-dawn"
+		},
+		"howlongtobeat": {
+			"mainStory": 22,
+			"mainExtra": 49,
+			"completionist": 245,
+			"gameId": 11847,
+			"gameName": "Grim Dawn",
+			"gameImageUrl": "https://howlongtobeat.com/games/Grim_Dawn.jpg",
+			"gameWebLink": "https://howlongtobeat.com/game/11847"
+		},
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "ok",
+			"howlongtobeat": "ok"
+		}
+	},
+	"ELEX": {
+		"pcgamingwiki": {
+			"steamID": "REDACTED",
+			"howLongToBeatID": "27129",
+			"metacritic": {
+				"score": "67",
+				"urlid": "elex"
+			},
+			"opencritic": {
+				"score": "61",
+				"urlid": "4612/elex"
+			},
+			"igdb": {
+				"score": "",
+				"urlid": ""
+			},
+			"direct3DVersions": [
+				"11"
+			],
+			"genres": [
+				"RPG"
+			],
+			"releaseDate": [
+				"Windows: October 17, 2017"
+			]
+		},
+		"applegamingwiki": {
+			"crossoverRating": "",
+			"wineRating": "",
+			"crossoverLink": ""
+		},
+		"codeweavers": {
+			"macRating": 2,
+			"linuxRating": null,
+			"slug": "elex"
+		},
+		"howlongtobeat": {
+			"mainStory": 27,
+			"mainExtra": 50,
+			"completionist": 85,
+			"gameId": 27129,
+			"gameName": "ELEX",
+			"gameImageUrl": "https://howlongtobeat.com/games/27129_Elex.jpg",
+			"gameWebLink": "https://howlongtobeat.com/game/27129"
+		},
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "ok",
+			"howlongtobeat": "ok"
+		}
+	},
+	"Schedule I Free Sample": {
+		"pcgamingwiki": null,
+		"applegamingwiki": {
+			"crossoverRating": "",
+			"wineRating": "",
+			"crossoverLink": ""
+		},
+		"codeweavers": {
+			"macRating": null,
+			"linuxRating": null,
+			"slug": ""
+		},
+		"howlongtobeat": null,
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "notfound",
+			"howlongtobeat": "notfound"
+		}
+	},
+	"Avernum 6": {
+		"pcgamingwiki": {
+			"steamID": "REDACTED",
+			"howLongToBeatID": "",
+			"metacritic": {
+				"score": "",
+				"urlid": ""
+			},
+			"opencritic": {
+				"score": "",
+				"urlid": ""
+			},
+			"igdb": {
+				"score": "",
+				"urlid": ""
+			},
+			"direct3DVersions": [
+				""
+			],
+			"genres": [
+				"RPG"
+			],
+			"releaseDate": [
+				"OS X: November 20, 2009",
+				"Windows: February 25, 2010"
+			]
+		},
+		"applegamingwiki": {
+			"crossoverRating": "",
+			"wineRating": "",
+			"crossoverLink": ""
+		},
+		"codeweavers": {
+			"macRating": null,
+			"linuxRating": null,
+			"slug": ""
+		},
+		"howlongtobeat": null,
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "ok",
+			"howlongtobeat": "notfound"
+		}
+	},
+	"Avadon The Black Fortress": {
+		"pcgamingwiki": {
+			"steamID": "REDACTED",
+			"howLongToBeatID": "",
+			"metacritic": {
+				"score": "",
+				"urlid": ""
+			},
+			"opencritic": {
+				"score": "",
+				"urlid": ""
+			},
+			"igdb": {
+				"score": "",
+				"urlid": ""
+			},
+			"direct3DVersions": [
+				""
+			],
+			"genres": [
+				"RPG"
+			],
+			"releaseDate": [
+				"OS X: February 28, 2011",
+				"Windows: May 2, 2011",
+				"Linux: August 17, 2011"
+			]
+		},
+		"applegamingwiki": {
+			"crossoverRating": "",
+			"wineRating": "",
+			"crossoverLink": ""
+		},
+		"codeweavers": {
+			"macRating": null,
+			"linuxRating": null,
+			"slug": ""
+		},
+		"howlongtobeat": null,
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "ok",
+			"howlongtobeat": "notfound"
+		}
+	},
+	"Avernum Escape From the Pit": {
+		"pcgamingwiki": null,
+		"applegamingwiki": {
+			"crossoverRating": "",
+			"wineRating": "",
+			"crossoverLink": ""
+		},
+		"codeweavers": {
+			"macRating": null,
+			"linuxRating": null,
+			"slug": ""
+		},
+		"howlongtobeat": null,
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "notfound",
+			"howlongtobeat": "notfound"
+		}
+	},
+	"The Dark Eye Chains of Satinav": {
+		"pcgamingwiki": {
+			"steamID": "REDACTED",
+			"howLongToBeatID": "9826",
+			"metacritic": {
+				"score": "75",
+				"urlid": "the-dark-eye-chains-of-satinav"
+			},
+			"opencritic": {
+				"score": "74",
+				"urlid": "10888/the-dark-eye-chains-of-satinav"
+			},
+			"igdb": {
+				"score": "",
+				"urlid": ""
+			},
+			"direct3DVersions": [
+				"9",
+				"11"
+			],
+			"genres": [
+				"Adventure"
+			],
+			"releaseDate": [
+				"Windows: June 22, 2012",
+				"OS X: January 4, 2013",
+				"Linux: December 24, 2024|ref=<ref>{{Refurl|url=https://store.steampowered.com/news/app/203830/view/544470329026675954|title=The Dark Eye: Chains of Satinav - Patch 3.0.351 - Steam News|date=2024-12-28"
+			]
+		},
+		"applegamingwiki": {
+			"crossoverRating": "playable",
+			"wineRating": "unknown",
+			"crossoverLink": "the-dark-eye-chains-of-satinav"
+		},
+		"codeweavers": {
+			"macRating": 4,
+			"linuxRating": null,
+			"slug": "the-dark-eye-chains-of-satinav"
+		},
+		"howlongtobeat": {
+			"mainStory": 10,
+			"mainExtra": 12,
+			"completionist": 13,
+			"gameId": 9826,
+			"gameName": "The Dark Eye: Chains of Satinav",
+			"gameImageUrl": "https://howlongtobeat.com/games/2161879-dark_large.png",
+			"gameWebLink": "https://howlongtobeat.com/game/9826"
+		},
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "ok",
+			"howlongtobeat": "ok"
+		}
+	},
+	"Disco Elysium": {
+		"pcgamingwiki": {
+			"steamID": "REDACTED",
+			"howLongToBeatID": "57335",
+			"metacritic": {
+				"score": "91",
+				"urlid": "disco-elysium"
+			},
+			"opencritic": {
+				"score": "92",
+				"urlid": "8419/disco-elysium"
+			},
+			"igdb": {
+				"score": "89",
+				"urlid": "disco-elysium"
+			},
+			"direct3DVersions": [
+				"11"
+			],
+			"genres": [
+				"Adventure",
+				"RPG"
+			],
+			"releaseDate": [
+				"Windows: October 15, 2019",
+				"OS X: April 27, 2020|ref=<ref>{{Refurl|url=https://store.steampowered.com/newshub/app/632470/view/2225284620691739906|title=Disco Elysium - Disco Elysium is now available on Mac! - Steam News|date=2020-04-28"
+			]
+		},
+		"applegamingwiki": {
+			"crossoverRating": "unknown",
+			"wineRating": "perfect",
+			"crossoverLink": ""
+		},
+		"codeweavers": {
+			"macRating": 5,
+			"linuxRating": null,
+			"slug": "disco-elysium"
+		},
+		"howlongtobeat": {
+			"mainStory": 24,
+			"mainExtra": 33,
+			"completionist": 49,
+			"gameId": 57335,
+			"gameName": "Disco Elysium",
+			"gameImageUrl": "https://howlongtobeat.com/games/57335_Disco_Elysium.jpg",
+			"gameWebLink": "https://howlongtobeat.com/game/57335"
+		},
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "ok",
+			"howlongtobeat": "ok"
+		}
+	},
+	"LIMBO": {
+		"pcgamingwiki": {
+			"steamID": "REDACTED",
+			"howLongToBeatID": "",
+			"metacritic": {
+				"score": "",
+				"urlid": ""
+			},
+			"opencritic": {
+				"score": "",
+				"urlid": ""
+			},
+			"igdb": {
+				"score": "",
+				"urlid": ""
+			},
+			"direct3DVersions": [
+				"11"
+			],
+			"genres": [
+				"Railshooter"
+			],
+			"releaseDate": [
+				"Windows: TBA"
+			]
+		},
+		"applegamingwiki": {
+			"crossoverRating": "playable",
+			"wineRating": "unknown",
+			"crossoverLink": "limbo"
+		},
+		"codeweavers": {
+			"macRating": 5,
+			"linuxRating": null,
+			"slug": "limbo"
+		},
+		"howlongtobeat": null,
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "ok",
+			"howlongtobeat": "notfound"
+		}
+	},
+	"Avernum 5": {
+		"pcgamingwiki": {
+			"steamID": "REDACTED",
+			"howLongToBeatID": "",
+			"metacritic": {
+				"score": "",
+				"urlid": ""
+			},
+			"opencritic": {
+				"score": "",
+				"urlid": ""
+			},
+			"igdb": {
+				"score": "",
+				"urlid": ""
+			},
+			"direct3DVersions": [
+				""
+			],
+			"genres": [
+				"RPG"
+			],
+			"releaseDate": [
+				"OS X: November 12, 2007",
+				"Windows: February 16, 2008"
+			]
+		},
+		"applegamingwiki": {
+			"crossoverRating": "",
+			"wineRating": "",
+			"crossoverLink": ""
+		},
+		"codeweavers": {
+			"macRating": null,
+			"linuxRating": null,
+			"slug": ""
+		},
+		"howlongtobeat": null,
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "ok",
+			"howlongtobeat": "notfound"
+		}
+	},
+	"Avencast": {
+		"pcgamingwiki": {
+			"steamID": "REDACTED",
+			"howLongToBeatID": "744",
+			"metacritic": {
+				"score": "68",
+				"urlid": "avencast-rise-of-the-mage"
+			},
+			"opencritic": {
+				"score": "",
+				"urlid": ""
+			},
+			"igdb": {
+				"score": "",
+				"urlid": ""
+			},
+			"direct3DVersions": [
+				"9.0c"
+			],
+			"genres": [
+				"RPG"
+			],
+			"releaseDate": [
+				"Windows: October 30, 2007"
+			]
+		},
+		"applegamingwiki": {
+			"crossoverRating": "",
+			"wineRating": "",
+			"crossoverLink": ""
+		},
+		"codeweavers": {
+			"macRating": null,
+			"linuxRating": null,
+			"slug": ""
+		},
+		"howlongtobeat": {
+			"mainStory": 13,
+			"mainExtra": 15,
+			"completionist": 18,
+			"gameId": 744,
+			"gameName": "Avencast: Rise of the Mage",
+			"gameImageUrl": "https://howlongtobeat.com/games/Avencast_Boxart.jpg",
+			"gameWebLink": "https://howlongtobeat.com/game/744"
+		},
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "ok",
+			"howlongtobeat": "ok"
+		}
+	},
+	"Bastion": {
+		"pcgamingwiki": {
+			"steamID": "",
+			"howLongToBeatID": "",
+			"metacritic": {
+				"score": "",
+				"urlid": ""
+			},
+			"opencritic": {
+				"score": "",
+				"urlid": ""
+			},
+			"igdb": {
+				"score": "",
+				"urlid": ""
+			},
+			"direct3DVersions": [
+				""
+			],
+			"genres": [
+				""
+			],
+			"releaseDate": [
+				"DOS: 1996"
+			]
+		},
+		"applegamingwiki": {
+			"crossoverRating": "runs",
+			"wineRating": "unknown",
+			"crossoverLink": ""
+		},
+		"codeweavers": {
+			"macRating": 4,
+			"linuxRating": null,
+			"slug": "bastion"
+		},
+		"howlongtobeat": null,
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "ok",
+			"howlongtobeat": "notfound"
+		}
+	},
+	"Wildermyth": {
+		"pcgamingwiki": {
+			"steamID": "REDACTED",
+			"howLongToBeatID": "72009",
+			"metacritic": {
+				"score": "87",
+				"urlid": "wildermyth"
+			},
+			"opencritic": {
+				"score": "85",
+				"urlid": "11539/wildermyth"
+			},
+			"igdb": {
+				"score": "",
+				"urlid": ""
+			},
+			"direct3DVersions": [
+				""
+			],
+			"genres": [
+				"TacticalRPG"
+			],
+			"releaseDate": [
+				"Windows: June 15, 2021",
+				"OS X: June 15, 2021",
+				"Linux: June 15, 2021"
+			]
+		},
+		"applegamingwiki": {
+			"crossoverRating": "",
+			"wineRating": "",
+			"crossoverLink": ""
+		},
+		"codeweavers": {
+			"macRating": null,
+			"linuxRating": null,
+			"slug": ""
+		},
+		"howlongtobeat": {
+			"mainStory": 28,
+			"mainExtra": 45,
+			"completionist": 86,
+			"gameId": 72009,
+			"gameName": "Wildermyth",
+			"gameImageUrl": "https://howlongtobeat.com/games/72009_Wildermyth.jpg",
+			"gameWebLink": "https://howlongtobeat.com/game/72009"
+		},
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "ok",
+			"howlongtobeat": "ok"
+		}
+	},
+	"Machinarium": {
+		"pcgamingwiki": {
+			"steamID": "REDACTED",
+			"howLongToBeatID": "5478",
+			"metacritic": {
+				"score": "85",
+				"urlid": "machinarium"
+			},
+			"opencritic": {
+				"score": "",
+				"urlid": ""
+			},
+			"igdb": {
+				"score": "",
+				"urlid": ""
+			},
+			"direct3DVersions": [
+				"9",
+				"12"
+			],
+			"genres": [
+				"Adventure",
+				"Puzzle"
+			],
+			"releaseDate": [
+				"Windows: October 16, 2009",
+				"OS X: October 16, 2009",
+				"Linux: October 16, 2009"
+			]
+		},
+		"applegamingwiki": {
+			"crossoverRating": "perfect",
+			"wineRating": "perfect",
+			"crossoverLink": "machinarium"
+		},
+		"codeweavers": {
+			"macRating": 5,
+			"linuxRating": null,
+			"slug": "machinarium"
+		},
+		"howlongtobeat": {
+			"mainStory": 5,
+			"mainExtra": 5,
+			"completionist": 6,
+			"gameId": 5478,
+			"gameName": "Machinarium",
+			"gameImageUrl": "https://howlongtobeat.com/games/Machinarium-cover_art.png",
+			"gameWebLink": "https://howlongtobeat.com/game/5478"
+		},
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "ok",
+			"howlongtobeat": "ok"
+		}
+	},
+	"Starbound": {
+		"pcgamingwiki": {
+			"steamID": "REDACTED",
+			"howLongToBeatID": "9149",
+			"metacritic": {
+				"score": "81",
+				"urlid": "starbound"
+			},
+			"opencritic": {
+				"score": "85",
+				"urlid": "2974/starbound"
+			},
+			"igdb": {
+				"score": "87",
+				"urlid": "starbound"
+			},
+			"direct3DVersions": [
+				""
+			],
+			"genres": [
+				"Action",
+				"Platform",
+				"RPG",
+				"Survival",
+				"Sandbox",
+				"Openworld"
+			],
+			"releaseDate": [
+				"Windows: July 22, 2016|ref=<ref name=\"release date\">[http://playstarbound.com/starbound-release-announcement/ Starbound - Starbound is Leaving Orbit on 22 July]</ref>",
+				"OS X: July 22, 2016|ref=<ref name=\"release date\"/>",
+				"Linux: July 22, 2016|ref=<ref name=\"release date\"/>"
+			]
+		},
+		"applegamingwiki": {
+			"crossoverRating": "unknown",
+			"wineRating": "unknown",
+			"crossoverLink": ""
+		},
+		"codeweavers": {
+			"macRating": 5,
+			"linuxRating": null,
+			"slug": "starbound"
+		},
+		"howlongtobeat": {
+			"mainStory": 26,
+			"mainExtra": 61,
+			"completionist": 154,
+			"gameId": 9149,
+			"gameName": "Starbound",
+			"gameImageUrl": "https://howlongtobeat.com/games/9149_Starbound.jpg",
+			"gameWebLink": "https://howlongtobeat.com/game/9149"
+		},
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "ok",
+			"howlongtobeat": "ok"
+		}
+	},
+	"Balrum": {
+		"pcgamingwiki": null,
+		"applegamingwiki": {
+			"crossoverRating": "",
+			"wineRating": "",
+			"crossoverLink": ""
+		},
+		"codeweavers": {
+			"macRating": null,
+			"linuxRating": null,
+			"slug": ""
+		},
+		"howlongtobeat": null,
+		"gamesdb": {
+			"steamID": "REDACTED"
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "error",
+			"howlongtobeat": "notfound"
+		}
+	},
+	"Alan Wake": {
+		"pcgamingwiki": null,
+		"applegamingwiki": {
+			"crossoverRating": "Runs",
+			"wineRating": "unknown",
+			"crossoverLink": "alan-wake"
+		},
+		"codeweavers": {
+			"macRating": 4,
+			"linuxRating": null,
+			"slug": "alan-wake"
+		},
+		"howlongtobeat": null,
+		"gamesdb": {
+			"steamID": "REDACTED"
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "error",
+			"howlongtobeat": "notfound"
+		}
+	},
+	"Sovereign Syndicate": {
+		"pcgamingwiki": {
+			"steamID": "REDACTED",
+			"howLongToBeatID": "112911",
+			"metacritic": {
+				"score": "77",
+				"urlid": "sovereign-syndicate"
+			},
+			"opencritic": {
+				"score": "",
+				"urlid": ""
+			},
+			"igdb": {
+				"score": "",
+				"urlid": ""
+			},
+			"direct3DVersions": [
+				""
+			],
+			"genres": [
+				"RPG"
+			],
+			"releaseDate": [
+				"Windows: January 15, 2024"
+			]
+		},
+		"applegamingwiki": {
+			"crossoverRating": "",
+			"wineRating": "",
+			"crossoverLink": ""
+		},
+		"codeweavers": {
+			"macRating": null,
+			"linuxRating": null,
+			"slug": ""
+		},
+		"howlongtobeat": {
+			"mainStory": 14,
+			"mainExtra": 17,
+			"completionist": 26,
+			"gameId": 112911,
+			"gameName": "Sovereign Syndicate",
+			"gameImageUrl": "https://howlongtobeat.com/games/112911_Sovereign_Syndicate.jpg",
+			"gameWebLink": "https://howlongtobeat.com/game/112911"
+		},
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "ok",
+			"howlongtobeat": "ok"
+		}
+	},
+	"Eschalon Book 1": {
+		"pcgamingwiki": null,
+		"applegamingwiki": {
+			"crossoverRating": "",
+			"wineRating": "",
+			"crossoverLink": ""
+		},
+		"codeweavers": {
+			"macRating": null,
+			"linuxRating": null,
+			"slug": ""
+		},
+		"howlongtobeat": null,
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "notfound",
+			"howlongtobeat": "notfound"
+		}
+	},
+	"The Bards Tale IV": {
+		"pcgamingwiki": null,
+		"applegamingwiki": {
+			"crossoverRating": "",
+			"wineRating": "",
+			"crossoverLink": ""
+		},
+		"codeweavers": {
+			"macRating": null,
+			"linuxRating": null,
+			"slug": ""
+		},
+		"howlongtobeat": null,
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "notfound",
+			"howlongtobeat": "notfound"
+		}
+	},
+	"Conquest of Elysium 3": {
+		"pcgamingwiki": {
+			"steamID": "REDACTED",
+			"howLongToBeatID": "",
+			"metacritic": {
+				"score": "",
+				"urlid": ""
+			},
+			"opencritic": {
+				"score": "",
+				"urlid": ""
+			},
+			"igdb": {
+				"score": "",
+				"urlid": ""
+			},
+			"direct3DVersions": [
+				""
+			],
+			"genres": [
+				""
+			],
+			"releaseDate": [
+				"Windows: October 24, 2012",
+				"OS X: October 24, 2012|ref={{cn|reason=Might be incorrect, using Steam release date.|date=September 2016",
+				"Linux: October 24, 2012|ref={{cn|reason=Might be incorrect, using Steam release date.|date=September 2016"
+			]
+		},
+		"applegamingwiki": {
+			"crossoverRating": "",
+			"wineRating": "",
+			"crossoverLink": ""
+		},
+		"codeweavers": {
+			"macRating": null,
+			"linuxRating": null,
+			"slug": ""
+		},
+		"howlongtobeat": null,
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "ok",
+			"howlongtobeat": "notfound"
+		}
+	},
+	"Tomb Raider": {
+		"pcgamingwiki": {
+			"steamID": "REDACTED",
+			"howLongToBeatID": "10469",
+			"metacritic": {
+				"score": "86",
+				"urlid": "tomb-raider"
+			},
+			"opencritic": {
+				"score": "85",
+				"urlid": "291/tomb-raider"
+			},
+			"igdb": {
+				"score": "85",
+				"urlid": "tomb-raider--2"
+			},
+			"direct3DVersions": [
+				"9.0c",
+				"11"
+			],
+			"genres": [
+				"Action",
+				"Adventure"
+			],
+			"releaseDate": [
+				"Windows: March 5, 2013",
+				"OS X: January 23, 2014",
+				"Linux: April 27, 2016"
+			]
+		},
+		"applegamingwiki": {
+			"crossoverRating": "playable",
+			"wineRating": "na",
+			"crossoverLink": ""
+		},
+		"codeweavers": {
+			"macRating": 4,
+			"linuxRating": null,
+			"slug": "tomb-raider"
+		},
+		"howlongtobeat": {
+			"mainStory": 11,
+			"mainExtra": 15,
+			"completionist": 21,
+			"gameId": 10469,
+			"gameName": "Tomb Raider",
+			"gameImageUrl": "https://howlongtobeat.com/games/256px-Tr2011cover.jpg",
+			"gameWebLink": "https://howlongtobeat.com/game/10469"
+		},
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "ok",
+			"howlongtobeat": "ok"
+		}
+	},
+	"DREDGE": {
+		"pcgamingwiki": {
+			"steamID": "REDACTED",
+			"howLongToBeatID": "94128",
+			"metacritic": {
+				"score": "80",
+				"urlid": "dredge"
+			},
+			"opencritic": {
+				"score": "82",
+				"urlid": "14348/dredge"
+			},
+			"igdb": {
+				"score": "86",
+				"urlid": "dredge"
+			},
+			"direct3DVersions": [
+				"11"
+			],
+			"genres": [
+				"Adventure",
+				"RPG",
+				"Driving",
+				"Simulation",
+				"Exploration",
+				"Openworld"
+			],
+			"releaseDate": [
+				"Windows: March 30, 2023",
+				"OS X: December 18, 2024|ref=<ref>{{Refurl|url=https://steamcommunity.com/games/1562430/announcements/detail/596261024722585004|title= Steam :: DREDGE :: DREDGE is out now on Mac for Steam!|date=2025-02-19"
+			]
+		},
+		"applegamingwiki": {
+			"crossoverRating": "perfect",
+			"wineRating": "perfect",
+			"crossoverLink": "dredge"
+		},
+		"codeweavers": {
+			"macRating": null,
+			"linuxRating": null,
+			"slug": ""
+		},
+		"howlongtobeat": {
+			"mainStory": 10,
+			"mainExtra": 13,
+			"completionist": 21,
+			"gameId": 94128,
+			"gameName": "Dredge",
+			"gameImageUrl": "https://howlongtobeat.com/games/94128_Dredge.jpg",
+			"gameWebLink": "https://howlongtobeat.com/game/94128"
+		},
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "ok",
+			"howlongtobeat": "ok"
+		}
+	},
+	"Avernum 4": {
+		"pcgamingwiki": null,
+		"applegamingwiki": null,
+		"codeweavers": {
+			"macRating": null,
+			"linuxRating": null,
+			"slug": ""
+		},
+		"howlongtobeat": null,
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "error",
+			"howlongtobeat": "notfound"
+		}
+	},
+	"WazHack": {
+		"pcgamingwiki": {
+			"steamID": "REDACTED",
+			"howLongToBeatID": "",
+			"metacritic": {
+				"score": "",
+				"urlid": ""
+			},
+			"opencritic": {
+				"score": "",
+				"urlid": ""
+			},
+			"igdb": {
+				"score": "",
+				"urlid": ""
+			},
+			"direct3DVersions": [
+				""
+			],
+			"genres": [
+				""
+			],
+			"releaseDate": [
+				"Windows: February 17, 2014",
+				"OS X: February 17, 2014|ref={{cn|reason=Might be incorrect.|date=September 2016",
+				"Linux: February 17, 2014|ref={{cn|reason=Might be incorrect.|date=September 2016"
+			]
+		},
+		"applegamingwiki": {
+			"crossoverRating": "",
+			"wineRating": "",
+			"crossoverLink": ""
+		},
+		"codeweavers": {
+			"macRating": null,
+			"linuxRating": null,
+			"slug": ""
+		},
+		"howlongtobeat": null,
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "ok",
+			"howlongtobeat": "notfound"
+		}
+	},
+	"The Binding of Isaac": {
+		"pcgamingwiki": {
+			"steamID": "REDACTED",
+			"howLongToBeatID": "9781",
+			"metacritic": {
+				"score": "84",
+				"urlid": "the-binding-of-isaac"
+			},
+			"opencritic": {
+				"score": "",
+				"urlid": ""
+			},
+			"igdb": {
+				"score": "",
+				"urlid": ""
+			},
+			"direct3DVersions": [
+				"9.0c"
+			],
+			"genres": [
+				"Roguelike",
+				"Shooter"
+			],
+			"releaseDate": [
+				"Windows: September 28, 2011",
+				"OS X: September 28, 2011",
+				"Linux: November 1, 2011"
+			]
+		},
+		"applegamingwiki": {
+			"crossoverRating": "runs",
+			"wineRating": "na",
+			"crossoverLink": "the-binding-of-isaac"
+		},
+		"codeweavers": {
+			"macRating": null,
+			"linuxRating": null,
+			"slug": ""
+		},
+		"howlongtobeat": {
+			"mainStory": 11,
+			"mainExtra": 52,
+			"completionist": 145,
+			"gameId": 9781,
+			"gameName": "The Binding of Isaac",
+			"gameImageUrl": "https://howlongtobeat.com/games/TheBindingofIsaac_292x136.jpg",
+			"gameWebLink": "https://howlongtobeat.com/game/9781"
+		},
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "ok",
+			"howlongtobeat": "ok"
+		}
+	},
+	"World of Goo": {
+		"pcgamingwiki": {
+			"steamID": "REDACTED",
+			"howLongToBeatID": "11283",
+			"metacritic": {
+				"score": "90",
+				"urlid": "world-of-goo"
+			},
+			"opencritic": {
+				"score": "85",
+				"urlid": "4262/world-of-goo"
+			},
+			"igdb": {
+				"score": "87",
+				"urlid": "world-of-goo"
+			},
+			"direct3DVersions": [
+				""
+			],
+			"genres": [
+				"Puzzle"
+			],
+			"releaseDate": [
+				"Windows: May 2, 2019",
+				"OS X: May 2, 2019",
+				"Linux: May 2, 2019"
+			]
+		},
+		"applegamingwiki": {
+			"crossoverRating": "unknown",
+			"wineRating": "unknown",
+			"crossoverLink": ""
+		},
+		"codeweavers": {
+			"macRating": 5,
+			"linuxRating": null,
+			"slug": "world-of-goo"
+		},
+		"howlongtobeat": {
+			"mainStory": 6,
+			"mainExtra": 8,
+			"completionist": 14,
+			"gameId": 11283,
+			"gameName": "World of Goo",
+			"gameImageUrl": "https://howlongtobeat.com/games/11283_World_of_Goo.jpg",
+			"gameWebLink": "https://howlongtobeat.com/game/11283"
+		},
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "ok",
+			"howlongtobeat": "ok"
+		}
+	},
+	"Banquet for Fools": {
+		"pcgamingwiki": {
+			"steamID": "REDACTED",
+			"howLongToBeatID": "157203",
+			"metacritic": {
+				"score": "",
+				"urlid": ""
+			},
+			"opencritic": {
+				"score": "",
+				"urlid": ""
+			},
+			"igdb": {
+				"score": "",
+				"urlid": ""
+			},
+			"direct3DVersions": [
+				""
+			],
+			"genres": [
+				"RPG"
+			],
+			"releaseDate": [
+				"Windows: March 5, 2026",
+				"OS X: March 5, 2026"
+			]
+		},
+		"applegamingwiki": {
+			"crossoverRating": "",
+			"wineRating": "",
+			"crossoverLink": ""
+		},
+		"codeweavers": {
+			"macRating": null,
+			"linuxRating": null,
+			"slug": ""
+		},
+		"howlongtobeat": {
+			"mainStory": 31,
+			"mainExtra": 32,
+			"completionist": 0,
+			"gameId": 157203,
+			"gameName": "Banquet for Fools",
+			"gameImageUrl": "https://howlongtobeat.com/games/157203_Banquet_for_Fools.jpg",
+			"gameWebLink": "https://howlongtobeat.com/game/157203"
+		},
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "ok",
+			"howlongtobeat": "ok"
+		}
+	},
+	"Oppidum": {
+		"pcgamingwiki": null,
+		"applegamingwiki": {
+			"crossoverRating": "",
+			"wineRating": "",
+			"crossoverLink": ""
+		},
+		"codeweavers": {
+			"macRating": null,
+			"linuxRating": null,
+			"slug": ""
+		},
+		"howlongtobeat": null,
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "notfound",
+			"howlongtobeat": "notfound"
+		}
+	},
+	"Wizardry 7 Crusaders of the Dark Savant": {
+		"pcgamingwiki": {
+			"steamID": "REDACTED",
+			"howLongToBeatID": "11236",
+			"metacritic": {
+				"score": "",
+				"urlid": ""
+			},
+			"opencritic": {
+				"score": "",
+				"urlid": ""
+			},
+			"igdb": {
+				"score": "",
+				"urlid": ""
+			},
+			"direct3DVersions": [
+				""
+			],
+			"genres": [
+				"RPG"
+			],
+			"releaseDate": [
+				"DOS: 1992",
+				"Windows: May 23, 2013|wrapper=DOSBox|ref=<ref>{{Refurl|url=https://www.gog.com/news/release_wizardry_67_copy3|title=Release: Wizardry 6+7 - GOG.com|date=May 2023",
+				"OS X: September 11, 2013|wrapper=DOSBox|ref=<ref name=\"release date\">[https://store.steampowered.com/news/11431/ News - Now Available - Wizardry 6, 7, and 8]</ref>",
+				"Linux: September 11, 2013|wrapper=DOSBox|ref=<ref name=\"release date\"/>"
+			]
+		},
+		"applegamingwiki": {
+			"crossoverRating": "",
+			"wineRating": "",
+			"crossoverLink": ""
+		},
+		"codeweavers": {
+			"macRating": null,
+			"linuxRating": null,
+			"slug": ""
+		},
+		"howlongtobeat": {
+			"mainStory": 60,
+			"mainExtra": 98,
+			"completionist": 148,
+			"gameId": 11236,
+			"gameName": "Wizardry VII: Crusaders of the Dark Savant",
+			"gameImageUrl": "https://howlongtobeat.com/games/256px-Wizardry7Box.jpg",
+			"gameWebLink": "https://howlongtobeat.com/game/11236"
+		},
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "ok",
+			"howlongtobeat": "ok"
+		}
+	},
+	"XCOM Chimera Squad": {
+		"pcgamingwiki": {
+			"steamID": "REDACTED",
+			"howLongToBeatID": "77090",
+			"metacritic": {
+				"score": "77",
+				"urlid": "xcom-chimera-squad"
+			},
+			"opencritic": {
+				"score": "79",
+				"urlid": "9349/xcom-chimera-squad"
+			},
+			"igdb": {
+				"score": "78",
+				"urlid": "xcom-chimera-squad"
+			},
+			"direct3DVersions": [
+				"11"
+			],
+			"genres": [
+				"Strategy"
+			],
+			"releaseDate": [
+				"Windows: April 24, 2020"
+			]
+		},
+		"applegamingwiki": {
+			"crossoverRating": "",
+			"wineRating": "",
+			"crossoverLink": ""
+		},
+		"codeweavers": {
+			"macRating": null,
+			"linuxRating": null,
+			"slug": ""
+		},
+		"howlongtobeat": {
+			"mainStory": 21,
+			"mainExtra": 27,
+			"completionist": 64,
+			"gameId": 77090,
+			"gameName": "XCOM: Chimera Squad",
+			"gameImageUrl": "https://howlongtobeat.com/games/77090_XCOM_Chimera_Squad.jpg",
+			"gameWebLink": "https://howlongtobeat.com/game/77090"
+		},
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "ok",
+			"howlongtobeat": "ok"
+		}
+	},
+	"Wasteland 1 - The Original Classic": {
+		"pcgamingwiki": {
+			"steamID": "REDACTED",
+			"howLongToBeatID": "11098",
+			"metacritic": {
+				"score": "",
+				"urlid": ""
+			},
+			"opencritic": {
+				"score": "",
+				"urlid": ""
+			},
+			"igdb": {
+				"score": "",
+				"urlid": ""
+			},
+			"direct3DVersions": [
+				""
+			],
+			"genres": [
+				"Openworld",
+				"RPG"
+			],
+			"releaseDate": [
+				"DOS: 1988",
+				"Windows: November 13, 2013|wrapper=DOSBox|ref=<ref name=\"release date\">[https://store.steampowered.com/news/11863/ News - Now Available on Steam - Wasteland 1 - The Original Classic]</ref>",
+				"OS X: November 13, 2013|wrapper=DOSBox|ref=<ref name=\"release date\"/>",
+				"Linux: November 13, 2013|wrapper=DOSBox|ref=<ref name=\"release date\"/>"
+			]
+		},
+		"applegamingwiki": {
+			"crossoverRating": "",
+			"wineRating": "",
+			"crossoverLink": ""
+		},
+		"codeweavers": {
+			"macRating": null,
+			"linuxRating": null,
+			"slug": ""
+		},
+		"howlongtobeat": {
+			"mainStory": 25,
+			"mainExtra": 35,
+			"completionist": 39,
+			"gameId": 11098,
+			"gameName": "Wasteland",
+			"gameImageUrl": "https://howlongtobeat.com/games/Wasteland_Coverart.png",
+			"gameWebLink": "https://howlongtobeat.com/game/11098"
+		},
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "ok",
+			"howlongtobeat": "ok"
+		}
+	},
+	"Wild Indigo Ranch": {
+		"pcgamingwiki": null,
+		"applegamingwiki": {
+			"crossoverRating": "",
+			"wineRating": "",
+			"crossoverLink": ""
+		},
+		"codeweavers": {
+			"macRating": null,
+			"linuxRating": null,
+			"slug": ""
+		},
+		"howlongtobeat": null,
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "notfound",
+			"howlongtobeat": "notfound"
+		}
+	},
+	"Amnesia The Dark Descent": {
+		"pcgamingwiki": {
+			"steamID": "REDACTED",
+			"howLongToBeatID": "440",
+			"metacritic": {
+				"score": "85",
+				"urlid": "amnesia-the-dark-descent"
+			},
+			"opencritic": {
+				"score": "",
+				"urlid": ""
+			},
+			"igdb": {
+				"score": "",
+				"urlid": ""
+			},
+			"direct3DVersions": [
+				""
+			],
+			"genres": [
+				"Adventure",
+				"Survivalhorror"
+			],
+			"releaseDate": [
+				"Windows: September 8, 2010",
+				"OS X: September 8, 2010",
+				"Linux: September 8, 2010"
+			]
+		},
+		"applegamingwiki": {
+			"crossoverRating": "runs",
+			"wineRating": "unknown",
+			"crossoverLink": ""
+		},
+		"codeweavers": {
+			"macRating": 3,
+			"linuxRating": null,
+			"slug": "amnesia-the-dark-descent"
+		},
+		"howlongtobeat": {
+			"mainStory": 8,
+			"mainExtra": 9,
+			"completionist": 12,
+			"gameId": 440,
+			"gameName": "Amnesia: The Dark Descent",
+			"gameImageUrl": "https://howlongtobeat.com/games/440_Amnesia_The_Dark_Descent.jpg",
+			"gameWebLink": "https://howlongtobeat.com/game/440"
+		},
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "ok",
+			"howlongtobeat": "ok"
+		}
+	},
+	"Low Magic Age": {
+		"pcgamingwiki": {
+			"steamID": "REDACTED",
+			"howLongToBeatID": "52579",
+			"metacritic": {
+				"score": "",
+				"urlid": ""
+			},
+			"opencritic": {
+				"score": "",
+				"urlid": ""
+			},
+			"igdb": {
+				"score": "",
+				"urlid": ""
+			},
+			"direct3DVersions": [
+				""
+			],
+			"genres": [
+				""
+			],
+			"releaseDate": [
+				"Windows: EA"
+			]
+		},
+		"applegamingwiki": {
+			"crossoverRating": "",
+			"wineRating": "",
+			"crossoverLink": ""
+		},
+		"codeweavers": {
+			"macRating": null,
+			"linuxRating": null,
+			"slug": ""
+		},
+		"howlongtobeat": {
+			"mainStory": 0,
+			"mainExtra": 20,
+			"completionist": 38,
+			"gameId": 52579,
+			"gameName": "Low Magic Age",
+			"gameImageUrl": "https://howlongtobeat.com/games/52579_Low_Magic_Age.jpg",
+			"gameWebLink": "https://howlongtobeat.com/game/52579"
+		},
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "ok",
+			"howlongtobeat": "ok"
+		}
+	},
+	"Cat Quest": {
+		"pcgamingwiki": {
+			"steamID": "REDACTED",
+			"howLongToBeatID": "48142",
+			"metacritic": {
+				"score": "79",
+				"urlid": "cat-quest"
+			},
+			"opencritic": {
+				"score": "76",
+				"urlid": "4693/cat-quest"
+			},
+			"igdb": {
+				"score": "83",
+				"urlid": "cat-quest"
+			},
+			"direct3DVersions": [
+				"11"
+			],
+			"genres": [
+				"Action",
+				"RPG",
+				"ARPG",
+				"Hackandslash"
+			],
+			"releaseDate": [
+				"Windows: August 8, 2017",
+				"OS X: August 8, 2017"
+			]
+		},
+		"applegamingwiki": {
+			"crossoverRating": "perfect",
+			"wineRating": "unknown",
+			"crossoverLink": "cat-quest"
+		},
+		"codeweavers": {
+			"macRating": null,
+			"linuxRating": null,
+			"slug": ""
+		},
+		"howlongtobeat": {
+			"mainStory": 6,
+			"mainExtra": 8,
+			"completionist": 11,
+			"gameId": 48142,
+			"gameName": "Cat Quest",
+			"gameImageUrl": "https://howlongtobeat.com/games/48142_Cat_Quest.jpg",
+			"gameWebLink": "https://howlongtobeat.com/game/48142"
+		},
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "ok",
+			"howlongtobeat": "ok"
+		}
+	},
+	"ADOM (Ancient Domains Of Mystery)": {
+		"pcgamingwiki": {
+			"steamID": "REDACTED",
+			"howLongToBeatID": "32000",
+			"metacritic": {
+				"score": "",
+				"urlid": ""
+			},
+			"opencritic": {
+				"score": "",
+				"urlid": ""
+			},
+			"igdb": {
+				"score": "",
+				"urlid": ""
+			},
+			"direct3DVersions": [
+				""
+			],
+			"genres": [
+				"Roguelike"
+			],
+			"releaseDate": [
+				"Linux: 1994",
+				"DOS: 1996",
+				"Windows: 1996",
+				"OS X: 2006"
+			]
+		},
+		"applegamingwiki": {
+			"crossoverRating": "unknown",
+			"wineRating": "unknown",
+			"crossoverLink": "adom"
+		},
+		"codeweavers": {
+			"macRating": null,
+			"linuxRating": null,
+			"slug": ""
+		},
+		"howlongtobeat": {
+			"mainStory": 78,
+			"mainExtra": 100,
+			"completionist": 2000,
+			"gameId": 32000,
+			"gameName": "ADOM: Ancient Domains Of Mystery",
+			"gameImageUrl": "https://howlongtobeat.com/games/Ancient_Domains_Of_Mystery_header.jpg",
+			"gameWebLink": "https://howlongtobeat.com/game/32000"
+		},
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "ok",
+			"howlongtobeat": "ok"
+		}
+	},
+	"Gothic 1 Remake": {
+		"pcgamingwiki": {
+			"steamID": "REDACTED",
+			"howLongToBeatID": "92900",
+			"metacritic": {
+				"score": "74",
+				"urlid": "gothic-remake"
+			},
+			"opencritic": {
+				"score": "73",
+				"urlid": "20135/gothic-1-remake"
+			},
+			"igdb": {
+				"score": "56",
+				"urlid": "gothic-1-remake|rating"
+			},
+			"direct3DVersions": [
+				"12"
+			],
+			"genres": [
+				"Action",
+				"RPG",
+				"Openworld"
+			],
+			"releaseDate": [
+				"Windows: June 5, 2026"
+			]
+		},
+		"applegamingwiki": {
+			"crossoverRating": "",
+			"wineRating": "",
+			"crossoverLink": ""
+		},
+		"codeweavers": {
+			"macRating": null,
+			"linuxRating": null,
+			"slug": ""
+		},
+		"howlongtobeat": {
+			"mainStory": 37,
+			"mainExtra": 52,
+			"completionist": 80,
+			"gameId": 92900,
+			"gameName": "Gothic 1 Remake",
+			"gameImageUrl": "https://howlongtobeat.com/games/92900_Gothic_1_Remake.jpg",
+			"gameWebLink": "https://howlongtobeat.com/game/92900"
+		},
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "ok",
+			"howlongtobeat": "ok"
+		}
+	},
+	"The Age of Decadence": {
+		"pcgamingwiki": {
+			"steamID": "REDACTED",
+			"howLongToBeatID": "28243",
+			"metacritic": {
+				"score": "81",
+				"urlid": "the-age-of-decadence"
+			},
+			"opencritic": {
+				"score": "73",
+				"urlid": "1991/the-age-of-decadence"
+			},
+			"igdb": {
+				"score": "",
+				"urlid": ""
+			},
+			"direct3DVersions": [
+				"9"
+			],
+			"genres": [
+				"RPG",
+				"TBS"
+			],
+			"releaseDate": [
+				"Windows: October 14, 2015|ref=<ref>{{Refurl|url=https://store.steampowered.com/app/230070/|title=Steam store page|date=May 2023"
+			]
+		},
+		"applegamingwiki": {
+			"crossoverRating": "",
+			"wineRating": "",
+			"crossoverLink": ""
+		},
+		"codeweavers": {
+			"macRating": 5,
+			"linuxRating": null,
+			"slug": "the-age-of-decadence"
+		},
+		"howlongtobeat": {
+			"mainStory": 13,
+			"mainExtra": 19,
+			"completionist": 75,
+			"gameId": 28243,
+			"gameName": "The Age of Decadence",
+			"gameImageUrl": "https://howlongtobeat.com/games/The_Age_of_Decadence_header.jpg",
+			"gameWebLink": "https://howlongtobeat.com/game/28243"
+		},
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "ok",
+			"howlongtobeat": "ok"
+		}
+	},
+	"The Longest Journey": {
+		"pcgamingwiki": {
+			"steamID": "REDACTED",
+			"howLongToBeatID": "2878",
+			"metacritic": {
+				"score": "75",
+				"urlid": "dreamfall-the-longest-journey"
+			},
+			"opencritic": {
+				"score": "",
+				"urlid": ""
+			},
+			"igdb": {
+				"score": "",
+				"urlid": ""
+			},
+			"direct3DVersions": [
+				"9.0c"
+			],
+			"genres": [
+				"Adventure"
+			],
+			"releaseDate": [
+				"Windows: April 17, 2006"
+			]
+		},
+		"applegamingwiki": {
+			"crossoverRating": "",
+			"wineRating": "",
+			"crossoverLink": ""
+		},
+		"codeweavers": {
+			"macRating": 3,
+			"linuxRating": null,
+			"slug": "the-longest-journey"
+		},
+		"howlongtobeat": {
+			"mainStory": 12,
+			"mainExtra": 13,
+			"completionist": 15,
+			"gameId": 2878,
+			"gameName": "Dreamfall: The Longest Journey",
+			"gameImageUrl": "https://howlongtobeat.com/games/250px-Dreamfall_cover.jpg",
+			"gameWebLink": "https://howlongtobeat.com/game/2878"
+		},
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "ok",
+			"howlongtobeat": "ok"
+		}
+	},
+	"The Bards Tale IV Directors Cut": {
+		"pcgamingwiki": null,
+		"applegamingwiki": {
+			"crossoverRating": "",
+			"wineRating": "",
+			"crossoverLink": ""
+		},
+		"codeweavers": {
+			"macRating": null,
+			"linuxRating": null,
+			"slug": ""
+		},
+		"howlongtobeat": null,
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "notfound",
+			"howlongtobeat": "notfound"
+		}
+	},
+	"The Banner Saga": {
+		"pcgamingwiki": {
+			"steamID": "REDACTED",
+			"howLongToBeatID": "9770",
+			"metacritic": {
+				"score": "67",
+				"urlid": "the-banner-saga-factions"
+			},
+			"opencritic": {
+				"score": "",
+				"urlid": ""
+			},
+			"igdb": {
+				"score": "59",
+				"urlid": "the-banner-saga-factions"
+			},
+			"direct3DVersions": [
+				""
+			],
+			"genres": [
+				"TacticalRPG"
+			],
+			"releaseDate": [
+				"Windows: February 25, 2013",
+				"OS X: February 25, 2013"
+			]
+		},
+		"applegamingwiki": {
+			"crossoverRating": "unknown",
+			"wineRating": "unknown",
+			"crossoverLink": ""
+		},
+		"codeweavers": {
+			"macRating": null,
+			"linuxRating": null,
+			"slug": ""
+		},
+		"howlongtobeat": {
+			"mainStory": 15,
+			"mainExtra": 0,
+			"completionist": 0,
+			"gameId": 9770,
+			"gameName": "The Banner Saga: Factions",
+			"gameImageUrl": "https://howlongtobeat.com/games/TheBannerSagaFactions.jpg",
+			"gameWebLink": "https://howlongtobeat.com/game/9770"
+		},
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "ok",
+			"howlongtobeat": "ok"
+		}
+	},
+	"Hero of the Kingdom The Lost Tales 3": {
+		"pcgamingwiki": null,
+		"applegamingwiki": {
+			"crossoverRating": "",
+			"wineRating": "",
+			"crossoverLink": ""
+		},
+		"codeweavers": {
+			"macRating": null,
+			"linuxRating": null,
+			"slug": ""
+		},
+		"howlongtobeat": null,
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "error",
+			"howlongtobeat": "notfound"
+		}
+	},
+	"Racine": {
+		"pcgamingwiki": null,
+		"applegamingwiki": {
+			"crossoverRating": "",
+			"wineRating": "",
+			"crossoverLink": ""
+		},
+		"codeweavers": {
+			"macRating": null,
+			"linuxRating": null,
+			"slug": ""
+		},
+		"howlongtobeat": null,
+		"gamesdb": {
+			"steamID": "REDACTED"
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "error",
+			"howlongtobeat": "notfound"
+		}
+	},
+	"Colony Ship A Post-Earth Role Playing Game": {
+		"pcgamingwiki": {
+			"steamID": "REDACTED",
+			"howLongToBeatID": "90797",
+			"metacritic": {
+				"score": "",
+				"urlid": ""
+			},
+			"opencritic": {
+				"score": "",
+				"urlid": ""
+			},
+			"igdb": {
+				"score": "",
+				"urlid": ""
+			},
+			"direct3DVersions": [
+				"11"
+			],
+			"genres": [
+				"RPG",
+				"TacticalRPG"
+			],
+			"releaseDate": [
+				"Windows: November 9, 2023"
+			]
+		},
+		"applegamingwiki": {
+			"crossoverRating": "",
+			"wineRating": "",
+			"crossoverLink": ""
+		},
+		"codeweavers": {
+			"macRating": null,
+			"linuxRating": null,
+			"slug": ""
+		},
+		"howlongtobeat": {
+			"mainStory": 17,
+			"mainExtra": 33,
+			"completionist": 78,
+			"gameId": 90797,
+			"gameName": "Colony Ship: A Post-Earth Role Playing Game",
+			"gameImageUrl": "https://howlongtobeat.com/games/90797_Colony_Ship_A_Post-Earth_Role_Playing_Game.jpg",
+			"gameWebLink": "https://howlongtobeat.com/game/90797"
+		},
+		"gamesdb": {
+			"steamID": ""
+		},
+		"steamInfo": null,
+		"umuId": null,
+		"fetchStatus": {
+			"pcgamingwiki": "ok",
+			"howlongtobeat": "ok"
+		}
+	}
+}

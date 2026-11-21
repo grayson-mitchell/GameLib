@@ -1,0 +1,298 @@
+{
+	"wine-releases": [
+		{
+			"version": "Wine-Staging-macOS-latest",
+			"type": "Wine-Staging-macOS",
+			"date": "2026-10-31",
+			"download": "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.21/wine-staging-11.21-osx64.tar.xz",
+			"downsize": 228148688,
+			"disksize": 914329600,
+			"release_notes_link": "https://github.com/Gcenx/macOS_Wine_builds/releases/tag/11.21",
+			"installDir": "/Users/operator/Library/Application Support/GameLib/tools/wine/Wine-Staging-macOS-latest",
+			"isInstalled": true
+		},
+		{
+			"date": "2026-10-31",
+			"disksize": 914763776,
+			"download": "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.21/wine-staging-11.21-osx64.tar.xz",
+			"downsize": 228148688,
+			"release_notes_link": "https://github.com/Gcenx/macOS_Wine_builds/releases/tag/11.21",
+			"type": "Wine-Staging-macOS",
+			"version": "Wine-11.21",
+			"installDir": "/Users/operator/Library/Application Support/GameLib/tools/wine/Wine-11.21",
+			"isInstalled": true,
+			"hasUpdate": false
+		},
+		{
+			"version": "Wine-11.20",
+			"type": "Wine-Staging-macOS",
+			"date": "2026-10-29",
+			"disksize": 0,
+			"release_notes_link": "https://github.com/Gcenx/macOS_Wine_builds/releases/tag/11.20",
+			"download": "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.20/wine-staging-11.20-osx64.tar.xz",
+			"downsize": 227975304
+		},
+		{
+			"version": "Wine-11.18",
+			"type": "Wine-Staging-macOS",
+			"date": "2026-09-25",
+			"disksize": 0,
+			"release_notes_link": "https://github.com/Gcenx/macOS_Wine_builds/releases/tag/11.18",
+			"download": "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.18/wine-staging-11.18-osx64.tar.xz",
+			"downsize": 193105336
+		},
+		{
+			"version": "Wine-11.17",
+			"type": "Wine-Staging-macOS",
+			"date": "2026-09-11",
+			"disksize": 0,
+			"release_notes_link": "https://github.com/Gcenx/macOS_Wine_builds/releases/tag/11.17",
+			"download": "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.17/wine-staging-11.17-osx64.tar.xz",
+			"downsize": 193354896
+		},
+		{
+			"version": "Wine-11.16",
+			"type": "Wine-Staging-macOS",
+			"date": "2026-08-24",
+			"disksize": 0,
+			"release_notes_link": "https://github.com/Gcenx/macOS_Wine_builds/releases/tag/11.16",
+			"download": "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.16/wine-staging-11.16-osx64.tar.xz",
+			"downsize": 193568360
+		},
+		{
+			"version": "Wine-11.15",
+			"type": "Wine-Staging-macOS",
+			"date": "2026-08-08",
+			"disksize": 0,
+			"release_notes_link": "https://github.com/Gcenx/macOS_Wine_builds/releases/tag/11.15",
+			"download": "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.15/wine-staging-11.15-osx64.tar.xz",
+			"downsize": 193561920
+		},
+		{
+			"version": "Wine-11.14",
+			"type": "Wine-Staging-macOS",
+			"date": "2026-07-27",
+			"disksize": 0,
+			"release_notes_link": "https://github.com/Gcenx/macOS_Wine_builds/releases/tag/11.14",
+			"download": "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.14/wine-staging-11.14-osx64.tar.xz",
+			"downsize": 192256088
+		},
+		{
+			"version": "Wine-11.13",
+			"type": "Wine-Staging-macOS",
+			"date": "2026-07-17",
+			"disksize": 0,
+			"release_notes_link": "https://github.com/Gcenx/macOS_Wine_builds/releases/tag/11.13",
+			"download": "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.13/wine-staging-11.13-osx64.tar.xz",
+			"downsize": 192152268
+		},
+		{
+			"version": "Wine-11.10",
+			"type": "Wine-Staging-macOS",
+			"date": "2026-06-04",
+			"disksize": 0,
+			"release_notes_link": "https://github.com/Gcenx/macOS_Wine_builds/releases/tag/11.10",
+			"download": "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.10/wine-staging-11.10-osx64.tar.xz",
+			"downsize": 190110136
+		},
+		{
+			"version": "Wine-11.9",
+			"type": "Wine-Staging-macOS",
+			"date": "2026-05-17",
+			"disksize": 0,
+			"release_notes_link": "https://github.com/Gcenx/macOS_Wine_builds/releases/tag/11.9",
+			"download": "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.9/wine-staging-11.9-osx64.tar.xz",
+			"downsize": 189942264
+		},
+		{
+			"version": "Wine-11.8",
+			"type": "Wine-Staging-macOS",
+			"date": "2026-05-02",
+			"disksize": 0,
+			"release_notes_link": "https://github.com/Gcenx/macOS_Wine_builds/releases/tag/11.8",
+			"download": "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.8/wine-staging-11.8-osx64.tar.xz",
+			"downsize": 188537088
+		},
+		{
+			"version": "Wine-11.7",
+			"type": "Wine-Staging-macOS",
+			"date": "2026-04-18",
+			"disksize": 0,
+			"release_notes_link": "https://github.com/Gcenx/macOS_Wine_builds/releases/tag/11.7",
+			"download": "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.7/wine-staging-11.7-osx64.tar.xz",
+			"downsize": 189397976
+		},
+		{
+			"version": "Wine-Crossover-latest",
+			"type": "Wine-Crossover",
+			"date": "2026-04-17",
+			"download": "https://github.com/Heroic-Games-Launcher/wine-crossover/releases/download/23.7.1-1/Wine-Crossover-23.7.1-1.tar.xz",
+			"downsize": 200466784,
+			"disksize": 0,
+			"release_notes_link": "https://github.com/Heroic-Games-Launcher/wine-crossover/releases/tag/23.7.1-1"
+		},
+		{
+			"version": "Wine-23.7.1-1",
+			"type": "Wine-Crossover",
+			"date": "2026-04-17",
+			"disksize": 0,
+			"release_notes_link": "https://github.com/Heroic-Games-Launcher/wine-crossover/releases/tag/23.7.1-1",
+			"download": "https://github.com/Heroic-Games-Launcher/wine-crossover/releases/download/23.7.1-1/Wine-Crossover-23.7.1-1.tar.xz",
+			"downsize": 200466784
+		},
+		{
+			"version": "Wine-11.6_1",
+			"type": "Wine-Staging-macOS",
+			"date": "2026-04-16",
+			"disksize": 0,
+			"release_notes_link": "https://github.com/Gcenx/macOS_Wine_builds/releases/tag/11.6_1",
+			"download": "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.6_1/wine-staging-11.6_1-osx64.tar.xz",
+			"downsize": 322511424
+		},
+		{
+			"version": "Wine-11.0_1",
+			"type": "Wine-Staging-macOS",
+			"date": "2026-04-16",
+			"disksize": 0,
+			"release_notes_link": "https://github.com/Gcenx/macOS_Wine_builds/releases/tag/11.0_1"
+		},
+		{
+			"date": "2026-03-03",
+			"disksize": 842874880,
+			"download": "https://github.com/Gcenx/game-porting-toolkit/releases/download/Game-Porting-Toolkit-3.0-3/game-porting-toolkit-3.0-3.tar.xz",
+			"downsize": 239200808,
+			"release_notes_link": "https://github.com/Gcenx/game-porting-toolkit/releases/tag/Game-Porting-Toolkit-3.0-3",
+			"type": "Game-Porting-Toolkit",
+			"version": "Game-Porting-Toolkit-latest",
+			"installDir": "/Users/operator/Library/Application Support/GameLib/tools/game-porting-toolkit/Game-Porting-Toolkit-latest",
+			"isInstalled": true,
+			"hasUpdate": false
+		},
+		{
+			"version": "Game-Porting-Toolkit-3.0-3",
+			"type": "Game-Porting-Toolkit",
+			"date": "2026-03-03",
+			"disksize": 0,
+			"release_notes_link": "https://github.com/Gcenx/game-porting-toolkit/releases/tag/Game-Porting-Toolkit-3.0-3",
+			"download": "https://github.com/Gcenx/game-porting-toolkit/releases/download/Game-Porting-Toolkit-3.0-3/game-porting-toolkit-3.0-3.tar.xz",
+			"downsize": 239200808
+		},
+		{
+			"version": "Game-Porting-Toolkit-3.0-2",
+			"type": "Game-Porting-Toolkit",
+			"date": "2026-02-13",
+			"disksize": 0,
+			"release_notes_link": "https://github.com/Gcenx/game-porting-toolkit/releases/tag/Game-Porting-Toolkit-3.0-2",
+			"download": "https://github.com/Gcenx/game-porting-toolkit/releases/download/Game-Porting-Toolkit-3.0-2/game-porting-toolkit-3.0-2.tar.xz",
+			"downsize": 260757848
+		},
+		{
+			"version": "Game-Porting-Toolkit-3.0-1",
+			"type": "Game-Porting-Toolkit",
+			"date": "2026-02-13",
+			"disksize": 0,
+			"release_notes_link": "https://github.com/Gcenx/game-porting-toolkit/releases/tag/Game-Porting-Toolkit-3.0-1",
+			"download": "https://github.com/Gcenx/game-porting-toolkit/releases/download/Game-Porting-Toolkit-3.0-1/game-porting-toolkit-3.0-1.tar.xz",
+			"downsize": 260771456
+		},
+		{
+			"version": "Game-Porting-Toolkit-3.0",
+			"type": "Game-Porting-Toolkit",
+			"date": "2025-12-05",
+			"disksize": 0,
+			"release_notes_link": "https://github.com/Gcenx/game-porting-toolkit/releases/tag/Game-Porting-Toolkit-3.0",
+			"download": "https://github.com/Gcenx/game-porting-toolkit/releases/download/Game-Porting-Toolkit-3.0/game-porting-toolkit-3.0.tar.xz",
+			"downsize": 240362208
+		},
+		{
+			"version": "Game-Porting-Toolkit-3.0-beta5",
+			"type": "Game-Porting-Toolkit",
+			"date": "2025-10-10",
+			"disksize": 0,
+			"release_notes_link": "https://github.com/Gcenx/game-porting-toolkit/releases/tag/Game-Porting-Toolkit-3.0-beta5",
+			"download": "https://github.com/Gcenx/game-porting-toolkit/releases/download/Game-Porting-Toolkit-3.0-beta5/game-porting-toolkit-3.0-beta5.tar.xz",
+			"downsize": 260784520
+		},
+		{
+			"version": "Game-Porting-Toolkit-3.0-beta4",
+			"type": "Game-Porting-Toolkit",
+			"date": "2025-09-05",
+			"disksize": 0,
+			"release_notes_link": "https://github.com/Gcenx/game-porting-toolkit/releases/tag/Game-Porting-Toolkit-3.0-beta4",
+			"download": "https://github.com/Gcenx/game-porting-toolkit/releases/download/Game-Porting-Toolkit-3.0-beta4/game-porting-toolkit-3.0-beta4.tar.xz",
+			"downsize": 260775716
+		},
+		{
+			"version": "Game-Porting-Toolkit-3.0-beta3",
+			"type": "Game-Porting-Toolkit",
+			"date": "2025-08-06",
+			"disksize": 0,
+			"release_notes_link": "https://github.com/Gcenx/game-porting-toolkit/releases/tag/Game-Porting-Toolkit-3.0-beta3",
+			"download": "https://github.com/Gcenx/game-porting-toolkit/releases/download/Game-Porting-Toolkit-3.0-beta3/game-porting-toolkit-3.0-beta3.tar.xz",
+			"downsize": 260718044
+		},
+		{
+			"version": "Game-Porting-Toolkit-3.0-beta2",
+			"type": "Game-Porting-Toolkit",
+			"date": "2025-07-11",
+			"disksize": 0,
+			"release_notes_link": "https://github.com/Gcenx/game-porting-toolkit/releases/tag/Game-Porting-Toolkit-3.0-beta2",
+			"download": "https://github.com/Gcenx/game-porting-toolkit/releases/download/Game-Porting-Toolkit-3.0-beta2/game-porting-toolkit-3.0-beta2.tar.xz",
+			"downsize": 260975608
+		},
+		{
+			"version": "Game-Porting-Toolkit-3.0-beta1",
+			"type": "Game-Porting-Toolkit",
+			"date": "2025-06-12",
+			"disksize": 0,
+			"release_notes_link": "https://github.com/Gcenx/game-porting-toolkit/releases/tag/Game-Porting-Toolkit-3.0-beta1",
+			"download": "https://github.com/Gcenx/game-porting-toolkit/releases/download/Game-Porting-Toolkit-3.0-beta1/game-porting-toolkit-3.0-beta1.tar.xz",
+			"downsize": 260953496
+		},
+		{
+			"version": "Game-Porting-Toolkit-2.1",
+			"type": "Game-Porting-Toolkit",
+			"date": "2025-03-12",
+			"disksize": 0,
+			"release_notes_link": "https://github.com/Gcenx/game-porting-toolkit/releases/tag/Game-Porting-Toolkit-2.1",
+			"download": "https://github.com/Gcenx/game-porting-toolkit/releases/download/Game-Porting-Toolkit-2.1/game-porting-toolkit-2.1.tar.xz",
+			"downsize": 259786172
+		},
+		{
+			"version": "Game-Porting-Toolkit-2.0-beta3",
+			"type": "Game-Porting-Toolkit",
+			"date": "2024-11-22",
+			"disksize": 0,
+			"release_notes_link": "https://github.com/Gcenx/game-porting-toolkit/releases/tag/Game-Porting-Toolkit-2.0-beta3",
+			"download": "https://github.com/Gcenx/game-porting-toolkit/releases/download/Game-Porting-Toolkit-2.0-beta3/game-porting-toolkit-2.0-beta3.tar.xz",
+			"downsize": 234508472
+		},
+		{
+			"version": "Game-Porting-Toolkit-2.0-beta1",
+			"type": "Game-Porting-Toolkit",
+			"date": "2024-06-11",
+			"disksize": 0,
+			"release_notes_link": "https://github.com/Gcenx/game-porting-toolkit/releases/tag/Game-Porting-Toolkit-2.0-beta1",
+			"download": "https://github.com/Gcenx/game-porting-toolkit/releases/download/Game-Porting-Toolkit-2.0-beta1/game-porting-toolkit-2.0-beta1.tar.xz",
+			"downsize": 160114764
+		},
+		{
+			"version": "Game-Porting-Toolkit-1.1-gstreamer",
+			"type": "Game-Porting-Toolkit",
+			"date": "2024-01-18",
+			"disksize": 0,
+			"release_notes_link": "https://github.com/Gcenx/game-porting-toolkit/releases/tag/Game-Porting-Toolkit-1.1-gstreamer",
+			"download": "https://github.com/Gcenx/game-porting-toolkit/releases/download/Game-Porting-Toolkit-1.1-gstreamer/game-porting-toolkit-1.1.tar.xz",
+			"downsize": 159635804
+		},
+		{
+			"version": "Game-Porting-Toolkit-1.1",
+			"type": "Game-Porting-Toolkit",
+			"date": "2024-01-08",
+			"disksize": 0,
+			"release_notes_link": "https://github.com/Gcenx/game-porting-toolkit/releases/tag/Game-Porting-Toolkit-1.1",
+			"download": "https://github.com/Gcenx/game-porting-toolkit/releases/download/Game-Porting-Toolkit-1.1/game-porting-toolkit-1.1.tar.xz",
+			"downsize": 159465176
+		}
+	]
+}

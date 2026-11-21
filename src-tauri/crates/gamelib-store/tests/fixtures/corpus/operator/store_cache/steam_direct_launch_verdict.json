@@ -1,0 +1,220 @@
+{
+	"57300": {
+		"v": 4,
+		"kind": "bridge",
+		"installPath": "/Users/operator/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-57300/drive_c/Program Files (x86)/Steam/steamapps/common",
+		"buildid": "12590639",
+		"verdict": {
+			"applies": true,
+			"kind": "bridge",
+			"warning": "steam-api",
+			"launch": {
+				"args": []
+			}
+		},
+		"computedAt": 1795159685993
+	},
+	"206060": {
+		"v": 4,
+		"kind": "bridge",
+		"installPath": "/Users/operator/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-206060/drive_c/Program Files (x86)/Steam/steamapps/common",
+		"buildid": "29993",
+		"verdict": {
+			"applies": true,
+			"kind": "bridge",
+			"warning": "steam-api",
+			"launch": {
+				"args": []
+			}
+		},
+		"computedAt": 1794897994132
+	},
+	"208400": {
+		"v": 4,
+		"kind": "mac-native",
+		"installPath": "/Users/operator/Library/Application Support/Steam/steamapps/common/Avernum Escape From the Pit",
+		"buildid": "4252718",
+		"verdict": {
+			"applies": true,
+			"kind": "mac-native",
+			"warning": "steam-api",
+			"launch": {
+				"binaryPath": "/Users/operator/Library/Application Support/Steam/steamapps/common/Avernum Escape From the Pit/Avernum.app/Contents/MacOS/Avernum",
+				"args": []
+			}
+		},
+		"computedAt": 1794988972585
+	},
+	"211820": {
+		"v": 4,
+		"kind": "mac-native",
+		"installPath": "/Users/operator/Library/Application Support/Steam/steamapps/common/Starbound",
+		"buildid": "16302742",
+		"verdict": {
+			"applies": true,
+			"kind": "mac-native",
+			"warning": "steam-api",
+			"launch": {
+				"binaryPath": "/Users/operator/Library/Application Support/Steam/steamapps/common/Starbound/osx/Starbound.app/Contents/MacOS/starbound",
+				"args": [],
+				"workingDir": "osx/"
+			}
+		},
+		"computedAt": 1794994381083
+	},
+	"219990": {
+		"v": 4,
+		"kind": "bridge",
+		"installPath": "/Users/operator/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-219990/drive_c/Program Files (x86)/Steam/steamapps/common",
+		"buildid": "26655545",
+		"verdict": {
+			"applies": false,
+			"reason": "steam-drm"
+		},
+		"computedAt": 1795155920006
+	},
+	"230070": {
+		"v": 4,
+		"kind": "bridge",
+		"installPath": "/Users/operator/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-230070/drive_c/Program Files (x86)/Steam/steamapps/common",
+		"buildid": "12301598",
+		"verdict": {
+			"applies": true,
+			"kind": "bridge",
+			"warning": "steam-api",
+			"launch": {
+				"args": []
+			}
+		},
+		"computedAt": 1795211632937
+	},
+	"248410": {
+		"v": 3,
+		"kind": "mac-native",
+		"installPath": "/Users/operator/Library/Application Support/Steam/steamapps/common/LegendsOfAethereus",
+		"buildid": "162845",
+		"verdict": {
+			"applies": true,
+			"kind": "mac-native",
+			"warning": "none",
+			"launch": {
+				"binaryPath": "/Users/operator/Library/Application Support/Steam/steamapps/common/LegendsOfAethereus/Loa.app/Contents/MacOS/LegendsofAethereus",
+				"args": []
+			}
+		},
+		"computedAt": 1794896920625
+	},
+	"264160": {
+		"v": 4,
+		"kind": "mac-native",
+		"installPath": "/Users/operator/Library/Application Support/Steam/steamapps/common/WazHack",
+		"buildid": "9044149",
+		"verdict": {
+			"applies": true,
+			"kind": "mac-native",
+			"warning": "steam-api",
+			"launch": {
+				"binaryPath": "/Users/operator/Library/Application Support/Steam/steamapps/common/WazHack/WazHack.app/Contents/MacOS/WazHack",
+				"args": []
+			}
+		},
+		"computedAt": 1795153839316
+	},
+	"333300": {
+		"v": 4,
+		"kind": "mac-native",
+		"installPath": "/Users/operator/Library/Application Support/Steam/steamapps/common/ADOM",
+		"buildid": "3512046",
+		"verdict": {
+			"applies": true,
+			"kind": "mac-native",
+			"warning": "steam-api",
+			"launch": {
+				"binaryPath": "/Users/operator/Library/Application Support/Steam/steamapps/common/ADOM/ADOM.app/Contents/MacOS/ADOM",
+				"args": []
+			}
+		},
+		"computedAt": 1795205732092
+	},
+	"576770": {
+		"v": 4,
+		"kind": "bridge",
+		"installPath": "/Users/operator/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-576770/drive_c/Program Files (x86)/Steam/steamapps/common",
+		"buildid": "25846860",
+		"verdict": {
+			"applies": true,
+			"kind": "bridge",
+			"warning": "steam-api",
+			"launch": {
+				"args": []
+			}
+		},
+		"computedAt": 1795199793750
+	},
+	"951430": {
+		"v": 4,
+		"kind": "mac-native",
+		"installPath": "/Users/operator/Library/Application Support/Steam/steamapps/common/Dead Age 2",
+		"buildid": "20299077",
+		"verdict": {
+			"applies": true,
+			"kind": "mac-native",
+			"warning": "none",
+			"launch": {
+				"binaryPath": "/Users/operator/Library/Application Support/Steam/steamapps/common/Dead Age 2/DeadAge2.app/Contents/MacOS/DeadAge2",
+				"args": []
+			}
+		},
+		"computedAt": 1795156327105
+	},
+	"1751350": {
+		"v": 4,
+		"kind": "bridge",
+		"installPath": "/Users/operator/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-1751350/drive_c/Program Files (x86)/Steam/steamapps/common",
+		"buildid": "20269028",
+		"verdict": {
+			"applies": true,
+			"kind": "bridge",
+			"warning": "steam-api",
+			"launch": {
+				"args": []
+			}
+		},
+		"computedAt": 1795155654378
+	},
+	"3205720": {
+		"v": 4,
+		"kind": "bridge",
+		"installPath": "/Users/operator/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-3205720/drive_c/Program Files (x86)/Steam/steamapps/common",
+		"buildid": "18191878",
+		"verdict": {
+			"applies": true,
+			"kind": "bridge",
+			"warning": "steam-api",
+			"launch": {
+				"args": []
+			}
+		},
+		"computedAt": 1795228896580
+	},
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 1
+		}
+	},
+	"__timestamp": {
+		"57300": "Fri Nov 20 2026 20:28:05 GMT+1300 (New Zealand Daylight Time)",
+		"206060": "Tue Nov 17 2026 19:46:34 GMT+1300 (New Zealand Daylight Time)",
+		"208400": "Wed Nov 18 2026 21:02:52 GMT+1300 (New Zealand Daylight Time)",
+		"211820": "Wed Nov 18 2026 22:33:01 GMT+1300 (New Zealand Daylight Time)",
+		"219990": "Fri Nov 20 2026 19:25:20 GMT+1300 (New Zealand Daylight Time)",
+		"230070": "Sat Nov 21 2026 10:53:52 GMT+1300 (New Zealand Daylight Time)",
+		"248410": "Tue Nov 17 2026 19:28:40 GMT+1300 (New Zealand Daylight Time)",
+		"264160": "Fri Nov 20 2026 18:50:39 GMT+1300 (New Zealand Daylight Time)",
+		"333300": "Sat Nov 21 2026 09:15:32 GMT+1300 (New Zealand Daylight Time)",
+		"576770": "Sat Nov 21 2026 07:36:33 GMT+1300 (New Zealand Daylight Time)",
+		"951430": "Fri Nov 20 2026 19:32:07 GMT+1300 (New Zealand Daylight Time)",
+		"1751350": "Fri Nov 20 2026 19:20:54 GMT+1300 (New Zealand Daylight Time)",
+		"3205720": "Sat Nov 21 2026 15:41:36 GMT+1300 (New Zealand Daylight Time)"
+	}
+}

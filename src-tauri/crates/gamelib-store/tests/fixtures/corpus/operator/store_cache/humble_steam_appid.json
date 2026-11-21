@@ -1,0 +1,172 @@
+{
+	"asguaard": {
+		"appId": "332380",
+		"checkedAt": 1794600678272
+	},
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 1
+		}
+	},
+	"__timestamp": {
+		"asguaard": "Sat Nov 14 2026 09:11:18 GMT+1300 (New Zealand Daylight Time)",
+		"the dragoness command of the flame": "Sat Nov 14 2026 09:53:25 GMT+1300 (New Zealand Daylight Time)",
+		"paths danger": "Sat Nov 14 2026 09:11:19 GMT+1300 (New Zealand Daylight Time)",
+		"cryofall": "Sat Nov 14 2026 09:11:20 GMT+1300 (New Zealand Daylight Time)",
+		"unclaimed world": "Sat Nov 14 2026 09:11:20 GMT+1300 (New Zealand Daylight Time)",
+		"valiant resurrection": "Sat Nov 14 2026 09:53:26 GMT+1300 (New Zealand Daylight Time)",
+		"dex enhanced version": "Sat Nov 14 2026 09:53:26 GMT+1300 (New Zealand Daylight Time)",
+		"californium": "Sat Nov 14 2026 09:11:22 GMT+1300 (New Zealand Daylight Time)",
+		"like a dragon gaiden the man who erased his name": "Sat Nov 14 2026 09:11:23 GMT+1300 (New Zealand Daylight Time)",
+		"resident evil village": "Sat Nov 14 2026 09:11:23 GMT+1300 (New Zealand Daylight Time)",
+		"zero hour": "Sat Nov 14 2026 09:11:24 GMT+1300 (New Zealand Daylight Time)",
+		"hard west 2": "Sat Nov 14 2026 09:11:25 GMT+1300 (New Zealand Daylight Time)",
+		"settlement survival": "Sat Nov 14 2026 09:11:25 GMT+1300 (New Zealand Daylight Time)",
+		"persona 5 royal": "Sat Nov 14 2026 09:11:26 GMT+1300 (New Zealand Daylight Time)",
+		"aksun playtest": "Sat Nov 14 2026 09:53:27 GMT+1300 (New Zealand Daylight Time)",
+		"dungeons of hinterberg": "Sat Nov 14 2026 09:11:27 GMT+1300 (New Zealand Daylight Time)",
+		"havendock": "Sat Nov 14 2026 09:11:28 GMT+1300 (New Zealand Daylight Time)",
+		"warhammer 40 000 rogue trader": "Sat Nov 14 2026 09:11:29 GMT+1300 (New Zealand Daylight Time)",
+		"the thaumaturge deluxe edition": "Sat Nov 14 2026 09:53:28 GMT+1300 (New Zealand Daylight Time)",
+		"shadow gambit": "Sat Nov 14 2026 09:53:28 GMT+1300 (New Zealand Daylight Time)",
+		"dredge": "Sat Nov 14 2026 09:11:31 GMT+1300 (New Zealand Daylight Time)",
+		"fabledom": "Sat Nov 14 2026 09:11:31 GMT+1300 (New Zealand Daylight Time)",
+		"total war pharaoh dynasties": "Sat Nov 14 2026 09:11:32 GMT+1300 (New Zealand Daylight Time)",
+		"the lamplighters league": "Sat Nov 14 2026 09:11:33 GMT+1300 (New Zealand Daylight Time)",
+		"knights of honor ii sovereign": "Sat Nov 14 2026 09:11:33 GMT+1300 (New Zealand Daylight Time)",
+		"victoria 3": "Sat Nov 14 2026 09:11:34 GMT+1300 (New Zealand Daylight Time)",
+		"citizen sleeper": "Sat Nov 14 2026 09:11:35 GMT+1300 (New Zealand Daylight Time)",
+		"crusader kings iii": "Sat Nov 14 2026 09:11:35 GMT+1300 (New Zealand Daylight Time)",
+		"frontiers early access": "Sat Nov 14 2026 09:53:29 GMT+1300 (New Zealand Daylight Time)",
+		"satellite reign": "Sat Nov 14 2026 09:11:36 GMT+1300 (New Zealand Daylight Time)",
+		"darkest dungeon early access": "Sat Nov 14 2026 09:53:29 GMT+1300 (New Zealand Daylight Time)"
+	},
+	"the dragoness command of the flame": {
+		"appId": "1413580",
+		"checkedAt": 1794603205679,
+		"termVersion": 2
+	},
+	"paths danger": {
+		"appId": "1403990",
+		"checkedAt": 1794600679504
+	},
+	"cryofall": {
+		"appId": "829590",
+		"checkedAt": 1794600680238
+	},
+	"unclaimed world": {
+		"appId": "284100",
+		"checkedAt": 1794600680860
+	},
+	"valiant resurrection": {
+		"appId": "368250",
+		"checkedAt": 1794603206272,
+		"termVersion": 2
+	},
+	"dex enhanced version": {
+		"appId": null,
+		"checkedAt": 1794603206863,
+		"termVersion": 2
+	},
+	"californium": {
+		"appId": "402060",
+		"checkedAt": 1794600682696
+	},
+	"like a dragon gaiden the man who erased his name": {
+		"appId": "2375550",
+		"checkedAt": 1794600683342
+	},
+	"resident evil village": {
+		"appId": "1196590",
+		"checkedAt": 1794600683962
+	},
+	"zero hour": {
+		"appId": "1359090",
+		"checkedAt": 1794600684566
+	},
+	"hard west 2": {
+		"appId": "1282410",
+		"checkedAt": 1794600685157
+	},
+	"settlement survival": {
+		"appId": "1509510",
+		"checkedAt": 1794600685870
+	},
+	"persona 5 royal": {
+		"appId": "1687950",
+		"checkedAt": 1794600686466
+	},
+	"aksun playtest": {
+		"appId": null,
+		"checkedAt": 1794603207539,
+		"termVersion": 2
+	},
+	"dungeons of hinterberg": {
+		"appId": "1983260",
+		"checkedAt": 1794600687838
+	},
+	"havendock": {
+		"appId": "2020710",
+		"checkedAt": 1794600688490
+	},
+	"warhammer 40 000 rogue trader": {
+		"appId": "2186680",
+		"checkedAt": 1794600689146
+	},
+	"the thaumaturge deluxe edition": {
+		"appId": null,
+		"checkedAt": 1794603208170,
+		"termVersion": 2
+	},
+	"shadow gambit": {
+		"appId": null,
+		"checkedAt": 1794603208777,
+		"termVersion": 2
+	},
+	"dredge": {
+		"appId": "1562430",
+		"checkedAt": 1794600691193
+	},
+	"fabledom": {
+		"appId": "1651560",
+		"checkedAt": 1794600691778
+	},
+	"total war pharaoh dynasties": {
+		"appId": "2951630",
+		"checkedAt": 1794600692423
+	},
+	"the lamplighters league": {
+		"appId": "1167750",
+		"checkedAt": 1794600693038
+	},
+	"knights of honor ii sovereign": {
+		"appId": "736820",
+		"checkedAt": 1794600693692
+	},
+	"victoria 3": {
+		"appId": "529340",
+		"checkedAt": 1794600694369
+	},
+	"citizen sleeper": {
+		"appId": "1578650",
+		"checkedAt": 1794600695005
+	},
+	"crusader kings iii": {
+		"appId": "1158310",
+		"checkedAt": 1794600695700
+	},
+	"frontiers early access": {
+		"appId": null,
+		"checkedAt": 1794603209373,
+		"termVersion": 2
+	},
+	"satellite reign": {
+		"appId": "268870",
+		"checkedAt": 1794600696933
+	},
+	"darkest dungeon early access": {
+		"appId": null,
+		"checkedAt": 1794603209976,
+		"termVersion": 2
+	}
+}

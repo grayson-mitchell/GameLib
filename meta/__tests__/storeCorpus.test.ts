@@ -38,10 +38,13 @@ const EXPECTS: readonly Expect[] = [
   'startEmpty',
   'missing'
 ]
+/** A source's top-level directory under corpus/: the backups live in `backups/`, every other source in its own name. */
+const sourceDir = (source: string): string =>
+  source === 'backup' ? 'backups' : source
 const FLAVOURS: readonly Flavour[] = ['store', 'settings']
 
 /** Sources every complete corpus must carry. Task-by-task the harvester adds to it; see NOTES.md. */
-const REQUIRED_SOURCES: readonly string[] = ['operator']
+const REQUIRED_SOURCES: readonly string[] = ['operator', 'backup']
 
 /** Keys that legitimately hold a long hex or base64-looking string (content hashes and build ids). */
 const HASH_KEYS = new Set([
@@ -53,7 +56,9 @@ const HASH_KEYS = new Set([
   'buildid',
   'build_id',
   'md5',
-  'etag'
+  'etag',
+  // GOG catalogue content ids (40 hex chars): public database identifiers, not credentials.
+  'external_id'
 ])
 
 const manifest = JSON.parse(
@@ -76,6 +81,42 @@ const JWT_RE = /eyJ[A-Za-z0-9_-]{10,}/
 const CIPHERTEXT_RE = /(steam|humble):v1:/
 const HEX_RUN_RE = /^[A-Fa-f0-9]+$/
 const BASE64_RUN_RE = /^[A-Za-z0-9+/=_-]+$/
+/** Bits per character of `text`; random base64 sits near 5, a slug or an identifier name well under 4.3. */
+function shannonEntropy(text: string): number {
+  const counts = new Map<string, number>()
+  for (const ch of text) counts.set(ch, (counts.get(ch) ?? 0) + 1)
+  let bits = 0
+  for (const n of counts.values()) {
+    const p = n / text.length
+    bits -= p * Math.log2(p)
+  }
+  return bits
+}
+
+/** Share of the letters in `text` that are vowels: about 0.38 in English-derived identifiers, about 0.19 in random base64. */
+function vowelShare(text: string): number {
+  const letters = text.match(/[A-Za-z]/g) ?? []
+  const vowels = letters.filter((c) => 'aeiouAEIOU'.includes(c))
+  return letters.length === 0 ? 0 : vowels.length / letters.length
+}
+
+/**
+ * A 40+ char run of base64-alphabet characters that reads as random: not a path, mixed letters and digits in both cases,
+ * high entropy and few vowels. Game titles in PascalCase, kebab-case slugs and SHOUTING_CASE interface names share the alphabet and
+ * have none of that.
+ */
+function looksLikeBase64Secret(text: string): boolean {
+  return (
+    BASE64_RUN_RE.test(text) &&
+    !PATH_LIKE_RE.test(text) &&
+    /\d/.test(text) &&
+    /[a-z]/.test(text) &&
+    /[A-Z]/.test(text) &&
+    shannonEntropy(text) >= 4.4 &&
+    vowelShare(text) <= 0.3
+  )
+}
+
 /** An absolute path is a long run of base64 characters only by accident: it starts at the root and has depth. */
 const PATH_LIKE_RE = /^\/[^/]+\/[^/]+\//
 const STEAMID64_RE = /7656119\d{10}/
@@ -95,13 +136,13 @@ function leakInString(
   if (EMAIL_RE.test(text)) return 'email'
   if (BEARER_RE.test(text)) return 'bearer token'
   if (COOKIE_RE.test(text)) return 'cookie'
-  if (
-    text.length >= 40 &&
-    !HASH_KEYS.has(key.toLowerCase()) &&
-    (HEX_RUN_RE.test(text) ||
-      (BASE64_RUN_RE.test(text) && !PATH_LIKE_RE.test(text)))
-  ) {
-    return `long hex/base64 run (${text.length} chars) under "${key}"`
+  if (text.length >= 40 && !HASH_KEYS.has(key.toLowerCase())) {
+    if (HEX_RUN_RE.test(text)) {
+      return `long hex run (${text.length} chars) under "${key}"`
+    }
+    if (looksLikeBase64Secret(text)) {
+      return `long base64 run (${text.length} chars) under "${key}"`
+    }
   }
   if (
     username.length >= 5 &&
@@ -225,6 +266,10 @@ describe('store corpus manifest', () => {
     for (const [source, n] of Object.entries(manifest.counts)) {
       expect({ source, n: n > 0 }).toEqual({ source, n: true })
     }
+    // At least one tagged release must have built and booted (the others may fail and be recorded in `failures`).
+    expect(
+      Object.keys(manifest.counts).filter((s) => /^v0\.\d+$/.test(s)).length
+    ).toBeGreaterThan(0)
     for (const source of REQUIRED_SOURCES) {
       expect({ source, present: source in manifest.counts }).toEqual({
         source,
@@ -238,13 +283,15 @@ describe('store corpus manifest', () => {
       expect(FLAVOURS).toContain(f.flavour)
       expect(EXPECTS).toContain(f.expect)
       expect(f.tableKey.length).toBeGreaterThan(0)
-      expect(f.path.startsWith(`${f.source}/`)).toBe(true)
+      expect(f.path.startsWith(`${sourceDir(f.source)}/`)).toBe(true)
     }
   })
 
   it('stores every harvested file in exactly the bytes TS writes for its flavour', () => {
+    // Redacted sources are re-serialised by the harvester. Tag files are raw bytes as that release wrote them and edge files
+    // are hand-built, so neither is held to the current flavour.
     const harvested = (f: ManifestEntry) =>
-      f.source !== 'edge' && f.expect !== 'missing'
+      f.source === 'operator' || f.source === 'backup'
     const off: string[] = []
     for (const f of manifest.files.filter(harvested)) {
       const text = readFileSync(join(CORPUS_DIR, f.path), 'utf8')
@@ -312,7 +359,21 @@ describe('store corpus redaction', () => {
 
   it('self-test: the scan fails on long hex and base64 runs, a SteamID64, an email and a gamekey key', () => {
     expect(scanDocument({ a: 'a'.repeat(40) }, username)).toHaveLength(1)
-    expect(scanDocument({ a: 'Zm9v'.repeat(12) }, username)).toHaveLength(1)
+    expect(
+      scanDocument(
+        { a: 'q7Hk2LpX9sRt4WzC8vNb1MyJ5dFg3aEu6oQi0TxZcBnVmKjA' },
+        username
+      )
+    ).toHaveLength(1)
+    expect(
+      scanDocument(
+        { a: 'PhoenixPointCompleteEditionAudienceUpgrade' },
+        username
+      )
+    ).toEqual([])
+    expect(
+      scanDocument({ a: 'STEAMUNIFIEDMESSAGES_INTERFACE_VERSION001' }, username)
+    ).toEqual([])
     expect(scanDocument({ sha256: 'a'.repeat(64) }, username)).toEqual([])
     expect(scanDocument({ a: 'x 76561197960287930 y' }, username)).toHaveLength(
       1

@@ -1,0 +1,38 @@
+{
+  "2706020": {
+    "autoInstallDxvk": true,
+    "autoInstallDxvkNvapi": false,
+    "autoInstallVkd3d": false,
+    "preferSystemLibs": false,
+    "enableEsync": true,
+    "enableMsync": true,
+    "enableFsync": false,
+    "enableWineWayland": false,
+    "enableHDR": false,
+    "enableWoW64": false,
+    "nvidiaPrime": false,
+    "enviromentOptions": [],
+    "wrapperOptions": [],
+    "showFps": false,
+    "useGameMode": false,
+    "battlEyeRuntime": false,
+    "eacRuntime": false,
+    "language": "",
+    "beforeLaunchScriptPath": "",
+    "afterLaunchScriptPath": "",
+    "verboseLogs": true,
+    "advertiseAvxForRosetta": false,
+    "enableQuickSavesMenu": false,
+    "disableUMU": false,
+    "wineVersion": {
+      "bin": "",
+      "name": "Default Wine - Not Found",
+      "type": "wine"
+    },
+    "wineCrossoverBottle": "GameLib",
+    "winePrefix": "/Users/operator/Games/GameLib/Prefixes/shared",
+    "engineOverride": "pinned:wine-staging-11.20"
+  },
+  "version": "v2",
+  "explicit": true
+}

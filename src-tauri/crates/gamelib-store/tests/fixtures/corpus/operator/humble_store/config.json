@@ -1,0 +1,10 @@
+{
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 1
+		}
+	},
+	"encryptionDegraded": false,
+	"isLoggedIn": true,
+	"expired": false
+}

@@ -1,0 +1,51 @@
+{
+	"installed": [
+		{
+			"platform": "osx",
+			"executable": "",
+			"install_path": "/Users/operator/Games/GameLib/Balrum.app",
+			"install_size": "265.98 MiB",
+			"is_dlc": false,
+			"version": "1.7",
+			"appName": "1769415595",
+			"installedDLCs": [],
+			"language": "en-US",
+			"versionEtag": "\"eec23f0c086b9dac6463057d2f6a3e6c\"",
+			"buildId": "56333733286993264",
+			"pinnedVersion": false
+		},
+		{
+			"platform": "windows",
+			"executable": "",
+			"install_path": "/Users/operator/Games/GameLib/Bloody Hell",
+			"install_size": "445.44 MiB",
+			"is_dlc": false,
+			"version": "1.7",
+			"appName": "1542190742",
+			"installedDLCs": [],
+			"language": "en-US",
+			"versionEtag": "\"9d407bfb0e2aba60f9a3034aa88a1692\"",
+			"buildId": "56589449008811827",
+			"pinnedVersion": false
+		},
+		{
+			"platform": "windows",
+			"executable": "",
+			"install_path": "/Users/operator/Games/GameLib/Racine",
+			"install_size": "676.57 MiB",
+			"is_dlc": false,
+			"version": "1.0.7",
+			"appName": "1192621307",
+			"installedDLCs": [],
+			"language": "en-US",
+			"versionEtag": "\"6174a0389dd822ae9061f14e341cbcd6\"",
+			"buildId": "57061495905048579",
+			"pinnedVersion": false
+		}
+	],
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 3
+		}
+	}
+}

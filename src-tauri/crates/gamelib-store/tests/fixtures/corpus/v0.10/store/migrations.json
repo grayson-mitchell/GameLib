@@ -1,0 +1,10 @@
+{
+	"appliedMigrations": [
+		"legendary-move-global-config-folder"
+	],
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 1
+		}
+	}
+}

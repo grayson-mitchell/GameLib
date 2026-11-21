@@ -1,0 +1,17 @@
+{
+	"asguaard_steam": {
+		"revealedAt": 1793345398343
+	},
+	"__timestamp": {
+		"asguaard_steam": "Fri Oct 30 2026 20:29:58 GMT+1300 (New Zealand Daylight Time)",
+		"c7a551c0-0d67-49e0-ae61-38d5744314f7": "Sat Nov 14 2026 08:42:58 GMT+1300 (New Zealand Daylight Time)"
+	},
+	"c7a551c0-0d67-49e0-ae61-38d5744314f7": {
+		"revealedAt": 1794598978327
+	},
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 1
+		}
+	}
+}

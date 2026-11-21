@@ -1,0 +1,13 @@
+{
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 1
+		}
+	},
+	"isLoggedIn": true,
+	"userData": {
+		"userId": "REDACTED",
+		"username": "REDACTED",
+		"galaxyUserId": "REDACTED"
+	}
+}

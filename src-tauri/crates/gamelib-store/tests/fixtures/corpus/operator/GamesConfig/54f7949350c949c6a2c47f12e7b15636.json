@@ -1,0 +1,38 @@
+{
+  "54f7949350c949c6a2c47f12e7b15636": {
+    "advertiseAvxForRosetta": false,
+    "afterLaunchScriptPath": "",
+    "autoInstallDxvk": true,
+    "autoInstallDxvkNvapi": false,
+    "autoInstallVkd3d": false,
+    "battlEyeRuntime": false,
+    "beforeLaunchScriptPath": "",
+    "disableUMU": false,
+    "eacRuntime": false,
+    "enableEsync": true,
+    "enableFsync": false,
+    "enableHDR": false,
+    "enableMsync": true,
+    "enableQuickSavesMenu": false,
+    "enableWineWayland": false,
+    "enableWoW64": false,
+    "engineOverride": "automatic",
+    "enviromentOptions": [],
+    "language": "",
+    "nvidiaPrime": false,
+    "preferSystemLibs": false,
+    "showFps": false,
+    "useGameMode": false,
+    "verboseLogs": true,
+    "wineCrossoverBottle": "GameLib-legendary-54f7949350c949c6a2c47f12e7b15636",
+    "winePrefix": "/Users/operator/Games/GameLib/Prefixes/shared",
+    "wineVersion": {
+      "bin": "",
+      "name": "Default Wine - Not Found",
+      "type": "wine"
+    },
+    "wrapperOptions": []
+  },
+  "version": "v1",
+  "explicit": true
+}

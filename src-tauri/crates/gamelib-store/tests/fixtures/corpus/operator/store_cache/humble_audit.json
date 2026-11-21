@@ -1,0 +1,314 @@
+{
+	"GKREDACTED000001:thethaumaturge_deluxeedition_row_choice_steam": [
+		{
+			"event": "ownership_settled",
+			"at": 1793251036553,
+			"title": "The Thaumaturge: Deluxe Edition",
+			"platform": "steam"
+		}
+	],
+	"__timestamp": {
+		"GKREDACTED000001:thethaumaturge_deluxeedition_row_choice_steam": "Thu Oct 29 2026 18:17:16 GMT+1300 (New Zealand Daylight Time)",
+		"GKREDACTED000002:dungeonsofhinterberg_choice_steam": "Thu Oct 29 2026 18:17:16 GMT+1300 (New Zealand Daylight Time)",
+		"GKREDACTED000003:havendock_choice_steam": "Thu Oct 29 2026 18:17:16 GMT+1300 (New Zealand Daylight Time)",
+		"GKREDACTED000004:victoria3_choice_steam": "Thu Oct 29 2026 18:17:16 GMT+1300 (New Zealand Daylight Time)",
+		"GKREDACTED000005:zerohour_row_choice_steam": "Thu Oct 29 2026 18:17:16 GMT+1300 (New Zealand Daylight Time)",
+		"GKREDACTED000006:crusaderkingsiii_choice_steam": "Thu Oct 29 2026 18:17:16 GMT+1300 (New Zealand Daylight Time)",
+		"GKREDACTED000007:shadowgambit_thecursedcrew_row_choice_steam": "Thu Oct 29 2026 18:17:16 GMT+1300 (New Zealand Daylight Time)",
+		"GKREDACTED000008:citizensleeper_choice_steam": "Thu Oct 29 2026 18:17:16 GMT+1300 (New Zealand Daylight Time)",
+		"GKREDACTED000009:knightsofhonorii_sovereign_row_choice_steam": "Thu Oct 29 2026 18:17:16 GMT+1300 (New Zealand Daylight Time)",
+		"GKREDACTED000010:thelamplightersleague_choice_steam": "Thu Oct 29 2026 18:17:16 GMT+1300 (New Zealand Daylight Time)",
+		"GKREDACTED000011:totalwar_pharaohdynasties_row_choice_steam": "Thu Oct 29 2026 18:17:16 GMT+1300 (New Zealand Daylight Time)",
+		"GKREDACTED000012:likeadragongaiden_themanwhoerasedhisname_row_choice_steam": "Thu Oct 29 2026 18:17:16 GMT+1300 (New Zealand Daylight Time)",
+		"GKREDACTED000013:asguaard_steam": "Fri Oct 30 2026 20:30:04 GMT+1300 (New Zealand Daylight Time)",
+		"GKREDACTED000014:hardwest2_choice_steam": "Fri Oct 30 2026 21:40:59 GMT+1300 (New Zealand Daylight Time)",
+		"c7a551c0-0d67-49e0-ae61-38d5744314f7:c7a551c0-0d67-49e0-ae61-38d5744314f7": "Sat Nov 14 2026 08:43:34 GMT+1300 (New Zealand Daylight Time)",
+		"c7a551c0-0d55-4219-a490-d07a1df2f1a8:c7a551c0-0d55-4219-a490-d07a1df2f1a8": "Sat Nov 14 2026 09:11:37 GMT+1300 (New Zealand Daylight Time)",
+		"c7a551c0-0d54-4ebd-99cc-548c79a0df34:c7a551c0-0d54-4ebd-99cc-548c79a0df34": "Sat Nov 14 2026 09:11:37 GMT+1300 (New Zealand Daylight Time)",
+		"c7a551c0-0d4d-4294-a84a-3b54e6a70e8f:c7a551c0-0d4d-4294-a84a-3b54e6a70e8f": "Sat Nov 14 2026 09:11:37 GMT+1300 (New Zealand Daylight Time)",
+		"c7a551c0-0d27-430d-b634-52c8b77d08f8:c7a551c0-0d27-430d-b634-52c8b77d08f8": "Sat Nov 14 2026 09:11:37 GMT+1300 (New Zealand Daylight Time)",
+		"c7a551c0-0d27-4309-ab94-e1c9f6ce59c7:c7a551c0-0d27-4309-ab94-e1c9f6ce59c7": "Sat Nov 14 2026 09:11:37 GMT+1300 (New Zealand Daylight Time)",
+		"c7a551c0-0d27-4308-9235-5c475d54c57e:c7a551c0-0d27-4308-9235-5c475d54c57e": "Sat Nov 14 2026 09:11:37 GMT+1300 (New Zealand Daylight Time)",
+		"c7a551c0-0ccb-4e3f-a6a1-38be97f5956a:c7a551c0-0ccb-4e3f-a6a1-38be97f5956a": "Sat Nov 14 2026 09:11:37 GMT+1300 (New Zealand Daylight Time)",
+		"c7a551c0-0ccb-4e3f-954e-6f062e9028cd:c7a551c0-0ccb-4e3f-954e-6f062e9028cd": "Sat Nov 14 2026 09:11:38 GMT+1300 (New Zealand Daylight Time)",
+		"c7a551c0-0c99-4018-9c01-2e2e6f91b86c:c7a551c0-0c99-4018-9c01-2e2e6f91b86c": "Sat Nov 14 2026 09:11:38 GMT+1300 (New Zealand Daylight Time)",
+		"c7a551c0-0c81-4fc0-8ebc-29bc6b05f3e6:c7a551c0-0c81-4fc0-8ebc-29bc6b05f3e6": "Sat Nov 14 2026 09:11:38 GMT+1300 (New Zealand Daylight Time)",
+		"c7a551c0-0c47-4167-bd5f-3b8f65327ee9:c7a551c0-0c47-4167-bd5f-3b8f65327ee9": "Sat Nov 14 2026 09:11:38 GMT+1300 (New Zealand Daylight Time)",
+		"c7a551c0-0c36-42dc-994a-b9f04261853f:c7a551c0-0c36-42dc-994a-b9f04261853f": "Sat Nov 14 2026 09:11:38 GMT+1300 (New Zealand Daylight Time)",
+		"c7a551c0-0c24-4788-a8b1-af7543393086:c7a551c0-0c24-4788-a8b1-af7543393086": "Sat Nov 14 2026 09:11:38 GMT+1300 (New Zealand Daylight Time)",
+		"c7a551c0-0b66-4b61-bda0-2714fe6adbb7:c7a551c0-0b66-4b61-bda0-2714fe6adbb7": "Sat Nov 14 2026 09:11:38 GMT+1300 (New Zealand Daylight Time)",
+		"c7a551c0-077d-4085-9f92-df6ab39dcd89:c7a551c0-077d-4085-9f92-df6ab39dcd89": "Sat Nov 14 2026 09:11:38 GMT+1300 (New Zealand Daylight Time)",
+		"c7a551c0-0d4c-41aa-9636-0feed6c13899:c7a551c0-0d4c-41aa-9636-0feed6c13899": "Sat Nov 14 2026 09:53:30 GMT+1300 (New Zealand Daylight Time)"
+	},
+	"GKREDACTED000002:dungeonsofhinterberg_choice_steam": [
+		{
+			"event": "ownership_settled",
+			"at": 1793251036641,
+			"title": "Dungeons of Hinterberg",
+			"platform": "steam"
+		}
+	],
+	"GKREDACTED000003:havendock_choice_steam": [
+		{
+			"event": "ownership_settled",
+			"at": 1793251036688,
+			"title": "Havendock",
+			"platform": "steam"
+		}
+	],
+	"GKREDACTED000004:victoria3_choice_steam": [
+		{
+			"event": "ownership_settled",
+			"at": 1793251036712,
+			"title": "Victoria 3",
+			"platform": "steam"
+		}
+	],
+	"GKREDACTED000005:zerohour_row_choice_steam": [
+		{
+			"event": "ownership_settled",
+			"at": 1793251036737,
+			"title": "Zero Hour",
+			"platform": "steam"
+		}
+	],
+	"GKREDACTED000006:crusaderkingsiii_choice_steam": [
+		{
+			"event": "ownership_settled",
+			"at": 1793251036761,
+			"title": "Crusader Kings III",
+			"platform": "steam"
+		}
+	],
+	"GKREDACTED000007:shadowgambit_thecursedcrew_row_choice_steam": [
+		{
+			"event": "ownership_settled",
+			"at": 1793251036785,
+			"title": "Shadow Gambit",
+			"platform": "steam"
+		}
+	],
+	"GKREDACTED000008:citizensleeper_choice_steam": [
+		{
+			"event": "ownership_settled",
+			"at": 1793251036810,
+			"title": "Citizen Sleeper",
+			"platform": "steam"
+		}
+	],
+	"GKREDACTED000009:knightsofhonorii_sovereign_row_choice_steam": [
+		{
+			"event": "ownership_settled",
+			"at": 1793251036834,
+			"title": "Knights of Honor II: Sovereign",
+			"platform": "steam"
+		}
+	],
+	"GKREDACTED000010:thelamplightersleague_choice_steam": [
+		{
+			"event": "ownership_settled",
+			"at": 1793251036859,
+			"title": "The Lamplighters League",
+			"platform": "steam"
+		}
+	],
+	"GKREDACTED000011:totalwar_pharaohdynasties_row_choice_steam": [
+		{
+			"event": "ownership_settled",
+			"at": 1793251036885,
+			"title": "Total War: PHARAOH DYNASTIES",
+			"platform": "steam"
+		}
+	],
+	"GKREDACTED000012:likeadragongaiden_themanwhoerasedhisname_row_choice_steam": [
+		{
+			"event": "ownership_settled",
+			"at": 1793251036911,
+			"title": "Like a Dragon Gaiden: The Man Who Erased His Name",
+			"platform": "steam"
+		}
+	],
+	"GKREDACTED000013:asguaard_steam": [
+		{
+			"event": "reveal_attempt",
+			"at": 1793345398333,
+			"title": "Asguaard",
+			"platform": "steam"
+		},
+		{
+			"event": "reveal_success",
+			"at": 1793345401147,
+			"title": "Asguaard",
+			"platform": "steam",
+			"outcome": "ok"
+		},
+		{
+			"event": "mark_redeemed",
+			"at": 1793345404458,
+			"title": "Asguaard",
+			"platform": "steam"
+		}
+	],
+	"GKREDACTED000014:hardwest2_choice_steam": [
+		{
+			"event": "ownership_settled",
+			"at": 1793349659348,
+			"title": "Hard West 2",
+			"platform": "steam"
+		}
+	],
+	"c7a551c0-0d67-49e0-ae61-38d5744314f7:c7a551c0-0d67-49e0-ae61-38d5744314f7": [
+		{
+			"event": "reveal_attempt",
+			"at": 1794598978317,
+			"title": "Resident Evil 3",
+			"platform": "gog"
+		},
+		{
+			"event": "reveal_success",
+			"at": 1794598987377,
+			"title": "Resident Evil 3",
+			"platform": "gog",
+			"outcome": "ok"
+		},
+		{
+			"event": "mark_redeemed",
+			"at": 1794599014000,
+			"title": "Resident Evil 3",
+			"platform": "gog"
+		}
+	],
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 1
+		}
+	},
+	"c7a551c0-0d55-4219-a490-d07a1df2f1a8:c7a551c0-0d55-4219-a490-d07a1df2f1a8": [
+		{
+			"event": "ownership_settled",
+			"at": 1794600697762,
+			"title": "Paths & Danger",
+			"platform": "steam"
+		}
+	],
+	"c7a551c0-0d54-4ebd-99cc-548c79a0df34:c7a551c0-0d54-4ebd-99cc-548c79a0df34": [
+		{
+			"event": "ownership_settled",
+			"at": 1794600697794,
+			"title": "Unclaimed World",
+			"platform": "steam"
+		}
+	],
+	"c7a551c0-0d4d-4294-a84a-3b54e6a70e8f:c7a551c0-0d4d-4294-a84a-3b54e6a70e8f": [
+		{
+			"event": "ownership_settled",
+			"at": 1794600697843,
+			"title": "Californium",
+			"platform": "steam"
+		}
+	],
+	"c7a551c0-0d27-430d-b634-52c8b77d08f8:c7a551c0-0d27-430d-b634-52c8b77d08f8": [
+		{
+			"event": "ownership_settled",
+			"at": 1794600697884,
+			"title": "Like a Dragon Gaiden: The Man Who Erased His Name",
+			"platform": "steam"
+		}
+	],
+	"c7a551c0-0d27-4309-ab94-e1c9f6ce59c7:c7a551c0-0d27-4309-ab94-e1c9f6ce59c7": [
+		{
+			"event": "ownership_settled",
+			"at": 1794600697916,
+			"title": "Zero Hour",
+			"platform": "steam"
+		}
+	],
+	"c7a551c0-0d27-4308-9235-5c475d54c57e:c7a551c0-0d27-4308-9235-5c475d54c57e": [
+		{
+			"event": "ownership_settled",
+			"at": 1794600697940,
+			"title": "Hard West 2",
+			"platform": "steam"
+		}
+	],
+	"c7a551c0-0ccb-4e3f-a6a1-38be97f5956a:c7a551c0-0ccb-4e3f-a6a1-38be97f5956a": [
+		{
+			"event": "ownership_settled",
+			"at": 1794600697990,
+			"title": "Dungeons of Hinterberg",
+			"platform": "steam"
+		}
+	],
+	"c7a551c0-0ccb-4e3f-954e-6f062e9028cd:c7a551c0-0ccb-4e3f-954e-6f062e9028cd": [
+		{
+			"event": "ownership_settled",
+			"at": 1794600698014,
+			"title": "Havendock",
+			"platform": "steam"
+		}
+	],
+	"c7a551c0-0c99-4018-9c01-2e2e6f91b86c:c7a551c0-0c99-4018-9c01-2e2e6f91b86c": [
+		{
+			"event": "ownership_settled",
+			"at": 1794600698089,
+			"title": "Total War: PHARAOH DYNASTIES",
+			"platform": "steam"
+		}
+	],
+	"c7a551c0-0c81-4fc0-8ebc-29bc6b05f3e6:c7a551c0-0c81-4fc0-8ebc-29bc6b05f3e6": [
+		{
+			"event": "ownership_settled",
+			"at": 1794600698113,
+			"title": "The Lamplighters League",
+			"platform": "steam"
+		}
+	],
+	"c7a551c0-0c47-4167-bd5f-3b8f65327ee9:c7a551c0-0c47-4167-bd5f-3b8f65327ee9": [
+		{
+			"event": "ownership_settled",
+			"at": 1794600698137,
+			"title": "Knights of Honor II: Sovereign",
+			"platform": "steam"
+		}
+	],
+	"c7a551c0-0c36-42dc-994a-b9f04261853f:c7a551c0-0c36-42dc-994a-b9f04261853f": [
+		{
+			"event": "ownership_settled",
+			"at": 1794600698160,
+			"title": "Victoria 3",
+			"platform": "steam"
+		}
+	],
+	"c7a551c0-0c24-4788-a8b1-af7543393086:c7a551c0-0c24-4788-a8b1-af7543393086": [
+		{
+			"event": "ownership_settled",
+			"at": 1794600698184,
+			"title": "Citizen Sleeper",
+			"platform": "steam"
+		}
+	],
+	"c7a551c0-0b66-4b61-bda0-2714fe6adbb7:c7a551c0-0b66-4b61-bda0-2714fe6adbb7": [
+		{
+			"event": "ownership_settled",
+			"at": 1794600698208,
+			"title": "Crusader Kings III",
+			"platform": "steam"
+		}
+	],
+	"c7a551c0-077d-4085-9f92-df6ab39dcd89:c7a551c0-077d-4085-9f92-df6ab39dcd89": [
+		{
+			"event": "ownership_settled",
+			"at": 1794600698272,
+			"title": "Satellite Reign",
+			"platform": "steam"
+		}
+	],
+	"c7a551c0-0d4c-41aa-9636-0feed6c13899:c7a551c0-0d4c-41aa-9636-0feed6c13899": [
+		{
+			"event": "ownership_settled",
+			"at": 1794603210127,
+			"title": "Valiant: Resurrection (Steam)",
+			"platform": "steam"
+		}
+	]
+}

@@ -1,0 +1,31 @@
+{
+	"games": {
+		"411300_steam": "user-on",
+		"38400_steam": "auto",
+		"1119730_steam": "auto",
+		"38410_steam": "auto",
+		"3205720_steam": "auto",
+		"648800_steam": "auto",
+		"63000_steam": "auto",
+		"1062520_steam": "auto",
+		"576770_steam": "auto",
+		"1284190_steam": "auto",
+		"1363080_steam": "auto",
+		"219990_steam": "auto",
+		"1769415595_gog": "auto",
+		"1603180_steam": "auto",
+		"1542190742_gog": "auto",
+		"391540_steam": "auto",
+		"593280_steam": "auto",
+		"1829678475_gog": "auto",
+		"Emu_legendary": "auto",
+		"98800_steam": "auto",
+		"206060_steam": "auto",
+		"206040_steam": "auto"
+	},
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 1
+		}
+	}
+}

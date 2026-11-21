@@ -5,6 +5,8 @@
  *   node meta/runTs.cjs --bundle --platform=node --target=node22 meta/harvestStoreCorpus.ts <subcommand> ...
  *
  *   operator <profileDir> [--only <relpath>...]   redacted copy of the live operator profile (read only)
+ *   backups <profileDir>                          redacted copies of the profile's `*.bak.json` pre-migration captures
+ *   tag <v0.8|v0.9|v0.10> [--scratch <dir>]       the files a tagged release writes on a cold boot in a fake HOME
  *
  * Everything lands under CORPUS_DIR, and MANIFEST.json lists every file with its sha256, source, flavour and the outcome
  * the Rust engine is expected to produce (`expect`). `meta/__tests__/storeCorpus.test.ts` fails when the tree and the
@@ -14,18 +16,22 @@
  * store would write it (`JSON.stringify(v, undefined, '\t')` for conf stores, `JSON.stringify(v, null, 2)` for settings
  * documents, no trailing newline), so a file that round-trips in Rust is compared against bytes TS itself would produce.
  */
+import { spawn, spawnSync } from 'child_process'
 import { createHash } from 'crypto'
 import {
   existsSync,
   mkdirSync,
+  mkdtempSync,
   readdirSync,
   readFileSync,
   rmSync,
   statSync,
   writeFileSync
 } from 'fs'
-import { userInfo } from 'os'
+import { tmpdir, userInfo } from 'os'
 import { dirname, join, resolve } from 'path'
+
+import { createFakeHomeProfile } from '../src/backend/testUtils/fakeHomeProfile'
 
 // The script is bundled into a private temp dir by meta/runTs.cjs, so `__dirname` is not the repo: resolve from the
 // working directory, which is the repo root for every run (`pnpm` and the jest rootDir alike).
@@ -165,7 +171,8 @@ const PLACEHOLDER = 'REDACTED'
 
 /** A value of the same JSON type with nothing in it: strings, numbers and booleans flatten, objects keep their keys. */
 export function placeholderOf(value: unknown): unknown {
-  if (typeof value === 'string') return PLACEHOLDER
+  // An empty string holds nothing to hide, and keeping it keeps the real default shape (`steamGridDbApiKey: ""`).
+  if (typeof value === 'string') return value === '' ? '' : PLACEHOLDER
   if (typeof value === 'number') return 0
   if (typeof value === 'boolean') return false
   if (Array.isArray(value)) return []
@@ -179,7 +186,7 @@ export function placeholderOf(value: unknown): unknown {
 
 /** True when `value` is what placeholderOf would have produced for its type. */
 export function isPlaceholder(value: unknown): boolean {
-  if (typeof value === 'string') return value === PLACEHOLDER
+  if (typeof value === 'string') return value === PLACEHOLDER || value === ''
   if (typeof value === 'number') return value === 0
   if (typeof value === 'boolean') return value === false
   if (Array.isArray(value)) return value.length === 0
@@ -439,7 +446,8 @@ export function profileStoreFiles(profileDir: string): string[] {
 function redactFile(
   profileDir: string,
   relPath: string,
-  ctx: RedactionContext
+  ctx: RedactionContext,
+  flavour: Flavour = flavourOf(relPath)
 ): { text: string; data: unknown } | null {
   let parsed: unknown
   try {
@@ -448,7 +456,7 @@ function redactFile(
     return null
   }
   const redacted = redactValue([], parsed, ctx)
-  return { text: serialise(redacted, flavourOf(relPath)), data: redacted }
+  return { text: serialise(redacted, flavour), data: redacted }
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -506,23 +514,341 @@ function harvestOperator(profileDir: string, only: readonly string[]): void {
   console.log(`operator: ${entries.length} file(s) written`)
 }
 
-function parseArgs(argv: string[]): { positional: string[]; only: string[] } {
+/**
+ * `backups <profileDir>`: the engine's real pre-migration captures (`<name>.v<from>.<stamp>.bak.json`) and the hand copy
+ * `config.v1.from-phase68.*.json`. Each is the bytes of a store as an OLDER shape wrote it, so they are the migration
+ * corpus: `expect` is `migrate` when the version in the file name is below the chain's current version.
+ * Read only, same justification as the operator arm: it never writes to the profile and never spawns.
+ */
+function harvestBackups(profileDir: string): void {
+  if (!existsSync(profileDir)) {
+    throw new Error(`operator profile not found at ${profileDir}`)
+  }
+  const ctx = newRedactionContext()
+  const entries: ManifestEntry[] = []
+  const dirs = ['', ...STORE_DIRS, 'GamesConfig']
+  for (const dir of dirs) {
+    const abs = join(profileDir, dir)
+    if (!existsSync(abs)) continue
+    for (const name of readdirSync(abs).sort()) {
+      const m = BACKUP_RE.exec(name)
+      if (!m || !statSync(join(abs, name)).isFile()) continue
+      const origRel = `${dir ? `${dir}/` : ''}${m[1]}.json`
+      const rel = `${dir ? `${dir}/` : ''}${name}`
+      if ((EXCLUDED_PATHS as readonly string[]).includes(origRel)) continue
+      const result = redactFile(profileDir, rel, ctx, flavourOf(origRel))
+      if (result === null) {
+        console.warn(`skip (not JSON): ${rel}`)
+        continue
+      }
+      const flavour = flavourOf(origRel)
+      const tableKey = tableKeyOf(origRel)
+      const from = Number(m[2])
+      const current = currentVersionOf(tableKey)
+      entries.push(
+        writeCorpusFile(`backups/${rel}`, result.text, {
+          source: 'backup',
+          flavour,
+          expect:
+            from > current
+              ? 'readOnly-newer'
+              : from < current
+                ? 'migrate'
+                : 'roundtrip',
+          tableKey,
+          note: `captured at v${from}`
+        })
+      )
+    }
+  }
+  replaceSource('backup', entries)
+  console.log(`backups: ${entries.length} file(s) written`)
+}
+
+const SENTINEL = '__GAMELIB_SIDECAR_READY__'
+const TAGS = ['v0.8', 'v0.9', 'v0.10'] as const
+const BOOT_WAIT_MS = 30_000
+const EXIT_WAIT_MS = 15_000
+
+interface RunResult {
+  status: number | null
+  stdout: string
+  stderr: string
+}
+
+/**
+ * Run a build-time command (git, pnpm) with a fresh fake HOME and dispose it after. Nothing here is profile-dependent, so
+ * this is the isolated half of the two-profile rule. `extraEnv` carries only non-profile keys (the pnpm store path).
+ */
+function runIsolated(
+  command: string,
+  args: string[],
+  cwd: string,
+  extraEnv: NodeJS.ProcessEnv = {},
+  timeoutMs = 600_000
+): RunResult {
+  const profile = createFakeHomeProfile({ prefix: 'gamelib-corpus-build-' })
+  try {
+    const r = spawnSync(command, args, {
+      cwd,
+      encoding: 'utf8',
+      timeout: timeoutMs,
+      maxBuffer: 64 * 1024 * 1024,
+      env: { ...profile.childEnv(process.env), ...extraEnv }
+    })
+    return { status: r.status, stdout: r.stdout ?? '', stderr: r.stderr ?? '' }
+  } finally {
+    profile.dispose()
+  }
+}
+
+function must(r: RunResult, what: string): void {
+  if (r.status !== 0) {
+    const tail = (r.stderr || r.stdout).split('\n').slice(-25).join('\n')
+    throw new Error(`${what} exited ${String(r.status)}\n${tail}`)
+  }
+}
+
+/**
+ * The operator's content-addressable pnpm store, so a tag's install links from it instead of downloading again. Asking
+ * where it lives is profile-dependent by purpose (a fake HOME would answer with an empty store); the call reads that one
+ * path and nothing else, spawns pnpm only for this, and never writes.
+ */
+function realPnpmStore(): string {
+  const r = spawnSync('pnpm', ['store', 'path'], { encoding: 'utf8' })
+  const path = (r.stdout ?? '').trim()
+  if (r.status !== 0 || path.length === 0) {
+    throw new Error('pnpm store path failed; cannot share the pnpm store')
+  }
+  return path
+}
+
+/** The directory a sidecar chose for its user data inside a fake profile: the one holding store/config.json. */
+function findUserData(root: string): string | null {
+  const queue: Array<{ dir: string; depth: number }> = [{ dir: root, depth: 0 }]
+  while (queue.length > 0) {
+    const { dir, depth } = queue.shift() as { dir: string; depth: number }
+    if (existsSync(join(dir, 'store', 'config.json'))) return dir
+    if (depth >= 5) continue
+    let names: string[]
+    try {
+      names = readdirSync(dir)
+    } catch {
+      continue
+    }
+    for (const n of names.sort()) {
+      const abs = join(dir, n)
+      try {
+        if (statSync(abs).isDirectory())
+          queue.push({ dir: abs, depth: depth + 1 })
+      } catch {
+        // vanished between readdir and stat
+      }
+    }
+  }
+  return null
+}
+
+/**
+ * A plain, referenced timer. It must NOT be unref'd: this is a one-shot CLI, and if the sidecar under test dies early an
+ * unreferenced wait leaves nothing holding the event loop, so the process exits 0 mid-await without ever reaching its
+ * cleanup (measured: the first v0.10 run left its worktree behind that way).
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms))
+}
+
+/**
+ * Boot one tag's sidecar in the fresh fake profile `profile`, wait until it has written store/config.json (or
+ * BOOT_WAIT_MS pass), close stdin so it leaves by event-loop drain, give it EXIT_WAIT_MS, then kill its process group.
+ * Returns the user-data dir. Raw stdout/stderr stay in memory and are discarded: nothing is written outside the profile,
+ * so there is no capture to register for shredding.
+ */
+async function bootSidecar(
+  worktree: string,
+  profile: ReturnType<typeof createFakeHomeProfile>
+): Promise<string> {
+  const bundle = join(worktree, 'build', 'main', 'sidecar.js')
+  if (!existsSync(bundle)) throw new Error(`no sidecar bundle at ${bundle}`)
+  const child = spawn(process.execPath, [bundle], {
+    cwd: worktree,
+    // The eight profile variables plus PATH only: nothing else of the operator's environment reaches the old release.
+    env: { ...profile.env, PATH: process.env.PATH ?? '' },
+    stdio: ['pipe', 'pipe', 'pipe'],
+    detached: process.platform !== 'win32'
+  })
+  let out = ''
+  child.stdout.on('data', (d: Buffer) => {
+    out = (out + d.toString()).slice(-4096)
+  })
+  let err = ''
+  child.stderr.on('data', (d: Buffer) => {
+    err = (err + d.toString()).slice(-1500)
+  })
+  let exited = false
+  child.on('exit', () => {
+    exited = true
+  })
+  const killGroup = () => {
+    try {
+      if (process.platform === 'win32' || child.pid === undefined)
+        child.kill('SIGKILL')
+      else process.kill(-child.pid, 'SIGKILL')
+    } catch {
+      // already gone
+    }
+  }
+  try {
+    const bootDeadline = Date.now() + BOOT_WAIT_MS
+    let userData: string | null = null
+    while (Date.now() < bootDeadline && !exited) {
+      userData = findUserData(profile.root)
+      if (userData !== null && out.includes(SENTINEL)) break
+      await sleep(250)
+    }
+    userData = findUserData(profile.root)
+    child.stdin.end()
+    const exitDeadline = Date.now() + EXIT_WAIT_MS
+    while (!exited && Date.now() < exitDeadline) await sleep(100)
+    if (userData === null) {
+      throw new Error(
+        `the sidecar wrote no store/config.json within ${BOOT_WAIT_MS} ms (ready sentinel ${
+          out.includes(SENTINEL) ? 'seen' : 'not seen'
+        }; exit ${exited ? 'seen' : 'not seen'}); stderr tail:\n${err}`
+      )
+    }
+    return userData
+  } finally {
+    killGroup()
+  }
+}
+
+/**
+ * `tag <v0.8|v0.9|v0.10>`: build the tagged sidecar in a detached worktree and boot it in a fresh fake HOME, then copy the
+ * store files it wrote. These are raw bytes, as that release wrote them: no re-serialisation, because how an older release
+ * laid out a file is exactly what a migration test needs. A fresh profile holds no account data, and the copy is refused
+ * if the redactor would change anything in it.
+ *
+ * A tag that cannot build or boot is recorded in the manifest (`failures`) with the exact error and the other tags
+ * continue; the manifest floor and storeCorpus.test.ts decide whether what remains is enough.
+ */
+async function harvestTag(tag: string, scratchParent?: string): Promise<void> {
+  if (!(TAGS as readonly string[]).includes(tag)) {
+    throw new Error(`unknown tag ${tag}; expected one of ${TAGS.join(', ')}`)
+  }
+  const repo = process.cwd()
+  const scratch = mkdtempSync(
+    join(scratchParent ?? tmpdir(), 'gamelib-corpus-')
+  )
+  const worktree = join(scratch, `gamelib-${tag}`)
+  let added = false
+  const profile = createFakeHomeProfile({ prefix: `gamelib-corpus-${tag}-` })
+  try {
+    must(
+      runIsolated('git', ['worktree', 'add', '--detach', worktree, tag], repo),
+      `git worktree add ${tag}`
+    )
+    added = true
+    const store = realPnpmStore()
+    // The fake HOME has no corepack cache: let corepack fetch the pinned pnpm into it without prompting, which the
+    // dispose() then shreds. Neither key names anything of the operator's.
+    const pnpmEnv = {
+      npm_config_store_dir: store,
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: '0',
+      // pnpm refuses to rewrite a node_modules it did not create without a TTY; CI=true is its documented answer.
+      CI: 'true'
+    }
+    must(
+      runIsolated('pnpm', ['install', '--frozen-lockfile'], worktree, pnpmEnv),
+      `pnpm install in ${tag}`
+    )
+    must(
+      runIsolated('pnpm', ['build:sidecar'], worktree, pnpmEnv, 300_000),
+      `pnpm build:sidecar in ${tag}`
+    )
+    const userData = await bootSidecar(worktree, profile)
+    const ctx = newRedactionContext()
+    const entries: ManifestEntry[] = []
+    for (const rel of profileStoreFiles(userData)) {
+      const bytes = readFileSync(join(userData, rel))
+      let parsed: unknown
+      try {
+        parsed = JSON.parse(bytes.toString('utf8'))
+      } catch {
+        console.warn(`${tag}: skip (not JSON): ${rel}`)
+        continue
+      }
+      if (
+        JSON.stringify(redactValue([], parsed, ctx)) !== JSON.stringify(parsed)
+      ) {
+        throw new Error(
+          `${tag}: ${rel} holds data the redactor would change; a fresh profile must hold none`
+        )
+      }
+      const flavour = flavourOf(rel)
+      const tableKey = tableKeyOf(rel)
+      entries.push(
+        writeCorpusFile(`${tag}/${rel}`, bytes, {
+          source: tag,
+          flavour,
+          expect: expectFor(flavour, tableKey, parsed),
+          tableKey
+        })
+      )
+    }
+    if (entries.length === 0)
+      throw new Error(`${tag}: the boot wrote no store files`)
+    replaceSource(tag, entries)
+    const manifest = readManifest()
+    if (manifest.failures) delete manifest.failures[tag]
+    writeManifest(manifest)
+    console.log(`${tag}: ${entries.length} file(s) written`)
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e)
+    replaceSource(tag, [])
+    const manifest = readManifest()
+    writeManifest({
+      ...manifest,
+      failures: {
+        ...manifest.failures,
+        [tag]: replaceUsername(message, newRedactionContext()).slice(0, 1500)
+      }
+    })
+    console.error(`${tag}: FAILED, recorded in the manifest: ${message}`)
+  } finally {
+    profile.dispose()
+    if (added)
+      runIsolated('git', ['worktree', 'remove', '--force', worktree], repo)
+    runIsolated('git', ['worktree', 'prune'], repo)
+    rmSync(scratch, { recursive: true, force: true })
+  }
+}
+
+function parseArgs(argv: string[]): {
+  positional: string[]
+  only: string[]
+  scratch?: string
+} {
   const positional: string[] = []
   const only: string[] = []
+  let scratch: string | undefined
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i] as string
     if (a === '--only') {
       const next = argv[++i]
       if (next === undefined) throw new Error('--only needs a path')
       only.push(next)
+    } else if (a === '--scratch') {
+      scratch = argv[++i]
+      if (scratch === undefined) throw new Error('--scratch needs a directory')
     } else positional.push(a)
   }
-  return { positional, only }
+  return { positional, only, scratch }
 }
 
-function main(): void {
+async function main(): Promise<void> {
   const [sub, ...rest] = process.argv.slice(2)
-  const { positional, only } = parseArgs(rest)
+  const { positional, only, scratch } = parseArgs(rest)
   switch (sub) {
     case 'operator': {
       const dir = positional[0]
@@ -531,16 +857,27 @@ function main(): void {
       harvestOperator(dir, only)
       return
     }
+    case 'backups': {
+      const dir = positional[0]
+      if (!dir) throw new Error('usage: backups <profileDir>')
+      harvestBackups(dir)
+      return
+    }
+    case 'tag': {
+      const tag = positional[0]
+      if (!tag)
+        throw new Error('usage: tag <v0.8|v0.9|v0.10> [--scratch <dir>]')
+      await harvestTag(tag, scratch)
+      return
+    }
     default:
       throw new Error(`unknown subcommand ${String(sub)}`)
   }
 }
 
 if (!process.env.JEST_WORKER_ID) {
-  try {
-    main()
-  } catch (e) {
+  main().catch((e) => {
     console.error(e instanceof Error ? e.message : e)
     process.exit(1)
-  }
+  })
 }

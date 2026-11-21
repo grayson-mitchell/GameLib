@@ -1,0 +1,481 @@
+{
+	"language": "en",
+	"settings": {
+		"notifyHumbleExpirations": true,
+		"checkUpdatesInterval": 10,
+		"enableUpdates": false,
+		"addDesktopShortcuts": true,
+		"addStartMenuShortcuts": false,
+		"autoInstallDxvk": true,
+		"autoInstallVkd3d": false,
+		"autoInstallDxvkNvapi": false,
+		"addSteamShortcuts": false,
+		"preferSystemLibs": false,
+		"checkForUpdatesOnStartup": true,
+		"autoUpdateGames": false,
+		"customWinePaths": [],
+		"defaultInstallPath": "/Users/operator/Games/GameLib",
+		"focusRow": {
+			"kind": "view",
+			"value": "recentlyPlayed"
+		},
+		"dismissedSignInNotices": [
+			"gog",
+			"nile"
+		],
+		"libraryTopSection": "disabled",
+		"trayIconVariant": "auto",
+		"defaultSteamPath": "'/Users/operator/Library/Application Support/Steam'",
+		"loginBackgroundPath": "",
+		"defaultWinePrefix": "/Users/operator/Games/GameLib/Prefixes",
+		"defaultWinePrefixDir": "/Users/operator/Games/GameLib/Prefixes",
+		"hideChangelogsOnStartup": false,
+		"language": "en",
+		"maxWorkers": 0,
+		"minimizeOnLaunch": false,
+		"nvidiaPrime": false,
+		"enviromentOptions": [],
+		"wrapperOptions": [],
+		"showFps": false,
+		"useGameMode": false,
+		"wineCrossoverBottle": "GameLib",
+		"winePrefix": "/Users/operator/Games/GameLib/Prefixes/shared",
+		"wineVersion": {
+			"bin": "",
+			"name": "Default Wine - Not Found",
+			"type": "wine"
+		},
+		"enableEsync": true,
+		"enableFsync": false,
+		"enableMsync": true,
+		"enableWineWayland": false,
+		"enableHDR": false,
+		"enableWoW64": false,
+		"eacRuntime": false,
+		"gamepadRepeatDelay": 150,
+		"gamepadInitialRepeatDelay": 400,
+		"battlEyeRuntime": false,
+		"framelessWindow": true,
+		"hideWindowOnProtocolLaunch": false,
+		"beforeLaunchScriptPath": "",
+		"afterLaunchScriptPath": "",
+		"disableUMU": false,
+		"verboseLogs": true,
+		"downloadProtonToSteam": false,
+		"enableSteamNativeInstall": true,
+		"advertiseAvxForRosetta": false,
+		"noTrayIcon": false,
+		"showValveProton": false,
+		"steamGridDbApiKey": "",
+		"disableGOGPresence": false,
+		"disableController": true,
+		"shareDetectedFixes": false,
+		"steamExperimentalInstallApp": false,
+		"enableSteamNativeDelete": true,
+		"discordRPC": false,
+		"experimentalFeatures": {
+			"cometSupport": true
+		},
+		"disableLogs": false
+	},
+	"games": {
+		"recent": [
+			{
+				"appName": "3205720",
+				"title": "Schedule I: Free Sample",
+				"runner": "steam"
+			},
+			{
+				"appName": "1192621307",
+				"title": "Racine",
+				"runner": "gog"
+			},
+			{
+				"appName": "264160",
+				"title": "WazHack",
+				"runner": "steam"
+			},
+			{
+				"appName": "1297900",
+				"title": "Gothic 1 Remake",
+				"runner": "steam"
+			},
+			{
+				"appName": "576770",
+				"title": "Low Magic Age",
+				"runner": "steam"
+			},
+			{
+				"appName": "333300",
+				"title": "ADOM (Ancient Domains Of Mystery)",
+				"runner": "steam"
+			},
+			{
+				"appName": "593280",
+				"title": "Cat Quest",
+				"runner": "steam"
+			},
+			{
+				"appName": "57300",
+				"title": "Amnesia: The Dark Descent",
+				"runner": "steam"
+			},
+			{
+				"appName": "219990",
+				"title": "Grim Dawn",
+				"runner": "steam"
+			},
+			{
+				"appName": "113200",
+				"title": "The Binding of Isaac",
+				"runner": "steam"
+			},
+			{
+				"appName": "951430",
+				"title": "Dead Age 2",
+				"runner": "steam"
+			},
+			{
+				"appName": "206060",
+				"title": "Avernum 6",
+				"runner": "steam"
+			},
+			{
+				"appName": "208400",
+				"title": "Avernum: Escape From the Pit",
+				"runner": "steam"
+			},
+			{
+				"appName": "211900",
+				"title": "Conquest of Elysium 3",
+				"runner": "steam"
+			},
+			{
+				"appName": "206040",
+				"title": "Avernum 5",
+				"runner": "steam"
+			},
+			{
+				"appName": "107100",
+				"title": "Bastion",
+				"runner": "steam"
+			},
+			{
+				"appName": "211820",
+				"title": "Starbound",
+				"runner": "steam"
+			},
+			{
+				"appName": "112100",
+				"title": "Avadon: The Black Fortress",
+				"runner": "steam"
+			},
+			{
+				"appName": "411300",
+				"title": "ELEX",
+				"runner": "steam"
+			},
+			{
+				"appName": "Emu",
+				"title": "SOMA",
+				"runner": "legendary"
+			},
+			{
+				"appName": "1621690",
+				"title": "Core Keeper",
+				"runner": "steam"
+			},
+			{
+				"appName": "1782460",
+				"title": "Hell Clock",
+				"runner": "steam"
+			},
+			{
+				"appName": "1562430",
+				"title": "DREDGE",
+				"runner": "steam"
+			},
+			{
+				"appName": "98800",
+				"title": "Dungeons of Dredmor",
+				"runner": "steam"
+			},
+			{
+				"appName": "1284190",
+				"title": "The Planet Crafter",
+				"runner": "steam"
+			},
+			{
+				"appName": "1363080",
+				"title": "Manor Lords",
+				"runner": "steam"
+			},
+			{
+				"appName": "1603180",
+				"title": "Mining Mechs",
+				"runner": "steam"
+			},
+			{
+				"appName": "230070",
+				"title": "The Age of Decadence",
+				"runner": "steam"
+			},
+			{
+				"appName": "amzn1.adg.product.1d092246-e48f-40f6-83fd-924af905ca9b",
+				"title": "Caravan SandWitch",
+				"runner": "nile"
+			},
+			{
+				"appName": "1829678475",
+				"title": "Endless Sky",
+				"runner": "gog"
+			},
+			{
+				"appName": "391540",
+				"title": "Undertale",
+				"runner": "steam"
+			},
+			{
+				"appName": "8930",
+				"title": "Sid Meier's Civilization V",
+				"runner": "steam"
+			},
+			{
+				"appName": "1Yk3fumGALbbDFMJgsGvDe",
+				"title": "testApp",
+				"runner": "sideload"
+			},
+			{
+				"appName": "1542190742",
+				"title": "Bloody Hell",
+				"runner": "gog"
+			},
+			{
+				"appName": "54f7949350c949c6a2c47f12e7b15636",
+				"title": "Trash Goblin",
+				"runner": "legendary"
+			},
+			{
+				"appName": "332380",
+				"title": "Asguaard",
+				"runner": "steam"
+			},
+			{
+				"appName": "1769415595",
+				"title": "Balrum",
+				"runner": "gog"
+			},
+			{
+				"appName": "233310",
+				"title": "Avadon 2: The Corruption",
+				"runner": "steam"
+			},
+			{
+				"appName": "38400",
+				"title": "Fallout",
+				"runner": "steam"
+			},
+			{
+				"appName": "1062520",
+				"title": "Dinkum",
+				"runner": "steam"
+			},
+			{
+				"appName": "63000",
+				"title": "HOARD",
+				"runner": "steam"
+			},
+			{
+				"appName": "648800",
+				"title": "Raft",
+				"runner": "steam"
+			},
+			{
+				"appName": "206020",
+				"title": "Avernum 4",
+				"runner": "steam"
+			},
+			{
+				"appName": "38410",
+				"title": "Fallout 2",
+				"runner": "steam"
+			},
+			{
+				"appName": "1119730",
+				"title": "Ranch Simulator",
+				"runner": "steam"
+			},
+			{
+				"appName": "284100",
+				"title": "Unclaimed World",
+				"runner": "steam"
+			},
+			{
+				"appName": "427410",
+				"title": "Abiotic Factor",
+				"runner": "steam"
+			},
+			{
+				"appName": "200510",
+				"title": "XCOM: Enemy Unknown",
+				"runner": "steam"
+			},
+			{
+				"appName": "1691190",
+				"title": "Rogue Waters",
+				"runner": "steam"
+			},
+			{
+				"appName": "1167950",
+				"title": "Vampire's Fall: Origins",
+				"runner": "steam"
+			},
+			{
+				"appName": "3410180",
+				"title": "Overlooting",
+				"runner": "steam"
+			},
+			{
+				"appName": "648410",
+				"title": "Colony Ship: A Post-Earth Role Playing Game",
+				"runner": "steam"
+			}
+		],
+		"favourites": [
+			{
+				"appName": "3205720",
+				"title": "Schedule I: Free Sample"
+			}
+		],
+		"hidden": [],
+		"customCategories": {
+			"Test Games x": [
+				"3205720_steam",
+				"333300_steam"
+			],
+			"category 2": []
+		}
+	},
+	"allTilesInColor": false,
+	"titlesAlwaysVisible": false,
+	"disableAnimations": false,
+	"zoomPercent": 100,
+	"contentFontFamily": "\"Cabin\", sans-serif",
+	"cleanTiles": true,
+	"hideTitles": true,
+	"theme": "custom:ca76eaea01057608",
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 1
+		}
+	},
+	"customThemes": [
+		{
+			"base": "midnightMirage",
+			"id": "ca76eaea01057608",
+			"name": "Test",
+			"tokens": {
+				"--accent": "REDACTED",
+				"--accent-02": "REDACTED",
+				"--accent-overlay": "REDACTED",
+				"--action-icon": "REDACTED",
+				"--action-icon-active": "REDACTED",
+				"--action-icon-hover": "REDACTED",
+				"--anticheat-broken": "REDACTED",
+				"--anticheat-denied": "REDACTED",
+				"--anticheat-planned": "REDACTED",
+				"--anticheat-running": "REDACTED",
+				"--anticheat-supported": "REDACTED",
+				"--background": "REDACTED",
+				"--background-darker": "REDACTED",
+				"--background-darker-80": "REDACTED",
+				"--background-lighter": "REDACTED",
+				"--base-06": "REDACTED",
+				"--body-background": "REDACTED",
+				"--border-color": "REDACTED",
+				"--brand-primary": "REDACTED",
+				"--brand-primary-hover": "REDACTED",
+				"--brand-secondary": "REDACTED",
+				"--brand-secondary-hover": "REDACTED",
+				"--brand-text-01": "REDACTED",
+				"--brand-text-02": "REDACTED",
+				"--brand-text-03": "REDACTED",
+				"--brand-text-04": "REDACTED",
+				"--brand-text-05": "REDACTED",
+				"--button-stroke": "REDACTED",
+				"--cancel-button": "REDACTED",
+				"--cancel-button-overlay": "REDACTED",
+				"--controller-hints-background": "REDACTED",
+				"--current-background": "REDACTED",
+				"--danger": "REDACTED",
+				"--danger-hover": "REDACTED",
+				"--disabled-button": "REDACTED",
+				"--disabled-button-overlay": "REDACTED",
+				"--divider": "REDACTED",
+				"--eighty-percent-black": "REDACTED",
+				"--gamecard-title-color": "REDACTED",
+				"--gradient-01": "REDACTED",
+				"--gradient-02": "REDACTED",
+				"--gradient-gamecard": "REDACTED",
+				"--icon-disabled": "REDACTED",
+				"--icon-disabled-overlay": "REDACTED",
+				"--icons-background": "REDACTED",
+				"--input-background": "REDACTED",
+				"--install-button": "REDACTED",
+				"--link-highlight": "REDACTED",
+				"--modal-backdrop": "REDACTED",
+				"--modal-background": "REDACTED",
+				"--modal-border": "REDACTED",
+				"--navbar-accent": "REDACTED",
+				"--navbar-active": "REDACTED",
+				"--navbar-active-background": "REDACTED",
+				"--navbar-background": "REDACTED",
+				"--navbar-inactive": "REDACTED",
+				"--neutral-01": "REDACTED",
+				"--neutral-02": "REDACTED",
+				"--neutral-03": "REDACTED",
+				"--neutral-04": "REDACTED",
+				"--neutral-05": "REDACTED",
+				"--neutral-06": "REDACTED",
+				"--neutral-07": "REDACTED",
+				"--neutral-08": "REDACTED",
+				"--osk-background": "REDACTED",
+				"--osk-button-background": "REDACTED",
+				"--osk-button-border": "REDACTED",
+				"--play-button": "REDACTED",
+				"--primary": "REDACTED",
+				"--primary-active": "REDACTED",
+				"--primary-button": "REDACTED",
+				"--primary-hover": "REDACTED",
+				"--search-bar-background": "REDACTED",
+				"--search-bar-border": "REDACTED",
+				"--secondary": "REDACTED",
+				"--secondary-active": "REDACTED",
+				"--secondary-button": "REDACTED",
+				"--secondary-button-overlay": "REDACTED",
+				"--secondary-hover": "REDACTED",
+				"--sixty-percent-black": "REDACTED",
+				"--status-danger": "REDACTED",
+				"--status-danger-hover": "REDACTED",
+				"--status-default": "REDACTED",
+				"--status-default-hover": "REDACTED",
+				"--status-info": "REDACTED",
+				"--status-info-hover": "REDACTED",
+				"--status-success": "REDACTED",
+				"--status-success-hover": "REDACTED",
+				"--status-warning": "REDACTED",
+				"--status-warning-hover": "REDACTED",
+				"--success": "REDACTED",
+				"--success-button": "REDACTED",
+				"--success-hover": "REDACTED",
+				"--tertiary-button": "REDACTED",
+				"--tertiary-button-overlay": "REDACTED",
+				"--text-default": "REDACTED",
+				"--text-hover": "REDACTED",
+				"--text-quartenary": "REDACTED",
+				"--text-secondary": "REDACTED",
+				"--text-tertiary": "REDACTED"
+			}
+		}
+	]
+}

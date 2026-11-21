@@ -1,0 +1,10 @@
+{
+	"noCrossoverNoteDismissed": true,
+	"__timestamp": {
+		"noCrossoverNoteDismissed": "Mon Nov 02 2026 09:58:08 GMT+1300 (New Zealand Daylight Time)",
+		"dismissedUntestedCrossoverBuilds": "Mon Nov 02 2026 22:39:01 GMT+1300 (New Zealand Daylight Time)"
+	},
+	"dismissedUntestedCrossoverBuilds": [
+		"26.3.0.39832"
+	]
+}

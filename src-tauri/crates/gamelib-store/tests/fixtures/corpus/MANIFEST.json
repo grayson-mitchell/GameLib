@@ -1,9 +1,369 @@
 {
-  "floor": 3,
+  "floor": 151,
   "counts": {
-    "operator": 3
+    "backup": 36,
+    "operator": 106,
+    "v0.10": 3,
+    "v0.8": 3,
+    "v0.9": 3
   },
   "files": [
+    {
+      "path": "backups/GamesConfig/112100.v0.20261118T075222416Z.bak.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "backup",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game",
+      "note": "captured at v0"
+    },
+    {
+      "path": "backups/GamesConfig/113200.v0.20261116T044224261Z.bak.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "backup",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game",
+      "note": "captured at v0"
+    },
+    {
+      "path": "backups/GamesConfig/1192621307.v0.20261121T083829288Z.bak.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "backup",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game",
+      "note": "captured at v0"
+    },
+    {
+      "path": "backups/GamesConfig/1207659037.v0.20261118T165422250Z.bak.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "backup",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game",
+      "note": "captured at v0"
+    },
+    {
+      "path": "backups/GamesConfig/1284190.v0.20261114T072509263Z.bak.json",
+      "sha256": "f97cea9a46afa007af1126549252095a1bd8c3bcd7a52d5b5dfd75b6e97dc6c6",
+      "source": "backup",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game",
+      "note": "captured at v0"
+    },
+    {
+      "path": "backups/GamesConfig/1313144493.v0.20261121T083822335Z.bak.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "backup",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game",
+      "note": "captured at v0"
+    },
+    {
+      "path": "backups/GamesConfig/1769415595.v1.20261118T165248039Z.bak.json",
+      "sha256": "ba921f8044963e986f04bfc3e9c5396a492d055368b3a9314f700a342f39371a",
+      "source": "backup",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game",
+      "note": "captured at v1"
+    },
+    {
+      "path": "backups/GamesConfig/208400.v0.20261118T075809469Z.bak.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "backup",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game",
+      "note": "captured at v0"
+    },
+    {
+      "path": "backups/GamesConfig/22000.v0.20261120T060902787Z.bak.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "backup",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game",
+      "note": "captured at v0"
+    },
+    {
+      "path": "backups/GamesConfig/248410.v0.20261117T062826636Z.bak.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "backup",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game",
+      "note": "captured at v0"
+    },
+    {
+      "path": "backups/GamesConfig/264160.v0.20261116T043433863Z.bak.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "backup",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game",
+      "note": "captured at v0"
+    },
+    {
+      "path": "backups/GamesConfig/3172700.v0.20261120T061318799Z.bak.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "backup",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game",
+      "note": "captured at v0"
+    },
+    {
+      "path": "backups/GamesConfig/3205720.v1.20261117T181337170Z.bak.json",
+      "sha256": "461300ffd4906859c16d0047255af083414d36bbec709082ebff12f32fffc670",
+      "source": "backup",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game",
+      "note": "captured at v1"
+    },
+    {
+      "path": "backups/GamesConfig/333300.v0.20261114T073322780Z.bak.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "backup",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game",
+      "note": "captured at v0"
+    },
+    {
+      "path": "backups/GamesConfig/593280.v0.20261120T073749628Z.bak.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "backup",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game",
+      "note": "captured at v0"
+    },
+    {
+      "path": "backups/GamesConfig/632470.v0.20261118T081846434Z.bak.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "backup",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game",
+      "note": "captured at v0"
+    },
+    {
+      "path": "backups/GamesConfig/8870.v0.20261114T072458236Z.bak.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "backup",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game",
+      "note": "captured at v0"
+    },
+    {
+      "path": "backups/GamesConfig/951430.v0.20261117T070902411Z.bak.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "backup",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game",
+      "note": "captured at v0"
+    },
+    {
+      "path": "backups/GamesConfig/Emu.v0.20261117T054306352Z.bak.json",
+      "sha256": "69b7a07baf4eaef472ee371745e29c284281c0f7a03ee56710a7e6fb22a5cad6",
+      "source": "backup",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game",
+      "note": "captured at v0"
+    },
+    {
+      "path": "backups/config.v0.20261108T091637899Z.bak.json",
+      "sha256": "0914e6d1c7dca2c80309a2bde2c4edeed5e40c360ee3a9221836cd5be5a87873",
+      "source": "backup",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/global",
+      "note": "captured at v0"
+    },
+    {
+      "path": "backups/config.v1.20261114T064824887Z.bak.json",
+      "sha256": "4d2bf11a6c20a886eebd541aba9cc7eec368c1854402f225252358f20860b729",
+      "source": "backup",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/global",
+      "note": "captured at v1"
+    },
+    {
+      "path": "backups/config.v1.from-phase68.20261109.json",
+      "sha256": "e685550f73d96f6226c034e3cd31cecfc4761cf68de76d3765cc2702fd549447",
+      "source": "backup",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/global",
+      "note": "captured at v1"
+    },
+    {
+      "path": "backups/gog_store/installed.v1.20261114T043721642Z.bak.json",
+      "sha256": "2f574e0f19226b6a18b5e8ae6aef90c0ca3fc3f2add8d96501fc2e468a5cae45",
+      "source": "backup",
+      "flavour": "store",
+      "expect": "migrate",
+      "tableKey": "gog_store/installed",
+      "note": "captured at v1"
+    },
+    {
+      "path": "backups/gog_store/installed.v2.20261114T064824816Z.bak.json",
+      "sha256": "f75225fb04ed8f4fe9539f864279e6b215952bc56e48d36120a57bb28131a301",
+      "source": "backup",
+      "flavour": "store",
+      "expect": "migrate",
+      "tableKey": "gog_store/installed",
+      "note": "captured at v2"
+    },
+    {
+      "path": "backups/sideload_apps/library.v0.20261114T043721662Z.bak.json",
+      "sha256": "8a246b8119dbfa177c2e38478893bbb27703950d38de684498fbcf20849731cd",
+      "source": "backup",
+      "flavour": "store",
+      "expect": "migrate",
+      "tableKey": "sideload_apps/library",
+      "note": "captured at v0"
+    },
+    {
+      "path": "backups/sideload_apps/library.v2.20261114T064824842Z.bak.json",
+      "sha256": "68153df256f6299e06444e0f434f1610dfc13733a8d42469df9e1f4f276e3fbb",
+      "source": "backup",
+      "flavour": "store",
+      "expect": "migrate",
+      "tableKey": "sideload_apps/library",
+      "note": "captured at v2"
+    },
+    {
+      "path": "backups/store/download-manager.v1.20261114T043721628Z.bak.json",
+      "sha256": "9e24e38f716456255db262167e10bb26a11868993702238bf82978ce3a9afd9c",
+      "source": "backup",
+      "flavour": "store",
+      "expect": "migrate",
+      "tableKey": "store/download-manager",
+      "note": "captured at v1"
+    },
+    {
+      "path": "backups/store/download-manager.v2.20261114T064824796Z.bak.json",
+      "sha256": "cd72f1b16ceecf9575ce02d517fdee89b7d99004f980b6f7aa74c7e574113d33",
+      "source": "backup",
+      "flavour": "store",
+      "expect": "migrate",
+      "tableKey": "store/download-manager",
+      "note": "captured at v2"
+    },
+    {
+      "path": "backups/store_cache/gog_library.v1.20261114T043721646Z.bak.json",
+      "sha256": "83672929145ea0f6c19d95b48e6ea9f538c81b97f2fde0d59d0ee11723c594b4",
+      "source": "backup",
+      "flavour": "store",
+      "expect": "migrate",
+      "tableKey": "store_cache/gog_library",
+      "note": "captured at v1"
+    },
+    {
+      "path": "backups/store_cache/gog_library.v2.20261114T064824825Z.bak.json",
+      "sha256": "b81a567043da2903199da8d2ae3012e9d39d77245f6db61347ada7be8390b47d",
+      "source": "backup",
+      "flavour": "store",
+      "expect": "migrate",
+      "tableKey": "store_cache/gog_library",
+      "note": "captured at v2"
+    },
+    {
+      "path": "backups/store_cache/legendary_library.v1.20261114T043721651Z.bak.json",
+      "sha256": "1c3920c4d06ad1aa09ebc9c3cddc9f012a99ea83be9fec56ea64c8fe63f6f6f0",
+      "source": "backup",
+      "flavour": "store",
+      "expect": "migrate",
+      "tableKey": "store_cache/legendary_library",
+      "note": "captured at v1"
+    },
+    {
+      "path": "backups/store_cache/legendary_library.v2.20261114T064824833Z.bak.json",
+      "sha256": "9e040bd6983a0e9906d179a0f5f0d2d1d6d72550aaa073083917a7916fb15b7f",
+      "source": "backup",
+      "flavour": "store",
+      "expect": "migrate",
+      "tableKey": "store_cache/legendary_library",
+      "note": "captured at v2"
+    },
+    {
+      "path": "backups/store_cache/nile_library.v1.20261114T043721657Z.bak.json",
+      "sha256": "477082c6f7492a0dc04132a4d8f7383e5e632447d02a33442922dca5315302a6",
+      "source": "backup",
+      "flavour": "store",
+      "expect": "migrate",
+      "tableKey": "store_cache/nile_library",
+      "note": "captured at v1"
+    },
+    {
+      "path": "backups/store_cache/nile_library.v2.20261114T064824840Z.bak.json",
+      "sha256": "f6a911dd09357b7100c8b8bf9cdc63652cdaf4dbd135d0d3eee6dcef59d8790b",
+      "source": "backup",
+      "flavour": "store",
+      "expect": "migrate",
+      "tableKey": "store_cache/nile_library",
+      "note": "captured at v2"
+    },
+    {
+      "path": "backups/store_cache/steam_library.v1.20261114T043721665Z.bak.json",
+      "sha256": "1389ab316bd3600934a5a373e570810629ed00399a66753783121ed98ec86bfb",
+      "source": "backup",
+      "flavour": "store",
+      "expect": "migrate",
+      "tableKey": "store_cache/steam_library",
+      "note": "captured at v1"
+    },
+    {
+      "path": "backups/store_cache/steam_library.v2.20261114T064824847Z.bak.json",
+      "sha256": "4f6ac98f2b91affdc00a56261906faef8e1ee01d917b327f342cd212c40e188f",
+      "source": "backup",
+      "flavour": "store",
+      "expect": "migrate",
+      "tableKey": "store_cache/steam_library",
+      "note": "captured at v2"
+    },
+    {
+      "path": "operator/GamesConfig/112100.json",
+      "sha256": "4251857d4e98cc0fa8e9ce29cf582e091b51eda239e6a146c57c456bb6f01776",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "roundtrip",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/113200.json",
+      "sha256": "4251857d4e98cc0fa8e9ce29cf582e091b51eda239e6a146c57c456bb6f01776",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "roundtrip",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/1192621307.json",
+      "sha256": "5a1855a7d002108e8fcb56313acf109e088c90f362bc2b00e0bf7f6eaaefa9a7",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "roundtrip",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/1207659037.json",
+      "sha256": "4251857d4e98cc0fa8e9ce29cf582e091b51eda239e6a146c57c456bb6f01776",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "roundtrip",
+      "tableKey": "settings/game"
+    },
     {
       "path": "operator/GamesConfig/1284190.json",
       "sha256": "2d45ca4b215cb4fdc6d18f6b7d5a070b33079aa085bcd9c861066b5942610fcf",
@@ -11,6 +371,478 @@
       "flavour": "settings",
       "expect": "roundtrip",
       "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/1313144493.json",
+      "sha256": "4251857d4e98cc0fa8e9ce29cf582e091b51eda239e6a146c57c456bb6f01776",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "roundtrip",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/1491728574.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/1542190742.json",
+      "sha256": "bc9483d64aa4cfe4d59e1c5c010ea2fbc6a08f868f080bb5e9917c62be2745ca",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/1769415595.json",
+      "sha256": "33a667be0443968866667df7602e4cd5eec68143ae300e329b56211b0dd9801c",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "roundtrip",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/17710.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/1979367321.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/1Yk3fumGALbbDFMJgsGvDe.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/206060.json",
+      "sha256": "d772e1f422c1283549b680df8dd6c518bb52d70fe640d3b7b88cfe34ca7f3ac0",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "roundtrip",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/208400.json",
+      "sha256": "fe8090d99c196afcaac862f3d80adf10a971042ed291cbb997cd04d13e0dc2d2",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "roundtrip",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/219990.json",
+      "sha256": "c22f88741688330947e24f6889b0bdd838947155b60e926b926d63affcbc8b20",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "roundtrip",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/22000.json",
+      "sha256": "4251857d4e98cc0fa8e9ce29cf582e091b51eda239e6a146c57c456bb6f01776",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "roundtrip",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/226840.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/228280.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/230070.json",
+      "sha256": "44eba38297cca54c2f1cee0bbca4ca29956b1f3a3941bb7d61c3782b9e2da950",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "roundtrip",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/233310.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/238320.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/248410.json",
+      "sha256": "9a6b3f71ee6b8073b5d9d1a6c2c08f84a0faa0f1f76e6dd048aef4ee5a925ed0",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "roundtrip",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/251570.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/257350.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/264160.json",
+      "sha256": "39174bfe71975a561f800c269d19b0e966af2b9133ced46214916ef29281f566",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "roundtrip",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/2706020.json",
+      "sha256": "5d0ff7e8e797ddc9edeea41302ef9fbf5019c9b5844e803a092ea5395cf3cec7",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "roundtrip",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/290300.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/291190.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/3172700.json",
+      "sha256": "4251857d4e98cc0fa8e9ce29cf582e091b51eda239e6a146c57c456bb6f01776",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "roundtrip",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/3205720.json",
+      "sha256": "4b26a5d9bfdb010487bc0268bff5063eb2c8d0507258a39f3b0c9c4a7631aafd",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "roundtrip",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/322330.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/337850.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/38400.json",
+      "sha256": "c6b1ac4bf02cda7c6bb4154883e17d5ab69fd9e10ca75013128865b9a8a5e41c",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/391540.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/402060.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/41500.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/41900.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/424250.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/466560.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/54f7949350c949c6a2c47f12e7b15636.json",
+      "sha256": "fa7b9c866c14cf4498a8d9c53e0060d47a10ea7e265b9b4f44084a8c4b77e04d",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/552620.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/576770.json",
+      "sha256": "1ad6e3dbf78adcc8e33554b668a640ab6a5e8d3fc62ee37b10d50e309fc9cd64",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "roundtrip",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/593280.json",
+      "sha256": "4251857d4e98cc0fa8e9ce29cf582e091b51eda239e6a146c57c456bb6f01776",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "roundtrip",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/63000.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/632470.json",
+      "sha256": "4251857d4e98cc0fa8e9ce29cf582e091b51eda239e6a146c57c456bb6f01776",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "roundtrip",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/640820.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/8870.json",
+      "sha256": "4251857d4e98cc0fa8e9ce29cf582e091b51eda239e6a146c57c456bb6f01776",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "roundtrip",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/8930.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/951430.json",
+      "sha256": "6520e5d43801c8e666733b9eca843eb074d7e71d15273ebd649a48d7ce4beafb",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "roundtrip",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/98800.json",
+      "sha256": "bc10dbed2b7b7e7cec6205faa84fcaca8ae4602b73ca9eb7c3bdebc8196f852b",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "roundtrip",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/Emu.json",
+      "sha256": "34b7669450dc8398385b6f54487bb8d87dc7146719ecb6ec5006294de38dd466",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "roundtrip",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/Iris.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/IrisContent.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/amzn1.adg.product.1d092246-e48f-40f6-83fd-924af905ca9b.json",
+      "sha256": "26caa0377f4c375eac607dca39214c43cfa94b0dc67021edd08b556ea75385dc",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/amzn1.adg.product.dfd0ec0a-b2f5-421d-a94a-780431cc730f.json",
+      "sha256": "5138b2235e22ba26c523a10597ba962a3058dd22171299d3bf41ed4013fd29c6",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/GamesConfig/cb3bf7ba89574a66ae3b795e039d4dbc.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/game"
+    },
+    {
+      "path": "operator/config.json",
+      "sha256": "679ea0f982db57479c83cc2f2c65a086bb372e8e6ac5650869387773e25772f0",
+      "source": "operator",
+      "flavour": "settings",
+      "expect": "roundtrip",
+      "tableKey": "settings/global"
+    },
+    {
+      "path": "operator/gog_store/config.json",
+      "sha256": "c1f0d82fed8ce38696242202b8c2fbfbc6e98bcb272629468be6a8c82682a56a",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "gog_store/config"
+    },
+    {
+      "path": "operator/gog_store/installed.json",
+      "sha256": "52a6b738791f240ecb3933f782b5e7b54b6c3c09863ec85d8c8b674b10a29a0d",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "gog_store/installed"
+    },
+    {
+      "path": "operator/gog_store/saveTimestamps.json",
+      "sha256": "483004485de63990cef3fb2f54b9e27c9825f9e83446326e54e67807d2102820",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "gog_store/saveTimestamps"
+    },
+    {
+      "path": "operator/humble_store/config.json",
+      "sha256": "a8d6aec434b1a6077d7ab6f85ae89c4179cbd2280a770d010a75a0cb7daa3175",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "humble_store/config"
+    },
+    {
+      "path": "operator/legendary_store/config.json",
+      "sha256": "483004485de63990cef3fb2f54b9e27c9825f9e83446326e54e67807d2102820",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "legendary_store/config"
+    },
+    {
+      "path": "operator/nile_store/config.json",
+      "sha256": "483004485de63990cef3fb2f54b9e27c9825f9e83446326e54e67807d2102820",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "nile_store/config"
+    },
+    {
+      "path": "operator/sideload_apps/library.json",
+      "sha256": "03f6723c4c6e163a71e884189d212469ef01e2ec25f9909cd34263f34ca5fb4a",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "sideload_apps/library"
     },
     {
       "path": "operator/steam_store/config.json",
@@ -21,12 +853,404 @@
       "tableKey": "steam_store/config"
     },
     {
+      "path": "operator/store/config.json",
+      "sha256": "41880a676cbe7dbda8e7e84975f3764e7309139ebe11f8e4ce601a5fd4289f3b",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store/config"
+    },
+    {
+      "path": "operator/store/download-manager.json",
+      "sha256": "a895c06c159e9cb32e4bb5c2fd87bb06f86e4cc2e71da862599b1efce72f9a65",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store/download-manager"
+    },
+    {
+      "path": "operator/store/mac-arch.json",
+      "sha256": "73edb900462e25b83ae305b859ef6c632ce3decb313e9b3a8c32303a7d38ab3a",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store/mac-arch"
+    },
+    {
+      "path": "operator/store/migrations.json",
+      "sha256": "fe8d6535dcb1c9db61cafdb1dd7a962eada5abcdc3f98023a3719e5038e355ca",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store/migrations"
+    },
+    {
+      "path": "operator/store/runs-for-me.json",
+      "sha256": "0e7d002e31517c5f0fb668493a7d5d0687470b34f210260e2ff722570967635d",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store/runs-for-me"
+    },
+    {
       "path": "operator/store/timestamp.json",
       "sha256": "75c7ee097ad3358c610dc977fde081f7e98995fb5a544bbfbd6d275366b76b8a",
       "source": "operator",
       "flavour": "store",
       "expect": "roundtrip",
       "tableKey": "store/timestamp"
+    },
+    {
+      "path": "operator/store/uploadedLogs.json",
+      "sha256": "18c16e6a9445ad366dac814d7759ea8a03a5231b4c7d98ecc9c58d304b0a44c9",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store/uploadedLogs"
+    },
+    {
+      "path": "operator/store/wine-downloader-info.json",
+      "sha256": "68c5de57a06046d9849f0db8d359936de5803f987004636818c3c8d3b3b98532",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store/wine-downloader-info"
+    },
+    {
+      "path": "operator/store_cache/crossover_index.json",
+      "sha256": "10996549d2abe7fb64e55d1fa052c2f8f82911c7f6c701f0c303111c23c0fd36",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store_cache/crossover_index"
+    },
+    {
+      "path": "operator/store_cache/gog_achievements.json",
+      "sha256": "8b3816b9aa4622189c0f9aa480c57f3d57c8ea477b2d50e70ec6d1aad4a7b7e9",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store_cache/gog_achievements"
+    },
+    {
+      "path": "operator/store_cache/gog_api_info.json",
+      "sha256": "30ae2cdfcee91bf52ad353aed5beb626ed8c1ca09b12dd6f5ecd4cf61b3da419",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store_cache/gog_api_info"
+    },
+    {
+      "path": "operator/store_cache/gog_install_info.json",
+      "sha256": "b645413404d05760bae2b1e974baf90962f97bdc4769344f9b7ba568828fe60e",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store_cache/gog_install_info"
+    },
+    {
+      "path": "operator/store_cache/gog_library.json",
+      "sha256": "fb89d04c0cd8a85b8d4cd44a70d2e22214bbe6048687171eb3c43481063644be",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store_cache/gog_library"
+    },
+    {
+      "path": "operator/store_cache/gog_playtime_sync_queue.json",
+      "sha256": "5e3a916dfd8a4267bbf619189d2612a63854050818de7a4a3bcdafc90d2a7fb2",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store_cache/gog_playtime_sync_queue"
+    },
+    {
+      "path": "operator/store_cache/humble_audit.json",
+      "sha256": "da2d9e31cfe27d06a1b3fafac63e54d7883463cf5453e4cc981711473aad587b",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store_cache/humble_audit"
+    },
+    {
+      "path": "operator/store_cache/humble_library.json",
+      "sha256": "483004485de63990cef3fb2f54b9e27c9825f9e83446326e54e67807d2102820",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store_cache/humble_library"
+    },
+    {
+      "path": "operator/store_cache/humble_local_redeemed.json",
+      "sha256": "35dd95d6946524109a92163044ffb7fc5fe506a957bd064cffb8e26a38d5d97c",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store_cache/humble_local_redeemed"
+    },
+    {
+      "path": "operator/store_cache/humble_notified_expiration.json",
+      "sha256": "c62d69aa217ee71dfdb655bbfac3c0027bae72c06ef9f38f564300c54c7d0bfa",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store_cache/humble_notified_expiration"
+    },
+    {
+      "path": "operator/store_cache/humble_ownership_override.json",
+      "sha256": "b14dd8fbb73c0b413f5a8018ac12701ae6703ecb66458b7339cab7fc22bb2de7",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store_cache/humble_ownership_override"
+    },
+    {
+      "path": "operator/store_cache/humble_revealed.json",
+      "sha256": "28c2f86872b1c1532e290d519f29c1fd0513b219e5f883bd8d00a07cea55a8c5",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store_cache/humble_revealed"
+    },
+    {
+      "path": "operator/store_cache/humble_steam_appid.json",
+      "sha256": "915c8aebb3babb085de23927bcc79055abe833d51d5ca4e8842c691d51055a21",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store_cache/humble_steam_appid"
+    },
+    {
+      "path": "operator/store_cache/humble_sync.json",
+      "sha256": "13a0e4ace0961c8467cf9793e936088f2877e003aea725d083ae2c0ae33b434e",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store_cache/humble_sync"
+    },
+    {
+      "path": "operator/store_cache/itad_prices.json",
+      "sha256": "44b76cc9a42773e8878017534f2f33a5deb007ccb4e8b755fcbc434e0a08fac2",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store_cache/itad_prices"
+    },
+    {
+      "path": "operator/store_cache/itad_steam_gids.json",
+      "sha256": "06a11a631afe3150bf584e2ebb995ad995a9f1d4351f852b82d4d388abf85465",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store_cache/itad_steam_gids"
+    },
+    {
+      "path": "operator/store_cache/legendary_gameinfo.json",
+      "sha256": "483004485de63990cef3fb2f54b9e27c9825f9e83446326e54e67807d2102820",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store_cache/legendary_gameinfo"
+    },
+    {
+      "path": "operator/store_cache/legendary_games_override.json",
+      "sha256": "cb9f0355283855c7141c1a7c43d1e58d9f87fd8728b6f4736f52dd20d2af4157",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store_cache/legendary_games_override"
+    },
+    {
+      "path": "operator/store_cache/legendary_install_info.json",
+      "sha256": "483004485de63990cef3fb2f54b9e27c9825f9e83446326e54e67807d2102820",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store_cache/legendary_install_info"
+    },
+    {
+      "path": "operator/store_cache/legendary_library.json",
+      "sha256": "f7d2d4d8341c199f24744bb62157b61d9f9e6d1912f730f4f34b678ee6d0ac19",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store_cache/legendary_library"
+    },
+    {
+      "path": "operator/store_cache/nile_install_info.json",
+      "sha256": "483004485de63990cef3fb2f54b9e27c9825f9e83446326e54e67807d2102820",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store_cache/nile_install_info"
+    },
+    {
+      "path": "operator/store_cache/nile_library.json",
+      "sha256": "f7d2d4d8341c199f24744bb62157b61d9f9e6d1912f730f4f34b678ee6d0ac19",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store_cache/nile_library"
+    },
+    {
+      "path": "operator/store_cache/pci_ids_device.json",
+      "sha256": "483004485de63990cef3fb2f54b9e27c9825f9e83446326e54e67807d2102820",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store_cache/pci_ids_device"
+    },
+    {
+      "path": "operator/store_cache/pci_ids_vendor.json",
+      "sha256": "483004485de63990cef3fb2f54b9e27c9825f9e83446326e54e67807d2102820",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store_cache/pci_ids_vendor"
+    },
+    {
+      "path": "operator/store_cache/steam_direct_launch_verdict.json",
+      "sha256": "ed6a21a58e112a346b84f5216fdf6b1cb210b16c8149b6055f8d5d1b9f941356",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store_cache/steam_direct_launch_verdict"
+    },
+    {
+      "path": "operator/store_cache/steam_engine_notices.json",
+      "sha256": "2b49222d75b546c3c7aa9fb70a2d0de77f7d8a4d1c1c64f7af77d3930313bfd4",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store_cache/steam_engine_notices"
+    },
+    {
+      "path": "operator/store_cache/steam_known_fix_reports.json",
+      "sha256": "d4d97c01fa19b329d23f182c96656a9551cc6f562d45a85ae1581b67d7fc8309",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store_cache/steam_known_fix_reports"
+    },
+    {
+      "path": "operator/store_cache/steam_library.json",
+      "sha256": "9e1d947aec320ccf0e6f444f97e888d3f7a547649094c79adc13d85a50d0c094",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store_cache/steam_library"
+    },
+    {
+      "path": "operator/store_cache/steam_metadata.json",
+      "sha256": "7b99dfc7a3ef5d329c4481d9c16f195f6c529269f4730b90c100411a699f916d",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store_cache/steam_metadata"
+    },
+    {
+      "path": "operator/store_cache/steam_pending_adoption.json",
+      "sha256": "c28e7457f0c9ebcbdc68f4bc45896d1c1eb71f3f90034336e19c4c3ddcdc3acc",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store_cache/steam_pending_adoption"
+    },
+    {
+      "path": "operator/store_cache/steam_sync.json",
+      "sha256": "ba0d4a7d2e7d3481a6203282de3d883f905552b762a023eeee3384789b2fa51f",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store_cache/steam_sync"
+    },
+    {
+      "path": "operator/store_cache/steam_update_prompt_ack.json",
+      "sha256": "3d0ac03609ea59a26ecb1a46e1fd738b68335787674f52172e1479626b2b993f",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store_cache/steam_update_prompt_ack"
+    },
+    {
+      "path": "operator/store_cache/wikigameinfo.json",
+      "sha256": "d70bd500ae4183a7cccd8765b06b574f1d8c11cb4fe04d9a138ad48def0e1a9e",
+      "source": "operator",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store_cache/wikigameinfo"
+    },
+    {
+      "path": "v0.10/config.json",
+      "sha256": "2e4e95bda4c141e0531432c9a96ffdc40341bbae94a7495a8b5abc5b019212ea",
+      "source": "v0.10",
+      "flavour": "settings",
+      "expect": "roundtrip",
+      "tableKey": "settings/global"
+    },
+    {
+      "path": "v0.10/store/config.json",
+      "sha256": "8852d7cb550bd42167e52dd545b1aa66b7fc51d5563bff8915a29226d6a69a06",
+      "source": "v0.10",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store/config"
+    },
+    {
+      "path": "v0.10/store/migrations.json",
+      "sha256": "fe8d6535dcb1c9db61cafdb1dd7a962eada5abcdc3f98023a3719e5038e355ca",
+      "source": "v0.10",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store/migrations"
+    },
+    {
+      "path": "v0.8/config.json",
+      "sha256": "3b8518c5cfd73d3e0c400a0c99022b38354782466b171bdc67962dd456d2160e",
+      "source": "v0.8",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/global"
+    },
+    {
+      "path": "v0.8/store/config.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "v0.8",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store/config"
+    },
+    {
+      "path": "v0.8/store/migrations.json",
+      "sha256": "0d70ae301c2956e4dc0bed1e552ff6d03a041067c3d4a62aeec6c281903f94cd",
+      "source": "v0.8",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store/migrations"
+    },
+    {
+      "path": "v0.9/config.json",
+      "sha256": "74cab30c648d97e5e0ce19f03c2acef0828955110391cd98c5602e40013beac9",
+      "source": "v0.9",
+      "flavour": "settings",
+      "expect": "migrate",
+      "tableKey": "settings/global"
+    },
+    {
+      "path": "v0.9/store/config.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "source": "v0.9",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store/config"
+    },
+    {
+      "path": "v0.9/store/migrations.json",
+      "sha256": "0d70ae301c2956e4dc0bed1e552ff6d03a041067c3d4a62aeec6c281903f94cd",
+      "source": "v0.9",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store/migrations"
     }
   ]
 }

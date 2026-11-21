@@ -1,0 +1,44 @@
+{
+	"GKREDACTED000015:residentevilvillage_csg_choice_steam": {
+		"expiration": "2026-09-03T05:00:00.000Z"
+	},
+	"__timestamp": {
+		"GKREDACTED000015:residentevilvillage_csg_choice_steam": "Thu Oct 29 2026 18:17:17 GMT+1300 (New Zealand Daylight Time)",
+		"GKREDACTED000016:dredge_row_choice_steam": "Thu Oct 29 2026 18:17:17 GMT+1300 (New Zealand Daylight Time)",
+		"GKREDACTED000017:warhammer40000_roguetrader_choice_steam": "Thu Oct 29 2026 18:17:17 GMT+1300 (New Zealand Daylight Time)",
+		"GKREDACTED000018:aksun_playtest_choice_steam": "Thu Oct 29 2026 18:17:17 GMT+1300 (New Zealand Daylight Time)",
+		"GKREDACTED000019:settlementsurvival_choice_steam": "Thu Oct 29 2026 18:17:17 GMT+1300 (New Zealand Daylight Time)",
+		"GKREDACTED000020:fabledom_row_choice_steam": "Thu Oct 29 2026 18:17:17 GMT+1300 (New Zealand Daylight Time)",
+		"GKREDACTED000021:persona5royal_row_choice_steam": "Thu Oct 29 2026 18:17:17 GMT+1300 (New Zealand Daylight Time)",
+		"GKREDACTED000005:zerohour_row_choice_steam": "Thu Oct 29 2026 18:17:17 GMT+1300 (New Zealand Daylight Time)",
+		"GKREDACTED000012:likeadragongaiden_themanwhoerasedhisname_row_choice_steam": "Thu Oct 29 2026 18:17:17 GMT+1300 (New Zealand Daylight Time)",
+		"GKREDACTED000014:hardwest2_choice_steam": "Thu Oct 29 2026 18:17:17 GMT+1300 (New Zealand Daylight Time)"
+	},
+	"GKREDACTED000016:dredge_row_choice_steam": {
+		"expiration": "2025-12-31T18:59:59.000Z"
+	},
+	"GKREDACTED000017:warhammer40000_roguetrader_choice_steam": {
+		"expiration": "2026-07-01T05:00:00.000Z"
+	},
+	"GKREDACTED000018:aksun_playtest_choice_steam": {
+		"expiration": "2025-09-02T06:00:00.000Z"
+	},
+	"GKREDACTED000019:settlementsurvival_choice_steam": {
+		"expiration": "2026-08-03T05:00:00.000Z"
+	},
+	"GKREDACTED000020:fabledom_row_choice_steam": {
+		"expiration": "2026-03-04T05:00:00.000Z"
+	},
+	"GKREDACTED000021:persona5royal_row_choice_steam": {
+		"expiration": "2026-05-27T05:00:00.000Z"
+	},
+	"GKREDACTED000005:zerohour_row_choice_steam": {
+		"expiration": "2027-04-07T05:00:00.000Z"
+	},
+	"GKREDACTED000012:likeadragongaiden_themanwhoerasedhisname_row_choice_steam": {
+		"expiration": "2027-01-06T05:00:00.000Z"
+	},
+	"GKREDACTED000014:hardwest2_choice_steam": {
+		"expiration": "2027-04-07T05:00:00.000Z"
+	}
+}
