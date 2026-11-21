@@ -78,12 +78,15 @@ const gameInfo = {
   is_installed: true
 } as unknown as GameInfo
 
-function render(): ReactElement {
+function render(
+  extra: { playTimeLine?: string | null; playTimeTitle?: string } = {}
+): ReactElement {
   return GameStatus({
     gameInfo,
     progress: { bytes: '', eta: '', percent: 0 },
     handleUpdate: () => undefined,
-    hasUpdate: false
+    hasUpdate: false,
+    ...extra
   }) as ReactElement
 }
 
@@ -116,5 +119,21 @@ describe('GameStatus redist spinner (quick/261026-e1c)', () => {
   it('shows no spinner once the redist step is over', () => {
     mockContext = { runner: 'steam', is: {} }
     expect(hasSpinner(render())).toBe(false)
+  })
+})
+
+describe('GameStatus play time (D-17)', () => {
+  it('appends the play-time line while the game is idle', () => {
+    mockContext = { runner: 'steam', is: {} }
+    expect(collectText(render({ playTimeLine: 'Played 12 h 40 m' }))).toContain(
+      'Played 12 h 40 m'
+    )
+  })
+
+  it('shows only the action progress while a long action runs', () => {
+    mockContext = { runner: 'steam', is: { installing: true } }
+    expect(
+      collectText(render({ playTimeLine: 'Played 12 h 40 m' }))
+    ).not.toContain('Played 12 h 40 m')
   })
 })

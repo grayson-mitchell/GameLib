@@ -141,7 +141,7 @@ describe('GamePage/index.tsx: card structure (D-02, D-03, D-04, D-06)', () => {
     ])
   })
 
-  it('L6: the body reads meta, title, notices, description, time played', () => {
+  it('L6: the body reads meta, title, library row, notices, description', () => {
     inOrder([
       'className="mainInfoBody"',
       'className="gameMeta"',
@@ -151,7 +151,6 @@ describe('GamePage/index.tsx: card structure (D-02, D-03, D-04, D-06)', () => {
       '<EngineNotices',
       '{wikiLink}',
       '<Description',
-      '<TimeContainer',
       'className="actionDock"'
     ])
   })

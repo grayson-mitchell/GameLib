@@ -300,6 +300,15 @@
             },
             "title": "Native port available"
         },
+        "playTime": {
+            "firstPlayedTitle": "First played {{date}}",
+            "hoursMinutes": "{{hours}} h {{minutes}} m",
+            "lastPlayed": "last played {{when}}",
+            "lastPlayedTitle": "Last played {{date}}",
+            "minutesOnly": "{{minutes}} m",
+            "never": "Never played",
+            "played": "Played {{duration}}"
+        },
         "steamInstallingPercent": "Installing… {{percent}}%",
         "steamShortcut": {
             "failed": "Updating the Steam shortcut failed."

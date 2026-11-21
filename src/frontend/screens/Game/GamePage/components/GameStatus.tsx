@@ -12,6 +12,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import SteamUpdateInfo from './SteamUpdateInfo'
+import { isStatusIdle } from '../playTimeSummary'
 import { CircularProgress, LinearProgress } from '@mui/material'
 
 interface Props {
@@ -19,9 +20,19 @@ interface Props {
   handleUpdate: () => void
   hasUpdate: boolean
   progress: InstallProgress
+  /** D-17: shown after the label only while no long action runs. */
+  playTimeLine?: string | null
+  playTimeTitle?: string
 }
 
-const GameStatus = ({ gameInfo, progress, handleUpdate, hasUpdate }: Props) => {
+const GameStatus = ({
+  gameInfo,
+  progress,
+  handleUpdate,
+  hasUpdate,
+  playTimeLine,
+  playTimeTitle
+}: Props) => {
   const { t } = useTranslation('gamepage')
   const { t: tGamelib } = useTranslation('gamelib')
   const { runner, is, statusContext } = useContext(GameContext)
@@ -398,6 +409,16 @@ const GameStatus = ({ gameInfo, progress, handleUpdate, hasUpdate }: Props) => {
             is.notAvailable,
             statusContext
           )}
+        {playTimeLine && isStatusIdle(is) && !waitingEntry && (
+          <span
+            className="gameStatus__playTime"
+            title={playTimeTitle}
+            style={{ color: 'var(--text-secondary)', fontStyle: 'normal' }}
+          >
+            {' · '}
+            {playTimeLine}
+          </span>
+        )}
       </p>
     </div>
   )

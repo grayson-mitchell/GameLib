@@ -47,7 +47,7 @@ import {
 import type { GameAchievement } from 'common/types/gog'
 
 import GamePicture from '../GamePicture'
-import TimeContainer from '../TimeContainer'
+import { usePlayTime } from './usePlayTime'
 
 import { install } from 'frontend/helpers/library'
 import { hasProgress } from 'frontend/hooks/hasProgress'
@@ -144,6 +144,7 @@ export default React.memo(function GamePage(): JSX.Element | null {
     : 0
 
   const [notInstallable, setNotInstallable] = useState<boolean>(false)
+  const playTime = usePlayTime(gameInfo, notInstallable)
   const [gameInstallInfo, setGameInstallInfo] = useState<InstallInfo | null>(
     null
   )
@@ -587,9 +588,6 @@ export default React.memo(function GamePage(): JSX.Element | null {
                           </div>
 
                           <Description />
-                          {!notInstallable && (
-                            <TimeContainer gameInfo={gameInfo} />
-                          )}
                         </div>
                       </div>
                       <div className="actionDock">
@@ -598,6 +596,8 @@ export default React.memo(function GamePage(): JSX.Element | null {
                           progress={progress}
                           handleUpdate={handleUpdate}
                           hasUpdate={hasUpdate}
+                          playTimeLine={playTime.line}
+                          playTimeTitle={playTime.title}
                         />
                         {isStore(runner, 'steam') && (
                           <AdoptionNote gameInfo={gameInfo} part="note" />
