@@ -5,6 +5,7 @@
 //! user-data dir, the clock and the timezone source.
 
 pub mod format;
+pub mod frame;
 pub mod prefix;
 pub mod writer;
 
@@ -12,7 +13,7 @@ use std::sync::OnceLock;
 use std::time::Duration;
 
 pub use prefix::{Level, Prefix};
-pub use writer::{LogConfig, Logger, SystemTz, TzOffset};
+pub use writer::{Entry, LogConfig, Logger, SystemTz, TargetBatch, TzOffset};
 
 static GLOBAL: OnceLock<Logger> = OnceLock::new();
 
@@ -35,6 +36,13 @@ pub fn global() -> Option<&'static Logger> {
 pub fn log(prefix: Prefix, level: Level, msg: &str) {
     if let Some(logger) = global() {
         logger.log(prefix, level, msg);
+    }
+}
+
+/// Submits batches to the global logger. Does nothing before `init`.
+pub fn submit(batches: Vec<TargetBatch>) {
+    if let Some(logger) = global() {
+        logger.submit(batches);
     }
 }
 

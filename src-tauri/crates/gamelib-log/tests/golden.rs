@@ -11,6 +11,7 @@ use std::time::Duration;
 
 use gamelib_core::clock::Clock;
 use gamelib_core::paths::{join, log_file, GameLogType, LogRunner, LogTarget, Platform};
+use gamelib_log::frame::parse_frame;
 use gamelib_log::writer::{LogConfig, Logger, TzOffset};
 use gamelib_log::{Level, Prefix};
 use gamelib_testutil::FakeHome;
@@ -59,14 +60,6 @@ fn target_of(v: &Value) -> LogTarget {
 
 fn runner_of(s: &str) -> LogRunner {
     LogRunner::from_str(s).unwrap_or_else(|| panic!("unknown runner {s}"))
-}
-
-fn level_of(s: &str) -> Level {
-    Level::from_str(s).unwrap_or_else(|| panic!("unknown level {s}"))
-}
-
-fn prefix_of(s: &str) -> Prefix {
-    Prefix::from_value(s).unwrap_or_else(|| panic!("unknown prefix {s:?}"))
 }
 
 /// Text found in the tree, with the temp root replaced by `${LOGDIR}` and the backslashes in the
@@ -160,30 +153,17 @@ fn replay(case: &Value, frames: &[Value]) -> (BTreeMap<String, String>, String) 
     if str_field(case, "id") == "shell-line" {
         logger.log(Prefix::Shell, Level::Info, str_field(case, "message"));
     }
+    // One frame per writer instance, each through the same parser the shell uses for a sidecar frame.
     for frame in frames {
-        for entry in frame["entries"].as_array().expect("entries") {
-            let line = entry
-                .get("line")
-                .expect("general-only replay: line entries");
-            logger.submit_line(
-                line["ts"].as_u64().expect("ts"),
-                line["tz"].as_i64().expect("tz") as i32,
-                level_of(str_field(line, "level")),
-                prefix_of(str_field(line, "prefix")),
-                str_field(line, "msg"),
-            );
-        }
+        let value = serde_json::json!({"kind": "log", "batch": [frame]});
+        let len = value.to_string().len();
+        let batches = parse_frame(len, value).expect("frame parses");
+        logger.submit(batches);
     }
     assert!(logger.flush(Duration::from_secs(10)), "flush timed out");
     let mut tree = BTreeMap::new();
     walk(home.root(), home.root(), &mut tree, Some(&root));
     (tree, root)
-}
-
-fn only_general(frames: &[Value]) -> bool {
-    frames
-        .iter()
-        .all(|f| f["target"]["kind"].as_str() == Some("general"))
 }
 
 #[test]
@@ -201,9 +181,6 @@ fn rust_writer_matches_the_ts_golden() {
             None if id == "shell-line" => Vec::new(),
             None => panic!("case {id} has no entries"),
         };
-        if !only_general(&frames) {
-            continue;
-        }
         let (tree, _root) = replay(case, &frames);
         let mut expected = BTreeMap::new();
         let dir = expected_dir(id);
@@ -212,5 +189,9 @@ fn rust_writer_matches_the_ts_golden() {
         replayed += 1;
     }
     println!("golden cases replayed: {replayed}");
-    assert!(replayed >= 20, "only {replayed} cases replayed");
+    let non_renderer = cases.iter().filter(|c| c["kind"] != "renderer").count();
+    assert_eq!(
+        replayed, non_renderer,
+        "every non-renderer case is replayed"
+    );
 }
