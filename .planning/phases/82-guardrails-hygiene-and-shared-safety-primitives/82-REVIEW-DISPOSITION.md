@@ -3,6 +3,14 @@ phase: 82
 review: 82-REVIEW.md
 titles: json
 findings:
+  - id: WR-11
+    severity: warning
+    disposition: open
+    title: "sharedRedistInstall.test.ts: the last in-flight test leaves its install run unawaited, so `import('../depot')` fires after Jest teardown"
+  - id: IN-09
+    severity: info
+    disposition: open
+    title: "82-20 slowed-download tracer: 250 ms real timer never cleared, and the slow path's elapsed time is not asserted"
   - id: WR-10
     severity: warning
     disposition: open
