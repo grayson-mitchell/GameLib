@@ -37,7 +37,7 @@
     "build:sidecar": "node meta/runTs.cjs --bundle --platform=node --target=node22 meta/buildSidecar.ts",
     "build:sidecar-sea": "pnpm build:sidecar && node meta/runTs.cjs --bundle --platform=node --target=node22 meta/buildSidecarSea.ts",
     "debug:react": "pnpm start & npx react-devtools",
-    "codecheck": "tsc --noEmit && tsc -p tsconfig.meta.json --noEmit",
+    "codecheck": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc-main.tsbuildinfo && tsc -p tsconfig.meta.json --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc-meta.tsbuildinfo",
     "perf:rerender": "jest --config meta/rerender/jest.config.js --runInBand",
     "planning-gates": "python3 meta/runPlanningGates.py",
     "find-deadcode": "knip --reporter json --no-exit-code | node meta/knipRatchet.cjs",
