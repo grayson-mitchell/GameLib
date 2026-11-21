@@ -1828,7 +1828,7 @@ fn run_setup(
     app.manage(NativeRouter::new(Arc::new(NativeCtx {
         host: Arc::new(AppNativeHost(app.handle().clone())),
         log_paths: native_log_paths(),
-        store_host: Arc::new(gamelib_core::store::StoreHost::new()),
+        store_host: Arc::new(gamelib_store::host::StoreHost::new()),
         emitter: Arc::new(steampoll_dispatch::TauriFrontendEmitter(
             app.handle().clone(),
         )),

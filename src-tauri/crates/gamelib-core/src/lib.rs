@@ -10,4 +10,3 @@ pub mod emitter;
 pub mod paths;
 pub mod process;
 pub mod shutdown;
-pub mod store;

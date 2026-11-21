@@ -23,8 +23,9 @@ use crate::log_dispatch::parse_log_file_args;
 use crate::native_router::{invalid_args, NativeCtx, NativeFuture};
 use gamelib_core::clock::{Clock, SystemClock};
 use gamelib_core::paths::{join, log_file};
-use gamelib_core::store::Store;
 use gamelib_log::{Level, Prefix};
+use gamelib_store::host::{Store, StoreHost};
+use gamelib_store::json::{Json, Num, Obj};
 use serde_json::{json, Value};
 use std::future::Future;
 use std::io::{self, Read};
@@ -270,14 +271,15 @@ async fn upload_with(ctx: &NativeCtx, args: &[Value], log: LogSink<'_>) -> Resul
         return Ok(Value::Bool(false));
     };
 
+    let uploaded_at = SystemClock.now_ms();
     let data = json!({
         "name": name,
         "token": PASTE_TOKEN,
-        "uploadedAt": SystemClock.now_ms(),
+        "uploadedAt": uploaded_at,
     });
     let store_dir = join(paths.platform, &paths.user_data, &["store"]);
     let store_host = Arc::clone(&ctx.store_host);
-    let (record_url, record) = (url.clone(), data.clone());
+    let (record_url, record) = (url.clone(), upload_record(&name, uploaded_at));
     let saved = tauri::async_runtime::spawn_blocking(move || {
         store_host
             .open_cache(Path::new(&store_dir), "uploadedLogs")
@@ -307,9 +309,19 @@ fn store_dir(ctx: &NativeCtx) -> Option<String> {
         .map(|p| join(p.platform, &p.user_data, &["store"]))
 }
 
+/// The stored record, keys in v0.10's uploader order (`name`, `token`, `uploadedAt`): the file's
+/// bytes show that order, so it is built as an ordered object and never through `json!`.
+fn upload_record(name: &str, uploaded_at: u64) -> Json {
+    let mut record = Obj::new();
+    record.insert_js("name", Json::Str(name.to_string()));
+    record.insert_js("token", Json::Str(PASTE_TOKEN.to_string()));
+    record.insert_js("uploadedAt", Json::Num(Num::U(uploaded_at)));
+    Json::Obj(record)
+}
+
 /// Opens the `uploadedLogs` store through the one owner. A corrupt file is `InvalidData` and is
 /// left untouched.
-fn open_uploaded(host: &gamelib_core::store::StoreHost, dir: &str) -> io::Result<Arc<Store>> {
+fn open_uploaded(host: &StoreHost, dir: &str) -> io::Result<Arc<Store>> {
     host.open_cache(Path::new(dir), "uploadedLogs")
 }
 
@@ -322,21 +334,22 @@ struct Pruned {
 
 /// Splits the stored uploads into the unexpired (returned) and the expired (removed from the
 /// store). An entry whose `uploadedAt` is not a number never compares as expired, as in the TS it
-/// replaces (`NaN >= 2` is false).
+/// replaces (`NaN >= 2` is false). `snapshot` never lists the `__internal__` version envelope, so
+/// the prune never sees it.
 fn prune_expired(store: &Store, now_ms: u64) -> Pruned {
     let mut valid = serde_json::Map::new();
     let mut failed = 0;
     for (key, value) in store.snapshot() {
         let age_days = value
             .get("uploadedAt")
-            .and_then(Value::as_f64)
+            .and_then(Json::as_f64)
             .map(|at| (now_ms as f64 - at) / MS_PER_DAY);
         if age_days.is_some_and(|d| d >= EXPIRY_PRUNE_DAYS) {
             if store.remove(&key).is_err() {
                 failed += 1;
             }
         } else {
-            valid.insert(key, value);
+            valid.insert(key, value.to_value());
         }
     }
     Pruned { valid, failed }
@@ -455,9 +468,9 @@ async fn delete_with(ctx: &NativeCtx, args: &[Value], log: LogSink<'_>) -> Resul
 
     let token = record
         .get("token")
-        .and_then(Value::as_str)
+        .and_then(Json::as_str)
         .unwrap_or(PASTE_TOKEN);
-    let name = record.get("name").and_then(Value::as_str).unwrap_or("");
+    let name = record.get("name").and_then(Json::as_str).unwrap_or("");
     let user_agent = format!("HeroicGamesLauncher/{}", ctx.app_version);
     let response = match ctx
         .paste
@@ -509,7 +522,6 @@ mod tests {
     use crate::native_router::{LogPaths, NativeHost};
     use gamelib_core::emitter::FrontendEmitter;
     use gamelib_core::paths::Platform;
-    use gamelib_core::store::StoreHost;
     use gamelib_testutil::FakeHome;
     use std::io::Write as _;
     use std::net::{TcpListener, TcpStream};
@@ -689,7 +701,12 @@ mod tests {
             // A fresh host reads what is on disk, not what the handler's host holds in memory.
             StoreHost::new()
                 .open_cache(Path::new(&dir), "uploadedLogs")
-                .map(|s| s.snapshot())
+                .map(|s| {
+                    s.snapshot()
+                        .into_iter()
+                        .map(|(k, v)| (k, v.to_value()))
+                        .collect()
+                })
                 .unwrap_or_default()
         }
 
@@ -1104,6 +1121,132 @@ mod tests {
         let lines = rig.logged();
         assert_eq!(lines.len(), 1);
         assert_eq!(lines[0].0, Level::Error);
+    }
+
+    /// The 85-01 golden `uploadedLogs.json` (tab-indented, `__internal__` envelope last) and the
+    /// ops that produce it, from the TS store stack.
+    const GOLDEN_UPLOADED_LOGS: &str = "crates/gamelib-store/tests/fixtures/golden/expected/ops-nodot-url-keys-uploaded-logs/store_cache/uploadedLogs.json";
+    const GOLDEN_URL: &str = "https://paste.example.com/a.log";
+    const GOLDEN_UPLOADED_AT: u64 = 1_700_000_000_000;
+
+    fn golden_bytes() -> String {
+        std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join(GOLDEN_UPLOADED_LOGS))
+            .expect("the 85-01 golden uploadedLogs file")
+    }
+
+    #[test]
+    fn log_upload_v010_file_lists_without_internal() {
+        let rig = Rig::local("http://127.0.0.1:9/".to_string());
+        let golden = golden_bytes();
+        assert!(
+            golden.contains("__internal__"),
+            "the golden carries the envelope"
+        );
+        rig.plant_store(&golden);
+
+        let listed = rig.list(GOLDEN_UPLOADED_AT + HOUR_MS).unwrap();
+        let keys: Vec<&String> = listed.as_object().unwrap().keys().collect();
+        assert_eq!(keys, [GOLDEN_URL]);
+        assert_eq!(
+            listed[GOLDEN_URL],
+            json!({"uploadedAt": GOLDEN_UPLOADED_AT})
+        );
+        assert!(rig.logged().is_empty());
+        // Listing an unexpired v0.10 file is a read: its bytes do not change.
+        assert_eq!(std::fs::read_to_string(rig.store_file()).unwrap(), golden);
+    }
+
+    #[test]
+    fn log_upload_prune_ignores_internal() {
+        let rig = Rig::local("http://127.0.0.1:9/".to_string());
+        // `__internal__.gamelib.schemaVersion` is a small number: if the prune saw the envelope as
+        // an entry it would have no `uploadedAt`, so it would be kept and listed. It must be
+        // neither listed nor removed, while the expired entry beside it is.
+        let planted = format!(
+            "{{\n\t\"https://dpaste.com/Old\": {{\n\t\t\"name\": \"old\",\n\t\t\"token\": \"1\",\n\t\t\"uploadedAt\": {}\n\t}},\n\t\"https://dpaste.com/Now\": {{\n\t\t\"name\": \"now\",\n\t\t\"token\": \"1\",\n\t\t\"uploadedAt\": {NOW}\n\t}},\n\t\"__internal__\": {{\n\t\t\"gamelib\": {{\n\t\t\t\"schemaVersion\": 1\n\t\t}}\n\t}}\n}}",
+            NOW - 72 * HOUR_MS
+        );
+        rig.plant_store(&planted);
+
+        let listed = rig.list(NOW).unwrap();
+        let keys: Vec<&String> = listed.as_object().unwrap().keys().collect();
+        assert_eq!(keys, ["https://dpaste.com/Now"]);
+        let after = std::fs::read_to_string(rig.store_file()).unwrap();
+        assert!(!after.contains("/Old"), "{after}");
+        assert!(
+            after.ends_with("\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t}\n}"),
+            "{after}"
+        );
+        assert!(rig.logged().is_empty());
+    }
+
+    #[test]
+    fn log_upload_phase84_file_adopted_without_write() {
+        let rig = Rig::local("http://127.0.0.1:9/".to_string());
+        // What Phase 84 wrote: 2-space, no envelope.
+        let planted = serde_json::to_string_pretty(&json!({
+            "https://dpaste.com/Now": record("now", NOW),
+            "https://dpaste.com/Recent": record("recent", NOW - HOUR_MS),
+        }))
+        .unwrap();
+        rig.plant_store(&planted);
+
+        let listed = rig.list(NOW).unwrap();
+        assert_eq!(listed.as_object().unwrap().len(), 2);
+        assert_eq!(std::fs::read_to_string(rig.store_file()).unwrap(), planted);
+
+        // The next change turns it into tab plus envelope.
+        let store = StoreHost::new()
+            .open_cache(rig.store_file().parent().unwrap(), "uploadedLogs")
+            .unwrap();
+        assert!(store.remove("https://dpaste.com/Recent").unwrap());
+        let after = std::fs::read_to_string(rig.store_file()).unwrap();
+        assert!(after.starts_with("{\n\t\""), "{after}");
+        assert!(after.contains("\"__internal__\""), "{after}");
+        assert!(!after.contains("/Recent"), "{after}");
+    }
+
+    #[test]
+    fn log_upload_resave_matches_golden() {
+        // The golden case's ops, applied through the widened host: the file is the golden bytes.
+        let home = FakeHome::new("gamelib-log-upload-golden-");
+        let dir = home.root().join("store");
+        let store = StoreHost::new().open_cache(&dir, "uploadedLogs").unwrap();
+        let value = |text: &str| gamelib_store::json::parse(text.as_bytes()).unwrap();
+        store
+            .set(GOLDEN_URL, value(r#"{"uploadedAt":1700000000000}"#))
+            .unwrap();
+        store.set("a.b", value("1")).unwrap();
+        assert_eq!(store.get("a.b"), Some(value("1")));
+        assert_eq!(store.get("a"), None);
+        assert!(store.remove("a.b").unwrap());
+        assert_eq!(
+            std::fs::read_to_string(dir.join("uploadedLogs.json")).unwrap(),
+            golden_bytes()
+        );
+    }
+
+    #[test]
+    fn log_upload_a_new_record_is_written_in_the_v010_uploader_key_order() {
+        let (base, _seen) = serve(vec![ok("https://dpaste.com/AbC123\n")]);
+        let rig = Rig::local(base);
+        rig.seed(&["gamelib.log"], b"x");
+        rig.upload(vec![json!("Heroic log"), json!({})]).unwrap();
+
+        let text = std::fs::read_to_string(rig.store_file()).unwrap();
+        let at = |needle: &str| {
+            text.find(needle)
+                .unwrap_or_else(|| panic!("{needle} in {text}"))
+        };
+        assert!(
+            at("\"name\"") < at("\"token\"") && at("\"token\"") < at("\"uploadedAt\""),
+            "{text}"
+        );
+        assert!(at("\"uploadedAt\"") < at("\"__internal__\""), "{text}");
+        assert!(
+            text.starts_with("{\n\t\"https://dpaste.com/AbC123\": {\n\t\t\"name\""),
+            "{text}"
+        );
     }
 
     #[test]

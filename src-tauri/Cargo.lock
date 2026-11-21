@@ -1605,7 +1605,6 @@ name = "gamelib-core"
 version = "0.1.0"
 dependencies = [
  "gamelib-testutil",
- "indexmap 2.14.0",
  "serde_json",
  "tokio",
  "tokio-util",

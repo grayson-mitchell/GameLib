@@ -295,6 +295,65 @@ pub fn parse(bytes: &[u8]) -> Result<Json, ParseError> {
     serde_json::from_slice::<Json>(bytes).map_err(ParseError)
 }
 
+impl From<serde_json::Value> for Json {
+    /// For call sites that hold a loose `serde_json::Value` (no key order to keep: without
+    /// `preserve_order` its objects are sorted). A store's own documents are built with [`Obj`].
+    fn from(v: serde_json::Value) -> Json {
+        use serde_json::Value;
+        match v {
+            Value::Null => Json::Null,
+            Value::Bool(b) => Json::Bool(b),
+            Value::Number(n) => Json::Num(match (n.as_u64(), n.as_i64()) {
+                (Some(u), _) => Num::U(u),
+                (None, Some(i)) => Num::I(i),
+                // `as_f64` is `Some` for every number this build can hold.
+                (None, None) => Num::F(n.as_f64().unwrap_or(0.0)),
+            }),
+            Value::String(s) => Json::Str(s),
+            Value::Array(a) => Json::Arr(a.into_iter().map(Json::from).collect()),
+            Value::Object(m) => {
+                let mut o = Obj::new();
+                for (k, v) in m {
+                    o.insert_js(k, Json::from(v));
+                }
+                Json::Obj(o)
+            }
+        }
+    }
+}
+
+impl Json {
+    /// The loose `serde_json::Value` of this document, for call sites that only read it. A
+    /// non-finite float (which JSON cannot hold) becomes `null`; object order is not kept.
+    pub fn to_value(&self) -> serde_json::Value {
+        use serde_json::{Map, Number, Value};
+        match self {
+            Json::Null => Value::Null,
+            Json::Bool(b) => Value::Bool(*b),
+            Json::Num(Num::U(u)) => Value::Number(Number::from(*u)),
+            Json::Num(Num::I(i)) => Value::Number(Number::from(*i)),
+            Json::Num(Num::F(f)) => Number::from_f64(*f).map_or(Value::Null, Value::Number),
+            Json::Str(s) => Value::String(s.clone()),
+            Json::Arr(a) => Value::Array(a.iter().map(Json::to_value).collect()),
+            Json::Obj(o) => Value::Object(
+                o.iter()
+                    .map(|(k, v)| (k.clone(), v.to_value()))
+                    .collect::<Map<String, Value>>(),
+            ),
+        }
+    }
+
+    /// The number as an `f64` (what a JS comparison sees), `None` for anything but a number.
+    pub fn as_f64(&self) -> Option<f64> {
+        match self {
+            Json::Num(Num::U(u)) => Some(*u as f64),
+            Json::Num(Num::I(i)) => Some(*i as f64),
+            Json::Num(Num::F(f)) => Some(*f),
+            _ => None,
+        }
+    }
+}
+
 /// Integers beyond this magnitude are not exactly representable as a JS number: TS parses them
 /// lossily and prints the nearest double, so the writer does the same.
 const MAX_SAFE_INTEGER: u64 = 1 << 53;
@@ -562,5 +621,22 @@ mod tests {
         assert!(parse(b"\xef\xbb\xbf{}").is_err());
         assert!(parse(b"{} x").is_err());
         assert!(parse(b"").is_err());
+    }
+
+    #[test]
+    fn a_loose_value_round_trips_through_json() {
+        let v = serde_json::json!({"a": [1, -2, 2.5, null, true, "x"], "n": {"k": 18446744073709551615u64}});
+        let j = Json::from(v.clone());
+        assert_eq!(
+            j.get("a").and_then(Json::as_array).map(<[Json]>::len),
+            Some(6)
+        );
+        assert_eq!(j.to_value(), v);
+        assert_eq!(
+            Json::Num(Num::F(f64::NAN)).to_value(),
+            serde_json::Value::Null
+        );
+        assert_eq!(Json::Num(Num::U(3)).as_f64(), Some(3.0));
+        assert_eq!(Json::Str("3".into()).as_f64(), None);
     }
 }

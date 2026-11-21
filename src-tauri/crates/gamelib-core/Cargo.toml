@@ -13,10 +13,6 @@ path = "src/lib.rs"
 tokio = { version = "1", features = ["sync"] }
 tokio-util = "0.7"
 serde_json = "1"
-# store.rs keeps a store file's top-level key order (IndexMap) instead of the insertion-ordered map
-# feature of serde_json, which would flip key order for every crate in the shell binary. indexmap 2
-# is already locked; its `serde` feature lets the map be read and written directly.
-indexmap = { version = "2", features = ["serde"] }
 
 [dev-dependencies]
 gamelib-testutil = { path = "../gamelib-testutil" }

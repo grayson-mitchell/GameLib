@@ -7,13 +7,16 @@
 //! reach the disk. On top of those, `envelope` and `ops` are the store's write shape, `engine`
 //! decides a file's fate on open (adopt, migrate, discard a cache, read-only, keep a corrupt file),
 //! `backup` writes the side files that decision leaves, `migrate` holds the chains (the registry, the
-//! settings and library steps, and the strip over `schema`, the descriptor generated from zod).
+//! settings and library steps, and the strip over `schema`, the descriptor generated from zod), and
+//! `host` is the one owner of each open store file (ordered values, the write layout by flavour,
+//! read-only state, a change event).
 
 pub mod atomic;
 pub mod backup;
 pub mod dotpath;
 pub mod engine;
 pub mod envelope;
+pub mod host;
 pub mod json;
 pub mod migrate;
 pub mod ops;
