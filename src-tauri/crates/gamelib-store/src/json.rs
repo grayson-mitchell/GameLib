@@ -65,6 +65,16 @@ impl Obj {
     pub fn iter(&self) -> impl Iterator<Item = (&String, &Json)> {
         self.0.iter()
     }
+
+    /// Sets `key`, keeping an existing key's place. (Skeleton for the RED run: appends.)
+    pub fn insert_js(&mut self, key: impl Into<String>, value: Json) -> Option<Json> {
+        self.0.insert(key.into(), value)
+    }
+
+    /// Removes `key`, shifting later keys up so the order of the rest is untouched.
+    pub fn remove(&mut self, key: &str) -> Option<Json> {
+        self.0.shift_remove(key)
+    }
 }
 
 impl Json {
