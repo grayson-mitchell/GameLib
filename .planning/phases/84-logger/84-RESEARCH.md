@@ -507,21 +507,30 @@ expiry prune in getUploadedLogFiles: delete entries where (now - uploadedAt)/864
 | A8 | Recommended frame-size cap 256 KiB and per-entry TS text cap | Native Channel Plan | Large single `logError(bigObject)` would be truncated (new behaviour); omit the per-entry cap if the user prefers strict parity |
 | A9 | Reaching `logErrorSettled`'s "flush complete" at the stdout write callback is enough for the fatal-guard use | Native Channel Plan | Last line lost if the pipe is closed; same exposure as today's frames |
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+All six were resolved at planning (2026-11-20/21). Each item ends with a **RESOLVED** line naming where. The original
+question text is kept as history.
 
 1. **0600 mode: deliberate tightening or keep today's default?**
    - What we know: the TS writer never sets a mode (log_writer.ts:213 `appendFile` no mode; mkdir no mode); roadmap/STACK/SUMMARY claim 0600; `fileStore.ts` is where 0o600 actually exists (WR-06). Today's real mode is `0o666 & ~umask`.
    - What's unclear: whether the user wants criterion 1 read literally ("keep" = stay at the umask default) or as the clearly intended hardening.
    - Recommendation: Rust creates files 0600 (logs can carry env and command lines; `.old` from an older release stays 0644 and is left alone), record it as a deliberate deviation in the golden notes and the SUMMARY. **Needs user confirmation before it becomes a locked decision.**
+   - **RESOLVED:** 84-CONTEXT D-18 (OQ1). The user confirmed the tightening: new files are created 0600, existing `.old` files are left alone, and the golden pins everything except mode. Implemented in plan 84-02 (the unix `writer::mode` test).
 2. **What raises crate diagnostics to DEBUG (D-16)?**
    - What we know: no global debug setting exists; `verboseLogs` is in `AppSettings extends GameSettings` with default `true` (`config.ts:345`) and is a per-game override too; `disableLogs` is separate and never gates `gamelib.log`; the TS writer does not filter levels at all.
    - What's unclear: whether "the existing verbose/debug log setting" means that global toggle (which would make DEBUG the default) or something else.
    - Recommendation: native verbosity default WARN; raised by env `GAMELIB_LOG_LEVEL=debug` and a `setLogVerbosity` native send (wired from a TS settings listener only if the user chooses to bind it to the global `verboseLogs`). Confirm which.
+   - **RESOLVED:** 84-CONTEXT D-19 (OQ2), which amends D-16. Only the env var `GAMELIB_LOG_LEVEL=debug` raises crate diagnostics to DEBUG. The default is WARN, and there is no `verboseLogs` binding, no new setting and no `setLogVerbosity` channel. Implemented in plan 84-08 (bridge.rs, `crate_level_from_env`).
 3. **`gog-redist.log` lives outside the log tree** (`<userData>/GamesConfig/gog-redist.log`). D-05 says Rust writes every log file, and a Rust writer must not accept arbitrary paths from TS.
    - Recommendation: a typed `gogRedist` target resolved by Rust from `Paths` (needs `games_config_dir`), file location unchanged. Alternative: move it into `runners/gog` (behaviour change). Pick the first unless the user objects.
+   - **RESOLVED:** 84-CONTEXT D-20 (OQ3). `gogRedist` is a typed target that Rust resolves from `Paths`, and the file stays at `<userData>/GamesConfig/gog-redist.log`. The Rust writer never accepts a path from TS. Implemented in plan 84-02 (path resolution) and plan 84-04 (redist.ts builds `{ kind: 'gogRedist' }`).
 4. **Does Phase 84 own the `run_exit` signature change** (pass `still_running` into `finish`) given 83 will be closed by then? Recommend yes; the change is tiny and covered by existing `shutdown::tests`.
+   - **RESOLVED:** 84-CONTEXT D-21 (OQ4), together with the "D-13 amendment (plan check W1)". Phase 84 owns the change: `finish` receives a `FinishContext`, and the logger flushes explicitly as finish's last step with no `Shutdown` registrant. Implemented in plan 84-09.
 5. **Windows live check.** CI's Windows leg proves rotation/handles/paths; the operator's Windows box is non-primary and `HOME` is unset there. No Windows live gate is recommended; say so in the plan rather than leaving a `human_needed` item.
+   - **RESOLVED:** no Windows live gate. Plan 84-01 records this in the live-gate contract's "## Withdrawn from live scoring" section (the Windows row, citing this question). The proof is CI's Windows leg, recorded in plan 84-10's "## CI proof" (`writer::windows` on windows-latest).
 6. **`close()`/`End of log` line** has no production caller in the sweep; confirm at plan time with `graphify query "LogWriter close"` before dropping it.
+   - **RESOLVED:** kept, not dropped. The premise was wrong: `src/backend/launcher.ts` calls `logWriter.close()` at three sites (lines ~317, ~357 and ~419 at planning). The facade keeps `close()`, which sends `============= End of log =============` (plan 84-04, targetWriter.ts). The literal stays in the live-gate contract's Required literals table (plan 84-01), and the game launch.log item scores it (plan 84-11).
 
 ## Environment Availability
 

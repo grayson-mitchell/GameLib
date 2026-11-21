@@ -185,7 +185,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 82: Guardrails, hygiene and shared safety primitives** — not planned
 - [ ] **Phase 83: Native seam, gamelib-core and process/shutdown contract** — not planned
-- [ ] **Phase 84: Logger** — 14 plans in 9 waves; planned 2026-11-21 (executes after Phase 83 closes)
+- [ ] **Phase 84: Logger** — 11 plans in 9 waves (consolidated from 14, then two plans split for context budget); planned 2026-11-21 (executes after Phase 83 closes)
 - [ ] **Phase 85: Store host, config and versioned migrations** — not planned
 - [ ] **Phase 86: Pure leaf services** — not planned
 - [ ] **Phase 87: Engine, Wine and tools** — not planned
@@ -201,6 +201,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 97: Steam bridge DRM mode, overlay and known fixes** — not planned
 - [ ] **Phase 98: Shell cutover** — not planned
 - [ ] **Phase 99: Sidecar deletion** — not planned
+- [ ] **Phase 100: Game page without the ⋮ menu**
 
 ## Phase Details
 
@@ -418,40 +419,37 @@ Plans:
   3. Diagnostics from steam-vent and reqwest appear in the log, and a repeating error is rate-limited rather than flooding the file
   4. The TS logger is reduced to a fire-and-forget forwarder, and the shell's second log path (`shell_diag`) and the TS log registrations are deleted
 
-**Plans:** 14 plans in 9 waves; planned 2026-11-21; executes only after Phase 83 closes (83-11 live gate passed, D-02)
+**Plans:** 11 plans in 9 waves; planned 2026-11-21, consolidated from 14 the same day, then the consolidated 84-06 and 84-07 each split in two to stay inside the per-plan context budget; executes only after Phase 83 closes (83-11 live gate passed, D-02)
 
 Plans:
 **Wave 1**
-- [ ] 84-01-PLAN.md — Live macOS gate contract (84-HUMAN-UAT.md), authored before code (run by 84-14)
-- [ ] 84-02-PLAN.md — Golden from the real TS writer plus shared `log` frame vectors, committed before any logger TS changes
+- [ ] 84-01-PLAN.md — Before any code: golden from the real TS writer, shared `log` frame vectors, and the live macOS gate contract (84-HUMAN-UAT.md, run by 84-11)
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 84-03-PLAN.md — `gamelib-log` crate (format, writer, rotation, 0600 per D-18, frame contract), log paths in gamelib-core, CI wiring
+- [ ] 84-02-PLAN.md — `gamelib-log` crate (format, writer, every target, 0600 per D-18, frame contract, renderer sanitiser), log paths and minimal StoreHost (D-09) in gamelib-core, CI wiring
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 84-04-PLAN.md — Tracer: sidecar `logInfo` → `kind:"log"` frame → native writer → gamelib.log; bounded TS forwarder
+- [ ] 84-03-PLAN.md — Tracer: sidecar `logInfo` → `kind:"log"` frame → native writer → gamelib.log; bounded TS forwarder with calibrated batching; EOF flush
 
 **Wave 4** *(blocked on Wave 3 completion)*
-- [ ] 84-05-PLAN.md — Runner, per-game and gog-redist logs through the native writer (batched forwarding)
-- [ ] 84-06-PLAN.md — Native router widened; logError/logInfo/showLogFileInFolder/getLogContent in Rust with the renderer sanitiser
+- [ ] 84-04-PLAN.md — Runner, per-game and gog-redist logs through the native writer (facade, with the import codemod in the same typechecking commit); gamelib.log rate limiter
+- [ ] 84-05-PLAN.md — Native router widened; logError/logInfo/showLogFileInFolder/getLogContent and upload (reqwest on StoreHost) in Rust
 
 **Wave 5** *(blocked on Wave 4 completion)*
-- [ ] 84-07-PLAN.md — gamelib.log rate limiter (identical-line suppression, scripted-clock golden)
-- [ ] 84-08-PLAN.md — Minimal StoreHost core (D-09) and log upload via reqwest (D-07)
+- [ ] 84-06-PLAN.md — Uploaded list and delete-uploaded in Rust; TS uploader, logger flow registration and uploadedLogs slice deleted (uploadedLogs has one owner); COVERAGE.md
 
 **Wave 6** *(blocked on Wave 5 completion)*
-- [ ] 84-09-PLAN.md — Uploaded list and delete-uploaded in Rust; uploader/loggerFlowRegistration and uploadedLogs census deletions; COVERAGE.md
-- [ ] 84-10-PLAN.md — tracing Layer + `log` bridge (steam-vent, reqwest), `GAMELIB_LOG_LEVEL`; VentLogForwarder deleted
+- [ ] 84-07-PLAN.md — TS logger internals and the oracle deleted behind the red-first `loggerPortComplete` gate; paths.ts and the containment kit's logger/paths element retired
 
 **Wave 7** *(blocked on Wave 6 completion)*
-- [ ] 84-11-PLAN.md — `shell_diag` → `shell_log` into gamelib.log; run_exit `FinishContext` and the final flush inside the 5 s budget (D-13 as amended, D-21)
+- [ ] 84-08-PLAN.md — `shell_diag` → `shell_log` into gamelib.log; tracing Layer + `log` bridge, `GAMELIB_LOG_LEVEL`; steamcm forwarder deleted; `loggerPortComplete` Rust half
 
 **Wave 8** *(blocked on Wave 7 completion)*
-- [ ] 84-12-PLAN.md — `loggerPortComplete` gate and deletion of the TS logger internals and oracle (fixtures kept)
+- [ ] 84-09-PLAN.md — run_exit `FinishContext` and the final flush inside the 5 s budget (D-13 as amended, D-21); docs that describe the old sinks corrected
 
 **Wave 9** *(blocked on Wave 8 completion)*
-- [ ] 84-13-PLAN.md — Clean-worktree proof, push checkpoint, three-OS CI proof
-- [ ] 84-14-PLAN.md — Run the live macOS gate
+- [ ] 84-10-PLAN.md — Clean-worktree proof, push checkpoint, three-OS CI proof
+- [ ] 84-11-PLAN.md — Run the live macOS gate
 
 ### Phase 85: Store host, config and versioned migrations
 
@@ -708,3 +706,13 @@ Plans:
 
 Plans:
 - [ ] TBD (run /gsd-plan-phase 99 to break down)
+
+### Phase 100: Game page without the ⋮ menu
+
+**Goal:** The game page has no ⋮ menu: every action sits next to what it changes. The left card is the game (store link, Edit details, Favourite heart by the title, category chips, Hide); the Install tab is the hub for your copy (Location → Open/Move, Size → Modify, Version → Verify/Check for updates, integration switch rows, red Uninstall last behind a confirmation); the ⚙ dialog owns how the game runs; the footer holds only tier-one actions. Requirements and the left-card play-time block are removed as duplicates; pending and error states live inside each row. Design source: sketch 012 (folds in 010, 011) — `.claude/skills/sketch-findings-gamelib/references/game-page.md`.
+**Requirements**: TBD
+**Depends on:** Nothing (frontend-only; independent of the v0.11 port phases)
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 100 to break down)

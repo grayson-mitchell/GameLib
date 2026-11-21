@@ -43,7 +43,7 @@ Task IDs get filled in by the planner. The map below is by criterion.
 
 | Criterion | Behavior | Test Type | Automated Command | File Exists | Status |
 |-----------|----------|-----------|-------------------|-------------|--------|
-| SC1 | Line format, rotation, `.old`, location, per-chunk rule and sanitiser output byte-equal to the TS golden | golden | `cargo test -p gamelib-log --test golden`; `pnpm exec jest --runTestsByPath meta/__tests__/logGolden.test.ts` | ❌ W0 | ⬜ pending |
+| SC1 | Line format, rotation, `.old`, location, per-chunk rule and sanitiser output byte-equal to the TS golden | golden | `cargo test -p gamelib-log --test golden`; `pnpm exec jest --runTestsByPath src/backend/logger/__tests__/logGolden.test.ts` (until 84-07 deletes the oracle) | ❌ W0 | ⬜ pending |
 | SC1 | New files created with unix mode 0600 (pending OQ1) | unit | `cargo test -p gamelib-log writer::mode` | ❌ W0 | ⬜ pending |
 | SC1 | Windows rotation with `.old` held open; path segments | unit (CI Windows) | `cargo test -p gamelib-log writer::windows` | ❌ W0 | ⬜ pending |
 | SC1 | Secondary instance never rotates | unit | `cargo test -p gamelib-log writer::second_init` | ❌ W0 | ⬜ pending |
@@ -65,12 +65,12 @@ Task IDs get filled in by the planner. The map below is by criterion.
 
 ## Wave 0 Requirements
 
-- [ ] `meta/genLogGolden.ts` + `src-tauri/crates/gamelib-log/tests/fixtures/golden/*` + `meta/__tests__/logGolden.test.ts`, committed before any TS is touched (the oracle)
-- [ ] `84-HUMAN-UAT.md` live-gate contract, authored before coding (UAT item shape per convention 4)
-- [ ] `gamelib-log` crate scaffold + CI wiring (`rust-test.yml`, `rustTestWorkflow.test.ts`, `cargoFeatures.test.ts`)
-- [ ] Shared `log` frame vectors file (valid/invalid)
-- [ ] `src/backend/__tests__/loggerPortComplete.test.ts`
-- [ ] Batch/cap calibration with a synthetic emitter (replaces research assumption A2)
+- [ ] `src/backend/logger/__tests__/logGolden.test.ts` (the oracle: it generates the fixtures in write mode under `GAMELIB_WRITE_LOG_GOLDEN=1`, otherwise asserts TS == golden; there is no separate generator script) + `src-tauri/crates/gamelib-log/tests/fixtures/golden/{cases.json,entries.json,expected/,NOTES.md}`, committed before any TS is touched (plan 84-01; 84-07 deletes the oracle, the fixtures stay)
+- [ ] `84-HUMAN-UAT.md` live-gate contract, authored before coding (UAT item shape per convention 4) (plan 84-01; run by 84-11)
+- [ ] `gamelib-log` crate scaffold + CI wiring (`.github/workflows/rust-test.yml`, `meta/__tests__/rustTestWorkflow.test.ts`, `src/backend/__tests__/cargoFeatures.test.ts`) (plan 84-02)
+- [ ] Shared `log` frame vectors file (valid/invalid): `src/common/__fixtures__/logFrameVectors.json` (plan 84-01)
+- [ ] `src/backend/__tests__/loggerPortComplete.test.ts` (TS half plan 84-07, Rust half plan 84-08)
+- [ ] Batch/cap calibration with a synthetic emitter (replaces research assumption A2): `src/backend/logger/__tests__/forwarderCalibration.test.ts` (plan 84-03)
 
 ---
 

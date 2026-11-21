@@ -1,20 +1,21 @@
 ---
 gsd_state_version: "1.0"
-milestone: v0.10
-current_phase: 82
-current_phase_name: Guardrails, hygiene and shared safety primitives
-status: verifying
+milestone: v0.11
+milestone_name: Node Sidecar Retirement
+current_phase: 84
+current_phase_name: Logger
+status: executing
 stopped_at: Completed 82-20-PLAN.md
-last_updated: "2026-11-21T02:46:54.817Z"
+last_updated: "2026-11-21T03:25:04.314Z"
 last_activity: 2026-11-21
-last_activity_desc: Phase 82 execution started
-state_head: 9457e908b61f8290ba8dc7f2bf0aa9add339570a
+last_activity_desc: Phase 83 execution started
+state_head: 4f7d54a221ef84606aacf0de6337b5ba14744a9d
 progress:
-  total_phases: 27
+  total_phases: 19
   completed_phases: 23
-  total_plans: 19
+  total_plans: 42
   completed_plans: 531
-milestone_name: Foundations
+  percent: 100
 ---
 
 # Project State
@@ -24,7 +25,7 @@ milestone_name: Foundations
 See: .planning/PROJECT.md (updated 2026-11-20)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 82 — Guardrails, hygiene and shared safety primitives
+**Current focus:** Phase 83 — Native seam, gamelib-core and process/shutdown contract
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -75,10 +76,10 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 
 ## Current Position
 
-Phase: 82 (Guardrails, hygiene and shared safety primitives) — EXECUTING
-Plan: 20 of 20
-Status: Phase complete — ready for verification
-Last activity: 2026-11-21 - Completed quick task 261121-lco: Fix stale i18n baseline, fork-touched-files list and gameinfo-narrowing ceiling after dzl redesign
+Phase: 84 (Logger) — READY TO EXECUTE
+Plan: 11 of 11
+Status: Ready to execute
+Last activity: 2026-11-21 — Phase 83 execution started
 Progress: [██████████] 100% (19 of 19 phase 82 plans have a SUMMARY; verification human_needed)
 
 ## Native-Install Arc Phase Map (21–25)
@@ -345,6 +346,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 
 Entries for phases before 44 live in STATE-HISTORY.md § Roadmap Evolution archive (2026-10-15).
 
+- Phase 100 added 2026-11-21: **Game page without the ⋮ menu.** Builds sketch 012 (folds in 010/011) after the 2026-11-21 sketch wrap-up. Appended to v0.11 by position only: it is frontend work, so `Depends on` was hand-corrected from Phase 99 to Nothing. `**Goal:**` hand-written from `references/game-page.md`. The STATE frontmatter `milestone` was stale (v0.10, shipped 2026-11-20) and was corrected to v0.11 so the SDK would accept the add.
 - Phase 81 added 2026-11-16: **Unify the Steam restart hold into restart-on-Play.** The operator asked for a more robust way to manage the "Restart Steam to finish" hold (todo 2026-11-05). Discussion found spikes 047/048/083 already answered the proposed spikes and restart-on-Play (261029-ji2) already implements the Play-time gate on macOS, so the phase merges the two mechanisms; the one new spike (Windows/Linux adoption) is a todo. The SDK set `Depends on` to Phase 80, which is correct. `**Goal:**` hand-written, and the summary-list line was added by hand.
 - Phase 79 added 2026-11-14: **Rust CM client replacing steam-user and steam-session.** The operator asked what comes after Phase 75 in the sidecar migration. Nothing was on the roadmap: 76–78 are v0.9 audit debt, and the CM-client work existed only as spikes 071c–085. The operator asked for a phase. `Depends on` hand-corrected from Phase 78 (positional) to Phase 75. `**Goal:**` hand-written, and the summary-list line was added by hand. Gated on spike 085's final results (its frontmatter says VALIDATED, but Results was still a placeholder).
 - Phase 80 added 2026-11-15: **Steam install, uninstall and update polling state machines in Rust.** The operator asked what comes after Phase 79 in the Rust migration; nothing was on the roadmap, and `79-CONTEXT.md` deferred this as the next sidecar-retirement slice. The operator asked to add it as Phase 80. The SDK set `Depends on` to Phase 79, which is correct. `**Goal:**` hand-written, and the summary-list line was added by hand.
