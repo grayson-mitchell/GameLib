@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 85
 current_phase_name: Store host, config and versioned migrations
 status: executing
-stopped_at: Completed 85-09-PLAN.md
-last_updated: "2026-11-21T21:55:55.286Z"
+stopped_at: Completed 85-10-PLAN.md
+last_updated: "2026-11-21T22:52:49.685Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 85 execution started
-state_head: 6183e62deeb673c4171dee7073ad12b14b1339a6
+state_head: a7792454ab011c13cab754778df6d9553aac37b8
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 85 (Store host, config and versioned migrations) — EXECUTING
-Plan: 9 of 25
+Plan: 10 of 25
 Status: Ready to execute
 Last activity: 2026-11-22 — Phase 85 execution started
 Progress: [██████████] 100%
@@ -368,6 +368,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 85 P07 | 45 min | 3 tasks | 14 files |
 | Phase 85 P08 | 30 min | 3 tasks | 17 files |
 | Phase 85 P09 | 90 min | 3 tasks | 14 files |
+| Phase 85 P10 | 55 min | 3 tasks | 24 files |
 
 ## Accumulated Context
 
@@ -697,6 +698,9 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 85]: 85-09: open_cache keeps Phase 84's never-overwrite-a-corrupt-store contract (InvalidData) even after a boot sweep opened the file; open_row takes whatever the engine decides
 - [Phase 85]: 85-09: a store's own storeOwnership flag wins over its family's; native always Rust-owned, excluded never
 - [Phase 85]: 85-09: Store::apply queues the rev-stamped change under the store lock and one store-events dispatcher delivers in rev order; unchanged-value writes are no-ops
+- [Phase 85]: 85-10: the shell worker acks every sidecar store frame including no-op applies, and nacks a frame rejected at parse when it names a readable seq, so a mirror's pending op is never stranded (S1 rule 7)
+- [Phase 85]: 85-10: createStoreRoot defaults storeMode to ts; only the sidecar boot passes the resolved GAMELIB_STORE mode and the rpc frame sink, and a Rust-owned store whose resolved path is not its table path under userData fails at construction
+- [Phase 85]: 85-10: native and excluded rows are never writable from the sidecar (refused not-owned); baseRev is the highest rev seen until 85-17 adds the load-time rev handshake
 
 ### Pending Todos
 
@@ -961,8 +965,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-21T21:55:54.014Z
-Stopped at: Completed 85-09-PLAN.md
+Last session: 2026-11-21T22:52:48.010Z
+Stopped at: Completed 85-10-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
