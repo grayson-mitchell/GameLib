@@ -7,8 +7,7 @@ import { useRowAction } from './rowAction'
 
 /**
  * Phase 100 (D-01, D-13, D-18): the Location row's Open / Move… / Set install
- * folder handlers, copied from the ⋮ menu (GameSubMenu keeps its own copy until
- * plan 09 removes it).
+ * folder handlers, moved here from the ⋮ menu, which Phase 100 removed.
  *
  * Move… and Set install folder keep their yes/no confirmation (D-13). The
  * picker and the backend call run through `useRowAction`, so a rejection marks

@@ -4,8 +4,7 @@ import { reportRowActionFailure } from './rowAction'
 
 /**
  * Phase 100 (D-01, D-12, D-18): the Show in Steam switch's state and handler,
- * copied from the ⋮ menu (GameSubMenu keeps its own copy until plan 09 removes
- * it).
+ * moved here from the ⋮ menu, which Phase 100 removed.
  *
  * `addedToSteam` flips only from the backend's answer. A rejection, or an add
  * that answers false (which contradicts the request), marks the row failed so

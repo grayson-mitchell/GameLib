@@ -417,8 +417,7 @@ describe('Group B: the loading row is mounted, in the right slot, behind the rig
 describe('Group C: the origin controls are deliberately UNTOUCHED (the inversion holds)', () => {
   const ORIGIN_CONTROLS: Record<string, string> = {
     MainButton: 'screens/Game/GamePage/components/MainButton.tsx',
-    GameCard: 'screens/Library/components/GameCard/index.tsx',
-    GameSubMenu: 'screens/Game/GameSubMenu/index.tsx'
+    GameCard: 'screens/Library/components/GameCard/index.tsx'
   }
 
   const FORBIDDEN_ORIGIN_TOKENS = [
@@ -429,7 +428,7 @@ describe('Group C: the origin controls are deliberately UNTOUCHED (the inversion
   ]
 
   it('D-25 inversion: no origin install control carries an eligibility busy state', () => {
-    // Under the retired D-12 contract these three files were the busy
+    // Under the retired D-12 contract these two files were the busy
     // state's home. D-25 moved it inside the dialog, and the quick path
     // fires no probe at all -- so there is no latency here to cover.
     for (const path of Object.values(ORIGIN_CONTROLS)) {

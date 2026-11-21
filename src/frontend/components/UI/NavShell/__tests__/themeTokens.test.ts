@@ -2525,10 +2525,6 @@ describe('Accent-filled Retry, Clear and .button.is-text text contrast in every 
 
 const GAME_PAGE_CSS = 'src/frontend/screens/Game/GamePage/index.css'
 const DROPDOWN_SCSS = 'src/frontend/components/UI/Dropdown/index.scss'
-const GAME_SUB_MENU_TSX = join(
-  REPO_ROOT,
-  'src/frontend/screens/Game/GameSubMenu/index.tsx'
-)
 const MAIN_BUTTON_TSX = join(
   REPO_ROOT,
   'src/frontend/screens/Game/GamePage/components/MainButton.tsx'
@@ -2799,15 +2795,14 @@ describe('Game-menu .is-link family: render-site census, winning-rule resolution
     return resolved
   }
 
-  // Census moves, each a deliberate feature: quick 261115-szs (ac63566b2) added 5 dots-menu-parity
-  // entries to GameSubMenu (21 -> 26); quick 261117-p38 (481168a3c) added SteamDirectLaunchButton.tsx (1 is-link) and quick
-  // 261117-q1t removed it again (the setting moved to the run tab). All use the same `link button is-text is-link
-  // buttonWithIcon` shape, so the winning-rule and contrast tests below cover them.
+  // Census moves, each a deliberate change: the pin was 39 (27 is-link) until Phase 100 plan 09 deleted
+  // the game page's ⋮ menu (GameSubMenu), which carried 26 of the is-link sites; 39 - 26 = 13. Earlier moves
+  // (quick 261115-szs, 261117-p38, 261117-q1t) only touched that deleted file.
   // Phase 82 plan 01 re-derived the pin from 34 to 39 site by site: five PURE `button is-text` sites
   // (no `.link`, no `.is-link`) were added and none escaped the contrast census, so all five count
   // in the pure family: NativePortInfo.tsx x3 (quick 261117-r4c, 20e70fdc1), ThemeEditor/index.tsx
-  // Back (phase 64-07, eb33e8668) and Rename (phase 64-09, 1f9c0efa1). The is-link subset (27) is unchanged.
-  it('render-site census: re-derived F1 counts match exactly (39 total, 27 is-link, 26 GameSubMenu, 1 MainButton, 1 pure DownloadManager, 2 pure SteamManagedItemView, 4 pure EngineNotices, 3 pure NativePortInfo, 2 pure ThemeEditor)', () => {
+  // Back (phase 64-07, eb33e8668) and Rename (phase 64-09, 1f9c0efa1). The is-link subset was 27 at that point.
+  it('render-site census: re-derived F1 counts match exactly (13 total, 1 is-link, 1 MainButton, 1 pure DownloadManager, 2 pure SteamManagedItemView, 4 pure EngineNotices, 3 pure NativePortInfo, 2 pure ThemeEditor)', () => {
     const allFiles = walkTsxFiles(FRONTEND_DIR)
     expect(allFiles.length).toBeGreaterThan(100) // walk sanity, same floor as navTourAnchorCensus
 
@@ -2816,7 +2811,7 @@ describe('Game-menu .is-link family: render-site census, winning-rule resolution
       const matches = text.match(/className="[^"]*is-text[^"]*"/g) ?? []
       return matches.map(() => path)
     })
-    expect(isTextSites).toHaveLength(39)
+    expect(isTextSites).toHaveLength(13)
 
     // The is-link subset re-derived directly from file contents, not from
     // isTextSites, so a non-is-link site is never miscounted as one.
@@ -2826,10 +2821,7 @@ describe('Game-menu .is-link family: render-site census, winning-rule resolution
         text.match(/className="[^"]*is-text[^"]*is-link[^"]*"/g) ?? []
       return matches.map(() => path)
     })
-    expect(isLinkOccurrences).toHaveLength(27)
-    expect(
-      isLinkOccurrences.filter((path) => path === GAME_SUB_MENU_TSX)
-    ).toHaveLength(26)
+    expect(isLinkOccurrences).toHaveLength(1)
     expect(
       isLinkOccurrences.filter((path) => path === MAIN_BUTTON_TSX)
     ).toHaveLength(1)
@@ -2850,7 +2842,7 @@ describe('Game-menu .is-link family: render-site census, winning-rule resolution
     expect(
       isTextSites.filter((path) => path === THEME_EDITOR_TSX)
     ).toHaveLength(2)
-    // Every site is accounted for by name: 27 is-link + 12 pure = 39, so a new site that is in
+    // Every site is accounted for by name: 1 is-link + 12 pure = 13, so a new site that is in
     // neither list fails here instead of being absorbed by a bumped total.
     expect(isLinkOccurrences.length + 1 + 2 + 4 + 3 + 2).toBe(
       isTextSites.length
@@ -3115,8 +3107,8 @@ describe('Game-menu .is-link family: render-site census, winning-rule resolution
    * `.SteamInstallCaret .dropdown .link:hover` (0,4,0), which beats the
    * global `.button.is-link:hover` (0,3,0) for this ONE render site -- if
    * one exists, else `undefined`. The 261015-7tt gruvbox_dark fix lives
-   * here, not in `_buttons.scss`: it must not touch the other 21
-   * GameSubMenu `.is-link` render sites that share the global rule.
+   * here, not in `_buttons.scss`: it must not touch the other
+   * `.is-link` render sites that share the global rule.
    */
   const mainButtonHoverOverrideBlock = (() => {
     try {

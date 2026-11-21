@@ -1,6 +1,6 @@
 /**
  * quick 261112-90h: the pure decision behind the game-page Steam Uninstall.
- * No jsdom (see repairFailure.test.ts): a plain function call, no rendering.
+ * No jsdom (see rowAction.test.ts): a plain function call, no rendering.
  */
 import {
   CLOSED_STEAM_DELETE_ROUTE,

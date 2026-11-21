@@ -4,8 +4,8 @@ import type { GameContextType } from 'frontend/types'
 
 /**
  * Phase 100 (D-11): which Install-tab actions show, which are disabled and
- * why. Pure: it copies the show gates and disabled expressions the old
- * GameSubMenu (the ⋮ menu) held, so every row asks one place.
+ * why. Pure: it carries the show gates and disabled expressions the old
+ * ⋮ menu held, so every row asks one place.
  *
  * D-11: while a long action runs, only the actions that conflict with it are
  * disabled (Verify, Modify, Set folder and Uninstall during a move); the ones
@@ -96,7 +96,7 @@ export function installActionGates({
   cloudSavesAvailable,
   settingFolder
 }: InstallActionGateInput): Record<InstallActionId, InstallActionGate> {
-  // The same two derivations GameSubMenu used.
+  // The same two derivations the old ⋮ menu used.
   const isSideloaded = !hasCapability(runner, 'hasStoreCatalog')
   const isSteam = !hasCapability(runner, 'winePrefixToolsAvailable')
 

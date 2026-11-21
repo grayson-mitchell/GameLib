@@ -1,6 +1,5 @@
 {
   "jestMock": {
-    "src/frontend/screens/Game/GamePage/components/__tests__/DotsMenu.disclosure.test.tsx": 8,
     "src/frontend/screens/Game/GamePage/components/__tests__/EngineBadge.test.tsx": 1,
     "src/frontend/screens/Game/GamePage/components/__tests__/EngineNotices.test.tsx": 1,
     "src/frontend/screens/Game/GamePage/components/__tests__/GameStatus.bottleWaiting.test.tsx": 6,

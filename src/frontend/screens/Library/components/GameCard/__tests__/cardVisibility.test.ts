@@ -332,6 +332,62 @@ describe('frontend/types.ts source gate -- WindowEventMap entry removed', () => 
   })
 })
 
+// Phase 100 deleted the game page's ⋮ menu, and with it tileMenuParity.test.ts (the
+// premise, ⋮ parity with this menu, is gone). The card's right-click menu is
+// deliberately UNCHANGED by the phase (D-07), and Categories stays reachable from
+// it (D-08), so its item set is pinned here on the card's own side.
+describe('GameCard/index.tsx source gate -- right-click menu unchanged by Phase 100 (D-07, D-08)', () => {
+  const EXPECTED_ITEM_COUNT = 18 // measured at f6dd52154
+
+  function itemsSlice(source: string): string {
+    const start = source.indexOf('const items: Item[] = [')
+    const end = source.indexOf('const wrapperClasses', start)
+    if (start === -1 || end === -1) {
+      throw new Error('GameCard items array markers not found')
+    }
+    return source.slice(start, end)
+  }
+
+  const onclickCount = (slice: string): number =>
+    (slice.match(/onclick:/g) ?? []).length
+
+  const slice = itemsSlice(readGated(GAME_CARD_PATH))
+
+  it(`the items array still holds exactly ${EXPECTED_ITEM_COUNT} entries`, () => {
+    expect(onclickCount(slice)).toBe(EXPECTED_ITEM_COUNT)
+  })
+
+  it.each([
+    [
+      'Logs (opens the per-game settings on the Logs tab)',
+      'openGameLogsModal(gameInfo)'
+    ],
+    [
+      'Categories (D-08: the per-game Categories modal)',
+      'openGameCategoriesModal(gameInfo)'
+    ],
+    ['Settings', 'openGameSettingsModal(gameInfo)'],
+    ['Hide', 'hiddenGames.add(appName, title)'],
+    ['Unhide', 'hiddenGames.remove(appName)'],
+    ['Favourite', 'favouriteGames.add(appName, title)'],
+    ['Unfavourite', 'favouriteGames.remove(appName)'],
+    ['Edit', 'handleEdit'],
+    ['Uninstall', 'onUninstallClick'],
+    ['Remove from recent', 'window.api.removeRecentGame(appName)']
+  ])('keeps the %s item', (_label, needle) => {
+    expect(slice).toContain(needle)
+  })
+
+  it('SANITY: the count check fails on a copy with one item removed', () => {
+    const lines = slice.split('\n')
+    const at1 = lines.findIndex((line) => line.includes('onclick:'))
+    expect(at1).toBeGreaterThan(-1)
+    const mutated = [...lines.slice(0, at1), ...lines.slice(at1 + 1)].join('\n')
+    expect(onclickCount(mutated)).toBe(EXPECTED_ITEM_COUNT - 1)
+    expect(onclickCount(mutated)).not.toBe(EXPECTED_ITEM_COUNT)
+  })
+})
+
 function gateSourceText(source: string): string {
   return stripSourceComments(source)
     .split('\n')

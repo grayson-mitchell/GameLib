@@ -2,35 +2,21 @@
  * Todo `2026-10-12-gamesubmenu-shows-remove-shortcuts-before-the-write-is-known` (quick
  * 261012-ca6).
  *
- * GameSubMenu used to flip `hasShortcuts` the moment it fired the send-kind `addShortcut` /
+ * The old ⋮ menu used to flip `hasShortcuts` the moment it fired the send-kind `addShortcut` /
  * `removeShortcut`, before anyone knew whether the write worked. `toggleShortcuts` awaits the
  * invoke-kind channel instead and sets the state from the sidecar's answer, "do shortcuts exist
  * on disk now". This file proves that for each outcome, plus the busy flag and the rejection path.
  *
  * No jsdom is installed (testEnvironment: 'node'), so the helper is called directly and
- * `window.api` is a plain object of jest mocks (same approach as repairFailure.test.ts). The
+ * `window.api` is a plain object of jest mocks (same approach as rowAction.test.ts). The
  * component itself cannot be rendered, so a source gate pins that `handleShortcuts` delegates.
  */
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { toggleShortcuts } from '../shortcutsToggle'
-import { at } from '../../../__tests__/fixtures/indexed'
+import { at } from '../../../../__tests__/fixtures/indexed'
 
-const FRONTEND = join(__dirname, '..', '..', '..', '..')
-
-/** The brace-balanced block that opens at the first `{` after `anchor`. */
-function blockAfter(source: string, anchor: string): string {
-  const start = source.indexOf(anchor)
-  if (start < 0) throw new Error(`anchor not found: ${anchor}`)
-  const open = source.indexOf('{', start + anchor.length)
-  let depth = 0
-  for (let i = open; i < source.length; i++) {
-    if (source[i] === '{') depth++
-    if (source[i] === '}') depth--
-    if (depth === 0) return source.slice(open, i + 1)
-  }
-  throw new Error(`unbalanced block after: ${anchor}`)
-}
+const FRONTEND = join(__dirname, '..', '..', '..', '..', '..')
 
 describe('toggleShortcuts (261012-ca6)', () => {
   let addShortcut: jest.Mock
@@ -233,15 +219,27 @@ describe('toggleShortcuts (261012-ca6)', () => {
     })
   })
 
-  it('source gate: handleShortcuts delegates to toggleShortcuts and never sets the state itself', () => {
+  it('source gate: IntegrationRows handleShortcuts delegates to toggleShortcuts and never sets the state itself', () => {
     const source = readFileSync(
-      join(FRONTEND, 'screens/Game/GameSubMenu/index.tsx'),
+      join(
+        FRONTEND,
+        'screens/Game/GamePage/components/InstallTab/IntegrationRows.tsx'
+      ),
       'utf-8'
     )
-    const body = blockAfter(source, 'function handleShortcuts()')
+    // The handler is an expression-bodied arrow, so slice to the next declaration
+    // instead of a brace block (which would return only the options object literal).
+    const start = source.indexOf('const handleShortcuts = () =>')
+    const end = source.indexOf('const shortcutsLabel', start)
+    expect(start).toBeGreaterThan(-1)
+    expect(end).toBeGreaterThan(start)
+    const body = source.slice(start, end)
 
     expect(body).toContain('toggleShortcuts(')
+    // The delegate is handed the setter; it must not call it from the handler.
     expect(body).not.toMatch(/setHasShortcuts\s*\(/)
-    expect(source).toMatch(/shortcutsBusy\s*\?\s*\(?\s*refreshCircle\(\)/)
+    // The pending state rides inside the switch row (no spinner swap).
+    expect(source).toMatch(/busy=\{shortcutsBusy\}/)
+    expect(source).not.toMatch(/refreshCircle/)
   })
 })

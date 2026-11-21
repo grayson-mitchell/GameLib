@@ -1,16 +1,17 @@
 /**
- * Task 1 (34.13-15) — D-27 rows 3/5, D-28 containment.
+ * Task 1 (34.13-15) — D-27 row 3, D-28 containment.
  *
- * Neither `GameCard/index.tsx` nor `GameSubMenu/index.tsx` can be imported
- * into this jest project: both `import './index.css'` at line 1, and this
- * repo carries no jsdom / react-test-renderer (`src/frontend/jest.config.js`
- * docstring, `testEnvironment: 'node'`). Groups A/B below are pure-function
- * specs against `steamInstallOptionsEntry.ts` directly; Groups C/D are
- * comment-stripped source-text gates over the two `.tsx` files, following
- * `framelessWindowCopy.test.ts`'s idiom.
+ * `GameCard/index.tsx` cannot be imported into this jest project: it
+ * `import './index.css'` at line 1, and this repo carries no jsdom /
+ * react-test-renderer (`src/frontend/jest.config.js` docstring,
+ * `testEnvironment: 'node'`). Group A below is pure-function specs against
+ * `steamInstallOptionsEntry.ts` directly; Group C is comment-stripped
+ * source-text gates over the `.tsx` file, following
+ * `framelessWindowCopy.test.ts`'s idiom. (Phase 100 deleted the ⋮ menu and its
+ * Groups B/D.)
  *
- * VACUITY BOUNDARY: this suite proves the two predicates' values and proves
- * that both `.tsx` files' stripped source calls the shared predicate and
+ * VACUITY BOUNDARY: this suite proves the predicates' values and proves
+ * that the `.tsx` file's stripped source calls the shared predicate and
  * imports the shared door. It proves NOTHING about whether either menu item
  * actually renders, is visible, or is reachable by mouse/keyboard/gamepad —
  * that is 34.13-13's manual gate (see this plan's `<verification>`).
@@ -26,10 +27,8 @@ import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import {
   showSteamCardInstallOptions,
   showSteamMainButtonInstallOptions,
-  showSteamSubMenuInstallOptions,
   type SteamCardInstallOptionsState,
-  type SteamMainButtonInstallOptionsState,
-  type SteamSubMenuInstallOptionsState
+  type SteamMainButtonInstallOptionsState
 } from '../steamInstallOptionsEntry'
 
 const GAME_CARD_PATH = join(
@@ -38,60 +37,8 @@ const GAME_CARD_PATH = join(
   '..',
   'screens/Library/components/GameCard/index.tsx'
 )
-const GAME_SUB_MENU_PATH = join(
-  __dirname,
-  '..',
-  '..',
-  'screens/Game/GameSubMenu/index.tsx'
-)
-
-// GameSubMenu's shared button class string. D4 guards ONE property: the
-// install-options button added by 34.13-15 reuses this file's own idiom rather
-// than inventing a bespoke class.
-//
-// D4 used to assert a WHOLE-FILE occurrence count of this string, pinned as
-// `17 pre-edit + 1`. That proxy was re-baselined on 2026-08-21 because it
-// measured the wrong thing in both directions:
-//   - False RED: `be73db5cb` (260821-le0) added an unrelated "Remove all
-//     copies" button using the same class. The count went 18 -> 19 and D4
-//     failed even though the property it guards was untouched. Any future
-//     button added to this file would break it again.
-//   - False GREEN: a whole-file total is silently satisfiable. If the
-//     install-options button LOST the class while any other button gained it,
-//     the total would not move and D4 would still pass -- exactly the drift it
-//     exists to catch.
-// It now reads the class off that specific button, so it is stable under
-// unrelated additions and cannot be satisfied by a compensating change
-// elsewhere.
-const SUBMENU_BUTTON_CLASS = 'link button is-text is-link buttonWithIcon'
-
-// The install-options button is identified by its onClick handler, which is
-// unique to it (the only other `openSteamInstallOptions` occurrence in the file
-// is the import). Returns null when no such button is found, so a missing or
-// renamed handler fails loudly rather than vacuously.
-function installOptionsButtonClass(source: string): string | null {
-  const handlerIdx = source.indexOf('openSteamInstallOptions(appName')
-  if (handlerIdx === -1) return null
-
-  const tagStart = source.lastIndexOf('<button', handlerIdx)
-  if (tagStart === -1) return null
-
-  // First `>` after the handler closes the opening tag -- the arrow in
-  // `() => openSteamInstallOptions(...)` sits before handlerIdx, and a
-  // className value contains no `>`.
-  const tagEnd = source.indexOf('>', handlerIdx)
-  if (tagEnd === -1) return null
-
-  const openingTag = source.slice(tagStart, tagEnd + 1)
-  return openingTag.match(/className="([^"]*)"/)?.[1] ?? null
-}
-
 function readStrippedGameCard(): string {
   return stripSourceComments(readFileSync(GAME_CARD_PATH, 'utf8'))
-}
-
-function readStrippedGameSubMenu(): string {
-  return stripSourceComments(readFileSync(GAME_SUB_MENU_PATH, 'utf8'))
 }
 
 const NON_STEAM_RUNNERS = ['gog', 'legendary', 'nile', 'sideload'] as const
@@ -150,83 +97,6 @@ describe('showSteamCardInstallOptions (D-27 row 3, D-28)', () => {
     const second = showSteamCardInstallOptions(cardBaseState)
     expect(first).toBe(true)
     expect(second).toBe(true)
-  })
-})
-
-const subMenuBaseState: SteamSubMenuInstallOptionsState = {
-  runner: 'steam',
-  isInstalled: false,
-  isDelisted: false
-}
-
-describe('showSteamSubMenuInstallOptions (D-27 row 5, D-28)', () => {
-  it('B1: steam + isInstalled false -> true', () => {
-    expect(showSteamSubMenuInstallOptions(subMenuBaseState)).toBe(true)
-  })
-
-  it.each(NON_STEAM_RUNNERS)(
-    'B2 DISCRIMINATOR: D-28 -- non-Steam runner (%s) with isInstalled false -> false',
-    (runner) => {
-      expect(
-        showSteamSubMenuInstallOptions({ ...subMenuBaseState, runner })
-      ).toBe(false)
-    }
-  )
-
-  it('B3: steam + isInstalled true -> false', () => {
-    expect(
-      showSteamSubMenuInstallOptions({
-        ...subMenuBaseState,
-        isInstalled: true
-      })
-    ).toBe(false)
-  })
-
-  // 34.13 review WR-05: a delisted Steam game is "confirmed unavailable on
-  // Steam … not activatable" (common/types.ts). The submenu entry used to
-  // ignore `is_delisted` entirely even though `gameInfo` is in scope at its
-  // call site.
-  it('B3b: steam + isInstalled false + isDelisted true -> false', () => {
-    expect(
-      showSteamSubMenuInstallOptions({
-        ...subMenuBaseState,
-        isDelisted: true
-      })
-    ).toBe(false)
-  })
-
-  it('B3b-RED: the pre-fix predicate (runner && !isInstalled only) would have returned true for that same delisted state', () => {
-    // The known-bad implementation, written out so the discriminator is
-    // visible: this is what shipped, and it answers `true` for a game the
-    // fixed predicate correctly refuses.
-    const preFix = ({
-      runner,
-      isInstalled
-    }: {
-      runner: string
-      isInstalled: boolean
-    }) => runner === 'steam' && !isInstalled
-    const delistedState = { ...subMenuBaseState, isDelisted: true }
-    expect(preFix(delistedState)).toBe(true)
-    expect(showSteamSubMenuInstallOptions(delistedState)).toBe(false)
-  })
-
-  it('B4: the two predicates are NOT the same function -- a state where the card is false and the submenu is true', () => {
-    const state = {
-      runner: 'steam' as const,
-      isInstalled: false,
-      isQueued: true,
-      isInstallable: true,
-      isDelisted: false
-    }
-    expect(showSteamCardInstallOptions(state)).toBe(false)
-    expect(
-      showSteamSubMenuInstallOptions({
-        runner: state.runner,
-        isInstalled: state.isInstalled,
-        isDelisted: state.isDelisted
-      })
-    ).toBe(true)
   })
 })
 
@@ -387,57 +257,6 @@ function assertSteamGuardConjuncts(source: string) {
     }
   }
 }
-
-describe('GameSubMenu/index.tsx source gates (D-27 row 5, D-28 -- comment-stripped)', () => {
-  it('D1: uses the shared predicate', () => {
-    expect(readStrippedGameSubMenu()).toMatch(/showSteamSubMenuInstallOptions/)
-  })
-
-  it('D2: calls openSteamInstallOptions', () => {
-    expect(readStrippedGameSubMenu()).toMatch(/openSteamInstallOptions/)
-  })
-
-  it("D3: the file's existing installed-gated cluster is untouched", () => {
-    const source = readStrippedGameSubMenu()
-    expect(source).toContain('{isInstalled && (')
-    expect(source).toContain("t('button.edit-game', 'Edit Game')")
-  })
-
-  it("D4: the install-options button carries the file's own class string", () => {
-    const source = readStrippedGameSubMenu()
-    expect(installOptionsButtonClass(source)).toBe(SUBMENU_BUTTON_CLASS)
-  })
-
-  it('D4b: that class string is genuinely shared, not invented by this button', () => {
-    // The half the targeted check cannot see: "the file's OWN class string"
-    // only means something if other buttons in the file use it too. Stable
-    // under additions and removals, unlike the old exact-count pin.
-    const source = readStrippedGameSubMenu()
-    const occurrences = (
-      source.match(new RegExp(SUBMENU_BUTTON_CLASS, 'g')) ?? []
-    ).length
-    expect(occurrences).toBeGreaterThan(1)
-  })
-
-  it('D4 DISCRIMINATOR: the same extraction rejects a bespoke class string', () => {
-    // Anti-vacuity proof carried in the suite itself rather than left to a
-    // one-off manual check: mutate ONLY the install-options button's class in
-    // a copy of the source and confirm the extractor reports the mutation.
-    // If this ever passes while D4 also passes on mutated input, D4 is dead.
-    const mutated = readStrippedGameSubMenu().replace(
-      /(<button\s+onClick=\{\(\) => openSteamInstallOptions\(appName[^>]*?className=")[^"]*(")/,
-      '$1bespoke-install-button$2'
-    )
-    expect(installOptionsButtonClass(mutated)).toBe('bespoke-install-button')
-    expect(installOptionsButtonClass(mutated)).not.toBe(SUBMENU_BUTTON_CLASS)
-  })
-
-  it('D5: zero occurrences of Dropdown and zero of ContextMenu (a third, distinct idiom)', () => {
-    const source = readStrippedGameSubMenu()
-    expect((source.match(/Dropdown/g) ?? []).length).toBe(0)
-    expect((source.match(/ContextMenu/g) ?? []).length).toBe(0)
-  })
-})
 
 // ---------------------------------------------------------------------------
 // 34.13 review C-04 — the THIRD door.

@@ -1,7 +1,7 @@
 import { Runner } from 'common/types'
 
 // Not exported: used only within this module (same ts-prune precedent as
-// `repairFailure.ts`).
+// `rowAction.ts`).
 interface ToggleShortcutsOptions {
   hasShortcuts: boolean
   appName: string
@@ -16,7 +16,7 @@ interface ToggleShortcutsOptions {
  * Todo `2026-10-12-gamesubmenu-shows-remove-shortcuts-before-the-write-is-known`
  * (quick 261012-ca6).
  *
- * GameSubMenu used to flip `hasShortcuts` the moment it fired the send-kind
+ * The old ⋮ menu used to flip `hasShortcuts` the moment it fired the send-kind
  * `addShortcut`/`removeShortcut`, before anyone knew whether the write worked,
  * so a failed add left the menu reading "Remove shortcuts" and a second click
  * ran the remove path against shortcuts that were never written.

@@ -11,8 +11,8 @@
  * unhandled rejection (`callTool`, `installWineVersion`).
  *
  * WHY A SOURCE GATE AND NOT A BEHAVIOURAL ONE: this Frontend jest project has no
- * jsdom / react-test-renderer (`src/frontend/jest.config.js`). `GameSubMenu` and
- * `SideloadDialog` each import a stylesheet and declare a dozen-plus hooks, well
+ * jsdom / react-test-renderer (`src/frontend/jest.config.js`). `useSteamShortcut`
+ * and `SideloadDialog` each import a stylesheet and declare a dozen-plus hooks, well
  * past what the hand-rolled hook harness makes safe to invoke as a plain
  * function. `EacRuntime` and `CloudSavesSync` -- the two small components on the
  * same todo -- ARE covered behaviourally, in `eacRuntimeInstallFailure.test.tsx`
@@ -22,7 +22,7 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
-const FRONTEND = join(__dirname, '..', '..', '..', '..')
+const FRONTEND = join(__dirname, '..', '..', '..', '..', '..')
 
 function read(rel: string): string {
   return readFileSync(join(FRONTEND, rel), 'utf-8')
@@ -43,15 +43,6 @@ function blockAfter(source: string, anchor: string): string {
 }
 
 describe('long-running invoke call sites release their busy state on rejection', () => {
-  test('GameSubMenu handleAddToSteam clears steamRefresh in a finally block', () => {
-    const body = blockAfter(
-      read('screens/Game/GameSubMenu/index.tsx'),
-      'async function handleAddToSteam()'
-    )
-    expect(body).toContain('window.api')
-    expect(blockAfter(body, 'finally')).toContain('setSteamRefresh(false)')
-  })
-
   test('useSteamShortcut handleAddToSteam clears steamRefresh in a finally block', () => {
     const body = blockAfter(
       read('screens/Game/GamePage/actions/useSteamShortcut.ts'),

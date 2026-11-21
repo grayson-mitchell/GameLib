@@ -47,7 +47,7 @@ interface ReportRowActionFailureOptions {
 
 /**
  * Logs a failed row action through two independent signals, ported from
- * `repairFailure.ts` without its dialog: a console line (transport
+ * the old ⋮ menu's repair-failure logging without its dialog: a console line (transport
  * independent) and the operator log. Nothing here throws.
  */
 export function reportRowActionFailure({

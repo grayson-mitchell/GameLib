@@ -1,4 +1,4 @@
-import { CLOSED_STEAM_DELETE_ROUTE } from 'frontend/screens/Game/GameSubMenu/steamUninstallConfirm'
+import { CLOSED_STEAM_DELETE_ROUTE } from 'frontend/screens/Game/GamePage/actions/steamUninstallConfirm'
 import './index.scss'
 import React, { useEffect, useState } from 'react'
 import {

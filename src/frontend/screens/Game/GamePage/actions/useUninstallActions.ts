@@ -8,12 +8,11 @@ import useUiState from 'frontend/state/uiState'
 import {
   CLOSED_STEAM_DELETE_ROUTE,
   steamUninstallNeedsConfirm
-} from '../../GameSubMenu/steamUninstallConfirm'
+} from './steamUninstallConfirm'
 
 /**
  * Phase 100 (D-01, D-11, D-13): the danger zone's Uninstall and Remove all
- * copies handlers, copied from the ⋮ menu (GameSubMenu keeps its own copy until
- * plan 09 removes it).
+ * handlers, moved here from the ⋮ menu, which Phase 100 removed.
  *
  * Both keep their confirmations (D-13, T-100-17, T-100-18). A non-Steam game
  * always opens UninstallModal. A Steam game asks `getSteamDeleteRoute` and

@@ -62,7 +62,6 @@ import {
   CompatibilityInfo,
   Description,
   Developer,
-  DotsMenu,
   GameStatus,
   HLTB,
   MacArchBadge,
@@ -626,10 +625,6 @@ export default React.memo(function GamePage(): JSX.Element | null {
                           <SettingsButton
                             gameInfo={gameInfo}
                             isUninstalling={isUninstalling}
-                          />
-                          <DotsMenu
-                            gameInfo={gameInfo}
-                            handleUpdate={handleUpdate}
                           />
                         </div>
                       </div>

@@ -2,17 +2,17 @@ import { Runner } from 'common/types'
 import { hasCapability } from 'common/storeCapabilities'
 
 /**
- * D-27 rows 3 (`GameCard`), 5 (`GameSubMenu`) and the `MainButton` caret each
- * add an "Install with options…" affordance, and D-28 requires all of them to
+ * D-27 row 3 (`GameCard`) and the `MainButton` caret each
+ * add an "Install with options…" affordance, and D-28 requires both of them to
  * be Steam-only. This module is the SINGLE site where `runner === 'steam'` is
  * evaluated for those entries — every `.tsx` file calls these exports rather
  * than inlining the conjunct, so a future runner extension is one edit and one
- * test here, not a grep across three component files that could silently drift
+ * test here, not a grep across component files that could silently drift
  * apart.
  *
  * 34.13 review C-04: that claim was FALSE the moment it was written. The
  * `MainButton` caret — added by the same phase — inlined its own conjunct and
- * was the only one of the three not gated on `is_delisted`, so a delisted
+ * was the only one of the entries not gated on `is_delisted`, so a delisted
  * Steam game (documented in `common/types.ts` as "confirmed unavailable on
  * Steam … not activatable") still got a caret opening an install-options
  * dialog for a game that cannot be installed. Neither candidate guard covered
@@ -29,12 +29,8 @@ import { hasCapability } from 'common/storeCapabilities'
  * runner is unaffected" a structural fact about this module rather than a
  * claim the two `.tsx` files individually have to uphold.
  *
- * `showSteamCardInstallOptions` and `showSteamSubMenuInstallOptions` are
- * deliberately NOT the same function (pinned by this module's test spec B4):
- * the card carries a queue/installable/delisted vocabulary the submenu does
- * not — `GameSubMenu` has no download-queue concept of its own, so folding
- * the two into one shared predicate would either fabricate queue/delisted
- * inputs for the submenu or silently drop them from the card.
+ * Phase 100 removed the ⋮ menu (`GameSubMenu`), which carried a third entry
+ * (D-27 row 5); its predicate went with it.
  */
 
 export interface SteamCardInstallOptionsState {
@@ -42,19 +38,6 @@ export interface SteamCardInstallOptionsState {
   isInstalled: boolean
   isQueued: boolean
   isInstallable: boolean
-  isDelisted: boolean
-}
-
-export interface SteamSubMenuInstallOptionsState {
-  runner: Runner
-  isInstalled: boolean
-  /** 34.13 review WR-05. The card/submenu split above is justified by the
-   * submenu having no download-QUEUE concept and no installability
-   * vocabulary — it says nothing about delisted, and `gameInfo` (hence
-   * `is_delisted`) IS in scope at the submenu call site. A delisted Steam
-   * game is documented in `common/types.ts` as "confirmed unavailable on
-   * Steam … not activatable", so offering it an install-options door is
-   * offering a door to nothing. */
   isDelisted: boolean
 }
 
@@ -74,25 +57,13 @@ export function showSteamCardInstallOptions({
   )
 }
 
-export function showSteamSubMenuInstallOptions({
-  runner,
-  isInstalled,
-  isDelisted
-}: SteamSubMenuInstallOptionsState): boolean {
-  return (
-    hasCapability(runner, 'installHandOffToClient') &&
-    !isInstalled &&
-    !isDelisted
-  )
-}
-
 /**
  * 34.13 review C-04 — the `MainButton` split-button caret.
  *
- * A third distinct shape rather than a reuse of either sibling, for the same
- * reason those two are separate: this site is the only one carrying
+ * A distinct shape rather than a reuse of the card's, for the same
+ * reason: this site is the only one carrying
  * `installDisabled` (GamePage's own `disabledInstallButtons`, which folds in
- * offline/updating/third-party-managed state), and neither sibling has a
+ * offline/updating/third-party-managed state), and the card has no
  * vocabulary for it. What it ADDS over the pre-fix inline conjunct is the
  * `!isDelisted` term.
  */

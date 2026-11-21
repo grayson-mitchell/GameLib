@@ -156,7 +156,7 @@ describe('GamePage/index.tsx: card structure (D-02, D-03, D-04, D-06)', () => {
   })
 
   // Operator UAT 2026-11-14: install status reads ABOVE the action bar.
-  it('L6: the dock reads status, then primary button, launch select, spacer, gear, dots', () => {
+  it('L6: the dock reads status, then primary button, launch select, spacer, gear (no overflow menu)', () => {
     inOrder([
       'className="actionDock"',
       '<GameStatus',
@@ -164,13 +164,13 @@ describe('GamePage/index.tsx: card structure (D-02, D-03, D-04, D-06)', () => {
       '<MainButton',
       '<LaunchOptionSelector',
       'className="actionDockSpacer"',
-      '<SettingsButton',
-      '<DotsMenu'
+      '<SettingsButton'
     ])
   })
 
-  it('L6: exactly one DotsMenu and no header row', () => {
-    expect(tsx.match(/<DotsMenu/g) ?? []).toHaveLength(1)
+  it('L6: no overflow menu is mounted (D-01) and no header row', () => {
+    expect(tsx).not.toMatch(/<DotsMenu/)
+    expect(tsx).not.toMatch(/GameSubMenu/)
     expect(tsx).not.toMatch(/topRowWrapper/)
   })
 })
