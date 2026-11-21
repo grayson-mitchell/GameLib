@@ -6,10 +6,10 @@ current_phase: 84
 current_phase_name: Logger
 status: executing
 stopped_at: Completed 84-09-PLAN.md
-last_updated: "2026-11-21T08:17:04.997Z"
+last_updated: "2026-11-21T08:19:17.912Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 84 execution started
-state_head: 752a2e614c6c9061cc0617d1cb1f1aad7a5fc4d3
+state_head: 0d4618b94f89d8acf653c24ed5742ca09a68a165
 progress:
   total_phases: 19
   completed_phases: 23
@@ -695,6 +695,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 15 | Fix Phase 82 review WR-13: runTs shared-cache pin matches every node_modules/.cache spelling, exempting only --tsBuildInfoFile | 2026-11-21 | 6cec972e7 | — | — |
 | 261121-ssg | Fix macowned helper stub ETXTBSY flake on ubuntu (HelperFailed vs AccountMismatch) | 2026-11-21 | 123b31139 | — | [261121-ssg-fix-macowned-helper-stub-etxtbsy-flake-o](./quick/261121-ssg-fix-macowned-helper-stub-etxtbsy-flake-o/) |
 | 261121-pwt | Migrate the sidecar test mocks off fileStore, then delete fileStore.ts (Phase 82 criterion 5 left open by 82-04) | 2026-11-21 | 752a2e614 | — | [261121-pwt-migrate-the-sidecar-test-mocks-off-files](./quick/261121-pwt-migrate-the-sidecar-test-mocks-off-files/) |
+| 18 | Reword Rust comments that still cited the deleted fileStore.ts (follow-up to 261121-pwt) | 2026-11-21 | 0d4618b94 | — | — |
 
 ## Deferred Items
 
