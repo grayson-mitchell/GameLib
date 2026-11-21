@@ -30,25 +30,28 @@ const LocationRow = ({ gameInfo, gates, actions }: Props) => {
 
   const location = gameInfo.install.install_path || gameInfo.folder_name
 
-  const failure = actions.moveFailed
-    ? {
-        message: t(
-          'gamelib:gamepage.installTab.failure.move',
-          'Move failed. Details are in the log.'
-        ),
-        retryLabel: t('gamelib:gamepage.installTab.retry', 'Retry'),
-        onRetry: actions.retryMove
-      }
-    : actions.setFolderFailed
+  // A running move has not failed: neither the message nor its Retry shows
+  // while the game reads moving (D-10).
+  const failure =
+    actions.moveFailed && !is.moving
       ? {
           message: t(
-            'gamelib:gamepage.installTab.failure.setFolder',
-            "Couldn't set the install folder. Details are in the log."
+            'gamelib:gamepage.installTab.failure.move',
+            'Move failed. Details are in the log.'
           ),
           retryLabel: t('gamelib:gamepage.installTab.retry', 'Retry'),
-          onRetry: actions.retrySetFolder
+          onRetry: actions.retryMove
         }
-      : undefined
+      : actions.setFolderFailed
+        ? {
+            message: t(
+              'gamelib:gamepage.installTab.failure.setFolder',
+              "Couldn't set the install folder. Details are in the log."
+            ),
+            retryLabel: t('gamelib:gamepage.installTab.retry', 'Retry'),
+            onRetry: actions.retrySetFolder
+          }
+        : undefined
 
   return (
     <FactRow

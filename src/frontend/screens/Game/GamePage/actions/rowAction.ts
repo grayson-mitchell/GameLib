@@ -22,6 +22,11 @@ export type RowActionEvent =
   | { type: 'succeed' }
   | { type: 'fail' }
   | { type: 'dismiss' }
+  /**
+   * The invoke ended but the backend still owns the action, and the row's busy
+   * look now comes from the game's status. busy -> idle, nothing else moves.
+   */
+  | { type: 'release' }
 
 export function rowActionReducer(
   state: RowActionState,
@@ -36,7 +41,28 @@ export function rowActionReducer(
       return state.phase === 'busy' ? { phase: 'failed' } : state
     case 'dismiss':
       return state.phase === 'failed' ? { phase: 'idle' } : state
+    case 'release':
+      return state.phase === 'busy' ? { phase: 'idle' } : state
   }
+}
+
+/**
+ * True when `error` is the shell giving up on an invoke. Tauri rejects a failed
+ * invoke with the Rust `Err(String)` itself, so the timeout arrives as the
+ * plain string `sidecar invoke timed out: <channel>` (src-tauri/src/main.rs);
+ * a wrapped Error carries the same text in its message. Both shapes count.
+ *
+ * CR-02: the backend can keep working after the shell stops waiting, so a
+ * timeout is not proof the action failed.
+ */
+export function isInvokeTimeout(error: unknown): boolean {
+  const text =
+    error instanceof Error
+      ? error.message
+      : typeof error === 'string'
+        ? error
+        : ''
+  return text.startsWith('sidecar invoke timed out')
 }
 
 interface ReportRowActionFailureOptions {
@@ -89,6 +115,12 @@ interface RunRowActionOptions<T> {
   dispatch: (event: RowActionEvent) => void
   /** True when the resolved answer contradicts the request (D-18). */
   isFailure?: (result: T) => boolean
+  /**
+   * True when a rejection does not mean the action failed because the backend
+   * still runs it (CR-02, D-18). The row then releases to idle instead of
+   * failing, and the hand-off is logged at info level.
+   */
+  stillRunning?: (error: unknown) => boolean
 }
 
 /** Runs `run` through the state machine. Never rethrows. */
@@ -97,7 +129,8 @@ export async function runRowAction<T>({
   appName,
   run,
   dispatch,
-  isFailure
+  isFailure,
+  stillRunning
 }: RunRowActionOptions<T>): Promise<void> {
   dispatch({ type: 'start' })
   try {
@@ -113,6 +146,17 @@ export async function runRowAction<T>({
     }
     dispatch({ type: 'succeed' })
   } catch (error) {
+    if (stillRunning?.(error)) {
+      try {
+        window.api.logInfo(
+          `${action} for ${appName}: the invoke ended while the game still reports the action running, so the row follows the game status`
+        )
+      } catch {
+        // a missing log signal must not turn the hand-off into a failure
+      }
+      dispatch({ type: 'release' })
+      return
+    }
     reportRowActionFailure({ action, appName, error })
     dispatch({ type: 'fail' })
   }
@@ -129,8 +173,19 @@ export function useRowAction(action: string, appName: string) {
   } satisfies RowActionState)
 
   const run = useCallback(
-    <T>(runFn: () => Promise<T>, isFailure?: (result: T) => boolean) =>
-      runRowAction({ action, appName, run: runFn, dispatch, isFailure }),
+    <T>(
+      runFn: () => Promise<T>,
+      isFailure?: (result: T) => boolean,
+      stillRunning?: (error: unknown) => boolean
+    ) =>
+      runRowAction({
+        action,
+        appName,
+        run: runFn,
+        dispatch,
+        isFailure,
+        stillRunning
+      }),
     [action, appName]
   )
   const dismiss = useCallback(() => dispatch({ type: 'dismiss' }), [])
