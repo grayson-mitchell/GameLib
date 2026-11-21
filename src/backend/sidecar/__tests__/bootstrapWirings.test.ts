@@ -96,11 +96,6 @@ jest.mock('os', () => {
 
 // ── electron / electron-store — route Jest's own module resolution at the REAL sidecar
 // shims (mirrors appShellFlows.test.ts / steamAuthFlows.test.ts) ────────────────────────────
-jest.mock('backend/store_backend', () => ({
-  __esModule: true,
-  default: jest.requireActual('../fileStore').default
-}))
-
 // ── online_monitor — full-surface mock, same reasoning as bootstrap.test.ts's own block
 // (its own header explains why: the real function reads `net.isOnline()` from `electron`,
 // which the generic automock does not provide, and numerous OTHER modules in the `./handlers`
@@ -386,9 +381,10 @@ describe('sidecar bootstrap wirings (Phase 34.2 Plan 01 -- REQ-34.2-02/04/07/14)
   })
 
   it('REQ-34.2-04/REQ-34.2-07: the re-homed listener writes the anticheat data file to disk', async () => {
-    // Electron guarantees userData exists before any file operation runs; the sidecar's
-    // fileStore only mkdir's on its own first WRITE (fileStore.ts's persist()), so this test
-    // pre-creates the directory the same way a real Electron app start would have.
+    // Electron guarantees userData exists before any file operation runs. This test pre-creates
+    // the directory the same way a real app start would, so the anticheat write does not depend
+    // on which store happened to create the folder first (store_backend.ts's `prepareStore` makes
+    // a store's own directory at construction).
     const { appFolder } = bootWirings(({ appFolder: folder }) => {
       mkdirSync(folder, { recursive: true })
     })

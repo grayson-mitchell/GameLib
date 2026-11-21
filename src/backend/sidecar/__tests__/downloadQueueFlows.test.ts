@@ -4,20 +4,21 @@
  *
  * Drives the REAL sidecar RPC server in-process (`settingsFlows.test.ts`'s own
  * real-shim black-box pattern — the shims under test are the actual
- * platform/index.ts/fileStore.ts modules, unmocked) against injected
+ * platform/index.ts and store_backend.ts modules, unmocked) against injected
  * `stream.PassThrough` pairs.
  *
  * **GAP FIX precedent (2026-07-22, see skeletonFlows.test.ts's own header):**
  * this suite's config directory is NOT the real OS config directory. The
  * `jest.mock('os', ...)` below overrides `homedir()` to a disposable
- * per-process tmp directory so the real platformApi/fileStore CODE runs
+ * per-process tmp directory so the real platformApi/store_backend CODE runs
  * (preserving this suite's fidelity), while the location it reads/writes can
  * never be the developer's real config directory.
  *
- * `jest.mock('electron', ...)` / `jest.mock('backend/store_backend', ...)` below
- * point Jest's OWN module resolution at platform/index.ts/fileStore.ts
- * directly — see skeletonFlows.test.ts's header for why this is necessary.
- * Because `electron-store` resolves to the REAL `fileStore.ts` (not a mock
+ * `jest.mock('electron', ...)` below points Jest's OWN module resolution at
+ * platform/index.ts directly — see skeletonFlows.test.ts's header for why this
+ * is necessary. `backend/store_backend` is not mocked (quick 261121-pwt): the
+ * production conf-backed store runs.
+ * Because `backend/store_backend` resolves to the REAL `store_backend.ts` (not a mock
  * class), `downloadmanager/stores.ts`'s `downloadManager` store is a
  * REAL, disk-backed `TypeCheckedStoreBackend` for this suite — no separate
  * mock is needed for it (32-PATTERNS.md's own note); this suite seeds/reads
@@ -58,7 +59,7 @@
  *
  * Every other module in the registration/transport/store path
  * (`downloadQueueFlowRegistration.ts`, `handlers.ts`, `sidecarRpc.ts`,
- * `bootstrap.ts`, `platform/index.ts`, `fileStore.ts`, `downloadqueue.ts`,
+ * `bootstrap.ts`, `platform/index.ts`, `store_backend.ts`, `downloadqueue.ts`,
  * `backend/ipc.ts`, `backend/utils/aborthandler/aborthandler.ts`,
  * `backend/dialog/dialog.ts`, `backend/online_monitor.ts`) runs for real,
  * unmodified — in particular `backend/logger` is intentionally NOT mocked
@@ -107,11 +108,6 @@ jest.mock('os', () => {
 
 // ── electron / electron-store — route Jest's own module resolution at the
 // REAL sidecar shims (see module docstring above) ───────────────────────────
-jest.mock('backend/store_backend', () => ({
-  __esModule: true,
-  default: jest.requireActual('../fileStore').default
-}))
-
 // ── axios — fix/steam-native-install-stability (33-05 live-gate gap): `init()` now wires
 // the REAL `initOnlineMonitor()` (backend/online_monitor.ts), which -- now that the real
 // platformApi's `net.isOnline()` returns `true` (mocked above) -- immediately calls the real

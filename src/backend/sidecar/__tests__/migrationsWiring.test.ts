@@ -13,9 +13,9 @@
  * site exists and say nothing about whether the migration can actually do its work under the
  * sidecar's shimmed `app.getPath` -- which is the half the todo asked to verify.
  *
- * `jest.mock('electron')` / `jest.mock('backend/store_backend')` route Jest's own module resolution at
- * the real `platform/index.ts`/`fileStore.ts` (the same singletons `bootstrap.ts` binds onto)
- * rather than the backend-wide manual mock, so `app.getPath('appData')` resolves through
+ * `jest.mock('electron')` routes Jest's own module resolution at the real `platform/index.ts` (the same
+ * singleton `bootstrap.ts` binds onto), and `backend/store_backend` is left unmocked (quick 261121-pwt), so the
+ * production `store_backend.ts` runs, rather than the backend-wide manual mock, so `app.getPath('appData')` resolves through
  * `pathShim.ts` exactly as it does in production. See `skeletonFlows.test.ts`'s header for the
  * full rationale.
  *
@@ -35,11 +35,6 @@
  */
 
 // ── electron / electron-store — route Jest's resolution at the REAL sidecar shims ──────────
-jest.mock('backend/store_backend', () => ({
-  __esModule: true,
-  default: jest.requireActual('../fileStore').default
-}))
-
 // ── axios — never a real network call (see header) ─────────────────────────────────────────
 jest.mock('axios', () => ({
   __esModule: true,

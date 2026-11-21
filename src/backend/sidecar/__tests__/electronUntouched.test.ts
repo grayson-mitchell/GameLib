@@ -63,20 +63,10 @@ import {
   stripTrailingLineCommentTs
 } from 'backend/testUtils/stripSourceComments'
 
-// ── electron / electron-store — route Jest's own module resolution at the REAL
-// sidecar shims (mirrors skeletonFlows.test.ts): without this, Jest's automatic
-// backend-wide manual mock (`src/backend/__mocks__/electron.ts`, tmpdir-backed)
-// would apply instead, and this suite would only prove a synthetic store is
-// untouched, not the actual production `configStore` file path a compiled
-// sidecar/Electron build shares (`~/Library/Application Support/GameLib/...`
-// via the derived appData path -- the whole point of D-04's proof). `jest.requireActual`
-// resolves the SAME singleton module instance `configStore`/`tokenStore.ts`
-// bind onto in production. ────────────────────────────────────────────────
-jest.mock('backend/store_backend', () => ({
-  __esModule: true,
-  default: jest.requireActual('../fileStore').default
-}))
-
+// ── store — `backend/store_backend` is deliberately NOT mocked (quick 261121-pwt): the
+// production conf-backed store runs, so this suite proves the actual production `configStore`
+// file path stays untouched, not a synthetic store (`~/Library/Application Support/GameLib/...`
+// via the derived appData path -- the whole point of D-04's proof). ──────────
 // ── logger mock — mirrors keyringTokenStore.test.ts's existing convention ──
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -152,8 +142,8 @@ function currentRefreshToken(): string | undefined {
 }
 
 // ── Real store file byte-comparison (read-only) ─────────────────────────────
-// Mirrors fileStore.ts's own `resolveStorePath`: name is never forwarded by
-// `TypeCheckedStoreBackend`, so electron-store's default filename applies.
+// Mirrors store_backend.ts's `translateStoreOptions`: name is never forwarded by
+// `TypeCheckedStoreBackend`, so with no name configName defaults to 'config'.
 const REAL_STORE_PATH = join(testUserDataDir(), 'steam_store', 'config.json')
 
 /**

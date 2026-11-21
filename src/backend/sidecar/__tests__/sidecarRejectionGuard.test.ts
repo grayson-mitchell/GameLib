@@ -56,7 +56,7 @@
  * fixed for `gameDetailsFlows.test.ts`/`enrichmentFlows.test.ts` in plan 34.2-10). (Until Phase 84 a
  * second `backend/logger/paths` mock redirected the TS log path as well, finding WR-01; the TS logger
  * writes no file any more and that mock and its tripwire element were retired in 84-07.) The `beforeAll` below adds a
- * `resolve`+`relative` containment tripwire (mirroring `fileStore.ts`'s own containment-check
+ * `resolve`+`relative` containment tripwire (mirroring `store_backend.ts`'s own containment-check
  * idiom -- `relative(resolve(base), target)` then `startsWith('..') || isAbsolute(...)`, NOT
  * `path.join`, which this project's recorded convention holds is not a containment check) over
  * `appFolder`, `userDataPath` and `fixesPath` so a future edit that
@@ -104,11 +104,6 @@ jest.mock('os', () => {
 
 // ── electron / electron-store — route Jest's own module resolution at the REAL sidecar shims
 // (mirrors bootstrapWirings.test.ts / appShellFlows.test.ts) ──────────────────────────────────
-jest.mock('backend/store_backend', () => ({
-  __esModule: true,
-  default: jest.requireActual('../fileStore').default
-}))
-
 // ── online_monitor — full-surface mock, same reasoning as bootstrapWirings.test.ts's own
 // block ─────────────────────────────────────────────────────────────────────────────────────
 
@@ -494,7 +489,7 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
   beforeAll(() => {
     // T-34.2-42 / CR-03 / WR-01 containment tripwire: prove `appFolder`, `userDataPath`,
     // `fixesPath` (via the `pathShim` mock) all resolve inside `os.tmpdir()`, using the SAME
-    // `resolve`+`relative` idiom `fileStore.ts`'s own containment check uses
+    // `resolve`+`relative` idiom `store_backend.ts`'s own containment check uses
     // (`relative(resolve(base), target)` then `startsWith('..') || isAbsolute(...)`) --
     // never `path.join`, which is not a containment check. Throws loudly ("REFUSING TO RUN")
     // rather than relying on an `afterAll` restore as a safety net -- this repo's own

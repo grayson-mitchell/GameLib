@@ -32,11 +32,6 @@
 
 // ── electron / electron-store — route Jest's own module resolution at the REAL sidecar shims
 // (mirrors humbleFlows.test.ts / clipboardFlows.test.ts) ──────────────────────────────────────
-jest.mock('backend/store_backend', () => ({
-  __esModule: true,
-  default: jest.requireActual('../fileStore').default
-}))
-
 // ── axios — humble/library.ts's import chain reaches ./adapter, which touches axios at module
 // scope elsewhere in the humble/ import graph (mirrors humbleFlows.test.ts) ────────────────────
 jest.mock('axios', () => {

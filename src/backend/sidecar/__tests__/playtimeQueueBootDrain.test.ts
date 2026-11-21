@@ -53,11 +53,6 @@
  */
 
 // ── electron / electron-store — route Jest's resolution at the REAL sidecar shims ──────────
-jest.mock('backend/store_backend', () => ({
-  __esModule: true,
-  default: jest.requireActual('../fileStore').default
-}))
-
 // ── axios — never a real network call (initOnlineMonitor()'s pingSites() runs during init()) ─
 jest.mock('axios', () => ({
   __esModule: true,

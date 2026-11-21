@@ -4,7 +4,7 @@
  *
  * Drives the REAL sidecar RPC server in-process (`appShellFlows.test.ts`'s
  * own real-shim black-box pattern — the shims under test are the actual
- * platform/index.ts/fileStore.ts modules, unmocked) against injected
+ * platform/index.ts and store_backend.ts modules, unmocked) against injected
  * `stream.PassThrough` pairs. The harness below (mock preamble, `startSidecar`/
  * `writeSend`/`writeInvoke`/`flush`) is copied from `appShellFlows.test.ts`
  * rather than invented fresh, since that suite already proves this exact mock
@@ -14,8 +14,8 @@
  * Every registration this plan owns delegates to `backend/utils.ts` /
  * `backend/utils/filesystem`, both already inside the sidecar's import graph
  * (Phase 34.1) — so the same `jest.mock('os', ...)` homedir redirection,
- * `jest.mock('electron', ...)`/`jest.mock('backend/store_backend', ...)` shim
- * routing, and `jest.mock('../sidecarRpc', ...)` partial mock this suite's
+ * `jest.mock('electron', ...)` shim routing (the production store runs
+ * unmocked since quick 261121-pwt), and `jest.mock('../sidecarRpc', ...)` partial mock this suite's
  * analog uses are required here too, for the identical reason.
  *
  * Plan 02 extends this suite with `clearCache`/`clearAchievementCache`/
@@ -66,11 +66,6 @@ jest.mock('os', () => {
 
 // ── electron / electron-store — route Jest's own module resolution at the
 // REAL sidecar shims (see module docstring above) ───────────────────────────
-jest.mock('backend/store_backend', () => ({
-  __esModule: true,
-  default: jest.requireActual('../fileStore').default
-}))
-
 // ── sidecarRpc — PARTIAL mock: real startRpcServer/pushFrontendMessage/
 // requestOpenExternal, scriptable requestRustInvoke only ────────────────────
 jest.mock('../sidecarRpc', () => {

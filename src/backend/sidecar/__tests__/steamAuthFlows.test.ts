@@ -4,23 +4,24 @@
  *
  * Drives the REAL sidecar RPC server in-process (bootstrap.test.ts's
  * real-shim black-box pattern — the shims under test are the actual
- * platform/index.ts/fileStore.ts modules, unmocked) against injected
+ * platform/index.ts and store_backend.ts modules, unmocked) against injected
  * `stream.PassThrough` pairs, mirroring `skeletonFlows.test.ts`'s own shape.
  *
  * **GAP FIX precedent (2026-07-22, see skeletonFlows.test.ts's own header):**
  * this suite's config directory is NOT the real OS config directory. Several
  * tests below write fixture data (including a fake refreshToken) through the
- * real configStore/fileStore module instance, and a previous incident proved
+ * real configStore/store_backend module instance, and a previous incident proved
  * that doing so against a developer's REAL
  * `~/Library/Application Support/GameLib/` is an active data-loss hazard. The
  * `jest.mock('os', ...)` below overrides `homedir()` to a disposable
- * per-process tmp directory so the real platformApi/fileStore CODE runs
+ * per-process tmp directory so the real platformApi/store_backend CODE runs
  * (preserving this suite's fidelity), while the location it reads/writes can
  * never be the developer's real config directory.
  *
- * `jest.mock('electron', ...)` / `jest.mock('backend/store_backend', ...)` below
- * point Jest's OWN module resolution at platform/index.ts/fileStore.ts
- * directly — see skeletonFlows.test.ts's header for why this is necessary,
+ * `jest.mock('electron', ...)` below points Jest's OWN module resolution at
+ * platform/index.ts directly (`backend/store_backend` is not mocked since
+ * quick 261121-pwt: the production conf-backed store runs) — see
+ * skeletonFlows.test.ts's header for why this is necessary,
  * not incidental (Jest's own manual mocks for these node_modules packages
  * would otherwise shadow the real sidecar shims this suite exists to prove).
  *
@@ -33,7 +34,7 @@
  * regardless of host OS) — all four mirror `skeletonFlows.test.ts`'s own
  * mock set exactly. Every other module in the registration/transport/store
  * path (`steamAuthFlowRegistration.ts`, `handlers.ts`, `sidecarRpc.ts`,
- * `bootstrap.ts`, `platform/index.ts`, `fileStore.ts`, `keyringTokenStore.ts`,
+ * `bootstrap.ts`, `platform/index.ts`, `store_backend.ts`, `keyringTokenStore.ts`,
  * `storeManagers/steam/tokenStore.ts`) runs for real, unmodified.
  *
  * The token-seam test (Test 4) does NOT mock or spy on `requestRustInvoke` —
@@ -65,11 +66,6 @@ jest.mock('os', () => {
 
 // ── electron / electron-store — route Jest's own module resolution at the
 // REAL sidecar shims (see module docstring above) ───────────────────────────
-jest.mock('backend/store_backend', () => ({
-  __esModule: true,
-  default: jest.requireActual('../fileStore').default
-}))
-
 // ── axios — fix/steam-native-install-stability (33-05 live-gate gap): the boot now wires
 // the REAL `initOnlineMonitor()` (backend/online_monitor.ts), which -- now that the real
 // platformApi's `net.isOnline()` returns `true` (mocked above) -- immediately calls the real

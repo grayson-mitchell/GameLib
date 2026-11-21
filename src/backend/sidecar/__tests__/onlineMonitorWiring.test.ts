@@ -20,9 +20,9 @@
  * `~/Library/Application Support/GameLib/`, an active data-loss hazard documented in
  * `electronUntouched.test.ts`'s header.
  *
- * `jest.mock('electron', ...)` / `jest.mock('backend/store_backend', ...)` route Jest's own module
- * resolution at the real `platform/index.ts`/`fileStore.ts` (the same singleton instances
- * `bootstrap.ts`/`online_monitor.ts` bind onto), rather than the generic backend-wide manual
+ * `jest.mock('electron', ...)` routes Jest's own module resolution at the real `platform/index.ts` (the same
+ * singleton instance `bootstrap.ts`/`online_monitor.ts` bind onto), and `backend/store_backend` is left unmocked
+ * (quick 261121-pwt), so the production `store_backend.ts` runs, rather than the generic backend-wide manual
  * mock Jest auto-applies to `require('electron')` -- see `skeletonFlows.test.ts`'s header for
  * the full rationale for why this override is necessary, not incidental.
  *
@@ -47,11 +47,6 @@ jest.mock('os', () => {
 })
 
 // ── electron / electron-store — route Jest's own module resolution at the REAL sidecar shims ──
-jest.mock('backend/store_backend', () => ({
-  __esModule: true,
-  default: jest.requireActual('../fileStore').default
-}))
-
 // ── axios — controllable per-test outcome, never a real network call ───────────────────────
 jest.mock('axios', () => ({
   __esModule: true,

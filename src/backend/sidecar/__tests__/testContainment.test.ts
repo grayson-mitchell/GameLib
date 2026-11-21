@@ -143,11 +143,6 @@ jest.mock('os', () => {
 // ── electron / electron-store — constants/paths.ts imports `app` from
 // 'electron' at module scope; route Jest's own module resolution at the
 // REAL sidecar shims (mirrors the four in-scope suites' own kit) ───────────
-jest.mock('backend/store_backend', () => ({
-  __esModule: true,
-  default: jest.requireActual('../fileStore').default
-}))
-
 // Comment-stripping now delegates to the shared
 // `backend/testUtils/stripSourceComments` util (strips block comments first,
 // then the line-prefix filter), imported above as `stripComments`.
@@ -773,14 +768,15 @@ const IN_SCOPE_SUITES = [
  * 61 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 57 below (correcting the stale "59 / 55" figure
  * that had drifted two additions behind reality -- quick-260908-ci2 added
  * `steamFocusRefreshWire.test.ts` -- same reasoning as `steamFlows.test.ts`, its immediate
- * list neighbour: its own `jest.mock('os', ...)` plus the identical `backend/store_backend`/
+ * list neighbour: its own `jest.mock('os', ...)` plus the identical
  * `axios`/`backend/utils`/`backend/constants/environment`/`../../storeManagers/steam/user`/
  * `../../launcher` mock set makes its import graph contained without opting into the
  * four-element `IN_SCOPE_SUITE` kit).
  *
  * `bootstrapUserReconcile.test.ts` (todo 2026-09-06, quick-260908-fre) is classified as
  * structurally contained: it follows `playtimeLockBootClear.test.ts`'s own already-approved
- * preamble exactly -- `backend/store_backend` routed at the real sidecar `fileStore` shim,
+ * preamble exactly -- no store mock (since quick 261121-pwt the production conf-backed
+ * `backend/store_backend` runs, and containment is still structural),
  * `axios` mocked so `initOnlineMonitor()`'s `pingSites()` (invoked by Block B's
  * `fetchLastestReleases()` inside `init()`) cannot make a live network call, and an additional
  * partial mock of `../../online_monitor` (spreading `jest.requireActual`, overriding only
@@ -796,7 +792,7 @@ const IN_SCOPE_SUITES = [
  *
  * `playtimeQueueBootDrain.test.ts` (todo 2026-09-06, quick-260908-wk0) is classified as
  * structurally contained: it copies `playtimeLockBootClear.test.ts`'s already-approved
- * `backend/store_backend`/`axios` preamble plus `bootstrapUserReconcile.test.ts`'s
+ * `axios` preamble (no store mock since quick 261121-pwt) plus `bootstrapUserReconcile.test.ts`'s
  * `../../online_monitor` partial mock (`initOnlineMonitor`/`isOnline`/`runOnceWhenOnline`
  * overridden, everything else `jest.requireActual`). It declares NO `jest.mock('os', ...)` of
  * its own, deliberately -- containment is structural, the same floor both model files rely on.
@@ -805,7 +801,7 @@ const IN_SCOPE_SUITES = [
  *
  * `gogPresenceBootWire.test.ts` (todo 2026-09-06, quick-260909-k5x) is classified as
  * structurally contained: it copies `playtimeQueueBootDrain.test.ts`'s already-approved
- * `backend/store_backend`/`axios` preamble plus the same `../../online_monitor` partial mock
+ * `axios` preamble (no store mock since quick 261121-pwt) plus the same `../../online_monitor` partial mock
  * (`initOnlineMonitor`/`isOnline`/`runOnceWhenOnline` overridden, everything else
  * `jest.requireActual`). It declares NO `jest.mock('os', ...)` of its own, deliberately --
  * containment is structural, the same floor both model files rely on. It cannot be an
@@ -849,7 +845,7 @@ const IN_SCOPE_SUITES = [
  *
  * `signInProbeBootWire.test.ts` (Phase 49 Plan 08, R3, 2026-10-10) is classified as structurally
  * contained on the same basis as `gogPresenceBootWire.test.ts`, whose preamble it copies: the
- * `backend/store_backend`/`axios` mocks plus the same `../../online_monitor` partial mock, and it
+ * `axios` mock (no store mock since quick 261121-pwt) plus the same `../../online_monitor` partial mock, and it
  * calls the real `bootstrap.init()` over `PassThrough` streams with the pass and outcomes modules
  * replaced by order recorders. It declares NO `jest.mock('os', ...)` of its own, deliberately --
  * containment is structural, the same floor both model files rely on. It cannot be an
@@ -877,8 +873,8 @@ const IN_SCOPE_SUITES = [
  * Its landing commit did not classify it; the T-34.2-83 tripwire caught it (59 gap round 2).
  *
  * `engineTempSweepBootWire.test.ts` (Phase 59 Plan 33, G20) is structurally contained on the same
- * basis as `playtimeLockBootClear.test.ts`, whose preamble it copies: the `backend/store_backend`/
- * `axios` mocks, with `fallbackEngine` replaced by a `jest.mock` factory so the sweep never reaches
+ * basis as `playtimeLockBootClear.test.ts`, whose preamble it copies: the
+ * `axios` mock (no store mock since quick 261121-pwt), with `fallbackEngine` replaced by a `jest.mock` factory so the sweep never reaches
  * the filesystem, and the real `bootstrap.init()` over `PassThrough` streams. Its landing commit did
  * not classify it; the T-34.2-83 tripwire caught it (59 gap round 3 post-wave gate).
  *

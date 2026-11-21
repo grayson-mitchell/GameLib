@@ -4,19 +4,20 @@
  *
  * Drives the REAL sidecar RPC server in-process (bootstrap.test.ts's
  * real-shim black-box pattern — the shims under test are the actual
- * platform/index.ts/fileStore.ts modules, unmocked) against injected
+ * platform/index.ts and store_backend.ts modules, unmocked) against injected
  * `stream.PassThrough` pairs, mirroring `steamAuthFlows.test.ts`'s own shape.
  *
  * **GAP FIX precedent (2026-07-22, see skeletonFlows.test.ts's own header):**
  * this suite's config directory is NOT the real OS config directory. The
  * `jest.mock('os', ...)` below overrides `homedir()` to a disposable
- * per-process tmp directory so the real platformApi/fileStore CODE runs
+ * per-process tmp directory so the real platformApi/store_backend CODE runs
  * (preserving this suite's fidelity), while the location it reads/writes can
  * never be the developer's real config directory.
  *
- * `jest.mock('electron', ...)` / `jest.mock('backend/store_backend', ...)` below
- * point Jest's OWN module resolution at platform/index.ts/fileStore.ts
- * directly — see skeletonFlows.test.ts's header for why this is necessary.
+ * `jest.mock('electron', ...)` below points Jest's OWN module resolution at
+ * platform/index.ts directly — see skeletonFlows.test.ts's header for why this
+ * is necessary. `backend/store_backend` is not mocked (quick 261121-pwt): the
+ * production conf-backed store runs.
  *
  * Mocked only at the DEEPEST boundary this plan's own module docstring names:
  *   - `storeManagers/steam/games` (the `SteamGame` class) — a factory mock
@@ -46,7 +47,7 @@
  *
  * Every other module in the registration/transport/store path
  * (`installFlowRegistration.ts`, `handlers.ts`, `sidecarRpc.ts`,
- * `bootstrap.ts`, `platform/index.ts`, `fileStore.ts`,
+ * `bootstrap.ts`, `platform/index.ts`, `store_backend.ts`,
  * `backend/utils/uninstaller.ts`, `backend/utils/checkGameUpdates.ts`,
  * `backend/storeManagers` incl. all six library managers,
  * `storeManagers/steam/installLocation.ts`,
@@ -55,7 +56,7 @@
 
 // ── os — GAP FIX precedent: redirect homedir() to a disposable per-process
 // tmp directory so this suite can never touch a developer's real config
-// directory (GlobalConfig/fileStore both resolve their on-disk path from
+// directory (GlobalConfig/store_backend both resolve their on-disk path from
 // homedir()) ──────────────────────────────────────────────────────────────
 jest.mock('os', () => {
   const actual = jest.requireActual('os')
@@ -72,11 +73,6 @@ jest.mock('os', () => {
 
 // ── electron / electron-store — route Jest's own module resolution at the
 // REAL sidecar shims (see module docstring above) ───────────────────────────
-jest.mock('backend/store_backend', () => ({
-  __esModule: true,
-  default: jest.requireActual('../fileStore').default
-}))
-
 // ── axios — fix/steam-native-install-stability (33-05 live-gate gap): the boot now wires
 // the REAL `initOnlineMonitor()` (backend/online_monitor.ts), which -- now that the real
 // platformApi's `net.isOnline()` returns `true` (mocked above) -- immediately calls the real

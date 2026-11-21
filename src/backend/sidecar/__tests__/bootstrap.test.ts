@@ -8,8 +8,8 @@
  * Follows the project's real-tmpdir black-box pattern (steam
  * library.test.ts precedent) rather than mocking `node:fs`/`graceful-fs`,
  * since this project's ts-jest/CJS interop makes fs exports non-mockable
- * (non-configurable getters) — the shims under test (fileStore.ts,
- * pathShim.ts) read/write the real OS config directory instead, exactly as
+ * (non-configurable getters) — the shims under test (the production
+ * store_backend.ts, pathShim.ts) read/write the real OS config directory instead, exactly as
  * they would in production.
  *
  * CONTAINMENT: the structural HOME/`os.homedir()` redirection in `src/backend/jest.setupContainment.ts`

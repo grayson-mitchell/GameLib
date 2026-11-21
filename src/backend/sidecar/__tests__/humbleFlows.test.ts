@@ -29,11 +29,6 @@
 
 // ── electron / electron-store — route Jest's own module resolution at the
 // REAL sidecar shims (mirrors steamAuthFlows.test.ts) ───────────────────────
-jest.mock('backend/store_backend', () => ({
-  __esModule: true,
-  default: jest.requireActual('../fileStore').default
-}))
-
 // ── axios — the same reasoning as steamAuthFlows.test.ts: `init()` wires the
 // REAL `initOnlineMonitor()`, which calls a live `axios.head()` against
 // several external hosts. Mocked so this suite never makes a real network

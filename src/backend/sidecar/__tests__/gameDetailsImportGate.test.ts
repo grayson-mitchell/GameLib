@@ -333,8 +333,10 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   // The ONLY change to the pinned file is ONE line — the mock specifier
   // `jest.mock('electron-store', ...)` became `jest.mock('backend/store_backend', ...)`, because
   // that plan removed the `electron-store` package outright. The factory body is byte-identical
-  // and still redirects to `jest.requireActual('../fileStore').default`, so the suite exercises
-  // exactly the same store implementation it did before. No assertion, fixture or proof was
+  // and still redirected to the Phase 27 sidecar file store, so the suite exercised
+  // exactly the same store implementation it did before. (Quick 261121-pwt later removed that
+  // redirect altogether -- see the re-pin entry below -- so the suite now runs the production
+  // conf-backed store.) No assertion, fixture or proof was
   // altered, weakened or repurposed — the `safeStorage.isEncryptionAvailable` regression detector
   // and the configStore byte-identity comparisons are untouched. Verified by
   // `git diff -- src/backend/sidecar/__tests__/electronUntouched.test.ts`: 1 insertion,
@@ -436,8 +438,13 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   // `getPath('userData')`, and two comments no longer name the shim. Same path, same byte-identity
   // assertions. Prior digest:
   // 2206b5c9fa8965c3eb1c1f503dad2c476c185e3d45809840c46af272e62beed3
+  // quick 261121-pwt: re-pin -- the `backend/store_backend` mock (a redirect to the deleted sidecar
+  // file store) is removed, so the suite runs the production conf-backed store, and two comments
+  // describing that mock and the store's default filename are reworded to match. No assertion,
+  // fixture or proof was altered, weakened or repurposed. Prior digest:
+  // 31a3129090194f5d79152bd4f762863c4d48d64931d73490c890529002bc637e
   const ELECTRON_UNTOUCHED_SHA256 =
-    '31a3129090194f5d79152bd4f762863c4d48d64931d73490c890529002bc637e'
+    'cd814b5e76c2086cf42637e0ba615815e0c2c8e5e15c9b96f55e0ffba466ad86'
 
   it('REQ-34.2-14 Gate 8: electronUntouched.test.ts matches its committed sha256 digest', () => {
     const filePath = join(__dirname, 'electronUntouched.test.ts')

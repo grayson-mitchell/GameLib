@@ -5,7 +5,7 @@
  *
  * Drives the REAL sidecar RPC server in-process (`gameDetailsFlows.test.ts`'s
  * own real-shim black-box pattern — the shims under test are the actual
- * platform/index.ts/fileStore.ts modules, unmocked) against injected
+ * platform/index.ts and store_backend.ts modules, unmocked) against injected
  * `stream.PassThrough` pairs. This suite's config directory is redirected to
  * a disposable per-process tmp home, never the developer's real config
  * directory.
@@ -87,11 +87,6 @@ jest.mock('os', () => {
 
 // ── electron / electron-store — route Jest's own module resolution at the
 // REAL sidecar shims (see module docstring above) ───────────────────────────
-jest.mock('backend/store_backend', () => ({
-  __esModule: true,
-  default: jest.requireActual('../fileStore').default
-}))
-
 // ── axios — scriptable per-URL. `mockAxiosGet` / `mockAxiosPost` drive the
 // storeSearch trio's real itad.ts bodies (top-level `axios.get` / `axios.post`);
 // `create()` still exists so bootstrap.ts's real `fetchLastestReleases()`
@@ -841,7 +836,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
 
   // ── quick 261029-mkz: Runs for me override ─────────────────────────────────
   describe('quick 261029-mkz setRunsForMe / getRunsForMeMap (invoke)', () => {
-    it('round-trips a user-on through the real fileStore', async () => {
+    it('round-trips a user-on through the real store', async () => {
       const { input, frames } = boot()
       writeInvoke(input, 'rfm-1', 'setRunsForMe', [
         { appName: 'rfm.game', runner: 'steam', on: true }

@@ -4,19 +4,20 @@
  *
  * Drives the REAL sidecar RPC server in-process (`downloadQueueFlows.test.ts`'s
  * own real-shim black-box pattern — the shims under test are the actual
- * fileStore.ts module, unmocked) against injected
+ * store_backend.ts module, unmocked) against injected
  * `stream.PassThrough` pairs.
  *
  * **GAP FIX precedent (2026-07-22, see skeletonFlows.test.ts's own header):**
  * this suite's config directory is NOT the real OS config directory. The
  * `jest.mock('os', ...)` below overrides `homedir()` to a disposable
- * per-process tmp directory so the real fileStore CODE runs
+ * per-process tmp directory so the real store_backend CODE runs
  * (preserving this suite's fidelity), while the location it reads/writes can
  * never be the developer's real config directory.
  *
- * `jest.mock('electron', ...)` / `jest.mock('backend/store_backend', ...)` below
- * point Jest's OWN module resolution at fileStore.ts
- * directly — see skeletonFlows.test.ts's header for why this is necessary.
+ * `jest.mock('electron', ...)` below points Jest's OWN module resolution at the
+ * real sidecar shim directly — see skeletonFlows.test.ts's header for why this
+ * is necessary. `backend/store_backend` is not mocked (quick 261121-pwt): the
+ * production conf-backed store runs.
  *
  * `../sidecarRpc` is PARTIALLY mocked (`jest.requireActual` spread, only
  * `requestRustInvoke` overridden) — this suite is the first curated-module
@@ -48,7 +49,7 @@
  *
  * Every other module in the registration/transport/store path
  * (`appShellFlowRegistration.ts`, `handlers.ts`, `bootstrap.ts`,
- * `fileStore.ts`, `backend/utils` — `handleExit`/
+ * `store_backend.ts`, `backend/utils` — `handleExit`/
  * `openUrlOrFile`, `backend/dialog/dialog` — `notify`, `backend/appshell/*`,
  * `backend/main_window`, `backend/online_monitor`) runs for real, unmodified
  * — in particular `backend/logger` is intentionally NOT mocked (mirrors
@@ -90,11 +91,6 @@ jest.mock('os', () => {
 
 // ── electron / electron-store — route Jest's own module resolution at the
 // REAL sidecar shims (see module docstring above) ───────────────────────────
-jest.mock('backend/store_backend', () => ({
-  __esModule: true,
-  default: jest.requireActual('../fileStore').default
-}))
-
 // ── sidecarRpc — PARTIAL mock: real startRpcServer/pushFrontendMessage/
 // requestOpenExternal, scriptable requestRustInvoke only (see module
 // docstring above for why this differs from every prior stub-only suite) ────

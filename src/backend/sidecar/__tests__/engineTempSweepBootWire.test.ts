@@ -4,11 +4,6 @@
  * Dedicated file for the same reason as playtimeLockBootClear.test.ts: each case boots once via bootFresh()
  * in a fresh module registry (D-08).
  */
-jest.mock('backend/store_backend', () => ({
-  __esModule: true,
-  default: jest.requireActual('../fileStore').default
-}))
-
 jest.mock('axios', () => ({
   __esModule: true,
   default: {

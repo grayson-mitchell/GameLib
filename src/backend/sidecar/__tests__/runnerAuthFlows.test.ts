@@ -37,11 +37,6 @@ jest.mock('os', () => {
 })
 
 // ── electron / electron-store — route Jest's own module resolution at the REAL sidecar shims ──
-jest.mock('backend/store_backend', () => ({
-  __esModule: true,
-  default: jest.requireActual('../fileStore').default
-}))
-
 // ── axios — several storeManagers modules reached via `../storeManagers`'s load-bearing import
 // touch axios at module scope (mirrors steamAuthFlows.test.ts) ────────────────────────────────
 jest.mock('axios', () => {

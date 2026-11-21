@@ -33,11 +33,6 @@ jest.mock('os', () => {
 })
 
 // ── electron / electron-store — route Jest's own module resolution at the REAL sidecar shims ──
-jest.mock('backend/store_backend', () => ({
-  __esModule: true,
-  default: jest.requireActual('../fileStore').default
-}))
-
 // ── utils/systeminfo — mocked so copySystemInfoToClipboard's coverage targets ITS OWN wiring
 // (the curated-import boundary, formatted-string forwarding), not systeminfo's real CPU/GPU/OS
 // gathering ──────────────────────────────────────────────────────────────────────────────────

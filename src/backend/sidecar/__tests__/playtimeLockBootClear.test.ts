@@ -25,18 +25,13 @@
  * unconditionally) and would leave a nested global hook in the worker for every subsequent suite.
  * A virgin file gets a virgin module registry and a virgin guard flag for free, with zero module
  * tricks -- `migrationsWiring.test.ts` exists for exactly this reason, and this file follows its
- * shape: real `backend/store_backend` routed at the sidecar's real file-backed shim, `axios`
+ * shape: the real, unmocked production `backend/store_backend` (conf-backed), `axios`
  * mocked so `initOnlineMonitor()`'s `pingSites()` cannot make a live network call, and NO
  * per-suite `jest.mock('os', ...)` -- containment comes from `src/backend/jest.setupContainment.ts`'s
  * `setupFiles` registration for the whole backend project, not a local mock.
  */
 
 // ── electron / electron-store — route Jest's resolution at the REAL sidecar shims ──────────
-jest.mock('backend/store_backend', () => ({
-  __esModule: true,
-  default: jest.requireActual('../fileStore').default
-}))
-
 // ── axios — never a real network call (initOnlineMonitor()'s pingSites() runs during init()) ─
 jest.mock('axios', () => ({
   __esModule: true,
