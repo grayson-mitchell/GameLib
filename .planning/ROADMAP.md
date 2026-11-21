@@ -482,7 +482,7 @@ Plans:
   4. The legendary store migration is ported only if a supported upgrade path still reaches it (reachability recorded), otherwise it is deleted
   5. The TS write-through mirror's deletion point is named and executed for every family flipped in this phase, and `storeVersioning`, `storeMigrations` and `migration/*` TypeScript are deleted
 
-**Plans:** 13/25 plans executed in 20 waves; planned 2026-11-21
+**Plans:** 14/25 plans executed in 20 waves; planned 2026-11-21
 
 Plans:
 **Wave 1**
@@ -515,7 +515,7 @@ Plans:
 - [x] 85-18-PLAN.md — D-17 bottle version gate in Rust for the engine marker and shared-redist ledger
 
 **Wave 9** *(blocked on Wave 8 completion)*
-- [ ] 85-13-PLAN.md — Flip user-state; older libraries migrated at boot before the sidecar
+- [x] 85-13-PLAN.md — Flip user-state; older libraries migrated at boot before the sidecar
 
 **Wave 10** *(blocked on Wave 9 completion)*
 - [ ] 85-14-PLAN.md — Flip token-bearing and account configs (shared steam_store cell); keyring names pinned on every CI OS (D-10, D-14)
