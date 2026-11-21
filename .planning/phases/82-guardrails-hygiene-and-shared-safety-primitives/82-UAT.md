@@ -1,9 +1,9 @@
 ---
-status: complete
+status: diagnosed
 phase: 82-guardrails-hygiene-and-shared-safety-primitives
 source: [82-VERIFICATION.md]
 started: 2026-11-20T07:59:36Z
-updated: 2026-11-21T02:56:25.571Z
+updated: 2026-11-21T03:20:00Z
 ---
 
 ## Current Test
@@ -18,13 +18,13 @@ result: pass — run on Windows in pnpm tauri:dev, 2026-11-20. 1a pass: the nest
 
 ### 2. Three-OS CI green on the 82-17..82-19 gap-closure commits
 expected: On a main commit that contains the 261120-uzn fix (afacd26ee), the Test workflow and the Rust test workflow both pass on ubuntu, macOS and Windows. The Rust test runs include the gamelib-safety symlink and case-sensitivity rows that only run on macOS/Linux.
-result: issue — checked by Claude from GitHub on 2026-11-21 (operator agreed it is automated). Main at 90ca09d02 (contains afacd26ee and 5b969edd8). Rust test run 44850161688 green on all three legs; the macOS gamelib-safety step ran a_symlinked_trust_root_is_followed_and_a_game_under_it_is_removable and case_insensitive_mode_refuses_a_differently_cased_nested_install, both ok (47/47). Test run 44850161668 red: 1 failed of 23351, sharedRedistInstall.test.ts 'installer timeout > records timedOut, stops all further entries and statuses, and does not settle' at line 929, installerCalls() length 0 after the wait loop. The prior main Test run 44846652719 was green and 90ca09d02 touches only Rust, so this is a flake in the test 82-12 (5b969edd8) set out to stabilise.
-reported: "Test workflow run 44850161668 failed: sharedRedistInstall.test.ts:929 installer timeout test, expected 1 installer call, received 0 (flaky; previous run green)"
+result: issue — re-tested by Claude from GitHub on 2026-11-21 after pushing main to 005cd414d (contains dc220850f, d59c79873, afacd26ee). Lint 44858803763 green. Rust test 44858803826: ubuntu and windows green, macOS red in gamelib-steampoll watchdog_real::still_kills_the_grandchild_when_the_middle_process_dies_first (monitor.rs:711, assertion alive(rig.grand)), the same timing flake seen on run 44823009090. Test 44858803823: 3 failed of 23415. (a) meta/__tests__/runTs.test.ts, two pins (C3-01 and E-02) fail deterministically: the codecheck script now writes --tsBuildInfoFile node_modules/.cache/tsc-*.tsbuildinfo (quick 261121-kqt, 1dc3e622e) and the pins reject any node_modules/.cache mention. (b) steamBridgeKnownFixes.test.ts:576 'times out a never-settling call after 15s and warns' exceeded the 5000 ms jest timeout (fake timers with real setImmediate around real .reg IO); green on prior main runs. The 82-20 installer-timeout tests in sharedRedistInstall.test.ts passed.
+reported: "Push to 005cd414d: Test run 44858803823 red (runTs.test.ts C3-01/E-02 pins vs codecheck tsbuildinfo under node_modules/.cache; steamBridgeKnownFixes.test.ts:576 exceeded 5 s timeout); Rust test 44858803826 macOS red (steampoll watchdog grandchild flake, monitor.rs:711)"
 severity: major
-retest_of: G-82-2 (resolved by quick 261120-uzn); retest requested 2026-11-21
+retest_of: G-82-2-r2 (resolved by 82-20-PLAN.md); retest 2026-11-21
 previous_result: |
-  issue — pushed dac99a816..c939280e5 on 2026-11-20. Rust test: the gamelib-safety step is green on all three legs (macOS: 47 adversarial incl. a_symlinked_trust_root_is_followed_and_a_game_under_it_is_removable, trust_root_contract ran). The macOS leg went red in the later steampoll step (watchdog_real::still_kills_the_grandchild_when_the_middle_process_dies_first, assertion alive(rig.grand)); gamelib-steampoll is untouched by this range, so it is treated as a timing flake; the rerun of run 44823009090 went green on all three legs (flake confirmed). Test workflow red: dialogOptionForwarding.test.ts pins UNBOUNDED_RUST_CHANNELS and does not list RUST_SAFETY_REMOVE_TREE, which 82-17..82-19 (WR-03) added.
-  reported: "Test workflow run 44823008791 failed: 1 suite, 1 test (dialogOptionForwarding.test.ts:223, UNBOUNDED_RUST_CHANNELS contains RUST_SAFETY_REMOVE_TREE, not in EXPECTED)"
+  issue — checked by Claude from GitHub on 2026-11-21 (operator agreed it is automated). Main at 90ca09d02 (contains afacd26ee and 5b969edd8). Rust test run 44850161688 green on all three legs; the macOS gamelib-safety step ran a_symlinked_trust_root_is_followed_and_a_game_under_it_is_removable and case_insensitive_mode_refuses_a_differently_cased_nested_install, both ok (47/47). Test run 44850161668 red: 1 failed of 23351, sharedRedistInstall.test.ts 'installer timeout > records timedOut, stops all further entries and statuses, and does not settle' at line 929, installerCalls() length 0 after the wait loop. The prior main Test run 44846652719 was green and 90ca09d02 touches only Rust, so this is a flake in the test 82-12 (5b969edd8) set out to stabilise.
+  reported: "Test workflow run 44850161668 failed: sharedRedistInstall.test.ts:929 installer timeout test, expected 1 installer call, received 0 (flaky; previous run green)"
   severity: major
 
 ### 3. Push main and read the Test, Rust test and Lint workflows on a sha that contains the 82-20 fix (dc220850f / d59c79873) and the 261120-uzn fix
@@ -77,6 +77,28 @@ blocked: 0
   missing:
     - "Replace the turn-counted wait with one shared helper that yields with setImmediate until the condition holds or a real wall-clock deadline (performance.now / Date.now, not faked) passes, and use it in all three installer-timeout tests"
     - "Prove it under load: run the suite repeatedly with CPU contention (e.g. --runInBand alongside a busy loop, or a mocked slow fs) and show no failures"
+  debug_session: ""
+
+- gap_id: G-82-2-r3
+  truth: "On a pushed main commit containing the 82-20 and 261120-uzn fixes, the Test and Rust test workflows pass on ubuntu, macOS and Windows"
+  status: failed
+  reason: "User reported: Test run 44858803823 red (runTs.test.ts C3-01/E-02 pins; steamBridgeKnownFixes.test.ts:576 5 s timeout) and Rust test 44858803826 macOS red (steampoll watchdog grandchild flake)"
+  severity: major
+  test: 2
+  root_cause: "Three independent causes, none in Phase 82 code. (1) Deterministic: quick 261121-kqt (1dc3e622e) put tsc incremental build info under node_modules/.cache in the codecheck script; runTs.test.ts pins C3-01 and E-02 forbid any package.json script mentioning node_modules/.cache (they target the compile-then-run outfile, but match the bare path). (2) Flake: steamBridgeKnownFixes.test.ts:576 runs under the default 5 s jest timeout while waiting on real .reg IO with fake timers, the same pattern 82-12 and 82-20 fixed in sharedRedistInstall.test.ts. (3) Flake: gamelib-steampoll watchdog_real grandchild test on macOS (monitor.rs:711), already seen on run 44823009090 and green on rerun."
+  artifacts:
+    - path: "meta/__tests__/runTs.test.ts"
+      issue: "C3-01 and E-02 pins match any node_modules/.cache mention, not only the compile-then-run outfile"
+    - path: "package.json"
+      issue: "codecheck writes tsc-main/tsc-meta .tsbuildinfo under node_modules/.cache"
+    - path: "src/backend/__tests__/steamBridgeKnownFixes.test.ts"
+      issue: "line 576 test has no per-test timeout and waits on real IO under fake timers"
+    - path: "crates/gamelib-steampoll/tests/monitor.rs"
+      issue: "line 711 alive(rig.grand) assertion is timing-dependent on macOS runners"
+  missing:
+    - "Narrow the runTs pins to the compile-then-run outfile, or move the tsbuildinfo files to a path the pins allow; keep codecheck incremental"
+    - "Give the steamBridgeKnownFixes timeout test a real-time-bounded wait (the 82-20 yieldUntil pattern) and an explicit per-test timeout"
+    - "Make the steampoll watchdog grandchild test wait on a deadline instead of a fixed timing assumption, or record why it stays flaky"
   debug_session: ""
 
 ## Deferred Follow-Ups
