@@ -1,9 +1,9 @@
 ---
-status: diagnosed
+status: complete
 phase: 84-logger
 source: [84-VERIFICATION.md]
 started: 2026-11-21T09:40:00Z
-updated: 2026-11-21T17:46:36.299Z
+updated: 2026-11-21T23:03:53.020Z
 ---
 
 ## Current Test
@@ -52,7 +52,9 @@ blocked: 0
 
 - gap_id: G-84-1
   truth: "All three rust-test.yml legs and test.yml green on a pushed head"
-  status: failed
+  status: resolved
+  resolved_by: 84-18-PLAN.md
+  resolved_at: 2026-11-22
   reason: "CI on pushed head 44e0c7a24: cargo-test (windows-latest) failed gamelib-log tests/golden.rs rust_writer_matches_the_ts_golden, case chunks-wine-header (run 44930097851)"
   severity: major
   test: 1
@@ -66,7 +68,9 @@ blocked: 0
 
 - gap_id: G-84-3
   truth: "The 84-HUMAN-UAT.md live contract states what the code really emits: item 4 names the preamble a GOG launch writes; item 7's crate-origin rule classifies lines by their real emitter"
-  status: failed
+  status: resolved
+  resolved_by: 84-13-PLAN.md
+  resolved_at: 2026-11-22
   reason: "User reported: test 3 amend; agreed with the recommended amendment for both items"
   severity: minor
   test: 3
@@ -83,7 +87,9 @@ blocked: 0
 
 - gap_id: G-84-4
   truth: "Every 84-REVIEW.md finding (WR-01..WR-07, IN-01..IN-04) is fixed and 84-REVIEW-DISPOSITION.md records each as fixed"
-  status: failed
+  status: resolved
+  resolved_by: 84-18-PLAN.md
+  resolved_at: 2026-11-22
   reason: "User reported: fix all"
   severity: major
   test: 4
