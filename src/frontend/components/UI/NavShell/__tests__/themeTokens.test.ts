@@ -3451,3 +3451,214 @@ describe('quick-261114-pqm: modal paper edge tokens', () => {
     }
   )
 })
+
+const INSTALL_TAB_CSS =
+  'src/frontend/screens/Game/GamePage/components/InstallTab/index.css'
+
+/**
+ * Phase 100 (D-15, D-22): the game page's new controls, measured in every
+ * theme through the same `var()` / `color-mix()` chain the browser follows.
+ * It cannot see a pixel (no CSS engine under the node environment), so the
+ * live theme sweep still adjudicates appearance.
+ *
+ *   --fav            declared in the body default and in EVERY theme block,
+ *                    and >= 3:1 (non-text) against --body-background.
+ *   switch track     on = the theme's --accent, which must clear the shared
+ *                    `accent-body` floor against --body-background.
+ *   switch knob      >= 3:1 against its own track, on and off.
+ *   failure text     --install-danger-text (danger pulled towards the text
+ *                    colour) >= 4.5:1 against --body-background.
+ *
+ * Lowest measured ratio per spec across the 10 themes: --fav 4.29:1 (gruvbox_dark),
+ * track on vs body 3.91:1 (gruvbox_dark), knob vs track 3.23:1 (cyberSpaceOasis),
+ * failure text 6.21:1 (gruvbox_dark).
+ */
+describe('Phase 100 game page tokens in every theme (D-15, D-22)', () => {
+  const themesScss = read(THEMES_SCSS)
+  const installCss = read(INSTALL_TAB_CSS)
+  const globals = globalTokens()
+  const floorMin = (id: string): number => {
+    const floor = CONTRAST_FLOORS.find((f) => f.id === id)
+    if (!floor) throw new Error(`no contrast floor named ${id}`)
+    return floor.min
+  }
+
+  /** How many rules in the stylesheet open with exactly this selector. */
+  const ruleCount = (selector: string): number => {
+    const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    return (installCss.match(new RegExp(`(?:^|\\n)${escaped} \\{`, 'g')) ?? [])
+      .length
+  }
+
+  /** The single depth-0 `prop` declaration of the rule that opens with `selector`. */
+  const ruleDecl = (selector: string, prop: string, css = installCss) => {
+    const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const m = new RegExp(`(?:^|\\n)${escaped} \\{`).exec(css)
+    if (!m) throw new Error(`rule not found: ${selector}`)
+    const body = cssBlock(
+      css.slice(m.index + (m[0].startsWith('\n') ? 1 : 0)),
+      selector
+    )
+    const decls = declsAtDepthZero(body, prop)
+    if (decls.length !== 1) {
+      throw new Error(
+        `expected exactly one ${prop} in ${selector}, found ${decls.length}`
+      )
+    }
+    return at(decls, 0)
+  }
+
+  const TRACK = '.switchRow__track'
+  const KNOB = '.switchRow__track::after'
+  const TRACK_ON = ".switchRow[aria-checked='true'] .switchRow__track"
+  const KNOB_ON = ".switchRow[aria-checked='true'] .switchRow__track::after"
+
+  /** The theme's tokens with the `.installTab` panel's own custom properties on top. */
+  const scopeFor = (selector: string, css = installCss) => {
+    const merged = new Map(themeTokens(themesScss, selector))
+    for (const [k, v] of customProps(cssBlock(css, '.installTab')))
+      merged.set(k, v)
+    return merged
+  }
+
+  const colourOf = (decl: string, scope: Map<string, string>) => {
+    const colour = resolveColour(decl, scope, globals)
+    if (colour === null) throw new Error(`unresolved colour: ${decl}`)
+    return colour
+  }
+
+  const surface = (scope: Map<string, string>) => {
+    const bg = resolveValue('var(--body-background)', scope, globals)
+    if (bg === null) throw new Error('unresolved --body-background')
+    return bg
+  }
+
+  it('non-vacuity: globals resolve and every measured declaration is found exactly once', () => {
+    expect(globals.size).toBeGreaterThan(0)
+    for (const selector of [TRACK, KNOB, TRACK_ON, KNOB_ON, '.installTab']) {
+      expect({ selector, count: ruleCount(selector) }).toEqual({
+        selector,
+        count: 1
+      })
+    }
+    expect(ruleDecl(TRACK, 'background')).toBe('var(--border-color)')
+    expect(ruleDecl(TRACK_ON, 'background')).toBe('var(--accent)')
+    expect(ruleDecl(KNOB, 'background')).not.toBe('')
+    expect(ruleDecl(KNOB_ON, 'background')).not.toBe('')
+    const dangerText = customProps(cssBlock(installCss, '.installTab')).get(
+      '--install-danger-text'
+    )
+    expect(dangerText).toMatch(/^color-mix\(/)
+    expect(dangerText).toMatch(/var\(--danger/)
+    expect(dangerText).toMatch(/var\(--text-default/)
+    expect(ruleDecl('.rowFailure', 'color')).toBe('var(--install-danger-text)')
+  })
+
+  it('--fav is declared in the body default block', () => {
+    expect(customProps(cssBlock(themesScss, 'body')).has('--fav')).toBe(true)
+  })
+
+  it.each(themeSelectors)(
+    '%s declares --fav in its own block and it is >= 3:1 against --body-background',
+    (selector) => {
+      const own = allBlocksFor(themesScss, selector).flatMap((body) => [
+        ...customProps(body).keys()
+      ])
+      expect({ selector, declared: own.includes('--fav') }).toEqual({
+        selector,
+        declared: true
+      })
+      const scope = themeTokens(themesScss, selector)
+      const fav = colourOf('var(--fav)', scope)
+      const ratio = contrastRatio(fav, surface(scope))
+      // Lowest measured across the 10 themes: gruvbox_dark 4.29:1.
+      expect({ selector, fav, ratio, passes: ratio >= 3 }).toEqual({
+        selector,
+        fav,
+        ratio,
+        passes: true
+      })
+    }
+  )
+
+  it.each(themeSelectors)(
+    '%s switch-on track is the theme --accent and clears the accent-body floor',
+    (selector) => {
+      const scope = scopeFor(selector)
+      const track = colourOf(ruleDecl(TRACK_ON, 'background'), scope)
+      const accent = colourOf('var(--accent)', scope)
+      expect(track).toBe(accent)
+      const ratio = contrastRatio(track, surface(scope))
+      const min = floorMin('accent-body')
+      expect({ selector, ratio, passes: ratio >= min }).toEqual({
+        selector,
+        ratio,
+        passes: true
+      })
+    }
+  )
+
+  it.each(themeSelectors)(
+    '%s switch knob clears 3:1 against its track, on and off',
+    (selector) => {
+      const scope = scopeFor(selector)
+      const pairs = [
+        ['off', ruleDecl(KNOB, 'background'), ruleDecl(TRACK, 'background')],
+        [
+          'on',
+          ruleDecl(KNOB_ON, 'background'),
+          ruleDecl(TRACK_ON, 'background')
+        ]
+      ] as const
+      for (const [state, knobDecl, trackDecl] of pairs) {
+        const knob = colourOf(knobDecl, scope)
+        const track = colourOf(trackDecl, scope)
+        const ratio = contrastRatio(knob, track)
+        expect({
+          selector,
+          state,
+          knob,
+          track,
+          ratio,
+          passes: ratio >= 3
+        }).toEqual({ selector, state, knob, track, ratio, passes: true })
+      }
+    }
+  )
+
+  it.each(themeSelectors)(
+    '%s inline-failure text (--install-danger-text) is >= 4.5:1 against --body-background',
+    (selector) => {
+      const scope = scopeFor(selector)
+      const fg = colourOf(ruleDecl('.rowFailure', 'color'), scope)
+      const ratio = contrastRatio(fg, surface(scope))
+      expect({ selector, fg, ratio, passes: ratio >= 4.5 }).toEqual({
+        selector,
+        fg,
+        ratio,
+        passes: true
+      })
+    }
+  )
+
+  it('checker can fail, in memory only', () => {
+    // Sabotage a STRING copy: a 100% danger weight must drop at least one
+    // theme under 4.5:1, so the measurement above is not vacuous.
+    const body = cssBlock(installCss, '.installTab')
+    expect((body.match(/40%/g) ?? []).length).toBe(1)
+    const sabotaged = installCss.replace('40%', '100%')
+    const failures = themeSelectors.filter((selector) => {
+      const scope = scopeFor(selector, sabotaged)
+      const fg = colourOf(ruleDecl('.rowFailure', 'color', sabotaged), scope)
+      return contrastRatio(fg, surface(scope)) < 4.5
+    })
+    expect(failures.length).toBeGreaterThan(0)
+  })
+
+  it('component CSS uses theme tokens only: no hex, rgb()/hsl() or black/white keyword', () => {
+    expect(installCss.length).toBeGreaterThan(0)
+    expect(installCss.match(/#[0-9a-fA-F]{3,8}\b/g)).toBeNull()
+    expect(installCss.match(/\b(?:rgba?|hsla?)\(/g)).toBeNull()
+    expect(installCss.match(/\b(?:black|white)\b/gi)).toBeNull()
+  })
+})

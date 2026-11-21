@@ -10,6 +10,7 @@ import { useCallback, useReducer } from 'react'
  * error reaches only `console.error` and `window.api.logError` (T-100-01).
  */
 
+/** @public consumed by the Install-tab rows in plans 04-06 (see useRowAction) */
 export type RowActionPhase = 'idle' | 'busy' | 'failed'
 
 export interface RowActionState {
@@ -117,6 +118,11 @@ export async function runRowAction<T>({
   }
 }
 
+/**
+ * @public consumed by the Install-tab rows in plans 04-06 (location, size,
+ * engine, uninstall); plan 01 proves the machine through its reducer and
+ * `runRowAction` tests.
+ */
 export function useRowAction(action: string, appName: string) {
   const [state, dispatch] = useReducer(rowActionReducer, {
     phase: 'idle'

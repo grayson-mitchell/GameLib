@@ -31,6 +31,13 @@ body {
      3:1 against --body-background and --modal-background. */
   --border-color: gray;
 
+  /* The favourite heart on the game page (Phase 100 D-15, D-22). Declared in
+     every theme block because a pressed heart must read as a heart, not as the
+     theme's accent or danger text: it is a non-text mark held to the 3:1 floor
+     against --body-background (themeTokens.test.ts, Phase 100). The body
+     default is only the fallback for a custom theme that sets none. */
+  --fav: var(--status-danger);
+
   /* The search bar's RESTING outline. Deliberately the theme's own --accent,
      which is what the focus ring already spends -- UI/SearchBar/index.scss
      fades it to 90% so rest reads as a quieter version of focus rather than
@@ -125,6 +132,7 @@ body.midnightMirage {
   --background-darker: var(--neutral-01);
   --background-lighter: var(--neutral-03);
   --body-background: var(--background-darker);
+  --fav: #ff5c8a;
   --input-background: var(--background-lighter);
   --controller-hints-background: transparent;
   --current-background: var(--body-background);
@@ -211,6 +219,7 @@ body.cyberSpaceOasis {
   --navbar-background: var(--background);
   --input-background: var(--background-darker);
   --body-background: #13172a;
+  --fav: #ff5c8a;
   --current-background: var(--body-background);
   --modal-background: #13172a;
   --modal-border: rgba(255, 255, 255, 0.1);
@@ -286,6 +295,7 @@ body.gruvbox_dark {
   --navbar-accent: #f9f5d7;
   --background: #1d2021;
   --body-background: #282828;
+  --fav: #fb4934;
   --background-darker: var(--body-background);
   --current-background: var(--body-background);
   --navbar-background: #32302f;
@@ -336,6 +346,7 @@ body.high-contrast {
   --navbar-accent: #ffffffff;
   --background: #121212ff;
   --body-background: #202020ff;
+  --fav: #ff5c8a;
   --background-darker: var(--background);
   --current-background: var(--body-background);
   --navbar-background: #121212ff;
@@ -377,6 +388,7 @@ body.dracula {
   --navbar-accent: #eae8e5;
   --background: #090b1c;
   --body-background: #282a35;
+  --fav: #ff79c6;
   --background-darker: var(--body-background);
   --current-background: var(--body-background);
   --navbar-background: #44475a;
@@ -417,6 +429,7 @@ body.dracula {
 body.nord-light {
   --background-light: #eceff4;
   --body-background: var(--background-light);
+  --fav: #a03a45;
   --accent-overlay: #81a1c1;
   --navbar-accent: #81a1c1;
   --background-darker: var(--body-background);
@@ -577,6 +590,7 @@ body.nord-dark {
   --navbar-accent: #afc4eb;
   --background: #191c22;
   --body-background: var(--background);
+  --fav: #ff5c8a;
   --background-darker: var(--body-background);
   --current-background: var(--body-background);
   --navbar-background: #2e3440;
@@ -614,6 +628,7 @@ body.marine {
   --accent-overlay: #d39f37;
   --background: #031b22;
   --body-background: #031b22;
+  --fav: #ff5c8a;
   --background-darker: #031b22;
   --current-background: var(--body-background);
   --navbar-background: #0b3e4b;
@@ -648,6 +663,7 @@ body.zombie {
   --navbar-accent: var(--accent);
   --background: #1d1f1f;
   --body-background: var(--background);
+  --fav: #ff5c8a;
   --background-darker: var(--body-background);
   --current-background: var(--body-background);
   --navbar-background: #323232;
@@ -686,6 +702,7 @@ body.sweet {
   --navbar-accent: #d4c2d6;
   --background: #110111;
   --body-background: #110111;
+  --fav: #ff5c8a;
   --background-darker: #110111;
   --current-background: #110111;
   --navbar-background: #220422;
