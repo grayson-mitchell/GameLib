@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 85
 current_phase_name: Store host, config and versioned migrations
 status: executing
-stopped_at: Completed 85-12-PLAN.md
-last_updated: "2026-11-21T23:29:54.231Z"
+stopped_at: Completed 85-18-PLAN.md
+last_updated: "2026-11-21T23:47:53.544Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 85 execution started
-state_head: 68d0c59d000b0b2ddd40c1b783a96501a8537846
+state_head: 01f7eb5b3e4196fdc2a3c5b689cc82be97ebd0df
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 85 (Store host, config and versioned migrations) — EXECUTING
-Plan: 12 of 25
+Plan: 13 of 25
 Status: Ready to execute
 Last activity: 2026-11-22 — Phase 85 execution started
 Progress: [██████████] 100%
@@ -371,6 +371,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 85 P10 | 55 min | 3 tasks | 24 files |
 | Phase 85 P11 | 75 min | 3 tasks | 18 files |
 | Phase 85 P12 | 90 min | 2 tasks | 6 files |
+| Phase 85 P18 | 16 min | 2 tasks | 26 files |
 
 ## Accumulated Context
 
@@ -708,6 +709,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 85]: 85-11: the storeMirrorEvent wire schema is not widened for changed here; 85-17 owns the Rust emitter, the schema and its fixture together
 - [Phase 85]: 85-12: a runtime store_cache name is Rust-owned only when RECOGNIZED_CACHE_STORE_NAMES names it, on both sides (RUNTIME_CACHE_NAMES in store_dispatch.rs is drift-tested against storePolicy.ts); applied at the ownership decision, not at frame validation
 - [Phase 85]: 85-12: cache family flipped by the family flag alone (tracer override dropped); cache.ts, store_backend.ts and storeWriteHandlers.ts needed no change because the facade already sends one replace frame per store assignment
+- [Phase 85]: 85-18: the bottle version-gate memo is a closure-owned object (createBottleVersionGate), not module state, because moduleStateCensus allows none; EngineRuntime.bottleGate and the shared-redist installer's state hold it
+- [Phase 85]: 85-18: a bottle version gate Rust cannot answer is treated as unprimed (writes refused, same-engine launches proceed, engine changes refused as marker-newer), never as writable
 
 ### Pending Todos
 
@@ -973,8 +976,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-21T23:29:52.664Z
-Stopped at: Completed 85-12-PLAN.md
+Last session: 2026-11-21T23:47:51.959Z
+Stopped at: Completed 85-18-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

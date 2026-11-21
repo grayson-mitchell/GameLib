@@ -482,7 +482,7 @@ Plans:
   4. The legendary store migration is ported only if a supported upgrade path still reaches it (reachability recorded), otherwise it is deleted
   5. The TS write-through mirror's deletion point is named and executed for every family flipped in this phase, and `storeVersioning`, `storeMigrations` and `migration/*` TypeScript are deleted
 
-**Plans:** 12/25 plans executed in 20 waves; planned 2026-11-21
+**Plans:** 13/25 plans executed in 20 waves; planned 2026-11-21
 
 Plans:
 **Wave 1**
@@ -512,7 +512,7 @@ Plans:
 
 **Wave 8** *(blocked on Wave 7 completion)*
 - [x] 85-12-PLAN.md — Flip caches (D-01 first family), runtime caches, corrupt caches start empty after their copy
-- [ ] 85-18-PLAN.md — D-17 bottle version gate in Rust for the engine marker and shared-redist ledger
+- [x] 85-18-PLAN.md — D-17 bottle version gate in Rust for the engine marker and shared-redist ledger
 
 **Wave 9** *(blocked on Wave 8 completion)*
 - [ ] 85-13-PLAN.md — Flip user-state; older libraries migrated at boot before the sidecar
