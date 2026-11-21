@@ -1,0 +1,320 @@
+[
+  {
+    "name": "top-level-integer-keys-sort-ahead-of-strings",
+    "via": "object",
+    "steps": [
+      {
+        "op": "set",
+        "path": "b",
+        "value": 1
+      },
+      {
+        "op": "set",
+        "path": "2",
+        "value": 1
+      },
+      {
+        "op": "set",
+        "path": "a",
+        "value": 1
+      },
+      {
+        "op": "set",
+        "path": "1",
+        "value": 1
+      }
+    ],
+    "stringified": "{\n\t\"1\": 1,\n\t\"2\": 1,\n\t\"b\": 1,\n\t\"a\": 1\n}"
+  },
+  {
+    "name": "depth-three-integer-keys",
+    "via": "store",
+    "steps": [
+      {
+        "op": "set",
+        "path": "x.y.z.b",
+        "value": 1
+      },
+      {
+        "op": "set",
+        "path": "x.y.z.2",
+        "value": 1
+      },
+      {
+        "op": "set",
+        "path": "x.y.z.a",
+        "value": 1
+      },
+      {
+        "op": "set",
+        "path": "x.y.z.1",
+        "value": 1
+      }
+    ],
+    "stringified": "{\n\t\"x\": {\n\t\t\"y\": {\n\t\t\t\"z\": {\n\t\t\t\t\"1\": 1,\n\t\t\t\t\"2\": 1,\n\t\t\t\t\"b\": 1,\n\t\t\t\t\"a\": 1\n\t\t\t}\n\t\t}\n\t}\n}"
+  },
+  {
+    "name": "leading-zero-key-is-not-an-index",
+    "via": "object",
+    "steps": [
+      {
+        "op": "set",
+        "path": "01",
+        "value": 1
+      },
+      {
+        "op": "set",
+        "path": "1",
+        "value": 1
+      },
+      {
+        "op": "set",
+        "path": "a",
+        "value": 1
+      },
+      {
+        "op": "set",
+        "path": "2",
+        "value": 1
+      }
+    ],
+    "stringified": "{\n\t\"1\": 1,\n\t\"2\": 1,\n\t\"01\": 1,\n\t\"a\": 1\n}"
+  },
+  {
+    "name": "u32-max-is-not-index-like-but-u32-max-minus-one-is",
+    "via": "object",
+    "steps": [
+      {
+        "op": "set",
+        "path": "4294967295",
+        "value": 1
+      },
+      {
+        "op": "set",
+        "path": "4294967294",
+        "value": 1
+      },
+      {
+        "op": "set",
+        "path": "a",
+        "value": 1
+      }
+    ],
+    "stringified": "{\n\t\"4294967294\": 1,\n\t\"4294967295\": 1,\n\t\"a\": 1\n}"
+  },
+  {
+    "name": "negative-and-float-keys-keep-insertion-order",
+    "via": "object",
+    "steps": [
+      {
+        "op": "set",
+        "path": "b",
+        "value": 1
+      },
+      {
+        "op": "set",
+        "path": "-1",
+        "value": 1
+      },
+      {
+        "op": "set",
+        "path": "1.5",
+        "value": 1
+      },
+      {
+        "op": "set",
+        "path": "1e3",
+        "value": 1
+      },
+      {
+        "op": "set",
+        "path": "3",
+        "value": 1
+      }
+    ],
+    "stringified": "{\n\t\"3\": 1,\n\t\"b\": 1,\n\t\"-1\": 1,\n\t\"1.5\": 1,\n\t\"1e3\": 1\n}"
+  },
+  {
+    "name": "beyond-2-pow-53-key-keeps-insertion-order",
+    "via": "object",
+    "steps": [
+      {
+        "op": "set",
+        "path": "9007199254740993",
+        "value": 1
+      },
+      {
+        "op": "set",
+        "path": "9",
+        "value": 1
+      },
+      {
+        "op": "set",
+        "path": "a",
+        "value": 1
+      }
+    ],
+    "stringified": "{\n\t\"9\": 1,\n\t\"9007199254740993\": 1,\n\t\"a\": 1\n}"
+  },
+  {
+    "name": "re-set-keeps-position",
+    "via": "object",
+    "steps": [
+      {
+        "op": "set",
+        "path": "a",
+        "value": 1
+      },
+      {
+        "op": "set",
+        "path": "b",
+        "value": 1
+      },
+      {
+        "op": "set",
+        "path": "a",
+        "value": 2
+      }
+    ],
+    "stringified": "{\n\t\"a\": 2,\n\t\"b\": 1\n}"
+  },
+  {
+    "name": "delete-then-re-insert-moves-last",
+    "via": "object",
+    "steps": [
+      {
+        "op": "set",
+        "path": "a",
+        "value": 1
+      },
+      {
+        "op": "set",
+        "path": "b",
+        "value": 1
+      },
+      {
+        "op": "set",
+        "path": "c",
+        "value": 1
+      },
+      {
+        "op": "delete",
+        "path": "a"
+      },
+      {
+        "op": "set",
+        "path": "a",
+        "value": 2
+      }
+    ],
+    "stringified": "{\n\t\"b\": 1,\n\t\"c\": 1,\n\t\"a\": 2\n}"
+  },
+  {
+    "name": "whole-object-replace-reorders-integer-keys",
+    "via": "object",
+    "steps": [
+      {
+        "op": "assign",
+        "valueText": "{\"b\":1,\"2\":2,\"a\":3,\"1\":4}"
+      }
+    ],
+    "stringified": "{\n\t\"1\": 4,\n\t\"2\": 2,\n\t\"b\": 1,\n\t\"a\": 3\n}"
+  },
+  {
+    "name": "whole-object-replace-nested-integer-keys",
+    "via": "object",
+    "steps": [
+      {
+        "op": "assign",
+        "valueText": "{\"o\":{\"z\":1,\"5\":2,\"a\":3,\"0\":4},\"7\":{\"y\":1,\"3\":2}}"
+      }
+    ],
+    "stringified": "{\n\t\"7\": {\n\t\t\"3\": 2,\n\t\t\"y\": 1\n\t},\n\t\"o\": {\n\t\t\"0\": 4,\n\t\t\"5\": 2,\n\t\t\"z\": 1,\n\t\t\"a\": 3\n\t}\n}"
+  },
+  {
+    "name": "nested-object-value-reorders-integer-keys",
+    "via": "object",
+    "steps": [
+      {
+        "op": "set",
+        "path": "o",
+        "valueText": "{\"z\":1,\"5\":2,\"a\":3,\"0\":4}"
+      }
+    ],
+    "stringified": "{\n\t\"o\": {\n\t\t\"0\": 4,\n\t\t\"5\": 2,\n\t\t\"z\": 1,\n\t\t\"a\": 3\n\t}\n}"
+  },
+  {
+    "name": "store-top-level-set-integer-keys",
+    "via": "store",
+    "steps": [
+      {
+        "op": "set",
+        "path": "10",
+        "value": 1
+      },
+      {
+        "op": "set",
+        "path": "9",
+        "value": 1
+      },
+      {
+        "op": "set",
+        "path": "x",
+        "value": 1
+      },
+      {
+        "op": "set",
+        "path": "100",
+        "value": 1
+      }
+    ],
+    "stringified": "{\n\t\"9\": 1,\n\t\"10\": 1,\n\t\"100\": 1,\n\t\"x\": 1\n}"
+  },
+  {
+    "name": "store-whole-object-replace",
+    "via": "store",
+    "steps": [
+      {
+        "op": "set",
+        "path": "keep",
+        "value": 1
+      },
+      {
+        "op": "assign",
+        "valueText": "{\"d\":1,\"2\":2,\"c\":3,\"1\":{\"y\":1,\"0\":2}}"
+      }
+    ],
+    "stringified": "{\n\t\"1\": {\n\t\t\"0\": 2,\n\t\t\"y\": 1\n\t},\n\t\"2\": 2,\n\t\"d\": 1,\n\t\"c\": 3\n}"
+  },
+  {
+    "name": "store-delete-then-set-nested",
+    "via": "store",
+    "steps": [
+      {
+        "op": "set",
+        "path": "a.b",
+        "value": 1
+      },
+      {
+        "op": "set",
+        "path": "a.c",
+        "value": 1
+      },
+      {
+        "op": "delete",
+        "path": "a.b"
+      },
+      {
+        "op": "set",
+        "path": "a.b",
+        "value": 2
+      },
+      {
+        "op": "set",
+        "path": "a.1",
+        "value": 1
+      }
+    ],
+    "stringified": "{\n\t\"a\": {\n\t\t\"1\": 1,\n\t\t\"c\": 1,\n\t\t\"b\": 2\n\t}\n}"
+  }
+]

@@ -664,3 +664,602 @@ describe('store oracle (TS store stack -> committed golden)', () => {
     })
   }
 })
+
+// ---- shared vectors ---------------------------------------------------------------------------------
+//
+// Dot-path behaviour, JS number text and JS key order, as small self-contained vectors the Rust store
+// tests read directly. The SPECS below are the inputs; every `result`, `after` and `stringified` is
+// produced by running them through conf (dot paths, via a real GameLibStore: dot-prop is not a direct
+// dependency) or `JSON.stringify`, never typed. Write mode rewrites the three files; compare mode
+// recomputes them and requires the committed files to match, specs included.
+
+const VECTORS_ROOT = resolve(FIXTURE_ROOT, '..', 'vectors')
+
+type DotpathSpec = {
+  name: string
+  initial: Record<string, unknown>
+  op: 'get' | 'has' | 'set' | 'delete'
+  path: string
+  value?: unknown
+  /** `set(path, undefined)`: JSON cannot carry undefined. */
+  valueUndefined?: true
+  dotNotation: boolean
+}
+
+type DotpathResult =
+  | { found: boolean; value?: unknown }
+  | { has: boolean }
+  | { done: true }
+  | { threw: string }
+
+type DotpathVector = DotpathSpec & {
+  result: DotpathResult
+  /** The store file after the op, parsed (a `get`/`has` leaves `initial`). */
+  after: unknown
+}
+
+const DOTPATH_SPECS: DotpathSpec[] = [
+  {
+    name: 'get-nested',
+    initial: { a: { b: { c: 1 } } },
+    op: 'get',
+    path: 'a.b.c',
+    dotNotation: true
+  },
+  {
+    name: 'get-missing-leaf',
+    initial: { a: { b: 1 } },
+    op: 'get',
+    path: 'a.c',
+    dotNotation: true
+  },
+  {
+    name: 'get-through-primitive',
+    initial: { a: 1 },
+    op: 'get',
+    path: 'a.b',
+    dotNotation: true
+  },
+  {
+    name: 'get-top-level-object',
+    initial: { a: { b: 1 } },
+    op: 'get',
+    path: 'a',
+    dotNotation: true
+  },
+  {
+    name: 'get-escaped-dot-picks-literal-key',
+    initial: { 'a.b': 1, a: { b: 2 } },
+    op: 'get',
+    path: 'a\\.b',
+    dotNotation: true
+  },
+  {
+    name: 'set-escaped-dot-writes-literal-key',
+    initial: {},
+    op: 'set',
+    path: 'a\\.b',
+    value: 5,
+    dotNotation: true
+  },
+  {
+    name: 'set-creates-nested-objects',
+    initial: {},
+    op: 'set',
+    path: 'a.b.c',
+    value: 1,
+    dotNotation: true
+  },
+  {
+    name: 'set-proto-segment-refused',
+    initial: { keep: 1 },
+    op: 'set',
+    path: '__proto__.x',
+    value: 1,
+    dotNotation: true
+  },
+  {
+    name: 'set-proto-middle-segment-refused',
+    initial: { a: {} },
+    op: 'set',
+    path: 'a.__proto__.x',
+    value: 1,
+    dotNotation: true
+  },
+  {
+    name: 'set-prototype-segment-refused',
+    initial: {},
+    op: 'set',
+    path: 'prototype.x',
+    value: 1,
+    dotNotation: true
+  },
+  {
+    name: 'set-constructor-segment-refused',
+    initial: {},
+    op: 'set',
+    path: 'constructor.prototype.x',
+    value: 1,
+    dotNotation: true
+  },
+  {
+    name: 'get-proto-segment',
+    initial: { a: 1 },
+    op: 'get',
+    path: '__proto__',
+    dotNotation: true
+  },
+  {
+    name: 'has-proto-segment',
+    initial: { a: 1 },
+    op: 'has',
+    path: '__proto__.x',
+    dotNotation: true
+  },
+  {
+    name: 'array-index-get',
+    initial: { list: [{ name: 'a' }, { name: 'b' }] },
+    op: 'get',
+    path: 'list.1.name',
+    dotNotation: true
+  },
+  {
+    name: 'array-index-set',
+    initial: { list: [{ name: 'a' }, { name: 'b' }] },
+    op: 'set',
+    path: 'list.1.name',
+    value: 'z',
+    dotNotation: true
+  },
+  {
+    name: 'array-index-set-beyond-length-leaves-holes',
+    initial: { list: [{ name: 'a' }] },
+    op: 'set',
+    path: 'list.3.name',
+    value: 'q',
+    dotNotation: true
+  },
+  {
+    name: 'array-element-delete-leaves-hole',
+    initial: { list: [1, 2, 3] },
+    op: 'delete',
+    path: 'list.1',
+    dotNotation: true
+  },
+  {
+    name: 'set-through-string-leaf-overwrites-it',
+    initial: { a: 'text' },
+    op: 'set',
+    path: 'a.b',
+    value: 1,
+    dotNotation: true
+  },
+  {
+    name: 'set-through-number-leaf-overwrites-it',
+    initial: { a: 7 },
+    op: 'set',
+    path: 'a.b.c',
+    value: 1,
+    dotNotation: true
+  },
+  {
+    name: 'set-through-null-overwrites-it',
+    initial: { a: null },
+    op: 'set',
+    path: 'a.b',
+    value: 1,
+    dotNotation: true
+  },
+  {
+    name: 'delete-leaves-empty-parent',
+    initial: { a: { b: 1 } },
+    op: 'delete',
+    path: 'a.b',
+    dotNotation: true
+  },
+  {
+    name: 'delete-missing-path',
+    initial: { a: 1 },
+    op: 'delete',
+    path: 'x.y.z',
+    dotNotation: true
+  },
+  {
+    name: 'empty-segment-set',
+    initial: {},
+    op: 'set',
+    path: 'a..b',
+    value: 1,
+    dotNotation: true
+  },
+  {
+    name: 'trailing-dot-set',
+    initial: {},
+    op: 'set',
+    path: 'a.',
+    value: 1,
+    dotNotation: true
+  },
+  {
+    name: 'leading-dot-set',
+    initial: {},
+    op: 'set',
+    path: '.a',
+    value: 1,
+    dotNotation: true
+  },
+  {
+    name: 'empty-path-set',
+    initial: {},
+    op: 'set',
+    path: '',
+    value: 1,
+    dotNotation: true
+  },
+  {
+    name: 'set-undefined-is-refused',
+    initial: { a: 1 },
+    op: 'set',
+    path: 'a',
+    valueUndefined: true,
+    dotNotation: true
+  },
+  {
+    name: 'reserved-internal-dotted-refused',
+    initial: { a: 1 },
+    op: 'set',
+    path: '__internal__.x',
+    value: 1,
+    dotNotation: true
+  },
+  {
+    name: 'nodot-get-literal-dotted-key',
+    initial: { 'a.b': 1, a: { b: 2 } },
+    op: 'get',
+    path: 'a.b',
+    dotNotation: false
+  },
+  {
+    name: 'nodot-set-literal-dotted-key',
+    initial: { a: { b: 1 } },
+    op: 'set',
+    path: 'a.b',
+    value: 2,
+    dotNotation: false
+  },
+  {
+    name: 'nodot-has-literal-dotted-key',
+    initial: { 'a.b': 1 },
+    op: 'has',
+    path: 'a.b',
+    dotNotation: false
+  },
+  {
+    name: 'nodot-has-prefix-is-false',
+    initial: { 'a.b': 1 },
+    op: 'has',
+    path: 'a',
+    dotNotation: false
+  },
+  {
+    name: 'nodot-delete-literal-dotted-key',
+    initial: { 'a.b': 1, keep: 2 },
+    op: 'delete',
+    path: 'a.b',
+    dotNotation: false
+  },
+  {
+    name: 'nodot-reserved-internal-literal-allowed',
+    initial: {},
+    op: 'set',
+    path: '__internal__.x',
+    value: 1,
+    dotNotation: false
+  },
+  {
+    name: 'nodot-proto-key-is-an-ordinary-key',
+    initial: { a: 1 },
+    op: 'set',
+    path: '__proto__',
+    value: { x: 1 },
+    dotNotation: false
+  }
+]
+
+type NumberSpec = { name: string; jsonText: string; rustParse?: 'reject' }
+type NumberVector = NumberSpec & { stringified: string }
+
+const NUMBER_SPECS: NumberSpec[] = [
+  { name: '1e20', jsonText: '1e20' },
+  { name: '1e21-switches-to-exponent', jsonText: '1e21' },
+  { name: '1e-6', jsonText: '1e-6' },
+  { name: '1e-7-switches-to-exponent', jsonText: '1e-7' },
+  { name: 'negative-zero', jsonText: '-0' },
+  { name: 'point-one', jsonText: '0.1' },
+  { name: 'min-subnormal', jsonText: '5e-324' },
+  { name: 'max-double', jsonText: '1.7976931348623157e308' },
+  { name: '2-pow-53-plus-1', jsonText: '9007199254740993' },
+  { name: 'u64-max', jsonText: '18446744073709551615' },
+  { name: 'beyond-u64', jsonText: '18446744073709551616' },
+  { name: 'beyond-i64-negative', jsonText: '-9223372036854775809' },
+  { name: 'thirty-digit-integer', jsonText: '1000000000000000000000000000000' },
+  { name: 'float-text-hundred', jsonText: '100.0' },
+  { name: 'trailing-zero-float', jsonText: '1.50' },
+  { name: 'exponent-with-plus-and-zeros', jsonText: '1.0E+2' },
+  {
+    name: 'object-holding-several',
+    jsonText:
+      '{"a":1e20,"b":1e21,"c":0.1,"d":[100.0,1.50,-0,5e-324],"e":{"x":9007199254740993}}'
+  },
+  {
+    name: 'lone-surrogate',
+    jsonText: '"\\ud83d"',
+    // JS accepts a lone surrogate escape; serde_json rejects it, so Rust keeps such a file read-only.
+    rustParse: 'reject'
+  }
+]
+
+type KeyOrderStep =
+  | { op: 'set'; path: string; value?: unknown; valueText?: string }
+  | { op: 'delete'; path: string }
+  | { op: 'assign'; valueText: string }
+
+/** `object` runs the steps on a plain JS object; `store` on a real GameLibStore (dot-path writes). */
+type KeyOrderSpec = {
+  name: string
+  via: 'object' | 'store'
+  steps: KeyOrderStep[]
+}
+type KeyOrderVector = KeyOrderSpec & { stringified: string }
+
+const setStep = (path: string, value: unknown = 1): KeyOrderStep => ({
+  op: 'set',
+  path,
+  value
+})
+
+const KEY_ORDER_SPECS: KeyOrderSpec[] = [
+  {
+    name: 'top-level-integer-keys-sort-ahead-of-strings',
+    via: 'object',
+    steps: [setStep('b'), setStep('2'), setStep('a'), setStep('1')]
+  },
+  {
+    name: 'depth-three-integer-keys',
+    via: 'store',
+    steps: [
+      setStep('x.y.z.b'),
+      setStep('x.y.z.2'),
+      setStep('x.y.z.a'),
+      setStep('x.y.z.1')
+    ]
+  },
+  {
+    name: 'leading-zero-key-is-not-an-index',
+    via: 'object',
+    steps: [setStep('01'), setStep('1'), setStep('a'), setStep('2')]
+  },
+  {
+    name: 'u32-max-is-not-index-like-but-u32-max-minus-one-is',
+    via: 'object',
+    steps: [setStep('4294967295'), setStep('4294967294'), setStep('a')]
+  },
+  {
+    name: 'negative-and-float-keys-keep-insertion-order',
+    via: 'object',
+    steps: [
+      setStep('b'),
+      setStep('-1'),
+      setStep('1.5'),
+      setStep('1e3'),
+      setStep('3')
+    ]
+  },
+  {
+    name: 'beyond-2-pow-53-key-keeps-insertion-order',
+    via: 'object',
+    steps: [setStep('9007199254740993'), setStep('9'), setStep('a')]
+  },
+  {
+    name: 're-set-keeps-position',
+    via: 'object',
+    steps: [setStep('a'), setStep('b'), setStep('a', 2)]
+  },
+  {
+    name: 'delete-then-re-insert-moves-last',
+    via: 'object',
+    steps: [
+      setStep('a'),
+      setStep('b'),
+      setStep('c'),
+      { op: 'delete', path: 'a' },
+      setStep('a', 2)
+    ]
+  },
+  {
+    name: 'whole-object-replace-reorders-integer-keys',
+    via: 'object',
+    steps: [{ op: 'assign', valueText: '{"b":1,"2":2,"a":3,"1":4}' }]
+  },
+  {
+    name: 'whole-object-replace-nested-integer-keys',
+    via: 'object',
+    steps: [
+      {
+        op: 'assign',
+        valueText: '{"o":{"z":1,"5":2,"a":3,"0":4},"7":{"y":1,"3":2}}'
+      }
+    ]
+  },
+  {
+    name: 'nested-object-value-reorders-integer-keys',
+    via: 'object',
+    steps: [
+      {
+        op: 'set',
+        path: 'o',
+        valueText: '{"z":1,"5":2,"a":3,"0":4}'
+      }
+    ]
+  },
+  {
+    name: 'store-top-level-set-integer-keys',
+    via: 'store',
+    steps: [setStep('10'), setStep('9'), setStep('x'), setStep('100')]
+  },
+  {
+    name: 'store-whole-object-replace',
+    via: 'store',
+    steps: [
+      setStep('keep'),
+      { op: 'assign', valueText: '{"d":1,"2":2,"c":3,"1":{"y":1,"0":2}}' }
+    ]
+  },
+  {
+    name: 'store-delete-then-set-nested',
+    via: 'store',
+    steps: [
+      setStep('a.b'),
+      setStep('a.c'),
+      { op: 'delete', path: 'a.b' },
+      setStep('a.b', 2),
+      setStep('a.1')
+    ]
+  }
+]
+
+function withVectorStore<T>(
+  initial: string | undefined,
+  dotNotation: boolean,
+  run: (store: GameLibStore, file: string) => T
+): T {
+  const userData = mkdtempSync(join(tmpdir(), 'gamelib-store-oracle-'))
+  try {
+    const root = createStoreRoot({ userData })
+    const file = join(userData, 'vectors', 'v.json')
+    if (initial !== undefined) seed(userData, 'vectors/v.json', initial)
+    const store = new GameLibStore({
+      root,
+      cwd: 'vectors',
+      name: 'v',
+      accessPropertiesByDotNotation: dotNotation
+    })
+    return run(store, file)
+  } finally {
+    rmSync(userData, { recursive: true, force: true })
+  }
+}
+
+function runDotpath(spec: DotpathSpec): DotpathVector {
+  return withVectorStore(
+    JSON.stringify(spec.initial),
+    spec.dotNotation,
+    (store, file) => {
+      let result: DotpathResult
+      try {
+        switch (spec.op) {
+          case 'get': {
+            const value: unknown = store.get(spec.path)
+            result =
+              value === undefined ? { found: false } : { found: true, value }
+            break
+          }
+          case 'has':
+            result = { has: store.has(spec.path) }
+            break
+          case 'set':
+            store.set(spec.path, spec.valueUndefined ? undefined : spec.value)
+            result = { done: true }
+            break
+          case 'delete':
+            store.delete(spec.path)
+            result = { done: true }
+            break
+        }
+      } catch (err) {
+        result = { threw: err instanceof Error ? err.name : typeof err }
+      }
+      const after: unknown = JSON.parse(readFileSync(file, 'utf8'))
+      return {
+        ...spec,
+        result: JSON.parse(JSON.stringify(result)) as DotpathResult,
+        after
+      }
+    }
+  )
+}
+
+function runNumber(spec: NumberSpec): NumberVector {
+  return {
+    ...spec,
+    stringified: JSON.stringify(JSON.parse(spec.jsonText), undefined, '\t')
+  }
+}
+
+function stepValue(step: { value?: unknown; valueText?: string }): unknown {
+  return step.valueText !== undefined
+    ? (JSON.parse(step.valueText) as unknown)
+    : step.value
+}
+
+function runKeyOrder(spec: KeyOrderSpec): KeyOrderVector {
+  if (spec.via === 'object') {
+    let object: Record<string, unknown> = {}
+    for (const step of spec.steps) {
+      if (step.op === 'set') object[step.path] = stepValue(step)
+      else if (step.op === 'delete') delete object[step.path]
+      else object = JSON.parse(step.valueText) as Record<string, unknown>
+    }
+    return { ...spec, stringified: JSON.stringify(object, undefined, '\t') }
+  }
+  return withVectorStore(undefined, true, (store, file) => {
+    for (const step of spec.steps) {
+      if (step.op === 'set') store.set(step.path, stepValue(step))
+      else if (step.op === 'delete') store.delete(step.path)
+      else store.store = JSON.parse(step.valueText) as Record<string, unknown>
+    }
+    return { ...spec, stringified: readFileSync(file, 'utf8') }
+  })
+}
+
+describe('store oracle vectors (dot paths, number text, key order)', () => {
+  const sets = [
+    { file: 'dotpath.json', build: () => DOTPATH_SPECS.map(runDotpath) },
+    { file: 'numbers.json', build: () => NUMBER_SPECS.map(runNumber) },
+    { file: 'keyorder.json', build: () => KEY_ORDER_SPECS.map(runKeyOrder) }
+  ] as const
+
+  beforeEach(() => {
+    jest.spyOn(process.stderr, 'write').mockImplementation(() => true)
+  })
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
+  if (WRITE_MODE) {
+    test('writes the vectors from conf and JSON.stringify', () => {
+      mkdirSync(VECTORS_ROOT, { recursive: true })
+      for (const { file, build } of sets) {
+        writeFileSync(
+          join(VECTORS_ROOT, file),
+          `${JSON.stringify(build(), null, 2)}\n`
+        )
+      }
+    })
+  } else {
+    test.each(sets.map((s) => [s.file, s] as const))('%s', (file, set) => {
+      const committed: unknown = JSON.parse(
+        readFileSync(join(VECTORS_ROOT, file), 'utf-8')
+      )
+      expect(committed).toEqual(JSON.parse(JSON.stringify(set.build())))
+    })
+
+    test('the committed vectors meet the plan minimums', () => {
+      const read = (file: string): unknown[] =>
+        JSON.parse(readFileSync(join(VECTORS_ROOT, file), 'utf-8')) as unknown[]
+      expect(read('dotpath.json').length).toBeGreaterThanOrEqual(25)
+      expect(read('numbers.json').length).toBeGreaterThanOrEqual(12)
+      expect(read('keyorder.json').length).toBeGreaterThanOrEqual(10)
+    })
+  }
+})

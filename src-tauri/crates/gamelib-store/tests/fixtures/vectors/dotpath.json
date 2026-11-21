@@ -1,0 +1,642 @@
+[
+  {
+    "name": "get-nested",
+    "initial": {
+      "a": {
+        "b": {
+          "c": 1
+        }
+      }
+    },
+    "op": "get",
+    "path": "a.b.c",
+    "dotNotation": true,
+    "result": {
+      "found": true,
+      "value": 1
+    },
+    "after": {
+      "a": {
+        "b": {
+          "c": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "get-missing-leaf",
+    "initial": {
+      "a": {
+        "b": 1
+      }
+    },
+    "op": "get",
+    "path": "a.c",
+    "dotNotation": true,
+    "result": {
+      "found": false
+    },
+    "after": {
+      "a": {
+        "b": 1
+      }
+    }
+  },
+  {
+    "name": "get-through-primitive",
+    "initial": {
+      "a": 1
+    },
+    "op": "get",
+    "path": "a.b",
+    "dotNotation": true,
+    "result": {
+      "found": false
+    },
+    "after": {
+      "a": 1
+    }
+  },
+  {
+    "name": "get-top-level-object",
+    "initial": {
+      "a": {
+        "b": 1
+      }
+    },
+    "op": "get",
+    "path": "a",
+    "dotNotation": true,
+    "result": {
+      "found": true,
+      "value": {
+        "b": 1
+      }
+    },
+    "after": {
+      "a": {
+        "b": 1
+      }
+    }
+  },
+  {
+    "name": "get-escaped-dot-picks-literal-key",
+    "initial": {
+      "a.b": 1,
+      "a": {
+        "b": 2
+      }
+    },
+    "op": "get",
+    "path": "a\\.b",
+    "dotNotation": true,
+    "result": {
+      "found": true,
+      "value": 1
+    },
+    "after": {
+      "a.b": 1,
+      "a": {
+        "b": 2
+      }
+    }
+  },
+  {
+    "name": "set-escaped-dot-writes-literal-key",
+    "initial": {},
+    "op": "set",
+    "path": "a\\.b",
+    "value": 5,
+    "dotNotation": true,
+    "result": {
+      "done": true
+    },
+    "after": {
+      "a.b": 5
+    }
+  },
+  {
+    "name": "set-creates-nested-objects",
+    "initial": {},
+    "op": "set",
+    "path": "a.b.c",
+    "value": 1,
+    "dotNotation": true,
+    "result": {
+      "done": true
+    },
+    "after": {
+      "a": {
+        "b": {
+          "c": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "set-proto-segment-refused",
+    "initial": {
+      "keep": 1
+    },
+    "op": "set",
+    "path": "__proto__.x",
+    "value": 1,
+    "dotNotation": true,
+    "result": {
+      "done": true
+    },
+    "after": {
+      "keep": 1
+    }
+  },
+  {
+    "name": "set-proto-middle-segment-refused",
+    "initial": {
+      "a": {}
+    },
+    "op": "set",
+    "path": "a.__proto__.x",
+    "value": 1,
+    "dotNotation": true,
+    "result": {
+      "done": true
+    },
+    "after": {
+      "a": {}
+    }
+  },
+  {
+    "name": "set-prototype-segment-refused",
+    "initial": {},
+    "op": "set",
+    "path": "prototype.x",
+    "value": 1,
+    "dotNotation": true,
+    "result": {
+      "done": true
+    },
+    "after": {}
+  },
+  {
+    "name": "set-constructor-segment-refused",
+    "initial": {},
+    "op": "set",
+    "path": "constructor.prototype.x",
+    "value": 1,
+    "dotNotation": true,
+    "result": {
+      "done": true
+    },
+    "after": {}
+  },
+  {
+    "name": "get-proto-segment",
+    "initial": {
+      "a": 1
+    },
+    "op": "get",
+    "path": "__proto__",
+    "dotNotation": true,
+    "result": {
+      "found": false
+    },
+    "after": {
+      "a": 1
+    }
+  },
+  {
+    "name": "has-proto-segment",
+    "initial": {
+      "a": 1
+    },
+    "op": "has",
+    "path": "__proto__.x",
+    "dotNotation": true,
+    "result": {
+      "has": false
+    },
+    "after": {
+      "a": 1
+    }
+  },
+  {
+    "name": "array-index-get",
+    "initial": {
+      "list": [
+        {
+          "name": "a"
+        },
+        {
+          "name": "b"
+        }
+      ]
+    },
+    "op": "get",
+    "path": "list.1.name",
+    "dotNotation": true,
+    "result": {
+      "found": true,
+      "value": "b"
+    },
+    "after": {
+      "list": [
+        {
+          "name": "a"
+        },
+        {
+          "name": "b"
+        }
+      ]
+    }
+  },
+  {
+    "name": "array-index-set",
+    "initial": {
+      "list": [
+        {
+          "name": "a"
+        },
+        {
+          "name": "b"
+        }
+      ]
+    },
+    "op": "set",
+    "path": "list.1.name",
+    "value": "z",
+    "dotNotation": true,
+    "result": {
+      "done": true
+    },
+    "after": {
+      "list": [
+        {
+          "name": "a"
+        },
+        {
+          "name": "z"
+        }
+      ]
+    }
+  },
+  {
+    "name": "array-index-set-beyond-length-leaves-holes",
+    "initial": {
+      "list": [
+        {
+          "name": "a"
+        }
+      ]
+    },
+    "op": "set",
+    "path": "list.3.name",
+    "value": "q",
+    "dotNotation": true,
+    "result": {
+      "done": true
+    },
+    "after": {
+      "list": [
+        {
+          "name": "a"
+        },
+        null,
+        null,
+        {
+          "name": "q"
+        }
+      ]
+    }
+  },
+  {
+    "name": "array-element-delete-leaves-hole",
+    "initial": {
+      "list": [
+        1,
+        2,
+        3
+      ]
+    },
+    "op": "delete",
+    "path": "list.1",
+    "dotNotation": true,
+    "result": {
+      "done": true
+    },
+    "after": {
+      "list": [
+        1,
+        null,
+        3
+      ]
+    }
+  },
+  {
+    "name": "set-through-string-leaf-overwrites-it",
+    "initial": {
+      "a": "text"
+    },
+    "op": "set",
+    "path": "a.b",
+    "value": 1,
+    "dotNotation": true,
+    "result": {
+      "done": true
+    },
+    "after": {
+      "a": {
+        "b": 1
+      }
+    }
+  },
+  {
+    "name": "set-through-number-leaf-overwrites-it",
+    "initial": {
+      "a": 7
+    },
+    "op": "set",
+    "path": "a.b.c",
+    "value": 1,
+    "dotNotation": true,
+    "result": {
+      "done": true
+    },
+    "after": {
+      "a": {
+        "b": {
+          "c": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "set-through-null-overwrites-it",
+    "initial": {
+      "a": null
+    },
+    "op": "set",
+    "path": "a.b",
+    "value": 1,
+    "dotNotation": true,
+    "result": {
+      "done": true
+    },
+    "after": {
+      "a": {
+        "b": 1
+      }
+    }
+  },
+  {
+    "name": "delete-leaves-empty-parent",
+    "initial": {
+      "a": {
+        "b": 1
+      }
+    },
+    "op": "delete",
+    "path": "a.b",
+    "dotNotation": true,
+    "result": {
+      "done": true
+    },
+    "after": {
+      "a": {}
+    }
+  },
+  {
+    "name": "delete-missing-path",
+    "initial": {
+      "a": 1
+    },
+    "op": "delete",
+    "path": "x.y.z",
+    "dotNotation": true,
+    "result": {
+      "done": true
+    },
+    "after": {
+      "a": 1
+    }
+  },
+  {
+    "name": "empty-segment-set",
+    "initial": {},
+    "op": "set",
+    "path": "a..b",
+    "value": 1,
+    "dotNotation": true,
+    "result": {
+      "done": true
+    },
+    "after": {
+      "a": {
+        "": {
+          "b": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "trailing-dot-set",
+    "initial": {},
+    "op": "set",
+    "path": "a.",
+    "value": 1,
+    "dotNotation": true,
+    "result": {
+      "done": true
+    },
+    "after": {
+      "a": {
+        "": 1
+      }
+    }
+  },
+  {
+    "name": "leading-dot-set",
+    "initial": {},
+    "op": "set",
+    "path": ".a",
+    "value": 1,
+    "dotNotation": true,
+    "result": {
+      "done": true
+    },
+    "after": {
+      "": {
+        "a": 1
+      }
+    }
+  },
+  {
+    "name": "empty-path-set",
+    "initial": {},
+    "op": "set",
+    "path": "",
+    "value": 1,
+    "dotNotation": true,
+    "result": {
+      "done": true
+    },
+    "after": {
+      "": 1
+    }
+  },
+  {
+    "name": "set-undefined-is-refused",
+    "initial": {
+      "a": 1
+    },
+    "op": "set",
+    "path": "a",
+    "valueUndefined": true,
+    "dotNotation": true,
+    "result": {
+      "threw": "TypeError"
+    },
+    "after": {
+      "a": 1
+    }
+  },
+  {
+    "name": "reserved-internal-dotted-refused",
+    "initial": {
+      "a": 1
+    },
+    "op": "set",
+    "path": "__internal__.x",
+    "value": 1,
+    "dotNotation": true,
+    "result": {
+      "threw": "TypeError"
+    },
+    "after": {
+      "a": 1
+    }
+  },
+  {
+    "name": "nodot-get-literal-dotted-key",
+    "initial": {
+      "a.b": 1,
+      "a": {
+        "b": 2
+      }
+    },
+    "op": "get",
+    "path": "a.b",
+    "dotNotation": false,
+    "result": {
+      "found": true,
+      "value": 1
+    },
+    "after": {
+      "a.b": 1,
+      "a": {
+        "b": 2
+      }
+    }
+  },
+  {
+    "name": "nodot-set-literal-dotted-key",
+    "initial": {
+      "a": {
+        "b": 1
+      }
+    },
+    "op": "set",
+    "path": "a.b",
+    "value": 2,
+    "dotNotation": false,
+    "result": {
+      "done": true
+    },
+    "after": {
+      "a": {
+        "b": 1
+      },
+      "a.b": 2
+    }
+  },
+  {
+    "name": "nodot-has-literal-dotted-key",
+    "initial": {
+      "a.b": 1
+    },
+    "op": "has",
+    "path": "a.b",
+    "dotNotation": false,
+    "result": {
+      "has": true
+    },
+    "after": {
+      "a.b": 1
+    }
+  },
+  {
+    "name": "nodot-has-prefix-is-false",
+    "initial": {
+      "a.b": 1
+    },
+    "op": "has",
+    "path": "a",
+    "dotNotation": false,
+    "result": {
+      "has": false
+    },
+    "after": {
+      "a.b": 1
+    }
+  },
+  {
+    "name": "nodot-delete-literal-dotted-key",
+    "initial": {
+      "a.b": 1,
+      "keep": 2
+    },
+    "op": "delete",
+    "path": "a.b",
+    "dotNotation": false,
+    "result": {
+      "done": true
+    },
+    "after": {
+      "keep": 2
+    }
+  },
+  {
+    "name": "nodot-reserved-internal-literal-allowed",
+    "initial": {},
+    "op": "set",
+    "path": "__internal__.x",
+    "value": 1,
+    "dotNotation": false,
+    "result": {
+      "done": true
+    },
+    "after": {
+      "__internal__.x": 1
+    }
+  },
+  {
+    "name": "nodot-proto-key-is-an-ordinary-key",
+    "initial": {
+      "a": 1
+    },
+    "op": "set",
+    "path": "__proto__",
+    "value": {
+      "x": 1
+    },
+    "dotNotation": false,
+    "result": {
+      "done": true
+    },
+    "after": {
+      "a": 1,
+      "__proto__": {
+        "x": 1
+      }
+    }
+  }
+]

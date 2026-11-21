@@ -1,0 +1,93 @@
+[
+  {
+    "name": "1e20",
+    "jsonText": "1e20",
+    "stringified": "100000000000000000000"
+  },
+  {
+    "name": "1e21-switches-to-exponent",
+    "jsonText": "1e21",
+    "stringified": "1e+21"
+  },
+  {
+    "name": "1e-6",
+    "jsonText": "1e-6",
+    "stringified": "0.000001"
+  },
+  {
+    "name": "1e-7-switches-to-exponent",
+    "jsonText": "1e-7",
+    "stringified": "1e-7"
+  },
+  {
+    "name": "negative-zero",
+    "jsonText": "-0",
+    "stringified": "0"
+  },
+  {
+    "name": "point-one",
+    "jsonText": "0.1",
+    "stringified": "0.1"
+  },
+  {
+    "name": "min-subnormal",
+    "jsonText": "5e-324",
+    "stringified": "5e-324"
+  },
+  {
+    "name": "max-double",
+    "jsonText": "1.7976931348623157e308",
+    "stringified": "1.7976931348623157e+308"
+  },
+  {
+    "name": "2-pow-53-plus-1",
+    "jsonText": "9007199254740993",
+    "stringified": "9007199254740992"
+  },
+  {
+    "name": "u64-max",
+    "jsonText": "18446744073709551615",
+    "stringified": "18446744073709552000"
+  },
+  {
+    "name": "beyond-u64",
+    "jsonText": "18446744073709551616",
+    "stringified": "18446744073709552000"
+  },
+  {
+    "name": "beyond-i64-negative",
+    "jsonText": "-9223372036854775809",
+    "stringified": "-9223372036854776000"
+  },
+  {
+    "name": "thirty-digit-integer",
+    "jsonText": "1000000000000000000000000000000",
+    "stringified": "1e+30"
+  },
+  {
+    "name": "float-text-hundred",
+    "jsonText": "100.0",
+    "stringified": "100"
+  },
+  {
+    "name": "trailing-zero-float",
+    "jsonText": "1.50",
+    "stringified": "1.5"
+  },
+  {
+    "name": "exponent-with-plus-and-zeros",
+    "jsonText": "1.0E+2",
+    "stringified": "100"
+  },
+  {
+    "name": "object-holding-several",
+    "jsonText": "{\"a\":1e20,\"b\":1e21,\"c\":0.1,\"d\":[100.0,1.50,-0,5e-324],\"e\":{\"x\":9007199254740993}}",
+    "stringified": "{\n\t\"a\": 100000000000000000000,\n\t\"b\": 1e+21,\n\t\"c\": 0.1,\n\t\"d\": [\n\t\t100,\n\t\t1.5,\n\t\t0,\n\t\t5e-324\n\t],\n\t\"e\": {\n\t\t\"x\": 9007199254740992\n\t}\n}"
+  },
+  {
+    "name": "lone-surrogate",
+    "jsonText": "\"\\ud83d\"",
+    "rustParse": "reject",
+    "stringified": "\"\\ud83d\""
+  }
+]
