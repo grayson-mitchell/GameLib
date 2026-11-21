@@ -183,7 +183,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **🚧 v0.11 Node Sidecar Retirement** (planned 2026-11-17; current since 2026-11-20; requirements `REQUIREMENTS-v0.11.md`)
 
-- [ ] **Phase 82: Guardrails, hygiene and shared safety primitives** — not planned
+- [x] **Phase 82: Guardrails, hygiene and shared safety primitives** — 20/20 plans (16 + 4 gap closure); completed 2026-11-21
 - [x] **Phase 83: Native seam, gamelib-core and process/shutdown contract** — 11/11 plans; completed 2026-11-21
 - [ ] **Phase 84: Logger** — 11 plans in 9 waves (consolidated from 14, then two plans split for context budget); planned 2026-11-21 (executes after Phase 83 closes)
 - [ ] **Phase 85: Store host, config and versioned migrations** — not planned
@@ -326,7 +326,7 @@ Milestone v0.11 Node Sidecar Retirement. Planned 2026-11-17 alongside v0.10; sta
   4. Uninstalling a game never deletes a sibling game co-installed beside it, proven by an adversarial path table (nested installdir, `.\x`, `C:\x`, UNC, symlink, case, NFC/NFD) on macOS, Windows and Linux
   5. The `utils.ts` and `bootstrap.ts` responsibility inventory and the milestone-wide state-ownership table are committed, and the zero-risk deletions (type-only files, dead exports, `legendary/commands/*`, `CI=e2e` mocks; `fileStore.ts` only after the live-or-dead check) are gone
 
-**Plans:** 20/20 plans executed (16 + 4 gap closure)
+**Plans:** 20/20 plans complete (16 + 4 gap closure)
 
 Plans:
 **Wave 1**
