@@ -248,7 +248,30 @@
         "extraInfoStaleBody": "This result was cached before load outcomes were recorded, so it may be out of date. Refresh to check.",
         "hiddenAchievement": "Hidden Achievement",
         "installTab": {
+            "busy": {
+                "moving": "Moving…",
+                "settingFolder": "Setting folder…"
+            },
+            "failure": {
+                "move": "Move failed. Details are in the log.",
+                "setFolder": "Couldn't set the install folder. Details are in the log."
+            },
             "libraryGroup": "Library & integration",
+            "location": "Location",
+            "move": "Move…",
+            "open": "Open",
+            "reason": {
+                "installing": "Wait for the install to finish",
+                "launching": "Wait for the game to start",
+                "moving": "Wait for the move to finish",
+                "playing": "Quit the game first",
+                "queued": "Wait for the queued download",
+                "settingFolder": "Wait for the folder change to finish",
+                "syncing": "Wait for the save sync to finish",
+                "uninstalling": "Wait for the uninstall to finish",
+                "updating": "Wait for the update to finish",
+                "verifying": "Wait for the verify to finish"
+            },
             "retry": "Retry",
             "shortcuts": {
                 "description": "Opens the game without opening GameLib first.",
@@ -260,7 +283,8 @@
             "switch": {
                 "adding": "Adding…",
                 "removing": "Removing…"
-            }
+            },
+            "wrongFolder": "Wrong folder?"
         },
         "leftCard": {
             "addCategory": "+ Category",

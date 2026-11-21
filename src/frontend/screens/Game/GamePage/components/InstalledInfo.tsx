@@ -6,8 +6,6 @@ import GameContext from '../../GameContext'
 import { DownloadDone } from '@mui/icons-material'
 import PopoverComponent from 'frontend/components/UI/PopoverComponent'
 import { GameInfo } from 'common/types'
-import { faFolderOpen } from '@fortawesome/free-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
 interface Props {
   gameInfo: GameInfo
@@ -32,8 +30,7 @@ const InstalledInfo = ({ gameInfo }: Props) => {
 
   const {
     install: { platform: installPlatform },
-    canRunOffline,
-    folder_name
+    canRunOffline
   } = gameInfo
 
   // Browser games have no local install data; the platform is shown (boxed)
@@ -42,17 +39,13 @@ const InstalledInfo = ({ gameInfo }: Props) => {
     return null
   }
 
-  let install_path: string | undefined
   let install_size: string | undefined
   let version: string | undefined
 
   if (!isSideloaded) {
-    install_path = gameInfo.install.install_path
     install_size = gameInfo.install.install_size
     version = gameInfo.install.version
   }
-
-  const appLocation = install_path || folder_name
 
   const { wineVersion, winePrefix, wineCrossoverBottle } = gameSettings
 
@@ -90,21 +83,6 @@ const InstalledInfo = ({ gameInfo }: Props) => {
           {asStoreGame(gameInfo, 'legendary')?.isEAManaged
             ? 'EA app'
             : gameInfo.thirdPartyManagedApp}
-        </div>
-      )}
-      {!isThirdParty && (
-        <div
-          className="clickable"
-          onClick={() =>
-            appLocation !== undefined ? window.api.openFolder(appLocation) : {}
-          }
-        >
-          <b>{t('info.path')}:</b>{' '}
-          <div className="truncatedPath">{appLocation}</div>
-          <FontAwesomeIcon
-            icon={faFolderOpen}
-            title={t('info.openLocation', 'Open location')}
-          />
         </div>
       )}
       {!is.win && !is.native && (

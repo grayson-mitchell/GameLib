@@ -1,4 +1,9 @@
+import { useContext } from 'react'
 import type { GameInfo } from 'common/types'
+import { hasCapability } from 'common/storeCapabilities'
+import GameContext from '../../../GameContext'
+import { installActionGates } from '../../actions/installActionGates'
+import { useInstallLocationActions } from '../../actions/useInstallLocationActions'
 // Imported by file path, not through the components barrel, to avoid an import
 // cycle (the barrel is imported by GamePage, which imports this).
 import PlatformSupport from '../PlatformSupport'
@@ -10,6 +15,7 @@ import CloudSavesSync from '../CloudSavesSync'
 import HumbleOriginInfo from '../HumbleOriginInfo'
 import NativePortInfo from '../NativePortInfo'
 import IntegrationRows from './IntegrationRows'
+import LocationRow from './LocationRow'
 import './index.css'
 
 interface Props {
@@ -23,22 +29,54 @@ interface Props {
  * and not to the new groups; plan 08 removes the wrapper once every row has
  * been reshaped.
  */
-const InstallTab = ({ gameInfo, platform }: Props) => (
-  <>
-    <div className="legacyRows">
-      <div>
-        <PlatformSupport gameInfo={gameInfo} />
-        <AppleWikiInfo gameInfo={gameInfo} />
-        <RunsForMeToggle gameInfo={gameInfo} />
-        <DownloadSizeInfo gameInfo={gameInfo} />
-        <InstalledInfo gameInfo={gameInfo} />
-        <CloudSavesSync gameInfo={gameInfo} />
-        <HumbleOriginInfo gameInfo={gameInfo} />
-        <NativePortInfo gameInfo={gameInfo} platform={platform} />
+const InstallTab = ({ gameInfo, platform }: Props) => {
+  const { is, gameSettings, gameExtraInfo, runner } = useContext(GameContext)
+  const locationActions = useInstallLocationActions(gameInfo)
+
+  const gates = installActionGates({
+    is,
+    runner,
+    isInstalled: gameInfo.is_installed,
+    isThirdPartyManaged: !!gameInfo.thirdPartyManagedApp,
+    isBrowserGame: gameInfo.install.platform === 'Browser',
+    hasWinePrefix:
+      !is.win &&
+      !is.native &&
+      gameSettings?.wineVersion.type !== 'crossover' &&
+      !!gameSettings?.winePrefix,
+    hasChangelog: !!gameExtraInfo?.changelog?.length,
+    cloudSavesAvailable:
+      gameInfo.is_installed &&
+      hasCapability(runner, 'supportsCloudSaves') &&
+      !!gameInfo.cloud_save_enabled &&
+      !is.linuxNative,
+    settingFolder: locationActions.settingFolder
+  })
+
+  return (
+    <>
+      <div className="installFacts">
+        <LocationRow
+          gameInfo={gameInfo}
+          gates={gates}
+          actions={locationActions}
+        />
       </div>
-    </div>
-    <IntegrationRows gameInfo={gameInfo} platform={platform} />
-  </>
-)
+      <div className="legacyRows">
+        <div>
+          <PlatformSupport gameInfo={gameInfo} />
+          <AppleWikiInfo gameInfo={gameInfo} />
+          <RunsForMeToggle gameInfo={gameInfo} />
+          <DownloadSizeInfo gameInfo={gameInfo} />
+          <InstalledInfo gameInfo={gameInfo} />
+          <CloudSavesSync gameInfo={gameInfo} />
+          <HumbleOriginInfo gameInfo={gameInfo} />
+          <NativePortInfo gameInfo={gameInfo} platform={platform} />
+        </div>
+      </div>
+      <IntegrationRows gameInfo={gameInfo} platform={platform} />
+    </>
+  )
+}
 
 export default InstallTab

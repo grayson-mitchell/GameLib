@@ -311,9 +311,11 @@ describe('every frontend openDialog call site goes through the total useOpenDial
       )
       .map((file) => file.slice(REPO_ROOT.length + 1))
 
-    // Five files, seven calls: GameSubMenu (moveInstall + changeInstallPath) and
-    // SideloadDialog (local image + run-exe) carry two each, the other three one apiece.
-    expect(callers).toHaveLength(5)
+    // Six files, nine calls: GameSubMenu and useInstallLocationActions (moveInstall +
+    // changeInstallPath each) and SideloadDialog (local image + run-exe) carry two
+    // each, the other three one apiece. Phase 100 plan 04 copies the two ⋮ pickers into
+    // useInstallLocationActions; plan 09 deletes GameSubMenu and returns this to five.
+    expect(callers).toHaveLength(6)
     expect(callers).toEqual(
       expect.arrayContaining([
         join(
@@ -325,6 +327,15 @@ describe('every frontend openDialog call site goes through the total useOpenDial
           'index.tsx'
         ),
         join('src', 'frontend', 'screens', 'Game', 'GameSubMenu', 'index.tsx'),
+        join(
+          'src',
+          'frontend',
+          'screens',
+          'Game',
+          'GamePage',
+          'actions',
+          'useInstallLocationActions.ts'
+        ),
         join(
           'src',
           'frontend',
