@@ -6,10 +6,10 @@ current_phase: 84
 current_phase_name: Logger
 status: executing
 stopped_at: Completed 82-20-PLAN.md
-last_updated: "2026-11-21T03:25:04.314Z"
+last_updated: "2026-11-21T03:49:03.970Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 83 execution started
-state_head: 4f7d54a221ef84606aacf0de6337b5ba14744a9d
+state_head: a354ce4b705fd10f98cd170c994743a815675bda
 progress:
   total_phases: 19
   completed_phases: 23
@@ -79,7 +79,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 Phase: 84 (Logger) — READY TO EXECUTE
 Plan: 11 of 11
 Status: Ready to execute
-Last activity: 2026-11-21 — Phase 83 execution started
+Last activity: 2026-11-21 - Completed quick task 261121-mpt: Close G-82-2-r3 (runTs pins narrowed; steamBridgeKnownFixes timeout wait bounded by real time)
 Progress: [██████████] 100% (19 of 19 phase 82 plans have a SUMMARY; verification human_needed)
 
 ## Native-Install Arc Phase Map (21–25)
@@ -660,6 +660,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261121-dzl | Game settings dialog redesign per sketch 009 B | 2026-11-21 | 3ff5d2ad8 | — | [261121-dzl-game-settings-dialog-redesign-per-sketch](./quick/261121-dzl-game-settings-dialog-redesign-per-sketch/) |
 | 261121-kqt | Enable incremental tsc in codecheck | 2026-11-21 | 893bf22da | — | [261121-kqt-enable-incremental-tsc-in-codecheck](./quick/261121-kqt-enable-incremental-tsc-in-codecheck/) |
 | 261121-lco | Fix stale i18n baseline, fork-touched-files list and gameinfo-narrowing ceiling after dzl redesign | 2026-11-21 | 9457e908b | — | [261121-lco-fix-stale-i18n-baseline-fork-touched-fil](./quick/261121-lco-fix-stale-i18n-baseline-fork-touched-fil/) |
+| 261121-mpt | Close G-82-2-r3: narrow runTs.test.ts node_modules/.cache pins for codecheck tsbuildinfo; real-time-bounded wait for steamBridgeKnownFixes 15s timeout test | 2026-11-21 | a354ce4b7 | — | [261121-mpt-close-g-82-2-r3-narrow-runts-test-ts-nod](./quick/261121-mpt-close-g-82-2-r3-narrow-runts-test-ts-nod/) |
 
 ## Deferred Items
 
