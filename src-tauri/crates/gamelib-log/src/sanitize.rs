@@ -3,8 +3,10 @@
 //! A port of `sanitizeRendererLogMessage.ts` plus the `formatter.ts` conversion that follows it
 //! (`convertUnknownToString`). Renderer logs reach Rust without a TS hop, so the redaction lives
 //! here: CR and LF become the two-character escapes `\r` and `\n` (so a message cannot forge a log
-//! line), strings are cut at 65,536 UTF-16 units and arrays at 256 entries, each with a visible
-//! marker. U+2028 and U+2029 are kept, as in TS.
+//! line), strings, array elements and each value of an object message are cut at 65,536 UTF-16
+//! units and arrays at 256 entries, each with a visible marker. U+2028 and U+2029 are kept, as in
+//! TS. [`truncate_utf16`] is the one cutting rule; the writer also applies it, at the frame path's
+//! per-entry cap, to every native-origin entry.
 
 use std::fmt;
 
@@ -76,19 +78,20 @@ impl<'de> Deserialize<'de> for RendererMessage {
     }
 }
 
-/// Cuts at `LOG_TEXT_MAX` UTF-16 units. A cut inside a surrogate pair keeps the units before it and
-/// writes U+FFFD, which is what Node wrote for the lone half left by `slice`.
-fn truncate_text(value: &str) -> String {
+/// Cuts at `limit` UTF-16 units, appending `…[truncated N bytes]` with N the units dropped. A cut
+/// inside a surrogate pair keeps the units before it and writes U+FFFD, which is what Node wrote for
+/// the lone half left by `slice`. A value within the limit is returned unchanged.
+pub(crate) fn truncate_utf16(value: &str, limit: usize) -> String {
     let total = value.encode_utf16().count();
-    if total <= LOG_TEXT_MAX {
+    if total <= limit {
         return value.to_string();
     }
     let mut out = String::new();
     let mut units = 0;
     for c in value.chars() {
         let n = c.len_utf16();
-        if units + n > LOG_TEXT_MAX {
-            if units < LOG_TEXT_MAX {
+        if units + n > limit {
+            if units < limit {
                 out.push('\u{FFFD}');
             }
             break;
@@ -96,11 +99,13 @@ fn truncate_text(value: &str) -> String {
         out.push(c);
         units += n;
     }
-    out.push_str(&format!(
-        "\u{2026}[truncated {} bytes]",
-        total - LOG_TEXT_MAX
-    ));
+    out.push_str(&format!("\u{2026}[truncated {} bytes]", total - limit));
     out
+}
+
+/// Cuts at `LOG_TEXT_MAX` UTF-16 units.
+fn truncate_text(value: &str) -> String {
+    truncate_utf16(value, LOG_TEXT_MAX)
 }
 
 fn escape_line_breaks(value: &str) -> String {
@@ -151,7 +156,13 @@ pub fn renderer_body(m: &RendererMessage) -> String {
             }
             parts.join(" ")
         }
-        RendererMessage::Object(entries) => pretty_object(entries),
+        RendererMessage::Object(entries) => {
+            let cut: Vec<(String, String)> = entries
+                .iter()
+                .map(|(k, v)| (k.clone(), truncate_text(v)))
+                .collect();
+            pretty_object(&cut)
+        }
     }
 }
 
@@ -230,6 +241,25 @@ mod tests {
             "{\n  \"stack\": \"s\\nx\",\n  \"name\": \"N\"\n}"
         );
         assert_eq!(body(json!({})), "{}");
+    }
+
+    #[test]
+    fn an_object_value_is_cut_at_the_text_cap_with_a_marker() {
+        let sent = format!(
+            r#"{{"stack":"{}","name":"N"}}"#,
+            "a".repeat(LOG_TEXT_MAX + 1)
+        );
+        let out = renderer_body(&serde_json::from_str(&sent).expect("parses"));
+        assert_eq!(
+            out,
+            format!(
+                "{{\n  \"stack\": \"{}\u{2026}[truncated 1 bytes]\",\n  \"name\": \"N\"\n}}",
+                "a".repeat(LOG_TEXT_MAX)
+            )
+        );
+        // At the cap exactly: untouched.
+        let whole = body(json!({"message": "a".repeat(LOG_TEXT_MAX)}));
+        assert!(!whole.contains("truncated"), "cut at the cap exactly");
     }
 
     #[test]

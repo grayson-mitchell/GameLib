@@ -1,7 +1,7 @@
 //! The writer thread: one owner of every log file, fed by a bounded channel.
 //!
 //! Callers never block and never see an error: `log` and `submit_line` stamp, `try_send` and return.
-//! A full channel drops the entry and counts it; the writer later logs how many were dropped. The
+//! A full channel drops the entry and counts it; the writer later logs how many entries were dropped. The
 //! thread opens, appends and closes per batch (no held handle, so a Windows reader or a rename never
 //! fights it) and runs every message under `catch_unwind`.
 
@@ -19,8 +19,10 @@ use gamelib_core::clock::Clock;
 use gamelib_core::paths::{log_file, LogPathError, LogTarget, Platform};
 
 use crate::format::{format_line, normalise_chunk};
+use crate::frame::LOG_ENTRY_MAX_UTF16;
 use crate::limiter::{RateLimiter, Summary};
 use crate::prefix::{Level, Prefix};
+use crate::sanitize::truncate_utf16;
 
 /// Ingest capacity. Past it a caller's entry is dropped and counted, never waited for.
 const CHANNEL_CAPACITY: usize = 4096;
@@ -153,7 +155,7 @@ impl Logger {
                 tz,
                 level,
                 prefix,
-                msg: msg.to_string(),
+                msg: truncate_utf16(msg, LOG_ENTRY_MAX_UTF16),
             }],
         }]);
     }
@@ -172,8 +174,15 @@ impl Logger {
     }
 
     fn send(&self, msg: Msg) {
-        if let Err(TrySendError::Full(_) | TrySendError::Disconnected(_)) = self.tx.try_send(msg) {
-            self.dropped.fetch_add(1, Ordering::Relaxed);
+        if let Err(TrySendError::Full(lost) | TrySendError::Disconnected(lost)) =
+            self.tx.try_send(msg)
+        {
+            // The report says "lines", so it counts the entries the frame carried, not the message.
+            let entries = match &lost {
+                Msg::Batches(batches) => batches.iter().map(|b| b.entries.len() as u64).sum(),
+                _ => 0,
+            };
+            self.dropped.fetch_add(entries, Ordering::Relaxed);
         }
     }
 
@@ -722,6 +731,77 @@ mod tests {
         );
         assert!(body.contains("log writer: "));
         assert!(body.contains("line 0\n"));
+    }
+
+    fn info_line(msg: &str) -> Entry {
+        Entry::Line {
+            ts: TS,
+            tz: 0,
+            level: Level::Info,
+            prefix: Prefix::Backend,
+            msg: msg.to_string(),
+        }
+    }
+
+    #[test]
+    fn a_native_entry_over_the_entry_cap_is_cut_with_a_marker() {
+        let home = FakeHome::new("gamelib-log-");
+        let general = path(&home, &["gamelib.log"]);
+        let logger = Logger::start(config(&home));
+        let cap = crate::frame::LOG_ENTRY_MAX_UTF16;
+        logger.log(Prefix::Backend, Level::Info, &"a".repeat(cap + 10));
+        assert!(logger.flush(GENEROUS));
+        let body = read(&general);
+        let marker = "\u{2026}[truncated 10 bytes]\n";
+        assert!(body.ends_with(marker), "marker missing");
+        assert_eq!(body.lines().count(), 1);
+        // The message is the last space-separated token of the line.
+        let text = body.trim_end_matches(marker).rsplit(' ').next().unwrap();
+        assert_eq!(text.len(), cap);
+        assert!(text.chars().all(|c| c == 'a'));
+        // At the cap exactly: written whole.
+        logger.log(Prefix::Backend, Level::Info, &"b".repeat(cap));
+        assert!(logger.flush(GENEROUS));
+        let body = read(&general);
+        assert!(body.ends_with(&format!("{}\n", "b".repeat(cap))));
+        assert_eq!(body.matches("truncated").count(), 1);
+    }
+
+    #[test]
+    fn the_drop_report_counts_entries_not_messages() {
+        let home = FakeHome::new("gamelib-log-");
+        let logger = Logger::start(config(&home));
+        let release = logger.hold();
+        for i in 0..5000 {
+            logger.submit(vec![batch(
+                LogTarget::General,
+                false,
+                vec![info_line(&format!("fill {i}"))],
+            )]);
+        }
+        let wide: Vec<Entry> = (0..200)
+            .map(|i| info_line(&format!("fill wide {i}")))
+            .collect();
+        logger.submit(vec![batch(LogTarget::General, false, wide)]);
+        drop(release);
+        assert!(logger.flush(GENEROUS));
+        let body = read(&path(&home, &["gamelib.log"]));
+        let written = body
+            .lines()
+            .filter(|l| l.contains("]: "))
+            .filter(|l| l.contains(" fill "))
+            .count();
+        let report = body
+            .lines()
+            .find(|l| l.contains("lines dropped (ingest full)"))
+            .expect("a drop report");
+        let reported: usize = report
+            .split("log writer: ")
+            .nth(1)
+            .and_then(|t| t.split(' ').next())
+            .and_then(|n| n.parse().ok())
+            .expect("a count");
+        assert_eq!(reported + written, 5200, "{report}");
     }
 
     #[test]
