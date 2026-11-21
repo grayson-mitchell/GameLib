@@ -825,4 +825,251 @@ mod tests {
             .count();
         assert!((1..=2).contains(&after), "{after} copies after two boots");
     }
+
+    /// An older-version corpus file of a user-state row (`expect: migrate`), the file the Rust
+    /// engine migrates at boot: its row, the stored bytes, and the bytes the real TS chains produced.
+    struct OlderUserState {
+        row: &'static TableRow,
+        file: String,
+        stored: Vec<u8>,
+        expected: Vec<u8>,
+    }
+
+    fn older_user_state_files() -> Vec<OlderUserState> {
+        let text = fs::read_to_string(format!("{CORPUS_DIR}/MANIFEST.json")).unwrap();
+        let manifest: serde_json::Value = serde_json::from_str(&text).unwrap();
+        let expected_dir = format!(
+            "{}/crates/gamelib-store/tests/fixtures/corpus-expected",
+            env!("CARGO_MANIFEST_DIR")
+        );
+        let mut found = Vec::new();
+        for entry in manifest["files"].as_array().unwrap() {
+            let (Some(key), Some(path)) = (entry["tableKey"].as_str(), entry["path"].as_str())
+            else {
+                continue;
+            };
+            let Some(row) = row_for_key(key) else {
+                continue;
+            };
+            if row.family != Family::UserState || entry["expect"] != "migrate" {
+                continue;
+            }
+            found.push(OlderUserState {
+                row,
+                file: path.rsplit('/').next().unwrap().to_string(),
+                stored: fs::read(format!("{CORPUS_DIR}/{path}")).unwrap(),
+                expected: fs::read(format!("{expected_dir}/{path}")).unwrap(),
+            });
+        }
+        found
+    }
+
+    /// Plants the older file at its row's own path under `home` and returns that path.
+    fn plant_older(home: &FakeHome, older: &OlderUserState) -> PathBuf {
+        let dir = home.root().join(&older.row.dir);
+        fs::create_dir_all(&dir).unwrap();
+        let path = dir.join(format!("{}.json", older.row.name.as_deref().unwrap()));
+        fs::write(&path, &older.stored).unwrap();
+        path
+    }
+
+    /// The backups the engine wrote beside `path` for its store: `<name>.v<N>.<stamp>.bak.json`.
+    fn backups_beside(path: &Path) -> Vec<PathBuf> {
+        let name = path.file_stem().unwrap().to_string_lossy().into_owned();
+        let mut found: Vec<PathBuf> = fs::read_dir(path.parent().unwrap())
+            .unwrap()
+            .flatten()
+            .map(|e| e.path())
+            .filter(|p| {
+                p.file_name().and_then(|n| n.to_str()).is_some_and(|n| {
+                    n.starts_with(&format!("{name}.v")) && n.ends_with(".bak.json")
+                })
+            })
+            .collect();
+        found.sort();
+        found
+    }
+
+    /// D-12 at boot: the shipped ownership file (user-state flipped) makes `open_all` migrate an
+    /// older-version library before `spawn_sidecar_state` (which runs after it in `run_setup`), so
+    /// the sidecar's mirror only ever loads current-version data. The pre-migration backup holds
+    /// the stored bytes and the migrated bytes equal what the real TS chains produced.
+    #[test]
+    fn store_boot_migrates_older_library_before_spawn() {
+        let older = older_user_state_files()
+            .into_iter()
+            .find(|o| {
+                o.row.key == "store_cache/steam_library" && o.file.starts_with("steam_library.v1.")
+            })
+            .expect("a v1 steam_library corpus file");
+        assert_ne!(older.stored, older.expected, "the corpus file is older");
+        let home = FakeHome::new("gamelib-store-boot-");
+        let path = plant_older(&home, &older);
+        let (host, report) = open(&home, Ownership::embedded(), 10_000, 60_000);
+        assert_eq!(
+            (
+                report.opened,
+                report.migrated,
+                report.adopted,
+                report.deferred
+            ),
+            (1, 1, 0, 0)
+        );
+        assert!(report.read_only.is_empty() && report.start_empty.is_empty());
+        assert!(
+            summary_line(&report).contains(", 1 migrated, "),
+            "{}",
+            summary_line(&report)
+        );
+        assert_eq!(
+            fs::read(&path).unwrap(),
+            older.expected,
+            "the file holds the migrated bytes at boot, before anything else reads it"
+        );
+        let backups = backups_beside(&path);
+        assert_eq!(backups.len(), 1, "{backups:?}");
+        assert!(backups[0]
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .starts_with("steam_library.v1."));
+        assert_eq!(fs::read(&backups[0]).unwrap(), older.stored);
+        // The host holds the migrated store open; GAMELIB_STORE_BOOT has nothing to report.
+        assert!(host.read_only_entries().is_empty());
+        assert_eq!(boot_env_value(&report), None);
+    }
+
+    /// Every older-version user-state corpus file (7 rows, v0/v1/v2 captures) migrates at boot with
+    /// a backup of its stored bytes and the bytes the TS chains produced.
+    #[test]
+    fn store_boot_migrates_every_older_user_state_corpus_file() {
+        let all = older_user_state_files();
+        assert!(
+            all.len() >= 14,
+            "{} older user-state corpus files",
+            all.len()
+        );
+        let rows: std::collections::BTreeSet<&str> =
+            all.iter().map(|o| o.row.key.as_str()).collect();
+        for key in [
+            "store_cache/steam_library",
+            "store_cache/gog_library",
+            "store_cache/legendary_library",
+            "store_cache/nile_library",
+            "gog_store/installed",
+            "sideload_apps/library",
+            "store/download-manager",
+        ] {
+            assert!(rows.contains(key), "no older corpus file for {key}");
+        }
+        for older in &all {
+            let home = FakeHome::new("gamelib-store-boot-");
+            let path = plant_older(&home, older);
+            let (_host, report) = open(&home, Ownership::embedded(), 10_000, 60_000);
+            assert_eq!(
+                (report.opened, report.migrated),
+                (1, 1),
+                "{} {}",
+                older.row.key,
+                older.file
+            );
+            assert_eq!(fs::read(&path).unwrap(), older.expected, "{}", older.file);
+            let backups = backups_beside(&path);
+            assert_eq!(backups.len(), 1, "{}: {backups:?}", older.file);
+            assert_eq!(
+                fs::read(&backups[0]).unwrap(),
+                older.stored,
+                "{}",
+                older.file
+            );
+        }
+    }
+
+    /// `GAMELIB_STORE=ts` keeps the shipped ownership file but opens nothing it does not own: no
+    /// user-state row is opened, migrated or backed up, and the older bytes stay as the TS engine
+    /// will find them.
+    #[test]
+    fn store_boot_ts_mode_opens_no_user_state() {
+        let own = Ownership::embedded();
+        assert!(own.families.get("user-state").copied().unwrap_or(false));
+        let home = FakeHome::new("gamelib-store-boot-");
+        let mut planted: Vec<(PathBuf, Vec<u8>)> = Vec::new();
+        // An older-version file for each row that has one, a baseline file for the other
+        // user-state rows.
+        let older = older_user_state_files();
+        for row in table()
+            .iter()
+            .filter(|r| r.family == Family::UserState && r.name.is_some())
+        {
+            let path = match older.iter().find(|o| o.row.key == row.key) {
+                Some(o) => plant_older(&home, o),
+                None => {
+                    let dir = home.root().join(&row.dir);
+                    fs::create_dir_all(&dir).unwrap();
+                    let path = dir.join(format!("{}.json", row.name.as_deref().unwrap()));
+                    fs::write(&path, "{\"a\":1}").unwrap();
+                    path
+                }
+            };
+            planted.push((path.clone(), fs::read(&path).unwrap()));
+        }
+        assert!(planted.len() >= 26, "{} user-state files", planted.len());
+        let before = home_tree(home.root());
+        let host = StoreHost::new();
+        let report = open_all_with(
+            &host,
+            StoreMode::Ts,
+            own,
+            home.root(),
+            10_000,
+            60_000,
+            &|| false,
+        );
+        assert_eq!(
+            (
+                report.opened,
+                report.migrated,
+                report.adopted,
+                report.deferred
+            ),
+            (0, 0, 0, 0)
+        );
+        for (path, bytes) in &planted {
+            assert_eq!(&fs::read(path).unwrap(), bytes, "{}", path.display());
+        }
+        assert_eq!(
+            home_tree(home.root()),
+            before,
+            "no backup or side file appeared"
+        );
+        assert!(host.read_only_entries().is_empty());
+        // The same profile in rust mode does open (and migrate) them: the mode alone is the gate.
+        let (_host, rust) = open(&home, own, 10_000, 60_000);
+        assert!(rust.opened >= 26, "{} opened under rust", rust.opened);
+        assert!(rust.migrated >= 7, "{} migrated under rust", rust.migrated);
+    }
+
+    /// Every file under `root`, relative, with its length: a cheap whole-tree comparison.
+    fn home_tree(root: &Path) -> Vec<(String, u64)> {
+        fn walk(dir: &Path, root: &Path, into: &mut Vec<(String, u64)>) {
+            for entry in fs::read_dir(dir).unwrap().flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    walk(&path, root, into);
+                } else {
+                    into.push((
+                        path.strip_prefix(root)
+                            .unwrap()
+                            .to_string_lossy()
+                            .into_owned(),
+                        entry.metadata().unwrap().len(),
+                    ));
+                }
+            }
+        }
+        let mut found = Vec::new();
+        walk(root, root, &mut found);
+        found.sort();
+        found
+    }
 }

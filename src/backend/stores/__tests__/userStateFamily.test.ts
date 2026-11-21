@@ -249,3 +249,36 @@ describe('store/timestamp end to end: TS set -> frame -> bytes', () => {
     }
   })
 })
+
+describe('queue state survives a restart', () => {
+  const queue = [
+    { params: { appName: 'Quail', runner: 'legendary' }, status: 'queued' },
+    { params: { appName: '1245620', runner: 'steam' }, status: 'queued' }
+  ]
+
+  it('download-manager’s queue written through frames is loaded by a fresh StoreRoot over the same dir', () => {
+    const frames: StoreFrame[] = []
+    const first = build(userData, 'rust', frames)
+    const store = storeOfRow(userData, 'store/download-manager', first.stores)
+    store.set('queue', queue)
+    store.set('finished', [])
+    expect(frames.map((frame) => [frame.store, frame.op, frame.key])).toEqual([
+      ['store/download-manager', 'set', 'queue'],
+      ['store/download-manager', 'set', 'finished']
+    ])
+
+    // A restart: nothing of the first root is kept, only the directory.
+    const second = build(userData, 'rust', [])
+    const reopened = storeOfRow(
+      userData,
+      'store/download-manager',
+      second.stores
+    )
+    expect(reopened.get('queue', [])).toEqual(queue)
+    expect(reopened.get('finished', ['unset'])).toEqual([])
+    const onDisk = JSON.parse(
+      readFileSync(join(userData, 'store', 'download-manager.json'), 'utf8')
+    ) as Record<string, unknown>
+    expect(onDisk.queue).toEqual(queue)
+  })
+})
