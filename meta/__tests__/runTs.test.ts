@@ -28,15 +28,28 @@ function loadScripts(): Record<string, string> {
   ).scripts
 }
 
-// The C3-01 defect predicate itself: a script value writes esbuild's output
-// to the shared, script-name-keyed `node_modules/.cache/` path. This is the
-// EXACT shape the reviewer measured 100% cross-contamination on. Reused
-// unmodified against both the real scripts object (test 1, expect zero
-// matches) and a synthetic deliberately-bad fixture (test 3, the vacuity
-// guard) so test 1's assertion is proven capable of failing, not just
-// capable of passing.
+// The C3-01 defect predicate itself: a script value compiles a runnable
+// outfile into the shared, script-name-keyed `node_modules/.cache/` path.
+// This is the EXACT shape the reviewer measured 100% cross-contamination on.
+// It matches either half of the compile-then-run shape: an esbuild
+// `--outfile`/`--outdir` pointing into node_modules/.cache, or a .js/.cjs/.mjs
+// path there (the `node node_modules/.cache/x.cjs` half).
+//
+// It deliberately EXCLUDES tsc incremental state. Since quick 261121-kqt,
+// `codecheck` keeps tsc's incremental buildinfo under node_modules/.cache
+// through `--tsBuildInfoFile`. That file is type-check state that is never
+// executed, so it is not the cross-contamination C3-01 measured: no
+// invocation can run another invocation's output through it.
+//
+// The same predicate is reused unmodified against both the real scripts
+// object (test 1, expect zero matches) and a synthetic deliberately-bad
+// fixture (test 3, the vacuity guard) so test 1's assertion is proven
+// capable of failing, not just capable of passing.
+const SHARED_CACHE_OUTFILE =
+  /--out(?:file|dir)[=\s]+node_modules\/\.cache\b|node_modules\/\.cache\/[\w./-]*\.[cm]?js\b/
+
 function hasSharedCacheOutfile(scriptValue: string): boolean {
-  return /node_modules\/\.cache/.test(scriptValue)
+  return SHARED_CACHE_OUTFILE.test(scriptValue)
 }
 
 // A script "compiles an esbuild-bundled meta/*.ts entry and then executes
@@ -98,21 +111,33 @@ describe('meta/runTs.cjs wrapper wiring pin (C3-01)', () => {
     expect(wrappedNames.length).toBeGreaterThan(0)
   })
 
-  test('vacuity guard: the shared-cache-outfile predicate used in test 1 actually fires against a known-bad synthetic input', () => {
+  test('vacuity guard: the shared-cache-outfile predicate used in test 1 fires against known-bad synthetic inputs and not against tsc incremental state', () => {
     // Proves test 1's assertion could go red, not just that it currently
-    // passes. Deliberately reintroduces the exact vulnerable shape into a
+    // passes. Deliberately reintroduces the vulnerable shapes into a
     // synthetic scripts object (never the real package.json) and asserts
-    // the SAME predicate function used above flags it.
+    // the SAME predicate function used above flags them. The
+    // 'incremental-state' entry is the negative control: tsc's buildinfo
+    // under node_modules/.cache is never executed and must not be flagged.
     const syntheticBadScripts: Record<string, string> = {
       'reintroduced-hazard':
-        '--outfile=node_modules/.cache/x.cjs meta/x.ts && node node_modules/.cache/x.cjs'
+        '--outfile=node_modules/.cache/x.cjs meta/x.ts && node node_modules/.cache/x.cjs',
+      'reintroduced-hazard-outdir':
+        'esbuild --bundle --outdir=node_modules/.cache meta/y.ts && node node_modules/.cache/y.js',
+      'reintroduced-hazard-extensionless':
+        'esbuild --bundle --outfile node_modules/.cache/z meta/z.ts && node node_modules/.cache/z',
+      'incremental-state':
+        'tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/x.tsbuildinfo'
     }
 
     const survivors = Object.entries(syntheticBadScripts).filter(([, v]) =>
       hasSharedCacheOutfile(v)
     )
 
-    expect(survivors.map(([k]) => k)).toEqual(['reintroduced-hazard'])
+    expect(survivors.map(([k]) => k)).toEqual([
+      'reintroduced-hazard',
+      'reintroduced-hazard-outdir',
+      'reintroduced-hazard-extensionless'
+    ])
   })
 })
 
@@ -127,6 +152,15 @@ describe('meta/runTs.cjs wrapper wiring pin (C3-01)', () => {
 // pins assert the fact, derived from the real package.json rather than
 // hand-copied, so a future reintroduction of a shared-cache outfile -- or a
 // comment drifting away from meta/runTs.cjs -- goes red here first.
+//
+// Since quick 261121-kqt, tool state legitimately lives under
+// node_modules/.cache (codecheck's tsc buildinfo), so pin 1's premise is the
+// narrower fact: no package.json script compiles a runnable outfile there.
+// The meta/*.ts source check deliberately keeps the bare path
+// (`sourceMentionsSharedCachePath` is unchanged): meta sources are the runner
+// entries, and they only ever named that path to describe the retired runner.
+// If a meta source ever needs to name a tool cache there, narrow that
+// predicate the same way; never delete the pin.
 // ---------------------------------------------------------------------------
 
 function listMetaTsFiles(): string[] {
@@ -172,14 +206,16 @@ function loadWrapperEntryFiles(): string[] {
 }
 
 describe('meta/*.ts doc-comment execution-path accuracy pin (E-02)', () => {
-  test('pin 1 (derived negative): no meta/*.ts source mentions the shared node_modules/.cache path, because no package.json script writes there', () => {
+  test('pin 1 (derived negative): no meta/*.ts source mentions the shared node_modules/.cache path, because no package.json script compiles a runnable outfile there', () => {
     const scripts = loadScripts()
     const scriptsWritingToSharedCache = Object.entries(scripts).filter(
       ([, v]) => hasSharedCacheOutfile(v)
     )
-    // The claim this test makes about meta/*.ts source comments is only
-    // true BECAUSE this is empty. If a future script reintroduces the
-    // shared-cache outfile, that must surface here explicitly rather than
+    // The first expect asserts the restated premise: no package.json script
+    // compiles a runnable outfile into node_modules/.cache (tsc incremental
+    // state there is not one). The claim this test makes about meta/*.ts
+    // source comments is only true BECAUSE this is empty. If a future script
+    // reintroduces the outfile, that must surface here explicitly rather than
     // this test silently continuing to assert an empty comment-mention set
     // for a reason that no longer holds.
     expect(scriptsWritingToSharedCache.map(([k]) => k)).toEqual([])
