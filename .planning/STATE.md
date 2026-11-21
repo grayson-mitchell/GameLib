@@ -6,10 +6,10 @@ current_phase: 84
 current_phase_name: Logger
 status: executing
 stopped_at: Completed 84-07-PLAN.md
-last_updated: "2026-11-21T07:39:06.120Z"
+last_updated: "2026-11-21T07:45:37.331Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 84 execution started
-state_head: b76b46076f68196d95d85a01aa20bddeb8d3e60f
+state_head: 123b3113962b80f091392796c97ddf6c6370f083
 progress:
   total_phases: 19
   completed_phases: 23
@@ -79,7 +79,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 Phase: 84 (Logger) — EXECUTING
 Plan: 8 of 11
 Status: Ready to execute
-Last activity: 2026-11-21 - Completed quick task 261121-p6z: Bound bootstrap.test.ts legacy-zoom cleanup wait by wall-clock via shared yieldUntil
+Last activity: 2026-11-21 - Completed quick task 261121-ssg: Fix macowned helper stub ETXTBSY flake on ubuntu
 Progress: [██████████] 100%
 
 ## Native-Install Arc Phase Map (21–25)
@@ -689,6 +689,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261121-o99 | Close Phase 82 deferred review findings (WR-02, WR-05, WR-06, WR-09, IN-01..IN-05) | 2026-11-21 | 81edc90b7 | — | [261121-o99-close-phase-82-deferred-review-findings](./quick/261121-o99-close-phase-82-deferred-review-findings/) |
 | 261121-p6z | Bound bootstrap.test.ts legacy-zoom cleanup wait by wall-clock via shared yieldUntil (siblings swept, none converted) | 2026-11-21 | 1ffdec537 | — | [261121-p6z-bound-bootstrap-test-ts-legacy-zoom-clea](./quick/261121-p6z-bound-bootstrap-test-ts-legacy-zoom-clea/) |
 | 15 | Fix Phase 82 review WR-13: runTs shared-cache pin matches every node_modules/.cache spelling, exempting only --tsBuildInfoFile | 2026-11-21 | 6cec972e7 | — | — |
+| 261121-ssg | Fix macowned helper stub ETXTBSY flake on ubuntu (HelperFailed vs AccountMismatch) | 2026-11-21 | 123b31139 | — | [261121-ssg-fix-macowned-helper-stub-etxtbsy-flake-o](./quick/261121-ssg-fix-macowned-helper-stub-etxtbsy-flake-o/) |
 
 ## Deferred Items
 
