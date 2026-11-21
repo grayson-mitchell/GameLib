@@ -500,9 +500,9 @@ async function waitForResponse(
 
 /**
  * REQ-34.3-01 Phase 34.3 plan 04 — round-trip coverage for the logger channels the sidecar still
- * serves: `uploadLogFile`, `deleteUploadedLogFile`, `getUploadedLogFiles`. (`logError`, `logInfo`,
- * `showLogFileInFolder` and `getLogContent` are served by the Rust native router since Phase 84
- * plan 84-05 and are tested in `src-tauri/src/log_dispatch.rs`.)
+ * serves: `deleteUploadedLogFile`, `getUploadedLogFiles`. (`logError`, `logInfo`,
+ * `showLogFileInFolder`, `getLogContent` and `uploadLogFile` are served by the Rust native router
+ * since Phase 84 plan 84-05 and are tested in `src-tauri/src/log_dispatch.rs` and `log_upload.rs`.)
  *
  * They mock only at the HTTP boundary (`global.fetch`) or the store boundary
  * (`uploadedLogFileStore`), never by replacing the uploader functions themselves with a jest
@@ -515,7 +515,7 @@ describe('REQ-34.3-09 / REQ-34.3-01 Phase 34.3 logger channels', () => {
     mockRequestRustInvoke.mockReset()
   })
 
-  it('REQ-34.3-01 send-vs-handle contract: uploadLogFile/deleteUploadedLogFile/getUploadedLogFiles are handlers; the native logger channels are not registered', async () => {
+  it('REQ-34.3-01 send-vs-handle contract: deleteUploadedLogFile/getUploadedLogFiles are handlers; the native logger channels are not registered', async () => {
     boot()
     await flush()
 
@@ -525,16 +525,13 @@ describe('REQ-34.3-09 / REQ-34.3-01 Phase 34.3 logger channels', () => {
       'logError',
       'logInfo',
       'showLogFileInFolder',
-      'getLogContent'
+      'getLogContent',
+      'uploadLogFile'
     ]) {
       expect(listenerRegistry.get(channel)).toBeUndefined()
       expect(handlerRegistry.get(channel)).toBeUndefined()
     }
-    for (const channel of [
-      'uploadLogFile',
-      'deleteUploadedLogFile',
-      'getUploadedLogFiles'
-    ]) {
+    for (const channel of ['deleteUploadedLogFile', 'getUploadedLogFiles']) {
       expect(handlerRegistry.get(channel)).toBeDefined()
       expect(listenerRegistry.get(channel)).toBeUndefined()
     }
@@ -556,59 +553,6 @@ describe('REQ-34.3-09 / REQ-34.3-01 Phase 34.3 logger channels', () => {
       uploadedLogFileStore.clear()
       jest.restoreAllMocks()
       delete (global as unknown as { fetch?: unknown }).fetch
-    })
-
-    it('REQ-34.3-01 uploadLogFile (invoke) resolves the paste URL and records it in uploadedLogFileStore', async () => {
-      const pasteUrl = `https://dpaste.com/upload-${process.pid}-${Math.random()
-        .toString(36)
-        .slice(2)}.txt`
-      global.fetch = jest.fn(() =>
-        Promise.resolve({
-          ok: true,
-          status: 200,
-          statusText: 'OK',
-          text: () => Promise.resolve(pasteUrl)
-        })
-      ) as unknown as typeof fetch
-
-      const { input, frames } = boot()
-      seedLogFile()
-      writeInvoke(input, 'ul-1', 'uploadLogFile', ['test-upload', {}])
-      const response = await waitForResponse(frames, 'ul-1')
-
-      expect(response?.ok).toBe(true)
-      expect(response?.result).toEqual([
-        pasteUrl,
-        expect.objectContaining({ name: 'test-upload' })
-      ])
-      expect(uploadedLogFileStore.get_nodefault(pasteUrl)).toEqual(
-        expect.objectContaining({ name: 'test-upload' })
-      )
-    })
-
-    it('REQ-34.3-01 uploadLogFile (invoke) rejects when the HTTP boundary fails, rather than resolving a falsely-successful value', async () => {
-      // A normal HTTP-level failure (a rejected fetch promise, or an
-      // ok:false response) is swallowed by logger/uploader.ts's own
-      // sendRequestToApi().catch(...) and surfaces as a resolved `false` --
-      // that is Electron parity, not a defect. To prove the invoke genuinely
-      // REJECTS (never a falsely-successful resolution) when the boundary
-      // itself is unusable, this mocks fetch to throw synchronously, which
-      // sendRequestToApi's `.catch()` chain never gets a chance to attach
-      // to -- the throw propagates through uploadLogFile's own await,
-      // converting the ipcMain.handle('uploadLogFile', ...) promise into a
-      // rejection, which dispatchInvoke turns into an { ok: false, error }
-      // frame (the same contract checkDiskSpace's ASVS V5 test already pins).
-      global.fetch = jest.fn(() => {
-        throw new Error('uploadLogFile HTTP boundary failure')
-      }) as unknown as typeof fetch
-
-      const { input, frames } = boot()
-      seedLogFile()
-      writeInvoke(input, 'ul-2', 'uploadLogFile', ['test-upload-fail', {}])
-      const response = await waitForResponse(frames, 'ul-2')
-
-      expect(response?.ok).toBe(false)
-      expect(response?.error).toBeDefined()
     })
 
     it("REQ-34.3-01/D-08 deleteUploadedLogFile (invoke) dispatches to logger/uploader.ts's deleteUploadedLogFile -- proves DISPATCH ONLY, not that deletion actually works (uploader.ts:74-77's hardcoded token makes real deletion impossible in either build)", async () => {

@@ -13,7 +13,6 @@
  * What remains here:
  *
  *   invoke (`deps.ipc.handle`):
- *     - `uploadLogFile` -> `logger/ipc_handler.ts:26`
  *     - `deleteUploadedLogFile` -> `logger/ipc_handler.ts:27`
  *     - `getUploadedLogFiles` -> `logger/ipc_handler.ts:30`
  *
@@ -27,32 +26,30 @@
  * module into the sidecar bundle. The helpers are imported directly from `../logger/uploader`.
  *
  * D-08 -- `deleteUploadedLogFile` is ported at parity but CANNOT ACTUALLY DELETE ANYTHING in either
- * build: `logger/uploader.ts` hardcodes `const token = '1'`, and dpaste.com does not support
- * deletion. There is no UI path to this channel in either build; the invariant is enforced by a
+ * build: the stored upload token is the literal `1` (`PASTE_TOKEN` in `src-tauri/src/log_upload.rs`),
+ * and dpaste.com does not support deletion. There is no UI path to this channel in either build; the invariant is enforced by a
  * render-level reachability gate
  * (`UploadedLogFilesList/__tests__/deleteButtonReachability.test.tsx`).
  *
- * D-09 -- log redaction is OUT OF SCOPE for this module. `uploadLogFile` sends up to 10 MiB of
- * unredacted log content to a public dpaste with a 2-day expiry; it is recorded as a standing
- * security todo (T-34.3-13, `34.3-PORTED-CHANNELS.md`). By explicit user instruction, NO AUDIT of
- * whether a token or key value can reach a log line is performed by this plan or this module.
+ * D-09 -- log redaction is OUT OF SCOPE here. The native `uploadLogFile` (`src-tauri/src/log_upload.rs`)
+ * sends up to 10 MiB of unredacted log content to a public dpaste with a 2-day expiry; it is
+ * recorded as a standing security todo (T-34.3-13, `34.3-PORTED-CHANNELS.md`). By explicit user
+ * instruction, NO AUDIT of whether a token or key value can reach a log line is performed.
  */
 
 import type { OpenExternal } from '../host/openExternal'
 import type { IpcRegistry } from './ipcRegistry'
-import type { GetLogFileArgs } from 'common/types/ipc/logger'
 import {
-  uploadLogFile,
   deleteUploadedLogFile,
   getUploadedLogFiles,
   type LogUploaderDeps
 } from '../logger/uploader'
 
 /**
- * Registers the 3 logger channels still served by the sidecar (3 invoke:
- * uploadLogFile, deleteUploadedLogFile, getUploadedLogFiles; 0 send).
- * `logError`, `logInfo` and `showLogFileInFolder` (sends) and `getLogContent`
- * moved to the Rust native router in Phase 84 plan 84-05. Called once from `handlers.ts` --
+ * Registers the 2 logger channels still served by the sidecar (2 invoke:
+ * deleteUploadedLogFile, getUploadedLogFiles; 0 send). `logError`, `logInfo`
+ * and `showLogFileInFolder` (sends) and `getLogContent` and `uploadLogFile`
+ * (invokes) moved to the Rust native router in Phase 84 plan 84-05. Called once from `handlers.ts` --
  * this module owns no side effects at import time beyond the imports above;
  * the caller decides when registration onto the handler registry happens.
  */
@@ -62,18 +59,6 @@ export function registerLoggerFlows(
     openExternal: Pick<OpenExternal, 'showItemInFolder'>
   }
 ): void {
-  // Electron parity source: src/backend/logger/ipc_handler.ts:26
-  // addHandler('uploadLogFile', async (e, name, args) => uploadLogFile(name, args))
-  //
-  // No try/catch here that would swallow the rejection: the frontend owns
-  // the "upload failed" state, and LogFileUploadDialog expects the invoke
-  // to reject on failure (the Phase 20 D-14 convention).
-  deps.ipc.handle(
-    'uploadLogFile',
-    async (_event: unknown, ...args: unknown[]) =>
-      uploadLogFile(deps, args[0] as string, args[1] as GetLogFileArgs)
-  )
-
   // Electron parity source: src/backend/logger/ipc_handler.ts:27
   //
   // D-08 (see this module's header docstring): ported faithfully. This

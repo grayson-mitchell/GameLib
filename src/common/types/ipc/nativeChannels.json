@@ -84,6 +84,44 @@
         ["x"]
       ]
     },
+    "uploadLogFile": {
+      "kind": "invoke",
+      "slice": "logger",
+      "args": [
+        {
+          "name": "name",
+          "type": "string",
+          "maxLength": 1024,
+          "maxLengthUnit": "utf16"
+        },
+        {
+          "name": "logFile",
+          "type": "{} | { runner } | { appName, runner, type? }",
+          "strict": true
+        }
+      ],
+      "returns": "false | [string, { name, token, uploadedAt }]",
+      "valid": [
+        ["Heroic log", {}],
+        [
+          "Game log of X",
+          { "appName": "abc", "runner": "gog", "type": "launch" }
+        ]
+      ],
+      "invalid": [
+        [],
+        ["x"],
+        [1, {}],
+        ["x", { "appName": "abc" }],
+        ["x", {}, "extra"],
+        [
+          "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          {}
+        ],
+        ["x", { "appName": "../x", "runner": "steam" }],
+        ["x", { "extra": 1 }]
+      ]
+    },
     "getHeroicVersion": {
       "kind": "invoke",
       "slice": "app-shell",

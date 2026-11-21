@@ -769,6 +769,7 @@ pub(crate) fn is_renderer_channel(name: &str) -> bool {
 pub(crate) const NATIVE_INVOKE_CHANNELS: &[&str] = &[
     "getHeroicVersion",
     "getLogContent",
+    "uploadLogFile",
 ];
 
 /// Renderer send channels owned by the Rust native router (Phase 83), sorted.

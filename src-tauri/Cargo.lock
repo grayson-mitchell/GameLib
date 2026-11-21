@@ -1742,6 +1742,7 @@ dependencies = [
  "objc2-foundation",
  "objc2-user-notifications",
  "objc2-web-kit",
+ "reqwest",
  "rfd",
  "serde",
  "serde_json",

@@ -71,6 +71,11 @@ serde_json = "1"
 # 2.5.8 is already locked transitively, so this adds no lockfile name (package-legitimacy check
 # OK, 2026-11-20).
 url = "2"
+# Phase 84 plan 84-05: the native log upload (`log_upload.rs`) posts to dpaste.com. Same version and
+# features as `gamelib-steamcm`'s reqwest (no default features; the TLS provider is installed by
+# `gamelib_steamcm::install_crypto_provider`), so it is already locked and adds no lockfile name
+# (package-legitimacy check OK, 84-RESEARCH).
+reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider"] }
 keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service"] }
 tauri-plugin-updater = "2"
 tauri-plugin-shell = "2"

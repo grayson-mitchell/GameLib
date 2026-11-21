@@ -2,8 +2,9 @@
  * Reachability gate for the uploaded-log DELETE control (todo
  * `uploaded-log-delete-button-lies`).
  *
- * The premise this file guards: `logger/uploader.ts` hardcodes `const token
- * = '1'` because dpaste.com has no delete API, so `deleteUploadedLogFile`
+ * The premise this file guards: the stored upload token is the hardcoded literal `1`
+ * (`PASTE_TOKEN` in `src-tauri/src/log_upload.rs`, formerly `const token = '1'` in
+ * `logger/uploader.ts`) because dpaste.com has no delete API, so `deleteUploadedLogFile`
  * cannot delete anything **in either build** — it POSTs a bogus token and
  * either errors or reports success while the paste stays public. The correct
  * state, and the one upstream shipped in `6ec27795c`, is that no UI reaches
@@ -69,6 +70,7 @@ jest.mock('frontend/state/uiState', () => ({
 
 import UploadedLogFilesList from '../index'
 
+// The native upload (Phase 84 plan 84-05) owns the stored token now.
 const UPLOADER_PATH = join(
   __dirname,
   '..',
@@ -79,9 +81,10 @@ const UPLOADER_PATH = join(
   '..',
   '..',
   '..',
-  'backend',
-  'logger',
-  'uploader.ts'
+  '..',
+  'src-tauri',
+  'src',
+  'log_upload.rs'
 )
 
 const TEST_URL = 'https://dpaste.com/ABC123'
@@ -240,13 +243,13 @@ describe('uploaded-log delete control reachability (todo uploaded-log-delete-but
     expect(reached).toContain('deleteUploadedLogFile')
   })
 
-  it('the backend premise still holds: uploader.ts cannot delete, so hiding the control is still correct', () => {
+  it('the backend premise still holds: the stored token is a literal, so the upload cannot be deleted and hiding the control is still correct', () => {
     // Keyed on the FACT (a hardcoded token literal), not on the rationale
     // comment beside it -- a comment can be reworded while the defect stays.
     // If a host with a real delete API ever replaces dpaste, this fails and
     // the UI decision above should be revisited rather than this line edited.
     const uploaderSource = readFileSync(UPLOADER_PATH, 'utf-8')
 
-    expect(uploaderSource).toMatch(/const token = '1'/)
+    expect(uploaderSource).toMatch(/const PASTE_TOKEN: &str = "1";/)
   })
 })

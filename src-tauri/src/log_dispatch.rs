@@ -327,10 +327,10 @@ mod tests {
 
     fn ctx_on(home: &FakeHome) -> (Arc<NativeCtx>, Receiver<String>) {
         let (tx, rx) = channel();
-        let ctx = Arc::new(NativeCtx {
-            host: Arc::new(RevealHost { tx }),
-            log_paths: Some(log_paths_of(home)),
-        });
+        let ctx = Arc::new(NativeCtx::for_tests(
+            Arc::new(RevealHost { tx }),
+            Some(log_paths_of(home)),
+        ));
         (ctx, rx)
     }
 
@@ -401,10 +401,10 @@ mod tests {
     fn log_rejection_line_names_the_channel_and_never_a_message() {
         let secret = "SENTINEL-token-9f3a";
         let router = NativeRouter::with_shutdown(
-            Arc::new(NativeCtx {
-                host: Arc::new(RevealHost { tx: channel().0 }),
-                log_paths: None,
-            }),
+            Arc::new(NativeCtx::for_tests(
+                Arc::new(RevealHost { tx: channel().0 }),
+                None,
+            )),
             Shutdown::new(),
         );
         // A rejected send is dropped with Ok (D-03), exactly as the sidecar dropped one.

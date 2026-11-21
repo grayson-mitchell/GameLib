@@ -123,6 +123,7 @@ mod dialogs;
 mod ipc_contract;
 mod keyring_dispatch;
 mod log_dispatch;
+mod log_upload;
 mod login_window;
 mod native_handlers;
 mod native_router;
@@ -1725,6 +1726,12 @@ fn run_setup(
     app.manage(NativeRouter::new(Arc::new(NativeCtx {
         host: Arc::new(AppNativeHost(app.handle().clone())),
         log_paths: native_log_paths(),
+        store_host: Arc::new(gamelib_core::store::StoreHost::new()),
+        emitter: Arc::new(steampoll_dispatch::TauriFrontendEmitter(
+            app.handle().clone(),
+        )),
+        paste: Arc::new(log_upload::ReqwestPaste::new()),
+        app_version: native_handlers::app_version().to_string(),
     })));
     let state = spawn_sidecar_state(app)?;
     start_single_instance_accept_loop(app, &state, primary_listener);
@@ -2176,6 +2183,7 @@ mod tests {
         "ipc_contract.rs",
         "keyring_dispatch.rs",
         "log_dispatch.rs",
+        "log_upload.rs",
         "login_window.rs",
         "login_window/devtools.rs",
         "login_window/humble_cookies.rs",
@@ -2229,6 +2237,7 @@ mod tests {
         include_str!("ipc_contract.rs"),
         include_str!("keyring_dispatch.rs"),
         include_str!("log_dispatch.rs"),
+        include_str!("log_upload.rs"),
         include_str!("login_window.rs"),
         include_str!("login_window/devtools.rs"),
         include_str!("login_window/humble_cookies.rs"),

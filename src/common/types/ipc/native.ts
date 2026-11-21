@@ -6,6 +6,7 @@
  * The keys below must equal the manifest's channels by kind (`ipcDomainCensus` test (e)): invoke
  * channels in `NativeAsync`, send channels in `NativeSync`.
  */
+import type { UploadedLogData } from '../../types'
 import type { GetLogFileArgs } from './logger'
 
 /**
@@ -22,6 +23,10 @@ type LogMessage =
 export interface NativeAsync {
   getHeroicVersion: () => string
   getLogContent: (args: GetLogFileArgs) => string
+  uploadLogFile: (
+    name: string,
+    args: GetLogFileArgs
+  ) => Promise<false | [string, UploadedLogData]>
 }
 
 export interface NativeSync {

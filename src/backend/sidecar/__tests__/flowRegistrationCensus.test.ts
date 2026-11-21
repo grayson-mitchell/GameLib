@@ -107,9 +107,9 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   // Phase 74 Plan 11 (2026-11-12): invoke 9 -> 10 -- getSteamUpdateInfo (STEAM-01).
   'installFlowRegistration.ts': { invoke: 10, send: 0 },
   // Phase 84 Plan 05 / 84-05 (2026-11-21): send 3 -> 0 -- `logError`, `logInfo` and `showLogFileInFolder`
-  // are served by the Rust native router (`nativeChannels.json`, slice `logger`); their registrations
-  // are deleted here.
-  'loggerFlowRegistration.ts': { invoke: 3, send: 0 },
+  // are served by the Rust native router (`nativeChannels.json`, slice `logger`); invoke 3 -> 2 --
+  // `uploadLogFile` is too. Their registrations are deleted here.
+  'loggerFlowRegistration.ts': { invoke: 2, send: 0 },
   'oauthLoginFlowRegistration.ts': { invoke: 1, send: 0 },
   'runnerAuthFlowRegistration.ts': { invoke: 10, send: 1 },
   // Phase 34.6 Plan 10 (2026-08-24): invoke 11 -> 14 -- getAchievements/getDefaultSavePath/

@@ -10,13 +10,6 @@ import {
 } from 'backend/testUtils/ipcSchemaFixtures'
 
 const asyncTable: FixtureTable<typeof loggerAsyncArgs> = {
-  uploadLogFile: {
-    valid: [
-      ['Heroic log', {}],
-      ['Game log of X', { appName: 'abc', runner: 'gog', type: 'launch' }]
-    ],
-    invalid: [['x'], [1, {}], ['x', { appName: 'abc' }], ['x', {}, 'extra']]
-  },
   deleteUploadedLogFile: {
     valid: [['https://dpaste.com/ABC123']],
     invalid: [[], [''], ['not a url'], ['file:///etc/passwd'], [5]]

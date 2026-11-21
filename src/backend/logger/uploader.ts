@@ -1,8 +1,6 @@
 import type { AppInfo } from 'backend/process/context'
-import { open } from 'fs/promises'
-import { z } from 'zod'
 
-import { getLogFilePath, logError, logInfo, LogPrefix } from '../logger'
+import { logError, logInfo, LogPrefix } from '../logger'
 import type { SendFrontendMessage } from 'backend/host/frontendMessage'
 
 import type { UploadedLogData } from 'common/types'
@@ -26,34 +24,8 @@ async function sendRequestToApi(
   })
 }
 
-const KiB = 1024
-const MiB = KiB * 1024
 const EXPIRY_DAYS = 2
 
-/**
- * Reads the first `size` bytes of a file
- * @param file The file to read
- * @param size The maximum number of bytes to read
- */
-async function readPartOfFile(file: string, size: number) {
-  const fileHandle = await open(file, 'r')
-
-  const fileSize = (await fileHandle.stat()).size
-  size = Math.min(size, fileSize)
-
-  const buffer = Buffer.alloc(size)
-  await fileHandle.read(buffer, 0, size, 0)
-  await fileHandle.close()
-  return buffer
-}
-
-/**
- * Uploads the log file of a game / runner / Heroic to https://dpaste.com/api/v2/
- * @param deps The logger store slice
- * @param name See {@link UploadedLogData.name}
- * @param getLogFileArgs Used to get the log file path. See {@link getLogFilePath}
- * @returns `false` if an error occurred, otherwise the URL to the uploaded file and {@link UploadedLogData}
- */
 /** The store slice the log uploader reads (66.1, R1). */
 export interface LogUploaderDeps {
   stores: Pick<Stores, 'logger'>
@@ -61,57 +33,8 @@ export interface LogUploaderDeps {
   sendFrontendMessage: SendFrontendMessage
 }
 
-async function uploadLogFile(
-  deps: LogUploaderDeps,
-  name: string,
-  getLogFileArgs: Parameters<typeof getLogFilePath>[0]
-): Promise<false | [string, UploadedLogData]> {
-  const fileLocation = getLogFilePath(getLogFileArgs)
-  const fileContents = await readPartOfFile(fileLocation, 10 * MiB)
-
-  // const filename = path.basename(fileLocation)
-  // const fileBlob = new Blob([fileContents])
-
-  // const formData = new FormData()
-  // formData.set('file', fileBlob, filename)
-  // formData.set('expires', (EXPIRY_DAYS * 24).toString())
-
-  const formData = `content=${encodeURIComponent(fileContents.toString())}&expiry_days=${EXPIRY_DAYS}`
-
-  const response = await sendRequestToApi(deps, formData)
-  if (!response) return false
-
-  // TODO: dpaste.com does not support deleting files, there's not token
-  // Setting 1 here so I don't have to remove all the code, in case 0x0.st
-  // starts working in the future. I'll hide the delete option.
-  const token = '1' // response.headers.get('X-Token')
-  const responseText = (await response.text()).trim()
-  const maybeUrl = z.url().safeParse(responseText)
-  if (!response.ok || !token || !maybeUrl.success) {
-    logError(
-      [
-        `Failed to upload log file, response error code ${response.status} ${response.statusText}, text:`,
-        responseText
-      ],
-      LogPrefix.LogUploader
-    )
-    return false
-  }
-
-  const url = maybeUrl.data
-  const uploadData: UploadedLogData = {
-    name,
-    token,
-    uploadedAt: Date.now()
-  }
-  deps.stores.logger.uploadedLogFileStore.set(url, uploadData)
-  deps.sendFrontendMessage('logFileUploaded', url, uploadData)
-  logInfo(`Uploaded log file ${name} to ${url}`, LogPrefix.LogUploader)
-  return [url, uploadData]
-}
-
 /**
- * Deletes a log file previously uploaded using {@link uploadLogFile}
+ * Deletes a log file previously uploaded by the native `uploadLogFile` (`src-tauri/src/log_upload.rs`)
  * @param url The URL to the uploaded log file
  * @returns Whether the file was deleted
  */
@@ -169,4 +92,4 @@ async function getUploadedLogFiles(
   return validUploadedLogs
 }
 
-export { uploadLogFile, deleteUploadedLogFile, getUploadedLogFiles }
+export { deleteUploadedLogFile, getUploadedLogFiles }

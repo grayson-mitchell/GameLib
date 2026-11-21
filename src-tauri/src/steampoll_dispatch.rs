@@ -374,7 +374,7 @@ fn ack_from_invoke(result: Result<Value, String>) -> AckReply {
 
 /// The one place in the shell that builds the `FRONTEND_MESSAGE_EVENT` payload for a push that
 /// originates in Rust. The sidecar relay (`sidecar.rs`) builds its own for sidecar-originated ones.
-pub(crate) struct TauriFrontendEmitter(AppHandle);
+pub(crate) struct TauriFrontendEmitter(pub(crate) AppHandle);
 
 impl gamelib_core::emitter::FrontendEmitter for TauriFrontendEmitter {
     fn emit(&self, channel: &str, args: Vec<Value>) {

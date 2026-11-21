@@ -19,10 +19,13 @@
 
 use crate::ipc_contract::{IPC_INVALID_ARGS, IPC_INVALID_ARGS_MARKER};
 use crate::log_dispatch;
+use crate::log_upload::{self, PasteClient};
 use crate::native_handlers;
 use crate::relay_commands::echo_channel;
+use gamelib_core::emitter::FrontendEmitter;
 use gamelib_core::paths::{LogTarget, Platform};
 use gamelib_core::shutdown::Shutdown;
+use gamelib_core::store::StoreHost;
 use gamelib_log::sanitize::RendererMessage;
 use gamelib_log::Level;
 use serde_json::{json, Value};
@@ -57,6 +60,34 @@ pub(crate) struct LogPaths {
 pub(crate) struct NativeCtx {
     pub(crate) host: Arc<dyn NativeHost>,
     pub(crate) log_paths: Option<LogPaths>,
+    /// The one owner of the store files a native handler writes (`uploadedLogs`, D-09).
+    pub(crate) store_host: Arc<StoreHost>,
+    /// The push seam to the renderer (`logFileUploaded`).
+    pub(crate) emitter: Arc<dyn FrontendEmitter>,
+    /// The HTTP client for the paste service, shared with the delete handler (84-06).
+    pub(crate) paste: Arc<dyn PasteClient>,
+    /// The app version, for the upload's User-Agent.
+    pub(crate) app_version: String,
+}
+
+#[cfg(test)]
+impl NativeCtx {
+    /// A context for tests: no log paths unless given, an emitter that drops everything and a paste
+    /// client that never reaches the network.
+    pub(crate) fn for_tests(host: Arc<dyn NativeHost>, log_paths: Option<LogPaths>) -> NativeCtx {
+        struct NullEmitter;
+        impl FrontendEmitter for NullEmitter {
+            fn emit(&self, _channel: &str, _args: Vec<Value>) {}
+        }
+        NativeCtx {
+            host,
+            log_paths,
+            store_host: Arc::new(StoreHost::new()),
+            emitter: Arc::new(NullEmitter),
+            paste: Arc::new(log_upload::OfflinePaste),
+            app_version: "0.0.0-test".to_string(),
+        }
+    }
 }
 
 /// What an async native invoke handler returns: the invoke's value or its error string.
@@ -278,6 +309,7 @@ impl NativeRouter {
             },
         );
         invoke.insert("getLogContent", log_dispatch::get_log_content);
+        invoke.insert("uploadLogFile", log_upload::upload_log_file);
         let mut queues: HashMap<&'static str, SliceQueue> = HashMap::new();
         for slice in [APP_SHELL_SLICE, LOGGER_SLICE] {
             let worker_ctx = Arc::clone(&ctx);
@@ -437,10 +469,7 @@ mod tests {
 
     /// A context over `host` with no log paths.
     fn ctx_of(host: impl NativeHost) -> Arc<NativeCtx> {
-        Arc::new(NativeCtx {
-            host: Arc::new(host),
-            log_paths: None,
-        })
+        Arc::new(NativeCtx::for_tests(Arc::new(host), None))
     }
 
     /// Drive a native invoke future to its result.
@@ -531,10 +560,15 @@ mod tests {
                 .unwrap_or_else(|| panic!("{name} has no native handler"));
             let ctx = router.ctx();
             for args in vectors(spec, "valid") {
-                assert!(
-                    run(handler, &ctx, &args).is_ok(),
-                    "{name} rejected valid {args:?}"
-                );
+                // A valid vector is one the validator accepts. Whether the handler then succeeds
+                // can depend on the file system or the network (an upload of a log that does not
+                // exist rejects), so only the INVALID_ARGS marker counts as a rejection here.
+                if let Err(e) = run(handler, &ctx, &args) {
+                    assert!(
+                        !e.starts_with(IPC_INVALID_ARGS_MARKER),
+                        "{name} rejected valid {args:?}: {e}"
+                    );
+                }
             }
             for args in vectors(spec, "invalid") {
                 let err = run(handler, &ctx, &args)
