@@ -378,6 +378,66 @@ describe('LogForwarder', () => {
     })
   })
 
+  describe('a rotate claim is not spent on an entry that never reaches a frame (WR-05)', () => {
+    const gameBatches = (frames: LogFrame[]) =>
+      frames.flatMap((f) => f.batch).filter((b) => b.target.kind === 'game')
+
+    it('moves a dropped rotate claim to the next surviving entry of the same target (WR-05)', () => {
+      const fw = new LogForwarder({ maxEntries: 2 })
+      fw.enqueue(GAME, true, { raw: 'first' })
+      fw.enqueue(GAME, false, { raw: 'second' })
+      fw.enqueue(GAME, false, { raw: 'third' })
+      expect(fw.stats().droppedTotal).toBe(1)
+      const transport = new FakeTransport()
+      fw.bind(transport)
+      expect(gameBatches(transport.frames)).toEqual([
+        {
+          target: GAME,
+          rotate: true,
+          entries: [{ raw: 'second' }, { raw: 'third' }]
+        }
+      ])
+    })
+
+    it('owes a rotation when no entry of the target survives (WR-05)', () => {
+      const fw = new LogForwarder({ maxEntries: 1 })
+      fw.enqueue(GAME, true, { raw: 'first' })
+      fw.enqueue(GENERAL, false, { raw: 'g' })
+      fw.enqueue(GAME, false, { raw: 'later' })
+      const transport = new FakeTransport()
+      fw.bind(transport)
+      expect(transport.messages()).not.toContain('first')
+      expect(gameBatches(transport.frames)).toEqual([
+        { target: GAME, rotate: true, entries: [{ raw: 'later' }] }
+      ])
+    })
+
+    it('carries a rotate claim past a rejected Promise message (WR-05)', async () => {
+      const fw = new LogForwarder()
+      const transport = new FakeTransport()
+      fw.bind(transport)
+      fw.logLine(GAME, true, 'INFO', '', Promise.reject(new Error('x')))
+      fw.logLine(GAME, false, 'INFO', '', 'after')
+      await fw.flush()
+      expect(transport.messages()).toEqual(['after'])
+      expect(gameBatches(transport.frames).map((b) => b.rotate)).toEqual([true])
+    })
+
+    it('never owes a rotation to a general target (WR-05)', () => {
+      const fw = new LogForwarder({ maxEntries: 1 })
+      fw.enqueue(GENERAL, true, { raw: 'a' })
+      fw.enqueue(GAME, false, { raw: 'b' })
+      fw.enqueue(GENERAL, false, { raw: 'c' })
+      const transport = new FakeTransport()
+      fw.bind(transport)
+      const general = transport.frames
+        .flatMap((f) => f.batch)
+        .filter((b) => b.target.kind === 'general')
+      expect(general.length).toBeGreaterThan(0)
+      expect(general.every((b) => !b.rotate)).toBe(true)
+    })
+  })
+
   describe('settle (logErrorSettled / logInfoSettled, the CR-01 contract)', () => {
     type Index = typeof import('../index')
     function freshIndex(): Index {
