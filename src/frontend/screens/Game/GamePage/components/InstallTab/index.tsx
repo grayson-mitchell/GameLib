@@ -10,12 +10,13 @@ import PlatformSupport from '../PlatformSupport'
 import AppleWikiInfo from '../AppleWikiInfo'
 import RunsForMeToggle from '../RunsForMeToggle'
 import DownloadSizeInfo from '../DownloadSizeInfo'
-import InstalledInfo from '../InstalledInfo'
 import CloudSavesSync from '../CloudSavesSync'
 import HumbleOriginInfo from '../HumbleOriginInfo'
 import NativePortInfo from '../NativePortInfo'
+import EngineRow from './EngineRow'
 import IntegrationRows from './IntegrationRows'
 import LocationRow from './LocationRow'
+import { OnlineRequiredRow, ThirdPartyRow } from './StaticFactRows'
 import SizeRow from './SizeRow'
 import VersionRow from './VersionRow'
 import './index.css'
@@ -72,15 +73,17 @@ const InstallTab = ({ gameInfo, platform, handleUpdate, hasUpdate }: Props) => {
           handleUpdate={handleUpdate}
           hasUpdate={hasUpdate}
         />
+        <EngineRow gameInfo={gameInfo} gates={gates} />
         <CloudSavesSync gameInfo={gameInfo} gates={gates} />
+        <PlatformSupport gameInfo={gameInfo} />
+        <OnlineRequiredRow gameInfo={gameInfo} />
+        <ThirdPartyRow gameInfo={gameInfo} />
       </div>
       <div className="legacyRows">
         <div>
-          <PlatformSupport gameInfo={gameInfo} />
           <AppleWikiInfo gameInfo={gameInfo} />
           <RunsForMeToggle gameInfo={gameInfo} />
           <DownloadSizeInfo gameInfo={gameInfo} />
-          <InstalledInfo gameInfo={gameInfo} />
           <HumbleOriginInfo gameInfo={gameInfo} />
           <NativePortInfo gameInfo={gameInfo} platform={platform} />
         </div>

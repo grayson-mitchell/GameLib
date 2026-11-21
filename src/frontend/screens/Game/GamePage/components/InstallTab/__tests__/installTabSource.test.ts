@@ -3,7 +3,7 @@
  * The rows are hook-heavy and the repo has no jsdom, so the wiring that
  * matters is asserted on the comment-stripped source.
  */
-import { readdirSync, readFileSync } from 'fs'
+import { existsSync, readdirSync, readFileSync } from 'fs'
 import { join } from 'path'
 
 const TAB_DIR = join(__dirname, '..')
@@ -156,5 +156,37 @@ describe('Install tab source gates', () => {
     const legacy = code.indexOf('className="legacyRows"')
     expect(cloud).toBeGreaterThan(version)
     expect(legacy).toBeGreaterThan(cloud)
+  })
+
+  it('EngineRow offers Open prefix only through gates.openPrefix (D-01, D-11)', () => {
+    const code = read(TAB_DIR, 'EngineRow.tsx')
+    expect(code).toContain('gates.openPrefix.show')
+    expect(code).toContain('window.api.openFolder(winePrefix)')
+    expect(code.match(/<FactAction/g)).toHaveLength(1)
+    expect(code).toContain("hasCapability(runner, 'winePrefixToolsAvailable')")
+  })
+
+  it('StaticFactRows are action-less facts (D-05)', () => {
+    const code = read(TAB_DIR, 'StaticFactRows.tsx')
+    expect(code).not.toContain('FactAction')
+    expect(code).toContain('export const OnlineRequiredRow')
+    expect(code).toContain('export const ThirdPartyRow')
+  })
+
+  it('InstalledInfo is gone and the InstallTab renders every re-homed fact in order (D-14)', () => {
+    expect(existsSync(join(COMPONENTS_DIR, 'InstalledInfo.tsx'))).toBe(false)
+    const code = read(TAB_DIR, 'index.tsx')
+    expect(code).not.toContain('InstalledInfo')
+    const order = [
+      '<VersionRow',
+      '<EngineRow',
+      '<CloudSavesSync',
+      '<PlatformSupport',
+      '<OnlineRequiredRow',
+      '<ThirdPartyRow',
+      'className="legacyRows"'
+    ].map((marker) => code.indexOf(marker))
+    expect(order.every((i) => i > -1)).toBe(true)
+    expect([...order].sort((a, b) => a - b)).toEqual(order)
   })
 })

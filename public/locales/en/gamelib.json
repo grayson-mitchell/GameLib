@@ -272,6 +272,8 @@
                 "syncing": "Syncing…",
                 "syncNow": "Sync now ▾"
             },
+            "engine": "Engine",
+            "engineBottle": "bottle \"{{bottle}}\"",
             "failure": {
                 "move": "Move failed. Details are in the log.",
                 "setFolder": "Couldn't set the install folder. Details are in the log.",
@@ -281,7 +283,11 @@
             "location": "Location",
             "modify": "Modify…",
             "move": "Move…",
+            "onlineRequired": "Online required",
+            "onlineRequiredValue": "Needs a connection to start",
             "open": "Open",
+            "openPrefix": "Open prefix",
+            "platforms": "Platforms",
             "reason": {
                 "installing": "Wait for the install to finish",
                 "launching": "Wait for the game to start",
@@ -307,6 +313,7 @@
                 "adding": "Adding…",
                 "removing": "Removing…"
             },
+            "thirdParty": "Third-party manager",
             "update": "Update",
             "upToDate": "· up to date",
             "verify": "Verify",

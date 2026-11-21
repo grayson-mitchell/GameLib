@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { faApple, faLinux, faWindows } from '@fortawesome/free-brands-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { GameInfo } from 'common/types'
+import { FactRow } from './InstallTab/FactRow'
 
 interface Props {
   gameInfo: GameInfo
@@ -35,8 +36,8 @@ export const getInstallPlatformIcon = (installPlatform: string | undefined) => {
 }
 
 /**
- * DETAIL-01: shows the OS platforms a game supports as small glyphs, inside the
- * Install-info tab. Runner-agnostic — reads the generic GameInfo platform flags.
+ * DETAIL-01: shows the OS platforms a game supports as small glyphs, as the
+ * Platforms fact of the Install tab (Phase 100, D-05). Runner-agnostic — reads the generic GameInfo platform flags.
  * Windows is the implicit baseline (always shown); Apple/Linux are conditional
  * on the native flags (populated by Steam metadata capture + upstream runners).
  * The installed platform, when any, is outlined in the theme accent colour.
@@ -99,14 +100,13 @@ const PlatformSupport = ({ gameInfo }: Props) => {
   }
 
   return (
-    <div className="platformSupport">
-      <b>{t('info.supportedPlatforms', 'Supported platforms')}:</b>
+    <FactRow label={t('gamelib:gamepage.installTab.platforms', 'Platforms')}>
       <span className="platformSupport__icons">
         {entries.map((e) => (
           <Fragment key={e.key}>{e.node}</Fragment>
         ))}
       </span>
-    </div>
+    </FactRow>
   )
 }
 
