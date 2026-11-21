@@ -67,7 +67,7 @@ I also ran the checks that bear on the changes:
 - `jiff` is built without its `logging` feature (`cargo tree -e features`), so it cannot re-enter the `log` bridge.
 
 All 11 round-1 findings are fixed correctly. I found no critical defect and no regression in the Rust fixes. One TS
-regression-shaped defect is new: the WR-05 "owed rotation" can rotate a live session's lines away (WR-01 below). The
+regression-shaped defect is new: the WR-05 "owed rotation" can rotate a live session's lines away (WR-08 below). The
 remaining items are residuals and maintainability points.
 
 Conventions (CLAUDE.md): every new timer in the forwarder is `unref`'d and cleared; no new spawn, task or exit work was
@@ -77,21 +77,25 @@ added in Rust, so the sidecar-exit and Rust-shutdown conventions hold. No necess
 
 | Round 1 | Verdict | Notes |
 |---|---|---|
-| WR-01 malformed entry drops a batch | Fixed | `sanitiseEntry` (lone surrogates, prefix to `Backend`) and `logTargetRefusal` (runner, type, appName incl. `isWellFormed`) cover every field the shell rejects from a TS producer; the `LogPrefix` set is a subset of `Prefix::ALL`. The runner and type sets are pinned to `paths.rs`. See IN-01 for the silent refusal. |
-| WR-02 shell and bridge lines with raw CR/LF, uploaded | Fixed | `gamelib_log::log`, `shell_log_to` and both bridges escape; `shell_log_detail` keeps error text on stderr; `shellLogCategoryOnly` walks every `.rs` file. Residuals are IN-03 and IN-05. |
+| WR-01 malformed entry drops a batch | Fixed | `sanitiseEntry` (lone surrogates, prefix to `Backend`) and `logTargetRefusal` (runner, type, appName incl. `isWellFormed`) cover every field the shell rejects from a TS producer; the `LogPrefix` set is a subset of `Prefix::ALL`. The runner and type sets are pinned to `paths.rs`. See IN-05 for the silent refusal. |
+| WR-02 shell and bridge lines with raw CR/LF, uploaded | Fixed | `gamelib_log::log`, `shell_log_to` and both bridges escape; `shell_log_detail` keeps error text on stderr; `shellLogCategoryOnly` walks every `.rs` file. Residuals are IN-07 and IN-09. |
 | WR-03 store persist truncates on temp-write failure | Fixed | A failed temp write now returns before the live file is opened. The rename-failed fallback is unchanged and remains safe. |
 | WR-04 renderer object values bypass the cut | Fixed | Object values are cut with `truncate_text`; keys are limited to `name`/`message`/`stack` by the deserialiser. `Logger::submit_line` also caps native entries. |
-| WR-05 dropped or skipped rotation | Fixed with a residual | Rust half is correct (owed set, deduplicated, general never owes). TS half has a new ordering hole, WR-01 below, plus IN-02. |
-| WR-06 unbounded flush chain wait | Fixed | One deadline across chain and transport waits; both timers `unref`'d and cleared. See IN-06 for a stale doc sentence. |
+| WR-05 dropped or skipped rotation | Fixed with a residual | Rust half is correct (owed set, deduplicated, general never owes). TS half has a new ordering hole, WR-08 below, plus IN-06. |
+| WR-06 unbounded flush chain wait | Fixed | One deadline across chain and transport waits; both timers `unref`'d and cleared. See IN-10 for a stale doc sentence. |
 | WR-07 `validate_paste_url` returns raw text | Fixed | Returns `parsed.to_string()`; the store key, emitted URL and log line all carry the normalised value. |
 | IN-01 "lines dropped" counts messages | Fixed | `send` counts the entries a lost frame carried. |
 | IN-02 limiter windows on sender timestamps | Fixed | `anchor = ts.min(clock.now_ms())`; the line itself keeps its own `ts`. |
-| IN-03 `install_bridges` failure silent | Fixed | `bridge_install_warning`. See IN-04 for an inaccuracy in its wording. |
+| IN-03 `install_bridges` failure silent | Fixed | `bridge_install_warning`. See IN-08 for an inaccuracy in its wording. |
 | IN-04 `ExitBudget` remaining is stale | Fixed | `FinishContext` carries a deadline `Instant`; `remaining_now()` is read at flush time. The README and the pinned `tauriShellSource` regex were updated together. |
 
 ## Warnings
 
-### WR-01: A rotation owed after a rejected Promise message can rotate away the session's already-written lines
+> Round-2 IDs continue the round-1 numbering (round 1 used WR-01..WR-07 and IN-01..IN-04, all recorded fixed in
+> `84-REVIEW-DISPOSITION.md`), so this round's findings are WR-08 and IN-05..IN-10 and never collide with a recorded
+> round-1 decision.
+
+### WR-08: A rotation owed after a rejected Promise message can rotate away the session's already-written lines
 
 **File:** `src/backend/logger/forwarder.ts:306-312` (owe on rejection), `:346` (spend on next enqueue); `src/backend/logger/targetWriter.ts:108-111,152-154`
 **Issue:** The WR-05 fix assumes nothing for the target is queued between the claim and the rejection, so that "carry the
@@ -122,7 +126,7 @@ has been queued since.
 
 ## Info
 
-### IN-01: Refused entries vanish with no trace; `refusedTotal` is never read
+### IN-05: Refused entries vanish with no trace; `refusedTotal` is never read
 
 **File:** `src/backend/logger/forwarder.ts:334-337,426` and `src/backend/logger/index.ts` (no consumer)
 **Issue:** `enqueue` drops an entry whose target `logTargetRefusal` rejects and only increments `#refusedTotal`. Nothing in
@@ -132,7 +136,7 @@ current call paths. A future direct `enqueueLogEntry` caller would lose lines wi
 **Fix:** Emit one rate-limited `[Backend]` WARNING the first time a target is refused (target kind and reason only), or
 report `refusedTotal` alongside the `lines dropped` line.
 
-### IN-02: Remaining paths that lose a rotation without owing it
+### IN-06: Remaining paths that lose a rotation without owing it
 
 **File:** `src-tauri/src/sidecar.rs:375-387` (`handle_log_frame`), `src/backend/logger/forwarder.ts:294-297` (`emit`)
 **Issue:** WR-05's principle is "do not spend a rotate claim on an entry that never reaches a frame". Two paths still do.
@@ -144,7 +148,7 @@ accepted "empty first call" item, ignore it; that item was recorded against the 
 batches are not parsed, so a cheap pre-scan of `batch[*].rotate` and target would be needed), or document the residual. For
 (b), call `oweRotation(target)` when `emit` drops an empty body.
 
-### IN-03: Two native entry points with opposite escaping rules, enforced only by a comment
+### IN-07: Two native entry points with opposite escaping rules, enforced only by a comment
 
 **File:** `src-tauri/crates/gamelib-log/src/lib.rs:38-46`, `src-tauri/crates/gamelib-log/src/writer.rs:149-153`, `src-tauri/src/main.rs:585-590`
 **Issue:** `gamelib_log::log` escapes CR/LF, but the public `Logger::log` is verbatim. `shell_log_to` has to remember to call
@@ -153,7 +157,7 @@ The renderer path needs the verbatim form only because its object body is multi-
 **Fix:** Make `Logger::log` escape, and give `log_dispatch` an explicit verbatim method (for example `log_body`) used only
 for sanitised renderer bodies. The existing tests then cover the safe default.
 
-### IN-04: The bridge-install warning claims all crate diagnostics are lost when only one bridge may have failed
+### IN-08: The bridge-install warning claims all crate diagnostics are lost when only one bridge may have failed
 
 **File:** `src-tauri/crates/gamelib-log/src/bridge.rs:243-255`, `src-tauri/src/main.rs:669-683`
 **Issue:** `install_bridges` returns `tracing_set && log_set`. If only the `log` logger was already taken, the tracing layer
@@ -162,7 +166,7 @@ gamelib.log". The reverse also holds. The warning then misdirects whoever reads 
 **Fix:** Return the two booleans (or a small enum) and name which bridge is missing: `tracing` (steam-vent, gamelib-steamcm)
 or `log` (reqwest).
 
-### IN-05: Residual free text reaches the uploaded file through paths the new gate does not cover
+### IN-09: Residual free text reaches the uploaded file through paths the new gate does not cover
 
 **File:** `src-tauri/src/steamcm_dispatch.rs:342-349` (`steamcm_diag`), `src-tauri/crates/gamelib-log/src/bridge.rs:177-181,231-235`, `src/backend/__tests__/shellLogCategoryOnly.test.ts:121-140`
 **Issue:** WR-02's privacy delta was that `gamelib.log` is posted to a public paste service. 84-17 closes it for `shell_log`
@@ -173,7 +177,7 @@ demonstrated leak. The disposition records WR-02 as fixed without this boundary 
 **Fix:** Add `steamcm_diag` to the gate's call list, and state in the README that bridge output is crate text and uploaded as
 is (or redact URL query strings in the bridge sink).
 
-### IN-06: `flush` doc says it returns at once with no transport, but it first waits on the chains
+### IN-10: `flush` doc says it returns at once with no transport, but it first waits on the chains
 
 **File:** `src/backend/logger/forwarder.ts:363-371`
 **Issue:** The comment says flush resolves "or at once when no transport is bound". `flush` awaits `#settleChains` first, up

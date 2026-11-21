@@ -47,9 +47,37 @@ findings:
     severity: info
     disposition: fixed
     title: "`ExitBudget` remaining is computed before finish's own work"
-open: 0
-total: 11
-recorded: 2026-11-21T09:28:07.129Z
+  - id: WR-08
+    severity: warning
+    disposition: open
+    title: "A rotation owed after a rejected Promise message can rotate away the session's already-written lines"
+  - id: IN-05
+    severity: info
+    disposition: open
+    title: "Refused entries vanish with no trace; `refusedTotal` is never read"
+  - id: IN-06
+    severity: info
+    disposition: open
+    title: "Remaining paths that lose a rotation without owing it"
+  - id: IN-07
+    severity: info
+    disposition: open
+    title: "Two native entry points with opposite escaping rules, enforced only by a comment"
+  - id: IN-08
+    severity: info
+    disposition: open
+    title: "The bridge-install warning claims all crate diagnostics are lost when only one bridge may have failed"
+  - id: IN-09
+    severity: info
+    disposition: open
+    title: "Residual free text reaches the uploaded file through paths the new gate does not cover"
+  - id: IN-10
+    severity: info
+    disposition: open
+    title: "`flush` doc says it returns at once with no transport, but it first waits on the chains"
+open: 7
+total: 18
+recorded: 2026-11-22T00:00:00.000Z
 ---
 
 # Phase 84: Code Review Disposition
@@ -67,6 +95,13 @@ recorded: 2026-11-21T09:28:07.129Z
 | IN-02 | info | fixed | 84-14: `6a385ab97` |
 | IN-03 | info | fixed | 84-16: `f5c3c9eef` |
 | IN-04 | info | fixed | 84-16: `bbf189be0` (RED `ce1f0689a`) |
+| WR-08 | warning | open | round-2 review (`84-REVIEW.md`, dd6c30c22) |
+| IN-05 | info | open | round-2 review (`84-REVIEW.md`, dd6c30c22) |
+| IN-06 | info | open | round-2 review (`84-REVIEW.md`, dd6c30c22) |
+| IN-07 | info | open | round-2 review (`84-REVIEW.md`, dd6c30c22) |
+| IN-08 | info | open | round-2 review (`84-REVIEW.md`, dd6c30c22) |
+| IN-09 | info | open | round-2 review (`84-REVIEW.md`, dd6c30c22) |
+| IN-10 | info | open | round-2 review (`84-REVIEW.md`, dd6c30c22) |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
