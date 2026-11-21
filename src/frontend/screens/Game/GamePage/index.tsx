@@ -34,7 +34,6 @@ import {
 import useLibraryState from 'frontend/state/libraryState'
 import { releasesPlayClicked } from './playClickedLatch'
 import { CachedImage, UpdateComponent, TabPanel } from 'frontend/components/UI'
-import UninstallModal from 'frontend/components/UI/UninstallModal'
 
 import {
   ExtraInfo,
@@ -111,7 +110,6 @@ export default React.memo(function GamePage(): JSX.Element | null {
 
   const { gameInfo: locationGameInfo } = location.state
 
-  const [showUninstallModal, setShowUninstallModal] = useState(false)
   const [wikiInfo, setWikiInfo] = useState<WikiInfo | null>(null)
 
   const epic = useEpicAccount()
@@ -527,14 +525,6 @@ export default React.memo(function GamePage(): JSX.Element | null {
             <CachedImage
               src={art_background || art_cover}
               className="backgroundImage"
-            />
-          )}
-          {showUninstallModal && (
-            <UninstallModal
-              appName={appName}
-              runner={runner}
-              onClose={() => setShowUninstallModal(false)}
-              isDlc={false}
             />
           )}
 

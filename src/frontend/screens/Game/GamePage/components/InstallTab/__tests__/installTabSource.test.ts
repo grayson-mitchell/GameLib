@@ -278,4 +278,45 @@ describe('Install tab source gates', () => {
     )
     expect(read(TAB_DIR, 'index.tsx')).not.toContain('RunsForMeToggle')
   })
+
+  it('the danger zone is the last block of the tab, owns UninstallModal and keeps both confirmations (D-01, D-13, T-100-17, T-100-18)', () => {
+    const tab = read(TAB_DIR, 'index.tsx')
+    const integration = tab.indexOf('<IntegrationRows')
+    const danger = tab.indexOf('<DangerZone')
+    expect(integration).toBeGreaterThan(-1)
+    expect(danger).toBeGreaterThan(integration)
+    // Nothing renders after the danger zone but the closing fragment.
+    const after = tab.slice(danger + '<DangerZone'.length)
+    expect(after.match(/<[A-Za-z]/g)).toBeNull()
+    const zone = read(TAB_DIR, 'DangerZone.tsx')
+    expect(zone.match(/<UninstallModal/g)).toHaveLength(1)
+    expect(zone).toContain('gates.uninstall')
+    expect(zone).toContain('gates.removeAllCopies')
+    expect(zone).toContain('aria-disabled')
+    const hook = read(ACTIONS_DIR, 'useUninstallActions.ts')
+    expect(hook).toContain('steamUninstallNeedsConfirm(route)')
+    expect(hook).toContain('.catch(() => CLOSED_STEAM_DELETE_ROUTE)')
+    expect(hook).toMatch(
+      /showDialogModal\(\{[\s\S]*removeAllCopiesConfirmTitle/
+    )
+    expect(hook).toContain('steamRemoveAllCopies')
+  })
+
+  it('no fact or switch row calls window.api.uninstall; the danger zone hook alone does (D-01)', () => {
+    for (const { name, code } of tabSources) {
+      expect({ name, hit: code.includes('window.api.uninstall') }).toEqual({
+        name,
+        hit: false
+      })
+    }
+    expect(read(ACTIONS_DIR, 'useUninstallActions.ts')).toContain(
+      'window.api.uninstall('
+    )
+  })
+
+  it('GamePage keeps no dead uninstall modal state (Pitfall 6)', () => {
+    const page = read(TAB_DIR, '..', '..', 'index.tsx')
+    expect(page).not.toContain('showUninstallModal')
+    expect(page).not.toContain('UninstallModal')
+  })
 })

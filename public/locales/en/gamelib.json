@@ -272,6 +272,11 @@
                 "syncing": "Syncing…",
                 "syncNow": "Sync now ▾"
             },
+            "dangerZone": {
+                "consequence": "Uninstalling deletes the game's files from this computer.",
+                "title": "Danger zone",
+                "uninstall": "Uninstall…"
+            },
             "downloadSize": "Download size",
             "engine": "Engine",
             "engineBottle": "bottle \"{{bottle}}\"",

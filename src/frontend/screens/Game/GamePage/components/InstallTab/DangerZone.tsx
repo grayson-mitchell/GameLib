@@ -1,0 +1,93 @@
+import { useTranslation } from 'react-i18next'
+import type { GameInfo } from 'common/types'
+import UninstallModal from 'frontend/components/UI/UninstallModal'
+import type {
+  InstallActionGate,
+  InstallActionId
+} from '../../actions/installActionGates'
+import { useUninstallActions } from '../../actions/useUninstallActions'
+import { gateReasonText } from './gateReasonText'
+
+interface Props {
+  gameInfo: GameInfo
+  gates: Record<InstallActionId, InstallActionGate>
+}
+
+/**
+ * Phase 100 (D-01, D-11, D-13): the last block of an installed game's Install
+ * tab. One line of consequence text, a red Uninstall… and, for Steam, Remove
+ * all copies…. Both stay behind their confirmations and are disabled with a
+ * reason (not removed from the focus ring) while the game plays or another long
+ * action runs. DangerZone owns the UninstallModal it opens.
+ */
+const DangerZone = ({ gameInfo, gates }: Props) => {
+  const { t } = useTranslation('gamelib')
+  const { app_name: appName, runner } = gameInfo
+  const {
+    startUninstall,
+    startRemoveAllCopies,
+    showUninstallModal,
+    closeUninstallModal
+  } = useUninstallActions(gameInfo)
+
+  if (!gates.uninstall.show) return null
+
+  const uninstallGate = gates.uninstall
+  const allCopiesGate = gates.removeAllCopies
+
+  const reasonOf = (gate: InstallActionGate) =>
+    gate.disabled && gate.reason ? gateReasonText(gate.reason, t) : undefined
+
+  return (
+    <section className="dangerZone" aria-labelledby="installTabDangerTitle">
+      <h3 id="installTabDangerTitle" className="dangerZone__title">
+        {t('gamepage.installTab.dangerZone.title', 'Danger zone')}
+      </h3>
+      <p className="dangerZone__text">
+        {t(
+          'gamepage.installTab.dangerZone.consequence',
+          "Uninstalling deletes the game's files from this computer."
+        )}
+      </p>
+      <button
+        type="button"
+        className="dangerButton"
+        aria-disabled={uninstallGate.disabled ? true : undefined}
+        title={reasonOf(uninstallGate)}
+        onClick={() => {
+          if (uninstallGate.disabled) return
+          void startUninstall()
+        }}
+      >
+        {t('gamepage.installTab.dangerZone.uninstall', 'Uninstall…')}
+      </button>
+      {allCopiesGate.show && (
+        <button
+          type="button"
+          className="dangerButton"
+          aria-disabled={allCopiesGate.disabled ? true : undefined}
+          title={reasonOf(allCopiesGate)}
+          onClick={() => {
+            if (allCopiesGate.disabled) return
+            startRemoveAllCopies()
+          }}
+        >
+          {t(
+            'gamelib:steam.uninstall.removeAllCopiesLabel',
+            'Remove all copies…'
+          )}
+        </button>
+      )}
+      {showUninstallModal && (
+        <UninstallModal
+          appName={appName}
+          runner={runner}
+          isDlc={false}
+          onClose={closeUninstallModal}
+        />
+      )}
+    </section>
+  )
+}
+
+export default DangerZone

@@ -11,6 +11,7 @@ import AppleWikiInfo from '../AppleWikiInfo'
 import CloudSavesSync from '../CloudSavesSync'
 import HumbleOriginInfo from '../HumbleOriginInfo'
 import NativePortInfo from '../NativePortInfo'
+import DangerZone from './DangerZone'
 import EngineRow from './EngineRow'
 import IntegrationRows from './IntegrationRows'
 import NotInstalledFacts from './NotInstalledFacts'
@@ -94,6 +95,9 @@ const InstallTab = ({ gameInfo, platform, handleUpdate, hasUpdate }: Props) => {
         </div>
       </div>
       <IntegrationRows gameInfo={gameInfo} platform={platform} />
+      {gameInfo.is_installed && (
+        <DangerZone gameInfo={gameInfo} gates={gates} />
+      )}
     </>
   )
 }

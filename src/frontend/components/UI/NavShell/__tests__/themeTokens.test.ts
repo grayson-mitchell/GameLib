@@ -3470,6 +3470,9 @@ const LEFT_CARD_CSS =
  *   switch knob      >= 3:1 against its own track, on and off.
  *   failure text     --install-danger-text (danger pulled towards the text
  *                    colour) >= 4.5:1 against --body-background.
+ *   danger-zone      border = --install-danger-text mixed into --border-color,
+ *   border           >= 3:1 (non-text) against --body-background. Mixing the raw
+ *                    danger token (35% then 50%) left gruvbox_dark under 3:1.
  *   Hide toggle on   --leftcard-warning-text (the warning token pulled towards
  *                    the text colour, declared on `.mainInfoBody`) >= 4.5:1
  *                    against --body-background.
@@ -3701,6 +3704,21 @@ describe('Phase 100 game page tokens in every theme (D-15, D-22)', () => {
       expect(failures.length).toBeGreaterThan(0)
     })
   })
+
+  it.each(themeSelectors)(
+    '%s danger-zone border (--install-danger-text mixed into --border-color) is >= 3:1 against --body-background',
+    (selector) => {
+      const scope = scopeFor(selector)
+      const border = colourOf(ruleDecl('.dangerZone', 'border-color'), scope)
+      const ratio = contrastRatio(border, surface(scope))
+      expect({ selector, border, ratio, passes: ratio >= 3 }).toEqual({
+        selector,
+        border,
+        ratio,
+        passes: true
+      })
+    }
+  )
 
   it('checker can fail, in memory only', () => {
     // Sabotage a STRING copy: a 100% danger weight must drop at least one
