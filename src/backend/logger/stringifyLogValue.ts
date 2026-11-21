@@ -1,6 +1,6 @@
 /**
  * The JS value to string conversion that stays in TypeScript (Phase 84, D-05): the same rules as
- * `convertUnknownToString` in `formatter.ts`, which the native writer cannot reproduce (Errors,
+ * `convertUnknownToString` in the since-deleted TS `formatter.ts`, which the native writer cannot reproduce (Errors,
  * Promises, arbitrary objects). The forwarder sends the resulting text; Rust formats the line.
  *
  * Synchronous unless the value is, or contains, a Promise. Never throws: a value that cannot be

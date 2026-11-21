@@ -12,29 +12,11 @@
  * pathShim.ts) read/write the real OS config directory instead, exactly as
  * they would in production.
  *
- * CONTAINMENT (Phase 34.2, gap cycle 3, plan 34.2-19 — REQ-34.2-07/-14):
- * this suite was independently reproduced DESTROYING the developer's real
- * `~/Library/Logs/GameLib/gamelib.log` three times during the 2026-07-26
- * verification (log mtimes 10:49 → 10:56 → 10:57) — each of the three
- * `init()` calls below runs `initHeadless()` → `new
- * LogWriter(getLogFilePath({}))` → `archiveOldLogFile()`'s `renameSync`,
- * unmocked, against whatever `getBaseLogPath()` resolves to. Containment is
- * now enforced structurally by `src/backend/jest.setupContainment.ts`, wired
- * into the backend project's `setupFiles` (`src/backend/jest.config.js`) —
- * NOT by any mock added to this file. That module redirects
- * `os.homedir()` via a project-wide `os` module mock (env-var
- * redirection alone does not reach `os.homedir()`'s native binding inside a
- * Jest test — see `jest.setupContainment.ts`'s own docstring for the full
- * finding) plus `HOME`/`APPDATA`/`XDG_CONFIG_HOME`/`XDG_STATE_HOME`
- * env-var redirection for the Windows/Linux branches. The tripwire test
- * immediately below is this suite's OWN local, failing-loudly proof of that
- * containment, placed first so it runs before any `init()` call — a future
- * removal of the `setupFiles` entry fails HERE too, not only in a distant
- * gate file. Do not add `os` / `pathShim` / `backend/logger/paths`
- * `jest.mock` blocks to this file — doing so would re-establish the
- * per-suite pattern this plan exists to replace, and would make the
- * tripwire vacuous (this suite would then be "contained" by its own local
- * mock, not by the structural mechanism the tripwire is supposed to prove).
+ * CONTAINMENT: the structural HOME/`os.homedir()` redirection in `src/backend/jest.setupContainment.ts`
+ * (the backend project's `setupFiles`) keeps every real-home path out of this suite; do not add
+ * `os` / `pathShim` `jest.mock` blocks here. (Until Phase 84 this suite also carried a tripwire on the
+ * TS log path, because each `init()` ran a TS log writer's `renameSync` against it. The TS logger
+ * writes no file any more, so the tripwire lost its subject and was retired in 84-07.)
  *
  * `backend/online_monitor` is mocked (fix/steam-native-install-stability, 33-05 live-gate gap):
  * `init()` calls `initOnlineMonitor()`; this suite's whole point is proving the sidecar boots
@@ -58,7 +40,7 @@ import { defined } from 'backend/testUtils/indexed'
 import { yieldUntil } from 'backend/testUtils/yieldUntil'
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 import { tmpdir } from 'os'
-import { isAbsolute, join, relative, resolve } from 'path'
+import { join } from 'path'
 import {
   existsSync,
   mkdirSync,
@@ -77,7 +59,6 @@ import { createStoreRegistry } from '../../stores/storeRegistry'
 import { bootFresh } from './helpers/sidecarHarness'
 import { createTestOnlineMonitor } from 'backend/testUtils/testOnlineMonitor'
 import type { BootServices } from '../../services/types'
-import { getLogFilePath } from '../../logger/paths'
 import {
   READY_SENTINEL,
   UNPORTED_CHANNEL_MARKER
@@ -127,36 +108,6 @@ async function flush(): Promise<void> {
 }
 
 describe('sidecar bootstrap (headless boot)', () => {
-  // Containment tripwire (Phase 34.2 gap cycle 3, plan 34.2-19 --
-  // REQ-34.2-07/-14). FIRST test in this describe block, but this is a
-  // DETECTOR, not a preventer (corrected 34.2-29, WR-10 remaining half):
-  // being the first `it` in this describe only means it runs before the
-  // real `init()` calls further down in THIS test body -- it does NOT run
-  // before this file's own module-scope imports (`../bootstrap`,
-  // `../../logger/paths`, line 66-75 above), and `constants/paths.ts`
-  // performs real filesystem work (an `app.getPath('appData')` read plus a
-  // conditional `mkdirSync`) at module scope, i.e. before ANY test body in
-  // this file runs, tripwire included. The actual preventer is
-  // `src/backend/jest.setupContainment.ts`'s `setupFiles`-time precondition
-  // (added by plan 34.2-25): `setupFiles` entries run once per test file,
-  // strictly BEFORE that file's own imports are evaluated, so containment
-  // is already in place by the time this file's module-scope imports above
-  // execute -- something a first-test tripwire structurally cannot do. This
-  // test carries no jest.mock for os/pathShim/backend/logger/paths of its
-  // own; containment comes entirely from that setupFiles registration. Its
-  // real value is as LOCALISED DOCUMENTATION at the exact site of the
-  // historical defect: if a future edit removes the setupFiles entry, this
-  // test still fails HERE too, not only in a distant gate file -- it just
-  // does so as a second, redundant detector, not as the mechanism that kept
-  // the destruction from happening in the first place.
-  it('containment tripwire: getLogFilePath({}) resolves inside os.tmpdir(), not the developer real home', () => {
-    const logPath = getLogFilePath({})
-    const tmpRoot = resolve(tmpdir())
-    const rel = relative(tmpRoot, resolve(logPath))
-    expect(rel.startsWith('..')).toBe(false)
-    expect(isAbsolute(rel)).toBe(false)
-  })
-
   // Behavior 1: building + running the sidecar entry under bare `node`
   // (electron absent) reaches READY without an uncaught exception --
   // proves paths.ts's app.getPath() and typed_store.ts's `new Store()`

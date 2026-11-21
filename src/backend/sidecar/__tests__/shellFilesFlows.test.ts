@@ -40,8 +40,6 @@
 jest.unmock('i18next')
 
 import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
-import { settleLogFile } from '../../testUtils/settleLogFile'
-import { getLogFilePath } from 'backend/logger/paths'
 
 // Per case (reset in freshRegistry): the boot is handed this root so the stores a case seeds
 // and the boot's own stores share one file-cell table, as the old module-level registry did.
@@ -301,12 +299,6 @@ async function waitForResponse(
 }
 
 let warnSpy: jest.SpyInstance
-
-// Windows: the previous case's un-awaited log appends must be closed before the next boot's
-// writer rotates the log (see settleLogFile). A no-op elsewhere.
-beforeEach(async () => {
-  await settleLogFile(getLogFilePath({}))
-})
 
 describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3-01/REQ-34.3-02)', () => {
   beforeEach(() => {

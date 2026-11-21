@@ -53,16 +53,14 @@
  * `appFolder`/`userDataPath`/`fixesPath` resolve through, since `pathShim.resolveAppDataDir()`
  * prefers `env.APPDATA`/`env.XDG_CONFIG_HOME` over `homedir()` on Windows/Linux -- the
  * `os.homedir()` mock above is insufficient by itself, per finding CR-03/T-34.2-42, first
- * fixed for `gameDetailsFlows.test.ts`/`enrichmentFlows.test.ts` in plan 34.2-10) and a
- * `backend/logger/paths` module mock (the log path is computed INDEPENDENTLY of `pathShim` --
- * `getBaseLogPath()` reads `process.env.LOCALAPPDATA`/`XDG_STATE_HOME` plus `homedir()`
- * directly, so it bypasses BOTH the `os` mock and the `pathShim` mock -- finding WR-01,
- * uncovered by every tripwire in this cluster until now). The `beforeAll` below adds a
+ * fixed for `gameDetailsFlows.test.ts`/`enrichmentFlows.test.ts` in plan 34.2-10). (Until Phase 84 a
+ * second `backend/logger/paths` mock redirected the TS log path as well, finding WR-01; the TS logger
+ * writes no file any more and that mock and its tripwire element were retired in 84-07.) The `beforeAll` below adds a
  * `resolve`+`relative` containment tripwire (mirroring `fileStore.ts`'s own containment-check
  * idiom -- `relative(resolve(base), target)` then `startsWith('..') || isAbsolute(...)`, NOT
  * `path.join`, which this project's recorded convention holds is not a containment check) over
- * `appFolder`, `userDataPath`, `fixesPath` AND `getLogFilePath({})` so a future edit that
- * starts writing, or a regression in either mock, fails loudly here instead of silently
+ * `appFolder`, `userDataPath` and `fixesPath` so a future edit that
+ * starts writing, or a regression in the mock, fails loudly here instead of silently
  * reaching a real user config or log directory.
  */
 
@@ -70,7 +68,6 @@ import EventEmitter from 'node:events'
 import { readFileSync, readdirSync } from 'fs'
 import { join, resolve, relative, isAbsolute } from 'path'
 import { tmpdir } from 'os'
-import { getLogFilePath } from 'backend/logger/paths'
 import { READY_SENTINEL } from 'common/types/sidecarTransport'
 import { stripSourceComments as stripComments } from 'backend/testUtils/stripSourceComments'
 import { bootFresh } from './helpers/sidecarHarness'
@@ -102,46 +99,6 @@ jest.mock('os', () => {
         `gamelib-sidecarrejectionguard-test-home-${process.pid}`,
         String(mockTestHomeSuffix)
       )
-  }
-})
-
-// ── backend/logger/paths — WR-01: `getLogFilePath`'s real `getBaseLogPath()` computes the log
-// directory INDEPENDENTLY of `pathShim`, straight from `process.env.LOCALAPPDATA`/
-// `XDG_STATE_HOME` plus `homedir()` -- so it bypasses the `os` mock. This factory reimplements `getLogFilePath`'s relative-path derivation (heroic
-// log vs runner log vs game log), rooted at its own tmp root, so
-// distinct arguments still yield distinct paths. Copied verbatim from
-// `loggerFlows.test.ts:134-158` except for the tmp-root name. Deliberately does NOT call
-// `jest.requireActual('backend/logger')` -- `backend/logger/index.ts` and `log_writer.ts`
-// import each other circularly, and re-entering that cycle from inside a mock factory throws
-// inside `LogWriter`'s constructor (see this file's own note above the `jest.mock('electron',
-// ...)` block on why `jest.spyOn`, not `jest.mock`, is used for `backend/logger` itself). ────
-jest.mock('backend/logger/paths', () => {
-  const actualPath = jest.requireActual('path')
-  const actualOs = jest.requireActual('os')
-  const tmpRoot = actualPath.join(
-    actualOs.tmpdir(),
-    `gamelib-sidecarrejectionguard-test-home-${process.pid}`
-  )
-  const logBaseDir = actualPath.join(tmpRoot, 'logs')
-  return {
-    getLogFilePath: (
-      args: { appName?: string; runner?: string; type?: string } = {}
-    ): string => {
-      let relativeFilePath: string
-      if (!(args?.appName || args?.runner)) {
-        relativeFilePath = 'gamelib'
-      } else if (args.runner && !args.appName) {
-        relativeFilePath = actualPath.join('runners', args.runner)
-      } else {
-        const { appName, runner, type = 'launch' } = args
-        relativeFilePath = actualPath.join(
-          'games',
-          `${appName}_${runner}`,
-          type
-        )
-      }
-      return actualPath.join(logBaseDir, relativeFilePath + '.log')
-    }
   }
 })
 
@@ -217,14 +174,10 @@ jest.mock('../../anticheat/utils', () => ({
 }))
 
 // Deliberately NOT `jest.mock('backend/logger', ...)`: `backend/logger/index.ts` and
-// `log_writer.ts` import each other circularly (`log_writer.ts` imports `getLogFilePath` FROM
-// `./index`, which itself imports `LogWriter` from `./log_writer`). A `jest.mock` factory that
-// calls `jest.requireActual('backend/logger')` re-enters that SAME mocked module specifier
-// while `log_writer.ts`'s own `require('./index')` resolves to the identical absolute path --
-// breaking the circular reference Node's plain CJS caching otherwise resolves cleanly (empirically
-// confirmed: throws `TypeError: getLogFilePath is not a function` inside `LogWriter`'s
-// constructor). `jest.spyOn` below wraps the REAL, already-fully-loaded module object in place
-// instead of re-triggering module resolution, so the circular require path is never disturbed.
+// `targetWriter.ts` import each other (the writer reaches `index.ts` at call time). A `jest.mock`
+// factory that calls `jest.requireActual('backend/logger')` re-enters that SAME mocked module
+// specifier mid-evaluation. `jest.spyOn` below wraps the REAL, already-fully-loaded module object in
+// place instead of re-triggering module resolution, so the require path is never disturbed.
 
 /** Waits a few microtask/macrotask turns for fire-and-forget async work to progress (mirrors
  * bootstrapWirings.test.ts's own `flush`). */
@@ -540,8 +493,7 @@ process.setMaxListeners(EXIT_LISTENER_CEILING)
 describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2 / CR-02 / T-34.2-38..41)', () => {
   beforeAll(() => {
     // T-34.2-42 / CR-03 / WR-01 containment tripwire: prove `appFolder`, `userDataPath`,
-    // `fixesPath` (via the `pathShim` mock) AND `getLogFilePath({})` (via the
-    // `backend/logger/paths` mock) all resolve inside `os.tmpdir()`, using the SAME
+    // `fixesPath` (via the `pathShim` mock) all resolve inside `os.tmpdir()`, using the SAME
     // `resolve`+`relative` idiom `fileStore.ts`'s own containment check uses
     // (`relative(resolve(base), target)` then `startsWith('..') || isAbsolute(...)`) --
     // never `path.join`, which is not a containment check. Throws loudly ("REFUSING TO RUN")
@@ -550,7 +502,7 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
     // `afterAll` restore is not a safety net under jest worker force-exit.
     const { appFolder, userDataPath, fixesPath } = loadConstantsPaths()
     const tmpRoot = resolve(tmpdir())
-    const candidates = [appFolder, userDataPath, fixesPath, getLogFilePath({})]
+    const candidates = [appFolder, userDataPath, fixesPath]
     for (const candidate of candidates) {
       const rel = relative(tmpRoot, resolve(candidate))
       if (rel.startsWith('..') || isAbsolute(rel)) {

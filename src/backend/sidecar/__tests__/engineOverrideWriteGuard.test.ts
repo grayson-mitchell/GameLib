@@ -15,7 +15,6 @@ const mockWriteConfig = jest.fn()
 jest.mock('../../utils', () => ({
   writeConfig: (...a: unknown[]) => mockWriteConfig(...a)
 }))
-jest.mock('../../logger/paths', () => ({ getLogFilePath: jest.fn() }))
 jest.mock('../../utils/systeminfo', () => ({ getSystemInfo: jest.fn() }))
 jest.mock('../../utils/os/path', () => ({ hasExecutable: jest.fn() }))
 

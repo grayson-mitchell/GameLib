@@ -35,7 +35,7 @@ import { join } from 'path'
 // `jest.mock('backend/logger', () => ({ ...jest.requireActual(...), ... }))` spread is fragile
 // against that cycle: depending on which side of the cycle this file's larger import graph
 // (Task 2's real `../bootstrap`) resolves FIRST, `jest.requireActual` can return the
-// STILL-EVALUATING module's PARTIAL exports (its own `export { ... LogPrefix, getLogFilePath }`
+// STILL-EVALUATING module's PARTIAL exports (its own `export { ... LogPrefix, RunnerToLogPrefixMap }`
 // list runs at the very end of the file), silently spreading in an incomplete object. `jest.spyOn`
 // on the REAL, already-fully-loaded module (mirrors `bootstrap.test.ts`'s own established
 // `jest.spyOn(loggerModule, 'logInfo')` convention) sidesteps this: it mutates the ALREADY-real

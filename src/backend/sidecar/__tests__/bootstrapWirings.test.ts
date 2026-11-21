@@ -220,7 +220,6 @@ type WiringHandles = {
 
   i18nextInstance: any
   appFolder: string
-  logFilePath: string
   handlerRegistry: typeof handlerRegistry
 }
 
@@ -264,7 +263,6 @@ function loadHandles(): WiringHandles {
   const i18nextInstance = require('i18next')
   const { appFolder } =
     require('../../testUtils/testAppPaths').createContainedHomeAppPaths()
-  const { getLogFilePath } = require('../../logger/paths')
   /* eslint-enable @typescript-eslint/no-require-imports */
 
   return {
@@ -274,7 +272,6 @@ function loadHandles(): WiringHandles {
     axiosGet: axiosInstance.get,
     i18nextInstance,
     appFolder,
-    logFilePath: getLogFilePath({}),
     handlerRegistry
   }
 }
@@ -326,8 +323,8 @@ describe('sidecar bootstrap wirings (Phase 34.2 Plan 01 -- REQ-34.2-02/04/07/14)
     // Deviation (Rule 1 -- bug, found empirically running this suite repeatedly):
     // deleting the tmp home directory tree here -- even once, after every test's own
     // `await`s have settled -- reproducibly crashed the WHOLE Node process with an
-    // uncaught `ENOENT`/`ENOTDIR` from `LogWriter.writeString()` (backend/logger/
-    // log_writer.ts). `initLogger()` (real, run once per isolated `init()` call in this
+    // uncaught `ENOENT`/`ENOTDIR` from the TS `LogWriter.writeString()` (since deleted in
+    // Phase 84, when the Rust shell took over the log files). `initLogger()` (real, run once per isolated `init()` call in this
     // suite) queues its own log writes fire-and-forget -- no caller in this codebase
     // `await`s a `logXXX()` call -- so a write can still be in flight, mid-`mkdir`, when
     // this hook runs, and `rmSync` out from under it throws an UNHANDLED rejection that
@@ -561,12 +558,6 @@ describe('sidecar bootstrap protocol-url wiring (Phase 34.5 gap cycle 6 plan 44,
     expect(line?.msg).toBe(
       'Received gamelib://launch?appName=__gamelib_test_missing__'
     )
-  })
-
-  it('Test A negative control: logFilePath resolves under the redirected tmp home, never the real ~/Library/Logs/GameLib', () => {
-    const { logFilePath } = setupWithoutBoot()
-    expect(logFilePath.startsWith(tmpdir())).toBe(true)
-    expect(logFilePath).not.toContain('Library/Logs/GameLib')
   })
 
   // Test B is intentionally SEPARATE from Test A: calling `deliverStartupProtocolUrl`

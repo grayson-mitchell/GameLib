@@ -3,8 +3,8 @@
  * 34.2-19 — REQ-34.2-07/-14) holds with NO per-suite containment kit at
  * all. This file contains zero `jest.mock` calls of any kind — its
  * evidentiary value comes entirely from that fact: it carries none of
- * `testContainment.test.ts`'s (plan 34.2-18) per-suite `os`/`pathShim`/
- * `backend/logger/paths` mock blocks, and the real resolvers still land
+ * `testContainment.test.ts`'s (plan 34.2-18) per-suite `os`/`pathShim`
+ * mock blocks (and, until 84-07, its `backend/logger/paths` block), and the real resolvers still land
  * inside `os.tmpdir()` anyway, because `src/backend/jest.setupContainment.ts`
  * (registered on the backend project's `setupFiles`) redirects
  * `HOME`/`USERPROFILE`/`APPDATA`/`LOCALAPPDATA`/`XDG_CONFIG_HOME`/
@@ -147,17 +147,10 @@ describe('structural containment proof — zero per-suite mocks (34.2 gap cycle 
     assertContained(tmpdir(), homedir())
   })
 
-  it('Test 2: the REAL, unmocked getLogFilePath({}) from backend/logger/paths resolves inside os.tmpdir()', () => {
-    let logPath!: string
-    jest.isolateModules(() => {
-      /* eslint-disable @typescript-eslint/no-require-imports */
-      const { getLogFilePath } = require('backend/logger/paths')
-      /* eslint-enable @typescript-eslint/no-require-imports */
-      logPath = getLogFilePath({})
-    })
-
-    assertContained(tmpdir(), logPath)
-  })
+  // Test 2 (the REAL, unmocked `getLogFilePath({})` resolves inside `os.tmpdir()`) was retired in 84-07:
+  // `backend/logger/paths.ts` is deleted, the TS process computes and writes no log path, and
+  // `loggerPortComplete.test.ts` forbids file writes in the TS logger. The numbering is kept so the
+  // references to Tests 3-9 in this file and in its history stay true.
 
   it("Test 3: the REAL, unmocked userData and appData the boot's resolveAppPaths derives resolve inside os.tmpdir()", () => {
     let userDataPath!: string
@@ -227,7 +220,7 @@ describe('structural containment proof — zero per-suite mocks (34.2 gap cycle 
     }
   })
 
-  it('Test 6 (anti-vacuity, portable): the redirection target is genuinely different from the real home, and the resolved log path lands inside the per-run containment root', () => {
+  it('Test 6 (anti-vacuity, portable): the redirection target is genuinely different from the real home, and the resolved userData path lands inside the per-run containment root', () => {
     // Rewritten 34.2-25 Task 3 (WR-11). The prior version used
     // `os.userInfo().homedir` as its "independent" real-home reference --
     // that stopped being independent the moment Task 2 redirected
@@ -248,29 +241,30 @@ describe('structural containment proof — zero per-suite mocks (34.2 gap cycle 
     // `os.tmpdir()` against `os.homedir()` -- structurally different on every
     // supported platform, so the assertion guarding against vacuity was
     // itself vacuous. Replaced below by the property actually wanted, asserted
-    // against the RESOLVED LOG PATH rather than the root: the thing that must
-    // never happen is a real log write landing under the developer's home.
+    // against a RESOLVED PATH rather than the root: the thing that must
+    // never happen is a real write landing under the developer's home. (It was the
+    // resolved log path until 84-07, when the TS log path went; it is now userData.)
     expect(containmentRoot).not.toBe(realHomeAtSetup)
 
-    let logPath!: string
+    let userDataPath!: string
     jest.isolateModules(() => {
       /* eslint-disable @typescript-eslint/no-require-imports */
-      const { getLogFilePath } = require('backend/logger/paths')
+      const { resolveAppPaths } = require('../bootstrap')
       /* eslint-enable @typescript-eslint/no-require-imports */
-      logPath = getLogFilePath({})
+      userDataPath = resolveAppPaths().userData
     })
 
     // Strictly stronger than the old `assertContained(tmpdir(), ...)`: the
-    // resolved log path must land inside THIS per-run mkdtemp root, which
+    // resolved userData path must land inside THIS per-run mkdtemp root, which
     // cannot coincide with the real home on any platform, on any of
-    // `getBaseLogPath()`'s three platform branches, regardless of where
+    // platform branch, regardless of where
     // `TMPDIR` happens to sit.
-    assertContained(containmentRoot, logPath)
+    assertContained(containmentRoot, userDataPath)
 
-    // The teeth IN-01 asked for: the resolved log path must be OUTSIDE the
+    // The teeth IN-01 asked for: the resolved userData path must be OUTSIDE the
     // pre-mock real home. This fails the moment containment breaks, which the
     // replaced identity comparison never could.
-    assertNotContained(realHomeAtSetup, logPath)
+    assertNotContained(realHomeAtSetup, userDataPath)
   })
 
   it('self-test: assertNotContained actually rejects a contained path (IN-01 non-vacuity)', () => {

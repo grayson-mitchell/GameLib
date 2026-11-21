@@ -85,48 +85,6 @@ jest.mock('os', () => {
   }
 })
 
-// ── backend/logger/paths — WR-01 (34.2 gap cycle 2, plan 34.2-18): the log
-// path is computed INDEPENDENTLY of pathShim -- `getBaseLogPath()`
-// (`backend/logger/paths.ts`) reads `process.env.LOCALAPPDATA`/
-// `XDG_STATE_HOME` plus `homedir()` directly, so it bypasses BOTH the `os`
-// mock and the `pathShim` mock above. This factory reimplements
-// `getLogFilePath`'s relative-path derivation, rooted at the SAME per-suite
-// tmp root, so distinct arguments still yield distinct paths. Does NOT call
-// `jest.requireActual('backend/logger')` -- `backend/logger/index.ts` and
-// `log_writer.ts` import each other circularly, and re-entering that cycle
-// from inside a mock factory throws inside `LogWriter`'s constructor (see
-// `sidecarRejectionGuard.test.ts`'s own note on this) -- not a concern here
-// since this suite never imports `backend/logger` at all. ───────────────────
-jest.mock('backend/logger/paths', () => {
-  const actualPath = jest.requireActual('path')
-  const actualOs = jest.requireActual('os')
-  const tmpRoot = actualPath.join(
-    actualOs.tmpdir(),
-    `gamelib-enrichmentflows-test-home-${process.pid}`
-  )
-  const logBaseDir = actualPath.join(tmpRoot, 'logs')
-  return {
-    getLogFilePath: (
-      args: { appName?: string; runner?: string; type?: string } = {}
-    ): string => {
-      let relativeFilePath: string
-      if (!(args?.appName || args?.runner)) {
-        relativeFilePath = 'gamelib'
-      } else if (args.runner && !args.appName) {
-        relativeFilePath = actualPath.join('runners', args.runner)
-      } else {
-        const { appName, runner, type = 'launch' } = args
-        relativeFilePath = actualPath.join(
-          'games',
-          `${appName}_${runner}`,
-          type
-        )
-      }
-      return actualPath.join(logBaseDir, relativeFilePath + '.log')
-    }
-  }
-})
-
 // ── electron / electron-store — route Jest's own module resolution at the
 // REAL sidecar shims (see module docstring above) ───────────────────────────
 jest.mock('backend/store_backend', () => ({
@@ -330,7 +288,6 @@ import {
   handlerRegistry
 } from './helpers/sidecarHarness'
 import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
-import { getLogFilePath } from 'backend/logger/paths'
 
 // The app folders a boot derives for the jest-contained HOME (`jest.setupContainment`).
 const {
@@ -352,14 +309,11 @@ import { createItadSecrets } from 'backend/storeSearch/itadSecrets'
 // sharing the tmp prefix). Throws loudly rather than relying on the
 // afterAll below as a safety net — see this repo's
 // tests-clobbering-real-steam-store lesson (commit 92c29a5e): an afterAll
-// restore is not a safety net under jest worker force-exit. Now also covers
-// getLogFilePath({}) (WR-01, 34.2 gap cycle 2 plan 34.2-18) — the log path
-// is env-driven and bypasses BOTH the os mock and the pathShim mock above,
-// so it needed its own separate module mock rather than another entry in
-// the same pathShim factory ─────────────────────────────────────────────
+// restore is not a safety net under jest worker force-exit. (A
+// getLogFilePath({}) element was retired in 84-07 with the TS log path.) ─────────
 beforeAll(() => {
   const tmpRoot = resolve(tmpdir())
-  const candidates = [appFolder, userDataPath, fixesPath, getLogFilePath({})]
+  const candidates = [appFolder, userDataPath, fixesPath]
   for (const candidate of candidates) {
     const rel = relative(tmpRoot, resolve(candidate))
     if (rel.startsWith('..') || isAbsolute(rel)) {

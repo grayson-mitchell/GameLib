@@ -22,10 +22,12 @@ const ROOT = join(__dirname, '..', '..', '..')
 const DELETED = [
   'src/backend/logger/log_writer.ts',
   'src/backend/logger/formatter.ts',
+  'src/backend/logger/paths.ts',
   'src/backend/logger/sanitizeRendererLogMessage.ts',
   'src/backend/logger/uploader.ts',
   'src/backend/logger/stores.ts',
   'src/backend/sidecar/loggerFlowRegistration.ts',
+  'src/backend/testUtils/settleLogFile.ts',
   'src/backend/logger/__tests__/logWriter.test.ts',
   'src/backend/logger/__tests__/sanitizeRendererLogMessage.test.ts',
   'src/backend/logger/__tests__/logGolden.test.ts',
@@ -53,7 +55,8 @@ const FORBIDDEN_IDENTIFIERS = [
   'createLoggerStores',
   'uploadedLogFileStore',
   'registerLoggerFlows',
-  'sanitizeRendererLogMessage'
+  'sanitizeRendererLogMessage',
+  'getLogFilePath'
 ]
 
 /** The five file-write calls the TS logger no longer makes (the Rust shell writes every log file). */

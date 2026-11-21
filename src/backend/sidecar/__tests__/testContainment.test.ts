@@ -4,8 +4,8 @@
  * so the `pathShim` mock kit is gone, Block A pins the derivation instead, and Block B no longer
  * requires a `pathShim` mock (it requires that none is left behind).
  *
- * Containment proof + declared-list gate for the sidecar's `pathShim`/
- * `backend/logger/paths` mock kit (Phase 34.2 gap cycle 2, plan 34.2-18 --
+ * Containment proof + declared-list gate for the sidecar's `pathShim` mock kit
+ * (Phase 34.2 gap cycle 2, plan 34.2-18 --
  * closes verification gap #3 / CR-03 / WR-01, REQ-34.2-07/-14).
  *
  * **Block A** is the platform-conditional evidence the plan's own objective
@@ -13,7 +13,7 @@
  * on macOS. A green local run is therefore NOT evidence of a fix." The four
  * in-scope suites' own tests are ALL run on this developer's real macOS
  * host, where `pathShim.ts`'s real `resolveAppDataDir()` and
- * `logger/paths.ts`'s real `getBaseLogPath()` take their `darwin` branch
+ * (until 84-07) the TS log path's real `getBaseLogPath()` take their `darwin` branch
  * unconditionally -- which reads ONLY `homedir()`, never
  * `env.APPDATA`/`env.XDG_CONFIG_HOME`/`env.XDG_STATE_HOME`/
  * `env.LOCALAPPDATA`. That means simply exporting those four env vars on
@@ -24,8 +24,8 @@
  * this repo's own established `overrideProcessPlatform` precedent,
  * `src/backend/__tests__/constants.test.ts`) -- restored in `afterAll`. With
  * both the hostile env vars AND the forced non-darwin platform in place,
- * Block A proves the `pathShim`/`backend/logger/paths` mocks below (the
- * SAME shape as the four in-scope suites') still resolve every path inside
+ * Block A proves the `pathShim` mocks below (the
+ * SAME shape as the in-scope suites') still resolve every path inside
  * `os.tmpdir()`, because those mocks ignore `platform` and `env` entirely --
  * a property a bare `os.homedir()` mock does NOT have.
  *
@@ -33,10 +33,9 @@
  * (audited by quick task 260905-jg4, 2026-09-05, when the shadowing rule in
  * `jest.setupContainment.ts` raised the question of whether Block A was
  * exercising a factory that is never installed). Both of Block A's assertions
- * are RED-PROOFed against the `../pathShim` and `backend/logger/paths` mocks
- * only -- see the two RED-PROOF notes at the foot of Block A, which record
- * commenting out each of THOSE two blocks and observing the corresponding
- * test go red. The sentence above is the same finding stated from the other
+ * were RED-PROOFed against the `../pathShim` and TS-log-path mocks
+ * only -- see the RED-PROOF note at the foot of Block A (the log-path half was retired in 84-07
+ * with the module). The sentence above is the same finding stated from the other
  * side: what Block A proves is precisely the property the `os` mock lacks, so
  * no re-pointing of Block A's assertions was required. What WAS wrong is the
  * comment above this file's own `jest.mock('os', ...)` below, which described
@@ -105,8 +104,8 @@ import {
 // with default permissions. On a shared, world-writable Linux CI `/tmp`
 // another uid could pre-create it as a symlink and receive an arbitrary-path
 // write as the CI user. Same remedy cycle 3's WR-07 applied to
-// `jest.setupContainment.ts`; this file and `loggerFlows.test.ts` were the two
-// that still carried the old pattern.
+// `jest.setupContainment.ts`; this file and the since-deleted `loggerFlows.test.ts`
+// were the two that still carried the old pattern.
 //
 // `mock`-prefixed and declared before the factories that read it: ts-jest's
 // hoist transform only lets a `jest.mock()` factory reference an out-of-scope
@@ -140,62 +139,6 @@ jest.mock('os', () => {
     homedir: () => mockTmpRoot
   }
 })
-
-// ── backend/logger/paths — same reasoning: the mock must stay safe under
-// the same adversarial env/platform conditions Block A forces. Does NOT
-// call jest.requireActual('backend/logger') -- see sidecarRejectionGuard
-// .test.ts's own note on the logger/log_writer circular-require hazard. ─────
-jest.mock('backend/logger/paths', () => {
-  const actualPath = jest.requireActual('path')
-  const logBaseDir = actualPath.join(mockTmpRoot, 'logs')
-  return {
-    getLogFilePath: (
-      args: { appName?: string; runner?: string; type?: string } = {}
-    ): string => {
-      let relativeFilePath: string
-      if (!(args?.appName || args?.runner)) {
-        relativeFilePath = 'gamelib'
-      } else if (args.runner && !args.appName) {
-        relativeFilePath = actualPath.join('runners', args.runner)
-      } else {
-        const { appName, runner, type = 'launch' } = args
-        relativeFilePath = actualPath.join(
-          'games',
-          `${appName}_${runner}`,
-          type
-        )
-      }
-      return actualPath.join(logBaseDir, relativeFilePath + '.log')
-    }
-  }
-})
-
-// ── backend/constants/environment — LOAD-BEARING (WR-04; previously and
-// INCORRECTLY documented as "included for parity"). Consumer:
-// `backend/logger/paths.ts`'s `getBaseLogPath()`, which branches on the
-// `isWindows`/`isMac` flags THIS mock provides and never reads
-// `process.platform` directly (`sidecar/pathShim.ts:31`'s
-// `resolveAppDataDir()` is the counterpart that DOES read
-// `process.platform` directly -- both must stay adversarial for Block A's
-// proof to be non-vacuous end-to-end). Pinning `isMac: false` (alongside
-// `isWindows: false`) forces `getBaseLogPath()` down its XDG_STATE_HOME
-// (Linux/else) branch regardless of the real host OS. On this developer's
-// own darwin host, WITHOUT this pin, `getBaseLogPath()` would take its
-// `isMac` branch unconditionally (`join(homedir(), 'Library', 'Logs',
-// 'GameLib')`), which reads NEITHER `process.platform` NOR any of Block A's
-// four sentinel env vars -- making RED-PROOF-2 (removing the
-// `backend/logger/paths` mock below and observing only the getLogFilePath
-// test fail) vacuous: that test would keep passing for the wrong reason
-// (the real darwin resolver never touching the adversarial state Block A
-// sets up), not because containment genuinely held. Removing this mock
-// silently turns RED-PROOF-2 false. Do not delete it. ──────────────────────
-jest.mock('backend/constants/environment', () => ({
-  isWindows: false,
-  isMac: false,
-  isLinux: true,
-  isSteamDeckGameMode: false,
-  isFlatpak: false
-}))
 
 // ── electron / electron-store — constants/paths.ts imports `app` from
 // 'electron' at module scope; route Jest's own module resolution at the
@@ -276,9 +219,8 @@ describe('Block A: env-simulating containment proof (34.2 gap cycle 2, plan 34.2
     }
 
     // RED PROPERTY (see module docstring): force the non-darwin resolution
-    // branch pathShim.ts's real resolveAppDataDir() / logger/paths.ts's real
-    // getBaseLogPath() would take on Windows/Linux. Without this, on THIS
-    // macOS host, both real resolvers' darwin branch never consults any of
+    // branch the real resolveAppDataDir() would take on Windows/Linux. Without
+    // this, on THIS macOS host, the real resolver's darwin branch never consults any of
     // the four env vars above -- the sentinel values alone would exercise
     // nothing, and removing either mock below would NOT fail here. Mirrors
     // `overrideProcessPlatform` in `src/backend/__tests__/constants.test.ts`.
@@ -364,24 +306,6 @@ describe('Block A: env-simulating containment proof (34.2 gap cycle 2, plan 34.2
     })
   })
 
-  it('REQ-34.2-07/-14: getLogFilePath({}) still resolves inside os.tmpdir()', () => {
-    withAdversarialPlatformAndEnv(() => {
-      let logPath!: string
-      // no boot: loads one module fresh to read a path; never calls bootstrap.init
-      jest.isolateModules(() => {
-        /* eslint-disable @typescript-eslint/no-require-imports */
-        const { getLogFilePath } = require('backend/logger/paths')
-        /* eslint-enable @typescript-eslint/no-require-imports */
-        logPath = getLogFilePath({})
-      })
-
-      const tmpRoot = resolve(tmpdir())
-      const rel = relative(tmpRoot, resolve(logPath))
-      expect(rel.startsWith('..')).toBe(false)
-      expect(isAbsolute(rel)).toBe(false)
-    })
-  })
-
   it('WR-07: process.platform and all four env vars are restored to their pre-test originals within the same test body that changed them, not deferred to a hook', () => {
     const originalPlatform = process.platform
     const originalEnv = {} as Partial<Record<EnvKey, string>>
@@ -416,23 +340,15 @@ describe('Block A: env-simulating containment proof (34.2 gap cycle 2, plan 34.2
   // `'linux'` for the duration of that test. Restored immediately
   // afterwards, `git diff` confirmed clean.
   //
-  // RED-PROOF 2 (recorded verbatim in 34.2-18-SUMMARY.md): commenting out
-  // the `jest.mock('backend/logger/paths', ...)` block above makes ONLY the
-  // `getLogFilePath({})` assertion test fail, for the same reason -- the
-  // real `getBaseLogPath()` reads the `LOCALAPPDATA`/`XDG_STATE_HOME`
-  // sentinel directly once `process.platform` is forced non-mac/non-win
-  // (and `backend/constants/environment`'s `isMac: false` pin routes it down
-  // that branch -- see WR-04's comment above the environment mock; this is
-  // exactly why that mock is load-bearing for THIS proof). Restored
-  // immediately afterwards, `git diff` confirmed clean.
+  // RED-PROOF 2 (a `backend/logger` path mock plus a `backend/constants/environment` pin) was retired
+  // in 84-07: the TS process computes and writes no log path, so that element had no subject.
 })
 
 // ── Block B: declared-list source gate ──────────────────────────────────────
 
 /**
- * The four suites this gate holds to the full containment kit
- * (`pathShim`/`backend/logger/paths`/`backend/constants/environment` mocks
- * plus the `getLogFilePath({})` tripwire). DECLARED, not derived (this
+ * The suites this gate holds to the containment kit (the `pathShim` retirement; the TS log-path
+ * mock and tripwire elements were retired in 84-07). DECLARED, not derived (this
  * repo's own D-13 precedent, `gameDetailsImportGate.test.ts`) -- a
  * `readdirSync`-derived list would silently shrink to fit whatever exists,
  * defeating the anti-vacuity purpose of pinning an exact count below.
@@ -719,7 +635,7 @@ const IN_SCOPE_SUITES = [
  * structurally contained: it reuses `skeletonFlows.test.ts`'s isolation preamble
  * verbatim -- a `jest.mock('os', ...)` disposable-homedir redirect plus `electron` /
  * `electron-store` / `axios` / `backend/utils` / `backend/constants/environment` mocks --
- * not the four-element `pathShim`/`backend/logger/paths` containment kit `IN_SCOPE_SUITES`
+ * not the per-suite `pathShim` containment kit `IN_SCOPE_SUITES`
  * requires, so it cannot be an `IN_SCOPE_SUITE`. It never imports `pathShim` at all; the
  * dispatch under test (`handleLaunch`'s runner routing) has no `pathShim` surface. A
  * `readdirSync` recount at this plan's execution time puts the directory at 43
@@ -763,7 +679,7 @@ const IN_SCOPE_SUITES = [
  * written -- which is exactly the "contained by construction, no per-suite opt-in required"
  * guarantee this Block C exists to prove, exercised here by a suite that would otherwise have had
  * every reason to be listed as accepted debt. It cannot be an `IN_SCOPE_SUITE`: it declares none
- * of the four-element `pathShim`/`backend/logger/paths` kit Block B gates on. A `readdirSync`
+ * of the per-suite `pathShim` kit Block B gates on. A `readdirSync`
  * recount at this task's execution time puts the directory at 47 `*.test.ts` files:
  * 4 `IN_SCOPE_SUITES` + 43 below.
  *
@@ -783,7 +699,7 @@ const IN_SCOPE_SUITES = [
  * `node:crypto`, `common/types/sidecarTransport` and `./platformApi` -- no path module, no
  * `homedir()`, no filesystem read or write anywhere in the chain. Its only other disk access is
  * a `readFileSync` of `sidecarRpc.ts`'s own source for the anti-vacuity pin. It cannot be an
- * `IN_SCOPE_SUITE`: it declares none of the four-element `pathShim`/`backend/logger/paths` kit
+ * `IN_SCOPE_SUITE`: it declares none of the per-suite `pathShim` kit
  * Block B gates on. A `readdirSync` recount at this task's execution time puts the directory at
  * 49 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 45 below.
  *
@@ -792,8 +708,7 @@ const IN_SCOPE_SUITES = [
  * It declares exactly ONE `jest.mock(...)`, `jest.mock('../../logger', ...)`, and the module
  * under test (`../sendChannelObservable`) imports only `../logger` -- no `pathShim`, no
  * `electron`/`electron-store`, no `homedir()`, no filesystem access anywhere in its chain. It
- * cannot be an `IN_SCOPE_SUITE`: it declares none of the four-element `pathShim`/
- * `backend/logger/paths` mock kit Block B gates on. A `readdirSync` recount at this plan's
+ * cannot be an `IN_SCOPE_SUITE`: it declares none of the per-suite `pathShim` mock kit Block B gates on. A `readdirSync` recount at this plan's
  * execution time puts the directory at 50 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 46 below.
  *
  * `eosOverlayFlows.test.ts` (Phase 34.6 Plan 08, REQ-34.6-01/08/13, 2026-08-24) is classified
@@ -804,7 +719,7 @@ const IN_SCOPE_SUITES = [
  * -- no `pathShim`, no real `electron`/`electron-store`, no `homedir()`, no filesystem access
  * anywhere in its chain (its one `readFileSync` call reads its own source file for an anti-vacuity
  * pin, mirroring `flowRegistrationCensus.test.ts`'s pattern above). It cannot be an
- * `IN_SCOPE_SUITE`: it declares none of the four-element `pathShim`/`backend/logger/paths` mock
+ * `IN_SCOPE_SUITE`: it declares none of the per-suite `pathShim` mock
  * kit Block B gates on. A `readdirSync` recount at this plan's execution time (Phase 34.6 Plan 11,
  * after adding `rendererPathGuard.test.ts` for `T-34.5-C6-49-03`) puts the directory at 53
  * `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 49 below.
@@ -819,7 +734,7 @@ const IN_SCOPE_SUITES = [
  * module scope is likewise inert (constants and empty containers). Its `readFileSync` calls read
  * source files in this very directory for the T-35-11 one-derivation source gate, mirroring
  * `flowRegistrationCensus.test.ts`'s own self-reading pattern above. It cannot be an
- * `IN_SCOPE_SUITE`: it declares none of the four-element `pathShim`/`backend/logger/paths` mock
+ * `IN_SCOPE_SUITE`: it declares none of the per-suite `pathShim` mock
  * kit Block B gates on. Recount: 54 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 50 below.
  *
  * `wakeLock.test.ts` (Phase 35 plan 08, D-08/D-05 / REQ-35-06, 2026-08-29) is classified
@@ -831,8 +746,7 @@ const IN_SCOPE_SUITES = [
  * `pathShim`'s `resolveAppDataDir()`/`homedir()` calls all live INSIDE `getPath()` and none runs
  * at module scope, so nothing in that chain resolves a path at import time. It touches no
  * filesystem at all -- not even the self-reading `readFileSync` source-gate pattern several
- * entries above use. It cannot be an `IN_SCOPE_SUITE`: it declares none of the four-element
- * `pathShim`/`backend/logger/paths` mock kit Block B gates on. Recount, run rather than carried
+ * entries above use. It cannot be an `IN_SCOPE_SUITE`: it declares none of the per-suite `pathShim` mock kit Block B gates on. Recount, run rather than carried
  * forward: 56 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 52 below.
  *
  * `installedJsonWatcher.test.ts` (Phase 35 plan 10, D-18/D-05 / REQ-35-16, 2026-08-29) is
@@ -855,8 +769,7 @@ const IN_SCOPE_SUITES = [
  * -- which is the stronger position, given this repo's recorded finding that a per-suite `os` mock
  * is inert here anyway.
  *
- * It cannot be an `IN_SCOPE_SUITE`: it declares none of the four-element `pathShim`/
- * `backend/logger/paths` mock kit Block B gates on. Recount, run rather than carried forward:
+ * It cannot be an `IN_SCOPE_SUITE`: it declares none of the per-suite `pathShim` mock kit Block B gates on. Recount, run rather than carried forward:
  * 61 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 57 below (correcting the stale "59 / 55" figure
  * that had drifted two additions behind reality -- quick-260908-ci2 added
  * `steamFocusRefreshWire.test.ts` -- same reasoning as `steamFlows.test.ts`, its immediate
@@ -876,7 +789,7 @@ const IN_SCOPE_SUITES = [
  * `jest.mock('os', ...)` of its own, deliberately -- containment is structural
  * (`jest.setupContainment.ts`'s project-wide `setupFiles` registration), the same floor
  * `playtimeLockBootClear.test.ts` relies on. It cannot be an `IN_SCOPE_SUITE`: it declares none
- * of the four-element `pathShim`/`backend/logger/paths` mock kit Block B gates on. A
+ * of the per-suite `pathShim` mock kit Block B gates on. A
  * `readdirSync` recount at this task's execution time puts the directory at 64 `*.test.ts`
  * files: 4 `IN_SCOPE_SUITES` + 60 below (quick-260908-k3x added `rosettaBootWiring.test.ts`
  * and `rosettaPlatformGate.test.ts`, neither of which declares the `IN_SCOPE_SUITES` kit).
@@ -887,8 +800,7 @@ const IN_SCOPE_SUITES = [
  * `../../online_monitor` partial mock (`initOnlineMonitor`/`isOnline`/`runOnceWhenOnline`
  * overridden, everything else `jest.requireActual`). It declares NO `jest.mock('os', ...)` of
  * its own, deliberately -- containment is structural, the same floor both model files rely on.
- * It cannot be an `IN_SCOPE_SUITE`: it declares none of the four-element `pathShim`/
- * `backend/logger/paths` mock kit Block B gates on. A `ls | wc -l` recount at this task's
+ * It cannot be an `IN_SCOPE_SUITE`: it declares none of the per-suite `pathShim` mock kit Block B gates on. A `ls | wc -l` recount at this task's
  * execution time puts the directory at 65 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 61 below.
  *
  * `gogPresenceBootWire.test.ts` (todo 2026-09-06, quick-260909-k5x) is classified as
@@ -897,7 +809,7 @@ const IN_SCOPE_SUITES = [
  * (`initOnlineMonitor`/`isOnline`/`runOnceWhenOnline` overridden, everything else
  * `jest.requireActual`). It declares NO `jest.mock('os', ...)` of its own, deliberately --
  * containment is structural, the same floor both model files rely on. It cannot be an
- * `IN_SCOPE_SUITE`: it declares none of the four-element `pathShim`/`backend/logger/paths` mock
+ * `IN_SCOPE_SUITE`: it declares none of the per-suite `pathShim` mock
  * kit Block B gates on. A `readdirSync` recount at this task's execution time puts the directory
  * at 66 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 62 below.
  *
@@ -941,7 +853,7 @@ const IN_SCOPE_SUITES = [
  * calls the real `bootstrap.init()` over `PassThrough` streams with the pass and outcomes modules
  * replaced by order recorders. It declares NO `jest.mock('os', ...)` of its own, deliberately --
  * containment is structural, the same floor both model files rely on. It cannot be an
- * `IN_SCOPE_SUITE`: it declares none of the four-element `pathShim`/`backend/logger/paths` mock kit
+ * `IN_SCOPE_SUITE`: it declares none of the per-suite `pathShim` mock kit
  * Block B gates on. A `readdirSync` recount at this task's execution time puts the directory at 72
  * `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 68 below.
  *
@@ -1156,36 +1068,20 @@ describe('Block B: declared-list source gate over the in-scope suites (34.2 gap 
     }
   )
 
-  it.each(IN_SCOPE_SUITES)(
-    'REQ-34.2-07/-14: %s contains a backend/logger/paths jest.mock, matched on comment-stripped source',
-    (name) => {
-      const stripped = stripComments(
-        readFileSync(join(__dirname, name), 'utf-8')
-      )
-      expect(stripped).toMatch(/jest\.mock\(\s*['"]backend\/logger\/paths['"]/)
-    }
-  )
+  // 84-07 (2026-11-21): the two per-suite gates that required a `backend/logger/paths` jest.mock and a
+  // `getLogFilePath({})` tripwire in every in-scope suite are retired. The module no longer exists, the TS
+  // process computes and writes no log path, and `loggerPortComplete.test.ts` forbids file writes in the
+  // TS logger and the `getLogFilePath` identifier anywhere in non-test source.
 
-  it.each(IN_SCOPE_SUITES)(
-    'REQ-34.2-07/-14: %s contains a containment tripwire referencing getLogFilePath, matched on comment-stripped source',
-    (name) => {
-      const stripped = stripComments(
-        readFileSync(join(__dirname, name), 'utf-8')
-      )
-      expect(stripped).toMatch(/getLogFilePath\(\{\}\)/)
-    }
-  )
-
-  // WR-01: this anti-claim gate matches RAW source, unlike the three
-  // pattern-PRESENCE gates above (pathShim mock, backend/logger/paths mock,
-  // getLogFilePath({}) tripwire), which correctly stay on `stripComments`
-  // output. The claim this gate hunts for can ONLY ever be written on a
+  // WR-01: this anti-claim gate matches RAW source, unlike the
+  // pattern gates above (pathShim, which correctly stays on `stripComments`
+  // output). The claim this gate hunts for can ONLY ever be written on a
   // `*`-prefixed docblock line (see the WR-01 self-test immediately below) --
   // `stripComments` drops every such line before matching, so running this
   // gate against stripped source made it permanently vacuous (the gap-cycle-2
   // verification finding this closes). This file (`testContainment.test.ts`)
   // is not itself one of `IN_SCOPE_SUITES`, so there is no self-satisfaction
-  // risk here the way there is for the three pattern-PRESENCE gates above --
+  // risk here the way there is for the pattern gates above --
   // do not "restore consistency" by moving this gate back onto stripped
   // source.
   it.each(IN_SCOPE_SUITES)(
@@ -1562,10 +1458,9 @@ describe('Block D: structural containment gate -- gates BOTH the load-bearing os
 
 /** Module specifiers whose real implementation reaches the destruction path
  * `jest.setupContainment.ts` exists to contain (`os.homedir()` /
- * `getBaseLogPath()` / `resolveAppDataDir()`). */
+ * `resolveAppDataDir()`). */
 const CONTAINMENT_MODULE_SPECIFIERS = [
   'backend/logger',
-  'backend/logger/paths',
   'backend/constants/paths',
   'backend/sidecar/pathShim'
 ]
@@ -1701,17 +1596,17 @@ describe('Block E: cross-project containment scope gate (plan 34.2-29, CR-02 sec
     expect(importsContainmentModule(synthetic, 'backend/logger')).toBe(false)
   })
 
-  it('self-test: a relative-form import (../../../backend/logger/paths) is detected the same as the bare form', () => {
+  it('self-test: a relative-form import (../../../backend/constants/paths) is detected the same as the bare form', () => {
     const synthetic =
-      "import { getLogFilePath } from '../../../backend/logger/paths'\n"
-    expect(importsContainmentModule(synthetic, 'backend/logger/paths')).toBe(
+      "import { appFolder } from '../../../backend/constants/paths'\n"
+    expect(importsContainmentModule(synthetic, 'backend/constants/paths')).toBe(
       true
     )
   })
 })
 
 // BLOCK E DELIBERATE-BREAK PROOF (recorded verbatim in 34.2-29-SUMMARY.md):
-// a real `import { getLogFilePath } from 'backend/logger/paths'` line was
+// a real import of a containment module (then the TS log-path module) was
 // temporarily added to `src/common/types/__tests__/storePolicy.test.ts`;
 // running this suite made the real-file gate above fail, naming that exact
 // file and specifier; the line was reverted and

@@ -4,8 +4,8 @@
  *
  * Defect this closes: `src/backend/sidecar/__tests__/bootstrap.test.ts`
  * drives the real, unmocked `bootstrap.init()` three times, and each call's
- * `initHeadless()` → `new LogWriter(getLogFilePath({}))` →
- * `archiveOldLogFile()` `renameSync`s the developer's real
+ * `initHeadless()` → the (since deleted) TS `LogWriter` →
+ * `archiveOldLogFile()` `renameSync`'d the developer's real
  * `~/Library/Logs/GameLib/gamelib.log` over the prior `.old`. This was
  * independently reproduced live three times during the 2026-07-26
  * verification (log timestamps 10:49 → 10:56 → 10:57) by running this
@@ -37,18 +37,18 @@
  *    real export stays real: `tmpdir()`, `platform()`, `type()`, etc.) and
  *    overrides ONLY `homedir()` to return the disposable per-process root
  *    below. This is the SAME factory shape gap-cycle-2's per-suite kits
- *    already use (`testContainment.test.ts`'s Block A, `loggerFlows.test.ts`,
- *    etc.) — the only difference is registration point: once, here, for the
+ *    already use (`testContainment.test.ts`'s Block A, the since-deleted
+ *    `loggerFlows.test.ts`, etc.) — the only difference is registration point: once, here, for the
  *    whole backend project, instead of copy-pasted into every suite that
  *    needs it. Because `setupFiles` runs before the test file's own imports,
  *    this mock is already registered by the time ANY backend module first
  *    `require`s `'os'` — so a twelfth suite added tomorrow with zero
  *    containment code of its own still gets a redirected `homedir()`,
  *    exactly like every suite that already remembered to add the kit by
- *    hand. This is what redirects `backend/logger/paths.ts`'s
- *    `getBaseLogPath()` macOS branch — the branch empirically proven to
- *    destroy real data on this host (see "Corrected premise" below) — and
- *    `process/appPaths.ts`'s `resolveAppDataDir()` darwin branch.
+ *    hand. This is what redirected the TS log path's macOS branch
+ *    (the branch empirically proven to destroy real data on this host, see
+ *    "Corrected premise" below; the TS logger writes no file since Phase 84) and
+ *    still redirects `process/appPaths.ts`'s `resolveAppDataDir()` darwin branch.
  * 2. `process.env.HOME`/`USERPROFILE`/`APPDATA`/`LOCALAPPDATA`/
  *    `XDG_CONFIG_HOME`/`XDG_STATE_HOME`/`XDG_DATA_HOME`/`XDG_CACHE_HOME` are
  *    still set, as defense-in-depth for the Windows/Linux branches of both
@@ -87,7 +87,7 @@
  * under Jest, because Jest's Runtime resolves Node builtins through its own
  * captured `require()`, bypassing `Module._load` entirely — verified
  * empirically, a test-local `Module._load` override left a downstream
- * `require('backend/logger/paths')` call still resolving the real,
+ * `require` of a home-directory module still resolving the real,
  * unpatched `os.homedir()`. `jest.mock('os', factory)` — a module-registry
  * substitution, not a property mutation — was the only mechanism found that
  * actually works.
@@ -193,13 +193,12 @@
  *    file strictly BEFORE that file's own imports, this precondition
  *    precedes any import-time `mkdirSync` (the retired `constants/paths` had one) and every
  *    other import-time filesystem touch -- which is exactly what the
- *    per-suite tripwires in `bootstrap.test.ts` and `loggerFlows.test.ts`
+ *    per-suite tripwires (such as `bootstrap.test.ts`'s, retired in 84-07)
  *    cannot do (they run as the first *test*, after all module-scope
- *    imports already executed). `getLogFilePath({})` is deliberately NOT
- *    required here -- requiring `backend/logger/paths` from `setupFiles`
- *    would pull a module into the graph of all 111 backend suites before
- *    their own `jest.mock` calls register; that assertion lives in
- *    `structuralContainment.test.ts` Test 2/Test 6 instead.
+ *    imports already executed). No resolver module is required here --
+ *    requiring one from `setupFiles` would pull it into the graph of every
+ *    backend suite before their own `jest.mock` calls register; those
+ *    assertions live in `structuralContainment.test.ts` instead.
  * 5. (WR-12) The comment above the `XDG_DATA_HOME`/`XDG_CACHE_HOME`
  *    assignments below is corrected: the retired `constants/paths.ts:21`
  *    is FIRST-PARTY code that reads `XDG_DATA_HOME` for `flatpakHome`, not
@@ -505,13 +504,11 @@ process.env.XDG_CACHE_HOME = join(containmentRoot, '.cache')
 // `setupFiles` entries run once per test file, strictly BEFORE that file's
 // own imports -- so this check runs before the retired `constants/paths.ts`'s
 // module-scope `mkdirSync` and every other import-time filesystem touch,
-// which is exactly what the per-suite tripwires in `bootstrap.test.ts` and
-// `loggerFlows.test.ts` cannot do (they run as the first *test*, after all
-// module-scope imports in that file have already executed). `getLogFilePath
-// ({})` is deliberately NOT required here: requiring `backend/logger/paths`
-// from `setupFiles` would pull a module into the graph of all 111 backend
-// suites before their own `jest.mock` calls register; that assertion lives
-// in `structuralContainment.test.ts` Test 2/Test 6 instead.
+// which is exactly what the per-suite tripwires (such as `bootstrap.test.ts`'s, retired in 84-07)
+// cannot do (they run as the first *test*, after all
+// module-scope imports in that file have already executed). No resolver module is required
+// here: requiring one from `setupFiles` would pull it into the graph of every backend suite before
+// their own `jest.mock` calls register; those assertions live in `structuralContainment.test.ts`.
 {
   /* eslint-disable @typescript-eslint/no-require-imports */
   const bareHomeAtPrecondition = (
