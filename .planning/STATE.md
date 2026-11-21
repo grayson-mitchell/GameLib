@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 84
 current_phase_name: Logger
 status: executing
-stopped_at: Completed 84-06-PLAN.md
-last_updated: "2026-11-21T07:27:00.104Z"
+stopped_at: Completed 84-07-PLAN.md
+last_updated: "2026-11-21T07:39:06.120Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 84 execution started
-state_head: ba1ac8808923ffb77254b5dd77d39183b76873e5
+state_head: b76b46076f68196d95d85a01aa20bddeb8d3e60f
 progress:
   total_phases: 19
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 84 (Logger) — EXECUTING
-Plan: 7 of 11
+Plan: 8 of 11
 Status: Ready to execute
 Last activity: 2026-11-21 - Completed quick task 261121-p6z: Bound bootstrap.test.ts legacy-zoom cleanup wait by wall-clock via shared yieldUntil
 Progress: [██████████] 100%
@@ -345,6 +345,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 84 P04 | 40 min | 2 tasks | 30 files |
 | Phase 84 P05 | not measured | 3 tasks | 31 files |
 | Phase 84 P06 | 18 min | 2 tasks | 45 files |
+| Phase 84 P07 | 45 min | 2 tasks | 31 files |
 
 ## Accumulated Context
 
@@ -629,6 +630,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 84]: Rust owns the uploaded-log list and delete on StoreHost; uploadedLogs.json has one writer (84-06)
 - [Phase 84]: Delete-uploaded is proven by a localhost round-trip test, not the UI: its control is commented out, so ROADMAP criterion 2 'from the UI' holds for upload and show-in-folder only (84-06)
 - [Phase 84]: ipcDomainCensus FILES_FLOOR 22 -> 21 is a deliberate deletion of loggerFlowRegistration.ts; the os-mock-is-inert pin now lives in enrichmentFlows.test.ts (84-06)
+- [Phase 84]: 84-07: the testContainment backend/constants/environment pin was removed with the logger/paths mock it only served; containment tripwires whose sole subject was the TS log path were deleted, and structuralContainment Test 6 was repointed at resolveAppPaths().userData to keep its real-home teeth
 
 ### Pending Todos
 
@@ -885,8 +887,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-21T07:26:59.786Z
-Stopped at: Completed 84-06-PLAN.md
+Last session: 2026-11-21T07:39:05.812Z
+Stopped at: Completed 84-07-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
