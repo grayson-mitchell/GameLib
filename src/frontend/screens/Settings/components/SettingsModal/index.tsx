@@ -4,21 +4,23 @@ import { Dialog, DialogContent } from 'frontend/components/UI/Dialog'
 import { GamesSettings } from '../../sections'
 import SettingsContext from '../../SettingsContext'
 import useSettingsContext from 'frontend/hooks/useSettingsContext'
-import LogSettings from '../../sections/LogSettings'
 import { SettingsContextType } from 'frontend/types'
 import CategorySettings from '../../sections/CategorySettings'
 import useUiState from 'frontend/state/uiState'
 import SettingsModalHeader from './SettingsModalHeader'
+import type { SettingsTab } from '../../sections/GamesSettings/tabs'
 import './index.scss'
 
-export type GameSettingsModalType = 'settings' | 'log' | 'category'
+export type GameSettingsModalType = 'settings' | 'category'
 
 type Props = {
   gameInfo: GameInfo
   type: GameSettingsModalType
+  // Phase 100 D-07: transient, never remembered (see initialSettingsTab).
+  initialTab?: SettingsTab
 }
 
-function SettingsModal({ gameInfo, type }: Props) {
+function SettingsModal({ gameInfo, type, initialTab }: Props) {
   const { closeSettingsModal } = useUiState.keys('closeSettingsModal')
 
   const { app_name: appName, runner } = gameInfo
@@ -66,8 +68,7 @@ function SettingsModal({ gameInfo, type }: Props) {
     >
       <DialogContent className="settingsDialogContent">
         <SettingsContext.Provider value={contextValues}>
-          {type === 'settings' && <GamesSettings />}
-          {type === 'log' && <LogSettings />}
+          {type === 'settings' && <GamesSettings initialTab={initialTab} />}
           {type === 'category' && <CategorySettings />}
         </SettingsContext.Provider>
       </DialogContent>

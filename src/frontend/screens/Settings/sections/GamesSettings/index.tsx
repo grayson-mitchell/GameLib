@@ -68,8 +68,13 @@ import {
 } from '../WinetricksSettings/visibility'
 import { hasCapability, isStore } from 'common/storeCapabilities'
 import { engineStateKey, useEngineState } from 'frontend/state/EngineState'
+import LogSettings from '../LogSettings'
 
-export default function GamesSettings() {
+export default function GamesSettings({
+  initialTab
+}: {
+  initialTab?: SettingsTab
+}) {
   const { t } = useTranslation()
   const platform = useUiState((s) => s.platform)
   const { isDefault, gameInfo, runner } = useContext(SettingsContext)
@@ -141,14 +146,16 @@ export default function GamesSettings() {
     showWinetricksTab,
     showCloudSavesTab,
     showGamescopeTab: isLinux,
-    showLegacyTab: isLinux && !isNative
+    showLegacyTab: isLinux && !isNative,
+    showLogsTab: !isDefault
   })
   // Lazy: the remembered tab (and its one-time key migration) is read once on
   // mount, not on every render.
   const [value, setValue] = useState(() =>
     initialSettingsTab(readRememberedTab(localStorage, gameInfo), {
       visible: tabOrder,
-      startingTab: getStartingTab(platform, gameInfo)
+      startingTab: getStartingTab(platform, gameInfo),
+      initialTab
     })
   )
 
@@ -166,6 +173,7 @@ export default function GamesSettings() {
     winetricks: t('gamelib:settings.navbar.winetricks', 'Winetricks'),
     run: t('gamelib:settings.navbar.run', 'Run'),
     advanced: t('settings.navbar.advanced', 'Advanced'),
+    logs: t('gamelib:settings.navbar.logs', 'Logs'),
     saves: t('settings.navbar.sync', 'Cloud Saves Sync'),
     gamescope: t('settings.navbar.gamescope', 'Gamescope'),
     legacy: t('settings.navbar.legacy', 'Legacy')
@@ -344,6 +352,12 @@ export default function GamesSettings() {
           {!isSideloaded && <IgnoreGameUpdates />}
         </SettingsCard>
       </TabPanel>
+
+      {!isDefault && (
+        <TabPanel value={value} index={'logs'}>
+          <LogSettings />
+        </TabPanel>
+      )}
 
       <TabPanel value={value} index={'saves'}>
         <SyncSaves />

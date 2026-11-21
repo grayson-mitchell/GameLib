@@ -49,8 +49,11 @@ describe('uiState store', () => {
       gameInfo: game
     })
     s.openGameLogsModal(game)
-    expect(useUiState.getState().settingsModalProps).toMatchObject({
-      type: 'log'
+    expect(useUiState.getState().settingsModalProps).toEqual({
+      isOpen: true,
+      type: 'settings',
+      gameInfo: game,
+      initialTab: 'logs'
     })
     s.openGameCategoriesModal(game)
     expect(useUiState.getState().settingsModalProps).toMatchObject({

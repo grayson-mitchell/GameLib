@@ -78,17 +78,7 @@ describe('SettingsModalHeader (261121-dzl)', () => {
     expect(text).not.toContain('Steam App ID')
   })
 
-  it('261121-dzl J: log and category types show their label and no saved element', () => {
-    const log = render(
-      <SettingsModalHeader gameInfo={game()} type="log" justSaved={false} />
-    )
-    expect(
-      log.container.querySelector('.settingsModalHeader__subline')?.textContent
-    ).toContain('Log')
-    expect(
-      log.container.querySelector('.settingsModalHeader__saved')
-    ).toBeNull()
-    cleanup()
+  it('261121-dzl J: the category type shows its label and no saved element', () => {
     const cat = render(
       <SettingsModalHeader
         gameInfo={game()}

@@ -8,6 +8,7 @@ import type {
   ExternalLinkDialogOptions
 } from 'frontend/types'
 import type { GameSettingsModalType } from '../screens/Settings/components/SettingsModal'
+import type { SettingsTab } from '../screens/Settings/sections/GamesSettings/tabs'
 import { notify } from 'frontend/helpers'
 import { t } from 'i18next'
 import { reduceDialogRequest } from './dialogQueue'
@@ -46,6 +47,9 @@ export interface UiState {
         isOpen: true
         type: GameSettingsModalType
         gameInfo: GameInfo
+        // Phase 100 D-07: opens the game dialog on this tab without
+        // remembering it.
+        initialTab?: SettingsTab
       }
   openGameSettingsModal: (gameInfo: GameInfo) => void
   openGameLogsModal: (gameInfo: GameInfo) => void
@@ -120,8 +124,9 @@ const useUiStateRaw = create<UiState>()(
       set({
         settingsModalProps: {
           isOpen: true,
-          type: 'log',
-          gameInfo
+          type: 'settings',
+          gameInfo,
+          initialTab: 'logs'
         }
       })
     },

@@ -854,6 +854,7 @@
             "steamAppId": "Steam App ID"
         },
         "navbar": {
+            "logs": "Logs",
             "run": "Run",
             "stores": "Stores",
             "wine": "Wine",

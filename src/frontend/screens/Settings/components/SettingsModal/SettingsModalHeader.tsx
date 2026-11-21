@@ -30,7 +30,6 @@ function SettingsModalHeader({ gameInfo, type, justSaved }: Props) {
 
   const typeLabel = {
     settings: t('gamelib:settings.modal.gameSettings', 'Game settings'),
-    log: t('settings.navbar.log', 'Log'),
     category: t('header.categories', 'Categories')
   }[type]
 

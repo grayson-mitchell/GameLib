@@ -8,6 +8,7 @@ export type SettingsTab =
   | 'winetricks'
   | 'run'
   | 'advanced'
+  | 'logs'
   | 'saves'
   | 'gamescope'
   | 'legacy'
@@ -44,7 +45,8 @@ export function settingsTabOrder({
   showWinetricksTab,
   showCloudSavesTab,
   showGamescopeTab,
-  showLegacyTab
+  showLegacyTab,
+  showLogsTab
 }: {
   runFirst: boolean
   showWineTab: boolean
@@ -52,6 +54,7 @@ export function settingsTabOrder({
   showCloudSavesTab: boolean
   showGamescopeTab: boolean
   showLegacyTab: boolean
+  showLogsTab: boolean
 }): SettingsTab[] {
   const order: SettingsTab[] = []
   if (runFirst) order.push('run')
@@ -59,6 +62,7 @@ export function settingsTabOrder({
   if (showWinetricksTab) order.push('winetricks')
   if (!runFirst) order.push('run')
   order.push('advanced')
+  if (showLogsTab) order.push('logs')
   if (showCloudSavesTab) order.push('saves')
   if (showGamescopeTab) order.push('gamescope')
   if (showLegacyTab) order.push('legacy')
@@ -105,10 +109,18 @@ export function rememberTab(
 // game), so any value that is not rendered falls back to the starting tab and
 // the Tabs value never points at a missing <Tab>. The Other tab was removed in
 // 261104-unp; a stored 'other' maps to 'run'.
+// Phase 100 D-07: initialTab is a transient request (the library card's Logs
+// item opens the dialog on Logs). It wins when that tab is visible, and it is
+// never written through rememberTab, so it cannot change the remembered tab.
 export function initialSettingsTab(
   stored: string | null,
-  { visible, startingTab }: { visible: string[]; startingTab: string }
+  {
+    visible,
+    startingTab,
+    initialTab
+  }: { visible: string[]; startingTab: string; initialTab?: string }
 ): string {
+  if (initialTab && visible.includes(initialTab)) return initialTab
   if (!stored) return startingTab
   const tab = stored === 'other' ? 'run' : stored
   return visible.includes(tab) ? tab : startingTab

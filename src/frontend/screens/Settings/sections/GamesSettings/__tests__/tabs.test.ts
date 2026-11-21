@@ -55,7 +55,8 @@ describe('settingsTabOrder (261121-dzl)', () => {
     showWinetricksTab: true,
     showCloudSavesTab: true,
     showGamescopeTab: true,
-    showLegacyTab: true
+    showLegacyTab: true,
+    showLogsTab: false
   }
   it('runFirst puts Run in front of Wine and Winetricks', () => {
     expect(
@@ -98,9 +99,27 @@ describe('settingsTabOrder (261121-dzl)', () => {
         showWinetricksTab: false,
         showCloudSavesTab: false,
         showGamescopeTab: false,
-        showLegacyTab: false
+        showLegacyTab: false,
+        showLogsTab: false
       })
     ).toEqual(['run', 'advanced'])
+  })
+  it('Phase 100 D-02: logs follows advanced, before saves; false omits it', () => {
+    expect(
+      settingsTabOrder({ ...all, runFirst: true, showLogsTab: true })
+    ).toEqual([
+      'run',
+      'wine',
+      'winetricks',
+      'advanced',
+      'logs',
+      'saves',
+      'gamescope',
+      'legacy'
+    ])
+    expect(
+      settingsTabOrder({ ...all, runFirst: true, showLogsTab: false })
+    ).not.toContain('logs')
   })
 })
 
@@ -158,5 +177,23 @@ describe('initialSettingsTab (261121-dzl)', () => {
   })
   it('a visible value is returned as is', () => {
     expect(initialSettingsTab('advanced', opts)).toBe('advanced')
+  })
+  it('Phase 100 D-07: a visible initialTab wins over the stored and starting tab', () => {
+    const withLogs = { ...opts, visible: [...visible, 'logs'] }
+    expect(
+      initialSettingsTab('run', {
+        ...withLogs,
+        startingTab: 'run',
+        initialTab: 'logs'
+      })
+    ).toBe('logs')
+  })
+  it('Phase 100 D-07: an initialTab that is not visible falls back to the stored/starting rule', () => {
+    expect(
+      initialSettingsTab('advanced', { ...opts, initialTab: 'logs' })
+    ).toBe('advanced')
+    expect(initialSettingsTab(null, { ...opts, initialTab: 'logs' })).toBe(
+      'wine'
+    )
   })
 })
