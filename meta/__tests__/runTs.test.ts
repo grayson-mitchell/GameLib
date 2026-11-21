@@ -31,25 +31,33 @@ function loadScripts(): Record<string, string> {
 // The C3-01 defect predicate itself: a script value compiles a runnable
 // outfile into the shared, script-name-keyed `node_modules/.cache/` path.
 // This is the EXACT shape the reviewer measured 100% cross-contamination on.
-// It matches either half of the compile-then-run shape: an esbuild
-// `--outfile`/`--outdir` pointing into node_modules/.cache, or a .js/.cjs/.mjs
-// path there (the `node node_modules/.cache/x.cjs` half).
+// It is deliberately BROAD: any mention of node_modules/.cache in a script
+// value counts, however it is spelled (`./`-prefixed, quoted, `--outfile`,
+// `--outdir`, `--outDir`, extensionless). An allow-list of hazard spellings
+// misses ordinary variants (Phase 82 review WR-13), so the predicate instead
+// starts from every mention and removes exactly one known-safe use.
 //
-// It deliberately EXCLUDES tsc incremental state. Since quick 261121-kqt,
+// That one exemption is tsc incremental state. Since quick 261121-kqt,
 // `codecheck` keeps tsc's incremental buildinfo under node_modules/.cache
 // through `--tsBuildInfoFile`. That file is type-check state that is never
 // executed, so it is not the cross-contamination C3-01 measured: no
-// invocation can run another invocation's output through it.
+// invocation can run another invocation's output through it. Only the value
+// of a `--tsBuildInfoFile` flag is removed before the broad test, so a script
+// that also writes or runs anything else under node_modules/.cache is still
+// flagged.
 //
 // The same predicate is reused unmodified against both the real scripts
 // object (test 1, expect zero matches) and a synthetic deliberately-bad
 // fixture (test 3, the vacuity guard) so test 1's assertion is proven
 // capable of failing, not just capable of passing.
-const SHARED_CACHE_OUTFILE =
-  /--out(?:file|dir)[=\s]+node_modules\/\.cache\b|node_modules\/\.cache\/[\w./-]*\.[cm]?js\b/
+const TS_BUILD_INFO_FILE_VALUE =
+  /--tsBuildInfoFile(?:=|\s+)(?:"[^"]*"|'[^']*'|\S+)/g
+const SHARED_CACHE_PATH = /node_modules\/\.cache\b/
 
 function hasSharedCacheOutfile(scriptValue: string): boolean {
-  return SHARED_CACHE_OUTFILE.test(scriptValue)
+  return SHARED_CACHE_PATH.test(
+    scriptValue.replace(TS_BUILD_INFO_FILE_VALUE, '')
+  )
 }
 
 // A script "compiles an esbuild-bundled meta/*.ts entry and then executes
@@ -125,6 +133,18 @@ describe('meta/runTs.cjs wrapper wiring pin (C3-01)', () => {
         'esbuild --bundle --outdir=node_modules/.cache meta/y.ts && node node_modules/.cache/y.js',
       'reintroduced-hazard-extensionless':
         'esbuild --bundle --outfile node_modules/.cache/z meta/z.ts && node node_modules/.cache/z',
+      // WR-13: ordinary spellings the narrowed predicate used to miss.
+      'reintroduced-hazard-dot-slash':
+        'esbuild --bundle --outfile=./node_modules/.cache/z meta/z.ts',
+      'reintroduced-hazard-quoted':
+        'esbuild --bundle --outfile="node_modules/.cache/z" meta/z.ts',
+      'reintroduced-hazard-outdir-dot-slash':
+        'esbuild --bundle --outdir=./node_modules/.cache meta/z.ts',
+      'reintroduced-hazard-tsc-outdir':
+        'tsc --outDir node_modules/.cache/x && node node_modules/.cache/x/main',
+      // A tsBuildInfoFile exemption must not hide another use in the same script.
+      'reintroduced-hazard-beside-buildinfo':
+        'tsc --incremental --tsBuildInfoFile node_modules/.cache/x.tsbuildinfo --outDir node_modules/.cache/x',
       'incremental-state':
         'tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/x.tsbuildinfo'
     }
@@ -136,7 +156,12 @@ describe('meta/runTs.cjs wrapper wiring pin (C3-01)', () => {
     expect(survivors.map(([k]) => k)).toEqual([
       'reintroduced-hazard',
       'reintroduced-hazard-outdir',
-      'reintroduced-hazard-extensionless'
+      'reintroduced-hazard-extensionless',
+      'reintroduced-hazard-dot-slash',
+      'reintroduced-hazard-quoted',
+      'reintroduced-hazard-outdir-dot-slash',
+      'reintroduced-hazard-tsc-outdir',
+      'reintroduced-hazard-beside-buildinfo'
     ])
   })
 })
