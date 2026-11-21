@@ -103,7 +103,9 @@ file:line and sink for each are in "Pre-run re-check" below.
 | `[reaper] disarmed` | 83-07, `src-tauri/crates/gamelib-proc/src/reaper.rs`, reaper stderr | terminal transcript only | REACHABLE (re-checked): `reaper.rs:350` |
 | `exit finished in ` | 83-09, `shell_diag` in `handle_exit`, `src-tauri/src/main.rs` | terminal transcript and `gamelib-shell.log` | REACHABLE (re-checked): `main.rs:841` |
 | `still running at exit deadline:` (absent unless a drain overran) | 83-09, `shell_diag` in `handle_exit`, `src-tauri/src/main.rs` | terminal transcript and `gamelib-shell.log` | REACHABLE (re-checked): `main.rs:846`; absence is non-vacuous because `exit finished in ` (`main.rs:841`) is the positive line from the same function |
-| `[GAMELIB_IPC_INVALID_CHANNEL]` (must be ABSENT in the native-channel item) | 83-03 (Rust verdict, `src-tauri/src/ipc_contract.rs:19` marker) and the sidecar's `validateInbound` | Rust side: terminal transcript; sidecar side: `gamelib.log` | IMPOSSIBLE (re-checked): the marker reaches NO capture. `relay_commands.rs:31` builds it into the `Err` returned to the renderer only; the sidecar never emits it (its rejection line is `[sidecarRpc] IPC_INVALID_ARGS ... codes=no_schema`, `ipcValidation.ts:88`). Absence over the three captures is vacuous; see Pre-run re-check |
+| ~~`[GAMELIB_IPC_INVALID_CHANNEL]`~~ (withdrawn 2026-11-21, operator-approved amendment) | 83-03, `src-tauri/src/ipc_contract.rs:19` | none | IMPOSSIBLE (re-checked): `relay_commands.rs:31` returns it to the renderer only; replaced by the two rows below. See "Amendment (2026-11-21)" |
+| `[sidecarRpc] IPC_INVALID_ARGS` (must be ABSENT in the native-channel item; subsumes `codes=no_schema`, which is a field of the same line) | sidecar `validateInbound` rejection, `src/backend/sidecar/ipcValidation.ts:86` | `gamelib.log`, and the transcript as `[sidecar:err] ...` (sidecar stderr relayed by `shell_eprintln!`, `src-tauri/src/sidecar.rs:340`) | REACHABLE (amendment): a mistaken relay of a native channel to the sidecar has no schema there and prints this line with `codes=no_schema` (first rejections per channel are logged, the throttle only caps bursts) |
+| `[shell] relay rejected send:` (must be ABSENT in the native-channel item) | Rust allow-list rejection of `sidecar_send`, `src-tauri/src/relay_commands.rs:153` | terminal transcript only (`shell_eprintln!`) | REACHABLE (amendment). A rejected `sidecar_invoke` logs nothing in Rust; that path stays covered by item 3's positive observables (Version value, browser opens) |
 | `native send rejected` (must be ABSENT in the native-channel item) | 83-06, Rust, `[shell] native send rejected: <channel>` | terminal transcript only (`shell_eprintln!`, not `shell_diag`) | REACHABLE (re-checked): `native_router.rs:203` |
 
 Note: sidecar `logInfo` lines reach `gamelib.log` only and never the transcript, and sidecar `console.*` reaches nothing,
@@ -125,7 +127,9 @@ bundles; none touches the Phase 83 surfaces). Each literal was grepped (`grep -r
 | `exit finished in ` | `src-tauri/src/main.rs:841` | `shell_diag` at the end of `handle_exit` | transcript and `gamelib-shell.log` | REACHABLE |
 | `still running at exit deadline:` (absent) | `src-tauri/src/main.rs:846` | `shell_diag`, only when `report.still_running` is non-empty | transcript and `gamelib-shell.log` | REACHABLE: absence is non-vacuous, `exit finished in ` (`main.rs:841`) is the positive line |
 | `native send rejected` (absent) | `src-tauri/src/native_router.rs:203` | `shell_eprintln!("[shell] native send rejected: ...")` in `route_send` | transcript only (not `shell_diag`, so never `gamelib-shell.log`) | REACHABLE: a bad-args `openExternalUrl` send would print it |
-| `[GAMELIB_IPC_INVALID_CHANNEL]` (absent) | constant `src-tauri/src/ipc_contract.rs:19`; used at `src-tauri/src/relay_commands.rs:31` only | built into the `Err(String)` that `relay_channel_verdict` returns to the renderer; never passed to `shell_eprintln!`, `shell_diag`, or any sidecar log call (`src/backend` and `src/common` contain the constant only in `sidecarTransport.ts:1280`, a definition, and the sidecar's rejection line is `[sidecarRpc] IPC_INVALID_ARGS kind=... codes=no_schema`, `ipcValidation.ts:88`) | none of transcript, `gamelib-shell.log`, `gamelib.log` | IMPOSSIBLE |
+| `[sidecarRpc] IPC_INVALID_ARGS` (absent; amendment) | `src/backend/sidecar/ipcValidation.ts:86` | sidecar stderr + `logWarning` | transcript (`[sidecar:err]`, `sidecar.rs:340`) and `gamelib.log` | REACHABLE (orchestrator re-grep 2026-11-21) |
+| `[shell] relay rejected send:` (absent; amendment) | `src-tauri/src/relay_commands.rs:153` | `shell_eprintln!` in `sidecar_send` | transcript only | REACHABLE (orchestrator re-grep 2026-11-21) |
+| `[GAMELIB_IPC_INVALID_CHANNEL]` (absent) | constant `src-tauri/src/ipc_contract.rs:19`; used at `src-tauri/src/relay_commands.rs:31` only | built into the `Err(String)` that `relay_channel_verdict` returns to the renderer; never passed to `shell_eprintln!`, `shell_diag`, or any sidecar log call (`src/backend` and `src/common` contain the constant only in `sidecarTransport.ts:1280`, a definition, and the sidecar's rejection line is `[sidecarRpc] IPC_INVALID_ARGS kind=... codes=no_schema`, `ipcValidation.ts:88`) | none of transcript, `gamelib-shell.log`, `gamelib.log` | IMPOSSIBLE — withdrawn by the 2026-11-21 amendment (replacement rows below) |
 
 Finding (blocking, standing rule: an IMPOSSIBLE row stops the run and is never scored). The contract's item 3 requires
 `[GAMELIB_IPC_INVALID_CHANNEL]` absent from "all three captures (transcript, shell log, `gamelib.log`) because a mistaken
@@ -142,6 +146,12 @@ replace the absence literal with the three observable ones, `[sidecarRpc] IPC_IN
 `gamelib.log`), `codes=no_schema`, and `[shell] relay rejected send:` (transcript), each absent for launch 1, and keep
 `native send rejected` as is. Route through `/gsd-plan-phase 83 --gaps` or an operator decision.
 
+Amendment (2026-11-21, operator decision "amend" at the 83-11 checkpoint): the candidate repair is APPLIED. The
+`[GAMELIB_IPC_INVALID_CHANNEL]` absence requirement is withdrawn from item 3, E7 and the Structural Reachability Review, and
+replaced by absence of `[sidecarRpc] IPC_INVALID_ARGS` (subsumes `codes=no_schema`) and `[shell] relay rejected send:`, both
+re-grepped REACHABLE above. With this, no row is IMPOSSIBLE and the block is lifted; P2 still requires the stale instance
+to be closed before launch 1.
+
 Run-time structural impossibilities found by this pre-run re-check: 1 (above). Unresolved requirement interactions: 0
 new beyond the authoring pairing pass.
 
@@ -154,11 +164,11 @@ new beyond the authoring pairing pass.
   (ppid 4353, started `Sat Nov 21 14:48:09 2026`, state `S+`, so attached to a terminal) and 32543 is its reaper
   (ppid 32369, own pgid 32543, started 14:48:19). Per P2 a leftover is closed by pid before the run restarts; the
   executor is forbidden to kill processes, so nothing was killed and no launch was prepared.
-- P3-P6: operator-established; not attempted because the run is blocked.
+- P3-P6: operator-established; to be confirmed when Task 2 is prepared (the block was lifted by the 2026-11-21 amendment).
 
 ## Current Test
 
-[blocked — Required literals row `[GAMELIB_IPC_INVALID_CHANNEL]` (item 3, Test 3 sink): IMPOSSIBLE, see "Pre-run re-check"; no launch was prepared]
+[pending — block lifted by the 2026-11-21 amendment; Task 2 (launch 1) not yet prepared; P2 needs the stale instance closed]
 
 ## Tests
 
@@ -171,7 +181,7 @@ expected: Right after the window appears in launch 1, before item 1's download s
 result: pending
 
 ### 3. The two native channels behave as before (D-01, D-02)
-expected: In launch 1, before item 1: Settings (tier-2 panel) then the About row opens the About dialog, whose `Version:` value equals `node -p "require('./package.json').version"` (and equals the version shown in the nav shell's version link); then Settings, General, Language set to a non-English language (record the original first) shows the machine-translation notice with a report link, and clicking that link opens the default browser on the GameLib GitHub new-issue page; restore the recorded language afterwards; the transcript, `gamelib-shell.log` and `gamelib.log` for this launch hold no `[GAMELIB_IPC_INVALID_CHANNEL]` and no `native send rejected` (launch 1).
+expected: In launch 1, before item 1: Settings (tier-2 panel) then the About row opens the About dialog, whose `Version:` value equals `node -p "require('./package.json').version"` (and equals the version shown in the nav shell's version link); then Settings, General, Language set to a non-English language (record the original first) shows the machine-translation notice with a report link, and clicking that link opens the default browser on the GameLib GitHub new-issue page; restore the recorded language afterwards; the transcript, `gamelib-shell.log` and `gamelib.log` for this launch hold no `[sidecarRpc] IPC_INVALID_ARGS`, no `[shell] relay rejected send:` and no `native send rejected` (launch 1; amended 2026-11-21, was `[GAMELIB_IPC_INVALID_CHANNEL]`).
 result: pending
 
 ### 4. Graceful quit during a depot download keeps finalize and leaves nothing behind (D-09, D-12)
@@ -223,7 +233,7 @@ Test 7, see the rows marked IMPOSSIBLE). Unresolved requirement interactions aft
 | Item 2, Test 7 (UI gesture) | Dock, Cmd-Tab, Cmd-Opt-Esc | OS-level views, no GameLib control | REACHABLE: all three are OS surfaces, independent of the frontend | n/a |
 | Item 3, Test 1 (origin and scheme) for the report link | `buildTranslationIssueUrl` | an `https` GitHub URL | REACHABLE: the URL is built from `GAMELIB_ISSUES_NEW_URL` with query parameters and `openExternalUrl` accepts `https` | `src/frontend/components/UI/LanguageSelector/translationIssue.ts:47-53`; `externalLinkClicks.ts:13` lists the routed schemes |
 | Item 3, Test 2 (concurrency) | the About dialog and the Settings General page | sequential gestures | REACHABLE: the About dialog is closed (its close button) before navigating to Settings, General; nothing is driven while a modal is up | `AboutDialog/index.tsx:63` (`showCloseButton`) |
-| Item 3, Test 3 (emitter and SINK) for `[GAMELIB_IPC_INVALID_CHANNEL]` and `native send rejected` | Rust native handlers (83-03, 83-06) and the sidecar `validateInbound` | absence in three captures | IMPOSSIBLE for `[GAMELIB_IPC_INVALID_CHANNEL]` (83-11 re-check: the marker is only ever the `Err` string returned to the renderer, `relay_commands.rs:31`; no capture can carry it). REACHABLE for `native send rejected` (`native_router.rs:203`, transcript only) | `src-tauri/src/ipc_contract.rs:19`; `83-06-PLAN.md` truth |
+| Item 3, Test 3 (emitter and SINK) for `[GAMELIB_IPC_INVALID_CHANNEL]` (withdrawn), its replacements and `native send rejected` | Rust native handlers (83-03, 83-06) and the sidecar `validateInbound` | absence in three captures | IMPOSSIBLE for `[GAMELIB_IPC_INVALID_CHANNEL]` (83-11 re-check: the marker is only ever the `Err` string returned to the renderer, `relay_commands.rs:31`; no capture can carry it). Amended 2026-11-21: replaced by `[sidecarRpc] IPC_INVALID_ARGS` (`ipcValidation.ts:86`, transcript via `sidecar.rs:340` and `gamelib.log`) and `[shell] relay rejected send:` (`relay_commands.rs:153`, transcript), both REACHABLE. REACHABLE for `native send rejected` (`native_router.rs:203`, transcript only) | `src-tauri/src/ipc_contract.rs:19`; `83-06-PLAN.md` truth |
 | Item 3, Test 4 (absence) for both markers | the native channels | absence | REACHABLE: the presence case is observable (a mistaken relay yields `no_schema` and the INVALID_CHANNEL marker in `gamelib.log`; a rejected send logs `native send rejected`), and the positive observables (version string equals `package.json`, browser opens) mean absence is never the only signal | `83-RESEARCH.md` Anti-Patterns (`validateInbound` fails closed) |
 | Item 3, Test 6 (external state) | the default browser, the stored UI language, the package.json version | a new browser tab; a restorable language; a known version | CONDITIONAL: the operator records the original language before changing it and the exact package.json version; a browser that is already open does not change the evidence because the check is a new tab on the new-issue URL; GitHub reachability is not required | `LanguageSelector/index.tsx:131-142` (a change persists to config, so it must be restored) |
 | Item 3, Test 7 (UI gesture): About dialog and version | Settings tier-2 About row, `AboutDialogHost`, `AboutDialog`; nav shell `HeroicVersion` | open About, read `Version:`; read the nav shell version | REACHABLE: the About row is an unconditional `NavItem` that calls `showAboutWindow`, which raises the event `AboutDialogHost` answers; `getHeroicVersion` is called at `AboutDialog/index.tsx:48-51`, rendered at `:69-73`; the nav shell version is always mounted (`NavShell/index.tsx:120`), called at `HeroicVersion/index.tsx:69`, rendered at `:138` | `SettingsPanel/index.tsx:208-213`; `AboutDialogHost.tsx:25-32` |
@@ -257,7 +267,7 @@ reaper pids); M7 item 4 starts the P5 depot install; M8 item 4 quits with Cmd+Q 
 
 Evidence-bearing requirements: E1 `reaper started (pid `; E2 absent `reaper unavailable:`; E3 `[reaper] parent gone:
 signalled `; E4 `[reaper] disarmed`; E5 `exit finished in `; E6 `still running at exit deadline:`; E7 absent
-`[GAMELIB_IPC_INVALID_CHANNEL]`; E8 absent `native send rejected`; E9 item 1 ps snapshots; E10 item 2 ps snapshot; E11
+`[sidecarRpc] IPC_INVALID_ARGS` and `[shell] relay rejected send:` (amended; was `[GAMELIB_IPC_INVALID_CHANNEL]`); E8 absent `native send rejected`; E9 item 1 ps snapshots; E10 item 2 ps snapshot; E11
 item 4 ps snapshots; E12 item 4 ACF copies; E13 `terminal.log`; E14 archived `gamelib-launch-${N}.log`; E15 archived
 `gamelib-shell-launch-${N}.log`; E16 the single shell pid records; E17 operator-observed UI evidence (About version,
 browser tab, Dock, Cmd-Tab, Force Quit window, confirm dialog).
