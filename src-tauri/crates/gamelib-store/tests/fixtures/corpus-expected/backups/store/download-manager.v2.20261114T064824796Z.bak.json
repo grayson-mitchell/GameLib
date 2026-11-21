@@ -1,0 +1,1298 @@
+{
+	"finished": [
+		{
+			"params": {
+				"appName": "333300",
+				"gameInfo": {
+					"app_name": "333300",
+					"art_cover": "https://cdn.cloudflare.steamstatic.com/steam/apps/333300/header.jpg",
+					"art_square": "https://cdn.cloudflare.steamstatic.com/steam/apps/333300/library_600x900.jpg",
+					"canRunOffline": true,
+					"extra": {
+						"about": {
+							"description": "ADOM (Ancient Domains Of Mystery) is one of the most successful roguelike games ever created, boasting a brilliant mix of story, RPG, exploration, and intensely strategic &amp; flexible combat. The Steam version adds various features like achievements, difficulty level customization &amp; play modes.",
+							"shortDescription": "ADOM (Ancient Domains Of Mystery) is one of the most successful roguelike games ever created, boasting a brilliant mix of story, RPG, exploration, and intensely strategic &amp; flexible combat. The Steam version adds various features like achievements, difficulty level customization &amp; play modes."
+						},
+						"genres": [
+							"Adventure",
+							"Indie",
+							"RPG",
+							"Strategy"
+						],
+						"reqs": [],
+						"steamLastPlayed": 1794615322,
+						"steamPlaytimeMinutes": 26266
+					},
+					"install": {
+						"install_path": "/Users/operator/Library/Application Support/Steam/steamapps/common/ADOM",
+						"install_size": "543.59 MiB",
+						"platform": "Mac"
+					},
+					"installable": true,
+					"is_delisted": false,
+					"is_installed": true,
+					"is_linux_native": true,
+					"is_mac_native": true,
+					"is_windows_native": true,
+					"mac_arch": "64",
+					"runner": "steam",
+					"steamPlatformsCaptured": true,
+					"store_url": "https://store.steampowered.com/app/333300/",
+					"title": "ADOM (Ancient Domains Of Mystery)"
+				},
+				"runner": "steam",
+				"path": "/Users/operator/Library/Application Support/Steam/steamapps/common/ADOM",
+				"platformToInstall": "Mac",
+				"size": "543.59 MiB"
+			},
+			"type": "update",
+			"addToQueueTime": 1794626522565,
+			"endTime": 1794626522649,
+			"startTime": 1794626522576,
+			"status": "done"
+		},
+		{
+			"addToQueueTime": 1794249202257,
+			"endTime": 1794249364321,
+			"params": {
+				"appName": "3205720",
+				"gameInfo": {
+					"app_name": "3205720",
+					"art_cover": "https://cdn.cloudflare.steamstatic.com/steam/apps/3205720/header.jpg",
+					"art_square": "https://cdn.cloudflare.steamstatic.com/steam/apps/3205720/library_600x900.jpg",
+					"canRunOffline": true,
+					"extra": {
+						"about": {
+							"description": "Jump into the streets of Hyland Point and take the first steps from small-time dope pusher to kingpin. Manufacture and distribute a range of drugs to reach the peak of the underworld. Now available in 4-player co-op!",
+							"shortDescription": "Jump into the streets of Hyland Point and take the first steps from small-time dope pusher to kingpin. Manufacture and distribute a range of drugs to reach the peak of the underworld. Now available in 4-player co-op!"
+						},
+						"genres": [
+							"Action",
+							"Indie",
+							"Simulation"
+						],
+						"reqs": [],
+						"steamLastPlayed": 1794248604,
+						"steamPlaytimeMinutes": 209
+					},
+					"install": {},
+					"installable": true,
+					"is_delisted": false,
+					"is_installed": false,
+					"is_linux_native": false,
+					"is_mac_native": false,
+					"is_windows_native": true,
+					"mac_arch": "unknown",
+					"runner": "steam",
+					"steamPlatformsCaptured": true,
+					"store_url": "https://store.steampowered.com/app/3205720/",
+					"title": "Schedule I: Free Sample"
+				},
+				"installDlcs": [],
+				"installLanguage": "en-US",
+				"path": "",
+				"platformToInstall": "Windows",
+				"runner": "steam",
+				"sdlList": [],
+				"size": "3 GiB",
+				"steamForceWindowsViaBottle": false
+			},
+			"startTime": 1794249202651,
+			"status": "done",
+			"type": "install"
+		},
+		{
+			"addToQueueTime": 1794299130827,
+			"endTime": 1794299285441,
+			"params": {
+				"appName": "amzn1.adg.product.1d092246-e48f-40f6-83fd-924af905ca9b",
+				"gameInfo": {
+					"app_name": "amzn1.adg.product.1d092246-e48f-40f6-83fd-924af905ca9b",
+					"art_background": "https://m.media-amazon.com/images/I/71CWU0+TgfL.jpg",
+					"art_cover": "https://m.media-amazon.com/images/I/71WFxzqk-EL.jpg",
+					"art_logo": "https://m.media-amazon.com/images/I/51A9BgMxowL.png",
+					"art_square": "https://m.media-amazon.com/images/I/91ur29wwlRL.jpg",
+					"canRunOffline": true,
+					"description": "Embark on a journey across a Sci-Fi Provence-like world.",
+					"developer": "Studio Plane Toast",
+					"extra": {
+						"genres": [
+							"Adventure",
+							"Indie"
+						],
+						"releaseDate": "2024-09-12T00:00:00Z",
+						"reqs": []
+					},
+					"folder_name": "Caravan SandWitch",
+					"install": {},
+					"is_installed": false,
+					"is_linux_native": false,
+					"is_mac_native": false,
+					"runner": "nile",
+					"title": "Caravan SandWitch"
+				},
+				"installDlcs": [],
+				"installLanguage": "",
+				"path": "/Users/operator/Games/GameLib",
+				"platformToInstall": "Windows",
+				"runner": "nile",
+				"sdlList": [],
+				"size": "3.04 GiB"
+			},
+			"startTime": 1794299130834,
+			"status": "done",
+			"type": "install"
+		},
+		{
+			"addToQueueTime": 1794300056631,
+			"endTime": 1794300073321,
+			"params": {
+				"appName": "73010",
+				"gameInfo": {
+					"app_name": "73010",
+					"art_cover": "https://cdn.cloudflare.steamstatic.com/steam/apps/73010/header.jpg",
+					"art_square": "https://cdn.cloudflare.steamstatic.com/steam/apps/73010/library_600x900.jpg",
+					"canRunOffline": true,
+					"extra": {
+						"about": {
+							"description": "Manage transportation for commuters in four of the world's greatest cities - Vienna, Helsinki, Berlin, and Amsterdam",
+							"shortDescription": "Manage transportation for commuters in four of the world's greatest cities - Vienna, Helsinki, Berlin, and Amsterdam"
+						},
+						"genres": [
+							"Simulation"
+						],
+						"reqs": [],
+						"steamLastPlayed": 1353830400,
+						"steamPlaytimeMinutes": 210
+					},
+					"install": {},
+					"installable": true,
+					"is_delisted": false,
+					"is_installed": false,
+					"is_linux_native": true,
+					"is_mac_native": true,
+					"is_windows_native": true,
+					"mac_arch": "unknown",
+					"metacritic_score": 70,
+					"runner": "steam",
+					"steamPlatformsCaptured": true,
+					"store_url": "https://store.steampowered.com/app/73010/",
+					"title": "Cities in Motion"
+				},
+				"installDlcs": [],
+				"installLanguage": "en-US",
+				"path": "",
+				"platformToInstall": "Windows",
+				"runner": "steam",
+				"sdlList": [],
+				"size": "?? MB",
+				"steamForceWindowsViaBottle": false
+			},
+			"startTime": 1794300056959,
+			"status": "abort",
+			"type": "install"
+		},
+		{
+			"addToQueueTime": 1794331719231,
+			"endTime": 1794331752736,
+			"params": {
+				"appName": "391540",
+				"gameInfo": {
+					"app_name": "391540",
+					"art_cover": "https://cdn.cloudflare.steamstatic.com/steam/apps/391540/header.jpg",
+					"art_square": "https://cdn.cloudflare.steamstatic.com/steam/apps/391540/library_600x900.jpg",
+					"canRunOffline": true,
+					"extra": {
+						"about": {
+							"description": "UNDERTALE! The RPG game where you don't have to destroy anyone.",
+							"shortDescription": "UNDERTALE! The RPG game where you don't have to destroy anyone."
+						},
+						"genres": [
+							"Indie",
+							"RPG"
+						],
+						"reqs": [],
+						"steamLastPlayed": 1794021186,
+						"steamPlaytimeMinutes": 1
+					},
+					"install": {},
+					"installable": true,
+					"is_delisted": false,
+					"is_installed": false,
+					"is_linux_native": true,
+					"is_mac_native": true,
+					"is_windows_native": true,
+					"mac_arch": "unknown",
+					"metacritic_score": 92,
+					"runner": "steam",
+					"steamPlatformsCaptured": true,
+					"store_url": "https://store.steampowered.com/app/391540/",
+					"title": "Undertale"
+				},
+				"installDlcs": [],
+				"installLanguage": "en-US",
+				"path": "",
+				"platformToInstall": "Windows",
+				"runner": "steam",
+				"sdlList": [],
+				"size": "200 MiB",
+				"steamForceWindowsViaBottle": true
+			},
+			"startTime": 1794331719540,
+			"status": "done",
+			"type": "install"
+		},
+		{
+			"addToQueueTime": 1794333226396,
+			"endTime": 1794333235265,
+			"params": {
+				"appName": "264160",
+				"gameInfo": {
+					"app_name": "264160",
+					"art_cover": "https://cdn.cloudflare.steamstatic.com/steam/apps/264160/header.jpg",
+					"art_square": "https://cdn.cloudflare.steamstatic.com/steam/apps/264160/library_600x900.jpg",
+					"canRunOffline": true,
+					"extra": {
+						"about": {
+							"description": "Time moves forward only when you do in the dungeons of WazHack. Think your way out of problems instead of just spamming 'attack' and 'drink healing potion'.",
+							"shortDescription": "Time moves forward only when you do in the dungeons of WazHack. Think your way out of problems instead of just spamming 'attack' and 'drink healing potion'."
+						},
+						"genres": [
+							"Action",
+							"Indie",
+							"RPG",
+							"Strategy"
+						],
+						"reqs": [],
+						"steamLastPlayed": 1794071447,
+						"steamPlaytimeMinutes": 23499
+					},
+					"install": {},
+					"installable": true,
+					"is_delisted": false,
+					"is_installed": false,
+					"is_linux_native": true,
+					"is_mac_native": true,
+					"is_windows_native": true,
+					"mac_arch": "64",
+					"runner": "steam",
+					"steamPlatformsCaptured": true,
+					"store_url": "https://store.steampowered.com/app/264160/",
+					"title": "WazHack"
+				},
+				"installDlcs": [],
+				"installLanguage": "en-US",
+				"path": "",
+				"platformToInstall": "Windows",
+				"runner": "steam",
+				"sdlList": [],
+				"size": "100 MiB",
+				"steamForceWindowsViaBottle": false
+			},
+			"startTime": 1794333226701,
+			"status": "done",
+			"type": "install"
+		},
+		{
+			"addToQueueTime": 1794470570173,
+			"endTime": 1794470592132,
+			"params": {
+				"appName": "215160",
+				"gameInfo": {
+					"app_name": "215160",
+					"art_cover": "https://cdn.cloudflare.steamstatic.com/steam/apps/215160/header.jpg",
+					"art_square": "https://cdn.cloudflare.steamstatic.com/steam/apps/215160/library_600x900.jpg",
+					"canRunOffline": true,
+					"extra": {
+						"about": {
+							"description": "In a world torn by war, the aged gremlin archaeologist Mortimer MacGuffin harbors the dark secret of a powerful artifact.",
+							"shortDescription": "In a world torn by war, the aged gremlin archaeologist Mortimer MacGuffin harbors the dark secret of a powerful artifact."
+						},
+						"genres": [
+							"Adventure"
+						],
+						"reqs": [],
+						"steamLastPlayed": 1357632000,
+						"steamPlaytimeMinutes": 150
+					},
+					"install": {},
+					"installable": true,
+					"is_delisted": false,
+					"is_installed": false,
+					"is_linux_native": true,
+					"is_mac_native": true,
+					"is_windows_native": true,
+					"mac_arch": "unknown",
+					"metacritic_score": 82,
+					"runner": "steam",
+					"steamPlatformsCaptured": true,
+					"store_url": "https://store.steampowered.com/app/215160/",
+					"title": "The Book of Unwritten Tales"
+				},
+				"installDlcs": [],
+				"installLanguage": "en-US",
+				"path": "",
+				"platformToInstall": "Windows",
+				"runner": "steam",
+				"sdlList": [],
+				"size": "?? MB",
+				"steamForceWindowsViaBottle": false
+			},
+			"startTime": 1794470570476,
+			"status": "abort",
+			"type": "install"
+		},
+		{
+			"params": {
+				"appName": "1603180",
+				"gameInfo": {
+					"runner": "steam",
+					"app_name": "1603180",
+					"title": "Mining Mechs",
+					"art_cover": "https://cdn.cloudflare.steamstatic.com/steam/apps/1603180/header.jpg",
+					"art_square": "https://cdn.cloudflare.steamstatic.com/steam/apps/1603180/library_600x900.jpg",
+					"is_mac_native": false,
+					"is_linux_native": false,
+					"is_windows_native": true,
+					"is_delisted": false,
+					"mac_arch": "unknown",
+					"steamPlatformsCaptured": true,
+					"is_installed": true,
+					"install": {
+						"install_path": "/Users/operator/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-1603180/drive_c/Program Files (x86)/Steam/steamapps/common/Mining Mechs",
+						"install_size": "123.51 MiB",
+						"platform": "Windows"
+					},
+					"extra": {
+						"reqs": [],
+						"steamPlaytimeMinutes": 9,
+						"steamLastPlayed": 1794501436,
+						"about": {
+							"description": "Unleash your inner miner as you commandeer a high-tech Mining Mech! Mine for valuable resources and upgrade your mech for even bigger hauls as you explore the underground. Fun to play alone or with up to 7 friends in online co-op multiplayer!",
+							"shortDescription": "Unleash your inner miner as you commandeer a high-tech Mining Mech! Mine for valuable resources and upgrade your mech for even bigger hauls as you explore the underground. Fun to play alone or with up to 7 friends in online co-op multiplayer!"
+						},
+						"genres": [
+							"Adventure",
+							"Casual",
+							"Indie"
+						]
+					},
+					"canRunOffline": true,
+					"installable": true,
+					"store_url": "https://store.steampowered.com/app/1603180/"
+				},
+				"runner": "steam",
+				"path": "/Users/operator/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-1603180/drive_c/Program Files (x86)/Steam/steamapps/common/Mining Mechs",
+				"platformToInstall": "Windows",
+				"unattended": true,
+				"size": "123.51 MiB"
+			},
+			"type": "update",
+			"addToQueueTime": 1794598528315,
+			"endTime": 1794598540813,
+			"startTime": 1794598528324,
+			"status": "done"
+		},
+		{
+			"addToQueueTime": 1794501634747,
+			"endTime": 1794501737823,
+			"params": {
+				"appName": "1363080",
+				"gameInfo": {
+					"app_name": "1363080",
+					"art_cover": "https://cdn.cloudflare.steamstatic.com/steam/apps/1363080/header.jpg",
+					"art_square": "https://cdn.cloudflare.steamstatic.com/steam/apps/1363080/library_600x900.jpg",
+					"canRunOffline": true,
+					"extra": {
+						"about": {
+							"description": "Manor Lords is a medieval strategy game featuring in-depth city building, large-scale tactical battles, and complex economic and social simulations. Rule your lands as a medieval lord – the seasons pass, the weather changes, and cities rise and fall.",
+							"shortDescription": "Manor Lords is a medieval strategy game featuring in-depth city building, large-scale tactical battles, and complex economic and social simulations. Rule your lands as a medieval lord – the seasons pass, the weather changes, and cities rise and fall."
+						},
+						"genres": [
+							"Simulation",
+							"Strategy",
+							"Early Access"
+						],
+						"reqs": [],
+						"steamLastPlayed": 1794007692,
+						"steamPlaytimeMinutes": 44
+					},
+					"install": {
+						"install_path": "/Users/operator/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-1363080/drive_c/Program Files (x86)/Steam/steamapps/common/Manor Lords",
+						"install_size": "14.31 GiB",
+						"platform": "Windows"
+					},
+					"installable": true,
+					"is_delisted": false,
+					"is_installed": true,
+					"is_linux_native": false,
+					"is_mac_native": false,
+					"is_windows_native": true,
+					"mac_arch": "unknown",
+					"runner": "steam",
+					"steamPlatformsCaptured": true,
+					"store_url": "https://store.steampowered.com/app/1363080/",
+					"title": "Manor Lords"
+				},
+				"path": "/Users/operator/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-1363080/drive_c/Program Files (x86)/Steam/steamapps/common/Manor Lords",
+				"platformToInstall": "Windows",
+				"runner": "steam",
+				"size": "14.31 GiB"
+			},
+			"startTime": 1794501634756,
+			"status": "done",
+			"type": "update"
+		},
+		{
+			"addToQueueTime": 1794502300264,
+			"endTime": 1794502488335,
+			"params": {
+				"appName": "1284190",
+				"gameInfo": {
+					"app_name": "1284190",
+					"art_cover": "https://cdn.cloudflare.steamstatic.com/steam/apps/1284190/header.jpg",
+					"art_square": "https://cdn.cloudflare.steamstatic.com/steam/apps/1284190/library_600x900.jpg",
+					"canRunOffline": true,
+					"extra": {
+						"about": {
+							"description": "A space survival open world terraforming crafting game, designed for 1 to 10 players. Alter the ecosystem of an inhospitable planet to render it habitable for humanity. Survive, gather resources, and build your base. Then, generate oxygen, warmth, and pressure to create a brand new biosphere.",
+							"shortDescription": "A space survival open world terraforming crafting game, designed for 1 to 10 players. Alter the ecosystem of an inhospitable planet to render it habitable for humanity. Survive, gather resources, and build your base. Then, generate oxygen, warmth, and pressure to create a brand new biosphere."
+						},
+						"genres": [
+							"Adventure"
+						],
+						"reqs": [],
+						"steamLastPlayed": 1794083240,
+						"steamPlaytimeMinutes": 3335
+					},
+					"install": {
+						"install_path": "/Users/operator/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-1284190/drive_c/Program Files (x86)/Steam/steamapps/common/The Planet Crafter",
+						"install_size": "5.93 GiB",
+						"platform": "Windows"
+					},
+					"installable": true,
+					"is_delisted": false,
+					"is_installed": true,
+					"is_linux_native": false,
+					"is_mac_native": false,
+					"is_windows_native": true,
+					"mac_arch": "unknown",
+					"runner": "steam",
+					"steamPlatformsCaptured": true,
+					"store_url": "https://store.steampowered.com/app/1284190/",
+					"title": "The Planet Crafter"
+				},
+				"path": "/Users/operator/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-1284190/drive_c/Program Files (x86)/Steam/steamapps/common/The Planet Crafter",
+				"platformToInstall": "Windows",
+				"runner": "steam",
+				"size": "5.93 GiB"
+			},
+			"startTime": 1794502464209,
+			"status": "done",
+			"type": "update"
+		},
+		{
+			"params": {
+				"appName": "1782460",
+				"gameInfo": {
+					"app_name": "1782460",
+					"art_cover": "https://cdn.cloudflare.steamstatic.com/steam/apps/1782460/header.jpg",
+					"art_square": "https://cdn.cloudflare.steamstatic.com/steam/apps/1782460/library_600x900.jpg",
+					"canRunOffline": true,
+					"extra": {
+						"about": {
+							"description": "Forge powerful builds with endless loot in this relentless combination of Roguelike and ARPG. Blast through dungeons and unleash inhuman powers in a dark fantasy twist on Brazil’s War of Canudos.",
+							"shortDescription": "Forge powerful builds with endless loot in this relentless combination of Roguelike and ARPG. Blast through dungeons and unleash inhuman powers in a dark fantasy twist on Brazil’s War of Canudos."
+						},
+						"genres": [
+							"Action",
+							"Indie",
+							"RPG"
+						],
+						"reqs": [],
+						"steamLastPlayed": 1794628415,
+						"steamPlaytimeMinutes": 9
+					},
+					"install": {},
+					"installable": true,
+					"is_delisted": false,
+					"is_installed": false,
+					"is_linux_native": false,
+					"is_mac_native": false,
+					"is_windows_native": true,
+					"mac_arch": "unknown",
+					"runner": "steam",
+					"steamPlatformsCaptured": true,
+					"store_url": "https://store.steampowered.com/app/1782460/",
+					"title": "Hell Clock"
+				},
+				"installDlcs": [],
+				"installLanguage": "en-US",
+				"path": "",
+				"platformToInstall": "Windows",
+				"runner": "steam",
+				"sdlList": [],
+				"steamForceWindowsViaBottle": false,
+				"size": "2 GiB"
+			},
+			"type": "install",
+			"addToQueueTime": 1794632851400,
+			"endTime": 1794632858906,
+			"startTime": 1794632851685,
+			"status": "abort"
+		},
+		{
+			"params": {
+				"appName": "1621690",
+				"gameInfo": {
+					"app_name": "1621690",
+					"art_cover": "https://cdn.cloudflare.steamstatic.com/steam/apps/1621690/header.jpg",
+					"art_square": "https://cdn.cloudflare.steamstatic.com/steam/apps/1621690/library_600x900.jpg",
+					"canRunOffline": true,
+					"extra": {
+						"about": {
+							"description": "Explore a vast cavern of creatures, relics and resources in a mining sandbox adventure for 1-8 players. Mine, build, fight, craft and farm to unravel the mystery of the ancient Core.",
+							"shortDescription": "Explore a vast cavern of creatures, relics and resources in a mining sandbox adventure for 1-8 players. Mine, build, fight, craft and farm to unravel the mystery of the ancient Core."
+						},
+						"genres": [
+							"Action",
+							"Adventure",
+							"Indie",
+							"RPG",
+							"Simulation"
+						],
+						"reqs": [],
+						"steamLastPlayed": 1794597309,
+						"steamPlaytimeMinutes": 4002
+					},
+					"install": {
+						"install_path": "/Users/operator/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-1621690/drive_c/Program Files (x86)/Steam/steamapps/common/Core Keeper",
+						"install_size": "831.81 MiB",
+						"platform": "Windows"
+					},
+					"installable": true,
+					"is_delisted": false,
+					"is_installed": true,
+					"is_linux_native": true,
+					"is_mac_native": false,
+					"is_windows_native": true,
+					"mac_arch": "unknown",
+					"metacritic_score": 86,
+					"runner": "steam",
+					"steamPlatformsCaptured": true,
+					"store_url": "https://store.steampowered.com/app/1621690/",
+					"title": "Core Keeper"
+				},
+				"runner": "steam",
+				"path": "/Users/operator/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-1621690/drive_c/Program Files (x86)/Steam/steamapps/common/Core Keeper",
+				"platformToInstall": "Windows",
+				"size": "831.81 MiB"
+			},
+			"type": "update",
+			"addToQueueTime": 1794598874022,
+			"endTime": 1794598879726,
+			"startTime": 1794598874032,
+			"status": "done"
+		},
+		{
+			"params": {
+				"appName": "54f7949350c949c6a2c47f12e7b15636",
+				"gameInfo": {
+					"app_name": "54f7949350c949c6a2c47f12e7b15636",
+					"art_cover": "https://cdn1.epicgames.com/spt-assets/113ae486fe9040d89a7fc25a501dc3b9/trash-goblin-rg9jv.png",
+					"art_square": "https://cdn1.epicgames.com/spt-assets/113ae486fe9040d89a7fc25a501dc3b9/trash-goblin-195pl.png",
+					"canRunOffline": false,
+					"cloud_save_enabled": true,
+					"developer": "Spilt Milk Studios",
+					"dlcList": [
+						{
+							"ageGatings": {},
+							"categories": [
+								{
+									"path": "addons"
+								}
+							],
+							"creationDate": "2026-04-28T17:17:10.307Z",
+							"description": "Trash Goblin - Spiffo Plush Trinket",
+							"developer": "Spilt Milk Studios",
+							"developerId": "o-at4ndketztkls9w75hjpcxhxtaxv75",
+							"endOfSupport": false,
+							"entitlementName": "18f0418693be494eadb59ae8ccdfb18d",
+							"entitlementType": "EXECUTABLE",
+							"id": "18f0418693be494eadb59ae8ccdfb18d",
+							"itemType": "DURABLE",
+							"keyImages": [
+								{
+									"alt": "Trash Goblin Trash Goblin - Spiffo Plush Trinket Offer",
+									"height": 1440,
+									"md5": "220fb11b262ebe9d2b083364e396c88b",
+									"size": 2445579,
+									"type": "DieselGameBox",
+									"uploadedDate": "2026-04-15T20:43:05.359Z",
+									"url": "https://cdn1.epicgames.com/spt-assets/113ae486fe9040d89a7fc25a501dc3b9/trash-goblin-1txbk.png",
+									"width": 2560
+								},
+								{
+									"alt": "Download Trash Goblin Trash Goblin - Spiffo Plush Trinket Offer",
+									"height": 1600,
+									"md5": "118e9e9a5c283c85b2100c8724307cd7",
+									"size": 1398039,
+									"type": "DieselGameBoxTall",
+									"uploadedDate": "2026-04-15T20:43:12.985Z",
+									"url": "https://cdn1.epicgames.com/spt-assets/113ae486fe9040d89a7fc25a501dc3b9/trash-goblin-twtpl.png",
+									"width": 1200
+								}
+							],
+							"lastModifiedDate": "2026-04-28T17:17:10.307Z",
+							"mainGameItem": {
+								"id": "e52e38a83c9546c1b6a7c592c91c5dd9",
+								"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+								"unsearchable": false
+							},
+							"mainGameItemList": [
+								{
+									"id": "e52e38a83c9546c1b6a7c592c91c5dd9",
+									"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+									"unsearchable": false
+								}
+							],
+							"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+							"requiresSecureAccount": false,
+							"status": "ACTIVE",
+							"title": "Trash Goblin - Spiffo Plush Trinket",
+							"unsearchable": false
+						},
+						{
+							"ageGatings": {},
+							"categories": [
+								{
+									"path": "addons"
+								}
+							],
+							"creationDate": "2026-04-28T17:17:10.333Z",
+							"description": "Trash Goblin - Goblin Plush Trinket",
+							"developer": "Spilt Milk Studios",
+							"developerId": "o-at4ndketztkls9w75hjpcxhxtaxv75",
+							"endOfSupport": false,
+							"entitlementName": "e433525a2afd4b498a03c9732414779d",
+							"entitlementType": "EXECUTABLE",
+							"id": "e433525a2afd4b498a03c9732414779d",
+							"itemType": "DURABLE",
+							"keyImages": [
+								{
+									"alt": "Trash Goblin Trash Goblin - Goblin Plush Trinket Offer",
+									"height": 1440,
+									"md5": "6f212ccc31456bd6ee024e7f49d8c1e5",
+									"size": 2829047,
+									"type": "DieselGameBox",
+									"uploadedDate": "2026-04-15T20:42:35.859Z",
+									"url": "https://cdn1.epicgames.com/spt-assets/113ae486fe9040d89a7fc25a501dc3b9/trash-goblin-mxdg9.png",
+									"width": 2560
+								},
+								{
+									"alt": "Download Trash Goblin Trash Goblin - Goblin Plush Trinket Offer",
+									"height": 1600,
+									"md5": "2650e81d6915c47077c0191ae2537e25",
+									"size": 1576405,
+									"type": "DieselGameBoxTall",
+									"uploadedDate": "2026-04-15T20:42:40.285Z",
+									"url": "https://cdn1.epicgames.com/spt-assets/113ae486fe9040d89a7fc25a501dc3b9/trash-goblin-sw8i0.png",
+									"width": 1200
+								}
+							],
+							"lastModifiedDate": "2026-04-28T17:17:10.333Z",
+							"mainGameItem": {
+								"id": "e52e38a83c9546c1b6a7c592c91c5dd9",
+								"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+								"unsearchable": false
+							},
+							"mainGameItemList": [
+								{
+									"id": "e52e38a83c9546c1b6a7c592c91c5dd9",
+									"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+									"unsearchable": false
+								}
+							],
+							"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+							"requiresSecureAccount": false,
+							"status": "ACTIVE",
+							"title": "Trash Goblin - Goblin Plush Trinket",
+							"unsearchable": false
+						},
+						{
+							"ageGatings": {},
+							"applicationId": "",
+							"categories": [
+								{
+									"path": "addons"
+								}
+							],
+							"creationDate": "2026-04-28T17:17:10.321Z",
+							"customAttributes": {},
+							"description": "Trash Goblin - Collector's Gift Set",
+							"developer": "Spilt Milk Studios",
+							"developerId": "o-at4ndketztkls9w75hjpcxhxtaxv75",
+							"endOfSupport": false,
+							"entitlementName": "791d927ed9a6428cbdf97836c6df38b1",
+							"entitlementType": "EXECUTABLE",
+							"id": "791d927ed9a6428cbdf97836c6df38b1",
+							"itemType": "DURABLE",
+							"keyImages": [
+								{
+									"alt": "Trash Goblin Trash Goblin - Collector's Gift Set Offer",
+									"height": 1440,
+									"md5": "59344da3831c91f2ff02058dbba0b893",
+									"size": 2332630,
+									"type": "DieselGameBox",
+									"uploadedDate": "2026-04-15T20:40:37.865Z",
+									"url": "https://cdn1.epicgames.com/spt-assets/113ae486fe9040d89a7fc25a501dc3b9/trash-goblin-1cfyh.png",
+									"width": 2560
+								},
+								{
+									"alt": "Download Trash Goblin Trash Goblin - Collector's Gift Set Offer",
+									"height": 1600,
+									"md5": "8fd26ba877092f55c540baa029ce5dbf",
+									"size": 1202835,
+									"type": "DieselGameBoxTall",
+									"uploadedDate": "2026-04-15T20:40:46.758Z",
+									"url": "https://cdn1.epicgames.com/spt-assets/113ae486fe9040d89a7fc25a501dc3b9/trash-goblin-13k86.png",
+									"width": 1200
+								}
+							],
+							"lastModifiedDate": "2026-04-28T17:17:10.321Z",
+							"mainGameItem": {
+								"id": "e52e38a83c9546c1b6a7c592c91c5dd9",
+								"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+								"unsearchable": false
+							},
+							"mainGameItemList": [
+								{
+									"id": "e52e38a83c9546c1b6a7c592c91c5dd9",
+									"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+									"unsearchable": false
+								}
+							],
+							"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+							"releaseInfo": [],
+							"requiresSecureAccount": false,
+							"status": "ACTIVE",
+							"title": "Trash Goblin - Collector's Gift Set",
+							"unsearchable": false
+						},
+						{
+							"ageGatings": {},
+							"categories": [
+								{
+									"path": "addons"
+								}
+							],
+							"creationDate": "2026-04-28T17:17:10.325Z",
+							"description": "Trash Goblin - Founder's Pack",
+							"developer": "Spilt Milk Studios",
+							"developerId": "o-at4ndketztkls9w75hjpcxhxtaxv75",
+							"endOfSupport": false,
+							"entitlementName": "952700de377d467ca525586f149e9e8f",
+							"entitlementType": "EXECUTABLE",
+							"id": "952700de377d467ca525586f149e9e8f",
+							"itemType": "DURABLE",
+							"keyImages": [
+								{
+									"alt": "Trash Goblin Trash Goblin - Founder's Pack Offer",
+									"height": 1440,
+									"md5": "afd98b7f4ce13868f0f035d6eba676b1",
+									"size": 2326392,
+									"type": "DieselGameBox",
+									"uploadedDate": "2026-04-15T20:41:20.326Z",
+									"url": "https://cdn1.epicgames.com/spt-assets/113ae486fe9040d89a7fc25a501dc3b9/trash-goblin-7wqsv.png",
+									"width": 2560
+								},
+								{
+									"alt": "Download Trash Goblin Trash Goblin - Founder's Pack Offer",
+									"height": 1600,
+									"md5": "29b2f664291fcda18d12a96737c13120",
+									"size": 1198328,
+									"type": "DieselGameBoxTall",
+									"uploadedDate": "2026-04-15T20:41:16.049Z",
+									"url": "https://cdn1.epicgames.com/spt-assets/113ae486fe9040d89a7fc25a501dc3b9/trash-goblin-r6kpd.png",
+									"width": 1200
+								}
+							],
+							"lastModifiedDate": "2026-04-28T17:17:10.325Z",
+							"mainGameItem": {
+								"id": "e52e38a83c9546c1b6a7c592c91c5dd9",
+								"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+								"unsearchable": false
+							},
+							"mainGameItemList": [
+								{
+									"id": "e52e38a83c9546c1b6a7c592c91c5dd9",
+									"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+									"unsearchable": false
+								}
+							],
+							"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+							"requiresSecureAccount": false,
+							"status": "ACTIVE",
+							"title": "Trash Goblin - Founder's Pack",
+							"unsearchable": false
+						},
+						{
+							"ageGatings": {},
+							"categories": [
+								{
+									"path": "addons"
+								}
+							],
+							"creationDate": "2026-04-15T16:01:40.207Z",
+							"description": "Trash Goblin - The Artist of Brimhaven",
+							"developer": "Spilt Milk Studios",
+							"developerId": "o-at4ndketztkls9w75hjpcxhxtaxv75",
+							"endOfSupport": false,
+							"entitlementName": "10ae18e9181d4758bdf7408cf866136b",
+							"entitlementType": "EXECUTABLE",
+							"id": "10ae18e9181d4758bdf7408cf866136b",
+							"itemType": "DURABLE",
+							"keyImages": [
+								{
+									"alt": "Trash Goblin Trash Goblin - The Artist of Brimhaven Offer",
+									"height": 1440,
+									"md5": "0f82fe5ff9c68edc6284fad6e141cdfd",
+									"size": 1020331,
+									"type": "DieselGameBox",
+									"uploadedDate": "2026-04-15T20:45:07.716Z",
+									"url": "https://cdn1.epicgames.com/spt-assets/113ae486fe9040d89a7fc25a501dc3b9/trash-goblin-s3u81.jpg",
+									"width": 2560
+								},
+								{
+									"alt": "Download Trash Goblin Trash Goblin - The Artist of Brimhaven Offer",
+									"height": 1600,
+									"md5": "51b0774b9b5c570e6bc629efdb1ee505",
+									"size": 2751454,
+									"type": "DieselGameBoxTall",
+									"uploadedDate": "2026-04-15T20:43:44.115Z",
+									"url": "https://cdn1.epicgames.com/spt-assets/113ae486fe9040d89a7fc25a501dc3b9/trash-goblin-1dd6l.png",
+									"width": 1200
+								}
+							],
+							"lastModifiedDate": "2026-07-07T19:30:41.548Z",
+							"mainGameItem": {
+								"id": "e52e38a83c9546c1b6a7c592c91c5dd9",
+								"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+								"unsearchable": false
+							},
+							"mainGameItemList": [
+								{
+									"id": "e52e38a83c9546c1b6a7c592c91c5dd9",
+									"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+									"unsearchable": false
+								}
+							],
+							"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+							"requiresSecureAccount": false,
+							"status": "ACTIVE",
+							"title": "Trash Goblin - The Artist of Brimhaven",
+							"unsearchable": false
+						},
+						{
+							"ageGatings": {},
+							"categories": [
+								{
+									"path": "addons"
+								}
+							],
+							"creationDate": "2026-04-28T17:17:10.318Z",
+							"description": "Trash Goblin - Found Family Cosmetic Pack",
+							"developer": "Spilt Milk Studios",
+							"developerId": "o-at4ndketztkls9w75hjpcxhxtaxv75",
+							"endOfSupport": false,
+							"entitlementName": "44e6e3765d834a34b1f17b593b09ab53",
+							"entitlementType": "EXECUTABLE",
+							"id": "44e6e3765d834a34b1f17b593b09ab53",
+							"itemType": "DURABLE",
+							"keyImages": [
+								{
+									"alt": "Trash Goblin Trash Goblin - Found Family Cosmetic Pack Offer",
+									"height": 1440,
+									"md5": "692f232ed9c6e0b4f644bb2f53bfab3b",
+									"size": 3662145,
+									"type": "DieselGameBox",
+									"uploadedDate": "2026-04-15T20:41:55.850Z",
+									"url": "https://cdn1.epicgames.com/spt-assets/113ae486fe9040d89a7fc25a501dc3b9/trash-goblin-1esgz.png",
+									"width": 2560
+								},
+								{
+									"alt": "Download Trash Goblin Trash Goblin - Found Family Cosmetic Pack Offer",
+									"height": 1600,
+									"md5": "65cc5a0e2b714961cc5b74558fae8d1e",
+									"size": 2373001,
+									"type": "DieselGameBoxTall",
+									"uploadedDate": "2026-04-15T20:41:59.097Z",
+									"url": "https://cdn1.epicgames.com/spt-assets/113ae486fe9040d89a7fc25a501dc3b9/trash-goblin-2cwmr.png",
+									"width": 1200
+								}
+							],
+							"lastModifiedDate": "2026-04-28T17:17:10.318Z",
+							"mainGameItem": {
+								"id": "e52e38a83c9546c1b6a7c592c91c5dd9",
+								"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+								"unsearchable": false
+							},
+							"mainGameItemList": [
+								{
+									"id": "e52e38a83c9546c1b6a7c592c91c5dd9",
+									"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+									"unsearchable": false
+								}
+							],
+							"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+							"requiresSecureAccount": false,
+							"status": "ACTIVE",
+							"title": "Trash Goblin - Found Family Cosmetic Pack",
+							"unsearchable": false
+						},
+						{
+							"ageGatings": {},
+							"categories": [
+								{
+									"path": "addons"
+								}
+							],
+							"creationDate": "2026-09-03T14:06:01.379Z",
+							"description": "Trash Goblin - PowerWash Simulator 2 Gnome",
+							"developer": "Spilt Milk Studios",
+							"developerId": "o-at4ndketztkls9w75hjpcxhxtaxv75",
+							"endOfSupport": false,
+							"entitlementName": "1b8643d2d34f444eac48c46f410242ec",
+							"entitlementType": "EXECUTABLE",
+							"id": "1b8643d2d34f444eac48c46f410242ec",
+							"itemType": "DURABLE",
+							"keyImages": [
+								{
+									"alt": "Trash Goblin Trash Goblin - PowerWash Simulator 2 Gnome Offer",
+									"height": 1440,
+									"md5": "4078ffea0c7107488d5ad505b1b64e0f",
+									"size": 2576378,
+									"type": "DieselGameBox",
+									"uploadedDate": "2026-07-07T14:27:47.659Z",
+									"url": "https://cdn1.epicgames.com/spt-assets/113ae486fe9040d89a7fc25a501dc3b9/trash-goblin-11jqq.png",
+									"width": 2560
+								},
+								{
+									"alt": "Download Trash Goblin Trash Goblin - PowerWash Simulator 2 Gnome Offer",
+									"height": 1600,
+									"md5": "707307b04339df3bb17bb072e819fd09",
+									"size": 1439785,
+									"type": "DieselGameBoxTall",
+									"uploadedDate": "2026-07-07T14:27:43.962Z",
+									"url": "https://cdn1.epicgames.com/spt-assets/113ae486fe9040d89a7fc25a501dc3b9/trash-goblin-ktk7a.png",
+									"width": 1200
+								}
+							],
+							"lastModifiedDate": "2026-09-03T14:06:01.379Z",
+							"mainGameItem": {
+								"id": "e52e38a83c9546c1b6a7c592c91c5dd9",
+								"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+								"unsearchable": false
+							},
+							"mainGameItemList": [
+								{
+									"id": "e52e38a83c9546c1b6a7c592c91c5dd9",
+									"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+									"unsearchable": false
+								}
+							],
+							"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+							"requiresSecureAccount": false,
+							"status": "ACTIVE",
+							"title": "Trash Goblin - PowerWash Simulator 2 Gnome",
+							"unsearchable": false
+						}
+					],
+					"extra": {
+						"about": {
+							"description": "Trash Goblin",
+							"shortDescription": ""
+						},
+						"reqs": [],
+						"storeUrl": "https://www.epicgames.com/store/product/trash-goblin"
+					},
+					"folder_name": "TrashGoblin",
+					"install": {},
+					"isEAManaged": false,
+					"isUbisoftManaged": false,
+					"is_installed": false,
+					"is_linux_native": false,
+					"is_mac_native": false,
+					"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+					"runner": "legendary",
+					"save_folder": "{AppData}/../LocalLow/Spilt Milk Studios/TrashGoblin/",
+					"save_path": null,
+					"store_url": "https://www.epicgames.com/store/product/trash-goblin",
+					"title": "Trash Goblin"
+				},
+				"installDlcs": [],
+				"installLanguage": "",
+				"path": "/Users/operator/Games/GameLib",
+				"platformToInstall": "Windows",
+				"runner": "legendary",
+				"sdlList": [],
+				"size": "1.76 GiB"
+			},
+			"type": "install",
+			"addToQueueTime": 1794631676278,
+			"endTime": 1794631684731,
+			"startTime": 1794631676284,
+			"status": "abort"
+		},
+		{
+			"params": {
+				"appName": "2706020",
+				"gameInfo": {
+					"runner": "steam",
+					"app_name": "2706020",
+					"title": "All Will Fall",
+					"art_cover": "https://cdn.cloudflare.steamstatic.com/steam/apps/2706020/header.jpg",
+					"art_square": "https://cdn.cloudflare.steamstatic.com/steam/apps/2706020/library_600x900.jpg",
+					"is_mac_native": false,
+					"is_linux_native": false,
+					"is_windows_native": true,
+					"is_delisted": false,
+					"mac_arch": "unknown",
+					"steamPlatformsCaptured": true,
+					"is_installed": true,
+					"install": {
+						"install_path": "/Users/operator/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-2706020/drive_c/Program Files (x86)/Steam/steamapps/common/All Will Fall",
+						"install_size": "3.98 GiB",
+						"platform": "Windows"
+					},
+					"extra": {
+						"reqs": [],
+						"steamPlaytimeMinutes": 4760,
+						"steamLastPlayed": 1792136895,
+						"about": {
+							"description": "Build massive ocean cities and lead your people to prosperity in this post-apocalyptic survival colony sim. Featuring a physics-based 3D construction system, complex resource management, exploration, difficult political decisions, supply chains, and a robust sandbox mode.",
+							"shortDescription": "Build massive ocean cities and lead your people to prosperity in this post-apocalyptic survival colony sim. Featuring a physics-based 3D construction system, complex resource management, exploration, difficult political decisions, supply chains, and a robust sandbox mode."
+						},
+						"genres": [
+							"Indie",
+							"Simulation",
+							"Strategy"
+						]
+					},
+					"canRunOffline": true,
+					"installable": true,
+					"store_url": "https://store.steampowered.com/app/2706020/"
+				},
+				"runner": "steam",
+				"path": "/Users/operator/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-2706020/drive_c/Program Files (x86)/Steam/steamapps/common/All Will Fall",
+				"platformToInstall": "Windows",
+				"size": "3.98 GiB"
+			},
+			"type": "update",
+			"addToQueueTime": 1794510070970,
+			"endTime": 1794510098472,
+			"startTime": 1794510070980,
+			"status": "done"
+		},
+		{
+			"params": {
+				"appName": "98800",
+				"gameInfo": {
+					"runner": "steam",
+					"app_name": "98800",
+					"title": "Dungeons of Dredmor",
+					"art_cover": "https://cdn.cloudflare.steamstatic.com/steam/apps/98800/header.jpg",
+					"art_square": "https://cdn.cloudflare.steamstatic.com/steam/apps/98800/library_600x900.jpg",
+					"is_mac_native": true,
+					"is_linux_native": true,
+					"is_windows_native": true,
+					"metacritic_score": 79,
+					"is_delisted": false,
+					"mac_arch": "32",
+					"steamPlatformsCaptured": true,
+					"is_installed": true,
+					"install": {
+						"install_path": "/Users/operator/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-98800/drive_c/Program Files (x86)/Steam/steamapps/common/Dungeons of Dredmor",
+						"install_size": "237.38 MiB",
+						"platform": "Windows"
+					},
+					"extra": {
+						"reqs": [],
+						"steamPlaytimeMinutes": 18956,
+						"steamLastPlayed": 1329638400,
+						"about": {
+							"description": "Test your luck and cunning in this exciting RPG as you craft, cast, and pillage your way through Lord Dredmor's Dungeons.",
+							"shortDescription": "Test your luck and cunning in this exciting RPG as you craft, cast, and pillage your way through Lord Dredmor's Dungeons."
+						},
+						"genres": [
+							"Casual",
+							"Indie",
+							"RPG"
+						]
+					},
+					"canRunOffline": true,
+					"installable": true,
+					"store_url": "https://store.steampowered.com/app/98800/"
+				},
+				"runner": "steam",
+				"path": "/Users/operator/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-98800/drive_c/Program Files (x86)/Steam/steamapps/common/Dungeons of Dredmor",
+				"platformToInstall": "Windows",
+				"unattended": true,
+				"size": "237.38 MiB"
+			},
+			"type": "update",
+			"addToQueueTime": 1794544935305,
+			"endTime": 1794544966027,
+			"startTime": 1794544945554,
+			"status": "done"
+		},
+		{
+			"params": {
+				"appName": "1562430",
+				"gameInfo": {
+					"app_name": "1562430",
+					"art_cover": "https://cdn.cloudflare.steamstatic.com/steam/apps/1562430/header.jpg",
+					"art_square": "https://cdn.cloudflare.steamstatic.com/steam/apps/1562430/library_600x900.jpg",
+					"canRunOffline": true,
+					"extra": {
+						"about": {
+							"description": "DREDGE is a single-player fishing adventure with a sinister undercurrent. Sell your catch, upgrade your boat, and dredge the depths for long-buried secrets. Explore a mysterious archipelago and discover why some things are best left forgotten.",
+							"shortDescription": "DREDGE is a single-player fishing adventure with a sinister undercurrent. Sell your catch, upgrade your boat, and dredge the depths for long-buried secrets. Explore a mysterious archipelago and discover why some things are best left forgotten."
+						},
+						"genres": [
+							"Adventure",
+							"RPG"
+						],
+						"reqs": [],
+						"steamLastPlayed": 1744616549,
+						"steamPlaytimeMinutes": 158
+					},
+					"install": {},
+					"installable": true,
+					"is_delisted": false,
+					"is_installed": false,
+					"is_linux_native": false,
+					"is_mac_native": true,
+					"is_windows_native": true,
+					"mac_arch": "64",
+					"runner": "steam",
+					"steamPlatformsCaptured": true,
+					"store_url": "https://store.steampowered.com/app/1562430/",
+					"title": "DREDGE"
+				},
+				"installDlcs": [],
+				"installLanguage": "en-US",
+				"path": "",
+				"platformToInstall": "Windows",
+				"runner": "steam",
+				"sdlList": [],
+				"steamForceWindowsViaBottle": false,
+				"size": "2 GiB"
+			},
+			"type": "install",
+			"addToQueueTime": 1794599834902,
+			"endTime": 1794599873246,
+			"startTime": 1794599835254,
+			"status": "done"
+		},
+		{
+			"params": {
+				"appName": "258970",
+				"gameInfo": {
+					"app_name": "258970",
+					"art_cover": "https://cdn.cloudflare.steamstatic.com/steam/apps/258970/header.jpg",
+					"art_square": "https://cdn.cloudflare.steamstatic.com/steam/apps/258970/library_600x900.jpg",
+					"canRunOffline": true,
+					"extra": {
+						"about": {
+							"description": "The classic Gauntlet 4-player co-op action gameplay returns in a completely new experience! Battle the endless hordes of foes as you and your friends fight for treasure and glory via both local and online co-op multiplayer. Invade the Darkness!",
+							"shortDescription": "The classic Gauntlet 4-player co-op action gameplay returns in a completely new experience! Battle the endless hordes of foes as you and your friends fight for treasure and glory via both local and online co-op multiplayer. Invade the Darkness!"
+						},
+						"genres": [
+							"Action",
+							"Adventure",
+							"RPG"
+						],
+						"reqs": [],
+						"steamLastPlayed": 1730184324,
+						"steamPlaytimeMinutes": 56
+					},
+					"install": {},
+					"installable": true,
+					"is_delisted": false,
+					"is_installed": false,
+					"is_linux_native": false,
+					"is_mac_native": false,
+					"is_windows_native": true,
+					"mac_arch": "unknown",
+					"runner": "steam",
+					"steamPlatformsCaptured": true,
+					"store_url": "https://store.steampowered.com/app/258970/",
+					"title": "Gauntlet™ "
+				},
+				"installDlcs": [],
+				"installLanguage": "en-US",
+				"path": "",
+				"platformToInstall": "Windows",
+				"runner": "steam",
+				"sdlList": [],
+				"steamForceWindowsViaBottle": false,
+				"size": "2 GiB"
+			},
+			"type": "install",
+			"addToQueueTime": 1794621139480,
+			"endTime": 1794621268296,
+			"startTime": 1794621139817,
+			"status": "done"
+		},
+		{
+			"params": {
+				"appName": "amzn1.adg.product.dfd0ec0a-b2f5-421d-a94a-780431cc730f",
+				"gameInfo": {
+					"app_name": "amzn1.adg.product.dfd0ec0a-b2f5-421d-a94a-780431cc730f",
+					"art_background": "https://m.media-amazon.com/images/I/71Mrorm-NVL.jpg",
+					"art_cover": "https://m.media-amazon.com/images/I/71H2dmmCT7L.jpg",
+					"art_logo": "https://m.media-amazon.com/images/I/41ai3P0G+fL.png",
+					"art_square": "https://m.media-amazon.com/images/I/91+QE-1kvLL.jpg",
+					"canRunOffline": true,
+					"description": "A hybrid of old-school beat’em ups, shooters, and rogue-likes. The fights are fast, brutal, and deadly.",
+					"developer": "Sobaka Studio",
+					"extra": {
+						"genres": [
+							"Adventure",
+							"Fighting",
+							"Hack and slash/Beat 'em up"
+						],
+						"releaseDate": "2025-04-30T00:00:00Z",
+						"reqs": []
+					},
+					"folder_name": "Kiborg",
+					"install": {},
+					"is_installed": false,
+					"is_linux_native": false,
+					"is_mac_native": false,
+					"runner": "nile",
+					"title": "Kiborg"
+				},
+				"installDlcs": [],
+				"installLanguage": "",
+				"path": "/Users/operator/Games/GameLib",
+				"platformToInstall": "Windows",
+				"runner": "nile",
+				"sdlList": [],
+				"size": "21.56 GiB"
+			},
+			"type": "install",
+			"addToQueueTime": 1794631717990,
+			"endTime": 1794631736525,
+			"startTime": 1794631717998,
+			"status": "abort"
+		}
+	],
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 3
+		}
+	},
+	"queue": []
+}

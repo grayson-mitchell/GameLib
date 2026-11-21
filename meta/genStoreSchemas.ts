@@ -58,7 +58,7 @@ const GENERATOR = 'meta/genStoreSchemas.ts'
 const REGEN_CMD =
   'node meta/runTs.cjs --bundle --platform=node --target=node22 meta/genStoreSchemas.ts'
 
-export interface Member {
+interface Member {
   optional: boolean
   node: Node
 }
