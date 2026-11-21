@@ -522,6 +522,32 @@ mod tests {
     }
 
     #[test]
+    fn a_bridged_message_with_line_breaks_is_written_on_one_line() {
+        // WR-02 (writer half): text a crate echoes from a server can carry CR/LF, and a raw one
+        // would start a forged second line in the file users upload.
+        let (seen, sink) = recorder();
+        with_layer(CrateLevel::Warn, sink, || {
+            tracing::warn!(target: "steam_vent::x", k = "v\r\nw", "a\nb");
+        });
+        assert_eq!(
+            lines(&seen),
+            vec![(
+                Prefix::Steam,
+                Level::Warning,
+                "a\\nb k=v\\r\\nw".to_string()
+            )]
+        );
+
+        let (seen, sink) = recorder();
+        let bridge = LogBridge::with_sink(CrateLevel::Warn, sink);
+        feed(&bridge, record("reqwest::x", log::Level::Error, "x\r\ny"));
+        assert_eq!(
+            lines(&seen),
+            vec![(Prefix::Backend, Level::Error, "x\\r\\ny".to_string())]
+        );
+    }
+
+    #[test]
     fn install_bridges_sets_the_log_ceiling_and_a_second_call_returns_false() {
         // The only test in this crate that touches the process-global subscriber and logger; every
         // other test scopes its subscriber with `with_default` or drives `LogBridge::log` directly.

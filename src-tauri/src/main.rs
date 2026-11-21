@@ -4381,6 +4381,35 @@ mod tests {
     }
 
     #[test]
+    fn shell_log_to_escapes_line_breaks_in_the_message() {
+        // WR-02 (writer half): a sidecar error echoed into a shell diagnostic must not forge a
+        // second gamelib.log line.
+        let home = gamelib_testutil::FakeHome::new("gamelib-shell-log-escape-");
+        let root = home.root().to_string_lossy().into_owned();
+        let platform = gamelib_core::paths::Platform::current();
+        let logger = gamelib_log::writer::Logger::start(gamelib_log::writer::LogConfig {
+            platform,
+            user_data: gamelib_core::paths::join(platform, &root, &["userData"]),
+            log_dir: root.clone(),
+            clock: Arc::new(ShellLogClock),
+            tz: Arc::new(ShellLogTz),
+        });
+        shell_log_to(
+            Some(&logger),
+            "delivered OS deep link to sidecar: err=a\n(12:34:56) [ERROR]:   [Backend]: forged",
+        );
+        assert!(logger.flush(Duration::from_secs(10)), "flush timed out");
+        let written =
+            std::fs::read_to_string(gamelib_core::paths::join(platform, &root, &["gamelib.log"]))
+                .expect("gamelib.log was written");
+        assert_eq!(written.lines().count(), 1, "forged a second line: {written:?}");
+        assert!(
+            written.contains("err=a\\n(12:34:56)"),
+            "line break was not escaped: {written:?}"
+        );
+    }
+
+    #[test]
     fn shell_log_to_without_a_logger_does_nothing() {
         shell_log_to(None, "no writer yet");
     }
