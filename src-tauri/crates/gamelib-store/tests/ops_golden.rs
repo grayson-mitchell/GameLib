@@ -8,8 +8,10 @@ mod common;
 use std::fs;
 
 use common::*;
-use gamelib_store::envelope::{settings_version, store_version, strip_envelope};
+use gamelib_store::engine::{open_file, Flavour, OpenOutcome, StoreKind};
+use gamelib_store::envelope::{store_version, strip_envelope};
 use gamelib_store::json::{parse, to_settings_bytes, Json};
+use gamelib_store::migrate::Chains;
 use gamelib_testutil::FakeHome;
 
 /// Every `ops` case, replayed with the store at the baseline version 1 (no `ops` case declares
@@ -99,11 +101,24 @@ fn every_settings_doc_case_writes_the_bytes_ts_wrote() {
             fs::write(&path, initial).unwrap();
         }
 
-        // `ensureSettingsMigrated` refuses a file newer than the settings chains (v2 in TS), and
-        // `writeSettingsFile` then leaves it alone.
-        let refused = case.get("ensure").and_then(Json::as_bool) == Some(true)
-            && opt_text(case, "initial")
-                .is_some_and(|i| settings_version(&parse(i.as_bytes()).unwrap()) > 2);
+        // `ensureSettingsMigrated` opens the file through the engine, and `writeSettingsFile` then
+        // refuses to write a read-only (here: newer) document.
+        let refused = case.get("ensure").and_then(Json::as_bool) == Some(true) && {
+            let chain = if is_game {
+                "settings/game"
+            } else {
+                "settings/global"
+            };
+            let opened = open_file(
+                &path,
+                Flavour::Settings,
+                StoreKind::Settings,
+                chain,
+                &Chains::baseline(),
+                golden_now(),
+            );
+            matches!(opened.outcome, OpenOutcome::ReadOnly { .. })
+        };
         if !refused {
             let data = case.get("data").expect("settingsDoc has data");
             fs::create_dir_all(path.parent().unwrap()).unwrap();

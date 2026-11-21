@@ -1,26 +1,186 @@
-//! Skeleton for the RED commit; replaced by the implementation.
+//! Pre-migration backups and corrupt-file copies (Phase 68 `backup.ts`, D-18).
+//!
+//! Both are written next to the store file, mode 0600 through `write_atomic` with `Synced`
+//! durability (they can hold token material, T-85-16), and both families are bounded the same way:
+//! a write is skipped when its bytes equal the newest file of that family, and at most
+//! `MAX_BACKUPS_PER_STORE` are kept (oldest pruned by stamp), so a file that stays corrupt, or a
+//! migration retried every boot, can never fill the disk (T-85-17).
+//!
+//! - `<name>.v<from>.<UTC stamp>.bak.json`: the bytes a file had before a migration rewrote it.
+//! - `<name>.corrupt.<UTC stamp>.json`: the bytes of a file the engine could not read as a store.
+//!
+//! The stamp is `YYYYMMDDTHHMMSSmmmZ`. It is formatted here from an injected `SystemTime` with a
+//! small civil-date routine instead of a date crate: the crate keeps its dependencies to what the
+//! store itself needs, and the format is fixed and tiny.
 
+use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
-use std::time::SystemTime;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use crate::atomic::{write_atomic, Durability};
+
+/// How many backups (and, separately, corrupt copies) a store keeps.
 pub const MAX_BACKUPS_PER_STORE: usize = 3;
 
-pub fn stamp(_now: SystemTime) -> String {
-    String::new()
+/// Which family of side files a write belongs to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Family {
+    Backup,
+    Corrupt,
 }
 
+/// `YYYYMMDDTHHMMSSmmmZ` in UTC. A time before 1970 prints as the epoch.
+pub fn stamp(now: SystemTime) -> String {
+    let since = now.duration_since(UNIX_EPOCH).unwrap_or(Duration::ZERO);
+    let secs = since.as_secs();
+    let millis = since.subsec_millis();
+    let days = i64::try_from(secs / 86_400).unwrap_or(0);
+    let rem = secs % 86_400;
+    let (y, m, d) = civil_from_days(days);
+    format!(
+        "{y:04}{m:02}{d:02}T{:02}{:02}{:02}{millis:03}Z",
+        rem / 3600,
+        (rem % 3600) / 60,
+        rem % 60
+    )
+}
+
+/// Howard Hinnant's `civil_from_days`: days since 1970-01-01 to (year, month, day).
+fn civil_from_days(z: i64) -> (i64, u32, u32) {
+    let z = z + 719_468;
+    let era = z.div_euclid(146_097);
+    let doe = z.rem_euclid(146_097);
+    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
+    let y = yoe + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = (doy - (153 * mp + 2) / 5 + 1) as u32;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 } as u32;
+    (if m <= 2 { y + 1 } else { y }, m, d)
+}
+
+/// `\d{8}T\d{9}Z`.
+fn is_stamp(s: &str) -> bool {
+    let b = s.as_bytes();
+    b.len() == 19
+        && b[..8].iter().all(u8::is_ascii_digit)
+        && b[8] == b'T'
+        && b[9..18].iter().all(u8::is_ascii_digit)
+        && b[18] == b'Z'
+}
+
+/// The store's name: its file name without `.json`. Refuses a path with no usable name.
+fn store_name(path: &Path) -> io::Result<String> {
+    let file = path.file_name().and_then(|n| n.to_str()).ok_or_else(|| {
+        io::Error::new(io::ErrorKind::InvalidInput, "store path has no file name")
+    })?;
+    let name = file.strip_suffix(".json").unwrap_or(file);
+    if name.is_empty() || name == "." || name == ".." {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "store path has no usable name",
+        ));
+    }
+    Ok(name.to_string())
+}
+
+/// The stamp in a side file's name, if `file` belongs to `family` of the store called `name`.
+fn stamp_in(file: &str, name: &str, family: Family) -> Option<String> {
+    match family {
+        Family::Backup => {
+            let rest = file.strip_prefix(name)?.strip_prefix(".v")?;
+            let digits = rest.bytes().take_while(u8::is_ascii_digit).count();
+            let rest = rest.get(digits..)?.strip_prefix('.')?;
+            let stamp = rest.strip_suffix(".bak.json")?;
+            (digits > 0 && is_stamp(stamp)).then(|| stamp.to_string())
+        }
+        Family::Corrupt => {
+            let rest = file.strip_prefix(name)?.strip_prefix(".corrupt.")?;
+            let stamp = rest.strip_suffix(".json")?;
+            is_stamp(stamp).then(|| stamp.to_string())
+        }
+    }
+}
+
+/// The family's files in `dir`, oldest first (by stamp, then name).
+fn list(dir: &Path, name: &str, family: Family) -> Vec<PathBuf> {
+    let Ok(read) = fs::read_dir(dir) else {
+        return Vec::new();
+    };
+    let mut found: Vec<(String, String)> = read
+        .flatten()
+        .filter_map(|e| {
+            let file = e.file_name().to_string_lossy().into_owned();
+            stamp_in(&file, name, family).map(|s| (s, file))
+        })
+        .collect();
+    found.sort();
+    found.into_iter().map(|(_, f)| dir.join(f)).collect()
+}
+
+fn write_side_file(
+    store: &Path,
+    family: Family,
+    target_name: impl FnOnce(&str, &str) -> String,
+    bytes: &[u8],
+    now: SystemTime,
+) -> io::Result<PathBuf> {
+    let name = store_name(store)?;
+    let dir = match store.parent() {
+        Some(p) if !p.as_os_str().is_empty() => p.to_path_buf(),
+        _ => PathBuf::from("."),
+    };
+    if let Some(newest) = list(&dir, &name, family).last() {
+        if fs::read(newest).is_ok_and(|b| b == bytes) {
+            return Ok(newest.clone());
+        }
+    }
+    let target = dir.join(target_name(&name, &stamp(now)));
+    write_atomic(&target, bytes, Durability::Synced)?;
+
+    // Prune the oldest beyond the cap, never the file just written (a clock that ran backwards
+    // would otherwise delete the copy the caller is about to rely on).
+    let others: Vec<PathBuf> = list(&dir, &name, family)
+        .into_iter()
+        .filter(|p| *p != target)
+        .collect();
+    let excess = (others.len() + 1).saturating_sub(MAX_BACKUPS_PER_STORE);
+    for old in others.into_iter().take(excess) {
+        // A file that cannot be pruned stays; the next write tries again.
+        let _ = fs::remove_file(old);
+    }
+    Ok(target)
+}
+
+/// Writes `<name>.v<from>.<stamp>.bak.json` holding `bytes`, the file as it was before a migration.
+/// Returns the path that now holds those bytes: the new file, or the newest existing backup when it
+/// already equals them.
 pub fn write_pre_migration_backup(
     path: &Path,
-    _from: u32,
-    _bytes: &[u8],
-    _now: SystemTime,
+    from: u32,
+    bytes: &[u8],
+    now: SystemTime,
 ) -> io::Result<PathBuf> {
-    Ok(path.to_path_buf())
+    write_side_file(
+        path,
+        Family::Backup,
+        |name, stamp| format!("{name}.v{from}.{stamp}.bak.json"),
+        bytes,
+        now,
+    )
 }
 
-pub fn write_corrupt_copy(path: &Path, _bytes: &[u8], _now: SystemTime) -> io::Result<PathBuf> {
-    Ok(path.to_path_buf())
+/// Writes `<name>.corrupt.<stamp>.json` holding `bytes`, a file the engine could not read as a
+/// store. Returns the path that now holds those bytes (see `write_pre_migration_backup`).
+pub fn write_corrupt_copy(path: &Path, bytes: &[u8], now: SystemTime) -> io::Result<PathBuf> {
+    write_side_file(
+        path,
+        Family::Corrupt,
+        |name, stamp| format!("{name}.corrupt.{stamp}.json"),
+        bytes,
+        now,
+    )
 }
 
 #[cfg(test)]

@@ -1,10 +1,33 @@
 //! The version engine: what happens to a store file when it is opened (Phase 68 `runFileMigration`,
 //! ported, with the D-18 change to corrupt files).
+//!
+//! Decision order, the same as the TS engine:
+//!
+//! 1. no file: `Missing`, nothing is created.
+//! 2. bytes that are not a JSON object (unparseable, a non-object root, empty, a BOM, a lone
+//!    surrogate): the bytes are first copied to `<name>.corrupt.<stamp>.json`, and the original is
+//!    never touched. A cache then starts empty (`StartEmpty`); every other kind opens read-only
+//!    (`ReadOnly(Failed)`), and so does any kind whose copy could not be written. TS let conf
+//!    reset such a file on its first write; losing a settings or account file that way is the
+//!    defect D-18 removes.
+//! 3. the file's version against the chain's current version: newer is `ReadOnly(Newer)` and the
+//!    bytes are never rewritten; equal is `Ok`.
+//! 4. a pending chain made only of identity steps is `Adopted` with zero bytes written (D-12).
+//! 5. a cache with a pending non-identity chain is deleted (`CacheDiscarded`); it can be rebuilt.
+//! 6. anything else: a pre-migration backup, the steps, then an atomic rewrite (`Migrated`). A
+//!    failure at any point leaves the original bytes in place and the store read-only.
+//!
+//! Diagnostics (`detail`) carry versions and error kinds, never data: these stores hold tokens.
 
+use std::fs;
+use std::io;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-use crate::json::{Json, Obj};
+use crate::atomic::{write_atomic, Durability};
+use crate::backup::{write_corrupt_copy, write_pre_migration_backup};
+use crate::envelope::{set_settings_version, settings_version, stamp_for_write, store_version};
+use crate::json::{parse, to_store_bytes, Json, Obj};
 use crate::migrate::Chains;
 
 /// Which kind of store a file belongs to; decides what is allowed to happen to unreadable or
@@ -19,11 +42,14 @@ pub enum StoreKind {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ReadOnlyReason {
+    /// The file's version is above this build's: written by a newer GameLib.
     Newer,
+    /// The file could not be read, copied aside or migrated.
     Failed,
 }
 
-/// Which on-disk codec carries the version.
+/// Which on-disk codec carries the version: `__internal__.gamelib.schemaVersion` in a conf store,
+/// a top-level `version: 'vN'` in a settings document.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Flavour {
     Store,
@@ -32,44 +58,179 @@ pub enum Flavour {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum OpenOutcome {
+    /// There is no file. The store starts empty and nothing was created.
     Missing,
+    /// The file is at the current version. Untouched.
     Ok,
+    /// An unstamped or baseline file whose pending steps are all identity: adopted, zero bytes
+    /// written.
     Adopted,
+    /// A backup was written and the file rewritten at the current version.
     Migrated {
         from: u32,
         to: u32,
         backup: Option<PathBuf>,
     },
+    /// A cache with a pending non-identity chain: its file was deleted.
     CacheDiscarded,
+    /// Writes are refused; the file's bytes are untouched.
     ReadOnly {
         reason: ReadOnlyReason,
         detail: String,
     },
-    StartEmpty {
-        copy: PathBuf,
-    },
+    /// A cache that could not be read: it continues empty. `copy` holds its bytes.
+    StartEmpty { copy: PathBuf },
 }
 
+/// What opening a file produced.
 #[derive(Debug, Clone)]
 pub struct Opened {
     pub outcome: OpenOutcome,
+    /// The document reads are served from: the file as parsed (envelope included, so a write keeps
+    /// it), or as migrated, or `{}` where the store starts empty. A cache over a newer file serves
+    /// `{}` (`viewOf`); per-store `failedView: 'empty'` is the host's to apply over a `ReadOnly`.
     pub view: Json,
+    /// The version a write stamps: the chain's current version.
     pub version: u32,
 }
 
+fn empty() -> Json {
+    Json::Obj(Obj::new())
+}
+
+/// Opens the store file at `path`, deciding its fate as described in the module documentation.
+/// `chain` is the chain key (`store/config`, `settings/global`); `now` stamps any side file.
 pub fn open_file(
-    _path: &Path,
-    _flavour: Flavour,
-    _kind: StoreKind,
-    _chain: &str,
-    _chains: &Chains,
-    _now: SystemTime,
+    path: &Path,
+    flavour: Flavour,
+    kind: StoreKind,
+    chain: &str,
+    chains: &Chains,
+    now: SystemTime,
 ) -> Opened {
-    Opened {
-        outcome: OpenOutcome::Missing,
-        view: Json::Obj(Obj::new()),
-        version: 0,
+    let current = chains.current_version_of(chain);
+    let opened = |outcome: OpenOutcome, view: Json| Opened {
+        outcome,
+        view,
+        version: current,
+    };
+    let failed = |detail: String, view: Json| {
+        opened(
+            OpenOutcome::ReadOnly {
+                reason: ReadOnlyReason::Failed,
+                detail,
+            },
+            view,
+        )
+    };
+
+    let bytes = match fs::read(path) {
+        Ok(b) => b,
+        Err(e) if e.kind() == io::ErrorKind::NotFound => {
+            return opened(OpenOutcome::Missing, empty())
+        }
+        Err(e) => return failed(format!("read: {}", e.kind()), empty()),
+    };
+
+    let doc = match parse(&bytes) {
+        Ok(d @ Json::Obj(_)) => d,
+        _ => {
+            return match write_corrupt_copy(path, &bytes, now) {
+                Ok(copy) if kind == StoreKind::Cache => {
+                    opened(OpenOutcome::StartEmpty { copy }, empty())
+                }
+                Ok(copy) => failed(
+                    format!(
+                        "not a readable store file; kept as is, copy at {}",
+                        copy.file_name()
+                            .map(|n| n.to_string_lossy())
+                            .unwrap_or_default()
+                    ),
+                    empty(),
+                ),
+                Err(e) => failed(
+                    format!(
+                        "not a readable store file and its copy could not be written: {}",
+                        e.kind()
+                    ),
+                    empty(),
+                ),
+            };
+        }
+    };
+
+    let file_version = match flavour {
+        Flavour::Store => store_version(&doc),
+        Flavour::Settings => settings_version(&doc),
+    };
+
+    if file_version > current {
+        let view = if kind == StoreKind::Cache {
+            empty()
+        } else {
+            doc
+        };
+        return opened(
+            OpenOutcome::ReadOnly {
+                reason: ReadOnlyReason::Newer,
+                detail: format!("file v{file_version} is newer than this build (v{current})"),
+            },
+            view,
+        );
     }
+    if file_version == current {
+        return opened(OpenOutcome::Ok, doc);
+    }
+
+    let steps = chains.pending(chain, file_version);
+    if steps.iter().all(|s| s.identity) {
+        return opened(OpenOutcome::Adopted, doc);
+    }
+    let step_failed =
+        |what: String, view: Json| failed(format!("v{file_version}->v{current}: {what}"), view);
+
+    if kind == StoreKind::Cache {
+        return match fs::remove_file(path) {
+            Ok(()) => opened(OpenOutcome::CacheDiscarded, empty()),
+            Err(e) => step_failed(format!("remove: {}", e.kind()), doc),
+        };
+    }
+
+    let backup = match write_pre_migration_backup(path, file_version, &bytes, now) {
+        Ok(p) => p,
+        Err(e) => return step_failed(format!("backup: {}", e.kind()), doc),
+    };
+    let mut result = doc.clone();
+    for step in &steps {
+        if let Err(msg) = (step.run)(&mut result) {
+            return step_failed(msg, doc);
+        }
+        if !matches!(result, Json::Obj(_)) {
+            return step_failed(
+                format!("migration {} did not return an object", step.id),
+                doc,
+            );
+        }
+    }
+    let rewritten = match flavour {
+        Flavour::Store => stamp_for_write(&result, current),
+        Flavour::Settings => {
+            set_settings_version(&mut result, current);
+            result
+        }
+    };
+    // TS wrote every migration with the tab layout, settings documents included.
+    if let Err(e) = write_atomic(path, &to_store_bytes(&rewritten), Durability::Synced) {
+        return step_failed(format!("write: {}", e.kind()), doc);
+    }
+    opened(
+        OpenOutcome::Migrated {
+            from: file_version,
+            to: current,
+            backup: Some(backup),
+        },
+        rewritten,
+    )
 }
 
 #[cfg(test)]
