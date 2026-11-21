@@ -1,7 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useContext, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { hasCapability } from 'common/storeCapabilities'
 import type { GameInfo } from 'common/types'
+import useSetting from 'frontend/hooks/useSetting'
+import GameContext from '../../../GameContext'
 import { toggleShortcuts } from '../../../GameSubMenu/shortcutsToggle'
+import { cloudSavesPathMissing } from '../../actions/cloudSync'
 import { SwitchRow } from './SwitchRow'
 
 interface Props {
@@ -11,8 +15,8 @@ interface Props {
 
 /**
  * Phase 100 (D-01): the "Library & integration" group of the Install tab.
- * Plan 01 carries only the shortcuts switch; later plans add Runs for me and
- * Show in Steam here. The group renders only when a row applies.
+ * Plan 01 carries the shortcuts switch and plan 05 adds Auto-sync saves; later
+ * plans add Runs for me and Show in Steam here. The group renders only when a row applies.
  *
  * The switch flips from the backend's answer alone (`toggleShortcuts`), its
  * pending state pulses inside the row, and a failure shows fixed text with a
@@ -22,6 +26,11 @@ const IntegrationRows = ({ gameInfo, platform }: Props) => {
   const { t } = useTranslation('gamelib')
   const { app_name: appName, runner } = gameInfo
   const isInstalled = Boolean(gameInfo.is_installed)
+  const { is } = useContext(GameContext)
+
+  const [autoSyncSaves, setAutoSyncSaves] = useSetting('autoSyncSaves', false)
+  const [savesPath] = useSetting('savesPath', '')
+  const [gogSaves] = useSetting('gogSaves', [])
 
   const [hasShortcuts, setHasShortcuts] = useState(false)
   const [shortcutsBusy, setShortcutsBusy] = useState(false)
@@ -71,6 +80,17 @@ const IntegrationRows = ({ gameInfo, platform }: Props) => {
             'Desktop & app menu shortcuts'
           )
 
+  // D-03: Auto-sync is its own switch, not part of the Cloud saves row.
+  const showAutoSync =
+    hasCapability(runner, 'supportsCloudSaves') &&
+    Boolean(gameInfo.cloud_save_enabled) &&
+    !is.linuxNative
+  const autoSyncNeedsFolder = cloudSavesPathMissing({
+    runner,
+    savesPath,
+    gogSaves
+  })
+
   const busyLabel = hasShortcuts
     ? t('gamepage.installTab.switch.removing', 'Removing…')
     : t('gamepage.installTab.switch.adding', 'Adding…')
@@ -80,6 +100,27 @@ const IntegrationRows = ({ gameInfo, platform }: Props) => {
       <h3 className="installGroup__title">
         {t('gamepage.installTab.libraryGroup', 'Library & integration')}
       </h3>
+      {showAutoSync && (
+        <SwitchRow
+          id="installTabAutoSync"
+          label={t('gamepage.installTab.autoSync.label', 'Auto-sync saves')}
+          description={t(
+            'gamepage.installTab.autoSync.description',
+            'Downloads your saves before you play and uploads them when you quit.'
+          )}
+          checked={autoSyncSaves}
+          disabled={autoSyncNeedsFolder}
+          disabledReason={
+            autoSyncNeedsFolder
+              ? t(
+                  'gamepage.installTab.autoSync.needsFolder',
+                  'Set a saves folder in ⚙ → Cloud Saves Sync first.'
+                )
+              : undefined
+          }
+          onToggle={() => setAutoSyncSaves(!autoSyncSaves)}
+        />
+      )}
       <SwitchRow
         id="installTabShortcuts"
         label={shortcutsLabel}

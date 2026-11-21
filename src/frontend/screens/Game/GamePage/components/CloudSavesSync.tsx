@@ -1,155 +1,156 @@
-import useUiState from 'frontend/state/uiState'
 import { useContext, useState } from 'react'
-import { hasCapability, isStore } from 'common/storeCapabilities'
 import { useTranslation } from 'react-i18next'
-import GameContext from '../../GameContext'
-import { CloudOff, CloudQueue } from '@mui/icons-material'
-import { GameInfo, SyncType } from 'common/types'
-import { GOGCloudSavesLocation } from 'common/types/gog'
+import { Menu, MenuItem } from '@mui/material'
+import { hasCapability, isStore } from 'common/storeCapabilities'
+import type { GameInfo, SyncType } from 'common/types'
 import InfoIcon from 'frontend/components/UI/InfoIcon'
 import useSetting from 'frontend/hooks/useSetting'
 import { syncSaves } from 'frontend/helpers'
-import { Menu, MenuItem, Divider } from '@mui/material'
-import { ToggleSwitch } from 'frontend/components/UI'
+import useUiState from 'frontend/state/uiState'
+import GameContext from '../../GameContext'
+import {
+  cloudSavesPathMissing,
+  cloudSavesValue,
+  executeCloudSync,
+  needsForceConfirm
+} from '../actions/cloudSync'
+import type {
+  InstallActionGate,
+  InstallActionId
+} from '../actions/installActionGates'
+import { useRowAction } from '../actions/rowAction'
+import { FactAction, FactRow } from './InstallTab/FactRow'
+import { gateReasonText } from './InstallTab/gateReasonText'
 
 interface Props {
   gameInfo: GameInfo
+  gates: Record<InstallActionId, InstallActionGate>
 }
 
-const CloudSavesSync = ({ gameInfo }: Props) => {
-  const { t } = useTranslation('gamepage')
+/**
+ * Phase 100 (D-03, D-21): the Cloud saves fact. Its value reads the state that
+ * exists today (Syncing…, Auto-sync on, Manual or Unsupported), [Sync now ▾]
+ * opens the four sync commands on click only, and [Open saves folder] opens the
+ * folder. Force download and force upload keep their overwrite confirmation
+ * (T-100-14). A sync the renderer sees reject shows fixed text under the row
+ * with Retry instead of an error dialog (D-12, D-18); the raw error reaches
+ * only the log.
+ */
+const CloudSavesSync = ({ gameInfo, gates }: Props) => {
+  const { t } = useTranslation('gamelib')
   const { t: tCommon } = useTranslation()
-  const { t: tGamelib } = useTranslation('gamelib')
+  const { t: tGamepage } = useTranslation('gamepage')
   const { gameSettings, is } = useContext(GameContext)
   const showDialogModal = useUiState((s) => s.showDialogModal)
+  const syncRow = useRowAction('syncSaves', gameInfo.app_name)
 
-  const [autoSyncSaves, setAutoSyncSaves] = useSetting('autoSyncSaves', false)
+  const [autoSyncSaves] = useSetting('autoSyncSaves', false)
   const [savesPath] = useSetting('savesPath', '')
   const [gogSaves] = useSetting('gogSaves', [])
-  const [enableQuickSavesMenu] = useSetting('enableQuickSavesMenu', false)
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
-  const [isSyncing, setIsSyncing] = useState(false)
-  const open = Boolean(anchorEl)
+  const [lastSyncType, setLastSyncType] = useState<SyncType | null>(null)
 
-  if (!gameSettings) {
-    return null
+  if (!gameSettings) return null
+  if (!gameInfo.is_installed) return null
+  if (!hasCapability(gameInfo.runner, 'hasStoreCatalog')) return null
+  if (!gameInfo.cloud_save_enabled) return null
+
+  const { runner } = gameInfo
+  const label = t('gamelib:gamepage.installTab.cloudSaves.label', 'Cloud saves')
+  const supported = !is.linuxNative
+
+  if (!supported) {
+    return (
+      <FactRow label={label} className="fact--withHelp">
+        {tGamepage('cloud_save_unsupported', 'Unsupported')}
+        <InfoIcon
+          text={tGamepage(
+            'help.cloud_save_unsupported',
+            'This game does not support cloud saves. This information is provided by the game developers. Some games do implement their own cloud save system'
+          )}
+        />
+      </FactRow>
+    )
   }
 
-  if (!gameInfo.is_installed) {
-    return null
+  const isSyncing = syncRow.phase === 'busy' || is.syncing
+  const value = cloudSavesValue({
+    supported,
+    isSyncing,
+    autoSync: autoSyncSaves
+  })
+  const valueText = {
+    unsupported: tGamepage('cloud_save_unsupported', 'Unsupported'),
+    syncing: t('gamelib:gamepage.installTab.cloudSaves.syncing', 'Syncing…'),
+    auto: t('gamelib:gamepage.installTab.cloudSaves.auto', 'Auto-sync on'),
+    manual: t('gamelib:gamepage.installTab.cloudSaves.manual', 'Manual')
+  }[value]
+
+  const pathMissing = cloudSavesPathMissing({
+    runner,
+    savesPath,
+    gogSaves
+  })
+
+  const reasonFor = (gate: InstallActionGate) =>
+    gate.reason ? gateReasonText(gate.reason, t) : undefined
+
+  const closeMenu = () => setAnchorEl(null)
+
+  const runSync = (syncType: SyncType) => {
+    setLastSyncType(syncType)
+    return syncRow.run(() =>
+      executeCloudSync({
+        appName: gameInfo.app_name,
+        runner,
+        syncType,
+        savesPath,
+        gogSaves,
+        syncSaves
+      })
+    )
   }
 
-  if (!hasCapability(gameInfo.runner, 'hasStoreCatalog')) {
-    return null
-  }
-
-  if (!gameInfo.cloud_save_enabled) {
-    return null
-  }
-
-  const cloud_save_enabled = gameInfo.cloud_save_enabled || false
-  const showCloudSaveInfo = cloud_save_enabled && !is.linuxNative
-
-  const handleOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget)
-  }
-
-  const handleClose = () => {
-    setAnchorEl(null)
-  }
-
-  const handleSync = async (syncType: SyncType) => {
-    if (
-      (syncType as string) === '--force-download' ||
-      (syncType as string) === '--force-upload'
-    ) {
+  const handleSync = (syncType: SyncType) => {
+    closeMenu()
+    if (needsForceConfirm(syncType)) {
       showDialogModal({
-        title: t('box.warning.title', 'Warning'),
+        title: tGamepage('box.warning.title', 'Warning'),
         message:
           (syncType as string) === '--force-upload'
-            ? t(
+            ? tGamepage(
                 'box.sync.force_upload_warning',
                 'Cloud saves will be overwritten. Do you want to proceed?'
               )
-            : t(
+            : tGamepage(
                 'box.sync.force_download_warning',
                 'Local saves will be erased. Do you want to proceed?'
               ),
         buttons: [
           {
-            text: t('box.yes'),
-            onClick: () => executeSync(syncType)
+            text: tGamepage('box.yes'),
+            onClick: () => runSync(syncType)
           },
           {
-            text: t('box.no'),
+            text: tGamepage('box.no'),
             onClick: () => null // Close handled by dialog
           }
         ]
       })
-      handleClose()
       return
     }
-
-    await executeSync(syncType)
-  }
-
-  const executeSync = async (syncType: SyncType) => {
-    setIsSyncing(true)
-
-    try {
-      if (isStore(gameInfo, 'gog')) {
-        let locations = gogSaves
-        if (!locations.length) {
-          locations = (await window.api.getDefaultSavePath(
-            gameInfo.app_name,
-            'gog',
-            []
-          )) as GOGCloudSavesLocation[]
-        }
-
-        await window.api
-          .syncGOGSaves(locations, gameInfo.app_name, syncType)
-          .then((stderr) => {
-            window.api.logError(stderr)
-          })
-      } else {
-        let path = savesPath
-        if (!path) {
-          path = (await window.api.getDefaultSavePath(
-            gameInfo.app_name,
-            'legendary',
-            []
-          )) as string
-        }
-
-        await syncSaves(path, gameInfo.app_name, gameInfo.runner, syncType)
-      }
-    } catch (error) {
-      showDialogModal({
-        showDialog: true,
-        type: 'ERROR',
-        title: tCommon('box.error.title', 'Error'),
-        message: `${tGamelib(
-          'gamepage.syncSaves.failed',
-          'Syncing saves failed.'
-        )}\n${String(error)}`
-      })
-    } finally {
-      setIsSyncing(false)
-      handleClose()
-    }
+    return runSync(syncType)
   }
 
   const handleOpenFolder = () => {
-    if (isStore(gameInfo, 'gog')) {
+    if (isStore(runner, 'gog')) {
       gogSaves.forEach((save) => {
         window.api.openFolder(save.location)
       })
     } else {
       window.api.openFolder(savesPath)
     }
-    handleClose()
   }
 
   const syncCommands = [
@@ -162,103 +163,92 @@ const CloudSavesSync = ({ gameInfo }: Props) => {
     { name: tCommon('setting.manualsync.forceupload'), value: '--force-upload' }
   ]
 
-  const disableItem =
-    (isStore(gameInfo, 'legendary') && savesPath === '') ||
-    (isStore(gameInfo, 'gog') && !gogSaves.some((save) => save.location))
-
   return (
     <>
-      {showCloudSaveInfo && (
-        <>
-          <p
-            style={{
-              color: autoSyncSaves ? '#07C5EF' : '',
-              margin: 0,
-              cursor: enableQuickSavesMenu ? 'pointer' : 'default',
-              textDecoration: 'underline'
-            }}
-            className="iconWithText"
-            onMouseEnter={handleOpen}
-            aria-owns={open ? 'mouse-over-popover' : undefined}
-            aria-haspopup="true"
+      <FactRow
+        label={label}
+        failure={
+          syncRow.phase === 'failed'
+            ? {
+                message: t(
+                  'gamelib:gamepage.installTab.cloudSaves.failed',
+                  'Syncing saves failed. Details are in the log.'
+                ),
+                retryLabel: t('gamelib:gamepage.installTab.retry', 'Retry'),
+                onRetry: () => {
+                  if (lastSyncType) handleSync(lastSyncType)
+                }
+              }
+            : undefined
+        }
+        actions={
+          <>
+            {gates.syncNow.show && (
+              <FactAction
+                label={t(
+                  'gamelib:gamepage.installTab.cloudSaves.syncNow',
+                  'Sync now ▾'
+                )}
+                busy={isSyncing}
+                busyLabel={t(
+                  'gamelib:gamepage.installTab.cloudSaves.syncing',
+                  'Syncing…'
+                )}
+                disabled={gates.syncNow.disabled || pathMissing}
+                disabledReason={
+                  reasonFor(gates.syncNow) ??
+                  (pathMissing
+                    ? t(
+                        'gamelib:gamepage.installTab.cloudSaves.needsFolder',
+                        'Set a saves folder in ⚙ → Cloud Saves Sync first.'
+                      )
+                    : undefined)
+                }
+                onClick={(event) => setAnchorEl(event.currentTarget)}
+              />
+            )}
+            {gates.openSaves.show && (
+              <FactAction
+                label={t(
+                  'gamelib:gamepage.installTab.cloudSaves.openFolder',
+                  'Open saves folder'
+                )}
+                disabled={gates.openSaves.disabled || pathMissing}
+                disabledReason={
+                  pathMissing
+                    ? t(
+                        'gamelib:gamepage.installTab.cloudSaves.needsFolder',
+                        'Set a saves folder in ⚙ → Cloud Saves Sync first.'
+                      )
+                    : reasonFor(gates.openSaves)
+                }
+                onClick={handleOpenFolder}
+              />
+            )}
+          </>
+        }
+      >
+        {valueText}
+      </FactRow>
+      <Menu
+        id="cloudSavesSyncMenu"
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={closeMenu}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+      >
+        {syncCommands.map((command) => (
+          <MenuItem
+            key={command.value}
+            divider={command.value === '--skip-download'}
+            onClick={() => handleSync(command.value as SyncType)}
+            disabled={pathMissing || isSyncing}
           >
-            <CloudQueue />
-            {isSyncing ? (
-              <b>{`${tCommon('setting.manualsync.syncing')}... ${tCommon(
-                'please-wait'
-              )}`}</b>
-            ) : (
-              <>
-                <b>{t('info.syncsaves')}:</b>
-                {autoSyncSaves ? t('enabled') : t('disabled')}
-              </>
-            )}
-          </p>
-
-          {enableQuickSavesMenu && (
-            <Menu
-              id="mouse-over-popover"
-              anchorEl={anchorEl}
-              open={open}
-              onClose={handleClose}
-              MenuListProps={{
-                onMouseLeave: handleClose,
-                style: { pointerEvents: 'auto' }
-              }}
-              anchorOrigin={{
-                vertical: 'bottom',
-                horizontal: 'left'
-              }}
-              transformOrigin={{
-                vertical: 'top',
-                horizontal: 'left'
-              }}
-            >
-              {syncCommands.map((command) => (
-                <MenuItem
-                  key={command.value}
-                  onClick={() => handleSync(command.value as SyncType)}
-                  disabled={disableItem || isSyncing}
-                >
-                  {command.name}
-                </MenuItem>
-              ))}
-              <Divider />
-              <MenuItem onClick={handleOpenFolder} disabled={disableItem}>
-                {t('open-saves-folder', 'Open Saves Folder')}
-              </MenuItem>
-              <MenuItem style={{ paddingLeft: '4px' }}>
-                <ToggleSwitch
-                  title={tCommon('setting.autosync')}
-                  htmlId="autosync"
-                  value={autoSyncSaves}
-                  handleChange={() => setAutoSyncSaves(!autoSyncSaves)}
-                  disabled={disableItem || isSyncing}
-                />
-              </MenuItem>
-            </Menu>
-          )}
-        </>
-      )}
-      {!showCloudSaveInfo && (
-        <p
-          style={{
-            color: '#F45460'
-          }}
-          className="iconWithText"
-        >
-          <CloudOff />
-          <b>{t('info.syncsaves')}</b>
-          {': '}
-          {t('cloud_save_unsupported', 'Unsupported')}
-          <InfoIcon
-            text={t(
-              'help.cloud_save_unsupported',
-              'This game does not support cloud saves. This information is provided by the game developers. Some games do implement their own cloud save system'
-            )}
-          />
-        </p>
-      )}
+            {command.name}
+          </MenuItem>
+        ))}
+      </Menu>
     </>
   )
 }

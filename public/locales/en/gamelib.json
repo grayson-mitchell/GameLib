@@ -248,6 +248,11 @@
         "extraInfoStaleBody": "This result was cached before load outcomes were recorded, so it may be out of date. Refresh to check.",
         "hiddenAchievement": "Hidden Achievement",
         "installTab": {
+            "autoSync": {
+                "description": "Downloads your saves before you play and uploads them when you quit.",
+                "label": "Auto-sync saves",
+                "needsFolder": "Set a saves folder in ⚙ → Cloud Saves Sync first."
+            },
             "available": "· {{version}} available",
             "availableNoVersion": "· update available",
             "busy": {
@@ -256,6 +261,16 @@
                 "settingFolder": "Setting folder…",
                 "updating": "Updating…",
                 "verifying": "Verifying…"
+            },
+            "cloudSaves": {
+                "auto": "Auto-sync on",
+                "failed": "Syncing saves failed. Details are in the log.",
+                "label": "Cloud saves",
+                "manual": "Manual",
+                "needsFolder": "Set a saves folder in ⚙ → Cloud Saves Sync first.",
+                "openFolder": "Open saves folder",
+                "syncing": "Syncing…",
+                "syncNow": "Sync now ▾"
             },
             "failure": {
                 "move": "Move failed. Details are in the log.",

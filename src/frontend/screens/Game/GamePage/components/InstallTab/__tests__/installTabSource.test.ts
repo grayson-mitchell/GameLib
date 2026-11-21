@@ -121,4 +121,40 @@ describe('Install tab source gates', () => {
     expect(code).toContain('handleUpdate={handleUpdate}')
     expect(code).toContain('hasUpdate={hasUpdate}')
   })
+
+  it('CloudSavesSync opens its menu on click only, with no hover handler, hex colour or quick-menu setting (D-03, D-21)', () => {
+    const code = read(COMPONENTS_DIR, 'CloudSavesSync.tsx')
+    expect(code).not.toContain('onMouseEnter')
+    expect(code).not.toContain('onMouseLeave')
+    expect(code).not.toContain('enableQuickSavesMenu')
+    expect(code).not.toMatch(/#[0-9a-fA-F]{3,6}\b/)
+    expect(code).toContain('setAnchorEl(event.currentTarget)')
+  })
+
+  it('CloudSavesSync syncs through executeCloudSync and confirms only the forced commands (T-100-14)', () => {
+    const code = read(COMPONENTS_DIR, 'CloudSavesSync.tsx')
+    expect(code).toContain('executeCloudSync({')
+    expect(code).toContain("useRowAction('syncSaves'")
+    expect(code.match(/showDialogModal\(/g)).toHaveLength(1)
+    expect(code).toMatch(
+      /if \(needsForceConfirm\(syncType\)\) \{\s*showDialogModal\(/
+    )
+    expect(code).toContain('gates.syncNow')
+    expect(code).toContain('gates.openSaves')
+  })
+
+  it('IntegrationRows drives the Auto-sync saves switch from useSetting (D-03)', () => {
+    const code = read(TAB_DIR, 'IntegrationRows.tsx')
+    expect(code).toContain("useSetting('autoSyncSaves'")
+    expect(code).toContain('id="installTabAutoSync"')
+  })
+
+  it('InstallTab renders CloudSavesSync inside installFacts after VersionRow', () => {
+    const code = read(TAB_DIR, 'index.tsx')
+    const version = code.indexOf('<VersionRow')
+    const cloud = code.indexOf('<CloudSavesSync')
+    const legacy = code.indexOf('className="legacyRows"')
+    expect(cloud).toBeGreaterThan(version)
+    expect(legacy).toBeGreaterThan(cloud)
+  })
 })

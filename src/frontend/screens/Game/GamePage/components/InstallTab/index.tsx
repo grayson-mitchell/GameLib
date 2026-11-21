@@ -72,6 +72,7 @@ const InstallTab = ({ gameInfo, platform, handleUpdate, hasUpdate }: Props) => {
           handleUpdate={handleUpdate}
           hasUpdate={hasUpdate}
         />
+        <CloudSavesSync gameInfo={gameInfo} gates={gates} />
       </div>
       <div className="legacyRows">
         <div>
@@ -80,7 +81,6 @@ const InstallTab = ({ gameInfo, platform, handleUpdate, hasUpdate }: Props) => {
           <RunsForMeToggle gameInfo={gameInfo} />
           <DownloadSizeInfo gameInfo={gameInfo} />
           <InstalledInfo gameInfo={gameInfo} />
-          <CloudSavesSync gameInfo={gameInfo} />
           <HumbleOriginInfo gameInfo={gameInfo} />
           <NativePortInfo gameInfo={gameInfo} platform={platform} />
         </div>

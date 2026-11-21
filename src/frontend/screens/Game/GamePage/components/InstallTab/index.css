@@ -228,3 +228,9 @@
 .fact__value--warning {
   color: var(--status-warning);
 }
+
+/* A fact whose value carries a help icon must not clip the icon's popover. */
+.fact--withHelp .fact__value {
+  overflow: visible;
+  white-space: normal;
+}
