@@ -24,6 +24,8 @@ import {
 } from './bridge/drm/steamclientLayerMode'
 import { resolveBridgeLaunchExe } from './bridge/launchTarget'
 import { ensureBridgeHelperReady } from './bridge/helperProcess'
+import { createOtherSessionGuard } from './bridge/otherSessionPlaying'
+import { createSteamInstallAppRun } from './steamInstallApp'
 import { createBridgeWaitNotice } from './bridgeWaitNotice'
 import { writeBridgeConfig } from './bridge/bridgeConfig'
 import {
@@ -59,6 +61,37 @@ import { prepareTcpOverlay } from './gameLaunchOverlay'
  */
 export interface BridgeLaunchOptions {
   withoutSteam?: { args: string[]; onNeedsSteam?: () => void }
+}
+
+/**
+ * Debug bridged-launch-kicks-other-session: one guard per launch (it remembers a signed-out
+ * reading, see createOtherSessionGuard). It asks the helper's `--steam-playing-session`, which
+ * registers nothing, so asking is always safe.
+ */
+function createLaunchOtherSessionGuard(steamGame: SteamGame) {
+  return createOtherSessionGuard({
+    appId: steamGame.appId,
+    paths: steamGame.deps.paths,
+    run: createSteamInstallAppRun({ runner: steamGame.deps.runner })
+  })
+}
+
+/**
+ * The DRM-mode launch has no helper spawn to guard: its game process registers "playing" through
+ * lsteamclient. Same rule, same message, asked once right before the wine launch. True means the
+ * launch must not go ahead; the dialog is already sent.
+ */
+async function otherSessionBlocksDrmLaunch(
+  steamGame: SteamGame
+): Promise<boolean> {
+  const verdict = await createLaunchOtherSessionGuard(steamGame)()
+  if (verdict.kind !== 'playing') return false
+  steamGame.deps.sendFrontendMessage('steamBridgeSetupRequired', {
+    appName: steamGame.appId,
+    reason: 'other-session-playing',
+    fallbackAvailable: false
+  })
+  return true
 }
 
 export async function launchBridgeGameBody(
@@ -334,6 +367,8 @@ export async function launchBridgeGameBody(
     // a throw propagates untouched.
     let launched = false
     try {
+      // The finally below sends the terminal 'done' for this early exit too.
+      if (await otherSessionBlocksDrmLaunch(steamGame)) return false
       launched = await launchDrmModeGame(
         steamGame,
         exePath,
@@ -541,7 +576,10 @@ export async function launchBridgeGameBody(
           (await readSteamWantsOfflineMode(
             steamGame.deps,
             steamGame.deps.paths.userHome
-          )) !== false
+          )) !== false,
+        // Before every real-AppID helper spawn: its InitFlat registers "playing" past Mac Steam's
+        // own prompt, and with another session playing the CM logs one session off.
+        checkOtherSessionPlaying: createLaunchOtherSessionGuard(steamGame)
       }
     )
   } finally {
@@ -561,9 +599,12 @@ export async function launchBridgeGameBody(
     // do not poison the session (the next Play retries the bridge) and do
     // not offer the bottled-Steam fallback. The setup message itself was
     // already sent by ensureBridgeHelperReady for these statuses.
+    // 'other-session-playing' is the same kind of cause (about the account, not
+    // the bridge); nothing was spawned, and the message below is its only dialog.
     const steamStateCause =
       helperReady.status === 'steam-not-running' ||
-      helperReady.status === 'steam-not-signed-in'
+      helperReady.status === 'steam-not-signed-in' ||
+      helperReady.status === 'other-session-playing'
     if (!steamStateCause) {
       steamGame.deps.steamSession.gameSession.markBridgeFailedThisSession(
         steamGame.appId

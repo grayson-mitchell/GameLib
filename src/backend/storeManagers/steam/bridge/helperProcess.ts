@@ -80,6 +80,7 @@ import { NUMERIC_APP_ID } from '../gameConstants'
 import type { BridgeHelperEntry } from './helperRegistry'
 import { classifyInitFlatError, ensureHelperSpawned } from './helperSpawn'
 import type { HelperSpawnDeps, InitFlatErrorCause } from './helperSpawn'
+import type { OtherSessionVerdict } from './otherSessionPlaying'
 
 // Same 127.0.0.1-only loopback host every native helper (bridge_helper.c)
 // binds -- T-51-01 (carries forward T-24-01), never a routable interface.
@@ -134,6 +135,9 @@ type BridgeHelperReadyStatus =
   | 'fallback-identity'
   | 'steam-not-running'
   | 'steam-not-signed-in'
+  // Debug bridged-launch-kicks-other-session: another session of the account is
+  // playing; nothing was registered with Steam.
+  | 'other-session-playing'
 
 interface EnsureBridgeHelperReadyResult {
   status: BridgeHelperReadyStatus
@@ -530,6 +534,11 @@ async function startSteamDefault(
  *    with exactly one `steamBridgeSetupRequired` (fallbackAvailable false).
  *    The 480 fallback is never tried for these causes -- Steam-level failures
  *    fail it identically.
+ *  - Debug bridged-launch-kicks-other-session: with `options.checkOtherSessionPlaying`, a
+ *    `playing` answer before any real-AppID spawn returns `{ status:
+ *    'other-session-playing', ready: false }` and spawns nothing (the helper's InitFlat would
+ *    register "playing" past Mac Steam's own prompt, and Steam's CM logs a session off). The
+ *    caller owns the message.
  */
 export async function ensureBridgeHelperReady(
   deps: HelperSpawnDeps & FrontendMessageDeps,
@@ -543,6 +552,16 @@ export async function ensureBridgeHelperReady(
      * false holds as signed out. Omitted: launches (the pre-round-3 rule).
      */
     steamOfflineByChoice?: () => Promise<boolean>
+    /**
+     * Debug bridged-launch-kicks-other-session: asked before EVERY real-AppID
+     * helper spawn (the first, and each respawn of the Steam-state hold),
+     * because that helper's InitFlat registers "playing <appId>" with Mac Steam
+     * and, while another session of the account is playing, Steam's CM logs a
+     * session off ("Logged In Elsewhere"). A `playing` answer spawns nothing and
+     * ends the call with status 'other-session-playing'. Any other answer
+     * launches as before; omitted: no check (the pre-fix behaviour).
+     */
+    checkOtherSessionPlaying?: () => Promise<OtherSessionVerdict>
   } = {}
 ): Promise<EnsureBridgeHelperReadyResult> {
   if (!NUMERIC_APP_ID.test(appId)) {
@@ -587,7 +606,28 @@ export async function ensureBridgeHelperReady(
     )
   }
 
+  // A full-AppID spawn registers "playing" with Steam the moment its InitFlat runs, so it is the
+  // one place the other-session check has to come first. A live entry is reused, not respawned
+  // (its InitFlat already ran), and the identity-only (480) fallback follows a full helper that
+  // was just checked, so neither asks again.
+  // `undefined` (not a resolved promise) when no check is due, so a call without one never awaits
+  // before its first spawn: that spawn is synchronous by design (see spawnHelper above), and the
+  // helperSpawn suite drives the child's stderr straight after the call.
+  const otherSessionCheck = (): Promise<boolean> | undefined => {
+    const check = options.checkOtherSessionPlaying
+    if (check === undefined || registry.helpers.has(appId)) return undefined
+    return check().then((verdict) => verdict.kind === 'playing')
+  }
+  const otherSessionPlayingResult = (): EnsureBridgeHelperReadyResult => ({
+    status: 'other-session-playing',
+    ready: false,
+    error:
+      'Another session of this Steam account is playing; starting a bridged game now would sign one session out'
+  })
+
   const reusingIdentityOnly = registry.helpers.get(appId)?.identityOnly === true
+  const firstCheck = otherSessionCheck()
+  if (firstCheck && (await firstCheck)) return otherSessionPlayingResult()
   let entry = await spawnHelper()
   let probe = await probeHelperReadiness(entry, options.steamOfflineByChoice)
   // A 480 helper left registered by an earlier call answers for that call's
@@ -601,6 +641,8 @@ export async function ensureBridgeHelperReady(
       LogPrefix.Steam
     )
     registry.stop(appId)
+    const replaceCheck = otherSessionCheck()
+    if (replaceCheck && (await replaceCheck)) return otherSessionPlayingResult()
     entry = await spawnHelper()
     probe = await probeHelperReadiness(entry, options.steamOfflineByChoice)
   }
@@ -643,6 +685,10 @@ export async function ensureBridgeHelperReady(
             : 'Steam did not finish signing in within the wait budget'
       }
     }
+    // The hold respawns a full-AppID helper each interval: a Steam that signed in during the wait
+    // may be signed in beside a PC that is playing, so ask again before this one registers.
+    const respawnCheck = otherSessionCheck()
+    if (respawnCheck && (await respawnCheck)) return otherSessionPlayingResult()
     entry = await spawnHelper()
     probe = await probeHelperReadiness(entry, options.steamOfflineByChoice)
   }

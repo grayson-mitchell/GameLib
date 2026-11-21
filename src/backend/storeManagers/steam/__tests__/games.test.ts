@@ -895,6 +895,19 @@ jest.mock('../bridge/steamOfflineMode', () => ({
 jest.mock('../bridge/helperProcess', () => ({
   ensureBridgeHelperReady: jest.fn()
 }))
+// Debug bridged-launch-kicks-other-session: the guard's verdict is scripted per test (default:
+// nobody else is playing). The real reader and its helper runs are covered in
+// bridge/__tests__/otherSessionPlaying.test.ts.
+// A plain factory and a `?? clear` fallback: this file's restoreAllMocks calls reset jest.fn
+// implementations, and a lost default must read as "nobody else is playing", never a TypeError.
+const mockOtherSessionVerdict = jest.fn<
+  Promise<{ kind: string; otherAppId?: number | null } | undefined>,
+  []
+>()
+jest.mock('../bridge/otherSessionPlaying', () => ({
+  createOtherSessionGuard: () => async () =>
+    (await mockOtherSessionVerdict()) ?? { kind: 'clear' }
+}))
 
 // ── bridge/bridgeConfig.ts mock (Phase 51 Plan 01, D-51-01) — the
 // gamelib_bridge.cfg port handoff launchBridgeGame() writes right before
@@ -2717,7 +2730,11 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       )
     })
 
-    it.each(['steam-not-running', 'steam-not-signed-in'] as const)(
+    it.each([
+      'steam-not-running',
+      'steam-not-signed-in',
+      'other-session-playing'
+    ] as const)(
       'quick 261027-aue: helper status %s -> no launch, session NOT poisoned, setup message without the bottled fallback',
       async (status) => {
         ;(placeShimForGame as jest.Mock).mockResolvedValue({
@@ -2759,6 +2776,24 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
         expect(runWineCommand).toHaveBeenCalled()
       }
     )
+
+    it('debug bridged-launch-kicks-other-session: launch hands ensureBridgeHelperReady the guard, which answers from the other-session check', async () => {
+      await new SteamGame(MISS_APP_ID, steamTestDeps).launch({} as any)
+
+      const options = (ensureBridgeHelperReady as jest.Mock).mock
+        .calls[0][2] as {
+        checkOtherSessionPlaying: () => Promise<{ kind: string }>
+      }
+      expect(options.checkOtherSessionPlaying).toEqual(expect.any(Function))
+      mockOtherSessionVerdict.mockResolvedValueOnce({
+        kind: 'playing',
+        otherAppId: 440
+      })
+      await expect(options.checkOtherSessionPlaying()).resolves.toEqual({
+        kind: 'playing',
+        otherAppId: 440
+      })
+    })
 
     describe('debug bridged-launch-steam-signed-out: the in-app wait notice', () => {
       const waitNotices = () =>
@@ -14124,6 +14159,62 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         expect(
           infoLines().filter((l) => l.startsWith(drmRelogPrefix(id)))
         ).toHaveLength(1)
+      })
+
+      it('debug bridged-launch-kicks-other-session: another session playing -> no wine launch, dialog without the bottled fallback, terminal done, session not poisoned', async () => {
+        const id = freshId()
+        const { sendGameStatusUpdate } = jest.requireMock('backend/utils')
+        ;(sendGameStatusUpdate as jest.Mock).mockClear()
+        sendFrontendMessage.mockClear()
+        useDrmOk(id)
+        mockOtherSessionVerdict.mockResolvedValueOnce({
+          kind: 'playing',
+          otherAppId: 440
+        })
+        const spy = jest.spyOn(gameLaunchModule, 'launchDrmModeGame')
+        try {
+          expect(
+            await new SteamGame(id, steamTestDeps).launch({} as never)
+          ).toBe(false)
+          expect(spy).not.toHaveBeenCalled()
+        } finally {
+          spy.mockRestore()
+        }
+        expect(runWineCommand).not.toHaveBeenCalled()
+        expect(sendFrontendMessage).toHaveBeenCalledWith(
+          'steamBridgeSetupRequired',
+          {
+            appName: id,
+            reason: 'other-session-playing',
+            fallbackAvailable: false
+          }
+        )
+        expect(sendGameStatusUpdate).toHaveBeenCalledWith(expect.anything(), {
+          appName: id,
+          runner: 'steam',
+          status: 'done'
+        })
+      })
+
+      it('debug bridged-launch-kicks-other-session: nobody else playing -> the DRM launch goes ahead untouched', async () => {
+        const id = freshId()
+        sendFrontendMessage.mockClear()
+        useDrmOk(id)
+        const spy = jest
+          .spyOn(gameLaunchModule, 'launchDrmModeGame')
+          .mockResolvedValue(true)
+        try {
+          expect(
+            await new SteamGame(id, steamTestDeps).launch({} as never)
+          ).toBe(true)
+          expect(spy).toHaveBeenCalledTimes(1)
+        } finally {
+          spy.mockRestore()
+        }
+        expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+          'steamBridgeSetupRequired',
+          expect.anything()
+        )
       })
 
       it('a missing Mac Steam steamclient.dylib is a steam-not-running notice', async () => {

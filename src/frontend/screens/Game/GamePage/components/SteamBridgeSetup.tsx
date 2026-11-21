@@ -136,10 +136,25 @@ const SteamBridgeSetup = () => {
       className="steamBridgeSetupDialog"
     >
       <DialogHeader onClose={handleCancel}>
-        {t('bridge.setup.title', 'Steam bridge unavailable')}
+        {reason === 'other-session-playing'
+          ? tGamelib(
+              'steam.bridge.setup.otherSessionPlayingTitle',
+              'Playing on another device'
+            )
+          : t('bridge.setup.title', 'Steam bridge unavailable')}
       </DialogHeader>
       <DialogContent>
-        {reason === 'steam-not-running' || reason === 'steam-not-signed-in' ? (
+        {reason === 'other-session-playing' ? (
+          // Debug bridged-launch-kicks-other-session: about the account, not the bridge. Nothing
+          // was started, so nothing was signed out; Mac Steam's own launch would ask the same.
+          <p>
+            {tGamelib(
+              'steam.bridge.setup.otherSessionPlaying',
+              'This Steam account is playing a game on another device. Starting this game here would sign one of the two devices out of Steam. Close the game on the other device, then press Play again.'
+            )}
+          </p>
+        ) : reason === 'steam-not-running' ||
+          reason === 'steam-not-signed-in' ? (
           // quick 261027-aue: a Steam-state failure, not a bridge failure --
           // the generic message below recommends bottled Steam, which is wrong.
           <p>
@@ -177,7 +192,7 @@ const SteamBridgeSetup = () => {
             )}
           </p>
         ) : null}
-        {reason ? (
+        {reason && reason !== 'other-session-playing' ? (
           <p className="steamBridgeSetupReason">
             {t('bridge.setup.reason', {
               defaultValue: 'Reason: {{reason}}',

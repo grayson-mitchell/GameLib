@@ -42,6 +42,7 @@ import {
   WHOAMI_ERR_REASON_NOT_LOGGED_ON
 } from '../protocol'
 import { ensureBridgeHelperReady } from '../helperProcess'
+import type { OtherSessionVerdict } from '../otherSessionPlaying'
 import {
   createBridgeHelperRegistry,
   DEFAULT_STEAM_WAIT_SCHEDULE,
@@ -1511,6 +1512,172 @@ describe('round 3: Steam holds the account but is not logged on (offline mode, o
 
     expect(result.status).toBe('ready')
     expect(mockedSpawn).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('bridged-launch-kicks-other-session: no real-AppID helper registers while another session plays', () => {
+  const playing = (): Promise<OtherSessionVerdict> =>
+    Promise.resolve({ kind: 'playing', otherAppId: 440 })
+  const clear = (): Promise<OtherSessionVerdict> =>
+    Promise.resolve({ kind: 'clear' })
+
+  beforeEach(() => {
+    fakeRunner.reset()
+    mockedSpawn.mockReset()
+    mockedSendFrontendMessage.mockClear()
+    mockedOpenExternal.mockClear()
+    registry = newRegistry({
+      steamWaitSchedule: { budgetMs: 5_000, intervalMs: 5 }
+    })
+  })
+
+  test('another session playing: nothing is spawned, status other-session-playing, no 480 fallback, the caller owns the message', async () => {
+    scriptWhoamiSpawns(['ok'])
+    const check = jest.fn(playing)
+
+    const result = await ensureBridgeHelperReady(helperDeps, APP_ID_A, {
+      checkOtherSessionPlaying: check
+    })
+
+    expect(result).toEqual({
+      status: 'other-session-playing',
+      ready: false,
+      error: expect.any(String)
+    })
+    expect(check).toHaveBeenCalledTimes(1)
+    expect(mockedSpawn).not.toHaveBeenCalled()
+    expect(registry.helpers.size).toBe(0)
+    expect(mockedSendFrontendMessage).not.toHaveBeenCalled()
+  })
+
+  test('nobody else playing: the helper spawns and the launch is ready, asked exactly once', async () => {
+    scriptWhoamiSpawns(['ok'])
+    const check = jest.fn(clear)
+
+    const result = await ensureBridgeHelperReady(helperDeps, APP_ID_A, {
+      checkOtherSessionPlaying: check
+    })
+
+    expect(result.status).toBe('ready')
+    expect(check).toHaveBeenCalledTimes(1)
+    expect(mockedSpawn).toHaveBeenCalledTimes(1)
+  })
+
+  test('an unknown answer (signed out, helper missing, off macOS) launches exactly as before', async () => {
+    scriptWhoamiSpawns(['ok'])
+    const check = jest.fn(
+      (): Promise<OtherSessionVerdict> =>
+        Promise.resolve({ kind: 'unknown', reason: 'helper-missing' })
+    )
+
+    const result = await ensureBridgeHelperReady(helperDeps, APP_ID_A, {
+      checkOtherSessionPlaying: check
+    })
+
+    expect(result.status).toBe('ready')
+    expect(mockedSpawn).toHaveBeenCalledTimes(1)
+  })
+
+  test('a caller with no check keeps the old behaviour', async () => {
+    scriptWhoamiSpawns(['ok'])
+
+    const result = await ensureBridgeHelperReady(helperDeps, APP_ID_A)
+
+    expect(result.status).toBe('ready')
+    expect(mockedSpawn).toHaveBeenCalledTimes(1)
+  })
+
+  test('a caller with no check still spawns synchronously, before the first await (helperSpawn drives the child straight after the call)', () => {
+    scriptWhoamiSpawns(['ok'])
+
+    const pending = ensureBridgeHelperReady(helperDeps, APP_ID_A)
+
+    expect(mockedSpawn).toHaveBeenCalledTimes(1)
+    return pending
+  })
+
+  test('a live helper is reused without asking: its InitFlat already ran, a respawn is the only thing that registers', async () => {
+    scriptWhoamiSpawns(['ok'])
+    const first = await ensureBridgeHelperReady(helperDeps, APP_ID_A, {
+      checkOtherSessionPlaying: clear
+    })
+    expect(first.status).toBe('ready')
+
+    const check = jest.fn(playing)
+    const second = await ensureBridgeHelperReady(helperDeps, APP_ID_A, {
+      checkOtherSessionPlaying: check
+    })
+
+    expect(second.status).toBe('ready')
+    expect(check).not.toHaveBeenCalled()
+    expect(mockedSpawn).toHaveBeenCalledTimes(1)
+  })
+
+  test('the Steam-state hold asks again before each respawn: a Steam that signs in beside a playing PC spawns nothing', async () => {
+    // Signed out on the first helper (the hold starts), then the answer flips to
+    // playing the moment Steam is back: the next fresh helper would have
+    // registered "playing" and been kicked, so it is never spawned.
+    scriptWhoamiSpawns(['signed-out', 'ok'])
+    const answers: Array<Promise<OtherSessionVerdict>> = [clear(), playing()]
+    const check = jest.fn(
+      () => answers.shift() ?? Promise.resolve<OtherSessionVerdict>(clear())
+    )
+    const onWaitingForSteam = jest.fn()
+
+    const result = await ensureBridgeHelperReady(helperDeps, APP_ID_A, {
+      checkOtherSessionPlaying: check,
+      onWaitingForSteam
+    })
+
+    expect(result.status).toBe('other-session-playing')
+    expect(result.ready).toBe(false)
+    expect(check).toHaveBeenCalledTimes(2)
+    // Only the first helper was ever spawned; the second spawn was refused.
+    expect(mockedSpawn).toHaveBeenCalledTimes(1)
+    expect(onWaitingForSteam).toHaveBeenCalledTimes(1)
+    expect(registry.helpers.size).toBe(0)
+  })
+
+  test('a leftover identity-only (480) helper that is no longer ready is replaced only if nobody else is playing', async () => {
+    // Leave an identity-only helper registered, as the 480 fallback does.
+    const stale = new FakeChildProcess()
+    mockedSpawn.mockImplementation(() => {
+      process.nextTick(() => emitListenLine(stale, 55900, APP_ID_A, 'ok'))
+      return stale
+    })
+    MockedSocket.mockImplementation(
+      () => new FakeSocket(healthOkFrame, whoamiOkFrame)
+    )
+    const seeded = await ensureBridgeHelperReady(helperDeps, APP_ID_A)
+    expect(seeded.status).toBe('ready')
+    // Re-register it as identity-only: the entry the earlier call kept.
+    const entry = registry.helpers.get(APP_ID_A)
+    if (!entry) throw new Error('seed helper missing')
+    entry.identityOnly = true
+    mockedSpawn.mockClear()
+
+    // Its WHOAMI now fails (Steam was signed out since), and someone else plays.
+    MockedSocket.mockImplementation(
+      () =>
+        new FakeSocket(
+          healthOkFrame,
+          encodeResponse(
+            PROBE_REQUEST_ID,
+            STATUS_ERR,
+            Buffer.from([WHOAMI_ERR_REASON_NOT_SIGNED_IN])
+          )
+        )
+    )
+    const check = jest.fn(playing)
+    const result = await ensureBridgeHelperReady(helperDeps, APP_ID_A, {
+      checkOtherSessionPlaying: check
+    })
+
+    expect(result.status).toBe('other-session-playing')
+    expect(check).toHaveBeenCalledTimes(1)
+    // The reused 480 helper was stopped; no replacement was spawned.
+    expect(mockedSpawn).not.toHaveBeenCalled()
+    expect(registry.helpers.size).toBe(0)
   })
 })
 
