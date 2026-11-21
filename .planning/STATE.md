@@ -1,14 +1,14 @@
 ---
 gsd_state_version: "1.0"
 milestone: v0.10
-current_phase: 83
-current_phase_name: Native seam, gamelib-core and process/shutdown contract
-status: executing
-stopped_at: Completed 83-10-PLAN.md
-last_updated: "2026-11-20T12:53:47.965Z"
+current_phase: 82
+current_phase_name: Guardrails, hygiene and shared safety primitives
+status: verifying
+stopped_at: Completed 82-20-PLAN.md
+last_updated: "2026-11-21T02:02:12.217Z"
 last_activity: 2026-11-21
-last_activity_desc: Phase 83 execution started
-state_head: b841140a71c714fa26bb86634d3c00c87ea92997
+last_activity_desc: Phase 82 execution started
+state_head: bb37b8e3f76ee38790f5100218b2c3e3bbd478cf
 progress:
   total_phases: 27
   completed_phases: 23
@@ -24,7 +24,7 @@ milestone_name: Foundations
 See: .planning/PROJECT.md (updated 2026-11-20)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 83 — Native seam, gamelib-core and process/shutdown contract
+**Current focus:** Phase 82 — Guardrails, hygiene and shared safety primitives
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -75,10 +75,10 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 
 ## Current Position
 
-Phase: 83 (Native seam, gamelib-core and process/shutdown contract) — EXECUTING
-Plan: 11 of 11
-Status: Ready to execute
-Last activity: 2026-11-21 - Completed quick task 261121-dzl: Game settings dialog redesign per sketch 009 B
+Phase: 82 (Guardrails, hygiene and shared safety primitives) — EXECUTING
+Plan: 20 of 20
+Status: Phase complete — ready for verification
+Last activity: 2026-11-21 — Phase 82 execution started
 Progress: [██████████] 100% (19 of 19 phase 82 plans have a SUMMARY; verification human_needed)
 
 ## Native-Install Arc Phase Map (21–25)
@@ -337,6 +337,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 83 P08 | not captured | 3 tasks | 10 files |
 | Phase 83 P09 | not captured | 2 tasks | 11 files |
 | Phase 83 P10 | n/a | 3 tasks | 5 files |
+| Phase 82 P20 | 15 min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -602,6 +603,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 83]: 83-08: D-15 interim recorded - on unix a SIGKILL of GameLib now kills TS-launched games (sidecar group); triaged as a ready: blocked todo until Phases 88 and 95-97
 - [Phase 83]: 83-09: the old per-subsystem 'still running at exit deadline' lines are deleted; the single shell_diag report line replaces them so the live gate's absence check is not contaminated
 - [Phase 83]: 83-09: an overrunning exit drain holds its Registrant open (hold_exit_drain_open) so run_exit names it instead of racing the stage deadline
+- [Phase 82]: 82-20: installer-timeout tests wait through yieldUntil bounded by a real clock captured at module load (jest fake timers freeze performance.now/Date.now/hrtime); the slowed-path RED/mutant is the binding proof, the CPU soak supplementary
 
 ### Pending Todos
 
@@ -851,8 +853,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-20T12:53:47.892Z
-Stopped at: Completed 83-10-PLAN.md
+Last session: 2026-11-21T02:02:12.191Z
+Stopped at: Completed 82-20-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

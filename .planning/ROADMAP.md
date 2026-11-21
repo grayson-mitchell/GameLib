@@ -301,7 +301,7 @@ Milestone v0.11 Node Sidecar Retirement. Planned 2026-11-17 alongside v0.10; sta
   4. Uninstalling a game never deletes a sibling game co-installed beside it, proven by an adversarial path table (nested installdir, `.\x`, `C:\x`, UNC, symlink, case, NFC/NFD) on macOS, Windows and Linux
   5. The `utils.ts` and `bootstrap.ts` responsibility inventory and the milestone-wide state-ownership table are committed, and the zero-risk deletions (type-only files, dead exports, `legendary/commands/*`, `CI=e2e` mocks; `fileStore.ts` only after the live-or-dead check) are gone
 
-**Plans:** 19/20 plans executed (16 + 4 gap closure)
+**Plans:** 20/20 plans executed (16 + 4 gap closure)
 
 Plans:
 **Wave 1**
@@ -342,7 +342,7 @@ Plans:
 - [x] 82-19-PLAN.md — Fake safety transport models trust roots and is pinned to the crate by the shared contract; GOG and cancel absent-folder tests; review dispositions and deferred-findings todo (gap closure, wave 2)
 
 **Gap closure, UAT re-test** *(82-UAT.md G-82-2-r2: sharedRedistInstall installer-timeout flake in Test run 44850161668; planned 2026-11-21; run with `/gsd-execute-phase 82 --gaps-only`)*
-- [ ] 82-20-PLAN.md — Installer-timeout waits bounded by real time (clock captured before fake timers), not by setImmediate turn count; slowed-path RED/GREEN + mutant proof, contention soak, ledger record (gap closure, wave 1)
+- [x] 82-20-PLAN.md — Installer-timeout waits bounded by real time (clock captured before fake timers), not by setImmediate turn count; slowed-path RED/GREEN + mutant proof, contention soak, ledger record (gap closure, wave 1)
 
 ### Phase 83: Native seam, gamelib-core and process/shutdown contract
 
