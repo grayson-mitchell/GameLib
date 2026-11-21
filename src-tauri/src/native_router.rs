@@ -18,12 +18,18 @@
 //! `bootErrorSurface` never paints a native rejection as a fatal boot error.
 
 use crate::ipc_contract::{IPC_INVALID_ARGS, IPC_INVALID_ARGS_MARKER};
+use crate::log_dispatch;
 use crate::native_handlers;
 use crate::relay_commands::echo_channel;
+use gamelib_core::paths::Platform;
 use gamelib_core::shutdown::Shutdown;
+use gamelib_log::sanitize::RendererMessage;
+use gamelib_log::Level;
 use serde_json::{json, Value};
 use std::collections::HashMap;
+use std::future::Future;
 use std::panic::{catch_unwind, AssertUnwindSafe};
+use std::pin::Pin;
 use std::sync::mpsc::{channel as mpsc_channel, Sender};
 use std::sync::Arc;
 use std::thread;
@@ -38,12 +44,45 @@ pub(crate) enum NativeKind {
     Send,
 }
 
-/// A native invoke handler: positional args in, the invoke's value or its error string out.
-pub(crate) type InvokeHandler = fn(&[Value]) -> Result<Value, String>;
+/// Where the log directory and the user-data directory are, for the handlers that resolve a log
+/// file (Phase 84, D-08). `None` in [`NativeCtx`] when the shell has no home directory.
+#[derive(Debug, Clone)]
+pub(crate) struct LogPaths {
+    pub(crate) platform: Platform,
+    pub(crate) log_dir: String,
+    pub(crate) user_data: String,
+}
 
-/// A native send validator: positional args in, the validated URL or a fixed category literal
+/// What a native handler can reach. Built once in `run_setup` and shared by every handler.
+pub(crate) struct NativeCtx {
+    pub(crate) host: Arc<dyn NativeHost>,
+    #[allow(dead_code)] // read by the log-file handlers added in this phase's next task
+    pub(crate) log_paths: Option<LogPaths>,
+}
+
+/// What an async native invoke handler returns: the invoke's value or its error string.
+pub(crate) type NativeFuture = Pin<Box<dyn Future<Output = Result<Value, String>> + Send>>;
+
+/// A native invoke handler: the shared context and the positional args in, the future of the
+/// invoke's value or its error string out. `sidecar_invoke` awaits it directly, so a handler that
+/// blocks moves its own work onto `spawn_blocking`.
+pub(crate) type InvokeHandler = fn(Arc<NativeCtx>, Vec<Value>) -> NativeFuture;
+
+/// A validated native send, decoded on the caller's thread and carried to its slice worker.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum SendPayload {
+    /// `openExternalUrl`: a URL that passed the Phase 72 policy.
+    Url(String),
+    /// `logError` / `logInfo`: renderer text still to be sanitised and written.
+    RendererLog {
+        level: Level,
+        message: RendererMessage,
+    },
+}
+
+/// A native send validator: positional args in, the validated payload or a fixed category literal
 /// out. It is pure and bounded, so it runs on the caller's (main) thread.
-pub(crate) type SendValidator = fn(&[Value]) -> Result<String, &'static str>;
+pub(crate) type SendValidator = fn(&[Value]) -> Result<SendPayload, &'static str>;
 
 /// What a native handler needs from the app. A trait so the router and its queue are tested with
 /// a recording fake and no `AppHandle`.
@@ -66,10 +105,10 @@ impl NativeHost for AppNativeHost {
     }
 }
 
-/// One queued native send: the channel it came in on and its validated URL.
+/// One queued native send: the channel it came in on and its validated payload.
 pub(crate) struct NativeSendJob {
     pub(crate) channel: &'static str,
-    pub(crate) url: String,
+    pub(crate) payload: SendPayload,
 }
 
 /// The FIFO hand-off to one slice's worker thread.
@@ -139,6 +178,7 @@ struct SendRoute {
 
 /// Native channel ownership, keyed by channel name.
 pub(crate) struct NativeRouter {
+    ctx: Arc<NativeCtx>,
     invoke: HashMap<&'static str, InvokeHandler>,
     send: HashMap<&'static str, SendRoute>,
     queues: HashMap<&'static str, SliceQueue>,
@@ -147,23 +187,39 @@ pub(crate) struct NativeRouter {
 /// The slice that owns `openExternalUrl` in `nativeChannels.json`.
 const APP_SHELL_SLICE: &str = "app-shell";
 
+/// The slice that owns the logger channels in `nativeChannels.json` (Phase 84): one FIFO worker,
+/// so renderer log lines reach the log in send order and never run on the main thread.
+const LOGGER_SLICE: &str = "logger";
+
 /// Run one queued send on its slice worker: the channel picks the handler.
-fn run_send_job(host: &Arc<dyn NativeHost>, job: NativeSendJob) -> Result<(), String> {
-    match job.channel {
-        "openExternalUrl" => native_handlers::open_external_url(host, job.url),
-        other => Err(format!(
+fn run_send_job(ctx: &Arc<NativeCtx>, job: NativeSendJob) -> Result<(), String> {
+    match (job.channel, job.payload) {
+        ("openExternalUrl", SendPayload::Url(url)) => {
+            native_handlers::open_external_url(&ctx.host, url)
+        }
+        ("logError" | "logInfo", SendPayload::RendererLog { level, message }) => {
+            log_dispatch::log_from_renderer(level, &message);
+            Ok(())
+        }
+        (other, _) => Err(format!(
             "no native send handler for {}",
             echo_channel(other)
         )),
     }
 }
 
+/// The line a rejected native send leaves behind: the channel name only, never an argument
+/// (D-03, T-34.6-16-02, T-84-17).
+fn rejection_line(channel: &str) -> String {
+    format!("[shell] native send rejected: {}", echo_channel(channel))
+}
+
 impl NativeRouter {
-    pub(crate) fn new(host: Arc<dyn NativeHost>) -> Self {
-        Self::with_shutdown(host, gamelib_core::shutdown::global().clone())
+    pub(crate) fn new(ctx: Arc<NativeCtx>) -> Self {
+        Self::with_shutdown(ctx, gamelib_core::shutdown::global().clone())
     }
 
-    pub(crate) fn with_shutdown(host: Arc<dyn NativeHost>, shutdown: Shutdown) -> Self {
+    pub(crate) fn with_shutdown(ctx: Arc<NativeCtx>, shutdown: Shutdown) -> Self {
         let mut invoke: HashMap<&'static str, InvokeHandler> = HashMap::new();
         invoke.insert("getHeroicVersion", native_handlers::get_heroic_version);
         let mut send: HashMap<&'static str, SendRoute> = HashMap::new();
@@ -174,18 +230,41 @@ impl NativeRouter {
                 validate: native_handlers::parse_open_external_url,
             },
         );
-        let mut queues: HashMap<&'static str, SliceQueue> = HashMap::new();
-        queues.insert(
-            APP_SHELL_SLICE,
-            spawn_slice_worker(APP_SHELL_SLICE, shutdown, move |job| {
-                run_send_job(&host, job)
-            }),
+        send.insert(
+            "logError",
+            SendRoute {
+                slice: LOGGER_SLICE,
+                validate: log_dispatch::parse_log_error,
+            },
         );
+        send.insert(
+            "logInfo",
+            SendRoute {
+                slice: LOGGER_SLICE,
+                validate: log_dispatch::parse_log_info,
+            },
+        );
+        let mut queues: HashMap<&'static str, SliceQueue> = HashMap::new();
+        for slice in [APP_SHELL_SLICE, LOGGER_SLICE] {
+            let worker_ctx = Arc::clone(&ctx);
+            queues.insert(
+                slice,
+                spawn_slice_worker(slice, shutdown.clone(), move |job| {
+                    run_send_job(&worker_ctx, job)
+                }),
+            );
+        }
         Self {
+            ctx,
             invoke,
             send,
             queues,
         }
+    }
+
+    /// The shared context the invoke handlers receive.
+    pub(crate) fn ctx(&self) -> Arc<NativeCtx> {
+        Arc::clone(&self.ctx)
     }
 
     /// Serve a native-owned send, or `None` when the sidecar owns `channel` (D-04: there is no
@@ -197,10 +276,10 @@ impl NativeRouter {
     /// research F3). `Err` is only a worker that is gone.
     pub(crate) fn route_send(&self, channel: &str, args: &[Value]) -> Option<Result<(), String>> {
         let (name, route) = self.send.get_key_value(channel)?;
-        let url = match (route.validate)(args) {
-            Ok(url) => url,
+        let payload = match (route.validate)(args) {
+            Ok(payload) => payload,
             Err(_category) => {
-                shell_eprintln!("[shell] native send rejected: {}", echo_channel(channel));
+                shell_eprintln!("{}", rejection_line(channel));
                 return Some(Ok(()));
             }
         };
@@ -210,7 +289,10 @@ impl NativeRouter {
                 echo_channel(channel)
             )));
         };
-        Some(queue.enqueue(NativeSendJob { channel: name, url }))
+        Some(queue.enqueue(NativeSendJob {
+            channel: name,
+            payload,
+        }))
     }
 
     /// The validator of a native send channel, for the manifest-vector test.
@@ -309,12 +391,33 @@ mod tests {
     /// A router over a recording host and its own `Shutdown` (never the global one).
     fn recording_router() -> (NativeRouter, Receiver<(String, Option<String>)>) {
         let (tx, rx) = mpsc_channel();
-        let router = NativeRouter::with_shutdown(Arc::new(RecordingHost { tx }), Shutdown::new());
+        let router = NativeRouter::with_shutdown(ctx_of(RecordingHost { tx }), Shutdown::new());
         (router, rx)
     }
 
     fn router() -> NativeRouter {
         recording_router().0
+    }
+
+    /// A context over `host` with no log paths.
+    fn ctx_of(host: impl NativeHost) -> Arc<NativeCtx> {
+        Arc::new(NativeCtx {
+            host: Arc::new(host),
+            log_paths: None,
+        })
+    }
+
+    /// Drive a native invoke future to its result.
+    fn run(handler: InvokeHandler, ctx: &Arc<NativeCtx>, args: &[Value]) -> Result<Value, String> {
+        tauri::async_runtime::block_on(handler(Arc::clone(ctx), args.to_vec()))
+    }
+
+    /// The URL of a job built by [`job`].
+    fn url_of(job: &NativeSendJob) -> String {
+        match &job.payload {
+            SendPayload::Url(url) => url.clone(),
+            other => panic!("expected a URL payload, got {other:?}"),
+        }
     }
 
     fn manifest() -> Value {
@@ -390,11 +493,15 @@ mod tests {
             let handler = router
                 .invoke_handler(name)
                 .unwrap_or_else(|| panic!("{name} has no native handler"));
+            let ctx = router.ctx();
             for args in vectors(spec, "valid") {
-                assert!(handler(&args).is_ok(), "{name} rejected valid {args:?}");
+                assert!(
+                    run(handler, &ctx, &args).is_ok(),
+                    "{name} rejected valid {args:?}"
+                );
             }
             for args in vectors(spec, "invalid") {
-                let err = handler(&args)
+                let err = run(handler, &ctx, &args)
                     .err()
                     .unwrap_or_else(|| panic!("{name} accepted invalid {args:?}"));
                 let payload = tail(&err);
@@ -488,14 +595,19 @@ mod tests {
     fn native_rejection_never_echoes_an_argument() {
         let sentinel = "SENTINEL-secret-token-9f3a";
         let args = vec![Value::String(sentinel.to_string())];
-        let err = native_handlers::get_heroic_version(&args).unwrap_err();
+        let err = run(native_handlers::get_heroic_version, &router().ctx(), &args).unwrap_err();
         assert!(!err.contains(sentinel), "argument value leaked: {err}");
         assert!(err.starts_with(IPC_INVALID_ARGS_MARKER));
     }
 
     #[test]
     fn get_heroic_version_extra_element_is_too_big_at_the_root() {
-        let err = native_handlers::get_heroic_version(&[Value::Null]).unwrap_err();
+        let err = run(
+            native_handlers::get_heroic_version,
+            &router().ctx(),
+            &[Value::Null],
+        )
+        .unwrap_err();
         let payload = tail(&err);
         assert_eq!(payload["paths"], json!(["(args)"]));
         assert_eq!(payload["codes"], json!(["too_big"]));
@@ -503,7 +615,7 @@ mod tests {
 
     #[test]
     fn get_heroic_version_answers_cargo_pkg_version() {
-        let v = native_handlers::get_heroic_version(&[]).unwrap();
+        let v = run(native_handlers::get_heroic_version, &router().ctx(), &[]).unwrap();
         assert_eq!(v, Value::String(env!("CARGO_PKG_VERSION").to_string()));
         assert_eq!(native_handlers::app_version(), env!("CARGO_PKG_VERSION"));
     }
@@ -511,7 +623,7 @@ mod tests {
     fn job(channel: &'static str, url: &str) -> NativeSendJob {
         NativeSendJob {
             channel,
-            url: url.to_string(),
+            payload: SendPayload::Url(url.to_string()),
         }
     }
 
@@ -525,7 +637,7 @@ mod tests {
     fn slice_queue_runs_fifty_jobs_in_enqueue_order() {
         let (done_tx, done_rx) = mpsc_channel::<String>();
         let queue = spawn_slice_worker("fifo-test", Shutdown::new(), move |job| {
-            let _ = done_tx.send(job.url);
+            let _ = done_tx.send(url_of(&job));
             Ok(())
         });
         let want: Vec<String> = (0..50)
@@ -545,7 +657,7 @@ mod tests {
         let (done_tx, done_rx) = mpsc_channel::<String>();
         let queue = spawn_slice_worker("block-test", Shutdown::new(), move |job| {
             let _ = release_rx.recv();
-            let _ = done_tx.send(job.url);
+            let _ = done_tx.send(url_of(&job));
             Ok(())
         });
         let started = std::time::Instant::now();
@@ -566,8 +678,8 @@ mod tests {
     fn slice_queue_keeps_going_after_a_failed_job() {
         let (done_tx, done_rx) = mpsc_channel::<String>();
         let queue = spawn_slice_worker("fail-test", Shutdown::new(), move |job| {
-            let _ = done_tx.send(job.url.clone());
-            if job.url == "broken" {
+            let _ = done_tx.send(url_of(&job));
+            if url_of(&job) == "broken" {
                 Err("handler failed".into())
             } else {
                 Ok(())
@@ -582,10 +694,10 @@ mod tests {
     fn slice_queue_keeps_going_after_a_panicking_job() {
         let (done_tx, done_rx) = mpsc_channel::<String>();
         let queue = spawn_slice_worker("panic-test", Shutdown::new(), move |job| {
-            if job.url == "boom" {
+            if url_of(&job) == "boom" {
                 panic!("handler panicked");
             }
-            let _ = done_tx.send(job.url);
+            let _ = done_tx.send(url_of(&job));
             Ok(())
         });
         queue.enqueue(job("openExternalUrl", "boom")).unwrap();
@@ -598,7 +710,7 @@ mod tests {
         // No order across the two queues is asserted (D-02): each only preserves its own.
         let (native_tx, native_rx) = mpsc_channel::<String>();
         let native = spawn_slice_worker("interleave-test", Shutdown::new(), move |job| {
-            let _ = native_tx.send(job.url);
+            let _ = native_tx.send(url_of(&job));
             Ok(())
         });
         let (sidecar_tx, sidecar_rx) = mpsc_channel::<String>();
@@ -652,7 +764,7 @@ mod tests {
             tx,
             release: std::sync::Mutex::new(release_rx),
         };
-        let router = NativeRouter::with_shutdown(Arc::new(host), Shutdown::new());
+        let router = NativeRouter::with_shutdown(ctx_of(host), Shutdown::new());
         for url in [BLOCKED_URL, "https://next.example/"] {
             assert_eq!(
                 router.route_send("openExternalUrl", &[json!(url)]),
@@ -680,8 +792,8 @@ mod tests {
         let (release_tx, release_rx) = mpsc_channel::<()>();
         let (ran_tx, ran_rx) = mpsc_channel::<String>();
         let queue = spawn_slice_worker("shutdown-test", shutdown.clone(), move |job| {
-            let _ = ran_tx.send(job.url.clone());
-            if job.url == "first" {
+            let _ = ran_tx.send(url_of(&job));
+            if url_of(&job) == "first" {
                 let _ = started_tx.send(());
                 let _ = release_rx.recv();
             }

@@ -50,9 +50,9 @@ pub(crate) async fn sidecar_invoke(
 ) -> Result<Value, String> {
     relay_channel_verdict(&channel)?;
     if let Some(handler) = router.invoke_handler(&channel) {
-        return tauri::async_runtime::spawn_blocking(move || handler(&args))
-            .await
-            .map_err(|e| e.to_string())?;
+        // Awaited, not parked on the blocking pool (Phase 84): a handler that waits on a file or
+        // the network moves that work onto `spawn_blocking` or an async client itself.
+        return handler(router.ctx(), args).await;
     }
     let state = state.inner().clone();
     // Run the blocking channel-write + recv off the async runtime's worker.

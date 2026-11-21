@@ -5,7 +5,7 @@
 //! described, and its accept/reject vectors are pinned, in
 //! `src/common/types/ipc/nativeChannels.json`.
 
-use crate::native_router::{invalid_args, NativeHost};
+use crate::native_router::{invalid_args, NativeCtx, NativeFuture, NativeHost, SendPayload};
 use crate::relay_commands::open_external_scheme_check;
 use serde_json::Value;
 use std::sync::Arc;
@@ -23,7 +23,12 @@ pub(crate) fn app_version() -> &'static str {
 struct GetHeroicVersionArgs();
 
 /// `getHeroicVersion` (invoke): answers the app version from the compiled-in crate version.
-pub(crate) fn get_heroic_version(args: &[Value]) -> Result<Value, String> {
+pub(crate) fn get_heroic_version(_ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFuture {
+    Box::pin(std::future::ready(get_heroic_version_now(&args)))
+}
+
+/// The synchronous body of `getHeroicVersion`: nothing in it waits.
+fn get_heroic_version_now(args: &[Value]) -> Result<Value, String> {
     serde_json::from_value::<GetHeroicVersionArgs>(Value::Array(args.to_vec()))
         .map_err(|_| invalid_args("getHeroicVersion", &["(args)"], &["too_big"]))?;
     Ok(Value::String(app_version().to_string()))
@@ -46,7 +51,7 @@ type OpenExternalUrlArgs = (String,);
 /// UTF-16 cap, `url::Url::parse` (WHATWG `URL.canParse` parity, D-18) and the scheme allow-list in
 /// [`open_external_scheme_check`]. The `Err` is a fixed category literal and never the URL: this
 /// string can reach a log a user attaches to a public bug report (T-83-19).
-pub(crate) fn parse_open_external_url(args: &[Value]) -> Result<String, &'static str> {
+pub(crate) fn parse_open_external_url(args: &[Value]) -> Result<SendPayload, &'static str> {
     let (url,) = serde_json::from_value::<OpenExternalUrlArgs>(Value::Array(args.to_vec()))
         .map_err(|_| "bad-args")?;
     if url.encode_utf16().count() > OPEN_EXTERNAL_URL_MAX_UTF16 {
@@ -58,7 +63,7 @@ pub(crate) fn parse_open_external_url(args: &[Value]) -> Result<String, &'static
     if open_external_scheme_check(&url).is_err() {
         return Err("scheme");
     }
-    Ok(url)
+    Ok(SendPayload::Url(url))
 }
 
 /// `openExternalUrl` (send): hand a validated URL to the host's opener on a short-lived thread and
@@ -82,7 +87,10 @@ mod tests {
     const POLICY_CASES: &str = include_str!("../../src/common/__fixtures__/openPolicyCases.json");
 
     fn parse(url: &str) -> Result<String, &'static str> {
-        parse_open_external_url(&[json!(url)])
+        match parse_open_external_url(&[json!(url)])? {
+            SendPayload::Url(url) => Ok(url),
+            other => panic!("openExternalUrl produced {other:?}"),
+        }
     }
 
     /// `https://example.com/` plus `a`s up to `units` UTF-16 code units.

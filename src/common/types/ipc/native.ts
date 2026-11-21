@@ -6,10 +6,23 @@
  * The keys below must equal the manifest's channels by kind (`ipcDomainCensus` test (e)): invoke
  * channels in `NativeAsync`, send channels in `NativeSync`.
  */
+/**
+ * The renderer's log text: a string, an array of strings, or an Error-like object. A real `Error`
+ * JSON-serialises to `{}` (its fields are non-enumerable), which the object arm accepts. The Rust
+ * `RendererMessage` (gamelib-log) is the authority; it is strict: any other key or a non-string
+ * value is rejected.
+ */
+type LogMessage =
+  | string
+  | string[]
+  | { name?: string; message?: string; stack?: string }
+
 export interface NativeAsync {
   getHeroicVersion: () => string
 }
 
 export interface NativeSync {
+  logError: (message: LogMessage) => void
+  logInfo: (message: LogMessage) => void
   openExternalUrl: (url: string) => void
 }

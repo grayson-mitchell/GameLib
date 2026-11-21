@@ -5018,84 +5018,28 @@
     {
       "channel": "logError",
       "kind": "send",
-      "owner": "sidecar",
-      "args": {
-        "type": "array",
-        "prefixItems": [
-          {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "name": {
-                    "type": "string"
-                  },
-                  "message": {
-                    "type": "string"
-                  },
-                  "stack": {
-                    "type": "string"
-                  }
-                },
-                "additionalProperties": false
-              }
-            ]
-          }
-        ],
-        "items": false,
-        "minItems": 1,
-        "maxItems": 1
-      }
+      "owner": "native",
+      "args": [
+        {
+          "name": "message",
+          "type": "string | string[] | { name?: string, message?: string, stack?: string }",
+          "strict": true
+        }
+      ],
+      "returns": "void"
     },
     {
       "channel": "logInfo",
       "kind": "send",
-      "owner": "sidecar",
-      "args": {
-        "type": "array",
-        "prefixItems": [
-          {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "name": {
-                    "type": "string"
-                  },
-                  "message": {
-                    "type": "string"
-                  },
-                  "stack": {
-                    "type": "string"
-                  }
-                },
-                "additionalProperties": false
-              }
-            ]
-          }
-        ],
-        "items": false,
-        "minItems": 1,
-        "maxItems": 1
-      }
+      "owner": "native",
+      "args": [
+        {
+          "name": "message",
+          "type": "string | string[] | { name?: string, message?: string, stack?: string }",
+          "strict": true
+        }
+      ],
+      "returns": "void"
     },
     {
       "channel": "login",

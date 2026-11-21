@@ -1,5 +1,59 @@
 {
   "channels": {
+    "logError": {
+      "kind": "send",
+      "slice": "logger",
+      "args": [
+        {
+          "name": "message",
+          "type": "string | string[] | { name?: string, message?: string, stack?: string }",
+          "strict": true
+        }
+      ],
+      "returns": "void",
+      "valid": [
+        ["x"],
+        [["a", "b"]],
+        [{ "name": "E", "message": "m", "stack": "s" }],
+        [{}]
+      ],
+      "invalid": [
+        [],
+        [null],
+        [7],
+        [["a", 1]],
+        [{ "extra": "x" }],
+        [{ "message": 1 }],
+        ["a", "b"]
+      ]
+    },
+    "logInfo": {
+      "kind": "send",
+      "slice": "logger",
+      "args": [
+        {
+          "name": "message",
+          "type": "string | string[] | { name?: string, message?: string, stack?: string }",
+          "strict": true
+        }
+      ],
+      "returns": "void",
+      "valid": [
+        ["x"],
+        [["a", "b"]],
+        [{ "name": "E", "message": "m", "stack": "s" }],
+        [{}]
+      ],
+      "invalid": [
+        [],
+        [null],
+        [7],
+        [["a", 1]],
+        [{ "extra": "x" }],
+        [{ "message": 1 }],
+        ["a", "b"]
+      ]
+    },
     "getHeroicVersion": {
       "kind": "invoke",
       "slice": "app-shell",

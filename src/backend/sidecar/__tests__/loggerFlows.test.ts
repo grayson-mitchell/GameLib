@@ -252,16 +252,10 @@ import {
   bootFresh,
   writeInvoke,
   writeSend,
-  findResponse,
   handlerRegistry,
   listenerRegistry
 } from './helpers/sidecarHarness'
-import {
-  LOG_FRAME_KIND,
-  UNPORTED_CHANNEL_MARKER,
-  RUST_SHELL_SHOW_ITEM_IN_FOLDER
-} from 'common/types/sidecarTransport'
-import type { LogFrame } from 'common/types/sidecarTransport'
+import { RUST_SHELL_SHOW_ITEM_IN_FOLDER } from 'common/types/sidecarTransport'
 import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
 import { getLogFilePath } from 'backend/logger/paths'
 
@@ -271,7 +265,6 @@ const {
   appFolder,
   userData: userDataPath
 } = createContainedHomeAppPaths()
-import { LogPrefix } from '../../logger/constants'
 import { createStoreRegistry } from 'backend/stores/storeRegistry'
 
 // ── Containment guard (WR-10 correction, Phase 34.2 gap cycle 4, plan
@@ -407,7 +400,6 @@ describe('WR-02: the containment root is minted, not derived from a predictable 
 // handles the cases configure or inspect are rebound from that registry in
 // freshRegistry() (run before each case, ahead of any mock configuration), and
 // boot() then boots without a second reset.
-let logger: typeof import('../../logger')
 let uploadedLogFileStore: ReturnType<
   typeof import('../../logger/stores').createLoggerStores
 >['uploadedLogFileStore']
@@ -421,7 +413,6 @@ function freshRegistry(): void {
   /* eslint-disable @typescript-eslint/no-require-imports */
   require('../bootstrap')
   const { createGlobalConfig } = require('backend/config')
-  logger = require('../../logger')
   const { requestRustInvoke } = require('../sidecarRpc')
   ;({ uploadedLogFileStore } =
     require('../../logger/stores').createLoggerStores({
@@ -489,193 +480,10 @@ async function waitForResponse(
   }
 }
 
-/**
- * The log lines the sidecar has sent on its output so far (Phase 84): the general log is the
- * forwarder, so a `logError` send frame lands as a `kind:"log"` frame's line entry on the same
- * stream as every other frame. Returns the line entries (prefix, level, msg) in send order.
- */
-function sentLogLines(
-  frames: Frame[]
-): { level: string; prefix: string; msg: string }[] {
-  return (frames as unknown as LogFrame[])
-    .filter((f) => f.kind === LOG_FRAME_KIND)
-    .flatMap((f) =>
-      f.batch.flatMap((b) =>
-        b.entries.flatMap((e) => ('line' in e ? [e.line] : []))
-      )
-    )
-}
-
-/**
- * Polls the captured frames (bounded, real timers) until a log line whose message contains
- * `marker` has been sent. Returns every such line, or `undefined` when the poll runs out.
- */
-async function pollForLogLine(
-  frames: Frame[],
-  marker: string,
-  maxIterations = 50
-): Promise<{ level: string; prefix: string; msg: string }[] | undefined> {
-  for (let i = 0; i < maxIterations; i++) {
-    if (i % 2 === 0) {
-      await new Promise((r) => setImmediate(r))
-    } else {
-      await new Promise((r) => setTimeout(r, 10))
-    }
-    const hits = sentLogLines(frames).filter((l) => l.msg.includes(marker))
-    if (hits.length > 0) return hits
-  }
-  return undefined
-}
-
-describe('sidecar logger flow: logError (Phase 34.2 gap cycle 2, plan 34.2-16)', () => {
-  beforeEach(() => {
-    freshRegistry()
-    mockAppSettings({ language: 'en' })
-  })
-
-  it('REQ-34.2-13 registers logError exactly once as a listener, never as a handler', async () => {
-    boot()
-    await flush()
-
-    expect(listenerRegistry.get('logError')?.length).toBe(1)
-    expect(handlerRegistry.get('logError')).toBeUndefined()
-  })
-
-  // ── The load-bearing test: a real send frame must produce a real log line ──
-
-  it('REQ-34.2-08/09/12 a logError send frame over the real transport leaves the sidecar as a log frame line', async () => {
-    const marker = `logError-marker-${process.pid}-${Math.random()
-      .toString(36)
-      .slice(2)}`
-    const message = `[loggerFlows.test.ts] ${marker}`
-
-    const { input, frames } = boot()
-    writeSend(input, 'le-1', 'logError', [message])
-    await flush()
-
-    const hits = await pollForLogLine(frames, marker)
-
-    // Not "nothing threw" — the actual frame content is read back and must
-    // carry the marker (REQ-34.2-08/09's own evidence standard for a `send`
-    // channel). Phase 84: the sidecar no longer writes gamelib.log itself, so
-    // the evidence is the log frame on its stdout (the shell writes the file).
-    expect(hits).toBeDefined()
-    expect(hits).toHaveLength(1)
-    expect(hits?.[0]).toMatchObject({
-      level: 'ERROR',
-      prefix: LogPrefix.Frontend
-    })
-    expect(hits?.[0]?.msg).toContain(marker)
-  })
-
-  it('REQ-34.2-12 the real backend/logger logErrorSettled export is called with the frame message and LogPrefix.Frontend', async () => {
-    // Spies on logErrorSettled, not logError -- gap cycle 4 (plan 34.2-26,
-    // CR-01) changed loggerFlowRegistration.ts's call site to import
-    // logErrorSettled (the expression-body sibling that actually forwards
-    // the writer's promise) instead of the block-body logError wrapper.
-    const spy = jest.spyOn(logger, 'logErrorSettled')
-    const message = `[loggerFlows.test.ts] spy-check-${process.pid}`
-
-    // IN-06 (gap cycle 4): `mockRestore()` used to sit AFTER the assertion it
-    // guards, so a failing expectation leaked a live spy on the REAL
-    // `backend/logger` module into every later test in this file. `finally`
-    // restores on both paths.
-    //
-    // `resetMocks: true` in `src/backend/jest.config.js` does NOT cover this:
-    // it clears a spy's calls and implementation but leaves it INSTALLED, so
-    // the leaked `logErrorSettled` would be a mock returning `undefined` for
-    // the rest of the file rather than the real export. Measured in
-    // `loggerCallSiteGuard.test.ts`, whose IN-06 guard test asserts exactly
-    // that and goes red when its restore hook is removed.
-    //
-    // Stated plainly: a passing suite cannot falsify this change, because the
-    // leak only occurs when an assertion fails. The `finally` is correct on
-    // the mechanism, not on a green run.
-    try {
-      const { input } = boot()
-      writeSend(input, 'le-2', 'logError', [message])
-      await flush()
-
-      expect(spy).toHaveBeenCalledWith(message, LogPrefix.Frontend)
-    } finally {
-      spy.mockRestore()
-    }
-  })
-
-  // ── IN-04: renderer-controlled log injection ──
-
-  it('IN-04 a renderer cannot forge a standalone log line through logError', async () => {
-    const marker = `in04-${process.pid}-${Math.random().toString(36).slice(2)}`
-    // The payload a hostile/careless renderer would send: a benign-looking
-    // head, then a newline, then something shaped exactly like a real backend
-    // ERROR line. Un-escaped, the second half occupies a line of its own and
-    // is indistinguishable from a genuine entry to any reader or log scraper.
-    const forgedLine = `(12:34:56) [ERROR]:   [Backend]: ${marker} forged`
-    const payload = `${marker} head\n${forgedLine}`
-
-    const { input, frames } = boot()
-    writeSend(input, 'le-in04', 'logError', [payload])
-    await flush()
-
-    const hits = await pollForLogLine(frames, marker)
-
-    // Direction 1 — the message DID arrive. Without this the test would pass
-    // just as well against a channel that dropped the frame entirely, which
-    // is the vacuity this suite's own header warns about.
-    expect(hits).toBeDefined()
-
-    // The payload must not have produced two log entries where one was sent,
-    // and the one entry arrives with the forged text as part of its message.
-    expect(hits).toHaveLength(1)
-    const msg = hits?.[0]?.msg ?? ''
-    expect(msg).toContain(`${marker} head`)
-
-    // Direction 2 — the escape actually happened, and the text survives in
-    // legible form rather than being stripped.
-    expect(msg).toContain('\\n')
-    expect(msg).toContain(`${marker} forged`)
-
-    // Direction 3 — the property that matters. The shell writes `msg` after a
-    // single header, so a message with no raw newline is exactly one log
-    // line, and the forged entry is never a line of its own (whole-message
-    // check, not substring presence: the forged text is legitimately present
-    // as escaped payload).
-    expect(msg.split('\n')).toHaveLength(1)
-    expect(msg.trim()).not.toBe(forgedLine)
-  })
-
-  it('REQ-34.2-14 no response frame is produced for the send frame id, and no UNPORTED_CHANNEL_MARKER appears', async () => {
-    const { input, frames } = boot()
-    writeSend(input, 'le-3', 'logError', ['no-response-expected'])
-    await flush()
-
-    expect(findResponse(frames, 'le-3')).toBeUndefined()
-    for (const frame of frames) {
-      expect(String(frame.error ?? '')).not.toContain(UNPORTED_CHANNEL_MARKER)
-    }
-  })
-
-  it('REQ-34.2-13 registration: one boot registers logError exactly once', async () => {
-    boot()
-    await flush()
-
-    expect(listenerRegistry.get('logError')?.length).toBe(1)
-  })
-})
-
-/**
- * RED-PROOF (recorded verbatim in 34.2-16-SUMMARY.md): the single line that
- * makes the positive side-effect test above fail if reverted is the
- * `registerLoggerFlows()` call in `src/backend/sidecar/handlers.ts` (Task
- * 1). Reverting it (commenting out the import + call) and re-running this
- * suite makes the positive test fail by TIMEOUT — `pollForLogLine` exhausts
- * its 50 iterations and returns `undefined`, so `expect(hits).toBeDefined()`
- * fails on a plain assertion, never an exception — reproducing this
- * project's own `sidecar-send-channels-fail-silently` failure mode
- * first-hand, exactly as REQ-34.2-08/09 predicts for an unregistered `send`
- * channel. Restoring the call and re-running turns the suite green again,
- * confirmed via `git diff` showing zero difference against the Task 1 commit.
- */
+// Phase 84 (plan 84-05): `logError` and `logInfo` are served by the Rust native router (the
+// `logger` slice), so there is no sidecar listener to register or exercise here any more. The
+// renderer-text escape (IN-04) is proven where the text now lands: the renderer golden in
+// `src-tauri/crates/gamelib-log` and `log_dispatch.rs`'s `log_renderer_*` tests.
 
 // The WR-02 "call-site guard" describe block that used to live here (Phase
 // 34.2 gap cycle 3, plan 34.2-20 — four tests: A/B/C/D) was DELETED by gap
@@ -712,23 +520,6 @@ describe('REQ-34.3-09 / REQ-34.3-01 Phase 34.3 logger channels', () => {
     mockRequestRustInvoke.mockReset()
   })
 
-  it('REQ-34.3-09 logInfo (send) reaches the real logInfo path with LogPrefix.Frontend', async () => {
-    const spy = jest.spyOn(logger, 'logInfoSettled')
-    const message = `[loggerFlows.test.ts] logInfo-check-${process.pid}`
-
-    // IN-06 (gap cycle 4): see the logError sibling above -- restore on both
-    // paths, not only the passing one.
-    try {
-      const { input } = boot()
-      writeSend(input, 'li-1', 'logInfo', [message])
-      await flush()
-
-      expect(spy).toHaveBeenCalledWith(message, LogPrefix.Frontend)
-    } finally {
-      spy.mockRestore()
-    }
-  })
-
   it('REQ-34.3-01 showLogFileInFolder (send) reveals the real log file at the path getLogFilePath returns', async () => {
     const logPath = getLogFilePath({})
 
@@ -746,11 +537,16 @@ describe('REQ-34.3-09 / REQ-34.3-01 Phase 34.3 logger channels', () => {
     )
   })
 
-  it('REQ-34.3-01 send-vs-handle contract: logInfo/showLogFileInFolder/logError are listeners; uploadLogFile/deleteUploadedLogFile/getUploadedLogFiles are handlers', async () => {
+  it('REQ-34.3-01 send-vs-handle contract: showLogFileInFolder is a listener; uploadLogFile/deleteUploadedLogFile/getUploadedLogFiles are handlers', async () => {
     boot()
     await flush()
 
-    for (const channel of ['logError', 'logInfo', 'showLogFileInFolder']) {
+    // Phase 84: `logError` and `logInfo` are native sends, so the sidecar registers neither.
+    for (const channel of ['logError', 'logInfo']) {
+      expect(listenerRegistry.get(channel)).toBeUndefined()
+      expect(handlerRegistry.get(channel)).toBeUndefined()
+    }
+    for (const channel of ['showLogFileInFolder']) {
       expect(listenerRegistry.get(channel)?.length).toBeGreaterThanOrEqual(1)
       expect(handlerRegistry.get(channel)).toBeUndefined()
     }
@@ -762,11 +558,6 @@ describe('REQ-34.3-09 / REQ-34.3-01 Phase 34.3 logger channels', () => {
       expect(handlerRegistry.get(channel)).toBeDefined()
       expect(listenerRegistry.get(channel)).toBeUndefined()
     }
-
-    // The double-registration guard (T-34.3-15): logError must still be
-    // registered exactly once, even after this slice's 5 new registrations
-    // landed in the same module.
-    expect(listenerRegistry.get('logError')?.length).toBe(1)
   })
 
   describe('uploadLogFile / deleteUploadedLogFile / getUploadedLogFiles', () => {

@@ -106,7 +106,9 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   // ported byte-equivalently from main.ts (D-02); send count unchanged.
   // Phase 74 Plan 11 (2026-11-12): invoke 9 -> 10 -- getSteamUpdateInfo (STEAM-01).
   'installFlowRegistration.ts': { invoke: 10, send: 0 },
-  'loggerFlowRegistration.ts': { invoke: 3, send: 3 },
+  // Phase 84 Plan 05 / 84-05 (2026-11-21): send 3 -> 1 -- `logError` and `logInfo` are served by the Rust
+  // native router (`nativeChannels.json`, slice `logger`); their registrations are deleted here.
+  'loggerFlowRegistration.ts': { invoke: 3, send: 1 },
   'oauthLoginFlowRegistration.ts': { invoke: 1, send: 0 },
   'runnerAuthFlowRegistration.ts': { invoke: 10, send: 1 },
   // Phase 34.6 Plan 10 (2026-08-24): invoke 11 -> 14 -- getAchievements/getDefaultSavePath/

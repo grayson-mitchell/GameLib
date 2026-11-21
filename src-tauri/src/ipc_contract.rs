@@ -772,6 +772,8 @@ pub(crate) const NATIVE_INVOKE_CHANNELS: &[&str] = &[
 
 /// Renderer send channels owned by the Rust native router (Phase 83), sorted.
 pub(crate) const NATIVE_SEND_CHANNELS: &[&str] = &[
+    "logError",
+    "logInfo",
     "openExternalUrl",
 ];
 

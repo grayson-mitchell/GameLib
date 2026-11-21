@@ -122,6 +122,7 @@ mod depot_dispatch;
 mod dialogs;
 mod ipc_contract;
 mod keyring_dispatch;
+mod log_dispatch;
 mod login_window;
 mod native_handlers;
 mod native_router;
@@ -607,23 +608,34 @@ fn shell_diag(message: &str) {
 /// first-call-wins). The home directory is `HOME`, then `USERPROFILE` (the `SidecarProfile::current`
 /// rule). With none the writer is not started and the sidecar's log frames are dropped.
 fn init_native_logger() {
-    let home = std::env::var("HOME")
-        .ok()
-        .or_else(|| std::env::var("USERPROFILE").ok())
-        .filter(|h| !h.is_empty());
-    let Some(home) = home else {
+    let Some(paths) = native_log_paths() else {
         shell_eprintln!("[shell] native logger not started: no home directory");
         return;
     };
-    let platform = gamelib_core::paths::Platform::current();
-    let env = |k: &str| std::env::var(k).ok();
     gamelib_log::init(gamelib_log::LogConfig {
-        platform,
-        log_dir: gamelib_core::paths::log_dir(platform, &home, &env),
-        user_data: gamelib_core::paths::resolve(platform, &home, &env).user_data,
+        platform: paths.platform,
+        log_dir: paths.log_dir,
+        user_data: paths.user_data,
         clock: std::sync::Arc::new(gamelib_core::clock::SystemClock),
         tz: std::sync::Arc::new(gamelib_log::SystemTz),
     });
+}
+
+/// Where this process's logs and user data live, or `None` without a home directory. The one
+/// computation shared by the writer ([`init_native_logger`]) and the native handlers that resolve
+/// a log file (`NativeCtx::log_paths`), so the two can never disagree about a path.
+fn native_log_paths() -> Option<LogPaths> {
+    let home = std::env::var("HOME")
+        .ok()
+        .or_else(|| std::env::var("USERPROFILE").ok())
+        .filter(|h| !h.is_empty())?;
+    let platform = gamelib_core::paths::Platform::current();
+    let env = |k: &str| std::env::var(k).ok();
+    Some(LogPaths {
+        platform,
+        log_dir: gamelib_core::paths::log_dir(platform, &home, &env),
+        user_data: gamelib_core::paths::resolve(platform, &home, &env).user_data,
+    })
 }
 
 /// Renders one panic report. Split out from the hook itself so a test can assert the report
@@ -1710,7 +1722,10 @@ fn run_setup(
     steampoll_boot();
     // Phase 83: native channel ownership. Managed before the sidecar is spawned so a native hit
     // never needs the sidecar.
-    app.manage(NativeRouter::new(Arc::new(AppNativeHost(app.handle().clone()))));
+    app.manage(NativeRouter::new(Arc::new(NativeCtx {
+        host: Arc::new(AppNativeHost(app.handle().clone())),
+        log_paths: native_log_paths(),
+    })));
     let state = spawn_sidecar_state(app)?;
     start_single_instance_accept_loop(app, &state, primary_listener);
     install_os_deep_link_handler(app, &state);
@@ -2160,6 +2175,7 @@ mod tests {
         "dialogs.rs",
         "ipc_contract.rs",
         "keyring_dispatch.rs",
+        "log_dispatch.rs",
         "login_window.rs",
         "login_window/devtools.rs",
         "login_window/humble_cookies.rs",
@@ -2212,6 +2228,7 @@ mod tests {
         include_str!("dialogs.rs"),
         include_str!("ipc_contract.rs"),
         include_str!("keyring_dispatch.rs"),
+        include_str!("log_dispatch.rs"),
         include_str!("login_window.rs"),
         include_str!("login_window/devtools.rs"),
         include_str!("login_window/humble_cookies.rs"),

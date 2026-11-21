@@ -12,24 +12,6 @@ import {
 
 const noArgs = z.tuple([])
 
-// D-09: renderer text is typed, never z.any(). Observed shapes: a string (nearly every
-// caller), a string array, and an Error-like object. A real Error JSON-serialises to `{}`
-// (message and stack are non-enumerable), so the object arm accepts that too; the global
-// error handler in frontend/index.tsx stringifies before sending so the text survives.
-// Length is deliberately NOT validated (67 review WR-03): rejecting would replace a long
-// diagnostic with a one-line `too_big`. The handler truncates instead
-// (backend/logger/sanitizeRendererLogMessage.ts); the 10 MiB frame limit is the hard bound.
-const logText = z.string()
-const logMessage = z.union([
-  logText,
-  z.array(logText),
-  z.strictObject({
-    name: z.string().optional(),
-    message: logText.optional(),
-    stack: logText.optional()
-  })
-])
-
 // Mirrors GetLogFileArgs in backend/logger/paths.ts: Heroic log, runner log, game log.
 const getLogFileArgs = z.union([
   z.strictObject({
@@ -47,8 +29,6 @@ const getLogFileArgs = z.union([
 ])
 
 export const loggerSyncArgs = {
-  logError: z.tuple([logMessage]),
-  logInfo: z.tuple([logMessage]),
   showLogFileInFolder: z.tuple([getLogFileArgs])
 }
 
