@@ -45,7 +45,13 @@ const code = loadCode()
 
 // Measured at HEAD `9fa43de5e` (Task 1's commit): 30 discarded-stderr eprintln! sites swapped
 // to crate::shell_log(...), 0 remaining — not the 25 the source todo's own title claimed.
+//
+// WR-02 / 84-17: three of those 30 carried error text (`{e}` of an open_external failure, twice,
+// and the NSError's localized description) into gamelib.log, the file users upload. They now call
+// `crate::shell_log_detail(message, detail)`, whose message is a category and whose detail is
+// stderr-only. The total is unchanged; the split is pinned below.
 const MEASURED_CALL_SITE_COUNT = 30
+const DETAIL_CALL_SITE_COUNT = 3
 
 describe('comment-stripping is real for this gate (self-test)', () => {
   test('a comment naming the forbidden macro does not survive stripping', () => {
@@ -70,7 +76,10 @@ describe('exactly 30 crate::shell_log( call sites — COUNTED, not toContain-ed'
     // Counted rather than `toContain`-ed: a `toContain` pin is satisfied by 1 call site out of
     // 30 and is the exact shape that lets 29 regressions through (shellDiagPersistence.test.ts's
     // identical framing).
-    expect(count(code, 'crate::shell_log(')).toBe(MEASURED_CALL_SITE_COUNT)
+    expect(
+      count(code, 'crate::shell_log(') + count(code, 'crate::shell_log_detail(')
+    ).toBe(MEASURED_CALL_SITE_COUNT)
+    expect(count(code, 'crate::shell_log_detail(')).toBe(DETAIL_CALL_SITE_COUNT)
   })
 })
 
@@ -78,7 +87,8 @@ describe('double-prefix guard: no shell_log call in this file passes a literal b
   // Guards BOTH argument forms this file actually uses: a plain literal (`shell_log("...`) and
   // an interpolated one (`shell_log(&format!("...`). A count-only assertion above cannot see
   // this: it would still report 30 if every single one of them doubled the prefix.
-  const DOUBLE_PREFIX_RE = /shell_log\(\s*(?:&format!\(\s*)?"\[shell\]/
+  const DOUBLE_PREFIX_RE =
+    /shell_log(?:_detail)?\(\s*(?:&format!\(\s*)?"\[shell\]/
 
   test('the guard passes against the real file', () => {
     expect(code).not.toMatch(DOUBLE_PREFIX_RE)

@@ -374,10 +374,10 @@ define_class!(
                              the system browser (D-12)"
                         );
                         if let Err(e) = crate::open_external(url_string, self.ivars().app.clone()) {
-                            crate::shell_log(&format!(
-                                "macos_epic_embed: popup hand-off to open_external \
-                                 failed: {e}"
-                            ));
+                            crate::shell_log_detail(
+                                "macos_epic_embed: popup hand-off to open_external failed",
+                                &e,
+                            );
                         }
                     } else {
                         crate::shell_log(
@@ -503,8 +503,16 @@ define_class!(
 /// Factored out because `didFailNavigation`/`didFailProvisionalNavigation` differ only in which
 /// delegate method called them, which `caller` names for the log line.
 fn epic_embed_handle_navigation_failure(webview: &WKWebView, error: &NSError, caller: &str) {
+    // WR-02 (84-17): gamelib.log is the file users upload, so the line carries the NSError's domain
+    // and code (a framework-authored category) and the localized description (WebKit's own text,
+    // which can name the failing URL) stays on stderr as the detail.
     let description = error.localizedDescription().to_string();
-    crate::shell_log(&format!("macos_epic_embed: {caller} -- {description}"));
+    let domain = error.domain().to_string();
+    let code = error.code();
+    crate::shell_log_detail(
+        &format!("macos_epic_embed: {caller} -- NSError domain={domain} code={code}"),
+        &description,
+    );
     let event = nav_state_json(webview);
     if let Ok(mut guard) = surface().lock() {
         guard.nav_started_at = None;
@@ -582,9 +590,10 @@ fn epic_embed_route_download(app: &AppHandle, navigation_response: &WKNavigation
              (T-40-04-04)",
         );
         if let Err(e) = crate::open_external(url_string, app.clone()) {
-            crate::shell_log(&format!(
-                "macos_epic_embed: download hand-off to open_external failed: {e}"
-            ));
+            crate::shell_log_detail(
+                "macos_epic_embed: download hand-off to open_external failed",
+                &e,
+            );
         }
     } else {
         crate::shell_log(

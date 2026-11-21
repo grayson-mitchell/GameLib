@@ -226,20 +226,25 @@ fn spawn_sidecar_dev(shell_exe: &str, forward_args: &[String]) -> std::io::Resul
         .unwrap_or_else(|_| "<unknown>".into());
     let exists = std::path::Path::new(&entry).exists();
     let node = resolve_node_program();
-    // `shell_log`, not `eprintln!`: LaunchServices discards a bundled app's stderr, so these
-    // lines — including the FAILURE line below — were invisible in exactly the configuration
-    // that fails. That is why a missing `node` presented as an unexplained "quit unexpectedly"
-    // rather than as the one-line diagnosis it already contained.
-    shell_log(&format!("spawning sidecar (dev): \"{node}\" \"{entry}\""));
-    shell_log(&format!("  cwd={cwd}"));
-    shell_log(&format!("  entry_exists={exists}"));
-    shell_log(&format!("  GAMELIB_SHELL_EXE={shell_exe}"));
-    shell_log(&format!("  GAMELIB_APP_ROOT={app_root}"));
+    // The outcome and its categories go to `gamelib.log` through `shell_log`, because
+    // LaunchServices discards a bundled app's stderr: a missing `node` used to present as an
+    // unexplained "quit unexpectedly" rather than as the one-line diagnosis it already contained.
+    // The paths and environment values stay on stderr (`shell_eprintln!`, exactly as
+    // `spawn_sidecar_packaged` does): `gamelib.log` is the file users upload to a public paste
+    // service, and an absolute path or a home-relative env value does not belong in it (WR-02).
     let (steam_root, steam_root_source) = steam_root_default_env();
+    shell_eprintln!("[shell] spawning sidecar (dev): \"{node}\" \"{entry}\"");
+    shell_eprintln!("[shell]   cwd={cwd}");
+    shell_eprintln!("[shell]   GAMELIB_SHELL_EXE={shell_exe}");
+    shell_eprintln!("[shell]   GAMELIB_APP_ROOT={app_root}");
+    shell_eprintln!(
+        "[shell]   GAMELIB_STEAM_ROOT_DEFAULT={steam_root} (source={steam_root_source})"
+    );
+    shell_eprintln!("[shell]   forward_args={forward_args:?}");
+    let forward_arg_count = forward_args.len();
     shell_log(&format!(
-        "  GAMELIB_STEAM_ROOT_DEFAULT={steam_root} (source={steam_root_source})"
+        "spawning sidecar (dev): entry_exists={exists} steam_root_source={steam_root_source} forward_args={forward_arg_count}"
     ));
-    shell_log(&format!("  forward_args={forward_args:?}"));
     let mut cmd = Command::new(&node);
     cmd.arg(&entry)
         .args(forward_args)
@@ -253,9 +258,13 @@ fn spawn_sidecar_dev(shell_exe: &str, forward_args: &[String]) -> std::io::Resul
     let child = cmd.spawn();
     match &child {
         Ok(_) => shell_log("sidecar process spawned OK"),
-        Err(e) => shell_log(&format!(
-            "FAILED to spawn sidecar: {e} (tried node={node:?}, entry_exists={exists})"
-        )),
+        Err(e) => {
+            let kind = e.kind();
+            shell_log_detail(
+                &format!("FAILED to spawn sidecar: {kind:?} (entry_exists={exists})"),
+                &format!("{e} (tried node={node:?})"),
+            );
+        }
     }
     child
 }

@@ -992,7 +992,13 @@ fn spawn_sidecar_state(app: &tauri::App) -> Result<Arc<SidecarState>, Box<dyn st
     let mut child = match spawn_sidecar(app.handle()) {
         Ok(child) => child,
         Err(e) => {
-            shell_log(&format!("FATAL: sidecar spawn failed, exiting: {e}"));
+            // The io::ErrorKind is the category; the error itself (it can name the node path) stays
+            // on stderr: gamelib.log is the file users upload (WR-02).
+            let kind = e.kind();
+            shell_log_detail(
+                &format!("FATAL: sidecar spawn failed, exiting: {kind:?}"),
+                &e,
+            );
             // The writer may not have drained the FATAL line yet; the dialog is about to block
             // on the user, so give it a bounded moment to reach disk first.
             let _ = gamelib_log::flush(Duration::from_millis(500));
@@ -2013,7 +2019,10 @@ fn main() {
     #[cfg(unix)]
     match gamelib_proc::reaper::start() {
         Ok(pid) => shell_log(&format!("reaper started (pid {pid})")),
-        Err(e) => shell_log(&format!("reaper unavailable: {:?}", e.kind())),
+        Err(e) => {
+            let kind = e.kind();
+            shell_log(&format!("reaper unavailable: {kind:?}"));
+        }
     }
 
     tauri::Builder::default()
@@ -2159,9 +2168,11 @@ fn install_os_deep_link_handler(app: &tauri::App, state: &Arc<SidecarState>) {
                 Ok(_) => shell_log(&format!(
                     "delivered OS deep link to sidecar: ok ({elapsed_ms}ms)"
                 )),
-                Err(e) => shell_log(&format!(
-                    "delivered OS deep link to sidecar: err={e} ({elapsed_ms}ms)"
-                )),
+                // The RPC error is stderr-only detail: it can echo the URL the OS handed us.
+                Err(e) => shell_log_detail(
+                    &format!("delivered OS deep link to sidecar: err ({elapsed_ms}ms)"),
+                    &e,
+                ),
             }
         }
     });
