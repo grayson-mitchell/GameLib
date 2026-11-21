@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 84
 current_phase_name: Logger
 status: executing
-stopped_at: Completed 84-04-PLAN.md
-last_updated: "2026-11-21T05:32:05.767Z"
+stopped_at: Completed 84-05-PLAN.md
+last_updated: "2026-11-21T05:47:57.658Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 84 execution started
-state_head: 743ead62a742a7593d36eec5ca1a3b3740d423a5
+state_head: c68bc33906afc3b1482cea0a7d7aedaa6e75c62e
 progress:
   total_phases: 19
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 84 (Logger) — EXECUTING
-Plan: 5 of 11
+Plan: 6 of 11
 Status: Ready to execute
 Last activity: 2026-11-21 - Completed quick task 261121-p6z: Bound bootstrap.test.ts legacy-zoom cleanup wait by wall-clock via shared yieldUntil
 Progress: [██████████] 100%
@@ -343,6 +343,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 84 P02 | not measured | 4 tasks | 19 files |
 | Phase 84 P03 | 25 min | 3 tasks | 28 files |
 | Phase 84 P04 | 40 min | 2 tasks | 30 files |
+| Phase 84 P05 | not measured | 3 tasks | 31 files |
 
 ## Accumulated Context
 
@@ -620,6 +621,10 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 84]: 84-03: forwarder onReady coalesces into the 50 ms tick; calibrated constants stay 50 ms / 32 KiB / 4,000 entries / 8 MiB
 - [Phase 84]: 84-04: the TS LogWriter is a facade over the forwarder; the type swap, codemod and facade land in one typechecking commit (nominal #private types)
 - [Phase 84]: 84-04: gamelib.log limiter is 60 s window / burst 5 / 256 keys / 200-char excerpt; only general-target Line entries are limited (D-15), flush drains open windows
+- [Phase 84]: 84-05: renderer log channels (logError, logInfo, showLogFileInFolder, getLogContent, uploadLogFile) are native-router channels served by Rust; NativeCtx carries host, log_paths, store_host, emitter, paste and app_version
+- [Phase 84]: 84-05: a paste URL is stored or returned only if https on host exactly dpaste.com (no credentials or port); ReqwestPaste disables redirects and is shared with 84-06's delete
+- [Phase 84]: 84-05: uploadedLogs.json has two writers (Rust on upload, TS FileStore on list/delete) until 84-06; no push before 84-10 so the window never ships
+- [Phase 84]: 84-05: the deleteButtonReachability premise check was pulled forward from 84-06 and now reads PASTE_TOKEN in log_upload.rs
 
 ### Pending Todos
 
@@ -875,8 +880,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-21T05:26:11.601Z
-Stopped at: Completed 84-04-PLAN.md
+Last session: 2026-11-21T05:47:56.941Z
+Stopped at: Completed 84-05-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

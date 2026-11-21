@@ -419,7 +419,7 @@ Plans:
   3. Diagnostics from steam-vent and reqwest appear in the log, and a repeating error is rate-limited rather than flooding the file
   4. The TS logger is reduced to a fire-and-forget forwarder, and the shell's second log path (`shell_diag`) and the TS log registrations are deleted
 
-**Plans:** 4/11 plans executed in 9 waves; planned 2026-11-21, consolidated from 14 the same day, then the consolidated 84-06 and 84-07 each split in two to stay inside the per-plan context budget; executes only after Phase 83 closes (83-11 live gate passed, D-02)
+**Plans:** 5/11 plans executed in 9 waves; planned 2026-11-21, consolidated from 14 the same day, then the consolidated 84-06 and 84-07 each split in two to stay inside the per-plan context budget; executes only after Phase 83 closes (83-11 live gate passed, D-02)
 
 Plans:
 **Wave 1**
@@ -433,7 +433,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 - [x] 84-04-PLAN.md — Runner, per-game and gog-redist logs through the native writer (facade, with the import codemod in the same typechecking commit); gamelib.log rate limiter
-- [ ] 84-05-PLAN.md — Native router widened; logError/logInfo/showLogFileInFolder/getLogContent and upload (reqwest on StoreHost) in Rust
+- [x] 84-05-PLAN.md — Native router widened; logError/logInfo/showLogFileInFolder/getLogContent and upload (reqwest on StoreHost) in Rust
 
 **Wave 5** *(blocked on Wave 4 completion)*
 - [ ] 84-06-PLAN.md — Uploaded list and delete-uploaded in Rust; TS uploader, logger flow registration and uploadedLogs slice deleted (uploadedLogs has one owner); COVERAGE.md
