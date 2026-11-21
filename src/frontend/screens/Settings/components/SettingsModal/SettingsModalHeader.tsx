@@ -15,7 +15,7 @@ type Props = {
 // the Dialog header row.
 function SettingsModalHeader({ gameInfo, type, justSaved }: Props) {
   const { t } = useTranslation()
-  const { title, app_name: appName } = gameInfo
+  const { title, app_name: appName, runner } = gameInfo
 
   const arts = [
     gameInfo.overrides?.art_square,
@@ -34,7 +34,7 @@ function SettingsModalHeader({ gameInfo, type, justSaved }: Props) {
     category: t('header.categories', 'Categories')
   }[type]
 
-  const appIdLabel = isStore(gameInfo, 'steam')
+  const appIdLabel = isStore(runner, 'steam')
     ? t('gamelib:settings.modal.steamAppId', 'Steam App ID')
     : t('gamelib:settings.modal.appId', 'App ID')
 
