@@ -800,6 +800,10 @@
             "environment": {
                 "label": "Environment variables"
             },
+            "gameLog": {
+                "label": "Game log",
+                "open": "Open the Logs tab"
+            },
             "language": {
                 "label": "Game language"
             },
@@ -846,6 +850,12 @@
         "loginBackgroundDialogTitle": "Select a background image",
         "loginBackgroundFilterName": "Images",
         "loginBackgroundHelp": "Image shown behind the Manage Accounts screen. Clear the field to go back to the bundled artwork. PNG, JPEG, WebP, AVIF and GIF are supported.",
+        "logs": {
+            "copy": "Copy log",
+            "gamelibLog": "GameLib log",
+            "lastSession": "Last session",
+            "session": "Log"
+        },
         "modal": {
             "appId": "App ID",
             "gameSettings": "Game settings",

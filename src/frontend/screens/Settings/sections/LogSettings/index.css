@@ -104,3 +104,7 @@
   text-align: start;
   max-width: 513px;
 }
+
+.logSessionPicker {
+  margin-block-end: var(--space-xs, 0.25rem);
+}

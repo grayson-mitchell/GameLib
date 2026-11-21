@@ -1,8 +1,9 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { faFolderOpen } from '@fortawesome/free-solid-svg-icons'
+import { faCopy, faFolderOpen } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { UpdateComponent } from 'frontend/components/UI'
+import { MenuItem } from '@mui/material'
+import { SelectField, UpdateComponent } from 'frontend/components/UI'
 import SettingsContext from '../../SettingsContext'
 import './index.css'
 import {
@@ -88,6 +89,11 @@ export default function LogSettings() {
     !runner ? {} : { appName, runner }
   )
   const [refreshing, setRefreshing] = useState<boolean>(true)
+  // Phase 100 D-02: a game's Logs tab picks between the game's last session
+  // (its own log) and the general GameLib log. No new backend: both are
+  // getLogContent arguments the page already polls.
+  const gameLogArgs: GetLogFileArgs = !runner ? {} : { appName, runner }
+  const logSession = showLogOf.appName ? 'lastSession' : 'gamelibLog'
 
   const epic = useEpicAccount()
   const gog = useGogAccount()
@@ -126,6 +132,15 @@ export default function LogSettings() {
     }, 1000)
     return () => clearInterval(interval)
   }, [showLogOf])
+
+  function changeLogSession(session: string) {
+    setRefreshing(true)
+    setShowLogOf(session === 'gamelibLog' ? {} : gameLogArgs)
+  }
+
+  function copyLog() {
+    window.api.clipboardWriteText(logFileContent)
+  }
 
   function showLogFileInFolder() {
     window.api.showLogFileInFolder(showLogOf)
@@ -224,6 +239,23 @@ export default function LogSettings() {
           </span>
         )}
 
+        {!isInSettingsMenu && (
+          <SelectField
+            htmlId="logSession"
+            extraClass="logSessionPicker"
+            label={t('gamelib:settings.logs.session', 'Log')}
+            value={logSession}
+            onChange={(e) => changeLogSession(e.target.value)}
+          >
+            <MenuItem value="lastSession">
+              {t('gamelib:settings.logs.lastSession', 'Last session')}
+            </MenuItem>
+            <MenuItem value="gamelibLog">
+              {t('gamelib:settings.logs.gamelibLog', 'GameLib log')}
+            </MenuItem>
+          </SelectField>
+        )}
+
         {refreshing ? (
           <span className="setting log-box">
             <UpdateComponent />
@@ -235,6 +267,22 @@ export default function LogSettings() {
       <span className="footerFlex">
         {logFileExist && (
           <>
+            {!isInSettingsMenu && (
+              <a
+                onClick={copyLog}
+                title={t('gamelib:settings.logs.copy', 'Copy log')}
+                className="button is-footer"
+              >
+                <div className="button-icontext-flex">
+                  <div className="button-icon-flex">
+                    <FontAwesomeIcon icon={faCopy} />
+                  </div>
+                  <span className="button-icon-text">
+                    {t('gamelib:settings.logs.copy', 'Copy log')}
+                  </span>
+                </div>
+              </a>
+            )}
             <a
               onClick={showLogFileInFolder}
               title={t('setting.log.show-in-folder', 'Show log file in folder')}

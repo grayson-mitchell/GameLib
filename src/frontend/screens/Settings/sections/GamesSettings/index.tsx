@@ -168,6 +168,13 @@ export default function GamesSettings({
     rememberTab(localStorage, gameInfo, newValue.toString())
   }
 
+  // Phase 100 D-02: the Diagnostics "Game log" link goes through the same path
+  // as a tab click.
+  const openLogsTab = () => {
+    setValue('logs')
+    rememberTab(localStorage, gameInfo, 'logs')
+  }
+
   const tabLabels: Record<SettingsTab, string> = {
     wine: t('gamelib:settings.navbar.wine', 'Wine'),
     winetricks: t('gamelib:settings.navbar.winetricks', 'Winetricks'),
@@ -349,6 +356,24 @@ export default function GamesSettings({
           )}
         >
           <VerboseLogs />
+          {!isDefault && (
+            <div className="toggleRow">
+              <span>
+                {t('gamelib:settings.fields.gameLog.label', 'Game log')}
+              </span>{' '}
+              <a
+                className="clickable"
+                role="button"
+                tabIndex={0}
+                onClick={openLogsTab}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') openLogsTab()
+                }}
+              >
+                {t('gamelib:settings.fields.gameLog.open', 'Open the Logs tab')}
+              </a>
+            </div>
+          )}
           {!isSideloaded && <IgnoreGameUpdates />}
         </SettingsCard>
       </TabPanel>
