@@ -137,6 +137,60 @@ export const SIDECAR_STORE_SNAPSHOT = 'sidecar_store_snapshot' as const
 export const RUST_INVOKE_KIND = 'rustInvoke' as const
 
 /**
+ * Frame `kind` of the sidecar's log frames (Phase 84, FND-05): a batch of log entries the sidecar
+ * forwards on stdout for the Rust shell to write (`src-tauri/src/sidecar.rs`'s `LOG_FRAME_KIND`; a
+ * Rust test pins the pair). Direction: sidecar to Rust only. The shell validates every frame
+ * (closed sets, caps, no paths) and rejects a bad one whole; the shared vectors are
+ * `src/common/__fixtures__/logFrameVectors.json`.
+ */
+export const LOG_FRAME_KIND = 'log' as const
+
+/** Which game log a game target names. Moved here from `backend/logger/paths.ts`. */
+export type GameLogType =
+  | 'launch'
+  | 'install'
+  | 'import'
+  | 'repair'
+  | 'update'
+  | 'setup'
+
+/** A typed log target: never a path, the shell resolves the file. */
+export type LogFrameTarget =
+  | { kind: 'general' }
+  | { kind: 'gogRedist' }
+  | { kind: 'runner'; runner: string }
+  | { kind: 'game'; appName: string; runner: string; type: GameLogType }
+
+/**
+ * One entry: a structured line (the shell formats it from `ts` epoch milliseconds and `tz` minutes
+ * east of UTC taken at call time) or a raw chunk of child output (written as is).
+ */
+export type LogFrameEntry =
+  | {
+      line: {
+        ts: number
+        tz: number
+        level: 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR'
+        prefix: string
+        msg: string
+      }
+    }
+  | { raw: string }
+
+/** The entries one writer sent for one target; `rotate` is true on a non-general writer's first. */
+export interface LogFrameBatch {
+  target: LogFrameTarget
+  rotate: boolean
+  entries: LogFrameEntry[]
+}
+
+/** The `kind:"log"` stdout frame. */
+export interface LogFrame {
+  kind: typeof LOG_FRAME_KIND
+  batch: LogFrameBatch[]
+}
+
+/**
  * Rust-side channel name: read the Steam refresh token from the OS Keychain via `keyring`.
  *
  * 34.4.1 gap cycle 2 plan 26 (F-9 observability half, REQ-34.4.1-GAP-01/REQ-34.4.1-GAP-11): the

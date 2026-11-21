@@ -1,80 +1,96 @@
 import os from 'os'
 
 import { LogPrefix, RunnerToLogPrefixMap } from './constants'
+import { LogForwarder } from './forwarder'
 import LogWriter from './log_writer'
-import { GameLogType, getLogFilePath } from './paths'
+import { getLogFilePath } from './paths'
 
 import type { Runner } from 'common/types'
-import type { RunnerOrComet } from './types'
+import type { GameLogType } from 'common/types/sidecarTransport'
+import type { LogLevel } from './constants'
+import type { LogTransport } from './forwarder'
+import type { LogOptions, RunnerOrComet } from './types'
 
-let heroicLogWriter: LogWriter
+/**
+ * The ONE process-wide piece of general-log state (moduleStateCensus: this file is sanctioned for
+ * two module-state sites, this and `runnerLogWriters`). Every general log call below queues into it;
+ * the forwarder sends frames to the Rust shell, which writes `gamelib.log` (Phase 84, FND-05).
+ */
+const logForwarder = new LogForwarder()
 const runnerLogWriters = new Map<RunnerOrComet, LogWriter>()
 
-const logDebug = (...params: Parameters<LogWriter['logDebug']>) => {
-  heroicLogWriter.logDebug(...params)
+function logGeneral(
+  level: LogLevel,
+  message: unknown,
+  options?: LogOptions
+): void {
+  const prefix =
+    (typeof options === 'string' ? options : options?.prefix) ??
+    LogPrefix.General
+  logForwarder.logLine({ kind: 'general' }, false, level, prefix, message)
 }
-const logInfo = (...params: Parameters<LogWriter['logInfo']>) => {
-  heroicLogWriter.logInfo(...params)
+
+const logDebug = (message: unknown, options?: LogOptions): void => {
+  logGeneral('DEBUG', message, options)
 }
-const logWarning = (...params: Parameters<LogWriter['logWarning']>) => {
-  heroicLogWriter.logWarning(...params)
+const logInfo = (message: unknown, options?: LogOptions): void => {
+  logGeneral('INFO', message, options)
 }
-const logError = (...params: Parameters<LogWriter['logError']>) => {
-  heroicLogWriter.logError(...params)
+const logWarning = (message: unknown, options?: LogOptions): void => {
+  logGeneral('WARNING', message, options)
+}
+const logError = (message: unknown, options?: LogOptions): void => {
+  logGeneral('ERROR', message, options)
 }
 
 /**
- * `logErrorSettled` (Phase 34.2 gap cycle 4, plan 34.2-26 — closes CR-01):
- * added BESIDE `logError` above, not in place of it. `logError` and
- * `logErrorSettled` are one-line siblings over the identical
- * `Parameters<LogWriter['logError']>` type, so they cannot drift
- * semantically — the only difference is that this one is an EXPRESSION
- * body, so it actually `return`s the `Promise<void>` `heroicLogWriter
- * .logError(...)` produces, instead of silently dropping it the way the
- * block-body `logError` above does (and the way `logDebug`/`logWarning`
- * still do). `loggerFlowRegistration.ts`'s `logError` IPC listener imports
- * THIS export so its call-site `.catch` guard has a real promise to attach
- * to.
+ * `logErrorSettled` (Phase 34.2 plan 34.2-26, CR-01; reshaped for Phase 84 D-10): queues the line
+ * exactly like `logError` and returns a promise that resolves once the entry has been handed to
+ * stdout (the stream's write callback), after at most `LOG_FLUSH_TIMEOUT_MS`, or at once when no
+ * transport is bound. It never rejects, so `loggerFlowRegistration.ts`'s call-site `.catch` guard
+ * and the fatal `uncaughtException` guard (Phase 72 D-04, which awaits it before exiting) can
+ * never be failed or hung by a log write. The old rejection path (a general writer failing on
+ * ENOTDIR) no longer exists: the native writer owns the file.
  *
- * Deliberately NOT applied to `logDebug`/`logWarning`/`logError` above:
- * this project measured 309 statement-position `logError(...)` call sites
- * under `src/backend` (excluding `src/backend/logger/` and `__tests__`),
- * none of them awaited, and `eslint.config.mjs:39` sets
- * `@typescript-eslint/no-floating-promises` to `warn` — so changing the
- * shared wrapper's inferred return type from `void` to `Promise<void>`
- * would add roughly 309 new warnings against a current backend baseline in
- * the low thousands (a project-wide, undeclared blast radius), with ZERO
- * runtime behavior change, since the promise is dropped either way — only
- * the drop site moves from inside this file to every one of those 309
- * call sites. The code review that raised CR-01 named this blast radius
- * and asked for it to be audited before acting; this comment IS that
- * audit's result. Widening all four wrappers remains a separately-scoped
- * follow-up, already recorded in this phase's `deferred-items.md` under
- * "From plan 34.2-20", and restated by plan 34.2-30.
- *
- * Phase 34.3 plan 04 (REQ-34.3-09) added `logInfoSettled` below for the
- * identical call-site-guard reason — `logInfo` is a `send` channel and, per
- * the `sidecar-send-channels-fail-silently` gotcha, a call-site rejection
- * that escapes its listener would kill the sidecar. The shared-wrapper
- * widening described above remains the same separately-scoped deferred
- * follow-up for both `logInfo` and `logError`.
+ * Deliberately NOT applied to `logDebug`/`logWarning`/`logError` above: widening the shared
+ * wrappers to return a promise would add roughly 309 floating-promise warnings at the
+ * statement-position call sites with no runtime change (the 34.2-26 audit).
  */
 const logErrorSettled = (
-  ...params: Parameters<LogWriter['logError']>
-): Promise<void> => heroicLogWriter.logError(...params)
+  message: unknown,
+  options?: LogOptions
+): Promise<void> => {
+  logGeneral('ERROR', message, options)
+  return logForwarder.flush()
+}
 
 /**
- * `logInfoSettled` (Phase 34.3 plan 04 — REQ-34.3-09): byte-shape-identical
- * sibling of `logErrorSettled` above, over `logInfo`'s own parameter type.
- * `logInfo` above is a block-body wrapper that drops the `Promise<void>`
- * `heroicLogWriter.logInfo(...)` returns; this expression-body sibling
- * forwards it instead, so `loggerFlowRegistration.ts`'s `logInfo` send
- * listener has a real promise to attach its call-site `.catch` guard to —
- * the exact same reason `logErrorSettled` exists.
+ * `logInfoSettled` (Phase 34.3 plan 04, REQ-34.3-09): the `logInfo` sibling of `logErrorSettled`,
+ * for the `logInfo` send listener's call-site guard.
  */
 const logInfoSettled = (
-  ...params: Parameters<LogWriter['logInfo']>
-): Promise<void> => heroicLogWriter.logInfo(...params)
+  message: unknown,
+  options?: LogOptions
+): Promise<void> => {
+  logGeneral('INFO', message, options)
+  return logForwarder.flush()
+}
+
+/**
+ * Binds the stdout transport the forwarder sends frames on (the 'sidecar-rpc' boot step). Lines
+ * logged before this call wait in the forwarder's queue, up to its caps.
+ */
+function bindLogTransport(transport: LogTransport): void {
+  logForwarder.bind(transport)
+}
+
+/**
+ * Hands every queued line to stdout and waits for the write (bounded, never rejects). Called last
+ * by `releaseOnStdinEof`, so the loop can drain with nothing left in the queue.
+ */
+function flushLogForwarder(): Promise<void> {
+  return logForwarder.flush()
+}
 
 /**
  * The caller passes `disableLogs` (66.3-06): this module reads no config. The writer is
@@ -117,14 +133,12 @@ async function createGameLogWriter(
 }
 
 /**
- * Writer initialization for the headless sidecar (`backend/sidecar/bootstrap.ts`). Assigns
- * `heroicLogWriter` directly so the REAL `logInfo`/`logWarning`/`logError` calls throughout
- * the backend have a writer to dereference. The Electron-era `init()` (GlobalConfig read,
- * one-time system-info dump, `settingChanged` listener) had no caller and was deleted in
- * 66.3-06 so this module imports no config.
+ * The 'logger' boot step's marker. The general log has no writer to create any more: it is the
+ * forwarder (`logForwarder` above), usable from module load, and the shell owns the file. Kept so
+ * the boot step order and the `initHeadless as initLogger` import stay as they were.
  */
 function initHeadless(): void {
-  heroicLogWriter = new LogWriter(getLogFilePath({}), false, false)
+  // Nothing to do: see above.
 }
 
 /**
@@ -138,7 +152,7 @@ function initHeadless(): void {
  */
 export function logBootFacts(): void {
   const cpus = os.cpus()
-  heroicLogWriter.logInfo(
+  logInfo(
     [
       'System facts:',
       `${process.platform} ${process.arch} ${os.release()},`,
@@ -150,6 +164,8 @@ export function logBootFacts(): void {
 }
 
 export {
+  bindLogTransport,
+  flushLogForwarder,
   initHeadless,
   logDebug,
   logInfo,

@@ -601,6 +601,31 @@ fn shell_diag(message: &str) {
     }
 }
 
+/// Phase 84 (FND-05): starts the native log writer that owns `gamelib.log` and the runner and game
+/// logs. Called from `fn main` only after the single-instance decision, so a second GameLib launch
+/// has already exited and can never rotate the live `gamelib.log` (`gamelib_log::init` is also
+/// first-call-wins). The home directory is `HOME`, then `USERPROFILE` (the `SidecarProfile::current`
+/// rule). With none the writer is not started and the sidecar's log frames are dropped.
+fn init_native_logger() {
+    let home = std::env::var("HOME")
+        .ok()
+        .or_else(|| std::env::var("USERPROFILE").ok())
+        .filter(|h| !h.is_empty());
+    let Some(home) = home else {
+        shell_eprintln!("[shell] native logger not started: no home directory");
+        return;
+    };
+    let platform = gamelib_core::paths::Platform::current();
+    let env = |k: &str| std::env::var(k).ok();
+    gamelib_log::init(gamelib_log::LogConfig {
+        platform,
+        log_dir: gamelib_core::paths::log_dir(platform, &home, &env),
+        user_data: gamelib_core::paths::resolve(platform, &home, &env).user_data,
+        clock: std::sync::Arc::new(gamelib_core::clock::SystemClock),
+        tz: std::sync::Arc::new(gamelib_log::SystemTz),
+    });
+}
+
 /// Renders one panic report. Split out from the hook itself so a test can assert the report
 /// actually CARRIES the four things a diagnosis needs — thread, location, payload, backtrace —
 /// without installing a process-global hook or writing to the operator's real log file.
@@ -1858,6 +1883,11 @@ fn main() {
     #[cfg(not(any(unix, windows)))]
     let primary_listener: Option<PrimaryListener> = None;
 
+    // Phase 84 (FND-05): the native log writer starts only now, once this process is the primary
+    // instance. A secondary has already exited above, so it never initialises the writer and
+    // cannot rotate `gamelib.log` under the running instance.
+    init_native_logger();
+
     // Phase 83 (FND-04, D-11): the SIGKILL reaper. Started only now that this process is the
     // primary instance (a secondary has already exited above, so it never spawns one) and before
     // the Tauri builder. A failure here is logged and startup continues: never `?`, never a
@@ -2461,6 +2491,47 @@ mod tests {
         assert!(arm.contains("reaper started (pid "));
         assert!(arm.contains("reaper unavailable: "));
         assert!(!arm.contains(")?") && !arm.contains("unwrap") && !arm.contains("expect"));
+    }
+
+    /// Phase 84 (FND-05, research change 2 / Pitfall 3): the native log writer starts only in the
+    /// primary instance, after both single-instance blocks and before the reaper starts, so a
+    /// second launch exits before it can rotate `gamelib.log`. Comment lines are dropped so prose
+    /// naming these calls cannot satisfy or break the order.
+    #[test]
+    fn fn_main_starts_the_native_logger_after_the_single_instance_guard_and_before_the_reaper() {
+        let src = shell_production_source();
+        let from = src.find("\nfn main() {").expect("fn main not found");
+        let rest = &src[from + 1..];
+        let end = rest.find("\n}\n").expect("end of fn main not found");
+        let body: String = rest[..end]
+            .lines()
+            .filter(|l| !l.trim_start().starts_with("//"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let at = |needle: &str| {
+            body.find(needle)
+                .unwrap_or_else(|| panic!("fn main does not contain `{needle}`"))
+        };
+        let init = at("init_native_logger();");
+        assert_eq!(body.matches("init_native_logger();").count(), 1);
+        for earlier in [
+            "acquire_single_instance(",
+            "acquire_single_instance_windows(",
+            "WindowsSingleInstanceRole::PrimaryWithoutListener",
+        ] {
+            assert!(
+                at(earlier) < init,
+                "the logger starts after `{earlier}` in fn main"
+            );
+        }
+        assert!(
+            init < at("gamelib_proc::reaper::start()"),
+            "the logger starts before the reaper"
+        );
+        assert!(
+            init < at("tauri::Builder::default()"),
+            "the logger starts before the Tauri builder"
+        );
     }
 
     /// Guard: a new shell module file must be named in `SHELL_SOURCE_FILES`, or the source-text

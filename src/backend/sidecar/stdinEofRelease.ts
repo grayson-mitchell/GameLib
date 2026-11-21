@@ -1,7 +1,7 @@
 import type { Readable } from 'node:stream'
 import type { AbortRegistry } from '../utils/aborthandler/aborthandler'
 import type { DownloadQueue } from '../downloadmanager/downloadqueue'
-import { LogPrefix, logInfo, logWarning } from '../logger'
+import { LogPrefix, flushLogForwarder, logInfo, logWarning } from '../logger'
 import type { OutboundHttpTracker } from './outboundHttpRegistry'
 
 /** How long after EOF the sidecar waits before logging what is still holding the loop. */
@@ -93,6 +93,10 @@ export function releaseOnStdinEof(
       )
     }, RESIDUAL_HOLDER_DIAG_MS)
     t.unref?.()
+    // LAST: hand every queued log line to stdout before the loop drains (Phase 84). The forwarder's
+    // tick timer is unref'd, so without this the lines above would never leave. The flush adds no
+    // referenced handle (its timeout timer is unref'd) and never rejects.
+    void flushLogForwarder()
   }
   input.once('end', release)
   input.once('close', release)

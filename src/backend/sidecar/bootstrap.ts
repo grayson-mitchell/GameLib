@@ -206,6 +206,7 @@ import {
   logErrorSettled,
   logBootFacts,
   getRunnerLogWriter,
+  bindLogTransport,
   LogPrefix
 } from '../logger'
 import { createGlobalConfig, type GlobalConfigSlice } from '../config'
@@ -1556,6 +1557,10 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             sink: (line) => logWarning(line, LogPrefix.Backend)
           })
         })
+        // Phase 84 (FND-05): from here the general log rides this transport as `kind:"log"` frames.
+        // Lines logged earlier wait in the forwarder's queue (capped) and are sent now; the frames
+        // are held by the transport until 'rpc-server' attaches stdout.
+        bindLogTransport(state.rpc.logTransport)
       }
     },
     {

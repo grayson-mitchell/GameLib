@@ -73,6 +73,7 @@ import {
 import type { IpcRegistry } from './ipcRegistry'
 import type { IpcValidator } from './ipcValidation'
 import type { RustInvokeArgsOf } from 'common/types/ipc/rustInvoke'
+import type { LogTransport } from '../logger/forwarder'
 
 /** Guardrail against an unterminated line growing the input buffer unbounded. */
 const MAX_LINE_LENGTH = 10 * 1024 * 1024 // 10 MiB
@@ -198,6 +199,11 @@ export interface SidecarRpc {
     channel: C,
     args: RustInvokeArgsOf<C>
   ) => Promise<unknown>
+  /**
+   * The log forwarder's view of this transport (Phase 84): `kind:"log"` frames on the same output
+   * stream, with the write callback and drain signal the forwarder needs for backpressure.
+   */
+  logTransport: LogTransport
 }
 
 /**
@@ -252,12 +258,14 @@ export function createSidecarRpc(deps: SidecarRpcDeps): SidecarRpc {
    * exists rather than before it.
    */
   let outputStream: Writable | null = null
-  const pendingLines: string[] = []
+  const pendingLines: { line: string; onWritten?: () => void }[] = []
+  /** Log-forwarder `onReady` listeners waiting for an output to be attached. */
+  const outputReadyListeners: (() => void)[] = []
 
   function writeLine(value: unknown): void {
     const line = `${JSON.stringify(value)}\n`
     if (outputStream === null) {
-      pendingLines.push(line)
+      pendingLines.push({ line })
       return
     }
     outputStream.write(line)
@@ -269,10 +277,35 @@ export function createSidecarRpc(deps: SidecarRpcDeps): SidecarRpc {
    */
   function attachOutput(output: Writable): void {
     outputStream = output
-    if (pendingLines.length === 0) return
     const queued = pendingLines.splice(0, pendingLines.length)
-    for (const line of queued) {
-      output.write(line)
+    for (const { line, onWritten } of queued) {
+      output.write(line, onWritten)
+    }
+    for (const listener of outputReadyListeners.splice(0)) listener()
+  }
+
+  /**
+   * The log forwarder's transport (Phase 84). `send` returns false while no output is attached: the
+   * frame is HELD here (not lost) and written, in order, when `start()` attaches the output, which
+   * is also when `onReady` fires. Once attached it returns the stream's own `write` result (false =
+   * accepted, backed up: wait for 'drain'). Log frames ride the same stream as every other frame,
+   * so the sidecar's stdout stays JSON frames only.
+   */
+  const logTransport: LogTransport = {
+    send(frame, onWritten) {
+      const line = `${JSON.stringify(frame)}\n`
+      if (outputStream === null) {
+        pendingLines.push({ line, onWritten })
+        return false
+      }
+      return outputStream.write(line, onWritten)
+    },
+    onReady(listener) {
+      if (outputStream === null) {
+        outputReadyListeners.push(listener)
+        return
+      }
+      outputStream.once('drain', listener)
     }
   }
 
@@ -576,5 +609,11 @@ export function createSidecarRpc(deps: SidecarRpcDeps): SidecarRpc {
     })
   }
 
-  return { start, pushFrontendMessage, requestOpenExternal, requestRustInvoke }
+  return {
+    start,
+    pushFrontendMessage,
+    requestOpenExternal,
+    requestRustInvoke,
+    logTransport
+  }
 }

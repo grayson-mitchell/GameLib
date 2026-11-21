@@ -344,8 +344,43 @@ pub(crate) fn start_stderr_forwarder(stderr: std::process::ChildStderr) {
     });
 }
 
-/// Reader thread: routes each stdout line from the sidecar. Four frame shapes are
-/// recognized: a line with `ok` is a SidecarRpcResponse (fulfil the pending invoke by id);
+/// The `kind` of the sidecar's log frame (Phase 84, FND-05). Mirrors `LOG_FRAME_KIND` in
+/// `src/common/types/sidecarTransport.ts` (a test pins the pair).
+pub(crate) const LOG_FRAME_KIND: &str = "log";
+
+/// Parses one `kind:"log"` frame and hands it to the logger. Never writes a file and never waits:
+/// `Logger::submit` is one `try_send`. A rejected frame returns its category (the shared vectors'
+/// reason string); the frame's content is never echoed.
+pub(crate) fn route_log_frame(
+    logger: &gamelib_log::writer::Logger,
+    line_len: usize,
+    value: Value,
+) -> Result<(), gamelib_log::frame::FrameReject> {
+    let batches = gamelib_log::frame::parse_frame(line_len, value)?;
+    logger.submit(batches);
+    Ok(())
+}
+
+/// The reader thread's log arm. With no global logger (a headless run, or no home directory) the
+/// frame is dropped silently. A rejected frame is reported by category only.
+fn handle_log_frame(line_len: usize, value: Value) {
+    let Some(logger) = gamelib_log::global() else {
+        return;
+    };
+    if let Err(reject) = route_log_frame(logger, line_len, value) {
+        let category = reject.as_str();
+        shell_eprintln!("[shell] log frame rejected: {category}");
+        gamelib_log::log(
+            gamelib_log::Prefix::Shell,
+            gamelib_log::Level::Warning,
+            &format!("log frame rejected: {category}"),
+        );
+    }
+}
+
+/// Reader thread: routes each stdout line from the sidecar. Five frame shapes are
+/// recognized: `kind == "log"` is a batch of log lines handed to the native writer
+/// (`handle_log_frame`, Phase 84); a line with `ok` is a SidecarRpcResponse (fulfil the pending invoke by id);
 /// `kind == "frontendMessage"` is a SidecarNotification (re-emit as FRONTEND_MESSAGE_EVENT);
 /// `kind == "rustInvoke"` is a sidecar-initiated request answered by `dispatch_rust_channel`
 /// on a spawned worker thread (Phase 28 — keyring calls); `kind == "openExternal"` opens the
@@ -485,6 +520,14 @@ pub(crate) fn start_reader(
             }
 
             let kind = value.get("kind").and_then(|v| v.as_str());
+
+            // Phase 84 (FND-05): the sidecar's log frames. Parsed, validated and handed to the
+            // writer thread here; this arm never writes a file and never blocks the reader
+            // (D-UAT-19, and the 2026-10-05 send-queue freeze).
+            if kind == Some(LOG_FRAME_KIND) {
+                handle_log_frame(trimmed.len(), value);
+                continue;
+            }
 
             // Sidecar-initiated request: dispatch to the keyring/native-facility handler and
             // write the correlated response back on the same stdin pipe. Dispatched on a
@@ -880,5 +923,115 @@ mod tests {
              ordered last, never discarded"
         );
         assert_eq!(nvm_versions_newest_first(vec![]), Vec::<String>::new());
+    }
+}
+
+/// Phase 84 (FND-05): the log frame arm, through `route_log_frame` (the function the reader thread
+/// calls) into a real `Logger` on a throwaway home.
+#[cfg(test)]
+mod log_frame_tests {
+    use super::*;
+    use gamelib_core::clock::Clock;
+    use gamelib_core::paths::{join, Platform};
+    use gamelib_log::writer::{LogConfig, Logger, TzOffset};
+    use gamelib_testutil::FakeHome;
+    use std::time::Duration;
+
+    const TS_TRANSPORT: &str = include_str!("../../src/common/types/sidecarTransport.ts");
+    const ENTRIES: &str = include_str!("../crates/gamelib-log/tests/fixtures/golden/entries.json");
+
+    struct FixedClock;
+    impl Clock for FixedClock {
+        fn now_ms(&self) -> u64 {
+            1_795_133_109_000
+        }
+    }
+
+    struct FixedTz;
+    impl TzOffset for FixedTz {
+        fn offset_minutes(&self, _epoch_ms: u64) -> i32 {
+            780
+        }
+    }
+
+    fn logger_on(home: &FakeHome) -> Logger {
+        let root = home.root().to_string_lossy().into_owned();
+        Logger::start(LogConfig {
+            platform: Platform::current(),
+            user_data: join(Platform::current(), &root, &["userData"]),
+            log_dir: root,
+            clock: Arc::new(FixedClock),
+            tz: Arc::new(FixedTz),
+        })
+    }
+
+    fn frame_of(batch: &Value) -> (usize, Value) {
+        let value = serde_json::json!({"kind": LOG_FRAME_KIND, "batch": [batch]});
+        (value.to_string().len(), value)
+    }
+
+    #[test]
+    fn log_frame_kind_matches_the_ts_transport_constant() {
+        assert!(
+            TS_TRANSPORT.contains(&format!("LOG_FRAME_KIND = '{LOG_FRAME_KIND}'")),
+            "sidecarTransport.ts must declare LOG_FRAME_KIND = '{LOG_FRAME_KIND}'"
+        );
+    }
+
+    /// Every case of the golden whose frames target only the general log: its frames go through
+    /// `route_log_frame` into a Logger and `gamelib.log` must equal the TS oracle's file.
+    #[test]
+    fn log_frame_golden_replays_every_general_case_through_route_log_frame() {
+        let entries: Vec<Value> = serde_json::from_str(ENTRIES).expect("entries.json");
+        let mut replayed = 0;
+        for entry in &entries {
+            let id = entry["id"].as_str().expect("case id");
+            let Some(frames) = entry.get("frames").and_then(Value::as_array) else {
+                continue;
+            };
+            let general_only = !frames.is_empty()
+                && frames
+                    .iter()
+                    .all(|f| f["target"]["kind"].as_str() == Some("general"));
+            if !general_only {
+                continue;
+            }
+            let home = FakeHome::new("gamelib-shell-log-frame-");
+            let logger = logger_on(&home);
+            for frame in frames {
+                let (len, value) = frame_of(frame);
+                route_log_frame(&logger, len, value)
+                    .unwrap_or_else(|r| panic!("case {id}: frame rejected: {}", r.as_str()));
+            }
+            assert!(logger.flush(Duration::from_secs(10)), "case {id}: flush");
+            let got = std::fs::read_to_string(home.root().join("gamelib.log"))
+                .unwrap_or_else(|e| panic!("case {id}: no gamelib.log: {e}"));
+            let want = std::fs::read_to_string(
+                std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("crates/gamelib-log/tests/fixtures/golden/expected")
+                    .join(id)
+                    .join("gamelib.log"),
+            )
+            .unwrap_or_else(|e| panic!("case {id}: no expected file: {e}"));
+            assert_eq!(got, want, "log frame golden mismatch in case {id}");
+            replayed += 1;
+        }
+        println!("log_frame golden cases replayed through route_log_frame: {replayed}");
+        assert!(
+            replayed >= 25,
+            "the general-target cases were found: {replayed}"
+        );
+    }
+
+    #[test]
+    fn log_frame_rejection_returns_a_category_and_writes_nothing() {
+        let home = FakeHome::new("gamelib-shell-log-frame-");
+        let logger = logger_on(&home);
+        let bad = serde_json::json!({"kind": "log", "batch": [], "extra": 1});
+        let len = bad.to_string().len();
+        let err = route_log_frame(&logger, len, bad).expect_err("unknown field");
+        assert_eq!(err.as_str(), "unknown-field");
+        assert!(logger.flush(Duration::from_secs(10)));
+        assert!(!home.root().join("gamelib.log").exists());
     }
 }

@@ -4,6 +4,7 @@ import { join } from 'path'
 import { isMac, isWindows } from '../constants/environment'
 
 import type { Runner } from 'common/types'
+import type { GameLogType } from 'common/types/sidecarTransport'
 import type { RunnerOrComet } from './types'
 
 /**
@@ -23,14 +24,8 @@ function getBaseLogPath(): string {
   return join(stateHome, 'GameLib', 'logs')
 }
 
-// Which game log to return. By default, the launch log is returned.
-type GameLogType =
-  | 'launch'
-  | 'install'
-  | 'import'
-  | 'repair'
-  | 'update'
-  | 'setup'
+// Which game log to return is `GameLogType` (common/types/sidecarTransport). By default, the launch
+// log is returned.
 type GetLogFileArgs =
   // Heroic log
   | { appName?: undefined; runner?: undefined }
@@ -58,4 +53,4 @@ function getLogFilePath(args: GetLogFileArgs): string {
 }
 
 export { getLogFilePath }
-export type { GameLogType, GetLogFileArgs }
+export type { GetLogFileArgs }
