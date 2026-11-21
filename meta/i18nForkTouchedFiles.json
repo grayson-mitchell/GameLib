@@ -1,7 +1,7 @@
 {
   "baseCommit": "b5b5cad3fa2e822602d320b70788d87240fc056e",
   "baseVersion": "2.22.0",
-  "generatedAt": "2026-11-21T10:41:48.155Z",
+  "generatedAt": "2026-11-21T10:52:37.783Z",
   "generatedBy": "pnpm gen-i18n-gate-scope",
   "purpose": "A-17: the CI-readable input to the i18n scope staleness ratchet — every fork-touched src/frontend source file eligible for the hardcoded-string gate (D-17 deferrals already removed, exactly the operand the ratchet compares against), INCLUDING those not yet listed in i18nGateScope.json. Regenerate with `pnpm gen-i18n-gate-scope`.",
   "files": [
@@ -354,6 +354,7 @@
     "src/frontend/screens/Settings/components/EnableWoW64.tsx",
     "src/frontend/screens/Settings/components/EngineOverride.tsx",
     "src/frontend/screens/Settings/components/EnvVariablesTable.tsx",
+    "src/frontend/screens/Settings/components/EosOverlaySetting.tsx",
     "src/frontend/screens/Settings/components/GameMode.tsx",
     "src/frontend/screens/Settings/components/GamePadDelayRepeat.tsx",
     "src/frontend/screens/Settings/components/GameStartWindow.tsx",
