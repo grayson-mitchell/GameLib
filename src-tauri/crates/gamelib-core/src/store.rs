@@ -175,9 +175,14 @@ fn write_private(path: &Path, data: &[u8]) -> io::Result<()> {
 }
 
 /// The persist seam: `rename` is a parameter so a test can force the failure without touching
-/// permissions. Writes `<file>.tmp-<pid>` (0600), renames it over the file, and when either step
-/// fails writes the file directly (the WR-05 fallback, kept from the retired TS file store); the
-/// temp file is removed either way.
+/// permissions. Writes `<file>.tmp-<pid>` (0600), then renames it over the file. The temp file is
+/// removed on any failure. Two failure arms, deliberately different (WR-03):
+///
+/// - the temp write fails (disk full, quota, a permission error on the new name): the error is
+///   returned and the live file is not touched, because a direct write would truncate it first and
+///   then fail the same way, leaving it empty;
+/// - the temp file was fully written and the rename fails (the Windows open-reader case): the file
+///   is written directly (the WR-05 fallback, kept from the retired TS file store).
 pub(crate) fn persist_atomic(
     path: &Path,
     data: &IndexMap<String, Value>,
@@ -191,8 +196,11 @@ pub(crate) fn persist_atomic(
     let mut tmp = path.as_os_str().to_owned();
     tmp.push(format!(".tmp-{}", std::process::id()));
     let tmp = PathBuf::from(tmp);
-    let atomic = write_private(&tmp, serialized.as_bytes()).and_then(|()| rename(&tmp, path));
-    if atomic.is_ok() {
+    if let Err(e) = write_private(&tmp, serialized.as_bytes()) {
+        let _ = fs::remove_file(&tmp);
+        return Err(e);
+    }
+    if rename(&tmp, path).is_ok() {
         return Ok(());
     }
     let direct = write_private(path, serialized.as_bytes());
