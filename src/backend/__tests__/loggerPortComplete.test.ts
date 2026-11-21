@@ -2,8 +2,8 @@
  * Phase 84 deletion gate for the logger slice (TS half): the TS logger is only a fire-and-forget
  * forwarder, and the Rust shell owns every log file (D-08). Fails if a deleted TS file, a TS file
  * write in the logger, a deleted identifier, a TS registration of a logger-slice channel, or a
- * rollback flag comes back. 84-08 adds the Rust half (shell_diag, gamelib-shell.log, the steamcm
- * forwarder).
+ * rollback flag comes back. The Rust half (84-08) forbids shell_diag and gamelib-shell.log under
+ * src-tauri/src and the steamcm forwarder identifiers under gamelib-steamcm/src.
  *
  * Modelled on nativeSeamPortComplete (82 D-05): every scan runs over comment-stripped text, the
  * walk has a floor on the files it read, and self-tests prove each scan can fail.
@@ -12,7 +12,10 @@
  * (`cargo test -p gamelib-log --test golden`) keeps asserting against them.
  */
 import { assertAtOrAboveFloor } from 'backend/testUtils/censusFloor'
-import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
+import {
+  stripSourceComments,
+  stripTrailingLineComment
+} from 'backend/testUtils/stripSourceComments'
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
 import { join, relative } from 'path'
@@ -59,6 +62,15 @@ const FORBIDDEN_IDENTIFIERS = [
   'getLogFilePath'
 ]
 
+/**
+ * Rust half (84-08). The shell's second log path is deleted: `shell_diag` and its file are gone,
+ * every shell diagnostic goes through `shell_log` into the native writer (D-01).
+ */
+const RUST_SHELL_FORBIDDEN = ['shell_diag', 'gamelib-shell.log']
+
+/** The shell's own source tree, scanned for RUST_SHELL_FORBIDDEN. */
+const SHELL_SRC = 'src-tauri/src'
+
 /** The five file-write calls the TS logger no longer makes (the Rust shell writes every log file). */
 const FILE_WRITE_RE =
   /\b(appendFile|renameSync|writeFileSync|createWriteStream|mkdir)/
@@ -73,6 +85,8 @@ const FLAG = 'GAMELIB_LOGGER'
  */
 const SCANNED_FILES_FLOOR = 500
 const LOGGER_CHANNELS_FLOOR = 7
+/** src-tauri/src held 30+ .rs files when 84-08 measured it. */
+const RUST_FILES_FLOOR = 20
 
 interface Manifest {
   channels: Record<string, { slice: string }>
@@ -114,6 +128,28 @@ function identifierHits(
   const hits: string[] = []
   for (const f of files) {
     const code = stripSourceComments(f.src)
+    for (const id of identifiers) {
+      if (code.includes(id)) hits.push(`${f.path}: ${id}`)
+    }
+  }
+  return hits
+}
+
+/** Rust code with whole-line and trailing `//` comments (and block comments) removed. */
+function rustCode(src: string): string {
+  return stripSourceComments(src)
+    .split('\n')
+    .map(stripTrailingLineComment)
+    .join('\n')
+}
+
+function rustIdentifierHits(
+  files: readonly { path: string; src: string }[],
+  identifiers: readonly string[]
+): string[] {
+  const hits: string[] = []
+  for (const f of files) {
+    const code = rustCode(f.src)
     for (const id of identifiers) {
       if (code.includes(id)) hits.push(`${f.path}: ${id}`)
     }
@@ -182,11 +218,24 @@ describe('logger port complete (Phase 84, TS half)', () => {
     expect(hits).toEqual([])
   })
 
+  it.each(RUST_SHELL_FORBIDDEN)(
+    'comment-stripped %s is not named anywhere under src-tauri/src',
+    (id) => {
+      const shell = rsFiles.map(load)
+      expect(rustIdentifierHits(shell, [id])).toEqual([])
+    }
+  )
+
   it('anti-vacuity: the walk scanned a real tree and the manifest has the logger slice', () => {
     assertAtOrAboveFloor(
       'loggerPortComplete files',
       tsFiles.length,
       SCANNED_FILES_FLOOR
+    )
+    assertAtOrAboveFloor(
+      `loggerPortComplete rust files (${SHELL_SRC})`,
+      rsFiles.length,
+      RUST_FILES_FLOOR
     )
     assertAtOrAboveFloor(
       'logger-slice channels',
@@ -223,6 +272,29 @@ describe('logger port complete (Phase 84, TS half)', () => {
       FORBIDDEN_IDENTIFIERS
     )
     expect(hits).toEqual(['x.ts: createLoggerStores'])
+  })
+
+  it('self-test: a Rust shell_diag or gamelib-shell.log in code is caught, in a comment it is not', () => {
+    expect(
+      rustIdentifierHits(
+        [{ path: 'a.rs', src: 'shell_diag(&format!("x"));' }],
+        RUST_SHELL_FORBIDDEN
+      )
+    ).toEqual(['a.rs: shell_diag'])
+    expect(
+      rustIdentifierHits(
+        [{ path: 'b.rs', src: 'let p = "gamelib-shell.log";' }],
+        RUST_SHELL_FORBIDDEN
+      )
+    ).toEqual(['b.rs: gamelib-shell.log'])
+    const commented =
+      '// shell_diag was deleted\n/// gamelib-shell.log too\nfn f() { g(); } // shell_diag(x)'
+    expect(
+      rustIdentifierHits(
+        [{ path: 'c.rs', src: commented }],
+        RUST_SHELL_FORBIDDEN
+      )
+    ).toEqual([])
   })
 
   it('self-test: a logger-channel registration in code is caught, in a comment or another channel it is not', () => {

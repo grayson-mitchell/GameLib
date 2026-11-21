@@ -2,7 +2,7 @@
  * Quick task `260907-j8n` (actions the F-9 todo,
  * `.planning/todos/pending/2026-08-23-f9-generic-rpc-timeout-cooccurrence-undetermined.md`,
  * disposition `2026-09-07`): pins that the shell's four RPC transport-failure diagnostics route
- * through `shell_diag()` rather than a bare `eprintln!`, so they persist to `gamelib-shell.log`
+ * through `shell_log()` rather than a bare `eprintln!`, so they persist to `gamelib.log`
  * and survive a packaged build where LaunchServices discards stderr.
  *
  * Why this file exists at all, given `src-tauri/src/main.rs` already carries a cargo test module
@@ -67,12 +67,12 @@ describe('comment-stripping is real for this gate (self-test)', () => {
   })
 })
 
-describe('Site A and Site B route through shell_diag, not a bare eprintln!', () => {
-  test('Site A (unknown/timed-out id) calls shell_diag', () => {
+describe('Site A and Site B route through shell_log, not a bare eprintln!', () => {
+  test('Site A (unknown/timed-out id) calls shell_log', () => {
     const code = loadMainRsCode()
 
     expect(code).toMatch(
-      /shell_diag\(&format!\(\s*"response for unknown\/timed-out id=\{id\} channel=\{channel\} \(dropped\)"/
+      /shell_log\(&format!\(\s*"response for unknown\/timed-out id=\{id\} channel=\{channel\} \(dropped\)"/
     )
   })
 
@@ -84,11 +84,11 @@ describe('Site A and Site B route through shell_diag, not a bare eprintln!', () 
     )
   })
 
-  test('Site B (missing/non-string id) calls shell_diag', () => {
+  test('Site B (missing/non-string id) calls shell_log', () => {
     const code = loadMainRsCode()
 
     expect(code).toMatch(
-      /shell_diag\(\s*"response frame with a missing or non-string id \(dropped\)"/
+      /shell_log\(\s*"response frame with a missing or non-string id \(dropped\)"/
     )
   })
 
@@ -102,7 +102,7 @@ describe('Site A and Site B route through shell_diag, not a bare eprintln!', () 
 })
 
 describe('Sites C and D: both silent invoke() arms are now instrumented', () => {
-  test('shell_diag(&invoke_abandoned_message( occurs exactly three times — COUNTED', () => {
+  test('shell_log(&invoke_abandoned_message( occurs exactly three times — COUNTED', () => {
     const code = loadMainRsCode()
 
     // Counted, not `toContain`-ed, for the same reason the sibling gate
@@ -113,7 +113,7 @@ describe('Sites C and D: both silent invoke() arms are now instrumented', () => 
     //
     // Three, not two, since todo 2026-10-05 sidecar-death: the two invoke() arms below, plus
     // the reader thread's post-loop drain (pinned by the next test).
-    const occurrences = code.match(/shell_diag\(&invoke_abandoned_message\(/g)
+    const occurrences = code.match(/shell_log\(&invoke_abandoned_message\(/g)
     expect(occurrences).toHaveLength(3)
   })
 
@@ -121,7 +121,7 @@ describe('Sites C and D: both silent invoke() arms are now instrumented', () => 
     const code = loadMainRsCode()
 
     expect(code).toMatch(
-      /drain_pending_invokes\(&state\.pending, &state\.abandoned\)\s*\{\s*shell_diag\(&invoke_abandoned_message\("sidecar exited", &id, &channel\)\);/
+      /drain_pending_invokes\(&state\.pending, &state\.abandoned\)\s*\{\s*shell_log\(&invoke_abandoned_message\("sidecar exited", &id, &channel\)\);/
     )
   })
 
@@ -130,12 +130,12 @@ describe('Sites C and D: both silent invoke() arms are now instrumented', () => 
 
     // This shape also encodes the ordering constraint `abandonedInvokeAttribution.test.ts`
     // imposes: that gate matches `record_abandoned(&id, &channel);\s*Err(...)` with only
-    // whitespace between the two statements, so the new `shell_diag` call MUST precede
+    // whitespace between the two statements, so the new `shell_log` call MUST precede
     // `record_abandoned`, never sit between it and the `Err`. Reordering it to come after
     // `record_abandoned` (between it and `Err`) would satisfy this pin while breaking that one —
     // RED-proofed in the SUMMARY (mutation d).
     expect(code).toMatch(
-      /shell_diag\(&invoke_abandoned_message\("timeout", &id, &channel\)\);\s*self\.record_abandoned\(&id, &channel\);\s*Err\(invoke_timeout_message\(&channel\)\)/
+      /shell_log\(&invoke_abandoned_message\("timeout", &id, &channel\)\);\s*self\.record_abandoned\(&id, &channel\);\s*Err\(invoke_timeout_message\(&channel\)\)/
     )
   })
 
@@ -143,13 +143,13 @@ describe('Sites C and D: both silent invoke() arms are now instrumented', () => 
     const code = loadMainRsCode()
 
     expect(code).toMatch(
-      /shell_diag\(&invoke_abandoned_message\("sidecar closed", &id, &channel\)\);\s*self\.record_abandoned\(&id, &channel\);\s*Err\("sidecar closed before responding"\.into\(\)\)/
+      /shell_log\(&invoke_abandoned_message\("sidecar closed", &id, &channel\)\);\s*self\.record_abandoned\(&id, &channel\);\s*Err\("sidecar closed before responding"\.into\(\)\)/
     )
   })
 })
 
-describe('double-prefix guard: no shell_diag call anywhere in main.rs passes a literal beginning with [shell] ', () => {
-  const DOUBLE_PREFIX_RE = /shell_diag\(\s*(?:&format!\(\s*)?"\[shell\]/
+describe('double-prefix guard: no shell_log call anywhere in main.rs passes a literal beginning with [shell] ', () => {
+  const DOUBLE_PREFIX_RE = /shell_log\(\s*(?:&format!\(\s*)?"\[shell\]/
 
   test('the guard passes against real main.rs', () => {
     const code = loadMainRsCode()
@@ -160,7 +160,7 @@ describe('double-prefix guard: no shell_diag call anywhere in main.rs passes a l
   test('the guard is non-vacuous: a synthetic positive control DOES match', () => {
     // A guard whose vocabulary is wrong convicts nothing and reports green forever — measure the
     // vocabulary first, against a case it must catch.
-    expect('shell_diag(&format!("[shell] doubled"))').toMatch(DOUBLE_PREFIX_RE)
+    expect('shell_log(&format!("[shell] doubled"))').toMatch(DOUBLE_PREFIX_RE)
   })
 })
 

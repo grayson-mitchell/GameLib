@@ -374,7 +374,7 @@ fn spawn_load_timeout_monitor(app: AppHandle) {
             }
             guard.load_timed_out = true;
             guard.nav_started_at = None;
-            crate::shell_diag(&format!(
+            crate::shell_log(&format!(
                 "macos_epic_embed: load timed out past {EPIC_EMBED_LOAD_TIMEOUT:?}"
             ));
             let webview_ptr = guard.webview.as_ref().map(|p| p.0);
@@ -738,7 +738,7 @@ pub(crate) fn reload(app: &AppHandle) -> Result<Value, String> {
         let (has_committed, last_requested_url) = match surface().lock() {
             Ok(guard) => (guard.has_committed, guard.last_requested_url.clone()),
             Err(_) => {
-                crate::shell_diag("WARN: macos_epic_embed surface registry poisoned -- continuing");
+                crate::shell_log("WARN: macos_epic_embed surface registry poisoned -- continuing");
                 (true, None)
             }
         };
@@ -748,7 +748,7 @@ pub(crate) fn reload(app: &AppHandle) -> Result<Value, String> {
                     last_requested_url.expect("LoadLastRequested implies a last-requested URL");
                 match NSURL::URLWithString(&NSString::from_str(&url_string)) {
                     Some(nsurl) => {
-                        crate::shell_diag(
+                        crate::shell_log(
                             "macos_epic_embed: reload arrived before the first commit -- \
                              re-issuing the last requested URL",
                         );
@@ -758,7 +758,7 @@ pub(crate) fn reload(app: &AppHandle) -> Result<Value, String> {
                         }
                     }
                     None => {
-                        crate::shell_diag("macos_epic_embed: reload() given an unparsable URL");
+                        crate::shell_log("macos_epic_embed: reload() given an unparsable URL");
                         unsafe {
                             webview.reload();
                         }
@@ -781,7 +781,7 @@ pub(crate) fn navigate(app: &AppHandle, url: &tauri::Url) -> Result<Value, Strin
     let url_string = url.to_string();
     navigate_webview_on_main_thread(app, "epic_embed_navigate", move |webview| {
         let Some(nsurl) = NSURL::URLWithString(&NSString::from_str(&url_string)) else {
-            crate::shell_diag("macos_epic_embed: navigate() given an unparsable URL");
+            crate::shell_log("macos_epic_embed: navigate() given an unparsable URL");
             return;
         };
         // D-11: every navigate() call starts fresh -- a challenge banner from the PREVIOUS page
@@ -798,7 +798,7 @@ pub(crate) fn navigate(app: &AppHandle, url: &tauri::Url) -> Result<Value, Strin
                 apply_visibility(webview, hidden);
             }
             Err(_) => {
-                crate::shell_diag("WARN: macos_epic_embed surface registry poisoned -- continuing")
+                crate::shell_log("WARN: macos_epic_embed surface registry poisoned -- continuing")
             }
         }
         let request = NSURLRequest::requestWithURL(&nsurl);

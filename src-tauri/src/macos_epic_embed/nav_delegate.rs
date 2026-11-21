@@ -59,7 +59,7 @@ define_class!(
                     guard.enqueue_nav_event(event);
                 }
             } else {
-                crate::shell_diag(
+                crate::shell_log(
                     "WARN: macos_epic_embed surface registry poisoned -- continuing"
                 );
             }
@@ -93,7 +93,7 @@ define_class!(
             let decision = match &parsed_url {
                 Ok(url) => crate::store_embed_navigation_policy(url, top_level_host.as_deref()),
                 Err(_) => {
-                    crate::shell_diag(
+                    crate::shell_log(
                         "macos_epic_embed: blocked an unparsable navigation URL"
                     );
                     crate::StoreEmbedNavigationDecision::Block
@@ -121,7 +121,7 @@ define_class!(
                 // decision is unreachable in practice here -- logged and cancelled rather than
                 // allowed, since there is no steam:// handoff path on this surface.
                 crate::StoreEmbedNavigationDecision::Handoff => {
-                    crate::shell_diag(
+                    crate::shell_log(
                         "macos_epic_embed: Handoff decision reached on the Epic surface \
                          -- its top-level host is never a Valve host; cancelling rather than \
                          allowing"
@@ -141,7 +141,7 @@ define_class!(
             if let Ok(mut guard) = surface().lock() {
                 guard.has_committed = true;
             } else {
-                crate::shell_diag(
+                crate::shell_log(
                     "WARN: macos_epic_embed surface registry poisoned -- continuing"
                 );
             }
@@ -162,7 +162,7 @@ define_class!(
             // Quick task 261014-vot: the todo's own `## Suggested instrument` -- until now this
             // hook spoke only on failure, so absence of log lines after a Reload click could not
             // distinguish "nothing happened" from "it worked silently". Host only (T-28-04).
-            crate::shell_diag(&format!(
+            crate::shell_log(&format!(
                 "macos_epic_embed: didFinishNavigation succeeded -- host: {}",
                 host.as_deref().unwrap_or("<unknown>")
             ));
@@ -177,7 +177,7 @@ define_class!(
                 }
                 guard.enqueue_nav_event(event);
             } else {
-                crate::shell_diag(
+                crate::shell_log(
                     "WARN: macos_epic_embed surface registry poisoned -- continuing"
                 );
             }
@@ -212,7 +212,7 @@ define_class!(
                 drop(guard);
                 apply_visibility(webview, hidden);
             } else {
-                crate::shell_diag(
+                crate::shell_log(
                     "WARN: macos_epic_embed surface registry poisoned -- continuing"
                 );
             }
@@ -289,7 +289,7 @@ define_class!(
                     })
                     .map(|v| v.to_string());
                 if epic_embed_response_is_challenged(header_value.as_deref(), &host, &path) {
-                    crate::shell_diag(
+                    crate::shell_log(
                         "macos_epic_embed: main-frame response flagged as challenged \
                          (D-09)"
                     );
@@ -303,7 +303,7 @@ define_class!(
                         drop(guard);
                         apply_visibility(webview, hidden);
                     } else {
-                        crate::shell_diag(
+                        crate::shell_log(
                             "WARN: macos_epic_embed surface registry poisoned -- \
                              continuing"
                         );
@@ -369,18 +369,18 @@ define_class!(
                 // URL is handed to the system browser like any other http(s) popup (D-12).
                 Popup::HandToSystemBrowser | Popup::OpenInAppPopup => {
                     if crate::store_embed_handoff_admitted(&crate::STORE_EMBED_POPUP_THROTTLE) {
-                        crate::shell_diag(
+                        crate::shell_log(
                             "macos_epic_embed: denied window.open request, routing to \
                              the system browser (D-12)"
                         );
                         if let Err(e) = crate::open_external(url_string, self.ivars().app.clone()) {
-                            crate::shell_diag(&format!(
+                            crate::shell_log(&format!(
                                 "macos_epic_embed: popup hand-off to open_external \
                                  failed: {e}"
                             ));
                         }
                     } else {
-                        crate::shell_diag(
+                        crate::shell_log(
                             "macos_epic_embed: denied window.open request, rate-limited \
                              -- not routed to the system browser"
                         );
@@ -392,7 +392,7 @@ define_class!(
                     epic_embed_record_launcher_scheme_block(webview, "window.open request");
                 }
                 Popup::Reject => {
-                    crate::shell_diag(
+                    crate::shell_log(
                         "macos_epic_embed: denied window.open request to a non-http(s) \
                          or blank URL -- not routed to the system browser"
                     );
@@ -504,7 +504,7 @@ define_class!(
 /// delegate method called them, which `caller` names for the log line.
 fn epic_embed_handle_navigation_failure(webview: &WKWebView, error: &NSError, caller: &str) {
     let description = error.localizedDescription().to_string();
-    crate::shell_diag(&format!("macos_epic_embed: {caller} -- {description}"));
+    crate::shell_log(&format!("macos_epic_embed: {caller} -- {description}"));
     let event = nav_state_json(webview);
     if let Ok(mut guard) = surface().lock() {
         guard.nav_started_at = None;
@@ -513,7 +513,7 @@ fn epic_embed_handle_navigation_failure(webview: &WKWebView, error: &NSError, ca
         }
         guard.enqueue_nav_event(event);
     } else {
-        crate::shell_diag("WARN: macos_epic_embed surface registry poisoned -- continuing");
+        crate::shell_log("WARN: macos_epic_embed surface registry poisoned -- continuing");
     }
 }
 
@@ -522,7 +522,7 @@ fn epic_embed_handle_navigation_failure(webview: &WKWebView, error: &NSError, ca
 /// review), so both entry points to the launcher scheme raise the same one-shot toast. `what`
 /// names the entry point for the log line -- scheme only, never the URL (T-28-04).
 fn epic_embed_record_launcher_scheme_block(webview: &WKWebView, what: &str) {
-    crate::shell_diag(&format!(
+    crate::shell_log(&format!(
         "macos_epic_embed: blocked a {what} to the Epic Games Launcher scheme \
          ('{EPIC_GAMES_LAUNCHER_SCHEME}') -- D-14"
     ));
@@ -531,7 +531,7 @@ fn epic_embed_record_launcher_scheme_block(webview: &WKWebView, what: &str) {
         let event = nav_state_json(webview);
         guard.enqueue_nav_event(event);
     } else {
-        crate::shell_diag("WARN: macos_epic_embed surface registry poisoned -- continuing");
+        crate::shell_log("WARN: macos_epic_embed surface registry poisoned -- continuing");
     }
 }
 
@@ -572,22 +572,22 @@ fn epic_embed_route_download(app: &AppHandle, navigation_response: &WKNavigation
         StoreEmbedBrowserHandoffDecision::HandToSystemBrowser
             | StoreEmbedBrowserHandoffDecision::OpenInAppPopup
     ) {
-        crate::shell_diag(
+        crate::shell_log(
             "macos_epic_embed: denied in-embed download from a non-http(s) URL -- not \
              routed to the system browser",
         );
     } else if crate::store_embed_handoff_admitted(&crate::STORE_EMBED_POPUP_THROTTLE) {
-        crate::shell_diag(
+        crate::shell_log(
             "macos_epic_embed: denied in-embed download, routing to the system browser \
              (T-40-04-04)",
         );
         if let Err(e) = crate::open_external(url_string, app.clone()) {
-            crate::shell_diag(&format!(
+            crate::shell_log(&format!(
                 "macos_epic_embed: download hand-off to open_external failed: {e}"
             ));
         }
     } else {
-        crate::shell_diag(
+        crate::shell_log(
             "macos_epic_embed: denied in-embed download, rate-limited -- not routed to \
              the system browser",
         );
@@ -609,7 +609,7 @@ fn epic_embed_route_download(app: &AppHandle, navigation_response: &WKNavigation
 /// the strength of the public path's reasoning alone. The 45 s timeout re-arm above remains this
 /// hook's backstop either way.
 fn epic_embed_handle_content_process_termination(webview: &WKWebView) {
-    crate::shell_diag("macos_epic_embed: WebContent process terminated -- reloading");
+    crate::shell_log("macos_epic_embed: WebContent process terminated -- reloading");
     if let Ok(mut guard) = surface().lock() {
         guard.nav_generation = guard.nav_generation.wrapping_add(1);
         guard.nav_started_at = Some(Instant::now());
@@ -619,7 +619,7 @@ fn epic_embed_handle_content_process_termination(webview: &WKWebView) {
         let event = nav_state_json(webview);
         guard.enqueue_nav_event(event);
     } else {
-        crate::shell_diag("WARN: macos_epic_embed surface registry poisoned -- continuing");
+        crate::shell_log("WARN: macos_epic_embed surface registry poisoned -- continuing");
     }
     unsafe {
         webview.reload();
@@ -670,7 +670,7 @@ fn epic_embed_js_dialog_admit(
     match (admitted, window, origin) {
         (true, Some(window), Some(origin)) => Some((mtm, window, origin)),
         _ => {
-            crate::shell_diag(&format!(
+            crate::shell_log(&format!(
                 "macos_epic_embed: refused a JS {kind} dialog (subframe, hidden surface, \
                  opaque origin or rate limit) -- answered with the default"
             ));

@@ -226,20 +226,20 @@ fn spawn_sidecar_dev(shell_exe: &str, forward_args: &[String]) -> std::io::Resul
         .unwrap_or_else(|_| "<unknown>".into());
     let exists = std::path::Path::new(&entry).exists();
     let node = resolve_node_program();
-    // `shell_diag`, not `eprintln!`: LaunchServices discards a bundled app's stderr, so these
+    // `shell_log`, not `eprintln!`: LaunchServices discards a bundled app's stderr, so these
     // lines — including the FAILURE line below — were invisible in exactly the configuration
     // that fails. That is why a missing `node` presented as an unexplained "quit unexpectedly"
     // rather than as the one-line diagnosis it already contained.
-    shell_diag(&format!("spawning sidecar (dev): \"{node}\" \"{entry}\""));
-    shell_diag(&format!("  cwd={cwd}"));
-    shell_diag(&format!("  entry_exists={exists}"));
-    shell_diag(&format!("  GAMELIB_SHELL_EXE={shell_exe}"));
-    shell_diag(&format!("  GAMELIB_APP_ROOT={app_root}"));
+    shell_log(&format!("spawning sidecar (dev): \"{node}\" \"{entry}\""));
+    shell_log(&format!("  cwd={cwd}"));
+    shell_log(&format!("  entry_exists={exists}"));
+    shell_log(&format!("  GAMELIB_SHELL_EXE={shell_exe}"));
+    shell_log(&format!("  GAMELIB_APP_ROOT={app_root}"));
     let (steam_root, steam_root_source) = steam_root_default_env();
-    shell_diag(&format!(
+    shell_log(&format!(
         "  GAMELIB_STEAM_ROOT_DEFAULT={steam_root} (source={steam_root_source})"
     ));
-    shell_diag(&format!("  forward_args={forward_args:?}"));
+    shell_log(&format!("  forward_args={forward_args:?}"));
     let mut cmd = Command::new(&node);
     cmd.arg(&entry)
         .args(forward_args)
@@ -252,8 +252,8 @@ fn spawn_sidecar_dev(shell_exe: &str, forward_args: &[String]) -> std::io::Resul
     configure_sidecar_process_group(&mut cmd);
     let child = cmd.spawn();
     match &child {
-        Ok(_) => shell_diag("sidecar process spawned OK"),
-        Err(e) => shell_diag(&format!(
+        Ok(_) => shell_log("sidecar process spawned OK"),
+        Err(e) => shell_log(&format!(
             "FAILED to spawn sidecar: {e} (tried node={node:?}, entry_exists={exists})"
         )),
     }
@@ -457,13 +457,13 @@ pub(crate) fn start_reader(
                                     .lock()
                                     .map(|ring| abandoned_channel_for(&ring, id))
                                     .unwrap_or_else(|_| ABANDONED_CHANNEL_UNRECORDED.to_string());
-                                shell_diag(&format!(
+                                shell_log(&format!(
                                     "response for unknown/timed-out id={id} channel={channel} (dropped)"
                                 ));
                             }
                         }
                     }
-                    None => shell_diag("response frame with a missing or non-string id (dropped)"),
+                    None => shell_log("response frame with a missing or non-string id (dropped)"),
                 }
                 continue;
             }
@@ -610,7 +610,7 @@ pub(crate) fn start_reader(
         // stdout has ended (EOF, or a read error such as a non-UTF-8 line), so no response can
         // arrive any more. Fail every invoke still waiting instead of leaving it parked forever.
         for (id, channel) in drain_pending_invokes(&state.pending, &state.abandoned) {
-            shell_diag(&invoke_abandoned_message("sidecar exited", &id, &channel));
+            shell_log(&invoke_abandoned_message("sidecar exited", &id, &channel));
         }
 
         // D-08: no consumer remains for any depot job's events or responses, so stop them all.

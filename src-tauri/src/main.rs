@@ -396,7 +396,7 @@ fn invoke_timeout_message(channel: &str) -> String {
 /// FORMAT can still be pinned; the call sites are pinned by
 /// `src/backend/__tests__/shellDiagPersistence.test.ts` instead.
 ///
-/// Carries NO `[shell] ` prefix: `shell_diag` prepends one, and a literal here would emit
+/// Carries NO `[shell] ` prefix: `shell_log` prepends one, and a literal here would emit
 /// `[shell] [shell] ...`.
 ///
 /// T-28-04 holds unchanged: `id` is a monotonic counter and `channel` is a fixed identifier from
@@ -540,66 +540,41 @@ fn shell_panic_log_path(home: Option<&str>) -> Option<std::path::PathBuf> {
     }
 }
 
-/// Routes every shell panic to a FILE, not just stderr.
+/// The shell's own diagnostics: one line on stderr (`[shell] <message>`, which the dev terminal and
+/// the gate transcripts read) and one `[Shell]` line in `gamelib.log` through the native writer
+/// (D-01). Under LaunchServices a bundled app's stderr is discarded, so the log line is what makes
+/// the shell's behaviour observable in the configuration users run. The level comes from the text
+/// ([`shell_log_level`]).
 ///
-/// WHY THIS EXISTS. Until now this binary installed no panic hook and used no `catch_unwind`
-/// anywhere, so a panic reported itself only via stderr. That is adequate under `tauri:dev`,
-/// where stderr is the operator's terminal, and useless in the shipped `.app`: LaunchServices
-/// discards a bundled process's stderr, so a panic in production left NO message anywhere. The
-/// crash report does not fill the gap — Rust does not write panic text into CRASetInfo, so the
-/// `.ips` carries `abort() called` and nothing else.
-///
-/// That cost a real diagnosis on 2026-08-29: an abort inside `on_open_url` produced a crash
-/// report whose faulting-thread stack ends at `panic_cannot_unwind`, the abort GUARD for a
-/// panic crossing an `extern "C"` boundary. The frames between the guard and the panic's origin
-/// had ALREADY been popped by the unwind, so the report cannot name the origin, and the message
-/// that would have named it went to a discarded stderr. See
-/// `.planning/debug/deep-link-open-url-abort.md`.
-///
-/// The backtrace is `force_capture`d rather than left to `RUST_BACKTRACE`, because a
-/// LaunchServices-launched app inherits no environment the operator can set.
-///
-/// This hook REPLACES the default rather than chaining to it: it prints the same information to
-/// stderr itself, so chaining would only duplicate the report, and it supplies an unconditional
-/// backtrace where the default's is env-gated.
-///
-/// NOTHING IN HERE MAY PANIC. A panic inside the panic hook aborts immediately and destroys the
-/// very report we are trying to write, so every fallible step (`create_dir_all`, `open`,
-/// `write_all`) is `let _ =`-swallowed and there is no indexing, slicing or `unwrap`.
-/// Where the shell's own diagnostics land, beside the panic log and the sidecar's `gamelib.log`.
-fn shell_diag_log_path(home: Option<&str>) -> Option<std::path::PathBuf> {
-    shell_panic_log_path(home).map(|p| p.with_file_name("gamelib-shell.log"))
+/// Best-effort and infallible by construction: a diagnostic that can fail a real operation would
+/// be worse than no diagnostic. Before the writer starts (`init_native_logger`) only stderr gets
+/// the line.
+fn shell_log(message: &str) {
+    shell_eprintln!("[shell] {message}");
+    shell_log_to(gamelib_log::global(), message);
 }
 
-/// Appends one shell diagnostic line to a FILE as well as stderr.
-///
-/// Same rationale as `install_panic_hook`: under LaunchServices a bundled app's stderr is
-/// discarded, so `eprintln!` alone makes the shell's own behaviour unobservable in exactly the
-/// configuration users run. Used on the deep-link path, where "did the OS event reach us at
-/// all?" is otherwise indistinguishable from "it reached us and we dropped it".
-///
-/// Best-effort and infallible by construction — a diagnostic that can fail a real operation
-/// would be worse than no diagnostic.
-fn shell_diag(message: &str) {
-    shell_eprintln!("[shell] {message}");
-    let Some(path) = shell_diag_log_path(std::env::var("HOME").ok().as_deref()) else {
-        return;
-    };
-    if let Some(dir) = path.parent() {
-        let _ = std::fs::create_dir_all(dir);
+/// The log half of [`shell_log`], with the logger passed in so a test can use its own.
+fn shell_log_to(logger: Option<&gamelib_log::writer::Logger>, message: &str) {
+    if let Some(logger) = logger {
+        logger.log(
+            gamelib_log::Prefix::Shell,
+            shell_log_level(message),
+            message,
+        );
     }
-    let epoch_secs = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or(0);
-    if let Ok(mut file) = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&path)
-    {
-        let _ = file
-            .write_all(format!("{epoch_secs} pid={} {message}\n", std::process::id()).as_bytes());
-        let _ = file.flush();
+}
+
+/// The level of a shell diagnostic, from its text: a `FATAL` prefix is an error, a `WARN` prefix or
+/// the word `failed` (ASCII case-insensitive) a warning, anything else info. The shell's call sites
+/// are prose, not structured, so the text is the only signal.
+pub(crate) fn shell_log_level(message: &str) -> gamelib_log::Level {
+    if message.starts_with("FATAL") {
+        gamelib_log::Level::Error
+    } else if message.starts_with("WARN") || message.to_ascii_lowercase().contains("failed") {
+        gamelib_log::Level::Warning
+    } else {
+        gamelib_log::Level::Info
     }
 }
 
@@ -677,6 +652,32 @@ fn append_panic_record(path: &std::path::Path, record: &str) {
     }
 }
 
+/// Routes every shell panic to a FILE, not just stderr.
+///
+/// WHY THIS EXISTS. Until now this binary installed no panic hook and used no `catch_unwind`
+/// anywhere, so a panic reported itself only via stderr. That is adequate under `tauri:dev`,
+/// where stderr is the operator's terminal, and useless in the shipped `.app`: LaunchServices
+/// discards a bundled process's stderr, so a panic in production left NO message anywhere. The
+/// crash report does not fill the gap — Rust does not write panic text into CRASetInfo, so the
+/// `.ips` carries `abort() called` and nothing else.
+///
+/// That cost a real diagnosis on 2026-08-29: an abort inside `on_open_url` produced a crash
+/// report whose faulting-thread stack ends at `panic_cannot_unwind`, the abort GUARD for a
+/// panic crossing an `extern "C"` boundary. The frames between the guard and the panic's origin
+/// had ALREADY been popped by the unwind, so the report cannot name the origin, and the message
+/// that would have named it went to a discarded stderr. See
+/// `.planning/debug/deep-link-open-url-abort.md`.
+///
+/// The backtrace is `force_capture`d rather than left to `RUST_BACKTRACE`, because a
+/// LaunchServices-launched app inherits no environment the operator can set.
+///
+/// This hook REPLACES the default rather than chaining to it: it prints the same information to
+/// stderr itself, so chaining would only duplicate the report, and it supplies an unconditional
+/// backtrace where the default's is env-gated.
+///
+/// NOTHING IN HERE MAY PANIC. A panic inside the panic hook aborts immediately and destroys the
+/// very report we are trying to write, so every fallible step (`create_dir_all`, `open`,
+/// `write_all`) is `let _ =`-swallowed and there is no indexing, slicing or `unwrap`.
 fn install_panic_hook() {
     std::panic::set_hook(Box::new(move |info| {
         // `PanicHookInfo::payload_as_str` is newer than this crate's MSRV (1.77.2), so downcast.
@@ -875,12 +876,12 @@ fn handle_exit(
         let _ = single_instance_socket_path;
     };
     let report = run_exit(global(), ExitBudget::DEFAULT, drains, children, finish);
-    shell_diag(&format!(
+    shell_log(&format!(
         "exit finished in {} ms",
         report.elapsed.as_millis()
     ));
     if !report.still_running.is_empty() {
-        shell_diag(&format!(
+        shell_log(&format!(
             "still running at exit deadline: {} ({})",
             report.still_running.join(", "),
             report.still_running.len()
@@ -907,9 +908,20 @@ fn spawn_sidecar_state(app: &tauri::App) -> Result<Arc<SidecarState>, Box<dyn st
     let mut child = match spawn_sidecar(app.handle()) {
         Ok(child) => child,
         Err(e) => {
-            shell_diag(&format!("FATAL: sidecar spawn failed, exiting: {e}"));
-            let where_to_look = shell_diag_log_path(std::env::var("HOME").ok().as_deref())
-                .map(|p| p.display().to_string())
+            shell_log(&format!("FATAL: sidecar spawn failed, exiting: {e}"));
+            // The writer may not have drained the FATAL line yet; the dialog is about to block
+            // on the user, so give it a bounded moment to reach disk first.
+            let _ = gamelib_log::flush(Duration::from_millis(500));
+            let where_to_look = native_log_paths()
+                .and_then(|paths| {
+                    gamelib_core::paths::log_file(
+                        paths.platform,
+                        &paths.log_dir,
+                        &paths.user_data,
+                        &gamelib_core::paths::LogTarget::General,
+                    )
+                    .ok()
+                })
                 .unwrap_or_else(|| "the GameLib log directory".to_string());
             app.dialog()
                 .message(format!(
@@ -1308,7 +1320,7 @@ fn attach_main_window_close_handler(app: &tauri::App, tray_exists: bool) {
                     }
                 }
             });
-            shell_diag(&format!(
+            shell_log(&format!(
                 "close handler attached (tray={tray_exists}): hide-to-tray re-read on every close; otherwise the quit is routed to the sidecar"
             ));
         }
@@ -1828,8 +1840,8 @@ fn main() {
     install_panic_hook();
     gamelib_proc::reaper::dispatch_if_requested();
     // gamelib-proc's own diagnostics (job creation, group-signal failures, reaper wiring) go
-    // through the shell's log sink, so they land in stderr and gamelib-shell.log.
-    gamelib_proc::diag::set_diag_sink(shell_diag);
+    // through the shell's log sink, so they land in stderr and gamelib.log.
+    gamelib_proc::diag::set_diag_sink(shell_log);
     // Explicit ring rustls provider before any reqwest/steam-vent client can pick one by crate
     // install order (spike 082, CF-07).
     gamelib_steamcm::install_crypto_provider();
@@ -1916,8 +1928,8 @@ fn main() {
     // panic out of `did_finish_launching` (the SIGABRT history in `spawn_sidecar_state`).
     #[cfg(unix)]
     match gamelib_proc::reaper::start() {
-        Ok(pid) => shell_diag(&format!("reaper started (pid {pid})")),
-        Err(e) => shell_diag(&format!("reaper unavailable: {:?}", e.kind())),
+        Ok(pid) => shell_log(&format!("reaper started (pid {pid})")),
+        Err(e) => shell_log(&format!("reaper unavailable: {:?}", e.kind())),
     }
 
     tauri::Builder::default()
@@ -1969,7 +1981,7 @@ fn main() {
             // on macOS Cmd+Q / Dock Quit never arrive here at all (`terminate:` goes straight to
             // `applicationWillTerminate:`; `macos_terminate_veto` vetoes it before that).
             tauri::RunEvent::ExitRequested { code, .. } => {
-                shell_diag(&format!("exit requested (code={code:?})"));
+                shell_log(&format!("exit requested (code={code:?})"));
                 // D-03: this arm never calls `prevent_exit()` (a vetoed quit never reaches it),
                 // so every arrival is an intentional exit: flag it before the sidecar closes.
                 if let Some(state) = app_handle.try_state::<Arc<SidecarState>>() {
@@ -2060,10 +2072,10 @@ fn install_os_deep_link_handler(app: &tauri::App, state: &Arc<SidecarState>) {
                 deep_link_state.invoke("handleProtocolUrl".to_string(), vec![Value::String(url)]);
             let elapsed_ms = started.elapsed().as_millis();
             match outcome {
-                Ok(_) => shell_diag(&format!(
+                Ok(_) => shell_log(&format!(
                     "delivered OS deep link to sidecar: ok ({elapsed_ms}ms)"
                 )),
-                Err(e) => shell_diag(&format!(
+                Err(e) => shell_log(&format!(
                     "delivered OS deep link to sidecar: err={e} ({elapsed_ms}ms)"
                 )),
             }
@@ -2076,7 +2088,7 @@ fn install_os_deep_link_handler(app: &tauri::App, state: &Arc<SidecarState>) {
     app.deep_link().on_open_url(move |event| {
         // `urls()` takes `self` by value, so bind once and reuse.
         let urls = event.urls();
-        shell_diag(&format!("on_open_url fired with {} url(s)", urls.len()));
+        shell_log(&format!("on_open_url fired with {} url(s)", urls.len()));
         for url in urls {
             let candidate = url.to_string();
             match deep_link_decision(&candidate) {
@@ -2089,7 +2101,7 @@ fn install_os_deep_link_handler(app: &tauri::App, state: &Arc<SidecarState>) {
                     // the payload, but it is not formatted here at all so that no future
                     // edit can turn this into a URL leak (T-34.5-G6-25 / T-35-26).
                     if deep_link_tx.send(url).is_err() {
-                        shell_diag(
+                        shell_log(
                             "deep-link dispatch worker is gone; dropping a validated URL",
                         );
                     }
@@ -2097,7 +2109,7 @@ fn install_os_deep_link_handler(app: &tauri::App, state: &Arc<SidecarState>) {
                 DeepLinkDecision::Reject { bytes } => {
                     // T-34.5-G6-25 / T-35-26: the REASON and byte count only, never
                     // the payload. `DeepLinkDecision::Reject` does not even carry it.
-                    shell_diag(&format!(
+                    shell_log(&format!(
                         "rejected OS deep-link payload (failed protocol_url_arg validation), bytes={bytes}"
                     ));
                 }
@@ -3140,7 +3152,7 @@ mod tests {
 
     #[test]
     fn invoke_abandoned_message_carries_no_shell_prefix() {
-        // Double-prefix guard: `shell_diag` prepends `[shell] ` itself. A literal here that
+        // Double-prefix guard: `shell_log` prepends `[shell] ` itself. A literal here that
         // already carried the prefix would emit `[shell] [shell] ...` at both call sites.
         assert!(!invoke_abandoned_message("timeout", "1575", "getCookies").starts_with("[shell] "));
     }
@@ -4313,14 +4325,74 @@ mod tests {
         assert_eq!(shell_panic_log_path(Some("")), None);
     }
 
+    // ---- shell_log (Phase 84 plan 08, D-01) ----
+
+    struct ShellLogClock;
+    impl gamelib_core::clock::Clock for ShellLogClock {
+        fn now_ms(&self) -> u64 {
+            // 2026-11-20 13:05:09 at UTC+13, the 84-01 golden's wall clock.
+            1_795_133_109_000
+        }
+    }
+
+    struct ShellLogTz;
+    impl gamelib_log::writer::TzOffset for ShellLogTz {
+        fn offset_minutes(&self, _epoch_ms: u64) -> i32 {
+            780
+        }
+    }
+
     #[test]
-    fn shell_diag_log_path_sits_next_to_the_panic_log() {
-        assert_eq!(shell_diag_log_path(None), None);
-        assert_eq!(shell_diag_log_path(Some("")), None);
-        let diag = shell_diag_log_path(Some("/home/example")).expect("a path for a real HOME");
-        let panic = shell_panic_log_path(Some("/home/example")).expect("a path for a real HOME");
-        assert_eq!(diag.parent(), panic.parent());
-        assert!(diag.ends_with("gamelib-shell.log"), "{diag:?}");
+    fn shell_log_to_writes_the_golden_shell_line() {
+        let home = gamelib_testutil::FakeHome::new("gamelib-shell-log-golden-");
+        let root = home.root().to_string_lossy().into_owned();
+        let platform = gamelib_core::paths::Platform::current();
+        let logger = gamelib_log::writer::Logger::start(gamelib_log::writer::LogConfig {
+            platform,
+            user_data: gamelib_core::paths::join(platform, &root, &["userData"]),
+            log_dir: root.clone(),
+            clock: Arc::new(ShellLogClock),
+            tz: Arc::new(ShellLogTz),
+        });
+        shell_log_to(Some(&logger), "reaper started (pid 4242)");
+        assert!(logger.flush(Duration::from_secs(10)), "flush timed out");
+        let written =
+            std::fs::read_to_string(gamelib_core::paths::join(platform, &root, &["gamelib.log"]))
+                .expect("gamelib.log was written");
+        assert_eq!(
+            written,
+            include_str!(
+                "../crates/gamelib-log/tests/fixtures/golden/expected/shell-line/gamelib.log"
+            )
+        );
+    }
+
+    #[test]
+    fn shell_log_to_without_a_logger_does_nothing() {
+        shell_log_to(None, "no writer yet");
+    }
+
+    #[test]
+    fn shell_log_level_follows_the_text() {
+        use gamelib_log::Level;
+        assert_eq!(
+            shell_log_level("FATAL: sidecar spawn failed, exiting: x"),
+            Level::Error
+        );
+        assert_eq!(shell_log_level("WARN: no 'main' window"), Level::Warning);
+        assert_eq!(
+            shell_log_level("reaper unavailable: sidecar closed FAILED"),
+            Level::Warning
+        );
+        assert_eq!(
+            shell_log_level("invoke failed: id=1 channel=x"),
+            Level::Warning
+        );
+        assert_eq!(shell_log_level("reaper started (pid 4242)"), Level::Info);
+        assert_eq!(shell_log_level("exit requested (code=None)"), Level::Info);
+        // FATAL wins over the word `failed`, and only a PREFIX makes an error.
+        assert_eq!(shell_log_level("FATAL failed"), Level::Error);
+        assert_eq!(shell_log_level("not FATAL here"), Level::Info);
     }
 
     #[test]

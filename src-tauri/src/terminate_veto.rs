@@ -57,7 +57,7 @@ where
 /// in the shell log. Runs off the main thread: the probe blocks for up to `QUIT_PROBE_TIMEOUT`.
 pub(crate) fn quit_via_sidecar(app_handle: &AppHandle, origin: &'static str) {
     let Some(state) = app_handle.try_state::<Arc<SidecarState>>() else {
-        shell_diag(&format!(
+        shell_log(&format!(
             "quit ({origin}): no sidecar state -- exiting directly"
         ));
         app_handle.exit(0);
@@ -80,11 +80,11 @@ pub(crate) fn quit_via_sidecar(app_handle: &AppHandle, origin: &'static str) {
             },
         );
         match routed {
-            Ok(()) => shell_diag(&format!(
+            Ok(()) => shell_log(&format!(
                 "quit ({origin}): handed to the sidecar handleExit"
             )),
             Err(e) => {
-                shell_diag(&format!("WARN: quit ({origin}): {e} -- exiting directly"));
+                shell_log(&format!("WARN: quit ({origin}): {e} -- exiting directly"));
                 app_handle.exit(0);
             }
         }
@@ -120,26 +120,26 @@ pub(crate) fn route_app_menu_quit_through_sidecar(app: &AppHandle) {
     use tauri::menu::{MenuItem, MenuItemKind};
 
     let Some(menu) = app.menu() else {
-        shell_diag("WARN: app menu: no app-wide menu -- Cmd+Q stays unrouted");
+        shell_log("WARN: app menu: no app-wide menu -- Cmd+Q stays unrouted");
         return;
     };
     let items = match menu.items() {
         Ok(items) => items,
         Err(e) => {
-            shell_diag(&format!(
+            shell_log(&format!(
                 "WARN: app menu: could not list the menu ({e}) -- Cmd+Q stays unrouted"
             ));
             return;
         }
     };
     let Some(app_submenu) = items.first().and_then(|item| item.as_submenu()) else {
-        shell_diag("WARN: app menu: first item is not the app submenu -- Cmd+Q stays unrouted");
+        shell_log("WARN: app menu: first item is not the app submenu -- Cmd+Q stays unrouted");
         return;
     };
     let sub_items = match app_submenu.items() {
         Ok(items) => items,
         Err(e) => {
-            shell_diag(&format!(
+            shell_log(&format!(
                 "WARN: app menu: could not list the app submenu ({e}) -- Cmd+Q stays unrouted"
             ));
             return;
@@ -156,13 +156,13 @@ pub(crate) fn route_app_menu_quit_through_sidecar(app: &AppHandle) {
             _ => None,
         });
     let Some((index, label)) = found else {
-        shell_diag("WARN: app menu: no predefined Quit item found -- Cmd+Q stays unrouted");
+        shell_log("WARN: app menu: no predefined Quit item found -- Cmd+Q stays unrouted");
         return;
     };
     let custom = match MenuItem::with_id(app, APP_MENU_QUIT_ID, &label, true, Some("CmdOrCtrl+Q")) {
         Ok(item) => item,
         Err(e) => {
-            shell_diag(&format!(
+            shell_log(&format!(
                 "WARN: app menu: could not build the custom Quit item ({e}) -- Cmd+Q stays unrouted"
             ));
             return;
@@ -173,14 +173,14 @@ pub(crate) fn route_app_menu_quit_through_sidecar(app: &AppHandle) {
     let removed = match app_submenu.remove_at(index) {
         Ok(removed) => removed,
         Err(e) => {
-            shell_diag(&format!(
+            shell_log(&format!(
                 "WARN: app menu: could not remove the predefined Quit ({e}) -- Cmd+Q stays unrouted"
             ));
             return;
         }
     };
     if let Err(e) = app_submenu.insert(&custom, index) {
-        shell_diag(&format!(
+        shell_log(&format!(
             "WARN: app menu: could not insert the custom Quit ({e}) -- restoring the predefined item"
         ));
         if let Some(original) = removed {
@@ -193,7 +193,7 @@ pub(crate) fn route_app_menu_quit_through_sidecar(app: &AppHandle) {
             quit_via_sidecar(app_handle, "Cmd+Q");
         }
     });
-    shell_diag(&format!(
+    shell_log(&format!(
         "app menu: Quit (Cmd+Q) routed through the sidecar (id={APP_MENU_QUIT_ID})"
     ));
 }
@@ -224,7 +224,7 @@ fn terminate_reply(power_off: bool, exiting: bool) -> TerminateReply {
 
 #[cfg(target_os = "macos")]
 pub(crate) mod macos_terminate_veto {
-    use super::{quit_via_sidecar, shell_diag, terminate_reply, TerminateReply};
+    use super::{quit_via_sidecar, shell_log, terminate_reply, TerminateReply};
     use objc2::ffi::class_addMethod;
     use objc2::rc::Retained;
     use objc2::runtime::{AnyClass, AnyObject, Imp, Sel};
@@ -275,11 +275,11 @@ pub(crate) mod macos_terminate_veto {
     pub fn install(app: &AppHandle) {
         let _ = APP.set(app.clone());
         let Some(mtm) = MainThreadMarker::new() else {
-            shell_diag("WARN: terminate veto: not on the main thread -- Dock Quit stays unrouted");
+            shell_log("WARN: terminate veto: not on the main thread -- Dock Quit stays unrouted");
             return;
         };
         let Some(delegate) = NSApplication::sharedApplication(mtm).delegate() else {
-            shell_diag("WARN: terminate veto: no app delegate yet -- Dock Quit stays unrouted");
+            shell_log("WARN: terminate veto: no app delegate yet -- Dock Quit stays unrouted");
             return;
         };
         let delegate_obj: &AnyObject = unsafe { &*(&*delegate as *const _ as *const AnyObject) };
@@ -298,7 +298,7 @@ pub(crate) mod macos_terminate_veto {
             )
         };
         if !added.as_bool() {
-            shell_diag(&format!(
+            shell_log(&format!(
                 "WARN: terminate veto: class_addMethod refused on {} -- Dock Quit stays unrouted",
                 class.name().to_string_lossy()
             ));
@@ -317,7 +317,7 @@ pub(crate) mod macos_terminate_veto {
             center.addObserverForName_object_queue_usingBlock(Some(&name), None, None, &block)
         };
         std::mem::forget(token);
-        shell_diag(&format!(
+        shell_log(&format!(
             "terminate veto: applicationShouldTerminate: added to {} (Dock Quit routed through the sidecar)",
             class.name().to_string_lossy()
         ));

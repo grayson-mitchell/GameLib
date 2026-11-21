@@ -2,7 +2,7 @@
  * Quick task `261001-p0s` (closes
  * `.planning/todos/pending/2026-10-01-keyring-rpc-arms-are-success-silent-and-eprintln-based.md`):
  * pins that all four keyring RPC dispatch arms (`keyring_get`, `keyring_set`, `keyring_delete`,
- * `keyring_available`) route every diagnostic through `shell_diag()` rather than a bare
+ * `keyring_available`) route every diagnostic through `shell_log()` rather than a bare
  * `eprintln!`, and that `keyring_get`/`keyring_set`/`keyring_delete` each carry a success-path
  * emission line naming a closed-set `outcome=` token.
  *
@@ -11,7 +11,7 @@
  * runs no cargo step at all, so this file is the part that actually runs on every push.
  *
  * `keyring_available` is a DELIBERATE scope extension beyond the originating todo's three named
- * arms (get/set/delete): it gets the `shell_diag()` routing conversion but NEVER a success-token
+ * arms (get/set/delete): it gets the `shell_log()` routing conversion but NEVER a success-token
  * emission, because its probe account is never a real slot-scoped outcome worth a
  * `KeyringOutcome` token. That asymmetry is itself pinned below (the `keyring_available`
  * sub-slice must carry zero `keyring_outcome_message(` calls) so a future edit cannot silently
@@ -83,7 +83,7 @@ describe('comment-stripping is real for this gate (self-test)', () => {
   })
 })
 
-describe('keyring arm region: zero bare eprintln!, 14 shell_diag(, 5 keyring_outcome_message(', () => {
+describe('keyring arm region: zero bare eprintln!, 14 shell_log(, 5 keyring_outcome_message(', () => {
   test('no bare eprintln! remains in the keyring arm region', () => {
     const region = extractKeyringArmRegion(loadMainRsCode())
 
@@ -91,10 +91,10 @@ describe('keyring arm region: zero bare eprintln!, 14 shell_diag(, 5 keyring_out
     expect(occurrences).toBeNull()
   })
 
-  test('shell_diag( occurs exactly 14 times — COUNTED, not toContain-ed', () => {
+  test('shell_log( occurs exactly 14 times — COUNTED, not toContain-ed', () => {
     const region = extractKeyringArmRegion(loadMainRsCode())
 
-    const occurrences = region.match(/shell_diag\(/g)
+    const occurrences = region.match(/shell_log\(/g)
     expect(occurrences).toHaveLength(14)
   })
 
@@ -132,13 +132,13 @@ describe('keyring_available gets conversion only — never a success-token emiss
     expect(occurrences).toBeNull()
   })
 
-  test('the keyring_available sub-slice still routes through shell_diag at least once', () => {
+  test('the keyring_available sub-slice still routes through shell_log at least once', () => {
     // Non-vacuity control for the assertion above: a sub-slice extraction bug that silently
     // returned an empty string would also report zero keyring_outcome_message( calls, for the
     // wrong reason entirely.
     const availableSubSlice = extractKeyringAvailableBody(loadMainRsCode())
 
-    const occurrences = availableSubSlice.match(/shell_diag\(/g)
+    const occurrences = availableSubSlice.match(/shell_log\(/g)
     expect(occurrences).not.toBeNull()
     expect(occurrences!.length).toBeGreaterThan(0)
   })
@@ -174,8 +174,8 @@ describe('byte-stability of the shared failure/warning message literals', () => 
   })
 })
 
-describe('double-prefix guard: no shell_diag call in the keyring region passes a literal beginning with [shell] ', () => {
-  const DOUBLE_PREFIX_RE = /shell_diag\(\s*(?:&format!\(\s*)?"\[shell\]/
+describe('double-prefix guard: no shell_log call in the keyring region passes a literal beginning with [shell] ', () => {
+  const DOUBLE_PREFIX_RE = /shell_log\(\s*(?:&format!\(\s*)?"\[shell\]/
 
   test('the guard passes against the real keyring arm region', () => {
     const region = extractKeyringArmRegion(loadMainRsCode())
@@ -184,18 +184,18 @@ describe('double-prefix guard: no shell_diag call in the keyring region passes a
   })
 
   test('the guard is non-vacuous: a synthetic positive control DOES match', () => {
-    expect('shell_diag(&format!("[shell] doubled"))').toMatch(DOUBLE_PREFIX_RE)
+    expect('shell_log(&format!("[shell] doubled"))').toMatch(DOUBLE_PREFIX_RE)
   })
 })
 
-describe('leak-shape guard: no shell_diag call carries a secret-bearing identifier', () => {
-  // Scans each shell_diag( call site's own argument list (up to its balancing close paren) for
+describe('leak-shape guard: no shell_log call carries a secret-bearing identifier', () => {
+  // Scans each shell_log( call site's own argument list (up to its balancing close paren) for
   // the two identifiers that denote a real secret/value payload in this file: `secret` (the
   // caller-supplied plaintext in keyring_set) and `get_password` (the raw Keychain read call).
   // A call site carrying either would mean a secret-shaped value reached a log line.
   function shellDiagArgSlices(region: string): string[] {
     const slices: string[] = []
-    const callRe = /shell_diag\(/g
+    const callRe = /shell_log\(/g
     let match: RegExpExecArray | null
     while ((match = callRe.exec(region)) !== null) {
       const openIdx = match.index + match[0].length - 1
@@ -211,7 +211,7 @@ describe('leak-shape guard: no shell_diag call carries a secret-bearing identifi
     return slices
   }
 
-  test('every shell_diag( call site in the keyring region is free of `secret` and `get_password`', () => {
+  test('every shell_log( call site in the keyring region is free of `secret` and `get_password`', () => {
     const region = extractKeyringArmRegion(loadMainRsCode())
     const slices = shellDiagArgSlices(region)
 
@@ -228,7 +228,7 @@ describe('leak-shape guard: no shell_diag call carries a secret-bearing identifi
 
   test('non-vacuity control: the scanner DOES flag a synthetic call site carrying `secret`', () => {
     const synthetic =
-      'shell_diag(&format!("keyring {channel} leaked: {secret}"));'
+      'shell_log(&format!("keyring {channel} leaked: {secret}"));'
     const slices = shellDiagArgSlices(synthetic)
 
     expect(slices).toHaveLength(1)
@@ -299,7 +299,7 @@ describe('RED-proof: this gate fails against pre-Task-1 source', () => {
         RustInvokeChannel::DialogOpen => {`
 
     const eprintlnOccurrences = preTask1Region.match(/eprintln!/g)
-    const shellDiagOccurrences = preTask1Region.match(/shell_diag\(/g)
+    const shellDiagOccurrences = preTask1Region.match(/shell_log\(/g)
     const outcomeMessageOccurrences = preTask1Region.match(
       /keyring_outcome_message\(/g
     )

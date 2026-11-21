@@ -337,13 +337,25 @@ impl WrapHost for ShellWrapHost {
     }
 }
 
-/// Installs the production wrap host and routes crate diagnostics to the shell log. Must run
+/// The steamcm crate's diagnostic sink: the same `[shell] <message>` stderr echo as `shell_log`, but
+/// the `gamelib.log` line carries the `Steam` prefix (the crate's lines are Steam session events,
+/// not shell events) and the level `shell_log_level` reads from the text.
+fn steamcm_diag(message: &str) {
+    shell_eprintln!("[shell] {message}");
+    gamelib_log::log(
+        gamelib_log::Prefix::Steam,
+        shell_log_level(message),
+        message,
+    );
+}
+
+/// Installs the production wrap host and routes crate diagnostics to the Steam log lines. Must run
 /// before any acquire; on macOS `steamcm_configure` fails without a host.
 pub(crate) fn install_steamcm_host(app: &AppHandle) {
     if let Some(helper) = bundled_bridge_helper_path(app) {
         let _ = BUNDLED_HELPER.set(helper);
     }
-    gamelib_steamcm::error::set_diag_sink(shell_diag);
+    gamelib_steamcm::error::set_diag_sink(steamcm_diag);
     gamelib_steamcm::facade::set_wrap_host(Arc::new(ShellWrapHost::new(app)));
 }
 

@@ -312,7 +312,7 @@ pub(crate) fn rpc_steam_api_pin_resolve(args: &[Value]) -> Result<Value, String>
 /// is cancelled (D-08). Logs the count only.
 pub(crate) fn on_sidecar_eof_cancel_jobs() {
     let n = gamelib_depot::registry::cancel_all();
-    shell_diag(&format!("depot jobs cancelled on sidecar EOF: {n}"));
+    shell_log(&format!("depot jobs cancelled on sidecar EOF: {n}"));
 }
 
 /// Placeholder host for the cancel op, which never emits or asks for anything.

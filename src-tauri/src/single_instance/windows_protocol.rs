@@ -224,7 +224,7 @@ pub(crate) fn gamelib_protocol_exe_is_dev_build(current_exe: &str, build_dirs: &
 /// last-launch-wins consequence on a machine carrying two GameLib installs.
 ///
 /// FAIL OPEN, NEVER FAIL CLOSED (T-34.5-G6-24, T-UOK-03): returns `()` and is infallible by
-/// construction, exactly like `shell_diag`. A missing key, an access-denied, a failed read, a
+/// construction, exactly like `shell_log`. A missing key, an access-denied, a failed read, a
 /// failed write -- every one logs a warning and moves on. There is no `unwrap()`, `expect(`,
 /// `panic!` or `?` anywhere in this body (pinned by a region-scoped source gate in
 /// `src/backend/__tests__/tauriShellSource.test.ts`), because a protocol registration that could
@@ -438,7 +438,7 @@ pub(crate) fn repair_windows_gamelib_protocol_registration(identifier: &str) {
         // One line, through the file-backed sink, because a bundled app's stderr is discarded and
         // "did the repair run, and what did it decide?" is exactly what this sink exists for.
         // The classification, never the stored value itself (T-UOK-01).
-        shell_diag(&format!(
+        shell_log(&format!(
             "repaired the gamelib:// HKCU registration (prior value: {classification}) -- {written}/4 installer-shaped values written under HKCU\\{ROOT_SUBKEY}"
         ));
     }

@@ -110,26 +110,26 @@ pub(crate) fn rpc_keyring_get(channel: &str, args: &[Value]) -> Result<Value, St
     // at this call site and not just inside the pure classifier it delegates to.
     match &result {
         Ok(v) if keyring_get_outcome(v) == KeyringOutcome::Found => {
-            shell_diag(&keyring_outcome_message(
+            shell_log(&keyring_outcome_message(
                 channel,
                 account,
                 KeyringOutcome::Found,
             ));
         }
         Ok(_) => {
-            shell_diag(&keyring_outcome_message(
+            shell_log(&keyring_outcome_message(
                 channel,
                 account,
                 KeyringOutcome::Absent,
             ));
         }
         Err(e) if e == "keyring:timeout" => {
-            shell_diag(&format!(
+            shell_log(&format!(
                 "keyring {channel} timed out after {KEYRING_READ_TIMEOUT:?} (worker thread abandoned, not cancelled -- see KEYRING_READ_TIMEOUT's doc comment)"
             ));
         }
         Err(e) => {
-            shell_diag(&format!("keyring {channel} failed: {e}"));
+            shell_log(&format!("keyring {channel} failed: {e}"));
         }
     }
     result
@@ -141,7 +141,7 @@ pub(crate) fn rpc_keyring_set(channel: &str, args: &[Value]) -> Result<Value, St
     match Entry::new(KEYRING_SERVICE, account) {
         Ok(entry) => match entry.set_password(&a.secret) {
             Ok(()) => {
-                shell_diag(&keyring_outcome_message(
+                shell_log(&keyring_outcome_message(
                     channel,
                     account,
                     KeyringOutcome::Stored,
@@ -153,12 +153,12 @@ pub(crate) fn rpc_keyring_set(channel: &str, args: &[Value]) -> Result<Value, St
                 // (threat T-28-04): `keyring_outcome_message`'s types forbid it,
                 // and `secret` is never passed to it -- channel + error only,
                 // enforced by construction rather than by this comment alone.
-                shell_diag(&format!("keyring {channel} failed: {e:?}"));
+                shell_log(&format!("keyring {channel} failed: {e:?}"));
                 Err(format!("keyring:unavailable:{e}"))
             }
         },
         Err(e) => {
-            shell_diag(&format!("keyring {channel} failed: {e:?}"));
+            shell_log(&format!("keyring {channel} failed: {e:?}"));
             Err(format!("keyring:unavailable:{e}"))
         }
     }
@@ -173,7 +173,7 @@ pub(crate) fn rpc_keyring_delete(channel: &str, args: &[Value]) -> Result<Value,
             // two arms below now differ in their logged token while remaining
             // identical in their returned result.
             Ok(()) => {
-                shell_diag(&keyring_outcome_message(
+                shell_log(&keyring_outcome_message(
                     channel,
                     account,
                     KeyringOutcome::Deleted,
@@ -181,7 +181,7 @@ pub(crate) fn rpc_keyring_delete(channel: &str, args: &[Value]) -> Result<Value,
                 Ok(Value::Bool(true))
             }
             Err(keyring::Error::NoEntry) => {
-                shell_diag(&keyring_outcome_message(
+                shell_log(&keyring_outcome_message(
                     channel,
                     account,
                     KeyringOutcome::Absent,
@@ -189,12 +189,12 @@ pub(crate) fn rpc_keyring_delete(channel: &str, args: &[Value]) -> Result<Value,
                 Ok(Value::Bool(true))
             }
             Err(e) => {
-                shell_diag(&format!("keyring {channel} failed: {e:?}"));
+                shell_log(&format!("keyring {channel} failed: {e:?}"));
                 Err(format!("keyring:unavailable:{e}"))
             }
         },
         Err(e) => {
-            shell_diag(&format!("keyring {channel} failed: {e:?}"));
+            shell_log(&format!("keyring {channel} failed: {e:?}"));
             Err(format!("keyring:unavailable:{e}"))
         }
     }
@@ -239,7 +239,7 @@ pub(crate) fn rpc_keyring_available(channel: &str, args: &[Value]) -> Result<Val
             // demonstrably up so the honest answer is still `true`, but this must be loud:
             // an item here means the probe has re-acquired an ACL and may prompt again.
             Ok(_) => {
-                shell_diag(&format!(
+                shell_log(&format!(
                     "keyring {channel}: WARNING -- a value exists at the reserved probe account; the reachability probe may raise an authorization prompt again (see KEYRING_REACHABILITY_PROBE_ACCOUNT)"
                 ));
                 Ok(Value::Bool(true))
@@ -248,12 +248,12 @@ pub(crate) fn rpc_keyring_available(channel: &str, args: &[Value]) -> Result<Val
             // not an error — the caller asked "is it available", and the honest answer
             // here is "no".
             Err(e) => {
-                shell_diag(&format!("keyring {channel} failed: {e:?}"));
+                shell_log(&format!("keyring {channel} failed: {e:?}"));
                 Ok(Value::Bool(false))
             }
         },
         Err(e) => {
-            shell_diag(&format!("keyring {channel} failed: {e:?}"));
+            shell_log(&format!("keyring {channel} failed: {e:?}"));
             Ok(Value::Bool(false))
         }
     }
@@ -325,7 +325,7 @@ pub(crate) fn keyring_get_result(result: Result<String, keyring::Error>) -> Resu
     }
 }
 
-/// The closed set of successful keyring-operation outcomes a `shell_diag()` line may report
+/// The closed set of successful keyring-operation outcomes a `shell_log()` line may report
 /// (quick 261001-p0s, closing the "keyring RPC arms are success-silent" todo). A closed enum
 /// rather than a free `&str` parameter: a free string would make it possible to pass a secret
 /// as the token, which this type cannot do by construction -- mirrors `afb0fe744`'s
@@ -351,7 +351,7 @@ impl KeyringOutcome {
 
 /// Renders one keyring success line. Pure and side-effect-free -- same split as
 /// `format_panic_record` above, so a test can assert what the line carries without writing to
-/// the operator's real log file. No `[shell] ` prefix: `shell_diag` prepends that itself, and a
+/// the operator's real log file. No `[shell] ` prefix: `shell_log` prepends that itself, and a
 /// second copy here would double it.
 ///
 /// `account: &'static str` is load-bearing, not a style choice: any secret value is a
@@ -454,7 +454,7 @@ mod tests {
     //
     // Pure formatter and pure discriminant-only classifier, mirroring keyring_get_result's own
     // "pure function, directly testable" precedent immediately above. These tests exercise the
-    // RENDERED LINE and the TOKEN MAPPING without touching a real Keychain or `shell_diag()`'s
+    // RENDERED LINE and the TOKEN MAPPING without touching a real Keychain or `shell_log()`'s
     // own file I/O -- per CLAUDE.md's two-profile rule, nothing here spawns a process or writes
     // to the operator's real HOME.
 
@@ -517,8 +517,8 @@ mod tests {
     }
 
     #[test]
-    fn keyring_outcome_message_does_not_carry_the_shell_diag_prefix_itself() {
-        // shell_diag() prepends "[shell] " -- a second copy here would double it.
+    fn keyring_outcome_message_does_not_carry_the_shell_log_prefix_itself() {
+        // shell_log() prepends "[shell] " -- a second copy here would double it.
         let rendered =
             keyring_outcome_message("keyring_get", "steam-refresh-token", KeyringOutcome::Found);
         assert!(!rendered.starts_with("[shell] "));

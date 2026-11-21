@@ -303,7 +303,7 @@ impl SidecarState {
         // `response for unknown/timed-out` diagnostic (reader thread, below) only ever fires if a
         // LATE response eventually arrives; if the sidecar simply never answers, nothing else
         // observes that at all. The rule this task acts on: a transport failure that leaves no trace is indistinguishable from no failure.
-        // So each arm now emits one `shell_diag` line naming both id and channel BEFORE
+        // So each arm now emits one `shell_log` line naming both id and channel BEFORE
         // `record_abandoned` — a placement `abandonedInvokeAttribution.test.ts`'s ordering pin
         // requires, not an arbitrary choice.
         match timeout {
@@ -311,7 +311,7 @@ impl SidecarState {
                 Ok(result) => result,
                 Err(_) => {
                     self.pending.lock().ok().and_then(|mut p| p.remove(&id));
-                    shell_diag(&invoke_abandoned_message("timeout", &id, &channel));
+                    shell_log(&invoke_abandoned_message("timeout", &id, &channel));
                     self.record_abandoned(&id, &channel);
                     Err(invoke_timeout_message(&channel))
                 }
@@ -324,7 +324,7 @@ impl SidecarState {
                 Ok(result) => result,
                 Err(_) => {
                     self.pending.lock().ok().and_then(|mut p| p.remove(&id));
-                    shell_diag(&invoke_abandoned_message("sidecar closed", &id, &channel));
+                    shell_log(&invoke_abandoned_message("sidecar closed", &id, &channel));
                     self.record_abandoned(&id, &channel);
                     Err("sidecar closed before responding".into())
                 }

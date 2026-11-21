@@ -3034,7 +3034,7 @@ describe('Phase 35 plan 07 main.rs OS deep-link registration (D-07/D-05)', () =>
  *
  * Gate 5 (quick-260926-f3l) is a SOURCE gate too, for the same reason: it proves WHERE the
  * dev-build skip sits (after the CI=e2e guard, before the first registry call, logged via
- * `eprintln!` not `shell_diag`) -- it proves nothing about whether a real `pnpm tauri:dev` run
+ * `eprintln!` not `shell_log`) -- it proves nothing about whether a real `pnpm tauri:dev` run
  * actually leaves HKCU alone. That live check is Task 3 of quick-260926-f3l.
  */
 describe('quick-260925-uok Windows gamelib:// HKCU self-heal on launch', () => {
@@ -3241,8 +3241,8 @@ describe('quick-260925-uok Windows gamelib:// HKCU self-heal on launch', () => {
   // every `pnpm tauri:dev` run was rewriting HKCU to point at `src-tauri\target\debug\...`,
   // last-launch-wins hijacking the scheme away from an installed build. As with every other gate
   // in this describe, this is a SOURCE gate: it proves the skip sits after the CI=e2e guard and
-  // before the first registry call, and that it logs via `eprintln!` (not `shell_diag`, so a dev
-  // launch does not append to `gamelib-shell.log` on every run). It proves nothing about whether
+  // before the first registry call, and that it logs via `eprintln!` (not `shell_log`, so a dev
+  // launch does not append to `gamelib.log` on every run). It proves nothing about whether
   // a real `pnpm tauri:dev` run actually leaves HKCU alone -- that live check is Task 3 of
   // quick-260926-f3l.
 
@@ -3269,7 +3269,7 @@ describe('quick-260925-uok Windows gamelib:// HKCU self-heal on launch', () => {
     expect(region).toContain('env!("CARGO_MANIFEST_DIR")')
   })
 
-  test('Gate 5C: the dev-build skip logs via eprintln!, not shell_diag', () => {
+  test('Gate 5C: the dev-build skip logs via eprintln!, not shell_log', () => {
     const region = fnRegion(loadMainRsCode(), REPAIR_FN_TOKEN)
     expect(region).not.toBeNull()
     const callIdx = region!.indexOf(DEV_BUILD_CALL_TOKEN)
@@ -3278,7 +3278,7 @@ describe('quick-260925-uok Windows gamelib:// HKCU self-heal on launch', () => {
     expect(returnIdx).toBeGreaterThan(-1)
     const skipBody = region!.slice(callIdx, returnIdx)
     expect(skipBody).toContain('eprintln!(')
-    expect(skipBody).not.toContain('shell_diag(')
+    expect(skipBody).not.toContain('shell_log(')
   })
 
   // Region-scoped existence of the pure fns. Each token carries a trailing `(` boundary
@@ -3317,12 +3317,12 @@ describe('quick-260925-uok Windows gamelib:// HKCU self-heal on launch', () => {
     expect(orderingOk).toBe(false)
   })
 
-  test('self-test (RED proof, gate 5C): a skip logged via shell_diag fails the eprintln check', () => {
+  test('self-test (RED proof, gate 5C): a skip logged via shell_log fails the eprintln check', () => {
     const synthetic =
       'fn repair_windows_gamelib_protocol_registration(identifier: &str) {\n' +
       '    let _ = identifier;\n' +
       '    if gamelib_protocol_exe_is_dev_build("x", &[]) {\n' +
-      '        shell_diag("dev build skip");\n' +
+      '        shell_log("dev build skip");\n' +
       '        return;\n' +
       '    }\n' +
       '}\n'
@@ -3333,9 +3333,9 @@ describe('quick-260925-uok Windows gamelib:// HKCU self-heal on launch', () => {
     const returnIdx = region!.indexOf('return;', callIdx)
     expect(returnIdx).toBeGreaterThan(-1)
     const skipBody = region!.slice(callIdx, returnIdx)
-    expect(skipBody).toContain('shell_diag(')
+    expect(skipBody).toContain('shell_log(')
     const loggingOk =
-      skipBody.includes('eprintln!(') && !skipBody.includes('shell_diag(')
+      skipBody.includes('eprintln!(') && !skipBody.includes('shell_log(')
     expect(loggingOk).toBe(false)
   })
 })
@@ -5295,7 +5295,7 @@ describe('Phase 80 plan 21: steampoll lifecycle wiring', () => {
     expect(body).toContain('ExitBudget::DEFAULT')
   })
 
-  test('handle_exit finishes with reaper disarm, wake-lock release and socket removal, and logs the two exit lines through shell_diag', () => {
+  test('handle_exit finishes with reaper disarm, wake-lock release and socket removal, and logs the two exit lines through shell_log', () => {
     const code = loadMainRsCode()
     const body = readTopLevelFnBody(code, 'handle_exit', 5)
     const finish = body.indexOf('let finish = ||')
@@ -5306,9 +5306,9 @@ describe('Phase 80 plan 21: steampoll lifecycle wiring', () => {
     expect(disarm).toBeGreaterThan(finish)
     expect(wake).toBeGreaterThan(disarm)
     expect(socket).toBeGreaterThan(wake)
-    expect(body).toMatch(/shell_diag\(&format!\(\s*"exit finished in \{\} ms"/)
+    expect(body).toMatch(/shell_log\(&format!\(\s*"exit finished in \{\} ms"/)
     expect(body).toMatch(
-      /shell_diag\(&format!\(\s*"still running at exit deadline: \{\} \(\{\}\)"/
+      /shell_log\(&format!\(\s*"still running at exit deadline: \{\} \(\{\}\)"/
     )
     // The old per-subsystem lines carried the same phrase and would muddy the overrun scoring.
     expect(code).not.toContain('jobs still running at exit deadline')
