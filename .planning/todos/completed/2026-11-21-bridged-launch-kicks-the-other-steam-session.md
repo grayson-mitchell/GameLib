@@ -28,3 +28,9 @@ The launch gate now holds when the Mac is the one kicked (debug `bridged-launch-
 1. Confirm the rule: a bridged launch vs. a native Mac Steam launch of the same game, with the PC playing. Does Mac Steam's own launch prompt, and does Steam's CM tell the client beforehand (a playing-session-state callback, e.g. `ClientPlayingSessionState` / `playing_blocked`) that the helper or GameLib could read before InitFlat?
 2. If a pre-launch signal exists, show GameLib's own "playing on another device" choice before spawning the helper.
 3. Close the race at minimum: re-check WHOAMI once just before the game is spawned, or watch for a SteamServersDisconnected callback in the helper during the first seconds.
+
+Resolved 2026-11-22 by debug session bridged-launch-kicks-other-session (commit fb7f9b243 plus the resolution commit).
+
+- Before starting the bridge, GameLib asks Mac Steam whether another session of the account is playing (`steam-bridge-helper --steam-playing-session`). If one is, it starts nothing and shows "Playing on another device" with Cancel only.
+- The "Play here" option (kick the other session as Mac Steam's prompt does) is filed as 2026-11-22-play-here-on-the-other-device-prompt.md.
+- The todo's claim that Steam drops the older session is unproven for the first 2026-11-21 run (Mac Steam had signed in at 19:07:57); the fix does not depend on which device is dropped.

@@ -112,6 +112,15 @@ static int gamelib_playingsession_main(int argc, char **argv) {
   (void)argv;
   if (argc > 2) return gl_ia_usage("unknown-argument");
 
+  /* Live 2026-11-22: attaching from a cwd holding steam_appid.txt (the repo
+   * root has one saying 480) made Mac Steam track this process as a running
+   * AppID 480, and with the PC playing the CM logged the Mac off. A read must
+   * never look like a game: drop every AppID source before attaching. */
+  unsetenv("SteamAppId");
+  unsetenv("SteamGameId");
+  unsetenv("SteamOverlayGameId");
+  if (chdir("/") != 0) return gl_ia_unavailable("chdir-failed");
+
 #if defined(__aarch64__)
   return gl_ps_run();
 #else

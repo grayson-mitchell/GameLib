@@ -1,8 +1,8 @@
 ---
-status: awaiting_human_verify
+status: resolved
 trigger: "A bridged launch while another device is playing gets one Steam session kicked (\"Logged In Elsewhere\") without Steam's own prompt. Source todo: .planning/todos/pending/2026-11-21-bridged-launch-kicks-the-other-steam-session.md"
 created: 2026-11-21
-updated: 2026-11-21
+updated: 2026-11-22
 source_todo: .planning/todos/pending/2026-11-21-bridged-launch-kicks-the-other-steam-session.md
 related:
   - .planning/debug/resolved/bridged-launch-steam-signed-out.md (fix e5fc84b8c; rounds 2-3 evidence of the kicks)
@@ -132,3 +132,16 @@ files_changed:
   - src/backend/storeManagers/steam/bridge/__tests__/helperProcess.test.ts
   - src/backend/storeManagers/steam/__tests__/steamPlayingSessionHelper.test.ts (new)
   - src/backend/storeManagers/steam/__tests__/games.test.ts
+
+## Live gate results (operator, 2026-11-22)
+
+- Step 1 PASS. Mac Steam signed in, PC idle: `{"result":"ok","loggedOn":1,"otherSessionPlaying":0,"otherAppId":0}`. PC playing: `{"result":"ok","loggedOn":1,"otherSessionPlaying":1,"otherAppId":264160}`. Steam's playing-session state reports the other device's game to the local client, so the pre-launch check is viable.
+- Kick during step 1, caused by the manual check itself. Mac Steam logged off ('Logged In Elsewhere') at 05:53:47 NZDT. gameprocess_log shows "AppID 480 adding PID 30594" at 05:53:01 (first run, PC idle) and "AppID 480 adding PID 30795" at 05:53:47 (second run, PC playing). The operator ran the helper from the repo root, which holds a gitignored steam_appid.txt saying 480. Steam tracks a process that attaches from that cwd as a running game 480, so "registers no game" was false for a manual run. Reproduced at 05:58:05 (signed out, repo root: tracked as 480); from the scratchpad dir: not tracked. GameLib's own check is not exposed: the dev sidecar's cwd is src-tauri, which has no steam_appid.txt; gamelib.log shows no helper spawn at 05:53.
+- Hardening applied: gamelib_playingsession_main unsets SteamAppId/SteamGameId/SteamOverlayGameId and chdirs to "/" before attaching. Helper rebuilt. Verified that a run from the repo root, and one with SteamAppId=480 in env, add no gameprocess_log tracking line.
+- Residual: --steam-appstate / --steam-owned-apps / --steam-installapp attach the same way and are equally exposed if run by hand from a dir holding steam_appid.txt (not from the app). The same hardening could be applied there.
+- Step 2 PASS (operator): with the PC playing, Play on Schedule I showed the "Playing on another device" dialog and launched nothing.
+- Step 3 PASS (operator): after quitting the PC game, Play launched the game in GameLib.
+
+## Resolution
+
+Confirmed fixed by the operator, 2026-11-22: live gate steps 1-3 passed, with no "Logged In Elsewhere" in connection_log after the one the manual step-1 run caused. The change set landed as fb7f9b243 (wip). The cwd/env hardening of `--steam-playing-session` lands with this resolution. Prompt decision: Option B (tell-and-cancel) ships. Option A ("Play here" via BKickOtherPlayingSession) is filed as todo 2026-11-22-play-here-on-the-other-device-prompt.md.
