@@ -540,6 +540,7 @@ async fn stop_kills_a_real_child() {
 #[cfg(unix)]
 mod watchdog_real {
     use gamelib_steampoll::monitor::build_watchdog_spawn;
+    use std::collections::HashSet;
     use std::process::{Child, Command, Stdio};
     use std::time::{Duration, Instant};
 
@@ -575,6 +576,19 @@ mod watchdog_real {
     fn command_of(pid: u32) -> String {
         String::from_utf8_lossy(&tool("ps", &["-o", "command=", "-p", &pid.to_string()]).stdout)
             .into_owned()
+    }
+
+    /// The watchdog's `sleep 1` children (the only `sleep` it parents; the inner shell's own is a
+    /// grandchild). Each loop iteration runs `pgrep -P "$m"` (recording the grandchild in `$g`) and
+    /// only then starts a fresh `sleep 1`, so a new pid here is the outside view of one more
+    /// completed iteration. One spawn, with no pgrep-then-ps gap in which the sleep can exit.
+    fn tick_sleeps(watchdog: u32) -> Vec<u32> {
+        String::from_utf8_lossy(
+            &tool("pgrep", &["-P", &watchdog.to_string(), "-x", "sleep"]).stdout,
+        )
+        .lines()
+        .filter_map(|l| l.trim().parse().ok())
+        .collect()
     }
 
     fn wait_for(mut cond: impl FnMut() -> bool, limit: Duration) -> bool {
@@ -670,6 +684,28 @@ mod watchdog_real {
             let _ = self.watched.wait();
         }
 
+        /// Waits until the watchdog has recorded the grandchild in its `$g`, by watching it complete
+        /// two loop iterations after `start` saw the grandchild. One is not enough: the first fresh
+        /// `sleep 1` can belong to an iteration whose pgrep ran just before the grandchild existed.
+        /// The second iteration began after the first one's `sleep` started, so its pgrep saw it.
+        fn wait_until_grandchild_recorded(&self) {
+            let wd = self.watchdog.id();
+            let mut seen: HashSet<u32> = tick_sleeps(wd).into_iter().collect();
+            let mut fresh = 0;
+            let done = wait_for(
+                || {
+                    for pid in tick_sleeps(wd) {
+                        if seen.insert(pid) {
+                            fresh += 1;
+                        }
+                    }
+                    fresh >= 2
+                },
+                Duration::from_secs(30),
+            );
+            assert!(done, "the watchdog never completed two loop iterations");
+        }
+
         fn tree_gone(&mut self) -> bool {
             let _ = self.watchdog.try_wait();
             !alive(self.watchdog.id()) && !alive(self.inner) && !alive(self.grand)
@@ -703,13 +739,22 @@ mod watchdog_real {
     #[test]
     fn still_kills_the_grandchild_when_the_middle_process_dies_first() {
         let mut rig = Rig::start();
-        // Let at least one full tick record the grandchild, as it always has in a long-lived monitor.
-        std::thread::sleep(Duration::from_millis(1500));
+        // At least one tick has recorded the grandchild, as it always has in a long-lived monitor.
+        rig.wait_until_grandchild_recorded();
+        // Once the inner shell is gone the watchdog's next tick kills the orphan by design, and a
+        // slow runner can put that tick anywhere in a sleep-sized window. So freeze the watchdog
+        // across the kill and the precondition instead: a stopped shell cannot kill anything, which
+        // makes the check independent of timing and leaves the resumed watchdog as the only killer.
+        let wd = rig.watchdog.id();
+        signal("-STOP", wd);
         signal("-KILL", rig.inner);
-        std::thread::sleep(Duration::from_millis(300));
         // The field shape: the grandchild outlived its parent.
-        assert!(alive(rig.grand));
+        assert!(
+            alive(rig.grand),
+            "killing the inner shell must not take the grandchild with it"
+        );
         rig.kill_parent();
+        signal("-CONT", wd);
         let grand = rig.grand;
         assert!(
             wait_for(
