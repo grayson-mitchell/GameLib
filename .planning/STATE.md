@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 85
 current_phase_name: Store host, config and versioned migrations
 status: executing
-stopped_at: Completed 85-01-PLAN.md
-last_updated: "2026-11-21T16:41:47.410Z"
+stopped_at: Completed 85-03-PLAN.md
+last_updated: "2026-11-21T16:51:08.939Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 85 execution started
-state_head: 258593d2daf93b488e6364e95d0d0ebf2802d8ad
+state_head: 4658ea8473b29dbd471eab75a71d6d84824f8900
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 85 (Store host, config and versioned migrations) — EXECUTING
-Plan: 2 of 25
+Plan: 3 of 25
 Status: Ready to execute
 Last activity: 2026-11-22 — Phase 85 execution started
 Progress: [██████████] 100%
@@ -361,6 +361,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 100 P09 | 85 min | 2 tasks | 42 files |
 | Phase 100 P10 | 55 min | 2 tasks | 2 files |
 | Phase 85 P01 | 35 min | 3 tasks | 137 files |
+| Phase 85 P03 | 35 min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -670,6 +671,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 100]: 100-10: phase-100 gamelib keys recorded in meta/i18nCatalogPresenceBaseline.json (105 keys, plus two steam.bridge.setup keys from another session) so test:ci is green
 - [Phase 85]: 85-01: conf stores are tab-indented JSON with the schemaVersion envelope and no trailing newline; settings documents are 2-space with a top-level version string; a migration rewrite is tab-indented for both, so a freshly migrated settings document is tab-indented until the next writeSettingsFile — Read from store_backend.ts, settingsFiles.ts and engine.ts and confirmed by the generated golden
 - [Phase 85]: 85-01: corrupt-file cases are recorded oracle tsOnly with a D-18 divergence note; Rust keeps the bytes, copies aside and opens read-only or empty — TS resets on clearInvalidConfig; Rust deliberately differs
+- [Phase 85]: 85-03: the read-only notice shows no area for reason newer, so the live gate reads the area from the log line; the signed-build gate has no terminal transcript and demands every line of gamelib.log
 
 ### Pending Todos
 
@@ -930,8 +932,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-21T16:41:47.080Z
-Stopped at: Completed 85-01-PLAN.md
+Last session: 2026-11-21T16:51:08.497Z
+Stopped at: Completed 85-03-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
