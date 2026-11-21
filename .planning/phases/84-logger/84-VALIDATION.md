@@ -226,3 +226,67 @@ Still unproven pending a later push (these run only on the CI legs):
 Before a push is attempted: restore `pnpm backend-di-ceilings` (the steam-bridge work removes the `jest.mock` in
 `games.test.ts` and `steamOfflineMode.test.ts`; baselines are never widened), re-measure the proof at the new head
 (a fresh P), and re-run `git diff --name-only P HEAD` immediately before the push.
+
+---
+
+## Gap-closure proof
+
+Measured by plan 84-18, Task 1, from a clean `git worktree add --detach` checkout (removed afterwards) with its own
+`pnpm install --frozen-lockfile`, `pnpm exec vite build` and `pnpm build:sidecar-sea`, and a cold cargo target dir.
+
+- **P (candidate head):** `5af07ab9fa35c488f5048c5d4e6ddd5c760bd498` (`main`, darwin aarch64, rustc 1.99.1 for the clippy leg)
+- **Proves:** gap plans 84-12 (WR-03, WR-07), 84-13 (G-84-3 UAT amendment, no code), 84-14 (G-84-1, WR-04, WR-05 Rust half, IN-01, IN-02),
+  84-15 (WR-01, WR-05 TS half, WR-06), 84-16 (WR-02 writer half, IN-03, IN-04) and 84-17 (WR-02 privacy half).
+- **Precondition:** `84-12..84-17-SUMMARY.md` exist; all 20 commit hashes their "Findings fixed" tables list are ancestors of P
+  (`git merge-base --is-ancestor`), none missing. The three files this plan edits were clean before it started.
+- **Host:** macOS (darwin). `pnpm test` is the jest authority only on the ubuntu CI leg (`test.yml`); here it ran on darwin.
+- **Multi-crate line:** copied verbatim from rust-test.yml at P; it now also lists Phase 85's `gamelib-store` and
+  `gamelib-store-cli`, so those crates ran too.
+
+| Command (in the clean checkout) | Exit | Result |
+|---------------------------------|------|--------|
+| `pnpm install --frozen-lockfile` | 0 | lockfile unchanged, nothing added |
+| `pnpm exec vite build` | 0 | renderer assembled |
+| `pnpm build:sidecar-sea` | 0 | `gamelib-sidecar-aarch64-apple-darwin` |
+| `cargo test -p gamelib-safety -p gamelib-testutil` | 0 | 95 passed, 0 failed |
+| `cargo test -p gamelib-proc` | 0 | 29 passed, 0 failed |
+| `cargo test -p gamelib-scan -p gamelib-scan-cli -p gamelib-depot -p gamelib-depot-cli -p gamelib-steamfiles -p gamelib-steamfiles-cli -p gamelib-steamcm -p gamelib-steamcm-cli -p gamelib-steampoll -p gamelib-steampoll-cli -p gamelib-i18n -p gamelib-core -p gamelib-log -p gamelib-store -p gamelib-store-cli` | 0 | 1770 passed, 0 failed, 7 ignored. gamelib-log: `rust_writer_matches_the_ts_golden`, `rust_sanitiser_matches_the_ts_golden_for_every_renderer_case`, `tokenise_normalises_a_windows_path_with_a_space_to_the_end_of_the_line` and `tokenise_ends_a_path_at_a_quote` all `ok` (on darwin; the Windows leg is G-84-1's CI proof) |
+| `cargo test --bin gamelib-shell` | 0 | 597 passed, 0 failed, 2 ignored |
+| `cargo +1.99.1 clippy --workspace --all-targets --message-format=json` then `node ../meta/clippyRatchet.cjs <file> --list` | 0 / 0 | `PASS (darwin, toolchain 1.99.1)`; no count fell, so `meta/clippyRatchet.cjs` is unchanged |
+| `pnpm check:ipc-contract` | 0 | `ipc_contract.rs` and `ipcSchemaSnapshot.json` up to date |
+| `pnpm test` (jest) | **1** | 1130 suites passed, 6 skipped, **2 failed**; 24081 tests passed, 40 skipped, **2 failed**. Both reds attributed below |
+| `pnpm codecheck` | 0 | tsc main + meta clean |
+| `pnpm lint` | 0 | `production: PASS \| tests: PASS` (0 errors, 645 warnings at the ceilings) |
+| `pnpm build:sidecar` | 0 | built |
+| `pnpm smoke:sidecar` | 0 | PASS: READY sentinel, exit 0 on stdin EOF |
+| `pnpm smoke:exit-check -- --mode eof` | 0 | PASS, exit latency 88 ms |
+| `pnpm smoke:exit-check` (live, default) | 2 | INVALID: "no sidecar process found before quit". Live mode reads the operator's real process table across a Cmd+Q, so it cannot pass with no app running (same as 84-03 and 84-10); it is a live gate owed to a human run |
+
+`.husky/pre-push` gate set, one by one:
+
+| Command | Exit | Result |
+|---------|------|--------|
+| `pnpm codecheck` | 0 | tsc main + meta clean |
+| `pnpm lint` | 0 | `production: PASS \| tests: PASS` |
+| `pnpm prettier` | 0 | all matched files use Prettier code style |
+| `pnpm i18n --fail-on-update` | 0 | no update needed |
+| `pnpm find-deadcode` | 0 | PASS (312 baselined knip findings) |
+| `pnpm boundaries` | 0 | no dependency violations (1416 modules) |
+| `pnpm steam-line-ceiling` | 0 | PASS (205 files, 0 allowlisted over 1000) |
+| `pnpm backend-di-ceilings` | 0 | PASS (the red 84-10 found at its P is gone) |
+| `pnpm gameinfo-narrowing-ceiling` | 0 | PASS (901 files, 43 allowlisted) |
+
+### Red at P, attributed
+
+1. `src/backend/__tests__/cargoFeatures.test.ts`, "Cargo.lock crate-name set pin": the lockfile gained `jiff`, `jiff-core`,
+   `jiff-static`, `jiff-tzdb`, `jiff-tzdb-platform`, `portable-atomic` and `portable-atomic-util`, none yet in
+   `EXPECTED_LOCKFILE_CRATE_NAMES`. Cause: commit `8fcadab94` ("replace chrono with jiff in gamelib-log", RUSTSEC-2026-0543),
+   a supply-chain fix that landed outside the gap plans. It is a Phase 84 crate's dependency swap, not a change any of
+   84-12..84-17 made. **Not fixed here:** accepting the pin means re-running the supply-chain review of seven new crates
+   (the test's own instruction), and the operator chose to continue past it. It stays red on `test.yml` (ubuntu) until the
+   pin is updated.
+2. `src/backend/__tests__/steamFilesPortComplete.test.ts`: `ENOENT ... meta/runTs.__probe__.cjs` while the census walk read
+   a file that `meta/__tests__/runTsSignals.test.ts` creates and deletes in the same tree. A jest-parallelism race, not a
+   code fault: the suite passed alone in the same checkout (19 passed, 19 tests). No Phase 85 file is involved.
+
+The other 1130 suites pass; the rest of 84-12..84-17's tests are among them.

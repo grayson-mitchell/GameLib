@@ -5,49 +5,49 @@ titles: json
 findings:
   - id: WR-01
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "One malformed entry drops the whole 32 KiB batch, including unrelated lines and other targets"
   - id: WR-02
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Shell and crate-bridge lines are written with raw CR/LF, and now land in the file users upload"
   - id: WR-03
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Store persist can truncate the live file when the temp write fails (data loss)"
   - id: WR-04
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Renderer `{name,message,stack}` objects bypass the documented 65,536-unit cut"
   - id: WR-05
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "A dropped or skipped rotating entry silently skips rotation"
   - id: WR-06
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "`LogForwarder.flush` promises a bounded wait but the chain wait is unbounded"
   - id: WR-07
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "`validate_paste_url` stores and returns the raw response text, not the parsed URL"
   - id: IN-01
     severity: info
-    disposition: open
+    disposition: fixed
     title: "Writer counts messages as \"lines\" in its drop report"
   - id: IN-02
     severity: info
-    disposition: open
+    disposition: fixed
     title: "Limiter windows key off sender-supplied timestamps"
   - id: IN-03
     severity: info
-    disposition: open
+    disposition: fixed
     title: "`install_bridges` failure is silent"
   - id: IN-04
     severity: info
-    disposition: open
+    disposition: fixed
     title: "`ExitBudget` remaining is computed before finish's own work"
-open: 11
+open: 0
 total: 11
 recorded: 2026-11-21T09:28:07.129Z
 ---
@@ -56,17 +56,17 @@ recorded: 2026-11-21T09:28:07.129Z
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-01 | warning | open | - |
-| WR-02 | warning | open | - |
-| WR-03 | warning | open | - |
-| WR-04 | warning | open | - |
-| WR-05 | warning | open | - |
-| WR-06 | warning | open | - |
-| WR-07 | warning | open | - |
-| IN-01 | info | open | - |
-| IN-02 | info | open | - |
-| IN-03 | info | open | - |
-| IN-04 | info | open | - |
+| WR-01 | warning | fixed | 84-15: `28c9f8caf` (RED `fbc5185db`) |
+| WR-02 | warning | fixed | 84-16: `e7eb01597` (RED `fdc5b6457`); 84-17: `13d057271`, `6b2ecf847` |
+| WR-03 | warning | fixed | 84-12: `8f0e3e12f` (RED `2600b3dc8`) |
+| WR-04 | warning | fixed | 84-14: `720fb9d86` |
+| WR-05 | warning | fixed | 84-14: `6a385ab97`; 84-15: `c42be0306` (RED `3336fae60`) |
+| WR-06 | warning | fixed | 84-15: `0a39bba18` (RED `f4cd3008c`) |
+| WR-07 | warning | fixed | 84-12: `415b97206` (RED `27ee3dac1`) |
+| IN-01 | info | fixed | 84-14: `720fb9d86` |
+| IN-02 | info | fixed | 84-14: `6a385ab97` |
+| IN-03 | info | fixed | 84-16: `f5c3c9eef` |
+| IN-04 | info | fixed | 84-16: `bbf189be0` (RED `ce1f0689a`) |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
