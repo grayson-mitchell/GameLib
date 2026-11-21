@@ -96,7 +96,9 @@ checkout of P in "## Phase proof". Commits are the per-task commits.
 | 84-08 | 2 crate diagnostics bridged | f0c2ae059 | `cargo test -p gamelib-log bridge`, `-p gamelib-steamcm` | ✅ |
 | 84-09 | 1 tracer: exit lines and final flush in the 5 s budget | 5d49036f0 | `cargo test -p gamelib-core shutdown`, `-p gamelib-log writer::`, `jest tauriShellSource.test.ts` | ✅ |
 | 84-09 | 2 documents and comments corrected | 0cfcebb7f | grep gates + jest | ✅ |
-| 84-10 | 1 tracer: clean-worktree proof at P | this commit | "## Phase proof" | ✅ except the red recorded below |
+| 84-10 | 1 tracer: clean-worktree proof at P | 60a71578c | "## Phase proof" | ✅ except the `backend-di-ceilings` red recorded below |
+| 84-10 | 2 push authorisation (checkpoint) | n/a | operator decision: `hold` | ⏸ held; nothing pushed |
+| 84-10 | 3 CI proof | this commit | "## CI proof" | ⏳ not pushed; three-OS proof pending a later push |
 
 ---
 
@@ -184,3 +186,43 @@ in-flight work, and the rule for this ceiling is to remove the `jest.mock` (inje
 **Consequence for the push (Task 2):** `.husky/pre-push` runs `pnpm backend-di-ceilings`, so the pre-push hook will
 refuse the push of this head until the steam-bridge work removes those mocks. `--no-verify` is prohibited, so the
 push cannot proceed until then.
+
+### Blockers found at the Task 2 checkpoint
+
+1. **`pnpm backend-di-ceilings` is red at clean P** (above), from committed steam-bridge commit `e5fc84b8c`. `.husky/pre-push`
+   runs it, so the hook would refuse the push; `--no-verify` is prohibited.
+2. **`main` moved past P.** After P, quick task 261121-pwt landed four commits (`ccf09a995`, `06a741eb1`, `752a2e614`,
+   `790260991`) that delete `src/backend/sidecar/fileStore.ts` and rewrite the sidecar test mocks and the
+   `meta/backendDiCeilings/` baselines, plus later docs commits. `git diff --name-only P HEAD` therefore lists 51 paths
+   outside `.planning/` at the time of this record (48 at the checkpoint), so the push-time open-time property (nothing
+   outside `.planning/` between P and the pushed head) does not hold. The Task 1 proof covers P, not the current head.
+
+---
+
+## CI proof
+
+**Operator decision at Task 2 (verbatim): `hold`.**
+
+**Not pushed.** Nothing was pushed to origin (`git status -sb` shows `main` ahead of `origin/main`, 41 commits at the
+time of this record); no `gh run` exists for these commits. The push-time `git diff --name-only P HEAD` check was
+therefore never the gate for a push and was not run as one.
+
+| Workflow | Run id | Leg | Conclusion |
+|----------|--------|-----|------------|
+| rust-test.yml | none | windows-latest | not pushed |
+| rust-test.yml | none | macos-latest | not pushed |
+| rust-test.yml | none | ubuntu-latest | not pushed |
+| codecheck.yml | none | n/a | not pushed |
+| test.yml | none | ubuntu-latest | not pushed |
+
+Still unproven pending a later push (these run only on the CI legs):
+
+- gamelib-log's Windows rotation with a held `.old` and the per-OS Windows log paths (`writer::windows`, research A4)
+- gamelib-log's unix 0600 mode on the CI unix legs (`writer::mode` passed locally on darwin only)
+- the win32 clippy ceiling: it is measured only from a Windows CI log and is never guessed locally, so it stays at its
+  current value
+- jest on ubuntu (`test.yml`), the jest authority; it ran green on darwin only
+
+Before a push is attempted: restore `pnpm backend-di-ceilings` (the steam-bridge work removes the `jest.mock` in
+`games.test.ts` and `steamOfflineMode.test.ts`; baselines are never widened), re-measure the proof at the new head
+(a fresh P), and re-run `git diff --name-only P HEAD` immediately before the push.
