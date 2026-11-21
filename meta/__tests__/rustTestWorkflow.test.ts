@@ -47,6 +47,11 @@ function testsLogCrate(text: string): boolean {
   return /(^|\s)-p gamelib-log(\s|$)/.test(multiCrateRunLine(text))
 }
 
+// Phase 85 (FND-06): the native store is a Tauri-free crate and runs in the multi-crate step.
+function testsStoreCrate(text: string): boolean {
+  return /(^|\s)-p gamelib-store(\s|$)/.test(multiCrateRunLine(text))
+}
+
 function hasSafetyCrateStep(text: string): boolean {
   const block = steps(text).find((s) => s.includes(SAFETY_TEST_RUN))
   if (!block) return false
@@ -128,6 +133,10 @@ describe('rust-test.yml covers the gamelib-scan crates', () => {
     expect(testsLogCrate(workflow)).toBe(true)
   })
 
+  test('the multi-crate step tests gamelib-store (Phase 85)', () => {
+    expect(testsStoreCrate(workflow)).toBe(true)
+  })
+
   test('clippy ratchet lints the whole workspace', () => {
     expect(hasWorkspaceClippy(workflow)).toBe(true)
   })
@@ -158,8 +167,8 @@ describe('anti-vacuity: the predicates reject mutated workflows', () => {
 
   test('rejects a workflow whose step is conditional', () => {
     const mutated = workflow.replace(
-      '- name: cargo test (gamelib-core, gamelib-scan, gamelib-depot, gamelib-steamfiles, gamelib-steamcm, gamelib-steampoll, gamelib-i18n and gamelib-log crates)\n',
-      "- name: cargo test (gamelib-core, gamelib-scan, gamelib-depot, gamelib-steamfiles, gamelib-steamcm, gamelib-steampoll, gamelib-i18n and gamelib-log crates)\n        if: runner.os == 'macOS'\n"
+      '- name: cargo test (gamelib-core, gamelib-scan, gamelib-depot, gamelib-steamfiles, gamelib-steamcm, gamelib-steampoll, gamelib-i18n, gamelib-log and gamelib-store crates)\n',
+      "- name: cargo test (gamelib-core, gamelib-scan, gamelib-depot, gamelib-steamfiles, gamelib-steamcm, gamelib-steampoll, gamelib-i18n, gamelib-log and gamelib-store crates)\n        if: runner.os == 'macOS'\n"
     )
     expect(mutated).not.toBe(workflow)
     expect(hasScanCrateStep(mutated)).toBe(false)
@@ -175,6 +184,15 @@ describe('anti-vacuity: the predicates reject mutated workflows', () => {
     const mutated = workflow.replace(' -p gamelib-log', '')
     expect(mutated).not.toBe(workflow)
     expect(testsLogCrate(mutated)).toBe(false)
+  })
+
+  test('rejects a workflow whose multi-crate step omits gamelib-store', () => {
+    const mutated = workflow.replace(
+      ' -p gamelib-store -p gamelib-store-cli',
+      ''
+    )
+    expect(mutated).not.toBe(workflow)
+    expect(testsStoreCrate(mutated)).toBe(false)
   })
 
   test('rejects a workflow without the safety step', () => {

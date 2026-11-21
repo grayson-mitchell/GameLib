@@ -1,0 +1,28 @@
+[package]
+name = "gamelib-store"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.77.2"
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+# Tauri-free native store (Phase 85, FND-06): the Rust owner of GameLib's store files. No keyring,
+# no Tauri, no env reads: directories and the clock are injected.
+gamelib-core = { path = "../gamelib-core" }
+serde = { version = "1", features = ["derive"] }
+# Default features PLUS the round-trip float parse (parsed floats match JS's correctly rounded parse).
+# `preserve_order` must stay OFF: Cargo feature unification would turn it on for every crate in the
+# shell binary and flip JSON key order there. The store keeps order in its own `Json` type instead.
+serde_json = { version = "1", features = ["float_roundtrip"] }
+indexmap = { version = "2", features = ["serde"] }
+
+[dev-dependencies]
+gamelib-testutil = { path = "../gamelib-testutil" }
+tempfile = "3"
+
+[lints.clippy]
+dbg_macro = "deny"
+todo = "deny"

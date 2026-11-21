@@ -14,7 +14,7 @@ The app crate (`src-tauri`) stays the workspace root. Each port adds:
 | `src-tauri/crates/<name>`     | Tauri-free library. No `tauri` dependency, ever.              |
 | `src-tauri/crates/<name>-cli` | Optional bin, only if `meta/` tools need the code headlessly. |
 
-Current crates: `gamelib-scan`, `gamelib-depot`, `gamelib-steamfiles`, `gamelib-steampoll` and `gamelib-steamcm`, each with a `-cli`, and the library-only `gamelib-i18n`, `gamelib-core` (traits and the shutdown budget), `gamelib-proc` (process spawning, tracking and killing), `gamelib-safety` (destructive-path guards), `gamelib-log` (the native log writer, Phase 84: format, rotation, frame contract and the renderer sanitiser, byte-equal to the TS golden) and `gamelib-testutil` (test fixtures such as `FakeHome`). Section 2c covers core and proc.
+Current crates: `gamelib-scan`, `gamelib-depot`, `gamelib-steamfiles`, `gamelib-steampoll` and `gamelib-steamcm`, each with a `-cli`, and the library-only `gamelib-i18n`, `gamelib-core` (traits and the shutdown budget), `gamelib-proc` (process spawning, tracking and killing), `gamelib-safety` (destructive-path guards), `gamelib-log` (the native log writer, Phase 84: format, rotation, frame contract and the renderer sanitiser, byte-equal to the TS golden), `gamelib-store` with a `gamelib-store-cli` (the native store owner, Phase 85: ordered JSON with JS number text and key order, dot-prop 6 paths and the atomic write, byte-equal to the TS golden) and `gamelib-testutil` (test fixtures such as `FakeHome`). Section 2c covers core and proc.
 
 Phase 80 is complete: `gamelib-steampoll` (with `gamelib-steampoll-cli`) is the only implementation of the Steam install, uninstall, update and running polls, the restart hold and the download monitor, and `gamelib-i18n` translates their notification text in Rust. The TS poll loops and the `GAMELIB_STEAM_POLLS` flag are deleted.
 
@@ -198,7 +198,7 @@ persisted user setting would have needed UI, migration and a removal path.
 `.github/workflows/rust-test.yml` runs, in order: `cargo test -p gamelib-safety -p gamelib-testutil`
 (Phase 82, first so a red crate further down cannot mask the adversarial table), `cargo test -p gamelib-proc`
 (Phase 83, the process-lifetime harness, its own step for the same reason), then an explicit
-`cargo test -p gamelib-scan -p gamelib-scan-cli -p gamelib-depot -p gamelib-depot-cli -p gamelib-steamfiles -p gamelib-steamfiles-cli -p gamelib-steamcm -p gamelib-steamcm-cli -p gamelib-steampoll -p gamelib-steampoll-cli -p gamelib-i18n -p gamelib-core -p gamelib-log`,
+`cargo test -p gamelib-scan -p gamelib-scan-cli -p gamelib-depot -p gamelib-depot-cli -p gamelib-steamfiles -p gamelib-steamfiles-cli -p gamelib-steamcm -p gamelib-steamcm-cli -p gamelib-steampoll -p gamelib-steampoll-cli -p gamelib-i18n -p gamelib-core -p gamelib-log -p gamelib-store -p gamelib-store-cli`,
 `cargo test --bin gamelib-shell` on all three legs (Windows, macOS, Linux) and `clippy --workspace` on the Windows and macOS legs. Workspace crates are not default members, so a plain
 `cargo test` in `src-tauri` silently skips them. A new crate needs its own `-p` entry.
 

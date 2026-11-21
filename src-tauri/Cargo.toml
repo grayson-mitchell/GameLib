@@ -16,6 +16,8 @@ tauri-build = { version = "2", features = [] }
 gamelib-core = { path = "crates/gamelib-core" }
 # Phase 84 (FND-05): the native log writer. Started in `fn main` only after the single-instance guard.
 gamelib-log = { path = "crates/gamelib-log" }
+# Phase 85 (FND-06): the native store (ordered JSON, dot paths, atomic write; later the engine and host).
+gamelib-store = { path = "crates/gamelib-store" }
 # Phase 83 (FND-04, D-11): spawn classes, the Windows kill-on-close Job, group kill and the
 # SIGKILL reaper (`--gamelib-reaper`, dispatched first in `fn main`). Already pinned in Cargo.lock.
 gamelib-proc = { path = "crates/gamelib-proc" }
@@ -480,5 +482,7 @@ members = [
   "crates/gamelib-testutil",
   "crates/gamelib-proc",
   "crates/gamelib-log",
+  "crates/gamelib-store",
+  "crates/gamelib-store-cli",
 ]
 resolver = "2"

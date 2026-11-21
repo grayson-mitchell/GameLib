@@ -1734,6 +1734,7 @@ dependencies = [
  "gamelib-steamcm",
  "gamelib-steamfiles",
  "gamelib-steampoll",
+ "gamelib-store",
  "gamelib-testutil",
  "gilrs",
  "gtk",
@@ -1840,6 +1841,27 @@ dependencies = [
  "serde_json",
  "tempfile",
  "tokio",
+]
+
+[[package]]
+name = "gamelib-store"
+version = "0.1.0"
+dependencies = [
+ "gamelib-core",
+ "gamelib-testutil",
+ "indexmap 2.14.0",
+ "serde",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
+name = "gamelib-store-cli"
+version = "0.1.0"
+dependencies = [
+ "gamelib-store",
+ "serde_json",
+ "tempfile",
 ]
 
 [[package]]
