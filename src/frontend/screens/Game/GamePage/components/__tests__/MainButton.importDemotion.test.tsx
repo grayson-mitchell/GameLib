@@ -1,36 +1,30 @@
 /**
- * Element-graph tests for quick 260916-cdb, closing
- * `.planning/todos/completed/2026-08-29-import-game-is-unlabelled-and-over-promoted-rename-demote-an.md`.
+ * Element-graph tests for the footer Install button's "Locate existing
+ * installation…" door.
  *
- * The operator's 2026-09-16 decision was: KEEP the import feature, but DEMOTE
- * its door out of the Game-page primary install row (`MainButton`) into
- * `GameSubMenu`, and rename its label from the unlabelled/misleading
- * "Import Game" wording to "Locate existing installation…". This suite pins
- * the `MainButton` half of that demotion: no button in its element graph may
- * still open the install modal in import mode, for ANY runner — including
- * `sideload` and `thirdPartyManagedApp`, which never reach `DownloadDialog`
- * (`InstallModal/index.tsx:629`, `:706-761`) and therefore depend entirely on
- * `GameSubMenu`'s door (D-02) once this one is gone.
+ * History: quick 260916-cdb (closing
+ * `.planning/todos/completed/2026-08-29-import-game-is-unlabelled-and-over-promoted-rename-demote-an.md`)
+ * KEPT the import feature, renamed its label from "Import Game" to "Locate
+ * existing installation…" and DEMOTED its door out of the primary install row
+ * into `GameSubMenu` (the ⋮ menu). Phase 100 deletes ⋮, and decision D-20 puts
+ * the door in the footer Install ▾ — the demotion moved it out of the primary
+ * ROW, D-20 puts it one click behind the Install button instead of two.
+ *
+ * So this suite now pins two things for gog, sideload and
+ * thirdPartyManagedApp (the last two never reach `DownloadDialog`,
+ * `InstallModal/index.tsx:629`, `:706-761`, so the ▾ is their ONLY import
+ * door):
+ *   - no button OUTSIDE the Dropdown routes `action: 'import'` (the main
+ *     Install button still opens the install modal, D-20), and
+ *   - the Dropdown holds exactly one item, reading "Locate existing
+ *     installation…", that routes `openInstallGameModal` with action 'import'.
+ * R4 and R5 pin the Steam item (Install with options…, never import) and the
+ * installed case (no Dropdown).
  *
  * No jsdom / react-test-renderer is installed in this project (see
  * `src/frontend/jest.config.js` docstring) — `MainButton` is called directly
  * as a plain function and its returned React-element object graph is walked,
  * exactly as the sibling `MainButton.installClickRouting.test.tsx` suite does.
- *
- * VACUITY BOUNDARY: this suite proves the element graph of `MainButton` ONLY.
- * It proves NOTHING about `GameSubMenu`, which cannot be called bare in this
- * repo's jest setup — it imports `./index.css` with no `moduleNameMapper` for
- * it, and it carries six `useState` hooks plus effects that a bare function
- * call cannot satisfy. `GameSubMenu`'s half of the demotion (that it NOW
- * carries the door, reachable for `sideload` and `thirdPartyManagedApp`) rests
- * on a source-shaped census recorded in the plan's Task 1 verify step and in
- * the quick's SUMMARY — that census is weaker than a render test and this
- * suite does not launder that weakness away.
- *
- * Non-vacuity: before this suite was finalized, the deleted MainButton import
- * block was temporarily restored and this suite was re-run to confirm it went
- * RED (a test named for a bug must sit downstream of it, not upstream). That
- * result is recorded in the quick's SUMMARY, not here.
  */
 import type { ReactElement } from 'react'
 import { isValidElement } from 'react'
@@ -118,7 +112,11 @@ jest.mock('frontend/components/UI/Dropdown', () => ({
 jest.mock('frontend/state/InstallGameModal')
 
 import MainButton from '../MainButton'
-import { openInstallGameModal } from 'frontend/state/InstallGameModal'
+import Dropdown from 'frontend/components/UI/Dropdown'
+import {
+  openInstallGameModal,
+  openSteamInstallOptions
+} from 'frontend/state/InstallGameModal'
 import { makeFaithfulT } from './faithfulTranslate'
 
 function makeGameInfo(overrides: Partial<GameInfo> = {}): GameInfo {
@@ -225,30 +223,69 @@ const DOOR_LABEL = gamelibT(
   'Locate existing installation…'
 )
 
-async function assertNoImportDoor(gameInfo: GameInfo) {
-  const tree = MainButton({
+type ButtonEl = ReactElement<{ onClick?: () => Promise<void> | void }>
+
+function dropdownsOf(tree: ReactElement): ReactElement[] {
+  return findAll(tree, (n) => n.type === Dropdown)
+}
+
+/** Buttons in the tree that are NOT inside a Dropdown panel. */
+function buttonsOutsideDropdown(tree: ReactElement): ButtonEl[] {
+  const inside = new Set<unknown>()
+  for (const dropdown of dropdownsOf(tree)) {
+    for (const b of allButtons(dropdown)) inside.add(b)
+  }
+  return allButtons(tree).filter((b) => !inside.has(b))
+}
+
+function importCalls() {
+  const calls = (openInstallGameModal as jest.Mock).mock.calls as Array<
+    [{ action?: string }]
+  >
+  return calls.filter((args) => args[0]?.action === 'import')
+}
+
+function render(gameInfo: GameInfo): ReactElement {
+  return MainButton({
     gameInfo,
     handlePlay: jest.fn(),
     handleInstall: jest.fn()
   }) as unknown as ReactElement
+}
 
-  const buttons = allButtons(tree)
-  expect(buttons.length).toBeGreaterThan(0)
+/** D-20: nothing outside the Dropdown routes import, and the Dropdown's one
+ * item is the Locate door. */
+async function assertLocateDoorInCaretOnly(gameInfo: GameInfo) {
+  const tree = render(gameInfo)
 
-  for (const button of buttons) {
+  const outside = buttonsOutsideDropdown(tree)
+  expect(outside.length).toBeGreaterThan(0)
+  for (const button of outside) {
     ;(openInstallGameModal as jest.Mock).mockClear()
     if (button.props.onClick) {
       await button.props.onClick()
     }
-    const calls = (openInstallGameModal as jest.Mock).mock.calls as Array<
-      [{ action?: string }]
-    >
-    const importCalls = calls.filter((args) => args[0]?.action === 'import')
-    expect(importCalls).toEqual([])
+    expect(importCalls()).toEqual([])
   }
+  expect(allTextLeaves(outside)).not.toContain(DOOR_LABEL)
 
-  const allText = allTextLeaves(tree)
-  expect(allText).not.toContain(DOOR_LABEL)
+  const dropdowns = dropdownsOf(tree)
+  expect(dropdowns).toHaveLength(1)
+  const panelChild = (dropdowns[0]!.props as { children: unknown }).children
+  expect(isValidElement(panelChild)).toBe(true)
+  const item = panelChild as ButtonEl
+  expect(item.type).toBe('button')
+  expect(allTextLeaves(item)).toContain(DOOR_LABEL)
+  ;(openInstallGameModal as jest.Mock).mockClear()
+  await item.props.onClick?.()
+  expect(importCalls()).toHaveLength(1)
+  expect(openInstallGameModal).toHaveBeenCalledWith(
+    expect.objectContaining({
+      appName: gameInfo.app_name,
+      runner: gameInfo.runner,
+      action: 'import'
+    })
+  )
 }
 
 beforeEach(() => {
@@ -256,29 +293,62 @@ beforeEach(() => {
   jest.clearAllMocks()
 })
 
-describe('MainButton — import door demotion (260916-cdb)', () => {
-  it('R1: gog, uninstalled — no button routes action:"import", door label absent from the graph', async () => {
+describe('MainButton — Install ▾ Locate door (D-20, was the 260916-cdb demotion)', () => {
+  it('R1: gog, uninstalled — the ▾ holds the Locate item; no button outside it routes action:"import"', async () => {
     resetContext({ runner: 'gog', is: { ...DEFAULT_IS } })
-    await assertNoImportDoor(
+    await assertLocateDoorInCaretOnly(
       makeGameInfo({ runner: 'gog', is_installed: false })
     )
   })
 
-  it('R2: sideload, uninstalled — no button routes action:"import" (sideload never reaches DownloadDialog, D-02)', async () => {
+  it('R2: sideload, uninstalled — the ▾ is its only import door (sideload never reaches DownloadDialog)', async () => {
     resetContext({ runner: 'sideload', is: { ...DEFAULT_IS } })
-    await assertNoImportDoor(
+    await assertLocateDoorInCaretOnly(
       makeGameInfo({ runner: 'sideload', is_installed: false })
     )
   })
 
-  it('R3: thirdPartyManagedApp, uninstalled — no button routes action:"import" (also never reaches DownloadDialog, D-02)', async () => {
-    resetContext({ runner: 'gog', is: { ...DEFAULT_IS } })
-    await assertNoImportDoor(
+  it('R3: thirdPartyManagedApp, uninstalled — the ▾ keeps the door although Install is not supported', async () => {
+    resetContext({
+      runner: 'gog',
+      is: { ...DEFAULT_IS, notSupportedGame: true }
+    })
+    await assertLocateDoorInCaretOnly(
       makeGameInfo({
         runner: 'gog',
         is_installed: false,
         thirdPartyManagedApp: 'epic'
       })
     )
+  })
+
+  it('R4: steam, uninstalled — the ▾ item opens Install with options, never import', async () => {
+    resetContext({ runner: 'steam', is: { ...DEFAULT_IS } })
+    const gameInfo = makeGameInfo({
+      runner: 'steam',
+      app_name: '620',
+      is_installed: false
+    })
+    const tree = render(gameInfo)
+    const dropdowns = dropdownsOf(tree)
+    expect(dropdowns).toHaveLength(1)
+    const item = (dropdowns[0]!.props as { children: unknown })
+      .children as ButtonEl
+    expect(allTextLeaves(item)).not.toContain(DOOR_LABEL)
+    await item.props.onClick?.()
+    expect(openSteamInstallOptions).toHaveBeenCalledWith('620', gameInfo)
+    expect(importCalls()).toEqual([])
+  })
+
+  it('R5: gog, installed — no Dropdown', () => {
+    resetContext({ runner: 'gog', is: { ...DEFAULT_IS } })
+    const tree = render(makeGameInfo({ runner: 'gog', is_installed: true }))
+    expect(dropdownsOf(tree)).toHaveLength(0)
+  })
+
+  it('R6: gog, installing — the ▾ is unmounted, not disabled', () => {
+    resetContext({ runner: 'gog', is: { ...DEFAULT_IS, installing: true } })
+    const tree = render(makeGameInfo({ runner: 'gog', is_installed: false }))
+    expect(dropdownsOf(tree)).toHaveLength(0)
   })
 })

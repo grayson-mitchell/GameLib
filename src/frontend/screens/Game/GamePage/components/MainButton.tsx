@@ -25,7 +25,7 @@ import { GameInfo } from 'common/types'
 import useSetting from 'frontend/hooks/useSetting'
 import { engineDownloadLabel } from 'frontend/hooks/engineDownloadLabel'
 import Dropdown from 'frontend/components/UI/Dropdown'
-import { showSteamMainButtonInstallOptions } from 'frontend/helpers/steamInstallOptionsEntry'
+import { installCaretItem } from '../actions/installCaret'
 
 interface Props {
   gameInfo: GameInfo
@@ -301,6 +301,19 @@ const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
     )
   }
 
+  // D-20: the Install ▾ serves both stores. Steam keeps "Install with
+  // options…"; every other store (and sideloaded / third-party-managed games,
+  // whose only import door this is) gets "Locate existing installation…".
+  const caretItem = installCaretItem({
+    runner: gameInfo.runner,
+    isInstalled: is_installed,
+    isQueued: is.queued,
+    isInstalling: is.installing,
+    isImporting: is.importing,
+    isDelisted: !!asStoreGame(gameInfo, 'steam')?.is_delisted,
+    installDisabled: disabledInstallButtons
+  })
+
   const handleAltLaunch = async () => {
     setVerboseLogs(!verboseLogs)
     await handlePlay(gameInfo)
@@ -385,27 +398,19 @@ const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
           >
             {getButtonLabel()}
           </button>
-          {/* D-21 split-button caret — Steam only. Takes the visual slot the
-              Import button leaves empty for Steam (its own gate is just
-              below, unchanged). The unusable-state gate below is
-              deliberate: Dropdown's Props type carries no interaction-
-              blocking attribute (and the approved UI-SPEC forbids adding
-              one), so unmounting is the only way to take the caret out of
-              the focus ring — a present-but-unusable-looking control would
-              still sit in it on one runtime and not the other (the repo's
-              own ledgered lesson). */}
-          {/* 34.13 review C-04: routed through the shared predicate module
-              instead of re-inlining the conjunct. The inline form was the
-              only one of the three "Install with options…" doors NOT gated
-              on `is_delisted`, and `gameInfo.is_delisted` was in scope right
-              here and simply unread. */}
-          {showSteamMainButtonInstallOptions({
-            runner: gameInfo.runner,
-            isInstalled: is_installed,
-            isQueued: is.queued,
-            isDelisted: !!asStoreGame(gameInfo, 'steam')?.is_delisted,
-            installDisabled: disabledInstallButtons
-          }) && (
+          {/* D-21 split-button caret, extended by D-20 to every store. The
+              unusable-state gate (installCaretItem) is deliberate:
+              Dropdown's Props type carries no interaction-blocking attribute
+              (and the approved UI-SPEC forbids adding one), so unmounting is
+              the only way to take the caret out of the focus ring — a
+              present-but-unusable-looking control would still sit in it on
+              one runtime and not the other (the repo's own ledgered lesson).
+              Steam routes to "Install with options…"; the other stores to
+              "Locate existing installation…". */}
+          {/* 34.13 review C-04: the Steam gate lives in the shared predicate
+              module (steamInstallOptionsEntry), reached through
+              installCaretItem, so the delisted exclusion stays in one place. */}
+          {caretItem && (
             <Dropdown
               className="SteamInstallCaret"
               /* WR-14: deliberately NOT `mainBtn` -- that class carries
@@ -417,10 +422,17 @@ const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
               buttonClass="button outline"
               title={
                 <span
-                  aria-label={t(
-                    'gamelib:steam.install.withOptionsLabel',
-                    'Install with options…'
-                  )}
+                  aria-label={
+                    caretItem === 'steamOptions'
+                      ? t(
+                          'gamelib:steam.install.withOptionsLabel',
+                          'Install with options…'
+                        )
+                      : t(
+                          'gamelib:installFlows.installOptionsLabel',
+                          'Install options'
+                        )
+                  }
                 >
                   <FontAwesomeIcon
                     icon={faChevronDown}
@@ -440,13 +452,25 @@ const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
               <button
                 className="link button is-text is-link buttonWithIcon"
                 onClick={() =>
-                  openSteamInstallOptions(gameInfo.app_name, gameInfo)
+                  caretItem === 'steamOptions'
+                    ? openSteamInstallOptions(gameInfo.app_name, gameInfo)
+                    : openInstallGameModal({
+                        appName: gameInfo.app_name,
+                        runner: gameInfo.runner,
+                        gameInfo,
+                        action: 'import'
+                      })
                 }
               >
-                {t(
-                  'gamelib:steam.install.withOptionsLabel',
-                  'Install with options…'
-                )}
+                {caretItem === 'steamOptions'
+                  ? t(
+                      'gamelib:steam.install.withOptionsLabel',
+                      'Install with options…'
+                    )
+                  : t(
+                      'gamelib:installFlows.importDoorLabel',
+                      'Locate existing installation…'
+                    )}
               </button>
             </Dropdown>
           )}

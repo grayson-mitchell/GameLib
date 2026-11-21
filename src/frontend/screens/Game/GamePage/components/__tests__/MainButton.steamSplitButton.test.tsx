@@ -208,11 +208,18 @@ describe('MainButton — D-21 split button (steam)', () => {
   })
 
   it.each(['gog', 'legendary', 'nile', 'sideload'] as GameInfo['runner'][])(
-    'S2: D-28: renders NO caret for %s',
+    'S2: D-28 / D-20: %s gets the Locate item in its caret, never "Install with options…"',
     (runner) => {
       const tree = invoke(makeGameInfo({ runner }))
       const carets = findAll(tree, (n) => n.type === Dropdown)
-      expect(carets).toHaveLength(0)
+      expect(carets).toHaveLength(1)
+      // The Steam-only item is wired to openSteamInstallOptions; a non-Steam
+      // caret must not reach it (MainButton.importDemotion covers the import
+      // routing itself).
+      const item = (at(carets, 0).props as { children: unknown })
+        .children as ReactElement<{ onClick: () => void }>
+      item.props.onClick()
+      expect(openSteamInstallOptions).not.toHaveBeenCalled()
     }
   )
 
@@ -335,14 +342,14 @@ describe('MainButton — D-21 split button (steam)', () => {
     expect(openInstallGameModal).not.toHaveBeenCalled()
   })
 
-  it('S9 (quick-260916-cdb): the Import button is absent for Steam AND for gog — demoted to GameSubMenu for every runner', () => {
-    // Superseded by the 2026-09-16 operator decision: the Import door is no
-    // longer a MainButton primary-row button for ANY runner, Steam or
-    // otherwise — it was demoted into GameSubMenu (D-02). This suite's own
-    // sibling, `MainButton.importDemotion.test.tsx`, is the dedicated gate on
-    // that demotion; this spec is kept only so this suite's own caret-vs-
-    // import discriminator (the class-based predicate below) does not go
-    // stale on a reader who does not know the door moved.
+  it('S9 (quick-260916-cdb): no bare Import button in the primary row for Steam AND for gog — the Locate door lives in the Install ▾', () => {
+    // The 2026-09-16 operator decision took the Import door out of the
+    // MainButton primary row for ANY runner. Phase 100 (D-20) puts it in the
+    // Install ▾ instead (the ⋮ menu it was demoted into is deleted). This
+    // suite's own sibling, `MainButton.importDemotion.test.tsx`, is the
+    // dedicated gate on that placement; this spec is kept so this suite's own
+    // caret-vs-import discriminator (the class-based predicate below) does
+    // not go stale on a reader who does not know where the door moved.
     const steamTree = invoke(makeGameInfo({ runner: 'steam' }))
     const steamImport = findAll(
       steamTree,
