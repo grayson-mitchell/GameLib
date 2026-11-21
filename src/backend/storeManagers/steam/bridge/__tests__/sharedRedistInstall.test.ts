@@ -27,6 +27,7 @@ import {
 } from '../sharedRedistInstall'
 import { createTestBridgeRuntime } from 'backend/testUtils/testBridgeRuntime'
 import { createTestVersioning } from 'backend/testUtils/testStoreRoot'
+import { yieldUntil } from 'backend/testUtils/yieldUntil'
 
 // One fresh single-flight map and tmp sequence per test (66.4-08).
 let installSteamBridgeSharedRedists: ReturnType<
@@ -221,36 +222,15 @@ afterEach(() => {
  * runner stretching past jest's 5 s default. Neither a retry nor a skip is the fix. */
 const LOADED_RUNNER_TEST_TIMEOUT_MS = 30_000
 
-/** Real-clock captures, evaluated at file load, before any test calls jest.useFakeTimers. Measured on
- * jest 29.7 / @sinonjs/fake-timers 10.3: once fake timers are installed, performance.now, Date.now
- * and process.hrtime all return a FROZEN value inside the test, and only a reference captured
- * before that keeps reading real time. Here doNotFake spares only setImmediate and nextTick, so a
- * deadline read from the live performance.now would never expire. */
-const realNow = performance.now.bind(performance)
+/** Real-clock capture, taken at file load before any test installs fake timers. Here doNotFake spares
+ * only setImmediate and nextTick, so the slowed-path test needs a real timer to hold the download
+ * back. */
 const realSetTimeout = setTimeout
-
-/** The real-time ceiling for yieldUntil. It sits inside the 30 s per-test timeout above, so a call
- * that never comes fails at the expect right after the wait, not at jest's timeout. */
-const REAL_WAIT_DEADLINE_MS = 15_000
 
 /** How long the slowed-path regression test holds the download back, in real time. 500 idle
  * setImmediate turns measured 6.7-9.8 ms on the dev Mac, so 250 ms is about 25 times what the old
  * turn-counted wait allowed. */
 const SLOW_PRE_INSTALLER_MS = 250
-
-/** Wait until done() holds, bounded by elapsed real time, never by a count of turns. The code under
- * test does real fs/promises I/O (the ledger read and the atomic ledger writes) and a dynamic
- * import before its first installer call; a setImmediate turn lets those poll-phase callbacks land
- * between checks. It returns rather than throws, so the caller's expect supplies the failure
- * message (G-82-2-r2). */
-async function yieldUntil(
-  done: () => boolean,
-  deadlineMs = REAL_WAIT_DEADLINE_MS
-): Promise<void> {
-  const deadline = realNow() + deadlineMs
-  while (!done() && realNow() < deadline)
-    await new Promise((r) => setImmediate(r))
-}
 
 describe('installSteamBridgeSharedRedists', () => {
   it('installs DirectX: status, argv, reg add mark, ledger and settled', async () => {

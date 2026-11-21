@@ -7,6 +7,7 @@
  */
 
 import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
+import { yieldUntil } from 'backend/testUtils/yieldUntil'
 import {
   mkdirSync,
   mkdtempSync,
@@ -399,30 +400,13 @@ describe('buildRegistryFixCommandParts', () => {
  * wait inside is bounded by real time through yieldUntil; neither a retry nor a skip is the fix. */
 const REGISTRY_TIMEOUT_TEST_TIMEOUT_MS = 30_000
 
-/** Real-clock captures, evaluated at file load, before any test calls jest.useFakeTimers. Under this
- * file's `doNotFake: ['setImmediate']` the live performance.now and Date.now are frozen inside the
- * test (82-20 measured this on jest 29.7), so only a reference captured before that keeps reading
- * real time. */
-const realNow = performance.now.bind(performance)
+/** Real-clock capture, taken at file load before any test installs fake timers. Under this file's
+ * `doNotFake: ['setImmediate']` the slowed-path test needs a real timer to hold the prefix .reg read
+ * back. */
 const realSetTimeout = setTimeout
-
-const REAL_WAIT_DEADLINE_MS = 15_000
 
 /** How long the slowed-path regression test holds the prefix .reg read back, in real time. */
 const SLOW_REG_READ_MS = 250
-
-/** Wait until done() holds, bounded by elapsed real time, never by a count of turns. It returns
- * rather than throws, so the caller's expect supplies the failure message. A deliberate local copy
- * of yieldUntil in bridge/__tests__/sharedRedistInstall.test.ts (G-82-2-r2), not an import: a
- * third user should extract both into a shared test util. */
-async function yieldUntil(
-  done: () => boolean,
-  deadlineMs = REAL_WAIT_DEADLINE_MS
-): Promise<void> {
-  const deadline = realNow() + deadlineMs
-  while (!done() && realNow() < deadline)
-    await new Promise((r) => setImmediate(r))
-}
 
 describe('registry fixes application', () => {
   it('bundled profile without views applies 32 then 64', async () => {
