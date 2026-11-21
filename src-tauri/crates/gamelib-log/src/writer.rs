@@ -716,6 +716,168 @@ mod tests {
     }
 }
 
+#[cfg(test)]
+mod limiter_scope {
+    use super::test_support::*;
+    use super::*;
+    use gamelib_testutil::FakeHome;
+    use std::sync::atomic::AtomicU64;
+
+    /// A clock the test sets; the writer reads it for summaries and its tick.
+    struct SetClock(Arc<AtomicU64>);
+    impl Clock for SetClock {
+        fn now_ms(&self) -> u64 {
+            self.0.load(Ordering::SeqCst)
+        }
+    }
+
+    fn line(ts: u64, level: Level, msg: &str) -> Entry {
+        Entry::Line {
+            ts,
+            tz: 0,
+            level,
+            prefix: Prefix::Backend,
+            msg: msg.to_string(),
+        }
+    }
+
+    fn start(home: &FakeHome, now: &Arc<AtomicU64>) -> Logger {
+        let mut cfg = config(home);
+        cfg.clock = Arc::new(SetClock(Arc::clone(now)));
+        Logger::start(cfg)
+    }
+
+    fn general(entries: Vec<Entry>) -> TargetBatch {
+        batch(LogTarget::General, false, entries)
+    }
+
+    #[test]
+    fn a_hundred_identical_raw_chunks_to_a_game_log_all_land() {
+        let home = FakeHome::new("gamelib-log-");
+        let launch = path(&home, &["games", "480_steam", "launch.log"]);
+        let logger = Logger::start(config(&home));
+        let chunks: Vec<Entry> = (0..100).map(|_| raw("wine: same warning\n")).collect();
+        logger.submit(vec![batch(game("480"), true, chunks)]);
+        assert!(logger.flush(GENEROUS));
+        assert_eq!(read(&launch).lines().count(), 100);
+        assert!(!read(&launch).contains("repeated"));
+    }
+
+    #[test]
+    fn a_hundred_identical_lines_to_a_game_log_all_land() {
+        let home = FakeHome::new("gamelib-log-");
+        let launch = path(&home, &["games", "480_steam", "launch.log"]);
+        let logger = Logger::start(config(&home));
+        let lines: Vec<Entry> = (0..100)
+            .map(|_| line(TS, Level::Info, "same line"))
+            .collect();
+        logger.submit(vec![batch(game("480"), true, lines)]);
+        assert!(logger.flush(GENEROUS));
+        assert_eq!(read(&launch).lines().count(), 100);
+    }
+
+    #[test]
+    fn a_raw_chunk_to_the_general_target_is_not_limited() {
+        let home = FakeHome::new("gamelib-log-");
+        let logger = Logger::start(config(&home));
+        let chunks: Vec<Entry> = (0..100).map(|_| raw("same raw\n")).collect();
+        logger.submit(vec![general(chunks)]);
+        assert!(logger.flush(GENEROUS));
+        assert_eq!(read(&path(&home, &["gamelib.log"])).lines().count(), 100);
+    }
+
+    #[test]
+    fn a_quiet_log_gets_its_summary_on_the_tick_after_the_window() {
+        let home = FakeHome::new("gamelib-log-");
+        let now = Arc::new(AtomicU64::new(0));
+        let logger = start(&home, &now);
+        let lines: Vec<Entry> = (0..7)
+            .map(|t| line(t * 1000, Level::Warning, "stuck"))
+            .collect();
+        logger.submit(vec![general(lines)]);
+        now.store(59_000, Ordering::SeqCst);
+        assert!(logger.tick_for_tests(GENEROUS));
+        let general_log = path(&home, &["gamelib.log"]);
+        assert!(
+            !read(&general_log).contains("repeated"),
+            "window still open"
+        );
+        now.store(61_000, Ordering::SeqCst);
+        assert!(logger.tick_for_tests(GENEROUS));
+        let body = read(&general_log);
+        assert_eq!(body.lines().count(), 6, "{body}");
+        assert!(body.ends_with("stuck (repeated 2 more times)\n"), "{body}");
+        // Closed, so a later flush adds nothing.
+        assert!(logger.flush(GENEROUS));
+        assert_eq!(read(&general_log), body);
+    }
+
+    #[test]
+    fn flush_writes_the_summary_of_a_window_still_open() {
+        let home = FakeHome::new("gamelib-log-");
+        let logger = Logger::start(config(&home));
+        let lines: Vec<Entry> = (0..8).map(|_| line(TS, Level::Error, "boom")).collect();
+        logger.submit(vec![general(lines)]);
+        assert!(logger.flush(GENEROUS));
+        let body = read(&path(&home, &["gamelib.log"]));
+        assert_eq!(body.lines().count(), 6, "{body}");
+        assert!(body.ends_with("boom (repeated 3 more times)\n"), "{body}");
+    }
+
+    #[test]
+    fn a_flood_of_identical_warnings_is_five_lines_plus_one_summary_per_window() {
+        let home = FakeHome::new("gamelib-log-");
+        let now = Arc::new(AtomicU64::new(0));
+        let logger = start(&home, &now);
+        // 10,000 lines over 600 s, in ten submissions (one per simulated minute).
+        for minute in 0..10u64 {
+            now.store(minute * 60_000, Ordering::SeqCst);
+            let lines: Vec<Entry> = (0..1000)
+                .map(|i| {
+                    line(
+                        minute * 60_000 + i * 59,
+                        Level::Warning,
+                        "connection refused",
+                    )
+                })
+                .collect();
+            logger.submit(vec![general(lines)]);
+            assert!(logger.tick_for_tests(GENEROUS));
+        }
+        assert!(logger.flush(GENEROUS));
+        let body = read(&path(&home, &["gamelib.log"]));
+        let summaries = body.matches("(repeated 995 more times)").count();
+        assert_eq!(summaries, 10, "{body}");
+        assert_eq!(body.lines().count(), 10 * 5 + 10);
+    }
+
+    #[test]
+    fn more_than_256_distinct_repeating_lines_are_all_summarised_and_memory_stays_bounded() {
+        let home = FakeHome::new("gamelib-log-");
+        let logger = Logger::start(config(&home));
+        let mut entries = Vec::new();
+        for key in 0..257u64 {
+            for n in 0..7 {
+                entries.push(line(key * 10 + n, Level::Warning, &format!("unique {key}")));
+            }
+        }
+        logger.submit(vec![general(entries)]);
+        assert!(logger.flush(GENEROUS));
+        let body = read(&path(&home, &["gamelib.log"]));
+        assert_eq!(
+            body.matches("(repeated 2 more times)").count(),
+            257,
+            "{body}"
+        );
+        // Key 0's summary is written at the eviction (just after the line that evicted it), well
+        // before the flush drains the rest.
+        let evicted = body.find("unique 0 (repeated 2 more times)").unwrap();
+        let drained = body.find("unique 1 (repeated 2 more times)").unwrap();
+        let newest_line = body.find("unique 256\n").unwrap();
+        assert!(newest_line < evicted && evicted < drained, "{body}");
+    }
+}
+
 #[cfg(all(test, unix))]
 mod mode {
     use super::test_support::*;

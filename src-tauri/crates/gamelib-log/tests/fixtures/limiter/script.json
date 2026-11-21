@@ -51,6 +51,226 @@
     {
       "t": 60,
       "tick": true
+    },
+    {
+      "t": 100,
+      "level": "WARNING",
+      "prefix": "Backend",
+      "msg": "same body, two levels"
+    },
+    {
+      "t": 100,
+      "level": "INFO",
+      "prefix": "Backend",
+      "msg": "same body, two levels"
+    },
+    {
+      "t": 101,
+      "level": "WARNING",
+      "prefix": "Backend",
+      "msg": "same body, two levels"
+    },
+    {
+      "t": 101,
+      "level": "INFO",
+      "prefix": "Backend",
+      "msg": "same body, two levels"
+    },
+    {
+      "t": 102,
+      "level": "WARNING",
+      "prefix": "Backend",
+      "msg": "same body, two levels"
+    },
+    {
+      "t": 102,
+      "level": "INFO",
+      "prefix": "Backend",
+      "msg": "same body, two levels"
+    },
+    {
+      "t": 103,
+      "level": "WARNING",
+      "prefix": "Backend",
+      "msg": "same body, two levels"
+    },
+    {
+      "t": 103,
+      "level": "INFO",
+      "prefix": "Backend",
+      "msg": "same body, two levels"
+    },
+    {
+      "t": 104,
+      "level": "WARNING",
+      "prefix": "Backend",
+      "msg": "same body, two levels"
+    },
+    {
+      "t": 104,
+      "level": "INFO",
+      "prefix": "Backend",
+      "msg": "same body, two levels"
+    },
+    {
+      "t": 105,
+      "level": "WARNING",
+      "prefix": "Backend",
+      "msg": "same body, two levels"
+    },
+    {
+      "t": 105,
+      "level": "INFO",
+      "prefix": "Backend",
+      "msg": "same body, two levels"
+    },
+    {
+      "t": 160,
+      "tick": true
+    },
+    {
+      "t": 201,
+      "level": "INFO",
+      "prefix": "Backend",
+      "msg": "poll 1"
+    },
+    {
+      "t": 202,
+      "level": "INFO",
+      "prefix": "Backend",
+      "msg": "poll 2"
+    },
+    {
+      "t": 203,
+      "level": "INFO",
+      "prefix": "Backend",
+      "msg": "poll 3"
+    },
+    {
+      "t": 204,
+      "level": "INFO",
+      "prefix": "Backend",
+      "msg": "poll 4"
+    },
+    {
+      "t": 205,
+      "level": "INFO",
+      "prefix": "Backend",
+      "msg": "poll 5"
+    },
+    {
+      "t": 206,
+      "level": "INFO",
+      "prefix": "Backend",
+      "msg": "poll 6"
+    },
+    {
+      "t": 207,
+      "level": "INFO",
+      "prefix": "Backend",
+      "msg": "poll 7"
+    },
+    {
+      "t": 208,
+      "level": "INFO",
+      "prefix": "Backend",
+      "msg": "poll 8"
+    },
+    {
+      "t": 270,
+      "tick": true
+    },
+    {
+      "t": 300,
+      "level": "ERROR",
+      "prefix": "Backend",
+      "msg": "abcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghij"
+    },
+    {
+      "t": 301,
+      "level": "ERROR",
+      "prefix": "Backend",
+      "msg": "abcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghij"
+    },
+    {
+      "t": 302,
+      "level": "ERROR",
+      "prefix": "Backend",
+      "msg": "abcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghij"
+    },
+    {
+      "t": 303,
+      "level": "ERROR",
+      "prefix": "Backend",
+      "msg": "abcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghij"
+    },
+    {
+      "t": 304,
+      "level": "ERROR",
+      "prefix": "Backend",
+      "msg": "abcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghij"
+    },
+    {
+      "t": 305,
+      "level": "ERROR",
+      "prefix": "Backend",
+      "msg": "abcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghij"
+    },
+    {
+      "t": 306,
+      "level": "ERROR",
+      "prefix": "Backend",
+      "msg": "abcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghij"
+    },
+    {
+      "t": 360,
+      "tick": true
+    },
+    {
+      "t": 400,
+      "level": "WARNING",
+      "prefix": "Backend",
+      "msg": "last words"
+    },
+    {
+      "t": 401,
+      "level": "WARNING",
+      "prefix": "Backend",
+      "msg": "last words"
+    },
+    {
+      "t": 402,
+      "level": "WARNING",
+      "prefix": "Backend",
+      "msg": "last words"
+    },
+    {
+      "t": 403,
+      "level": "WARNING",
+      "prefix": "Backend",
+      "msg": "last words"
+    },
+    {
+      "t": 404,
+      "level": "WARNING",
+      "prefix": "Backend",
+      "msg": "last words"
+    },
+    {
+      "t": 405,
+      "level": "WARNING",
+      "prefix": "Backend",
+      "msg": "last words"
+    },
+    {
+      "t": 406,
+      "level": "WARNING",
+      "prefix": "Backend",
+      "msg": "last words"
+    },
+    {
+      "t": 407,
+      "flush": true
     }
   ]
 }
