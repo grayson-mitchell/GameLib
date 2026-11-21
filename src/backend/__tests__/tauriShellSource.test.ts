@@ -5409,7 +5409,7 @@ describe('Phase 85 plan 09: store boot wiring', () => {
     }
   })
 
-  test('the ownership file flips only the cache family: no other family, no per-store override', () => {
+  test('the ownership file flips only the cache and user-state families: no other family, no per-store override', () => {
     const own = JSON.parse(
       readFileSync(
         join(
@@ -5431,12 +5431,13 @@ describe('Phase 85 plan 09: store boot wiring', () => {
       'user-state'
     ])
     // Phase 85 plan 12 flipped the cache family and retired plan 10's tracer
-    // override. Each later family flip (85-13 onward) moves this pin.
+    // override; plan 13 flipped user-state. Each later family flip (85-14 onward)
+    // moves this pin.
     expect(own.families).toEqual({
       account: false,
       cache: true,
       settings: false,
-      'user-state': false
+      'user-state': true
     })
     expect(own.stores).toEqual({})
   })

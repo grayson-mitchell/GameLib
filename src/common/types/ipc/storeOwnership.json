@@ -1,7 +1,7 @@
 {
   "families": {
     "cache": true,
-    "user-state": false,
+    "user-state": true,
     "account": false,
     "settings": false
   },

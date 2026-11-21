@@ -83,12 +83,16 @@ describe(`the cache family (${CACHE_ROWS.length} cache rows)`, () => {
     )
   })
 
-  it('owns exactly the cache rows (and the native one) under rust, none of them under ts', () => {
+  it('owns the cache rows (with the native one and, since 85-13, the user-state ones) under rust, none of the cache rows under ts', () => {
     for (const row of tableFile.rows) {
       if (row.name === null) continue
       const rust = isRustOwned(row.key, 'rust')
       const ts = isRustOwned(row.key, 'ts')
-      expect(rust).toBe(row.family === 'cache' || row.family === 'native')
+      expect(rust).toBe(
+        row.family === 'cache' ||
+          row.family === 'user-state' ||
+          row.family === 'native'
+      )
       expect(ts).toBe(row.family === 'native')
     }
   })
@@ -288,10 +292,11 @@ describe('a cache the shell could not read (D-18, GAMELIB_STORE_BOOT startEmpty)
 })
 
 /**
- * `storeNew` and the write handler build a cache store from a recognised name. Under the shipped
- * ownership file every recognised name is a user-state table row, so none is Rust's yet; the user-
- * state family is flipped here for the length of a case, the way the later family plan will flip it
- * in the file, to prove the ad hoc construction reaches the root's one mirror cell for the file.
+ * `storeNew` and the write handler build a cache store from a recognised name. Every recognised
+ * name is a user-state table row, so the user-state family decides it: Rust's since plan 13 flipped
+ * it in the file. The cases set the family explicitly for their length (and restore it) so each
+ * proves one side: the ad hoc construction reaching the root's one mirror cell for the file, and
+ * the conf-backed fallback while the family is off.
  */
 describe('runtime cache stores built by storeNew', () => {
   let userData: string
@@ -360,6 +365,7 @@ describe('runtime cache stores built by storeNew', () => {
   })
 
   it('stays conf-backed while the family is not Rust’s: a write sends no frame', () => {
+    families['user-state'] = false
     const frames: StoreFrame[] = []
     const { listeners } = layer(frames)
     listeners.get(STORE_NEW_CHANNEL)?.(undefined, 'steam_library')
