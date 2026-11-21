@@ -83,7 +83,59 @@ fn every_migrate_case_replays_byte_identical() {
     for case in &cases {
         replay(case);
     }
-    println!("migrate_golden: {} migrate cases replayed", cases.len());
+    println!(
+        "migrate_golden: {} of {total} migrate cases replayed (the other, the override-chain sequence, runs in engine_golden)",
+        cases.len()
+    );
+}
+
+/// A library file at the current version writes nothing: the second open of a migrated file is `Ok`
+/// and its bytes and mtime-independent content do not move.
+#[test]
+fn a_current_version_library_file_opened_twice_writes_nothing() {
+    for case in real_chain_cases()
+        .iter()
+        .filter(|c| text(c, "flavour") == "conf" && text(c, "chain") != "settings/game")
+    {
+        let id = text(case, "id");
+        let home = FakeHome::new("gamelib-store-migrate-twice-");
+        let path = home.root().join(text(case, "file"));
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::copy(
+            golden_dir().join("inputs").join(format!("{id}.json")),
+            &path,
+        )
+        .unwrap();
+        let chains = Chains::baseline();
+        let chain = text(case, "chain");
+        let first = open_file(
+            &path,
+            Flavour::Store,
+            StoreKind::UserState,
+            chain,
+            &chains,
+            golden_now(),
+        );
+        assert!(
+            matches!(first.outcome, OpenOutcome::Migrated { .. }),
+            "{id}"
+        );
+        let migrated = fs::read(&path).unwrap();
+        let files = tree(home.root());
+        for _ in 0..2 {
+            let again = open_file(
+                &path,
+                Flavour::Store,
+                StoreKind::UserState,
+                chain,
+                &chains,
+                golden_now(),
+            );
+            assert_eq!(again.outcome, OpenOutcome::Ok, "{id}");
+            assert_eq!(fs::read(&path).unwrap(), migrated, "{id}");
+            assert_eq!(tree(home.root()), files, "{id}: no new file");
+        }
+    }
 }
 
 /// D-04: Phase 85 introduces no store version bump. Every chain's current version is the TS value; a

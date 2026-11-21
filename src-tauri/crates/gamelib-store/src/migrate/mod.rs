@@ -14,6 +14,7 @@ use std::sync::Arc;
 
 use crate::json::Json;
 
+pub mod libraries;
 pub mod settings;
 pub mod strip;
 
@@ -86,7 +87,29 @@ impl Chains {
             .iter()
             .map(|k| ((*k).to_string(), Vec::new()))
             .collect();
-        chains.insert("settings/global".to_string(), settings::global_chain());
+        let registered: [(&str, Vec<Step>); 9] = [
+            ("settings/global", settings::global_chain()),
+            ("settings/game", settings::game_chain()),
+            (
+                "store_cache/steam_library",
+                libraries::steam_library_chain(),
+            ),
+            ("store_cache/gog_library", libraries::gog_library_chain()),
+            ("gog_store/installed", libraries::gog_installed_chain()),
+            (
+                "store_cache/legendary_library",
+                libraries::legendary_library_chain(),
+            ),
+            ("store_cache/nile_library", libraries::nile_library_chain()),
+            ("sideload_apps/library", libraries::sideload_library_chain()),
+            (
+                "store/download-manager",
+                libraries::download_manager_chain(),
+            ),
+        ];
+        for (key, steps) in registered {
+            chains.insert(key.to_string(), steps);
+        }
         Chains { chains }
     }
 

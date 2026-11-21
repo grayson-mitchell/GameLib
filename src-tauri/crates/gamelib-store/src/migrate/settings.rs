@@ -1,4 +1,5 @@
-//! The `settings/global` migration chain (Phase 68, D-10, D-11), ported unchanged (D-12).
+//! The `settings/global` and `settings/game` migration chains (Phase 68, D-10, D-11; Phase 70 gap G3), ported
+//! unchanged (D-12).
 //!
 //! v0 -> v1 folds the two ad hoc read-side fix-ups into one persisted step: `darkTrayIcon` becomes
 //! `trayIconVariant` and the retired `libraryTopSection` seeds `focusRow`. Both read the ORIGINAL
@@ -156,6 +157,33 @@ pub fn global_chain() -> Vec<Step> {
     ]
 }
 
+/// `settingsGameChain` (`GamesConfig/<app>.json`): v0 -> v1 is an identity step; v1 -> v2 strips every
+/// per-game settings object against `gameSettingsSchema.partial()`. The `version` and `explicit` members
+/// are the document's own, not a game's settings, and are left alone.
+pub fn game_chain() -> Vec<Step> {
+    vec![
+        Step::identity("settings-game-v0-v1", 1),
+        Step::new("settings-game-v1-v2", 2, |file| {
+            let Json::Obj(top) = file else { return Ok(()) };
+            let stripped: Vec<(String, Json)> = top
+                .iter()
+                .filter(|(key, _)| key.as_str() != "version" && key.as_str() != "explicit")
+                .filter_map(|(key, value)| match value {
+                    Json::Obj(settings) => Some((
+                        key.clone(),
+                        strip_settings(settings, &schemas().settings_game),
+                    )),
+                    _ => None,
+                })
+                .collect();
+            for (key, value) in stripped {
+                top.insert_js(key, value);
+            }
+            Ok(())
+        }),
+    ]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -216,6 +244,18 @@ mod tests {
         ] {
             assert_eq!(run(&global_chain(), doc), doc);
         }
+    }
+
+    #[test]
+    fn the_game_chain_strips_each_games_settings_but_not_version_or_explicit() {
+        let out = run(
+            &game_chain(),
+            r#"{"G1":{"showFps":"yes","useSteamRuntime":true,"targetExe":"a.exe"},"explicit":{"k":1},"version":"v1","G2":3}"#,
+        );
+        assert_eq!(
+            out,
+            r#"{"G1":{"targetExe":"a.exe"},"explicit":{"k":1},"version":"v1","G2":3}"#
+        );
     }
 
     #[test]
