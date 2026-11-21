@@ -16,6 +16,7 @@ import HumbleOriginInfo from '../HumbleOriginInfo'
 import NativePortInfo from '../NativePortInfo'
 import IntegrationRows from './IntegrationRows'
 import LocationRow from './LocationRow'
+import SizeRow from './SizeRow'
 import './index.css'
 
 interface Props {

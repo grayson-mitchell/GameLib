@@ -249,6 +249,7 @@
         "hiddenAchievement": "Hidden Achievement",
         "installTab": {
             "busy": {
+                "modifying": "Applying changes…",
                 "moving": "Moving…",
                 "settingFolder": "Setting folder…"
             },
@@ -258,6 +259,7 @@
             },
             "libraryGroup": "Library & integration",
             "location": "Location",
+            "modify": "Modify…",
             "move": "Move…",
             "open": "Open",
             "reason": {
@@ -280,6 +282,7 @@
                 "macLabel": "Applications shortcut",
                 "windowsLabel": "Desktop & Start menu shortcuts"
             },
+            "size": "Size",
             "switch": {
                 "adding": "Adding…",
                 "removing": "Removing…"

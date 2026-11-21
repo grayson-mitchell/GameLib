@@ -66,6 +66,14 @@ describe('Install tab source gates', () => {
     expect(code).toContain("useRowAction('changeInstallPath'")
   })
 
+  it('SizeRow opens ModifyInstallModal from gates.modify with gameInstallInfo (D-01)', () => {
+    const code = read(TAB_DIR, 'SizeRow.tsx')
+    expect(code).toContain('import ModifyInstallModal from')
+    expect(code).toContain('gates.modify')
+    expect(code).toContain('gameInstallInfo={gameInstallInfo}')
+    expect(code).toContain('is.installing')
+  })
+
   it('InstallTab renders LocationRow inside installFacts before legacyRows', () => {
     const code = read(TAB_DIR, 'index.tsx')
     const facts = code.indexOf('className="installFacts"')

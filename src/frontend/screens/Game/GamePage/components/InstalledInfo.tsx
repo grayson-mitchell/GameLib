@@ -39,11 +39,9 @@ const InstalledInfo = ({ gameInfo }: Props) => {
     return null
   }
 
-  let install_size: string | undefined
   let version: string | undefined
 
   if (!isSideloaded) {
-    install_size = gameInfo.install.install_size
     version = gameInfo.install.version
   }
 
@@ -63,11 +61,6 @@ const InstalledInfo = ({ gameInfo }: Props) => {
 
   const info = (
     <>
-      {!isSideloaded && !isThirdParty && (
-        <div>
-          <b>{t('info.size')}:</b> {install_size}
-        </div>
-      )}
       {!isSideloaded && !isThirdParty && (
         <div>
           <b>{t('info.version')}:</b> {version}
