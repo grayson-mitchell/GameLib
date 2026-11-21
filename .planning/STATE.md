@@ -5,15 +5,15 @@ milestone_name: Node Sidecar Retirement
 current_phase: 100
 current_phase_name: Game page without the ⋮ menu
 status: executing
-stopped_at: Completed 100-05-PLAN.md
-last_updated: "2026-11-21T10:34:14.947Z"
+stopped_at: Completed 100-06-PLAN.md
+last_updated: "2026-11-21T10:48:08.191Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 100 execution started
-state_head: 97d1505416fdc88e914301828f3971a60da41ccf
+state_head: b3111c3c8768e1a5eb4a5ac8419de481c077aaf4
 progress:
   total_phases: 20
   completed_phases: 23
-  total_plans: 74
+  total_plans: 75
   completed_plans: 531
   percent: 100
 ---
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 100 (Game page without the ⋮ menu) — EXECUTING
-Plan: 6 of 10
+Plan: 7 of 10
 Status: Ready to execute
 Last activity: 2026-11-21 — Phase 100 execution started
 Progress: [██████████] 100%
@@ -355,6 +355,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 100 P03 | 10 min | 2 tasks | 21 files |
 | Phase 100 P04 | 25 min | 3 tasks | 20 files |
 | Phase 100 P05 | 16 min | 3 tasks | 25 files |
+| Phase 100 P06 | 13 min | 3 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -653,6 +654,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 100]: Retry on a failed cloud sync re-runs through handleSync, so a forced download or upload asks for its overwrite confirmation again (T-100-14)
 - [Phase 100]: Cloud saves label key is installTab.cloudSaves.label: i18next nests on '.', so a cloudSaves leaf cannot share a name with cloudSaves.syncing
 - [Phase 100]: InstallTab renders separate fact lists for installed and not-installed games; ThirdPartyRow serves both and DownloadSizeInfo no longer has a third-party branch
+- [Phase 100]: 100-06: danger-zone border mixes --install-danger-text (not the raw danger token) into --border-color to clear 3:1 in gruvbox_dark
+- [Phase 100]: 100-06: Runs for me renders only for installed games, inside Library & integration; a not-installed game shows Show in Steam alone
 
 ### Pending Todos
 
@@ -913,8 +916,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-21T10:34:14.627Z
-Stopped at: Completed 100-05-PLAN.md
+Last session: 2026-11-21T10:48:07.893Z
+Stopped at: Completed 100-06-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
