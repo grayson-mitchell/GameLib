@@ -1,0 +1,789 @@
+{
+  "read": [
+    {
+      "store": "configStore",
+      "key": "theme",
+      "allowed": true
+    },
+    {
+      "store": "configStore",
+      "key": "notAField",
+      "allowed": false
+    },
+    {
+      "store": "wineDownloaderInfoStore",
+      "key": "wine-releases",
+      "allowed": true
+    },
+    {
+      "store": "wineDownloaderInfoStore",
+      "key": "notAField",
+      "allowed": false
+    },
+    {
+      "store": "gogInstalledGamesStore",
+      "key": "installed",
+      "allowed": true
+    },
+    {
+      "store": "gogInstalledGamesStore",
+      "key": "notAField",
+      "allowed": false
+    },
+    {
+      "store": "timestampStore",
+      "key": "480",
+      "allowed": true
+    },
+    {
+      "store": "timestampStore",
+      "key": "notAField",
+      "allowed": true
+    },
+    {
+      "store": "fontsStore",
+      "key": "fonts",
+      "allowed": true
+    },
+    {
+      "store": "fontsStore",
+      "key": "notAField",
+      "allowed": false
+    },
+    {
+      "store": "gogConfigStore",
+      "key": "isLoggedIn",
+      "allowed": true
+    },
+    {
+      "store": "gogConfigStore",
+      "key": "notAField",
+      "allowed": false
+    },
+    {
+      "store": "steamConfigStore",
+      "key": "isLoggedIn",
+      "allowed": true
+    },
+    {
+      "store": "steamConfigStore",
+      "key": "notAField",
+      "allowed": false
+    },
+    {
+      "store": "steamBottleConfigStore",
+      "key": "bottleName",
+      "allowed": true
+    },
+    {
+      "store": "steamBottleConfigStore",
+      "key": "notAField",
+      "allowed": false
+    },
+    {
+      "store": "nileConfigStore",
+      "key": "expired",
+      "allowed": true
+    },
+    {
+      "store": "nileConfigStore",
+      "key": "notAField",
+      "allowed": false
+    },
+    {
+      "store": "legendaryConfigStore",
+      "key": "expired",
+      "allowed": true
+    },
+    {
+      "store": "legendaryConfigStore",
+      "key": "notAField",
+      "allowed": false
+    },
+    {
+      "store": "humbleConfigStore",
+      "key": "isLoggedIn",
+      "allowed": true
+    },
+    {
+      "store": "humbleConfigStore",
+      "key": "notAField",
+      "allowed": false
+    },
+    {
+      "store": "sideloadedStore",
+      "key": "games",
+      "allowed": true
+    },
+    {
+      "store": "sideloadedStore",
+      "key": "notAField",
+      "allowed": false
+    },
+    {
+      "store": "downloadManager",
+      "key": "queue",
+      "allowed": true
+    },
+    {
+      "store": "downloadManager",
+      "key": "notAField",
+      "allowed": false
+    },
+    {
+      "store": "gogSyncStore",
+      "key": "someGame",
+      "allowed": true
+    },
+    {
+      "store": "gogSyncStore",
+      "key": "notAField",
+      "allowed": true
+    },
+    {
+      "store": "gogPrivateBranches",
+      "key": "someGame",
+      "allowed": true
+    },
+    {
+      "store": "gogPrivateBranches",
+      "key": "notAField",
+      "allowed": true
+    },
+    {
+      "store": "wikigameinfo",
+      "key": "someGame",
+      "allowed": true
+    },
+    {
+      "store": "wikigameinfo",
+      "key": "notAField",
+      "allowed": true
+    },
+    {
+      "store": "migrationsStore",
+      "key": "appliedMigrations",
+      "allowed": true
+    },
+    {
+      "store": "migrationsStore",
+      "key": "notAField",
+      "allowed": false
+    },
+    {
+      "store": "gameOverridesStore",
+      "key": "overrides",
+      "allowed": true
+    },
+    {
+      "store": "gameOverridesStore",
+      "key": "notAField",
+      "allowed": false
+    },
+    {
+      "store": "configStore",
+      "key": "settings.wineVersion.bin",
+      "allowed": true
+    },
+    {
+      "store": "steamConfigStore",
+      "key": "refreshToken",
+      "allowed": false
+    },
+    {
+      "store": "steamConfigStore",
+      "key": "refreshToken.x",
+      "allowed": false
+    },
+    {
+      "store": "humbleConfigStore",
+      "key": "sessionCookie",
+      "allowed": false
+    },
+    {
+      "store": "humbleConfigStore",
+      "key": "csrfToken",
+      "allowed": false
+    },
+    {
+      "store": "gogConfigStore",
+      "key": "credentials",
+      "allowed": false
+    },
+    {
+      "store": "timestampStore",
+      "key": "__internal__.gamelib.schemaVersion",
+      "allowed": false
+    },
+    {
+      "store": "steam_library",
+      "key": "__internal__",
+      "allowed": false
+    },
+    {
+      "store": "steam_library",
+      "key": "games",
+      "allowed": true
+    },
+    {
+      "store": "legendary_library",
+      "key": "library",
+      "allowed": true
+    },
+    {
+      "store": "humble_library",
+      "key": "games",
+      "allowed": false
+    },
+    {
+      "store": "humble_revealed",
+      "key": "anything",
+      "allowed": false
+    },
+    {
+      "store": "custom_cache",
+      "key": "anything",
+      "allowed": false
+    },
+    {
+      "store": "constructor",
+      "key": "x",
+      "allowed": false
+    },
+    {
+      "store": "toString",
+      "key": "x",
+      "allowed": false
+    },
+    {
+      "store": "__proto__",
+      "key": "x",
+      "allowed": false
+    },
+    {
+      "store": "",
+      "key": "x",
+      "allowed": false
+    }
+  ],
+  "write": [
+    {
+      "store": "configStore",
+      "key": "theme",
+      "allowed": true
+    },
+    {
+      "store": "configStore",
+      "key": "notAField",
+      "allowed": false
+    },
+    {
+      "store": "wineDownloaderInfoStore",
+      "key": "wine-releases",
+      "allowed": true
+    },
+    {
+      "store": "wineDownloaderInfoStore",
+      "key": "notAField",
+      "allowed": false
+    },
+    {
+      "store": "gogInstalledGamesStore",
+      "key": "installed",
+      "allowed": true
+    },
+    {
+      "store": "gogInstalledGamesStore",
+      "key": "notAField",
+      "allowed": false
+    },
+    {
+      "store": "timestampStore",
+      "key": "480",
+      "allowed": true
+    },
+    {
+      "store": "timestampStore",
+      "key": "notAField",
+      "allowed": true
+    },
+    {
+      "store": "fontsStore",
+      "key": "fonts",
+      "allowed": true
+    },
+    {
+      "store": "fontsStore",
+      "key": "notAField",
+      "allowed": false
+    },
+    {
+      "store": "gogConfigStore",
+      "key": "isLoggedIn",
+      "allowed": true
+    },
+    {
+      "store": "gogConfigStore",
+      "key": "notAField",
+      "allowed": false
+    },
+    {
+      "store": "steamConfigStore",
+      "key": "isLoggedIn",
+      "allowed": true
+    },
+    {
+      "store": "steamConfigStore",
+      "key": "notAField",
+      "allowed": false
+    },
+    {
+      "store": "steamBottleConfigStore",
+      "key": "bottleName",
+      "allowed": true
+    },
+    {
+      "store": "steamBottleConfigStore",
+      "key": "notAField",
+      "allowed": false
+    },
+    {
+      "store": "nileConfigStore",
+      "key": "expired",
+      "allowed": true
+    },
+    {
+      "store": "nileConfigStore",
+      "key": "notAField",
+      "allowed": false
+    },
+    {
+      "store": "legendaryConfigStore",
+      "key": "expired",
+      "allowed": true
+    },
+    {
+      "store": "legendaryConfigStore",
+      "key": "notAField",
+      "allowed": false
+    },
+    {
+      "store": "humbleConfigStore",
+      "key": "isLoggedIn",
+      "allowed": true
+    },
+    {
+      "store": "humbleConfigStore",
+      "key": "notAField",
+      "allowed": false
+    },
+    {
+      "store": "sideloadedStore",
+      "key": "games",
+      "allowed": true
+    },
+    {
+      "store": "sideloadedStore",
+      "key": "notAField",
+      "allowed": false
+    },
+    {
+      "store": "downloadManager",
+      "key": "queue",
+      "allowed": true
+    },
+    {
+      "store": "downloadManager",
+      "key": "notAField",
+      "allowed": false
+    },
+    {
+      "store": "gogSyncStore",
+      "key": "someGame",
+      "allowed": true
+    },
+    {
+      "store": "gogSyncStore",
+      "key": "notAField",
+      "allowed": true
+    },
+    {
+      "store": "gogPrivateBranches",
+      "key": "someGame",
+      "allowed": true
+    },
+    {
+      "store": "gogPrivateBranches",
+      "key": "notAField",
+      "allowed": true
+    },
+    {
+      "store": "wikigameinfo",
+      "key": "someGame",
+      "allowed": true
+    },
+    {
+      "store": "wikigameinfo",
+      "key": "notAField",
+      "allowed": true
+    },
+    {
+      "store": "migrationsStore",
+      "key": "appliedMigrations",
+      "allowed": true
+    },
+    {
+      "store": "migrationsStore",
+      "key": "notAField",
+      "allowed": false
+    },
+    {
+      "store": "gameOverridesStore",
+      "key": "overrides",
+      "allowed": true
+    },
+    {
+      "store": "gameOverridesStore",
+      "key": "notAField",
+      "allowed": false
+    },
+    {
+      "store": "configStore",
+      "key": "settings",
+      "allowed": false
+    },
+    {
+      "store": "configStore",
+      "key": "settings.wrapperOptions",
+      "allowed": false
+    },
+    {
+      "store": "configStore",
+      "key": "userHome",
+      "allowed": false
+    },
+    {
+      "store": "configStore",
+      "key": "userInfo",
+      "allowed": false
+    },
+    {
+      "store": "gogConfigStore",
+      "key": "userData",
+      "allowed": false
+    },
+    {
+      "store": "steamConfigStore",
+      "key": "userData",
+      "allowed": false
+    },
+    {
+      "store": "nileConfigStore",
+      "key": "userData",
+      "allowed": false
+    },
+    {
+      "store": "humbleConfigStore",
+      "key": "userData",
+      "allowed": false
+    },
+    {
+      "store": "steamConfigStore",
+      "key": "refreshToken",
+      "allowed": false
+    },
+    {
+      "store": "humbleConfigStore",
+      "key": "sessionCookie",
+      "allowed": false
+    },
+    {
+      "store": "humbleConfigStore",
+      "key": "csrfToken",
+      "allowed": false
+    },
+    {
+      "store": "gogConfigStore",
+      "key": "credentials",
+      "allowed": false
+    },
+    {
+      "store": "timestampStore",
+      "key": "__proto__.polluted",
+      "allowed": false
+    },
+    {
+      "store": "timestampStore",
+      "key": "a.constructor.b",
+      "allowed": false
+    },
+    {
+      "store": "configStore",
+      "key": "theme.prototype",
+      "allowed": false
+    },
+    {
+      "store": "timestampStore",
+      "key": "__internal__.gamelib",
+      "allowed": false
+    },
+    {
+      "store": "steam_library",
+      "key": "games",
+      "allowed": true
+    },
+    {
+      "store": "humble_library",
+      "key": "games",
+      "allowed": false
+    },
+    {
+      "store": "custom_cache",
+      "key": "x",
+      "allowed": false
+    },
+    {
+      "store": "constructor",
+      "key": "x",
+      "allowed": false
+    }
+  ],
+  "keyPath": [
+    {
+      "key": "theme",
+      "safe": true
+    },
+    {
+      "key": "a.b.c",
+      "safe": true
+    },
+    {
+      "key": "480",
+      "safe": true
+    },
+    {
+      "key": "a.__proto__.b",
+      "safe": false
+    },
+    {
+      "key": "__proto__",
+      "safe": false
+    },
+    {
+      "key": "constructor",
+      "safe": false
+    },
+    {
+      "key": "prototype.x",
+      "safe": false
+    },
+    {
+      "key": "x.prototype",
+      "safe": false
+    },
+    {
+      "key": "a.constructor",
+      "safe": false
+    },
+    {
+      "key": "a..b",
+      "safe": true
+    },
+    {
+      "key": "",
+      "safe": true
+    },
+    {
+      "key": ".",
+      "safe": true
+    },
+    {
+      "key": "a.",
+      "safe": true
+    },
+    {
+      "key": ".a",
+      "safe": true
+    },
+    {
+      "key": "__internal__.gamelib",
+      "safe": true
+    },
+    {
+      "key": "a.__proto__x",
+      "safe": true
+    },
+    {
+      "key": "protoTYPE",
+      "safe": true
+    },
+    {
+      "key": "Constructor",
+      "safe": true
+    }
+  ],
+  "cacheName": [
+    {
+      "name": "steam_library",
+      "accepted": true
+    },
+    {
+      "name": "gog_library",
+      "accepted": true
+    },
+    {
+      "name": "legendary_library",
+      "accepted": true
+    },
+    {
+      "name": "nile_library",
+      "accepted": true
+    },
+    {
+      "name": "humble_library",
+      "accepted": true
+    },
+    {
+      "name": "custom_cache",
+      "accepted": false
+    },
+    {
+      "name": "name-with-dash_9",
+      "accepted": false
+    },
+    {
+      "name": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "accepted": false
+    },
+    {
+      "name": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "accepted": false
+    },
+    {
+      "name": "",
+      "accepted": false
+    },
+    {
+      "name": "../x",
+      "accepted": false
+    },
+    {
+      "name": "a/b",
+      "accepted": false
+    },
+    {
+      "name": "a.b",
+      "accepted": false
+    },
+    {
+      "name": "a b",
+      "accepted": false
+    },
+    {
+      "name": "steam_library\n",
+      "accepted": false
+    },
+    {
+      "name": "ünïcode",
+      "accepted": false
+    }
+  ],
+  "area": [
+    {
+      "storeKey": "store_cache/steam_library",
+      "area": "steam-library"
+    },
+    {
+      "storeKey": "store_cache/gog_library",
+      "area": "gog-library"
+    },
+    {
+      "storeKey": "gog_store/installed",
+      "area": "gog-library"
+    },
+    {
+      "storeKey": "store_cache/legendary_library",
+      "area": "epic-library"
+    },
+    {
+      "storeKey": "store_cache/nile_library",
+      "area": "amazon-library"
+    },
+    {
+      "storeKey": "sideload_apps/library",
+      "area": "sideload-library"
+    },
+    {
+      "storeKey": "steam_store/config",
+      "area": "steam-account"
+    },
+    {
+      "storeKey": "gog_store/config",
+      "area": "gog-account"
+    },
+    {
+      "storeKey": "legendary_store/config",
+      "area": "epic-account"
+    },
+    {
+      "storeKey": "nile_store/config",
+      "area": "amazon-account"
+    },
+    {
+      "storeKey": "humble_store/config",
+      "area": "humble"
+    },
+    {
+      "storeKey": "store/download-manager",
+      "area": "downloads"
+    },
+    {
+      "storeKey": "store/timestamp",
+      "area": "play-history"
+    },
+    {
+      "storeKey": "gog_store/saveTimestamps",
+      "area": "play-history"
+    },
+    {
+      "storeKey": "store_cache/gog_playtime_sync_queue",
+      "area": "play-history"
+    },
+    {
+      "storeKey": "store/config",
+      "area": "preferences"
+    },
+    {
+      "storeKey": "settings/global",
+      "area": "settings"
+    },
+    {
+      "storeKey": "settings/game",
+      "area": "game-settings"
+    },
+    {
+      "storeKey": "store_cache/humble_revealed",
+      "area": "humble"
+    },
+    {
+      "storeKey": "store_cache/humble_library",
+      "area": "humble"
+    },
+    {
+      "storeKey": "store_cache/umu",
+      "area": "app-data"
+    },
+    {
+      "storeKey": "store/fonts",
+      "area": "app-data"
+    },
+    {
+      "storeKey": "GamesConfig/480",
+      "area": "app-data"
+    },
+    {
+      "storeKey": "",
+      "area": "app-data"
+    }
+  ]
+}
