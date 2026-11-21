@@ -1,26 +1,166 @@
-//! The store's atomic file write (skeleton for the RED run).
+//! The store's atomic file write: a copy of `gamelib-steamfiles`'s writer, hardened for private,
+//! frequently rewritten state files (D-13).
+//!
+//! The bytes go to a uniquely named `create_new` temp file next to the (symlink-resolved) target at
+//! mode 0600, are `sync_all`-ed when the caller asks for durability (D-21), and are renamed over the
+//! target. A rename that fails is retried a few times when the failure looks transient (Windows holds
+//! a file open without `FILE_SHARE_DELETE` while a virus scanner or indexer reads it), and a rename
+//! that still fails falls back to writing the target in place, the fallback the retired TS file store
+//! had (WR-05). No temp file survives any outcome.
 
-use std::io;
-use std::path::Path;
+use std::fs::{self, File, OpenOptions};
+use std::io::{self, Write};
+use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::Duration;
+
+static TMP_SEQ: AtomicU64 = AtomicU64::new(0);
+
+/// Sleeps before each retry of a refused rename: three retries after the first attempt.
+const RENAME_RETRY_DELAYS_MS: [u64; 3] = [25, 50, 100];
 
 /// Whether the temp file is `sync_all`-ed before it replaces the file (D-21).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Durability {
+    /// User-state, settings and account stores: a crash right after the write must not lose it.
     Synced,
+    /// Caches, rewritten in bursts and rebuilt on demand.
     Unsynced,
 }
 
-pub fn write_atomic(_path: &Path, _bytes: &[u8], _durability: Durability) -> io::Result<()> {
+/// Follow a symlinked final component (up to 40 hops, dangling targets included) so the write lands
+/// on the real file instead of replacing the link. A non-link path is returned unchanged.
+pub fn resolve_final_symlinks(path: &Path) -> PathBuf {
+    let mut cur = path.to_path_buf();
+    for _ in 0..40 {
+        let Ok(meta) = fs::symlink_metadata(&cur) else {
+            break;
+        };
+        if !meta.file_type().is_symlink() {
+            break;
+        }
+        let Ok(link) = fs::read_link(&cur) else {
+            break;
+        };
+        cur = if link.is_absolute() {
+            link
+        } else {
+            match cur.parent() {
+                Some(p) => p.join(link),
+                None => link,
+            }
+        };
+    }
+    cur
+}
+
+/// Creates `dir` and any missing ancestors, each new directory 0700 on Unix.
+fn create_dir_private(dir: &Path) -> io::Result<()> {
+    if dir.exists() {
+        return Ok(());
+    }
+    let mut builder = fs::DirBuilder::new();
+    builder.recursive(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::DirBuilderExt;
+        builder.mode(0o700);
+    }
+    builder.create(dir)
+}
+
+/// Write options for a store file: mode 0600 when the file is created (Unix).
+fn private_options() -> OpenOptions {
+    let mut options = OpenOptions::new();
+    options.write(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    options
+}
+
+fn finish(mut f: File, bytes: &[u8], durability: Durability) -> io::Result<()> {
+    f.write_all(bytes)?;
+    if durability == Durability::Synced {
+        f.sync_all()?;
+    }
     Ok(())
 }
 
+/// A rename worth trying again: a permission refusal anywhere, or on Windows a sharing violation
+/// (os error 32) or access denied (os error 5).
+fn is_retryable(e: &io::Error) -> bool {
+    if e.kind() == io::ErrorKind::PermissionDenied {
+        return true;
+    }
+    #[cfg(windows)]
+    if matches!(e.raw_os_error(), Some(32) | Some(5)) {
+        return true;
+    }
+    false
+}
+
+/// Writes `bytes` to `path`, atomically where the platform allows it.
+pub fn write_atomic(path: &Path, bytes: &[u8], durability: Durability) -> io::Result<()> {
+    write_atomic_with(path, bytes, durability, &|from, to| fs::rename(from, to))
+}
+
+/// `write_atomic` with the rename as a parameter, so a test can force the failure without touching
+/// permissions or holding a file open.
 pub fn write_atomic_with(
-    _path: &Path,
-    _bytes: &[u8],
-    _durability: Durability,
-    _rename: &dyn Fn(&Path, &Path) -> io::Result<()>,
+    path: &Path,
+    bytes: &[u8],
+    durability: Durability,
+    rename: &dyn Fn(&Path, &Path) -> io::Result<()>,
 ) -> io::Result<()> {
-    Ok(())
+    let invalid = || {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "path has no parent or file name",
+        )
+    };
+    let target = resolve_final_symlinks(path);
+    let parent = target.parent().ok_or_else(invalid)?;
+    let name = target.file_name().ok_or_else(invalid)?;
+    create_dir_private(parent)?;
+
+    let mut tmp_name = name.to_os_string();
+    tmp_name.push(format!(
+        ".{}.{}.tmp",
+        std::process::id(),
+        TMP_SEQ.fetch_add(1, Ordering::Relaxed)
+    ));
+    let tmp = parent.join(tmp_name);
+    let file = private_options().create_new(true).open(&tmp)?;
+    if let Err(e) = finish(file, bytes, durability) {
+        let _ = fs::remove_file(&tmp);
+        return Err(e);
+    }
+
+    let mut attempt = rename(&tmp, &target);
+    for delay in RENAME_RETRY_DELAYS_MS {
+        match &attempt {
+            Err(e) if is_retryable(e) => {
+                std::thread::sleep(Duration::from_millis(delay));
+                attempt = rename(&tmp, &target);
+            }
+            _ => break,
+        }
+    }
+    if attempt.is_ok() {
+        return Ok(());
+    }
+
+    // The rename never went through: write the target in place, then drop the temp either way.
+    let direct = private_options()
+        .create(true)
+        .truncate(true)
+        .open(&target)
+        .and_then(|f| finish(f, bytes, durability));
+    let _ = fs::remove_file(&tmp);
+    direct
 }
 
 #[cfg(test)]
