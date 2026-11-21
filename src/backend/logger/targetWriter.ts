@@ -1,4 +1,5 @@
 import { LogPrefix } from './constants'
+import { logTargetRefusal } from './forwarder'
 // Bound at call time, never at load: `./index` imports this file for its two constructors, so a
 // load-time use would meet a half-initialised module.
 import { enqueueLogEntry, logLine, logWarning } from './index'
@@ -30,18 +31,6 @@ import type { LogOptions } from './types'
  * This module holds no module-level state (moduleStateCensus); the one process-wide forwarder lives
  * in `./index`.
  */
-
-/** What the Rust path resolver accepts for an appName (`gamelib-core` `validate_app_name`). */
-const APP_NAME_MAX_BYTES = 255
-
-function isValidAppName(appName: string): boolean {
-  if (appName.length === 0) return false
-  if (Buffer.byteLength(appName, 'utf8') > APP_NAME_MAX_BYTES) return false
-  if (appName.includes('\0')) return false
-  if (appName.includes('/') || appName.includes('\\')) return false
-  if (appName.includes('..')) return false
-  return true
-}
 
 function describeTarget(target: LogFrameTarget): string {
   switch (target.kind) {
@@ -76,9 +65,10 @@ export default class LogWriter {
     this.#target = target
     this.#logsDisabled = logsDisabled
     this.#rotatePending = target.kind !== 'general'
-    this.#refused = target.kind === 'game' && !isValidAppName(target.appName)
-    if (this.#refused) {
-      logWarning('log target refused: invalid appName', LogPrefix.Backend)
+    const refusal = logTargetRefusal(target)
+    this.#refused = refusal !== null
+    if (refusal !== null) {
+      logWarning(`log target refused: ${refusal}`, LogPrefix.Backend)
     }
   }
 
