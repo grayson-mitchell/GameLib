@@ -525,21 +525,51 @@ describe('copy removal pre-check before Rust remove_copy (D-12, D-16, D-21)', ()
     expect(removeCalls()).toHaveLength(1)
   })
 
-  it('a nested installdir is not placed by the check: remove_copy decides and its refusal carries no safety field', async () => {
+  it('WR-05: an installed copy whose installdir the check cannot place is refused canonicalize-failed and remove_copy is not called', async () => {
     seed({}, 'Studio')
     readReply = { ...readReply, installPath: join(copyRoot, 'GameB') }
-    removeReply = {
-      status: 'refused',
-      source: 'bottle',
-      reason: 'installdir is not a single folder'
-    }
 
     const result = await removeSteamInstallCopy(h.deps, APP_ID, 'bottle')
 
     expect(result).toEqual({
       status: 'refused',
       source: 'bottle',
-      reason: 'installdir is not a single folder'
+      reason: 'canonicalize-failed',
+      safety: { reason: 'canonicalize-failed' }
+    })
+    expect(safetyCalls()).toEqual([])
+    expect(removeCalls()).toEqual([])
+    expect(existsSync(join(copyRoot, 'Hoard.exe'))).toBe(true)
+  })
+
+  it('WR-05: an installed copy with no installPath is refused canonicalize-failed and remove_copy is not called', async () => {
+    seed()
+    readReply = { state: 'installed', stateFlags: 4, sizeOnDisk: '1' }
+
+    const result = await removeSteamInstallCopy(h.deps, APP_ID, 'bottle')
+
+    expect(result).toEqual({
+      status: 'refused',
+      source: 'bottle',
+      reason: 'canonicalize-failed',
+      safety: { reason: 'canonicalize-failed' }
+    })
+    expect(safetyCalls()).toEqual([])
+    expect(removeCalls()).toEqual([])
+    expect(existsSync(join(copyRoot, 'Hoard.exe'))).toBe(true)
+  })
+
+  it('WR-05: a downloading copy skips the check and lets remove_copy report it', async () => {
+    seed()
+    readReply = { state: 'downloading', stateFlags: 1026 }
+    removeReply = { status: 'refused', source: 'bottle', reason: 'downloading' }
+
+    const result = await removeSteamInstallCopy(h.deps, APP_ID, 'bottle')
+
+    expect(result).toEqual({
+      status: 'refused',
+      source: 'bottle',
+      reason: 'downloading'
     })
     expect(safetyCalls()).toEqual([])
     expect(removeCalls()).toHaveLength(1)

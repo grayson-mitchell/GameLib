@@ -247,11 +247,17 @@ async function uninstallBridgeGame(steamGame: SteamGame): Promise<ExecResult> {
         `SteamGame: uninstallBridgeGame refused to remove per-game bottle "${bottleName}" for appId ${steamGame.appId} (${result.reason})`,
         LogPrefix.Steam
       )
-      return refuseWithRemovalNotice(steamGame, {
-        outcome: 'refused',
-        reason: result.reason,
-        ...(result.otherKey !== undefined ? { otherKey: result.otherKey } : {})
-      })
+      return refuseWithRemovalNotice(
+        steamGame,
+        {
+          outcome: 'refused',
+          reason: result.reason,
+          ...(result.otherKey !== undefined
+            ? { otherKey: result.otherKey }
+            : {})
+        },
+        'remove-bottle'
+      )
     }
     if (result.status === 'error') {
       logWarning(

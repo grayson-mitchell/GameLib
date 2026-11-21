@@ -320,6 +320,8 @@ describe('deleteCancelledSteamInstall', () => {
       options: FakeSafetyOptions & {
         otherKey?: string
         otherGames?: GameInfo[]
+        /** Runs right after the fake has answered safety_check_removal (WR-09: a change after the check). */
+        afterCheck?: () => void
       } = {}
     ) {
       const sent: Sent[] = []
@@ -331,6 +333,7 @@ describe('deleteCancelledSteamInstall', () => {
         const reply = (await safety.requestRustInvoke(channel, args)) as {
           items?: { verdict: string }[]
         }
+        if (channel === 'safety_check_removal') options.afterCheck?.()
         if (!reply.items || !options.otherKey) return reply
         return {
           ...reply,
@@ -510,6 +513,50 @@ describe('deleteCancelledSteamInstall', () => {
       expect(readFileSync(join(referent, 'precious.txt'), 'utf8')).toBe(
         'keep me'
       )
+    })
+
+    it('WR-09: a root that was a link when checked but is a real directory at delete time is refused and nothing is deleted', async () => {
+      const referent = join(tmp, 'referent')
+      mkdirSync(referent, { recursive: true })
+      const root = join(steamapps, 'common', 'Cool Game')
+      rmSync(root, { recursive: true, force: true })
+      symlinkSync(referent, root)
+      const { deps } = guarded({
+        afterCheck: () => {
+          rmSync(root, { force: true })
+          mkdirSync(root)
+          writeFileSync(join(root, 'other.txt'), 'another install')
+        }
+      })
+
+      const r = await deleteCancelledSteamInstall(deps, '123', OPTS)
+
+      expect(r.status).toBe('refused')
+      expect(r.reason).toMatch(/changed since the safety check/)
+      expect(readFileSync(join(root, 'other.txt'), 'utf8')).toBe(
+        'another install'
+      )
+      expect(existsSync(join(steamapps, 'appmanifest_123.acf'))).toBe(true)
+      expect(clearSteamResumeBreadcrumb).not.toHaveBeenCalled()
+    })
+
+    it('WR-09: a root that was absent when checked but exists at delete time is refused and nothing is deleted', async () => {
+      const root = join(steamapps, 'common', 'Cool Game')
+      rmSync(root, { recursive: true, force: true })
+      const { deps } = guarded({
+        afterCheck: () => {
+          mkdirSync(root)
+          writeFileSync(join(root, 'late.bin'), 'x')
+        }
+      })
+
+      const r = await deleteCancelledSteamInstall(deps, '123', OPTS)
+
+      expect(r.status).toBe('refused')
+      expect(r.reason).toMatch(/changed since the safety check/)
+      expect(existsSync(join(root, 'late.bin'))).toBe(true)
+      expect(existsSync(join(steamapps, 'appmanifest_123.acf'))).toBe(true)
+      expect(clearSteamResumeBreadcrumb).not.toHaveBeenCalled()
     })
   })
 

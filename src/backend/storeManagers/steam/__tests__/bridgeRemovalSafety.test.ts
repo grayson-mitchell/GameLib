@@ -415,7 +415,9 @@ describe('per-game bridge bottle removal (D-11, D-12, D-15, D-16)', () => {
     expect(h.events).toEqual([
       'safety:safety_check_removal',
       'spawn:wineserver',
-      'spawn:cxbottle'
+      'spawn:cxbottle',
+      // WR-09: the guard is asked again once cxbottle --delete has returned.
+      'safety:safety_check_removal'
     ])
     const deleteCall = h.spawned.find((c) => basename(c.bin) === 'cxbottle')
     expect(deleteCall?.args).toEqual([
@@ -490,6 +492,33 @@ describe('per-game bridge bottle removal (D-11, D-12, D-15, D-16)', () => {
     ])
   })
 
+  it('WR-09: a guard that objects after cxbottle --delete returns reports an error, not removed', async () => {
+    seedPerGame()
+    const objecting = fakeSafetyRustInvoke({
+      checkVerdict: 'no',
+      reason: 'nested-known-install'
+    }).requestRustInvoke
+    let checks = 0
+    const deps: ManagerDeps = {
+      ...h.deps,
+      requestRustInvoke: (channel, args) => {
+        if (channel === 'safety_check_removal' && ++checks === 2) {
+          return objecting(channel, args)
+        }
+        return h.deps.requestRustInvoke(channel, args)
+      }
+    }
+
+    const result = await removePerGameBridgeBottle(deps, APP_ID)
+
+    expect(checks).toBe(2)
+    expect(result.status).toBe('error')
+    expect(h.spawned.map((c) => basename(c.bin))).toEqual([
+      'wineserver',
+      'cxbottle'
+    ])
+  })
+
   it('an absent bottle needs no guard call at all', async () => {
     h = makeHarness()
 
@@ -521,7 +550,7 @@ describe('per-game bridge bottle removal (D-11, D-12, D-15, D-16)', () => {
       expect(pollSpy).not.toHaveBeenCalled()
       expect(messages(h, 'removalRefusedNotice')).toEqual([
         {
-          kind: 'uninstall',
+          kind: 'remove-bottle',
           outcome: 'refused',
           reason: 'rust-invoke-failed',
           title: TITLE,

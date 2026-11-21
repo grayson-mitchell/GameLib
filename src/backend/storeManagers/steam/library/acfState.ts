@@ -286,8 +286,8 @@ export async function removeSteamInstallCopy(
  * Phase 82 (D-16): the install root of the copy `installPath` names, when it is exactly
  * `<steamapps>/common/<one plain folder>`. Rust builds `installPath` as `<steamapps>/common/<installdir>`
  * with no normalisation, so a single plain installdir makes the parent the steamapps dir Rust scanned.
- * Anything else (a nested, absolute or dotted installdir) returns null and is left to remove_copy's own
- * installdir_shape refusal.
+ * Anything else (a nested, absolute or dotted installdir) returns null, and `refuseUnsafeCopy` refuses an
+ * installed copy it cannot place (WR-05, canonicalize-failed) rather than leave it to remove_copy.
  */
 function copyInstallRoot(
   installPath: string
@@ -313,11 +313,20 @@ async function refuseUnsafeCopy(
   source: AcfSource
 ): Promise<RemoveCopyResult | null> {
   const acf = await readAcfState(deps, appId, source)
-  const placed =
-    acf.state === 'installed' && acf.installPath
-      ? copyInstallRoot(acf.installPath)
-      : null
-  if (!placed) return null
+  if (acf.state !== 'installed') return null
+  const placed = acf.installPath ? copyInstallRoot(acf.installPath) : null
+  if (!placed) {
+    logWarning(
+      `SteamLibraryManager: removeSteamInstallCopy refused appId ${appId} source '${source}': the installed copy's install root could not be placed (${acf.installPath ?? 'no installPath'})`,
+      LogPrefix.Steam
+    )
+    return {
+      status: 'refused',
+      source,
+      reason: 'canonicalize-failed',
+      safety: { reason: 'canonicalize-failed' }
+    }
+  }
   const verdict = await checkRemoval(
     deps,
     steamSafetyRequest({ deps, appId }, [

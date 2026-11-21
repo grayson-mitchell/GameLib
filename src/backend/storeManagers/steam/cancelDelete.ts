@@ -28,7 +28,7 @@
 // D-UAT-11 (quick-261029-o5a): a successful delete also zeroes the frontend progress.
 
 import type { StatusUpdateDeps } from 'backend/appRuntime'
-import { rmSync } from 'node:fs'
+import { lstatSync, rmSync } from 'node:fs'
 import { isAbsolute, join, relative, resolve, sep } from 'path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import {
@@ -67,6 +67,21 @@ function refuse(appId: string, reason: string): CancelDeleteResult {
     LogPrefix.Steam
   )
   return { status: 'refused', reason }
+}
+
+/**
+ * WR-09: does the install root on disk still match what gamelib-safety checked? Synchronous on
+ * purpose (the Phase 75 critical section has no await). A root that was present and is now gone
+ * has nothing left to delete, so that is not a change.
+ */
+function changedSinceCheck(
+  installRoot: string,
+  checked: { absent: boolean; isLink: boolean } | undefined
+): boolean {
+  if (!checked) return false
+  const now = lstatSync(installRoot, { throwIfNoEntry: false })
+  if (!now) return false
+  return checked.absent || now.isSymbolicLink() !== checked.isLink
 }
 
 async function collectAllowedRoots(
@@ -224,6 +239,9 @@ export async function deleteCancelledSteamInstall(
     // not run, keeps the files and the breadcrumb. Only a root that is about to be deleted is asked
     // about; a shared installdir below removes the manifest alone. This is the last await before the
     // synchronous section: the in-flight re-check and the delete must stay adjacent.
+    // WR-09: the verdict's item says whether the root was absent or a link when it was checked; the
+    // synchronous section re-asserts that just before the delete.
+    let checked: { absent: boolean; isLink: boolean } | undefined
     if (conflicting.length === 0) {
       const verdict = await checkRemoval(
         deps,
@@ -257,6 +275,8 @@ export async function deleteCancelledSteamInstall(
           `safety check answered ${verdict.overall}: ${reason}`
         )
       }
+      const item = verdict.items.find((i) => i.id === 'partial')
+      if (item) checked = { absent: item.absent, isLink: item.isLink }
     }
 
     // The Rust reads above awaited; re-check nothing started meanwhile.
@@ -269,6 +289,15 @@ export async function deleteCancelledSteamInstall(
         // Phase 75 critical section: no await between the in-flight check above and this delete, so a
         // restarted install cannot race it. The path was pre-checked by gamelib-safety (D-16); a
         // Node recursive delete unlinks a link root rather than following it (D-15).
+        // WR-09: the verdict is re-asserted here, synchronously: if the root's absent/link state on
+        // disk no longer matches what was checked, something replaced it after the check, so nothing
+        // is deleted and the manifests and breadcrumb are kept. guardedRemoveTree is not used for
+        // this delete because its await would sit between the in-flight re-check and the delete,
+        // which is the race Phase 75 closed. Node's lstat on Windows reports junctions and symlinks
+        // as symbolic links (libuv maps both reparse tags), matching the Rust `isLink`.
+        if (changedSinceCheck(installRoot, checked)) {
+          return refuse(appId, 'install root changed since the safety check')
+        }
         rmSync(installRoot, { recursive: true, force: true })
       } else {
         logWarning(

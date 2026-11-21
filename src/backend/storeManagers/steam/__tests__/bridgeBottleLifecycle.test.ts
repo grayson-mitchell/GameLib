@@ -548,7 +548,9 @@ describe('bottle.ts', () => {
         )
 
         expect(result).toEqual({ status: 'removed' })
+        // Pre-check, the WR-09 re-check after cxbottle, then guardedRemoveTree's own check and delete.
         expect(safety.calls.map((c) => c.channel)).toEqual([
+          'safety_check_removal',
           'safety_check_removal',
           'safety_check_removal',
           'safety_remove_tree'

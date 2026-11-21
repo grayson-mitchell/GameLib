@@ -270,6 +270,22 @@ export async function removePerGameBridgeBottle(
       }
     }
 
+    // WR-09: cxbottle --delete removes the bottle by name, outside the guard, so the guard is asked
+    // again now that it has returned. A delete has already run; if the guard now objects (another
+    // store's game turned up inside the bottle, say) success must not be claimed.
+    if (removeBinDir) {
+      const after = await checkRemoval(deps, request)
+      if (after.overall !== 'yes') {
+        const blocking = firstBlockingItem(after)
+        const error = `Bottle "${name}" was deleted by cxbottle but the removal guard now objects (${after.overall}: ${blocking?.reason ?? 'bad-reply'})`
+        logError(
+          `removePerGameBridgeBottle: appId "${appId}": ${error}`,
+          LogPrefix.Steam
+        )
+        return { status: 'error', error }
+      }
+    }
+
     if (existsSync(bottleDir)) {
       const leftover = await guardedRemoveTree(deps, request)
       if (leftover.outcome !== 'removed') {
@@ -278,7 +294,7 @@ export async function removePerGameBridgeBottle(
     }
   }
 
-  // (8) Final confirmation.
+  // (8) Final confirmation (after the post-cxbottle guard re-check of step 7).
   if (existsSync(bottleDir)) {
     const error = `Bottle directory "${bottleDir}" still exists after removal attempt`
     logError(`removePerGameBridgeBottle: ${error}`, LogPrefix.Steam)
