@@ -12,9 +12,12 @@ use std::time::Duration;
 use gamelib_core::clock::Clock;
 use gamelib_core::paths::{join, log_file, GameLogType, LogRunner, LogTarget, Platform};
 use gamelib_log::frame::parse_frame;
+use gamelib_log::sanitize::{renderer_body, RendererMessage};
 use gamelib_log::writer::{LogConfig, Logger, TzOffset};
 use gamelib_log::{Level, Prefix};
 use gamelib_testutil::FakeHome;
+use serde::de::{self, Deserializer, MapAccess, SeqAccess, Visitor};
+use serde::Deserialize;
 use serde_json::Value;
 
 const CASES: &str = include_str!("fixtures/golden/cases.json");
@@ -194,4 +197,138 @@ fn rust_writer_matches_the_ts_golden() {
         replayed, non_renderer,
         "every non-renderer case is replayed"
     );
+}
+
+// ---------------------------------------------------------------------------------------------------
+// Renderer cases. The sanitiser reads the sender's key order, which `serde_json::Value` (a sorted
+// map without the ordered-map feature) would lose, so these cases are parsed with their own visitor.
+// `{"$gen": {"repeat": "a", "count": 65537}}` expands to a string, as in the TS oracle.
+// ---------------------------------------------------------------------------------------------------
+
+#[derive(Deserialize)]
+struct GenSpec {
+    repeat: String,
+    count: usize,
+}
+
+struct GenStr(String);
+
+impl<'de> Deserialize<'de> for GenStr {
+    fn deserialize<D: Deserializer<'de>>(d: D) -> Result<GenStr, D::Error> {
+        struct V;
+        impl<'de> Visitor<'de> for V {
+            type Value = GenStr;
+            fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                f.write_str("a string or a $gen object")
+            }
+            fn visit_str<E: de::Error>(self, v: &str) -> Result<GenStr, E> {
+                Ok(GenStr(v.to_string()))
+            }
+            fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<GenStr, A::Error> {
+                let key: String = map.next_key()?.ok_or_else(|| de::Error::custom("empty"))?;
+                if key != "$gen" {
+                    return Err(de::Error::custom("only $gen objects"));
+                }
+                let spec: GenSpec = map.next_value()?;
+                Ok(GenStr(spec.repeat.repeat(spec.count)))
+            }
+        }
+        d.deserialize_any(V)
+    }
+}
+
+struct GoldenMessage(RendererMessage);
+
+impl<'de> Deserialize<'de> for GoldenMessage {
+    fn deserialize<D: Deserializer<'de>>(d: D) -> Result<GoldenMessage, D::Error> {
+        struct V;
+        impl<'de> Visitor<'de> for V {
+            type Value = GoldenMessage;
+            fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                f.write_str("a renderer log message")
+            }
+            fn visit_str<E: de::Error>(self, v: &str) -> Result<GoldenMessage, E> {
+                Ok(GoldenMessage(RendererMessage::Text(v.to_string())))
+            }
+            fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<GoldenMessage, A::Error> {
+                let mut items = Vec::new();
+                while let Some(GenStr(s)) = seq.next_element()? {
+                    items.push(s);
+                }
+                Ok(GoldenMessage(RendererMessage::List(items)))
+            }
+            fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<GoldenMessage, A::Error> {
+                let mut entries: Vec<(String, String)> = Vec::new();
+                while let Some(key) = map.next_key::<String>()? {
+                    if key == "$gen" {
+                        let spec: GenSpec = map.next_value()?;
+                        return Ok(GoldenMessage(RendererMessage::Text(
+                            spec.repeat.repeat(spec.count),
+                        )));
+                    }
+                    entries.push((key, map.next_value::<String>()?));
+                }
+                Ok(GoldenMessage(RendererMessage::Object(entries)))
+            }
+        }
+        d.deserialize_any(V)
+    }
+}
+
+#[derive(Deserialize)]
+struct RawCase {
+    id: String,
+    kind: String,
+    channel: Option<String>,
+    value: Option<GoldenMessage>,
+}
+
+#[test]
+fn rust_sanitiser_matches_the_ts_golden_for_every_renderer_case() {
+    let cases: Vec<RawCase> = serde_json::from_str(CASES).expect("cases.json");
+    let mut replayed = 0;
+    for case in cases.iter().filter(|c| c.kind == "renderer") {
+        let message = &case.value.as_ref().expect("renderer value").0;
+        let level = match case.channel.as_deref() {
+            Some("logError") => Level::Error,
+            Some("logInfo") => Level::Info,
+            other => panic!("unknown renderer channel {other:?} in {}", case.id),
+        };
+        let home = FakeHome::new("gamelib-log-golden-");
+        let root = home.root().to_string_lossy().into_owned();
+        let logger = Logger::start(LogConfig {
+            platform: Platform::current(),
+            log_dir: root.clone(),
+            user_data: join(Platform::current(), &root, &["userData"]),
+            clock: Arc::new(FixedClock),
+            tz: Arc::new(FixedTz),
+        });
+        logger.submit_line(
+            FIXED_TS,
+            FIXED_TZ,
+            level,
+            Prefix::Frontend,
+            &renderer_body(message),
+        );
+        assert!(logger.flush(Duration::from_secs(10)), "flush timed out");
+        let mut tree = BTreeMap::new();
+        walk(home.root(), home.root(), &mut tree, Some(&root));
+        let mut expected = BTreeMap::new();
+        let dir = expected_dir(&case.id);
+        walk(&dir, &dir, &mut expected, None);
+        assert_eq!(
+            tree, expected,
+            "golden mismatch in renderer case {}",
+            case.id
+        );
+        replayed += 1;
+    }
+    println!("renderer cases replayed: {replayed}");
+    let total = serde_json::from_str::<Vec<Value>>(CASES)
+        .expect("cases.json")
+        .iter()
+        .filter(|c| c["kind"] == "renderer")
+        .count();
+    assert!(total > 0);
+    assert_eq!(replayed, total, "every renderer case is replayed");
 }

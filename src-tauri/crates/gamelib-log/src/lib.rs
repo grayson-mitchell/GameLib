@@ -7,6 +7,7 @@
 pub mod format;
 pub mod frame;
 pub mod prefix;
+pub mod sanitize;
 pub mod writer;
 
 use std::sync::OnceLock;
