@@ -7,6 +7,7 @@
  *   operator <profileDir> [--only <relpath>...]   redacted copy of the live operator profile (read only)
  *   backups <profileDir>                          redacted copies of the profile's `*.bak.json` pre-migration captures
  *   tag <v0.8|v0.9|v0.10> [--scratch <dir>]       the files a tagged release writes on a cold boot in a fake HOME
+ *   edge                                          the hand-built edge cases (corrupt, BOM, CRLF, newer, missing, ...)
  *
  * Everything lands under CORPUS_DIR, and MANIFEST.json lists every file with its sha256, source, flavour and the outcome
  * the Rust engine is expected to produce (`expect`). `meta/__tests__/storeCorpus.test.ts` fails when the tree and the
@@ -106,7 +107,7 @@ const STORE_DIRS = [
  * Paths GameLib does not own, never copied: gog_store/auth.json belongs to gogdl, nile_config/** to nile and
  * legendaryConfig/** to legendary. The first is also where the real GOG session tokens live.
  */
-export const EXCLUDED_PATHS = [
+const EXCLUDED_PATHS = [
   'gog_store/auth.json',
   'nile_config/**',
   'legendaryConfig/**'
@@ -170,7 +171,7 @@ export function isDenylistedKey(key: string): boolean {
 const PLACEHOLDER = 'REDACTED'
 
 /** A value of the same JSON type with nothing in it: strings, numbers and booleans flatten, objects keep their keys. */
-export function placeholderOf(value: unknown): unknown {
+function placeholderOf(value: unknown): unknown {
   // An empty string holds nothing to hide, and keeping it keeps the real default shape (`steamGridDbApiKey: ""`).
   if (typeof value === 'string') return value === '' ? '' : PLACEHOLDER
   if (typeof value === 'number') return 0
@@ -204,7 +205,7 @@ const JWT_RE = /^eyJ[A-Za-z0-9_-]{10,}/
 const STEAMID64_RE = /^7656119\d{10}$/
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/
 
-export interface RedactionContext {
+interface RedactionContext {
   /** The operator's OS account name; every case-insensitive occurrence in a string is replaced. */
   username: string
   /** Humble gamekey -> stable placeholder, so the same order keeps the same placeholder across files in one run. */
@@ -299,7 +300,7 @@ export function tableKeyOf(relPath: string): string {
   return relPath.replace(/\.json$/, '')
 }
 
-export function currentVersionOf(tableKey: string): number {
+function currentVersionOf(tableKey: string): number {
   return CHAIN_CURRENT[tableKey] ?? 1
 }
 
@@ -316,7 +317,9 @@ function storedVersion(flavour: Flavour, data: unknown): number {
   }
   const doc = data as Record<string, unknown>
   if (flavour === 'settings') {
-    const m = /^v(\d+)$/.exec(String(doc.version ?? ''))
+    const m = /^v(\d+)$/.exec(
+      typeof doc.version === 'string' ? doc.version : ''
+    )
     return m ? Number(m[1]) : 0
   }
   const internal = doc.__internal__
@@ -345,18 +348,18 @@ export function expectFor(
 // Corpus and manifest I/O
 // ---------------------------------------------------------------------------------------------------------------
 
-export function sha256(bytes: Buffer | string): string {
+function sha256(bytes: Buffer | string): string {
   return createHash('sha256').update(bytes).digest('hex')
 }
 
-export function readManifest(): Manifest {
+function readManifest(): Manifest {
   const path = join(CORPUS_DIR, 'MANIFEST.json')
   if (!existsSync(path)) return { floor: 0, counts: {}, files: [] }
   return JSON.parse(readFileSync(path, 'utf8')) as Manifest
 }
 
 /** Rewrite MANIFEST.json: files sorted by path, counts by source, floor = the committed (non-missing) file count. */
-export function writeManifest(manifest: Manifest): void {
+function writeManifest(manifest: Manifest): void {
   const files = [...manifest.files].sort((a, b) =>
     a.path < b.path ? -1 : a.path > b.path ? 1 : 0
   )
@@ -416,7 +419,7 @@ function replaceSource(
 // Profile walking
 // ---------------------------------------------------------------------------------------------------------------
 
-export function isBackupName(fileName: string): boolean {
+function isBackupName(fileName: string): boolean {
   return BACKUP_RE.test(fileName)
 }
 
@@ -424,7 +427,7 @@ export function isBackupName(fileName: string): boolean {
  * The store JSON files directly inside a profile: `*.json` in each store directory and in GamesConfig, plus config.json.
  * Backups and anything in EXCLUDED_PATHS are not returned; non-JSON files never are.
  */
-export function profileStoreFiles(profileDir: string): string[] {
+function profileStoreFiles(profileDir: string): string[] {
   const out: string[] = []
   const add = (dir: string) => {
     const abs = join(profileDir, dir)
@@ -824,6 +827,164 @@ async function harvestTag(tag: string, scratchParent?: string): Promise<void> {
   }
 }
 
+interface EdgeCase {
+  /** Path under corpus/edge/. */
+  path: string
+  /** File bytes, or `null` for a manifest-only entry (the file does not exist). */
+  bytes: Buffer | null
+  flavour: Flavour
+  expect: Expect
+  tableKey: string
+  note: string
+}
+
+const EDGE_STAMP_V1 = { __internal__: { gamelib: { schemaVersion: 1 } } }
+
+/** The hand-built edge cases. The bytes are written exactly as listed; nothing here is re-serialised or redacted. */
+function edgeCases(): EdgeCase[] {
+  const tab = (v: unknown): string => serialise(v, 'store')
+  return [
+    {
+      path: 'store_cache/edge_unknown_keys.json',
+      bytes: Buffer.from(
+        tab({
+          'edge-game': {
+            title: 'Edge Game',
+            extra: {
+              unknownKeyA: { nested: [1, 2, 3] },
+              unknownKeyB: 'kept at depth 2'
+            }
+          },
+          ...EDGE_STAMP_V1
+        })
+      ),
+      flavour: 'store',
+      expect: 'roundtrip',
+      tableKey: 'store_cache/wikigameinfo',
+      note: 'current version with two keys no schema declares, nested at depth 2: they must survive untouched'
+    },
+    {
+      path: 'store/edge_corrupt.json',
+      bytes: Buffer.from('{not json'),
+      flavour: 'store',
+      expect: 'readOnly-failed',
+      tableKey: 'store/timestamp',
+      note: 'user state that does not parse: keep the bytes, copy aside, open read-only (D-18)'
+    },
+    {
+      path: 'store_cache/edge_corrupt_cache.json',
+      bytes: Buffer.from('{not json'),
+      flavour: 'store',
+      expect: 'startEmpty',
+      tableKey: 'store_cache/wikigameinfo',
+      note: 'a cache that does not parse: continue empty once its copy exists (D-18)'
+    },
+    {
+      path: 'store/edge_array_root.json',
+      bytes: Buffer.from('[1]'),
+      flavour: 'store',
+      expect: 'readOnly-failed',
+      tableKey: 'store/timestamp',
+      note: 'valid JSON whose root is an array, not an object'
+    },
+    {
+      path: 'store/edge_empty.json',
+      bytes: Buffer.alloc(0),
+      flavour: 'store',
+      expect: 'readOnly-failed',
+      tableKey: 'store/timestamp',
+      note: 'zero bytes'
+    },
+    {
+      path: 'store/edge_bom.json',
+      bytes: Buffer.concat([
+        Buffer.from([0xef, 0xbb, 0xbf]),
+        Buffer.from(tab({ lastPlayed: 'x', ...EDGE_STAMP_V1 }))
+      ]),
+      flavour: 'store',
+      expect: 'readOnly-failed',
+      tableKey: 'store/timestamp',
+      note: 'UTF-8 BOM then a valid object: serde_json rejects a BOM where TS conf resets the store'
+    },
+    {
+      path: 'store/edge_crlf.json',
+      bytes: Buffer.from(
+        tab({ lastPlayed: 'x', nested: { a: 1 }, ...EDGE_STAMP_V1 }).replace(
+          /\n/g,
+          '\r\n'
+        )
+      ),
+      flavour: 'store',
+      expect: 'roundtrip',
+      tableKey: 'store/timestamp',
+      note: 'semantic roundtrip: valid JSON with CRLF line breaks; Rust rewrites with LF only on the next real write, never on a no-op boot'
+    },
+    {
+      path: 'store/edge_newer.json',
+      bytes: Buffer.from(
+        tab({
+          lastPlayed: 'x',
+          __internal__: { gamelib: { schemaVersion: 99 } }
+        })
+      ),
+      flavour: 'store',
+      expect: 'readOnly-newer',
+      tableKey: 'store/timestamp',
+      note: 'schemaVersion 99, newer than any chain: open read-only, bytes never rewritten'
+    },
+    {
+      path: 'store/edge_lone_surrogate.json',
+      // JSON.stringify would write the escape for a lone surrogate too; it is spelled out so the bytes are plain ASCII.
+      bytes: Buffer.from(
+        '{\n\t"text": "\\ud800",\n\t"__internal__": {\n\t\t"gamelib": {\n\t\t\t"schemaVersion": 1\n\t\t}\n\t}\n}'
+      ),
+      flavour: 'store',
+      expect: 'readOnly-failed',
+      tableKey: 'store/timestamp',
+      note: 'a lone UTF-16 surrogate escape: JS accepts it, serde_json rejects it'
+    },
+    {
+      path: 'settings/edge_newer_global.json',
+      bytes: Buffer.from(
+        serialise({ version: 'v9', language: 'en' }, 'settings')
+      ),
+      flavour: 'settings',
+      expect: 'readOnly-newer',
+      tableKey: 'settings/global',
+      note: 'a settings document at version v9, newer than the global chain (v2)'
+    },
+    {
+      path: 'store/edge_missing.json',
+      bytes: null,
+      flavour: 'store',
+      expect: 'missing',
+      tableKey: 'store/timestamp',
+      note: 'manifest-only: the file does not exist, the store starts empty'
+    }
+  ]
+}
+
+/** `edge`: write corpus/edge/ and replace the manifest's `edge` entries. */
+function harvestEdge(): void {
+  const entries: ManifestEntry[] = []
+  for (const c of edgeCases()) {
+    const meta = {
+      source: 'edge',
+      flavour: c.flavour,
+      expect: c.expect,
+      tableKey: c.tableKey,
+      note: c.note
+    }
+    if (c.bytes === null) {
+      entries.push({ path: `edge/${c.path}`, sha256: null, ...meta })
+    } else {
+      entries.push(writeCorpusFile(`edge/${c.path}`, c.bytes, meta))
+    }
+  }
+  replaceSource('edge', entries)
+  console.log(`edge: ${entries.length} entr(ies) written`)
+}
+
 function parseArgs(argv: string[]): {
   positional: string[]
   only: string[]
@@ -868,6 +1029,10 @@ async function main(): Promise<void> {
       if (!tag)
         throw new Error('usage: tag <v0.8|v0.9|v0.10> [--scratch <dir>]')
       await harvestTag(tag, scratch)
+      return
+    }
+    case 'edge': {
+      harvestEdge()
       return
     }
     default:

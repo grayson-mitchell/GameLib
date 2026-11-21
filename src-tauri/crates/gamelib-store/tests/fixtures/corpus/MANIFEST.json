@@ -1,7 +1,8 @@
 {
-  "floor": 151,
+  "floor": 161,
   "counts": {
     "backup": 36,
+    "edge": 11,
     "operator": 106,
     "v0.10": 3,
     "v0.8": 3,
@@ -331,6 +332,105 @@
       "expect": "migrate",
       "tableKey": "store_cache/steam_library",
       "note": "captured at v2"
+    },
+    {
+      "path": "edge/settings/edge_newer_global.json",
+      "sha256": "45f8a1875439906380d7b51363c5abe5f7cba2b8793a9fe5e223b3117fe394f3",
+      "source": "edge",
+      "flavour": "settings",
+      "expect": "readOnly-newer",
+      "tableKey": "settings/global",
+      "note": "a settings document at version v9, newer than the global chain (v2)"
+    },
+    {
+      "path": "edge/store/edge_array_root.json",
+      "sha256": "080a9ed428559ef602668b4c00f114f1a11c3f6b02a435f0bdc154578e4d7f22",
+      "source": "edge",
+      "flavour": "store",
+      "expect": "readOnly-failed",
+      "tableKey": "store/timestamp",
+      "note": "valid JSON whose root is an array, not an object"
+    },
+    {
+      "path": "edge/store/edge_bom.json",
+      "sha256": "aa8fa1ec65e52c6a069b3ceb250d5ee7f658ca2b329e30fb12b86121e44f20b0",
+      "source": "edge",
+      "flavour": "store",
+      "expect": "readOnly-failed",
+      "tableKey": "store/timestamp",
+      "note": "UTF-8 BOM then a valid object: serde_json rejects a BOM where TS conf resets the store"
+    },
+    {
+      "path": "edge/store/edge_corrupt.json",
+      "sha256": "92072df399cb74703f8e86f450d552bc0bb01eeeb98a90985a1b7772c8fd0016",
+      "source": "edge",
+      "flavour": "store",
+      "expect": "readOnly-failed",
+      "tableKey": "store/timestamp",
+      "note": "user state that does not parse: keep the bytes, copy aside, open read-only (D-18)"
+    },
+    {
+      "path": "edge/store/edge_crlf.json",
+      "sha256": "63986dd85c6567648b3a745e54f824bc6951dde9a9486f7208f71737ae45ab44",
+      "source": "edge",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store/timestamp",
+      "note": "semantic roundtrip: valid JSON with CRLF line breaks; Rust rewrites with LF only on the next real write, never on a no-op boot"
+    },
+    {
+      "path": "edge/store/edge_empty.json",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source": "edge",
+      "flavour": "store",
+      "expect": "readOnly-failed",
+      "tableKey": "store/timestamp",
+      "note": "zero bytes"
+    },
+    {
+      "path": "edge/store/edge_lone_surrogate.json",
+      "sha256": "85f7ac52aac33061db14c9bf75928f24114437c0bd5d9e3f6a1528540eb287f2",
+      "source": "edge",
+      "flavour": "store",
+      "expect": "readOnly-failed",
+      "tableKey": "store/timestamp",
+      "note": "a lone UTF-16 surrogate escape: JS accepts it, serde_json rejects it"
+    },
+    {
+      "path": "edge/store/edge_missing.json",
+      "sha256": null,
+      "source": "edge",
+      "flavour": "store",
+      "expect": "missing",
+      "tableKey": "store/timestamp",
+      "note": "manifest-only: the file does not exist, the store starts empty"
+    },
+    {
+      "path": "edge/store/edge_newer.json",
+      "sha256": "0f1d6ca451ad05d47bcad73d16cd454474b9b426b7bb7c4f364851f10c0ce989",
+      "source": "edge",
+      "flavour": "store",
+      "expect": "readOnly-newer",
+      "tableKey": "store/timestamp",
+      "note": "schemaVersion 99, newer than any chain: open read-only, bytes never rewritten"
+    },
+    {
+      "path": "edge/store_cache/edge_corrupt_cache.json",
+      "sha256": "92072df399cb74703f8e86f450d552bc0bb01eeeb98a90985a1b7772c8fd0016",
+      "source": "edge",
+      "flavour": "store",
+      "expect": "startEmpty",
+      "tableKey": "store_cache/wikigameinfo",
+      "note": "a cache that does not parse: continue empty once its copy exists (D-18)"
+    },
+    {
+      "path": "edge/store_cache/edge_unknown_keys.json",
+      "sha256": "8223070db8389ea78898bcb19ed69496ee8c2fca725d8aab2290079bd6dad43b",
+      "source": "edge",
+      "flavour": "store",
+      "expect": "roundtrip",
+      "tableKey": "store_cache/wikigameinfo",
+      "note": "current version with two keys no schema declares, nested at depth 2: they must survive untouched"
     },
     {
       "path": "operator/GamesConfig/112100.json",

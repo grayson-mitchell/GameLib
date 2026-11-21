@@ -20,10 +20,15 @@ import {
 import {
   CHAIN_CURRENT,
   CORPUS_DIR,
+  expectFor,
+  flavourOf,
   GAMEKEY_PREFIX_RE,
   isDenylistedKey,
   isPlaceholder,
+  newRedactionContext,
+  redactValue,
   serialise,
+  tableKeyOf,
   type Expect,
   type Flavour,
   type Manifest,
@@ -44,7 +49,7 @@ const sourceDir = (source: string): string =>
 const FLAVOURS: readonly Flavour[] = ['store', 'settings']
 
 /** Sources every complete corpus must carry. Task-by-task the harvester adds to it; see NOTES.md. */
-const REQUIRED_SOURCES: readonly string[] = ['operator', 'backup']
+const REQUIRED_SOURCES: readonly string[] = ['operator', 'backup', 'edge']
 
 /** Keys that legitimately hold a long hex or base64-looking string (content hashes and build ids). */
 const HASH_KEYS = new Set([
@@ -278,6 +283,27 @@ describe('store corpus manifest', () => {
     }
   })
 
+  it('covers every outcome the Rust engine must produce, and both byte flavours', () => {
+    for (const e of EXPECTS) {
+      expect({
+        expect: e,
+        present: manifest.files.some((f) => f.expect === e)
+      }).toEqual({
+        expect: e,
+        present: true
+      })
+    }
+    for (const fl of FLAVOURS) {
+      expect({
+        flavour: fl,
+        present: manifest.files.some((f) => f.flavour === fl)
+      }).toEqual({
+        flavour: fl,
+        present: true
+      })
+    }
+  })
+
   it('describes every entry with a known flavour and outcome, a table key and a path under its source', () => {
     for (const f of manifest.files) {
       expect(FLAVOURS).toContain(f.flavour)
@@ -394,5 +420,134 @@ describe('store corpus redaction', () => {
     expect(
       scanDocument({ '/Users/zorbalicious': 1 }, 'zorbalicious')
     ).toHaveLength(1)
+  })
+})
+
+// ---- the harvester's own redaction and expectations ---------------------------------------------------------------
+
+describe('harvester redactValue', () => {
+  const ctx = () => newRedactionContext('zorbalicious')
+
+  it('replaces a denylisted key by a same-type placeholder and keeps key names and shape', () => {
+    const input = {
+      refreshToken: 'abc',
+      userId: 7,
+      isLoggedIn: true,
+      session: false,
+      cookies: ['a', 'b'],
+      userData: { username: 'someone', steamId: '123', keep: 'me' },
+      tokens: { access: 'x', nested: { n: 9 } },
+      steamGridDbApiKey: 'k',
+      emptyKey: { email: '' }
+    }
+    expect(redactValue([], input, ctx())).toEqual({
+      refreshToken: 'REDACTED',
+      userId: 0,
+      isLoggedIn: true,
+      session: false,
+      cookies: [],
+      userData: { username: 'REDACTED', steamId: 'REDACTED', keep: 'me' },
+      tokens: { access: 'REDACTED', nested: { n: 0 } },
+      steamGridDbApiKey: 'REDACTED',
+      emptyKey: { email: '' }
+    })
+  })
+
+  it('redacts ciphertext, JWTs, SteamID64s and emails wherever they sit and keeps ordinary strings', () => {
+    const jwt = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0In0.c2ln'
+    expect(
+      redactValue(
+        [],
+        {
+          a: 'steam:v1:AAAA',
+          b: ['humble:v1:BBBB', jwt],
+          c: {
+            d: '76561197960287930',
+            e: 'someone@example.com',
+            f: 'plain text'
+          }
+        },
+        ctx()
+      )
+    ).toEqual({
+      a: 'REDACTED',
+      b: ['REDACTED', 'REDACTED'],
+      c: { d: 'REDACTED', e: 'REDACTED', f: 'plain text' }
+    })
+  })
+
+  it('replaces the OS account name in values and key names, case-insensitively', () => {
+    expect(
+      redactValue(
+        [],
+        { '/Users/Zorbalicious/x': '/Users/zorbalicious/Games' },
+        ctx()
+      )
+    ).toEqual({ '/Users/operator/x': '/Users/operator/Games' })
+  })
+
+  it('renames a Humble gamekey prefix to a stable placeholder and keeps the product part', () => {
+    const c = ctx()
+    const out = redactValue(
+      [],
+      {
+        '2MqyBhd5ew2en7xx:game_choice': 1,
+        '5rpen7H55yPCVwY2:other_choice': 2,
+        __timestamp: { '2MqyBhd5ew2en7xx:game_choice': 'x' }
+      },
+      c
+    ) as Record<string, unknown>
+    expect(Object.keys(out)).toEqual([
+      'GKREDACTED000001:game_choice',
+      'GKREDACTED000002:other_choice',
+      '__timestamp'
+    ])
+    expect(out.__timestamp).toEqual({ 'GKREDACTED000001:game_choice': 'x' })
+  })
+})
+
+describe('harvester flavour, table key and expected outcome', () => {
+  it('maps paths to flavours and table keys', () => {
+    expect(flavourOf('config.json')).toBe('settings')
+    expect(flavourOf('GamesConfig/1.json')).toBe('settings')
+    expect(flavourOf('store/config.json')).toBe('store')
+    expect(tableKeyOf('config.json')).toBe('settings/global')
+    expect(tableKeyOf('GamesConfig/1.json')).toBe('settings/game')
+    expect(tableKeyOf('store_cache/steam_library.json')).toBe(
+      'store_cache/steam_library'
+    )
+  })
+
+  it('derives expect from the stored version against the chain', () => {
+    const stamp = (v: number) => ({
+      __internal__: { gamelib: { schemaVersion: v } }
+    })
+    // steam_library: chain current 3
+    expect(expectFor('store', 'store_cache/steam_library', stamp(3))).toBe(
+      'roundtrip'
+    )
+    expect(expectFor('store', 'store_cache/steam_library', stamp(2))).toBe(
+      'migrate'
+    )
+    expect(expectFor('store', 'store_cache/steam_library', {})).toBe('migrate')
+    expect(expectFor('store', 'store_cache/steam_library', stamp(9))).toBe(
+      'readOnly-newer'
+    )
+    // baseline 1: an unstamped file is adopted in place, nothing written
+    expect(expectFor('store', 'store/timestamp', {})).toBe('roundtrip')
+    expect(expectFor('store', 'store/timestamp', stamp(2))).toBe(
+      'readOnly-newer'
+    )
+    // settings: global current v2
+    expect(expectFor('settings', 'settings/global', { version: 'v2' })).toBe(
+      'roundtrip'
+    )
+    expect(expectFor('settings', 'settings/global', { version: 'v1' })).toBe(
+      'migrate'
+    )
+    expect(expectFor('settings', 'settings/game', {})).toBe('migrate')
+    expect(expectFor('settings', 'settings/global', { version: 'v9' })).toBe(
+      'readOnly-newer'
+    )
   })
 })

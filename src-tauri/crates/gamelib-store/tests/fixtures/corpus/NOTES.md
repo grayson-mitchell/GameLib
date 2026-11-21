@@ -109,3 +109,26 @@ Files GameLib does not own are never copied:
 
 Also skipped: every non-JSON file (logs, sockets, icons), the `steam-api/`, `steam-bridge/`, `tools/`, `fixes/`, `overlays/`
 and `icons/` trees, and `areweanticheatyet.json` (a public download, not a store).
+
+## Edge cases (`edge/`)
+
+Hand-built by `edge`; the bytes are written exactly as listed, never re-serialised or redacted. `tableKey` is the store
+whose rules apply (`store/timestamp` for user state, `store_cache/wikigameinfo` for a cache, `settings/global` for a settings
+document).
+
+| file                                    | bytes                                                         | expect            | why                                                                                                      |
+| --------------------------------------- | ------------------------------------------------------------- | ----------------- | -------------------------------------------------------------------------------------------------------- |
+| `store_cache/edge_unknown_keys.json`    | a current-version store with two keys no schema declares, nested at depth 2 | `roundtrip` | unknown keys must survive untouched                                                                      |
+| `store/edge_corrupt.json`               | `{not json`                                                   | `readOnly-failed` | user state that does not parse: keep the bytes, copy aside, open read-only (D-18)                       |
+| `store_cache/edge_corrupt_cache.json`   | `{not json`                                                   | `startEmpty`      | a cache that does not parse: continue empty after its copy exists (D-18)                                |
+| `store/edge_array_root.json`            | `[1]`                                                         | `readOnly-failed` | valid JSON, wrong root type                                                                              |
+| `store/edge_empty.json`                 | zero bytes                                                    | `readOnly-failed` | an empty file is not an empty object                                                                     |
+| `store/edge_bom.json`                   | UTF-8 BOM, then a valid object                                | `readOnly-failed` | serde_json rejects a BOM where TS conf resets the store (a deliberate divergence)                        |
+| `store/edge_crlf.json`                  | valid JSON, CRLF line breaks                                  | `roundtrip`       | semantic roundtrip: Rust rewrites with LF only on the next real write, never on a no-op boot           |
+| `store/edge_newer.json`                 | `schemaVersion` 99                                            | `readOnly-newer`  | newer than any chain: open read-only, bytes never rewritten                                              |
+| `store/edge_lone_surrogate.json`        | a string holding the escape `\ud800`                          | `readOnly-failed` | JS accepts a lone surrogate escape, serde_json rejects it (the golden's `rustParse: reject` vector)      |
+| `settings/edge_newer_global.json`       | a settings document with `version: "v9"`                      | `readOnly-newer`  | newer than the global settings chain (v2)                                                                |
+| `store/edge_missing.json`               | no file (manifest-only entry, `sha256: null`)                 | `missing`         | the store starts empty                                                                                   |
+
+The divergences in the `readOnly-failed`, `startEmpty` and `readOnly-newer` rows are the D-18 wording in
+`../golden/NOTES.md`: where TS conf resets or discards a store it cannot read, Rust deliberately keeps the bytes.

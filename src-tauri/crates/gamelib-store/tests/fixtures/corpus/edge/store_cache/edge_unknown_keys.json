@@ -1,0 +1,20 @@
+{
+	"edge-game": {
+		"title": "Edge Game",
+		"extra": {
+			"unknownKeyA": {
+				"nested": [
+					1,
+					2,
+					3
+				]
+			},
+			"unknownKeyB": "kept at depth 2"
+		}
+	},
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 1
+		}
+	}
+}
