@@ -65,7 +65,7 @@ blocked: 0
 - gap_id: G-82-2-r2
   truth: "On a main commit containing the 261120-uzn fix, the Test and Rust test workflows pass on ubuntu, macOS and Windows"
   status: resolved
-  resolved_by: 82-20-PLAN
+  resolved_by: 82-20-PLAN.md
   resolved_at: 2026-11-21
   reason: "Test workflow run 44850161668 failed: sharedRedistInstall.test.ts:929 installer-timeout test saw 0 installer calls after its wait loop (flaky; previous main run green)"
   severity: major
