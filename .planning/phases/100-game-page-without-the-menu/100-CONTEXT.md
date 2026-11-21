@@ -95,6 +95,28 @@ place of a UI-SPEC.md.
   game (Move / Modify / Check for updates, Engine row), a sideloaded game (no Verify), and one
   not-installed game (Download / Install size / Platforms, Locate link, Show in Steam only).
 
+### Post-research decisions (2026-11-21, after 100-RESEARCH.md)
+- **D-17:** Play time moves into the footer status line (`GameStatus`) when idle — "Played 12 h ·
+  last played 3 days ago" — reusing `TimeContainer`'s existing logic, before `TimeContainer` is
+  deleted. Play time must not leave the page.
+- **D-18:** D-12 holds only where the renderer observes the failure (rejections, path-shape errors,
+  `changeInstallPath`, shortcut / Steam-shortcut answers that contradict the request). Backend
+  repair/move runner-level failures keep their existing notification/dialog. Phase stays
+  frontend-only.
+- **D-19:** The Version row's update action is labelled **Update** (noun/verb honest label) and calls
+  the existing `handleUpdate`; it renders only when the store supports updates. No read-only
+  "check" capability is built.
+- **D-20:** Footer Install ▾ for non-Steam games: the main button keeps opening the install modal
+  as today; the ▾ adds "Locate existing installation…". No one-click default-folder install.
+- **D-21:** Cloud saves value uses states that exist today (Syncing… / Auto-sync on / Manual /
+  Unsupported); no "Synced N days ago" (no last-sync timestamp exists; adding one is backend work).
+  The `enableQuickSavesMenu` toggle in `SyncSaves` becomes inert with the hover menu gone and is
+  removed.
+- **D-22:** Sketch tokens map to real app tokens per 100-RESEARCH.md's token table
+  (`--color-primary`/`--on-primary`/`--color-border-strong` are sketch-only). The switch track uses
+  `--accent` (as `ToggleSwitch` does). `--fav` does not exist yet: add it to every theme block in
+  `themes.scss` with a contrast spec in `themeTokens.test.ts` (corrects D-15's "defined per theme").
+
 ### Claude's Discretion
 - Exact component split (e.g. a shared `FactRow` / `SwitchRow` component), file layout, and how the
   ⋮ logic is decomposed into hooks.
