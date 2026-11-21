@@ -1,0 +1,505 @@
+{
+  "maxFrameBytes": 10485760,
+  "valid": [
+    {
+      "name": "set of a nested object whose keys are out of alphabetical order (values travel as JSON text, order is kept)",
+      "frame": {
+        "kind": "store",
+        "seq": 1,
+        "store": "store/config",
+        "op": "set",
+        "key": "settings",
+        "valueJson": "{\"z\":1,\"a\":{\"y\":2,\"b\":3},\"m\":[3,1,2]}"
+      }
+    },
+    {
+      "name": "set with an integer-like key (timestampStore keyed by an app id)",
+      "frame": {
+        "kind": "store",
+        "seq": 2,
+        "store": "store/timestamp",
+        "op": "set",
+        "key": "480",
+        "valueJson": "{\"firstPlayed\":\"2026-01-01T00:00:00.000Z\",\"lastPlayed\":\"2026-01-02T00:00:00.000Z\",\"totalPlayed\":5}"
+      }
+    },
+    {
+      "name": "set at a dotted key path",
+      "frame": {
+        "kind": "store",
+        "seq": 3,
+        "store": "store/config",
+        "op": "set",
+        "key": "window-props.width",
+        "valueJson": "1280"
+      }
+    },
+    {
+      "name": "set of a JSON string value",
+      "frame": {
+        "kind": "store",
+        "seq": 4,
+        "store": "store/config",
+        "op": "set",
+        "key": "theme",
+        "valueJson": "\"dark\""
+      }
+    },
+    {
+      "name": "set of JSON null and an exponent number text",
+      "frame": {
+        "kind": "store",
+        "seq": 5,
+        "store": "gog_store/config",
+        "op": "set",
+        "key": "userData",
+        "valueJson": "{\"cleared\":null,\"big\":1e21}"
+      }
+    },
+    {
+      "name": "delete of a key",
+      "frame": {
+        "kind": "store",
+        "seq": 6,
+        "store": "gog_store/config",
+        "op": "delete",
+        "key": "userData"
+      }
+    },
+    {
+      "name": "delete of a dotted key path",
+      "frame": {
+        "kind": "store",
+        "seq": 7,
+        "store": "store/config",
+        "op": "delete",
+        "key": "window-props.width"
+      }
+    },
+    {
+      "name": "clear of a cache store",
+      "frame": {
+        "kind": "store",
+        "seq": 8,
+        "store": "store_cache/steam_library",
+        "op": "clear"
+      }
+    },
+    {
+      "name": "replace on a cache store (the whole-object commit)",
+      "frame": {
+        "kind": "store",
+        "seq": 9,
+        "store": "store_cache/gog_library",
+        "op": "replace",
+        "valueJson": "{\"games\":[],\"installed\":{}}"
+      }
+    },
+    {
+      "name": "flush of a conf store",
+      "frame": {
+        "kind": "store",
+        "seq": 10,
+        "store": "store/config",
+        "op": "flush"
+      }
+    },
+    {
+      "name": "replace on the global settings document",
+      "frame": {
+        "kind": "store",
+        "seq": 11,
+        "store": "settings/global",
+        "op": "replace",
+        "valueJson": "{\"version\":\"v0\",\"defaultSettings\":{\"language\":\"en\"}}"
+      }
+    },
+    {
+      "name": "flush of the global settings document",
+      "frame": {
+        "kind": "store",
+        "seq": 12,
+        "store": "settings/global",
+        "op": "flush"
+      }
+    },
+    {
+      "name": "replace on a per-game settings document",
+      "frame": {
+        "kind": "store",
+        "seq": 13,
+        "store": "GamesConfig/480",
+        "op": "replace",
+        "valueJson": "{\"version\":\"v0\",\"480\":{\"autoInstallDxvk\":true}}"
+      }
+    },
+    {
+      "name": "set on a runtime cache store that is not in the recognized list",
+      "frame": {
+        "kind": "store",
+        "seq": 14,
+        "store": "store_cache/custom_cache",
+        "op": "set",
+        "key": "entry",
+        "valueJson": "{\"a\":1}"
+      }
+    },
+    {
+      "name": "set on a per-store directory (nile_store)",
+      "frame": {
+        "kind": "store",
+        "seq": 15,
+        "store": "nile_store/config",
+        "op": "set",
+        "key": "expired",
+        "valueJson": "true"
+      }
+    },
+    {
+      "name": "set with the largest seq a JS number holds exactly (2^53 - 1)",
+      "frame": {
+        "kind": "store",
+        "seq": 9007199254740991,
+        "store": "steam_store/config",
+        "op": "set",
+        "key": "isLoggedIn",
+        "valueJson": "false"
+      }
+    }
+  ],
+  "invalid": [
+    {
+      "name": "an extra top-level field",
+      "reason": "unknown-field",
+      "frame": {
+        "kind": "store",
+        "seq": 1,
+        "store": "store/config",
+        "op": "flush",
+        "extra": 1
+      }
+    },
+    {
+      "name": "missing seq",
+      "reason": "shape",
+      "frame": {
+        "kind": "store",
+        "store": "store/config",
+        "op": "flush"
+      }
+    },
+    {
+      "name": "wrong kind",
+      "reason": "shape",
+      "frame": {
+        "kind": "log",
+        "seq": 1,
+        "store": "store/config",
+        "op": "flush"
+      }
+    },
+    {
+      "name": "seq 0",
+      "reason": "seq",
+      "frame": {
+        "kind": "store",
+        "seq": 0,
+        "store": "store/config",
+        "op": "flush"
+      }
+    },
+    {
+      "name": "negative seq",
+      "reason": "seq",
+      "frame": {
+        "kind": "store",
+        "seq": -1,
+        "store": "store/config",
+        "op": "flush"
+      }
+    },
+    {
+      "name": "fractional seq",
+      "reason": "seq",
+      "frame": {
+        "kind": "store",
+        "seq": 1.5,
+        "store": "store/config",
+        "op": "flush"
+      }
+    },
+    {
+      "name": "op merge is not an op",
+      "reason": "op",
+      "frame": {
+        "kind": "store",
+        "seq": 1,
+        "store": "store/config",
+        "op": "merge",
+        "key": "a",
+        "valueJson": "1"
+      }
+    },
+    {
+      "name": "store with a parent segment",
+      "reason": "store-key",
+      "frame": {
+        "kind": "store",
+        "seq": 1,
+        "store": "../x",
+        "op": "flush"
+      }
+    },
+    {
+      "name": "cache store escaping through parent segments",
+      "reason": "store-key",
+      "frame": {
+        "kind": "store",
+        "seq": 1,
+        "store": "store_cache/../../etc",
+        "op": "flush"
+      }
+    },
+    {
+      "name": "per-game document with a separator in the app name",
+      "reason": "store-key",
+      "frame": {
+        "kind": "store",
+        "seq": 1,
+        "store": "GamesConfig/a/b",
+        "op": "flush"
+      }
+    },
+    {
+      "name": "per-game document named ..",
+      "reason": "store-key",
+      "frame": {
+        "kind": "store",
+        "seq": 1,
+        "store": "GamesConfig/..",
+        "op": "flush"
+      }
+    },
+    {
+      "name": "per-game document named .",
+      "reason": "store-key",
+      "frame": {
+        "kind": "store",
+        "seq": 1,
+        "store": "GamesConfig/.",
+        "op": "flush"
+      }
+    },
+    {
+      "name": "per-game document with an empty app name",
+      "reason": "store-key",
+      "frame": {
+        "kind": "store",
+        "seq": 1,
+        "store": "GamesConfig/",
+        "op": "flush"
+      }
+    },
+    {
+      "name": "unknown store directory",
+      "reason": "store-key",
+      "frame": {
+        "kind": "store",
+        "seq": 1,
+        "store": "foo/bar",
+        "op": "flush"
+      }
+    },
+    {
+      "name": "absolute store path",
+      "reason": "store-key",
+      "frame": {
+        "kind": "store",
+        "seq": 1,
+        "store": "/store/config",
+        "op": "flush"
+      }
+    },
+    {
+      "name": "key path through __proto__",
+      "reason": "key-path",
+      "frame": {
+        "kind": "store",
+        "seq": 1,
+        "store": "store/config",
+        "op": "set",
+        "key": "__proto__.x",
+        "valueJson": "1"
+      }
+    },
+    {
+      "name": "key path through constructor",
+      "reason": "key-path",
+      "frame": {
+        "kind": "store",
+        "seq": 1,
+        "store": "store/config",
+        "op": "set",
+        "key": "a.constructor",
+        "valueJson": "1"
+      }
+    },
+    {
+      "name": "key path through prototype",
+      "reason": "key-path",
+      "frame": {
+        "kind": "store",
+        "seq": 1,
+        "store": "store/config",
+        "op": "delete",
+        "key": "prototype.x"
+      }
+    },
+    {
+      "name": "key path with an empty segment",
+      "reason": "key-path",
+      "frame": {
+        "kind": "store",
+        "seq": 1,
+        "store": "store/config",
+        "op": "set",
+        "key": "a..b",
+        "valueJson": "1"
+      }
+    },
+    {
+      "name": "empty key",
+      "reason": "key-path",
+      "frame": {
+        "kind": "store",
+        "seq": 1,
+        "store": "store/config",
+        "op": "delete",
+        "key": ""
+      }
+    },
+    {
+      "name": "the __internal__ version namespace",
+      "reason": "reserved-key",
+      "frame": {
+        "kind": "store",
+        "seq": 1,
+        "store": "store/config",
+        "op": "set",
+        "key": "__internal__.gamelib",
+        "valueJson": "{}"
+      }
+    },
+    {
+      "name": "set without valueJson",
+      "reason": "shape",
+      "frame": {
+        "kind": "store",
+        "seq": 1,
+        "store": "store/config",
+        "op": "set",
+        "key": "a"
+      }
+    },
+    {
+      "name": "set without key",
+      "reason": "shape",
+      "frame": {
+        "kind": "store",
+        "seq": 1,
+        "store": "store/config",
+        "op": "set",
+        "valueJson": "1"
+      }
+    },
+    {
+      "name": "delete carrying a valueJson",
+      "reason": "shape",
+      "frame": {
+        "kind": "store",
+        "seq": 1,
+        "store": "store/config",
+        "op": "delete",
+        "key": "a",
+        "valueJson": "1"
+      }
+    },
+    {
+      "name": "clear carrying a key",
+      "reason": "shape",
+      "frame": {
+        "kind": "store",
+        "seq": 1,
+        "store": "store/config",
+        "op": "clear",
+        "key": "a"
+      }
+    },
+    {
+      "name": "flush carrying a valueJson",
+      "reason": "shape",
+      "frame": {
+        "kind": "store",
+        "seq": 1,
+        "store": "store/config",
+        "op": "flush",
+        "valueJson": "{}"
+      }
+    },
+    {
+      "name": "replace carrying a key",
+      "reason": "shape",
+      "frame": {
+        "kind": "store",
+        "seq": 1,
+        "store": "store/config",
+        "op": "replace",
+        "key": "a",
+        "valueJson": "{}"
+      }
+    },
+    {
+      "name": "valueJson that is not JSON",
+      "reason": "value-json",
+      "frame": {
+        "kind": "store",
+        "seq": 1,
+        "store": "store/config",
+        "op": "set",
+        "key": "a",
+        "valueJson": "{"
+      }
+    },
+    {
+      "name": "replace whose valueJson is an array",
+      "reason": "value-json",
+      "frame": {
+        "kind": "store",
+        "seq": 1,
+        "store": "store/config",
+        "op": "replace",
+        "valueJson": "[1]"
+      }
+    },
+    {
+      "name": "replace whose valueJson is a scalar",
+      "reason": "value-json",
+      "frame": {
+        "kind": "store",
+        "seq": 1,
+        "store": "settings/global",
+        "op": "replace",
+        "valueJson": "3"
+      }
+    },
+    {
+      "name": "frame over maxFrameBytes: the consumer expands the generate stanza into a set whose valueJson is valueJsonBytes ASCII bytes",
+      "reason": "too-large",
+      "frame": {
+        "generate": {
+          "valueJsonBytes": 10485761
+        }
+      }
+    }
+  ]
+}
