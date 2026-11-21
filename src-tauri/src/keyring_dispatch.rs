@@ -129,7 +129,8 @@ pub(crate) fn rpc_keyring_get(channel: &str, args: &[Value]) -> Result<Value, St
             ));
         }
         Err(e) => {
-            shell_log(&format!("keyring {channel} failed: {e}"));
+            let kind = keyring_error_class(e);
+            shell_log_detail(&format!("keyring {channel} failed ({kind})"), e);
         }
     }
     result
@@ -153,12 +154,20 @@ pub(crate) fn rpc_keyring_set(channel: &str, args: &[Value]) -> Result<Value, St
                 // (threat T-28-04): `keyring_outcome_message`'s types forbid it,
                 // and `secret` is never passed to it -- channel + error only,
                 // enforced by construction rather than by this comment alone.
-                shell_log(&format!("keyring {channel} failed: {e:?}"));
+                let kind = keyring_error_kind(&e);
+                shell_log_detail(
+                    &format!("keyring {channel} failed ({kind})"),
+                    &format!("{e:?}"),
+                );
                 Err(format!("keyring:unavailable:{e}"))
             }
         },
         Err(e) => {
-            shell_log(&format!("keyring {channel} failed: {e:?}"));
+            let kind = keyring_error_kind(&e);
+            shell_log_detail(
+                &format!("keyring {channel} failed ({kind})"),
+                &format!("{e:?}"),
+            );
             Err(format!("keyring:unavailable:{e}"))
         }
     }
@@ -189,12 +198,20 @@ pub(crate) fn rpc_keyring_delete(channel: &str, args: &[Value]) -> Result<Value,
                 Ok(Value::Bool(true))
             }
             Err(e) => {
-                shell_log(&format!("keyring {channel} failed: {e:?}"));
+                let kind = keyring_error_kind(&e);
+                shell_log_detail(
+                    &format!("keyring {channel} failed ({kind})"),
+                    &format!("{e:?}"),
+                );
                 Err(format!("keyring:unavailable:{e}"))
             }
         },
         Err(e) => {
-            shell_log(&format!("keyring {channel} failed: {e:?}"));
+            let kind = keyring_error_kind(&e);
+            shell_log_detail(
+                &format!("keyring {channel} failed ({kind})"),
+                &format!("{e:?}"),
+            );
             Err(format!("keyring:unavailable:{e}"))
         }
     }
@@ -248,12 +265,20 @@ pub(crate) fn rpc_keyring_available(channel: &str, args: &[Value]) -> Result<Val
             // not an error — the caller asked "is it available", and the honest answer
             // here is "no".
             Err(e) => {
-                shell_log(&format!("keyring {channel} failed: {e:?}"));
+                let kind = keyring_error_kind(&e);
+                shell_log_detail(
+                    &format!("keyring {channel} failed ({kind})"),
+                    &format!("{e:?}"),
+                );
                 Ok(Value::Bool(false))
             }
         },
         Err(e) => {
-            shell_log(&format!("keyring {channel} failed: {e:?}"));
+            let kind = keyring_error_kind(&e);
+            shell_log_detail(
+                &format!("keyring {channel} failed ({kind})"),
+                &format!("{e:?}"),
+            );
             Ok(Value::Bool(false))
         }
     }
@@ -323,6 +348,32 @@ pub(crate) fn keyring_get_result(result: Result<String, keyring::Error>) -> Resu
         Err(keyring::Error::NoEntry) => Ok(Value::Null),
         Err(e) => Err(format!("keyring:unavailable:{e}")),
     }
+}
+
+/// The category a `keyring::Error` is logged under: the variant's name as a fixed lowercase word,
+/// never its text (which may carry an OS message; `gamelib.log` is the file users upload, WR-02).
+/// The enum is `#[non_exhaustive]`, so a variant added by a later crate version reads `other`.
+pub(crate) fn keyring_error_kind(error: &keyring::Error) -> &'static str {
+    match error {
+        keyring::Error::NoEntry => "no-entry",
+        keyring::Error::PlatformFailure(_) => "platform-failure",
+        keyring::Error::NoStorageAccess(_) => "no-storage-access",
+        keyring::Error::BadEncoding(_) => "bad-encoding",
+        keyring::Error::TooLong(..) => "too-long",
+        keyring::Error::Invalid(..) => "invalid",
+        keyring::Error::Ambiguous(_) => "ambiguous",
+        _ => "other",
+    }
+}
+
+/// The category a classified `keyring:<class>:<payload>` error string is logged under: `<class>`
+/// only, never the payload (an OS message). A string that is not so classified reads `other`.
+pub(crate) fn keyring_error_class(classified: &str) -> &str {
+    classified
+        .strip_prefix("keyring:")
+        .map(|rest| rest.split(':').next().unwrap_or(rest))
+        .filter(|class| !class.is_empty())
+        .unwrap_or("other")
 }
 
 /// The closed set of successful keyring-operation outcomes a `shell_log()` line may report
@@ -447,6 +498,51 @@ mod tests {
         )));
         assert!(result.is_err());
         assert!(result.unwrap_err().starts_with("keyring:unavailable:"));
+    }
+
+    #[test]
+    fn keyring_error_kind_names_the_variant_only() {
+        // WR-02 (privacy half, 84-17): the category that reaches gamelib.log is the variant, never
+        // the error's own text (which may carry an OS message).
+        let os_text = || -> Box<dyn std::error::Error + Send + Sync> {
+            Box::new(std::io::Error::other("secret-looking OS text"))
+        };
+        let cases: Vec<(keyring::Error, &str)> = vec![
+            (keyring::Error::NoEntry, "no-entry"),
+            (
+                keyring::Error::PlatformFailure(os_text()),
+                "platform-failure",
+            ),
+            (
+                keyring::Error::NoStorageAccess(os_text()),
+                "no-storage-access",
+            ),
+            (keyring::Error::BadEncoding(vec![0xff]), "bad-encoding"),
+            (
+                keyring::Error::TooLong("account".to_string(), 1),
+                "too-long",
+            ),
+            (
+                keyring::Error::Invalid("account".to_string(), "why".to_string()),
+                "invalid",
+            ),
+            (keyring::Error::Ambiguous(Vec::new()), "ambiguous"),
+        ];
+        for (error, expected) in cases {
+            assert_eq!(keyring_error_kind(&error), expected);
+        }
+    }
+
+    #[test]
+    fn keyring_error_class_names_the_class_only() {
+        assert_eq!(
+            keyring_error_class("keyring:unavailable:Platform secure storage failure: x"),
+            "unavailable"
+        );
+        assert_eq!(keyring_error_class("keyring:timeout"), "timeout");
+        assert_eq!(keyring_error_class("keyring:bad-args"), "bad-args");
+        assert_eq!(keyring_error_class("not a classified string"), "other");
+        assert_eq!(keyring_error_class("keyring:"), "other");
     }
 
     // ---- keyring_outcome_message / keyring_get_outcome / KeyringOutcome (quick 261001-p0s,

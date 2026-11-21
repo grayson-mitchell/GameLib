@@ -84,7 +84,12 @@ pub(crate) fn quit_via_sidecar(app_handle: &AppHandle, origin: &'static str) {
                 "quit ({origin}): handed to the sidecar handleExit"
             )),
             Err(e) => {
-                shell_log(&format!("WARN: quit ({origin}): {e} -- exiting directly"));
+                shell_log_detail(
+                    &format!(
+                        "WARN: quit ({origin}): routing to the sidecar failed -- exiting directly"
+                    ),
+                    &e,
+                );
                 app_handle.exit(0);
             }
         }
@@ -126,9 +131,10 @@ pub(crate) fn route_app_menu_quit_through_sidecar(app: &AppHandle) {
     let items = match menu.items() {
         Ok(items) => items,
         Err(e) => {
-            shell_log(&format!(
-                "WARN: app menu: could not list the menu ({e}) -- Cmd+Q stays unrouted"
-            ));
+            shell_log_detail(
+                "WARN: app menu: could not list the menu -- Cmd+Q stays unrouted",
+                &e,
+            );
             return;
         }
     };
@@ -139,9 +145,10 @@ pub(crate) fn route_app_menu_quit_through_sidecar(app: &AppHandle) {
     let sub_items = match app_submenu.items() {
         Ok(items) => items,
         Err(e) => {
-            shell_log(&format!(
-                "WARN: app menu: could not list the app submenu ({e}) -- Cmd+Q stays unrouted"
-            ));
+            shell_log_detail(
+                "WARN: app menu: could not list the app submenu -- Cmd+Q stays unrouted",
+                &e,
+            );
             return;
         }
     };
@@ -162,9 +169,10 @@ pub(crate) fn route_app_menu_quit_through_sidecar(app: &AppHandle) {
     let custom = match MenuItem::with_id(app, APP_MENU_QUIT_ID, &label, true, Some("CmdOrCtrl+Q")) {
         Ok(item) => item,
         Err(e) => {
-            shell_log(&format!(
-                "WARN: app menu: could not build the custom Quit item ({e}) -- Cmd+Q stays unrouted"
-            ));
+            shell_log_detail(
+                "WARN: app menu: could not build the custom Quit item -- Cmd+Q stays unrouted",
+                &e,
+            );
             return;
         }
     };
@@ -173,16 +181,18 @@ pub(crate) fn route_app_menu_quit_through_sidecar(app: &AppHandle) {
     let removed = match app_submenu.remove_at(index) {
         Ok(removed) => removed,
         Err(e) => {
-            shell_log(&format!(
-                "WARN: app menu: could not remove the predefined Quit ({e}) -- Cmd+Q stays unrouted"
-            ));
+            shell_log_detail(
+                "WARN: app menu: could not remove the predefined Quit -- Cmd+Q stays unrouted",
+                &e,
+            );
             return;
         }
     };
     if let Err(e) = app_submenu.insert(&custom, index) {
-        shell_log(&format!(
-            "WARN: app menu: could not insert the custom Quit ({e}) -- restoring the predefined item"
-        ));
+        shell_log_detail(
+            "WARN: app menu: could not insert the custom Quit -- restoring the predefined item",
+            &e,
+        );
         if let Some(original) = removed {
             let _ = app_submenu.insert(&original, index);
         }

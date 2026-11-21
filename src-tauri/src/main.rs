@@ -590,6 +590,30 @@ fn shell_log_to(logger: Option<&gamelib_log::writer::Logger>, message: &str) {
     }
 }
 
+/// [`shell_log`] for a failure whose external detail (an error's own text, an OS message, a path)
+/// must stay on the developer's side. stderr (the dev transcript, which LaunchServices discards for
+/// a bundled app) gets `[shell] <message>: <detail>`; `gamelib.log` gets `<message>` only.
+///
+/// This is the one way to keep such a detail visible without writing it into the uploadable file:
+/// `uploadLogFile` posts `gamelib.log` to a public paste service, and the shell's own error text
+/// (keyring, sidecar RPC, io, tauri menu, NSError) is text the shell did not author (WR-02,
+/// 84-17). `message` is therefore a category: the operation plus an error kind, a variant or a
+/// classified prefix, never the error itself. The level is read from `message`
+/// ([`shell_log_level`]) and CR/LF in it are neutralised by [`shell_log_to`], as for `shell_log`.
+pub(crate) fn shell_log_detail(message: &str, detail: &dyn std::fmt::Display) {
+    shell_log_detail_to(gamelib_log::global(), message, detail);
+}
+
+/// The two halves of [`shell_log_detail`], with the logger passed in so a test can use its own.
+fn shell_log_detail_to(
+    logger: Option<&gamelib_log::writer::Logger>,
+    message: &str,
+    detail: &dyn std::fmt::Display,
+) {
+    shell_eprintln!("[shell] {message}: {detail}");
+    shell_log_to(logger, message);
+}
+
 /// The level of a shell diagnostic, from its text: a `FATAL` prefix is an error, a `WARN` prefix or
 /// the word `failed` (ASCII case-insensitive) a warning, anything else info. The shell's call sites
 /// are prose, not structured, so the text is the only signal.
@@ -4467,6 +4491,47 @@ mod tests {
             written.contains("err=a\\n(12:34:56)"),
             "line break was not escaped: {written:?}"
         );
+    }
+
+    #[test]
+    fn shell_log_detail_keeps_the_detail_out_of_gamelib_log() {
+        // WR-02 (privacy half, 84-17): the detail (an error string, an OS message, a path) is
+        // for the developer's stderr only. gamelib.log is the file users upload.
+        let home = gamelib_testutil::FakeHome::new("gamelib-shell-log-detail-");
+        let root = home.root().to_string_lossy().into_owned();
+        let platform = gamelib_core::paths::Platform::current();
+        let logger = gamelib_log::writer::Logger::start(gamelib_log::writer::LogConfig {
+            platform,
+            user_data: gamelib_core::paths::join(platform, &root, &["userData"]),
+            log_dir: root.clone(),
+            clock: Arc::new(ShellLogClock),
+            tz: Arc::new(ShellLogTz),
+        });
+        shell_log_detail_to(
+            Some(&logger),
+            "keyring k failed (platform-failure)",
+            &"secret-looking OS text",
+        );
+        assert!(logger.flush(Duration::from_secs(10)), "flush timed out");
+        let written =
+            std::fs::read_to_string(gamelib_core::paths::join(platform, &root, &["gamelib.log"]))
+                .expect("gamelib.log was written");
+        assert_eq!(written.lines().count(), 1, "not one line: {written:?}");
+        assert!(
+            written
+                .trim_end()
+                .ends_with("keyring k failed (platform-failure)"),
+            "the line is not the message alone: {written:?}"
+        );
+        assert!(
+            !written.contains("secret-looking OS text"),
+            "the detail reached gamelib.log: {written:?}"
+        );
+    }
+
+    #[test]
+    fn shell_log_detail_to_without_a_logger_does_nothing() {
+        shell_log_detail_to(None, "no writer yet", &"detail");
     }
 
     #[test]

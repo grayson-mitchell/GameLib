@@ -91,11 +91,14 @@ describe('keyring arm region: zero bare eprintln!, 14 shell_log(, 5 keyring_outc
     expect(occurrences).toBeNull()
   })
 
-  test('shell_log( occurs exactly 14 times — COUNTED, not toContain-ed', () => {
+  test('shell_log( and shell_log_detail( occur exactly 14 times together — COUNTED, not toContain-ed', () => {
     const region = extractKeyringArmRegion(loadMainRsCode())
 
-    const occurrences = region.match(/shell_log\(/g)
-    expect(occurrences).toHaveLength(14)
+    // WR-02 / 84-17: the seven failure lines moved from `shell_log(` to `shell_log_detail(`, so
+    // the total is unchanged and the split is pinned: 7 plain, 7 with a stderr-only detail.
+    expect(region.match(/shell_log(?:_detail)?\(/g)).toHaveLength(14)
+    expect(region.match(/shell_log\(/g)).toHaveLength(7)
+    expect(region.match(/shell_log_detail\(/g)).toHaveLength(7)
   })
 
   test('keyring_outcome_message( occurs exactly 5 times — COUNTED, not toContain-ed', () => {
@@ -155,12 +158,14 @@ describe('byte-stability of the shared failure/warning message literals', () => 
   test('exactly 3 distinct failure/warning message literals exist', () => {
     const region = extractKeyringArmRegion(loadMainRsCode())
 
-    // "keyring {channel} failed: {e:?}" (6x: set x2, delete x2, available x2)
-    expect(region.match(/keyring \{channel\} failed: \{e:\?\}/g)).toHaveLength(
-      6
-    )
-    // "keyring {channel} failed: {e}" (1x: keyring_get's final Err(e) arm)
-    expect(region.match(/keyring \{channel\} failed: \{e\}/g)).toHaveLength(1)
+    // WR-02 / 84-17: a failure line carries a category (`kind`: the keyring::Error variant, or the
+    // class of the classified `keyring:<class>:...` string), never the error text. The error
+    // text is the stderr-only detail of `shell_log_detail`. These replace the former
+    // `failed: {e:?}` (6x) and `failed: {e}` (1x) literals; the count of seven is unchanged.
+    expect(
+      region.match(/keyring \{channel\} failed \(\{kind\}\)/g)
+    ).toHaveLength(7)
+    expect(region).not.toMatch(/failed: \{e/)
     // the timeout message (1x: keyring_get's timeout arm)
     expect(
       region.match(
@@ -175,7 +180,8 @@ describe('byte-stability of the shared failure/warning message literals', () => 
 })
 
 describe('double-prefix guard: no shell_log call in the keyring region passes a literal beginning with [shell] ', () => {
-  const DOUBLE_PREFIX_RE = /shell_log\(\s*(?:&format!\(\s*)?"\[shell\]/
+  const DOUBLE_PREFIX_RE =
+    /shell_log(?:_detail)?\(\s*(?:&format!\(\s*)?"\[shell\]/
 
   test('the guard passes against the real keyring arm region', () => {
     const region = extractKeyringArmRegion(loadMainRsCode())
@@ -185,6 +191,9 @@ describe('double-prefix guard: no shell_log call in the keyring region passes a 
 
   test('the guard is non-vacuous: a synthetic positive control DOES match', () => {
     expect('shell_log(&format!("[shell] doubled"))').toMatch(DOUBLE_PREFIX_RE)
+    expect('shell_log_detail(&format!("[shell] doubled"), &e)').toMatch(
+      DOUBLE_PREFIX_RE
+    )
   })
 })
 
@@ -195,7 +204,7 @@ describe('leak-shape guard: no shell_log call carries a secret-bearing identifie
   // A call site carrying either would mean a secret-shaped value reached a log line.
   function shellDiagArgSlices(region: string): string[] {
     const slices: string[] = []
-    const callRe = /shell_log\(/g
+    const callRe = /shell_log(?:_detail)?\(/g
     let match: RegExpExecArray | null
     while ((match = callRe.exec(region)) !== null) {
       const openIdx = match.index + match[0].length - 1
@@ -215,8 +224,8 @@ describe('leak-shape guard: no shell_log call carries a secret-bearing identifie
     const region = extractKeyringArmRegion(loadMainRsCode())
     const slices = shellDiagArgSlices(region)
 
-    // Non-vacuity precondition: there really are 14 call sites to scan, matching the count
-    // pinned above, so an extraction bug that silently returned zero slices is caught here
+    // Non-vacuity precondition: there really are 14 call sites to scan (plain and detail),
+    // matching the count pinned above, so an extraction bug that silently returned zero slices is caught here
     // rather than passing the forbidden-identifier check for the wrong reason.
     expect(slices).toHaveLength(14)
 
@@ -229,6 +238,15 @@ describe('leak-shape guard: no shell_log call carries a secret-bearing identifie
   test('non-vacuity control: the scanner DOES flag a synthetic call site carrying `secret`', () => {
     const synthetic =
       'shell_log(&format!("keyring {channel} leaked: {secret}"));'
+    const slices = shellDiagArgSlices(synthetic)
+
+    expect(slices).toHaveLength(1)
+    expect(slices[0]).toMatch(/\bsecret\b/)
+  })
+
+  test('non-vacuity control: the scanner DOES flag a shell_log_detail call site carrying `secret`', () => {
+    const synthetic =
+      'shell_log_detail(&format!("keyring {channel} failed ({kind})"), &secret);'
     const slices = shellDiagArgSlices(synthetic)
 
     expect(slices).toHaveLength(1)

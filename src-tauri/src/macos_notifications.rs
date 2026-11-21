@@ -98,14 +98,21 @@ pub fn init_at_startup() {
 
     let block = RcBlock::new(|granted: Bool, error: *mut NSError| {
         // SAFETY: when non-null, `error` is a valid NSError for the duration of the callback.
-        let err = unsafe { error.as_ref() }.map(|e| e.localizedDescription().to_string());
-        if let Some(e) = &err {
-            let _ = STARTUP_AUTH_ERROR.set(e.clone());
+        let error = unsafe { error.as_ref() };
+        if let Some(e) = error {
+            let _ = STARTUP_AUTH_ERROR.set(e.localizedDescription().to_string());
         }
+        // WR-02 (84-17): gamelib.log is the file users upload, so the line carries the NSError's
+        // domain and code (a framework-authored category), never its localized description (the
+        // description is still kept in `STARTUP_AUTH_ERROR`).
+        let error_category = match error {
+            Some(e) => format!("{} {}", e.domain(), e.code()),
+            None => "none".to_string(),
+        };
         crate::shell_log(&format!(
-            "notification authorization: granted={} error={:?}",
+            "notification authorization: granted={} error={}",
             granted.as_bool(),
-            err
+            error_category
         ));
     });
     center.requestAuthorizationWithOptions_completionHandler(
