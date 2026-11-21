@@ -645,6 +645,12 @@ const FIXTURE_DIFF_LINES = [
  * `Settings/components/EosOverlaySetting.tsx`. SCANNED, not declared debt: every string is a
  * literal `t('gamelib:...', '<default>')` or `tDefault('<key>', '<default>')` call and the
  * gate showed 0 violations. DECLARED_UNSCANNED_DEBT unchanged.
+ *
+ * 2026-11-22 (Phase 100 plan 08): fork-touched 472 -> 474, scope 349 -> 351 (committed
+ * first, then `pnpm gen-i18n-gate-scope`): TWO files added in sorted position --
+ * `GamePage/actions/installCaret.ts` and `GamePage/components/ProtonDbLink.tsx`. SCANNED, not
+ * declared debt: every string is a literal `t('gamelib:...', '<default>')` call and the gate
+ * showed 0 violations. DECLARED_UNSCANNED_DEBT unchanged.
  */
 const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/__mocks__/svgReactStub.tsx',
@@ -1502,9 +1508,9 @@ describe('--rewrite-scope guard', () => {
     }
   })
 
-  it('A0 fixture sanity: the seeded scope is the REAL 349-file hand-curated snapshot, and the fresh-snapshot fixture carries the committed 472-file fork-touched set verbatim', () => {
-    expect(scopeSnapshot.files.length).toBe(349)
-    expect(forkTouchedSnapshot.files.length).toBe(472)
+  it('A0 fixture sanity: the seeded scope is the REAL 351-file hand-curated snapshot, and the fresh-snapshot fixture carries the committed 474-file fork-touched set verbatim', () => {
+    expect(scopeSnapshot.files.length).toBe(351)
+    expect(forkTouchedSnapshot.files.length).toBe(474)
     // `freshSnapshot()` is a FIXTURE built from the committed artifact
     // (`files: [...forkTouchedSnapshot.files]`) -- NOT a live git derivation,
     // despite what this assertion used to claim. The live derivation is
@@ -1545,7 +1551,7 @@ describe('--rewrite-scope guard', () => {
     expect(result.refusal).toBeNull()
   })
 
-  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 349 -> 472 diff and writes nothing', () => {
+  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 351 -> 474 diff and writes nothing', () => {
     const { outDir, scopePath, seededBytes } = seedScope()
 
     const result = writeArtifacts({
@@ -1568,7 +1574,7 @@ describe('--rewrite-scope guard', () => {
     expect(refusal.provenance).toBe(scopeSnapshot.generatedBy)
   })
 
-  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 472', () => {
+  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 474', () => {
     // The load-bearing spec. Without it, A1/A2's "the file did not change"
     // would be satisfied just as well by a writer that cannot write at all —
     // a guard that refuses everything is not a fix, it is a different bug.
@@ -1581,12 +1587,12 @@ describe('--rewrite-scope guard', () => {
     })
 
     const rewritten = JSON.parse(readFileSync(scopePath, 'utf-8'))
-    expect(rewritten.files.length).toBe(472)
+    expect(rewritten.files.length).toBe(474)
     expect(result.wroteScope).toBe(scopePath)
     expect(result.refusal).toBeNull()
   })
 
-  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 472 files', () => {
+  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 474 files', () => {
     const outDir = makeTmpDir()
     const scopePath = join(outDir, 'i18nGateScope.json')
     expect(existsSync(scopePath)).toBe(false)
@@ -1599,7 +1605,7 @@ describe('--rewrite-scope guard', () => {
 
     expect(result.refusal).toBeNull()
     expect(result.wroteScope).toBe(scopePath)
-    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(472)
+    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(474)
   })
 
   it('A5 PROVENANCE RATCHET ON THE REAL ARTIFACT: the committed marker still reads as hand-curated', () => {
