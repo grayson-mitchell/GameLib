@@ -33,7 +33,7 @@ findings:
     title: "the WR-06 sibling-directory rule refuses the most common sideload layouts and has no override"
   - id: WR-13
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "the narrowed runTs shared-cache predicate can be bypassed by an ordinary spelling"
   - id: IN-10
     severity: info
@@ -127,7 +127,7 @@ recorded: 2026-11-21T06:39:30.595Z
 | WR-11 | warning | open | - |
 | IN-09 | info | open | - |
 | WR-12 | warning | open | - |
-| WR-13 | warning | open | - |
+| WR-13 | warning | fixed | 692736559 (gsd-fast, 2026-11-21) |
 | IN-10 | info | open | - |
 | IN-11 | info | open | - |
 | IN-12 | info | open | - |
