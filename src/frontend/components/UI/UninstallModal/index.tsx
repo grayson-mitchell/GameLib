@@ -21,13 +21,20 @@ interface UninstallModalProps {
   runner: Runner
   onClose: () => void
   isDlc: boolean
+  /**
+   * How the caller runs the uninstall invoke. The game page's danger zone
+   * passes its row runner so a rejection shows in the row (WR-05). Without it
+   * the modal catches and logs the rejection itself.
+   */
+  runUninstall?: (uninstall: () => Promise<void>) => Promise<void>
 }
 
 const UninstallModal: React.FC<UninstallModalProps> = function ({
   appName,
   runner,
   onClose,
-  isDlc
+  isDlc,
+  runUninstall
 }) {
   const [isNative, setIsNative] = useState(true)
   const [winePrefix, setWinePrefix] = useState('')
@@ -107,16 +114,36 @@ const UninstallModal: React.FC<UninstallModalProps> = function ({
   const uninstallGame = async () => {
     onClose()
 
-    await window.api.uninstall(
-      appName,
-      runner,
-      deletePrefixChecked,
-      deleteSettingsChecked && !isDlc
-    )
-    if (isStore(runner, 'sideload') && location.pathname.match(/gamepage/)) {
-      navigate('/#library')
+    const uninstall = async () => {
+      await window.api.uninstall(
+        appName,
+        runner,
+        deletePrefixChecked,
+        deleteSettingsChecked && !isDlc
+      )
+      if (isStore(runner, 'sideload') && location.pathname.match(/gamepage/)) {
+        navigate('/#library')
+      }
+      storage.removeItem(appName)
     }
-    storage.removeItem(appName)
+
+    if (runUninstall) {
+      await runUninstall(uninstall)
+      return
+    }
+    // WR-05: without a caller-supplied runner the rejection would be an
+    // unhandled one that never reaches gamelib.log.
+    try {
+      await uninstall()
+    } catch (error) {
+      window.api.logError(
+        `uninstall failed for ${appName}: ${
+          error instanceof Error
+            ? (error.stack ?? error.message)
+            : String(error)
+        }`
+      )
+    }
   }
 
   // quick 261112-90h: never offer "Remove prefix" for Steam. A bottle-eligible

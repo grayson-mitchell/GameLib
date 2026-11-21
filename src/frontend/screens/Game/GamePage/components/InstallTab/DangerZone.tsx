@@ -28,6 +28,10 @@ const DangerZone = ({ gameInfo, gates }: Props) => {
   const {
     startUninstall,
     startRemoveAllCopies,
+    uninstallFailed,
+    uninstallBusy,
+    retryUninstall,
+    runModalUninstall,
     removeAllCopiesFailed,
     removingAllCopies,
     retryRemoveAllCopies,
@@ -39,6 +43,9 @@ const DangerZone = ({ gameInfo, gates }: Props) => {
 
   const uninstallGate = gates.uninstall
   const allCopiesGate = gates.removeAllCopies
+
+  const uninstallIsBusy =
+    uninstallBusy || uninstallGate.reason === 'uninstalling'
 
   const reasonOf = (gate: InstallActionGate) =>
     gate.disabled && gate.reason ? gateReasonText(gate.reason, t) : undefined
@@ -56,15 +63,20 @@ const DangerZone = ({ gameInfo, gates }: Props) => {
       </p>
       <button
         type="button"
-        className="dangerButton"
-        aria-disabled={uninstallGate.disabled ? true : undefined}
-        title={reasonOf(uninstallGate)}
+        className={classNames('dangerButton', { 'is-busy': uninstallIsBusy })}
+        aria-busy={uninstallIsBusy ? true : undefined}
+        aria-disabled={
+          uninstallGate.disabled || uninstallIsBusy ? true : undefined
+        }
+        title={uninstallIsBusy ? undefined : reasonOf(uninstallGate)}
         onClick={() => {
-          if (uninstallGate.disabled) return
+          if (uninstallGate.disabled || uninstallIsBusy) return
           void startUninstall()
         }}
       >
-        {t('gamepage.installTab.dangerZone.uninstall', 'Uninstall…')}
+        {uninstallIsBusy
+          ? t('gamelib:gamepage.installTab.busy.uninstalling', 'Uninstalling…')
+          : t('gamepage.installTab.dangerZone.uninstall', 'Uninstall…')}
       </button>
       {allCopiesGate.show && (
         <button
@@ -93,6 +105,18 @@ const DangerZone = ({ gameInfo, gates }: Props) => {
               )}
         </button>
       )}
+      {uninstallFailed && (
+        <RowFailure
+          message={t(
+            'gamelib:gamepage.installTab.failure.uninstall',
+            'Uninstall failed. Details are in the log.'
+          )}
+          retryLabel={t('gamelib:gamepage.installTab.retry', 'Retry')}
+          onRetry={() => void retryUninstall()}
+          retryDisabled={uninstallGate.disabled}
+          retryDisabledReason={reasonOf(uninstallGate)}
+        />
+      )}
       {removeAllCopiesFailed && (
         <RowFailure
           message={t(
@@ -111,6 +135,7 @@ const DangerZone = ({ gameInfo, gates }: Props) => {
           runner={runner}
           isDlc={false}
           onClose={closeUninstallModal}
+          runUninstall={runModalUninstall}
         />
       )}
     </section>

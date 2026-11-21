@@ -747,9 +747,9 @@ describe('Danger zone (WR-05)', () => {
         UNINSTALL_FAILED
       )
       expect(mockApi.logError).toHaveBeenCalledTimes(1)
-      expect(String(mockApi.logError.mock.calls[0]?.[0])).toContain(
-        'uninstall failed for 1234'
-      )
+      expect(
+        String((mockApi.logError.mock.calls as unknown[][])[0]?.[0])
+      ).toContain('uninstall failed for 1234')
     })
 
     it('Retry asks the route again, so the confirmation decision is asked again (D-13)', async () => {

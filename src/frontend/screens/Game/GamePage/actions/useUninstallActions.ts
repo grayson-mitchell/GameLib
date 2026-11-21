@@ -27,6 +27,11 @@ import {
  * reaches the log instead of becoming an unhandled rejection. A partial sweep
  * counts as a failure: a copy is still on disk (D-18). Retry goes back through
  * "Remove all copies?" (D-13), never straight to the invoke.
+ *
+ * WR-05: Uninstall runs through a row on both routes. The delegated Steam
+ * `window.api.uninstall` is awaited inside it, and UninstallModal runs its own
+ * invoke through `runModalUninstall`. Retry is `startUninstall`, which asks
+ * the route again.
  */
 export function useUninstallActions(gameInfo: GameInfo) {
   const { t } = useTranslation('gamepage')
@@ -38,6 +43,7 @@ export function useUninstallActions(gameInfo: GameInfo) {
 
   const [showUninstallModal, setShowUninstallModal] = useState(false)
   const allCopiesRow = useRowAction('steamRemoveAllCopies', appName)
+  const uninstallRow = useRowAction('uninstall', appName)
 
   async function startUninstall() {
     if (isSteam) {
@@ -52,11 +58,19 @@ export function useUninstallActions(gameInfo: GameInfo) {
       if (steamUninstallNeedsConfirm(route)) {
         setShowUninstallModal(true)
       } else {
-        window.api.uninstall(appName, runner, false, false)
+        await uninstallRow.run(() =>
+          window.api.uninstall(appName, runner, false, false)
+        )
       }
     } else {
       setShowUninstallModal(true)
     }
+  }
+
+  // The confirm-modal route runs its uninstall invoke through the same row, so
+  // its rejection shows under the danger zone too (WR-05).
+  function runModalUninstall(uninstall: () => Promise<void>) {
+    return uninstallRow.run(uninstall)
   }
 
   // quick-260821-le0 (Task 3): sweeps EVERY recorded install root for this
@@ -93,6 +107,12 @@ export function useUninstallActions(gameInfo: GameInfo) {
   return {
     startUninstall,
     startRemoveAllCopies,
+    uninstallFailed: uninstallRow.phase === 'failed',
+    uninstallBusy: uninstallRow.phase === 'busy',
+    // Retry asks the route again, so the modal still opens unless Steam's own
+    // dialog confirms (D-13).
+    retryUninstall: startUninstall,
+    runModalUninstall,
     removeAllCopiesFailed: allCopiesRow.phase === 'failed',
     removingAllCopies: allCopiesRow.phase === 'busy',
     // Retry re-asks "Remove all copies?" (D-13).
