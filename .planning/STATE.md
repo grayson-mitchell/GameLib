@@ -5,15 +5,15 @@ milestone_name: Node Sidecar Retirement
 current_phase: 85
 current_phase_name: Store host, config and versioned migrations
 status: executing
-stopped_at: Completed 85-06-PLAN.md
-last_updated: "2026-11-21T17:55:30.193Z"
+stopped_at: Completed 85-07-PLAN.md
+last_updated: "2026-11-21T17:59:32.618Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 85 execution started
-state_head: 5ad01481e7cb3e544ccbf49c463481202d27ffb3
+state_head: 3ca99c0f72953dc0ab7e08fc6998857f54fa5885
 progress:
   total_phases: 20
   completed_phases: 23
-  total_plans: 77
+  total_plans: 81
   completed_plans: 531
   percent: 100
 ---
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 85 (Store host, config and versioned migrations) — EXECUTING
-Plan: 6 of 25
+Plan: 7 of 25
 Status: Ready to execute
 Last activity: 2026-11-22 — Phase 85 execution started
 Progress: [██████████] 100%
@@ -365,6 +365,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 85 P04 | 9 min | 2 tasks | 10 files |
 | Phase 85 P02 | 25 min | 3 tasks | 166 files |
 | Phase 85 P06 | 25 min | 3 tasks | 16 files |
+| Phase 85 P07 | 45 min | 3 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -685,6 +686,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 85]: Corpus tree is -text in .gitattributes so the CRLF edge fixture keeps its bytes under eol=lf
 - [Phase 85]: 85-06: gamelib-store json::parse is JS-faithful (integer-like keys first and ascending, last duplicate wins at the first position) rather than plain insertion, so reading and rewriting a TS-written store reproduces its bytes; build objects only through Obj::insert_js or dotpath::set
 - [Phase 85]: 85-06: dotpath with dot_paths false treats __proto__ as an ordinary key (oracle vector wins over the plan text); arrays hold holes as Json::Null
+- [Phase 85]: 85-07: corrupt store files (D-18) are copied to <name>.corrupt.<stamp>.json first and kept byte-identical; caches start empty only after the copy exists, every other kind opens ReadOnly(Failed), and so does any kind whose copy cannot be written
+- [Phase 85]: 85-07: a migration rewrite is written with the tab layout for settings documents too (the golden oracle shows TS did), not to_settings_bytes; Step.run is an Arc<dyn Fn> so data-driven and schema-bound steps can capture state
 
 ### Pending Todos
 
@@ -948,8 +951,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-21T17:39:57.819Z
-Stopped at: Completed 85-06-PLAN.md
+Last session: 2026-11-21T17:59:31.998Z
+Stopped at: Completed 85-07-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
