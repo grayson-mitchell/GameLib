@@ -79,7 +79,7 @@ impl<'de> Deserialize<'de> for RendererMessage {
 /// Cuts at `LOG_TEXT_MAX` UTF-16 units. A cut inside a surrogate pair keeps the units before it and
 /// writes U+FFFD, which is what Node wrote for the lone half left by `slice`.
 fn truncate_text(value: &str) -> String {
-    let total: usize = value.chars().map(char::len_utf16).sum();
+    let total = value.encode_utf16().count();
     if total <= LOG_TEXT_MAX {
         return value.to_string();
     }
