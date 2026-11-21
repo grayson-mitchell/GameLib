@@ -85,7 +85,11 @@ const EXPECTED_LONG_RUNNING_CHANNELS = [
   'launch',
   // Phase 100 CR-02 (plan 100-11): the sidecar's moveInstall handler awaits the whole
   // getGame(appName).moveInstall(path) copy, so a large move outlives the 60s bound.
-  'moveInstall'
+  'moveInstall',
+  // Phase 100 CR-02: changeInstallPath awaits the store's changeGameInstallPath (Legendary runs
+  // the runner's `move --skip-move`); steamRemoveAllCopies deletes every recorded install root.
+  'changeInstallPath',
+  'steamRemoveAllCopies'
 ]
 
 /**
@@ -496,6 +500,14 @@ describe('REQ-34.2-12 main.rs LONG_RUNNING_CHANNELS exemption list (D-10)', () =
 
   test('Phase 100 CR-02 moveInstall is a member — the sidecar handler awaits the whole copy, so a large move outlives 60s', () => {
     expect(extractLongRunningChannels()).toContain('moveInstall')
+  })
+
+  test("Phase 100 CR-02 changeInstallPath is a member — it awaits the store runner's install-record rewrite", () => {
+    expect(extractLongRunningChannels()).toContain('changeInstallPath')
+  })
+
+  test('Phase 100 CR-02 steamRemoveAllCopies is a member — it deletes every recorded Steam install root in turn', () => {
+    expect(extractLongRunningChannels()).toContain('steamRemoveAllCopies')
   })
 
   test("REQ-34.2-12 readConfig is a member — readConfig('library') calls legendary.refresh(), the same work refreshLibrary is exempted for", () => {

@@ -309,6 +309,20 @@ const LONG_RUNNING_CHANNELS: &[&str] = &[
     // 100-HUMAN-UAT item 20 times a Move over 60s. A crashed sidecar still fails fast via
     // `drain_pending_invokes`.
     "moveInstall",
+    // Phase 100 CR-02. `dispatch.ts` changeInstallPath awaits the store's
+    // `changeGameInstallPath`. Legendary's runs the runner as a child process (`move` with
+    // `--skip-move`) with no wall-clock ceiling of its own; GOG's and Nile's do not spawn, they
+    // only rewrite the installed-games record. This is the shape of the 2026-10-05 runner
+    // entries. Usually quick, but a 60s rejection would show "Couldn't set the install folder" in
+    // the Location row while the runner was still rewriting the install record. Added on shape,
+    // not timed.
+    "changeInstallPath",
+    // Phase 100 CR-02. `removeAllSteamInstallCopies` (`storeManagers/steam/removeAllCopies.ts`)
+    // deletes every recorded install root in turn and then polls once. That is the `uninstall`
+    // shape (deleting a large directory) multiplied by the number of roots. The danger zone gains
+    // an inline failure for it in plan 100-14, and a 60s rejection there would be false. Added on
+    // shape, not timed.
+    "steamRemoveAllCopies",
 ];
 
 /// Cap on `SidecarState::abandoned`, oldest-dropped past this bound.
@@ -2933,6 +2947,8 @@ mod tests {
         // Phase 100 CR-02 (plan 100-11): each awaits work with no wall-clock ceiling of its own,
         // so a 60s rejection would be a false failure in the Location row and the danger zone.
         assert_eq!(timeout_for("moveInstall"), None);
+        assert_eq!(timeout_for("changeInstallPath"), None);
+        assert_eq!(timeout_for("steamRemoveAllCopies"), None);
     }
 
     #[test]
