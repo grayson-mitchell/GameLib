@@ -187,7 +187,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 83: Native seam, gamelib-core and process/shutdown contract** — 11/11 plans; completed 2026-11-21
 - [ ] **Phase 84: Logger** — 11 plans in 9 waves (consolidated from 14, then two plans split for context budget); planned 2026-11-21 (executes after Phase 83 closes)
 - [ ] **Phase 85: Store host, config and versioned migrations** — 25 plans in 20 waves (the D-03 deletion split into four plans for context budget); planned 2026-11-21
-- [ ] **Phase 86: Pure leaf services** — not planned
+- [ ] **Phase 86: Pure leaf services** — 26 plans in 21 waves; planned 2026-11-22 (executes after 85-19/20)
 - [ ] **Phase 87: Engine, Wine and tools** — not planned
 - [ ] **Phase 88: Launch pipeline** — not planned
 - [ ] **Phase 89: Steam library state** — not planned
@@ -420,7 +420,7 @@ Plans:
   3. Diagnostics from steam-vent and reqwest appear in the log, and a repeating error is rate-limited rather than flooding the file
   4. The TS logger is reduced to a fire-and-forget forwarder, and the shell's second log path (`shell_diag`) and the TS log registrations are deleted
 
-**Plans:** 16/18 plans executed (7 gap-closure plans 84-12..84-18 added 2026-11-22 from UAT); original 11 in 9 waves; planned 2026-11-21, consolidated from 14 the same day, then the consolidated 84-06 and 84-07 each split in two to stay inside the per-plan context budget; executes only after Phase 83 closes (83-11 live gate passed, D-02)
+**Plans:** 17/18 plans executed (7 gap-closure plans 84-12..84-18 added 2026-11-22 from UAT); original 11 in 9 waves; planned 2026-11-21, consolidated from 14 the same day, then the consolidated 84-06 and 84-07 each split in two to stay inside the per-plan context budget; executes only after Phase 83 closes (83-11 live gate passed, D-02)
 
 Plans:
 **Wave 1**
@@ -464,7 +464,7 @@ Plans:
 - [x] 84-16-PLAN.md — WR-02 escape CR/LF at every native entry point; IN-03; IN-04 finish deadline
 
 **Wave 3** *(after 84-16)*
-- [ ] 84-17-PLAN.md — WR-02 privacy half: external error text and paths kept out of `gamelib.log`, plus a gate
+- [x] 84-17-PLAN.md — WR-02 privacy half: external error text and paths kept out of `gamelib.log`, plus a gate
 
 **Wave 4** *(after 84-12..84-17)*
 - [ ] 84-18-PLAN.md — Clean-worktree proof, all 11 dispositions fixed, operator push checkpoint, windows-leg CI re-proof
@@ -562,10 +562,76 @@ Plans:
   3. Recorded fixtures exist for each previously untested directory before it is ported
   4. Each ported slice's TypeScript and sidecar registrations are deleted in this phase (the delete gate per slice passes)
 
-**Plans:** 0 plans
+**Plans:** 26 plans in 21 waves; planned 2026-11-22 (executes after Phase 85's StoreHost ships, 85-19/20; D-29)
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 86 to break down)
+**Wave 1**
+- [ ] 86-01-PLAN.md — D-29 checkpoint: re-read the shipped gamelib-store host API; amend 82-STATE-OWNERSHIP (umu 86, macArch 89, runsForMe 96)
+- [ ] 86-02-PLAN.md — The live macOS gate contract 86-HUMAN-UAT.md (four D-14 items, D-15 signed upgrade), authored before coding
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 86-03-PLAN.md — `gamelib-info` (+cli) crate: CacheView over StoreHost, Http trait with pinned Replay, op wrapper with shutdown registrant; CI wiring
+- [ ] 86-04-PLAN.md — TS oracle recorder and harness; goldens for the zero-test slices (recent games, overrides, anticheat) before any Rust; redaction scan
+- [ ] 86-05-PLAN.md — Delete-gate machinery (infoPortComplete, shim/resolver schedule) proven by deleting images_cache (D-22)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 86-06-PLAN.md — Record discounts, CrossOver index and wiki + umu live; TS goldens with D-23 TS-only/Rust-only exchanges
+- [ ] 86-07-PLAN.md — ITAD and SteamGridDB oracles; operator records the keyed cases in their own terminal
+- [ ] 86-08-PLAN.md — Tracer: recent games in Rust with the shell info wiring, `removeRecent` native, Rust emit and tray (D-08)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 86-09-PLAN.md — Recent games shims; TS slice and the sidecar tray sniff deleted
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 86-10-PLAN.md — Per-game overrides in Rust; two native read channels; image cleanup confined to its dir
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 86-11-PLAN.md — Override shims (async ripple in gamedetails); TS slice deleted, store row kept in EXTRA_ROWS
+
+**Wave 7** *(blocked on Wave 6 completion)*
+- [ ] 86-12-PLAN.md — Anticheat in Rust (native lookup, status/download ops, md-5); the D-12 drift command
+
+**Wave 8** *(blocked on Wave 7 completion)*
+- [ ] 86-13-PLAN.md — Anticheat shims; TS online hook calls status then download (D-07, D-28); TS slice deleted
+
+**Wave 9** *(blocked on Wave 8 completion)*
+- [ ] 86-14-PLAN.md — Keys: shell SecretSource over the keyring, dev vault port, SteamGridDB plaintext migration, baked ITAD key (D-19, D-25, D-26)
+
+**Wave 10** *(blocked on Wave 9 completion)*
+- [ ] 86-15-PLAN.md — SteamGridDB in Rust (five native channels); migration to Rust boot; TS slice and secret store deleted
+
+**Wave 11** *(blocked on Wave 10 completion)*
+- [ ] 86-16-PLAN.md — ITAD store search, deals, Steam gids and key status native in Rust
+
+**Wave 12** *(blocked on Wave 11 completion)*
+- [ ] 86-17-PLAN.md — ITAD TS deleted; shared coverage file; cache rows kept; sidecar key bake removed
+
+**Wave 13** *(blocked on Wave 12 completion)*
+- [ ] 86-18-PLAN.md — GOG discounts in Rust behind the token resolver (D-24); TS fetcher deleted
+
+**Wave 14** *(blocked on Wave 13 completion)*
+- [ ] 86-19-PLAN.md — CrossOver index in Rust; rating map behind the game-list resolver; shared runner table
+
+**Wave 15** *(blocked on Wave 14 completion)*
+- [ ] 86-20-PLAN.md — umu and wiki sources part 1 (PCGamingWiki, AppleGamingWiki, ProtonDB, Steam Deck) with JS regex parity
+
+**Wave 16** *(blocked on Wave 15 completion)*
+- [ ] 86-21-PLAN.md — HowLongToBeat, GamesDB and the two D-23 GOG GETs in Rust
+
+**Wave 17** *(blocked on Wave 16 completion)*
+- [ ] 86-22-PLAN.md — Wiki aggregator in Rust; `getWikiGameInfo` native; one live drift run (Pitfall 11)
+
+**Wave 18** *(blocked on Wave 17 completion)*
+- [ ] 86-23-PLAN.md — umu shims, nonesteamgame wiki resolver, clear-cache shim; HLTB type moved to common
+
+**Wave 19** *(blocked on Wave 18 completion)*
+- [ ] 86-24-PLAN.md — Wiki and CrossOver TS deleted together; three cache rows kept; oracle harness retired
+
+**Wave 20** *(blocked on Wave 19 completion)*
+- [ ] 86-25-PLAN.md — Clean-worktree proof, SC4 sweep, drift run, push and signed Phase 86 build checkpoint, three-OS CI
+
+**Wave 21** *(blocked on Wave 20 completion)*
+- [ ] 86-26-PLAN.md — Run the live macOS gate (signed Phase 85 -> signed Phase 86, D-14/D-15)
 
 ### Phase 87: Engine, Wine and tools
 
