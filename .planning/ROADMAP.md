@@ -420,7 +420,7 @@ Plans:
   3. Diagnostics from steam-vent and reqwest appear in the log, and a repeating error is rate-limited rather than flooding the file
   4. The TS logger is reduced to a fire-and-forget forwarder, and the shell's second log path (`shell_diag`) and the TS log registrations are deleted
 
-**Plans:** 15/18 plans executed (7 gap-closure plans 84-12..84-18 added 2026-11-22 from UAT); original 11 in 9 waves; planned 2026-11-21, consolidated from 14 the same day, then the consolidated 84-06 and 84-07 each split in two to stay inside the per-plan context budget; executes only after Phase 83 closes (83-11 live gate passed, D-02)
+**Plans:** 16/18 plans executed (7 gap-closure plans 84-12..84-18 added 2026-11-22 from UAT); original 11 in 9 waves; planned 2026-11-21, consolidated from 14 the same day, then the consolidated 84-06 and 84-07 each split in two to stay inside the per-plan context budget; executes only after Phase 83 closes (83-11 live gate passed, D-02)
 
 Plans:
 **Wave 1**
@@ -461,7 +461,7 @@ Plans:
 - [x] 84-15-PLAN.md — WR-01 sanitise at the producer, WR-05 TS half, WR-06 bounded flush
 
 **Wave 2** *(after 84-14)*
-- [ ] 84-16-PLAN.md — WR-02 escape CR/LF at every native entry point; IN-03; IN-04 finish deadline
+- [x] 84-16-PLAN.md — WR-02 escape CR/LF at every native entry point; IN-03; IN-04 finish deadline
 
 **Wave 3** *(after 84-16)*
 - [ ] 84-17-PLAN.md — WR-02 privacy half: external error text and paths kept out of `gamelib.log`, plus a gate
