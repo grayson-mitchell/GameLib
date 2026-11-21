@@ -29,7 +29,11 @@ const REQUEST_KINDS: ReadonlySet<string> = new Set([
   'adopt-restart-busy',
   'adopt-restart-quit-timeout',
   'direct-launch-failed',
-  'direct-launch-needs-steam'
+  'direct-launch-needs-steam',
+  // debug bridged-launch-steam-signed-out: the persistent "waiting for Steam" notice and its retraction.
+  'bridge-wait-steam-not-running',
+  'bridge-wait-steam-not-signed-in',
+  'bridge-wait-end'
 ])
 
 // Standalone so tests can simulate the push without mounting GlobalState.

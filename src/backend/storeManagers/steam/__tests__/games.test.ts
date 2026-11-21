@@ -175,6 +175,7 @@ import {
   resolveBridgeLaunchWorkingDir
 } from '../bridge/launchTarget'
 import { ensureBridgeHelperReady } from '../bridge/helperProcess'
+import { readSteamWantsOfflineMode } from '../bridge/steamOfflineMode'
 import { writeBridgeConfig } from '../bridge/bridgeConfig'
 import {
   applySteamBridgeKnownFixes,
@@ -888,6 +889,9 @@ jest.mock('../bridge/launchTarget', () => ({
 // ── bridge/helperProcess.ts mock (24-06, widened Phase 51 Plan 01) —
 // ensureBridgeHelperReady() gate + stopBridgeHelper() teardown hook, both
 // consumed by launch()'s bridge branch.
+jest.mock('../bridge/steamOfflineMode', () => ({
+  readSteamWantsOfflineMode: jest.fn()
+}))
 jest.mock('../bridge/helperProcess', () => ({
   ensureBridgeHelperReady: jest.fn()
 }))
@@ -2756,22 +2760,171 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       }
     )
 
-    it('quick 261027-aue: launch passes onWaitingForSteam, which fires notify() with the waiting strings', async () => {
-      ;(placeShimForGame as jest.Mock).mockResolvedValue({
-        status: 'already-placed',
-        shimPath: RESOLVED_EXE_PATH
+    describe('debug bridged-launch-steam-signed-out: the in-app wait notice', () => {
+      const waitNotices = () =>
+        sendFrontendMessage.mock.calls
+          .filter((c) => c[0] === 'steamRequestNotice')
+          .map((c) => c[1] as { appId: string; kind: string; seq: number })
+      // The retraction is fire-and-forget (the launch does not wait on a notice).
+      const settle = () => new Promise<void>((r) => setImmediate(r))
+      const holdThen = (
+        cause: 'steam-not-running' | 'steam-not-signed-in',
+        result: Record<string, unknown>
+      ) =>
+        (ensureBridgeHelperReady as jest.Mock).mockImplementationOnce(
+          async (
+            _deps: unknown,
+            _appId: string,
+            options: {
+              onWaitingForSteam: (
+                c: 'steam-not-running' | 'steam-not-signed-in'
+              ) => void
+            }
+          ) => {
+            options.onWaitingForSteam(cause)
+            return result
+          }
+        )
+
+      beforeEach(() => {
+        ;(placeShimForGame as jest.Mock).mockResolvedValue({
+          status: 'already-placed',
+          shimPath: RESOLVED_EXE_PATH
+        })
+        ;(notify as jest.Mock).mockClear()
+        sendFrontendMessage.mockClear()
       })
-      ;(notify as jest.Mock).mockClear()
 
-      await new SteamGame(MISS_APP_ID, steamTestDeps).launch({} as any)
+      it.each([
+        // [network offline, loginusers WantsOfflineMode, expected answer]
+        [false, false, false], // "Logged In Elsewhere": hold
+        [false, true, true], // offline mode by choice: launch
+        [false, null, true], // unreadable loginusers.vdf: the old rule, launch
+        [true, false, true] // no network: launch, the vdf is not consulted
+      ])(
+        'round 3: steamOfflineByChoice with network offline=%s and WantsOfflineMode=%s answers %s',
+        async (offline, wants, expected) => {
+          ;(checkConnectivityNow as jest.Mock).mockResolvedValueOnce({
+            offline,
+            source: offline ? 'dns-failed' : 'dns-ok',
+            elapsedMs: 0
+          })
+          const read = readSteamWantsOfflineMode as jest.Mock
+          read.mockReset()
+          read.mockResolvedValue(wants)
 
-      const options = (ensureBridgeHelperReady as jest.Mock).mock.calls[0][2]
-      expect(options.onWaitingForSteam).toEqual(expect.any(Function))
-      options.onWaitingForSteam('steam-not-running')
-      expect(notify).toHaveBeenCalledTimes(1)
-      expect(notify).toHaveBeenCalledWith({
-        title: 'gamelib:steam.bridge.waiting.title',
-        body: 'gamelib:steam.bridge.waiting.notRunning'
+          await new SteamGame(MISS_APP_ID, steamTestDeps).launch({} as any)
+
+          const calls = (ensureBridgeHelperReady as jest.Mock).mock.calls
+          const options = calls[calls.length - 1][2] as {
+            steamOfflineByChoice: () => Promise<boolean>
+          }
+          await expect(options.steamOfflineByChoice()).resolves.toBe(expected)
+          if (offline) {
+            expect(read).not.toHaveBeenCalled()
+          } else {
+            expect(read).toHaveBeenCalledWith(
+              steamTestDeps,
+              steamTestDeps.paths.userHome
+            )
+          }
+        }
+      )
+
+      it('launch passes onWaitingForSteam, and it pushes the in-app notice instead of a system notification', async () => {
+        await new SteamGame(MISS_APP_ID, steamTestDeps).launch({} as any)
+
+        const options = (ensureBridgeHelperReady as jest.Mock).mock.calls[0][2]
+        expect(options.onWaitingForSteam).toEqual(expect.any(Function))
+        options.onWaitingForSteam('steam-not-running')
+        await settle()
+        expect(waitNotices()).toEqual([
+          expect.objectContaining({
+            appId: MISS_APP_ID,
+            kind: 'bridge-wait-steam-not-running'
+          })
+        ])
+        expect(notify).not.toHaveBeenCalled()
+      })
+
+      it('a launch that never waits pushes no wait notice at all', async () => {
+        await new SteamGame(MISS_APP_ID, steamTestDeps).launch({} as any)
+        await settle()
+        expect(waitNotices()).toEqual([])
+      })
+
+      it('the hold ends in a launch: the wait notice is pushed, then retracted for the same game with a newer seq', async () => {
+        holdThen('steam-not-signed-in', {
+          status: 'ready',
+          ready: true,
+          port: 55001,
+          secret: 'a'.repeat(64)
+        })
+
+        const result = await new SteamGame(MISS_APP_ID, steamTestDeps).launch(
+          {} as any
+        )
+        await settle()
+
+        expect(result).toBe(true)
+        expect(runWineCommand).toHaveBeenCalled()
+        const pushed = waitNotices()
+        expect(pushed.map((n) => n.kind)).toEqual([
+          'bridge-wait-steam-not-signed-in',
+          'bridge-wait-end'
+        ])
+        const [started, ended] = pushed
+        expect(ended?.appId).toBe(MISS_APP_ID)
+        expect(ended?.seq).toBeGreaterThan(started?.seq ?? Infinity)
+        expect(notify).not.toHaveBeenCalled()
+      })
+
+      it.each(['steam-not-running', 'steam-not-signed-in'] as const)(
+        'the hold ends in the %s dialog: no launch, the wait notice is retracted',
+        async (status) => {
+          holdThen(status, { status, ready: false })
+
+          const result = await new SteamGame(MISS_APP_ID, steamTestDeps).launch(
+            {} as any
+          )
+          await settle()
+
+          expect(result).toBe(false)
+          expect(runWineCommand).not.toHaveBeenCalled()
+          expect(sendFrontendMessage).toHaveBeenCalledWith(
+            'steamBridgeSetupRequired',
+            expect.objectContaining({ reason: status })
+          )
+          expect(waitNotices().map((n) => n.kind)).toEqual([
+            status === 'steam-not-running'
+              ? 'bridge-wait-steam-not-running'
+              : 'bridge-wait-steam-not-signed-in',
+            'bridge-wait-end'
+          ])
+        }
+      )
+
+      it('a throw out of the hold still retracts the notice', async () => {
+        ;(ensureBridgeHelperReady as jest.Mock).mockImplementationOnce(
+          async (
+            _deps: unknown,
+            _appId: string,
+            options: { onWaitingForSteam: (c: 'steam-not-signed-in') => void }
+          ) => {
+            options.onWaitingForSteam('steam-not-signed-in')
+            throw new Error('spawn blew up')
+          }
+        )
+
+        await new SteamGame(MISS_APP_ID, steamTestDeps)
+          .launch({} as any)
+          .catch(() => false)
+        await settle()
+
+        expect(waitNotices().map((n) => n.kind)).toEqual([
+          'bridge-wait-steam-not-signed-in',
+          'bridge-wait-end'
+        ])
       })
     })
   })

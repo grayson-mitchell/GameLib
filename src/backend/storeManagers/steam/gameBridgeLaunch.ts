@@ -6,12 +6,11 @@
  * are free functions, so a test spies on the module export.
  */
 import { createRunTool } from 'backend/engine/runTool'
-import i18next from 'i18next'
 import { existsSync } from 'graceful-fs'
 import { basename } from 'node:path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { checkConnectivityNow } from 'backend/connectivityNow'
-import { notify } from 'backend/dialog/dialog'
+import { readSteamWantsOfflineMode } from './bridge/steamOfflineMode'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { isBridgeBottleReady, getBridgeBottleSettings } from './bridgeBottle'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
@@ -25,6 +24,7 @@ import {
 } from './bridge/drm/steamclientLayerMode'
 import { resolveBridgeLaunchExe } from './bridge/launchTarget'
 import { ensureBridgeHelperReady } from './bridge/helperProcess'
+import { createBridgeWaitNotice } from './bridgeWaitNotice'
 import { writeBridgeConfig } from './bridge/bridgeConfig'
 import {
   readBridgeVerdict,
@@ -519,30 +519,35 @@ export async function launchBridgeGameBody(
 
   // 261027-aue: InitFlat fails fast while Steam is quit or signing in, so the
   // helper layer waits (bounded) for it -- tell the user, who would
-  // otherwise see up to a minute of silence after pressing Play.
-  const helperReady = await ensureBridgeHelperReady(
-    steamGame.deps,
-    steamGame.appId,
-    {
-      onWaitingForSteam: (cause) =>
-        notify(steamGame.deps, {
-          title: i18next.t(
-            'gamelib:steam.bridge.waiting.title',
-            'Waiting for Steam'
-          ),
-          body:
-            cause === 'steam-not-running'
-              ? i18next.t(
-                  'gamelib:steam.bridge.waiting.notRunning',
-                  'Starting Steam. The game will launch once Steam has signed in.'
-                )
-              : i18next.t(
-                  'gamelib:steam.bridge.waiting.signingIn',
-                  'Waiting for Steam to finish signing in. The game will launch once it has.'
-                )
-        })
-    }
-  )
+  // otherwise see up to a minute of silence after pressing Play. The notice
+  // is in-app (a system notification was never seen) and is retracted the
+  // moment the hold ends, whether the game launches or the Steam dialog takes
+  // over. A launch that never waits pushes nothing.
+  const waitNotice = createBridgeWaitNotice(steamGame)
+  let helperReady: Awaited<ReturnType<typeof ensureBridgeHelperReady>>
+  try {
+    helperReady = await ensureBridgeHelperReady(
+      steamGame.deps,
+      steamGame.appId,
+      {
+        onWaitingForSteam: (cause) => waitNotice.begin(cause),
+        // Round 3: Steam holds the account but is not logged on. Offline mode
+        // by choice (loginusers.vdf WantsOfflineMode) and a launch with no
+        // network go ahead; otherwise Steam was signed out ("Logged In
+        // Elsewhere") and the launch holds. An unreadable file keeps the old
+        // rule and launches.
+        steamOfflineByChoice: async () =>
+          connectivity.offline ||
+          (await readSteamWantsOfflineMode(
+            steamGame.deps,
+            steamGame.deps.paths.userHome
+          )) !== false
+      }
+    )
+  } finally {
+    // Not awaited: the launch must not wait on a notice. `end` never rejects.
+    void waitNotice.end()
+  }
   if (
     !helperReady.ready ||
     helperReady.port === undefined ||

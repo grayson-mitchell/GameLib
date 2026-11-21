@@ -79,6 +79,7 @@ pub(crate) enum RustInvokeChannel {
     SteamfilesReadInstallscript,
     SteamfilesReadLibraryFolders,
     SteamfilesReadLocalconfigBetaKey,
+    SteamfilesReadLoginusersOfflineMode,
     SteamfilesReadRunningAppId,
     SteamfilesScanAcfs,
     SteamfilesShortcutsApply,
@@ -202,6 +203,7 @@ impl RustInvokeChannel {
         RustInvokeChannel::SteamfilesReadInstallscript,
         RustInvokeChannel::SteamfilesReadLibraryFolders,
         RustInvokeChannel::SteamfilesReadLocalconfigBetaKey,
+        RustInvokeChannel::SteamfilesReadLoginusersOfflineMode,
         RustInvokeChannel::SteamfilesReadRunningAppId,
         RustInvokeChannel::SteamfilesScanAcfs,
         RustInvokeChannel::SteamfilesShortcutsApply,
@@ -325,6 +327,7 @@ impl RustInvokeChannel {
             "steamfiles_read_installscript" => Some(RustInvokeChannel::SteamfilesReadInstallscript),
             "steamfiles_read_library_folders" => Some(RustInvokeChannel::SteamfilesReadLibraryFolders),
             "steamfiles_read_localconfig_beta_key" => Some(RustInvokeChannel::SteamfilesReadLocalconfigBetaKey),
+            "steamfiles_read_loginusers_offline_mode" => Some(RustInvokeChannel::SteamfilesReadLoginusersOfflineMode),
             "steamfiles_read_running_app_id" => Some(RustInvokeChannel::SteamfilesReadRunningAppId),
             "steamfiles_scan_acfs" => Some(RustInvokeChannel::SteamfilesScanAcfs),
             "steamfiles_shortcuts_apply" => Some(RustInvokeChannel::SteamfilesShortcutsApply),
@@ -450,6 +453,7 @@ impl RustInvokeChannel {
             RustInvokeChannel::SteamfilesReadInstallscript => "steamfiles_read_installscript",
             RustInvokeChannel::SteamfilesReadLibraryFolders => "steamfiles_read_library_folders",
             RustInvokeChannel::SteamfilesReadLocalconfigBetaKey => "steamfiles_read_localconfig_beta_key",
+            RustInvokeChannel::SteamfilesReadLoginusersOfflineMode => "steamfiles_read_loginusers_offline_mode",
             RustInvokeChannel::SteamfilesReadRunningAppId => "steamfiles_read_running_app_id",
             RustInvokeChannel::SteamfilesScanAcfs => "steamfiles_scan_acfs",
             RustInvokeChannel::SteamfilesShortcutsApply => "steamfiles_shortcuts_apply",
@@ -1631,6 +1635,18 @@ impl SteamfilesReadLocalconfigBetaKeyArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let first = args.first().ok_or_else(|| "steamfiles_read_localconfig_beta_key:bad-args".to_string())?;
         serde_json::from_value(first.clone()).map_err(|_| "steamfiles_read_localconfig_beta_key:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct SteamfilesReadLoginusersOfflineModeArgs {
+    pub(crate) path: String,
+}
+
+impl SteamfilesReadLoginusersOfflineModeArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "steamfiles_read_loginusers_offline_mode:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "steamfiles_read_loginusers_offline_mode:bad-args".to_string())
     }
 }
 

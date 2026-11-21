@@ -434,3 +434,63 @@ fn playtime_reader_rejects_over_cap() {
     assert!(!read_localconfig_playtime_capped(&p, 1 << 20).is_empty());
     assert!(read_localconfig_playtime_capped(&p, 16).is_empty());
 }
+
+fn loginusers(text: &str) -> Option<bool> {
+    let d = tempfile::tempdir().unwrap();
+    let p = d.path().join("loginusers.vdf");
+    std::fs::write(&p, text).unwrap();
+    read_loginusers_offline_mode(&p).wants_offline_mode
+}
+
+fn user(id: &str, most_recent: &str, offline: Option<&str>) -> String {
+    let offline = offline
+        .map(|v| format!("\"WantsOfflineMode\" \"{v}\""))
+        .unwrap_or_default();
+    format!(
+        "\"{id}\" {{ \"AccountName\" \"a{id}\" \"MostRecent\" \"{most_recent}\" {offline} \"SkipOfflineModeWarning\" \"0\" }}"
+    )
+}
+
+#[test]
+fn loginusers_offline_mode_reads_the_most_recent_user() {
+    let users = |body: String| format!("\"users\" {{ {body} }}");
+    // Mac Steam's own file on 2026-11-21 after a "Logged In Elsewhere" kick: one user, "0".
+    assert_eq!(
+        loginusers(&users(user("765611", "1", Some("0")))),
+        Some(false)
+    );
+    assert_eq!(
+        loginusers(&users(user("765611", "1", Some("1")))),
+        Some(true)
+    );
+    // Key absent is not offline mode.
+    assert_eq!(loginusers(&users(user("765611", "1", None))), Some(false));
+    // The MostRecent user wins over file order.
+    let two = format!("{}{}", user("1", "0", Some("1")), user("2", "1", Some("0")));
+    assert_eq!(loginusers(&users(two)), Some(false));
+    let two = format!("{}{}", user("1", "1", Some("1")), user("2", "0", Some("0")));
+    assert_eq!(loginusers(&users(two)), Some(true));
+    // A sole user with no MostRecent mark is still the user.
+    assert_eq!(loginusers(&users(user("1", "0", Some("1")))), Some(true));
+    // Several users and none marked: no pick.
+    let two = format!("{}{}", user("1", "0", Some("1")), user("2", "0", Some("1")));
+    assert_eq!(loginusers(&users(two)), None);
+    // Case-insensitive keys, as Steam's KV is.
+    assert_eq!(
+        loginusers("\"Users\" { \"1\" { \"mostrecent\" \"1\" \"wantsofflinemode\" \"1\" } }"),
+        Some(true)
+    );
+}
+
+#[test]
+fn loginusers_offline_mode_fails_soft() {
+    assert_eq!(loginusers(""), None);
+    assert_eq!(loginusers("\"users\" { \"1\" {"), None);
+    assert_eq!(loginusers("\"users\" \"x\""), None);
+    assert_eq!(loginusers("\"users\" { }"), None);
+    assert_eq!(
+        read_loginusers_offline_mode(Path::new("/nonexistent/gamelib/loginusers.vdf"))
+            .wants_offline_mode,
+        None
+    );
+}

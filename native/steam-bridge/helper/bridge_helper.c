@@ -55,7 +55,9 @@
  *     status: 0=ok, 1=err/no-live-session (or not-inited, for CONTROL WHOAMI
  *     answered before init succeeds). A CONTROL WHOAMI STATUS_ERR with a
  *     ONE-byte retBlob is a reason code (WHOAMI_ERR_REASON_ACCESSOR_MISSING:
- *     init ok but SteamUser unresolvable); an empty retBlob is not-inited.
+ *     init ok but SteamUser unresolvable; WHOAMI_ERR_REASON_NOT_SIGNED_IN: init
+ *     ok but Mac Steam has no signed-in account; WHOAMI_ERR_REASON_NOT_LOGGED_ON:
+ *     account kept but not logged on); an empty retBlob is not-inited.
  *
  * CONTROL frame (Phase 24 review finding #7, extended D-51-01): a reserved
  * ordinal (0xFFFF) reconciles the human-readable PING/WHOAMI text handshake
@@ -69,7 +71,13 @@
  *     helper.
  *   - WHOAMI (slot 1): answered ok+real-SteamID64-bytes ONLY once InitFlat
  *     succeeded against the live signed-in Mac Steam -- proves "init
- *     succeeded against a live session".
+ *     succeeded against a live session". InitFlat alone does NOT prove
+ *     that: ConnectToGlobalUser succeeds against a Steam parked at its
+ *     sign-in screen (261105-ord gate item 6), so WHOAMI answers ok only
+ *     when BLoggedOn is true. Otherwise STATUS_ERR with a one-byte reason:
+ *     WHOAMI_ERR_REASON_NOT_SIGNED_IN (no account) or
+ *     WHOAMI_ERR_REASON_NOT_LOGGED_ON (account kept: offline mode, or a
+ *     "Logged In Elsewhere" kick -- the backend tells them apart).
  *   - HELLO (slot 2, D-51-01; WR-03): the connection handshake. The arg
  *     blob is the 64 ASCII-hex per-launch secret, optionally followed by ONE
  *     role byte (HELLO_ROLE_PROBE = the backend readiness probe). A
@@ -243,6 +251,18 @@ static void gl_ovl_publish_closed_at_exit(void) {
 // retBlob still means not-inited. MUST equal WHOAMI_ERR_REASON_ACCESSOR_MISSING
 // in src/backend/storeManagers/steam/bridge/protocol.ts.
 #define WHOAMI_ERR_REASON_ACCESSOR_MISSING 0x02
+// Bridged-launch-while-signed-out fix: one-byte retBlob on a CONTROL WHOAMI
+// STATUS_ERR meaning "InitFlat succeeded but Mac Steam has no signed-in
+// account" (Steam is at its sign-in screen). The backend holds the launch on
+// it, exactly as for an InitFlat `ConnectToGlobalUser failed`. MUST equal
+// WHOAMI_ERR_REASON_NOT_SIGNED_IN in src/backend/storeManagers/steam/bridge/protocol.ts.
+#define WHOAMI_ERR_REASON_NOT_SIGNED_IN 0x03
+// Round 3: Steam holds the account but is not logged on. Offline mode by choice
+// and a "Logged In Elsewhere" kick both read this way (BLoggedOn 0, account id
+// kept; measured at the kicked sign-in screen 2026-11-21), so the helper does
+// not decide: the backend reads loginusers.vdf WantsOfflineMode. MUST equal
+// WHOAMI_ERR_REASON_NOT_LOGGED_ON in src/backend/storeManagers/steam/bridge/protocol.ts.
+#define WHOAMI_ERR_REASON_NOT_LOGGED_ON 0x04
 // D-51-01: the shim's own connect-time handshake slot (see module doc).
 #define CONTROL_SLOT_HELLO 2
 // Slot 3 retired in Phase 56 (56-14, D-20); never reuse it.
@@ -1916,6 +1936,7 @@ static uint8_t g_call_seen[BD_CALL_COUNT > 0 ? BD_CALL_COUNT : 1];
 
 // 53-13 WR-06: helper-side cap; the shim's 16-report cap (T-53-25) is not a trust boundary.
 static unsigned g_nover_logged = 0;
+static unsigned g_whoami_state_logged = 0;
 
 // WR-03: the launch secret, copied from env at startup, then scrubbed in place and unsetenv'd.
 static char g_secret[BRIDGE_SECRET_HEX_LEN];
@@ -2480,6 +2501,29 @@ static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, u
         return;
       }
       uint64_t id = g_bd_flat_SteamUser023_GetSteamID(g_bd_self_steamuser023);
+      // A Steam parked at its sign-in screen still lets InitFlat connect, so a
+      // bare STATUS_OK here said "signed in" for a signed-out Steam. Only
+      // BLoggedOn proves a live session. Not logged on with no account (id
+      // with account 0, the 0x0110000100000000 base id) is NOT_SIGNED_IN. Not
+      // logged on with the account kept is NOT_LOGGED_ON: offline mode by
+      // choice reads that way, and so does a "Logged In Elsewhere" kick, so
+      // the backend decides between them. `& 0xff` because the flat bool
+      // return leaves the upper bits of the register undefined.
+      int loggedOn = g_bd_flat_SteamUser023_BLoggedOn != NULL &&
+                     (g_bd_flat_SteamUser023_BLoggedOn(g_bd_self_steamuser023) & 0xff) != 0;
+      int accountPresent = (id & 0xffffffffULL) != 0;
+      if (g_whoami_state_logged < 4) {
+        // Flags only, never the SteamID (V7). The first live sign-in-screen run
+        // reads this line to confirm which of the two signals tracks it.
+        g_whoami_state_logged++;
+        logts_f("INIT", "user loggedOn=%d accountPresent=%d", loggedOn, accountPresent);
+      }
+      if (!loggedOn) {
+        uint8_t reason = accountPresent ? WHOAMI_ERR_REASON_NOT_LOGGED_ON
+                                        : WHOAMI_ERR_REASON_NOT_SIGNED_IN;
+        send_response(fd, requestId, STATUS_ERR, &reason, 1);
+        return;
+      }
       uint8_t retbuf[8];
       memcpy(retbuf, &id, 8); // raw bytes, never parsed to a JS number
       send_response(fd, requestId, STATUS_OK, retbuf, 8);

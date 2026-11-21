@@ -587,6 +587,17 @@ export const RUST_STEAMFILES_READ_LOCALCONFIG_BETA_KEY =
   'steamfiles_read_localconfig_beta_key' as const
 
 /**
+ * Rust-side channel name: steamfiles op `steamfiles_read_loginusers_offline_mode` (bridged-launch-while-signed-out
+ * fix), a pass-through to the Tauri-free `gamelib-steamfiles` crate (the same dispatch `gamelib-steamfiles-cli` uses).
+ *
+ * Takes ONE object arg (`{ path }`); paths in, typed result out. Resolves the most recent user's `WantsOfflineMode`
+ * from Steam's `config/loginusers.vdf`. Bad args reject `steamfiles_read_loginusers_offline_mode:bad-args`; unreadable
+ * or unparseable files RESOLVE with a typed result.
+ */
+export const RUST_STEAMFILES_READ_LOGINUSERS_OFFLINE_MODE =
+  'steamfiles_read_loginusers_offline_mode' as const
+
+/**
  * Rust-side channel name: Phase 75 steamfiles op `steamfiles_read_running_app_id`, a pass-through to the
  * Tauri-free `gamelib-steamfiles` crate (the same dispatch `gamelib-steamfiles-cli` uses).
  *
@@ -1115,6 +1126,7 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_STEAMFILES_READ_INSTALLSCRIPT,
   RUST_STEAMFILES_READ_LIBRARY_FOLDERS,
   RUST_STEAMFILES_READ_LOCALCONFIG_BETA_KEY,
+  RUST_STEAMFILES_READ_LOGINUSERS_OFFLINE_MODE,
   RUST_STEAMFILES_READ_RUNNING_APP_ID,
   RUST_STEAMFILES_SCAN_ACFS,
   RUST_STEAMFILES_SHORTCUTS_APPLY,
@@ -1207,6 +1219,7 @@ export const RUST_STEAMFILES_CHANNELS = [
   RUST_STEAMFILES_READ_INSTALLSCRIPT,
   RUST_STEAMFILES_READ_LIBRARY_FOLDERS,
   RUST_STEAMFILES_READ_LOCALCONFIG_BETA_KEY,
+  RUST_STEAMFILES_READ_LOGINUSERS_OFFLINE_MODE,
   RUST_STEAMFILES_READ_RUNNING_APP_ID,
   RUST_STEAMFILES_SCAN_ACFS,
   RUST_STEAMFILES_SHORTCUTS_APPLY,

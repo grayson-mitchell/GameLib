@@ -91,7 +91,9 @@ import {
   CONTROL_ORDINAL,
   CONTROL_SLOT,
   STATUS_ERR,
-  STATUS_OK
+  STATUS_OK,
+  WHOAMI_ERR_REASON_NOT_SIGNED_IN,
+  WHOAMI_ERR_REASON_NOT_LOGGED_ON
 } from '../protocol'
 
 // outside src/'s tsconfig `include`; other real-build suites (e.g. the
@@ -2801,6 +2803,302 @@ describeDarwinOnly(
           pinRegistry.shutdownAll()
         }
       }, 40000)
+    })
+
+    // Bridged launch while Mac Steam is signed out. Steam parked at its sign-in screen lets
+    // SteamAPI_InitFlat connect (261105-ord gate item 6), so the helper reaches READY init=ok and
+    // WHOAMI used to answer STATUS_OK with an account-0 SteamID. A fake libsteam_api whose
+    // sign-in state is picked by an env var drives the REAL compiled WHOAMI handler through the
+    // four states Steam can be in. The helper is built with the pin overridden to the fake's
+    // sha, like the 261117-ubb block above, so the real validator and argv path run.
+    describe('WHOAMI sign-in state (fake libsteam_api, bridged launch while Steam is signed out)', () => {
+      let signInHelperPath: string
+      let signInDylibPath: string
+
+      // CSteamID: universe 1 << 56, type individual 1 << 52, instance 1 << 32 (desktop), then the
+      // account id in the low 32 bits. The signed-out Steam answers the base id with account 0.
+      const BASE_ID = '0x0110000100000000ULL'
+      const FAKE_STEAM_API_SOURCE = [
+        '#include <stdint.h>',
+        '#include <stdlib.h>',
+        '#include <string.h>',
+        // signedout: BLoggedOn 0, account 0. signedout-nil: BLoggedOn 0, id 0 outright.
+        // online: BLoggedOn 1, account set. offline: BLoggedOn 0 but the account is kept
+        // (Steam offline mode, or briefly off the network).
+        'static const char *st(void) { const char *s = getenv("GL_FAKE_STEAM_STATE"); return s ? s : "online"; }',
+        'int SteamAPI_InitFlat(char *err) { err[0] = 0; return 0; }',
+        'void SteamAPI_RunCallbacks(void) {}',
+        'static int dummy;',
+        'void *SteamAPI_SteamUser_v023(void) { return &dummy; }',
+        'int SteamAPI_ISteamUser_BLoggedOn(void *self) {',
+        '  (void)self;',
+        // The flat bool return leaves the upper register bits undefined; the helper masks to 8 bits.
+        '  return strcmp(st(), "online") == 0 ? (int)0xabcdef01 : (int)0xabcdef00;',
+        '}',
+        'uint64_t SteamAPI_ISteamUser_GetSteamID(void *self) {',
+        '  (void)self;',
+        '  if (strcmp(st(), "signedout-nil") == 0) return 0;',
+        `  if (strcmp(st(), "signedout") == 0) return ${BASE_ID};`,
+        `  return ${BASE_ID} | 35601368ULL;`,
+        '}'
+      ].join('\n')
+
+      const sha256Of = (path: string) =>
+        createHash('sha256').update(readFileSync(path)).digest('hex')
+
+      beforeAll(() => {
+        const buildDir = mkdtempSync(join(profile.root, 'signin-build-'))
+        const { command, args } = buildHelperCompileArgv()
+        const archFlag = args[args.indexOf('-arch') + 1] as string
+
+        const dylibSource = join(buildDir, 'fake_steam_api.c')
+        writeFileSync(dylibSource, FAKE_STEAM_API_SOURCE)
+        const dylibDir = join(buildDir, 'dylib')
+        mkdirSync(dylibDir, { mode: 0o700 })
+        signInDylibPath = join(dylibDir, 'libsteam_api.dylib')
+        execFileSync(
+          'clang',
+          [
+            '-dynamiclib',
+            '-arch',
+            archFlag,
+            '-o',
+            signInDylibPath,
+            dylibSource
+          ],
+          { env: profile.childEnv(), stdio: 'pipe' }
+        )
+
+        const outputFlagIndex = args.indexOf('-o')
+        const customArgs = [...args]
+        signInHelperPath = join(buildDir, 'steam-bridge-helper-signin')
+        customArgs[outputFlagIndex + 1] = signInHelperPath
+        customArgs.splice(
+          outputFlagIndex,
+          0,
+          `-DGAMELIB_STEAM_API_PIN_SHA256="${sha256Of(signInDylibPath)}"`
+        )
+        execFileSync(command, customArgs, {
+          cwd: REPO_ROOT,
+          env: profile.childEnv(),
+          stdio: 'pipe'
+        })
+        chmodSync(signInHelperPath, 0o755)
+      }, 60000)
+
+      const envFor = (state: string): NodeJS.ProcessEnv => ({
+        ...profile.childEnv(),
+        [BRIDGE_SECRET_ENV]: TEST_SECRET,
+        GL_FAKE_STEAM_STATE: state
+      })
+
+      /** Spawns the helper against the fake dylib in `state`, authenticates a probe-role
+       * connection and answers one CONTROL WHOAMI. */
+      const whoamiFor = async (state: string) => {
+        const stageDir = mkdtempSync(join(profile.root, 'signin-run-'))
+        const child = spawn(
+          signInHelperPath,
+          [
+            '--appid',
+            AVERNUM_APP_ID,
+            '--port',
+            '0',
+            '--steam-api-dylib',
+            signInDylibPath
+          ],
+          {
+            cwd: stageDir,
+            stdio: ['ignore', 'pipe', 'pipe'],
+            env: envFor(state)
+          }
+        )
+        let stderr = ''
+        child.stderr?.on('data', (data: Buffer) => {
+          stderr += data.toString()
+        })
+        try {
+          const port = await new Promise<number>((resolvePromise, reject) => {
+            const timeout = setTimeout(
+              () => reject(new Error(`no LISTEN line -- stderr: ${stderr}`)),
+              8000
+            )
+            const poll = setInterval(() => {
+              const m = /LISTEN 127\.0\.0\.1:(\d+)/.exec(stderr)
+              if (m) {
+                clearInterval(poll)
+                clearTimeout(timeout)
+                resolvePromise(Number(m[1]))
+              }
+            }, 25)
+          })
+          const socket = new Socket()
+          await new Promise<void>((res, rej) => {
+            socket.once('error', rej)
+            socket.connect(port, '127.0.0.1', () => res())
+          })
+          try {
+            const hello = await sendFrameOnSocket(
+              socket,
+              encodeHello(1, TEST_SECRET, HELLO_ROLE_PROBE)
+            )
+            expect(hello.status).toBe(STATUS_OK)
+            const whoami = await sendFrameOnSocket(
+              socket,
+              encodeControl(2, 'whoami')
+            )
+            return { whoami, stderr: () => stderr }
+          } finally {
+            socket.destroy()
+          }
+        } finally {
+          child.kill()
+        }
+      }
+
+      test.each([
+        ['signedout', 'Steam at its sign-in screen: BLoggedOn 0, account 0'],
+        ['signedout-nil', 'a nil SteamID and BLoggedOn 0']
+      ])(
+        '%s (%s): WHOAMI answers STATUS_ERR with the one-byte not-signed-in reason, and logs flags only',
+        async (state) => {
+          const { whoami, stderr } = await whoamiFor(state)
+          expect(whoami.status).toBe(STATUS_ERR)
+          expect([...whoami.retBlob]).toEqual([WHOAMI_ERR_REASON_NOT_SIGNED_IN])
+          expect(stderr()).toContain('INIT   user loggedOn=0 accountPresent=0')
+          // Never the SteamID (V7): neither the base id nor any 17-digit Steam64.
+          expect(stderr()).not.toMatch(/7656119\d{10}/)
+          expect(stderr()).not.toContain('76561197960265728')
+        },
+        20000
+      )
+
+      test('online: WHOAMI answers STATUS_OK with the 8 raw SteamID bytes (account 35601368)', async () => {
+        const { whoami, stderr } = await whoamiFor('online')
+        expect(whoami.status).toBe(STATUS_OK)
+        expect(whoami.retBlob).toHaveLength(8)
+        // Low 32 bits = the account id, high 32 bits = universe/type/instance.
+        expect(whoami.retBlob.readUInt32LE(0)).toBe(35601368)
+        expect(whoami.retBlob.readUInt32LE(4)).toBe(0x01100001)
+        expect(stderr()).toContain('INIT   user loggedOn=1 accountPresent=1')
+      }, 20000)
+
+      test('account kept, BLoggedOn 0 (offline mode, or kicked by "Logged In Elsewhere"): WHOAMI answers STATUS_ERR with the one-byte not-logged-on reason', async () => {
+        // Round 3: the kicked sign-in screen measured live on 2026-11-21 reads
+        // exactly like offline mode, so the helper leaves the call to the backend.
+        const { whoami, stderr } = await whoamiFor('offline')
+        expect(whoami.status).toBe(STATUS_ERR)
+        expect([...whoami.retBlob]).toEqual([WHOAMI_ERR_REASON_NOT_LOGGED_ON])
+        expect(stderr()).toContain('INIT   user loggedOn=0 accountPresent=1')
+        expect(stderr()).not.toMatch(/7656119\d{10}/)
+      }, 20000)
+
+      describe('through ensureBridgeHelperReady', () => {
+        const SIGNIN_APP_ID = '411300'
+
+        const registryFor = (state: string, budgetMs: number) =>
+          createBridgeHelperRegistry({
+            steamWaitSchedule: { budgetMs, intervalMs: 100 },
+            helperPath: () => signInHelperPath,
+            spawnEnv: () => ({
+              ...profile.childEnv(),
+              GL_FAKE_STEAM_STATE: state
+            }),
+            resolveSteamApiDylib: () => Promise.resolve(signInDylibPath)
+          })
+
+        test('a signed-out Steam holds the launch, never reports ready, and ends in exactly one steam-not-signed-in setup message', async () => {
+          const signedOutRegistry = registryFor('signedout', 1500)
+          sendFrontendMessage.mockClear()
+          const onWaitingForSteam = jest.fn()
+          try {
+            const result = await ensureBridgeHelperReady(
+              { ...helperDeps(), bridgeHelpers: signedOutRegistry },
+              SIGNIN_APP_ID,
+              { onWaitingForSteam }
+            )
+            expect(result.ready).toBe(false)
+            expect(result.status).toBe('steam-not-signed-in')
+            expect(onWaitingForSteam).toHaveBeenCalledWith(
+              'steam-not-signed-in'
+            )
+            expect(sendFrontendMessage).toHaveBeenCalledTimes(1)
+            expect(sendFrontendMessage).toHaveBeenCalledWith(
+              'steamBridgeSetupRequired',
+              {
+                appName: SIGNIN_APP_ID,
+                reason: 'steam-not-signed-in',
+                fallbackAvailable: false
+              }
+            )
+          } finally {
+            signedOutRegistry.shutdownAll()
+          }
+        }, 40000)
+
+        test('account kept but not logged on, NOT offline by choice ("Logged In Elsewhere"): holds and ends in steam-not-signed-in', async () => {
+          const kickedRegistry = registryFor('offline', 1500)
+          sendFrontendMessage.mockClear()
+          const onWaitingForSteam = jest.fn()
+          const steamOfflineByChoice = jest.fn(() => Promise.resolve(false))
+          try {
+            const result = await ensureBridgeHelperReady(
+              { ...helperDeps(), bridgeHelpers: kickedRegistry },
+              SIGNIN_APP_ID,
+              { onWaitingForSteam, steamOfflineByChoice }
+            )
+            expect(result.ready).toBe(false)
+            expect(result.status).toBe('steam-not-signed-in')
+            expect(steamOfflineByChoice).toHaveBeenCalled()
+            expect(onWaitingForSteam).toHaveBeenCalledWith(
+              'steam-not-signed-in'
+            )
+            expect(sendFrontendMessage).toHaveBeenCalledTimes(1)
+          } finally {
+            kickedRegistry.shutdownAll()
+          }
+        }, 40000)
+
+        test('account kept but not logged on, offline by choice: ready on the first helper, with no wait', async () => {
+          const offlineRegistry = registryFor('offline', 1500)
+          sendFrontendMessage.mockClear()
+          const onWaitingForSteam = jest.fn()
+          try {
+            const result = await ensureBridgeHelperReady(
+              { ...helperDeps(), bridgeHelpers: offlineRegistry },
+              SIGNIN_APP_ID,
+              {
+                onWaitingForSteam,
+                steamOfflineByChoice: () => Promise.resolve(true)
+              }
+            )
+            expect(result.status).toBe('ready')
+            expect(result.ready).toBe(true)
+            expect(onWaitingForSteam).not.toHaveBeenCalled()
+            expect(sendFrontendMessage).not.toHaveBeenCalled()
+          } finally {
+            offlineRegistry.shutdownAll()
+          }
+        }, 40000)
+
+        test('a signed-in Steam is ready on the first helper, with no wait', async () => {
+          const onlineRegistry = registryFor('online', 1500)
+          sendFrontendMessage.mockClear()
+          const onWaitingForSteam = jest.fn()
+          try {
+            const result = await ensureBridgeHelperReady(
+              { ...helperDeps(), bridgeHelpers: onlineRegistry },
+              SIGNIN_APP_ID,
+              { onWaitingForSteam }
+            )
+            expect(result.status).toBe('ready')
+            expect(result.ready).toBe(true)
+            expect(onWaitingForSteam).not.toHaveBeenCalled()
+            expect(sendFrontendMessage).not.toHaveBeenCalled()
+          } finally {
+            onlineRegistry.shutdownAll()
+          }
+        }, 40000)
+      })
     })
   }
 )

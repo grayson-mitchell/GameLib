@@ -46,6 +46,9 @@ describe('SteamRequestNotice store', () => {
     ['adopt-restart-quit-timeout', undefined],
     ['direct-launch-failed', undefined],
     ['direct-launch-needs-steam', undefined],
+    ['bridge-wait-steam-not-running', undefined],
+    ['bridge-wait-steam-not-signed-in', undefined],
+    ['bridge-wait-end', undefined],
     ['uninstall-steam-error', 2]
   ] as const)('accepts kind %s', (kind, code) => {
     send(make({ kind, ...(code !== undefined ? { code } : {}) }))

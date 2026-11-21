@@ -46,7 +46,11 @@
  *   - WHOAMI (slot 1): answerable ok+SteamID64-bytes ONLY after
  *     `SteamAPI_InitFlat` succeeded against the live signed-in Mac Steam --
  *     proves "init succeeded against a live session". Answers
- *     status=err/not-inited otherwise.
+ *     status=err/not-inited otherwise, and status=err with a one-byte
+ *     WHOAMI_ERR_REASON_NOT_SIGNED_IN reason when InitFlat connected to a
+ *     Steam that has no signed-in account (its sign-in screen), or
+ *     WHOAMI_ERR_REASON_NOT_LOGGED_ON when Steam holds the account but is
+ *     not logged on (offline mode, or kicked: "Logged In Elsewhere").
  *
  * Authentication (Phase 55 WR-03): the helper's loopback listener is
  * reachable by any local user, and its callback ring can hold a Steam web-API
@@ -194,6 +198,24 @@ export const STATUS_ERR = 1
  * look only at `status`, so this is wire-compatible. MUST equal
  * WHOAMI_ERR_REASON_ACCESSOR_MISSING in native/steam-bridge/helper/bridge_helper.c. */
 export const WHOAMI_ERR_REASON_ACCESSOR_MISSING = 0x02
+
+/** A ONE-byte retBlob on a CONTROL WHOAMI STATUS_ERR: InitFlat succeeded but
+ * Mac Steam has no signed-in account (it is parked at its sign-in screen).
+ * InitFlat's ConnectToGlobalUser does not track that screen, so without this
+ * reason a bridged game launched against a signed-out Steam and read a dead
+ * session once, at startup. Old readers look only at `status`, so this is
+ * wire-compatible. MUST equal WHOAMI_ERR_REASON_NOT_SIGNED_IN in
+ * native/steam-bridge/helper/bridge_helper.c. */
+export const WHOAMI_ERR_REASON_NOT_SIGNED_IN = 0x03
+
+/** A ONE-byte retBlob on a CONTROL WHOAMI STATUS_ERR: InitFlat succeeded and
+ * Mac Steam still holds the account, but is not logged on to Steam. That is
+ * either offline mode by choice or a sign-out that kept the account (a
+ * "Logged In Elsewhere" kick, measured 2026-11-21); the Steam API cannot tell
+ * them apart, so the backend decides from loginusers.vdf `WantsOfflineMode`.
+ * MUST equal WHOAMI_ERR_REASON_NOT_LOGGED_ON in
+ * native/steam-bridge/helper/bridge_helper.c. */
+export const WHOAMI_ERR_REASON_NOT_LOGGED_ON = 0x04
 
 // ── Decoded shapes ──────────────────────────────────────────────────────────
 

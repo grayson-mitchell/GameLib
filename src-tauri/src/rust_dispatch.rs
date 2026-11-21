@@ -88,6 +88,9 @@ pub(crate) fn dispatch_rust_channel(
         RustInvokeChannel::SteamfilesReadLocalconfigBetaKey => {
             rpc_steamfiles_read_localconfig_beta_key(args)
         }
+        RustInvokeChannel::SteamfilesReadLoginusersOfflineMode => {
+            rpc_steamfiles_read_loginusers_offline_mode(args)
+        }
         RustInvokeChannel::SteamfilesReadRunningAppId => rpc_steamfiles_read_running_app_id(args),
         RustInvokeChannel::SteamfilesScanAcfs => rpc_steamfiles_scan_acfs(args),
         RustInvokeChannel::SteamfilesShortcutsApply => rpc_steamfiles_shortcuts_apply(args),

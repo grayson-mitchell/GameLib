@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faClock,
   faEyeSlash,
+  faHourglassHalf,
   faMagnifyingGlass,
   faRightToBracket,
   faTriangleExclamation,
@@ -66,6 +67,8 @@ type RequestKind =
   | 'adopt-restart-quit-timeout'
   | 'direct-launch-failed'
   | 'direct-launch-needs-steam'
+  | 'bridge-wait-steam-not-running'
+  | 'bridge-wait-steam-not-signed-in'
 const REQUEST_KINDS: readonly string[] = [
   'install-not-started',
   'uninstall-not-started',
@@ -77,8 +80,19 @@ const REQUEST_KINDS: readonly string[] = [
   'adopt-restart-busy',
   'adopt-restart-quit-timeout',
   'direct-launch-failed',
-  'direct-launch-needs-steam'
+  'direct-launch-needs-steam',
+  'bridge-wait-steam-not-running',
+  'bridge-wait-steam-not-signed-in'
 ]
+// debug bridged-launch-steam-signed-out: the bridged Play hold. These two kinds
+// are PERSISTENT -- no 8 s auto-hide and no countdown hairline, like
+// ReadOnlyStoresNotice (D-15) -- because they stay for as long as the backend
+// holds the launch (up to a minute). They leave on the backend's
+// `bridge-wait-end` for the same appId, on dismiss, or when another request
+// notice replaces them.
+const isBridgeWaitKind = (k: RequestKind): boolean =>
+  k === 'bridge-wait-steam-not-running' ||
+  k === 'bridge-wait-steam-not-signed-in'
 interface ShownRequest {
   kind: RequestKind
   appId: string
@@ -163,6 +177,9 @@ const isReason = (r: unknown): r is Reason =>
 // Same rules: once per seq, frozen until GameLib is in front, catalogue
 // strings chosen by the closed `kind` only (T-pvk-01). Quick 261120-8hb's
 // launch-without-Steam failure and needs-Steam notices ride this request stream.
+// So does the bridged Play's persistent "Waiting for Steam" notice (debug
+// bridged-launch-steam-signed-out): it has no countdown and is retracted by the
+// backend's `bridge-wait-end` push.
 // 61-27 (WR-02): a fifth stream shows the launch-deadline notice ("couldn't
 // confirm the game started"), which used to raise the main window with a modal
 // over a running game. Same rules: once per seq, frozen until GameLib is in
@@ -387,6 +404,25 @@ export default function SteamEngineLaunchNotice() {
     if (!n || typeof n.seq !== 'number' || n.seq <= lastRequestSeq.current) {
       return
     }
+    if (n.kind === 'bridge-wait-end') {
+      // The retraction shows nothing. It ends the wait notice for the same game,
+      // whether on screen or queued behind a leaving one; anything else stays.
+      lastRequestSeq.current = n.seq
+      const queued = pendingRequest.current
+      if (queued && isBridgeWaitKind(queued.kind) && queued.appId === n.appId) {
+        pendingRequest.current = null
+      }
+      const cur = shownRequestRef.current
+      if (
+        cur &&
+        isBridgeWaitKind(cur.kind) &&
+        cur.appId === n.appId &&
+        cur.phase === 'in'
+      ) {
+        setShownRequest({ ...cur, phase: 'leaving' })
+      }
+      return
+    }
     if (!REQUEST_KINDS.includes(n.kind)) return
     lastRequestSeq.current = n.seq
     const next: ShownRequest = {
@@ -559,6 +595,7 @@ export default function SteamEngineLaunchNotice() {
   const requestPhase = shownRequest?.phase
   useEffect(() => {
     if (!shownRequest || shownRequest.phase !== 'in') return
+    if (isBridgeWaitKind(shownRequest.kind)) return
     if (hoveredRequest || waitingRequest) return
     const startedAt = Date.now()
     const id = setTimeout(
@@ -631,6 +668,8 @@ export default function SteamEngineLaunchNotice() {
     overlay: boolean
     paused: boolean
     waiting: boolean
+    /** No auto-hide, so no countdown hairline. */
+    persistent?: boolean
     icon: IconDefinition
     title: string
     body: string
@@ -691,11 +730,13 @@ export default function SteamEngineLaunchNotice() {
           >
             <FontAwesomeIcon icon={faXmark} />
           </button>
-          <span
-            className="steamEngineLaunchNoticeBar"
-            aria-hidden="true"
-            style={{ animationDuration: `${AUTO_HIDE_MS}ms` }}
-          />
+          {!o.persistent && (
+            <span
+              className="steamEngineLaunchNoticeBar"
+              aria-hidden="true"
+              style={{ animationDuration: `${AUTO_HIDE_MS}ms` }}
+            />
+          )}
         </>
       )
     })
@@ -769,6 +810,16 @@ export default function SteamEngineLaunchNotice() {
           '{{game}} closed right after starting without Steam, so it probably needs the Steam app. If Launch without Steam is on for this game, turn it off in its settings: Run > Launch without Steam.',
           { game }
         )
+      case 'bridge-wait-steam-not-running':
+        return t(
+          'steam.bridge.waiting.notRunning',
+          'Starting Steam. The game will launch once Steam has signed in.'
+        )
+      case 'bridge-wait-steam-not-signed-in':
+        return t(
+          'steam.bridge.waiting.signingIn',
+          'Waiting for Steam to finish signing in. The game will launch once it has.'
+        )
     }
   }
 
@@ -780,10 +831,15 @@ export default function SteamEngineLaunchNotice() {
         overlay: false,
         paused: hoveredRequest,
         waiting: waitingRequest,
-        icon: shownRequest.kind.startsWith('direct-launch-')
-          ? faTriangleExclamation
-          : faRightToBracket,
-        title: requestGame,
+        persistent: isBridgeWaitKind(shownRequest.kind),
+        icon: isBridgeWaitKind(shownRequest.kind)
+          ? faHourglassHalf
+          : shownRequest.kind.startsWith('direct-launch-')
+            ? faTriangleExclamation
+            : faRightToBracket,
+        title: isBridgeWaitKind(shownRequest.kind)
+          ? t('steam.bridge.waiting.title', 'Waiting for Steam')
+          : requestGame,
         body: requestBody(shownRequest, requestGame),
         // Phase 81 D-05: the backend's direct-launch verdict decided whether the button shows;
         // the click re-derives it, so a stale flag can never launch an ineligible game.

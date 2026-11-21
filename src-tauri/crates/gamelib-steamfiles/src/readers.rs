@@ -273,6 +273,56 @@ fn running_app_id(path: &Path) -> Option<u32> {
     steam.str("RunningAppID")?.trim().parse().ok()
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LoginUsersOfflineModeResult {
+    /// The most recent user's `WantsOfflineMode` ("1" true, any other value false). None when the
+    /// file is missing or unparseable, or no user can be picked.
+    pub wants_offline_mode: Option<bool>,
+}
+
+const LOGINUSERS_MAX_BYTES: usize = 1024 * 1024;
+
+/// Whether the user chose Steam's offline mode, from `config/loginusers.vdf`: Steam saves "Go
+/// Offline" (and "Start in Offline Mode") as `WantsOfflineMode "1"` on the account. The user is
+/// the one marked `MostRecent "1"`, or the only user when none is marked. Signed in but not
+/// logged on with this unset means Steam was signed out (for example "Logged In Elsewhere"), not
+/// offline by choice. Fail-soft: every failure is `None`.
+pub fn read_loginusers_offline_mode(path: &Path) -> LoginUsersOfflineModeResult {
+    LoginUsersOfflineModeResult {
+        wants_offline_mode: loginusers_offline_mode(path),
+    }
+}
+
+fn loginusers_offline_mode(path: &Path) -> Option<bool> {
+    let bytes = std::fs::read(path).ok()?;
+    let limits = Limits {
+        max_bytes: LOGINUSERS_MAX_BYTES,
+        max_depth: 16,
+    };
+    let root = kv_text::merged(&kv_text::parse(&bytes, &limits).ok()?);
+    let users: Vec<&MergedMap> = root
+        .map("users")?
+        .iter()
+        .filter_map(|(_, v)| match v {
+            MergedValue::Map(m) => Some(m),
+            _ => None,
+        })
+        .collect();
+    let user = users
+        .iter()
+        .find(|u| u.str("MostRecent").is_some_and(|s| s.trim() == "1"))
+        .or(if users.len() == 1 {
+            users.first()
+        } else {
+            None
+        })?;
+    Some(
+        user.str("WantsOfflineMode")
+            .is_some_and(|s| s.trim() == "1"),
+    )
+}
+
 const STEAM_HKCU_SUBKEY: &str = "Software\\Valve\\Steam";
 const RUNNING_APP_ID_VALUE: &str = "RunningAppID";
 

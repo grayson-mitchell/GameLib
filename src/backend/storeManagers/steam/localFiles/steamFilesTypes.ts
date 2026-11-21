@@ -12,6 +12,7 @@ import type {
   RUST_STEAMFILES_READ_INSTALLSCRIPT,
   RUST_STEAMFILES_READ_LIBRARY_FOLDERS,
   RUST_STEAMFILES_READ_LOCALCONFIG_BETA_KEY,
+  RUST_STEAMFILES_READ_LOGINUSERS_OFFLINE_MODE,
   RUST_STEAMFILES_READ_RUNNING_APP_ID,
   RUST_STEAMFILES_SCAN_ACFS,
   RUST_STEAMFILES_SHORTCUTS_APPLY,
@@ -27,6 +28,7 @@ export const STEAMFILES_OPS = [
   'steamfiles_read_installscript',
   'steamfiles_read_library_folders',
   'steamfiles_read_localconfig_beta_key',
+  'steamfiles_read_loginusers_offline_mode',
   'steamfiles_read_running_app_id',
   'steamfiles_scan_acfs',
   'steamfiles_shortcuts_apply',
@@ -106,6 +108,11 @@ export interface LibraryFoldersResult {
 
 interface RunningAppIdResult {
   runningAppId: number
+}
+
+/** `null`: file missing or unparseable, or no user could be picked. */
+interface LoginUsersOfflineModeResult {
+  wantsOfflineMode: boolean | null
 }
 
 interface LocalConfigBetaKeyResult {
@@ -206,6 +213,10 @@ interface SteamFilesShapes {
   [RUST_STEAMFILES_READ_LOCALCONFIG_BETA_KEY]: {
     args: { path: string; appId: string }
     result: LocalConfigBetaKeyResult
+  }
+  [RUST_STEAMFILES_READ_LOGINUSERS_OFFLINE_MODE]: {
+    args: PathArgs
+    result: LoginUsersOfflineModeResult
   }
   [RUST_STEAMFILES_READ_RUNNING_APP_ID]: {
     args: PathArgs

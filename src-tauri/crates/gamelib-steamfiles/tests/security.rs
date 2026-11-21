@@ -5,8 +5,9 @@ use gamelib_steamfiles::dispatch;
 use serde_json::json;
 use std::path::{Path, PathBuf};
 
-const PATH_OPS: [&str; 7] = [
+const PATH_OPS: [&str; 8] = [
     "steamfiles_read_acf",
+    "steamfiles_read_loginusers_offline_mode",
     "steamfiles_read_library_folders",
     "steamfiles_read_running_app_id",
     "steamfiles_read_installscript",

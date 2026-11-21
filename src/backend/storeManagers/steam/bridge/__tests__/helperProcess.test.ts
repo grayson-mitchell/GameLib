@@ -37,7 +37,9 @@ import {
   HELLO_ROLE_PROBE,
   STATUS_OK,
   STATUS_ERR,
-  WHOAMI_ERR_REASON_ACCESSOR_MISSING
+  WHOAMI_ERR_REASON_ACCESSOR_MISSING,
+  WHOAMI_ERR_REASON_NOT_SIGNED_IN,
+  WHOAMI_ERR_REASON_NOT_LOGGED_ON
 } from '../protocol'
 import { ensureBridgeHelperReady } from '../helperProcess'
 import {
@@ -813,6 +815,46 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
     expect(parseInt(m?.[1] ?? '', 16)).toBe(WHOAMI_ERR_REASON_ACCESSOR_MISSING)
   })
 
+  test('bridged launch while Steam is signed out: bridge_helper.c and protocol.ts agree on the WHOAMI not-signed-in reason value, and it differs from accessor-missing', () => {
+    const c = readFileSync(
+      join(
+        __dirname,
+        '../../../../../../native/steam-bridge/helper/bridge_helper.c'
+      ),
+      'utf-8'
+    )
+    const m = c.match(
+      /#define WHOAMI_ERR_REASON_NOT_SIGNED_IN (0x[0-9a-fA-F]+)/
+    )
+    expect(m).not.toBeNull()
+    expect(parseInt(m?.[1] ?? '', 16)).toBe(WHOAMI_ERR_REASON_NOT_SIGNED_IN)
+    expect(WHOAMI_ERR_REASON_NOT_SIGNED_IN).not.toBe(
+      WHOAMI_ERR_REASON_ACCESSOR_MISSING
+    )
+  })
+
+  test('round 3: bridge_helper.c and protocol.ts agree on the WHOAMI not-logged-on reason, distinct from the other reasons', () => {
+    const c = readFileSync(
+      join(
+        __dirname,
+        '../../../../../../native/steam-bridge/helper/bridge_helper.c'
+      ),
+      'utf-8'
+    )
+    const m = c.match(
+      /#define WHOAMI_ERR_REASON_NOT_LOGGED_ON (0x[0-9a-fA-F]+)/
+    )
+    expect(m).not.toBeNull()
+    expect(parseInt(m?.[1] ?? '', 16)).toBe(WHOAMI_ERR_REASON_NOT_LOGGED_ON)
+    expect(
+      new Set([
+        WHOAMI_ERR_REASON_ACCESSOR_MISSING,
+        WHOAMI_ERR_REASON_NOT_SIGNED_IN,
+        WHOAMI_ERR_REASON_NOT_LOGGED_ON
+      ]).size
+    ).toBe(3)
+  })
+
   test('D-51-04: both the full helper AND the identity-only fallback fail WHOAMI -> not-inited, ready:false, exactly ONE steamBridgeSetupRequired(reason: not-inited)', async () => {
     const fullChild = new FakeChildProcess()
     const identityChild = new FakeChildProcess()
@@ -1197,5 +1239,277 @@ describe('261027-aue: wait for Steam to start / sign in', () => {
     expect(second.status).toBe('ready')
     expect(second.port).toBe(55009)
     await first
+  })
+})
+
+/**
+ * A helper whose InitFlat SUCCEEDED but whose WHOAMI answers the one-byte
+ * not-signed-in reason: Mac Steam is parked at its sign-in screen (InitFlat's
+ * ConnectToGlobalUser connects there, 261105-ord gate item 6). Before the fix
+ * the probe read only the status byte, so the launch went ahead against a dead
+ * session and the game had no friends until it was restarted.
+ *
+ * `script[i]` is what attempt i's helper answers to WHOAMI. Every helper reports
+ * READY init=ok, like the real one does at the sign-in screen.
+ */
+function scriptWhoamiSpawns(
+  script: Array<'signed-out' | 'not-logged-on' | 'ok'>,
+  appId = APP_ID_A
+) {
+  const children: FakeChildProcess[] = []
+  mockedSpawn.mockImplementation(() => {
+    const child = new FakeChildProcess()
+    children.push(child)
+    process.nextTick(() => {
+      emitListenLine(child, 55000 + children.length, appId, 'ok')
+    })
+    return child
+  })
+  let sockets = 0
+  MockedSocket.mockImplementation(() => {
+    const step = at(script, Math.min(sockets, script.length - 1))
+    sockets += 1
+    return new FakeSocket(
+      healthOkFrame,
+      step === 'ok'
+        ? whoamiOkFrame
+        : encodeResponse(
+            PROBE_REQUEST_ID,
+            STATUS_ERR,
+            Buffer.from([
+              step === 'not-logged-on'
+                ? WHOAMI_ERR_REASON_NOT_LOGGED_ON
+                : WHOAMI_ERR_REASON_NOT_SIGNED_IN
+            ])
+          )
+    )
+  })
+  return children
+}
+
+describe('bridged launch while Mac Steam is signed out (InitFlat ok, WHOAMI not-signed-in)', () => {
+  beforeEach(() => {
+    fakeRunner.reset()
+    mockedSpawn.mockReset()
+    mockedSendFrontendMessage.mockClear()
+    mockedOpenExternal.mockClear()
+    registry = newRegistry({
+      steamWaitSchedule: { budgetMs: 150, intervalMs: 5 }
+    })
+  })
+
+  test('holds the launch: waiting hook once, no 480 fallback, no Steam start, then ready on the helper spawned after sign-in', async () => {
+    // Each WHOAMI probe costs one real poll interval (the InitFlat-text cases
+    // above skip the polls), so the budget has to cover three of them.
+    registry = newRegistry({
+      steamWaitSchedule: { budgetMs: 5_000, intervalMs: 5 }
+    })
+    const children = scriptWhoamiSpawns(['signed-out', 'signed-out', 'ok'])
+    const startSteam = jest.fn().mockResolvedValue(undefined)
+    const onWaitingForSteam = jest.fn()
+
+    const result = await ensureBridgeHelperReady(helperDeps, APP_ID_A, {
+      startSteam,
+      onWaitingForSteam
+    })
+
+    expect(result).toEqual({
+      status: 'ready',
+      ready: true,
+      port: 55003,
+      secret: mockedSpawn.mock.calls[2][2].env[BRIDGE_SECRET_ENV]
+    })
+    expect(onWaitingForSteam).toHaveBeenCalledTimes(1)
+    expect(onWaitingForSteam).toHaveBeenCalledWith('steam-not-signed-in')
+    expect(startSteam).not.toHaveBeenCalled()
+    expect(mockedSpawn).toHaveBeenCalledTimes(3)
+    for (const [, args] of mockedSpawn.mock.calls) {
+      expect(args).toEqual(['--appid', APP_ID_A, '--port', '0'])
+    }
+    // Each signed-out helper opened its session against a signed-out Steam:
+    // it is stopped, never reused.
+    expect(at(children, 0).kill).toHaveBeenCalled()
+    expect(at(children, 1).kill).toHaveBeenCalled()
+    expect(mockedSendFrontendMessage).not.toHaveBeenCalled()
+  })
+
+  test('budget exhausted while still signed out -> steam-not-signed-in, exactly one setup message, no 480 fallback, registry empty, spawns bounded', async () => {
+    scriptWhoamiSpawns(['signed-out'])
+
+    const result = await ensureBridgeHelperReady(helperDeps, APP_ID_A)
+
+    expect(result).toEqual({
+      status: 'steam-not-signed-in',
+      ready: false,
+      error: expect.any(String)
+    })
+    expect(result.port).toBeUndefined()
+    expect(result.secret).toBeUndefined()
+    expect(mockedSendFrontendMessage).toHaveBeenCalledTimes(1)
+    expect(mockedSendFrontendMessage).toHaveBeenCalledWith(
+      'steamBridgeSetupRequired',
+      {
+        appName: APP_ID_A,
+        reason: 'steam-not-signed-in',
+        fallbackAvailable: false
+      }
+    )
+    for (const [, args] of mockedSpawn.mock.calls) {
+      expect(args).not.toContain('--identity-only')
+    }
+    expect(mockedSpawn.mock.calls.length).toBeGreaterThan(1)
+    expect(mockedSpawn.mock.calls.length).toBeLessThanOrEqual(
+      1 + Math.floor(150 / 5) + 1
+    )
+    // Registry empty: the next call spawns fresh rather than reusing a helper
+    // that was opened against the signed-out Steam.
+    mockedSpawn.mockClear()
+    scriptWhoamiSpawns(['ok'])
+    await ensureBridgeHelperReady(helperDeps, APP_ID_A)
+    expect(mockedSpawn).toHaveBeenCalledTimes(1)
+  })
+
+  test('a signed-in Steam is untouched: WHOAMI ok on the first helper -> ready, no wait, no extra spawn', async () => {
+    scriptWhoamiSpawns(['ok'])
+    const onWaitingForSteam = jest.fn()
+
+    const result = await ensureBridgeHelperReady(helperDeps, APP_ID_A, {
+      onWaitingForSteam
+    })
+
+    expect(result.status).toBe('ready')
+    expect(onWaitingForSteam).not.toHaveBeenCalled()
+    expect(mockedSpawn).toHaveBeenCalledTimes(1)
+    expect(mockedSendFrontendMessage).not.toHaveBeenCalled()
+  })
+
+  test('a live helper that went signed-out is stopped and respawned on the next Play, not reused as ready', async () => {
+    // First Play: Steam signed in, helper ready and left registered (the game runs).
+    const firstChildren = scriptWhoamiSpawns(['ok'])
+    const first = await ensureBridgeHelperReady(helperDeps, APP_ID_A)
+    expect(first.status).toBe('ready')
+    expect(mockedSpawn).toHaveBeenCalledTimes(1)
+
+    // Steam is later signed out (a "Logged In Elsewhere" kick). The same appId
+    // is played again while that helper is still registered: its WHOAMI is
+    // re-asked live and now reports signed out, so it must not stay 'ready'.
+    mockedSpawn.mockClear()
+    const secondChildren: FakeChildProcess[] = []
+    let probes = 0
+    MockedSocket.mockImplementation(() => {
+      const signedOut = probes === 0
+      probes += 1
+      return new FakeSocket(
+        healthOkFrame,
+        signedOut
+          ? encodeResponse(
+              PROBE_REQUEST_ID,
+              STATUS_ERR,
+              Buffer.from([WHOAMI_ERR_REASON_NOT_SIGNED_IN])
+            )
+          : whoamiOkFrame
+      )
+    })
+    mockedSpawn.mockImplementation(() => {
+      const child = new FakeChildProcess()
+      secondChildren.push(child)
+      process.nextTick(() => emitListenLine(child, 56000, APP_ID_A, 'ok'))
+      return child
+    })
+
+    const second = await ensureBridgeHelperReady(helperDeps, APP_ID_A)
+
+    expect(at(firstChildren, 0).kill).toHaveBeenCalled()
+    expect(second.status).toBe('ready')
+    expect(second.port).toBe(56000)
+    expect(secondChildren).toHaveLength(1)
+  })
+})
+
+describe('round 3: Steam holds the account but is not logged on (offline mode, or "Logged In Elsewhere")', () => {
+  beforeEach(() => {
+    fakeRunner.reset()
+    mockedSpawn.mockReset()
+    mockedSendFrontendMessage.mockClear()
+    mockedOpenExternal.mockClear()
+  })
+
+  test('not offline by choice: holds, then ready on the helper spawned after sign-in', async () => {
+    registry = newRegistry({
+      steamWaitSchedule: { budgetMs: 5_000, intervalMs: 5 }
+    })
+    scriptWhoamiSpawns(['not-logged-on', 'ok'])
+    const onWaitingForSteam = jest.fn()
+    const steamOfflineByChoice = jest.fn(() => Promise.resolve(false))
+
+    const result = await ensureBridgeHelperReady(helperDeps, APP_ID_A, {
+      onWaitingForSteam,
+      steamOfflineByChoice
+    })
+
+    expect(result.status).toBe('ready')
+    expect(steamOfflineByChoice).toHaveBeenCalledTimes(1)
+    expect(onWaitingForSteam).toHaveBeenCalledTimes(1)
+    expect(onWaitingForSteam).toHaveBeenCalledWith('steam-not-signed-in')
+    expect(mockedSpawn).toHaveBeenCalledTimes(2)
+  })
+
+  test('not offline by choice and never signed back in: steam-not-signed-in, exactly one setup message, no 480 fallback', async () => {
+    registry = newRegistry({
+      steamWaitSchedule: { budgetMs: 150, intervalMs: 5 }
+    })
+    scriptWhoamiSpawns(['not-logged-on'])
+
+    const result = await ensureBridgeHelperReady(helperDeps, APP_ID_A, {
+      steamOfflineByChoice: () => Promise.resolve(false)
+    })
+
+    expect(result).toMatchObject({
+      status: 'steam-not-signed-in',
+      ready: false
+    })
+    expect(mockedSendFrontendMessage).toHaveBeenCalledTimes(1)
+    expect(mockedSendFrontendMessage).toHaveBeenCalledWith(
+      'steamBridgeSetupRequired',
+      {
+        appName: APP_ID_A,
+        reason: 'steam-not-signed-in',
+        fallbackAvailable: false
+      }
+    )
+    for (const [, args] of mockedSpawn.mock.calls) {
+      expect(args).not.toContain('--identity-only')
+    }
+  })
+
+  test('offline by choice: ready on the first helper, no wait, no setup message', async () => {
+    registry = newRegistry({
+      steamWaitSchedule: { budgetMs: 5_000, intervalMs: 5 }
+    })
+    scriptWhoamiSpawns(['not-logged-on'])
+    const onWaitingForSteam = jest.fn()
+
+    const result = await ensureBridgeHelperReady(helperDeps, APP_ID_A, {
+      onWaitingForSteam,
+      steamOfflineByChoice: () => Promise.resolve(true)
+    })
+
+    expect(result.status).toBe('ready')
+    expect(result.ready).toBe(true)
+    expect(onWaitingForSteam).not.toHaveBeenCalled()
+    expect(mockedSendFrontendMessage).not.toHaveBeenCalled()
+    expect(mockedSpawn).toHaveBeenCalledTimes(1)
+  })
+
+  test('a caller with no offline check keeps the old rule and launches', async () => {
+    registry = newRegistry({
+      steamWaitSchedule: { budgetMs: 5_000, intervalMs: 5 }
+    })
+    scriptWhoamiSpawns(['not-logged-on'])
+
+    const result = await ensureBridgeHelperReady(helperDeps, APP_ID_A)
+
+    expect(result.status).toBe('ready')
+    expect(mockedSpawn).toHaveBeenCalledTimes(1)
   })
 })

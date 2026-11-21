@@ -4712,6 +4712,7 @@ mod tests {
             "steamfiles_read_installscript",
             "steamfiles_read_library_folders",
             "steamfiles_read_localconfig_beta_key",
+            "steamfiles_read_loginusers_offline_mode",
             "steamfiles_read_running_app_id",
             "steamfiles_scan_acfs",
             "steamfiles_shortcuts_apply",

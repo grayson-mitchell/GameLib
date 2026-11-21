@@ -13,7 +13,7 @@ fn list_prints_ops() {
     assert_eq!(out.status.code(), Some(0));
     let ops: Vec<String> =
         serde_json::from_str(String::from_utf8_lossy(&out.stdout).trim()).unwrap();
-    assert_eq!(ops.len(), 12);
+    assert_eq!(ops.len(), 13);
     assert!(ops.contains(&"steamfiles_discover_root".to_string()));
     assert!(ops.contains(&"steamfiles_shortcuts_roundtrip".to_string()));
 }

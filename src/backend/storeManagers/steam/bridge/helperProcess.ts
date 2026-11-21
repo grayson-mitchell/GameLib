@@ -42,6 +42,16 @@
  * schedule (InitFlat runs once per process, so a failed helper can never
  * recover); every other failure keeps the D-51-04 path unchanged.
  *
+ * InitFlat's ConnectToGlobalUser does NOT track Steam's sign-in screen
+ * (261105-ord gate item 6): a Steam parked there lets InitFlat succeed, so
+ * the InitFlat text alone never saw a signed-out Steam, and the game launched
+ * and read a dead session once, at startup (no friends until restarted). The
+ * helper's WHOAMI now answers a one-byte `WHOAMI_ERR_REASON_NOT_SIGNED_IN`
+ * for that state and the probe feeds it into the same bounded hold below.
+ * A Steam kicked by "Logged In Elsewhere" keeps the account, so it reads like
+ * offline mode (`WHOAMI_ERR_REASON_NOT_LOGGED_ON`); the caller's
+ * `steamOfflineByChoice` (loginusers.vdf `WantsOfflineMode`) decides.
+ *
  * These are two DISTINCT states (24-02 review finding #7): "process up, no
  * live Steam session" (`status: 'not-inited'`) is reported differently from
  * "helper never answered at all" (`status: 'unreachable'`) so a caller can
@@ -62,6 +72,8 @@ import {
   STATUS_OK,
   STATUS_ERR,
   WHOAMI_ERR_REASON_ACCESSOR_MISSING,
+  WHOAMI_ERR_REASON_NOT_SIGNED_IN,
+  WHOAMI_ERR_REASON_NOT_LOGGED_ON,
   FrameTooLargeError
 } from './protocol'
 import { NUMERIC_APP_ID } from '../gameConstants'
@@ -146,6 +158,12 @@ interface ProbeResult {
   /** quick 261113-n39: WHOAMI STATUS_ERR carrying the one-byte
    * WHOAMI_ERR_REASON_ACCESSOR_MISSING reason (init ok, SteamUser unresolvable). */
   whoamiAccessorMissing?: boolean
+  /** WHOAMI STATUS_ERR carrying the one-byte WHOAMI_ERR_REASON_NOT_SIGNED_IN
+   * reason (init ok, but Steam is parked at its sign-in screen). */
+  whoamiNotSignedIn?: boolean
+  /** WHOAMI STATUS_ERR carrying WHOAMI_ERR_REASON_NOT_LOGGED_ON (init ok, Steam
+   * holds the account but is not logged on: offline mode or kicked). */
+  whoamiNotLoggedOn?: boolean
 }
 
 /**
@@ -238,14 +256,18 @@ function probeHealthAndWhoami(
       }
 
       // stage === 'whoami'
+      const whoamiReason =
+        decoded.status === STATUS_ERR && decoded.retBlob.length === 1
+          ? decoded.retBlob[0]
+          : undefined
       finish({
         healthOk: true,
         authOk: true,
         whoamiOk: decoded.status === STATUS_OK,
         whoamiAccessorMissing:
-          decoded.status === STATUS_ERR &&
-          decoded.retBlob.length === 1 &&
-          decoded.retBlob[0] === WHOAMI_ERR_REASON_ACCESSOR_MISSING
+          whoamiReason === WHOAMI_ERR_REASON_ACCESSOR_MISSING,
+        whoamiNotSignedIn: whoamiReason === WHOAMI_ERR_REASON_NOT_SIGNED_IN,
+        whoamiNotLoggedOn: whoamiReason === WHOAMI_ERR_REASON_NOT_LOGGED_ON
       })
     })
   })
@@ -317,7 +339,8 @@ interface HelperReadinessProbe {
  * stage (full vs. fallback) produced it.
  */
 async function probeHelperReadiness(
-  entry: BridgeHelperEntry
+  entry: BridgeHelperEntry,
+  steamOfflineByChoice?: () => Promise<boolean>
 ): Promise<HelperReadinessProbe> {
   const port = await waitForPort(entry)
   if (port === null) {
@@ -347,8 +370,14 @@ async function probeHelperReadiness(
   for (let attempt = 0; attempt < POLL_ATTEMPTS; attempt++) {
     await sleep(POLL_INTERVAL_MS)
 
-    const { healthOk, authOk, whoamiOk, whoamiAccessorMissing } =
-      await probeHealthAndWhoami(port, entry.secret)
+    const {
+      healthOk,
+      authOk,
+      whoamiOk,
+      whoamiAccessorMissing,
+      whoamiNotSignedIn,
+      whoamiNotLoggedOn
+    } = await probeHealthAndWhoami(port, entry.secret)
 
     if (!healthOk) {
       continue
@@ -370,6 +399,34 @@ async function probeHelperReadiness(
 
     if (whoamiAccessorMissing) {
       return { outcome: 'accessor-missing', port }
+    }
+
+    // InitFlat succeeded, but Steam is parked at its sign-in screen: the
+    // helper's ConnectToGlobalUser connects there (261105-ord gate), so only
+    // WHOAMI's account check can tell. Same bounded hold as the InitFlat
+    // `ConnectToGlobalUser failed` text -- a fresh helper per interval, since
+    // this helper's session was opened against a signed-out Steam. Full-AppID
+    // helpers only: the identity-only (480) fallback keeps reporting not-inited.
+    if (whoamiNotSignedIn && !entry.identityOnly) {
+      return { outcome: 'steam-wait', cause: 'steam-not-signed-in', port }
+    }
+
+    // Round 3: Steam holds the account but is not logged on. Offline mode by
+    // choice launches, as it always has. Anything else is a sign-out that kept
+    // the account ("Logged In Elsewhere", measured 2026-11-21: the game then
+    // reads a dead session once and has no friends), so it takes the same
+    // hold. A caller with no offline check keeps the old launch behaviour.
+    if (whoamiNotLoggedOn && !entry.identityOnly) {
+      const offlineByChoice = steamOfflineByChoice
+        ? await steamOfflineByChoice()
+        : true
+      logInfo(
+        `bridge helper [${entry.appId}] Steam holds the account but is not logged on -- ${offlineByChoice ? 'offline by choice, launching' : 'not offline by choice (signed out), holding'}`,
+        LogPrefix.Steam
+      )
+      return offlineByChoice
+        ? { outcome: 'ready', port }
+        : { outcome: 'steam-wait', cause: 'steam-not-signed-in', port }
     }
 
     return { outcome: 'not-inited', port }
@@ -440,7 +497,11 @@ async function startSteamDefault(
  *    to every spawn of the call, the identity-only fallback included. A reused
  *    live entry never triggers a resolution.
  *  - 261027-aue: a full helper whose InitFlat failed with a known Steam-state
- *    text (Steam quit / still signing in) enters a bounded wait: Steam is
+ *    text (Steam quit / still signing in), or whose WHOAMI answered
+ *    `WHOAMI_ERR_REASON_NOT_SIGNED_IN` (Steam at its sign-in screen: InitFlat
+ *    connects there), or `WHOAMI_ERR_REASON_NOT_LOGGED_ON` when
+ *    `options.steamOfflineByChoice` answers false (account kept but signed
+ *    out, e.g. "Logged In Elsewhere"), enters a bounded wait: Steam is
  *    started when it is not running, `onWaitingForSteam` fires once, and a
  *    fresh helper is respawned every steamWaitSchedule.intervalMs until it is
  *    ready or steamWaitSchedule.budgetMs passes. Budget exhausted ->
@@ -455,6 +516,12 @@ export async function ensureBridgeHelperReady(
   options: {
     onWaitingForSteam?: (cause: InitFlatErrorCause) => void
     startSteam?: () => Promise<void>
+    /**
+     * Round 3: asked when the helper reports Steam holds the account but is
+     * not logged on. True launches (offline mode by choice, or no network);
+     * false holds as signed out. Omitted: launches (the pre-round-3 rule).
+     */
+    steamOfflineByChoice?: () => Promise<boolean>
   } = {}
 ): Promise<EnsureBridgeHelperReadyResult> {
   if (!NUMERIC_APP_ID.test(appId)) {
@@ -500,7 +567,7 @@ export async function ensureBridgeHelperReady(
   }
 
   let entry = await spawnHelper()
-  let probe = await probeHelperReadiness(entry)
+  let probe = await probeHelperReadiness(entry, options.steamOfflineByChoice)
 
   let waitStart: number | null = null
   let steamStarted = false
@@ -541,7 +608,7 @@ export async function ensureBridgeHelperReady(
       }
     }
     entry = await spawnHelper()
-    probe = await probeHelperReadiness(entry)
+    probe = await probeHelperReadiness(entry, options.steamOfflineByChoice)
   }
 
   if (probe.outcome === 'unreachable') {

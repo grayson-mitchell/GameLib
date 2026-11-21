@@ -1,4 +1,4 @@
-//! Handlers for the ten `steamfiles_*` rustInvoke channels (Phase 75 plan 12). Each validates
+//! Handlers for the `steamfiles_*` rustInvoke channels (Phase 75 plan 12). Each validates
 //! through its generated Args struct then passes straight to the Tauri-free `gamelib-steamfiles` crate.
 
 use super::*;
@@ -31,6 +31,11 @@ pub(crate) fn rpc_steamfiles_read_library_folders(args: &[Value]) -> Result<Valu
 pub(crate) fn rpc_steamfiles_read_localconfig_beta_key(args: &[Value]) -> Result<Value, String> {
     SteamfilesReadLocalconfigBetaKeyArgs::from_args(args)?;
     gamelib_steamfiles::dispatch("steamfiles_read_localconfig_beta_key", args)
+}
+
+pub(crate) fn rpc_steamfiles_read_loginusers_offline_mode(args: &[Value]) -> Result<Value, String> {
+    SteamfilesReadLoginusersOfflineModeArgs::from_args(args)?;
+    gamelib_steamfiles::dispatch("steamfiles_read_loginusers_offline_mode", args)
 }
 
 pub(crate) fn rpc_steamfiles_read_running_app_id(args: &[Value]) -> Result<Value, String> {

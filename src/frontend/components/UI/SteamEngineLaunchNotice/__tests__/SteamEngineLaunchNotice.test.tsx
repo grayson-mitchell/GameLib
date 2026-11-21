@@ -89,6 +89,7 @@ import * as React from 'react'
 import {
   faClock,
   faEyeSlash,
+  faHourglassHalf,
   faMagnifyingGlass,
   faRightToBracket,
   faTriangleExclamation,
@@ -810,5 +811,149 @@ describe('SteamEngineLaunchNotice request slot (quick 261106-pvk)', () => {
     expect(cls(toast(render()))).not.toContain('--waiting')
     jest.advanceTimersByTime(8000)
     expect(cls(toast(render()))).toContain('noticeStackToast--leaving')
+  })
+})
+
+// debug bridged-launch-steam-signed-out: the bridged Play's "Waiting for Steam"
+// hold, moved off notify() (a macOS system notification nobody saw) onto the
+// request slot. Persistent: no countdown, retracted by `bridge-wait-end`.
+describe('SteamEngineLaunchNotice bridge wait notice', () => {
+  const wait = (over: Record<string, unknown> = {}) => ({
+    appId: '3205720',
+    title: 'Schedule I',
+    kind: 'bridge-wait-steam-not-signed-in',
+    seq: 1,
+    ...over
+  })
+  const end = (over: Record<string, unknown> = {}) =>
+    wait({ kind: 'bridge-wait-end', seq: 2, ...over })
+  // Any other request notice, for the same game unless told otherwise.
+  const req = (over: Record<string, unknown> = {}) => ({
+    appId: '3205720',
+    title: 'Schedule I',
+    kind: 'install-not-started',
+    seq: 1,
+    ...over
+  })
+  const barOf = (out: ReactNode) =>
+    find(out, (e) => cls(e).includes('steamEngineLaunchNoticeBar'))
+  const embedHeld = () =>
+    jest.mocked(useSuppressStoreEmbedWhile).mock.calls.at(-1)?.[0]
+
+  it('shows the signing-in wait with the hourglass, the title and the signing-in body', () => {
+    requestState = wait()
+    const out = render()
+    expect(toast(out)).toBeDefined()
+    expect(text(out)).toBe(
+      'Waiting for Steam Waiting for Steam to finish signing in. The game will launch once it has.'
+    )
+    expect(find(out, (e) => e.props.icon === faHourglassHalf)).toBeDefined()
+    expect(embedHeld()).toBe(true)
+  })
+
+  it('shows the Steam-not-running wording for the other cause', () => {
+    requestState = wait({ kind: 'bridge-wait-steam-not-running' })
+    expect(text(render())).toBe(
+      'Waiting for Steam Starting Steam. The game will launch once Steam has signed in.'
+    )
+  })
+
+  it('has no countdown hairline and a dismiss button', () => {
+    requestState = wait()
+    const out = render()
+    expect(barOf(out)).toBeUndefined()
+    expect(
+      find(out, (e) => cls(e).includes('noticeStackDismiss'))
+    ).toBeDefined()
+  })
+
+  it('does not auto-hide: still up after the 60 s hold budget and a minute more', () => {
+    requestState = wait()
+    render()
+    jest.advanceTimersByTime(120_000)
+    const out = render()
+    expect(toast(out)).toBeDefined()
+    expect(cls(toast(out))).not.toContain('noticeStackToast--leaving')
+  })
+
+  it('bridge-wait-end for the same game starts the leave, then removes it and frees the embed', () => {
+    requestState = wait()
+    render()
+    requestState = end()
+    const leaving = render()
+    expect(cls(toast(leaving))).toContain('noticeStackToast--leaving')
+    expect(exit(leaving)).toBeNull()
+    expect(embedHeld()).toBe(false)
+  })
+
+  it('bridge-wait-end for a different game leaves the wait notice up', () => {
+    requestState = wait()
+    render()
+    requestState = end({ appId: '570' })
+    const out = render()
+    expect(cls(toast(out))).not.toContain('noticeStackToast--leaving')
+    expect(text(out)).toContain('Waiting for Steam')
+  })
+
+  it('an older or equal bridge-wait-end seq is ignored', () => {
+    requestState = wait({ seq: 5 })
+    render()
+    requestState = end({ seq: 5 })
+    expect(cls(toast(render()))).not.toContain('noticeStackToast--leaving')
+  })
+
+  it('bridge-wait-end shows nothing when no wait notice is on screen', () => {
+    requestState = end()
+    expect(render()).toBeNull()
+  })
+
+  it('bridge-wait-end does not retract a different notice for the same game', () => {
+    requestState = req({ appId: '3205720', kind: 'install-not-started' })
+    render()
+    requestState = end({ appId: '3205720' })
+    const out = render()
+    expect(cls(toast(out))).not.toContain('noticeStackToast--leaving')
+    expect(text(out)).toContain("Steam didn't start the install")
+  })
+
+  it('bridge-wait-end after a manual dismiss does not bring the notice back', () => {
+    requestState = wait()
+    const out = render()
+    expect(exit(dismiss(out))).toBeNull()
+    requestState = end()
+    expect(render()).toBeNull()
+  })
+
+  it('bridge-wait-end drops a wait notice that is still queued behind a leaving one', () => {
+    requestState = req({ appId: '3205720', kind: 'install-not-started' })
+    render()
+    requestState = wait({ seq: 2 })
+    const leaving = render()
+    // The install notice is leaving and the wait notice is queued, not shown.
+    expect(cls(toast(leaving))).toContain('noticeStackToast--leaving')
+    requestState = end({ seq: 3 })
+    render()
+    expect(exit(render())).toBeNull()
+  })
+
+  it('a queued wait notice is promoted when nothing retracts it', () => {
+    requestState = req({ appId: '3205720', kind: 'install-not-started' })
+    render()
+    requestState = wait({ seq: 2 })
+    const out = exit(render())
+    expect(text(out)).toContain('Waiting for Steam')
+  })
+
+  it('a newer request notice replaces the wait notice through its exit', () => {
+    requestState = wait()
+    render()
+    requestState = req({
+      appId: '3205720',
+      kind: 'direct-launch-failed',
+      seq: 2
+    })
+    const out = exit(render())
+    expect(text(out)).toContain('Could not launch Schedule I without Steam.')
+    expect(barOf(out)).toBeDefined()
   })
 })

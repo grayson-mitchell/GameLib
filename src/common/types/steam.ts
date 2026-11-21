@@ -226,6 +226,15 @@ export interface SteamRequestNoticePayload {
     /** quick 261120-8hb: a launch without Steam did not start, or its process ended within the early-exit window */
     | 'direct-launch-failed'
     | 'direct-launch-needs-steam'
+    /**
+     * debug bridged-launch-steam-signed-out: a bridged Play is holding (up to a minute) for Mac
+     * Steam to start / finish signing in. These two are PERSISTENT (no auto-hide); the renderer
+     * keeps one until `bridge-wait-end` for the same appId, a dismiss, or a replacement.
+     */
+    | 'bridge-wait-steam-not-running'
+    | 'bridge-wait-steam-not-signed-in'
+    /** the hold ended (launched, or the Steam dialog took over): retracts the wait notice for `appId`; shows nothing itself */
+    | 'bridge-wait-end'
   /** only for uninstall-steam-error */
   code?: number
   /** only for adopt-restart-* kinds: the backend's direct-launch verdict applies (Phase 81 D-05) */

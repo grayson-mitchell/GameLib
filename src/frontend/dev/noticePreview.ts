@@ -122,9 +122,10 @@ export function registerNoticePreview(
     },
     /**
      * The Humble toast leaves through its normal slot lifecycle. The Steam
-     * request stream has no retraction signal in production either: this
-     * resets the store, but a Steam notice already on screen leaves the way a
-     * real one does, via its X or its 8s auto-hide (frozen while DevTools,
+     * request stream has one retraction signal in production, `bridge-wait-end`
+     * (retracts the persistent bridge-wait notices; send it with `steam()`):
+     * this resets the store, but a Steam notice already on screen leaves the way
+     * a real one does, via its X or its 8s auto-hide (frozen while DevTools,
      * not the GameLib window, has focus). The read-only store is reset too,
      * but a read-only notice already on screen leaves only through its X
      * (D-15: no auto-hide), as a real one does.

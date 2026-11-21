@@ -26,6 +26,7 @@ pub const OPS: &[&str] = &[
     "steamfiles_read_installscript",
     "steamfiles_read_library_folders",
     "steamfiles_read_localconfig_beta_key",
+    "steamfiles_read_loginusers_offline_mode",
     "steamfiles_read_running_app_id",
     "steamfiles_scan_acfs",
     "steamfiles_shortcuts_apply",
@@ -148,6 +149,13 @@ fn run_op(op: &str, args: &[Value]) -> Result<Value, String> {
                 readers::read_localconfig_beta_key(Path::new(&a.path), &a.app_id),
             )
         }
+        "steamfiles_read_loginusers_offline_mode" => {
+            let a: PathArgs = parse_args(op, args)?;
+            to_value(
+                op,
+                readers::read_loginusers_offline_mode(Path::new(&a.path)),
+            )
+        }
         "steamfiles_read_running_app_id" => {
             let a: PathArgs = parse_args(op, args)?;
             to_value(op, readers::read_running_app_id(Path::new(&a.path)))
@@ -233,7 +241,7 @@ mod tests {
         assert!(parse_args::<A>("o", &[json!({"x": 1, "y": 2})]).is_err());
     }
 
-    const TWELVE: [&str; 12] = [
+    const THIRTEEN: [&str; 13] = [
         "steamfiles_discover_root",
         "steamfiles_find_acf",
         "steamfiles_parse_valve_manifest",
@@ -241,6 +249,7 @@ mod tests {
         "steamfiles_read_installscript",
         "steamfiles_read_library_folders",
         "steamfiles_read_localconfig_beta_key",
+        "steamfiles_read_loginusers_offline_mode",
         "steamfiles_read_running_app_id",
         "steamfiles_scan_acfs",
         "steamfiles_shortcuts_apply",
@@ -253,8 +262,8 @@ mod tests {
     }
 
     #[test]
-    fn registry_is_the_twelve_ops() {
-        assert_eq!(OPS, TWELVE.as_slice());
+    fn registry_is_the_thirteen_ops() {
+        assert_eq!(OPS, THIRTEEN.as_slice());
         assert_eq!(
             CLI_ONLY_OPS,
             ["steamfiles_discover_root", "steamfiles_shortcuts_roundtrip"].as_slice()
@@ -282,13 +291,16 @@ mod tests {
             "steamfiles_read_acf",
             "steamfiles_read_library_folders",
             "steamfiles_read_running_app_id",
+            "steamfiles_read_loginusers_offline_mode",
             "steamfiles_read_installscript",
             "steamfiles_parse_valve_manifest",
             "steamfiles_shortcuts_read",
             "steamfiles_shortcuts_roundtrip",
         ] {
             let r = dispatch(op, &[json!({"path": "/nonexistent/gamelib/zzz"})]).unwrap();
-            if op == "steamfiles_read_running_app_id" {
+            if op == "steamfiles_read_loginusers_offline_mode" {
+                assert_eq!(r["wantsOfflineMode"], json!(null), "{op}: {r}");
+            } else if op == "steamfiles_read_running_app_id" {
                 assert_eq!(r["runningAppId"], json!(0), "{op}: {r}");
             } else if op == "steamfiles_parse_valve_manifest" {
                 assert_eq!(r["ok"], json!(false), "{op}: {r}");
