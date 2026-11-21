@@ -5,15 +5,15 @@ milestone_name: Node Sidecar Retirement
 current_phase: 100
 current_phase_name: Game page without the ⋮ menu
 status: executing
-stopped_at: Completed 100-06-PLAN.md
-last_updated: "2026-11-21T10:48:08.191Z"
+stopped_at: Completed 100-07-PLAN.md
+last_updated: "2026-11-21T10:58:42.103Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 100 execution started
-state_head: b3111c3c8768e1a5eb4a5ac8419de481c077aaf4
+state_head: d49da6e749d71717ad1505bac0af8692a05f2526
 progress:
   total_phases: 20
   completed_phases: 23
-  total_plans: 75
+  total_plans: 77
   completed_plans: 531
   percent: 100
 ---
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 100 (Game page without the ⋮ menu) — EXECUTING
-Plan: 7 of 10
+Plan: 8 of 10
 Status: Ready to execute
 Last activity: 2026-11-21 — Phase 100 execution started
 Progress: [██████████] 100%
@@ -356,6 +356,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 100 P04 | 25 min | 3 tasks | 20 files |
 | Phase 100 P05 | 16 min | 3 tasks | 25 files |
 | Phase 100 P06 | 13 min | 3 tasks | 15 files |
+| Phase 100 P07 | 16 min | 3 tasks | 20 files |
 
 ## Accumulated Context
 
@@ -656,6 +657,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 100]: InstallTab renders separate fact lists for installed and not-installed games; ThirdPartyRow serves both and DownloadSizeInfo no longer has a third-party branch
 - [Phase 100]: 100-06: danger-zone border mixes --install-danger-text (not the raw danger token) into --border-color to clear 3:1 in gruvbox_dark
 - [Phase 100]: 100-06: Runs for me renders only for installed games, inside Library & integration; a not-installed game shows Show in Steam alone
+- [Phase 100]: Plan 07: the Logs tab is per-game only; initialTab is transient and never remembered, so the card's right-click Logs opens the dialog on Logs without changing the remembered tab (D-07)
+- [Phase 100]: Plan 07: EosOverlaySetting copies handleEosOverlay and the probe verbatim into Run -> Launch with a mirrored call-site guard (5 sites, 6 releases); the GameSubMenu guard stays until plan 09
 
 ### Pending Todos
 
@@ -916,8 +919,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-21T10:48:07.893Z
-Stopped at: Completed 100-06-PLAN.md
+Last session: 2026-11-21T10:58:41.770Z
+Stopped at: Completed 100-07-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

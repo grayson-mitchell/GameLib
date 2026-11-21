@@ -737,7 +737,7 @@ Plans:
 **Goal:** The game page has no ⋮ menu: every action sits next to what it changes. The left card is the game (store link, Edit details, Favourite heart by the title, category chips, Hide); the Install tab is the hub for your copy (Location → Open/Move, Size → Modify, Version → Verify/Check for updates, integration switch rows, red Uninstall last behind a confirmation); the ⚙ dialog owns how the game runs; the footer holds only tier-one actions. Requirements and the left-card play-time block are removed as duplicates; pending and error states live inside each row. Design source: sketch 012 (folds in 010, 011) — `.claude/skills/sketch-findings-gamelib/references/game-page.md`.
 **Requirements**: TBD
 **Depends on:** Nothing (frontend-only; independent of the v0.11 port phases)
-**Plans:** 6/10 plans executed
+**Plans:** 7/10 plans executed
 
 Plans:
 **Wave 1**
@@ -759,7 +759,7 @@ Plans:
 - [x] 100-06-PLAN.md — Show in Steam and Runs for me switch rows, danger zone (Uninstall / Remove all copies)
 
 **Wave 7** *(blocked on Wave 6 completion)*
-- [ ] 100-07-PLAN.md — ⚙ dialog: Logs tab (log modal type merged), EOS overlay switch, Wine prefix folder button
+- [x] 100-07-PLAN.md — ⚙ dialog: Logs tab (log modal type merged), EOS overlay switch, Wine prefix folder button
 
 **Wave 8** *(blocked on Wave 7 completion)*
 - [ ] 100-08-PLAN.md — Footer Install ▾ Locate for non-Steam, tab relabel, Apple compatibility + ProtonDB on Ratings
