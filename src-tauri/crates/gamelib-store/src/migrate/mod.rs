@@ -5,13 +5,17 @@
 //! `store_cache/steam_library`) or `settings/global` / `settings/game` for the settings documents.
 //! A store with no steps sits at the baseline version 1: `current_version_of` is
 //! `max(1, highest step target)`, and a file at version 0 (no stamp, or a stamp that is not a valid
-//! version) is adopted into v1 by an implicit identity step that writes nothing. This module is the
-//! registry only; the real steps (settings, library strips) are registered by plan 85-08.
+//! version) is adopted into v1 by an implicit identity step that writes nothing. `settings` and
+//! `libraries` hold the steps themselves, ported unchanged from `storeMigrations/` (D-12), and `strip`
+//! is the schema-derived strip they share.
 
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use crate::json::Json;
+
+pub mod settings;
+pub mod strip;
 
 /// What a step does to a document in place. An `Err` is a failed migration (the store opens
 /// read-only); the message may reach a log, so it must never carry file contents.
@@ -51,8 +55,9 @@ impl Step {
     }
 }
 
-/// The chain keys `storeMigrations/index.ts` (`STORE_MIGRATIONS`) names. Each is registered here
-/// with an empty step list until the plan that ports its steps fills it in.
+/// The chain keys `storeMigrations/index.ts` (`STORE_MIGRATIONS`) names. The two engine files
+/// (`steam_bridge/shared-redists`, `engine/gamelib-engine-marker`) have no steps: they sit at the
+/// baseline v1 and keep their own codecs.
 const TS_CHAIN_KEYS: [&str; 11] = [
     "settings/global",
     "settings/game",
@@ -74,14 +79,15 @@ pub struct Chains {
 }
 
 impl Chains {
-    /// Every chain `STORE_MIGRATIONS` names, each with no steps yet (85-08 registers them).
+    /// Every chain `STORE_MIGRATIONS` names, with the steps TS runs: settings global v2, settings game
+    /// v2, the seven library chains v3, and the rest at the baseline v1 (D-04: no version bump).
     pub fn baseline() -> Chains {
-        Chains {
-            chains: TS_CHAIN_KEYS
-                .iter()
-                .map(|k| ((*k).to_string(), Vec::new()))
-                .collect(),
-        }
+        let mut chains: BTreeMap<String, Vec<Step>> = TS_CHAIN_KEYS
+            .iter()
+            .map(|k| ((*k).to_string(), Vec::new()))
+            .collect();
+        chains.insert("settings/global".to_string(), settings::global_chain());
+        Chains { chains }
     }
 
     /// Replaces (or adds) the chain for `key`: the test seam `MigrationOverrides` was in TS.
@@ -131,7 +137,7 @@ mod tests {
     fn a_baseline_chain_is_v1_and_adopts_an_unstamped_file() {
         let c = Chains::baseline();
         assert_eq!(c.current_version_of("store/config"), 1);
-        assert_eq!(c.current_version_of("settings/global"), 1);
+        assert_eq!(c.current_version_of("engine/gamelib-engine-marker"), 1);
         let pending = c.pending("store/config", 0);
         assert_eq!(pending.len(), 1);
         assert!(pending.iter().all(|s| s.identity));

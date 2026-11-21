@@ -1,0 +1,3916 @@
+{
+  "generatedBy": "meta/genStoreSchemas.ts",
+  "settingsGlobal": {
+    "kind": "object",
+    "mode": "strict",
+    "members": {
+      "autoInstallDxvk": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "autoInstallVkd3d": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "autoInstallDxvkNvapi": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "autoSyncSaves": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "battlEyeRuntime": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "DXVKFpsCap": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": { "kind": "string", "max": 4096 }
+        }
+      },
+      "eacRuntime": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "enableDXVKFpsLimit": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "enableEsync": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "enableFSR": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "enableMsync": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "enableFsync": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "enableWineWayland": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "enableHDR": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "enableWoW64": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "gamescope": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": {
+            "kind": "object",
+            "mode": "strict",
+            "members": {
+              "enableUpscaling": {
+                "optional": false,
+                "node": { "kind": "boolean" }
+              },
+              "enableLimiter": {
+                "optional": false,
+                "node": { "kind": "boolean" }
+              },
+              "enableForceGrabCursor": {
+                "optional": false,
+                "node": { "kind": "boolean" }
+              },
+              "windowType": {
+                "optional": false,
+                "node": { "kind": "string", "max": 4096 }
+              },
+              "gameWidth": {
+                "optional": false,
+                "node": { "kind": "string", "max": 4096 }
+              },
+              "gameHeight": {
+                "optional": false,
+                "node": { "kind": "string", "max": 4096 }
+              },
+              "upscaleWidth": {
+                "optional": false,
+                "node": { "kind": "string", "max": 4096 }
+              },
+              "upscaleHeight": {
+                "optional": false,
+                "node": { "kind": "string", "max": 4096 }
+              },
+              "upscaleMethod": {
+                "optional": false,
+                "node": { "kind": "string", "max": 4096 }
+              },
+              "fpsLimiter": {
+                "optional": false,
+                "node": { "kind": "string", "max": 4096 }
+              },
+              "fpsLimiterNoFocus": {
+                "optional": false,
+                "node": { "kind": "string", "max": 4096 }
+              },
+              "additionalOptions": {
+                "optional": false,
+                "node": { "kind": "string", "max": 65536 }
+              }
+            }
+          }
+        }
+      },
+      "enviromentOptions": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": {
+            "kind": "array",
+            "element": {
+              "kind": "object",
+              "mode": "strict",
+              "members": {
+                "key": {
+                  "optional": false,
+                  "node": { "kind": "string", "max": 4096 }
+                },
+                "value": {
+                  "optional": false,
+                  "node": { "kind": "string", "max": 65536 }
+                }
+              }
+            },
+            "max": 4096
+          }
+        }
+      },
+      "ignoreGameUpdates": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "language": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": { "kind": "string", "max": 4096 }
+        }
+      },
+      "launcherArgs": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": { "kind": "string", "max": 65536 }
+        }
+      },
+      "lastUsedLaunchOption": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": {
+            "kind": "optional",
+            "inner": {
+              "kind": "union",
+              "options": [
+                {
+                  "kind": "object",
+                  "mode": "strict",
+                  "members": {
+                    "type": {
+                      "optional": true,
+                      "node": {
+                        "kind": "optional",
+                        "inner": { "kind": "literal", "value": "basic" }
+                      }
+                    },
+                    "name": {
+                      "optional": false,
+                      "node": { "kind": "string", "max": 4096 }
+                    },
+                    "parameters": {
+                      "optional": false,
+                      "node": { "kind": "string", "max": 4096 }
+                    }
+                  }
+                },
+                {
+                  "kind": "object",
+                  "mode": "strict",
+                  "members": {
+                    "type": {
+                      "optional": false,
+                      "node": { "kind": "literal", "value": "altExe" }
+                    },
+                    "executable": {
+                      "optional": false,
+                      "node": { "kind": "string", "max": 4096 }
+                    }
+                  }
+                },
+                {
+                  "kind": "object",
+                  "mode": "strict",
+                  "members": {
+                    "type": {
+                      "optional": false,
+                      "node": { "kind": "literal", "value": "dlc" }
+                    },
+                    "dlcAppName": {
+                      "optional": false,
+                      "node": { "kind": "string", "min": 1, "max": 256 }
+                    },
+                    "dlcTitle": {
+                      "optional": false,
+                      "node": { "kind": "string", "max": 4096 }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "maxSharpness": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": { "kind": "optional", "inner": { "kind": "number" } }
+        }
+      },
+      "nvidiaPrime": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "offlineMode": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "otherOptions": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 65536 }
+          }
+        }
+      },
+      "preferSystemLibs": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "showFps": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "showMangohud": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "targetExe": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": { "kind": "string", "max": 4096 }
+        }
+      },
+      "useGameMode": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "wineCrossoverBottle": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": { "kind": "string", "max": 4096 }
+        }
+      },
+      "steamEngineOverride": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        }
+      },
+      "engineOverride": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        }
+      },
+      "steamOverlayOverride": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": {
+            "kind": "optional",
+            "inner": { "kind": "enum", "values": ["automatic", "on", "off"] }
+          }
+        }
+      },
+      "launchWithoutSteam": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": { "kind": "optional", "inner": { "kind": "boolean" } }
+        }
+      },
+      "winePrefix": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": { "kind": "string", "max": 4096 }
+        }
+      },
+      "wineVersion": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": {
+            "kind": "union",
+            "options": [
+              {
+                "kind": "object",
+                "mode": "loose",
+                "members": {
+                  "bin": {
+                    "optional": false,
+                    "node": { "kind": "string", "min": 1, "max": 4096 }
+                  },
+                  "name": {
+                    "optional": false,
+                    "node": { "kind": "string", "max": 1024 }
+                  },
+                  "type": {
+                    "optional": false,
+                    "node": {
+                      "kind": "enum",
+                      "values": ["wine", "proton", "crossover", "toolkit"]
+                    }
+                  },
+                  "lib": {
+                    "optional": true,
+                    "node": {
+                      "kind": "optional",
+                      "inner": {
+                        "kind": "nullable",
+                        "inner": { "kind": "string", "max": 4096 }
+                      }
+                    }
+                  },
+                  "lib32": {
+                    "optional": true,
+                    "node": {
+                      "kind": "optional",
+                      "inner": {
+                        "kind": "nullable",
+                        "inner": { "kind": "string", "max": 4096 }
+                      }
+                    }
+                  },
+                  "wineserver": {
+                    "optional": true,
+                    "node": {
+                      "kind": "optional",
+                      "inner": {
+                        "kind": "nullable",
+                        "inner": { "kind": "string", "max": 4096 }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "kind": "object",
+                "mode": "strict",
+                "members": {
+                  "bin": {
+                    "optional": true,
+                    "node": {
+                      "kind": "optional",
+                      "inner": { "kind": "literal", "value": "" }
+                    }
+                  },
+                  "name": {
+                    "optional": true,
+                    "node": {
+                      "kind": "optional",
+                      "inner": { "kind": "string", "max": 1024 }
+                    }
+                  },
+                  "type": {
+                    "optional": true,
+                    "node": {
+                      "kind": "optional",
+                      "inner": {
+                        "kind": "enum",
+                        "values": ["wine", "proton", "crossover", "toolkit"]
+                      }
+                    }
+                  },
+                  "lib": {
+                    "optional": true,
+                    "node": {
+                      "kind": "optional",
+                      "inner": {
+                        "kind": "nullable",
+                        "inner": { "kind": "string", "max": 4096 }
+                      }
+                    }
+                  },
+                  "lib32": {
+                    "optional": true,
+                    "node": {
+                      "kind": "optional",
+                      "inner": {
+                        "kind": "nullable",
+                        "inner": { "kind": "string", "max": 4096 }
+                      }
+                    }
+                  },
+                  "wineserver": {
+                    "optional": true,
+                    "node": {
+                      "kind": "optional",
+                      "inner": {
+                        "kind": "nullable",
+                        "inner": { "kind": "string", "max": 4096 }
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      "wrapperOptions": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": {
+            "kind": "array",
+            "element": {
+              "kind": "object",
+              "mode": "strict",
+              "members": {
+                "exe": {
+                  "optional": false,
+                  "node": { "kind": "string", "max": 4096 }
+                },
+                "args": {
+                  "optional": false,
+                  "node": { "kind": "string", "max": 65536 }
+                }
+              }
+            },
+            "max": 4096
+          }
+        }
+      },
+      "savesPath": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": { "kind": "string", "max": 4096 }
+        }
+      },
+      "gogSaves": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": {
+            "kind": "optional",
+            "inner": {
+              "kind": "array",
+              "element": {
+                "kind": "object",
+                "mode": "strict",
+                "members": {
+                  "name": {
+                    "optional": false,
+                    "node": { "kind": "string", "max": 4096 }
+                  },
+                  "location": {
+                    "optional": false,
+                    "node": { "kind": "string", "max": 4096 }
+                  }
+                }
+              },
+              "max": 4096
+            }
+          }
+        }
+      },
+      "beforeLaunchScriptPath": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": { "kind": "string", "max": 4096 }
+        }
+      },
+      "afterLaunchScriptPath": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": { "kind": "string", "max": 4096 }
+        }
+      },
+      "disableUMU": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "verboseLogs": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "advertiseAvxForRosetta": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "enableQuickSavesMenu": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "notifyHumbleExpirations": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "shareDetectedFixes": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "addDesktopShortcuts": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "addStartMenuShortcuts": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "addSteamShortcuts": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "altGogdlBin": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": { "kind": "string", "max": 4096 }
+        }
+      },
+      "altCometBin": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": { "kind": "string", "max": 4096 }
+        }
+      },
+      "altLegendaryBin": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": { "kind": "string", "max": 4096 }
+        }
+      },
+      "altNileBin": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": { "kind": "string", "max": 4096 }
+        }
+      },
+      "autoUpdateGames": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "checkForUpdatesOnStartup": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "checkUpdatesInterval": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "number" } }
+      },
+      "customWinePaths": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": {
+            "kind": "array",
+            "element": { "kind": "string", "max": 4096 },
+            "max": 4096
+          }
+        }
+      },
+      "trayIconVariant": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": { "kind": "enum", "values": ["auto", "light", "dark"] }
+        }
+      },
+      "defaultInstallPath": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": { "kind": "string", "max": 4096 }
+        }
+      },
+      "defaultSteamPath": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": { "kind": "string", "max": 4096 }
+        }
+      },
+      "loginBackgroundPath": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": { "kind": "string", "max": 4096 }
+        }
+      },
+      "sharedWinePrefix": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": { "kind": "string", "max": 4096 }
+        }
+      },
+      "defaultWinePrefix": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": { "kind": "string", "max": 4096 }
+        }
+      },
+      "defaultWinePrefixDir": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": { "kind": "string", "max": 4096 }
+        }
+      },
+      "disableController": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "disablePlaytimeSync": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "disableLogs": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "disableAnimations": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "discordRPC": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "disableGOGPresence": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "downloadNoHttps": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "downloadProtonToSteam": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "enableSteamNativeInstall": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "enableSteamNativeDelete": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": { "kind": "optional", "inner": { "kind": "boolean" } }
+        }
+      },
+      "steamExperimentalInstallApp": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "egsLinkedPath": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": { "kind": "string", "max": 4096 }
+        }
+      },
+      "enableUpdates": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "exitToTray": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "gamepadRepeatDelay": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "number" } }
+      },
+      "gamepadInitialRepeatDelay": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "number" } }
+      },
+      "noTrayIcon": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "experimentalFeatures": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": {
+            "kind": "optional",
+            "inner": {
+              "kind": "object",
+              "mode": "strict",
+              "members": {
+                "cometSupport": {
+                  "optional": false,
+                  "node": { "kind": "boolean" }
+                },
+                "umuSupport": {
+                  "optional": true,
+                  "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+                }
+              }
+            }
+          }
+        }
+      },
+      "framelessWindow": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "focusRow": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": {
+            "kind": "nullable",
+            "inner": {
+              "kind": "object",
+              "mode": "strict",
+              "members": {
+                "kind": {
+                  "optional": false,
+                  "node": {
+                    "kind": "enum",
+                    "values": ["view", "collection", "store", "runnability"]
+                  }
+                },
+                "value": {
+                  "optional": false,
+                  "node": { "kind": "string", "max": 4096 }
+                }
+              }
+            }
+          }
+        }
+      },
+      "dismissedSignInNotices": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": {
+            "kind": "array",
+            "element": {
+              "kind": "enum",
+              "values": ["legendary", "gog", "nile", "humble", "steam"]
+            },
+            "max": 16
+          }
+        }
+      },
+      "hideChangelogsOnStartup": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "hideWindowOnProtocolLaunch": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "maxWorkers": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "number" } }
+      },
+      "minimizeOnLaunch": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "startInConsoleMode": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "startInTray": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "allowInstallationBrokenAnticheat": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "showValveProton": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "steamGridDbApiKey": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": { "kind": "string", "max": 4096 }
+        }
+      }
+    }
+  },
+  "settingsGame": {
+    "kind": "object",
+    "mode": "strict",
+    "members": {
+      "autoInstallDxvk": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "autoInstallVkd3d": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "autoInstallDxvkNvapi": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "autoSyncSaves": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "battlEyeRuntime": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "DXVKFpsCap": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": { "kind": "string", "max": 4096 }
+        }
+      },
+      "eacRuntime": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "enableDXVKFpsLimit": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "enableEsync": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "enableFSR": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "enableMsync": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "enableFsync": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "enableWineWayland": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "enableHDR": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "enableWoW64": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "gamescope": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": {
+            "kind": "object",
+            "mode": "strict",
+            "members": {
+              "enableUpscaling": {
+                "optional": false,
+                "node": { "kind": "boolean" }
+              },
+              "enableLimiter": {
+                "optional": false,
+                "node": { "kind": "boolean" }
+              },
+              "enableForceGrabCursor": {
+                "optional": false,
+                "node": { "kind": "boolean" }
+              },
+              "windowType": {
+                "optional": false,
+                "node": { "kind": "string", "max": 4096 }
+              },
+              "gameWidth": {
+                "optional": false,
+                "node": { "kind": "string", "max": 4096 }
+              },
+              "gameHeight": {
+                "optional": false,
+                "node": { "kind": "string", "max": 4096 }
+              },
+              "upscaleWidth": {
+                "optional": false,
+                "node": { "kind": "string", "max": 4096 }
+              },
+              "upscaleHeight": {
+                "optional": false,
+                "node": { "kind": "string", "max": 4096 }
+              },
+              "upscaleMethod": {
+                "optional": false,
+                "node": { "kind": "string", "max": 4096 }
+              },
+              "fpsLimiter": {
+                "optional": false,
+                "node": { "kind": "string", "max": 4096 }
+              },
+              "fpsLimiterNoFocus": {
+                "optional": false,
+                "node": { "kind": "string", "max": 4096 }
+              },
+              "additionalOptions": {
+                "optional": false,
+                "node": { "kind": "string", "max": 65536 }
+              }
+            }
+          }
+        }
+      },
+      "enviromentOptions": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": {
+            "kind": "array",
+            "element": {
+              "kind": "object",
+              "mode": "strict",
+              "members": {
+                "key": {
+                  "optional": false,
+                  "node": { "kind": "string", "max": 4096 }
+                },
+                "value": {
+                  "optional": false,
+                  "node": { "kind": "string", "max": 65536 }
+                }
+              }
+            },
+            "max": 4096
+          }
+        }
+      },
+      "ignoreGameUpdates": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "language": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": { "kind": "string", "max": 4096 }
+        }
+      },
+      "launcherArgs": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": { "kind": "string", "max": 65536 }
+        }
+      },
+      "lastUsedLaunchOption": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": {
+            "kind": "optional",
+            "inner": {
+              "kind": "union",
+              "options": [
+                {
+                  "kind": "object",
+                  "mode": "strict",
+                  "members": {
+                    "type": {
+                      "optional": true,
+                      "node": {
+                        "kind": "optional",
+                        "inner": { "kind": "literal", "value": "basic" }
+                      }
+                    },
+                    "name": {
+                      "optional": false,
+                      "node": { "kind": "string", "max": 4096 }
+                    },
+                    "parameters": {
+                      "optional": false,
+                      "node": { "kind": "string", "max": 4096 }
+                    }
+                  }
+                },
+                {
+                  "kind": "object",
+                  "mode": "strict",
+                  "members": {
+                    "type": {
+                      "optional": false,
+                      "node": { "kind": "literal", "value": "altExe" }
+                    },
+                    "executable": {
+                      "optional": false,
+                      "node": { "kind": "string", "max": 4096 }
+                    }
+                  }
+                },
+                {
+                  "kind": "object",
+                  "mode": "strict",
+                  "members": {
+                    "type": {
+                      "optional": false,
+                      "node": { "kind": "literal", "value": "dlc" }
+                    },
+                    "dlcAppName": {
+                      "optional": false,
+                      "node": { "kind": "string", "min": 1, "max": 256 }
+                    },
+                    "dlcTitle": {
+                      "optional": false,
+                      "node": { "kind": "string", "max": 4096 }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "maxSharpness": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": { "kind": "optional", "inner": { "kind": "number" } }
+        }
+      },
+      "nvidiaPrime": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "offlineMode": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "otherOptions": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 65536 }
+          }
+        }
+      },
+      "preferSystemLibs": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "showFps": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "showMangohud": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "targetExe": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": { "kind": "string", "max": 4096 }
+        }
+      },
+      "useGameMode": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "wineCrossoverBottle": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": { "kind": "string", "max": 4096 }
+        }
+      },
+      "steamEngineOverride": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        }
+      },
+      "engineOverride": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        }
+      },
+      "steamOverlayOverride": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": {
+            "kind": "optional",
+            "inner": { "kind": "enum", "values": ["automatic", "on", "off"] }
+          }
+        }
+      },
+      "launchWithoutSteam": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": { "kind": "optional", "inner": { "kind": "boolean" } }
+        }
+      },
+      "winePrefix": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": { "kind": "string", "max": 4096 }
+        }
+      },
+      "wineVersion": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": {
+            "kind": "union",
+            "options": [
+              {
+                "kind": "object",
+                "mode": "loose",
+                "members": {
+                  "bin": {
+                    "optional": false,
+                    "node": { "kind": "string", "min": 1, "max": 4096 }
+                  },
+                  "name": {
+                    "optional": false,
+                    "node": { "kind": "string", "max": 1024 }
+                  },
+                  "type": {
+                    "optional": false,
+                    "node": {
+                      "kind": "enum",
+                      "values": ["wine", "proton", "crossover", "toolkit"]
+                    }
+                  },
+                  "lib": {
+                    "optional": true,
+                    "node": {
+                      "kind": "optional",
+                      "inner": {
+                        "kind": "nullable",
+                        "inner": { "kind": "string", "max": 4096 }
+                      }
+                    }
+                  },
+                  "lib32": {
+                    "optional": true,
+                    "node": {
+                      "kind": "optional",
+                      "inner": {
+                        "kind": "nullable",
+                        "inner": { "kind": "string", "max": 4096 }
+                      }
+                    }
+                  },
+                  "wineserver": {
+                    "optional": true,
+                    "node": {
+                      "kind": "optional",
+                      "inner": {
+                        "kind": "nullable",
+                        "inner": { "kind": "string", "max": 4096 }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "kind": "object",
+                "mode": "strict",
+                "members": {
+                  "bin": {
+                    "optional": true,
+                    "node": {
+                      "kind": "optional",
+                      "inner": { "kind": "literal", "value": "" }
+                    }
+                  },
+                  "name": {
+                    "optional": true,
+                    "node": {
+                      "kind": "optional",
+                      "inner": { "kind": "string", "max": 1024 }
+                    }
+                  },
+                  "type": {
+                    "optional": true,
+                    "node": {
+                      "kind": "optional",
+                      "inner": {
+                        "kind": "enum",
+                        "values": ["wine", "proton", "crossover", "toolkit"]
+                      }
+                    }
+                  },
+                  "lib": {
+                    "optional": true,
+                    "node": {
+                      "kind": "optional",
+                      "inner": {
+                        "kind": "nullable",
+                        "inner": { "kind": "string", "max": 4096 }
+                      }
+                    }
+                  },
+                  "lib32": {
+                    "optional": true,
+                    "node": {
+                      "kind": "optional",
+                      "inner": {
+                        "kind": "nullable",
+                        "inner": { "kind": "string", "max": 4096 }
+                      }
+                    }
+                  },
+                  "wineserver": {
+                    "optional": true,
+                    "node": {
+                      "kind": "optional",
+                      "inner": {
+                        "kind": "nullable",
+                        "inner": { "kind": "string", "max": 4096 }
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      "wrapperOptions": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": {
+            "kind": "array",
+            "element": {
+              "kind": "object",
+              "mode": "strict",
+              "members": {
+                "exe": {
+                  "optional": false,
+                  "node": { "kind": "string", "max": 4096 }
+                },
+                "args": {
+                  "optional": false,
+                  "node": { "kind": "string", "max": 65536 }
+                }
+              }
+            },
+            "max": 4096
+          }
+        }
+      },
+      "savesPath": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": { "kind": "string", "max": 4096 }
+        }
+      },
+      "gogSaves": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": {
+            "kind": "optional",
+            "inner": {
+              "kind": "array",
+              "element": {
+                "kind": "object",
+                "mode": "strict",
+                "members": {
+                  "name": {
+                    "optional": false,
+                    "node": { "kind": "string", "max": 4096 }
+                  },
+                  "location": {
+                    "optional": false,
+                    "node": { "kind": "string", "max": 4096 }
+                  }
+                }
+              },
+              "max": 4096
+            }
+          }
+        }
+      },
+      "beforeLaunchScriptPath": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": { "kind": "string", "max": 4096 }
+        }
+      },
+      "afterLaunchScriptPath": {
+        "optional": true,
+        "node": {
+          "kind": "optional",
+          "inner": { "kind": "string", "max": 4096 }
+        }
+      },
+      "disableUMU": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "verboseLogs": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "advertiseAvxForRosetta": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      },
+      "enableQuickSavesMenu": {
+        "optional": true,
+        "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+      }
+    }
+  },
+  "gameInfo": {
+    "steam": {
+      "kind": "object",
+      "mode": "strict",
+      "members": {
+        "store_url": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "app_name": {
+          "optional": false,
+          "node": { "kind": "string", "min": 1, "max": 4096 }
+        },
+        "art_cover": {
+          "optional": false,
+          "node": { "kind": "string", "max": 65536 }
+        },
+        "art_logo": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 65536 }
+          }
+        },
+        "art_background": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 65536 }
+          }
+        },
+        "art_icon": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 65536 }
+          }
+        },
+        "art_square": {
+          "optional": false,
+          "node": { "kind": "string", "max": 65536 }
+        },
+        "cloud_save_enabled": {
+          "optional": true,
+          "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+        },
+        "developer": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "extra": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": {
+              "kind": "object",
+              "mode": "strict",
+              "members": {
+                "about": {
+                  "optional": true,
+                  "node": {
+                    "kind": "optional",
+                    "inner": {
+                      "kind": "object",
+                      "mode": "strict",
+                      "members": {
+                        "description": {
+                          "optional": false,
+                          "node": { "kind": "string", "max": 262144 }
+                        },
+                        "shortDescription": {
+                          "optional": false,
+                          "node": { "kind": "string", "max": 262144 }
+                        }
+                      }
+                    }
+                  }
+                },
+                "reqs": {
+                  "optional": false,
+                  "node": {
+                    "kind": "array",
+                    "element": {
+                      "kind": "object",
+                      "mode": "strict",
+                      "members": {
+                        "minimum": {
+                          "optional": false,
+                          "node": { "kind": "string", "max": 262144 }
+                        },
+                        "recommended": {
+                          "optional": false,
+                          "node": { "kind": "string", "max": 262144 }
+                        },
+                        "title": {
+                          "optional": false,
+                          "node": { "kind": "string", "max": 4096 }
+                        }
+                      }
+                    },
+                    "max": 256
+                  }
+                },
+                "releaseDate": {
+                  "optional": true,
+                  "node": {
+                    "kind": "optional",
+                    "inner": { "kind": "string", "max": 4096 }
+                  }
+                },
+                "storeUrl": {
+                  "optional": true,
+                  "node": {
+                    "kind": "optional",
+                    "inner": { "kind": "string", "max": 4096 }
+                  }
+                },
+                "changelog": {
+                  "optional": true,
+                  "node": {
+                    "kind": "optional",
+                    "inner": { "kind": "string", "max": 262144 }
+                  }
+                },
+                "genres": {
+                  "optional": true,
+                  "node": {
+                    "kind": "optional",
+                    "inner": {
+                      "kind": "array",
+                      "element": { "kind": "string", "max": 4096 },
+                      "max": 256
+                    }
+                  }
+                },
+                "steamPlaytimeMinutes": {
+                  "optional": true,
+                  "node": { "kind": "optional", "inner": { "kind": "number" } }
+                },
+                "steamLastPlayed": {
+                  "optional": true,
+                  "node": { "kind": "optional", "inner": { "kind": "number" } }
+                }
+              }
+            }
+          }
+        },
+        "folder_name": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "install": {
+          "optional": false,
+          "node": {
+            "kind": "object",
+            "mode": "strict",
+            "members": {
+              "manifest": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": {
+                    "kind": "object",
+                    "mode": "strict",
+                    "members": {
+                      "disk_size": {
+                        "optional": false,
+                        "node": { "kind": "number" }
+                      },
+                      "download_size": {
+                        "optional": false,
+                        "node": { "kind": "number" }
+                      },
+                      "app_name": {
+                        "optional": false,
+                        "node": { "kind": "string", "max": 4096 }
+                      },
+                      "languages": {
+                        "optional": false,
+                        "node": {
+                          "kind": "array",
+                          "element": { "kind": "string", "max": 4096 },
+                          "max": 4096
+                        }
+                      },
+                      "versionEtag": {
+                        "optional": false,
+                        "node": { "kind": "string", "max": 4096 }
+                      },
+                      "dependencies": {
+                        "optional": false,
+                        "node": {
+                          "kind": "array",
+                          "element": { "kind": "string", "max": 4096 },
+                          "max": 4096
+                        }
+                      },
+                      "perLangSize": {
+                        "optional": false,
+                        "node": {
+                          "kind": "record",
+                          "value": {
+                            "kind": "object",
+                            "mode": "strict",
+                            "members": {
+                              "download_size": {
+                                "optional": false,
+                                "node": { "kind": "number" }
+                              },
+                              "disk_size": {
+                                "optional": false,
+                                "node": { "kind": "number" }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "executable": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": { "kind": "string", "max": 4096 }
+                }
+              },
+              "install_path": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": { "kind": "string", "max": 4096 }
+                }
+              },
+              "install_size": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": { "kind": "string", "max": 4096 }
+                }
+              },
+              "is_dlc": {
+                "optional": true,
+                "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+              },
+              "version": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": { "kind": "string", "max": 4096 }
+                }
+              },
+              "platform": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": {
+                    "kind": "enum",
+                    "values": [
+                      "Windows",
+                      "Win32",
+                      "Mac",
+                      "Android",
+                      "iOS",
+                      "windows",
+                      "osx",
+                      "linux",
+                      "Browser"
+                    ]
+                  }
+                }
+              },
+              "appName": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": { "kind": "string", "max": 4096 }
+                }
+              },
+              "language": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": { "kind": "string", "max": 4096 }
+                }
+              },
+              "branch": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": { "kind": "string", "max": 4096 }
+                }
+              },
+              "steamResumePending": {
+                "optional": true,
+                "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+              },
+              "steamResumeTargetSteamappsDir": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": { "kind": "string", "max": 4096 }
+                }
+              },
+              "steamResumeInstalldir": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": { "kind": "string", "max": 4096 }
+                }
+              },
+              "steamResumeInstalledAtStart": {
+                "optional": true,
+                "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+              }
+            }
+          }
+        },
+        "is_installed": { "optional": false, "node": { "kind": "boolean" } },
+        "save_folder": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "title": {
+          "optional": false,
+          "node": { "kind": "string", "max": 4096 }
+        },
+        "canRunOffline": { "optional": false, "node": { "kind": "boolean" } },
+        "thirdPartyManagedApp": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "is_mac_native": {
+          "optional": true,
+          "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+        },
+        "mac_arch": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "enum", "values": ["32", "64", "unknown"] }
+          }
+        },
+        "is_linux_native": {
+          "optional": true,
+          "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+        },
+        "is_windows_native": {
+          "optional": true,
+          "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+        },
+        "metacritic_score": {
+          "optional": true,
+          "node": { "kind": "optional", "inner": { "kind": "number" } }
+        },
+        "description": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 262144 }
+          }
+        },
+        "version": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "overrides": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": {
+              "kind": "object",
+              "mode": "strict",
+              "members": {
+                "title": {
+                  "optional": true,
+                  "node": {
+                    "kind": "optional",
+                    "inner": { "kind": "string", "max": 4096 }
+                  }
+                },
+                "art_cover": {
+                  "optional": true,
+                  "node": {
+                    "kind": "optional",
+                    "inner": { "kind": "string", "max": 65536 }
+                  }
+                },
+                "art_square": {
+                  "optional": true,
+                  "node": {
+                    "kind": "optional",
+                    "inner": { "kind": "string", "max": 65536 }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "runner": {
+          "optional": false,
+          "node": { "kind": "literal", "value": "steam" }
+        },
+        "installable": {
+          "optional": true,
+          "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+        },
+        "is_delisted": {
+          "optional": true,
+          "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+        },
+        "steamPlatformsCaptured": {
+          "optional": true,
+          "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+        }
+      }
+    },
+    "gog": {
+      "kind": "object",
+      "mode": "strict",
+      "members": {
+        "store_url": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "app_name": {
+          "optional": false,
+          "node": { "kind": "string", "min": 1, "max": 4096 }
+        },
+        "art_cover": {
+          "optional": false,
+          "node": { "kind": "string", "max": 65536 }
+        },
+        "art_logo": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 65536 }
+          }
+        },
+        "art_background": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 65536 }
+          }
+        },
+        "art_icon": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 65536 }
+          }
+        },
+        "art_square": {
+          "optional": false,
+          "node": { "kind": "string", "max": 65536 }
+        },
+        "cloud_save_enabled": {
+          "optional": true,
+          "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+        },
+        "developer": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "extra": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": {
+              "kind": "object",
+              "mode": "strict",
+              "members": {
+                "about": {
+                  "optional": true,
+                  "node": {
+                    "kind": "optional",
+                    "inner": {
+                      "kind": "object",
+                      "mode": "strict",
+                      "members": {
+                        "description": {
+                          "optional": false,
+                          "node": { "kind": "string", "max": 262144 }
+                        },
+                        "shortDescription": {
+                          "optional": false,
+                          "node": { "kind": "string", "max": 262144 }
+                        }
+                      }
+                    }
+                  }
+                },
+                "reqs": {
+                  "optional": false,
+                  "node": {
+                    "kind": "array",
+                    "element": {
+                      "kind": "object",
+                      "mode": "strict",
+                      "members": {
+                        "minimum": {
+                          "optional": false,
+                          "node": { "kind": "string", "max": 262144 }
+                        },
+                        "recommended": {
+                          "optional": false,
+                          "node": { "kind": "string", "max": 262144 }
+                        },
+                        "title": {
+                          "optional": false,
+                          "node": { "kind": "string", "max": 4096 }
+                        }
+                      }
+                    },
+                    "max": 256
+                  }
+                },
+                "releaseDate": {
+                  "optional": true,
+                  "node": {
+                    "kind": "optional",
+                    "inner": { "kind": "string", "max": 4096 }
+                  }
+                },
+                "storeUrl": {
+                  "optional": true,
+                  "node": {
+                    "kind": "optional",
+                    "inner": { "kind": "string", "max": 4096 }
+                  }
+                },
+                "changelog": {
+                  "optional": true,
+                  "node": {
+                    "kind": "optional",
+                    "inner": { "kind": "string", "max": 262144 }
+                  }
+                },
+                "genres": {
+                  "optional": true,
+                  "node": {
+                    "kind": "optional",
+                    "inner": {
+                      "kind": "array",
+                      "element": { "kind": "string", "max": 4096 },
+                      "max": 256
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "folder_name": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "install": {
+          "optional": false,
+          "node": {
+            "kind": "object",
+            "mode": "strict",
+            "members": {
+              "manifest": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": {
+                    "kind": "object",
+                    "mode": "strict",
+                    "members": {
+                      "disk_size": {
+                        "optional": false,
+                        "node": { "kind": "number" }
+                      },
+                      "download_size": {
+                        "optional": false,
+                        "node": { "kind": "number" }
+                      },
+                      "app_name": {
+                        "optional": false,
+                        "node": { "kind": "string", "max": 4096 }
+                      },
+                      "languages": {
+                        "optional": false,
+                        "node": {
+                          "kind": "array",
+                          "element": { "kind": "string", "max": 4096 },
+                          "max": 4096
+                        }
+                      },
+                      "versionEtag": {
+                        "optional": false,
+                        "node": { "kind": "string", "max": 4096 }
+                      },
+                      "dependencies": {
+                        "optional": false,
+                        "node": {
+                          "kind": "array",
+                          "element": { "kind": "string", "max": 4096 },
+                          "max": 4096
+                        }
+                      },
+                      "perLangSize": {
+                        "optional": false,
+                        "node": {
+                          "kind": "record",
+                          "value": {
+                            "kind": "object",
+                            "mode": "strict",
+                            "members": {
+                              "download_size": {
+                                "optional": false,
+                                "node": { "kind": "number" }
+                              },
+                              "disk_size": {
+                                "optional": false,
+                                "node": { "kind": "number" }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "executable": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": { "kind": "string", "max": 4096 }
+                }
+              },
+              "install_path": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": { "kind": "string", "max": 4096 }
+                }
+              },
+              "install_size": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": { "kind": "string", "max": 4096 }
+                }
+              },
+              "is_dlc": {
+                "optional": true,
+                "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+              },
+              "version": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": { "kind": "string", "max": 4096 }
+                }
+              },
+              "platform": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": {
+                    "kind": "enum",
+                    "values": [
+                      "Windows",
+                      "Win32",
+                      "Mac",
+                      "Android",
+                      "iOS",
+                      "windows",
+                      "osx",
+                      "linux",
+                      "Browser"
+                    ]
+                  }
+                }
+              },
+              "appName": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": { "kind": "string", "max": 4096 }
+                }
+              },
+              "language": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": { "kind": "string", "max": 4096 }
+                }
+              },
+              "branch": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": { "kind": "string", "max": 4096 }
+                }
+              },
+              "isDosbox": {
+                "optional": true,
+                "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+              },
+              "dosboxConf": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": {
+                    "kind": "array",
+                    "element": { "kind": "string", "max": 4096 },
+                    "max": 4096
+                  }
+                }
+              },
+              "installedWithDLCs": {
+                "optional": true,
+                "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+              },
+              "installedDLCs": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": {
+                    "kind": "array",
+                    "element": { "kind": "string", "max": 4096 },
+                    "max": 4096
+                  }
+                }
+              },
+              "versionEtag": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": { "kind": "string", "max": 4096 }
+                }
+              },
+              "buildId": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": { "kind": "string", "max": 4096 }
+                }
+              },
+              "pinnedVersion": {
+                "optional": true,
+                "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+              },
+              "cyberpunk": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": {
+                    "kind": "object",
+                    "mode": "strict",
+                    "members": {
+                      "modsEnabled": {
+                        "optional": false,
+                        "node": { "kind": "boolean" }
+                      },
+                      "modsToLoad": {
+                        "optional": false,
+                        "node": {
+                          "kind": "array",
+                          "element": { "kind": "string", "max": 4096 },
+                          "max": 4096
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "is_installed": { "optional": false, "node": { "kind": "boolean" } },
+        "save_folder": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "title": {
+          "optional": false,
+          "node": { "kind": "string", "max": 4096 }
+        },
+        "canRunOffline": { "optional": false, "node": { "kind": "boolean" } },
+        "thirdPartyManagedApp": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "is_mac_native": {
+          "optional": true,
+          "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+        },
+        "mac_arch": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "enum", "values": ["32", "64", "unknown"] }
+          }
+        },
+        "is_linux_native": {
+          "optional": true,
+          "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+        },
+        "is_windows_native": {
+          "optional": true,
+          "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+        },
+        "metacritic_score": {
+          "optional": true,
+          "node": { "kind": "optional", "inner": { "kind": "number" } }
+        },
+        "description": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 262144 }
+          }
+        },
+        "version": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "overrides": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": {
+              "kind": "object",
+              "mode": "strict",
+              "members": {
+                "title": {
+                  "optional": true,
+                  "node": {
+                    "kind": "optional",
+                    "inner": { "kind": "string", "max": 4096 }
+                  }
+                },
+                "art_cover": {
+                  "optional": true,
+                  "node": {
+                    "kind": "optional",
+                    "inner": { "kind": "string", "max": 65536 }
+                  }
+                },
+                "art_square": {
+                  "optional": true,
+                  "node": {
+                    "kind": "optional",
+                    "inner": { "kind": "string", "max": 65536 }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "runner": {
+          "optional": false,
+          "node": { "kind": "literal", "value": "gog" }
+        },
+        "gog_save_location": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": {
+              "kind": "array",
+              "element": {
+                "kind": "object",
+                "mode": "strict",
+                "members": {
+                  "name": {
+                    "optional": false,
+                    "node": { "kind": "string", "max": 4096 }
+                  },
+                  "location": {
+                    "optional": false,
+                    "node": { "kind": "string", "max": 4096 }
+                  }
+                }
+              },
+              "max": 4096
+            }
+          }
+        }
+      }
+    },
+    "legendary": {
+      "kind": "object",
+      "mode": "strict",
+      "members": {
+        "store_url": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "app_name": {
+          "optional": false,
+          "node": { "kind": "string", "min": 1, "max": 4096 }
+        },
+        "art_cover": {
+          "optional": false,
+          "node": { "kind": "string", "max": 65536 }
+        },
+        "art_logo": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 65536 }
+          }
+        },
+        "art_background": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 65536 }
+          }
+        },
+        "art_icon": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 65536 }
+          }
+        },
+        "art_square": {
+          "optional": false,
+          "node": { "kind": "string", "max": 65536 }
+        },
+        "cloud_save_enabled": {
+          "optional": true,
+          "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+        },
+        "developer": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "extra": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": {
+              "kind": "object",
+              "mode": "strict",
+              "members": {
+                "about": {
+                  "optional": true,
+                  "node": {
+                    "kind": "optional",
+                    "inner": {
+                      "kind": "object",
+                      "mode": "strict",
+                      "members": {
+                        "description": {
+                          "optional": false,
+                          "node": { "kind": "string", "max": 262144 }
+                        },
+                        "shortDescription": {
+                          "optional": false,
+                          "node": { "kind": "string", "max": 262144 }
+                        }
+                      }
+                    }
+                  }
+                },
+                "reqs": {
+                  "optional": false,
+                  "node": {
+                    "kind": "array",
+                    "element": {
+                      "kind": "object",
+                      "mode": "strict",
+                      "members": {
+                        "minimum": {
+                          "optional": false,
+                          "node": { "kind": "string", "max": 262144 }
+                        },
+                        "recommended": {
+                          "optional": false,
+                          "node": { "kind": "string", "max": 262144 }
+                        },
+                        "title": {
+                          "optional": false,
+                          "node": { "kind": "string", "max": 4096 }
+                        }
+                      }
+                    },
+                    "max": 256
+                  }
+                },
+                "releaseDate": {
+                  "optional": true,
+                  "node": {
+                    "kind": "optional",
+                    "inner": { "kind": "string", "max": 4096 }
+                  }
+                },
+                "storeUrl": {
+                  "optional": true,
+                  "node": {
+                    "kind": "optional",
+                    "inner": { "kind": "string", "max": 4096 }
+                  }
+                },
+                "changelog": {
+                  "optional": true,
+                  "node": {
+                    "kind": "optional",
+                    "inner": { "kind": "string", "max": 262144 }
+                  }
+                },
+                "genres": {
+                  "optional": true,
+                  "node": {
+                    "kind": "optional",
+                    "inner": {
+                      "kind": "array",
+                      "element": { "kind": "string", "max": 4096 },
+                      "max": 256
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "folder_name": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "install": {
+          "optional": false,
+          "node": {
+            "kind": "object",
+            "mode": "strict",
+            "members": {
+              "manifest": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": {
+                    "kind": "object",
+                    "mode": "strict",
+                    "members": {
+                      "disk_size": {
+                        "optional": false,
+                        "node": { "kind": "number" }
+                      },
+                      "download_size": {
+                        "optional": false,
+                        "node": { "kind": "number" }
+                      },
+                      "app_name": {
+                        "optional": false,
+                        "node": { "kind": "string", "max": 4096 }
+                      },
+                      "languages": {
+                        "optional": false,
+                        "node": {
+                          "kind": "array",
+                          "element": { "kind": "string", "max": 4096 },
+                          "max": 4096
+                        }
+                      },
+                      "versionEtag": {
+                        "optional": false,
+                        "node": { "kind": "string", "max": 4096 }
+                      },
+                      "dependencies": {
+                        "optional": false,
+                        "node": {
+                          "kind": "array",
+                          "element": { "kind": "string", "max": 4096 },
+                          "max": 4096
+                        }
+                      },
+                      "perLangSize": {
+                        "optional": false,
+                        "node": {
+                          "kind": "record",
+                          "value": {
+                            "kind": "object",
+                            "mode": "strict",
+                            "members": {
+                              "download_size": {
+                                "optional": false,
+                                "node": { "kind": "number" }
+                              },
+                              "disk_size": {
+                                "optional": false,
+                                "node": { "kind": "number" }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "executable": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": { "kind": "string", "max": 4096 }
+                }
+              },
+              "install_path": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": { "kind": "string", "max": 4096 }
+                }
+              },
+              "install_size": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": { "kind": "string", "max": 4096 }
+                }
+              },
+              "is_dlc": {
+                "optional": true,
+                "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+              },
+              "version": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": { "kind": "string", "max": 4096 }
+                }
+              },
+              "platform": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": {
+                    "kind": "enum",
+                    "values": [
+                      "Windows",
+                      "Win32",
+                      "Mac",
+                      "Android",
+                      "iOS",
+                      "windows",
+                      "osx",
+                      "linux",
+                      "Browser"
+                    ]
+                  }
+                }
+              },
+              "appName": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": { "kind": "string", "max": 4096 }
+                }
+              },
+              "language": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": { "kind": "string", "max": 4096 }
+                }
+              },
+              "branch": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": { "kind": "string", "max": 4096 }
+                }
+              }
+            }
+          }
+        },
+        "is_installed": { "optional": false, "node": { "kind": "boolean" } },
+        "save_folder": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "title": {
+          "optional": false,
+          "node": { "kind": "string", "max": 4096 }
+        },
+        "canRunOffline": { "optional": false, "node": { "kind": "boolean" } },
+        "thirdPartyManagedApp": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "is_mac_native": {
+          "optional": true,
+          "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+        },
+        "mac_arch": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "enum", "values": ["32", "64", "unknown"] }
+          }
+        },
+        "is_linux_native": {
+          "optional": true,
+          "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+        },
+        "is_windows_native": {
+          "optional": true,
+          "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+        },
+        "metacritic_score": {
+          "optional": true,
+          "node": { "kind": "optional", "inner": { "kind": "number" } }
+        },
+        "description": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 262144 }
+          }
+        },
+        "version": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "overrides": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": {
+              "kind": "object",
+              "mode": "strict",
+              "members": {
+                "title": {
+                  "optional": true,
+                  "node": {
+                    "kind": "optional",
+                    "inner": { "kind": "string", "max": 4096 }
+                  }
+                },
+                "art_cover": {
+                  "optional": true,
+                  "node": {
+                    "kind": "optional",
+                    "inner": { "kind": "string", "max": 65536 }
+                  }
+                },
+                "art_square": {
+                  "optional": true,
+                  "node": {
+                    "kind": "optional",
+                    "inner": { "kind": "string", "max": 65536 }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "runner": {
+          "optional": false,
+          "node": { "kind": "literal", "value": "legendary" }
+        },
+        "namespace": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "save_path": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": {
+              "kind": "nullable",
+              "inner": { "kind": "string", "max": 4096 }
+            }
+          }
+        },
+        "isEAManaged": {
+          "optional": true,
+          "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+        },
+        "isUbisoftManaged": {
+          "optional": true,
+          "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+        },
+        "dlcList": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": {
+              "kind": "array",
+              "element": { "kind": "object", "mode": "loose", "members": {} },
+              "max": 4096
+            }
+          }
+        }
+      }
+    },
+    "nile": {
+      "kind": "object",
+      "mode": "strict",
+      "members": {
+        "store_url": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "app_name": {
+          "optional": false,
+          "node": { "kind": "string", "min": 1, "max": 4096 }
+        },
+        "art_cover": {
+          "optional": false,
+          "node": { "kind": "string", "max": 65536 }
+        },
+        "art_logo": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 65536 }
+          }
+        },
+        "art_background": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 65536 }
+          }
+        },
+        "art_icon": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 65536 }
+          }
+        },
+        "art_square": {
+          "optional": false,
+          "node": { "kind": "string", "max": 65536 }
+        },
+        "cloud_save_enabled": {
+          "optional": true,
+          "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+        },
+        "developer": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "extra": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": {
+              "kind": "object",
+              "mode": "strict",
+              "members": {
+                "about": {
+                  "optional": true,
+                  "node": {
+                    "kind": "optional",
+                    "inner": {
+                      "kind": "object",
+                      "mode": "strict",
+                      "members": {
+                        "description": {
+                          "optional": false,
+                          "node": { "kind": "string", "max": 262144 }
+                        },
+                        "shortDescription": {
+                          "optional": false,
+                          "node": { "kind": "string", "max": 262144 }
+                        }
+                      }
+                    }
+                  }
+                },
+                "reqs": {
+                  "optional": false,
+                  "node": {
+                    "kind": "array",
+                    "element": {
+                      "kind": "object",
+                      "mode": "strict",
+                      "members": {
+                        "minimum": {
+                          "optional": false,
+                          "node": { "kind": "string", "max": 262144 }
+                        },
+                        "recommended": {
+                          "optional": false,
+                          "node": { "kind": "string", "max": 262144 }
+                        },
+                        "title": {
+                          "optional": false,
+                          "node": { "kind": "string", "max": 4096 }
+                        }
+                      }
+                    },
+                    "max": 256
+                  }
+                },
+                "releaseDate": {
+                  "optional": true,
+                  "node": {
+                    "kind": "optional",
+                    "inner": { "kind": "string", "max": 4096 }
+                  }
+                },
+                "storeUrl": {
+                  "optional": true,
+                  "node": {
+                    "kind": "optional",
+                    "inner": { "kind": "string", "max": 4096 }
+                  }
+                },
+                "changelog": {
+                  "optional": true,
+                  "node": {
+                    "kind": "optional",
+                    "inner": { "kind": "string", "max": 262144 }
+                  }
+                },
+                "genres": {
+                  "optional": true,
+                  "node": {
+                    "kind": "optional",
+                    "inner": {
+                      "kind": "array",
+                      "element": { "kind": "string", "max": 4096 },
+                      "max": 256
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "folder_name": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "install": {
+          "optional": false,
+          "node": {
+            "kind": "object",
+            "mode": "strict",
+            "members": {
+              "manifest": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": {
+                    "kind": "object",
+                    "mode": "strict",
+                    "members": {
+                      "disk_size": {
+                        "optional": false,
+                        "node": { "kind": "number" }
+                      },
+                      "download_size": {
+                        "optional": false,
+                        "node": { "kind": "number" }
+                      },
+                      "app_name": {
+                        "optional": false,
+                        "node": { "kind": "string", "max": 4096 }
+                      },
+                      "languages": {
+                        "optional": false,
+                        "node": {
+                          "kind": "array",
+                          "element": { "kind": "string", "max": 4096 },
+                          "max": 4096
+                        }
+                      },
+                      "versionEtag": {
+                        "optional": false,
+                        "node": { "kind": "string", "max": 4096 }
+                      },
+                      "dependencies": {
+                        "optional": false,
+                        "node": {
+                          "kind": "array",
+                          "element": { "kind": "string", "max": 4096 },
+                          "max": 4096
+                        }
+                      },
+                      "perLangSize": {
+                        "optional": false,
+                        "node": {
+                          "kind": "record",
+                          "value": {
+                            "kind": "object",
+                            "mode": "strict",
+                            "members": {
+                              "download_size": {
+                                "optional": false,
+                                "node": { "kind": "number" }
+                              },
+                              "disk_size": {
+                                "optional": false,
+                                "node": { "kind": "number" }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "executable": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": { "kind": "string", "max": 4096 }
+                }
+              },
+              "install_path": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": { "kind": "string", "max": 4096 }
+                }
+              },
+              "install_size": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": { "kind": "string", "max": 4096 }
+                }
+              },
+              "is_dlc": {
+                "optional": true,
+                "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+              },
+              "version": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": { "kind": "string", "max": 4096 }
+                }
+              },
+              "platform": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": {
+                    "kind": "enum",
+                    "values": [
+                      "Windows",
+                      "Win32",
+                      "Mac",
+                      "Android",
+                      "iOS",
+                      "windows",
+                      "osx",
+                      "linux",
+                      "Browser"
+                    ]
+                  }
+                }
+              },
+              "appName": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": { "kind": "string", "max": 4096 }
+                }
+              },
+              "language": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": { "kind": "string", "max": 4096 }
+                }
+              },
+              "branch": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": { "kind": "string", "max": 4096 }
+                }
+              }
+            }
+          }
+        },
+        "is_installed": { "optional": false, "node": { "kind": "boolean" } },
+        "save_folder": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "title": {
+          "optional": false,
+          "node": { "kind": "string", "max": 4096 }
+        },
+        "canRunOffline": { "optional": false, "node": { "kind": "boolean" } },
+        "thirdPartyManagedApp": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "is_mac_native": {
+          "optional": true,
+          "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+        },
+        "mac_arch": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "enum", "values": ["32", "64", "unknown"] }
+          }
+        },
+        "is_linux_native": {
+          "optional": true,
+          "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+        },
+        "is_windows_native": {
+          "optional": true,
+          "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+        },
+        "metacritic_score": {
+          "optional": true,
+          "node": { "kind": "optional", "inner": { "kind": "number" } }
+        },
+        "description": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 262144 }
+          }
+        },
+        "version": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "overrides": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": {
+              "kind": "object",
+              "mode": "strict",
+              "members": {
+                "title": {
+                  "optional": true,
+                  "node": {
+                    "kind": "optional",
+                    "inner": { "kind": "string", "max": 4096 }
+                  }
+                },
+                "art_cover": {
+                  "optional": true,
+                  "node": {
+                    "kind": "optional",
+                    "inner": { "kind": "string", "max": 65536 }
+                  }
+                },
+                "art_square": {
+                  "optional": true,
+                  "node": {
+                    "kind": "optional",
+                    "inner": { "kind": "string", "max": 65536 }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "runner": {
+          "optional": false,
+          "node": { "kind": "literal", "value": "nile" }
+        }
+      }
+    },
+    "sideload": {
+      "kind": "object",
+      "mode": "strict",
+      "members": {
+        "store_url": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "app_name": {
+          "optional": false,
+          "node": { "kind": "string", "min": 1, "max": 4096 }
+        },
+        "art_cover": {
+          "optional": false,
+          "node": { "kind": "string", "max": 65536 }
+        },
+        "art_logo": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 65536 }
+          }
+        },
+        "art_background": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 65536 }
+          }
+        },
+        "art_icon": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 65536 }
+          }
+        },
+        "art_square": {
+          "optional": false,
+          "node": { "kind": "string", "max": 65536 }
+        },
+        "cloud_save_enabled": {
+          "optional": true,
+          "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+        },
+        "developer": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "extra": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": {
+              "kind": "object",
+              "mode": "strict",
+              "members": {
+                "about": {
+                  "optional": true,
+                  "node": {
+                    "kind": "optional",
+                    "inner": {
+                      "kind": "object",
+                      "mode": "strict",
+                      "members": {
+                        "description": {
+                          "optional": false,
+                          "node": { "kind": "string", "max": 262144 }
+                        },
+                        "shortDescription": {
+                          "optional": false,
+                          "node": { "kind": "string", "max": 262144 }
+                        }
+                      }
+                    }
+                  }
+                },
+                "reqs": {
+                  "optional": false,
+                  "node": {
+                    "kind": "array",
+                    "element": {
+                      "kind": "object",
+                      "mode": "strict",
+                      "members": {
+                        "minimum": {
+                          "optional": false,
+                          "node": { "kind": "string", "max": 262144 }
+                        },
+                        "recommended": {
+                          "optional": false,
+                          "node": { "kind": "string", "max": 262144 }
+                        },
+                        "title": {
+                          "optional": false,
+                          "node": { "kind": "string", "max": 4096 }
+                        }
+                      }
+                    },
+                    "max": 256
+                  }
+                },
+                "releaseDate": {
+                  "optional": true,
+                  "node": {
+                    "kind": "optional",
+                    "inner": { "kind": "string", "max": 4096 }
+                  }
+                },
+                "storeUrl": {
+                  "optional": true,
+                  "node": {
+                    "kind": "optional",
+                    "inner": { "kind": "string", "max": 4096 }
+                  }
+                },
+                "changelog": {
+                  "optional": true,
+                  "node": {
+                    "kind": "optional",
+                    "inner": { "kind": "string", "max": 262144 }
+                  }
+                },
+                "genres": {
+                  "optional": true,
+                  "node": {
+                    "kind": "optional",
+                    "inner": {
+                      "kind": "array",
+                      "element": { "kind": "string", "max": 4096 },
+                      "max": 256
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "folder_name": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "install": {
+          "optional": false,
+          "node": {
+            "kind": "object",
+            "mode": "strict",
+            "members": {
+              "manifest": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": {
+                    "kind": "object",
+                    "mode": "strict",
+                    "members": {
+                      "disk_size": {
+                        "optional": false,
+                        "node": { "kind": "number" }
+                      },
+                      "download_size": {
+                        "optional": false,
+                        "node": { "kind": "number" }
+                      },
+                      "app_name": {
+                        "optional": false,
+                        "node": { "kind": "string", "max": 4096 }
+                      },
+                      "languages": {
+                        "optional": false,
+                        "node": {
+                          "kind": "array",
+                          "element": { "kind": "string", "max": 4096 },
+                          "max": 4096
+                        }
+                      },
+                      "versionEtag": {
+                        "optional": false,
+                        "node": { "kind": "string", "max": 4096 }
+                      },
+                      "dependencies": {
+                        "optional": false,
+                        "node": {
+                          "kind": "array",
+                          "element": { "kind": "string", "max": 4096 },
+                          "max": 4096
+                        }
+                      },
+                      "perLangSize": {
+                        "optional": false,
+                        "node": {
+                          "kind": "record",
+                          "value": {
+                            "kind": "object",
+                            "mode": "strict",
+                            "members": {
+                              "download_size": {
+                                "optional": false,
+                                "node": { "kind": "number" }
+                              },
+                              "disk_size": {
+                                "optional": false,
+                                "node": { "kind": "number" }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "executable": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": { "kind": "string", "max": 4096 }
+                }
+              },
+              "install_path": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": { "kind": "string", "max": 4096 }
+                }
+              },
+              "install_size": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": { "kind": "string", "max": 4096 }
+                }
+              },
+              "is_dlc": {
+                "optional": true,
+                "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+              },
+              "version": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": { "kind": "string", "max": 4096 }
+                }
+              },
+              "platform": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": {
+                    "kind": "enum",
+                    "values": [
+                      "Windows",
+                      "Win32",
+                      "Mac",
+                      "Android",
+                      "iOS",
+                      "windows",
+                      "osx",
+                      "linux",
+                      "Browser"
+                    ]
+                  }
+                }
+              },
+              "appName": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": { "kind": "string", "max": 4096 }
+                }
+              },
+              "language": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": { "kind": "string", "max": 4096 }
+                }
+              },
+              "branch": {
+                "optional": true,
+                "node": {
+                  "kind": "optional",
+                  "inner": { "kind": "string", "max": 4096 }
+                }
+              }
+            }
+          }
+        },
+        "is_installed": { "optional": false, "node": { "kind": "boolean" } },
+        "save_folder": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "title": {
+          "optional": false,
+          "node": { "kind": "string", "max": 4096 }
+        },
+        "canRunOffline": { "optional": false, "node": { "kind": "boolean" } },
+        "thirdPartyManagedApp": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "is_mac_native": {
+          "optional": true,
+          "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+        },
+        "mac_arch": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "enum", "values": ["32", "64", "unknown"] }
+          }
+        },
+        "is_linux_native": {
+          "optional": true,
+          "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+        },
+        "is_windows_native": {
+          "optional": true,
+          "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+        },
+        "metacritic_score": {
+          "optional": true,
+          "node": { "kind": "optional", "inner": { "kind": "number" } }
+        },
+        "description": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 262144 }
+          }
+        },
+        "version": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "overrides": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": {
+              "kind": "object",
+              "mode": "strict",
+              "members": {
+                "title": {
+                  "optional": true,
+                  "node": {
+                    "kind": "optional",
+                    "inner": { "kind": "string", "max": 4096 }
+                  }
+                },
+                "art_cover": {
+                  "optional": true,
+                  "node": {
+                    "kind": "optional",
+                    "inner": { "kind": "string", "max": 65536 }
+                  }
+                },
+                "art_square": {
+                  "optional": true,
+                  "node": {
+                    "kind": "optional",
+                    "inner": { "kind": "string", "max": 65536 }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "runner": {
+          "optional": false,
+          "node": { "kind": "literal", "value": "sideload" }
+        },
+        "browserUrl": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "customUserAgent": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "launchFullScreen": {
+          "optional": true,
+          "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+        }
+      }
+    }
+  },
+  "gameInfoInstalled": {
+    "gog": {
+      "kind": "object",
+      "mode": "strict",
+      "members": {
+        "manifest": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": {
+              "kind": "object",
+              "mode": "strict",
+              "members": {
+                "disk_size": {
+                  "optional": false,
+                  "node": { "kind": "number" }
+                },
+                "download_size": {
+                  "optional": false,
+                  "node": { "kind": "number" }
+                },
+                "app_name": {
+                  "optional": false,
+                  "node": { "kind": "string", "max": 4096 }
+                },
+                "languages": {
+                  "optional": false,
+                  "node": {
+                    "kind": "array",
+                    "element": { "kind": "string", "max": 4096 },
+                    "max": 4096
+                  }
+                },
+                "versionEtag": {
+                  "optional": false,
+                  "node": { "kind": "string", "max": 4096 }
+                },
+                "dependencies": {
+                  "optional": false,
+                  "node": {
+                    "kind": "array",
+                    "element": { "kind": "string", "max": 4096 },
+                    "max": 4096
+                  }
+                },
+                "perLangSize": {
+                  "optional": false,
+                  "node": {
+                    "kind": "record",
+                    "value": {
+                      "kind": "object",
+                      "mode": "strict",
+                      "members": {
+                        "download_size": {
+                          "optional": false,
+                          "node": { "kind": "number" }
+                        },
+                        "disk_size": {
+                          "optional": false,
+                          "node": { "kind": "number" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "executable": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "install_path": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "install_size": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "is_dlc": {
+          "optional": true,
+          "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+        },
+        "version": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "platform": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": {
+              "kind": "enum",
+              "values": [
+                "Windows",
+                "Win32",
+                "Mac",
+                "Android",
+                "iOS",
+                "windows",
+                "osx",
+                "linux",
+                "Browser"
+              ]
+            }
+          }
+        },
+        "appName": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "language": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "branch": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "isDosbox": {
+          "optional": true,
+          "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+        },
+        "dosboxConf": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": {
+              "kind": "array",
+              "element": { "kind": "string", "max": 4096 },
+              "max": 4096
+            }
+          }
+        },
+        "installedWithDLCs": {
+          "optional": true,
+          "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+        },
+        "installedDLCs": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": {
+              "kind": "array",
+              "element": { "kind": "string", "max": 4096 },
+              "max": 4096
+            }
+          }
+        },
+        "versionEtag": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "buildId": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "pinnedVersion": {
+          "optional": true,
+          "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+        },
+        "cyberpunk": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": {
+              "kind": "object",
+              "mode": "strict",
+              "members": {
+                "modsEnabled": {
+                  "optional": false,
+                  "node": { "kind": "boolean" }
+                },
+                "modsToLoad": {
+                  "optional": false,
+                  "node": {
+                    "kind": "array",
+                    "element": { "kind": "string", "max": 4096 },
+                    "max": 4096
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "sideload": {
+      "kind": "object",
+      "mode": "strict",
+      "members": {
+        "manifest": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": {
+              "kind": "object",
+              "mode": "strict",
+              "members": {
+                "disk_size": {
+                  "optional": false,
+                  "node": { "kind": "number" }
+                },
+                "download_size": {
+                  "optional": false,
+                  "node": { "kind": "number" }
+                },
+                "app_name": {
+                  "optional": false,
+                  "node": { "kind": "string", "max": 4096 }
+                },
+                "languages": {
+                  "optional": false,
+                  "node": {
+                    "kind": "array",
+                    "element": { "kind": "string", "max": 4096 },
+                    "max": 4096
+                  }
+                },
+                "versionEtag": {
+                  "optional": false,
+                  "node": { "kind": "string", "max": 4096 }
+                },
+                "dependencies": {
+                  "optional": false,
+                  "node": {
+                    "kind": "array",
+                    "element": { "kind": "string", "max": 4096 },
+                    "max": 4096
+                  }
+                },
+                "perLangSize": {
+                  "optional": false,
+                  "node": {
+                    "kind": "record",
+                    "value": {
+                      "kind": "object",
+                      "mode": "strict",
+                      "members": {
+                        "download_size": {
+                          "optional": false,
+                          "node": { "kind": "number" }
+                        },
+                        "disk_size": {
+                          "optional": false,
+                          "node": { "kind": "number" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "executable": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "install_path": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "install_size": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "is_dlc": {
+          "optional": true,
+          "node": { "kind": "optional", "inner": { "kind": "boolean" } }
+        },
+        "version": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "platform": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": {
+              "kind": "enum",
+              "values": [
+                "Windows",
+                "Win32",
+                "Mac",
+                "Android",
+                "iOS",
+                "windows",
+                "osx",
+                "linux",
+                "Browser"
+              ]
+            }
+          }
+        },
+        "appName": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "language": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        },
+        "branch": {
+          "optional": true,
+          "node": {
+            "kind": "optional",
+            "inner": { "kind": "string", "max": 4096 }
+          }
+        }
+      }
+    }
+  }
+}

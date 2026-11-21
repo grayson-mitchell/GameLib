@@ -6,7 +6,8 @@
 //! `json` is where that is decided, `dotpath` is dot-prop 6 over it, and `atomic` is how the bytes
 //! reach the disk. On top of those, `envelope` and `ops` are the store's write shape, `engine`
 //! decides a file's fate on open (adopt, migrate, discard a cache, read-only, keep a corrupt file),
-//! `backup` writes the side files that decision leaves, and `migrate` is the chain registry.
+//! `backup` writes the side files that decision leaves, `migrate` holds the chains (the registry, the
+//! settings and library steps, and the strip over `schema`, the descriptor generated from zod).
 
 pub mod atomic;
 pub mod backup;
@@ -16,4 +17,5 @@ pub mod envelope;
 pub mod json;
 pub mod migrate;
 pub mod ops;
+pub mod schema;
 pub mod table;
