@@ -202,3 +202,9 @@ What this means:
 Diagnostics gap: the launch's `placeShimForGame ... withheld the shim` warning was
 in a `gamelib.log` that has since rotated, and nothing in the UI says "withheld". So this
 had to be reconstructed from the verdict's shape.
+
+## Tracked as backlog Phase 999.2 (2026-11-21)
+
+The flat tier is scoped as ROADMAP backlog **Phase 999.2**. That entry was refreshed on
+2026-11-21 with tier 1's landing, the four-part remainder, the research step and the
+promotion trigger. Close this todo when 999.2 is promoted and executed.

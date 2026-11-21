@@ -257,22 +257,46 @@ Phase 999.1 (cross-store signed-out / offline mode) was promoted to Phase 49 on
 
 ### Phase 999.2: x86 shim coverage — flat C API and current interface versions (BACKLOG)
 
-32-bit-only titles get the shim withheld by design (D-53-09 deferred x86). The x86 export list
-is hand-pinned (~50 bare accessors); the generated flat `SteamAPI_ISteam*` API exists for x64
-only, and x86 does not serve SteamUser020, SteamFriends017, SteamUtils009 or the current
-SteamApps/SteamUserStats versions. `classifyUnservableInterfaceVersions` therefore blocks
-placement, and `gameBridgeLaunch.ts` launches direct with no helper.
+32-bit titles that need the flat API get the shim withheld by design (D-53-09 deferred x86):
+`classifyUnservableInterfaceVersions` reports their versions as blocking, so
+`placeShimForGame` leaves the game's own `steam_api.dll` in place and the launch runs with no
+helper.
 
-Scope if promoted: x86 flat-API generation in `meta/gen_vtables.ts`, x86 manifests and vtables
-for the missing versions, a 32-bit shim build verified under Wine. **Acceptance title:** Cat
-Quest (593280, 32-bit Mono Unity, Steamworks.NET) — strict verified bar: shim HELLO plus a
-clean game Steam-init line in its `error.log` / `output_log.txt`. Diagnosis:
-`.planning/debug/resolved/cat-quest-shim-withheld.md`.
+**Already landed (quick 261120-rdo, 2026-11-20):** x86 `CreateInterface`, the modern
+`SteamInternal_*` family plus `SteamAPI_GetHSteamUser`/`GetHSteamPipe`, manifest-backed x86
+null objects, and x86 service of the versions Amnesia (57300) and Low Magic Age (576770)
+request. Amnesia is bridge-verified.
+
+**Remaining scope (the flat tier)** is all-or-nothing, because Steamworks.NET's
+`CSteamAPIContext.Init` fails on the first NULL lookup:
+1. Generator: `meta/gen_vtables.ts` emits about 900 x86 flat `SteamAPI_ISteam*` exports
+   through `__thiscall` slot casts, keeping the D-53-07 NULL flat-lookup contract.
+2. Widen about 14 interface versions to x86 (SteamClient020, SteamMatchGameSearch001,
+   SteamNetworking006, …), and extract or check 2–5 more (STEAMREMOTESTORAGE014, STEAMUGC014,
+   NetworkingSockets/Utils, GameServer013). Each needs i386 `stackBytes` manifests.
+3. Port the x86 `SteamAPI_ManualDispatch_*` family and add the bare `SteamClient` export
+   (both found missing in quick 261121-ley).
+4. Generate the x86 export list in place of the hand-pinned `SHIM_EXPORTED_SYMBOLS`, update
+   `shimCoverage.ts` and the census, then run the live gate.
+
+**Research step first:** how the old instance-pointer-first flat convention and
+`ManualDispatch` behave on x86 under Wine. Source todo:
+`.planning/todos/pending/2026-10-25-x86-shim-modern-sdk-and-flat-api-parity-deferred.md`
+(items a–e, the 2026-11-20 measurement and the 261121-ley diagnosis).
+
+**Promotion trigger:** a second x86 title that needs the flat API appears in `pnpm bridge-census`,
+or this is picked from the backlog.
+
+**Acceptance title:** Cat Quest (593280, 32-bit Mono Unity, Steamworks.NET), at the strict
+verified bar: shim HELLO plus a clean game Steam-init line in its `error.log` /
+`output_log.txt`. Diagnoses: `.planning/debug/resolved/cat-quest-shim-withheld.md` and quick
+`261121-ley` (the 2026-11-20 no-HELLO baseline was a withheld shim).
 
 **Second acceptance title:** Undertale (391540, GameMaker 1.4 x86 runner, runtime-loaded
 `steam_api.dll`). The runner resolves `SteamAPI_InitSafe`, `SteamAPI_GetHSteamPipe` and
-`SteamAPI_GetHSteamUser` by name; the x86 shim exports none of them, so init never reaches the
-shim and HELLO is never sent. The shim is now withheld for this shape (original restored from
+`SteamAPI_GetHSteamUser` by name. Since quick 261120-rdo the x86 shim exports the last two,
+but not `SteamAPI_InitSafe`, so init still never reaches the shim and HELLO is never sent.
+Adding `SteamAPI_InitSafe` is a small item and may be worth splitting out ahead of the flat tier. The shim is now withheld for this shape (original restored from
 `.gamelib-orig`, direct launch, no helper), not bridged, so it is **not verified**. Same strict
 bar as Cat Quest: shim HELLO plus a game-originated bridge call. Diagnosis:
 `.planning/debug/resolved/undertale-shim-placed-no-hello.md`.
