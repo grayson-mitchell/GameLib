@@ -6,7 +6,8 @@
 use std::fs;
 use std::path::Path;
 
-use gamelib_store::json::{parse, to_store_bytes, Json, Obj};
+use gamelib_store::dotpath;
+use gamelib_store::json::{parse, to_compact_bytes, to_store_bytes, Json, Obj};
 
 fn load(name: &str) -> Json {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -49,9 +50,9 @@ fn numbers_print_as_js_prints_them() {
     }
 }
 
-/// Applies one keyorder step to `root`. `dotted` store steps need `dotpath` and are replayed in
-/// Task 3; everything else is a plain key on the root object.
-fn apply(root: &mut Obj, via: &str, step: &Json) -> bool {
+/// Applies one keyorder step to `root`. A `store` step goes through `dotpath` (the store's `set`
+/// takes dot paths); an `object` step is a plain property assignment on the object.
+fn apply(root: &mut Json, via: &str, step: &Json) {
     let op = text(step, "op");
     let value = || -> Json {
         match (step.get("value"), step.get("valueText")) {
@@ -62,53 +63,108 @@ fn apply(root: &mut Obj, via: &str, step: &Json) -> bool {
     };
     match op {
         "assign" => {
-            let Json::Obj(o) = value() else {
-                panic!("assign needs an object")
-            };
-            *root = o;
-            true
+            assert!(matches!(value(), Json::Obj(_)), "assign needs an object");
+            *root = value();
         }
         "set" | "delete" => {
             let path = text(step, "path");
-            if via == "store" && path.contains('.') {
-                return false;
+            if via == "store" {
+                if op == "set" {
+                    dotpath::set(root, path, value(), true);
+                } else {
+                    dotpath::delete(root, path, true);
+                }
+            } else if let Json::Obj(o) = root {
+                if op == "set" {
+                    o.insert_js(path, value());
+                } else {
+                    o.remove(path);
+                }
             }
-            if op == "set" {
-                root.insert_js(path, value());
-            } else {
-                root.remove(path);
-            }
-            true
         }
         other => panic!("unknown op {other}"),
     }
 }
 
 #[test]
-fn undotted_key_order_vectors_match() {
+fn key_order_vectors_match() {
     let all = cases("keyorder.json");
     assert!(all.len() >= 10, "keyorder.json shrank to {}", all.len());
-    let mut replayed = 0;
+    let mut dotted = 0;
     for case in &all {
         let name = text(case, "name");
         let via = text(case, "via");
-        let mut root = Obj::new();
+        let mut root = Json::Obj(Obj::new());
         let steps = case.get("steps").and_then(Json::as_array).unwrap();
-        let mut skipped = false;
         for step in steps {
-            if !apply(&mut root, via, step) {
-                skipped = true;
-                break;
+            let path = step.get("path").and_then(Json::as_str).unwrap_or("");
+            if via == "store" && path.contains('.') {
+                dotted += 1;
             }
+            apply(&mut root, via, step);
         }
-        if skipped {
-            continue;
-        }
-        replayed += 1;
-        let got = String::from_utf8(to_store_bytes(&Json::Obj(root))).unwrap();
+        let got = String::from_utf8(to_store_bytes(&root)).unwrap();
         assert_eq!(got, text(case, "stringified"), "{name}");
     }
-    assert!(replayed >= 10, "only {replayed} undotted vectors replayed");
+    assert!(dotted >= 3, "only {dotted} dotted store steps replayed");
+}
+
+fn compact(v: &Json) -> String {
+    String::from_utf8(to_compact_bytes(v)).unwrap()
+}
+
+#[test]
+fn dot_prop_vectors_match() {
+    let all = cases("dotpath.json");
+    assert!(all.len() >= 30, "dotpath.json shrank to {}", all.len());
+    for case in &all {
+        let name = text(case, "name");
+        let op = text(case, "op");
+        let path = text(case, "path");
+        let dot = case.get("dotNotation").and_then(Json::as_bool).unwrap();
+        let initial = case.get("initial").unwrap();
+        let expected = case.get("result").unwrap();
+        let mut doc = initial.clone();
+        let threw = expected.get("threw").and_then(Json::as_str);
+
+        match op {
+            "get" => {
+                let got = dotpath::get(&doc, path, dot);
+                let found = expected.get("found").and_then(Json::as_bool).unwrap();
+                assert_eq!(got.is_some(), found, "{name}: found");
+                if found {
+                    assert_eq!(
+                        compact(got.unwrap()),
+                        compact(expected.get("value").unwrap()),
+                        "{name}: value"
+                    );
+                }
+            }
+            "has" => {
+                let want = expected.get("has").and_then(Json::as_bool).unwrap();
+                assert_eq!(dotpath::has(&doc, path, dot), want, "{name}: has");
+            }
+            "set" => {
+                // Two conf rules sit in front of dot-prop: an undefined value and a reserved
+                // `__internal__.` key throw TypeError. Rust has no undefined value to pass.
+                let refused = case.get("valueUndefined").is_some()
+                    || dotpath::is_reserved_internal(path, dot);
+                assert_eq!(threw == Some("TypeError"), refused, "{name}: throws");
+                if !refused {
+                    dotpath::set(&mut doc, path, case.get("value").unwrap().clone(), dot);
+                }
+            }
+            "delete" => {
+                dotpath::delete(&mut doc, path, dot);
+            }
+            other => panic!("{name}: unknown op {other}"),
+        }
+        assert_eq!(
+            compact(&doc),
+            compact(case.get("after").unwrap()),
+            "{name}: after"
+        );
+    }
 }
 
 fn nested_arrays(depth: usize) -> Vec<u8> {

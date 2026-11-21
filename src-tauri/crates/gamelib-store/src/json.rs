@@ -58,6 +58,10 @@ impl Obj {
         self.0.get(key)
     }
 
+    pub fn get_mut(&mut self, key: &str) -> Option<&mut Json> {
+        self.0.get_mut(key)
+    }
+
     pub fn contains_key(&self, key: &str) -> bool {
         self.0.contains_key(key)
     }
