@@ -14,6 +14,7 @@ use common::*;
 use gamelib_store::engine::{open_file, Flavour, OpenOutcome, StoreKind};
 use gamelib_store::json::Json;
 use gamelib_store::migrate::Chains;
+use gamelib_store::table;
 use gamelib_testutil::FakeHome;
 
 /// The cases that run a real chain: every `migrate` case except the override-chain sequence.
@@ -71,17 +72,52 @@ fn replay(case: &Json) {
 }
 
 #[test]
-fn settings_global_cases_replay_byte_identical() {
-    let cases: Vec<Json> = real_chain_cases()
-        .into_iter()
-        .filter(|c| text(c, "chain") == "settings/global")
-        .collect();
-    assert_eq!(cases.len(), 4, "cases.json has four settings/global cases");
+fn every_migrate_case_replays_byte_identical() {
+    let cases = real_chain_cases();
+    // The sequence case is the one `migrate` case that is not a real chain.
+    let total = load_cases()
+        .iter()
+        .filter(|c| text(c, "kind") == "migrate")
+        .count();
+    assert_eq!(cases.len() + 1, total, "only the sequence case is skipped");
     for case in &cases {
         replay(case);
     }
-    println!(
-        "migrate_golden: {} settings/global cases replayed",
-        cases.len()
-    );
+    println!("migrate_golden: {} migrate cases replayed", cases.len());
+}
+
+/// D-04: Phase 85 introduces no store version bump. Every chain's current version is the TS value; a
+/// bump in Rust (or a chain that quietly gains a step) fails here and needs an explicit decision.
+#[test]
+fn chain_versions_are_pinned_to_ts() {
+    let chains = Chains::baseline();
+    let pinned = [
+        ("settings/global", 2),
+        ("settings/game", 2),
+        ("store_cache/steam_library", 3),
+        ("store_cache/gog_library", 3),
+        ("gog_store/installed", 3),
+        ("store_cache/legendary_library", 3),
+        ("store_cache/nile_library", 3),
+        ("sideload_apps/library", 3),
+        ("store/download-manager", 3),
+        ("engine/gamelib-engine-marker", 1),
+        ("steam_bridge/shared-redists", 1),
+    ];
+    for (key, version) in pinned {
+        assert_eq!(chains.current_version_of(key), version, "{key}");
+    }
+    // Every row of the store table: its chain's pin, else the baseline v1.
+    for row in table::table() {
+        let want = pinned
+            .iter()
+            .find(|(k, _)| Some(*k) == row.chain.as_deref())
+            .map_or(1, |(_, v)| *v);
+        assert_eq!(
+            chains.current_version_of(row.chain_key()),
+            want,
+            "{}",
+            row.key
+        );
+    }
 }
