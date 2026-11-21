@@ -3,7 +3,7 @@ status: complete
 phase: 82-guardrails-hygiene-and-shared-safety-primitives
 source: [82-VERIFICATION.md]
 started: 2026-11-20T07:59:36Z
-updated: 2026-11-20T23:30:00Z
+updated: 2026-11-21T01:43:21.043Z
 ---
 
 ## Current Test
@@ -17,10 +17,15 @@ expected: Through the real sidecar-to-shell hop, a nested sideload uninstall is 
 result: pass — run on Windows in pnpm tauri:dev, 2026-11-20. 1a pass: the nested case was driven through a GOG uninstall (Balrum with a sideload "UAT Nested" installed inside its folder), because the UI uninstall never passes deleteFiles, so the sideload folder guard is unreachable from the app (uninstaller.ts:246); the refusal notice named the nested game, nothing was deleted, the tile returned to rest. 1b pass: GOG uninstall of Balrum with gog-support absent completed (CR-01 absent-trust-root path through the real hop). 1c skipped: no Steam library picker exists (installLocation.ts:92 always targets library 0, whose steamapps/common already exists on this machine), so the pre-first-write shape cannot be set up from the app; the same resolve_trust_root absent-root path was exercised live by 1b, and the Steam-side cleanup is covered by cancelDelete.test.ts:391.
 
 ### 2. Three-OS CI green on the 82-17..82-19 gap-closure commits
-expected: After pushing main, the Rust test and Test workflows pass on ubuntu, macOS and Windows legs, including the gamelib-safety symlink and case-sensitivity rows that only run on macOS/Linux (last green CI sha dac99a816 predates the gap closure).
-result: issue — pushed dac99a816..c939280e5 on 2026-11-20. Rust test: the gamelib-safety step is green on all three legs (macOS: 47 adversarial incl. a_symlinked_trust_root_is_followed_and_a_game_under_it_is_removable, trust_root_contract ran). The macOS leg went red in the later steampoll step (watchdog_real::still_kills_the_grandchild_when_the_middle_process_dies_first, assertion alive(rig.grand)); gamelib-steampoll is untouched by this range, so it is treated as a timing flake; the rerun of run 44823009090 went green on all three legs (flake confirmed). Test workflow red: dialogOptionForwarding.test.ts pins UNBOUNDED_RUST_CHANNELS and does not list RUST_SAFETY_REMOVE_TREE, which 82-17..82-19 (WR-03) added.
-reported: "Test workflow run 44823008791 failed: 1 suite, 1 test (dialogOptionForwarding.test.ts:223, UNBOUNDED_RUST_CHANNELS contains RUST_SAFETY_REMOVE_TREE, not in EXPECTED)"
+expected: On a main commit that contains the 261120-uzn fix (afacd26ee), the Test workflow and the Rust test workflow both pass on ubuntu, macOS and Windows. The Rust test runs include the gamelib-safety symlink and case-sensitivity rows that only run on macOS/Linux.
+result: issue — checked by Claude from GitHub on 2026-11-21 (operator agreed it is automated). Main at 90ca09d02 (contains afacd26ee and 5b969edd8). Rust test run 44850161688 green on all three legs; the macOS gamelib-safety step ran a_symlinked_trust_root_is_followed_and_a_game_under_it_is_removable and case_insensitive_mode_refuses_a_differently_cased_nested_install, both ok (47/47). Test run 44850161668 red: 1 failed of 23351, sharedRedistInstall.test.ts 'installer timeout > records timedOut, stops all further entries and statuses, and does not settle' at line 929, installerCalls() length 0 after the wait loop. The prior main Test run 44846652719 was green and 90ca09d02 touches only Rust, so this is a flake in the test 82-12 (5b969edd8) set out to stabilise.
+reported: "Test workflow run 44850161668 failed: sharedRedistInstall.test.ts:929 installer timeout test, expected 1 installer call, received 0 (flaky; previous run green)"
 severity: major
+retest_of: G-82-2 (resolved by quick 261120-uzn); retest requested 2026-11-21
+previous_result: |
+  issue — pushed dac99a816..c939280e5 on 2026-11-20. Rust test: the gamelib-safety step is green on all three legs (macOS: 47 adversarial incl. a_symlinked_trust_root_is_followed_and_a_game_under_it_is_removable, trust_root_contract ran). The macOS leg went red in the later steampoll step (watchdog_real::still_kills_the_grandchild_when_the_middle_process_dies_first, assertion alive(rig.grand)); gamelib-steampoll is untouched by this range, so it is treated as a timing flake; the rerun of run 44823009090 went green on all three legs (flake confirmed). Test workflow red: dialogOptionForwarding.test.ts pins UNBOUNDED_RUST_CHANNELS and does not list RUST_SAFETY_REMOVE_TREE, which 82-17..82-19 (WR-03) added.
+  reported: "Test workflow run 44823008791 failed: 1 suite, 1 test (dialogOptionForwarding.test.ts:223, UNBOUNDED_RUST_CHANNELS contains RUST_SAFETY_REMOVE_TREE, not in EXPECTED)"
+  severity: major
 
 ## Summary
 
@@ -47,6 +52,21 @@ blocked: 0
       issue: "EXPECTED list (ends ~line 216) missing RUST_SAFETY_REMOVE_TREE; test title says 'dialog, depot and Rust CM channels'"
   missing:
     - "Add RUST_SAFETY_REMOVE_TREE to EXPECTED with a comment citing WR-03 (a recursive delete of a large install can exceed the 60 s cap), and widen the test title to include the safety remove channel"
+  debug_session: ""
+
+- gap_id: G-82-2-r2
+  truth: "On a main commit containing the 261120-uzn fix, the Test and Rust test workflows pass on ubuntu, macOS and Windows"
+  status: failed
+  reason: "Test workflow run 44850161668 failed: sharedRedistInstall.test.ts:929 installer-timeout test saw 0 installer calls after its wait loop (flaky; previous main run green)"
+  severity: major
+  test: 2
+  root_cause: "The three installer-timeout tests in sharedRedistInstall.test.ts wait for the first installer call with a loop bounded by 500 setImmediate turns. Before that call the code under test does real fs I/O (the ledger lives under a per-test mkdtemp dir). A setImmediate turn costs microseconds when nothing else is pending, so on a loaded CI runner the 500 turns run out before the fs callbacks land and the assertion sees an empty call list. 82-12 (5b969edd8) only raised the per-test jest timeout to 30 s, which cures the other failure mode (the loop taking longer than 5 s) but not this one: the loop counts turns, not elapsed time."
+  artifacts:
+    - path: "src/backend/storeManagers/steam/bridge/__tests__/sharedRedistInstall.test.ts"
+      issue: "wait loops at ~line 927 (and the two sibling installer-timeout tests) are bounded by a turn count, not by wall-clock time"
+  missing:
+    - "Replace the turn-counted wait with one shared helper that yields with setImmediate until the condition holds or a real wall-clock deadline (performance.now / Date.now, not faked) passes, and use it in all three installer-timeout tests"
+    - "Prove it under load: run the suite repeatedly with CPU contention (e.g. --runInBand alongside a busy loop, or a mocked slow fs) and show no failures"
   debug_session: ""
 
 ## Deferred Follow-Ups
