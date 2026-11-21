@@ -186,7 +186,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 82: Guardrails, hygiene and shared safety primitives** — 20/20 plans (16 + 4 gap closure); completed 2026-11-21
 - [x] **Phase 83: Native seam, gamelib-core and process/shutdown contract** — 11/11 plans; completed 2026-11-21
 - [ ] **Phase 84: Logger** — 11 plans in 9 waves (consolidated from 14, then two plans split for context budget); planned 2026-11-21 (executes after Phase 83 closes)
-- [ ] **Phase 85: Store host, config and versioned migrations** — not planned
+- [ ] **Phase 85: Store host, config and versioned migrations** — 22 plans in 17 waves; planned 2026-11-21
 - [ ] **Phase 86: Pure leaf services** — not planned
 - [ ] **Phase 87: Engine, Wine and tools** — not planned
 - [ ] **Phase 88: Launch pipeline** — not planned
@@ -713,7 +713,7 @@ Plans:
 **Goal:** The game page has no ⋮ menu: every action sits next to what it changes. The left card is the game (store link, Edit details, Favourite heart by the title, category chips, Hide); the Install tab is the hub for your copy (Location → Open/Move, Size → Modify, Version → Verify/Check for updates, integration switch rows, red Uninstall last behind a confirmation); the ⚙ dialog owns how the game runs; the footer holds only tier-one actions. Requirements and the left-card play-time block are removed as duplicates; pending and error states live inside each row. Design source: sketch 012 (folds in 010, 011) — `.claude/skills/sketch-findings-gamelib/references/game-page.md`.
 **Requirements**: TBD
 **Depends on:** Nothing (frontend-only; independent of the v0.11 port phases)
-**Plans:** 3/10 plans executed
+**Plans:** 4/10 plans executed
 
 Plans:
 **Wave 1**
@@ -726,7 +726,7 @@ Plans:
 - [x] 100-03-PLAN.md — Play time into the footer status line (TimeContainer deleted), Edit details pencil, store badge link
 
 **Wave 4** *(blocked on Wave 3 completion)*
-- [ ] 100-04-PLAN.md — Location / Size / Version rows: Move, Set install folder, Modify, Verify, Update, What's new with busy, gating and inline failure
+- [x] 100-04-PLAN.md — Location / Size / Version rows: Move, Set install folder, Modify, Verify, Update, What's new with busy, gating and inline failure
 
 **Wave 5** *(blocked on Wave 4 completion)*
 - [ ] 100-05-PLAN.md — Cloud saves row + Auto-sync switch, Engine and static facts, not-installed facts + Locate link, notes; InstalledInfo retired
