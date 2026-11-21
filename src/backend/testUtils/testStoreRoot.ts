@@ -1,8 +1,10 @@
 import { homedir } from 'os'
 import { join } from 'path'
 import { resolveAppDataDir } from '../process/appPaths'
+import type { StoreFrame } from '../stores/storeFrames'
 import { createStoreRoot, type StoreRoot } from '../stores/storeRoot'
 import type { Migration } from '../storeVersioning/types'
+import { createDiskStoreSink } from './diskStoreSink'
 
 /**
  * The OS appData folder for the jest-contained fake HOME: what a booted sidecar derives
@@ -22,18 +24,32 @@ export function testUserDataDir(): string {
  * derives for the jest-contained fake HOME (`jest.setupContainment.ts`), so a suite that reads
  * the files a store wrote through another root on the same directory still lines up. Each call
  * returns independent cells and an unbound changes channel.
+ *
+ * Frames a Rust-owned store sends go to `frameSink`, which defaults to an in-process disk sink
+ * (`diskStoreSink.ts`): it applies each frame to the store's file the way the shell's writer
+ * would and answers it at once, so a real-store suite keeps writing through a store and reading the
+ * file back. `recordFrames` keeps that sink and also collects every frame it receives, in order.
+ * An explicit `frameSink` replaces the disk sink and the suite owns the answers.
  */
 export function createTestStoreRoot(
   userData?: string,
   options: Pick<
     Parameters<typeof createStoreRoot>[0],
     'readOnlySinks' | 'migrationOverrides' | 'storeMode' | 'boot' | 'frameSink'
-  > = {}
+  > & { recordFrames?: StoreFrame[] } = {}
 ): StoreRoot {
-  return createStoreRoot({
-    ...options,
-    userData: userData ?? testUserDataDir()
+  const { recordFrames, frameSink, ...rest } = options
+  const resolvedUserData = userData ?? testUserDataDir()
+  const disk = frameSink
+    ? undefined
+    : createDiskStoreSink({ userData: resolvedUserData, recordFrames })
+  const root = createStoreRoot({
+    ...rest,
+    frameSink: frameSink ?? disk?.sink,
+    userData: resolvedUserData
   })
+  disk?.attach(root)
+  return root
 }
 
 /** A fresh versioning engine (its own root) for a consumer test that only needs the migration guard. */

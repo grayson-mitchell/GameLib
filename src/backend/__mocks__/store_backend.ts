@@ -20,14 +20,21 @@
  */
 
 import { join } from 'path'
-import type { StoreOptions } from 'common/types/typed_store'
+import type RealStore from '../store_backend'
 import type { StoreRoot } from '../stores/storeRoot'
 
 const OriginalStore = jest.requireActual('../store_backend').default
 
 const MOCK_STORE_ROOT = 'jest_store_root'
 
-// A suite that builds a store with no root gets one rooted at the jest-contained userData.
+/** The facade's own constructor options (`declaration` and `root` included), so the mock never drifts from it. */
+type FacadeOptions<T extends Record<string, unknown>> = NonNullable<
+  ConstructorParameters<typeof RealStore<T>>[0]
+>
+
+// A suite that builds a store with no root gets one rooted at the jest-contained userData. Its
+// frame sink is the in-process disk sink (`testUtils/diskStoreSink.ts`), so a store the shell owns
+// still writes its file here and reads it back.
 let defaultRoot: StoreRoot | undefined
 function fallbackRoot(): StoreRoot {
   const { createTestStoreRoot } = jest.requireActual(
@@ -40,7 +47,7 @@ function fallbackRoot(): StoreRoot {
 export default class Store<
   T extends Record<string, unknown> = Record<string, unknown>
 > extends OriginalStore<T> {
-  constructor(options?: StoreOptions<T> & { root?: StoreRoot }) {
+  constructor(options?: FacadeOptions<T>) {
     super({
       ...(options ?? {}),
       root: options?.root ?? fallbackRoot(),

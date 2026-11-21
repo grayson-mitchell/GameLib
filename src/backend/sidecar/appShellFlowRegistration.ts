@@ -187,6 +187,7 @@ import type { GlobalConfigSlice } from '../config'
 import { logInfo, LogPrefix } from '../logger'
 import { pushReadOnlyStoresNotice } from './readOnlyStoresNotice'
 import type { ReadOnlyStores } from '../storeVersioning/readOnlyStores'
+import type { MirrorRegistry } from '../stores/mirrorCell'
 // Phase 35 plan 11: boot-time download-queue auto-resume, ported from
 // `main.ts:613` before that file is deleted at plan 35-14. See the
 // `frontendReady` handler below for the full contingency analysis.
@@ -326,6 +327,9 @@ function syncTrayIcon(
   }
 }
 
+/** How long `quit` waits for the shell to answer the store flush (85-11): the one budget for it. */
+const STORE_FLUSH_AT_QUIT_MS = 2000
+
 /** Narrow dependency slice for `registerAppShellFlows` (66.1, D-01). */
 export interface AppShellFlowDeps
   extends DialogBoxDeps, NotifyDeps, AppRuntimeSlice<'events' | 'protocol'> {
@@ -334,6 +338,8 @@ export interface AppShellFlowDeps
   dialogs: Pick<Dialogs, 'showErrorBox' | 'showMessageBox' | 'displayAcks'>
   /** The boot's read-only store tracker, flushed to the renderer once per launch (66.4-18). */
   readOnly: Pick<ReadOnlyStores, 'flush'>
+  /** The boot's store mirrors: `quit` waits for the shell to have applied their writes (85-11). */
+  storeMirrors: Pick<MirrorRegistry, 'flushStores'>
   /** The boot-owned abort registry the `abort` channel signals (66.4-13). */
   aborts: Pick<AbortRegistry, 'call'>
   downloadQueue: Pick<DownloadQueue, 'initQueue'>
@@ -434,7 +440,14 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
     // Live-gate marker (todo 2026-10-05 cmd-q-and-red-x): proves the shell's routed quit frame
     // landed in the sidecar, before handleExit() can block on the pending-operations confirm.
     logSendHandlerReached('quit')
-    deps.quit.handleExit().catch((error) => logSendFailure('quit', error))
+    // Durability parity at quit (Phase 85): every store write the sidecar has sent is applied by
+    // the shell before the exit is asked for. `flushStores` never rejects and its deadline timer
+    // is unref'd, so a missing peer costs at most STORE_FLUSH_AT_QUIT_MS and never holds the
+    // sidecar open (sidecar exit contract).
+    deps.storeMirrors
+      .flushStores(STORE_FLUSH_AT_QUIT_MS)
+      .then(() => deps.quit.handleExit())
+      .catch((error) => logSendFailure('quit', error))
   })
 
   // Quick 261026-b9r (T-b9r-02): takes NO argument; only the constant is ever opened.

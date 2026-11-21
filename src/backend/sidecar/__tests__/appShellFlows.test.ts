@@ -393,6 +393,8 @@ function directDeps(stores: unknown = {}, sendFrontendMessage = jest.fn()) {
     appShell: createAppShellState({ clock: createClock() }),
     // The boot's read-only tracker (66.4-18): a fresh one per direct registration.
     readOnly: createReadOnlyStores(),
+    // The boot's store mirrors (85-11): nothing waiting, so the quit flush resolves at once.
+    storeMirrors: { flushStores: jest.fn().mockResolvedValue(undefined) },
     appRuntime
   }
 }
@@ -591,6 +593,35 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     } finally {
       logInfoSpy.mockRestore()
     }
+  })
+
+  it('85-11 quit (send) waits for the store flush (2 s budget) before it reaches handleExit()', async () => {
+    let release: () => void = () => {}
+    const flushStores = jest.fn(
+      () => new Promise<void>((resolve) => (release = resolve))
+    )
+    let handleExit: jest.Mock = jest.fn()
+    let quitListener: () => void = () => {}
+    inFreshRegistry(() => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      require('../../logger').initHeadless()
+      const deps = { ...directDeps(), storeMirrors: { flushStores } }
+      handleExit = deps.quit.handleExit
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      require('../appShellFlowRegistration').registerAppShellFlows(deps)
+      ;[quitListener] = directListeners().get('quit')
+    })
+
+    quitListener()
+    await flush()
+    expect(flushStores).toHaveBeenCalledTimes(1)
+    expect(flushStores).toHaveBeenCalledWith(2000)
+    // The shell has not answered yet: the exit is not asked for.
+    expect(handleExit).not.toHaveBeenCalled()
+
+    release()
+    await flush()
+    expect(handleExit).toHaveBeenCalledTimes(1)
   })
 
   // Quick task 260907-juv Layer A (quit tears down long-lived children before exit) is pinned

@@ -105,6 +105,11 @@ export function isStoreKey(storeKey: string): boolean {
   return rowForStoreKey(storeKey) !== undefined
 }
 
+/** The family of a store's table row (`cache`, `settings`, `native`, ...), or `undefined` for a key that names no store. */
+export function familyOf(storeKey: string): string | undefined {
+  return rowForStoreKey(storeKey)?.family
+}
+
 /** Whether a store's keys are dot paths (every row but `store/uploadedLogs`). */
 export function dotPathsFor(storeKey: string): boolean {
   return rowForStoreKey(storeKey)?.dotPaths ?? true
