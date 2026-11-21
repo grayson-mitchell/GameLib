@@ -472,5 +472,6 @@ members = [
   "crates/gamelib-safety",
   "crates/gamelib-testutil",
   "crates/gamelib-proc",
+  "crates/gamelib-log",
 ]
 resolver = "2"

@@ -1659,6 +1659,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "gamelib-log"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "gamelib-core",
+ "gamelib-testutil",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "gamelib-proc"
 version = "0.1.0"
 dependencies = [

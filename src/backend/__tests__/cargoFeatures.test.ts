@@ -163,7 +163,8 @@ describe('Phase 34.4.2 Plan 13 (operator decision D-A) objc2-app-kit NSGraphicsC
  * `src-tauri/Cargo.lock` (`grep '^name = ' Cargo.lock | sed ... | sort -u`), not hand-typed.
  * Re-pinned by quick 261103-wjs after `70f7022af` (gilrs gamepad reader) added 9 crates, and by
  * Phase 79-01 (gamelib-steamcm, the steam-vent tree), and by Phase 82-03 (gamelib-safety,
- * gamelib-testutil, unicode-normalization; its tinyvec dependency was already locked).
+ * gamelib-testutil, unicode-normalization; its tinyvec dependency was already locked), and by
+ * Phase 84-02 (gamelib-log alone: chrono, serde, serde_json and iana-time-zone were already locked).
  */
 const CARGO_LOCK_PATH = join(
   __dirname,
@@ -215,7 +216,7 @@ const EXPECTED_LOCKFILE_CRATE_NAMES = [
   "find-msvc-tools", "fixedbitset", "flate2", "fnv", "foldhash", "foreign-types",
   "foreign-types-macros", "foreign-types-shared", "form_urlencoded", "fs_extra", "futures-channel", "futures-core",
   "futures-executor", "futures-io", "futures-lite", "futures-macro", "futures-sink", "futures-task",
-  "futures-util", "gamelib-core", "gamelib-depot", "gamelib-depot-cli", "gamelib-i18n", "gamelib-proc", "gamelib-safety", "gamelib-scan", "gamelib-scan-cli", "gamelib-shell",
+  "futures-util", "gamelib-core", "gamelib-depot", "gamelib-depot-cli", "gamelib-i18n", "gamelib-log", "gamelib-proc", "gamelib-safety", "gamelib-scan", "gamelib-scan-cli", "gamelib-shell",
   "gamelib-steamcm", "gamelib-steamcm-cli", "gamelib-steamfiles", "gamelib-steamfiles-cli", "gamelib-steampoll", "gamelib-steampoll-cli", "gamelib-testutil", "gdk", "gdk-pixbuf",
   "gdk-pixbuf-sys", "gdk-sys", "gdkwayland-sys", "gdkx11", "gdkx11-sys", "generic-array",
   "gethostname", "getrandom", "gilrs", "gilrs-core", "gio", "gio-sys",
