@@ -67,3 +67,17 @@ for completion, because a Steam operation does not always move the ACF.
 
 Move a Mac-native game to a second Steam library; Steam and GameLib both show the new location and
 it launches.
+
+## Progress (2026-11-22, quick 261122-9sl)
+
+- Steam-registered Move is implemented: the helper `--steam-moveapp`, run-guarded
+  CanMoveApp/MoveApp with a bounded completion wait; `requestSteamMoveApp`; `moveNative.ts`;
+  `moveInstall` routing; and the Move gate shown for Steam on macOS.
+- `refreshInstallState` now rewrites a changed install_path, so the cache follows a move made in
+  Steam too.
+- Still open:
+  - Bridge-game Move. The "Bridge games" design question above is undecided, and GameLib refuses
+    with "Move isn't available for bridge games yet".
+  - Steam Move off macOS.
+  - The cross-volume move and the post-move error paths spike 090 did not exercise.
+  - The live gate.
