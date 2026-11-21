@@ -9,12 +9,12 @@ import { useInstallLocationActions } from '../../actions/useInstallLocationActio
 import PlatformSupport from '../PlatformSupport'
 import AppleWikiInfo from '../AppleWikiInfo'
 import RunsForMeToggle from '../RunsForMeToggle'
-import DownloadSizeInfo from '../DownloadSizeInfo'
 import CloudSavesSync from '../CloudSavesSync'
 import HumbleOriginInfo from '../HumbleOriginInfo'
 import NativePortInfo from '../NativePortInfo'
 import EngineRow from './EngineRow'
 import IntegrationRows from './IntegrationRows'
+import NotInstalledFacts from './NotInstalledFacts'
 import LocationRow from './LocationRow'
 import { OnlineRequiredRow, ThirdPartyRow } from './StaticFactRows'
 import SizeRow from './SizeRow'
@@ -61,31 +61,38 @@ const InstallTab = ({ gameInfo, platform, handleUpdate, hasUpdate }: Props) => {
   return (
     <>
       <div className="installFacts">
-        <LocationRow
-          gameInfo={gameInfo}
-          gates={gates}
-          actions={locationActions}
-        />
-        <SizeRow gameInfo={gameInfo} gates={gates} />
-        <VersionRow
-          gameInfo={gameInfo}
-          gates={gates}
-          handleUpdate={handleUpdate}
-          hasUpdate={hasUpdate}
-        />
-        <EngineRow gameInfo={gameInfo} gates={gates} />
-        <CloudSavesSync gameInfo={gameInfo} gates={gates} />
-        <PlatformSupport gameInfo={gameInfo} />
-        <OnlineRequiredRow gameInfo={gameInfo} />
-        <ThirdPartyRow gameInfo={gameInfo} />
+        {gameInfo.is_installed ? (
+          <>
+            <LocationRow
+              gameInfo={gameInfo}
+              gates={gates}
+              actions={locationActions}
+            />
+            <SizeRow gameInfo={gameInfo} gates={gates} />
+            <VersionRow
+              gameInfo={gameInfo}
+              gates={gates}
+              handleUpdate={handleUpdate}
+              hasUpdate={hasUpdate}
+            />
+            <EngineRow gameInfo={gameInfo} gates={gates} />
+            <CloudSavesSync gameInfo={gameInfo} gates={gates} />
+            <PlatformSupport gameInfo={gameInfo} />
+            <OnlineRequiredRow gameInfo={gameInfo} />
+            <ThirdPartyRow gameInfo={gameInfo} />
+          </>
+        ) : (
+          <NotInstalledFacts gameInfo={gameInfo} gates={gates} />
+        )}
+      </div>
+      <div className="installNotes">
+        <HumbleOriginInfo gameInfo={gameInfo} />
+        <NativePortInfo gameInfo={gameInfo} platform={platform} />
       </div>
       <div className="legacyRows">
         <div>
           <AppleWikiInfo gameInfo={gameInfo} />
           <RunsForMeToggle gameInfo={gameInfo} />
-          <DownloadSizeInfo gameInfo={gameInfo} />
-          <HumbleOriginInfo gameInfo={gameInfo} />
-          <NativePortInfo gameInfo={gameInfo} platform={platform} />
         </div>
       </div>
       <IntegrationRows gameInfo={gameInfo} platform={platform} />

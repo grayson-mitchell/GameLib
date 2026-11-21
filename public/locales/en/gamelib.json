@@ -272,6 +272,7 @@
                 "syncing": "Syncing…",
                 "syncNow": "Sync now ▾"
             },
+            "downloadSize": "Download size",
             "engine": "Engine",
             "engineBottle": "bottle \"{{bottle}}\"",
             "failure": {
@@ -279,7 +280,9 @@
                 "setFolder": "Couldn't set the install folder. Details are in the log.",
                 "verify": "Verify failed. Details are in the log."
             },
+            "installSize": "Install size",
             "libraryGroup": "Library & integration",
+            "locate": "Already installed elsewhere?",
             "location": "Location",
             "modify": "Modify…",
             "move": "Move…",

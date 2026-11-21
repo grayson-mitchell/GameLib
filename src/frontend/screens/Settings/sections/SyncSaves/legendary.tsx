@@ -25,7 +25,6 @@ interface Props {
   winePrefix?: string
   syncCommands: { name: string; value: string }[]
   featureSupported: boolean
-  quickSavesToggle: () => React.ReactNode
 }
 
 export default function LegendarySyncSaves({
@@ -36,8 +35,7 @@ export default function LegendarySyncSaves({
   isProton,
   winePrefix,
   syncCommands,
-  featureSupported,
-  quickSavesToggle: QuickSavesToggle
+  featureSupported
 }: Props) {
   const [isSyncing, setIsSyncing] = useState(false)
   const [isLoading, setLoading] = useState(false)
@@ -188,7 +186,6 @@ export default function LegendarySyncSaves({
             handleChange={() => setAutoSyncSaves(!autoSyncSaves)}
             title={t('setting.autosync')}
           />
-          {savesPath.length > 0 ? <QuickSavesToggle /> : null}
           <InfoBox text="infobox.help">
             <ul>
               <li>{t('help.sync.part1')}</li>

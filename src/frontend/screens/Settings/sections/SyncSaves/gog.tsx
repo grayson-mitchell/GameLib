@@ -24,7 +24,6 @@ interface Props {
   syncCommands: { name: string; value: string }[]
   featureSupported: boolean
   isLinuxNative: boolean
-  quickSavesToggle: () => React.ReactNode
 }
 
 export default function GOGSyncSaves({
@@ -34,8 +33,7 @@ export default function GOGSyncSaves({
   setAutoSyncSaves,
   syncCommands,
   featureSupported,
-  isLinuxNative,
-  quickSavesToggle: QuickSavesToggle
+  isLinuxNative
 }: Props) {
   const [isLoading, setIsLoading] = useState(true)
   const [isSyncing, setIsSyncing] = useState(false)
@@ -221,9 +219,6 @@ export default function GOGSyncSaves({
             handleChange={() => setAutoSyncSaves(!autoSyncSaves)}
             title={t('setting.autosync')}
           />
-          {gogSaves.some((save) => save.location.length > 0) ? (
-            <QuickSavesToggle />
-          ) : null}
           <InfoBox text="infobox.help">
             <ul>
               <li>{t('help.sync.part1')}</li>

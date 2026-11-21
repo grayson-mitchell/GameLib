@@ -43,7 +43,7 @@ const NativePortInfo = ({ gameInfo, platform }: Props) => {
         : t('gamepage.nativePort.steps.import')
 
   return (
-    <div className="steamEngineNotice nativePortInfo" role="note">
+    <div className="steamEngineNotice nativePortInfo installNote" role="note">
       <strong>{t('gamepage.nativePort.title')}</strong>
       <p>{t('gamepage.nativePort.intro', { name: entry.name })}</p>
       <p>{t('gamepage.nativePort.licence', { licence: entry.licence })}</p>

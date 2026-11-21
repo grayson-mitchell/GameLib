@@ -1,25 +1,25 @@
 import useUiState from 'frontend/state/uiState'
 import { useContext, useEffect, useState } from 'react'
-import { asStoreGame } from 'common/gameInfoNarrowing'
 import { hasCapability } from 'common/storeCapabilities'
 import { useTranslation } from 'react-i18next'
 import GameContext from '../../GameContext'
-import { CloudDownload, Storage, Assignment } from '@mui/icons-material'
 import { size } from 'frontend/helpers'
 import { GameInfo } from 'common/types'
+import { FactRow } from './InstallTab/FactRow'
 
 interface Props {
   gameInfo: GameInfo
 }
 
 /**
- * Steam-only branch: estimated Install Size row (no Download Size row — Steam
+ * Steam-only branch: estimated Install size fact (no Download size fact: Steam
  * does not expose a pre-download size, only an estimate parsed from the store
  * page's system requirements). Extracted into its own component so its hooks
  * remain unconditional (not called after DownloadSizeInfo's early returns).
  */
 const SteamInstallSize = ({ appId }: { appId: string }) => {
   const { t } = useTranslation('gamepage')
+  const { t: tGamelib } = useTranslation('gamelib')
   const [result, setResult] = useState<string | null>(null)
 
   useEffect(() => {
@@ -37,16 +37,25 @@ const SteamInstallSize = ({ appId }: { appId: string }) => {
   }
 
   return (
-    <div className="iconWithText">
-      <Storage />
-      <b>{t('game.installSize', 'Install Size')}:</b>
+    <FactRow
+      label={tGamelib(
+        'gamelib:gamepage.installTab.installSize',
+        'Install size'
+      )}
+    >
       {display}
-    </div>
+    </FactRow>
   )
 }
 
+/**
+ * Phase 100 (D-01, D-05): the not-installed sizes as fact rows. The
+ * third-party manager no longer shows here: ThirdPartyRow renders it for an
+ * installed and a not-installed game alike.
+ */
 const DownloadSizeInfo = ({ gameInfo }: Props) => {
   const { t } = useTranslation('gamepage')
+  const { t: tGamelib } = useTranslation('gamelib')
   const { gameInstallInfo, runner } = useContext(GameContext)
   const connectivity = useUiState((s) => s.connectivity)
 
@@ -66,16 +75,10 @@ const DownloadSizeInfo = ({ gameInfo }: Props) => {
     return <SteamInstallSize appId={gameInfo.app_name} />
   }
 
+  // A third-party-managed game has no manifest here; ThirdPartyRow names its
+  // manager instead.
   if (gameInfo.thirdPartyManagedApp) {
-    return (
-      <div className="iconWithText">
-        <Assignment />
-        <b>{t('info.third-party-app', 'Third-Party Manager')}</b>
-        {asStoreGame(gameInfo, 'legendary')?.isEAManaged
-          ? 'EA app'
-          : gameInfo.thirdPartyManagedApp}
-      </div>
-    )
+    return null
   }
 
   const downloadSize =
@@ -87,18 +90,24 @@ const DownloadSizeInfo = ({ gameInfo }: Props) => {
 
   return (
     <>
-      <div className="iconWithText">
-        <CloudDownload />
-        <b>{t('game.downloadSize', 'Download Size')}:</b>
+      <FactRow
+        label={tGamelib(
+          'gamelib:gamepage.installTab.downloadSize',
+          'Download size'
+        )}
+      >
         {downloadSize ??
           `${t('game.getting-download-size', 'Getting download size')}...`}
-      </div>
-      <div className="iconWithText">
-        <Storage />
-        <b>{t('game.installSize', 'Install Size')}:</b>
+      </FactRow>
+      <FactRow
+        label={tGamelib(
+          'gamelib:gamepage.installTab.installSize',
+          'Install size'
+        )}
+      >
         {installSize ??
           `${t('game.getting-install-size', 'Getting install size')}...`}
-      </div>
+      </FactRow>
     </>
   )
 }

@@ -234,3 +234,30 @@
   overflow: visible;
   white-space: normal;
 }
+
+/* Phase 100 (D-06): the native-port hint and the Humble key origin read as
+   neutral accent-tinted notes between the facts and Library & integration.
+   Red stays for real danger. */
+.installNotes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-top: 14px;
+}
+
+.installNotes:empty {
+  display: none;
+}
+
+.installTab .installNote {
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.installLocate {
+  padding: 10px 2px;
+}

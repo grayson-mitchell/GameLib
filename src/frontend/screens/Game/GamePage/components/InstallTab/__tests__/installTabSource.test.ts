@@ -189,4 +189,64 @@ describe('Install tab source gates', () => {
     expect(order.every((i) => i > -1)).toBe(true)
     expect([...order].sort((a, b) => a - b)).toEqual(order)
   })
+
+  it('NotInstalledFacts opens the import door behind gates.locate (D-01)', () => {
+    const code = read(TAB_DIR, 'NotInstalledFacts.tsx')
+    expect(code).toContain('gates.locate.show')
+    expect(code).toContain('openInstallGameModal({')
+    expect(code).toContain("action: 'import'")
+    expect(code).toContain('<ThirdPartyRow')
+    expect(code).toContain('<DownloadSizeInfo')
+    expect(code).toContain('<PlatformSupport')
+  })
+
+  it('InstallTab branches installed and not-installed facts and places the notes before the legacy rows (D-06)', () => {
+    const code = read(TAB_DIR, 'index.tsx')
+    const notInstalled = code.indexOf('<NotInstalledFacts')
+    const notes = code.indexOf('className="installNotes"')
+    const humble = code.indexOf('<HumbleOriginInfo')
+    const nativePort = code.indexOf('<NativePortInfo')
+    const legacy = code.indexOf('className="legacyRows"')
+    const integration = code.indexOf('<IntegrationRows')
+    expect(code).toContain('gameInfo.is_installed ? (')
+    expect(notInstalled).toBeGreaterThan(-1)
+    expect(notes).toBeGreaterThan(notInstalled)
+    expect(humble).toBeGreaterThan(notes)
+    expect(nativePort).toBeGreaterThan(humble)
+    expect(legacy).toBeGreaterThan(nativePort)
+    expect(integration).toBeGreaterThan(legacy)
+    expect(code).not.toContain('<DownloadSizeInfo')
+  })
+
+  it('the two notes carry installNote and NativePortInfo keeps its three is-text buttons (D-06)', () => {
+    const humble = read(COMPONENTS_DIR, 'HumbleOriginInfo.tsx')
+    const native = read(COMPONENTS_DIR, 'NativePortInfo.tsx')
+    expect(humble).toContain('installNote')
+    expect(native).toContain('installNote')
+    expect(native.match(/className="button is-text"/g)).toHaveLength(3)
+  })
+
+  it('the Settings Cloud Saves Sync section no longer offers the quick-sync-menu toggle (D-21)', () => {
+    const dir = join(
+      TAB_DIR,
+      '..',
+      '..',
+      '..',
+      '..',
+      'Settings',
+      'sections',
+      'SyncSaves'
+    )
+    for (const name of ['index.tsx', 'legendary.tsx', 'gog.tsx']) {
+      const code = read(dir, name)
+      expect({ name, hit: code.includes('enableQuickSavesMenu') }).toEqual({
+        name,
+        hit: false
+      })
+      expect({ name, hit: code.includes('QuickSavesToggle') }).toEqual({
+        name,
+        hit: false
+      })
+    }
+  })
 })
