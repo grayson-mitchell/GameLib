@@ -3,7 +3,7 @@ status: complete
 phase: 82-guardrails-hygiene-and-shared-safety-primitives
 source: [82-VERIFICATION.md]
 started: 2026-11-20T07:59:36Z
-updated: 2026-11-21T01:43:21.043Z
+updated: 2026-11-21T02:45:00Z
 ---
 
 ## Current Test
@@ -27,12 +27,20 @@ previous_result: |
   reported: "Test workflow run 44823008791 failed: 1 suite, 1 test (dialogOptionForwarding.test.ts:223, UNBOUNDED_RUST_CHANNELS contains RUST_SAFETY_REMOVE_TREE, not in EXPECTED)"
   severity: major
 
+### 3. Push main and read the Test, Rust test and Lint workflows on a sha that contains the 82-20 fix (dc220850f / d59c79873) and the 261120-uzn fix
+expected: Test workflow green (sharedRedistInstall.test.ts installer-timeout tests pass), Rust test green on ubuntu, macOS and Windows, Lint workflow green
+result: [pending]
+
+### 4. Confirm the SC5 override wording (operator)
+expected: ROADMAP SC5 edited to name the deferrals (fileStore.ts to Phase 85, proxy-types.ts, legendary/commands/* and the type-only files to Phase 91), or the override accepted as is
+result: [pending]
+
 ## Summary
 
-total: 2
+total: 4
 passed: 1
 issues: 1
-pending: 0
+pending: 2
 skipped: 0
 blocked: 0
 

@@ -1,6 +1,6 @@
 ---
 created: 2026-11-21T02:10:00.000Z
-title: Game settings redesign (quick-261121-dzl) left the i18n baseline and fork-touched-files list stale, so main goes red on push
+title: Game settings redesign (quick-261121-dzl) left the i18n baseline, fork-touched-files list and gameinfo-narrowing ceiling stale, so main goes red on push
 area: i18n
 severity: major
 platform: any
@@ -18,6 +18,8 @@ The local post-wave test gate for Phase 82 plan 82-20 (2026-11-21, HEAD 6ec89ee1
 tests that come from the committed-but-unpushed quick-261121-dzl commits (56e3874de..ab691d565),
 not from Phase 82:
 
+- Lint: `pnpm gameinfo-narrowing-ceiling` FAILS (`SettingsModalHeader.tsx` has 1, baseline 0), from dzl commit 75b492f1d; runs in lint.yml (found by the 82 verifier, 2026-11-21).
+
 - `lintTranslations` REQ-41-02 and `comparePresenceBaseline` REQ-41-01 R13: 1728 hard failures,
   all new gamelib keys (`engine.wineTabNote`, `settings.cards.*`, `settings.fields.afterExit.*`, ...)
   not localised and not recorded in the presence baseline.
@@ -29,5 +31,5 @@ Pushing main as-is turns the Test workflow red, which also blocks the Phase 82 U
 
 ## Solution
 
-Regenerate the presence baseline and `meta/i18nForkTouchedFiles.json` with the repo's own
+Remove the new GameInfo narrowing in `SettingsModalHeader.tsx` (do not raise the ceiling). Regenerate the presence baseline and `meta/i18nForkTouchedFiles.json` with the repo's own
 generators (do not hand-edit, do not widen the gate), confirm the three suites green, then push.
