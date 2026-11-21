@@ -75,3 +75,7 @@ Deferred because: in-progress installs are outside the D-16 known-install list t
 Fix direction: Add timeout-minutes to the cargo-test job and record reasons for the deny.toml advisory ignores.
 
 Deferred because: the rust-test.yml job timeout and the deny.toml advisory reasons need the network advisory DB and a workflow-pin test change.
+
+## Resolved by quick 261121-o99
+
+Resolved by quick 261121-o99: d8fc1bb25 (gamelib-safety: WR-02, WR-06, IN-01), 099101f9e (Steam removal sites: WR-05, WR-09, IN-02), 81edc90b7 (IN-03, IN-04, IN-05). WR-05 moving the verdict into gamelib-steampoll remove_copy remains for Phase 90.

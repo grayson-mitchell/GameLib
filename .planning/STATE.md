@@ -6,10 +6,10 @@ current_phase: 84
 current_phase_name: Logger
 status: executing
 stopped_at: Completed 84-02-PLAN.md
-last_updated: "2026-11-21T04:45:59.645Z"
+last_updated: "2026-11-21T04:54:07.245Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 84 execution started
-state_head: 73afed020d74636ea70d0219347e55e7466da712
+state_head: 81edc90b7bba0c14b28b1b52c01fd2428ccd9cb7
 progress:
   total_phases: 19
   completed_phases: 23
@@ -79,7 +79,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 Phase: 84 (Logger) — EXECUTING
 Plan: 3 of 11
 Status: Ready to execute
-Last activity: 2026-11-21 — Phase 84 execution started
+Last activity: 2026-11-21 - Completed quick task 261121-o99: Close Phase 82 deferred review findings
 Progress: [██████████] 100%
 
 ## Native-Install Arc Phase Map (21–25)
@@ -669,6 +669,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261121-kqt | Enable incremental tsc in codecheck | 2026-11-21 | 893bf22da | — | [261121-kqt-enable-incremental-tsc-in-codecheck](./quick/261121-kqt-enable-incremental-tsc-in-codecheck/) |
 | 261121-lco | Fix stale i18n baseline, fork-touched-files list and gameinfo-narrowing ceiling after dzl redesign | 2026-11-21 | 9457e908b | — | [261121-lco-fix-stale-i18n-baseline-fork-touched-fil](./quick/261121-lco-fix-stale-i18n-baseline-fork-touched-fil/) |
 | 261121-mpt | Close G-82-2-r3: narrow runTs.test.ts node_modules/.cache pins for codecheck tsbuildinfo; real-time-bounded wait for steamBridgeKnownFixes 15s timeout test | 2026-11-21 | a354ce4b7 | — | [261121-mpt-close-g-82-2-r3-narrow-runts-test-ts-nod](./quick/261121-mpt-close-g-82-2-r3-narrow-runts-test-ts-nod/) |
+| 261121-o99 | Close Phase 82 deferred review findings (WR-02, WR-05, WR-06, WR-09, IN-01..IN-05) | 2026-11-21 | 81edc90b7 | — | [261121-o99-close-phase-82-deferred-review-findings](./quick/261121-o99-close-phase-82-deferred-review-findings/) |
 
 ## Deferred Items
 

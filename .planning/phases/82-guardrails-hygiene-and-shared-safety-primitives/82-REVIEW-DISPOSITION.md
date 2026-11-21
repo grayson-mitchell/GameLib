@@ -37,7 +37,7 @@ findings:
     title: "Cancelled-install cleanup refuses (and keeps manifest and breadcrumb) when `steamapps/common` is absent"
   - id: WR-02
     severity: warning
-    disposition: deferred
+    disposition: fixed
     title: "One unresolvable protected-root or known-install path blocks every removal"
   - id: WR-03
     severity: warning
@@ -49,11 +49,11 @@ findings:
     title: "An empty `trustRoot` string is read as \"no trust root\", and game-install/prefix/sideload targets then skip containment"
   - id: WR-05
     severity: warning
-    disposition: deferred
+    disposition: fixed
     title: "Steam copy-removal guard is advisory and fails open to an unguarded delete in the crate"
   - id: WR-06
     severity: warning
-    disposition: deferred
+    disposition: fixed
     title: "Sideload \"shared folder\" heuristic ignores sub-directories entirely"
   - id: WR-07
     severity: warning
@@ -65,27 +65,27 @@ findings:
     title: "Adversarial lexical rows pass vacuously if a row name drifts"
   - id: WR-09
     severity: warning
-    disposition: deferred
+    disposition: fixed
     title: "Deletes that run after the Rust check but outside the Rust delete-time re-check"
   - id: IN-01
     severity: info
-    disposition: deferred
+    disposition: fixed
     title: "Windows `is_link_metadata` treats every reparse point as a link"
   - id: IN-02
     severity: info
-    disposition: deferred
+    disposition: fixed
     title: "`remove-bottle` refusal kind is never emitted"
   - id: IN-03
     severity: info
-    disposition: deferred
+    disposition: fixed
     title: "Sideload reports a `refused` second-stage guard as `failed`"
   - id: IN-04
     severity: info
-    disposition: deferred
+    disposition: fixed
     title: "Known-install list ignores entries that are not yet `is_installed`"
   - id: IN-05
     severity: info
-    disposition: deferred
+    disposition: fixed
     title: "CI and supply-chain hygiene in touched files"
 open: 4
 total: 19
@@ -102,19 +102,19 @@ recorded: 2026-11-20T07:55:52.740Z
 | IN-08 | info | open | - |
 | CR-01 | critical | fixed | 82-17-SUMMARY.md and 82-19-SUMMARY.md (not in the current review) |
 | WR-01 | warning | fixed | 82-17-SUMMARY.md and 82-19-SUMMARY.md (not in the current review) |
-| WR-02 | warning | deferred | fail-closed (over-refuses, never deletes). A lexical fallback for unresolvable reference paths is a design change, and its Windows unplugged-drive branch can only be proven on the CI Windows leg. Todo: .planning/todos/pending/2026-11-21-phase-82-deferred-review-findings.md (not in the current review) |
+| WR-02 | warning | fixed | quick 261121-o99 (261121-o99-SUMMARY.md) (not in the current review) |
 | WR-03 | warning | fixed | 82-18-SUMMARY.md (not in the current review) |
 | WR-04 | warning | fixed | 82-17-SUMMARY.md (not in the current review) |
-| WR-05 | warning | deferred | bounded by remove_copy own symlink-root, installdir-shape and downloading guards (D-21). The TS pre-check goes away when Phase 90 ports Steam uninstall, and remove_copy should then take the gamelib-safety verdict itself. Todo: .planning/todos/pending/2026-11-21-phase-82-deferred-review-findings.md (not in the current review) |
-| WR-06 | warning | deferred | a sub-directory rule would refuse nearly every real game folder (Data or Engine beside the exe). What marks a sibling game directory needs its own decision. Todo: .planning/todos/pending/2026-11-21-phase-82-deferred-review-findings.md (not in the current review) |
+| WR-05 | warning | fixed | quick 261121-o99 (261121-o99-SUMMARY.md): the TS half is fixed (an installed copy that cannot be placed is refused canonicalize-failed); moving the verdict into gamelib-steampoll remove_copy itself remains for Phase 90 (not in the current review) |
+| WR-06 | warning | fixed | quick 261121-o99 (261121-o99-SUMMARY.md) (not in the current review) |
 | WR-07 | warning | fixed | 82-18-SUMMARY.md (not in the current review) |
 | WR-08 | warning | fixed | 82-17-SUMMARY.md (not in the current review) |
-| WR-09 | warning | deferred | both are named, accepted exceptions (the Phase 75 critical section; cxbottle deletes by bottle name). Re-asserting the check after cxbottle and at the cancel delete is follow-up work. Todo: .planning/todos/pending/2026-11-21-phase-82-deferred-review-findings.md (not in the current review) |
-| IN-01 | info | deferred | needs the Windows reparse tag, which std metadata does not expose; fails safe as delete-failed. Todo: .planning/todos/pending/2026-11-21-phase-82-deferred-review-findings.md (not in the current review) |
-| IN-02 | info | deferred | cosmetic toast title for bottle removal. Todo: .planning/todos/pending/2026-11-21-phase-82-deferred-review-findings.md (not in the current review) |
-| IN-03 | info | deferred | sideload toast wording for a refused second-stage guard. Todo: .planning/todos/pending/2026-11-21-phase-82-deferred-review-findings.md (not in the current review) |
-| IN-04 | info | deferred | in-progress installs are outside the D-16 known-install list today. Todo: .planning/todos/pending/2026-11-21-phase-82-deferred-review-findings.md (not in the current review) |
-| IN-05 | info | deferred | the rust-test.yml job timeout and the deny.toml advisory reasons need the network advisory DB and a workflow-pin test change. Todo: .planning/todos/pending/2026-11-21-phase-82-deferred-review-findings.md (not in the current review) |
+| WR-09 | warning | fixed | quick 261121-o99 (261121-o99-SUMMARY.md) (not in the current review) |
+| IN-01 | info | fixed | quick 261121-o99 (261121-o99-SUMMARY.md) (not in the current review) |
+| IN-02 | info | fixed | quick 261121-o99 (261121-o99-SUMMARY.md) (not in the current review) |
+| IN-03 | info | fixed | quick 261121-o99 (261121-o99-SUMMARY.md) (not in the current review) |
+| IN-04 | info | fixed | quick 261121-o99 (261121-o99-SUMMARY.md) (not in the current review) |
+| IN-05 | info | fixed | quick 261121-o99 (261121-o99-SUMMARY.md) (not in the current review) |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
