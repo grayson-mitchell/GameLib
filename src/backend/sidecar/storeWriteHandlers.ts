@@ -163,10 +163,10 @@ export function applyStoreWrite(
   }
 
   // Guard (c′): CR-01 defence-in-depth — refuse prototype-chain key path segments at
-  // the POLICY layer too, not only at the storage layer. `fileStore.ts` now rejects
-  // these itself, but the policy layer must not depend on that: `resolveWritableStore`
-  // returns a real `electron-store` under Electron, and any future storage backend
-  // would otherwise inherit the hole. Mirrors `dot-prop`'s `disallowedKeys`. Runs
+  // the POLICY layer too, not only at the storage layer. The storage layer (conf's
+  // dot-prop `disallowedKeys`) rejects these itself, but the policy layer must not depend
+  // on that: any future storage backend would otherwise inherit the hole. Mirrors
+  // `dot-prop`'s `disallowedKeys`. Runs
   // BEFORE guard (c) purely so a hostile key gets its own precise diagnostic —
   // `isWritableStoreField` also refuses these, so the two are belt and braces.
   if (!isSafeKeyPath(key)) {

@@ -2,10 +2,10 @@
  * Per-boot store root (66.4 plan 04, D-66.4-04 / D-05).
  *
  * Every persistent store used to find its directory through `process/appPaths` at construction
- * and share two pieces of module state: the file-cell registry (`sidecar/fileStore.ts`, D-14)
- * and the renderer push (`storeChangeNotifier.ts`). A `StoreRoot` is the instance form of all
- * three: the boot's 'stores' step builds one from `ctx.paths.userData` and hands it to every
- * store, so two boots (or two tests) share nothing and no store resolves a path at import.
+ * and share module state: the renderer push (`storeChangeNotifier.ts`). A `StoreRoot` is the
+ * instance form of that state: the boot's 'stores' step builds one from `ctx.paths.userData` and
+ * hands it to every store, so two boots (or two tests) share nothing and no store resolves a
+ * path at import.
  *
  * Import budget: the pure versioning layer (storeVersioning/engine, readOnlyStores,
  * storeMigrations: no logger, no IPC) and type-only imports. Stores import this module; it must
@@ -39,18 +39,6 @@ import {
 } from '../storeVersioning/readOnlyStores'
 import type { StoreRegistry } from './storeRegistry'
 
-export interface FileStoreCell {
-  data: Record<string, unknown>
-}
-
-/**
- * D-14: one shared data cell per resolved on-disk path, scoped to the root. Production code
- * never discards a cell: doing so would desync an already-constructed `FileStore`.
- */
-interface FileStoreCells {
-  cellFor(fullPath: string, create: () => FileStoreCell): FileStoreCell
-}
-
 type StorePush = (payload: StoreChangedPayload) => void
 
 interface StoreChangeChannel {
@@ -77,24 +65,9 @@ interface StoreChangeChannel {
 
 export interface StoreRoot {
   readonly userData: string
-  readonly cells: FileStoreCells
   readonly changes: StoreChangeChannel
   readonly versioning: StoreVersioning
   readonly readOnly: ReadOnlyStores
-}
-
-function createFileStoreCells(): FileStoreCells {
-  const registry = new Map<string, FileStoreCell>()
-  return {
-    cellFor(fullPath, create) {
-      let cell = registry.get(fullPath)
-      if (!cell) {
-        cell = create()
-        registry.set(fullPath, cell)
-      }
-      return cell
-    }
-  }
 }
 
 function createStoreChangeChannel(): StoreChangeChannel {
@@ -149,7 +122,6 @@ export function createStoreRoot(deps: {
   })
   return {
     userData: deps.userData,
-    cells: createFileStoreCells(),
     changes: createStoreChangeChannel(),
     versioning,
     readOnly

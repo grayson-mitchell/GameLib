@@ -10,7 +10,7 @@
 
 Owner tokens, one per cell:
 
-- `SC`: the sidecar (TypeScript store classes over `fileStore.ts` for persisted state, a TS object in the sidecar for in-memory state). Sole writer.
+- `SC`: the sidecar (TypeScript store classes over `store_backend.ts` (conf) for persisted state (the Phase 27 sidecar file store never ran in production and was deleted by quick 261121-pwt, 2026-11-21), a TS object in the sidecar for in-memory state). Sole writer.
 - `RH`: the Rust `StoreHost` in `gamelib-core`. Sole disk writer; the TS store class becomes a read-mostly write-through mirror (writes are ordered frames to Rust) until the mirror-deletion slice in the "TS mirror deleted" column.
 - `R`: a Rust domain owner (the actor or crate named in the "Rust owner" column of the in-memory table). `X`: deleted, no owner (the state has no Rust equivalent).
 - `ext`: written by a process outside GameLib (the Steam client, the legendary binary); GameLib only reads. `per-channel`: owned channel by channel, never as one object (the IPC handler table).

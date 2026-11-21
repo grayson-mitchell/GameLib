@@ -150,8 +150,8 @@
  *    pair. `mkdtemp` is
  *    atomic (no TOCTOU), mode 0700, and its suffix is unpredictable --
  *    closing the world-writable-`/tmp` symlink-capture vector on Linux
- *    CI, where this root receives real `electron-store` JSON
- *    (`fileStore.ts`) and the full contents of `gamelib.log`.
+ *    CI, where this root receives real store JSON
+ *    (`store_backend.ts`) and the full contents of `gamelib.log`.
  *
  *    IN-05 (gap cycle 4) reported the `chmodSync` as a redundant no-op,
  *    "because mkdtempSync already creates the directory with mode 0700".

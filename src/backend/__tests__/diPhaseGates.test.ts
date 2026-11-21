@@ -652,7 +652,6 @@ describe('66.4 end state: long tail at zero, census is a test, path shim gone', 
     'src/backend/sidecar/appShellFlowRegistration.ts',
     'src/backend/sidecar/devEpicCookieSweepRegistration.ts',
     'src/backend/sidecar/enrichmentFlowRegistration.ts',
-    'src/backend/sidecar/fileStore.ts',
     'src/backend/sidecar/installedJsonWatcher.ts',
     'src/backend/sidecar/ipcValidation.ts',
     'src/backend/sidecar/outboundHttpRegistry.ts',
@@ -748,7 +747,8 @@ describe('66.4 end state: long tail at zero, census is a test, path shim gone', 
     // Phase 82 Plan 10 deleted gog/e2eMock.ts (D-19), so the list is 79 entries and the floor moves 80 -> 79
     // with the deliberate deletion; the floor stays equal to the list length, so a parse miss still turns it red.
     // Phase 82 Plan 15 deleted legendary/e2eMock.ts and nile/e2eMock.ts (D-19): 79 -> 77.
-    assertAtOrAboveFloor('66.4 owned list', OWNED_66_4.length, 77)
+    // Quick 261121-pwt deleted sidecar/fileStore.ts (the Phase 82 criterion 5 file-store clause): 77 -> 76.
+    assertAtOrAboveFloor('66.4 owned list', OWNED_66_4.length, 76)
   })
 
   it.each(OWNED_66_4)('%s is absent from the census', (file) => {

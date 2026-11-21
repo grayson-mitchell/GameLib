@@ -401,7 +401,7 @@ function getAtPath(obj: Record<string, unknown> | undefined, key: string): unkno
  * `` `__timestamp.${key}` `` entry) therefore read back the PRE-write hydrated value for
  * the rest of the session: a hidden game un-hid itself, and a freshly written cache
  * entry could never be read back in-session. Only a restart repaired it, because the
- * sidecar's `FileStore` does split on dots, so disk was always correct.
+ * sidecar's store does split on dots, so disk was always correct.
  *
  * Carries CR-01's disallowed-segment guard (single-sourced from `storePolicy`) so the
  * renderer snapshot cannot be prototype-polluted either.

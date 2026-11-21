@@ -14,8 +14,8 @@
  *
  * This mock previously pointed `cwd` at an ABSOLUTE `tmp.dirSync()` path. That
  * worked only because `electron-store` had no containment check of its own —
- * the check lived in `sidecar/fileStore.ts`. Now that the shim carries WR-11's
- * containment forward, an absolute path outside userData throws, which is the
+ * the check lived in a second store (`sidecar/`, since deleted). Now that
+ * `store_backend.ts` carries WR-11's containment, an absolute path outside userData throws, which is the
  * correct behaviour and is what caught this during Plan 05's own gate run.
  */
 

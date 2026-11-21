@@ -37,13 +37,13 @@
  * CR-01 (Phase 29 code review): key path segments that may NEVER appear in a store
  * key, in EITHER direction, on EITHER build.
  *
- * `electron-store` resolves dot-notation paths through `dot-prop`, which rejects
- * exactly these three names (`dot-prop`'s own `disallowedKeys`). The sidecar's
- * `FileStore` replacement re-implemented dot-notation traversal WITHOUT that guard,
+ * conf (the production store) resolves dot-notation paths through `dot-prop`, which rejects
+ * exactly these three names (`dot-prop`'s own `disallowedKeys`). The Phase 27 sidecar file
+ * store (deleted in quick 261121-pwt) re-implemented dot-notation traversal WITHOUT that guard,
  * so a renderer-controlled `storeSet('timestampStore', '__proto__.polluted', …)`
  * walked the cursor onto `Object.prototype` and polluted every object in the sidecar
  * process — the process that holds Steam session material and dispatches every RPC
- * handler. Single-sourced here so the storage layer (`fileStore.ts`), the sidecar
+ * handler. Single-sourced here so the sidecar
  * write choke point (`storeWriteHandlers.ts`) and the renderer snapshot
  * (`tauriTransport.ts`) cannot drift apart on what "hostile key" means.
  *

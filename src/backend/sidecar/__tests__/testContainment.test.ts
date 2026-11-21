@@ -963,7 +963,6 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'engineTempSweepBootWire.test.ts',
   'eosOverlayFlows.test.ts',
   'externalDynamicImportGate.test.ts',
-  'fileStore.test.ts',
   'flowRegistrationCensus.test.ts',
   'focusRowFirstLaunchHydration.test.ts',
   'gameDetailsImportGate.test.ts',

@@ -165,12 +165,12 @@ function readFixesFileWithin(
   // the directory and made this an arbitrary-file read primitive -- whatever it
   // landed on was `readFileSync`'d and `JSON.parse`'d.
   //
-  // Same containment idiom as `sidecar/fileStore.ts:121-133`, and the same
+  // Same containment idiom as `store_backend.ts`'s `assertContained`, and the same
   // lesson it records: `path.join` is not containment -- use resolve+relative.
   // `runner` needs no guard; it is a closed `Runner` union indexed through
   // `storeMap`.
   //
-  // Returns null rather than throwing, unlike fileStore: every failure mode of
+  // Returns null rather than throwing, unlike `assertContained`: every failure mode of
   // this function (absent file, malformed JSON) already yields null and callers
   // depend on that. The `logWarning` keeps it loud rather than silent.
   const relativeToFixes = relative(resolve(dir), fixPath)

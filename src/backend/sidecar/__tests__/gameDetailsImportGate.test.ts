@@ -254,8 +254,13 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   // that channel; the diff is that removal plus docstring wording, no other channel, guard or
   // `steamLibrary.has` gate moved. Registered set 12 -> 11. Prior digest:
   // ea25a6c699e5ac722a01eab7424e6591337c405beb0171abd3c161c4905882b2
+  // quick 261121-pwt: re-pin -- COMMENT-ONLY. One line of the setSetting docstring named the sidecar
+  // file store's D-07 clobber, and that store is deleted, so the line now says so. HEAD and the
+  // working tree are byte-identical after stripping comments: no registration, argument, guard or
+  // `steamLibrary.has` gate moved. Prior digest:
+  // 1cf25750511f1cb0d65d6564ed4aa06df1aa0b8cf517cf668802aa2a5a76cad7
   const SETTINGS_FLOW_REGISTRATION_SHA256 =
-    '1cf25750511f1cb0d65d6564ed4aa06df1aa0b8cf517cf668802aa2a5a76cad7'
+    'd05b557e5d0a9c05611b9447b98803e1b9f2d55652d0f2053db8cfacb6175769'
 
   it('REQ-34.2-10/D-09 Gate 7: settingsFlowRegistration.ts matches its committed sha256 digest', () => {
     const filePath = join(__dirname, '../settingsFlowRegistration.ts')

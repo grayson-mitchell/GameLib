@@ -60,7 +60,8 @@
  *
  * Phase 68: store versioning, the read-only refusal and the D-13 file modes
  * live here because this is the one class every production store passes
- * through; `sidecar/fileStore.ts` is not on the production path.
+ * through. (The Phase 27 sidecar file store, which never ran in production, was deleted in
+ * quick 261121-pwt, so WR-11's containment below lives only here.)
  */
 
 import Conf from 'conf'
@@ -101,8 +102,9 @@ function assertContained(candidate: string, root: string, label: string): void {
  * cwd from the boot's `StoreRoot` instead of Electron's userData path, and enforces path
  * containment.
  *
- * The containment check is MOVED (not reimplemented) from
- * `sidecar/fileStore.ts`'s `resolveStorePath()` — Phase 29 code review WR-11.
+ * The containment check was MOVED (not reimplemented) from the sidecar file store's
+ * `resolveStorePath()` (deleted in quick 261121-pwt; this is now its only home) — Phase 29
+ * code review WR-11.
  * It is defence-in-depth for `storeWriteHandlers.ts`'s `resolveWritableStore()`
  * / `storeNew`, which pass an RPC-supplied `storeName` straight into this
  * function's `name`. Those callers validate against `CACHE_STORE_NAME_PATTERN`
@@ -145,7 +147,7 @@ export function translateStoreOptions<T extends Record<string, unknown>>(
   // backend code at every call site, whereas `name` arrives from an RPC frame
   // via `storeWriteHandlers.ts`'s `resolveWritableStore()`/`storeNew`, so `name`
   // is the component an attacker controls and `../../evil` is the payload.
-  // Anchoring to `cwd` is STRICTER than fileStore's original for that path — it
+  // Anchoring to `cwd` is STRICTER than the deleted file store's original for that path — it
   // also forbids escaping `store_cache` into a sibling of it.
   assertContained(predictedPath, resolvedCwd, 'its cwd')
 

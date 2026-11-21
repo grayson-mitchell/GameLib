@@ -517,7 +517,7 @@ export function registerHandlers(deps: {
       if (!isUniverseMember && !isSyntacticallyValidName) {
         // T-29-13: rejected BEFORE any resolution attempt — this never
         // reaches `getRegisteredStore()` or the cache-store construction
-        // branch, so `fileStore.ts`'s own path-tampering guard is never even
+        // branch, so `store_backend.ts`'s own path-containment guard is never even
         // exercised by a malicious name arriving here. The diagnostic below
         // names the rejected string only — never a store value (T-29-18).
         process.stderr.write(
@@ -578,10 +578,10 @@ const CACHE_BACKED_STORE_NAMES: readonly string[] = [
  *   - A name in `CACHE_BACKED_STORE_NAMES` resolves through the EXACT
  *     construction shape `backend/cache.ts` uses for every dynamically-named
  *     `CacheStore` (`{ cwd: 'store_cache', name, clearInvalidConfig: true }`).
- *     The sidecar's `FileStore` shares its D-14
- *     path-keyed cell with the real `CacheStore` instance constructed by the
- *     corresponding store-declaration module, so this always reads the
- *     identical on-disk data rather than a fresh, unrelated read.
+ *     A store built here and the real `CacheStore` instance constructed by the
+ *     corresponding store-declaration module resolve to the same file, and conf
+ *     re-reads that file on every access, so this always reads the identical
+ *     on-disk data rather than a fresh, unrelated read.
  *   - Anything else (a registration gap, or a name a caller's own
  *     validation let through that isn't actually served here) yields `{}`
  *     plus a stderr diagnostic naming the store — NEVER a throw (SEAM

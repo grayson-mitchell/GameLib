@@ -148,7 +148,7 @@ export function registerSettingsFlows(deps: {
   // is architecturally required (31-RESEARCH.md "Write-Path Mechanics"). This
   // is the same shape of accepted, documented constraint as
   // `keyringTokenStore.ts`'s two-token divergence (Phase 28, SEAM.md
-  // Stubbed) and `fileStore.ts`'s D-07 last-writer-wins clobber (Phase 29) —
+  // Stubbed) and the D-07 last-writer-wins clobber of Phase 29's (since deleted) sidecar file store —
   // cross-referenced here so a future reader recognizes the pattern rather
   // than treating it as a new gap.
   //
