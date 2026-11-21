@@ -1,5 +1,5 @@
 ---
-status: pending
+status: partial
 phase: 83-native-seam-gamelib-core-and-process-shutdown-contract
 source: [83-CONTEXT.md D-08 D-09 D-11 D-13 D-15, 83-RESEARCH.md Live macOS gate]
 authored_by: 83-01
@@ -10,7 +10,8 @@ updated: 2026-11-21
 
 This is the live macOS gate contract for FND-04 (no orphaned helper after a quit or a kill) and the live check of the two
 native channels for FND-03. It was authored by plan 83-01 before any Phase 83 code exists and is run by plan 83-11,
-never by its author (live-gate-contract-authoring standing rule D-E). Nothing in it has been run.
+never by its author (live-gate-contract-authoring standing rule D-E). It was run by 83-11 on 2026-11-21 (UTC 03:17-03:44);
+the scored items are under "Tests" and the capture record under "Live run record".
 
 ## Launch recipe
 
@@ -164,33 +165,78 @@ new beyond the authoring pairing pass.
   (ppid 4353, started `Sat Nov 21 14:48:09 2026`, state `S+`, so attached to a terminal) and 32543 is its reaper
   (ppid 32369, own pgid 32543, started 14:48:19). Per P2 a leftover is closed by pid before the run restarts; the
   executor is forbidden to kill processes, so nothing was killed and no launch was prepared.
-- P3-P6: operator-established; to be confirmed when Task 2 is prepared (the block was lifted by the 2026-11-21 amendment).
+- P3 Mac Steam running and signed in: `steam_osx` running (one process). Survival subject WazHack 264160.
+- P4 not-installed owned game for the handoff: The Longest Journey (appId 6310). Steam's "Allow downloads during
+  gameplay": not stated by the operator.
+- P5 depot-install target: The Banner Saga (appId 237990), not installed (ACF absent at the before snapshot). The
+  experimental InstallApp setting was not recorded.
+- P6 session directory `/tmp/gamelib-gate-2026-11-21T03:17:11Z`; `preexisting-gamelib.log` and `.old` copied; shell-log
+  baseline 15015 lines.
+- P2 re-check at launch-1-up: after the operator quit the stale instance (32369/32543), exactly one shell (14491) and one
+  reaper (14537). Launch 2: shell 32131, reaper 32173 (one instance by `pgrep` during the run).
 
 ## Current Test
 
-[pending — block lifted by the 2026-11-21 amendment; Task 2 (launch 1) not yet prepared; P2 needs the stale instance closed]
+[none — the run is complete; 3 of 5 items pass, 2 are issues (items 1 and 3); see Gaps]
 
 ## Tests
 
 ### 1. Force Quit during a download with a game running leaves no helper and the game survives (D-13, D-08, T-80-16)
 expected: With the Steam handoff download running (a `gamelib-watchdog` sh and a nettop visible) and the P3 game launched through `steam://rungameid/<appid>`, record the before snapshot, SIGKILL the shell (`kill -9 <shell pid>` or Cmd-Opt-Esc Force Quit), and within 5 s the after snapshot shows no `node .../sidecar.js`, no process whose pgid is the sidecar's recorded pgid, no nettop, no `gamelib-watchdog` sh, no `--gamelib-reaper` process, no comet/legendary/gogdl/nile, and no `--steam-owned-apps` helper, while the game pid is still alive; the transcript carries `[reaper] parent gone: signalled ` (launch 1).
-result: pending
+result: issue — expected text not fully met (launch 1; `ps-item1-before.txt` 03:38:32Z, `ps-item1-after.txt` 03:39:21Z). Met: before shows shell 14491, reaper 14537, sidecar 14541 (the only member of pgid 14541); after shows all three gone, 0 members of pgid 14541, 0 `gamelib-reaper`, 0 `sidecar.js`; WazHack 264160 (pid 29900, ppid 1, launched with `open steam://rungameid/264160`) is alive in both snapshots; `terminal.log` line 82 reads `[reaper] parent gone: signalled 1 group(s)`. NOT met: (a) the expected text requires a running Steam handoff download with a `gamelib-watchdog` sh and a nettop visible; neither is in either snapshot (the only text matches are the operator's own shell command line). The Longest Journey was started with `open steam://install/6310` in Steam, which starts no GameLib monitor, and then through GameLib Install, which took `runNativeDepotDownload` (no handoff), so the watchdog and nettop sub-check is "not exercised", never "passed". (b) the contract asks for the after snapshot within 5 s of the SIGKILL; the operator ran `kill -9 14491; sleep 6; snap`, so it was taken about 6 s after, and absence is shown at 6 s, not at 5 s. Also not exercised: comet, legendary, gogdl, nile and `--steam-owned-apps` (none in the before snapshot); the sidecar group-member check covered the sidecar alone (it also exits by itself on stdin EOF), so the transcript literal is the discriminating signal. An earlier WazHack launched from GameLib (a sidecar child, pid 28334) was rejected as a D-15 subject and quit by the operator before the kill.
 
 ### 2. Reaper runs, in its own process group, and is invisible (D-11, assumption A3)
 expected: Right after the window appears in launch 1, before item 1's download starts, exactly one process has `--gamelib-reaper` in its args, its ppid is the shell pid and its pgid differs from the shell's pgid; `reaper started (pid ` appears in the transcript and in `gamelib-shell.log` (lines starting `<epoch> pid=<shell pid> `); `reaper unavailable:` is absent from both; and while it runs there is no second Dock icon, no second Cmd-Tab entry and no extra entry in the Force Quit Applications window (Cmd-Opt-Esc) beyond the one GameLib shell entry (launch 1).
-result: pending
+result: pass — launch 1, `ps-item2-before.txt`. Exactly one process with `--gamelib-reaper` in its args: pid 14537, ppid 14491 (the shell), pgid 14537 against the shell's pgid 14189. `reaper started (pid 14537)` appears once in `terminal.log` and once among the 16 `pid=14491` lines of `gamelib-shell-launch-1.log`; `reaper unavailable:` is 0 in both. Operator-observed (A3 settled, invisible): one GameLib Dock icon, one Cmd-Tab entry, one Force Quit Applications entry (03:24:04Z). Capture note: the `=== GATE LAUNCH 1` delimiter was written after the window appeared, labelled late; the launch output above it is launch 1.
 
 ### 3. The two native channels behave as before (D-01, D-02)
 expected: In launch 1, before item 1: Settings (tier-2 panel) then the About row opens the About dialog, whose `Version:` value equals `node -p "require('./package.json').version"` (and equals the version shown in the nav shell's version link); then Settings, General, Language set to a non-English language (record the original first) shows the machine-translation notice with a report link, and clicking that link opens the default browser on the GameLib GitHub new-issue page; restore the recorded language afterwards; the transcript, `gamelib-shell.log` and `gamelib.log` for this launch hold no `[sidecarRpc] IPC_INVALID_ARGS`, no `[shell] relay rejected send:` and no `native send rejected` (launch 1; amended 2026-11-21, was `[GAMELIB_IPC_INVALID_CHANNEL]`).
-result: pending
+result: issue — launch 1, two sub-checks of the expected text have no recorded evidence; the behaviour itself was observed. Observed: About `Version:` 0.8.0, equal to `package.json` 0.8.0; Settings, General, Language set to a non-English language showed the machine-translation notice; the report link opened the default browser on GitHub, which redirected to sign-in (a signed-out new-issue request needs auth); language restored to `en` (`config.json` reads `en` after the run). Absence counts for launch 1 (transcript lines 1-82 / `gamelib-launch-1.log` / `pid=14491` lines of the shell log): `[sidecarRpc] IPC_INVALID_ARGS` 0/0/0, `[shell] relay rejected send:` 0/0/0, `native send rejected` 0/0/0. NOT recorded: (a) the nav shell's version link was not compared to the About value, which the expected text asks for; (b) the page the browser landed on was the GitHub sign-in redirect, and the new-issue URL it was redirected from has no capture (the browser tab is not in any sink), so "on the new-issue page" is inferred, not observed. Both are a one-minute re-observation, not a defect in the channels.
 
 ### 4. Graceful quit during a depot download keeps finalize and leaves nothing behind (D-09, D-12)
 expected: In launch 2, with a GameLib-driven Rust depot install of the P5 game in progress (before snapshot and a copy of its `appmanifest_<appid>.acf`, if any, taken first), Cmd+Q and, only if the existing "There are pending operations, are you sure?" confirm appears, answer Yes (its appearance is recorded, not scored, and no other prompt may appear); within the deadline the after snapshot shows no sidecar group member, no `--gamelib-reaper` process and no Rust helper that the before snapshot showed; the transcript has `[reaper] disarmed`; `gamelib-shell.log` has `exit finished in `; and a copy of the ACF taken immediately after exit shows StateFlags 1026 written before exit (launch 2).
-result: pending
+result: pass — launch 2 (shell 32131, reaper 32173), `ps-item4-before.txt` 03:42:56Z, `ps-item4-after.txt` 03:44:03Z. The Banner Saga (237990) native depot install was running (job started about 16:42:21 local). The operator paused it at 16:43:05 (acf 1026 written by the pause), resumed it at 16:43:42 (verify_only, StateFlags already 1026) and pressed Cmd+Q at about 16:43:55; the pending-operations confirm appeared and was accepted (recorded, not scored), and no other prompt was reported. Before: shell, reaper, sidecar 32177 (alone in its pgid), no Rust helper. After: none of them, no `gamelib-reaper`, no helper. Rust helpers: none in the before snapshot, so "not exercised". `[reaper] disarmed` is in the launch-2 transcript (see Live run record: the file is `terminal.log.`, a misnamed tee target, not `terminal.log`); the operator also read it in scrollback. `gamelib-shell.log` `pid=32131` has `exit finished in 51 ms` and `reaper started (pid 32173)`. ACF: the before copy is absent (03:42:56Z), so the contract's INCONCLUSIVE rule (before already 1026) does not trigger by its letter, but a 1026 already existed from the manual pause, so the after copy alone would not discriminate. It is discriminated by the mid-run copy `acf-item4-observed-1643.acf` (taken after the pause, StateFlags 1026, LastUpdated 03:43:05Z, SizeOnDisk 450438937) against `acf-item4-after.acf` (StateFlags 1026, LastUpdated 03:43:55Z, SizeOnDisk 550967915): the quit-time cancel rewrote the manifest, matching `gamelib.log` `depot job 4162c73e finished: cancelled` and `[depot-rust] outcome appId=237990 mode=install status=cancelled acf=1026` at 16:43:55, before the exit at 03:43:56Z.
 
 ### 5. One exit deadline (D-12, D-16)
 expected: Read from item 4's evidence in launch 2: the value in `exit finished in <ms> ms` is at most 5000, with the confirm-dialog time not counted because the Rust deadline starts at `handle_exit`, after the TS confirm; `still running at exit deadline:` is absent, or if present names registrants only, with counts and no job detail (launch 2).
-result: pending
+result: pass — launch 2, `gamelib-shell-launch-2.log`, lines starting `<epoch> pid=32131 ` (24 lines): `exit finished in 51 ms` (1795232636, at most 5000; the confirm time is before `quit (Cmd+Q): handed to the sidecar handleExit` at 1795232633, so not counted); `still running at exit deadline:` count 0 and `exit finished in ` present in the same section, so the absence is non-vacuous. The run was short (`depot jobs cancelled on sidecar EOF: 0`: the TS side had already cancelled the job), so the figure shows the Rust deadline was not stressed, not that a slow drain was bounded.
+
+## Live run record (83-11, 2026-11-21)
+
+Operator ran the live steps; the orchestrator took the captures in-session. Session dir `/tmp/gamelib-gate-2026-11-21T03:17:11Z`.
+
+**Capture deviations (recorded, not hidden).**
+
+- D1: the `=== GATE LAUNCH 1` delimiter was written after the window appeared (labelled late in `terminal.log`); launch 1's output precedes it.
+- D2: launch 2 was not tee'd into `terminal.log`; `terminal.log` ends at the `=== GATE LAUNCH 2` delimiter (83 lines). Its stdout/stderr was tee'd into a misnamed file, `terminal.log.` (trailing dot, 93 lines), which has no delimiter and no `gate shell pid 2` echo but holds the launch-2 transcript: `reaper started (pid 32173)` (line 51), `[reaper] disarmed` (line 92), `exit finished in 51 ms` (line 93), matching `gamelib-shell-launch-2.log` for pid 32131. The sinks are real; the file name breaks the dual-sink standard, so the `[reaper] disarmed` read is from the misnamed file plus the operator's scrollback.
+- D3: launch 2's single-instance check was a `pgrep` during the run (shell 32131, reaper 32173) plus the one non-reaper shell line in `ps-item4-before.txt`, not a recorded post-window assertion; the teardown pid record for both launches is the ps snapshot (14491 in `ps-item1-before.txt`, 32131 in `ps-item4-before.txt`), not an echo into the transcript.
+- D4: item 1's after snapshot is about 6 s after the SIGKILL (contract: within 5 s). It is scored in item 1.
+- D5: a first P2 FAIL (stale shell 32369 and reaper 32543 from an earlier session) was closed by the operator quitting it; the shell-log baseline was re-taken at launch-1-up.
+
+**Test 5 run-time count.** Structural impossibilities met: 2 (1 pre-run, `[GAMELIB_IPC_INVALID_CHANNEL]`, amended 2026-11-21; 1 during the run: item 1's watchdog/nettop sub-check was unreachable as the P4 recipe is written on this build, because `open steam://install/<appid>` starts no GameLib monitor and GameLib's Install took the native depot path, so no snapshot, including item 4's running native install, ever held a `gamelib-watchdog` or nettop). Unresolved requirement interactions found during the run: 0 beyond that one.
+
+**D-15 note.** What was observed matches it: the `steam://rungameid` game (WazHack, pid 29900, ppid 1) survived the SIGKILL while the reaper signalled the sidecar's group (`signalled 1 group(s)`), and Phase 83 left the TS runner's spawns unchanged. The other half (a TS-launched game dying with the sidecar group) was not exercised, because the one GameLib-launched game was quit by the operator before the kill; neither confirmed nor contradicted.
+
+**Closing inventory** (`ls -la` and `wc -l` of the session dir at 16:46 local; no zero-length capture):
+
+| File | Bytes | Lines |
+|---|---|---|
+| `terminal.log` | 5699 | 83 |
+| `terminal.log.` (misnamed launch-2 transcript) | 6320 | 93 |
+| `gamelib-launch-1.log` | 64142 | 446 |
+| `gamelib-launch-2.log` | 57994 | 448 |
+| `gamelib-shell-launch-1.log` | 1328905 | 15031 |
+| `gamelib-shell-launch-2.log` | 1330802 | 15055 |
+| `ps-item2-before.txt` | 216982 | 952 |
+| `ps-item1-before.txt` / `ps-item1-after.txt` | 219398 / 215499 | 962 / 939 |
+| `ps-item4-before.txt` / `ps-item4-after.txt` | 219619 / 232003 | 960 / 1035 |
+| `ps-item1-*.time`, `ps-item4-*.time` (4 files) | 21 each | 1 each |
+| `acf-item4-observed-1643.acf` / `acf-item4-after.acf` | 609 / 609 | 39 / 39 |
+| `shell-pid-1.txt` / `shell-pid-2.txt` | 6 / 6 | 1 / 1 |
+| `notes.txt`, `snap.sh` | 3098, 461 | 21, 10 |
+| `preexisting-gamelib.log` / `.log.old` | 150053 / 17350 | 1065 / 143 |
+
+The ps snapshots and logs hold user paths, so they are not committed. They remain at `/tmp/gamelib-gate-2026-11-21T03:17:11Z` until reboot, because gap closure for items 1 and 3 may need them; delete the directory once the gaps are closed.
 
 ## Structural Reachability Review
 
@@ -300,10 +346,30 @@ archive launch 2's logs; closing inventory. Items 2 and 3 run before item 1's SI
 ## Summary
 
 total: 5
-passed: 0
-issues: 0
-pending: 5
+passed: 3
+issues: 2
+pending: 0
 skipped: 0
 blocked: 0
 
 ## Gaps
+
+- gap_id: G-83-11-1
+  truth: "With a Steam handoff download running (a `gamelib-watchdog` sh and a nettop visible) and a `steam://rungameid` game running, a SIGKILL of the shell leaves no helper within 5 s and the game survives"
+  status: failed
+  reason: "Item 1 was not fully exercised: GameLib Install took the native depot path, so no watchdog or nettop existed in any snapshot; the after snapshot was taken about 6 s after the kill, not within 5 s. The positive parts held (reaper line, sidecar group gone, steam:// game alive)."
+  severity: minor
+  test: 1
+  missing:
+    - "A recipe step that really starts GameLib's handoff monitor (or a decision that the watchdog/nettop sub-check is out of scope, since the watchdog exits by itself within about 1 s), and an after snapshot taken within 5 s of the kill (for example `kill -9 <pid>; sleep 4; snap`)"
+  debug_session: ""
+
+- gap_id: G-83-11-2
+  truth: "The About Version equals package.json and the nav shell's version link, and the report link opens the default browser on the GameLib GitHub new-issue page"
+  status: failed
+  reason: "Item 3 lacks two recorded observations: the nav shell version link was not compared to the About value, and the new-issue URL the browser was redirected from to a GitHub sign-in has no capture."
+  severity: minor
+  test: 3
+  missing:
+    - "Re-observe the nav shell version next to the About value, and record the browser's pre-redirect URL (or accept the sign-in redirect as the observation)"
+  debug_session: ""
