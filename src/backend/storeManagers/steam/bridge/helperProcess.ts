@@ -96,6 +96,12 @@ const BRIDGE_HELPER_HOST = '127.0.0.1'
 const POLL_ATTEMPTS = 6
 const POLL_INTERVAL_MS = 250
 const PROBE_TIMEOUT_MS = 250
+// WHOAMI gets its own, longer timer: the helper pumps callbacks for >= 150 ms
+// before it answers, and right after a sign-in Steam's callback burst
+// stretches that past PROBE_TIMEOUT_MS (measured 2026-11-21: the answer came
+// after the probe had already given up). An unanswered WHOAMI is not an
+// answered "not inited" -- the probe polls again.
+const WHOAMI_TIMEOUT_MS = 1_500
 const PORT_WAIT_BUDGET_MS = POLL_ATTEMPTS * POLL_INTERVAL_MS
 
 // How long to wait for the helper's READY line after LISTEN (51-REVIEW WR-02).
@@ -164,6 +170,8 @@ interface ProbeResult {
   /** WHOAMI STATUS_ERR carrying WHOAMI_ERR_REASON_NOT_LOGGED_ON (init ok, Steam
    * holds the account but is not logged on: offline mode or kicked). */
   whoamiNotLoggedOn?: boolean
+  /** WHOAMI was sent but not answered within WHOAMI_TIMEOUT_MS. */
+  whoamiTimedOut?: boolean
 }
 
 /**
@@ -195,7 +203,7 @@ function probeHealthAndWhoami(
       resolve(result)
     }
 
-    const timeout = setTimeout(
+    let timeout = setTimeout(
       () => finish({ healthOk, authOk, whoamiOk: false }),
       PROBE_TIMEOUT_MS
     )
@@ -251,6 +259,18 @@ function probeHealthAndWhoami(
           return
         }
         stage = 'whoami'
+        clearTimeout(timeout)
+        timeout = setTimeout(
+          () =>
+            finish({
+              healthOk: true,
+              authOk: true,
+              whoamiOk: false,
+              whoamiTimedOut: true
+            }),
+          WHOAMI_TIMEOUT_MS
+        )
+        timeout.unref?.()
         socket.write(encodeControl(PROBE_REQUEST_ID, 'whoami'))
         return
       }
@@ -376,10 +396,11 @@ async function probeHelperReadiness(
       whoamiOk,
       whoamiAccessorMissing,
       whoamiNotSignedIn,
-      whoamiNotLoggedOn
+      whoamiNotLoggedOn,
+      whoamiTimedOut
     } = await probeHealthAndWhoami(port, entry.secret)
 
-    if (!healthOk) {
+    if (!healthOk || whoamiTimedOut) {
       continue
     }
 
@@ -566,8 +587,23 @@ export async function ensureBridgeHelperReady(
     )
   }
 
+  const reusingIdentityOnly = registry.helpers.get(appId)?.identityOnly === true
   let entry = await spawnHelper()
   let probe = await probeHelperReadiness(entry, options.steamOfflineByChoice)
+  // A 480 helper left registered by an earlier call answers for that call's
+  // Steam session only. If it no longer does (measured 2026-11-21: Steam was
+  // signed out since, and the reused helper died on a broken Steam pipe), its
+  // failure says nothing about this launch -- reporting it as not-inited
+  // skipped the signed-out hold. Start over from a fresh full-AppID helper.
+  if (reusingIdentityOnly && probe.outcome !== 'ready') {
+    logInfo(
+      `ensureBridgeHelperReady: the reused identity-only (480) helper for appId ${appId} is no longer ready (${probe.outcome}) -- respawning a full-AppID helper`,
+      LogPrefix.Steam
+    )
+    registry.stop(appId)
+    entry = await spawnHelper()
+    probe = await probeHelperReadiness(entry, options.steamOfflineByChoice)
+  }
 
   let waitStart: number | null = null
   let steamStarted = false

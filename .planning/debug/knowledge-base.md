@@ -329,3 +329,15 @@ Resolved debug sessions. Used by `gsd-debugger` to surface known-pattern hypothe
 - **Recurrence guard:** helperIntegration.test.ts "WHOAMI sign-in state" (real compiled helper, fake libsteam_api in signedout / signedout-nil / online / offline states, plus kicked-holds and offline-by-choice-ready through ensureBridgeHelperReady); helperProcess.test.ts round-3 describe and C/TS reason parity; games.test.ts steamOfflineByChoice matrix; steamfiles reader tests. Runtime: gamelib.log `INIT   user loggedOn= accountPresent=` and `Steam holds the account but is not logged on -- ...`. **Open:** race — a WHOAMI answered before the kick lands still passes. DRM-mode launches have no sign-in check.
 
 ---
+
+## whoami-probe-timeout-not-inited — Signing in to Steam during the bridged-launch hold showed the not-inited dialog; the next Play skipped the hold
+
+- **Date:** 2026-11-21
+- **Error patterns:** Reason: not-inited after signing in during "Waiting for Steam", full-AppID WHOAMI failed, identity-only fallback also failed, INIT user loggedOn=1 logged after the backend gave up, reused 480 helper, CCrossProcessPipe::BWrite Broken pipe, Fatal assert, bridge error on first Play then wait notice on second
+- **Root cause:** (1) `probeHealthAndWhoami` shared one 250 ms timer across HEALTH + HELLO + WHOAMI. The helper's WHOAMI pumps callbacks for >= 150 ms before answering, and Steam's post-login callback burst pushes it past the timer; a timed-out WHOAMI looked like an answered not-inited, so the first poll went to the 480 fallback, which timed out the same way. (2) That 480 helper stayed registered (its InitFlat was ok), the next Play reused it after Steam was signed out, it died on a broken Steam pipe, and the identity-only reuse branch reported not-inited with no hold.
+- **Fix:** `helperProcess.ts`: WHOAMI gets its own `WHOAMI_TIMEOUT_MS` (1500 ms), and a timed-out WHOAMI (`whoamiTimedOut`) polls again instead of returning not-inited. A reused identity-only helper whose probe is not ready is stopped and replaced by a fresh full-AppID helper before the outcome is decided. Live-confirmed 2026-11-21.
+- **Files changed:** src/backend/storeManagers/steam/bridge/helperProcess.ts, src/backend/storeManagers/steam/bridge/__tests__/helperProcess.test.ts
+- **Why not caught:** The fake sockets in the tests answer instantly or never; nothing modelled a slow WHOAMI. The 250 ms timer dates from 24-06 and was only ever hit once the hold began respawning helpers exactly while Steam is busiest.
+- **Recurrence guard:** helperProcess.test.ts "a slow WHOAMI right after sign-in is not 'not inited'" (2) and "a leftover identity-only (480) helper that is no longer ready" (1), each red with its change reverted. Runtime: gamelib.log `the reused identity-only (480) helper ... is no longer ready`.
+
+---

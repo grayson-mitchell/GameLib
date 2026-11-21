@@ -1513,3 +1513,112 @@ describe('round 3: Steam holds the account but is not logged on (offline mode, o
     expect(mockedSpawn).toHaveBeenCalledTimes(1)
   })
 })
+
+/**
+ * A FakeSocket whose WHOAMI is answered `delayMs` after it is sent, or never
+ * (`delayMs` undefined). HEALTH and HELLO answer at once.
+ */
+function slowWhoamiSocket(delayMs: number | undefined): FakeSocket {
+  const socket = new FakeSocket(healthOkFrame)
+  const answer = socket.write.getMockImplementation()!
+  socket.write.mockImplementation((data: Buffer) => {
+    answer(data)
+    if (socket.writeCount === 3 && delayMs !== undefined) {
+      setTimeout(() => socket.emit('data', whoamiOkFrame), delayMs)
+    }
+  })
+  return socket
+}
+
+describe('a slow WHOAMI right after sign-in is not "not inited"', () => {
+  beforeEach(() => {
+    registry = newRegistry()
+    fakeRunner.reset()
+    mockedSpawn.mockReset()
+    mockedSendFrontendMessage.mockClear()
+  })
+
+  test('a WHOAMI answered after PROBE_TIMEOUT_MS still counts: ready, no 480 fallback', async () => {
+    const child = new FakeChildProcess()
+    mockedSpawn.mockReturnValueOnce(child)
+    MockedSocket.mockImplementation(() => slowWhoamiSocket(600))
+
+    const pending = ensureBridgeHelperReady(helperDeps, APP_ID_A)
+    emitListenLine(child, 55001, APP_ID_A)
+    const result = await pending
+
+    expect(result.status).toBe('ready')
+    expect(mockedSpawn).toHaveBeenCalledTimes(1)
+    expect(mockedSendFrontendMessage).not.toHaveBeenCalled()
+  })
+
+  test('an unanswered WHOAMI polls again on the same helper instead of going to the 480 fallback', async () => {
+    const child = new FakeChildProcess()
+    mockedSpawn.mockReturnValueOnce(child)
+    const sockets = [slowWhoamiSocket(undefined), slowWhoamiSocket(0)]
+    MockedSocket.mockImplementation(() => sockets.shift())
+
+    const pending = ensureBridgeHelperReady(helperDeps, APP_ID_A)
+    emitListenLine(child, 55001, APP_ID_A)
+    const result = await pending
+
+    expect(result.status).toBe('ready')
+    expect(MockedSocket).toHaveBeenCalledTimes(2)
+    expect(mockedSpawn).toHaveBeenCalledTimes(1)
+    for (const [, args] of mockedSpawn.mock.calls) {
+      expect(args).not.toContain('--identity-only')
+    }
+  })
+})
+
+describe('a leftover identity-only (480) helper that is no longer ready', () => {
+  beforeEach(() => {
+    registry = newRegistry({
+      steamWaitSchedule: { budgetMs: 5_000, intervalMs: 5 }
+    })
+    fakeRunner.reset()
+    mockedSpawn.mockReset()
+    mockedSendFrontendMessage.mockClear()
+  })
+
+  test('is stopped and replaced by a fresh full-AppID helper, so a signed-out Steam takes the hold, not the not-inited dialog', async () => {
+    const fullChild = new FakeChildProcess()
+    const identityChild = new FakeChildProcess()
+    mockedSpawn
+      .mockReturnValueOnce(fullChild)
+      .mockReturnValueOnce(identityChild)
+    MockedSocket.mockImplementationOnce(
+      () => new FakeSocket(healthOkFrame, whoamiErrFrame)
+    ).mockImplementationOnce(() => new FakeSocket(healthOkFrame, whoamiOkFrame))
+
+    const first = ensureBridgeHelperReady(helperDeps, APP_ID_A)
+    emitListenLine(fullChild, 55001, APP_ID_A)
+    await waitForSpawnCallCount(2)
+    emitListenLine(identityChild, 55002, '480')
+    expect((await first).status).toBe('fallback-identity')
+
+    // Steam is signed out since: the reused 480 helper answers a bare
+    // not-inited, and every fresh full-AppID helper reports not signed in
+    // until the second one, after sign-in.
+    mockedSpawn.mockReset()
+    scriptWhoamiSpawns(['signed-out', 'ok'])
+    const reusedSocket = () => new FakeSocket(healthOkFrame, whoamiErrFrame)
+    const scripted = MockedSocket.getMockImplementation()!
+    MockedSocket.mockImplementationOnce(reusedSocket).mockImplementation(
+      scripted
+    )
+    const onWaitingForSteam = jest.fn()
+
+    const second = await ensureBridgeHelperReady(helperDeps, APP_ID_A, {
+      onWaitingForSteam
+    })
+
+    expect(second.status).toBe('ready')
+    expect(onWaitingForSteam).toHaveBeenCalledWith('steam-not-signed-in')
+    expect(mockedSpawn).toHaveBeenCalledTimes(2)
+    for (const [, args] of mockedSpawn.mock.calls) {
+      expect(args).toEqual(['--appid', APP_ID_A, '--port', '0'])
+    }
+    expect(mockedSendFrontendMessage).not.toHaveBeenCalled()
+  })
+})
