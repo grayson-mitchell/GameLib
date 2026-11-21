@@ -12,7 +12,7 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{sync_channel, Receiver, RecvTimeoutError, SyncSender, TrySendError};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use gamelib_core::clock::Clock;
@@ -108,9 +108,14 @@ enum Msg {
     Hold(Receiver<()>),
 }
 
+/// The non-general targets whose rotation was lost with a dropped frame. Shared by the callers
+/// (who add) and the writer (who pays), deduplicated (`LogTarget` is not `Hash`).
+type OwedRotations = Arc<Mutex<Vec<LogTarget>>>;
+
 pub struct Logger {
     tx: SyncSender<Msg>,
     dropped: Arc<AtomicU64>,
+    owed: OwedRotations,
     clock: Arc<dyn Clock>,
     tz: Arc<dyn TzOffset>,
 }
@@ -119,9 +124,10 @@ impl Logger {
     pub fn start(cfg: LogConfig) -> Logger {
         let (tx, rx) = sync_channel(CHANNEL_CAPACITY);
         let dropped = Arc::new(AtomicU64::new(0));
+        let owed: OwedRotations = Arc::new(Mutex::new(Vec::new()));
         let clock = Arc::clone(&cfg.clock);
         let tz = Arc::clone(&cfg.tz);
-        let mut state = WriterState::new(cfg, Arc::clone(&dropped));
+        let mut state = WriterState::new(cfg, Arc::clone(&dropped), Arc::clone(&owed));
         let spawned = std::thread::Builder::new()
             .name("gamelib-log-writer".to_string())
             .spawn(move || {
@@ -133,6 +139,7 @@ impl Logger {
         Logger {
             tx,
             dropped,
+            owed,
             clock,
             tz,
         }
@@ -178,10 +185,20 @@ impl Logger {
             self.tx.try_send(msg)
         {
             // The report says "lines", so it counts the entries the frame carried, not the message.
-            let entries = match &lost {
-                Msg::Batches(batches) => batches.iter().map(|b| b.entries.len() as u64).sum(),
-                _ => 0,
-            };
+            let mut entries = 0;
+            if let Msg::Batches(batches) = &lost {
+                for b in batches {
+                    entries += b.entries.len() as u64;
+                    // A lost rotation is owed to the target's next batch, so a launch log is never
+                    // appended to the previous session's (the general target rotates once per Logger).
+                    if b.rotate && b.target != LogTarget::General {
+                        let mut owed = self.owed.lock().unwrap_or_else(|e| e.into_inner());
+                        if !owed.contains(&b.target) {
+                            owed.push(b.target.clone());
+                        }
+                    }
+                }
+            }
             self.dropped.fetch_add(entries, Ordering::Relaxed);
         }
     }
@@ -224,6 +241,8 @@ impl Logger {
 struct WriterState {
     cfg: LogConfig,
     dropped: Arc<AtomicU64>,
+    /// Rotations lost with a dropped frame, applied to the target's next batch.
+    owed: OwedRotations,
     general_rotated: bool,
     /// Paths whose failed rotation already logged its one WARNING.
     rotation_warned: HashSet<String>,
@@ -232,10 +251,11 @@ struct WriterState {
 }
 
 impl WriterState {
-    fn new(cfg: LogConfig, dropped: Arc<AtomicU64>) -> WriterState {
+    fn new(cfg: LogConfig, dropped: Arc<AtomicU64>, owed: OwedRotations) -> WriterState {
         WriterState {
             cfg,
             dropped,
+            owed,
             general_rotated: false,
             rotation_warned: HashSet::new(),
             limiter: RateLimiter::new(),
@@ -343,7 +363,8 @@ impl WriterState {
             }
         };
         let is_general = batch.target == LogTarget::General;
-        if !is_general && batch.rotate {
+        let owes_rotation = !is_general && self.take_owed(&batch.target);
+        if !is_general && (batch.rotate || owes_rotation) {
             if let Err(e) = rotate(&path) {
                 if self.rotation_warned.insert(path.clone()) {
                     self.general(
@@ -394,8 +415,20 @@ impl WriterState {
         let _ = append(&path, &data);
     }
 
+    /// Removes `target` from the owed set; true when a dropped frame owed it a rotation.
+    fn take_owed(&self, target: &LogTarget) -> bool {
+        let mut owed = self.owed.lock().unwrap_or_else(|e| e.into_inner());
+        match owed.iter().position(|t| t == target) {
+            Some(i) => {
+                owed.swap_remove(i);
+                true
+            }
+            None => false,
+        }
+    }
+
     /// Runs one general-target line through the limiter: the summaries of windows that closed by the
-    /// entry's own time go into `data` first (so they precede the entry that closed them), then the
+    /// entry's time (clamped to the Logger clock) go into `data` first (so they precede the entry that closed them), then the
     /// line itself if admitted, then the summary of any key its admission evicted (written after it).
     fn limit(
         &mut self,
@@ -406,12 +439,15 @@ impl WriterState {
         data: &mut String,
         line: Option<String>,
     ) -> Option<String> {
-        for summary in self.limiter.expire(ts) {
+        // The limiter's windows run on the Logger's clock: a sender stamp in the future would hold a
+        // window open until eviction or drain. The line itself keeps its origin's own `ts`.
+        let anchor = ts.min(self.cfg.clock.now_ms());
+        for summary in self.limiter.expire(anchor) {
             if let Some(chunk) = self.summary_chunk(&summary) {
                 data.push_str(&chunk);
             }
         }
-        let admitted = self.limiter.admit(ts, level, prefix, msg);
+        let admitted = self.limiter.admit(anchor, level, prefix, msg);
         let mut out = if admitted { line } else { None };
         for summary in self.limiter.take_evicted() {
             if let Some(chunk) = self.summary_chunk(&summary) {
@@ -793,7 +829,7 @@ mod tests {
             .count();
         let report = body
             .lines()
-            .find(|l| l.contains("lines dropped (ingest full)"))
+            .find(|l| l.contains("lines dropped"))
             .expect("a drop report");
         let reported: usize = report
             .split("log writer: ")
@@ -802,6 +838,59 @@ mod tests {
             .and_then(|n| n.parse().ok())
             .expect("a count");
         assert_eq!(reported + written, 5200, "{report}");
+    }
+
+    #[test]
+    fn a_rotation_in_a_dropped_frame_is_applied_to_the_next_batch_for_that_target() {
+        let home = FakeHome::new("gamelib-log-");
+        let launch = path(&home, &["games", "480_steam", "launch.log"]);
+        fs::create_dir_all(Path::new(&launch).parent().unwrap()).unwrap();
+        fs::write(&launch, "previous session\n").unwrap();
+        let logger = Logger::start(config(&home));
+        let release = logger.hold();
+        for i in 0..5000 {
+            logger.submit(vec![batch(
+                LogTarget::General,
+                false,
+                vec![info_line(&format!("fill {i}"))],
+            )]);
+        }
+        // The channel is full: this frame, and the rotation it carried, are dropped.
+        logger.submit(vec![batch(game("480"), true, vec![raw("first launch\n")])]);
+        drop(release);
+        assert!(logger.flush(GENEROUS));
+        assert_eq!(read(&launch), "previous session\n");
+        logger.submit(vec![batch(game("480"), false, vec![raw("second\n")])]);
+        assert!(logger.flush(GENEROUS));
+        assert_eq!(read(&format!("{launch}.old")), "previous session\n");
+        assert_eq!(read(&launch), "second\n");
+        let body = read(&path(&home, &["gamelib.log"]));
+        assert_eq!(body.matches("Logging to file(s)").count(), 1, "{body}");
+        // The debt is paid once: a later non-rotating batch appends.
+        logger.submit(vec![batch(game("480"), false, vec![raw("third\n")])]);
+        assert!(logger.flush(GENEROUS));
+        assert_eq!(read(&launch), "second\nthird\n");
+    }
+
+    #[test]
+    fn a_dropped_general_batch_owes_no_rotation() {
+        let home = FakeHome::new("gamelib-log-");
+        let general = path(&home, &["gamelib.log"]);
+        fs::write(&general, "from the last launch\n").unwrap();
+        let logger = Logger::start(config(&home));
+        let release = logger.hold();
+        for i in 0..5000 {
+            logger.submit(vec![batch(
+                LogTarget::General,
+                true,
+                vec![info_line(&format!("fill {i}"))],
+            )]);
+        }
+        drop(release);
+        assert!(logger.flush(GENEROUS));
+        assert_eq!(read(&format!("{general}.old")), "from the last launch\n");
+        assert!(read(&general).contains("fill 0\n"));
+        assert!(!read(&general).contains("from the last launch"));
     }
 
     #[test]
@@ -967,6 +1056,24 @@ mod limiter_scope {
         let body = read(&path(&home, &["gamelib.log"]));
         assert_eq!(body.lines().count(), 6, "{body}");
         assert!(body.ends_with("boom (repeated 3 more times)\n"), "{body}");
+    }
+
+    #[test]
+    fn a_future_timestamp_cannot_hold_a_window_open_past_the_logger_clock() {
+        let home = FakeHome::new("gamelib-log-");
+        let now = Arc::new(AtomicU64::new(0));
+        let logger = start(&home, &now);
+        let ten_days_ahead = 10 * 24 * 60 * 60 * 1000;
+        let lines: Vec<Entry> = (0..7)
+            .map(|_| line(ten_days_ahead, Level::Warning, "stuck"))
+            .collect();
+        logger.submit(vec![general(lines)]);
+        // The barrier makes the writer read the clock at 0 before the test moves it.
+        assert!(logger.tick_for_tests(GENEROUS));
+        now.store(61_000, Ordering::SeqCst);
+        assert!(logger.tick_for_tests(GENEROUS));
+        let body = read(&path(&home, &["gamelib.log"]));
+        assert!(body.ends_with("stuck (repeated 2 more times)\n"), "{body}");
     }
 
     #[test]
