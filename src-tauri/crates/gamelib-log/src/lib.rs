@@ -35,10 +35,14 @@ pub fn global() -> Option<&'static Logger> {
     GLOBAL.get()
 }
 
+/// The native-origin entry: CR and LF in `msg` are escaped ([`sanitize::escape_line_breaks`]) so
+/// text the shell did not author (a sidecar error, a server-echoed crate message) cannot forge a
+/// second line. `Logger::log` itself is verbatim, because the renderer path hands it a body that
+/// is already sanitised and whose object form is multi-line on purpose; native callers use this.
 /// Does nothing before `init`.
 pub fn log(prefix: Prefix, level: Level, msg: &str) {
     if let Some(logger) = global() {
-        logger.log(prefix, level, msg);
+        logger.log(prefix, level, &sanitize::escape_line_breaks(msg));
     }
 }
 

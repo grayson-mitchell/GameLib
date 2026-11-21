@@ -108,7 +108,10 @@ fn truncate_text(value: &str) -> String {
     truncate_utf16(value, LOG_TEXT_MAX)
 }
 
-fn escape_line_breaks(value: &str) -> String {
+/// Escapes CR and LF as the two-character `\r` and `\n`: the rule for native-origin text (shell
+/// diagnostics, crate messages), the same one `sanitize_text` applies to renderer strings, so a
+/// line break in text the shell did not author cannot start a second log line.
+pub fn escape_line_breaks(value: &str) -> String {
     let mut out = String::with_capacity(value.len());
     for c in value.chars() {
         match c {

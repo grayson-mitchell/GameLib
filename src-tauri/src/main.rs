@@ -560,7 +560,7 @@ fn shell_log_to(logger: Option<&gamelib_log::writer::Logger>, message: &str) {
         logger.log(
             gamelib_log::Prefix::Shell,
             shell_log_level(message),
-            message,
+            &gamelib_log::sanitize::escape_line_breaks(message),
         );
     }
 }

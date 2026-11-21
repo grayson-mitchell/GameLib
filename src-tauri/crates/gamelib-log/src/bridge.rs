@@ -24,6 +24,7 @@ use tracing_subscriber::registry::LookupSpan;
 use tracing_subscriber::Registry;
 
 use crate::prefix::{Level, Prefix};
+use crate::sanitize::escape_line_breaks;
 use crate::writer::on_writer_thread;
 
 /// How much of a crate's output enters the log.
@@ -176,7 +177,7 @@ where
         (self.sink)(
             target_prefix(meta.target()),
             map_tracing_level(meta.level()),
-            &fields.render(),
+            &escape_line_breaks(&fields.render()),
         );
     }
 }
@@ -230,7 +231,7 @@ impl log::Log for LogBridge {
         (self.sink)(
             target_prefix(record.target()),
             map_log_level(record.level()),
-            &record.args().to_string(),
+            &escape_line_breaks(&record.args().to_string()),
         );
     }
 
