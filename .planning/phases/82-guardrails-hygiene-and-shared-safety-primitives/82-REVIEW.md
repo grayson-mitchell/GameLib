@@ -1,8 +1,8 @@
 ---
 phase: 82-guardrails-hygiene-and-shared-safety-primitives
-reviewed: 2026-11-20T00:00:00Z
+reviewed: 2026-11-21T00:00:00Z
 depth: standard
-files_reviewed: 24
+files_reviewed: 43
 files_reviewed_list:
   - src-tauri/crates/README.md
   - src-tauri/crates/gamelib-safety/src/remove.rs
@@ -28,11 +28,30 @@ files_reviewed_list:
   - src/backend/testUtils/rawRecursiveDeletes.ts
   - src/backend/utils/uninstaller.ts
   - src/common/types/safety.ts
+  - src/backend/safety/knownInstalls.ts
+  - src/backend/safety/__tests__/knownInstalls.test.ts
+  - src/backend/storeManagers/sideload/games.ts
+  - src/backend/storeManagers/sideload/__tests__/uninstallSafety.test.ts
+  - src/backend/storeManagers/steam/bridgeBottleLifecycle.ts
+  - src/backend/storeManagers/steam/__tests__/bridgeBottleLifecycle.test.ts
+  - src/backend/storeManagers/steam/__tests__/bridgeRemovalSafety.test.ts
+  - src/backend/storeManagers/steam/cancelDelete.ts
+  - src/backend/storeManagers/steam/gameUninstall.ts
+  - src/backend/storeManagers/steam/__tests__/steamDirectRemovalSafety.test.ts
+  - src/backend/storeManagers/steam/library/acfState.ts
+  - src/backend/__tests__/steamBridgeKnownFixes.test.ts
+  - src/backend/sidecar/__tests__/bootstrap.test.ts
+  - src/backend/testUtils/yieldUntil.ts
+  - src/backend/testUtils/__tests__/yieldUntil.test.ts
+  - meta/__tests__/runTs.test.ts
+  - meta/__tests__/rustTestWorkflow.test.ts
+  - .github/workflows/rust-test.yml
+  - src-tauri/deny.toml
 findings:
   critical: 0
-  warning: 2
-  info: 4
-  total: 6
+  warning: 4
+  info: 8
+  total: 12
 status: issues_found
 ---
 
@@ -70,16 +89,16 @@ and tooling hygiene.
 |----|-------------|-------------------------|
 | CR-01 (GOG uninstall refused when `gog-support` absent) | fixed | Holds. `resolve_trust_root` places an absent root at its nearest existing ancestor; `trust_root_absent_and_target_absent_is_yes...` and the shared contract row pass on the real crate. The GOG test now removes `gogSupportPath` and the fake (which models the rule, pinned to the crate by the fixture) lets the uninstall through. |
 | WR-01 (cancel cleanup refused when `steamapps/common` absent) | fixed | Holds. Same root cause, covered by the crate row "cancel before the first write" and the new `cancelDelete` test. |
-| WR-02 (one unresolvable protected/known path blocks all removals) | deferred | Still present, unchanged: `location_keys(raw)?` at `remove.rs:56,122` is untouched. Fails closed (over-refuses). Not re-reported. |
+| WR-02 (one unresolvable protected/known path blocks all removals) | fixed (quick 261121-o99, `d8fc1bb25`) | Holds. A relative reference is skipped and an unresolvable absolute one is placed by `lexical_reference_location`; only a dotted unresolvable one stays `unknown`. Adversarial rows pin unrelated-passes and inside-still-refuses for known installs and protected roots, plus the relative and (Windows-only, compiled not run) unplugged-drive cases. Side effect: IN-10. Verified in the post-82 section below. |
 | WR-03 (60 s timeout on the delete) | fixed | Holds. `RUST_SAFETY_REMOVE_TREE` is in `UNBOUNDED_RUST_CHANNELS`; the check channel keeps the bound; the new test proves both. Residual hang risk: see IN-06. |
 | WR-04 (empty `trustRoot` read as none) | fixed | Holds. `Some("")` is `unknown(NoTrustRoot)` for every kind, including the may-skip kinds, with an adversarial row for all three. |
-| WR-05 (Steam copy-removal guard advisory) | deferred | Still present, unchanged (`acfState.ts` not touched). Not re-reported. |
-| WR-06 (sideload sub-directories ignored) | deferred | Still present, unchanged (`check_sideload` not touched). Not re-reported. |
+| WR-05 (Steam copy-removal guard advisory) | fixed for the named fail-open (o99, `099101f9e`) | `refuseUnsafeCopy` (`acfState.ts:310-329`) now refuses an `installed` copy it cannot place and never calls `remove_copy` (two new rows). Residual: `absent`/`downloading`/`unknown` still reach `remove_copy`, and the verdict is not enforced inside it (Phase 90, per the summary). Doc drift: IN-11. |
+| WR-06 (sideload sub-directories ignored) | fixed as specified (o99, `d8fc1bb25`) | `check_sideload` now refuses when a sibling real directory's top level holds a runnable entry (`remove.rs:298-306`); three adversarial rows. The rule over-refuses common layouts: WR-12. |
 | WR-07 (detector blind spots) | fixed | Mostly holds. `deps.rm`, `deps.fs.rmSync`, `nfs.rmSync`, optional chains and opaque options are now reported (verified by probe and test). Residual fail-open modes remain: WR-10. |
 | WR-08 (lexical rows pass vacuously) | fixed | Holds. Every filter string must match a row, with a `should_panic` test proving it. |
-| WR-09 (deletes outside the Rust delete-time re-check) | deferred | Still present, unchanged (`cancelDelete.ts` `rmSync` and `cxbottle` path untouched). Not re-reported. |
+| WR-09 (deletes outside the Rust delete-time re-check) | fixed, narrower than documented (o99, `099101f9e`) | Cancel path: `changedSinceCheck` (`cancelDelete.ts:72-85,298`) re-asserts absent/isLink synchronously before `rmSync` (two new rows). Bottle path: the guard is re-asked after `cxbottle --delete` (`bridgeBottleLifecycle.ts:273-287`, one new row). Neither repeats the known-install check before the delete, and the bottle re-check is after the fact: IN-12. |
 
-The deferred Info items IN-01..IN-05 are likewise unchanged in the files touched by this range.
+The deferred Info items IN-01..IN-05 were closed by quick 261121-o99 (IN-01 `is_symlink` only, IN-02 `remove-bottle` kind, IN-03 sideload `refused`, IN-04 in-progress Steam installs, IN-05 job timeout and advisory reasons); evidence is in the post-82 section below. (The WR-02, WR-05, WR-06 and WR-09 rows above were revised on 2026-11-21; they said "deferred" before.)
 
 ## Warnings
 
@@ -236,5 +255,170 @@ after the wait; keep the timer handle and `clearTimeout` it in a `finally`, or p
 ---
 
 _Reviewed: 2026-11-21 (82-20 incremental)_
+_Reviewer: Claude (gsd-code-reviewer)_
+_Depth: standard_
+
+## Incremental review — post-82 quick tasks (o99, p6z, mpt)
+
+**Reviewed:** 2026-11-21
+**Depth:** standard
+**Scope:** `git diff 00ce8e36c..HEAD` over the 24 files in the request: quick `261121-o99` (commits `d8fc1bb25`,
+`099101f9e`, `81edc90b7`), `261121-p6z` (`1ffdec537`, `ded4cd2b8`) and `261121-mpt` (runTs pin narrowing and the
+`steamBridgeKnownFixes` wait). `sideload/games.ts` also carries a Phase 84 logger import rename (`targetWriter`,
+file exists, type-only) that is not part of o99.
+**Result:** 2 warnings, 4 info. No critical findings.
+
+Verified, not assumed:
+
+- `cargo test -p gamelib-safety --offline`: 30 unit, 55 adversarial, 2 contract, all pass. Ten Jest suites touched by
+  o99, p6z and mpt (303 tests) pass, as do `bootstrap.test.ts` and `sharedRedistInstall.test.ts` (89 tests).
+- **IN-01 premise holds.** `FileType::is_symlink` on Windows is `is_reparse_point && tag & 0x20000000`, and both
+  `IO_REPARSE_TAG_SYMLINK` (0xA000000C) and `IO_REPARSE_TAG_MOUNT_POINT` (0xA0000003) carry that bit, so junctions
+  stay links and `remove_link` still picks `remove_dir` by the directory attribute. The Windows rows were compiled,
+  not run, here (the author says the same).
+- **`lexical_reference_location` is sound for what it claims.** It anchors at the deepest ancestor that resolves, so
+  macOS `/var` to `/private/var` stays comparable with canonical targets; a dot segment is rejected first by
+  `lexical_check`, so the dotted case stays `unknown`. A reference through a regular file or an unplugged drive is
+  placed lexically and still refuses a target at or inside it (adversarial rows pin both directions).
+- **`yieldUntil` is correct.** The clock is captured at module load, the contract (static import, `setImmediate`
+  left real, per-test timeout above 15 s, return not throw) is written down and each caller meets it:
+  `bootstrap.test.ts`, `steamBridgeKnownFixes.test.ts` and `sharedRedistInstall.test.ts` import it statically and
+  set a 30 s timeout. `yieldUntil.test.ts` proves expiry on real time with fake timers installed.
+- The `rust-test.yml` `timeout-minutes: 45` is at job level and the new workflow test reads only the pre-`steps:`
+  header, so it cannot be satisfied by a step-level key.
+
+### Status of o99's claimed closures
+
+| Id | o99 claim | Verdict on the code now |
+|----|-----------|-------------------------|
+| WR-02 | reference fallback | **Closed.** `location_keys` no longer propagates `NotAbsolute`/`CanonicalizeFailed` for a relative or unresolvable reference; the unplugged-drive and relative-setting cases from the original finding are in the adversarial table. A side effect is IN-10. |
+| WR-05 | non-placeable installed copy refused | **Closed for the named fail-open.** `refuseUnsafeCopy` now refuses an `installed` copy with no `installPath` or an unplaceable install root, and `remove_copy` is not called (two new rows assert both, plus `existsSync` on the payload). Residual, as the summary says: `absent`/`downloading`/`unknown` still reach `remove_copy`, and the verdict is still not enforced inside `remove_copy` (Phase 90). Doc drift: IN-11. |
+| WR-06 | sibling-game rule | **Closed as specified**, one level down. The rule over-refuses common layouts: WR-12. |
+| WR-09 | re-assert at the cancel delete and after cxbottle | **Closed, narrower than the comments say.** The cancel path re-asserts only `absent`/`isLink`, and the bottle path re-checks after the delete has run: IN-12. |
+| IN-01 | `is_symlink` only | **Closed.** See above. |
+| IN-02 | `remove-bottle` kind emitted | **Closed.** `gameUninstall.ts:259` passes it; the title branch and `removalRefused.title.removeBottle` (`gamelib.json:606`) exist; `bridgeRemovalSafety.test.ts` pins `kind: 'remove-bottle'`. |
+| IN-03 | sideload `refused` second stage | **Closed.** `guardedRemoveTree` returns `refused` only when nothing was deleted (check-stage refusal, or Rust's re-check inside `remove_tree`); the new test drives the second `safety_check_removal` to a refusal and asserts `refused: true`, no `failed`, the entry kept and the file on disk. |
+| IN-04 | in-progress Steam installs known | **Closed for Steam** (the breadcrumb is cleared on completion and cancel by `clearSteamResumeBreadcrumb`, so it does not leave a phantom known install; the caller's own key is excluded and tested). The never-loaded-versus-empty point is a documented decision, not a fix: an unloaded library still reads as "no other installs". |
+| IN-05 | job timeout, advisory reasons | **(a) Closed** and pinned by a test. **(b) Not independently verifiable here:** the local advisory DB has no RUSTSEC-2026-0545/0548 entry and `cargo deny` did not run, so the new reasons rest on the summary's statement that the rustsec.org pages were re-fetched. |
+
+Still open and untouched by this range (not re-reported): WR-10, WR-11, IN-06, IN-07, IN-08, IN-09. WR-11 still
+reproduces: `sharedRedistInstall.test.ts` printed the "import a file after the Jest environment has been torn down"
+error again on this run.
+
+## Warnings (post-82 quick tasks)
+
+### WR-12: the WR-06 sibling-directory rule refuses the most common sideload layouts and has no override
+
+**File:** `src-tauri/crates/gamelib-safety/src/remove.rs:241-251,255-268,298-306`
+**Issue:** The new rule reuses the top-level predicate unchanged for a sibling directory:
+`entry_looks_runnable` counts any `.exe`, `.msi`, `.bat`, `.cmd`, `.com`, `.sh`, `.lnk`, `.command`, `.appimage`,
+`.x86`, `.x86_64` name, and on Unix any regular file with an execute bit. Applied one level down, that matches
+folders that are part of one game, not a second game:
+
+- A Windows game folder `Game/game.exe` plus `Game/_CommonRedist/vcredist_x64.exe`, `Game/DirectX/DXSETUP.exe`,
+  `Game/redist/...`, `Game/Support/uninstall.exe` or `Game/Launcher/crashhandler.exe` now answers
+  `folder-looks-shared`. It is the same shape as the new row `sideload_shared_when_a_sibling_directory_holds_a_game`
+  (`Other/other.exe`), so the crate cannot tell them apart.
+- A native Linux or macOS game folder with `lib/`, `plugins/` or `tools/` holding exec-bit `.so`/helper files
+  (libraries are normally 0755) refuses for the same reason, unless it happens to be the directory that contains
+  the game's own executable.
+- An unreadable sibling directory (`top_level_looks_runnable` maps any `read_dir` error to `unknown`) now turns the
+  whole removal `unknown`, where before it was invisible.
+
+The tests only pin the passing case `Data/` plus `Engine/Binaries/Win64/Game-Shipping.exe` (executable two levels
+down), so none of the layouts above is exercised. The user's only recourse is the notice ("may be shared with other
+software"); there is no force option, so "delete files" is unusable for these sideloaded games. This is a behavior
+change from a removal that worked (over-refusal is the stated direction, but this widens it from "executable beside
+the game" to "any installer anywhere one level down").
+**Fix:** Make the sibling-directory test narrower than the top-level one: count a sibling directory only when its
+top level holds a `.exe`/`.app`/`.appimage`/`.x86_64` that is not an uninstaller or redistributable name, or count
+only `.app` bundles and `.exe` files and drop the exec-bit and `.msi`/`.bat`/`.cmd`/`.sh` arms for the nested level.
+Add adversarial rows for `Redist/vcredist_x64.exe` (removable) and an exec-bit `lib/libfoo.so` (removable, Unix
+only) so the chosen boundary is pinned, and make an unreadable sibling directory skip-with-no-key rather than
+`unknown` if the over-refusal is not wanted.
+
+### WR-13: the narrowed runTs shared-cache predicate can be bypassed by an ordinary spelling
+
+**File:** `meta/__tests__/runTs.test.ts:51-52` (`SHARED_CACHE_OUTFILE`), used at `:53-55`, `:117-140`, `:205-222`
+**Issue:** mpt replaced the broad `/node_modules\/\.cache/` match with
+`/--out(?:file|dir)[=\s]+node_modules\/\.cache\b|node_modules\/\.cache\/[\w./-]*\.[cm]?js\b/` so `codecheck`'s tsc
+buildinfo is allowed. The new regex only fires on a bare `node_modules/.cache` immediately after the flag, or on a
+`.js/.cjs/.mjs` filename. I ran it:
+
+- `esbuild --outfile=./node_modules/.cache/z m.ts && node ./node_modules/.cache/z`: not flagged
+- `esbuild --outfile="node_modules/.cache/z" m.ts && node node_modules/.cache/z`: not flagged
+- `esbuild --outdir=./node_modules/.cache m.ts`: not flagged
+- `tsc --outDir node_modules/.cache/x` (capital D): not flagged
+
+All four are the C3-01 hazard (a runnable compiled into the shared, script-name-keyed cache path). The vacuity guard
+only tries the three spellings the regex was written around, so it cannot notice. The old predicate caught every
+one of these.
+**Fix:** Keep the broad predicate and exempt only the allowed form, so the default stays strict:
+
+```ts
+function hasSharedCacheOutfile(scriptValue: string): boolean {
+  const withoutBuildInfo = scriptValue.replace(
+    /--tsBuildInfoFile[=\s]+\S*node_modules\/\.cache\/\S+\.tsbuildinfo/g,
+    ''
+  )
+  return /node_modules\/\.cache/.test(withoutBuildInfo)
+}
+```
+
+Add the four spellings above to the synthetic bad set, and keep `incremental-state` as the negative control.
+
+## Info (post-82 quick tasks)
+
+### IN-10: relative, NUL-containing and `~`-prefixed references are now skipped silently, which turns a fail-closed row into a fail-open one
+
+**File:** `src-tauri/crates/gamelib-safety/src/remove.rs:45-48`, `src/backend/safety/knownInstalls.ts:44-49`
+**Issue:** `location_keys` returns no keys for any reference `parse_absolute` rejects. That was the intended WR-02
+fix for settings like `~/Games`, but it also covers a *known install* whose recorded path is relative. A sideloaded
+game whose `install.executable` is relative gives `dirname('game.exe') === '.'`, which the guard used to answer
+`unknown/not-absolute` and now ignores, so that game is invisible to the nested/inside-known-install checks. Nothing
+logs or reports the skip, and the adversarial rows pin only the "removable" direction.
+**Fix:** In `installFolder`, drop (and `logWarning`) non-absolute paths on the TS side so the skip is visible, or
+have the reply carry a `skippedReferences` count the caller can log. Keep the Rust skip.
+
+### IN-11: `refuseUnsafeCopy` docstring contradicts the WR-05 change, and the refusal reason is misleading
+
+**File:** `src/backend/storeManagers/steam/library/acfState.ts:304-309` (docstring), `:323-328` (reason)
+**Issue:** The docstring still says "an installdir this check cannot place" is left to `remove_copy`, but the body now
+refuses an installed copy it cannot place. The refusal reports `canonicalize-failed`, which the notice renders as
+"couldn't be verified" even though the cause is an install path that is not `<steamapps>/common/<one folder>` or is
+missing (and `remove_copy`'s own `installdir is not a single folder` reason, which was more accurate, is gone for this case).
+**Fix:** Update the docstring to say an installed-but-unplaceable copy is refused here, and either keep the original
+`installdir is not a single folder` reason in `reason` (with `safety` still set) or add a distinct `RemovalReason`.
+
+### IN-12: the WR-09 re-assertions are weaker than their comments, and one fails open on a missing item
+
+**File:** `src/backend/storeManagers/steam/cancelDelete.ts:278-279,292-300`;
+`src/backend/storeManagers/steam/bridgeBottleLifecycle.ts:273-287`
+**Issue:** (a) `cancelDelete` re-checks only that the root's absent/link state is unchanged. The scenario in the
+original finding (another store's game registered into the folder after the check) is not re-asserted: the
+known-install and protected-root checks are not repeated. The window is now only the synchronous stretch after the
+last `await`, so this is a narrow residual, but the comment "the verdict is re-asserted here" overstates it.
+(b) If a `yes` verdict carries no `partial` item, `checked` stays `undefined`, `changedSinceCheck` returns `false`,
+and the delete proceeds without any re-assertion. It should refuse. (c) The bottle re-check runs after `cxbottle
+--delete` has already deleted the bottle, so it can only relabel the outcome as `error`; and it asks the guard about
+an absent directory, so a transient non-`yes` answer (for example `rust-invoke-failed`) after a successful delete
+reports `Failed to remove bridge bottle` for a bottle that is gone. A retry reaches the `absent` branch and
+completes, so it self-heals.
+**Fix:** (b) `if (!item) return refuse(appId, 'safety verdict carried no item for the install root')`. (a) and (c)
+reword the comments to say what is and is not re-asserted; if (c)'s false `error` matters, report `removed` with a
+logged warning when the post-check is `unknown` and the bottle directory is already gone.
+
+### IN-13: new slowed-I/O tests leak a real timer on their failure path (same pattern as IN-09)
+
+**File:** `src/backend/__tests__/steamBridgeKnownFixes.test.ts:625-640`, `src/backend/sidecar/__tests__/bootstrap.test.ts:688-696`
+**Issue:** Both the slowed `readFile` and the slowed `fsPromises.rm` wait on an un-tracked 250 ms timer. If
+`yieldUntil` expires (the failure these tests exist to catch), the `finally` restores the spy and removes the tmp
+profile, then the timer resolves and calls the real `readFile`/`rm` against a directory that is gone, after teardown.
+Failure path only, and `yieldUntil` expiring would already have failed the test, so the cost is a noisy second error.
+**Fix:** Keep the timer handle and `clearTimeout` it in the `finally`, or `unref` it.
+
+---
+
+_Reviewed: 2026-11-21 (post-82 quick tasks o99, p6z, mpt)_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
