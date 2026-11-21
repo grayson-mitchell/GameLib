@@ -14,7 +14,7 @@ files:
 
 ## Problem
 
-The local post-wave test gate for Phase 82 plan 82-20 (2026-11-21, HEAD 4c5ff056e) failed three
+The local post-wave test gate for Phase 82 plan 82-20 (2026-11-21, HEAD 6ec89ee18) failed three
 tests that come from the committed-but-unpushed quick-261121-dzl commits (56e3874de..ab691d565),
 not from Phase 82:
 

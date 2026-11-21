@@ -92,7 +92,7 @@ created: "2026-11-21"
 | T-82-57 | Tampering | sharedRedistInstall.test.ts waits (82-20) | medium | mitigate | Every `yieldUntil` (test.ts:960, 1006, 1161, 1281) is followed by an explicit `toHaveLength(1)`; deadline 15 s (:234) inside the 30 s per-test timeout (:222); 5 ms mutant failed; 0 skip/only/retryTimes | closed |
 | T-82-58 | Denial of service | 82-20 soak busy loops | low | mitigate | Self-expiring 150 s loops killed by EXIT trap; no busy-loop processes remain after execution | closed |
 | T-82-59 | Tampering | 82-20 deadlineMutant test file | low | mitigate | No mutant file in `bridge/__tests__/`; 82-20 commits stage only the test file and ledger | closed |
-| T-82-60 | Repudiation | ledger record of the G-82-2-r2 recurrence | low | mitigate | 82-TEST-LEDGER.md:94, :269, :272 name run 44850161668, sha 90ca09d02 and fix commits e5651c5c6 / e91beb1da | closed |
+| T-82-60 | Repudiation | ledger record of the G-82-2-r2 recurrence | low | mitigate | 82-TEST-LEDGER.md:94, :269, :272 name run 44850161668, sha 90ca09d02 and fix commits dc220850f / d59c79873 | closed |
 | T-82-SC | Tampering | npm / cargo installs | high | mitigate | package.json / pnpm-lock untouched; lock gains only gamelib-safety, gamelib-testutil, unicode-normalization 0.1.26; `cargoFeatures.test.ts` pins names; legitimacy audit in 82-RESEARCH | closed |
 
 *Status: open · closed · open — below high threshold (non-blocking)*

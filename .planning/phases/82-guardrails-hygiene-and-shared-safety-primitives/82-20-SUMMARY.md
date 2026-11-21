@@ -18,8 +18,8 @@ actuals:
   tokens: 14000
   tasks: 3
   commits: 3
-plan_head_before: ce2b38a360bf2614aa2891a5905e1b59dd321e10
-plan_head_after: 6665598bec8ef17b5cd64532b3689627cecacb46
+plan_head_before: 2496709d003b96a7caf12f55b410bc69322e41fc
+plan_head_after: 2398a915a3a9f61ba02ddaa3773109e006257343
 
 tech-stack:
   added: []
@@ -58,9 +58,9 @@ completed: 2026-11-21
 
 ## Task Commits
 
-1. **Task 1 (tracer): real-clock helper, slowed path RED then GREEN, mutant** - `e5651c5c6` (test)
-2. **Task 2: remaining two waits, assertions, comment, soak** - `e91beb1da` (test)
-3. **Task 3: ledger post-verdict recurrence (D-04)** - `6665598be` (docs, committed with `--files`)
+1. **Task 1 (tracer): real-clock helper, slowed path RED then GREEN, mutant** - `dc220850f` (test)
+2. **Task 2: remaining two waits, assertions, comment, soak** - `d59c79873` (test)
+3. **Task 3: ledger post-verdict recurrence (D-04)** - `2398a915a` (docs, committed with `--files`)
 
 ## Proofs
 
@@ -90,5 +90,5 @@ None. Test-only change; no new network, auth or file-access surface.
 
 ## Self-Check: PASSED
 
-- Test file and ledger exist; `e5651c5c6`, `e91beb1da` and `6665598be` are ancestors of HEAD.
+- Test file and ledger exist; `dc220850f`, `d59c79873` and `2398a915a` are ancestors of HEAD.
 - `git show --name-only` for the Task 1 and Task 2 commits lists only the test file; for the Task 3 commit only the ledger.
