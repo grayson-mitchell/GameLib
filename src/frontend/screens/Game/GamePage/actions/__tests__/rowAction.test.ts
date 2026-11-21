@@ -4,6 +4,7 @@
  * are called directly; `window.api` is a plain object of jest mocks.
  */
 import {
+  isInvokeTimeout,
   rowActionReducer,
   runRowAction,
   reportRowActionFailure,
@@ -21,7 +22,8 @@ describe('rowActionReducer', () => {
     ['busy + succeed', busy, { type: 'succeed' }, 'idle'],
     ['busy + fail', busy, { type: 'fail' }, 'failed'],
     ['failed + start (retry)', failed, { type: 'start' }, 'busy'],
-    ['failed + dismiss', failed, { type: 'dismiss' }, 'idle']
+    ['failed + dismiss', failed, { type: 'dismiss' }, 'idle'],
+    ['busy + release', busy, { type: 'release' }, 'idle']
   ])('%s -> %s', (_name, from, event, to) => {
     expect(rowActionReducer(from, event).phase).toBe(to)
   })
@@ -33,24 +35,41 @@ describe('rowActionReducer', () => {
     ['busy + start', busy, { type: 'start' }],
     ['busy + dismiss', busy, { type: 'dismiss' }],
     ['failed + succeed', failed, { type: 'succeed' }],
-    ['failed + fail', failed, { type: 'fail' }]
+    ['failed + fail', failed, { type: 'fail' }],
+    ['idle + release', idle, { type: 'release' }],
+    ['failed + release', failed, { type: 'release' }]
   ])('an event that does not apply (%s) returns the same state', (_n, s, e) => {
     expect(rowActionReducer(s, e)).toBe(s)
   })
 })
 
+describe('isInvokeTimeout (CR-02)', () => {
+  it.each<[string, unknown, boolean]>([
+    ['the shell string', 'sidecar invoke timed out: moveInstall', true],
+    ['an Error wrapping it', new Error('sidecar invoke timed out: x'), true],
+    ['an unrelated Error', new Error('rsync exited 23'), false],
+    ['undefined', undefined, false],
+    ['a number', 408, false]
+  ])('%s -> %s', (_name, value, expected) => {
+    expect(isInvokeTimeout(value)).toBe(expected)
+  })
+})
+
 describe('reportRowActionFailure and runRowAction', () => {
   let logError: jest.Mock
+  let logInfo: jest.Mock
   let consoleErrorSpy: jest.SpyInstance
 
   beforeEach(() => {
     logError = jest.fn()
+    logInfo = jest.fn()
     const globalWithWindow = globalThis as unknown as { window?: unknown }
     if (!globalWithWindow.window) {
       globalWithWindow.window = {}
     }
     ;(globalThis as unknown as { window: { api: unknown } }).window.api = {
-      logError
+      logError,
+      logInfo
     }
     consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
   })
@@ -178,6 +197,60 @@ describe('reportRowActionFailure and runRowAction', () => {
       })
 
       expect(types(dispatch)).toEqual(['start', 'succeed'])
+    })
+
+    it('rejected while stillRunning holds: start then release, info log only (CR-02)', async () => {
+      const dispatch = jest.fn()
+      await expect(
+        runRowAction({
+          action: 'moveInstall',
+          appName: 'MyGame',
+          run: async () => {
+            throw new Error('sidecar invoke timed out: moveInstall')
+          },
+          stillRunning: () => true,
+          dispatch
+        })
+      ).resolves.toBeUndefined()
+
+      expect(types(dispatch)).toEqual(['start', 'release'])
+      expect(logInfo).toHaveBeenCalledTimes(1)
+      expect(logError).not.toHaveBeenCalled()
+    })
+
+    it('rejected while stillRunning is false: start then fail, error logged', async () => {
+      const dispatch = jest.fn()
+      await runRowAction({
+        action: 'moveInstall',
+        appName: 'MyGame',
+        run: async () => {
+          throw new Error('boom')
+        },
+        stillRunning: () => false,
+        dispatch
+      })
+
+      expect(types(dispatch)).toEqual(['start', 'fail'])
+      expect(logError).toHaveBeenCalledTimes(1)
+      expect(logInfo).not.toHaveBeenCalled()
+    })
+
+    it('a throwing logInfo during the hand-off still releases the row', async () => {
+      logInfo.mockImplementation(() => {
+        throw new Error('no transport')
+      })
+      const dispatch = jest.fn()
+      await runRowAction({
+        action: 'moveInstall',
+        appName: 'MyGame',
+        run: async () => {
+          throw new Error('timeout')
+        },
+        stillRunning: () => true,
+        dispatch
+      })
+
+      expect(types(dispatch)).toEqual(['start', 'release'])
     })
 
     it('a throwing logError does not make runRowAction throw', async () => {

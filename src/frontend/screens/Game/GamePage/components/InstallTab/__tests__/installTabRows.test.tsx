@@ -76,9 +76,14 @@ import * as React from 'react'
 import type { GameInfo, Runner } from 'common/types'
 import type { GameContextType } from 'frontend/types'
 import { resetAllStores } from 'frontend/state/storeKit'
+import useLibraryState from 'frontend/state/libraryState'
+import useUiState from 'frontend/state/uiState'
+import { useInstallLocationActions } from '../../../actions/useInstallLocationActions'
+import type { InstallLocationActions } from '../../../actions/useInstallLocationActions'
 import { installActionGates } from '../../../actions/installActionGates'
 import { FactAction } from '../FactRow'
 import VersionRow from '../VersionRow'
+import LocationRow from '../LocationRow'
 
 const harness = React as unknown as {
   __beginRender: () => void
@@ -216,13 +221,24 @@ const findAction = (tree: ReactElement<Props>, label: string) =>
 const mockApi = {
   repair: jest.fn(),
   logError: jest.fn(),
-  logInfo: jest.fn()
+  logInfo: jest.fn(),
+  requestAppSettings: jest.fn(),
+  openDialog: jest.fn(),
+  moveInstall: jest.fn(),
+  changeInstallPath: jest.fn(),
+  openFolder: jest.fn()
 }
 
 beforeEach(() => {
   harness.__resetMount()
   Object.values(mockApi).forEach((fn) => fn.mockReset())
   mockApi.repair.mockResolvedValue(undefined)
+  mockApi.requestAppSettings.mockResolvedValue({ defaultInstallPath: '/games' })
+  mockApi.openDialog.mockResolvedValue('/new/place')
+  mockApi.moveInstall.mockResolvedValue(undefined)
+  mockApi.changeInstallPath.mockResolvedValue(undefined)
+  useLibraryState.setState({ refresh: jest.fn().mockResolvedValue(undefined) })
+  useUiState.setState({ showDialogModal: jest.fn() })
   ;(globalThis as unknown as { window: unknown }).window = { api: mockApi }
   jest.spyOn(console, 'error').mockImplementation(() => undefined)
 })
@@ -328,5 +344,86 @@ describe('VersionRow', () => {
       expect(failure?.retryDisabled).toBe(true)
       expect(failure?.retryDisabledReason).toBe('Wait for the move to finish')
     })
+  })
+})
+
+describe('Location row (CR-02)', () => {
+  const MOVE_FAILED = 'Move failed. Details are in the log.'
+  const TIMEOUT = 'sidecar invoke timed out: moveInstall'
+
+  // One render pass as InstallTab composes it: context, the hook, the row.
+  function renderLocation(
+    game: GameInfo,
+    isOverrides: RenderOptions['is'] = {}
+  ) {
+    const is = makeIs(isOverrides)
+    harness.__setContext({ is, runner: game.runner })
+    harness.__beginRender()
+    const actions = useInstallLocationActions(game)
+    const tree = LocationRow({
+      gameInfo: game,
+      gates: gatesFor(game, is),
+      actions
+    }) as ReactElement<Props> | null
+    return { actions, tree }
+  }
+
+  const failureOf = (tree: ReactElement<Props> | null) =>
+    tree?.props.failure as { message: string } | undefined
+
+  const setStatus = (status: string) =>
+    useLibraryState.setState({
+      libraryStatus: [{ appName: '1234', status }]
+    } as unknown as Parameters<typeof useLibraryState.setState>[0])
+
+  it('hands a timeout over to the game status while the game still reads moving', async () => {
+    const game = makeGame('legendary')
+    setStatus('moving')
+    mockApi.moveInstall.mockRejectedValue(TIMEOUT)
+    await renderLocation(game).actions.retryMove()
+
+    expect(renderLocation(game, { moving: true }).actions.moveFailed).toBe(
+      false
+    )
+    expect(mockApi.logInfo).toHaveBeenCalledTimes(1)
+    expect(mockApi.logError).not.toHaveBeenCalled()
+  })
+
+  it('reports the same timeout as a failure once the game no longer reads moving', async () => {
+    const game = makeGame('legendary')
+    mockApi.moveInstall.mockRejectedValue(TIMEOUT)
+    await renderLocation(game).actions.retryMove()
+
+    expect(renderLocation(game).actions.moveFailed).toBe(true)
+  })
+
+  it('reports a real rejection as a failure even while the game reads moving', async () => {
+    const game = makeGame('legendary')
+    setStatus('moving')
+    mockApi.moveInstall.mockRejectedValue(new Error('rsync exited 23'))
+    await renderLocation(game).actions.retryMove()
+
+    expect(renderLocation(game).actions.moveFailed).toBe(true)
+  })
+
+  it('shows no Move failure while the game is moving, and the message once it is not', () => {
+    const game = makeGame('legendary')
+    const failedActions = {
+      moveFailed: true,
+      setFolderFailed: false
+    } as unknown as InstallLocationActions
+    const render = (moving: boolean) => {
+      const is = makeIs({ moving })
+      harness.__setContext({ is, runner: game.runner })
+      harness.__beginRender()
+      return LocationRow({
+        gameInfo: game,
+        gates: gatesFor(game, is),
+        actions: failedActions
+      }) as ReactElement<Props>
+    }
+
+    expect(failureOf(render(true))).toBeUndefined()
+    expect(failureOf(render(false))?.message).toBe(MOVE_FAILED)
   })
 })
