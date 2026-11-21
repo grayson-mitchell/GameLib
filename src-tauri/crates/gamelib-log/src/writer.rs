@@ -103,9 +103,13 @@ enum Msg {
     Flush(SyncSender<()>),
     /// The writer's periodic tick, run now (tests drive it from a scripted clock).
     Tick(SyncSender<()>),
-    /// Test hook: park the writer thread until the sender side is dropped or signalled.
+    /// Test hook: the writer acks `entered` once it is inside this arm, then parks until
+    /// `release`'s sender side is dropped or signalled.
     #[cfg(test)]
-    Hold(Receiver<()>),
+    Hold {
+        entered: SyncSender<()>,
+        release: Receiver<()>,
+    },
 }
 
 /// The non-general targets whose rotation was lost with a dropped frame. Shared by the callers
@@ -172,12 +176,18 @@ impl Logger {
         self.send(Msg::Batches(batches));
     }
 
-    /// Test hook: parks the writer thread until the returned sender is dropped.
+    /// Test hook: parks the writer thread until the returned sender is dropped. Returns only once
+    /// the writer has handled every earlier message and is parked, and panics if it does not take
+    /// the hold within `GENEROUS`.
     #[cfg(test)]
     fn hold(&self) -> std::sync::mpsc::Sender<()> {
-        let (tx, rx) = std::sync::mpsc::channel();
-        let _ = self.tx.send(Msg::Hold(rx));
-        tx
+        let (release_tx, release) = std::sync::mpsc::channel();
+        let (entered, entered_rx) = sync_channel(1);
+        let _ = self.tx.send(Msg::Hold { entered, release });
+        entered_rx
+            .recv_timeout(test_support::GENEROUS)
+            .expect("log writer never took the hold");
+        release_tx
     }
 
     fn send(&self, msg: Msg) {
@@ -317,7 +327,10 @@ impl WriterState {
                 let _ = ack.try_send(());
             }
             #[cfg(test)]
-            Msg::Hold(rx) => while rx.recv().is_ok() {},
+            Msg::Hold { entered, release } => {
+                let _ = entered.try_send(());
+                while release.recv().is_ok() {}
+            }
         }
     }
 
@@ -767,6 +780,37 @@ mod tests {
         );
         assert!(body.contains("log writer: "));
         assert!(body.contains("line 0\n"));
+    }
+
+    // hold() must not return before the writer is parked in the Hold arm. If it did, a burst after
+    // it would race the Hold: the queue fills early, a drop report is written when the writer
+    // finally dequeues the Hold, and the report splits in two.
+    #[test]
+    fn hold_returns_only_once_the_writer_is_parked() {
+        let home = FakeHome::new("gamelib-log-");
+        let logger = Logger::start(config(&home));
+        let entries: Vec<Entry> = (0..20_000).map(|i| raw(&format!("slow {i}\n"))).collect();
+        logger.submit(vec![batch(game("480"), true, entries)]);
+        let release = logger.hold();
+        // No flush: everything sent before hold() is on disk the instant it returns.
+        let launch = read(&path(&home, &["games", "480_steam", "launch.log"]));
+        assert_eq!(launch.lines().count(), 20_000, "hold() returned early");
+        // A full queue's worth fits, so the writer took the Hold off the queue and consumes nothing.
+        for i in 0..CHANNEL_CAPACITY {
+            logger.log(Prefix::Backend, Level::Info, &format!("fill {i}"));
+        }
+        assert_eq!(logger.dropped.load(Ordering::Relaxed), 0);
+        logger.log(Prefix::Backend, Level::Info, "one too many");
+        assert_eq!(logger.dropped.load(Ordering::Relaxed), 1);
+        drop(release);
+        assert!(logger.flush(GENEROUS));
+        let body = read(&path(&home, &["gamelib.log"]));
+        assert_eq!(
+            body.matches("lines dropped (ingest full)").count(),
+            1,
+            "{body}"
+        );
+        assert!(body.contains("log writer: 1 lines dropped (ingest full)"));
     }
 
     fn info_line(msg: &str) -> Entry {
