@@ -612,6 +612,12 @@ describe('Danger zone (WR-05)', () => {
   const failuresOf = (tree: ReactElement<Props>) =>
     walk(tree).filter((el) => el.type === RowFailure)
 
+  const firstFailure = (tree: ReactElement<Props>) => {
+    const failure = failuresOf(tree)[0]
+    if (!failure) throw new Error('expected a RowFailure in the danger zone')
+    return failure
+  }
+
   const showDialog = () =>
     useUiState.getState().showDialogModal as unknown as jest.Mock
 
@@ -619,11 +625,11 @@ describe('Danger zone (WR-05)', () => {
   function openRemoveAllConfirm(game: GameInfo) {
     const button = buttonByText(renderDanger(game), REMOVE_ALL)
     ;(button?.props.onClick as () => void)()
-    const calls = showDialog().mock.calls
-    const dialog = calls[calls.length - 1][0] as {
-      buttons: Array<{ onClick?: () => Promise<void> }>
-    }
-    return dialog.buttons[0].onClick as () => Promise<void>
+    const calls = showDialog().mock.calls as Array<
+      [{ buttons: Array<{ onClick?: () => Promise<void> }> }]
+    >
+    const dialog = calls[calls.length - 1]?.[0]
+    return dialog?.buttons[0]?.onClick as () => Promise<void>
   }
 
   it('shows an inline failure and logs once when the sweep refuses a root', async () => {
@@ -637,7 +643,7 @@ describe('Danger zone (WR-05)', () => {
 
     const failures = failuresOf(renderDanger(game))
     expect(failures).toHaveLength(1)
-    expect(failures[0].props.message).toBe(REMOVE_FAILED)
+    expect(failures[0]?.props.message).toBe(REMOVE_FAILED)
     expect(mockApi.logError).toHaveBeenCalledTimes(1)
     expect(useLibraryState.getState().refresh).toHaveBeenCalledTimes(1)
   })
@@ -677,7 +683,7 @@ describe('Danger zone (WR-05)', () => {
     mockApi.steamRemoveAllCopies.mockResolvedValue({ removed: 0, refused: 1 })
     await openRemoveAllConfirm(game)()
 
-    const failure = failuresOf(renderDanger(game))[0]
+    const failure = firstFailure(renderDanger(game))
     ;(failure.props.onRetry as () => void)()
 
     expect(showDialog()).toHaveBeenCalledTimes(2)
@@ -689,10 +695,10 @@ describe('Danger zone (WR-05)', () => {
     mockApi.steamRemoveAllCopies.mockResolvedValue({ removed: 0, refused: 1 })
     await openRemoveAllConfirm(game)()
 
-    const failure = failuresOf(renderDanger(game, { playing: true }))[0]
+    const failure = firstFailure(renderDanger(game, { playing: true }))
     expect(failure.props.retryDisabled).toBe(true)
     expect(failure.props.retryDisabledReason).toBe('Quit the game first')
-    expect(failuresOf(renderDanger(game))[0].props.retryDisabled).toBe(false)
+    expect(firstFailure(renderDanger(game)).props.retryDisabled).toBe(false)
   })
 
   it('reads "Removing copies…" and aria-busy while the sweep runs', () => {

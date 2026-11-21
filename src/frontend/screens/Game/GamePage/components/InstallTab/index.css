@@ -317,6 +317,21 @@
   opacity: 0.55;
 }
 
+.dangerButton.is-busy {
+  animation: installTabPulse 1.2s infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dangerButton.is-busy {
+    animation: none;
+  }
+}
+
+.dangerZone > .rowFailure {
+  flex: 1 1 100%;
+  margin: 0;
+}
+
 .dangerButton:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;

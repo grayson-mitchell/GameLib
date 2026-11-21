@@ -258,6 +258,7 @@
             "busy": {
                 "modifying": "Applying changes…",
                 "moving": "Moving…",
+                "removingAllCopies": "Removing copies…",
                 "settingFolder": "Setting folder…",
                 "updating": "Updating…",
                 "verifying": "Verifying…"
@@ -282,6 +283,7 @@
             "engineBottle": "bottle \"{{bottle}}\"",
             "failure": {
                 "move": "Move failed. Details are in the log.",
+                "removeAllCopies": "Couldn't remove every copy. Details are in the log.",
                 "setFolder": "Couldn't set the install folder. Details are in the log.",
                 "verify": "Verify failed. Details are in the log."
             },

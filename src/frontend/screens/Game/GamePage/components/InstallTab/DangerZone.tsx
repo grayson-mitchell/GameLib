@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import classNames from 'classnames'
 import type { GameInfo } from 'common/types'
 import UninstallModal from 'frontend/components/UI/UninstallModal'
 import type {
@@ -7,6 +8,7 @@ import type {
 } from '../../actions/installActionGates'
 import { useUninstallActions } from '../../actions/useUninstallActions'
 import { gateReasonText } from './gateReasonText'
+import { RowFailure } from './SwitchRow'
 
 interface Props {
   gameInfo: GameInfo
@@ -26,6 +28,9 @@ const DangerZone = ({ gameInfo, gates }: Props) => {
   const {
     startUninstall,
     startRemoveAllCopies,
+    removeAllCopiesFailed,
+    removingAllCopies,
+    retryRemoveAllCopies,
     showUninstallModal,
     closeUninstallModal
   } = useUninstallActions(gameInfo)
@@ -64,19 +69,41 @@ const DangerZone = ({ gameInfo, gates }: Props) => {
       {allCopiesGate.show && (
         <button
           type="button"
-          className="dangerButton"
-          aria-disabled={allCopiesGate.disabled ? true : undefined}
+          className={classNames('dangerButton', {
+            'is-busy': removingAllCopies
+          })}
+          aria-busy={removingAllCopies ? true : undefined}
+          aria-disabled={
+            allCopiesGate.disabled || removingAllCopies ? true : undefined
+          }
           title={reasonOf(allCopiesGate)}
           onClick={() => {
-            if (allCopiesGate.disabled) return
+            if (allCopiesGate.disabled || removingAllCopies) return
             startRemoveAllCopies()
           }}
         >
-          {t(
-            'gamelib:steam.uninstall.removeAllCopiesLabel',
-            'Remove all copies…'
-          )}
+          {removingAllCopies
+            ? t(
+                'gamelib:gamepage.installTab.busy.removingAllCopies',
+                'Removing copies…'
+              )
+            : t(
+                'gamelib:steam.uninstall.removeAllCopiesLabel',
+                'Remove all copies…'
+              )}
         </button>
+      )}
+      {removeAllCopiesFailed && (
+        <RowFailure
+          message={t(
+            'gamelib:gamepage.installTab.failure.removeAllCopies',
+            "Couldn't remove every copy. Details are in the log."
+          )}
+          retryLabel={t('gamelib:gamepage.installTab.retry', 'Retry')}
+          onRetry={retryRemoveAllCopies}
+          retryDisabled={allCopiesGate.disabled}
+          retryDisabledReason={reasonOf(allCopiesGate)}
+        />
       )}
       {showUninstallModal && (
         <UninstallModal

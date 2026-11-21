@@ -4,6 +4,7 @@ import { hasCapability } from 'common/storeCapabilities'
 import type { GameInfo } from 'common/types'
 import useLibraryState from 'frontend/state/libraryState'
 import useUiState from 'frontend/state/uiState'
+import { useRowAction } from './rowAction'
 // The route classifier stays where the ⋮ menu keeps it; plan 09 moves it.
 import {
   CLOSED_STEAM_DELETE_ROUTE,
@@ -20,6 +21,12 @@ import {
  * dialog; a rejected or malformed route reply fails closed, so the modal opens.
  * Remove all copies asks "Remove all copies?" and is the only path to
  * `steamRemoveAllCopies`.
+ *
+ * WR-05: Remove all copies runs through `useRowAction`, so a rejection, an
+ * `error` answer or a refused root shows a failure under the danger zone and
+ * reaches the log instead of becoming an unhandled rejection. A partial sweep
+ * counts as a failure: a copy is still on disk (D-18). Retry goes back through
+ * "Remove all copies?" (D-13), never straight to the invoke.
  */
 export function useUninstallActions(gameInfo: GameInfo) {
   const { t } = useTranslation('gamepage')
@@ -30,6 +37,7 @@ export function useUninstallActions(gameInfo: GameInfo) {
   const isSteam = !hasCapability(runner, 'winePrefixToolsAvailable')
 
   const [showUninstallModal, setShowUninstallModal] = useState(false)
+  const allCopiesRow = useRowAction('steamRemoveAllCopies', appName)
 
   async function startUninstall() {
     if (isSteam) {
@@ -54,8 +62,14 @@ export function useUninstallActions(gameInfo: GameInfo) {
   // quick-260821-le0 (Task 3): sweeps EVERY recorded install root for this
   // Steam title in one confirmed action.
   async function onRemoveAllCopiesYesClick() {
-    await window.api.steamRemoveAllCopies(appName)
-    await refresh(runner)
+    await allCopiesRow.run(
+      async () => {
+        const result = await window.api.steamRemoveAllCopies(appName)
+        await refresh(runner)
+        return result
+      },
+      (result) => Boolean(result.error) || result.refused > 0
+    )
   }
 
   function startRemoveAllCopies() {
@@ -79,6 +93,10 @@ export function useUninstallActions(gameInfo: GameInfo) {
   return {
     startUninstall,
     startRemoveAllCopies,
+    removeAllCopiesFailed: allCopiesRow.phase === 'failed',
+    removingAllCopies: allCopiesRow.phase === 'busy',
+    // Retry re-asks "Remove all copies?" (D-13).
+    retryRemoveAllCopies: startRemoveAllCopies,
     showUninstallModal,
     closeUninstallModal: () => setShowUninstallModal(false)
   }
