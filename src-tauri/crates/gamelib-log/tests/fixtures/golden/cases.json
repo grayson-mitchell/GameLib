@@ -1,0 +1,24 @@
+[
+  {
+    "id": "general-info-string",
+    "kind": "line",
+    "target": { "kind": "general" },
+    "method": "info",
+    "messageKind": "string",
+    "message": "hello from the oracle",
+    "prefix": "Backend"
+  },
+  {
+    "id": "game-chunks-rotate",
+    "kind": "chunks",
+    "target": { "kind": "game", "appName": "480", "runner": "steam", "type": "launch" },
+    "existing": "previous launch output\n",
+    "chunks": ["first chunk\n", "middle chunk without a newline", "last chunk\n"]
+  },
+  {
+    "id": "renderer-error-crlf",
+    "kind": "renderer",
+    "channel": "logError",
+    "value": "a\r\nb"
+  }
+]

@@ -1,0 +1,56 @@
+[
+  {
+    "id": "general-info-string",
+    "frames": [
+      {
+        "target": {
+          "kind": "general"
+        },
+        "rotate": false,
+        "entries": [
+          {
+            "line": {
+              "ts": 1795133109000,
+              "tz": 780,
+              "level": "INFO",
+              "prefix": "Backend",
+              "msg": "hello from the oracle"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "game-chunks-rotate",
+    "frames": [
+      {
+        "target": {
+          "kind": "game",
+          "appName": "480",
+          "runner": "steam",
+          "type": "launch"
+        },
+        "rotate": true,
+        "entries": [
+          {
+            "raw": "first chunk\n"
+          },
+          {
+            "raw": "middle chunk without a newline"
+          },
+          {
+            "raw": "last chunk\n"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "renderer-error-crlf",
+    "renderer": {
+      "channel": "logError",
+      "value": "a\r\nb"
+    }
+  }
+]

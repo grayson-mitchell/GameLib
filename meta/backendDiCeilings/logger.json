@@ -1,5 +1,6 @@
 {
   "jestMock": {
+    "src/backend/logger/__tests__/logGolden.test.ts": 1,
     "src/backend/logger/__tests__/logWriter.test.ts": 2
   }
 }
