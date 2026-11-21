@@ -517,7 +517,7 @@ mod tests {
     }
 
     #[test]
-    fn insert_js_places_a_new_integer_key_among_the_integers() {
+    fn a_new_integer_key_goes_among_the_integers() {
         let mut o = Obj::new();
         for k in ["10", "x", "2", "y", "100", "3"] {
             o.insert_js(k, Json::Null);
