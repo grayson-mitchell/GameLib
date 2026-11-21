@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 84
 current_phase_name: Logger
 status: executing
-stopped_at: Completed 84-01-PLAN.md
-last_updated: "2026-11-21T04:28:56.634Z"
+stopped_at: Completed 84-02-PLAN.md
+last_updated: "2026-11-21T04:45:59.645Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 84 execution started
-state_head: b90e6a2f24782fb2a97d7c15e52e617faa7103c2
+state_head: 73afed020d74636ea70d0219347e55e7466da712
 progress:
   total_phases: 19
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 84 (Logger) — EXECUTING
-Plan: 2 of 11
+Plan: 3 of 11
 Status: Ready to execute
 Last activity: 2026-11-21 — Phase 84 execution started
 Progress: [██████████] 100%
@@ -340,6 +340,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 83 P10 | n/a | 3 tasks | 5 files |
 | Phase 82 P20 | 15 min | 3 tasks | 2 files |
 | Phase 84 P01 | ~60 min (estimate) | 4 tasks | 102 files |
+| Phase 84 P02 | not measured | 4 tasks | 19 files |
 
 ## Accumulated Context
 
@@ -610,6 +611,9 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 84]: Phase 83 precondition judged met from the closed record (83-HUMAN-UAT 5/5, 83-UAT complete, 83-VERIFICATION passed), not from 83-11-SUMMARY alone
 - [Phase 84]: Golden frames are per writer instance; an accepted empty entry still claims the rotation; the Logging to file(s) line is derived by the Rust writer, not a forwarder entry
 - [Phase 84]: Golden expected tree is -text in .gitattributes so CRLF fixtures stay byte-exact
+- [Phase 84]: gamelib-log is its own Tauri-free crate; it reads no env and takes log dir, user data dir, clock and timezone through LogConfig
+- [Phase 84]: Renderer redaction is Rust-at-write (gamelib-log sanitize); gamelib.log rotates once per Logger on its first general write with data; a rejected target logs only its error kind
+- [Phase 84]: StoreHost core (gamelib_core::store) API fixed for uploadedLogs: open_cache(dir,name), Store get/set/remove/snapshot/on_change, flat keys, rollback on failed persist; Phase 85 widens it
 
 ### Pending Todos
 
@@ -863,8 +867,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-21T04:28:56.570Z
-Stopped at: Completed 84-01-PLAN.md
+Last session: 2026-11-21T04:45:59.582Z
+Stopped at: Completed 84-02-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
