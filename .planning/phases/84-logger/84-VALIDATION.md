@@ -290,3 +290,58 @@ Measured by plan 84-18, Task 1, from a clean `git worktree add --detach` checkou
    code fault: the suite passed alone in the same checkout (19 passed, 19 tests). No Phase 85 file is involved.
 
 The other 1130 suites pass; the rest of 84-12..84-17's tests are among them.
+
+---
+
+## Gap-closure CI proof
+
+**Operator decision at Task 2 (verbatim): `push-now`**, with "Update pin first" for the cargo pin and "Include 94cc93f6e" for the proof record.
+The checkpoint showed 80 commits `origin/main..P` (P = `5af07ab9f`): Phase 84 37, Phase 100 25 (incl. merge `9264ca57c`),
+Phase 85 7, Phase 86 3, quick-261122-9sl 4, quick-261122-93a 3, merge 1; 152 files, +51403/-300 outside `.planning`.
+
+**Pushed head P' = `a0401bbc6d922b9e8df7df941d1e1ccc9144f555`** (`origin/main` `8b7d92f77` -> `a0401bbc6`, fast-forward, hooks ran, no
+`--no-verify`). P' = P + `94cc93f6e` (docs only: the proof record) + `a0401bbc6` (test-only: the 7 jiff crates pinned in
+`src/backend/__tests__/cargoFeatures.test.ts`, operator decision 2026-11-22, citing `8fcadab94` / RUSTSEC-2026-0543), so the
+`## Gap-closure proof` at P carries over for everything except the pin test, which was re-proven at P'. 82 commits were
+published. Immediately before the push: `git fetch origin`, `git merge-base --is-ancestor origin/main a0401bbc6` -> true
+(`origin/main` = `8b7d92f77ea86f0422fbc254a9184af59ccfb3d6`), nothing in between.
+
+Local re-proof at P' before the push:
+
+| Command | Exit | Result |
+|---------|------|--------|
+| `npx jest src/backend/__tests__/cargoFeatures.test.ts` | 0 | 12 passed (the pin test was the 1 red at P) |
+| `npx prettier --check src/backend/__tests__/cargoFeatures.test.ts` | 0 | clean |
+| the nine `.husky/pre-push` checks (`pnpm codecheck`, `lint`, `prettier`, `i18n --fail-on-update`, `find-deadcode`, `boundaries`, `steam-line-ceiling`, `backend-di-ceilings`, `gameinfo-narrowing-ceiling`) | 0 each | all nine exit 0; the push hook then re-ran them and the push went through |
+
+CI at `a0401bbc6` (all five workflows triggered by the push):
+
+| Workflow | Run id | Leg | Conclusion |
+|----------|--------|-----|------------|
+| rust-test.yml | 44942334026 | windows-latest (job 136962058480) | success (including the multi-crate step and `PASS (win32, toolchain 1.99.1)`) |
+| rust-test.yml | 44942334026 | macos-latest (job 136962058306) | success (`PASS (darwin, toolchain 1.99.1)`) |
+| rust-test.yml | 44942334026 | ubuntu-latest (job 136962058533) | success |
+| codecheck.yml | 44942333992 | codecheck | success |
+| lint.yml | 44942334060 | lint | success |
+| audit.yml (Supply-chain audit) | 44942334032 | cargo-deny / pnpm-audit | success / success (RUSTSEC-2026-0543 no longer fires after `8fcadab94`) |
+| test.yml | 44942334064 | ci (ubuntu-latest) | **failure**, one suite, attributed below |
+
+G-84-1's proof, from the windows-latest multi-crate step (`cargo test (gamelib-core, gamelib-scan, ... gamelib-log and gamelib-store crates)`):
+
+```
+test tokenise_normalises_a_windows_path_with_a_space_to_the_end_of_the_line ... ok
+test tokenise_ends_a_path_at_a_quote ... ok
+test rust_sanitiser_matches_the_ts_golden_for_every_renderer_case ... ok
+test rust_writer_matches_the_ts_golden ... ok
+```
+
+`rust_writer_matches_the_ts_golden` and the tokenise test also read `ok` on the macos and ubuntu legs. The windows-latest golden
+case `chunks-wine-header` that run 44930097851 on `44e0c7a24` failed is therefore fixed on the leg that found it.
+
+**test.yml red, attributed:** `meta/__tests__/storeCorpus.test.ts` ("store corpus redaction > finds no account data in any
+committed file"): 1 failed, 1125 suites passed, 23905 tests passed, 217 skipped. The corpus files under `backups/sideload_apps/...`
+carry the OS account name in `$.games[N].runner`. Owner: Phase 85-02 (`44e0c7a24`, `fa6c791de`, `b6834ba46`); the same suite was one of the
+two reds (with the pin test) on `8b7d92f77`'s run 44932352973. **Not Phase 84's and not fixed here.** The `cargoFeatures.test.ts` pin that was red at P is green
+on CI at P'. No other Phase 84 leg is red, so no follow-up push was needed.
+
+The earlier note under "Red at P, attributed", item 1 (cargoFeatures pin), is resolved by `a0401bbc6`.
