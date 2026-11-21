@@ -11,21 +11,43 @@ import { InstallResult } from 'common/types/game_manager'
 import { logWarning, LogPrefix } from 'backend/logger'
 import { findBridgeInstallBottle } from './bridgeBottle'
 import { readAcfUpdateState } from './library/acfUpdateState'
+import { moveRegisteredSteamGame } from './moveNative'
 import { validateRegisteredSteamGame } from './validateNative'
 import { verifyBridgeGame } from './verifyBridge'
 import type SteamGame from './games'
 
+// quick 261122-9sl: Move install. A Steam-registered install asks Mac Steam to MoveApp
+// (moveNative.ts); a bridge install is refused for now. NEVER rejects: the 'moveInstall' IPC
+// handler has no catch, and a rejection would skip its terminal 'done' status and leave the row
+// stuck on "Moving...".
 export async function moveInstall(
   steamGame: SteamGame,
-  _newInstallPath: string
+  newInstallPath: string
 ): Promise<InstallResult> {
-  logWarning(
-    `SteamGame.moveInstall not implemented until Phase 2 (appId: ${steamGame.appId})`,
-    LogPrefix.Steam
-  )
-  return {
-    status: 'error',
-    error: 'Steam library not implemented until Phase 2'
+  try {
+    if (findBridgeInstallBottle(steamGame.deps.paths, steamGame.appId)) {
+      return {
+        status: 'error',
+        error: "Move isn't available for bridge games yet"
+      }
+    }
+    if (
+      (await readAcfUpdateState(steamGame.deps, steamGame.appId, 'native')) ===
+      null
+    ) {
+      return {
+        status: 'error',
+        error: `Steam doesn't list ${steamGame.getGameInfo().title} as installed in one of its libraries, so GameLib can't ask Steam to move it.`
+      }
+    }
+    return await moveRegisteredSteamGame(steamGame, newInstallPath)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    logWarning(
+      `SteamGame.moveInstall failed for appId ${steamGame.appId}: ${message}`,
+      LogPrefix.Steam
+    )
+    return { status: 'error', error: message }
   }
 }
 
