@@ -571,7 +571,6 @@
         overflow-y: auto;
       }
 
-      & div.installTab .legacyRows,
       & div.extraTab {
         /* The Extra info tab is now ALWAYS rendered, so this panel can legitimately
            contain an empty state rather than a list of rows. Opt it out of the row
@@ -940,6 +939,9 @@
   display: flex;
   flex-direction: row;
   justify-content: center;
+  /* Backstop: if the four tab labels ever exceed the 2fr column, scroll the
+     bar sideways instead of clipping a label. */
+  overflow-x: auto;
 
   .gameInfoTabs {
     align-items: center;

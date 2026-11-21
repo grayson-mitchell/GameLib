@@ -1,6 +1,5 @@
 /* Phase 100: the Install tab's own groups and switch rows. Colours are theme
-   tokens only (D-22); the legacy rows keep GamePage/index.css's row rule via
-   the .legacyRows wrapper. */
+   tokens only (D-22). */
 
 .installTab {
   /* Derived danger text for inline failures: the theme's danger token pulled

@@ -99,11 +99,11 @@ describe('Install tab source gates', () => {
     expect(code).not.toMatch(/import[^\n]*InstallTab/)
   })
 
-  it('InstallTab renders LocationRow inside installFacts before legacyRows', () => {
+  it('InstallTab renders LocationRow inside installFacts before IntegrationRows', () => {
     const code = read(TAB_DIR, 'index.tsx')
     const facts = code.indexOf('className="installFacts"')
     const location = code.indexOf('<LocationRow')
-    const legacy = code.indexOf('className="legacyRows"')
+    const legacy = code.indexOf('<IntegrationRows')
     expect(facts).toBeGreaterThan(-1)
     expect(location).toBeGreaterThan(facts)
     expect(legacy).toBeGreaterThan(location)
@@ -114,7 +114,7 @@ describe('Install tab source gates', () => {
     const location = code.indexOf('<LocationRow')
     const size = code.indexOf('<SizeRow')
     const version = code.indexOf('<VersionRow')
-    const legacy = code.indexOf('className="legacyRows"')
+    const legacy = code.indexOf('<IntegrationRows')
     expect(size).toBeGreaterThan(location)
     expect(version).toBeGreaterThan(size)
     expect(legacy).toBeGreaterThan(version)
@@ -153,7 +153,7 @@ describe('Install tab source gates', () => {
     const code = read(TAB_DIR, 'index.tsx')
     const version = code.indexOf('<VersionRow')
     const cloud = code.indexOf('<CloudSavesSync')
-    const legacy = code.indexOf('className="legacyRows"')
+    const legacy = code.indexOf('<IntegrationRows')
     expect(cloud).toBeGreaterThan(version)
     expect(legacy).toBeGreaterThan(cloud)
   })
@@ -184,7 +184,7 @@ describe('Install tab source gates', () => {
       '<PlatformSupport',
       '<OnlineRequiredRow',
       '<ThirdPartyRow',
-      'className="legacyRows"'
+      '<IntegrationRows'
     ].map((marker) => code.indexOf(marker))
     expect(order.every((i) => i > -1)).toBe(true)
     expect([...order].sort((a, b) => a - b)).toEqual(order)
@@ -200,21 +200,23 @@ describe('Install tab source gates', () => {
     expect(code).toContain('<PlatformSupport')
   })
 
-  it('InstallTab branches installed and not-installed facts and places the notes before the legacy rows (D-06)', () => {
+  it('InstallTab branches installed and not-installed facts and places the notes before the integration rows (D-06)', () => {
     const code = read(TAB_DIR, 'index.tsx')
     const notInstalled = code.indexOf('<NotInstalledFacts')
     const notes = code.indexOf('className="installNotes"')
     const humble = code.indexOf('<HumbleOriginInfo')
     const nativePort = code.indexOf('<NativePortInfo')
-    const legacy = code.indexOf('className="legacyRows"')
+    const legacy = code.indexOf('<IntegrationRows')
     const integration = code.indexOf('<IntegrationRows')
     expect(code).toContain('gameInfo.is_installed ? (')
     expect(notInstalled).toBeGreaterThan(-1)
     expect(notes).toBeGreaterThan(notInstalled)
     expect(humble).toBeGreaterThan(notes)
     expect(nativePort).toBeGreaterThan(humble)
-    expect(legacy).toBeGreaterThan(nativePort)
-    expect(integration).toBeGreaterThan(legacy)
+    expect(integration).toBeGreaterThan(nativePort)
+    expect(legacy).toBe(integration)
+    expect(code).not.toContain('legacyRows')
+    expect(code).not.toContain('AppleWikiInfo')
     expect(code).not.toContain('<DownloadSizeInfo')
   })
 

@@ -73,7 +73,9 @@ import {
   SettingsButton,
   WikiInfoEmptyState
 } from './components'
+import AppleWikiInfo from './components/AppleWikiInfo'
 import InstallTab from './components/InstallTab'
+import ProtonDbLink from './components/ProtonDbLink'
 import WhatsNewLink from './components/InstallTab/WhatsNewLink'
 import FavouriteHeart from './components/LeftCard/FavouriteHeart'
 import HiddenNotice from './components/LeftCard/HiddenNotice'
@@ -651,7 +653,10 @@ export default React.memo(function GamePage(): JSX.Element | null {
                           <Tab
                             className="tabButton"
                             value={'info'}
-                            label={t('game.install_info', 'Install info')}
+                            label={tGamelib(
+                              'gamelib:gamepage.tabs.install',
+                              'Install'
+                            )}
                             iconPosition="start"
                             icon={<Info className="gameInfoTabsIcon" />}
                           />
@@ -672,7 +677,10 @@ export default React.memo(function GamePage(): JSX.Element | null {
                           <Tab
                             className="tabButton"
                             value={'extra'}
-                            label={t('game.extra_info', 'Extra info')}
+                            label={tGamelib(
+                              'gamelib:gamepage.tabs.ratings',
+                              'Ratings'
+                            )}
                             iconPosition="start"
                             icon={<Star className="gameInfoTabsIcon" />}
                           />
@@ -723,6 +731,8 @@ export default React.memo(function GamePage(): JSX.Element | null {
                           ) : (
                             <WikiInfoEmptyState />
                           )}
+                          <AppleWikiInfo gameInfo={gameInfo} />
+                          <ProtonDbLink gameInfo={gameInfo} />
                         </TabPanel>
 
                         <TabPanel

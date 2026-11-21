@@ -386,6 +386,10 @@
             "never": "Never played",
             "played": "Played {{duration}}"
         },
+        "ratings": {
+            "protondb": "ProtonDB",
+            "protondbCheck": "Check compatibility ↗"
+        },
         "steamInstallingPercent": "Installing… {{percent}}%",
         "steamShortcut": {
             "failed": "Updating the Steam shortcut failed."
@@ -394,6 +398,10 @@
         "steamUpdatePlanning": "Planning update…",
         "syncSaves": {
             "failed": "Syncing saves failed."
+        },
+        "tabs": {
+            "install": "Install",
+            "ratings": "Ratings"
         },
         "tabsAriaLabel": "gameinfo tabs",
         "update": {

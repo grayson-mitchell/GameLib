@@ -7,7 +7,6 @@ import { useInstallLocationActions } from '../../actions/useInstallLocationActio
 // Imported by file path, not through the components barrel, to avoid an import
 // cycle (the barrel is imported by GamePage, which imports this).
 import PlatformSupport from '../PlatformSupport'
-import AppleWikiInfo from '../AppleWikiInfo'
 import CloudSavesSync from '../CloudSavesSync'
 import HumbleOriginInfo from '../HumbleOriginInfo'
 import NativePortInfo from '../NativePortInfo'
@@ -29,10 +28,8 @@ interface Props {
 }
 
 /**
- * Phase 100: the right panel's Install tab. The legacy rows stay in a
- * `.legacyRows` wrapper so GamePage's old row styling keeps applying to them
- * and not to the new groups; plan 08 removes the wrapper once every row has
- * been reshaped.
+ * Phase 100: the right panel's Install tab. It holds only the new rows; the
+ * Apple compatibility block moved to the Ratings tab (D-04).
  */
 const InstallTab = ({ gameInfo, platform, handleUpdate, hasUpdate }: Props) => {
   const { is, gameSettings, gameExtraInfo, runner } = useContext(GameContext)
@@ -88,11 +85,6 @@ const InstallTab = ({ gameInfo, platform, handleUpdate, hasUpdate }: Props) => {
       <div className="installNotes">
         <HumbleOriginInfo gameInfo={gameInfo} />
         <NativePortInfo gameInfo={gameInfo} platform={platform} />
-      </div>
-      <div className="legacyRows">
-        <div>
-          <AppleWikiInfo gameInfo={gameInfo} />
-        </div>
       </div>
       <IntegrationRows gameInfo={gameInfo} platform={platform} />
       {gameInfo.is_installed && (
