@@ -6,10 +6,10 @@ current_phase: 85
 current_phase_name: Store host, config and versioned migrations
 status: executing
 stopped_at: Completed 85-06-PLAN.md
-last_updated: "2026-11-21T17:39:58.503Z"
+last_updated: "2026-11-21T17:55:30.193Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 85 execution started
-state_head: 1b96ce79b71691d620f78531dce7c83ca3fead6a
+state_head: 5ad01481e7cb3e544ccbf49c463481202d27ffb3
 progress:
   total_phases: 20
   completed_phases: 23
@@ -749,6 +749,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261121-vlo | "Report a translation problem" opens the in-app report form, prefilled, not GitHub | 2026-11-21 | c72bb25cd | — | [261121-vlo-report-a-translation-problem-should-open](./quick/261121-vlo-report-a-translation-problem-should-open/) |
 | 20 | Close stale Gate 7 digest todo (already re-pinned by 84-06, 90ba1d3ab) | 2026-11-22 | 01c12f259 | — | — |
 | 21 | Replace chrono with jiff in gamelib-log (RUSTSEC-2026-0543 audit red) | 2026-11-22 | 8fcadab94 | — | — |
+| 261122-93a | Set up gsd-graph for .planning and exclude .planning from graphify | 2026-11-22 | 5ad01481e | — | [261122-93a-set-up-gsd-graph-for-planning-and-exclud](./quick/261122-93a-set-up-gsd-graph-for-planning-and-exclud/) |
 
 ## Deferred Items
 
