@@ -147,6 +147,7 @@ describe('GamePage/index.tsx: card structure (D-02, D-03, D-04, D-06)', () => {
       'className="gameMeta"',
       '<h1',
       '<FavouriteHeart',
+      '<LibraryRow',
       '<EngineNotices',
       '{wikiLink}',
       '<Description',

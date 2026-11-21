@@ -263,8 +263,13 @@
             }
         },
         "leftCard": {
+            "addCategory": "+ Category",
             "addFavourite": "Add to favourites",
+            "addFirstCategory": "+ Add to Category",
+            "categoryExists": "That category already exists — tick it above.",
             "favourite": "Favourite",
+            "newCategory": "New category…",
+            "removeCategory": "Remove {{name}}",
             "removeFavourite": "Remove from favourites"
         },
         "moreActions": "More actions",
