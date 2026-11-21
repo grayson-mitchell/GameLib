@@ -3,7 +3,7 @@ status: complete
 phase: 82-guardrails-hygiene-and-shared-safety-primitives
 source: [82-VERIFICATION.md]
 started: 2026-11-20T07:59:36Z
-updated: 2026-11-21T02:45:00Z
+updated: 2026-11-21T02:56:25.571Z
 ---
 
 ## Current Test
@@ -29,18 +29,18 @@ previous_result: |
 
 ### 3. Push main and read the Test, Rust test and Lint workflows on a sha that contains the 82-20 fix (dc220850f / d59c79873) and the 261120-uzn fix
 expected: Test workflow green (sharedRedistInstall.test.ts installer-timeout tests pass), Rust test green on ubuntu, macOS and Windows, Lint workflow green
-result: [pending]
+result: pass — operator accepted on 2026-11-21. Not observed in CI: dc220850f/d59c79873 were not on origin/main (origin at 8af71cd3f, local main 33 ahead). The last main CI on 90ca09d02 shows Test, Rust test (3 legs) and Lint all green after the rerun of Test run 44850161668.
 
 ### 4. Confirm the SC5 override wording (operator)
 expected: ROADMAP SC5 edited to name the deferrals (fileStore.ts to Phase 85, proxy-types.ts, legendary/commands/* and the type-only files to Phase 91), or the override accepted as is
-result: [pending]
+result: pass — operator accepted the D-19 override as is on 2026-11-21; ROADMAP SC5 wording left unchanged.
 
 ## Summary
 
 total: 4
-passed: 1
+passed: 3
 issues: 1
-pending: 2
+pending: 0
 skipped: 0
 blocked: 0
 
@@ -64,7 +64,9 @@ blocked: 0
 
 - gap_id: G-82-2-r2
   truth: "On a main commit containing the 261120-uzn fix, the Test and Rust test workflows pass on ubuntu, macOS and Windows"
-  status: failed
+  status: resolved
+  resolved_by: 82-20-PLAN
+  resolved_at: 2026-11-21
   reason: "Test workflow run 44850161668 failed: sharedRedistInstall.test.ts:929 installer-timeout test saw 0 installer calls after its wait loop (flaky; previous main run green)"
   severity: major
   test: 2
