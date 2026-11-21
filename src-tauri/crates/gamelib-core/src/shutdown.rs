@@ -142,6 +142,13 @@ pub struct FinishContext {
     pub still_running: Vec<&'static str>,
     pub elapsed: Duration,
     pub remaining: Duration,
+    pub deadline: Instant,
+}
+
+impl FinishContext {
+    pub fn remaining_now(&self) -> Duration {
+        self.remaining
+    }
 }
 
 /// One exit-time drain: its registrant name and the work it runs with the drain budget.
@@ -184,6 +191,7 @@ pub fn run_exit(
         still_running: still_running.clone(),
         elapsed,
         remaining: budget.total.saturating_sub(elapsed),
+        deadline: Instant::now(),
     });
     ExitReport {
         elapsed: start.elapsed(),
@@ -421,6 +429,43 @@ mod tests {
             budget.total.saturating_sub(seen[0].elapsed)
         );
         let _ = release.send(());
+    }
+
+    #[test]
+    fn finish_flush_time_is_measured_from_the_deadline_not_from_finish_entry() {
+        // IN-04: a duration computed before finish's own work goes stale while finish runs; a
+        // deadline does not.
+        let s = Shutdown::new();
+        let budget = ExitBudget {
+            total: ms(2000),
+            child_grace: ms(100),
+        };
+        let seen = Arc::new(Mutex::new(Vec::<(Duration, Duration, Instant)>::new()));
+        let sink = seen.clone();
+        let before = Instant::now();
+        run_exit(
+            &s,
+            budget,
+            Vec::new(),
+            |_| {},
+            move |ctx| {
+                let first = ctx.remaining_now();
+                thread::sleep(ms(100));
+                let second = ctx.remaining_now();
+                sink.lock().unwrap().push((first, second, ctx.deadline));
+            },
+        );
+        let after = Instant::now();
+        let seen = seen.lock().unwrap();
+        let (first, second, deadline) = seen[0];
+        assert!(
+            first.saturating_sub(second) >= ms(90),
+            "remaining_now did not shrink with finish's own work: {first:?} -> {second:?}"
+        );
+        assert!(
+            deadline >= before + budget.total && deadline <= after + budget.total,
+            "deadline is not the run's start plus the total budget"
+        );
     }
 
     #[test]
