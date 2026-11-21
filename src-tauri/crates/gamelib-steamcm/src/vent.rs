@@ -5,7 +5,7 @@
 //! `RefreshTokenSecret::expose`.
 
 use std::pin::pin;
-use std::sync::{Mutex, Once};
+use std::sync::Mutex;
 use std::time::Duration;
 
 use futures_util::StreamExt;
@@ -38,7 +38,7 @@ use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 
 use crate::backend::*;
-use crate::error::{diag, CmError, ERESULT_EXPIRED, ERESULT_LOGON_SESSION_REPLACED};
+use crate::error::{CmError, ERESULT_EXPIRED, ERESULT_LOGON_SESSION_REPLACED};
 
 const LICENSE_LIST_TIMEOUT: Duration = Duration::from_secs(10);
 const PROBE_APP: u32 = 480;
@@ -488,70 +488,6 @@ impl CmConn for VentConn {
     }
 }
 
-/// Forwards steam-vent's WARN+ tracing events to the crate diagnostic sink. steam-vent's heartbeat
-/// and read-loop failures surface only through tracing (spike 085), so without this they are
-/// invisible. Hand-written on `tracing` 0.1: no `tracing-subscriber` crate.
-struct VentLogForwarder;
-
-struct MessageVisitor(String);
-
-impl tracing::field::Visit for MessageVisitor {
-    fn record_debug(&mut self, field: &tracing::field::Field, value: &dyn std::fmt::Debug) {
-        if field.name() == "message" {
-            self.0 = format!("{value:?}");
-        }
-    }
-}
-
-impl tracing::Subscriber for VentLogForwarder {
-    fn enabled(&self, m: &tracing::Metadata<'_>) -> bool {
-        m.target().starts_with("steam_vent") && *m.level() <= tracing::Level::WARN
-    }
-
-    fn max_level_hint(&self) -> Option<tracing::level_filters::LevelFilter> {
-        Some(tracing::level_filters::LevelFilter::WARN)
-    }
-
-    fn new_span(&self, _: &tracing::span::Attributes<'_>) -> tracing::span::Id {
-        tracing::span::Id::from_u64(1)
-    }
-
-    fn record(&self, _: &tracing::span::Id, _: &tracing::span::Record<'_>) {}
-
-    fn record_follows_from(&self, _: &tracing::span::Id, _: &tracing::span::Id) {}
-
-    fn event(&self, event: &tracing::Event<'_>) {
-        let mut v = MessageVisitor(String::new());
-        event.record(&mut v);
-        let m = event.metadata();
-        diag(&format!("{} {}: {}", m.target(), m.level(), v.0));
-    }
-
-    fn enter(&self, _: &tracing::span::Id) {}
-
-    fn exit(&self, _: &tracing::span::Id) {}
-}
-
-/// Idempotent. If another global subscriber is already set, this is a no-op.
-///
-/// A/IN-09: this claims the PROCESS-GLOBAL `tracing` subscriber (`steamcm_configure` runs it in
-/// the shell process). Two consequences:
-/// - a later `set_global_default` by any other crate fails (silently, if it ignores the error);
-/// - every event that is not a `steam_vent*` event at WARN or above is discarded (`enabled`).
-///
-/// That is safe today only because no other code in this workspace emits `tracing` events: crate
-/// diagnostics go through `crate::error::diag` (A/WR-03 moved the last `tracing::` calls there).
-/// Do not add `tracing::` calls expecting them to be seen, and do not install another global
-/// subscriber without replacing this one. A scoped dispatcher (`tracing::dispatcher::with_default`)
-/// was considered and not used: it is thread-local, and steam-vent spawns its own tokio tasks,
-/// which would run outside the scope and lose the forwarding this exists for.
-pub fn install_vent_log_forwarder() {
-    static ONCE: Once = Once::new();
-    ONCE.call_once(|| {
-        let _ = tracing::subscriber::set_global_default(VentLogForwarder);
-    });
-}
-
 #[allow(dead_code)]
 fn _assert_send_sync() {
     fn is<T: Send + Sync>() {}
@@ -607,12 +543,6 @@ mod tests {
         std::env::remove_var("SSLKEYLOGFILE");
         assert_eq!(r.err(), Some(CmError::Protocol("sslkeylogfile-set".into())));
         assert_eq!(a.err(), Some(CmError::Protocol("sslkeylogfile-set".into())));
-    }
-
-    #[test]
-    fn forwarder_install_is_idempotent() {
-        install_vent_log_forwarder();
-        install_vent_log_forwarder();
     }
 
     /// Spike 073 shape: anonymous PICS product info for app 480.

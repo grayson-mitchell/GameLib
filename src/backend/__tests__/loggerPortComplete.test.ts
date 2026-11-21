@@ -71,6 +71,16 @@ const RUST_SHELL_FORBIDDEN = ['shell_diag', 'gamelib-shell.log']
 /** The shell's own source tree, scanned for RUST_SHELL_FORBIDDEN. */
 const SHELL_SRC = 'src-tauri/src'
 
+/**
+ * steamcm's private tracing subscriber claimed the process-global subscriber, kept only steam_vent
+ * WARN+ and gave every span the id 1; the app-wide gamelib-log LogLayer replaced it (84-08).
+ */
+const STEAMCM_SRC = 'src-tauri/crates/gamelib-steamcm/src'
+const STEAMCM_FORWARDER_IDENTIFIERS = [
+  'VentLogForwarder',
+  'install_vent_log_forwarder'
+]
+
 /** The five file-write calls the TS logger no longer makes (the Rust shell writes every log file). */
 const FILE_WRITE_RE =
   /\b(appendFile|renameSync|writeFileSync|createWriteStream|mkdir)/
@@ -87,6 +97,8 @@ const SCANNED_FILES_FLOOR = 500
 const LOGGER_CHANNELS_FLOOR = 7
 /** src-tauri/src held 30+ .rs files when 84-08 measured it. */
 const RUST_FILES_FLOOR = 20
+/** gamelib-steamcm/src held 20+ .rs files when 84-08 measured it. */
+const STEAMCM_FILES_FLOOR = 10
 
 interface Manifest {
   channels: Record<string, { slice: string }>
@@ -171,6 +183,8 @@ describe('logger port complete (Phase 84, TS half)', () => {
   walk(join(ROOT, 'meta'), tsFiles, /\.(ts|tsx|cjs|js)$/)
   const rsFiles: string[] = []
   walk(join(ROOT, 'src-tauri', 'src'), rsFiles, /\.rs$/)
+  const steamcmFiles: string[] = []
+  walk(join(ROOT, STEAMCM_SRC), steamcmFiles, /\.rs$/)
   const load = (f: string) => ({
     path: relative(ROOT, f),
     src: readFileSync(f, 'utf8')
@@ -226,6 +240,13 @@ describe('logger port complete (Phase 84, TS half)', () => {
     }
   )
 
+  it.each(STEAMCM_FORWARDER_IDENTIFIERS)(
+    'comment-stripped %s is not named anywhere under the steamcm crate',
+    (id) => {
+      expect(rustIdentifierHits(steamcmFiles.map(load), [id])).toEqual([])
+    }
+  )
+
   it('anti-vacuity: the walk scanned a real tree and the manifest has the logger slice', () => {
     assertAtOrAboveFloor(
       'loggerPortComplete files',
@@ -236,6 +257,11 @@ describe('logger port complete (Phase 84, TS half)', () => {
       `loggerPortComplete rust files (${SHELL_SRC})`,
       rsFiles.length,
       RUST_FILES_FLOOR
+    )
+    assertAtOrAboveFloor(
+      `loggerPortComplete steamcm files (${STEAMCM_SRC})`,
+      steamcmFiles.length,
+      STEAMCM_FILES_FLOOR
     )
     assertAtOrAboveFloor(
       'logger-slice channels',
@@ -293,6 +319,27 @@ describe('logger port complete (Phase 84, TS half)', () => {
       rustIdentifierHits(
         [{ path: 'c.rs', src: commented }],
         RUST_SHELL_FORBIDDEN
+      )
+    ).toEqual([])
+  })
+
+  it('self-test: a steamcm forwarder identifier in code is caught, in a comment it is not', () => {
+    expect(
+      rustIdentifierHits(
+        [{ path: 'v.rs', src: 'install_vent_log_forwarder();' }],
+        STEAMCM_FORWARDER_IDENTIFIERS
+      )
+    ).toEqual(['v.rs: install_vent_log_forwarder'])
+    expect(
+      rustIdentifierHits(
+        [{ path: 'w.rs', src: 'struct VentLogForwarder;' }],
+        STEAMCM_FORWARDER_IDENTIFIERS
+      )
+    ).toEqual(['w.rs: VentLogForwarder'])
+    expect(
+      rustIdentifierHits(
+        [{ path: 'x.rs', src: '/// see VentLogForwarder\nfn a() {}' }],
+        STEAMCM_FORWARDER_IDENTIFIERS
       )
     ).toEqual([])
   })

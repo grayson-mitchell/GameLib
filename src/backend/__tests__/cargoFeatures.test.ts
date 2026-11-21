@@ -164,7 +164,10 @@ describe('Phase 34.4.2 Plan 13 (operator decision D-A) objc2-app-kit NSGraphicsC
  * Re-pinned by quick 261103-wjs after `70f7022af` (gilrs gamepad reader) added 9 crates, and by
  * Phase 79-01 (gamelib-steamcm, the steam-vent tree), and by Phase 82-03 (gamelib-safety,
  * gamelib-testutil, unicode-normalization; its tinyvec dependency was already locked), and by
- * Phase 84-02 (gamelib-log alone: chrono, serde, serde_json and iana-time-zone were already locked).
+ * Phase 84-02 (gamelib-log alone: chrono, serde, serde_json and iana-time-zone were already locked),
+ * and by Phase 84-08 (the crate-diagnostic bridges: tracing-subscriber, sharded-slab and
+ * thread_local; tracing-log is NOT pulled because tracing-subscriber is built with default features
+ * off, and a flip that pulls it fails this test).
  */
 const CARGO_LOCK_PATH = join(
   __dirname,
@@ -256,7 +259,7 @@ const EXPECTED_LOCKFILE_CRATE_NAMES = [
   "scopeguard", "security-framework", "security-framework-sys", "selectors", "semver", "serde",
   "serde-untagged", "serde_core", "serde_derive", "serde_derive_internals", "serde_json", "serde_repr",
   "serde_spanned", "serde_with", "serde_with_macros", "serialize-to-javascript", "serialize-to-javascript-impl", "servo_arc",
-  "sha-1", "sha1", "sha1_smol", "sha2", "shared_child", "shlex",
+  "sha-1", "sha1", "sha1_smol", "sha2", "sharded-slab", "shared_child", "shlex",
   "sigchld", "signal-hook", "signal-hook-registry", "signature", "simd-adler32", "simd_cesu8",
   "simdutf8", "siphasher", "slab", "smallvec", "socket2", "softbuffer",
   "soup3", "soup3-sys", "spin", "spki", "stable_deref_trait", "steam-machine-id",
@@ -267,11 +270,11 @@ const EXPECTED_LOCKFILE_CRATE_NAMES = [
   "tauri-codegen", "tauri-macros", "tauri-plugin", "tauri-plugin-clipboard-manager", "tauri-plugin-deep-link", "tauri-plugin-dialog",
   "tauri-plugin-fs", "tauri-plugin-notification", "tauri-plugin-opener", "tauri-plugin-shell", "tauri-plugin-updater", "tauri-runtime",
   "tauri-runtime-wry", "tauri-utils", "tauri-winres", "tauri-winrt-notification", "tempfile", "tendril",
-  "thiserror", "thiserror-impl", "tiff", "time", "time-core", "time-macros",
+  "thiserror", "thiserror-impl", "thread_local", "tiff", "time", "time-core", "time-macros",
   "tiny-keccak", "tinystr", "tinyvec", "tinyvec_macros", "tokio", "tokio-macros",
   "tokio-rustls", "tokio-stream", "tokio-tungstenite", "tokio-util", "toml", "toml_datetime",
   "toml_edit", "toml_parser", "toml_writer", "tower", "tower-http", "tower-layer",
-  "tower-service", "tracing", "tracing-attributes", "tracing-core", "tray-icon", "tree_magic_mini",
+  "tower-service", "tracing", "tracing-attributes", "tracing-core", "tracing-subscriber", "tray-icon", "tree_magic_mini",
   "try-lock", "tungstenite", "typeid", "typenum", "uds_windows", "unic-char-property",
   "unic-char-range", "unic-common", "unic-ucd-ident", "unic-ucd-version", "unicode-ident", "unicode-normalization", "unicode-segmentation",
   "untrusted", "url", "urlpattern", "utf8_iter", "uuid", "vec_map",

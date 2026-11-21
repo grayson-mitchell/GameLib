@@ -545,10 +545,7 @@ fn run<F: std::future::Future<Output = Value>>(f: F) -> Result<Value, String> {
     block_on_guarded(f)
 }
 
-/// Also installs the steam-vent log forwarder as the process-global `tracing` subscriber; see
-/// `vent::install_vent_log_forwarder` for what that takes from the host process.
 pub fn configure(app_folder: &str) -> Result<Value, String> {
-    crate::vent::install_vent_log_forwarder();
     let folder = PathBuf::from(app_folder);
     block_on_guarded(async { core().configure(folder) })??;
     Ok(json!({}))

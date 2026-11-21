@@ -19,6 +19,13 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 # `clock` is only for the local UTC offset at a given instant (`SystemTz`).
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+# Crate-diagnostic bridges (D-16, D-17, D-19): one process-wide tracing `Registry` carrying a
+# `LogLayer`, and a `log::Log` bridge for crates (reqwest) that emit through `log`. Default features
+# off keeps `tracing-log` out of the lockfile; only the `registry` feature (sharded-slab,
+# thread_local) is needed to give spans real ids.
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", default-features = false, features = ["registry"] }
+log = { version = "0.4", features = ["std"] }
 
 [dev-dependencies]
 gamelib-testutil = { path = "../gamelib-testutil" }

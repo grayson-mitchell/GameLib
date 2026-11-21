@@ -588,13 +588,22 @@ fn init_native_logger() {
         shell_eprintln!("[shell] native logger not started: no home directory");
         return;
     };
-    gamelib_log::init(gamelib_log::LogConfig {
+    let started = gamelib_log::init(gamelib_log::LogConfig {
         platform: paths.platform,
         log_dir: paths.log_dir,
         user_data: paths.user_data,
         clock: std::sync::Arc::new(gamelib_core::clock::SystemClock),
         tz: std::sync::Arc::new(gamelib_log::SystemTz),
     });
+    if started {
+        // D-16, D-17, D-19: steam-vent, gamelib-steamcm, reqwest and the other crates now log into
+        // gamelib.log through one app-wide tracing Registry and a `log` bridge. WARN and above by
+        // default; only `GAMELIB_LOG_LEVEL=debug` raises them to DEBUG. Only the primary instance
+        // reaches here (the reaper and a secondary launch exit before `init_native_logger`).
+        gamelib_log::bridge::install_bridges(gamelib_log::bridge::crate_level_from_env(
+            std::env::var("GAMELIB_LOG_LEVEL").ok().as_deref(),
+        ));
+    }
 }
 
 /// Where this process's logs and user data live, or `None` without a home directory. The one

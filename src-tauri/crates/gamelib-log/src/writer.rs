@@ -25,6 +25,23 @@ use crate::prefix::{Level, Prefix};
 /// Ingest capacity. Past it a caller's entry is dropped and counted, never waited for.
 const CHANNEL_CAPACITY: usize = 4096;
 
+thread_local! {
+    /// Set once, by the writer thread, at the top of its loop. The crate-diagnostic bridges
+    /// ([`crate::bridge`]) drop any event raised while it is set: a tracing or `log` event emitted
+    /// by code the writer calls would otherwise be written by the writer, which could emit again.
+    static ON_WRITER_THREAD: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Marks the calling thread as the writer thread (the writer's own thread, and tests).
+pub(crate) fn mark_writer_thread() {
+    ON_WRITER_THREAD.with(|f| f.set(true));
+}
+
+/// `true` on the writer thread.
+pub(crate) fn on_writer_thread() -> bool {
+    ON_WRITER_THREAD.with(std::cell::Cell::get)
+}
+
 /// How often an idle writer wakes to close the rate limiter's elapsed windows, so a log that goes
 /// quiet still gets its summary (D-14).
 const WRITER_TICK: Duration = Duration::from_secs(5);
@@ -108,7 +125,10 @@ impl Logger {
         let mut state = WriterState::new(cfg, Arc::clone(&dropped));
         let spawned = std::thread::Builder::new()
             .name("gamelib-log-writer".to_string())
-            .spawn(move || state.run(rx));
+            .spawn(move || {
+                mark_writer_thread();
+                state.run(rx);
+            });
         // A failed spawn leaves the receiver dropped: every `log` then counts a drop, never errors.
         drop(spawned);
         Logger {

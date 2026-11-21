@@ -4,6 +4,7 @@
 //! `tests/fixtures/golden`). The writer reads no environment: `LogConfig` carries the log dir, the
 //! user-data dir, the clock and the timezone source.
 
+pub mod bridge;
 pub mod format;
 pub mod frame;
 pub mod limiter;
