@@ -4,8 +4,8 @@ phase: 84-logger
 source: [84-CONTEXT.md D-01 D-05 D-07 D-08 D-13 D-14 D-16 D-18 D-19, 84-RESEARCH.md Gates and docs that grep log text verbatim, 84-RESEARCH.md Behaviour changes that are deliberate]
 authored_by: 84-01
 run_by: 84-11
-started:
-updated:
+started: 2026-11-21
+updated: 2026-11-21
 ---
 
 This is the live macOS gate contract for FND-05 (logs keep their format, location, rotation and redaction; log upload and
@@ -124,26 +124,83 @@ The dual-sink standard, in full.
 
 ## Required literals
 
-Sinks are the post-84 partition above. "Verdict at authoring" is CONDITIONAL for every row whose emitter does not exist yet
-or whose sink changes in Phase 84; plan 84-11 Task 1 re-greps each CONDITIONAL row against the then-current source and
-records the emitter file:line and sink before any scoring, and an IMPOSSIBLE row stops the run (it is amended, never scored).
+Sinks are the post-84 partition above. At authoring every row whose emitter did not exist yet, or whose sink changed in
+Phase 84, was conditional on code not yet written. Plan 84-11 Task 1 re-grepped each such row against the then-current
+source (2026-11-21, HEAD b3e8857fc) and recorded the emitter file:line and sink below; a row that cannot be emitted is
+IMPOSSIBLE, stops the run, and is amended, never scored. No row is IMPOSSIBLE.
 
 | Literal | Emitting plan and file | Sink | Verdict at authoring |
 |---|---|---|---|
-| `[Shell]:` prefix chunk | 84-02 `gamelib-log` line format, 84-08 `shell_log` | `gamelib.log` | CONDITIONAL: neither emitter exists; re-check owner 84-11 Task 1 |
-| `reaper started (pid ` | 83-08 `shell_diag` at `src-tauri/src/main.rs:1867` today, routed to `shell_log` by 84-08 | transcript (`[shell] `) and `gamelib.log` | CONDITIONAL: the call exists, the post-84 routing does not; re-check owner 84-11 Task 1 |
-| `System facts:` | `logBootFacts` at `src/backend/logger/index.ts:139`, called at `src/backend/sidecar/bootstrap.ts:2510`, sent through the 84-03 forwarder | `gamelib.log` | CONDITIONAL: emitter exists, forwarder does not; re-check owner 84-11 Task 1 |
-| `Logging to file(s) ` | 84-02 writer on a rotate of a runner or game target, driven by the 84-04 facade (today `src/backend/logger/log_writer.ts`, DEBUG `[Backend]`) | `gamelib.log` | CONDITIONAL: the Rust writer does not exist; re-check owner 84-11 Task 1 |
-| `============= End of log =============` | 84-04 facade `LogWriter.close` (today `log_writer.ts` `close`, called at `src/backend/launcher.ts:317`, `:357`, `:419`) | the game's `launch.log` | CONDITIONAL: the facade does not exist; re-check owner 84-11 Task 1 |
-| `Uploaded log file ` | 84-05 (today `src/backend/logger/uploader.ts:109`, `logInfo` with `[LogUploader]`) | `gamelib.log` | CONDITIONAL: the Rust uploader does not exist; re-check owner 84-11 Task 1 |
-| `exit finished in ` | 83-09 `shell_diag` in `handle_exit` at `src-tauri/src/main.rs:841`, moved into `finish` by 84-09 | transcript (`[shell] `) and `gamelib.log` | CONDITIONAL: the move and the post-84 sink do not exist; re-check owner 84-11 Task 1 |
-| `still running at exit deadline:` | 83-09 at `src-tauri/src/main.rs:846`, moved by 84-09; absent unless a drain overran | transcript and `gamelib.log` | CONDITIONAL: as above; absence is non-vacuous only because `exit finished in ` is the positive line on the same path |
-| `lines dropped` (must be ABSENT) | 84-03 forwarder and 84-02 writer | `gamelib.log` | CONDITIONAL: neither emitter exists; absence is scored only after 84-11 Task 1 confirms both emit and write to `gamelib.log`; the emission is proven by their own unit tests, so the live check confirms an existing structural guarantee, not a novel discovery |
-| `log frame rejected` (must be ABSENT) | 84-03 reader arm in the shell | `gamelib.log` and transcript | CONDITIONAL: the reader arm does not exist; same absence rule as `lines dropped` |
+| `[Shell]:` prefix chunk | 84-02 `gamelib-log` line format, 84-08 `shell_log` | `gamelib.log` | REACHABLE: `shell_log` at `src-tauri/src/main.rs:545` calls `shell_log_to` (`:551`), which logs `gamelib_log::Prefix::Shell` through the native writer; `Prefix::Shell` line format pinned by `src-tauri/crates/gamelib-log/src/format.rs:126` |
+| `reaper started (pid ` | 83-08 `shell_diag` at `src-tauri/src/main.rs:1867` today, routed to `shell_log` by 84-08 | transcript (`[shell] `) and `gamelib.log` | REACHABLE: emitter `src-tauri/src/main.rs:1944` (`shell_log`); `init_native_logger()` (`:1936`) runs before `gamelib_proc::reaper::start()` (`:1943`), so the writer is live when the line is logged; sinks stderr `[shell] ` echo (`:546`) and `gamelib.log` `[Shell]` |
+| `System facts:` | `logBootFacts` at `src/backend/logger/index.ts:139`, called at `src/backend/sidecar/bootstrap.ts:2510`, sent through the 84-03 forwarder | `gamelib.log` | REACHABLE: emitter `src/backend/logger/index.ts:178-190` (`logBootFacts`, `logInfo` with `LogPrefix.Backend`), called at `src/backend/sidecar/bootstrap.ts:2515`; `logInfo` goes through the `LogForwarder` (`index.ts:22`, `:33`), frames to the shell writer; `gamelib.log` only |
+| `Logging to file(s) ` | 84-02 writer on a rotate of a runner or game target, driven by the 84-04 facade (today `src/backend/logger/log_writer.ts`, DEBUG `[Backend]`) | `gamelib.log` | REACHABLE: emitter `src-tauri/crates/gamelib-log/src/writer.rs:353` (`self.general(Level::Debug, ...)` on a typed target with `batch.rotate`, written to `gamelib.log`); the facade `src/backend/logger/targetWriter.ts` enqueues the rotate flag |
+| `============= End of log =============` | 84-04 facade `LogWriter.close` (today `log_writer.ts` `close`, called at `src/backend/launcher.ts:317`, `:357`, `:419`) | the game's `launch.log` | REACHABLE: emitter `src/backend/logger/targetWriter.ts:59` (`END_OF_LOG`), written by `close()` at `:189`; sink the game's `launch.log` through the forwarder and native writer |
+| `Uploaded log file ` | 84-05 (today `src/backend/logger/uploader.ts:109`, `logInfo` with `[LogUploader]`) | `gamelib.log` | REACHABLE: emitter `src-tauri/src/log_upload.rs:296` (`Uploaded log file {name} to {url}`), logged to `gamelib.log` by the native uploader |
+| `exit finished in ` | 83-09 `shell_diag` in `handle_exit` at `src-tauri/src/main.rs:841`, moved into `finish` by 84-09 | transcript (`[shell] `) and `gamelib.log` | REACHABLE: emitter `src-tauri/src/main.rs:892` (`shell_log`, inside the `finish` closure of `handle_exit`), followed by `gamelib_log::flush(ctx.remaining)` (`:899`); sinks transcript `[shell] ` and `gamelib.log` `[Shell]` |
+| `still running at exit deadline:` | 83-09 at `src-tauri/src/main.rs:846`, moved by 84-09; absent unless a drain overran | transcript and `gamelib.log` | REACHABLE: emitter `src-tauri/src/main.rs:895` (`shell_log`, inside `finish`, only when `ctx.still_running` is non-empty); absence is non-vacuous only because `exit finished in ` (`:892`) is the positive line on the same path. ORDER NOTE: the code logs `exit finished in ` first and this line second, the reverse of item 8's expectation; see the Pre-run re-check |
+| `lines dropped` (must be ABSENT) | 84-03 forwarder and 84-02 writer | `gamelib.log` | REACHABLE: emitters `src/backend/logger/forwarder.ts:441` (`lines dropped (queue full)`) and `src-tauri/crates/gamelib-log/src/writer.rs:305` (`lines dropped (ingest full)`, `general(Level::Warning, ...)` into `gamelib.log`); absence is therefore observable |
+| `log frame rejected` (must be ABSENT) | 84-03 reader arm in the shell | `gamelib.log` and transcript | REACHABLE: emitter `src-tauri/src/sidecar.rs:372` (`[shell] log frame rejected:` stderr) and `:374-376` (`gamelib_log::log` with `Prefix::Shell`, into `gamelib.log`); absence is therefore observable |
+
+## Pre-run re-check
+
+Run by 84-11 Task 1 on 2026-11-21 at HEAD `b3e8857fc23e5ab57608c7d690dc52cbf853184f`, before any launch.
+
+### Required literals re-grepped (`grep -rnF` over `src-tauri/src`, `src-tauri/crates`, `src/backend`)
+
+| Literal | Emitter file:line | Sink actually reached | Verdict |
+|---|---|---|---|
+| `[Shell]:` prefix chunk | `src-tauri/src/main.rs:545` `shell_log` -> `:551` `shell_log_to` (`Prefix::Shell`); format `src-tauri/crates/gamelib-log/src/format.rs:126` | `gamelib.log`; stderr echo `[shell] ` at `:546` | REACHABLE |
+| `reaper started (pid ` | `src-tauri/src/main.rs:1944`; `init_native_logger()` at `:1936` precedes `reaper::start()` at `:1943` | `gamelib.log` as `[Shell]`, and transcript `[shell] ` | REACHABLE |
+| `System facts:` | `src/backend/logger/index.ts:182` (`logBootFacts`, `:178`), called at `src/backend/sidecar/bootstrap.ts:2515`, through `LogForwarder` (`index.ts:22`) | `gamelib.log` only | REACHABLE |
+| `Logging to file(s) ` | `src-tauri/crates/gamelib-log/src/writer.rs:353` (rotate of a typed target) | `gamelib.log` (general log), not the game's `launch.log` | REACHABLE |
+| `============= End of log =============` | `src/backend/logger/targetWriter.ts:59` (`END_OF_LOG`), written by `close()` at `:189` | the game's `launch.log` | REACHABLE |
+| `Uploaded log file ` | `src-tauri/src/log_upload.rs:296` | `gamelib.log` | REACHABLE |
+| `exit finished in ` | `src-tauri/src/main.rs:892` (in `handle_exit`'s `finish`), flush at `:900` | transcript `[shell] ` and `gamelib.log` `[Shell]` | REACHABLE |
+| `still running at exit deadline:` | `src-tauri/src/main.rs:895` (only when a drain overran) | transcript and `gamelib.log` | REACHABLE (see order note) |
+| `lines dropped` (absent) | `src/backend/logger/forwarder.ts:441`, `src-tauri/crates/gamelib-log/src/writer.rs:305` | `gamelib.log` | REACHABLE (absence observable) |
+| `log frame rejected` (absent) | `src-tauri/src/sidecar.rs:372` (stderr), `:374-376` (`gamelib.log`) | `gamelib.log` and transcript | REACHABLE (absence observable) |
+
+No row is IMPOSSIBLE, so the run is not stopped.
+
+Formats checked against the golden expected files: `gamelib.log` shell line is `(13:05:09) [INFO]:    [Shell]:           reaper started (pid 4242)`
+(4 spaces after `[INFO]:`, 11 after `[Shell]:`) and the game line is `[DEBUG]:   [Backend]:         Logging to file(s) ...`
+(3 and 9), so the item 1 and item 4 regexes match the emitted format.
+
+### Findings recorded at the re-check (nothing is fixed here)
+
+- **Item 8 order note.** `handle_exit`'s `finish` logs `exit finished in <ms> ms` (`main.rs:892`) and then, only if a drain
+  overran, `still running at exit deadline:` (`main.rs:895`). Item 8's expected text and this plan demand the deadline
+  line BEFORE the exit line. The contradiction bites only when a drain overran: with no overrun the deadline line is absent
+  and item 8 is scored on the exit line and its bound alone. If a launch shows a deadline line, item 8 is `issue` for that
+  launch on the contract's wording, with the order as the evidence; the fix (reorder the two calls, or amend the contract)
+  goes to `/gsd-plan-phase 84 --gaps`, not into this plan.
+- **Store path case.** The uploaded-logs store is `~/Library/Application Support/gamelib/store/uploadedLogs.json`
+  (lowercase `gamelib`, per `log_upload.rs:276`); the contract spells `GameLib`. APFS here is case-insensitive, so both spellings resolve.
+- **Sidecar bundle holds uncommitted work.** `build/main/sidecar.js` was built from a tree that also carries another
+  session's uncommitted `src/backend/storeManagers/steam/` changes (`bridge/helperProcess.ts`, `gameBridgeLaunch.ts`,
+  `bridge/otherSessionPlaying.ts`, tests). They do not touch `src/backend/logger/`.
+
+### Automatable preflight
+
+- **P1** `pnpm build:sidecar` exit 0; `build/main/sidecar.js` mtime `Nov 21 21:26:44 2026` is newer than the last
+  `src/backend` commit (`06a741eb1`, `Sat Nov 21 21:14:20 2026 +1300`). PASS.
+- **P2** before launch 1: `pgrep -f 'target/debug/gamelib-shell'` empty, `pgrep -f -- '--gamelib-reaper'` empty,
+  `env | grep -c '^GAMELIB_LOG_LEVEL='` prints 0. PASS. Must be repeated before EVERY launch.
+- **P3** log directory baseline taken. `~/Library/Logs/GameLib/` holds `gamelib.log` (mode 600, 11904 bytes, `Nov 21 20:41`,
+  91 lines), `gamelib.log.old` (mode 600, 10282 bytes, 83 lines), `gamelib-shell.log` and older `gamelib.log.*` snapshots.
+  Both were copied to the session dir as `preexisting-gamelib.log` and `preexisting-gamelib.log.old`.
+  `gamelib-shell.log` baseline `stat -f '%m %z'` = `1795246522 1348615` (item 1 requires it unchanged).
+  `uploadedLogs.json` does not exist yet: baseline entry count is 0 (item 6 expects one entry afterwards, not "one more
+  than an existing file").
+- **P7** session dir: `/private/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/2ac7689c-6dfc-4793-b795-25f79a4607b8/scratchpad/gamelib-gate-2026-11-21T082706Z`
+  (under `/tmp`, never committed), holding `notes.txt`, `terminal.log` (empty) and the two preexisting copies.
+- **P4, P5, P6** need the operator and are not yet recorded: P4 a TS-launched game with Verbose logs ON, P5 a signed-in
+  Steam account with at least one owned, not-installed game, P6 a benign log chosen for the upload.
 
 ## Current Test
 
-[pending — run by plan 84-11]
+[pending — Task 1 re-check done (no IMPOSSIBLE row); awaiting the operator-driven launches 1-4, then scoring (84-11 Task 2/3)]
 
 ## Tests
 
