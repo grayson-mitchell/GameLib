@@ -1,0 +1,290 @@
+---
+status: pending
+phase: 84-logger
+source: [84-CONTEXT.md D-01 D-05 D-07 D-08 D-13 D-14 D-16 D-18 D-19, 84-RESEARCH.md Gates and docs that grep log text verbatim, 84-RESEARCH.md Behaviour changes that are deliberate]
+authored_by: 84-01
+run_by: 84-11
+started:
+updated:
+---
+
+This is the live macOS gate contract for FND-05 (logs keep their format, location, rotation and redaction; log upload and
+"show in folder" still work; crate diagnostics reach the log; shell lines live in `gamelib.log`). It was authored by plan
+84-01 before any Phase 84 logger code exists and is run by plan 84-11, never by its author (live-gate-contract-authoring
+standing rule D-E). Nothing in this file has been run. Every verdict in the review below is an authoring-time verdict.
+
+From Phase 84 on, shell lines are scored in `gamelib.log` as `[Shell]` lines and in the terminal transcript as `[shell] `
+lines, and `gamelib-shell.log` is no longer written (84-CONTEXT D-01). The 83 gate scored `gamelib-shell.log` by pid; that
+file is not read by this contract except to prove it is no longer written (item 1).
+
+## Launch recipe
+
+1. Run `pnpm build:sidecar`, then confirm `build/main/sidecar.js` has an mtime newer than the last backend commit
+   (`tauri dev` does not rebuild the sidecar, so a stale sidecar would still use the TS writer).
+2. Launch only with `pnpm tauri:dev`, never `tauri:dev:run` (it skips the dev-vault flag, so Keychain prompts every launch).
+3. The crate-diagnostics launch (launch 3) is `GAMELIB_LOG_LEVEL=debug pnpm tauri:dev`, with the variable as a prefix on
+   that one command so it never persists in the shell (84-CONTEXT D-19). It is its own launch ordinal, so the variable never
+   reaches launches 1, 2 or 4.
+4. Four launches, in this order: launch 1 (items 1, 2), launch 2 (items 3, 5, 6, 4), launch 3 (item 7, debug), launch 4
+   (item 7, default level). Item 8 is read from all four. Every launch ends with a graceful Cmd+Q (a Force Quit writes no
+   exit line, so it cannot be scored by item 8). Network off only for an action that needs it, never during reporting.
+
+## Sink partition after Phase 84
+
+This is the authority for the contract. It restates, for the post-84 world, the partition that
+`.claude/skills/spike-findings-gamelib/references/live-gate-contract-authoring.md` Section 2 Test 3 describes for the
+pre-84 world. Each row names the plan that makes it true; none is true yet at authoring.
+
+| Source | Reaches `gamelib.log` | Reaches the terminal transcript | Made true by |
+|---|---|---|---|
+| Rust shell lines (`shell_log`) | yes, as `(HH:MM:SS) [LEVEL]:   [Shell]:           <msg>` | yes, as `[shell] <msg>` (the stderr echo) | 84-08 |
+| Crate diagnostics (tracing and `log` bridges) | yes, with `[Steam]` or `[Backend]` prefixes | no | 84-08 |
+| Sidecar `logInfo`, `logWarning`, `logError`, `logDebug` | yes (forwarder frames ride stdout, the RPC pipe) | no | 84-03, 84-04 |
+| Sidecar `console.*` | no | no | unchanged |
+| Sidecar stderr | no | yes, as `[sidecar:err]` | unchanged |
+| The reaper's own `[reaper] ` stderr lines | no | yes (transcript only) | unchanged (83-07) |
+| `gamelib-shell.log` | not written any more (a stale copy from older releases may exist and is left alone) | not applicable | 84-08 |
+
+The consequence for scoring: a `[Shell]` line is demanded of `gamelib.log` and, as `[shell] <msg>`, of the transcript (two
+different sinks for one call); a sidecar line is demanded of `gamelib.log` only; a crate line is demanded of `gamelib.log`
+only; the transcript is never asked for a sidecar-emitted line.
+
+## Deliberate behaviour changes
+
+Each is one line, with the decision that makes it deliberate. None is a regression when observed.
+
+- New log files are mode 0600 (D-18); today's TS writer never set a mode (files were `0o666 & ~umask`).
+- `gamelib.log` rotates once per app launch, not once per sidecar process (84-RESEARCH change 1).
+- A second GameLib launch never rotates (84-RESEARCH change 2); this contract never starts a second instance.
+- Shell lines are persisted on Windows for the first time (84-RESEARCH Pitfall 6); not scored here (no Windows gate).
+- A single log message over the per-entry cap is truncated with a marker (84-03); not scored live (no live trigger).
+
+## Preflight
+
+Record each result in `"$S/notes.txt"` before the first launch. Record pids, process names, literals and counts only; never a
+full `args` line (it can carry a user name in a path).
+
+- P1 sidecar freshness: `pnpm build:sidecar`, then `stat -f %Sm build/main/sidecar.js` against
+  `git log -1 --format=%cd -- src/backend`. Record both times; abort if the sidecar is older.
+- P2 zero instances and a clean environment, before EVERY launch: `pgrep -f 'target/debug/gamelib-shell'` and
+  `pgrep -f -- '--gamelib-reaper'` both print nothing, and `env | grep -c '^GAMELIB_LOG_LEVEL='` prints 0. Record the three
+  results. A leftover process from an earlier session is killed by pid and the check is re-run.
+- P3 baseline of the log directory, taken once before launch 1: `ls -la ~/Library/Logs/GameLib/`; copy any existing
+  `gamelib.log` and `gamelib.log.old` into the session directory as `preexisting-gamelib.log` and
+  `preexisting-gamelib.log.old`; if `~/Library/Logs/GameLib/gamelib-shell.log` exists, record
+  `stat -f '%m %z' ~/Library/Logs/GameLib/gamelib-shell.log` (item 1 checks it does not change). Also record
+  `stat -f '%m %z' ~/Library/Application\ Support/GameLib/store/uploadedLogs.json` if the file exists, and its entry count
+  with `node -e 'console.log(Object.keys(JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"))).length)' <that file>`
+  (item 6 checks one entry is added; print the count only, never the URLs or tokens).
+- P4 a game GameLib launches through the TS runner and that writes a GameLib launch log: a GOG, Epic, Amazon or sideloaded
+  game, installed, ideally a Wine launch on this Mac (the `Wine Command:` header is written only by the Wine runner,
+  `src/backend/commandRunner.ts:342`). Record its runner and appName. NOT a Steam game: a Steam handoff writes no GameLib
+  launch log, and the Settings log picker lists only epic, gog, amazon and sideloaded games
+  (`src/frontend/screens/Settings/sections/LogSettings/index.tsx:80-100`, `:170-185`). Its per-game "Verbose logs" setting
+  (Game settings, Advanced) must be ON, or the launch log holds only the two forced `IMPORTANT: Logs are disabled` warnings
+  (`src/backend/launcher.ts:283-296`, `src/backend/logger/index.ts` `createGameLogWriter`); record the setting.
+- P5 a Steam account signed in inside GameLib, for item 7 (Test 6 external state). The positive observable is that the Steam
+  library lists at least one owned game that is not installed; record the count only. The Steam tile deliberately hides the
+  account name, so it is not evidence either way, and the account name is never recorded.
+- P6 a benign log the operator is willing to post publicly for 2 days, chosen for item 6. The Settings Log box shows the
+  selected log's content, so the operator reads it before confirming. Not the GameLib log (it holds paths and session
+  lines). Record only which picker entry was chosen, never any content.
+- P7 the session directory, created once (see Evidence capture), with `notes.txt` in it.
+
+## Evidence capture
+
+The dual-sink standard, in full.
+
+- One session directory per gate run, created once before the first launch, named with a UTC timestamp:
+  `S=/tmp/gamelib-gate-$(date -u +%Y-%m-%dT%H:%M:%SZ); mkdir -p "$S"`. Captures stay under `/tmp` and are never committed.
+- Every launch is `pnpm tauri:dev 2>&1 | tee -a "$S/terminal.log"` (launch 3:
+  `GAMELIB_LOG_LEVEL=debug pnpm tauri:dev 2>&1 | tee -a "$S/terminal.log"`). Never a bare `tee`, never a `>` redirect, and the
+  file is named exactly `terminal.log` (83's run lost launch 2 to a misnamed `terminal.log.`).
+- Before each launch write the delimiter, exactly, as its own command BEFORE the launch command:
+  `echo "=== GATE LAUNCH ${N} — $(date -u +%Y-%m-%dT%H:%M:%SZ) ===" | tee -a "$S/terminal.log"`
+  (find the sections again with `grep -n '^=== GATE LAUNCH' "$S/terminal.log"`).
+- After each launch exits and BEFORE the next launch starts, archive both files while they still exist:
+  `cp ~/Library/Logs/GameLib/gamelib.log "$S/gamelib-launch-${N}.log"` and
+  `cp ~/Library/Logs/GameLib/gamelib.log.old "$S/gamelib-old-after-launch-${N}.log"` (skip the second copy only if
+  `gamelib.log.old` does not exist, and record that). The next launch's first write renames `gamelib.log` to
+  `gamelib.log.old`, replacing whatever `.old` held, so the copies must come first. After launch 1 the `.old` is the
+  pre-session log from an older release (also in `preexisting-gamelib.log`).
+- Exactly one app instance, asserted. Before each launch P2's results are empty/zero. After the window appears, count shell
+  processes with the reaper excluded (the reaper is the same executable, so a bare `pgrep -f 'target/debug/gamelib-shell'`
+  also matches it and reads 2):
+  `ps -axo pid,ppid,pgid,args | grep 'target/debug/gamelib-shell' | grep -v -- '--gamelib-reaper' | grep -v grep` must print
+  exactly one line. Write its pid to `"$S/shell-pid-${N}.txt"`, write the reaper pid
+  (`pgrep -f -- '--gamelib-reaper'`) to `"$S/reaper-pid-${N}.txt"`, and echo the shell pid into the transcript with
+  `echo "gate shell pid ${N}: <pid>" | tee -a "$S/terminal.log"`. Record the shell pid again immediately before Cmd+Q. If the
+  count is ever not 1 the launch is ABORTED and re-run: its evidence is not scorable.
+- Game files (item 4): after the first game launch exits, `cp` the game's `launch.log` to `"$S/game-launch-1.log"` before the
+  second game launch (the second launch rotates it).
+- Closing inventory, at session end: `ls -la "$S/"` and `wc -l "$S"/*`, recorded in the result of the last item run, so a
+  missing or zero-length capture is visible while the evidence still exists.
+
+## Required literals
+
+Sinks are the post-84 partition above. "Verdict at authoring" is CONDITIONAL for every row whose emitter does not exist yet
+or whose sink changes in Phase 84; plan 84-11 Task 1 re-greps each CONDITIONAL row against the then-current source and
+records the emitter file:line and sink before any scoring, and an IMPOSSIBLE row stops the run (it is amended, never scored).
+
+| Literal | Emitting plan and file | Sink | Verdict at authoring |
+|---|---|---|---|
+| `[Shell]:` prefix chunk | 84-02 `gamelib-log` line format, 84-08 `shell_log` | `gamelib.log` | CONDITIONAL: neither emitter exists; re-check owner 84-11 Task 1 |
+| `reaper started (pid ` | 83-08 `shell_diag` at `src-tauri/src/main.rs:1867` today, routed to `shell_log` by 84-08 | transcript (`[shell] `) and `gamelib.log` | CONDITIONAL: the call exists, the post-84 routing does not; re-check owner 84-11 Task 1 |
+| `System facts:` | `logBootFacts` at `src/backend/logger/index.ts:139`, called at `src/backend/sidecar/bootstrap.ts:2510`, sent through the 84-03 forwarder | `gamelib.log` | CONDITIONAL: emitter exists, forwarder does not; re-check owner 84-11 Task 1 |
+| `Logging to file(s) ` | 84-02 writer on a rotate of a runner or game target, driven by the 84-04 facade (today `src/backend/logger/log_writer.ts`, DEBUG `[Backend]`) | `gamelib.log` | CONDITIONAL: the Rust writer does not exist; re-check owner 84-11 Task 1 |
+| `============= End of log =============` | 84-04 facade `LogWriter.close` (today `log_writer.ts` `close`, called at `src/backend/launcher.ts:317`, `:357`, `:419`) | the game's `launch.log` | CONDITIONAL: the facade does not exist; re-check owner 84-11 Task 1 |
+| `Uploaded log file ` | 84-05 (today `src/backend/logger/uploader.ts:109`, `logInfo` with `[LogUploader]`) | `gamelib.log` | CONDITIONAL: the Rust uploader does not exist; re-check owner 84-11 Task 1 |
+| `exit finished in ` | 83-09 `shell_diag` in `handle_exit` at `src-tauri/src/main.rs:841`, moved into `finish` by 84-09 | transcript (`[shell] `) and `gamelib.log` | CONDITIONAL: the move and the post-84 sink do not exist; re-check owner 84-11 Task 1 |
+| `still running at exit deadline:` | 83-09 at `src-tauri/src/main.rs:846`, moved by 84-09; absent unless a drain overran | transcript and `gamelib.log` | CONDITIONAL: as above; absence is non-vacuous only because `exit finished in ` is the positive line on the same path |
+| `lines dropped` (must be ABSENT) | 84-03 forwarder and 84-02 writer | `gamelib.log` | CONDITIONAL: neither emitter exists; absence is scored only after 84-11 Task 1 confirms both emit and write to `gamelib.log`; the emission is proven by their own unit tests, so the live check confirms an existing structural guarantee, not a novel discovery |
+| `log frame rejected` (must be ABSENT) | 84-03 reader arm in the shell | `gamelib.log` and transcript | CONDITIONAL: the reader arm does not exist; same absence rule as `lines dropped` |
+
+## Current Test
+
+[pending — run by plan 84-11]
+
+## Tests
+
+### 1. Shell lines persist in gamelib.log with the [Shell] prefix and gamelib-shell.log is not written (D-01, criterion 4)
+expected: In launch 1 (read from `gamelib-launch-1.log` and `terminal.log` after the launch exits), `gamelib-launch-1.log` holds a line matching `^\(\d{2}:\d{2}:\d{2}\) \[INFO\]: {4}\[Shell\]: {11}reaper started \(pid \d+\)$` whose pid equals the reaper pid in `reaper-pid-1.txt`, `terminal.log` holds `[shell] reaper started (pid ` with the same pid in launch 1's section, and `gamelib-shell.log`'s mtime and size equal the P3 baseline (or it is still absent).
+result: pending
+
+### 2. TS sidecar lines keep the line format (criterion 1)
+expected: In launch 1, `gamelib-launch-1.log` holds a `System facts:` line matching `^\(\d{2}:\d{2}:\d{2}\) \[INFO\]: {4}\[Backend\]: {9}System facts: `, and `lines dropped` and `log frame rejected` are absent from `gamelib-launch-1.log` and from launch 1's section of `terminal.log` (re-checked on all four launches' archives).
+result: pending
+
+### 3. Rotation once per app launch, and new files are 0600 (criterion 1, D-18)
+expected: In launch 2, after its window appears (launch 2 reads launch 1's archive), `cmp "$S/gamelib-launch-1.log" ~/Library/Logs/GameLib/gamelib.log.old` reports no difference and `stat -f %Lp ~/Library/Logs/GameLib/gamelib.log` prints 600.
+result: pending
+
+### 4. A game transcript is written by the native writer and keeps its bytes (D-05, D-06)
+expected: In launch 2, launch the P4 game twice from GameLib, quitting it normally in between and copying `launch.log` to `$S/game-launch-1.log` after the first quit; after the second quit `gamelib-launch-2.log` (archived after launch 2 exits) holds at least two `^\(\d{2}:\d{2}:\d{2}\) \[DEBUG\]: {3}\[Backend\]: {9}Logging to file\(s\) .*/games/<appName>_<runner>/launch\.log$` lines, `launch.log` starts with the runner's header line (record which: `Wine Command:` for Wine launches) and ends with `============= End of log =============`, `cmp "$S/game-launch-1.log" launch.log.old` reports no difference, and `lines dropped` is absent.
+result: pending
+
+### 5. Show in folder (criterion 2)
+expected: In launch 2, Settings, Log, pick the GameLib entry, click "Show log file in folder": Finder opens `~/Library/Logs/GameLib` with `gamelib.log` selected.
+result: pending
+
+### 6. Upload and the uploaded list (criterion 2, D-07, D-09)
+expected: In launch 2, upload the P6 benign log through the dialog (Yes on the confirm): the dialog shows an `https://dpaste.com/` URL, "Show uploaded log files" lists the entry by name, `~/Library/Application Support/GameLib/store/uploadedLogs.json` holds that URL with name, token and uploadedAt in 2-space JSON and one more entry than the P3 count, and `gamelib-launch-2.log` has a `[LogUploader]:` line containing `Uploaded log file `; record only the URL host and the entry name, never the log content.
+result: pending
+
+### 7. Crate diagnostics reach the log (criterion 3, D-16, D-19)
+expected: In launch 3 (`GAMELIB_LOG_LEVEL=debug`), with the P5 signed-in account, pressing the Library header's Refresh produces in `gamelib-launch-3.log` at least one `[DEBUG]:   [Steam]:` line whose message text is found by no `grep -rnF` over `src/backend` (so it came from a steam-vent or gamelib-steamcm tracing event, not a TS `logDebug`) and at least one `[Backend]:` line from an http-stack crate, and in launch 4 (no variable, P2 confirms) the same Refresh adds no `[DEBUG]` line whose message text matches any launch-3 crate-origin line.
+result: pending
+
+### 8. The exit lines are flushed into gamelib.log inside the deadline (D-13 as amended, D-21)
+expected: Read from launches 1-4 (each ended by Cmd+Q), each `gamelib-launch-N.log` holds a `[Shell]` line `exit finished in <ms> ms` with ms at most 5000, and a `still running at exit deadline:` line appears only if a drain overran and, when present, comes before that exit line; presence and order are scored, never end-of-file, so lines that land after the exit line (late sidecar frames or teardown `[Shell]` lines from other threads) do not affect the score.
+result: pending
+
+## Withdrawn from live scoring
+
+- Delete-uploaded: no reachable UI control, so no gesture can reach it live (`UploadedLogFilesList/index.tsx:59-64` is a JSX
+  comment block; `UploadedLogFilesList/__tests__/deleteButtonReachability.test.tsx` proves no rendered control reaches the
+  channel). Covered instead by the Rust round-trip test in 84-06.
+- The rate limiter: no live trigger exists without injecting a fault into the running app. Covered instead by the limiter
+  golden in 84-04.
+- Windows: no live gate is claimed. CI's Windows leg is the Windows proof (paths, rotation with a held `.old`, and 0600 is
+  unix-only), per research OQ5. The same reasoning leaves Linux to CI; this contract is a macOS gate.
+
+## Structural Reachability Review
+
+Authored by 84-01 on 2026-11-21 against the tree at HEAD, before any Phase 84 logger code exists. Every Phase 84 emitter is
+absent, so every row that depends on one is CONDITIONAL and names 84-11 Task 1 as its re-check. REACHABLE means the surface
+exists in current source and the gesture or command can be performed; IMPOSSIBLE means it cannot, and no row is IMPOSSIBLE.
+
+| Item/sub-check/precondition | Surface it names | What it asks for | Verdict | Evidence |
+|---|---|---|---|---|
+| Item 1: `[Shell]` line in gamelib.log | `shell_log` (84-08), `gamelib-log` writer (84-02) | the line with the reaper pid | CONDITIONAL: emitter not written; 84-11 Task 1 re-greps. T3 SINK: the transcript line is the stderr echo `[shell] <msg>` (`src-tauri/src/main.rs:581-582`, `shell_diag`) and the `gamelib.log` line is the writer, two different sinks for one call | the call exists at `src-tauri/src/main.rs:1867`; the pid is the reaper's (`gamelib_proc::reaper::start()` returns it) and `reaper-pid-1.txt` records it by command |
+| Item 1: gamelib-shell.log unchanged | the file written by `shell_diag` today (`main.rs:568-600`) | mtime and size equal the P3 baseline | CONDITIONAL: holds only after 84-08 removes the file write. T4: presence case observable, because today every launch appends many lines (the 83 run's launch 1 and launch 2 each wrote 16 and 24 `pid=` lines to it), so an unchanged file proves the write is gone | `stat -f '%m %z'` before and after, P3 |
+| Item 2: `System facts:` line | `logBootFacts` through the forwarder | the line format with `[Backend]:` and 9 spaces | CONDITIONAL: emitter exists, forwarder (84-03) does not. T3 SINK: sidecar `logInfo` reaches `gamelib.log` only, never the transcript, so the line is demanded of `gamelib-launch-1.log` only | `src/backend/logger/index.ts:139`, `src/backend/sidecar/bootstrap.ts:2510`; padding from `formatter.ts` and `constants.ts` (longest prefix 15, so `[Backend]:` pads to 18) |
+| Item 2: `lines dropped` and `log frame rejected` absent | 84-03 forwarder, 84-02 writer, reader arm | absence in both sinks | CONDITIONAL. T4: confirmation of an existing structural guarantee, not a novel live discovery; each emitter is proven by its own unit test, and the rows in Required literals say so | Required literals table rows 9 and 10; re-check owner 84-11 Task 1 |
+| Item 3: `cmp` launch 1 archive against `.old` | `gamelib.log.old` after launch 2's first write | no difference, proving one rotation at launch 2 | REACHABLE once 84-02 rotates; CONDITIONAL on it. T5: depends on the archive step running before launch 2 (flagged pair F1) | `cmp` exit status; rotation rule `log_writer.ts` `#archiveOldLogFile` today, 84-02 tomorrow |
+| Item 3: `stat -f %Lp` prints 600 | the live `gamelib.log` at launch 2 | the mode of a file created by the Rust writer | CONDITIONAL: 0600 comes from 84-02 (D-18). T6: gamelib.log is created at launch 2's first write, so the pre-session 0644 file (renamed to `.old` at launch 1) cannot be read by mistake | `stat -f %Lp ~/Library/Logs/GameLib/gamelib.log`, read while launch 2 is running |
+| Item 4: game launch twice | the installed P4 game's Play control | two launches, quitting between | REACHABLE: T7: the picker lists installed epic, gog, amazon and sideloaded games; the launch path writes a per-launch writer | `src/backend/launcher.ts:283` (`createGameLogWriter`, one writer per launch); `LogSettings/index.tsx:80-100`, `:170-185` |
+| Item 4: `Logging to file(s)` lines and header | the facade and Rust writer (84-04, 84-02) | at least two DEBUG `[Backend]` lines naming the game's `launch.log` | CONDITIONAL: neither exists. T3 SINK: the line goes to `gamelib.log` (the general log), not to the game's launch log | `log_writer.ts` `Logging to file(s)` today; each launch builds a new writer, so one line per launch |
+| Item 4: `End of log` and header in `launch.log` | the game's `launch.log` | the header first, `============= End of log =============` last | CONDITIONAL on 84-04. T6: P4 requires Verbose logs ON, because with it OFF the launch log holds only the two forced warnings and no header (`launcher.ts:283-296`) | `src/backend/commandRunner.ts:342` (`Wine Command:` header), `launcher.ts:317`, `:357`, `:419` (`logWriter.close()`) |
+| Item 4: `cmp game-launch-1.log launch.log.old` | `launch.log.old` | the first launch's bytes | CONDITIONAL on 84-02 rotating a game target per writer. T5: flagged pair F5, resolved by the `cp` step between the two launches | `cmp`; evidence-capture bullet "Game files" |
+| Item 5: show in folder | `LogSettings` footer control | Finder opens the log directory with `gamelib.log` selected | REACHABLE as a gesture; CONDITIONAL on 84-05's native path. T7: Settings (tier-2 panel) then Log renders `LogSettings` with `isInSettingsMenu`; the picker button `GameLib` (`index.tsx:206-221`) selects `{}`; `getLogContent` returns the content, so `logFileExist` is true and the control renders; the click calls `window.api.showLogFileInFolder(showLogOf)` | `src/frontend/screens/Settings/sections/LogSettings/index.tsx:130-132`, `:236-239` (render guard `logFileExist &&`) |
+| Item 6: upload through the dialog | `LogSettings` footer Upload control, `LogFileUploadDialog` | the confirm, an `https://dpaste.com/` URL | REACHABLE as a gesture; CONDITIONAL on 84-05. T1: the one URL is the https dpaste endpoint (`uploader.ts:14`), not an http fixture. T2: the dialog is modal and sequential, nothing is driven concurrently. T7: picker entry, then the footer Upload control (`index.tsx:252-258`) sets `uploadLogFileProps`, the dialog's Yes (`LogFileUploadDialog/index.tsx:65`) runs `doUpload` (`:26-52`) and then shows `Uploaded to {{url}}` | `LogFileUploadDialog/index.tsx:26-52`, `:65`; one-shot resource: an upload cannot be retracted (`uploader.ts` has no delete), so a failed score is not retried by uploading again |
+| Item 6: uploaded list and `uploadedLogs.json` | `UploadedLogFilesList`, `store/uploadedLogs.json` | the entry by name; the URL, name, token and uploadedAt in 2-space JSON; count plus one | CONDITIONAL on 84-06. T7: "Show uploaded log files" renders only `isInSettingsMenu` (`LogSettings/index.tsx:273-277`) and the row shows `<td>{name}</td>` (`UploadedLogFilesList/index.tsx:50`). T6: pre-existing entries from earlier sessions are why P3 records a count | P3 baseline; `src/backend/logger/stores.ts:13-16` (`uploadedLogs`, `cwd: 'store'`) |
+| Item 6: `Uploaded log file ` line | the uploader's `logInfo` `[LogUploader]` | the line in `gamelib-launch-2.log` | CONDITIONAL on 84-05. T3 SINK: reaches `gamelib.log` only | `src/backend/logger/uploader.ts:109` today |
+| Item 7: crate `[DEBUG] [Steam]` and `[Backend]` lines | tracing and `log` bridges (84-08), Library header Refresh | at least one of each in launch 3 | CONDITIONAL on 84-08. T7: the Library header's Refresh button runs `refreshLibrary({checkForUpdates: true, origin: 'action-icons-refresh-button'})` for all runners | `src/frontend/components/UI/Header/index.tsx:471-482`; `src/frontend/state/libraryState.ts:407-470`; T3 SINK: crate lines reach `gamelib.log` only |
+| Item 7: launch 4 absence | launch 4's `[DEBUG]` Steam lines | none whose text matches a launch-3 crate-origin line | CONDITIONAL. T4: the absence is meaningful only because the same Refresh in launch 3 produced those lines (the positive control); a TS `logDebug` with the `Steam` prefix would otherwise be mistaken for a crate line, which is why crate origin is defined as "message text found by no `grep -rnF` over `src/backend`", compared by text, not by prefix alone | launch 3 and launch 4 archives; residual risk recorded: a cached Refresh could emit fewer crate events in launch 4, so a missing line is read together with launch 3's set |
+| Item 8: exit line presence, bound and order | `exit finished in <ms> ms`, `still running at exit deadline:` | present, at most 5000, deadline line (if any) before it | CONDITIONAL on 84-09. T3 SINK: both are `[Shell]` lines in `gamelib.log` after 84-08, and `[shell] ` lines in the transcript. T4: presence is the positive control for the deadline line. T5: scores presence and order, never end-of-file (late sidecar frames and teardown `[Shell]` lines from other threads can follow the exit line) | `src-tauri/src/main.rs:841`, `:846` (today) |
+| P1 sidecar freshness | `build/main/sidecar.js` | newer than the last `src/backend` commit | REACHABLE | `stat -f %Sm build/main/sidecar.js`; `git log -1 --format=%cd -- src/backend` |
+| P2 zero instances and clean env | process table and shell env | two empty `pgrep` results and zero `GAMELIB_LOG_LEVEL` | REACHABLE. T5 and T6: a stale instance or a lingering variable is the F-34.4.2-15 and F-34.4.2-18 shape, checked before every launch | `pgrep -f 'target/debug/gamelib-shell'`, `pgrep -f -- '--gamelib-reaper'`, `env` |
+| P3 baseline | `~/Library/Logs/GameLib/`, `uploadedLogs.json` | listing, copies, stat, entry count | REACHABLE. T6: names the pre-existing `gamelib.log`, `gamelib.log.old`, `gamelib-shell.log` and uploaded-logs state this run starts from | `ls -la`, `stat -f`, `node -e` entry count |
+| P4 a TS-launched game with Verbose logs on | an installed gog, epic, amazon or sideloaded game | runner, appName, setting recorded | REACHABLE. T6: the game's existing `launch.log` from earlier sessions is rotated into `.old` by the first launch and replaced by the second, so only the two launches in this run remain; Verbose logs ON is the premise | `launcher.ts:283-296`; `LogSettings/index.tsx:170-185` |
+| P5 signed-in Steam account | the Steam library | at least one owned, not-installed game (count only) | REACHABLE. T6: an emptied app-side store would not prove a signed-out session, so the positive observable is the library content; the tile hides the account name by design | Library view, Steam filter |
+| P6 a benign log to publish | the Settings Log box | a log the operator has read | REACHABLE. T6: external state is the operator's judgement of what is benign; the contract records only the URL host and the entry name | `LogSettings/index.tsx:206-221` (picker), the Log box |
+| P7 the session directory | `/tmp/gamelib-gate-<UTC>/` | created once | REACHABLE | `mkdir -p "$S"` |
+| Evidence-capture instruction across Tests 1-4, 6, 7 | `terminal.log`, the archive copies | `tee -a`, delimiter, per-launch archive, one-instance assert, closing inventory | REACHABLE. T3: each literal is read from the sink its row names. T5: see the pairing pass | the Evidence capture section; `live-gate-contract-authoring.md` Section 3 |
+
+**Test 1 (origin/scheme).** The only network origin is `https://dpaste.com/api/v2/` (`src/backend/logger/uploader.ts:14`), a
+real https endpoint; no http fixture origin and no login URL is required. Steam sign-in is a precondition (P5), never driven.
+
+**Test 2 (concurrency).** Nothing is driven at once: the upload dialog is modal and sequential, Finder opens after the click,
+and the two game launches are sequential by design.
+
+**Test 3 (emitter and SINK).** Every literal is in the Required literals table with its sink, and the sink column is the
+post-84 partition. Sidecar lines are demanded of `gamelib.log` only; `[Shell]` lines of both sinks as two different sinks;
+crate lines of `gamelib.log` only. The transcript is never asked for a sidecar-emitted line (the F-34.4.2-14 shape).
+
+**Test 4 (absence-observability).** Four absences: `lines dropped`, `log frame rejected` (structural guarantees, each with a
+unit-tested emitter; the live check confirms them), gamelib-shell.log unchanged (observable: today every launch appends a couple of dozen lines), and launch 4's missing crate lines (observable: launch 3's positive control).
+
+**Test 5 (requirement interaction), the pairing pass.** Reduction applied: every state-mutating requirement against every
+evidence-bearing requirement, not the full cross product. State-mutating requirements (M = 8): relaunch 2, relaunch 3,
+relaunch 4, the `GAMELIB_LOG_LEVEL` change (set for launch 3, unset for launch 4, counted as one), game launch 1, game
+launch 2, the upload, and the graceful quit that ends each launch. Evidence-bearing requirements (N = 11): `terminal.log`,
+the `gamelib-launch-N.log` archives, the `gamelib-old-after-launch-N.log` archives, the live `gamelib.log` (cmp and stat
+reads), the P3 `gamelib-shell.log` baseline, the game's `launch.log`, `launch.log.old`, `uploadedLogs.json`, the item 3
+`cmp`, the item 3 `stat`, and the absence checks (`lines dropped`, `log frame rejected`). Total pairs considered: **88 (8 x 11)**. Pairs flagged: **7**.
+
+- F1: relaunch 2 x the live `gamelib.log` and the launch 1 archive. Launch 2's first write renames `gamelib.log` to
+  `.old`. Resolution: launch 1's copy is archived before launch 2 starts, and item 3 compares that copy to `.old`.
+- F2: relaunch 2, 3 and 4 x the `gamelib-old-after-launch-N.log` archives. Each launch replaces `.old`. Resolution: archive
+  `.old` after each launch and before the next.
+- F3: every relaunch x `terminal.log`. A bare `tee` truncates on each new process. Resolution: `tee -a` and the delimiter
+  command run as its own step before each launch.
+- F4: the `GAMELIB_LOG_LEVEL` change x item 7's launch 4 absence and item 2's absences. The variable must not reach launch
+  4. Resolution: it is a command prefix on launch 3 only, and P2 asserts `env | grep -c '^GAMELIB_LOG_LEVEL='` is 0 before
+  launches 1, 2 and 4.
+- F5: game launch 2 x `launch.log`. The second launch rotates the first launch's file into `.old`. Resolution: item 4
+  copies `launch.log` to `game-launch-1.log` between the launches and compares that copy with `.old`.
+- F6: the upload x `uploadedLogs.json`. Entries from earlier sessions would make "the URL is present" vacuous.
+  Resolution: P3 records the entry count and item 6 asserts the count rose by one and names the new URL.
+- F7: every relaunch x the one-instance assertion. A previous instance or its reaper still alive splits the sinks.
+  Resolution: P2's two `pgrep` checks before every launch, and a graceful Cmd+Q to end each launch.
+
+Considered and not flagged: the upload x item 4's `launch.log` (the upload only reads the chosen log), the graceful quit x
+items 5 and 6 (they run earlier in launch 2), and every relaunch x the `stat` mode read (the file is created at that
+launch's first write and read in the same launch).
+
+**Test 6 (pre-existing external state).** Per item: item 1 depends on the pre-session `gamelib-shell.log` (P3 records it).
+Item 3 depends on the pre-session `gamelib.log` and `.old` (renamed at launch 1; `preexisting-*` copies kept). Item 4 depends
+on the game's earlier `launch.log` and its Verbose logs setting (P4). Item 5 depends on Finder (a window opened by another
+app; read by eye). Item 6 depends on `uploadedLogs.json` from earlier sessions (P3) and on dpaste being reachable. Item 7
+depends on the live Steam sign-in (P5, a positive observable) and on Steam's own cached state. Item 8 depends on a graceful
+quit in every launch.
+
+**Test 7 (UI-level reachability).** Items 4 to 7 are traced above to the components that render each control: the
+LogSettings picker, footer controls and uploaded-list button (`src/frontend/screens/Settings/sections/LogSettings/index.tsx`
+at the lines cited), `LogFileUploadDialog/index.tsx`, `UploadedLogFilesList/index.tsx` and the Library header Refresh
+(`src/frontend/components/UI/Header/index.tsx:471-482`). The delete control is commented out and is withdrawn above.
+
+**Run order.** P1 to P7, then launch 1 (item 1, item 2; item 8 read after exit), archive, launch 2 (item 3 first, then 5, 6,
+4), archive, launch 3 (item 7 with `GAMELIB_LOG_LEVEL=debug`), archive, launch 4 (item 7 without it), archive, read item 8 across all four archives,
+then the closing inventory.
+
+## Summary
+
+total: 8
+passed: 0
+issues: 0
+pending: 8
+skipped: 0
+blocked: 0

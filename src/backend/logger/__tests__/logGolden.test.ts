@@ -345,20 +345,18 @@ class Tree {
     if (accepted) {
       // The line's message body is the oracle's own output with its prefix chunk removed: format a
       // one-character marker to learn the header, then cut it from the real line.
-      const header = (
-        await formatLogMessage('X', level, prefix as LogPrefix)
-      ).slice(0, -1)
+      const header = (await formatLogMessage('X', level, prefix)).slice(0, -1)
       const full = await formatLogMessage(
         buildMessage(c as GoldenLineCase),
         level,
-        prefix as LogPrefix
+        prefix
       )
       if (full.length) {
         expect(full.startsWith(header)).toBe(true)
         msg = full.slice(header.length)
       }
     }
-    const options = { prefix: prefix as LogPrefix, forceLog: c.forceLog }
+    const options = { prefix: prefix, forceLog: c.forceLog }
     const method = (
       {
         DEBUG: 'logDebug',
