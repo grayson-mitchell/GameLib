@@ -17,15 +17,20 @@
  *   6. `originSeq` acks: an `applied` event removes exactly the pending op with that `seq`.
  *   7. A `refused` event (a failed persist, a read-only or not-owned store) drops the pending op
  *      and the view reverts to base plus what is still pending.
- *   8. `rev` only ever rises: `baseRev` is the highest rev seen. The shell counts a store's
- *      changes from its own open, and this plan has one writer per store (this cell), so a late
- *      cell needs no rev handshake yet; the renderer-native writes of 85-17 add one.
+ *   8. `rev` only ever rises: `baseRev` is the highest rev seen. A `changed` event (another origin,
+ *      emitted by the shell from 85-17) is applied to base when its rev is above `baseRev` and
+ *      dropped otherwise. A cell created late starts at rev 0 and loads whatever the file shows;
+ *      because ops assign state, an event the file already reflects converges when it is applied
+ *      once more. The load-time rev handshake that skips those repeats belongs to 85-17.
  *
  * A write refused by this cell itself (a read-only store, the reserved `__internal__` namespace, a
  * frame the shell would reject) changes nothing and sends nothing, as the conf store did.
  *
  * Values cross as JSON text. `JSON.stringify(value)` is the frame's `valueJson` and the same text
  * is parsed back for the pending op, so what the view holds is exactly what the disk will hold.
+ *
+ * Dot paths are `dotPath.ts` (dot-prop 6, proven on the oracle vectors Rust also passes), so the
+ * view after a local write is what the shell will persist for the same frame.
  *
  * Sidecar exit contract: the only timer is `flush`'s deadline, and it is `unref()`ed.
  * Pure otherwise: no logger (stderr lines name the store key and a reason word, never a value).
@@ -55,14 +60,23 @@ interface PendingOp {
   op: MirrorOp
 }
 
-type StoreMirrorEventOp = 'applied' | 'refused' | 'flushed'
+/**
+ * What the shell tells the sidecar about a store. `applied`, `refused` and `flushed` answer one of
+ * this process's own frames and carry its `originSeq`; `changed` reports a write from another
+ * origin (the renderer, 85-17) and has none. A `changed` event names the write the way a frame
+ * does: `key` and `valueJson` is a `set`, `key` alone a `delete`, `valueJson` alone a `replace`,
+ * neither a `clear`.
+ */
+type StoreMirrorEventOp = 'applied' | 'refused' | 'flushed' | 'changed'
 
 export interface StoreMirrorEvent {
   store: string
   rev: number
   op: StoreMirrorEventOp
-  originSeq: number
+  originSeq?: number
   reason?: 'read-only' | 'evicted' | 'rejected' | 'io' | 'not-owned'
+  key?: string
+  valueJson?: string
 }
 
 export interface MirrorCellOptions {
@@ -105,9 +119,20 @@ function applyOp(doc: Doc, op: MirrorOp, dotPaths: boolean): void {
     case 'clear':
       emptyDoc(doc)
       return
-    case 'replace':
+    case 'replace': {
       emptyDoc(doc)
-      Object.assign(doc, cloneJson(op.value))
+      const next = cloneJson(op.value)
+      // Own properties, never `Object.assign`: its [[Set]] would turn an own `__proto__` key of
+      // the value into a write to the prototype.
+      for (const key of Object.keys(next)) {
+        Object.defineProperty(doc, key, {
+          value: next[key],
+          writable: true,
+          enumerable: true,
+          configurable: true
+        })
+      }
+    }
   }
 }
 
@@ -145,7 +170,10 @@ export class MirrorCell {
   private readonly sink: StoreFrameSink
   private readonly nextSeq: () => number
   private readonly base: Doc
-  /** `base` with `pending` folded over it; only held while something is pending. */
+  /**
+   * `base` with `pending` folded over it. `null` while nothing is pending, and also whenever a
+   * change to `base` has made the cached fold stale: it is rebuilt on the next read.
+   */
   private viewDoc: Doc | null = null
   private pending: PendingOp[] = []
   private baseRevValue = 0
@@ -168,7 +196,7 @@ export class MirrorCell {
     this.base = options.startEmpty ? {} : loadFile(options.path)
   }
 
-  /** The highest `rev` the shell has told this cell about. */
+  /** The highest `rev` the shell has told this cell about (`lastRev` of S1 rule 8). */
   get baseRev(): number {
     return this.baseRevValue
   }
@@ -178,8 +206,18 @@ export class MirrorCell {
     return this.pending.length
   }
 
+  /** The fold of `pending` over `base`, built on demand and kept until `base` or `pending` changes. */
+  private materialize(): Doc {
+    if (this.viewDoc === null) {
+      const doc = cloneJson(this.base)
+      for (const { op } of this.pending) applyOp(doc, op, this.dotPaths)
+      this.viewDoc = doc
+    }
+    return this.viewDoc
+  }
+
   private get view(): Doc {
-    return this.viewDoc ?? this.base
+    return this.pending.length === 0 ? this.base : this.materialize()
   }
 
   // ---- reads: always from the view -------------------------------------------------------
@@ -237,8 +275,8 @@ export class MirrorCell {
       )
       return
     }
-    if (this.viewDoc === null) this.viewDoc = cloneJson(this.base)
-    applyOp(this.viewDoc, op, this.dotPaths)
+    // The fold before this op joins `pending`, then the op on top of it.
+    applyOp(this.materialize(), op, this.dotPaths)
     this.pending.push({ seq: frame.seq, op })
     this.sink.send(frame)
   }
@@ -284,12 +322,18 @@ export class MirrorCell {
     })
   }
 
-  // ---- the shell's answers ---------------------------------------------------------------
+  // ---- the shell's events ----------------------------------------------------------------
 
   applyEvent(event: StoreMirrorEvent): void {
-    const waiter = this.flushWaiters.get(event.originSeq)
+    if (event.op === 'changed') {
+      this.applyChanged(event)
+      return
+    }
+    const { originSeq } = event
+    if (originSeq === undefined) return
+    const waiter = this.flushWaiters.get(originSeq)
     if (waiter) {
-      this.flushWaiters.delete(event.originSeq)
+      this.flushWaiters.delete(originSeq)
       clearTimeout(waiter.timer)
       if (event.op === 'flushed') waiter.resolve()
       else {
@@ -299,42 +343,108 @@ export class MirrorCell {
       }
       return
     }
-    const index = this.pending.findIndex((p) => p.seq === event.originSeq)
+    const index = this.pending.findIndex((p) => p.seq === originSeq)
     if (index === -1) return
     const [settled] = this.pending.splice(index, 1) as [PendingOp]
     if (event.op === 'applied') {
+      // The shell answers in apply order, so the op it names is the oldest pending one and moving
+      // it onto base leaves base plus the rest exactly what the view already was. Anything else
+      // (an answer out of order) rebuilds the view rather than trust that.
       applyOp(this.base, settled.op, this.dotPaths)
       this.baseRevValue = Math.max(this.baseRevValue, event.rev)
-      if (this.pending.length === 0) this.viewDoc = null
+      if (this.pending.length === 0 || index !== 0) this.viewDoc = null
       return
     }
     // refused: the view reverts to base plus what is still pending.
     process.stderr.write(
       `[mirrorCell] ${this.storeKey}: store write refused by the shell (${event.reason ?? 'unknown'})\n`
     )
-    if (this.pending.length === 0) {
-      this.viewDoc = null
-      return
+    this.viewDoc = null
+  }
+
+  /**
+   * A write from another origin, in the shell's rev order (S1 rule 8). A rev at or below `baseRev`
+   * is already reflected (this cell was created after it, or the event is a repeat) and is dropped;
+   * anything above it moves `base`, and the view is recomputed from base plus what this cell still
+   * has pending, so a local write the shell has not answered yet stays visible until it is applied
+   * or refused. Ops assign state, so a late cell whose file already shows an event converges when
+   * the same event is applied once more. A change that cannot be read as one of the four ops is
+   * dropped with one stderr line that names the reason, never the key or the value.
+   */
+  private applyChanged(event: StoreMirrorEvent): void {
+    if (event.rev <= this.baseRevValue) return
+    const op = this.opOfChange(event)
+    if (op === null) return
+    applyOp(this.base, op, this.dotPaths)
+    this.baseRevValue = event.rev
+    this.viewDoc = null
+  }
+
+  private opOfChange(event: StoreMirrorEvent): MirrorOp | null {
+    const { key, valueJson } = event
+    const shape: StoreFrame = {
+      kind: STORE_FRAME_KIND,
+      seq: 1,
+      store: this.storeKey,
+      op:
+        key !== undefined
+          ? valueJson !== undefined
+            ? 'set'
+            : 'delete'
+          : valueJson !== undefined
+            ? 'replace'
+            : 'clear'
     }
-    const rebuilt = cloneJson(this.base)
-    for (const { op } of this.pending) applyOp(rebuilt, op, this.dotPaths)
-    this.viewDoc = rebuilt
+    if (key !== undefined) shape.key = key
+    if (valueJson !== undefined) shape.valueJson = valueJson
+    // The same checks the shell applies to a frame: a reserved or prototype path, text that is not
+    // JSON, a `replace` that is not an object.
+    const verdict = validateStoreFrame(shape)
+    if (!verdict.ok) {
+      process.stderr.write(
+        `[mirrorCell] ${this.storeKey}: change event dropped (${verdict.reason})\n`
+      )
+      return null
+    }
+    const value =
+      valueJson === undefined ? undefined : (JSON.parse(valueJson) as unknown)
+    switch (shape.op) {
+      case 'set':
+        return { kind: 'set', key: key as string, value }
+      case 'delete':
+        return { kind: 'delete', key: key as string }
+      case 'replace': {
+        // The freshly parsed object itself, not a spread of it: a copy made with `Object.assign`
+        // semantics would turn an own `__proto__` key into a write to the prototype.
+        const doc = value as Doc
+        delete doc[RESERVED_KEY]
+        return { kind: 'replace', value: doc }
+      }
+      default:
+        return { kind: 'clear' }
+    }
   }
 }
 
-const EVENT_OPS: readonly string[] = ['applied', 'refused', 'flushed']
+const ACK_OPS: readonly string[] = ['applied', 'refused', 'flushed']
 
-/** Whether `value` has the shape of a `storeMirrorEvent` payload (the channel's schema already ran). */
+/**
+ * Whether `value` has the shape of a `storeMirrorEvent` payload (the channel's schema already ran).
+ * An answer to one of this process's frames names its `originSeq`; a `changed` event may carry a
+ * `key` and a `valueJson` instead (strings only) and has no `originSeq`.
+ */
 export function isStoreMirrorEvent(value: unknown): value is StoreMirrorEvent {
   if (typeof value !== 'object' || value === null) return false
   const e = value as Record<string, unknown>
-  return (
-    typeof e.store === 'string' &&
-    typeof e.rev === 'number' &&
-    typeof e.originSeq === 'number' &&
-    typeof e.op === 'string' &&
-    EVENT_OPS.includes(e.op)
-  )
+  if (typeof e.store !== 'string' || typeof e.rev !== 'number') return false
+  if (typeof e.op !== 'string') return false
+  if (e.op === 'changed') {
+    return (
+      (e.key === undefined || typeof e.key === 'string') &&
+      (e.valueJson === undefined || typeof e.valueJson === 'string')
+    )
+  }
+  return ACK_OPS.includes(e.op) && typeof e.originSeq === 'number'
 }
 
 export interface MirrorRegistryDeps {
@@ -376,5 +486,29 @@ export class MirrorRegistry {
     if (!cell) return false
     cell.applyEvent(event)
     return true
+  }
+
+  /**
+   * Quit durability: resolves once the shell has applied every frame this boot sent, or after
+   * `timeoutMs`, whichever is first. It never rejects, so a missing or slow peer cannot hold the
+   * exit: the cases that would reject (a deadline, a refused flush) cost one stderr line.
+   *
+   * The shell applies frames in one FIFO, so the barrier for the whole sink is a single `flush`
+   * frame behind them, sent through a cell that still has something unanswered (that store is one
+   * the shell owns, which a flush must name). No pending write anywhere means nothing to wait for.
+   * The deadline timer is `unref()`ed, so it never keeps the sidecar open.
+   */
+  async flushStores(timeoutMs: number): Promise<void> {
+    const waiting = [...this.cells.values()].find(
+      (cell) => cell.pendingCount > 0
+    )
+    if (waiting === undefined) return
+    try {
+      await waiting.flush(timeoutMs)
+    } catch (error) {
+      process.stderr.write(
+        `[mirrorCell] store flush at quit did not complete: ${error instanceof Error ? error.message : 'unknown'}\n`
+      )
+    }
   }
 }

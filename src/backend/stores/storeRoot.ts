@@ -27,6 +27,7 @@
  * notifier was. `storeWriteHandlers.ts` forbids a second `pushFrontendMessage(STORE_CHANGED_CHANNEL)`
  * call site: this channel holds a function reference that points at that one site.
  */
+import { basename } from 'path'
 import type { StoreChangedPayload } from 'common/types/sidecarTransport'
 import { createMigrations, type MigrationOverrides } from '../storeMigrations'
 import {
@@ -89,6 +90,23 @@ const NO_FRAME_SINK: StoreFrameSink = {
 
 const NO_BOOT: StoreBootEnv = { readOnly: new Map(), startEmpty: new Set() }
 
+/**
+ * The stores the shell found read-only at boot (`GAMELIB_STORE_BOOT`), entered into the root's
+ * aggregate so the once-per-launch notice (payload unchanged, D-12) lists them beside the stores
+ * the TS engine marks. Keyed like the engine's own entries (`<dir>/<name>`, `<name>.json`), so a
+ * store both sides report is recorded once.
+ */
+function seedBootReadOnly(readOnly: ReadOnlyStores, boot: StoreBootEnv): void {
+  for (const [storeKey, reason] of boot.readOnly) {
+    readOnly.record({
+      storeKey,
+      file: `${basename(storeKey)}.json`,
+      reason,
+      detail: 'reported by the Rust store host'
+    })
+  }
+}
+
 function createStoreChangeChannel(): StoreChangeChannel {
   let push: StorePush | null = null
   let suppressDepth = 0
@@ -147,6 +165,7 @@ export function createStoreRoot(deps: {
   const frameSink = deps.frameSink ?? NO_FRAME_SINK
   const boot = deps.boot ?? NO_BOOT
   const readOnly = createReadOnlyStores({ sinks: deps.readOnlySinks })
+  seedBootReadOnly(readOnly, boot)
   const versioning = createStoreVersioning({
     migrations: createMigrations({ overrides: deps.migrationOverrides }),
     readOnly
