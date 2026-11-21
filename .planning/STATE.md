@@ -6,10 +6,10 @@ current_phase: 84
 current_phase_name: Logger
 status: executing
 stopped_at: Completed 84-05-PLAN.md
-last_updated: "2026-11-21T05:47:57.658Z"
+last_updated: "2026-11-21T07:15:02.279Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 84 execution started
-state_head: c68bc33906afc3b1482cea0a7d7aedaa6e75c62e
+state_head: 6cec972e7853606f5d0e6ac68c24d0c9d489be8c
 progress:
   total_phases: 19
   completed_phases: 23
@@ -682,6 +682,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261121-mpt | Close G-82-2-r3: narrow runTs.test.ts node_modules/.cache pins for codecheck tsbuildinfo; real-time-bounded wait for steamBridgeKnownFixes 15s timeout test | 2026-11-21 | a354ce4b7 | — | [261121-mpt-close-g-82-2-r3-narrow-runts-test-ts-nod](./quick/261121-mpt-close-g-82-2-r3-narrow-runts-test-ts-nod/) |
 | 261121-o99 | Close Phase 82 deferred review findings (WR-02, WR-05, WR-06, WR-09, IN-01..IN-05) | 2026-11-21 | 81edc90b7 | — | [261121-o99-close-phase-82-deferred-review-findings](./quick/261121-o99-close-phase-82-deferred-review-findings/) |
 | 261121-p6z | Bound bootstrap.test.ts legacy-zoom cleanup wait by wall-clock via shared yieldUntil (siblings swept, none converted) | 2026-11-21 | 1ffdec537 | — | [261121-p6z-bound-bootstrap-test-ts-legacy-zoom-clea](./quick/261121-p6z-bound-bootstrap-test-ts-legacy-zoom-clea/) |
+| 15 | Fix Phase 82 review WR-13: runTs shared-cache pin matches every node_modules/.cache spelling, exempting only --tsBuildInfoFile | 2026-11-21 | 6cec972e7 | — | — |
 
 ## Deferred Items
 
