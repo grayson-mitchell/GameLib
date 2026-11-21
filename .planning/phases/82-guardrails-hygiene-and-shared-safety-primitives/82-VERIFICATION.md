@@ -1,8 +1,8 @@
 ---
 phase: 82-guardrails-hygiene-and-shared-safety-primitives
-verified: 2026-11-21T04:30:00Z
-status: human_needed
-score: 8/9 must-haves verified
+verified: 2026-11-21T08:00:00Z
+status: passed
+score: 9/9 must-haves verified
 covered_files:
   - ".planning/phases/82-guardrails-hygiene-and-shared-safety-primitives/82-01-PLAN.md"
   - ".planning/phases/82-guardrails-hygiene-and-shared-safety-primitives/82-01-SUMMARY.md"
@@ -54,75 +54,79 @@ covered_files:
   - "src-tauri/crates/gamelib-safety/tests/trust_root_contract.rs"
   - "src-tauri/crates/gamelib-testutil/src/lib.rs"
   - "src-tauri/src/safety_dispatch.rs"
+  - "src/backend/safety/__tests__/knownInstalls.test.ts"
   - "src/backend/safety/knownInstalls.ts"
   - "src/backend/safety/protectedRoots.ts"
+  - "src/backend/safety/refusal.ts"
   - "src/backend/safety/rustSafety.ts"
   - "src/backend/sidecar/sidecarRpc.ts"
   - "src/backend/storeManagers/gog/games.ts"
   - "src/backend/storeManagers/steam/bridge/__tests__/sharedRedistInstall.test.ts"
   - "src/backend/storeManagers/steam/cancelDelete.ts"
   - "src/backend/testUtils/__tests__/fakeSafetyRustContract.test.ts"
+  - "src/backend/testUtils/__tests__/yieldUntil.test.ts"
   - "src/backend/testUtils/censusFloor.ts"
   - "src/backend/testUtils/fakeSafetyRust.ts"
   - "src/backend/testUtils/rawRecursiveDeletes.ts"
+  - "src/backend/testUtils/yieldUntil.ts"
   - "src/backend/utils/uninstaller.ts"
-covered_digest: "v4:sha256:a67afcb8096fa5cc1f0b05ac25c4fad4622a4be9402f35317e7f545b6bbbaa80"
+covered_digest: "v4:sha256:e46ef39cb4f611d542ca0d4e8ae06fe1504e29e2ed66640a3fa2c9bbb68ceebd"
 behavior_unverified: 0
 overrides_applied: 1
 overrides:
   - must_have: "The zero-risk deletions (type-only files, legendary/commands/*, fileStore.ts only after the live-or-dead check) are gone"
     reason: "Operator ruling D-19 (82-CONTEXT, 2026-11-20) moved legendary/commands/* and the type-only files to Phase 91 (10 live importers, runtime zod brands in base.ts); fileStore.ts failed the live-or-dead check (dead in the runtime bundle, live as the test store of about 27 jest suites), which 82-CONTEXT already routes to Phase 85 scope. Dead exports, proxy-types analysis and the CI=e2e surface were done. Follow-up todo filed."
-    accepted_by: "operator via 82-CONTEXT D-19 (verifier recorded; operator should confirm by editing ROADMAP SC5 wording)"
-    accepted_at: "2026-11-20T00:00:00Z"
+    accepted_by: "operator via 82-CONTEXT D-19; operator confirmed the override as is on 2026-11-21 (82-UAT.md test 4), ROADMAP SC5 wording left unchanged"
+    accepted_at: "2026-11-21T00:00:00Z"
 re_verification:
   previous_status: human_needed
-  previous_score: 7/7
+  previous_score: 8/9
   gaps_closed:
-    - "G-82-2 (UNBOUNDED_RUST_CHANNELS exact-set pin) closed by quick 261120-uzn; dialogOptionForwarding.test.ts passes in my run"
-    - "G-82-2-r2 test defect (turn-counted wait in the installer-timeout tests) closed by plan 82-20 in code; CI observation still pending (human item 1)"
-    - "Prior human item 1 (live sidecar -> shell round trip) resolved by operator UAT test 1 on 2026-11-20 (1a and 1b pass, 1c skipped with a recorded reason)"
-    - "Prior human item 2, Rust half: Rust test run 44850161688 at 90ca09d02 is green on all three OS legs (I confirmed with gh)"
+    - "Prior human item 1 (green CI on a pushed main with the 82-20 fix): resolved. 82-UAT.md test 2 passed on attribution at 5bd0c0b72 (Phase 82 checks green there, remaining reds owned elsewhere); test 3 accepted by the operator. I confirmed with gh that the gamelib-safety and gamelib-testutil step is green on all three OS legs of Rust test 44872994911, and that the only failure in Test 44872994910 is gameDetailsImportGate Gate 7 (Phase 84-05)."
+    - "Prior human item 2 (SC5 override wording): resolved. Operator accepted the D-19 override as is on 2026-11-21 (82-UAT.md test 4)."
   gaps_remaining: []
   regressions: []
 gaps: []
 deferred: []
 advisory:
-  - finding: "WR-11 (82-REVIEW.md): the 'import after the Jest environment has been torn down' warning in sharedRedistInstall.test.ts still prints; it comes from the synchronous 'Play-time call joining' test, not from the installer-timeout waits 82-20 changed. Disposition open."
+  - finding: "WR-12 (82-REVIEW.md, post-82 section): the WR-06 sibling-directory rule in gamelib-safety remove.rs (check_sideload, entry_looks_runnable, top_level_looks_runnable) answers folder-looks-shared for common sideload layouts (Game/_CommonRedist/vcredist_x64.exe, exec-bit lib/*.so) and an unreadable sibling directory makes the removal unknown. Open, advisory."
     category: other
-    reason: "Noise plus a possible floating promise past teardown; does not change any must-have. Fix is stated in the review (settle the run before the test returns)."
-    evidence_status: "reproduced by the reviewer 3 of 3; not a test failure"
-  - finding: "IN-09 (82-REVIEW.md): the slowed-download tracer test does not assert the slow window elapsed and leaks a real 250 ms timer on its failure path. Disposition open."
+    reason: "Over-refusal: every outcome is refused or unknown, so the guard fails closed; nothing is deleted that should be kept. It narrows usefulness of sideload 'delete files', which the app UI never passes today (82-UAT.md test 1 finding, uninstaller.ts:246). Fix is stated in the review (narrower nested predicate plus pinned rows)."
+    evidence_status: "reviewer finding; I read remove.rs and the diff, and the 55-row adversarial suite passes"
+  - finding: "WR-13 (82-REVIEW.md): the narrowed runTs shared-cache predicate in meta/__tests__/runTs.test.ts can be bypassed by spellings such as --outfile=./node_modules/.cache/z. Open, advisory."
     category: other
-    reason: "Weakens the regression test's own value slightly; the mutant proof in 82-20-SUMMARY (deadline cut to 5 ms makes it fail) still holds."
-    evidence_status: "reviewer finding, code read by me"
+    reason: "A test-hygiene pin (C3-01/E-02), not a safety-guard or census gate; no Phase 82 must-have depends on it."
+    evidence_status: "reviewer ran four bypass spellings"
+  - finding: "IN-12 (82-REVIEW.md) part b: cancelDelete.changedSinceCheck returns false, and the delete proceeds, when a yes verdict carries no 'partial' item."
+    category: other
+    reason: "Requires a contract violation by gamelib-safety (a yes reply with no item for the single requested id); rustSafety.answersRequest already rejects replies that do not answer the request. Narrow residual; review fix is a one-line refuse."
+    evidence_status: "code read at cancelDelete.ts:278-300"
+  - finding: "WR-10, WR-11, IN-06..IN-11, IN-13 (82-REVIEW.md and 82-REVIEW-DISPOSITION.md, 12 open of 27): carried forward, all advisory."
+    category: other
+    reason: "None changes a must-have. WR-10 (rawRecursiveDeletes detector skips on an unmatched paren, an 'if (a) rmSync(...)' shape and .call/.apply) is the one nearest the goal; today the guarded files hold only the one allowlisted delete (cancelDelete.ts:301)."
+    evidence_status: "reviewer findings; ledger recorded in f101bd97e"
 behavior_unverified_items: []
 coincidental_reliance_items: []
-human_verification:
-  - test: "Push main and read the Test, Rust test and Lint workflows on a sha that contains the 82-20 fix (dc220850f / d59c79873) and the 261120-uzn fix"
-    expected: "Test workflow green (sharedRedistInstall.test.ts installer-timeout tests pass), Rust test green on ubuntu, macOS and Windows, Lint workflow green"
-    why_human: "Nothing is pushed (main is 25 commits ahead of origin/main), so the truth 'Test and Rust test workflows green on all three OSes on a main sha containing the fix' cannot be observed. Before that push will be green, three unrelated blockers need resolving: the three i18n gates and the gameinfo-narrowing-ceiling ratchet (SettingsModalHeader.tsx has 1, baseline 0) all come from the unpushed quick-261121-dzl settings redesign, and bootstrap.test.ts has a load flake (todo 2026-11-21-bootstrap-legacy-zoom-turn-counted-wait.md). The gameinfo-narrowing-ceiling failure is not in the dzl i18n todo; it runs in lint.yml."
-  - test: "Confirm the SC5 override wording (operator)"
-    expected: "ROADMAP SC5 edited to name the deferrals (fileStore.ts to Phase 85, proxy-types.ts, legendary/commands/* and the type-only files to Phase 91), or the override accepted as is"
-    why_human: "The override is an operator ruling the verifier can only record; the deferrals are still not named in ROADMAP SC5 or in a later phase's success criteria."
 ---
 
 # Phase 82: Guardrails, hygiene and shared safety primitives - Verification Report
 
 **Phase Goal:** The backend test suite is trustworthy and the shared safety rules exist before any code is ported, so no later slice can fail open, delete a sibling game, or pass a drift gate vacuously.
 **Verified:** 2026-11-21
-**Status:** human_needed
-**Re-verification:** Yes, after gap-closure plan 82-20 (G-82-2-r2) and the 261120-uzn fix (G-82-2)
+**Status:** passed
+**Re-verification:** Yes. The prior report was `human_needed` on one CI observation and one operator wording item; both are now resolved by `82-UAT.md` (4 of 4 pass). The covered files changed since that report (quick tasks 261120-uzn, 261121-o99, 261121-p6z, 261121-mpt and Phase 84 logger commits), so the safety truths were re-checked against the code at HEAD, not carried forward.
 
-Every code-level must-have holds. I re-ran the Rust crates, the phase's jest suites and the 82-20 test file myself and read the helper and its call sites; none of it rests on the SUMMARYs. One truth cannot be decided from the codebase: that CI is green on a pushed main containing the fix. Nothing is pushed, so it stays a human item. Do not mark it verified from local runs.
+## Re-verification Scope
 
-## Gap Closure Check (this round)
+What changed in the covered files since the last report (`git diff 2496709d0 HEAD`, 11 files):
 
-| Gap | Closed? | Evidence |
-|-----|---------|----------|
-| G-82-2 (UNBOUNDED_RUST_CHANNELS pin missing RUST_SAFETY_REMOVE_TREE) | CLOSED | `dialogOptionForwarding.test.ts` passes in my run (3 suites, 55 passed, 1 skipped, with the GOG and cancelDelete guard suites). |
-| G-82-2-r2 (installer-timeout test counted setImmediate turns, saw 0 installer calls in Test run 44850161668) | CLOSED IN CODE; CI unobserved | `sharedRedistInstall.test.ts:229-252`: `realNow = performance.now.bind(performance)` and `realSetTimeout` captured at module load, before any `jest.useFakeTimers` (the four `useFakeTimers` calls are at lines 949, 987, 1155, 1273), and `yieldUntil` loops on `realNow() < deadline` (15 s, inside the 30 s per-test timeout). `await yieldUntil(` appears at lines 960, 1006, 1161, 1281; each is followed by an `expect` on the call list. `grep 'i < 500 &&'` finds nothing; no `retryTimes`, `.skip(` or `.only(` in the file. `git diff 2496709d0 HEAD -- sharedRedistInstall.ts` is empty, so the production module is untouched. I ran the file: 63 of 63 pass. The 82-20 SUMMARY's RED/mutant proof was not re-run by me; I confirmed the mutation-sensitive pieces exist (captured clock, a 250 ms real `realSetTimeout` in the slowed test at `:987-1014`). |
-
-Circumstantial CI evidence the flake was environmental, not a 90ca09d02 regression: `gh api .../runs/44850161668/attempts/1` is `failure` and attempt 2 is `success` with no code change. That supports the diagnosis but is a rerun, not the fix.
+| Change | Source | Effect on Phase 82 truths |
+|--------|--------|---------------------------|
+| `remove.rs`, `safe_path.rs`, `adversarial.rs` (WR-02 reference fallback, WR-06 sibling-directory rule, IN-01 `is_symlink` only) | quick 261121-o99 | Strengthens SC4. Rules refuse in more cases, never fewer, except the intended WR-02 change that a relative or unresolvable reference no longer turns an unrelated removal into `unknown`. Adversarial rows grew 47 to 55. |
+| `knownInstalls.ts` (+ test) (IN-04 in-progress Steam installs count as known installs) | o99 | Strengthens SC4 (an in-progress native install is no longer invisible to the sibling check). |
+| `cancelDelete.ts` (WR-09 `changedSinceCheck` re-assert before the delete) | o99 | Strengthens SC3/SC4 on the cancel path. Residual IN-12 b, see Advisory. |
+| `yieldUntil.ts` (+ test), `sharedRedistInstall.test.ts` | quick 261121-p6z | Test-only. 82-20's helper hoisted to a shared util; behavior of the 82-20 fix unchanged. |
+| `sidecarRpc.ts` (adds `logTransport`, `pendingLines` now carries an `onWritten` callback), `gog/games.ts` (one type-import path) | Phase 84-03/84-04 | Unrelated to safety. `RUST_SAFETY_REMOVE_TREE` is still in `UNBOUNDED_RUST_CHANNELS` (sidecarRpc.ts:164) and the `dialogOptionForwarding` pin passes. |
 
 ## Goal Achievement
 
@@ -130,64 +134,70 @@ Circumstantial CI evidence the flake was environmental, not a 90ca09d02 regressi
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| 1 | SC1: `pnpm test` runs every backend suite green, or each red suite is retired with a recorded reason; none left on a known-red list | VERIFIED (point-in-time at phase close; see caveat) | `82-TEST-LEDGER.md` records every red, with the 82-20 section at `:265` added after the Verdict. Ratchet gates re-run now: `planning-gates` 12/12, `steam-line-ceiling` PASS, `backend-di-ceilings` PASS, `find-deadcode` PASS (312 baselined). Caveat: `gameinfo-narrowing-ceiling` now FAILS (`SettingsModalHeader.tsx` has 1, baseline 0) from the unpushed dzl commit 75b492f1d, and the orchestrator measured a local full run with 5 non-Phase-82 failures (three dzl i18n gates, a stale tmpdir artifact, one `bootstrap.test.ts` load flake). These post-date the phase's work and are tracked in todos, but the first two will make CI red on push. See human item 1. |
-| 2 | SC2: IPC census and flow-registration census fail on empty or truncated input | VERIFIED | `ipcDomainCensus` and `flowRegistrationCensus` suites pass in my 19-suite run (281 tests) with their D-05 non-vacuity blocks and `censusFloor.ts`. |
-| 3 | SC3: uninstall, bottle removal and store reset refuse with a visible error when the guard returns unknown; one injected-rejection test per guard | VERIFIED | `rustSafety`, `rustInvokeChannel`, `uninstaller`, `testUtils`, `safety`, `uninstallSafety`, `cancelDelete` suites pass in my run. Live hop now also exercised by the operator (truth 7). |
-| 4 | SC4: uninstall never deletes a sibling; adversarial path table on macOS, Windows, Linux | VERIFIED | `cargo test -p gamelib-safety -p gamelib-testutil --offline` on this macOS host: unit 30, adversarial 47, trust_root_contract 2, testutil 8, all pass. Rust test run 44850161688 at 90ca09d02 is `success` on cargo-test windows, ubuntu and macos (confirmed with `gh run view`). Those runs include the macOS symlink and case-insensitive rows, per UAT. |
-| 5 | SC5: utils/bootstrap inventory and state-ownership table committed; zero-risk deletions gone | PASSED (override) | `82-UTILS-BOOTSTRAP-INVENTORY.md` and `82-STATE-OWNERSHIP.md` exist; `fileStore.ts` and `proxy-types.ts` no longer exist at their old paths. The override remains for `legendary/commands/*` and the type-only files (D-19). |
-| 6 | Guards refuse only when safety genuinely cannot be confirmed: a normal GOG uninstall and a cancelled-install cleanup still proceed | VERIFIED | Unchanged since the prior report; `trust_root_contract` and adversarial rows pass against the real crate, and the contract-pinned fake covers both call sites. |
-| 7 | The live sidecar -> shell safety round trip works in the real app | VERIFIED (operator UAT) | `82-UAT.md` test 1: pass, run on Windows in `pnpm tauri:dev` on 2026-11-20. 1a (nested install refused with the notice, nothing deleted) and 1b (GOG uninstall with `gog-support` absent completes) pass. 1c (Steam cancel before first write) was skipped because no Steam library picker exists; the same absent-root path was exercised live by 1b and by `cancelDelete.test.ts:391`. This is human evidence I did not reproduce. |
-| 8 | G-82-2-r2 test fix: the installer-timeout tests wait through one real-time-bounded helper and assert straight after the wait; the 30 s per-test timeout stays; no retry/skip/only; production module untouched | VERIFIED | See Gap Closure Check. |
-| 9 | G-82-2-r2: Test and Rust test workflows green on all three OSes on a main sha containing the fix | UNCERTAIN (human) | Not observable: nothing pushed, `main` is 25 ahead of `origin/main`. The last observed runs (90ca09d02) predate 82-20. See human item 1. |
+| 1 | SC1: `pnpm test` runs every backend suite green, or each red suite is retired with a recorded reason; none left on a known-red list | VERIFIED (point-in-time at phase close; see note) | `82-TEST-LEDGER.md` present with the 82-20 recurrence section. Re-run today: the 26 Phase 82 and guard-site suites pass (26 suites, 430 passed, 1 skipped). Ratchet gates: `planning-gates` PASS, `steam-line-ceiling` PASS, `find-deadcode` PASS. The orchestrator's full run shows 2 failures, both in `gameDetailsImportGate.test.ts`; I confirmed they are not Phase 82's (see Regression Gate Triage). |
+| 2 | SC2: IPC census and flow-registration census fail on empty or truncated input | VERIFIED | `ipcDomainCensus` and `flowRegistrationCensus` suites pass in my run with their D-05 non-vacuity blocks and `censusFloor.ts` (34 lines) in use. `gameDetailsImportGate.test.ts` still passes its 8 non-Gate-7 tests, including the empty-input guards 82-02 added there (f41f5cd94). |
+| 3 | SC3: uninstall, bottle removal and store reset refuse with a visible error when the guard returns unknown; one injected-rejection test per guard | VERIFIED | `rustSafety.ts:91-100` has the single catch (rejection or timeout becomes `rust-invoke-failed`, malformed reply becomes `bad-reply`, both `unknown`/`failed`); `checkRemoval` and `removeTree` additionally reject replies that do not answer the request or whose outcome contradicts the verdict (`:110-138`). Guard sites call it: `uninstaller.ts`, `gog/games.ts`, `sideload/games.ts`, `steam/gameUninstall.ts`, `cancelDelete.ts`, `bridgeBottleLifecycle.ts`, `acfState.ts`, `utils.ts`. Guard suites (`rustSafety`, `rustInvokeChannel`, `uninstaller`, `uninstallSafety`, `cancelDelete`, `bridgeRemovalSafety`) pass. |
+| 4 | SC4: uninstall never deletes a sibling; adversarial path table on macOS, Windows, Linux | VERIFIED | `cargo test -p gamelib-safety -p gamelib-testutil --offline` on this macOS host: unit 30, adversarial 55, trust_root_contract 2, testutil 8, all pass (re-run by me). The o99 commits (d8fc1bb25, 099101f9e, 81edc90b7) are ancestors of 5bd0c0b72, and Rust test run 44872994911 shows the "gamelib-safety and gamelib-testutil" step `success` on windows, ubuntu and macOS, so the Windows and Unix-only rows ran on their native legs. |
+| 5 | SC5: utils/bootstrap inventory and state-ownership table committed; zero-risk deletions gone | PASSED (override) | `82-UTILS-BOOTSTRAP-INVENTORY.md` and `82-STATE-OWNERSHIP.md` exist; `src/backend/fileStore.ts` and `src/backend/proxy-types.ts` do not exist. Deferrals (`legendary/commands/*`, type-only files to Phase 91; `fileStore.ts` to Phase 85) are the D-19 override, confirmed by the operator as is on 2026-11-21. |
+| 6 | Guards refuse only when safety genuinely cannot be confirmed: a normal GOG uninstall and a cancelled-install cleanup still proceed | VERIFIED | `trust_root_contract` and adversarial rows pass against the real crate (absent trust root is `yes` only when protected roots anchor it, now tightened to absolute roots by WR-02). Live GOG uninstall with `gog-support` absent completed (82-UAT test 1b). Over-refusal risk from o99's sibling rule is WR-12, see Advisory. |
+| 7 | The live sidecar to shell safety round trip works in the real app | VERIFIED (operator UAT) | `82-UAT.md` test 1: pass on Windows in `pnpm tauri:dev` (nested install refused with the notice, nothing deleted; GOG uninstall completed). Human evidence I did not reproduce; the o99 changes post-date it but the wire contract is pinned by `trust_root_contract` and `fakeSafetyRustContract`. |
+| 8 | G-82-2-r2 test fix: installer-timeout tests wait through one real-time-bounded helper, assert straight after the wait, 30 s per-test timeout kept, no retry/skip/only, production module untouched | VERIFIED | The helper moved to `src/backend/testUtils/yieldUntil.ts` (40 lines) with `yieldUntil.test.ts` proving expiry on real time under fake timers. `sharedRedistInstall.test.ts` passes inside the 26-suite run. |
+| 9 | Test and Rust test workflows green on a pushed main containing the 82-20 and 261120-uzn fixes (was human item 1) | VERIFIED (operator UAT + gh) | `82-UAT.md` test 2 pass and test 3 accepted. On 5bd0c0b72 (contains dc220850f, ded4cd2b8, d8fc1bb25, 099101f9e, 81edc90b7; confirmed with `git merge-base --is-ancestor`) Lint and Code check are green; the safety crates step is green on all three OS legs; the red Test run's only failures are the two Gate 7 tests; remaining reds (gamelib-log golden on Windows, gamelib-steamcm macowned on ubuntu, RUSTSEC chrono supply-chain audit) are in other phases' crates or external and are filed as todos. The pass on attribution is an operator ruling and is recorded as such. |
 
-**Score:** 8/9 truths verified (SC5 by override; truth 7 on operator UAT evidence); 1 uncertain, routed to human. `behavior_unverified`: 0.
+**Score:** 9/9 truths verified (SC5 by override; truths 7 and 9 rest partly on operator evidence). `behavior_unverified`: 0.
+
+### Regression Gate Triage
+
+| Red | Phase 82's? | Evidence |
+|-----|-------------|----------|
+| `gameDetailsImportGate.test.ts` Gate 7 digest and twelve-channel pin (2 tests) | No | `git show 92ad8ec5b` (Phase 84-05) removes the `getLogContent` handler and its imports from `settingsFlowRegistration.ts` (12 channels to 11); the digest `ea25a6c6...` is stale, received `1cf25750...`, channel count expected 12, received 11. No Phase 82 commit touches `settingsFlowRegistration.ts` (82-02 touched only the test file, to add empty-input guards, which pass). Tracked in `.planning/todos/pending/2026-11-21-settings-flow-registration-gate-digest-stale-after-84-05.md`. Same two failures in CI run 44872994910. |
+| `pnpm backend-di-ceilings` FAIL (`steam/__tests__/games.test.ts` 46 > baseline 45; `steamOfflineMode.test.ts` new violation) | No | Both are uncommitted working-tree changes of other in-flight work: `games.test.ts` is ` M` and `steamOfflineMode.test.ts` is untracked (`??`) in `git status`. Committed HEAD is not the cause; the gate passed in the prior report. The in-flight author should either add the baseline entry or drop the `jest.mock` use before committing. |
 
 ### Overrides
 
-SC5 stays PASSED (override) on operator ruling D-19 (82-CONTEXT). The deferrals are still not written into ROADMAP SC5 or a later phase's success criteria; the operator should edit the wording or confirm (human item 2).
+SC5 stays PASSED (override) on D-19. `accepted_by` now records the operator's 2026-11-21 confirmation (82-UAT.md test 4: "operator accepted the D-19 override as is; ROADMAP SC5 wording left unchanged").
 
 ### Deferred Items
 
-None under the strict rule. The review findings deferred by 82-19 (WR-02, WR-05, WR-06, WR-09, IN-01..IN-05) remain in `.planning/todos/pending/2026-11-21-phase-82-deferred-review-findings.md` with dispositions in `82-REVIEW-DISPOSITION.md`. The crate and guard-site source I diffed since the last report (`git diff 2496709d0 HEAD` over the crate, `src/backend/safety`, `testUtils`, `uninstaller.ts`) shows no change from the 82-20 round.
+None under the strict rule. The review findings still open are listed in the Advisory frontmatter and in `82-REVIEW-DISPOSITION.md` (12 open of 27).
 
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
 |----------|----------|--------|---------|
-| `sharedRedistInstall.test.ts` `yieldUntil`, `realNow`, `REAL_WAIT_DEADLINE_MS` | real-time bounded wait, clock captured before fake timers | VERIFIED | read at `:224-252`; 4 call sites, each asserted |
-| `82-TEST-LEDGER.md` `## Post-verdict recurrence (G-82-2-r2)` | recurrence recorded, Verdict left as history | VERIFIED | present at line 265; line 94 cross-references it |
-| `gamelib-safety` crate and `trust-root-contract.json` | shared contract plus adversarial table | VERIFIED | tests pass (above) |
-| `fakeSafetyRust.ts`, `rawRecursiveDeletes.ts`, `censusFloor.ts` | contract-pinned fake, delete-gate detector, floors | VERIFIED | suites pass; detector residual is WR-10 (open, advisory, unchanged from prior report) |
-| `sidecarRpc.ts` `UNBOUNDED_RUST_CHANNELS` | includes remove-tree | VERIFIED | `dialogOptionForwarding` pin now passes |
-| Phase-82 docs (ledger, inventory, state-ownership, review disposition, security, validation) | committed | VERIFIED | all present |
+| `src-tauri/crates/gamelib-safety/src/{lib,remove,safe_path,tri,wire}.rs` | shared contract, 458-line `remove.rs` check set | VERIFIED | Real checks, no stubs; 30 unit tests pass |
+| `src-tauri/crates/gamelib-safety/tests/adversarial.rs`, `trust_root_contract.rs`, `fixtures/trust-root-contract.json` | adversarial table, one JSON fixture shared with TS | VERIFIED | 55 + 2 pass |
+| `src-tauri/src/safety_dispatch.rs` | shell arms | VERIFIED | present and wired (RUST_SAFETY channels in `sidecarRpc.ts`, `sidecarTransport.ts`) |
+| `src/backend/safety/rustSafety.ts` | fail-closed adapter | VERIFIED | single catch, reply validation, 183 lines |
+| `src/backend/safety/knownInstalls.ts`, `protectedRoots.ts`, `refusal.ts` | inputs and notice mapping | VERIFIED | `knownInstalls` now includes in-progress Steam installs (IN-04) |
+| `src/backend/testUtils/{censusFloor,fakeSafetyRust,rawRecursiveDeletes,yieldUntil}.ts` | floors, contract-pinned fake, delete-gate detector, real-time wait | VERIFIED | suites pass; detector residual is WR-10 |
+| `82-TEST-LEDGER.md`, `82-UTILS-BOOTSTRAP-INVENTORY.md`, `82-STATE-OWNERSHIP.md`, `82-REVIEW*.md`, `82-SECURITY.md`, `82-VALIDATION.md`, `82-UAT.md` | phase docs | VERIFIED | all present |
 
 ### Key Link Verification
 
 | From | To | Via | Status |
 |------|----|-----|--------|
-| `yieldUntil` call sites | `runBounded` timer in `sharedRedistInstall.ts` | wait returns only after the installer call exists, so `advanceTimersByTimeAsync(REDIST_PROCESS_TIMEOUT_MS)` fires a registered timer; an `expect` follows each wait | WIRED |
-| `check_trust_root` | `safe_path::resolve_trust_root` | direct call | WIRED (unchanged) |
+| Guard sites (uninstaller, gog, sideload, steam gameUninstall, cancelDelete, bridgeBottleLifecycle, acfState, utils) | `rustSafety` | direct import (grep of non-test sources) | WIRED |
+| `rustSafety` | Rust `safety_check_removal` / `safety_remove_tree` | `requestRustInvoke` over `sidecarRpc`; `RUST_SAFETY_REMOVE_TREE` in `UNBOUNDED_RUST_CHANNELS` | WIRED (live hop exercised by operator) |
 | `trust_root_contract.rs` and `fakeSafetyRustContract.test.ts` | one JSON fixture | `include_str!` / `readFileSync` | WIRED |
-| Guard sites (GOG, cancelDelete, uninstaller, resetHeroic, bridge) | `rustSafety` | direct import; live hop exercised once by the operator | WIRED |
-| CI | `gamelib-safety` and the 82-20 test | `rust-test.yml`, `test.yml` | WIRED, not yet run on the 82-20 commits |
+| `yieldUntil` | `bootstrap`, `steamBridgeKnownFixes`, `sharedRedistInstall` tests | static import | WIRED |
+| CI | `gamelib-safety` and `gamelib-testutil` | `rust-test.yml` first step (D-18) | WIRED, green on 3 OS at 5bd0c0b72 |
 
 ### Data-Flow Trace (Level 4)
 
-Not applicable: test-infrastructure and Rust safety primitives, no rendered dynamic data in the 82-20 change. The refusal notice's data flow was exercised live (truth 7).
+Not applicable: test infrastructure and Rust safety primitives. The refusal notice's data flow was exercised live (truth 7).
 
 ### Behavioral Spot-Checks
 
 | Behavior | Command | Result | Status |
 |----------|---------|--------|--------|
-| 82-20 test file | `npx jest --selectProjects Backend --runTestsByPath src/backend/storeManagers/steam/bridge/__tests__/sharedRedistInstall.test.ts --silent` | 63 passed, 0 failed | PASS |
-| Phase jest suites (testUtils, safety, censuses, rustSafety, rustInvokeChannel, uninstaller, rawRecursive) | `npx jest --selectProjects Backend --silent --testPathPattern '...'` | 19 suites, 281 tests passed | PASS |
-| Guard-site and pin suites | `npx jest ... uninstallSafety cancelDelete dialogOptionForwarding` | 3 suites, 55 passed, 1 skipped | PASS |
-| Safety crates | `cargo test -p gamelib-safety -p gamelib-testutil --offline` (from `src-tauri/`) | 30 + 47 + 2 + 8 passed | PASS |
-| Ratchet gates | `pnpm planning-gates / steam-line-ceiling / backend-di-ceilings / find-deadcode` | PASS | PASS |
-| Ratchet gate | `pnpm gameinfo-narrowing-ceiling` | FAIL: `SettingsModalHeader.tsx` has 1, baseline 0 | FAIL (not Phase 82 code; from unpushed quick-261121-dzl) |
-| Prior CI evidence | `gh run view 44850161688` / `44850161668` | Rust test success on 3 OSes; Test run attempt 1 failure, attempt 2 success, same sha | context only |
+| Safety crates | `cargo test -p gamelib-safety -p gamelib-testutil --offline` (from `src-tauri/`) | 30 + 55 + 2 + 8 passed, exit 0 | PASS |
+| Phase suites and guard sites | `npx jest --selectProjects Backend --silent --testPathPattern 'testUtils\|backend/safety\|ipcDomainCensus\|flowRegistrationCensus\|rustSafety\|rustInvokeChannel\|uninstaller\|rawRecursive\|uninstallSafety\|cancelDelete\|dialogOptionForwarding\|sharedRedistInstall\|yieldUntil\|bridgeRemovalSafety\|knownInstalls\|protectedRoots'` | 26 suites, 430 passed, 1 skipped | PASS |
+| Gate suite | `npx jest ... gameDetailsImportGate.test.ts` | 8 passed, 2 failed (Gate 7, Phase 84-05) | FAIL, not Phase 82 |
+| Ratchet gates | `pnpm planning-gates`, `steam-line-ceiling`, `find-deadcode` | exit 0 | PASS |
+| Ratchet gate | `pnpm backend-di-ceilings` | exit 1, two violations from uncommitted working-tree files | FAIL, not Phase 82 |
 
-I did not run the 82-20 SUMMARY's soak (10 x file with two busy loops per core) or its mutant copy. The SUMMARY itself says contention alone never reproduced the red locally, so the deterministic slowed-path test is the binding proof, and I read that test. Judgment: the fix addresses a mechanism the planner measured (fake timers freeze `performance.now`; 500 idle turns take 6.7 to 9.8 ms), but the plan's own confidence is low, and only a green CI on the pushed sha shows the flake is gone.
+I did not re-run the 82-20 soak or mutant proof.
 
 ### Probe Execution
 
@@ -195,43 +205,34 @@ Not applicable (no phase-declared probe scripts).
 
 ### Requirements Coverage
 
-`.planning/REQUIREMENTS.md` does not exist. I accounted for the IDs from the PLAN frontmatter and `.planning/REQUIREMENTS-v0.11.md` (FND-01 at line 15, FND-02 at line 16, traceability rows 70-71), plus ROADMAP.md's Phase 82 `**Requirements**: FND-01, FND-02`.
+`.planning/REQUIREMENTS.md` does not exist. IDs traced through the PLAN frontmatter, `.planning/REQUIREMENTS-v0.11.md` (FND-01 line 15, FND-02 line 16, traceability rows 70-71) and ROADMAP.md's Phase 82 `**Requirements**: FND-01, FND-02`.
 
 | Requirement | Source plans (frontmatter) | Status | Evidence |
 |-------------|----------------------------|--------|----------|
-| FND-01 | 82-01, 82-02, 82-04, 82-10, 82-11, 82-12, 82-13, 82-14, 82-15, 82-16, 82-17, 82-18, 82-20 | SATISFIED in code; CI observation pending | Truths 1, 2, 8; the 82-20 fix closes the last known flake in this phase's suites. Truth 9 (green pushed CI) is open. |
-| FND-02 | 82-03, 82-05, 82-06, 82-07, 82-08, 82-09, 82-11, 82-17, 82-18, 82-19 | SATISFIED | Truths 3, 4, 6, 7. |
+| FND-01 (every backend suite green or retired with a reason; census gates cannot pass vacuously) | 82-01, 82-02, 82-04, 82-10, 82-11, 82-12, 82-13, 82-14, 82-15, 82-16, 82-17, 82-18, 82-20 (the frontmatter count is 13 plans naming FND-01, 3 of them with both IDs) | SATISFIED | Truths 1, 2, 8, 9 |
+| FND-02 (destructive ops refuse on unknown; never delete a sibling on macOS, Windows, Linux) | 82-03, 82-05, 82-06, 82-07, 82-08, 82-09, 82-11, 82-17, 82-18, 82-19 | SATISFIED | Truths 3, 4, 6, 7 |
 
-Every plan declares FND-01 or FND-02 and no other ID. No orphaned IDs: REQUIREMENTS-v0.11.md maps only these two to Phase 82. Both boxes are still `[ ]` / `Pending`; tick them only after human item 1 is accepted. Housekeeping: ROADMAP.md's milestone list still reads `- [ ] **Phase 82** — not planned` (line 186) while the phase detail says 20/20 executed; that summary line is stale.
+All 20 plans declare FND-01 and/or FND-02 and no other ID. No orphans: REQUIREMENTS-v0.11.md maps only these two to Phase 82. Housekeeping for the orchestrator (I did not edit them): both requirement boxes in `REQUIREMENTS-v0.11.md` are still `[ ]` / `Pending` and ROADMAP.md line 186 still reads `- [ ] **Phase 82** ... not planned` while the phase detail says 20/20 executed.
 
 ### Anti-Patterns Found
 
 | File | Line | Pattern | Severity | Impact |
 |------|------|---------|----------|--------|
-| `testUtils/rawRecursiveDeletes.ts` | 178-185, 214-219 | WR-10: detector skips silently on an unmatched paren, on `if (a) rmSync(...)` followed by `{`, and on `.call`/`.apply` | WARNING | Delete gates could pass over a raw delete in those shapes; today the guarded files hold only the one allowlisted delete. Disposition open, carried forward. |
-| `sharedRedistInstall.test.ts` | ~1507-1514 | WR-11: torn-down-environment import warning from the 'Play-time call joining' test | WARNING (advisory) | Noise and a floating promise; no must-have affected. Open. |
-| `sharedRedistInstall.test.ts` | 986-1014 | IN-09: tracer test leaks a 250 ms real timer on failure and does not assert the delay elapsed | INFO | Open. |
-| `testUtils/fakeSafetyRust.ts`, `sidecarRpc.ts`, `steam/__tests__/games.test.ts` | | IN-06, IN-07, IN-08 | INFO | Carried forward unchanged. |
+| `gamelib-safety/src/remove.rs` | 241-251, 298-306 | WR-12: sibling-directory rule reuses the top-level runnable predicate | WARNING (over-refusal, fails closed) | Not a fail-open and not a sibling deletion; it can refuse a removal that would have been safe. Sideload "delete files" is not reachable from the UI today. |
+| `steam/cancelDelete.ts` | 278-300 | IN-12 b: `yes` verdict with no `partial` item skips the re-assert | INFO | Needs a gamelib-safety contract violation; adapter validates the reply |
+| `testUtils/rawRecursiveDeletes.ts` | 178-185, 214-219 | WR-10 detector shapes skipped | WARNING | Carried forward, open |
+| `meta/__tests__/runTs.test.ts` | 51-55 | WR-13 narrowed predicate bypass | WARNING | Hygiene pin, outside the phase's safety truths |
+| `sharedRedistInstall.test.ts`, `steamBridgeKnownFixes.test.ts`, `bootstrap.test.ts` | | WR-11, IN-09, IN-13 torn-down warning and leaked failure-path timers | INFO | Noise only |
 
-No TBD/FIXME/XXX markers in the 82-20 test file. No blockers.
+No TBD/FIXME/XXX in any covered source or test file (grep rc=1). No blockers.
 
 ### Human Verification Required
 
-#### 1. Green CI on a pushed main that contains the 82-20 fix
-
-**Test:** Resolve the unrelated reds first, then push and read the Test, Rust test and Lint workflows. Reds I found that would otherwise show up: the three i18n gates and `gameinfo-narrowing-ceiling` (both from unpushed quick-261121-dzl; the second is not named in the existing dzl todo), and the `bootstrap.test.ts` load flake (todo `2026-11-21-bootstrap-legacy-zoom-turn-counted-wait.md`, the same turn-counted-wait class 82-20 fixed in a different file).
-**Expected:** Test green including the installer-timeout tests; Rust test green on ubuntu, macOS and Windows; Lint green.
-**Why human:** requires a push, which this verification does not do, and the result is the only evidence that G-82-2-r2 is gone. Re-run `/gsd-verify-work 82` after that push to settle UAT item 2.
-
-#### 2. SC5 override wording
-
-**Test:** Edit ROADMAP SC5 to name the deferrals or accept the override as written.
-**Expected:** SC5 and the later phases' success criteria agree on where `fileStore.ts`, `proxy-types.ts`, `legendary/commands/*` and the type-only files go.
-**Why human:** operator ruling.
+None. The two prior items are resolved in `82-UAT.md` (4 of 4 pass, 0 issues).
 
 ### Gaps Summary
 
-No gaps. Plan 82-20 closes the G-82-2-r2 test defect in code and the earlier gaps stay closed. The phase's goal, a trustworthy backend suite plus shared safety rules that fail closed, is met in the codebase, with the live round trip confirmed by the operator's UAT. Status is `human_needed` solely because the CI-green truth cannot be observed until a push, and a push today would not go green: dzl-induced Lint and i18n reds and a bootstrap flake are in the way. Those are outside Phase 82 but they decide whether the phase's CI truth can be closed.
+No gaps. Weighing WR-12 against the goal's "fail open / delete a sibling game": the new sibling-directory rule can only turn a `yes` into `no` or `unknown`; every path it adds ends in a refusal, so it cannot delete a sibling or fail open, and it moves the guard in the goal's direction. It is a usability cost on sideloaded game folders that carry redistributables, recorded as advisory with a stated fix. The two red jest tests at HEAD belong to Phase 84-05 (stale Gate 7 digest after `getLogContent` moved to the native router), and the `backend-di-ceilings` failure comes from uncommitted working-tree files of other in-flight work; neither retracts a Phase 82 truth. The goal, a trustworthy backend suite plus shared safety rules that fail closed and cannot pass a census vacuously, is met in the codebase.
 
 ---
 
