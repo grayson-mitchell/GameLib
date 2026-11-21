@@ -262,6 +262,11 @@
                 "removing": "Removing…"
             }
         },
+        "leftCard": {
+            "addFavourite": "Add to favourites",
+            "favourite": "Favourite",
+            "removeFavourite": "Remove from favourites"
+        },
         "moreActions": "More actions",
         "nativePort": {
             "copyPath": "Copy install path",

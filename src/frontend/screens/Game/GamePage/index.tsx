@@ -74,6 +74,7 @@ import {
   WikiInfoEmptyState
 } from './components'
 import InstallTab from './components/InstallTab'
+import FavouriteHeart from './components/LeftCard/FavouriteHeart'
 import EngineBadge from './components/EngineBadge'
 import EngineNotices from './components/EngineNotices'
 import { engineStateKey, useEngineState } from 'frontend/state/EngineState'
@@ -570,7 +571,12 @@ export default React.memo(function GamePage(): JSX.Element | null {
                             <EngineBadge state={engineState} />
                           </div>
 
-                          <h1 style={{ opacity: art_logo ? 0 : 1 }}>{title}</h1>
+                          <div className="titleRow">
+                            <h1 style={{ opacity: art_logo ? 0 : 1 }}>
+                              {title}
+                            </h1>
+                            <FavouriteHeart appName={appName} title={title} />
+                          </div>
                           <div className="gameNotices">
                             <EngineNotices state={engineState} />
                             {wikiLink}

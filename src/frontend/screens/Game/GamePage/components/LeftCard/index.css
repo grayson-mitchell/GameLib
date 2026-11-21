@@ -1,0 +1,52 @@
+/* Phase 100: the left card's library controls (heart, category chips, hide
+   toggle). Colours are theme tokens only (D-22). */
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  /* The title's own bottom margin moved here so the heart centres on the text. */
+  margin-bottom: 0.8rem;
+}
+
+.favouriteHeart {
+  box-sizing: border-box;
+  width: 32px;
+  height: 32px;
+  padding: 4px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.favouriteHeart:focus-visible {
+  outline: 2px solid var(--accent);
+}
+
+.favouriteHeart[aria-pressed='true'] {
+  color: var(--fav);
+}
+
+.favouriteHeart[aria-pressed='true'] svg {
+  animation: leftCardHeartPulse 0.3s;
+}
+
+@keyframes leftCardHeartPulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.25);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .favouriteHeart[aria-pressed='true'] svg {
+    animation: none;
+  }
+}
