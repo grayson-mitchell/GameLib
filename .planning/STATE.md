@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 84
 current_phase_name: Logger
 status: executing
-stopped_at: Phase 83 complete, ready to execute Phase 84
-last_updated: "2026-11-21T04:12:35.974Z"
+stopped_at: Completed 84-01-PLAN.md
+last_updated: "2026-11-21T04:28:56.634Z"
 last_activity: 2026-11-21
-last_activity_desc: Phase 83 complete (UAT 3/3, security 0 open, verification passed); Phase 84 ready to execute
-state_head: 1dedfca4389f384e2cdf584654d886320646ced5
+last_activity_desc: Phase 84 execution started
+state_head: b90e6a2f24782fb2a97d7c15e52e617faa7103c2
 progress:
   total_phases: 19
   completed_phases: 23
@@ -76,11 +76,11 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 
 ## Current Position
 
-Phase: 84 (Logger) — READY TO EXECUTE
-Plan: Not started
+Phase: 84 (Logger) — EXECUTING
+Plan: 2 of 11
 Status: Ready to execute
-Last activity: 2026-11-21 — Phase 83 complete (UAT 3/3, security 0 open, verification passed); Phase 84 ready to execute
-Progress: Phase 83 complete — 11/11 plans, verification passed; Phase 84: 0 of 11 plans
+Last activity: 2026-11-21 — Phase 84 execution started
+Progress: [██████████] 100%
 
 ## Native-Install Arc Phase Map (21–25)
 
@@ -339,6 +339,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 83 P09 | not captured | 2 tasks | 11 files |
 | Phase 83 P10 | n/a | 3 tasks | 5 files |
 | Phase 82 P20 | 15 min | 3 tasks | 2 files |
+| Phase 84 P01 | ~60 min (estimate) | 4 tasks | 102 files |
 
 ## Accumulated Context
 
@@ -606,6 +607,9 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 83]: 83-09: the old per-subsystem 'still running at exit deadline' lines are deleted; the single shell_diag report line replaces them so the live gate's absence check is not contaminated
 - [Phase 83]: 83-09: an overrunning exit drain holds its Registrant open (hold_exit_drain_open) so run_exit names it instead of racing the stage deadline
 - [Phase 82]: 82-20: installer-timeout tests wait through yieldUntil bounded by a real clock captured at module load (jest fake timers freeze performance.now/Date.now/hrtime); the slowed-path RED/mutant is the binding proof, the CPU soak supplementary
+- [Phase 84]: Phase 83 precondition judged met from the closed record (83-HUMAN-UAT 5/5, 83-UAT complete, 83-VERIFICATION passed), not from 83-11-SUMMARY alone
+- [Phase 84]: Golden frames are per writer instance; an accepted empty entry still claims the rotation; the Logging to file(s) line is derived by the Rust writer, not a forwarder entry
+- [Phase 84]: Golden expected tree is -text in .gitattributes so CRLF fixtures stay byte-exact
 
 ### Pending Todos
 
@@ -859,9 +863,9 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-21T04:13:00Z
-Stopped at: Phase 83 complete, ready to execute Phase 84
-Resume file: .planning/phases/100-game-page-without-the-menu/100-CONTEXT.md
+Last session: 2026-11-21T04:28:56.570Z
+Stopped at: Completed 84-01-PLAN.md
+Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
 

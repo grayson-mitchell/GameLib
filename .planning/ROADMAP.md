@@ -419,11 +419,11 @@ Plans:
   3. Diagnostics from steam-vent and reqwest appear in the log, and a repeating error is rate-limited rather than flooding the file
   4. The TS logger is reduced to a fire-and-forget forwarder, and the shell's second log path (`shell_diag`) and the TS log registrations are deleted
 
-**Plans:** 11 plans in 9 waves; planned 2026-11-21, consolidated from 14 the same day, then the consolidated 84-06 and 84-07 each split in two to stay inside the per-plan context budget; executes only after Phase 83 closes (83-11 live gate passed, D-02)
+**Plans:** 1/11 plans executed in 9 waves; planned 2026-11-21, consolidated from 14 the same day, then the consolidated 84-06 and 84-07 each split in two to stay inside the per-plan context budget; executes only after Phase 83 closes (83-11 live gate passed, D-02)
 
 Plans:
 **Wave 1**
-- [ ] 84-01-PLAN.md — Before any code: golden from the real TS writer, shared `log` frame vectors, and the live macOS gate contract (84-HUMAN-UAT.md, run by 84-11)
+- [x] 84-01-PLAN.md — Before any code: golden from the real TS writer, shared `log` frame vectors, and the live macOS gate contract (84-HUMAN-UAT.md, run by 84-11)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 84-02-PLAN.md — `gamelib-log` crate (format, writer, every target, 0600 per D-18, frame contract, renderer sanitiser), log paths and minimal StoreHost (D-09) in gamelib-core, CI wiring
