@@ -140,6 +140,7 @@ mod steam_window;
 mod steamcm_dispatch;
 mod steamfiles_dispatch;
 mod steampoll_dispatch;
+mod store_boot;
 mod store_embed;
 mod terminate_veto;
 mod tray;
@@ -936,6 +937,17 @@ fn handle_exit(
                 }
             }),
         ),
+        // Phase 85 (FND-06): a store write in flight finishes inside the drain budget; one that
+        // overruns it holds the drain open so the deadline line names `store`. No registrant is
+        // held permanently: the host counts its own applies.
+        (
+            "store",
+            Box::new(|bound| {
+                if store_boot::drain(bound) {
+                    hold_exit_drain_open();
+                }
+            }),
+        ),
     ];
     let children = |grace: Duration| {
         if let Some(state) = app_handle.try_state::<Arc<SidecarState>>() {
@@ -974,7 +986,10 @@ fn handle_exit(
 }
 
 /// Spawns the sidecar, wires its reader and stderr forwarder, and returns the shared state.
-fn spawn_sidecar_state(app: &tauri::App) -> Result<Arc<SidecarState>, Box<dyn std::error::Error>> {
+fn spawn_sidecar_state(
+    app: &tauri::App,
+    store_boot_env: Option<&str>,
+) -> Result<Arc<SidecarState>, Box<dyn std::error::Error>> {
     // A spawn failure used to propagate through this `?`. Tauri turns a setup error into
     // a panic (`app.rs:1425`), and that panic unwinds out of `did_finish_launching` — an
     // `extern "C"` ObjC callback — so it became `panic_cannot_unwind` -> `SIGABRT`. The
@@ -989,7 +1004,7 @@ fn spawn_sidecar_state(app: &tauri::App) -> Result<Arc<SidecarState>, Box<dyn st
     // running event loop (`did_finish_launching` -> `AppState::launched` ->
     // `make_run_event_loop_callback`, per the captured backtrace), so the modal has a
     // run loop to spin. It is also on a path where the app is already dead either way.
-    let mut child = match spawn_sidecar(app.handle()) {
+    let mut child = match spawn_sidecar(app.handle(), store_boot_env) {
         Ok(child) => child,
         Err(e) => {
             // The io::ErrorKind is the category; the error itself (it can name the node path) stays
@@ -1825,17 +1840,38 @@ fn run_setup(
     steampoll_boot();
     // Phase 83: native channel ownership. Managed before the sidecar is spawned so a native hit
     // never needs the sidecar.
+    //
+    // Phase 85 (FND-06): the one store host is opened here, in the primary instance only
+    // (`acquire_single_instance` returned before `run_setup`, so a second launch never opens or
+    // migrates a store file), before the sidecar is spawned so the sidecar can be told which
+    // stores came up read-only. Bounded by BOOT_SWEEP_MAX_FILES / BOOT_SWEEP_MAX_MS and the
+    // shutdown token; what it does not reach opens on first use.
+    let log_paths = native_log_paths();
+    let store_mode =
+        store_boot::store_mode_from_env(std::env::var("GAMELIB_STORE").ok().as_deref());
+    let store_report = match log_paths.as_ref() {
+        Some(paths) => store_boot::open_all(
+            store_boot::host(),
+            store_mode,
+            store_boot::Ownership::embedded(),
+            std::path::Path::new(&paths.user_data),
+            store_boot::BOOT_SWEEP_MAX_FILES,
+            store_boot::BOOT_SWEEP_MAX_MS,
+        ),
+        None => store_boot::BootReport::default(),
+    };
+    let store_boot_env = store_boot::boot_env_value(&store_report);
     app.manage(NativeRouter::new(Arc::new(NativeCtx {
         host: Arc::new(AppNativeHost(app.handle().clone())),
-        log_paths: native_log_paths(),
-        store_host: Arc::new(gamelib_store::host::StoreHost::new()),
+        log_paths,
+        store_host: Arc::clone(store_boot::host()),
         emitter: Arc::new(steampoll_dispatch::TauriFrontendEmitter(
             app.handle().clone(),
         )),
         paste: Arc::new(log_upload::ReqwestPaste::new()),
         app_version: native_handlers::app_version().to_string(),
     })));
-    let state = spawn_sidecar_state(app)?;
+    let state = spawn_sidecar_state(app, store_boot_env.as_deref())?;
     start_single_instance_accept_loop(app, &state, primary_listener);
     install_os_deep_link_handler(app, &state);
     register_os_deep_link_scheme(app);
@@ -2312,6 +2348,7 @@ mod tests {
         "scan_dispatch.rs",
         "steamfiles_dispatch.rs",
         "steampoll_dispatch.rs",
+        "store_boot.rs",
         "steamcm_dispatch.rs",
         "steam_window.rs",
         "shell_state.rs",
@@ -2366,6 +2403,7 @@ mod tests {
         include_str!("scan_dispatch.rs"),
         include_str!("steamfiles_dispatch.rs"),
         include_str!("steampoll_dispatch.rs"),
+        include_str!("store_boot.rs"),
         include_str!("steamcm_dispatch.rs"),
         include_str!("steam_window.rs"),
         include_str!("shell_state.rs"),

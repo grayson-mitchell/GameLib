@@ -218,7 +218,11 @@ fn configure_sidecar_process_group(cmd: &mut Command) {
 #[cfg(not(unix))]
 fn configure_sidecar_process_group(_cmd: &mut Command) {}
 
-fn spawn_sidecar_dev(shell_exe: &str, forward_args: &[String]) -> std::io::Result<Child> {
+fn spawn_sidecar_dev(
+    shell_exe: &str,
+    forward_args: &[String],
+    store_boot_env: Option<&str>,
+) -> std::io::Result<Child> {
     let entry = resolve_sidecar_entry();
     let app_root = resolve_dev_app_root();
     let cwd = std::env::current_dir()
@@ -254,6 +258,12 @@ fn spawn_sidecar_dev(shell_exe: &str, forward_args: &[String]) -> std::io::Resul
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
+    // Phase 85 (FND-06): the stores the shell opened read-only or empty, as JSON of store keys and
+    // reason words (never a value), so the TS mirror learns it synchronously at start. Set by BOTH
+    // spawn paths and only when there is something to say.
+    if let Some(boot) = store_boot_env {
+        cmd.env("GAMELIB_STORE_BOOT", boot);
+    }
     configure_sidecar_process_group(&mut cmd);
     let child = cmd.spawn();
     match &child {
@@ -282,6 +292,7 @@ fn spawn_sidecar_packaged(
     app: &AppHandle,
     shell_exe: &str,
     forward_args: &[String],
+    store_boot_env: Option<&str>,
 ) -> std::io::Result<Child> {
     let shell_command: ShellCommand = app.shell().sidecar("gamelib-sidecar").map_err(|e| {
         std::io::Error::other(format!("sidecar externalBin resolution failed: {e}"))
@@ -310,6 +321,10 @@ fn spawn_sidecar_packaged(
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
+    // Phase 85 (FND-06): as in the dev path, `GAMELIB_STORE_BOOT` only when non-empty.
+    if let Some(boot) = store_boot_env {
+        std_command.env("GAMELIB_STORE_BOOT", boot);
+    }
     configure_sidecar_process_group(&mut std_command);
     let child = std_command.spawn();
     match &child {
@@ -329,13 +344,16 @@ fn spawn_sidecar_packaged(
 /// `sidecar_forward_args`, mirroring `shell_exe`'s own single-derivation discipline one line
 /// above, and hands it down to both spawn paths -- neither `spawn_sidecar_dev` nor
 /// `spawn_sidecar_packaged` calls `sidecar_forward_args` itself.
-pub(crate) fn spawn_sidecar(app: &AppHandle) -> std::io::Result<Child> {
+pub(crate) fn spawn_sidecar(
+    app: &AppHandle,
+    store_boot_env: Option<&str>,
+) -> std::io::Result<Child> {
     let shell_exe = shell_exe_env_value(std::env::current_exe());
     let forward_args = sidecar_forward_args(&std::env::args().skip(1).collect::<Vec<String>>());
     if use_dev_sidecar() {
-        spawn_sidecar_dev(&shell_exe, &forward_args)
+        spawn_sidecar_dev(&shell_exe, &forward_args, store_boot_env)
     } else {
-        spawn_sidecar_packaged(app, &shell_exe, &forward_args)
+        spawn_sidecar_packaged(app, &shell_exe, &forward_args, store_boot_env)
     }
 }
 

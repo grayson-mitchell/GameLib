@@ -5266,19 +5266,28 @@ describe('Phase 80 plan 21: steampoll lifecycle wiring', () => {
     expect(code).toContain('on_sidecar_eof_steampoll();')
   })
 
-  test('handle_exit drains depot, steamcm and steampoll before the children stage signals the sidecar (Phase 83, D-12)', () => {
+  test('handle_exit drains depot, steamcm, steampoll and store before the children stage signals the sidecar (Phase 83, D-12; Phase 85 adds store)', () => {
     const body = readTopLevelFnBody(loadMainRsCode(), 'handle_exit', 5)
     const depot = body.indexOf('"depot"')
     const steamcm = body.indexOf('"steamcm"')
     const steampoll = body.indexOf('"steampoll"')
-    for (const at of [depot, steamcm, steampoll]) expect(at).toBeGreaterThan(-1)
+    const store = body.indexOf('"store"')
+    for (const at of [depot, steamcm, steampoll, store])
+      expect(at).toBeGreaterThan(-1)
     // Each named drain runs its own subsystem's exit call with the drain bound it is handed.
     const cancel = body.indexOf('cancel_all_and_wait(bound)')
     const cm = body.indexOf('steamcm_exit_shutdown(bound)')
     const poll = body.indexOf('steampoll_exit_shutdown(bound)')
+    const storeDrain = body.indexOf('store_boot::drain(bound)')
     expect(cancel).toBeGreaterThan(depot)
     expect(cm).toBeGreaterThan(steamcm)
     expect(poll).toBeGreaterThan(steampoll)
+    expect(storeDrain).toBeGreaterThan(store)
+    // An in-flight store write that overruns the drain holds it open, like every other drain, so
+    // the one deadline line names `store` (T-85-21).
+    expect(body.slice(storeDrain, body.indexOf('}),', storeDrain))).toContain(
+      'hold_exit_drain_open()'
+    )
     // The children closure is declared after every drain, holds the one shutdown_child call
     // (and the ChildSet kill), and is the argument run_exit receives after the drains.
     const children = body.indexOf('let children = |grace')
@@ -5287,7 +5296,7 @@ describe('Phase 80 plan 21: steampoll lifecycle wiring', () => {
     const run = body.search(
       /run_exit\(global\(\),\s*ExitBudget::DEFAULT,\s*drains,\s*children,\s*finish\s*\)/
     )
-    expect(children).toBeGreaterThan(Math.max(cancel, cm, poll))
+    expect(children).toBeGreaterThan(Math.max(cancel, cm, poll, storeDrain))
     expect(sidecar).toBeGreaterThan(children)
     expect(helpers).toBeGreaterThan(sidecar)
     expect(run).toBeGreaterThan(helpers)
@@ -5337,9 +5346,83 @@ describe('Phase 80 plan 21: steampoll lifecycle wiring', () => {
     const code = loadMainRsCode()
     const install = code.indexOf('install_steampoll_host(app.handle());')
     const boot = code.indexOf('steampoll_boot();')
-    const spawn = code.indexOf('spawn_sidecar_state(app)?')
+    const spawn = code.indexOf('spawn_sidecar_state(app, store_boot_env')
     expect(install).toBeGreaterThan(-1)
     expect(boot).toBeGreaterThan(install)
     expect(boot).toBeLessThan(spawn)
+  })
+})
+
+// Phase 85 plan 09 (FND-06, D-01, D-21): the store boot open, the GAMELIB_STORE_BOOT hand-off and
+// the single-instance ordering that keeps a second GameLib from opening or migrating store files.
+describe('Phase 85 plan 09: store boot wiring', () => {
+  test('run_setup opens the stores before the sidecar is spawned, and only run_setup does', () => {
+    const code = loadMainRsCode()
+    const setup = readTopLevelFnBody(code, 'run_setup', 5)
+    const open = setup.indexOf('store_boot::open_all(')
+    const spawn = setup.indexOf('spawn_sidecar_state(app, store_boot_env')
+    expect(open).toBeGreaterThan(-1)
+    expect(spawn).toBeGreaterThan(open)
+    // The host the boot opened is the host the native handlers write through.
+    expect(setup).toContain('store_host: Arc::clone(store_boot::host())')
+    // One call site in the whole shell: nothing else opens the profile's stores at boot.
+    expect(
+      loadMainRsCode(readTauriShellProductionSource()).split(
+        'store_boot::open_all('
+      ).length - 1
+    ).toBe(1)
+  })
+
+  test('FND-06 second-instance edge: run_setup is reached only through .setup(, after the single-instance guard has decided', () => {
+    const code = loadMainRsCode()
+    expect(code.split('run_setup(').length - 1).toBe(2) // the fn and its one call
+    const main = code.slice(code.indexOf('fn main('))
+    const setupCall = main.indexOf('.setup(move |app| run_setup(')
+    expect(setupCall).toBeGreaterThan(-1)
+    // The guard that makes this process the primary (or hands off and exits) comes first, on
+    // every platform.
+    const unixGuard = main.indexOf('acquire_single_instance(')
+    const windowsGuard = main.indexOf('acquire_single_instance_windows(')
+    expect(unixGuard).toBeGreaterThan(-1)
+    expect(windowsGuard).toBeGreaterThan(-1)
+    expect(unixGuard).toBeLessThan(setupCall)
+    expect(windowsGuard).toBeLessThan(setupCall)
+  })
+
+  test('both sidecar spawn paths set GAMELIB_STORE_BOOT, only when there is something to say', () => {
+    const code = loadMainRsCode(readTauriShellProductionFile('sidecar.rs'))
+    for (const fn of ['fn spawn_sidecar_dev(', 'fn spawn_sidecar_packaged(']) {
+      const body = code.slice(code.indexOf(fn))
+      const end = body.indexOf('\n}\n')
+      const own = body.slice(0, end)
+      expect(own).toMatch(
+        /if let Some\(boot\) = store_boot_env \{\s*\w+\.env\("GAMELIB_STORE_BOOT", boot\);/
+      )
+    }
+  })
+
+  test('the ownership file flips nothing yet: every family false, no per-store override', () => {
+    const own = JSON.parse(
+      readFileSync(
+        join(
+          __dirname,
+          '..',
+          '..',
+          'common',
+          'types',
+          'ipc',
+          'storeOwnership.json'
+        ),
+        'utf-8'
+      )
+    ) as { families: Record<string, boolean>; stores: Record<string, boolean> }
+    expect(Object.keys(own.families).sort()).toEqual([
+      'account',
+      'cache',
+      'settings',
+      'user-state'
+    ])
+    expect(Object.values(own.families).every((on) => on === false)).toBe(true)
+    expect(own.stores).toEqual({})
   })
 })

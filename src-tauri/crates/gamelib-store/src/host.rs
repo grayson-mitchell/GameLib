@@ -415,6 +415,19 @@ fn runtime_cache_row(key: String, dir: &str, name: &str) -> TableRow {
     }
 }
 
+/// A file that is not a readable store: a cache that starts empty over it, or any store that opens
+/// read-only because it could not be read, copied aside or migrated. (A `Newer` file is readable.)
+fn unreadable(outcome: &OpenOutcome) -> bool {
+    matches!(
+        outcome,
+        OpenOutcome::StartEmpty { .. }
+            | OpenOutcome::ReadOnly {
+                reason: ReadOnlyReason::Failed,
+                ..
+            }
+    )
+}
+
 type Clock = Arc<dyn Fn() -> SystemTime + Send + Sync>;
 
 /// Opens stores and hands out one `Arc<Store>` per file.
@@ -566,6 +579,13 @@ impl StoreHost {
         };
         let mut open = lock(&self.open);
         if let Some(store) = open.get(&path) {
+            // A store the boot sweep opened as unreadable is still unreadable to the strict entry.
+            if strict && unreadable(&store.outcome) {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "store file is not a readable store",
+                ));
+            }
             return Ok(Arc::clone(store));
         }
         let opened = open_file(
@@ -580,9 +600,7 @@ impl StoreHost {
             OpenOutcome::ReadOnly { reason, detail } => Some((*reason, detail.clone())),
             _ => None,
         };
-        let unreadable = matches!(opened.outcome, OpenOutcome::StartEmpty { .. })
-            || matches!(read_only, Some((ReadOnlyReason::Failed, _)));
-        if strict && unreadable {
+        if strict && unreadable(&opened.outcome) {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
                 "store file is not a readable store",
@@ -1268,5 +1286,24 @@ mod tests {
         std::thread::sleep(Duration::from_millis(30));
         assert_eq!(*all.lock().unwrap(), ["store/uploadedLogs", "store/other"]);
         assert_eq!(*only_a.lock().unwrap(), ["store/uploadedLogs"]);
+    }
+
+    #[test]
+    fn a_corrupt_file_the_boot_sweep_opened_is_still_invalid_data_to_open_cache() {
+        let home = FakeHome::new("gamelib-store-host-");
+        let file = seed(&home, "{not json");
+        let host = StoreHost::new();
+        let row = row_for_key("store/uploadedLogs").unwrap();
+        let swept = host.open_row(row, file.clone()).unwrap();
+        assert!(matches!(
+            swept.open_outcome(),
+            OpenOutcome::StartEmpty { .. }
+        ));
+        let err = host
+            .open_cache(&dir_of(&home), "uploadedLogs")
+            .err()
+            .expect("strict entry refuses what the sweep found unreadable");
+        assert_eq!(err.kind(), io::ErrorKind::InvalidData);
+        assert_eq!(fs::read_to_string(&file).unwrap(), "{not json");
     }
 }

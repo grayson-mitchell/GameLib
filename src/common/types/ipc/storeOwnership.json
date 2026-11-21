@@ -1,0 +1,9 @@
+{
+  "families": {
+    "cache": false,
+    "user-state": false,
+    "account": false,
+    "settings": false
+  },
+  "stores": {}
+}
