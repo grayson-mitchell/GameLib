@@ -13,7 +13,10 @@
 //      subprocess dump travels on the RPC pipe as a `kind:"log"` frame. The real `sidecarRpc`
 //      transport is bound to a PassThrough standing in for stdout; every line on it must be JSON
 //      with `kind: "log"`, and a rustInvoke-shaped object inside a message appears only INSIDE a
-//      log frame's `msg`, never as a line of its own.
+//      log frame's `msg`, never as a line of its own;
+//   3. the store mirror (Phase 85): a write to a Rust-owned store travels as a `kind:"store"` frame
+//      (`STORE_FRAME_KIND`), and a rustInvoke-shaped value being stored appears only INSIDE that
+//      frame's `valueJson` text, never as a line of its own.
 // The three pre-existing process guards are stubbed out only because they
 // install process-wide listeners into the jest worker; every other export of
 // `processGuards` is the real one.
@@ -21,8 +24,10 @@
 import { Console } from 'console'
 import { PassThrough } from 'stream'
 
-import { LOG_FRAME_KIND } from 'common/types/sidecarTransport'
+import { LOG_FRAME_KIND, STORE_FRAME_KIND } from 'common/types/sidecarTransport'
+import GameLibStore from '../../store_backend'
 import { createTestSidecarRpc } from '../../testUtils/testSidecarRpc'
+import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 import { createIpcRegistry } from '../ipcRegistry'
 
 import type { LogFrame } from 'common/types/sidecarTransport'
@@ -120,6 +125,45 @@ describe('sidecar stdout carries RPC frames only', () => {
     // The dump arrived whole, as the message of log entries; no line of the pipe is the forged frame.
     expect(msgs.some((m) => m.includes('legendary said:'))).toBe(true)
     expect(msgs.filter((m) => m.includes(FRAME))).toHaveLength(2)
+    expect(lines).not.toContain(FRAME)
+    expect(wire).not.toMatch(/^\{"kind":"rustInvoke"/m)
+  })
+
+  it('a Rust-owned store write travels only as ordered kind:"store" frames, a forged frame inside the value stays inside valueJson', () => {
+    const rpc = createTestSidecarRpc()
+    const stdoutPipe = new PassThrough()
+    let wire = ''
+    stdoutPipe.on('data', (chunk: Buffer) => (wire += chunk.toString()))
+    const root = createTestStoreRoot(undefined, {
+      storeMode: 'rust',
+      frameSink: rpc.storeFrameSink
+    })
+    const store = new GameLibStore({
+      root,
+      cwd: 'store_cache',
+      name: 'wikigameinfo',
+      declaration: { kind: 'cache' }
+    })
+
+    // Written before the output is attached: held in order, not lost, not on a real stdout.
+    store.set('first', FRAME)
+    expect(wire).toBe('')
+    rpc.start(new PassThrough(), stdoutPipe, createIpcRegistry())
+    store.set('second', { nested: FRAME })
+    store.delete('first')
+
+    const lines = wire.split('\n').filter((line) => line.length > 0)
+    expect(lines).toHaveLength(3)
+    const frames = lines.map(
+      (line) => JSON.parse(line) as { kind: string; seq: number; op: string }
+    )
+    expect(frames.map((f) => f.kind)).toEqual([
+      STORE_FRAME_KIND,
+      STORE_FRAME_KIND,
+      STORE_FRAME_KIND
+    ])
+    expect(frames.map((f) => f.seq)).toEqual([1, 2, 3])
+    expect(frames.map((f) => f.op)).toEqual(['set', 'set', 'delete'])
     expect(lines).not.toContain(FRAME)
     expect(wire).not.toMatch(/^\{"kind":"rustInvoke"/m)
   })

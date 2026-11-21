@@ -15,7 +15,12 @@ import CacheStore from '../../cache'
 import GameLibStore from '../../store_backend'
 import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 import vectors from 'common/__fixtures__/storeFrameVectors.json'
-import { STORE_FRAME_KIND } from 'common/types/sidecarTransport'
+import {
+  STORE_FRAME_KIND,
+  STORE_MIRROR_EVENT_CHANNEL
+} from 'common/types/sidecarTransport'
+import { registerStoreWriteHandlers } from '../../sidecar/storeWriteHandlers'
+import { createStoreRegistry } from '../storeRegistry'
 import { MirrorCell, type StoreMirrorEvent } from '../mirrorCell'
 import type { StoreFrame, StoreFrameSink } from '../storeFrames'
 import { STORE_FRAME_MAX_BYTES, validateStoreFrame } from '../storeFrames'
@@ -578,5 +583,68 @@ describe('refusals and the flush barrier', () => {
     expect(handle.hasRef()).toBe(false)
     cell.applyEvent(event(frames[0] as StoreFrame, 'flushed'))
     return pending
+  })
+})
+
+describe('the storeMirrorEvent registration', () => {
+  it('routes a shell event to the mirror cell of its store and drops a malformed payload with one line', () => {
+    const userData = mkdtempSync(join(tmpdir(), 'gamelib-write-path-'))
+    try {
+      const frames: StoreFrame[] = []
+      const root = createTestStoreRoot(userData, {
+        storeMode: 'rust',
+        frameSink: { send: (f) => void frames.push(f) }
+      })
+      const listeners = new Map<string, (...args: unknown[]) => void>()
+      registerStoreWriteHandlers({
+        ipc: {
+          on: (channel: string, listener: (...args: unknown[]) => void) => {
+            listeners.set(channel, listener)
+          },
+          handle: () => undefined
+        } as never,
+        registry: createStoreRegistry(),
+        root,
+        pushFrontendMessage: () => undefined
+      })
+      const listener = listeners.get(STORE_MIRROR_EVENT_CHANNEL)
+      expect(listener).toBeDefined()
+
+      const store = new GameLibStore({
+        root,
+        cwd: 'store_cache',
+        name: 'wikigameinfo',
+        declaration: { kind: 'cache' }
+      })
+      const cell = root.mirrors.cellFor({
+        path: store.path,
+        storeKey: TRACER,
+        dotPaths: true
+      })
+      store.set('k', 1)
+      expect(cell.pendingCount).toBe(1)
+
+      const stderr = jest
+        .spyOn(process.stderr, 'write')
+        .mockImplementation(() => true)
+      listener?.(undefined, { not: 'an event' })
+      listener?.(undefined)
+      expect(cell.pendingCount).toBe(1)
+      expect(
+        stderr.mock.calls.filter((c) => String(c[0]).includes('malformed'))
+      ).toHaveLength(2)
+
+      listener?.(undefined, {
+        store: TRACER,
+        rev: 1,
+        op: 'applied',
+        originSeq: (frames[0] as StoreFrame).seq
+      })
+      expect(cell.pendingCount).toBe(0)
+      expect(cell.baseRev).toBe(1)
+    } finally {
+      jest.restoreAllMocks()
+      rmSync(userData, { recursive: true, force: true })
+    }
   })
 })

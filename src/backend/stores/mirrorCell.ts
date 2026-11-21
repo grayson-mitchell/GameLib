@@ -59,7 +59,7 @@ interface PendingOp {
   op: MirrorOp
 }
 
-export type StoreMirrorEventOp = 'applied' | 'refused' | 'flushed'
+type StoreMirrorEventOp = 'applied' | 'refused' | 'flushed'
 
 export interface StoreMirrorEvent {
   store: string

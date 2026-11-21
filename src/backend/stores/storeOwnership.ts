@@ -83,7 +83,7 @@ function isPlainAppName(name: string): boolean {
  * `GamesConfig/<app>` (the `settings/game` pattern row) and a runtime `store_cache/<name>` resolve;
  * anything else (an unknown directory, a path escape, the pattern row's own key) is `undefined`.
  */
-export function rowForStoreKey(storeKey: string): TableRowShape | undefined {
+function rowForStoreKey(storeKey: string): TableRowShape | undefined {
   if (storeKey.startsWith(GAMES_CONFIG_PREFIX)) {
     const app = storeKey.slice(GAMES_CONFIG_PREFIX.length)
     const pattern = rowByKey('settings/game')
@@ -133,7 +133,7 @@ export function isRustOwned(
     : false
 }
 
-export type BootReadOnlyReason = 'newer' | 'failed'
+type BootReadOnlyReason = 'newer' | 'failed'
 
 /** What the shell told the sidecar about the stores it opened (`GAMELIB_STORE_BOOT`). */
 export interface StoreBootEnv {

@@ -18,7 +18,7 @@
 import { STORE_FRAME_KIND } from 'common/types/sidecarTransport'
 import { isStoreKey } from './storeOwnership'
 
-export type StoreFrameOp = 'set' | 'delete' | 'clear' | 'replace' | 'flush'
+type StoreFrameOp = 'set' | 'delete' | 'clear' | 'replace' | 'flush'
 
 export interface StoreFrame {
   kind: typeof STORE_FRAME_KIND
@@ -39,7 +39,7 @@ export interface StoreFrameSink {
 /** The shell rejects a frame whose line is longer than this (`MAX_FRAME_BYTES` in store_dispatch.rs). */
 export const STORE_FRAME_MAX_BYTES = 10 * 1024 * 1024
 
-export type StoreFrameRejectReason =
+type StoreFrameRejectReason =
   | 'unknown-field'
   | 'shape'
   | 'seq'
