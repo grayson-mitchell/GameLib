@@ -2,14 +2,14 @@
 gsd_state_version: "1.0"
 milestone: v0.11
 milestone_name: Node Sidecar Retirement
-current_phase: 100
-current_phase_name: Game page without the ⋮ menu
-status: verifying
-stopped_at: Completed 100-10-PLAN.md
-last_updated: "2026-11-21T11:45:34.261Z"
-last_activity: 2026-11-21
-last_activity_desc: Phase 100 execution started
-state_head: 8690622c33c717690989da0d4ca1736fbd2070f9
+current_phase: 85
+current_phase_name: Store host, config and versioned migrations
+status: executing
+stopped_at: Completed 85-01-PLAN.md
+last_updated: "2026-11-21T16:41:47.410Z"
+last_activity: 2026-11-22
+last_activity_desc: Phase 85 execution started
+state_head: 258593d2daf93b488e6364e95d0d0ebf2802d8ad
 progress:
   total_phases: 20
   completed_phases: 23
@@ -25,7 +25,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-20)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 100 — Game page without the ⋮ menu
+**Current focus:** Phase 85 — Store host, config and versioned migrations
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -76,10 +76,10 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 
 ## Current Position
 
-Phase: 100 (Game page without the ⋮ menu) — EXECUTING
-Plan: 10 of 10
-Status: Phase complete — ready for verification
-Last activity: 2026-11-21 — Phase 100 execution started
+Phase: 85 (Store host, config and versioned migrations) — EXECUTING
+Plan: 2 of 25
+Status: Ready to execute
+Last activity: 2026-11-22 — Phase 85 execution started
 Progress: [██████████] 100%
 
 ## Native-Install Arc Phase Map (21–25)
@@ -360,6 +360,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 100 P08 | 38 min | 2 tasks | 17 files |
 | Phase 100 P09 | 85 min | 2 tasks | 42 files |
 | Phase 100 P10 | 55 min | 2 tasks | 2 files |
+| Phase 85 P01 | 35 min | 3 tasks | 137 files |
 
 ## Accumulated Context
 
@@ -667,6 +668,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 100]: Plan 09: shortcuts source gate slices IntegrationRows from the handler to the next declaration (expression-bodied arrow); dock spec asserts no <...Menu element instead of naming the deleted DotsMenu
 - [Phase 100]: 100-10: the 18 UAT items stay at 18 — owed human-judgment checks from plans 01-09 were folded into existing items
 - [Phase 100]: 100-10: phase-100 gamelib keys recorded in meta/i18nCatalogPresenceBaseline.json (105 keys, plus two steam.bridge.setup keys from another session) so test:ci is green
+- [Phase 85]: 85-01: conf stores are tab-indented JSON with the schemaVersion envelope and no trailing newline; settings documents are 2-space with a top-level version string; a migration rewrite is tab-indented for both, so a freshly migrated settings document is tab-indented until the next writeSettingsFile — Read from store_backend.ts, settingsFiles.ts and engine.ts and confirmed by the generated golden
+- [Phase 85]: 85-01: corrupt-file cases are recorded oracle tsOnly with a D-18 divergence note; Rust keeps the bytes, copies aside and opens read-only or empty — TS resets on clearInvalidConfig; Rust deliberately differs
 
 ### Pending Todos
 
@@ -927,8 +930,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-21T11:45:33.937Z
-Stopped at: Completed 100-10-PLAN.md
+Last session: 2026-11-21T16:41:47.080Z
+Stopped at: Completed 85-01-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
