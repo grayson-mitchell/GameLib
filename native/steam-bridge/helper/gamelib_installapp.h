@@ -49,6 +49,20 @@
  *   {"result":"ok","tracked":true,"finished":B,"installState":N[,"reason":"..."]}
  *   {"result":"refused"}                                            exit 3
  *
+ * quick 261122-9sl. `steam-bridge-helper --steam-moveapp <appId> --library <absPath>
+ * [--wait] [--dry-run]` asks the same running client to CanMoveApp then MoveApp
+ * (spike 090: Steam moves the files and ACF itself, no window). MoveApp is only
+ * called when its unique 0x4780 ID sits in the run CanMoveApp (-1),
+ * GetMoveAppProgress (+1), CancelMoveApp (+2), each by its own unique ID.
+ * CancelMoveApp is never called. The folder index comes from Steam's own
+ * folder list (the same match --steam-installapp --library does). With --wait it
+ * polls GetMoveAppProgress / GetAppLibraryFolder / GetAppInstallState once a
+ * second until the move has finished and the post-move verify has settled.
+ *   {"result":"ok","tracked":true,"finished":B,"installState":N,"folderIndex":T,
+ *    "fromFolder":F[,"reason":"..."]}                                exit 0
+ *   {"result":"refused","appId":N,"reason":"not-installed|already-in-folder"} exit 3
+ *   {"result":"error","appId":N,"stage":"CanMoveApp|MoveApp","eAppUpdateError":E} exit 3
+ *
  * Output: exactly ONE JSON line on the original stdout; everything Steam logs
  * goes to stderr (fd 1 is redirected to fd 2 while Steam code runs).
  *   {"result":"ok",...}                       exit 0
@@ -99,6 +113,21 @@
 /* UpdateQueued | UpdateRunning | UpdateStarted | Validating */
 #define GL_IA_ACTIVE_STATE_MASK (0x8u | 0x100u | 0x400u | 0x20000u)
 #define GL_IA_STATE_UPDATE_PAUSED 0x200u
+
+/* quick 261122-9sl: Move (spike 090 slots 67-70, GetAppLibraryFolder). */
+#define GL_IA_FN_CANMOVE 0x68b2u
+#define GL_IA_FN_MOVEAPP 0x4780u
+#define GL_IA_FN_MOVEPROGRESS 0x5523u
+#define GL_IA_FN_CANCELMOVE 0x4309u
+#define GL_IA_FN_APPLIBFOLDER 0x166eu
+/* Must track MOVE_WAIT_TIMEOUT_MS in steamInstallApp.ts (cap + margin). */
+#define GL_IA_MOVE_WAIT_CAP_S 21600
+#define GL_IA_MOVE_START_GRACE_S 30
+#define GL_IA_MOVE_SETTLE_FALLBACK_S 60
+#define GL_IA_STATE_FULLY_INSTALLED 0x4u
+#define GL_IA_STATE_FILES_MISSING 0x20u
+/* UpdateRunning | UpdateStarted | Validating: work actually running, not queued. */
+#define GL_IA_MOVE_BUSY_MASK (0x100u | 0x400u | 0x20000u)
 
 #define GL_IA_CHILD_TIMEOUT_MS 3000
 #define GL_IA_SCAN_CAP_MS 20000
@@ -669,6 +698,224 @@ static int gl_ia_run_validate(uint32_t app_id, bool wait, bool dry_run) {
   return GL_IA_EXIT_OK;
 }
 
+/*
+ * quick 261122-9sl: --steam-moveapp. Same attach order as the validate run.
+ * Spike 090: CanMoveApp is `uint32 (this, appId, uint32 *out)` on this build (NOT
+ * the OpenSteamClient (appId, folder) shape, which segfaulted), MoveApp is
+ * `uint32 (this, appId, int32 folderIndex)`, GetMoveAppProgress is
+ * `uint32 (this, appId, uint64 *, uint64 *, uint32 *)`. Every out-parameter is a
+ * real stack variable of exactly that width, never NULL. CancelMoveApp is never
+ * called; it only guards the slot order.
+ */
+static int gl_ia_move_error(uint32_t app_id, const char *stage, uint32_t err) {
+  gl_ia_emit("{\"result\":\"error\",\"appId\":%u,\"stage\":\"%s\","
+             "\"eAppUpdateError\":%u}",
+             app_id, stage, err);
+  return GL_IA_EXIT_ERROR;
+}
+
+static int gl_ia_run_move(uint32_t app_id, const char *library, bool wait,
+                          bool dry_run) {
+  fflush(NULL);
+  gl_ia_out_fd = dup(1);
+  if (gl_ia_out_fd < 0) gl_ia_out_fd = 1;
+  else dup2(2, 1);
+
+  const char *reason = NULL;
+  int getter_slot = gl_ia_find_getter_slot(&reason);
+  if (getter_slot < 0) return gl_ia_unavailable(reason ? reason : "app-manager-not-found");
+
+  gl_ia_session s = {0};
+  const char *why = gl_ia_attach(&s);
+  if (why) return gl_ia_unavailable(why);
+  void *apm = gl_ia_call_getter(&s, getter_slot);
+  if (!apm || !strstr(gl_ia_rtti(apm), "IClientAppManager"))
+    return gl_ia_unavailable("app-manager-not-found");
+
+  void **vt = gl_ia_vt(apm);
+  /* Run guard (spike 090 slots 67-70): MoveApp by unique ID, and its three
+   * neighbours each by unique ID AND by the high half at the exact position. */
+  int move_slot = gl_ia_find_method_slot(vt, GL_IA_FN_MOVEAPP);
+  if (move_slot < 1 ||
+      gl_ia_find_method_slot(vt, GL_IA_FN_CANMOVE) != move_slot - 1 ||
+      gl_ia_slot_hi(vt, move_slot - 1) != (int)GL_IA_FN_CANMOVE ||
+      gl_ia_find_method_slot(vt, GL_IA_FN_MOVEPROGRESS) != move_slot + 1 ||
+      gl_ia_slot_hi(vt, move_slot + 1) != (int)GL_IA_FN_MOVEPROGRESS ||
+      gl_ia_find_method_slot(vt, GL_IA_FN_CANCELMOVE) != move_slot + 2 ||
+      gl_ia_slot_hi(vt, move_slot + 2) != (int)GL_IA_FN_CANCELMOVE)
+    return gl_ia_unavailable("method-unverified:MoveApp");
+  int can_slot = move_slot - 1;
+  int prog_slot = move_slot + 1;
+
+  int folder_slot = gl_ia_find_method_slot(vt, GL_IA_FN_APPLIBFOLDER);
+  if (folder_slot < 0) return gl_ia_unavailable("method-unverified:GetAppLibraryFolder");
+
+  int slot_n = gl_ia_find_method_slot(vt, GL_IA_FN_NUMFOLDERS);
+  int slot_p = gl_ia_find_method_slot(vt, GL_IA_FN_FOLDERPATH);
+  if (slot_n < 0 || slot_p < 0) return gl_ia_unavailable("library-lookup-unverified");
+  int folder_count = gl_ia_list_folders(apm, slot_n, slot_p);
+  if (folder_count < 0) return gl_ia_unavailable("library-lookup-unverified");
+  int target = -1;
+  for (int i = 0; i < folder_count; i++) {
+    if (gl_ia_folder_matches(gl_ia_folders[i], library)) {
+      target = i;
+      break;
+    }
+  }
+  if (target < 0) return gl_ia_unavailable("library-not-registered");
+
+  int32_t from =
+      ((int32_t (*)(void *, uint32_t))vt[folder_slot])(apm, app_id);
+  if (from < 0) {
+    gl_ia_emit("{\"result\":\"refused\",\"appId\":%u,\"reason\":\"not-installed\"}",
+               app_id);
+    return GL_IA_EXIT_ERROR;
+  }
+  if (from == target) {
+    gl_ia_emit("{\"result\":\"refused\",\"appId\":%u,"
+               "\"reason\":\"already-in-folder\",\"folderIndex\":%d}",
+               app_id, target);
+    return GL_IA_EXIT_ERROR;
+  }
+
+  /* CanMoveApp: the reply writes 4 bytes into a REAL pointer. Its value's
+   * meaning is unknown (always 0 in spike 090), so it is ignored. */
+  uint32_t can_out = 0;
+  uint32_t can_err =
+      ((uint32_t (*)(void *, uint32_t, uint32_t *))vt[can_slot])(apm, app_id,
+                                                                 &can_out);
+
+  if (dry_run) {
+    static char list[GL_IA_MAX_FOLDERS * (GL_IA_PATH_CAP * 2 + 8)];
+    size_t o = 0;
+    list[0] = '\0';
+    for (int i = 0; i < folder_count; i++) {
+      char esc[GL_IA_PATH_CAP * 2];
+      gl_ia_json_escape(esc, sizeof esc, gl_ia_folders[i]);
+      int w = snprintf(list + o, sizeof list - o, "%s\"%s\"", i ? "," : "", esc);
+      if (w < 0 || (size_t)w >= sizeof list - o) break;
+      o += (size_t)w;
+    }
+    gl_ia_emit("{\"result\":\"ok\",\"appId\":%u,\"dryRun\":true,"
+               "\"folderIndex\":%d,\"fromFolder\":%d,\"canMoveError\":%u,"
+               "\"engineSlot\":%d,\"canMoveSlot\":%d,\"moveSlot\":%d,"
+               "\"progressSlot\":%d,\"libraryFolders\":[%s]}",
+               app_id, target, (int)from, can_err, getter_slot, can_slot,
+               move_slot, prog_slot, list);
+    return GL_IA_EXIT_OK;
+  }
+
+  /* Resolve the wait-state slot BEFORE the move: unresolved is untracked, not
+   * an error. */
+  int state_slot = -1;
+  const char *untracked = NULL;
+  if (wait) {
+    state_slot = gl_ia_find_method_slot(vt, GL_IA_FN_INSTALLSTATE);
+    if (state_slot < 0) untracked = "method-unverified:GetAppInstallState";
+  }
+
+  if (can_err != 0) return gl_ia_move_error(app_id, "CanMoveApp", can_err);
+  uint32_t err =
+      ((uint32_t (*)(void *, uint32_t, int32_t))vt[move_slot])(apm, app_id,
+                                                               (int32_t)target);
+  if (err != 0) return gl_ia_move_error(app_id, "MoveApp", err);
+
+  if (!wait || untracked) {
+    if (untracked) {
+      gl_ia_emit("{\"result\":\"ok\",\"appId\":%u,\"tracked\":false,"
+                 "\"folderIndex\":%d,\"fromFolder\":%d,\"reason\":\"%s\"}",
+                 app_id, target, (int)from, untracked);
+    } else {
+      gl_ia_emit("{\"result\":\"ok\",\"appId\":%u,\"tracked\":false,"
+                 "\"folderIndex\":%d,\"fromFolder\":%d}",
+                 app_id, target, (int)from);
+    }
+    return GL_IA_EXIT_OK;
+  }
+
+  long started = gl_ia_now_ms();
+  bool seen_moving = false;
+  int settled_run = 0;
+  long quiet_since_ms = -1; /* start of the continuous no-busy-bits window */
+  uint32_t last_state = 0;
+  uint32_t prev_prog = 0xFFFFFFFFu;
+  uint64_t prev_a = 0;
+  uint64_t prev_b = 0;
+  int32_t prev_folder = -2;
+  uint32_t prev_state = 0xFFFFFFFFu;
+  const char *stop_reason = NULL;
+  bool finished = false;
+  for (;;) {
+    uint64_t a = 0;
+    uint64_t b = 0;
+    uint32_t c = 0;
+    uint32_t prog = ((uint32_t (*)(void *, uint32_t, uint64_t *, uint64_t *,
+                                   uint32_t *))vt[prog_slot])(apm, app_id, &a,
+                                                              &b, &c);
+    int32_t folder =
+        ((int32_t (*)(void *, uint32_t))vt[folder_slot])(apm, app_id);
+    uint32_t st = ((uint32_t (*)(void *, uint32_t))vt[state_slot])(apm, app_id);
+    last_state = st;
+    if (prog != prev_prog || a != prev_a || b != prev_b || folder != prev_folder ||
+        st != prev_state) {
+      fprintf(stderr,
+              "[moveapp] app %u progress=%u a=%llu b=%llu folder=%d installState=%u\n",
+              app_id, prog, (unsigned long long)a, (unsigned long long)b,
+              (int)folder, st);
+      prev_prog = prog;
+      prev_a = a;
+      prev_b = b;
+      prev_folder = folder;
+      prev_state = st;
+    }
+    long now_ms = gl_ia_now_ms();
+    long elapsed_s = (now_ms - started) / 1000L;
+    if (prog == 1) seen_moving = true;
+
+    bool at_target = (prog == 0 && folder == target);
+    bool settled = at_target && (st & GL_IA_STATE_FULLY_INSTALLED) &&
+                   !(st & GL_IA_ACTIVE_STATE_MASK) &&
+                   !(st & GL_IA_STATE_FILES_MISSING);
+    settled_run = settled ? settled_run + 1 : 0;
+    if (settled_run >= 2) {
+      finished = true;
+      break;
+    }
+    /* Fallback: at the target with no running work for a continuous window, so
+     * a persistent queued/required bit cannot hold the wait forever. */
+    if (at_target && !(st & GL_IA_MOVE_BUSY_MASK)) {
+      if (quiet_since_ms < 0) quiet_since_ms = now_ms;
+      if ((now_ms - quiet_since_ms) / 1000L >= GL_IA_MOVE_SETTLE_FALLBACK_S) {
+        finished = true;
+        break;
+      }
+    } else {
+      quiet_since_ms = -1;
+    }
+    if (!seen_moving && folder != target && elapsed_s >= GL_IA_MOVE_START_GRACE_S) {
+      stop_reason = "not-started";
+      break;
+    }
+    if (elapsed_s >= GL_IA_MOVE_WAIT_CAP_S) {
+      stop_reason = "wait-cap";
+      break;
+    }
+    usleep(1000000);
+  }
+  if (finished) {
+    gl_ia_emit("{\"result\":\"ok\",\"appId\":%u,\"tracked\":true,\"finished\":true,"
+               "\"installState\":%u,\"folderIndex\":%d,\"fromFolder\":%d}",
+               app_id, last_state, target, (int)from);
+  } else {
+    gl_ia_emit("{\"result\":\"ok\",\"appId\":%u,\"tracked\":true,\"finished\":false,"
+               "\"installState\":%u,\"folderIndex\":%d,\"fromFolder\":%d,"
+               "\"reason\":\"%s\"}",
+               app_id, last_state, target, (int)from,
+               stop_reason ? stop_reason : "unknown");
+  }
+  return GL_IA_EXIT_OK;
+}
+
 #endif /* __aarch64__ */
 
 /* Shared appId parse: 1..10 digits, 1..0xFFFFFFFF. Returns a usage exit code
@@ -756,6 +1003,42 @@ static int gamelib_validateapp_main(int argc, char **argv) {
 #if defined(__aarch64__)
   return gl_ia_run_validate(app_id, wait, dry_run);
 #else
+  (void)wait;
+  (void)dry_run;
+  (void)app_id;
+  return gl_ia_unavailable("unsupported-arch");
+#endif
+}
+
+/* argv[1] == "--steam-moveapp" (quick 261122-9sl). Same isolation as the other
+ * subcommands; requires --library <abs>, accepts --wait and --dry-run. */
+static int gamelib_moveapp_main(int argc, char **argv) {
+  uint32_t app_id = 0;
+  int rc = gl_ia_parse_app_id(argc, argv, &app_id);
+  if (rc >= 0) return rc;
+
+  const char *library = NULL;
+  bool wait = false;
+  bool dry_run = false;
+  for (int i = 3; i < argc; i++) {
+    if (strcmp(argv[i], "--wait") == 0) {
+      wait = true;
+    } else if (strcmp(argv[i], "--dry-run") == 0) {
+      dry_run = true;
+    } else if (strcmp(argv[i], "--library") == 0) {
+      if (i + 1 >= argc || !gl_ia_library_arg_ok(argv[i + 1]))
+        return gl_ia_usage("bad-library");
+      library = argv[++i];
+    } else {
+      return gl_ia_usage("unknown-argument");
+    }
+  }
+  if (library == NULL) return gl_ia_usage("missing-library");
+
+#if defined(__aarch64__)
+  return gl_ia_run_move(app_id, library, wait, dry_run);
+#else
+  (void)library;
   (void)wait;
   (void)dry_run;
   (void)app_id;

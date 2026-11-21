@@ -1,8 +1,8 @@
 /**
  * quick 261105-ord: backend caller for the bridge helper's
  * `--steam-installapp` subcommand, and (quick 261106-s3n) its
- * `--steam-uninstallapp` subcommand and (quick 261120-p2j) its `--steam-validateapp`
- * subcommand (native/steam-bridge/helper/
+ * `--steam-uninstallapp` subcommand, (quick 261120-p2j) its `--steam-validateapp`
+ * subcommand and (quick 261122-9sl) its `--steam-moveapp` subcommand (native/steam-bridge/helper/
  * gamelib_installapp.h). Never throws; every failure maps to a typed
  * 'unavailable' outcome so callers fall back to today's behaviour.
  *
@@ -62,6 +62,26 @@ export type SteamValidateAppOutcome =
       reason?: string
     }
   | { kind: 'refused' }
+  | { kind: 'unavailable'; reason: string }
+
+/**
+ * quick 261122-9sl: the bound on a `--steam-moveapp --wait` helper child. It must track
+ * GL_IA_MOVE_WAIT_CAP_S (21600 s) in gamelib_installapp.h, plus 120 s margin so the helper's own
+ * cap fires first and reports `wait-cap` instead of being timeout-killed.
+ */
+export const MOVE_WAIT_TIMEOUT_MS = (21600 + 120) * 1000
+
+export type SteamMoveAppOutcome =
+  | {
+      kind: 'ok'
+      tracked: boolean
+      finished: boolean
+      installState: number | null
+      folderIndex: number | null
+      reason?: string
+    }
+  | { kind: 'refused'; reason: string }
+  | { kind: 'error'; stage: string; code: number }
   | { kind: 'unavailable'; reason: string }
 
 /**
@@ -291,6 +311,84 @@ export async function requestSteamValidateApp(
   }
   if (parsed.result === 'unavailable' && typeof parsed.reason === 'string') {
     warn(appId, `validate unavailable: ${parsed.reason}`, stderr)
+    return { kind: 'unavailable', reason: parsed.reason }
+  }
+  warn(appId, 'helper-failed (unrecognised result line)', stderr)
+  return { kind: 'unavailable', reason: 'helper-failed' }
+}
+
+/**
+ * quick 261122-9sl: ask running, signed-in Mac Steam to CanMoveApp then MoveApp(appId, folder)
+ * into the registered library at `libraryPath` (spike 090). The helper resolves the folder index
+ * from Steam's own list and refuses a library Steam does not list. With `wait` it holds until the
+ * move and Steam's follow-up verify have settled; the child is bounded by the helper's own 6 h cap
+ * plus margin and by `signal` (stdin-EOF release aborts it). Killing the helper does not stop
+ * Steam's move. Not gated on the experimental InstallApp setting (like validate and uninstall).
+ * The default runner passes no `env`: the helper needs the real HOME to find steamclient.dylib.
+ */
+export async function requestSteamMoveApp(
+  appId: string,
+  opts: { libraryPath: string; wait: boolean; signal?: AbortSignal },
+  deps: SteamInstallAppDeps
+): Promise<SteamMoveAppOutcome> {
+  if (!/^\d{1,10}$/.test(appId)) {
+    return { kind: 'unavailable', reason: 'bad-appid' }
+  }
+  if ((deps.platform ?? process.platform) !== 'darwin') {
+    return { kind: 'unavailable', reason: 'unsupported-platform' }
+  }
+  const helperPath = deps.paths.steamBridgeHelperPath
+  if (!existsSync(helperPath)) {
+    warn(appId, 'helper-missing')
+    return { kind: 'unavailable', reason: 'helper-missing' }
+  }
+
+  const args = ['--steam-moveapp', appId, '--library', opts.libraryPath]
+  if (opts.wait) args.push('--wait')
+  const call = await callHelper(
+    appId,
+    helperPath,
+    args,
+    deps,
+    opts.wait ? { timeoutMs: MOVE_WAIT_TIMEOUT_MS, signal: opts.signal } : {}
+  )
+  if (!call.ok) return { kind: 'unavailable', reason: call.reason }
+  const { parsed, stderr } = call
+
+  if (parsed.result === 'ok') {
+    const state = parsed.installState
+    const folder = parsed.folderIndex
+    return {
+      kind: 'ok',
+      tracked: parsed.tracked === true,
+      finished: parsed.finished === true,
+      installState: typeof state === 'number' ? state : null,
+      folderIndex: typeof folder === 'number' ? folder : null,
+      ...(typeof parsed.reason === 'string' ? { reason: parsed.reason } : {})
+    }
+  }
+  if (parsed.result === 'refused' && typeof parsed.reason === 'string') {
+    warn(appId, `MoveApp refused: ${parsed.reason}`, stderr)
+    return { kind: 'refused', reason: parsed.reason }
+  }
+  if (
+    parsed.result === 'error' &&
+    typeof parsed.stage === 'string' &&
+    typeof parsed.eAppUpdateError === 'number'
+  ) {
+    warn(
+      appId,
+      `${parsed.stage} EAppUpdateError ${parsed.eAppUpdateError}`,
+      stderr
+    )
+    return {
+      kind: 'error',
+      stage: parsed.stage,
+      code: parsed.eAppUpdateError
+    }
+  }
+  if (parsed.result === 'unavailable' && typeof parsed.reason === 'string') {
+    warn(appId, `move unavailable: ${parsed.reason}`, stderr)
     return { kind: 'unavailable', reason: parsed.reason }
   }
   warn(appId, 'helper-failed (unrecognised result line)', stderr)
