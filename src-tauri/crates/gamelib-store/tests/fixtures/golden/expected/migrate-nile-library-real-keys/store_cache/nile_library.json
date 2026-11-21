@@ -1,0 +1,37 @@
+{
+	"library": [
+		{
+			"app_name": "redacted",
+			"art_cover": "redacted",
+			"art_logo": "redacted",
+			"art_background": "redacted",
+			"art_square": "redacted",
+			"canRunOffline": true,
+			"install": {
+				"install_path": "redacted",
+				"install_size": "redacted",
+				"version": "redacted"
+			},
+			"folder_name": "redacted",
+			"is_installed": false,
+			"runner": "nile",
+			"title": "redacted",
+			"description": "redacted",
+			"developer": "redacted",
+			"extra": {
+				"reqs": [],
+				"genres": [
+					"redacted"
+				],
+				"releaseDate": "redacted"
+			},
+			"is_linux_native": false,
+			"is_mac_native": false
+		}
+	],
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 3
+		}
+	}
+}

@@ -1,0 +1,20 @@
+{
+	"Game1": {
+		"targetExe": "a.exe",
+		"winePrefix": "/p",
+		"enviromentOptions": [
+			{
+				"key": "A",
+				"value": "1"
+			}
+		],
+		"wineVersion": {
+			"bin": "/usr/bin/wine",
+			"name": "Wine",
+			"type": "wine",
+			"legacyKey": 1
+		}
+	},
+	"version": "v2",
+	"explicit": false
+}

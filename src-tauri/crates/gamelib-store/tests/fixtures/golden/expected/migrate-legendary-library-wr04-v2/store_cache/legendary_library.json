@@ -1,0 +1,35 @@
+{
+	"library": [
+		{
+			"runner": "legendary",
+			"app_name": "a1",
+			"title": "T",
+			"art_cover": "c",
+			"art_square": "s",
+			"canRunOffline": true,
+			"is_installed": false,
+			"install": {},
+			"save_path": null,
+			"extra": {
+				"reqs": [],
+				"storeUrl": "u"
+			},
+			"dlcList": [
+				{
+					"id": "d",
+					"mainGameItemList": [
+						{
+							"x": 1
+						}
+					],
+					"longDescription": "ld"
+				}
+			]
+		}
+	],
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 3
+		}
+	}
+}

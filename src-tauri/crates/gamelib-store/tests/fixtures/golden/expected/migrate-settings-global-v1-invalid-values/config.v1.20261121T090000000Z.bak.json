@@ -1,0 +1,10 @@
+{
+  "defaultSettings": {
+    "checkUpdatesInterval": "10",
+    "experimentalFeatures": { "umuSupport": true },
+    "maxWorkers": 4,
+    "focusRow": { "kind": "view", "value": "favourites" },
+    "language": "de"
+  },
+  "version": "v1"
+}

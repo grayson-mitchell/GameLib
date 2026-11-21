@@ -1,0 +1,16 @@
+{
+	"installed": [
+		{
+			"install_path": "/p"
+		},
+		{
+			"executable": "e",
+			"install_path": "/p"
+		}
+	],
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 3
+		}
+	}
+}

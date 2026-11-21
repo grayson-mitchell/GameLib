@@ -1,0 +1,11 @@
+{
+	"a": 1,
+	"step2": true,
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 4
+		}
+	},
+	"step3": true,
+	"step4": true
+}

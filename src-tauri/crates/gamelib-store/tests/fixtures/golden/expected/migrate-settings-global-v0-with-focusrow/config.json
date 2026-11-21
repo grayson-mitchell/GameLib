@@ -1,0 +1,11 @@
+{
+	"defaultSettings": {
+		"trayIconVariant": "light",
+		"focusRow": {
+			"kind": "view",
+			"value": "favourites"
+		},
+		"language": "de"
+	},
+	"version": "v2"
+}

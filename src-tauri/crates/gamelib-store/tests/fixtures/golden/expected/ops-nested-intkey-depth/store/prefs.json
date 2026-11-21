@@ -1,0 +1,17 @@
+{
+	"outer": {
+		"1": "one",
+		"5": "five",
+		"x": "ex",
+		"deep": {
+			"0": 2,
+			"9": 1,
+			"b": 3
+		}
+	},
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 1
+		}
+	}
+}

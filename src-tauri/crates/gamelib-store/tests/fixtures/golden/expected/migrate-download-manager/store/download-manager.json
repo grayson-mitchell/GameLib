@@ -1,0 +1,110 @@
+{
+	"queue": [
+		{
+			"params": {
+				"appName": "a",
+				"runner": "gog",
+				"gameInfo": {
+					"app_name": "a1",
+					"title": "T",
+					"art_cover": "c",
+					"art_square": "s",
+					"canRunOffline": true,
+					"is_installed": true,
+					"runner": "gog",
+					"install": {
+						"install_path": "/p",
+						"platform": "Windows"
+					},
+					"extra": {
+						"about": {
+							"description": "d",
+							"shortDescription": "s"
+						},
+						"reqs": [],
+						"genres": [
+							"g"
+						]
+					},
+					"overrides": {
+						"title": "o"
+					}
+				},
+				"path": "/p"
+			},
+			"status": "done"
+		}
+	],
+	"finished": [
+		{
+			"params": {
+				"appName": "a",
+				"runner": "steam",
+				"gameInfo": {
+					"app_name": "a1",
+					"title": "T",
+					"art_cover": "c",
+					"art_square": "s",
+					"canRunOffline": true,
+					"is_installed": true,
+					"runner": "steam",
+					"install": {
+						"install_path": "/p",
+						"platform": "Windows"
+					},
+					"extra": {
+						"about": {
+							"description": "d",
+							"shortDescription": "s"
+						},
+						"reqs": [],
+						"genres": [
+							"g"
+						]
+					},
+					"overrides": {
+						"title": "o"
+					}
+				},
+				"path": "/p"
+			},
+			"status": "done"
+		},
+		{
+			"params": {
+				"appName": "b",
+				"runner": "nile",
+				"gameInfo": {
+					"app_name": "a1",
+					"title": "T",
+					"art_cover": "c",
+					"art_square": "s",
+					"canRunOffline": true,
+					"is_installed": true,
+					"install": {
+						"install_path": "/p",
+						"platform": "Windows"
+					},
+					"extra": {
+						"about": {
+							"description": "d",
+							"shortDescription": "s"
+						},
+						"reqs": [],
+						"genres": [
+							"g"
+						]
+					},
+					"overrides": {
+						"title": "o"
+					}
+				}
+			}
+		}
+	],
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 3
+		}
+	}
+}

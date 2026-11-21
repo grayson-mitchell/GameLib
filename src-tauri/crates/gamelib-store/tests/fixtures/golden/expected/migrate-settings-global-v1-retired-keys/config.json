@@ -1,0 +1,14 @@
+{
+	"defaultSettings": {
+		"language": "en",
+		"focusRow": null,
+		"customWinePaths": [
+			"/x"
+		],
+		"experimentalFeatures": {
+			"cometSupport": true
+		},
+		"trayIconVariant": "auto"
+	},
+	"version": "v2"
+}

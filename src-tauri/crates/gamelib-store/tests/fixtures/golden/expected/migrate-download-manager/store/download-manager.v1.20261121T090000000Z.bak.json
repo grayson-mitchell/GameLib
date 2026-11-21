@@ -1,0 +1,119 @@
+{
+  "queue": [
+    {
+      "params": {
+        "appName": "a",
+        "runner": "gog",
+        "gameInfo": {
+          "app_name": "a1",
+          "title": "T",
+          "art_cover": "c",
+          "art_square": "s",
+          "canRunOffline": true,
+          "is_installed": true,
+          "runner": "gog",
+          "install": {
+            "install_path": "/p",
+            "platform": "Windows",
+            "staleInstallKey": 1
+          },
+          "extra": {
+            "about": {
+              "description": "d",
+              "shortDescription": "s",
+              "junk": 1
+            },
+            "reqs": [],
+            "genres": ["g"],
+            "staleExtraKey": true
+          },
+          "overrides": {
+            "title": "o",
+            "staleOverride": 1
+          },
+          "staleTopKey": "x"
+        },
+        "path": "/p"
+      },
+      "status": "done"
+    }
+  ],
+  "finished": [
+    {
+      "params": {
+        "appName": "a",
+        "runner": "steam",
+        "gameInfo": {
+          "app_name": "a1",
+          "title": "T",
+          "art_cover": "c",
+          "art_square": "s",
+          "canRunOffline": true,
+          "is_installed": true,
+          "runner": "steam",
+          "install": {
+            "install_path": "/p",
+            "platform": "Windows",
+            "staleInstallKey": 1
+          },
+          "extra": {
+            "about": {
+              "description": "d",
+              "shortDescription": "s",
+              "junk": 1
+            },
+            "reqs": [],
+            "genres": ["g"],
+            "staleExtraKey": true
+          },
+          "overrides": {
+            "title": "o",
+            "staleOverride": 1
+          },
+          "staleTopKey": "x"
+        },
+        "path": "/p"
+      },
+      "status": "done"
+    },
+    {
+      "params": {
+        "appName": "b",
+        "runner": "nile",
+        "gameInfo": {
+          "app_name": "a1",
+          "title": "T",
+          "art_cover": "c",
+          "art_square": "s",
+          "canRunOffline": true,
+          "is_installed": true,
+          "install": {
+            "install_path": "/p",
+            "platform": "Windows",
+            "staleInstallKey": 1
+          },
+          "extra": {
+            "about": {
+              "description": "d",
+              "shortDescription": "s",
+              "junk": 1
+            },
+            "reqs": [],
+            "genres": ["g"],
+            "staleExtraKey": true
+          },
+          "overrides": {
+            "title": "o",
+            "staleOverride": 1
+          },
+          "staleTopKey": "x"
+        }
+      }
+    }
+  ],
+  "__internal__": {
+    "gamelib": {
+      "schemaVersion": 1
+    }
+  }
+}

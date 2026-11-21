@@ -1,0 +1,21 @@
+{
+	"Game2": {
+		"gamescope": {
+			"enableUpscaling": true,
+			"enableLimiter": false,
+			"enableForceGrabCursor": false,
+			"windowType": "fullscreen",
+			"gameWidth": "1920",
+			"gameHeight": "1080",
+			"upscaleWidth": "1920",
+			"upscaleHeight": "1080",
+			"upscaleMethod": "fsr",
+			"fpsLimiter": "60",
+			"fpsLimiterNoFocus": "30",
+			"additionalOptions": ""
+		},
+		"targetExe": "b.exe",
+		"showMangohud": true
+	},
+	"version": "v2"
+}

@@ -30,12 +30,13 @@ import { dirname, join, relative, resolve, sep } from 'path'
 
 import GameLibStore from '../../store_backend'
 import { createStoreRoot } from '../storeRoot'
+import { storeVersionCodec } from '../../storeMigrations'
 import {
   ensureSettingsMigrated,
   writeSettingsFile
 } from '../../storeVersioning/settingsFiles'
 
-import type { StoreDeclaration } from '../../storeVersioning/types'
+import type { Migration, StoreDeclaration } from '../../storeVersioning/types'
 import type { StoreRoot } from '../storeRoot'
 
 /** One store declaration as a case writes it. The store file is `<userData>/<dir>/<name>.json`. */
@@ -72,7 +73,13 @@ export type GoldenOp =
  *   with `declaration.kind`) or `settings` (`ensureSettingsMigrated`).
  * - `settingsDoc`: `writeSettingsFile` of `data` for the global document (`config.json`) or a game
  *   document (`GamesConfig/<appName>.json`), optionally after `ensureSettingsMigrated` over `initial`.
- * - `engine`: added with the engine cases (plan 85-01 task 2).
+ * - `engine`: an `ops` case that also states which path the versioning engine takes on `initial`
+ *   (`expectPath`); the oracle fails when the TS engine takes another one, so the label is checked,
+ *   never trusted.
+ *
+ * `steps` replaces the real chain of the store's chain key for this case (the root's migration
+ * override seam); without it the real STORE_MIGRATIONS apply. `rounds` repeats a `migrate` case:
+ * each round builds a fresh root (a new boot) over the store file the previous round left.
  */
 export type GoldenCase = {
   id: string
@@ -84,14 +91,50 @@ export type GoldenCase = {
   second?: GoldenDeclaration
   initial?: string
   ops?: GoldenOp[]
+  expectPath?: EnginePath
+  steps?: StepSpec[]
+  rounds?: Round[]
+  /** The chain key of a `migrate` case, as the engine derives it (`<dir>/<name>`, or `settings/...`). */
   chain?: string
   flavour?: 'conf' | 'settings'
   file?: string
+  /** A committed migration fixture whose bytes become `inputs/<id>.json` (write mode). */
   source?: string
   doc?: 'global' | 'game'
   appName?: string
   data?: Record<string, unknown>
   ensure?: boolean
+}
+
+/** What the engine does with the file on `initial` at construction. */
+type EnginePath =
+  | 'identity'
+  | 'current'
+  | 'newer'
+  | 'migrates'
+  | 'failed'
+  | 'cacheChainDeletes'
+  | 'corrupt'
+
+/**
+ * One data-described migration step, so a case stays plain JSON. It sets and deletes top-level keys;
+ * `throws` makes the step fail (the failed-migration path).
+ */
+type StepSpec = {
+  id: string
+  to: number
+  identity?: true
+  setTop?: Record<string, unknown>
+  deleteTop?: string[]
+  throws?: true
+}
+
+type Round = {
+  /** The fake clock for this round (ISO instant); default is the oracle's base time. */
+  at?: string
+  /** Replace the store file by the bytes of its newest backup before this round. */
+  reseed?: 'newestBackup'
+  steps?: StepSpec[]
 }
 
 type Read = {
@@ -112,6 +155,8 @@ export type GoldenOutcome = {
   readOnly: { reason: string } | null
   backups: string[]
   files: string[]
+  /** Per round of a `rounds` case: the backups present after it. */
+  rounds?: { backups: string[] }[]
 }
 
 const FIXTURE_ROOT = resolve(
@@ -280,8 +325,99 @@ function outcomeOf(
     id: c.id,
     ...partial,
     readOnly: reason ? { reason } : null,
-    backups: names.filter((n) => n.endsWith('.bak.json')),
+    backups: backupsOf(files),
     files: names
+  }
+}
+
+function toMigration(step: StepSpec): Migration {
+  return {
+    id: step.id,
+    to: step.to,
+    ...(step.identity ? { identity: true as const } : {}),
+    run: (data) => {
+      if (step.throws) throw new Error(`oracle step ${step.id} fails`)
+      const out: Record<string, unknown> = { ...data }
+      for (const [key, value] of Object.entries(step.setTop ?? {})) {
+        out[key] = structuredClone(value)
+      }
+      for (const key of step.deleteTop ?? []) delete out[key]
+      return out
+    }
+  }
+}
+
+function overridesFor(
+  chainKey: string,
+  steps: StepSpec[] | undefined
+): ReadonlyMap<string, readonly Migration[]> | undefined {
+  return steps ? new Map([[chainKey, steps.map(toMigration)]]) : undefined
+}
+
+function sameFiles(a: Map<string, Buffer>, b: Map<string, Buffer>): boolean {
+  if (a.size !== b.size) return false
+  for (const [name, bytes] of a) {
+    const other = b.get(name)
+    if (!other || !bytes.equals(other)) return false
+  }
+  return true
+}
+
+/** Fails when the TS engine does not take the path an `engine` case says it takes. */
+function assertEnginePath(
+  c: GoldenCase,
+  root: StoreRoot,
+  mainFile: string,
+  rel: string,
+  chainKey: string,
+  before: Map<string, Buffer>,
+  after: Map<string, Buffer>
+): void {
+  const fail = (why: string): never => {
+    throw new Error(`${c.id}: expectPath ${c.expectPath} but ${why}`)
+  }
+  const reason = root.versioning.readOnlyReasonOf(mainFile)
+  const backups = [...after.keys()].filter((n) => n.endsWith('.bak.json'))
+  switch (c.expectPath) {
+    case 'identity':
+    case 'current': {
+      if (!sameFiles(before, after)) fail('the engine changed the files')
+      const original = before.get(rel)
+      const version = original
+        ? storeVersionCodec.read(JSON.parse(original.toString('utf8')))
+        : -1
+      const current = root.versioning.currentVersionOf(chainKey)
+      if (c.expectPath === 'current' && version !== current) {
+        fail(`the file is v${version}, current is v${current}`)
+      }
+      if (c.expectPath === 'identity' && version >= current) {
+        fail(`the file is v${version}, which is not behind v${current}`)
+      }
+      if (reason) fail(`the store is read-only (${reason})`)
+      break
+    }
+    case 'newer':
+      if (reason !== 'newer') fail(`the read-only reason is ${reason}`)
+      if (!sameFiles(before, after)) fail('the engine changed the files')
+      break
+    case 'migrates':
+      if (reason) fail(`the store is read-only (${reason})`)
+      if (backups.length === 0) fail('no backup was written')
+      if (!after.has(rel)) fail('the store file is gone')
+      break
+    case 'failed':
+      if (reason !== 'failed') fail(`the read-only reason is ${reason}`)
+      if (backups.length === 0) fail('no backup was written before the failure')
+      break
+    case 'cacheChainDeletes':
+      if (!before.has(rel) || after.has(rel))
+        fail('the cache file was not deleted')
+      break
+    case 'corrupt':
+      if (c.oracle !== 'tsOnly') fail('a corrupt case must be marked tsOnly')
+      break
+    default:
+      fail('an engine case needs an expectPath')
   }
 }
 
@@ -289,10 +425,15 @@ function runStoreCase(c: GoldenCase, userData: string): Produced {
   const decl = c.declaration
   if (!decl) throw new Error(`${c.id}: an ops case needs a declaration`)
   const mainFile = storeFileOf(userData, decl)
-  if (c.initial !== undefined)
-    seed(userData, relative(userData, mainFile), c.initial)
+  const rel = relative(userData, mainFile).split(sep).join('/')
+  const chainKey = `${decl.dir}/${decl.name}`
+  if (c.initial !== undefined) seed(userData, rel, c.initial)
+  const before = snapshot(userData)
 
-  const root = createStoreRoot({ userData })
+  const root = createStoreRoot({
+    userData,
+    migrationOverrides: overridesFor(chainKey, c.steps)
+  })
   const stores: Partial<Record<StoreAlias, GameLibStore>> = {}
   const partial: Pick<GoldenOutcome, 'constructThrew' | 'reads' | 'threw'> = {
     constructThrew: null,
@@ -305,9 +446,24 @@ function runStoreCase(c: GoldenCase, userData: string): Produced {
   } catch (err) {
     partial.constructThrew = err instanceof Error ? err.name : typeof err
   }
+  if (c.kind === 'engine') {
+    assertEnginePath(
+      c,
+      root,
+      mainFile,
+      rel,
+      chainKey,
+      before,
+      snapshot(userData)
+    )
+  }
   if (partial.constructThrew === null) runOps(stores, c.ops ?? [], partial)
   const files = snapshot(userData)
   return { files, outcome: outcomeOf(c, root, mainFile, files, partial) }
+}
+
+function backupsOf(files: Map<string, Buffer>): string[] {
+  return [...files.keys()].filter((n) => n.endsWith('.bak.json'))
 }
 
 function runMigrateCase(c: GoldenCase, userData: string): Produced {
@@ -316,25 +472,44 @@ function runMigrateCase(c: GoldenCase, userData: string): Produced {
   }
   seed(userData, c.file, readFileSync(join(INPUTS_ROOT, `${c.id}.json`)))
   const mainFile = join(userData, c.file)
-  const root = createStoreRoot({ userData })
   const partial: Pick<GoldenOutcome, 'constructThrew' | 'reads' | 'threw'> = {
     constructThrew: null,
     reads: [],
     threw: []
   }
-  if (c.flavour === 'settings') {
-    if (c.chain !== 'settings/global' && c.chain !== 'settings/game') {
-      throw new Error(`${c.id}: ${c.chain} is not a settings chain`)
+  const rounds: Round[] = c.rounds ?? [{}]
+  let root: StoreRoot | undefined
+  const perRound: { backups: string[] }[] = []
+  for (const round of rounds) {
+    jest.setSystemTime(round.at ? new Date(round.at) : BASE_TIME)
+    if (round.reseed === 'newestBackup') {
+      const newest = backupsOf(snapshot(userData)).sort().at(-1)
+      if (!newest) throw new Error(`${c.id}: no backup to reseed from`)
+      seed(userData, c.file, readFileSync(join(userData, newest)))
     }
-    ensureSettingsMigrated(root.versioning, mainFile, c.chain)
-  } else {
-    const decl = c.declaration
-    if (!decl)
-      throw new Error(`${c.id}: a conf migrate case needs a declaration`)
-    openStore(root, decl)
+    root = createStoreRoot({
+      userData,
+      migrationOverrides: overridesFor(c.chain, round.steps ?? c.steps)
+    })
+    if (c.flavour === 'settings') {
+      if (c.chain !== 'settings/global' && c.chain !== 'settings/game') {
+        throw new Error(`${c.id}: ${c.chain} is not a settings chain`)
+      }
+      ensureSettingsMigrated(root.versioning, mainFile, c.chain)
+    } else {
+      const decl = c.declaration
+      if (!decl)
+        throw new Error(`${c.id}: a conf migrate case needs a declaration`)
+      openStore(root, decl)
+    }
+    perRound.push({ backups: backupsOf(snapshot(userData)) })
   }
   const files = snapshot(userData)
-  return { files, outcome: outcomeOf(c, root, mainFile, files, partial) }
+  const outcome = outcomeOf(c, root as StoreRoot, mainFile, files, partial)
+  return {
+    files,
+    outcome: c.rounds ? { ...outcome, rounds: perRound } : outcome
+  }
 }
 
 function runSettingsDocCase(c: GoldenCase, userData: string): Produced {
@@ -396,18 +571,23 @@ function runCase(c: GoldenCase): Produced {
   }
 }
 
-/** Write mode: copy each migrate case's source fixture into inputs/<id>.json. */
+/** Write mode: each migrate case's input bytes (its source fixture, else `initial`) into inputs/<id>.json. */
 function writeInputs(cases: GoldenCase[]): void {
   rmSync(INPUTS_ROOT, { recursive: true, force: true })
   for (const c of cases) {
     if (c.kind !== 'migrate') continue
-    if (!c.source)
-      throw new Error(`${c.id}: a migrate case needs a source fixture`)
+    const bytes = c.source
+      ? readFileSync(join(SOURCE_FIXTURES, c.source))
+      : c.initial !== undefined
+        ? Buffer.from(c.initial, 'utf8')
+        : undefined
+    if (!bytes) {
+      throw new Error(
+        `${c.id}: a migrate case needs a source fixture or initial`
+      )
+    }
     mkdirSync(INPUTS_ROOT, { recursive: true })
-    writeFileSync(
-      join(INPUTS_ROOT, `${c.id}.json`),
-      readFileSync(join(SOURCE_FIXTURES, c.source))
-    )
+    writeFileSync(join(INPUTS_ROOT, `${c.id}.json`), bytes)
   }
 }
 

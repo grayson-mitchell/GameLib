@@ -9,12 +9,580 @@
       "clearInvalidConfig": true
     },
     "ops": [
-      { "op": "set", "key": "480", "value": { "title": "Half-Life", "score": 96, "tags": ["fps", "classic"] } },
-      { "op": "set", "key": "480.title", "value": "x" },
-      { "op": "set", "key": "__timestamp.480", "value": 1700000000000 },
-      { "op": "delete", "key": "480.title" },
-      { "op": "get", "key": "480" },
-      { "op": "get", "key": "__timestamp.480" }
+      {
+        "op": "set",
+        "key": "480",
+        "value": {
+          "title": "Half-Life",
+          "score": 96,
+          "tags": [
+            "fps",
+            "classic"
+          ]
+        }
+      },
+      {
+        "op": "set",
+        "key": "480.title",
+        "value": "x"
+      },
+      {
+        "op": "set",
+        "key": "__timestamp.480",
+        "value": 1700000000000
+      },
+      {
+        "op": "delete",
+        "key": "480.title"
+      },
+      {
+        "op": "get",
+        "key": "480"
+      },
+      {
+        "op": "get",
+        "key": "__timestamp.480"
+      }
+    ]
+  },
+  {
+    "id": "ops-user-state-intkeys-out-of-order",
+    "kind": "ops",
+    "declaration": {
+      "dir": "store",
+      "name": "timestamp",
+      "kind": "user-state"
+    },
+    "ops": [
+      {
+        "op": "set",
+        "key": "730",
+        "value": {
+          "firstPlayed": "2026-01-01",
+          "lastPlayed": "2026-02-01",
+          "totalPlayed": 3
+        }
+      },
+      {
+        "op": "set",
+        "key": "b-game",
+        "value": {
+          "totalPlayed": 1
+        }
+      },
+      {
+        "op": "set",
+        "key": "10",
+        "value": {
+          "totalPlayed": 2
+        }
+      },
+      {
+        "op": "set",
+        "key": "2",
+        "value": {
+          "totalPlayed": 9
+        }
+      },
+      {
+        "op": "set",
+        "key": "alpha",
+        "value": {
+          "totalPlayed": 4
+        }
+      },
+      {
+        "op": "set",
+        "key": "730.totalPlayed",
+        "value": 5
+      },
+      {
+        "op": "get",
+        "key": "10"
+      },
+      {
+        "op": "dump"
+      }
+    ]
+  },
+  {
+    "id": "ops-envelope-existing-first",
+    "kind": "ops",
+    "declaration": {
+      "dir": "store",
+      "name": "prefs",
+      "kind": "user-state"
+    },
+    "initial": "{\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"note\": \"kept\",\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t},\n\t\"a\": 1\n}",
+    "ops": [
+      {
+        "op": "set",
+        "key": "b",
+        "value": 2
+      },
+      {
+        "op": "set",
+        "key": "a",
+        "value": 3
+      }
+    ]
+  },
+  {
+    "id": "ops-envelope-absent-appended-last",
+    "kind": "ops",
+    "declaration": {
+      "dir": "store",
+      "name": "prefs",
+      "kind": "user-state"
+    },
+    "initial": "{\"a\":1,\"b\":2}",
+    "ops": [
+      {
+        "op": "set",
+        "key": "c",
+        "value": 3
+      }
+    ]
+  },
+  {
+    "id": "ops-assign-whole-object-cache",
+    "kind": "ops",
+    "declaration": {
+      "dir": "store_cache",
+      "name": "crossover_index",
+      "kind": "cache",
+      "clearInvalidConfig": true
+    },
+    "initial": "{\n\t\"a\": {\n\t\t\"x\": 1\n\t},\n\t\"b\": 2,\n\t\"c\": 3,\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t}\n}",
+    "ops": [
+      {
+        "op": "assign",
+        "value": {
+          "b": 20,
+          "d": {
+            "z": 1,
+            "a": 2
+          }
+        }
+      },
+      {
+        "op": "get",
+        "key": "a"
+      },
+      {
+        "op": "get",
+        "key": "b"
+      },
+      {
+        "op": "dump"
+      }
+    ]
+  },
+  {
+    "id": "ops-assign-carries-internal-key",
+    "kind": "ops",
+    "declaration": {
+      "dir": "store",
+      "name": "prefs",
+      "kind": "user-state"
+    },
+    "initial": "{\n\t\"a\": 1,\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t}\n}",
+    "ops": [
+      {
+        "op": "assign",
+        "value": {
+          "x": 1,
+          "__internal__": {
+            "gamelib": {
+              "other": true
+            }
+          }
+        }
+      },
+      {
+        "op": "dump"
+      }
+    ]
+  },
+  {
+    "id": "ops-nodot-url-keys-uploaded-logs",
+    "kind": "ops",
+    "declaration": {
+      "dir": "store_cache",
+      "name": "uploadedLogs",
+      "kind": "cache",
+      "clearInvalidConfig": true,
+      "accessPropertiesByDotNotation": false
+    },
+    "ops": [
+      {
+        "op": "set",
+        "key": "https://paste.example.com/a.log",
+        "value": {
+          "uploadedAt": 1700000000000
+        }
+      },
+      {
+        "op": "set",
+        "key": "a.b",
+        "value": 1
+      },
+      {
+        "op": "get",
+        "key": "a.b"
+      },
+      {
+        "op": "has",
+        "key": "a"
+      },
+      {
+        "op": "has",
+        "key": "a.b"
+      },
+      {
+        "op": "delete",
+        "key": "a.b"
+      },
+      {
+        "op": "get",
+        "key": "https://paste.example.com/a.log"
+      }
+    ]
+  },
+  {
+    "id": "ops-token-two-declarations-one-file",
+    "kind": "ops",
+    "declaration": {
+      "dir": "steam_store",
+      "name": "config",
+      "kind": "user-state",
+      "tokenBearing": true
+    },
+    "second": {
+      "dir": "steam_store",
+      "name": "config",
+      "kind": "user-state",
+      "tokenBearing": true
+    },
+    "ops": [
+      {
+        "op": "set",
+        "key": "refreshToken",
+        "value": "tok-abc"
+      },
+      {
+        "op": "set",
+        "key": "bottle",
+        "value": {
+          "name": "Steam",
+          "path": "/b"
+        },
+        "store": "second"
+      },
+      {
+        "op": "set",
+        "key": "accountName",
+        "value": "player"
+      },
+      {
+        "op": "get",
+        "key": "refreshToken",
+        "store": "second"
+      },
+      {
+        "op": "delete",
+        "key": "bottle"
+      },
+      {
+        "op": "dump",
+        "store": "second"
+      }
+    ]
+  },
+  {
+    "id": "ops-nested-array-key-order",
+    "kind": "ops",
+    "declaration": {
+      "dir": "store",
+      "name": "prefs",
+      "kind": "user-state"
+    },
+    "ops": [
+      {
+        "op": "set",
+        "key": "list",
+        "value": [
+          {
+            "z": 1,
+            "a": 2,
+            "m": {
+              "y": 1,
+              "b": 2
+            }
+          },
+          {
+            "k": [
+              3,
+              {
+                "q": 1,
+                "c": 2
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "op": "set",
+        "key": "obj",
+        "value": {
+          "zeta": 1,
+          "alpha": {
+            "beta": 2,
+            "aleph": 1
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "ops-delete-missing-key",
+    "kind": "ops",
+    "declaration": {
+      "dir": "store",
+      "name": "prefs",
+      "kind": "user-state"
+    },
+    "ops": [
+      {
+        "op": "set",
+        "key": "a",
+        "value": 1
+      },
+      {
+        "op": "delete",
+        "key": "nope"
+      },
+      {
+        "op": "delete",
+        "key": "a.b.c"
+      },
+      {
+        "op": "delete",
+        "key": "x.y"
+      },
+      {
+        "op": "get",
+        "key": "a"
+      }
+    ]
+  },
+  {
+    "id": "ops-clear",
+    "kind": "ops",
+    "declaration": {
+      "dir": "store",
+      "name": "prefs",
+      "kind": "user-state"
+    },
+    "ops": [
+      {
+        "op": "set",
+        "key": "a",
+        "value": 1
+      },
+      {
+        "op": "set",
+        "key": "b",
+        "value": {
+          "c": 2
+        }
+      },
+      {
+        "op": "clear"
+      },
+      {
+        "op": "get",
+        "key": "a"
+      },
+      {
+        "op": "set",
+        "key": "d",
+        "value": 4
+      }
+    ]
+  },
+  {
+    "id": "ops-control-chars-string",
+    "kind": "ops",
+    "declaration": {
+      "dir": "store",
+      "name": "prefs",
+      "kind": "user-state"
+    },
+    "ops": [
+      {
+        "op": "set",
+        "key": "s",
+        "value": "tab\tnl\ncr\rquote\"back\\slash/ \u0000\u001f   😀 é ퟿ ￿"
+      },
+      {
+        "op": "get",
+        "key": "s"
+      }
+    ]
+  },
+  {
+    "id": "ops-reserved-key-refused",
+    "kind": "ops",
+    "declaration": {
+      "dir": "store",
+      "name": "prefs",
+      "kind": "user-state"
+    },
+    "ops": [
+      {
+        "op": "set",
+        "key": "__internal__.x",
+        "value": 1
+      },
+      {
+        "op": "set",
+        "key": "a",
+        "value": 1
+      },
+      {
+        "op": "set",
+        "key": "__internal__.gamelib.schemaVersion",
+        "value": 9
+      },
+      {
+        "op": "dump"
+      }
+    ]
+  },
+  {
+    "id": "ops-nested-intkey-depth",
+    "kind": "ops",
+    "declaration": {
+      "dir": "store",
+      "name": "prefs",
+      "kind": "user-state"
+    },
+    "ops": [
+      {
+        "op": "set",
+        "key": "outer.5",
+        "value": "five"
+      },
+      {
+        "op": "set",
+        "key": "outer.1",
+        "value": "one"
+      },
+      {
+        "op": "set",
+        "key": "outer.x",
+        "value": "ex"
+      },
+      {
+        "op": "set",
+        "key": "outer.deep.9",
+        "value": 1
+      },
+      {
+        "op": "set",
+        "key": "outer.deep.0",
+        "value": 2
+      },
+      {
+        "op": "set",
+        "key": "outer.deep.b",
+        "value": 3
+      }
+    ]
+  },
+  {
+    "id": "ops-overwrite-keeps-position",
+    "kind": "ops",
+    "declaration": {
+      "dir": "store",
+      "name": "prefs",
+      "kind": "user-state"
+    },
+    "ops": [
+      {
+        "op": "set",
+        "key": "b",
+        "value": 1
+      },
+      {
+        "op": "set",
+        "key": "a",
+        "value": 2
+      },
+      {
+        "op": "set",
+        "key": "b",
+        "value": 3
+      },
+      {
+        "op": "delete",
+        "key": "b"
+      },
+      {
+        "op": "set",
+        "key": "b",
+        "value": 4
+      }
+    ]
+  },
+  {
+    "id": "ops-null-empty-and-number-values",
+    "kind": "ops",
+    "declaration": {
+      "dir": "store",
+      "name": "prefs",
+      "kind": "user-state"
+    },
+    "ops": [
+      {
+        "op": "set",
+        "key": "n",
+        "value": null
+      },
+      {
+        "op": "set",
+        "key": "e",
+        "value": {}
+      },
+      {
+        "op": "set",
+        "key": "arr",
+        "value": []
+      },
+      {
+        "op": "set",
+        "key": "f",
+        "value": 1.5
+      },
+      {
+        "op": "set",
+        "key": "big",
+        "value": 12345678901234
+      },
+      {
+        "op": "set",
+        "key": "small",
+        "value": -2.5e-9
+      },
+      {
+        "op": "has",
+        "key": "n"
+      },
+      {
+        "op": "get",
+        "key": "n"
+      }
     ]
   },
   {
@@ -26,6 +594,852 @@
     "source": "settings-global-v0.json"
   },
   {
+    "id": "migrate-settings-global-v0-with-focusrow",
+    "kind": "migrate",
+    "chain": "settings/global",
+    "flavour": "settings",
+    "file": "config.json",
+    "source": "settings-global-v0-with-focusrow.json"
+  },
+  {
+    "id": "migrate-settings-global-v1-retired-keys",
+    "kind": "migrate",
+    "chain": "settings/global",
+    "flavour": "settings",
+    "file": "config.json",
+    "source": "settings-global-v1-retired-keys.json"
+  },
+  {
+    "id": "migrate-settings-global-v1-invalid-values",
+    "kind": "migrate",
+    "chain": "settings/global",
+    "flavour": "settings",
+    "file": "config.json",
+    "source": "settings-global-v1-invalid-values.json"
+  },
+  {
+    "id": "migrate-settings-game-v0",
+    "kind": "migrate",
+    "chain": "settings/game",
+    "flavour": "settings",
+    "file": "GamesConfig/myApp.json",
+    "source": "settings-game-v0.json"
+  },
+  {
+    "id": "migrate-settings-game-v1-retired-keys",
+    "kind": "migrate",
+    "chain": "settings/game",
+    "flavour": "settings",
+    "file": "GamesConfig/myApp.json",
+    "source": "settings-game-v1-retired-keys.json"
+  },
+  {
+    "id": "migrate-settings-game-v1-invalid-values",
+    "kind": "migrate",
+    "chain": "settings/game",
+    "flavour": "settings",
+    "file": "GamesConfig/Game2.json",
+    "source": "settings-game-v1-invalid-values.json"
+  },
+  {
+    "id": "migrate-steam-library",
+    "kind": "migrate",
+    "chain": "store_cache/steam_library",
+    "flavour": "conf",
+    "file": "store_cache/steam_library.json",
+    "declaration": {
+      "dir": "store_cache",
+      "name": "steam_library",
+      "kind": "user-state",
+      "clearInvalidConfig": true
+    },
+    "source": "steam-library-gameinfo-v1.json"
+  },
+  {
+    "id": "migrate-steam-library-real-keys",
+    "kind": "migrate",
+    "chain": "store_cache/steam_library",
+    "flavour": "conf",
+    "file": "store_cache/steam_library.json",
+    "declaration": {
+      "dir": "store_cache",
+      "name": "steam_library",
+      "kind": "user-state",
+      "clearInvalidConfig": true
+    },
+    "source": "steam-library-real-keys.json"
+  },
+  {
+    "id": "migrate-steam-library-wr04-v2",
+    "kind": "migrate",
+    "chain": "store_cache/steam_library",
+    "flavour": "conf",
+    "file": "store_cache/steam_library.json",
+    "declaration": {
+      "dir": "store_cache",
+      "name": "steam_library",
+      "kind": "user-state",
+      "clearInvalidConfig": true
+    },
+    "source": "steam-library-wr04-v2.json"
+  },
+  {
+    "id": "migrate-gog-library",
+    "kind": "migrate",
+    "chain": "store_cache/gog_library",
+    "flavour": "conf",
+    "file": "store_cache/gog_library.json",
+    "declaration": {
+      "dir": "store_cache",
+      "name": "gog_library",
+      "kind": "user-state",
+      "clearInvalidConfig": true
+    },
+    "source": "gog-library-gameinfo-v1.json"
+  },
+  {
+    "id": "migrate-gog-library-real-keys",
+    "kind": "migrate",
+    "chain": "store_cache/gog_library",
+    "flavour": "conf",
+    "file": "store_cache/gog_library.json",
+    "declaration": {
+      "dir": "store_cache",
+      "name": "gog_library",
+      "kind": "user-state",
+      "clearInvalidConfig": true
+    },
+    "source": "gog-library-real-keys.json"
+  },
+  {
+    "id": "migrate-gog-library-wr04-v2",
+    "kind": "migrate",
+    "chain": "store_cache/gog_library",
+    "flavour": "conf",
+    "file": "store_cache/gog_library.json",
+    "declaration": {
+      "dir": "store_cache",
+      "name": "gog_library",
+      "kind": "user-state",
+      "clearInvalidConfig": true
+    },
+    "source": "gog-library-wr04-v2.json"
+  },
+  {
+    "id": "migrate-gog-installed",
+    "kind": "migrate",
+    "chain": "gog_store/installed",
+    "flavour": "conf",
+    "file": "gog_store/installed.json",
+    "declaration": {
+      "dir": "gog_store",
+      "name": "installed",
+      "kind": "user-state"
+    },
+    "source": "gog-installed-gameinfo-v1.json"
+  },
+  {
+    "id": "migrate-gog-installed-real-keys",
+    "kind": "migrate",
+    "chain": "gog_store/installed",
+    "flavour": "conf",
+    "file": "gog_store/installed.json",
+    "declaration": {
+      "dir": "gog_store",
+      "name": "installed",
+      "kind": "user-state"
+    },
+    "source": "gog-installed-real-keys.json"
+  },
+  {
+    "id": "migrate-gog-installed-wr04-v2",
+    "kind": "migrate",
+    "chain": "gog_store/installed",
+    "flavour": "conf",
+    "file": "gog_store/installed.json",
+    "declaration": {
+      "dir": "gog_store",
+      "name": "installed",
+      "kind": "user-state"
+    },
+    "source": "gog-installed-wr04-v2.json"
+  },
+  {
+    "id": "migrate-legendary-library",
+    "kind": "migrate",
+    "chain": "store_cache/legendary_library",
+    "flavour": "conf",
+    "file": "store_cache/legendary_library.json",
+    "declaration": {
+      "dir": "store_cache",
+      "name": "legendary_library",
+      "kind": "user-state",
+      "clearInvalidConfig": true
+    },
+    "source": "legendary-library-gameinfo-v1.json"
+  },
+  {
+    "id": "migrate-legendary-library-real-keys",
+    "kind": "migrate",
+    "chain": "store_cache/legendary_library",
+    "flavour": "conf",
+    "file": "store_cache/legendary_library.json",
+    "declaration": {
+      "dir": "store_cache",
+      "name": "legendary_library",
+      "kind": "user-state",
+      "clearInvalidConfig": true
+    },
+    "source": "legendary-library-real-keys.json"
+  },
+  {
+    "id": "migrate-legendary-library-wr04-v2",
+    "kind": "migrate",
+    "chain": "store_cache/legendary_library",
+    "flavour": "conf",
+    "file": "store_cache/legendary_library.json",
+    "declaration": {
+      "dir": "store_cache",
+      "name": "legendary_library",
+      "kind": "user-state",
+      "clearInvalidConfig": true
+    },
+    "source": "legendary-library-wr04-v2.json"
+  },
+  {
+    "id": "migrate-nile-library",
+    "kind": "migrate",
+    "chain": "store_cache/nile_library",
+    "flavour": "conf",
+    "file": "store_cache/nile_library.json",
+    "declaration": {
+      "dir": "store_cache",
+      "name": "nile_library",
+      "kind": "user-state",
+      "clearInvalidConfig": true
+    },
+    "source": "nile-library-gameinfo-v1.json"
+  },
+  {
+    "id": "migrate-nile-library-real-keys",
+    "kind": "migrate",
+    "chain": "store_cache/nile_library",
+    "flavour": "conf",
+    "file": "store_cache/nile_library.json",
+    "declaration": {
+      "dir": "store_cache",
+      "name": "nile_library",
+      "kind": "user-state",
+      "clearInvalidConfig": true
+    },
+    "source": "nile-library-real-keys.json"
+  },
+  {
+    "id": "migrate-nile-library-wr04-v2",
+    "kind": "migrate",
+    "chain": "store_cache/nile_library",
+    "flavour": "conf",
+    "file": "store_cache/nile_library.json",
+    "declaration": {
+      "dir": "store_cache",
+      "name": "nile_library",
+      "kind": "user-state",
+      "clearInvalidConfig": true
+    },
+    "source": "nile-library-wr04-v2.json"
+  },
+  {
+    "id": "migrate-sideload-library",
+    "kind": "migrate",
+    "chain": "sideload_apps/library",
+    "flavour": "conf",
+    "file": "sideload_apps/library.json",
+    "declaration": {
+      "dir": "sideload_apps",
+      "name": "library",
+      "kind": "user-state",
+      "clearInvalidConfig": true
+    },
+    "source": "sideload-library-gameinfo-v0.json"
+  },
+  {
+    "id": "migrate-sideload-library-real-keys",
+    "kind": "migrate",
+    "chain": "sideload_apps/library",
+    "flavour": "conf",
+    "file": "sideload_apps/library.json",
+    "declaration": {
+      "dir": "sideload_apps",
+      "name": "library",
+      "kind": "user-state",
+      "clearInvalidConfig": true
+    },
+    "source": "sideload-library-real-keys.json"
+  },
+  {
+    "id": "migrate-sideload-library-wr04-v2",
+    "kind": "migrate",
+    "chain": "sideload_apps/library",
+    "flavour": "conf",
+    "file": "sideload_apps/library.json",
+    "declaration": {
+      "dir": "sideload_apps",
+      "name": "library",
+      "kind": "user-state",
+      "clearInvalidConfig": true
+    },
+    "source": "sideload-library-wr04-v2.json"
+  },
+  {
+    "id": "migrate-download-manager",
+    "kind": "migrate",
+    "chain": "store/download-manager",
+    "flavour": "conf",
+    "file": "store/download-manager.json",
+    "declaration": {
+      "dir": "store",
+      "name": "download-manager",
+      "kind": "user-state"
+    },
+    "source": "download-manager-gameinfo-v1.json"
+  },
+  {
+    "id": "migrate-download-manager-real-keys",
+    "kind": "migrate",
+    "chain": "store/download-manager",
+    "flavour": "conf",
+    "file": "store/download-manager.json",
+    "declaration": {
+      "dir": "store",
+      "name": "download-manager",
+      "kind": "user-state"
+    },
+    "source": "download-manager-real-keys.json"
+  },
+  {
+    "id": "migrate-download-manager-wr04-v2",
+    "kind": "migrate",
+    "chain": "store/download-manager",
+    "flavour": "conf",
+    "file": "store/download-manager.json",
+    "declaration": {
+      "dir": "store",
+      "name": "download-manager",
+      "kind": "user-state"
+    },
+    "source": "download-manager-wr04-v2.json"
+  },
+  {
+    "id": "migrate-sequence-backups-max3-newest-equal",
+    "kind": "migrate",
+    "chain": "store/seq",
+    "flavour": "conf",
+    "file": "store/seq.json",
+    "declaration": {
+      "dir": "store",
+      "name": "seq",
+      "kind": "user-state"
+    },
+    "initial": "{\"a\":1}",
+    "rounds": [
+      {
+        "at": "2026-11-21T09:00:00.000Z",
+        "steps": [
+          {
+            "id": "seq-to-2",
+            "to": 2,
+            "setTop": {
+              "step2": true
+            }
+          }
+        ]
+      },
+      {
+        "at": "2026-11-21T10:00:00.000Z",
+        "steps": [
+          {
+            "id": "seq-to-2",
+            "to": 2,
+            "setTop": {
+              "step2": true
+            }
+          },
+          {
+            "id": "seq-to-3",
+            "to": 3,
+            "setTop": {
+              "step3": true
+            }
+          }
+        ]
+      },
+      {
+        "at": "2026-11-21T11:00:00.000Z",
+        "steps": [
+          {
+            "id": "seq-to-2",
+            "to": 2,
+            "setTop": {
+              "step2": true
+            }
+          },
+          {
+            "id": "seq-to-3",
+            "to": 3,
+            "setTop": {
+              "step3": true
+            }
+          },
+          {
+            "id": "seq-to-4",
+            "to": 4,
+            "setTop": {
+              "step4": true
+            }
+          }
+        ]
+      },
+      {
+        "at": "2026-11-21T12:00:00.000Z",
+        "steps": [
+          {
+            "id": "seq-to-2",
+            "to": 2,
+            "setTop": {
+              "step2": true
+            }
+          },
+          {
+            "id": "seq-to-3",
+            "to": 3,
+            "setTop": {
+              "step3": true
+            }
+          },
+          {
+            "id": "seq-to-4",
+            "to": 4,
+            "setTop": {
+              "step4": true
+            }
+          },
+          {
+            "id": "seq-to-5",
+            "to": 5,
+            "setTop": {
+              "step5": true
+            }
+          }
+        ]
+      },
+      {
+        "at": "2026-11-21T13:00:00.000Z",
+        "reseed": "newestBackup",
+        "steps": [
+          {
+            "id": "seq-to-2",
+            "to": 2,
+            "setTop": {
+              "step2": true
+            }
+          },
+          {
+            "id": "seq-to-3",
+            "to": 3,
+            "setTop": {
+              "step3": true
+            }
+          },
+          {
+            "id": "seq-to-4",
+            "to": 4,
+            "setTop": {
+              "step4": true
+            }
+          },
+          {
+            "id": "seq-to-5",
+            "to": 5,
+            "setTop": {
+              "step5": true
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "engine-identity-unstamped-baseline",
+    "kind": "engine",
+    "expectPath": "identity",
+    "declaration": {
+      "dir": "store",
+      "name": "prefs",
+      "kind": "user-state"
+    },
+    "initial": "{\"a\":1,\"b\":{\"c\":2}}",
+    "ops": [
+      {
+        "op": "get",
+        "key": "a"
+      },
+      {
+        "op": "set",
+        "key": "a",
+        "value": 2
+      }
+    ]
+  },
+  {
+    "id": "engine-identity-invalid-schemaversion",
+    "kind": "engine",
+    "expectPath": "identity",
+    "declaration": {
+      "dir": "store",
+      "name": "prefs",
+      "kind": "user-state"
+    },
+    "initial": "{\n\t\"a\": 1,\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": \"x\"\n\t\t}\n\t}\n}",
+    "ops": [
+      {
+        "op": "set",
+        "key": "b",
+        "value": 2
+      }
+    ]
+  },
+  {
+    "id": "engine-current-version-untouched",
+    "kind": "engine",
+    "expectPath": "current",
+    "declaration": {
+      "dir": "store",
+      "name": "prefs",
+      "kind": "user-state"
+    },
+    "initial": "{\n\t\"a\": 1,\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t}\n}",
+    "ops": [
+      {
+        "op": "get",
+        "key": "a"
+      }
+    ]
+  },
+  {
+    "id": "engine-newer-readonly-user-state",
+    "kind": "engine",
+    "expectPath": "newer",
+    "declaration": {
+      "dir": "store",
+      "name": "prefs",
+      "kind": "user-state"
+    },
+    "initial": "{\n\t\"a\": 1,\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 99\n\t\t}\n\t}\n}",
+    "ops": [
+      {
+        "op": "get",
+        "key": "a"
+      },
+      {
+        "op": "set",
+        "key": "b",
+        "value": 2
+      },
+      {
+        "op": "delete",
+        "key": "a"
+      },
+      {
+        "op": "clear"
+      },
+      {
+        "op": "dump"
+      }
+    ]
+  },
+  {
+    "id": "engine-newer-readonly-cache",
+    "kind": "engine",
+    "expectPath": "newer",
+    "declaration": {
+      "dir": "store_cache",
+      "name": "wikigameinfo",
+      "kind": "cache",
+      "clearInvalidConfig": true
+    },
+    "initial": "{\n\t\"a\": 1,\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 99\n\t\t}\n\t}\n}",
+    "ops": [
+      {
+        "op": "dump"
+      },
+      {
+        "op": "get",
+        "key": "a"
+      },
+      {
+        "op": "set",
+        "key": "b",
+        "value": 2
+      }
+    ]
+  },
+  {
+    "id": "engine-newer-failedview-empty",
+    "kind": "engine",
+    "expectPath": "newer",
+    "declaration": {
+      "dir": "store",
+      "name": "prefs",
+      "kind": "user-state",
+      "failedView": "empty"
+    },
+    "initial": "{\n\t\"a\": 1,\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 99\n\t\t}\n\t}\n}",
+    "ops": [
+      {
+        "op": "dump"
+      },
+      {
+        "op": "set",
+        "key": "b",
+        "value": 2
+      }
+    ]
+  },
+  {
+    "id": "engine-cache-chain-deletes",
+    "kind": "engine",
+    "expectPath": "cacheChainDeletes",
+    "declaration": {
+      "dir": "store_cache",
+      "name": "wikigameinfo",
+      "kind": "cache",
+      "clearInvalidConfig": true
+    },
+    "steps": [
+      {
+        "id": "cache-to-2",
+        "to": 2,
+        "setTop": {
+          "x": 1
+        }
+      }
+    ],
+    "initial": "{\n\t\"a\": 1,\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t}\n}",
+    "ops": [
+      {
+        "op": "get",
+        "key": "a"
+      },
+      {
+        "op": "set",
+        "key": "k",
+        "value": 1
+      }
+    ]
+  },
+  {
+    "id": "engine-cache-identity-chain-kept",
+    "kind": "engine",
+    "expectPath": "identity",
+    "declaration": {
+      "dir": "store_cache",
+      "name": "wikigameinfo",
+      "kind": "cache",
+      "clearInvalidConfig": true
+    },
+    "steps": [
+      {
+        "id": "adopt-v1",
+        "to": 1,
+        "identity": true
+      }
+    ],
+    "initial": "{\"a\":1}",
+    "ops": [
+      {
+        "op": "get",
+        "key": "a"
+      }
+    ]
+  },
+  {
+    "id": "engine-user-state-chain-migrates-with-backup",
+    "kind": "engine",
+    "expectPath": "migrates",
+    "declaration": {
+      "dir": "store",
+      "name": "prefs",
+      "kind": "user-state"
+    },
+    "steps": [
+      {
+        "id": "to-2",
+        "to": 2,
+        "setTop": {
+          "migrated": true
+        },
+        "deleteTop": [
+          "legacy"
+        ]
+      }
+    ],
+    "initial": "{\"legacy\":1,\"a\":2}",
+    "ops": [
+      {
+        "op": "get",
+        "key": "migrated"
+      },
+      {
+        "op": "get",
+        "key": "legacy"
+      }
+    ]
+  },
+  {
+    "id": "engine-failed-migration-readonly",
+    "kind": "engine",
+    "expectPath": "failed",
+    "declaration": {
+      "dir": "store",
+      "name": "prefs",
+      "kind": "user-state"
+    },
+    "steps": [
+      {
+        "id": "to-2-fails",
+        "to": 2,
+        "throws": true
+      }
+    ],
+    "initial": "{\"a\":1}",
+    "ops": [
+      {
+        "op": "get",
+        "key": "a"
+      },
+      {
+        "op": "set",
+        "key": "b",
+        "value": 2
+      },
+      {
+        "op": "dump"
+      }
+    ]
+  },
+  {
+    "id": "engine-corrupt-not-json",
+    "kind": "engine",
+    "expectPath": "corrupt",
+    "oracle": "tsOnly",
+    "divergenceNote": "D-18: TS resets a corrupt file when clearInvalidConfig is set (the first write replaces it); Rust keeps the bytes, copies them aside and opens read-only (user-state) or starts empty (cache), so the two deliberately differ.",
+    "declaration": {
+      "dir": "store",
+      "name": "prefs",
+      "kind": "user-state",
+      "clearInvalidConfig": true
+    },
+    "initial": "{not json",
+    "ops": [
+      {
+        "op": "dump"
+      },
+      {
+        "op": "get",
+        "key": "a"
+      },
+      {
+        "op": "set",
+        "key": "k",
+        "value": 1
+      }
+    ]
+  },
+  {
+    "id": "engine-corrupt-array",
+    "kind": "engine",
+    "expectPath": "corrupt",
+    "oracle": "tsOnly",
+    "divergenceNote": "D-18: TS resets a corrupt file when clearInvalidConfig is set (the first write replaces it); Rust keeps the bytes, copies them aside and opens read-only (user-state) or starts empty (cache), so the two deliberately differ.",
+    "declaration": {
+      "dir": "store",
+      "name": "prefs",
+      "kind": "user-state",
+      "clearInvalidConfig": true
+    },
+    "initial": "[1]",
+    "ops": [
+      {
+        "op": "dump"
+      },
+      {
+        "op": "get",
+        "key": "a"
+      },
+      {
+        "op": "set",
+        "key": "k",
+        "value": 1
+      }
+    ]
+  },
+  {
+    "id": "engine-corrupt-empty",
+    "kind": "engine",
+    "expectPath": "corrupt",
+    "oracle": "tsOnly",
+    "divergenceNote": "D-18: TS resets a corrupt file when clearInvalidConfig is set (the first write replaces it); Rust keeps the bytes, copies them aside and opens read-only (user-state) or starts empty (cache), so the two deliberately differ.",
+    "declaration": {
+      "dir": "store_cache",
+      "name": "wikigameinfo",
+      "kind": "cache",
+      "clearInvalidConfig": true
+    },
+    "initial": "",
+    "ops": [
+      {
+        "op": "dump"
+      },
+      {
+        "op": "get",
+        "key": "a"
+      },
+      {
+        "op": "set",
+        "key": "k",
+        "value": 1
+      }
+    ]
+  },
+  {
+    "id": "engine-corrupt-bom",
+    "kind": "engine",
+    "expectPath": "corrupt",
+    "oracle": "tsOnly",
+    "divergenceNote": "D-18: TS resets a corrupt file when clearInvalidConfig is set (the first write replaces it); Rust keeps the bytes, copies them aside and opens read-only (user-state) or starts empty (cache), so the two deliberately differ.",
+    "declaration": {
+      "dir": "store",
+      "name": "prefs",
+      "kind": "user-state",
+      "clearInvalidConfig": true
+    },
+    "initial": "﻿{\"a\":1}",
+    "ops": [
+      {
+        "op": "dump"
+      },
+      {
+        "op": "get",
+        "key": "a"
+      },
+      {
+        "op": "set",
+        "key": "k",
+        "value": 1
+      }
+    ]
+  },
+  {
     "id": "settings-doc-game",
     "kind": "settingsDoc",
     "doc": "game",
@@ -35,11 +1449,119 @@
         "language": "en",
         "launcherArgs": "-windowed",
         "showFps": true,
-        "wineVersion": { "name": "Wine-GE", "bin": "/opt/wine/bin/wine", "type": "wine" },
-        "enviromentOptions": [{ "key": "DXVK_HUD", "value": "fps" }]
+        "wineVersion": {
+          "name": "Wine-GE",
+          "bin": "/opt/wine/bin/wine",
+          "type": "wine"
+        },
+        "enviromentOptions": [
+          {
+            "key": "DXVK_HUD",
+            "value": "fps"
+          }
+        ]
       },
       "version": "v2",
       "explicit": true
+    }
+  },
+  {
+    "id": "settings-doc-global-nested",
+    "kind": "settingsDoc",
+    "doc": "global",
+    "data": {
+      "defaultSettings": {
+        "language": "en",
+        "trayIconVariant": "dark",
+        "focusRow": {
+          "kind": "view",
+          "value": "recentlyPlayed"
+        },
+        "customWinePaths": [
+          "/x",
+          "/y"
+        ],
+        "experimentalFeatures": {
+          "zeta": true,
+          "alpha": false
+        }
+      },
+      "version": "v2"
+    }
+  },
+  {
+    "id": "settings-doc-global-overwrites-existing",
+    "kind": "settingsDoc",
+    "doc": "global",
+    "initial": "{\n  \"defaultSettings\": {\n    \"language\": \"de\"\n  },\n  \"version\": \"v2\"\n}",
+    "data": {
+      "defaultSettings": {
+        "language": "fr",
+        "b": 1,
+        "a": 2
+      },
+      "version": "v2"
+    }
+  },
+  {
+    "id": "settings-doc-newer-refused",
+    "kind": "settingsDoc",
+    "doc": "global",
+    "ensure": true,
+    "initial": "{\n  \"defaultSettings\": {\n    \"language\": \"de\"\n  },\n  \"version\": \"v99\"\n}",
+    "data": {
+      "defaultSettings": {
+        "language": "fr"
+      },
+      "version": "v2"
+    }
+  },
+  {
+    "id": "settings-doc-migrate-then-write",
+    "kind": "settingsDoc",
+    "doc": "global",
+    "ensure": true,
+    "initial": "{\n  \"defaultSettings\": {\n    \"darkTrayIcon\": true,\n    \"language\": \"en\"\n  }\n}",
+    "data": {
+      "defaultSettings": {
+        "language": "en",
+        "trayIconVariant": "dark"
+      },
+      "version": "v2"
+    }
+  },
+  {
+    "id": "settings-doc-game-unicode-and-escapes",
+    "kind": "settingsDoc",
+    "doc": "game",
+    "appName": "Spiel",
+    "data": {
+      "Spiel": {
+        "title": "Café Über 🎮",
+        "note": "line\nbreak\ttab \"q\" \\ /   ",
+        "path": "C:\\Games\\Spiel"
+      },
+      "version": "v2"
+    }
+  },
+  {
+    "id": "settings-doc-empty-containers",
+    "kind": "settingsDoc",
+    "doc": "game",
+    "appName": "Empty",
+    "data": {
+      "Empty": {
+        "list": [],
+        "map": {},
+        "nested": {
+          "list": [
+            [],
+            {}
+          ],
+          "n": null
+        }
+      },
+      "version": "v2"
     }
   }
 ]

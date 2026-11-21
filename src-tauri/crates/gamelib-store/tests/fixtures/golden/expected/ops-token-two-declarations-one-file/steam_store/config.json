@@ -1,0 +1,9 @@
+{
+	"refreshToken": "tok-abc",
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 1
+		}
+	},
+	"accountName": "player"
+}

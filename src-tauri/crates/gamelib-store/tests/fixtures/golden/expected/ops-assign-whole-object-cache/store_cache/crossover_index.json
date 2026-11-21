@@ -1,0 +1,12 @@
+{
+	"b": 20,
+	"d": {
+		"z": 1,
+		"a": 2
+	},
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 1
+		}
+	}
+}

@@ -1,0 +1,14 @@
+{
+  "Empty": {
+    "list": [],
+    "map": {},
+    "nested": {
+      "list": [
+        [],
+        {}
+      ],
+      "n": null
+    }
+  },
+  "version": "v2"
+}

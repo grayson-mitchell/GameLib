@@ -1,0 +1,24 @@
+{
+	"2": {
+		"totalPlayed": 9
+	},
+	"10": {
+		"totalPlayed": 2
+	},
+	"730": {
+		"firstPlayed": "2026-01-01",
+		"lastPlayed": "2026-02-01",
+		"totalPlayed": 5
+	},
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 1
+		}
+	},
+	"b-game": {
+		"totalPlayed": 1
+	},
+	"alpha": {
+		"totalPlayed": 4
+	}
+}

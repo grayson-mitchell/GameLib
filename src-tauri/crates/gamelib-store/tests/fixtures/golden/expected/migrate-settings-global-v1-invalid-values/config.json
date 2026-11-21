@@ -1,0 +1,11 @@
+{
+	"defaultSettings": {
+		"maxWorkers": 4,
+		"focusRow": {
+			"kind": "view",
+			"value": "favourites"
+		},
+		"language": "de"
+	},
+	"version": "v2"
+}

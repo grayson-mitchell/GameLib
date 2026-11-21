@@ -1,0 +1,13 @@
+{
+	"n": null,
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 1
+		}
+	},
+	"e": {},
+	"arr": [],
+	"f": 1.5,
+	"big": 12345678901234,
+	"small": -2.5e-9
+}

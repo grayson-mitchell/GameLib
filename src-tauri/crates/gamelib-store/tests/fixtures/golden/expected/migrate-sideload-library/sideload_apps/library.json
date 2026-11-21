@@ -1,0 +1,68 @@
+{
+	"games": [
+		{
+			"app_name": "a1",
+			"title": "T",
+			"art_cover": "c",
+			"art_square": "s",
+			"canRunOffline": true,
+			"is_installed": true,
+			"runner": "sideload",
+			"install": {
+				"install_path": "/p",
+				"platform": "Windows"
+			},
+			"extra": {
+				"about": {
+					"description": "d",
+					"shortDescription": "s"
+				},
+				"reqs": [],
+				"genres": [
+					"g"
+				]
+			},
+			"overrides": {
+				"title": "o"
+			},
+			"browserUrl": "u",
+			"launchFullScreen": true
+		},
+		{
+			"app_name": "a1",
+			"title": "T",
+			"art_cover": "c",
+			"art_square": "s",
+			"canRunOffline": true,
+			"is_installed": true,
+			"install": {
+				"install_path": "/p",
+				"platform": "Windows"
+			},
+			"extra": {
+				"about": {
+					"description": "d",
+					"shortDescription": "s"
+				},
+				"reqs": [],
+				"genres": [
+					"g"
+				]
+			},
+			"overrides": {
+				"title": "o"
+			}
+		}
+	],
+	"installed": [
+		{
+			"platform": "Windows",
+			"executable": "e"
+		}
+	],
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 3
+		}
+	}
+}

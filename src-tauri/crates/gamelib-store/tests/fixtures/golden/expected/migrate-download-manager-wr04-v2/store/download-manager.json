@@ -1,0 +1,62 @@
+{
+	"queue": [
+		{
+			"params": {
+				"appName": "a",
+				"runner": "steam",
+				"path": "/p",
+				"gameInfo": {
+					"runner": "steam",
+					"app_name": "a1",
+					"title": "T",
+					"art_cover": "c",
+					"art_square": "s",
+					"canRunOffline": true,
+					"is_installed": false,
+					"install": {},
+					"extra": {
+						"reqs": [
+							{
+								"minimum": "m",
+								"recommended": "r",
+								"title": "t"
+							}
+						]
+					}
+				}
+			},
+			"status": "done"
+		}
+	],
+	"finished": [
+		{
+			"params": {
+				"appName": "a",
+				"runner": "gog",
+				"path": "/p",
+				"gameInfo": {
+					"runner": "gog",
+					"app_name": "a1",
+					"title": "T",
+					"art_cover": "c",
+					"art_square": "s",
+					"canRunOffline": true,
+					"is_installed": false,
+					"install": {},
+					"gog_save_location": [
+						{
+							"name": "n",
+							"location": "l"
+						}
+					]
+				}
+			},
+			"status": "done"
+		}
+	],
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 3
+		}
+	}
+}

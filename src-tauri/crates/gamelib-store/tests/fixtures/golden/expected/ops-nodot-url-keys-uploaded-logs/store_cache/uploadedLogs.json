@@ -1,0 +1,10 @@
+{
+	"https://paste.example.com/a.log": {
+		"uploadedAt": 1700000000000
+	},
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 1
+		}
+	}
+}

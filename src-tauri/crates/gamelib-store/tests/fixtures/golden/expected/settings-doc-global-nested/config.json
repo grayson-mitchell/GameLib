@@ -1,0 +1,19 @@
+{
+  "defaultSettings": {
+    "language": "en",
+    "trayIconVariant": "dark",
+    "focusRow": {
+      "kind": "view",
+      "value": "recentlyPlayed"
+    },
+    "customWinePaths": [
+      "/x",
+      "/y"
+    ],
+    "experimentalFeatures": {
+      "zeta": true,
+      "alpha": false
+    }
+  },
+  "version": "v2"
+}

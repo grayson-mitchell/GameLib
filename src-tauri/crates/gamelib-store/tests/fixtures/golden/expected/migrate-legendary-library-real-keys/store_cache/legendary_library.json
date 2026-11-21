@@ -1,0 +1,153 @@
+{
+	"library": [
+		{
+			"app_name": "redacted",
+			"art_cover": "redacted",
+			"art_square": "redacted",
+			"cloud_save_enabled": true,
+			"developer": "redacted",
+			"extra": {
+				"about": {
+					"description": "redacted",
+					"shortDescription": "redacted"
+				},
+				"reqs": [],
+				"storeUrl": "redacted"
+			},
+			"dlcList": [
+				{
+					"ageGatings": {},
+					"categories": [
+						{
+							"path": "redacted"
+						}
+					],
+					"creationDate": "redacted",
+					"description": "redacted",
+					"developer": "redacted",
+					"developerId": "redacted",
+					"endOfSupport": false,
+					"entitlementName": "redacted",
+					"entitlementType": "redacted",
+					"id": "redacted",
+					"itemType": "redacted",
+					"keyImages": [
+						{
+							"alt": "redacted",
+							"height": 0,
+							"md5": "redacted",
+							"size": 0,
+							"type": "redacted",
+							"uploadedDate": "redacted",
+							"url": "redacted",
+							"width": 0
+						}
+					],
+					"lastModifiedDate": "redacted",
+					"mainGameItem": {
+						"id": "redacted",
+						"namespace": "redacted",
+						"unsearchable": false
+					},
+					"mainGameItemList": [
+						{
+							"id": "redacted",
+							"namespace": "redacted",
+							"unsearchable": false
+						}
+					],
+					"namespace": "redacted",
+					"requiresSecureAccount": false,
+					"status": "redacted",
+					"title": "redacted",
+					"unsearchable": false,
+					"applicationId": "redacted",
+					"customAttributes": {
+						"CanRunOffline": {
+							"type": "redacted",
+							"value": "redacted"
+						},
+						"FolderName": {
+							"type": "redacted",
+							"value": "redacted"
+						},
+						"CanSkipKoreanIdVerification": {
+							"type": "redacted",
+							"value": "redacted"
+						},
+						"CloudSaveFolder": {
+							"type": "redacted",
+							"value": "redacted"
+						},
+						"MonitorPresence": {
+							"type": "redacted",
+							"value": "redacted"
+						},
+						"PresenceID": {
+							"type": "redacted",
+							"value": "redacted"
+						},
+						"RequirementsJson": {
+							"type": "redacted",
+							"value": "redacted"
+						},
+						"SupportedPlatforms": {
+							"type": "redacted",
+							"value": "redacted"
+						},
+						"PresenceId": {
+							"type": "redacted",
+							"value": "redacted"
+						},
+						"UseAccessControl": {
+							"type": "redacted",
+							"value": "redacted"
+						}
+					},
+					"eulaIds": [
+						"redacted"
+					],
+					"releaseInfo": [
+						{
+							"appId": "redacted",
+							"compatibleApps": [],
+							"dateAdded": "redacted",
+							"id": "redacted",
+							"platform": [
+								"redacted"
+							],
+							"releaseNote": "redacted",
+							"versionTitle": "redacted"
+						}
+					]
+				}
+			],
+			"folder_name": "redacted",
+			"install": {
+				"executable": "redacted",
+				"install_path": "redacted",
+				"install_size": "redacted",
+				"is_dlc": false,
+				"version": "redacted"
+			},
+			"is_installed": true,
+			"namespace": "redacted",
+			"is_mac_native": false,
+			"save_folder": "redacted",
+			"save_path": null,
+			"title": "redacted",
+			"canRunOffline": false,
+			"isEAManaged": false,
+			"isUbisoftManaged": false,
+			"is_linux_native": false,
+			"runner": "legendary",
+			"store_url": "redacted",
+			"art_logo": "redacted"
+		}
+	],
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 3
+		}
+	}
+}

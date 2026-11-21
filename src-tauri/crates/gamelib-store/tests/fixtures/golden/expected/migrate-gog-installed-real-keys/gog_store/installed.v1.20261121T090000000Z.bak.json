@@ -1,0 +1,23 @@
+{
+  "installed": [
+    {
+      "platform": "redacted",
+      "executable": "redacted",
+      "install_path": "redacted",
+      "install_size": "redacted",
+      "is_dlc": false,
+      "version": "redacted",
+      "appName": "redacted",
+      "installedDLCs": [],
+      "language": "redacted",
+      "versionEtag": "redacted",
+      "buildId": "redacted",
+      "pinnedVersion": false
+    }
+  ],
+  "__internal__": {
+    "gamelib": {
+      "schemaVersion": 1
+    }
+  }
+}

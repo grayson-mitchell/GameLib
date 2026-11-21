@@ -1,0 +1,23 @@
+{
+	"installed": [
+		{
+			"platform": "windows",
+			"executable": "e",
+			"install_path": "/p",
+			"install_size": "1",
+			"is_dlc": false,
+			"version": "1",
+			"appName": "a",
+			"installedDLCs": [],
+			"language": "en",
+			"versionEtag": "e",
+			"buildId": "b",
+			"pinnedVersion": false
+		}
+	],
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 3
+		}
+	}
+}
