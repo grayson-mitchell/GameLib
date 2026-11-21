@@ -465,10 +465,31 @@ Plans:
   4. The legendary store migration is ported only if a supported upgrade path still reaches it (reachability recorded), otherwise it is deleted
   5. The TS write-through mirror's deletion point is named and executed for every family flipped in this phase, and `storeVersioning`, `storeMigrations` and `migration/*` TypeScript are deleted
 
-**Plans:** 0 plans
+**Plans:** 22 plans in 17 waves; planned 2026-11-21
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 85 to break down)
+- [ ] 85-01-PLAN.md — Before any store code: the TS store oracle golden (conf writes, engine outcomes, migrations, settings documents) and dot-path, number and key-order vectors
+- [ ] 85-02-PLAN.md — Redacted real-file corpus (operator profile, its `*.bak.json`, v0.8/v0.9/v0.10 in fake HOMEs, edge cases) pinned by MANIFEST.json (D-09)
+- [ ] 85-03-PLAN.md — Shared renderer policy and `kind:"store"` frame vectors; the live macOS gate contract 85-HUMAN-UAT.md (run by 85-20)
+- [ ] 85-04-PLAN.md — Spikes: S1 mirror protocol model, S3-S5 frame/boot/sync_all measurements and the constants they set
+- [ ] 85-05-PLAN.md — D-16 checkpoint: the signed v0.10 baseline and its recorded signing identity
+- [ ] 85-06-PLAN.md — `gamelib-store` (+cli) crate: ordered JSON with JS number text and key order, dot-prop paths, atomic write; CI wiring
+- [ ] 85-07-PLAN.md — Envelope, ops, version engine, backups, D-18 corrupt handling, generated store table, corpus roundtrip
+- [ ] 85-08-PLAN.md — zod-derived schema descriptor and the settings/library migration chains in Rust; corpus migrate parity; CLI `open`
+- [ ] 85-09-PLAN.md — StoreHost widened into gamelib-store; uploadedLogs v0.10 format fix; bounded boot open, GAMELIB_STORE, GAMELIB_STORE_BOOT, `store` exit drain
+- [ ] 85-10-PLAN.md — Tracer: TS mirror -> `kind:"store"` frames -> Rust owner -> disk with acks, on one store
+- [ ] 85-11-PLAN.md — Mirror hardening: S1 protocol, shared cells, dot paths, quit flush, D-02 fallback proof, jest disk sink
+- [ ] 85-12-PLAN.md — Flip caches (D-01 first family), runtime caches, corrupt caches start empty after their copy
+- [ ] 85-13-PLAN.md — Flip user-state; older libraries migrated at boot before the sidecar
+- [ ] 85-14-PLAN.md — Flip token-bearing and account configs (shared steam_store cell); keyring names pinned on every CI OS (D-10, D-14)
+- [ ] 85-15-PLAN.md — Flip settings last: store/config.json, config.json, GamesConfig/* through readSettingsDoc; D-22 first boot; eviction on reset/uninstall
+- [ ] 85-16-PLAN.md — Renderer reads native: one policy file for TS and Rust, snapshot and fetch from StoreHost, read-only notice from Rust
+- [ ] 85-17-PLAN.md — Renderer writes native: set/set-checked/delete/new and storeChanged from Rust with rev; preload stale-push guard
+- [ ] 85-18-PLAN.md — D-17 bottle version gate in Rust for the engine marker and shared-redist ledger
+- [ ] 85-19-PLAN.md — Clean-worktree proof, push and signed Phase 85 build checkpoint, three-OS CI, identity recorded beside the baseline
+- [ ] 85-20-PLAN.md — Run the live macOS gate (signed v0.10 -> signed Phase 85 upgrade, SC1-SC3)
+- [ ] 85-21-PLAN.md — D-03 deletion after the gate: migration system (SC4 recorded), flag and TS owner path, storeVersioning, storeMigrations; mirror schedule pinned (D-19)
+- [ ] 85-22-PLAN.md — Post-deletion clean-worktree and three-OS CI proof
 
 ### Phase 86: Pure leaf services
 

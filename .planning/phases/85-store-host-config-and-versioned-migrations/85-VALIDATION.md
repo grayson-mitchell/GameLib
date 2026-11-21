@@ -39,30 +39,45 @@ created: "2026-11-21"
 
 ## Per-Task Verification Map
 
-Task IDs are bound by the planner. Requirement-level map (from research):
+Task IDs bound by the planner (2026-11-21). `85-NN-Tk` = plan 85-NN, task k. Commands are the ones the plans' `<verify>` blocks run; the plan-end gates of each plan are not repeated here.
 
-| Requirement | Behavior | Test Type | Automated Command | File Exists | Status |
-|-------------|----------|-----------|-------------------|-------------|--------|
-| FND-06 / SC1 | Corpus loads; no-op re-save byte-identical; unknown keys preserved at current version | integration | `cargo test -p gamelib-store --test corpus roundtrip_is_byte_identical` | ❌ W0 | ⬜ pending |
-| FND-06 / SC1 | Fixture manifest complete (cannot pass vacuously) | integration | `cargo test -p gamelib-store --test corpus manifest_is_complete` | ❌ W0 | ⬜ pending |
-| FND-06 / SC1 | JS key order on insert; dot-path parity with `dot-prop@6` | unit + golden | `cargo test -p gamelib-store json::order dotpath` + `storeOracle.test.ts` | ❌ W0 | ⬜ pending |
-| FND-06 / SC1 | Number/escape vectors | unit | `cargo test -p gamelib-store json::numbers` | ❌ W0 | ⬜ pending |
-| FND-06 / SC1 | Strip migrations equal TS zod oracle | golden | `cargo test -p gamelib-store --test migrate_golden` | ❌ W0 | ⬜ pending |
-| FND-06 / SC1 | Schema descriptor not stale | jest | `pnpm exec jest src/backend/storeMigrations/__tests__/schemaDescriptor.test.ts` | ❌ W0 | ⬜ pending |
-| FND-06 / SC2 | Backup before migrate; newer = read-only; corrupt kept + reported; missing = empty | unit | `cargo test -p gamelib-store engine::` | ❌ W0 | ⬜ pending |
-| FND-06 / SC2 | Read-only notice payload parity | unit + jest vector | `cargo test -p gamelib-store readonly::` | ❌ W0 | ⬜ pending |
-| FND-06 | Atomic write incl. Windows open-handle | unit (+ CI Windows) | `cargo test -p gamelib-store atomic::` | ❌ W0 | ⬜ pending |
-| FND-06 | Ordering: rev under lock, in-order events | unit | `cargo test -p gamelib-store host::ordering` | ❌ W0 | ⬜ pending |
-| FND-06 | Mirror read-your-writes, rebase, shared-file coherence, unref | jest | `pnpm exec jest src/backend/stores/__tests__/mirrorCell.test.ts` | ❌ W0 | ⬜ pending |
-| FND-06 | `kind:"store"` frame vectors shared jest/cargo | unit | `cargo test --bin gamelib-shell store_frame` | ❌ W0 | ⬜ pending |
-| FND-06 | Renderer policy vectors TS = Rust | unit | `cargo test --bin gamelib-shell store_policy` ; `pnpm exec jest storePolicy` | ❌ W0 | ⬜ pending |
-| FND-06 | One owner per channel (83 census) | jest | `pnpm exec jest nativeSeamPortComplete` + `pnpm check:ipc-contract` | ✅ update | ⬜ pending |
-| FND-06 | `uploadedLogs` v0.10 tab+envelope regression | unit | `cargo test --bin gamelib-shell log_upload` | ✅ add case | ⬜ pending |
-| FND-06 / SC4 | Legendary reachability recorded; TS migration system deleted | jest | `pnpm exec jest src/backend/__tests__/storeHostPortComplete.test.ts` | ❌ W0 | ⬜ pending |
-| FND-06 / SC5 | Mirror deletion schedule pinned; TS dirs deleted | jest | `storeHostPortComplete.test.ts`, `storeKinds.test.ts` | ❌ W0 | ⬜ pending |
-| FND-07 / SC3 | Keyring names unchanged; store crates have no keyring dep | unit + `cargo tree` | `cargo test --bin gamelib-shell keyring_` | ❌ W0 | ⬜ pending |
-| Exit | Store drain holds Registrant, within budget | unit | `cargo test -p gamelib-store host::drain` | ❌ W0 | ⬜ pending |
-| Gates | Sidecar boot with no Rust peer exits cleanly | smoke | `pnpm smoke:sidecar` | ✅ | ⬜ pending |
+| Task | Requirement | Behavior | Test Type | Automated Command | File Exists | Status |
+|------|-------------|----------|-----------|-------------------|-------------|--------|
+| 85-01-T1..T3 | FND-06 / SC1 | TS oracle golden (ops, engine, migrate, settings docs) and dot-path, number, key-order vectors | golden | `pnpm exec jest --runTestsByPath src/backend/stores/__tests__/storeOracle.test.ts` | ❌ W0 | ⬜ pending |
+| 85-02-T1..T3 | FND-06 / SC1 | Redacted corpus complete, hashed, floored; redaction clean | jest | `pnpm exec jest --selectProjects Meta --runTestsByPath meta/__tests__/storeCorpus.test.ts` | ❌ W0 | ⬜ pending |
+| 85-03-T1 | FND-06 | Renderer policy vectors = today's TS | jest | `pnpm exec jest --runTestsByPath src/backend/stores/__tests__/storePolicyVectors.test.ts` | ❌ W0 | ⬜ pending |
+| 85-03-T2 | FND-06 | Store frame contract vectors well-formed | node check | see 85-03 Task 2 `<verify>` | ❌ W0 | ⬜ pending |
+| 85-03-T3 | FND-06 / FND-07 | Live gate contract parses (8 items, headingsSeen 0) | uat parse | see 85-03 Task 3 `<verify>` | ❌ W0 | ⬜ pending |
+| 85-04-T1..T2 | FND-06 | S1 protocol model converges; S3-S5 constants recorded | spike | `node .planning/spikes/092-store-mirror-protocol/sim.mjs --runs 10000 --seed 85` | ❌ W0 | ⬜ pending |
+| 85-05-T1..T3 | FND-07 / SC3 | Signed v0.10 baseline identity recorded (D-16) | manual + gh | see 85-05 `<verify>` | ❌ W0 | ⬜ pending |
+| 85-06-T1 | FND-06 / SC1 | Every golden file round-trips byte-identical in Rust | golden | `cd src-tauri && cargo test -p gamelib-store --test golden` | ❌ W0 | ⬜ pending |
+| 85-06-T2 | FND-06 / SC1 | JS number text and key order (vectors) | unit | `cd src-tauri && cargo test -p gamelib-store --test vectors` | ❌ W0 | ⬜ pending |
+| 85-06-T3 | FND-06 | dot-prop paths; atomic write incl. Windows open handle (S2 on CI) | unit (+ CI Windows) | `cd src-tauri && cargo test -p gamelib-store dotpath:: && cargo test -p gamelib-store atomic::` | ❌ W0 | ⬜ pending |
+| 85-07-T1 | FND-06 / SC1 | Golden ops replay byte-identical (envelope, reserved key) | golden | `cd src-tauri && cargo test -p gamelib-store --test ops_golden` | ❌ W0 | ⬜ pending |
+| 85-07-T2 | FND-06 / SC2 | Backup before migrate; newer read-only; corrupt copied aside and kept (D-18); missing empty | golden + unit | `cd src-tauri && cargo test -p gamelib-store --test engine_golden && cargo test -p gamelib-store engine::` | ❌ W0 | ⬜ pending |
+| 85-07-T3 | FND-06 / SC1 | Corpus: manifest complete, no-op open byte-identical, outcomes match; store table drift | integration + jest | `cd src-tauri && cargo test -p gamelib-store --test corpus` ; `pnpm exec jest --runTestsByPath src/backend/stores/__tests__/storeTable.test.ts` | ❌ W0 | ⬜ pending |
+| 85-08-T1..T2 | FND-06 / SC1 | Schema descriptor not stale; migrations equal TS oracle; versions pinned (D-04) | golden + jest | `cd src-tauri && cargo test -p gamelib-store --test migrate_golden` ; `pnpm exec jest --runTestsByPath src/backend/stores/__tests__/schemaDescriptor.test.ts` | ❌ W0 | ⬜ pending |
+| 85-08-T3 | FND-06 / SC1 | Older corpus files migrate like TS; CLI open on FakeHome | integration | `cd src-tauri && cargo test -p gamelib-store --test corpus older_versions_match_ts_oracle && cargo test -p gamelib-store-cli` | ❌ W0 | ⬜ pending |
+| 85-09-T1 | FND-06 | uploadedLogs v0.10 tab+envelope regression | unit | `cd src-tauri && cargo test --bin gamelib-shell log_upload` | ✅ add case | ⬜ pending |
+| 85-09-T2 | FND-06 | Rev under lock, ordered events, rollback, read-only, eviction | unit | `cd src-tauri && cargo test -p gamelib-store host::` | ❌ W0 | ⬜ pending |
+| 85-09-T3 | FND-06 | Bounded boot open, mode/ownership, boot env, `store` exit drain | unit + jest gates | `cd src-tauri && cargo test --bin gamelib-shell store_boot && cargo test --bin gamelib-shell handle_exit` | ❌ W0 | ⬜ pending |
+| 85-10-T1..T3 | FND-06 | Frame write path end to end; frame vectors on both sides; flush; registrant | unit + jest | `cd src-tauri && cargo test --bin gamelib-shell store_frame` ; `pnpm exec jest --runTestsByPath src/backend/stores/__tests__/storeWritePath.test.ts` | ❌ W0 | ⬜ pending |
+| 85-11-T1..T3 | FND-06 | Mirror protocol property test, shared cells, dot paths, quit flush, D-02 fallback | jest | `pnpm exec jest --runTestsByPath src/backend/stores/__tests__/mirrorCell.test.ts src/backend/stores/__tests__/dotPath.test.ts src/backend/stores/__tests__/storeFallback.test.ts` | ❌ W0 | ⬜ pending |
+| 85-12-T1..T2 | FND-06 | Cache family flipped; runtime caches; corrupt cache startEmpty | jest + unit | `pnpm exec jest --runTestsByPath src/backend/stores/__tests__/cacheFamily.test.ts` | ❌ W0 | ⬜ pending |
+| 85-13-T1..T2 | FND-06 | User-state flipped; libraries migrated at boot | jest + unit | `pnpm exec jest --runTestsByPath src/backend/stores/__tests__/userStateFamily.test.ts` ; `cd src-tauri && cargo test --bin gamelib-shell store_boot` | ❌ W0 | ⬜ pending |
+| 85-14-T1 | FND-06 | Account family flipped; shared steam_store cell; tightening | jest + unit | `pnpm exec jest --runTestsByPath src/backend/stores/__tests__/accountFamily.test.ts` | ❌ W0 | ⬜ pending |
+| 85-14-T2 | FND-07 / SC3 / D-10 | Keyring names pinned on all CI legs; no keyring dep in store crates | unit + `cargo tree` | `cd src-tauri && cargo test --bin gamelib-shell keyring_` | ❌ W0 | ⬜ pending |
+| 85-15-T1..T3 | FND-06 | Settings family flipped; readSettingsDoc; D-22; resync; eviction | jest + unit | `pnpm exec jest --runTestsByPath src/backend/stores/__tests__/settingsDocs.test.ts src/backend/stores/__tests__/settingsFamily.test.ts src/backend/__tests__/settingsMirrorResync.test.ts` | ❌ W0 | ⬜ pending |
+| 85-16-T1..T3 | FND-06 / SC2 | Native reads; one owner per channel; policy TS = Rust; Rust read-only notice | unit + jest | `cd src-tauri && cargo test --bin gamelib-shell store_policy && cargo test --bin gamelib-shell store_native` ; `pnpm exec jest --runTestsByPath src/backend/__tests__/nativeSeamPortComplete.test.ts` ; `pnpm check:ipc-contract` | ✅ update | ⬜ pending |
+| 85-17-T1..T3 | FND-06 | Native writes and storeChanged with rev; preload stale-push guard | unit + jest | `cd src-tauri && cargo test --bin gamelib-shell store_native` ; `pnpm exec jest --runTestsByPath src/backend/stores/__tests__/rendererWrites.test.ts src/preload/__tests__/tauriTransport.test.ts` | ❌ W0 | ⬜ pending |
+| 85-18-T1..T2 | FND-06 | Bottle version gate (D-17) for marker and ledger | unit + jest | `cd src-tauri && cargo test -p gamelib-store version_gate && cargo test --bin gamelib-shell store_gate` ; `pnpm exec jest --runTestsByPath src/backend/stores/__tests__/bottleVersionGate.test.ts` | ❌ W0 | ⬜ pending |
+| 85-19-T1..T3 | FND-06 / FND-07 | Clean-worktree proof; three-OS CI; Phase 85 signed identity recorded | proof | see 85-19 | — | ⬜ pending |
+| 85-20-T1..T3 | FND-07 / SC3, SC1, SC2 | Live macOS gate on signed builds | manual | `85-HUMAN-UAT.md` | — | ⬜ pending |
+| 85-21-T1..T3 | FND-06 / SC4, SC5 | Reachability recorded; migration system, flag, owner path, storeVersioning, storeMigrations deleted; mirror schedule pinned | jest | `pnpm exec jest --runTestsByPath src/backend/__tests__/storeHostPortComplete.test.ts src/backend/__tests__/storeMirrorSchedule.test.ts` | ❌ W0 | ⬜ pending |
+| 85-22-T1..T3 | FND-06 / FND-07 | Post-deletion clean-worktree and three-OS CI proof | proof | see 85-22 | — | ⬜ pending |
+| all | Gates | Sidecar boot with no Rust peer exits cleanly | smoke | `pnpm smoke:sidecar` | ✅ | ⬜ pending |
+
+Binding notes: the schema descriptor drift test lives at `src/backend/stores/__tests__/schemaDescriptor.test.ts` (not under storeMigrations/, which 85-21 deletes); the read-only area parity is proven by cargo's `store_policy` tests over `storePolicyVectors.json` (85-16), so no separate `readonly::` module exists; the store drain is proven by `store_boot` and `store_frame` tests (85-09, 85-10) rather than a `host::drain` filter.
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -74,7 +89,7 @@ Task IDs are bound by the planner. Requirement-level map (from research):
 - [ ] Corpus harvest + redaction tool under `createFakeHomeProfile()`, with a redaction test
 - [ ] `85-HUMAN-UAT.md` live-gate contract (convention 5 item shape), incl. signing-identity precondition
 - [ ] `gamelib-store` crate scaffold + CI wiring (`rust-test.yml`, `rustTestWorkflow.test.ts`, `cargoFeatures.test.ts`)
-- [ ] `storeChannels.json` policy vectors; `storeFrameVectors.json`
+- [ ] `storePolicyVectors.json` policy vectors (85-03; the policy itself moves to `storeChannels.json` in 85-16); `storeFrameVectors.json`
 - [ ] `meta/genStoreSchemas.ts` + drift test
 - [ ] Spikes S1–S5 (mirror rebase sim, Windows rename, frame throughput, GamesConfig sweep, `sync_all` cost)
 
