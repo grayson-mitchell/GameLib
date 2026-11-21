@@ -40,7 +40,12 @@ const LocationRow = ({ gameInfo, gates, actions }: Props) => {
             'Move failed. Details are in the log.'
           ),
           retryLabel: t('gamelib:gamepage.installTab.retry', 'Retry'),
-          onRetry: actions.retryMove
+          onRetry: actions.retryMove,
+          // D-11: Retry must not start a move the Move button would refuse.
+          retryDisabled: gates.move.disabled,
+          retryDisabledReason: gates.move.reason
+            ? gateReasonText(gates.move.reason, t)
+            : undefined
         }
       : actions.setFolderFailed
         ? {
@@ -49,7 +54,11 @@ const LocationRow = ({ gameInfo, gates, actions }: Props) => {
               "Couldn't set the install folder. Details are in the log."
             ),
             retryLabel: t('gamelib:gamepage.installTab.retry', 'Retry'),
-            onRetry: actions.retrySetFolder
+            onRetry: actions.retrySetFolder,
+            retryDisabled: gates.setFolder.disabled,
+            retryDisabledReason: gates.setFolder.reason
+              ? gateReasonText(gates.setFolder.reason, t)
+              : undefined
           }
         : undefined
 

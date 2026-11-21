@@ -45,6 +45,18 @@ jest.mock('react', () => {
       }
       return [slots[idx], dispatch]
     },
+    // Memoised per deps, so a stable callback in an effect's deps stays stable.
+    useCallback: (fn: unknown, deps?: unknown[]) => {
+      const idx = cursor++
+      const prev = slots[idx] as { fn: unknown; deps?: unknown[] } | undefined
+      const same =
+        prev !== undefined &&
+        deps !== undefined &&
+        prev.deps !== undefined &&
+        deps.every((dep, i) => Object.is(dep, (prev.deps as unknown[])[i]))
+      if (!same) slots[idx] = { fn, deps }
+      return (slots[idx] as { fn: unknown }).fn
+    },
     useContext: () => contextValue,
     useEffect: (fn: () => unknown, deps?: unknown[]) => {
       const idx = cursor++
@@ -121,6 +133,8 @@ const harness = React as unknown as {
 }
 
 type Props = Record<string, unknown> & { children?: ReactNode }
+
+type RetryGate = { retryDisabled?: boolean; retryDisabledReason?: string }
 
 function isElement(node: unknown): node is ReactElement<Props> {
   return typeof node === 'object' && node !== null && 'props' in node
@@ -354,8 +368,6 @@ describe('VersionRow', () => {
       retryDisabled?: boolean
       retryDisabledReason?: string
     }
-    type RetryGate = { retryDisabled?: boolean; retryDisabledReason?: string }
-
     const failureOf = (tree: ReactElement<Props> | null) =>
       tree?.props.failure as Failure | undefined
 
@@ -531,10 +543,13 @@ describe('Location row (CR-02)', () => {
 
   it('clears a Move failure when the install path changes (WR-04)', async () => {
     const game = makeGame('legendary')
+    const mount = renderLocation(game)
+    harness.__flushEffects() // the mount effect, before any failure exists
     mockApi.moveInstall.mockRejectedValue(new Error('boom'))
-    await renderLocation(game).actions.retryMove()
+    await mount.actions.retryMove()
     expect(renderLocation(game).actions.moveFailed).toBe(true)
     harness.__flushEffects()
+    expect(renderLocation(game).actions.moveFailed).toBe(true)
 
     const moved = makeGame('legendary', { install_path: '/elsewhere/test' })
     expect(renderLocation(moved).actions.moveFailed).toBe(true)

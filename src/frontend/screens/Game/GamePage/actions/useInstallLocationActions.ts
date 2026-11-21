@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { GameInfo } from 'common/types'
 import useLibraryState from 'frontend/state/libraryState'
@@ -19,6 +20,11 @@ import { isInvokeTimeout, useRowAction } from './rowAction'
  * A rejection that is that timeout, while the game's status still reads
  * 'moving', is handed to the game status instead of reported as a failure; any
  * other rejection still fails the row (D-18).
+ *
+ * WR-04: Location failures are not sticky. Starting either action dismisses
+ * the other's failure, so at most one exists and the newest is the one shown,
+ * and a change of install path dismisses both (a move or re-point by any route
+ * ends a stale "Move failed").
  */
 /**
  * Read at rejection time, not through a render-time selector: the rejection
@@ -42,6 +48,14 @@ export function useInstallLocationActions(gameInfo: GameInfo) {
   const moveRow = useRowAction('moveInstall', appName)
   const folderRow = useRowAction('changeInstallPath', appName)
 
+  const dismissMove = moveRow.dismiss
+  const dismissFolder = folderRow.dismiss
+  const installPath = gameInfo.install.install_path
+  useEffect(() => {
+    dismissMove()
+    dismissFolder()
+  }, [installPath, dismissMove, dismissFolder])
+
   function openFolder() {
     const path = gameInfo.install.install_path || gameInfo.folder_name
 
@@ -51,6 +65,7 @@ export function useInstallLocationActions(gameInfo: GameInfo) {
   }
 
   async function onMoveInstallYesClick() {
+    dismissFolder()
     await moveRow.run(
       async () => {
         const { defaultInstallPath } = await window.api.requestAppSettings()
@@ -82,6 +97,7 @@ export function useInstallLocationActions(gameInfo: GameInfo) {
   }
 
   async function onChangeInstallYesClick() {
+    dismissMove()
     await folderRow.run(async () => {
       const { defaultInstallPath } = await window.api.requestAppSettings()
       const path = await openDialog({
