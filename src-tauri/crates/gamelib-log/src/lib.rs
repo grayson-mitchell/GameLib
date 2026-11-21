@@ -6,6 +6,7 @@
 
 pub mod format;
 pub mod frame;
+pub mod limiter;
 pub mod prefix;
 pub mod sanitize;
 pub mod writer;

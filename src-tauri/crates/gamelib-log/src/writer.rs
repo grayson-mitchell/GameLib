@@ -11,7 +11,7 @@ use std::io::{self, Write};
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::mpsc::{sync_channel, Receiver, SyncSender, TrySendError};
+use std::sync::mpsc::{sync_channel, Receiver, RecvTimeoutError, SyncSender, TrySendError};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -19,10 +19,15 @@ use gamelib_core::clock::Clock;
 use gamelib_core::paths::{log_file, LogPathError, LogTarget, Platform};
 
 use crate::format::{format_line, normalise_chunk};
+use crate::limiter::{RateLimiter, Summary};
 use crate::prefix::{Level, Prefix};
 
 /// Ingest capacity. Past it a caller's entry is dropped and counted, never waited for.
 const CHANNEL_CAPACITY: usize = 4096;
+
+/// How often an idle writer wakes to close the rate limiter's elapsed windows, so a log that goes
+/// quiet still gets its summary (D-14).
+const WRITER_TICK: Duration = Duration::from_secs(5);
 
 /// The local UTC offset, in minutes east, that applies at an instant.
 pub trait TzOffset: Send + Sync + 'static {
@@ -78,7 +83,10 @@ pub struct TargetBatch {
 
 enum Msg {
     Batches(Vec<TargetBatch>),
+    /// Everything submitted before is on disk; every open rate-limit window is closed first.
     Flush(SyncSender<()>),
+    /// The writer's periodic tick, run now (tests drive it from a scripted clock).
+    Tick(SyncSender<()>),
     /// Test hook: park the writer thread until the sender side is dropped or signalled.
     #[cfg(test)]
     Hold(Receiver<()>),
@@ -153,20 +161,22 @@ impl Logger {
     }
 
     /// Runs the writer's periodic tick now and waits for it (a barrier: everything submitted before
-    /// this call has been handled). Exists so a test can drive the tick from a scripted clock.
+    /// this call has been handled, and the rate limiter's windows that have elapsed at the clock's
+    /// time are closed). Exists so a test can drive the tick from a scripted clock.
     pub fn tick_for_tests(&self, within: Duration) -> bool {
-        self.barrier(within)
+        self.barrier(within, Msg::Tick)
     }
 
-    /// Waits (up to `within`) until everything submitted before this call is on disk.
+    /// Waits (up to `within`) until everything submitted before this call is on disk. Closes every
+    /// open rate-limit window first, so its summary is part of what lands.
     pub fn flush(&self, within: Duration) -> bool {
-        self.barrier(within)
+        self.barrier(within, Msg::Flush)
     }
 
-    fn barrier(&self, within: Duration) -> bool {
+    fn barrier(&self, within: Duration, make: fn(SyncSender<()>) -> Msg) -> bool {
         let deadline = Instant::now() + within;
         let (ack_tx, ack_rx) = sync_channel(1);
-        let mut msg = Msg::Flush(ack_tx);
+        let mut msg = make(ack_tx);
         loop {
             match self.tx.try_send(msg) {
                 Ok(()) => break,
@@ -191,6 +201,8 @@ struct WriterState {
     general_rotated: bool,
     /// Paths whose failed rotation already logged its one WARNING.
     rotation_warned: HashSet<String>,
+    /// Repeating `gamelib.log` lines only (D-14); transcripts never reach it (D-15).
+    limiter: RateLimiter,
 }
 
 impl WriterState {
@@ -200,18 +212,50 @@ impl WriterState {
             dropped,
             general_rotated: false,
             rotation_warned: HashSet::new(),
+            limiter: RateLimiter::new(),
         }
     }
 
     fn run(&mut self, rx: Receiver<Msg>) {
-        while let Ok(msg) = rx.recv() {
+        loop {
             // A panic while handling one message must not end the writer.
-            let _ = catch_unwind(AssertUnwindSafe(|| self.handle(msg)));
+            match rx.recv_timeout(WRITER_TICK) {
+                Ok(msg) => {
+                    let _ = catch_unwind(AssertUnwindSafe(|| self.handle(msg)));
+                }
+                Err(RecvTimeoutError::Timeout) => {
+                    let _ = catch_unwind(AssertUnwindSafe(|| self.close_windows()));
+                }
+                Err(RecvTimeoutError::Disconnected) => break,
+            }
         }
+    }
+
+    /// Writes the summary of every rate-limit window that has elapsed at the clock's time.
+    fn close_windows(&mut self) {
+        let summaries = self.limiter.expire(self.cfg.clock.now_ms());
+        self.append_summaries(&summaries);
+    }
+
+    fn append_summaries(&mut self, summaries: &[Summary]) {
+        for summary in summaries {
+            if let Some(chunk) = self.summary_chunk(summary) {
+                self.append_general_chunk(&chunk);
+            }
+        }
+    }
+
+    /// A summary as a normal line, stamped by the Logger's clock.
+    fn summary_chunk(&self, summary: &Summary) -> Option<String> {
+        let ts = self.cfg.clock.now_ms();
+        let tz = self.cfg.tz.offset_minutes(ts);
+        format_line(ts, tz, summary.level, summary.prefix, &summary.body)
+            .and_then(|l| normalise_chunk(&l))
     }
 
     fn handle(&mut self, msg: Msg) {
         self.report_drops();
+        self.close_windows();
         match msg {
             Msg::Batches(batches) => {
                 for batch in batches {
@@ -219,6 +263,11 @@ impl WriterState {
                 }
             }
             Msg::Flush(ack) => {
+                let summaries = self.limiter.drain();
+                self.append_summaries(&summaries);
+                let _ = ack.try_send(());
+            }
+            Msg::Tick(ack) => {
                 let _ = ack.try_send(());
             }
             #[cfg(test)]
@@ -292,7 +341,17 @@ impl WriterState {
                     level,
                     prefix,
                     msg,
-                } => format_line(*ts, *tz, *level, *prefix, msg).and_then(|l| normalise_chunk(&l)),
+                } => {
+                    let line = format_line(*ts, *tz, *level, *prefix, msg)
+                        .and_then(|l| normalise_chunk(&l));
+                    // Only a general-target line is rate limited (D-14); a raw chunk or a line for
+                    // any other target is a transcript and is never altered (D-15).
+                    if is_general && line.is_some() {
+                        self.limit(*ts, *level, *prefix, msg, &mut data, line)
+                    } else {
+                        line
+                    }
+                }
                 Entry::Raw(text) => normalise_chunk(text),
             };
             if let Some(c) = chunk {
@@ -307,6 +366,33 @@ impl WriterState {
         }
         // A failed append is dropped; it never re-rotates (that would archive what did land).
         let _ = append(&path, &data);
+    }
+
+    /// Runs one general-target line through the limiter: the summaries of windows that closed by the
+    /// entry's own time go into `data` first (so they precede the entry that closed them), then the
+    /// line itself if admitted, then the summary of any key its admission evicted (written after it).
+    fn limit(
+        &mut self,
+        ts: u64,
+        level: Level,
+        prefix: Prefix,
+        msg: &str,
+        data: &mut String,
+        line: Option<String>,
+    ) -> Option<String> {
+        for summary in self.limiter.expire(ts) {
+            if let Some(chunk) = self.summary_chunk(&summary) {
+                data.push_str(&chunk);
+            }
+        }
+        let admitted = self.limiter.admit(ts, level, prefix, msg);
+        let mut out = if admitted { line } else { None };
+        for summary in self.limiter.take_evicted() {
+            if let Some(chunk) = self.summary_chunk(&summary) {
+                out.get_or_insert_with(String::new).push_str(&chunk);
+            }
+        }
+        out
     }
 
     /// Rotates `gamelib.log` to `.old` once per Logger, on its first general write. A failed rename
@@ -332,15 +418,20 @@ impl WriterState {
 
     /// Appends one line to `gamelib.log`.
     fn append_general(&mut self, line: &str) {
-        let Ok(path) = self.path_of(&LogTarget::General) else {
-            return;
-        };
         // The per-chunk rule applies to a formatted line too (a message ending in a newline).
         let Some(data) = normalise_chunk(line) else {
             return;
         };
+        self.append_general_chunk(&data);
+    }
+
+    /// Appends already-normalised text to `gamelib.log`.
+    fn append_general_chunk(&mut self, data: &str) {
+        let Ok(path) = self.path_of(&LogTarget::General) else {
+            return;
+        };
         self.rotate_general_once(&path);
-        let _ = append(&path, &data);
+        let _ = append(&path, data);
     }
 }
 
