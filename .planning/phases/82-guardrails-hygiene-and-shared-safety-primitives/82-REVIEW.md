@@ -2,7 +2,7 @@
 phase: 82-guardrails-hygiene-and-shared-safety-primitives
 reviewed: 2026-11-20T00:00:00Z
 depth: standard
-files_reviewed: 23
+files_reviewed: 24
 files_reviewed_list:
   - src-tauri/crates/README.md
   - src-tauri/crates/gamelib-safety/src/remove.rs
@@ -19,6 +19,7 @@ files_reviewed_list:
   - src/backend/storeManagers/gog/__tests__/uninstallSafety.test.ts
   - src/backend/storeManagers/steam/__tests__/cancelDelete.test.ts
   - src/backend/storeManagers/steam/__tests__/games.test.ts
+  - src/backend/storeManagers/steam/bridge/__tests__/sharedRedistInstall.test.ts
   - src/backend/storeManagers/steam/gameLaunchOverlay.ts
   - src/backend/testUtils/__tests__/fakeSafetyRust.test.ts
   - src/backend/testUtils/__tests__/fakeSafetyRustContract.test.ts
@@ -29,9 +30,9 @@ files_reviewed_list:
   - src/common/types/safety.ts
 findings:
   critical: 0
-  warning: 1
-  info: 3
-  total: 4
+  warning: 2
+  info: 4
+  total: 6
 status: issues_found
 ---
 
@@ -162,5 +163,78 @@ the two older ones).
 ---
 
 _Reviewed: 2026-11-20_
+_Reviewer: Claude (gsd-code-reviewer)_
+_Depth: standard_
+
+## Incremental review — 82-20 (G-82-2-r2)
+
+**Reviewed:** 2026-11-21
+**Depth:** standard
+**Scope:** `src/backend/storeManagers/steam/bridge/__tests__/sharedRedistInstall.test.ts`, diff `2496709d0..HEAD`
+**Result:** 1 warning, 1 info. No critical findings.
+
+The change does what it claims for the converted waits. Verified, not assumed:
+
+- **The captured clock advances under fake timers.** `realNow` and `realSetTimeout` are module-scope constants, and
+  nothing in the file installs fake timers at module scope or in a `beforeEach`. Every `jest.useFakeTimers` call is
+  inside an `it`, and `afterEach` restores real timers. With `@sinonjs/fake-timers` 10.3.0 installed
+  (`toFake` including `performance`, `Date`, `hrtime`), a reference captured before install kept reading real time
+  while `performance.now()` and `Date.now()` read frozen. `setImmediate` is in `doNotFake`, so the loop yields on
+  the real event loop.
+- **`yieldUntil` cannot hang.** Both its exits are real: `done()` or the 15 s real deadline. It is inside the 30 s
+  per-test timeout. It leaks no timer of its own (setImmediate only).
+- **Every converted wait is followed by an `expect` that fails instead of hanging.** All four sites (lines 960-961,
+  1006-1007, 1161-1162, 1281-1282) assert the call count straight after the wait, before
+  `advanceTimersByTimeAsync`.
+- No turn-counted waits remain (`grep` for `setImmediate`/`i <` finds only `yieldUntil`).
+- The file passes locally (63/63).
+
+### WR-11: the "import after the Jest environment has been torn down" warning is not fixed; it comes from the last test, not the waits
+
+**File:** `src/backend/storeManagers/steam/bridge/__tests__/sharedRedistInstall.test.ts:1507-1514`
+**Issue:** Running the whole file still prints `ReferenceError: You are trying to import a file after the Jest
+environment has been torn down` (reproduced 3 of 3 full runs; the stack points at
+`sharedRedistInstall.ts:459` through source maps, but it is the `await import('../depot')` at
+`sharedRedistInstall.ts:655`). Narrowing the run shows the cause: `-t "Play-time call joining"` alone reproduces
+it, and the four converted installer-timeout/Graphics tests plus the slowed tracer together do not. That test is
+synchronous. It starts two `installSteamBridgeSharedRedists` calls and returns without awaiting them, so the
+run is still in its real `fs/promises` ledger I/O when `afterEach` removes the tmp dirs and the environment tears
+down; the dynamic `import('../depot')` then fires after teardown. The comment above the block ("leaves a
+never-settling in-flight run for APP") treats this as harmless because the download mock never settles, but the
+run never gets as far as the mock. The plan-82-20 text and the new doc comments attribute the CI warning to the
+timing waits; this leaves it unresolved and noisy, and a floating promise past teardown can also surface as an
+unhandled rejection if the run's error path ever throws.
+**Fix:** Settle the run before the test returns:
+```ts
+it('a Play-time call joining an install-time in-flight run returns the same promise', async () => {
+  let release!: (r: SharedRedistDownloadResult) => void
+  mockedDownload.mockReturnValue(
+    new Promise<SharedRedistDownloadResult>((r) => (release = r))
+  )
+  const a = installSteamBridgeSharedRedists(DEPS, APP, SETTINGS, undefined, { allowLogon: true })
+  const b = installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
+  expect(b).toBe(a)
+  release({ status: 'offline', depots: [], failed: [], skipped: [] })
+  await a
+})
+```
+
+### IN-09: slowed-download tracer test leaks a real timer on its failure path and does not prove the slow window elapsed
+
+**File:** `src/backend/storeManagers/steam/bridge/__tests__/sharedRedistInstall.test.ts:986-1014`
+**Issue:** (a) The 250 ms `realSetTimeout` is not unref'd or tracked. If `yieldUntil` expires (the failure the test
+exists to catch) the `expect` throws, `afterEach` tears down, and the timer later resolves the download and drives the
+run into the dynamic import and removed tmp dirs after teardown, which is the same warning as WR-11, on the failure
+path only. (b) The test never asserts that the first installer call came at least `SLOW_PRE_INSTALLER_MS` after the
+call began, so it would still pass if a future change made the download mock resolve early; its value as a regression
+for the turn-counted wait rests on that unasserted delay. (c) Apart from the download mock it duplicates the sibling
+test above it line for line.
+**Fix:** Take `const t0 = realNow()` before the call and `expect(realNow() - t0).toBeGreaterThanOrEqual(SLOW_PRE_INSTALLER_MS - 10)`
+after the wait; keep the timer handle and `clearTimeout` it in a `finally`, or parameterize the two tests with
+`it.each` over the download mock.
+
+---
+
+_Reviewed: 2026-11-21 (82-20 incremental)_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
