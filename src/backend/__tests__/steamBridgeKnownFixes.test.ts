@@ -7,7 +7,13 @@
  */
 
 import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs'
+import {
+  mkdirSync,
+  mkdtempSync,
+  promises as fsPromises,
+  rmSync,
+  writeFileSync
+} from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
 import * as engineServices from 'backend/services/engineServices'
@@ -387,6 +393,37 @@ describe('buildRegistryFixCommandParts', () => {
   })
 })
 
+/** The 30 s per-test timeout is only the outer bound for the registry-timeout tests. Test run
+ * 44858803823 exceeded jest's 5 s default here (G-82-2-r3): a turn-counted wait ran out before the
+ * real prefix .reg read landed, so the 15 s timer was never armed and `await p` never settled. The
+ * wait inside is bounded by real time through yieldUntil; neither a retry nor a skip is the fix. */
+const REGISTRY_TIMEOUT_TEST_TIMEOUT_MS = 30_000
+
+/** Real-clock captures, evaluated at file load, before any test calls jest.useFakeTimers. Under this
+ * file's `doNotFake: ['setImmediate']` the live performance.now and Date.now are frozen inside the
+ * test (82-20 measured this on jest 29.7), so only a reference captured before that keeps reading
+ * real time. */
+const realNow = performance.now.bind(performance)
+const realSetTimeout = setTimeout
+
+const REAL_WAIT_DEADLINE_MS = 15_000
+
+/** How long the slowed-path regression test holds the prefix .reg read back, in real time. */
+const SLOW_REG_READ_MS = 250
+
+/** Wait until done() holds, bounded by elapsed real time, never by a count of turns. It returns
+ * rather than throws, so the caller's expect supplies the failure message. A deliberate local copy
+ * of yieldUntil in bridge/__tests__/sharedRedistInstall.test.ts (G-82-2-r2), not an import: a
+ * third user should extract both into a shared test util. */
+async function yieldUntil(
+  done: () => boolean,
+  deadlineMs = REAL_WAIT_DEADLINE_MS
+): Promise<void> {
+  const deadline = realNow() + deadlineMs
+  while (!done() && realNow() < deadline)
+    await new Promise((r) => setImmediate(r))
+}
+
 describe('registry fixes application', () => {
   it('bundled profile without views applies 32 then 64', async () => {
     writeBundled({ title: 't', registry: [WMP] })
@@ -573,27 +610,63 @@ describe('registry fixes application', () => {
     })
   })
 
-  it('times out a never-settling call after 15s and warns', async () => {
-    // The prefix .reg read is real async IO; keep setImmediate real so it can
-    // settle before the 15 s timer is armed.
-    jest.useFakeTimers({ doNotFake: ['setImmediate'] })
-    try {
-      writeBundled({ title: 't', registry: [{ ...WMP, views: [32] }] })
-      mockRunWineCommand.mockReturnValue(new Promise(() => undefined))
-      const p = applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
-      for (let i = 0; i < 20; i++) {
-        await new Promise((r) => setImmediate(r))
+  it(
+    'times out a never-settling call after 15s and warns',
+    async () => {
+      // setImmediate stays real so yieldUntil can let the real prefix .reg read
+      // land before the 15 s timer is armed; the wait is bounded by real time,
+      // not a turn count (G-82-2-r3, Test run 44858803823).
+      jest.useFakeTimers({ doNotFake: ['setImmediate'] })
+      try {
+        writeBundled({ title: 't', registry: [{ ...WMP, views: [32] }] })
+        mockRunWineCommand.mockReturnValue(new Promise(() => undefined))
+        const p = applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
+        await yieldUntil(() => mockRunWineCommand.mock.calls.length > 0)
+        expect(mockRunWineCommand).toHaveBeenCalledTimes(1)
+        await jest.advanceTimersByTimeAsync(15_000)
+        await p
+        expect(mockLogWarning).toHaveBeenCalledWith(
+          expect.stringContaining('timed out'),
+          'Steam'
+        )
+      } finally {
+        jest.useRealTimers()
       }
-      await jest.advanceTimersByTimeAsync(15_000)
-      await p
-      expect(mockLogWarning).toHaveBeenCalledWith(
-        expect.stringContaining('timed out'),
-        'Steam'
-      )
-    } finally {
-      jest.useRealTimers()
-    }
-  })
+    },
+    REGISTRY_TIMEOUT_TEST_TIMEOUT_MS
+  )
+
+  it(
+    'times out a never-settling call after 15s even when the prefix .reg read is slow',
+    async () => {
+      jest.useFakeTimers({ doNotFake: ['setImmediate'] })
+      const actualReadFile = fsPromises.readFile.bind(fsPromises)
+      const readFileSpy = jest
+        .spyOn(fsPromises, 'readFile')
+        .mockImplementation((async (...args: unknown[]) => {
+          await new Promise((r) => realSetTimeout(r, SLOW_REG_READ_MS))
+          return (actualReadFile as (...a: unknown[]) => unknown)(...args)
+        }) as unknown as typeof fsPromises.readFile)
+      try {
+        writeBundled({ title: 't', registry: [{ ...WMP, views: [32] }] })
+        mockRunWineCommand.mockReturnValue(new Promise(() => undefined))
+        const p = applySteamBridgeKnownFixes(DEPS, APP_ID, BRIDGE, ROOT)
+        await yieldUntil(() => mockRunWineCommand.mock.calls.length > 0)
+        expect(mockRunWineCommand).toHaveBeenCalledTimes(1)
+        await jest.advanceTimersByTimeAsync(15_000)
+        await p
+        expect(mockLogWarning).toHaveBeenCalledWith(
+          expect.stringContaining('timed out'),
+          'Steam'
+        )
+        expect(readFileSpy).toHaveBeenCalled()
+      } finally {
+        readFileSpy.mockRestore()
+        jest.useRealTimers()
+      }
+    },
+    REGISTRY_TIMEOUT_TEST_TIMEOUT_MS
+  )
 })
 
 describe('validateRegistryFixes', () => {
