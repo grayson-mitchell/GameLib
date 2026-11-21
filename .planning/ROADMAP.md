@@ -713,10 +713,38 @@ Plans:
 **Goal:** The game page has no ⋮ menu: every action sits next to what it changes. The left card is the game (store link, Edit details, Favourite heart by the title, category chips, Hide); the Install tab is the hub for your copy (Location → Open/Move, Size → Modify, Version → Verify/Check for updates, integration switch rows, red Uninstall last behind a confirmation); the ⚙ dialog owns how the game runs; the footer holds only tier-one actions. Requirements and the left-card play-time block are removed as duplicates; pending and error states live inside each row. Design source: sketch 012 (folds in 010, 011) — `.claude/skills/sketch-findings-gamelib/references/game-page.md`.
 **Requirements**: TBD
 **Depends on:** Nothing (frontend-only; independent of the v0.11 port phases)
-**Plans:** 0 plans
+**Plans:** 10 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 100 to break down)
+**Wave 1**
+- [ ] 100-01-PLAN.md — Install tab skeleton: shortcuts switch row end to end, installActionGates + rowAction, --fav and switch-track tokens
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 100-02-PLAN.md — Left card library row: Favourite heart, category chips + create-and-assign popover, Hide + hidden notice
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 100-03-PLAN.md — Play time into the footer status line (TimeContainer deleted), Edit details pencil, store badge link
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 100-04-PLAN.md — Location / Size / Version rows: Move, Set install folder, Modify, Verify, Update, What's new with busy, gating and inline failure
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 100-05-PLAN.md — Cloud saves row + Auto-sync switch, Engine and static facts, not-installed facts + Locate link, notes; InstalledInfo retired
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 100-06-PLAN.md — Show in Steam and Runs for me switch rows, danger zone (Uninstall / Remove all copies)
+
+**Wave 7** *(blocked on Wave 6 completion)*
+- [ ] 100-07-PLAN.md — ⚙ dialog: Logs tab (log modal type merged), EOS overlay switch, Wine prefix folder button
+
+**Wave 8** *(blocked on Wave 7 completion)*
+- [ ] 100-08-PLAN.md — Footer Install ▾ Locate for non-Steam, tab relabel, Apple compatibility + ProtonDB on Ratings
+
+**Wave 9** *(blocked on Wave 8 completion)*
+- [ ] 100-09-PLAN.md — Delete ⋮ with every gate retargeted, D-07 GameCard menu guard, dead CSS removed
+
+**Wave 10** *(blocked on Wave 9 completion)*
+- [ ] 100-10-PLAN.md — 100-HUMAN-UAT.md (D-15 themes, D-16 store walk) and the full phase-gate run
 
 ### Phase 101: Steam Verify & Move install
 
