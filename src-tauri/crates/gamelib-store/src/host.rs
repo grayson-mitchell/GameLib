@@ -12,26 +12,99 @@
 //!
 //! The envelope is the engine's namespace: [`Store::get`] never finds it, [`Store::snapshot`] never
 //! lists it, and a write that names it is refused.
+//!
+//! Writes: [`Store::apply`] takes the store's lock, applies the op, persists (`sync_all` for every
+//! kind but a cache, D-21), assigns the next `rev` and pushes the [`StoreChange`] onto the host's one
+//! event queue, all before the lock is released. That is the ordering rule: a change is never
+//! announced after its lock is gone, so another writer's change cannot overtake it. One dispatcher
+//! thread (`store-events`, started with the first listener) drains the queue and calls each
+//! listener in order, holding no lock while it does, so a listener may call back into the store.
+//! The dispatcher is idle, not in-flight work, and holds no shutdown registrant; in-flight work is
+//! the applies, counted by [`StoreHost::in_flight`] for the exit drain.
 
 use std::collections::HashMap;
 use std::io;
+use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex, MutexGuard};
-use std::time::SystemTime;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::mpsc::{channel, Sender};
+use std::sync::{Arc, Condvar, Mutex, MutexGuard};
+use std::time::{Duration, Instant, SystemTime};
 
 use crate::atomic::{write_atomic, Durability};
 use crate::engine::{open_file, Flavour, OpenOutcome, ReadOnlyReason, StoreKind};
 use crate::envelope::{set_settings_version, stamp_for_write, RESERVED_KEY};
-use crate::json::{to_settings_bytes, to_store_bytes, Json};
+use crate::json::{to_settings_bytes, to_store_bytes, Json, Obj};
 use crate::migrate::Chains;
-use crate::ops::{self, Op};
+use crate::ops::{self, Op, OpReject};
 use crate::table::{row_for_key, Family, Kind, TableRow};
 
-/// What changed. Fired after the change is on disk.
+/// Who asked for a change.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Origin {
+    /// A Rust module of the shell.
+    Rust,
+    /// The sidecar's mirror; `seq` is its frame number, echoed so it can match an ack.
+    Sidecar { seq: u64 },
+    /// The renderer, through a native handler.
+    Renderer,
+}
+
+/// What a change did, without the value: a store holds tokens, and an event is logged and queued.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum StoreChange {
+pub enum OpSummary {
     Set { key: String },
-    Removed { key: String },
+    Delete { key: String },
+    Clear,
+    Replace,
+}
+
+impl OpSummary {
+    fn of(op: &Op) -> OpSummary {
+        match op {
+            Op::Set { key, .. } => OpSummary::Set { key: key.clone() },
+            Op::Delete { key } => OpSummary::Delete { key: key.clone() },
+            Op::Clear => OpSummary::Clear,
+            Op::Replace(_) => OpSummary::Replace,
+        }
+    }
+}
+
+/// A change that is on disk. `rev` counts a store's changes from 1 and is strictly increasing in
+/// delivery order.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StoreChange {
+    /// The store table key.
+    pub store: String,
+    pub rev: u64,
+    pub op: OpSummary,
+    pub origin: Origin,
+}
+
+/// Why an [`Store::apply`] did not change the store. None of these wrote a byte or fired an event.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ApplyError {
+    ReadOnly(ReadOnlyReason),
+    /// The store's directory was evicted (the profile is being replaced); it takes no more writes.
+    Evicted,
+    Rejected(OpReject),
+    /// The write failed; the in-memory view was restored.
+    Io(io::ErrorKind),
+}
+
+impl From<ApplyError> for io::Error {
+    fn from(e: ApplyError) -> io::Error {
+        match e {
+            ApplyError::ReadOnly(_) => {
+                io::Error::new(io::ErrorKind::PermissionDenied, "store is read-only")
+            }
+            ApplyError::Evicted => io::Error::other("store was evicted"),
+            ApplyError::Rejected(r) => {
+                io::Error::new(io::ErrorKind::InvalidInput, format!("{r:?}"))
+            }
+            ApplyError::Io(kind) => io::Error::from(kind),
+        }
+    }
 }
 
 type Listener = Arc<dyn Fn(&StoreChange) + Send + Sync>;
@@ -41,18 +114,116 @@ fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
     m.lock().unwrap_or_else(|e| e.into_inner())
 }
 
+/// The write seam: how bytes reach the disk. The default is [`write_atomic`]; a test injects one to
+/// observe the durability asked for, to fail a write, or to hold one open.
+pub type Writer = Arc<dyn Fn(&Path, &[u8], Durability) -> io::Result<()> + Send + Sync>;
+
+fn default_writer() -> Writer {
+    Arc::new(write_atomic)
+}
+
+/// A queued change and the store it came from (listeners can be bound to one store).
+struct Queued {
+    store_id: u64,
+    change: StoreChange,
+}
+
+/// Which stores a listener hears: one, or every store of the host.
+type Listeners = Arc<Mutex<Vec<(Option<u64>, Listener)>>>;
+
+/// The host's one event queue and its dispatcher.
+#[derive(Default)]
+struct Dispatch {
+    listeners: Listeners,
+    tx: Mutex<Option<Sender<Queued>>>,
+}
+
+impl Dispatch {
+    /// Registers a listener, and starts the dispatcher with the first one. Changes made before the
+    /// first listener are not queued: nobody could hear them.
+    fn add(&self, store_id: Option<u64>, f: Listener) {
+        lock(&self.listeners).push((store_id, f));
+        let mut tx = lock(&self.tx);
+        if tx.is_some() {
+            return;
+        }
+        let (sender, receiver) = channel::<Queued>();
+        let listeners = Arc::clone(&self.listeners);
+        let spawned = std::thread::Builder::new()
+            .name("store-events".to_string())
+            .spawn(move || {
+                while let Ok(queued) = receiver.recv() {
+                    // Cloned out of the lock: a listener may register another, or write.
+                    let heard: Vec<Listener> = lock(&listeners)
+                        .iter()
+                        .filter(|(only, _)| match only {
+                            None => true,
+                            Some(id) => *id == queued.store_id,
+                        })
+                        .map(|(_, l)| Arc::clone(l))
+                        .collect();
+                    for listener in heard {
+                        // A listener that panics must not end delivery for every store.
+                        let _ = catch_unwind(AssertUnwindSafe(|| listener(&queued.change)));
+                    }
+                }
+            });
+        if spawned.is_ok() {
+            *tx = Some(sender);
+        }
+    }
+
+    /// Called with the store's lock held, which is what orders delivery by `rev`.
+    fn enqueue(&self, store_id: u64, change: StoreChange) {
+        if let Some(tx) = lock(&self.tx).as_ref() {
+            let _ = tx.send(Queued { store_id, change });
+        }
+    }
+}
+
+/// How many applies are running (waiting for a store's lock included), for the exit drain.
+#[derive(Default)]
+struct Idle {
+    count: Mutex<usize>,
+    cv: Condvar,
+}
+
+struct InFlight<'a>(&'a Idle);
+
+impl<'a> InFlight<'a> {
+    fn enter(idle: &'a Idle) -> InFlight<'a> {
+        *lock(&idle.count) += 1;
+        InFlight(idle)
+    }
+}
+
+impl Drop for InFlight<'_> {
+    fn drop(&mut self) {
+        let mut n = lock(&self.0.count);
+        *n -= 1;
+        if *n == 0 {
+            self.0.cv.notify_all();
+        }
+    }
+}
+
 /// The mutable part of a store, behind its lock.
 struct StoreState {
     /// The document as on disk, envelope included; reads go through `ops::get`, which hides it.
     view: Json,
     /// The version a write stamps: the chain's current version.
     version: u32,
+    /// Changes applied since open.
+    rev: u64,
     /// Writes are refused while this is set; the file's bytes are never touched.
     read_only: Option<(ReadOnlyReason, String)>,
+    /// The directory was evicted: the view is dropped and writes are refused.
+    evicted: bool,
 }
 
 /// One store file. Keys follow the row's `dot_paths`; the top-level order is the file's order.
 pub struct Store {
+    id: u64,
     path: PathBuf,
     key: String,
     kind: StoreKind,
@@ -60,7 +231,9 @@ pub struct Store {
     flavour: Flavour,
     outcome: OpenOutcome,
     state: Mutex<StoreState>,
-    listeners: Mutex<Vec<Listener>>,
+    dispatch: Arc<Dispatch>,
+    idle: Arc<Idle>,
+    writer: Writer,
 }
 
 impl Store {
@@ -80,34 +253,78 @@ impl Store {
         ops::get(&st.view, key, self.dot_paths).cloned()
     }
 
-    /// Persists atomically, then fires `StoreChange::Set`. On a persist failure the in-memory view
-    /// is rolled back, so memory never claims what the disk does not hold. Setting a key to the
-    /// value it already holds writes nothing and fires nothing.
+    /// Persists atomically, then queues the change. On a persist failure the in-memory view is
+    /// rolled back, so memory never claims what the disk does not hold. Setting a key to the value
+    /// it already holds writes nothing and fires nothing.
     pub fn set(&self, key: &str, value: Json) -> io::Result<()> {
-        let changed = self.mutate(&Op::Set {
-            key: key.to_string(),
-            value,
-        })?;
-        if changed {
-            self.notify(&StoreChange::Set {
+        self.apply_inner(
+            Op::Set {
                 key: key.to_string(),
-            });
-        }
-        Ok(())
+                value,
+            },
+            Origin::Rust,
+        )
+        .map(|_| ())
+        .map_err(io::Error::from)
     }
 
-    /// `Ok(true)` when the key was present (the file is rewritten without it and `Removed` fires),
-    /// `Ok(false)` when it was absent (nothing is written, nothing fires).
+    /// `Ok(true)` when the key was present (the file is rewritten without it and the change is
+    /// queued), `Ok(false)` when it was absent (nothing is written, nothing is queued).
     pub fn remove(&self, key: &str) -> io::Result<bool> {
-        let removed = self.mutate(&Op::Delete {
-            key: key.to_string(),
-        })?;
-        if removed {
-            self.notify(&StoreChange::Removed {
+        self.apply_inner(
+            Op::Delete {
                 key: key.to_string(),
-            });
+            },
+            Origin::Rust,
+        )
+        .map(|(_, changed)| changed)
+        .map_err(io::Error::from)
+    }
+
+    /// Applies `op`: refuses a read-only or evicted store, persists a change (synced by kind), and
+    /// returns the store's `rev`. An op that changes nothing writes nothing and returns the
+    /// current `rev`.
+    pub fn apply(&self, op: Op, origin: Origin) -> Result<u64, ApplyError> {
+        self.apply_inner(op, origin).map(|(rev, _)| rev)
+    }
+
+    fn apply_inner(&self, op: Op, origin: Origin) -> Result<(u64, bool), ApplyError> {
+        let _flight = InFlight::enter(&self.idle);
+        let mut st = lock(&self.state);
+        if st.evicted {
+            return Err(ApplyError::Evicted);
         }
-        Ok(removed)
+        if let Some((reason, _)) = st.read_only {
+            return Err(ApplyError::ReadOnly(reason));
+        }
+        let previous = st.view.clone();
+        let changed = match ops::apply(&mut st.view, &op, self.dot_paths) {
+            Ok(changed) => changed,
+            Err(reject) => {
+                st.view = previous;
+                return Err(ApplyError::Rejected(reject));
+            }
+        };
+        if !changed {
+            return Ok((st.rev, false));
+        }
+        if let Err(e) = self.persist(&mut st) {
+            st.view = previous;
+            return Err(ApplyError::Io(e.kind()));
+        }
+        st.rev += 1;
+        let rev = st.rev;
+        // Still under the store's lock: the next writer cannot get a rev, or queue, before this.
+        self.dispatch.enqueue(
+            self.id,
+            StoreChange {
+                store: self.key.clone(),
+                rev,
+                op: OpSummary::of(&op),
+                origin,
+            },
+        );
+        Ok((rev, true))
     }
 
     /// Every top-level `(key, value)` in file order, without the `__internal__` envelope; a key set
@@ -124,8 +341,9 @@ impl Store {
         }
     }
 
+    /// Calls `f` for every change of this store, in `rev` order, on the host's dispatcher thread.
     pub fn on_change(&self, f: Box<dyn Fn(&StoreChange) + Send + Sync>) {
-        lock(&self.listeners).push(Arc::from(f));
+        self.dispatch.add(Some(self.id), Arc::from(f));
     }
 
     /// The reason writes are refused, if they are.
@@ -133,27 +351,9 @@ impl Store {
         lock(&self.state).read_only.as_ref().map(|(r, _)| *r)
     }
 
-    /// Applies `op` under the lock and persists it; the view is restored when the write fails.
-    /// Returns whether the document changed.
-    fn mutate(&self, op: &Op) -> io::Result<bool> {
-        let mut st = lock(&self.state);
-        if st.read_only.is_some() {
-            return Err(io::Error::new(
-                io::ErrorKind::PermissionDenied,
-                "store is read-only",
-            ));
-        }
-        let previous = st.view.clone();
-        let changed = ops::apply(&mut st.view, op, self.dot_paths)
-            .map_err(|reject| io::Error::new(io::ErrorKind::InvalidInput, format!("{reject:?}")))?;
-        if !changed {
-            return Ok(false);
-        }
-        if let Err(e) = self.persist(&mut st) {
-            st.view = previous;
-            return Err(e);
-        }
-        Ok(true)
+    /// Changes applied since this store was opened.
+    pub fn rev(&self) -> u64 {
+        lock(&self.state).rev
     }
 
     /// Writes the view in this store's byte layout, version stamped. `view` is replaced by the
@@ -172,17 +372,9 @@ impl Store {
                 (stamped, bytes)
             }
         };
-        write_atomic(&self.path, &bytes, durability_of(self.kind))?;
+        (self.writer)(&self.path, &bytes, durability_of(self.kind))?;
         st.view = stamped;
         Ok(())
-    }
-
-    fn notify(&self, change: &StoreChange) {
-        // Cloned out so a listener may call back into the store without deadlocking.
-        let listeners: Vec<Listener> = lock(&self.listeners).clone();
-        for l in listeners {
-            l(change);
-        }
     }
 }
 
@@ -230,6 +422,10 @@ pub struct StoreHost {
     open: Mutex<HashMap<PathBuf, Arc<Store>>>,
     chains: Chains,
     now: Clock,
+    writer: Writer,
+    dispatch: Arc<Dispatch>,
+    idle: Arc<Idle>,
+    next_id: AtomicU64,
 }
 
 impl Default for StoreHost {
@@ -240,16 +436,96 @@ impl Default for StoreHost {
 
 impl StoreHost {
     pub fn new() -> StoreHost {
-        StoreHost::with_clock(Arc::new(SystemTime::now))
+        StoreHost::with_parts(Arc::new(SystemTime::now), default_writer())
     }
 
     /// A host whose side files (corrupt copy, pre-migration backup) are stamped by `now`.
     pub fn with_clock(now: Clock) -> StoreHost {
+        StoreHost::with_parts(now, default_writer())
+    }
+
+    /// A host whose store writes go through `writer` (the test seam of [`Writer`]).
+    pub fn with_writer(writer: Writer) -> StoreHost {
+        StoreHost::with_parts(Arc::new(SystemTime::now), writer)
+    }
+
+    fn with_parts(now: Clock, writer: Writer) -> StoreHost {
         StoreHost {
             open: Mutex::new(HashMap::new()),
             chains: Chains::baseline(),
             now,
+            writer,
+            dispatch: Arc::new(Dispatch::default()),
+            idle: Arc::new(Idle::default()),
+            next_id: AtomicU64::new(1),
         }
+    }
+
+    /// Calls `f` for every change of every store of this host, in each store's `rev` order. Stores
+    /// opened later are heard too.
+    pub fn on_any_change(&self, f: Box<dyn Fn(&StoreChange) + Send + Sync>) {
+        self.dispatch.add(None, Arc::from(f));
+    }
+
+    /// How many applies are running right now.
+    pub fn in_flight(&self) -> usize {
+        *lock(&self.idle.count)
+    }
+
+    /// Waits up to `bound` for every running apply to finish. `true` when the host is idle,
+    /// `false` when something is still writing at the deadline.
+    pub fn wait_idle(&self, bound: Duration) -> bool {
+        let deadline = Instant::now() + bound;
+        let mut n = lock(&self.idle.count);
+        while *n > 0 {
+            let left = deadline.saturating_duration_since(Instant::now());
+            if left.is_zero() {
+                return false;
+            }
+            n = self
+                .idle
+                .cv
+                .wait_timeout(n, left)
+                .unwrap_or_else(|e| e.into_inner())
+                .0;
+        }
+        true
+    }
+
+    /// Marks every open store whose file is at or under `path` evicted: its view is dropped and it
+    /// takes no more writes, so a profile being replaced is not written back over. The stores are
+    /// forgotten too, so a later open reads the new files. Returns how many were evicted.
+    pub fn evict_path(&self, path: &Path) -> usize {
+        let mut open = lock(&self.open);
+        let doomed: Vec<PathBuf> = open
+            .keys()
+            .filter(|p| p.starts_with(path))
+            .cloned()
+            .collect();
+        for p in &doomed {
+            if let Some(store) = open.remove(p) {
+                let mut st = lock(&store.state);
+                st.evicted = true;
+                st.view = Json::Obj(Obj::new());
+            }
+        }
+        doomed.len()
+    }
+
+    /// Every open store that refuses writes, as `(key, reason, detail)`, ordered by key. The
+    /// detail names versions and error kinds, never a value.
+    pub fn read_only_entries(&self) -> Vec<(String, ReadOnlyReason, String)> {
+        let mut entries: Vec<(String, ReadOnlyReason, String)> = lock(&self.open)
+            .values()
+            .filter_map(|store| {
+                lock(&store.state)
+                    .read_only
+                    .as_ref()
+                    .map(|(reason, detail)| (store.key.clone(), *reason, detail.clone()))
+            })
+            .collect();
+        entries.sort_by(|a, b| a.0.cmp(&b.0));
+        entries
     }
 
     /// Opens `<dir>/<name>.json` as the table row `<dir's name>/<name>` (a cache row with dot paths
@@ -313,6 +589,7 @@ impl StoreHost {
             ));
         }
         let store = Arc::new(Store {
+            id: self.next_id.fetch_add(1, Ordering::Relaxed),
             path: path.clone(),
             key: row.key.clone(),
             kind,
@@ -322,9 +599,13 @@ impl StoreHost {
             state: Mutex::new(StoreState {
                 view: opened.view,
                 version: opened.version,
+                rev: 0,
                 read_only,
+                evicted: false,
             }),
-            listeners: Mutex::new(Vec::new()),
+            dispatch: Arc::clone(&self.dispatch),
+            idle: Arc::clone(&self.idle),
+            writer: Arc::clone(&self.writer),
         });
         open.insert(path, Arc::clone(&store));
         Ok(store)
@@ -337,7 +618,8 @@ mod tests {
     use crate::json::{parse, Num, Obj};
     use gamelib_testutil::FakeHome;
     use std::fs;
-    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::atomic::AtomicUsize;
+    use std::sync::mpsc;
 
     /// A v0.10 `uploadedLogs.json`: tab-indented, the version envelope last.
     const TS_SHAPED: &str = "{\n\t\"https://dpaste.com/ZZ99\": {\n\t\t\"name\": \"launch.log\",\n\t\t\"token\": \"1\",\n\t\t\"uploadedAt\": 1795133109000\n\t},\n\t\"https://dpaste.com/AA11\": {\n\t\t\"name\": \"gamelib.log\",\n\t\t\"token\": \"1\",\n\t\t\"uploadedAt\": 1795133100000\n\t},\n\t\"__internal__\": {\n\t\t\"gamelib\": {\n\t\t\t\"schemaVersion\": 1\n\t\t}\n\t}\n}";
@@ -593,6 +875,15 @@ mod tests {
         );
     }
 
+    /// Polls until `cond` holds; the dispatcher is another thread.
+    fn wait_until(what: &str, mut cond: impl FnMut() -> bool) {
+        let deadline = Instant::now() + Duration::from_secs(10);
+        while !cond() {
+            assert!(Instant::now() < deadline, "timed out waiting for {what}");
+            std::thread::sleep(Duration::from_millis(2));
+        }
+    }
+
     #[test]
     fn a_listener_fires_once_per_successful_set_and_remove_after_the_persist_and_not_for_a_no_op() {
         let home = FakeHome::new("gamelib-store-host-");
@@ -604,33 +895,56 @@ mod tests {
         store.on_change(Box::new(move |c| {
             // On disk already: the file holds the key (set) or no longer does (removed).
             let text = fs::read_to_string(&watched).unwrap();
-            let on_disk = match c {
-                StoreChange::Set { key } => text.contains(key.as_str()),
-                StoreChange::Removed { key } => !text.contains(key.as_str()),
+            let key = match &c.op {
+                OpSummary::Set { key } | OpSummary::Delete { key } => key.clone(),
+                other => panic!("unexpected {other:?}"),
+            };
+            let on_disk = match c.op {
+                OpSummary::Set { .. } => text.contains(key.as_str()),
+                _ => !text.contains(key.as_str()),
             };
             sink.lock().unwrap().push((c.clone(), on_disk));
         }));
+        let delivered = |n: usize| {
+            let seen = Arc::clone(&seen);
+            wait_until("a change event", move || seen.lock().unwrap().len() >= n);
+        };
         store.set("https://dpaste.com/N", num(1)).unwrap();
+        delivered(1);
         store.remove("https://dpaste.com/none").unwrap();
         store.remove("https://dpaste.com/N").unwrap();
-        let seen = seen.lock().unwrap().clone();
+        delivered(2);
+        std::thread::sleep(Duration::from_millis(50));
+        let change = |rev: u64, op: OpSummary| StoreChange {
+            store: "store/uploadedLogs".to_string(),
+            rev,
+            op,
+            origin: Origin::Rust,
+        };
         assert_eq!(
-            seen,
+            seen.lock().unwrap().clone(),
             vec![
                 (
-                    StoreChange::Set {
-                        key: "https://dpaste.com/N".into()
-                    },
+                    change(
+                        1,
+                        OpSummary::Set {
+                            key: "https://dpaste.com/N".into()
+                        }
+                    ),
                     true
                 ),
                 (
-                    StoreChange::Removed {
-                        key: "https://dpaste.com/N".into()
-                    },
+                    change(
+                        2,
+                        OpSummary::Delete {
+                            key: "https://dpaste.com/N".into()
+                        }
+                    ),
                     true
                 ),
             ]
         );
+        assert_eq!(store.rev(), 2);
     }
 
     #[test]
@@ -641,10 +955,12 @@ mod tests {
         let count = Arc::new(AtomicUsize::new(0));
         let c = Arc::clone(&count);
         store.on_change(Box::new(move |_| {
+            // Reads, and even writes, from inside a listener must not deadlock the dispatcher.
+            let _ = again.get("k");
             c.store(again.snapshot().len(), Ordering::SeqCst);
         }));
         store.set("k", num(1)).unwrap();
-        assert_eq!(count.load(Ordering::SeqCst), 1);
+        wait_until("the listener", || count.load(Ordering::SeqCst) == 1);
     }
 
     #[test]
@@ -674,5 +990,283 @@ mod tests {
             .filter(|n| n.contains(".tmp"))
             .collect();
         assert!(leftovers.is_empty(), "{leftovers:?}");
+    }
+
+    // ---- apply, ordering, durability, read-only, eviction, in-flight (85-09 task 2) ----
+
+    /// Opens the table row `key` under `home` at its own `<dir>/<name>.json`.
+    fn open_row_at(host: &StoreHost, home: &FakeHome, key: &str) -> Arc<Store> {
+        let row = row_for_key(key).unwrap_or_else(|| panic!("no row {key}"));
+        let file = format!("{}.json", row.name.as_deref().unwrap());
+        host.open_row(row, home.root().join(&row.dir).join(file))
+            .unwrap()
+    }
+
+    fn set_op(key: &str, value: Json) -> Op {
+        Op::Set {
+            key: key.to_string(),
+            value,
+        }
+    }
+
+    #[test]
+    fn durability_follows_the_store_kind() {
+        let home = FakeHome::new("gamelib-store-host-");
+        let asked = Arc::new(Mutex::new(Vec::<(String, Durability)>::new()));
+        let sink = Arc::clone(&asked);
+        let host = StoreHost::with_writer(Arc::new(move |path, bytes, durability| {
+            let name = path.file_name().unwrap().to_string_lossy().into_owned();
+            sink.lock().unwrap().push((name, durability));
+            write_atomic(path, bytes, durability)
+        }));
+        for (key, want) in [
+            ("store_cache/steam_metadata", Durability::Unsynced),
+            ("store_cache/steam_library", Durability::Synced),
+            ("steam_store/config", Durability::Synced),
+            ("store/config", Durability::Synced),
+        ] {
+            let store = open_row_at(&host, &home, key);
+            store.apply(set_op("k", num(1)), Origin::Rust).unwrap();
+            let last = asked.lock().unwrap().last().cloned().unwrap();
+            assert_eq!(last.1, want, "{key}");
+        }
+        assert_eq!(asked.lock().unwrap().len(), 4);
+    }
+
+    #[test]
+    fn eight_writer_threads_see_strictly_increasing_revs_in_delivery_order() {
+        const THREADS: u64 = 8;
+        const EACH: u64 = 200;
+        let home = FakeHome::new("gamelib-store-host-");
+        let host = Arc::new(StoreHost::new());
+        let store = host.open_cache(&dir_of(&home), "uploadedLogs").unwrap();
+        let revs = Arc::new(Mutex::new(Vec::<u64>::new()));
+        let sink = Arc::clone(&revs);
+        store.on_change(Box::new(move |c| sink.lock().unwrap().push(c.rev)));
+        let writers: Vec<_> = (0..THREADS)
+            .map(|t| {
+                let store = Arc::clone(&store);
+                std::thread::spawn(move || {
+                    for n in 0..EACH {
+                        store.set(&format!("t{t}-{n}"), num(n)).unwrap();
+                    }
+                })
+            })
+            .collect();
+        for w in writers {
+            w.join().unwrap();
+        }
+        let total = (THREADS * EACH) as usize;
+        wait_until("every event", || revs.lock().unwrap().len() >= total);
+        let delivered = revs.lock().unwrap().clone();
+        assert_eq!(delivered, (1..=total as u64).collect::<Vec<_>>());
+        assert_eq!(store.rev(), total as u64);
+        // Neither write was lost: the file is the last view.
+        let on_disk = parse(&fs::read(dir_of(&home).join("uploadedLogs.json")).unwrap()).unwrap();
+        let on_disk = crate::envelope::strip_envelope(&on_disk);
+        let in_file: Vec<(String, Json)> = on_disk
+            .as_object()
+            .unwrap()
+            .iter()
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect();
+        assert_eq!(in_file, store.snapshot());
+        assert_eq!(in_file.len(), total);
+    }
+
+    #[test]
+    fn apply_carries_the_origin_and_never_the_value_and_a_no_op_returns_the_current_rev() {
+        let home = FakeHome::new("gamelib-store-host-");
+        let store = open(&home);
+        let seen = Arc::new(Mutex::new(Vec::<StoreChange>::new()));
+        let sink = Arc::clone(&seen);
+        store.on_change(Box::new(move |c| sink.lock().unwrap().push(c.clone())));
+        let secret = Json::Str("secret-token-value".into());
+        let first = store
+            .apply(set_op("k", secret.clone()), Origin::Sidecar { seq: 7 })
+            .unwrap();
+        assert_eq!(first, 1);
+        let again = store.apply(set_op("k", secret), Origin::Renderer).unwrap();
+        assert_eq!(again, 1, "a no-op writes nothing and keeps the rev");
+        assert_eq!(store.apply(Op::Clear, Origin::Renderer).unwrap(), 2);
+        wait_until("two events", || seen.lock().unwrap().len() >= 2);
+        let seen = seen.lock().unwrap().clone();
+        assert_eq!(seen[0].origin, Origin::Sidecar { seq: 7 });
+        assert_eq!(seen[1].op, OpSummary::Clear);
+        assert!(!format!("{seen:?}").contains("secret-token-value"));
+        assert_eq!(seen.len(), 2);
+    }
+
+    #[test]
+    fn a_failed_persist_returns_an_error_restores_the_view_and_fires_no_event() {
+        let home = FakeHome::new("gamelib-store-host-");
+        let failing = Arc::new(AtomicUsize::new(0));
+        let flag = Arc::clone(&failing);
+        let host = StoreHost::with_writer(Arc::new(move |path, bytes, durability| {
+            if flag.load(Ordering::SeqCst) == 1 {
+                return Err(io::Error::other("forced write failure"));
+            }
+            write_atomic(path, bytes, durability)
+        }));
+        let store = host.open_cache(&dir_of(&home), "uploadedLogs").unwrap();
+        let fired = Arc::new(AtomicUsize::new(0));
+        let f = Arc::clone(&fired);
+        store.on_change(Box::new(move |_| {
+            f.fetch_add(1, Ordering::SeqCst);
+        }));
+        store.apply(set_op("k", num(1)), Origin::Rust).unwrap();
+        wait_until("the first event", || fired.load(Ordering::SeqCst) == 1);
+        let file = dir_of(&home).join("uploadedLogs.json");
+        let before = fs::read(&file).unwrap();
+
+        failing.store(1, Ordering::SeqCst);
+        assert_eq!(
+            store.apply(set_op("k", num(2)), Origin::Rust),
+            Err(ApplyError::Io(io::ErrorKind::Other))
+        );
+        assert_eq!(
+            store.apply(set_op("new", num(3)), Origin::Rust),
+            Err(ApplyError::Io(io::ErrorKind::Other))
+        );
+        assert_eq!(store.get("k"), Some(num(1)));
+        assert_eq!(store.get("new"), None);
+        assert_eq!(store.rev(), 1);
+        assert_eq!(fs::read(&file).unwrap(), before);
+        std::thread::sleep(Duration::from_millis(50));
+        assert_eq!(fired.load(Ordering::SeqCst), 1);
+        // The store is still usable once writes work again, and its next rev is not skipped.
+        failing.store(0, Ordering::SeqCst);
+        assert_eq!(store.apply(set_op("k", num(4)), Origin::Rust), Ok(2));
+    }
+
+    #[test]
+    fn an_interrupted_write_leaves_the_previous_file_and_no_temp_file() {
+        // The real writer, with the live file's name taken by a directory: the temp write, the
+        // rename and the direct write all fail, as an interrupted write before the rename would.
+        let home = FakeHome::new("gamelib-store-host-");
+        let dir = dir_of(&home);
+        let store = open(&home);
+        store.set("k", num(1)).unwrap();
+        let file = dir.join("uploadedLogs.json");
+        let before = fs::read(&file).unwrap();
+        fs::remove_file(&file).unwrap();
+        fs::create_dir(&file).unwrap();
+        assert!(store.set("k", num(2)).is_err());
+        fs::remove_dir(&file).unwrap();
+        fs::write(&file, &before).unwrap();
+        let names: Vec<String> = fs::read_dir(&dir)
+            .unwrap()
+            .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(names, ["uploadedLogs.json"], "no temp file may remain");
+        assert_eq!(fs::read(&file).unwrap(), before);
+    }
+
+    #[test]
+    fn a_read_only_store_refuses_apply_leaves_its_bytes_and_is_listed() {
+        let home = FakeHome::new("gamelib-store-host-");
+        let newer = TS_SHAPED.replace("\"schemaVersion\": 1", "\"schemaVersion\": 9");
+        let file = seed(&home, &newer);
+        let host = StoreHost::new();
+        let store = host.open_cache(&dir_of(&home), "uploadedLogs").unwrap();
+        assert_eq!(
+            store.apply(set_op("k", num(1)), Origin::Rust),
+            Err(ApplyError::ReadOnly(ReadOnlyReason::Newer))
+        );
+        assert_eq!(fs::read_to_string(&file).unwrap(), newer);
+        let entries = host.read_only_entries();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(
+            (entries[0].0.as_str(), entries[0].1),
+            ("store/uploadedLogs", ReadOnlyReason::Newer)
+        );
+        assert!(entries[0].2.contains("newer"), "{}", entries[0].2);
+        assert!(
+            !entries[0].2.contains("dpaste"),
+            "a detail never carries a value"
+        );
+    }
+
+    #[test]
+    fn an_evicted_store_refuses_apply_and_creates_no_file() {
+        let home = FakeHome::new("gamelib-store-host-");
+        let host = StoreHost::new();
+        let store = host.open_cache(&dir_of(&home), "uploadedLogs").unwrap();
+        store.set("k", num(1)).unwrap();
+        assert_eq!(host.evict_path(&dir_of(&home)), 1);
+        let file = dir_of(&home).join("uploadedLogs.json");
+        fs::remove_file(&file).unwrap();
+        assert_eq!(
+            store.apply(set_op("k", num(2)), Origin::Rust),
+            Err(ApplyError::Evicted)
+        );
+        assert!(!file.exists());
+        assert_eq!(store.get("k"), None);
+        assert!(store.snapshot().is_empty());
+        // An unrelated path evicts nothing, and a later open reads the files as they are now.
+        assert_eq!(host.evict_path(&home.root().join("elsewhere")), 0);
+        let fresh = host.open_cache(&dir_of(&home), "uploadedLogs").unwrap();
+        assert!(!Arc::ptr_eq(&store, &fresh));
+        assert_eq!(fresh.get("k"), None);
+    }
+
+    #[test]
+    fn a_rejected_op_is_an_error_and_changes_nothing() {
+        let home = FakeHome::new("gamelib-store-host-");
+        let file = seed(&home, TS_SHAPED);
+        let store = open(&home);
+        assert_eq!(
+            store.apply(set_op("__internal__.x", num(1)), Origin::Rust),
+            Err(ApplyError::Rejected(OpReject::ReservedKey))
+        );
+        assert_eq!(fs::read_to_string(&file).unwrap(), TS_SHAPED);
+        assert_eq!(store.rev(), 0);
+    }
+
+    #[test]
+    fn in_flight_is_zero_when_idle_and_wait_idle_gives_up_while_an_apply_is_blocked() {
+        let home = FakeHome::new("gamelib-store-host-");
+        let (entered_tx, entered_rx) = mpsc::channel::<()>();
+        let (release_tx, release_rx) = mpsc::channel::<()>();
+        let entered_tx = Mutex::new(entered_tx);
+        let release_rx = Mutex::new(release_rx);
+        let host = StoreHost::with_writer(Arc::new(move |path, bytes, durability| {
+            entered_tx.lock().unwrap().send(()).unwrap();
+            let _ = release_rx.lock().unwrap().recv();
+            write_atomic(path, bytes, durability)
+        }));
+        assert_eq!(host.in_flight(), 0);
+        assert!(host.wait_idle(Duration::from_millis(1)));
+        let store = host.open_cache(&dir_of(&home), "uploadedLogs").unwrap();
+        let writer = {
+            let store = Arc::clone(&store);
+            std::thread::spawn(move || store.set("k", num(1)))
+        };
+        entered_rx.recv_timeout(Duration::from_secs(10)).unwrap();
+        assert_eq!(host.in_flight(), 1);
+        assert!(!host.wait_idle(Duration::from_millis(50)));
+        release_tx.send(()).unwrap();
+        writer.join().unwrap().unwrap();
+        assert!(host.wait_idle(Duration::from_secs(10)));
+        assert_eq!(host.in_flight(), 0);
+    }
+
+    #[test]
+    fn a_host_listener_hears_every_store_and_a_store_listener_only_its_own() {
+        let home = FakeHome::new("gamelib-store-host-");
+        let host = StoreHost::new();
+        let a = host.open_cache(&dir_of(&home), "uploadedLogs").unwrap();
+        let b = host.open_cache(&dir_of(&home), "other").unwrap();
+        let all = Arc::new(Mutex::new(Vec::<String>::new()));
+        let only_a = Arc::new(Mutex::new(Vec::<String>::new()));
+        let (s1, s2) = (Arc::clone(&all), Arc::clone(&only_a));
+        host.on_any_change(Box::new(move |c| s1.lock().unwrap().push(c.store.clone())));
+        a.on_change(Box::new(move |c| s2.lock().unwrap().push(c.store.clone())));
+        a.set("k", num(1)).unwrap();
+        b.set("k", num(1)).unwrap();
+        wait_until("both stores", || all.lock().unwrap().len() >= 2);
+        std::thread::sleep(Duration::from_millis(30));
+        assert_eq!(*all.lock().unwrap(), ["store/uploadedLogs", "store/other"]);
+        assert_eq!(*only_a.lock().unwrap(), ["store/uploadedLogs"]);
     }
 }
