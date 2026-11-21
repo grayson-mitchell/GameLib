@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 85
 current_phase_name: Store host, config and versioned migrations
 status: executing
-stopped_at: Completed 85-02-PLAN.md
-last_updated: "2026-11-21T17:39:55.057Z"
+stopped_at: Completed 85-06-PLAN.md
+last_updated: "2026-11-21T17:39:58.503Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 85 execution started
-state_head: 8fcadab94453fd35774966873231decfa84c08c2
+state_head: 1b96ce79b71691d620f78531dce7c83ca3fead6a
 progress:
   total_phases: 20
   completed_phases: 23
@@ -364,6 +364,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 85 P03 | 35 min | 3 tasks | 4 files |
 | Phase 85 P04 | 9 min | 2 tasks | 10 files |
 | Phase 85 P02 | 25 min | 3 tasks | 166 files |
+| Phase 85 P06 | 25 min | 3 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -682,6 +683,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 85]: Corpus expect derived from stored version vs chain current version; unstamped baseline-1 files are roundtrip
 - [Phase 85]: Humble gamekey prefixes in key names redacted to GKREDACTED placeholders; OS account name replaced in values and keys
 - [Phase 85]: Corpus tree is -text in .gitattributes so the CRLF edge fixture keeps its bytes under eol=lf
+- [Phase 85]: 85-06: gamelib-store json::parse is JS-faithful (integer-like keys first and ascending, last duplicate wins at the first position) rather than plain insertion, so reading and rewriting a TS-written store reproduces its bytes; build objects only through Obj::insert_js or dotpath::set
+- [Phase 85]: 85-06: dotpath with dot_paths false treats __proto__ as an ordinary key (oracle vector wins over the plan text); arrays hold holes as Json::Null
 
 ### Pending Todos
 
@@ -944,8 +947,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-21T17:24:54.410Z
-Stopped at: Completed 85-02-PLAN.md
+Last session: 2026-11-21T17:39:57.819Z
+Stopped at: Completed 85-06-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
