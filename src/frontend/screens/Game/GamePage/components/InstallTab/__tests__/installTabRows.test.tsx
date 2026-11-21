@@ -14,6 +14,10 @@ jest.mock('react', () => {
   let slots: unknown[] = []
   let cursor = 0
   let contextValue: unknown = undefined
+  // useEffect recorder: an effect is queued when its deps changed (the first
+  // render counts as changed) and runs on __flushEffects, cleanup first.
+  type EffectSlot = { deps?: unknown[]; cleanup?: unknown }
+  let pendingEffects: Array<() => void> = []
   const { withStoreHooks } = jest.requireActual<
     typeof import('frontend/testUtils/storeHookReact')
   >('frontend/testUtils/storeHookReact')
@@ -42,11 +46,35 @@ jest.mock('react', () => {
       return [slots[idx], dispatch]
     },
     useContext: () => contextValue,
+    useEffect: (fn: () => unknown, deps?: unknown[]) => {
+      const idx = cursor++
+      const first = idx >= slots.length
+      if (first) slots[idx] = {} satisfies EffectSlot
+      const slot = slots[idx] as EffectSlot
+      const changed =
+        first ||
+        !deps ||
+        !slot.deps ||
+        deps.some((dep, i) => !Object.is(dep, (slot.deps as unknown[])[i]))
+      slot.deps = deps
+      if (changed) {
+        pendingEffects.push(() => {
+          if (typeof slot.cleanup === 'function') slot.cleanup()
+          slot.cleanup = fn()
+        })
+      }
+    },
+    __flushEffects: () => {
+      const queued = pendingEffects
+      pendingEffects = []
+      queued.forEach((run) => run())
+    },
     __beginRender: () => {
       cursor = 0
     },
     __resetMount: () => {
       slots = []
+      pendingEffects = []
       cursor = 0
     },
     __setContext: (value: unknown) => {
@@ -86,6 +114,7 @@ import VersionRow from '../VersionRow'
 import LocationRow from '../LocationRow'
 
 const harness = React as unknown as {
+  __flushEffects: () => void
   __beginRender: () => void
   __resetMount: () => void
   __setContext: (value: unknown) => void
@@ -325,6 +354,8 @@ describe('VersionRow', () => {
       retryDisabled?: boolean
       retryDisabledReason?: string
     }
+    type RetryGate = { retryDisabled?: boolean; retryDisabledReason?: string }
+
     const failureOf = (tree: ReactElement<Props> | null) =>
       tree?.props.failure as Failure | undefined
 
@@ -425,5 +456,90 @@ describe('Location row (CR-02)', () => {
 
     expect(failureOf(render(true))).toBeUndefined()
     expect(failureOf(render(false))?.message).toBe(MOVE_FAILED)
+  })
+  it('makes the Move failure Retry inert with the gate reason while the game plays', () => {
+    const game = makeGame('legendary')
+    const stub = { moveFailed: true } as unknown as InstallLocationActions
+    const render = (playing: boolean) => {
+      const is = makeIs({ playing })
+      harness.__setContext({ is, runner: game.runner })
+      harness.__beginRender()
+      return LocationRow({
+        gameInfo: game,
+        gates: gatesFor(game, is),
+        actions: stub
+      }) as ReactElement<Props>
+    }
+
+    const inert = render(true).props.failure as RetryGate
+    expect(inert.retryDisabled).toBe(true)
+    expect(inert.retryDisabledReason).toBe('Quit the game first')
+    expect((render(false).props.failure as RetryGate).retryDisabled).toBe(false)
+  })
+
+  it('carries the setFolder gate on the Set-folder failure Retry', () => {
+    const game = makeGame('legendary')
+    const stub = {
+      moveFailed: false,
+      setFolderFailed: true
+    } as unknown as InstallLocationActions
+    const is = makeIs({ playing: true })
+    harness.__setContext({ is, runner: game.runner })
+    harness.__beginRender()
+    const tree = LocationRow({
+      gameInfo: game,
+      gates: gatesFor(game, is),
+      actions: stub
+    }) as ReactElement<Props>
+    const gate = gatesFor(game, is).setFolder
+
+    const failure = tree.props.failure as RetryGate
+    expect(failure.retryDisabled).toBe(gate.disabled)
+    expect(failure.retryDisabled).toBe(true)
+  })
+
+  it('shows a Set-folder failure right after a Move failure (WR-04)', async () => {
+    const game = makeGame('legendary')
+    mockApi.moveInstall.mockRejectedValue(new Error('boom'))
+    await renderLocation(game).actions.retryMove()
+    expect(renderLocation(game).actions.moveFailed).toBe(true)
+
+    mockApi.changeInstallPath.mockRejectedValue(new Error('nope'))
+    await renderLocation(game).actions.retrySetFolder()
+
+    const { actions, tree } = renderLocation(game)
+    expect(actions.moveFailed).toBe(false)
+    expect(actions.setFolderFailed).toBe(true)
+    expect(failureOf(tree)?.message).toBe(
+      "Couldn't set the install folder. Details are in the log."
+    )
+  })
+
+  it('clears a Set-folder failure when a Move starts (WR-04)', async () => {
+    const game = makeGame('legendary')
+    mockApi.changeInstallPath.mockRejectedValue(new Error('nope'))
+    await renderLocation(game).actions.retrySetFolder()
+    expect(renderLocation(game).actions.setFolderFailed).toBe(true)
+
+    mockApi.moveInstall.mockRejectedValue(new Error('boom'))
+    await renderLocation(game).actions.retryMove()
+
+    const { actions } = renderLocation(game)
+    expect(actions.setFolderFailed).toBe(false)
+    expect(actions.moveFailed).toBe(true)
+  })
+
+  it('clears a Move failure when the install path changes (WR-04)', async () => {
+    const game = makeGame('legendary')
+    mockApi.moveInstall.mockRejectedValue(new Error('boom'))
+    await renderLocation(game).actions.retryMove()
+    expect(renderLocation(game).actions.moveFailed).toBe(true)
+    harness.__flushEffects()
+
+    const moved = makeGame('legendary', { install_path: '/elsewhere/test' })
+    expect(renderLocation(moved).actions.moveFailed).toBe(true)
+    harness.__flushEffects()
+
+    expect(renderLocation(moved).actions.moveFailed).toBe(false)
   })
 })
