@@ -114,7 +114,7 @@ Binding notes: SC5 is read per D-19, not literally: ROADMAP SC5's "named and exe
 
 Inventory taken 2026-11-22 by plan 85-05 Task 1. Commands and short outputs only; no secret values.
 
-**SC3: unproven (baseline not yet recorded)**
+**SC3: pending (baseline recorded; Phase 85 build identity owed by 85-19)**
 
 ### Inventory
 
@@ -152,6 +152,20 @@ Read from `gh run view 42190933355 --json jobs` and its log, as evidence for wha
 ### What gets recorded once the run finishes (Task 3)
 
 From the downloaded macOS artifact itself, never from the log: run id and artifact name; each leg's conclusion; `codesign -dv --verbose=4` (Authority chain, TeamIdentifier, Identifier, signing time); `codesign -d -r-` (designated requirement); `spctl -a -vv` (accepted or rejected, and source); `xcrun stapler validate` (stapled or not).
+
+### Baseline record (Task 3, 2026-11-22)
+
+The operator chose the version bump: branch `release/v0.10` at `10c85ed72` bumps `package.json`, `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json` and `Cargo.lock` from 0.8.0 to 0.10.0 (caveat 1 resolved, so tauri-action targeted a new `v0.10.0` release rather than `v0.8.0`). Run with Option B2 on that branch.
+
+- **Run:** release-tauri.yml `44925761249`, headBranch `release/v0.10`, headSha `10c85ed72cb9c1c0ba907a764c3ac6557883b478`. First attempt: Linux and Windows `success`; macOS failed at notarization with `HTTP status code: 403. A required agreement is missing or has expired`. The operator accepted the updated Apple Developer Program agreement and the failed leg was rerun.
+- **Leg conclusions:** macOS `aarch64-apple-darwin` `success` (16m31s, completed 2026-11-21T23:15:11Z); Windows `x86_64-pc-windows-msvc` `success`; Linux `ubuntu-22.04` `success`.
+- **Artifact:** draft release `GameLib v0.10.0` (tag `v0.10.0`, not published). Inspected `GameLib_0.10.0_aarch64.app.tar.gz` (sha256 `028566815d75ffc35d3e92935ec38ddc069c62e6944821a17b177c13a02500ea`) and `GameLib_0.10.0_aarch64.dmg` (sha256 `359aeffc9b21a8852542e0887ba69235472cba7ad808327187d9bca572d1785f`), downloaded with `gh release download` (a non-dry run uploads to the release, not as a run artifact).
+- **`codesign -dv --verbose=4 GameLib.app`:** `Identifier=com.gamelib.shell`; `Authority=Developer ID Application: grayson mitchell (S7U223QWXJ)` -> `Developer ID Certification Authority` -> `Apple Root CA`; `TeamIdentifier=S7U223QWXJ`; `Timestamp=22 Nov 2026 at 12:11:37 PM` (local); flags `0x10000(runtime)`; `CDHash=67b2149aafcae158b769a49ddc7927487c7dd44f`. `codesign --verify --deep --strict` passes.
+- **Designated requirement (`codesign -d -r-`):** `identifier "com.gamelib.shell" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = S7U223QWXJ`
+- **`spctl -a -vv GameLib.app`:** `accepted`, `source=Notarized Developer ID`, `origin=Developer ID Application: grayson mitchell (S7U223QWXJ)`.
+- **`xcrun stapler validate GameLib.app`:** stapled (`The validate action worked!`).
+- **DMG (note, not a blocker):** the dmg container itself has no stapled ticket and `spctl -t open` rejects it as `Unnotarized Developer ID`. The app inside is notarized and stapled, and the Keychain ACL binds to the app's designated requirement, so this does not affect SC3. Recorded so 85-19 compares like with like.
+- Downloaded files deleted from the scratchpad after recording.
 
 ### Identity rule for the Phase 85 build
 
