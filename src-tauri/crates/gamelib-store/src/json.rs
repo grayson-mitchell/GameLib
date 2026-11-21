@@ -66,14 +66,102 @@ impl Obj {
         self.0.iter()
     }
 
-    /// Sets `key`, keeping an existing key's place. (Skeleton for the RED run: appends.)
+    /// Sets `key` the way assigning a property on a JS object does. An existing key keeps its place
+    /// and takes the new value. A new integer-like key (a canonical decimal in 0..=4294967294) goes
+    /// into the leading integer section in ascending order; any other new key goes last. Returns the
+    /// replaced value, if any.
     pub fn insert_js(&mut self, key: impl Into<String>, value: Json) -> Option<Json> {
-        self.0.insert(key.into(), value)
+        let key = key.into();
+        if let Some(slot) = self.0.get_mut(&key) {
+            return Some(std::mem::replace(slot, value));
+        }
+        match index_key(&key) {
+            None => {
+                self.0.insert(key, value);
+            }
+            Some(n) => {
+                // The integer keys are a sorted prefix, so the slot is a binary search away.
+                let (mut lo, mut hi) = (0, self.0.len());
+                while lo < hi {
+                    let mid = lo + (hi - lo) / 2;
+                    let smaller = self
+                        .0
+                        .get_index(mid)
+                        .and_then(|(k, _)| index_key(k))
+                        .is_some_and(|m| m < n);
+                    if smaller {
+                        lo = mid + 1;
+                    } else {
+                        hi = mid;
+                    }
+                }
+                self.0.shift_insert(lo, key, value);
+            }
+        }
+        None
     }
 
     /// Removes `key`, shifting later keys up so the order of the rest is untouched.
     pub fn remove(&mut self, key: &str) -> Option<Json> {
         self.0.shift_remove(key)
+    }
+}
+
+/// The numeric value of an "array index" key: a canonical decimal (no sign, no leading zero unless
+/// the key is `0`) no greater than 4294967294. JS lists these first, ascending, whatever order they
+/// were assigned in; every other key (`01`, `-1`, `1.5`, `4294967295`, `9007199254740993`) keeps its
+/// insertion order after them.
+fn index_key(key: &str) -> Option<u32> {
+    let b = key.as_bytes();
+    if b.is_empty() || b.len() > 10 || !b.iter().all(u8::is_ascii_digit) {
+        return None;
+    }
+    if b.len() > 1 && b[0] == b'0' {
+        return None;
+    }
+    key.parse::<u64>()
+        .ok()
+        .filter(|n| *n <= 4_294_967_294)
+        .map(|n| n as u32)
+}
+
+impl Obj {
+    /// Builds an object from entries in document order, ordering them as `JSON.parse` does: integer
+    /// keys first and ascending, the rest as they came. A document TS wrote is already in this order,
+    /// so the common case costs one scan.
+    fn from_document_order(map: IndexMap<String, Json>) -> Obj {
+        let mut last_index: Option<u32> = None;
+        let mut seen_other = false;
+        let mut ordered = true;
+        for k in map.keys() {
+            match index_key(k) {
+                Some(n) => {
+                    if seen_other || last_index.is_some_and(|l| l > n) {
+                        ordered = false;
+                        break;
+                    }
+                    last_index = Some(n);
+                }
+                None => seen_other = true,
+            }
+        }
+        if ordered {
+            return Obj(map);
+        }
+        let mut indexed: Vec<(u32, String, Json)> = Vec::new();
+        let mut others: Vec<(String, Json)> = Vec::new();
+        for (k, v) in map {
+            match index_key(&k) {
+                Some(n) => indexed.push((n, k, v)),
+                None => others.push((k, v)),
+            }
+        }
+        // Keys are unique, so the sort has no ties.
+        indexed.sort_unstable_by_key(|e| e.0);
+        let mut out = IndexMap::with_capacity(indexed.len() + others.len());
+        out.extend(indexed.into_iter().map(|(_, k, v)| (k, v)));
+        out.extend(others);
+        Obj(out)
     }
 }
 
@@ -186,7 +274,7 @@ impl<'de> Visitor<'de> for JsonVisitor {
             // A repeated key keeps its first position and takes the last value, as JSON.parse does.
             entries.insert(key, value);
         }
-        Ok(Json::Obj(Obj(entries)))
+        Ok(Json::Obj(Obj::from_document_order(entries)))
     }
 }
 
@@ -196,7 +284,9 @@ impl<'de> Deserialize<'de> for Json {
     }
 }
 
-/// Parses a whole document. Trailing bytes, a BOM and an empty input are errors.
+/// Parses a whole document the way `JSON.parse` reads it: a repeated key keeps its first position
+/// and its last value, and integer-like keys come first in ascending order. Trailing bytes, a BOM and
+/// an empty input are errors.
 pub fn parse(bytes: &[u8]) -> Result<Json, ParseError> {
     serde_json::from_slice::<Json>(bytes).map_err(ParseError)
 }
@@ -353,4 +443,120 @@ pub fn to_settings_bytes(v: &Json) -> Vec<u8> {
 /// `JSON.stringify(v)`: compact text.
 pub fn to_compact_bytes(v: &Json) -> Vec<u8> {
     write_all(v, None)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn keys(v: &Json) -> Vec<&str> {
+        v.as_object()
+            .unwrap()
+            .iter()
+            .map(|(k, _)| k.as_str())
+            .collect()
+    }
+
+    #[test]
+    fn js_number_text_follows_ecmascript_number_to_string() {
+        let table: &[(f64, &str)] = &[
+            (0.0, "0"),
+            (-0.0, "0"),
+            (1.0, "1"),
+            (100.0, "100"),
+            (-2.5, "-2.5"),
+            (0.1, "0.1"),
+            (123.456, "123.456"),
+            (1e20, "100000000000000000000"),
+            (1e21, "1e+21"),
+            (1.5e21, "1.5e+21"),
+            (1e-6, "0.000001"),
+            (1e-7, "1e-7"),
+            (1.25e-7, "1.25e-7"),
+            (5e-324, "5e-324"),
+            (1.7976931348623157e308, "1.7976931348623157e+308"),
+            (4294967295.0, "4294967295"),
+            (-1e21, "-1e+21"),
+        ];
+        for (f, want) in table {
+            assert_eq!(js_number_text(*f), *want, "{f:e}");
+        }
+    }
+
+    #[test]
+    fn integers_beyond_2_pow_53_print_as_the_nearest_double() {
+        assert_eq!(
+            Num::U(9_007_199_254_740_992).to_js_text(),
+            "9007199254740992"
+        );
+        assert_eq!(
+            Num::U(9_007_199_254_740_993).to_js_text(),
+            "9007199254740992"
+        );
+        assert_eq!(Num::U(u64::MAX).to_js_text(), "18446744073709552000");
+        assert_eq!(Num::I(i64::MIN).to_js_text(), "-9223372036854776000");
+        assert_eq!(Num::I(-42).to_js_text(), "-42");
+    }
+
+    #[test]
+    fn index_keys_are_canonical_decimals_below_u32_max() {
+        for (k, want) in [
+            ("0", Some(0)),
+            ("7", Some(7)),
+            ("4294967294", Some(4294967294)),
+            ("4294967295", None),
+            ("01", None),
+            ("-1", None),
+            ("1.5", None),
+            ("1e3", None),
+            ("", None),
+            ("9007199254740993", None),
+        ] {
+            assert_eq!(index_key(k), want, "{k:?}");
+        }
+    }
+
+    #[test]
+    fn insert_js_places_a_new_integer_key_among_the_integers() {
+        let mut o = Obj::new();
+        for k in ["10", "x", "2", "y", "100", "3"] {
+            o.insert_js(k, Json::Null);
+        }
+        let v = Json::Obj(o);
+        assert_eq!(keys(&v), ["2", "3", "10", "100", "x", "y"]);
+    }
+
+    #[test]
+    fn parse_orders_keys_like_json_parse_and_keeps_the_last_duplicate() {
+        let v = parse(br#"{"b":1,"2":"two","a":2,"1":"one","b":3}"#).unwrap();
+        assert_eq!(keys(&v), ["1", "2", "b", "a"]);
+        assert_eq!(v.get("b"), Some(&Json::Num(Num::U(3))));
+    }
+
+    #[test]
+    fn strings_escape_as_json_stringify_does() {
+        let v = Json::Str("a\"b\\c\n\u{1f}\u{7f}\u{2028}é".to_string());
+        let got = String::from_utf8(to_compact_bytes(&v)).unwrap();
+        assert_eq!(got, "\"a\\\"b\\\\c\\n\\u001f\u{7f}\u{2028}é\"");
+    }
+
+    #[test]
+    fn empty_containers_and_nesting_print_like_json_stringify() {
+        let v = parse(br#"{"a":[],"b":{},"c":[1,{"d":null}]}"#).unwrap();
+        assert_eq!(
+            String::from_utf8(to_settings_bytes(&v)).unwrap(),
+            "{\n  \"a\": [],\n  \"b\": {},\n  \"c\": [\n    1,\n    {\n      \"d\": null\n    }\n  ]\n}"
+        );
+        assert_eq!(
+            String::from_utf8(to_compact_bytes(&v)).unwrap(),
+            r#"{"a":[],"b":{},"c":[1,{"d":null}]}"#
+        );
+    }
+
+    #[test]
+    fn a_bom_and_trailing_bytes_are_parse_errors() {
+        assert!(parse(b"\xef\xbb\xbf{}").is_err());
+        assert!(parse(b"{} x").is_err());
+        assert!(parse(b"").is_err());
+    }
 }
