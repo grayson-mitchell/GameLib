@@ -5308,7 +5308,7 @@ describe('Phase 80 plan 21: steampoll lifecycle wiring', () => {
     const overrun = body.search(
       /shell_log\(&format!\(\s*"still running at exit deadline: \{\} \(\{\}\)"/
     )
-    const flush = body.indexOf('gamelib_log::flush(ctx.remaining)')
+    const flush = body.indexOf('gamelib_log::flush(ctx.remaining_now())')
     expect(finish).toBeGreaterThan(-1)
     expect(disarm).toBeGreaterThan(finish)
     expect(wake).toBeGreaterThan(disarm)
@@ -5320,7 +5320,7 @@ describe('Phase 80 plan 21: steampoll lifecycle wiring', () => {
     // The flush is the last statement of the closure and the only flush in the function.
     expect(body.split('gamelib_log::flush(').length - 1).toBe(1)
     expect(body.slice(flush)).toMatch(
-      /^gamelib_log::flush\(ctx\.remaining\);\s*\};\s*run_exit\(global\(\),\s*ExitBudget::DEFAULT,\s*drains,\s*children,\s*finish\);\s*$/
+      /^gamelib_log::flush\(ctx\.remaining_now\(\)\);\s*\};\s*run_exit\(global\(\),\s*ExitBudget::DEFAULT,\s*drains,\s*children,\s*finish\);\s*$/
     )
     // The overrun line reads the context, not a report measured after run_exit returned.
     expect(body).toContain('ctx.still_running.join(", ")')

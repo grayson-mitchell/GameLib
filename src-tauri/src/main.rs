@@ -847,14 +847,16 @@ fn hold_exit_drain_open() -> ! {
 /// 3. Finish, handed a `FinishContext`: the reaper disarm (D-11, a graceful quit makes the reaper
 ///    signal nothing), the OS power-assertion release (Phase 35 Plan 08) and the single-instance
 ///    socket cleanup (Phase 34.5 gap cycle 6 plan 44); then the two exit lines; then
-///    the writer flush bounded by `ctx.remaining`, last, so both lines are on disk inside the one budget
+///    the writer flush bounded by `ctx.remaining_now()` (the time left to the budget's deadline when
+///    the flush starts, not a duration measured before finish's own steps), last, so both lines are
+///    on disk inside the one budget
 ///    (D-21, D-13 as amended). The logger holds no `Shutdown` registrant: a permanent one would
 ///    report `still running at exit deadline: logger` on every exit.
 ///
 /// Logs `exit finished in <ms> ms` always and `still running at exit deadline: <names> (<count>)`
 /// only when a drain overran; registrant names and counts, never job detail (D-12). The
 /// milliseconds are measured when finish starts, so they exclude the final flush, which is bounded
-/// by `ctx.remaining` and not a stage of its own.
+/// by `ctx.remaining_now()` and not a stage of its own.
 fn handle_exit(
     app_handle: &tauri::AppHandle,
     single_instance_socket_path: Option<&std::path::Path>,
@@ -917,7 +919,7 @@ fn handle_exit(
                 ctx.still_running.len()
             ));
         }
-        let _ = gamelib_log::flush(ctx.remaining);
+        let _ = gamelib_log::flush(ctx.remaining_now());
     };
     run_exit(global(), ExitBudget::DEFAULT, drains, children, finish);
 }

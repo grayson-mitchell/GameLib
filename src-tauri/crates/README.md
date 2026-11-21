@@ -118,7 +118,8 @@ writer flush. Drains run on detached threads, so an overrunning one cannot hold 
 deadline; it is named in `still running at exit deadline: <names> (<count>)`, and `exit finished in
 <ms> ms` is always logged, both through `shell_log` inside the finish stage (stderr, and
 `gamelib.log` as `[Shell]` lines); `finish` is handed a `FinishContext` and ends with
-`gamelib_log::flush(ctx.remaining)`, so the writer flushes last within the one budget and holds no
+`gamelib_log::flush(ctx.remaining_now())` (a deadline, so the time finish's own steps took is not
+spent twice), so the writer flushes last within the one budget and holds no
 `Registrant` of its own. Names and counts only, never job detail. New exit work either becomes a drain in
 `handle_exit` or holds a `gamelib_core::shutdown::global()` `Registrant` while work is in flight,
 and must fit that one budget. Bound boot work too: nothing at startup may wait without a limit.
@@ -377,8 +378,9 @@ timezone source come in through `LogConfig`. The recipe grew in these ways:
 - **The exit flush is explicit, not a registrant.** A permanent `Shutdown` registrant would make
   every exit report `still running at exit deadline: logger`. `run_exit` hands `finish` a
   `FinishContext`; `finish` writes the two exit lines through `shell_log` and ends with
-  `gamelib_log::flush(ctx.remaining)`, so the writer flushes last, inside the one 5 s budget, with
-  no wait of its own.
+  `gamelib_log::flush(ctx.remaining_now())` (`remaining_now` reads a deadline, not a duration taken
+  at finish entry, so the flush gets only what finish's own steps left), so the writer flushes
+  last, inside the one 5 s budget, with no wait of its own.
 
 Deliberate deviations from the TS writer:
 
