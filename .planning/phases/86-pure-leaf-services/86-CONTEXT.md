@@ -130,6 +130,44 @@ ports its main callers.
 - **D-21:** v0.11 rules: live gates are authored before coding, goldens are recorded from TS before
   porting, and the phase's last plan leaves no TS or registrations for any ported slice.
 
+### Post-research amendments (2026-11-22, answers to 86-RESEARCH.md Open Questions)
+- **D-22:** **`images_cache` is deleted, not ported.** It is dead under Tauri
+  (`imageCacheSchemeAvailable()` is hard-coded `false`; `initImagesCache`/`getImageFromCache` have
+  no callers). Delete the TS module and the `imageFetches` slot in `appRuntime`. SC2 covers recent
+  games, overrides and the SteamGridDB artwork only; D-14 item 3 is reworded to SteamGridDB artwork.
+  (Open Question 1, user-confirmed.)
+- **D-23:** **Rust wiki makes the two unauthenticated GOG GETs itself**
+  (`api.gog.com/v2/games/<id>?locale=en-US` for the HLTB store link, `gamesdb.gog.com/platforms/<store>/external_releases/<id>`
+  for the steam id), takes the title from the renderer's `title` arg, and does **not** write GOG's
+  `gog_api_info` cache (both are D-03 quirk todos). The D-10 request-pin comparison tolerates a
+  documented "TS-only requests" list for the GOG calls the TS makes and Rust skips. (Open Question 2,
+  user-confirmed.)
+- **D-24:** **D-06 gains a second allowed shape: "resolver".** A resolver registration collects named
+  TS-only inputs and makes exactly one typed Rust call, nothing else. `getCrossoverIndex` (per-library
+  game enumeration) and `getGogDiscounts` with `hideOwned`/`wishlistOnly` (gogdl auth token) keep a
+  resolver until their owning phase (89–92). Each shim and resolver is a row in the D-06 schedule
+  test with its deleting phase. SC4 reads: every ported slice's TS logic and pure-forward
+  registrations are deleted in 86; resolvers are the only survivors and are scheduled. The no-token
+  `getGogDiscounts` path runs in Rust. (Open Question 3, user-confirmed.)
+- **D-25:** **The baked ITAD key compiles into the Rust shell.** The shell crate (not
+  `gamelib-info`) reads `option_env!("ITAD_API_KEY")` with a `build.rs` `rerun-if-env-changed` and
+  passes it in the info context; `release-tauri.yml` passes `ITAD_API_KEY` to the tauri build step;
+  `GAMELIB_ITAD_API_KEY` stays the runtime override. (Open Question 5, user-confirmed.)
+- **D-26:** **Keys and the dev vault (research recommendation, adopted by default).** A `SecretSource`
+  trait in the shell over the existing keyring functions; a Rust port of the dev-vault read/write
+  for the `steamGridDbApiKey` and `itadApiKey` slots (same file, slot names and refuse-when-packaged
+  rule) so `pnpm tauri:dev` keeps its no-Keychain-prompt property; and a port of the one-time
+  `GlobalConfig.steamGridDbApiKey` plaintext migration with its read-back proof. (Open Question 4.)
+- **D-27:** **The D-04 amendment to `82-STATE-OWNERSHIP.md` also moves the `macArchStore` and
+  `runsForMeStore` "TS mirror deleted: 86" cells to their owning phases**, so the table and the D-06
+  schedule test agree. (Open Question 6, adopted by default.)
+- **D-28:** **Anticheat exposes two Rust ops**: `anticheat_status` (is a download needed, from the
+  local MD5) then TS runs `runOnceWhenOnline(() => anticheat_download)`, preserving the
+  check-then-wait order. (Open Question 7, adopted by default.)
+- **D-29:** **Execution order:** 86 executes after Phase 85's StoreHost ships (85-19/20). 86's first
+  plan is a checkpoint that re-reads the shipped `gamelib-store` host API against what 86's plans
+  assume.
+
 ### Claude's Discretion
 - The order slices port within the phase. Research suggests `wiki_game_info` first. Smaller,
   zero-test slices may go early to prove the harness.
