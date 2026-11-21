@@ -84,5 +84,3 @@ export function useUninstallActions(gameInfo: GameInfo) {
     closeUninstallModal: () => setShowUninstallModal(false)
   }
 }
-
-export type UninstallActions = ReturnType<typeof useUninstallActions>
