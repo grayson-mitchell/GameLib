@@ -97,6 +97,79 @@ describe('collectKnownInstalls', () => {
     expect(out).toEqual([{ key: 'gog:ok', path: '/g/ok' }])
   })
 
+  it('IN-04: a Steam install in progress (resume breadcrumb) names its folder under steamapps/common', () => {
+    const out = collectKnownInstalls(
+      managers({
+        steam: [
+          {
+            app_name: '730',
+            is_installed: false,
+            install: {
+              steamResumePending: true,
+              steamResumeTargetSteamappsDir: join('/lib', 'steamapps'),
+              steamResumeInstalldir: 'Half Game'
+            }
+          }
+        ]
+      })
+    )
+    expect(out).toEqual([
+      {
+        key: 'steam:730',
+        path: join('/lib', 'steamapps', 'common', 'Half Game')
+      }
+    ])
+  })
+
+  it('IN-04: a resume-pending Steam entry with an install_path and no breadcrumb uses that path', () => {
+    const out = collectKnownInstalls(
+      managers({
+        steam: [
+          {
+            app_name: '731',
+            is_installed: false,
+            install: { steamResumePending: true, install_path: '/g/steam/731' }
+          }
+        ]
+      })
+    )
+    expect(out).toEqual([{ key: 'steam:731', path: '/g/steam/731' }])
+  })
+
+  it('IN-04: a not-installed Steam entry with only a stale install_path is still skipped', () => {
+    const out = collectKnownInstalls(
+      managers({
+        steam: [
+          {
+            app_name: '732',
+            is_installed: false,
+            install: { install_path: '/g/stale' }
+          }
+        ]
+      })
+    )
+    expect(out).toEqual([])
+  })
+
+  it('IN-04: a Steam breadcrumb under the caller own key is still excluded', () => {
+    const out = collectKnownInstalls(
+      managers({
+        steam: [
+          {
+            app_name: '730',
+            is_installed: false,
+            install: {
+              steamResumeTargetSteamappsDir: join('/lib', 'steamapps'),
+              steamResumeInstalldir: 'Half Game'
+            }
+          }
+        ]
+      }),
+      { runner: 'steam', appName: '730' }
+    )
+    expect(out).toEqual([])
+  })
+
   it('a non-sideload entry with only an executable carries no path and is skipped', () => {
     const out = collectKnownInstalls(
       managers({

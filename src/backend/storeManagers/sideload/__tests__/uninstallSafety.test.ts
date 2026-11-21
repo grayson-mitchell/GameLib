@@ -233,6 +233,40 @@ describe('SideloadGame.uninstall delete-files guard (82-07, D-22)', () => {
     })
   })
 
+  it('IN-03: a second-stage guard that refuses reports refused, not failed, and keeps the entry and folder', async () => {
+    const yes = fakeSafetyRustInvoke().requestRustInvoke
+    const refusing = fakeSafetyRustInvoke({
+      checkVerdict: 'no',
+      reason: 'folder-looks-shared'
+    }).requestRustInvoke
+    let checks = 0
+    const requestRustInvoke: RequestRustInvoke = (channel, args) =>
+      channel === 'safety_check_removal' && ++checks === 2
+        ? refusing(channel, args)
+        : yes(channel, args)
+    const h = build(requestRustInvoke)
+
+    const res = await h.game.uninstall({
+      shouldRemovePrefix: false,
+      deleteFiles: true
+    })
+
+    expect(checks).toBe(2)
+    expect(res).toEqual({
+      stdout: '',
+      stderr: 'folder-looks-shared',
+      refused: true
+    })
+    expect(res.failed).toBeUndefined()
+    expect(notices(h)).toHaveLength(1)
+    expect(notices(h)[0]?.[1]).toMatchObject({
+      outcome: 'refused',
+      reason: 'folder-looks-shared'
+    })
+    expect(h.librarySet).toEqual([])
+    expect(existsSync(executable)).toBe(true)
+  })
+
   it('names the other game when another store has an install in the folder', async () => {
     const inner = fakeSafetyRustInvoke({
       checkVerdict: 'no',

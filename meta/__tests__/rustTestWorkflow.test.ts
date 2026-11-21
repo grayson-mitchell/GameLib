@@ -139,6 +139,14 @@ describe('rust-test.yml covers the gamelib-scan crates', () => {
   test('still tests the shell crate', () => {
     expect(workflow).toContain('cargo test --bin gamelib-shell')
   })
+
+  // IN-05: a hung test must not hold a runner for the 6 h platform default.
+  test('the cargo-test job itself carries timeout-minutes: 45', () => {
+    const job = workflow.match(/^ {2}cargo-test:\r?\n((?: {4}.*\r?\n|\r?\n)+)/m)
+    expect(job).not.toBeNull()
+    const header = (job?.[1] ?? '').split(/^ {4}steps:/m)[0] ?? ''
+    expect(header).toMatch(/^ {4}timeout-minutes: 45\s*$/m)
+  })
 })
 
 describe('anti-vacuity: the predicates reject mutated workflows', () => {

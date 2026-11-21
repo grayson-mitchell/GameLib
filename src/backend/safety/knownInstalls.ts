@@ -8,14 +8,28 @@
  * carry `install.install_path`; a sideloaded game carries only `install.executable`, so its folder
  * is `dirname(executable)` (the same folder `SideloadGame.uninstall` removes).
  *
+ * IN-04: Steam's native installer writes into `steamapps/common/<installdir>` long before the
+ * entry is `is_installed`, so an in-progress (or cancelled, or crashed) native install also counts:
+ * the resume breadcrumb (`steamResumeTargetSteamappsDir` + `steamResumeInstalldir`, written at
+ * install start) names the folder, and failing that a `steamResumePending` entry's `install_path`.
+ * legendary, gog and nile entries take their install info from the store's installed list, which
+ * the store tool writes when the install completes, so their in-progress installs are outside D-16
+ * (no folder is recorded on the library entry while the install runs).
+ *
+ * Never-loaded versus empty: `LibraryManager` exposes no "loaded" signal, so a library that has
+ * not loaded yet cannot be told apart from an empty one, and an empty list is also the permanent
+ * state of a store the user never signed in to. Returning `null` for an empty list would make
+ * every removal `unknown` for most users, so an empty list stays an empty list.
+ *
  * Exit contract: no timers, no handles, no work at import, no module-level mutable state.
  */
-import { dirname } from 'path'
+import { dirname, join } from 'path'
 import type { GameInfo, Runner } from 'common/types'
 import type { ManagerDeps } from 'backend/services/types'
 import { isStore } from 'common/storeCapabilities'
 import { resolveGameTitle } from 'backend/utils/gameTitle'
 import type { SafetyKnownInstall } from 'common/types/safety'
+import type { SteamInstalledInfo } from 'common/types/steam'
 
 type LibraryDeps = Pick<ManagerDeps, 'libraryManagers'>
 
@@ -35,7 +49,35 @@ function installFolder(runner: Runner, game: GameInfo): string | undefined {
 }
 
 /**
- * Every installed library entry except the caller's own. Returns `null` when any manager's
+ * IN-04: the folder a Steam native install that is not yet `is_installed` already occupies, or
+ * undefined. A stale `install_path` on an entry with no in-progress marker is not enough.
+ */
+function steamInProgressFolder(
+  runner: Runner,
+  game: GameInfo
+): string | undefined {
+  if (!isStore(runner, 'steam')) return undefined
+  const install: Partial<SteamInstalledInfo> = game.install
+  const {
+    steamResumeTargetSteamappsDir: target,
+    steamResumeInstalldir: installdir,
+    steamResumePending,
+    install_path: installPath
+  } = install
+  if (
+    typeof target === 'string' &&
+    target &&
+    typeof installdir === 'string' &&
+    installdir
+  ) {
+    return join(target, 'common', installdir)
+  }
+  if (steamResumePending === true && installPath) return installPath
+  return undefined
+}
+
+/**
+ * Every installed library entry except the caller's own, plus Steam's in-progress native installs. Returns `null` when any manager's
  * `getListOfGames` throws: a list that could not be read is `unknown` to the guard, never "no
  * other installs".
  */
@@ -53,8 +95,9 @@ export function collectKnownInstalls(
       return null
     }
     for (const game of games) {
-      if (!game.is_installed) continue
-      const path = installFolder(runner, game)
+      const path = game.is_installed
+        ? installFolder(runner, game)
+        : steamInProgressFolder(runner, game)
       if (!path) continue
       const key = knownInstallKey(runner, game.app_name)
       if (key === selfKey) continue

@@ -213,8 +213,14 @@ export default class SideloadGame implements Game {
     if (folderRequest) {
       const removed = await guardedRemoveTree(this.deps, folderRequest)
       if (removed.outcome !== 'removed') {
-        // The delete ran or its effect is unconfirmed: keep the library entry so a retry works.
         const reason = removed.reason ?? 'bad-reply'
+        if (removed.outcome === 'refused') {
+          // IN-03: the verdict changed between the two Rust calls and nothing was deleted (no
+          // external process runs on this path), so this is a refusal, not a failure.
+          this.pushRefusal('refused', title, reason, removed.otherKey)
+          return { stdout: '', stderr: reason, refused: true }
+        }
+        // The delete ran or its effect is unconfirmed: keep the library entry so a retry works.
         this.pushRefusal('failed', title, reason, removed.otherKey)
         return { stdout: '', stderr: reason, failed: true }
       }
