@@ -737,7 +737,7 @@ Plans:
 **Goal:** The game page has no ⋮ menu: every action sits next to what it changes. The left card is the game (store link, Edit details, Favourite heart by the title, category chips, Hide); the Install tab is the hub for your copy (Location → Open/Move, Size → Modify, Version → Verify/Check for updates, integration switch rows, red Uninstall last behind a confirmation); the ⚙ dialog owns how the game runs; the footer holds only tier-one actions. Requirements and the left-card play-time block are removed as duplicates; pending and error states live inside each row. Design source: sketch 012 (folds in 010, 011) — `.claude/skills/sketch-findings-gamelib/references/game-page.md`.
 **Requirements**: TBD
 **Depends on:** Nothing (frontend-only; independent of the v0.11 port phases)
-**Plans:** 8/10 plans executed
+**Plans:** 9/10 plans executed
 
 Plans:
 **Wave 1**
@@ -765,7 +765,7 @@ Plans:
 - [x] 100-08-PLAN.md — Footer Install ▾ Locate for non-Steam, tab relabel, Apple compatibility + ProtonDB on Ratings
 
 **Wave 9** *(blocked on Wave 8 completion)*
-- [ ] 100-09-PLAN.md — Delete ⋮ with every gate retargeted, D-07 GameCard menu guard, dead CSS removed
+- [x] 100-09-PLAN.md — Delete ⋮ with every gate retargeted, D-07 GameCard menu guard, dead CSS removed
 
 **Wave 10** *(blocked on Wave 9 completion)*
 - [ ] 100-10-PLAN.md — 100-HUMAN-UAT.md (D-15 themes, D-16 store walk) and the full phase-gate run

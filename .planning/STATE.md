@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 100
 current_phase_name: Game page without the ⋮ menu
 status: executing
-stopped_at: Completed 100-08-PLAN.md
-last_updated: "2026-11-21T11:09:39.475Z"
+stopped_at: Completed 100-09-PLAN.md
+last_updated: "2026-11-21T11:27:29.858Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 100 execution started
-state_head: 1b09953f24e896688de6841b090d7a0fb9734cbb
+state_head: 6d243fee38f216e4a537245208b7e1745f4128f1
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 100 (Game page without the ⋮ menu) — EXECUTING
-Plan: 9 of 10
+Plan: 10 of 10
 Status: Ready to execute
 Last activity: 2026-11-21 — Phase 100 execution started
 Progress: [██████████] 100%
@@ -358,6 +358,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 100 P06 | 13 min | 3 tasks | 15 files |
 | Phase 100 P07 | 16 min | 3 tasks | 20 files |
 | Phase 100 P08 | 38 min | 2 tasks | 17 files |
+| Phase 100 P09 | 85 min | 2 tasks | 42 files |
 
 ## Accumulated Context
 
@@ -662,6 +663,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 100]: Plan 07: EosOverlaySetting copies handleEosOverlay and the probe verbatim into Run -> Launch with a mirrored call-site guard (5 sites, 6 releases); the GameSubMenu guard stays until plan 09
 - [Phase 100]: 100-08: installCaretItem gates 'locate' on winePrefixToolsAvailable and not installed/queued/installing/importing, not on installDisabled, so third-party games keep their only import door
 - [Phase 100]: 100-08: ProtonDbLink is a clickable iconWithText anchor, not an is-text button, to keep the themeTokens is-text census at 39
+- [Phase 100]: Plan 09: shortcuts source gate slices IntegrationRows from the handler to the next declaration (expression-bodied arrow); dock spec asserts no <...Menu element instead of naming the deleted DotsMenu
 
 ### Pending Todos
 
@@ -922,8 +924,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-21T11:09:39.165Z
-Stopped at: Completed 100-08-PLAN.md
+Last session: 2026-11-21T11:27:29.541Z
+Stopped at: Completed 100-09-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
