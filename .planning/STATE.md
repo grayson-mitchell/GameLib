@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 84
 current_phase_name: Logger
 status: executing
-stopped_at: Completed 84-03-PLAN.md
-last_updated: "2026-11-21T05:13:33.904Z"
+stopped_at: Completed 84-04-PLAN.md
+last_updated: "2026-11-21T05:26:13.522Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 84 execution started
-state_head: 654a8e5371c05c362ce341722d5ce0319f74f4f0
+state_head: 4cee54d15069c8af93df037477f1f4a97b594b92
 progress:
   total_phases: 19
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 84 (Logger) — EXECUTING
-Plan: 4 of 11
+Plan: 5 of 11
 Status: Ready to execute
 Last activity: 2026-11-21 - Completed quick task 261121-o99: Close Phase 82 deferred review findings
 Progress: [██████████] 100%
@@ -342,6 +342,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 84 P01 | ~60 min (estimate) | 4 tasks | 102 files |
 | Phase 84 P02 | not measured | 4 tasks | 19 files |
 | Phase 84 P03 | 25 min | 3 tasks | 28 files |
+| Phase 84 P04 | 40 min | 2 tasks | 30 files |
 
 ## Accumulated Context
 
@@ -617,6 +618,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 84]: StoreHost core (gamelib_core::store) API fixed for uploadedLogs: open_cache(dir,name), Store get/set/remove/snapshot/on_change, flat keys, rollback on failed persist; Phase 85 widens it
 - [Phase 84]: 84-03: a clipped log entry keeps its truncation marker inside the shell's 1,048,576-unit entry cap, because the shell rejects the whole frame over it
 - [Phase 84]: 84-03: forwarder onReady coalesces into the 50 ms tick; calibrated constants stay 50 ms / 32 KiB / 4,000 entries / 8 MiB
+- [Phase 84]: 84-04: the TS LogWriter is a facade over the forwarder; the type swap, codemod and facade land in one typechecking commit (nominal #private types)
+- [Phase 84]: 84-04: gamelib.log limiter is 60 s window / burst 5 / 256 keys / 200-char excerpt; only general-target Line entries are limited (D-15), flush drains open windows
 
 ### Pending Todos
 
@@ -871,8 +874,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-21T05:13:33.160Z
-Stopped at: Completed 84-03-PLAN.md
+Last session: 2026-11-21T05:26:11.601Z
+Stopped at: Completed 84-04-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
