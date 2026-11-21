@@ -468,30 +468,69 @@ Plans:
 **Plans:** 25 plans in 20 waves; planned 2026-11-21
 
 Plans:
+**Wave 1**
 - [ ] 85-01-PLAN.md — Before any store code: the TS store oracle golden (conf writes, engine outcomes, migrations, settings documents) and dot-path, number and key-order vectors
-- [ ] 85-02-PLAN.md — Redacted real-file corpus (operator profile, its `*.bak.json`, v0.8/v0.9/v0.10 in fake HOMEs, edge cases) pinned by MANIFEST.json (D-09)
 - [ ] 85-03-PLAN.md — Shared renderer policy and `kind:"store"` frame vectors; the live macOS gate contract 85-HUMAN-UAT.md (run by 85-20)
 - [ ] 85-04-PLAN.md — Spikes: S1 mirror protocol model, S3-S5 frame/boot/sync_all measurements and the constants they set
 - [ ] 85-05-PLAN.md — D-16 checkpoint: the signed v0.10 baseline and its recorded signing identity
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 85-02-PLAN.md — Redacted real-file corpus (operator profile, its `*.bak.json`, v0.8/v0.9/v0.10 in fake HOMEs, edge cases) pinned by MANIFEST.json (D-09)
 - [ ] 85-06-PLAN.md — `gamelib-store` (+cli) crate: ordered JSON with JS number text and key order, dot-prop paths, atomic write; CI wiring
+
+**Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 85-07-PLAN.md — Envelope, ops, version engine, backups, D-18 corrupt handling, generated store table, corpus roundtrip
+
+**Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 85-08-PLAN.md — zod-derived schema descriptor and the settings/library migration chains in Rust; corpus migrate parity; CLI `open`
+
+**Wave 5** *(blocked on Wave 4 completion)*
 - [ ] 85-09-PLAN.md — StoreHost widened into gamelib-store; uploadedLogs v0.10 format fix; bounded boot open, GAMELIB_STORE, GAMELIB_STORE_BOOT, `store` exit drain
+
+**Wave 6** *(blocked on Wave 5 completion)*
 - [ ] 85-10-PLAN.md — Tracer: TS mirror -> `kind:"store"` frames -> Rust owner -> disk with acks, on one store
+
+**Wave 7** *(blocked on Wave 6 completion)*
 - [ ] 85-11-PLAN.md — Mirror hardening: S1 protocol, shared cells, dot paths, quit flush, D-02 fallback proof, jest disk sink
+
+**Wave 8** *(blocked on Wave 7 completion)*
 - [ ] 85-12-PLAN.md — Flip caches (D-01 first family), runtime caches, corrupt caches start empty after their copy
-- [ ] 85-13-PLAN.md — Flip user-state; older libraries migrated at boot before the sidecar
-- [ ] 85-14-PLAN.md — Flip token-bearing and account configs (shared steam_store cell); keyring names pinned on every CI OS (D-10, D-14)
-- [ ] 85-15-PLAN.md — Flip settings last: store/config.json, config.json, GamesConfig/* through readSettingsDoc; D-22 first boot; eviction on reset/uninstall
-- [ ] 85-16-PLAN.md — Renderer reads native: one policy file for TS and Rust, snapshot and fetch from StoreHost, read-only notice from Rust
-- [ ] 85-17-PLAN.md — Renderer writes native: set/set-checked/delete/new and storeChanged from Rust with rev; preload stale-push guard
 - [ ] 85-18-PLAN.md — D-17 bottle version gate in Rust for the engine marker and shared-redist ledger
+
+**Wave 9** *(blocked on Wave 8 completion)*
+- [ ] 85-13-PLAN.md — Flip user-state; older libraries migrated at boot before the sidecar
+
+**Wave 10** *(blocked on Wave 9 completion)*
+- [ ] 85-14-PLAN.md — Flip token-bearing and account configs (shared steam_store cell); keyring names pinned on every CI OS (D-10, D-14)
+
+**Wave 11** *(blocked on Wave 10 completion)*
+- [ ] 85-15-PLAN.md — Flip settings last: store/config.json, config.json, GamesConfig/* through readSettingsDoc; D-22 first boot; eviction on reset/uninstall
+
+**Wave 12** *(blocked on Wave 11 completion)*
+- [ ] 85-16-PLAN.md — Renderer reads native: one policy file for TS and Rust, snapshot and fetch from StoreHost, read-only notice from Rust
+
+**Wave 13** *(blocked on Wave 12 completion)*
+- [ ] 85-17-PLAN.md — Renderer writes native: set/set-checked/delete/new and storeChanged from Rust with rev; preload stale-push guard
+
+**Wave 14** *(blocked on Wave 13 completion)*
 - [ ] 85-19-PLAN.md — Clean-worktree proof, push and signed Phase 85 build checkpoint, three-OS CI, identity recorded beside the baseline
+
+**Wave 15** *(blocked on Wave 14 completion)*
 - [ ] 85-20-PLAN.md — Run the live macOS gate (signed v0.10 -> signed Phase 85 upgrade, SC1-SC3)
+
+**Wave 16** *(blocked on Wave 15 completion)*
 - [ ] 85-21-PLAN.md — D-03 deletion after the gate, part 1: migration system (SC4 recorded) and migrationsStore, mirror schedule pinned (D-19); flag, TS owner path and `conf`
+
+**Wave 17** *(blocked on Wave 16 completion)*
 - [ ] 85-22-PLAN.md — D-03 deletion, part 2: the engine, tools, launcher, flow and bridge-runtime side stops carrying the TS versioning engine
+
+**Wave 18** *(blocked on Wave 17 completion)*
 - [ ] 85-23-PLAN.md — D-03 deletion, part 3: configs, store managers and StoreRoot stop carrying it; test helper forbidden and deleted
+
+**Wave 19** *(blocked on Wave 18 completion)*
 - [ ] 85-24-PLAN.md — D-03 deletion, part 4: TS read-only notice path ended; schemaStrip and store types relocated; storeVersioning and storeMigrations deleted (SC5)
+
+**Wave 20** *(blocked on Wave 19 completion)*
 - [ ] 85-25-PLAN.md — Post-deletion clean-worktree and three-OS CI proof
 
 ### Phase 86: Pure leaf services
