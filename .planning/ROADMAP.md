@@ -419,7 +419,7 @@ Plans:
   3. Diagnostics from steam-vent and reqwest appear in the log, and a repeating error is rate-limited rather than flooding the file
   4. The TS logger is reduced to a fire-and-forget forwarder, and the shell's second log path (`shell_diag`) and the TS log registrations are deleted
 
-**Plans:** 7/11 plans executed in 9 waves; planned 2026-11-21, consolidated from 14 the same day, then the consolidated 84-06 and 84-07 each split in two to stay inside the per-plan context budget; executes only after Phase 83 closes (83-11 live gate passed, D-02)
+**Plans:** 8/11 plans executed in 9 waves; planned 2026-11-21, consolidated from 14 the same day, then the consolidated 84-06 and 84-07 each split in two to stay inside the per-plan context budget; executes only after Phase 83 closes (83-11 live gate passed, D-02)
 
 Plans:
 **Wave 1**
@@ -442,7 +442,7 @@ Plans:
 - [x] 84-07-PLAN.md — TS logger internals and the oracle deleted behind the red-first `loggerPortComplete` gate; paths.ts and the containment kit's logger/paths element retired
 
 **Wave 7** *(blocked on Wave 6 completion)*
-- [ ] 84-08-PLAN.md — `shell_diag` → `shell_log` into gamelib.log; tracing Layer + `log` bridge, `GAMELIB_LOG_LEVEL`; steamcm forwarder deleted; `loggerPortComplete` Rust half
+- [x] 84-08-PLAN.md — `shell_diag` → `shell_log` into gamelib.log; tracing Layer + `log` bridge, `GAMELIB_LOG_LEVEL`; steamcm forwarder deleted; `loggerPortComplete` Rust half
 
 **Wave 8** *(blocked on Wave 7 completion)*
 - [ ] 84-09-PLAN.md — run_exit `FinishContext` and the final flush inside the 5 s budget (D-13 as amended, D-21); docs that describe the old sinks corrected

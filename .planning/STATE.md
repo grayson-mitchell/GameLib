@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 84
 current_phase_name: Logger
 status: executing
-stopped_at: Completed 84-07-PLAN.md
-last_updated: "2026-11-21T07:45:37.331Z"
+stopped_at: Completed 84-08-PLAN.md
+last_updated: "2026-11-21T07:53:30.636Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 84 execution started
-state_head: 123b3113962b80f091392796c97ddf6c6370f083
+state_head: 3d54e8a52986940aa82af74787a621c63a0a3a11
 progress:
   total_phases: 19
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 84 (Logger) — EXECUTING
-Plan: 8 of 11
+Plan: 9 of 11
 Status: Ready to execute
 Last activity: 2026-11-21 - Completed quick task 261121-ssg: Fix macowned helper stub ETXTBSY flake on ubuntu
 Progress: [██████████] 100%
@@ -346,6 +346,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 84 P05 | not measured | 3 tasks | 31 files |
 | Phase 84 P06 | 18 min | 2 tasks | 45 files |
 | Phase 84 P07 | 45 min | 2 tasks | 31 files |
+| Phase 84 P08 | 60 min | 2 tasks | 31 files |
 
 ## Accumulated Context
 
@@ -631,6 +632,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 84]: Delete-uploaded is proven by a localhost round-trip test, not the UI: its control is commented out, so ROADMAP criterion 2 'from the UI' holds for upload and show-in-folder only (84-06)
 - [Phase 84]: ipcDomainCensus FILES_FLOOR 22 -> 21 is a deliberate deletion of loggerFlowRegistration.ts; the os-mock-is-inert pin now lives in enrichmentFlows.test.ts (84-06)
 - [Phase 84]: 84-07: the testContainment backend/constants/environment pin was removed with the logger/paths mock it only served; containment tripwires whose sole subject was the TS log path were deleted, and structuralContainment Test 6 was repointed at resolveAppPaths().userData to keep its real-home teeth
+- [Phase 84]: 84-08: steamcm_diag is a separate sink from shell_log so crate lines are Steam events; bridged events on the writer thread are dropped by a thread-local guard; GAMELIB_LOG_LEVEL=debug is the only way crate diagnostics reach DEBUG
 
 ### Pending Todos
 
@@ -888,8 +890,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-21T07:39:05.812Z
-Stopped at: Completed 84-07-PLAN.md
+Last session: 2026-11-21T07:53:30.312Z
+Stopped at: Completed 84-08-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
