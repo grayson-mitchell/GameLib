@@ -128,6 +128,11 @@
   cursor: pointer;
 }
 
+.rowFailure__retry[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 /* Phase 100 (D-01, D-10, D-22): fact rows with the actions that change them.
    Each colour declaration sits in a flat rule so the contrast specs can
    resolve it. */

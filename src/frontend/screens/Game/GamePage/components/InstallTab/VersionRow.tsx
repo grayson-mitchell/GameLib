@@ -77,7 +77,9 @@ const VersionRow = ({ gameInfo, gates, handleUpdate, hasUpdate }: Props) => {
                 'Verify failed. Details are in the log.'
               ),
               retryLabel: t('gamelib:gamepage.installTab.retry', 'Retry'),
-              onRetry: runVerify
+              onRetry: runVerify,
+              retryDisabled: gates.verify.disabled,
+              retryDisabledReason: reasonFor(gates.verify)
             }
           : undefined
       }

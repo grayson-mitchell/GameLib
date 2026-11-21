@@ -5,6 +5,10 @@ interface RowFailureProps {
   message: string
   retryLabel: string
   onRetry: () => void
+  /** True while the repeated action's own gate is disabled (D-11). */
+  retryDisabled?: boolean
+  /** The gate's reason tooltip, shown only while Retry is inert. */
+  retryDisabledReason?: string
 }
 
 interface SwitchRowProps {
@@ -23,13 +27,33 @@ interface SwitchRowProps {
 /**
  * Phase 100 (D-01, D-12, D-18). Inline failure for a row: a fixed, translated
  * message plus a Retry link, never a modal (T-100-01: the raw error reaches
- * the log only, never this text).
+ * the log only, never this text). Retry follows the same gate as the action
+ * it repeats (D-11): inert via `aria-disabled` plus an early return, never the
+ * `disabled` attribute, so the reason tooltip shows and the control stays in
+ * the gamepad focus ring.
  */
-export function RowFailure({ message, retryLabel, onRetry }: RowFailureProps) {
+export function RowFailure({
+  message,
+  retryLabel,
+  onRetry,
+  retryDisabled,
+  retryDisabledReason
+}: RowFailureProps) {
+  const handleRetry = () => {
+    if (retryDisabled) return
+    onRetry()
+  }
+
   return (
     <p className="rowFailure" role="alert">
       {message}{' '}
-      <button type="button" className="rowFailure__retry" onClick={onRetry}>
+      <button
+        type="button"
+        className="rowFailure__retry"
+        aria-disabled={retryDisabled ? true : undefined}
+        title={retryDisabled ? retryDisabledReason : undefined}
+        onClick={handleRetry}
+      >
         {retryLabel}
       </button>
     </p>
