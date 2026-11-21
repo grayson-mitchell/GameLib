@@ -48,7 +48,7 @@ pub(crate) use crate::ipc_contract::{STORE_FRAME_KIND, STORE_MIRROR_EVENT_CHANNE
 /// 176, rounded up to 256. A warning only: the queue stays unbounded and no write is dropped.
 pub(crate) const STORE_QUEUE_HIGH_WATER: usize = 256;
 
-/// A frame line longer than this is rejected whole (`maxFrameBytes` in `storeFrameVectors.json`).
+/// A frame line longer than this is rejected whole (`maxFrameBytes` of the shared frame vectors).
 pub(crate) const MAX_FRAME_BYTES: usize = 10 * 1024 * 1024;
 
 /// Why a frame was rejected. The strings are the shared vectors' reason categories.
@@ -156,7 +156,7 @@ fn path_for(user_data: &Path, key: &str, row: &TableRow) -> PathBuf {
 }
 
 /// Validates one frame the way `validateStoreFrame` (`storeFrames.ts`) does, in the same order, so
-/// both sides accept and reject the same vectors (`storeFrameVectors.json`). `line_len` is the
+/// both sides accept and reject the same shared frame vectors. `line_len` is the
 /// length of the line the frame arrived on. The result never carries a key or a value.
 pub(crate) fn parse_store_frame(
     line_len: usize,
@@ -287,6 +287,9 @@ struct Queue {
     /// Held from the first enqueued frame until the queue is empty and nothing is being applied.
     registrant: Option<Registrant>,
     worker_started: bool,
+    /// The depth has crossed [`STORE_QUEUE_HIGH_WATER`] and not yet fallen back: one warning per
+    /// crossing.
+    above_high_water: bool,
 }
 
 /// The queue, its worker and what the worker needs. One per process in production ([`global`]);
@@ -323,6 +326,7 @@ impl Dispatcher {
                 busy: false,
                 registrant: None,
                 worker_started: false,
+                above_high_water: false,
             }),
             work: Condvar::new(),
             idle: Condvar::new(),
@@ -345,14 +349,25 @@ impl Dispatcher {
 
     /// Queues a frame and makes sure the worker is running. Never blocks and never writes a file.
     fn push(self: &Arc<Self>, frame: StoreFrame) {
-        let start_worker = {
+        let (start_worker, crossed) = {
             let mut q = lock(&self.queue);
             if q.registrant.is_none() {
                 q.registrant = Some(self.shutdown.register("store"));
             }
             q.items.push_back(frame);
-            !std::mem::replace(&mut q.worker_started, true)
+            let depth = q.items.len();
+            let crossed = (depth > STORE_QUEUE_HIGH_WATER && !q.above_high_water).then(|| {
+                q.above_high_water = true;
+                depth
+            });
+            (!std::mem::replace(&mut q.worker_started, true), crossed)
         };
+        if let Some(depth) = crossed {
+            // A count only, once per crossing: the queue stays unbounded and nothing is dropped.
+            (self.log)(&format!(
+                "WARN: store queue high-water: {depth} frames queued"
+            ));
+        }
         if start_worker {
             let worker = Arc::clone(self);
             let spawned = std::thread::Builder::new()
@@ -374,6 +389,9 @@ impl Dispatcher {
                 loop {
                     if let Some(frame) = q.items.pop_front() {
                         q.busy = true;
+                        if q.above_high_water && q.items.len() <= STORE_QUEUE_HIGH_WATER / 2 {
+                            q.above_high_water = false;
+                        }
                         break frame;
                     }
                     // Empty and nothing in flight: the exit drain has nothing left to wait for.
@@ -538,6 +556,7 @@ mod tests {
     use super::*;
     use gamelib_testutil::FakeHome;
     use std::fs;
+    use std::sync::atomic::{AtomicBool, Ordering};
 
     /// Everything a test needs: a dispatcher over a throwaway user-data directory, the events it
     /// sent the sidecar and the lines it logged.
@@ -557,8 +576,11 @@ mod tests {
     }
 
     fn rig_with(ownership: Ownership, mode: StoreMode) -> Rig {
+        rig_over(Arc::new(StoreHost::new()), ownership, mode)
+    }
+
+    fn rig_over(host: Arc<StoreHost>, ownership: Ownership, mode: StoreMode) -> Rig {
         let home = FakeHome::new("store-dispatch-");
-        let host = Arc::new(StoreHost::new());
         let shutdown = Shutdown::new();
         let events = Arc::new(Mutex::new(Vec::new()));
         let logs = Arc::new(Mutex::new(Vec::new()));
@@ -582,6 +604,64 @@ mod tests {
             events,
             logs,
         }
+    }
+
+    /// A writer that waits at a gate before writing, so a test can hold the worker mid-apply with
+    /// frames queued behind it. `fail_first` makes the first write fail (after the gate opens).
+    struct Gate {
+        open: Mutex<bool>,
+        cv: Condvar,
+        entered: Mutex<usize>,
+        entered_cv: Condvar,
+    }
+
+    impl Gate {
+        fn new(open: bool) -> Arc<Gate> {
+            Arc::new(Gate {
+                open: Mutex::new(open),
+                cv: Condvar::new(),
+                entered: Mutex::new(0),
+                entered_cv: Condvar::new(),
+            })
+        }
+
+        fn release(&self) {
+            *lock(&self.open) = true;
+            self.cv.notify_all();
+        }
+
+        /// Waits until the writer has been entered `n` times (the worker is held at the gate).
+        fn wait_entered(&self, n: usize) {
+            let mut entered = lock(&self.entered);
+            let deadline = Instant::now() + Duration::from_secs(10);
+            while *entered < n {
+                let left = deadline.saturating_duration_since(Instant::now());
+                assert!(!left.is_zero(), "the worker never reached the writer");
+                entered = self
+                    .entered_cv
+                    .wait_timeout(entered, left)
+                    .unwrap_or_else(|e| e.into_inner())
+                    .0;
+            }
+        }
+    }
+
+    fn gated_host(gate: &Arc<Gate>, fail_first: bool) -> Arc<StoreHost> {
+        let gate = Arc::clone(gate);
+        let failed = Arc::new(AtomicBool::new(!fail_first));
+        Arc::new(StoreHost::with_writer(Arc::new(move |path, bytes, dur| {
+            *lock(&gate.entered) += 1;
+            gate.entered_cv.notify_all();
+            let mut open = lock(&gate.open);
+            while !*open {
+                open = gate.cv.wait(open).unwrap_or_else(|e| e.into_inner());
+            }
+            drop(open);
+            if !failed.swap(true, Ordering::SeqCst) {
+                return Err(std::io::Error::other("disk full"));
+            }
+            gamelib_store::atomic::write_atomic(path, bytes, dur)
+        })))
     }
 
     fn rig() -> Rig {
@@ -795,5 +875,219 @@ mod tests {
         // Everything applied: the registrant is released, so a drain returns at once.
         assert!(rig.shutdown.drain(Duration::from_millis(500)).is_empty());
         let _ = &rig.host;
+    }
+
+    const VECTORS: &str = include_str!("../../src/common/__fixtures__/storeFrameVectors.json");
+
+    fn vectors() -> Value {
+        serde_json::from_str(VECTORS).unwrap()
+    }
+
+    /// The frame a vector names: a `generate` stanza is expanded into a `set` whose `valueJson` is
+    /// that many ASCII bytes (a JSON string).
+    fn frame_of(vector: &Value) -> Value {
+        let frame = &vector["frame"];
+        match frame.get("generate") {
+            Some(g) => {
+                let n = usize::try_from(g["valueJsonBytes"].as_u64().unwrap()).unwrap();
+                let text = format!("\"{}\"", "a".repeat(n - 2));
+                frame_value(1, "store/config", "set", Some("k"), Some(&text))
+            }
+            None => frame.clone(),
+        }
+    }
+
+    fn frame_value(
+        seq: u64,
+        store: &str,
+        op: &str,
+        key: Option<&str>,
+        value_json: Option<&str>,
+    ) -> Value {
+        frame(seq, store, op, key, value_json)
+    }
+
+    #[test]
+    fn store_frame_every_valid_vector_parses() {
+        let doc = vectors();
+        assert_eq!(doc["maxFrameBytes"], MAX_FRAME_BYTES);
+        let valid = doc["valid"].as_array().unwrap();
+        assert!(valid.len() >= 16, "the vectors cannot pass vacuously");
+        for vector in valid {
+            let frame = frame_of(vector);
+            let len = serde_json::to_string(&frame).unwrap().len();
+            let parsed = parse_store_frame(len, &frame);
+            assert!(
+                parsed.is_ok(),
+                "{}: {:?}",
+                vector["name"].as_str().unwrap(),
+                parsed.err()
+            );
+        }
+    }
+
+    #[test]
+    fn store_frame_every_invalid_vector_is_rejected_with_exactly_its_reason() {
+        let doc = vectors();
+        let invalid = doc["invalid"].as_array().unwrap();
+        assert!(invalid.len() >= 31, "the vectors cannot pass vacuously");
+        let mut seen = std::collections::BTreeSet::new();
+        for vector in invalid {
+            let frame = frame_of(vector);
+            let len = serde_json::to_string(&frame).unwrap().len();
+            let want = vector["reason"].as_str().unwrap();
+            let got = parse_store_frame(len, &frame)
+                .map(|_| "accepted")
+                .map_err(|r| r.as_str());
+            assert_eq!(got, Err(want), "{}", vector["name"].as_str().unwrap());
+            seen.insert(want.to_string());
+        }
+        // All nine reason categories are exercised, including the generated oversized frame.
+        assert_eq!(seen.len(), 9, "{seen:?}");
+        assert!(seen.contains("too-large"));
+    }
+
+    #[test]
+    fn store_frame_a_valid_vector_keeps_nested_key_order_and_big_numbers_as_text() {
+        let doc = vectors();
+        let first = &doc["valid"][0];
+        let text = first["frame"]["valueJson"].as_str().unwrap();
+        let parsed = parse_store_frame(text.len(), &first["frame"]).unwrap();
+        let FrameOp::Set { value, .. } = parsed.op else {
+            panic!("a set vector")
+        };
+        // The ordered parser keeps the order serde_json::Value would sort away.
+        assert_eq!(
+            String::from_utf8(gamelib_store::json::to_compact_bytes(&value)).unwrap(),
+            text
+        );
+    }
+
+    #[test]
+    fn store_frame_the_queue_flush_is_answered_only_after_every_earlier_frame_is_applied() {
+        let gate = Gate::new(false);
+        let rig = rig_over(
+            gated_host(&gate, false),
+            tracer_ownership(),
+            StoreMode::Rust,
+        );
+        for (i, key) in ["a", "b", "c"].iter().enumerate() {
+            send(
+                &rig,
+                frame(i as u64 + 1, TRACER, "set", Some(key), Some("1")),
+            );
+        }
+        send(&rig, frame(4, TRACER, "flush", None, None));
+        gate.wait_entered(1);
+        assert!(
+            lock(&rig.events).is_empty(),
+            "nothing is answered while the first apply is still writing"
+        );
+        gate.release();
+        settle(&rig);
+        let events = lock(&rig.events);
+        let order: Vec<(u64, &str)> = events
+            .iter()
+            .map(|e| (e["originSeq"].as_u64().unwrap(), e["op"].as_str().unwrap()))
+            .collect();
+        assert_eq!(
+            order,
+            vec![
+                (1, "applied"),
+                (2, "applied"),
+                (3, "applied"),
+                (4, "flushed")
+            ]
+        );
+    }
+
+    #[test]
+    fn store_frame_a_failed_persist_is_refused_io_consumes_no_rev_and_leaves_no_file() {
+        let gate = Gate::new(true);
+        let rig = rig_over(gated_host(&gate, true), tracer_ownership(), StoreMode::Rust);
+        send(&rig, frame(1, TRACER, "set", Some("a"), Some("1")));
+        send(&rig, frame(2, TRACER, "set", Some("b"), Some("2")));
+        settle(&rig);
+        let events = lock(&rig.events);
+        assert_eq!(events[0]["op"], "refused");
+        assert_eq!(events[0]["reason"], "io");
+        assert_eq!(events[0]["originSeq"], 1);
+        // The failed write consumed no rev: the next change is rev 1, not 2 (S1 rule 1).
+        assert_eq!(events[1]["op"], "applied");
+        assert_eq!(events[1]["rev"], 1);
+        let written =
+            fs::read_to_string(rig.home.root().join("store_cache/wikigameinfo.json")).unwrap();
+        assert!(!written.contains("\"a\""), "{written}");
+        assert!(written.contains("\"b\""), "{written}");
+    }
+
+    #[test]
+    fn store_frame_worker_holds_a_store_registrant_while_frames_are_queued_and_releases_it_when_empty(
+    ) {
+        let gate = Gate::new(false);
+        let rig = rig_over(
+            gated_host(&gate, false),
+            tracer_ownership(),
+            StoreMode::Rust,
+        );
+        send(&rig, frame(1, TRACER, "set", Some("a"), Some("1")));
+        send(&rig, frame(2, TRACER, "set", Some("b"), Some("2")));
+        gate.wait_entered(1);
+        // Held while the queue is non-empty and a frame is mid-apply: a drain names it.
+        assert_eq!(rig.shutdown.drain(Duration::from_millis(60)), vec!["store"]);
+        // `wait_idle(bound)` reports frames remaining past the bound.
+        assert!(!rig.dispatcher.wait_idle(Duration::from_millis(40)));
+        gate.release();
+        settle(&rig);
+        assert!(rig.shutdown.drain(Duration::from_millis(500)).is_empty());
+        assert_eq!(rig.host.in_flight(), 0);
+        // A later frame takes the registrant again and releases it again.
+        send(&rig, frame(3, TRACER, "set", Some("c"), Some("3")));
+        settle(&rig);
+        assert!(rig.shutdown.drain(Duration::from_millis(500)).is_empty());
+    }
+
+    #[test]
+    fn store_frame_queue_high_water_is_logged_once_per_crossing_and_never_drops_a_frame() {
+        let gate = Gate::new(false);
+        let rig = rig_over(
+            gated_host(&gate, false),
+            tracer_ownership(),
+            StoreMode::Rust,
+        );
+        // The first frame is taken by the worker and held at the gate; the rest queue behind it.
+        send(&rig, frame(1, TRACER, "set", Some("k0"), Some("0")));
+        gate.wait_entered(1);
+        let total = STORE_QUEUE_HIGH_WATER + 40;
+        for i in 0..total {
+            let key = format!("k{}", i + 1);
+            send(
+                &rig,
+                frame(i as u64 + 2, TRACER, "set", Some(&key), Some("1")),
+            );
+        }
+        let lines: Vec<String> = lock(&rig.logs)
+            .iter()
+            .filter(|l| l.contains("store queue high-water"))
+            .cloned()
+            .collect();
+        assert_eq!(
+            lines,
+            vec![format!(
+                "WARN: store queue high-water: {} frames queued",
+                STORE_QUEUE_HIGH_WATER + 1
+            )]
+        );
+        gate.release();
+        settle(&rig);
+        // Every frame was applied and answered: the queue never drops a store write.
+        let events = lock(&rig.events);
+        assert_eq!(events.len(), total + 1);
+        assert!(events.iter().all(|e| e["op"] == "applied"));
+        let seqs: Vec<u64> = events
+            .iter()
+            .map(|e| e["originSeq"].as_u64().unwrap())
+            .collect();
+        assert_eq!(seqs, (1..=total as u64 + 1).collect::<Vec<_>>());
     }
 }

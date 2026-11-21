@@ -308,12 +308,17 @@ pub(crate) fn host() -> &'static Arc<StoreHost> {
     HOST.get_or_init(|| Arc::new(StoreHost::new()))
 }
 
-/// The `store` exit drain: waits up to `bound` for in-flight applies and returns `true` when one is
-/// still running, so the caller holds the drain open and the exit deadline line names it. It holds
-/// no registrant of its own: a permanent one would report on every exit (85-10 extends this with
-/// the frame queue).
+/// The `store` exit drain: waits up to `bound` for the sidecar's queued store frames to be applied
+/// and for in-flight applies to finish, and returns `true` when work is still pending, so the
+/// caller holds the drain open and the exit deadline line names it. The frame queue is drained
+/// first (it feeds the host), then the host gets what is left of the bound. The drain holds no
+/// registrant of its own: the frame worker holds one while frames are queued (`store_dispatch`),
+/// and a permanent one would report on every exit.
 pub(crate) fn drain(bound: Duration) -> bool {
-    !host().wait_idle(bound)
+    let start = Instant::now();
+    let queue_idle = crate::store_dispatch::wait_idle(bound);
+    let host_idle = host().wait_idle(bound.saturating_sub(start.elapsed()));
+    !(queue_idle && host_idle)
 }
 
 #[cfg(test)]

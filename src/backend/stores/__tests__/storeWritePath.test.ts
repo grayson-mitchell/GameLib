@@ -14,10 +14,11 @@ import { join } from 'path'
 import CacheStore from '../../cache'
 import GameLibStore from '../../store_backend'
 import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
+import vectors from 'common/__fixtures__/storeFrameVectors.json'
 import { STORE_FRAME_KIND } from 'common/types/sidecarTransport'
 import { MirrorCell, type StoreMirrorEvent } from '../mirrorCell'
 import type { StoreFrame, StoreFrameSink } from '../storeFrames'
-import { validateStoreFrame } from '../storeFrames'
+import { STORE_FRAME_MAX_BYTES, validateStoreFrame } from '../storeFrames'
 import type { StoreRoot } from '../storeRoot'
 
 const TRACER = 'store_cache/wikigameinfo'
@@ -323,5 +324,259 @@ describe('the sidecar write path to a Rust-owned store', () => {
     const read = cell.get('k') as { list: number[] }
     read.list.push(4)
     expect(cell.get('k')).toEqual({ list: [1, 2] })
+  })
+})
+
+// ---- Task 2: the shared frame vectors, refusals and the flush barrier -----------------------
+
+interface VectorFrame {
+  kind?: string
+  seq?: number
+  store?: string
+  op?: string
+  key?: string
+  valueJson?: string
+}
+interface Vector {
+  name: string
+  reason?: string
+  frame: VectorFrame & { generate?: { valueJsonBytes: number } }
+}
+
+/** A `generate` stanza is expanded into a `set` whose `valueJson` is that many ASCII bytes. */
+function frameOf(vector: Vector): unknown {
+  const generate = vector.frame.generate
+  if (generate === undefined) return vector.frame
+  return {
+    kind: STORE_FRAME_KIND,
+    seq: 1,
+    store: 'store/config',
+    op: 'set',
+    key: 'k',
+    valueJson: `"${'a'.repeat(generate.valueJsonBytes - 2)}"`
+  }
+}
+
+describe('the shared storeFrameVectors contract', () => {
+  const valid = vectors.valid as Vector[]
+  const invalid = vectors.invalid as Vector[]
+
+  it('is the same cap on both sides, and cannot pass vacuously', () => {
+    expect(vectors.maxFrameBytes).toBe(STORE_FRAME_MAX_BYTES)
+    expect(valid.length).toBeGreaterThanOrEqual(16)
+    expect(invalid.length).toBeGreaterThanOrEqual(31)
+  })
+
+  it.each(valid.map((v) => [v.name, v] as const))(
+    'accepts the valid vector: %s',
+    (_name, vector) => {
+      expect(validateStoreFrame(frameOf(vector))).toEqual({ ok: true })
+    }
+  )
+
+  it.each(invalid.map((v) => [v.name, v] as const))(
+    'rejects the invalid vector with its reason: %s',
+    (_name, vector) => {
+      expect(validateStoreFrame(frameOf(vector))).toEqual({
+        ok: false,
+        reason: vector.reason
+      })
+    }
+  )
+
+  it('exercises all nine reason categories', () => {
+    expect(new Set(invalid.map((v) => v.reason)).size).toBe(9)
+  })
+
+  it('the TS frame builder produces only frames the valid vectors’ rules accept, with the vectors’ ops, keys and values', async () => {
+    for (const vector of valid) {
+      const { frame } = vector
+      const frames: StoreFrame[] = []
+      let seq = 0
+      const cell = new MirrorCell({
+        path: '/unused/by/a/startEmpty/cell.json',
+        storeKey: frame.store as string,
+        dotPaths: true,
+        readOnly: false,
+        startEmpty: true,
+        sink: { send: (f) => void frames.push(f) },
+        nextSeq: () => ++seq
+      })
+      const value =
+        frame.valueJson === undefined ? undefined : JSON.parse(frame.valueJson)
+      switch (frame.op) {
+        case 'set':
+          cell.set(frame.key as string, value)
+          break
+        case 'delete':
+          cell.delete(frame.key as string)
+          break
+        case 'clear':
+          cell.clear()
+          break
+        case 'replace':
+          cell.replace(value)
+          break
+        case 'flush': {
+          const flushed = cell.flush(1000)
+          const sent = frames[0] as StoreFrame
+          cell.applyEvent({
+            store: sent.store,
+            rev: 0,
+            op: 'flushed',
+            originSeq: sent.seq
+          })
+          await flushed
+          break
+        }
+      }
+      expect(frames).toHaveLength(1)
+      const built = frames[0] as StoreFrame
+      expect(validateStoreFrame(built)).toEqual({ ok: true })
+      expect(built).toMatchObject({
+        kind: STORE_FRAME_KIND,
+        store: frame.store,
+        op: frame.op
+      })
+      expect(built.key).toBe(frame.key)
+      if (frame.valueJson !== undefined) {
+        // Same value; the text may differ only in number spelling (1e21 -> 1e+21).
+        expect(JSON.parse(built.valueJson as string)).toEqual(value)
+      } else {
+        expect(built.valueJson).toBeUndefined()
+      }
+    }
+  })
+})
+
+describe('refusals and the flush barrier', () => {
+  let userData: string
+  beforeEach(() => {
+    userData = mkdtempSync(join(tmpdir(), 'gamelib-write-path-'))
+  })
+  afterEach(() => {
+    rmSync(userData, { recursive: true, force: true })
+    jest.restoreAllMocks()
+  })
+
+  const cellOver = (options: { fileText?: string; frames: StoreFrame[] }) => {
+    const path = join(userData, 'store_cache', 'wikigameinfo.json')
+    if (options.fileText !== undefined) {
+      mkdirSync(join(userData, 'store_cache'), { recursive: true })
+      writeFileSync(path, options.fileText)
+    }
+    let seq = 0
+    const cell = new MirrorCell({
+      path,
+      storeKey: TRACER,
+      dotPaths: true,
+      readOnly: false,
+      startEmpty: false,
+      sink: { send: (f) => void options.frames.push(f) },
+      nextSeq: () => ++seq
+    })
+    const event = (
+      frame: StoreFrame,
+      op: StoreMirrorEvent['op'],
+      rev = 0,
+      reason?: StoreMirrorEvent['reason']
+    ): StoreMirrorEvent => ({
+      store: TRACER,
+      rev,
+      op,
+      originSeq: frame.seq,
+      ...(reason ? { reason } : {})
+    })
+    return { cell, event }
+  }
+
+  it('a refused write reverts the view to base plus what is still pending, logging only the reason', () => {
+    const stderr = jest
+      .spyOn(process.stderr, 'write')
+      .mockImplementation(() => true)
+    const frames: StoreFrame[] = []
+    const { cell, event } = cellOver({ fileText: '{"x":1}', frames })
+    cell.set('x', 2)
+    cell.set('secret', 'TOKEN-VALUE')
+    cell.set('y', 3)
+    expect(cell.get('x')).toBe(2)
+
+    cell.applyEvent(event(frames[0] as StoreFrame, 'refused', 0, 'read-only'))
+    // x is back to its base value; the later writes are still folded over it.
+    expect(cell.get('x')).toBe(1)
+    expect(cell.get('secret')).toBe('TOKEN-VALUE')
+    expect(cell.get('y')).toBe(3)
+    expect(cell.pendingCount).toBe(2)
+
+    cell.applyEvent(event(frames[1] as StoreFrame, 'applied', 1))
+    cell.applyEvent(event(frames[2] as StoreFrame, 'applied', 2))
+    expect(cell.pendingCount).toBe(0)
+    expect(cell.data).toEqual({ x: 1, secret: 'TOKEN-VALUE', y: 3 })
+
+    const logged = stderr.mock.calls.map((c) => String(c[0])).join('')
+    expect(logged).toContain('refused by the shell (read-only)')
+    expect(logged).not.toContain('TOKEN-VALUE')
+  })
+
+  it('refusing the only pending write drops the view back to base', () => {
+    const frames: StoreFrame[] = []
+    jest.spyOn(process.stderr, 'write').mockImplementation(() => true)
+    const { cell, event } = cellOver({ fileText: '{"x":1}', frames })
+    cell.set('x', 2)
+    cell.delete('x')
+    expect(cell.has('x')).toBe(false)
+    cell.applyEvent(event(frames[0] as StoreFrame, 'refused', 0, 'io'))
+    cell.applyEvent(event(frames[1] as StoreFrame, 'refused', 0, 'io'))
+    expect(cell.get('x')).toBe(1)
+    expect(cell.pendingCount).toBe(0)
+  })
+
+  it('an event for a seq that is not pending changes nothing', () => {
+    const frames: StoreFrame[] = []
+    const { cell } = cellOver({ frames })
+    cell.set('a', 1)
+    cell.applyEvent({ store: TRACER, rev: 9, op: 'applied', originSeq: 999 })
+    expect(cell.pendingCount).toBe(1)
+    expect(cell.baseRev).toBe(0)
+  })
+
+  it('flush resolves only on the flushed event for its own frame, after the earlier frames', async () => {
+    const frames: StoreFrame[] = []
+    const { cell, event } = cellOver({ frames })
+    cell.set('a', 1)
+    cell.set('b', 2)
+    cell.set('c', 3)
+    let resolved = false
+    const flushed = cell.flush(5000).then(() => {
+      resolved = true
+    })
+    expect(frames.map((f) => f.op)).toEqual(['set', 'set', 'set', 'flush'])
+    for (const f of frames.slice(0, 3)) cell.applyEvent(event(f, 'applied', 1))
+    await Promise.resolve()
+    expect(resolved).toBe(false)
+    cell.applyEvent(event(frames[3] as StoreFrame, 'flushed'))
+    await flushed
+    expect(resolved).toBe(true)
+    expect(cell.pendingCount).toBe(0)
+  })
+
+  it('flush rejects when the shell refuses it, and when the deadline passes', async () => {
+    const frames: StoreFrame[] = []
+    const { cell, event } = cellOver({ frames })
+    const refused = cell.flush(5000)
+    cell.applyEvent(event(frames[0] as StoreFrame, 'refused', 0, 'not-owned'))
+    await expect(refused).rejects.toThrow(/refused: not-owned/)
+    await expect(cell.flush(15)).rejects.toThrow(/timed out/)
+  })
+
+  it('flush’s deadline timer is unref()ed (the sidecar exit contract)', () => {
+    const timeouts = jest.spyOn(global, 'setTimeout')
+    const frames: StoreFrame[] = []
+    const { cell, event } = cellOver({ frames })
+    const pending = cell.flush(60_000)
+    const handle = timeouts.mock.results[0]?.value as NodeJS.Timeout
+    expect(handle.hasRef()).toBe(false)
+    cell.applyEvent(event(frames[0] as StoreFrame, 'flushed'))
+    return pending
   })
 })
