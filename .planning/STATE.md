@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 85
 current_phase_name: Store host, config and versioned migrations
 status: executing
-stopped_at: Completed 85-03-PLAN.md
-last_updated: "2026-11-21T16:51:08.939Z"
+stopped_at: Completed 85-04-PLAN.md
+last_updated: "2026-11-21T16:59:07.832Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 85 execution started
-state_head: 4658ea8473b29dbd471eab75a71d6d84824f8900
+state_head: b12eb190774ba4f7ab83a0bb1eee882be8ae7441
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 85 (Store host, config and versioned migrations) — EXECUTING
-Plan: 3 of 25
+Plan: 4 of 25
 Status: Ready to execute
 Last activity: 2026-11-22 — Phase 85 execution started
 Progress: [██████████] 100%
@@ -362,6 +362,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 100 P10 | 55 min | 2 tasks | 2 files |
 | Phase 85 P01 | 35 min | 3 tasks | 137 files |
 | Phase 85 P03 | 35 min | 3 tasks | 4 files |
+| Phase 85 P04 | 9 min | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -672,6 +673,10 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 85]: 85-01: conf stores are tab-indented JSON with the schemaVersion envelope and no trailing newline; settings documents are 2-space with a top-level version string; a migration rewrite is tab-indented for both, so a freshly migrated settings document is tab-indented until the next writeSettingsFile — Read from store_backend.ts, settingsFiles.ts and engine.ts and confirmed by the generated golden
 - [Phase 85]: 85-01: corrupt-file cases are recorded oracle tsOnly with a D-18 divergence note; Rust keeps the bytes, copies aside and opens read-only or empty — TS resets on clearInvalidConfig; Rust deliberately differs
 - [Phase 85]: 85-03: the read-only notice shows no area for reason newer, so the live gate reads the area from the log line; the signed-build gate has no terminal transcript and demands every line of gamelib.log
+- [Phase 85]: [85-04] Mirror protocol frozen from the S1 model: persist before emit, rev under one lock, one FIFO dispatcher, idempotent state-assigning ops, one MirrorCell per file path, originSeq acks, a nack when persist fails, mirror rev rule, renderer push rev filter (85-SPIKES.md S1)
+- [Phase 85]: [85-04] A failed persist sends the originating sidecar a nack{originSeq}; without it the op is stranded in pending and the mirror shows a value Rust never stored
+- [Phase 85]: [85-04] Boot sweep caps: BOOT_SWEEP_MAX_FILES 10000, BOOT_SWEEP_MAX_MS 2000 (measured 106 files in a 6.77 ms median); queue warning STORE_QUEUE_HIGH_WATER 256 frames (worst burst high-water 44), counted log line only, queue stays unbounded
+- [Phase 85]: [85-04] D-21 confirmed by measurement: sync_all about 4 ms per write at 1 KB and 600 KB; sync_all for user-state, settings and account stores, none for caches
 
 ### Pending Todos
 
@@ -932,8 +937,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-21T16:51:08.497Z
-Stopped at: Completed 85-03-PLAN.md
+Last session: 2026-11-21T16:59:07.514Z
+Stopped at: Completed 85-04-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

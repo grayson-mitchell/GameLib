@@ -465,13 +465,13 @@ Plans:
   4. The legendary store migration is ported only if a supported upgrade path still reaches it (reachability recorded), otherwise it is deleted
   5. The TS write-through mirror's deletion point is named and executed for every family flipped in this phase, and `storeVersioning`, `storeMigrations` and `migration/*` TypeScript are deleted
 
-**Plans:** 2/25 plans executed in 20 waves; planned 2026-11-21
+**Plans:** 3/25 plans executed in 20 waves; planned 2026-11-21
 
 Plans:
 **Wave 1**
 - [x] 85-01-PLAN.md — Before any store code: the TS store oracle golden (conf writes, engine outcomes, migrations, settings documents) and dot-path, number and key-order vectors
 - [x] 85-03-PLAN.md — Shared renderer policy and `kind:"store"` frame vectors; the live macOS gate contract 85-HUMAN-UAT.md (run by 85-20)
-- [ ] 85-04-PLAN.md — Spikes: S1 mirror protocol model, S3-S5 frame/boot/sync_all measurements and the constants they set
+- [x] 85-04-PLAN.md — Spikes: S1 mirror protocol model, S3-S5 frame/boot/sync_all measurements and the constants they set
 - [ ] 85-05-PLAN.md — D-16 checkpoint: the signed v0.10 baseline and its recorded signing identity
 
 **Wave 2** *(blocked on Wave 1 completion)*
