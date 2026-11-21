@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="default">
+<head>
+<meta charset="utf-8">
+<title>Sketch 009 · Game settings dialog</title>
+<link rel="stylesheet" href="../themes/default.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700&family=Cabin:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body { background: #0b0d0e; font-family: var(--font-sans); color: var(--color-text); padding-top: 52px; padding-bottom: 90px; }
+html[data-theme="default"] { --on-primary: #08191b; }
+html[data-theme="gruvbox"] { --on-primary: #fbf1c7; }
+html[data-theme="dracula"] { --on-primary: #21222c; }
+
+/* ─── sketch chrome (theme-independent) ─────────────────────── */
+#variant-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #16181a; border-bottom: 1px solid #2a2e31; padding: 8px 16px; display: flex; gap: 8px; align-items: center; font-family: system-ui, sans-serif; flex-wrap: wrap; }
+#variant-nav .brand { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #6b7376; margin-right: 12px; font-weight: 600; }
+.variant-tab { background: transparent; border: 1px solid #2a2e31; color: #b9c0c2; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: inherit; transition: all .15s ease; }
+.variant-tab:hover { border-color: #4a5154; color: #e6ebec; }
+.variant-tab.active { background: #1de8f5; border-color: #1de8f5; color: #08191b; font-weight: 600; }
+.variant-tab.ref { border-style: dashed; }
+.caption { max-width: 1240px; margin: 20px auto 14px; padding: 0 24px; font-family: system-ui, sans-serif; }
+.caption h2 { margin: 0 0 6px; font-size: 15px; color: #e6ebec; font-weight: 600; }
+.caption p { margin: 0; font-size: 13px; line-height: 1.55; color: #8b9295; max-width: 100ch; }
+.tradeoff { display: flex; gap: 18px; font-size: 12px; margin-top: 10px; flex-wrap: wrap; }
+.tradeoff span { color: #8b9295; }
+.good b { color: #58c06d; } .bad b { color: #d6704e; }
+#sketch-tools { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 9999; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; background: #16181a; border: 1px solid #2a2e31; border-radius: 10px; padding: 6px 8px; font-family: system-ui, sans-serif; font-size: 12px; color: #b9c0c2; box-shadow: 0 8px 24px rgba(0,0,0,.5); max-width: calc(100vw - 32px); }
+#sketch-tools button, #sketch-tools select { background: #1f2326; color: #d6dcde; border: 1px solid #2f3437; border-radius: 6px; padding: 5px 9px; font: inherit; cursor: pointer; }
+#sketch-tools button:hover { border-color: #4a5154; }
+#sketch-tools button.on { background: #1de8f5; color: #08191b; border-color: #1de8f5; }
+#sketch-tools label { display: flex; gap: 5px; align-items: center; padding: 0 4px; cursor: pointer; }
+.sep2 { width: 1px; height: 20px; background: #2f3437; margin: 0 2px; }
+
+/* review-item badges (toolbar: "Review #s") */
+.fix { display: none; font-family: system-ui, sans-serif; font-size: 10px; font-weight: 700; background: #f5c542; color: #1a1400; border-radius: 9px; padding: 1px 6px; margin-left: 6px; vertical-align: middle; letter-spacing: 0; text-transform: none; }
+.show-fixes .fix { display: inline-block; }
+
+/* ─── fake app window ───────────────────────────────────────── */
+.window { width: min(var(--win-w, 1240px), calc(100vw - 32px)); height: var(--win-h, 760px); margin: 0 auto; border-radius: 10px; overflow: hidden; border: 1px solid #2a2e31; box-shadow: var(--shadow-lg); background: var(--color-bg); position: relative; display: flex; flex-direction: column; transition: width .22s, height .22s; }
+.titlebar { height: var(--titlebar-height); flex: none; display: flex; align-items: center; gap: 8px; padding: 0 16px; background: var(--navbar-background); }
+.tl { width: 12px; height: 12px; border-radius: 50%; } .tl.r { background: #ff5f57; } .tl.y { background: #febc2e; } .tl.g { background: #28c840; }
+.apptabs { display: flex; gap: 4px; margin-left: 18px; align-self: flex-end; }
+.apptabs span { font-size: var(--text-sm); padding: 7px 16px; border-radius: 8px 8px 0 0; color: var(--color-text-muted); }
+.apptabs span.on { background: var(--color-bg); color: var(--color-text); }
+.page { flex: 1; position: relative; padding: 28px; display: grid; grid-template-columns: 3fr 2fr; gap: 24px; }
+.page .art { border-radius: 10px; background: linear-gradient(135deg, #3b2a1a, #6a4a24 50%, #1e2a1c); min-height: 260px; }
+.page .meta h1 { margin: 0 0 8px; font-size: var(--text-2xl); }
+.page .meta p { color: var(--color-text-muted); font-size: var(--text-sm); }
+.page .reopen { margin-top: 12px; }
+.scrim { position: absolute; inset: var(--titlebar-height) 0 0 0; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; transition: opacity .25s; }
+.scrim.closed { opacity: 0; pointer-events: none; }
+.scrim.closed .dlg { transform: translateY(40px); }
+
+/* ─── dialog primitives (mirrors MUI Dialog + StyledPaper) ─── */
+.dlg { position: relative; width: min(900px, calc(100% - 64px)); max-height: 80%; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 10px; box-shadow: var(--shadow-lg); display: flex; flex-direction: column; transition: transform .3s cubic-bezier(.4,0,.2,1), height .2s; overflow: hidden; }
+.dlg.h80 { height: 80%; }
+.x { width: 36px; height: 36px; border-radius: 50%; border: 0; background: transparent; color: var(--color-text); display: grid; place-items: center; cursor: pointer; transition: background .15s; flex: none; }
+.x:hover { background: color-mix(in srgb, var(--color-text) 12%, transparent); }
+.x svg { width: 20px; height: 20px; fill: currentColor; }
+.x.abs { position: absolute; top: 8px; right: 8px; z-index: 3; }
+.body { flex: 1; min-height: 0; overflow: auto; padding: 0 24px 20px; }
+h2.dtitle { margin: 0; font-size: var(--text-xl); font-weight: 700; line-height: 1.25; }
+
+/* tabs (MUI Tabs look) */
+.mtabs { display: flex; gap: 2px; border-bottom: 1px solid var(--color-border); margin-bottom: 18px; position: sticky; top: 0; background: var(--color-surface); z-index: 2; }
+.mtab { background: none; border: 0; color: var(--color-text); font: 500 var(--text-sm) var(--font-sans); text-transform: uppercase; letter-spacing: .04em; padding: 12px 16px; cursor: pointer; border-bottom: 2px solid transparent; transition: color .15s, border-color .15s; }
+.mtab:hover { color: var(--accent); }
+.mtab.on { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* fields */
+.field { margin: 0 0 18px; }
+.flabel { display: flex; align-items: center; gap: 6px; font-size: var(--text-sm); font-weight: 500; margin-bottom: 6px; color: var(--color-text); position: relative; }
+.ctl { width: 100%; background: var(--color-bg); color: var(--color-text); border: 1px solid var(--color-border-strong); border-radius: 6px; padding: 9px 12px; font: 400 var(--text-sm) var(--font-sans); transition: border-color .15s; }
+.ctl:hover, .ctl:focus { border-color: var(--accent); outline: none; }
+.pathrow { display: flex; gap: 8px; } .pathrow .ctl { flex: 1; }
+.btn { background: transparent; color: var(--color-text); border: 1px solid var(--color-border-strong); border-radius: 6px; padding: 8px 12px; font: 500 var(--text-sm) var(--font-sans); cursor: pointer; transition: all .15s; white-space: nowrap; }
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.sub { font-size: var(--text-xs); color: var(--color-text-muted); margin-top: 4px; line-height: 1.45; }
+.sub.danger { color: var(--color-danger); }
+.info { background: none; border: 0; padding: 0; width: 16px; height: 16px; color: var(--accent); cursor: pointer; display: inline-grid; place-items: center; }
+.info svg { width: 14px; height: 14px; fill: currentColor; }
+.pop { position: absolute; top: 100%; left: 0; z-index: 20; width: 320px; background: var(--color-surface-raised); border: 1px solid var(--color-border-strong); border-radius: 8px; padding: 10px 12px; font-size: var(--text-xs); font-weight: 400; line-height: 1.5; color: var(--color-text); box-shadow: var(--shadow-md); display: none; }
+.pop.open { display: block; }
+
+.tog { display: flex; align-items: flex-start; gap: 12px; margin: 0 0 16px; }
+.sw { flex: none; width: 36px; height: 20px; border-radius: 10px; background: var(--color-border-strong); position: relative; cursor: pointer; border: 0; transition: background .15s; margin-top: 1px; }
+.sw::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .15s; }
+.sw.on { background: var(--accent); } .sw.on::after { transform: translateX(16px); }
+.sw:disabled { opacity: .4; cursor: not-allowed; }
+.tog .tt { font-size: var(--text-sm); display: flex; align-items: center; gap: 6px; position: relative; }
+.tog.dis .tt { color: var(--color-text-dim); }
+
+/* env table */
+.tbl { border: 1px solid var(--color-border-strong); border-radius: 6px; overflow: hidden; font-size: var(--text-sm); }
+.tbl .r { display: grid; grid-template-columns: 1fr 18px 1fr 36px; align-items: center; border-top: 1px solid var(--color-border); }
+.tbl .r:first-child { border-top: 0; }
+.tbl .r.h { background: var(--color-surface-raised); font-size: var(--text-xs); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: .05em; }
+.tbl .r > span, .tbl .r > input { padding: 8px 10px; }
+.tbl .r > input { background: transparent; border: 0; color: var(--color-text); font: inherit; font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+.tbl .r > input:focus { outline: 1px solid var(--accent); }
+.tbl .eq { text-align: center; color: var(--color-text-dim); }
+.tbl .del, .tbl .add { background: none; border: 0; color: var(--color-text-muted); cursor: pointer; font-size: 16px; }
+.tbl .del:hover { color: var(--color-danger); } .tbl .add:hover { color: var(--accent); }
+
+/* hints: TODAY = danger fill; PROPOSED = neutral note / amber warning */
+.hint-danger { background: var(--color-danger); color: var(--brand-text-01, #fff); padding: 16px; border-radius: 4px; display: flex; gap: 16px; font-size: var(--text-sm); margin-bottom: 16px; }
+html[data-theme="gruvbox"] .hint-danger, html[data-theme="dracula"] .hint-danger { color: #fff; }
+.note { display: flex; gap: 10px; align-items: flex-start; font-size: var(--text-sm); color: var(--color-text-muted); padding: 10px 12px; border-radius: 6px; background: color-mix(in srgb, var(--accent) 8%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent); margin-bottom: 18px; line-height: 1.45; }
+.note svg { flex: none; width: 16px; height: 16px; fill: var(--accent); margin-top: 1px; }
+.note.inline { background: none; border: 0; padding: 0 0 4px; }
+.warn { display: flex; gap: 10px; align-items: flex-start; font-size: var(--text-sm); line-height: 1.45; padding: 10px 12px; border-radius: 6px; margin: -6px 0 16px 48px; background: color-mix(in srgb, var(--color-warning) 12%, transparent); border: 1px solid color-mix(in srgb, var(--color-warning) 40%, transparent); }
+.warn svg { flex: none; width: 16px; height: 16px; fill: var(--color-warning); margin-top: 1px; }
+.warn-today { display: flex; gap: 10px; font-size: var(--text-sm); padding: 10px 0; margin: -6px 0 16px; line-height: 1.45; }
+.warn-today svg { flex: none; width: 16px; height: 16px; fill: yellow; }
+
+details.tw { margin: 16px 0; }
+details.tw > summary { cursor: pointer; font-weight: 700; font-size: var(--text-xl); padding: 8px 0; }
+details.tw.small > summary { font-weight: 600; font-size: var(--text-base); }
+details.tw[open] > summary { margin-bottom: 8px; }
+
+/* section headings (A/C) and cards (B) */
+.sec { margin: 0 0 22px; }
+.sec > h3 { margin: 0 0 12px; font-size: var(--text-xs); font-weight: 600; text-transform: uppercase; letter-spacing: .1em; color: var(--color-text-muted); display: flex; align-items: center; gap: 8px; position: relative; }
+.sec > h3::after { content: ''; flex: 1; height: 1px; background: var(--color-border); }
+.card { background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 8px; padding: 14px 16px 2px; margin: 0 0 14px; }
+.card > h3 { margin: 0 0 12px; font-size: var(--text-sm); font-weight: 600; display: flex; align-items: center; gap: 6px; position: relative; }
+
+.footer-today { font-size: var(--text-sm); color: var(--color-text-muted); margin-top: 20px; display: flex; gap: 16px; }
+.dfoot { flex: none; display: flex; align-items: center; gap: 14px; padding: 10px 24px; border-top: 1px solid var(--color-border); font-size: var(--text-xs); color: var(--color-text-muted); }
+.dfoot .saved { display: flex; align-items: center; gap: 6px; transition: color .2s; }
+.dfoot .saved.flash { color: var(--color-success); }
+.dfoot .id { margin-left: auto; font-family: ui-monospace, Menlo, monospace; user-select: all; }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--color-success); }
+
+/* A header */
+.hA { display: grid; grid-template-columns: 1fr 36px; gap: 12px; align-items: center; padding: 16px 12px 8px 24px; }
+.hA h2 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hA .kind { color: var(--color-text-muted); font-weight: 400; }
+/* B header */
+.hB { display: flex; gap: 14px; align-items: center; padding: 16px 12px 14px 20px; border-bottom: 1px solid var(--color-border); }
+.hB .thumb { width: 44px; height: 44px; border-radius: 8px; background: linear-gradient(135deg, #6a4a24, #1e2a1c); flex: none; }
+.hB .tt { flex: 1; min-width: 0; }
+.hB h2 { font-size: var(--text-lg); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.hB .subline { font-size: var(--text-xs); color: var(--color-text-muted); margin-top: 3px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.hB .subline .saved { display: flex; gap: 5px; align-items: center; transition: color .2s; }
+.hB .subline .saved.flash { color: var(--color-success); }
+.hB .subline code { font-family: ui-monospace, Menlo, monospace; user-select: all; }
+.bTabs { padding: 0 20px; }
+.bTabs .mtabs { margin-bottom: 0; border-bottom: 0; }
+.dlg.vB .body { padding-top: 16px; background: color-mix(in srgb, var(--color-bg) 35%, var(--color-surface)); }
+/* C layout */
+.dlg.vC { flex-direction: row; }
+.cSide { width: 210px; flex: none; background: var(--navbar-background); border-right: 1px solid var(--color-border); display: flex; flex-direction: column; padding: 16px 10px; }
+.cSide h2 { font-size: var(--text-base); padding: 0 8px 4px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.cSide .sk { font-size: var(--text-xs); color: var(--color-text-muted); padding: 0 8px 14px; }
+.cnav { display: flex; flex-direction: column; gap: 2px; }
+.cnav button { text-align: left; background: none; border: 0; color: var(--navbar-accent, var(--color-text)); font: 400 var(--text-sm) var(--font-sans); padding: 8px 10px; border-radius: 6px; cursor: pointer; transition: background .15s; }
+.cnav button:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
+.cnav button.on { background: var(--navbar-active-background); color: var(--navbar-active, var(--accent)); font-weight: 500; }
+.cSide .cfoot { margin-top: auto; font-size: var(--text-xs); color: var(--color-text-muted); padding: 8px; line-height: 1.6; }
+.cSide .cfoot code { font-family: ui-monospace, Menlo, monospace; user-select: all; }
+.cMain { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.cHead { display: flex; align-items: center; padding: 14px 12px 6px 24px; }
+.cHead h2 { flex: 1; font-size: var(--text-lg); }
+
+.toast { position: absolute; left: 50%; bottom: 18px; transform: translate(-50%, 20px); opacity: 0; background: var(--color-surface-raised); border: 1px solid var(--color-border-strong); padding: 8px 14px; border-radius: 8px; font-size: var(--text-sm); transition: all .2s; pointer-events: none; z-index: 50; }
+.toast.on { opacity: 1; transform: translate(-50%, 0); }
+</style>
+</head>
+<body>
+
+<div id="variant-nav">
+  <span class="brand">Sketch 009 · Game settings dialog</span>
+  <button class="variant-tab ref" data-v="t">Today (reference)</button>
+  <button class="variant-tab" data-v="a">A: Targeted fixes</button>
+  <button class="variant-tab" data-v="b">B: Header card + grouped cards ★ Selected</button>
+  <button class="variant-tab" data-v="c">C: Side-nav dialog</button>
+</div>
+
+<div class="caption" id="caption"></div>
+
+<div class="window" id="win">
+  <div class="titlebar">
+    <span class="tl r"></span><span class="tl y"></span><span class="tl g"></span>
+    <div class="apptabs"><span class="on">Games</span><span>Stores</span><span>Settings</span></div>
+  </div>
+  <div class="page">
+    <div class="art"></div>
+    <div class="meta"><h1 id="pageTitle"></h1><p>Steam · Windows · bridged (CrossOver)</p><button class="btn reopen" id="reopen">Open settings</button></div>
+  </div>
+  <div class="scrim" id="scrim"><div id="dlgHost"></div></div>
+  <div class="toast" id="toast"></div>
+</div>
+
+<div id="sketch-tools">
+  <select id="theme-switcher" title="Theme">
+    <option value="default">midnightMirage</option>
+    <option value="gruvbox">gruvbox_dark</option>
+    <option value="dracula">dracula</option>
+  </select>
+  <div class="sep2"></div>
+  <select id="titlelen" title="Game title"><option value="short">Short title</option><option value="long">Long title</option></select>
+  <select id="lws" title="Launch without Steam verdict">
+    <option value="api">LWS: Steam API game</option>
+    <option value="clean">LWS: no Steam API</option>
+    <option value="drm">LWS: Steam DRM (disabled)</option>
+  </select>
+  <div class="sep2"></div>
+  <button data-w="1240" class="on">1240</button>
+  <button data-w="980">980</button>
+  <button data-w="760">760</button>
+  <button data-h="760" class="on">Tall</button>
+  <button data-h="560">Short</button>
+  <div class="sep2"></div>
+  <label><input type="checkbox" id="fixes" checked> Review #s</label>
+</div>
+
+<script>
+const I = {
+  x: '<path d="M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/>',
+  info: '<path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 15h-2v-6h2zm0-8h-2V7h2z"/>',
+  warn: '<path d="M12 2 1 21h22zm1 15h-2v-2h2zm0-4h-2V9h2z"/>',
+};
+const svg = (k) => `<svg viewBox="0 0 24 24">${I[k]}</svg>`;
+const TITLES = { short: 'Low Magic Age', long: 'The Elder Scrolls V: Skyrim Special Edition — Anniversary Upgrade' };
+
+const S = {
+  v: 't', tab: null, titlelen: 'short', lwsVerdict: 'api', open: true,
+  toggles: { offline: false, fps: false, lws: false, verbose: true, ignoreUpd: false },
+  engine: 'automatic', overlay: 'automatic', lang: '',
+  env: [['WINEDEBUG', '+loaddll'], ['DXVK_HUD', 'fps']],
+  wrappers: [],
+};
+const fix = (n) => `<span class="fix">#${n}</span>`;
+
+// ── primitives ─────────────────────────────────────────────
+let popId = 0;
+function help(text) { const id = 'p' + (++popId); return `<button class="info" data-pop="${id}" aria-label="Help">${svg('info')}</button><div class="pop" id="${id}">${text}</div>`; }
+function toggle(key, title, opts = {}) {
+  const on = S.toggles[key] && !opts.disabled;
+  return `<div class="tog ${opts.disabled ? 'dis' : ''}"><button class="sw ${on ? 'on' : ''}" data-tog="${key}" ${opts.disabled ? 'disabled' : ''} aria-pressed="${on}"></button>
+    <div><div class="tt">${title}${opts.help ? help(opts.help) : ''}${opts.badge || ''}</div>${opts.desc ? `<div class="sub">${opts.desc}</div>` : ''}</div></div>`;
+}
+function select(key, label, options, opts = {}) {
+  return `<div class="field"><div class="flabel">${label}${opts.help ? help(opts.help) : ''}${opts.badge || ''}</div>
+    <select class="ctl" data-sel="${key}">${options.map(([v, l, dis]) => `<option value="${v}" ${S[key] === v ? 'selected' : ''} ${dis ? 'disabled' : ''}>${l}</option>`).join('')}</select>
+    ${opts.after || ''}</div>`;
+}
+function text(label, ph, opts = {}) { return `<div class="field"><div class="flabel">${label}${opts.help ? help(opts.help) : ''}${opts.badge || ''}</div><input class="ctl" placeholder="${ph}"></div>`; }
+function path(label, ph, opts = {}) { return `<div class="field"><div class="flabel">${label}${opts.help ? help(opts.help) : ''}${opts.badge || ''}</div><div class="pathrow"><input class="ctl" placeholder="${ph}"><button class="btn" data-act="browse">Browse…</button></div></div>`; }
+function table(key, label, head, opts = {}) {
+  const rows = S[key].map(([k, v], i) => `<div class="r"><input value="${k}" data-cell="${key}:${i}:0"><span class="eq">${opts.conn || ''}</span><input value="${v}" data-cell="${key}:${i}:1"><button class="del" data-del="${key}:${i}" title="Remove">×</button></div>`).join('');
+  return `<div class="field">${label ? `<div class="flabel">${label}${opts.help ? help(opts.help) : ''}${opts.badge || ''}</div>` : ''}
+    <div class="tbl"><div class="r h"><span>${head[0]}</span><span></span><span>${head[1]}</span><span></span></div>${rows}
+    <div class="r"><input placeholder="${opts.ph?.[0] || 'NAME'}" data-new="${key}:0"><span class="eq">${opts.conn || ''}</span><input placeholder="${opts.ph?.[1] || 'value'}" data-new="${key}:1"><button class="add" data-add="${key}" title="Add">+</button></div></div></div>`;
+}
+
+const ENGINE_OPTS = [['automatic', 'Automatic (CrossOver, then built-in)'], ['crossover', 'CrossOver'], ['pinned:staging-9.21', 'Wine-Staging 9.21 + DXVK'], ['pinned:staging-9.20', 'Wine-Staging 9.20 (previous build)']];
+const OVERLAY_OPTS = [['automatic', 'Automatic (on, unless a known fix turns it off)'], ['on', 'On'], ['off', 'Off']];
+const ENGINE_HELP = 'Choose the Wine engine for this game. Automatic uses CrossOver when it works and the built-in engine otherwise.';
+const OVERLAY_HELP = "Shift+Tab opens Mac Steam's overlay in this game. Turn it off if the game crashes or draws wrongly with it.";
+const engineWarn = () => S.engine.startsWith('pinned:') ? `<div class="sub danger">Unsupported — known fixes and compatibility ratings don't apply</div>` : '';
+const LWS_LOSSES = 'no Steam Cloud sync, no playtime tracking, no achievements and no Steam overlay';
+
+// ── tab content, per variant ───────────────────────────────
+function wineTab(v) {
+  if (v === 't') return `<div class="hint-danger">${svg('info').replace('<svg', '<svg style="width:18px;height:18px;fill:currentColor;flex:none"')}<span>GameLib chooses the Wine engine and bottle for this game.${fix(2)}</span></div>
+    <details class="tw small"><summary>Engine (advanced)${fix(3)}</summary>${select('engine', 'Engine', ENGINE_OPTS, { help: ENGINE_HELP, after: engineWarn() })}</details>`;
+  const note = `<div class="note ${v === 'c' ? 'inline' : ''}">${svg('info')}<span>GameLib picks the Wine engine and bottle for this game. Change it only if the game won't run.${fix(2)}</span></div>`;
+  const eng = select('engine', 'Engine', ENGINE_OPTS, { help: ENGINE_HELP, after: engineWarn(), badge: fix(3) });
+  if (v === 'b') return `<div class="card"><h3>Wine engine</h3>${note}${eng}</div>`;
+  return note + eng;
+}
+function winetricksTab() {
+  return `<div class="field"><div class="flabel">Installed components</div><div class="sub" style="font-size:var(--text-sm)">vcrun2019 · d3dcompiler_47 · corefonts</div></div>
+    <button class="btn" data-act="toast:Winetricks would open">Install a component…</button>`;
+}
+function lwsBlock(v) {
+  const verdict = S.lwsVerdict;
+  if (verdict === 'drm') return toggle('lws', 'Launch without Steam', { disabled: true, help: 'Not available: this game uses Steam DRM, which needs the Steam app.' });
+  const warnOn = S.toggles.lws && verdict === 'api';
+  if (v === 't') {
+    return toggle('lws', 'Launch without Steam', { desc: `This starts the game directly, without the Steam client. For this session there is ${LWS_LOSSES}.`, badge: fix(5) }) +
+      (warnOn ? `<div class="warn-today">${svg('warn')}<span>This game uses the Steam API, or GameLib could not check. Without Steam it may quit, run without Steam features, or reopen Steam. You lose Steam Cloud sync, playtime, achievements and the overlay.</span></div>` : '');
+  }
+  return toggle('lws', 'Launch without Steam', { desc: `Starts the game directly: ${LWS_LOSSES}.`, badge: fix(5) }) +
+    (warnOn ? `<div class="warn">${svg('warn')}<span>This game uses the Steam API, or GameLib couldn't check. Without Steam it may quit, lose Steam features, or reopen Steam.</span></div>` : '');
+}
+function runTab(v) {
+  const general = `${select('lang', v === 't' ? 'Choose the game language' : 'Game language', [['', 'System default'], ['en', 'English'], ['de', 'Deutsch'], ['fr', 'Français']])}
+    ${text(v === 't' ? 'Launcher Arguments' : 'Launch arguments', '-windowed -nointro', { help: 'Passed to the game executable after its own arguments.' })}
+    ${toggle('offline', v === 't' ? 'Run Game Offline' : 'Run offline')}
+    ${toggle('fps', v === 't' ? 'Show FPS (DX9, 10 and 11)' : 'Show FPS', v === 't' ? {} : { help: 'Draws a frame counter for DirectX 9, 10 and 11 games.' })}`;
+  const overlay = v === 't'
+    ? `<details class="tw small"><summary>Steam overlay (advanced)${fix(3)}</summary>${select('overlay', 'Steam overlay', OVERLAY_OPTS, { help: OVERLAY_HELP })}</details>`
+    : select('overlay', 'Steam overlay', OVERLAY_OPTS, { help: OVERLAY_HELP, badge: fix(3) });
+  if (v === 't') return general + lwsBlock(v) + overlay;
+  if (v === 'b') return `<div class="card"><h3>Launch</h3>${general}</div><div class="card"><h3>Steam</h3>${lwsBlock(v)}${overlay}</div>`;
+  return `<div class="sec"><h3>Launch</h3>${general}</div><div class="sec"><h3>Steam</h3>${lwsBlock(v)}${overlay}</div>`;
+}
+function advancedTab(v) {
+  if (v === 't') return `${path('Select an alternative EXE to run', 'Select EXE...')}
+    <div class="field"><div class="flabel" style="font-weight:400">Scripts:${fix(7)}</div></div>
+    ${path('Select a script to run before the game is launched', 'Select script ...')}
+    ${path('Select a script to run after the game exits', 'Select script ...')}
+    ${table('wrappers', 'Wrapper command:', ['Wrapper', 'Arguments'], { help: 'Wrapper commands run before the game, in order.', ph: ['mangohud', '--dlsym'] })}
+    ${table('env', 'Environment Variables', ['Variable Name', 'Value'], { conn: '=', help: 'Set environment variables to append to the command.<br>Do NOT include the "=" sign, e.g: for a setting like "MY_FLAG=123", set MY_FLAG in NAME and 123 in VALUE.' })}
+    ${toggle('verbose', 'Enable verbose logs')}${toggle('ignoreUpd', 'Ignore game updates', { badge: fix(6) })}`;
+  const target = `${path('Alternative executable', 'Game default', { help: 'Run a different .exe from the game folder instead of the one Steam starts.' })}`;
+  const scripts = `${path('Before launch', 'None', { help: 'A script GameLib runs before the game starts. The game waits for it to finish.' })}${path('After exit', 'None', { help: 'A script GameLib runs after the game closes.' })}`;
+  const env = `${table('wrappers', 'Wrapper commands', ['Command', 'Arguments'], { help: 'Commands the game is launched through, in order.', ph: ['mangohud', '--dlsym'] })}
+    ${table('env', 'Environment variables', ['Name', 'Value'], { conn: '=', help: 'Added to the game\'s environment. Enter the name and value separately, e.g. MY_FLAG and 123.' })}`;
+  const diag = `${toggle('verbose', 'Verbose logs', { help: 'Writes extra Wine and GameLib detail to this game\'s log.' })}${toggle('ignoreUpd', 'Ignore game updates')}`;
+  const secs = [['Launch target', target, fix(7)], ['Scripts', scripts, ''], ['Wrappers & environment', env, ''], ['Diagnostics & updates', diag, fix(6)]];
+  if (v === 'b') return secs.map(([h, c, b]) => `<div class="card"><h3>${h}${b}</h3>${c}</div>`).join('');
+  return secs.map(([h, c, b]) => `<div class="sec"><h3>${h}${b}</h3>${c}</div>`).join('');
+}
+
+const TABS = {
+  t: [['wine', 'Wine'], ['winetricks', 'Winetricks'], ['run', 'Run'], ['advanced', 'Advanced']],
+  a: [['wine', 'Wine'], ['winetricks', 'Winetricks'], ['run', 'Run'], ['advanced', 'Advanced']],
+  b: [['run', 'Run'], ['wine', 'Wine'], ['winetricks', 'Winetricks'], ['advanced', 'Advanced']],
+  c: [['run', 'Run'], ['wine', 'Wine'], ['winetricks', 'Winetricks'], ['advanced', 'Advanced']],
+};
+const START = { t: 'wine', a: 'run', b: 'run', c: 'run' };
+function tabContent(v) {
+  return ({ wine: wineTab, winetricks: winetricksTab, run: runTab, advanced: advancedTab })[S.tab](v);
+}
+function mtabs(v) { return `<div class="mtabs">${TABS[v].map(([k, l]) => `<button class="mtab ${S.tab === k ? 'on' : ''}" data-tab="${k}">${l}${k === START[v] && v !== 't' ? fix(4) : ''}</button>`).join('')}</div>`; }
+const xbtn = (cls = '') => `<button class="x ${cls}" data-act="close" aria-label="Close">${svg('x')}</button>`;
+
+// ── dialog shells ──────────────────────────────────────────
+function render() {
+  popId = 0;
+  const v = S.v, title = TITLES[S.titlelen];
+  document.getElementById('pageTitle').textContent = title;
+  let html;
+  if (v === 't') {
+    html = `<div class="dlg h80">${xbtn('abs')}
+      <div class="body" style="padding-top:16px"><h2 class="dtitle" style="padding:0 0 12px">${title} (Settings)${fix(1)}${fix(9)}</h2>${mtabs(v)}${tabContent(v)}
+      <div class="footer-today"><span>Settings are saved automatically</span><span>AppName: &nbsp;<span style="user-select:all">576770</span></span>${fix(10)}</div></div></div>`;
+  } else if (v === 'a') {
+    html = `<div class="dlg">
+      <div class="hA"><h2 class="dtitle" title="${title}">${title} <span class="kind">— Settings</span>${fix(1)}${fix(9)}</h2>${xbtn()}</div>
+      <div class="body">${mtabs(v)}${tabContent(v)}</div>
+      <div class="dfoot"><span class="saved" id="saved"><span class="dot"></span>Changes save automatically</span>${fix(10)}<span class="id">Steam App ID 576770</span></div></div>`;
+  } else if (v === 'b') {
+    html = `<div class="dlg vB h80">
+      <div class="hB"><div class="thumb"></div><div class="tt"><h2 class="dtitle" title="${title}">${title}${fix(1)}</h2>
+        <div class="subline"><span>Game settings</span><span>·</span><span>Steam App ID <code>576770</code></span><span>·</span><span class="saved" id="saved"><span class="dot"></span>Saved automatically</span>${fix(10)}</div></div>${xbtn()}</div>
+      <div class="bTabs">${mtabs(v)}</div>
+      <div class="body">${tabContent(v)}</div></div>`;
+  } else {
+    html = `<div class="dlg vC h80">
+      <div class="cSide"><h2 class="dtitle" title="${title}">${title}</h2><div class="sk">Game settings${fix(9)}</div>
+        <div class="cnav">${TABS.c.map(([k, l]) => `<button class="${S.tab === k ? 'on' : ''}" data-tab="${k}">${l}${k === 'run' ? fix(4) : ''}</button>`).join('')}</div>
+        <div class="cfoot"><div class="saved" id="saved"><span class="dot" style="display:inline-block;margin-right:6px"></span>Saved automatically</div>Steam App ID <code>576770</code>${fix(10)}</div></div>
+      <div class="cMain"><div class="cHead"><h2 class="dtitle">${TABS.c.find(([k]) => k === S.tab)[1]}</h2>${fix(1)}${xbtn()}</div>
+        <div class="body">${tabContent(v)}</div></div></div>`;
+  }
+  const host = document.getElementById('dlgHost');
+  host.innerHTML = html;
+  host.style.display = 'contents';
+  document.getElementById('scrim').classList.toggle('closed', !S.open);
+}
+
+// ── interactions ───────────────────────────────────────────
+let toastT;
+function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 1600); }
+function saved() {
+  if (S.v === 't') return toast('Saved (no visible confirmation in today\'s dialog)');
+  const s = document.getElementById('saved'); if (!s) return;
+  s.classList.add('flash'); s.lastChild.textContent = 'Saved'; setTimeout(() => { s.classList.remove('flash'); s.lastChild.textContent = S.v === 'a' ? 'Changes save automatically' : 'Saved automatically'; }, 1200);
+}
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('button');
+  if (!e.target.closest('.pop') && !e.target.closest('.info')) document.querySelectorAll('.pop.open').forEach(p => p.classList.remove('open'));
+  if (!t) return;
+  if (t.dataset.pop) { const p = document.getElementById(t.dataset.pop); const was = p.classList.contains('open'); document.querySelectorAll('.pop.open').forEach(x => x.classList.remove('open')); p.classList.toggle('open', !was); return; }
+  if (t.dataset.tab) { S.tab = t.dataset.tab; render(); return; }
+  if (t.dataset.tog) { S.toggles[t.dataset.tog] = !S.toggles[t.dataset.tog]; render(); saved(); return; }
+  if (t.dataset.del) { const [k, i] = t.dataset.del.split(':'); S[k].splice(+i, 1); render(); saved(); return; }
+  if (t.dataset.add) { const k = t.dataset.add; const a = document.querySelector(`[data-new="${k}:0"]`).value.trim(), b = document.querySelector(`[data-new="${k}:1"]`).value.trim(); if (!a) return toast('Enter a name first'); S[k].push([a, b]); render(); saved(); return; }
+  const act = t.dataset.act;
+  if (act === 'close') { S.open = false; render(); }
+  if (act === 'browse') toast('File picker would open');
+  if (act?.startsWith('toast:')) toast(act.slice(6));
+});
+document.addEventListener('change', (e) => { const k = e.target.dataset.sel; if (k) { S[k] = e.target.value; render(); saved(); } });
+document.getElementById('reopen').addEventListener('click', () => { S.open = true; render(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && S.open) { S.open = false; render(); } });
+
+const CAPTIONS = {
+  t: ['Today: what ships now', 'A bridged Mac Steam game opens on the Wine tab: a red danger banner for a neutral fact, then a collapsed "Engine (advanced)" twisty. The X is positioned absolutely over the title (switch to Long title). Steam overlay hides behind a second twisty on Run. Launch without Steam lists the same losses in its description and again in a hard-coded yellow warning. "Settings are saved automatically" sits at the bottom of the scroll.', [], []],
+  a: ['A: Targeted fixes (least resistance)', 'Same MUI Dialog and Tabs. The header becomes a grid with a 36px column for the X, and the title ellipsizes. The Wine hint is a neutral note; twisties are gone; the dialog opens on Run with the tab order unchanged. Run and Advanced get small uppercase section rules and noun labels with (i) help. The footer is pinned below the scroll area, and the dialog fits its content (watch height change between tabs).', ['smallest diff: SettingsModal, Dialog, GamesSettings scss', 'saved state always visible', 'familiar tab order kept'], ['height jumps between tabs', 'Run first but sits third in the strip']],
+  b: ['B: Header card + grouped cards', 'A real header: a thumbnail, a title that clamps to two lines, and a subline carrying "Game settings · Steam App ID · Saved" (the footer goes away). Tabs sit under the header with Run first. Each tab is a stack of cards (Launch, Steam, Wine engine, Scripts…). The dialog keeps a fixed 80% height, so switching tabs never jumps.', ['the title can never meet the X', 'cards make the Steam-only controls obvious', 'stable height'], ['cards nest inside a dialog (box-in-box)', 'more vertical chrome; short windows scroll sooner']],
+  c: ['C: Side-nav dialog', 'The dialog borrows the app\'s tier-2 vertical nav (sketch 003/007): the game title and Saved/App ID live in a 210px sidebar, and the content area is headed by the current tab name with the X beside it. Room for more tabs (Cloud saves, Gamescope on Linux) without a scrolling tab strip.', ['matches the Settings page\'s tier-2 pattern', 'scales to 6-7 tabs on Linux', 'long titles wrap to 3 lines safely'], ['loses 210px of width; tables get tighter at 760', 'biggest change; Default-settings page uses tabs too']],
+};
+
+function showVariant(id) {
+  S.v = id; S.tab = START[id]; S.open = true;
+  document.querySelectorAll('.variant-tab').forEach(t => t.classList.toggle('active', t.dataset.v === id));
+  const [h, p, good, bad] = CAPTIONS[id];
+  document.getElementById('caption').innerHTML = `<h2>${h}</h2><p>${p}</p>` + (good.length ? `<div class="tradeoff">${good.map(g => `<span class="good"><b>+</b> ${g}</span>`).join('')}${bad.map(b => `<span class="bad"><b>−</b> ${b}</span>`).join('')}</div>` : '');
+  render();
+}
+document.querySelectorAll('.variant-tab').forEach(t => t.addEventListener('click', () => showVariant(t.dataset.v)));
+
+document.getElementById('theme-switcher').addEventListener('change', (e) => {
+  document.querySelector('link[href*="themes/"]').href = '../themes/' + e.target.value + '.css';
+  document.documentElement.dataset.theme = e.target.value;
+});
+document.getElementById('titlelen').addEventListener('change', (e) => { S.titlelen = e.target.value; render(); });
+document.getElementById('lws').addEventListener('change', (e) => { S.lwsVerdict = e.target.value; render(); });
+document.getElementById('fixes').addEventListener('change', (e) => document.body.classList.toggle('show-fixes', e.target.checked));
+document.body.classList.add('show-fixes');
+document.querySelectorAll('[data-w]').forEach(b => b.addEventListener('click', () => { document.getElementById('win').style.setProperty('--win-w', b.dataset.w + 'px'); document.querySelectorAll('[data-w]').forEach(x => x.classList.toggle('on', x === b)); }));
+document.querySelectorAll('[data-h]').forEach(b => b.addEventListener('click', () => { document.getElementById('win').style.setProperty('--win-h', b.dataset.h + 'px'); document.querySelectorAll('[data-h]').forEach(x => x.classList.toggle('on', x === b)); }));
+
+// ?v=b&tab=advanced&theme=dracula&title=long&lws=drm&w=980 — deep links for review
+const q = new URLSearchParams(location.search);
+if (q.get('theme')) { const ts = document.getElementById('theme-switcher'); ts.value = q.get('theme'); ts.dispatchEvent(new Event('change')); }
+if (q.get('title')) { S.titlelen = q.get('title'); document.getElementById('titlelen').value = S.titlelen; }
+if (q.get('lws')) { S.lwsVerdict = q.get('lws'); document.getElementById('lws').value = S.lwsVerdict; }
+if (q.get('lwson')) S.toggles.lws = true;
+if (q.get('w')) document.getElementById('win').style.setProperty('--win-w', q.get('w') + 'px');
+showVariant(CAPTIONS[q.get('v')] ? q.get('v') : 'b');
+if (q.get('tab')) { S.tab = q.get('tab'); render(); }
+</script>
+</body>
+</html>

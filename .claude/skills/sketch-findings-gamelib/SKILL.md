@@ -1,6 +1,6 @@
 ---
 name: sketch-findings-gamelib
-description: Validated design decisions, CSS patterns, and visual direction from GameLib's navigation-redesign sketches — app-level card/folder tabs replacing the sidebar, the two-tier nav structure, the macOS traffic-light inset, multi-theme survival rules, the Games library filter panel (search, views, collections, cross-store facets, filter chips), the Views segmented control (unbuilt), tier-2 nav-list icons and grouping dividers, and the bottom-right toast/notice stack. Auto-loaded during UI implementation on GameLib, especially nav, tier-2 panel, library filter and notice/toast work.
+description: Validated design decisions, CSS patterns, and visual direction from GameLib's navigation-redesign sketches — app-level card/folder tabs replacing the sidebar, the two-tier nav structure, the macOS traffic-light inset, multi-theme survival rules, the Games library filter panel (search, views, collections, cross-store facets, filter chips), the Views segmented control (unbuilt), tier-2 nav-list icons and grouping dividers, the bottom-right toast/notice stack, the game page (3fr/2fr card with docked footer, NO ⋮ menu — every action placed next to what it changes: left card, Install tab with fact-attached actions and switch rows, ⚙ dialog, tier-one footer), and the per-game settings dialog (header card, Run-first tabs, grouped cards, neutral notes). Auto-loaded during UI implementation on GameLib, especially nav, tier-2 panel, library filter, notice/toast, game page and game settings work.
 ---
 
 <context>
@@ -20,7 +20,7 @@ Reference points during intake: MUI Tabs (already in the stack), Vercel Geist, m
 `NSSegmentedControl`, Ant Design card tabs, Steam and GOG Galaxy library sidebars, Playnite's
 filter panel.
 
-Sketch sessions wrapped: 2026-08-07 (001–004), 2026-11-05 (005–007)
+Sketch sessions wrapped: 2026-08-07 (001–004), 2026-11-05 (005–007), 2026-11-21 (008–012)
 </context>
 
 <design_direction>
@@ -70,6 +70,8 @@ are `.12s–.22s ease`; the one cubic-bezier is `cubic-bezier(.4,0,.2,1)` for pa
 | Library filtering | `references/library-filtering.md` | Hybrid panel — views and collections one click, facets collapsed below, removable chips above the grid; facet counts **exclude their own facet**. Views as a segmented control (005-D) is **unblocked** (Phase 48 inserted rows above the grid) but not yet built |
 | Tier-2 nav icons | `references/navigation-shell.md` § Tier-2 nav lists | Every tier-2 nav row carries an icon; group with a divider tinted from the row colour, never with icon presence; tier-1 glyphs reserved (007) |
 | Notices and toasts | `references/notices-and-toasts.md` | One bottom-right stack; refined warning stripe, title/body, 8s pausable hairline, slide right / fade-only under reduced motion (006) |
+| Game page | `references/game-page.md` | 3fr/2fr, left card with docked footer, status above Play (008, shipped). **No ⋮** (012-A, unbuilt): left card = the game (store link, Edit details, heart, category chips, Hide); Install tab = your copy (facts with inline actions, switch rows, danger-zone Uninstall); ⚙ = how it runs; footer = tier one |
+| Game settings dialog | `references/game-settings-dialog.md` | Header card + 2-line title, Run-first tabs, bordered cards, neutral note vs amber risk warning, (i) help, fixed 80% (009-B, shipped 261121-dzl); 012 adds EOS overlay, a Logs tab and a prefix folder button |
 
 ## Phase Mapping
 
@@ -78,6 +80,8 @@ are `.12s–.22s ease`; the one cubic-bezier is `cubic-bezier(.4,0,.2,1)` for pa
 - **Building sketch 005-D** (Views segmented control) — read its section in `references/library-filtering.md`; reconcile with Phase 48's `FOCUS ROW` Views sub-label
 - **Any tier-2 nav list** (Settings, Stores) → `references/navigation-shell.md` § Tier-2 nav lists
 - **Any transient notice / toast** → `references/notices-and-toasts.md`
+- **Game page, ⋮ removal, any new per-game action** → `references/game-page.md` (the item map says where each action lives)
+- **Per-game ⚙ dialog** → `references/game-settings-dialog.md`
 
 ## Theme
 
@@ -106,6 +110,11 @@ Sketch 004 is a **working filter engine** over 24 games, not a static mockup.
 - 005-views-section-distinction — winner: **D** (segmented block + `VIEWS` label) — unblocked (Phase 48 resolved Q1), not yet built
 - 006-launch-notice-toast — winner: **A** (refined stripe) — shipped 261104-vvz
 - 007-settings-nav-icons — winner: **Option 1** (icons on every row, divider grouping) — shipped 261105-o65
+- 008-game-page-action-bar — winner: **A′** (3fr/2fr card, docked footer) — shipped 261114-1fi (status above the action bar)
+- 009-game-settings-dialog — winner: **B** (header card + grouped cards) — shipped 261121-dzl
+- 010-game-page-title-row — winner: **A** (heart by title, category chips) — absorbed into 012
+- 011-integration-toggles — winner: **A2** (switch rows, per-row pending/error) — absorbed into 012
+- 012-game-page-no-menu — winner: **A** (Install tab is the hub, ⋮ removed) — not yet built
 
 Planning record: `.planning/sketches/MANIFEST.md` and each sketch's `README.md`.
 </metadata>

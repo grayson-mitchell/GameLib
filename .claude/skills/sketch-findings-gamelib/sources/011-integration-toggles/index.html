@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="default">
+<head>
+<meta charset="utf-8">
+<title>Sketch 011 · Integration toggles</title>
+<link rel="stylesheet" href="../themes/default.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700&family=Cabin:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body { background: #0b0d0e; font-family: var(--font-sans); color: var(--color-text); padding-top: 52px; padding-bottom: 80px; }
+html[data-theme="default"] { --on-primary: #08191b; --fav: #ff5c8a; }
+html[data-theme="gruvbox"] { --on-primary: #fbf1c7; --fav: #fb4934; }
+html[data-theme="dracula"] { --on-primary: #21222c; --fav: #ff79c6; }
+
+/* ─── sketch chrome (theme-independent) ─── */
+#variant-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #16181a; border-bottom: 1px solid #2a2e31; padding: 8px 16px; display: flex; gap: 8px; align-items: center; font-family: system-ui, sans-serif; flex-wrap: wrap; }
+#variant-nav .brand { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #6b7376; margin-right: 12px; font-weight: 600; }
+.variant-tab { background: transparent; border: 1px solid #2a2e31; color: #b9c0c2; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: inherit; transition: all .15s ease; }
+.variant-tab:hover { border-color: #4a5154; color: #e6ebec; }
+.variant-tab.active { background: #1de8f5; border-color: #1de8f5; color: #08191b; font-weight: 600; }
+.variant-tab.ref { border-style: dashed; }
+.caption { max-width: 1240px; margin: 20px auto 14px; padding: 0 24px; font-family: system-ui, sans-serif; }
+.caption h2 { margin: 0 0 6px; font-size: 15px; color: #e6ebec; font-weight: 600; }
+.caption p { margin: 0; font-size: 13px; line-height: 1.55; color: #8b9295; max-width: 100ch; }
+.tradeoff { display: flex; gap: 18px; font-size: 12px; margin-top: 10px; flex-wrap: wrap; }
+.tradeoff span { color: #8b9295; } .good b { color: #58c06d; } .bad b { color: #d6704e; }
+#sketch-tools { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 9999; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; background: #16181a; border: 1px solid #2a2e31; border-radius: 10px; padding: 6px 8px; font-family: system-ui, sans-serif; font-size: 12px; color: #b9c0c2; box-shadow: 0 8px 24px rgba(0,0,0,.5); max-width: calc(100vw - 32px); }
+#sketch-tools button, #sketch-tools select { background: #1f2326; color: #d6dcde; border: 1px solid #2f3437; border-radius: 6px; padding: 5px 9px; font: inherit; cursor: pointer; }
+#sketch-tools button.on { background: #1de8f5; color: #08191b; border-color: #1de8f5; }
+#sketch-tools label { display: flex; gap: 5px; align-items: center; padding: 0 4px; cursor: pointer; }
+.sep2 { width: 1px; height: 20px; background: #2f3437; margin: 0 2px; }
+
+/* ─── fake app window ─── */
+.window { width: min(var(--win-w, 1240px), calc(100vw - 32px)); height: var(--win-h, 700px); margin: 0 auto; border-radius: 10px; overflow: hidden; border: 1px solid #2a2e31; box-shadow: var(--shadow-lg); background: var(--color-bg); position: relative; display: flex; flex-direction: column; transition: width .22s, height .22s; }
+.titlebar { height: var(--titlebar-height); flex: none; display: flex; align-items: center; gap: 8px; padding: 0 var(--space-4); background: var(--navbar-background); }
+.tl { width: 12px; height: 12px; border-radius: 50%; } .tl.r { background: #ff5f57; } .tl.y { background: #febc2e; } .tl.g { background: #28c840; }
+.tabs { display: flex; gap: 4px; margin-left: calc(var(--traffic-light-inset) - 60px); align-self: flex-end; }
+.tabs span { font-size: var(--text-sm); padding: 7px 16px; border-radius: 8px 8px 0 0; color: var(--color-text-muted); }
+.tabs span.on { background: var(--color-bg); color: var(--color-text); }
+.stage { flex: 1; min-height: 0; position: relative; container-type: size; container-name: stage; }
+
+.art { background: radial-gradient(ellipse 60% 40% at 72% 30%, rgba(255,190,120,.55), transparent 70%), radial-gradient(ellipse 80% 60% at 20% 110%, #0d2a2c 30%, transparent 70%), linear-gradient(180deg, #3a2f52 0%, #6b4a63 38%, #c27a5d 62%, #1a2d33 63%, #0e1c20 100%); position: relative; overflow: hidden; }
+.art::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 35%, var(--color-surface) 100%); }
+.logo { font-family: Georgia, serif; font-weight: 700; letter-spacing: .14em; color: #f6ecd8; text-shadow: 0 2px 12px rgba(0,0,0,.6); line-height: .95; position: relative; z-index: 1; text-transform: uppercase; }
+.logo small { display: block; font-size: .32em; letter-spacing: .5em; opacity: .85; margin-top: .4em; }
+
+/* ─── shared components ─── */
+svg.i { width: 16px; height: 16px; flex: none; fill: currentColor; }
+.iconbtn { width: 40px; height: 40px; display: grid; place-items: center; flex: none; background: var(--navbar-background); color: var(--color-text-muted); border: 1px solid var(--color-border); border-radius: var(--radius-lg); cursor: pointer; transition: color .15s, border-color .15s, background .15s, transform .15s; }
+.iconbtn:hover, .iconbtn[aria-expanded="true"] { color: var(--color-text); border-color: var(--color-border-strong); }
+.iconbtn svg.i { width: 18px; height: 18px; }
+.iconbtn.fav[aria-pressed="true"] { color: var(--fav); border-color: color-mix(in srgb, var(--fav) 55%, transparent); background: color-mix(in srgb, var(--fav) 12%, var(--navbar-background)); }
+.iconbtn.hid[aria-pressed="true"] { color: var(--color-warning); border-color: color-mix(in srgb, var(--color-warning) 55%, transparent); background: color-mix(in srgb, var(--color-warning) 12%, var(--navbar-background)); }
+.iconbtn.pop { animation: pulse .3s ease; }
+@keyframes pulse { 50% { transform: scale(1.15); } }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.btn { height: 40px; padding: 0 18px; border-radius: var(--radius-md); border: 1px solid transparent; font: 600 var(--text-base) var(--font-sans); display: inline-flex; align-items: center; gap: 8px; cursor: pointer; white-space: nowrap; }
+.btn.primary { background: var(--color-primary); color: var(--on-primary); min-width: 168px; justify-content: center; }
+.btn.primary:hover { background: var(--color-primary-hover); }
+.actionbar { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; position: relative; }
+.actionbar .grow { flex: 1; }
+.launchopt { height: 40px; background: var(--navbar-background); color: var(--color-text); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 10px; font: var(--text-sm) var(--font-sans); flex: 0 1 180px; min-width: 112px; }
+.vsep { width: 1px; height: 24px; background: var(--color-border-strong); margin: 0 2px; }
+
+.popwrap { position: relative; display: inline-flex; }
+.menu { position: absolute; bottom: calc(100% + 6px); right: 0; z-index: 30; min-width: 250px; max-height: min(560px, calc(100cqh - 120px)); overflow-y: auto; background: var(--navbar-background); border: 1px solid var(--color-border-strong); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); padding: 6px; display: none; transform-origin: bottom right; animation: pop .14s ease both; }
+.menu.down { bottom: auto; top: calc(100% + 6px); transform-origin: top left; left: 0; right: auto; }
+.menu.open { display: block; }
+@keyframes pop { from { opacity: 0; transform: scale(.97) translateY(4px); } }
+.menu .grp { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: .08em; color: var(--color-text-muted); padding: 8px 10px 4px; font-weight: 600; }
+.menu hr { border: 0; border-top: 1px solid var(--color-border); margin: 6px 4px; }
+.menu button, .menu label { display: flex; gap: 10px; align-items: center; width: 100%; text-align: start; background: none; border: 0; color: var(--color-text); font: var(--text-sm) var(--font-sans); padding: 7px 10px; border-radius: var(--radius-md); cursor: pointer; }
+.menu button:hover, .menu label:hover { background: color-mix(in srgb, var(--color-text) 10%, transparent); }
+.menu button svg { color: var(--color-text-muted); }
+.menu button.danger { color: var(--color-danger); } .menu button.danger svg { color: currentColor; }
+.menu button .chk { margin-left: auto; color: var(--color-primary); visibility: hidden; }
+.menu button[aria-checked="true"] .chk { visibility: visible; }
+.menu .moved { font-size: var(--text-xs); color: var(--color-text-dim); padding: 2px 10px 6px; font-style: italic; }
+.menu input[type=checkbox] { accent-color: var(--color-primary); margin: 0; }
+.menu .newcat { display: flex; gap: 6px; padding: 6px 6px 2px; }
+.menu .newcat input { flex: 1; min-width: 0; background: var(--color-bg); color: var(--color-text); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); padding: 6px 8px; font: var(--text-sm) var(--font-sans); }
+.menu .newcat button { width: auto; padding: 6px 10px; border: 1px solid var(--color-border-strong); }
+
+.notice { display: flex; gap: 10px; align-items: flex-start; padding: 9px 12px; border-radius: var(--radius-md); font-size: var(--text-sm); line-height: 1.45; background: color-mix(in srgb, var(--color-text) 6%, var(--color-surface)); border: 1px solid var(--color-border); border-left: 3px solid var(--color-text-muted); }
+.notice svg { color: var(--color-text-muted); margin-top: 2px; }
+.notice.hidden-note { border-left-color: var(--color-warning); }
+.notice.hidden-note svg { color: var(--color-warning); }
+.notice .linkbtn { background: none; border: 0; padding: 0; color: var(--color-text); font: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; }
+.notices { display: flex; flex-direction: column; gap: 6px; } .notices:empty { display: none; }
+.status { display: flex; align-items: center; gap: 10px; font-size: var(--text-sm); color: var(--color-text-muted); flex-wrap: wrap; min-height: 22px; }
+.status b { color: var(--color-text); font-weight: 500; }
+.status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-text-muted); } .status .dot.ok { background: var(--color-success); }
+
+.meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: var(--text-sm); color: var(--color-text-muted); }
+.meta .store { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 9999px; border: 1px solid var(--color-border-strong); color: var(--color-text); font-size: var(--text-xs); font-weight: 600; }
+.chip { padding: 3px 9px; border-radius: 9999px; font-size: var(--text-xs); font-weight: 600; background: color-mix(in srgb, var(--color-accent) 18%, transparent); color: var(--color-text); }
+.dev { font-style: italic; color: var(--brand-text-02); }
+h1.title { margin: 0; font-size: var(--text-2xl); font-weight: 600; color: var(--color-text); line-height: 1.15; }
+
+/* user categories: outlined + tag icon, so they never read as store genres */
+.cats { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.cat { display: inline-flex; align-items: center; gap: 5px; padding: 3px 6px 3px 8px; border-radius: 9999px; font-size: var(--text-xs); font-weight: 500; border: 1px solid var(--color-border-strong); color: var(--color-text); background: transparent; }
+.cat svg.i { width: 12px; height: 12px; color: var(--color-text-muted); }
+.cat .x { background: none; border: 0; color: var(--color-text-muted); cursor: pointer; padding: 0 2px; font-size: 13px; line-height: 1; opacity: 0; transition: opacity .15s; }
+.cat:hover .x, .cat:focus-within .x { opacity: 1; }
+.cat .x:hover { color: var(--color-text); }
+.addcat { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 9999px; font: 500 var(--text-xs) var(--font-sans); border: 1px dashed var(--color-border-strong); color: var(--color-text-muted); background: none; cursor: pointer; transition: color .15s, border-color .15s; }
+.addcat:hover, .addcat[aria-expanded="true"] { color: var(--color-text); border-color: var(--color-text-muted); }
+.addcat svg.i { width: 12px; height: 12px; }
+
+/* A — heart beside title */
+.titlerow { display: flex; align-items: center; gap: 10px; }
+.titlerow h1 { flex: 0 1 auto; }
+.heart { background: none; border: 0; padding: 4px; border-radius: 9999px; color: var(--color-text-muted); cursor: pointer; display: grid; place-items: center; transition: color .15s, transform .15s; }
+.heart svg.i { width: 24px; height: 24px; }
+.heart:hover { color: var(--color-text); }
+.heart[aria-pressed="true"] { color: var(--fav); }
+.heart.pop { animation: pulse .3s ease; }
+
+/* C — library strip */
+.strip { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 10px; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: color-mix(in srgb, var(--color-bg) 40%, var(--color-surface)); }
+.strip .lbl { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: .08em; color: var(--color-text-dim); font-weight: 600; margin-right: 2px; }
+.pill { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border-radius: 9999px; font: 500 var(--text-xs) var(--font-sans); border: 1px solid var(--color-border-strong); color: var(--color-text-muted); background: none; cursor: pointer; transition: all .15s; }
+.pill svg.i { width: 14px; height: 14px; }
+.pill:hover { color: var(--color-text); }
+.pill.fav[aria-pressed="true"] { color: var(--fav); border-color: color-mix(in srgb, var(--fav) 55%, transparent); background: color-mix(in srgb, var(--fav) 12%, transparent); }
+.pill.hid[aria-pressed="true"] { color: var(--color-warning); border-color: color-mix(in srgb, var(--color-warning) 55%, transparent); background: color-mix(in srgb, var(--color-warning) 12%, transparent); }
+
+/* layout (A′ from sketch 008, as shipped in 261114-1fi) */
+.page { position: absolute; inset: 0; display: grid; grid-template-columns: 3fr 2fr; gap: 16px; padding: 16px; }
+.main { min-height: 0; display: flex; flex-direction: column; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; }
+.scrollall { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
+.main .art { height: clamp(120px, 26cqh, 220px); flex: none; display: flex; align-items: center; justify-content: center; }
+.main .art .logo { font-size: clamp(22px, min(3.4cqw, 5cqh), 40px); margin-top: -14px; }
+.main .art .back { position: absolute; top: 12px; left: 12px; z-index: 3; }
+.head { padding: 0 24px 14px; margin-top: -18px; position: relative; z-index: 2; display: flex; flex-direction: column; gap: 10px; flex: none; }
+.aboutblock { padding: 14px 24px 20px; border-top: 1px solid var(--color-border); font-size: var(--text-sm); line-height: 1.6; color: var(--neutral-06); }
+.aboutblock p { margin: 0 0 .8em; }
+.sectionhead { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: .1em; color: var(--color-text-muted); font-weight: 600; margin: 0 0 8px; }
+.dock { flex: none; border-top: 1px solid var(--color-border); padding: 12px 24px 14px; display: flex; flex-direction: column; gap: 8px; background: color-mix(in srgb, var(--color-bg) 35%, var(--color-surface)); position: relative; z-index: 3; }
+.panel { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.tabbar { display: flex; gap: 2px; padding: 4px; margin: 12px 12px 0; border: 1px solid var(--color-border); border-radius: 8px; background: color-mix(in srgb, var(--color-bg) 50%, transparent); flex: none; }
+.tabbar span { flex: 1; text-align: center; color: var(--color-text-muted); padding: 7px 10px; border-radius: var(--radius-md); font: 500 var(--text-sm) var(--font-sans); }
+.tabbar span.on { color: var(--color-text); background: color-mix(in srgb, var(--color-text) 14%, transparent); }
+.tabbody { overflow-y: auto; padding: 6px 16px 14px; min-height: 0; flex: 1; }
+.row { display: flex; gap: 16px; padding: 11px 2px; border-bottom: 1px solid var(--color-border); font-size: var(--text-sm); }
+.row b { flex: 0 0 120px; font-weight: 500; color: var(--color-text-muted); }
+.row span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@container stage (max-width: 820px) { .page { grid-template-columns: 1fr; overflow-y: auto; } .main { overflow: visible; } .scrollall { overflow: visible; } .dock { position: sticky; bottom: 0; } }
+
+.toast { position: absolute; right: 20px; bottom: 20px; z-index: 50; background: var(--navbar-background); color: var(--color-text); border: 1px solid var(--color-border-strong); border-left: 3px solid var(--color-primary); border-radius: var(--radius-md); padding: 10px 14px; font-size: var(--text-sm); box-shadow: var(--shadow-md); opacity: 0; transform: translateY(8px); transition: opacity .18s, transform .18s; pointer-events: none; }
+.toast.show { opacity: 1; transform: none; }
+.anno { display: none; }
+.annotate .anno { display: inline-block; position: absolute; z-index: 40; font: 600 10px system-ui; background: #ff3d7f; color: #fff; padding: 2px 6px; border-radius: 4px; pointer-events: none; white-space: nowrap; }
+.annotate [data-anno] { outline: 1px dashed #ff3d7f; outline-offset: 3px; position: relative; }
+
+/* ─── 011 ─── */
+.grouphead { display: flex; align-items: baseline; gap: 8px; margin: 18px 2px 6px; }
+.grouphead h3 { margin: 0; font-size: var(--text-xs); text-transform: uppercase; letter-spacing: .1em; color: var(--color-text-muted); font-weight: 600; }
+.grouphead small { color: var(--color-text-dim); font-size: var(--text-xs); }
+
+/* A — the app's real ToggleSwitch (components/UI/ToggleSwitch/index.css): accent square + check, label goes bold accent when on */
+.tsw { display: grid; grid-template-columns: 20px 1fr auto; gap: 4px 12px; align-items: start; padding: 10px 4px; border-bottom: 1px solid var(--color-border); cursor: pointer; }
+.tsw:last-child { border-bottom: 0; }
+.tsw .box { width: 20px; height: 20px; border: 3px solid var(--accent); border-radius: 3px; display: grid; place-items: center; color: var(--color-bg); transition: background .25s; margin-top: 1px; }
+.tsw .box svg.i { width: 14px; height: 14px; opacity: 0; }
+.tsw[aria-checked="true"] .box { background: var(--accent); }
+.tsw[aria-checked="true"] .box svg.i { opacity: 1; }
+.tsw .lbl { font-size: var(--text-sm); color: var(--color-text); transition: color .2s; }
+.tsw[aria-checked="true"] .lbl { color: var(--accent); font-weight: 700; }
+.tsw .desc { grid-column: 2 / 4; font-size: var(--text-xs); color: var(--color-text-muted); line-height: 1.45; }
+.tsw .aside { font-size: var(--text-xs); color: var(--color-text-dim); display: inline-flex; align-items: center; gap: 6px; }
+.tsw.busy { cursor: progress; } .tsw.busy .box { animation: fading 1.2s infinite; }
+@keyframes fading { 50% { opacity: .4; } }
+.tsw .err { grid-column: 2 / 4; font-size: var(--text-xs); color: var(--color-danger); }
+.tsw .err button { background: none; border: 0; padding: 0; color: inherit; font: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; }
+.spin { width: 12px; height: 12px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin .7s linear infinite; display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* A2 — same rows, real switch track instead of the checkbox square */
+.tsw.sw { grid-template-columns: 1fr auto; }
+.tsw.sw .desc, .tsw.sw .err { grid-column: 1 / 3; }
+.track { width: 34px; height: 20px; border-radius: 9999px; background: var(--color-border-strong); position: relative; transition: background .2s; flex: none; }
+.track::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--neutral-06); transition: transform .2s; }
+.tsw[aria-checked="true"] .track { background: var(--color-primary); }
+.tsw[aria-checked="true"] .track::after { transform: translateX(14px); background: var(--on-primary); }
+.tsw.sw[aria-checked="true"] .lbl { color: var(--color-text); font-weight: 500; }
+.tsw.busy .track { animation: fading 1.2s infinite; }
+
+/* B — chip toggles */
+.chiprow { display: flex; flex-wrap: wrap; gap: 8px; padding: 4px 2px 2px; }
+.tchip { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 12px 0 10px; border-radius: 9999px; font: 500 var(--text-sm) var(--font-sans); border: 1px solid var(--color-border-strong); color: var(--color-text-muted); background: none; cursor: pointer; transition: all .15s; }
+.tchip:hover { color: var(--color-text); }
+.tchip .tick { width: 14px; height: 14px; display: grid; place-items: center; }
+.tchip .tick svg.i { width: 14px; height: 14px; }
+.tchip[aria-pressed="true"] { color: var(--color-text); border-color: color-mix(in srgb, var(--color-primary) 60%, transparent); background: color-mix(in srgb, var(--color-primary) 14%, transparent); }
+.tchip[aria-pressed="true"] .tick { color: var(--color-primary); }
+.tchip.error { border-color: var(--color-danger); color: var(--color-danger); }
+.chiphint { font-size: var(--text-xs); color: var(--color-text-dim); padding: 6px 2px 0; }
+</style>
+</head>
+<body>
+
+<div id="variant-nav">
+  <span class="brand">Sketch 011 · Integration toggles</span>
+  <button class="variant-tab" data-v="a">A: Toggle group in Install info</button>
+  <button class="variant-tab" data-v="a2">A2: Same, with switches ★ (via 012)</button>
+  <button class="variant-tab" data-v="b">B: Chip row</button>
+  <button class="variant-tab" data-v="c">C: Checkmarks in ⋮</button>
+</div>
+
+<div class="caption" id="caption"></div>
+
+<div class="window" id="win">
+  <div class="titlebar">
+    <span class="tl r"></span><span class="tl y"></span><span class="tl g"></span>
+    <div class="tabs"><span>Manage Accounts</span><span class="on">Games</span><span>Stores</span><span>Downloads</span><span>Settings</span></div>
+  </div>
+  <div class="stage" id="stage">
+    <div class="page">
+      <div class="main">
+        <div class="scrollall">
+          <div class="art"><button class="iconbtn back" data-act="toast" data-msg="Back to library" aria-label="Back"></button><div class="logo">Hollow Depths<small>The Lantern Tide</small></div></div>
+          <div class="head" id="head"></div>
+          <div class="aboutblock">
+            <p class="sectionhead">About</p>
+            <p>Descend into a flooded city lit only by the lanterns you carry. Every chamber you relight redraws the map, opening shortcuts and sealing others behind rising water.</p>
+            <p>Trade with the tide-keepers, bind spirits to your lantern for new traversal powers, and decide which districts the sea finally reclaims.</p>
+          </div>
+        </div>
+        <div class="dock">
+          <div class="statuswrap" id="status"></div>
+          <div class="actionbar" id="actions"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="tabbar"><span class="on">Install info</span><span>Achievements · 64%</span><span>Extra info</span><span>Requirements</span></div>
+        <div class="tabbody" id="panel"></div>
+      </div>
+    </div>
+    <div class="toast" id="toast"></div>
+  </div>
+</div>
+
+<div id="sketch-tools">
+  <select id="theme-switcher" title="Theme"><option value="default">midnightMirage</option><option value="gruvbox">gruvbox_dark</option><option value="dracula">dracula</option></select>
+  <div class="sep2"></div>
+  <select id="store" title="Store"><option value="steam">Steam</option><option value="epic" selected>Epic</option><option value="gog">GOG</option><option value="sideload">Sideloaded</option></select>
+  <select id="platform" title="Platform"><option value="darwin">macOS</option><option value="linux" selected>Linux</option><option value="win32">Windows</option></select>
+  <label><input type="checkbox" id="installed" checked> Installed</label>
+  <label title="Desktop shortcut, Add to Steam and EOS overlay each take about 1.5 s"><input type="checkbox" id="slow" checked> Slow backend</label>
+  <label title="The next Add to Steam call fails"><input type="checkbox" id="failSteam"> Steam fails</label>
+  <div class="sep2"></div>
+  <button data-w="1240" class="on">1240</button><button data-w="980">980</button><button data-w="760">760</button>
+  <div class="sep2"></div>
+  <label><input type="checkbox" id="annotate"> Annotate</label>
+</div>
+
+<script>
+const ICONS = {
+  back: '<path d="M15.4 4.6 14 3.2 5.2 12l8.8 8.8 1.4-1.4L8 12z"/>',
+  dots: '<circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/>',
+  gear: '<path d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3h-4l-.4 2.7a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.4 7.4 0 0 0 1.7 1L11 21h4l.4-2.7a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/>',
+  play: '<path d="M7 4.5v15l12.5-7.5z"/>',
+  down: '<path d="M11 3h2v10.2l3.6-3.6L18 11l-6 6-6-6 1.4-1.4 3.6 3.6zM5 19h14v2H5z"/>',
+  heart: '<path d="M12 21.4 10.6 20C5.4 15.4 2 12.3 2 8.5 2 5.4 4.4 3 7.5 3c1.7 0 3.4.8 4.5 2.1A6 6 0 0 1 16.5 3C19.6 3 22 5.4 22 8.5c0 3.8-3.4 6.9-8.6 11.5z"/>',
+  heartO: '<path d="M16.5 3A6 6 0 0 0 12 5.1 6 6 0 0 0 7.5 3C4.4 3 2 5.4 2 8.5c0 3.8 3.4 6.9 8.6 11.5l1.4 1.4 1.4-1.4C18.6 15.4 22 12.3 22 8.5 22 5.4 19.6 3 16.5 3zm-4.4 15.6-.1.1-.1-.1C7.1 14.2 4 11.4 4 8.5 4 6.5 5.5 5 7.5 5c1.5 0 3 1 3.6 2.4h1.9C13.5 6 15 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.9-3.1 5.7-7.9 10.1z"/>',
+  eye: '<path d="M12 4.5C7 4.5 2.7 7.6 1 12c1.7 4.4 6 7.5 11 7.5s9.3-3.1 11-7.5c-1.7-4.4-6-7.5-11-7.5zM12 17a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/>',
+  eyeOff: '<path d="M12 7a5 5 0 0 1 4.6 7l2.9 2.9c1.5-1.3 2.7-2.9 3.5-4.9-1.7-4.4-6-7.5-11-7.5-1.4 0-2.7.3-4 .7l2.2 2.2A5 5 0 0 1 12 7zM2 4.3l2.3 2.3.4.4A11.8 11.8 0 0 0 1 12c1.7 4.4 6 7.5 11 7.5 1.6 0 3-.3 4.4-.8l.4.4 2.9 2.9 1.3-1.3L3.3 3zM7.5 9.8l1.6 1.6-.1.6a3 3 0 0 0 3 3l.6-.1 1.6 1.6A5 5 0 0 1 7.5 9.8zm4.3-.8 3.2 3.2V12a3 3 0 0 0-3-3z"/>',
+  tag: '<path d="M21.4 11.6 12.4 2.6A2 2 0 0 0 11 2H4a2 2 0 0 0-2 2v7a2 2 0 0 0 .6 1.4l9 9a2 2 0 0 0 2.8 0l7-7a2 2 0 0 0 0-2.8zM6.5 8A1.5 1.5 0 1 1 6.5 5a1.5 1.5 0 0 1 0 3z"/>',
+  plus: '<path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/>',
+  check: '<path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/>',
+  folder: '<path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8z"/>',
+  wrench: '<path d="M22.7 19 13.6 9.9A6.4 6.4 0 0 0 5.4 2l3.9 3.9-2.8 2.8L2.6 4.8a6.4 6.4 0 0 0 7.9 8.2l9.1 9.1z"/>',
+  link: '<path d="M14 3v2h3.6l-9.8 9.8 1.4 1.4L19 6.4V10h2V3zm5 16H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7h-2z"/>',
+  edit: '<path d="M3 17.2V21h3.8L17.8 10l-3.8-3.8zM20.7 7a1 1 0 0 0 0-1.4l-2.3-2.3a1 1 0 0 0-1.4 0l-1.8 1.8 3.7 3.7z"/>',
+  list: '<path d="M3 5h18v2H3zm0 6h18v2H3zm0 6h18v2H3z"/>',
+  doc: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zm2 16H8v-2h8zm0-4H8v-2h8zm-3-5V3.5L18.5 9z"/>',
+  update: '<path d="M12 4a8 8 0 0 1 7.4 5H17v2h6V5h-2v2.3A10 10 0 0 0 2 12h2a8 8 0 0 1 8-8zm8 8a8 8 0 0 1-15.4 3H7v-2H1v6h2v-2.3A10 10 0 0 0 22 12z"/>',
+  search: '<path d="M15.5 14h-.8l-.3-.3A6.5 6.5 0 1 0 14 15.5l.3.3v.8l5 5 1.5-1.5zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z"/>',
+  monitor: '<path d="M21 3H3a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h7v2H8v2h8v-2h-2v-2h7a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm0 13H3V5h18z"/>',
+  wine: '<path d="M6 2h12l-1 7a5 5 0 0 1-4 4.9V20h3v2H8v-2h3v-6.1A5 5 0 0 1 7 9z"/>',
+  shortcut: '<path d="M21 11 14 4v4C7 9 4 14 3 19c2.5-3.5 6-5.1 11-5.1V18z"/>',
+  steam: '<circle cx="12" cy="12" r="10" opacity=".35"/><circle cx="15" cy="9" r="3"/><circle cx="8.5" cy="15.5" r="2.5"/>',
+  overlay: '<path d="M19 7h-8v6h8zm2-4H3a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm0 16H3V5h18z"/>',
+  trash: '<path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6zM19 4h-3.5l-1-1h-5l-1 1H5v2h14z"/>',
+  cart: '<path d="M7 18a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM1 2v2h2l3.6 7.6-1.4 2.4A2 2 0 0 0 7 17h12v-2H7.4l1.1-2h7.5a2 2 0 0 0 1.7-1l3.6-6.5A1 1 0 0 0 20.5 4H5.2l-.9-2zm16 16a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/>',
+  info: '<path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 15h-2v-6h2zm0-8h-2V7h2z"/>'
+};
+const ic = (n) => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n]}</svg>`;
+document.querySelector('.art .back').innerHTML = ic('back');
+
+const S = { v: 'a', store: 'epic', platform: 'linux', installed: true, slow: true, failSteam: false,
+  runsForMe: 'auto', shortcut: true, addSteam: false, eos: false, busy: {}, err: {} };
+
+const CAPTIONS = {
+  a: ['A: A "Library & integration" group in Install info', 'Each setting is one row using the app’s real ToggleSwitch (the accent square with a check), with a one-line description. "Runs for me" is already there today, so the others join it. Each row tracks its own pending state: while the backend works, that row pulses and nothing else moves. A failure shows inline under the row with a Retry link, not as a modal dialog. Rows only appear when they apply (switch Store, Platform and Installed in the toolbar).',
+      ['Uses a component the page already ships', 'Descriptions explain what "Add to Steam" actually does', 'Easiest to build: the same pattern as RunsForMeToggle'],
+      ['On the Install info tab, so not visible from other tabs', 'The checkbox-square style reads as "agree to terms" more than as a setting']],
+  a2: ['A2: The same group with switch tracks', 'Identical to A, but each row uses a switch track on the right instead of the checkbox square on the left. Labels stay normal weight, so the panel doesn’t shout when several are on. This would need a new switch style (or a variant of ToggleSwitch).',
+      ['Reads as a setting at a glance', 'Right-aligned switches line up into one column you can scan'],
+      ['New visual element: a variant of ToggleSwitch that has to work in every theme']],
+  b: ['B: A compact chip row at the top of Install info', 'The same settings as pill chips that toggle on click, with a tick when on. It takes one line instead of four rows. Descriptions move to tooltips. A failure turns the chip red and the tooltip says why.',
+      ['Very compact; the info rows stay at the top', 'Reads as one "integrations" cluster'],
+      ['No visible explanations; "EOS overlay" means nothing to most people', 'Chip on and off states are subtle in dracula, so check them there']],
+  c: ['C: Keep them in ⋮ as checkmark items (easiest build)', 'The smallest change: the items stay in the (now grouped) ⋮ menu but become checkbox items that show a ✓ when on, so they stop flipping their wording. Clicking keeps the menu open, and a spinner takes the place of the check while pending. The Install info panel is unchanged.',
+      ['Smallest change; no new UI on the page', 'Fixes the flipping wording, which was the worst part'],
+      ['Still have to open ⋮ to see the state', 'The menu stays longer than the other variants leave it']]
+};
+
+/* which settings apply — mirrors the real gates in GameSubMenu/index.tsx + RunsForMeToggle */
+function items() {
+  const st = S.store, inst = S.installed, steam = st === 'steam';
+  const out = [];
+  if (S.platform === 'darwin') out.push({ key: 'runsForMe', icon: 'check', label: 'Runs for me', desc: 'Mark this game as working on this Mac, whatever its CrossOver rating says.', aside: S.runsForMe === 'auto' ? 'set automatically' : '' });
+  if (inst) out.push({ key: 'shortcut', icon: 'shortcut', label: { darwin: 'Applications shortcut', win32: 'Desktop & Start menu shortcuts', linux: 'Desktop & app menu shortcuts' }[S.platform], desc: 'Launch this game without opening GameLib.', slow: true });
+  if (!steam) out.push({ key: 'addSteam', icon: 'steam', label: 'Show in Steam', desc: 'Adds a non-Steam shortcut to your Steam library, so it appears in Big Picture and on Steam Deck.', slow: true });
+  if (inst && st === 'epic' && S.platform === 'linux') out.push({ key: 'eos', icon: 'overlay', label: 'Epic overlay (EOS)', desc: 'Epic’s in-game overlay for friends and achievements. Installs it the first time.', slow: true });
+  return out;
+}
+const isOn = (k) => k === 'runsForMe' ? S.runsForMe !== 'off' : S[k];
+
+function rowsA(sw) {
+  const its = items();
+  if (!its.length) return '';
+  return `<div class="grouphead" data-anno><span class="anno" style="top:-16px;left:0">moved out of ⋮</span><h3>Library &amp; integration</h3></div>` + its.map(it => {
+    const busy = S.busy[it.key], err = S.err[it.key];
+    const ctl = sw ? `<span class="track"></span>` : `<span class="box">${ic('check')}</span>`;
+    return `<div class="tsw ${sw ? 'sw' : ''} ${busy ? 'busy' : ''}" role="switch" tabindex="0" aria-checked="${isOn(it.key)}" data-act="tog" data-key="${it.key}">
+      ${sw ? '' : ctl}<span class="lbl">${it.label}</span>${busy ? `<span class="aside"><span class="spin"></span>${isOn(it.key) ? 'Removing…' : 'Adding…'}</span>` : `<span class="aside">${it.aside || ''}${sw ? ctl : ''}</span>`}
+      <span class="desc">${it.desc}</span>${err ? `<span class="err">${err} <button data-act="tog" data-key="${it.key}">Retry</button></span>` : ''}</div>`;
+  }).join('');
+}
+function rowsB() {
+  const its = items();
+  if (!its.length) return '';
+  return `<div class="grouphead"><h3>Library &amp; integration</h3></div><div class="chiprow" data-anno><span class="anno" style="top:-16px;left:0">moved out of ⋮</span>` + its.map(it => {
+    const busy = S.busy[it.key], err = S.err[it.key];
+    return `<button class="tchip ${err ? 'error' : ''}" aria-pressed="${isOn(it.key)}" data-act="tog" data-key="${it.key}" title="${err || it.desc}"><span class="tick">${busy ? '<span class="spin"></span>' : ic(err ? 'info' : isOn(it.key) ? 'check' : it.icon)}</span>${it.label}</button>`;
+  }).join('') + `</div><div class="chiphint">Hover a chip for what it does.</div>`;
+}
+
+function menuHtml() {
+  const st = S.store, inst = S.installed, steam = st === 'steam', side = st === 'sideload', epicGog = st === 'epic' || st === 'gog';
+  const b = (icon, label, msg, cls = '') => `<button class="${cls}" data-act="toast" data-msg="${msg || label}">${ic(icon)}${label}</button>`;
+  let h = '';
+  if (!inst) h += (steam ? b('down', 'Install with options…') : b('search', 'Locate existing installation…')) + '<hr>';
+  h += '<div class="grp">Manage</div>' + b('edit', 'Edit game…');
+  if (inst && epicGog) h += b('list', 'Modify installation…');
+  if (inst && !side) h += b('wrench', 'Verify and repair');
+  if (inst && epicGog) h += b('update', 'Check for update') + b('folder', 'Move game…') + b('search', 'Set install folder…');
+  if (S.v === 'c') {
+    const its = items().filter(i => i.key !== 'runsForMe');
+    if (its.length) h += '<hr><div class="grp">Integration</div>' + its.map(it => `<button role="menuitemcheckbox" aria-checked="${isOn(it.key)}" data-act="tog" data-key="${it.key}" ${it.key && S.err[it.key] ? `title="${S.err[it.key]}"` : ''}>${ic(it.icon)}${it.label}<span class="chk" style="visibility:visible">${S.busy[it.key] ? '<span class="spin"></span>' : S.err[it.key] ? '<span style="color:var(--color-danger)">!</span>' : isOn(it.key) ? ic('check') : ''}</span></button>`).join('');
+  }
+  h += '<hr><div class="grp">Open</div>';
+  if (inst) h += b('folder', 'Browse files');
+  if (inst && !steam && S.platform !== 'win32') h += b('wine', 'Browse Wine prefix');
+  if (inst) h += b('doc', 'Logs');
+  if (!side) h += b('cart', 'Store page');
+  if (!side && S.platform === 'linux') h += b('monitor', 'Check compatibility (ProtonDB)');
+  if (inst) { h += '<hr>' + b('trash', 'Uninstall…', 'Uninstall…', 'danger'); if (steam) h += b('trash', 'Remove all copies…', 'Remove all copies…', 'danger'); }
+  return h;
+}
+
+const storeBadge = () => ({ steam: 'Steam', epic: 'Epic Games', gog: 'GOG', sideload: 'Sideloaded' })[S.store];
+function render() {
+  const openMenu = !!document.querySelector('.menu.open');
+  document.getElementById('head').innerHTML = `<div class="meta"><span class="store">${storeBadge()}</span><span class="dev">Saltmarsh Interactive</span><span>·</span><span>2024</span><span class="chip">Adventure</span><span class="chip">Metroidvania</span></div><h1 class="title">Hollow Depths: The Lantern Tide</h1>`;
+  document.getElementById('actions').innerHTML = (S.installed ? `<button class="btn primary" data-act="toast" data-msg="Launching…">${ic('play')}Play</button><select class="launchopt"><option>Default launch</option></select>` : `<button class="btn primary" data-act="toast" data-msg="Install dialog…">${ic('down')}Install</button>`) +
+    `<span class="grow"></span><button class="iconbtn" data-act="toast" data-msg="Opens game settings" aria-label="Game settings">${ic('gear')}</button>
+     <span class="popwrap"><button class="iconbtn" data-act="menu" aria-haspopup="menu" aria-expanded="false" aria-label="More actions">${ic('dots')}</button><div class="menu" role="menu">${menuHtml()}</div></span>`;
+  document.getElementById('status').innerHTML = S.installed ? `<div class="status"><span class="dot ok"></span><b>Installed</b> · 48.2 GB · Played 12 h 40 m</div>` : `<div class="status"><span class="dot"></span><b>Not installed</b> · Download 31.6 GB</div>`;
+  const info = [['Platforms', 'Windows · Linux (Proton)'], ['Install size', S.installed ? '48.2 GB' : '—'], ['Location', S.installed ? '~/Games/Heroic/HollowDepths' : '—'], ['Cloud saves', 'Synced 3 days ago']]
+    .map(([k, v]) => `<div class="row"><b>${k}</b><span>${v}</span></div>`).join('');
+  let panel;
+  if (S.v === 'a') panel = info + rowsA(false);
+  else if (S.v === 'a2') panel = info + rowsA(true);
+  else if (S.v === 'b') panel = rowsB() + `<div style="height:8px"></div>` + info;
+  else panel = info + (S.platform === 'darwin' ? rowsA(false) : '');
+  document.getElementById('panel').innerHTML = panel;
+  if (openMenu) { const m = document.querySelector('#actions .menu'); m.classList.add('open'); m.previousElementSibling.setAttribute('aria-expanded', 'true'); }
+}
+
+function toggle(k) {
+  if (S.busy[k]) return;
+  if (k === 'runsForMe') { S.runsForMe = S.runsForMe === 'off' ? 'on' : 'off'; render(); return; }
+  delete S.err[k];
+  const target = !S[k];
+  S.busy[k] = true; render();
+  setTimeout(() => {
+    delete S.busy[k];
+    if (k === 'addSteam' && S.failSteam && target) { S.err[k] = 'Couldn’t update Steam’s shortcuts.vdf: Steam is running and holds the file.'; S.failSteam = false; document.getElementById('failSteam').checked = false; }
+    else { S[k] = target; toast(target ? 'Done: on' : 'Done: off'); }
+    render();
+  }, S.slow ? 1500 : 120);
+}
+
+function closeMenus() { document.querySelectorAll('.menu.open').forEach(m => { m.classList.remove('open'); m.previousElementSibling?.setAttribute('aria-expanded', 'false'); }); }
+let toastT; function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 1600); }
+
+document.addEventListener('click', (e) => {
+  const el = e.target.closest('[data-act]');
+  if (!el) { if (!e.target.closest('.menu')) closeMenus(); return; }
+  const act = el.dataset.act;
+  if (act === 'menu') { const m = el.nextElementSibling; const open = !m.classList.contains('open'); closeMenus(); m.classList.toggle('open', open); el.setAttribute('aria-expanded', String(open)); return; }
+  if (act === 'tog') { e.stopPropagation(); toggle(el.dataset.key); return; }
+  closeMenus();
+  if (act === 'toast') toast(el.dataset.msg);
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeMenus();
+  if ((e.key === ' ' || e.key === 'Enter') && e.target.matches('.tsw')) { e.preventDefault(); toggle(e.target.dataset.key); }
+});
+
+function showVariant(id) {
+  S.v = id;
+  document.querySelectorAll('.variant-tab').forEach(t => t.classList.toggle('active', t.dataset.v === id));
+  const [h, p, good, bad] = CAPTIONS[id];
+  document.getElementById('caption').innerHTML = `<h2>${h}</h2><p>${p}</p><div class="tradeoff">${good.map(g => `<span class="good"><b>+</b> ${g}</span>`).join('')}${bad.map(b => `<span class="bad"><b>−</b> ${b}</span>`).join('')}</div>`;
+  closeMenus(); render();
+}
+document.querySelectorAll('.variant-tab').forEach(t => t.addEventListener('click', () => showVariant(t.dataset.v)));
+document.getElementById('theme-switcher').addEventListener('change', (e) => { document.querySelector('link[href*="themes/"]').href = '../themes/' + e.target.value + '.css'; document.documentElement.dataset.theme = e.target.value; });
+['store', 'platform'].forEach(k => document.getElementById(k).addEventListener('change', (e) => { S[k] = e.target.value; render(); }));
+document.getElementById('installed').addEventListener('change', (e) => { S.installed = e.target.checked; render(); });
+document.getElementById('slow').addEventListener('change', (e) => { S.slow = e.target.checked; });
+document.getElementById('failSteam').addEventListener('change', (e) => { S.failSteam = e.target.checked; });
+document.getElementById('annotate').addEventListener('change', (e) => document.getElementById('win').classList.toggle('annotate', e.target.checked));
+document.querySelectorAll('[data-w]').forEach(b => b.addEventListener('click', () => { document.getElementById('win').style.setProperty('--win-w', b.dataset.w + 'px'); document.querySelectorAll('[data-w]').forEach(x => x.classList.toggle('on', x === b)); }));
+
+// deep links: ?v=a|a2|b|c&theme=&store=&platform=&installed=0&menu=1&err=1
+const q = new URLSearchParams(location.search);
+if (q.get('theme')) { const ts = document.getElementById('theme-switcher'); ts.value = q.get('theme'); ts.dispatchEvent(new Event('change')); }
+['store', 'platform'].forEach(k => { if (q.get(k)) { S[k] = q.get(k); document.getElementById(k).value = S[k]; } });
+if (q.get('installed') === '0') { S.installed = false; document.getElementById('installed').checked = false; }
+if (q.get('err') === '1') S.err.addSteam = 'Couldn’t update Steam’s shortcuts.vdf: Steam is running and holds the file.';
+if (q.get('busy') === '1') S.busy.eos = true;
+showVariant(CAPTIONS[q.get('v')] ? q.get('v') : 'a');
+if (q.get('menu') === '1') document.querySelector('#actions [data-act="menu"]').click();
+</script>
+</body>
+</html>

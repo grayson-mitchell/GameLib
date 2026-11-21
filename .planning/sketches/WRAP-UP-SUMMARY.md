@@ -116,3 +116,44 @@ icon presence; `gamepad` and `sliders` are reserved for tier-1 tabs.
 `sources/themes/*.css` in the skill were refreshed. The 2026-08-07 copies predated the tier-2 row
 tokens (`--navbar-accent`, `--navbar-active`, `--navbar-active-background`, `--accent`,
 `--accent-overlay`) that sketch 005 added, and sketches 005–007 depend on those tokens.
+
+
+---
+
+# Sketch Wrap-Up Summary (2026-11-21)
+
+**Date:** 2026-11-21
+**Sketches processed:** 5 (5 included, 0 excluded; 010 and 011 folded into 012)
+**Design areas:** Game page · Game settings dialog
+**Skill output:** `./.claude/skills/sketch-findings-gamelib/` (appended; new `references/game-page.md`, `references/game-settings-dialog.md`)
+
+## Included Sketches
+
+| # | Name | Winner | Design Area |
+|---|------|--------|-------------|
+| 008 | game-page-action-bar | **A′**: 3fr/2fr card, docked footer (shipped 261114-1fi) | Game page |
+| 009 | game-settings-dialog | **B**: header card + grouped cards (shipped 261121-dzl) | Game settings dialog |
+| 010 | game-page-title-row | **A**: heart by title, category chips (folded into 012) | Game page |
+| 011 | integration-toggles | **A2**: switch rows (folded into 012) | Game page |
+| 012 | game-page-no-menu | **A**: Install tab is the hub, ⋮ removed (unbuilt) | Game page |
+
+## Excluded Sketches
+
+None.
+
+## Design Direction
+
+The game page has three homes and needs no catch-all menu. The left card is the game (the same for
+everyone): store link, Edit details, Favourite heart, category chips, Hide. The right panel's
+Install tab is your copy: facts that carry their own actions (Location → Open/Move, Size → Modify,
+Version → Verify/Check for updates), integration switch rows, and a danger-zone Uninstall. The ⚙
+dialog covers how the game runs (EOS overlay, Logs tab). The footer holds only tier-one actions: the
+status line, then Play or Install (split ▾), the launch option and ⚙.
+
+## Key Decisions
+
+- Every action sits next to the thing it changes; no ⋮; Requirements and the left-card play-time block are removed as duplicates.
+- Uninstall stays out of the footer (one misclick from Play); it goes last, in red, behind a confirmation.
+- State is shown by the control (pressed heart, switch position), never by wording that flips.
+- Pending and error states live inside each row; the list never jumps and errors never open a modal.
+- Settings dialog: Run first, bordered cards, noun labels with (i) help, neutral notes, fixed 80% height.

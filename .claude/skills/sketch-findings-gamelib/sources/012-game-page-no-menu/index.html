@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="default">
+<head>
+<meta charset="utf-8">
+<title>Sketch 012 · Game page without ⋮</title>
+<link rel="stylesheet" href="../themes/default.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700&family=Cabin:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body { background: #0b0d0e; font-family: var(--font-sans); color: var(--color-text); padding-top: 52px; padding-bottom: 80px; }
+html[data-theme="default"] { --on-primary: #08191b; --fav: #ff5c8a; }
+html[data-theme="gruvbox"] { --on-primary: #fbf1c7; --fav: #fb4934; }
+html[data-theme="dracula"] { --on-primary: #21222c; --fav: #ff79c6; }
+
+/* ─── sketch chrome (theme-independent) ─── */
+#variant-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #16181a; border-bottom: 1px solid #2a2e31; padding: 8px 16px; display: flex; gap: 8px; align-items: center; font-family: system-ui, sans-serif; flex-wrap: wrap; }
+#variant-nav .brand { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #6b7376; margin-right: 12px; font-weight: 600; }
+.variant-tab { background: transparent; border: 1px solid #2a2e31; color: #b9c0c2; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: inherit; transition: all .15s ease; }
+.variant-tab:hover { border-color: #4a5154; color: #e6ebec; }
+.variant-tab.active { background: #1de8f5; border-color: #1de8f5; color: #08191b; font-weight: 600; }
+.variant-tab.ref { border-style: dashed; }
+.caption { max-width: 1240px; margin: 20px auto 14px; padding: 0 24px; font-family: system-ui, sans-serif; }
+.caption h2 { margin: 0 0 6px; font-size: 15px; color: #e6ebec; font-weight: 600; }
+.caption p { margin: 0; font-size: 13px; line-height: 1.55; color: #8b9295; max-width: 100ch; }
+.tradeoff { display: flex; gap: 18px; font-size: 12px; margin-top: 10px; flex-wrap: wrap; }
+.tradeoff span { color: #8b9295; } .good b { color: #58c06d; } .bad b { color: #d6704e; }
+#sketch-tools { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 9999; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; background: #16181a; border: 1px solid #2a2e31; border-radius: 10px; padding: 6px 8px; font-family: system-ui, sans-serif; font-size: 12px; color: #b9c0c2; box-shadow: 0 8px 24px rgba(0,0,0,.5); max-width: calc(100vw - 32px); }
+#sketch-tools button, #sketch-tools select { background: #1f2326; color: #d6dcde; border: 1px solid #2f3437; border-radius: 6px; padding: 5px 9px; font: inherit; cursor: pointer; }
+#sketch-tools button.on { background: #1de8f5; color: #08191b; border-color: #1de8f5; }
+#sketch-tools label { display: flex; gap: 5px; align-items: center; padding: 0 4px; cursor: pointer; }
+.sep2 { width: 1px; height: 20px; background: #2f3437; margin: 0 2px; }
+
+/* ─── fake app window ─── */
+.window { width: min(var(--win-w, 1240px), calc(100vw - 32px)); height: var(--win-h, 700px); margin: 0 auto; border-radius: 10px; overflow: hidden; border: 1px solid #2a2e31; box-shadow: var(--shadow-lg); background: var(--color-bg); position: relative; display: flex; flex-direction: column; transition: width .22s, height .22s; }
+.titlebar { height: var(--titlebar-height); flex: none; display: flex; align-items: center; gap: 8px; padding: 0 var(--space-4); background: var(--navbar-background); }
+.tl { width: 12px; height: 12px; border-radius: 50%; } .tl.r { background: #ff5f57; } .tl.y { background: #febc2e; } .tl.g { background: #28c840; }
+.tabs { display: flex; gap: 4px; margin-left: calc(var(--traffic-light-inset) - 60px); align-self: flex-end; }
+.tabs span { font-size: var(--text-sm); padding: 7px 16px; border-radius: 8px 8px 0 0; color: var(--color-text-muted); }
+.tabs span.on { background: var(--color-bg); color: var(--color-text); }
+.stage { flex: 1; min-height: 0; position: relative; container-type: size; container-name: stage; }
+
+.art { background: radial-gradient(ellipse 60% 40% at 72% 30%, rgba(255,190,120,.55), transparent 70%), radial-gradient(ellipse 80% 60% at 20% 110%, #0d2a2c 30%, transparent 70%), linear-gradient(180deg, #3a2f52 0%, #6b4a63 38%, #c27a5d 62%, #1a2d33 63%, #0e1c20 100%); position: relative; overflow: hidden; }
+.art::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 35%, var(--color-surface) 100%); }
+.logo { font-family: Georgia, serif; font-weight: 700; letter-spacing: .14em; color: #f6ecd8; text-shadow: 0 2px 12px rgba(0,0,0,.6); line-height: .95; position: relative; z-index: 1; text-transform: uppercase; }
+.logo small { display: block; font-size: .32em; letter-spacing: .5em; opacity: .85; margin-top: .4em; }
+
+/* ─── shared components ─── */
+svg.i { width: 16px; height: 16px; flex: none; fill: currentColor; }
+.iconbtn { width: 40px; height: 40px; display: grid; place-items: center; flex: none; background: var(--navbar-background); color: var(--color-text-muted); border: 1px solid var(--color-border); border-radius: var(--radius-lg); cursor: pointer; transition: color .15s, border-color .15s, background .15s, transform .15s; }
+.iconbtn:hover, .iconbtn[aria-expanded="true"] { color: var(--color-text); border-color: var(--color-border-strong); }
+.iconbtn svg.i { width: 18px; height: 18px; }
+.iconbtn.fav[aria-pressed="true"] { color: var(--fav); border-color: color-mix(in srgb, var(--fav) 55%, transparent); background: color-mix(in srgb, var(--fav) 12%, var(--navbar-background)); }
+.iconbtn.hid[aria-pressed="true"] { color: var(--color-warning); border-color: color-mix(in srgb, var(--color-warning) 55%, transparent); background: color-mix(in srgb, var(--color-warning) 12%, var(--navbar-background)); }
+.iconbtn.pop { animation: pulse .3s ease; }
+@keyframes pulse { 50% { transform: scale(1.15); } }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.btn { height: 40px; padding: 0 18px; border-radius: var(--radius-md); border: 1px solid transparent; font: 600 var(--text-base) var(--font-sans); display: inline-flex; align-items: center; gap: 8px; cursor: pointer; white-space: nowrap; }
+.btn.primary { background: var(--color-primary); color: var(--on-primary); min-width: 168px; justify-content: center; }
+.btn.primary:hover { background: var(--color-primary-hover); }
+.actionbar { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; position: relative; }
+.actionbar .grow { flex: 1; }
+.launchopt { height: 40px; background: var(--navbar-background); color: var(--color-text); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 10px; font: var(--text-sm) var(--font-sans); flex: 0 1 180px; min-width: 112px; }
+.vsep { width: 1px; height: 24px; background: var(--color-border-strong); margin: 0 2px; }
+
+.popwrap { position: relative; display: inline-flex; }
+.menu { position: absolute; bottom: calc(100% + 6px); right: 0; z-index: 30; min-width: 250px; max-height: min(560px, calc(100cqh - 120px)); overflow-y: auto; background: var(--navbar-background); border: 1px solid var(--color-border-strong); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); padding: 6px; display: none; transform-origin: bottom right; animation: pop .14s ease both; }
+.menu.down { bottom: auto; top: calc(100% + 6px); transform-origin: top left; left: 0; right: auto; }
+.menu.open { display: block; }
+@keyframes pop { from { opacity: 0; transform: scale(.97) translateY(4px); } }
+.menu .grp { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: .08em; color: var(--color-text-muted); padding: 8px 10px 4px; font-weight: 600; }
+.menu hr { border: 0; border-top: 1px solid var(--color-border); margin: 6px 4px; }
+.menu button, .menu label { display: flex; gap: 10px; align-items: center; width: 100%; text-align: start; background: none; border: 0; color: var(--color-text); font: var(--text-sm) var(--font-sans); padding: 7px 10px; border-radius: var(--radius-md); cursor: pointer; }
+.menu button:hover, .menu label:hover { background: color-mix(in srgb, var(--color-text) 10%, transparent); }
+.menu button svg { color: var(--color-text-muted); }
+.menu button.danger { color: var(--color-danger); } .menu button.danger svg { color: currentColor; }
+.menu button .chk { margin-left: auto; color: var(--color-primary); visibility: hidden; }
+.menu button[aria-checked="true"] .chk { visibility: visible; }
+.menu .moved { font-size: var(--text-xs); color: var(--color-text-dim); padding: 2px 10px 6px; font-style: italic; }
+.menu input[type=checkbox] { accent-color: var(--color-primary); margin: 0; }
+.menu .newcat { display: flex; gap: 6px; padding: 6px 6px 2px; }
+.menu .newcat input { flex: 1; min-width: 0; background: var(--color-bg); color: var(--color-text); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); padding: 6px 8px; font: var(--text-sm) var(--font-sans); }
+.menu .newcat button { width: auto; padding: 6px 10px; border: 1px solid var(--color-border-strong); }
+
+.notice { display: flex; gap: 10px; align-items: flex-start; padding: 9px 12px; border-radius: var(--radius-md); font-size: var(--text-sm); line-height: 1.45; background: color-mix(in srgb, var(--color-text) 6%, var(--color-surface)); border: 1px solid var(--color-border); border-left: 3px solid var(--color-text-muted); }
+.notice svg { color: var(--color-text-muted); margin-top: 2px; }
+.notice.hidden-note { border-left-color: var(--color-warning); }
+.notice.hidden-note svg { color: var(--color-warning); }
+.notice .linkbtn { background: none; border: 0; padding: 0; color: var(--color-text); font: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; }
+.notices { display: flex; flex-direction: column; gap: 6px; } .notices:empty { display: none; }
+.status { display: flex; align-items: center; gap: 10px; font-size: var(--text-sm); color: var(--color-text-muted); flex-wrap: wrap; min-height: 22px; }
+.status b { color: var(--color-text); font-weight: 500; }
+.status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-text-muted); } .status .dot.ok { background: var(--color-success); }
+
+.meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: var(--text-sm); color: var(--color-text-muted); }
+.meta .store { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 9999px; border: 1px solid var(--color-border-strong); color: var(--color-text); font-size: var(--text-xs); font-weight: 600; }
+.chip { padding: 3px 9px; border-radius: 9999px; font-size: var(--text-xs); font-weight: 600; background: color-mix(in srgb, var(--color-accent) 18%, transparent); color: var(--color-text); }
+.dev { font-style: italic; color: var(--brand-text-02); }
+h1.title { margin: 0; font-size: var(--text-2xl); font-weight: 600; color: var(--color-text); line-height: 1.15; }
+
+/* user categories: outlined + tag icon, so they never read as store genres */
+.cats { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.cat { display: inline-flex; align-items: center; gap: 5px; padding: 3px 6px 3px 8px; border-radius: 9999px; font-size: var(--text-xs); font-weight: 500; border: 1px solid var(--color-border-strong); color: var(--color-text); background: transparent; }
+.cat svg.i { width: 12px; height: 12px; color: var(--color-text-muted); }
+.cat .x { background: none; border: 0; color: var(--color-text-muted); cursor: pointer; padding: 0 2px; font-size: 13px; line-height: 1; opacity: 0; transition: opacity .15s; }
+.cat:hover .x, .cat:focus-within .x { opacity: 1; }
+.cat .x:hover { color: var(--color-text); }
+.addcat { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 9999px; font: 500 var(--text-xs) var(--font-sans); border: 1px dashed var(--color-border-strong); color: var(--color-text-muted); background: none; cursor: pointer; transition: color .15s, border-color .15s; }
+.addcat:hover, .addcat[aria-expanded="true"] { color: var(--color-text); border-color: var(--color-text-muted); }
+.addcat svg.i { width: 12px; height: 12px; }
+
+/* A — heart beside title */
+.titlerow { display: flex; align-items: center; gap: 10px; }
+.titlerow h1 { flex: 0 1 auto; }
+.heart { background: none; border: 0; padding: 4px; border-radius: 9999px; color: var(--color-text-muted); cursor: pointer; display: grid; place-items: center; transition: color .15s, transform .15s; }
+.heart svg.i { width: 24px; height: 24px; }
+.heart:hover { color: var(--color-text); }
+.heart[aria-pressed="true"] { color: var(--fav); }
+.heart.pop { animation: pulse .3s ease; }
+
+/* C — library strip */
+.strip { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 10px; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: color-mix(in srgb, var(--color-bg) 40%, var(--color-surface)); }
+.strip .lbl { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: .08em; color: var(--color-text-dim); font-weight: 600; margin-right: 2px; }
+.pill { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border-radius: 9999px; font: 500 var(--text-xs) var(--font-sans); border: 1px solid var(--color-border-strong); color: var(--color-text-muted); background: none; cursor: pointer; transition: all .15s; }
+.pill svg.i { width: 14px; height: 14px; }
+.pill:hover { color: var(--color-text); }
+.pill.fav[aria-pressed="true"] { color: var(--fav); border-color: color-mix(in srgb, var(--fav) 55%, transparent); background: color-mix(in srgb, var(--fav) 12%, transparent); }
+.pill.hid[aria-pressed="true"] { color: var(--color-warning); border-color: color-mix(in srgb, var(--color-warning) 55%, transparent); background: color-mix(in srgb, var(--color-warning) 12%, transparent); }
+
+/* layout (A′ from sketch 008, as shipped in 261114-1fi) */
+.page { position: absolute; inset: 0; display: grid; grid-template-columns: 3fr 2fr; gap: 16px; padding: 16px; }
+.main { min-height: 0; display: flex; flex-direction: column; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; }
+.scrollall { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
+.main .art { height: clamp(120px, 26cqh, 220px); flex: none; display: flex; align-items: center; justify-content: center; }
+.main .art .logo { font-size: clamp(22px, min(3.4cqw, 5cqh), 40px); margin-top: -14px; }
+.main .art .back { position: absolute; top: 12px; left: 12px; z-index: 3; }
+.head { padding: 0 24px 14px; margin-top: -18px; position: relative; z-index: 2; display: flex; flex-direction: column; gap: 10px; flex: none; }
+.aboutblock { padding: 14px 24px 20px; border-top: 1px solid var(--color-border); font-size: var(--text-sm); line-height: 1.6; color: var(--neutral-06); }
+.aboutblock p { margin: 0 0 .8em; }
+.sectionhead { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: .1em; color: var(--color-text-muted); font-weight: 600; margin: 0 0 8px; }
+.dock { flex: none; border-top: 1px solid var(--color-border); padding: 12px 24px 14px; display: flex; flex-direction: column; gap: 8px; background: color-mix(in srgb, var(--color-bg) 35%, var(--color-surface)); position: relative; z-index: 3; }
+.panel { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.tabbar { display: flex; gap: 2px; padding: 4px; margin: 12px 12px 0; border: 1px solid var(--color-border); border-radius: 8px; background: color-mix(in srgb, var(--color-bg) 50%, transparent); flex: none; }
+.tabbar span { flex: 1; text-align: center; color: var(--color-text-muted); padding: 7px 10px; border-radius: var(--radius-md); font: 500 var(--text-sm) var(--font-sans); }
+.tabbar span.on { color: var(--color-text); background: color-mix(in srgb, var(--color-text) 14%, transparent); }
+.tabbody { overflow-y: auto; padding: 6px 16px 14px; min-height: 0; flex: 1; }
+.row { display: flex; gap: 16px; padding: 11px 2px; border-bottom: 1px solid var(--color-border); font-size: var(--text-sm); }
+.row b { flex: 0 0 120px; font-weight: 500; color: var(--color-text-muted); }
+.row span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@container stage (max-width: 820px) { .page { grid-template-columns: 1fr; overflow-y: auto; } .main { overflow: visible; } .scrollall { overflow: visible; } .dock { position: sticky; bottom: 0; } }
+
+.toast { position: absolute; right: 20px; bottom: 20px; z-index: 50; background: var(--navbar-background); color: var(--color-text); border: 1px solid var(--color-border-strong); border-left: 3px solid var(--color-primary); border-radius: var(--radius-md); padding: 10px 14px; font-size: var(--text-sm); box-shadow: var(--shadow-md); opacity: 0; transform: translateY(8px); transition: opacity .18s, transform .18s; pointer-events: none; }
+.toast.show { opacity: 1; transform: none; }
+.anno { display: none; }
+.annotate .anno { display: inline-block; position: absolute; z-index: 40; font: 600 10px system-ui; background: #ff3d7f; color: #fff; padding: 2px 6px; border-radius: 4px; pointer-events: none; white-space: nowrap; }
+.annotate [data-anno] { outline: 1px dashed #ff3d7f; outline-offset: 3px; position: relative; }
+
+/* ─── 012 ─── */
+.window { height: var(--win-h, 740px); }
+.btn.ghost { background: transparent; color: var(--color-text); border-color: var(--color-border-strong); }
+.btn.dangerghost { background: transparent; color: var(--color-danger); border-color: color-mix(in srgb, var(--color-danger) 60%, transparent); height: 34px; font-size: var(--text-sm); padding: 0 14px; }
+.btn.dangerghost:hover { background: color-mix(in srgb, var(--color-danger) 12%, transparent); }
+.split { display: inline-flex; }
+.split .btn.primary:first-child { border-radius: var(--radius-md) 0 0 var(--radius-md); }
+.split .caret { min-width: 0; width: 40px; padding: 0; border-radius: 0 var(--radius-md) var(--radius-md) 0; border-left: 1px solid color-mix(in srgb, var(--on-primary) 25%, transparent); }
+.iconbtn.trash:hover { color: var(--color-danger); border-color: color-mix(in srgb, var(--color-danger) 60%, transparent); }
+.store a, a.store { color: inherit; text-decoration: none; }
+a.store:hover { border-color: var(--color-text-muted); }
+a.store svg.i { width: 11px; height: 11px; opacity: .7; }
+.editart { position: absolute; top: 12px; right: 12px; z-index: 3; opacity: 0; transition: opacity .15s; height: 32px; width: auto; padding: 0 10px; gap: 6px; display: inline-flex; font: 500 var(--text-xs) var(--font-sans); }
+.main .art:hover .editart, .editart:focus-visible, .annotate .editart { opacity: 1; }
+.libgroup { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.hidebtn { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 9999px; font: 500 var(--text-xs) var(--font-sans); border: 1px solid transparent; color: var(--color-text-dim); background: none; cursor: pointer; margin-left: auto; }
+.hidebtn svg.i { width: 13px; height: 13px; }
+.hidebtn:hover { color: var(--color-text); border-color: var(--color-border-strong); }
+.hidebtn[aria-pressed="true"] { color: var(--color-warning); border-color: color-mix(in srgb, var(--color-warning) 55%, transparent); }
+
+/* right panel tabs (clickable here) */
+.tabbar { overflow-x: auto; }
+.tabbar button { flex: 1 0 auto; white-space: nowrap; background: none; border: 0; color: var(--color-text-muted); padding: 7px 10px; border-radius: var(--radius-md); font: 500 var(--text-sm) var(--font-sans); cursor: pointer; }
+.tabbar button:hover { color: var(--color-text); }
+.tabbar button[aria-selected="true"] { color: var(--color-text); background: color-mix(in srgb, var(--color-text) 14%, transparent); }
+
+/* install hub: facts with the actions that act on them */
+.fact { display: grid; grid-template-columns: 112px 1fr; gap: 2px 14px; padding: 10px 2px; border-bottom: 1px solid var(--color-border); font-size: var(--text-sm); align-items: baseline; }
+.fact > b { font-weight: 500; color: var(--color-text-muted); }
+.fact .val { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fact .val small { color: var(--color-text-muted); }
+.fact .acts { grid-column: 2; display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; align-items: center; }
+.sbtn { height: 28px; padding: 0 10px; border-radius: var(--radius-md); border: 1px solid var(--color-border-strong); background: none; color: var(--color-text); font: 500 var(--text-xs) var(--font-sans); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: border-color .15s, background .15s; }
+.sbtn:hover { border-color: var(--color-text-muted); background: color-mix(in srgb, var(--color-text) 6%, transparent); }
+.sbtn svg.i { width: 13px; height: 13px; color: var(--color-text-muted); }
+.tlink { background: none; border: 0; padding: 0 4px; color: var(--color-text-muted); font: var(--text-xs) var(--font-sans); text-decoration: underline; cursor: pointer; }
+.tlink:hover { color: var(--color-text); }
+.pillok { color: var(--color-success); } .pillwarn { color: var(--color-warning); }
+.danger-zone { margin-top: 18px; padding: 12px; border: 1px solid color-mix(in srgb, var(--color-danger) 35%, var(--color-border)); border-radius: var(--radius-lg); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.danger-zone p { margin: 0; flex: 1 1 160px; font-size: var(--text-xs); color: var(--color-text-muted); }
+.new { font: 700 9px system-ui; letter-spacing: .06em; text-transform: uppercase; color: var(--color-bg); background: var(--color-accent); padding: 1px 5px; border-radius: 3px; margin-left: 6px; vertical-align: middle; display: none; }
+.annotate .new { display: inline-block; }
+
+/* switch rows (011-A2) */
+.tsw { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; align-items: center; padding: 9px 2px; border-bottom: 1px solid var(--color-border); cursor: pointer; }
+.tsw:last-child { border-bottom: 0; }
+.tsw .lbl { font-size: var(--text-sm); }
+.tsw .desc { grid-column: 1 / 3; font-size: var(--text-xs); color: var(--color-text-muted); }
+.track { width: 34px; height: 20px; border-radius: 9999px; background: var(--color-border-strong); position: relative; transition: background .2s; }
+.track::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--neutral-06); transition: transform .2s; }
+.tsw[aria-checked="true"] .track { background: var(--color-primary); }
+.tsw[aria-checked="true"] .track::after { transform: translateX(14px); background: var(--on-primary); }
+.grouphead { margin: 18px 2px 4px; font-size: var(--text-xs); text-transform: uppercase; letter-spacing: .1em; color: var(--color-text-muted); font-weight: 600; }
+
+/* C: "the game" | "your copy" */
+.copy { display: flex; flex-direction: column; min-height: 0; }
+.copyhead { padding: 14px 16px 12px; border-bottom: 1px solid var(--color-border); display: flex; flex-direction: column; gap: 10px; background: color-mix(in srgb, var(--color-bg) 35%, var(--color-surface)); }
+.copyhead h2 { margin: 0; font-size: var(--text-xs); text-transform: uppercase; letter-spacing: .1em; color: var(--color-text-muted); }
+.lefttabs { display: flex; gap: 2px; padding: 0 24px; border-bottom: 1px solid var(--color-border); position: sticky; top: 0; background: var(--color-surface); z-index: 4; }
+.lefttabs button { background: none; border: 0; border-bottom: 2px solid transparent; color: var(--color-text-muted); padding: 10px 12px; font: 500 var(--text-sm) var(--font-sans); cursor: pointer; }
+.lefttabs button[aria-selected="true"] { color: var(--color-text); border-bottom-color: var(--color-primary); }
+.leftbody { padding: 14px 24px 20px; font-size: var(--text-sm); line-height: 1.6; color: var(--neutral-06); }
+.leftbody p { margin: 0 0 .8em; }
+
+/* settings dialog mock */
+.scrim { position: absolute; inset: 0; background: rgba(0,0,0,.55); z-index: 60; display: none; place-items: center; }
+.scrim.open { display: grid; }
+.dlg { width: min(680px, 92%); height: 80%; background: var(--color-surface); border: 1px solid var(--color-border-strong); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); display: flex; flex-direction: column; overflow: hidden; animation: pop .15s ease both; }
+.dlghead { display: flex; gap: 12px; align-items: center; padding: 14px 16px; border-bottom: 1px solid var(--color-border); }
+.dlghead .thumb { width: 64px; height: 36px; border-radius: 6px; }
+.dlghead .thumb::after { display: none; }
+.dlghead div { flex: 1; } .dlghead strong { display: block; } .dlghead small { color: var(--color-text-muted); font-size: var(--text-xs); }
+.dlgtabs { display: flex; gap: 2px; padding: 8px 16px 0; border-bottom: 1px solid var(--color-border); }
+.dlgtabs button { background: none; border: 0; border-bottom: 2px solid transparent; color: var(--color-text-muted); padding: 8px 12px; font: 500 var(--text-sm) var(--font-sans); cursor: pointer; }
+.dlgtabs button[aria-selected="true"] { color: var(--color-text); border-bottom-color: var(--color-primary); }
+.dlgbody { flex: 1; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+.card { border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 4px 14px 8px; }
+.card h4 { margin: 10px 0 2px; font-size: var(--text-xs); text-transform: uppercase; letter-spacing: .1em; color: var(--color-text-muted); }
+.field { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--color-border); font-size: var(--text-sm); }
+.field:last-child { border-bottom: 0; }
+.field.hl { background: color-mix(in srgb, var(--color-accent) 10%, transparent); margin: 0 -14px; padding: 9px 14px; }
+.field input[type=text] { background: var(--color-bg); color: var(--color-text); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); padding: 5px 8px; font: var(--text-sm) var(--font-sans); width: 220px; }
+.logbox { font: 12px/1.5 ui-monospace, Menlo, monospace; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 10px; color: var(--color-text-muted); white-space: pre; overflow: auto; flex: 1; min-height: 200px; }
+
+/* map overlay */
+.mapwrap { max-width: 1240px; margin: 18px auto 0; padding: 0 24px; font-family: system-ui, sans-serif; display: none; }
+.mapwrap.open { display: block; }
+.mapwrap table { width: 100%; border-collapse: collapse; font-size: 12.5px; color: #c9d0d2; }
+.mapwrap th, .mapwrap td { text-align: left; padding: 6px 10px; border-bottom: 1px solid #2a2e31; vertical-align: top; }
+.mapwrap th { color: #8b9295; font-weight: 600; }
+.mapwrap td:first-child { color: #e6ebec; white-space: nowrap; }
+.mapwrap .where { white-space: nowrap; }
+.mapwrap .gone { color: #8b9295; text-decoration: line-through; }
+</style>
+</head>
+<body>
+
+<div id="variant-nav">
+  <span class="brand">Sketch 012 · Game page without ⋮</span>
+  <button class="variant-tab" data-v="a">A: Install tab is the hub ★ Selected</button>
+  <button class="variant-tab" data-v="b">B: A + Uninstall in the button row</button>
+  <button class="variant-tab" data-v="c">C: The game | Your copy</button>
+  <button class="variant-tab ref" id="mapbtn">Where did each item go?</button>
+</div>
+
+<div class="caption" id="caption"></div>
+<div class="mapwrap" id="map"></div>
+
+<div class="window" id="win">
+  <div class="titlebar">
+    <span class="tl r"></span><span class="tl y"></span><span class="tl g"></span>
+    <div class="tabs"><span>Manage Accounts</span><span class="on">Games</span><span>Stores</span><span>Downloads</span><span>Settings</span></div>
+  </div>
+  <div class="stage" id="stage">
+    <div class="page" id="page"></div>
+    <div class="scrim" id="scrim"><div class="dlg" id="dlg"></div></div>
+    <div class="toast" id="toast"></div>
+  </div>
+</div>
+
+<div id="sketch-tools">
+  <select id="theme-switcher" title="Theme"><option value="default">midnightMirage</option><option value="gruvbox">gruvbox_dark</option><option value="dracula">dracula</option></select>
+  <div class="sep2"></div>
+  <select id="store" title="Store"><option value="steam">Steam</option><option value="epic" selected>Epic</option><option value="gog">GOG</option><option value="sideload">Sideloaded</option></select>
+  <select id="platform" title="Platform"><option value="darwin" selected>macOS</option><option value="linux">Linux</option><option value="win32">Windows</option></select>
+  <select id="state" title="Game state"><option value="notInstalled">Not installed</option><option value="installed" selected>Installed</option><option value="update">Update available</option></select>
+  <div class="sep2"></div>
+  <button data-w="1240" class="on">1240</button><button data-w="980">980</button><button data-w="760">760</button>
+  <button data-h="740" class="on">Tall</button><button data-h="560">Short</button>
+  <div class="sep2"></div>
+  <label title="Mark everything that moved out of ⋮"><input type="checkbox" id="annotate"> Show moved items</label>
+</div>
+
+<script>
+const ICONS = {
+  back: '<path d="M15.4 4.6 14 3.2 5.2 12l8.8 8.8 1.4-1.4L8 12z"/>',
+  dots: '<circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/>',
+  gear: '<path d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3h-4l-.4 2.7a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.4 7.4 0 0 0 1.7 1L11 21h4l.4-2.7a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/>',
+  play: '<path d="M7 4.5v15l12.5-7.5z"/>',
+  down: '<path d="M11 3h2v10.2l3.6-3.6L18 11l-6 6-6-6 1.4-1.4 3.6 3.6zM5 19h14v2H5z"/>',
+  heart: '<path d="M12 21.4 10.6 20C5.4 15.4 2 12.3 2 8.5 2 5.4 4.4 3 7.5 3c1.7 0 3.4.8 4.5 2.1A6 6 0 0 1 16.5 3C19.6 3 22 5.4 22 8.5c0 3.8-3.4 6.9-8.6 11.5z"/>',
+  heartO: '<path d="M16.5 3A6 6 0 0 0 12 5.1 6 6 0 0 0 7.5 3C4.4 3 2 5.4 2 8.5c0 3.8 3.4 6.9 8.6 11.5l1.4 1.4 1.4-1.4C18.6 15.4 22 12.3 22 8.5 22 5.4 19.6 3 16.5 3zm-4.4 15.6-.1.1-.1-.1C7.1 14.2 4 11.4 4 8.5 4 6.5 5.5 5 7.5 5c1.5 0 3 1 3.6 2.4h1.9C13.5 6 15 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.9-3.1 5.7-7.9 10.1z"/>',
+  eye: '<path d="M12 4.5C7 4.5 2.7 7.6 1 12c1.7 4.4 6 7.5 11 7.5s9.3-3.1 11-7.5c-1.7-4.4-6-7.5-11-7.5zM12 17a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/>',
+  eyeOff: '<path d="M12 7a5 5 0 0 1 4.6 7l2.9 2.9c1.5-1.3 2.7-2.9 3.5-4.9-1.7-4.4-6-7.5-11-7.5-1.4 0-2.7.3-4 .7l2.2 2.2A5 5 0 0 1 12 7zM2 4.3l2.3 2.3.4.4A11.8 11.8 0 0 0 1 12c1.7 4.4 6 7.5 11 7.5 1.6 0 3-.3 4.4-.8l.4.4 2.9 2.9 1.3-1.3L3.3 3zM7.5 9.8l1.6 1.6-.1.6a3 3 0 0 0 3 3l.6-.1 1.6 1.6A5 5 0 0 1 7.5 9.8zm4.3-.8 3.2 3.2V12a3 3 0 0 0-3-3z"/>',
+  tag: '<path d="M21.4 11.6 12.4 2.6A2 2 0 0 0 11 2H4a2 2 0 0 0-2 2v7a2 2 0 0 0 .6 1.4l9 9a2 2 0 0 0 2.8 0l7-7a2 2 0 0 0 0-2.8zM6.5 8A1.5 1.5 0 1 1 6.5 5a1.5 1.5 0 0 1 0 3z"/>',
+  plus: '<path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/>',
+  check: '<path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/>',
+  folder: '<path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8z"/>',
+  wrench: '<path d="M22.7 19 13.6 9.9A6.4 6.4 0 0 0 5.4 2l3.9 3.9-2.8 2.8L2.6 4.8a6.4 6.4 0 0 0 7.9 8.2l9.1 9.1z"/>',
+  link: '<path d="M14 3v2h3.6l-9.8 9.8 1.4 1.4L19 6.4V10h2V3zm5 16H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7h-2z"/>',
+  edit: '<path d="M3 17.2V21h3.8L17.8 10l-3.8-3.8zM20.7 7a1 1 0 0 0 0-1.4l-2.3-2.3a1 1 0 0 0-1.4 0l-1.8 1.8 3.7 3.7z"/>',
+  list: '<path d="M3 5h18v2H3zm0 6h18v2H3zm0 6h18v2H3z"/>',
+  doc: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zm2 16H8v-2h8zm0-4H8v-2h8zm-3-5V3.5L18.5 9z"/>',
+  update: '<path d="M12 4a8 8 0 0 1 7.4 5H17v2h6V5h-2v2.3A10 10 0 0 0 2 12h2a8 8 0 0 1 8-8zm8 8a8 8 0 0 1-15.4 3H7v-2H1v6h2v-2.3A10 10 0 0 0 22 12z"/>',
+  search: '<path d="M15.5 14h-.8l-.3-.3A6.5 6.5 0 1 0 14 15.5l.3.3v.8l5 5 1.5-1.5zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z"/>',
+  monitor: '<path d="M21 3H3a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h7v2H8v2h8v-2h-2v-2h7a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm0 13H3V5h18z"/>',
+  wine: '<path d="M6 2h12l-1 7a5 5 0 0 1-4 4.9V20h3v2H8v-2h3v-6.1A5 5 0 0 1 7 9z"/>',
+  shortcut: '<path d="M21 11 14 4v4C7 9 4 14 3 19c2.5-3.5 6-5.1 11-5.1V18z"/>',
+  steam: '<circle cx="12" cy="12" r="10" opacity=".35"/><circle cx="15" cy="9" r="3"/><circle cx="8.5" cy="15.5" r="2.5"/>',
+  overlay: '<path d="M19 7h-8v6h8zm2-4H3a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm0 16H3V5h18z"/>',
+  trash: '<path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6zM19 4h-3.5l-1-1h-5l-1 1H5v2h14z"/>',
+  cart: '<path d="M7 18a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM1 2v2h2l3.6 7.6-1.4 2.4A2 2 0 0 0 7 17h12v-2H7.4l1.1-2h7.5a2 2 0 0 0 1.7-1l3.6-6.5A1 1 0 0 0 20.5 4H5.2l-.9-2zm16 16a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/>',
+  info: '<path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 15h-2v-6h2zm0-8h-2V7h2z"/>'
+};
+Object.assign(ICONS, {
+  ext: '<path d="M14 3v2h3.6l-9.8 9.8 1.4 1.4L19 6.4V10h2V3zm5 16H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7h-2z"/>',
+  caret: '<path d="m7 9.5 5 5 5-5z"/>',
+  cloud: '<path d="M19.4 10A7.5 7.5 0 0 0 5.4 8 6 6 0 0 0 6 20h13a5 5 0 0 0 .4-10z"/>'
+});
+const ic = (n) => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n]}</svg>`;
+
+const S = { v: 'a', store: 'epic', platform: 'darwin', state: 'installed', fav: true, hid: false, cats: ['Backlog', 'Comfort games'],
+  shortcut: true, addSteam: false, runsForMe: true, rtab: 'install', ltab: 'about', dlgTab: 'run' };
+const inst = () => S.state !== 'notInstalled';
+const steam = () => S.store === 'steam', side = () => S.store === 'sideload', epicGog = () => S.store === 'epic' || S.store === 'gog';
+const wine = () => S.platform !== 'win32' && !steam();
+const N = '<span class="new">moved</span>';
+
+const CAPTIONS = {
+  a: ['A: No ⋮. The Install tab becomes the hub', 'Every ⋮ item moves to the thing it acts on. The left card holds the game itself: the store badge links to the store page, a pencil on the art edits details, the heart and category chips sit by the title, and Hide is a quiet toggle at the end of that row. The right panel’s first tab becomes "Install", where each fact carries its own actions: Location has Open and Move, Size has Modify, Version has Verify and Check for updates, Engine has Open prefix, Cloud saves has Open folder. Below them are the integration switches and an Uninstall zone at the bottom. Run settings (EOS overlay) and Logs go in the ⚙ dialog. The footer is just Play, launch option and ⚙.',
+      ['Nothing hidden: every item is in a place you can see', 'Actions next to the data they change (Move sits by the path)', 'Footer stays calm: one primary action plus ⚙'],
+      ['Uninstall needs a tab switch if you’re on Achievements', 'The Install tab gets long for Epic/GOG on Linux']],
+  b: ['B: A, plus Uninstall as a tier-one button in the footer', 'Same distribution as A, but Uninstall is promoted to an icon button in the footer beside ⚙, as the one destructive action common enough to deserve a fixed spot. It turns red on hover and asks for confirmation. For Steam it opens a small choice (this copy / all copies). The Install tab loses its danger zone.',
+      ['Uninstall is one click from anywhere on the page', 'Matches how most launchers place it'],
+      ['A destructive button two buttons away from Play', 'The trash icon needs a tooltip and a confirmation every time']],
+  c: ['C: Split by meaning: the game on the left, your copy on the right', 'A bigger rethink. The left card is everything about the game, the same for everyone: art, title, library row, notices, then its own tabs for About, Ratings & compatibility, Requirements and Achievements (these move over from the right). The right column becomes "Your copy": status and the Play bar on top, then the install hub, integrations and Uninstall at the bottom. Play sits with the install it launches.',
+      ['Clear story: left = the game, right = this install', 'One place for everything you can do', 'Info tabs get the wide column they need (achievements, ratings)'],
+      ['Reverses 008: Play leaves the bottom of the left card', 'Biggest change to build and to get used to']]
+};
+
+const MAP = [
+  ['Install with options…', 'Footer', 'Install split ▾ (caret beside Install)'],
+  ['Locate existing installation…', 'Footer', 'Install split ▾, plus a link in the Install tab when not installed'],
+  ['Edit Game', 'Left', 'Pencil "Edit details" on the art (it edits the title and art shown there)'],
+  ['Logs', '⚙ dialog', 'New "Logs" tab beside Advanced (today a separate modal type of the same SettingsModal)'],
+  ['Hide / Unhide', 'Left', 'Quiet "Hide" toggle at the end of the library row, plus a notice with Unhide while hidden'],
+  ['Add To / Remove From Favourites', 'Left', 'Heart beside the title'],
+  ['Add / Remove shortcuts', 'Right · Install', 'Switch under "Library & integration"'],
+  ['Uninstall', 'Right · Install / Footer', 'Danger zone at the bottom of Install (A, C) or a footer icon (B)'],
+  ['Remove all copies… (Steam)', 'Right · Install / Footer', 'Beside Uninstall'],
+  ['Force Update if Available', 'Right · Install', '"Check for updates" on the Version row'],
+  ['Move Game', 'Right · Install', '"Move…" on the Location row'],
+  ['Change Install Location', 'Right · Install', '"Wrong folder? Set install folder…" link on the Location row (it points GameLib at a folder; nothing is moved)'],
+  ['Verify and Repair', 'Right · Install', '"Verify" on the Version row'],
+  ['Enable / Disable EOS Overlay', '⚙ dialog', 'Switch in Run → Launch (Linux, Epic): it changes how the game runs'],
+  ['Add to / Remove from Steam', 'Right · Install', '"Show in Steam" switch'],
+  ['Categories', 'Left', 'Category chips + "+ Category" under the title'],
+  ['Store', 'Left', 'The store badge in the meta row becomes a link ↗'],
+  ['Show Changelog', 'Status / Right · Install', '"What’s new" in the update status line and on the Version row'],
+  ['Check Compatibility (ProtonDB)', 'Ratings tab', 'ProtonDB row in Ratings & compatibility links out'],
+  ['Requirements', '—', '<span class="gone">removed</span>: the Requirements tab already shows it'],
+  ['Modify Installation', 'Right · Install', '"Modify…" on the Size row'],
+  ['Browse Files', 'Right · Install', '"Open" on the Location row'],
+  ['Browse Wine Prefix', 'Right · Install + ⚙ dialog', '"Open prefix" on the Engine row; also a folder button by the prefix field in ⚙ → Wine'],
+  ['Time played (TimeContainer, left card today)', 'Status line', 'Already in the status line ("Played 12 h 40 m"), so the left-card copy goes']
+];
+
+/* ── pieces ── */
+const storeName = () => ({ steam: 'Steam', epic: 'Epic Games', gog: 'GOG', sideload: 'Sideloaded' })[S.store];
+function meta() {
+  const badge = side() ? `<span class="store">${storeName()}</span>` : `<a class="store" href="#" data-act="toast" data-msg="Opens the ${storeName()} store page" title="Open store page">${storeName()} ${ic('ext')}${N}</a>`;
+  return `<div class="meta">${badge}<span class="dev">Saltmarsh Interactive</span><span>·</span><span>2024</span><span class="chip">Adventure</span><span class="chip">Metroidvania</span></div>`;
+}
+function titleBlock() {
+  const chips = S.cats.map(c => `<span class="cat">${ic('tag')}${c}<button class="x" data-act="rmcat" data-cat="${c}" aria-label="Remove ${c}">×</button></span>`).join('');
+  return `<div class="titlerow"><h1 class="title">Hollow Depths: The Lantern Tide</h1><button class="heart" data-act="flip" data-key="fav" aria-pressed="${S.fav}" aria-label="Favourite" title="${S.fav ? 'Remove from favourites' : 'Add to favourites'}">${ic(S.fav ? 'heart' : 'heartO')}</button>${N}</div>
+    <div class="libgroup">${chips}<button class="addcat" data-act="toast" data-msg="Category checklist (see sketch 010)">${ic('plus')}Category</button>${N}
+      <button class="hidebtn" data-act="flip" data-key="hid" aria-pressed="${S.hid}" title="${S.hid ? 'Unhide' : 'Hide from library'}">${ic(S.hid ? 'eyeOff' : 'eye')}${S.hid ? 'Hidden' : 'Hide'}</button>${N}</div>
+    <div class="notices">${S.hid ? `<div class="notice hidden-note">${ic('eyeOff')}<div>Hidden from your library. It only appears when “Show hidden” is on. <button class="linkbtn" data-act="flip" data-key="hid">Unhide</button></div></div>` : ''}</div>`;
+}
+const artBand = () => `<div class="art"><button class="iconbtn back" data-act="toast" data-msg="Back to library" aria-label="Back">${ic('back')}</button>
+  <button class="iconbtn editart" data-act="toast" data-msg="Edit details: title, cover and logo art">${ic('edit')}Edit details${N}</button>
+  <div class="logo">Hollow Depths<small>The Lantern Tide</small></div></div>`;
+const aboutText = `<p>Descend into a flooded city lit only by the lanterns you carry. Every chamber you relight redraws the map, opening shortcuts and sealing others behind rising water.</p><p>Trade with the tide-keepers, bind spirits to your lantern for new traversal powers, and decide which districts the sea finally reclaims.</p>`;
+
+function statusLine() {
+  if (S.state === 'notInstalled') return `<div class="status"><span class="dot"></span><b>Not installed</b> · Download 31.6 GB · Install 48.2 GB</div>`;
+  if (S.state === 'update') return `<div class="status"><span class="dot" style="background:var(--color-warning)"></span><b>Update available</b> · 1.2 GB · <button class="linkbtn" data-act="toast" data-msg="Changelog">What’s new</button></div>`;
+  return `<div class="status"><span class="dot ok"></span><b>Installed</b> · Played 12 h 40 m · Last played 3 days ago</div>`;
+}
+function primary() {
+  if (S.state === 'notInstalled') {
+    const opts = (steam() ? `<button data-act="toast" data-msg="Install options dialog">${ic('down')}Install with options…</button>` : `<button data-act="toast" data-msg="Install dialog">${ic('down')}Choose folder and options…</button>`) +
+      (!steam() ? `<button data-act="toast" data-msg="Locate existing installation">${ic('search')}Locate existing installation…</button>` : '');
+    return `<span class="split popwrap"><button class="btn primary" data-act="toast" data-msg="Installing to the default folder">${ic('down')}Install</button><button class="btn primary caret" data-act="menu" aria-haspopup="menu" aria-expanded="false" aria-label="Install options">${ic('caret')}</button><div class="menu down" role="menu" style="bottom:calc(100% + 6px);top:auto">${opts}</div></span>${N}`;
+  }
+  if (S.state === 'update') return `<button class="btn primary" data-act="toast" data-msg="Update queued">${ic('update')}Update</button><button class="btn ghost" data-act="toast" data-msg="Launching…">Play anyway</button>`;
+  return `<button class="btn primary" data-act="toast" data-msg="Launching…">${ic('play')}Play</button><select class="launchopt"><option>Default launch</option><option>Safe mode</option></select>`;
+}
+function footerRight() {
+  const trash = S.v === 'b' && inst() ? (steam()
+    ? `<span class="popwrap"><button class="iconbtn trash" data-act="menu" aria-haspopup="menu" aria-expanded="false" aria-label="Uninstall" title="Uninstall">${ic('trash')}</button><div class="menu" role="menu"><button class="danger" data-act="toast" data-msg="Steam’s uninstall dialog">${ic('trash')}Uninstall this copy…</button><button class="danger" data-act="toast" data-msg="Remove all copies?">${ic('trash')}Remove all copies…</button></div></span>${N}`
+    : `<button class="iconbtn trash" data-act="toast" data-msg="Uninstall confirmation" aria-label="Uninstall" title="Uninstall">${ic('trash')}</button>${N}`) : '';
+  return `${trash}<button class="iconbtn" data-act="settings" aria-label="Game settings" title="Game settings">${ic('gear')}</button>`;
+}
+const footer = () => `<div class="statuswrap">${statusLine()}</div><div class="actionbar">${primary()}<span class="grow"></span>${footerRight()}</div>`;
+
+function sw(key, label, desc) { return `<div class="tsw" role="switch" tabindex="0" aria-checked="${S[key]}" data-act="flip" data-key="${key}"><span class="lbl">${label}${N}</span><span class="track"></span><span class="desc">${desc}</span></div>`; }
+function hub(withDanger) {
+  const fact = (k, v, acts = '') => `<div class="fact"><b>${k}</b><span class="val">${v}</span>${acts ? `<div class="acts">${acts}</div>` : ''}</div>`;
+  const b = (icon, label, msg) => `<button class="sbtn" data-act="toast" data-msg="${msg || label}">${ic(icon)}${label}${N}</button>`;
+  let h = '';
+  if (!inst()) {
+    h += fact('Download', '31.6 GB') + fact('Install size', '48.2 GB') + fact('Platforms', 'Windows · macOS (CrossOver)');
+    if (!steam()) h += `<div style="padding:10px 2px"><button class="tlink" data-act="toast" data-msg="Locate existing installation">Already installed elsewhere? Locate it…</button>${N}</div>`;
+    if (!steam()) h += `<div class="grouphead">Library &amp; integration</div>` + sw('addSteam', 'Show in Steam', 'Adds a non-Steam shortcut, so it appears in Big Picture and on Steam Deck.');
+    return h;
+  }
+  const path = steam() ? '~/Library/Application Support/Steam/steamapps/common/Hollow Depths' : '~/Games/GameLib/HollowDepths';
+  h += fact('Location', `<span title="${path}">${path}</span>`, b('folder', 'Open', 'Opens the install folder') + (epicGog() ? b('folder', 'Move…', 'Move game: pick a new folder') + `<button class="tlink" data-act="toast" data-msg="Set install folder: points GameLib at a folder, nothing is moved">Wrong folder?</button>${N}` : ''));
+  h += fact('Size', '48.2 GB' + (S.store === 'epic' ? ' <small>· 2 of 3 components</small>' : ''), epicGog() ? b('list', 'Modify…', 'Modify installation: DLC and components') : '');
+  const ver = S.state === 'update' ? `1.4.2 <small class="pillwarn">· 1.5.0 available</small>` : `1.4.2 <small class="pillok">· up to date</small>`;
+  h += fact('Version', ver, (side() ? '' : b('wrench', 'Verify', 'Verify and repair started')) + (epicGog() ? b('update', 'Check for updates', 'Checking for updates…') : '') + (S.store === 'gog' || S.state === 'update' ? `<button class="tlink" data-act="toast" data-msg="Changelog">What’s new</button>${N}` : ''));
+  if (wine()) h += fact('Engine', S.platform === 'darwin' ? 'CrossOver 25 · bottle “GameLib”' : 'Proton-GE 9-20 · prefix ~/Games/Prefixes/HollowDepths', b('wine', 'Open prefix', 'Opens the Wine prefix'));
+  h += fact('Cloud saves', 'Synced 3 days ago', b('cloud', 'Open saves folder'));
+  h += `<div class="grouphead">Library &amp; integration</div>`;
+  if (S.platform === 'darwin') h += `<div class="tsw" role="switch" tabindex="0" aria-checked="${S.runsForMe}" data-act="flip" data-key="runsForMe"><span class="lbl">Runs for me</span><span class="track"></span><span class="desc">Mark this game as working on this Mac. Set automatically after a minute of play.</span></div>`;
+  h += sw('shortcut', { darwin: 'Applications shortcut', win32: 'Desktop & Start menu shortcuts', linux: 'Desktop & app menu shortcuts' }[S.platform], 'Launch this game without opening GameLib.');
+  if (!steam()) h += sw('addSteam', 'Show in Steam', 'Adds a non-Steam shortcut, so it appears in Big Picture and on Steam Deck.');
+  if (withDanger) h += `<div class="danger-zone"><p>${steam() ? 'Steam handles removing this copy. “All copies” clears every install location.' : 'Removes the game files. Cloud saves stay in the cloud.'}</p>
+      <button class="btn dangerghost" data-act="toast" data-msg="Uninstall confirmation">${ic('trash')}Uninstall…${N}</button>${steam() ? `<button class="btn dangerghost" data-act="toast" data-msg="Remove all copies?">Remove all copies…${N}</button>` : ''}</div>`;
+  return h;
+}
+function infoTab(k) {
+  const rows = (arr) => arr.map(([a, b]) => `<div class="row"><b>${a}</b><span>${b}</span></div>`).join('');
+  if (k === 'ach') return `<div class="row"><b>Unlocked</b><span>32 of 50 (64%)</span></div><div class="row"><b>Latest</b><span>Tide Turner · 3 days ago</span></div><div class="row"><b>Rarest</b><span>Unsunk · 2.1% of players</span></div>`;
+  if (k === 'ratings') return rows([['Metacritic', '87'], ['HowLongToBeat', 'Main 28 h · Completionist 61 h'], ['CrossOver', 'Runs well · 4 reports']]) +
+    (S.platform === 'linux' ? `<div class="row"><b>ProtonDB</b><span><a href="#" data-act="toast" data-msg="Opens ProtonDB" style="color:inherit">Platinum ↗</a>${N}</span></div>` : '') + rows([['Steam Deck', 'Verified'], ['Anticheat', 'None']]);
+  if (k === 'reqs') return rows([['OS', 'Windows 10 64-bit'], ['Processor', 'Intel i5-6600 / Ryzen 5 1600'], ['Memory', '8 GB RAM'], ['Graphics', 'GTX 1060 / RX 580, 4 GB']]);
+  return '';
+}
+
+function render() {
+  const P = document.getElementById('page');
+  if (S.v === 'c') {
+    const lt = [['about', 'About'], ['ratings', 'Ratings & compatibility'], ['reqs', 'Requirements'], ['ach', 'Achievements · 64%']];
+    P.innerHTML = `<div class="main"><div class="scrollall">${artBand()}<div class="head">${meta()}${titleBlock()}</div>
+        <div class="lefttabs" role="tablist">${lt.map(([k, l]) => `<button role="tab" data-ltab="${k}" aria-selected="${S.ltab === k}">${l}</button>`).join('')}</div>
+        <div class="leftbody">${S.ltab === 'about' ? aboutText : `<div style="color:var(--color-text)">${infoTab(S.ltab)}</div>`}</div></div></div>
+      <div class="panel copy"><div class="copyhead"><h2>Your copy · ${storeName()}</h2>${statusLine()}<div class="actionbar">${primary()}<span class="grow"></span>${footerRight()}</div></div>
+        <div class="tabbody">${hub(true)}</div></div>`;
+  } else {
+    const rt = [['install', 'Install'], ['ach', 'Achievements · 64%'], ['ratings', 'Ratings'], ['reqs', 'Requirements']];
+    P.innerHTML = `<div class="main"><div class="scrollall">${artBand()}<div class="head">${meta()}${titleBlock()}</div>
+        <div class="aboutblock"><p class="sectionhead">About</p>${aboutText}</div></div><div class="dock">${footer()}</div></div>
+      <div class="panel"><div class="tabbar" role="tablist">${rt.map(([k, l]) => `<button role="tab" data-rtab="${k}" aria-selected="${S.rtab === k}">${l}</button>`).join('')}</div>
+        <div class="tabbody">${S.rtab === 'install' ? hub(S.v === 'a') : infoTab(S.rtab)}</div></div>`;
+  }
+  renderDlg();
+}
+
+function renderDlg() {
+  const tabs = [['run', 'Run'], ...(wine() ? [['wine', 'Wine']] : []), ['advanced', 'Advanced'], ['logs', 'Logs']];
+  if (!tabs.find(t => t[0] === S.dlgTab)) S.dlgTab = 'run';
+  const f = (l, ctl, hl) => `<div class="field ${hl ? 'hl' : ''}"><span>${l}${hl ? N : ''}</span>${ctl}</div>`;
+  const tg = (on) => `<span class="track" style="${on ? 'background:var(--color-primary)' : ''}"></span>`;
+  let body = '';
+  if (S.dlgTab === 'run') {
+    body = `<div class="card"><h4>Launch</h4>${f('Launch option', '<select class="launchopt" style="height:30px"><option>Default</option></select>')}${f('Arguments', '<input type="text" placeholder="-skipintro">')}${f('Offline mode', tg(false))}
+      ${S.store === 'epic' && S.platform === 'linux' ? f('Epic overlay (EOS)', `<span class="tsw" role="switch" aria-checked="${S.eos ? 'true' : 'false'}" data-act="flip" data-key="eos" style="border:0;padding:0"><span class="track"></span></span>`, true) : ''}</div>
+      ${S.store === 'epic' && S.platform !== 'linux' ? '<p style="font-size:var(--text-xs);color:var(--color-text-dim)">Set Store to Epic and Platform to Linux to see the EOS overlay switch that moved here.</p>' : ''}`;
+  } else if (S.dlgTab === 'wine') {
+    body = `<div class="card"><h4>Wine engine</h4>${f('Engine', '<select class="launchopt" style="height:30px"><option>CrossOver 25</option></select>')}${f('Prefix', `<span style="display:flex;gap:6px"><input type="text" value="~/Games/Prefixes/HollowDepths"><button class="sbtn" data-act="toast" data-msg="Opens the Wine prefix">${ic('folder')}</button></span>`, true)}</div>`;
+  } else if (S.dlgTab === 'advanced') {
+    body = `<div class="card"><h4>Scripts</h4>${f('Before launch', '<input type="text">')}${f('After exit', '<input type="text">')}</div><div class="card"><h4>Diagnostics &amp; updates</h4>${f('Verbose logs', tg(false))}${f('Ignore game updates', tg(false))}${f('Game log', '<button class="tlink" data-act="dlgtab" data-tab="logs">Open the Logs tab</button>', true)}</div>`;
+  } else {
+    body = `<div style="display:flex;gap:8px;align-items:center"><select class="launchopt" style="height:30px;flex:0 0 220px"><option>Last session · 3 days ago</option><option>GameLib log</option></select><span class="grow" style="flex:1"></span><button class="sbtn" data-act="toast" data-msg="Copied">Copy</button><button class="sbtn" data-act="toast" data-msg="Opens the log folder">${ic('folder')}Folder</button></div>
+      <div class="logbox">[10:42:01] Launching Hollow Depths (Epic, CrossOver 25)
+[10:42:02] Bottle "GameLib" ready
+[10:42:04] wine: using DXVK 2.4
+[10:42:09] Game process started (pid 4412)
+[10:54:31] Game exited with code 0 · session 12 m 30 s</div>`;
+  }
+  document.getElementById('dlg').innerHTML = `<div class="dlghead"><span class="thumb art"></span><div><strong>Hollow Depths: The Lantern Tide</strong><small>Game settings · ${storeName()} · Saved automatically</small></div><button class="iconbtn" data-act="closedlg" aria-label="Close">×</button></div>
+    <div class="dlgtabs" role="tablist">${tabs.map(([k, l]) => `<button role="tab" data-act="dlgtab" data-tab="${k}" aria-selected="${S.dlgTab === k}">${l}${k === 'logs' ? N : ''}</button>`).join('')}</div><div class="dlgbody">${body}</div>`;
+}
+
+function renderMap() {
+  document.getElementById('map').innerHTML = `<table><tr><th>⋮ item today</th><th>New home</th><th>How</th></tr>${MAP.map(([a, b, c]) => `<tr><td>${a}</td><td class="where">${b}</td><td>${c}</td></tr>`).join('')}</table>`;
+}
+
+function closeMenus() { document.querySelectorAll('.menu.open').forEach(m => { m.classList.remove('open'); m.previousElementSibling?.setAttribute('aria-expanded', 'false'); }); }
+let toastT; function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 1700); }
+
+document.addEventListener('click', (e) => {
+  const rt = e.target.closest('[data-rtab]'); if (rt) { S.rtab = rt.dataset.rtab; render(); return; }
+  const lt = e.target.closest('[data-ltab]'); if (lt) { S.ltab = lt.dataset.ltab; render(); return; }
+  if (e.target.id === 'scrim') { document.getElementById('scrim').classList.remove('open'); return; }
+  const el = e.target.closest('[data-act]');
+  if (!el) { if (!e.target.closest('.menu')) closeMenus(); return; }
+  const act = el.dataset.act;
+  if (act === 'menu') { const m = el.nextElementSibling; const open = !m.classList.contains('open'); closeMenus(); m.classList.toggle('open', open); el.setAttribute('aria-expanded', String(open)); return; }
+  closeMenus();
+  if (act === 'toast') { e.preventDefault(); toast(el.dataset.msg); }
+  if (act === 'settings') { S.dlgTab = 'run'; renderDlg(); document.getElementById('scrim').classList.add('open'); }
+  if (act === 'closedlg') document.getElementById('scrim').classList.remove('open');
+  if (act === 'dlgtab') { S.dlgTab = el.dataset.tab; renderDlg(); }
+  if (act === 'rmcat') { S.cats = S.cats.filter(c => c !== el.dataset.cat); render(); }
+  if (act === 'flip') { S[el.dataset.key] = !S[el.dataset.key]; if (el.dataset.key === 'fav') toast(S.fav ? 'Added to favourites' : 'Removed from favourites'); render(); }
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { closeMenus(); document.getElementById('scrim').classList.remove('open'); }
+  if ((e.key === ' ' || e.key === 'Enter') && e.target.matches('.tsw')) { e.preventDefault(); e.target.click(); }
+});
+
+function showVariant(id) {
+  S.v = id;
+  document.querySelectorAll('.variant-tab[data-v]').forEach(t => t.classList.toggle('active', t.dataset.v === id));
+  const [h, p, good, bad] = CAPTIONS[id];
+  document.getElementById('caption').innerHTML = `<h2>${h}</h2><p>${p}</p><div class="tradeoff">${good.map(g => `<span class="good"><b>+</b> ${g}</span>`).join('')}${bad.map(b => `<span class="bad"><b>−</b> ${b}</span>`).join('')}</div>`;
+  closeMenus(); render();
+}
+document.querySelectorAll('.variant-tab[data-v]').forEach(t => t.addEventListener('click', () => showVariant(t.dataset.v)));
+document.getElementById('mapbtn').addEventListener('click', (e) => { const m = document.getElementById('map'); m.classList.toggle('open'); e.target.classList.toggle('active', m.classList.contains('open')); });
+document.getElementById('theme-switcher').addEventListener('change', (e) => { document.querySelector('link[href*="themes/"]').href = '../themes/' + e.target.value + '.css'; document.documentElement.dataset.theme = e.target.value; });
+['store', 'platform', 'state'].forEach(k => document.getElementById(k).addEventListener('change', (e) => { S[k] = e.target.value; render(); }));
+document.getElementById('annotate').addEventListener('change', (e) => document.getElementById('win').classList.toggle('annotate', e.target.checked));
+document.querySelectorAll('[data-w]').forEach(b => b.addEventListener('click', () => { document.getElementById('win').style.setProperty('--win-w', b.dataset.w + 'px'); document.querySelectorAll('[data-w]').forEach(x => x.classList.toggle('on', x === b)); }));
+document.querySelectorAll('[data-h]').forEach(b => b.addEventListener('click', () => { document.getElementById('win').style.setProperty('--win-h', b.dataset.h + 'px'); document.querySelectorAll('[data-h]').forEach(x => x.classList.toggle('on', x === b)); }));
+
+// deep links: ?v=a|b|c&theme=&store=&platform=&state=&settings=1&dlg=logs&map=1&anno=1
+const q = new URLSearchParams(location.search);
+if (q.get('theme')) { const ts = document.getElementById('theme-switcher'); ts.value = q.get('theme'); ts.dispatchEvent(new Event('change')); }
+['store', 'platform', 'state'].forEach(k => { if (q.get(k)) { S[k] = q.get(k); document.getElementById(k).value = S[k]; } });
+if (q.get('anno') === '1') { document.getElementById('annotate').checked = true; document.getElementById('win').classList.add('annotate'); }
+renderMap();
+if (q.get('map') === '1') document.getElementById('mapbtn').click();
+showVariant(CAPTIONS[q.get('v')] ? q.get('v') : 'a');
+if (q.get('settings') === '1') { document.querySelector('[data-act="settings"]').click(); if (q.get('dlg')) { S.dlgTab = q.get('dlg'); renderDlg(); } }
+</script>
+</body>
+</html>
