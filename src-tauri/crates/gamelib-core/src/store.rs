@@ -5,8 +5,8 @@
 //! Phase 85 widens this same owner (dot paths, versioned envelopes, backup, the `storeChanged`
 //! bridge) without changing the signatures below: stores are keyed by `(dir, name)` and keys are flat.
 //!
-//! The file shape is the TS one (`fileStore.ts`): 2-space `JSON.stringify` of a top-level object,
-//! written through `<file>.tmp-<pid>` then renamed, 0600 file, 0700 new directory.
+//! The file shape is the one the retired TS file store wrote: 2-space pretty JSON of a top-level
+//! object, written through `<file>.tmp-<pid>` then renamed, 0600 file, 0700 new directory.
 
 use std::collections::HashMap;
 use std::fs::{self, OpenOptions};
@@ -176,8 +176,8 @@ fn write_private(path: &Path, data: &[u8]) -> io::Result<()> {
 
 /// The persist seam: `rename` is a parameter so a test can force the failure without touching
 /// permissions. Writes `<file>.tmp-<pid>` (0600), renames it over the file, and when either step
-/// fails writes the file directly (the `fileStore.ts` WR-05 fallback); the temp file is removed
-/// either way.
+/// fails writes the file directly (the WR-05 fallback, kept from the retired TS file store); the
+/// temp file is removed either way.
 pub(crate) fn persist_atomic(
     path: &Path,
     data: &IndexMap<String, Value>,

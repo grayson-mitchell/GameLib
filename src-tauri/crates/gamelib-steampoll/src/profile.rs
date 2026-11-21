@@ -1,8 +1,8 @@
 //! Sidecar profile paths the shell needs before the sidecar exists (plan 07, D-06/D-09).
 //!
 //! Pure path maths that mirrors `process/appPaths.ts` (`resolveAppDataDir`, `derivePaths`) and the
-//! `CacheStore` / `FileStore` location rule (`<userData>/store_cache/<name>.json`). Proven against
-//! TS-generated fixtures (`tests/fixtures/profile/app-paths.json`).
+//! `CacheStore` / `store_backend.ts` location rule (`<userData>/store_cache/<name>.json`). Proven
+//! against TS-generated fixtures (`tests/fixtures/profile/app-paths.json`).
 //!
 //! `language()` and `default_steam_path()` read `config.json` on every call (no caching): boot
 //! resume runs before the sidecar, and the user can change either setting while the app runs.

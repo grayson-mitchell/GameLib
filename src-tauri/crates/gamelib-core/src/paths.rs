@@ -1,8 +1,8 @@
 //! Profile path maths, shared by every crate that must find the app's data before the sidecar is up.
 //!
 //! Mirrors `process/appPaths.ts` (`resolveAppDataDir`, `derivePaths`) and the `CacheStore` /
-//! `FileStore` location rule (`<userData>/store_cache/<name>.json`). Pure: the environment and the
-//! home directory are injected, nothing here reads either.
+//! `store_backend.ts` location rule (`<userData>/store_cache/<name>.json`). Pure: the environment
+//! and the home directory are injected, nothing here reads either.
 
 /// The three OS flavours the TS `resolveAppDataDir` switches on.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
