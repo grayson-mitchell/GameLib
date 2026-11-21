@@ -1,7 +1,7 @@
 {
   "contract": "1.0.0",
   "flavor": "core",
-  "milestone": "v0.8",
+  "milestone": "v0.11 — Node Sidecar Retirement",
   "phases": [
     {
       "number": "1",
@@ -334,11 +334,6 @@
       "status": "complete"
     },
     {
-      "number": "47",
-      "name": "Migrate aggregated store search from CheapShark to IsThereAnyDeal",
-      "status": "pending"
-    },
-    {
       "number": "48",
       "name": "Focus row — move the library top section into the panel and widen it",
       "status": "complete"
@@ -352,12 +347,287 @@
       "number": "50",
       "name": "Epic store in-app on macOS — a Rust-managed raw WKWebView subview for /store/epic",
       "status": "complete"
+    },
+    {
+      "number": "51",
+      "name": "Widen the native Steam bridge — more interface proxies, scan-derived eligibility",
+      "status": "complete"
+    },
+    {
+      "number": "52",
+      "name": "Bridge-backed steamclient.dll for SteamStub titles",
+      "status": "complete"
+    },
+    {
+      "number": "53",
+      "name": "Steam bridge coverage: modern-SDK exports, flat API",
+      "status": "complete"
+    },
+    {
+      "number": "54",
+      "name": "No authenticated Steam logon at launch, browse or Play",
+      "status": "complete"
+    },
+    {
+      "number": "55",
+      "name": "Steam bridge callback delivery for the web-API auth ticket",
+      "status": "complete"
+    },
+    {
+      "number": "56",
+      "name": "Bridge steamclient-layer DRM mode for SteamStub titles",
+      "status": "complete"
+    },
+    {
+      "number": "57",
+      "name": "Opt-in known-fix sharing via relay",
+      "status": "complete"
+    },
+    {
+      "number": "58",
+      "name": "Steam bridge multiplayer",
+      "status": "complete"
+    },
+    {
+      "number": "59",
+      "name": "Steam engine fallback when CrossOver is unavailable",
+      "status": "complete"
+    },
+    {
+      "number": "60",
+      "name": "Steam overlay in bridged games on macOS",
+      "status": "complete"
+    },
+    {
+      "number": "61",
+      "name": "Unified macOS engine for all stores",
+      "status": "complete"
+    },
+    {
+      "number": "62",
+      "name": "Module boundaries and decomposition",
+      "status": "complete"
+    },
+    {
+      "number": "63",
+      "name": "Rust migration pattern and executable scanners",
+      "status": "complete"
+    },
+    {
+      "number": "64",
+      "name": "UI to edit themes",
+      "status": "complete"
+    },
+    {
+      "number": "65",
+      "name": "Steam store manager decomposition, continued",
+      "status": "complete"
+    },
+    {
+      "number": "66",
+      "name": "Backend dependency injection replacing module-level singletons",
+      "status": "complete"
+    },
+    {
+      "number": "66.1",
+      "name": "Backend DI — stores, store managers, flow registrations and launcher",
+      "status": "complete"
+    },
+    {
+      "number": "66.2",
+      "name": "Every backend spawn through the process runner, then the `child_process` ban",
+      "status": "complete"
+    },
+    {
+      "number": "66.3",
+      "name": "Backend module state to zero, then the live macOS smoke",
+      "status": "complete"
+    },
+    {
+      "number": "66.4",
+      "name": "Backend module state long tail, the census-to-test flip, then the live smokes",
+      "status": "complete"
+    },
+    {
+      "number": "67",
+      "name": "Schema validation at the sidecar IPC boundary",
+      "status": "complete"
+    },
+    {
+      "number": "68",
+      "name": "Versioned persisted stores and migrations",
+      "status": "complete"
+    },
+    {
+      "number": "69",
+      "name": "Consolidate frontend state onto GlobalStateV2",
+      "status": "complete"
+    },
+    {
+      "number": "70",
+      "name": "Split GameInfo into shared and per-store shapes",
+      "status": "complete"
+    },
+    {
+      "number": "71",
+      "name": "Rust shell module decomposition",
+      "status": "complete"
+    },
+    {
+      "number": "72",
+      "name": "Renderer trust boundary and process hardening",
+      "status": "complete"
+    },
+    {
+      "number": "73",
+      "name": "Steam depot download pipeline in Rust",
+      "status": "complete"
+    },
+    {
+      "number": "74",
+      "name": "Steam game updates",
+      "status": "complete"
+    },
+    {
+      "number": "75",
+      "name": "Steam local file formats in Rust",
+      "status": "complete"
+    },
+    {
+      "number": "76",
+      "name": "Engine-correct bottle for DRM-mode launches (v0.9 audit S9)",
+      "status": "complete"
+    },
+    {
+      "number": "77",
+      "name": "Runtime hardening from the v0.9 review debt",
+      "status": "complete"
+    },
+    {
+      "number": "78",
+      "name": "Verification records and test health after v0.9",
+      "status": "complete"
+    },
+    {
+      "number": "79",
+      "name": "Rust CM client replacing steam-user and steam-session",
+      "status": "complete"
+    },
+    {
+      "number": "80",
+      "name": "Steam install, uninstall and update polling state machines in Rust",
+      "status": "complete"
+    },
+    {
+      "number": "81",
+      "name": "Unify the Steam restart hold into restart-on-Play",
+      "status": "complete"
+    },
+    {
+      "number": "47",
+      "name": "Migrate aggregated store search from CheapShark to IsThereAnyDeal",
+      "status": "complete"
+    },
+    {
+      "number": "82",
+      "name": "Guardrails, hygiene and shared safety primitives",
+      "status": "pending"
+    },
+    {
+      "number": "83",
+      "name": "Native seam, gamelib-core and process/shutdown contract",
+      "status": "pending"
+    },
+    {
+      "number": "84",
+      "name": "Logger",
+      "status": "in_progress"
+    },
+    {
+      "number": "85",
+      "name": "Store host, config and versioned migrations",
+      "status": "pending"
+    },
+    {
+      "number": "86",
+      "name": "Pure leaf services",
+      "status": "pending"
+    },
+    {
+      "number": "87",
+      "name": "Engine, Wine and tools",
+      "status": "pending"
+    },
+    {
+      "number": "88",
+      "name": "Launch pipeline",
+      "status": "pending"
+    },
+    {
+      "number": "89",
+      "name": "Steam library state",
+      "status": "pending"
+    },
+    {
+      "number": "90",
+      "name": "Steam services and TypeScript depot path",
+      "status": "pending"
+    },
+    {
+      "number": "91",
+      "name": "Epic (legendary) runner",
+      "status": "pending"
+    },
+    {
+      "number": "92",
+      "name": "GOG, Amazon and sideloaded runners",
+      "status": "pending"
+    },
+    {
+      "number": "93",
+      "name": "Download manager",
+      "status": "pending"
+    },
+    {
+      "number": "94",
+      "name": "Humble Bundle and shortcuts",
+      "status": "pending"
+    },
+    {
+      "number": "95",
+      "name": "Steam bridge install",
+      "status": "pending"
+    },
+    {
+      "number": "96",
+      "name": "Steam bridge launch and bottle lifecycle",
+      "status": "pending"
+    },
+    {
+      "number": "97",
+      "name": "Steam bridge DRM mode, overlay and known fixes",
+      "status": "pending"
+    },
+    {
+      "number": "98",
+      "name": "Shell cutover",
+      "status": "pending"
+    },
+    {
+      "number": "99",
+      "name": "Sidecar deletion",
+      "status": "pending"
+    },
+    {
+      "number": "100",
+      "name": "Game page without the ⋮ menu",
+      "status": "pending"
     }
   ],
   "next": {
-    "command": "/gsd:progress --next",
+    "command": "/gsd-progress --next",
     "label": "Advance to the next step",
-    "reason": "Phase 51 of 1 · 0% · executing"
+    "reason": "Phase 28 of 44 · 100% · executing"
   },
-  "updated_at": "2026-10-21T18:20:05.991Z"
+  "updated_at": "2026-11-21T04:12:35.992Z"
 }

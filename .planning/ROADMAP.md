@@ -184,7 +184,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **🚧 v0.11 Node Sidecar Retirement** (planned 2026-11-17; current since 2026-11-20; requirements `REQUIREMENTS-v0.11.md`)
 
 - [ ] **Phase 82: Guardrails, hygiene and shared safety primitives** — not planned
-- [ ] **Phase 83: Native seam, gamelib-core and process/shutdown contract** — not planned
+- [x] **Phase 83: Native seam, gamelib-core and process/shutdown contract** — 11/11 plans; completed 2026-11-21
 - [ ] **Phase 84: Logger** — 11 plans in 9 waves (consolidated from 14, then two plans split for context budget); planned 2026-11-21 (executes after Phase 83 closes)
 - [ ] **Phase 85: Store host, config and versioned migrations** — not planned
 - [ ] **Phase 86: Pure leaf services** — not planned
@@ -381,7 +381,7 @@ Plans:
   3. Quitting GameLib, and SIGKILL of the parent, leaves no orphaned helper process on macOS, Windows and Linux (launched games excepted), proven on all three OS legs
   4. `gamelib-core` (paths, emitter, clock, `ProcessRunner`, `Shutdown` token) and `gamelib-proc` kill-tree exist, and the TS shim the first migrated channel used is deleted in this phase
 
-**Plans:** 11/11 plans executed
+**Plans:** 11/11 plans complete
 
 Plans:
 **Wave 1**
