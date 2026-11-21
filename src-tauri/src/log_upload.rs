@@ -150,8 +150,10 @@ impl PasteClient for OfflinePaste {
 }
 
 /// The paste URL if (and only if) it is `https` on the host exactly `dpaste.com`, with no
-/// credentials and no explicit port; the trimmed text otherwise `None`. A hostile or spoofed
-/// response must never decide which URL is stored, returned or later requested (V13).
+/// credentials and no explicit port, returned as the parsed URL's own serialisation (so a tab or
+/// line break the parser strips from the response text never reaches the store, the renderer or the
+/// log); `None` otherwise. A hostile or spoofed response must never decide which URL is stored,
+/// returned or later requested (V13).
 pub(crate) fn validate_paste_url(text: &str) -> Option<String> {
     let trimmed = text.trim();
     let parsed = url::Url::parse(trimmed).ok()?;
@@ -160,7 +162,7 @@ pub(crate) fn validate_paste_url(text: &str) -> Option<String> {
         && parsed.username().is_empty()
         && parsed.password().is_none()
         && parsed.port().is_none();
-    plain.then(|| trimmed.to_string())
+    plain.then(|| parsed.to_string())
 }
 
 /// The first `max` characters of `text`.
