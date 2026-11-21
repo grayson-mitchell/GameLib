@@ -600,9 +600,29 @@ fn init_native_logger() {
         // gamelib.log through one app-wide tracing Registry and a `log` bridge. WARN and above by
         // default; only `GAMELIB_LOG_LEVEL=debug` raises them to DEBUG. Only the primary instance
         // reaches here (the reaper and a secondary launch exit before `init_native_logger`).
-        gamelib_log::bridge::install_bridges(gamelib_log::bridge::crate_level_from_env(
-            std::env::var("GAMELIB_LOG_LEVEL").ok().as_deref(),
-        ));
+        let bridged =
+            gamelib_log::bridge::install_bridges(gamelib_log::bridge::crate_level_from_env(
+                std::env::var("GAMELIB_LOG_LEVEL").ok().as_deref(),
+            ));
+        if let Some(warning) = bridge_install_warning(bridged) {
+            shell_log(warning);
+        }
+    }
+}
+
+/// IN-03: the shell diagnostic for a failed `install_bridges` (`false`: a global tracing subscriber
+/// or `log` logger was already set, so steam-vent, reqwest and the other crates' diagnostics do
+/// not reach `gamelib.log`), or `None` when the bridges are in place. The `WARN` prefix is what
+/// [`shell_log_level`] reads as a warning.
+fn bridge_install_warning(installed: bool) -> Option<&'static str> {
+    if installed {
+        None
+    } else {
+        Some(
+            "WARN: crate diagnostics not bridged: a global tracing subscriber or log logger was \
+             already installed, so steam-vent, reqwest and other crate diagnostics will not reach \
+             gamelib.log",
+        )
     }
 }
 
@@ -4402,10 +4422,26 @@ mod tests {
         let written =
             std::fs::read_to_string(gamelib_core::paths::join(platform, &root, &["gamelib.log"]))
                 .expect("gamelib.log was written");
-        assert_eq!(written.lines().count(), 1, "forged a second line: {written:?}");
+        assert_eq!(
+            written.lines().count(),
+            1,
+            "forged a second line: {written:?}"
+        );
         assert!(
             written.contains("err=a\\n(12:34:56)"),
             "line break was not escaped: {written:?}"
+        );
+    }
+
+    #[test]
+    fn a_failed_bridge_install_is_reported() {
+        assert_eq!(bridge_install_warning(true), None);
+        let warning = bridge_install_warning(false).expect("a failed install is reported");
+        assert!(warning.starts_with("WARN"), "not a warning: {warning}");
+        assert_eq!(shell_log_level(warning), gamelib_log::Level::Warning);
+        assert!(
+            warning.contains("steam-vent") && warning.contains("reqwest"),
+            "does not name what is lost: {warning}"
         );
     }
 
