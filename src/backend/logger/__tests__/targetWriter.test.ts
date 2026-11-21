@@ -208,6 +208,23 @@ describe('LogWriter facade over the forwarder', () => {
     expect(warnings).toHaveLength(bad.length)
   })
 
+  it('refuses a runner Rust would reject: one general WARNING, nothing sent (WR-01)', async () => {
+    const { index, LogWriter, frames } = load()
+    const w = new LogWriter({ kind: 'runner', runner: 'bogus' }, false)
+    await w.writeString('x\n')
+    await w.logInfo('x')
+    await index.flushLogForwarder()
+    expect(batchesFor(frames, 'runner')).toEqual([])
+    const general = batchesFor(frames, 'general').flatMap((b) => b.entries)
+    const warnings = general.filter(
+      (e) =>
+        'line' in e &&
+        e.line.level === 'WARNING' &&
+        e.line.msg.includes('log target refused: invalid runner')
+    )
+    expect(warnings).toHaveLength(1)
+  })
+
   it('accepts a 255-byte appName and one with spaces', async () => {
     const { index, LogWriter, frames } = load()
     await new LogWriter(

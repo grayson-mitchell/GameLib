@@ -1,11 +1,17 @@
 // Phase 84 plan 03 (D-10, D-12, Phase 72 D-04): the forwarder's liveness and loss rules. Each test
 // builds its own LogForwarder; the settle tests drive `logger/index.ts` through a fresh module.
 
+import { readFileSync } from 'fs'
+import { join } from 'path'
+
+import { LogPrefix } from '../constants'
 import {
   LOG_BATCH_MAX_BYTES,
   LOG_ENTRY_MAX_UTF16,
   LOG_FLUSH_TIMEOUT_MS,
+  LOG_GAME_TYPES,
   LOG_QUEUE_MAX_ENTRIES,
+  LOG_TARGET_RUNNERS,
   LogForwarder
 } from '../forwarder'
 import { stringifyLogValue } from '../stringifyLogValue'
@@ -279,6 +285,97 @@ describe('LogForwarder', () => {
       fw.enqueue(GAME, false, { raw: 'y'.repeat(300) })
     expect(fw.stats().droppedTotal).toBeGreaterThan(0)
     expect(fw.stats().queuedBytes).toBeLessThanOrEqual(1000)
+  })
+
+  describe('one bad entry never costs the shell a frame (WR-01)', () => {
+    it('replaces lone surrogates before queueing (WR-01)', () => {
+      const fw = new LogForwarder()
+      const transport = new FakeTransport()
+      fw.bind(transport)
+      fw.logLine(GENERAL, false, 'INFO', 'Backend', 'a\ud83db')
+      fw.enqueue(GAME, false, { raw: 'x\udc00' })
+      fw.logLine(GENERAL, false, 'INFO', 'Backend', 'pair 😀')
+      jest.advanceTimersByTime(50)
+      expect(transport.messages()).toEqual(['a\ufffdb', 'x\ufffd', 'pair 😀'])
+      for (const text of transport.messages())
+        expect(text.isWellFormed()).toBe(true)
+      const wire = JSON.stringify(transport.frames)
+      expect(wire).not.toMatch(/\\ud83d|\\udc00/i)
+    })
+
+    it('falls back to Backend for a prefix outside the closed set (WR-01)', () => {
+      const fw = new LogForwarder()
+      const transport = new FakeTransport()
+      fw.bind(transport)
+      fw.logLine(GENERAL, false, 'INFO', 'Nope', 'odd')
+      for (const prefix of Object.values(LogPrefix)) {
+        fw.logLine(GENERAL, false, 'INFO', prefix, `p:${prefix}`)
+      }
+      jest.advanceTimersByTime(50)
+      const lines = transport
+        .entries()
+        .map((e) => ('line' in e ? e.line : undefined))
+        .filter((l): l is NonNullable<typeof l> => l !== undefined)
+      expect(lines[0]).toMatchObject({ msg: 'odd', prefix: LogPrefix.Backend })
+      expect(lines.slice(1).map((l) => [l.msg, l.prefix])).toEqual(
+        Object.values(LogPrefix).map((p) => [`p:${p}`, p])
+      )
+    })
+
+    it('drops an entry whose target the shell would reject without losing the rest of the frame (WR-01)', () => {
+      const fw = new LogForwarder()
+      const transport = new FakeTransport()
+      fw.bind(transport)
+      fw.enqueue(GENERAL, false, { raw: 'g1' })
+      fw.enqueue({ kind: 'runner', runner: 'bogus' }, false, { raw: 'bad1' })
+      fw.enqueue(GAME, false, { raw: 'game1' })
+      fw.enqueue({ ...GAME, runner: 'comet' } as LogFrameTarget, false, {
+        raw: 'bad2'
+      })
+      fw.enqueue({ ...GAME, appName: '../x' } as LogFrameTarget, false, {
+        raw: 'bad3'
+      })
+      fw.enqueue(
+        { ...GAME, type: 'crash' } as unknown as LogFrameTarget,
+        false,
+        {
+          raw: 'bad4'
+        }
+      )
+      fw.enqueue(GENERAL, false, { raw: 'g2' })
+      expect(fw.stats().refusedTotal).toBe(4)
+      jest.advanceTimersByTime(50)
+      expect(transport.messages()).toEqual(['g1', 'game1', 'g2'])
+    })
+
+    it('the TS runner and game-type sets equal gamelib-core paths.rs (WR-01)', () => {
+      const source = readFileSync(
+        join(
+          __dirname,
+          '../../../../src-tauri/crates/gamelib-core/src/paths.rs'
+        ),
+        'utf-8'
+      )
+      const arms = (text: string, typeName: string): string[] => {
+        const impl = text.indexOf(`impl ${typeName} {`)
+        if (impl === -1) throw new Error(`no impl ${typeName} in paths.rs`)
+        const fn = text.indexOf('pub fn from_str', impl)
+        const end = text.indexOf('_ => return None', fn)
+        return [...text.slice(fn, end).matchAll(/"([^"]+)" =>/g)]
+          .map((m) => m[1])
+          .filter((v): v is string => v !== undefined)
+      }
+      const rustRunners = arms(source, 'LogRunner')
+      const rustTypes = arms(source, 'GameLogType')
+      expect([...LOG_TARGET_RUNNERS].sort()).toEqual([...rustRunners].sort())
+      expect([...LOG_GAME_TYPES].sort()).toEqual([...rustTypes].sort())
+      // Self-test: a dropped arm is reported.
+      const mutated = source.replace('"comet" => LogRunner::Comet,', '')
+      expect(mutated).not.toBe(source)
+      expect(arms(mutated, 'LogRunner')).not.toContain('comet')
+      expect(rustRunners).toHaveLength(6)
+      expect(rustTypes).toHaveLength(6)
+    })
   })
 
   describe('settle (logErrorSettled / logInfoSettled, the CR-01 contract)', () => {
