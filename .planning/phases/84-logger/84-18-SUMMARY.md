@@ -69,7 +69,7 @@ re-proven locally first. None was needed.
 - **Pin commit** `a0401bbc6`: added `jiff`, `jiff-core`, `jiff-static`, `jiff-tzdb`, `jiff-tzdb-platform`, `portable-atomic` and
   `portable-atomic-util` to `EXPECTED_LOCKFILE_CRATE_NAMES` in its own commit, citing `8fcadab94` / RUSTSEC-2026-0543 and
   stating the operator accepted these crates (operator decision, 2026-11-22). `chrono` stays (still locked). Cargo.lock
-  count unchanged otherwise.
+  Cargo.lock was not touched.
 - **P' = `a0401bbc6d922b9e8df7df941d1e1ccc9144f555`** = P + `94cc93f6e` (docs only) + the pin commit (test-only), so the Task 1
   proof at P carries over for everything else. 82 commits published (the 80 shown plus those two); no Phase 85 / 100 commit
   was added between the checkpoint and the push (`git log a0401bbc6..HEAD` empty at push time).
