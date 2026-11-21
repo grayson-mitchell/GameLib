@@ -20,6 +20,18 @@
         ]
       }
     ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" 2>/dev/null || exit 0; [ -f .gsd-graph/hooks/gsd-graph-update.sh ] || exit 0; exec bash .gsd-graph/hooks/gsd-graph-update.sh",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
     "SessionStart": [
       {
         "hooks": [

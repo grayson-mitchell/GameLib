@@ -91,7 +91,7 @@ Integration_ and describes a key-management overlay on an **Electron** launcher.
 Rust/Tauri shell, which landed 2026-07-20 in `83dc57a76`, by fifteen days: it mentions Electron
 13 times and Tauri 0. Treat its process, IPC and packaging model as pre-rearchitecture.
 
-For current structure, orient with `graphify query` (see the graphify section at the end of this
+For current structure, orient with `graphify query` (see the graphify section near the end of this
 file) and follow the patterns already in the codebase.
 
 <!-- GSD:architecture-end -->
@@ -133,16 +133,44 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 ## graphify
 
 This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+It covers the code and the top-level docs (README.md, CHANGELOG.md, CONTRIBUTING.md, CLAUDE.md). It does NOT
+cover `.planning/`, which `.graphifyignore` has excluded since 2026-11-22: planning questions go to gsd-graph (next
+section). Spike source code under `.planning/spikes/` is in neither graph, so grep it.
 
 Rules:
 
 - For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
 - If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
-- **Do not read graphify-out/GRAPH_REPORT.md into context.** It is ~324,000 tokens (1.3 MB) — a
-  third of a 1M window — and once read it is re-billed on every later turn of the session.
-  `graphify-out/graph.json` is far worse at ~13.4M tokens; never open it. If `query`/`path`/
+- **Do not read graphify-out/GRAPH_REPORT.md into context.** It is approximately 42,000 tokens (0.16 MB,
+  measured 2026-11-22) — about 4% of a 1M window — and once read it is re-billed on every later turn of the
+  session. `graphify-out/graph.json` is far worse at approximately 10M tokens (39 MB, measured 2026-11-22);
+  never open it. If `query`/`path`/
   `explain` genuinely do not surface enough, read a **scoped slice** (`grep`/`sed -n` for the
   section you need), or say the graph cannot answer it — do not fall back to the whole report.
 - `graphify-out/wiki/index.md` does not currently exist, so the wiki rule above is a dead branch;
   check before relying on it.
 - After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+- The `graphify hook-guard` PreToolUse hooks in .claude/settings.json still prompt for a `graphify query` before every
+  grep or read, including ones under `.planning/`. For `.planning/` the route is gsd-graph, because graphify no longer
+  holds those files.
+
+## gsd-graph
+
+This project has a planning knowledge graph in `.gsd-graph/`, built by @opengsd/gsd-graph. The store is gitignored;
+only `config.json` is committed.
+
+- For planning, decision and phase-relationship questions, run `gsd-graph ask "<question>"` for a grounded answer with
+  citations, `gsd-graph query <term>`, or `gsd-graph why <A> <B>`, before grepping `.planning/`.
+- Check freshness with `gsd-graph status`. The project PostToolUse hook runs an incremental sync only after a commit,
+  merge or pull on `main`, so after planning edits on another branch, or uncommitted ones, run `gsd-graph sync`
+  yourself.
+- `corpus` in `.gsd-graph/config.json` is a hand-curated string[] that replaces gsd-graph's default roots entirely.
+  Directories listed there pick up new files on their own. A new spike README and new milestone ROADMAP /
+  REQUIREMENTS / MILESTONE-AUDIT files must be added by hand. Paths that do not exist are skipped silently.
+- Per-machine setup (GameLib is worked from three machines): it is a global npm install. On each machine run
+  `npm i -g @opengsd/gsd-graph@0.4.0`, then `gsd-graph enable --skip-sync` (installs the skill and `.gsd-graph/hooks/`;
+  leaves `corpus` alone), then `gsd-graph sync --full`. Until then the hook is a no-op. The corpus semantics were
+  verified on 0.4.0, so re-check them before upgrading.
+- The bare `.gsd-graph/` + `!.gsd-graph/` pair in .gitignore is deliberate. Without it every sync appends
+  `.gsd-graph/` to .gitignore.
+- Never pass `--llm`. Without it gsd-graph makes no API calls.
