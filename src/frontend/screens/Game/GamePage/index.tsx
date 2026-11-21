@@ -59,28 +59,21 @@ import { hasStatus } from 'frontend/hooks/hasStatus'
 import GameContext from '../GameContext'
 import { GameContextType } from 'frontend/types'
 import {
-  AppleWikiInfo,
-  RunsForMeToggle,
-  CloudSavesSync,
   CompatibilityInfo,
   Description,
   Developer,
   DotsMenu,
-  DownloadSizeInfo,
   GameStatus,
   HLTB,
-  HumbleOriginInfo,
-  NativePortInfo,
-  InstalledInfo,
   MacArchBadge,
   MainButton,
-  PlatformSupport,
   ReportIssue,
   Requirements,
   Scores,
   SettingsButton,
   WikiInfoEmptyState
 } from './components'
+import InstallTab from './components/InstallTab'
 import EngineBadge from './components/EngineBadge'
 import EngineNotices from './components/EngineNotices'
 import { engineStateKey, useEngineState } from 'frontend/state/EngineState'
@@ -696,19 +689,9 @@ export default React.memo(function GamePage(): JSX.Element | null {
                         <TabPanel
                           value={currentTab}
                           index="info"
-                          className="infoTab"
+                          className="installTab"
                         >
-                          <PlatformSupport gameInfo={gameInfo} />
-                          <AppleWikiInfo gameInfo={gameInfo} />
-                          <RunsForMeToggle gameInfo={gameInfo} />
-                          <DownloadSizeInfo gameInfo={gameInfo} />
-                          <InstalledInfo gameInfo={gameInfo} />
-                          <CloudSavesSync gameInfo={gameInfo} />
-                          <HumbleOriginInfo gameInfo={gameInfo} />
-                          <NativePortInfo
-                            gameInfo={gameInfo}
-                            platform={platform}
-                          />
+                          <InstallTab gameInfo={gameInfo} platform={platform} />
                         </TabPanel>
 
                         <TabPanel

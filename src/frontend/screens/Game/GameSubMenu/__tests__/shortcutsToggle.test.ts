@@ -156,6 +156,83 @@ describe('toggleShortcuts (261012-ca6)', () => {
     )
   })
 
+  describe('setFailed (Phase 100 D-12/D-18)', () => {
+    let setFailed: jest.Mock
+
+    beforeEach(() => {
+      setFailed = jest.fn()
+    })
+
+    const runWithFailed = (hasShortcuts: boolean) =>
+      toggleShortcuts({
+        hasShortcuts,
+        appName: 'MyGame',
+        runner: 'legendary',
+        setHasShortcuts,
+        setBusy,
+        setFailed
+      })
+
+    it('clears the failure flag when the toggle starts', async () => {
+      addShortcut.mockResolvedValue(true)
+
+      await runWithFailed(false)
+
+      expect(setFailed.mock.calls[0]).toEqual([false])
+      expect(setFailed.mock.invocationCallOrder[0]).toBeLessThan(
+        at(addShortcut.mock.invocationCallOrder, 0)
+      )
+    })
+
+    it('add answered true: not a failure', async () => {
+      addShortcut.mockResolvedValue(true)
+
+      await runWithFailed(false)
+
+      expect(setFailed).toHaveBeenLastCalledWith(false)
+    })
+
+    it('add answered false: a failure', async () => {
+      addShortcut.mockResolvedValue(false)
+
+      await runWithFailed(false)
+
+      expect(setFailed).toHaveBeenLastCalledWith(true)
+    })
+
+    it('remove answered false: not a failure', async () => {
+      removeShortcut.mockResolvedValue(false)
+
+      await runWithFailed(true)
+
+      expect(setFailed).toHaveBeenLastCalledWith(false)
+    })
+
+    it('remove answered true: a failure (the shortcut is still there)', async () => {
+      removeShortcut.mockResolvedValue(true)
+
+      await runWithFailed(true)
+
+      expect(setFailed).toHaveBeenLastCalledWith(true)
+    })
+
+    it('a rejected add is a failure and setBusy still ends false', async () => {
+      addShortcut.mockRejectedValue(new Error('transport down'))
+
+      await expect(runWithFailed(false)).resolves.toBeUndefined()
+
+      expect(setFailed).toHaveBeenLastCalledWith(true)
+      expect(setHasShortcuts).not.toHaveBeenCalled()
+      expect(setBusy).toHaveBeenLastCalledWith(false)
+    })
+
+    it('options without setFailed still resolve undefined', async () => {
+      addShortcut.mockRejectedValue(new Error('transport down'))
+
+      await expect(run(false)).resolves.toBeUndefined()
+    })
+  })
+
   it('source gate: handleShortcuts delegates to toggleShortcuts and never sets the state itself', () => {
     const source = readFileSync(
       join(FRONTEND, 'screens/Game/GameSubMenu/index.tsx'),

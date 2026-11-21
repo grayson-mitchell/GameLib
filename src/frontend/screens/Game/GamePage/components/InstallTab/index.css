@@ -1,0 +1,130 @@
+/* Phase 100: the Install tab's own groups and switch rows. Colours are theme
+   tokens only (D-22); the legacy rows keep GamePage/index.css's row rule via
+   the .legacyRows wrapper. */
+
+.installTab {
+  /* Derived danger text for inline failures: the theme's danger token pulled
+     towards the body text so it clears 4.5:1 on every body background. */
+  --install-danger-text: color-mix(
+    in srgb,
+    var(--danger, var(--status-danger)) 40%,
+    var(--text-default)
+  );
+}
+
+.installGroup {
+  margin-top: var(--space-md-fixed);
+}
+
+.installGroup__title {
+  margin: 0 0 var(--space-xs-fixed);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.switchRowWrap {
+  border-bottom: 1px solid var(--border-color);
+}
+
+.switchRow {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 2px 12px;
+  align-items: center;
+  padding: 9px 2px;
+  cursor: pointer;
+}
+
+.switchRow__label {
+  grid-column: 1;
+  color: var(--text-default);
+  font-weight: 400;
+}
+
+.switchRow__aside {
+  grid-column: 2;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+
+.switchRow__track {
+  grid-column: 3;
+  position: relative;
+  width: 34px;
+  height: 20px;
+  border-radius: 9999px;
+  background: var(--border-color);
+}
+
+.switchRow__track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--text-default);
+  transition: transform 0.2s;
+}
+
+.switchRow[aria-checked='true'] .switchRow__track {
+  background: var(--accent);
+}
+
+.switchRow[aria-checked='true'] .switchRow__track::after {
+  background: var(--body-background);
+  transform: translateX(14px);
+}
+
+.switchRow.is-busy .switchRow__track {
+  animation: installTabPulse 1.2s infinite;
+}
+
+@keyframes installTabPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .switchRow.is-busy .switchRow__track {
+    animation: none;
+  }
+}
+
+.switchRow[aria-disabled='true'] {
+  cursor: not-allowed;
+}
+
+.switchRow:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.switchRow__desc {
+  grid-column: 1 / 4;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+
+.rowFailure {
+  margin: 0 0 6px;
+  color: var(--install-danger-text);
+  font-size: var(--text-xs);
+}
+
+.rowFailure__retry {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}

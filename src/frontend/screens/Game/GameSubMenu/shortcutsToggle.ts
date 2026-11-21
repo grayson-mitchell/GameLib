@@ -8,6 +8,8 @@ interface ToggleShortcutsOptions {
   runner: Runner
   setHasShortcuts: (exists: boolean) => void
   setBusy: (busy: boolean) => void
+  /** Phase 100: the Install tab's switch row reports an inline failure. */
+  setFailed?: (failed: boolean) => void
 }
 
 /**
@@ -33,15 +35,24 @@ interface ToggleShortcutsOptions {
  * `setBusy(false)` runs in `finally`, so the spinner cannot stick. This never
  * rethrows: React does not await an onClick promise, so a rethrow would become
  * an unhandled rejection.
+ *
+ * Phase 100 (D-12, D-18): the optional `setFailed` reports the failure rule to
+ * the Install tab's switch row. It is cleared when the toggle starts and set
+ * when the call rejects or the sidecar's answer contradicts the request (an add
+ * that answers "no shortcut exists", a remove that answers "one still exists").
+ * The state itself is still set from the answer alone; `setFailed` only drives
+ * the inline "couldn't update" text and its Retry link.
  */
 export async function toggleShortcuts({
   hasShortcuts,
   appName,
   runner,
   setHasShortcuts,
-  setBusy
+  setBusy,
+  setFailed
 }: ToggleShortcutsOptions): Promise<void> {
   setBusy(true)
+  setFailed?.(false)
   const channel = hasShortcuts ? 'removeShortcut' : 'addShortcut'
 
   try {
@@ -50,6 +61,9 @@ export async function toggleShortcuts({
       : await window.api.addShortcut(appName, runner, true)
 
     setHasShortcuts(result === true)
+    // A removal is only done when no shortcut exists any more; an add only when
+    // one does. An answer that contradicts the request is a failure (D-18).
+    setFailed?.(hasShortcuts ? result === true : result !== true)
   } catch (error) {
     let errorText = '<unstringifiable error>'
     try {
@@ -79,6 +93,7 @@ export async function toggleShortcuts({
         // nothing left to try
       }
     }
+    setFailed?.(true)
   } finally {
     setBusy(false)
   }

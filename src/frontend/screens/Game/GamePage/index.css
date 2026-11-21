@@ -571,7 +571,7 @@
         overflow-y: auto;
       }
 
-      & div.infoTab,
+      & div.installTab .legacyRows,
       & div.extraTab {
         /* The Extra info tab is now ALWAYS rendered, so this panel can legitimately
            contain an empty state rather than a list of rows. Opt it out of the row

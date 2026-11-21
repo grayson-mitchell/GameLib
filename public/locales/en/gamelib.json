@@ -247,6 +247,21 @@
         "extraInfoRetry": "Retry",
         "extraInfoStaleBody": "This result was cached before load outcomes were recorded, so it may be out of date. Refresh to check.",
         "hiddenAchievement": "Hidden Achievement",
+        "installTab": {
+            "libraryGroup": "Library & integration",
+            "retry": "Retry",
+            "shortcuts": {
+                "description": "Opens the game without opening GameLib first.",
+                "failed": "Couldn't update the shortcuts. Details are in the log.",
+                "linuxLabel": "Desktop & app menu shortcuts",
+                "macLabel": "Applications shortcut",
+                "windowsLabel": "Desktop & Start menu shortcuts"
+            },
+            "switch": {
+                "adding": "Adding…",
+                "removing": "Removing…"
+            }
+        },
         "moreActions": "More actions",
         "nativePort": {
             "copyPath": "Copy install path",
