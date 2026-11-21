@@ -7,7 +7,7 @@ status: validated
 nyquist_compliant: true
 wave_0_complete: true
 created: "2026-11-20"
-validated: "2026-11-20"
+validated: 2026-11-21
 ---
 
 # Phase 82 — Validation Strategy
@@ -90,6 +90,9 @@ Status reflects Linux CI (Test run 44834013151 on 456600895, Rust test runs 4482
 | 82-19-T1 | 19 | 2 | FND-02 | — | fake models trust roots, pinned to the crate | jest | jest fakeSafetyRustContract, fakeSafetyRust, gog uninstallSafety | ✅ | ✅ green |
 | 82-19-T2 | 19 | 2 | FND-02 | — | cancel cleanup with no steamapps/common; fake-user sweep | jest | jest cancelDelete, uninstallSafety, bridgeRemovalSafety, removeCopies, … | ✅ | ✅ green |
 | 82-19-T3 | 19 | 2 | FND-02 | — | disposition per review finding; triaged todo | gate | `pnpm planning-gates` | ✅ | ✅ 12/12 |
+| 82-20-T1 | 20 | 1 | FND-01 | — | installer-timeout waits bounded by real time (G-82-2-r2); slowed-download tracer RED on old wait | jest | `npx jest --runTestsByPath src/backend/storeManagers/steam/bridge/__tests__/sharedRedistInstall.test.ts` (+ 5 ms-deadline mutant must fail) | ✅ | ✅ green 63/63; mutant red |
+| 82-20-T2 | 20 | 1 | FND-01 | — | every installer-timeout wait asserted; 10x load soak | jest | same file, 10 runs under 2 busy loops/core | ✅ | ✅ green 10/10; full `pnpm test` suite PASS |
+| 82-20-T3 | 20 | 1 | FND-01 | — | recurrence recorded in ledger (D-04) | grep | `grep -c 44850161668 82-TEST-LEDGER.md` | ✅ | ✅ doc check |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
