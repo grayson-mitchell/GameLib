@@ -1,12 +1,13 @@
 import { type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { configStore } from 'frontend/helpers/stores'
 import useSettingsState from 'frontend/state/settingsState'
 import { SelectField } from '..'
 import { MenuItem } from '@mui/material'
 import { toI18nextCode, type SupportedLanguage } from 'common/languages'
 import {
-  buildTranslationIssueUrl,
+  reportTranslationProblem,
   shouldShowMtNotice
 } from './translationIssue'
 
@@ -122,6 +123,7 @@ export default function LanguageSelector({
   hideLabel = false
 }: Props) {
   const { t, i18n } = useTranslation()
+  const navigate = useNavigate()
   const { language, setLanguage } = useSettingsState.keys(
     'language',
     'setLanguage'
@@ -145,7 +147,7 @@ export default function LanguageSelector({
     languageLabels[currentLanguage as SupportedLanguage] ?? currentLanguage
 
   const handleReportTranslationProblem = () => {
-    window.api.openExternalUrl(buildTranslationIssueUrl(currentLanguage, label))
+    reportTranslationProblem(navigate, currentLanguage, label)
   }
 
   const handleReportTranslationProblemKeyDown = (
@@ -178,7 +180,9 @@ export default function LanguageSelector({
   // Heroic's own Weblate project, which GameLib -- an independent fork that
   // does not pull from Heroic -- never reads corrections from for ANY
   // string, fork or upstream-copied. The `openWeblate` IPC channel and
-  // `weblateUrl` constant were removed in quick task 261115-tk8.
+  // `weblateUrl` constant were removed in quick task 261115-tk8. Quick
+  // 261121-vlo routes the report link to the in-app report form (Settings >
+  // Report a problem) with the language prefilled, instead of GitHub.
   let afterSelect = null
   if (shouldShowMtNotice(currentLanguage)) {
     afterSelect = (

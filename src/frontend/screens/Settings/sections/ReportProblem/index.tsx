@@ -36,11 +36,17 @@ export default function ReportProblem() {
 
   const configured = isReportingConfigured()
 
-  const [message, setMessage] = useState('')
-  // The game page's "Report a problem" link navigates here with the game
-  // preselected via route state.
-  const location = useLocation() as { state?: { reportGame?: unknown } | null }
+  // The game page's "Report a problem" link preselects the game, and the
+  // language picker's "Report a translation problem" link prefills the
+  // message, both through route state.
+  const location = useLocation() as {
+    state?: { reportGame?: unknown; reportMessage?: unknown } | null
+  }
+  const initialMessage = location.state?.reportMessage
   const initialGame = location.state?.reportGame
+  const [message, setMessage] = useState(
+    typeof initialMessage === 'string' ? initialMessage : ''
+  )
   const [selectedKey, setSelectedKey] = useState(
     typeof initialGame === 'string' ? initialGame : ''
   )

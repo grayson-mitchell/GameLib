@@ -1,23 +1,29 @@
 /**
  * Pure helpers for the machine-translation disclosure note and its
- * "Report a translation problem" link in `LanguageSelector` (260925-88h).
+ * "Report a translation problem" link in `LanguageSelector` (260925-88h,
+ * reworked by quick 261121-vlo).
  *
  * No React, no i18next, no window/DOM access -- kept free of side effects so
- * both functions are hermetically unit-testable, matching the purity
+ * every function is hermetically unit-testable, matching the purity
  * convention this codebase already uses for `chipLabels.ts`/`facetLabels.ts`.
  *
- * T-88h-01 (threat model, mitigate): the issue URL's origin and pathname are
- * CONSTANTS -- every caller-supplied value (`code`, `label`) is encoded
- * strictly as a QUERY VALUE via `URLSearchParams`, never concatenated into
- * the path. A hostile `code`/`label` containing `&`, `#`, `/`, or any other
- * URL-special character stays inside its own encoded query value and can
- * neither add a new parameter nor change the host/path.
+ * T-vlo-01 (threat model, mitigate): the prefill is a plain string that
+ * reaches the report form only through in-app router state. The form uses it
+ * solely as the initial value of a React-controlled textarea; it is never
+ * parsed as HTML or as a URL. This replaces the former GitHub new-issue
+ * link, whose query-injection concerns retired with it.
  */
 
-export const GAMELIB_ISSUES_NEW_URL =
-  'https://github.com/grayson-mitchell/GameLib/issues/new'
+// The in-app report form (Settings > Report a problem) -- the same target the
+// game page's "Report a problem" link navigates to.
+const REPORT_ROUTE = '/settings/report'
 
-const TRANSLATION_ISSUE_TEMPLATE = 'translation_problem.yaml'
+// The slice of React Router's `navigate` this module needs. Kept private and
+// structural so this file imports nothing from React or the router.
+type NavigateToReport = (
+  to: string,
+  options: { state: { reportMessage: string } }
+) => void
 
 /**
  * The MT-disclosure note and report link show for every language except
@@ -39,15 +45,29 @@ export function shouldShowMtNotice(lang: string): boolean {
 }
 
 /**
- * Builds the prefilled "Report a translation problem" GitHub issue URL.
- * `code` and `label` are ordinary display/interpolation values -- see the
- * file header's T-88h-01 note for why neither can escape its query-value
- * position no matter what characters they contain.
+ * The text the report form's "What happened?" box starts with:
+ * `[Translation] <label> (<code>): `. The code is included so the report names
+ * the shipped locale even when the display label is ambiguous. Both values are
+ * returned verbatim -- nothing is escaped or encoded, because the receiving
+ * textarea is React-controlled (see the file header).
  */
-export function buildTranslationIssueUrl(code: string, label: string): string {
-  const url = new URL(GAMELIB_ISSUES_NEW_URL)
-  url.searchParams.set('template', TRANSLATION_ISSUE_TEMPLATE)
-  url.searchParams.set('language', `${label} (${code})`)
-  url.searchParams.set('title', `[Translation] ${label}: `)
-  return url.toString()
+export function buildTranslationReportMessage(
+  code: string,
+  label: string
+): string {
+  return `[Translation] ${label} (${code}): `
+}
+
+/**
+ * Opens the in-app report form with the language prefilled, through route
+ * state, instead of leaving the app.
+ */
+export function reportTranslationProblem(
+  navigate: NavigateToReport,
+  code: string,
+  label: string
+): void {
+  navigate(REPORT_ROUTE, {
+    state: { reportMessage: buildTranslationReportMessage(code, label) }
+  })
 }

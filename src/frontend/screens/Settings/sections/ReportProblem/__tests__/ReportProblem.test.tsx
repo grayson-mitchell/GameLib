@@ -235,7 +235,9 @@ describe('ReportProblem', () => {
     >()
     reportTranslationProblem(navigate, 'de', 'Deutsch')
     expect(navigate).toHaveBeenCalledTimes(1)
-    const [target, options] = navigate.mock.calls[0]
+    const call = navigate.mock.calls[0]
+    if (!call) throw new Error('navigate was not called')
+    const [target, options] = call
     expect(target).toBe('/settings/report')
     mockLocationState = options.state
     let tree = render()
@@ -247,9 +249,11 @@ describe('ReportProblem', () => {
     ;(byTestId(tree, 'report-send')?.props.onClick as () => void)()
     await flush()
     expect(mockSubmit).toHaveBeenCalledTimes(1)
-    expect(mockSubmit.mock.calls[0][0]).toMatchObject({
-      message: '[Translation] Deutsch (de): the Save button is cut off'
-    })
+    expect(mockSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: '[Translation] Deutsch (de): the Save button is cut off'
+      })
+    )
   })
 
   it('unconfigured: shows the notice, disables Send and never submits', async () => {
