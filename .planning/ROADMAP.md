@@ -713,7 +713,7 @@ Plans:
 **Goal:** The game page has no ⋮ menu: every action sits next to what it changes. The left card is the game (store link, Edit details, Favourite heart by the title, category chips, Hide); the Install tab is the hub for your copy (Location → Open/Move, Size → Modify, Version → Verify/Check for updates, integration switch rows, red Uninstall last behind a confirmation); the ⚙ dialog owns how the game runs; the footer holds only tier-one actions. Requirements and the left-card play-time block are removed as duplicates; pending and error states live inside each row. Design source: sketch 012 (folds in 010, 011) — `.claude/skills/sketch-findings-gamelib/references/game-page.md`.
 **Requirements**: TBD
 **Depends on:** Nothing (frontend-only; independent of the v0.11 port phases)
-**Plans:** 2/10 plans executed
+**Plans:** 3/10 plans executed
 
 Plans:
 **Wave 1**
@@ -723,7 +723,7 @@ Plans:
 - [x] 100-02-PLAN.md — Left card library row: Favourite heart, category chips + create-and-assign popover, Hide + hidden notice
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 100-03-PLAN.md — Play time into the footer status line (TimeContainer deleted), Edit details pencil, store badge link
+- [x] 100-03-PLAN.md — Play time into the footer status line (TimeContainer deleted), Edit details pencil, store badge link
 
 **Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 100-04-PLAN.md — Location / Size / Version rows: Move, Set install folder, Modify, Verify, Update, What's new with busy, gating and inline failure

@@ -5,15 +5,15 @@ milestone_name: Node Sidecar Retirement
 current_phase: 100
 current_phase_name: Game page without the ⋮ menu
 status: executing
-stopped_at: Completed 100-02-PLAN.md
-last_updated: "2026-11-21T09:56:48.204Z"
+stopped_at: Completed 100-03-PLAN.md
+last_updated: "2026-11-21T10:07:08.547Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 100 execution started
-state_head: 7b5aadae3a242415b6e3e66f29ede01754b824c9
+state_head: 9813cab3178e255ea2f164ece43f97a314d18a06
 progress:
   total_phases: 20
   completed_phases: 23
-  total_plans: 60
+  total_plans: 65
   completed_plans: 531
   percent: 100
 ---
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 100 (Game page without the ⋮ menu) — EXECUTING
-Plan: 3 of 10
+Plan: 4 of 10
 Status: Ready to execute
 Last activity: 2026-11-21 — Phase 100 execution started
 Progress: [██████████] 100%
@@ -352,6 +352,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 84 P11 | ~45min (operator-driven) | 3 tasks | 1 files |
 | Phase 100 P01 | 35 min | 3 tasks | 21 files |
 | Phase 100 P02 | 25 min | 3 tasks | 16 files |
+| Phase 100 P03 | 10 min | 2 tasks | 21 files |
 
 ## Accumulated Context
 
@@ -645,6 +646,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 100]: 100-01: --fav uses per-theme literals (not each theme's --danger, which fails 3:1 on dark bodies); switch row divider lives on .switchRowWrap so inline failure sits inside the row; useRowAction/RowActionPhase tagged @public for knip until plans 04-06 consume them
 - [Phase 100]: Left card: the title's bottom margin moved from the h1 to the .titleRow wrapper so the Favourite heart centres on the title text
 - [Phase 100]: Left card: the New category field matches names exactly after trim (case-sensitive) via validateNewCategoryName before addCategory, so an existing category is never wiped (T-100-04)
+- [Phase 100]: Play time lives in the footer status line (idle only); zero minutes counts as never played
 
 ### Pending Todos
 
@@ -904,8 +906,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-21T09:56:47.858Z
-Stopped at: Completed 100-02-PLAN.md
+Last session: 2026-11-21T10:07:08.221Z
+Stopped at: Completed 100-03-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
