@@ -13,5 +13,5 @@ The Rust client lives in `src-tauri/src/log_upload.rs`.
 | title and syntax fields | OPT-OUT | Not needed: parity with the TS uploader this replaces, which never sent them. |
 | poster field | OPT-OUT | Not needed: it would identify the user to a public paste service. |
 | raw or JSON retrieval of a paste | OPT-OUT | Not needed: the app only hands the URL to the user, who opens it in a browser. |
-| delete paste | INTEGRATE | Parity only: the request (`token=1&delete=`) is still sent to a stored URL, but dpaste.com has no delete endpoint, so it cannot remove anything. The UI control stays commented out (`deleteButtonReachability.test.tsx`), so this row is proven by the localhost round-trip test in `log_upload.rs`, not from the UI. |
+| delete paste | INTEGRATE | Parity only: the request is still sent, but dpaste.com has no delete endpoint. The UI control stays commented out, so this row is proven by the localhost round-trip test in `log_upload.rs`. |
 | account or API-key authentication | OPT-OUT | Explicitly out of scope: pastes are anonymous only, as before. |
