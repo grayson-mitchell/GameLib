@@ -29,7 +29,7 @@ created: "2026-11-21"
 
 ## Threat Register
 
-57 threats from the 19 plan `<threat_model>` blocks (T-82-01..56 plus T-82-SC, merged across plans 01-16). Evidence is file:line as of the audit; the auditor ran `cargo test -p gamelib-safety -p gamelib-testutil` (green), 24 jest suites / 459 tests (green), `check:ipc-contract` and `planning-gates` 12/12.
+61 threats from the 20 plan `<threat_model>` blocks (T-82-01..60 plus T-82-SC, merged across plans 01-16 and 20). T-82-57..60 (gap-closure plan 82-20) verified at L1 on 2026-11-21; T-82-SC re-checked: no package or lockfile change in the 82-20 commits. Evidence is file:line as of the audit; the auditor ran `cargo test -p gamelib-safety -p gamelib-testutil` (green), 24 jest suites / 459 tests (green), `check:ipc-contract` and `planning-gates` 12/12.
 
 | Threat ID | Category | Component | Severity | Disposition | Mitigation | Status |
 |-----------|----------|-----------|----------|-------------|------------|--------|
@@ -89,6 +89,10 @@ created: "2026-11-21"
 | T-82-54 | Repudiation | fake diverging from the crate | high | mitigate | Fake models the trust-root rule with no off switch; shared fixture with floor 12 on both sides | closed |
 | T-82-55 | Tampering | fake deleting outside the temp dir | medium | mitigate | `insideTmp` confinement throws otherwise | closed (residual IN-07) |
 | T-82-56 | Repudiation | deferred findings lost | low | mitigate | All 19 review findings dispositioned; deferred-findings todo with valid triage frontmatter; planning-gates 12/12 | closed |
+| T-82-57 | Tampering | sharedRedistInstall.test.ts waits (82-20) | medium | mitigate | Every `yieldUntil` (test.ts:960, 1006, 1161, 1281) is followed by an explicit `toHaveLength(1)`; deadline 15 s (:234) inside the 30 s per-test timeout (:222); 5 ms mutant failed; 0 skip/only/retryTimes | closed |
+| T-82-58 | Denial of service | 82-20 soak busy loops | low | mitigate | Self-expiring 150 s loops killed by EXIT trap; no busy-loop processes remain after execution | closed |
+| T-82-59 | Tampering | 82-20 deadlineMutant test file | low | mitigate | No mutant file in `bridge/__tests__/`; 82-20 commits stage only the test file and ledger | closed |
+| T-82-60 | Repudiation | ledger record of the G-82-2-r2 recurrence | low | mitigate | 82-TEST-LEDGER.md:94, :269, :272 name run 44850161668, sha 90ca09d02 and fix commits e5651c5c6 / e91beb1da | closed |
 | T-82-SC | Tampering | npm / cargo installs | high | mitigate | package.json / pnpm-lock untouched; lock gains only gamelib-safety, gamelib-testutil, unicode-normalization 0.1.26; `cargoFeatures.test.ts` pins names; legitimacy audit in 82-RESEARCH | closed |
 
 *Status: open · closed · open — below high threshold (non-blocking)*
