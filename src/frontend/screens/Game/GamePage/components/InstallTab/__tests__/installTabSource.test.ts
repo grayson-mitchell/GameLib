@@ -262,4 +262,20 @@ describe('Install tab source gates', () => {
     // The probe and the switch must not depend on the install state.
     expect(code).not.toMatch(/canShowInSteam\s*=[^\n]*is_installed/)
   })
+
+  it('Runs for me is a SwitchRow that sets state only from the backend map, first in Library & integration (D-01, D-18)', () => {
+    const code = read(COMPONENTS_DIR, 'RunsForMeToggle.tsx')
+    expect(code).toContain('<SwitchRow')
+    expect(code).not.toContain('ToggleSwitch')
+    expect(code).toContain('window.api.setRunsForMe(')
+    expect(code.match(/\.setRunsForMe\(/g)).toHaveLength(2)
+    expect(code).toContain('getState().setRunsForMe(map)')
+    expect(code).not.toContain('showDialogModal')
+    const rows = read(TAB_DIR, 'IntegrationRows.tsx')
+    expect(rows.indexOf('<RunsForMeToggle')).toBeGreaterThan(-1)
+    expect(rows.indexOf('<RunsForMeToggle')).toBeLessThan(
+      rows.indexOf('id="installTabAutoSync"')
+    )
+    expect(read(TAB_DIR, 'index.tsx')).not.toContain('RunsForMeToggle')
+  })
 })

@@ -8,7 +8,6 @@ import { useInstallLocationActions } from '../../actions/useInstallLocationActio
 // cycle (the barrel is imported by GamePage, which imports this).
 import PlatformSupport from '../PlatformSupport'
 import AppleWikiInfo from '../AppleWikiInfo'
-import RunsForMeToggle from '../RunsForMeToggle'
 import CloudSavesSync from '../CloudSavesSync'
 import HumbleOriginInfo from '../HumbleOriginInfo'
 import NativePortInfo from '../NativePortInfo'
@@ -92,7 +91,6 @@ const InstallTab = ({ gameInfo, platform, handleUpdate, hasUpdate }: Props) => {
       <div className="legacyRows">
         <div>
           <AppleWikiInfo gameInfo={gameInfo} />
-          <RunsForMeToggle gameInfo={gameInfo} />
         </div>
       </div>
       <IntegrationRows gameInfo={gameInfo} platform={platform} />

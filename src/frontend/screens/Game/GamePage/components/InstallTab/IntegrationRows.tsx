@@ -7,6 +7,7 @@ import GameContext from '../../../GameContext'
 import { toggleShortcuts } from '../../../GameSubMenu/shortcutsToggle'
 import { cloudSavesPathMissing } from '../../actions/cloudSync'
 import { useSteamShortcut } from '../../actions/useSteamShortcut'
+import RunsForMeToggle from '../RunsForMeToggle'
 import { SwitchRow } from './SwitchRow'
 
 interface Props {
@@ -139,6 +140,7 @@ const IntegrationRows = ({ gameInfo, platform }: Props) => {
       <h3 className="installGroup__title">
         {t('gamepage.installTab.libraryGroup', 'Library & integration')}
       </h3>
+      {isInstalled && <RunsForMeToggle gameInfo={gameInfo} />}
       {isInstalled && showAutoSync && (
         <SwitchRow
           id="installTabAutoSync"

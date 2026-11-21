@@ -304,6 +304,9 @@
                 "verifying": "Wait for the verify to finish"
             },
             "retry": "Retry",
+            "runsForMe": {
+                "failed": "Couldn't save Runs for me. Details are in the log."
+            },
             "shortcuts": {
                 "description": "Opens the game without opening GameLib first.",
                 "failed": "Couldn't update the shortcuts. Details are in the log.",
