@@ -6,10 +6,10 @@ current_phase: 85
 current_phase_name: Store host, config and versioned migrations
 status: executing
 stopped_at: Completed 85-08-PLAN.md
-last_updated: "2026-11-21T18:18:15.450Z"
+last_updated: "2026-11-21T18:22:09.761Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 85 execution started
-state_head: 19efd5662c8c48436e91d3ec2b30ed4689e0ab66
+state_head: 653c0627d7a34604cba72a871fbdb9fb2d4c931f
 progress:
   total_phases: 20
   completed_phases: 23
@@ -758,6 +758,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 20 | Close stale Gate 7 digest todo (already re-pinned by 84-06, 90ba1d3ab) | 2026-11-22 | 01c12f259 | — | — |
 | 21 | Replace chrono with jiff in gamelib-log (RUSTSEC-2026-0543 audit red) | 2026-11-22 | 8fcadab94 | — | — |
 | 261122-93a | Set up gsd-graph for .planning and exclude .planning from graphify | 2026-11-22 | 5ad01481e | — | [261122-93a-set-up-gsd-graph-for-planning-and-exclud](./quick/261122-93a-set-up-gsd-graph-for-planning-and-exclud/) |
+| 261122-9sl | Implement Move install for Steam games (moveInstall is a stub) | 2026-11-22 | 4bbab9da4 | — | [261122-9sl-implement-move-install-for-steam-games](./quick/261122-9sl-implement-move-install-for-steam-games/) |
 
 ## Deferred Items
 
