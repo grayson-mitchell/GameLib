@@ -5,10 +5,10 @@ current_phase: 82
 current_phase_name: Guardrails, hygiene and shared safety primitives
 status: verifying
 stopped_at: Completed 82-20-PLAN.md
-last_updated: "2026-11-21T02:05:12.992Z"
+last_updated: "2026-11-21T02:46:54.817Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 82 execution started
-state_head: 893bf22daf46760954b10b63a5ef4e55632296f4
+state_head: 9457e908b61f8290ba8dc7f2bf0aa9add339570a
 progress:
   total_phases: 27
   completed_phases: 23
@@ -78,7 +78,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 Phase: 82 (Guardrails, hygiene and shared safety primitives) — EXECUTING
 Plan: 20 of 20
 Status: Phase complete — ready for verification
-Last activity: 2026-11-21 - Completed quick task 261121-kqt: Enable incremental tsc in codecheck
+Last activity: 2026-11-21 - Completed quick task 261121-lco: Fix stale i18n baseline, fork-touched-files list and gameinfo-narrowing ceiling after dzl redesign
 Progress: [██████████] 100% (19 of 19 phase 82 plans have a SUMMARY; verification human_needed)
 
 ## Native-Install Arc Phase Map (21–25)
@@ -657,6 +657,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261121-97s | Download queue logs "handed off to the Steam client" instead of "Finished Installation" at a Steam-client handoff | 2026-11-21 | f16f58990 | — | [261121-97s-download-queue-logs-handed-off-to-the-st](./quick/261121-97s-download-queue-logs-handed-off-to-the-st/) |
 | 261121-dzl | Game settings dialog redesign per sketch 009 B | 2026-11-21 | 3ff5d2ad8 | — | [261121-dzl-game-settings-dialog-redesign-per-sketch](./quick/261121-dzl-game-settings-dialog-redesign-per-sketch/) |
 | 261121-kqt | Enable incremental tsc in codecheck | 2026-11-21 | 893bf22da | — | [261121-kqt-enable-incremental-tsc-in-codecheck](./quick/261121-kqt-enable-incremental-tsc-in-codecheck/) |
+| 261121-lco | Fix stale i18n baseline, fork-touched-files list and gameinfo-narrowing ceiling after dzl redesign | 2026-11-21 | 9457e908b | — | [261121-lco-fix-stale-i18n-baseline-fork-touched-fil](./quick/261121-lco-fix-stale-i18n-baseline-fork-touched-fil/) |
 
 ## Deferred Items
 
