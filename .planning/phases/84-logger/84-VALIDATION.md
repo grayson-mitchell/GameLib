@@ -3,8 +3,8 @@ phase: "84"
 slug: "logger"
 # status lifecycle: draft (seeded by plan-phase) → validated (set by validate-phase §6)
 # audit-milestone §5.5 distinguishes NOT-VALIDATED (draft) from PARTIAL (validated + nyquist_compliant: false) (#2117)
-status: draft
-nyquist_compliant: false
+status: validated
+nyquist_compliant: true
 wave_0_complete: true
 created: "2026-11-20"
 ---
@@ -48,7 +48,7 @@ Filled at plan 84-10 from the clean-worktree proof at P = `7fc103955fefbc5f5d821
 |-----------|----------|-----------|-------------------|-------------|--------|
 | SC1 | Line format, rotation, `.old`, location, per-chunk rule and sanitiser output byte-equal to the TS golden | golden | `cargo test -p gamelib-log --test golden` (passes in the multi-crate run). The TS oracle `logGolden.test.ts` was deleted by 84-07 as planned; the fixtures stay and `forwarderGolden.test.ts` is the TS-side proof (in the full jest run) | ✅ | ✅ green |
 | SC1 | New files created with unix mode 0600 | unit | `cargo test -p gamelib-log writer::mode` (2 passed: `a_new_log_file_is_created_0600`, `an_existing_file_keeps_its_mode_after_an_append`) | ✅ | ✅ green (darwin); unix legs on CI |
-| SC1 | Windows rotation with `.old` held open; path segments | unit (CI Windows) | `cargo test -p gamelib-log writer::windows` (`#[cfg(all(test, windows))]`, runs 0 tests on darwin) | ✅ | ⏳ pending CI windows-latest |
+| SC1 | Windows rotation with `.old` held open; path segments | unit (CI Windows) | `cargo test -p gamelib-log writer::windows` (`#[cfg(all(test, windows))]`, runs 0 tests on darwin) | ✅ | ✅ green on CI windows-latest (rust-test run 44942334026 at `a0401bbc6`, per "## Gap-closure CI proof") |
 | SC1 | Secondary instance never rotates | unit | `cargo test -p gamelib-log writer::second_init` (1 passed) | ✅ | ✅ green |
 | SC2 | The 7 channels validate and route; invalid vectors rejected; one owner | unit + census | `cargo test --bin gamelib-shell native_` (37 passed); `pnpm check:ipc-contract` (up to date); ownership/schema/census jest suites in the full run | ✅ | ✅ green |
 | SC2 | Upload / list against a localhost server; expiry prune; StoreHost round trip of an existing `uploadedLogs.json`. **delete-uploaded has no UI control** (`src/frontend/screens/Settings/sections/LogSettings/components/UploadedLogFilesList/__tests__/deleteButtonReachability.test.tsx`), so it is proven by 84-06's localhost round-trip test (`cargo test --bin gamelib-shell log_upload`, 24 passed), not from the UI; ROADMAP criterion 2's "from the UI" is literally met for upload and show-in-folder only | unit/integration | `cargo test --bin gamelib-shell log_upload` (the uploader moved into the shell with D-07, so the former `-p gamelib-log uploader` filter matches 0); `cargo test -p gamelib-core store` (12 passed) | ✅ | ✅ green |
@@ -77,7 +77,7 @@ checkout of P in "## Phase proof". Commits are the per-task commits.
 | 84-01 | 3 shared frame vectors | 01167bb93 | node count check + prettier on the vectors | ✅ |
 | 84-01 | 4 live gate contract (`84-HUMAN-UAT.md`) | see 84-01-SUMMARY | `uat.cjs parseUatItemsWithStats` = 8 items | ✅ (run by 84-11) |
 | 84-02 | 1 tracer: crate scaffold, core paths, general writer, CI wiring | 0fbbb9522 | `cargo test -p gamelib-log`, `--test golden`, `-p gamelib-core paths`, clippy, fmt | ✅ |
-| 84-02 | 2 every target, rotation, mode, Windows rename, second init, frame | c5136c74f | `cargo test -p gamelib-log writer:: frame::` | ✅ (windows leg: CI) |
+| 84-02 | 2 every target, rotation, mode, Windows rename, second init, frame | c5136c74f | `cargo test -p gamelib-log writer:: frame::` | ✅ (windows leg green on CI run 44942334026) |
 | 84-02 | 3 sanitiser in Rust | 3cf2c9fbf, 73afed020 | `cargo test -p gamelib-log sanitize`, golden | ✅ |
 | 84-02 | 4 minimal StoreHost core | 13db3e06c | `cargo test -p gamelib-core store`, clippy ratchet | ✅ |
 | 84-03 | 1 tracer: sidecar logInfo to gamelib.log | 4b22f2869 | `cargo test --bin gamelib-shell log_frame fn_main`, forwarderGolden jest | ✅ |
@@ -98,7 +98,26 @@ checkout of P in "## Phase proof". Commits are the per-task commits.
 | 84-09 | 2 documents and comments corrected | 0cfcebb7f | grep gates + jest | ✅ |
 | 84-10 | 1 tracer: clean-worktree proof at P | 60a71578c | "## Phase proof" | ✅ except the `backend-di-ceilings` red recorded below |
 | 84-10 | 2 push authorisation (checkpoint) | n/a | operator decision: `hold` | ⏸ held; nothing pushed |
-| 84-10 | 3 CI proof | this commit | "## CI proof" | ⏳ not pushed; three-OS proof pending a later push |
+| 84-10 | 3 CI proof | this commit | "## CI proof" | ✅ superseded: three-OS proof done by 84-18 (push of `a0401bbc6`, rust-test run 44942334026) |
+| 84-11 | 1–3 live UAT run (preflight, operator checkpoint, scoring) | see 84-11-SUMMARY | `84-HUMAN-UAT.md` | manual-only (see Manual-Only Verifications); 8/8 pass after 84-13 |
+| 84-12 | 1 tracer: WR-03 failed temp write leaves the live store file untouched | 2600b3dc8 (RED), 8f0e3e12f | `cargo test -p gamelib-core store` (`when_the_temp_write_fails_the_live_file_is_left_untouched`) | ✅ |
+| 84-12 | 2 WR-07 stored/returned paste URL is the parsed URL | 27ee3dac1 (RED), 415b97206 | `cargo test --bin gamelib-shell log_upload` (`log_upload_returns_the_parsed_url_not_the_raw_text`, `log_upload_records_the_normalised_url_when_the_response_embeds_a_line_break`) | ✅ |
+| 84-13 | 1 tracer: UAT item 4 amended and re-scored (G-84-3) | c84698110 | `uat.cjs parseUatItemsWithStats` structure check | doc-only ✅ |
+| 84-13 | 2 UAT items 7 and 8 amended; 8 of 8 pass | b937ca7be | `uat.cjs parseUatItemsWithStats`; `pnpm planning-gates` | doc-only ✅ |
+| 84-14 | 1 tracer: golden `tokenise` ends a LOGDIR path at a line break or quote (G-84-1) | 1c70a61c1 | `cargo test -p gamelib-log --test golden` (`tokenise_normalises_a_windows_path_with_a_space_to_the_end_of_the_line`, `tokenise_ends_a_path_at_a_quote`) | ✅ (windows-latest green, CI run 44942334026) |
+| 84-14 | 2 WR-04 object values / native entries cut at caps; IN-01 drop report counts entries | 720fb9d86 | `cargo test -p gamelib-log sanitize writer::` (`an_object_value_is_cut_at_the_text_cap_with_a_marker`, `a_native_entry_over_the_entry_cap_is_cut_with_a_marker`, `the_drop_report_counts_entries_not_messages`) | ✅ |
+| 84-14 | 3 WR-05 Rust half (dropped frame's rotation owed); IN-02 limiter window clamp | 6a385ab97 | `cargo test -p gamelib-log writer:: limiter` (`a_rotation_in_a_dropped_frame_is_applied_to_the_next_batch_for_that_target`, `a_dropped_general_batch_owes_no_rotation`, `a_future_timestamp_cannot_hold_a_window_open_past_the_logger_clock`) | ✅ |
+| 84-15 | 1 WR-01 sanitise at the single producer | fbc5185db (RED), 28c9f8caf | `jest forwarder.test.ts targetWriter.test.ts` | ✅ |
+| 84-15 | 2 WR-05 TS half (evicted / rejected rotate claim passed on) | 3336fae60 (RED), c42be0306 | `jest forwarder.test.ts targetWriter.test.ts` | ✅ |
+| 84-15 | 3 WR-06 flush bounded by one deadline, timers unref'd | f4cd3008c (RED), 0a39bba18 | `jest forwarder.test.ts` | ✅ |
+| 84-16 | 1 WR-02 writer half: CR/LF escaped at every native entry point | fdc5b6457 (RED), e7eb01597 | `cargo test -p gamelib-log bridge`; `cargo test --bin gamelib-shell shell_log` | ✅ |
+| 84-16 | 2 IN-03 failed `install_bridges` warns | f5c3c9eef | `cargo test --bin gamelib-shell a_failed_bridge_install_is_reported` | ✅ |
+| 84-16 | 3 IN-04 finish flush budget from the deadline | ce1f0689a (RED), bbf189be0 | `cargo test -p gamelib-core shutdown`; `jest tauriShellSource.test.ts` | ✅ |
+| 84-17 | 1 `shell_log_detail` keeps keyring, quit-routing and notification error text out of gamelib.log | 13d057271 | `cargo test --bin gamelib-shell shell_log_detail keyring_error` | ✅ |
+| 84-17 | 2 spawn, deep-link and Epic embed lines become categories; gate added | 6b2ecf847 | `jest shellLogCategoryOnly.test.ts keyringDiagPersistence.test.ts macosEpicEmbedDiagPersistence.test.ts` | ✅ |
+| 84-18 | 1 clean-worktree gap-closure proof at P = `5af07ab9f`; 11 dispositions | 94cc93f6e | "## Gap-closure proof" | ✅ (local reds attributed outside Phase 84) |
+| 84-18 | 2 push authorisation (checkpoint) | a0401bbc6 (Cargo.lock pin, operator-accepted) | operator decision: `push-now`, pin updated first, proof commit included | ✅ pushed `a0401bbc6` |
+| 84-18 | 3 CI proof | e79693b59 | "## Gap-closure CI proof" | ✅ rust-test three OS green (run 44942334026); test.yml red only on Phase 85-02's `storeCorpus.test.ts` |
 
 ---
 
@@ -123,14 +142,14 @@ checkout of P in "## Phase proof". Commits are the per-task commits.
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 180s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 180s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** validated 2026-11-22 (validate-phase audit after gap closure 84-12..84-18: 0 gaps; doc/operator tasks 84-11, 84-13, 84-18 T2 manual-only by nature)
 
 ---
 
@@ -345,3 +364,11 @@ two reds (with the pin test) on `8b7d92f77`'s run 44932352973. **Not Phase 84's 
 on CI at P'. No other Phase 84 leg is red, so no follow-up push was needed.
 
 The earlier note under "Red at P, attributed", item 1 (cargoFeatures pin), is resolved by `a0401bbc6`.
+
+## Validation Audit 2026-11-21
+
+| Metric | Count |
+|---|---|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
