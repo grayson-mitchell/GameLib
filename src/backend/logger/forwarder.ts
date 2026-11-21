@@ -212,7 +212,7 @@ function sanitiseEntry(entry: LogFrameEntry): LogFrameEntry {
   }
   const { msg, prefix } = entry.line
   const cleanMsg = wellFormed(msg)
-  const cleanPrefix = (Object.values(LogPrefix) as string[]).includes(prefix)
+  const cleanPrefix = Object.values(LogPrefix).includes(prefix)
     ? prefix
     : LogPrefix.Backend
   if (cleanMsg === msg && cleanPrefix === prefix) return entry
@@ -362,29 +362,56 @@ export class LogForwarder {
 
   /**
    * Resolves once everything queued so far has been handed to the transport and its write callback
-   * has run, after at most `LOG_FLUSH_TIMEOUT_MS`, or at once when no transport is bound. Never
-   * rejects. The fatal `uncaughtException` guard awaits this before exiting, so it must not hang.
+   * has run, or at once when no transport is bound. The whole call, the wait on Promise-valued
+   * messages and the wait on the transport together, takes at most `LOG_FLUSH_TIMEOUT_MS` (one
+   * deadline taken at entry, WR-06): a message that never settles cannot hold it, and the lines of
+   * other writers are still handed to the transport. Never rejects. The fatal `uncaughtException`
+   * guard awaits this before exiting, so it must not hang.
    */
   async flush(): Promise<void> {
+    const deadline = Date.now() + this.#flushTimeoutMs
     try {
-      while (this.#chains.size > 0) {
-        await Promise.all([...this.#chains.values()])
-      }
+      await this.#settleChains(deadline)
       if (this.#transport === null) return
       this.#pump()
       if (this.#isIdle()) return
+      // Whatever is left of the one deadline, never more than a full timeout (a clock step back).
+      const left = Math.min(
+        this.#flushTimeoutMs,
+        Math.max(0, deadline - Date.now())
+      )
       await new Promise<void>((resolve) => {
         const done = (): void => {
           clearTimeout(timer)
           this.#waiters = this.#waiters.filter((w) => w !== done)
           resolve()
         }
-        const timer = setTimeout(done, this.#flushTimeoutMs)
+        const timer = setTimeout(done, left)
         timer.unref?.()
         this.#waiters.push(done)
       })
     } catch {
       // Settling never rejects.
+    }
+  }
+
+  /** Waits for the Promise-valued messages in flight, giving up at `deadline` (WR-06). */
+  async #settleChains(deadline: number): Promise<void> {
+    while (this.#chains.size > 0) {
+      const left = deadline - Date.now()
+      if (left <= 0) return
+      let timer: ReturnType<typeof setTimeout> | undefined
+      const expired = new Promise<boolean>((resolve) => {
+        timer = setTimeout(() => resolve(true), left)
+        // convention 3 (the sidecar's exit contract): never hold the loop.
+        timer.unref?.()
+      })
+      const timedOut = await Promise.race([
+        Promise.all([...this.#chains.values()]).then(() => false),
+        expired
+      ])
+      clearTimeout(timer)
+      if (timedOut) return
     }
   }
 
