@@ -1,6 +1,6 @@
 import { LogPrefix } from './constants'
 // Bound at call time, never at load: `./index` imports this file for its two constructors, so a
-// load-time use would meet a half-initialised module. (log_writer.ts reached `logDebug` the same way.)
+// load-time use would meet a half-initialised module.
 import { enqueueLogEntry, logLine, logWarning } from './index'
 
 import type { LogFrameTarget } from 'common/types/sidecarTransport'

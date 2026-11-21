@@ -2,7 +2,6 @@ import os from 'os'
 
 import { LogPrefix, RunnerToLogPrefixMap } from './constants'
 import { LogForwarder } from './forwarder'
-import { getLogFilePath } from './paths'
 import LogWriter from './targetWriter'
 
 import type { Runner } from 'common/types'
@@ -51,7 +50,7 @@ const logError = (message: unknown, options?: LogOptions): void => {
  * `logErrorSettled` (Phase 34.2 plan 34.2-26, CR-01; reshaped for Phase 84 D-10): queues the line
  * exactly like `logError` and returns a promise that resolves once the entry has been handed to
  * stdout (the stream's write callback), after at most `LOG_FLUSH_TIMEOUT_MS`, or at once when no
- * transport is bound. It never rejects, so `loggerFlowRegistration.ts`'s call-site `.catch` guard
+ * transport is bound. It never rejects, so a call-site `.catch` guard
  * and the fatal `uncaughtException` guard (Phase 72 D-04, which awaits it before exiting) can
  * never be failed or hung by a log write. The old rejection path (a general writer failing on
  * ENOTDIR) no longer exists: the native writer owns the file.
@@ -204,6 +203,5 @@ export {
   getRunnerLogWriter,
   createGameLogWriter,
   LogPrefix,
-  RunnerToLogPrefixMap,
-  getLogFilePath
+  RunnerToLogPrefixMap
 }

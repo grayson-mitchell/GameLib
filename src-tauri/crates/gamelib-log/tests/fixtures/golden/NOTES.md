@@ -69,3 +69,12 @@ These are not in the golden because the TS writer does the opposite:
 4. A failed rotation rename (a Windows `.old` held open elsewhere) keeps appending instead of dropping the line.
 5. A single log message over the per-entry cap is truncated with a marker.
 6. New files are created 0600 on unix.
+
+## The oracle was deleted in 84-07
+
+The TS oracle (`logGolden.test.ts`) was deleted in Phase 84 plan 07 together with the TS writer it drove
+(`log_writer.ts`, `formatter.ts`, `paths.ts`). The fixtures in this directory stay: `cases.json`,
+`entries.json`, `expected/` and this file are what the Rust golden (`cargo test -p gamelib-log --test golden`)
+keeps asserting against, and `src/backend/__tests__/loggerPortComplete.test.ts` fails if they go. With no
+oracle left, new cases are written by hand with a Rust-verified value and a note
+(`src-tauri/crates/README.md` section 6), as `shell-line` was.
