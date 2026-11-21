@@ -11,6 +11,10 @@ import type { GameContextType } from 'frontend/types'
  * disabled (Verify, Modify, Set folder and Uninstall during a move); the ones
  * that do not (Open, Open prefix, Open saves folder, What's new) stay live.
  *
+ * Open shows for every installed game, as the deleted ⋮ Browse Files did
+ * (gated on isInstalled alone, WR-02, D-14). Move, Set folder, Modify and
+ * Verify keep their third-party exclusions.
+ *
  * Phase 101 will flip the Steam Move/Verify gates here; today Steam hides
  * Move, Set folder and Update and shows Verify.
  */
@@ -53,7 +57,6 @@ export interface InstallActionGateInput {
   runner: Runner
   isInstalled: boolean
   isThirdPartyManaged: boolean
-  isBrowserGame: boolean
   hasWinePrefix: boolean
   hasChangelog: boolean
   cloudSavesAvailable: boolean
@@ -90,7 +93,6 @@ export function installActionGates({
   runner,
   isInstalled,
   isThirdPartyManaged,
-  isBrowserGame,
   hasWinePrefix,
   hasChangelog,
   cloudSavesAvailable,
@@ -139,7 +141,7 @@ export function installActionGates({
     show ? live : hidden
 
   return {
-    open: unaffected(isInstalled && !isThirdPartyManaged && !isBrowserGame),
+    open: unaffected(isInstalled),
     move: conflicting(managedStore),
     setFolder: conflicting(managedStore),
     modify: conflicting(

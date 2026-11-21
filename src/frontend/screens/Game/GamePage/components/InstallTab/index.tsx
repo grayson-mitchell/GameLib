@@ -40,7 +40,6 @@ const InstallTab = ({ gameInfo, platform, handleUpdate, hasUpdate }: Props) => {
     runner,
     isInstalled: gameInfo.is_installed,
     isThirdPartyManaged: !!gameInfo.thirdPartyManagedApp,
-    isBrowserGame: gameInfo.install.platform === 'Browser',
     hasWinePrefix:
       !is.win &&
       !is.native &&

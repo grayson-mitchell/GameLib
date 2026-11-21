@@ -26,9 +26,11 @@ const LocationRow = ({ gameInfo, gates, actions }: Props) => {
   const { t } = useTranslation('gamelib')
   const { is } = useContext(GameContext)
 
-  if (!gates.open.show) return null
-
   const location = gameInfo.install.install_path || gameInfo.folder_name
+
+  // No folder to show or open means no row (the old Browse Files did nothing
+  // without a path).
+  if (!gates.open.show || !location) return null
 
   // A running move has not failed: neither the message nor its Retry shows
   // while the game reads moving (D-10).
