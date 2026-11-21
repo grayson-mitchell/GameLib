@@ -124,6 +124,8 @@ import { installActionGates } from '../../../actions/installActionGates'
 import { FactAction } from '../FactRow'
 import VersionRow from '../VersionRow'
 import LocationRow from '../LocationRow'
+import DangerZone from '../DangerZone'
+import { RowFailure } from '../SwitchRow'
 
 const harness = React as unknown as {
   __flushEffects: () => void
@@ -268,7 +270,10 @@ const mockApi = {
   openDialog: jest.fn(),
   moveInstall: jest.fn(),
   changeInstallPath: jest.fn(),
-  openFolder: jest.fn()
+  openFolder: jest.fn(),
+  steamRemoveAllCopies: jest.fn(),
+  getSteamDeleteRoute: jest.fn(),
+  uninstall: jest.fn()
 }
 
 beforeEach(() => {
@@ -279,6 +284,12 @@ beforeEach(() => {
   mockApi.openDialog.mockResolvedValue('/new/place')
   mockApi.moveInstall.mockResolvedValue(undefined)
   mockApi.changeInstallPath.mockResolvedValue(undefined)
+  mockApi.steamRemoveAllCopies.mockResolvedValue({ removed: 1, refused: 0 })
+  mockApi.getSteamDeleteRoute.mockResolvedValue({
+    delegated: false,
+    gamelibDelete: true
+  })
+  mockApi.uninstall.mockResolvedValue(undefined)
   useLibraryState.setState({ refresh: jest.fn().mockResolvedValue(undefined) })
   useUiState.setState({ showDialogModal: jest.fn() })
   ;(globalThis as unknown as { window: unknown }).window = { api: mockApi }
@@ -576,5 +587,123 @@ describe('Location row (CR-02)', () => {
     )
 
     expect(renderLocation(game).tree).toBeNull()
+  })
+})
+
+describe('Danger zone (WR-05)', () => {
+  const REMOVE_ALL = 'Remove all copies…'
+  const REMOVE_FAILED = "Couldn't remove every copy. Details are in the log."
+
+  function renderDanger(game: GameInfo, isOverrides: RenderOptions['is'] = {}) {
+    const is = makeIs(isOverrides)
+    harness.__setContext({ is, runner: game.runner })
+    harness.__beginRender()
+    return DangerZone({
+      gameInfo: game,
+      gates: gatesFor(game, is)
+    }) as ReactElement<Props>
+  }
+
+  const buttonByText = (tree: ReactElement<Props>, text: string) =>
+    walk(tree)
+      .filter((el) => el.type === 'button')
+      .find((el) => textOf(el.props.children) === text)
+
+  const failuresOf = (tree: ReactElement<Props>) =>
+    walk(tree).filter((el) => el.type === RowFailure)
+
+  const showDialog = () =>
+    useUiState.getState().showDialogModal as unknown as jest.Mock
+
+  // Clicks the button, then returns the dialog's Yes handler (not yet run).
+  function openRemoveAllConfirm(game: GameInfo) {
+    const button = buttonByText(renderDanger(game), REMOVE_ALL)
+    ;(button?.props.onClick as () => void)()
+    const calls = showDialog().mock.calls
+    const dialog = calls[calls.length - 1][0] as {
+      buttons: Array<{ onClick?: () => Promise<void> }>
+    }
+    return dialog.buttons[0].onClick as () => Promise<void>
+  }
+
+  it('shows an inline failure and logs once when the sweep refuses a root', async () => {
+    const game = makeGame('steam')
+    mockApi.steamRemoveAllCopies.mockResolvedValue({ removed: 1, refused: 1 })
+
+    expect(showDialog()).not.toHaveBeenCalled()
+    const yes = openRemoveAllConfirm(game)
+    expect(showDialog()).toHaveBeenCalledTimes(1)
+    await yes()
+
+    const failures = failuresOf(renderDanger(game))
+    expect(failures).toHaveLength(1)
+    expect(failures[0].props.message).toBe(REMOVE_FAILED)
+    expect(mockApi.logError).toHaveBeenCalledTimes(1)
+    expect(useLibraryState.getState().refresh).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows the same failure for a sweep that answers with an error', async () => {
+    const game = makeGame('steam')
+    mockApi.steamRemoveAllCopies.mockResolvedValue({
+      removed: 0,
+      refused: 0,
+      error: 'disk gone'
+    })
+    await openRemoveAllConfirm(game)()
+
+    expect(failuresOf(renderDanger(game))[0]?.props.message).toBe(REMOVE_FAILED)
+  })
+
+  it('shows the failure for a rejected sweep, and the awaited Yes-click does not reject', async () => {
+    const game = makeGame('steam')
+    mockApi.steamRemoveAllCopies.mockRejectedValue(new Error('ipc closed'))
+
+    await expect(openRemoveAllConfirm(game)()).resolves.toBeUndefined()
+
+    expect(failuresOf(renderDanger(game))[0]?.props.message).toBe(REMOVE_FAILED)
+    expect(mockApi.logError).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows no failure for a clean sweep', async () => {
+    const game = makeGame('steam')
+    mockApi.steamRemoveAllCopies.mockResolvedValue({ removed: 2, refused: 0 })
+    await openRemoveAllConfirm(game)()
+
+    expect(failuresOf(renderDanger(game))).toHaveLength(0)
+  })
+
+  it('Retry re-opens the confirmation and never starts a second sweep (D-13)', async () => {
+    const game = makeGame('steam')
+    mockApi.steamRemoveAllCopies.mockResolvedValue({ removed: 0, refused: 1 })
+    await openRemoveAllConfirm(game)()
+
+    const failure = failuresOf(renderDanger(game))[0]
+    ;(failure.props.onRetry as () => void)()
+
+    expect(showDialog()).toHaveBeenCalledTimes(2)
+    expect(mockApi.steamRemoveAllCopies).toHaveBeenCalledTimes(1)
+  })
+
+  it('makes the failure Retry inert with the gate reason while the game plays', async () => {
+    const game = makeGame('steam')
+    mockApi.steamRemoveAllCopies.mockResolvedValue({ removed: 0, refused: 1 })
+    await openRemoveAllConfirm(game)()
+
+    const failure = failuresOf(renderDanger(game, { playing: true }))[0]
+    expect(failure.props.retryDisabled).toBe(true)
+    expect(failure.props.retryDisabledReason).toBe('Quit the game first')
+    expect(failuresOf(renderDanger(game))[0].props.retryDisabled).toBe(false)
+  })
+
+  it('reads "Removing copies…" and aria-busy while the sweep runs', () => {
+    const game = makeGame('steam')
+    mockApi.steamRemoveAllCopies.mockReturnValue(new Promise(() => undefined))
+    const yes = openRemoveAllConfirm(game)
+    void yes()
+
+    const tree = renderDanger(game)
+    expect(buttonByText(tree, REMOVE_ALL)).toBeUndefined()
+    const busy = buttonByText(tree, 'Removing copies…')
+    expect(busy?.props['aria-busy']).toBe(true)
   })
 })
