@@ -1,11 +1,9 @@
 {
   "families": {
-    "cache": false,
+    "cache": true,
     "user-state": false,
     "account": false,
     "settings": false
   },
-  "stores": {
-    "store_cache/wikigameinfo": true
-  }
+  "stores": {}
 }

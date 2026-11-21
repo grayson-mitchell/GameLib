@@ -372,21 +372,24 @@ mod tests {
     }
 
     #[test]
-    fn the_embedded_ownership_file_parses_and_flips_only_the_tracer_store() {
+    fn the_embedded_ownership_file_parses_and_flips_only_the_cache_family() {
         let own = Ownership::embedded();
         assert_eq!(own.families.len(), 4);
+        let mut on: Vec<&str> = own
+            .families
+            .iter()
+            .filter(|(_, on)| **on)
+            .map(|(name, _)| name.as_str())
+            .collect();
+        on.sort_unstable();
+        assert_eq!(on, vec!["cache"], "only the cache family is flipped (85-12)");
         assert!(
-            own.families.values().all(|on| !on),
-            "no family is flipped yet"
-        );
-        assert_eq!(
-            own.stores.keys().collect::<Vec<_>>(),
-            vec!["store_cache/wikigameinfo"],
-            "only the tracer store is flipped (85-10)"
+            own.stores.is_empty(),
+            "no per-store override: the 85-10 tracer's is gone, the family covers it"
         );
         for row in table() {
             let rust = is_rust_owned(row, StoreMode::Rust, own);
-            let expected = row.family == Family::Native || row.key == "store_cache/wikigameinfo";
+            let expected = matches!(row.family, Family::Native | Family::Cache);
             assert_eq!(rust, expected, "{}", row.key);
         }
     }
