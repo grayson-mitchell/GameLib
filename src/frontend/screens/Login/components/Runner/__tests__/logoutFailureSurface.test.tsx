@@ -2,7 +2,7 @@
  * Phase 35 gap closure, plan 35-22 (CR-04, renderer half).
  *
  * `Runner/index.tsx`'s `handleLogout` catch used to be a bare `console.error`, which under
- * Tauri reaches neither `gamelib.log` nor `gamelib-shell.log` -- the exact failure this test
+ * Tauri never reaches `gamelib.log` -- the exact failure this test
  * proves is now visible: a rejected `logoutAction` must (a) reach the backend log via
  * `window.api.logError`, (b) raise a user-visible `showDialogModal` ERROR dialog using the two
  * `gamelib.json` keys added in Task 2 (asserted by KEY, not rendered English, so a later copy

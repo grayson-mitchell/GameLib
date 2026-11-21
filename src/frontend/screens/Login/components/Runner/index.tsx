@@ -96,8 +96,8 @@ export default function Runner(props: RunnerProps) {
       // still guarantees that on every path, including this catch and a
       // throwing showDialogModal call; (2) a failed logout is a SECURITY
       // outcome (the session may not have actually cleared), and renderer
-      // console logging reaches neither `gamelib.log` nor `gamelib-shell.log`
-      // under Tauri, so it was an invisible failure. Route it through the
+      // console logging never reaches `gamelib.log` under Tauri, so it was
+      // an invisible failure. Route it through the
       // sidecar logger (recoverable by a support request) and surface it to
       // the user via a dialog -- the error text itself stays out of the
       // dialog body since it may carry an internal path or domain list; only

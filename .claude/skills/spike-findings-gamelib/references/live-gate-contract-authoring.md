@@ -86,17 +86,25 @@ and confirm the contract's mandated capture actually reads that sink. A required
 exists but whose sink is not captured is IMPOSSIBLE just as surely as a required line with no
 emitter at all — and grepping the emitter alone will not reveal this.
 
-**The project's two sinks and their partition (confirm each with the cited command before relying
-on it — sinks can shift as logging code changes):**
+**The project's sinks and their partition from Phase 84 on (confirm each with the cited command
+before relying on it — sinks can shift as logging code changes):**
 
-- Rust `[shell]`-prefixed lines reach `tauri:dev`'s own stdout/stderr, and therefore the tee'd
-  terminal transcript. They never reach `~/Library/Logs/GameLib/gamelib.log`.
-- Sidecar-side `logInfo`/`logWarning` calls (`src/backend/logger/index.ts`) reach
-  `~/Library/Logs/GameLib/gamelib.log` and **never** the tee'd terminal transcript — the sidecar's
-  stdout is consumed as the RPC frame pipe, not surfaced as human-readable text (this project's own
+- Rust shell lines (`shell_log` in `src-tauri/src/main.rs`) reach `tauri:dev`'s own stdout/stderr,
+  and therefore the tee'd terminal transcript, as `[shell] <msg>`, AND reach
+  `~/Library/Logs/GameLib/gamelib.log` as `[Shell]` lines (`(<time>) [INFO]: [Shell]: <msg>`). A
+  plain `eprintln!` in the shell (one that does not go through `shell_log`) still reaches only the
+  transcript.
+- Rust crate diagnostics (steam-vent, reqwest and the in-repo crates, through the tracing and `log`
+  bridges in `gamelib-log`) reach `gamelib.log` only, with a mapped prefix such as `[Steam]`.
+- Sidecar-side `logInfo`/`logWarning`/`logError` calls (`src/backend/logger/index.ts`) reach
+  `~/Library/Logs/GameLib/gamelib.log` only, as `kind:"log"` frames on the RPC stdout that the Rust
+  shell writes — **never** the tee'd terminal transcript, because the sidecar's stdout is consumed
+  as the RPC frame pipe, not surfaced as human-readable text (this project's own
   `sidecar-console-and-logger-are-invisible` lesson).
 - Sidecar STDERR does reach the tee'd transcript, prefixed `[sidecar:err]`.
 - Sidecar `console.*` calls reach **nothing at all** — no sink captures them.
+- The reaper's stderr reaches the tee'd transcript only.
+- `gamelib-shell.log` is no longer written (Phase 84); do not ask it for a line.
 
 **Worked example (Phase 34.4.2, F-34.4.2-14):** RERUN-3's contract required three lines of the
 tee'd terminal transcript — `Humble sync finished:` (`src/backend/humble/library.ts:954`, `logInfo`),
@@ -107,6 +115,9 @@ grepped and cited at authoring time — Test 3 as originally written was satisfi
 sidecar-emitted, and none of them can ever reach the transcript the contract demanded of them. This
 is why one of the three (item 4's line) was recorded absent from the transcript with no cause ever
 assigned: the contract asked a real emitter for evidence via a sink that cannot carry it.
+
+(The partition those worked examples cite was the pre-Phase-84 one: shell lines reached the
+transcript and a separate shell log, and `gamelib.log` was written by the TypeScript writer.)
 
 ### Test 4 — Absence-observability
 
@@ -279,8 +290,8 @@ must implement it in full — it is not optional guidance.
 - **`gamelib.log` is archived per launch**, copied to a launch-numbered file inside the session
   directory (`cp ~/Library/Logs/GameLib/gamelib.log <session-dir>/gamelib-launch-${N}.log`), and the
   copy must happen while it still exists — **before the next launch's first write renames it to
-  `.old`** (`src/backend/logger/log_writer.ts:72-74`: `existsSync(this.logFilePath)` then
-  `renameSync(this.logFilePath, this.oldLogFilePath)`). Also archive any pre-existing `.old` file on
+  `.old`** (the Rust writer's rule, `src-tauri/crates/gamelib-log/src/writer.rs`: `gamelib.log`
+  rotates to `.old` on the first write of each app launch). Also archive any pre-existing `.old` file on
   the very first pass, since it may hold evidence from a launch before the session began.
 - **Every item records which launch ordinal covered it**, so a reader can locate its evidence
   (both the terminal-log delimiter section and the archived `gamelib-launch-${N}.log`) without

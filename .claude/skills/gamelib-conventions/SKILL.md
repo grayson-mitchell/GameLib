@@ -246,10 +246,14 @@ section stays as it is until Phase 99 retires the sidecar; this one governs ever
   registrant, within the 3.5 s drain budget (`depot`, `steamcm`, `steampoll` today). **Children**
   then get what is left, at most 1.5 s: the sidecar's process group (`shutdown_child(grace)` ->
   `terminate_group`) and the `ChildSet`'s helpers. **Finish** runs reaper disarm, wake-lock
-  release and socket cleanup. A drain that overruns is abandoned, not joined, and named in
+  release and socket cleanup, handed a `FinishContext` (what overran, time spent, time left). A
+  drain that overruns is abandoned, not joined, and named in
   `still running at exit deadline: <names> (<count>)`; `exit finished in <ms> ms` is always
-  logged. Both go through `shell_diag` (stderr and `gamelib-shell.log`), names and counts only,
-  never job detail. The deadline starts at `handle_exit`, after the TS pending-operations confirm.
+  logged. Both go through `shell_log` (stderr and `gamelib.log`) inside the finish stage, names and
+  counts only, never job detail, and the logger flushes last, within the budget
+  (`gamelib_log::flush(ctx.remaining)`), holding no registrant: a permanent one would report
+  `still running at exit deadline: logger` on every exit. The deadline starts at `handle_exit`,
+  after the TS pending-operations confirm.
 - A drain that detects it overran holds its registrant open (`hold_exit_drain_open`), because the
   drain's own timeout and the stage deadline are the same instant and would otherwise race, leaving
   the overrun unnamed.

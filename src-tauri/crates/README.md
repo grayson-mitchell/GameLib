@@ -113,10 +113,13 @@ refuses pgid <= 1).
 `ExitBudget::DEFAULT`: 5 s in total, 1.5 s of it kept for children. Stage 1 runs every drain
 concurrently with the 3.5 s drain budget (each holds a `Registrant` while it works). Stage 2 kills
 the children (the sidecar group, then the `ChildSet`) with the time left, at most 1.5 s. Stage 3 is
-`finish`: reaper disarm, wake-lock release, socket cleanup. Drains run on detached threads, so an
-overrunning one cannot hold exit past the deadline; it is named in `still running at exit
-deadline: <names> (<count>)`, and `exit finished in <ms> ms` is always logged, both through
-`shell_diag`. Names and counts only, never job detail. New exit work either becomes a drain in
+`finish`: reaper disarm, wake-lock release, socket cleanup, then the two exit lines, then the
+writer flush. Drains run on detached threads, so an overrunning one cannot hold exit past the
+deadline; it is named in `still running at exit deadline: <names> (<count>)`, and `exit finished in
+<ms> ms` is always logged, both through `shell_log` inside the finish stage (stderr, and
+`gamelib.log` as `[Shell]` lines); `finish` is handed a `FinishContext` and ends with
+`gamelib_log::flush(ctx.remaining)`, so the writer flushes last within the one budget and holds no
+`Registrant` of its own. Names and counts only, never job detail. New exit work either becomes a drain in
 `handle_exit` or holds a `gamelib_core::shutdown::global()` `Registrant` while work is in flight,
 and must fit that one budget. Bound boot work too: nothing at startup may wait without a limit.
 
@@ -338,3 +341,55 @@ Lessons:
 - Parity found real divergences between steam-user and the Rust client (`79-PARITY.md`); each was
   judged and accepted before the TS side was deleted. `steamCmPortComplete.test.ts` pins the
   deletion.
+
+## 13. Fifth worked example: the logger (Phase 84)
+
+`gamelib-log` is the one writer of `gamelib.log`, the per-game launch and runner logs and the
+sidecar-forwarded log lines; the TypeScript log writer is deleted, and no TypeScript code appends to
+a log file or computes a log path any more. History lives in `.planning/phases/84-logger/`. The
+crate is Tauri-free and reads no environment: the log directory, user-data directory, clock and
+timezone source come in through `LogConfig`. The recipe grew in these ways:
+
+- **One writer thread, with the rules in one place.** `gamelib-log` owns the line format (byte for
+  byte what the TS formatter produced), rotation, mode 0600 on new files, the per-chunk rule for raw
+  game output, a rate limiter that applies to `gamelib.log` only (transcripts are never limited),
+  and the tracing and `log` bridges that carry crate diagnostics (steam-vent, reqwest) into
+  `gamelib.log` through one process-wide subscriber. The writer thread marks itself, so an event it
+  raises is dropped instead of fed back.
+- **Paths live in `gamelib-core`.** `gamelib_core::paths` (`log_dir`, `log_file`, the `LogTarget`
+  set) is the only place a log path is computed; the shell, the writer and the log commands all go
+  through it, and `meta/` tools mirror it rather than import it.
+- **The sidecar sends frames, not files.** Sidecar `logInfo`, `logWarning` and `logError`, and every
+  per-target writer, queue a bounded drop-oldest batch and send `kind:"log"` frames on the RPC
+  stdout. The Rust reader validates each frame against the shared frame vectors that Jest and cargo
+  both read, so the two sides cannot drift.
+- **Renderer channels are native.** `logError`, `logInfo`, `showLogFileInFolder`, `getLogContent`,
+  `uploadLogFile`, `getUploadedLogFiles` and `deleteUploadedLogFile` are served by the Rust native
+  router on the `logger` slice; the sidecar serves none of them.
+- **A minimal `StoreHost` for one store.** `uploadedLogs` needed the native logger to read and write
+  its list, so `gamelib_core::store` carries the minimal core (open, atomic write, change event)
+  for that one store, and phase 85 widens the same owner. The row of the phase 82 ownership table
+  flips at 84.
+- **A Tier 1 golden with the oracle deleted.** The committed fixtures (`cases.json`,
+  `entries.json`, `expected/`) were generated from the unmodified TS writer; the TS oracle is
+  deleted and the Rust golden keeps asserting against the fixtures. `loggerPortComplete.test.ts`
+  pins the deletion on both halves.
+- **The exit flush is explicit, not a registrant.** A permanent `Shutdown` registrant would make
+  every exit report `still running at exit deadline: logger`. `run_exit` hands `finish` a
+  `FinishContext`; `finish` writes the two exit lines through `shell_log` and ends with
+  `gamelib_log::flush(ctx.remaining)`, so the writer flushes last, inside the one 5 s budget, with
+  no wait of its own.
+
+Deliberate deviations from the TS writer:
+
+- New log files are created 0600; the TS writer never set a mode.
+- `gamelib.log` rotates to `.old` once per app launch (on the first write), not per write.
+- The `exit finished in <ms> ms` figure is measured when `finish` starts, so it excludes the final
+  flush, which is bounded by what is left of the budget.
+
+Lessons:
+
+- A sink partition is part of a test's contract: shell lines reach the transcript as `[shell]` and
+  `gamelib.log` as `[Shell]`; crate diagnostics and sidecar log frames reach `gamelib.log` only.
+  Ask a gate for a line only from a sink that carries it.
+- A bridge that feeds a writer must not be able to be fed by the writer: guard the writer thread.

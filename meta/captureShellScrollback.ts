@@ -9,9 +9,9 @@
  * (`src-tauri/src/main.rs:8332`). F-9's central, twice-repeated correction is that a clean
  * grep of the WRONG source is not evidence of absence: `gamelib.log` cannot see shell
  * `eprintln!` output (the sidecar's stdout is the RPC frame pipe, not a log stream), and
- * `gamelib-shell.log` cannot see this particular line EITHER -- `shell_diag()`
- * (main.rs:8521) writes to both stderr and that file, but the target line at main.rs:8332
- * is a plain `eprintln!` that never routes through `shell_diag()`. The shell process's
+ * `gamelib.log` cannot see this particular line EITHER -- `shell_log()` writes to both stderr
+ * and `gamelib.log` (as a `[Shell]` line), but the target line at main.rs:8332 is a plain
+ * `eprintln!` that never routes through `shell_log()`. The shell process's
  * OWN stderr, captured whole, is the only valid source. This module is the apparatus that
  * makes that capture re-runnable on the next recurrence.
  *
@@ -184,7 +184,7 @@ export const COOKIE_POLL_INTERVAL_MS: number = readCookiePollIntervalMs()
  * `[shell] ` literal substrings proving the capture sink was live for a given phase of the
  * run. `boot` requires ALL members present (both fire on every `tauri dev` launch
  * regardless of dev/packaged path -- `spawn_sidecar_dev` routes its own "spawned OK" line
- * through `shell_diag()`, which itself does `eprintln!("[shell] {message}")`, so the final
+ * through `shell_log()`, which itself does `eprintln!("[shell] {message}")`, so the final
  * stderr text is identical either way). `gesture` and `teardown` each require AT LEAST ONE
  * member.
  *
@@ -198,7 +198,7 @@ export const COOKIE_POLL_INTERVAL_MS: number = readCookiePollIntervalMs()
  */
 export const CAPTURE_ANCHORS = {
   boot: [
-    '[shell] sidecar process spawned OK', // main.rs:8163 (via shell_diag, dev path) / :8209 (packaged path)
+    '[shell] sidecar process spawned OK', // main.rs:8163 (via shell_log, dev path) / :8209 (packaged path)
     '[shell] sidecar signalled READY (' // main.rs:8274
   ],
   gesture: [
@@ -625,9 +625,10 @@ function preflightRefuseIfRunning(): void {
 function resolveGamelibLogPath(
   env: Readonly<Record<FakeHomeEnvKey, string>>
 ): string {
-  // Mirrors src/backend/logger/paths.ts's getBaseLogPath()/getLogFilePath({}) exactly, but
-  // reimplemented locally rather than imported -- that module pulls in `../constants/environment`
-  // and this CLI half must stay import-light and side-effect-free (see module docblock).
+  // Mirrors gamelib_core::paths::log_dir / log_file (src-tauri/crates/gamelib-core/src/paths.rs)
+  // for the General target, but reimplemented locally rather than imported -- the Rust crate is
+  // not importable here and this CLI half must stay import-light and side-effect-free (see
+  // module docblock).
   //
   // quick-260913-arr: resolves against the FAKE PROFILE this harness spawns the app with,
   // NOT the harness's own `homedir()`/`process.env`. Both halves had to move together --
