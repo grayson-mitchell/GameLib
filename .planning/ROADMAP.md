@@ -482,14 +482,14 @@ Plans:
   4. The legendary store migration is ported only if a supported upgrade path still reaches it (reachability recorded), otherwise it is deleted
   5. The TS write-through mirror's deletion point is named and executed for every family flipped in this phase, and `storeVersioning`, `storeMigrations` and `migration/*` TypeScript are deleted
 
-**Plans:** 10/25 plans executed in 20 waves; planned 2026-11-21
+**Plans:** 12/25 plans executed in 20 waves; planned 2026-11-21
 
 Plans:
 **Wave 1**
 - [x] 85-01-PLAN.md — Before any store code: the TS store oracle golden (conf writes, engine outcomes, migrations, settings documents) and dot-path, number and key-order vectors
 - [x] 85-03-PLAN.md — Shared renderer policy and `kind:"store"` frame vectors; the live macOS gate contract 85-HUMAN-UAT.md (run by 85-20)
 - [x] 85-04-PLAN.md — Spikes: S1 mirror protocol model, S3-S5 frame/boot/sync_all measurements and the constants they set
-- [ ] 85-05-PLAN.md — D-16 checkpoint: the signed v0.10 baseline and its recorded signing identity
+- [x] 85-05-PLAN.md — D-16 checkpoint: the signed v0.10 baseline and its recorded signing identity
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [x] 85-02-PLAN.md — Redacted real-file corpus (operator profile, its `*.bak.json`, v0.8/v0.9/v0.10 in fake HOMEs, edge cases) pinned by MANIFEST.json (D-09)
@@ -511,7 +511,7 @@ Plans:
 - [x] 85-11-PLAN.md — Mirror hardening: S1 protocol, shared cells, dot paths, quit flush, D-02 fallback proof, jest disk sink
 
 **Wave 8** *(blocked on Wave 7 completion)*
-- [ ] 85-12-PLAN.md — Flip caches (D-01 first family), runtime caches, corrupt caches start empty after their copy
+- [x] 85-12-PLAN.md — Flip caches (D-01 first family), runtime caches, corrupt caches start empty after their copy
 - [ ] 85-18-PLAN.md — D-17 bottle version gate in Rust for the engine marker and shared-redist ledger
 
 **Wave 9** *(blocked on Wave 8 completion)*
