@@ -1,0 +1,28 @@
+# Spike 093 (phase 85, S3-S5): scratch bench. The empty [workspace] table below keeps it out of src-tauri's
+# workspace so it never touches that Cargo.lock. serde_json and indexmap are the versions already locked there.
+[workspace]
+
+[package]
+name = "store-costs-bench"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+serde_json = { version = "=1.0.151", features = ["preserve_order"] }
+indexmap = { version = "=2.14.0", features = ["serde"] }
+
+[[bin]]
+name = "sweep"
+path = "src/bin/sweep.rs"
+
+[[bin]]
+name = "sync"
+path = "src/bin/sync.rs"
+
+[[bin]]
+name = "frames"
+path = "src/bin/frames.rs"
+
+[profile.release]
+opt-level = 3
