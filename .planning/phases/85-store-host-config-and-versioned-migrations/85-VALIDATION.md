@@ -110,6 +110,55 @@ Binding notes: SC5 is read per D-19, not literally: ROADMAP SC5's "named and exe
 
 ---
 
+## Signed baseline (D-16)
+
+Inventory taken 2026-11-22 by plan 85-05 Task 1. Commands and short outputs only; no secret values.
+
+**SC3: unproven (baseline not yet recorded)**
+
+### Inventory
+
+| Check | Result |
+|-------|--------|
+| `git tag -l 'v0.*'` | `v0.10` (local only), `v0.7.0-glibc-test1`, `v0.8`, `v0.8.0`, `v0.9` |
+| `git ls-remote --tags origin 'v0.*'` | `v0.7.0-glibc-test1`, `v0.8`, `v0.8.0`, `v0.9`; **no `v0.10`**. Local `v0.10` is `2baad18e0` -> commit `58a0c1c7a` ("record v0.10 closeout disclosure and point STATE at v0.11", 2026-11-20) |
+| `gh release list -L 10` | no `v0.10` and no `v0.9` release. Only `GameLib v0.8.0` (one Draft, one Pre-release, tag `v0.8.0`), `Updater feed` (`updater`), `runners-onedir-macos`, `crossover-index`, and two component pre-releases |
+| `gh run list --workflow release-tauri.yml -L 5` | `v0.9` push 42190933355 success (2026-11-06); `v0.8` push 38856607168 success (2026-10-16); `v0.8.0` push 36900898500 success and 36843945458 failure (2026-10-01); `v0.7.0-glibc-test1` push 36556473399 success (2026-09-29). No run for `v0.10` |
+| `security find-identity -v -p codesigning` (local) | one identity: `468BEA6D513FBE23A5760BD53E0E7F2F0BA88B78` "Apple Development: grayson mitchell (4BULWN7PPN)". No Developer ID identity locally |
+| `gh secret list` (names only) | **not run**: the permission classifier denied the call. Enrolment is inferred instead from run 42190933355 (see below), not confirmed by name |
+
+### What the last CI run (v0.9, 42190933355) shows
+
+Read from `gh run view 42190933355 --json jobs` and its log, as evidence for what the workflow does with the enrolled secrets:
+
+- All three legs concluded `success` (macOS `macos-latest aarch64-apple-darwin`, Linux `ubuntu-22.04`, Windows `windows-latest`).
+- The macOS leg ran "Sign every Mach-O in the macOS helper tree before bundling" (its `if:` needs a non-empty `APPLE_SIGNING_IDENTITY`) and signed `gamelib-sidecar`, `gamelib-shell`, `GameLib.app`, the updater zip and the dmg with a `Mac Developer ID Application: grayson mitchell` identity (the identity string is masked as `***` in the log). So the CI path signs with a **Developer ID Application** identity, which is a different identity from the local `Apple Development` one. Nothing built locally can stand in for the baseline (D-16).
+- Its keyword search of the log found no `Accepted` notarization line and no stapling line. Whether v0.9 was notarized is therefore unconfirmed here; the artifact check in Task 3 (`spctl`, `stapler validate`) is what decides it.
+- The Windows leg shipped unsigned (no Windows cert secret). That does not affect the macOS baseline.
+
+### Two things the operator needs to know before choosing (found during the inventory)
+
+1. **`src-tauri/tauri.conf.json` says `"version": "0.8.0"` at the `v0.10` tag (and on `main`).** tauri-action's `tagName: v__VERSION__` resolves from that field, not from the pushed tag, and the v0.9 run produced `GameLib_0.8.0_aarch64.dmg`. A non-dry run triggered by a `v0.10` tag push therefore targets the release `v0.8.0` (a published pre-release plus a draft already exist under that tag), not a new `v0.10` release. `v0.8.0`'s assets were last updated 2026-10-01, so the v0.8 and v0.9 runs did not visibly change it; this inventory did not establish where their artifacts went. Expect the baseline artifact to be named `GameLib_0.8.0_*`, and expect a non-dry run to write to the `v0.8.0` release (which also carries `latest.json`, the updater manifest). Decide whether that is acceptable before running Option A or B2; this plan does not change the version or the workflow.
+2. **A dry run uploads nothing.** The workflow header states a dry run delivers the build log, not a binary (no `upload-artifact` step by design), so Option B yields no artifact that `gh run download` can fetch and cannot satisfy Task 3. Task 3 needs an artifact, which only a non-dry run produces (Option A or B2).
+
+### Operator options (Task 2: one human step)
+
+- **Option A:** `git push origin v0.10`. A `v*` tag push runs release-tauri.yml (non-dry), signs, and opens a draft prerelease. Subject to caveat 1 above.
+- **Option B (as D-16 and the plan word it):** `gh workflow run release-tauri.yml --ref v0.10 -f dry_run=true`. Signs and may notarize, but uploads nothing (caveat 2): the run id is recorded, no identity can be read from an artifact, so on its own this leaves SC3 unproven.
+- **Option B2:** `gh workflow run release-tauri.yml --ref v0.10 -f dry_run=false`. Same build and release behaviour as Option A without creating the `v0.10` tag on the remote. Subject to caveat 1.
+- Then `gh run watch <id>` until the macOS leg finishes, and reply with the run id, or reply `deferred` to stop with SC3 recorded as unproven.
+- Claude does not push tags, dispatch release workflows, or publish a release. The workflow only ever opens a draft prerelease; publication is the operator's decision.
+
+### What gets recorded once the run finishes (Task 3)
+
+From the downloaded macOS artifact itself, never from the log: run id and artifact name; each leg's conclusion; `codesign -dv --verbose=4` (Authority chain, TeamIdentifier, Identifier, signing time); `codesign -d -r-` (designated requirement); `spctl -a -vv` (accepted or rejected, and source); `xcrun stapler validate` (stapled or not).
+
+### Identity rule for the Phase 85 build
+
+The Phase 85 build must come from the same workflow (`release-tauri.yml`), the same Apple secrets, and carry the same TeamIdentifier and designated requirement as the baseline. Plan 85-19 records the Phase 85 artifact's identity in this section before 85-20 is scheduled; 85-20 does not score items 1-2 unless the two identities are equal. Until both are recorded and equal, SC3 stays unproven. Research A1/A8 (flagged assumption, not resolved here): macOS Keychain item ACLs bind to the accessing binary's code signature, so the D-08 gate is meaningful only when both builds share the designated requirement.
+
+---
+
 ## Validation Sign-Off
 
 - [ ] All tasks have `<automated>` verify or Wave 0 dependencies
