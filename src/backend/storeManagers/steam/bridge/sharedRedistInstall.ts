@@ -7,9 +7,10 @@
  * the declared depots into one shared cache (`downloadSharedRedistDepots`), then run each
  * installscript `Run Process` entry inside the bottle under the `redist` Play-button status.
  *
- * The ledger is versioned on the store engine (quick 261109-uv4): its top-level `version` is the
- * engine stamp. A ledger from a newer build is left untouched and the whole pass is skipped; an
- * unreadable one is backed up (engine backup helper) before the pass starts empty.
+ * The ledger carries a top-level `version` (quick 261109-uv4) and Rust decides whether it may be
+ * rewritten (Phase 85 D-17, `store_version_gate`, via backend/stores/bottleVersionGate.ts). A ledger
+ * from a newer build is left untouched and the whole pass is skipped; an unreadable one is backed up
+ * through Rust (`store_backup_file`) before the pass starts empty.
  *
  * Idempotence has two layers. The HasRunKey registry value (lowercased entry name, REG_DWORD 1,
  * 32-bit view) is the authoritative mark, exactly as Steam writes it. A ledger file in the bottle
@@ -79,13 +80,13 @@ import type { ManagerDeps } from 'backend/services/types'
 import { bridgeBottleNameFor } from '../bridgeBottle'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
 import {
-  ensureSharedRedistLedgerMigrated,
-  isSharedRedistLedgerReadOnly,
-  sharedRedistLedgerCodec,
-  sharedRedistLedgerVersion
-} from 'backend/storeVersioning/sharedRedistLedgerFile'
-import { writePreMigrationBackup } from 'backend/storeVersioning/backup'
-import type { StoreVersioning } from 'backend/storeVersioning/engine'
+  BOTTLE_FILE_VERSION,
+  SHARED_REDIST_LEDGER_CHAIN,
+  backupBottleFile,
+  createBottleVersionGate,
+  gateAllowsWrite
+} from 'backend/stores/bottleVersionGate'
+import type { BottleVersionGate } from 'backend/stores/bottleVersionGate'
 import {
   buildHasRunKeyAddParts,
   buildHasRunKeyQueryParts,
@@ -126,7 +127,7 @@ interface FailureRecord {
 }
 
 interface Ledger {
-  /** The engine stamp (top-level `version`), see storeVersioning/sharedRedistLedgerFile.ts. */
+  /** The engine stamp (top-level `version`), see stores/bottleVersionGate.ts. */
   version: number
   /** ledgerKey -> manifest GID of the depot that was run. */
   done: Record<string, string>
@@ -163,14 +164,15 @@ type BoundedResult =
   | { timedOut: false; code?: number; stdout: string }
 
 type SharedRedistState = {
-  versioning: StoreVersioning
+  /** What Rust last said about each ledger file; `readLedger` primes it, `writeLedger` reads it. */
+  gate: BottleVersionGate
   inFlight: Map<string, Promise<void>>
   nextTmpSeq: () => number
 }
 
-function emptyLedger(versioning: StoreVersioning): Ledger {
+function emptyLedger(): Ledger {
   return {
-    version: sharedRedistLedgerVersion(versioning),
+    version: BOTTLE_FILE_VERSION,
     done: {},
     timedOut: {},
     failures: {},
@@ -209,20 +211,30 @@ function isStringRecord(v: unknown): v is Record<string, string> {
   )
 }
 
+/** The ledger codec's `read`: a non-negative integer `version` is itself, anything else is 0. */
+function ledgerVersionOf(parsed: unknown): number {
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed))
+    return 0
+  const v = (parsed as { version?: unknown }).version
+  return typeof v === 'number' && Number.isInteger(v) && v >= 0 ? v : 0
+}
+
 /**
- * Read the bottle's ledger through the store engine. Returns null when the ledger must not be
- * touched this launch (newer build's file, failed migration, or an unreadable file whose backup
- * could not be written): the caller skips the whole pass and nothing is written.
+ * Read the bottle's ledger. Rust is asked first (`store_version_gate`): it returns null when the
+ * ledger must not be touched this launch (a newer build's file, a gate Rust could not answer, or an
+ * unreadable file whose backup could not be written): the caller skips the whole pass and nothing
+ * is written.
  */
 async function readLedger(
-  versioning: StoreVersioning,
+  state: SharedRedistState,
+  deps: Pick<RedistDeps, 'requestRustInvoke'>,
   path: string,
   appId: string
 ): Promise<Ledger | null> {
-  ensureSharedRedistLedgerMigrated(versioning, path)
-  if (isSharedRedistLedgerReadOnly(versioning, path)) {
+  await state.gate.prime(deps, path, SHARED_REDIST_LEDGER_CHAIN)
+  if (!gateAllowsWrite(state.gate.state(path))) {
     logWarning(
-      `Steam ${appId}: shared redist ledger in this bottle is from a newer GameLib or failed to migrate; leaving it untouched and skipping shared redists this launch`,
+      `Steam ${appId}: shared redist ledger in this bottle is from a newer GameLib or its version could not be checked; leaving it untouched and skipping shared redists this launch`,
       LogPrefix.Steam
     )
     return null
@@ -231,18 +243,15 @@ async function readLedger(
   try {
     raw = await readFile(path, 'utf8')
   } catch {
-    return emptyLedger(versioning)
+    return emptyLedger()
   }
   let fromVersion = 0
   try {
     const parsed = JSON.parse(raw) as Partial<Ledger> | null
-    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed))
-      fromVersion = sharedRedistLedgerCodec.read(
-        parsed as Record<string, unknown>
-      )
+    fromVersion = ledgerVersionOf(parsed)
     if (
       parsed &&
-      parsed.version === sharedRedistLedgerVersion(versioning) &&
+      parsed.version === BOTTLE_FILE_VERSION &&
       isStringRecord(parsed.done) &&
       isStringRecord(parsed.timedOut)
     ) {
@@ -279,7 +288,7 @@ async function readLedger(
     // fall through
   }
   try {
-    writePreMigrationBackup(path, fromVersion, Buffer.from(raw, 'utf8'))
+    await backupBottleFile(deps, path, fromVersion)
   } catch {
     logWarning(
       `Steam ${appId}: could not back up the unreadable shared redist ledger; leaving it untouched and skipping shared redists this launch`,
@@ -291,18 +300,23 @@ async function readLedger(
     `Steam ${appId}: shared redist ledger is unreadable, starting empty (a backup was kept)`,
     LogPrefix.Steam
   )
-  return emptyLedger(versioning)
+  return emptyLedger()
 }
 
 /** Write to a unique temp file and rename it over the ledger, so a crash never tears it (IN-04). */
 async function writeLedger(
-  { versioning, nextTmpSeq }: SharedRedistState,
+  { gate, nextTmpSeq }: SharedRedistState,
   path: string,
   dir: string,
   ledger: Ledger
 ): Promise<void> {
-  if (isSharedRedistLedgerReadOnly(versioning, path)) {
-    versioning.noteRefusedWrite(path)
+  // `readLedger` primed the gate before any pass reaches here; a ledger a newer build wrote, or a
+  // path nobody asked about, is never overwritten.
+  if (!gateAllowsWrite(gate.state(path))) {
+    logWarning(
+      'shared redist ledger is read-only (newer build or unchecked version): write refused',
+      LogPrefix.Steam
+    )
     return
   }
   await mkdir(dir, { recursive: true })
@@ -310,14 +324,7 @@ async function writeLedger(
   try {
     await writeFile(
       tmp,
-      JSON.stringify(
-        sharedRedistLedgerCodec.write(
-          ledger as unknown as Record<string, unknown>,
-          sharedRedistLedgerVersion(versioning)
-        ),
-        null,
-        2
-      )
+      JSON.stringify({ ...ledger, version: BOTTLE_FILE_VERSION }, null, 2)
     )
     await rename(tmp, path)
   } catch (err) {
@@ -480,12 +487,10 @@ export interface SharedRedistInstaller {
  * concurrent installs for one appId share a promise, and tmp names stay unique within a boot.
  * Construction allocates an empty map and a counter.
  */
-export function createSharedRedistInstaller(deps: {
-  versioning: StoreVersioning
-}): SharedRedistInstaller {
+export function createSharedRedistInstaller(): SharedRedistInstaller {
   let ledgerTmpSeq = 0
   const state: SharedRedistState = {
-    versioning: deps.versioning,
+    gate: createBottleVersionGate(),
     inFlight: new Map(),
     nextTmpSeq: () => ++ledgerTmpSeq
   }
@@ -562,7 +567,7 @@ async function run(
 ): Promise<void> {
   const bottleDir = getBottleDir(deps.paths, bottleSettings.wineCrossoverBottle)
   const ledgerPath = join(bottleDir, LEDGER_FILE)
-  const ledger = await readLedger(state.versioning, ledgerPath, appId)
+  const ledger = await readLedger(state, deps, ledgerPath, appId)
   if (!ledger) return
   const optIn = normaliseSharedRedistOptIn(
     readKnownFixProfile(deps, appId, 'steam')?.steamSharedRedists

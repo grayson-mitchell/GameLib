@@ -36,7 +36,7 @@ export const ENGINE_MARKER_CHAIN = 'engine/gamelib-engine-marker' as const
 /** The shared-redist ledger's chain key. */
 export const SHARED_REDIST_LEDGER_CHAIN = 'steam_bridge/shared-redists' as const
 
-export type BottleFileChain =
+type BottleFileChain =
   | typeof ENGINE_MARKER_CHAIN
   | typeof SHARED_REDIST_LEDGER_CHAIN
 

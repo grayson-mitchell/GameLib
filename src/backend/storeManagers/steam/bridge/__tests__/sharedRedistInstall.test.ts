@@ -26,20 +26,20 @@ import {
   REDIST_TIMEOUT_BACKOFF_AFTER
 } from '../sharedRedistInstall'
 import { createTestBridgeRuntime } from 'backend/testUtils/testBridgeRuntime'
-import { createTestVersioning } from 'backend/testUtils/testStoreRoot'
+import { createFakeBottleGateRust } from 'backend/testUtils/fakeBottleGateRust'
 import { yieldUntil } from 'backend/testUtils/yieldUntil'
 
 // One fresh single-flight map and tmp sequence per test (66.4-08).
 let installSteamBridgeSharedRedists: ReturnType<
   typeof createTestBridgeRuntime
 >['sharedRedist']['installSteamBridgeSharedRedists']
-let versioning: ReturnType<typeof createTestVersioning>
-const installerOn = (v: typeof versioning) =>
-  createTestBridgeRuntime({ versioning: v }).sharedRedist
-    .installSteamBridgeSharedRedists
+// Rust's ledger gate and backup (D-17), answered from the real ledger file; a test that needs it
+// to answer otherwise replaces it (DEPS reads the current one on every call).
+let gateRust: ReturnType<typeof createFakeBottleGateRust>
 beforeEach(() => {
-  versioning = createTestVersioning()
-  installSteamBridgeSharedRedists = installerOn(versioning)
+  gateRust = createFakeBottleGateRust()
+  installSteamBridgeSharedRedists =
+    createTestBridgeRuntime().sharedRedist.installSteamBridgeSharedRedists
 })
 import { classifySharedRedist } from '../sharedRedists'
 import type { InstallScriptEntry } from '../sharedRedists'
@@ -51,12 +51,7 @@ import { logWarning } from 'backend/logger'
 import { endPerGameBridgeBottleSession } from '../../bridgeBottleLifecycle'
 import { bridgeBottleNameFor } from '../../bridgeBottle'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
-import * as backupModule from 'backend/storeVersioning/backup'
-import { listBackups } from 'backend/storeVersioning/backup'
-import {
-  SHARED_REDIST_LEDGER_CHAIN,
-  sharedRedistLedgerVersion
-} from 'backend/storeVersioning/sharedRedistLedgerFile'
+import { BOTTLE_FILE_VERSION } from 'backend/stores/bottleVersionGate'
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -83,6 +78,8 @@ const mockedRun = jest.fn()
 const DEPS = {
   commandRunner: { runWineCommand: mockedRun },
   spawnAsync: jest.fn(),
+  requestRustInvoke: (...a: Parameters<typeof gateRust.requestRustInvoke>) =>
+    gateRust.requestRustInvoke(...a),
   paths: {
     get steamSupportPath() {
       return mockSupportDir
@@ -165,6 +162,12 @@ const ledgerPath = () => join(bottleDir, 'gamelib-shared-redists.json')
 const settledOf = () =>
   existsSync(ledgerPath()) ? ledger().settled : undefined
 const ledger = () => JSON.parse(readFileSync(ledgerPath(), 'utf8'))
+/** The `<name>.v<from>.<stamp>.bak.json` files Rust's `store_backup_file` left beside the ledger, oldest first. */
+const backupsOf = () =>
+  readdirSync(bottleDir)
+    .filter((f) => f.endsWith('.bak.json'))
+    .sort()
+    .map((f) => join(bottleDir, f))
 
 /** Default wine: reg query absent, everything else exits 0. */
 function defaultWine(
@@ -609,7 +612,7 @@ describe('installSteamBridgeSharedRedists', () => {
     ).resolves.toBeUndefined()
     expect(mockedWarn).toHaveBeenCalled()
     expect(installerCalls()).toHaveLength(1)
-    const backups = listBackups(ledgerPath())
+    const backups = backupsOf()
     expect(backups).toHaveLength(1)
     expect(at(backups, 0)).toMatch(/gamelib-shared-redists\.v0\..*\.bak\.json$/)
     expect(readFileSync(at(backups, 0), 'utf8')).toBe('{nope')
@@ -1392,34 +1395,17 @@ describe('ledger versioning (quick 261109-uv4)', () => {
     expect(ledger().version).toBe(1)
     expect(ledger()).not.toHaveProperty('__internal__')
     expect(ledger().displayDriver).toBeUndefined()
-    expect(listBackups(ledgerPath())).toEqual([])
+    expect(backupsOf()).toEqual([])
   })
 
   it('round trips: a fresh install is stamped and the second call is settled', async () => {
     mockedDownload.mockResolvedValue(ok([dx()]))
     await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
-    expect(ledger().version).toBe(sharedRedistLedgerVersion(versioning))
+    expect(ledger().version).toBe(BOTTLE_FILE_VERSION)
     jest.clearAllMocks()
     await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
     expect(mockedDownload).not.toHaveBeenCalled()
     expect(mockedRun).not.toHaveBeenCalled()
-  })
-
-  it('migrates a v1 ledger through a simulated v2 step, preserving the pending restore', async () => {
-    versioning = createTestVersioning({
-      migrationOverrides: new Map([
-        [SHARED_REDIST_LEDGER_CHAIN, [{ id: 'test-v2', to: 2, run: (d) => d }]]
-      ])
-    })
-    installSteamBridgeSharedRedists = installerOn(versioning)
-    writeFileSync(ledgerPath(), pendingRestore(1))
-    mockedDownload.mockResolvedValue(ok([dx()]))
-    nullGfxWine()
-    await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
-    expect(listBackups(ledgerPath())).toHaveLength(1)
-    expect(restoredToMac()).toBe(true)
-    expect(ledger().version).toBe(2)
-    expect(ledger()).not.toHaveProperty('__internal__')
   })
 
   it('leaves a newer ledger untouched and skips the pass', async () => {
@@ -1433,14 +1419,57 @@ describe('ledger versioning (quick 261109-uv4)', () => {
     expect(mockedDownload).not.toHaveBeenCalled()
     expect(mockedRun).not.toHaveBeenCalled()
     expect(readFileSync(ledgerPath()).equals(before)).toBe(true)
-    expect(listBackups(ledgerPath())).toEqual([])
+    expect(backupsOf()).toEqual([])
+  })
+
+  it('asks Rust about the ledger by its path and chain before it reads or writes it', async () => {
+    mockedDownload.mockResolvedValue(ok([dx()]))
+    await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
+    expect(gateRust.calls[0]).toEqual({
+      channel: 'store_version_gate',
+      args: [{ path: ledgerPath(), chain: 'steam_bridge/shared-redists' }]
+    })
+    expect(ledger().version).toBe(1)
+  })
+
+  it('skips the pass and leaves the ledger alone when Rust says newer, whatever the file says', async () => {
+    writeFileSync(ledgerPath(), pendingRestore(1))
+    const before = readFileSync(ledgerPath())
+    gateRust = createFakeBottleGateRust({ answer: 'newer' })
+    mockedDownload.mockResolvedValue(ok([dx()]))
+    await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
+    expect(mockedDownload).not.toHaveBeenCalled()
+    expect(mockedRun).not.toHaveBeenCalled()
+    expect(readFileSync(ledgerPath()).equals(before)).toBe(true)
+    expect(backupsOf()).toEqual([])
+  })
+
+  it('skips the pass and writes nothing when Rust cannot be asked', async () => {
+    writeFileSync(ledgerPath(), pendingRestore(1))
+    const before = readFileSync(ledgerPath())
+    gateRust = createFakeBottleGateRust({ rejectGate: true })
+    mockedDownload.mockResolvedValue(ok([dx()]))
+    await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
+    expect(mockedWarn).toHaveBeenCalled()
+    expect(mockedDownload).not.toHaveBeenCalled()
+    expect(readFileSync(ledgerPath()).equals(before)).toBe(true)
+  })
+
+  it('backs an unreadable ledger up through store_backup_file, then starts empty and writes it', async () => {
+    writeFileSync(ledgerPath(), '{nope')
+    mockedDownload.mockResolvedValue(ok([dx()]))
+    await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
+    expect(gateRust.backups).toEqual([{ path: ledgerPath(), fromVersion: 0 }])
+    expect(readFileSync(at(backupsOf(), 0), 'utf8')).toBe('{nope')
+    expect(ledger().version).toBe(1)
+    expect(installerCalls()).toHaveLength(1)
   })
 
   it('backs up a wrong-shape ledger with its version before starting empty', async () => {
     writeFileSync(ledgerPath(), JSON.stringify({ version: 1, done: 'x' }))
     mockedDownload.mockResolvedValue(ok([dx()]))
     await installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
-    const backups = listBackups(ledgerPath())
+    const backups = backupsOf()
     expect(backups).toHaveLength(1)
     expect(at(backups, 0)).toMatch(/\.v1\..*\.bak\.json$/)
     expect(installerCalls()).toHaveLength(1)
@@ -1449,11 +1478,7 @@ describe('ledger versioning (quick 261109-uv4)', () => {
   it('skips the pass and does not clobber when the backup cannot be written', async () => {
     writeFileSync(ledgerPath(), '{nope')
     mockedDownload.mockResolvedValue(ok([dx()]))
-    jest
-      .spyOn(backupModule, 'writePreMigrationBackup')
-      .mockImplementation(() => {
-        throw new Error('disk full')
-      })
+    gateRust = createFakeBottleGateRust({ rejectBackup: true })
     await expect(
       installSteamBridgeSharedRedists(DEPS, APP, SETTINGS)
     ).resolves.toBeUndefined()

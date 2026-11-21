@@ -30,7 +30,7 @@ export interface BridgeRuntime {
 export function createBridgeRuntime(deps: {
   /** The boot-owned abort registry the runner clones register in (66.4-13). */
   aborts: Pick<AbortRegistry, 'create' | 'delete'>
-  /** The boot's store-versioning engine: the shared-redist ledger is migrated through it. */
+  /** Not read here since Phase 85 plan 18 (the ledger's version gate is Rust's); removed with the versioning engine in 85-22. */
   versioning: StoreVersioning
 }): BridgeRuntime {
   const signer = createRunnerEntitlementSigner()
@@ -41,6 +41,6 @@ export function createBridgeRuntime(deps: {
       signer,
       aborts: deps.aborts
     }),
-    sharedRedist: createSharedRedistInstaller({ versioning: deps.versioning })
+    sharedRedist: createSharedRedistInstaller()
   }
 }

@@ -39,7 +39,7 @@ fn valid_bottle_path(path: &str, chain: Option<&str>) -> bool {
     };
     BOTTLE_FILES
         .iter()
-        .any(|(name, key)| *name == file && chain.is_none_or(|c| c == *key))
+        .any(|(name, key)| *name == file && chain.map_or(true, |c| c == *key))
 }
 
 pub(crate) fn rpc_store_version_gate(args: &[Value]) -> Result<Value, String> {

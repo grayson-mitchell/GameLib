@@ -26,12 +26,6 @@ import type { GateState } from '../bottleVersionGate'
 import { createFakeBottleGateRust } from 'backend/testUtils/fakeBottleGateRust'
 import type { RequestRustInvoke } from 'backend/host'
 
-jest.mock('backend/logger', () => ({
-  logInfo: jest.fn(),
-  logWarning: jest.fn(),
-  LogPrefix: { Backend: 'Backend' }
-}))
-
 let root: string
 let marker: string
 let ledger: string

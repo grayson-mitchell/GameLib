@@ -1255,14 +1255,6 @@ export const RUST_SAFETY_CHANNELS = [
 
 export type RustSafetyChannel = (typeof RUST_SAFETY_CHANNELS)[number]
 
-/** Phase 85 (D-17): the bottle version-gate channels, a subset of {@link RUST_INVOKE_CHANNELS}. */
-export const RUST_STORE_GATE_CHANNELS = [
-  RUST_STORE_VERSION_GATE,
-  RUST_STORE_BACKUP_FILE
-] as const
-
-export type RustStoreGateChannel = (typeof RUST_STORE_GATE_CHANNELS)[number]
-
 /** Phase 75: the steamfiles channels, a subset of {@link RUST_INVOKE_CHANNELS}. */
 export const RUST_STEAMFILES_CHANNELS = [
   RUST_STEAMFILES_FIND_ACF,
