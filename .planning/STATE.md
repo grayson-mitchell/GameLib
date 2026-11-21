@@ -6,10 +6,10 @@ current_phase: 85
 current_phase_name: Store host, config and versioned migrations
 status: executing
 stopped_at: Completed 85-02-PLAN.md
-last_updated: "2026-11-21T17:24:54.783Z"
+last_updated: "2026-11-21T17:36:13.416Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 85 execution started
-state_head: 1918c94af43953192a5b1b1f3c44b488ffb546dc
+state_head: 01c12f259ffe15e8b6227c7bf39e070f6e3bb6a4
 progress:
   total_phases: 20
   completed_phases: 23
@@ -744,6 +744,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261121-pwt | Migrate the sidecar test mocks off fileStore, then delete fileStore.ts (Phase 82 criterion 5 left open by 82-04) | 2026-11-21 | 752a2e614 | — | [261121-pwt-migrate-the-sidecar-test-mocks-off-files](./quick/261121-pwt-migrate-the-sidecar-test-mocks-off-files/) |
 | 18 | Reword Rust comments that still cited the deleted fileStore.ts (follow-up to 261121-pwt) | 2026-11-21 | 0d4618b94 | — | — |
 | 261121-vlo | "Report a translation problem" opens the in-app report form, prefilled, not GitHub | 2026-11-21 | c72bb25cd | — | [261121-vlo-report-a-translation-problem-should-open](./quick/261121-vlo-report-a-translation-problem-should-open/) |
+| 20 | Close stale Gate 7 digest todo (already re-pinned by 84-06, 90ba1d3ab) | 2026-11-22 | 01c12f259 | — | — |
 
 ## Deferred Items
 
