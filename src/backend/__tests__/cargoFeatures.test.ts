@@ -168,7 +168,11 @@ describe('Phase 34.4.2 Plan 13 (operator decision D-A) objc2-app-kit NSGraphicsC
  * and by Phase 84-08 (the crate-diagnostic bridges: tracing-subscriber, sharded-slab and
  * thread_local; tracing-log is NOT pulled because tracing-subscriber is built with default features
  * off, and a flip that pulls it fails this test), and by Phase 85-06 (gamelib-store and
- * gamelib-store-cli alone: serde, serde_json, indexmap and tempfile were already locked).
+ * gamelib-store-cli alone: serde, serde_json, indexmap and tempfile were already locked), and by
+ * Phase 84-18 (8fcadab94, RUSTSEC-2026-0543: gamelib-log's SystemTz moved from chrono to jiff, which
+ * adds jiff, jiff-core, jiff-static, jiff-tzdb, jiff-tzdb-platform, portable-atomic and
+ * portable-atomic-util; the operator accepted these crates, operator decision 2026-11-22; chrono
+ * stays locked because other crates still use it).
  */
 const CARGO_LOCK_PATH = join(
   __dirname,
@@ -232,7 +236,7 @@ const EXPECTED_LOCKFILE_CRATE_NAMES = [
   "icu_normalizer_data", "icu_properties", "icu_properties_data", "icu_provider", "ident_case", "idna",
   "idna_adapter", "image", "indexmap", "infer", "inotify", "inotify-sys",
   "inout", "ipnet", "is-docker", "is-wsl", "itertools", "itoa",
-  "javascriptcore-rs", "javascriptcore-rs-sys", "jni", "jni-macros", "jni-sys", "jni-sys-macros",
+  "javascriptcore-rs", "javascriptcore-rs-sys", "jiff", "jiff-core", "jiff-static", "jiff-tzdb", "jiff-tzdb-platform", "jni", "jni-macros", "jni-sys", "jni-sys-macros",
   "jobserver", "js-sys", "json-patch", "jsonptr", "keyboard-types", "keyring",
   "lazy_static", "libappindicator", "libappindicator-sys", "libc", "libdbus-sys", "libloading",
   "libm", "libredox", "libudev-sys", "linux-raw-sys", "litemap", "lock_api",
@@ -248,7 +252,7 @@ const EXPECTED_LOCKFILE_CRATE_NAMES = [
   "pango", "pango-sys", "parking", "parking_lot", "parking_lot_core", "pem-rfc7468",
   "percent-encoding", "petgraph", "phf", "phf_codegen", "phf_generator", "phf_macros",
   "phf_shared", "pin-project-lite", "piper", "pkcs1", "pkcs8", "pkg-config",
-  "plist", "png", "polling", "potential_utf", "powerfmt", "ppv-lite86",
+  "plist", "png", "polling", "portable-atomic", "portable-atomic-util", "potential_utf", "powerfmt", "ppv-lite86",
   "precomputed-hash", "proc-macro-crate", "proc-macro-error", "proc-macro-error-attr", "proc-macro2", "prost",
   "prost-derive", "protobuf", "protobuf-support", "pxfm", "quick-error", "quick-xml",
   "quinn", "quinn-proto", "quinn-udp", "quote", "r-efi", "rand",
