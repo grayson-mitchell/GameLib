@@ -252,6 +252,12 @@ export class LogForwarder {
 
   /** Per writer key: the tail of the chain of Promise-valued messages not yet enqueued. */
   readonly #chains = new Map<string, Promise<void>>()
+  /**
+   * Targets whose rotation was claimed by an entry that never reached a frame (evicted, or its
+   * Promise message rejected): the next entry enqueued for the target carries the rotation instead.
+   * Instance state, not module state (moduleStateCensus).
+   */
+  readonly #owedRotations = new Set<string>()
   #waiters: (() => void)[] = []
 
   constructor(caps: LogForwarderCaps = {}) {
@@ -300,7 +306,10 @@ export class LogForwarder {
       if (typeof body !== 'string') body.catch(() => undefined)
       const link = (tail ?? Promise.resolve())
         .then(() => body)
-        .then(emit, () => undefined)
+        .then(emit, () => {
+          // The line never reaches a frame: its rotation is not spent (WR-05).
+          if (rotate) this.oweRotation(target)
+        })
       this.#chains.set(key, link)
       void link.then(() => {
         if (this.#chains.get(key) === link) this.#chains.delete(key)
@@ -308,6 +317,15 @@ export class LogForwarder {
     } catch {
       // A log call never throws into its caller.
     }
+  }
+
+  /**
+   * Records that a rotation claimed for `target` did not reach a frame, so the next entry queued for
+   * that target carries it (WR-05). A general target never rotates, so it owes nothing.
+   */
+  oweRotation(target: LogFrameTarget): void {
+    if (target.kind === 'general' || logTargetRefusal(target) !== null) return
+    this.#owedRotations.add(targetKey(target))
   }
 
   /** Queues one entry (a line with its own timestamp, or a raw chunk). Never throws. */
@@ -320,10 +338,12 @@ export class LogForwarder {
       }
       const clipped = sanitiseEntry(clipEntry(entry))
       const bytes = entryBytes(clipped)
+      const key = targetKey(target)
       this.#queue.push({
         target,
-        key: targetKey(target),
-        rotate,
+        key,
+        // An owed rotation is spent here, on an entry that is queued.
+        rotate: this.#owedRotations.delete(key) || rotate,
         entry: clipped,
         bytes
       })
@@ -407,8 +427,21 @@ export class LogForwarder {
       this.#queuedBytes -= oldest.bytes
       this.#dropped += 1
       this.#droppedTotal += 1
+      if (oldest.rotate) this.#passRotation(oldest)
     }
     this.#compact()
+  }
+
+  /** An evicted entry carried a rotation: hand it to the target's next queued entry, or owe it (WR-05). */
+  #passRotation(evicted: QueuedEntry): void {
+    for (let i = this.#head; i < this.#queue.length; i += 1) {
+      const next = this.#queue[i]
+      if (next !== undefined && next.key === evicted.key) {
+        next.rotate = true
+        return
+      }
+    }
+    this.oweRotation(evicted.target)
   }
 
   #compact(): void {

@@ -2,7 +2,7 @@ import { LogPrefix } from './constants'
 import { logTargetRefusal } from './forwarder'
 // Bound at call time, never at load: `./index` imports this file for its two constructors, so a
 // load-time use would meet a half-initialised module.
-import { enqueueLogEntry, logLine, logWarning } from './index'
+import { enqueueLogEntry, logLine, logWarning, oweLogRotation } from './index'
 
 import type { LogFrameTarget } from 'common/types/sidecarTransport'
 import type { LogLevel } from './constants'
@@ -109,7 +109,13 @@ export default class LogWriter {
       send(message)
       return
     }
-    const link = this.#tail.then(() => message).then(send)
+    const link = this.#tail
+      .then(() => message)
+      .then(send, (error: unknown) => {
+        // The entry never reaches a frame, so its rotation is not spent: the next write carries it.
+        if (rotate) oweLogRotation(this.#target)
+        throw error
+      })
     // The chain survives a rejected message; the caller of THIS write still sees the rejection.
     this.#extend(link)
     await link
