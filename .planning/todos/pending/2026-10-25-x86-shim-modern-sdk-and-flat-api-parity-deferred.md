@@ -148,3 +148,57 @@ It writes no game log, so it cannot produce a call beyond init; Avernum 4 is the
 ## Live baseline after tier 1 (2026-11-20 20:37)
 
 Cat Quest launched, with no HELLO. Its `error.log` (`AppData/LocalLow/The Gentlebros Pte_ Ltd_/Cat Quest/error.log`) reads `[Steamworks.NET] SteamAPI_Init() failed`, then `InvalidOperationException: Steamworks is not initialized` from `SteamUser.GetSteamID`, identical to the 2026-11-07 run. It exited after 20s (`overlay-exit-abnormal`). This is the baseline the flat tier must move. Tier-1 titles: 57300 is verified; 576770 reaches GINIT ok=1 but shows no window (a separate issue).
+
+## Why the baseline showed no HELLO (quick 261121-ley, 2026-11-21)
+
+Desk diagnosis of the 2026-11-20 20:37 baseline. GameLib **withheld** the shim on
+purpose, so Cat Quest ran Valve's own `steam_api.dll` with no helper. Valve's
+`SteamAPI_Init` then failed because the bottle has no Steam client. That is why no
+HELLO arrived: the game never loaded the shim.
+
+Evidence:
+
+- `Cat Quest_Data/Plugins/steam_api.dll` in the bottle is Valve's original: 237856 bytes,
+  sha1 `23ba5c92…`, dated 2026-11-07 (the install date), with no `.gamelib-orig` next to
+  it. Amnesia's bottle, by contrast, holds the current x86 shim (sha1 `107cda0b…`, same
+  as `public/bin/arm64/darwin/steam_api.dll`) plus a `.gamelib-orig` backup. It is the only
+  `steam_api*.dll` in the Cat Quest bottle.
+- The persisted verdict (`steam_metadata.json` → `593280.bridge.scan`, scannedAt
+  `2026-11-20T07:37:53Z` = the baseline launch) is `status: miss`, x86, with no
+  `managedScan` key. That is the shape `withhold()` in `bridge/shimPlacement.ts` returns;
+  the placed-miss path always records `managedScan` for a Mono title. Its missing list
+  ends with the unservable interface versions that `withhold()` appends.
+- Re-running `classifyUnservableInterfaceVersions` (current tree) on the stored inputs
+  gives 26 **blocking**, 0 non-core x86 versions. `SteamClient020` alone blocks
+  (`SteamClient` is in `CORE_STARTUP_FAMILIES`), and so does every other version an
+  x86 flat lookup would need. In `placeShimForGame`, blocking > 0 means
+  `withholdIfRestorable`, and no shim was present yet, so the restore set is empty and the
+  result is `withheld`.
+
+Other hypotheses:
+
+- The shim loaded but its `SteamAPI_Init` failed: ruled out, because it was never placed.
+- A missing export broke init: ruled out as the cause of *this* failure, but it is exactly
+  what would come next. `Assembly-CSharp-firstpass.dll` names `SteamAPI_Init`,
+  `SteamAPI_ISteamClient_GetISteam*`, `SteamAPI_ManualDispatch_Init/RunFrame/GetNextCallback/FreeLastCallback`,
+  `SteamClient` and `SteamInternal_CreateInterface`. The x86 export set has `SteamAPI_Init`,
+  `SteamInternal_CreateInterface` and `SteamAPI_GetHSteam*`, but **not** the flat
+  `SteamAPI_ISteamClient_*`, the `SteamAPI_ManualDispatch_*` family, or the bare `SteamClient`.
+
+What this means:
+
+- There is no cheaper fix. Forcing placement today would get a HELLO from
+  `SteamAPI_Init` and then fail at `CSteamAPIContext.Init` on the first flat lookup
+  (`EntryPointNotFoundException`), and next at `CallbackDispatcher`'s
+  `SteamAPI_ManualDispatch_Init`.
+- The flat tier (items a–e above) is confirmed as the blocker. Two exports join its scope:
+  - the x86 `SteamAPI_ManualDispatch_*` family (item d's `gl_md_*`, now a hard
+    requirement, not an audit);
+  - the bare `SteamClient` export.
+- No placement-guard change is needed. Once the x86 shim serves those versions, the
+  classifier stops reporting them as blocking and the next launch places the shim with
+  a `.gamelib-orig` backup on its own.
+
+Diagnostics gap: the launch's `placeShimForGame ... withheld the shim` warning was
+in a `gamelib.log` that has since rotated, and nothing in the UI says "withheld". So this
+had to be reconstructed from the verdict's shape.
