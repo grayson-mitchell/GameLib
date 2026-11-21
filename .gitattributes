@@ -23,3 +23,7 @@ src-tauri/crates/gamelib-scan/tests/fixtures/**/*.dll binary
 # must be stored byte-exact on every OS.
 src-tauri/crates/gamelib-steamfiles/tests/fixtures/** -text
 src-tauri/crates/gamelib-steamfiles/tests/fixtures/shortcuts/** binary
+
+# Phase 84-01: the log golden is byte-exact output of the TS writer (some files hold CRLF on purpose).
+# Never normalise it; a normalised copy would make every parity test compare the wrong bytes.
+src-tauri/crates/gamelib-log/tests/fixtures/golden/expected/** -text
