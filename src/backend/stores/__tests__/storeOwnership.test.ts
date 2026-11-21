@@ -6,6 +6,7 @@
  */
 import ownershipFile from 'common/types/ipc/storeOwnership.json'
 import tableFile from 'common/types/ipc/storeTable.json'
+import { RECOGNIZED_CACHE_STORE_NAMES } from 'common/types/storePolicy'
 import {
   dotPathsFor,
   isRustOwned,
@@ -83,16 +84,44 @@ describe('isRustOwned', () => {
     expect(isRustOwned('store_cache/itad_prices', 'rust', off)).toBe(true)
   })
 
-  it('treats a runtime store_cache name the table does not list as a cache-family store', () => {
+  it('treats a recognised runtime store_cache name the table does not list as a cache-family store', () => {
     const cache = { families: { cache: true }, stores: {} }
-    expect(isRustOwned('store_cache/brand_new_cache', 'rust', cache)).toBe(true)
-    expect(isRustOwned('store_cache/brand_new_cache', 'ts', cache)).toBe(false)
-    expect(isRustOwned('store_cache/brand_new_cache', 'rust', NONE)).toBe(false)
-    const own = {
-      families: {},
+    const recognised = ['fresh_runtime_cache']
+    const owned = (
+      mode: 'rust' | 'ts',
+      own: {
+        families: Record<string, boolean>
+        stores: Record<string, boolean>
+      }
+    ) => isRustOwned('store_cache/fresh_runtime_cache', mode, own, recognised)
+    expect(owned('rust', cache)).toBe(true)
+    expect(owned('ts', cache)).toBe(false)
+    expect(owned('rust', NONE)).toBe(false)
+    expect(
+      owned('rust', {
+        families: {},
+        stores: { 'store_cache/fresh_runtime_cache': true }
+      })
+    ).toBe(true)
+  })
+
+  it('refuses a runtime store_cache name the store policy does not recognise, whatever the flags say (T-85-30)', () => {
+    const all = {
+      families: { cache: true },
       stores: { 'store_cache/brand_new_cache': true }
     }
-    expect(isRustOwned('store_cache/brand_new_cache', 'rust', own)).toBe(true)
+    expect(isRustOwned('store_cache/brand_new_cache', 'rust', all)).toBe(false)
+    expect(isRustOwned('store_cache/brand_new_cache', 'rust', all, [])).toBe(
+      false
+    )
+    // A table row decides for itself: it never needs to be in the recognised list.
+    expect(isRustOwned('store_cache/umu', 'rust', all, [])).toBe(true)
+    // The shipped list is the policy's: every recognised name today is a user-state table row, so
+    // the cache family alone reaches none of them.
+    for (const name of RECOGNIZED_CACHE_STORE_NAMES) {
+      expect(isStoreKey(`store_cache/${name}`)).toBe(true)
+      expect(isRustOwned(`store_cache/${name}`, 'rust', all)).toBe(false)
+    }
   })
 
   it('resolves GamesConfig/<app> through the settings/game pattern row', () => {

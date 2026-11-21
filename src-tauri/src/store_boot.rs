@@ -382,7 +382,11 @@ mod tests {
             .map(|(name, _)| name.as_str())
             .collect();
         on.sort_unstable();
-        assert_eq!(on, vec!["cache"], "only the cache family is flipped (85-12)");
+        assert_eq!(
+            on,
+            vec!["cache"],
+            "only the cache family is flipped (85-12)"
+        );
         assert!(
             own.stores.is_empty(),
             "no per-store override: the 85-10 tracer's is gone, the family covers it"
@@ -684,5 +688,138 @@ mod tests {
             !drain(Duration::from_millis(5)),
             "idle host: nothing to hold open"
         );
+    }
+
+    const CORPUS_DIR: &str = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/crates/gamelib-store/tests/fixtures/corpus"
+    );
+
+    /// The cache-family corpus files that read as stores (the `roundtrip` ones), by table key: the
+    /// first corpus file of each cache row.
+    fn corpus_cache_files() -> Vec<(&'static TableRow, PathBuf)> {
+        let text = fs::read_to_string(format!("{CORPUS_DIR}/MANIFEST.json")).unwrap();
+        let manifest: serde_json::Value = serde_json::from_str(&text).unwrap();
+        let mut found: Vec<(&'static TableRow, PathBuf)> = Vec::new();
+        for entry in manifest["files"].as_array().unwrap() {
+            let (Some(key), Some(path)) = (entry["tableKey"].as_str(), entry["path"].as_str())
+            else {
+                continue;
+            };
+            let Some(row) = row_for_key(key) else {
+                continue;
+            };
+            if row.family != Family::Cache
+                || entry["expect"] != "roundtrip"
+                || entry["sha256"].is_null()
+                || found.iter().any(|(r, _)| r.key == row.key)
+            {
+                continue;
+            }
+            found.push((row, PathBuf::from(format!("{CORPUS_DIR}/{path}"))));
+        }
+        found
+    }
+
+    #[test]
+    fn open_all_opens_every_cache_row_under_the_cache_family_and_leaves_every_other_family() {
+        let own = ownership(&["cache"], &[]);
+        let home = FakeHome::new("gamelib-store-boot-");
+        let corpus = corpus_cache_files();
+        let cache_rows: Vec<&TableRow> = table()
+            .iter()
+            .filter(|r| r.family == Family::Cache && r.name.is_some())
+            .collect();
+        assert!(cache_rows.len() >= 20, "{} cache rows", cache_rows.len());
+        // The real corpus file where there is one, a baseline file for the rest.
+        let mut from_corpus = 0;
+        for row in &cache_rows {
+            let dir = home.root().join(&row.dir);
+            fs::create_dir_all(&dir).unwrap();
+            let target = dir.join(format!("{}.json", row.name.as_deref().unwrap()));
+            match corpus.iter().find(|(r, _)| r.key == row.key) {
+                Some((_, from)) => {
+                    fs::copy(from, &target).unwrap();
+                    from_corpus += 1;
+                }
+                None => fs::write(&target, "{\"a\":1}").unwrap(),
+            }
+        }
+        assert!(
+            from_corpus >= 10,
+            "{from_corpus} cache rows held a corpus file"
+        );
+        // A user-state file sits in the same directory: the cache family does not reach it.
+        let lib = home.root().join("store_cache").join("gog_library.json");
+        fs::write(&lib, "{ not json").unwrap();
+        let (host, report) = open(&home, &own, 10_000, 60_000);
+        assert_eq!(report.opened, cache_rows.len());
+        assert_eq!(report.deferred, 0);
+        assert!(report.read_only.is_empty(), "{:?}", report.read_only);
+        assert!(report.start_empty.is_empty(), "{:?}", report.start_empty);
+        assert_eq!(fs::read_to_string(&lib).unwrap(), "{ not json");
+        assert!(host.read_only_entries().is_empty());
+        eprintln!(
+            "cache family: {} cache rows opened, {} from the corpus",
+            cache_rows.len(),
+            from_corpus
+        );
+    }
+
+    #[test]
+    fn open_all_copies_a_corrupt_cache_aside_lists_it_start_empty_and_keeps_the_original() {
+        let own = ownership(&["cache"], &[]);
+        let home = FakeHome::new("gamelib-store-boot-");
+        let corrupt = fs::read(format!(
+            "{CORPUS_DIR}/edge/store_cache/edge_corrupt_cache.json"
+        ))
+        .unwrap();
+        assert!(serde_json::from_slice::<serde_json::Value>(&corrupt).is_err());
+        let dir = home.root().join("store_cache");
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(dir.join("wikigameinfo.json"), &corrupt).unwrap();
+        fs::write(dir.join("umu.json"), "{\"a\":1}").unwrap();
+        let (_host, report) = open(&home, &own, 10_000, 60_000);
+        assert_eq!(report.opened, 2);
+        assert_eq!(
+            report.start_empty,
+            vec!["store_cache/wikigameinfo".to_string()]
+        );
+        assert!(report.read_only.is_empty());
+        // The byte copy exists, and the original is not touched by opening.
+        let copies: Vec<PathBuf> = fs::read_dir(&dir)
+            .unwrap()
+            .flatten()
+            .map(|e| e.path())
+            .filter(|p| {
+                p.file_name()
+                    .and_then(|n| n.to_str())
+                    .is_some_and(|n| n.starts_with("wikigameinfo.corrupt.") && n.ends_with(".json"))
+            })
+            .collect();
+        assert_eq!(copies.len(), 1, "{copies:?}");
+        assert_eq!(fs::read(&copies[0]).unwrap(), corrupt);
+        assert_eq!(fs::read(dir.join("wikigameinfo.json")).unwrap(), corrupt);
+        // GAMELIB_STORE_BOOT names the key in startEmpty and nothing else.
+        let env: serde_json::Value =
+            serde_json::from_str(&boot_env_value(&report).unwrap()).unwrap();
+        assert_eq!(
+            env["startEmpty"],
+            serde_json::json!(["store_cache/wikigameinfo"])
+        );
+        assert_eq!(env["readOnly"], serde_json::json!([]));
+        // Boot again over the same files (a second launch with the file still unreadable): the
+        // cache still starts empty, and the copies stay bounded by the engine's own rotation.
+        let (_again, second) = open(&home, &own, 10_000, 60_000);
+        assert_eq!(
+            second.start_empty,
+            vec!["store_cache/wikigameinfo".to_string()]
+        );
+        let after = fs::read_dir(&dir)
+            .unwrap()
+            .flatten()
+            .filter(|e| e.file_name().to_string_lossy().contains(".corrupt."))
+            .count();
+        assert!((1..=2).contains(&after), "{after} copies after two boots");
     }
 }

@@ -142,6 +142,49 @@ fn row_for_store_key(key: &str) -> Option<TableRow> {
     cache_name(name).then(|| runtime_cache_row(key.to_string(), "store_cache", name))
 }
 
+/// The runtime `store_cache/<name>` names the shell will own: `RECOGNIZED_CACHE_STORE_NAMES` of
+/// `storePolicy.ts` (the boot-set library caches, then the denied one). A runtime cache name is
+/// only ever one the sidecar's `storeNew` would construct, so a frame for any other name is refused
+/// `not-owned` and never creates a file (T-85-30). A test reads `storePolicy.ts` and asserts this
+/// list equals its arrays, so the two cannot drift.
+///
+/// Every name here is also a table row (`user-state`), and a listed row follows its own family, so
+/// today the runtime branch owns nothing the table does not already name: the list is the gate a
+/// future runtime cache must pass, kept on both sides so the two refuse the same names.
+pub(crate) const RUNTIME_CACHE_NAMES: [&str; 5] = [
+    "legendary_library",
+    "gog_library",
+    "nile_library",
+    "steam_library",
+    "humble_library",
+];
+
+/// Whether a `store_cache/<name>` key is one the shell may open: a table row decides for itself, a
+/// runtime name must be in `recognised`. Any other key (not under `store_cache/`) is not a runtime
+/// cache and passes.
+fn runtime_cache_recognised(key: &str, recognised: &[&str]) -> bool {
+    let Some(name) = key.strip_prefix("store_cache/") else {
+        return true;
+    };
+    row_for_key(key).is_some() || recognised.contains(&name)
+}
+
+/// The row of a store this shell owns under `mode` and `ownership`, or `None`: the key names no
+/// store, the store cannot be opened (`native` and `excluded` rows), the ownership file has not
+/// moved it, or it is a runtime cache name outside `recognised`.
+fn owned_row(
+    key: &str,
+    mode: StoreMode,
+    ownership: &Ownership,
+    recognised: &[&str],
+) -> Option<TableRow> {
+    let row = row_for_store_key(key)?;
+    (row.store_kind().is_some()
+        && runtime_cache_recognised(key, recognised)
+        && store_boot::is_rust_owned(&row, mode, ownership))
+    .then_some(row)
+}
+
 /// Where a store's file is, under the user-data directory (`store_boot::candidates` agrees).
 fn path_for(user_data: &Path, key: &str, row: &TableRow) -> PathBuf {
     if let Some(app) = key.strip_prefix("GamesConfig/") {
@@ -411,10 +454,12 @@ impl Dispatcher {
     /// Applies one frame and answers it.
     fn handle(&self, frame: StoreFrame) {
         let StoreFrame { seq, store, op } = frame;
-        let target = row_for_store_key(&store).filter(|row| {
-            row.store_kind().is_some()
-                && store_boot::is_rust_owned(row, self.config.mode, &self.config.ownership)
-        });
+        let target = owned_row(
+            &store,
+            self.config.mode,
+            &self.config.ownership,
+            &RUNTIME_CACHE_NAMES,
+        );
         let Some(row) = target else {
             self.reply(&store, 0, "refused", seq, Some("not-owned"));
             return;
@@ -1089,5 +1134,216 @@ mod tests {
             .map(|e| e["originSeq"].as_u64().unwrap())
             .collect();
         assert_eq!(seqs, (1..=total as u64 + 1).collect::<Vec<_>>());
+    }
+
+    fn cache_ownership() -> Ownership {
+        Ownership::parse(r#"{"families":{"cache":true},"stores":{}}"#).unwrap()
+    }
+
+    const STORE_POLICY_TS: &str = include_str!("../../src/common/types/storePolicy.ts");
+
+    /// The quoted strings of `const <name>: readonly string[] = [ ... ]` in `storePolicy.ts`.
+    fn ts_string_array(src: &str, name: &str) -> Vec<String> {
+        let at = src
+            .find(&format!("{name}: readonly string[] = ["))
+            .unwrap_or_else(|| panic!("storePolicy.ts has no `{name}` array"));
+        let rest = &src[at..];
+        let start = rest.find("= [").expect("array open") + 3;
+        let end = start + rest[start..].find(']').expect("array close");
+        rest[start..end]
+            .split('\'')
+            .skip(1)
+            .step_by(2)
+            .map(str::to_string)
+            .collect()
+    }
+
+    #[test]
+    fn store_frame_runtime_cache_names_equal_the_recognised_names_of_store_policy_ts() {
+        let boot = ts_string_array(STORE_POLICY_TS, "BOOT_SET_CACHE_STORE_NAMES");
+        let denied = ts_string_array(STORE_POLICY_TS, "DENIED_CACHE_STORES");
+        assert!(!boot.is_empty() && !denied.is_empty());
+        let expected: Vec<String> = boot.into_iter().chain(denied).collect();
+        assert_eq!(
+            RUNTIME_CACHE_NAMES.map(str::to_string).to_vec(),
+            expected,
+            "RUNTIME_CACHE_NAMES drifted from storePolicy.ts"
+        );
+        // RECOGNIZED_CACHE_STORE_NAMES is still those two arrays and nothing else.
+        let at = STORE_POLICY_TS
+            .find("RECOGNIZED_CACHE_STORE_NAMES: readonly string[] = [")
+            .expect("RECOGNIZED_CACHE_STORE_NAMES");
+        let recognised = &STORE_POLICY_TS[at..];
+        let open = recognised.find("= [").unwrap() + 3;
+        let recognised = &recognised[open..open + recognised[open..].find(']').unwrap()];
+        assert!(
+            recognised.contains("...BOOT_SET_CACHE_STORE_NAMES")
+                && recognised.contains("...DENIED_CACHE_STORES")
+                && recognised.matches("...").count() == 2,
+            "{recognised}"
+        );
+        // The name pattern this shell checks is the one the sidecar checks.
+        assert!(STORE_POLICY_TS.contains("CACHE_STORE_NAME_PATTERN = /^[A-Za-z0-9_-]{1,64}$/"));
+    }
+
+    #[test]
+    fn store_frame_owned_row_follows_the_cache_family_and_refuses_unrecognised_runtime_names() {
+        let own = cache_ownership();
+        let recognised = ["fresh_runtime_cache"];
+        let owned =
+            |key: &str, mode: StoreMode, own: &Ownership| owned_row(key, mode, own, &recognised);
+        // A table row follows its family, whatever the recognised list says.
+        assert!(owned("store_cache/steam_metadata", StoreMode::Rust, &own).is_some());
+        assert!(owned("store/wine-downloader-info", StoreMode::Rust, &own).is_some());
+        assert!(owned("store_cache/steam_metadata", StoreMode::Ts, &own).is_none());
+        assert!(owned(
+            "store_cache/steam_metadata",
+            StoreMode::Rust,
+            &Ownership::default()
+        )
+        .is_none());
+        // The library caches are user-state rows: not moved yet.
+        assert!(owned("store_cache/gog_library", StoreMode::Rust, &own).is_none());
+        // A recognised runtime name is a cache-family store and opens as a cache.
+        let row = owned("store_cache/fresh_runtime_cache", StoreMode::Rust, &own).unwrap();
+        assert_eq!(row.family, gamelib_store::table::Family::Cache);
+        assert_eq!(row.dir, "store_cache");
+        assert!(owned("store_cache/fresh_runtime_cache", StoreMode::Ts, &own).is_none());
+        assert!(owned(
+            "store_cache/fresh_runtime_cache",
+            StoreMode::Rust,
+            &Ownership::default()
+        )
+        .is_none());
+        // An unrecognised name, or one that fails the pattern, is not owned.
+        for key in [
+            "store_cache/brand_new_cache",
+            "store_cache/a.b",
+            "store_cache/../../etc",
+            "store_cache/",
+            "store_cache/a/b",
+            "elsewhere/fresh_runtime_cache",
+        ] {
+            assert!(owned(key, StoreMode::Rust, &own).is_none(), "{key}");
+        }
+        // The shipped list admits exactly the recognised names that are not table rows.
+        for name in RUNTIME_CACHE_NAMES {
+            let key = format!("store_cache/{name}");
+            assert!(
+                runtime_cache_recognised(&key, &RUNTIME_CACHE_NAMES),
+                "{key}"
+            );
+            assert!(row_for_key(&key).is_some(), "{key} is a table row");
+        }
+        assert!(!runtime_cache_recognised(
+            "store_cache/brand_new_cache",
+            &RUNTIME_CACHE_NAMES
+        ));
+        assert!(runtime_cache_recognised(
+            "GamesConfig/480",
+            &RUNTIME_CACHE_NAMES
+        ));
+    }
+
+    #[test]
+    fn store_frame_under_the_cache_family_applies_to_a_cache_and_refuses_the_rest_not_owned() {
+        let rig = rig_with(cache_ownership(), StoreMode::Rust);
+        send(
+            &rig,
+            frame(1, "store_cache/steam_metadata", "set", Some("a"), Some("1")),
+        );
+        send(
+            &rig,
+            frame(2, "store/wine-downloader-info", "set", Some("b"), Some("2")),
+        );
+        // A runtime name outside the recognised list: shape-valid (the shared vector says so), but
+        // not owned, and no file appears.
+        send(
+            &rig,
+            frame(3, "store_cache/custom_cache", "set", Some("c"), Some("3")),
+        );
+        // A library cache is a user-state row: the cache family does not reach it.
+        send(
+            &rig,
+            frame(4, "store_cache/gog_library", "set", Some("d"), Some("4")),
+        );
+        send(&rig, frame(5, "store/config", "set", Some("e"), Some("5")));
+        settle(&rig);
+        let events = lock(&rig.events);
+        let ops: Vec<(&str, Option<&str>)> = events
+            .iter()
+            .map(|e| (e["op"].as_str().unwrap(), e["reason"].as_str()))
+            .collect();
+        assert_eq!(
+            ops,
+            vec![
+                ("applied", None),
+                ("applied", None),
+                ("refused", Some("not-owned")),
+                ("refused", Some("not-owned")),
+                ("refused", Some("not-owned")),
+            ]
+        );
+        let root = rig.home.root();
+        assert!(root.join("store_cache/steam_metadata.json").is_file());
+        assert!(root.join("store/wine-downloader-info.json").is_file());
+        assert!(!root.join("store_cache/custom_cache.json").exists());
+        assert!(!root.join("store_cache/gog_library.json").exists());
+        assert!(!root.join("store/config.json").exists());
+    }
+
+    #[test]
+    fn store_frame_the_first_write_over_a_corrupt_cache_lands_only_after_its_copy_exists() {
+        let copied_at_write = Arc::new(Mutex::new(Vec::<bool>::new()));
+        let seen = Arc::clone(&copied_at_write);
+        let host = Arc::new(StoreHost::with_writer(Arc::new(
+            move |path, bytes, durability| {
+                let has_copy = fs::read_dir(path.parent().unwrap())
+                    .unwrap()
+                    .flatten()
+                    .any(|e| e.file_name().to_string_lossy().contains(".corrupt."));
+                lock(&seen).push(has_copy);
+                gamelib_store::atomic::write_atomic(path, bytes, durability)
+            },
+        )));
+        let rig = rig_over(host, cache_ownership(), StoreMode::Rust);
+        let dir = rig.home.root().join("store_cache");
+        fs::create_dir_all(&dir).unwrap();
+        let corrupt = b"{ not json, a cache the sidecar cannot read";
+        fs::write(dir.join("steam_metadata.json"), corrupt).unwrap();
+        send(
+            &rig,
+            frame(1, "store_cache/steam_metadata", "set", Some("k"), Some("1")),
+        );
+        settle(&rig);
+        let events = lock(&rig.events);
+        assert_eq!(events[0]["op"], "applied");
+        // Every store write the host made saw the copy already on disk.
+        assert_eq!(*lock(&copied_at_write), vec![true]);
+        let copies: Vec<PathBuf> = fs::read_dir(&dir)
+            .unwrap()
+            .flatten()
+            .map(|e| e.path())
+            .filter(|p| {
+                p.file_name().and_then(|n| n.to_str()).is_some_and(|n| {
+                    n.starts_with("steam_metadata.corrupt.") && n.ends_with(".json")
+                })
+            })
+            .collect();
+        assert_eq!(copies.len(), 1, "{copies:?}");
+        assert_eq!(fs::read(&copies[0]).unwrap(), corrupt);
+        // The original now holds the new, empty-based cache.
+        let written = fs::read_to_string(dir.join("steam_metadata.json")).unwrap();
+        let parsed: Value = serde_json::from_str(&written).unwrap();
+        assert_eq!(parsed["k"], 1);
+        assert_eq!(
+            parsed
+                .as_object()
+                .unwrap()
+                .keys()
+                .filter(|k| *k != "__internal__")
+                .count(),
+            1
+        );
     }
 }

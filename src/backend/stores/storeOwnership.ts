@@ -10,13 +10,19 @@
  *     failing that its family's, is set. A store's own flag wins over its family's.
  *
  * A runtime `store_cache/<name>` key the table does not list is a cache-family store (the same
- * stores `storeNew` builds), so it follows the `cache` family flag and its own override.
+ * stores `storeNew` builds), so it follows the `cache` family flag and its own override, but only
+ * when `RECOGNIZED_CACHE_STORE_NAMES` names it (85-12, T-85-30): the shell refuses every other
+ * runtime name `not-owned` and creates no file, and `RUNTIME_CACHE_NAMES` in `store_dispatch.rs`
+ * is held equal to that list by a test.
  *
  * Pure: no logger, no IPC, no module state. The environment is a parameter.
  */
 import ownershipFile from 'common/types/ipc/storeOwnership.json'
 import tableFile from 'common/types/ipc/storeTable.json'
-import { CACHE_STORE_NAME_PATTERN } from 'common/types/storePolicy'
+import {
+  CACHE_STORE_NAME_PATTERN,
+  RECOGNIZED_CACHE_STORE_NAMES
+} from 'common/types/storePolicy'
 
 export type StoreMode = 'rust' | 'ts'
 
@@ -117,15 +123,24 @@ export function dotPathsFor(storeKey: string): boolean {
 
 /**
  * Whether Rust owns the file behind `storeKey` under `mode`. `ownership` is a parameter so a test
- * can flip a family; production reads the committed file.
+ * can flip a family; production reads the committed file. `recognizedRuntimeCaches` is likewise a
+ * seam: the names a runtime cache (one the table does not list) must be among to be Rust's.
  */
 export function isRustOwned(
   storeKey: string,
   mode: StoreMode,
-  ownership: OwnershipShape = ownershipFile
+  ownership: OwnershipShape = ownershipFile,
+  recognizedRuntimeCaches: readonly string[] = RECOGNIZED_CACHE_STORE_NAMES
 ): boolean {
   const row = rowForStoreKey(storeKey)
   if (row === undefined) return false
+  if (
+    storeKey.startsWith(CACHE_PREFIX) &&
+    rowByKey(storeKey) === undefined &&
+    !recognizedRuntimeCaches.includes(storeKey.slice(CACHE_PREFIX.length))
+  ) {
+    return false
+  }
   if (row.family === 'native') return true
   if (row.family === 'excluded') return false
   if (mode !== 'rust') return false

@@ -8,12 +8,24 @@
  * frame. The Rust half of these cases is `cargo test --bin gamelib-shell store_boot` and
  * `store_frame`.
  */
-import { mkdtempSync, readFileSync, rmSync } from 'fs'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync
+} from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import ownershipFile from 'common/types/ipc/storeOwnership.json'
 import tableFile from 'common/types/ipc/storeTable.json'
+import {
+  STORE_NEW_CHANNEL,
+  STORE_SET_CHANNEL
+} from 'common/types/sidecarTransport'
 import CacheStore from '../../cache'
+import { registerStoreWriteHandlers } from '../../sidecar/storeWriteHandlers'
 import { createStores } from '../createStores'
 import { createStoreRegistry } from '../storeRegistry'
 import type { StoreFrame } from '../storeFrames'
@@ -205,5 +217,176 @@ describe('CacheStore.commit() on a Rust-owned cache', () => {
     expect(cache.has('added')).toBe(true)
     expect(cache.has('removed')).toBe(false)
     expect(cache.readOnly).toBe(false)
+  })
+})
+
+describe('a cache the shell could not read (D-18, GAMELIB_STORE_BOOT startEmpty)', () => {
+  let userData: string
+  beforeEach(() => {
+    userData = mkdtempSync(join(tmpdir(), 'gamelib-cache-family-boot-'))
+    mkdirSync(join(userData, 'store_cache'), { recursive: true })
+  })
+  afterEach(() => {
+    rmSync(userData, { recursive: true, force: true })
+  })
+
+  const bootListing = (...keys: string[]) => ({
+    readOnly: new Map<string, 'newer' | 'failed'>(),
+    startEmpty: new Set(keys)
+  })
+
+  it('starts empty and writable over a corrupt file, and the first write replaces it through the sink', () => {
+    const file = join(userData, 'store_cache', 'umu.json')
+    writeFileSync(file, '{ not json, a cache nobody can read')
+    const frames: StoreFrame[] = []
+    const root = createTestStoreRoot(userData, {
+      storeMode: 'rust',
+      boot: bootListing('store_cache/umu'),
+      recordFrames: frames
+    })
+    const cache = new CacheStore<string>('umu', 60 * 6, { root, kind: 'cache' })
+    expect(cache.entries()).toEqual([])
+    expect(cache.readOnly).toBe(false)
+    // The file is still the unreadable one: nothing is written until the first write.
+    expect(frames).toEqual([])
+    expect(readFileSync(file, 'utf8')).toBe(
+      '{ not json, a cache nobody can read'
+    )
+    cache.set('game', 'umu-1')
+    expect(cache.get('game')).toBe('umu-1')
+    expect(frames.map((frame) => frame.op)).toEqual(['set', 'set'])
+    const written = JSON.parse(readFileSync(file, 'utf8')) as Record<
+      string,
+      unknown
+    >
+    expect(written.game).toBe('umu-1')
+  })
+
+  it('starts empty over a readable file when the shell says so: the shell’s verdict, not the file, decides', () => {
+    writeFileSync(
+      join(userData, 'store_cache', 'umu.json'),
+      JSON.stringify({ stale: 'entry' })
+    )
+    const empty = createTestStoreRoot(userData, {
+      storeMode: 'rust',
+      boot: bootListing('store_cache/umu')
+    })
+    expect(
+      new CacheStore<string>('umu', 60 * 6, {
+        root: empty,
+        kind: 'cache'
+      }).entries()
+    ).toEqual([])
+    const normal = createTestStoreRoot(userData, { storeMode: 'rust' })
+    expect(
+      new CacheStore<string>('umu', 60 * 6, {
+        root: normal,
+        kind: 'cache'
+      }).entries()
+    ).toEqual([['stale', 'entry']])
+  })
+})
+
+/**
+ * `storeNew` and the write handler build a cache store from a recognised name. Under the shipped
+ * ownership file every recognised name is a user-state table row, so none is Rust's yet; the user-
+ * state family is flipped here for the length of a case, the way the later family plan will flip it
+ * in the file, to prove the ad hoc construction reaches the root's one mirror cell for the file.
+ */
+describe('runtime cache stores built by storeNew', () => {
+  let userData: string
+  const families = ownershipFile.families as Record<string, boolean>
+  const userStateBefore = families['user-state'] ?? false
+  beforeEach(() => {
+    userData = mkdtempSync(join(tmpdir(), 'gamelib-cache-family-new-'))
+  })
+  afterEach(() => {
+    families['user-state'] = userStateBefore
+    rmSync(userData, { recursive: true, force: true })
+    jest.restoreAllMocks()
+  })
+
+  function layer(frames: StoreFrame[]) {
+    const root = createTestStoreRoot(userData, {
+      storeMode: 'rust',
+      recordFrames: frames
+    })
+    const listeners = new Map<string, (...args: unknown[]) => void>()
+    registerStoreWriteHandlers({
+      ipc: {
+        on: (channel: string, listener: (...args: unknown[]) => void) => {
+          listeners.set(channel, listener)
+        },
+        handle: () => undefined
+      } as never,
+      registry: createStoreRegistry(),
+      root,
+      pushFrontendMessage: () => undefined
+    })
+    return { root, listeners }
+  }
+
+  const libraryPath = () => join(userData, 'store_cache', 'steam_library.json')
+
+  it('constructs a mirror-backed store sharing the root’s cell when the family is Rust’s', () => {
+    families['user-state'] = true
+    const frames: StoreFrame[] = []
+    const { root, listeners } = layer(frames)
+    listeners.get(STORE_NEW_CHANNEL)?.(undefined, 'steam_library')
+    const cell = root.mirrors.cellFor({
+      path: libraryPath(),
+      storeKey: 'store_cache/steam_library',
+      dotPaths: true
+    })
+    // storeNew left a cell behind (the file was never touched by conf: no file, no frames).
+    expect(existsSync(libraryPath())).toBe(false)
+    expect(frames).toEqual([])
+    // A write through the handler is a frame on that same cell.
+    listeners.get(STORE_SET_CHANNEL)?.(undefined, 'steam_library', 'k', 1)
+    expect(frames.map((frame) => [frame.store, frame.op])).toEqual([
+      ['store_cache/steam_library', 'set']
+    ])
+    // The disk sink answered the frame at once: the cell holds it on base, at rev 1.
+    expect(cell.pendingCount).toBe(0)
+    expect(cell.baseRev).toBe(1)
+    expect(cell.get('k')).toBe(1)
+    expect(
+      root.mirrors.cellFor({
+        path: libraryPath(),
+        storeKey: 'store_cache/steam_library',
+        dotPaths: true
+      })
+    ).toBe(cell)
+  })
+
+  it('stays conf-backed while the family is not Rust’s: a write sends no frame', () => {
+    const frames: StoreFrame[] = []
+    const { listeners } = layer(frames)
+    listeners.get(STORE_NEW_CHANNEL)?.(undefined, 'steam_library')
+    listeners.get(STORE_SET_CHANNEL)?.(undefined, 'steam_library', 'k', 1)
+    expect(frames).toEqual([])
+    expect(JSON.parse(readFileSync(libraryPath(), 'utf8'))).toMatchObject({
+      k: 1
+    })
+  })
+
+  it('refuses an unrecognised runtime name: no store, no file, no frame', () => {
+    families['user-state'] = true
+    const stderr = jest
+      .spyOn(process.stderr, 'write')
+      .mockImplementation(() => true)
+    const frames: StoreFrame[] = []
+    const { listeners } = layer(frames)
+    listeners.get(STORE_NEW_CHANNEL)?.(undefined, 'brand_new_cache')
+    listeners.get(STORE_SET_CHANNEL)?.(undefined, 'brand_new_cache', 'k', 1)
+    expect(frames).toEqual([])
+    expect(
+      existsSync(join(userData, 'store_cache', 'brand_new_cache.json'))
+    ).toBe(false)
+    expect(
+      stderr.mock.calls.some((c) =>
+        String(c[0]).includes('storeNew rejected an unrecognized store name')
+      )
+    ).toBe(true)
   })
 })
