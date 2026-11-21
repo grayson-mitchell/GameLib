@@ -202,6 +202,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 98: Shell cutover** — not planned
 - [ ] **Phase 99: Sidecar deletion** — not planned
 - [ ] **Phase 100: Game page without the ⋮ menu**
+- [ ] **Phase 101: Steam Verify & Move install**
 
 ## Phase Details
 
@@ -716,3 +717,19 @@ Plans:
 
 Plans:
 - [ ] TBD (run /gsd-plan-phase 100 to break down)
+
+### Phase 101: Steam Verify & Move install
+
+**Goal:** Verify and Move work for Steam games. For games installed by native Mac Steam, Verify calls
+`StartValidatingApp` and Move calls `CanMoveApp` then `MoveApp` through the bridge helper (spikes 090
+and 091), with completion tracked by install state and the cached install path refreshed after a
+move. For bridge (CrossOver-bottled) games, the meaning of Verify and Move is settled in discussion
+(GameLib's own Rust depot verifier is the likely Verify). This replaces the `moveInstall` stub and
+the bridge-DLL-only `repair` in `steam/gameMaintenance.ts`.
+**Source todo:** `.planning/todos/pending/2026-11-07-implement-steam-verify-and-move-install.md`
+**Requirements**: TBD
+**Depends on:** Nothing (spikes 090, 091 validated the Steam-registered half)
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 101 to break down)
