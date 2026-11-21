@@ -176,6 +176,8 @@ import {
 } from '../bridge/launchTarget'
 import { ensureBridgeHelperReady } from '../bridge/helperProcess'
 import { readSteamWantsOfflineMode } from '../bridge/steamOfflineMode'
+import * as steamOfflineModeModule from '../bridge/steamOfflineMode'
+import * as otherSessionPlayingModule from '../bridge/otherSessionPlaying'
 import { writeBridgeConfig } from '../bridge/bridgeConfig'
 import {
   applySteamBridgeKnownFixes,
@@ -889,25 +891,19 @@ jest.mock('../bridge/launchTarget', () => ({
 // ── bridge/helperProcess.ts mock (24-06, widened Phase 51 Plan 01) —
 // ensureBridgeHelperReady() gate + stopBridgeHelper() teardown hook, both
 // consumed by launch()'s bridge branch.
-jest.mock('../bridge/steamOfflineMode', () => ({
-  readSteamWantsOfflineMode: jest.fn()
-}))
 jest.mock('../bridge/helperProcess', () => ({
   ensureBridgeHelperReady: jest.fn()
 }))
 // Debug bridged-launch-kicks-other-session: the guard's verdict is scripted per test (default:
 // nobody else is playing). The real reader and its helper runs are covered in
-// bridge/__tests__/otherSessionPlaying.test.ts.
-// A plain factory and a `?? clear` fallback: this file's restoreAllMocks calls reset jest.fn
-// implementations, and a lost default must read as "nobody else is playing", never a TypeError.
+// bridge/__tests__/otherSessionPlaying.test.ts. The guard factory and readSteamWantsOfflineMode
+// are spied on the real modules in the file-scope beforeEach below (no jest.mock: the
+// backend-di-ceilings jestMock ratchet). The `?? clear` fallback keeps a reset verdict reading as
+// "nobody else is playing", never a TypeError.
 const mockOtherSessionVerdict = jest.fn<
   Promise<{ kind: string; otherAppId?: number | null } | undefined>,
   []
 >()
-jest.mock('../bridge/otherSessionPlaying', () => ({
-  createOtherSessionGuard: () => async () =>
-    (await mockOtherSessionVerdict()) ?? { kind: 'clear' }
-}))
 
 // ── bridge/bridgeConfig.ts mock (Phase 51 Plan 01, D-51-01) — the
 // gamelib_bridge.cfg port handoff launchBridgeGame() writes right before
@@ -1036,6 +1032,17 @@ jest.mock('../installLocation', () => ({
 // hand-off tests below keep exercising openExternal; a test that needs another
 // verdict overrides this in its own setup (describe/it beforeEach runs later).
 beforeEach(() => {
+  // resetMocks (Jest 29) wipes spy implementations before each test, so both spies are
+  // re-installed here. readSteamWantsOfflineMode answers undefined unless a test scripts it.
+  jest
+    .spyOn(steamOfflineModeModule, 'readSteamWantsOfflineMode')
+    .mockReturnValue(undefined as never)
+  jest
+    .spyOn(otherSessionPlayingModule, 'createOtherSessionGuard')
+    .mockImplementation(
+      () => async () =>
+        ((await mockOtherSessionVerdict()) ?? { kind: 'clear' }) as never
+    )
   ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({
     status: 'ready',
     ready: true

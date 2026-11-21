@@ -4,22 +4,22 @@ import {
   type OtherSessionVerdict
 } from '../otherSessionPlaying'
 
-jest.mock('backend/logger', () => ({
-  logError: jest.fn(),
-  logInfo: jest.fn(),
-  logWarning: jest.fn(),
-  LogPrefix: { Steam: 'Steam' }
-}))
-jest.mock('node:fs', () => ({
-  ...jest.requireActual('node:fs'),
-  existsSync: jest.fn()
-}))
+import * as loggerModule from 'backend/logger'
 
-import { existsSync } from 'node:fs'
-import { logInfo } from 'backend/logger'
+// No jest.mock (the backend-di-ceilings jestMock ratchet): the helper-binary check is injected
+// through deps.exists, and the logger is spied on the real module. resetMocks (Jest 29) wipes
+// both before each test, so each describe's beforeEach re-arms them.
+const mockedExists = jest.fn<boolean, [string]>()
+let mockedLogInfo: jest.SpyInstance
 
-const mockedExists = existsSync as jest.Mock
-const mockedLogInfo = logInfo as jest.Mock
+function armMocks() {
+  mockedExists.mockReturnValue(true)
+  mockedLogInfo = jest
+    .spyOn(loggerModule, 'logInfo')
+    .mockImplementation(() => undefined)
+  jest.spyOn(loggerModule, 'logWarning').mockImplementation(() => undefined)
+  jest.spyOn(loggerModule, 'logError').mockImplementation(() => undefined)
+}
 
 const PATHS = { steamBridgeHelperPath: '/h/steam-bridge-helper' }
 
@@ -50,13 +50,17 @@ const read = (
   run: jest.Mock,
   extra: { platform?: NodeJS.Platform } = {}
 ): Promise<OtherSessionVerdict> =>
-  readOtherSessionPlaying({ paths: PATHS, platform: 'darwin', run, ...extra })
+  readOtherSessionPlaying({
+    paths: PATHS,
+    exists: mockedExists,
+    platform: 'darwin',
+    run,
+    ...extra
+  })
 
 describe('readOtherSessionPlaying (the helper --steam-playing-session read)', () => {
   beforeEach(() => {
-    mockedExists.mockReset()
-    mockedExists.mockReturnValue(true)
-    mockedLogInfo.mockClear()
+    armMocks()
   })
 
   it('asks the helper exactly one thing, with a bound', async () => {
@@ -154,6 +158,7 @@ describe('readOtherSessionPlaying (the helper --steam-playing-session read)', ()
     await expect(
       readOtherSessionPlaying({
         paths: PATHS,
+        exists: mockedExists,
         platform: 'darwin',
         run: off,
         env: { GAMELIB_STEAM_OTHER_SESSION_CHECK: 'off' }
@@ -166,6 +171,7 @@ describe('readOtherSessionPlaying (the helper --steam-playing-session read)', ()
       await expect(
         readOtherSessionPlaying({
           paths: PATHS,
+          exists: mockedExists,
           platform: 'darwin',
           run,
           env: { GAMELIB_STEAM_OTHER_SESSION_CHECK: value }
@@ -200,9 +206,7 @@ describe('readOtherSessionPlaying (the helper --steam-playing-session read)', ()
 
 describe('createOtherSessionGuard (per-launch, remembers a signed-out reading)', () => {
   beforeEach(() => {
-    mockedExists.mockReset()
-    mockedExists.mockReturnValue(true)
-    mockedLogInfo.mockClear()
+    armMocks()
   })
 
   const guardWith = (outputs: string[], settleMs = 0) => {
@@ -217,6 +221,7 @@ describe('createOtherSessionGuard (per-launch, remembers a signed-out reading)',
     const guard = createOtherSessionGuard({
       appId: '3205720',
       paths: PATHS,
+      exists: mockedExists,
       platform: 'darwin',
       run,
       settleMs

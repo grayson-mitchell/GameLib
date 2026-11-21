@@ -45,6 +45,8 @@ export interface OtherSessionDeps {
   platform?: NodeJS.Platform
   /** Default process.env; only GAMELIB_STEAM_OTHER_SESSION_CHECK is read. */
   env?: NodeJS.ProcessEnv
+  /** Default node:fs existsSync; tests inject it. */
+  exists?: (path: string) => boolean
   run: (
     file: string,
     args: string[],
@@ -108,7 +110,7 @@ export async function readOtherSessionPlaying(
     return { kind: 'unknown', reason: 'unsupported-platform' }
   }
   const helperPath = deps.paths.steamBridgeHelperPath
-  if (!existsSync(helperPath)) {
+  if (!(deps.exists ?? existsSync)(helperPath)) {
     return { kind: 'unknown', reason: 'helper-missing' }
   }
 
