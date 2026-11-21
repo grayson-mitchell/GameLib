@@ -298,6 +298,17 @@ const LONG_RUNNING_CHANNELS: &[&str] = &[
     // fails fast via `drain_pending_invokes`. Rejected alternatives (decoupling the bridge launch
     // via status events; renderer treating the timeout as non-fatal) each fix only the bridge path.
     "launch",
+    // Phase 100 gap closure (100-REVIEW CR-02, plan 100-11). The sidecar's moveInstall handler
+    // (`installFlowRegistration.ts`, `deps.ipc.handle('moveInstall', ...)`) sends status 'moving'
+    // and then awaits the whole `getGame(appName).moveInstall(path)` copy before it settles, so
+    // the invoke lasts as long as the copy. At the 60s bound the renderer saw a rejection while
+    // the copy continued. Since Phase 100 the Location row catches that rejection, so it read
+    // "Move failed" with a Retry that could start a second move on the same install. The shape is
+    // the same as `uninstall`: arbitrarily long on a large install directory. Added on the
+    // handler's shape, like `uninstall` and the 2026-10-05 entries, NOT on a live timing;
+    // 100-HUMAN-UAT item 20 times a Move over 60s. A crashed sidecar still fails fast via
+    // `drain_pending_invokes`.
+    "moveInstall",
 ];
 
 /// Cap on `SidecarState::abandoned`, oldest-dropped past this bound.
@@ -2915,6 +2926,13 @@ mod tests {
         assert_eq!(timeout_for("oauthCaptureLogin"), None);
         assert_eq!(timeout_for("humbleStartLogin"), None);
         assert_eq!(timeout_for("humbleReconnect"), None);
+    }
+
+    #[test]
+    fn install_location_and_remove_all_copies_channels_are_exempt() {
+        // Phase 100 CR-02 (plan 100-11): each awaits work with no wall-clock ceiling of its own,
+        // so a 60s rejection would be a false failure in the Location row and the danger zone.
+        assert_eq!(timeout_for("moveInstall"), None);
     }
 
     #[test]

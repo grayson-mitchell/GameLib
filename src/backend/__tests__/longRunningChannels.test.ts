@@ -82,7 +82,10 @@ const EXPECTED_LONG_RUNNING_CHANNELS = [
   // Quick 261026-jmm / todo `2026-10-25-bridge-launch-invoke-times-out-during-first-launch-
   // redist-install`: a game launch awaits the whole session for non-Steam runners, and a bridge
   // first launch measured ~2 min installing redists, so no 60s bound is correct.
-  'launch'
+  'launch',
+  // Phase 100 CR-02 (plan 100-11): the sidecar's moveInstall handler awaits the whole
+  // getGame(appName).moveInstall(path) copy, so a large move outlives the 60s bound.
+  'moveInstall'
 ]
 
 /**
@@ -489,6 +492,10 @@ describe('REQ-34.2-12 main.rs LONG_RUNNING_CHANNELS exemption list (D-10)', () =
 
   test('REQ-34.2-12 repair is a member — a real GOG/Epic repair routinely exceeds the 60s bound (CR-01)', () => {
     expect(extractLongRunningChannels()).toContain('repair')
+  })
+
+  test('Phase 100 CR-02 moveInstall is a member — the sidecar handler awaits the whole copy, so a large move outlives 60s', () => {
+    expect(extractLongRunningChannels()).toContain('moveInstall')
   })
 
   test("REQ-34.2-12 readConfig is a member — readConfig('library') calls legendary.refresh(), the same work refreshLibrary is exempted for", () => {
