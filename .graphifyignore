@@ -1,15 +1,19 @@
 # .graphifyignore
 #
-# Scopes the graphify knowledge graph to the codebase, top-level project docs
-# (README.md, CHANGELOG.md, etc.) and the .planning/ GSD artifacts. Uses
-# gitignore syntax and is merged after .gitignore, with these patterns winning
-# on conflict (last-match-wins).
+# Scopes the graphify knowledge graph to the codebase and the top-level project
+# docs (README.md, CHANGELOG.md, etc.) only. The .planning/ GSD artifacts are NOT
+# indexed here: gsd-graph (.gsd-graph/, see CLAUDE.md) owns them. Uses gitignore
+# syntax and is merged after .gitignore, with these patterns winning on conflict
+# (last-match-wins).
 
-# GSD planning artifacts are INDEXED (unignored 2026-08-22 on request).
-# Only their non-document noise is excluded below.
-.planning/**/*.json
-.planning/**/*.sig
-.planning/graphs/
+# GSD planning artifacts are EXCLUDED from graphify since 2026-11-22 (quick
+# 261122-93a; they were indexed from 2026-08-22). gsd-graph indexes a curated
+# planning corpus instead.
+.planning/
+
+# gsd-graph's planning-graph store, not code. .gitignore keeps most of it out
+# but un-ignores config.json, and this line keeps graphify off it too.
+.gsd-graph/
 
 # throwaway working files
 scratchpad/
