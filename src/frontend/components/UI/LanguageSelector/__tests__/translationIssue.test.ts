@@ -1,6 +1,6 @@
 import {
-  GAMELIB_ISSUES_NEW_URL,
-  buildTranslationIssueUrl,
+  buildTranslationReportMessage,
+  reportTranslationProblem,
   shouldShowMtNotice
 } from '../translationIssue'
 
@@ -36,60 +36,37 @@ describe('shouldShowMtNotice', () => {
   })
 })
 
-describe('buildTranslationIssueUrl', () => {
-  it('points at the constant GameLib issues/new URL', () => {
-    const url = new URL(buildTranslationIssueUrl('de', 'Deutsch'))
-    expect(`${url.origin}${url.pathname}`).toBe(GAMELIB_ISSUES_NEW_URL)
-  })
-
-  it('sets template to exactly translation_problem.yaml', () => {
-    const url = new URL(buildTranslationIssueUrl('de', 'Deutsch'))
-    expect(url.searchParams.get('template')).toBe('translation_problem.yaml')
-  })
-
-  it('prefills language as "<label> (<code>)"', () => {
-    const url = new URL(buildTranslationIssueUrl('de', 'Deutsch'))
-    expect(url.searchParams.get('language')).toBe('Deutsch (de)')
-  })
-
-  it('prefills title as "[Translation] <label>: "', () => {
-    const url = new URL(buildTranslationIssueUrl('de', 'Deutsch'))
-    expect(url.searchParams.get('title')).toBe('[Translation] Deutsch: ')
+describe('buildTranslationReportMessage', () => {
+  it('prefills "[Translation] <label> (<code>): " with one trailing space', () => {
+    expect(buildTranslationReportMessage('de', 'Deutsch')).toBe(
+      '[Translation] Deutsch (de): '
+    )
   })
 
   it('resolves for nb_NO with its display label', () => {
-    const url = new URL(buildTranslationIssueUrl('nb_NO', 'bokmål'))
-    expect(url.searchParams.get('language')).toBe('bokmål (nb_NO)')
-    expect(url.searchParams.get('title')).toBe('[Translation] bokmål: ')
+    expect(buildTranslationReportMessage('nb_NO', 'bokmål')).toBe(
+      '[Translation] bokmål (nb_NO): '
+    )
   })
 
-  // T-88h-01: a hostile code cannot add a query parameter or change the
-  // host/path -- it stays entirely inside the encoded `language` value.
-  it('a code containing "&" cannot inject a second query parameter', () => {
-    const url = new URL(buildTranslationIssueUrl('de&evil=1', 'Deutsch'))
-    expect(`${url.origin}${url.pathname}`).toBe(GAMELIB_ISSUES_NEW_URL)
-    expect(url.searchParams.get('language')).toBe('Deutsch (de&evil=1)')
-    expect(url.searchParams.has('evil')).toBe(false)
-    expect(url.searchParams.get('template')).toBe('translation_problem.yaml')
+  it('returns markup and URL-special characters verbatim, escaping nothing', () => {
+    expect(buildTranslationReportMessage('de', '<b>x</b>&#?')).toBe(
+      '[Translation] <b>x</b>&#? (de): '
+    )
   })
+})
 
-  it('a code containing "#" cannot inject a URL fragment', () => {
-    const url = new URL(buildTranslationIssueUrl('de#frag', 'Deutsch'))
-    expect(url.hash).toBe('')
-    expect(url.searchParams.get('language')).toBe('Deutsch (de#frag)')
-  })
-
-  it('a code containing "/" cannot change the path or host', () => {
-    const url = new URL(buildTranslationIssueUrl('../../evil.com', 'Deutsch'))
-    expect(url.host).toBe('github.com')
-    expect(url.pathname).toBe('/grayson-mitchell/GameLib/issues/new')
-    expect(url.searchParams.get('language')).toBe('Deutsch (../../evil.com)')
-  })
-
-  it('a label containing "?" cannot start a second query string', () => {
-    const url = new URL(buildTranslationIssueUrl('de', 'Deutsch?evil=1'))
-    expect(`${url.origin}${url.pathname}`).toBe(GAMELIB_ISSUES_NEW_URL)
-    expect(url.searchParams.get('language')).toBe('Deutsch?evil=1 (de)')
-    expect(url.searchParams.has('evil')).toBe(false)
+describe('reportTranslationProblem', () => {
+  it('navigates once to the in-app report form with the prefill in route state', () => {
+    const navigate = jest.fn<
+      void,
+      [string, { state: { reportMessage: string } }]
+    >()
+    const result = reportTranslationProblem(navigate, 'de', 'Deutsch')
+    expect(result).toBeUndefined()
+    expect(navigate).toHaveBeenCalledTimes(1)
+    expect(navigate).toHaveBeenCalledWith('/settings/report', {
+      state: { reportMessage: '[Translation] Deutsch (de): ' }
+    })
   })
 })

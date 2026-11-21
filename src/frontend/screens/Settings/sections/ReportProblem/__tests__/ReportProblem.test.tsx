@@ -99,6 +99,7 @@ const mockContext = {
 }
 
 import ReportProblem from '../index'
+import { reportTranslationProblem } from 'frontend/components/UI/LanguageSelector/translationIssue'
 import useAuthState from 'frontend/state/authState'
 import useLibraryState from 'frontend/state/libraryState'
 import { resetAllStores } from 'frontend/state/storeKit'
@@ -193,9 +194,62 @@ describe('ReportProblem', () => {
     expect(byTestId(tree, 'report-game')?.props.value).toBe('steam/70')
   })
 
-  it('defaults to no game without route state', () => {
+  it('defaults to no game and an empty message without route state', () => {
     const tree = render()
     expect(byTestId(tree, 'report-game')?.props.value).toBe('')
+    expect(byTestId(tree, 'report-message')?.props.value).toBe('')
+  })
+
+  it('seeds the message from route state reportMessage', () => {
+    mockLocationState = { reportMessage: '[Translation] Deutsch (de): ' }
+    const tree = render()
+    expect(byTestId(tree, 'report-message')?.props.value).toBe(
+      '[Translation] Deutsch (de): '
+    )
+  })
+
+  it('ignores a non-string reportMessage', () => {
+    mockLocationState = { reportMessage: 42 }
+    expect(byTestId(render(), 'report-message')?.props.value).toBe('')
+    h.slots = []
+    mockLocationState = { reportMessage: { text: 'x' } }
+    expect(byTestId(render(), 'report-message')?.props.value).toBe('')
+  })
+
+  it('applies both reportGame and reportMessage from route state', () => {
+    mockLocationState = {
+      reportGame: 'steam/70',
+      reportMessage: '[Translation] Deutsch (de): '
+    }
+    const tree = render()
+    expect(byTestId(tree, 'report-game')?.props.value).toBe('steam/70')
+    expect(byTestId(tree, 'report-message')?.props.value).toBe(
+      '[Translation] Deutsch (de): '
+    )
+  })
+
+  it('contract: the translation link route state prefills the form and the typed message is submitted', async () => {
+    const navigate = jest.fn<
+      void,
+      [string, { state: { reportMessage: string } }]
+    >()
+    reportTranslationProblem(navigate, 'de', 'Deutsch')
+    expect(navigate).toHaveBeenCalledTimes(1)
+    const [target, options] = navigate.mock.calls[0]
+    expect(target).toBe('/settings/report')
+    mockLocationState = options.state
+    let tree = render()
+    expect(byTestId(tree, 'report-message')?.props.value).toBe(
+      '[Translation] Deutsch (de): '
+    )
+    typeMessage(tree, '[Translation] Deutsch (de): the Save button is cut off')
+    tree = render()
+    ;(byTestId(tree, 'report-send')?.props.onClick as () => void)()
+    await flush()
+    expect(mockSubmit).toHaveBeenCalledTimes(1)
+    expect(mockSubmit.mock.calls[0][0]).toMatchObject({
+      message: '[Translation] Deutsch (de): the Save button is cut off'
+    })
   })
 
   it('unconfigured: shows the notice, disables Send and never submits', async () => {
