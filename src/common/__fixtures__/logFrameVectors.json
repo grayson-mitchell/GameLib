@@ -1,0 +1,825 @@
+{
+  "maxFrameBytes": 4194304,
+  "maxEntryUtf16": 1048576,
+  "valid": [
+    {
+      "name": "general target with one line",
+      "frame": {
+        "kind": "log",
+        "batch": [
+          {
+            "target": {
+              "kind": "general"
+            },
+            "rotate": false,
+            "entries": [
+              {
+                "line": {
+                  "ts": 1795133109000,
+                  "tz": 780,
+                  "level": "INFO",
+                  "prefix": "Backend",
+                  "msg": "a message"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "runner target (comet is a runner log)",
+      "frame": {
+        "kind": "log",
+        "batch": [
+          {
+            "target": {
+              "kind": "runner",
+              "runner": "comet"
+            },
+            "rotate": true,
+            "entries": [
+              {
+                "line": {
+                  "ts": 1795133109000,
+                  "tz": 780,
+                  "level": "INFO",
+                  "prefix": "Gog",
+                  "msg": "a message"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "game target with a raw chunk and rotate",
+      "frame": {
+        "kind": "log",
+        "batch": [
+          {
+            "target": {
+              "kind": "game",
+              "appName": "480",
+              "runner": "steam",
+              "type": "launch"
+            },
+            "rotate": true,
+            "entries": [
+              {
+                "raw": "Wine Command: wine game.exe\n\nGame Log:\n"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "gogRedist target",
+      "frame": {
+        "kind": "log",
+        "batch": [
+          {
+            "target": {
+              "kind": "gogRedist"
+            },
+            "rotate": false,
+            "entries": [
+              {
+                "raw": "redist output\n"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "mixed batch of lines and raws over two targets",
+      "frame": {
+        "kind": "log",
+        "batch": [
+          {
+            "target": {
+              "kind": "game",
+              "appName": "1207658930",
+              "runner": "gog",
+              "type": "install"
+            },
+            "rotate": true,
+            "entries": [
+              {
+                "line": {
+                  "ts": 1795133109000,
+                  "tz": 780,
+                  "level": "DEBUG",
+                  "prefix": "Gog",
+                  "msg": "start"
+                }
+              },
+              {
+                "raw": "chunk without newline"
+              },
+              {
+                "raw": "   "
+              },
+              {
+                "line": {
+                  "ts": 1795133109000,
+                  "tz": 780,
+                  "level": "WARNING",
+                  "prefix": "Backend",
+                  "msg": "warn"
+                }
+              }
+            ]
+          },
+          {
+            "target": {
+              "kind": "general"
+            },
+            "rotate": false,
+            "entries": [
+              {
+                "line": {
+                  "ts": 1795133109000,
+                  "tz": 780,
+                  "level": "ERROR",
+                  "prefix": "Backend",
+                  "msg": "multi\nline"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "empty-string prefix (General)",
+      "frame": {
+        "kind": "log",
+        "batch": [
+          {
+            "target": {
+              "kind": "general"
+            },
+            "rotate": false,
+            "entries": [
+              {
+                "line": {
+                  "ts": 1795133109000,
+                  "tz": 780,
+                  "level": "INFO",
+                  "prefix": "",
+                  "msg": "a message"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "Shell prefix",
+      "frame": {
+        "kind": "log",
+        "batch": [
+          {
+            "target": {
+              "kind": "general"
+            },
+            "rotate": false,
+            "entries": [
+              {
+                "line": {
+                  "ts": 1795133109000,
+                  "tz": 780,
+                  "level": "INFO",
+                  "prefix": "Shell",
+                  "msg": "reaper started (pid 4242)"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "appName with spaces and unicode",
+      "frame": {
+        "kind": "log",
+        "batch": [
+          {
+            "target": {
+              "kind": "game",
+              "appName": "Game Name é世界",
+              "runner": "sideload",
+              "type": "setup"
+            },
+            "rotate": true,
+            "entries": [
+              {
+                "line": {
+                  "ts": 1795133109000,
+                  "tz": 780,
+                  "level": "INFO",
+                  "prefix": "Backend",
+                  "msg": "a message"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "negative timezone offset",
+      "frame": {
+        "kind": "log",
+        "batch": [
+          {
+            "target": {
+              "kind": "general"
+            },
+            "rotate": false,
+            "entries": [
+              {
+                "line": {
+                  "ts": 1795133109000,
+                  "tz": -300,
+                  "level": "INFO",
+                  "prefix": "Backend",
+                  "msg": "a message"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "positive timezone offset and zero ts",
+      "frame": {
+        "kind": "log",
+        "batch": [
+          {
+            "target": {
+              "kind": "general"
+            },
+            "rotate": false,
+            "entries": [
+              {
+                "line": {
+                  "ts": 0,
+                  "tz": 345,
+                  "level": "INFO",
+                  "prefix": "Backend",
+                  "msg": "a message"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "empty entries with rotate (a rotation claim with no line)",
+      "frame": {
+        "kind": "log",
+        "batch": [
+          {
+            "target": {
+              "kind": "game",
+              "appName": "480",
+              "runner": "steam",
+              "type": "launch"
+            },
+            "rotate": true,
+            "entries": []
+          }
+        ]
+      }
+    },
+    {
+      "name": "every level",
+      "frame": {
+        "kind": "log",
+        "batch": [
+          {
+            "target": {
+              "kind": "general"
+            },
+            "rotate": false,
+            "entries": [
+              {
+                "line": {
+                  "ts": 1795133109000,
+                  "tz": 780,
+                  "level": "DEBUG",
+                  "prefix": "Backend",
+                  "msg": "a message"
+                }
+              },
+              {
+                "line": {
+                  "ts": 1795133109000,
+                  "tz": 780,
+                  "level": "INFO",
+                  "prefix": "Backend",
+                  "msg": "a message"
+                }
+              },
+              {
+                "line": {
+                  "ts": 1795133109000,
+                  "tz": 780,
+                  "level": "WARNING",
+                  "prefix": "Backend",
+                  "msg": "a message"
+                }
+              },
+              {
+                "line": {
+                  "ts": 1795133109000,
+                  "tz": 780,
+                  "level": "ERROR",
+                  "prefix": "Backend",
+                  "msg": "a message"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "invalid": [
+    {
+      "name": "extra top-level field",
+      "reason": "unknown-field",
+      "frame": {
+        "kind": "log",
+        "batch": [
+          {
+            "target": {
+              "kind": "general"
+            },
+            "rotate": false,
+            "entries": [
+              {
+                "line": {
+                  "ts": 1795133109000,
+                  "tz": 780,
+                  "level": "INFO",
+                  "prefix": "Backend",
+                  "msg": "a message"
+                }
+              }
+            ]
+          }
+        ],
+        "extra": 1
+      }
+    },
+    {
+      "name": "unknown field inside a batch item",
+      "reason": "unknown-field",
+      "frame": {
+        "kind": "log",
+        "batch": [
+          {
+            "target": {
+              "kind": "general"
+            },
+            "rotate": false,
+            "entries": [],
+            "extra": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "unknown field inside a target",
+      "reason": "unknown-field",
+      "frame": {
+        "kind": "log",
+        "batch": [
+          {
+            "target": {
+              "kind": "general",
+              "extra": "x"
+            },
+            "rotate": false,
+            "entries": [
+              {
+                "line": {
+                  "ts": 1795133109000,
+                  "tz": 780,
+                  "level": "INFO",
+                  "prefix": "Backend",
+                  "msg": "a message"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "missing batch",
+      "reason": "shape",
+      "frame": {
+        "kind": "log"
+      }
+    },
+    {
+      "name": "rotate is a string",
+      "reason": "shape",
+      "frame": {
+        "kind": "log",
+        "batch": [
+          {
+            "target": {
+              "kind": "general"
+            },
+            "rotate": "yes",
+            "entries": []
+          }
+        ]
+      }
+    },
+    {
+      "name": "entry carries both line and raw",
+      "reason": "shape",
+      "frame": {
+        "kind": "log",
+        "batch": [
+          {
+            "target": {
+              "kind": "general"
+            },
+            "rotate": false,
+            "entries": [
+              {
+                "line": {
+                  "ts": 1795133109000,
+                  "tz": 780,
+                  "level": "INFO",
+                  "prefix": "Backend",
+                  "msg": "a message"
+                },
+                "raw": "x"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "negative ts",
+      "reason": "shape",
+      "frame": {
+        "kind": "log",
+        "batch": [
+          {
+            "target": {
+              "kind": "general"
+            },
+            "rotate": false,
+            "entries": [
+              {
+                "line": {
+                  "ts": -1,
+                  "tz": 780,
+                  "level": "INFO",
+                  "prefix": "Backend",
+                  "msg": "a message"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "unknown prefix Bogus",
+      "reason": "prefix",
+      "frame": {
+        "kind": "log",
+        "batch": [
+          {
+            "target": {
+              "kind": "general"
+            },
+            "rotate": false,
+            "entries": [
+              {
+                "line": {
+                  "ts": 1795133109000,
+                  "tz": 780,
+                  "level": "INFO",
+                  "prefix": "Bogus",
+                  "msg": "a message"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "unknown level TRACE",
+      "reason": "level",
+      "frame": {
+        "kind": "log",
+        "batch": [
+          {
+            "target": {
+              "kind": "general"
+            },
+            "rotate": false,
+            "entries": [
+              {
+                "line": {
+                  "ts": 1795133109000,
+                  "tz": 780,
+                  "level": "TRACE",
+                  "prefix": "Backend",
+                  "msg": "a message"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "runner epic is not a runner",
+      "reason": "runner",
+      "frame": {
+        "kind": "log",
+        "batch": [
+          {
+            "target": {
+              "kind": "runner",
+              "runner": "epic"
+            },
+            "rotate": false,
+            "entries": [
+              {
+                "line": {
+                  "ts": 1795133109000,
+                  "tz": 780,
+                  "level": "INFO",
+                  "prefix": "Backend",
+                  "msg": "a message"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "comet is not a game runner",
+      "reason": "runner",
+      "frame": {
+        "kind": "log",
+        "batch": [
+          {
+            "target": {
+              "kind": "game",
+              "appName": "480",
+              "runner": "comet",
+              "type": "launch"
+            },
+            "rotate": false,
+            "entries": [
+              {
+                "line": {
+                  "ts": 1795133109000,
+                  "tz": 780,
+                  "level": "INFO",
+                  "prefix": "Backend",
+                  "msg": "a message"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "game type crash is not a log type",
+      "reason": "type",
+      "frame": {
+        "kind": "log",
+        "batch": [
+          {
+            "target": {
+              "kind": "game",
+              "appName": "480",
+              "runner": "steam",
+              "type": "crash"
+            },
+            "rotate": false,
+            "entries": [
+              {
+                "line": {
+                  "ts": 1795133109000,
+                  "tz": 780,
+                  "level": "INFO",
+                  "prefix": "Backend",
+                  "msg": "a message"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "appName ../x",
+      "reason": "path-segment",
+      "frame": {
+        "kind": "log",
+        "batch": [
+          {
+            "target": {
+              "kind": "game",
+              "appName": "../x",
+              "runner": "steam",
+              "type": "launch"
+            },
+            "rotate": false,
+            "entries": [
+              {
+                "line": {
+                  "ts": 1795133109000,
+                  "tz": 780,
+                  "level": "INFO",
+                  "prefix": "Backend",
+                  "msg": "a message"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "appName a/b",
+      "reason": "path-segment",
+      "frame": {
+        "kind": "log",
+        "batch": [
+          {
+            "target": {
+              "kind": "game",
+              "appName": "a/b",
+              "runner": "steam",
+              "type": "launch"
+            },
+            "rotate": false,
+            "entries": [
+              {
+                "line": {
+                  "ts": 1795133109000,
+                  "tz": 780,
+                  "level": "INFO",
+                  "prefix": "Backend",
+                  "msg": "a message"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "appName with a backslash",
+      "reason": "path-segment",
+      "frame": {
+        "kind": "log",
+        "batch": [
+          {
+            "target": {
+              "kind": "game",
+              "appName": "a\\b",
+              "runner": "steam",
+              "type": "launch"
+            },
+            "rotate": false,
+            "entries": [
+              {
+                "line": {
+                  "ts": 1795133109000,
+                  "tz": 780,
+                  "level": "INFO",
+                  "prefix": "Backend",
+                  "msg": "a message"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "appName empty",
+      "reason": "path-segment",
+      "frame": {
+        "kind": "log",
+        "batch": [
+          {
+            "target": {
+              "kind": "game",
+              "appName": "",
+              "runner": "steam",
+              "type": "launch"
+            },
+            "rotate": false,
+            "entries": [
+              {
+                "line": {
+                  "ts": 1795133109000,
+                  "tz": 780,
+                  "level": "INFO",
+                  "prefix": "Backend",
+                  "msg": "a message"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "appName with a NUL",
+      "reason": "path-segment",
+      "frame": {
+        "kind": "log",
+        "batch": [
+          {
+            "target": {
+              "kind": "game",
+              "appName": "a\u0000b",
+              "runner": "steam",
+              "type": "launch"
+            },
+            "rotate": false,
+            "entries": [
+              {
+                "line": {
+                  "ts": 1795133109000,
+                  "tz": 780,
+                  "level": "INFO",
+                  "prefix": "Backend",
+                  "msg": "a message"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "appName ..",
+      "reason": "path-segment",
+      "frame": {
+        "kind": "log",
+        "batch": [
+          {
+            "target": {
+              "kind": "game",
+              "appName": "..",
+              "runner": "steam",
+              "type": "launch"
+            },
+            "rotate": false,
+            "entries": [
+              {
+                "line": {
+                  "ts": 1795133109000,
+                  "tz": 780,
+                  "level": "INFO",
+                  "prefix": "Backend",
+                  "msg": "a message"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "frame over maxFrameBytes: the consumer expands the generate stanza into one general-target raw entry of rawBytes ASCII bytes",
+      "reason": "too-large",
+      "frame": {
+        "generate": {
+          "rawBytes": 4194305
+        }
+      }
+    }
+  ]
+}
