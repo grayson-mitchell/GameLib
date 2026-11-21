@@ -15,6 +15,8 @@ const read = (name: string) =>
 const css = read('index.css')
 const heart = read('FavouriteHeart.tsx')
 const popover = read('CategoryPopover.tsx')
+const libraryRow = read('LibraryRow.tsx')
+const hiddenNotice = read('HiddenNotice.tsx')
 
 /** Text of the brace-counted block that starts at `needle` in `source`. */
 function blockAfter(source: string, needle: string): string {
@@ -133,5 +135,27 @@ describe('LeftCard/index.css: category chips (D-01)', () => {
     const body = ruleBody(css, '.categoryChip__remove')
     expect(body).toMatch(/opacity:\s*0/)
     expect(body).not.toMatch(/display:\s*none/)
+  })
+})
+
+describe('Hide toggle and hidden notice (D-01)', () => {
+  it('the Hide toggle is a pressed button with a constant noun label', () => {
+    expect(libraryRow).toContain('className="hideToggle"')
+    expect(libraryRow).toContain('aria-pressed={isHidden}')
+    expect(libraryRow).toContain("t('gamelib:gamepage.leftCard.hide', 'Hide')")
+  })
+
+  it('the toggle makes the same add/remove calls the old menu made', () => {
+    expect(libraryRow).toContain('hiddenGames.add(appName, title)')
+    expect(libraryRow).toContain('hiddenGames.remove(appName)')
+  })
+
+  it('the notice offers Unhide through hiddenGames.remove(appName)', () => {
+    expect(hiddenNotice).toContain('hiddenGames.remove(appName)')
+    expect(hiddenNotice).toContain('gamelib:gamepage.leftCard.unhide')
+  })
+
+  it('the notice renders nothing unless the game is hidden', () => {
+    expect(hiddenNotice).toMatch(/if \(!isHidden\) return null/)
   })
 })

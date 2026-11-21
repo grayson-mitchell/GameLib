@@ -3454,6 +3454,8 @@ describe('quick-261114-pqm: modal paper edge tokens', () => {
 
 const INSTALL_TAB_CSS =
   'src/frontend/screens/Game/GamePage/components/InstallTab/index.css'
+const LEFT_CARD_CSS =
+  'src/frontend/screens/Game/GamePage/components/LeftCard/index.css'
 
 /**
  * Phase 100 (D-15, D-22): the game page's new controls, measured in every
@@ -3468,6 +3470,9 @@ const INSTALL_TAB_CSS =
  *   switch knob      >= 3:1 against its own track, on and off.
  *   failure text     --install-danger-text (danger pulled towards the text
  *                    colour) >= 4.5:1 against --body-background.
+ *   Hide toggle on   --leftcard-warning-text (the warning token pulled towards
+ *                    the text colour, declared on `.mainInfoBody`) >= 4.5:1
+ *                    against --body-background.
  *
  * Lowest measured ratio per spec across the 10 themes: --fav 4.29:1 (gruvbox_dark),
  * track on vs body 3.91:1 (gruvbox_dark), knob vs track 3.23:1 (cyberSpaceOasis),
@@ -3640,6 +3645,62 @@ describe('Phase 100 game page tokens in every theme (D-15, D-22)', () => {
       })
     }
   )
+
+  describe('left card Hide toggle (--leftcard-warning-text)', () => {
+    const leftCss = read(LEFT_CARD_CSS)
+    const leftScopeFor = (selector: string, css = leftCss) => {
+      const merged = new Map(themeTokens(themesScss, selector))
+      for (const [k, v] of customProps(cssBlock(css, '.mainInfoBody')))
+        merged.set(k, v)
+      return merged
+    }
+
+    it('non-vacuity: the token is declared once on .mainInfoBody and the pressed toggle uses it', () => {
+      expect((leftCss.match(/(?:^|\n)\.mainInfoBody \{/g) ?? []).length).toBe(1)
+      const decl = customProps(cssBlock(leftCss, '.mainInfoBody')).get(
+        '--leftcard-warning-text'
+      )
+      expect(decl).toMatch(/^color-mix\(/)
+      expect(decl).toMatch(/var\(--status-warning/)
+      expect(decl).toMatch(/var\(--text-default/)
+      expect(
+        ruleDecl(".hideToggle[aria-pressed='true']", 'color', leftCss)
+      ).toBe('var(--leftcard-warning-text)')
+    })
+
+    it.each(themeSelectors)(
+      '%s Hide toggle (on) text is >= 4.5:1 against --body-background',
+      (selector) => {
+        const scope = leftScopeFor(selector)
+        const fg = colourOf(
+          ruleDecl(".hideToggle[aria-pressed='true']", 'color', leftCss),
+          scope
+        )
+        const ratio = contrastRatio(fg, surface(scope))
+        expect({ selector, fg, ratio, passes: ratio >= 4.5 }).toEqual({
+          selector,
+          fg,
+          ratio,
+          passes: true
+        })
+      }
+    )
+
+    it('checker can fail, in memory only', () => {
+      // A 100% warning weight must drop at least one theme under 4.5:1.
+      expect((leftCss.match(/60%/g) ?? []).length).toBe(1)
+      const sabotaged = leftCss.replace('60%', '100%')
+      const failures = themeSelectors.filter((selector) => {
+        const scope = leftScopeFor(selector, sabotaged)
+        const fg = colourOf(
+          ruleDecl(".hideToggle[aria-pressed='true']", 'color', sabotaged),
+          scope
+        )
+        return contrastRatio(fg, surface(scope)) < 4.5
+      })
+      expect(failures.length).toBeGreaterThan(0)
+    })
+  })
 
   it('checker can fail, in memory only', () => {
     // Sabotage a STRING copy: a 100% danger weight must drop at least one

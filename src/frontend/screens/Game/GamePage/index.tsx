@@ -75,6 +75,7 @@ import {
 } from './components'
 import InstallTab from './components/InstallTab'
 import FavouriteHeart from './components/LeftCard/FavouriteHeart'
+import HiddenNotice from './components/LeftCard/HiddenNotice'
 import LibraryRow from './components/LeftCard/LibraryRow'
 import EngineBadge from './components/EngineBadge'
 import EngineNotices from './components/EngineNotices'
@@ -578,8 +579,9 @@ export default React.memo(function GamePage(): JSX.Element | null {
                             </h1>
                             <FavouriteHeart appName={appName} title={title} />
                           </div>
-                          <LibraryRow gameInfo={gameInfo} />
+                          <LibraryRow gameInfo={gameInfo} title={title} />
                           <div className="gameNotices">
+                            <HiddenNotice appName={appName} />
                             <EngineNotices state={engineState} />
                             {wikiLink}
                           </div>
