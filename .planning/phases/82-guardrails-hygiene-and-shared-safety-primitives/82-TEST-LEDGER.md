@@ -91,6 +91,7 @@ Silent skips (the suite returns early and reports PASS, so they are not in the 3
 - `src/backend/tools/__tests__/dxvkInstallRemove.test.ts`: the research saw one `ENOTEMPTY` in `afterEach` under load. It did NOT red in this measurement (passed). Fix direction if it reds again: an `rmSync` `maxRetries` race fix, never retirement.
 
 - `src-tauri/crates/gamelib-steampoll/tests/monitor.rs` `watchdog_real::still_kills_the_grandchild_when_the_middle_process_dies_first`: red once on the macOS CI leg at `2345c2686` (attempt 1), green on attempt 2 and in 6 of 6 local runs alone. The test finds the inner shell's first child with `pgrep` and asserts it alive 300 ms after killing the shell; a loaded runner can stretch either step. Fix direction if it reds again: pin the grandchild by command line (`sleep 300`) instead of taking the first child, never retirement.
+- `src/backend/storeManagers/steam/bridge/__tests__/sharedRedistInstall.test.ts` installer-timeout tests: red again in Test run `44850161668` at `90ca09d02`, after the Verdict. See "Post-verdict recurrence (G-82-2-r2)" below. Fix direction taken: a real-time wait helper, never retirement.
 
 ## CI-only reds (D-20)
 
@@ -260,6 +261,17 @@ FND-01 criterion 1 holds at the final proof sha **`2345c268686399287ac5d504e7f03
 - Nothing was retired. No suite is skipped as known-red or on a known-red list, and no skip list, retirement file, ceiling, baseline or pin was widened by this plan (the Windows clippy ceilings and the jest `jestMock` ceiling are untouched). The only risk acceptance is the operator's own: `RUSTSEC-2026-0545` and `RUSTSEC-2026-0548` in `src-tauri/deny.toml`, 2026-11-21.
 - D-18 (gamelib-safety and gamelib-testutil on all three legs) and D-20 (Windows `gamelib-depot` `tests/fetch.rs`, plus the previously unobserved Windows steamcm, steampoll, i18n, static codec linkage, Tauri shell test and clippy ratchet) are observed green at this sha.
 - Remaining honest caveats: the live sidecar-to-shell safety round trip was never exercised; the Linux leg has no clippy step by workflow design; load flakes (`steampoll` watchdog on macOS, `dxvkInstallRemove`, `steamLoginPollLifecycle`, `rustInvokeChannel`) pass alone and are not reds.
+
+## Post-verdict recurrence (G-82-2-r2)
+
+A red recurred after the Verdict above. The Verdict stays as the historical record at `2345c2686`; this section is the follow-up.
+
+- What failed: Test run `44850161668` at `90ca09d02` failed 1 of 23351. The test was `installer timeout > records timedOut, stops all further entries and statuses, and does not settle`, at line 929: expected 1 installer call, received 0. The previous main Test run `44846652719` was green, and `90ca09d02` touched only Rust.
+- Cause: the wait was bounded by a count of `setImmediate` turns, while the code under test does real `fs/promises` I/O (the ledger read and the atomic ledger writes) and a dynamic import before its first installer call. 500 idle turns measured 6.7-9.8 ms on the dev Mac on 2026-11-21. Jest 29.7 fake timers also freeze `Date`, `performance` and `hrtime` once installed, so the real-time deadline reads a clock captured at module load, not a live one.
+- Correction: the `5b969edd8` per-test timeout bounded the hang form but not the turns running out. It stays as the outer bound. The `064d8f5c7` `restores after an installer timeout` timeout fits the same cause, because that test had no assertion after its wait: when the turns ran out, `advanceTimersByTimeAsync` ran before the timer existed and the run never settled.
+- Fix: `e5651c5c6` adds `yieldUntil` (bounded by elapsed real time, deadline 15 s inside the 30 s per-test timeout), uses it in `records timedOut ...` and adds the slowed-path regression test; `e91beb1da` moves `restores after an installer timeout` and `Graphics query times out` onto it and asserts the awaited call right after every wait. No turn-counted wait remains in the file. `sharedRedistInstall.ts` is unchanged.
+- Proof: with the old wait, the slowed test (download held back 250 ms of real time) failed with `Expected length: 1 / Received length: 0`, the CI symptom. With `yieldUntil` it passes (63 of 63). A mutant copy with the deadline cut to 5 ms fails that test (1 failed, 0 passed, no runtime error), which shows the test catches a wait that gives up early and that the captured clock is not frozen. 10 of 10 runs of the file passed with 60 busy loops on the machine. Contention alone did not turn the old wait red locally (8 of 8 green), so the binding proof is the RED run and the mutant, not the soak.
+- CI: CI at a pushed main sha is pending the UAT item 2 re-test after the operator pushes; this plan did not observe it.
 
 ## Decision brief (D-03)
 
