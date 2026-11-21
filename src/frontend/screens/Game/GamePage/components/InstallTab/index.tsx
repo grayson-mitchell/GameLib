@@ -17,11 +17,14 @@ import NativePortInfo from '../NativePortInfo'
 import IntegrationRows from './IntegrationRows'
 import LocationRow from './LocationRow'
 import SizeRow from './SizeRow'
+import VersionRow from './VersionRow'
 import './index.css'
 
 interface Props {
   gameInfo: GameInfo
   platform: string
+  handleUpdate: () => void
+  hasUpdate: boolean
 }
 
 /**
@@ -30,7 +33,7 @@ interface Props {
  * and not to the new groups; plan 08 removes the wrapper once every row has
  * been reshaped.
  */
-const InstallTab = ({ gameInfo, platform }: Props) => {
+const InstallTab = ({ gameInfo, platform, handleUpdate, hasUpdate }: Props) => {
   const { is, gameSettings, gameExtraInfo, runner } = useContext(GameContext)
   const locationActions = useInstallLocationActions(gameInfo)
 

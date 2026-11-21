@@ -248,14 +248,19 @@
         "extraInfoStaleBody": "This result was cached before load outcomes were recorded, so it may be out of date. Refresh to check.",
         "hiddenAchievement": "Hidden Achievement",
         "installTab": {
+            "available": "· {{version}} available",
+            "availableNoVersion": "· update available",
             "busy": {
                 "modifying": "Applying changes…",
                 "moving": "Moving…",
-                "settingFolder": "Setting folder…"
+                "settingFolder": "Setting folder…",
+                "updating": "Updating…",
+                "verifying": "Verifying…"
             },
             "failure": {
                 "move": "Move failed. Details are in the log.",
-                "setFolder": "Couldn't set the install folder. Details are in the log."
+                "setFolder": "Couldn't set the install folder. Details are in the log.",
+                "verify": "Verify failed. Details are in the log."
             },
             "libraryGroup": "Library & integration",
             "location": "Location",
@@ -287,6 +292,11 @@
                 "adding": "Adding…",
                 "removing": "Removing…"
             },
+            "update": "Update",
+            "upToDate": "· up to date",
+            "verify": "Verify",
+            "version": "Version",
+            "whatsNew": "What's new",
             "wrongFolder": "Wrong folder?"
         },
         "leftCard": {

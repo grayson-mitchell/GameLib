@@ -1,6 +1,5 @@
 import { useContext } from 'react'
 import { asStoreGame } from 'common/gameInfoNarrowing'
-import { hasCapability } from 'common/storeCapabilities'
 import { useTranslation } from 'react-i18next'
 import GameContext from '../../GameContext'
 import { DownloadDone } from '@mui/icons-material'
@@ -15,7 +14,7 @@ const InstalledInfo = ({ gameInfo }: Props) => {
   const { t } = useTranslation('gamepage')
   const { t: t2 } = useTranslation()
   const { t: tGamelib } = useTranslation('gamelib')
-  const { gameSettings, runner, is } = useContext(GameContext)
+  const { gameSettings, is } = useContext(GameContext)
 
   if (!gameInfo.is_installed) {
     return null
@@ -25,7 +24,6 @@ const InstalledInfo = ({ gameInfo }: Props) => {
     return null
   }
 
-  const isSideloaded = !hasCapability(runner, 'hasStoreCatalog')
   const isThirdParty = !!gameInfo.thirdPartyManagedApp
 
   const {
@@ -37,12 +35,6 @@ const InstalledInfo = ({ gameInfo }: Props) => {
   // in PlatformSupport instead.
   if (installPlatform === 'Browser') {
     return null
-  }
-
-  let version: string | undefined
-
-  if (!isSideloaded) {
-    version = gameInfo.install.version
   }
 
   const { wineVersion, winePrefix, wineCrossoverBottle } = gameSettings
@@ -61,11 +53,6 @@ const InstalledInfo = ({ gameInfo }: Props) => {
 
   const info = (
     <>
-      {!isSideloaded && !isThirdParty && (
-        <div>
-          <b>{t('info.version')}:</b> {version}
-        </div>
-      )}
       <div>
         <b>{t('info.canRunOffline', 'Online Required')}:</b>{' '}
         {t(canRunOffline ? 'box.no' : 'box.yes')}

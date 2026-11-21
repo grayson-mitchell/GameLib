@@ -23,6 +23,8 @@ interface Props {
   /** D-17: shown after the label only while no long action runs. */
   playTimeLine?: string | null
   playTimeTitle?: string
+  /** D-01: the shared "What's new" link, shown beside the update prompt. */
+  whatsNew?: React.ReactNode
 }
 
 const GameStatus = ({
@@ -31,7 +33,8 @@ const GameStatus = ({
   handleUpdate,
   hasUpdate,
   playTimeLine,
-  playTimeTitle
+  playTimeTitle,
+  whatsNew
 }: Props) => {
   const { t } = useTranslation('gamepage')
   const { t: tGamelib } = useTranslation('gamelib')
@@ -252,12 +255,15 @@ const GameStatus = ({
         )
       }
       return (
-        <span onClick={async () => handleUpdate()} className="updateText">
-          {`${t('status.installed')} - ${t(
-            'status.hasUpdates',
-            'New Version Available!'
-          )} (${t('status.clickToUpdate', 'Click to Update')})`}
-        </span>
+        <>
+          <span onClick={async () => handleUpdate()} className="updateText">
+            {`${t('status.installed')} - ${t(
+              'status.hasUpdates',
+              'New Version Available!'
+            )} (${t('status.clickToUpdate', 'Click to Update')})`}
+          </span>
+          {whatsNew}
+        </>
       )
     }
 

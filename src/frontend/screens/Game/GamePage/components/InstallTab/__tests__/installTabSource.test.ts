@@ -7,6 +7,7 @@ import { readdirSync, readFileSync } from 'fs'
 import { join } from 'path'
 
 const TAB_DIR = join(__dirname, '..')
+const COMPONENTS_DIR = join(TAB_DIR, '..')
 const ACTIONS_DIR = join(TAB_DIR, '..', '..', 'actions')
 
 function strip(source: string): string {
@@ -72,6 +73,30 @@ describe('Install tab source gates', () => {
     expect(code).toContain('gates.modify')
     expect(code).toContain('gameInstallInfo={gameInstallInfo}')
     expect(code).toContain('is.installing')
+  })
+
+  it('VersionRow verifies through useRowAction with no confirmation and updates through handleUpdate (D-13, D-19)', () => {
+    const code = read(TAB_DIR, 'VersionRow.tsx')
+    expect(code).toContain("useRowAction('repair'")
+    expect(code).toContain('repair(')
+    expect(code).not.toContain('showDialogModal')
+    expect(code).toContain('onClick={handleUpdate}')
+    expect(code).toContain('gates.verify')
+    expect(code).toContain('gates.update')
+    expect(code).toContain('<WhatsNewLink />')
+  })
+
+  it('WhatsNewLink renders the changelog only through GameChangeLog (T-100-12)', () => {
+    const code = read(TAB_DIR, 'WhatsNewLink.tsx')
+    expect(code).toContain('<GameChangeLog')
+    expect(code).not.toContain('dangerouslySetInnerHTML')
+  })
+
+  it('GameStatus takes whatsNew as a prop and gained no import', () => {
+    const code = read(COMPONENTS_DIR, 'GameStatus.tsx')
+    expect(code).toContain('whatsNew')
+    expect(code).not.toMatch(/import[^\n]*WhatsNewLink/)
+    expect(code).not.toMatch(/import[^\n]*InstallTab/)
   })
 
   it('InstallTab renders LocationRow inside installFacts before legacyRows', () => {

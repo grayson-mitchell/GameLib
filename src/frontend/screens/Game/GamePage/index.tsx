@@ -75,6 +75,7 @@ import {
   WikiInfoEmptyState
 } from './components'
 import InstallTab from './components/InstallTab'
+import WhatsNewLink from './components/InstallTab/WhatsNewLink'
 import FavouriteHeart from './components/LeftCard/FavouriteHeart'
 import HiddenNotice from './components/LeftCard/HiddenNotice'
 import LibraryRow from './components/LeftCard/LibraryRow'
@@ -606,6 +607,7 @@ export default React.memo(function GamePage(): JSX.Element | null {
                           hasUpdate={hasUpdate}
                           playTimeLine={playTime.line}
                           playTimeTitle={playTime.title}
+                          whatsNew={<WhatsNewLink />}
                         />
                         {isStore(runner, 'steam') && (
                           <AdoptionNote gameInfo={gameInfo} part="note" />
@@ -709,7 +711,12 @@ export default React.memo(function GamePage(): JSX.Element | null {
                           index="info"
                           className="installTab"
                         >
-                          <InstallTab gameInfo={gameInfo} platform={platform} />
+                          <InstallTab
+                            gameInfo={gameInfo}
+                            platform={platform}
+                            handleUpdate={handleUpdate}
+                            hasUpdate={hasUpdate}
+                          />
                         </TabPanel>
 
                         <TabPanel
