@@ -10,7 +10,7 @@
  */
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
-import { join } from 'path'
+import { join, resolve } from 'path'
 import CacheStore from '../../cache'
 import GameLibStore from '../../store_backend'
 import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
@@ -155,6 +155,40 @@ describe('the sidecar write path to a Rust-owned store', () => {
       '480': { score: 96, tags: ['fps', 'classic'] },
       __timestamp: { '480': 1700000000000 }
     })
+  })
+
+  it('a dotted set through the tracer store leaves the view the golden file the shell’s store_frame test writes byte for byte', () => {
+    // The same four ops as the Rust test `store_frame_golden_ops_write_the_bytes_ts_wrote…`, which
+    // replays these frames and compares the file with this golden. Here the view (key order and
+    // tab indentation included) is compared with the golden's data, so the dot paths the mirror
+    // applies locally and the ones Rust applies to the file agree.
+    const { frames, sink, answer } = recordingSink()
+    const root = rustRoot(sink)
+    const store = tracerStore(root)
+    store.set('480', {
+      title: 'Half-Life',
+      score: 96,
+      tags: ['fps', 'classic']
+    })
+    store.set('480.title', 'x')
+    store.set('__timestamp.480', 1700000000000)
+    store.delete('480.title')
+    frames.forEach((frame, i) => answer(root, frame, i + 1))
+
+    const golden = JSON.parse(
+      readFileSync(
+        resolve(
+          __dirname,
+          '../../../../src-tauri/crates/gamelib-store/tests/fixtures/golden/expected/cache-ops-dotpath-intkey/store_cache/wikigameinfo.json'
+        ),
+        'utf8'
+      )
+    )
+    delete golden.__internal__
+    expect(JSON.stringify(store.store, undefined, '\t')).toBe(
+      JSON.stringify(golden, undefined, '\t')
+    )
+    expect(Object.keys(store.store)).toEqual(['480', '__timestamp'])
   })
 
   it('writes nothing to disk itself: the file is the shell’s to write', () => {

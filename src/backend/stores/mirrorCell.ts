@@ -32,6 +32,7 @@
  */
 import { readFileSync } from 'fs'
 import { STORE_FRAME_KIND } from 'common/types/sidecarTransport'
+import { deletePath, getPath, setPath } from './dotPath'
 import {
   validateStoreFrame,
   type StoreFrame,
@@ -40,11 +41,6 @@ import {
 import type { StoreBootEnv } from './storeOwnership'
 
 const RESERVED_KEY = '__internal__'
-const DISALLOWED_SEGMENTS: readonly string[] = [
-  '__proto__',
-  'prototype',
-  'constructor'
-]
 
 type Doc = Record<string, unknown>
 
@@ -85,110 +81,12 @@ export interface MirrorCellOptions {
   nextSeq: () => number
 }
 
-const own = (o: object, key: string): boolean =>
-  Object.prototype.hasOwnProperty.call(o, key)
-
 const isContainer = (v: unknown): v is Doc | unknown[] =>
   typeof v === 'object' && v !== null
 
 /** A value copied so nothing the cell holds is shared with a caller (JSON values only). */
 function cloneJson<V>(value: V): V {
   return isContainer(value) ? (structuredClone(value) as V) : value
-}
-
-// ---- dot paths -----------------------------------------------------------------------------
-// The minimal subset 85-11 replaces with the vector-proven `dotPath.ts` (dot-prop 6). Same
-// behaviour as `gamelib-store`'s `dotpath.rs`: `\.` escapes a dot, a `__proto__`, `prototype` or
-// `constructor` segment refuses the whole path, an array segment is a canonical decimal index.
-
-function segmentsOf(path: string, dotPaths: boolean): string[] | null {
-  if (!dotPaths) return [path]
-  const pieces = path.split('.')
-  const parts: string[] = []
-  for (let i = 0; i < pieces.length; i++) {
-    let part = pieces[i] as string
-    while (part.endsWith('\\') && i + 1 < pieces.length) {
-      part = `${part.slice(0, -1)}.${pieces[++i] as string}`
-    }
-    parts.push(part)
-  }
-  return parts.some((s) => DISALLOWED_SEGMENTS.includes(s)) ? null : parts
-}
-
-function arrayIndex(segment: string): number | null {
-  if (!/^(0|[1-9][0-9]{0,9})$/.test(segment)) return null
-  const n = Number(segment)
-  return n <= 0xffffffff ? n : null
-}
-
-function childOf(node: unknown, segment: string): unknown {
-  if (Array.isArray(node)) {
-    const i = arrayIndex(segment)
-    return i === null ? undefined : node[i]
-  }
-  if (isContainer(node) && own(node, segment)) return (node as Doc)[segment]
-  return undefined
-}
-
-function getPath(root: Doc, path: string, dotPaths: boolean): unknown {
-  const segments = segmentsOf(path, dotPaths)
-  if (segments === null) return undefined
-  let cur: unknown = root
-  for (const segment of segments) {
-    cur = childOf(cur, segment)
-    if (cur === undefined) return undefined
-  }
-  return cur
-}
-
-function setPath(
-  root: Doc,
-  path: string,
-  value: unknown,
-  dotPaths: boolean
-): void {
-  const segments = segmentsOf(path, dotPaths)
-  if (segments === null || segments.length === 0) return
-  let cur: Doc | unknown[] = root
-  for (let i = 0; i < segments.length; i++) {
-    const segment = segments[i] as string
-    const last = i === segments.length - 1
-    if (Array.isArray(cur)) {
-      const index = arrayIndex(segment)
-      if (index === null) return
-      while (cur.length <= index) cur.push(null)
-      if (last) {
-        cur[index] = value
-        return
-      }
-      if (!isContainer(cur[index])) cur[index] = {}
-      cur = cur[index] as Doc | unknown[]
-    } else {
-      if (last) {
-        cur[segment] = value
-        return
-      }
-      if (!isContainer(cur[segment])) cur[segment] = {}
-      cur = cur[segment] as Doc | unknown[]
-    }
-  }
-}
-
-function deletePath(root: Doc, path: string, dotPaths: boolean): void {
-  const segments = segmentsOf(path, dotPaths)
-  if (segments === null || segments.length === 0) return
-  const leaf = segments[segments.length - 1] as string
-  let cur: unknown = root
-  for (const segment of segments.slice(0, -1)) {
-    cur = childOf(cur, segment)
-    if (!isContainer(cur)) return
-  }
-  if (Array.isArray(cur)) {
-    const index = arrayIndex(leaf)
-    if (index !== null && index < cur.length) cur[index] = null
-  } else if (isContainer(cur)) {
-    delete (cur as Doc)[leaf]
-  }
 }
 
 function emptyDoc(doc: Doc): void {
