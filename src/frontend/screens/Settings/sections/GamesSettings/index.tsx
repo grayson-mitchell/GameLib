@@ -69,6 +69,7 @@ import {
 import { hasCapability, isStore } from 'common/storeCapabilities'
 import { engineStateKey, useEngineState } from 'frontend/state/EngineState'
 import LogSettings from '../LogSettings'
+import EosOverlaySetting from '../../components/EosOverlaySetting'
 
 export default function GamesSettings({
   initialTab
@@ -307,6 +308,10 @@ export default function GamesSettings({
           {!isSideloaded && <PreferedLanguage />}
           {!isSideloaded && <OfflineMode />}
           {showStatsOverlay && <ShowFPS />}
+          {!isDefault &&
+            isLinux &&
+            isStore(runner, 'legendary') &&
+            gameInfo?.is_installed && <EosOverlaySetting />}
           <Mangohud />
           <GameMode />
           <NvidiaPrime />

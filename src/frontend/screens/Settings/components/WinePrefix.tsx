@@ -1,5 +1,7 @@
 import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faFolderOpen } from '@fortawesome/free-solid-svg-icons'
 import useUiState from 'frontend/state/uiState'
 import useSetting from 'frontend/hooks/useSetting'
 import { InfoBox, PathSelectionBox } from 'frontend/components/UI'
@@ -31,6 +33,25 @@ const WinePrefix = () => {
       pathDialogTitle={t('box.wineprefix')}
       pathDialogDefaultPath={winePrefix}
       noDeleteButton
+      afterInput={
+        winePrefix ? (
+          <button
+            type="button"
+            className="winePrefixFolderButton"
+            title={t(
+              'gamelib:settings.fields.winePrefix.openFolder',
+              'Open prefix folder'
+            )}
+            aria-label={t(
+              'gamelib:settings.fields.winePrefix.openFolder',
+              'Open prefix folder'
+            )}
+            onClick={() => window.api.openFolder(winePrefix)}
+          >
+            <FontAwesomeIcon icon={faFolderOpen} />
+          </button>
+        ) : undefined
+      }
       labelHelp={
         <InfoBox text={t('infobox.wine-prefix.title', 'Wine Prefix')} iconOnly>
           {t(

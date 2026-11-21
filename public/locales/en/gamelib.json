@@ -800,6 +800,10 @@
             "environment": {
                 "label": "Environment variables"
             },
+            "eosOverlay": {
+                "help": "Epic's in-game overlay for friends and achievements. GameLib installs it the first time you turn it on.",
+                "label": "EOS overlay"
+            },
             "gameLog": {
                 "label": "Game log",
                 "open": "Open the Logs tab"
@@ -825,6 +829,9 @@
             "verboseLogs": {
                 "help": "Writes extra Wine and GameLib detail to the game's log.",
                 "label": "Verbose logs"
+            },
+            "winePrefix": {
+                "openFolder": "Open prefix folder"
             },
             "wrappers": {
                 "help": "Commands the game is launched through, in order.",

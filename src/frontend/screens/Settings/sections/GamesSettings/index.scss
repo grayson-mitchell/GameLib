@@ -205,3 +205,22 @@ details {
 .Field {
   text-align: left;
 }
+
+// Phase 100 D-02: icon-only "open the prefix" button beside the Wine prefix
+// field. Neutral, theme-token colours.
+.winePrefixFolderButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xs);
+  margin-inline-start: var(--space-xs);
+  background: transparent;
+  border: none;
+  color: var(--text-secondary, inherit);
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    color: var(--accent);
+  }
+}

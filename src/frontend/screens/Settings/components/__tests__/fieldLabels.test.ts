@@ -19,7 +19,8 @@ const fields: [string, string, boolean][] = [
   ['OfflineMode', 'gamelib:settings.fields.offline.label', false],
   ['LauncherArgs', 'gamelib:settings.fields.launchArguments.label', true],
   ['PreferedLanguage', 'gamelib:settings.fields.language.label', true],
-  ['ShowFPS', 'gamelib:settings.fields.showFps.label', true]
+  ['ShowFPS', 'gamelib:settings.fields.showFps.label', true],
+  ['EosOverlaySetting', 'gamelib:settings.fields.eosOverlay.label', true]
 ]
 
 const oldLabels = [
