@@ -441,6 +441,24 @@ mod tests {
     }
 
     #[test]
+    fn when_the_temp_write_fails_the_live_file_is_left_untouched() {
+        let home = FakeHome::new("gamelib-store-");
+        let file = seed(&home, TS_SHAPED);
+        let dir = dir_of(&home);
+        let store = StoreHost::new().open_cache(&dir, "uploadedLogs").unwrap();
+        // A directory on the temp name makes the temp open fail on every OS while the live file
+        // stays writable: a direct write would truncate it and succeed, which is the defect.
+        fs::create_dir(dir.join(format!("uploadedLogs.json.tmp-{}", std::process::id()))).unwrap();
+        assert!(store.set("https://dpaste.com/NEW1", json!(1)).is_err());
+        assert_eq!(fs::read_to_string(&file).unwrap(), TS_SHAPED);
+        assert_eq!(store.get("https://dpaste.com/NEW1"), None);
+        assert_eq!(
+            store.get("https://dpaste.com/AA11"),
+            Some(entry("gamelib.log", 1_795_133_100_000))
+        );
+    }
+
+    #[test]
     fn a_failed_persist_rolls_the_in_memory_value_back_and_fires_nothing() {
         let home = FakeHome::new("gamelib-store-");
         let dir = dir_of(&home);
