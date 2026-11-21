@@ -103,6 +103,32 @@ fn stamp_in(file: &str, name: &str, family: Family) -> Option<String> {
     }
 }
 
+/// Whether `file` is a side file this module wrote (`<name>.v<N>.<stamp>.bak.json` or
+/// `<name>.corrupt.<stamp>.json`) rather than a store: anything that walks a directory for stores
+/// (the per-game settings in `GamesConfig/`) must skip these.
+pub fn is_side_file(file: &str) -> bool {
+    if let Some(rest) = file.strip_suffix(".bak.json") {
+        if let Some((head, stamp)) = rest.rsplit_once('.') {
+            if let Some((name, v)) = head.rsplit_once('.') {
+                return !name.is_empty()
+                    && is_stamp(stamp)
+                    && v.strip_prefix('v')
+                        .is_some_and(|d| !d.is_empty() && d.bytes().all(|b| b.is_ascii_digit()));
+            }
+        }
+        return false;
+    }
+    if let Some(rest) = file.strip_suffix(".json") {
+        if let Some((head, stamp)) = rest.rsplit_once('.') {
+            return is_stamp(stamp)
+                && head
+                    .rsplit_once('.')
+                    .is_some_and(|(name, tag)| !name.is_empty() && tag == "corrupt");
+        }
+    }
+    false
+}
+
 /// The family's files in `dir`, oldest first (by stamp, then name).
 fn list(dir: &Path, name: &str, family: Family) -> Vec<PathBuf> {
     let Ok(read) = fs::read_dir(dir) else {
@@ -234,6 +260,29 @@ mod tests {
             stamp(UNIX_EPOCH + Duration::from_secs(1_767_225_599)),
             "20251231T235959000Z"
         );
+    }
+
+    #[test]
+    fn side_files_are_told_apart_from_stores() {
+        for side in [
+            "prefs.v0.20261121T090000000Z.bak.json",
+            "480.v12.20261121T090000000Z.bak.json",
+            "prefs.corrupt.20261121T090000000Z.json",
+            "my.game.v1.20261121T090000000Z.bak.json",
+        ] {
+            assert!(is_side_file(side), "{side}");
+        }
+        for store in [
+            "prefs.json",
+            "480.json",
+            "prefs.v1.notastamp.bak.json",
+            "prefs.vx.20261121T090000000Z.bak.json",
+            "prefs.v1.20261121T090000000Z.json",
+            ".v1.20261121T090000000Z.bak.json",
+            "corrupt.20261121T090000000Z.json",
+        ] {
+            assert!(!is_side_file(store), "{store}");
+        }
     }
 
     #[test]

@@ -49,8 +49,9 @@ pub enum ReadOnlyReason {
 }
 
 /// Which on-disk codec carries the version: `__internal__.gamelib.schemaVersion` in a conf store,
-/// a top-level `version: 'vN'` in a settings document.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// a top-level `version: 'vN'` in a settings document. The names are the store table's.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum Flavour {
     Store,
     Settings,
