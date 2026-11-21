@@ -55,10 +55,16 @@ import { createTestAppPaths } from 'backend/testUtils/testAppPaths'
 import { createTestStoreRoot } from '../../testUtils/testStoreRoot'
 import { createTestHostServices } from 'backend/testUtils/testHostServices'
 import { defined } from 'backend/testUtils/indexed'
+import { yieldUntil } from 'backend/testUtils/yieldUntil'
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 import { tmpdir } from 'os'
 import { isAbsolute, join, relative, resolve } from 'path'
-import { existsSync, mkdirSync, mkdtempSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  promises as fsPromises
+} from 'node:fs'
 import { createFakeHomeProfile } from '../../testUtils/fakeHomeProfile'
 import {
   createTestManagers,
@@ -627,6 +633,18 @@ describe('sidecar bootstrap (headless boot)', () => {
   })
 })
 
+/** The per-test timeout for the two legacy-zoom cleanup tests. The shared yieldUntil's 15 s real-time
+ * ceiling sits inside it, so a cleanup that never lands fails at the expect, not at jest's 5 s
+ * default. The full local `pnpm test` run on 2026-11-21 failed the first of them with Expected
+ * false, received true, after a 50-turn counted wait ran out before the real rm landed
+ * (quick 261121-p6z). */
+const LEGACY_ZOOM_TEST_TIMEOUT_MS = 30_000
+
+/** How long the slowed-rm regression test holds the real rm of the seeded store back, in real time.
+ * The old 50-turn wait covered about 1 ms of idle real time (82-20 measured 500 idle turns at 6.7
+ * to 9.8 ms), so 250 ms is about 250 times that window. */
+const SLOW_ZOOM_RM_MS = 250
+
 describe('register-handlers boot step (D-08, C-03)', () => {
   it('importing ../handlers alone registers nothing; the boot step registers health', () => {
     jest.resetModules()
@@ -637,23 +655,56 @@ describe('register-handlers boot step (D-08, C-03)', () => {
     expect(services.host.ipc.handlerMap().has('health')).toBe(true)
   })
 
-  it('legacy-zoom cleanup removes seeded data under ctx.paths.userData', async () => {
-    const profile = createFakeHomeProfile({ prefix: 'gamelib-zoom-ctx-' })
-    try {
-      const ctxUserData = join(profile.root, 'ctx-userData')
-      const seeded = join(ctxUserData, 'zoom_store')
-      mkdirSync(seeded, { recursive: true })
+  it(
+    'legacy-zoom cleanup removes seeded data under ctx.paths.userData',
+    async () => {
+      const profile = createFakeHomeProfile({ prefix: 'gamelib-zoom-ctx-' })
+      try {
+        const ctxUserData = join(profile.root, 'ctx-userData')
+        const seeded = join(ctxUserData, 'zoom_store')
+        mkdirSync(seeded, { recursive: true })
 
-      bootFresh({ context: { paths: { userData: ctxUserData } } })
+        bootFresh({ context: { paths: { userData: ctxUserData } } })
 
-      for (let turn = 0; turn < 50 && existsSync(seeded); turn++) {
-        await new Promise((resolve) => setImmediate(resolve))
+        await yieldUntil(() => !existsSync(seeded))
+        expect(existsSync(seeded)).toBe(false)
+      } finally {
+        profile.dispose()
       }
-      expect(existsSync(seeded)).toBe(false)
-    } finally {
-      profile.dispose()
-    }
-  })
+    },
+    LEGACY_ZOOM_TEST_TIMEOUT_MS
+  )
+
+  it(
+    'legacy-zoom cleanup still lands when the real rm is held back past the old turn-counted window',
+    async () => {
+      const profile = createFakeHomeProfile({ prefix: 'gamelib-zoom-slow-' })
+      const originalRm = fsPromises.rm
+      const rmSpy = jest.spyOn(fsPromises, 'rm')
+      try {
+        const ctxUserData = join(profile.root, 'ctx-userData')
+        const seeded = join(ctxUserData, 'zoom_store')
+        mkdirSync(seeded, { recursive: true })
+
+        rmSpy.mockImplementation(async (path, options) => {
+          if (path === seeded) {
+            await new Promise((resolve) => setTimeout(resolve, SLOW_ZOOM_RM_MS))
+          }
+          return originalRm.call(fsPromises, path, options)
+        })
+
+        bootFresh({ context: { paths: { userData: ctxUserData } } })
+
+        await yieldUntil(() => !existsSync(seeded))
+        expect(rmSpy).toHaveBeenCalledWith(seeded, { recursive: true })
+        expect(existsSync(seeded)).toBe(false)
+      } finally {
+        rmSpy.mockRestore()
+        profile.dispose()
+      }
+    },
+    LEGACY_ZOOM_TEST_TIMEOUT_MS
+  )
 })
 
 describe('one-shot boot (D-08)', () => {
