@@ -187,6 +187,35 @@ describe('SwitchRow', () => {
     expect(rendered.props.role).toBe('alert')
   })
 
+  it('failure: an inert retry carries aria-disabled and the reason, and ignores clicks', () => {
+    const onRetry = jest.fn()
+    const rendered = RowFailure({
+      message: 'Verify failed.',
+      retryLabel: 'Retry',
+      onRetry,
+      retryDisabled: true,
+      retryDisabledReason: 'Wait for the move to finish'
+    })
+    const retry = find(rendered, (el) => el.type === 'button')!
+    expect(retry.props['aria-disabled']).toBe(true)
+    expect(retry.props.title).toBe('Wait for the move to finish')
+    ;(retry.props.onClick as () => void)()
+    expect(onRetry).not.toHaveBeenCalled()
+  })
+
+  it('failure: a live retry has no aria-disabled and no title', () => {
+    const rendered = RowFailure({
+      message: 'Verify failed.',
+      retryLabel: 'Retry',
+      onRetry: jest.fn(),
+      retryDisabled: false,
+      retryDisabledReason: 'ignored while live'
+    })
+    const retry = find(rendered, (el) => el.type === 'button')!
+    expect(retry.props['aria-disabled']).toBeUndefined()
+    expect(retry.props.title).toBeUndefined()
+  })
+
   it('no failure element without a failure', () => {
     const tree = SwitchRow({ ...base, checked: false })
     expect(find(tree, (el) => el.type === RowFailure)).toBeUndefined()

@@ -293,4 +293,40 @@ describe('VersionRow', () => {
     expect(mockApi.repair).toHaveBeenCalledTimes(1)
     expect(mockApi.repair).toHaveBeenCalledWith('1234', 'steam')
   })
+
+  describe('a failed Verify', () => {
+    const failedRow = async (opts: RenderOptions = {}) => {
+      mockApi.repair.mockRejectedValue(new Error('repair blew up'))
+      const game = makeGame('steam')
+      const first = renderVersion(game, opts) as ReactElement<Props>
+      const verify = findAction(first, 'Verify') as ReactElement<Props>
+      await (verify.props.onClick as () => Promise<void>)()
+      return { game, rerender: (o: RenderOptions) => renderVersion(game, o) }
+    }
+
+    type Failure = {
+      message: string
+      retryDisabled?: boolean
+      retryDisabledReason?: string
+    }
+    const failureOf = (tree: ReactElement<Props> | null) =>
+      tree?.props.failure as Failure | undefined
+
+    it('shows the fixed inline message with a live Retry and logs the error once', async () => {
+      const { rerender } = await failedRow()
+
+      const failure = failureOf(rerender({}))
+      expect(failure?.message).toBe('Verify failed. Details are in the log.')
+      expect(failure?.retryDisabled).toBe(false)
+      expect(mockApi.logError).toHaveBeenCalledTimes(1)
+    })
+
+    it('makes Retry inert with the gate reason while a move runs', async () => {
+      const { rerender } = await failedRow()
+
+      const failure = failureOf(rerender({ is: { moving: true } }))
+      expect(failure?.retryDisabled).toBe(true)
+      expect(failure?.retryDisabledReason).toBe('Wait for the move to finish')
+    })
+  })
 })
