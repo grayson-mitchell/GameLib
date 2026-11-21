@@ -33,3 +33,13 @@ Pushing main as-is turns the Test workflow red, which also blocks the Phase 82 U
 
 Remove the new GameInfo narrowing in `SettingsModalHeader.tsx` (do not raise the ceiling). Regenerate the presence baseline and `meta/i18nForkTouchedFiles.json` with the repo's own
 generators (do not hand-edit, do not widen the gate), confirm the three suites green, then push.
+
+## Resolution
+
+Closed by quick 261121-lco (2026-11-21). Nothing pushed.
+
+- `370e1ce7a`: `SettingsModalHeader.tsx` now picks the App-ID label with `isStore(runner, 'steam')`, so the GameInfo narrowing count is back to 0 and the ceiling was not raised.
+- `98f952f4b`: `meta/i18nCatalogPresenceBaseline.json` written by `LINT_TRANSLATIONS_WRITE_BASELINE=1 pnpm lint-translations:gamelib` (+1728 / -0, 16368 pairs, 341 keys).
+- `60e1c07ed`: `meta/i18nForkTouchedFiles.json` regenerated with `pnpm gen-i18n-gate-scope` (445 files). Five zero-violation files were promoted into the blocking scope (317 -> 322) and `GamesSettings/tabs.ts` was declared in `DECLARED_UNSCANNED_DEBT` (+1), with the ledger entry and count pins updated.
+
+Correction to the A-17 framing above: the committed artifact was not listing removed files. It was missing six files that quick 261121-dzl made fork-touched (three edited upstream files, three created).
