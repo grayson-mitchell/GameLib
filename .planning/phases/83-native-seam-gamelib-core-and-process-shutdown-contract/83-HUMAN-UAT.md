@@ -4,8 +4,8 @@ phase: 83-native-seam-gamelib-core-and-process-shutdown-contract
 source: [83-CONTEXT.md D-08 D-09 D-11 D-13 D-15, 83-RESEARCH.md Live macOS gate]
 authored_by: 83-01
 run_by: 83-11
-started:
-updated:
+started: 2026-11-21
+updated: 2026-11-21
 ---
 
 This is the live macOS gate contract for FND-04 (no orphaned helper after a quit or a kill) and the live check of the two
@@ -91,26 +91,74 @@ Sinks: the terminal transcript is `terminal.log` (stdout and stderr of `pnpm tau
 is written only by `shell_diag` (plain `shell_eprintln!` never reaches it); `gamelib.log` is written only by sidecar
 `logInfo` and `logWarning` and never reaches the transcript. Sidecar `console.*` reaches no sink.
 
-Verdict at authoring: no emitter below exists yet, so every row is CONDITIONAL. Plan 83-11 Task 1 re-checks each row
-against the then-current source (`grep` for the literal, then confirm the emitting call and its sink) before launch 1.
+Verdict at authoring: no emitter below existed yet, so every row was CONDITIONAL. Plan 83-11 Task 1 re-checked each row
+against the then-current source on 2026-11-21; the verdicts in the last column are the re-checked ones, and the emitter
+file:line and sink for each are in "Pre-run re-check" below.
 
 | Literal | Emitting plan and file | Sink | Verdict at authoring |
 |---|---|---|---|
-| `reaper started (pid ` | 83-08, `shell_diag` in `src-tauri/src/main.rs` | terminal transcript and `gamelib-shell.log` | CONDITIONAL: emitter does not exist yet; 83-11 Task 1 re-checks |
-| `reaper unavailable:` (must be ABSENT) | 83-08, `shell_diag` in `src-tauri/src/main.rs` | terminal transcript and `gamelib-shell.log` | CONDITIONAL: emitter does not exist yet; absence is meaningful only once the emitter exists; 83-11 Task 1 re-checks |
-| `[reaper] parent gone: signalled ` | 83-07, `src-tauri/crates/gamelib-proc/src/reaper.rs`, written by the reaper process to its inherited stderr | terminal transcript only (the reaper is not `shell_diag`, so it never reaches `gamelib-shell.log`; it outlives the shell and `tee` keeps reading while the reaper holds the pipe) | CONDITIONAL: emitter does not exist yet; 83-11 Task 1 re-checks |
-| `[reaper] disarmed` | 83-07, `src-tauri/crates/gamelib-proc/src/reaper.rs`, reaper stderr | terminal transcript only | CONDITIONAL: emitter does not exist yet; 83-11 Task 1 re-checks |
-| `exit finished in ` | 83-09, `shell_diag` in `handle_exit`, `src-tauri/src/main.rs` | terminal transcript and `gamelib-shell.log` | CONDITIONAL: emitter does not exist yet; 83-11 Task 1 re-checks |
-| `still running at exit deadline:` (absent unless a drain overran) | 83-09, `shell_diag` in `handle_exit`, `src-tauri/src/main.rs` | terminal transcript and `gamelib-shell.log` | CONDITIONAL: emitter does not exist yet (today's `[shell] depot jobs still running at exit deadline: ` at `main.rs:763` is `shell_eprintln!`, transcript only, and is the wrong literal); 83-11 Task 1 re-checks |
-| `[GAMELIB_IPC_INVALID_CHANNEL]` (must be ABSENT in the native-channel item) | 83-03 (Rust verdict, `src-tauri/src/ipc_contract.rs:19` marker) and the sidecar's `validateInbound` | Rust side: terminal transcript; sidecar side: `gamelib.log` | CONDITIONAL: the Rust native path does not exist yet; 83-11 Task 1 re-checks. Absence is scored over all three captures (transcript, shell log, `gamelib.log`) because a mistaken relay to the sidecar would surface there |
-| `native send rejected` (must be ABSENT in the native-channel item) | 83-06, Rust, `[shell] native send rejected: <channel>` | terminal transcript (and `gamelib-shell.log` if routed through `shell_diag`) | CONDITIONAL: emitter does not exist yet; 83-11 Task 1 re-checks |
+| `reaper started (pid ` | 83-08, `shell_diag` in `src-tauri/src/main.rs` | terminal transcript and `gamelib-shell.log` | REACHABLE (re-checked): `main.rs:1867` |
+| `reaper unavailable:` (must be ABSENT) | 83-08, `shell_diag` in `src-tauri/src/main.rs` | terminal transcript and `gamelib-shell.log` | REACHABLE (re-checked): `main.rs:1868`; absence is non-vacuous because `reaper started (pid ` is the positive line on the same code path |
+| `[reaper] parent gone: signalled ` | 83-07, `src-tauri/crates/gamelib-proc/src/reaper.rs`, written by the reaper process to its inherited stderr | terminal transcript only (the reaper is not `shell_diag`, so it never reaches `gamelib-shell.log`; it outlives the shell and `tee` keeps reading while the reaper holds the pipe) | REACHABLE (re-checked): `reaper.rs:357` and `:360` |
+| `[reaper] disarmed` | 83-07, `src-tauri/crates/gamelib-proc/src/reaper.rs`, reaper stderr | terminal transcript only | REACHABLE (re-checked): `reaper.rs:350` |
+| `exit finished in ` | 83-09, `shell_diag` in `handle_exit`, `src-tauri/src/main.rs` | terminal transcript and `gamelib-shell.log` | REACHABLE (re-checked): `main.rs:841` |
+| `still running at exit deadline:` (absent unless a drain overran) | 83-09, `shell_diag` in `handle_exit`, `src-tauri/src/main.rs` | terminal transcript and `gamelib-shell.log` | REACHABLE (re-checked): `main.rs:846`; absence is non-vacuous because `exit finished in ` (`main.rs:841`) is the positive line from the same function |
+| `[GAMELIB_IPC_INVALID_CHANNEL]` (must be ABSENT in the native-channel item) | 83-03 (Rust verdict, `src-tauri/src/ipc_contract.rs:19` marker) and the sidecar's `validateInbound` | Rust side: terminal transcript; sidecar side: `gamelib.log` | IMPOSSIBLE (re-checked): the marker reaches NO capture. `relay_commands.rs:31` builds it into the `Err` returned to the renderer only; the sidecar never emits it (its rejection line is `[sidecarRpc] IPC_INVALID_ARGS ... codes=no_schema`, `ipcValidation.ts:88`). Absence over the three captures is vacuous; see Pre-run re-check |
+| `native send rejected` (must be ABSENT in the native-channel item) | 83-06, Rust, `[shell] native send rejected: <channel>` | terminal transcript only (`shell_eprintln!`, not `shell_diag`) | REACHABLE (re-checked): `native_router.rs:203` |
 
 Note: sidecar `logInfo` lines reach `gamelib.log` only and never the transcript, and sidecar `console.*` reaches nothing,
 so no required literal in this contract is a sidecar-emitted line demanded of the transcript.
 
+## Pre-run re-check
+
+Run by 83-11 Task 1, 2026-11-21 (UTC 03:09-03:15), main checkout HEAD `33b4b5e02126d37daf13e49dd4ec4d34afcfdc63`
+(working tree dirty with unrelated Steam bridge edits under `src/backend/storeManagers/steam/`, which `pnpm build:sidecar`
+bundles; none touches the Phase 83 surfaces). Each literal was grepped (`grep -rnF`) over `src-tauri/src` and
+`src-tauri/crates/*/src`, then its emitting call and sink were read.
+
+| Literal | Emitter file:line | Emitting call | Sink actually reached | Verdict |
+|---|---|---|---|---|
+| `reaper started (pid ` | `src-tauri/src/main.rs:1867` | `shell_diag` (`#[cfg(unix)]`, after the single-instance gate) | transcript (stderr) and `gamelib-shell.log` | REACHABLE |
+| `reaper unavailable:` (absent) | `src-tauri/src/main.rs:1868` | `shell_diag`, `Err` arm of the same `match` | transcript and `gamelib-shell.log` | REACHABLE: absence is non-vacuous, the `Ok` arm's `reaper started (pid ` is the positive line |
+| `[reaper] parent gone: signalled ` | `src-tauri/crates/gamelib-proc/src/reaper.rs:357` (recycled-pid variant) and `:360` | `eprintln!` in the reaper process; stderr is `Stdio::inherit()` (`reaper.rs:110`) | transcript only (never `gamelib-shell.log`) | REACHABLE |
+| `[reaper] disarmed` | `src-tauri/crates/gamelib-proc/src/reaper.rs:350` | `eprintln!` in the reaper process, `disarmed` branch of `finish` | transcript only | REACHABLE |
+| `exit finished in ` | `src-tauri/src/main.rs:841` | `shell_diag` at the end of `handle_exit` | transcript and `gamelib-shell.log` | REACHABLE |
+| `still running at exit deadline:` (absent) | `src-tauri/src/main.rs:846` | `shell_diag`, only when `report.still_running` is non-empty | transcript and `gamelib-shell.log` | REACHABLE: absence is non-vacuous, `exit finished in ` (`main.rs:841`) is the positive line |
+| `native send rejected` (absent) | `src-tauri/src/native_router.rs:203` | `shell_eprintln!("[shell] native send rejected: ...")` in `route_send` | transcript only (not `shell_diag`, so never `gamelib-shell.log`) | REACHABLE: a bad-args `openExternalUrl` send would print it |
+| `[GAMELIB_IPC_INVALID_CHANNEL]` (absent) | constant `src-tauri/src/ipc_contract.rs:19`; used at `src-tauri/src/relay_commands.rs:31` only | built into the `Err(String)` that `relay_channel_verdict` returns to the renderer; never passed to `shell_eprintln!`, `shell_diag`, or any sidecar log call (`src/backend` and `src/common` contain the constant only in `sidecarTransport.ts:1280`, a definition, and the sidecar's rejection line is `[sidecarRpc] IPC_INVALID_ARGS kind=... codes=no_schema`, `ipcValidation.ts:88`) | none of transcript, `gamelib-shell.log`, `gamelib.log` | IMPOSSIBLE |
+
+Finding (blocking, standing rule: an IMPOSSIBLE row stops the run and is never scored). The contract's item 3 requires
+`[GAMELIB_IPC_INVALID_CHANNEL]` absent from "all three captures (transcript, shell log, `gamelib.log`) because a mistaken
+relay to the sidecar would surface there". It would not: a mistaken relay to the sidecar produces
+`[sidecarRpc] IPC_INVALID_ARGS ... codes=no_schema` (stderr, so the transcript as `[sidecar:err]`, and `gamelib.log`), and
+the Rust channel-allow-list rejection returns the marker to the renderer without logging it (a rejected `sidecar_send`
+logs `[shell] relay rejected send: <channel>` to the transcript, `relay_commands.rs:153`; a rejected `sidecar_invoke`
+logs nothing in Rust). So the literal can never appear in any capture, and a green absence check would prove nothing
+(live-gate-contract-authoring Test 3 sink clause and Test 4). Item 3's positive observables (Version equals
+`package.json`, the browser opens on the new-issue URL) are unaffected.
+
+Candidate repair (NOT applied here: the contract was authored by 83-01 and 83-11 runs it, it does not rewrite it):
+replace the absence literal with the three observable ones, `[sidecarRpc] IPC_INVALID_ARGS` (transcript and
+`gamelib.log`), `codes=no_schema`, and `[shell] relay rejected send:` (transcript), each absent for launch 1, and keep
+`native send rejected` as is. Route through `/gsd-plan-phase 83 --gaps` or an operator decision.
+
+Run-time structural impossibilities found by this pre-run re-check: 1 (above). Unresolved requirement interactions: 0
+new beyond the authoring pairing pass.
+
+### Automatable preflight
+
+- P1 sidecar freshness: PASS. `pnpm build:sidecar` ran clean; `build/main/sidecar.js` mtime `Nov 21 16:09:30 2026`;
+  last commit under `src/backend` is `d59c79873`, `Sat Nov 21 15:08:57 2026 +1300`. The sidecar is newer.
+- P2 zero instances: FAIL (not a contract defect; an operator action). `pgrep -f 'target/debug/gamelib-shell'` printed
+  `32369` and `32543`; `pgrep -f -- '--gamelib-reaper'` printed `32543`. Pid 32369 is a live `target/debug/gamelib-shell`
+  (ppid 4353, started `Sat Nov 21 14:48:09 2026`, state `S+`, so attached to a terminal) and 32543 is its reaper
+  (ppid 32369, own pgid 32543, started 14:48:19). Per P2 a leftover is closed by pid before the run restarts; the
+  executor is forbidden to kill processes, so nothing was killed and no launch was prepared.
+- P3-P6: operator-established; not attempted because the run is blocked.
+
 ## Current Test
 
-[pending — run by plan 83-11]
+[blocked — Required literals row `[GAMELIB_IPC_INVALID_CHANNEL]` (item 3, Test 3 sink): IMPOSSIBLE, see "Pre-run re-check"; no launch was prepared]
 
 ## Tests
 
@@ -147,7 +195,7 @@ Test 7, see the rows marked IMPOSSIBLE). Unresolved requirement interactions aft
 |---|---|---|---|---|
 | Item 1, Test 1 (origin and scheme) | `steam://install/<appid>`, `steam://rungameid/<appid>` | URL schemes handed to Mac Steam | REACHABLE: no https-only gate sits on these; Steam handles the scheme itself and 80-HUMAN-UAT item 4a launched WazHack the same way | `80-HUMAN-UAT.md` items 1 and 4a |
 | Item 1, Test 2 (concurrency) | a running download, a running game and a SIGKILL from a terminal | three things at once | REACHABLE: no modal blocks it; the SIGKILL is from a terminal or the Force Quit window, outside GameLib's own window | `kill -9` is a terminal command; Cmd-Opt-Esc is the OS window |
-| Item 1, Test 3 (emitter and SINK) for `[reaper] parent gone: signalled ` | reaper stderr | a transcript line | CONDITIONAL: the emitter is planned (83-07) and not written; the SINK is the transcript only, because the reaper inherits the shell's stderr and is not `shell_diag`, so it never reaches `gamelib-shell.log`; the contract therefore reads `terminal.log` for it and never the shell log | `src-tauri/src/main.rs:577-598` (`shell_diag` writes stderr and the shell log; the reaper is a separate process); 83-07 PLAN truth |
+| Item 1, Test 3 (emitter and SINK) for `[reaper] parent gone: signalled ` | reaper stderr | a transcript line | REACHABLE (83-11 re-check): emitter at `reaper.rs:357` and `:360`, stderr inherited (`reaper.rs:110`); the SINK is the transcript only, because the reaper inherits the shell's stderr and is not `shell_diag`, so it never reaches `gamelib-shell.log`; the contract therefore reads `terminal.log` for it and never the shell log | `src-tauri/src/main.rs:577-598` (`shell_diag` writes stderr and the shell log; the reaper is a separate process); 83-07 PLAN truth |
 | Item 1, Test 4 (absence) for the nettop and watchdog sub-checks | nettop and `gamelib-watchdog` sh | absence within 5 s | REACHABLE but WEAK: the watchdog loop exits by itself within about one second once its parent pid is gone (`while kill -0 "$p"`, `monitor.rs:49`), so this absence is a pre-existing guarantee, not a reaper discovery; recorded so it is never misread as one | `src-tauri/crates/gamelib-steampoll/src/monitor.rs:35-57` |
 | Item 1, Test 4 (absence) for the sidecar and group-member sub-checks | `node .../sidecar.js` and its pgid | no member of the recorded pgid | CONDITIONAL: a presence case is observable only if the before snapshot lists the sidecar and at least one other group member; the sidecar alone also exits by itself on stdin EOF; the discriminating signal is the transcript literal plus any group member that outlives the sidecar. Rule: a helper absent from the before snapshot is recorded "not exercised", never "passed" | `src-tauri/src/sidecar.rs:201-228`, exit contract in CLAUDE.md |
 | Item 1, Test 4 (absence) for comet, legendary, gogdl, nile and `--steam-owned-apps` | helpers that exist only when an Epic or GOG action or a Mac owned-apps refresh is running | absence | CONDITIONAL: each is checked only when the before snapshot shows it running; otherwise recorded "not exercised" | `src-tauri/crates/gamelib-steamcm/src/macowned.rs:163` |
@@ -162,20 +210,20 @@ Test 7, see the rows marked IMPOSSIBLE). Unresolved requirement interactions aft
 | P6 session directory and pre-existing logs | `/tmp` and `~/Library/Logs/GameLib` | one directory, copies, a baseline | REACHABLE | `src/backend/logger/log_writer.ts:72-74` (rotation); `main.rs:589-593` (append-only shell log) |
 | Evidence capture, Test 1 | none | none | REACHABLE: no URL involved | n/a |
 | Evidence capture, Test 2 | a terminal | `tee`, `cp`, `ps` | REACHABLE: all run from a shell, none is modal | n/a |
-| Evidence capture, Test 3 | `terminal.log`, `gamelib-shell.log`, `gamelib.log` | each literal read from its own sink | REACHABLE for the sink assignment in "Required literals"; the emitters are CONDITIONAL until 83-11 Task 1 | `main.rs:577-598`; `src/backend/logger/index.ts` |
+| Evidence capture, Test 3 | `terminal.log`, `gamelib-shell.log`, `gamelib.log` | each literal read from its own sink | REACHABLE for the sink assignment in "Required literals"; the emitters were re-checked by 83-11 Task 1 (see "Pre-run re-check") | `main.rs:577-598`; `src/backend/logger/index.ts` |
 | Evidence capture, Test 4 | the single-instance count | a count of one that would show two | REACHABLE: a second instance would print a second `ps` line, and the reaper is excluded by `grep -v -- '--gamelib-reaper'` so the count of one is meaningful | the reaper shares the shell's executable path |
 | Evidence capture, Test 6 | an already-running instance | positive zero-instance checks | REACHABLE | P2 |
 | Evidence capture, Test 7 | none (terminal only) | no GameLib gesture | REACHABLE | n/a |
 | Item 2, Test 1 (origin and scheme) | the reaper process | none | REACHABLE: no URL involved | n/a |
 | Item 2, Test 2 (concurrency) | `ps`, Dock, Cmd-Tab, Force Quit window | read-only observations while the app idles | REACHABLE: nothing modal is open at that point | n/a |
-| Item 2, Test 3 (emitter and SINK) for `reaper started (pid ` and the absent `reaper unavailable:` | `shell_diag` | transcript and `gamelib-shell.log` | CONDITIONAL: emitters planned in 83-08 (`main.rs`, `shell_diag`), not written; both sinks are real (`main.rs:577-598`); 83-11 Task 1 re-checks | "Required literals" |
+| Item 2, Test 3 (emitter and SINK) for `reaper started (pid ` and the absent `reaper unavailable:` | `shell_diag` | transcript and `gamelib-shell.log` | REACHABLE (83-11 re-check): emitters `main.rs:1867` and `:1868` (`shell_diag`, `#[cfg(unix)]`); both sinks are real (`shell_diag` at `main.rs:581-602`) | "Required literals" |
 | Item 2, Test 4 (absence) for `reaper unavailable:` | `shell_diag` failure branch | absence | REACHABLE once the emitter exists: a start failure would write the line to both sinks, and the positive `reaper started (pid ` line plus the `ps` process make the absence non-vacuous | 83-08 PLAN truth |
 | Item 2, Test 4 (absence) for "no second Dock icon, Cmd-Tab entry or Force Quit entry" | LaunchServices registration | absence of UI entries | CONDITIONAL: confirmation of an assumption (A3), not a structural guarantee; a regression that registered the reaper would visibly add an entry, so the presence case is observable; this is the one row where a live discovery is possible | `83-RESEARCH.md` Pattern 5, assumption A3 |
 | Item 2, Test 6 (external state) | a leftover reaper, a second Dock icon already present from another GameLib instance | exactly one of each | REACHABLE: P2 and the single-instance assertion establish a clean start before the observation | Evidence capture |
 | Item 2, Test 7 (UI gesture) | Dock, Cmd-Tab, Cmd-Opt-Esc | OS-level views, no GameLib control | REACHABLE: all three are OS surfaces, independent of the frontend | n/a |
 | Item 3, Test 1 (origin and scheme) for the report link | `buildTranslationIssueUrl` | an `https` GitHub URL | REACHABLE: the URL is built from `GAMELIB_ISSUES_NEW_URL` with query parameters and `openExternalUrl` accepts `https` | `src/frontend/components/UI/LanguageSelector/translationIssue.ts:47-53`; `externalLinkClicks.ts:13` lists the routed schemes |
 | Item 3, Test 2 (concurrency) | the About dialog and the Settings General page | sequential gestures | REACHABLE: the About dialog is closed (its close button) before navigating to Settings, General; nothing is driven while a modal is up | `AboutDialog/index.tsx:63` (`showCloseButton`) |
-| Item 3, Test 3 (emitter and SINK) for `[GAMELIB_IPC_INVALID_CHANNEL]` and `native send rejected` | Rust native handlers (83-03, 83-06) and the sidecar `validateInbound` | absence in three captures | CONDITIONAL: the Rust emitters do not exist yet; the marker constant exists (`ipc_contract.rs:19`); sinks assigned in "Required literals"; 83-11 Task 1 re-checks | `src-tauri/src/ipc_contract.rs:19`; `83-06-PLAN.md` truth |
+| Item 3, Test 3 (emitter and SINK) for `[GAMELIB_IPC_INVALID_CHANNEL]` and `native send rejected` | Rust native handlers (83-03, 83-06) and the sidecar `validateInbound` | absence in three captures | IMPOSSIBLE for `[GAMELIB_IPC_INVALID_CHANNEL]` (83-11 re-check: the marker is only ever the `Err` string returned to the renderer, `relay_commands.rs:31`; no capture can carry it). REACHABLE for `native send rejected` (`native_router.rs:203`, transcript only) | `src-tauri/src/ipc_contract.rs:19`; `83-06-PLAN.md` truth |
 | Item 3, Test 4 (absence) for both markers | the native channels | absence | REACHABLE: the presence case is observable (a mistaken relay yields `no_schema` and the INVALID_CHANNEL marker in `gamelib.log`; a rejected send logs `native send rejected`), and the positive observables (version string equals `package.json`, browser opens) mean absence is never the only signal | `83-RESEARCH.md` Anti-Patterns (`validateInbound` fails closed) |
 | Item 3, Test 6 (external state) | the default browser, the stored UI language, the package.json version | a new browser tab; a restorable language; a known version | CONDITIONAL: the operator records the original language before changing it and the exact package.json version; a browser that is already open does not change the evidence because the check is a new tab on the new-issue URL; GitHub reachability is not required | `LanguageSelector/index.tsx:131-142` (a change persists to config, so it must be restored) |
 | Item 3, Test 7 (UI gesture): About dialog and version | Settings tier-2 About row, `AboutDialogHost`, `AboutDialog`; nav shell `HeroicVersion` | open About, read `Version:`; read the nav shell version | REACHABLE: the About row is an unconditional `NavItem` that calls `showAboutWindow`, which raises the event `AboutDialogHost` answers; `getHeroicVersion` is called at `AboutDialog/index.tsx:48-51`, rendered at `:69-73`; the nav shell version is always mounted (`NavShell/index.tsx:120`), called at `HeroicVersion/index.tsx:69`, rendered at `:138` | `SettingsPanel/index.tsx:208-213`; `AboutDialogHost.tsx:25-32` |
@@ -185,14 +233,14 @@ Test 7, see the rows marked IMPOSSIBLE). Unresolved requirement interactions aft
 | Item 3, Test 7 (UI gesture): Settings, General, Language, then the report link | `GeneralSettings`, `LanguageSelector` | pick a non-English language, click the notice link | REACHABLE: `LanguageSelector` is rendered unconditionally on General; the notice and link render for any non-English language (`shouldShowMtNotice`); the link is an `<a role="button">` with an `onClick` that calls `openExternalUrl` directly, so it does not depend on the `externalLinkClicks` anchor handler and no external-link confirm intervenes | `GeneralSettings/index.tsx:28`; `LanguageSelector/index.tsx:147-149, 183-199`; `translationIssue.ts:31-39` |
 | Item 4, Test 1 (origin and scheme) | none | none | REACHABLE: no URL involved | n/a |
 | Item 4, Test 2 (concurrency) | the native quit confirm | one modal, answered, no other gesture driven meanwhile | REACHABLE: the confirm is a modal message box; the contract drives nothing while it is up | `quitHandler.ts:41-70` |
-| Item 4, Test 3 (emitter and SINK) for `[reaper] disarmed` | reaper stderr | transcript line | CONDITIONAL: emitter planned (83-07); sink is the transcript only, because the reaper is not `shell_diag`; the contract reads `terminal.log` for it | `83-07-PLAN.md` truth |
-| Item 4, Test 3 (emitter and SINK) for `exit finished in ` | `shell_diag` in `handle_exit` | shell log line | CONDITIONAL: emitter planned (83-09); both sinks real (`main.rs:577-598`) | `main.rs:755` (`handle_exit`), 83-09 PLAN truth |
+| Item 4, Test 3 (emitter and SINK) for `[reaper] disarmed` | reaper stderr | transcript line | REACHABLE (83-11 re-check): emitter `reaper.rs:350`; sink is the transcript only, because the reaper is not `shell_diag`; the contract reads `terminal.log` for it | `83-07-PLAN.md` truth |
+| Item 4, Test 3 (emitter and SINK) for `exit finished in ` | `shell_diag` in `handle_exit` | shell log line | REACHABLE (83-11 re-check): emitter `main.rs:841`; both sinks real (`shell_diag`, `main.rs:581-602`) | `main.rs:755` (`handle_exit`), 83-09 PLAN truth |
 | Item 4, Test 4 (absence) for "no sidecar group member, reaper or Rust helper" | helpers present before the quit | absence | CONDITIONAL: a helper absent from the before snapshot is recorded "not exercised", never "passed"; `[reaper] disarmed` is the positive signal that the graceful path ran | rule in item 1 row |
 | Item 4, Test 4 for the 1026 record | `appmanifest_<appid>.acf` | StateFlags 1026 after, something else before | CONDITIONAL: the check discriminates only if the before copy is not already 1026; if it is, the item is recorded INCONCLUSIVE, not passed | `gamelib-depot/src/acf.rs:5-9` |
 | Item 4, Test 6 (external state) | a running Mac Steam, a not-installed target | Steam may react to the ACF; the target must be fresh | CONDITIONAL: Steam can rewrite a 1026 ACF it sees; the after copy is taken immediately after exit and before relaunch; a target that is already installed writes no 1026 and falsifies the premise, so P5 requires an uninstalled game | `acf.rs:5-9`; P5 |
 | Item 4, Test 7 (UI gesture) | Cmd+Q, the existing confirm | quit, answer Yes if shown | REACHABLE: Cmd+Q routes to `quit_via_sidecar` (`terminate_veto.rs:193`) then `handleExit` (`quitHandler.ts:35`); the confirm appears only if `isLocked`, `isRunning` or `isBridgeHosting` is true (`quitHandler.ts:40`), which a Rust depot install may not set, so its appearance is recorded and not required; the nav shell Quit button (`QuitButton/index.tsx:38`) is an equivalent gesture not used | `terminate_veto.rs:193`; `quitHandler.ts:35-70` |
 | Item 5, Test 1 and Test 2 | none | a reading of item 4's evidence | REACHABLE: no gesture of its own | n/a |
-| Item 5, Test 3 (emitter and SINK) for `exit finished in ` and `still running at exit deadline:` | `shell_diag` | both sinks | CONDITIONAL: emitters planned (83-09); today's `main.rs:763` line is `shell_eprintln!` with different wording, so it is not a substitute | `main.rs:763`; 83-09 PLAN truth |
+| Item 5, Test 3 (emitter and SINK) for `exit finished in ` and `still running at exit deadline:` | `shell_diag` | both sinks | REACHABLE (83-11 re-check): emitters `main.rs:841` and `:846`, both `shell_diag` | `main.rs:763`; 83-09 PLAN truth |
 | Item 5, Test 4 (absence) for `still running at exit deadline:` | `handle_exit` overrun branch | absence | REACHABLE once the emitter exists: an overrun writes the line to both sinks, and `exit finished in ` in the same section proves `handle_exit` ran to its end | 83-09 PLAN truth |
 | Item 5, Test 6 (external state) | none beyond item 4's | none | REACHABLE: inherits item 4's rows | n/a |
 | Item 5, Test 7 (UI gesture) | none | none | REACHABLE: no gesture | n/a |
