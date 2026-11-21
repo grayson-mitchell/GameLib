@@ -16,7 +16,7 @@ Every requirement below is a "still works after the port" guarantee unless it sa
 - [x] **FND-02**: Destructive operations (uninstall, bottle removal, store reset) refuse when a check returns "unknown"; uninstalling a game never deletes a sibling game co-installed beside it, on macOS, Windows and Linux
 - [ ] **FND-03**: Rust can serve a renderer channel natively with the sidecar as fallback; each channel has exactly one owner, and renderer arguments are validated in Rust (the Phase 72 trust boundary is kept)
 - [ ] **FND-04**: Quitting or killing GameLib leaves no orphaned helper processes on macOS, Windows or Linux (launched games excepted)
-- [ ] **FND-05**: Logs keep their format, location, rotation and redaction; log upload and "show in folder" still work
+- [x] **FND-05**: Logs keep their format, location, rotation and redaction; log upload and "show in folder" still work
 - [ ] **FND-06**: Existing settings, caches and per-game config load unchanged after upgrade; unknown keys are preserved, the pre-migration state is backed up, and a corrupt file is kept, never reset. The legendary store migration is ported only if a supported upgrade path still reaches it
 - [ ] **FND-07**: Stored credentials keep working, with no new Keychain prompts, across a signed-release upgrade
 
@@ -71,7 +71,7 @@ Every requirement below is a "still works after the port" guarantee unless it sa
 | FND-02 | Phase 82 | Complete |
 | FND-03 | Phase 83 | Pending |
 | FND-04 | Phase 83 | Pending |
-| FND-05 | Phase 84 | Pending |
+| FND-05 | Phase 84 | Complete |
 | FND-06 | Phase 85 | Pending |
 | FND-07 | Phase 85 | Pending |
 | SVC-01 | Phase 86 | Pending |

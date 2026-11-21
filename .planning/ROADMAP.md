@@ -185,7 +185,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 82: Guardrails, hygiene and shared safety primitives** — 20/20 plans (16 + 4 gap closure); completed 2026-11-21
 - [x] **Phase 83: Native seam, gamelib-core and process/shutdown contract** — 11/11 plans; completed 2026-11-21
-- [ ] **Phase 84: Logger** — 11 plans in 9 waves (consolidated from 14, then two plans split for context budget); planned 2026-11-21 (executes after Phase 83 closes)
+- [x] **Phase 84: Logger** — 18/18 plans (11 + 7 gap closure); completed 2026-11-22
 - [ ] **Phase 85: Store host, config and versioned migrations** — 25 plans in 20 waves (the D-03 deletion split into four plans for context budget); planned 2026-11-21
 - [ ] **Phase 86: Pure leaf services** — 26 plans in 21 waves; planned 2026-11-22 (executes after 85-19/20)
 - [ ] **Phase 87: Engine, Wine and tools** — not planned
@@ -420,7 +420,7 @@ Plans:
   3. Diagnostics from steam-vent and reqwest appear in the log, and a repeating error is rate-limited rather than flooding the file
   4. The TS logger is reduced to a fire-and-forget forwarder, and the shell's second log path (`shell_diag`) and the TS log registrations are deleted
 
-**Plans:** 18/18 plans executed (7 gap-closure plans 84-12..84-18 added 2026-11-22 from UAT); original 11 in 9 waves; planned 2026-11-21, consolidated from 14 the same day, then the consolidated 84-06 and 84-07 each split in two to stay inside the per-plan context budget; executes only after Phase 83 closes (83-11 live gate passed, D-02)
+**Plans:** 18/18 plans complete (7 gap-closure plans 84-12..84-18 added 2026-11-22 from UAT); original 11 in 9 waves; planned 2026-11-21, consolidated from 14 the same day, then the consolidated 84-06 and 84-07 each split in two to stay inside the per-plan context budget; executes only after Phase 83 closes (83-11 live gate passed, D-02)
 
 Plans:
 **Wave 1**
