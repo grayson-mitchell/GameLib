@@ -1,0 +1,7 @@
+(13:05:00) [WARNING]: [Backend]:         disk is nearly full
+(13:05:01) [WARNING]: [Backend]:         disk is nearly full
+(13:05:02) [WARNING]: [Backend]:         disk is nearly full
+(13:05:03) [WARNING]: [Backend]:         disk is nearly full
+(13:05:03) [INFO]:    [Backend]:         something else
+(13:05:04) [WARNING]: [Backend]:         disk is nearly full
+(13:06:00) [WARNING]: [Backend]:         disk is nearly full (repeated 2 more times)

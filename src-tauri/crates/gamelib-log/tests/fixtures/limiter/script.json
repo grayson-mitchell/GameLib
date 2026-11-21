@@ -1,0 +1,56 @@
+{
+  "steps": [
+    {
+      "t": 0,
+      "level": "WARNING",
+      "prefix": "Backend",
+      "msg": "disk is nearly full"
+    },
+    {
+      "t": 1,
+      "level": "WARNING",
+      "prefix": "Backend",
+      "msg": "disk is nearly full"
+    },
+    {
+      "t": 2,
+      "level": "WARNING",
+      "prefix": "Backend",
+      "msg": "disk is nearly full"
+    },
+    {
+      "t": 3,
+      "level": "WARNING",
+      "prefix": "Backend",
+      "msg": "disk is nearly full"
+    },
+    {
+      "t": 3,
+      "level": "INFO",
+      "prefix": "Backend",
+      "msg": "something else"
+    },
+    {
+      "t": 4,
+      "level": "WARNING",
+      "prefix": "Backend",
+      "msg": "disk is nearly full"
+    },
+    {
+      "t": 5,
+      "level": "WARNING",
+      "prefix": "Backend",
+      "msg": "disk is nearly full"
+    },
+    {
+      "t": 6,
+      "level": "WARNING",
+      "prefix": "Backend",
+      "msg": "disk is nearly full"
+    },
+    {
+      "t": 60,
+      "tick": true
+    }
+  ]
+}

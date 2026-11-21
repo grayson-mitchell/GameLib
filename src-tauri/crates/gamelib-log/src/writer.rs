@@ -152,8 +152,18 @@ impl Logger {
         }
     }
 
+    /// Runs the writer's periodic tick now and waits for it (a barrier: everything submitted before
+    /// this call has been handled). Exists so a test can drive the tick from a scripted clock.
+    pub fn tick_for_tests(&self, within: Duration) -> bool {
+        self.barrier(within)
+    }
+
     /// Waits (up to `within`) until everything submitted before this call is on disk.
     pub fn flush(&self, within: Duration) -> bool {
+        self.barrier(within)
+    }
+
+    fn barrier(&self, within: Duration) -> bool {
         let deadline = Instant::now() + within;
         let (ack_tx, ack_rx) = sync_channel(1);
         let mut msg = Msg::Flush(ack_tx);
