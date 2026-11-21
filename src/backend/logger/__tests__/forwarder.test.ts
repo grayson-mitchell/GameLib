@@ -438,6 +438,50 @@ describe('LogForwarder', () => {
     })
   })
 
+  describe('flush is bounded in total (WR-06)', () => {
+    function stuckForwarder(): { fw: LogForwarder; transport: FakeTransport } {
+      const fw = new LogForwarder({ flushTimeoutMs: 50 })
+      const transport = new FakeTransport()
+      fw.bind(transport)
+      // A Promise message that never settles holds this writer's chain open forever.
+      fw.logLine(
+        GENERAL,
+        false,
+        'INFO',
+        '',
+        new Promise<string>(() => undefined)
+      )
+      fw.enqueue(GAME, false, { raw: 'other' })
+      return { fw, transport }
+    }
+
+    it('flush resolves within the timeout even when a Promise message never settles (WR-06)', async () => {
+      jest.useRealTimers()
+      const { fw, transport } = stuckForwarder()
+      const started = Date.now()
+      await fw.flush()
+      expect(Date.now() - started).toBeLessThan(1000)
+      expect(transport.messages()).toContain('other')
+    })
+
+    it('the deadline timer is unref d (WR-06)', async () => {
+      jest.useRealTimers()
+      const spy = jest.spyOn(global, 'setTimeout')
+      try {
+        const { fw } = stuckForwarder()
+        const flushed = fw.flush()
+        const timers = spy.mock.results
+          .map((r) => r.value as NodeJS.Timeout)
+          .filter((t) => typeof t?.hasRef === 'function')
+        expect(timers.length).toBeGreaterThanOrEqual(1)
+        for (const timer of timers) expect(timer.hasRef()).toBe(false)
+        await flushed
+      } finally {
+        spy.mockRestore()
+      }
+    })
+  })
+
   describe('settle (logErrorSettled / logInfoSettled, the CR-01 contract)', () => {
     type Index = typeof import('../index')
     function freshIndex(): Index {
