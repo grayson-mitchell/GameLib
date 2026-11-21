@@ -53,5 +53,13 @@
   },
   "graphify": {
     "enabled": false
+  },
+  "gsd_graph": {
+    "enabled": true,
+    "auto_update": true,
+    "store_dir": ".gsd-graph",
+    "report_on_sync": true,
+    "communities_on_sync": false,
+    "full_on_enable": true
   }
 }

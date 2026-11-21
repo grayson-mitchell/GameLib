@@ -103,3 +103,15 @@ __pycache__/
 # It holds this machine's absolute node_modules path, so it is machine-local and must not be committed;
 # untracked-but-unignored it fails the pre-push `prettier --check .`.
 /src/backend/storeManagers/steam/depot/lzmaNativeResolvedPaths.generated.cjs
+
+# The gsd-graph planning knowledge graph (quick 261122-93a). The store under .gsd-graph/
+# is machine-local and rebuilt by `gsd-graph sync --full`; only config.json, which holds
+# the curated corpus list, is committed. The bare `.gsd-graph/` line and its own negation
+# do nothing to git: they exist because every `gsd-graph sync` runs init's
+# appendGitignoreIfNeeded, which appends `.gsd-graph/` unless a line reads exactly that,
+# and the appended line would dirty .gitignore after every post-commit sync and re-ignore
+# config.json.
+.gsd-graph/
+!.gsd-graph/
+.gsd-graph/*
+!.gsd-graph/config.json
