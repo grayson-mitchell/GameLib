@@ -556,6 +556,36 @@ const itadPricesFixture = [
   }
 ]
 
+// Behavioural pin for the os-mock shadowing rule (quick 260905-jg4), rehomed here from the deleted
+// loggerFlows.test.ts by Phase 84 plan 84-06: `structuralContainment.test.ts` leg 3 holds this test
+// in place and needs a suite that declares a per-suite `os` mock in code. It sits in its own
+// top-level describe, ahead of the suite's `freshRegistry()` (`jest.resetModules()`), because a
+// reset drops the cached setupContainment instance and would make this file's mock take effect.
+describe('os mock shadowing', () => {
+  it("this file's own jest.mock('os') is INERT -- setupContainment's wins", () => {
+    // MEASURED: a per-suite os mock in a backend suite never takes effect while the registry is
+    // intact. `jest.setupContainment.ts` runs from `setupFiles` and requires 'os' during its own
+    // precondition block, so the mocked module is already instantiated by the time this file's
+    // hoisted os mock registers a new factory -- `require('os')` returns the cached
+    // setupContainment instance. Containment is not weakened: homedir() still resolves inside a
+    // disposable tmp root, just setupContainment's rather than this file's. The rule's canonical
+    // statement is `jest.setupContainment.ts`'s SHADOWING section.
+    /* eslint-disable @typescript-eslint/no-require-imports */
+    const { homedir } = require('os') as typeof import('os')
+    /* eslint-enable @typescript-eslint/no-require-imports */
+    const thisFilesMockedHome = join(
+      jest.requireActual<typeof import('os')>('os').tmpdir(),
+      `gamelib-enrichmentflows-test-home-${process.pid}`
+    )
+    expect(homedir()).not.toBe(thisFilesMockedHome)
+    expect(homedir()).toBe(process.env.HOME)
+
+    // Still contained, which is the property that actually matters.
+    const rel = relative(resolve(tmpdir()), resolve(homedir()))
+    expect(rel.startsWith('..') || isAbsolute(rel)).toBe(false)
+  })
+})
+
 describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
   beforeEach(() => {
     freshRegistry()

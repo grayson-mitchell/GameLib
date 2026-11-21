@@ -806,20 +806,16 @@
     {
       "channel": "deleteUploadedLogFile",
       "kind": "invoke",
-      "owner": "sidecar",
-      "args": {
-        "type": "array",
-        "prefixItems": [
-          {
-            "type": "string",
-            "maxLength": 8192,
-            "format": "uri"
-          }
-        ],
-        "items": false,
-        "minItems": 1,
-        "maxItems": 1
-      }
+      "owner": "native",
+      "args": [
+        {
+          "name": "url",
+          "type": "string",
+          "format": "url",
+          "maxLength": 8192
+        }
+      ],
+      "returns": "boolean"
     },
     {
       "channel": "devSweepEpicCookieDomain",
@@ -2061,13 +2057,9 @@
     {
       "channel": "getUploadedLogFiles",
       "kind": "invoke",
-      "owner": "sidecar",
-      "args": {
-        "type": "array",
-        "prefixItems": [],
-        "items": false,
-        "maxItems": 0
-      }
+      "owner": "native",
+      "args": [],
+      "returns": "{ [url]: { name, token, uploadedAt } }"
     },
     {
       "channel": "getUserInfo",

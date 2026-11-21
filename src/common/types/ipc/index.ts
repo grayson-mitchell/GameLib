@@ -19,7 +19,7 @@ import type { HumbleSync, HumbleAsync, HumbleFrontendMessages } from './humble'
 import type { HumbleLoginSync, HumbleLoginAsync } from './humbleLogin'
 import type { InstallAsync } from './install'
 import type { LegendaryFrontendMessages } from './legendary'
-import type { LoggerAsync, LoggerFrontendMessages } from './logger'
+import type { LoggerFrontendMessages } from './logger'
 import type { MainProcessSync, MainProcessAsync } from './mainProcess'
 import type { NativeAsync, NativeSync } from './native'
 import type { OauthLoginAsync } from './oauthLogin'
@@ -65,7 +65,6 @@ export type AsyncIPCFunctions = AppShellAsync &
   HumbleAsync &
   HumbleLoginAsync &
   InstallAsync &
-  LoggerAsync &
   MainProcessAsync &
   NativeAsync &
   OauthLoginAsync &

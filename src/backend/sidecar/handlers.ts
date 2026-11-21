@@ -25,11 +25,7 @@
  * channels (`registerClipboardFlows()`, `clipboardFlowRegistration.ts` — Phase
  * 34.3 Plan 06, REQ-34.3-03/-04/-13 — clipboardWriteText/clipboardReadText/
  * copySystemInfoToClipboard, the ONLY consumers of this slice's two new
- * Rust arms), the curated logger channels (`registerLoggerFlows()`,
- * `loggerFlowRegistration.ts` — opened by Phase 34.2 gap cycle 2 plan 34.2-16,
- * REQ-34.2-12, with `logError` alone as an early port of a Phase 34.3/slice-6
- * channel, then extended by Phase 34.3 plan 04; `logError` itself must never be
- * registered a second time), the curated
+ * Rust arms), the curated
  * Humble library/sync + key-state channels (`registerHumbleFlows()`,
  * `humbleFlowRegistration.ts` — Phase 34.4 Plans 04+05, REQ-34.4-07;
  * curated-imports `humble/user.ts`/`humble/library.ts` directly, never
@@ -91,7 +87,6 @@ import { registerGameDetailsFlows } from './gameDetailsFlowRegistration'
 import { registerEnrichmentFlows } from './enrichmentFlowRegistration'
 import { registerShellFilesFlows } from './shellFilesFlowRegistration'
 import { registerClipboardFlows } from './clipboardFlowRegistration'
-import { registerLoggerFlows } from './loggerFlowRegistration'
 import { registerHumbleFlows } from './humbleFlowRegistration'
 import { registerHumbleLoginFlows } from './humbleLoginFlowRegistration'
 import { registerOAuthLoginFlows } from './oauthLoginFlowRegistration'
@@ -337,25 +332,9 @@ export function registerHandlers(deps: {
     infoCaches: deps.services.infoCaches,
     paths: deps.services.paths
   })
-  // Phase 34.2 gap cycle 2, plan 34.2-16 (REQ-34.2-12), extended by Phase 34.3
-  // plan 04: the logger channels. `logError` was ported early from its Phase
-  // 34.3/slice-6 slot because gap cycle 1's renderer repair-failure handler
-  // routes through it — an unregistered `send` channel is a total silent no-op
-  // under Tauri. Declared
-  // in both `.planning/IPC-PORT-INVENTORY.md` and this slice's own
-  // `34.2-PORTED-CHANNELS.md` (§7 gap-cycle-2 subsection, plan 34.2-16 Task 3)
-  // so Phase 34.3 does not register `logError` a second time — a duplicate
-  // listener would duplicate every frontend log line (`dispatchSend` iterates
-  // ALL listeners for a channel). No ordering constraint relative to the other
-  // calls above (own channel name, no cross-module runtime dependency at
-  // registration time), placed alongside them, before `registerStoreWriteHandlers()`.
-  registerLoggerFlows({
-    ipc,
-    stores: deps.services.stores,
-    appInfo: deps.services.appInfo,
-    sendFrontendMessage: deps.services.host.sendFrontendMessage,
-    openExternal: deps.services.host.openExternal
-  })
+  // Phase 84 plan 84-06: the sidecar serves no logger channel. Every renderer logger channel
+  // (logError, logInfo, showLogFileInFolder, getLogContent, uploadLogFile, getUploadedLogFiles,
+  // deleteUploadedLogFile) is answered by the Rust native router (nativeChannels.json).
   // Phase 34.4 Plans 04+05 (REQ-34.4-07): the library/sync + key-state Humble
   // channels — no ordering constraint relative to the other calls above (own channel
   // names, no cross-module runtime dependency at registration time), placed

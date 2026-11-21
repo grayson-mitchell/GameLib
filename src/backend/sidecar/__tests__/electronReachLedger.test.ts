@@ -70,7 +70,8 @@ const ENTRY_POINTS = [
   // to capture.
   join(REPO_ROOT, 'src/backend/sidecar/shellFilesFlowRegistration.ts'),
   join(REPO_ROOT, 'src/backend/sidecar/clipboardFlowRegistration.ts'),
-  join(REPO_ROOT, 'src/backend/sidecar/loggerFlowRegistration.ts'),
+  // Phase 84 Plan 06 (2026-11-21): loggerFlowRegistration.ts was an entry point here; it and
+  // logger/uploader.ts (its electron edge) are deleted -- the uploaded-log channels are native.
   // Phase 34.4 Plan 08 (REQ-34.4-10, D-10): this slice's ported surface.
   // humbleFlowRegistration.ts is a brand-new registration module (plans
   // 34.4-04/05) that was never added as an entry point by those plans --
@@ -591,9 +592,9 @@ describe('electronReachLedger (Phase 34.2 Plan 11 — REQ-34.2-03, gap #3 / WR-0
       'src/backend/process/appPaths.ts',
       'src/backend/utils.ts',
       'src/common/types.ts',
-      // Phase 34.3 Plan 07 (D-10): the new edge itself is anti-vacuity-protected --
-      // logger/uploader.ts, reached via loggerFlowRegistration.ts.
-      'src/backend/logger/uploader.ts',
+      // Phase 34.3 Plan 07 (D-10) required 'src/backend/logger/uploader.ts' here (reached via
+      // loggerFlowRegistration.ts). Phase 84 Plan 06 (2026-11-21) deleted both files, so the edge
+      // is gone from the tree and from this list.
       // Phase 34.4 Plan 08 (D-10): the four new Humble edges, each
       // anti-vacuity-protected so a future refactor that quietly drops one
       // fails this test instead of silently shrinking the measured set.

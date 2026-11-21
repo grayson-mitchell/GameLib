@@ -443,11 +443,15 @@ describe('Block A: env-simulating containment proof (34.2 gap cycle 2, plan 34.2
  * the sole containment mechanism for these four files, only the most
  * heavily-proven one.
  */
+//
+// Phase 84 Plan 06 (2026-11-21): 4 -> 3. `loggerFlows.test.ts` is deleted -- the logger channels it
+// covered are served by the Rust native router, and every case it held moved to the native tests
+// in `src-tauri/src/log_upload.rs` / `log_dispatch.rs` or to the gamelib-log golden. Block B then
+// gates three suites and Block C has no phantom entry.
 const IN_SCOPE_SUITES = [
   'gameDetailsFlows.test.ts',
   'enrichmentFlows.test.ts',
-  'sidecarRejectionGuard.test.ts',
-  'loggerFlows.test.ts'
+  'sidecarRejectionGuard.test.ts'
 ]
 
 /**
@@ -1123,9 +1127,9 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'wineToolsFlows.test.ts'
 ]
 
-describe('Block B: declared-list source gate over the four in-scope suites (34.2 gap cycle 2, plan 34.2-18)', () => {
-  it('anti-vacuity: the declared in-scope list has exactly 4 entries and every file exists', () => {
-    expect(IN_SCOPE_SUITES).toHaveLength(4)
+describe('Block B: declared-list source gate over the in-scope suites (34.2 gap cycle 2, plan 34.2-18; three since 84-06)', () => {
+  it('anti-vacuity: the declared in-scope list has exactly 3 entries and every file exists', () => {
+    expect(IN_SCOPE_SUITES).toHaveLength(3)
     for (const name of IN_SCOPE_SUITES) {
       const filePath = join(__dirname, name)
       expect(existsSync(filePath)).toBe(true)
@@ -1232,7 +1236,8 @@ describe('Block B: declared-list source gate over the four in-scope suites (34.2
 // `loggerFlows.test.ts`'s own `jest.mock('../pathShim', ...)` call (backed
 // up first, restored immediately afterwards, `git diff` confirmed clean)
 // made exactly one Block B test fail -- the pathShim-mock-presence check
-// for `loggerFlows.test.ts` -- proving Block B is not vacuous.
+// for `loggerFlows.test.ts` -- proving Block B is not vacuous. (That suite was deleted in Phase 84
+// plan 84-06; the same per-suite presence checks still run for the three remaining suites.)
 
 // ── Block C: derived readdirSync tripwire over the whole directory
 // (plan 34.2-23, WR-08, T-34.2-83) ──────────────────────────────────────────

@@ -27,6 +27,8 @@ export interface NativeAsync {
     name: string,
     args: GetLogFileArgs
   ) => Promise<false | [string, UploadedLogData]>
+  getUploadedLogFiles: () => Promise<Record<string, UploadedLogData>>
+  deleteUploadedLogFile: (url: string) => Promise<boolean>
 }
 
 export interface NativeSync {

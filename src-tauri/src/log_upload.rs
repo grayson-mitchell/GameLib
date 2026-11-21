@@ -1,8 +1,10 @@
-//! `uploadLogFile`, served natively (Phase 84, D-07 and D-09): a user-initiated upload of one log
-//! file to the paste service, run in Rust with reqwest instead of the sidecar's `fetch`.
+//! `uploadLogFile`, `getUploadedLogFiles` and `deleteUploadedLogFile`, served natively (Phase 84,
+//! D-07 and D-09): a user-initiated upload of one log file to the paste service, the list of what
+//! was uploaded (with its two-day expiry prune), and the delete request, all run in Rust with
+//! reqwest instead of the sidecar's `fetch`.
 //!
-//! The behaviour is the TS `uploadLogFile` of `src/backend/logger/uploader.ts` kept as it was: the
-//! same endpoint, the same `HeroicGamesLauncher/<app version>` User-Agent, the same
+//! The behaviour is the TS uploader's (`src/backend/logger/uploader.ts`, deleted in 84-06) kept as
+//! it was: the same endpoint, the same `HeroicGamesLauncher/<app version>` User-Agent, the same
 //! `content=<first 10 MiB of the file>&expiry_days=2` form body, the stored token is the literal
 //! `1` ([`PASTE_TOKEN`], dpaste.com has no delete token), the same two log lines and the same
 //! `logFileUploaded` push. The record is written through `StoreHost` (D-09).
@@ -12,16 +14,20 @@
 //!
 //! V13: a paste URL is stored or returned only if it parses as `https` with the host exactly
 //! `dpaste.com`; the shared client does not follow redirects (84-06's delete POST reuses it); a
-//! request times out after [`REQUEST_TIMEOUT`]; the response text logged is capped.
+//! request times out after [`REQUEST_TIMEOUT`]; the response text logged is capped. The delete
+//! posts only to a URL already in the store that re-validates through [`validate_paste_url`].
+//!
+//! `uploadedLogs.json` has exactly one writer, this module, through `StoreHost`.
 
 use crate::log_dispatch::parse_log_file_args;
 use crate::native_router::{invalid_args, NativeCtx, NativeFuture};
 use gamelib_core::clock::{Clock, SystemClock};
 use gamelib_core::paths::{join, log_file};
+use gamelib_core::store::Store;
 use gamelib_log::{Level, Prefix};
 use serde_json::{json, Value};
 use std::future::Future;
-use std::io::Read;
+use std::io::{self, Read};
 use std::path::Path;
 use std::pin::Pin;
 use std::sync::{Arc, OnceLock};
@@ -37,6 +43,12 @@ pub(crate) const UPLOAD_MAX_BYTES: usize = 10 * 1024 * 1024;
 pub(crate) const REQUEST_TIMEOUT: Duration = Duration::from_secs(60);
 /// The most characters of a response body that reach the log.
 pub(crate) const LOGGED_TEXT_MAX: usize = 1024;
+/// A stored upload expires once it is this many days old (`getUploadedLogFiles` prunes it).
+const EXPIRY_PRUNE_DAYS: f64 = EXPIRY_DAYS as f64;
+/// Milliseconds in a day.
+const MS_PER_DAY: f64 = 86_400_000.0;
+/// The longest URL `deleteUploadedLogFile` accepts (the zod `max(8192)` it replaces).
+const URL_ARG_MAX: usize = 8192;
 /// The most bytes read from a response body; a paste URL is a few dozen.
 const RESPONSE_READ_MAX: usize = 64 * 1024;
 /// The longest upload name, in UTF-16 code units (the zod `max(1024)` it replaces).
@@ -56,7 +68,7 @@ pub(crate) struct PasteResponse {
 type PasteFuture = Pin<Box<dyn Future<Output = Result<PasteResponse, String>> + Send>>;
 
 /// The HTTP seam of the paste service: one form POST. A trait so the handler is tested against a
-/// localhost stand-in with no network, and shared by the upload and the delete (84-06).
+/// localhost stand-in with no network, and shared by the upload and the delete.
 pub(crate) trait PasteClient: Send + Sync + 'static {
     fn post_form(&self, url: String, body: String, user_agent: String) -> PasteFuture;
 }
@@ -286,6 +298,209 @@ async fn upload_with(ctx: &NativeCtx, args: &[Value], log: LogSink<'_>) -> Resul
     Ok(json!([url, data]))
 }
 
+/// The store file's directory: `<user_data>/store`.
+fn store_dir(ctx: &NativeCtx) -> Option<String> {
+    ctx.log_paths
+        .as_ref()
+        .map(|p| join(p.platform, &p.user_data, &["store"]))
+}
+
+/// Opens the `uploadedLogs` store through the one owner. A corrupt file is `InvalidData` and is
+/// left untouched.
+fn open_uploaded(host: &gamelib_core::store::StoreHost, dir: &str) -> io::Result<Arc<Store>> {
+    host.open_cache(Path::new(dir), "uploadedLogs")
+}
+
+/// What the expiry prune found.
+struct Pruned {
+    valid: serde_json::Map<String, Value>,
+    /// Expired keys that could not be removed from the file.
+    failed: usize,
+}
+
+/// Splits the stored uploads into the unexpired (returned) and the expired (removed from the
+/// store). An entry whose `uploadedAt` is not a number never compares as expired, as in the TS it
+/// replaces (`NaN >= 2` is false).
+fn prune_expired(store: &Store, now_ms: u64) -> Pruned {
+    let mut valid = serde_json::Map::new();
+    let mut failed = 0;
+    for (key, value) in store.snapshot() {
+        let age_days = value
+            .get("uploadedAt")
+            .and_then(Value::as_f64)
+            .map(|at| (now_ms as f64 - at) / MS_PER_DAY);
+        if age_days.is_some_and(|d| d >= EXPIRY_PRUNE_DAYS) {
+            if store.remove(&key).is_err() {
+                failed += 1;
+            }
+        } else {
+            valid.insert(key, value);
+        }
+    }
+    Pruned { valid, failed }
+}
+
+/// `getUploadedLogFiles` (invoke, no args): the uploads that have not expired, as `{url: record}`.
+/// A read with a write side effect, kept on purpose: expired records are removed from the store
+/// here. A store that cannot be read (a corrupt file) reads as `{}` and is never rewritten.
+pub(crate) fn get_uploaded_log_files(ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFuture {
+    Box::pin(async move { list_with(&ctx, &args, SystemClock.now_ms(), &default_log).await })
+}
+
+async fn list_with(
+    ctx: &NativeCtx,
+    args: &[Value],
+    now_ms: u64,
+    log: LogSink<'_>,
+) -> Result<Value, String> {
+    if !args.is_empty() {
+        return Err(invalid_args(
+            "getUploadedLogFiles",
+            &["(args)"],
+            &["too_big"],
+        ));
+    }
+    let Some(dir) = store_dir(ctx) else {
+        return Ok(json!({}));
+    };
+    let host = Arc::clone(&ctx.store_host);
+    let pruned = tauri::async_runtime::spawn_blocking(move || {
+        open_uploaded(&host, &dir).map(|store| prune_expired(&store, now_ms))
+    })
+    .await;
+    match pruned {
+        Ok(Ok(pruned)) => {
+            if pruned.failed > 0 {
+                log(
+                    Level::Error,
+                    "Failed to remove an expired uploaded log record".to_string(),
+                );
+            }
+            Ok(Value::Object(pruned.valid))
+        }
+        _ => {
+            log(
+                Level::Error,
+                "Failed to read the uploaded log records".to_string(),
+            );
+            Ok(json!({}))
+        }
+    }
+}
+
+/// The one argument of `deleteUploadedLogFile`: an `http` or `https` URL of at most
+/// [`URL_ARG_MAX`] characters. `None` on any other shape.
+fn parse_delete_args(args: &[Value]) -> Option<String> {
+    let [url] = args else {
+        return None;
+    };
+    let url = url.as_str()?;
+    if url.chars().count() > URL_ARG_MAX {
+        return None;
+    }
+    let parsed = url::Url::parse(url).ok()?;
+    matches!(parsed.scheme(), "http" | "https").then(|| url.to_string())
+}
+
+/// `token=<token>&delete=`, form-urlencoded: what dpaste.com was always sent (it ignores it).
+fn delete_body(token: &str) -> String {
+    url::form_urlencoded::Serializer::new(String::new())
+        .append_pair("token", token)
+        .append_pair("delete", "")
+        .finish()
+}
+
+/// `deleteUploadedLogFile` (invoke): ask the paste service to delete an upload this app made.
+/// Only a URL already in the store is ever requested, and only if it still validates as
+/// `https://dpaste.com/...` (V13): a hand-edited store cannot aim the request anywhere else. On a
+/// 2xx the record is removed and `logFileUploadDeleted` is pushed. Anything else resolves `false`
+/// with the record kept. dpaste.com has no delete endpoint, so this cannot remove a paste in
+/// practice; there is no UI control for it (deleteButtonReachability.test.tsx).
+pub(crate) fn delete_uploaded_log_file(ctx: Arc<NativeCtx>, args: Vec<Value>) -> NativeFuture {
+    Box::pin(async move { delete_with(&ctx, &args, &default_log).await })
+}
+
+async fn delete_with(ctx: &NativeCtx, args: &[Value], log: LogSink<'_>) -> Result<Value, String> {
+    let Some(url) = parse_delete_args(args) else {
+        return Err(invalid_args(
+            "deleteUploadedLogFile",
+            &["(args)"],
+            &["invalid_type"],
+        ));
+    };
+    let Some(dir) = store_dir(ctx) else {
+        return Ok(Value::Bool(false));
+    };
+    let (host, key) = (Arc::clone(&ctx.store_host), url.clone());
+    let entry = tauri::async_runtime::spawn_blocking(move || {
+        open_uploaded(&host, &dir)
+            .ok()
+            .and_then(|store| store.get(&key).map(|record| (store, record)))
+    })
+    .await
+    .ok()
+    .flatten();
+    let Some((store, record)) = entry else {
+        return Ok(Value::Bool(false));
+    };
+    let Some(target) = validate_paste_url(&url) else {
+        log(
+            Level::Error,
+            "Refusing to delete an upload: the stored URL is not a dpaste.com URL".to_string(),
+        );
+        return Ok(Value::Bool(false));
+    };
+
+    let token = record
+        .get("token")
+        .and_then(Value::as_str)
+        .unwrap_or(PASTE_TOKEN);
+    let name = record.get("name").and_then(Value::as_str).unwrap_or("");
+    let user_agent = format!("HeroicGamesLauncher/{}", ctx.app_version);
+    let response = match ctx
+        .paste
+        .post_form(target, delete_body(token), user_agent)
+        .await
+    {
+        Ok(response) => response,
+        Err(e) => {
+            log(
+                Level::Error,
+                format!("Failed to send data to dpaste.com: {}", one_line(&e)),
+            );
+            return Ok(Value::Bool(false));
+        }
+    };
+    if !(200..300).contains(&response.status) {
+        log(
+            Level::Error,
+            format!(
+                "Failed to delete log file upload, response error code {} {}, text: {}",
+                response.status,
+                one_line(&response.reason),
+                one_line(&capped(response.text.trim(), LOGGED_TEXT_MAX))
+            ),
+        );
+        return Ok(Value::Bool(false));
+    }
+
+    let key = url.clone();
+    let removed = tauri::async_runtime::spawn_blocking(move || store.remove(&key)).await;
+    if !matches!(removed, Ok(Ok(_))) {
+        log(
+            Level::Error,
+            "Failed to remove the deleted log file's record".to_string(),
+        );
+        return Ok(Value::Bool(false));
+    }
+    ctx.emitter.emit("logFileUploadDeleted", vec![json!(url)]);
+    log(
+        Level::Info,
+        format!("Deleted log file {} ({})", one_line(name), one_line(&url)),
+    );
+    Ok(Value::Bool(true))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -318,13 +533,12 @@ mod tests {
     struct LocalPaste {
         inner: ReqwestPaste,
         base: String,
+        /// Every URL the handler asked to post to, before it was aimed at `base`.
+        asked: Arc<Mutex<Vec<String>>>,
     }
     impl PasteClient for LocalPaste {
         fn post_form(&self, url: String, body: String, user_agent: String) -> PasteFuture {
-            assert_eq!(
-                url, PASTE_ENDPOINT,
-                "the handler must post to the fixed endpoint"
-            );
+            self.asked.lock().unwrap().push(url);
             self.inner.post_form(self.base.clone(), body, user_agent)
         }
     }
@@ -408,9 +622,11 @@ mod tests {
         emitter: Arc<Recording>,
         ctx: Arc<NativeCtx>,
         lines: Mutex<Vec<(Level, String)>>,
+        /// The URLs the handler asked the paste client to post to.
+        asked: Arc<Mutex<Vec<String>>>,
     }
 
-    fn rig(paste: Arc<dyn PasteClient>) -> Rig {
+    fn rig(paste: Arc<dyn PasteClient>, asked: Arc<Mutex<Vec<String>>>) -> Rig {
         let home = FakeHome::new("gamelib-log-upload-");
         let root = home.root().to_string_lossy().into_owned();
         let paths = LogPaths {
@@ -432,15 +648,21 @@ mod tests {
             emitter,
             ctx,
             lines: Mutex::new(Vec::new()),
+            asked,
         }
     }
 
     impl Rig {
         fn local(base: String) -> Rig {
-            rig(Arc::new(LocalPaste {
-                inner: ReqwestPaste::new(),
-                base,
-            }))
+            let asked = Arc::new(Mutex::new(Vec::new()));
+            rig(
+                Arc::new(LocalPaste {
+                    inner: ReqwestPaste::new(),
+                    base,
+                    asked: Arc::clone(&asked),
+                }),
+                asked,
+            )
         }
 
         fn log_path(&self, parts: &[&str]) -> String {
@@ -522,6 +744,11 @@ mod tests {
             json!([url, {"name": "Heroic log", "token": "1", "uploadedAt": uploaded_at}])
         );
 
+        assert_eq!(
+            *rig.asked.lock().unwrap(),
+            vec![PASTE_ENDPOINT.to_string()],
+            "the handler must post to the fixed endpoint"
+        );
         let request = seen.recv_timeout(Duration::from_secs(5)).unwrap();
         let head = request.head.to_ascii_lowercase();
         assert!(head.starts_with("post /api/v2/ "), "{head}");
@@ -741,5 +968,291 @@ mod tests {
         let line = &rig.logged()[0].1;
         assert!(line.ends_with(&"z".repeat(1024)), "{line}");
         assert!(!line.ends_with(&"z".repeat(1025)));
+    }
+
+    // ---- getUploadedLogFiles and deleteUploadedLogFile (84-06) ----
+
+    const HOUR_MS: u64 = 3_600_000;
+    const NOW: u64 = 1_800_000_000_000;
+
+    impl Rig {
+        fn store_file(&self) -> std::path::PathBuf {
+            let paths = self.ctx.log_paths.as_ref().unwrap();
+            Path::new(&join(paths.platform, &paths.user_data, &["store"])).join("uploadedLogs.json")
+        }
+
+        /// Writes `uploadedLogs.json` directly, as a previous session (or a hand edit) left it.
+        fn plant_store(&self, text: &str) {
+            let file = self.store_file();
+            std::fs::create_dir_all(file.parent().unwrap()).unwrap();
+            std::fs::write(file, text).unwrap();
+        }
+
+        fn list(&self, now: u64) -> Result<Value, String> {
+            let sink = |level: Level, msg: String| self.lines.lock().unwrap().push((level, msg));
+            tauri::async_runtime::block_on(list_with(&self.ctx, &[], now, &sink))
+        }
+
+        fn delete(&self, args: Vec<Value>) -> Result<Value, String> {
+            let sink = |level: Level, msg: String| self.lines.lock().unwrap().push((level, msg));
+            tauri::async_runtime::block_on(delete_with(&self.ctx, &args, &sink))
+        }
+    }
+
+    fn record(name: &str, uploaded_at: u64) -> Value {
+        json!({"name": name, "token": "1", "uploadedAt": uploaded_at})
+    }
+
+    #[test]
+    fn log_list_returns_unexpired_entries_and_prunes_the_expired_one_from_disk() {
+        let rig = Rig::local("http://127.0.0.1:9/".to_string());
+        let store = json!({
+            "https://dpaste.com/Now": record("now", NOW),
+            "https://dpaste.com/Recent": record("recent", NOW - 47 * HOUR_MS),
+            "https://dpaste.com/Old": record("old", NOW - 48 * HOUR_MS),
+        });
+        rig.plant_store(&serde_json::to_string_pretty(&store).unwrap());
+
+        let listed = rig.list(NOW).unwrap();
+        assert_eq!(
+            listed,
+            json!({
+                "https://dpaste.com/Now": record("now", NOW),
+                "https://dpaste.com/Recent": record("recent", NOW - 47 * HOUR_MS),
+            })
+        );
+        // Persisted: a fresh host sees only the two unexpired entries.
+        let keys: Vec<String> = rig.stored().into_iter().map(|(k, _)| k).collect();
+        assert_eq!(
+            keys,
+            ["https://dpaste.com/Now", "https://dpaste.com/Recent"]
+        );
+        assert!(rig.logged().is_empty());
+    }
+
+    #[test]
+    fn log_list_keeps_an_entry_without_a_numeric_uploaded_at() {
+        let rig = Rig::local("http://127.0.0.1:9/".to_string());
+        rig.plant_store(r#"{"https://dpaste.com/Odd": {"name": "odd", "token": "1"}}"#);
+        let listed = rig.list(NOW).unwrap();
+        assert_eq!(listed.as_object().unwrap().len(), 1);
+        assert_eq!(rig.stored().len(), 1);
+    }
+
+    #[test]
+    fn log_list_a_missing_store_is_empty_and_writes_nothing() {
+        let rig = Rig::local("http://127.0.0.1:9/".to_string());
+        assert_eq!(rig.list(NOW).unwrap(), json!({}));
+        assert!(!rig.store_file().exists());
+    }
+
+    #[test]
+    fn log_list_a_corrupt_store_reads_as_empty_and_the_file_is_byte_identical() {
+        let rig = Rig::local("http://127.0.0.1:9/".to_string());
+        let corrupt = "{ this is not json,,";
+        rig.plant_store(corrupt);
+        assert_eq!(rig.list(NOW).unwrap(), json!({}));
+        assert_eq!(std::fs::read_to_string(rig.store_file()).unwrap(), corrupt);
+        let lines = rig.logged();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(lines[0].0, Level::Error);
+    }
+
+    #[test]
+    fn log_list_any_argument_returns_the_invalid_args_marker() {
+        let rig = Rig::local("http://127.0.0.1:9/".to_string());
+        for args in [vec![json!("x")], vec![json!({})], vec![Value::Null]] {
+            let sink = |_: Level, _: String| {};
+            let err =
+                tauri::async_runtime::block_on(list_with(&rig.ctx, &args, NOW, &sink)).unwrap_err();
+            assert!(
+                err.starts_with(crate::ipc_contract::IPC_INVALID_ARGS_MARKER),
+                "{err}"
+            );
+        }
+    }
+
+    #[test]
+    fn log_delete_a_url_not_in_the_store_returns_false_and_sends_nothing() {
+        let (base, seen) = serve(vec![ok("")]);
+        let rig = Rig::local(base);
+        rig.plant_store(&json!({"https://dpaste.com/Other": record("o", NOW)}).to_string());
+        assert_eq!(
+            rig.delete(vec![json!("https://dpaste.com/Missing")]),
+            Ok(Value::Bool(false))
+        );
+        assert!(rig.asked.lock().unwrap().is_empty());
+        assert!(seen.recv_timeout(Duration::from_millis(200)).is_err());
+        assert_eq!(rig.stored().len(), 1);
+    }
+
+    #[test]
+    fn log_delete_posts_the_token_and_removes_the_entry_on_a_2xx() {
+        let (base, seen) = serve(vec![ok("")]);
+        let rig = Rig::local(base);
+        let url = "https://dpaste.com/AbC123";
+        rig.plant_store(
+            &json!({url: record("Heroic log", NOW), "https://dpaste.com/Keep": record("k", NOW)})
+                .to_string(),
+        );
+        assert_eq!(rig.delete(vec![json!(url)]), Ok(Value::Bool(true)));
+
+        assert_eq!(*rig.asked.lock().unwrap(), vec![url.to_string()]);
+        let request = seen.recv_timeout(Duration::from_secs(5)).unwrap();
+        let head = request.head.to_ascii_lowercase();
+        assert!(head.starts_with("post /api/v2/ "), "{head}");
+        assert!(
+            head.contains("user-agent: heroicgameslauncher/9.9.9"),
+            "{head}"
+        );
+        assert!(
+            head.contains("content-type: application/x-www-form-urlencoded"),
+            "{head}"
+        );
+        assert_eq!(request.body, "token=1&delete=");
+
+        let keys: Vec<String> = rig.stored().into_iter().map(|(k, _)| k).collect();
+        assert_eq!(keys, ["https://dpaste.com/Keep"]);
+        assert_eq!(
+            rig.emitter.0.lock().unwrap().clone(),
+            vec![("logFileUploadDeleted".to_string(), vec![json!(url)])]
+        );
+        assert_eq!(
+            rig.logged(),
+            vec![(
+                Level::Info,
+                "Deleted log file Heroic log (https://dpaste.com/AbC123)".to_string()
+            )]
+        );
+    }
+
+    #[test]
+    fn log_delete_a_404_logs_an_error_returns_false_and_keeps_the_entry() {
+        let (base, _seen) = serve(vec![status("404 Not Found", "no such paste\nline 2")]);
+        let rig = Rig::local(base);
+        let url = "https://dpaste.com/Gone";
+        rig.plant_store(&json!({url: record("g", NOW)}).to_string());
+        assert_eq!(rig.delete(vec![json!(url)]), Ok(Value::Bool(false)));
+        assert_eq!(rig.stored().len(), 1);
+        assert!(rig.emitter.0.lock().unwrap().is_empty());
+        assert_eq!(
+            rig.logged(),
+            vec![(
+                Level::Error,
+                "Failed to delete log file upload, response error code 404 Not Found, text: no such paste\\nline 2"
+                    .to_string()
+            )]
+        );
+    }
+
+    #[test]
+    fn log_delete_a_redirect_is_not_followed() {
+        let redirect = "HTTP/1.1 302 Found\r\nLocation: https://evil.example/\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+        let (base, seen) = serve(vec![redirect.to_string(), ok("")]);
+        let rig = Rig::local(base);
+        let url = "https://dpaste.com/Moved";
+        rig.plant_store(&json!({url: record("m", NOW)}).to_string());
+        assert_eq!(rig.delete(vec![json!(url)]), Ok(Value::Bool(false)));
+        assert!(seen.recv_timeout(Duration::from_secs(5)).is_ok());
+        assert!(
+            seen.recv_timeout(Duration::from_millis(500)).is_err(),
+            "a redirect was followed"
+        );
+        assert_eq!(rig.stored().len(), 1);
+    }
+
+    #[test]
+    fn log_delete_a_refused_connection_returns_false_and_keeps_the_entry() {
+        let closed = {
+            let l = TcpListener::bind("127.0.0.1:0").unwrap();
+            format!("http://{}/api/v2/", l.local_addr().unwrap())
+        };
+        let rig = Rig::local(closed);
+        let url = "https://dpaste.com/Down";
+        rig.plant_store(&json!({url: record("d", NOW)}).to_string());
+        assert_eq!(rig.delete(vec![json!(url)]), Ok(Value::Bool(false)));
+        assert_eq!(rig.stored().len(), 1);
+        let lines = rig.logged();
+        assert_eq!(lines.len(), 1);
+        assert!(lines[0].1.starts_with("Failed to send data to dpaste.com:"));
+    }
+
+    #[test]
+    fn log_delete_a_planted_off_host_url_is_never_posted_to() {
+        let (base, seen) = serve(vec![ok("")]);
+        let rig = Rig::local(base);
+        let planted = [
+            "https://evil.example/x",
+            "http://dpaste.com/x",
+            "https://dpaste.com@evil.example/x",
+            "https://dpaste.com:8443/x",
+            "https://www.dpaste.com/x",
+        ];
+        let store: serde_json::Map<String, Value> = planted
+            .iter()
+            .map(|u| (u.to_string(), record("planted", NOW)))
+            .collect();
+        rig.plant_store(&Value::Object(store).to_string());
+        for url in planted {
+            assert_eq!(
+                rig.delete(vec![json!(url)]),
+                Ok(Value::Bool(false)),
+                "{url}"
+            );
+        }
+        assert!(rig.asked.lock().unwrap().is_empty(), "nothing was asked");
+        assert!(
+            seen.recv_timeout(Duration::from_millis(200)).is_err(),
+            "nothing was sent"
+        );
+        assert_eq!(rig.stored().len(), planted.len());
+    }
+
+    #[test]
+    fn log_delete_bad_args_return_the_invalid_args_marker_and_send_nothing() {
+        let (base, seen) = serve(vec![ok("")]);
+        let rig = Rig::local(base);
+        rig.plant_store(&json!({"https://dpaste.com/A": record("a", NOW)}).to_string());
+        let cases: Vec<Vec<Value>> = vec![
+            vec![],
+            vec![json!(1)],
+            vec![Value::Null],
+            vec![json!({"url": "https://dpaste.com/A"})],
+            vec![json!("https://dpaste.com/A"), json!("extra")],
+            vec![json!("not a url")],
+            vec![json!("javascript:alert(1)")],
+            vec![json!("file:///etc/passwd")],
+            vec![json!(format!("https://dpaste.com/{}", "a".repeat(8200)))],
+        ];
+        for args in cases {
+            let err = rig.delete(args.clone()).unwrap_err();
+            assert!(
+                err.starts_with(crate::ipc_contract::IPC_INVALID_ARGS_MARKER),
+                "{args:?}: {err}"
+            );
+        }
+        assert!(rig.asked.lock().unwrap().is_empty());
+        assert!(seen.recv_timeout(Duration::from_millis(200)).is_err());
+    }
+
+    #[test]
+    fn log_upload_then_list_then_delete_round_trips_on_one_store() {
+        // The window 84-05 opened is closed: the upload, the list and the delete all go through
+        // the same StoreHost, so the file has one writer.
+        let (base, _seen) = serve(vec![ok("https://dpaste.com/Trip"), ok("")]);
+        let rig = Rig::local(base);
+        rig.seed(&["gamelib.log"], b"x");
+        rig.upload(vec![json!("trip"), json!({})]).unwrap();
+        let listed = rig.list(SystemClock.now_ms()).unwrap();
+        assert_eq!(
+            listed.as_object().unwrap().keys().collect::<Vec<_>>(),
+            ["https://dpaste.com/Trip"]
+        );
+        assert_eq!(
+            rig.delete(vec![json!("https://dpaste.com/Trip")]),
+            Ok(Value::Bool(true))
+        );
+        assert_eq!(rig.list(SystemClock.now_ms()).unwrap(), json!({}));
+        assert!(rig.stored().is_empty());
     }
 }

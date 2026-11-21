@@ -122,6 +122,42 @@
         ["x", { "extra": 1 }]
       ]
     },
+    "getUploadedLogFiles": {
+      "kind": "invoke",
+      "slice": "logger",
+      "args": [],
+      "returns": "{ [url]: { name, token, uploadedAt } }",
+      "valid": [[]],
+      "invalid": [["x"], [{}], [null], [1, 2]]
+    },
+    "deleteUploadedLogFile": {
+      "kind": "invoke",
+      "slice": "logger",
+      "args": [
+        {
+          "name": "url",
+          "type": "string",
+          "format": "url",
+          "maxLength": 8192
+        }
+      ],
+      "returns": "boolean",
+      "valid": [
+        ["https://dpaste.com/AbC123"],
+        ["http://dpaste.com/AbC123"],
+        ["https://evil.example/x"]
+      ],
+      "invalid": [
+        [],
+        [1],
+        [null],
+        [{ "url": "https://dpaste.com/AbC123" }],
+        ["https://dpaste.com/AbC123", "extra"],
+        ["not a url"],
+        ["javascript:alert(1)"],
+        ["file:///etc/passwd"]
+      ]
+    },
     "getHeroicVersion": {
       "kind": "invoke",
       "slice": "app-shell",

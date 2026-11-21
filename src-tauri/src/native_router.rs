@@ -64,7 +64,7 @@ pub(crate) struct NativeCtx {
     pub(crate) store_host: Arc<StoreHost>,
     /// The push seam to the renderer (`logFileUploaded`).
     pub(crate) emitter: Arc<dyn FrontendEmitter>,
-    /// The HTTP client for the paste service, shared with the delete handler (84-06).
+    /// The HTTP client for the paste service, shared by the upload and the delete handlers.
     pub(crate) paste: Arc<dyn PasteClient>,
     /// The app version, for the upload's User-Agent.
     pub(crate) app_version: String,
@@ -310,6 +310,11 @@ impl NativeRouter {
         );
         invoke.insert("getLogContent", log_dispatch::get_log_content);
         invoke.insert("uploadLogFile", log_upload::upload_log_file);
+        invoke.insert("getUploadedLogFiles", log_upload::get_uploaded_log_files);
+        invoke.insert(
+            "deleteUploadedLogFile",
+            log_upload::delete_uploaded_log_file,
+        );
         let mut queues: HashMap<&'static str, SliceQueue> = HashMap::new();
         for slice in [APP_SHELL_SLICE, LOGGER_SLICE] {
             let worker_ctx = Arc::clone(&ctx);

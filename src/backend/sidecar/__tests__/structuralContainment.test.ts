@@ -902,7 +902,7 @@ describe('shadowing: a per-suite os mock is INERT (quick task 260905-jg4)', () =
 
   const backendRoot = resolve(__dirname, '..', '..')
   const setupContainmentPath = join(backendRoot, 'jest.setupContainment.ts')
-  const loggerFlowsPath = join(__dirname, 'loggerFlows.test.ts')
+  const pinHostPath = join(__dirname, 'enrichmentFlows.test.ts')
 
   /** True when `source` declares an `os` mock in CODE, not merely in prose.
    * Comment-stripped for the same reason `testContainment.test.ts`'s Block B
@@ -956,7 +956,8 @@ describe('shadowing: a per-suite os mock is INERT (quick task 260905-jg4)', () =
     // This file cannot host that measurement: proving a per-suite factory is
     // ignored requires declaring one, and this file's mock-free import graph
     // is load-bearing for the WR-05 gate above. The pin therefore lives in
-    // loggerFlows.test.ts and this leg holds it in place.
+    // enrichmentFlows.test.ts and this leg holds it in place. (It lived in loggerFlows.test.ts
+    // until Phase 84 plan 84-06 deleted that suite and rehomed the pin.)
     //
     // The pin's title is assembled at runtime rather than written as a
     // literal, for a reason this gate's own self-test C caught on its first
@@ -965,12 +966,12 @@ describe('shadowing: a per-suite os mock is INERT (quick task 260905-jg4)', () =
     // above, which greps for the same `jest` + `.mock(` fragment. Two red
     // tests, one cause. Left as a runtime concatenation deliberately.
     const pinTitle = `jest` + `.mock('os') is INERT`
-    const raw = readFileSync(loggerFlowsPath, 'utf8')
+    const raw = readFileSync(pinHostPath, 'utf8')
 
     // Matched on COMMENT-STRIPPED source, and this is the whole point of the
     // leg. The first version matched RAW source and its RED-PROOF stayed
     // GREEN: renaming the actual `it(...)` did not fail the gate, because
-    // loggerFlows.test.ts ALSO names the pin in its docstring, and prose was
+    // the pin host ALSO names the pin in its docstring, and prose was
     // enough to satisfy a raw match. That is this repo's recorded "a gate a
     // comment can satisfy" failure -- the gate would have gone on passing
     // after the test it exists to hold in place had been deleted. A test

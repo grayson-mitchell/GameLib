@@ -106,10 +106,10 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   // ported byte-equivalently from main.ts (D-02); send count unchanged.
   // Phase 74 Plan 11 (2026-11-12): invoke 9 -> 10 -- getSteamUpdateInfo (STEAM-01).
   'installFlowRegistration.ts': { invoke: 10, send: 0 },
-  // Phase 84 Plan 05 / 84-05 (2026-11-21): send 3 -> 0 -- `logError`, `logInfo` and `showLogFileInFolder`
-  // are served by the Rust native router (`nativeChannels.json`, slice `logger`); invoke 3 -> 2 --
-  // `uploadLogFile` is too. Their registrations are deleted here.
-  'loggerFlowRegistration.ts': { invoke: 2, send: 0 },
+  // Phase 84 Plan 06 / 84-06 (2026-11-21): the `loggerFlowRegistration.ts` row is gone -- its last two
+  // invokes (`getUploadedLogFiles`, `deleteUploadedLogFile`) moved to the Rust native router
+  // (`nativeChannels.json`, slice `logger`) and the module registered nothing, so it was deleted
+  // (84-05 had already moved its other five channels: send 3 -> 0, invoke 3 -> 2).
   'oauthLoginFlowRegistration.ts': { invoke: 1, send: 0 },
   'runnerAuthFlowRegistration.ts': { invoke: 10, send: 1 },
   // Phase 34.6 Plan 10 (2026-08-24): invoke 11 -> 14 -- getAchievements/getDefaultSavePath/

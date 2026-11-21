@@ -187,8 +187,17 @@ function ownerlessChannels(
   return computed
 }
 
-/** Floors (D-05). Never lower: a parse miss must turn the census red, not shrink it. */
-const FILES_FLOOR = 22
+/**
+ * Floors (D-05). Never lower: a parse miss must turn the census red, not shrink it.
+ *
+ * Phase 84 Plan 06 (2026-11-21): FILES_FLOOR 22 -> 21. The drop is the deliberate deletion of
+ * `loggerFlowRegistration.ts` (a measured file, not a parse miss): its last two invokes moved to
+ * the Rust native router, so the module registered nothing and was removed. The scan reads 21
+ * `*FlowRegistration.ts` files, the same count as the on-disk listing, so the parse-miss margin is
+ * unchanged. The declaration total stays 289 (the two channels moved from `logger.ts` into
+ * `native.ts`).
+ */
+const FILES_FLOOR = 21
 const DECLARATIONS_FLOOR = 284
 
 /** Declared channels across every domain part, all kinds. */
@@ -218,7 +227,7 @@ describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
   it('(a) every channel a FlowRegistration registers is declared in its paired ipc/<domain>.ts', () => {
     const files = registrationFiles()
     assertAtOrAboveFloor('ipcDomainCensus files', files.length, FILES_FLOOR)
-    expect(files.length).toBe(22)
+    expect(files.length).toBe(21) // 22 before 84-06 deleted loggerFlowRegistration.ts
     for (const f of files) {
       const domain = f.replace('FlowRegistration.ts', '')
       expect(Object.keys(domains)).toContain(domain)
@@ -300,6 +309,7 @@ describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
     // Phase 82 Plan 15: -2 TestSync (setNileCommandStub, resetNileCommandStub, the nile e2e stub deleted, D-19); owner-less allowlist 63 -> 61.
     // That removed the last TestSync channel, so the TestSync kind left the census.
     // Phase 83 Plan 03 (2026-11-20): getHeroicVersion moved from appShell.ts to native.ts (NativeAsync), net 0.
+    // Phase 84 Plan 06 (2026-11-21): getUploadedLogFiles and deleteUploadedLogFile moved from logger.ts (LoggerAsync, deleted) to native.ts (NativeAsync), net 0.
     expect(total).toBe(289)
     // Floor (Phase 67): originally measured - 6. Re-measured at 290 after quick 261115-tk8's deliberate
     // six-channel deletion and quick 261117-p38's two added channels (288 + 2), so the floor moves

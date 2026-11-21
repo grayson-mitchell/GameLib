@@ -243,7 +243,8 @@
  * WHAT THIS MEANS WHEN YOU WRITE A SUITE. Do not add a `jest.mock('os', ...)`
  * expecting it to take effect, and do not describe an existing one as
  * load-bearing -- assert the value instead. The behavioural pin lives in
- * `loggerFlows.test.ts` ("this file's own jest.mock('os') is INERT"); the
+ * `enrichmentFlows.test.ts` ("this file's own jest.mock('os') is INERT"; it lived in the deleted
+ * `loggerFlows.test.ts` until Phase 84 plan 84-06); the
  * census and this note are gated by `structuralContainment.test.ts`'s
  * "shadowing" describe block.
  */
