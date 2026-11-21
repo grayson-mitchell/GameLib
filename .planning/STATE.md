@@ -4,16 +4,16 @@ milestone: v0.11
 milestone_name: Node Sidecar Retirement
 current_phase: 84
 current_phase_name: Logger
-status: executing
-stopped_at: Completed 84-10-PLAN.md
-last_updated: "2026-11-21T08:25:43.816Z"
+status: verifying
+stopped_at: Completed 84-11-PLAN.md
+last_updated: "2026-11-21T09:21:29.451Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 84 execution started
-state_head: cf1fea921ddd1ba0746f3a24180e97188c021779
+state_head: d72ac7b858c219c5cafe57eff8f54d7f20da9898
 progress:
-  total_phases: 19
+  total_phases: 20
   completed_phases: 23
-  total_plans: 42
+  total_plans: 52
   completed_plans: 531
   percent: 100
 ---
@@ -78,7 +78,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 
 Phase: 84 (Logger) — EXECUTING
 Plan: 11 of 11
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-11-21 - Completed quick task 261121-pwt: Migrate the sidecar test mocks off fileStore, then delete fileStore.ts (Phase 82 criterion 5 left open by 82-04)
 Progress: [██████████] 100%
 
@@ -349,6 +349,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 84 P08 | 60 min | 2 tasks | 31 files |
 | Phase 84 P09 | 25 min | 2 tasks | 11 files |
 | Phase 84 P10 | n/a (two sessions, checkpoint hold) | 3 tasks | 1 files |
+| Phase 84 P11 | ~45min (operator-driven) | 3 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -638,6 +639,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 84]: 84-08: steamcm_diag is a separate sink from shell_log so crate lines are Steam events; bridged events on the writer thread are dropped by a thread-local guard; GAMELIB_LOG_LEVEL=debug is the only way crate diagnostics reach DEBUG
 - [Phase 84]: 84-09: the logger holds no Shutdown registrant; finish ends with gamelib_log::flush(ctx.remaining) inside the one exit budget (D-13 as amended, D-21)
 - [Phase 84]: 84-10: operator held the push; Phase 84 CI proof not collected; backend-di-ceilings red at P (steam-bridge e5fc84b8c) and main moved past P block a push
+- [Phase 84]: 84-11: live gate scored 7 pass, 1 issue; item 4 (runner header premise) and item 7 (crate-origin grep rule) are contract defects routed to /gsd-plan-phase 84 --gaps
 
 ### Pending Todos
 
@@ -897,8 +899,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-21T08:25:43.506Z
-Stopped at: Completed 84-10-PLAN.md
+Last session: 2026-11-21T09:21:29.131Z
+Stopped at: Completed 84-11-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

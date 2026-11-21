@@ -420,7 +420,7 @@ Plans:
   3. Diagnostics from steam-vent and reqwest appear in the log, and a repeating error is rate-limited rather than flooding the file
   4. The TS logger is reduced to a fire-and-forget forwarder, and the shell's second log path (`shell_diag`) and the TS log registrations are deleted
 
-**Plans:** 10/11 plans executed in 9 waves; planned 2026-11-21, consolidated from 14 the same day, then the consolidated 84-06 and 84-07 each split in two to stay inside the per-plan context budget; executes only after Phase 83 closes (83-11 live gate passed, D-02)
+**Plans:** 11/11 plans executed in 9 waves; planned 2026-11-21, consolidated from 14 the same day, then the consolidated 84-06 and 84-07 each split in two to stay inside the per-plan context budget; executes only after Phase 83 closes (83-11 live gate passed, D-02)
 
 Plans:
 **Wave 1**
@@ -450,7 +450,7 @@ Plans:
 
 **Wave 9** *(blocked on Wave 8 completion)*
 - [x] 84-10-PLAN.md — Clean-worktree proof, push checkpoint, three-OS CI proof
-- [ ] 84-11-PLAN.md — Run the live macOS gate
+- [x] 84-11-PLAN.md — Run the live macOS gate
 
 ### Phase 85: Store host, config and versioned migrations
 
