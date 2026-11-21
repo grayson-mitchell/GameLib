@@ -776,7 +776,7 @@ Plans:
 **Goal:** The game page has no ⋮ menu: every action sits next to what it changes. The left card is the game (store link, Edit details, Favourite heart by the title, category chips, Hide); the Install tab is the hub for your copy (Location → Open/Move, Size → Modify, Version → Verify/Check for updates, integration switch rows, red Uninstall last behind a confirmation); the ⚙ dialog owns how the game runs; the footer holds only tier-one actions. Requirements and the left-card play-time block are removed as duplicates; pending and error states live inside each row. Design source: sketch 012 (folds in 010, 011) — `.claude/skills/sketch-findings-gamelib/references/game-page.md`.
 **Requirements**: TBD
 **Depends on:** Nothing (frontend-only; independent of the v0.11 port phases)
-**Plans:** 10/10 plans executed
+**Plans:** 10/14 plans executed
 
 Plans:
 **Wave 1**
@@ -808,6 +808,16 @@ Plans:
 
 **Wave 10** *(blocked on Wave 9 completion)*
 - [x] 100-10-PLAN.md — 100-HUMAN-UAT.md (D-15 themes, D-16 store walk) and the full phase-gate run
+
+**Wave 11** *(gap closure, blocked on Wave 10 completion)*
+- [ ] 100-11-PLAN.md — Shell: moveInstall, changeInstallPath, steamRemoveAllCopies on LONG_RUNNING_CHANNELS with Rust pins and the TS mirror (CR-02)
+- [ ] 100-12-PLAN.md — Version row renders with no install.version ("Unknown", Verify reachable) plus a hook-harness render test; RowFailure Retry obeys its gate (CR-01)
+
+**Wave 12** *(gap closure, blocked on 100-12)*
+- [ ] 100-13-PLAN.md — Location row truthful past 60 s (timeout hand-off, failure hidden while moving), gate-aware Retry, non-sticky failures, Open for third-party games (CR-02, WR-04, WR-02)
+
+**Wave 13** *(gap closure, blocked on 100-11 and 100-13)*
+- [ ] 100-14-PLAN.md — Danger-zone failure path for Uninstall and Remove all copies (WR-05), UAT items 19-20, review dispositions, full phase-gate run
 
 ### Phase 101: Steam Verify & Move install
 
