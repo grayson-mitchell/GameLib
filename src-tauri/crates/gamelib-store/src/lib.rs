@@ -8,4 +8,6 @@
 
 pub mod atomic;
 pub mod dotpath;
+pub mod envelope;
 pub mod json;
+pub mod ops;
