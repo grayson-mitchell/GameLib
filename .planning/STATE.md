@@ -6,10 +6,10 @@ current_phase: 85
 current_phase_name: Store host, config and versioned migrations
 status: executing
 stopped_at: Completed 85-02-PLAN.md
-last_updated: "2026-11-21T17:36:13.416Z"
+last_updated: "2026-11-21T17:39:55.057Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 85 execution started
-state_head: 01c12f259ffe15e8b6227c7bf39e070f6e3bb6a4
+state_head: 8fcadab94453fd35774966873231decfa84c08c2
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 85 (Store host, config and versioned migrations) — EXECUTING
-Plan: 5 of 25
+Plan: 6 of 25
 Status: Ready to execute
 Last activity: 2026-11-22 — Phase 85 execution started
 Progress: [██████████] 100%
@@ -745,6 +745,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 18 | Reword Rust comments that still cited the deleted fileStore.ts (follow-up to 261121-pwt) | 2026-11-21 | 0d4618b94 | — | — |
 | 261121-vlo | "Report a translation problem" opens the in-app report form, prefilled, not GitHub | 2026-11-21 | c72bb25cd | — | [261121-vlo-report-a-translation-problem-should-open](./quick/261121-vlo-report-a-translation-problem-should-open/) |
 | 20 | Close stale Gate 7 digest todo (already re-pinned by 84-06, 90ba1d3ab) | 2026-11-22 | 01c12f259 | — | — |
+| 21 | Replace chrono with jiff in gamelib-log (RUSTSEC-2026-0543 audit red) | 2026-11-22 | 8fcadab94 | — | — |
 
 ## Deferred Items
 
