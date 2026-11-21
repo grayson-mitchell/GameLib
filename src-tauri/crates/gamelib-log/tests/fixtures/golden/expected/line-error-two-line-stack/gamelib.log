@@ -1,0 +1,2 @@
+(13:05:09) [ERROR]:   [Backend]:         Error: boom
+    at run (/app/src/run.ts:12:5)

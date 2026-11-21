@@ -92,6 +92,8 @@ interface GoldenLineCase {
   id: string
   kind: 'line'
   oracle?: boolean
+  /** Required when `oracle` is false: names the decision the hand-written expectation comes from. */
+  divergenceNote?: string
   target: GoldenTarget
   method: 'debug' | 'info' | 'warning' | 'error'
   /** JSON message. For `error` it is `{name, message, stack}` and the test builds a real Error. */
@@ -108,6 +110,8 @@ interface GoldenChunksCase {
   id: string
   kind: 'chunks'
   oracle?: boolean
+  /** Required when `oracle` is false: names the decision the hand-written expectation comes from. */
+  divergenceNote?: string
   target: GoldenTarget
   /** Content of a log file that exists before the writer's first write. */
   existing?: string
@@ -120,6 +124,8 @@ interface GoldenRotateCase {
   id: string
   kind: 'rotate'
   oracle?: boolean
+  /** Required when `oracle` is false: names the decision the hand-written expectation comes from. */
+  divergenceNote?: string
   target: GoldenTarget
   existing?: string
   existingOld?: string
@@ -137,6 +143,8 @@ interface GoldenCloseCase {
   id: string
   kind: 'close'
   oracle?: boolean
+  /** Required when `oracle` is false: names the decision the hand-written expectation comes from. */
+  divergenceNote?: string
   target: GoldenTarget
   chunks: string[]
 }
@@ -146,6 +154,8 @@ interface GoldenRendererCase {
   id: string
   kind: 'renderer'
   oracle?: boolean
+  /** Required when `oracle` is false: names the decision the hand-written expectation comes from. */
+  divergenceNote?: string
   channel: 'logError' | 'logInfo'
   value: unknown
 }
@@ -581,11 +591,14 @@ function readExpectedTree(id: string): Map<string, string> {
 const cases = JSON.parse(readFileSync(CASES_PATH, 'utf-8')) as GoldenCase[]
 const oracleCases = cases.filter((c) => c.oracle !== false)
 const generated: CaseEntries[] = []
+/** Cases whose run produced at least one file (git cannot hold an empty directory). */
+const casesWithFiles = new Set<string>()
 
 describe('log golden (TS oracle)', () => {
   it.each(oracleCases.map((c) => [c.id, c] as const))('%s', async (_id, c) => {
     const result = await runCase(c)
     generated.push(result.entries)
+    if (result.files.size) casesWithFiles.add(c.id)
     if (WRITE_MODE) {
       rmSync(join(EXPECTED_ROOT, c.id), { recursive: true, force: true })
       for (const [file, content] of result.files) {
@@ -613,21 +626,25 @@ describe('log golden (TS oracle)', () => {
     expect(normaliseEntries(generated)).toEqual(normaliseEntries(expected))
   })
 
-  it('the expected tree holds exactly one directory per case, and hand-written cases exist', () => {
+  it('the expected tree holds one directory per case that wrote files, and hand-written cases exist', () => {
+    const handWritten = cases.filter((c) => c.oracle === false)
+    for (const c of handWritten) {
+      expect(typeof c.divergenceNote).toBe('string')
+    }
+    const wanted = [...casesWithFiles, ...handWritten.map((c) => c.id)].sort()
     if (WRITE_MODE) {
-      const known = new Set(cases.map((c) => c.id))
       for (const dir of existsSync(EXPECTED_ROOT)
         ? readdirSync(EXPECTED_ROOT)
         : []) {
-        if (!known.has(dir))
+        if (!wanted.includes(dir))
           rmSync(join(EXPECTED_ROOT, dir), { recursive: true, force: true })
       }
     }
     const onDisk = existsSync(EXPECTED_ROOT)
       ? readdirSync(EXPECTED_ROOT).sort()
       : []
-    expect(onDisk).toEqual(cases.map((c) => c.id).sort())
-    for (const c of cases.filter((x) => x.oracle === false)) {
+    expect(onDisk).toEqual(wanted)
+    for (const c of handWritten) {
       expect(readExpectedTree(c.id).size).toBeGreaterThan(0)
     }
   })

@@ -52,5 +52,1482 @@
       "channel": "logError",
       "value": "a\r\nb"
     }
+  },
+  {
+    "id": "line-debug-general",
+    "frames": [
+      {
+        "target": {
+          "kind": "general"
+        },
+        "rotate": false,
+        "entries": [
+          {
+            "line": {
+              "ts": 1795133109000,
+              "tz": 780,
+              "level": "DEBUG",
+              "prefix": "",
+              "msg": "debug message for General"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "line-debug-backend",
+    "frames": [
+      {
+        "target": {
+          "kind": "general"
+        },
+        "rotate": false,
+        "entries": [
+          {
+            "line": {
+              "ts": 1795133109000,
+              "tz": 780,
+              "level": "DEBUG",
+              "prefix": "Backend",
+              "msg": "debug message for Backend"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "line-debug-steam",
+    "frames": [
+      {
+        "target": {
+          "kind": "general"
+        },
+        "rotate": false,
+        "entries": [
+          {
+            "line": {
+              "ts": 1795133109000,
+              "tz": 780,
+              "level": "DEBUG",
+              "prefix": "Steam",
+              "msg": "debug message for Steam"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "line-debug-frontend",
+    "frames": [
+      {
+        "target": {
+          "kind": "general"
+        },
+        "rotate": false,
+        "entries": [
+          {
+            "line": {
+              "ts": 1795133109000,
+              "tz": 780,
+              "level": "DEBUG",
+              "prefix": "Frontend",
+              "msg": "debug message for Frontend"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "line-debug-protocolhandler",
+    "frames": [
+      {
+        "target": {
+          "kind": "general"
+        },
+        "rotate": false,
+        "entries": [
+          {
+            "line": {
+              "ts": 1795133109000,
+              "tz": 780,
+              "level": "DEBUG",
+              "prefix": "ProtocolHandler",
+              "msg": "debug message for ProtocolHandler"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "line-info-general",
+    "frames": [
+      {
+        "target": {
+          "kind": "general"
+        },
+        "rotate": false,
+        "entries": [
+          {
+            "line": {
+              "ts": 1795133109000,
+              "tz": 780,
+              "level": "INFO",
+              "prefix": "",
+              "msg": "info message for General"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "line-info-backend",
+    "frames": [
+      {
+        "target": {
+          "kind": "general"
+        },
+        "rotate": false,
+        "entries": [
+          {
+            "line": {
+              "ts": 1795133109000,
+              "tz": 780,
+              "level": "INFO",
+              "prefix": "Backend",
+              "msg": "info message for Backend"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "line-info-steam",
+    "frames": [
+      {
+        "target": {
+          "kind": "general"
+        },
+        "rotate": false,
+        "entries": [
+          {
+            "line": {
+              "ts": 1795133109000,
+              "tz": 780,
+              "level": "INFO",
+              "prefix": "Steam",
+              "msg": "info message for Steam"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "line-info-frontend",
+    "frames": [
+      {
+        "target": {
+          "kind": "general"
+        },
+        "rotate": false,
+        "entries": [
+          {
+            "line": {
+              "ts": 1795133109000,
+              "tz": 780,
+              "level": "INFO",
+              "prefix": "Frontend",
+              "msg": "info message for Frontend"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "line-info-protocolhandler",
+    "frames": [
+      {
+        "target": {
+          "kind": "general"
+        },
+        "rotate": false,
+        "entries": [
+          {
+            "line": {
+              "ts": 1795133109000,
+              "tz": 780,
+              "level": "INFO",
+              "prefix": "ProtocolHandler",
+              "msg": "info message for ProtocolHandler"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "line-warning-general",
+    "frames": [
+      {
+        "target": {
+          "kind": "general"
+        },
+        "rotate": false,
+        "entries": [
+          {
+            "line": {
+              "ts": 1795133109000,
+              "tz": 780,
+              "level": "WARNING",
+              "prefix": "",
+              "msg": "warning message for General"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "line-warning-backend",
+    "frames": [
+      {
+        "target": {
+          "kind": "general"
+        },
+        "rotate": false,
+        "entries": [
+          {
+            "line": {
+              "ts": 1795133109000,
+              "tz": 780,
+              "level": "WARNING",
+              "prefix": "Backend",
+              "msg": "warning message for Backend"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "line-warning-steam",
+    "frames": [
+      {
+        "target": {
+          "kind": "general"
+        },
+        "rotate": false,
+        "entries": [
+          {
+            "line": {
+              "ts": 1795133109000,
+              "tz": 780,
+              "level": "WARNING",
+              "prefix": "Steam",
+              "msg": "warning message for Steam"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "line-warning-frontend",
+    "frames": [
+      {
+        "target": {
+          "kind": "general"
+        },
+        "rotate": false,
+        "entries": [
+          {
+            "line": {
+              "ts": 1795133109000,
+              "tz": 780,
+              "level": "WARNING",
+              "prefix": "Frontend",
+              "msg": "warning message for Frontend"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "line-warning-protocolhandler",
+    "frames": [
+      {
+        "target": {
+          "kind": "general"
+        },
+        "rotate": false,
+        "entries": [
+          {
+            "line": {
+              "ts": 1795133109000,
+              "tz": 780,
+              "level": "WARNING",
+              "prefix": "ProtocolHandler",
+              "msg": "warning message for ProtocolHandler"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "line-error-general",
+    "frames": [
+      {
+        "target": {
+          "kind": "general"
+        },
+        "rotate": false,
+        "entries": [
+          {
+            "line": {
+              "ts": 1795133109000,
+              "tz": 780,
+              "level": "ERROR",
+              "prefix": "",
+              "msg": "error message for General"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "line-error-backend",
+    "frames": [
+      {
+        "target": {
+          "kind": "general"
+        },
+        "rotate": false,
+        "entries": [
+          {
+            "line": {
+              "ts": 1795133109000,
+              "tz": 780,
+              "level": "ERROR",
+              "prefix": "Backend",
+              "msg": "error message for Backend"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "line-error-steam",
+    "frames": [
+      {
+        "target": {
+          "kind": "general"
+        },
+        "rotate": false,
+        "entries": [
+          {
+            "line": {
+              "ts": 1795133109000,
+              "tz": 780,
+              "level": "ERROR",
+              "prefix": "Steam",
+              "msg": "error message for Steam"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "line-error-frontend",
+    "frames": [
+      {
+        "target": {
+          "kind": "general"
+        },
+        "rotate": false,
+        "entries": [
+          {
+            "line": {
+              "ts": 1795133109000,
+              "tz": 780,
+              "level": "ERROR",
+              "prefix": "Frontend",
+              "msg": "error message for Frontend"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "line-error-protocolhandler",
+    "frames": [
+      {
+        "target": {
+          "kind": "general"
+        },
+        "rotate": false,
+        "entries": [
+          {
+            "line": {
+              "ts": 1795133109000,
+              "tz": 780,
+              "level": "ERROR",
+              "prefix": "ProtocolHandler",
+              "msg": "error message for ProtocolHandler"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "line-array-boot-facts",
+    "frames": [
+      {
+        "target": {
+          "kind": "general"
+        },
+        "rotate": false,
+        "entries": [
+          {
+            "line": {
+              "ts": 1795133109000,
+              "tz": 780,
+              "level": "INFO",
+              "prefix": "Backend",
+              "msg": "System facts: darwin arm64 25.0.0, CPU: x x8, memory: 16 GiB"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "line-array-nested-mixed",
+    "frames": [
+      {
+        "target": {
+          "kind": "general"
+        },
+        "rotate": false,
+        "entries": [
+          {
+            "line": {
+              "ts": 1795133109000,
+              "tz": 780,
+              "level": "INFO",
+              "prefix": "Backend",
+              "msg": "a b c 42 true"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "line-error-two-line-stack",
+    "frames": [
+      {
+        "target": {
+          "kind": "general"
+        },
+        "rotate": false,
+        "entries": [
+          {
+            "line": {
+              "ts": 1795133109000,
+              "tz": 780,
+              "level": "ERROR",
+              "prefix": "Backend",
+              "msg": "Error: boom\n    at run (/app/src/run.ts:12:5)"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "line-object-json",
+    "frames": [
+      {
+        "target": {
+          "kind": "general"
+        },
+        "rotate": false,
+        "entries": [
+          {
+            "line": {
+              "ts": 1795133109000,
+              "tz": 780,
+              "level": "INFO",
+              "prefix": "Backend",
+              "msg": "{\n  \"b\": 1,\n  \"a\": {\n    \"c\": [\n      1,\n      2\n    ]\n  }\n}"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "line-number",
+    "frames": [
+      {
+        "target": {
+          "kind": "general"
+        },
+        "rotate": false,
+        "entries": [
+          {
+            "line": {
+              "ts": 1795133109000,
+              "tz": 780,
+              "level": "INFO",
+              "prefix": "Backend",
+              "msg": "42"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "line-boolean",
+    "frames": [
+      {
+        "target": {
+          "kind": "general"
+        },
+        "rotate": false,
+        "entries": [
+          {
+            "line": {
+              "ts": 1795133109000,
+              "tz": 780,
+              "level": "WARNING",
+              "prefix": "Backend",
+              "msg": "false"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "line-promise-string",
+    "frames": [
+      {
+        "target": {
+          "kind": "general"
+        },
+        "rotate": false,
+        "entries": [
+          {
+            "line": {
+              "ts": 1795133109000,
+              "tz": 780,
+              "level": "INFO",
+              "prefix": "Backend",
+              "msg": "resolved text"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "line-empty-string-no-line",
+    "frames": []
+  },
+  {
+    "id": "line-whitespace-only-string",
+    "frames": [
+      {
+        "target": {
+          "kind": "general"
+        },
+        "rotate": false,
+        "entries": [
+          {
+            "line": {
+              "ts": 1795133109000,
+              "tz": 780,
+              "level": "INFO",
+              "prefix": "Backend",
+              "msg": "   "
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "line-multiline-string",
+    "frames": [
+      {
+        "target": {
+          "kind": "general"
+        },
+        "rotate": false,
+        "entries": [
+          {
+            "line": {
+              "ts": 1795133109000,
+              "tz": 780,
+              "level": "INFO",
+              "prefix": "Backend",
+              "msg": "first\nsecond"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "line-trailing-newline-string",
+    "frames": [
+      {
+        "target": {
+          "kind": "general"
+        },
+        "rotate": false,
+        "entries": [
+          {
+            "line": {
+              "ts": 1795133109000,
+              "tz": 780,
+              "level": "INFO",
+              "prefix": "Backend",
+              "msg": "ends with a newline\n"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "line-uat-scanner-proof",
+    "frames": [
+      {
+        "target": {
+          "kind": "general"
+        },
+        "rotate": false,
+        "entries": [
+          {
+            "line": {
+              "ts": 1795133109000,
+              "tz": 780,
+              "level": "INFO",
+              "prefix": "Backend",
+              "msg": "scanner steam_api op=scan caller=test: impl=rust"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "line-runner-disabled-dropped",
+    "frames": []
+  },
+  {
+    "id": "line-runner-disabled-forcelog",
+    "frames": [
+      {
+        "target": {
+          "kind": "runner",
+          "runner": "legendary"
+        },
+        "rotate": true,
+        "entries": [
+          {
+            "line": {
+              "ts": 1795133109000,
+              "tz": 780,
+              "level": "ERROR",
+              "prefix": "Legendary",
+              "msg": "forced onto a disabled writer"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "line-game-install-log",
+    "frames": [
+      {
+        "target": {
+          "kind": "game",
+          "appName": "1207658930",
+          "runner": "gog",
+          "type": "install"
+        },
+        "rotate": true,
+        "entries": [
+          {
+            "line": {
+              "ts": 1795133109000,
+              "tz": 780,
+              "level": "INFO",
+              "prefix": "Gog",
+              "msg": "install log line"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "chunks-whitespace-only-skipped",
+    "frames": [
+      {
+        "target": {
+          "kind": "game",
+          "appName": "480",
+          "runner": "steam",
+          "type": "launch"
+        },
+        "rotate": true,
+        "entries": [
+          {
+            "raw": "first\n"
+          },
+          {
+            "raw": "   \n"
+          },
+          {
+            "raw": "\t"
+          },
+          {
+            "raw": "after\n"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "chunks-first-whitespace-still-rotates",
+    "frames": [
+      {
+        "target": {
+          "kind": "game",
+          "appName": "480",
+          "runner": "steam",
+          "type": "launch"
+        },
+        "rotate": true,
+        "entries": [
+          {
+            "raw": "  \n"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "chunks-wine-header",
+    "frames": [
+      {
+        "target": {
+          "kind": "game",
+          "appName": "Game Name",
+          "runner": "gog",
+          "type": "launch"
+        },
+        "rotate": true,
+        "entries": [
+          {
+            "raw": "Wine Command: /usr/bin/wine game.exe --arg value\n\nGame Log:\n"
+          },
+          {
+            "raw": "wine: loading module\n"
+          },
+          {
+            "raw": "0024:err:module:import_dll Library X.dll not found\n"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "chunks-crlf-and-unicode",
+    "frames": [
+      {
+        "target": {
+          "kind": "game",
+          "appName": "480",
+          "runner": "steam",
+          "type": "launch"
+        },
+        "rotate": true,
+        "entries": [
+          {
+            "raw": "line one\r\nline two\r\n"
+          },
+          {
+            "raw": "unicode é世界 🎮\n"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "chunks-no-final-newline",
+    "frames": [
+      {
+        "target": {
+          "kind": "game",
+          "appName": "480",
+          "runner": "steam",
+          "type": "launch"
+        },
+        "rotate": true,
+        "entries": [
+          {
+            "raw": "partial output"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "chunks-disabled-no-file",
+    "frames": []
+  },
+  {
+    "id": "chunks-disabled-forcelog-line",
+    "frames": [
+      {
+        "target": {
+          "kind": "game",
+          "appName": "480",
+          "runner": "steam",
+          "type": "launch"
+        },
+        "rotate": true,
+        "entries": [
+          {
+            "raw": "forced line\n"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "chunks-runner-target",
+    "frames": [
+      {
+        "target": {
+          "kind": "runner",
+          "runner": "legendary"
+        },
+        "rotate": true,
+        "entries": [
+          {
+            "raw": "legendary output\n"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "chunks-gog-redist-target",
+    "frames": [
+      {
+        "target": {
+          "kind": "gogRedist"
+        },
+        "rotate": true,
+        "entries": [
+          {
+            "raw": "redist output\n"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "rotate-existing-to-old",
+    "frames": [
+      {
+        "target": {
+          "kind": "game",
+          "appName": "480",
+          "runner": "steam",
+          "type": "launch"
+        },
+        "rotate": true,
+        "entries": [
+          {
+            "raw": "new launch\n"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "rotate-overwrites-existing-old",
+    "frames": [
+      {
+        "target": {
+          "kind": "game",
+          "appName": "480",
+          "runner": "steam",
+          "type": "launch"
+        },
+        "rotate": true,
+        "entries": [
+          {
+            "raw": "new launch\n"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "rotate-second-instance-rotates-again",
+    "frames": [
+      {
+        "target": {
+          "kind": "game",
+          "appName": "480",
+          "runner": "steam",
+          "type": "launch"
+        },
+        "rotate": true,
+        "entries": [
+          {
+            "raw": "first instance\n"
+          }
+        ]
+      },
+      {
+        "target": {
+          "kind": "game",
+          "appName": "480",
+          "runner": "steam",
+          "type": "launch"
+        },
+        "rotate": true,
+        "entries": [
+          {
+            "raw": "second instance\n"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "rotate-disabled-never-rotates",
+    "frames": []
+  },
+  {
+    "id": "rotate-forcelog-on-disabled-rotates",
+    "frames": [
+      {
+        "target": {
+          "kind": "game",
+          "appName": "480",
+          "runner": "steam",
+          "type": "launch"
+        },
+        "rotate": true,
+        "entries": [
+          {
+            "raw": "forced\n"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "rotate-general-existing",
+    "frames": [
+      {
+        "target": {
+          "kind": "general"
+        },
+        "rotate": false,
+        "entries": [
+          {
+            "line": {
+              "ts": 1795133109000,
+              "tz": 780,
+              "level": "INFO",
+              "prefix": "Backend",
+              "msg": "first line of the new log"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "rotate-logging-line-game",
+    "frames": [
+      {
+        "target": {
+          "kind": "game",
+          "appName": "480",
+          "runner": "steam",
+          "type": "launch"
+        },
+        "rotate": true,
+        "entries": [
+          {
+            "line": {
+              "ts": 1795133109000,
+              "tz": 780,
+              "level": "INFO",
+              "prefix": "Backend",
+              "msg": "game line"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "rotate-logging-line-runner",
+    "frames": [
+      {
+        "target": {
+          "kind": "runner",
+          "runner": "nile"
+        },
+        "rotate": true,
+        "entries": [
+          {
+            "line": {
+              "ts": 1795133109000,
+              "tz": 780,
+              "level": "INFO",
+              "prefix": "Backend",
+              "msg": "runner line"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "rotate-logging-line-gog-redist",
+    "frames": [
+      {
+        "target": {
+          "kind": "gogRedist"
+        },
+        "rotate": true,
+        "entries": [
+          {
+            "line": {
+              "ts": 1795133109000,
+              "tz": 780,
+              "level": "INFO",
+              "prefix": "Backend",
+              "msg": "redist line"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "close-game-launch",
+    "frames": [
+      {
+        "target": {
+          "kind": "game",
+          "appName": "480",
+          "runner": "steam",
+          "type": "launch"
+        },
+        "rotate": true,
+        "entries": [
+          {
+            "raw": "Wine Command: wine game.exe\n\nGame Log:\n"
+          },
+          {
+            "raw": "game output\n"
+          },
+          {
+            "raw": "============= End of log ============="
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "renderer-lf",
+    "renderer": {
+      "channel": "logError",
+      "value": "a\nb"
+    }
+  },
+  {
+    "id": "renderer-info-plain",
+    "renderer": {
+      "channel": "logInfo",
+      "value": "plain renderer info"
+    }
+  },
+  {
+    "id": "renderer-forge-in04",
+    "renderer": {
+      "channel": "logError",
+      "value": "x\n(12:34:56) [ERROR]:   [Backend]: forged"
+    }
+  },
+  {
+    "id": "renderer-u2028-kept",
+    "renderer": {
+      "channel": "logInfo",
+      "value": "a b"
+    }
+  },
+  {
+    "id": "renderer-string-65537",
+    "renderer": {
+      "channel": "logError",
+      "value": {
+        "$gen": {
+          "repeat": "a",
+          "count": 65537
+        }
+      }
+    }
+  },
+  {
+    "id": "renderer-array-257",
+    "renderer": {
+      "channel": "logError",
+      "value": [
+        "entry 0",
+        "entry 1",
+        "entry 2",
+        "entry 3",
+        "entry 4",
+        "entry 5",
+        "entry 6",
+        "entry 7",
+        "entry 8",
+        "entry 9",
+        "entry 10",
+        "entry 11",
+        "entry 12",
+        "entry 13",
+        "entry 14",
+        "entry 15",
+        "entry 16",
+        "entry 17",
+        "entry 18",
+        "entry 19",
+        "entry 20",
+        "entry 21",
+        "entry 22",
+        "entry 23",
+        "entry 24",
+        "entry 25",
+        "entry 26",
+        "entry 27",
+        "entry 28",
+        "entry 29",
+        "entry 30",
+        "entry 31",
+        "entry 32",
+        "entry 33",
+        "entry 34",
+        "entry 35",
+        "entry 36",
+        "entry 37",
+        "entry 38",
+        "entry 39",
+        "entry 40",
+        "entry 41",
+        "entry 42",
+        "entry 43",
+        "entry 44",
+        "entry 45",
+        "entry 46",
+        "entry 47",
+        "entry 48",
+        "entry 49",
+        "entry 50",
+        "entry 51",
+        "entry 52",
+        "entry 53",
+        "entry 54",
+        "entry 55",
+        "entry 56",
+        "entry 57",
+        "entry 58",
+        "entry 59",
+        "entry 60",
+        "entry 61",
+        "entry 62",
+        "entry 63",
+        "entry 64",
+        "entry 65",
+        "entry 66",
+        "entry 67",
+        "entry 68",
+        "entry 69",
+        "entry 70",
+        "entry 71",
+        "entry 72",
+        "entry 73",
+        "entry 74",
+        "entry 75",
+        "entry 76",
+        "entry 77",
+        "entry 78",
+        "entry 79",
+        "entry 80",
+        "entry 81",
+        "entry 82",
+        "entry 83",
+        "entry 84",
+        "entry 85",
+        "entry 86",
+        "entry 87",
+        "entry 88",
+        "entry 89",
+        "entry 90",
+        "entry 91",
+        "entry 92",
+        "entry 93",
+        "entry 94",
+        "entry 95",
+        "entry 96",
+        "entry 97",
+        "entry 98",
+        "entry 99",
+        "entry 100",
+        "entry 101",
+        "entry 102",
+        "entry 103",
+        "entry 104",
+        "entry 105",
+        "entry 106",
+        "entry 107",
+        "entry 108",
+        "entry 109",
+        "entry 110",
+        "entry 111",
+        "entry 112",
+        "entry 113",
+        "entry 114",
+        "entry 115",
+        "entry 116",
+        "entry 117",
+        "entry 118",
+        "entry 119",
+        "entry 120",
+        "entry 121",
+        "entry 122",
+        "entry 123",
+        "entry 124",
+        "entry 125",
+        "entry 126",
+        "entry 127",
+        "entry 128",
+        "entry 129",
+        "entry 130",
+        "entry 131",
+        "entry 132",
+        "entry 133",
+        "entry 134",
+        "entry 135",
+        "entry 136",
+        "entry 137",
+        "entry 138",
+        "entry 139",
+        "entry 140",
+        "entry 141",
+        "entry 142",
+        "entry 143",
+        "entry 144",
+        "entry 145",
+        "entry 146",
+        "entry 147",
+        "entry 148",
+        "entry 149",
+        "entry 150",
+        "entry 151",
+        "entry 152",
+        "entry 153",
+        "entry 154",
+        "entry 155",
+        "entry 156",
+        "entry 157",
+        "entry 158",
+        "entry 159",
+        "entry 160",
+        "entry 161",
+        "entry 162",
+        "entry 163",
+        "entry 164",
+        "entry 165",
+        "entry 166",
+        "entry 167",
+        "entry 168",
+        "entry 169",
+        "entry 170",
+        "entry 171",
+        "entry 172",
+        "entry 173",
+        "entry 174",
+        "entry 175",
+        "entry 176",
+        "entry 177",
+        "entry 178",
+        "entry 179",
+        "entry 180",
+        "entry 181",
+        "entry 182",
+        "entry 183",
+        "entry 184",
+        "entry 185",
+        "entry 186",
+        "entry 187",
+        "entry 188",
+        "entry 189",
+        "entry 190",
+        "entry 191",
+        "entry 192",
+        "entry 193",
+        "entry 194",
+        "entry 195",
+        "entry 196",
+        "entry 197",
+        "entry 198",
+        "entry 199",
+        "entry 200",
+        "entry 201",
+        "entry 202",
+        "entry 203",
+        "entry 204",
+        "entry 205",
+        "entry 206",
+        "entry 207",
+        "entry 208",
+        "entry 209",
+        "entry 210",
+        "entry 211",
+        "entry 212",
+        "entry 213",
+        "entry 214",
+        "entry 215",
+        "entry 216",
+        "entry 217",
+        "entry 218",
+        "entry 219",
+        "entry 220",
+        "entry 221",
+        "entry 222",
+        "entry 223",
+        "entry 224",
+        "entry 225",
+        "entry 226",
+        "entry 227",
+        "entry 228",
+        "entry 229",
+        "entry 230",
+        "entry 231",
+        "entry 232",
+        "entry 233",
+        "entry 234",
+        "entry 235",
+        "entry 236",
+        "entry 237",
+        "entry 238",
+        "entry 239",
+        "entry 240",
+        "entry 241",
+        "entry 242",
+        "entry 243",
+        "entry 244",
+        "entry 245",
+        "entry 246",
+        "entry 247",
+        "entry 248",
+        "entry 249",
+        "entry 250",
+        "entry 251",
+        "entry 252",
+        "entry 253",
+        "entry 254",
+        "entry 255",
+        "entry 256"
+      ]
+    }
+  },
+  {
+    "id": "renderer-array-newline-element",
+    "renderer": {
+      "channel": "logError",
+      "value": [
+        "one\ntwo",
+        "three\r\nfour"
+      ]
+    }
+  },
+  {
+    "id": "renderer-object-name-message-stack",
+    "renderer": {
+      "channel": "logError",
+      "value": {
+        "name": "TypeError",
+        "message": "bad thing",
+        "stack": "TypeError: bad thing\n    at a (x.js:1:1)\n    at b (x.js:2:2)"
+      }
+    }
+  },
+  {
+    "id": "renderer-object-stack-name-order",
+    "renderer": {
+      "channel": "logError",
+      "value": {
+        "stack": "TypeError: bad thing\n    at a (x.js:1:1)",
+        "name": "TypeError",
+        "message": "bad thing"
+      }
+    }
+  },
+  {
+    "id": "renderer-empty-object",
+    "renderer": {
+      "channel": "logError",
+      "value": {}
+    }
+  },
+  {
+    "id": "renderer-array-with-65537-string",
+    "renderer": {
+      "channel": "logError",
+      "value": [
+        "short",
+        {
+          "$gen": {
+            "repeat": "b",
+            "count": 65537
+          }
+        }
+      ]
+    }
   }
 ]

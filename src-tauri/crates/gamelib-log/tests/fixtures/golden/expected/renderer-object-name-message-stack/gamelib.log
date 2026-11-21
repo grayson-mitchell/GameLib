@@ -1,0 +1,5 @@
+(13:05:09) [ERROR]:   [Frontend]:        {
+  "name": "TypeError",
+  "message": "bad thing",
+  "stack": "TypeError: bad thing\n    at a (x.js:1:1)\n    at b (x.js:2:2)"
+}

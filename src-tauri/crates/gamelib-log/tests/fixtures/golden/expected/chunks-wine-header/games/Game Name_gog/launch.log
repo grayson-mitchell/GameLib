@@ -1,0 +1,5 @@
+Wine Command: /usr/bin/wine game.exe --arg value
+
+Game Log:
+wine: loading module
+0024:err:module:import_dll Library X.dll not found

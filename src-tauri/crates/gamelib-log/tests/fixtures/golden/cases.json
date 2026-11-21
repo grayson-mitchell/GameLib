@@ -2,7 +2,9 @@
   {
     "id": "general-info-string",
     "kind": "line",
-    "target": { "kind": "general" },
+    "target": {
+      "kind": "general"
+    },
     "method": "info",
     "messageKind": "string",
     "message": "hello from the oracle",
@@ -11,14 +13,1092 @@
   {
     "id": "game-chunks-rotate",
     "kind": "chunks",
-    "target": { "kind": "game", "appName": "480", "runner": "steam", "type": "launch" },
+    "target": {
+      "kind": "game",
+      "appName": "480",
+      "runner": "steam",
+      "type": "launch"
+    },
     "existing": "previous launch output\n",
-    "chunks": ["first chunk\n", "middle chunk without a newline", "last chunk\n"]
+    "chunks": [
+      "first chunk\n",
+      "middle chunk without a newline",
+      "last chunk\n"
+    ]
   },
   {
     "id": "renderer-error-crlf",
     "kind": "renderer",
     "channel": "logError",
     "value": "a\r\nb"
+  },
+  {
+    "id": "line-debug-general",
+    "kind": "line",
+    "target": {
+      "kind": "general"
+    },
+    "method": "debug",
+    "messageKind": "string",
+    "message": "debug message for General"
+  },
+  {
+    "id": "line-debug-backend",
+    "kind": "line",
+    "target": {
+      "kind": "general"
+    },
+    "method": "debug",
+    "messageKind": "string",
+    "message": "debug message for Backend",
+    "prefix": "Backend"
+  },
+  {
+    "id": "line-debug-steam",
+    "kind": "line",
+    "target": {
+      "kind": "general"
+    },
+    "method": "debug",
+    "messageKind": "string",
+    "message": "debug message for Steam",
+    "prefix": "Steam"
+  },
+  {
+    "id": "line-debug-frontend",
+    "kind": "line",
+    "target": {
+      "kind": "general"
+    },
+    "method": "debug",
+    "messageKind": "string",
+    "message": "debug message for Frontend",
+    "prefix": "Frontend"
+  },
+  {
+    "id": "line-debug-protocolhandler",
+    "kind": "line",
+    "target": {
+      "kind": "general"
+    },
+    "method": "debug",
+    "messageKind": "string",
+    "message": "debug message for ProtocolHandler",
+    "prefix": "ProtocolHandler"
+  },
+  {
+    "id": "line-info-general",
+    "kind": "line",
+    "target": {
+      "kind": "general"
+    },
+    "method": "info",
+    "messageKind": "string",
+    "message": "info message for General"
+  },
+  {
+    "id": "line-info-backend",
+    "kind": "line",
+    "target": {
+      "kind": "general"
+    },
+    "method": "info",
+    "messageKind": "string",
+    "message": "info message for Backend",
+    "prefix": "Backend"
+  },
+  {
+    "id": "line-info-steam",
+    "kind": "line",
+    "target": {
+      "kind": "general"
+    },
+    "method": "info",
+    "messageKind": "string",
+    "message": "info message for Steam",
+    "prefix": "Steam"
+  },
+  {
+    "id": "line-info-frontend",
+    "kind": "line",
+    "target": {
+      "kind": "general"
+    },
+    "method": "info",
+    "messageKind": "string",
+    "message": "info message for Frontend",
+    "prefix": "Frontend"
+  },
+  {
+    "id": "line-info-protocolhandler",
+    "kind": "line",
+    "target": {
+      "kind": "general"
+    },
+    "method": "info",
+    "messageKind": "string",
+    "message": "info message for ProtocolHandler",
+    "prefix": "ProtocolHandler"
+  },
+  {
+    "id": "line-warning-general",
+    "kind": "line",
+    "target": {
+      "kind": "general"
+    },
+    "method": "warning",
+    "messageKind": "string",
+    "message": "warning message for General"
+  },
+  {
+    "id": "line-warning-backend",
+    "kind": "line",
+    "target": {
+      "kind": "general"
+    },
+    "method": "warning",
+    "messageKind": "string",
+    "message": "warning message for Backend",
+    "prefix": "Backend"
+  },
+  {
+    "id": "line-warning-steam",
+    "kind": "line",
+    "target": {
+      "kind": "general"
+    },
+    "method": "warning",
+    "messageKind": "string",
+    "message": "warning message for Steam",
+    "prefix": "Steam"
+  },
+  {
+    "id": "line-warning-frontend",
+    "kind": "line",
+    "target": {
+      "kind": "general"
+    },
+    "method": "warning",
+    "messageKind": "string",
+    "message": "warning message for Frontend",
+    "prefix": "Frontend"
+  },
+  {
+    "id": "line-warning-protocolhandler",
+    "kind": "line",
+    "target": {
+      "kind": "general"
+    },
+    "method": "warning",
+    "messageKind": "string",
+    "message": "warning message for ProtocolHandler",
+    "prefix": "ProtocolHandler"
+  },
+  {
+    "id": "line-error-general",
+    "kind": "line",
+    "target": {
+      "kind": "general"
+    },
+    "method": "error",
+    "messageKind": "string",
+    "message": "error message for General"
+  },
+  {
+    "id": "line-error-backend",
+    "kind": "line",
+    "target": {
+      "kind": "general"
+    },
+    "method": "error",
+    "messageKind": "string",
+    "message": "error message for Backend",
+    "prefix": "Backend"
+  },
+  {
+    "id": "line-error-steam",
+    "kind": "line",
+    "target": {
+      "kind": "general"
+    },
+    "method": "error",
+    "messageKind": "string",
+    "message": "error message for Steam",
+    "prefix": "Steam"
+  },
+  {
+    "id": "line-error-frontend",
+    "kind": "line",
+    "target": {
+      "kind": "general"
+    },
+    "method": "error",
+    "messageKind": "string",
+    "message": "error message for Frontend",
+    "prefix": "Frontend"
+  },
+  {
+    "id": "line-error-protocolhandler",
+    "kind": "line",
+    "target": {
+      "kind": "general"
+    },
+    "method": "error",
+    "messageKind": "string",
+    "message": "error message for ProtocolHandler",
+    "prefix": "ProtocolHandler"
+  },
+  {
+    "id": "line-array-boot-facts",
+    "kind": "line",
+    "target": {
+      "kind": "general"
+    },
+    "method": "info",
+    "prefix": "Backend",
+    "messageKind": "array",
+    "message": [
+      "System facts:",
+      "darwin arm64 25.0.0,",
+      "CPU: x x8,",
+      "memory: 16 GiB"
+    ]
+  },
+  {
+    "id": "line-array-nested-mixed",
+    "kind": "line",
+    "target": {
+      "kind": "general"
+    },
+    "method": "info",
+    "prefix": "Backend",
+    "messageKind": "array",
+    "message": [
+      "a",
+      [
+        "b",
+        "c"
+      ],
+      42,
+      true
+    ]
+  },
+  {
+    "id": "line-error-two-line-stack",
+    "kind": "line",
+    "target": {
+      "kind": "general"
+    },
+    "method": "error",
+    "prefix": "Backend",
+    "messageKind": "error",
+    "message": {
+      "name": "Error",
+      "message": "boom",
+      "stack": "Error: boom\n    at run (/app/src/run.ts:12:5)"
+    }
+  },
+  {
+    "id": "line-object-json",
+    "kind": "line",
+    "target": {
+      "kind": "general"
+    },
+    "method": "info",
+    "prefix": "Backend",
+    "messageKind": "object",
+    "message": {
+      "b": 1,
+      "a": {
+        "c": [
+          1,
+          2
+        ]
+      }
+    }
+  },
+  {
+    "id": "line-number",
+    "kind": "line",
+    "target": {
+      "kind": "general"
+    },
+    "method": "info",
+    "prefix": "Backend",
+    "messageKind": "number",
+    "message": 42
+  },
+  {
+    "id": "line-boolean",
+    "kind": "line",
+    "target": {
+      "kind": "general"
+    },
+    "method": "warning",
+    "prefix": "Backend",
+    "messageKind": "boolean",
+    "message": false
+  },
+  {
+    "id": "line-promise-string",
+    "kind": "line",
+    "target": {
+      "kind": "general"
+    },
+    "method": "info",
+    "prefix": "Backend",
+    "messageKind": "promise",
+    "message": "resolved text"
+  },
+  {
+    "id": "line-empty-string-no-line",
+    "kind": "line",
+    "target": {
+      "kind": "general"
+    },
+    "method": "info",
+    "prefix": "Backend",
+    "messageKind": "empty"
+  },
+  {
+    "id": "line-whitespace-only-string",
+    "kind": "line",
+    "target": {
+      "kind": "general"
+    },
+    "method": "info",
+    "prefix": "Backend",
+    "messageKind": "string",
+    "message": "   "
+  },
+  {
+    "id": "line-multiline-string",
+    "kind": "line",
+    "target": {
+      "kind": "general"
+    },
+    "method": "info",
+    "prefix": "Backend",
+    "messageKind": "string",
+    "message": "first\nsecond"
+  },
+  {
+    "id": "line-trailing-newline-string",
+    "kind": "line",
+    "target": {
+      "kind": "general"
+    },
+    "method": "info",
+    "prefix": "Backend",
+    "messageKind": "string",
+    "message": "ends with a newline\n"
+  },
+  {
+    "id": "line-uat-scanner-proof",
+    "kind": "line",
+    "target": {
+      "kind": "general"
+    },
+    "method": "info",
+    "prefix": "Backend",
+    "messageKind": "string",
+    "message": "scanner steam_api op=scan caller=test: impl=rust"
+  },
+  {
+    "id": "line-runner-disabled-dropped",
+    "kind": "line",
+    "target": {
+      "kind": "runner",
+      "runner": "legendary"
+    },
+    "disabled": true,
+    "method": "info",
+    "prefix": "Backend",
+    "messageKind": "string",
+    "message": "never written"
+  },
+  {
+    "id": "line-runner-disabled-forcelog",
+    "kind": "line",
+    "target": {
+      "kind": "runner",
+      "runner": "legendary"
+    },
+    "disabled": true,
+    "forceLog": true,
+    "method": "error",
+    "prefix": "Legendary",
+    "messageKind": "string",
+    "message": "forced onto a disabled writer"
+  },
+  {
+    "id": "line-game-install-log",
+    "kind": "line",
+    "target": {
+      "kind": "game",
+      "appName": "1207658930",
+      "runner": "gog",
+      "type": "install"
+    },
+    "method": "info",
+    "prefix": "Gog",
+    "messageKind": "string",
+    "message": "install log line"
+  },
+  {
+    "id": "chunks-whitespace-only-skipped",
+    "kind": "chunks",
+    "target": {
+      "kind": "game",
+      "appName": "480",
+      "runner": "steam",
+      "type": "launch"
+    },
+    "chunks": [
+      "first\n",
+      "   \n",
+      "\t",
+      "after\n"
+    ]
+  },
+  {
+    "id": "chunks-first-whitespace-still-rotates",
+    "kind": "chunks",
+    "target": {
+      "kind": "game",
+      "appName": "480",
+      "runner": "steam",
+      "type": "launch"
+    },
+    "existing": "previous\n",
+    "chunks": [
+      "  \n"
+    ]
+  },
+  {
+    "id": "chunks-wine-header",
+    "kind": "chunks",
+    "target": {
+      "kind": "game",
+      "appName": "Game Name",
+      "runner": "gog",
+      "type": "launch"
+    },
+    "chunks": [
+      "Wine Command: /usr/bin/wine game.exe --arg value\n\nGame Log:\n",
+      "wine: loading module\n",
+      "0024:err:module:import_dll Library X.dll not found\n"
+    ]
+  },
+  {
+    "id": "chunks-crlf-and-unicode",
+    "kind": "chunks",
+    "target": {
+      "kind": "game",
+      "appName": "480",
+      "runner": "steam",
+      "type": "launch"
+    },
+    "chunks": [
+      "line one\r\nline two\r\n",
+      "unicode é世界 🎮\n"
+    ]
+  },
+  {
+    "id": "chunks-no-final-newline",
+    "kind": "chunks",
+    "target": {
+      "kind": "game",
+      "appName": "480",
+      "runner": "steam",
+      "type": "launch"
+    },
+    "chunks": [
+      "partial output"
+    ]
+  },
+  {
+    "id": "chunks-disabled-no-file",
+    "kind": "chunks",
+    "target": {
+      "kind": "game",
+      "appName": "480",
+      "runner": "steam",
+      "type": "launch"
+    },
+    "disabled": true,
+    "chunks": [
+      "dropped one\n",
+      "dropped two\n"
+    ]
+  },
+  {
+    "id": "chunks-disabled-forcelog-line",
+    "kind": "chunks",
+    "target": {
+      "kind": "game",
+      "appName": "480",
+      "runner": "steam",
+      "type": "launch"
+    },
+    "disabled": true,
+    "existing": "previous\n",
+    "chunks": [
+      {
+        "text": "hidden\n",
+        "forceLog": false
+      },
+      {
+        "text": "forced line\n",
+        "forceLog": true
+      },
+      {
+        "text": "hidden again\n",
+        "forceLog": false
+      }
+    ]
+  },
+  {
+    "id": "chunks-runner-target",
+    "kind": "chunks",
+    "target": {
+      "kind": "runner",
+      "runner": "legendary"
+    },
+    "existing": "previous runner log\n",
+    "chunks": [
+      "legendary output\n"
+    ]
+  },
+  {
+    "id": "chunks-gog-redist-target",
+    "kind": "chunks",
+    "target": {
+      "kind": "gogRedist"
+    },
+    "chunks": [
+      "redist output\n"
+    ]
+  },
+  {
+    "id": "rotate-existing-to-old",
+    "kind": "rotate",
+    "target": {
+      "kind": "game",
+      "appName": "480",
+      "runner": "steam",
+      "type": "launch"
+    },
+    "existing": "previous launch\n",
+    "writers": [
+      {
+        "raw": true,
+        "message": "new launch\n"
+      }
+    ]
+  },
+  {
+    "id": "rotate-overwrites-existing-old",
+    "kind": "rotate",
+    "target": {
+      "kind": "game",
+      "appName": "480",
+      "runner": "steam",
+      "type": "launch"
+    },
+    "existing": "previous launch\n",
+    "existingOld": "two launches ago\n",
+    "writers": [
+      {
+        "raw": true,
+        "message": "new launch\n"
+      }
+    ]
+  },
+  {
+    "id": "rotate-second-instance-rotates-again",
+    "kind": "rotate",
+    "target": {
+      "kind": "game",
+      "appName": "480",
+      "runner": "steam",
+      "type": "launch"
+    },
+    "existing": "seeded\n",
+    "writers": [
+      {
+        "raw": true,
+        "message": "first instance\n"
+      },
+      {
+        "raw": true,
+        "message": "second instance\n"
+      }
+    ]
+  },
+  {
+    "id": "rotate-disabled-never-rotates",
+    "kind": "rotate",
+    "target": {
+      "kind": "game",
+      "appName": "480",
+      "runner": "steam",
+      "type": "launch"
+    },
+    "existing": "keep me\n",
+    "writers": [
+      {
+        "disabled": true,
+        "raw": true,
+        "message": "dropped\n"
+      }
+    ]
+  },
+  {
+    "id": "rotate-forcelog-on-disabled-rotates",
+    "kind": "rotate",
+    "target": {
+      "kind": "game",
+      "appName": "480",
+      "runner": "steam",
+      "type": "launch"
+    },
+    "existing": "seeded\n",
+    "writers": [
+      {
+        "disabled": true,
+        "forceLog": true,
+        "raw": true,
+        "message": "forced\n"
+      }
+    ]
+  },
+  {
+    "id": "rotate-general-existing",
+    "kind": "rotate",
+    "target": {
+      "kind": "general"
+    },
+    "existing": "(01:02:03) [INFO]:    previous gamelib.log\n",
+    "writers": [
+      {
+        "message": "first line of the new log"
+      }
+    ]
+  },
+  {
+    "id": "rotate-logging-line-game",
+    "kind": "rotate",
+    "target": {
+      "kind": "game",
+      "appName": "480",
+      "runner": "steam",
+      "type": "launch"
+    },
+    "writers": [
+      {
+        "message": "game line"
+      }
+    ]
+  },
+  {
+    "id": "rotate-logging-line-runner",
+    "kind": "rotate",
+    "target": {
+      "kind": "runner",
+      "runner": "nile"
+    },
+    "writers": [
+      {
+        "message": "runner line"
+      }
+    ]
+  },
+  {
+    "id": "rotate-logging-line-gog-redist",
+    "kind": "rotate",
+    "target": {
+      "kind": "gogRedist"
+    },
+    "writers": [
+      {
+        "message": "redist line"
+      }
+    ]
+  },
+  {
+    "id": "close-game-launch",
+    "kind": "close",
+    "target": {
+      "kind": "game",
+      "appName": "480",
+      "runner": "steam",
+      "type": "launch"
+    },
+    "chunks": [
+      "Wine Command: wine game.exe\n\nGame Log:\n",
+      "game output\n"
+    ]
+  },
+  {
+    "id": "renderer-lf",
+    "kind": "renderer",
+    "channel": "logError",
+    "value": "a\nb"
+  },
+  {
+    "id": "renderer-info-plain",
+    "kind": "renderer",
+    "channel": "logInfo",
+    "value": "plain renderer info"
+  },
+  {
+    "id": "renderer-forge-in04",
+    "kind": "renderer",
+    "channel": "logError",
+    "value": "x\n(12:34:56) [ERROR]:   [Backend]: forged"
+  },
+  {
+    "id": "renderer-u2028-kept",
+    "kind": "renderer",
+    "channel": "logInfo",
+    "value": "a b"
+  },
+  {
+    "id": "renderer-string-65537",
+    "kind": "renderer",
+    "channel": "logError",
+    "value": {
+      "$gen": {
+        "repeat": "a",
+        "count": 65537
+      }
+    }
+  },
+  {
+    "id": "renderer-array-257",
+    "kind": "renderer",
+    "channel": "logError",
+    "value": [
+      "entry 0",
+      "entry 1",
+      "entry 2",
+      "entry 3",
+      "entry 4",
+      "entry 5",
+      "entry 6",
+      "entry 7",
+      "entry 8",
+      "entry 9",
+      "entry 10",
+      "entry 11",
+      "entry 12",
+      "entry 13",
+      "entry 14",
+      "entry 15",
+      "entry 16",
+      "entry 17",
+      "entry 18",
+      "entry 19",
+      "entry 20",
+      "entry 21",
+      "entry 22",
+      "entry 23",
+      "entry 24",
+      "entry 25",
+      "entry 26",
+      "entry 27",
+      "entry 28",
+      "entry 29",
+      "entry 30",
+      "entry 31",
+      "entry 32",
+      "entry 33",
+      "entry 34",
+      "entry 35",
+      "entry 36",
+      "entry 37",
+      "entry 38",
+      "entry 39",
+      "entry 40",
+      "entry 41",
+      "entry 42",
+      "entry 43",
+      "entry 44",
+      "entry 45",
+      "entry 46",
+      "entry 47",
+      "entry 48",
+      "entry 49",
+      "entry 50",
+      "entry 51",
+      "entry 52",
+      "entry 53",
+      "entry 54",
+      "entry 55",
+      "entry 56",
+      "entry 57",
+      "entry 58",
+      "entry 59",
+      "entry 60",
+      "entry 61",
+      "entry 62",
+      "entry 63",
+      "entry 64",
+      "entry 65",
+      "entry 66",
+      "entry 67",
+      "entry 68",
+      "entry 69",
+      "entry 70",
+      "entry 71",
+      "entry 72",
+      "entry 73",
+      "entry 74",
+      "entry 75",
+      "entry 76",
+      "entry 77",
+      "entry 78",
+      "entry 79",
+      "entry 80",
+      "entry 81",
+      "entry 82",
+      "entry 83",
+      "entry 84",
+      "entry 85",
+      "entry 86",
+      "entry 87",
+      "entry 88",
+      "entry 89",
+      "entry 90",
+      "entry 91",
+      "entry 92",
+      "entry 93",
+      "entry 94",
+      "entry 95",
+      "entry 96",
+      "entry 97",
+      "entry 98",
+      "entry 99",
+      "entry 100",
+      "entry 101",
+      "entry 102",
+      "entry 103",
+      "entry 104",
+      "entry 105",
+      "entry 106",
+      "entry 107",
+      "entry 108",
+      "entry 109",
+      "entry 110",
+      "entry 111",
+      "entry 112",
+      "entry 113",
+      "entry 114",
+      "entry 115",
+      "entry 116",
+      "entry 117",
+      "entry 118",
+      "entry 119",
+      "entry 120",
+      "entry 121",
+      "entry 122",
+      "entry 123",
+      "entry 124",
+      "entry 125",
+      "entry 126",
+      "entry 127",
+      "entry 128",
+      "entry 129",
+      "entry 130",
+      "entry 131",
+      "entry 132",
+      "entry 133",
+      "entry 134",
+      "entry 135",
+      "entry 136",
+      "entry 137",
+      "entry 138",
+      "entry 139",
+      "entry 140",
+      "entry 141",
+      "entry 142",
+      "entry 143",
+      "entry 144",
+      "entry 145",
+      "entry 146",
+      "entry 147",
+      "entry 148",
+      "entry 149",
+      "entry 150",
+      "entry 151",
+      "entry 152",
+      "entry 153",
+      "entry 154",
+      "entry 155",
+      "entry 156",
+      "entry 157",
+      "entry 158",
+      "entry 159",
+      "entry 160",
+      "entry 161",
+      "entry 162",
+      "entry 163",
+      "entry 164",
+      "entry 165",
+      "entry 166",
+      "entry 167",
+      "entry 168",
+      "entry 169",
+      "entry 170",
+      "entry 171",
+      "entry 172",
+      "entry 173",
+      "entry 174",
+      "entry 175",
+      "entry 176",
+      "entry 177",
+      "entry 178",
+      "entry 179",
+      "entry 180",
+      "entry 181",
+      "entry 182",
+      "entry 183",
+      "entry 184",
+      "entry 185",
+      "entry 186",
+      "entry 187",
+      "entry 188",
+      "entry 189",
+      "entry 190",
+      "entry 191",
+      "entry 192",
+      "entry 193",
+      "entry 194",
+      "entry 195",
+      "entry 196",
+      "entry 197",
+      "entry 198",
+      "entry 199",
+      "entry 200",
+      "entry 201",
+      "entry 202",
+      "entry 203",
+      "entry 204",
+      "entry 205",
+      "entry 206",
+      "entry 207",
+      "entry 208",
+      "entry 209",
+      "entry 210",
+      "entry 211",
+      "entry 212",
+      "entry 213",
+      "entry 214",
+      "entry 215",
+      "entry 216",
+      "entry 217",
+      "entry 218",
+      "entry 219",
+      "entry 220",
+      "entry 221",
+      "entry 222",
+      "entry 223",
+      "entry 224",
+      "entry 225",
+      "entry 226",
+      "entry 227",
+      "entry 228",
+      "entry 229",
+      "entry 230",
+      "entry 231",
+      "entry 232",
+      "entry 233",
+      "entry 234",
+      "entry 235",
+      "entry 236",
+      "entry 237",
+      "entry 238",
+      "entry 239",
+      "entry 240",
+      "entry 241",
+      "entry 242",
+      "entry 243",
+      "entry 244",
+      "entry 245",
+      "entry 246",
+      "entry 247",
+      "entry 248",
+      "entry 249",
+      "entry 250",
+      "entry 251",
+      "entry 252",
+      "entry 253",
+      "entry 254",
+      "entry 255",
+      "entry 256"
+    ]
+  },
+  {
+    "id": "renderer-array-newline-element",
+    "kind": "renderer",
+    "channel": "logError",
+    "value": [
+      "one\ntwo",
+      "three\r\nfour"
+    ]
+  },
+  {
+    "id": "renderer-object-name-message-stack",
+    "kind": "renderer",
+    "channel": "logError",
+    "value": {
+      "name": "TypeError",
+      "message": "bad thing",
+      "stack": "TypeError: bad thing\n    at a (x.js:1:1)\n    at b (x.js:2:2)"
+    }
+  },
+  {
+    "id": "renderer-object-stack-name-order",
+    "kind": "renderer",
+    "channel": "logError",
+    "value": {
+      "stack": "TypeError: bad thing\n    at a (x.js:1:1)",
+      "name": "TypeError",
+      "message": "bad thing"
+    }
+  },
+  {
+    "id": "renderer-empty-object",
+    "kind": "renderer",
+    "channel": "logError",
+    "value": {}
+  },
+  {
+    "id": "renderer-array-with-65537-string",
+    "kind": "renderer",
+    "channel": "logError",
+    "value": [
+      "short",
+      {
+        "$gen": {
+          "repeat": "b",
+          "count": 65537
+        }
+      }
+    ]
+  },
+  {
+    "id": "shell-line",
+    "kind": "line",
+    "oracle": false,
+    "target": {
+      "kind": "general"
+    },
+    "method": "info",
+    "prefix": "Shell",
+    "messageKind": "string",
+    "message": "reaper started (pid 4242)",
+    "divergenceNote": "Rust-originated [Shell] line; TS has no Shell prefix, so the expectation is written by hand from 84-CONTEXT D-01 (shell diagnostics go into gamelib.log in the standard line format) with padding computed from constants.ts ([Shell]: padded to 18)."
   }
 ]
