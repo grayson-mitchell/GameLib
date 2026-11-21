@@ -133,11 +133,23 @@ pub struct ExitReport {
     pub still_running: Vec<&'static str>,
 }
 
+/// What the finish stage is told: the drains that overran, the time spent so far and the time left
+/// in the one exit budget (D-21). The finish stage logs its lines from this and then flushes the
+/// log writer for at most `remaining`, so the writer is the last thing to run and never waits on a
+/// budget of its own.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FinishContext {
+    pub still_running: Vec<&'static str>,
+    pub elapsed: Duration,
+    pub remaining: Duration,
+}
+
 /// One exit-time drain: its registrant name and the work it runs with the drain budget.
 pub type Drain = (&'static str, Box<dyn FnOnce(Duration) + Send>);
 
 /// Spend one exit budget in stages: every drain concurrently (each holding a `Registrant`), then
-/// the child kills with the time left (at most `child_grace`), then `finish`.
+/// the child kills with the time left (at most `child_grace`), then `finish`, handed a
+/// `FinishContext` (what overran, time spent, time left of the one budget).
 ///
 /// Drains run on detached `std` threads, never a scoped join: a join would wait for an
 /// overrunning drain and break the deadline (T-83-03). An abandoned drain is named in
@@ -147,7 +159,7 @@ pub fn run_exit(
     budget: ExitBudget,
     drains: Vec<Drain>,
     children: impl FnOnce(Duration),
-    finish: impl FnOnce(),
+    finish: impl FnOnce(&FinishContext),
 ) -> ExitReport {
     let start = Instant::now();
     let drain_budget = budget.drain_budget();
@@ -167,7 +179,12 @@ pub fn run_exit(
         .saturating_sub(start.elapsed())
         .min(budget.child_grace);
     children(remaining);
-    finish();
+    let elapsed = start.elapsed();
+    finish(&FinishContext {
+        still_running: still_running.clone(),
+        elapsed,
+        remaining: budget.total.saturating_sub(elapsed),
+    });
     ExitReport {
         elapsed: start.elapsed(),
         still_running,
@@ -296,7 +313,7 @@ mod tests {
                 o1.lock().unwrap().push("children");
                 g.lock().unwrap().push(left);
             },
-            move || o2.lock().unwrap().push("finish"),
+            move |_| o2.lock().unwrap().push("finish"),
         );
         assert_eq!(drained.load(Ordering::SeqCst), 3);
         assert!(report.still_running.is_empty());
@@ -329,7 +346,7 @@ mod tests {
             budget,
             drains,
             move |left| g.lock().unwrap().push(left),
-            move || {
+            move |_| {
                 f.fetch_add(1, Ordering::SeqCst);
             },
         );
@@ -340,6 +357,69 @@ mod tests {
         let granted = granted.lock().unwrap();
         assert_eq!(granted.len(), 1);
         assert!(granted[0] <= budget.child_grace, "{:?}", granted[0]);
+        let _ = release.send(());
+    }
+
+    #[test]
+    fn finish_is_told_nothing_overran_and_how_much_of_the_budget_is_left_when_drains_are_quick() {
+        let s = Shutdown::new();
+        let seen = Arc::new(Mutex::new(Vec::<FinishContext>::new()));
+        let sink = seen.clone();
+        let report = run_exit(
+            &s,
+            ExitBudget::DEFAULT,
+            vec![("quick", Box::new(|_| {}))],
+            |_| {},
+            move |ctx| sink.lock().unwrap().push(ctx.clone()),
+        );
+        let seen = seen.lock().unwrap();
+        assert_eq!(seen.len(), 1);
+        let ctx = &seen[0];
+        assert!(ctx.still_running.is_empty());
+        assert!(ctx.elapsed < ExitBudget::DEFAULT.total);
+        assert_eq!(
+            ctx.remaining,
+            ExitBudget::DEFAULT.total.saturating_sub(ctx.elapsed)
+        );
+        // The report is measured after finish, so it is never shorter than what finish was told.
+        assert!(report.elapsed >= ctx.elapsed);
+    }
+
+    #[test]
+    fn finish_is_told_the_overrunning_drain_and_almost_no_time_left() {
+        let s = Shutdown::new();
+        let budget = ExitBudget {
+            total: ms(400),
+            child_grace: ms(100),
+        };
+        let (release, hold) = mpsc::channel::<()>();
+        let drains: Vec<Drain> = vec![(
+            "stuck",
+            Box::new(move |_| {
+                let _ = hold.recv();
+            }),
+        )];
+        let runs = Arc::new(AtomicUsize::new(0));
+        let seen = Arc::new(Mutex::new(Vec::<FinishContext>::new()));
+        let (r, sink) = (runs.clone(), seen.clone());
+        run_exit(
+            &s,
+            budget,
+            drains,
+            |_| {},
+            move |ctx| {
+                r.fetch_add(1, Ordering::SeqCst);
+                sink.lock().unwrap().push(ctx.clone());
+            },
+        );
+        assert_eq!(runs.load(Ordering::SeqCst), 1);
+        let seen = seen.lock().unwrap();
+        assert_eq!(seen[0].still_running, vec!["stuck"]);
+        assert!(seen[0].remaining <= ms(100), "{:?}", seen[0].remaining);
+        assert_eq!(
+            seen[0].remaining,
+            budget.total.saturating_sub(seen[0].elapsed)
+        );
         let _ = release.send(());
     }
 

@@ -824,17 +824,22 @@ fn hold_exit_drain_open() -> ! {
 ///    deadline, before the sidecar is signalled, which keeps the old order's intent.
 /// 2. Children, with the time left (at most 1.5 s): the sidecar's process group
 ///    (`shutdown_child`), then every helper in the `ChildSet`.
-/// 3. Finish: the reaper disarm (D-11, a graceful quit makes the reaper signal nothing), the OS
-///    power-assertion release (Phase 35 Plan 08) and the single-instance socket cleanup (Phase 34.5
-///    gap cycle 6 plan 44).
+/// 3. Finish, handed a `FinishContext`: the reaper disarm (D-11, a graceful quit makes the reaper
+///    signal nothing), the OS power-assertion release (Phase 35 Plan 08) and the single-instance
+///    socket cleanup (Phase 34.5 gap cycle 6 plan 44); then the two exit lines; then
+///    the writer flush bounded by `ctx.remaining`, last, so both lines are on disk inside the one budget
+///    (D-21, D-13 as amended). The logger holds no `Shutdown` registrant: a permanent one would
+///    report `still running at exit deadline: logger` on every exit.
 ///
 /// Logs `exit finished in <ms> ms` always and `still running at exit deadline: <names> (<count>)`
-/// only when a drain overran; registrant names and counts, never job detail (D-12).
+/// only when a drain overran; registrant names and counts, never job detail (D-12). The
+/// milliseconds are measured when finish starts, so they exclude the final flush, which is bounded
+/// by `ctx.remaining` and not a stage of its own.
 fn handle_exit(
     app_handle: &tauri::AppHandle,
     single_instance_socket_path: Option<&std::path::Path>,
 ) {
-    use gamelib_core::shutdown::{global, run_exit, Drain, ExitBudget};
+    use gamelib_core::shutdown::{global, run_exit, Drain, ExitBudget, FinishContext};
     let drains: Vec<Drain> = vec![
         (
             "depot",
@@ -867,7 +872,7 @@ fn handle_exit(
         }
         let _ = gamelib_proc::children::global().terminate_all(grace);
     };
-    let finish = || {
+    let finish = |ctx: &FinishContext| {
         // The reaper is told first: from here a graceful quit signals nothing (D-11).
         gamelib_proc::reaper::disarm();
         // Phase 35 Plan 08 (D-08, REQ-35-06, threat T-35-31): drop every OS power assertion still
@@ -883,19 +888,18 @@ fn handle_exit(
         }
         #[cfg(not(unix))]
         let _ = single_instance_socket_path;
+        // The exit lines, then the writer flushes last: both are on disk inside the one budget.
+        shell_log(&format!("exit finished in {} ms", ctx.elapsed.as_millis()));
+        if !ctx.still_running.is_empty() {
+            shell_log(&format!(
+                "still running at exit deadline: {} ({})",
+                ctx.still_running.join(", "),
+                ctx.still_running.len()
+            ));
+        }
+        let _ = gamelib_log::flush(ctx.remaining);
     };
-    let report = run_exit(global(), ExitBudget::DEFAULT, drains, children, finish);
-    shell_log(&format!(
-        "exit finished in {} ms",
-        report.elapsed.as_millis()
-    ));
-    if !report.still_running.is_empty() {
-        shell_log(&format!(
-            "still running at exit deadline: {} ({})",
-            report.still_running.join(", "),
-            report.still_running.len()
-        ));
-    }
+    run_exit(global(), ExitBudget::DEFAULT, drains, children, finish);
 }
 
 /// Spawns the sidecar, wires its reader and stderr forwarder, and returns the shared state.

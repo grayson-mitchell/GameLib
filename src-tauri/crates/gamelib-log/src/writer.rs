@@ -734,6 +734,54 @@ mod tests {
         assert!(logger.flush(GENEROUS));
         assert!(!Logger::start(config(&home)).flush(Duration::ZERO));
     }
+
+    #[test]
+    fn a_started_logger_holds_no_shutdown_registrant() {
+        // A permanent registrant would be reported as `still running at exit deadline: logger` on
+        // every exit (Pitfall 2); the logger flushes through `flush(remaining)` instead (D-13 as
+        // amended, D-21).
+        let home = FakeHome::new("gamelib-log-");
+        let logger = Logger::start(config(&home));
+        logger.log(Prefix::Backend, Level::Info, "running");
+        assert!(logger.flush(GENEROUS));
+        assert!(gamelib_core::shutdown::global()
+            .drain(Duration::ZERO)
+            .is_empty());
+        let local = gamelib_core::shutdown::Shutdown::new();
+        assert!(local.drain(Duration::ZERO).is_empty());
+    }
+
+    #[test]
+    fn lines_submitted_just_before_the_exit_flush_are_on_disk_when_it_returns_true() {
+        let home = FakeHome::new("gamelib-log-");
+        let logger = Logger::start(config(&home));
+        logger.log(Prefix::Shell, Level::Info, "exit finished in 12 ms");
+        logger.log(
+            Prefix::Shell,
+            Level::Info,
+            "still running at exit deadline: depot (1)",
+        );
+        assert!(logger.flush(GENEROUS));
+        let body = read(&path(&home, &["gamelib.log"]));
+        assert!(body.contains("exit finished in 12 ms\n"), "{body}");
+        assert!(
+            body.contains("still running at exit deadline: depot (1)\n"),
+            "{body}"
+        );
+    }
+
+    #[test]
+    fn a_flush_with_a_zero_budget_returns_at_once() {
+        let home = FakeHome::new("gamelib-log-");
+        let logger = Logger::start(config(&home));
+        let t0 = Instant::now();
+        let _ = logger.flush(Duration::ZERO);
+        assert!(
+            t0.elapsed() < Duration::from_millis(250),
+            "{:?}",
+            t0.elapsed()
+        );
+    }
 }
 
 #[cfg(test)]

@@ -5295,20 +5295,38 @@ describe('Phase 80 plan 21: steampoll lifecycle wiring', () => {
     expect(body).toContain('ExitBudget::DEFAULT')
   })
 
-  test('handle_exit finishes with reaper disarm, wake-lock release and socket removal, and logs the two exit lines through shell_log', () => {
+  test('handle_exit finishes with reaper disarm, wake-lock release, socket removal, the two exit lines and the writer flush last (D-13 as amended, D-21)', () => {
     const code = loadMainRsCode()
     const body = readTopLevelFnBody(code, 'handle_exit', 5)
-    const finish = body.indexOf('let finish = ||')
+    const finish = body.indexOf('let finish = |ctx: &FinishContext|')
     const disarm = body.indexOf('reaper::disarm()')
     const wake = body.indexOf('wake_lock_release_all()')
     const socket = body.indexOf('remove_file(path)')
+    const finished = body.search(
+      /shell_log\(&format!\(\s*"exit finished in \{\} ms",\s*ctx\.elapsed\.as_millis\(\)/
+    )
+    const overrun = body.search(
+      /shell_log\(&format!\(\s*"still running at exit deadline: \{\} \(\{\}\)"/
+    )
+    const flush = body.indexOf('gamelib_log::flush(ctx.remaining)')
     expect(finish).toBeGreaterThan(-1)
     expect(disarm).toBeGreaterThan(finish)
     expect(wake).toBeGreaterThan(disarm)
     expect(socket).toBeGreaterThan(wake)
-    expect(body).toMatch(/shell_log\(&format!\(\s*"exit finished in \{\} ms"/)
-    expect(body).toMatch(
-      /shell_log\(&format!\(\s*"still running at exit deadline: \{\} \(\{\}\)"/
+    // Both lines are written inside finish, after the cleanup and before the flush.
+    expect(finished).toBeGreaterThan(socket)
+    expect(overrun).toBeGreaterThan(socket)
+    expect(flush).toBeGreaterThan(Math.max(finished, overrun))
+    // The flush is the last statement of the closure and the only flush in the function.
+    expect(body.split('gamelib_log::flush(').length - 1).toBe(1)
+    expect(body.slice(flush)).toMatch(
+      /^gamelib_log::flush\(ctx\.remaining\);\s*\};\s*run_exit\(global\(\),\s*ExitBudget::DEFAULT,\s*drains,\s*children,\s*finish\);\s*$/
+    )
+    // The overrun line reads the context, not a report measured after run_exit returned.
+    expect(body).toContain('ctx.still_running.join(", ")')
+    // Nothing is logged after run_exit: the old post-run_exit lines are gone.
+    expect(body.slice(body.indexOf('run_exit(global()'))).not.toContain(
+      'shell_log('
     )
     // The old per-subsystem lines carried the same phrase and would muddy the overrun scoring.
     expect(code).not.toContain('jobs still running at exit deadline')
