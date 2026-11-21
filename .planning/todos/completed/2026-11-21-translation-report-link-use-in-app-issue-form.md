@@ -30,3 +30,20 @@ Route the link to the existing in-app report flow (Settings → Report a Problem
 option is a design call, so this todo is `ready: human`. Note: the Phase 83 gate used this link as its
 `openExternalUrl` test subject. If the link stops calling `openExternalUrl`, any later live gate
 exercising that channel needs a different subject.
+
+## Resolution
+
+Resolved 2026-11-21 by quick task 261121-vlo (commits 6453ac05f, c72bb25cd, 4d85125c5).
+
+- Design call: the orchestrator relayed the operator's choice to drop GitHub for this link entirely, with no
+  secondary option ("only a small % of users will know what github is").
+- The link now navigates in-app to Settings > Report a problem (`/settings/report`) with the "What happened?" box
+  prefilled as `[Translation] <label> (<code>): `. The language code and label travel as router state
+  (`reportMessage`), the same mechanism the game page's link uses for `reportGame`. ReportProblem reads it as
+  `unknown` and uses it only when it is a string. The GitHub URL builder and its constants are deleted.
+- The Phase 83 live gate's test subject for the external-URL IPC channel (this link) is gone, so a later live gate
+  exercising that channel needs a different subject. Candidates measured at planning: the CrossOver link in
+  `src/frontend/components/UI/WelcomeModal/index.tsx` and in
+  `src/frontend/screens/Game/GamePage/components/EngineNotices.tsx`, and the NativePortInfo entry link.
+- `.github/ISSUE_TEMPLATE/translation_problem.yaml` is left in place for people who file directly on GitHub.
+  Nothing in the app links to it any more.
