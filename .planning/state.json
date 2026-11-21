@@ -531,22 +531,22 @@
     {
       "number": "82",
       "name": "Guardrails, hygiene and shared safety primitives",
-      "status": "pending"
+      "status": "complete"
     },
     {
       "number": "83",
       "name": "Native seam, gamelib-core and process/shutdown contract",
-      "status": "pending"
+      "status": "complete"
     },
     {
       "number": "84",
       "name": "Logger",
-      "status": "in_progress"
+      "status": "complete"
     },
     {
       "number": "85",
       "name": "Store host, config and versioned migrations",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "number": "86",
@@ -622,12 +622,17 @@
       "number": "100",
       "name": "Game page without the ⋮ menu",
       "status": "pending"
+    },
+    {
+      "number": "101",
+      "name": "Steam Verify & Move install",
+      "status": "pending"
     }
   ],
   "next": {
     "command": "/gsd-progress --next",
     "label": "Advance to the next step",
-    "reason": "Phase 28 of 44 · 100% · executing"
+    "reason": "Phase 29 of 45 · 100% · executing"
   },
-  "updated_at": "2026-11-21T04:12:35.992Z"
+  "updated_at": "2026-11-21T21:55:42.056Z"
 }
