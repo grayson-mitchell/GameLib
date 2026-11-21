@@ -24,6 +24,10 @@ interface Props {
  * Phase 100 (D-01, D-10, D-11, D-13, D-19): the Version fact with Verify,
  * Update and What's new beside it.
  *
+ * The row renders for every installed store-catalogue game. A missing version
+ * (bridge installs, an ACF buildid of 0) reads Unknown and never "up to date",
+ * so Verify stays reachable (CR-01, D-14).
+ *
  * Verify starts at once with no confirmation (D-13) and a rejection shows
  * inline with Retry (D-18); the runner's own failures are reported by the
  * backend and never reach here. Update calls the page's `handleUpdate`
@@ -42,8 +46,7 @@ const VersionRow = ({ gameInfo, gates, handleUpdate, hasUpdate }: Props) => {
     !gameInfo.is_installed ||
     isSideloaded ||
     gameInfo.thirdPartyManagedApp ||
-    gameInfo.install.platform === 'Browser' ||
-    !version
+    gameInfo.install.platform === 'Browser'
   ) {
     return null
   }
@@ -110,11 +113,25 @@ const VersionRow = ({ gameInfo, gates, handleUpdate, hasUpdate }: Props) => {
         </>
       }
     >
-      {version}{' '}
-      {hasUpdate ? (
-        <span className="fact__value--warning">{availableText}</span>
+      {version ? (
+        <>
+          {version}{' '}
+          {hasUpdate ? (
+            <span className="fact__value--warning">{availableText}</span>
+          ) : (
+            t('gamelib:gamepage.installTab.upToDate', '· up to date')
+          )}
+        </>
       ) : (
-        t('gamelib:gamepage.installTab.upToDate', '· up to date')
+        <>
+          {t('gamelib:gamepage.installTab.versionUnknown', 'Unknown')}
+          {hasUpdate && (
+            <>
+              {' '}
+              <span className="fact__value--warning">{availableText}</span>
+            </>
+          )}
+        </>
       )}
     </FactRow>
   )

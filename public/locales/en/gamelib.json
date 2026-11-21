@@ -334,6 +334,7 @@
             "upToDate": "· up to date",
             "verify": "Verify",
             "version": "Version",
+            "versionUnknown": "Unknown",
             "whatsNew": "What's new",
             "wrongFolder": "Wrong folder?"
         },
