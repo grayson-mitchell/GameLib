@@ -1,5 +1,5 @@
 ---
-status: pending
+status: partial
 phase: 84-logger
 source: [84-CONTEXT.md D-01 D-05 D-07 D-08 D-13 D-14 D-16 D-18 D-19, 84-RESEARCH.md Gates and docs that grep log text verbatim, 84-RESEARCH.md Behaviour changes that are deliberate]
 authored_by: 84-01
@@ -11,7 +11,8 @@ updated: 2026-11-21
 This is the live macOS gate contract for FND-05 (logs keep their format, location, rotation and redaction; log upload and
 "show in folder" still work; crate diagnostics reach the log; shell lines live in `gamelib.log`). It was authored by plan
 84-01 before any Phase 84 logger code exists and is run by plan 84-11, never by its author (live-gate-contract-authoring
-standing rule D-E). Nothing in this file has been run. Every verdict in the review below is an authoring-time verdict.
+standing rule D-E). It was run on 2026-11-21 by 84-11 (Task 1 pre-run re-check, Task 2 operator launches, Task 3 scoring);
+the eight results are under Tests. The Structural Reachability Review below keeps its authoring-time verdicts.
 
 From Phase 84 on, shell lines are scored in `gamelib.log` as `[Shell]` lines and in the terminal transcript as `[shell] `
 lines, and `gamelib-shell.log` is no longer written (84-CONTEXT D-01). The 83 gate scored `gamelib-shell.log` by pid; that
@@ -195,46 +196,99 @@ Formats checked against the golden expected files: `gamelib.log` shell line is `
   than an existing file").
 - **P7** session dir: `/private/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/2ac7689c-6dfc-4793-b795-25f79a4607b8/scratchpad/gamelib-gate-2026-11-21T082706Z`
   (under `/tmp`, never committed), holding `notes.txt`, `terminal.log` (empty) and the two preexisting copies.
-- **P4, P5, P6** need the operator and are not yet recorded: P4 a TS-launched game with Verbose logs ON, P5 a signed-in
-  Steam account with at least one owned, not-installed game, P6 a benign log chosen for the upload.
+- **P4** (operator-confirmed, 2026-11-21): runner `gog`, appName `1192621307` (Racine), a Wine/CrossOver launch
+  (`engine=crossover build=26.3.0.39832`). Verbose logs: assumed ON per the run instructions and CONFIRMED from the captured
+  content: `game-launch-1.log` is 182 lines (system info, game settings, the game's own output) and holds no
+  `IMPORTANT: Logs are disabled` line, where an OFF setting would leave only the two forced warnings.
+- **P5** (operator): Steam signed in, at least one owned not-installed game; the operator reported no contrary observation.
+  Independent evidence in launch 3: `[signInProbe] steam outcome=healthy` and a signed-in CM session (`session started`,
+  PICS requests) after Refresh.
+- **P6** (operator): the benign log was Balrum's game log (picker entry `Game log of Balrum`), read in the Log box before
+  the upload. No content recorded.
 
 ## Current Test
 
-[pending — Task 1 re-check done (no IMPOSSIBLE row); awaiting the operator-driven launches 1-4, then scoring (84-11 Task 2/3)]
+[partial — scored 2026-11-21 by 84-11 Task 3: 7 pass, 1 issue (item 4, header clause); gaps go to `/gsd-plan-phase 84 --gaps`]
 
 ## Tests
 
 ### 1. Shell lines persist in gamelib.log with the [Shell] prefix and gamelib-shell.log is not written (D-01, criterion 4)
 expected: In launch 1 (read from `gamelib-launch-1.log` and `terminal.log` after the launch exits), `gamelib-launch-1.log` holds a line matching `^\(\d{2}:\d{2}:\d{2}\) \[INFO\]: {4}\[Shell\]: {11}reaper started \(pid \d+\)$` whose pid equals the reaper pid in `reaper-pid-1.txt`, `terminal.log` holds `[shell] reaper started (pid ` with the same pid in launch 1's section, and `gamelib-shell.log`'s mtime and size equal the P3 baseline (or it is still absent).
-result: pending
+result: pass — launch 1 (scorable run: shell pid 51625, reaper pid 51705, the third `=== GATE LAUNCH 1` section, `terminal.log` lines 87-171; see Capture-procedure notes). `gamelib-launch-1.log` line 1 `(21:53:54) [INFO]:    [Shell]:           reaper started (pid 51705)` matches the regex and `reaper-pid-1.txt` holds 51705; `terminal.log` line 139, inside that section, holds `[shell] reaper started (pid 51705)`; `gamelib-shell.log` `stat -f '%m %z'` after the run is `1795246522 1348615`, equal to the P3 baseline. One `reaper started` line per archive in all four launches.
 
 ### 2. TS sidecar lines keep the line format (criterion 1)
 expected: In launch 1, `gamelib-launch-1.log` holds a `System facts:` line matching `^\(\d{2}:\d{2}:\d{2}\) \[INFO\]: {4}\[Backend\]: {9}System facts: `, and `lines dropped` and `log frame rejected` are absent from `gamelib-launch-1.log` and from launch 1's section of `terminal.log` (re-checked on all four launches' archives).
-result: pending
+result: pass — `gamelib-launch-1.log` line 14 `(21:53:55) [INFO]:    [Backend]:         System facts: darwin arm64 27.0.0, CPU: Apple M5 Ultra x30, memory: 96 GiB` matches the regex (9 spaces after `[Backend]:`); the same line is present in launches 2, 3 and 4. `lines dropped` and `log frame rejected` count 0 in all four `gamelib-launch-N.log` archives and in all of `terminal.log` (each of launch 1's three sections, launches 2-4).
 
 ### 3. Rotation once per app launch, and new files are 0600 (criterion 1, D-18)
 expected: In launch 2, after its window appears (launch 2 reads launch 1's archive), `cmp "$S/gamelib-launch-1.log" ~/Library/Logs/GameLib/gamelib.log.old` reports no difference and `stat -f %Lp ~/Library/Logs/GameLib/gamelib.log` prints 600.
-result: pending
+result: pass — launch 2 (shell pid 52750, reaper pid 52792; no up-time instance count was recorded for this launch, see Capture-procedure notes). Helper output at launch 2: `item3 stat: 600` and `item3 cmp: no difference`; re-run from the archives afterwards: `cmp gamelib-launch-1.log gamelib-old-after-launch-2.log` reports no difference (both 17585 bytes), and the same pairing holds for launches 2 to 3 and 3 to 4. `gamelib.log` and `gamelib.log.old` are mode 600 at session end too.
 
 ### 4. A game transcript is written by the native writer and keeps its bytes (D-05, D-06)
 expected: In launch 2, launch the P4 game twice from GameLib, quitting it normally in between and copying `launch.log` to `$S/game-launch-1.log` after the first quit; after the second quit `gamelib-launch-2.log` (archived after launch 2 exits) holds at least two `^\(\d{2}:\d{2}:\d{2}\) \[DEBUG\]: {3}\[Backend\]: {9}Logging to file\(s\) .*/games/<appName>_<runner>/launch\.log$` lines, `launch.log` starts with the runner's header line (record which: `Wine Command:` for Wine launches) and ends with `============= End of log =============`, `cmp "$S/game-launch-1.log" launch.log.old` reports no difference, and `lines dropped` is absent.
-result: pending
+result: issue — the writer half is met, the header clause is not. Launch 2, runner `gog`, appName `1192621307` (Racine, Wine via CrossOver, Verbose logs ON confirmed from content): `gamelib-launch-2.log` holds two `[DEBUG]:   [Backend]:         Logging to file(s) ~/Library/Logs/GameLib/games/1192621307_gog/launch.log` lines (line 281 at 22:03:57 and line 358 at 22:08:35); `game-launch-1.log` (182 lines) and the final `launch.log` (180 lines) both end with `============= End of log =============`; `cmp game-launch-1.log launch.log.old` reports no difference (helper `item4 cmp: no difference`, re-run); `lines dropped` is absent; `launch.log`, `launch.log.old` and `install.log` are mode 600. NOT met: `launch.log` does not start with a runner header and holds no `Wine Command:` line (nor `Game Log:`). It starts `(22:03:57) [INFO]:    engine=crossover build=26.3.0.39832 reason=cx-healthy`, then `Launching "Racine" (gog)`, and its last line before End of log is gogdl's own `Launch command: [...]`. `Wine Command:` appears in no log under `~/Library/Logs/GameLib` on this Mac, including launch logs written before Phase 84 (e.g. the Nov 7 Balrum log), so this is not a Phase 84 regression. Cause: the header is written only by `runWineCommand` callers that pass `logWriters` (`src/backend/commandRunner.ts:342`), and a GOG launch goes through `runRunnerCommand` (`src/backend/storeManagers/gog/games.ts:938`), which never calls it. The contract premise (P4: a Wine launch writes `Wine Command:`) is wrong for this path; the fix is a contract amendment (name the real header, or pick a path that writes `Wine Command:`), to `/gsd-plan-phase 84 --gaps`. Evidence: `game-launch-1.log`, `gamelib-launch-2.log`.
 
 ### 5. Show in folder (criterion 2)
 expected: In launch 2, Settings, Log, pick the GameLib entry, click "Show log file in folder": Finder opens `~/Library/Logs/GameLib` with `gamelib.log` selected.
-result: pending
+result: pass — launch 2, operator observation (the log cannot show it): Finder opened `~/Library/Logs/GameLib` with `gamelib.log` selected. No executor-side evidence beyond the operator's report.
 
 ### 6. Upload and the uploaded list (criterion 2, D-07, D-09)
 expected: In launch 2, upload the P6 benign log through the dialog (Yes on the confirm): the dialog shows an `https://dpaste.com/` URL, "Show uploaded log files" lists the entry by name, `~/Library/Application Support/GameLib/store/uploadedLogs.json` holds that URL with name, token and uploadedAt in 2-space JSON and one more entry than the P3 count, and `gamelib-launch-2.log` has a `[LogUploader]:` line containing `Uploaded log file `; record only the URL host and the entry name, never the log content.
-result: pending
+result: pass — launch 2. Operator observation: the upload dialog showed an `https://dpaste.com/` URL and "Show uploaded log files" listed the `Game log of Balrum` entry. Executor evidence: URL host `dpaste.com`, entry name `Game log of Balrum`; `~/Library/Application Support/gamelib/store/uploadedLogs.json` (path lowercase `gamelib`, mode 600) has 1 entry against a P3 baseline of 0 (file absent), keyed by the URL and holding `name`, `token` and `uploadedAt`, byte-equal to `JSON.stringify(parsed, null, 2)` (2-space JSON); `gamelib-launch-2.log` line 144 `(22:00:59) [INFO]:    [LogUploader]:     Uploaded log file Game log of Balrum to https://dpaste.com/<id>`. Nothing about the log content recorded. Note: the entry is keyed by URL rather than carrying a separate `url` field; the contract's wording ("holds that URL with name, token and uploadedAt") is met.
 
 ### 7. Crate diagnostics reach the log (criterion 3, D-16, D-19)
 expected: In launch 3 (`GAMELIB_LOG_LEVEL=debug`), with the P5 signed-in account, pressing the Library header's Refresh produces in `gamelib-launch-3.log` at least one `[DEBUG]:   [Steam]:` line whose message text is found by no `grep -rnF` over `src/backend` (so it came from a steam-vent or gamelib-steamcm tracing event, not a TS `logDebug`) and at least one `[Backend]:` line from an http-stack crate, and in launch 4 (no variable, P2 confirms) the same Refresh adds no `[DEBUG]` line whose message text matches any launch-3 crate-origin line.
-result: pending
+result: pass — launches 3 and 4 (shell pids 58545 and 60316). Launch 3 (`gamelib-launch-3.log`) has 158 `[DEBUG]:   [Steam]:` lines; 120 of them are true crate-origin steam-vent events found by no `grep -rnF` and carrying no TS template (`picked websocket server from list addr=...`, `connected to websocket server`, `writing raw k_EMsgClientLogon message`, `session started steam_id=...`, `Setting up heartbeat with interval 9s`, `Reading child message MsgKind(...)`, with `(repeated N more times)` collapsing). The `[Backend]` http-stack lines are present: `connecting to <ip>:443`, `connected to <ip>:443`, `No cached session for DnsName("api.steampowered.com")`, `Using ciphersuite TLS13_AES_256_GCM_SHA384`, `pooling idle connection for ("https", api.steampowered.com)` (16 matches for the TLS/connect/pool/websocket pattern in launch 3, 0 in launch 4). Launch 4 (default level, P2 count 0): the Refresh ran (`[steamcm] rust steamcm_refresh` at 22:13:54, `steamcm_licenses` at 22:13:55) and adds 0 true crate-origin lines; its 39 `[DEBUG]:   [Steam]:` lines are all `[steampoll|steamfiles|steamcm] rust <channel>` lines, which are TS `logDebug` calls (`src/backend/storeManagers/steam/pollRust/rustSteamPoll.ts:24`, `localFiles/rustSteamFiles.ts:19`, `cm/rustSteamCm.ts:24`) emitted at every level, not tracing events. CONTRACT-WORDING DEFECT, scored on the stated purpose ("not a TS logDebug"): the literal rule "message text found by no `grep -rnF` over `src/backend`" classifies those 38 launch-3 and 39 launch-4 `rust <channel>` lines as crate-origin, because the text is built from a template literal (`rust ${channel}`) that grep -F cannot match, and read literally the launch 4 absence would then fail. Fix for the gaps pass: amend the origin rule (exclude the three `[steam*] rust ` templates, or compare against an emitter list). That launch 3 and 4 were separated by the variable alone is shown by the 120 versus 0 true crate lines; the variable itself was a command prefix (launch 3 pre-check recorded `GAMELIB_LOG_LEVEL_count=0`, as designed).
 
 ### 8. The exit lines are flushed into gamelib.log inside the deadline (D-13 as amended, D-21)
 expected: Read from launches 1-4 (each ended by Cmd+Q), each `gamelib-launch-N.log` holds a `[Shell]` line `exit finished in <ms> ms` with ms at most 5000, and a `still running at exit deadline:` line appears only if a drain overran and, when present, comes before that exit line; presence and order are scored, never end-of-file, so lines that land after the exit line (late sidecar frames or teardown `[Shell]` lines from other threads) do not affect the score.
-result: pending
+result: pass — all four archives hold the `[Shell]` line and none holds `still running at exit deadline:`, so the order clause (and the Task 1 order note) was not triggered. `exit finished in 51 ms` in launch 1 (`gamelib-launch-1.log` line 118, 21:54:43), launch 2 (line 407, 22:10:07), launch 3 (line 332, 22:12:14) and launch 4 (line 156, 22:14:27); the same line `[shell] exit finished in 51 ms` is in `terminal.log` five times (launch 1's final section plus the aborted first section, launches 2-4 at lines 85, 171, 258, 348, 438). Lines after the exit line, recorded as observed and not scored: launch 1 ends with 3 `[Steam]` DEBUG lines and launch 3 with 8 lines after it (late sidecar frames); launches 2 and 4 end on the exit line itself. The value is 51 ms in every launch; it is read as the measured value and not interpreted further here.
+
+## Capture-procedure notes
+
+Recorded as they happened; none changed a score.
+
+- **Launch 1 false starts.** `pre 1` ran three times (three `=== GATE LAUNCH 1` delimiters in `terminal.log`, at 08:48:33,
+  08:52:36 and 08:53:23 UTC); the first attempt (shell pid 48809, reaper pid 48852) ran as an app instance, and the first
+  attempt's `up 1` failed because `$G` was unset in the operator's second tab. The scorable launch 1 is the last (shell pid
+  51625, reaper pid 51705, `terminal.log` lines 87-171; `shell-pid-1.txt` and `reaper-pid-1.txt` hold those final values,
+  confirmed). The earlier attempts' `gamelib.log` went to `.old`, so `gamelib-old-after-launch-1.log` (140 lines, 20524 bytes)
+  is a false start's log and not the pre-session `.old`, which is in `preexisting-gamelib.log.old` (83 lines).
+- **Launch 2 has no up-time instance record.** `$G up 2` was not run: there is no `shell-pid-2.txt`, `reaper-pid-2.txt` or
+  instance-count-at-up line. The contract's abort rule is "if the count is ever not 1 the launch is ABORTED"; every count
+  taken was 1 (P2 empty before launch 2; `quit 2` recorded `instances: 1`, shell pid 52750) and no count was 2, so the rule
+  does not fire. The missing record is a gap in the capture, covered by indirect evidence only: the launch 2 archive holds
+  exactly one `reaper started` line (pid 52792) and one `System facts:` line, which a second instance sharing the log would
+  have doubled, and launch 1's archive is byte-equal to `.old` (no second rotation). Items 3, 5 and 6 (and the writer half of
+  item 4) were scored on that basis; this is a recorded weakness, not a clean assertion.
+- **Launch 3 pre-check.** `GAMELIB_LOG_LEVEL_count=0` because the variable was supplied only as a command prefix, as designed;
+  that it took effect is shown by launch 3's 120 true crate-origin DEBUG lines against launch 4's 0.
+
+## Capture inventory (closing, 2026-11-21, before deletion)
+
+`ls -la` of the session dir (`/tmp`-side, user name elided) and `wc -l` per file:
+
+| file | bytes | lines |
+|---|---|---|
+| `game-launch-1.log` | 9042 | 182 |
+| `gamelib-launch-1.log` | 17585 | 121 |
+| `gamelib-launch-2.log` | 55039 | 407 |
+| `gamelib-launch-3.log` | 39976 | 340 |
+| `gamelib-launch-4.log` | 22596 | 156 |
+| `gamelib-old-after-launch-1.log` | 20524 | 140 |
+| `gamelib-old-after-launch-2.log` | 17585 | 121 |
+| `gamelib-old-after-launch-3.log` | 55039 | 407 |
+| `gamelib-old-after-launch-4.log` | 39976 | 340 |
+| `preexisting-gamelib.log` | 11904 | 91 |
+| `preexisting-gamelib.log.old` | 10282 | 83 |
+| `terminal.log` | 28483 | 438 |
+| `notes.txt` | 6691 | 74 |
+| `reaper-pid-1/3/4.txt`, `shell-pid-1/3/4.txt` | 6 each | 1 each |
+
+Total 2906 lines. No capture is missing or zero-length except `reaper-pid-2.txt` and `shell-pid-2.txt`, which were never
+written (see Capture-procedure notes). After the counts above were copied, the log copies (`game-launch-1.log`,
+`gamelib-launch-N.log`, `gamelib-old-after-launch-N.log`, `preexisting-*`, `terminal.log`) were deleted from the session dir
+because they hold user paths; `notes.txt` and the pid files remain there (pids, literals and counts only).
 
 ## Withdrawn from live scoring
 
@@ -333,6 +387,14 @@ LogSettings picker, footer controls and uploaded-list button (`src/frontend/scre
 at the lines cited), `LogFileUploadDialog/index.tsx`, `UploadedLogFilesList/index.tsx` and the Library header Refresh
 (`src/frontend/components/UI/Header/index.tsx:471-482`). The delete control is commented out and is withdrawn above.
 
+**Run-time count (84-11, 2026-11-21).** Structural impossibilities and unresolved requirement interactions met during the run:
+**2**. (1) Item 4's header clause is structurally unreachable on the path P4 chose: a GOG launch goes through
+`runRunnerCommand` and never writes `Wine Command:` (see item 4). (2) Item 7's crate-origin rule, "message text found by no
+`grep -rnF` over `src/backend`", cannot see TS `logDebug` calls built from a template literal, so the launch 4 absence read
+literally contradicts its own purpose (see item 7). Not counted: the item 8 order contradiction recorded at Task 1 (latent,
+never triggered, since no launch had a deadline line). Two capture-procedure slips were met and are not contract defects:
+launch 1 needed three attempts, and launch 2 has no up-time instance record (see Capture-procedure notes).
+
 **Run order.** P1 to P7, then launch 1 (item 1, item 2; item 8 read after exit), archive, launch 2 (item 3 first, then 5, 6,
 4), archive, launch 3 (item 7 with `GAMELIB_LOG_LEVEL=debug`), archive, launch 4 (item 7 without it), archive, read item 8 across all four archives,
 then the closing inventory.
@@ -340,8 +402,8 @@ then the closing inventory.
 ## Summary
 
 total: 8
-passed: 0
-issues: 0
-pending: 8
+passed: 7
+issues: 1
+pending: 0
 skipped: 0
 blocked: 0
