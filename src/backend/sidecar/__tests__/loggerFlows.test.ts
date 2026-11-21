@@ -96,7 +96,7 @@ import { settleLogFile } from '../../testUtils/settleLogFile'
 // Per case (reset in freshRegistry): the boot is handed this root so the stores a case seeds
 // and the boot's own stores share one file-cell table, as the old module-level registry did.
 let testRoot = createTestStoreRoot()
-import { existsSync, readFileSync, mkdirSync, writeFileSync } from 'fs'
+import { mkdirSync, writeFileSync } from 'fs'
 import { relative, resolve, isAbsolute, dirname } from 'path'
 import { tmpdir } from 'os'
 
@@ -257,9 +257,11 @@ import {
   listenerRegistry
 } from './helpers/sidecarHarness'
 import {
+  LOG_FRAME_KIND,
   UNPORTED_CHANNEL_MARKER,
   RUST_SHELL_SHOW_ITEM_IN_FOLDER
 } from 'common/types/sidecarTransport'
+import type { LogFrame } from 'common/types/sidecarTransport'
 import { createContainedHomeAppPaths } from 'backend/testUtils/testAppPaths'
 import { getLogFilePath } from 'backend/logger/paths'
 
@@ -488,29 +490,39 @@ async function waitForResponse(
 }
 
 /**
- * Polls the real log file (bounded, up to `maxIterations`, alternating a
- * `setImmediate` tick and a short timer) until it exists and contains
- * `marker`. Returns the file content if found, `undefined` if the poll runs
- * out — a timeout/absence, never a thrown exception, is the RED signature
- * this suite's own RED-PROOF spot-check below relies on.
+ * The log lines the sidecar has sent on its output so far (Phase 84): the general log is the
+ * forwarder, so a `logError` send frame lands as a `kind:"log"` frame's line entry on the same
+ * stream as every other frame. Returns the line entries (prefix, level, msg) in send order.
  */
-async function pollForMarker(
-  logPath: string,
+function sentLogLines(
+  frames: Frame[]
+): { level: string; prefix: string; msg: string }[] {
+  return (frames as unknown as LogFrame[])
+    .filter((f) => f.kind === LOG_FRAME_KIND)
+    .flatMap((f) =>
+      f.batch.flatMap((b) =>
+        b.entries.flatMap((e) => ('line' in e ? [e.line] : []))
+      )
+    )
+}
+
+/**
+ * Polls the captured frames (bounded, real timers) until a log line whose message contains
+ * `marker` has been sent. Returns every such line, or `undefined` when the poll runs out.
+ */
+async function pollForLogLine(
+  frames: Frame[],
   marker: string,
   maxIterations = 50
-): Promise<string | undefined> {
+): Promise<{ level: string; prefix: string; msg: string }[] | undefined> {
   for (let i = 0; i < maxIterations; i++) {
     if (i % 2 === 0) {
       await new Promise((r) => setImmediate(r))
     } else {
       await new Promise((r) => setTimeout(r, 10))
     }
-    if (existsSync(logPath)) {
-      const content = readFileSync(logPath, 'utf-8')
-      if (content.includes(marker)) {
-        return content
-      }
-    }
+    const hits = sentLogLines(frames).filter((l) => l.msg.includes(marker))
+    if (hits.length > 0) return hits
   }
   return undefined
 }
@@ -531,24 +543,29 @@ describe('sidecar logger flow: logError (Phase 34.2 gap cycle 2, plan 34.2-16)',
 
   // ── The load-bearing test: a real send frame must produce a real log line ──
 
-  it('REQ-34.2-08/09/12 a logError send frame over the real transport lands in the sidecar log file', async () => {
+  it('REQ-34.2-08/09/12 a logError send frame over the real transport leaves the sidecar as a log frame line', async () => {
     const marker = `logError-marker-${process.pid}-${Math.random()
       .toString(36)
       .slice(2)}`
     const message = `[loggerFlows.test.ts] ${marker}`
 
-    const { input } = boot()
+    const { input, frames } = boot()
     writeSend(input, 'le-1', 'logError', [message])
     await flush()
 
-    const logPath = getLogFilePath({})
-    const content = await pollForMarker(logPath, marker)
+    const hits = await pollForLogLine(frames, marker)
 
-    // Not "nothing threw" — the actual file content is read back and must
-    // contain the marker (REQ-34.2-08/09's own evidence standard for a
-    // `send` channel).
-    expect(content).toBeDefined()
-    expect(content).toContain(marker)
+    // Not "nothing threw" — the actual frame content is read back and must
+    // carry the marker (REQ-34.2-08/09's own evidence standard for a `send`
+    // channel). Phase 84: the sidecar no longer writes gamelib.log itself, so
+    // the evidence is the log frame on its stdout (the shell writes the file).
+    expect(hits).toBeDefined()
+    expect(hits).toHaveLength(1)
+    expect(hits?.[0]).toMatchObject({
+      level: 'ERROR',
+      prefix: LogPrefix.Frontend
+    })
+    expect(hits?.[0]?.msg).toContain(marker)
   })
 
   it('REQ-34.2-12 the real backend/logger logErrorSettled export is called with the frame message and LogPrefix.Frontend', async () => {
@@ -596,36 +613,35 @@ describe('sidecar logger flow: logError (Phase 34.2 gap cycle 2, plan 34.2-16)',
     const forgedLine = `(12:34:56) [ERROR]:   [Backend]: ${marker} forged`
     const payload = `${marker} head\n${forgedLine}`
 
-    const { input } = boot()
+    const { input, frames } = boot()
     writeSend(input, 'le-in04', 'logError', [payload])
     await flush()
 
-    const logPath = getLogFilePath({})
-    const content = await pollForMarker(logPath, marker)
+    const hits = await pollForLogLine(frames, marker)
 
     // Direction 1 — the message DID arrive. Without this the test would pass
     // just as well against a channel that dropped the frame entirely, which
     // is the vacuity this suite's own header warns about.
-    expect(content).toBeDefined()
-    expect(content).toContain(`${marker} head`)
+    expect(hits).toBeDefined()
+
+    // The payload must not have produced two log entries where one was sent,
+    // and the one entry arrives with the forged text as part of its message.
+    expect(hits).toHaveLength(1)
+    const msg = hits?.[0]?.msg ?? ''
+    expect(msg).toContain(`${marker} head`)
 
     // Direction 2 — the escape actually happened, and the text survives in
     // legible form rather than being stripped.
-    expect(content).toContain('\\n')
-    expect(content).toContain(`${marker} forged`)
+    expect(msg).toContain('\\n')
+    expect(msg).toContain(`${marker} forged`)
 
-    // Direction 3 — the property that matters. No LINE in the file may consist
-    // of the forged entry. Asserting on whole lines, not on substring
-    // presence: the forged text is legitimately present as escaped payload, so
-    // a `not.toContain(forgedLine)` would be measuring the wrong property and
-    // would fail even against a correct fix.
-    const lines = (content ?? '').split('\n')
-    const forgedLines = lines.filter((line) => line.trim() === forgedLine)
-    expect(forgedLines).toEqual([])
-
-    // And the payload must not have produced two log lines where one was sent.
-    const markerLines = lines.filter((line) => line.includes(marker))
-    expect(markerLines).toHaveLength(1)
+    // Direction 3 — the property that matters. The shell writes `msg` after a
+    // single header, so a message with no raw newline is exactly one log
+    // line, and the forged entry is never a line of its own (whole-message
+    // check, not substring presence: the forged text is legitimately present
+    // as escaped payload).
+    expect(msg.split('\n')).toHaveLength(1)
+    expect(msg.trim()).not.toBe(forgedLine)
   })
 
   it('REQ-34.2-14 no response frame is produced for the send frame id, and no UNPORTED_CHANNEL_MARKER appears', async () => {
@@ -652,8 +668,8 @@ describe('sidecar logger flow: logError (Phase 34.2 gap cycle 2, plan 34.2-16)',
  * makes the positive side-effect test above fail if reverted is the
  * `registerLoggerFlows()` call in `src/backend/sidecar/handlers.ts` (Task
  * 1). Reverting it (commenting out the import + call) and re-running this
- * suite makes the positive test fail by TIMEOUT — `pollForMarker` exhausts
- * its 50 iterations and returns `undefined`, so `expect(content).toBeDefined()`
+ * suite makes the positive test fail by TIMEOUT — `pollForLogLine` exhausts
+ * its 50 iterations and returns `undefined`, so `expect(hits).toBeDefined()`
  * fails on a plain assertion, never an exception — reproducing this
  * project's own `sidecar-send-channels-fail-silently` failure mode
  * first-hand, exactly as REQ-34.2-08/09 predicts for an unregistered `send`

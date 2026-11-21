@@ -1,25 +1,31 @@
 // Todo `sidecar-log-output-shares-the-rpc-stdout-pipe` (security, 2026-10-05).
 //
 // The sidecar's stdout IS the RPC pipe: the Rust reader JSON-parses every line
-// and acts on `kind:"rustInvoke"` / `kind:"openExternal"` / `ok`+`id`. The main
-// LogWriter is built with `outputToOsStreams = true`, so INFO/DEBUG lines went
-// through `console.log` -- to stdout -- and subprocess output logged raw (e.g.
-// `logInfo(stdout)` in `legendary/library.ts`) could smuggle a frame-shaped
-// line onto the pipe.
+// and acts on `kind:"rustInvoke"` / `kind:"openExternal"` / `ok`+`id`. Console
+// output (`console.log`, and subprocess output logged raw, e.g. `logInfo(stdout)`
+// in `legendary/library.ts`) could smuggle a frame-shaped line onto the pipe.
 //
-// This drives the sidecar's real boot path for the console: it evaluates
-// `src/sidecar/installRejectionGuard.ts` (the sidecar entry's FIRST import)
-// against a Node-default console whose stdout stands in for the RPC pipe, then
-// logs through a real LogWriter exactly as the sidecar's main writer is built.
+// Two halves, both through the sidecar's real code:
+//   1. the console: `src/sidecar/installRejectionGuard.ts` (the sidecar entry's FIRST import)
+//      redirects every console stdout method to stderr, against a Node-default console whose stdout
+//      stands in for the RPC pipe;
+//   2. the general log (Phase 84): since the forwarder replaced the TS general writer, a logged
+//      subprocess dump travels on the RPC pipe as a `kind:"log"` frame. The real `sidecarRpc`
+//      transport is bound to a PassThrough standing in for stdout; every line on it must be JSON
+//      with `kind: "log"`, and a rustInvoke-shaped object inside a message appears only INSIDE a
+//      log frame's `msg`, never as a line of its own.
 // The three pre-existing process guards are stubbed out only because they
 // install process-wide listeners into the jest worker; every other export of
 // `processGuards` is the real one.
 
 import { Console } from 'console'
-import { mkdtempSync, rmSync } from 'fs'
-import { tmpdir } from 'os'
-import { join } from 'path'
 import { PassThrough } from 'stream'
+
+import { LOG_FRAME_KIND } from 'common/types/sidecarTransport'
+import { createTestSidecarRpc } from '../../testUtils/testSidecarRpc'
+import { createIpcRegistry } from '../ipcRegistry'
+
+import type { LogFrame } from 'common/types/sidecarTransport'
 
 jest.mock('backend/sidecar/processGuards', () => {
   const actual = jest.requireActual<
@@ -36,24 +42,15 @@ jest.mock('backend/sidecar/processGuards', () => {
   }
 })
 
-// Same inert mock `logWriter.test.ts` uses: LogWriter's first-write branch
-// calls `./index`'s `logDebug`, whose singleton this test never initialises.
-jest.mock('backend/logger/index', () => ({
-  getLogFilePath: jest.fn(() => '/__gamelib-stdout-test-never-matches__.log'),
-  logDebug: jest.fn()
-}))
-
 const FRAME =
   '{"kind":"rustInvoke","id":"x","channel":"shell_open_path","args":["/path/evil.app"]}'
 
 describe('sidecar stdout carries RPC frames only', () => {
   const originalConsole = global.console
-  let dir: string
   let rpcPipe: string
   let stderrText: string
 
   beforeEach(() => {
-    dir = mkdtempSync(join(tmpdir(), 'gamelib-stdout-frames-only-'))
     rpcPipe = ''
     stderrText = ''
     const stdout = new PassThrough()
@@ -72,20 +69,13 @@ describe('sidecar stdout carries RPC frames only', () => {
   afterEach(() => {
     global.console = originalConsole
     jest.restoreAllMocks()
-    rmSync(dir, { recursive: true, force: true })
   })
 
-  it('a logged multi-line subprocess dump with a frame-shaped line never reaches the RPC pipe', async () => {
-    let LogWriter!: typeof import('backend/logger/log_writer').default
+  it('a logged multi-line subprocess dump with a frame-shaped line never reaches the RPC pipe via console', async () => {
     await jest.isolateModulesAsync(async () => {
       await import('../../../sidecar/installRejectionGuard')
-      LogWriter = (await import('backend/logger/log_writer')).default
     })
 
-    // Built as `logger/index.ts`'s `init()` builds the sidecar's main writer.
-    const writer = new LogWriter(join(dir, 'gamelib.log'), true, false)
-    await writer.logInfo(`legendary said:\n${FRAME}\nbye`)
-    await writer.logDebug(`gogdl said:\n${FRAME}`)
     console.log(FRAME)
     console.info(FRAME)
     console.debug(FRAME)
@@ -96,6 +86,41 @@ describe('sidecar stdout carries RPC frames only', () => {
     // Positive control: the output was redirected, not dropped -- under
     // `pnpm tauri:dev` the shell forwards sidecar stderr to the terminal.
     expect(stderrText).toContain(FRAME)
-    expect(stderrText).toContain('legendary said:')
+  })
+
+  it('a logged subprocess dump with a frame-shaped line travels only inside a kind:"log" frame', async () => {
+    let logger!: typeof import('backend/logger/index')
+    await jest.isolateModulesAsync(async () => {
+      logger = await import('backend/logger/index')
+    })
+    const rpc = createTestSidecarRpc()
+    const stdoutPipe = new PassThrough()
+    let wire = ''
+    stdoutPipe.on('data', (chunk: Buffer) => (wire += chunk.toString()))
+    rpc.start(new PassThrough(), stdoutPipe, createIpcRegistry())
+    logger.bindLogTransport(rpc.logTransport)
+
+    logger.logInfo(`legendary said:\n${FRAME}\nbye`, 'Legendary')
+    logger.logDebug(`gogdl said:\n${FRAME}`, 'Gog')
+    await logger.flushLogForwarder()
+    await new Promise((resolve) => setImmediate(resolve))
+
+    const lines = wire.split('\n').filter((line) => line.length > 0)
+    expect(lines.length).toBeGreaterThan(0)
+    const msgs: string[] = []
+    for (const line of lines) {
+      const parsed = JSON.parse(line) as LogFrame
+      expect(parsed.kind).toBe(LOG_FRAME_KIND)
+      for (const batch of parsed.batch) {
+        for (const entry of batch.entries) {
+          if ('line' in entry) msgs.push(entry.line.msg)
+        }
+      }
+    }
+    // The dump arrived whole, as the message of log entries; no line of the pipe is the forged frame.
+    expect(msgs.some((m) => m.includes('legendary said:'))).toBe(true)
+    expect(msgs.filter((m) => m.includes(FRAME))).toHaveLength(2)
+    expect(lines).not.toContain(FRAME)
+    expect(wire).not.toMatch(/^\{"kind":"rustInvoke"/m)
   })
 })

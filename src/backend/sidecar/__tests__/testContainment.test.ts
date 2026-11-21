@@ -111,7 +111,7 @@ import {
 // `mock`-prefixed and declared before the factories that read it: ts-jest's
 // hoist transform only lets a `jest.mock()` factory reference an out-of-scope
 // identifier when that identifier is `mock`-prefixed (same convention as
-// `loggerCallSiteGuard.test.ts`'s `mockScratchDir`). All three factories below
+// the retired call-site guard suite's `mockScratchDir`). All three factories below
 // now read ONE value; the path used to be re-derived as a literal in each.
 const mockTmpRoot = jest
   .requireActual<typeof import('fs')>('fs')
@@ -483,18 +483,20 @@ const IN_SCOPE_SUITES = [
  * The directory holds 28 `*.test.ts` files as of Phase 34.3 Plan 06 (27
  * before this plan added `clipboardFlows.test.ts`; 26 before plan 34.3-01
  * added `shellFilesFlows.test.ts`; 25 before gap cycle 4 plan 34.2-26 added
- * `loggerCallSiteGuard.test.ts`, itself classified here rather than left as
+ * the call-site guard suite (retired in Phase 84 plan 03), itself classified here rather than left as
  * the deliberately-open Block C failure that plan left as live evidence the
  * tripwire fires); 4 are `IN_SCOPE_SUITES` and the 24 below account for the
  * rest (counts recomputed from `readdirSync` by this plan, not carried
  * forward by hand -- see Block C's own anti-vacuity test, which asserts
  * every name declared here still exists on disk).
  *
- * `loggerCallSiteGuard.test.ts` (plan 34.2-26) is classified as
- * structurally contained: it carries no `os`/`pathShim` mock of its own and
- * relies entirely on the `setupFiles` mechanism, mocking only
- * `backend/logger/paths` (a module below the code it tests) plus
- * `electron`/`backend/config`.
+ * The call-site guard suite (plan 34.2-26) was classified here as structurally contained and
+ * was RETIRED by Phase 84 plan 03: it guarded CR-01 (a rejecting general-writer promise escaping the
+ * renderer log listener) through a real ENOTDIR write failure and a source shape keyed on the old
+ * general writer binding. Once the general log is the forwarder, `logErrorSettled` cannot reject, so
+ * that subject is gone; its Contract C (a promise-returning `logErrorSettled`) lives in
+ * `logger/__tests__/forwarder.test.ts`. The entry is removed so Block C's set-equality does not fail
+ * on a phantom name.
  *
  * `clipboardFlows.test.ts` (Phase 34.3 Plan 06) is classified as
  * structurally contained: it uses the identical `os`/`electron`/
@@ -1071,7 +1073,6 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'keyringTokenStore.test.ts',
   'knownFolders.test.ts',
   'legacyZoomDataCleanup.test.ts',
-  'loggerCallSiteGuard.test.ts',
   'migrationsWiring.test.ts',
   'nativeChannelOwnership.test.ts',
   'nativeImageShim.test.ts',
@@ -1298,7 +1299,7 @@ describe('Block C: derived readdirSync tripwire over the whole directory (plan 3
   // self-tests failed too, because listActualTestSuites() returned a
   // right-hand set the self-tests' own hardcoded expectations no longer
   // matched. Reproduced live during this plan's own arrival state (see
-  // 34.2-29-SUMMARY.md): dropping loggerCallSiteGuard.test.ts unclassified
+  // 34.2-29-SUMMARY.md): dropping the call-site guard suite unclassified
   // produced 3 failures, not 1 -- the two self-tests below failed WITH
   // misleading `expected ['zzSyntheticUnclassifiedSuite.test.ts']` /
   // `expected []` messages that named the WRONG file and actively misdirect

@@ -924,13 +924,10 @@ mod tests {
         );
         assert_eq!(nvm_versions_newest_first(vec![]), Vec::<String>::new());
     }
-}
 
-/// Phase 84 (FND-05): the log frame arm, through `route_log_frame` (the function the reader thread
-/// calls) into a real `Logger` on a throwaway home.
-#[cfg(test)]
-mod log_frame_tests {
-    use super::*;
+    // ---- Phase 84 (FND-05): the log frame arm, through `route_log_frame` (the function the reader
+    // thread calls) into a real `Logger` on a throwaway home. ----
+
     use gamelib_core::clock::Clock;
     use gamelib_core::paths::{join, Platform};
     use gamelib_log::writer::{LogConfig, Logger, TzOffset};

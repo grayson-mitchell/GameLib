@@ -4,7 +4,8 @@ jest.mock('../../logger', () => ({
   LogPrefix: { Backend: 'Backend', Steam: 'Steam' },
   logInfo: jest.fn(),
   logWarning: jest.fn(),
-  logError: jest.fn()
+  logError: jest.fn(),
+  flushLogForwarder: jest.fn()
 }))
 const callAll = jest.fn()
 const running = jest.fn(() => false)
@@ -25,7 +26,7 @@ const deps = {
   aborts: { abortAll: () => callAll() }
 }
 
-import { logInfo, logWarning } from '../../logger'
+import { flushLogForwarder, logInfo, logWarning } from '../../logger'
 import { RESIDUAL_HOLDER_DIAG_MS, releaseOnStdinEof } from '../stdinEofRelease'
 
 describe('releaseOnStdinEof (debug/sidecar-survives-force-quit)', () => {
@@ -54,6 +55,25 @@ describe('releaseOnStdinEof (debug/sidecar-survives-force-quit)', () => {
       expect(callAll).toHaveBeenCalledTimes(1)
       expect(destroyHttp).toHaveBeenCalledTimes(1)
     })
+  })
+
+  it('flushes the log forwarder once, after the other release steps and their log lines (Phase 84)', async () => {
+    const input = new PassThrough()
+    releaseOnStdinEof(input, deps)
+    input.resume()
+    input.end()
+    await new Promise<void>((resolve) => setImmediate(resolve))
+    const flush = flushLogForwarder as jest.Mock
+    expect(flush).toHaveBeenCalledTimes(1)
+    const flushedAt = flush.mock.invocationCallOrder[0] ?? 0
+    const lastLine = Math.max(
+      ...(logInfo as jest.Mock).mock.invocationCallOrder
+    )
+    expect(flushedAt).toBeGreaterThan(lastLine)
+    expect(flushedAt).toBeGreaterThan(callAll.mock.invocationCallOrder[0] ?? 0)
+    expect(flushedAt).toBeGreaterThan(
+      destroyHttp.mock.invocationCallOrder[0] ?? 0
+    )
   })
 
   it('pauses a running download before aborting, so it stays in the persisted queue', () => {

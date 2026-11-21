@@ -34,6 +34,7 @@ import { existsSync, mkdirSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
 import { READY_SENTINEL } from 'common/types/sidecarTransport'
+import type { LogFrame } from 'common/types/sidecarTransport'
 import { stripSourceComments as stripComments } from 'backend/testUtils/stripSourceComments'
 import { createTestServices } from 'backend/testUtils/testServices'
 
@@ -456,6 +457,31 @@ describe('sidecar bootstrap wirings (Phase 34.2 Plan 01 -- REQ-34.2-02/04/07/14)
     expect(lines).toContain(READY_SENTINEL)
   })
 
+  it("Phase 84: the 'sidecar-rpc' step binds the log forwarder's transport, so the boot's own log lines leave as kind:\"log\" frames on stdout", async () => {
+    const { lines } = bootWirings()
+    await waitFor(() => lines.some((line) => line.startsWith('{"kind":"log"')))
+    const frame = JSON.parse(
+      lines.find((line) => line.startsWith('{"kind":"log"')) ?? '{}'
+    ) as LogFrame
+    expect(frame.kind).toBe('log')
+    expect(frame.batch[0]?.target).toEqual({ kind: 'general' })
+  })
+
+  it("Phase 84: bootstrap.ts calls bindLogTransport(state.rpc.logTransport) inside the 'sidecar-rpc' step, right after createSidecarRpc", () => {
+    const source = stripComments(
+      readFileSync(join(__dirname, '..', 'bootstrap.ts'), 'utf-8')
+    )
+    const step = source.indexOf("name: 'sidecar-rpc'")
+    const next = source.indexOf("name: 'host-services'")
+    expect(step).toBeGreaterThan(-1)
+    expect(next).toBeGreaterThan(step)
+    const body = source.slice(step, next)
+    expect(body).toContain('bindLogTransport(state.rpc.logTransport)')
+    expect(body.indexOf('createSidecarRpc(')).toBeLessThan(
+      body.indexOf('bindLogTransport(')
+    )
+  })
+
   it('REQ-34.2-04/T-34.2-05: appFolder resolves inside the disposable tmp home, never the real config directory', () => {
     const { appFolder } = setupWithoutBoot()
     expect(appFolder.startsWith(tmpdir())).toBe(true)
@@ -470,16 +496,14 @@ describe('sidecar bootstrap protocol-url wiring (Phase 34.5 gap cycle 6 plan 44,
     mockTestHomeSuffix += 1
   })
 
-  it('Test A (behaviour, real log file): deliverStartupProtocolUrl makes the real LogWriter write the [ProtocolHandler] Received line', async () => {
+  it('Test A (behaviour, captured log frame): deliverStartupProtocolUrl logs the [ProtocolHandler] Received line through the forwarder', async () => {
     // Same precondition the pre-existing anticheat-data test (above) states explicitly: a
     // real Electron app guarantees `userData` exists before any file operation runs, via
     // `app.whenReady()`; the sidecar has no such hook. Belt-and-braces here even though the
     // runner-less URL below is not expected to reach a GameConfig write (see next comment).
-    const { deliverStartupProtocolUrl, logFilePath } = bootWirings(
-      ({ appFolder }) => {
-        mkdirSync(join(appFolder, 'GamesConfig'), { recursive: true })
-      }
-    )
+    const { deliverStartupProtocolUrl } = bootWirings(({ appFolder }) => {
+      mkdirSync(join(appFolder, 'GamesConfig'), { recursive: true })
+    })
     await flush()
 
     // Deviation (Rule 1 -- bug, found live running this test): the plan's own draft used
@@ -499,22 +523,43 @@ describe('sidecar bootstrap protocol-url wiring (Phase 34.5 gap cycle 6 plan 44,
     // implementations report a falsy `app_name` for this appName, so `handleLaunch` logs
     // "Could not receive game data" and returns immediately after the `Received` line below.
     const testUrl = 'gamelib://launch?appName=__gamelib_test_missing__'
+    // Phase 84: the general log is the forwarder, not a TS-written file. Rebind a capturing
+    // transport in the booted registry (replacing the boot's stdout transport) and wait for the
+    // CONTENT of the captured frame entry: the forwarder sends on its own unref'd tick, and no
+    // caller in this codebase awaits a `logXXX()` call.
+    /* eslint-disable @typescript-eslint/no-require-imports */
+    const { bindLogTransport } =
+      require('../../logger') as typeof import('../../logger')
+    /* eslint-enable @typescript-eslint/no-require-imports */
+    const captured: LogFrame[] = []
+    bindLogTransport({
+      send(frame, onWritten) {
+        captured.push(frame)
+        onWritten()
+        return true
+      },
+      onReady() {
+        // Never backed up.
+      }
+    })
     deliverStartupProtocolUrl(createTestServices(), ['--no-gui', testUrl])
 
-    // Real, unmocked LogWriter queues its write fire-and-forget (no caller in this codebase
-    // `await`s a `logXXX()` call) -- poll for the CONTENT, not merely the file's existence,
-    // since the file can exist (from init()'s own earlier boot-diagnostic writes) before this
-    // specific line has landed.
-    await waitFor(() => {
-      if (!existsSync(logFilePath)) return false
-      return readFileSync(logFilePath, 'utf-8').includes(
-        'Received gamelib://launch?appName=__gamelib_test_missing__'
+    const received = (): { prefix: string; msg: string }[] =>
+      captured.flatMap((f) =>
+        f.batch.flatMap((b) =>
+          b.entries.flatMap((e) => ('line' in e ? [e.line] : []))
+        )
       )
-    })
-
-    const contents = readFileSync(logFilePath, 'utf-8')
-    expect(contents).toMatch(
-      /\[ProtocolHandler\]:\s+Received gamelib:\/\/launch\?appName=__gamelib_test_missing__/
+    await waitFor(() =>
+      received().some(
+        (l) =>
+          l.msg === 'Received gamelib://launch?appName=__gamelib_test_missing__'
+      )
+    )
+    const line = received().find((l) => l.msg.startsWith('Received gamelib://'))
+    expect(line?.prefix).toBe('ProtocolHandler')
+    expect(line?.msg).toBe(
+      'Received gamelib://launch?appName=__gamelib_test_missing__'
     )
   })
 
