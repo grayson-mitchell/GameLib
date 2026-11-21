@@ -575,6 +575,21 @@ const FIXTURE_DIFF_LINES = [
  * `ThemeCardActions.tsx` and `themeDialogs.ts`. SCANNED, not declared debt:
  * every string they render is a literal `t()` call.
  * DECLARED_UNSCANNED_DEBT unchanged.
+ *
+ * 2026-11-21 (quick 261121-lco): fork-touched 439 -> 445 by a fresh
+ * `pnpm gen-i18n-gate-scope` (committed first), scope 317 -> 322. Quick
+ * 261121-dzl made six src/frontend files fork-touched without regenerating the
+ * artifact: it edited the upstream `AfterLaunchScriptPath.tsx`,
+ * `BeforeLaunchScriptPath.tsx` and `VerboseLogs.tsx`, and created
+ * `SettingsModal/SettingsModalHeader.tsx`, `GamesSettings/SettingsCard.tsx` and
+ * `GamesSettings/tabs.ts`. The filing todo read the A-17 diff as stale entries;
+ * they were missing ones. Audit-mode `scanScope({ extraFiles })` found 2
+ * violations, both in `tabs.ts` (:71, :76): localStorage key templates,
+ * identifiers that are never rendered. The other five audited ZERO and were
+ * hand-inserted in sorted position into scope. They are SCANNED, not declared
+ * debt. `tabs.ts` is declared below rather than promoted, because editing
+ * product code to quiet a false positive is the route the translationIssue.ts
+ * precedent rejected. DECLARED_UNSCANNED_DEBT +1.
  */
 const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/__mocks__/svgReactStub.tsx',
@@ -618,6 +633,8 @@ const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/screens/Settings/components/WinePrefix.tsx',
   'src/frontend/screens/Settings/sections/AdvancedSettings/index.tsx',
   'src/frontend/screens/Settings/sections/GamesSettings/index.tsx',
+  // quick 261121-lco: tabs.ts holds two localStorage key templates (:71, :76), not rendered text
+  'src/frontend/screens/Settings/sections/GamesSettings/tabs.ts',
   'src/frontend/screens/Settings/sections/StoreSettings/EosOverlay.tsx',
   'src/frontend/screens/Settings/sections/SyncSaves/gog.tsx',
   'src/frontend/screens/Settings/sections/SyncSaves/legendary.tsx',
@@ -1430,9 +1447,9 @@ describe('--rewrite-scope guard', () => {
     }
   })
 
-  it('A0 fixture sanity: the seeded scope is the REAL 317-file hand-curated snapshot, and the fresh-snapshot fixture carries the committed 439-file fork-touched set verbatim', () => {
-    expect(scopeSnapshot.files.length).toBe(317)
-    expect(forkTouchedSnapshot.files.length).toBe(439)
+  it('A0 fixture sanity: the seeded scope is the REAL 322-file hand-curated snapshot, and the fresh-snapshot fixture carries the committed 445-file fork-touched set verbatim', () => {
+    expect(scopeSnapshot.files.length).toBe(322)
+    expect(forkTouchedSnapshot.files.length).toBe(445)
     // `freshSnapshot()` is a FIXTURE built from the committed artifact
     // (`files: [...forkTouchedSnapshot.files]`) -- NOT a live git derivation,
     // despite what this assertion used to claim. The live derivation is
@@ -1473,7 +1490,7 @@ describe('--rewrite-scope guard', () => {
     expect(result.refusal).toBeNull()
   })
 
-  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 317 -> 439 diff and writes nothing', () => {
+  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 322 -> 445 diff and writes nothing', () => {
     const { outDir, scopePath, seededBytes } = seedScope()
 
     const result = writeArtifacts({
@@ -1496,7 +1513,7 @@ describe('--rewrite-scope guard', () => {
     expect(refusal.provenance).toBe(scopeSnapshot.generatedBy)
   })
 
-  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 439', () => {
+  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 445', () => {
     // The load-bearing spec. Without it, A1/A2's "the file did not change"
     // would be satisfied just as well by a writer that cannot write at all —
     // a guard that refuses everything is not a fix, it is a different bug.
@@ -1509,12 +1526,12 @@ describe('--rewrite-scope guard', () => {
     })
 
     const rewritten = JSON.parse(readFileSync(scopePath, 'utf-8'))
-    expect(rewritten.files.length).toBe(439)
+    expect(rewritten.files.length).toBe(445)
     expect(result.wroteScope).toBe(scopePath)
     expect(result.refusal).toBeNull()
   })
 
-  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 439 files', () => {
+  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 445 files', () => {
     const outDir = makeTmpDir()
     const scopePath = join(outDir, 'i18nGateScope.json')
     expect(existsSync(scopePath)).toBe(false)
@@ -1527,7 +1544,7 @@ describe('--rewrite-scope guard', () => {
 
     expect(result.refusal).toBeNull()
     expect(result.wroteScope).toBe(scopePath)
-    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(439)
+    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(445)
   })
 
   it('A5 PROVENANCE RATCHET ON THE REAL ARTIFACT: the committed marker still reads as hand-curated', () => {
