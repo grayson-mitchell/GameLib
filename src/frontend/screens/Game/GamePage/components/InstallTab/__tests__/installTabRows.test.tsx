@@ -218,7 +218,6 @@ function gatesFor(game: GameInfo, is: GameContextType['is']) {
     runner: game.runner,
     isInstalled: Boolean(game.is_installed),
     isThirdPartyManaged: Boolean(game.thirdPartyManagedApp),
-    isBrowserGame: game.install.platform === 'Browser',
     hasWinePrefix: false,
     hasChangelog: false,
     cloudSavesAvailable: false
@@ -556,5 +555,26 @@ describe('Location row (CR-02)', () => {
     harness.__flushEffects()
 
     expect(renderLocation(moved).actions.moveFailed).toBe(false)
+  })
+  it('keeps Open, without Move or Wrong folder, for an installed third-party-managed game (WR-02)', () => {
+    const game = makeGame(
+      'legendary',
+      { install_path: '/games/ea' },
+      { thirdPartyManagedApp: 'EA' }
+    )
+    const row = renderLocation(game).tree as ReactElement<Props>
+
+    expect(row).not.toBeNull()
+    expect(actionLabels(row)).toEqual(['Open'])
+  })
+
+  it('renders no Location row for an installed game with no folder at all', () => {
+    const game = makeGame(
+      'legendary',
+      { install_path: '' },
+      { folder_name: '' }
+    )
+
+    expect(renderLocation(game).tree).toBeNull()
   })
 })

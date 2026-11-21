@@ -56,7 +56,6 @@ const gates = (
     is: makeIs(is),
     isInstalled: true,
     isThirdPartyManaged: false,
-    isBrowserGame: false,
     hasWinePrefix: true,
     hasChangelog: true,
     cloudSavesAvailable: true,
@@ -106,10 +105,10 @@ describe('installActionGates', () => {
     expect(g.uninstall.show).toBe(true)
   })
 
-  it('third-party managed: open, move, set folder, modify, verify and update hide', () => {
+  it('third-party managed: open stays live; move, set folder, modify, verify and update hide', () => {
     const g = gates('legendary', { isThirdPartyManaged: true })
+    expect(g.open).toEqual({ show: true, disabled: false })
     for (const id of [
-      'open',
       'move',
       'setFolder',
       'modify',
@@ -120,8 +119,11 @@ describe('installActionGates', () => {
     }
   })
 
-  it('a browser game has no Open action', () => {
-    expect(gates('legendary', { isBrowserGame: true }).open.show).toBe(false)
+  it('Open shows for every installed game, as the old ⋮ Browse Files did (WR-02)', () => {
+    expect(gates('legendary', { isThirdPartyManaged: true }).open.show).toBe(
+      true
+    )
+    expect(gates('sideload').open.show).toBe(true)
   })
 
   it('not installed (gog): only locate shows among the installed-only actions', () => {
