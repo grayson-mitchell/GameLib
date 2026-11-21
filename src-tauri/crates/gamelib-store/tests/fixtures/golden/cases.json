@@ -1,0 +1,45 @@
+[
+  {
+    "id": "cache-ops-dotpath-intkey",
+    "kind": "ops",
+    "declaration": {
+      "dir": "store_cache",
+      "name": "wikigameinfo",
+      "kind": "cache",
+      "clearInvalidConfig": true
+    },
+    "ops": [
+      { "op": "set", "key": "480", "value": { "title": "Half-Life", "score": 96, "tags": ["fps", "classic"] } },
+      { "op": "set", "key": "480.title", "value": "x" },
+      { "op": "set", "key": "__timestamp.480", "value": 1700000000000 },
+      { "op": "delete", "key": "480.title" },
+      { "op": "get", "key": "480" },
+      { "op": "get", "key": "__timestamp.480" }
+    ]
+  },
+  {
+    "id": "migrate-settings-global-v0",
+    "kind": "migrate",
+    "chain": "settings/global",
+    "flavour": "settings",
+    "file": "config.json",
+    "source": "settings-global-v0.json"
+  },
+  {
+    "id": "settings-doc-game",
+    "kind": "settingsDoc",
+    "doc": "game",
+    "appName": "480",
+    "data": {
+      "480": {
+        "language": "en",
+        "launcherArgs": "-windowed",
+        "showFps": true,
+        "wineVersion": { "name": "Wine-GE", "bin": "/opt/wine/bin/wine", "type": "wine" },
+        "enviromentOptions": [{ "key": "DXVK_HUD", "value": "fps" }]
+      },
+      "version": "v2",
+      "explicit": true
+    }
+  }
+]

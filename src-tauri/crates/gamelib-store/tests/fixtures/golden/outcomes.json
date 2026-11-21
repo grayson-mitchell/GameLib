@@ -1,0 +1,59 @@
+[
+  {
+    "id": "cache-ops-dotpath-intkey",
+    "constructThrew": null,
+    "reads": [
+      {
+        "i": 4,
+        "op": "get",
+        "key": "480",
+        "found": true,
+        "value": {
+          "score": 96,
+          "tags": [
+            "fps",
+            "classic"
+          ]
+        }
+      },
+      {
+        "i": 5,
+        "op": "get",
+        "key": "__timestamp.480",
+        "found": true,
+        "value": 1700000000000
+      }
+    ],
+    "threw": [],
+    "readOnly": null,
+    "backups": [],
+    "files": [
+      "store_cache/wikigameinfo.json"
+    ]
+  },
+  {
+    "id": "migrate-settings-global-v0",
+    "constructThrew": null,
+    "reads": [],
+    "threw": [],
+    "readOnly": null,
+    "backups": [
+      "config.v0.20261121T090000000Z.bak.json"
+    ],
+    "files": [
+      "config.json",
+      "config.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "id": "settings-doc-game",
+    "constructThrew": null,
+    "reads": [],
+    "threw": [],
+    "readOnly": null,
+    "backups": [],
+    "files": [
+      "GamesConfig/480.json"
+    ]
+  }
+]

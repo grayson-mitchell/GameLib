@@ -1,0 +1,20 @@
+{
+  "480": {
+    "language": "en",
+    "launcherArgs": "-windowed",
+    "showFps": true,
+    "wineVersion": {
+      "name": "Wine-GE",
+      "bin": "/opt/wine/bin/wine",
+      "type": "wine"
+    },
+    "enviromentOptions": [
+      {
+        "key": "DXVK_HUD",
+        "value": "fps"
+      }
+    ]
+  },
+  "version": "v2",
+  "explicit": true
+}

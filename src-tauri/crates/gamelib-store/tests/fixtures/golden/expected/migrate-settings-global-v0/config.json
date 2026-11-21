@@ -1,0 +1,11 @@
+{
+	"defaultSettings": {
+		"language": "en",
+		"trayIconVariant": "dark",
+		"focusRow": {
+			"kind": "view",
+			"value": "recentlyPlayed"
+		}
+	},
+	"version": "v2"
+}
