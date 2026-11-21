@@ -17,6 +17,8 @@ const heart = read('FavouriteHeart.tsx')
 const popover = read('CategoryPopover.tsx')
 const libraryRow = read('LibraryRow.tsx')
 const hiddenNotice = read('HiddenNotice.tsx')
+const editDetails = read('EditDetailsButton.tsx')
+const storeBadge = read('StoreBadgeLink.tsx')
 
 /** Text of the brace-counted block that starts at `needle` in `source`. */
 function blockAfter(source: string, needle: string): string {
@@ -157,5 +159,46 @@ describe('Hide toggle and hidden notice (D-01)', () => {
 
   it('the notice renders nothing unless the game is hidden', () => {
     expect(hiddenNotice).toMatch(/if \(!isHidden\) return null/)
+  })
+})
+
+describe('StoreBadgeLink (D-01, T-100-08)', () => {
+  it('links in-app to the store page and never opens a window', () => {
+    expect(storeBadge).toContain('NavLink')
+    expect(storeBadge).toContain('/store-page?store-url=')
+    expect(storeBadge).not.toMatch(/window\.open|createNewWindow/)
+  })
+
+  it('keeps the plain badge when there is no store URL or the game is sideloaded', () => {
+    expect(storeBadge).toContain("hasCapability(runner, 'hasStoreCatalog')")
+    expect(storeBadge).toContain('className="store-icon"')
+  })
+
+  it('shows the store name and an arrow hidden from assistive tech', () => {
+    expect(storeBadge).toContain("getStoreDisplayName(runner, '')")
+    expect(storeBadge).toContain('<span aria-hidden="true">↗</span>')
+  })
+})
+
+describe('EditDetailsButton (D-01)', () => {
+  it('opens the install modal for a sideloaded game', () => {
+    expect(editDetails).toContain(
+      "hasCapability(gameInfo.runner, 'hasStoreCatalog')"
+    )
+    expect(editDetails).toContain('openInstallGameModal(')
+  })
+
+  it('opens the Edit Game dialog otherwise', () => {
+    expect(editDetails).toContain('showDialogModal({')
+    expect(editDetails).toContain('<EditGameDialog')
+    expect(editDetails).toContain("t('edit-game.title', 'Edit Game')")
+  })
+
+  it('is revealed by opacity on hover or focus, never display', () => {
+    const body = ruleBody(css, '.editDetailsButton')
+    expect(body).toMatch(/opacity:\s*0/)
+    expect(css).toContain('.gameArtBand:hover .editDetailsButton')
+    expect(css).toContain('.editDetailsButton:focus-visible')
+    expect(css).not.toMatch(/\.editDetailsButton[^{]*\{[^}]*display:\s*none/)
   })
 })

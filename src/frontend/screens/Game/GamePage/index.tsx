@@ -48,13 +48,14 @@ import type { GameAchievement } from 'common/types/gog'
 
 import GamePicture from '../GamePicture'
 import { usePlayTime } from './usePlayTime'
+import EditDetailsButton from './components/LeftCard/EditDetailsButton'
+import StoreBadgeLink from './components/LeftCard/StoreBadgeLink'
 
 import { install } from 'frontend/helpers/library'
 import { hasProgress } from 'frontend/hooks/hasProgress'
 import ErrorComponent from 'frontend/components/UI/ErrorComponent'
 import Anticheat from 'frontend/components/UI/Anticheat'
 
-import StoreLogos from 'frontend/components/UI/StoreLogos'
 import { hasStatus } from 'frontend/hooks/hasStatus'
 import GameContext from '../GameContext'
 import { GameContextType } from 'frontend/types'
@@ -145,6 +146,11 @@ export default React.memo(function GamePage(): JSX.Element | null {
 
   const [notInstallable, setNotInstallable] = useState<boolean>(false)
   const playTime = usePlayTime(gameInfo, notInstallable)
+  const storeUrl =
+    extraInfo?.storeUrl ||
+    ('store_url' in gameInfo && gameInfo.store_url !== undefined
+      ? gameInfo.store_url
+      : '')
   const [gameInstallInfo, setGameInstallInfo] = useState<InstallInfo | null>(
     null
   )
@@ -553,12 +559,14 @@ export default React.memo(function GamePage(): JSX.Element | null {
                             <ArrowBackIosNew />
                           </NavLink>
                           <MacArchBadge gameInfo={gameInfo} isMac={isMac} />
+                          <EditDetailsButton gameInfo={gameInfo} />
                         </div>
                         <div className="mainInfoBody">
                           <div className="gameMeta">
-                            <div className="store-icon">
-                              <StoreLogos runner={runner} />
-                            </div>
+                            <StoreBadgeLink
+                              runner={runner}
+                              storeUrl={storeUrl}
+                            />
                             <Developer gameInfo={gameInfo} />
                             <ReleaseDate
                               runnerDate={extraInfo?.releaseDate}

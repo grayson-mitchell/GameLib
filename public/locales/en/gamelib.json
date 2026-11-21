@@ -267,10 +267,12 @@
             "addFavourite": "Add to favourites",
             "addFirstCategory": "+ Add to Category",
             "categoryExists": "That category already exists — tick it above.",
+            "editDetails": "Edit details",
             "favourite": "Favourite",
             "hiddenNotice": "Hidden from your library. It only appears when \"Show hidden\" is on.",
             "hide": "Hide",
             "newCategory": "New category…",
+            "openStorePage": "Open the {{store}} store page",
             "removeCategory": "Remove {{name}}",
             "removeFavourite": "Remove from favourites",
             "unhide": "Unhide"

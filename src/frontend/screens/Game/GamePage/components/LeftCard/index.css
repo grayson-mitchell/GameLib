@@ -195,3 +195,54 @@
   text-decoration: underline;
   cursor: pointer;
 }
+
+/* D-01: "Edit details" on the art band. Revealed by opacity only, never
+   display, so the gamepad focus collector still sees a non-zero box and the
+   button stays in the focus ring. .gameArtBand is already position: relative. */
+.editDetailsButton {
+  position: absolute;
+  top: var(--space-sm);
+  right: var(--space-sm);
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: color-mix(in srgb, var(--body-background) 75%, transparent);
+  color: var(--text-default);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.gameArtBand:hover .editDetailsButton,
+.editDetailsButton:focus-visible {
+  opacity: 1;
+}
+
+.editDetailsButton:focus-visible {
+  outline: 2px solid var(--accent);
+}
+
+/* D-01: the store badge as an in-app link with an arrow. */
+.storeBadgeLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-default);
+  text-decoration: none;
+  font-size: var(--text-sm);
+}
+
+.storeBadgeLink:hover {
+  text-decoration: underline;
+}
+
+.storeBadgeLink svg {
+  width: 28px;
+  height: 28px;
+}
