@@ -61,3 +61,21 @@ import path is not enough. Expect about 29 files of churn.
 
 This may fold into Phase 85 (the StoreHost flip, see `82-STATE-OWNERSHIP.md`), which reworks the
 TS store layer anyway. If so, close this todo there rather than doing the migration twice.
+
+## Resolution
+
+Resolved 2026-11-21 by quick task 261121-pwt (commits 7fc103955, ccf09a995, 06a741eb1).
+
+- No separate test store root was needed. The production conf-backed `store_backend.ts`, built through the
+  existing `createTestStoreRoot`, already provides what the suites relied on: two instances on one path see each
+  other's writes (conf re-reads the file on every access), `translateStoreOptions` carries the WR-11 containment
+  check, and dot-prop's `disallowedKeys` rejects prototype key segments. `storeRoot.test.ts` now pins the
+  root-sharing behaviour on `GameLibStore` (two roots never share a file for one name; one root and one path see
+  each other's writes and deletes), and its WR-11 containment cases are unchanged.
+- 28 mock-site suites (planning list 29, minus `loggerFlows.test.ts` that 84-07 deleted) dropped their
+  `backend/store_backend` redirect. Failing-test set across those suites plus `storeRoot`, `diPhaseGates`,
+  `bootstrap` and `gameDetailsImportGate` (32 suites, 878 tests): empty before the first edit, empty after.
+  No test fixture needed changing.
+- `fileStore.ts`, its test and `StoreRoot`'s cell registry are deleted. Dev-sidecar esbuild metafile: 589 inputs
+  before the deletion and 589 after, `fileStore.ts` absent from both, `store_backend.ts` present in both.
+- Phase 85 need not repeat this work.
