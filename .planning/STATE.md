@@ -6,10 +6,10 @@ current_phase: 85
 current_phase_name: Store host, config and versioned migrations
 status: executing
 stopped_at: Completed 85-11-PLAN.md
-last_updated: "2026-11-21T23:14:35.729Z"
+last_updated: "2026-11-21T23:26:48.459Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 85 execution started
-state_head: ab648b57deb1c0cdeb803b4b367c6437661c5958
+state_head: 7dc3d632bc13d80b372a485b7ad8dcf6285bb1bc
 progress:
   total_phases: 20
   completed_phases: 23
@@ -771,6 +771,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 21 | Replace chrono with jiff in gamelib-log (RUSTSEC-2026-0543 audit red) | 2026-11-22 | 8fcadab94 | — | — |
 | 261122-93a | Set up gsd-graph for .planning and exclude .planning from graphify | 2026-11-22 | 5ad01481e | — | [261122-93a-set-up-gsd-graph-for-planning-and-exclud](./quick/261122-93a-set-up-gsd-graph-for-planning-and-exclud/) |
 | 261122-9sl | Implement Move install for Steam games (moveInstall is a stub) | 2026-11-22 | 4bbab9da4 | — | [261122-9sl-implement-move-install-for-steam-games](./quick/261122-9sl-implement-move-install-for-steam-games/) |
+| 261122-gzp | fix the hold() test race in writer.rs | 2026-11-22 | 7dc3d632b | — | [261122-gzp-fix-the-hold-test-race-in-writer-rs](./quick/261122-gzp-fix-the-hold-test-race-in-writer-rs/) |
 
 ## Deferred Items
 
