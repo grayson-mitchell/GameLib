@@ -5401,7 +5401,7 @@ describe('Phase 85 plan 09: store boot wiring', () => {
     }
   })
 
-  test('the ownership file flips nothing yet: every family false, no per-store override', () => {
+  test('the ownership file flips only the tracer store: every family false, one per-store override', () => {
     const own = JSON.parse(
       readFileSync(
         join(
@@ -5423,6 +5423,7 @@ describe('Phase 85 plan 09: store boot wiring', () => {
       'user-state'
     ])
     expect(Object.values(own.families).every((on) => on === false)).toBe(true)
-    expect(own.stores).toEqual({})
+    // Phase 85 plan 10: the tracer store is the one thing moved ahead of its family.
+    expect(own.stores).toEqual({ 'store_cache/wikigameinfo': true })
   })
 })

@@ -556,6 +556,15 @@ pub(crate) fn start_reader(
                 continue;
             }
 
+            // Phase 85 (FND-06): the sidecar's store writes, one ordered frame per write. Validated
+            // and queued for the single `store-frames` worker here; this arm never writes a file
+            // and never blocks the reader, and a store write never travels as a `rustInvoke`
+            // (those run one worker per call with no order, Pitfall 7).
+            if kind == Some(crate::store_dispatch::STORE_FRAME_KIND) {
+                store_dispatch::enqueue(trimmed.len(), value);
+                continue;
+            }
+
             // Sidecar-initiated request: dispatch to the keyring/native-facility handler and
             // write the correlated response back on the same stdin pipe. Dispatched on a
             // spawned worker thread rather than inline — a Keychain access prompt blocks

@@ -367,17 +367,22 @@ mod tests {
     }
 
     #[test]
-    fn the_embedded_ownership_file_parses_and_flips_nothing() {
+    fn the_embedded_ownership_file_parses_and_flips_only_the_tracer_store() {
         let own = Ownership::embedded();
         assert_eq!(own.families.len(), 4);
         assert!(
             own.families.values().all(|on| !on),
             "no family is flipped yet"
         );
-        assert!(own.stores.is_empty());
+        assert_eq!(
+            own.stores.keys().collect::<Vec<_>>(),
+            vec!["store_cache/wikigameinfo"],
+            "only the tracer store is flipped (85-10)"
+        );
         for row in table() {
             let rust = is_rust_owned(row, StoreMode::Rust, own);
-            assert_eq!(rust, row.family == Family::Native, "{}", row.key);
+            let expected = row.family == Family::Native || row.key == "store_cache/wikigameinfo";
+            assert_eq!(rust, expected, "{}", row.key);
         }
     }
 

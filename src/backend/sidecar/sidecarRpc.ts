@@ -74,6 +74,10 @@ import type { IpcRegistry } from './ipcRegistry'
 import type { IpcValidator } from './ipcValidation'
 import type { RustInvokeArgsOf } from 'common/types/ipc/rustInvoke'
 import type { LogTransport } from '../logger/forwarder'
+import {
+  createStdoutStoreFrameSink,
+  type StoreFrameSink
+} from '../stores/storeFrames'
 
 /** Guardrail against an unterminated line growing the input buffer unbounded. */
 const MAX_LINE_LENGTH = 10 * 1024 * 1024 // 10 MiB
@@ -204,6 +208,12 @@ export interface SidecarRpc {
    * stream, with the write callback and drain signal the forwarder needs for backpressure.
    */
   logTransport: LogTransport
+  /**
+   * The store mirror's view of this transport (Phase 85): `kind:"store"` frames on the same output
+   * stream, written in call order, held (not lost) until `start()` attaches the output. Stdout
+   * stays JSON frames only.
+   */
+  storeFrameSink: StoreFrameSink
 }
 
 /**
@@ -272,6 +282,20 @@ export function createSidecarRpc(deps: SidecarRpcDeps): SidecarRpc {
   }
 
   /**
+   * Writes one already-serialised frame (the caller built the JSON text) with its newline, through
+   * the same hold-until-attached rule as `writeLine`, so a store frame keeps its place in the
+   * ordered stream whether or not the output is attached yet.
+   */
+  function writeSerialized(json: string): void {
+    const line = `${json}\n`
+    if (outputStream === null) {
+      pendingLines.push({ line })
+      return
+    }
+    outputStream.write(line)
+  }
+
+  /**
    * Binds the output stream and flushes anything `writeLine` buffered before it
    * existed, in the order it was produced. Called by `start()`.
    */
@@ -308,6 +332,8 @@ export function createSidecarRpc(deps: SidecarRpcDeps): SidecarRpc {
       outputStream.once('drain', listener)
     }
   }
+
+  const storeFrameSink = createStdoutStoreFrameSink(writeSerialized)
 
   async function dispatchInvoke(
     request: SidecarRpcRequest,
@@ -614,6 +640,7 @@ export function createSidecarRpc(deps: SidecarRpcDeps): SidecarRpc {
     pushFrontendMessage,
     requestOpenExternal,
     requestRustInvoke,
-    logTransport
+    logTransport,
+    storeFrameSink
   }
 }

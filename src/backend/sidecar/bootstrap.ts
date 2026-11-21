@@ -51,6 +51,7 @@ import { createIpcRegistry, type IpcRegistry } from './ipcRegistry'
 import { createStores } from '../stores/createStores'
 import { createStoreRegistry } from '../stores/storeRegistry'
 import { createStoreRoot, type StoreRoot } from '../stores/storeRoot'
+import { readStoreBootEnv, resolveStoreMode } from '../stores/storeOwnership'
 import { createStoreManagers } from '../storeManagers'
 import {
   createSteamProcesses,
@@ -1718,9 +1719,17 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           )
         }
         // The one place a store directory is decided: every store resolves under it.
+        // Phase 85 (FND-06): the root carries who owns each store. `GAMELIB_STORE` and what the
+        // shell reported about the stores it opened arrive in the environment; a store the
+        // ownership file moved to Rust is written as ordered frames on this boot's stdout.
         const root =
           prebuilt.storeRoot ??
-          createStoreRoot({ userData: ctx.paths.userData })
+          createStoreRoot({
+            userData: ctx.paths.userData,
+            storeMode: resolveStoreMode(),
+            boot: readStoreBootEnv(),
+            frameSink: requireRpc(state).storeFrameSink
+          })
         state.services.storeRoot = root
         if (prebuilt.stores && prebuilt.storeRegistry) {
           state.services.stores = prebuilt.stores

@@ -58,6 +58,13 @@
  * `pnpm-lock.yaml` as `electron-store@8.2.0`'s own dependency, so the
  * supply-chain delta of this swap is zero.
  *
+ * Phase 85 (FND-06): `GameLibStore` is now a facade over one of two owners of the file. A store
+ * the ownership file (`storeOwnership.json`, `GAMELIB_STORE`) has moved to Rust is backed by the
+ * boot's `MirrorCell` for its path (`stores/mirrorCell.ts`): it reads from memory, applies a write
+ * to its own view and sends one ordered frame to the shell's single writer. Every other store is
+ * the conf owner exactly as before. The class name, the constructor and the members consumers use
+ * (`get set has delete clear store size path readOnly`) are the same for both.
+ *
  * Phase 68: store versioning, the read-only refusal and the D-13 file modes
  * live here because this is the one class every production store passes
  * through. (The Phase 27 sidecar file store, which never ran in production, was deleted in
@@ -68,6 +75,8 @@ import Conf from 'conf'
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'path'
 import type { StoreOptions } from 'common/types/typed_store'
 import { chmodSync, existsSync, mkdirSync, statSync } from 'fs'
+import type { MirrorCell } from './stores/mirrorCell'
+import { dotPathsFor, isRustOwned } from './stores/storeOwnership'
 import type { StoreRoot } from './stores/storeRoot'
 import { storeKeyOf, type StoreVersioning } from './storeVersioning/engine'
 import { storeVersionCodec } from './storeMigrations'
@@ -199,9 +208,16 @@ type GameLibStoreOptions<T extends Record<string, unknown>> =
     root?: StoreRoot
   }
 
-function prepareStore<T extends Record<string, unknown>>(
+interface ResolvedStore<T extends Record<string, unknown>> {
+  declaration: StoreDeclaration | undefined
+  root: StoreRoot
+  translated: TranslatedOptions<T>
+  filePath: string
+}
+
+function resolveStore<T extends Record<string, unknown>>(
   options: GameLibStoreOptions<T> | undefined
-): TranslatedOptions<T> & { configFileMode: number } {
+): ResolvedStore<T> {
   const { declaration, root, ...rest } = options ?? {}
   if (!root) {
     throw new Error(
@@ -214,6 +230,13 @@ function prepareStore<T extends Record<string, unknown>>(
     translated.cwd,
     `${translated.configName}.${translated.fileExtension ?? 'json'}`
   )
+  return { declaration, root, translated, filePath }
+}
+
+function prepareConf<T extends Record<string, unknown>>(
+  resolved: ResolvedStore<T>
+): TranslatedOptions<T> & { configFileMode: number } {
+  const { declaration, root, translated, filePath } = resolved
   const dir = dirname(filePath)
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true, mode: 0o700 })
   if (declaration?.tokenBearing) tightenTokenPaths(filePath)
@@ -236,16 +259,12 @@ function prepareStore<T extends Record<string, unknown>>(
 
 type VersioningCarrier = { _serialize: { versioning: StoreVersioning } }
 
-/**
- * Drop-in replacement for `electron-store`'s default export. Same constructor
- * surface (`{ cwd, name, clearInvalidConfig, ... }`), same on-disk JSON layout
- * and file naming, no `require('electron')`.
- */
-export default class GameLibStore<
+/** The conf-backed owner: today's store, unchanged. */
+class ConfBackedStore<
   T extends Record<string, unknown> = Record<string, unknown>
 > extends Conf<T> {
-  constructor(options?: GameLibStoreOptions<T>) {
-    super(prepareStore(options))
+  constructor(options: TranslatedOptions<T> & { configFileMode: number }) {
+    super(options)
   }
 
   private get versioning(): StoreVersioning {
@@ -272,5 +291,189 @@ export default class GameLibStore<
       return
     }
     super.store = this.versioning.stampForWrite(this.path, value)
+  }
+}
+
+/** What both owners offer: the members consumers use, loosely typed (the facade restores the types). */
+interface StoreBackend {
+  readonly path: string
+  readonly readOnly: boolean
+  readonly size: number
+  store: Record<string, unknown>
+  get(key: string, defaultValue?: unknown): unknown
+  set(key: string | Record<string, unknown>, value?: unknown): void
+  has(key: string): boolean
+  delete(key: string): void
+  clear(): void
+  reset(...keys: string[]): void
+  [Symbol.iterator](): IterableIterator<[string, unknown]>
+}
+
+/** The Rust-owned owner: a window onto the boot's mirror cell for this file path. */
+class MirrorBackedStore implements StoreBackend {
+  constructor(private readonly cell: MirrorCell) {}
+
+  get path(): string {
+    return this.cell.path
+  }
+
+  get readOnly(): boolean {
+    return this.cell.readOnly
+  }
+
+  get size(): number {
+    return this.cell.size
+  }
+
+  get store(): Record<string, unknown> {
+    return this.cell.data
+  }
+
+  set store(value: Record<string, unknown>) {
+    this.cell.replace(value)
+  }
+
+  get(key: string, defaultValue?: unknown): unknown {
+    const value = this.cell.get(key)
+    return value === undefined ? defaultValue : value
+  }
+
+  set(key: string | Record<string, unknown>, value?: unknown): void {
+    if (typeof key === 'string') {
+      this.cell.set(key, value)
+      return
+    }
+    for (const [k, v] of Object.entries(key)) this.cell.set(k, v)
+  }
+
+  has(key: string): boolean {
+    return this.cell.has(key)
+  }
+
+  delete(key: string): void {
+    this.cell.delete(key)
+  }
+
+  clear(): void {
+    this.cell.clear()
+  }
+
+  // conf's `reset` restores the constructor's `defaults`. A Rust-owned store is constructed
+  // without any (the family plans move stores that seed none), so there is nothing to restore.
+  reset(): void {}
+
+  [Symbol.iterator](): IterableIterator<[string, unknown]> {
+    return Object.entries(this.cell.data)[Symbol.iterator]()
+  }
+}
+
+/**
+ * The mirror cell for a Rust-owned store. The shell writes the file at the store table's own path
+ * under ITS user-data directory, so a store whose resolved path is anywhere else would read a
+ * different file than the one Rust writes: refused at construction instead of diverging silently.
+ */
+function mirrorCellFor<T extends Record<string, unknown>>(
+  resolved: ResolvedStore<T>,
+  storeKey: string
+): MirrorCell {
+  const { root, filePath } = resolved
+  const expected = resolve(root.userData, `${storeKey}.json`)
+  if (filePath !== expected) {
+    throw new Error(
+      `[backend/store_backend] the Rust-owned store ${storeKey} must live at its table path under the user-data directory`
+    )
+  }
+  return root.mirrors.cellFor({
+    path: filePath,
+    storeKey,
+    dotPaths: dotPathsFor(storeKey)
+  })
+}
+
+/**
+ * Drop-in replacement for `electron-store`'s default export. Same constructor
+ * surface (`{ cwd, name, clearInvalidConfig, ... }`), same on-disk JSON layout
+ * and file naming, no `require('electron')`.
+ */
+export default class GameLibStore<
+  T extends Record<string, unknown> = Record<string, unknown>
+> {
+  private readonly backend: StoreBackend
+
+  constructor(options?: GameLibStoreOptions<T>) {
+    const resolved = resolveStore(options)
+    const storeKey = storeKeyOf(resolved.filePath)
+    this.backend = isRustOwned(storeKey, resolved.root.storeMode)
+      ? new MirrorBackedStore(mirrorCellFor(resolved, storeKey))
+      : (new ConfBackedStore<T>(
+          prepareConf(resolved)
+        ) as unknown as StoreBackend)
+  }
+
+  /** The store file's absolute path. */
+  get path(): string {
+    return this.backend.path
+  }
+
+  get readOnly(): boolean {
+    return this.backend.readOnly
+  }
+
+  get size(): number {
+    return this.backend.size
+  }
+
+  get store(): T {
+    return this.backend.store as T
+  }
+
+  set store(value: T) {
+    this.backend.store = value
+  }
+
+  get<Key extends keyof T>(key: Key): T[Key]
+  get<Key extends keyof T>(
+    key: Key,
+    defaultValue: Required<T>[Key]
+  ): Required<T>[Key]
+  get<Key extends string, Value = unknown>(
+    key: Exclude<Key, keyof T>,
+    defaultValue?: Value
+  ): Value
+  get(key: string, defaultValue?: unknown): unknown {
+    return this.backend.get(key, defaultValue)
+  }
+
+  set<Key extends keyof T>(key: Key, value?: T[Key]): void
+  set(key: string, value: unknown): void
+  set(object: Partial<T>): void
+  set(key: string | Partial<T>, value?: unknown): void {
+    this.backend.set(key as string | Record<string, unknown>, value)
+  }
+
+  has<Key extends keyof T>(key: Key | string): boolean {
+    return this.backend.has(key as string)
+  }
+
+  delete<Key extends keyof T>(key: Key): void
+  delete(key: string): void
+  delete(key: string): void {
+    this.backend.delete(key)
+  }
+
+  clear(): void {
+    this.backend.clear()
+  }
+
+  reset<Key extends keyof T>(...keys: Key[]): void
+  reset(...keys: string[]): void
+  reset(...keys: string[]): void {
+    this.backend.reset(...keys)
+  }
+
+  [Symbol.iterator](): IterableIterator<[keyof T, T[keyof T]]> {
+    return this.backend[Symbol.iterator]() as IterableIterator<
+      [keyof T, T[keyof T]]
+    >
   }
 }

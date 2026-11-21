@@ -141,6 +141,7 @@ mod steamcm_dispatch;
 mod steamfiles_dispatch;
 mod steampoll_dispatch;
 mod store_boot;
+mod store_dispatch;
 mod store_embed;
 mod terminate_veto;
 mod tray;
@@ -1073,6 +1074,9 @@ fn spawn_sidecar_state(
     // Before the reader: a READY read before `manage_sidecar_state` must still reach the sidecar
     // from the poll host (80-REVIEW B/CR-01).
     set_steampoll_sidecar_state(&state);
+    // Phase 85: the store dispatcher answers frames through this state; installed before the reader
+    // so a frame can never arrive with nowhere to answer.
+    store_dispatch::install_sidecar(&state);
     start_reader(app.handle().clone(), state.clone(), stdout);
     start_stderr_forwarder(stderr);
     Ok(state)
@@ -1861,6 +1865,10 @@ fn run_setup(
         None => store_boot::BootReport::default(),
     };
     let store_boot_env = store_boot::boot_env_value(&store_report);
+    // Where the sidecar's store frames are resolved, under the mode this boot used.
+    if let Some(paths) = log_paths.as_ref() {
+        store_dispatch::configure(std::path::PathBuf::from(&paths.user_data), store_mode);
+    }
     app.manage(NativeRouter::new(Arc::new(NativeCtx {
         host: Arc::new(AppNativeHost(app.handle().clone())),
         log_paths,
@@ -2349,6 +2357,7 @@ mod tests {
         "steamfiles_dispatch.rs",
         "steampoll_dispatch.rs",
         "store_boot.rs",
+        "store_dispatch.rs",
         "steamcm_dispatch.rs",
         "steam_window.rs",
         "shell_state.rs",
@@ -2404,6 +2413,7 @@ mod tests {
         include_str!("steamfiles_dispatch.rs"),
         include_str!("steampoll_dispatch.rs"),
         include_str!("store_boot.rs"),
+        include_str!("store_dispatch.rs"),
         include_str!("steamcm_dispatch.rs"),
         include_str!("steam_window.rs"),
         include_str!("shell_state.rs"),

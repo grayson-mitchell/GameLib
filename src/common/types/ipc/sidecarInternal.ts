@@ -155,6 +155,20 @@ const steamPollStateEvent = z.discriminatedUnion('kind', [
   })
 ])
 
+// Phase 85 (FND-06): the shell's answer to one sidecar store frame (`kind:"store"`), in apply order.
+// Keep in lockstep with `store_dispatch.rs`'s `send_mirror_event`. `originSeq` is the frame's `seq`
+// (a JS-safe positive integer); `rev` is the store's change count after the apply (0 when the store
+// was never opened); `reason` rides only a `refused`.
+const storeMirrorEvent = z.strictObject({
+  store: nonEmptyString(128),
+  rev: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+  op: z.enum(['applied', 'refused', 'flushed']),
+  originSeq: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+  reason: z
+    .enum(['read-only', 'evicted', 'rejected', 'io', 'not-owned'])
+    .optional()
+})
+
 const noArgs = z.tuple([])
 
 // Store name and dot-notation key path, as the preload sends them (strings, never arrays).
@@ -188,7 +202,9 @@ export const sidecarInternalSendArgs = {
   // The handler ignores `options` (T-27-03) beyond a mismatch log.
   storeNew: z.tuple([storeName, optionalArg(z.record(z.string(), z.json()))]),
   // Shell-originated: Rust depot job progress events.
-  depotJobEvent: z.tuple([depotJobEvent])
+  depotJobEvent: z.tuple([depotJobEvent]),
+  // Shell-originated: the answer to one sidecar store frame (Phase 85).
+  storeMirrorEvent: z.tuple([storeMirrorEvent])
 }
 
 /** Channels only the Rust shell invokes; the 67-19 relay allow-list excludes them. */
@@ -201,6 +217,7 @@ export const sidecarInternalCallers = {
   depotCdnToken: 'shell',
   depotManifestRequestCode: 'shell',
   depotJobEvent: 'shell',
+  storeMirrorEvent: 'shell',
   steamPollStateEvent: 'shell'
 } as const
 

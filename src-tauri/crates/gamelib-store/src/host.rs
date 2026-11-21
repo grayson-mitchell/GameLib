@@ -399,8 +399,9 @@ fn engine_kind(row: &TableRow) -> Option<StoreKind> {
     }
 }
 
-/// The row a runtime cache store (one the table does not list) opens with.
-fn runtime_cache_row(key: String, dir: &str, name: &str) -> TableRow {
+/// The row a runtime cache store (one the table does not list) opens with. The shell's store
+/// dispatcher builds the same row to decide ownership of a `store_cache/<name>` frame.
+pub fn runtime_cache_row(key: String, dir: &str, name: &str) -> TableRow {
     TableRow {
         key,
         dir: dir.to_string(),

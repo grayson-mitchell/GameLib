@@ -193,6 +193,47 @@ const sendTable: FixtureTable<typeof sidecarInternalSendArgs> = {
         }
       ]
     ]
+  },
+  // 85-10 store_dispatch.rs send_mirror_event: one answer per sidecar store frame
+  storeMirrorEvent: {
+    valid: [
+      [
+        {
+          store: 'store_cache/wikigameinfo',
+          rev: 3,
+          op: 'applied',
+          originSeq: 7
+        }
+      ],
+      [
+        {
+          store: 'store/config',
+          rev: 0,
+          op: 'flushed',
+          originSeq: 9007199254740991
+        }
+      ],
+      [
+        {
+          store: 'store_cache/wikigameinfo',
+          rev: 0,
+          op: 'refused',
+          originSeq: 1,
+          reason: 'not-owned'
+        }
+      ]
+    ],
+    invalid: [
+      [],
+      [{ store: '', rev: 1, op: 'applied', originSeq: 1 }],
+      [{ store: 's', rev: -1, op: 'applied', originSeq: 1 }],
+      [{ store: 's', rev: 1.5, op: 'applied', originSeq: 1 }],
+      [{ store: 's', rev: 1, op: 'applied', originSeq: 0 }],
+      [{ store: 's', rev: 1, op: 'nack', originSeq: 1 }],
+      [{ store: 's', rev: 1, op: 'refused', originSeq: 1, reason: 'why' }],
+      [{ store: 's', rev: 1, op: 'applied', originSeq: 1, extra: 1 }],
+      [{ store: 's', rev: 1, op: 'applied' }]
+    ]
   }
 }
 
@@ -202,7 +243,7 @@ describe('sidecarInternal schemas', () => {
   runFixtureTable(sidecarInternalInvokeArgs, invokeTable)
   runFixtureTable(sidecarInternalSendArgs, sendTable)
 
-  it('registers the fifteen channels with the right kind and caller', () => {
+  it('registers the sixteen channels with the right kind and caller', () => {
     const shell = [
       'health',
       'trayResolveRunner',
@@ -212,6 +253,7 @@ describe('sidecarInternal schemas', () => {
       'depotCdnToken',
       'depotManifestRequestCode',
       'depotJobEvent',
+      'storeMirrorEvent',
       'steamPollStateEvent'
     ]
     for (const k of Object.keys(sidecarInternalInvokeArgs)) {
@@ -229,6 +271,6 @@ describe('sidecarInternal schemas', () => {
     expect(
       Object.keys(sidecarInternalInvokeArgs).length +
         Object.keys(sidecarInternalSendArgs).length
-    ).toBe(15)
+    ).toBe(16)
   })
 })

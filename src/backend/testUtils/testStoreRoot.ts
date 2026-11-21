@@ -27,7 +27,7 @@ export function createTestStoreRoot(
   userData?: string,
   options: Pick<
     Parameters<typeof createStoreRoot>[0],
-    'readOnlySinks' | 'migrationOverrides'
+    'readOnlySinks' | 'migrationOverrides' | 'storeMode' | 'boot' | 'frameSink'
   > = {}
 ): StoreRoot {
   return createStoreRoot({

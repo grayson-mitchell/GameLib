@@ -45,8 +45,10 @@ import {
   STORE_NEW_CHANNEL,
   STORE_SET_CHECKED_CHANNEL,
   STORE_CHANGED_CHANNEL,
+  STORE_MIRROR_EVENT_CHANNEL,
   type StoreChangedPayload
 } from 'common/types/sidecarTransport'
+import { isStoreMirrorEvent } from '../stores/mirrorCell'
 
 /** Minimal shape both a registered typed store and a raw cache-backed `Store` satisfy. */
 interface WritableStoreBackend {
@@ -432,6 +434,24 @@ export function registerStoreWriteHandlers(deps: {
         name: storeName,
         clearInvalidConfig: true
       })
+    }
+  )
+
+  // Phase 85 (FND-06): the shell's answer to a store frame a Rust-owned store's mirror sent
+  // (`store_dispatch.rs`). One registration site for the store layer: the same function that binds
+  // the root's change channel above routes the answers to the root's mirror cells. The channel's
+  // schema (`sidecarInternal.ts`) already ran; a payload that still is not an event is dropped
+  // with one line naming nothing but the fact.
+  deps.ipc.on(
+    STORE_MIRROR_EVENT_CHANNEL,
+    (_event: unknown, payload: unknown) => {
+      if (!isStoreMirrorEvent(payload)) {
+        process.stderr.write(
+          '[storeWriteHandlers] storeMirrorEvent dropped a malformed payload\n'
+        )
+        return
+      }
+      layer.root.mirrors.applyEvent(payload)
     }
   )
 }

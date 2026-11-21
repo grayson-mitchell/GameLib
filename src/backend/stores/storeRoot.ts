@@ -8,7 +8,8 @@
  * path at import.
  *
  * Import budget: the pure versioning layer (storeVersioning/engine, readOnlyStores,
- * storeMigrations: no logger, no IPC) and type-only imports. Stores import this module; it must
+ * storeMigrations: no logger, no IPC), the pure mirror layer (mirrorCell, storeFrames,
+ * storeOwnership: no logger, no IPC, the output stream injected) and type-only imports. Stores import this module; it must
  * never reach the IPC layer (see the changes-channel note below) or construct a store.
  *
  * Plan 18 adds `versioning` (the per-file version engine, former module state in
@@ -37,6 +38,9 @@ import {
   type ReadOnlyStores,
   type Sinks as ReadOnlySinks
 } from '../storeVersioning/readOnlyStores'
+import { MirrorRegistry } from './mirrorCell'
+import type { StoreFrameSink } from './storeFrames'
+import type { StoreBootEnv, StoreMode } from './storeOwnership'
 import type { StoreRegistry } from './storeRegistry'
 
 type StorePush = (payload: StoreChangedPayload) => void
@@ -68,7 +72,22 @@ export interface StoreRoot {
   readonly changes: StoreChangeChannel
   readonly versioning: StoreVersioning
   readonly readOnly: ReadOnlyStores
+  readonly storeMode: StoreMode
+  readonly boot: StoreBootEnv
+  readonly frameSink: StoreFrameSink
+  readonly mirrors: MirrorRegistry
 }
+
+/** What a root built in `ts` mode with no sink is given: it must never be asked to carry a frame. */
+const NO_FRAME_SINK: StoreFrameSink = {
+  send() {
+    throw new Error(
+      '[storeRoot] a store frame was sent on a root built without a frame sink'
+    )
+  }
+}
+
+const NO_BOOT: StoreBootEnv = { readOnly: new Map(), startEmpty: new Set() }
 
 function createStoreChangeChannel(): StoreChangeChannel {
   let push: StorePush | null = null
@@ -114,7 +133,19 @@ export function createStoreRoot(deps: {
   readOnlySinks?: ReadOnlySinks
   /** Test seam: replacement migration chains for this root's versioning engine. */
   migrationOverrides?: MigrationOverrides
+  /** `GAMELIB_STORE`, resolved (`resolveStoreMode`). Default `ts`: this root owns every store. */
+  storeMode?: StoreMode
+  /** `GAMELIB_STORE_BOOT`, parsed (`readStoreBootEnv`). */
+  boot?: StoreBootEnv
+  /** Where a mirror's frames go. Required in `rust` mode. */
+  frameSink?: StoreFrameSink
 }): StoreRoot {
+  const storeMode = deps.storeMode ?? 'ts'
+  if (storeMode === 'rust' && !deps.frameSink) {
+    throw new Error('[storeRoot] a root in rust mode needs a frame sink')
+  }
+  const frameSink = deps.frameSink ?? NO_FRAME_SINK
+  const boot = deps.boot ?? NO_BOOT
   const readOnly = createReadOnlyStores({ sinks: deps.readOnlySinks })
   const versioning = createStoreVersioning({
     migrations: createMigrations({ overrides: deps.migrationOverrides }),
@@ -124,6 +155,10 @@ export function createStoreRoot(deps: {
     userData: deps.userData,
     changes: createStoreChangeChannel(),
     versioning,
-    readOnly
+    readOnly,
+    storeMode,
+    boot,
+    frameSink,
+    mirrors: new MirrorRegistry({ sink: frameSink, boot })
   }
 }

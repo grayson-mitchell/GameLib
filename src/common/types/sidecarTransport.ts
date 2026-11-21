@@ -145,6 +145,25 @@ export const RUST_INVOKE_KIND = 'rustInvoke' as const
  */
 export const LOG_FRAME_KIND = 'log' as const
 
+/**
+ * Frame `kind` of the sidecar's store writes (Phase 85, FND-06): one ordered frame per store write
+ * the sidecar's mirror of a Rust-owned store makes, sent on stdout and applied by the shell's single
+ * store worker in arrival order (`src-tauri/src/store_dispatch.rs`'s `STORE_FRAME_KIND`; the
+ * generated `ipc_contract.rs` carries the same literal). Direction: sidecar to Rust only. Values
+ * travel as JSON text (`valueJson`) so nested key order survives. The shell validates every frame
+ * and refuses a bad one whole; the shared vectors are `src/common/__fixtures__/storeFrameVectors.json`.
+ */
+export const STORE_FRAME_KIND = 'store' as const
+
+/**
+ * `send`-kind channel the Rust shell fires into the sidecar after it handles a store frame
+ * (Phase 85, FND-06): `{store, rev, op: 'applied' | 'refused' | 'flushed', originSeq, reason?}`, one
+ * per frame, in apply order. The sidecar's mirror uses it to move an op from `pending` to its base
+ * or to drop a refused one. Shell to sidecar only; like `SHELL_WINDOW_FOCUSED` it has no preload
+ * call site and no renderer caller.
+ */
+export const STORE_MIRROR_EVENT_CHANNEL = 'storeMirrorEvent' as const
+
 /** Which game log a game target names. Moved here from `backend/logger/paths.ts`. */
 export type GameLogType =
   | 'launch'

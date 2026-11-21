@@ -30,7 +30,11 @@ describe('GameLibStore accessor overrides (A6)', () => {
     expect(disk(s.path)).toEqual({ a: 1 })
   })
 
-  test('a subclass setter observes the constructor-time write', () => {
+  test('a subclass setter observes a store replacement, and constructor-time defaults still reach disk', () => {
+    // Phase 85 made GameLibStore a facade over its owner, so conf's constructor-time defaults
+    // merge runs inside the conf-backed owner (its read-only guard being live during that merge is
+    // storeBackendVersioning's case). What a subclass of the facade can observe is its own
+    // replacement of the store.
     let calls = 0
     class Probe extends GameLibStore<Data> {
       get store(): Data {
@@ -47,8 +51,10 @@ describe('GameLibStore accessor overrides (A6)', () => {
       name: 'a6probe',
       defaults: { seeded: true }
     })
-    expect(calls).toBeGreaterThanOrEqual(1)
     expect(disk(p.path).seeded).toBe(true)
+    p.store = { a: 1 }
+    expect(calls).toBe(1)
+    expect(disk(p.path)).toEqual({ a: 1 })
   })
 
   test('Symbol.iterator yields persisted entries', () => {

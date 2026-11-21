@@ -5,5 +5,7 @@
     "account": false,
     "settings": false
   },
-  "stores": {}
+  "stores": {
+    "store_cache/wikigameinfo": true
+  }
 }
