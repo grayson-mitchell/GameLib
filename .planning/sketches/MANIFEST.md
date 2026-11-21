@@ -38,6 +38,9 @@ a usable tab style.
 | 007 | settings-nav-icons | Every Settings tier-2 row iconed, or icons only on help & app actions? | **Option 1** — icons on every row, two groups split by a divider | navigation, tier-2, settings, icons |
 | 008 | game-page-action-bar | Where should the game page's primary actions live so Play is never pushed down or clipped? | **A′ — synthesis**: A's 3fr/2fr card with the action bar in a docked footer; notices under the title | game-page, layout, action-bar, menu, multi-theme |
 | 009 | game-settings-dialog | How should the per-game settings dialog fix its header, hints, disclosures, default tab and grouping? | **B: header card + grouped cards** (all items) | settings, dialog, game-settings, macos, steam |
+| 010 | game-page-title-row | Where do Favourite, Hide and Categories live so their state is visible without opening ⋮? | **A**, absorbed into 012 | game-page, favourites, categories, hide, menu |
+| 011 | integration-toggles | Where do shortcuts, Add to Steam and EOS overlay go once they stop being flipping-label ⋮ actions? | **A2**, absorbed into 012 | game-page, toggles, settings, menu, install-info |
+| 012 | game-page-no-menu | If ⋮ goes, where does each item live: left card, ⚙ dialog, right panel or button row? (supersedes 010/011) | **A — Install tab is the hub**; ⋮ removed, Uninstall in an Install-tab danger zone | game-page, information-architecture, menu, install-info, settings |
 
 ## Outcome — Phases 34.10 and 34.11
 
