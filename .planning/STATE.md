@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 85
 current_phase_name: Store host, config and versioned migrations
 status: executing
-stopped_at: Completed 85-10-PLAN.md
-last_updated: "2026-11-21T22:52:49.685Z"
+stopped_at: Completed 85-11-PLAN.md
+last_updated: "2026-11-21T23:14:35.729Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 85 execution started
-state_head: a7792454ab011c13cab754778df6d9553aac37b8
+state_head: ab648b57deb1c0cdeb803b4b367c6437661c5958
 progress:
   total_phases: 20
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 85 (Store host, config and versioned migrations) — EXECUTING
-Plan: 10 of 25
+Plan: 11 of 25
 Status: Ready to execute
 Last activity: 2026-11-22 — Phase 85 execution started
 Progress: [██████████] 100%
@@ -369,6 +369,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 85 P08 | 30 min | 3 tasks | 17 files |
 | Phase 85 P09 | 90 min | 3 tasks | 14 files |
 | Phase 85 P10 | 55 min | 3 tasks | 24 files |
+| Phase 85 P11 | 75 min | 3 tasks | 18 files |
 
 ## Accumulated Context
 
@@ -701,6 +702,9 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 85]: 85-10: the shell worker acks every sidecar store frame including no-op applies, and nacks a frame rejected at parse when it names a readable seq, so a mirror's pending op is never stranded (S1 rule 7)
 - [Phase 85]: 85-10: createStoreRoot defaults storeMode to ts; only the sidecar boot passes the resolved GAMELIB_STORE mode and the rpc frame sink, and a Rust-owned store whose resolved path is not its table path under userData fails at construction
 - [Phase 85]: 85-10: native and excluded rows are never writable from the sidecar (refused not-owned); baseRev is the highest rev seen until 85-17 adds the load-time rev handshake
+- [Phase 85]: 85-11: a changed event applies to base only above the cell's baseRev; a late cell starts at rev 0 and converges because ops assign state (rev handshake stays with 85-17)
+- [Phase 85]: 85-11: the quit flush is one flush frame behind pending writes through a cell with an unanswered write (one FIFO worker covers every store); it never rejects and its 2 s deadline timer is unref'd
+- [Phase 85]: 85-11: the storeMirrorEvent wire schema is not widened for changed here; 85-17 owns the Rust emitter, the schema and its fixture together
 
 ### Pending Todos
 
@@ -965,8 +969,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-21T22:52:48.010Z
-Stopped at: Completed 85-10-PLAN.md
+Last session: 2026-11-21T23:14:34.598Z
+Stopped at: Completed 85-11-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
