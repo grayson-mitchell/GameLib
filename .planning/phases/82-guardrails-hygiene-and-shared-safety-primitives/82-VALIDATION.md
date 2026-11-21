@@ -163,3 +163,13 @@ The causes were all in the tests, none in product code:
 - `dxvkInstallRemove`: unawaited `copyFile` calls held files at teardown; cleanup now uses an async `rm` with retries.
 
 No implementation file was changed, `jestMock` stayed at 1865, and no Linux assertion was loosened. Commits: 8cd067cd3, aab0354e3, 289bd75f9, e554173d9, 11a23ae6a, 36b1b5a7d, b3a059a8f, e572574b7. Residual risk: `rustInvokeChannel` can still print an EPERM log line while passing, because the product's log writes are unawaited. That is a product-side concern and is not tracked here.
+
+## Validation Audit 2026-11-21
+
+| Metric | Count |
+|---|---|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
+
+Re-audit after quicks 261121-o99, 261121-p6z, 261121-mpt and Phase 84 (84-03, 84-04) touched covered files: `cargo test -p gamelib-safety` 87/87; 27 jest suites (safety, refusal, cancelDelete, sharedRedistInstall, dialogOptionForwarding, gog) 380 passed, 5 skipped. Status and nyquist_compliant unchanged.
