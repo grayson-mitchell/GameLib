@@ -5,11 +5,11 @@ milestone_name: Node Sidecar Retirement
 current_phase: 84
 current_phase_name: Logger
 status: executing
-stopped_at: Completed 84-02-PLAN.md
-last_updated: "2026-11-21T04:54:07.245Z"
+stopped_at: Completed 84-03-PLAN.md
+last_updated: "2026-11-21T05:13:33.904Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 84 execution started
-state_head: 81edc90b7bba0c14b28b1b52c01fd2428ccd9cb7
+state_head: 654a8e5371c05c362ce341722d5ce0319f74f4f0
 progress:
   total_phases: 19
   completed_phases: 23
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 84 (Logger) — EXECUTING
-Plan: 3 of 11
+Plan: 4 of 11
 Status: Ready to execute
 Last activity: 2026-11-21 - Completed quick task 261121-o99: Close Phase 82 deferred review findings
 Progress: [██████████] 100%
@@ -341,6 +341,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 82 P20 | 15 min | 3 tasks | 2 files |
 | Phase 84 P01 | ~60 min (estimate) | 4 tasks | 102 files |
 | Phase 84 P02 | not measured | 4 tasks | 19 files |
+| Phase 84 P03 | 25 min | 3 tasks | 28 files |
 
 ## Accumulated Context
 
@@ -614,6 +615,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 84]: gamelib-log is its own Tauri-free crate; it reads no env and takes log dir, user data dir, clock and timezone through LogConfig
 - [Phase 84]: Renderer redaction is Rust-at-write (gamelib-log sanitize); gamelib.log rotates once per Logger on its first general write with data; a rejected target logs only its error kind
 - [Phase 84]: StoreHost core (gamelib_core::store) API fixed for uploadedLogs: open_cache(dir,name), Store get/set/remove/snapshot/on_change, flat keys, rollback on failed persist; Phase 85 widens it
+- [Phase 84]: 84-03: a clipped log entry keeps its truncation marker inside the shell's 1,048,576-unit entry cap, because the shell rejects the whole frame over it
+- [Phase 84]: 84-03: forwarder onReady coalesces into the 50 ms tick; calibrated constants stay 50 ms / 32 KiB / 4,000 entries / 8 MiB
 
 ### Pending Todos
 
@@ -868,8 +871,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-21T04:45:59.582Z
-Stopped at: Completed 84-02-PLAN.md
+Last session: 2026-11-21T05:13:33.160Z
+Stopped at: Completed 84-03-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
