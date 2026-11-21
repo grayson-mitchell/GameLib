@@ -186,7 +186,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 82: Guardrails, hygiene and shared safety primitives** — 20/20 plans (16 + 4 gap closure); completed 2026-11-21
 - [x] **Phase 83: Native seam, gamelib-core and process/shutdown contract** — 11/11 plans; completed 2026-11-21
 - [ ] **Phase 84: Logger** — 11 plans in 9 waves (consolidated from 14, then two plans split for context budget); planned 2026-11-21 (executes after Phase 83 closes)
-- [ ] **Phase 85: Store host, config and versioned migrations** — 22 plans in 17 waves; planned 2026-11-21
+- [ ] **Phase 85: Store host, config and versioned migrations** — 25 plans in 20 waves (the D-03 deletion split into four plans for context budget); planned 2026-11-21
 - [ ] **Phase 86: Pure leaf services** — not planned
 - [ ] **Phase 87: Engine, Wine and tools** — not planned
 - [ ] **Phase 88: Launch pipeline** — not planned
@@ -465,7 +465,7 @@ Plans:
   4. The legendary store migration is ported only if a supported upgrade path still reaches it (reachability recorded), otherwise it is deleted
   5. The TS write-through mirror's deletion point is named and executed for every family flipped in this phase, and `storeVersioning`, `storeMigrations` and `migration/*` TypeScript are deleted
 
-**Plans:** 22 plans in 17 waves; planned 2026-11-21
+**Plans:** 25 plans in 20 waves; planned 2026-11-21
 
 Plans:
 - [ ] 85-01-PLAN.md — Before any store code: the TS store oracle golden (conf writes, engine outcomes, migrations, settings documents) and dot-path, number and key-order vectors
@@ -488,8 +488,11 @@ Plans:
 - [ ] 85-18-PLAN.md — D-17 bottle version gate in Rust for the engine marker and shared-redist ledger
 - [ ] 85-19-PLAN.md — Clean-worktree proof, push and signed Phase 85 build checkpoint, three-OS CI, identity recorded beside the baseline
 - [ ] 85-20-PLAN.md — Run the live macOS gate (signed v0.10 -> signed Phase 85 upgrade, SC1-SC3)
-- [ ] 85-21-PLAN.md — D-03 deletion after the gate: migration system (SC4 recorded), flag and TS owner path, storeVersioning, storeMigrations; mirror schedule pinned (D-19)
-- [ ] 85-22-PLAN.md — Post-deletion clean-worktree and three-OS CI proof
+- [ ] 85-21-PLAN.md — D-03 deletion after the gate, part 1: migration system (SC4 recorded) and migrationsStore, mirror schedule pinned (D-19); flag, TS owner path and `conf`
+- [ ] 85-22-PLAN.md — D-03 deletion, part 2: the engine, tools, launcher, flow and bridge-runtime side stops carrying the TS versioning engine
+- [ ] 85-23-PLAN.md — D-03 deletion, part 3: configs, store managers and StoreRoot stop carrying it; test helper forbidden and deleted
+- [ ] 85-24-PLAN.md — D-03 deletion, part 4: TS read-only notice path ended; schemaStrip and store types relocated; storeVersioning and storeMigrations deleted (SC5)
+- [ ] 85-25-PLAN.md — Post-deletion clean-worktree and three-OS CI proof
 
 ### Phase 86: Pure leaf services
 
