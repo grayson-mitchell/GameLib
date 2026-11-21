@@ -1,8 +1,7 @@
 import { mkdtempSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
-import FileStore from '../../sidecar/fileStore'
-import { translateStoreOptions } from '../../store_backend'
+import GameLibStore, { translateStoreOptions } from '../../store_backend'
 import { createStoreRoot } from '../storeRoot'
 
 describe('createStoreRoot', () => {
@@ -17,22 +16,27 @@ describe('createStoreRoot', () => {
     rmSync(dirB, { recursive: true, force: true })
   })
 
-  it('two roots never share a file cell, even for the same name', () => {
+  // The production store gives same-path instances a shared view because conf
+  // re-reads the file on every access. These cases replaced the deleted file
+  // store's cell-registry cases (quick 261121-pwt).
+  it('two roots never share a store file, even for the same name', () => {
     const a = createStoreRoot({ userData: dirA })
     const b = createStoreRoot({ userData: dirB })
-    const storeA = new FileStore({ root: a, cwd: 'store', name: 'same' })
-    const storeB = new FileStore({ root: b, cwd: 'store', name: 'same' })
+    const storeA = new GameLibStore({ root: a, cwd: 'store', name: 'same' })
+    const storeB = new GameLibStore({ root: b, cwd: 'store', name: 'same' })
     storeA.set('k', 'from-a')
     expect(storeA.get('k')).toBe('from-a')
     expect(storeB.get('k')).toBeUndefined()
   })
 
-  it('two stores on one root and one resolved path share one cell', () => {
+  it("two stores on one root and one resolved path see each other's writes", () => {
     const root = createStoreRoot({ userData: dirA })
-    const first = new FileStore({ root, cwd: 'store', name: 'shared' })
-    const second = new FileStore({ root, cwd: 'store', name: 'shared' })
+    const first = new GameLibStore({ root, cwd: 'store', name: 'shared' })
+    const second = new GameLibStore({ root, cwd: 'store', name: 'shared' })
     first.set('k', 'v')
     expect(second.get('k')).toBe('v')
+    second.delete('k')
+    expect(first.has('k')).toBe(false)
   })
 
   describe('changes channel', () => {

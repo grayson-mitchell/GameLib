@@ -22,6 +22,6 @@
     "src/backend/sidecar/__tests__/sidecarRpcFraming.test.ts": 1,
     "src/backend/sidecar/__tests__/steamNativeInstallDefault.test.ts": 5,
     "src/backend/sidecar/__tests__/steamgridSecretStore.test.ts": 2,
-    "src/backend/sidecar/__tests__/storeLayer.test.ts": 5
+    "src/backend/sidecar/__tests__/storeLayer.test.ts": 4
   }
 }

@@ -21,8 +21,8 @@
  *     `registry.get()` target.
  *
  * TOKEN-WIPE SAFETY (non-negotiable): this suite drives REAL store
- * construction through the real `fileStore.ts`, so it MUST open with the
- * three-way mock block below — before ANY other import. A previous suite
+ * construction through the real `store_backend.ts` (the conf-backed
+ * production store), so it MUST open with the mock block below — before ANY other import. A previous suite
  * wiped the developer's live Steam refresh token from the real
  * `~/Library/Application Support/GameLib` (fixed in commit 92c29a5e), and an
  * `afterAll` restore is not a safety net because Jest force-exits workers.
@@ -33,14 +33,9 @@
  * (suffixed `storelayer` so it never collides with `skeletonflows`/
  * `bootstrap`/etc.'s own tmp homes when tests run in parallel workers).
  *
- * `electron`/`electron-store` are pointed at the REAL sidecar shims
- * (`platform/index.ts`/`fileStore.ts`) the same way `skeletonFlows.test.ts`
- * does — Jest's own manual mocks for these node_modules packages
- * (`src/backend/__mocks__/electron.ts` / `.../electron-store.ts`) are
- * auto-applied to EVERY backend test before Node's `Module._load` (which
- * `bootstrap.ts`'s own hook patches) is ever consulted, so this suite must
- * override Jest's resolution directly to exercise the real store-layer
- * code under test rather than the generic fixtures.
+ * `backend/store_backend` is deliberately NOT mocked (quick 261121-pwt): the
+ * suite's stores resolve to the production `store_backend.ts` class, so the
+ * real store-layer code is what runs under test, not a generic fixture.
  */
 import { createTestShellState } from 'backend/testUtils/testShellState'
 import { createMockSteamUser } from 'backend/testUtils/testSteamUser'
@@ -54,11 +49,6 @@ jest.mock('os', () => {
       path.join(actual.tmpdir(), `gamelib-storelayer-test-home-${process.pid}`)
   }
 })
-
-jest.mock('backend/store_backend', () => ({
-  __esModule: true,
-  default: jest.requireActual('../fileStore').default
-}))
 
 // ── backend/utils mock — no real on-disk Steam install to scan in CI ────────
 jest.mock('backend/utils', () => ({
@@ -258,9 +248,9 @@ describe('round-trip', () => {
     (name) => {
       // Indefinite lifespan (null), matching how each store's own
       // stores.ts module constructs its `libraryStore` — a fresh
-      // `CacheStore` instance at the SAME filename resolves through
-      // fileStore.ts's D-14 path-keyed cell, so this reads/writes the
-      // identical underlying data as the instance storeRegistration.ts (or,
+      // `CacheStore` instance at the SAME filename reads and writes the same
+      // file, because conf re-reads it on every access (it is not a shared
+      // in-memory cell), so this sees the identical underlying data as the instance storeRegistration.ts (or,
       // for wikigameinfo, wiki_game_info/stores.ts) already
       // constructed.
       const cache = new CacheStore<string, '__gsdProbe'>(name, null, {
