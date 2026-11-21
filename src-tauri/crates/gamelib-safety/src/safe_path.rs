@@ -63,20 +63,42 @@ pub fn strip_verbatim_prefix(s: &str) -> String {
     s.to_string()
 }
 
-#[cfg(windows)]
-fn has_reparse_bit(md: &std::fs::Metadata) -> bool {
-    use std::os::windows::fs::MetadataExt;
-    const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x400;
-    md.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0
-}
-#[cfg(not(windows))]
-fn has_reparse_bit(_md: &std::fs::Metadata) -> bool {
-    false
+/// A symlink, or on Windows a junction. std sets `is_symlink` on Windows when the entry is a
+/// reparse point whose tag carries the name-surrogate bit (0x20000000): both
+/// `IO_REPARSE_TAG_SYMLINK` (0xA000000C) and `IO_REPARSE_TAG_MOUNT_POINT` (0xA0000003, a
+/// junction) do. Other reparse tags (cloud-file placeholders, dedup, WOF) are real directories
+/// and files, so they are not links and `delete_location` sends them through `remove_dir_all`.
+pub fn is_link_metadata(md: &std::fs::Metadata) -> bool {
+    md.file_type().is_symlink()
 }
 
-/// A symlink, or on Windows any reparse point (a junction is not reported by `is_symlink`).
-pub fn is_link_metadata(md: &std::fs::Metadata) -> bool {
-    md.file_type().is_symlink() || has_reparse_bit(md)
+/// Where a reference path (a protected root or a known install) that `canonical_location`
+/// could not resolve lies, as its normalised lexical form: the first ancestor (the path itself
+/// first) that `dunce::canonicalize` resolves, with the remaining names joined on lexically. If
+/// no ancestor resolves (a Windows drive that is not present, say) the path is returned as
+/// given. Anchoring at the deepest ancestor that resolves keeps the result comparable with
+/// canonical target locations through symlinked ancestors such as macOS `/var` to `/private/var`.
+/// Callers must have rejected dot segments first (`lexical_check`): a `..` cannot be placed
+/// without resolving it.
+pub fn lexical_reference_location(p: &Path) -> PathBuf {
+    let mut tail: Vec<OsString> = Vec::new();
+    let mut cur = p;
+    loop {
+        if let Ok(base) = dunce::canonicalize(cur) {
+            let mut path = base;
+            for n in tail.iter().rev() {
+                path.push(n);
+            }
+            return path;
+        }
+        match (cur.file_name(), cur.parent()) {
+            (Some(name), Some(parent)) => {
+                tail.push(name.to_os_string());
+                cur = parent;
+            }
+            _ => return p.to_path_buf(),
+        }
+    }
 }
 
 /// Where a target really is.

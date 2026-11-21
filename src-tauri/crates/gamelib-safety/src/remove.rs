@@ -34,17 +34,38 @@ fn unknown(reason: Reason) -> Refusal {
 
 /// Every location a caller-supplied path (a protected root or a known install) occupies: its
 /// canonical location and, when it is itself a link, also its referent, so a target equal to
-/// either is recognised. Not absolute, or not resolvable, is `Unknown`.
+/// either is recognised.
+///
+/// WR-02: a reference cannot name a location when it is not absolute (empty, relative, `~/x`, a
+/// rooted path with no drive), so it is skipped with no keys. One that is absolute but cannot be
+/// resolved is placed by its normalised lexical form (`lexical_reference_location`), so it still
+/// refuses a target at or inside it and no longer turns an unrelated removal into `unknown`.
+/// `unknown` remains only for the target's own resolution (in `check_one`) and for a reference
+/// that can be neither resolved nor placed lexically (one with a dot segment).
 fn location_keys(raw: &str) -> Result<Vec<PathBuf>, Refusal> {
-    let p = safe_path::parse_absolute(raw).map_err(|_| unknown(Reason::NotAbsolute))?;
-    let loc = canonical_location(&p).map_err(unknown)?;
-    let mut keys = vec![loc.path];
-    if loc.is_link {
-        if let Ok(referent) = dunce::canonicalize(&p) {
-            keys.push(referent);
+    let Ok(p) = safe_path::parse_absolute(raw) else {
+        return Ok(Vec::new());
+    };
+    match canonical_location(&p) {
+        Ok(loc) => {
+            let mut keys = vec![loc.path];
+            if loc.is_link {
+                if let Ok(referent) = dunce::canonicalize(&p) {
+                    keys.push(referent);
+                }
+            }
+            Ok(keys)
+        }
+        Err(_) => {
+            // A `..` cannot be placed without resolving it: fail closed.
+            safe_path::lexical_check(raw).map_err(|_| unknown(Reason::CanonicalizeFailed))?;
+            // Also the Windows unplugged-drive path: `absent_location` walks up to the drive
+            // root, whose `file_name()` is `None`, so `canonical_location` fails and the
+            // reference lands here. Only the cfg(windows) adversarial row proves this, on the CI
+            // Windows leg.
+            Ok(vec![safe_path::lexical_reference_location(&p)])
         }
     }
-    Ok(keys)
 }
 
 fn check_protected(req: &Request, loc: &Location, insensitive: bool) -> Result<(), Refusal> {
@@ -96,11 +117,15 @@ fn check_trust_root(
         }
         None => {
             // No single root exists (a sideload folder can be anywhere): the protected-root and
-            // known-install checks then carry the weight, so a caller must have supplied roots.
+            // known-install checks then carry the weight, so a caller must have supplied at least
+            // one absolute root (WR-02: relative roots are skipped, so alone they anchor nothing).
             let may_skip = matches!(
                 t.kind,
                 TargetKind::GameInstall | TargetKind::Prefix | TargetKind::SideloadFolder
-            ) && req.protected_roots.iter().any(|s| !s.is_empty());
+            ) && req
+                .protected_roots
+                .iter()
+                .any(|s| safe_path::parse_absolute(s).is_ok());
             if may_skip {
                 Ok(())
             } else {
@@ -213,11 +238,45 @@ fn own_entry(folder: &Path, raw_target: &Path, executable: Option<&str>) -> Opti
         .map(|s| s.to_lowercase())
 }
 
+/// Does one directory entry look like something runnable? A directory counts when it is a
+/// `.app` bundle; anything else counts with a runnable extension, or as a regular file with the
+/// execute bit. `name` is lowercased, `emd` is the non-following metadata.
+fn entry_looks_runnable(name: &str, emd: &std::fs::Metadata) -> bool {
+    if emd.is_dir() {
+        name.ends_with(".app")
+    } else {
+        EXECUTABLE_EXTENSIONS.iter().any(|ext| name.ends_with(ext))
+            || (emd.is_file() && has_exec_bit(emd))
+    }
+}
+
+/// Does the top level of `dir` hold a runnable-looking entry? Entry metadata does not follow
+/// links. Any read error is `Unknown`.
+fn top_level_looks_runnable(dir: &Path) -> Result<bool, Refusal> {
+    let entries = std::fs::read_dir(dir).map_err(|_| unknown(Reason::CanonicalizeFailed))?;
+    for entry in entries {
+        let entry = entry.map_err(|_| unknown(Reason::CanonicalizeFailed))?;
+        let name = entry.file_name().to_string_lossy().to_lowercase();
+        let emd = entry
+            .metadata()
+            .map_err(|_| unknown(Reason::CanonicalizeFailed))?;
+        if entry_looks_runnable(&name, &emd) {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
 /// D-22: a sideload folder may be shared (a `Games` folder, a Downloads folder holding several
 /// installers). It is removable only when its top level holds no executable-looking entry or app
 /// bundle other than the game's own. Over-refusing is the intended direction: on Unix any regular
 /// file with an execute bit counts, so a native game folder with helper scripts or libraries
 /// refuses rather than risk a sibling.
+///
+/// WR-06: a sibling that is a real directory (not the game's own entry; a link is not descended)
+/// also refuses when its own top level holds such an entry, because that is another game in its
+/// own folder. One level down only, never recursive: a `Data/` or `Engine/` folder with no
+/// executable at its own top level passes.
 fn check_sideload(
     loc: &Location,
     raw_target: &Path,
@@ -239,13 +298,10 @@ fn check_sideload(
         let emd = entry
             .metadata()
             .map_err(|_| unknown(Reason::CanonicalizeFailed))?;
-        let looks_runnable = if emd.is_dir() {
-            name.ends_with(".app")
-        } else {
-            EXECUTABLE_EXTENSIONS.iter().any(|ext| name.ends_with(ext))
-                || (emd.is_file() && has_exec_bit(&emd))
-        };
-        if looks_runnable {
+        if entry_looks_runnable(&name, &emd) {
+            return Err(no(Reason::FolderLooksShared));
+        }
+        if emd.is_dir() && top_level_looks_runnable(&entry.path())? {
             return Err(no(Reason::FolderLooksShared));
         }
     }

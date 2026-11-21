@@ -810,6 +810,51 @@ fn sideload_shared_when_an_executable_bit_file_sits_beside_the_game() {
     run("exec-bit file", &fx, &refused(Reason::FolderLooksShared));
 }
 
+/// WR-06: a top-level sibling directory that holds a game of its own marks the folder shared.
+#[test]
+fn sideload_shared_when_a_sibling_directory_holds_a_game() {
+    let c = common();
+    let (folder, mut fx) = sideload_fixture(&c, "game.exe");
+    touch(&seg(&folder, &["game.exe"]));
+    let other = seg(&folder, &["Other", "other.exe"]);
+    touch(&other);
+    fx.precious.push(other);
+    run(
+        "sibling directory with an exe",
+        &fx,
+        &refused(Reason::FolderLooksShared),
+    );
+}
+
+#[test]
+fn sideload_shared_when_a_sibling_directory_holds_an_app_bundle() {
+    let c = common();
+    let (folder, mut fx) = sideload_fixture(&c, "game.exe");
+    touch(&seg(&folder, &["game.exe"]));
+    let plist = seg(&folder, &["Other", "Thing.app", "Contents", "Info.plist"]);
+    touch(&plist);
+    fx.precious.push(plist);
+    run(
+        "sibling directory with an app bundle",
+        &fx,
+        &refused(Reason::FolderLooksShared),
+    );
+}
+
+/// WR-06 goes one level down only: an executable two levels down is not a second game.
+#[test]
+fn a_sideload_folder_with_data_and_engine_siblings_is_removable() {
+    let c = common();
+    let (folder, fx) = sideload_fixture(&c, "game.exe");
+    touch(&seg(&folder, &["game.exe"]));
+    touch(&seg(&folder, &["Data", "level.pak"]));
+    touch(&seg(
+        &folder,
+        &["Engine", "Binaries", "Win64", "Game-Shipping.exe"],
+    ));
+    run("data and engine siblings", &fx, &removed());
+}
+
 #[test]
 fn a_dedicated_sideload_folder_is_removable() {
     let c = common();
@@ -928,30 +973,80 @@ fn unknown_known_installs_unreadable_refuses() {
     );
 }
 
+/// WR-02: a reference the crate cannot resolve is placed by its normalised lexical form, so one
+/// that is unrelated to the target no longer turns the removal into unknown.
 #[test]
-fn unknown_a_known_install_that_cannot_be_resolved_refuses() {
+fn an_unresolvable_known_install_unrelated_to_the_target_does_not_block() {
     let c = common();
     let game = seg(&c.common, &["Game"]);
     touch(&seg(&game, &["g.exe"]));
     let file = seg(&c.common, &["file.txt"]);
     touch(&file);
     let broken = seg(&file, &["Inside"]);
-    let fx = game_fixture(&c, &game, vec![known("broken", &broken)]);
-    let mut fx = fx;
+    let mut fx = game_fixture(&c, &game, vec![known("broken", &broken)]);
+    fx.precious.push(file);
+    run("known path through a file, unrelated", &fx, &removed());
+}
+
+/// WR-02: an unresolvable known install that sits inside the target still refuses.
+#[test]
+fn an_unresolvable_known_install_inside_the_target_still_refuses() {
+    let c = common();
+    let studio = seg(&c.common, &["Studio"]);
+    let file = seg(&studio, &["file.txt"]);
+    touch(&file);
+    let broken = seg(&file, &["Inside"]);
+    let mut fx = game_fixture(&c, &studio, vec![known("broken", &broken)]);
+    fx.precious.push(file);
+    let mut ex = refused(Reason::NestedKnownInstall);
+    ex.other_key = Some("broken");
+    run("unresolvable known install inside the target", &fx, &ex);
+}
+
+/// WR-02: an unresolvable protected root that sits inside the target still refuses.
+#[test]
+fn an_unresolvable_protected_root_inside_the_target_still_refuses() {
+    let c = common();
+    let studio = seg(&c.common, &["Studio"]);
+    let file = seg(&studio, &["file.txt"]);
+    touch(&file);
+    let mut fx = game_fixture(&c, &studio, vec![]);
+    fx.req.protected_roots = vec![s(&seg(&file, &["Inside"]))];
+    fx.precious.push(file);
+    run(
+        "unresolvable protected root inside the target",
+        &fx,
+        &refused(Reason::IsProtectedRoot),
+    );
+}
+
+/// WR-02: a dot segment in an unresolvable reference cannot be placed without resolving it, so
+/// the fail-closed answer stands.
+#[test]
+fn an_unresolvable_reference_with_a_dot_segment_stays_unknown() {
+    let c = common();
+    let game = seg(&c.common, &["Game"]);
+    touch(&seg(&game, &["g.exe"]));
+    let file = seg(&c.common, &["file.txt"]);
+    touch(&file);
+    let dotted = seg(&file, &["Inside", "..", "Other"]);
+    let mut fx = game_fixture(&c, &game, vec![known("dotted", &dotted)]);
+    fx.precious.push(file);
     fx.precious.push(seg(&game, &["g.exe"]));
     run(
-        "known path through a file",
+        "dotted unresolvable known install",
         &fx,
         &unknown_with(Reason::CanonicalizeFailed),
     );
 }
 
+/// WR-02: a relative known install cannot name any location, so it is skipped.
 #[test]
-fn unknown_a_relative_known_install_path_refuses() {
+fn a_relative_known_install_path_is_skipped() {
     let c = common();
     let game = seg(&c.common, &["Game"]);
     touch(&seg(&game, &["g.exe"]));
-    let mut fx = game_fixture(
+    let fx = game_fixture(
         &c,
         &game,
         vec![Known {
@@ -959,12 +1054,57 @@ fn unknown_a_relative_known_install_path_refuses() {
             path: "relative/path".to_string(),
         }],
     );
-    fx.precious.push(seg(&game, &["g.exe"]));
+    run("relative known path", &fx, &removed());
+}
+
+/// WR-02: relative protected roots are skipped too.
+#[test]
+fn a_relative_protected_root_does_not_block_an_unrelated_removal() {
+    let c = common();
+    let game = seg(&c.common, &["Game"]);
+    touch(&seg(&game, &["g.exe"]));
+    let mut fx = game_fixture(&c, &game, vec![]);
+    fx.req.protected_roots = vec!["relative/path".to_string(), "~/Games".to_string()];
+    run("relative protected roots", &fx, &removed());
+}
+
+/// WR-02 corollary: with only relative protected roots nothing anchors a sideload folder.
+#[test]
+fn sideload_with_only_relative_protected_roots_has_no_trust_root() {
+    let c = common();
+    let (folder, mut fx) = sideload_fixture(&c, "game.exe");
+    touch(&seg(&folder, &["game.exe"]));
+    fx.req.protected_roots = vec!["Games".to_string()];
     run(
-        "relative known path",
+        "sideload, only relative roots",
         &fx,
-        &unknown_with(Reason::NotAbsolute),
+        &unknown_with(Reason::NoTrustRoot),
     );
+}
+
+/// WR-02 on Windows: a reference on a drive that is not present is placed by its lexical form.
+/// Exercises the drive-root branch of the fallback (`absent_location` reaches the root, whose
+/// `file_name()` is `None`). Runs only on the CI Windows leg.
+#[cfg(windows)]
+#[test]
+fn an_unplugged_drive_reference_does_not_block_an_unrelated_removal() {
+    let letter = ('D'..='Z')
+        .rev()
+        .find(|l| !Path::new(&format!("{l}:\\")).exists())
+        .expect("a GitHub Windows runner leaves most drive letters free");
+    let c = common();
+    let game = seg(&c.common, &["Game"]);
+    touch(&seg(&game, &["g.exe"]));
+    let mut fx = game_fixture(
+        &c,
+        &game,
+        vec![Known {
+            key: "unplugged".to_string(),
+            path: format!("{letter}:\\Games\\Foo"),
+        }],
+    );
+    fx.req.protected_roots = vec![format!("{letter}:\\Games")];
+    run("unplugged drive reference", &fx, &removed());
 }
 
 #[test]
