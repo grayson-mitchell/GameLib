@@ -1,7 +1,7 @@
 ---
 status: pending
 phase: 100-game-page-without-the-menu
-source: [100-CONTEXT.md D-01 D-02 D-03 D-04 D-07 D-08 D-09 D-10 D-11 D-12 D-13 D-15 D-16 D-17 D-19 D-20 D-21]
+source: [100-CONTEXT.md D-01 D-02 D-03 D-04 D-07 D-08 D-09 D-10 D-11 D-12 D-13 D-14 D-15 D-16 D-17 D-19 D-20 D-21]
 authored_by: 100-10
 started: 2026-11-22
 updated: 2026-11-22
@@ -20,11 +20,14 @@ row alignment, footer play time lines, pencil reveal, busy pulses, inline Retry 
 anchoring, Wine versus native row sets, Locate link placement, the library card's Logs entry) are folded into the items
 below.
 
+Items 19 and 20 were added by gap-closure plan 100-14 for the two gaps in 100-VERIFICATION.md (CR-01 and CR-02).
+
 ## Launch recipe
 
 1. Launch only with `pnpm tauri:dev`, never `tauri:dev:run` (it skips the dev-vault flag, so Keychain prompts every
    launch).
-2. This phase is frontend-only, so vite HMR suffices and no sidecar rebuild is needed.
+2. Gap-closure plan 100-11 changed the Rust shell (`src-tauri/src/main.rs`), so start `pnpm tauri:dev` fresh after
+   pulling it (the shell rebuilds on start). The sidecar needs no rebuild.
 3. Switch themes in the app's theme settings (midnight is midnightMirage, dracula, gruvbox is gruvbox_dark). Items 1 to 3
    are run once per theme; the other items can run in any one theme.
 4. The network stays on. Nothing here needs it off.
@@ -37,6 +40,8 @@ below.
 4. A not-installed Epic or GOG game.
 5. A game you have played before, for play time (one Steam and one non-Steam if you can).
 6. Linux is optional, for the EOS overlay item (18). On macOS mark item 18 `skipped`.
+7. An installed Steam game with no version (a bridge install on macOS, or a Steam build id of 0).
+8. An Epic or GOG game large enough that copying it takes over a minute, plus a destination folder with room for it.
 
 ## Tests
 
@@ -110,4 +115,12 @@ result: pending
 
 ### 18. Linux only: EOS overlay switch
 expected: On Linux an installed Epic game's ⚙ → Run → Launch has an EOS overlay switch that installs on first enable after a confirmation; on macOS mark this item skipped (D-02)
+result: pending
+
+### 19. Steam game with no version: Verify still shows
+expected: On an installed Steam game that has no version (a bridge install, or a Steam build id of 0), the Install tab shows a Version row reading Unknown with no "up to date" claim, Verify sits on it, and Verify starts with no yes/no dialog and reads "Verifying…" (D-14, D-13)
+result: pending
+
+### 20. A Move longer than 60 seconds
+expected: On an Epic or GOG game whose copy takes over 60 seconds, Move… keeps reading "Moving…" past the one-minute mark while the footer shows the percent; no "Move failed" text and no Retry appear while it runs; Move… and Wrong folder? stay disabled with "Wait for the move to finish"; and when the copy ends, the Location row shows the new path with no failure text (D-10, D-11, D-12)
 result: pending

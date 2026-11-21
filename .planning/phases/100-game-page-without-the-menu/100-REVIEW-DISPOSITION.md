@@ -5,11 +5,11 @@ titles: json
 findings:
   - id: CR-01
     severity: critical
-    disposition: open
+    disposition: fixed
     title: "Verify, Update and What's new vanish for any installed game with no `install.version`"
   - id: CR-02
     severity: critical
-    disposition: open
+    disposition: fixed
     title: "A Move that runs longer than 60 s is shown as \"Move failed\", and the Retry link can start a second move"
   - id: WR-01
     severity: warning
@@ -17,7 +17,7 @@ findings:
     title: "The \"Edit details\" button sits on top of the 32-bit macOS badge"
   - id: WR-02
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Installed third-party-managed games lose \"Browse Files\""
   - id: WR-03
     severity: warning
@@ -25,11 +25,11 @@ findings:
     title: "The long-action guard's header and the CloudSavesSync failure path point at a deleted behavioural test"
   - id: WR-04
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Row failure state is sticky, and a second simultaneous failure is hidden"
   - id: WR-05
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Danger-zone confirms have no failure path (unhandled rejections)"
   - id: IN-01
     severity: info
@@ -61,13 +61,13 @@ findings:
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| CR-01 | critical | open | - |
-| CR-02 | critical | open | - |
+| CR-01 | critical | fixed | 100-12-SUMMARY.md |
+| CR-02 | critical | fixed | 100-11-SUMMARY.md and 100-13-SUMMARY.md |
 | WR-01 | warning | open | - |
-| WR-02 | warning | open | - |
+| WR-02 | warning | fixed | 100-13-SUMMARY.md |
 | WR-03 | warning | open | - |
-| WR-04 | warning | open | - |
-| WR-05 | warning | open | - |
+| WR-04 | warning | fixed | 100-13-SUMMARY.md |
+| WR-05 | warning | fixed | 100-14-SUMMARY.md |
 | IN-01 | info | open | - |
 | IN-02 | info | open | - |
 | IN-03 | info | open | - |
