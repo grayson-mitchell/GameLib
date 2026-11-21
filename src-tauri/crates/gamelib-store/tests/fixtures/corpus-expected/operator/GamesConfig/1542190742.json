@@ -1,0 +1,40 @@
+{
+	"1542190742": {
+		"autoInstallDxvk": true,
+		"autoInstallDxvkNvapi": false,
+		"autoInstallVkd3d": false,
+		"preferSystemLibs": false,
+		"enableEsync": true,
+		"enableMsync": true,
+		"enableFsync": false,
+		"enableWineWayland": false,
+		"enableHDR": false,
+		"enableWoW64": false,
+		"nvidiaPrime": false,
+		"enviromentOptions": [],
+		"wrapperOptions": [],
+		"showFps": false,
+		"useGameMode": false,
+		"battlEyeRuntime": false,
+		"eacRuntime": false,
+		"language": "",
+		"beforeLaunchScriptPath": "",
+		"afterLaunchScriptPath": "",
+		"verboseLogs": true,
+		"advertiseAvxForRosetta": false,
+		"enableQuickSavesMenu": false,
+		"wineVersion": {
+			"bin": "/Users/operator/Library/Application Support/GameLib/tools/game-porting-toolkit/Game-Porting-Toolkit-latest/Contents/Resources/wine/bin/wine64",
+			"lib": "/Users/operator/Library/Application Support/GameLib/tools/game-porting-toolkit/Game-Porting-Toolkit-latest/Contents/Resources/wine/lib",
+			"lib32": "/Users/operator/Library/Application Support/GameLib/tools/game-porting-toolkit/Game-Porting-Toolkit-latest/Contents/Resources/wine/lib",
+			"name": "Game-Porting-Toolkit-latest",
+			"type": "toolkit",
+			"wineserver": "/Users/operator/Library/Application Support/GameLib/tools/game-porting-toolkit/Game-Porting-Toolkit-latest/Contents/Resources/wine/bin/wineserver"
+		},
+		"wineCrossoverBottle": "",
+		"winePrefix": "/Users/operator/Games/GameLib/Prefixes/Bloody Hell",
+		"engineOverride": "automatic"
+	},
+	"version": "v2",
+	"explicit": true
+}

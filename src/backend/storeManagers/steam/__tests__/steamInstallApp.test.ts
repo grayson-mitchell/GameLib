@@ -2,7 +2,9 @@ import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 
 import {
   createSteamInstallAppRun,
+  MOVE_WAIT_TIMEOUT_MS,
   requestSteamInstallApp,
+  requestSteamMoveApp,
   requestSteamUninstallApp,
   requestSteamValidateApp,
   VALIDATE_WAIT_TIMEOUT_MS
@@ -19,7 +21,8 @@ jest.mock('node:fs', () => ({
   existsSync: jest.fn()
 }))
 
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
 
 const mockedExists = existsSync as jest.Mock
 
@@ -369,6 +372,190 @@ describe('requestSteamValidateApp (quick 261120-p2j)', () => {
     await expect(
       requestSteamValidateApp('440', { wait: true }, deps(runWith('', null)))
     ).resolves.toEqual({ kind: 'unavailable', reason: 'helper-failed' })
+  })
+})
+
+describe('requestSteamMoveApp (quick 261122-9sl)', () => {
+  beforeEach(() => {
+    mockedExists.mockReturnValue(true)
+  })
+  const deps = (run: jest.Mock) => ({
+    paths: { steamBridgeHelperPath: '/h' },
+    platform: 'darwin' as const,
+    run
+  })
+  const opts = { libraryPath: '/libB', wait: true }
+
+  it('reports unsupported-platform off darwin without spawning', async () => {
+    const run = jest.fn()
+    await expect(
+      requestSteamMoveApp('440', opts, { ...deps(run), platform: 'linux' })
+    ).resolves.toEqual({ kind: 'unavailable', reason: 'unsupported-platform' })
+    expect(run).not.toHaveBeenCalled()
+  })
+
+  it('rejects a bad appId without spawning', async () => {
+    const run = jest.fn()
+    await expect(requestSteamMoveApp('4;40', opts, deps(run))).resolves.toEqual(
+      { kind: 'unavailable', reason: 'bad-appid' }
+    )
+    expect(run).not.toHaveBeenCalled()
+  })
+
+  it('reports helper-missing when the binary is absent', async () => {
+    mockedExists.mockReturnValue(false)
+    const run = jest.fn()
+    await expect(requestSteamMoveApp('440', opts, deps(run))).resolves.toEqual({
+      kind: 'unavailable',
+      reason: 'helper-missing'
+    })
+    expect(run).not.toHaveBeenCalled()
+  })
+
+  it('passes --library, --wait, the long timeout and the signal to run', async () => {
+    const run = runWith(
+      '{"result":"ok","tracked":true,"finished":true,"installState":4,"folderIndex":1}'
+    )
+    const signal = new AbortController().signal
+    await requestSteamMoveApp('440', { ...opts, signal }, deps(run))
+    expect(run).toHaveBeenCalledWith(
+      '/h',
+      ['--steam-moveapp', '440', '--library', '/libB', '--wait'],
+      MOVE_WAIT_TIMEOUT_MS,
+      signal
+    )
+  })
+
+  it('without wait uses the short default timeout and no --wait', async () => {
+    const run = runWith('{"result":"ok","tracked":false,"folderIndex":1}')
+    await requestSteamMoveApp(
+      '440',
+      { libraryPath: '/libB', wait: false },
+      deps(run)
+    )
+    const [, args, timeout] = run.mock.calls[0]
+    expect(args).toEqual(['--steam-moveapp', '440', '--library', '/libB'])
+    expect(timeout).toBeLessThan(MOVE_WAIT_TIMEOUT_MS)
+  })
+
+  it('maps ok finished', async () => {
+    const run = runWith(
+      '{"result":"ok","tracked":true,"finished":true,"installState":4,"folderIndex":1,"fromFolder":0}'
+    )
+    await expect(requestSteamMoveApp('440', opts, deps(run))).resolves.toEqual({
+      kind: 'ok',
+      tracked: true,
+      finished: true,
+      installState: 4,
+      folderIndex: 1
+    })
+  })
+
+  it('maps ok not-finished with a reason, and ok untracked', async () => {
+    await expect(
+      requestSteamMoveApp(
+        '440',
+        opts,
+        deps(
+          runWith(
+            '{"result":"ok","tracked":true,"finished":false,"installState":4,"folderIndex":1,"reason":"wait-cap"}'
+          )
+        )
+      )
+    ).resolves.toMatchObject({ finished: false, reason: 'wait-cap' })
+    await expect(
+      requestSteamMoveApp(
+        '440',
+        opts,
+        deps(
+          runWith(
+            '{"result":"ok","tracked":false,"folderIndex":1,"reason":"method-unverified:GetAppInstallState"}'
+          )
+        )
+      )
+    ).resolves.toEqual({
+      kind: 'ok',
+      tracked: false,
+      finished: false,
+      installState: null,
+      folderIndex: 1,
+      reason: 'method-unverified:GetAppInstallState'
+    })
+  })
+
+  it('maps refused with its reason', async () => {
+    await expect(
+      requestSteamMoveApp(
+        '440',
+        opts,
+        deps(
+          runWith(
+            '{"result":"refused","appId":440,"reason":"already-in-folder","folderIndex":1}',
+            3
+          )
+        )
+      )
+    ).resolves.toEqual({ kind: 'refused', reason: 'already-in-folder' })
+  })
+
+  it('maps error with its stage and EAppUpdateError', async () => {
+    await expect(
+      requestSteamMoveApp(
+        '440',
+        opts,
+        deps(
+          runWith(
+            '{"result":"error","appId":440,"stage":"MoveApp","eAppUpdateError":16}',
+            3
+          )
+        )
+      )
+    ).resolves.toEqual({ kind: 'error', stage: 'MoveApp', code: 16 })
+  })
+
+  it('maps unavailable, a missing result line and an unrecognised line', async () => {
+    await expect(
+      requestSteamMoveApp(
+        '440',
+        opts,
+        deps(
+          runWith(
+            '{"result":"unavailable","reason":"library-not-registered"}',
+            2
+          )
+        )
+      )
+    ).resolves.toEqual({
+      kind: 'unavailable',
+      reason: 'library-not-registered'
+    })
+    await expect(
+      requestSteamMoveApp('440', opts, deps(runWith('', null)))
+    ).resolves.toEqual({ kind: 'unavailable', reason: 'helper-failed' })
+    await expect(
+      requestSteamMoveApp('440', opts, deps(runWith('{"result":"huh"}')))
+    ).resolves.toEqual({ kind: 'unavailable', reason: 'helper-failed' })
+  })
+
+  it('MOVE_WAIT_TIMEOUT_MS tracks GL_IA_MOVE_WAIT_CAP_S in the helper header', () => {
+    const header = readFileSync(
+      join(
+        __dirname,
+        '..',
+        '..',
+        '..',
+        '..',
+        '..',
+        'native',
+        'steam-bridge',
+        'helper',
+        'gamelib_installapp.h'
+      ),
+      'utf8'
+    )
+    const cap = /#define GL_IA_MOVE_WAIT_CAP_S (\d+)/.exec(header)
+    expect(cap).not.toBeNull()
+    expect(MOVE_WAIT_TIMEOUT_MS).toBe((Number(cap?.[1]) + 120) * 1000)
   })
 })
 

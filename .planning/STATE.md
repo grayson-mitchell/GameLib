@@ -5,15 +5,15 @@ milestone_name: Node Sidecar Retirement
 current_phase: 85
 current_phase_name: Store host, config and versioned migrations
 status: executing
-stopped_at: Completed 85-07-PLAN.md
-last_updated: "2026-11-21T17:59:32.618Z"
+stopped_at: Completed 85-08-PLAN.md
+last_updated: "2026-11-21T18:22:09.761Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 85 execution started
-state_head: 3ca99c0f72953dc0ab7e08fc6998857f54fa5885
+state_head: 653c0627d7a34604cba72a871fbdb9fb2d4c931f
 progress:
   total_phases: 20
   completed_phases: 23
-  total_plans: 81
+  total_plans: 88
   completed_plans: 531
   percent: 100
 ---
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-11-20)
 ## Current Position
 
 Phase: 85 (Store host, config and versioned migrations) — EXECUTING
-Plan: 7 of 25
+Plan: 8 of 25
 Status: Ready to execute
 Last activity: 2026-11-22 — Phase 85 execution started
 Progress: [██████████] 100%
@@ -366,6 +366,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 85 P02 | 25 min | 3 tasks | 166 files |
 | Phase 85 P06 | 25 min | 3 tasks | 16 files |
 | Phase 85 P07 | 45 min | 3 tasks | 14 files |
+| Phase 85 P08 | 30 min | 3 tasks | 17 files |
 
 ## Accumulated Context
 
@@ -688,6 +689,10 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 85]: 85-06: dotpath with dot_paths false treats __proto__ as an ordinary key (oracle vector wins over the plan text); arrays hold holes as Json::Null
 - [Phase 85]: 85-07: corrupt store files (D-18) are copied to <name>.corrupt.<stamp>.json first and kept byte-identical; caches start empty only after the copy exists, every other kind opens ReadOnly(Failed), and so does any kind whose copy cannot be written
 - [Phase 85]: 85-07: a migration rewrite is written with the tab layout for settings documents too (the golden oracle shows TS did), not to_settings_bytes; Step.run is an Arc<dyn Fn> so data-driven and schema-bound steps can capture state
+- [Phase 85]: settings and library migration chains are driven by a descriptor generated from zod (schemas.json) with a jest drift test; the generator refuses any construct outside the strip grammar
+- [Phase 85]: D-04 held: every chain is pinned to its TS version (settings 2, game 2, libraries 3, baseline 1) by chain_versions_are_pinned_to_ts
+- [Phase 85]: Corpus migrate entries are placed at the table row path in both the TS oracle and Rust so backup names compare; corpus-expected is written by the real TS chains
+- [Phase 85]: gamelib-store-cli open has --dry-run (scratch copy, removed after) and --scratch so tests stay inside a FakeHome
 
 ### Pending Todos
 
@@ -753,6 +758,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 20 | Close stale Gate 7 digest todo (already re-pinned by 84-06, 90ba1d3ab) | 2026-11-22 | 01c12f259 | — | — |
 | 21 | Replace chrono with jiff in gamelib-log (RUSTSEC-2026-0543 audit red) | 2026-11-22 | 8fcadab94 | — | — |
 | 261122-93a | Set up gsd-graph for .planning and exclude .planning from graphify | 2026-11-22 | 5ad01481e | — | [261122-93a-set-up-gsd-graph-for-planning-and-exclud](./quick/261122-93a-set-up-gsd-graph-for-planning-and-exclud/) |
+| 261122-9sl | Implement Move install for Steam games (moveInstall is a stub) | 2026-11-22 | 4bbab9da4 | — | [261122-9sl-implement-move-install-for-steam-games](./quick/261122-9sl-implement-move-install-for-steam-games/) |
 
 ## Deferred Items
 
@@ -951,8 +957,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-21T17:59:31.998Z
-Stopped at: Completed 85-07-PLAN.md
+Last session: 2026-11-21T18:18:14.801Z
+Stopped at: Completed 85-08-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

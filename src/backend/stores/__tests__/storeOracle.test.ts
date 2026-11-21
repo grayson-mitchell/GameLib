@@ -1263,3 +1263,174 @@ describe('store oracle vectors (dot paths, number text, key order)', () => {
     })
   }
 })
+
+// ---- corpus migrate entries ---------------------------------------------------------------------------
+//
+// Phase 85 plan 08: every MANIFEST entry of the real-store corpus whose `expect` is `migrate` goes through
+// the REAL TS chains, and what TS produced is committed under `tests/fixtures/corpus-expected` for the
+// Rust engine to reproduce byte for byte. The file lands where the engine looks for it (the entry's table
+// row: `config.json`, `GamesConfig/app.json`, or `<dir>/<name>.json`), never at its corpus path, which for
+// a captured backup is a backup name. `corpus-expected/<manifest path>` holds the migrated file and
+// `corpus-expected/outcomes.json` the result and the backup names under the oracle's fake clock. Same
+// write/compare switch as the golden above.
+
+const CORPUS_ROOT = resolve(FIXTURE_ROOT, '..', 'corpus')
+const CORPUS_EXPECTED_ROOT = resolve(FIXTURE_ROOT, '..', 'corpus-expected')
+const CORPUS_OUTCOMES_FILE = join(CORPUS_EXPECTED_ROOT, 'outcomes.json')
+const STORE_TABLE_FILE = resolve(
+  __dirname,
+  '../../../common/types/ipc/storeTable.json'
+)
+
+type CorpusEntry = {
+  path: string
+  sha256?: string
+  expect: string
+  tableKey: string
+}
+
+type CorpusOutcome = {
+  path: string
+  /** `migrated`: the engine backed up and rewrote the file; `discarded`: a cache lost its file instead. */
+  result: 'migrated' | 'discarded'
+  /** Backup names relative to userData. */
+  backups: string[]
+}
+
+type TableRow = {
+  key: string
+  dir: string
+  name: string | null
+  kind: 'cache' | 'user-state'
+  tokenBearing: boolean
+  dotPaths: boolean
+  flavour: 'store' | 'settings'
+}
+
+function corpusMigrateEntries(): CorpusEntry[] {
+  const manifest = JSON.parse(
+    readFileSync(join(CORPUS_ROOT, 'MANIFEST.json'), 'utf-8')
+  ) as { files: CorpusEntry[] }
+  return manifest.files.filter((e) => e.expect === 'migrate' && e.sha256)
+}
+
+function tableRow(key: string): TableRow {
+  const table = JSON.parse(readFileSync(STORE_TABLE_FILE, 'utf-8')) as {
+    rows: TableRow[]
+  }
+  const row = table.rows.find((r) => r.key === key)
+  if (!row) throw new Error(`no store table row for ${key}`)
+  return row
+}
+
+/** Where the engine finds the file for a table row, relative to userData. */
+function placementOf(row: TableRow): string {
+  if (row.key === 'settings/global') return 'config.json'
+  if (row.key === 'settings/game') return 'GamesConfig/app.json'
+  return `${row.dir}/${row.name}.json`
+}
+
+function runCorpusEntry(entry: CorpusEntry): {
+  outcome: CorpusOutcome
+  migrated: Buffer | undefined
+} {
+  const row = tableRow(entry.tableKey)
+  const rel = placementOf(row)
+  const userData = mkdtempSync(join(tmpdir(), 'gamelib-store-corpus-oracle-'))
+  jest.setSystemTime(BASE_TIME)
+  try {
+    seed(userData, rel, readFileSync(join(CORPUS_ROOT, entry.path)))
+    const root = createStoreRoot({ userData })
+    if (row.flavour === 'settings') {
+      if (row.key !== 'settings/global' && row.key !== 'settings/game') {
+        throw new Error(`${entry.path}: ${row.key} is not a settings chain`)
+      }
+      ensureSettingsMigrated(root.versioning, join(userData, rel), row.key)
+    } else {
+      openStore(root, {
+        dir: row.dir,
+        name: row.name as string,
+        kind: row.kind,
+        ...(row.tokenBearing ? { tokenBearing: true as const } : {}),
+        ...(row.dotPaths ? {} : { accessPropertiesByDotNotation: false })
+      })
+    }
+    const files = snapshot(userData)
+    const migrated = files.get(rel)
+    return {
+      outcome: {
+        path: entry.path,
+        result: migrated ? 'migrated' : 'discarded',
+        backups: backupsOf(files)
+      },
+      migrated
+    }
+  } finally {
+    rmSync(userData, { recursive: true, force: true })
+  }
+}
+
+describe('store oracle corpus migrate entries (TS chains -> committed corpus-expected)', () => {
+  const entries = corpusMigrateEntries()
+
+  beforeEach(() => {
+    jest.useFakeTimers({ now: BASE_TIME, doNotFake: [...ALL_BUT_DATE] })
+    jest.spyOn(process.stderr, 'write').mockImplementation(() => true)
+  })
+  afterEach(() => {
+    jest.restoreAllMocks()
+    jest.useRealTimers()
+  })
+
+  test('the corpus has migrate entries to run', () => {
+    expect(entries.length).toBeGreaterThanOrEqual(60)
+  })
+
+  if (WRITE_MODE) {
+    test('writes corpus-expected from the TS chains', () => {
+      rmSync(CORPUS_EXPECTED_ROOT, { recursive: true, force: true })
+      const outcomes: CorpusOutcome[] = []
+      for (const entry of entries) {
+        const { outcome, migrated } = runCorpusEntry(entry)
+        outcomes.push(outcome)
+        if (migrated) {
+          const target = join(CORPUS_EXPECTED_ROOT, entry.path)
+          mkdirSync(dirname(target), { recursive: true })
+          writeFileSync(target, migrated)
+        }
+      }
+      mkdirSync(CORPUS_EXPECTED_ROOT, { recursive: true })
+      writeFileSync(
+        CORPUS_OUTCOMES_FILE,
+        `${JSON.stringify(outcomes, null, 2)}\n`
+      )
+    })
+  } else {
+    const committed = JSON.parse(
+      readFileSync(CORPUS_OUTCOMES_FILE, 'utf-8')
+    ) as CorpusOutcome[]
+
+    test('outcomes.json lists exactly the manifest migrate entries', () => {
+      expect(committed.map((o) => o.path)).toEqual(entries.map((e) => e.path))
+    })
+
+    test.each(entries.map((e) => [e.path, e] as const))('%s', (path, entry) => {
+      const { outcome, migrated } = runCorpusEntry(entry)
+      expect(outcome).toEqual(committed.find((o) => o.path === path))
+      const target = join(CORPUS_EXPECTED_ROOT, path)
+      if (migrated) {
+        expect(migrated.equals(readFileSync(target))).toBe(true)
+      } else {
+        expect(existsSync(target)).toBe(false)
+      }
+    })
+
+    test('every file under corpus-expected belongs to a migrate entry', () => {
+      const names = new Set(entries.map((e) => e.path))
+      for (const rel of snapshot(CORPUS_EXPECTED_ROOT).keys()) {
+        if (rel === 'outcomes.json') continue
+        expect(names.has(rel)).toBe(true)
+      }
+    })
+  }
+})

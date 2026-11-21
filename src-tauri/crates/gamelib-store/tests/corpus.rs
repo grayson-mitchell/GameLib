@@ -4,9 +4,13 @@
 //! where SC1 and SC2 are proven on real bytes: a `roundtrip` file opens without a single byte
 //! written (a no-op boot) and re-serialises to its exact bytes (so an unknown key at the current
 //! version survives), a corrupt file is kept and copied aside, a newer file is never rewritten.
-//! `migrate` entries are only classified as having a pending chain here; plan 85-08 registers the
-//! real steps and asserts their bytes. The test cannot pass vacuously: it fails below the
+//! A `migrate` entry is an OLDER-version file: the strip deletes undeclared keys by design behind a
+//! backup, so `older_versions_match_ts_oracle` asserts parity with what the real TS chains wrote for
+//! the same input (`corpus-expected/`, from the oracle), while `current_version_preserves_unknown_keys`
+//! asserts the opposite for a CURRENT-version file. The test cannot pass vacuously: it fails below the
 //! manifest's floor and when an `expect` value or a table key has no entry.
+
+mod common;
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs::{self, File};
@@ -14,10 +18,10 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use gamelib_store::atomic::{write_atomic, Durability};
-use gamelib_store::engine::{open_file, Flavour, OpenOutcome, Opened, ReadOnlyReason, StoreKind};
+use gamelib_store::engine::{open_file, Flavour, OpenOutcome, Opened, ReadOnlyReason};
 use gamelib_store::envelope::{settings_version, stamp_for_write, store_version};
 use gamelib_store::json::{parse, to_settings_bytes, to_store_bytes, Json};
-use gamelib_store::migrate::{Chains, Step};
+use gamelib_store::migrate::Chains;
 use gamelib_store::ops::{apply, Op};
 use gamelib_store::table::{row_for_key, Family, TableRow};
 use gamelib_testutil::FakeHome;
@@ -50,31 +54,9 @@ fn manifest() -> Manifest {
     serde_json::from_slice(&bytes).expect("MANIFEST.json parses")
 }
 
-/// The chains' current versions on the TS side (`CHAIN_CURRENT` in `meta/harvestStoreCorpus.ts`).
-/// Plan 85-08 registers the real steps in `Chains::baseline()`; until then each of these is a
-/// chain of no-op steps up to its current version, enough for the engine to tell current, newer
-/// and pending apart.
-const TS_CURRENT: [(&str, u32); 9] = [
-    ("settings/global", 2),
-    ("settings/game", 2),
-    ("store_cache/steam_library", 3),
-    ("store_cache/gog_library", 3),
-    ("gog_store/installed", 3),
-    ("store_cache/legendary_library", 3),
-    ("store_cache/nile_library", 3),
-    ("sideload_apps/library", 3),
-    ("store/download-manager", 3),
-];
-
+/// The real chains: settings 2, game 2 and the seven library chains 3 (pinned in `migrate_golden`).
 fn chains() -> Chains {
-    let mut c = Chains::baseline();
-    for (key, current) in TS_CURRENT {
-        let steps = (2..=current)
-            .map(|to| Step::new(format!("{key}-to-{to}"), to, |_| Ok(())))
-            .collect();
-        c = c.with_override(key, steps);
-    }
-    c
+    Chains::baseline()
 }
 
 fn now() -> SystemTime {
@@ -342,9 +324,11 @@ fn noop_open_writes_nothing() {
     assert!(checked >= 60);
 }
 
-/// SC1: a current-version file with keys no schema declares keeps them through a read-write cycle.
+/// SC1, CURRENT-version files: a file with keys no schema declares keeps them through a read-write
+/// cycle. (An older-version file is the opposite case: its strip removes them, see
+/// `older_versions_match_ts_oracle`.)
 #[test]
-fn unknown_keys_at_the_current_version_survive_a_write() {
+fn current_version_preserves_unknown_keys() {
     let m = manifest();
     let e = m
         .files
@@ -480,9 +464,140 @@ fn outcomes_match_manifest() {
     }
 }
 
-/// A `migrate` entry is only classified here: its stored version is below its chain's current
-/// version, so the engine would back up and migrate it (or, for a cache, delete it). The migrated
-/// bytes are 85-08's to assert once the real steps are registered.
+/// Where the engine finds the file of a table row, relative to the profile (the same placement the
+/// TS oracle used): the entry's corpus path can be a captured backup's name, which is not a store name.
+fn placement(row: &TableRow) -> String {
+    match row.key.as_str() {
+        "settings/global" => "config.json".to_string(),
+        "settings/game" => "GamesConfig/app.json".to_string(),
+        _ => format!(
+            "{}/{}.json",
+            row.dir,
+            row.name.as_deref().expect("a named row")
+        ),
+    }
+}
+
+#[derive(Deserialize)]
+struct OracleOutcome {
+    path: String,
+    result: String,
+    backups: Vec<String>,
+}
+
+fn oracle_outcomes() -> Vec<OracleOutcome> {
+    let bytes = fs::read(corpus_expected_dir().join("outcomes.json"))
+        .expect("corpus-expected/outcomes.json (regenerate with GAMELIB_WRITE_STORE_GOLDEN=1)");
+    serde_json::from_slice(&bytes).expect("outcomes.json parses")
+}
+
+fn corpus_expected_dir() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/corpus-expected")
+}
+
+/// A `migrate` entry is an OLDER-version file. Opened through the real Rust chains it is `Migrated`,
+/// writes a backup holding the original bytes, and its migrated bytes (and the backup's name) equal
+/// what the real TS chains produced for the same input. The strip deletes undeclared keys by design,
+/// so parity with the oracle, not preservation, is the claim for these files.
+#[test]
+fn older_versions_match_ts_oracle() {
+    let m = manifest();
+    let oracle = oracle_outcomes();
+    let entries: Vec<&Entry> = files_of(&m)
+        .into_iter()
+        .filter(|e| e.expect == "migrate")
+        .collect();
+    assert_eq!(
+        oracle.iter().map(|o| o.path.as_str()).collect::<Vec<_>>(),
+        entries.iter().map(|e| e.path.as_str()).collect::<Vec<_>>(),
+        "outcomes.json lists exactly the manifest migrate entries"
+    );
+    assert!(
+        entries.len() >= 60,
+        "only {} migrate entries",
+        entries.len()
+    );
+    let mut by_chain: BTreeMap<&str, usize> = BTreeMap::new();
+    for (e, want) in entries.iter().zip(&oracle) {
+        let row = row_of(e);
+        let home = FakeHome::new("gamelib-store-corpus-migrate-");
+        let profile = home.root().join("profile");
+        let rel = placement(row);
+        let path = profile.join(&rel);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        let original = fs::read(corpus_dir().join(&e.path)).unwrap();
+        fs::write(&path, &original).unwrap();
+
+        let opened = open_file(
+            &path,
+            row.flavour,
+            row.store_kind().expect("an openable row"),
+            row.chain_key(),
+            &chains(),
+            common::golden_now(),
+        );
+        let got = common::tree(&profile);
+        match (want.result.as_str(), &opened.outcome) {
+            ("migrated", OpenOutcome::Migrated { .. }) => {
+                let expected = fs::read(corpus_expected_dir().join(&e.path))
+                    .unwrap_or_else(|err| panic!("{}: corpus-expected: {err}", e.path));
+                assert_eq!(
+                    String::from_utf8_lossy(&fs::read(&path).unwrap()),
+                    String::from_utf8_lossy(&expected),
+                    "{}: migrated bytes differ from the TS oracle",
+                    e.path
+                );
+                assert_eq!(fs::read(&path).unwrap(), expected, "{}", e.path);
+                assert_eq!(want.backups.len(), 1, "{}", e.path);
+                assert_eq!(
+                    fs::read(profile.join(&want.backups[0])).unwrap(),
+                    original,
+                    "{}: the backup holds the original bytes",
+                    e.path
+                );
+            }
+            ("discarded", OpenOutcome::CacheDiscarded) => {
+                assert!(
+                    !path.exists(),
+                    "{}: a discarded cache keeps no file",
+                    e.path
+                );
+            }
+            (result, outcome) => {
+                panic!(
+                    "{}: TS said {result}, the Rust engine said {outcome:?}",
+                    e.path
+                )
+            }
+        }
+        let mut want_files: BTreeSet<String> = want.backups.iter().cloned().collect();
+        if want.result == "migrated" {
+            want_files.insert(rel);
+        }
+        assert_eq!(got, want_files, "{}: file set differs from TS", e.path);
+        *by_chain.entry(e.table_key.as_str()).or_default() += 1;
+    }
+    println!("corpus older versions: {by_chain:?}");
+    for key in [
+        "settings/global",
+        "settings/game",
+        "store_cache/steam_library",
+        "store_cache/gog_library",
+        "gog_store/installed",
+        "store_cache/legendary_library",
+        "store_cache/nile_library",
+        "sideload_apps/library",
+        "store/download-manager",
+    ] {
+        assert!(
+            by_chain.get(key).copied().unwrap_or(0) >= 1,
+            "no corpus entry exercises the {key} chain"
+        );
+    }
+}
+
+/// The classification the engine makes before it runs a step: every `migrate` entry's stored version
+/// is below its chain's current version and has a non-identity step pending.
 #[test]
 fn migrate_entries_have_a_pending_chain() {
     let m = manifest();
@@ -511,12 +626,6 @@ fn migrate_entries_have_a_pending_chain() {
             "{}: no non-identity step is pending",
             e.path
         );
-        assert!(matches!(
-            row.store_kind(),
-            Some(
-                StoreKind::Cache | StoreKind::UserState | StoreKind::Settings | StoreKind::Account
-            )
-        ));
         n += 1;
     }
     println!("corpus migrate: {n} entries have a pending chain");

@@ -585,7 +585,7 @@ fn shell_log_to(logger: Option<&gamelib_log::writer::Logger>, message: &str) {
         logger.log(
             gamelib_log::Prefix::Shell,
             shell_log_level(message),
-            message,
+            &gamelib_log::sanitize::escape_line_breaks(message),
         );
     }
 }
@@ -625,9 +625,29 @@ fn init_native_logger() {
         // gamelib.log through one app-wide tracing Registry and a `log` bridge. WARN and above by
         // default; only `GAMELIB_LOG_LEVEL=debug` raises them to DEBUG. Only the primary instance
         // reaches here (the reaper and a secondary launch exit before `init_native_logger`).
-        gamelib_log::bridge::install_bridges(gamelib_log::bridge::crate_level_from_env(
-            std::env::var("GAMELIB_LOG_LEVEL").ok().as_deref(),
-        ));
+        let bridged =
+            gamelib_log::bridge::install_bridges(gamelib_log::bridge::crate_level_from_env(
+                std::env::var("GAMELIB_LOG_LEVEL").ok().as_deref(),
+            ));
+        if let Some(warning) = bridge_install_warning(bridged) {
+            shell_log(warning);
+        }
+    }
+}
+
+/// IN-03: the shell diagnostic for a failed `install_bridges` (`false`: a global tracing subscriber
+/// or `log` logger was already set, so steam-vent, reqwest and the other crates' diagnostics do
+/// not reach `gamelib.log`), or `None` when the bridges are in place. The `WARN` prefix is what
+/// [`shell_log_level`] reads as a warning.
+fn bridge_install_warning(installed: bool) -> Option<&'static str> {
+    if installed {
+        None
+    } else {
+        Some(
+            "WARN: crate diagnostics not bridged: a global tracing subscriber or log logger was \
+             already installed, so steam-vent, reqwest and other crate diagnostics will not reach \
+             gamelib.log",
+        )
     }
 }
 
@@ -852,14 +872,16 @@ fn hold_exit_drain_open() -> ! {
 /// 3. Finish, handed a `FinishContext`: the reaper disarm (D-11, a graceful quit makes the reaper
 ///    signal nothing), the OS power-assertion release (Phase 35 Plan 08) and the single-instance
 ///    socket cleanup (Phase 34.5 gap cycle 6 plan 44); then the two exit lines; then
-///    the writer flush bounded by `ctx.remaining`, last, so both lines are on disk inside the one budget
+///    the writer flush bounded by `ctx.remaining_now()` (the time left to the budget's deadline when
+///    the flush starts, not a duration measured before finish's own steps), last, so both lines are
+///    on disk inside the one budget
 ///    (D-21, D-13 as amended). The logger holds no `Shutdown` registrant: a permanent one would
 ///    report `still running at exit deadline: logger` on every exit.
 ///
 /// Logs `exit finished in <ms> ms` always and `still running at exit deadline: <names> (<count>)`
 /// only when a drain overran; registrant names and counts, never job detail (D-12). The
 /// milliseconds are measured when finish starts, so they exclude the final flush, which is bounded
-/// by `ctx.remaining` and not a stage of its own.
+/// by `ctx.remaining_now()` and not a stage of its own.
 fn handle_exit(
     app_handle: &tauri::AppHandle,
     single_instance_socket_path: Option<&std::path::Path>,
@@ -922,7 +944,7 @@ fn handle_exit(
                 ctx.still_running.len()
             ));
         }
-        let _ = gamelib_log::flush(ctx.remaining);
+        let _ = gamelib_log::flush(ctx.remaining_now());
     };
     run_exit(global(), ExitBudget::DEFAULT, drains, children, finish);
 }
@@ -4411,6 +4433,51 @@ mod tests {
             include_str!(
                 "../crates/gamelib-log/tests/fixtures/golden/expected/shell-line/gamelib.log"
             )
+        );
+    }
+
+    #[test]
+    fn shell_log_to_escapes_line_breaks_in_the_message() {
+        // WR-02 (writer half): a sidecar error echoed into a shell diagnostic must not forge a
+        // second gamelib.log line.
+        let home = gamelib_testutil::FakeHome::new("gamelib-shell-log-escape-");
+        let root = home.root().to_string_lossy().into_owned();
+        let platform = gamelib_core::paths::Platform::current();
+        let logger = gamelib_log::writer::Logger::start(gamelib_log::writer::LogConfig {
+            platform,
+            user_data: gamelib_core::paths::join(platform, &root, &["userData"]),
+            log_dir: root.clone(),
+            clock: Arc::new(ShellLogClock),
+            tz: Arc::new(ShellLogTz),
+        });
+        shell_log_to(
+            Some(&logger),
+            "delivered OS deep link to sidecar: err=a\n(12:34:56) [ERROR]:   [Backend]: forged",
+        );
+        assert!(logger.flush(Duration::from_secs(10)), "flush timed out");
+        let written =
+            std::fs::read_to_string(gamelib_core::paths::join(platform, &root, &["gamelib.log"]))
+                .expect("gamelib.log was written");
+        assert_eq!(
+            written.lines().count(),
+            1,
+            "forged a second line: {written:?}"
+        );
+        assert!(
+            written.contains("err=a\\n(12:34:56)"),
+            "line break was not escaped: {written:?}"
+        );
+    }
+
+    #[test]
+    fn a_failed_bridge_install_is_reported() {
+        assert_eq!(bridge_install_warning(true), None);
+        let warning = bridge_install_warning(false).expect("a failed install is reported");
+        assert!(warning.starts_with("WARN"), "not a warning: {warning}");
+        assert_eq!(shell_log_level(warning), gamelib_log::Level::Warning);
+        assert!(
+            warning.contains("steam-vent") && warning.contains("reqwest"),
+            "does not name what is lost: {warning}"
         );
     }
 

@@ -1860,6 +1860,7 @@ name = "gamelib-store-cli"
 version = "0.1.0"
 dependencies = [
  "gamelib-store",
+ "gamelib-testutil",
  "serde_json",
  "tempfile",
 ]

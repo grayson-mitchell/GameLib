@@ -133,15 +133,26 @@ pub struct ExitReport {
     pub still_running: Vec<&'static str>,
 }
 
-/// What the finish stage is told: the drains that overran, the time spent so far and the time left
-/// in the one exit budget (D-21). The finish stage logs its lines from this and then flushes the
-/// log writer for at most `remaining`, so the writer is the last thing to run and never waits on a
-/// budget of its own.
+/// What the finish stage is told: the drains that overran, the time spent so far and the deadline
+/// of the one exit budget (D-21). The finish stage logs its lines from this and then flushes the
+/// log writer for at most [`FinishContext::remaining_now`], so the writer is the last thing to run
+/// and never waits on a budget of its own. It is a deadline and not a duration measured at finish
+/// entry (IN-04): a duration goes stale while finish does its own work (reaper disarm, wake-lock
+/// release, socket cleanup, the exit lines), and a flush bounded by it would run past the budget by
+/// exactly that much.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FinishContext {
     pub still_running: Vec<&'static str>,
     pub elapsed: Duration,
-    pub remaining: Duration,
+    /// When the one exit budget ends: the instant `run_exit` started plus `budget.total`.
+    pub deadline: Instant,
+}
+
+impl FinishContext {
+    /// What is left of the exit budget right now, zero once the deadline has passed.
+    pub fn remaining_now(&self) -> Duration {
+        self.deadline.saturating_duration_since(Instant::now())
+    }
 }
 
 /// One exit-time drain: its registrant name and the work it runs with the drain budget.
@@ -183,7 +194,7 @@ pub fn run_exit(
     finish(&FinishContext {
         still_running: still_running.clone(),
         elapsed,
-        remaining: budget.total.saturating_sub(elapsed),
+        deadline: start + budget.total,
     });
     ExitReport {
         elapsed: start.elapsed(),
@@ -377,10 +388,9 @@ mod tests {
         let ctx = &seen[0];
         assert!(ctx.still_running.is_empty());
         assert!(ctx.elapsed < ExitBudget::DEFAULT.total);
-        assert_eq!(
-            ctx.remaining,
-            ExitBudget::DEFAULT.total.saturating_sub(ctx.elapsed)
-        );
+        // The deadline is fixed at the run's start, so what is left can only be at most the budget
+        // minus the time spent when finish was entered.
+        assert!(ctx.remaining_now() <= ExitBudget::DEFAULT.total.saturating_sub(ctx.elapsed));
         // The report is measured after finish, so it is never shorter than what finish was told.
         assert!(report.elapsed >= ctx.elapsed);
     }
@@ -415,12 +425,47 @@ mod tests {
         assert_eq!(runs.load(Ordering::SeqCst), 1);
         let seen = seen.lock().unwrap();
         assert_eq!(seen[0].still_running, vec!["stuck"]);
-        assert!(seen[0].remaining <= ms(100), "{:?}", seen[0].remaining);
-        assert_eq!(
-            seen[0].remaining,
-            budget.total.saturating_sub(seen[0].elapsed)
-        );
+        let left = seen[0].remaining_now();
+        assert!(left <= ms(100), "{left:?}");
+        assert!(left <= budget.total.saturating_sub(seen[0].elapsed));
         let _ = release.send(());
+    }
+
+    #[test]
+    fn finish_flush_time_is_measured_from_the_deadline_not_from_finish_entry() {
+        // IN-04: a duration computed before finish's own work goes stale while finish runs; a
+        // deadline does not.
+        let s = Shutdown::new();
+        let budget = ExitBudget {
+            total: ms(2000),
+            child_grace: ms(100),
+        };
+        let seen = Arc::new(Mutex::new(Vec::<(Duration, Duration, Instant)>::new()));
+        let sink = seen.clone();
+        let before = Instant::now();
+        run_exit(
+            &s,
+            budget,
+            Vec::new(),
+            |_| {},
+            move |ctx| {
+                let first = ctx.remaining_now();
+                thread::sleep(ms(100));
+                let second = ctx.remaining_now();
+                sink.lock().unwrap().push((first, second, ctx.deadline));
+            },
+        );
+        let after = Instant::now();
+        let seen = seen.lock().unwrap();
+        let (first, second, deadline) = seen[0];
+        assert!(
+            first.saturating_sub(second) >= ms(90),
+            "remaining_now did not shrink with finish's own work: {first:?} -> {second:?}"
+        );
+        assert!(
+            deadline >= before + budget.total && deadline <= after + budget.total,
+            "deadline is not the run's start plus the total budget"
+        );
     }
 
     #[test]

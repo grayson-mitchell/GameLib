@@ -175,9 +175,14 @@ fn write_private(path: &Path, data: &[u8]) -> io::Result<()> {
 }
 
 /// The persist seam: `rename` is a parameter so a test can force the failure without touching
-/// permissions. Writes `<file>.tmp-<pid>` (0600), renames it over the file, and when either step
-/// fails writes the file directly (the WR-05 fallback, kept from the retired TS file store); the
-/// temp file is removed either way.
+/// permissions. Writes `<file>.tmp-<pid>` (0600), then renames it over the file. The temp file is
+/// removed on any failure. Two failure arms, deliberately different (WR-03):
+///
+/// - the temp write fails (disk full, quota, a permission error on the new name): the error is
+///   returned and the live file is not touched, because a direct write would truncate it first and
+///   then fail the same way, leaving it empty;
+/// - the temp file was fully written and the rename fails (the Windows open-reader case): the file
+///   is written directly (the WR-05 fallback, kept from the retired TS file store).
 pub(crate) fn persist_atomic(
     path: &Path,
     data: &IndexMap<String, Value>,
@@ -191,8 +196,11 @@ pub(crate) fn persist_atomic(
     let mut tmp = path.as_os_str().to_owned();
     tmp.push(format!(".tmp-{}", std::process::id()));
     let tmp = PathBuf::from(tmp);
-    let atomic = write_private(&tmp, serialized.as_bytes()).and_then(|()| rename(&tmp, path));
-    if atomic.is_ok() {
+    if let Err(e) = write_private(&tmp, serialized.as_bytes()) {
+        let _ = fs::remove_file(&tmp);
+        return Err(e);
+    }
+    if rename(&tmp, path).is_ok() {
         return Ok(());
     }
     let direct = write_private(path, serialized.as_bytes());
@@ -438,6 +446,24 @@ mod tests {
             .filter(|n| n.contains(".tmp-"))
             .collect();
         assert!(leftovers.is_empty(), "{leftovers:?}");
+    }
+
+    #[test]
+    fn when_the_temp_write_fails_the_live_file_is_left_untouched() {
+        let home = FakeHome::new("gamelib-store-");
+        let file = seed(&home, TS_SHAPED);
+        let dir = dir_of(&home);
+        let store = StoreHost::new().open_cache(&dir, "uploadedLogs").unwrap();
+        // A directory on the temp name makes the temp open fail on every OS while the live file
+        // stays writable: a direct write would truncate it and succeed, which is the defect.
+        fs::create_dir(dir.join(format!("uploadedLogs.json.tmp-{}", std::process::id()))).unwrap();
+        assert!(store.set("https://dpaste.com/NEW1", json!(1)).is_err());
+        assert_eq!(fs::read_to_string(&file).unwrap(), TS_SHAPED);
+        assert_eq!(store.get("https://dpaste.com/NEW1"), None);
+        assert_eq!(
+            store.get("https://dpaste.com/AA11"),
+            Some(entry("gamelib.log", 1_795_133_100_000))
+        );
     }
 
     #[test]

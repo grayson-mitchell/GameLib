@@ -868,14 +868,17 @@ describe('SteamLibraryManager', () => {
     })
 
     describe('install.version from the ACF buildid (quick 261114-rc8)', () => {
-      const seedInstalled = (version?: string) =>
+      const seedInstalled = (
+        version?: string,
+        installPath = join('/steam', 'steamapps', 'common', 'dota2')
+      ) =>
         library.set('570', {
           runner: 'steam',
           app_name: '570',
           title: 'Dota 2',
           is_installed: true,
           install: {
-            install_path: join('/steam', 'steamapps', 'common', 'dota2'),
+            install_path: installPath,
             install_size: '50000 B',
             platform: 'Mac',
             ...(version ? { version } : {})
@@ -936,6 +939,31 @@ describe('SteamLibraryManager', () => {
         expect(sendFrontendMessage).toHaveBeenCalledWith(
           'pushGameToLibrary',
           expect.objectContaining({ app_name: '570' })
+        )
+      })
+
+      it('persists and pushes a path-only change (a moved install, quick 261122-9sl)', async () => {
+        seedInstalled('200', join('/old-lib', 'steamapps', 'common', 'dota2'))
+        mockAcf('200')
+        await manager.refreshInstallState()
+        expect(library.get('570')!.install).toEqual(
+          expect.objectContaining({
+            install_path: join('/steam', 'steamapps', 'common', 'dota2'),
+            version: '200'
+          })
+        )
+        expect(steamLibraryStore.set).toHaveBeenCalledWith(
+          'games',
+          expect.anything()
+        )
+        expect(sendFrontendMessage).toHaveBeenCalledWith(
+          'pushGameToLibrary',
+          expect.objectContaining({
+            app_name: '570',
+            install: expect.objectContaining({
+              install_path: join('/steam', 'steamapps', 'common', 'dota2')
+            })
+          })
         )
       })
 

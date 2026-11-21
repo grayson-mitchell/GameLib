@@ -149,7 +149,8 @@ export async function refresh(deps: ManagerDeps): Promise<ExecResult | null> {
  * result is only consulted when the native scan found nothing for that
  * appId, so the two roots are never double-counted or conflated.
  *
- * Only games whose state changed are pushed (avoids flooding the frontend).
+ * Only games whose state changed (installed flag, version, or install path) are
+ * pushed (avoids flooding the frontend).
  * The GameInfo install shape matches refresh() when installed:
  *   install_path, install_size, platform ('Windows' always for a bottle
  *   install; host-OS-derived for a native install)
@@ -239,7 +240,14 @@ export async function refreshInstallState(deps: ManagerDeps): Promise<void> {
       gameInfo.install?.version !==
         installVersionField(installedData.buildid).version
 
-    if (flipped || versionStale) {
+    // quick 261122-9sl (spike 090 step 7): the cached install_path was never re-derived after a
+    // move, so a game moved by GameLib or inside Steam showed "not available" until a full
+    // Refresh. A path-only change (same buildid, same installed flag) must also persist and push.
+    const pathStale =
+      isNowInstalled &&
+      gameInfo.install?.install_path !== installedData.installPath
+
+    if (flipped || versionStale || pathStale) {
       const updated: SteamGameInfo = {
         ...gameInfo,
         is_installed: isNowInstalled,

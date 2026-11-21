@@ -1,0 +1,492 @@
+[
+  {
+    "path": "backups/GamesConfig/112100.v0.20261118T075222416Z.bak.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "backups/GamesConfig/113200.v0.20261116T044224261Z.bak.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "backups/GamesConfig/1192621307.v0.20261121T083829288Z.bak.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "backups/GamesConfig/1207659037.v0.20261118T165422250Z.bak.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "backups/GamesConfig/1284190.v0.20261114T072509263Z.bak.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "backups/GamesConfig/1313144493.v0.20261121T083822335Z.bak.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "backups/GamesConfig/1769415595.v1.20261118T165248039Z.bak.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v1.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "backups/GamesConfig/208400.v0.20261118T075809469Z.bak.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "backups/GamesConfig/22000.v0.20261120T060902787Z.bak.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "backups/GamesConfig/248410.v0.20261117T062826636Z.bak.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "backups/GamesConfig/264160.v0.20261116T043433863Z.bak.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "backups/GamesConfig/3172700.v0.20261120T061318799Z.bak.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "backups/GamesConfig/3205720.v1.20261117T181337170Z.bak.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v1.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "backups/GamesConfig/333300.v0.20261114T073322780Z.bak.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "backups/GamesConfig/593280.v0.20261120T073749628Z.bak.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "backups/GamesConfig/632470.v0.20261118T081846434Z.bak.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "backups/GamesConfig/8870.v0.20261114T072458236Z.bak.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "backups/GamesConfig/951430.v0.20261117T070902411Z.bak.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "backups/GamesConfig/Emu.v0.20261117T054306352Z.bak.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "backups/config.v0.20261108T091637899Z.bak.json",
+    "result": "migrated",
+    "backups": [
+      "config.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "backups/config.v1.20261114T064824887Z.bak.json",
+    "result": "migrated",
+    "backups": [
+      "config.v1.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "backups/config.v1.from-phase68.20261109.json",
+    "result": "migrated",
+    "backups": [
+      "config.v1.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "backups/gog_store/installed.v1.20261114T043721642Z.bak.json",
+    "result": "migrated",
+    "backups": [
+      "gog_store/installed.v1.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "backups/gog_store/installed.v2.20261114T064824816Z.bak.json",
+    "result": "migrated",
+    "backups": [
+      "gog_store/installed.v2.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "backups/sideload_apps/library.v0.20261114T043721662Z.bak.json",
+    "result": "migrated",
+    "backups": [
+      "sideload_apps/library.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "backups/sideload_apps/library.v2.20261114T064824842Z.bak.json",
+    "result": "migrated",
+    "backups": [
+      "sideload_apps/library.v2.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "backups/store/download-manager.v1.20261114T043721628Z.bak.json",
+    "result": "migrated",
+    "backups": [
+      "store/download-manager.v1.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "backups/store/download-manager.v2.20261114T064824796Z.bak.json",
+    "result": "migrated",
+    "backups": [
+      "store/download-manager.v2.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "backups/store_cache/gog_library.v1.20261114T043721646Z.bak.json",
+    "result": "migrated",
+    "backups": [
+      "store_cache/gog_library.v1.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "backups/store_cache/gog_library.v2.20261114T064824825Z.bak.json",
+    "result": "migrated",
+    "backups": [
+      "store_cache/gog_library.v2.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "backups/store_cache/legendary_library.v1.20261114T043721651Z.bak.json",
+    "result": "migrated",
+    "backups": [
+      "store_cache/legendary_library.v1.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "backups/store_cache/legendary_library.v2.20261114T064824833Z.bak.json",
+    "result": "migrated",
+    "backups": [
+      "store_cache/legendary_library.v2.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "backups/store_cache/nile_library.v1.20261114T043721657Z.bak.json",
+    "result": "migrated",
+    "backups": [
+      "store_cache/nile_library.v1.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "backups/store_cache/nile_library.v2.20261114T064824840Z.bak.json",
+    "result": "migrated",
+    "backups": [
+      "store_cache/nile_library.v2.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "backups/store_cache/steam_library.v1.20261114T043721665Z.bak.json",
+    "result": "migrated",
+    "backups": [
+      "store_cache/steam_library.v1.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "backups/store_cache/steam_library.v2.20261114T064824847Z.bak.json",
+    "result": "migrated",
+    "backups": [
+      "store_cache/steam_library.v2.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "operator/GamesConfig/1491728574.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "operator/GamesConfig/1542190742.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "operator/GamesConfig/17710.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "operator/GamesConfig/1979367321.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "operator/GamesConfig/1Yk3fumGALbbDFMJgsGvDe.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "operator/GamesConfig/226840.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "operator/GamesConfig/228280.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "operator/GamesConfig/233310.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "operator/GamesConfig/238320.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "operator/GamesConfig/251570.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "operator/GamesConfig/257350.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "operator/GamesConfig/290300.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "operator/GamesConfig/291190.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "operator/GamesConfig/322330.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "operator/GamesConfig/337850.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "operator/GamesConfig/38400.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "operator/GamesConfig/391540.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "operator/GamesConfig/402060.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "operator/GamesConfig/41500.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "operator/GamesConfig/41900.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "operator/GamesConfig/424250.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "operator/GamesConfig/466560.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "operator/GamesConfig/54f7949350c949c6a2c47f12e7b15636.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v1.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "operator/GamesConfig/552620.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "operator/GamesConfig/63000.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "operator/GamesConfig/640820.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "operator/GamesConfig/8930.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "operator/GamesConfig/Iris.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "operator/GamesConfig/IrisContent.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "operator/GamesConfig/amzn1.adg.product.1d092246-e48f-40f6-83fd-924af905ca9b.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v1.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "operator/GamesConfig/amzn1.adg.product.dfd0ec0a-b2f5-421d-a94a-780431cc730f.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v1.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "operator/GamesConfig/cb3bf7ba89574a66ae3b795e039d4dbc.json",
+    "result": "migrated",
+    "backups": [
+      "GamesConfig/app.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "v0.8/config.json",
+    "result": "migrated",
+    "backups": [
+      "config.v0.20261121T090000000Z.bak.json"
+    ]
+  },
+  {
+    "path": "v0.9/config.json",
+    "result": "migrated",
+    "backups": [
+      "config.v0.20261121T090000000Z.bak.json"
+    ]
+  }
+]

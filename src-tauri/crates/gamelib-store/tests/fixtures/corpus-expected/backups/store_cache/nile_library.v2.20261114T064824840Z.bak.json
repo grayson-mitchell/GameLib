@@ -1,0 +1,68 @@
+{
+	"library": [
+		{
+			"app_name": "amzn1.adg.product.dfd0ec0a-b2f5-421d-a94a-780431cc730f",
+			"art_cover": "https://m.media-amazon.com/images/I/71H2dmmCT7L.jpg",
+			"art_logo": "https://m.media-amazon.com/images/I/41ai3P0G+fL.png",
+			"art_background": "https://m.media-amazon.com/images/I/71Mrorm-NVL.jpg",
+			"art_square": "https://m.media-amazon.com/images/I/91+QE-1kvLL.jpg",
+			"canRunOffline": true,
+			"install": {},
+			"folder_name": "Kiborg",
+			"is_installed": false,
+			"runner": "nile",
+			"title": "Kiborg",
+			"description": "A hybrid of old-school beat’em ups, shooters, and rogue-likes. The fights are fast, brutal, and deadly.",
+			"developer": "Sobaka Studio",
+			"extra": {
+				"reqs": [],
+				"genres": [
+					"Adventure",
+					"Fighting",
+					"Hack and slash/Beat 'em up"
+				],
+				"releaseDate": "2025-04-30T00:00:00Z"
+			},
+			"is_linux_native": false,
+			"is_mac_native": false
+		},
+		{
+			"app_name": "amzn1.adg.product.1d092246-e48f-40f6-83fd-924af905ca9b",
+			"art_cover": "https://m.media-amazon.com/images/I/71WFxzqk-EL.jpg",
+			"art_logo": "https://m.media-amazon.com/images/I/51A9BgMxowL.png",
+			"art_background": "https://m.media-amazon.com/images/I/71CWU0+TgfL.jpg",
+			"art_square": "https://m.media-amazon.com/images/I/91ur29wwlRL.jpg",
+			"canRunOffline": true,
+			"install": {
+				"install_path": "/Users/operator/Games/GameLib/Caravan SandWitch",
+				"install_size": "3.04 GiB",
+				"version": "3faaf97b-d2d1-4855-830b-6c413d0100ad",
+				"platform": "Windows"
+			},
+			"folder_name": "Caravan SandWitch",
+			"is_installed": true,
+			"runner": "nile",
+			"title": "Caravan SandWitch",
+			"description": "Embark on a journey across a Sci-Fi Provence-like world.",
+			"developer": "Studio Plane Toast",
+			"extra": {
+				"reqs": [],
+				"genres": [
+					"Adventure",
+					"Indie"
+				],
+				"releaseDate": "2024-09-12T00:00:00Z"
+			},
+			"is_linux_native": false,
+			"is_mac_native": false
+		}
+	],
+	"__timestamp": {
+		"library": "Sat Nov 14 2026 18:07:39 GMT+1300 (New Zealand Daylight Time)"
+	},
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 3
+		}
+	}
+}

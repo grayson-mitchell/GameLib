@@ -14,8 +14,10 @@
 //! more evicts the key with the oldest window, with its summary, so unique messages cannot grow
 //! memory.
 //!
-//! This module owns no clock and no file: the writer feeds it each entry's own timestamp and asks
-//! for closed windows (`expire`) on every message, on its tick and at flush (`drain`). Only
+//! This module owns no clock and no file: the writer feeds it each entry's timestamp clamped to the
+//! Logger's clock (a sender stamp in the future would otherwise hold a window open until eviction
+//! or drain) and asks for closed windows (`expire`) on every message, on its tick and at flush
+//! (`drain`). Only
 //! general-target line entries ever reach it. A game or runner transcript is raw child output users
 //! upload, and is never limited (D-15).
 

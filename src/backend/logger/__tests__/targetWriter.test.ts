@@ -208,6 +208,36 @@ describe('LogWriter facade over the forwarder', () => {
     expect(warnings).toHaveLength(bad.length)
   })
 
+  it('refuses a runner Rust would reject: one general WARNING, nothing sent (WR-01)', async () => {
+    const { index, LogWriter, frames } = load()
+    const w = new LogWriter({ kind: 'runner', runner: 'bogus' }, false)
+    await w.writeString('x\n')
+    await w.logInfo('x')
+    await index.flushLogForwarder()
+    expect(batchesFor(frames, 'runner')).toEqual([])
+    const general = batchesFor(frames, 'general').flatMap((b) => b.entries)
+    const warnings = general.filter(
+      (e) =>
+        'line' in e &&
+        e.line.level === 'WARNING' &&
+        e.line.msg.includes('log target refused: invalid runner')
+    )
+    expect(warnings).toHaveLength(1)
+  })
+
+  it('a rejected Promise write passes its rotate claim to the next write (WR-05)', async () => {
+    const { index, LogWriter, frames } = load()
+    const w = new LogWriter(GAME, false)
+    await expect(w.writeString(Promise.reject(new Error('x')))).rejects.toThrow(
+      'x'
+    )
+    await w.writeString('next\n')
+    await index.flushLogForwarder()
+    expect(batchesFor(frames, 'game')).toEqual([
+      { target: GAME, rotate: true, entries: [{ raw: 'next\n' }] }
+    ])
+  })
+
   it('accepts a 255-byte appName and one with spaces', async () => {
     const { index, LogWriter, frames } = load()
     await new LogWriter(

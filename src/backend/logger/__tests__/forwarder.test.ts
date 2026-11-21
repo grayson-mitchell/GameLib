@@ -1,11 +1,17 @@
 // Phase 84 plan 03 (D-10, D-12, Phase 72 D-04): the forwarder's liveness and loss rules. Each test
 // builds its own LogForwarder; the settle tests drive `logger/index.ts` through a fresh module.
 
+import { readFileSync } from 'fs'
+import { join } from 'path'
+
+import { LogPrefix } from '../constants'
 import {
   LOG_BATCH_MAX_BYTES,
   LOG_ENTRY_MAX_UTF16,
   LOG_FLUSH_TIMEOUT_MS,
+  LOG_GAME_TYPES,
   LOG_QUEUE_MAX_ENTRIES,
+  LOG_TARGET_RUNNERS,
   LogForwarder
 } from '../forwarder'
 import { stringifyLogValue } from '../stringifyLogValue'
@@ -279,6 +285,201 @@ describe('LogForwarder', () => {
       fw.enqueue(GAME, false, { raw: 'y'.repeat(300) })
     expect(fw.stats().droppedTotal).toBeGreaterThan(0)
     expect(fw.stats().queuedBytes).toBeLessThanOrEqual(1000)
+  })
+
+  describe('one bad entry never costs the shell a frame (WR-01)', () => {
+    it('replaces lone surrogates before queueing (WR-01)', () => {
+      const fw = new LogForwarder()
+      const transport = new FakeTransport()
+      fw.bind(transport)
+      fw.logLine(GENERAL, false, 'INFO', 'Backend', 'a\ud83db')
+      fw.enqueue(GAME, false, { raw: 'x\udc00' })
+      fw.logLine(GENERAL, false, 'INFO', 'Backend', 'pair 😀')
+      jest.advanceTimersByTime(50)
+      expect(transport.messages()).toEqual(['a\ufffdb', 'x\ufffd', 'pair 😀'])
+      for (const text of transport.messages())
+        expect(text.isWellFormed()).toBe(true)
+      const wire = JSON.stringify(transport.frames)
+      expect(wire).not.toMatch(/\\ud83d|\\udc00/i)
+    })
+
+    it('falls back to Backend for a prefix outside the closed set (WR-01)', () => {
+      const fw = new LogForwarder()
+      const transport = new FakeTransport()
+      fw.bind(transport)
+      fw.logLine(GENERAL, false, 'INFO', 'Nope', 'odd')
+      for (const prefix of Object.values(LogPrefix)) {
+        fw.logLine(GENERAL, false, 'INFO', prefix, `p:${prefix}`)
+      }
+      jest.advanceTimersByTime(50)
+      const lines = transport
+        .entries()
+        .map((e) => ('line' in e ? e.line : undefined))
+        .filter((l): l is NonNullable<typeof l> => l !== undefined)
+      expect(lines[0]).toMatchObject({ msg: 'odd', prefix: LogPrefix.Backend })
+      expect(lines.slice(1).map((l) => [l.msg, l.prefix])).toEqual(
+        Object.values(LogPrefix).map((p) => [`p:${p}`, p])
+      )
+    })
+
+    it('drops an entry whose target the shell would reject without losing the rest of the frame (WR-01)', () => {
+      const fw = new LogForwarder()
+      const transport = new FakeTransport()
+      fw.bind(transport)
+      fw.enqueue(GENERAL, false, { raw: 'g1' })
+      fw.enqueue({ kind: 'runner', runner: 'bogus' }, false, { raw: 'bad1' })
+      fw.enqueue(GAME, false, { raw: 'game1' })
+      fw.enqueue({ ...GAME, runner: 'comet' } as LogFrameTarget, false, {
+        raw: 'bad2'
+      })
+      fw.enqueue({ ...GAME, appName: '../x' } as LogFrameTarget, false, {
+        raw: 'bad3'
+      })
+      fw.enqueue(
+        { ...GAME, type: 'crash' } as unknown as LogFrameTarget,
+        false,
+        {
+          raw: 'bad4'
+        }
+      )
+      fw.enqueue(GENERAL, false, { raw: 'g2' })
+      expect(fw.stats().refusedTotal).toBe(4)
+      jest.advanceTimersByTime(50)
+      expect(transport.messages()).toEqual(['g1', 'game1', 'g2'])
+    })
+
+    it('the TS runner and game-type sets equal gamelib-core paths.rs (WR-01)', () => {
+      const source = readFileSync(
+        join(
+          __dirname,
+          '../../../../src-tauri/crates/gamelib-core/src/paths.rs'
+        ),
+        'utf-8'
+      )
+      const arms = (text: string, typeName: string): string[] => {
+        const impl = text.indexOf(`impl ${typeName} {`)
+        if (impl === -1) throw new Error(`no impl ${typeName} in paths.rs`)
+        const fn = text.indexOf('pub fn from_str', impl)
+        const end = text.indexOf('_ => return None', fn)
+        return [...text.slice(fn, end).matchAll(/"([^"]+)" =>/g)]
+          .map((m) => m[1])
+          .filter((v): v is string => v !== undefined)
+      }
+      const rustRunners = arms(source, 'LogRunner')
+      const rustTypes = arms(source, 'GameLogType')
+      expect([...LOG_TARGET_RUNNERS].sort()).toEqual([...rustRunners].sort())
+      expect([...LOG_GAME_TYPES].sort()).toEqual([...rustTypes].sort())
+      // Self-test: a dropped arm is reported.
+      const mutated = source.replace('"comet" => LogRunner::Comet,', '')
+      expect(mutated).not.toBe(source)
+      expect(arms(mutated, 'LogRunner')).not.toContain('comet')
+      expect(rustRunners).toHaveLength(6)
+      expect(rustTypes).toHaveLength(6)
+    })
+  })
+
+  describe('a rotate claim is not spent on an entry that never reaches a frame (WR-05)', () => {
+    const gameBatches = (frames: LogFrame[]) =>
+      frames.flatMap((f) => f.batch).filter((b) => b.target.kind === 'game')
+
+    it('moves a dropped rotate claim to the next surviving entry of the same target (WR-05)', () => {
+      const fw = new LogForwarder({ maxEntries: 2 })
+      fw.enqueue(GAME, true, { raw: 'first' })
+      fw.enqueue(GAME, false, { raw: 'second' })
+      fw.enqueue(GAME, false, { raw: 'third' })
+      expect(fw.stats().droppedTotal).toBe(1)
+      const transport = new FakeTransport()
+      fw.bind(transport)
+      expect(gameBatches(transport.frames)).toEqual([
+        {
+          target: GAME,
+          rotate: true,
+          entries: [{ raw: 'second' }, { raw: 'third' }]
+        }
+      ])
+    })
+
+    it('owes a rotation when no entry of the target survives (WR-05)', () => {
+      const fw = new LogForwarder({ maxEntries: 1 })
+      fw.enqueue(GAME, true, { raw: 'first' })
+      fw.enqueue(GENERAL, false, { raw: 'g' })
+      fw.enqueue(GAME, false, { raw: 'later' })
+      const transport = new FakeTransport()
+      fw.bind(transport)
+      expect(transport.messages()).not.toContain('first')
+      expect(gameBatches(transport.frames)).toEqual([
+        { target: GAME, rotate: true, entries: [{ raw: 'later' }] }
+      ])
+    })
+
+    it('carries a rotate claim past a rejected Promise message (WR-05)', async () => {
+      const fw = new LogForwarder()
+      const transport = new FakeTransport()
+      fw.bind(transport)
+      fw.logLine(GAME, true, 'INFO', '', Promise.reject(new Error('x')))
+      fw.logLine(GAME, false, 'INFO', '', 'after')
+      await fw.flush()
+      expect(transport.messages()).toEqual(['after'])
+      expect(gameBatches(transport.frames).map((b) => b.rotate)).toEqual([true])
+    })
+
+    it('never owes a rotation to a general target (WR-05)', () => {
+      const fw = new LogForwarder({ maxEntries: 1 })
+      fw.enqueue(GENERAL, true, { raw: 'a' })
+      fw.enqueue(GAME, false, { raw: 'b' })
+      fw.enqueue(GENERAL, false, { raw: 'c' })
+      const transport = new FakeTransport()
+      fw.bind(transport)
+      const general = transport.frames
+        .flatMap((f) => f.batch)
+        .filter((b) => b.target.kind === 'general')
+      expect(general.length).toBeGreaterThan(0)
+      expect(general.every((b) => !b.rotate)).toBe(true)
+    })
+  })
+
+  describe('flush is bounded in total (WR-06)', () => {
+    function stuckForwarder(): { fw: LogForwarder; transport: FakeTransport } {
+      const fw = new LogForwarder({ flushTimeoutMs: 50 })
+      const transport = new FakeTransport()
+      fw.bind(transport)
+      // A Promise message that never settles holds this writer's chain open forever.
+      fw.logLine(
+        GENERAL,
+        false,
+        'INFO',
+        '',
+        new Promise<string>(() => undefined)
+      )
+      fw.enqueue(GAME, false, { raw: 'other' })
+      return { fw, transport }
+    }
+
+    it('flush resolves within the timeout even when a Promise message never settles (WR-06)', async () => {
+      jest.useRealTimers()
+      const { fw, transport } = stuckForwarder()
+      const started = Date.now()
+      await fw.flush()
+      expect(Date.now() - started).toBeLessThan(1000)
+      expect(transport.messages()).toContain('other')
+    })
+
+    it('the deadline timer is unref d (WR-06)', async () => {
+      jest.useRealTimers()
+      const spy = jest.spyOn(global, 'setTimeout')
+      try {
+        const { fw } = stuckForwarder()
+        const flushed = fw.flush()
+        const timers = spy.mock.results
+          .map((r) => r.value as NodeJS.Timeout)
+          .filter((t) => typeof t?.hasRef === 'function')
+        expect(timers.length).toBeGreaterThanOrEqual(1)
+        for (const timer of timers) expect(timer.hasRef()).toBe(false)
+        await flushed
+      } finally {
+        spy.mockRestore()
+      }
+    })
   })
 
   describe('settle (logErrorSettled / logInfoSettled, the CR-01 contract)', () => {

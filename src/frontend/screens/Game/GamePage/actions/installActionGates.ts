@@ -15,8 +15,8 @@ import type { GameContextType } from 'frontend/types'
  * (gated on isInstalled alone, WR-02, D-14). Move, Set folder, Modify and
  * Verify keep their third-party exclusions.
  *
- * Phase 101 will flip the Steam Move/Verify gates here; today Steam hides
- * Move, Set folder and Update and shows Verify.
+ * Steam shows Move on macOS since quick 261122-9sl (Steam's own MoveApp through the bridge
+ * helper); Set folder and Update stay hidden for Steam, and Verify shows.
  */
 
 export type InstallActionId =
@@ -115,6 +115,10 @@ export function installActionGates({
   const managedStore =
     isInstalled && !isSideloaded && !isSteam && !isThirdPartyManaged
 
+  // quick 261122-9sl: Move for an installed Steam game, macOS only. `is.mac` is the host platform;
+  // the backend refuses off macOS anyway, so this only hides a button that would always refuse.
+  const steamMove = isInstalled && isSteam && !isThirdPartyManaged && is.mac
+
   let verify: InstallActionGate = hidden
   if (isInstalled && !isSideloaded && !isThirdPartyManaged) {
     if (active) {
@@ -142,7 +146,7 @@ export function installActionGates({
 
   return {
     open: unaffected(isInstalled),
-    move: conflicting(managedStore),
+    move: conflicting(managedStore || steamMove),
     setFolder: conflicting(managedStore),
     modify: conflicting(
       isInstalled &&

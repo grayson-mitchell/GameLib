@@ -92,6 +92,14 @@ function enqueueLogEntry(
   logForwarder.enqueue(target, rotate, entry)
 }
 
+/**
+ * Records that a rotation a writer claimed did not reach a frame (a rejected Promise message), so
+ * the next entry for the target carries it (WR-05). Bound at call time like `enqueueLogEntry`.
+ */
+function oweLogRotation(target: LogFrameTarget): void {
+  logForwarder.oweRotation(target)
+}
+
 /** Queues one structured line for a typed target (the facade's `logDebug|Info|Warning|Error`). */
 function logLine(
   target: LogFrameTarget,
@@ -191,6 +199,7 @@ export function logBootFacts(): void {
 export {
   bindLogTransport,
   enqueueLogEntry,
+  oweLogRotation,
   logLine,
   flushLogForwarder,
   initHeadless,

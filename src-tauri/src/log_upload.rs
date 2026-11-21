@@ -150,8 +150,10 @@ impl PasteClient for OfflinePaste {
 }
 
 /// The paste URL if (and only if) it is `https` on the host exactly `dpaste.com`, with no
-/// credentials and no explicit port; the trimmed text otherwise `None`. A hostile or spoofed
-/// response must never decide which URL is stored, returned or later requested (V13).
+/// credentials and no explicit port, returned as the parsed URL's own serialisation (so a tab or
+/// line break the parser strips from the response text never reaches the store, the renderer or the
+/// log); `None` otherwise. A hostile or spoofed response must never decide which URL is stored,
+/// returned or later requested (V13).
 pub(crate) fn validate_paste_url(text: &str) -> Option<String> {
     let trimmed = text.trim();
     let parsed = url::Url::parse(trimmed).ok()?;
@@ -160,7 +162,7 @@ pub(crate) fn validate_paste_url(text: &str) -> Option<String> {
         && parsed.username().is_empty()
         && parsed.password().is_none()
         && parsed.port().is_none();
-    plain.then(|| trimmed.to_string())
+    plain.then(|| parsed.to_string())
 }
 
 /// The first `max` characters of `text`.
@@ -727,6 +729,52 @@ mod tests {
         ] {
             assert_eq!(validate_paste_url(bad), None, "{bad:?}");
         }
+    }
+
+    #[test]
+    fn log_upload_returns_the_parsed_url_not_the_raw_text() {
+        // The WHATWG parser strips tab and line break and percent-encodes a space; the value
+        // returned must be that serialisation, not the trimmed input.
+        for (raw, normalised) in [
+            ("https://dpaste.com/AB\nCD", "https://dpaste.com/ABCD"),
+            ("https://dpaste.com/AB\tCD", "https://dpaste.com/ABCD"),
+            ("https://dpaste.com/a b", "https://dpaste.com/a%20b"),
+        ] {
+            assert_eq!(
+                validate_paste_url(raw).as_deref(),
+                Some(normalised),
+                "{raw:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn log_upload_records_the_normalised_url_when_the_response_embeds_a_line_break() {
+        let (base, _seen) = serve(vec![ok("https://dpaste.com/AB\nCD\n")]);
+        let rig = Rig::local(base);
+        rig.seed(&["gamelib.log"], b"x");
+        let result = rig.upload(vec![json!("Heroic log"), json!({})]).unwrap();
+
+        let url = "https://dpaste.com/ABCD";
+        assert_eq!(result[0], json!(url));
+        let stored = rig.stored();
+        assert_eq!(stored.len(), 1);
+        assert_eq!(stored[0].0, url);
+        assert_eq!(
+            rig.emitter.0.lock().unwrap().clone(),
+            vec![(
+                "logFileUploaded".to_string(),
+                vec![json!(url), result[1].clone()]
+            )]
+        );
+        let logged = rig.logged();
+        assert_eq!(logged.len(), 1);
+        assert!(logged[0].1.contains(url), "{:?}", logged[0].1);
+        assert!(
+            !logged[0].1.contains('\n') && !logged[0].1.contains('\r'),
+            "{:?}",
+            logged[0].1
+        );
     }
 
     #[test]

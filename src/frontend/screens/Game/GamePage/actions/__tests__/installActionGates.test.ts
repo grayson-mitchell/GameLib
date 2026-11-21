@@ -84,7 +84,7 @@ describe('installActionGates', () => {
     expect(g.locate.show).toBe(false)
   })
 
-  it('steam installed: move, set folder, update and modify hide; verify, uninstall, remove-all show; no prefix', () => {
+  it('steam installed off macOS: move, set folder, update and modify hide; verify, uninstall, remove-all show; no prefix', () => {
     const g = gates('steam')
     expect(g.move.show).toBe(false)
     expect(g.setFolder.show).toBe(false)
@@ -94,6 +94,45 @@ describe('installActionGates', () => {
     expect(g.uninstall.show).toBe(true)
     expect(g.removeAllCopies.show).toBe(true)
     expect(g.openPrefix.show).toBe(false)
+  })
+
+  describe('steam Move on macOS (quick 261122-9sl)', () => {
+    it('shows Move, live when idle; set folder, update and modify stay hidden', () => {
+      const g = gates('steam', { is: { mac: true } })
+      expect(g.move).toEqual({ show: true, disabled: false })
+      expect(g.setFolder.show).toBe(false)
+      expect(g.update.show).toBe(false)
+      expect(g.modify.show).toBe(false)
+    })
+
+    it('disables Move while the game is playing', () => {
+      expect(gates('steam', { is: { mac: true, playing: true } }).move).toEqual(
+        { show: true, disabled: true, reason: 'playing' }
+      )
+    })
+
+    it('disables verify and uninstall during a move', () => {
+      const g = gates('steam', { is: { mac: true, moving: true } })
+      expect(g.verify).toEqual({ show: true, disabled: true, reason: 'moving' })
+      expect(g.uninstall).toEqual({
+        show: true,
+        disabled: true,
+        reason: 'moving'
+      })
+    })
+
+    it('hides Move for a Steam game that is not installed', () => {
+      expect(
+        gates('steam', { isInstalled: false, is: { mac: true } }).move.show
+      ).toBe(false)
+    })
+
+    it('hides Move for a third-party managed Steam game', () => {
+      expect(
+        gates('steam', { isThirdPartyManaged: true, is: { mac: true } }).move
+          .show
+      ).toBe(false)
+    })
   })
 
   it('sideload installed: verify, move, set folder and update hide; uninstall shows', () => {

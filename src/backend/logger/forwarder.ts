@@ -1,7 +1,9 @@
 import { LOG_FRAME_KIND } from 'common/types/sidecarTransport'
+import { LogPrefix } from './constants'
 import { stringifyLogValue } from './stringifyLogValue'
 
 import type {
+  GameLogType,
   LogFrame,
   LogFrameBatch,
   LogFrameEntry,
@@ -54,6 +56,30 @@ export const LOG_ENTRY_MAX_UTF16 = 1024 * 1024
 /** How long a settle (`flush`) waits for the stream's write callback at most. */
 export const LOG_FLUSH_TIMEOUT_MS = 2000
 
+/**
+ * The runners the shell's path resolver accepts (`gamelib-core` `LogRunner::from_str`; a test pins
+ * the pair). A game target additionally refuses `comet`, as the shell's `target_of` does.
+ */
+export const LOG_TARGET_RUNNERS: readonly string[] = [
+  'legendary',
+  'gog',
+  'nile',
+  'sideload',
+  'steam',
+  'comet'
+]
+/** The game log types the shell accepts (`gamelib-core` `GameLogType::from_str`; a test pins the pair). */
+export const LOG_GAME_TYPES: readonly GameLogType[] = [
+  'launch',
+  'install',
+  'import',
+  'repair',
+  'update',
+  'setup'
+]
+/** What the Rust path resolver accepts for an appName (`gamelib-core` `validate_app_name`). */
+const APP_NAME_MAX_BYTES = 255
+
 /** Units kept free under the cap for the `…[truncated N bytes]` marker (the marker is under 40). */
 const TRUNCATION_RESERVE = 64
 /** Added to every entry's size so a flood of tiny entries still counts against the byte cap. */
@@ -87,6 +113,8 @@ export interface LogForwarderStats {
   /** Entries dropped and not yet reported by a `lines dropped` line. */
   pendingDropped: number
   droppedTotal: number
+  /** Entries never queued because their target is one the shell would reject (WR-01). */
+  refusedTotal: number
   framesSent: number
   bound: boolean
 }
@@ -97,6 +125,44 @@ interface QueuedEntry {
   rotate: boolean
   entry: LogFrameEntry
   bytes: number
+}
+
+function isValidAppName(appName: string): boolean {
+  if (appName.length === 0) return false
+  // serde_json refuses a lone surrogate, which would cost the shell the whole frame.
+  if (!appName.isWellFormed()) return false
+  if (Buffer.byteLength(appName, 'utf8') > APP_NAME_MAX_BYTES) return false
+  if (appName.includes('\0')) return false
+  if (appName.includes('/') || appName.includes('\\')) return false
+  if (appName.includes('..')) return false
+  return true
+}
+
+/**
+ * Why the shell would reject a frame carrying this target, or null when it accepts it (WR-01). The
+ * one predicate the forwarder (never queue such an entry) and the per-target facade (refuse at
+ * construction) share, so a target is judged the same way in both places.
+ */
+export function logTargetRefusal(target: LogFrameTarget): string | null {
+  switch (target.kind) {
+    case 'general':
+    case 'gogRedist':
+      return null
+    case 'runner':
+      return LOG_TARGET_RUNNERS.includes(target.runner)
+        ? null
+        : 'invalid runner'
+    case 'game':
+      if (
+        !LOG_TARGET_RUNNERS.includes(target.runner) ||
+        target.runner === 'comet'
+      )
+        return 'invalid runner'
+      if (!LOG_GAME_TYPES.includes(target.type)) return 'invalid type'
+      return isValidAppName(target.appName) ? null : 'invalid appName'
+    default:
+      return 'invalid kind'
+  }
 }
 
 function targetKey(target: LogFrameTarget): string {
@@ -130,6 +196,29 @@ function clipEntry(entry: LogFrameEntry): LogFrameEntry {
   return { line: { ...entry.line, msg: clipText(entry.line.msg) } }
 }
 
+function wellFormed(text: string): string {
+  return text.isWellFormed() ? text : text.toWellFormed()
+}
+
+/**
+ * Makes one entry acceptable to the shell (WR-01): a lone surrogate (which serde_json refuses,
+ * costing the shell the whole frame) becomes U+FFFD, and a line prefix outside the closed
+ * `LogPrefix` set becomes `Backend`. Returns the same object when nothing needs changing.
+ */
+function sanitiseEntry(entry: LogFrameEntry): LogFrameEntry {
+  if ('raw' in entry) {
+    const raw = wellFormed(entry.raw)
+    return raw === entry.raw ? entry : { raw }
+  }
+  const { msg, prefix } = entry.line
+  const cleanMsg = wellFormed(msg)
+  const cleanPrefix = Object.values(LogPrefix).includes(prefix)
+    ? prefix
+    : LogPrefix.Backend
+  if (cleanMsg === msg && cleanPrefix === prefix) return entry
+  return { line: { ...entry.line, msg: cleanMsg, prefix: cleanPrefix } }
+}
+
 function entryBytes(entry: LogFrameEntry): number {
   return textOf(entry).length + ENTRY_OVERHEAD_BYTES
 }
@@ -148,6 +237,7 @@ export class LogForwarder {
   /** Entries dropped since the last `lines dropped` line was sent. */
   #dropped = 0
   #droppedTotal = 0
+  #refusedTotal = 0
   #maxQueuedEntries = 0
   #maxQueuedBytes = 0
   #framesSent = 0
@@ -162,6 +252,12 @@ export class LogForwarder {
 
   /** Per writer key: the tail of the chain of Promise-valued messages not yet enqueued. */
   readonly #chains = new Map<string, Promise<void>>()
+  /**
+   * Targets whose rotation was claimed by an entry that never reached a frame (evicted, or its
+   * Promise message rejected): the next entry enqueued for the target carries the rotation instead.
+   * Instance state, not module state (moduleStateCensus).
+   */
+  readonly #owedRotations = new Set<string>()
   #waiters: (() => void)[] = []
 
   constructor(caps: LogForwarderCaps = {}) {
@@ -210,7 +306,10 @@ export class LogForwarder {
       if (typeof body !== 'string') body.catch(() => undefined)
       const link = (tail ?? Promise.resolve())
         .then(() => body)
-        .then(emit, () => undefined)
+        .then(emit, () => {
+          // The line never reaches a frame: its rotation is not spent (WR-05).
+          if (rotate) this.oweRotation(target)
+        })
       this.#chains.set(key, link)
       void link.then(() => {
         if (this.#chains.get(key) === link) this.#chains.delete(key)
@@ -220,15 +319,31 @@ export class LogForwarder {
     }
   }
 
+  /**
+   * Records that a rotation claimed for `target` did not reach a frame, so the next entry queued for
+   * that target carries it (WR-05). A general target never rotates, so it owes nothing.
+   */
+  oweRotation(target: LogFrameTarget): void {
+    if (target.kind === 'general' || logTargetRefusal(target) !== null) return
+    this.#owedRotations.add(targetKey(target))
+  }
+
   /** Queues one entry (a line with its own timestamp, or a raw chunk). Never throws. */
   enqueue(target: LogFrameTarget, rotate: boolean, entry: LogFrameEntry): void {
     try {
-      const clipped = clipEntry(entry)
+      if (logTargetRefusal(target) !== null) {
+        // One bad target would cost the shell a whole frame of other writers' lines.
+        this.#refusedTotal += 1
+        return
+      }
+      const clipped = sanitiseEntry(clipEntry(entry))
       const bytes = entryBytes(clipped)
+      const key = targetKey(target)
       this.#queue.push({
         target,
-        key: targetKey(target),
-        rotate,
+        key,
+        // An owed rotation is spent here, on an entry that is queued.
+        rotate: this.#owedRotations.delete(key) || rotate,
         entry: clipped,
         bytes
       })
@@ -247,29 +362,56 @@ export class LogForwarder {
 
   /**
    * Resolves once everything queued so far has been handed to the transport and its write callback
-   * has run, after at most `LOG_FLUSH_TIMEOUT_MS`, or at once when no transport is bound. Never
-   * rejects. The fatal `uncaughtException` guard awaits this before exiting, so it must not hang.
+   * has run, or at once when no transport is bound. The whole call, the wait on Promise-valued
+   * messages and the wait on the transport together, takes at most `LOG_FLUSH_TIMEOUT_MS` (one
+   * deadline taken at entry, WR-06): a message that never settles cannot hold it, and the lines of
+   * other writers are still handed to the transport. Never rejects. The fatal `uncaughtException`
+   * guard awaits this before exiting, so it must not hang.
    */
   async flush(): Promise<void> {
+    const deadline = Date.now() + this.#flushTimeoutMs
     try {
-      while (this.#chains.size > 0) {
-        await Promise.all([...this.#chains.values()])
-      }
+      await this.#settleChains(deadline)
       if (this.#transport === null) return
       this.#pump()
       if (this.#isIdle()) return
+      // Whatever is left of the one deadline, never more than a full timeout (a clock step back).
+      const left = Math.min(
+        this.#flushTimeoutMs,
+        Math.max(0, deadline - Date.now())
+      )
       await new Promise<void>((resolve) => {
         const done = (): void => {
           clearTimeout(timer)
           this.#waiters = this.#waiters.filter((w) => w !== done)
           resolve()
         }
-        const timer = setTimeout(done, this.#flushTimeoutMs)
+        const timer = setTimeout(done, left)
         timer.unref?.()
         this.#waiters.push(done)
       })
     } catch {
       // Settling never rejects.
+    }
+  }
+
+  /** Waits for the Promise-valued messages in flight, giving up at `deadline` (WR-06). */
+  async #settleChains(deadline: number): Promise<void> {
+    while (this.#chains.size > 0) {
+      const left = deadline - Date.now()
+      if (left <= 0) return
+      let timer: ReturnType<typeof setTimeout> | undefined
+      const expired = new Promise<boolean>((resolve) => {
+        timer = setTimeout(() => resolve(true), left)
+        // convention 3 (the sidecar's exit contract): never hold the loop.
+        timer.unref?.()
+      })
+      const timedOut = await Promise.race([
+        Promise.all([...this.#chains.values()]).then(() => false),
+        expired
+      ])
+      clearTimeout(timer)
+      if (timedOut) return
     }
   }
 
@@ -281,6 +423,7 @@ export class LogForwarder {
       maxQueuedBytes: this.#maxQueuedBytes,
       pendingDropped: this.#dropped,
       droppedTotal: this.#droppedTotal,
+      refusedTotal: this.#refusedTotal,
       framesSent: this.#framesSent,
       bound: this.#transport !== null
     }
@@ -311,8 +454,21 @@ export class LogForwarder {
       this.#queuedBytes -= oldest.bytes
       this.#dropped += 1
       this.#droppedTotal += 1
+      if (oldest.rotate) this.#passRotation(oldest)
     }
     this.#compact()
+  }
+
+  /** An evicted entry carried a rotation: hand it to the target's next queued entry, or owe it (WR-05). */
+  #passRotation(evicted: QueuedEntry): void {
+    for (let i = this.#head; i < this.#queue.length; i += 1) {
+      const next = this.#queue[i]
+      if (next !== undefined && next.key === evicted.key) {
+        next.rotate = true
+        return
+      }
+    }
+    this.oweRotation(evicted.target)
   }
 
   #compact(): void {

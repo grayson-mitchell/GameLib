@@ -1,0 +1,3843 @@
+{
+	"library": [
+		{
+			"app_name": "54f7949350c949c6a2c47f12e7b15636",
+			"art_cover": "https://cdn1.epicgames.com/spt-assets/113ae486fe9040d89a7fc25a501dc3b9/trash-goblin-rg9jv.png",
+			"art_square": "https://cdn1.epicgames.com/spt-assets/113ae486fe9040d89a7fc25a501dc3b9/trash-goblin-195pl.png",
+			"cloud_save_enabled": true,
+			"developer": "Spilt Milk Studios",
+			"extra": {
+				"about": {
+					"description": "Trash Goblin",
+					"shortDescription": ""
+				},
+				"reqs": [],
+				"storeUrl": "https://www.epicgames.com/store/product/trash-goblin"
+			},
+			"dlcList": [
+				{
+					"ageGatings": {},
+					"categories": [
+						{
+							"path": "addons"
+						}
+					],
+					"creationDate": "2026-04-28T17:17:10.307Z",
+					"description": "Trash Goblin - Spiffo Plush Trinket",
+					"developer": "Spilt Milk Studios",
+					"developerId": "o-at4ndketztkls9w75hjpcxhxtaxv75",
+					"endOfSupport": false,
+					"entitlementName": "18f0418693be494eadb59ae8ccdfb18d",
+					"entitlementType": "EXECUTABLE",
+					"id": "18f0418693be494eadb59ae8ccdfb18d",
+					"itemType": "DURABLE",
+					"keyImages": [
+						{
+							"alt": "Trash Goblin Trash Goblin - Spiffo Plush Trinket Offer",
+							"height": 1440,
+							"md5": "220fb11b262ebe9d2b083364e396c88b",
+							"size": 2445579,
+							"type": "DieselGameBox",
+							"uploadedDate": "2026-04-15T20:43:05.359Z",
+							"url": "https://cdn1.epicgames.com/spt-assets/113ae486fe9040d89a7fc25a501dc3b9/trash-goblin-1txbk.png",
+							"width": 2560
+						},
+						{
+							"alt": "Download Trash Goblin Trash Goblin - Spiffo Plush Trinket Offer",
+							"height": 1600,
+							"md5": "118e9e9a5c283c85b2100c8724307cd7",
+							"size": 1398039,
+							"type": "DieselGameBoxTall",
+							"uploadedDate": "2026-04-15T20:43:12.985Z",
+							"url": "https://cdn1.epicgames.com/spt-assets/113ae486fe9040d89a7fc25a501dc3b9/trash-goblin-twtpl.png",
+							"width": 1200
+						}
+					],
+					"lastModifiedDate": "2026-04-28T17:17:10.307Z",
+					"mainGameItem": {
+						"id": "e52e38a83c9546c1b6a7c592c91c5dd9",
+						"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+						"unsearchable": false
+					},
+					"mainGameItemList": [
+						{
+							"id": "e52e38a83c9546c1b6a7c592c91c5dd9",
+							"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+							"unsearchable": false
+						}
+					],
+					"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+					"requiresSecureAccount": false,
+					"status": "ACTIVE",
+					"title": "Trash Goblin - Spiffo Plush Trinket",
+					"unsearchable": false
+				},
+				{
+					"ageGatings": {},
+					"categories": [
+						{
+							"path": "addons"
+						}
+					],
+					"creationDate": "2026-04-28T17:17:10.333Z",
+					"description": "Trash Goblin - Goblin Plush Trinket",
+					"developer": "Spilt Milk Studios",
+					"developerId": "o-at4ndketztkls9w75hjpcxhxtaxv75",
+					"endOfSupport": false,
+					"entitlementName": "e433525a2afd4b498a03c9732414779d",
+					"entitlementType": "EXECUTABLE",
+					"id": "e433525a2afd4b498a03c9732414779d",
+					"itemType": "DURABLE",
+					"keyImages": [
+						{
+							"alt": "Trash Goblin Trash Goblin - Goblin Plush Trinket Offer",
+							"height": 1440,
+							"md5": "6f212ccc31456bd6ee024e7f49d8c1e5",
+							"size": 2829047,
+							"type": "DieselGameBox",
+							"uploadedDate": "2026-04-15T20:42:35.859Z",
+							"url": "https://cdn1.epicgames.com/spt-assets/113ae486fe9040d89a7fc25a501dc3b9/trash-goblin-mxdg9.png",
+							"width": 2560
+						},
+						{
+							"alt": "Download Trash Goblin Trash Goblin - Goblin Plush Trinket Offer",
+							"height": 1600,
+							"md5": "2650e81d6915c47077c0191ae2537e25",
+							"size": 1576405,
+							"type": "DieselGameBoxTall",
+							"uploadedDate": "2026-04-15T20:42:40.285Z",
+							"url": "https://cdn1.epicgames.com/spt-assets/113ae486fe9040d89a7fc25a501dc3b9/trash-goblin-sw8i0.png",
+							"width": 1200
+						}
+					],
+					"lastModifiedDate": "2026-04-28T17:17:10.333Z",
+					"mainGameItem": {
+						"id": "e52e38a83c9546c1b6a7c592c91c5dd9",
+						"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+						"unsearchable": false
+					},
+					"mainGameItemList": [
+						{
+							"id": "e52e38a83c9546c1b6a7c592c91c5dd9",
+							"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+							"unsearchable": false
+						}
+					],
+					"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+					"requiresSecureAccount": false,
+					"status": "ACTIVE",
+					"title": "Trash Goblin - Goblin Plush Trinket",
+					"unsearchable": false
+				},
+				{
+					"ageGatings": {},
+					"applicationId": "",
+					"categories": [
+						{
+							"path": "addons"
+						}
+					],
+					"creationDate": "2026-04-28T17:17:10.321Z",
+					"customAttributes": {},
+					"description": "Trash Goblin - Collector's Gift Set",
+					"developer": "Spilt Milk Studios",
+					"developerId": "o-at4ndketztkls9w75hjpcxhxtaxv75",
+					"endOfSupport": false,
+					"entitlementName": "791d927ed9a6428cbdf97836c6df38b1",
+					"entitlementType": "EXECUTABLE",
+					"id": "791d927ed9a6428cbdf97836c6df38b1",
+					"itemType": "DURABLE",
+					"keyImages": [
+						{
+							"alt": "Trash Goblin Trash Goblin - Collector's Gift Set Offer",
+							"height": 1440,
+							"md5": "59344da3831c91f2ff02058dbba0b893",
+							"size": 2332630,
+							"type": "DieselGameBox",
+							"uploadedDate": "2026-04-15T20:40:37.865Z",
+							"url": "https://cdn1.epicgames.com/spt-assets/113ae486fe9040d89a7fc25a501dc3b9/trash-goblin-1cfyh.png",
+							"width": 2560
+						},
+						{
+							"alt": "Download Trash Goblin Trash Goblin - Collector's Gift Set Offer",
+							"height": 1600,
+							"md5": "8fd26ba877092f55c540baa029ce5dbf",
+							"size": 1202835,
+							"type": "DieselGameBoxTall",
+							"uploadedDate": "2026-04-15T20:40:46.758Z",
+							"url": "https://cdn1.epicgames.com/spt-assets/113ae486fe9040d89a7fc25a501dc3b9/trash-goblin-13k86.png",
+							"width": 1200
+						}
+					],
+					"lastModifiedDate": "2026-04-28T17:17:10.321Z",
+					"mainGameItem": {
+						"id": "e52e38a83c9546c1b6a7c592c91c5dd9",
+						"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+						"unsearchable": false
+					},
+					"mainGameItemList": [
+						{
+							"id": "e52e38a83c9546c1b6a7c592c91c5dd9",
+							"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+							"unsearchable": false
+						}
+					],
+					"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+					"releaseInfo": [],
+					"requiresSecureAccount": false,
+					"status": "ACTIVE",
+					"title": "Trash Goblin - Collector's Gift Set",
+					"unsearchable": false
+				},
+				{
+					"ageGatings": {},
+					"categories": [
+						{
+							"path": "addons"
+						}
+					],
+					"creationDate": "2026-04-28T17:17:10.325Z",
+					"description": "Trash Goblin - Founder's Pack",
+					"developer": "Spilt Milk Studios",
+					"developerId": "o-at4ndketztkls9w75hjpcxhxtaxv75",
+					"endOfSupport": false,
+					"entitlementName": "952700de377d467ca525586f149e9e8f",
+					"entitlementType": "EXECUTABLE",
+					"id": "952700de377d467ca525586f149e9e8f",
+					"itemType": "DURABLE",
+					"keyImages": [
+						{
+							"alt": "Trash Goblin Trash Goblin - Founder's Pack Offer",
+							"height": 1440,
+							"md5": "afd98b7f4ce13868f0f035d6eba676b1",
+							"size": 2326392,
+							"type": "DieselGameBox",
+							"uploadedDate": "2026-04-15T20:41:20.326Z",
+							"url": "https://cdn1.epicgames.com/spt-assets/113ae486fe9040d89a7fc25a501dc3b9/trash-goblin-7wqsv.png",
+							"width": 2560
+						},
+						{
+							"alt": "Download Trash Goblin Trash Goblin - Founder's Pack Offer",
+							"height": 1600,
+							"md5": "29b2f664291fcda18d12a96737c13120",
+							"size": 1198328,
+							"type": "DieselGameBoxTall",
+							"uploadedDate": "2026-04-15T20:41:16.049Z",
+							"url": "https://cdn1.epicgames.com/spt-assets/113ae486fe9040d89a7fc25a501dc3b9/trash-goblin-r6kpd.png",
+							"width": 1200
+						}
+					],
+					"lastModifiedDate": "2026-04-28T17:17:10.325Z",
+					"mainGameItem": {
+						"id": "e52e38a83c9546c1b6a7c592c91c5dd9",
+						"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+						"unsearchable": false
+					},
+					"mainGameItemList": [
+						{
+							"id": "e52e38a83c9546c1b6a7c592c91c5dd9",
+							"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+							"unsearchable": false
+						}
+					],
+					"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+					"requiresSecureAccount": false,
+					"status": "ACTIVE",
+					"title": "Trash Goblin - Founder's Pack",
+					"unsearchable": false
+				},
+				{
+					"ageGatings": {},
+					"categories": [
+						{
+							"path": "addons"
+						}
+					],
+					"creationDate": "2026-04-15T16:01:40.207Z",
+					"description": "Trash Goblin - The Artist of Brimhaven",
+					"developer": "Spilt Milk Studios",
+					"developerId": "o-at4ndketztkls9w75hjpcxhxtaxv75",
+					"endOfSupport": false,
+					"entitlementName": "10ae18e9181d4758bdf7408cf866136b",
+					"entitlementType": "EXECUTABLE",
+					"id": "10ae18e9181d4758bdf7408cf866136b",
+					"itemType": "DURABLE",
+					"keyImages": [
+						{
+							"alt": "Trash Goblin Trash Goblin - The Artist of Brimhaven Offer",
+							"height": 1440,
+							"md5": "0f82fe5ff9c68edc6284fad6e141cdfd",
+							"size": 1020331,
+							"type": "DieselGameBox",
+							"uploadedDate": "2026-04-15T20:45:07.716Z",
+							"url": "https://cdn1.epicgames.com/spt-assets/113ae486fe9040d89a7fc25a501dc3b9/trash-goblin-s3u81.jpg",
+							"width": 2560
+						},
+						{
+							"alt": "Download Trash Goblin Trash Goblin - The Artist of Brimhaven Offer",
+							"height": 1600,
+							"md5": "51b0774b9b5c570e6bc629efdb1ee505",
+							"size": 2751454,
+							"type": "DieselGameBoxTall",
+							"uploadedDate": "2026-04-15T20:43:44.115Z",
+							"url": "https://cdn1.epicgames.com/spt-assets/113ae486fe9040d89a7fc25a501dc3b9/trash-goblin-1dd6l.png",
+							"width": 1200
+						}
+					],
+					"lastModifiedDate": "2026-07-07T19:30:41.548Z",
+					"mainGameItem": {
+						"id": "e52e38a83c9546c1b6a7c592c91c5dd9",
+						"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+						"unsearchable": false
+					},
+					"mainGameItemList": [
+						{
+							"id": "e52e38a83c9546c1b6a7c592c91c5dd9",
+							"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+							"unsearchable": false
+						}
+					],
+					"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+					"requiresSecureAccount": false,
+					"status": "ACTIVE",
+					"title": "Trash Goblin - The Artist of Brimhaven",
+					"unsearchable": false
+				},
+				{
+					"ageGatings": {},
+					"categories": [
+						{
+							"path": "addons"
+						}
+					],
+					"creationDate": "2026-04-28T17:17:10.318Z",
+					"description": "Trash Goblin - Found Family Cosmetic Pack",
+					"developer": "Spilt Milk Studios",
+					"developerId": "o-at4ndketztkls9w75hjpcxhxtaxv75",
+					"endOfSupport": false,
+					"entitlementName": "44e6e3765d834a34b1f17b593b09ab53",
+					"entitlementType": "EXECUTABLE",
+					"id": "44e6e3765d834a34b1f17b593b09ab53",
+					"itemType": "DURABLE",
+					"keyImages": [
+						{
+							"alt": "Trash Goblin Trash Goblin - Found Family Cosmetic Pack Offer",
+							"height": 1440,
+							"md5": "692f232ed9c6e0b4f644bb2f53bfab3b",
+							"size": 3662145,
+							"type": "DieselGameBox",
+							"uploadedDate": "2026-04-15T20:41:55.850Z",
+							"url": "https://cdn1.epicgames.com/spt-assets/113ae486fe9040d89a7fc25a501dc3b9/trash-goblin-1esgz.png",
+							"width": 2560
+						},
+						{
+							"alt": "Download Trash Goblin Trash Goblin - Found Family Cosmetic Pack Offer",
+							"height": 1600,
+							"md5": "65cc5a0e2b714961cc5b74558fae8d1e",
+							"size": 2373001,
+							"type": "DieselGameBoxTall",
+							"uploadedDate": "2026-04-15T20:41:59.097Z",
+							"url": "https://cdn1.epicgames.com/spt-assets/113ae486fe9040d89a7fc25a501dc3b9/trash-goblin-2cwmr.png",
+							"width": 1200
+						}
+					],
+					"lastModifiedDate": "2026-04-28T17:17:10.318Z",
+					"mainGameItem": {
+						"id": "e52e38a83c9546c1b6a7c592c91c5dd9",
+						"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+						"unsearchable": false
+					},
+					"mainGameItemList": [
+						{
+							"id": "e52e38a83c9546c1b6a7c592c91c5dd9",
+							"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+							"unsearchable": false
+						}
+					],
+					"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+					"requiresSecureAccount": false,
+					"status": "ACTIVE",
+					"title": "Trash Goblin - Found Family Cosmetic Pack",
+					"unsearchable": false
+				},
+				{
+					"ageGatings": {},
+					"categories": [
+						{
+							"path": "addons"
+						}
+					],
+					"creationDate": "2026-09-03T14:06:01.379Z",
+					"description": "Trash Goblin - PowerWash Simulator 2 Gnome",
+					"developer": "Spilt Milk Studios",
+					"developerId": "o-at4ndketztkls9w75hjpcxhxtaxv75",
+					"endOfSupport": false,
+					"entitlementName": "1b8643d2d34f444eac48c46f410242ec",
+					"entitlementType": "EXECUTABLE",
+					"id": "1b8643d2d34f444eac48c46f410242ec",
+					"itemType": "DURABLE",
+					"keyImages": [
+						{
+							"alt": "Trash Goblin Trash Goblin - PowerWash Simulator 2 Gnome Offer",
+							"height": 1440,
+							"md5": "4078ffea0c7107488d5ad505b1b64e0f",
+							"size": 2576378,
+							"type": "DieselGameBox",
+							"uploadedDate": "2026-07-07T14:27:47.659Z",
+							"url": "https://cdn1.epicgames.com/spt-assets/113ae486fe9040d89a7fc25a501dc3b9/trash-goblin-11jqq.png",
+							"width": 2560
+						},
+						{
+							"alt": "Download Trash Goblin Trash Goblin - PowerWash Simulator 2 Gnome Offer",
+							"height": 1600,
+							"md5": "707307b04339df3bb17bb072e819fd09",
+							"size": 1439785,
+							"type": "DieselGameBoxTall",
+							"uploadedDate": "2026-07-07T14:27:43.962Z",
+							"url": "https://cdn1.epicgames.com/spt-assets/113ae486fe9040d89a7fc25a501dc3b9/trash-goblin-ktk7a.png",
+							"width": 1200
+						}
+					],
+					"lastModifiedDate": "2026-09-03T14:06:01.379Z",
+					"mainGameItem": {
+						"id": "e52e38a83c9546c1b6a7c592c91c5dd9",
+						"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+						"unsearchable": false
+					},
+					"mainGameItemList": [
+						{
+							"id": "e52e38a83c9546c1b6a7c592c91c5dd9",
+							"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+							"unsearchable": false
+						}
+					],
+					"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+					"requiresSecureAccount": false,
+					"status": "ACTIVE",
+					"title": "Trash Goblin - PowerWash Simulator 2 Gnome",
+					"unsearchable": false
+				}
+			],
+			"folder_name": "TrashGoblin",
+			"install": {
+				"install_size": "0",
+				"is_dlc": false
+			},
+			"is_installed": false,
+			"namespace": "f14e8d865ad04b93a5df850ce7a59fe2",
+			"is_mac_native": false,
+			"save_folder": "{AppData}/../LocalLow/Spilt Milk Studios/TrashGoblin/",
+			"title": "Trash Goblin",
+			"canRunOffline": false,
+			"isEAManaged": false,
+			"isUbisoftManaged": false,
+			"is_linux_native": false,
+			"runner": "legendary",
+			"store_url": "https://www.epicgames.com/store/product/trash-goblin"
+		},
+		{
+			"app_name": "Emu",
+			"art_cover": "https://cdn1.epicgames.com/8a6a94901c8248fca1f5c78931c85cbd/item/SOMA_promo-2560x1440-e92be1297f6234f9171ae88de27b92f0.jpg",
+			"art_square": "https://cdn1.epicgames.com/item/8a6a94901c8248fca1f5c78931c85cbd/SOMA_1200x1600-db37622eb525f124d94b79778b697f53",
+			"cloud_save_enabled": false,
+			"developer": "Frictional Games",
+			"extra": {
+				"about": {
+					"description": "SOMA",
+					"shortDescription": ""
+				},
+				"reqs": [],
+				"storeUrl": "https://www.epicgames.com/store/product/soma"
+			},
+			"folder_name": "SOMA",
+			"install": {
+				"executable": "Soma.app/Contents/MacOS/Soma",
+				"install_path": "/Users/operator/Games/GameLib/SOMA",
+				"install_size": "20.62 GiB",
+				"is_dlc": false,
+				"version": "1.64",
+				"platform": "Mac"
+			},
+			"is_installed": true,
+			"namespace": "8a6a94901c8248fca1f5c78931c85cbd",
+			"is_mac_native": true,
+			"save_folder": "",
+			"save_path": null,
+			"title": "SOMA",
+			"canRunOffline": true,
+			"isEAManaged": false,
+			"isUbisoftManaged": false,
+			"is_linux_native": false,
+			"runner": "legendary",
+			"store_url": "https://www.epicgames.com/store/product/soma"
+		},
+		{
+			"app_name": "Iris",
+			"art_cover": "https://cdn1.epicgames.com/item/iris/Phoenix point epic store Normal edition_2560x1440-b1d804175982be23950ecaef72779ce6",
+			"art_square": "https://cdn1.epicgames.com/item/iris/PP base edition 1200x1600_1200x1600-fe2a59aa8d549dad0cf288197552cca7",
+			"cloud_save_enabled": true,
+			"developer": "Snapshot Games",
+			"extra": {
+				"about": {
+					"description": "Phoenix Point: Complete Edition",
+					"shortDescription": ""
+				},
+				"reqs": [],
+				"storeUrl": "https://www.epicgames.com/store/product/phoenix-point"
+			},
+			"dlcList": [
+				{
+					"ageGatings": {},
+					"applicationId": "",
+					"categories": [
+						{
+							"path": "games"
+						},
+						{
+							"path": "applications"
+						}
+					],
+					"creationDate": "2019-11-12T20:06:58.989Z",
+					"customAttributes": {
+						"CanRunOffline": {
+							"type": "STRING",
+							"value": "true"
+						},
+						"FolderName": {
+							"type": "STRING",
+							"value": "KaosEngines"
+						}
+					},
+					"description": "Phoenix Point - Kaos Engines",
+					"developer": "Snapshot Games",
+					"developerId": "o-dc63tr2khr4scc36nj3htbpmh3gda6",
+					"endOfSupport": false,
+					"entitlementName": "a0b94753b4164b978f327dbdb40e04b6",
+					"entitlementType": "EXECUTABLE",
+					"eulaIds": [
+						"egstore"
+					],
+					"id": "a0b94753b4164b978f327dbdb40e04b6",
+					"itemType": "DURABLE",
+					"keyImages": [
+						{
+							"height": 1440,
+							"md5": "e550901e67541462212cb8e68dcad01b",
+							"size": 623133,
+							"type": "DieselGameBox",
+							"uploadedDate": "2022-03-01T18:43:15.094Z",
+							"url": "https://cdn1.epicgames.com/item/iris/EGS_DLC5KaosEngines_SnapshotGamesIncSaberMinsk_DLC_S1_2560x1440-e550901e67541462212cb8e68dcad01b_2560x1440-e550901e67541462212cb8e68dcad01b",
+							"width": 2560
+						},
+						{
+							"height": 1600,
+							"md5": "420e3fe7696192df9869b8c746834862",
+							"size": 434613,
+							"type": "DieselGameBoxTall",
+							"uploadedDate": "2022-03-01T18:43:20.236Z",
+							"url": "https://cdn1.epicgames.com/item/iris/EGS_DLC5KaosEngines_SnapshotGamesIncSaberMinsk_DLC_S2_1200x1600-420e3fe7696192df9869b8c746834862_1200x1600-420e3fe7696192df9869b8c746834862",
+							"width": 1200
+						}
+					],
+					"lastModifiedDate": "2022-03-01T18:44:57.479Z",
+					"mainGameItem": {
+						"id": "10c812b546fe4cba8cec7e27ae6970e8",
+						"namespace": "iris",
+						"unsearchable": false
+					},
+					"mainGameItemList": [
+						{
+							"id": "10c812b546fe4cba8cec7e27ae6970e8",
+							"namespace": "iris",
+							"unsearchable": false
+						}
+					],
+					"namespace": "iris",
+					"releaseInfo": [
+						{
+							"appId": "IrisDLC5",
+							"compatibleApps": [],
+							"dateAdded": "2019-11-12T00:00:00.000Z",
+							"id": "18df53e75e584b399bfdbddc98638999",
+							"platform": [
+								"Windows",
+								"Mac"
+							],
+							"releaseNote": "",
+							"versionTitle": ""
+						}
+					],
+					"status": "ACTIVE",
+					"title": "Phoenix Point - Kaos Engines",
+					"unsearchable": false
+				},
+				{
+					"ageGatings": {},
+					"applicationId": "",
+					"categories": [
+						{
+							"path": "games"
+						},
+						{
+							"path": "applications"
+						}
+					],
+					"creationDate": "2019-11-12T19:53:24.725Z",
+					"customAttributes": {
+						"CanRunOffline": {
+							"type": "STRING",
+							"value": "true"
+						},
+						"FolderName": {
+							"type": "STRING",
+							"value": "FesteringSkies"
+						}
+					},
+					"description": "Phoenix Point Festering Skies",
+					"developer": "Snapshot Games",
+					"developerId": "o-dc63tr2khr4scc36nj3htbpmh3gda6",
+					"endOfSupport": false,
+					"entitlementName": "545e28fa8b1241409ca8c2cc4c2bfd3c",
+					"entitlementType": "EXECUTABLE",
+					"eulaIds": [
+						"egstore"
+					],
+					"id": "545e28fa8b1241409ca8c2cc4c2bfd3c",
+					"itemType": "DURABLE",
+					"keyImages": [
+						{
+							"height": 1440,
+							"md5": "8f0aa62f9bca176436a42f72556005c7",
+							"size": 516947,
+							"type": "DieselGameBox",
+							"uploadedDate": "2021-05-14T16:17:29.184Z",
+							"url": "https://cdn1.epicgames.com/salesEvent/salesEvent/EGS_FesteringSkies_SnapshotGames_DLC_S1_2560x1440-8f0aa62f9bca176436a42f72556005c7",
+							"width": 2560
+						},
+						{
+							"height": 1600,
+							"md5": "b81d03d5fa7d42baeac171c726c4ed72",
+							"size": 313516,
+							"type": "DieselGameBoxTall",
+							"uploadedDate": "2021-05-14T16:17:36.898Z",
+							"url": "https://cdn1.epicgames.com/salesEvent/salesEvent/EGS_FesteringSkies_SnapshotGames_DLC_S2_1200x1600-b81d03d5fa7d42baeac171c726c4ed72",
+							"width": 1200
+						}
+					],
+					"lastModifiedDate": "2021-05-25T16:48:22.147Z",
+					"mainGameItem": {
+						"id": "10c812b546fe4cba8cec7e27ae6970e8",
+						"namespace": "iris",
+						"unsearchable": false
+					},
+					"mainGameItemList": [
+						{
+							"id": "10c812b546fe4cba8cec7e27ae6970e8",
+							"namespace": "iris",
+							"unsearchable": false
+						}
+					],
+					"namespace": "iris",
+					"releaseInfo": [
+						{
+							"appId": "IrisDLC3",
+							"compatibleApps": [],
+							"dateAdded": "2019-11-12T00:00:00.000Z",
+							"id": "268668d0a80c49e0880992b22b5ec922",
+							"platform": [
+								"Windows",
+								"Mac"
+							],
+							"releaseNote": "",
+							"versionTitle": ""
+						}
+					],
+					"status": "ACTIVE",
+					"title": "Phoenix Point Festering Skies",
+					"unsearchable": false
+				},
+				{
+					"ageGatings": {},
+					"applicationId": "",
+					"categories": [
+						{
+							"path": "games"
+						},
+						{
+							"path": "applications"
+						}
+					],
+					"creationDate": "2019-11-12T20:04:51.498Z",
+					"customAttributes": {
+						"CanRunOffline": {
+							"type": "STRING",
+							"value": "true"
+						},
+						"FolderName": {
+							"type": "STRING",
+							"value": "CorruptedHorizons"
+						}
+					},
+					"description": "Phoenix Point Corrupted Horizons",
+					"developer": "Snapshot Games",
+					"developerId": "o-dc63tr2khr4scc36nj3htbpmh3gda6",
+					"endOfSupport": false,
+					"entitlementName": "2f7656b07b464055b191af04a577bfdc",
+					"entitlementType": "EXECUTABLE",
+					"eulaIds": [
+						"egstore"
+					],
+					"id": "2f7656b07b464055b191af04a577bfdc",
+					"itemType": "DURABLE",
+					"keyImages": [
+						{
+							"height": 1440,
+							"md5": "2eb7f0355355117af55f641b80f3af6a",
+							"size": 430721,
+							"type": "DieselGameBox",
+							"uploadedDate": "2021-09-29T03:23:00.604Z",
+							"url": "https://cdn1.epicgames.com/salesEvent/salesEvent/EGS_DLC4CorruptedHorizons_SnapshotGamesInc_DLC_S1_2560x1440-2eb7f0355355117af55f641b80f3af6a",
+							"width": 2560
+						},
+						{
+							"height": 1600,
+							"md5": "1ed2fd36d5e38aa68b9be4316a85eb5a",
+							"size": 303021,
+							"type": "DieselGameBoxTall",
+							"uploadedDate": "2021-09-29T03:23:02.908Z",
+							"url": "https://cdn1.epicgames.com/salesEvent/salesEvent/EGS_DLC4CorruptedHorizons_SnapshotGamesInc_DLC_S2_1200x1600-1ed2fd36d5e38aa68b9be4316a85eb5a",
+							"width": 1200
+						}
+					],
+					"lastModifiedDate": "2021-10-07T23:56:11.130Z",
+					"mainGameItem": {
+						"id": "10c812b546fe4cba8cec7e27ae6970e8",
+						"namespace": "iris",
+						"unsearchable": false
+					},
+					"mainGameItemList": [
+						{
+							"id": "10c812b546fe4cba8cec7e27ae6970e8",
+							"namespace": "iris",
+							"unsearchable": false
+						}
+					],
+					"namespace": "iris",
+					"releaseInfo": [
+						{
+							"appId": "IrisDLC4",
+							"compatibleApps": [],
+							"dateAdded": "2019-11-12T00:00:00.000Z",
+							"id": "ba46204c415843a7b9601d93caee8f23",
+							"platform": [
+								"Windows",
+								"Mac"
+							],
+							"releaseNote": "",
+							"versionTitle": ""
+						}
+					],
+					"status": "ACTIVE",
+					"title": "Phoenix Point Corrupted Horizons",
+					"unsearchable": false
+				},
+				{
+					"ageGatings": {},
+					"applicationId": "",
+					"categories": [
+						{
+							"path": "audience"
+						},
+						{
+							"path": "public"
+						}
+					],
+					"creationDate": "2022-06-28T21:56:50.979Z",
+					"customAttributes": {
+						"SupportedPlatforms": {
+							"type": "STRING",
+							"value": "Windows,Mac "
+						}
+					},
+					"description": "PhoenixPointCompleteEditionAudienceUpgrade",
+					"developer": "Snapshot Games",
+					"developerId": "o-dc63tr2khr4scc36nj3htbpmh3gda6",
+					"endOfSupport": false,
+					"entitlementName": "08b927d27bca44ca95dd3a994cc28687",
+					"entitlementType": "AUDIENCE",
+					"eulaIds": [
+						"egstore"
+					],
+					"id": "08b927d27bca44ca95dd3a994cc28687",
+					"itemType": "DURABLE",
+					"keyImages": [
+						{
+							"height": 404,
+							"md5": "728bf175b519ada5e5a4400e8f1df7cf",
+							"size": 66425,
+							"type": "ESRB",
+							"uploadedDate": "2019-11-08T14:50:30.257Z",
+							"url": "https://cdn1.epicgames.com/iris/item/ESRB_RP-842x404-728bf175b519ada5e5a4400e8f1df7cf.png",
+							"width": 842
+						}
+					],
+					"lastModifiedDate": "2022-07-19T23:24:19.088Z",
+					"mainGameItem": {
+						"id": "10c812b546fe4cba8cec7e27ae6970e8",
+						"namespace": "iris",
+						"unsearchable": false
+					},
+					"mainGameItemList": [
+						{
+							"id": "10c812b546fe4cba8cec7e27ae6970e8",
+							"namespace": "iris",
+							"unsearchable": false
+						}
+					],
+					"namespace": "iris",
+					"releaseInfo": [],
+					"requiresSecureAccount": false,
+					"status": "ACTIVE",
+					"title": "PhoenixPointCompleteEditionAudienceUpgrade",
+					"unsearchable": true
+				},
+				{
+					"ageGatings": {},
+					"applicationId": "",
+					"categories": [
+						{
+							"path": "games"
+						},
+						{
+							"path": "applications"
+						}
+					],
+					"creationDate": "2019-11-12T19:48:28.552Z",
+					"customAttributes": {
+						"CanRunOffline": {
+							"type": "STRING",
+							"value": "true"
+						},
+						"FolderName": {
+							"type": "STRING",
+							"value": "BloodandTitanium"
+						}
+					},
+					"description": "Phoenix Point Blood and Titanium",
+					"developer": "Snapshot Games",
+					"developerId": "o-dc63tr2khr4scc36nj3htbpmh3gda6",
+					"endOfSupport": false,
+					"entitlementName": "52777dbd46fe43a1b52e7c6d77f7ee11",
+					"entitlementType": "EXECUTABLE",
+					"eulaIds": [
+						"egstore"
+					],
+					"id": "52777dbd46fe43a1b52e7c6d77f7ee11",
+					"itemType": "DURABLE",
+					"keyImages": [
+						{
+							"height": 1440,
+							"md5": "81064fd86bf384bf2de69266683a96de",
+							"size": 1334315,
+							"type": "DieselGameBox",
+							"uploadedDate": "2019-12-03T18:56:42.852Z",
+							"url": "https://cdn1.epicgames.com/iris/item/phoenix-point_blood-and-titanium-2560x1440-81064fd86bf384bf2de69266683a96de.png",
+							"width": 2560
+						}
+					],
+					"lastModifiedDate": "2024-04-13T00:16:18.523Z",
+					"mainGameItem": {
+						"id": "10c812b546fe4cba8cec7e27ae6970e8",
+						"namespace": "iris",
+						"unsearchable": false
+					},
+					"mainGameItemList": [
+						{
+							"id": "10c812b546fe4cba8cec7e27ae6970e8",
+							"namespace": "iris",
+							"unsearchable": false
+						}
+					],
+					"namespace": "iris",
+					"releaseInfo": [
+						{
+							"appId": "IrisDLC1",
+							"compatibleApps": [],
+							"dateAdded": "2019-11-12T00:00:00.000Z",
+							"id": "671c43287de2454ebbec6cab2e504cba",
+							"platform": [
+								"Windows",
+								"Mac"
+							],
+							"releaseNote": "",
+							"versionTitle": ""
+						}
+					],
+					"status": "ACTIVE",
+					"title": "Phoenix Point Blood and Titanium",
+					"unsearchable": false
+				},
+				{
+					"ageGatings": {},
+					"categories": [
+						{
+							"path": "games"
+						},
+						{
+							"path": "applications"
+						}
+					],
+					"creationDate": "2019-11-12T19:50:38.650Z",
+					"customAttributes": {
+						"CanRunOffline": {
+							"type": "STRING",
+							"value": "true"
+						},
+						"FolderName": {
+							"type": "STRING",
+							"value": "LegacyoftheAncients"
+						}
+					},
+					"description": "Phoenix Point Legacy of the Ancients",
+					"developer": "Snapshot Games",
+					"developerId": "o-dc63tr2khr4scc36nj3htbpmh3gda6",
+					"endOfSupport": false,
+					"entitlementName": "86db4f6493d54c62a377d22509145f2b",
+					"entitlementType": "EXECUTABLE",
+					"eulaIds": [
+						"egstore"
+					],
+					"id": "86db4f6493d54c62a377d22509145f2b",
+					"itemType": "DURABLE",
+					"keyImages": [
+						{
+							"height": 1080,
+							"md5": "7fe55cf3442403028c245197b2bcaf70",
+							"size": 659223,
+							"type": "DieselGameBox",
+							"uploadedDate": "2020-08-26T14:34:30.139Z",
+							"url": "https://cdn1.epicgames.com/iris/item/EGS_LegacyoftheAncients_SnapshotGames_DLC_G1C_00-1920x1080-7fe55cf3442403028c245197b2bcaf70.jpg",
+							"width": 1920
+						},
+						{
+							"height": 1600,
+							"md5": "8c173ae781ada5e222142cfb5baeb8a5",
+							"size": 692526,
+							"type": "DieselGameBoxTall",
+							"uploadedDate": "2020-08-26T14:34:40.334Z",
+							"url": "https://cdn1.epicgames.com/iris/item/EGS_LegacyoftheAncients_SnapshotGames_DLC_S2-1200x1600-8c173ae781ada5e222142cfb5baeb8a5.jpg",
+							"width": 1200
+						}
+					],
+					"lastModifiedDate": "2020-12-11T01:07:10.474Z",
+					"mainGameItem": {
+						"id": "10c812b546fe4cba8cec7e27ae6970e8",
+						"namespace": "iris",
+						"unsearchable": false
+					},
+					"mainGameItemList": [
+						{
+							"id": "10c812b546fe4cba8cec7e27ae6970e8",
+							"namespace": "iris",
+							"unsearchable": false
+						}
+					],
+					"namespace": "iris",
+					"releaseInfo": [
+						{
+							"appId": "IrisDLC2",
+							"compatibleApps": [],
+							"dateAdded": "2019-11-12T00:00:00.000Z",
+							"id": "df695a6c5c7f457baa5c8d2030fba177",
+							"platform": [
+								"Windows",
+								"Mac"
+							],
+							"releaseNote": "",
+							"versionTitle": ""
+						}
+					],
+					"status": "ACTIVE",
+					"title": "Phoenix Point Legacy of the Ancients",
+					"unsearchable": false
+				},
+				{
+					"ageGatings": {},
+					"applicationId": "",
+					"categories": [
+						{
+							"path": "audience"
+						},
+						{
+							"path": "public"
+						}
+					],
+					"creationDate": "2021-05-19T17:54:23.547Z",
+					"customAttributes": {
+						"SupportedPlatforms": {
+							"type": "STRING",
+							"value": "Windows,Mac"
+						}
+					},
+					"description": "Expansion Pass Audience",
+					"developer": "Snapshot Games",
+					"developerId": "o-dc63tr2khr4scc36nj3htbpmh3gda6",
+					"endOfSupport": false,
+					"entitlementName": "06968e831e1446e9aef6d3de66fc2535",
+					"entitlementType": "AUDIENCE",
+					"esrbGameRatingValue": "RATING_PENDING",
+					"eulaIds": [
+						"egstore"
+					],
+					"id": "06968e831e1446e9aef6d3de66fc2535",
+					"itemType": "DURABLE",
+					"keyImages": [
+						{
+							"height": 404,
+							"md5": "728bf175b519ada5e5a4400e8f1df7cf",
+							"size": 66425,
+							"type": "ESRB",
+							"uploadedDate": "2019-11-08T14:51:43.010Z",
+							"url": "https://cdn1.epicgames.com/iris/item/ESRB_RP-842x404-728bf175b519ada5e5a4400e8f1df7cf.png",
+							"width": 842
+						}
+					],
+					"lastModifiedDate": "2022-07-19T23:24:19.085Z",
+					"mainGameItem": {
+						"id": "10c812b546fe4cba8cec7e27ae6970e8",
+						"namespace": "iris",
+						"unsearchable": false
+					},
+					"mainGameItemList": [
+						{
+							"id": "10c812b546fe4cba8cec7e27ae6970e8",
+							"namespace": "iris",
+							"unsearchable": false
+						}
+					],
+					"namespace": "iris",
+					"releaseInfo": [],
+					"requiresSecureAccount": false,
+					"status": "ACTIVE",
+					"title": "Expansion Pass Audience",
+					"unsearchable": true
+				},
+				{
+					"ageGatings": {},
+					"applicationId": "",
+					"categories": [
+						{
+							"path": "audience"
+						},
+						{
+							"path": "public"
+						}
+					],
+					"creationDate": "2019-11-01T20:08:14.951Z",
+					"customAttributes": {
+						"SupportedPlatforms": {
+							"type": "STRING",
+							"value": "Windows,Mac"
+						}
+					},
+					"description": "Season Pass Audience",
+					"developer": "Snapshot Games",
+					"developerId": "o-dc63tr2khr4scc36nj3htbpmh3gda6",
+					"endOfSupport": false,
+					"entitlementName": "a15d2cdd6ce9417fb0a138787d0d1c0f",
+					"entitlementType": "AUDIENCE",
+					"esrbGameRatingValue": "RATING_PENDING",
+					"eulaIds": [
+						"egstore"
+					],
+					"id": "a15d2cdd6ce9417fb0a138787d0d1c0f",
+					"itemType": "DURABLE",
+					"keyImages": [
+						{
+							"height": 404,
+							"md5": "728bf175b519ada5e5a4400e8f1df7cf",
+							"size": 66425,
+							"type": "ESRB",
+							"uploadedDate": "2019-11-08T14:51:43.010Z",
+							"url": "https://cdn1.epicgames.com/iris/item/ESRB_RP-842x404-728bf175b519ada5e5a4400e8f1df7cf.png",
+							"width": 842
+						}
+					],
+					"lastModifiedDate": "2024-04-13T00:09:04.053Z",
+					"mainGameItem": {
+						"id": "10c812b546fe4cba8cec7e27ae6970e8",
+						"namespace": "iris",
+						"unsearchable": false
+					},
+					"mainGameItemList": [
+						{
+							"id": "10c812b546fe4cba8cec7e27ae6970e8",
+							"namespace": "iris",
+							"unsearchable": false
+						}
+					],
+					"namespace": "iris",
+					"releaseInfo": [],
+					"status": "ACTIVE",
+					"title": "Season Pass Audience",
+					"unsearchable": false
+				},
+				{
+					"ageGatings": {},
+					"applicationId": "",
+					"categories": [
+						{
+							"path": "audience"
+						},
+						{
+							"path": "public"
+						}
+					],
+					"creationDate": "2024-04-13T00:07:57.184Z",
+					"customAttributes": {
+						"SupportedPlatforms": {
+							"type": "STRING",
+							"value": "Windows,Mac"
+						}
+					},
+					"description": "Digital Download Edition Audience",
+					"developer": "Snapshot Games",
+					"developerId": "o-dc63tr2khr4scc36nj3htbpmh3gda6",
+					"endOfSupport": false,
+					"entitlementName": "7f738c1ffdba4be794cffb5bb6d082df",
+					"entitlementType": "AUDIENCE",
+					"eulaIds": [
+						"egstore"
+					],
+					"id": "7f738c1ffdba4be794cffb5bb6d082df",
+					"itemType": "DURABLE",
+					"keyImages": [
+						{
+							"height": 404,
+							"md5": "728bf175b519ada5e5a4400e8f1df7cf",
+							"size": 66425,
+							"type": "ESRB",
+							"uploadedDate": "2019-11-08T14:51:43.010Z",
+							"url": "https://cdn1.epicgames.com/iris/item/ESRB_RP-842x404-728bf175b519ada5e5a4400e8f1df7cf.png",
+							"width": 842
+						}
+					],
+					"lastModifiedDate": "2024-04-13T00:09:04.092Z",
+					"mainGameItem": {
+						"id": "10c812b546fe4cba8cec7e27ae6970e8",
+						"namespace": "iris",
+						"unsearchable": false
+					},
+					"mainGameItemList": [
+						{
+							"id": "10c812b546fe4cba8cec7e27ae6970e8",
+							"namespace": "iris",
+							"unsearchable": false
+						}
+					],
+					"namespace": "iris",
+					"releaseInfo": [],
+					"requiresSecureAccount": false,
+					"status": "ACTIVE",
+					"title": "Digital Download Edition Audience",
+					"unsearchable": true
+				}
+			],
+			"folder_name": "PhoenixPoint",
+			"install": {
+				"install_size": "0",
+				"is_dlc": false
+			},
+			"is_installed": false,
+			"namespace": "iris",
+			"is_mac_native": true,
+			"save_folder": "{appdata}/../locallow/Snapshot Games Inc/Phoenix Point/EGS/{EpicID}/",
+			"title": "Phoenix Point",
+			"canRunOffline": true,
+			"isEAManaged": false,
+			"isUbisoftManaged": false,
+			"is_linux_native": false,
+			"runner": "legendary",
+			"store_url": "https://www.epicgames.com/store/product/phoenix-point"
+		},
+		{
+			"app_name": "IrisArtBook",
+			"art_cover": "https://cdn1.epicgames.com/iris/item/PhoenixPoint_NEWPROMO-2048x1151-a5d45cf0f70a168b0c1f7eae142a3397.jpg",
+			"art_logo": "https://cdn1.epicgames.com/iris/item/PhoenixPoint_GameLogo_White-1920x258-f459d6f60aceae2e47ce0c6ec6d46471.png",
+			"art_square": "https://cdn1.epicgames.com/iris/item/PhoenixPoint_NEWPROMO-2048x1151-a5d45cf0f70a168b0c1f7eae142a3397.jpg",
+			"cloud_save_enabled": false,
+			"developer": "Snapshot Games",
+			"extra": {
+				"about": {
+					"description": "Phoenix Point Art Book",
+					"shortDescription": ""
+				},
+				"reqs": [],
+				"storeUrl": "https://www.epicgames.com/store/product/phoenix-point-art-book"
+			},
+			"folder_name": "PhoenixPointArtBook",
+			"install": {
+				"install_size": "0",
+				"is_dlc": true
+			},
+			"is_installed": false,
+			"namespace": "iris",
+			"is_mac_native": true,
+			"save_folder": "",
+			"title": "Phoenix Point Art Book",
+			"canRunOffline": true,
+			"isEAManaged": false,
+			"isUbisoftManaged": false,
+			"is_linux_native": false,
+			"runner": "legendary",
+			"store_url": "https://www.epicgames.com/store/product/phoenix-point-art-book"
+		},
+		{
+			"app_name": "IrisContent",
+			"art_cover": "https://cdn1.epicgames.com/iris/item/PhoenixPoint_NEWPROMO-2048x1151-a5d45cf0f70a168b0c1f7eae142a3397.jpg",
+			"art_logo": "https://cdn1.epicgames.com/iris/item/PhoenixPoint_GameLogo_White-1920x258-f459d6f60aceae2e47ce0c6ec6d46471.png",
+			"art_square": "https://cdn1.epicgames.com/iris/item/PhoenixPoint_NEWPortraitPromo-1280x1420-3ebed9c3972a5710778d97b6b1018905.png",
+			"cloud_save_enabled": false,
+			"developer": "Snapshot Games",
+			"extra": {
+				"about": {
+					"description": "Phoenix Point Content",
+					"shortDescription": ""
+				},
+				"reqs": [],
+				"storeUrl": "https://www.epicgames.com/store/product/phoenix-point-content"
+			},
+			"dlcList": [
+				{
+					"ageGatings": {},
+					"categories": [
+						{
+							"path": "games"
+						},
+						{
+							"path": "applications"
+						}
+					],
+					"creationDate": "2019-11-04T14:13:47.205Z",
+					"customAttributes": {
+						"CanRunOffline": {
+							"type": "STRING",
+							"value": "true"
+						},
+						"FolderName": {
+							"type": "STRING",
+							"value": "PhoenixPointSoundtrack"
+						}
+					},
+					"description": "Phoenix Point Soundtrack",
+					"developer": "Snapshot Games",
+					"developerId": "o-dc63tr2khr4scc36nj3htbpmh3gda6",
+					"endOfSupport": false,
+					"entitlementName": "485bb1e0225840edbc731961d48bd852",
+					"entitlementType": "EXECUTABLE",
+					"eulaIds": [
+						"egstore"
+					],
+					"id": "485bb1e0225840edbc731961d48bd852",
+					"itemType": "DURABLE",
+					"keyImages": [
+						{
+							"height": 400,
+							"md5": "3077494a8cfa2a464958203163c65722",
+							"size": 7129,
+							"type": "Thumbnail",
+							"uploadedDate": "2019-03-12T17:22:06.207Z",
+							"url": "https://cdn1.epicgames.com/iris/item/PhoenixPoint_GameIcon_400x400-400x400-3077494a8cfa2a464958203163c65722.png",
+							"width": 400
+						},
+						{
+							"height": 258,
+							"md5": "f459d6f60aceae2e47ce0c6ec6d46471",
+							"size": 99414,
+							"type": "DieselGameBoxLogo",
+							"uploadedDate": "2019-03-12T17:22:26.642Z",
+							"url": "https://cdn1.epicgames.com/iris/item/PhoenixPoint_GameLogo_White-1920x258-f459d6f60aceae2e47ce0c6ec6d46471.png",
+							"width": 1920
+						},
+						{
+							"height": 1151,
+							"md5": "a5d45cf0f70a168b0c1f7eae142a3397",
+							"size": 2147087,
+							"type": "DieselGameBox",
+							"uploadedDate": "2019-07-10T17:22:52.186Z",
+							"url": "https://cdn1.epicgames.com/iris/item/PhoenixPoint_NEWPROMO-2048x1151-a5d45cf0f70a168b0c1f7eae142a3397.jpg",
+							"width": 2048
+						},
+						{
+							"height": 1420,
+							"md5": "3ebed9c3972a5710778d97b6b1018905",
+							"size": 2968120,
+							"type": "DieselGameBoxTall",
+							"uploadedDate": "2019-10-22T09:41:44.790Z",
+							"url": "https://cdn1.epicgames.com/iris/item/PhoenixPoint_NEWPortraitPromo-1280x1420-3ebed9c3972a5710778d97b6b1018905.png",
+							"width": 1280
+						}
+					],
+					"lastModifiedDate": "2024-04-12T23:30:59.940Z",
+					"mainGameItem": {
+						"id": "081ae98294cb4dd6b1a06ac72ceae895",
+						"namespace": "iris",
+						"unsearchable": false
+					},
+					"mainGameItemList": [
+						{
+							"id": "081ae98294cb4dd6b1a06ac72ceae895",
+							"namespace": "iris",
+							"unsearchable": false
+						}
+					],
+					"namespace": "iris",
+					"releaseInfo": [
+						{
+							"appId": "IrisSoundtrack",
+							"compatibleApps": [],
+							"dateAdded": "2019-02-15T00:00:00.000Z",
+							"id": "2e22a6cfd20e4a1f822de78f70a797be",
+							"platform": [
+								"Windows",
+								"Mac"
+							],
+							"releaseNote": "",
+							"versionTitle": ""
+						}
+					],
+					"status": "ACTIVE",
+					"title": "Phoenix Point Soundtrack",
+					"unsearchable": false
+				},
+				{
+					"ageGatings": {},
+					"categories": [
+						{
+							"path": "games"
+						},
+						{
+							"path": "applications"
+						}
+					],
+					"creationDate": "2019-11-01T21:32:54.664Z",
+					"customAttributes": {
+						"CanRunOffline": {
+							"type": "STRING",
+							"value": "true"
+						},
+						"FolderName": {
+							"type": "STRING",
+							"value": "PhoenixPointManual"
+						}
+					},
+					"description": "Phoenix Point Digital Game Manual",
+					"developer": "Snapshot Games",
+					"developerId": "o-dc63tr2khr4scc36nj3htbpmh3gda6",
+					"endOfSupport": false,
+					"entitlementName": "7d4f9a44b2cb47ab8512bfa211d96534",
+					"entitlementType": "EXECUTABLE",
+					"eulaIds": [
+						"egstore"
+					],
+					"id": "7d4f9a44b2cb47ab8512bfa211d96534",
+					"itemType": "DURABLE",
+					"keyImages": [
+						{
+							"height": 400,
+							"md5": "3077494a8cfa2a464958203163c65722",
+							"size": 7129,
+							"type": "Thumbnail",
+							"uploadedDate": "2019-03-12T17:22:06.207Z",
+							"url": "https://cdn1.epicgames.com/iris/item/PhoenixPoint_GameIcon_400x400-400x400-3077494a8cfa2a464958203163c65722.png",
+							"width": 400
+						},
+						{
+							"height": 258,
+							"md5": "f459d6f60aceae2e47ce0c6ec6d46471",
+							"size": 99414,
+							"type": "DieselGameBoxLogo",
+							"uploadedDate": "2019-03-12T17:22:26.642Z",
+							"url": "https://cdn1.epicgames.com/iris/item/PhoenixPoint_GameLogo_White-1920x258-f459d6f60aceae2e47ce0c6ec6d46471.png",
+							"width": 1920
+						},
+						{
+							"height": 1151,
+							"md5": "a5d45cf0f70a168b0c1f7eae142a3397",
+							"size": 2147087,
+							"type": "DieselGameBox",
+							"uploadedDate": "2019-07-10T17:22:52.186Z",
+							"url": "https://cdn1.epicgames.com/iris/item/PhoenixPoint_NEWPROMO-2048x1151-a5d45cf0f70a168b0c1f7eae142a3397.jpg",
+							"width": 2048
+						}
+					],
+					"lastModifiedDate": "2024-04-12T23:30:59.940Z",
+					"mainGameItem": {
+						"id": "081ae98294cb4dd6b1a06ac72ceae895",
+						"namespace": "iris",
+						"unsearchable": false
+					},
+					"mainGameItemList": [
+						{
+							"id": "081ae98294cb4dd6b1a06ac72ceae895",
+							"namespace": "iris",
+							"unsearchable": false
+						}
+					],
+					"namespace": "iris",
+					"releaseInfo": [
+						{
+							"appId": "IrisManual",
+							"compatibleApps": [],
+							"dateAdded": "2019-02-15T00:00:00.000Z",
+							"id": "97f6e1b6d1a04237bb3dc54e39277cf1",
+							"platform": [
+								"Windows",
+								"Mac"
+							],
+							"releaseNote": "",
+							"versionTitle": ""
+						}
+					],
+					"status": "ACTIVE",
+					"title": "Phoenix Point Digital Game Manual",
+					"unsearchable": false
+				},
+				{
+					"ageGatings": {},
+					"categories": [
+						{
+							"path": "games"
+						},
+						{
+							"path": "applications"
+						}
+					],
+					"creationDate": "2019-11-04T14:16:55.742Z",
+					"customAttributes": {
+						"CanRunOffline": {
+							"type": "STRING",
+							"value": "true"
+						},
+						"FolderName": {
+							"type": "STRING",
+							"value": "PhoenixPointAlbum"
+						}
+					},
+					"description": "Phoenix Point AM3 Digital Album",
+					"developer": "Snapshot Games",
+					"developerId": "o-dc63tr2khr4scc36nj3htbpmh3gda6",
+					"endOfSupport": false,
+					"entitlementName": "f752dacff1ee41faa6f5a48fbfa590f2",
+					"entitlementType": "EXECUTABLE",
+					"eulaIds": [
+						"egstore"
+					],
+					"id": "f752dacff1ee41faa6f5a48fbfa590f2",
+					"itemType": "DURABLE",
+					"keyImages": [
+						{
+							"height": 400,
+							"md5": "3077494a8cfa2a464958203163c65722",
+							"size": 7129,
+							"type": "Thumbnail",
+							"uploadedDate": "2019-03-12T17:22:06.207Z",
+							"url": "https://cdn1.epicgames.com/iris/item/PhoenixPoint_GameIcon_400x400-400x400-3077494a8cfa2a464958203163c65722.png",
+							"width": 400
+						},
+						{
+							"height": 258,
+							"md5": "f459d6f60aceae2e47ce0c6ec6d46471",
+							"size": 99414,
+							"type": "DieselGameBoxLogo",
+							"uploadedDate": "2019-03-12T17:22:26.642Z",
+							"url": "https://cdn1.epicgames.com/iris/item/PhoenixPoint_GameLogo_White-1920x258-f459d6f60aceae2e47ce0c6ec6d46471.png",
+							"width": 1920
+						},
+						{
+							"height": 1151,
+							"md5": "a5d45cf0f70a168b0c1f7eae142a3397",
+							"size": 2147087,
+							"type": "DieselGameBox",
+							"uploadedDate": "2019-07-10T17:22:52.186Z",
+							"url": "https://cdn1.epicgames.com/iris/item/PhoenixPoint_NEWPROMO-2048x1151-a5d45cf0f70a168b0c1f7eae142a3397.jpg",
+							"width": 2048
+						},
+						{
+							"height": 1420,
+							"md5": "3ebed9c3972a5710778d97b6b1018905",
+							"size": 2968120,
+							"type": "DieselGameBoxTall",
+							"uploadedDate": "2019-10-22T09:41:44.790Z",
+							"url": "https://cdn1.epicgames.com/iris/item/PhoenixPoint_NEWPortraitPromo-1280x1420-3ebed9c3972a5710778d97b6b1018905.png",
+							"width": 1280
+						}
+					],
+					"lastModifiedDate": "2024-04-12T23:30:59.940Z",
+					"mainGameItem": {
+						"id": "081ae98294cb4dd6b1a06ac72ceae895",
+						"namespace": "iris",
+						"unsearchable": false
+					},
+					"mainGameItemList": [
+						{
+							"id": "081ae98294cb4dd6b1a06ac72ceae895",
+							"namespace": "iris",
+							"unsearchable": false
+						}
+					],
+					"namespace": "iris",
+					"releaseInfo": [
+						{
+							"appId": "IrisAlbum",
+							"compatibleApps": [],
+							"dateAdded": "2019-02-15T00:00:00.000Z",
+							"id": "316bf23f2d64469b9dc18a2964495aea",
+							"platform": [
+								"Windows",
+								"Mac"
+							],
+							"releaseNote": "",
+							"versionTitle": ""
+						}
+					],
+					"status": "ACTIVE",
+					"title": "Phoenix Point AM3 Digital Album",
+					"unsearchable": false
+				},
+				{
+					"ageGatings": {},
+					"categories": [
+						{
+							"path": "games"
+						},
+						{
+							"path": "applications"
+						}
+					],
+					"creationDate": "2019-11-01T21:43:34.525Z",
+					"customAttributes": {
+						"CanRunOffline": {
+							"type": "STRING",
+							"value": "true"
+						},
+						"FolderName": {
+							"type": "STRING",
+							"value": "PhoenixPointWallpaper"
+						}
+					},
+					"description": "Phoenix Point Desktop Wallpaper",
+					"developer": "Snapshot Games",
+					"developerId": "o-dc63tr2khr4scc36nj3htbpmh3gda6",
+					"endOfSupport": false,
+					"entitlementName": "75214dbabe2d463d878cf88bdbfb1067",
+					"entitlementType": "EXECUTABLE",
+					"eulaIds": [
+						"egstore"
+					],
+					"id": "75214dbabe2d463d878cf88bdbfb1067",
+					"itemType": "DURABLE",
+					"keyImages": [
+						{
+							"height": 400,
+							"md5": "3077494a8cfa2a464958203163c65722",
+							"size": 7129,
+							"type": "Thumbnail",
+							"uploadedDate": "2019-03-12T17:22:06.207Z",
+							"url": "https://cdn1.epicgames.com/iris/item/PhoenixPoint_GameIcon_400x400-400x400-3077494a8cfa2a464958203163c65722.png",
+							"width": 400
+						},
+						{
+							"height": 258,
+							"md5": "f459d6f60aceae2e47ce0c6ec6d46471",
+							"size": 99414,
+							"type": "DieselGameBoxLogo",
+							"uploadedDate": "2019-03-12T17:22:26.642Z",
+							"url": "https://cdn1.epicgames.com/iris/item/PhoenixPoint_GameLogo_White-1920x258-f459d6f60aceae2e47ce0c6ec6d46471.png",
+							"width": 1920
+						},
+						{
+							"height": 1151,
+							"md5": "a5d45cf0f70a168b0c1f7eae142a3397",
+							"size": 2147087,
+							"type": "DieselGameBox",
+							"uploadedDate": "2019-07-10T17:22:52.186Z",
+							"url": "https://cdn1.epicgames.com/iris/item/PhoenixPoint_NEWPROMO-2048x1151-a5d45cf0f70a168b0c1f7eae142a3397.jpg",
+							"width": 2048
+						}
+					],
+					"lastModifiedDate": "2024-04-12T23:30:59.940Z",
+					"mainGameItem": {
+						"id": "081ae98294cb4dd6b1a06ac72ceae895",
+						"namespace": "iris",
+						"unsearchable": false
+					},
+					"mainGameItemList": [
+						{
+							"id": "081ae98294cb4dd6b1a06ac72ceae895",
+							"namespace": "iris",
+							"unsearchable": false
+						}
+					],
+					"namespace": "iris",
+					"releaseInfo": [
+						{
+							"appId": "IrisWallpaper",
+							"compatibleApps": [],
+							"dateAdded": "2019-02-15T00:00:00.000Z",
+							"id": "61fcf4610ca843cab0bf38e4db75b764",
+							"platform": [
+								"Windows",
+								"Mac"
+							],
+							"releaseNote": "",
+							"versionTitle": ""
+						}
+					],
+					"status": "ACTIVE",
+					"title": "Phoenix Point Desktop Wallpaper",
+					"unsearchable": false
+				},
+				{
+					"ageGatings": {},
+					"categories": [
+						{
+							"path": "games"
+						},
+						{
+							"path": "applications"
+						}
+					],
+					"creationDate": "2019-11-01T21:56:53.542Z",
+					"customAttributes": {
+						"CanRunOffline": {
+							"type": "STRING",
+							"value": "true"
+						},
+						"FolderName": {
+							"type": "STRING",
+							"value": "PhoenixPointArtBook"
+						}
+					},
+					"description": "Phoenix Point Art Book",
+					"developer": "Snapshot Games",
+					"developerId": "o-dc63tr2khr4scc36nj3htbpmh3gda6",
+					"endOfSupport": false,
+					"entitlementName": "a2d1f299239b40ba9d979c398cc91ee5",
+					"entitlementType": "EXECUTABLE",
+					"eulaIds": [
+						"egstore"
+					],
+					"id": "a2d1f299239b40ba9d979c398cc91ee5",
+					"itemType": "DURABLE",
+					"keyImages": [
+						{
+							"height": 400,
+							"md5": "3077494a8cfa2a464958203163c65722",
+							"size": 7129,
+							"type": "Thumbnail",
+							"uploadedDate": "2019-03-12T17:22:06.207Z",
+							"url": "https://cdn1.epicgames.com/iris/item/PhoenixPoint_GameIcon_400x400-400x400-3077494a8cfa2a464958203163c65722.png",
+							"width": 400
+						},
+						{
+							"height": 258,
+							"md5": "f459d6f60aceae2e47ce0c6ec6d46471",
+							"size": 99414,
+							"type": "DieselGameBoxLogo",
+							"uploadedDate": "2019-03-12T17:22:26.642Z",
+							"url": "https://cdn1.epicgames.com/iris/item/PhoenixPoint_GameLogo_White-1920x258-f459d6f60aceae2e47ce0c6ec6d46471.png",
+							"width": 1920
+						},
+						{
+							"height": 1151,
+							"md5": "a5d45cf0f70a168b0c1f7eae142a3397",
+							"size": 2147087,
+							"type": "DieselGameBox",
+							"uploadedDate": "2019-07-10T17:22:52.186Z",
+							"url": "https://cdn1.epicgames.com/iris/item/PhoenixPoint_NEWPROMO-2048x1151-a5d45cf0f70a168b0c1f7eae142a3397.jpg",
+							"width": 2048
+						}
+					],
+					"lastModifiedDate": "2024-04-12T23:30:59.940Z",
+					"mainGameItem": {
+						"id": "081ae98294cb4dd6b1a06ac72ceae895",
+						"namespace": "iris",
+						"unsearchable": false
+					},
+					"mainGameItemList": [
+						{
+							"id": "081ae98294cb4dd6b1a06ac72ceae895",
+							"namespace": "iris",
+							"unsearchable": false
+						}
+					],
+					"namespace": "iris",
+					"releaseInfo": [
+						{
+							"appId": "IrisArtBook",
+							"compatibleApps": [],
+							"dateAdded": "2019-02-15T00:00:00.000Z",
+							"id": "9e4c1410cc634378bb8032c5fd3f9119",
+							"platform": [
+								"Windows",
+								"Mac"
+							],
+							"releaseNote": "",
+							"versionTitle": ""
+						}
+					],
+					"status": "ACTIVE",
+					"title": "Phoenix Point Art Book",
+					"unsearchable": false
+				},
+				{
+					"ageGatings": {},
+					"categories": [
+						{
+							"path": "games"
+						},
+						{
+							"path": "applications"
+						}
+					],
+					"creationDate": "2019-11-01T21:53:36.296Z",
+					"customAttributes": {
+						"CanRunOffline": {
+							"type": "STRING",
+							"value": "true"
+						},
+						"FolderName": {
+							"type": "STRING",
+							"value": "PhoenixPointStories"
+						}
+					},
+					"description": "Phoenix Point Compendium",
+					"developer": "Snapshot Games",
+					"developerId": "o-dc63tr2khr4scc36nj3htbpmh3gda6",
+					"endOfSupport": false,
+					"entitlementName": "9c8055e30fea4e5ea1a229f6b084e70e",
+					"entitlementType": "EXECUTABLE",
+					"eulaIds": [
+						"egstore"
+					],
+					"id": "9c8055e30fea4e5ea1a229f6b084e70e",
+					"itemType": "DURABLE",
+					"keyImages": [
+						{
+							"height": 400,
+							"md5": "3077494a8cfa2a464958203163c65722",
+							"size": 7129,
+							"type": "Thumbnail",
+							"uploadedDate": "2019-03-12T17:22:06.207Z",
+							"url": "https://cdn1.epicgames.com/iris/item/PhoenixPoint_GameIcon_400x400-400x400-3077494a8cfa2a464958203163c65722.png",
+							"width": 400
+						},
+						{
+							"height": 258,
+							"md5": "f459d6f60aceae2e47ce0c6ec6d46471",
+							"size": 99414,
+							"type": "DieselGameBoxLogo",
+							"uploadedDate": "2019-03-12T17:22:26.642Z",
+							"url": "https://cdn1.epicgames.com/iris/item/PhoenixPoint_GameLogo_White-1920x258-f459d6f60aceae2e47ce0c6ec6d46471.png",
+							"width": 1920
+						},
+						{
+							"height": 1151,
+							"md5": "a5d45cf0f70a168b0c1f7eae142a3397",
+							"size": 2147087,
+							"type": "DieselGameBox",
+							"uploadedDate": "2019-07-10T17:22:52.186Z",
+							"url": "https://cdn1.epicgames.com/iris/item/PhoenixPoint_NEWPROMO-2048x1151-a5d45cf0f70a168b0c1f7eae142a3397.jpg",
+							"width": 2048
+						}
+					],
+					"lastModifiedDate": "2024-04-12T23:30:59.940Z",
+					"longDescription": "Short Stories",
+					"mainGameItem": {
+						"id": "081ae98294cb4dd6b1a06ac72ceae895",
+						"namespace": "iris",
+						"unsearchable": false
+					},
+					"mainGameItemList": [
+						{
+							"id": "081ae98294cb4dd6b1a06ac72ceae895",
+							"namespace": "iris",
+							"unsearchable": false
+						}
+					],
+					"namespace": "iris",
+					"releaseInfo": [
+						{
+							"appId": "IrisStories",
+							"compatibleApps": [],
+							"dateAdded": "2019-02-15T00:00:00.000Z",
+							"id": "2af4d30c366f4be2b10e9e67d50fe372",
+							"platform": [
+								"Windows",
+								"Mac"
+							],
+							"releaseNote": "",
+							"versionTitle": ""
+						}
+					],
+					"status": "ACTIVE",
+					"title": "Phoenix Point Compendium",
+					"unsearchable": false
+				}
+			],
+			"folder_name": "PhoenixPointContent",
+			"install": {
+				"install_size": "0",
+				"is_dlc": false
+			},
+			"is_installed": false,
+			"namespace": "iris",
+			"is_mac_native": true,
+			"save_folder": "",
+			"title": "Phoenix Point Content",
+			"canRunOffline": true,
+			"isEAManaged": false,
+			"isUbisoftManaged": false,
+			"is_linux_native": false,
+			"runner": "legendary",
+			"store_url": "https://www.epicgames.com/store/product/phoenix-point-content"
+		},
+		{
+			"app_name": "IrisDLC1",
+			"art_cover": "https://cdn1.epicgames.com/iris/item/phoenix-point_blood-and-titanium-2560x1440-81064fd86bf384bf2de69266683a96de.png",
+			"art_square": "https://cdn1.epicgames.com/iris/item/phoenix-point_blood-and-titanium-2560x1440-81064fd86bf384bf2de69266683a96de.png",
+			"cloud_save_enabled": false,
+			"developer": "Snapshot Games",
+			"extra": {
+				"about": {
+					"description": "Phoenix Point Blood and Titanium",
+					"shortDescription": ""
+				},
+				"reqs": [],
+				"storeUrl": "https://www.epicgames.com/store/product/phoenix-point-blood-and-titanium"
+			},
+			"folder_name": "BloodandTitanium",
+			"install": {
+				"install_size": "0",
+				"is_dlc": true
+			},
+			"is_installed": false,
+			"namespace": "iris",
+			"is_mac_native": true,
+			"save_folder": "",
+			"title": "Phoenix Point Blood and Titanium",
+			"canRunOffline": true,
+			"isEAManaged": false,
+			"isUbisoftManaged": false,
+			"is_linux_native": false,
+			"runner": "legendary",
+			"store_url": "https://www.epicgames.com/store/product/phoenix-point-blood-and-titanium"
+		},
+		{
+			"app_name": "IrisDLC2",
+			"art_cover": "https://cdn1.epicgames.com/iris/item/EGS_LegacyoftheAncients_SnapshotGames_DLC_G1C_00-1920x1080-7fe55cf3442403028c245197b2bcaf70.jpg",
+			"art_square": "https://cdn1.epicgames.com/iris/item/EGS_LegacyoftheAncients_SnapshotGames_DLC_S2-1200x1600-8c173ae781ada5e222142cfb5baeb8a5.jpg",
+			"cloud_save_enabled": false,
+			"developer": "Snapshot Games",
+			"extra": {
+				"about": {
+					"description": "Phoenix Point Legacy of the Ancients",
+					"shortDescription": ""
+				},
+				"reqs": [],
+				"storeUrl": "https://www.epicgames.com/store/product/phoenix-point-legacy-of-the-ancients"
+			},
+			"folder_name": "LegacyoftheAncients",
+			"install": {
+				"install_size": "0",
+				"is_dlc": true
+			},
+			"is_installed": false,
+			"namespace": "iris",
+			"is_mac_native": true,
+			"save_folder": "",
+			"title": "Phoenix Point Legacy of the Ancients",
+			"canRunOffline": true,
+			"isEAManaged": false,
+			"isUbisoftManaged": false,
+			"is_linux_native": false,
+			"runner": "legendary",
+			"store_url": "https://www.epicgames.com/store/product/phoenix-point-legacy-of-the-ancients"
+		},
+		{
+			"app_name": "IrisDLC3",
+			"art_cover": "https://cdn1.epicgames.com/salesEvent/salesEvent/EGS_FesteringSkies_SnapshotGames_DLC_S1_2560x1440-8f0aa62f9bca176436a42f72556005c7",
+			"art_square": "https://cdn1.epicgames.com/salesEvent/salesEvent/EGS_FesteringSkies_SnapshotGames_DLC_S2_1200x1600-b81d03d5fa7d42baeac171c726c4ed72",
+			"cloud_save_enabled": false,
+			"developer": "Snapshot Games",
+			"extra": {
+				"about": {
+					"description": "Phoenix Point Festering Skies",
+					"shortDescription": ""
+				},
+				"reqs": [],
+				"storeUrl": "https://www.epicgames.com/store/product/phoenix-point-festering-skies"
+			},
+			"folder_name": "FesteringSkies",
+			"install": {
+				"install_size": "0",
+				"is_dlc": true
+			},
+			"is_installed": false,
+			"namespace": "iris",
+			"is_mac_native": true,
+			"save_folder": "",
+			"title": "Phoenix Point Festering Skies",
+			"canRunOffline": true,
+			"isEAManaged": false,
+			"isUbisoftManaged": false,
+			"is_linux_native": false,
+			"runner": "legendary",
+			"store_url": "https://www.epicgames.com/store/product/phoenix-point-festering-skies"
+		},
+		{
+			"app_name": "IrisDLC4",
+			"art_cover": "https://cdn1.epicgames.com/salesEvent/salesEvent/EGS_DLC4CorruptedHorizons_SnapshotGamesInc_DLC_S1_2560x1440-2eb7f0355355117af55f641b80f3af6a",
+			"art_square": "https://cdn1.epicgames.com/salesEvent/salesEvent/EGS_DLC4CorruptedHorizons_SnapshotGamesInc_DLC_S2_1200x1600-1ed2fd36d5e38aa68b9be4316a85eb5a",
+			"cloud_save_enabled": false,
+			"developer": "Snapshot Games",
+			"extra": {
+				"about": {
+					"description": "Phoenix Point Corrupted Horizons",
+					"shortDescription": ""
+				},
+				"reqs": [],
+				"storeUrl": "https://www.epicgames.com/store/product/phoenix-point-corrupted-horizons"
+			},
+			"folder_name": "CorruptedHorizons",
+			"install": {
+				"install_size": "0",
+				"is_dlc": true
+			},
+			"is_installed": false,
+			"namespace": "iris",
+			"is_mac_native": true,
+			"save_folder": "",
+			"title": "Phoenix Point Corrupted Horizons",
+			"canRunOffline": true,
+			"isEAManaged": false,
+			"isUbisoftManaged": false,
+			"is_linux_native": false,
+			"runner": "legendary",
+			"store_url": "https://www.epicgames.com/store/product/phoenix-point-corrupted-horizons"
+		},
+		{
+			"app_name": "IrisDLC5",
+			"art_cover": "https://cdn1.epicgames.com/item/iris/EGS_DLC5KaosEngines_SnapshotGamesIncSaberMinsk_DLC_S1_2560x1440-e550901e67541462212cb8e68dcad01b_2560x1440-e550901e67541462212cb8e68dcad01b",
+			"art_square": "https://cdn1.epicgames.com/item/iris/EGS_DLC5KaosEngines_SnapshotGamesIncSaberMinsk_DLC_S2_1200x1600-420e3fe7696192df9869b8c746834862_1200x1600-420e3fe7696192df9869b8c746834862",
+			"cloud_save_enabled": false,
+			"developer": "Snapshot Games",
+			"extra": {
+				"about": {
+					"description": "Phoenix Point - Kaos Engines",
+					"shortDescription": ""
+				},
+				"reqs": [],
+				"storeUrl": "https://www.epicgames.com/store/product/phoenix-point--kaos-engines"
+			},
+			"folder_name": "KaosEngines",
+			"install": {
+				"install_size": "0",
+				"is_dlc": true
+			},
+			"is_installed": false,
+			"namespace": "iris",
+			"is_mac_native": true,
+			"save_folder": "",
+			"title": "Phoenix Point - Kaos Engines",
+			"canRunOffline": true,
+			"isEAManaged": false,
+			"isUbisoftManaged": false,
+			"is_linux_native": false,
+			"runner": "legendary",
+			"store_url": "https://www.epicgames.com/store/product/phoenix-point--kaos-engines"
+		},
+		{
+			"app_name": "IrisManual",
+			"art_cover": "https://cdn1.epicgames.com/iris/item/PhoenixPoint_NEWPROMO-2048x1151-a5d45cf0f70a168b0c1f7eae142a3397.jpg",
+			"art_logo": "https://cdn1.epicgames.com/iris/item/PhoenixPoint_GameLogo_White-1920x258-f459d6f60aceae2e47ce0c6ec6d46471.png",
+			"art_square": "https://cdn1.epicgames.com/iris/item/PhoenixPoint_NEWPROMO-2048x1151-a5d45cf0f70a168b0c1f7eae142a3397.jpg",
+			"cloud_save_enabled": false,
+			"developer": "Snapshot Games",
+			"extra": {
+				"about": {
+					"description": "Phoenix Point Digital Game Manual",
+					"shortDescription": ""
+				},
+				"reqs": [],
+				"storeUrl": "https://www.epicgames.com/store/product/phoenix-point-digital-game-manual"
+			},
+			"folder_name": "PhoenixPointManual",
+			"install": {
+				"install_size": "0",
+				"is_dlc": true
+			},
+			"is_installed": false,
+			"namespace": "iris",
+			"is_mac_native": true,
+			"save_folder": "",
+			"title": "Phoenix Point Digital Game Manual",
+			"canRunOffline": true,
+			"isEAManaged": false,
+			"isUbisoftManaged": false,
+			"is_linux_native": false,
+			"runner": "legendary",
+			"store_url": "https://www.epicgames.com/store/product/phoenix-point-digital-game-manual"
+		},
+		{
+			"app_name": "IrisStories",
+			"art_cover": "https://cdn1.epicgames.com/iris/item/PhoenixPoint_NEWPROMO-2048x1151-a5d45cf0f70a168b0c1f7eae142a3397.jpg",
+			"art_logo": "https://cdn1.epicgames.com/iris/item/PhoenixPoint_GameLogo_White-1920x258-f459d6f60aceae2e47ce0c6ec6d46471.png",
+			"art_square": "https://cdn1.epicgames.com/iris/item/PhoenixPoint_NEWPROMO-2048x1151-a5d45cf0f70a168b0c1f7eae142a3397.jpg",
+			"cloud_save_enabled": false,
+			"developer": "Snapshot Games",
+			"extra": {
+				"about": {
+					"description": "Phoenix Point Compendium",
+					"shortDescription": ""
+				},
+				"reqs": [],
+				"storeUrl": "https://www.epicgames.com/store/product/phoenix-point-compendium"
+			},
+			"folder_name": "PhoenixPointStories",
+			"install": {
+				"install_size": "0",
+				"is_dlc": true
+			},
+			"is_installed": false,
+			"namespace": "iris",
+			"is_mac_native": true,
+			"save_folder": "",
+			"title": "Phoenix Point Compendium",
+			"canRunOffline": true,
+			"isEAManaged": false,
+			"isUbisoftManaged": false,
+			"is_linux_native": false,
+			"runner": "legendary",
+			"store_url": "https://www.epicgames.com/store/product/phoenix-point-compendium"
+		},
+		{
+			"app_name": "IrisWallpaper",
+			"art_cover": "https://cdn1.epicgames.com/iris/item/PhoenixPoint_NEWPROMO-2048x1151-a5d45cf0f70a168b0c1f7eae142a3397.jpg",
+			"art_logo": "https://cdn1.epicgames.com/iris/item/PhoenixPoint_GameLogo_White-1920x258-f459d6f60aceae2e47ce0c6ec6d46471.png",
+			"art_square": "https://cdn1.epicgames.com/iris/item/PhoenixPoint_NEWPROMO-2048x1151-a5d45cf0f70a168b0c1f7eae142a3397.jpg",
+			"cloud_save_enabled": false,
+			"developer": "Snapshot Games",
+			"extra": {
+				"about": {
+					"description": "Phoenix Point Desktop Wallpaper",
+					"shortDescription": ""
+				},
+				"reqs": [],
+				"storeUrl": "https://www.epicgames.com/store/product/phoenix-point-desktop-wallpaper"
+			},
+			"folder_name": "PhoenixPointWallpaper",
+			"install": {
+				"install_size": "0",
+				"is_dlc": true
+			},
+			"is_installed": false,
+			"namespace": "iris",
+			"is_mac_native": true,
+			"save_folder": "",
+			"title": "Phoenix Point Desktop Wallpaper",
+			"canRunOffline": true,
+			"isEAManaged": false,
+			"isUbisoftManaged": false,
+			"is_linux_native": false,
+			"runner": "legendary",
+			"store_url": "https://www.epicgames.com/store/product/phoenix-point-desktop-wallpaper"
+		},
+		{
+			"app_name": "Rosemallow",
+			"art_cover": "https://cdn1.epicgames.com/rosemallow/item/Diesel_productv2_the-outer-worlds_home_ANC_Banner_TOW_NoLogo_1920x1080-(1)-1920x1080-ebae8a5f2e33aeda17905df7c4d61ae65d6c72da-1920x1080-d71ee9b36e9b95adace99e39cc33e557.jpg",
+			"art_logo": "https://cdn1.epicgames.com/rosemallow/item/TheOuterWorlds_Logo-1558x730-90519fa5dc9d7baa45ad3afd7fdb4cb1.png",
+			"art_square": "https://cdn1.epicgames.com/rosemallow/item/ANC_Banner_TOW_NoLogo_1280x1440 (2)-1280x1140-5b445a5bbd0ba31cc63cbcb373ccfaa0.jpg",
+			"cloud_save_enabled": true,
+			"developer": "Microsoft",
+			"extra": {
+				"about": {
+					"description": "The Outer Worlds",
+					"shortDescription": ""
+				},
+				"reqs": [],
+				"storeUrl": "https://www.epicgames.com/store/product/the-outer-worlds"
+			},
+			"dlcList": [
+				{
+					"ageGatings": {},
+					"categories": [
+						{
+							"path": "games"
+						},
+						{
+							"path": "applications"
+						}
+					],
+					"creationDate": "2020-04-10T13:45:23.619Z",
+					"customAttributes": {
+						"CanRunOffline": {
+							"type": "STRING",
+							"value": "true"
+						},
+						"CanSkipKoreanIdVerification": {
+							"type": "STRING",
+							"value": "true"
+						},
+						"CloudSaveFolder": {
+							"type": "STRING",
+							"value": "{UserSavedGames}/The Outer Worlds/"
+						},
+						"FolderName": {
+							"type": "STRING",
+							"value": "TOWMurderOnEridanos"
+						},
+						"MonitorPresence": {
+							"type": "STRING",
+							"value": "true"
+						},
+						"PresenceID": {
+							"type": "STRING",
+							"value": "rosemallow"
+						},
+						"RequirementsJson": {
+							"type": "STRING",
+							"value": "{}"
+						}
+					},
+					"description": "The Outer Worlds: Murder on Eridanos",
+					"developer": "Microsoft",
+					"developerId": "o-f3qq8ygts6pglxx529jhgx5bmyj6bf",
+					"endOfSupport": false,
+					"entitlementName": "fdb4a3820d7e49169fd6187ef2828a65",
+					"entitlementType": "EXECUTABLE",
+					"eulaIds": [
+						"egstore"
+					],
+					"id": "fdb4a3820d7e49169fd6187ef2828a65",
+					"itemType": "DURABLE",
+					"keyImages": [
+						{
+							"height": 1600,
+							"md5": "4d05cd51e070894edf5335955a07ee9e",
+							"size": 1958586,
+							"type": "DieselGameBoxTall",
+							"uploadedDate": "2021-03-17T19:11:44.038Z",
+							"url": "https://cdn1.epicgames.com/rosemallow/item/TOW_TallDLC2-1200x1600-4d05cd51e070894edf5335955a07ee9e.jpg",
+							"width": 1200
+						},
+						{
+							"height": 1440,
+							"md5": "6c325475a9a4808ec10b8e5f2ba0ec4f",
+							"size": 3525707,
+							"type": "DieselGameBox",
+							"uploadedDate": "2021-03-17T19:12:02.891Z",
+							"url": "https://cdn1.epicgames.com/rosemallow/item/TOW_WIDEDLC2-2560x1440-6c325475a9a4808ec10b8e5f2ba0ec4f.jpg",
+							"width": 2560
+						}
+					],
+					"lastModifiedDate": "2026-03-17T19:54:53.019Z",
+					"mainGameItem": {
+						"id": "fa16dbd78e2147179dae12e04afa3d95",
+						"namespace": "rosemallow",
+						"unsearchable": false
+					},
+					"mainGameItemList": [
+						{
+							"id": "fa16dbd78e2147179dae12e04afa3d95",
+							"namespace": "rosemallow",
+							"unsearchable": false
+						}
+					],
+					"namespace": "rosemallow",
+					"releaseInfo": [
+						{
+							"appId": "f5f1f25431bf43ec827656b41123c01b",
+							"compatibleApps": [],
+							"dateAdded": "2019-03-16T00:00:00.000Z",
+							"id": "015497ee3bd94eec9d5c910f15c49639",
+							"platform": [
+								"Windows"
+							],
+							"releaseNote": "",
+							"versionTitle": ""
+						}
+					],
+					"status": "ACTIVE",
+					"title": "The Outer Worlds: Murder on Eridanos",
+					"unsearchable": true
+				},
+				{
+					"ageGatings": {},
+					"categories": [
+						{
+							"path": "audience"
+						},
+						{
+							"path": "public"
+						}
+					],
+					"creationDate": "2020-04-10T14:23:25.362Z",
+					"customAttributes": {},
+					"description": "RosemallowDLC02 Audience",
+					"developer": "Microsoft",
+					"developerId": "o-f3qq8ygts6pglxx529jhgx5bmyj6bf",
+					"endOfSupport": false,
+					"entitlementName": "8d58a634be64484c95adc331720f6537",
+					"entitlementType": "AUDIENCE",
+					"eulaIds": [
+						"egstore"
+					],
+					"id": "8d58a634be64484c95adc331720f6537",
+					"itemType": "DURABLE",
+					"keyImages": [],
+					"lastModifiedDate": "2026-03-17T19:54:53.004Z",
+					"mainGameItem": {
+						"id": "fa16dbd78e2147179dae12e04afa3d95",
+						"namespace": "rosemallow",
+						"unsearchable": false
+					},
+					"mainGameItemList": [
+						{
+							"id": "fa16dbd78e2147179dae12e04afa3d95",
+							"namespace": "rosemallow",
+							"unsearchable": false
+						}
+					],
+					"namespace": "rosemallow",
+					"releaseInfo": [],
+					"status": "ACTIVE",
+					"title": "RosemallowDLC02 Audience",
+					"unsearchable": true
+				},
+				{
+					"ageGatings": {},
+					"categories": [
+						{
+							"path": "games"
+						},
+						{
+							"path": "applications"
+						}
+					],
+					"creationDate": "2020-08-29T00:14:37.845Z",
+					"customAttributes": {
+						"CanRunOffline": {
+							"type": "STRING",
+							"value": "true"
+						},
+						"CanSkipKoreanIdVerification": {
+							"type": "STRING",
+							"value": "true"
+						},
+						"FolderName": {
+							"type": "STRING",
+							"value": "PerilOnGorgon"
+						},
+						"MonitorPresence": {
+							"type": "STRING",
+							"value": "true"
+						},
+						"PresenceID": {
+							"type": "STRING",
+							"value": "rosemallow"
+						},
+						"RequirementsJson": {
+							"type": "STRING",
+							"value": "{}"
+						}
+					},
+					"description": "The Outer Worlds Peril on Gorgon",
+					"developer": "Microsoft",
+					"developerId": "o-f3qq8ygts6pglxx529jhgx5bmyj6bf",
+					"endOfSupport": false,
+					"entitlementName": "d96f9819a46a47c5b5462881a0feef21",
+					"entitlementType": "EXECUTABLE",
+					"eulaIds": [
+						"egstore"
+					],
+					"id": "d96f9819a46a47c5b5462881a0feef21",
+					"itemType": "DURABLE",
+					"keyImages": [
+						{
+							"height": 1440,
+							"md5": "32bb2fac601020a530483cc4c1c564ab",
+							"size": 8250826,
+							"type": "DieselGameBox",
+							"uploadedDate": "2020-09-03T21:45:26.315Z",
+							"url": "https://cdn1.epicgames.com/rosemallow/item/TOW_DLC1_Wide-2560x1440-32bb2fac601020a530483cc4c1c564ab.png",
+							"width": 2560
+						},
+						{
+							"height": 1600,
+							"md5": "0fbe15c004f62671d7c1eca86e78d4c1",
+							"size": 4254204,
+							"type": "DieselGameBoxTall",
+							"uploadedDate": "2020-09-03T21:45:25.785Z",
+							"url": "https://cdn1.epicgames.com/rosemallow/item/TOW_DLC1_Tall-1200x1600-0fbe15c004f62671d7c1eca86e78d4c1.png",
+							"width": 1200
+						}
+					],
+					"lastModifiedDate": "2026-03-17T19:54:53.222Z",
+					"longDescription": "The Outer Worlds Peril on Gorgon",
+					"mainGameItem": {
+						"id": "fa16dbd78e2147179dae12e04afa3d95",
+						"namespace": "rosemallow",
+						"unsearchable": false
+					},
+					"mainGameItemList": [
+						{
+							"id": "fa16dbd78e2147179dae12e04afa3d95",
+							"namespace": "rosemallow",
+							"unsearchable": false
+						}
+					],
+					"namespace": "rosemallow",
+					"releaseInfo": [
+						{
+							"appId": "0d5096d5f109405d814ccab3dc6d94f3",
+							"compatibleApps": [],
+							"dateAdded": "2019-06-04T00:00:00.000Z",
+							"id": "918c078e0f7b421a9ada0edb50e88c04",
+							"platform": [
+								"Windows"
+							],
+							"releaseNote": "",
+							"versionTitle": ""
+						}
+					],
+					"status": "ACTIVE",
+					"title": "The Outer Worlds Peril on Gorgon",
+					"unsearchable": true
+				},
+				{
+					"ageGatings": {},
+					"applicationId": "",
+					"categories": [
+						{
+							"path": "audience"
+						},
+						{
+							"path": "public"
+						}
+					],
+					"creationDate": "2023-02-09T23:02:14.956Z",
+					"customAttributes": {
+						"SupportedPlatforms": {
+							"type": "STRING",
+							"value": "Windows"
+						}
+					},
+					"description": "Spacer's Choice Upgrade Path audience",
+					"developer": "Microsoft",
+					"developerId": "o-f3qq8ygts6pglxx529jhgx5bmyj6bf",
+					"endOfSupport": false,
+					"entitlementName": "3ed3b63ede034648acc6edd795ee5814",
+					"entitlementType": "AUDIENCE",
+					"eulaIds": [
+						"egstore"
+					],
+					"id": "3ed3b63ede034648acc6edd795ee5814",
+					"itemType": "DURABLE",
+					"lastModifiedDate": "2026-03-17T19:54:53.180Z",
+					"mainGameItem": {
+						"id": "fa16dbd78e2147179dae12e04afa3d95",
+						"namespace": "rosemallow",
+						"unsearchable": false
+					},
+					"mainGameItemList": [
+						{
+							"id": "fa16dbd78e2147179dae12e04afa3d95",
+							"namespace": "rosemallow",
+							"unsearchable": false
+						}
+					],
+					"namespace": "rosemallow",
+					"releaseInfo": [],
+					"requiresSecureAccount": false,
+					"status": "ACTIVE",
+					"title": "Spacer's Choice Upgrade Path audience",
+					"unsearchable": true
+				}
+			],
+			"folder_name": "TheOuterWorlds",
+			"install": {
+				"install_size": "0",
+				"is_dlc": false
+			},
+			"is_installed": false,
+			"namespace": "rosemallow",
+			"is_mac_native": false,
+			"save_folder": "{UserSavedGames}/The Outer Worlds/",
+			"title": "The Outer Worlds",
+			"canRunOffline": true,
+			"isEAManaged": false,
+			"isUbisoftManaged": false,
+			"is_linux_native": false,
+			"runner": "legendary",
+			"store_url": "https://www.epicgames.com/store/product/the-outer-worlds"
+		},
+		{
+			"app_name": "Swift",
+			"art_cover": "https://cdn1.epicgames.com/item/91b9a3ac7cda40718addd961fddfadca/EGS_VampireTheMasqueradeSwansong_BigBadWolf_S1_2560x1440-3f2dfd9ba25488b64fd899af9bef7699",
+			"art_square": "https://cdn1.epicgames.com/item/91b9a3ac7cda40718addd961fddfadca/EGS_VampireTheMasqueradeSwansong_BigBadWolf_S2_1200x1600-4b9fbee303df3621dcd280e9591bc2b9",
+			"cloud_save_enabled": false,
+			"developer": "Nacon",
+			"extra": {
+				"about": {
+					"description": "Vampire: The Masquerade - Swansong",
+					"shortDescription": ""
+				},
+				"reqs": [],
+				"storeUrl": "https://www.epicgames.com/store/product/vampire-the-masquerade--swansong"
+			},
+			"dlcList": [
+				{
+					"ageGatings": {},
+					"applicationId": "",
+					"categories": [
+						{
+							"path": "audience"
+						},
+						{
+							"path": "public"
+						}
+					],
+					"creationDate": "2022-04-01T23:20:18.442Z",
+					"customAttributes": {
+						"SupportedPlatforms": {
+							"type": "STRING",
+							"value": "Windows"
+						}
+					},
+					"description": "SwiftArtifactsAudience",
+					"developer": "Nacon",
+					"developerId": "o-wubu848ps2xcxuwv2m3bhet9gbhdbp",
+					"endOfSupport": false,
+					"entitlementName": "e6dbb61bf4b44c28b0a6654d2333f968",
+					"entitlementType": "AUDIENCE",
+					"eulaIds": [
+						"egstore"
+					],
+					"id": "e6dbb61bf4b44c28b0a6654d2333f968",
+					"itemType": "DURABLE",
+					"lastModifiedDate": "2022-05-19T00:42:58.562Z",
+					"mainGameItem": {
+						"id": "947174e4cc824f7aafaece1f54c033b9",
+						"namespace": "91b9a3ac7cda40718addd961fddfadca",
+						"unsearchable": false
+					},
+					"mainGameItemList": [
+						{
+							"id": "947174e4cc824f7aafaece1f54c033b9",
+							"namespace": "91b9a3ac7cda40718addd961fddfadca",
+							"unsearchable": false
+						}
+					],
+					"namespace": "91b9a3ac7cda40718addd961fddfadca",
+					"releaseInfo": [],
+					"requiresSecureAccount": false,
+					"status": "ACTIVE",
+					"title": "SwiftArtifactsAudience",
+					"unsearchable": true
+				},
+				{
+					"ageGatings": {},
+					"applicationId": "",
+					"categories": [
+						{
+							"path": "audience"
+						},
+						{
+							"path": "public"
+						}
+					],
+					"creationDate": "2022-04-01T23:51:37.285Z",
+					"customAttributes": {
+						"SupportedPlatforms": {
+							"type": "STRING",
+							"value": "Windows"
+						}
+					},
+					"description": "SwiftOutfitAudience",
+					"developer": "Nacon",
+					"developerId": "o-wubu848ps2xcxuwv2m3bhet9gbhdbp",
+					"endOfSupport": false,
+					"entitlementName": "ce0026798a5941ebb67ce32db8e67408",
+					"entitlementType": "AUDIENCE",
+					"eulaIds": [
+						"egstore"
+					],
+					"id": "ce0026798a5941ebb67ce32db8e67408",
+					"itemType": "DURABLE",
+					"lastModifiedDate": "2022-05-19T00:42:58.564Z",
+					"mainGameItem": {
+						"id": "947174e4cc824f7aafaece1f54c033b9",
+						"namespace": "91b9a3ac7cda40718addd961fddfadca",
+						"unsearchable": false
+					},
+					"mainGameItemList": [
+						{
+							"id": "947174e4cc824f7aafaece1f54c033b9",
+							"namespace": "91b9a3ac7cda40718addd961fddfadca",
+							"unsearchable": false
+						}
+					],
+					"namespace": "91b9a3ac7cda40718addd961fddfadca",
+					"releaseInfo": [],
+					"requiresSecureAccount": false,
+					"status": "ACTIVE",
+					"title": "SwiftOutfitAudience",
+					"unsearchable": true
+				},
+				{
+					"ageGatings": {},
+					"applicationId": "",
+					"categories": [
+						{
+							"path": "audience"
+						},
+						{
+							"path": "public"
+						}
+					],
+					"creationDate": "2022-04-01T23:35:52.651Z",
+					"customAttributes": {
+						"SupportedPlatforms": {
+							"type": "STRING",
+							"value": "Windows"
+						}
+					},
+					"description": "SwiftVictoriaAshAudience",
+					"developer": "Nacon",
+					"developerId": "o-wubu848ps2xcxuwv2m3bhet9gbhdbp",
+					"endOfSupport": false,
+					"entitlementName": "c8663670520b486c8a8d0b75ea735841",
+					"entitlementType": "AUDIENCE",
+					"eulaIds": [
+						"egstore"
+					],
+					"id": "c8663670520b486c8a8d0b75ea735841",
+					"itemType": "DURABLE",
+					"lastModifiedDate": "2022-05-19T00:42:58.563Z",
+					"mainGameItem": {
+						"id": "947174e4cc824f7aafaece1f54c033b9",
+						"namespace": "91b9a3ac7cda40718addd961fddfadca",
+						"unsearchable": false
+					},
+					"mainGameItemList": [
+						{
+							"id": "947174e4cc824f7aafaece1f54c033b9",
+							"namespace": "91b9a3ac7cda40718addd961fddfadca",
+							"unsearchable": false
+						}
+					],
+					"namespace": "91b9a3ac7cda40718addd961fddfadca",
+					"releaseInfo": [],
+					"requiresSecureAccount": false,
+					"status": "ACTIVE",
+					"title": "SwiftVictoriaAshAudience",
+					"unsearchable": true
+				}
+			],
+			"folder_name": "VampireMasqueradeSwansong",
+			"install": {
+				"install_size": "0",
+				"is_dlc": false
+			},
+			"is_installed": false,
+			"namespace": "91b9a3ac7cda40718addd961fddfadca",
+			"is_mac_native": false,
+			"save_folder": "",
+			"title": "Vampire: The Masquerade - Swansong",
+			"canRunOffline": true,
+			"isEAManaged": false,
+			"isUbisoftManaged": false,
+			"is_linux_native": false,
+			"runner": "legendary",
+			"store_url": "https://www.epicgames.com/store/product/vampire-the-masquerade--swansong"
+		},
+		{
+			"app_name": "a65a0afe57db4cd1ae1d3f38e5c536a2",
+			"art_cover": "https://cdn1.epicgames.com/spt-assets/9db4b49a7a0f41f7a071c8d2ccd3c214/our-free-world-j800p.png",
+			"art_square": "https://cdn1.epicgames.com/spt-assets/9db4b49a7a0f41f7a071c8d2ccd3c214/our-free-world-3kwgi.png",
+			"cloud_save_enabled": false,
+			"developer": "Free Minds Publishing",
+			"extra": {
+				"about": {
+					"description": "Our Free World Demo",
+					"shortDescription": ""
+				},
+				"reqs": [],
+				"storeUrl": "https://www.epicgames.com/store/product/our-free-world-demo"
+			},
+			"folder_name": "DemoOurFreeWorld301a6",
+			"install": {
+				"install_size": "0",
+				"is_dlc": false
+			},
+			"is_installed": false,
+			"namespace": "ae86370297884eb18da907ab1e93c4de",
+			"is_mac_native": false,
+			"save_folder": "",
+			"title": "Our Free World Demo",
+			"canRunOffline": false,
+			"isEAManaged": false,
+			"isUbisoftManaged": false,
+			"is_linux_native": false,
+			"runner": "legendary",
+			"store_url": "https://www.epicgames.com/store/product/our-free-world-demo"
+		},
+		{
+			"app_name": "aafc587fbf654758802c8e41e4fb3255",
+			"art_cover": "https://cdn1.epicgames.com/ark/item/EGS_ARKSurvivalEvolved_StudioWildcard_S1-2560x1440-c316afb7c33a9dfb892eef6b99169e43.jpg",
+			"art_square": "https://cdn1.epicgames.com/ark/item/EGS_ARKSurvivalEvolved_StudioWildcard_S2-1200x1600-5b58fdefea9f885c7426e894a1034921.jpg",
+			"cloud_save_enabled": false,
+			"developer": "Studio Wildcard",
+			"extra": {
+				"about": {
+					"description": "ARK: Survival Evolved",
+					"shortDescription": ""
+				},
+				"reqs": [],
+				"storeUrl": "https://www.epicgames.com/store/product/ark-survival-evolved"
+			},
+			"dlcList": [
+				{
+					"ageGatings": {},
+					"categories": [
+						{
+							"path": "games"
+						},
+						{
+							"path": "applications"
+						}
+					],
+					"creationDate": "2020-05-11T23:00:45.822Z",
+					"customAttributes": {
+						"CanRunOffline": {
+							"type": "STRING",
+							"value": "true"
+						},
+						"CanSkipKoreanIdVerification": {
+							"type": "STRING",
+							"value": "true"
+						},
+						"FolderName": {
+							"type": "STRING",
+							"value": "ARKGenesis2"
+						},
+						"MonitorPresence": {
+							"type": "STRING",
+							"value": "false"
+						},
+						"PresenceId": {
+							"type": "STRING",
+							"value": "ark"
+						},
+						"RequirementsJson": {
+							"type": "STRING",
+							"value": "[]"
+						},
+						"UseAccessControl": {
+							"type": "STRING",
+							"value": "false"
+						}
+					},
+					"description": "ARK Genesis 2",
+					"developer": "Studio Wildcard",
+					"developerId": "o-usvfbmlqdt678vrp36qvm2d5cz2cpr",
+					"endOfSupport": false,
+					"entitlementName": "37a58fa2e6564037bc0641930e65d5cd",
+					"entitlementType": "EXECUTABLE",
+					"eulaIds": [
+						"egstore"
+					],
+					"id": "37a58fa2e6564037bc0641930e65d5cd",
+					"itemType": "DURABLE",
+					"keyImages": [
+						{
+							"height": 1440,
+							"md5": "1dff4f517cccbfffa5d66d12a9b8acc6",
+							"size": 999161,
+							"type": "DieselGameBox",
+							"uploadedDate": "2020-06-10T22:33:13.419Z",
+							"url": "https://cdn1.epicgames.com/ark/item/EGS_ARKGenesisSeasonPass_StudioWildcard_SeasonPass_S1-2560x1440-1dff4f517cccbfffa5d66d12a9b8acc6.jpg",
+							"width": 2560
+						},
+						{
+							"height": 1600,
+							"md5": "769c735a6bafd98eef937cd391bff8e0",
+							"size": 1019043,
+							"type": "DieselGameBoxTall",
+							"uploadedDate": "2020-06-10T22:33:29.566Z",
+							"url": "https://cdn1.epicgames.com/ark/item/EGS_ARKGenesisSeasonPass_StudioWildcard_SeasonPass_S2-1200x1600-769c735a6bafd98eef937cd391bff8e0.jpg",
+							"width": 1200
+						}
+					],
+					"lastModifiedDate": "2020-11-11T16:19:48.305Z",
+					"mainGameItem": {
+						"id": "743e47ee84ac49a1a49f4781da70e0d0",
+						"namespace": "ark",
+						"unsearchable": false
+					},
+					"mainGameItemList": [
+						{
+							"id": "743e47ee84ac49a1a49f4781da70e0d0",
+							"namespace": "ark",
+							"unsearchable": false
+						}
+					],
+					"namespace": "ark",
+					"releaseInfo": [
+						{
+							"appId": "2ef456723ec04b4aa04ad498973b86f6",
+							"dateAdded": "2020-03-28T00:00:00.000Z",
+							"id": "11b239088217436ea81bf3c5af8337fd",
+							"platform": [
+								"Windows",
+								"Mac"
+							]
+						}
+					],
+					"status": "ACTIVE",
+					"title": "ARK Genesis 2",
+					"unsearchable": true
+				},
+				{
+					"ageGatings": {},
+					"categories": [
+						{
+							"path": "public"
+						},
+						{
+							"path": "games"
+						},
+						{
+							"path": "applications"
+						}
+					],
+					"creationDate": "2020-05-28T21:54:16.814Z",
+					"customAttributes": {
+						"CanRunOffline": {
+							"type": "STRING",
+							"value": "true"
+						},
+						"CanSkipKoreanIdVerification": {
+							"type": "STRING",
+							"value": "true"
+						},
+						"FolderName": {
+							"type": "STRING",
+							"value": "Ragnarok"
+						},
+						"MonitorPresence": {
+							"type": "STRING",
+							"value": "false"
+						},
+						"PresenceId": {
+							"type": "STRING",
+							"value": "ark"
+						},
+						"RequirementsJson": {
+							"type": "STRING",
+							"value": "[]"
+						},
+						"UseAccessControl": {
+							"type": "STRING",
+							"value": "false"
+						}
+					},
+					"description": "ARK Ragnarok",
+					"developer": "Studio Wildcard",
+					"developerId": "o-usvfbmlqdt678vrp36qvm2d5cz2cpr",
+					"endOfSupport": false,
+					"entitlementName": "e5fb718ceea24f12a6e59602f6a29c6c",
+					"entitlementType": "EXECUTABLE",
+					"eulaIds": [
+						"egstore"
+					],
+					"id": "e5fb718ceea24f12a6e59602f6a29c6c",
+					"itemType": "DURABLE",
+					"keyImages": [
+						{
+							"height": 1440,
+							"md5": "57a08b3edd6d54d179427a7e7af8d7fd",
+							"size": 745003,
+							"type": "DieselGameBox",
+							"uploadedDate": "2020-06-01T16:03:50.124Z",
+							"url": "https://cdn1.epicgames.com/ark/item/EGS_RagnarokARKExpansionMap_StudioWildcard_DLC_S1-2560x1440-57a08b3edd6d54d179427a7e7af8d7fd.jpg",
+							"width": 2560
+						},
+						{
+							"height": 1600,
+							"md5": "cebef6fbf975e9be62a11bdf52a77672",
+							"size": 441308,
+							"type": "DieselGameBoxTall",
+							"uploadedDate": "2020-06-10T23:19:50.060Z",
+							"url": "https://cdn1.epicgames.com/ark/item/EGS_RagnarokARKExpansionTALL-1200x1600-cebef6fbf975e9be62a11bdf52a77672.jpg",
+							"width": 1200
+						}
+					],
+					"lastModifiedDate": "2020-06-11T14:27:42.814Z",
+					"mainGameItem": {
+						"id": "743e47ee84ac49a1a49f4781da70e0d0",
+						"namespace": "ark",
+						"unsearchable": false
+					},
+					"mainGameItemList": [
+						{
+							"id": "743e47ee84ac49a1a49f4781da70e0d0",
+							"namespace": "ark",
+							"unsearchable": false
+						}
+					],
+					"namespace": "ark",
+					"releaseInfo": [
+						{
+							"appId": "40404abd974443de81c875af6323f329",
+							"dateAdded": "2020-03-28T00:00:00.000Z",
+							"id": "11b239088217436ea81bf3c5af8337fd",
+							"platform": [
+								"Windows",
+								"Mac"
+							]
+						}
+					],
+					"status": "ACTIVE",
+					"title": "ARK Ragnarok",
+					"unsearchable": true
+				},
+				{
+					"ageGatings": {},
+					"categories": [
+						{
+							"path": "public"
+						},
+						{
+							"path": "games"
+						},
+						{
+							"path": "applications"
+						}
+					],
+					"creationDate": "2020-05-11T22:28:04.946Z",
+					"customAttributes": {
+						"CanRunOffline": {
+							"type": "STRING",
+							"value": "true"
+						},
+						"CanSkipKoreanIdVerification": {
+							"type": "STRING",
+							"value": "true"
+						},
+						"FolderName": {
+							"type": "STRING",
+							"value": "Aberration"
+						},
+						"MonitorPresence": {
+							"type": "STRING",
+							"value": "false"
+						},
+						"PresenceId": {
+							"type": "STRING",
+							"value": "ark"
+						},
+						"RequirementsJson": {
+							"type": "STRING",
+							"value": "[]"
+						},
+						"UseAccessControl": {
+							"type": "STRING",
+							"value": "false"
+						}
+					},
+					"description": "ARK Aberration",
+					"developer": "Studio Wildcard",
+					"developerId": "o-usvfbmlqdt678vrp36qvm2d5cz2cpr",
+					"endOfSupport": false,
+					"entitlementName": "1d0b20ac2d2a4eaebae9a372bac08aed",
+					"entitlementType": "EXECUTABLE",
+					"eulaIds": [
+						"egstore"
+					],
+					"id": "1d0b20ac2d2a4eaebae9a372bac08aed",
+					"itemType": "DURABLE",
+					"keyImages": [
+						{
+							"height": 1440,
+							"md5": "9bfc2385b3619fd40ad9709d006bac9c",
+							"size": 1006594,
+							"type": "DieselGameBox",
+							"uploadedDate": "2020-06-01T16:45:27.686Z",
+							"url": "https://cdn1.epicgames.com/ark/item/EGS_ARKAberration_StudioWildcard_DLC_S1-2560x1440-9bfc2385b3619fd40ad9709d006bac9c.jpg",
+							"width": 2560
+						},
+						{
+							"height": 1600,
+							"md5": "da14621020a10c5ae4f6aebac3edf952",
+							"size": 1001185,
+							"type": "DieselGameBoxTall",
+							"uploadedDate": "2020-06-01T16:45:35.866Z",
+							"url": "https://cdn1.epicgames.com/ark/item/EGS_ARKAberration_StudioWildcard_DLC_S2-1200x1600-da14621020a10c5ae4f6aebac3edf952.jpg",
+							"width": 1200
+						}
+					],
+					"lastModifiedDate": "2020-06-11T14:27:42.814Z",
+					"mainGameItem": {
+						"id": "743e47ee84ac49a1a49f4781da70e0d0",
+						"namespace": "ark",
+						"unsearchable": false
+					},
+					"mainGameItemList": [
+						{
+							"id": "743e47ee84ac49a1a49f4781da70e0d0",
+							"namespace": "ark",
+							"unsearchable": false
+						}
+					],
+					"namespace": "ark",
+					"releaseInfo": [
+						{
+							"appId": "38a050f6a6814582b4e2c28d6c069ae6",
+							"dateAdded": "2020-03-28T00:00:00.000Z",
+							"id": "11b239088217436ea81bf3c5af8337fd",
+							"platform": [
+								"Windows",
+								"Mac"
+							]
+						}
+					],
+					"status": "ACTIVE",
+					"title": "ARK Aberration",
+					"unsearchable": true
+				},
+				{
+					"ageGatings": {},
+					"categories": [
+						{
+							"path": "games"
+						},
+						{
+							"path": "applications"
+						}
+					],
+					"creationDate": "2020-05-11T22:47:05.875Z",
+					"customAttributes": {
+						"CanRunOffline": {
+							"type": "STRING",
+							"value": "true"
+						},
+						"CanSkipKoreanIdVerification": {
+							"type": "STRING",
+							"value": "true"
+						},
+						"FolderName": {
+							"type": "STRING",
+							"value": "ARKGenesis1"
+						},
+						"MonitorPresence": {
+							"type": "STRING",
+							"value": "false"
+						},
+						"PresenceId": {
+							"type": "STRING",
+							"value": "ark"
+						},
+						"RequirementsJson": {
+							"type": "STRING",
+							"value": "[]"
+						},
+						"UseAccessControl": {
+							"type": "STRING",
+							"value": "false"
+						}
+					},
+					"description": "ARK Genesis 1",
+					"developer": "Studio Wildcard",
+					"developerId": "o-usvfbmlqdt678vrp36qvm2d5cz2cpr",
+					"endOfSupport": false,
+					"entitlementName": "f0c1d267c9f04abba4cde4d940a24622",
+					"entitlementType": "EXECUTABLE",
+					"eulaIds": [
+						"egstore"
+					],
+					"id": "f0c1d267c9f04abba4cde4d940a24622",
+					"itemType": "DURABLE",
+					"keyImages": [
+						{
+							"height": 1440,
+							"md5": "1dff4f517cccbfffa5d66d12a9b8acc6",
+							"size": 999161,
+							"type": "DieselGameBox",
+							"uploadedDate": "2020-06-10T22:59:51.606Z",
+							"url": "https://cdn1.epicgames.com/ark/item/EGS_ARKGenesisSeasonPass_StudioWildcard_SeasonPass_S1-2560x1440-1dff4f517cccbfffa5d66d12a9b8acc6.jpg",
+							"width": 2560
+						},
+						{
+							"height": 1600,
+							"md5": "769c735a6bafd98eef937cd391bff8e0",
+							"size": 1019043,
+							"type": "DieselGameBoxTall",
+							"uploadedDate": "2020-06-10T23:00:09.571Z",
+							"url": "https://cdn1.epicgames.com/ark/item/EGS_ARKGenesisSeasonPass_StudioWildcard_SeasonPass_S2-1200x1600-769c735a6bafd98eef937cd391bff8e0.jpg",
+							"width": 1200
+						}
+					],
+					"lastModifiedDate": "2020-06-11T14:27:42.814Z",
+					"mainGameItem": {
+						"id": "743e47ee84ac49a1a49f4781da70e0d0",
+						"namespace": "ark",
+						"unsearchable": false
+					},
+					"mainGameItemList": [
+						{
+							"id": "743e47ee84ac49a1a49f4781da70e0d0",
+							"namespace": "ark",
+							"unsearchable": false
+						}
+					],
+					"namespace": "ark",
+					"releaseInfo": [
+						{
+							"appId": "155aa8899e6d498886e8ba4c03b2ed59",
+							"dateAdded": "2020-03-28T00:00:00.000Z",
+							"id": "11b239088217436ea81bf3c5af8337fd",
+							"platform": [
+								"Windows",
+								"Mac"
+							]
+						}
+					],
+					"status": "ACTIVE",
+					"title": "ARK Genesis 1",
+					"unsearchable": true
+				},
+				{
+					"ageGatings": {},
+					"categories": [
+						{
+							"path": "public"
+						},
+						{
+							"path": "games"
+						},
+						{
+							"path": "applications"
+						}
+					],
+					"creationDate": "2020-05-11T22:32:36.559Z",
+					"customAttributes": {
+						"CanRunOffline": {
+							"type": "STRING",
+							"value": "true"
+						},
+						"CanSkipKoreanIdVerification": {
+							"type": "STRING",
+							"value": "true"
+						},
+						"FolderName": {
+							"type": "STRING",
+							"value": "ARKExtinction"
+						},
+						"MonitorPresence": {
+							"type": "STRING",
+							"value": "false"
+						},
+						"PresenceId": {
+							"type": "STRING",
+							"value": "ark"
+						},
+						"RequirementsJson": {
+							"type": "STRING",
+							"value": "[]"
+						},
+						"UseAccessControl": {
+							"type": "STRING",
+							"value": "false"
+						}
+					},
+					"description": "ARK Extinction",
+					"developer": "Studio Wildcard",
+					"developerId": "o-usvfbmlqdt678vrp36qvm2d5cz2cpr",
+					"endOfSupport": false,
+					"entitlementName": "906d7a9edc23408199e7bc79715f4a58",
+					"entitlementType": "EXECUTABLE",
+					"eulaIds": [
+						"egstore"
+					],
+					"id": "906d7a9edc23408199e7bc79715f4a58",
+					"itemType": "DURABLE",
+					"keyImages": [
+						{
+							"height": 1440,
+							"md5": "398e03248edc6104f0cc16be02f4b451",
+							"size": 934923,
+							"type": "DieselGameBox",
+							"uploadedDate": "2020-06-01T16:44:01.715Z",
+							"url": "https://cdn1.epicgames.com/ark/item/EGS_ARKExtinction_StudioWildcard_DLC_S1-2560x1440-398e03248edc6104f0cc16be02f4b451.jpg",
+							"width": 2560
+						},
+						{
+							"height": 1600,
+							"md5": "21e6c4a02ee6d242dc1b6538fbd48275",
+							"size": 1013129,
+							"type": "DieselGameBoxTall",
+							"uploadedDate": "2020-06-01T16:44:10.422Z",
+							"url": "https://cdn1.epicgames.com/ark/item/EGS_ARKExtinction_StudioWildcard_DLC_S2-1200x1600-21e6c4a02ee6d242dc1b6538fbd48275.jpg",
+							"width": 1200
+						}
+					],
+					"lastModifiedDate": "2020-06-11T14:27:42.814Z",
+					"mainGameItem": {
+						"id": "743e47ee84ac49a1a49f4781da70e0d0",
+						"namespace": "ark",
+						"unsearchable": false
+					},
+					"mainGameItemList": [
+						{
+							"id": "743e47ee84ac49a1a49f4781da70e0d0",
+							"namespace": "ark",
+							"unsearchable": false
+						}
+					],
+					"namespace": "ark",
+					"releaseInfo": [
+						{
+							"appId": "c3dc963da86e4a13b5b8a696959d4e5e",
+							"dateAdded": "2020-03-28T00:00:00.000Z",
+							"id": "11b239088217436ea81bf3c5af8337fd",
+							"platform": [
+								"Windows",
+								"Mac"
+							]
+						}
+					],
+					"status": "ACTIVE",
+					"title": "ARK Extinction",
+					"unsearchable": true
+				},
+				{
+					"ageGatings": {},
+					"applicationId": "",
+					"categories": [
+						{
+							"path": "public"
+						},
+						{
+							"path": "addons"
+						},
+						{
+							"path": "applications"
+						}
+					],
+					"creationDate": "2021-12-13T19:40:29.845Z",
+					"customAttributes": {
+						"CanRunOffline": {
+							"type": "STRING",
+							"value": "true"
+						},
+						"CanSkipKoreanIdVerification": {
+							"type": "STRING",
+							"value": "true"
+						},
+						"FolderName": {
+							"type": "STRING",
+							"value": "ARKLostIsland"
+						},
+						"MonitorPresence": {
+							"type": "STRING",
+							"value": "false"
+						},
+						"PresenceId": {
+							"type": "STRING",
+							"value": "ark"
+						},
+						"RequirementsJson": {
+							"type": "STRING",
+							"value": "[]"
+						},
+						"UseAccessControl": {
+							"type": "STRING",
+							"value": "false"
+						}
+					},
+					"description": "ARK Lost Island",
+					"developer": "Studio Wildcard",
+					"developerId": "o-usvfbmlqdt678vrp36qvm2d5cz2cpr",
+					"endOfSupport": false,
+					"entitlementName": "094da37630e84ab389a4ec359d6f7aaa",
+					"entitlementType": "EXECUTABLE",
+					"eulaIds": [
+						"egstore"
+					],
+					"id": "094da37630e84ab389a4ec359d6f7aaa",
+					"itemType": "DURABLE",
+					"keyImages": [
+						{
+							"height": 1440,
+							"md5": "6fa2c1db07b8cd865076ef333cbaee24",
+							"size": 990814,
+							"type": "DieselGameBox",
+							"uploadedDate": "2021-12-14T19:17:28.365Z",
+							"url": "https://cdn1.epicgames.com/item/ark/EGS_LostIslandARKExpansionMap_StudioWildcard_DLC_S1_2560x1440-6fa2c1db07b8cd865076ef333cbaee24",
+							"width": 2560
+						},
+						{
+							"height": 1600,
+							"md5": "a8e8a9ce16278379f8eaddbc168fcf4f",
+							"size": 871021,
+							"type": "DieselGameBoxTall",
+							"uploadedDate": "2021-12-14T19:17:32.869Z",
+							"url": "https://cdn1.epicgames.com/item/ark/EGS_LostIslandARKExpansionMap_StudioWildcard_DLC_S2_1200x1600-a8e8a9ce16278379f8eaddbc168fcf4f",
+							"width": 1200
+						}
+					],
+					"lastModifiedDate": "2021-12-14T19:52:19.073Z",
+					"mainGameItem": {
+						"id": "743e47ee84ac49a1a49f4781da70e0d0",
+						"namespace": "ark",
+						"unsearchable": false
+					},
+					"mainGameItemList": [
+						{
+							"id": "743e47ee84ac49a1a49f4781da70e0d0",
+							"namespace": "ark",
+							"unsearchable": false
+						}
+					],
+					"namespace": "ark",
+					"releaseInfo": [
+						{
+							"appId": "deaeb7a174e74a10b1caa9a5dc1d7697",
+							"compatibleApps": [],
+							"dateAdded": "2020-03-28T00:00:00.000Z",
+							"id": "e38261164de546f1a360cef75ea3db56",
+							"platform": [
+								"Windows"
+							]
+						}
+					],
+					"requiresSecureAccount": false,
+					"status": "ACTIVE",
+					"title": "ARK Lost Island",
+					"unsearchable": true
+				},
+				{
+					"ageGatings": {},
+					"categories": [
+						{
+							"path": "public"
+						},
+						{
+							"path": "games"
+						},
+						{
+							"path": "applications"
+						}
+					],
+					"creationDate": "2020-05-28T21:53:29.892Z",
+					"customAttributes": {
+						"CanRunOffline": {
+							"type": "STRING",
+							"value": "true"
+						},
+						"CanSkipKoreanIdVerification": {
+							"type": "STRING",
+							"value": "true"
+						},
+						"FolderName": {
+							"type": "STRING",
+							"value": "ARKCenter"
+						},
+						"MonitorPresence": {
+							"type": "STRING",
+							"value": "false"
+						},
+						"PresenceId": {
+							"type": "STRING",
+							"value": "ark"
+						},
+						"RequirementsJson": {
+							"type": "STRING",
+							"value": "[]"
+						},
+						"UseAccessControl": {
+							"type": "STRING",
+							"value": "false"
+						}
+					},
+					"description": "ARK The Center",
+					"developer": "Studio Wildcard",
+					"developerId": "o-usvfbmlqdt678vrp36qvm2d5cz2cpr",
+					"endOfSupport": false,
+					"entitlementName": "c76f31b0c4ea4b99bc80ce6844212802",
+					"entitlementType": "EXECUTABLE",
+					"eulaIds": [
+						"egstore"
+					],
+					"id": "c76f31b0c4ea4b99bc80ce6844212802",
+					"itemType": "DURABLE",
+					"keyImages": [
+						{
+							"height": 1600,
+							"md5": "7542bcf9b85934d5ac62d53efeef6416",
+							"size": 918346,
+							"type": "DieselGameBoxTall",
+							"uploadedDate": "2020-06-10T23:31:39.813Z",
+							"url": "https://cdn1.epicgames.com/ark/item/EGS_TheCenterARKExpansionMap_StudioWildcard_DLC_S2-1200x1600-7542bcf9b85934d5ac62d53efeef6416.jpg",
+							"width": 1200
+						},
+						{
+							"height": 1440,
+							"md5": "89babcad6baf67d8543742d8de919db2",
+							"size": 1010707,
+							"type": "DieselGameBox",
+							"uploadedDate": "2020-06-10T23:32:07.770Z",
+							"url": "https://cdn1.epicgames.com/ark/item/EGS_TheCenterARKExpansionMap_StudioWildcard_DLC_S1-2560x1440-89babcad6baf67d8543742d8de919db2.jpg",
+							"width": 2560
+						}
+					],
+					"lastModifiedDate": "2020-06-11T14:27:42.814Z",
+					"mainGameItem": {
+						"id": "743e47ee84ac49a1a49f4781da70e0d0",
+						"namespace": "ark",
+						"unsearchable": false
+					},
+					"mainGameItemList": [
+						{
+							"id": "743e47ee84ac49a1a49f4781da70e0d0",
+							"namespace": "ark",
+							"unsearchable": false
+						}
+					],
+					"namespace": "ark",
+					"releaseInfo": [
+						{
+							"appId": "028eaf5aa1bf4867b4bf163303d338d3",
+							"dateAdded": "2020-03-28T00:00:00.000Z",
+							"id": "11b239088217436ea81bf3c5af8337fd",
+							"platform": [
+								"Windows",
+								"Mac"
+							]
+						}
+					],
+					"status": "ACTIVE",
+					"title": "ARK The Center",
+					"unsearchable": true
+				},
+				{
+					"ageGatings": {},
+					"categories": [
+						{
+							"path": "public"
+						},
+						{
+							"path": "games"
+						},
+						{
+							"path": "applications"
+						}
+					],
+					"creationDate": "2020-05-28T21:56:00.213Z",
+					"customAttributes": {
+						"CanRunOffline": {
+							"type": "STRING",
+							"value": "true"
+						},
+						"CanSkipKoreanIdVerification": {
+							"type": "STRING",
+							"value": "true"
+						},
+						"FolderName": {
+							"type": "STRING",
+							"value": "CrystalIsles"
+						},
+						"MonitorPresence": {
+							"type": "STRING",
+							"value": "false"
+						},
+						"PresenceId": {
+							"type": "STRING",
+							"value": "ark"
+						},
+						"RequirementsJson": {
+							"type": "STRING",
+							"value": "[]"
+						},
+						"UseAccessControl": {
+							"type": "STRING",
+							"value": "false"
+						}
+					},
+					"description": "ARK Crystal Isles",
+					"developer": "Studio Wildcard",
+					"developerId": "o-usvfbmlqdt678vrp36qvm2d5cz2cpr",
+					"endOfSupport": false,
+					"entitlementName": "b560fb0489764a5bb7197761562ec16a",
+					"entitlementType": "EXECUTABLE",
+					"eulaIds": [
+						"egstore"
+					],
+					"id": "b560fb0489764a5bb7197761562ec16a",
+					"itemType": "DURABLE",
+					"keyImages": [
+						{
+							"height": 1440,
+							"md5": "69362bdd35ee84abc616f06b9c5430e3",
+							"size": 839439,
+							"type": "DieselGameBox",
+							"uploadedDate": "2020-06-10T23:49:31.970Z",
+							"url": "https://cdn1.epicgames.com/ark/item/EGS_CrystalIslesARKExpansionMap_StudioWildcard_DLC_S1-2560x1440-69362bdd35ee84abc616f06b9c5430e3.jpg",
+							"width": 2560
+						},
+						{
+							"height": 1600,
+							"md5": "728f7f9cec6d40b17e06e35fe7f5edb1",
+							"size": 654232,
+							"type": "DieselGameBoxTall",
+							"uploadedDate": "2020-06-10T23:49:47.539Z",
+							"url": "https://cdn1.epicgames.com/ark/item/EGS_CrystalIslesARKExpansionMap_StudioWildcard_DLC_S2-1200x1600-728f7f9cec6d40b17e06e35fe7f5edb1.jpg",
+							"width": 1200
+						}
+					],
+					"lastModifiedDate": "2020-06-11T14:27:42.814Z",
+					"mainGameItem": {
+						"id": "743e47ee84ac49a1a49f4781da70e0d0",
+						"namespace": "ark",
+						"unsearchable": false
+					},
+					"mainGameItemList": [
+						{
+							"id": "743e47ee84ac49a1a49f4781da70e0d0",
+							"namespace": "ark",
+							"unsearchable": false
+						}
+					],
+					"namespace": "ark",
+					"releaseInfo": [
+						{
+							"appId": "59e7d1f8e717413586341e227a12aa58",
+							"dateAdded": "2020-03-28T00:00:00.000Z",
+							"id": "11b239088217436ea81bf3c5af8337fd",
+							"platform": [
+								"Windows",
+								"Mac"
+							]
+						}
+					],
+					"status": "ACTIVE",
+					"title": "ARK Crystal Isles",
+					"unsearchable": true
+				},
+				{
+					"ageGatings": {},
+					"applicationId": "",
+					"categories": [
+						{
+							"path": "public"
+						},
+						{
+							"path": "addons"
+						},
+						{
+							"path": "applications"
+						}
+					],
+					"creationDate": "2022-04-22T20:48:49.498Z",
+					"customAttributes": {
+						"CanRunOffline": {
+							"type": "STRING",
+							"value": "true"
+						},
+						"CanSkipKoreanIdVerification": {
+							"type": "STRING",
+							"value": "true"
+						},
+						"FolderName": {
+							"type": "STRING",
+							"value": "ARKFjordur"
+						},
+						"MonitorPresence": {
+							"type": "STRING",
+							"value": "false"
+						},
+						"PresenceId": {
+							"type": "STRING",
+							"value": "ark"
+						},
+						"RequirementsJson": {
+							"type": "STRING",
+							"value": "[]"
+						},
+						"UseAccessControl": {
+							"type": "STRING",
+							"value": "false"
+						}
+					},
+					"description": "ARK Fjordur",
+					"developer": "Studio Wildcard",
+					"developerId": "o-usvfbmlqdt678vrp36qvm2d5cz2cpr",
+					"endOfSupport": false,
+					"entitlementName": "4c3d3fad6d0a42659113933165f0accf",
+					"entitlementType": "EXECUTABLE",
+					"eulaIds": [
+						"egstore"
+					],
+					"id": "4c3d3fad6d0a42659113933165f0accf",
+					"itemType": "DURABLE",
+					"keyImages": [
+						{
+							"height": 1440,
+							"md5": "3265804dd9b793d785e5fc0c88f66793",
+							"size": 995921,
+							"type": "DieselGameBox",
+							"uploadedDate": "2022-06-10T20:17:25.180Z",
+							"url": "https://cdn1.epicgames.com/item/ark/EGS_FjordurARKExpansionMap_StudioWildcard_DLC_S1_2560x1440-3265804dd9b793d785e5fc0c88f66793",
+							"width": 2560
+						},
+						{
+							"height": 1600,
+							"md5": "e908f469c1dace302a88fc8e6a1ad5e0",
+							"size": 934812,
+							"type": "DieselGameBoxTall",
+							"uploadedDate": "2022-06-10T20:17:28.871Z",
+							"url": "https://cdn1.epicgames.com/item/ark/EGS_FjordurARKExpansionMap_StudioWildcard_DLC_S2_1200x1600-e908f469c1dace302a88fc8e6a1ad5e0",
+							"width": 1200
+						}
+					],
+					"lastModifiedDate": "2022-06-12T19:05:14.540Z",
+					"mainGameItem": {
+						"id": "743e47ee84ac49a1a49f4781da70e0d0",
+						"namespace": "ark",
+						"unsearchable": false
+					},
+					"mainGameItemList": [
+						{
+							"id": "743e47ee84ac49a1a49f4781da70e0d0",
+							"namespace": "ark",
+							"unsearchable": false
+						}
+					],
+					"namespace": "ark",
+					"releaseInfo": [
+						{
+							"appId": "c8100452cf954e2292152d17182386ff",
+							"compatibleApps": [],
+							"dateAdded": "2020-03-28T00:00:00.000Z",
+							"id": "feb7d156d5e34eabbb67a018f680a8ba",
+							"platform": [
+								"Windows"
+							]
+						}
+					],
+					"requiresSecureAccount": false,
+					"status": "ACTIVE",
+					"title": "ARK Fjordur",
+					"unsearchable": true
+				},
+				{
+					"ageGatings": {},
+					"categories": [
+						{
+							"path": "public"
+						},
+						{
+							"path": "games"
+						},
+						{
+							"path": "applications"
+						}
+					],
+					"creationDate": "2020-05-11T22:17:16.915Z",
+					"customAttributes": {
+						"CanRunOffline": {
+							"type": "STRING",
+							"value": "true"
+						},
+						"CanSkipKoreanIdVerification": {
+							"type": "STRING",
+							"value": "true"
+						},
+						"FolderName": {
+							"type": "STRING",
+							"value": "ScorchedEarth"
+						},
+						"MonitorPresence": {
+							"type": "STRING",
+							"value": "false"
+						},
+						"PresenceId": {
+							"type": "STRING",
+							"value": "ark"
+						},
+						"RequirementsJson": {
+							"type": "STRING",
+							"value": "[]"
+						},
+						"UseAccessControl": {
+							"type": "STRING",
+							"value": "false"
+						}
+					},
+					"description": "ARK Scorched Earth",
+					"developer": "Studio Wildcard",
+					"developerId": "o-usvfbmlqdt678vrp36qvm2d5cz2cpr",
+					"endOfSupport": false,
+					"entitlementName": "551ae469c0294f729edf66512506c46e",
+					"entitlementType": "EXECUTABLE",
+					"eulaIds": [
+						"egstore"
+					],
+					"id": "551ae469c0294f729edf66512506c46e",
+					"itemType": "DURABLE",
+					"keyImages": [
+						{
+							"height": 1440,
+							"md5": "7044aba826505468a03216eca3d74304",
+							"size": 996880,
+							"type": "DieselGameBox",
+							"uploadedDate": "2020-06-01T16:46:28.057Z",
+							"url": "https://cdn1.epicgames.com/ark/item/EGS_ARKScorchedEarth_StudioWildcard_DLC_S1-2560x1440-7044aba826505468a03216eca3d74304.jpg",
+							"width": 2560
+						},
+						{
+							"height": 1600,
+							"md5": "23f851460c2b6e7b489544df7b9b8621",
+							"size": 1017103,
+							"type": "DieselGameBoxTall",
+							"uploadedDate": "2020-06-01T16:46:36.205Z",
+							"url": "https://cdn1.epicgames.com/ark/item/EGS_ARKScorchedEarth_StudioWildcard_DLC_S2-1200x1600-23f851460c2b6e7b489544df7b9b8621.jpg",
+							"width": 1200
+						}
+					],
+					"lastModifiedDate": "2020-06-11T14:27:42.814Z",
+					"mainGameItem": {
+						"id": "743e47ee84ac49a1a49f4781da70e0d0",
+						"namespace": "ark",
+						"unsearchable": false
+					},
+					"mainGameItemList": [
+						{
+							"id": "743e47ee84ac49a1a49f4781da70e0d0",
+							"namespace": "ark",
+							"unsearchable": false
+						}
+					],
+					"namespace": "ark",
+					"releaseInfo": [
+						{
+							"appId": "7dc86e5a3fd34ddca9b0e58b57363eb0",
+							"dateAdded": "2020-03-28T00:00:00.000Z",
+							"id": "11b239088217436ea81bf3c5af8337fd",
+							"platform": [
+								"Windows",
+								"Mac"
+							]
+						}
+					],
+					"status": "ACTIVE",
+					"title": "ARK Scorched Earth",
+					"unsearchable": true
+				},
+				{
+					"ageGatings": {},
+					"categories": [
+						{
+							"path": "public"
+						},
+						{
+							"path": "games"
+						},
+						{
+							"path": "applications"
+						}
+					],
+					"creationDate": "2020-05-28T21:55:02.088Z",
+					"customAttributes": {
+						"CanRunOffline": {
+							"type": "STRING",
+							"value": "true"
+						},
+						"CanSkipKoreanIdVerification": {
+							"type": "STRING",
+							"value": "true"
+						},
+						"FolderName": {
+							"type": "STRING",
+							"value": "Valguero"
+						},
+						"MonitorPresence": {
+							"type": "STRING",
+							"value": "false"
+						},
+						"PresenceId": {
+							"type": "STRING",
+							"value": "ark"
+						},
+						"RequirementsJson": {
+							"type": "STRING",
+							"value": "[]"
+						},
+						"UseAccessControl": {
+							"type": "STRING",
+							"value": "false"
+						}
+					},
+					"description": "ARK Valguero",
+					"developer": "Studio Wildcard",
+					"developerId": "o-usvfbmlqdt678vrp36qvm2d5cz2cpr",
+					"endOfSupport": false,
+					"entitlementName": "8a86839da0b94334851f4c07b0d161a9",
+					"entitlementType": "EXECUTABLE",
+					"eulaIds": [
+						"egstore"
+					],
+					"id": "8a86839da0b94334851f4c07b0d161a9",
+					"itemType": "DURABLE",
+					"keyImages": [
+						{
+							"height": 1440,
+							"md5": "ac1543ffc6225457c0d4c8b93557d951",
+							"size": 1014057,
+							"type": "DieselGameBox",
+							"uploadedDate": "2020-06-01T16:07:15.241Z",
+							"url": "https://cdn1.epicgames.com/ark/item/EGS_ValgueroARKExpansionMap_StudioWildcard_DLC_S1-2560x1440-ac1543ffc6225457c0d4c8b93557d951.jpg",
+							"width": 2560
+						},
+						{
+							"height": 1600,
+							"md5": "f9b0a95b6536d99e18384643d8898465",
+							"size": 1000864,
+							"type": "DieselGameBoxTall",
+							"uploadedDate": "2020-06-01T16:07:25.292Z",
+							"url": "https://cdn1.epicgames.com/ark/item/EGS_ValgueroARKExpansionMap_StudioWildcard_DLC_S2-1200x1600-f9b0a95b6536d99e18384643d8898465.jpg",
+							"width": 1200
+						}
+					],
+					"lastModifiedDate": "2020-06-11T14:27:42.814Z",
+					"mainGameItem": {
+						"id": "743e47ee84ac49a1a49f4781da70e0d0",
+						"namespace": "ark",
+						"unsearchable": false
+					},
+					"mainGameItemList": [
+						{
+							"id": "743e47ee84ac49a1a49f4781da70e0d0",
+							"namespace": "ark",
+							"unsearchable": false
+						}
+					],
+					"namespace": "ark",
+					"releaseInfo": [
+						{
+							"appId": "e25eb863aafb4453b9f9fd17af3ae6d2",
+							"dateAdded": "2020-03-28T00:00:00.000Z",
+							"id": "11b239088217436ea81bf3c5af8337fd",
+							"platform": [
+								"Windows",
+								"Mac"
+							]
+						}
+					],
+					"status": "ACTIVE",
+					"title": "ARK Valguero",
+					"unsearchable": true
+				}
+			],
+			"folder_name": "ARKSurvivalEvolved",
+			"install": {
+				"install_size": "0",
+				"is_dlc": false
+			},
+			"is_installed": false,
+			"namespace": "ark",
+			"is_mac_native": true,
+			"save_folder": "",
+			"title": "ARK: Survival Evolved",
+			"canRunOffline": true,
+			"isEAManaged": false,
+			"isUbisoftManaged": false,
+			"is_linux_native": false,
+			"runner": "legendary",
+			"store_url": "https://www.epicgames.com/store/product/ark-survival-evolved"
+		},
+		{
+			"app_name": "cb3bf7ba89574a66ae3b795e039d4dbc",
+			"art_cover": "https://cdn1.epicgames.com/item/dc61166eea95474e912953b163791d42/EGS_TheOuterWorldsSpacersChoiceEdition_ObsidianEntertainment_S2_1200x1600-24b156886564b75bf9aa823a0a0eb18e",
+			"art_square": "https://cdn1.epicgames.com/item/dc61166eea95474e912953b163791d42/EGS_TheOuterWorldsSpacersChoiceEdition_ObsidianEntertainment_S2_1200x1600-24b156886564b75bf9aa823a0a0eb18e",
+			"cloud_save_enabled": true,
+			"developer": "Microsoft",
+			"extra": {
+				"about": {
+					"description": "The Outer Worlds: Spacer's Choice Edition",
+					"shortDescription": ""
+				},
+				"reqs": [],
+				"storeUrl": "https://www.epicgames.com/store/product/the-outer-worlds-spacer-choice-edition"
+			},
+			"folder_name": "TOWSpacersChoice",
+			"install": {
+				"install_size": "0",
+				"is_dlc": false
+			},
+			"is_installed": false,
+			"namespace": "dc61166eea95474e912953b163791d42",
+			"is_mac_native": false,
+			"save_folder": "{UserSavedGames}/The Outer Worlds Epic Games",
+			"title": "The Outer Worlds: Spacer's Choice Edition",
+			"canRunOffline": false,
+			"isEAManaged": false,
+			"isUbisoftManaged": false,
+			"is_linux_native": false,
+			"runner": "legendary",
+			"store_url": "https://www.epicgames.com/store/product/the-outer-worlds-spacer-choice-edition"
+		},
+		{
+			"app_name": "f989878b560747a1aa9d237effd9e005",
+			"art_cover": "https://cdn1.epicgames.com/item/9862908ffff747abb145c54ded5164d0/EGS_AdInfinitum_Hekate_S1_2560x1440-3ec814a15914111bbb56dd6841b7762a",
+			"art_square": "https://cdn1.epicgames.com/item/9862908ffff747abb145c54ded5164d0/EGS_AdInfinitum_Hekate_S2_1200x1600-092760f304c0c794d0c19f3e397751b4",
+			"cloud_save_enabled": true,
+			"developer": "Nacon",
+			"extra": {
+				"about": {
+					"description": "Ad Infinitum",
+					"shortDescription": ""
+				},
+				"reqs": [],
+				"storeUrl": "https://www.epicgames.com/store/product/ad-infinitum"
+			},
+			"folder_name": "AdInfinitum",
+			"install": {
+				"install_size": "0",
+				"is_dlc": false
+			},
+			"is_installed": false,
+			"namespace": "9862908ffff747abb145c54ded5164d0",
+			"is_mac_native": false,
+			"save_folder": "{AppData}/AdInfinitum/Saved/SaveGames/",
+			"title": "Ad Infinitum",
+			"canRunOffline": false,
+			"isEAManaged": false,
+			"isUbisoftManaged": false,
+			"is_linux_native": false,
+			"runner": "legendary",
+			"store_url": "https://www.epicgames.com/store/product/ad-infinitum"
+		}
+	],
+	"__timestamp": {
+		"library": "Sat Nov 14 2026 18:07:41 GMT+1300 (New Zealand Daylight Time)"
+	},
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 3
+		}
+	}
+}

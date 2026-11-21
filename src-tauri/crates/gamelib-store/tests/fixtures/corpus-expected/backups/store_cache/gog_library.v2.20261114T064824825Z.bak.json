@@ -1,0 +1,321 @@
+{
+	"games": [
+		{
+			"app_name": "gog-redist",
+			"runner": "gog",
+			"title": "Galaxy Common Redistributables",
+			"canRunOffline": true,
+			"install": {
+				"is_dlc": true
+			},
+			"is_installed": true,
+			"art_cover": "https://images.gog-statics.com/516af877f6a03199526d1ce5a76358b8f85f6b828764cf46c820f77ae8832fc5.jpg",
+			"art_square": "https://cdn2.steamgriddb.com/file/sgdb-cdn/grid/5fa80a0fb5ff0b2aaca6730ba213219b.png"
+		},
+		{
+			"runner": "gog",
+			"developer": "",
+			"app_name": "1829678475",
+			"art_cover": "https://images.gog.com/0fac9f1dbf470bf0dc7fc69d4ad1d78c8186fab5d96930c0562298da48add838.jpg?namespace=gamesdb",
+			"art_square": "https://images.gog.com/b847f182016a6127e4391121cf9d97c4c9965da76c720821459fa28e56861438.jpg?namespace=gamesdb",
+			"art_background": "https://images.gog.com/443fa45e5a21747ce70d69c7cfec0576dd3f735385561531abd4e3f9dfecc012.webp?namespace=gamesdb",
+			"cloud_save_enabled": false,
+			"art_icon": "https://images.gog.com/98451d0056af5a656fddd568b2f10b06a76681c8e1587a01038ffd34009583ea.jpg?namespace=gamesdb",
+			"extra": {
+				"about": {
+					"description": "Endless Sky is an open source 2D space trading and combat game inspired by the classic Escape Velocity series. Work your way up from a relatively wimpy shuttle, cargo ship, or fighter, to a highly upgraded and customized flagship or to a massive fleet of warships or freighters.",
+					"shortDescription": ""
+				},
+				"reqs": [],
+				"genres": [
+					"Role-playing (RPG)",
+					"Adventure",
+					"Simulator"
+				]
+			},
+			"folder_name": "Endless Sky.app",
+			"install": {
+				"is_dlc": false
+			},
+			"is_installed": false,
+			"save_folder": "",
+			"title": "Endless Sky",
+			"canRunOffline": true,
+			"is_mac_native": true,
+			"is_linux_native": true,
+			"mac_arch": "64"
+		},
+		{
+			"runner": "gog",
+			"developer": "Goblinz Studio, Antoine Descoubet, Hugues Laborde",
+			"app_name": "1192621307",
+			"art_cover": "https://images.gog.com/1f4d70007d53eae03f2416dac3b7e8927d4cdd43b6257ca27a9de9c6861968a8.jpg?namespace=gamesdb",
+			"art_square": "https://images.gog.com/79d2a1e21323f79b9173b021ac6d16f7f4d62affac7c250365c0a869d48c10b1.jpg?namespace=gamesdb",
+			"art_background": "https://images.gog.com/abe34a834bdea2c24d8cd69835f9aae67a3a8ac4f7d91cf0f6047612980aa004.webp?namespace=gamesdb",
+			"cloud_save_enabled": false,
+			"art_icon": "https://images.gog.com/df5b592454a07c45604907d38e2364879eb266a4813f5bf51888031c7c45df97.jpg?namespace=gamesdb",
+			"extra": {
+				"about": {
+					"description": "Racine is a strategy, card game that will give you dynamic real time combat with increasing intensity. Quickly use your cards to give your character a chance to survive not only the current fight, but also the ones to come. Everything happens in real time so you need to help your avatar by using your cards before he gets crushed by the relentless attacks of the spirit.",
+					"shortDescription": ""
+				},
+				"reqs": [],
+				"genres": [
+					"Role-playing (RPG)",
+					"Adventure",
+					"Strategy",
+					"Indie",
+					"Real Time Strategy (RTS)",
+					"Tactical",
+					"Card & Board Game"
+				]
+			},
+			"folder_name": "Racine",
+			"install": {
+				"is_dlc": false
+			},
+			"is_installed": false,
+			"save_folder": "",
+			"title": "Racine",
+			"canRunOffline": true,
+			"is_mac_native": false,
+			"is_linux_native": false
+		},
+		{
+			"runner": "gog",
+			"developer": "Stainless Steel Studios",
+			"app_name": "1207658777",
+			"art_cover": "https://images.gog.com/2c05b2443c63d3ff3332b26940fced591a8d655227c3de21d5253b69576e9df9.jpg?namespace=gamesdb",
+			"art_square": "https://images.gog.com/9a8eda8e31ea87c97e0e289ccbd9cbf2d99a91b873adcac3aae49d043176f563.jpg?namespace=gamesdb",
+			"art_background": "https://images.gog.com/62a9f2e2c4396e2a35685468090e512ec7edec320930d79e3c3abf166ece2eca.webp?namespace=gamesdb",
+			"cloud_save_enabled": false,
+			"art_icon": "https://images.gog.com/a9e361d988650922db56fc180d9aece4673184b243b4f93df935f70041bfe2e0.jpg?namespace=gamesdb",
+			"extra": {
+				"about": {
+					"description": "Description\r\nControl the destiny of a fledgling civilization through as many as 500,000 years of human history. From meagre beginnings you must exploit the natural resources around you to build an empire capable of dominating the Earth. But your rise to supremacy will not go unchallenged. As was the case throughout history, rival civilizations are certain to oppose you every step of the way. \r\n\r\nNew technologies, buildings and weapons become available as your civilization progresses through history. But bear in mind that advancement does not necessarily mean success. Your civilization might flourish during one Epoch only to be crushed in the next...",
+					"shortDescription": ""
+				},
+				"reqs": [],
+				"genres": [
+					"Strategy"
+				]
+			},
+			"folder_name": "",
+			"install": {
+				"is_dlc": false
+			},
+			"is_installed": false,
+			"save_folder": "",
+			"title": "Empire Earth Gold Edition",
+			"canRunOffline": true,
+			"is_mac_native": false,
+			"is_linux_native": false
+		},
+		{
+			"runner": "gog",
+			"developer": "Team FOLON®",
+			"app_name": "1491728574",
+			"art_cover": "https://images.gog.com/a557fa41364e6d06bfe3fca629755b8371af04082645186fd6fdd55c70aaf147.jpg?namespace=gamesdb",
+			"art_square": "https://images.gog.com/a763950d7039103bebdcd6ebd92144ee19ddecbbd4d9cdfee4775aadc965fb01.jpg?namespace=gamesdb",
+			"art_background": "https://images.gog.com/0ac949e2aa519f1f34f7b5e9c9393d56a8b397587329ca7f42491c633cf95922.webp?namespace=gamesdb",
+			"cloud_save_enabled": false,
+			"art_icon": "https://images.gog.com/6215b457aefcbe90737be746b9668d04d54141a3b4cd7dd2176ae79cd4d4475b.jpg?namespace=gamesdb",
+			"extra": {
+				"about": {
+					"description": "There has never been a better time to sample the capital’s delights! Fallout: London lets you explore the wonders of the city 160 years after the bombs have dropped, and 40 years before the events of Fallout 3. You can now reimagine Fallout in a London-centric universe, interacting with a brave new world of London-based locations, stories, factions, creatures, weapons, and gameplay mechanics.",
+					"shortDescription": ""
+				},
+				"reqs": [],
+				"genres": [
+					"Role-playing (RPG)",
+					"Shooter"
+				]
+			},
+			"folder_name": "",
+			"install": {
+				"is_dlc": false
+			},
+			"is_installed": false,
+			"save_folder": "",
+			"title": "Fallout: London",
+			"canRunOffline": true,
+			"is_mac_native": false,
+			"is_linux_native": false
+		},
+		{
+			"runner": "gog",
+			"developer": "Remedy Entertainment",
+			"app_name": "1207659037",
+			"art_cover": "https://images.gog.com/6a49d5e811b8be9f103ba2ba6dcd2623b11d581cd2d35e0ac6535dca9edd4b3e.jpg?namespace=gamesdb",
+			"art_square": "https://images.gog.com/33aa9867f8b843e23f35837c44e73524c6fba0aef81c40f2d0f9e02117356550.jpg?namespace=gamesdb",
+			"art_background": "https://images.gog.com/b3fd290f242f68df4c765b2f8482a5053dbeb67100805adf56934fa3a0b53029.webp?namespace=gamesdb",
+			"cloud_save_enabled": false,
+			"art_icon": "https://images.gog.com/973a7a1ecdca0f53d6af6cdda80d9949e98083eca3336506b681b7e3fb3f5e58.jpg?namespace=gamesdb",
+			"extra": {
+				"about": {
+					"description": "Presented in the style of a TV series, Alan Wake features the trademark Remedy storytelling and pulse-pounding action sequences. As players dive deeper and deeper into the mystery, they’ll face overwhelming odds, plot twists, and cliffhangers. It’s only by mastering the Fight With Light combat mechanic that they can stay one step ahead of the darkness that spreads across Bright Falls.  \r\n \r\nWith the body of an action game and the mind of a psychological thriller, Alan Wake’s intense atmosphere, deep and multi-layered story, and exceptionally tense combat sequences provide players with an entertaining and original gaming experience.",
+					"shortDescription": ""
+				},
+				"reqs": [],
+				"genres": [
+					"Adventure",
+					"Shooter"
+				]
+			},
+			"folder_name": "Alan Wake",
+			"install": {
+				"is_dlc": false
+			},
+			"is_installed": false,
+			"save_folder": "",
+			"title": "Alan Wake",
+			"canRunOffline": true,
+			"is_mac_native": false,
+			"is_linux_native": false
+		},
+		{
+			"runner": "gog",
+			"developer": "Red Orb Entertainment",
+			"app_name": "1979367321",
+			"art_cover": "https://images.gog.com/41a38bfbca4d4d312162095b233f77e0f2e05796eb8ea534b482dc050d746304.jpg?namespace=gamesdb",
+			"art_square": "https://images.gog.com/70a769c6111b7e0cded691102905b82eb0edc7265ac693d903391d3b3fb1970c.jpg?namespace=gamesdb",
+			"art_background": "https://images.gog.com/8de4e8fb7d3b8891f408287a5254f77cd932027940b57c15db95cac268f6e73d.webp?namespace=gamesdb",
+			"cloud_save_enabled": false,
+			"art_icon": "https://images.gog.com/6a88e4a1d1e6f64cd3d7c66ae03e3af41d6e92526163d8ec742f78d6b6207038.jpg?namespace=gamesdb",
+			"extra": {
+				"about": {
+					"description": "WarBreeds is a Real Time Strategy game developed by Red Orb. Warbreeds was notable for its customizable units which provided over 35,000 unique combinations.",
+					"shortDescription": ""
+				},
+				"reqs": [],
+				"genres": [
+					"Strategy",
+					"Real Time Strategy (RTS)"
+				]
+			},
+			"folder_name": "",
+			"install": {
+				"is_dlc": false
+			},
+			"is_installed": false,
+			"save_folder": "",
+			"title": "Warbreeds",
+			"canRunOffline": true,
+			"is_mac_native": false,
+			"is_linux_native": false
+		},
+		{
+			"runner": "gog",
+			"developer": "Lonely Troops",
+			"app_name": "1313144493",
+			"art_cover": "https://images.gog.com/af7abf7e852ee1e6e5722653511e8f3943696b5a8841bc338962c44802b205a3.webp?namespace=gamesdb",
+			"art_square": "https://images.gog.com/b750a6b569c91256a6bd5aef7cd8db634f1b2b5c628e5136cf583dda7d474806.jpg?namespace=gamesdb",
+			"art_background": "https://images.gog.com/af7abf7e852ee1e6e5722653511e8f3943696b5a8841bc338962c44802b205a3.webp?namespace=gamesdb",
+			"cloud_save_enabled": false,
+			"art_icon": "https://images.gog.com/858ac00e37c358cded7ac0be5409d0fd5f15b9a29881f4130a01210bb7963b1a.jpg?namespace=gamesdb",
+			"extra": {
+				"about": {
+					"description": "Lovely adventuring RPG series. Casual, story-driven journey and quests. A darkness is coming that will engulf the whole kingdom. Prepare for an adventure full of surprises and heroic deeds.",
+					"shortDescription": ""
+				},
+				"reqs": [],
+				"genres": []
+			},
+			"folder_name": "",
+			"install": {
+				"is_dlc": false
+			},
+			"is_installed": false,
+			"save_folder": "",
+			"title": "Hero of the Kingdom: The Lost Tales 3",
+			"canRunOffline": true,
+			"is_mac_native": true,
+			"is_linux_native": true
+		},
+		{
+			"runner": "gog",
+			"developer": "Pun Intended",
+			"app_name": "1542190742",
+			"art_cover": "https://images.gog.com/f2c7a7eaea9de56ca2b99494b33ccf1af55e40299f5921dd4feee00f00e832bd.jpg?namespace=gamesdb",
+			"art_square": "https://images.gog.com/9496d5835ae607f78b44e6813a5aa12be2329e1bc1b1a70e9b4613fec0658bdf.jpg?namespace=gamesdb",
+			"art_background": "https://images.gog.com/b48f1485bd06d669cd1eb74dd7624f16dcb1f8c84f061cfd98b3a841c1982a61.webp?namespace=gamesdb",
+			"cloud_save_enabled": true,
+			"art_icon": "https://images.gog.com/459e484079ab7cfe0ce39e06ec311564544735631493b3dc641343d0d2a46657.jpg?namespace=gamesdb",
+			"extra": {
+				"about": {
+					"description": "A short but sweet game about an Angel on a Bloody Bullet-hell mission to kill Satan! Dash, Double Dash, Grapple & Blast your way through Hell to fulfill your Holy Mission. Will you be able to kill Satan? Or will you fail to master your abilities and DIE in this BLOODY HELL?",
+					"shortDescription": ""
+				},
+				"reqs": [],
+				"genres": [
+					"Adventure",
+					"Indie"
+				]
+			},
+			"folder_name": "",
+			"install": {
+				"is_dlc": false
+			},
+			"is_installed": false,
+			"save_folder": "",
+			"title": "Bloody Hell",
+			"canRunOffline": true,
+			"is_mac_native": false,
+			"is_linux_native": false,
+			"gog_save_location": [
+				{
+					"name": "saves",
+					"location": "<?APPLICATION_DATA_LOCAL_LOW?>/Pun Intended/Bloody Hell"
+				}
+			]
+		},
+		{
+			"runner": "gog",
+			"developer": "Balcony Softworks",
+			"app_name": "1769415595",
+			"art_cover": "https://images.gog.com/39eaba93eb37cc724cacd3e1e794856d2923fa898d4ac8917fc49ef3e819ab6c.jpg?namespace=gamesdb",
+			"art_square": "https://images.gog.com/2bf6a392fb327ac4ffc3a7b8fda88f43629dcedec8e979c12639e75a2a7123ae.jpg?namespace=gamesdb",
+			"art_background": "https://images.gog.com/b128642aaebaded1ae81b8bf22dabaaba85771ff671509988e1fef29c3dfc544.webp?namespace=gamesdb",
+			"cloud_save_enabled": true,
+			"art_icon": "https://images.gog.com/759fbe1abaf30d519b7e227c12fd725d5e7947b66a740b5928ab882ac3fea1b3.jpg?namespace=gamesdb",
+			"extra": {
+				"about": {
+					"description": "Balrum is an old-school, hybrid turn-based, open world RPG with deep tactical combat. Explore a huge living fantasy world with dozens of side quests next to an epic main quest. Grow your own crops, build your home, and craft your own custom items.",
+					"shortDescription": ""
+				},
+				"reqs": [],
+				"genres": [
+					"Role-playing (RPG)",
+					"Adventure",
+					"Strategy",
+					"Indie"
+				]
+			},
+			"folder_name": "Balrum.app",
+			"install": {
+				"is_dlc": false
+			},
+			"is_installed": false,
+			"save_folder": "",
+			"title": "Balrum",
+			"canRunOffline": true,
+			"is_mac_native": true,
+			"is_linux_native": true,
+			"mac_arch": "64",
+			"gog_save_location": [
+				{
+					"name": "saves",
+					"location": "<?INSTALL?>/Contents/Resources/game/files/saves"
+				}
+			]
+		}
+	],
+	"__timestamp": {
+		"games": "Sat Nov 14 2026 18:08:13 GMT+1300 (New Zealand Daylight Time)"
+	},
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 3
+		}
+	}
+}

@@ -67,6 +67,11 @@ fn runner_of(s: &str) -> LogRunner {
 
 /// Text found in the tree, with the temp root replaced by `${LOGDIR}` and the backslashes in the
 /// path that follows it normalised (the TS oracle's own tokenising rule).
+///
+/// A path ends at a line break or a quote, not at any whitespace: every `${LOGDIR}` path in the
+/// goldens runs to the end of its line, and a Windows folder name may hold a space
+/// (`Game Name_gog`), which used to cut the path short and leave its backslashes (G-84-1, CI run
+/// 44930097851).
 fn tokenise(text: &str, root: &str) -> String {
     let mut out = String::new();
     let mut rest = text;
@@ -74,14 +79,31 @@ fn tokenise(text: &str, root: &str) -> String {
         out.push_str(&rest[..i]);
         out.push_str("${LOGDIR}");
         let tail = &rest[i + root.len()..];
-        let end = tail
-            .find(|c: char| c.is_whitespace() || c == '\'' || c == '"')
-            .unwrap_or(tail.len());
+        let end = tail.find(['\n', '\r', '\'', '"']).unwrap_or(tail.len());
         out.push_str(&tail[..end].replace('\\', "/"));
         rest = &tail[end..];
     }
     out.push_str(rest);
     out
+}
+
+#[test]
+fn tokenise_normalises_a_windows_path_with_a_space_to_the_end_of_the_line() {
+    let root = r"C:\T\golden-1";
+    let text = "x C:\\T\\golden-1\\games\\Game Name_gog\\launch.log\r\nnext C:\\T\\golden-1\\runners\\legendary.log\n";
+    assert_eq!(
+        tokenise(text, root),
+        "x ${LOGDIR}/games/Game Name_gog/launch.log\r\nnext ${LOGDIR}/runners/legendary.log\n"
+    );
+}
+
+#[test]
+fn tokenise_ends_a_path_at_a_quote() {
+    let root = r"C:\T\golden-1";
+    assert_eq!(
+        tokenise("'C:\\T\\golden-1\\a b\\c.log' tail\\x", root),
+        "'${LOGDIR}/a b/c.log' tail\\x"
+    );
 }
 
 fn walk(base: &Path, dir: &Path, out: &mut BTreeMap<String, String>, root: Option<&str>) {

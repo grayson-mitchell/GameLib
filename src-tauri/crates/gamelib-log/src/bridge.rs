@@ -24,6 +24,7 @@ use tracing_subscriber::registry::LookupSpan;
 use tracing_subscriber::Registry;
 
 use crate::prefix::{Level, Prefix};
+use crate::sanitize::escape_line_breaks;
 use crate::writer::on_writer_thread;
 
 /// How much of a crate's output enters the log.
@@ -176,7 +177,7 @@ where
         (self.sink)(
             target_prefix(meta.target()),
             map_tracing_level(meta.level()),
-            &fields.render(),
+            &escape_line_breaks(&fields.render()),
         );
     }
 }
@@ -230,7 +231,7 @@ impl log::Log for LogBridge {
         (self.sink)(
             target_prefix(record.target()),
             map_log_level(record.level()),
-            &record.args().to_string(),
+            &escape_line_breaks(&record.args().to_string()),
         );
     }
 
@@ -519,6 +520,32 @@ mod tests {
         .join()
         .unwrap();
         assert!(lines(&on_writer).is_empty());
+    }
+
+    #[test]
+    fn a_bridged_message_with_line_breaks_is_written_on_one_line() {
+        // WR-02 (writer half): text a crate echoes from a server can carry CR/LF, and a raw one
+        // would start a forged second line in the file users upload.
+        let (seen, sink) = recorder();
+        with_layer(CrateLevel::Warn, sink, || {
+            tracing::warn!(target: "steam_vent::x", k = "v\r\nw", "a\nb");
+        });
+        assert_eq!(
+            lines(&seen),
+            vec![(
+                Prefix::Steam,
+                Level::Warning,
+                "a\\nb k=v\\r\\nw".to_string()
+            )]
+        );
+
+        let (seen, sink) = recorder();
+        let bridge = LogBridge::with_sink(CrateLevel::Warn, sink);
+        feed(&bridge, record("reqwest::x", log::Level::Error, "x\r\ny"));
+        assert_eq!(
+            lines(&seen),
+            vec![(Prefix::Backend, Level::Error, "x\\r\\ny".to_string())]
+        );
     }
 
     #[test]

@@ -1,0 +1,45 @@
+{
+	"games": [
+		{
+			"runner": "sideload",
+			"app_name": "1MuSrZGJXRTFDF3j7n7TX7",
+			"title": "Test",
+			"install": {
+				"executable": "/System/Applications/Calculator.app/Contents/MacOS/Calculator",
+				"platform": "Mac",
+				"is_dlc": false
+			},
+			"folder_name": "/System/Applications",
+			"art_cover": "https://cdn2.steamgriddb.com/grid/b801531c99bcf50b6975cf79dfe7e765.png",
+			"is_installed": true,
+			"art_square": "https://cdn2.steamgriddb.com/grid/b801531c99bcf50b6975cf79dfe7e765.png",
+			"canRunOffline": true,
+			"browserUrl": "",
+			"customUserAgent": "",
+			"launchFullScreen": false
+		},
+		{
+			"runner": "sideload",
+			"app_name": "1Yk3fumGALbbDFMJgsGvDe",
+			"title": "testApp",
+			"install": {
+				"executable": "/System/Applications/Calendar.app/Contents/MacOS/Calendar",
+				"platform": "Mac",
+				"is_dlc": false
+			},
+			"folder_name": "/System/Applications",
+			"art_cover": "/src/frontend/assets/gamelib_card.svg",
+			"is_installed": true,
+			"art_square": "/src/frontend/assets/gamelib_card.svg",
+			"canRunOffline": true,
+			"browserUrl": "",
+			"customUserAgent": "",
+			"launchFullScreen": false
+		}
+	],
+	"__internal__": {
+		"gamelib": {
+			"schemaVersion": 3
+		}
+	}
+}

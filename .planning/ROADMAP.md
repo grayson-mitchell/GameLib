@@ -420,7 +420,7 @@ Plans:
   3. Diagnostics from steam-vent and reqwest appear in the log, and a repeating error is rate-limited rather than flooding the file
   4. The TS logger is reduced to a fire-and-forget forwarder, and the shell's second log path (`shell_diag`) and the TS log registrations are deleted
 
-**Plans:** 11/11 plans executed in 9 waves; planned 2026-11-21, consolidated from 14 the same day, then the consolidated 84-06 and 84-07 each split in two to stay inside the per-plan context budget; executes only after Phase 83 closes (83-11 live gate passed, D-02)
+**Plans:** 16/18 plans executed (7 gap-closure plans 84-12..84-18 added 2026-11-22 from UAT); original 11 in 9 waves; planned 2026-11-21, consolidated from 14 the same day, then the consolidated 84-06 and 84-07 each split in two to stay inside the per-plan context budget; executes only after Phase 83 closes (83-11 live gate passed, D-02)
 
 Plans:
 **Wave 1**
@@ -452,6 +452,23 @@ Plans:
 - [x] 84-10-PLAN.md — Clean-worktree proof, push checkpoint, three-OS CI proof
 - [x] 84-11-PLAN.md — Run the live macOS gate
 
+**Gap closure** *(from 84-UAT.md: G-84-1, G-84-3, G-84-4; planned 2026-11-22)*
+
+**Wave 1**
+- [x] 84-12-PLAN.md — WR-03 store persist never truncates the live file; WR-07 store the parsed paste URL (isolated for Phase 85 plan 85-09)
+- [x] 84-13-PLAN.md — Amend live-contract items 4, 7 and 8 and re-score from existing captures (G-84-3)
+- [x] 84-14-PLAN.md — Golden `tokenise` Windows path fix (G-84-1); WR-04, IN-01, IN-02, WR-05 Rust half
+- [x] 84-15-PLAN.md — WR-01 sanitise at the producer, WR-05 TS half, WR-06 bounded flush
+
+**Wave 2** *(after 84-14)*
+- [x] 84-16-PLAN.md — WR-02 escape CR/LF at every native entry point; IN-03; IN-04 finish deadline
+
+**Wave 3** *(after 84-16)*
+- [ ] 84-17-PLAN.md — WR-02 privacy half: external error text and paths kept out of `gamelib.log`, plus a gate
+
+**Wave 4** *(after 84-12..84-17)*
+- [ ] 84-18-PLAN.md — Clean-worktree proof, all 11 dispositions fixed, operator push checkpoint, windows-leg CI re-proof
+
 ### Phase 85: Store host, config and versioned migrations
 
 **Goal**: Rust is the only disk writer for settings, caches and per-game config, and an upgrade loads existing data unchanged without new Keychain prompts.
@@ -465,7 +482,7 @@ Plans:
   4. The legendary store migration is ported only if a supported upgrade path still reaches it (reachability recorded), otherwise it is deleted
   5. The TS write-through mirror's deletion point is named and executed for every family flipped in this phase, and `storeVersioning`, `storeMigrations` and `migration/*` TypeScript are deleted
 
-**Plans:** 6/25 plans executed in 20 waves; planned 2026-11-21
+**Plans:** 7/25 plans executed in 20 waves; planned 2026-11-21
 
 Plans:
 **Wave 1**
@@ -482,7 +499,7 @@ Plans:
 - [x] 85-07-PLAN.md — Envelope, ops, version engine, backups, D-18 corrupt handling, generated store table, corpus roundtrip
 
 **Wave 4** *(blocked on Wave 3 completion)*
-- [ ] 85-08-PLAN.md — zod-derived schema descriptor and the settings/library migration chains in Rust; corpus migrate parity; CLI `open`
+- [x] 85-08-PLAN.md — zod-derived schema descriptor and the settings/library migration chains in Rust; corpus migrate parity; CLI `open`
 
 **Wave 5** *(blocked on Wave 4 completion)*
 - [ ] 85-09-PLAN.md — StoreHost widened into gamelib-store; uploadedLogs v0.10 format fix; bounded boot open, GAMELIB_STORE, GAMELIB_STORE_BOOT, `store` exit drain
