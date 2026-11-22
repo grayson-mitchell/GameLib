@@ -199,6 +199,10 @@ function walk(
   for (const e of readdirSync(dir, { withFileTypes: true })) {
     if (e.name === 'node_modules') continue
     if (e.name === '__tests__' && !withTests) continue
+    // meta/__tests__/runTsSignals.test.ts writes meta/runTs.__probe__.cjs for a moment; a scan that
+    // lists the file and then reads it after the unlink dies with ENOENT under full-suite load
+    // (the same skip steamCmPortComplete.test.ts carries).
+    if (e.name.includes('.__probe__.')) continue
     const full = join(dir, e.name)
     if (e.isDirectory()) walk(full, out, ext, withTests)
     else if (ext.test(e.name)) out.push(full)
